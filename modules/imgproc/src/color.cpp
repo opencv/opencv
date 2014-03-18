@@ -90,6 +90,7 @@
 \**********************************************************************************/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 #include <limits>
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
@@ -1593,8 +1594,11 @@ struct RGB2Lab_b
         static volatile int _3 = 3;
         initLabTabs();
 
-        if(!_coeffs) _coeffs = sRGB2XYZ_D65;
-        if(!_whitept) _whitept = D65;
+        if (!_coeffs)
+            _coeffs = sRGB2XYZ_D65;
+        if (!_whitept)
+            _whitept = D65;
+
         float scale[] =
         {
             (1 << lab_shift)/_whitept[0],
@@ -1698,10 +1702,6 @@ struct RGB2Lab_f
             float G = clip(src[1]);
             float B = clip(src[2]);
 
-//            CV_Assert(R >= 0.0f && R <= 1.0f);
-//            CV_Assert(G >= 0.0f && G <= 1.0f);
-//            CV_Assert(B >= 0.0f && B <= 1.0f);
-
             if (gammaTab)
             {
                 R = splineInterpolate(R * gscale, gammaTab, GAMMA_TAB_SIZE);
@@ -1737,7 +1737,7 @@ struct Lab2RGB_f
 
     Lab2RGB_f( int _dstcn, int blueIdx, const float* _coeffs,
               const float* _whitept, bool _srgb )
-    : dstcn(_dstcn), srgb(_srgb), blueInd(blueIdx)
+    : dstcn(_dstcn), srgb(_srgb)
     {
         initLabTabs();
 
@@ -1795,13 +1795,12 @@ struct Lab2RGB_f
 
 
             float x = fxz[0], z = fxz[1];
-            float ro = clip(C0 * x + C1 * y + C2 * z);
-            float go = clip(C3 * x + C4 * y + C5 * z);
-            float bo = clip(C6 * x + C7 * y + C8 * z);
-
-//            CV_Assert(ro >= 0.0f && ro <= 1.0f);
-//            CV_Assert(go >= 0.0f && go <= 1.0f);
-//            CV_Assert(bo >= 0.0f && bo <= 1.0f);
+            float ro = C0 * x + C1 * y + C2 * z;
+            float go = C3 * x + C4 * y + C5 * z;
+            float bo = C6 * x + C7 * y + C8 * z;
+            ro = clip(ro);
+            go = clip(go);
+            bo = clip(bo);
 
             if (gammaTab)
             {
@@ -1819,7 +1818,6 @@ struct Lab2RGB_f
     int dstcn;
     float coeffs[9];
     bool srgb;
-    int blueInd;
 };
 
 #undef clip
@@ -2274,7 +2272,7 @@ struct YUV420p2RGB888Invoker : ParallelLoopBody
         const int rangeBegin = range.start * 2;
         const int rangeEnd = range.end * 2;
 
-        size_t uvsteps[2] = {width/2, stride - width/2};
+        int uvsteps[2] = {width/2, stride - width/2};
         int usIdx = ustepIdx, vsIdx = vstepIdx;
 
         const uchar* y1 = my1 + rangeBegin * stride;
@@ -2342,7 +2340,7 @@ struct YUV420p2RGBA8888Invoker : ParallelLoopBody
         int rangeBegin = range.start * 2;
         int rangeEnd = range.end * 2;
 
-        size_t uvsteps[2] = {width/2, stride - width/2};
+        int uvsteps[2] = {width/2, stride - width/2};
         int usIdx = ustepIdx, vsIdx = vstepIdx;
 
         const uchar* y1 = my1 + rangeBegin * stride;
@@ -2687,6 +2685,516 @@ struct mRGBA2RGBA
     }
 };
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
+{
+    bool ok = false;
+    UMat src = _src.getUMat(), dst;
+    Size sz = src.size(), dstSz = sz;
+    int scn = src.channels(), depth = src.depth(), bidx;
+    int dims = 2, stripeSize = 1;
+    size_t globalsize[] = { src.cols, src.rows };
+    ocl::Kernel k;
+
+    if (depth != CV_8U && depth != CV_16U && depth != CV_32F)
+        return false;
+
+    switch (code)
+    {
+    case COLOR_BGR2BGRA: case COLOR_RGB2BGRA: case COLOR_BGRA2BGR:
+    case COLOR_RGBA2BGR: case COLOR_RGB2BGR: case COLOR_BGRA2RGBA:
+    {
+        CV_Assert(scn == 3 || scn == 4);
+        dcn = code == COLOR_BGR2BGRA || code == COLOR_RGB2BGRA || code == COLOR_BGRA2RGBA ? 4 : 3;
+        bool reverse = !(code == COLOR_BGR2BGRA || code == COLOR_BGRA2BGR);
+        k.create("RGB", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=%d -D bidx=0 -D %s", depth, scn, dcn,
+                        reverse ? "REVERSE" : "ORDER"));
+        break;
+    }
+    case COLOR_BGR5652BGR: case COLOR_BGR5552BGR: case COLOR_BGR5652RGB: case COLOR_BGR5552RGB:
+    case COLOR_BGR5652BGRA: case COLOR_BGR5552BGRA: case COLOR_BGR5652RGBA: case COLOR_BGR5552RGBA:
+    {
+        dcn = code == COLOR_BGR5652BGRA || code == COLOR_BGR5552BGRA || code == COLOR_BGR5652RGBA || code == COLOR_BGR5552RGBA ? 4 : 3;
+        CV_Assert((dcn == 3 || dcn == 4) && scn == 2 && depth == CV_8U);
+        bidx = code == COLOR_BGR5652BGR || code == COLOR_BGR5552BGR ||
+            code == COLOR_BGR5652BGRA || code == COLOR_BGR5552BGRA ? 0 : 2;
+        int greenbits = code == COLOR_BGR5652BGR || code == COLOR_BGR5652RGB ||
+            code == COLOR_BGR5652BGRA || code == COLOR_BGR5652RGBA ? 6 : 5;
+        k.create("RGB5x52RGB", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=2 -D dcn=%d -D bidx=%d -D greenbits=%d", depth, dcn, bidx, greenbits));
+        break;
+    }
+    case COLOR_BGR2BGR565: case COLOR_BGR2BGR555: case COLOR_RGB2BGR565: case COLOR_RGB2BGR555:
+    case COLOR_BGRA2BGR565: case COLOR_BGRA2BGR555: case COLOR_RGBA2BGR565: case COLOR_RGBA2BGR555:
+    {
+        CV_Assert((scn == 3 || scn == 4) && depth == CV_8U );
+        bidx = code == COLOR_BGR2BGR565 || code == COLOR_BGR2BGR555 ||
+            code == COLOR_BGRA2BGR565 || code == COLOR_BGRA2BGR555 ? 0 : 2;
+        int greenbits = code == COLOR_BGR2BGR565 || code == COLOR_RGB2BGR565 ||
+            code == COLOR_BGRA2BGR565 || code == COLOR_RGBA2BGR565 ? 6 : 5;
+        dcn = 2;
+        k.create("RGB2RGB5x5", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=2 -D bidx=%d -D greenbits=%d", depth, scn, bidx, greenbits));
+        break;
+    }
+    case COLOR_BGR5652GRAY: case COLOR_BGR5552GRAY:
+    {
+        CV_Assert(scn == 2 && depth == CV_8U);
+        dcn = 1;
+        int greenbits = code == COLOR_BGR5652GRAY ? 6 : 5;
+        k.create("BGR5x52Gray", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=2 -D dcn=1 -D bidx=0 -D greenbits=%d", depth, greenbits));
+        break;
+    }
+    case COLOR_GRAY2BGR565: case COLOR_GRAY2BGR555:
+    {
+        CV_Assert(scn == 1 && depth == CV_8U);
+        dcn = 2;
+        int greenbits = code == COLOR_GRAY2BGR565 ? 6 : 5;
+        k.create("Gray2BGR5x5", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=1 -D dcn=2 -D bidx=0 -D greenbits=%d", depth, greenbits));
+        break;
+    }
+    case COLOR_BGR2GRAY: case COLOR_BGRA2GRAY:
+    case COLOR_RGB2GRAY: case COLOR_RGBA2GRAY:
+    {
+        CV_Assert(scn == 3 || scn == 4);
+        bidx = code == COLOR_BGR2GRAY || code == COLOR_BGRA2GRAY ? 0 : 2;
+        dcn = 1;
+        k.create("RGB2Gray", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=1 -D bidx=%d -D STRIPE_SIZE=%d",
+                        depth, scn, bidx, stripeSize));
+        globalsize[0] = (src.cols + stripeSize-1)/stripeSize;
+        break;
+    }
+    case COLOR_GRAY2BGR:
+    case COLOR_GRAY2BGRA:
+    {
+        CV_Assert(scn == 1);
+        dcn = code == COLOR_GRAY2BGRA ? 4 : 3;
+        k.create("Gray2RGB", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D bidx=0 -D scn=1 -D dcn=%d", depth, dcn));
+        break;
+    }
+    case COLOR_BGR2YUV:
+    case COLOR_RGB2YUV:
+    {
+        CV_Assert(scn == 3 || scn == 4);
+        bidx = code == COLOR_RGB2YUV ? 0 : 2;
+        dcn = 3;
+        k.create("RGB2YUV", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=3 -D bidx=%d", depth, scn, bidx));
+        break;
+    }
+    case COLOR_YUV2BGR:
+    case COLOR_YUV2RGB:
+    {
+        if(dcn < 0) dcn = 3;
+        CV_Assert(dcn == 3 || dcn == 4);
+        bidx = code == COLOR_YUV2RGB ? 0 : 2;
+        k.create("YUV2RGB", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=3 -D dcn=%d -D bidx=%d", depth, dcn, bidx));
+        break;
+    }
+    case COLOR_YUV2RGB_NV12: case COLOR_YUV2BGR_NV12:
+    case COLOR_YUV2RGBA_NV12: case COLOR_YUV2BGRA_NV12:
+    {
+        CV_Assert( scn == 1 );
+        CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
+        dcn  = code == COLOR_YUV2BGRA_NV12 || code == COLOR_YUV2RGBA_NV12 ? 4 : 3;
+        bidx = code == COLOR_YUV2BGRA_NV12 || code == COLOR_YUV2BGR_NV12 ? 0 : 2;
+
+        dstSz = Size(sz.width, sz.height * 2 / 3);
+        k.create("YUV2RGB_NV12", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=0 -D scn=1 -D dcn=%d -D bidx=%d", dcn, bidx));
+        break;
+    }
+    case COLOR_BGR2YCrCb:
+    case COLOR_RGB2YCrCb:
+    {
+        CV_Assert(scn == 3 || scn == 4);
+        bidx = code == COLOR_BGR2YCrCb ? 0 : 2;
+        dcn = 3;
+        k.create("RGB2YCrCb", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=3 -D bidx=%d", depth, scn, bidx));
+        break;
+    }
+    case COLOR_YCrCb2BGR:
+    case COLOR_YCrCb2RGB:
+    {
+        if( dcn <= 0 )
+            dcn = 3;
+        CV_Assert(scn == 3 && (dcn == 3 || dcn == 4));
+        bidx = code == COLOR_YCrCb2BGR ? 0 : 2;
+        k.create("YCrCb2RGB", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=%d -D bidx=%d", depth, scn, dcn, bidx));
+        break;
+    }
+    case COLOR_BGR2XYZ: case COLOR_RGB2XYZ:
+    {
+        CV_Assert(scn == 3 || scn == 4);
+        bidx = code == COLOR_BGR2XYZ ? 0 : 2;
+
+        UMat c;
+        if (depth == CV_32F)
+        {
+            float coeffs[] =
+            {
+                0.412453f, 0.357580f, 0.180423f,
+                0.212671f, 0.715160f, 0.072169f,
+                0.019334f, 0.119193f, 0.950227f
+            };
+            if (bidx == 0)
+            {
+                std::swap(coeffs[0], coeffs[2]);
+                std::swap(coeffs[3], coeffs[5]);
+                std::swap(coeffs[6], coeffs[8]);
+            }
+            Mat(1, 9, CV_32FC1, &coeffs[0]).copyTo(c);
+        }
+        else
+        {
+            int coeffs[] =
+            {
+                1689,    1465,    739,
+                871,     2929,    296,
+                79,      488,     3892
+            };
+            if (bidx == 0)
+            {
+                std::swap(coeffs[0], coeffs[2]);
+                std::swap(coeffs[3], coeffs[5]);
+                std::swap(coeffs[6], coeffs[8]);
+            }
+            Mat(1, 9, CV_32SC1, &coeffs[0]).copyTo(c);
+        }
+
+        _dst.create(dstSz, CV_MAKETYPE(depth, 3));
+        dst = _dst.getUMat();
+
+        k.create("RGB2XYZ", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=3 -D bidx=%d", depth, scn, bidx));
+        if (k.empty())
+            return false;
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(c));
+        return k.run(2, globalsize, 0, false);
+    }
+    case COLOR_XYZ2BGR: case COLOR_XYZ2RGB:
+    {
+        if (dcn <= 0)
+            dcn = 3;
+        CV_Assert(scn == 3 && (dcn == 3 || dcn == 4));
+        bidx = code == COLOR_XYZ2BGR ? 0 : 2;
+
+        UMat c;
+        if (depth == CV_32F)
+        {
+            float coeffs[] =
+            {
+                3.240479f, -1.53715f, -0.498535f,
+                -0.969256f, 1.875991f, 0.041556f,
+                0.055648f, -0.204043f, 1.057311f
+            };
+            if (bidx == 0)
+            {
+                std::swap(coeffs[0], coeffs[6]);
+                std::swap(coeffs[1], coeffs[7]);
+                std::swap(coeffs[2], coeffs[8]);
+            }
+            Mat(1, 9, CV_32FC1, &coeffs[0]).copyTo(c);
+        }
+        else
+        {
+            int coeffs[] =
+            {
+                13273,  -6296,  -2042,
+                -3970,   7684,    170,
+                  228,   -836,   4331
+            };
+            if (bidx == 0)
+            {
+                std::swap(coeffs[0], coeffs[6]);
+                std::swap(coeffs[1], coeffs[7]);
+                std::swap(coeffs[2], coeffs[8]);
+            }
+            Mat(1, 9, CV_32SC1, &coeffs[0]).copyTo(c);
+        }
+
+        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
+        dst = _dst.getUMat();
+
+        k.create("XYZ2RGB", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=3 -D dcn=%d -D bidx=%d", depth, dcn, bidx));
+        if (k.empty())
+            return false;
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(c));
+        return k.run(2, globalsize, 0, false);
+    }
+    case COLOR_BGR2HSV: case COLOR_RGB2HSV: case COLOR_BGR2HSV_FULL: case COLOR_RGB2HSV_FULL:
+    case COLOR_BGR2HLS: case COLOR_RGB2HLS: case COLOR_BGR2HLS_FULL: case COLOR_RGB2HLS_FULL:
+    {
+        CV_Assert((scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F));
+        bidx = code == COLOR_BGR2HSV || code == COLOR_BGR2HLS ||
+            code == COLOR_BGR2HSV_FULL || code == COLOR_BGR2HLS_FULL ? 0 : 2;
+        int hrange = depth == CV_32F ? 360 : code == COLOR_BGR2HSV || code == COLOR_RGB2HSV ||
+            code == COLOR_BGR2HLS || code == COLOR_RGB2HLS ? 180 : 256;
+        bool is_hsv = code == COLOR_BGR2HSV || code == COLOR_RGB2HSV || code == COLOR_BGR2HSV_FULL || code == COLOR_RGB2HSV_FULL;
+        String kernelName = String("RGB2") + (is_hsv ? "HSV" : "HLS");
+        dcn = 3;
+
+        if (is_hsv && depth == CV_8U)
+        {
+            static UMat sdiv_data;
+            static UMat hdiv_data180;
+            static UMat hdiv_data256;
+            static int sdiv_table[256];
+            static int hdiv_table180[256];
+            static int hdiv_table256[256];
+            static volatile bool initialized180 = false, initialized256 = false;
+            volatile bool & initialized = hrange == 180 ? initialized180 : initialized256;
+
+            if (!initialized)
+            {
+                int * const hdiv_table = hrange == 180 ? hdiv_table180 : hdiv_table256, hsv_shift = 12;
+                UMat & hdiv_data = hrange == 180 ? hdiv_data180 : hdiv_data256;
+
+                sdiv_table[0] = hdiv_table180[0] = hdiv_table256[0] = 0;
+
+                int v = 255 << hsv_shift;
+                if (!initialized180 && !initialized256)
+                {
+                    for(int i = 1; i < 256; i++ )
+                        sdiv_table[i] = saturate_cast<int>(v/(1.*i));
+                    Mat(1, 256, CV_32SC1, sdiv_table).copyTo(sdiv_data);
+                }
+
+                v = hrange << hsv_shift;
+                for (int i = 1; i < 256; i++ )
+                    hdiv_table[i] = saturate_cast<int>(v/(6.*i));
+
+                Mat(1, 256, CV_32SC1, hdiv_table).copyTo(hdiv_data);
+                initialized = true;
+            }
+
+            _dst.create(dstSz, CV_8UC3);
+            dst = _dst.getUMat();
+
+            k.create("RGB2HSV", ocl::imgproc::cvtcolor_oclsrc, format("-D depth=%d -D hrange=%d -D bidx=%d -D dcn=3 -D scn=%d",
+                                                                      depth, hrange, bidx, scn));
+            if (k.empty())
+                return false;
+
+            k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst),
+                   ocl::KernelArg::PtrReadOnly(sdiv_data), hrange == 256 ? ocl::KernelArg::PtrReadOnly(hdiv_data256) :
+                                                                       ocl::KernelArg::PtrReadOnly(hdiv_data180));
+
+            return k.run(2, globalsize, NULL, false);
+        }
+        else
+            k.create(kernelName.c_str(), ocl::imgproc::cvtcolor_oclsrc,
+                     format("-D depth=%d -D hscale=%ff -D bidx=%d -D scn=%d -D dcn=3", depth, hrange*(1.f/360.f), bidx, scn));
+        break;
+    }
+    case COLOR_HSV2BGR: case COLOR_HSV2RGB: case COLOR_HSV2BGR_FULL: case COLOR_HSV2RGB_FULL:
+    case COLOR_HLS2BGR: case COLOR_HLS2RGB: case COLOR_HLS2BGR_FULL: case COLOR_HLS2RGB_FULL:
+    {
+        if (dcn <= 0)
+            dcn = 3;
+        CV_Assert(scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F));
+        bidx = code == COLOR_HSV2BGR || code == COLOR_HLS2BGR ||
+            code == COLOR_HSV2BGR_FULL || code == COLOR_HLS2BGR_FULL ? 0 : 2;
+        int hrange = depth == CV_32F ? 360 : code == COLOR_HSV2BGR || code == COLOR_HSV2RGB ||
+            code == COLOR_HLS2BGR || code == COLOR_HLS2RGB ? 180 : 255;
+        bool is_hsv = code == COLOR_HSV2BGR || code == COLOR_HSV2RGB ||
+                code == COLOR_HSV2BGR_FULL || code == COLOR_HSV2RGB_FULL;
+
+        String kernelName = String(is_hsv ? "HSV" : "HLS") + "2RGB";
+        k.create(kernelName.c_str(), ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D dcn=%d -D scn=3 -D bidx=%d -D hrange=%d -D hscale=%ff",
+                        depth, dcn, bidx, hrange, 6.f/hrange));
+        break;
+    }
+    case COLOR_RGBA2mRGBA: case COLOR_mRGBA2RGBA:
+    {
+        CV_Assert(scn == 4 && depth == CV_8U);
+        dcn = 4;
+
+        k.create(code == COLOR_RGBA2mRGBA ? "RGBA2mRGBA" : "mRGBA2RGBA", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D dcn=4 -D scn=4 -D bidx=3", depth));
+        break;
+    }
+    case CV_BGR2Lab: case CV_RGB2Lab: case CV_LBGR2Lab: case CV_LRGB2Lab:
+    {
+        CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
+
+        bidx = code == CV_BGR2Lab || code == CV_LBGR2Lab ? 0 : 2;
+        bool srgb = code == CV_BGR2Lab || code == CV_RGB2Lab;
+        dcn = 3;
+
+        k.create("BGR2Lab", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D dcn=3 -D scn=%d -D bidx=%d%s",
+                        depth, scn, bidx, srgb ? " -D SRGB" : ""));
+        if (k.empty())
+            return false;
+
+        initLabTabs();
+
+        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
+        dst = _dst.getUMat();
+
+        ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+                dstarg = ocl::KernelArg::WriteOnly(dst);
+
+        if (depth == CV_8U)
+        {
+            static UMat usRGBGammaTab, ulinearGammaTab, uLabCbrtTab, ucoeffs;
+
+            if (srgb && usRGBGammaTab.empty())
+                Mat(1, 256, CV_16UC1, sRGBGammaTab_b).copyTo(usRGBGammaTab);
+            else if (ulinearGammaTab.empty())
+                Mat(1, 256, CV_16UC1, linearGammaTab_b).copyTo(ulinearGammaTab);
+            if (uLabCbrtTab.empty())
+                Mat(1, LAB_CBRT_TAB_SIZE_B, CV_16UC1, LabCbrtTab_b).copyTo(uLabCbrtTab);
+
+            {
+                int coeffs[9];
+                const float * const _coeffs = sRGB2XYZ_D65, * const _whitept = D65;
+                const float scale[] =
+                {
+                    (1 << lab_shift)/_whitept[0],
+                    (float)(1 << lab_shift),
+                    (1 << lab_shift)/_whitept[2]
+                };
+
+                for (int i = 0; i < 3; i++ )
+                {
+                    coeffs[i*3+(bidx^2)] = cvRound(_coeffs[i*3]*scale[i]);
+                    coeffs[i*3+1] = cvRound(_coeffs[i*3+1]*scale[i]);
+                    coeffs[i*3+bidx] = cvRound(_coeffs[i*3+2]*scale[i]);
+
+                    CV_Assert( coeffs[i] >= 0 && coeffs[i*3+1] >= 0 && coeffs[i*3+2] >= 0 &&
+                              coeffs[i*3] + coeffs[i*3+1] + coeffs[i*3+2] < 2*(1 << lab_shift) );
+                }
+                Mat(1, 9, CV_32SC1, coeffs).copyTo(ucoeffs);
+            }
+
+            const int Lscale = (116*255+50)/100;
+            const int Lshift = -((16*255*(1 << lab_shift2) + 50)/100);
+
+            k.args(srcarg, dstarg,
+                   ocl::KernelArg::PtrReadOnly(srgb ? usRGBGammaTab : ulinearGammaTab),
+                   ocl::KernelArg::PtrReadOnly(uLabCbrtTab), ocl::KernelArg::PtrReadOnly(ucoeffs),
+                   Lscale, Lshift);
+        }
+        else
+        {
+            static UMat usRGBGammaTab, ucoeffs;
+
+            if (srgb && usRGBGammaTab.empty())
+                Mat(1, GAMMA_TAB_SIZE * 4, CV_32FC1, sRGBGammaTab).copyTo(usRGBGammaTab);
+
+            {
+                float coeffs[9];
+                const float * const _coeffs = sRGB2XYZ_D65, * const _whitept = D65;
+                float scale[] = { 1.0f / _whitept[0], 1.0f, 1.0f / _whitept[2] };
+
+                for (int i = 0; i < 3; i++)
+                {
+                    int j = i * 3;
+                    coeffs[j + (bidx ^ 2)] = _coeffs[j] * scale[i];
+                    coeffs[j + 1] = _coeffs[j + 1] * scale[i];
+                    coeffs[j + bidx] = _coeffs[j + 2] * scale[i];
+
+                    CV_Assert( coeffs[j] >= 0 && coeffs[j + 1] >= 0 && coeffs[j + 2] >= 0 &&
+                               coeffs[j] + coeffs[j + 1] + coeffs[j + 2] < 1.5f*LabCbrtTabScale );
+                }
+
+                Mat(1, 9, CV_32FC1, coeffs).copyTo(ucoeffs);
+            }
+
+            float _1_3 = 1.0f / 3.0f, _a = 16.0f / 116.0f;
+            ocl::KernelArg ucoeffsarg = ocl::KernelArg::PtrReadOnly(ucoeffs);
+
+            if (srgb)
+                k.args(srcarg, dstarg, ocl::KernelArg::PtrReadOnly(usRGBGammaTab),
+                       ucoeffsarg, _1_3, _a);
+            else
+                k.args(srcarg, dstarg, ucoeffsarg, _1_3, _a);
+        }
+
+        return k.run(dims, globalsize, NULL, false);
+    }
+    case CV_Lab2BGR: case CV_Lab2RGB: case CV_Lab2LBGR: case CV_Lab2LRGB:
+    {
+        if( dcn <= 0 )
+            dcn = 3;
+        CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
+
+        bidx = code == CV_Lab2BGR || code == CV_Lab2LBGR ? 0 : 2;
+        bool srgb = code == CV_Lab2BGR || code == CV_Lab2RGB;
+
+        k.create("Lab2BGR", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D dcn=%d -D scn=3 -D bidx=%d%s",
+                        depth, dcn, bidx, srgb ? " -D SRGB" : ""));
+        if (k.empty())
+            return false;
+
+        initLabTabs();
+        static UMat ucoeffs, usRGBInvGammaTab;
+
+        if (srgb && usRGBInvGammaTab.empty())
+            Mat(1, GAMMA_TAB_SIZE*4, CV_32FC1, sRGBInvGammaTab).copyTo(usRGBInvGammaTab);
+
+        {
+            float coeffs[9];
+            const float * const _coeffs = XYZ2sRGB_D65, * const _whitept = D65;
+
+            for( int i = 0; i < 3; i++ )
+            {
+                coeffs[i+(bidx^2)*3] = _coeffs[i]*_whitept[i];
+                coeffs[i+3] = _coeffs[i+3]*_whitept[i];
+                coeffs[i+bidx*3] = _coeffs[i+6]*_whitept[i];
+            }
+
+            Mat(1, 9, CV_32FC1, coeffs).copyTo(ucoeffs);
+        }
+
+        _dst.create(sz, CV_MAKETYPE(depth, dcn));
+        dst = _dst.getUMat();
+
+        float lThresh = 0.008856f * 903.3f;
+        float fThresh = 7.787f * 0.008856f + 16.0f / 116.0f;
+
+        ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+                dstarg = ocl::KernelArg::WriteOnly(dst),
+                coeffsarg = ocl::KernelArg::PtrReadOnly(ucoeffs);
+
+        if (srgb)
+            k.args(srcarg, dstarg, ocl::KernelArg::PtrReadOnly(usRGBInvGammaTab),
+                   coeffsarg, lThresh, fThresh);
+        else
+            k.args(srcarg, dstarg, coeffsarg, lThresh, fThresh);
+
+        return k.run(dims, globalsize, NULL, false);
+    }
+    default:
+        break;
+    }
+
+    if( !k.empty() )
+    {
+        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
+        dst = _dst.getUMat();
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst));
+        ok = k.run(dims, globalsize, NULL, false);
+    }
+    return ok;
+}
+
+#endif
+
 }//namespace cv
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -2695,9 +3203,14 @@ struct mRGBA2RGBA
 
 void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 {
+    int stype = _src.type();
+    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype), bidx;
+
+    CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat(),
+                ocl_cvtColor(_src, _dst, code, dcn) )
+
     Mat src = _src.getMat(), dst;
     Size sz = src.size();
-    int scn = src.channels(), depth = src.depth(), bidx;
 
     CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32F );
 
@@ -2797,7 +3310,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             CV_Assert( scn == 3 || scn == 4 );
             _dst.create(sz, CV_MAKETYPE(depth, 1));
             dst = _dst.getMat();
-
+/*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
             if( code == CV_BGR2GRAY )
             {
@@ -2820,7 +3333,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                     return;
             }
 #endif
-
+*/
             bidx = code == CV_BGR2GRAY || code == CV_BGRA2GRAY ? 0 : 2;
 
             if( depth == CV_8U )
@@ -3298,7 +3811,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 int ustepIdx = 0;
                 int vstepIdx = dstSz.height % 4 == 2 ? 1 : 0;
 
-                if(uIdx == 1) { std::swap(u ,v), std::swap(ustepIdx, vstepIdx); };
+                if(uIdx == 1) { std::swap(u ,v), std::swap(ustepIdx, vstepIdx); }
 
                 switch(dcn*10 + bIdx)
                 {
@@ -3409,9 +3922,9 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 dst = _dst.getMat();
 
                 if( depth == CV_8U )
-                {
                     CvtColorLoop(src, dst, RGBA2mRGBA<uchar>());
-                } else {
+                else
+                {
                     CV_Error( CV_StsBadArg, "Unsupported image depth" );
                 }
             }
@@ -3425,9 +3938,9 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 dst = _dst.getMat();
 
                 if( depth == CV_8U )
-                {
                     CvtColorLoop(src, dst, mRGBA2RGBA<uchar>());
-                } else {
+                else
+                {
                     CV_Error( CV_StsBadArg, "Unsupported image depth" );
                 }
             }

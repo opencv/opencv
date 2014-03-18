@@ -201,7 +201,7 @@ public:
     virtual bool train( const CvMat* trainData, const CvMat* responses,
         const CvMat* varIdx = 0, const CvMat* sampleIdx=0, bool update=false );
 
-    virtual float predict( const CvMat* samples, CV_OUT CvMat* results=0 ) const;
+    virtual float predict( const CvMat* samples, CV_OUT CvMat* results=0, CV_OUT CvMat* results_prob=0 ) const;
     CV_WRAP virtual void clear();
 
     CV_WRAP CvNormalBayesClassifier( const cv::Mat& trainData, const cv::Mat& responses,
@@ -209,7 +209,7 @@ public:
     CV_WRAP virtual bool train( const cv::Mat& trainData, const cv::Mat& responses,
                        const cv::Mat& varIdx = cv::Mat(), const cv::Mat& sampleIdx=cv::Mat(),
                        bool update=false );
-    CV_WRAP virtual float predict( const cv::Mat& samples, CV_OUT cv::Mat* results=0 ) const;
+    CV_WRAP virtual float predict( const cv::Mat& samples, CV_OUT cv::Mat* results=0, CV_OUT cv::Mat* results_prob=0 ) const;
 
     virtual void write( CvFileStorage* storage, const char* name ) const;
     virtual void read( CvFileStorage* storage, CvFileNode* node );
@@ -490,7 +490,7 @@ public:
         bool balanced=false );
 
     virtual float predict( const CvMat* sample, bool returnDFVal=false ) const;
-    virtual float predict( const CvMat* samples, CV_OUT CvMat* results ) const;
+    virtual float predict( const CvMat* samples, CV_OUT CvMat* results, bool returnDFVal=false ) const;
 
     CV_WRAP CvSVM( const cv::Mat& trainData, const cv::Mat& responses,
           const cv::Mat& varIdx=cv::Mat(), const cv::Mat& sampleIdx=cv::Mat(),
@@ -515,8 +515,10 @@ public:
 
     CV_WRAP virtual int get_support_vector_count() const;
     virtual const float* get_support_vector(int i) const;
-    virtual CvSVMParams get_params() const { return params; };
+    virtual CvSVMParams get_params() const { return params; }
     CV_WRAP virtual void clear();
+
+    virtual const CvSVMDecisionFunc* get_decision_function() const { return decision_func; }
 
     static CvParamGrid get_default_grid( int param_id );
 
@@ -554,6 +556,10 @@ protected:
 
     CvSVMSolver* solver;
     CvSVMKernel* kernel;
+
+private:
+    CvSVM(const CvSVM&);
+    CvSVM& operator = (const CvSVM&);
 };
 
 /****************************************************************************************\
@@ -1519,7 +1525,7 @@ public:
     // API
     // virtual bool train( CvMLData* data,
              CvGBTreesParams params=CvGBTreesParams(),
-             bool update=false ) {return false;};
+             bool update=false ) {return false;}
 
     // INPUT
     // data          - training set.

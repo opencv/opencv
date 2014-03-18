@@ -76,7 +76,9 @@ enum { EVENT_MOUSEMOVE      = 0,
        EVENT_MBUTTONUP      = 6,
        EVENT_LBUTTONDBLCLK  = 7,
        EVENT_RBUTTONDBLCLK  = 8,
-       EVENT_MBUTTONDBLCLK  = 9
+       EVENT_MBUTTONDBLCLK  = 9,
+       EVENT_MOUSEWHEEL     = 10,
+       EVENT_MOUSEHWHEEL    = 11
      };
 
 enum { EVENT_FLAG_LBUTTON   = 1,
@@ -136,6 +138,8 @@ CV_EXPORTS_W double getWindowProperty(const String& winname, int prop_id);
 
 //! assigns callback for mouse events
 CV_EXPORTS void setMouseCallback(const String& winname, MouseCallback onMouse, void* userdata = 0);
+
+CV_EXPORTS int getMouseWheelDelta(int flags);
 
 CV_EXPORTS int createTrackbar(const String& trackbarname, const String& winname,
                               int* value, int count,
@@ -271,7 +275,8 @@ enum { CAP_ANY          = 0,     // autodetect
        CAP_XIAPI        = 1100,  // XIMEA Camera API
        CAP_AVFOUNDATION = 1200,  // AVFoundation framework for iOS (OS X Lion will have the same API)
        CAP_GIGANETIX    = 1300,  // Smartek Giganetix GigEVisionSDK
-       CAP_MSMF         = 1400   // Microsoft Media Foundation (via videoInput)
+       CAP_MSMF         = 1400,  // Microsoft Media Foundation (via videoInput)
+       CAP_INTELPERC    = 1500   // Intel Perceptual Computing SDK
      };
 
 // generic properties (based on DC1394 properties)
@@ -384,9 +389,17 @@ enum { CAP_PROP_GSTREAMER_QUEUE_LENGTH = 200 // default is 1
 
 
 // PVAPI
-enum { CAP_PROP_PVAPI_MULTICASTIP = 300 // ip for anable multicast master mode. 0 for disable multicast
+enum { CAP_PROP_PVAPI_MULTICASTIP               = 300, // ip for anable multicast master mode. 0 for disable multicast
+       CAP_PROP_PVAPI_FRAMESTARTTRIGGERMODE     = 301  // FrameStartTriggerMode: Determines how a frame is initiated
      };
 
+// PVAPI: FrameStartTriggerMode
+enum { CAP_PVAPI_FSTRIGMODE_FREERUN     = 0,    // Freerun
+       CAP_PVAPI_FSTRIGMODE_SYNCIN1     = 1,    // SyncIn1
+       CAP_PVAPI_FSTRIGMODE_SYNCIN2     = 2,    // SyncIn2
+       CAP_PVAPI_FSTRIGMODE_FIXEDRATE   = 3,    // FixedRate
+       CAP_PVAPI_FSTRIGMODE_SOFTWARE    = 4     // Software
+     };
 
 // Properties of cameras available through XIMEA SDK interface
 enum { CAP_PROP_XI_DOWNSAMPLING  = 400, // Change image resolution by binning or skipping.
@@ -496,7 +509,29 @@ enum { CAP_PROP_GIGA_FRAME_OFFSET_X   = 10001,
        CAP_PROP_GIGA_FRAME_SENS_HEIGH = 10006
      };
 
+enum { CAP_PROP_INTELPERC_PROFILE_COUNT               = 11001,
+       CAP_PROP_INTELPERC_PROFILE_IDX                 = 11002,
+       CAP_PROP_INTELPERC_DEPTH_LOW_CONFIDENCE_VALUE  = 11003,
+       CAP_PROP_INTELPERC_DEPTH_SATURATION_VALUE      = 11004,
+       CAP_PROP_INTELPERC_DEPTH_CONFIDENCE_THRESHOLD  = 11005,
+       CAP_PROP_INTELPERC_DEPTH_FOCAL_LENGTH_HORZ     = 11006,
+       CAP_PROP_INTELPERC_DEPTH_FOCAL_LENGTH_VERT     = 11007
+     };
 
+// Intel PerC streams
+enum { CAP_INTELPERC_DEPTH_GENERATOR = 1 << 29,
+       CAP_INTELPERC_IMAGE_GENERATOR = 1 << 28,
+       CAP_INTELPERC_GENERATORS_MASK = CAP_INTELPERC_DEPTH_GENERATOR + CAP_INTELPERC_IMAGE_GENERATOR
+     };
+
+enum { CAP_INTELPERC_DEPTH_MAP              = 0, // Each pixel is a 16-bit integer. The value indicates the distance from an object to the camera's XY plane or the Cartesian depth.
+       CAP_INTELPERC_UVDEPTH_MAP            = 1, // Each pixel contains two 32-bit floating point values in the range of 0-1, representing the mapping of depth coordinates to the color coordinates.
+       CAP_INTELPERC_IR_MAP                 = 2, // Each pixel is a 16-bit integer. The value indicates the intensity of the reflected laser beam.
+       CAP_INTELPERC_IMAGE                  = 3
+     };
+
+
+class IVideoCapture;
 class CV_EXPORTS_W VideoCapture
 {
 public:
@@ -511,17 +546,20 @@ public:
     CV_WRAP virtual void release();
 
     CV_WRAP virtual bool grab();
-    CV_WRAP virtual bool retrieve(CV_OUT Mat& image, int flag = 0);
+    CV_WRAP virtual bool retrieve(OutputArray image, int flag = 0);
     virtual VideoCapture& operator >> (CV_OUT Mat& image);
-    CV_WRAP virtual bool read(CV_OUT Mat& image);
+    virtual VideoCapture& operator >> (CV_OUT UMat& image);
+    CV_WRAP virtual bool read(OutputArray image);
 
     CV_WRAP virtual bool set(int propId, double value);
     CV_WRAP virtual double get(int propId);
 
 protected:
     Ptr<CvCapture> cap;
+    Ptr<IVideoCapture> icap;
+private:
+    static Ptr<IVideoCapture> createCameraCapture(int index);
 };
-
 
 class CV_EXPORTS_W VideoWriter
 {

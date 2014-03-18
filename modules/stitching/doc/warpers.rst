@@ -14,17 +14,17 @@ Rotation-only model image warper interface. ::
     public:
         virtual ~RotationWarper() {}
 
-        virtual Point2f warpPoint(const Point2f &pt, const Mat &K, const Mat &R) = 0;
+        virtual Point2f warpPoint(const Point2f &pt, InputArray K, InputArray R) = 0;
 
-        virtual Rect buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap) = 0;
+        virtual Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap) = 0;
 
-        virtual Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-                           Mat &dst) = 0;
+        virtual Point warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode,
+                           OutputArray dst) = 0;
 
-        virtual void warpBackward(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-                                  Size dst_size, Mat &dst) = 0;
+        virtual void warpBackward(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode,
+                                  Size dst_size, OutputArray dst) = 0;
 
-        virtual Rect warpRoi(Size src_size, const Mat &K, const Mat &R) = 0;
+        virtual Rect warpRoi(Size src_size, InputArray K, InputArray R) = 0;
     };
 
 detail::RotationWarper::warpPoint
@@ -32,7 +32,7 @@ detail::RotationWarper::warpPoint
 
 Projects the image point.
 
-.. ocv:function:: Point2f detail::RotationWarper::warpPoint(const Point2f &pt, const Mat &K, const Mat &R)
+.. ocv:function:: Point2f detail::RotationWarper::warpPoint(const Point2f &pt, InputArray K, InputArray R)
 
     :param pt: Source point
 
@@ -47,7 +47,7 @@ detail::RotationWarper::buildMaps
 
 Builds the projection maps according to the given camera data.
 
-.. ocv:function:: Rect detail::RotationWarper::buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap)
+.. ocv:function:: Rect detail::RotationWarper::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap)
 
     :param src_size: Source image size
 
@@ -66,7 +66,7 @@ detail::RotationWarper::warp
 
 Projects the image.
 
-.. ocv:function:: Point detail::RotationWarper::warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode, Mat &dst)
+.. ocv:function:: Point detail::RotationWarper::warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode, OutputArray dst)
 
     :param src: Source image
 
@@ -87,7 +87,7 @@ detail::RotationWarper::warpBackward
 
 Projects the image backward.
 
-.. ocv:function:: void detail::RotationWarper::warpBackward(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode, Size dst_size, Mat &dst)
+.. ocv:function:: void detail::RotationWarper::warpBackward(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode, Size dst_size, OutputArray dst)
 
     :param src: Projected image
 
@@ -106,7 +106,7 @@ Projects the image backward.
 detail::RotationWarper::warpRoi
 -------------------------------
 
-.. ocv:function:: Rect detail::RotationWarper::warpRoi(Size src_size, const Mat &K, const Mat &R)
+.. ocv:function:: Rect detail::RotationWarper::warpRoi(Size src_size, InputArray K, InputArray R)
 
     :param src_size: Source image bounding box
 
@@ -124,9 +124,9 @@ Base class for warping logic implementation. ::
 
     struct CV_EXPORTS ProjectorBase
     {
-        void setCameraParams(const Mat &K = Mat::eye(3, 3, CV_32F),
-                            const Mat &R = Mat::eye(3, 3, CV_32F),
-                            const Mat &T = Mat::zeros(3, 1, CV_32F));
+        void setCameraParams(InputArray K = Mat::eye(3, 3, CV_32F),
+                            InputArray R = Mat::eye(3, 3, CV_32F),
+                            InputArray T = Mat::zeros(3, 1, CV_32F));
 
         float scale;
         float k[9];
@@ -146,17 +146,17 @@ Base class for rotation-based warper using a `detail::ProjectorBase`_ derived cl
     class CV_EXPORTS RotationWarperBase : public RotationWarper
     {
     public:
-        Point2f warpPoint(const Point2f &pt, const Mat &K, const Mat &R);
+        Point2f warpPoint(const Point2f &pt, InputArray K, InputArray R);
 
-        Rect buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap);
+        Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap);
 
-        Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-                Mat &dst);
+        Point warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode,
+                OutputArray dst);
 
-        void warpBackward(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-                        Size dst_size, Mat &dst);
+        void warpBackward(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode,
+                        Size dst_size, OutputArray dst);
 
-        Rect warpRoi(Size src_size, const Mat &K, const Mat &R);
+        Rect warpRoi(Size src_size, InputArray K, InputArray R);
 
     protected:
 
@@ -183,14 +183,14 @@ Warper that maps an image onto the z = 1 plane. ::
 
         void setScale(float scale) { projector_.scale = scale; }
 
-        Point2f warpPoint(const Point2f &pt, const Mat &K, const Mat &R, const Mat &T);
+        Point2f warpPoint(const Point2f &pt, InputArray K, InputArray R, InputArray T);
 
-        Rect buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, Mat &xmap, Mat &ymap);
+        Rect buildMaps(Size src_size, InputArray K, InputArray R, InputArray T, OutputArray xmap, OutputArray ymap);
 
-        Point warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode,
-                   Mat &dst);
+        Point warp(InputArray src, InputArray K, InputArray R, InputArray T, int interp_mode, int border_mode,
+                   OutputArray dst);
 
-        Rect warpRoi(Size src_size, const Mat &K, const Mat &R, const Mat &T);
+        Rect warpRoi(Size src_size, InputArray K, InputArray R, InputArray T);
 
     protected:
         void detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br);

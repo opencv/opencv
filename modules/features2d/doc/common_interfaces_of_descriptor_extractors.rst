@@ -25,16 +25,17 @@ Abstract base class for computing descriptors for image keypoints. ::
     public:
         virtual ~DescriptorExtractor();
 
-        void compute( const Mat& image, vector<KeyPoint>& keypoints,
-                      Mat& descriptors ) const;
-        void compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints,
-                      vector<Mat>& descriptors ) const;
+        void compute( InputArray image, vector<KeyPoint>& keypoints,
+                      OutputArray descriptors ) const;
+        void compute( InputArrayOfArrays images, vector<vector<KeyPoint> >& keypoints,
+                      OutputArrayOfArrays descriptors ) const;
 
         virtual void read( const FileNode& );
         virtual void write( FileStorage& ) const;
 
         virtual int descriptorSize() const = 0;
         virtual int descriptorType() const = 0;
+        virtual int defaultNorm() const = 0;
 
         static Ptr<DescriptorExtractor> create( const String& descriptorExtractorType );
 
@@ -56,9 +57,9 @@ DescriptorExtractor::compute
 --------------------------------
 Computes the descriptors for a set of keypoints detected in an image (first variant) or image set (second variant).
 
-.. ocv:function:: void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const
+.. ocv:function:: void DescriptorExtractor::compute( InputArray image, vector<KeyPoint>& keypoints, OutputArray descriptors ) const
 
-.. ocv:function:: void DescriptorExtractor::compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, vector<Mat>& descriptors ) const
+.. ocv:function:: void DescriptorExtractor::compute( InputArrayOfArrays  images, vector<vector<KeyPoint> >& keypoints, OutputArrayOfArrays descriptors ) const
 
 .. ocv:pyfunction:: cv2.DescriptorExtractor_create.compute(image, keypoints[, descriptors]) -> keypoints, descriptors
 
@@ -114,37 +115,7 @@ them into a single color descriptor. ::
         virtual void write( FileStorage& ) const;
         virtual int descriptorSize() const;
         virtual int descriptorType() const;
+        virtual int defaultNorm() const;
     protected:
         ...
     };
-
-
-
-BriefDescriptorExtractor
-------------------------
-.. ocv:class:: BriefDescriptorExtractor : public DescriptorExtractor
-
-Class for computing BRIEF descriptors described in a paper of Calonder M., Lepetit V.,
-Strecha C., Fua P. *BRIEF: Binary Robust Independent Elementary Features* ,
-11th European Conference on Computer Vision (ECCV), Heraklion, Crete. LNCS Springer, September 2010. ::
-
-    class BriefDescriptorExtractor : public DescriptorExtractor
-    {
-    public:
-        static const int PATCH_SIZE = 48;
-        static const int KERNEL_SIZE = 9;
-
-        // bytes is a length of descriptor in bytes. It can be equal 16, 32 or 64 bytes.
-        BriefDescriptorExtractor( int bytes = 32 );
-
-        virtual void read( const FileNode& );
-        virtual void write( FileStorage& ) const;
-        virtual int descriptorSize() const;
-        virtual int descriptorType() const;
-    protected:
-        ...
-    };
-
-.. note::
-
-   * A complete BRIEF extractor sample can be found at opencv_source_code/samples/cpp/brief_match_test.cpp

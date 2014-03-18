@@ -1,10 +1,10 @@
 *.autosave
 *.pyc
 *.user
+*~
 .*.swp
 .DS_Store
 .sw[a-z]
-/modules/refman.rst
 Thumbs.db
 tags
 tegra/

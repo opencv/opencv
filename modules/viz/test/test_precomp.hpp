@@ -41,9 +41,6 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #ifdef __GNUC__
@@ -57,12 +54,59 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-#include "opencv2/ts.hpp"
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
+#include <opencv2/core/version.hpp>
+#include <opencv2/viz/vizcore.hpp>
+
+namespace cv
+{
+    Mat imread(const String& filename, int flags = 1);
+}
+
+#if CV_MAJOR_VERSION < 3
+    #include "opencv2/ts/ts.hpp"
+#else
+    #include "opencv2/ts.hpp"
+#endif
 
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <limits>
+
+namespace cv
+{
+    struct Path
+    {
+        static String combine(const String& item1, const String& item2);
+        static String combine(const String& item1, const String& item2, const String& item3);
+        static String change_extension(const String& file, const String& ext);
+    };
+
+    inline cv::String get_dragon_ply_file_path()
+    {
+        return Path::combine(cvtest::TS::ptr()->get_data_path(), "dragon.ply");
+    }
+
+    template<typename _Tp>
+    inline std::vector< Affine3<_Tp> > generate_test_trajectory()
+    {
+        std::vector< Affine3<_Tp> > result;
+
+        for (int i = 0, j = 0; i <= 270; i += 3, j += 10)
+        {
+            double x = 2 * cos(i * 3 * CV_PI/180.0) * (1.0 + 0.5 * cos(1.2 + i * 1.2 * CV_PI/180.0));
+            double y = 0.25 + i/270.0 + sin(j * CV_PI/180.0) * 0.2 * sin(0.6 + j * 1.5 * CV_PI/180.0);
+            double z = 2 * sin(i * 3 * CV_PI/180.0) * (1.0 + 0.5 * cos(1.2 + i * CV_PI/180.0));
+            result.push_back(viz::makeCameraPose(Vec3d(x, y, z), Vec3d::all(0.0), Vec3d(0.0, 1.0, 0.0)));
+        }
+        return result;
+    }
+
+    inline Mat make_gray(const Mat& image)
+    {
+        Mat chs[3]; split(image, chs);
+        return 0.114 * chs[0] + 0.58 * chs[1] + 0.3 * chs[2];
+    }
+}
 
 #endif

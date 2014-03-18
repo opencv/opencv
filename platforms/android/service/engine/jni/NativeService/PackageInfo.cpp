@@ -19,6 +19,8 @@ map<int, string> PackageInfo::InitPlatformNameMap()
     result[PLATFORM_TEGRA2] = PLATFORM_TEGRA2_NAME;
     result[PLATFORM_TEGRA3] = PLATFORM_TEGRA3_NAME;
     result[PLATFORM_TEGRA4] = PLATFORM_TEGRA4_NAME;
+    result[PLATFORM_TEGRA4i] = PLATFORM_TEGRA4_NAME;
+    result[PLATFORM_TEGRA5] = PLATFORM_TEGRA5_NAME;
 
     return result;
 }
@@ -168,7 +170,7 @@ inline string JoinPlatform(int platform)
     return result;
 }
 
-inline int SplitPlatfrom(const vector<string>& features)
+inline int SplitPlatform(const vector<string>& features)
 {
     int result = 0;
 
@@ -201,7 +203,7 @@ inline int SplitPlatfrom(const vector<string>& features)
 }
 
 /* Package naming convention
- * All parts of package name seporated by "_" symbol
+ * All parts of package name separated by "_" symbol
  * First part is base namespace.
  * Second part is version. Version starts from "v" symbol. After "v" symbol version nomber without dot symbol added.
  * If platform is known third part is platform name
@@ -417,7 +419,7 @@ InstallPath(install_path)
             return;
         }
 
-        Platform = SplitPlatfrom(features);
+        Platform = SplitPlatform(features);
         if (PLATFORM_UNKNOWN != Platform)
         {
             switch (Platform)

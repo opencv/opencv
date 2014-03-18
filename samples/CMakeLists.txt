@@ -13,12 +13,15 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_LIST_DIR)
 add_subdirectory(c)
 add_subdirectory(cpp)
 add_subdirectory(gpu)
-add_subdirectory(ocl)
+add_subdirectory(tapi)
+
+if(WIN32 AND HAVE_DIRECTX)
+  add_subdirectory(directx)
+endif()
 
 if(ANDROID AND BUILD_ANDROID_EXAMPLES)
   add_subdirectory(android)
 endif()
-
 
 #
 # END OF BUILD CASE 1: Build samples with library sources
@@ -59,8 +62,11 @@ endif()
 
 add_subdirectory(c)
 add_subdirectory(cpp)
-add_subdirectory(ocl)
 # FIXIT: can't use cvconfig.h in samples: add_subdirectory(gpu)
+
+if(WIN32)
+  add_subdirectory(directx)
+endif()
 
 #
 # END OF BUILD CASE 2: Build samples with library binaries

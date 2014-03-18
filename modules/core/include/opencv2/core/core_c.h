@@ -120,7 +120,7 @@ CVAPI(void)  cvResetImageROI( IplImage* image );
 /* Retrieves image ROI */
 CVAPI(CvRect) cvGetImageROI( const IplImage* image );
 
-/* Allocates and initalizes CvMat header */
+/* Allocates and initializes CvMat header */
 CVAPI(CvMat*)  cvCreateMatHeader( int rows, int cols, int type );
 
 #define CV_AUTOSTEP  0x7fffffff

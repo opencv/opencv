@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -705,10 +706,52 @@ private:
     int thresholdType;
 };
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, double maxval, int thresh_type )
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+        kercn = ocl::predictOptimalVectorWidth(_src, _dst), ktype = CV_MAKE_TYPE(depth, kercn);
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if ( !(thresh_type == THRESH_BINARY || thresh_type == THRESH_BINARY_INV || thresh_type == THRESH_TRUNC ||
+           thresh_type == THRESH_TOZERO || thresh_type == THRESH_TOZERO_INV) ||
+         (!doubleSupport && depth == CV_64F))
+        return false;
+
+    const char * const thresholdMap[] = { "THRESH_BINARY", "THRESH_BINARY_INV", "THRESH_TRUNC",
+                                          "THRESH_TOZERO", "THRESH_TOZERO_INV" };
+    ocl::Kernel k("threshold", ocl::imgproc::threshold_oclsrc,
+                  format("-D %s -D T=%s -D T1=%s%s", thresholdMap[thresh_type],
+                         ocl::typeToStr(ktype), ocl::typeToStr(depth),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(src.size(), type);
+    UMat dst = _dst.getUMat();
+
+    if (depth <= CV_32S)
+        thresh = cvFloor(thresh);
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst, cn, kercn),
+           ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(thresh))),
+           ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(maxval))));
+
+    size_t globalsize[2] = { dst.cols * cn / kercn, dst.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+
+#endif
+
 }
 
 double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double maxval, int type )
 {
+    CV_OCL_RUN_(_src.dims() <= 2 && _dst.isUMat(),
+                ocl_threshold(_src, _dst, thresh, maxval, type), thresh)
+
     Mat src = _src.getMat();
     bool use_otsu = (type & THRESH_OTSU) != 0;
     type &= THRESH_MASK;

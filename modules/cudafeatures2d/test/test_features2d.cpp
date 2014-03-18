@@ -52,20 +52,20 @@ using namespace cvtest;
 namespace
 {
     IMPLEMENT_PARAM_CLASS(FAST_Threshold, int)
-    IMPLEMENT_PARAM_CLASS(FAST_NonmaxSupression, bool)
+    IMPLEMENT_PARAM_CLASS(FAST_NonmaxSuppression, bool)
 }
 
-PARAM_TEST_CASE(FAST, cv::cuda::DeviceInfo, FAST_Threshold, FAST_NonmaxSupression)
+PARAM_TEST_CASE(FAST, cv::cuda::DeviceInfo, FAST_Threshold, FAST_NonmaxSuppression)
 {
     cv::cuda::DeviceInfo devInfo;
     int threshold;
-    bool nonmaxSupression;
+    bool nonmaxSuppression;
 
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         threshold = GET_PARAM(1);
-        nonmaxSupression = GET_PARAM(2);
+        nonmaxSuppression = GET_PARAM(2);
 
         cv::cuda::setDevice(devInfo.deviceID());
     }
@@ -77,7 +77,7 @@ CUDA_TEST_P(FAST, Accuracy)
     ASSERT_FALSE(image.empty());
 
     cv::cuda::FAST_CUDA fast(threshold);
-    fast.nonmaxSupression = nonmaxSupression;
+    fast.nonmaxSuppression = nonmaxSuppression;
 
     if (!supportFeature(devInfo, cv::cuda::GLOBAL_ATOMICS))
     {
@@ -97,7 +97,7 @@ CUDA_TEST_P(FAST, Accuracy)
         fast(loadMat(image), cv::cuda::GpuMat(), keypoints);
 
         std::vector<cv::KeyPoint> keypoints_gold;
-        cv::FAST(image, keypoints_gold, threshold, nonmaxSupression);
+        cv::FAST(image, keypoints_gold, threshold, nonmaxSuppression);
 
         ASSERT_KEYPOINTS_EQ(keypoints_gold, keypoints);
     }
@@ -106,7 +106,7 @@ CUDA_TEST_P(FAST, Accuracy)
 INSTANTIATE_TEST_CASE_P(CUDA_Features2D, FAST, testing::Combine(
     ALL_DEVICES,
     testing::Values(FAST_Threshold(25), FAST_Threshold(50)),
-    testing::Values(FAST_NonmaxSupression(false), FAST_NonmaxSupression(true))));
+    testing::Values(FAST_NonmaxSuppression(false), FAST_NonmaxSuppression(true))));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // ORB

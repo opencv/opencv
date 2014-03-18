@@ -19,7 +19,8 @@ static std::vector<std::string> available_impls;
 
 static std::string  param_impl;
 
-static enum PERF_STRATEGY param_strategy = PERF_STRATEGY_BASE;
+static enum PERF_STRATEGY strategyForce = PERF_STRATEGY_DEFAULT;
+static enum PERF_STRATEGY strategyModule = PERF_STRATEGY_BASE;
 
 static double       param_max_outliers;
 static double       param_max_deviation;
@@ -112,6 +113,14 @@ Regression& Regression::add(TestBase* test, const std::string& name, cv::InputAr
 {
     if(test) test->setVerified();
     return instance()(name, array, eps, err);
+}
+
+Regression& Regression::addMoments(TestBase* test, const std::string& name, const cv::Moments& array, double eps, ERROR_TYPE err)
+{
+    int len = (int)sizeof(cv::Moments) / sizeof(double);
+    cv::Mat m(1, len, CV_64F, (void*)&array);
+
+    return Regression::add(test, name, m, eps, err);
 }
 
 Regression& Regression::addKeypoints(TestBase* test, const std::string& name, const std::vector<cv::KeyPoint>& array, double eps, ERROR_TYPE err)
@@ -267,7 +276,8 @@ std::string Regression::getCurrentTestNodeName()
 
 bool Regression::isVector(cv::InputArray a)
 {
-    return a.kind() == cv::_InputArray::STD_VECTOR_MAT || a.kind() == cv::_InputArray::STD_VECTOR_VECTOR;
+    return a.kind() == cv::_InputArray::STD_VECTOR_MAT || a.kind() == cv::_InputArray::STD_VECTOR_VECTOR ||
+           a.kind() == cv::_InputArray::STD_VECTOR_UMAT;
 }
 
 double Regression::getElem(cv::Mat& m, int y, int x, int cn)
@@ -684,11 +694,11 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     }
     else if (perf_strategy == "base")
     {
-        param_strategy = PERF_STRATEGY_BASE;
+        strategyForce = PERF_STRATEGY_BASE;
     }
     else if (perf_strategy == "simple")
     {
-        param_strategy = PERF_STRATEGY_SIMPLE;
+        strategyForce = PERF_STRATEGY_SIMPLE;
     }
     else
     {
@@ -788,16 +798,16 @@ std::string TestBase::getSelectedImpl()
     return param_impl;
 }
 
-enum PERF_STRATEGY TestBase::getPerformanceStrategy()
+enum PERF_STRATEGY TestBase::setModulePerformanceStrategy(enum PERF_STRATEGY strategy)
 {
-    return param_strategy;
+    enum PERF_STRATEGY ret = strategyModule;
+    strategyModule = strategy;
+    return ret;
 }
 
-enum PERF_STRATEGY TestBase::setPerformanceStrategy(enum PERF_STRATEGY strategy)
+enum PERF_STRATEGY TestBase::getCurrentModulePerformanceStrategy()
 {
-    enum PERF_STRATEGY ret = param_strategy;
-    param_strategy = strategy;
-    return ret;
+    return strategyForce == PERF_STRATEGY_DEFAULT ? strategyModule : strategyForce;
 }
 
 
@@ -830,7 +840,7 @@ int64 TestBase::_calibrate()
     _helper h;
     h.PerfTestBody();
     double compensation = h.getMetrics().min;
-    if (param_strategy == PERF_STRATEGY_SIMPLE)
+    if (getCurrentModulePerformanceStrategy() == PERF_STRATEGY_SIMPLE)
     {
         CV_Assert(compensation < 0.01 * cv::getTickFrequency());
         compensation = 0.0f; // simple strategy doesn't require any compensation
@@ -843,15 +853,18 @@ int64 TestBase::_calibrate()
 # pragma warning(push)
 # pragma warning(disable:4355)  // 'this' : used in base member initializer list
 #endif
-TestBase::TestBase(): declare(this)
+TestBase::TestBase(): testStrategy(PERF_STRATEGY_DEFAULT), declare(this)
 {
+    lastTime = totalTime = timeLimit = 0;
+    nIters = currentIter = runsPerIteration = 0;
+    verified = false;
 }
 #ifdef _MSC_VER
 # pragma warning(pop)
 #endif
 
 
-void TestBase::declareArray(SizeVector& sizes, cv::InputOutputArray a, int wtype)
+void TestBase::declareArray(SizeVector& sizes, cv::InputOutputArray a, WarmUpType wtype)
 {
     if (!a.empty())
     {
@@ -862,10 +875,31 @@ void TestBase::declareArray(SizeVector& sizes, cv::InputOutputArray a, int wtype
         ADD_FAILURE() << "  Uninitialized input/output parameters are not allowed for performance tests";
 }
 
-void TestBase::warmup(cv::InputOutputArray a, int wtype)
+void TestBase::warmup(cv::InputOutputArray a, WarmUpType wtype)
 {
-    if (a.empty()) return;
-    if (a.kind() != cv::_InputArray::STD_VECTOR_MAT && a.kind() != cv::_InputArray::STD_VECTOR_VECTOR)
+    if (a.empty())
+        return;
+    else if (a.isUMat())
+    {
+        if (wtype == WARMUP_RNG || wtype == WARMUP_WRITE)
+        {
+            int depth = a.depth();
+            if (depth == CV_8U)
+                cv::randu(a, 0, 256);
+            else if (depth == CV_8S)
+                cv::randu(a, -128, 128);
+            else if (depth == CV_16U)
+                cv::randu(a, 0, 1024);
+            else if (depth == CV_32F || depth == CV_64F)
+                cv::randu(a, -1.0, 1.0);
+            else if (depth == CV_16S || depth == CV_32S)
+                cv::randu(a, -4096, 4096);
+            else
+                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported format");
+        }
+        return;
+    }
+    else if (a.kind() != cv::_InputArray::STD_VECTOR_MAT && a.kind() != cv::_InputArray::STD_VECTOR_VECTOR)
         warmup_impl(a.getMat(), wtype);
     else
     {
@@ -896,6 +930,14 @@ cv::Size TestBase::getSize(cv::InputArray a)
     return cv::Size();
 }
 
+PERF_STRATEGY TestBase::getCurrentPerformanceStrategy() const
+{
+    if (strategyForce == PERF_STRATEGY_DEFAULT)
+        return (testStrategy == PERF_STRATEGY_DEFAULT) ? strategyModule : testStrategy;
+    else
+        return strategyForce;
+}
+
 bool TestBase::next()
 {
     static int64 lastActivityPrintTime = 0;
@@ -924,13 +966,13 @@ bool TestBase::next()
             break;
         }
 
-        if (param_strategy == PERF_STRATEGY_BASE)
+        if (getCurrentPerformanceStrategy() == PERF_STRATEGY_BASE)
         {
             has_next = currentIter < nIters && totalTime < timeLimit;
         }
         else
         {
-            assert(param_strategy == PERF_STRATEGY_SIMPLE);
+            assert(getCurrentPerformanceStrategy() == PERF_STRATEGY_SIMPLE);
             if (totalTime - lastActivityPrintTime >= cv::getTickFrequency() * 10)
             {
                 std::cout << '.' << std::endl;
@@ -974,7 +1016,7 @@ bool TestBase::next()
     return has_next;
 }
 
-void TestBase::warmup_impl(cv::Mat m, int wtype)
+void TestBase::warmup_impl(cv::Mat m, WarmUpType wtype)
 {
     switch(wtype)
     {
@@ -1053,7 +1095,7 @@ performance_metrics& TestBase::calcMetrics()
     TimeVector::const_iterator start = times.begin();
     TimeVector::const_iterator end = times.end();
 
-    if (param_strategy == PERF_STRATEGY_BASE)
+    if (getCurrentPerformanceStrategy() == PERF_STRATEGY_BASE)
     {
         //estimate mean and stddev for log(time)
         double gmean = 0;
@@ -1084,7 +1126,7 @@ performance_metrics& TestBase::calcMetrics()
             ++end, --metrics.outliers;
         }
     }
-    else if (param_strategy == PERF_STRATEGY_SIMPLE)
+    else if (getCurrentPerformanceStrategy() == PERF_STRATEGY_SIMPLE)
     {
         metrics.outliers = static_cast<int>(times.size() * param_max_outliers / 100);
         for (unsigned int i = 0; i < metrics.outliers; i++)
@@ -1143,7 +1185,7 @@ void TestBase::validateMetrics()
     ASSERT_GE(m.samples, 1u)
       << "  No time measurements was performed.\nstartTimer() and stopTimer() commands are required for performance tests.";
 
-    if (param_strategy == PERF_STRATEGY_BASE)
+    if (getCurrentPerformanceStrategy() == PERF_STRATEGY_BASE)
     {
         EXPECT_GE(m.samples, param_min_samples)
           << "  Only a few samples are collected.\nPlease increase number of iterations or/and time limit to get reliable performance measurements.";
@@ -1157,12 +1199,12 @@ void TestBase::validateMetrics()
         EXPECT_LE(m.outliers, std::max((unsigned int)cvCeil(m.samples * param_max_outliers / 100.), 1u))
           << "  Test results are not reliable (too many outliers).";
     }
-    else if (param_strategy == PERF_STRATEGY_SIMPLE)
+    else if (getCurrentPerformanceStrategy() == PERF_STRATEGY_SIMPLE)
     {
         double mean = metrics.mean * 1000.0f / metrics.frequency;
         double stddev = metrics.stddev * 1000.0f / metrics.frequency;
         double percents = stddev / mean * 100.f;
-        printf("    samples = %d, mean = %.2f, stddev = %.2f (%.1f%%)\n", (int)metrics.samples, mean, stddev, percents);
+        printf("[ PERFSTAT ]    (samples = %d, mean = %.2f, stddev = %.2f (%.1f%%))\n", (int)metrics.samples, mean, stddev, percents);
     }
     else
     {
@@ -1174,7 +1216,14 @@ void TestBase::reportMetrics(bool toJUnitXML)
 {
     performance_metrics& m = calcMetrics();
 
-    if (toJUnitXML)
+    if (m.terminationReason == performance_metrics::TERM_SKIP_TEST)
+    {
+        if (toJUnitXML)
+        {
+            RecordProperty("custom_status", "skipped");
+        }
+    }
+    else if (toJUnitXML)
     {
         RecordProperty("bytesIn", (int)m.bytesIn);
         RecordProperty("bytesOut", (int)m.bytesOut);
@@ -1266,21 +1315,30 @@ void TestBase::SetUp()
 
 void TestBase::TearDown()
 {
-    if (!HasFailure() && !verified)
-        ADD_FAILURE() << "The test has no sanity checks. There should be at least one check at the end of performance test.";
-
-    validateMetrics();
-    if (HasFailure())
-        reportMetrics(false);
+    if (metrics.terminationReason == performance_metrics::TERM_SKIP_TEST)
+    {
+        LOGI("\tTest was skipped");
+        GTEST_SUCCEED() << "Test was skipped";
+    }
     else
     {
-        const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
-        const char* type_param = test_info->type_param();
-        const char* value_param = test_info->value_param();
-        if (value_param) printf("[ VALUE    ] \t%s\n", value_param), fflush(stdout);
-        if (type_param)  printf("[ TYPE     ] \t%s\n", type_param), fflush(stdout);
-        reportMetrics(true);
+        if (!HasFailure() && !verified)
+            ADD_FAILURE() << "The test has no sanity checks. There should be at least one check at the end of performance test.";
+
+        validateMetrics();
+        if (HasFailure())
+        {
+            reportMetrics(false);
+            return;
+        }
     }
+
+    const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    const char* type_param = test_info->type_param();
+    const char* value_param = test_info->value_param();
+    if (value_param) printf("[ VALUE    ] \t%s\n", value_param), fflush(stdout);
+    if (type_param)  printf("[ TYPE     ] \t%s\n", type_param), fflush(stdout);
+    reportMetrics(true);
 }
 
 std::string TestBase::getDataPath(const std::string& relativePath)
@@ -1329,6 +1387,11 @@ void TestBase::RunPerfTestBody()
     try
     {
         this->PerfTestBody();
+    }
+    catch(PerfSkipTestException&)
+    {
+        metrics.terminationReason = performance_metrics::TERM_SKIP_TEST;
+        return;
     }
     catch(PerfEarlyExitException&)
     {
@@ -1390,14 +1453,14 @@ TestBase::_declareHelper& TestBase::_declareHelper::runs(unsigned int runsNumber
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->inputData, a1, wtype);
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->inputData, a1, wtype);
@@ -1405,7 +1468,7 @@ TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, 
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->inputData, a1, wtype);
@@ -1414,7 +1477,7 @@ TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, 
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->inputData, a1, wtype);
@@ -1424,14 +1487,14 @@ TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, 
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->outputData, a1, wtype);
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->outputData, a1, wtype);
@@ -1439,7 +1502,7 @@ TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1,
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->outputData, a1, wtype);
@@ -1448,13 +1511,19 @@ TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1,
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->outputData, a1, wtype);
     TestBase::declareArray(test->outputData, a2, wtype);
     TestBase::declareArray(test->outputData, a3, wtype);
     TestBase::declareArray(test->outputData, a4, wtype);
+    return *this;
+}
+
+TestBase::_declareHelper& TestBase::_declareHelper::strategy(enum PERF_STRATEGY s)
+{
+    test->testStrategy = s;
     return *this;
 }
 
@@ -1546,6 +1615,11 @@ void PrintTo(const MatType& t, ::std::ostream* os)
 *                                  ::cv::PrintTo
 \*****************************************************************************************/
 namespace cv {
+
+void PrintTo(const String& str, ::std::ostream* os)
+{
+    *os << "\"" << str << "\"";
+}
 
 void PrintTo(const Size& sz, ::std::ostream* os)
 {

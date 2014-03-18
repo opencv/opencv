@@ -43,9 +43,13 @@
 #include "precomp.hpp"
 #include <fstream>
 
-#ifndef INT32_MAX
-#define __STDC_LIMIT_MACROS
-#include <stdint.h>
+#if defined _MSC_VER && _MSC_VER == 1500
+    typedef int int_fast32_t;
+#else
+    #ifndef INT32_MAX
+    #define __STDC_LIMIT_MACROS
+    #include <stdint.h>
+    #endif
 #endif
 
 using namespace std;
@@ -79,7 +83,7 @@ public:
     //Constructor
     ERFilterNM();
     //Destructor
-    ~ERFilterNM() {};
+    ~ERFilterNM() {}
 
     float minProbability;
     bool  nonMaxSuppression;
@@ -142,7 +146,7 @@ public:
     //Constructor
     ERClassifierNM1(const std::string& filename);
     // Destructor
-    ~ERClassifierNM1() {};
+    ~ERClassifierNM1() {}
 
     // The classifier must return probability measure for the region.
     double eval(const ERStat& stat);
@@ -158,7 +162,7 @@ public:
     //constructor
     ERClassifierNM2(const std::string& filename);
     // Destructor
-    ~ERClassifierNM2() {};
+    ~ERClassifierNM2() {}
 
     // The classifier must return probability measure for the region.
     double eval(const ERStat& stat);
@@ -290,7 +294,7 @@ void ERFilterNM::er_tree_extract( InputArray image )
         push_new_component = false;
 
         // explore the (remaining) edges to the neighbors to the current pixel
-        for (current_edge = current_edge; current_edge < 4; current_edge++)
+        for ( ; current_edge < 4; current_edge++)
         {
 
             int neighbour_pixel = current_pixel;
@@ -929,14 +933,14 @@ ERStat* ERFilterNM::er_tree_nonmax_suppression ( ERStat * stat, ERStat *parent, 
 void ERFilterNM::setCallback(const Ptr<ERFilter::Callback>& cb)
 {
     classifier = cb;
-};
+}
 
 void ERFilterNM::setMinArea(float _minArea)
 {
     CV_Assert( (_minArea >= 0) && (_minArea < maxArea) );
     minArea = _minArea;
     return;
-};
+}
 
 void ERFilterNM::setMaxArea(float _maxArea)
 {
@@ -944,39 +948,39 @@ void ERFilterNM::setMaxArea(float _maxArea)
     CV_Assert(minArea < _maxArea);
     maxArea = _maxArea;
     return;
-};
+}
 
 void ERFilterNM::setThresholdDelta(int _thresholdDelta)
 {
     CV_Assert( (_thresholdDelta > 0) && (_thresholdDelta <= 128) );
     thresholdDelta = _thresholdDelta;
     return;
-};
+}
 
 void ERFilterNM::setMinProbability(float _minProbability)
 {
     CV_Assert( (_minProbability >= 0.0) && (_minProbability <= 1.0) );
     minProbability = _minProbability;
     return;
-};
+}
 
 void ERFilterNM::setMinProbabilityDiff(float _minProbabilityDiff)
 {
     CV_Assert( (_minProbabilityDiff >= 0.0) && (_minProbabilityDiff <= 1.0) );
     minProbabilityDiff = _minProbabilityDiff;
     return;
-};
+}
 
 void ERFilterNM::setNonMaxSuppression(bool _nonMaxSuppression)
 {
     nonMaxSuppression = _nonMaxSuppression;
     return;
-};
+}
 
 int ERFilterNM::getNumRejected()
 {
     return num_rejected_regions;
-};
+}
 
 
 
@@ -989,7 +993,7 @@ ERClassifierNM1::ERClassifierNM1(const std::string& filename)
         boost.load( filename.c_str(), "boost" );
     else
         CV_Error(CV_StsBadArg, "Default classifier file not found!");
-};
+}
 
 double ERClassifierNM1::eval(const ERStat& stat)
 {
@@ -1005,7 +1009,7 @@ double ERClassifierNM1::eval(const ERStat& stat)
 
     // Logistic Correction returns a probability value (in the range(0,1))
     return (double)1-(double)1/(1+exp(-2*votes));
-};
+}
 
 
 // load default 2nd stage classifier if found
@@ -1015,7 +1019,7 @@ ERClassifierNM2::ERClassifierNM2(const std::string& filename)
         boost.load( filename.c_str(), "boost" );
     else
         CV_Error(CV_StsBadArg, "Default classifier file not found!");
-};
+}
 
 double ERClassifierNM2::eval(const ERStat& stat)
 {
@@ -1032,7 +1036,7 @@ double ERClassifierNM2::eval(const ERStat& stat)
 
     // Logistic Correction returns a probability value (in the range(0,1))
     return (double)1-(double)1/(1+exp(-2*votes));
-};
+}
 
 
 /*!
@@ -1945,7 +1949,6 @@ private:
     double (dissimilarity::*distfn) (const int_fast32_t, const int_fast32_t) const;
 
     auto_array_ptr<double> precomputed;
-    double * precomputed2;
 
     double * V;
     const double * V_data;
@@ -2160,7 +2163,7 @@ public:
     unsigned char metric_;
 
     /// Constructor.
-    MaxMeaningfulClustering(unsigned char method, unsigned char metric){ method_=method; metric_=metric; };
+    MaxMeaningfulClustering(unsigned char method, unsigned char metric){ method_=method; metric_=metric; }
 
     void operator()(double *data, unsigned int num, int dim, unsigned char method,
                     unsigned char metric, vector< vector<int> > *meaningful_clusters);

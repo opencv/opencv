@@ -1,3 +1,8 @@
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+// eliminating duplicated round() declaration
+#define HAVE_ROUND
+#endif
+
 #include <Python.h>
 
 #define MODULESTR "cv2"
@@ -184,7 +189,6 @@ public:
     UMatData* allocate(PyObject* o, int dims, const int* sizes, int type, size_t* step) const
     {
         UMatData* u = new UMatData(this);
-        u->refcount = 1;
         u->data = u->origdata = (uchar*)PyArray_DATA((PyArrayObject*) o);
         npy_intp* _strides = PyArray_STRIDES((PyArrayObject*) o);
         for( int i = 0; i < dims - 1; i++ )
@@ -195,8 +199,14 @@ public:
         return u;
     }
 
-    UMatData* allocate(int dims0, const int* sizes, int type, size_t* step) const
+    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const
     {
+        if( data != 0 )
+        {
+            CV_Error(Error::StsAssert, "The data should normally be NULL!");
+            // probably this is safe to do in such extreme case
+            return stdAllocator->allocate(dims0, sizes, type, data, step, flags, usageFlags);
+        }
         PyEnsureGIL gil;
 
         int depth = CV_MAT_DEPTH(type);
@@ -218,9 +228,9 @@ public:
         return allocate(o, dims0, sizes, type, step);
     }
 
-    bool allocate(UMatData* u, int accessFlags) const
+    bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const
     {
-        return stdAllocator->allocate(u, accessFlags);
+        return stdAllocator->allocate(u, accessFlags, usageFlags);
     }
 
     void deallocate(UMatData* u) const
@@ -229,41 +239,9 @@ public:
         {
             PyEnsureGIL gil;
             PyObject* o = (PyObject*)u->userdata;
-            Py_DECREF(o);
+            Py_XDECREF(o);
             delete u;
         }
-    }
-
-    void map(UMatData*, int) const
-    {
-    }
-
-    void unmap(UMatData* u) const
-    {
-        if(u->urefcount == 0)
-            deallocate(u);
-    }
-
-    void download(UMatData* u, void* dstptr,
-                  int dims, const size_t sz[],
-                  const size_t srcofs[], const size_t srcstep[],
-                  const size_t dststep[]) const
-    {
-        stdAllocator->download(u, dstptr, dims, sz, srcofs, srcstep, dststep);
-    }
-
-    void upload(UMatData* u, const void* srcptr, int dims, const size_t sz[],
-                const size_t dstofs[], const size_t dststep[],
-                const size_t srcstep[]) const
-    {
-        stdAllocator->upload(u, srcptr, dims, sz, dstofs, dststep, srcstep);
-    }
-
-    void copy(UMatData* usrc, UMatData* udst, int dims, const size_t sz[],
-              const size_t srcofs[], const size_t srcstep[],
-              const size_t dstofs[], const size_t dststep[], bool sync) const
-    {
-        stdAllocator->copy(usrc, udst, dims, sz, srcofs, srcstep, dstofs, dststep, sync);
     }
 
     const MatAllocator* stdAllocator;
@@ -437,6 +415,7 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
 
     m = Mat(ndims, size, type, PyArray_DATA(oarr), step);
     m.u = g_numpyAllocator.allocate(o, ndims, size, type, step);
+    m.addref();
 
     if( !needcopy )
     {

@@ -43,6 +43,9 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
+#include "opencv2/opencv_modules.hpp"
+#include "cvconfig.h"
+
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/cuda.hpp"
@@ -106,7 +109,6 @@ extern const uchar g_Saturate8u[];
 
 #if defined WIN32 || defined _WIN32
 void deleteThreadAllocData();
-void deleteThreadData();
 #endif
 
 template<typename T1, typename T2=T1, typename T3=T1> struct OpAdd
@@ -205,29 +207,61 @@ enum { BLOCK_SIZE = 1024 };
 
 inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)
 {
-    if( sc.dims > 2 || (sc.cols != 1 && sc.rows != 1) || !sc.isContinuous() )
+    if( sc.dims > 2 || !sc.isContinuous() )
+        return false;
+    Size sz = sc.size();
+    if(sz.width != 1 && sz.height != 1)
         return false;
     int cn = CV_MAT_CN(atype);
     if( akind == _InputArray::MATX && sckind != _InputArray::MATX )
         return false;
-    return sc.size() == Size(1, 1) || sc.size() == Size(1, cn) || sc.size() == Size(cn, 1) ||
-           (sc.size() == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
+    return sz == Size(1, 1) || sz == Size(1, cn) || sz == Size(cn, 1) ||
+           (sz == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
+}
+
+inline bool checkScalar(InputArray sc, int atype, int sckind, int akind)
+{
+    if( sc.dims() > 2 || !sc.isContinuous() )
+        return false;
+    Size sz = sc.size();
+    if(sz.width != 1 && sz.height != 1)
+        return false;
+    int cn = CV_MAT_CN(atype);
+    if( akind == _InputArray::MATX && sckind != _InputArray::MATX )
+        return false;
+    return sz == Size(1, 1) || sz == Size(1, cn) || sz == Size(cn, 1) ||
+           (sz == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
 }
 
 void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t blocksize );
 
-struct TLSData
+struct CoreTLSData
 {
-    TLSData();
+    CoreTLSData() : device(0), useOpenCL(-1)
+    {}
+
     RNG rng;
     int device;
     ocl::Queue oclQueue;
     int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
-
-    static TLSData* get();
 };
 
-namespace ocl { MatAllocator* getOpenCLAllocator(); }
+extern TLSData<CoreTLSData> coreTlsData;
+
+#if defined(BUILD_SHARED_LIBS)
+#if defined WIN32 || defined _WIN32 || defined WINCE
+#define CL_RUNTIME_EXPORT __declspec(dllexport)
+#elif defined __GNUC__ && __GNUC__ >= 4
+#define CL_RUNTIME_EXPORT __attribute__ ((visibility ("default")))
+#else
+#define CL_RUNTIME_EXPORT
+#endif
+#else
+#define CL_RUNTIME_EXPORT
+#endif
+
+extern bool __termination; // skip some cleanups, because process is terminating
+                           // (for example, if ExitProcess() was already called)
 
 }
 

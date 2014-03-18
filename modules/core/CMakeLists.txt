@@ -1,5 +1,5 @@
 set(the_description "The Core Functionality")
-ocv_add_module(core PRIVATE_REQUIRED ${ZLIB_LIBRARIES} OPTIONAL opencv_cudev)
+ocv_add_module(core PRIVATE_REQUIRED ${ZLIB_LIBRARIES} "${OPENCL_LIBRARIES}" OPTIONAL opencv_cudev)
 ocv_module_include_directories(${ZLIB_INCLUDE_DIRS})
 
 if(HAVE_WINRT_CX)
@@ -10,7 +10,7 @@ if(HAVE_WINRT)
 endif()
 
 if(HAVE_CUDA)
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
 endif()
 
 file(GLOB lib_cuda_hdrs        "include/opencv2/${name}/cuda/*.hpp"        "include/opencv2/${name}/cuda/*.h")

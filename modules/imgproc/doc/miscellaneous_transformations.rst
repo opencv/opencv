@@ -110,6 +110,8 @@ But in case of a non-linear transformation, an input RGB image should be normali
 
 If you use ``cvtColor`` with 8-bit images, the conversion will have some information lost. For many applications, this will not be noticeable but it is recommended to use 32-bit images in applications that need the full range of colors or that convert an image before an operation and then convert back.
 
+If conversion adds the alpha channel, its value will set to the maximum of corresponding channel range: 255 for ``CV_8U``, 65535 for ``CV_16U``, 1 for ``CV_32F``.
+
 The function can do the following transformations:
 
 *
@@ -124,7 +126,7 @@ The function can do the following transformations:
 
     .. math::
 
-        \text{Gray to RGB[A]:} \quad R  \leftarrow Y, G  \leftarrow Y, B  \leftarrow Y, A  \leftarrow 0
+        \text{Gray to RGB[A]:} \quad R  \leftarrow Y, G  \leftarrow Y, B  \leftarrow Y, A  \leftarrow \max (ChannelRange)
 
     The conversion from a RGB image to gray is done with:
 
@@ -596,15 +598,15 @@ Calculates the integral of an image.
 
 .. ocv:function:: void integral( InputArray src, OutputArray sum, int sdepth=-1 )
 
-.. ocv:function:: void integral( InputArray src, OutputArray sum, OutputArray sqsum, int sdepth=-1 )
+.. ocv:function:: void integral( InputArray src, OutputArray sum, OutputArray sqsum, int sdepth=-1, int sqdepth=-1 )
 
-.. ocv:function:: void integral( InputArray src, OutputArray sum, OutputArray sqsum, OutputArray tilted, int sdepth=-1 )
+.. ocv:function:: void integral( InputArray src, OutputArray sum, OutputArray sqsum, OutputArray tilted, int sdepth=-1, int sqdepth=-1 )
 
 .. ocv:pyfunction:: cv2.integral(src[, sum[, sdepth]]) -> sum
 
-.. ocv:pyfunction:: cv2.integral2(src[, sum[, sqsum[, sdepth]]]) -> sum, sqsum
+.. ocv:pyfunction:: cv2.integral2(src[, sum[, sqsum[, sdepth[, sqdepth]]]]) -> sum, sqsum
 
-.. ocv:pyfunction:: cv2.integral3(src[, sum[, sqsum[, tilted[, sdepth]]]]) -> sum, sqsum, tilted
+.. ocv:pyfunction:: cv2.integral3(src[, sum[, sqsum[, tilted[, sdepth[, sqdepth]]]]]) -> sum, sqsum, tilted
 
 .. ocv:cfunction:: void cvIntegral( const CvArr* image, CvArr* sum, CvArr* sqsum=NULL, CvArr* tilted_sum=NULL )
 
@@ -617,6 +619,8 @@ Calculates the integral of an image.
     :param tilted: integral for the image rotated by 45 degrees; it is :math:`(W+1)\times (H+1)` array  with the same data type as ``sum``.
 
     :param sdepth: desired depth of the integral and the tilted integral images,  ``CV_32S``, ``CV_32F``,  or  ``CV_64F``.
+
+    :param sqdepth: desired depth of the integral image of squared pixel values, ``CV_32F``  or  ``CV_64F``.
 
 The functions calculate one or more integral images for the source image as follows:
 
@@ -632,7 +636,7 @@ The functions calculate one or more integral images for the source image as foll
 
     \texttt{tilted} (X,Y) =  \sum _{y<Y,abs(x-X+1) \leq Y-y-1}  \texttt{image} (x,y)
 
-Using these integral images, you can calculate sa um, mean, and standard deviation over a specific up-right or rotated rectangular region of the image in a constant time, for example:
+Using these integral images, you can calculate sum, mean, and standard deviation over a specific up-right or rotated rectangular region of the image in a constant time, for example:
 
 .. math::
 

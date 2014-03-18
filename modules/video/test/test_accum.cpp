@@ -100,7 +100,7 @@ double CV_AccumBaseTest::get_success_error_level( int /*test_case_idx*/, int /*i
 class CV_AccTest : public CV_AccumBaseTest
 {
 public:
-    CV_AccTest() {};
+    CV_AccTest() { }
 protected:
     void run_func();
     void prepare_to_validation( int );

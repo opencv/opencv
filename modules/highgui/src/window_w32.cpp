@@ -40,31 +40,15 @@
 //M*/
 
 #include "precomp.hpp"
+#include <windowsx.h> // required for GET_X_LPARAM() and GET_Y_LPARAM() macros
 
 #if defined WIN32 || defined _WIN32
-
-#define COMPILE_MULTIMON_STUBS // Required for multi-monitor support
-#ifndef _MULTIMON_USE_SECURE_CRT
-#  define _MULTIMON_USE_SECURE_CRT 0 // some MinGW platforms have no strncpy_s
-#endif
-
-#if defined SM_CMONITORS && !defined MONITOR_DEFAULTTONEAREST
-#  define MONITOR_DEFAULTTONULL       0x00000000
-#  define MONITOR_DEFAULTTOPRIMARY    0x00000001
-#  define MONITOR_DEFAULTTONEAREST    0x00000002
-#  define MONITORINFOF_PRIMARY        0x00000001
-#endif
-#ifndef __inout
-#  define __inout
-#endif
 
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wmissing-declarations"
 #endif
-#include <MultiMon.h>
 
 #include <commctrl.h>
-#include <winuser.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -104,6 +88,10 @@ static const char* trackbar_text =
 #define CV_HCURSOR GCL_HCURSOR
 #define CV_HBRBACKGROUND GCL_HBRBACKGROUND
 
+#endif
+
+#ifndef WM_MOUSEHWHEEL
+    #define WM_MOUSEHWHEEL 0x020E
 #endif
 
 static void FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin )
@@ -1378,6 +1366,39 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
             SetFocus(window->hwnd);
         break;
 
+    case WM_MOUSEWHEEL:
+    case WM_MOUSEHWHEEL:
+       if( window->on_mouse )
+       {
+          int flags = (wParam & MK_LBUTTON      ? CV_EVENT_FLAG_LBUTTON  : 0)|
+                      (wParam & MK_RBUTTON      ? CV_EVENT_FLAG_RBUTTON  : 0)|
+                      (wParam & MK_MBUTTON      ? CV_EVENT_FLAG_MBUTTON  : 0)|
+                      (wParam & MK_CONTROL      ? CV_EVENT_FLAG_CTRLKEY  : 0)|
+                      (wParam & MK_SHIFT        ? CV_EVENT_FLAG_SHIFTKEY : 0)|
+                      (GetKeyState(VK_MENU) < 0 ? CV_EVENT_FLAG_ALTKEY   : 0);
+          int event = (uMsg == WM_MOUSEWHEEL    ? CV_EVENT_MOUSEWHEEL    : CV_EVENT_MOUSEHWHEEL);
+
+          // Set the wheel delta of mouse wheel to be in the upper word of 'event'
+          int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+          flags |= (delta << 16);
+
+          POINT pt;
+          pt.x = GET_X_LPARAM( lParam );
+          pt.y = GET_Y_LPARAM( lParam );
+          ::ScreenToClient(hwnd, &pt); // Convert screen coordinates to client coordinates.
+
+          RECT rect;
+          GetClientRect( window->hwnd, &rect );
+
+          SIZE size = {0,0};
+          icvGetBitmapData( window, &size, 0, 0 );
+
+          window->on_mouse( event, pt.x*size.cx/MAX(rect.right - rect.left,1),
+                                   pt.y*size.cy/MAX(rect.bottom - rect.top,1), flags,
+                                   window->on_mouse_param );
+       }
+       break;
+
     case WM_ERASEBKGND:
         {
             RECT cr, tr, wrc;
@@ -1475,8 +1496,8 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             if( uMsg == WM_LBUTTONUP || uMsg == WM_RBUTTONUP || uMsg == WM_MBUTTONUP )
                 ReleaseCapture();
 
-            pt.x = LOWORD( lParam );
-            pt.y = HIWORD( lParam );
+            pt.x = GET_X_LPARAM( lParam );
+            pt.y = GET_Y_LPARAM( lParam );
 
             GetClientRect( window->hwnd, &rect );
             icvGetBitmapData( window, &size, 0, 0 );

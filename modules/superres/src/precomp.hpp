@@ -56,6 +56,7 @@
 #include "opencv2/core/private.hpp"
 
 #include "opencv2/core/private.cuda.hpp"
+#include "opencv2/core/ocl.hpp"
 
 #ifdef HAVE_OPENCV_CUDAARITHM
 #  include "opencv2/cudaarithm.hpp"
@@ -79,10 +80,6 @@
 
 #ifdef HAVE_OPENCV_CUDACODEC
 #  include "opencv2/cudacodec.hpp"
-#endif
-
-#ifdef HAVE_OPENCV_OCL
-    #include "opencv2/ocl/private/util.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_HIGHGUI

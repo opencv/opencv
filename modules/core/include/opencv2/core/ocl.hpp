@@ -48,6 +48,8 @@ namespace cv { namespace ocl {
 
 CV_EXPORTS bool haveOpenCL();
 CV_EXPORTS bool useOpenCL();
+CV_EXPORTS bool haveAmdBlas();
+CV_EXPORTS bool haveAmdFft();
 CV_EXPORTS void setUseOpenCL(bool flag);
 CV_EXPORTS void finish();
 
@@ -57,6 +59,8 @@ class CV_EXPORTS Kernel;
 class CV_EXPORTS Program;
 class CV_EXPORTS ProgramSource;
 class CV_EXPORTS Queue;
+class CV_EXPORTS PlatformInfo;
+class CV_EXPORTS Image2D;
 
 class CV_EXPORTS Device
 {
@@ -82,9 +86,12 @@ public:
 
     String name() const;
     String extensions() const;
-    String vendor() const;
+    String version() const;
+    String vendorName() const;
     String OpenCL_C_Version() const;
     String OpenCLVersion() const;
+    int deviceVersionMajor() const;
+    int deviceVersionMinor() const;
     String driverVersion() const;
     void* ptr() const;
 
@@ -154,6 +161,21 @@ public:
     size_t imageMaxBufferSize() const;
     size_t imageMaxArraySize() const;
 
+    enum
+    {
+        UNKNOWN_VENDOR=0,
+        VENDOR_AMD=1,
+        VENDOR_INTEL=2,
+        VENDOR_NVIDIA=3
+    };
+    int vendorID() const;
+    // FIXIT
+    // dev.isAMD() doesn't work for OpenCL CPU devices from AMD OpenCL platform.
+    // This method should use platform name instead of vendor name.
+    // After fix restore code in arithm.cpp: ocl_compare()
+    inline bool isAMD() const { return vendorID() == VENDOR_AMD; }
+    inline bool isIntel() const { return vendorID() == VENDOR_INTEL; }
+
     int maxClockFrequency() const;
     int maxComputeUnits() const;
     int maxConstantArgs() const;
@@ -208,19 +230,41 @@ public:
     Context(const Context& c);
     Context& operator = (const Context& c);
 
+    bool create();
     bool create(int dtype);
     size_t ndevices() const;
     const Device& device(size_t idx) const;
     Program getProg(const ProgramSource& prog,
                     const String& buildopt, String& errmsg);
 
-    static Context& getDefault();
+    static Context& getDefault(bool initialize = true);
     void* ptr() const;
+
+    friend void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
 protected:
     struct Impl;
     Impl* p;
 };
 
+class CV_EXPORTS Platform
+{
+public:
+    Platform();
+    ~Platform();
+    Platform(const Platform& p);
+    Platform& operator = (const Platform& p);
+
+    void* ptr() const;
+    static Platform& getDefault();
+
+    friend void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
+protected:
+    struct Impl;
+    Impl* p;
+};
+
+// TODO Move to internal header
+void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
 
 class CV_EXPORTS Queue
 {
@@ -245,21 +289,40 @@ protected:
 class CV_EXPORTS KernelArg
 {
 public:
-    enum { LOCAL=1, READ_ONLY=2, WRITE_ONLY=4, READ_WRITE=6, CONSTANT=8 };
-    KernelArg(int _flags, UMat* _m, void* _obj=0, size_t _sz=0);
+    enum { LOCAL=1, READ_ONLY=2, WRITE_ONLY=4, READ_WRITE=6, CONSTANT=8, PTR_ONLY = 16, NO_SIZE=256 };
+    KernelArg(int _flags, UMat* _m, int wscale=1, int iwscale=1, const void* _obj=0, size_t _sz=0);
+    KernelArg();
 
     static KernelArg Local() { return KernelArg(LOCAL, 0); }
-    static KernelArg ReadOnly(const UMat& m) { return KernelArg(READ_ONLY, (UMat*)&m); }
-    static KernelArg WriteOnly(const UMat& m) { return KernelArg(WRITE_ONLY, (UMat*)&m); }
+    static KernelArg PtrWriteOnly(const UMat& m)
+    { return KernelArg(PTR_ONLY+WRITE_ONLY, (UMat*)&m); }
+    static KernelArg PtrReadOnly(const UMat& m)
+    { return KernelArg(PTR_ONLY+READ_ONLY, (UMat*)&m); }
+    static KernelArg PtrReadWrite(const UMat& m)
+    { return KernelArg(PTR_ONLY+READ_WRITE, (UMat*)&m); }
+    static KernelArg ReadWrite(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(READ_WRITE, (UMat*)&m, wscale, iwscale); }
+    static KernelArg ReadWriteNoSize(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(READ_WRITE+NO_SIZE, (UMat*)&m, wscale, iwscale); }
+    static KernelArg ReadOnly(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(READ_ONLY, (UMat*)&m, wscale, iwscale); }
+    static KernelArg WriteOnly(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(WRITE_ONLY, (UMat*)&m, wscale, iwscale); }
+    static KernelArg ReadOnlyNoSize(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(READ_ONLY+NO_SIZE, (UMat*)&m, wscale, iwscale); }
+    static KernelArg WriteOnlyNoSize(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(WRITE_ONLY+NO_SIZE, (UMat*)&m, wscale, iwscale); }
     static KernelArg Constant(const Mat& m);
     template<typename _Tp> static KernelArg Constant(const _Tp* arr, size_t n)
-    { return KernelArg(CONSTANT, 0, (void*)arr, n); }
+    { return KernelArg(CONSTANT, 0, 1, 1, (void*)arr, n); }
 
     int flags;
     UMat* m;
-    void* obj;
+    const void* obj;
     size_t sz;
+    int wscale, iwscale;
 };
+
 
 class CV_EXPORTS Kernel
 {
@@ -267,19 +330,21 @@ public:
     Kernel();
     Kernel(const char* kname, const Program& prog);
     Kernel(const char* kname, const ProgramSource& prog,
-           const String& buildopts, String& errmsg);
+           const String& buildopts = String(), String* errmsg=0);
     ~Kernel();
     Kernel(const Kernel& k);
     Kernel& operator = (const Kernel& k);
 
+    bool empty() const;
     bool create(const char* kname, const Program& prog);
     bool create(const char* kname, const ProgramSource& prog,
-                const String& buildopts, String& errmsg);
+                const String& buildopts, String* errmsg=0);
 
-    void set(int i, const void* value, size_t sz);
-    void set(int i, const UMat& m);
-    void set(int i, const KernelArg& arg);
-    template<typename _Tp> void set(int i, const _Tp& value)
+    int set(int i, const void* value, size_t sz);
+    int set(int i, const Image2D& image2D);
+    int set(int i, const UMat& m);
+    int set(int i, const KernelArg& arg);
+    template<typename _Tp> int set(int i, const _Tp& value)
     { return set(i, &value, sizeof(value)); }
 
     template<typename _Tp0>
@@ -291,26 +356,27 @@ public:
     template<typename _Tp0, typename _Tp1>
     Kernel& args(const _Tp0& a0, const _Tp1& a1)
     {
-        set(0, a0); set(1, a1); return *this;
+        int i = set(0, a0); set(i, a1); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2>
     Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2)
     {
-        set(0, a0); set(1, a1); set(2, a2); return *this;
+        int i = set(0, a0); i = set(i, a1); set(i, a2); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3>
     Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4>
     Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2,
                  const _Tp3& a3, const _Tp4& a4)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3); set(4, a4); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2);
+        i = set(i, a3); set(i, a4); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2,
@@ -318,8 +384,8 @@ public:
     Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2,
                  const _Tp3& a3, const _Tp4& a4, const _Tp5& a5)
     {
-        set(0, a0); set(1, a1); set(2, a2);
-        set(3, a3); set(4, a4); set(5, a5); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2);
+        i = set(i, a3); i = set(i, a4); set(i, a5); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
@@ -327,8 +393,8 @@ public:
     Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
                  const _Tp4& a4, const _Tp5& a5, const _Tp6& a6)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3);
-        set(4, a4); set(5, a5); set(6, a6); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3);
+        i = set(i, a4); i = set(i, a5); set(i, a6); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
@@ -336,8 +402,8 @@ public:
     Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
                  const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3);
-        set(4, a4); set(5, a5); set(6, a6); set(7, a7); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3);
+        i = set(i, a4); i = set(i, a5); i = set(i, a6); set(i, a7); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4,
@@ -346,8 +412,8 @@ public:
                  const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
                  const _Tp8& a8)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3); set(4, a4);
-        set(5, a5); set(6, a6); set(7, a7); set(8, a8); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4);
+        i = set(i, a5); i = set(i, a6); i = set(i, a7); set(i, a8); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4,
@@ -356,8 +422,8 @@ public:
                  const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
                  const _Tp8& a8, const _Tp9& a9)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3); set(4, a4); set(5, a5);
-        set(6, a6); set(7, a7); set(8, a8); set(9, a9); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
+        i = set(i, a6); i = set(i, a7); i = set(i, a8); set(i, a9); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
@@ -367,8 +433,8 @@ public:
                  const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
                  const _Tp8& a8, const _Tp9& a9, const _Tp10& a10)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3); set(4, a4); set(5, a5);
-        set(6, a6); set(7, a7); set(8, a8); set(9, a9); set(10, a10); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
+        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); set(i, a10); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
@@ -378,15 +444,71 @@ public:
                  const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
                  const _Tp8& a8, const _Tp9& a9, const _Tp10& a10, const _Tp11& a11)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3); set(4, a4); set(5, a5);
-        set(6, a6); set(7, a7); set(8, a8); set(9, a9); set(10, a10); set(11, a11); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
+        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); set(i, a11); return *this;
     }
 
-    void run(int dims, size_t offset[], size_t globalsize[],
+    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
+             typename _Tp4, typename _Tp5, typename _Tp6, typename _Tp7,
+             typename _Tp8, typename _Tp9, typename _Tp10, typename _Tp11, typename _Tp12>
+    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
+                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
+                 const _Tp8& a8, const _Tp9& a9, const _Tp10& a10, const _Tp11& a11,
+                 const _Tp12& a12)
+    {
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
+        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); i = set(i, a11);
+        set(i, a12); return *this;
+    }
+
+    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
+             typename _Tp4, typename _Tp5, typename _Tp6, typename _Tp7,
+             typename _Tp8, typename _Tp9, typename _Tp10, typename _Tp11, typename _Tp12,
+             typename _Tp13>
+    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
+                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
+                 const _Tp8& a8, const _Tp9& a9, const _Tp10& a10, const _Tp11& a11,
+                 const _Tp12& a12, const _Tp13& a13)
+    {
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
+        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); i = set(i, a11);
+        i = set(i, a12); set(i, a13); return *this;
+    }
+
+    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
+             typename _Tp4, typename _Tp5, typename _Tp6, typename _Tp7,
+             typename _Tp8, typename _Tp9, typename _Tp10, typename _Tp11, typename _Tp12,
+             typename _Tp13, typename _Tp14>
+    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
+                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
+                 const _Tp8& a8, const _Tp9& a9, const _Tp10& a10, const _Tp11& a11,
+                 const _Tp12& a12, const _Tp13& a13, const _Tp14& a14)
+    {
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
+        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); i = set(i, a11);
+        i = set(i, a12); i = set(i, a13); set(i, a14); return *this;
+    }
+
+    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
+             typename _Tp4, typename _Tp5, typename _Tp6, typename _Tp7,
+             typename _Tp8, typename _Tp9, typename _Tp10, typename _Tp11, typename _Tp12,
+             typename _Tp13, typename _Tp14, typename _Tp15>
+    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
+                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
+                 const _Tp8& a8, const _Tp9& a9, const _Tp10& a10, const _Tp11& a11,
+                 const _Tp12& a12, const _Tp13& a13, const _Tp14& a14, const _Tp15& a15)
+    {
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
+        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); i = set(i, a11);
+        i = set(i, a12); i = set(i, a13); i = set(i, a14); set(i, a15); return *this;
+    }
+
+    bool run(int dims, size_t globalsize[],
              size_t localsize[], bool sync, const Queue& q=Queue());
-    void runTask(bool sync, const Queue& q=Queue());
+    bool runTask(bool sync, const Queue& q=Queue());
 
     size_t workGroupSize() const;
+    size_t preferedWorkGroupSizeMultiple() const;
     bool compileWorkGroupSize(size_t wsz[]) const;
     size_t localMemSize() const;
 
@@ -445,6 +567,55 @@ protected:
     struct Impl;
     Impl* p;
 };
+
+class CV_EXPORTS PlatformInfo
+{
+public:
+    PlatformInfo();
+    explicit PlatformInfo(void* id);
+    ~PlatformInfo();
+
+    PlatformInfo(const PlatformInfo& i);
+    PlatformInfo& operator =(const PlatformInfo& i);
+
+    String name() const;
+    String vendor() const;
+    String version() const;
+    int deviceNumber() const;
+    void getDevice(Device& device, int d) const;
+
+protected:
+    struct Impl;
+    Impl* p;
+};
+
+CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf);
+CV_EXPORTS const char* typeToStr(int t);
+CV_EXPORTS const char* memopTypeToStr(int t);
+CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1);
+CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo>& platform_info);
+CV_EXPORTS int predictOptimalVectorWidth(InputArray src1, InputArray src2 = noArray(), InputArray src3 = noArray(),
+                                         InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
+                                         InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray());
+
+class CV_EXPORTS Image2D
+{
+public:
+    Image2D();
+    explicit Image2D(const UMat &src);
+    Image2D(const Image2D & i);
+    ~Image2D();
+
+    Image2D & operator = (const Image2D & i);
+
+    void* ptr() const;
+protected:
+    struct Impl;
+    Impl* p;
+};
+
+
+CV_EXPORTS MatAllocator* getOpenCLAllocator();
 
 }}
 

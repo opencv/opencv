@@ -195,7 +195,7 @@ TEST_P(SURF, DISABLED_Descriptor)
     cv::Mat descriptors_gold;
     surf_gold(image, cv::noArray(), keypoints, descriptors_gold, true);
 
-    cv::BFMatcher matcher(cv::NORM_L2);
+    cv::BFMatcher matcher(surf.defaultNorm());
     std::vector<cv::DMatch> matches;
     matcher.match(descriptors_gold, cv::Mat(descriptors), matches);
 

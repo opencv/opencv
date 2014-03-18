@@ -6,12 +6,13 @@
 #  Usage from an external project:
 #    In your CMakeLists.txt, add these lines:
 #
-#    FIND_PACKAGE(OpenCV REQUIRED)
-#    TARGET_LINK_LIBRARIES(MY_TARGET_NAME ${OpenCV_LIBS})
+#    find_package(OpenCV REQUIRED)
+#    include_directories(${OpenCV_INCLUDE_DIRS})
+#    target_link_libraries(MY_TARGET_NAME ${OpenCV_LIBS})
 #
 #    Or you can search for specific OpenCV modules:
 #
-#    FIND_PACKAGE(OpenCV REQUIRED core highgui)
+#    find_package(OpenCV REQUIRED core highgui)
 #
 #    If the module is found then OPENCV_<MODULE>_FOUND is set to TRUE.
 #
@@ -24,7 +25,6 @@
 #      - OpenCV_VERSION_MAJOR            : Major version part of OpenCV_VERSION: "@OPENCV_VERSION_MAJOR@"
 #      - OpenCV_VERSION_MINOR            : Minor version part of OpenCV_VERSION: "@OPENCV_VERSION_MINOR@"
 #      - OpenCV_VERSION_PATCH            : Patch version part of OpenCV_VERSION: "@OPENCV_VERSION_PATCH@"
-#      - OpenCV_VERSION_TWEAK            : Tweak version part of OpenCV_VERSION: "@OPENCV_VERSION_TWEAK@"
 #      - OpenCV_VERSION_STATUS           : Development status of this build: "@OPENCV_VERSION_STATUS@"
 #
 #    Advanced variables:
@@ -35,6 +35,9 @@
 #      - OpenCV_USE_MANGLED_PATHS
 #      - OpenCV_HAVE_ANDROID_CAMERA
 #
+#    Deprecated variables:
+#      - OpenCV_VERSION_TWEAK            : Always "0"
+#
 # ===================================================================================
 
 set(modules_file_suffix "")
@@ -42,7 +45,9 @@ if(ANDROID)
   string(REPLACE - _ modules_file_suffix "_${ANDROID_NDK_ABI_NAME}")
 endif()
 
-include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${modules_file_suffix}.cmake)
+if(NOT TARGET opencv_core)
+  include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${modules_file_suffix}.cmake)
+endif()
 
 # TODO All things below should be reviewed. What is about of moving this code into related modules (special vars/hooks/files)
 
@@ -108,7 +113,7 @@ SET(OpenCV_VERSION @OPENCV_VERSION_PLAIN@)
 SET(OpenCV_VERSION_MAJOR  @OPENCV_VERSION_MAJOR@)
 SET(OpenCV_VERSION_MINOR  @OPENCV_VERSION_MINOR@)
 SET(OpenCV_VERSION_PATCH  @OPENCV_VERSION_PATCH@)
-SET(OpenCV_VERSION_TWEAK  @OPENCV_VERSION_TWEAK@)
+SET(OpenCV_VERSION_TWEAK  0)
 SET(OpenCV_VERSION_STATUS "@OPENCV_VERSION_STATUS@")
 
 # ====================================================================
@@ -179,6 +184,10 @@ foreach(__cvcomponent ${OpenCV_FIND_COMPONENTS})
     set(${__cvcomponent}_FOUND "${__cvcomponent}_FOUND-NOTFOUND")
   else()
     list(APPEND OpenCV_FIND_COMPONENTS_ ${__cvcomponent})
+    # Not using list(APPEND) here, because OpenCV_LIBS may not exist yet.
+    # Also not clearing OpenCV_LIBS anywhere, so that multiple calls
+    # to find_package(OpenCV) with different component lists add up.
+    set(OpenCV_LIBS ${OpenCV_LIBS} "${__cvcomponent}")
     #indicate that module is found
     string(TOUPPER "${__cvcomponent}" __cvcomponent)
     set(${__cvcomponent}_FOUND 1)
@@ -194,8 +203,6 @@ if(OpenCV_USE_MANGLED_PATHS)
 else()
   set(OpenCV_LIB_SUFFIX "")
 endif()
-
-SET(OpenCV_LIBS "${OpenCV_LIB_COMPONENTS}")
 
 foreach(__opttype OPT DBG)
   SET(OpenCV_LIBS_${__opttype} "${OpenCV_LIBS}")

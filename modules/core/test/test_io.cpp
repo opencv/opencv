@@ -83,7 +83,7 @@ static bool cvTsCheckSparse(const CvSparseMat* m1, const CvSparseMat* m2, double
 class Core_IOTest : public cvtest::BaseTest
 {
 public:
-    Core_IOTest() {};
+    Core_IOTest() { }
 protected:
     void run(int)
     {

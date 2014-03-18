@@ -1,6 +1,6 @@
 #if !defined(ANDROID_r2_2_0) && !defined(ANDROID_r2_3_3) && !defined(ANDROID_r3_0_1) && \
  !defined(ANDROID_r4_0_0) && !defined(ANDROID_r4_0_3) && !defined(ANDROID_r4_1_1) && \
- !defined(ANDROID_r4_2_0) && !defined(ANDROID_r4_3_0)
+ !defined(ANDROID_r4_2_0) && !defined(ANDROID_r4_3_0) && !defined(ANDROID_r4_4_0)
 # error Building camera wrapper for your version of Android is not supported by OpenCV.\
  You need to modify OpenCV sources in order to compile camera wrapper for your version of Android.
 #endif
@@ -22,7 +22,7 @@
 #elif defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0)
 # include <gui/ISurface.h>
 # include <gui/BufferQueue.h>
-#elif defined(ANDROID_r4_3_0)
+#elif defined(ANDROID_r4_3_0) || defined(ANDROID_r4_4_0)
 # include <gui/IGraphicBufferProducer.h>
 # include <gui/BufferQueue.h>
 #else
@@ -71,6 +71,20 @@ public:
     {
     }
     virtual void onBuffersReleased()
+    {
+    }
+};
+#elif defined(ANDROID_r4_4_0)
+class ConsumerListenerStub: public android::BnConsumerListener
+{
+public:
+    virtual void onFrameAvailable()
+    {
+    }
+    virtual void onBuffersReleased()
+    {
+    }
+    virtual ~ConsumerListenerStub()
     {
     }
 };
@@ -306,7 +320,8 @@ public:
     }
 
     virtual void postData(int32_t msgType, const sp<IMemory>& dataPtr
-    #if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3) || defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0) || defined(ANDROID_r4_3_0)
+#if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3) || defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0) \
+ || defined(ANDROID_r4_3_0) || defined(ANDROID_r4_4_0)
                           ,camera_frame_metadata_t*
 #endif
                           )
@@ -623,7 +638,14 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
     bufferStatus = camera->setPreviewTexture(bufferQueue);
     if (bufferStatus != 0)
         LOGE("initCameraConnect: failed setPreviewTexture call; camera might not work correctly");
-#endif
+# elif defined(ANDROID_r4_4_0)
+    sp<BufferQueue> bufferQueue = new BufferQueue();
+    sp<IConsumerListener> queueListener = new ConsumerListenerStub();
+    bufferQueue->consumerConnect(queueListener, true);
+    bufferStatus = handler->camera->setPreviewTarget(bufferQueue);
+    if (bufferStatus != 0)
+        LOGE("applyProperties: failed setPreviewTexture call; camera might not work correctly");
+# endif
 
 #if (defined(ANDROID_r2_2_0) || defined(ANDROID_r2_3_3) || defined(ANDROID_r3_0_1))
 # if 1
@@ -663,7 +685,8 @@ void CameraHandler::closeCameraConnect()
     }
 
     camera->stopPreview();
-#if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3) || defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0) || defined(ANDROID_r4_3_0)
+#if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3) || defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0) \
+ || defined(ANDROID_r4_3_0) || defined(ANDROID_r4_4_0)
     camera->setPreviewCallbackFlags(CAMERA_FRAME_CALLBACK_FLAG_NOOP);
 #endif
     camera->disconnect();
@@ -914,7 +937,8 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
 
     CameraParameters curCameraParameters((*ppcameraHandler)->params.flatten());
 
-#if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3) || defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0) || defined(ANDROID_r4_3_0)
+#if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3) || defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0) \
+ || defined(ANDROID_r4_3_0) || defined(ANDROID_r4_4_0)
     CameraHandler* handler=*ppcameraHandler;
 
     handler->camera->stopPreview();
@@ -941,6 +965,13 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
     sp<BufferQueue::ConsumerListener> queueListener = new ConsumerListenerStub();
     bufferQueue->consumerConnect(queueListener);
     bufferStatus = handler->camera->setPreviewTexture(bufferQueue);
+    if (bufferStatus != 0)
+        LOGE("applyProperties: failed setPreviewTexture call; camera might not work correctly");
+# elif defined(ANDROID_r4_4_0)
+    sp<BufferQueue> bufferQueue = new BufferQueue();
+    sp<IConsumerListener> queueListener = new ConsumerListenerStub();
+    bufferQueue->consumerConnect(queueListener, true);
+    bufferStatus = handler->camera->setPreviewTarget(bufferQueue);
     if (bufferStatus != 0)
         LOGE("applyProperties: failed setPreviewTexture call; camera might not work correctly");
 # endif

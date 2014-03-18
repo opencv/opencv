@@ -808,6 +808,7 @@ CV_FundamentalMatTest::CV_FundamentalMatTest()
     method = 0;
     img_size = 10;
     cube_size = 10;
+    dims = 0;
     min_f = 1;
     max_f = 3;
     sigma = 0;//0.1;
@@ -1086,7 +1087,6 @@ protected:
     int img_size;
     int cube_size;
     int dims;
-    int e_result;
     double min_f, max_f;
     double sigma;
 };
@@ -1124,9 +1124,10 @@ CV_EssentialMatTest::CV_EssentialMatTest()
     method = 0;
     img_size = 10;
     cube_size = 10;
+    dims = 0;
     min_f = 1;
     max_f = 3;
-
+    sigma = 0;
 }
 
 

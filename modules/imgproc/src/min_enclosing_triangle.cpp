@@ -287,7 +287,7 @@ static void updateSidesCA(const std::vector<cv::Point2f> &polygon,
                           cv::Point2f &sideAStartVertex, cv::Point2f &sideAEndVertex,
                           cv::Point2f &sideCStartVertex, cv::Point2f &sideCEndVertex);
 
-};
+}
 
 
 ///////////////////////////////////// Main functions /////////////////////////////////////
@@ -1560,4 +1560,4 @@ static bool lessOrEqual(double number1, double number2) {
     return ((number1 < number2) || (almostEqual(number1, number2)));
 }
 
-};
+}

@@ -73,7 +73,7 @@ int main(int, char *argv[])
     BufferPSNR bufferPSNR;
     BufferMSSIM bufferMSSIM;
 
-    int TIMES;
+    int TIMES = 10;
     stringstream sstr(argv[3]);
     sstr >> TIMES;
     double time, result = 0;

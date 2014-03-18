@@ -41,15 +41,12 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #ifndef __OPENCV_VIZ_VIZ3D_HPP__
 #define __OPENCV_VIZ_VIZ3D_HPP__
 
-#if !defined YES_I_AGREE_THAT_VIZ_API_IS_NOT_STABLE_NOW_AND_BINARY_COMPARTIBILITY_WONT_BE_SUPPORTED
+#if !defined YES_I_AGREE_THAT_VIZ_API_IS_NOT_STABLE_NOW_AND_BINARY_COMPARTIBILITY_WONT_BE_SUPPORTED && !defined CVAPI_EXPORTS
     //#error "Viz is in beta state now. Please define macro above to use it"
 #endif
 
@@ -64,7 +61,7 @@ namespace cv
         class CV_EXPORTS Viz3d
         {
         public:
-            typedef cv::Ptr<Viz3d> Ptr;
+            typedef cv::viz::Color Color;
             typedef void (*KeyboardCallback)(const KeyboardEvent&, void*);
             typedef void (*MouseCallback)(const MouseEvent&, void*);
 
@@ -73,19 +70,21 @@ namespace cv
             Viz3d& operator=(const Viz3d&);
             ~Viz3d();
 
-            void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
+            void showWidget(const String &id, const Widget &widget, const Affine3d &pose = Affine3d::Identity());
             void removeWidget(const String &id);
             Widget getWidget(const String &id) const;
             void removeAllWidgets();
 
-            void setWidgetPose(const String &id, const Affine3f &pose);
-            void updateWidgetPose(const String &id, const Affine3f &pose);
-            Affine3f getWidgetPose(const String &id) const;
+            void showImage(InputArray image, const Size& window_size = Size(-1, -1));
+
+            void setWidgetPose(const String &id, const Affine3d &pose);
+            void updateWidgetPose(const String &id, const Affine3d &pose);
+            Affine3d getWidgetPose(const String &id) const;
 
             void setCamera(const Camera &camera);
             Camera getCamera() const;
-            Affine3f getViewerPose();
-            void setViewerPose(const Affine3f &pose);
+            Affine3d getViewerPose();
+            void setViewerPose(const Affine3d &pose);
 
             void resetCameraViewpoint(const String &id);
             void resetCamera();
@@ -97,13 +96,16 @@ namespace cv
             void setWindowSize(const Size &window_size);
             String getWindowName() const;
             void saveScreenshot(const String &file);
-            void setWindowPosition(int x, int y);
-            void setFullScreen(bool mode);
-            void setBackgroundColor(const Color& color = Color::black());
+            void setWindowPosition(const Point& window_position);
+            void setFullScreen(bool mode = true);
+            void setBackgroundColor(const Color& color = Color::black(), const Color& color2 = Color::not_set());
+            void setBackgroundTexture(InputArray image = noArray());
+            void setBackgroundMeshLab();
 
             void spin();
             void spinOnce(int time = 1, bool force_redraw = false);
             bool wasStopped() const;
+            void close();
 
             void registerKeyboardCallback(KeyboardCallback callback, void* cookie = 0);
             void registerMouseCallback(MouseCallback callback, void* cookie = 0);
@@ -111,10 +113,9 @@ namespace cv
             void setRenderingProperty(const String &id, int property, double value);
             double getRenderingProperty(const String &id, int property);
 
-            void setDesiredUpdateRate(double rate);
-            double getDesiredUpdateRate();
-
             void setRepresentation(int representation);
+
+            void setGlobalWarnings(bool enabled = false);
         private:
 
             struct VizImpl;
@@ -122,6 +123,8 @@ namespace cv
 
             void create(const String &window_name);
             void release();
+
+            friend class VizStorage;
         };
 
     } /* namespace viz */

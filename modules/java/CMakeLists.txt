@@ -159,7 +159,7 @@ foreach(java_file ${step3_input_files})
 
   if(ANDROID)
     get_filename_component(install_subdir "${java_file_name}" PATH)
-    install(FILES "${output_name}" DESTINATION "${JAVA_INSTALL_ROOT}/src/org/opencv/${install_subdir}" COMPONENT main)
+    install(FILES "${output_name}" DESTINATION "${JAVA_INSTALL_ROOT}/src/org/opencv/${install_subdir}" COMPONENT java)
   endif()
 endforeach()
 
@@ -173,7 +173,7 @@ if(ANDROID)
 
     if(NOT file MATCHES "jni/.+")
       get_filename_component(install_subdir "${file}" PATH)
-      install(FILES "${OpenCV_BINARY_DIR}/${file}" DESTINATION "${JAVA_INSTALL_ROOT}/${install_subdir}" COMPONENT main)
+      install(FILES "${OpenCV_BINARY_DIR}/${file}" DESTINATION "${JAVA_INSTALL_ROOT}/${install_subdir}" COMPONENT java)
     endif()
   endforeach()
 
@@ -209,11 +209,11 @@ if(ANDROID AND ANDROID_EXECUTABLE)
   list(APPEND copied_files ${lib_target_files} "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}")
   list(APPEND step3_input_files "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_MANIFEST_FILE}")
 
-  install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_PROJECT_PROPERTIES_FILE}" DESTINATION ${JAVA_INSTALL_ROOT} COMPONENT main)
-  install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" DESTINATION ${JAVA_INSTALL_ROOT} COMPONENT main)
+  install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_PROJECT_PROPERTIES_FILE}" DESTINATION ${JAVA_INSTALL_ROOT} COMPONENT java)
+  install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" DESTINATION ${JAVA_INSTALL_ROOT} COMPONENT java)
   # creating empty 'gen' and 'res' folders
-  install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${JAVA_INSTALL_ROOT}/gen\")" COMPONENT main)
-  install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${JAVA_INSTALL_ROOT}/res\")" COMPONENT main)
+  install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${JAVA_INSTALL_ROOT}/gen\")" COMPONENT java)
+  install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${JAVA_INSTALL_ROOT}/res\")" COMPONENT java)
 endif(ANDROID AND ANDROID_EXECUTABLE)
 
 set(step3_depends ${step2_depends} ${step3_input_files} ${copied_files})
@@ -250,7 +250,7 @@ if(ANDROID)
 else(ANDROID)
   set(JAR_NAME opencv-${LIB_NAME_SUFIX}.jar)
   set(JAR_FILE "${OpenCV_BINARY_DIR}/bin/${JAR_NAME}")
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.xml.in" "${OpenCV_BINARY_DIR}/build.xml" IMMEDIATE @ONLY)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.xml.in" "${OpenCV_BINARY_DIR}/build.xml" @ONLY)
   list(APPEND step3_depends "${OpenCV_BINARY_DIR}/build.xml")
 
   add_custom_command(OUTPUT "${JAR_FILE}" "${JAR_FILE}.dephelper"
@@ -266,7 +266,7 @@ else(ANDROID)
   else(WIN32)
     set(JAR_INSTALL_DIR share/OpenCV/java)
   endif(WIN32)
-  install(FILES ${JAR_FILE} DESTINATION ${JAR_INSTALL_DIR} COMPONENT main)
+  install(FILES ${JAR_FILE} DESTINATION ${JAR_INSTALL_DIR} COMPONENT java)
 endif(ANDROID)
 
 # step 5: build native part
@@ -337,17 +337,17 @@ endif()
 
 if(ANDROID)
   ocv_install_target(${the_module} EXPORT OpenCVModules
-          LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
-          ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
+          LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT java
+          ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT java)
 else()
   if(NOT INSTALL_CREATE_DISTRIB)
     ocv_install_target(${the_module} EXPORT OpenCVModules
-            RUNTIME DESTINATION ${JAR_INSTALL_DIR} COMPONENT main
-            LIBRARY DESTINATION ${JAR_INSTALL_DIR} COMPONENT main)
+            RUNTIME DESTINATION ${JAR_INSTALL_DIR} COMPONENT java
+            LIBRARY DESTINATION ${JAR_INSTALL_DIR} COMPONENT java)
   else()
     ocv_install_target(${the_module} EXPORT OpenCVModules
-            RUNTIME DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT main
-            LIBRARY DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT main)
+            RUNTIME DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT java
+            LIBRARY DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT java)
   endif()
 endif()
 

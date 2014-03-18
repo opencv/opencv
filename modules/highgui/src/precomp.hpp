@@ -58,6 +58,14 @@
 #include <assert.h>
 
 #if defined WIN32 || defined WINCE
+    #if !defined _WIN32_WINNT
+        #ifdef HAVE_MSMF
+            #define _WIN32_WINNT 0x0600 // Windows Vista
+        #else
+            #define _WIN32_WINNT 0x0500 // Windows 2000
+        #endif
+    #endif
+
     #include <windows.h>
     #undef small
     #undef min
@@ -129,7 +137,6 @@ CvCapture* cvCreateCameraCapture_Android( int index );
 CvCapture* cvCreateCameraCapture_XIMEA( int index );
 CvCapture* cvCreateCameraCapture_AVFoundation(int index);
 
-
 CVAPI(int) cvHaveImageReader(const char* filename);
 CVAPI(int) cvHaveImageWriter(const char* filename);
 
@@ -188,6 +195,20 @@ double cvGetRatioWindow_GTK(const char* name);
 
 double cvGetOpenGlProp_W32(const char* name);
 double cvGetOpenGlProp_GTK(const char* name);
+
+namespace cv
+{
+    class IVideoCapture
+    {
+    public:
+        virtual ~IVideoCapture() {}
+        virtual double getProperty(int) { return 0; }
+        virtual bool setProperty(int, double) { return 0; }
+        virtual bool grabFrame() = 0;
+        virtual bool retrieveFrame(int, cv::OutputArray) = 0;
+        virtual int getCaptureDomain() { return CAP_ANY; } // Return the type of the capture object: CAP_VFW, etc...
+    };
+};
 
 //for QT
 #if defined (HAVE_QT)

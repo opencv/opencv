@@ -34,7 +34,7 @@ circle
 ----------
 Draws a circle.
 
-.. ocv:function:: void circle( Mat& img, Point center, int radius, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
+.. ocv:function:: void circle( InputOutputArray img, Point center, int radius, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
 .. ocv:pyfunction:: cv2.circle(img, center, radius, color[, thickness[, lineType[, shift]]]) -> img
 
@@ -83,9 +83,9 @@ ellipse
 -----------
 Draws a simple or thick elliptic arc or fills an ellipse sector.
 
-.. ocv:function:: void ellipse( Mat& img, Point center, Size axes, double angle, double startAngle, double endAngle, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
+.. ocv:function:: void ellipse( InputOutputArray img, Point center, Size axes, double angle, double startAngle, double endAngle, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
-.. ocv:function:: void ellipse( Mat& img, const RotatedRect& box, const Scalar& color, int thickness=1, int lineType=LINE_8 )
+.. ocv:function:: void ellipse( InputOutputArray img, const RotatedRect& box, const Scalar& color, int thickness=1, int lineType=LINE_8 )
 
 .. ocv:pyfunction:: cv2.ellipse(img, center, axes, angle, startAngle, endAngle, color[, thickness[, lineType[, shift]]]) -> img
 
@@ -331,7 +331,7 @@ line
 --------
 Draws a line segment connecting two points.
 
-.. ocv:function:: void line( Mat& img, Point pt1, Point pt2, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
+.. ocv:function:: void line( InputOutputArray img, Point pt1, Point pt2, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
 .. ocv:pyfunction:: cv2.line(img, pt1, pt2, color[, thickness[, lineType[, shift]]]) -> img
 
@@ -417,7 +417,7 @@ rectangle
 -------------
 Draws a simple, thick, or filled up-right rectangle.
 
-.. ocv:function:: void rectangle( Mat& img, Point pt1, Point pt2, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
+.. ocv:function:: void rectangle( InputOutputArray img, Point pt1, Point pt2, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
 .. ocv:function:: void rectangle( Mat& img, Rect rec, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
@@ -570,7 +570,7 @@ putText
 -----------
 Draws a text string.
 
-.. ocv:function:: void putText( Mat& img, const String& text, Point org, int fontFace, double fontScale, Scalar color, int thickness=1, int lineType=LINE_8, bool bottomLeftOrigin=false )
+.. ocv:function:: void putText( InputOutputArray img, const String& text, Point org, int fontFace, double fontScale, Scalar color, int thickness=1, int lineType=LINE_8, bool bottomLeftOrigin=false )
 
 .. ocv:pyfunction:: cv2.putText(img, text, org, fontFace, fontScale, color[, thickness[, lineType[, bottomLeftOrigin]]]) -> None
 

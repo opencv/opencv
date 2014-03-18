@@ -5,7 +5,7 @@
 
 SET(OPENCV_CPP_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc
     opencv_highgui opencv_ml opencv_video opencv_objdetect opencv_photo opencv_nonfree opencv_softcascade
-    opencv_features2d opencv_calib3d opencv_legacy opencv_contrib opencv_stitching opencv_videostab opencv_bioinspired opencv_shape)
+    opencv_features2d opencv_calib3d opencv_legacy opencv_contrib opencv_stitching opencv_videostab opencv_shape)
 
 ocv_check_dependencies(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
@@ -27,6 +27,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   endif()
   if(HAVE_opencv_cudafilters)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudafilters/include")
+  endif()
+
+  if(HAVE_opencv_ocl)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/ocl/include")
   endif()
 
   if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
@@ -56,6 +60,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
       target_link_libraries(${the_target} opencv_cudaarithm opencv_cudafilters)
     endif()
 
+    if(HAVE_opencv_ocl)
+      target_link_libraries(${the_target} opencv_ocl)
+    endif()
+
     set_target_properties(${the_target} PROPERTIES
       OUTPUT_NAME "cpp-${sample_kind}-${name}"
       PROJECT_LABEL "(${sample_KIND}) ${name}")
@@ -69,7 +77,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
         set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
       endif()
       install(TARGETS ${the_target}
-              RUNTIME DESTINATION "${OPENCV_SAMPLES_BIN_INSTALL_PATH}/${sample_subfolder}" COMPONENT main)
+              RUNTIME DESTINATION "${OPENCV_SAMPLES_BIN_INSTALL_PATH}/${sample_subfolder}" COMPONENT samples)
     endif()
   ENDMACRO()
 
@@ -91,9 +99,9 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   endforeach()
 endif()
 
-if (INSTALL_C_EXAMPLES AND NOT WIN32)
+if(INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB C_SAMPLES *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
   install(FILES ${C_SAMPLES}
-          DESTINATION share/OpenCV/samples/cpp
-          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
+          DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/cpp
+          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
 endif()
