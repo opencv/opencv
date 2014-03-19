@@ -86,7 +86,9 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
                                       float h, float hForColorComponents,
                                       int templateWindowSize, int searchWindowSize)
 {
-    if (_src.type() != CV_8UC3)
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if (type != CV_8UC3 && type != CV_8UC4)
     {
         CV_Error(Error::StsBadArg, "Type of input image should be CV_8UC3!");
         return;
@@ -97,7 +99,7 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
                                                 templateWindowSize, searchWindowSize))
 
     Mat src = _src.getMat();
-    _dst.create(src.size(), src.type());
+    _dst.create(src.size(), type);
     Mat dst = _dst.getMat();
 
     Mat src_lab;
@@ -113,10 +115,10 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
     fastNlMeansDenoising(ab, ab, hForColorComponents, templateWindowSize, searchWindowSize);
 
     Mat l_ab_denoised[] = { l, ab };
-    Mat dst_lab(src.size(), src.type());
+    Mat dst_lab(src.size(), CV_MAKE_TYPE(depth, 3));
     mixChannels(l_ab_denoised, 2, &dst_lab, 1, from_to, 3);
 
-    cvtColor(dst_lab, dst, COLOR_Lab2LBGR);
+    cvtColor(dst_lab, dst, COLOR_Lab2LBGR, cn);
 }
 
 static void fastNlMeansDenoisingMultiCheckPreconditions(
