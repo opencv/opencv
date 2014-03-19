@@ -79,12 +79,14 @@ PARAM_TEST_CASE(SepFilter2D, MatDepth, Channels, BorderType, bool, bool)
             ksize.width++;
         if (1 != (ksize.height % 2))
             ksize.height++;
+
         Mat temp = randomMat(Size(ksize.width, 1), CV_MAKE_TYPE(CV_32F, 1), -MAX_VALUE, MAX_VALUE);
         cv::normalize(temp, kernelX, 1.0, 0.0, NORM_L1);
         temp = randomMat(Size(1, ksize.height),  CV_MAKE_TYPE(CV_32F, 1), -MAX_VALUE, MAX_VALUE);
         cv::normalize(temp, kernelY, 1.0, 0.0, NORM_L1);
 
-        Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
+        Size roiSize = randomSize(ksize.width + 16, MAX_VALUE, ksize.height + 20, MAX_VALUE);
+        std::cout << roiSize << std::endl;
         int rest = roiSize.width % 4;
         if (0 != rest)
             roiSize.width += (4 - rest);
