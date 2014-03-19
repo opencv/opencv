@@ -60,8 +60,8 @@ PARAM_TEST_CASE(Dft, cv::Size, MatDepth, bool, bool, bool, bool)
     int	dft_flags, depth;
     bool inplace;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -106,9 +106,9 @@ PARAM_TEST_CASE(MulSpectrums, bool, bool)
 {
     bool ccorr, useRoi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src1)
-    TEST_DECLARE_INPUT_PARAMETER(src2)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src1);
+    TEST_DECLARE_INPUT_PARAMETER(src2);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -129,9 +129,9 @@ PARAM_TEST_CASE(MulSpectrums, bool, bool)
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, srcRoiSize, dstBorder, CV_32FC2, 5, 16);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src1)
-        UMAT_UPLOAD_INPUT_PARAMETER(src2)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src1);
+        UMAT_UPLOAD_INPUT_PARAMETER(src2);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 };
 

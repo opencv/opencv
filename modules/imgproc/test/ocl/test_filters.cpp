@@ -69,8 +69,8 @@ PARAM_TEST_CASE(FilterTestBase, MatType,
     double param;
     bool useRoi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -94,8 +94,8 @@ PARAM_TEST_CASE(FilterTestBase, MatType,
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, type, -60, 70);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 
     void Near()
@@ -112,15 +112,9 @@ PARAM_TEST_CASE(FilterTestBase, MatType,
     void Near(double threshold, bool relative)
     {
         if (relative)
-        {
-            EXPECT_MAT_NEAR_RELATIVE(dst, udst, threshold);
-            EXPECT_MAT_NEAR_RELATIVE(dst_roi, udst_roi, threshold);
-        }
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst, threshold);
         else
-        {
-            EXPECT_MAT_NEAR(dst, udst, threshold);
-            EXPECT_MAT_NEAR(dst_roi, udst_roi, threshold);
-        }
+            OCL_EXPECT_MATS_NEAR(dst, threshold);
     }
 };
 

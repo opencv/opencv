@@ -415,42 +415,54 @@ namespace cv {
 
 static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
 {
-    std::vector<UMat> src;
+    std::vector<UMat> src, ksrc;
     _mv.getUMatVector(src);
     CV_Assert(!src.empty());
 
     int type = src[0].type(), depth = CV_MAT_DEPTH(type);
     Size size = src[0].size();
 
-    size_t srcsize = src.size();
-    for (size_t i = 0; i < srcsize; ++i)
+    for (size_t i = 0, srcsize = src.size(); i < srcsize; ++i)
     {
-        int itype = src[i].type(), icn = CV_MAT_CN(itype), idepth = CV_MAT_DEPTH(itype);
-        if (src[i].dims > 2 || icn != 1)
+        int itype = src[i].type(), icn = CV_MAT_CN(itype), idepth = CV_MAT_DEPTH(itype),
+                esz1 = CV_ELEM_SIZE1(idepth);
+        if (src[i].dims > 2)
             return false;
-        CV_Assert(size == src[i].size() && depth == idepth);
-    }
 
-    String srcargs, srcdecl, processelem;
-    for (size_t i = 0; i < srcsize; ++i)
+        CV_Assert(size == src[i].size() && depth == idepth);
+
+        for (int cn = 0; cn < icn; ++cn)
+        {
+            UMat tsrc = src[i];
+            tsrc.offset += cn * esz1;
+            ksrc.push_back(tsrc);
+        }
+    }
+    int dcn = (int)ksrc.size();
+
+    String srcargs, srcdecl, processelem, cndecl;
+    for (int i = 0; i < dcn; ++i)
     {
         srcargs += format("DECLARE_SRC_PARAM(%d)", i);
         srcdecl += format("DECLARE_DATA(%d)", i);
         processelem += format("PROCESS_ELEM(%d)", i);
+        cndecl += format(" -D scn%d=%d", i, ksrc[i].channels());
     }
 
     ocl::Kernel k("merge", ocl::core::split_merge_oclsrc,
-                  format("-D OP_MERGE -D cn=%d -D T=%s -D DECLARE_SRC_PARAMS_N=%s -D DECLARE_DATA_N=%s -D PROCESS_ELEMS_N=%s",
-                         (int)srcsize, ocl::memopTypeToStr(depth), srcargs.c_str(), srcdecl.c_str(), processelem.c_str()));
+                  format("-D OP_MERGE -D cn=%d -D T=%s -D DECLARE_SRC_PARAMS_N=%s"
+                         " -D DECLARE_DATA_N=%s -D PROCESS_ELEMS_N=%s%s",
+                         dcn, ocl::memopTypeToStr(depth), srcargs.c_str(),
+                         srcdecl.c_str(), processelem.c_str(), cndecl.c_str()));
     if (k.empty())
         return false;
 
-    _dst.create(size, CV_MAKE_TYPE(depth, (int)srcsize));
+    _dst.create(size, CV_MAKE_TYPE(depth, dcn));
     UMat dst = _dst.getUMat();
 
     int argidx = 0;
-    for (size_t i = 0; i < srcsize; ++i)
-        argidx = k.set(argidx, ocl::KernelArg::ReadOnlyNoSize(src[i]));
+    for (int i = 0; i < dcn; ++i)
+        argidx = k.set(argidx, ocl::KernelArg::ReadOnlyNoSize(ksrc[i]));
     k.set(argidx, ocl::KernelArg::WriteOnly(dst));
 
     size_t globalsize[2] = { dst.cols, dst.rows };
