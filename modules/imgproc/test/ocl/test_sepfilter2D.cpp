@@ -85,7 +85,7 @@ PARAM_TEST_CASE(SepFilter2D, MatDepth, Channels, BorderType, bool, bool)
         temp = randomMat(Size(1, ksize.height),  CV_MAKE_TYPE(CV_32F, 1), -MAX_VALUE, MAX_VALUE);
         cv::normalize(temp, kernelY, 1.0, 0.0, NORM_L1);
 
-        Size roiSize = randomSize(ksize.width + 16, MAX_VALUE, ksize.height + 20, MAX_VALUE);
+        Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
         int rest = roiSize.width % 4;
         if (rest != 0)
             roiSize.width += (4 - rest);
@@ -115,7 +115,7 @@ PARAM_TEST_CASE(SepFilter2D, MatDepth, Channels, BorderType, bool, bool)
 
 OCL_TEST_P(SepFilter2D, Mat)
 {
-    for (int j = 0; j < test_loop_times; j++)
+    for (int j = 0; j < test_loop_times + 1; j++)
     {
         random_roi();
 
