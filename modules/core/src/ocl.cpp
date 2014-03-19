@@ -4317,8 +4317,8 @@ String kernelToStr(InputArray _kernel, int ddepth, const char * name)
     if (ddepth != depth)
         kernel.convertTo(kernel, ddepth);
 
-    typedef std::string (*func_t)(const Mat &);
-    static const func_t funcs[] = { kerToStr<uchar>, kerToStr<char>, kerToStr<ushort>,kerToStr<short>,
+    typedef std::string (* func_t)(const Mat &);
+    static const func_t funcs[] = { kerToStr<uchar>, kerToStr<char>, kerToStr<ushort>, kerToStr<short>,
                                     kerToStr<int>, kerToStr<float>, kerToStr<double>, 0 };
     const func_t func = funcs[depth];
     CV_Assert(func != 0);

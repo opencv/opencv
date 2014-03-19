@@ -34,6 +34,14 @@
 //
 //
 
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
+#endif
+#endif
+
 #define READ_TIMES_ROW ((2*(RADIUSX+LSIZE0)-1)/LSIZE0) //for c4 only
 #define RADIUS 1
 
@@ -117,16 +125,16 @@
 
 #define noconvert
 
-#if cn != 3
+#if CN != 3
 #define loadpix(addr) *(__global const srcT *)(addr)
 #define storepix(val, addr)  *(__global dstT *)(addr) = val
-#define SRCSIZE ((int)sizeof(srcT))
-#define DSTSIZE ((int)sizeof(dstT))
+#define SRCSIZE (int)sizeof(srcT)
+#define DSTSIZE (int)sizeof(dstT)
 #else
 #define loadpix(addr)  vload3(0, (__global const srcT1 *)(addr))
 #define storepix(val, addr) vstore3(val, 0, (__global dstT1 *)(addr))
-#define SRCSIZE ((int)sizeof(srcT1)*3)
-#define DSTSIZE ((int)sizeof(dstT1)*3)
+#define SRCSIZE (int)sizeof(srcT1)*3
+#define DSTSIZE (int)sizeof(dstT1)*3
 #endif
 
 #define DIG(a) a,
@@ -269,32 +277,33 @@ __kernel void row_filter_C1_D0(__global const uchar * src, int src_step_in_pixel
         dst[start_addr] = sum.x;
 }
 
-__kernel void row_filter(__global const srcT * src, int src_step_in_pixel, int src_offset_x, int src_offset_y,
+__kernel void row_filter(__global const uchar * src, int src_step, int src_offset_x, int src_offset_y,
                          int src_cols, int src_rows, int src_whole_cols, int src_whole_rows,
-                         __global dstT * dst, int dst_step_in_pixel, int dst_cols, int dst_rows,
+                         __global uchar * dst, int dst_step, int dst_cols, int dst_rows,
                          int radiusy)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
     int l_x = get_local_id(0);
     int l_y = get_local_id(1);
+
     int start_x = x + src_offset_x - RADIUSX;
     int start_y = y + src_offset_y - radiusy;
-    int start_addr = mad24(start_y, src_step_in_pixel, start_x);
+    int start_addr = mad24(start_y, src_step, start_x * SRCSIZE);
 
     dstT sum;
     srcT temp[READ_TIMES_ROW];
 
     __local srcT LDS_DAT[LSIZE1][READ_TIMES_ROW * LSIZE0 + 1];
 #ifdef BORDER_CONSTANT
-    int end_addr = mad24(src_whole_rows - 1, src_step_in_pixel, src_whole_cols);
+    int end_addr = mad24(src_whole_rows - 1, src_step, src_whole_cols * SRCSIZE);
 
     // read pixels from src
     for (int i = 0; i < READ_TIMES_ROW; i++)
     {
-        int current_addr = mad24(i, LSIZE0, start_addr);
-        current_addr = current_addr < end_addr && current_addr > 0 ? current_addr : 0;
-        temp[i] = src[current_addr];
+        int current_addr = mad24(i, LSIZE0 * SRCSIZE, start_addr);
+        current_addr = current_addr < end_addr && current_addr >= 0 ? current_addr : 0;
+        temp[i] = loadpix(src + current_addr);
     }
 
     // judge if read out of boundary
@@ -312,8 +321,7 @@ __kernel void row_filter(__global const srcT * src, int src_step_in_pixel, int s
     }
 #endif
 #else
-    int index[READ_TIMES_ROW];
-    int s_x, s_y;
+    int index[READ_TIMES_ROW], s_x, s_y;
 
     // judge if read out of boundary
     for (int i = 0; i < READ_TIMES_ROW; ++i)
@@ -328,12 +336,12 @@ __kernel void row_filter(__global const srcT * src, int src_step_in_pixel, int s
         EXTRAPOLATE(s_x, 0, src_whole_cols);
         EXTRAPOLATE(s_y, 0, src_whole_rows);
 #endif
-        index[i] = mad24(s_y, src_step_in_pixel, s_x);
+        index[i] = mad24(s_y, src_step, s_x * SRCSIZE);
     }
 
     // read pixels from src
     for (int i = 0; i < READ_TIMES_ROW; ++i)
-        temp[i] = src[index[i]];
+        temp[i] = loadpix(src + index[i]);
 #endif // BORDER_CONSTANT
 
     // save pixels to lds
@@ -349,10 +357,11 @@ __kernel void row_filter(__global const srcT * src, int src_step_in_pixel, int s
         temp[1] = LDS_DAT[l_y][l_x + RADIUSX + i];
         sum += mad(convertToDstT(temp[0]), mat_kernel[RADIUSX - i], convertToDstT(temp[1]) * mat_kernel[RADIUSX + i]);
     }
+
     // write the result to dst
     if (x < dst_cols && y < dst_rows)
     {
-        start_addr = mad24(y, dst_step_in_pixel, x);
-        dst[start_addr] = sum;
+        start_addr = mad24(y, dst_step, x * DSTSIZE);
+        storepix(sum, dst + start_addr);
     }
 }

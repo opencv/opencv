@@ -75,9 +75,9 @@ PARAM_TEST_CASE(SepFilter2D, MatDepth, Channels, BorderType, bool, bool)
     void random_roi()
     {
         Size ksize = randomSize(kernelMinSize, kernelMaxSize);
-        if (1 != (ksize.width % 2))
+        if (1 != ksize.width % 2)
             ksize.width++;
-        if (1 != (ksize.height % 2))
+        if (1 != ksize.height % 2)
             ksize.height++;
 
         Mat temp = randomMat(Size(ksize.width, 1), CV_MAKE_TYPE(CV_32F, 1), -MAX_VALUE, MAX_VALUE);
@@ -86,24 +86,22 @@ PARAM_TEST_CASE(SepFilter2D, MatDepth, Channels, BorderType, bool, bool)
         cv::normalize(temp, kernelY, 1.0, 0.0, NORM_L1);
 
         Size roiSize = randomSize(ksize.width + 16, MAX_VALUE, ksize.height + 20, MAX_VALUE);
-        std::cout << roiSize << std::endl;
         int rest = roiSize.width % 4;
-        if (0 != rest)
+        if (rest != 0)
             roiSize.width += (4 - rest);
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         rest = srcBorder.lef % 4;
-        if (0 != rest)
+        if (rest != 0)
             srcBorder.lef += (4 - rest);
         rest = srcBorder.rig % 4;
-        if (0 != rest)
+        if (rest != 0)
             srcBorder.rig += (4 - rest);
         randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
 
-        anchor.x = -1;
-        anchor.y = -1;
+        anchor.x = anchor.y = -1;
 
         UMAT_UPLOAD_INPUT_PARAMETER(src)
         UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
@@ -128,11 +126,10 @@ OCL_TEST_P(SepFilter2D, Mat)
     }
 }
 
-
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, SepFilter2D,
                             Combine(
                                 Values(CV_8U, CV_32F),
-                                Values(1, 4),
+                                OCL_ALL_CHANNELS,
                                 Values(
                                         (BorderType)BORDER_CONSTANT,
                                         (BorderType)BORDER_REPLICATE,
