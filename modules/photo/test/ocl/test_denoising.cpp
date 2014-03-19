@@ -72,9 +72,9 @@ OCL_TEST_P(FastNlMeansDenoising, Mat)
     }
 }
 
-typedef FastNlMeansDenoisingTestBase fastNlMeansDenoisingColored;
+typedef FastNlMeansDenoisingTestBase FastNlMeansDenoisingColored;
 
-OCL_TEST_P(fastNlMeansDenoisingColored, Mat)
+OCL_TEST_P(FastNlMeansDenoisingColored, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
@@ -88,7 +88,7 @@ OCL_TEST_P(fastNlMeansDenoisingColored, Mat)
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising, Combine(Values(1, 2), Bool()));
-OCL_INSTANTIATE_TEST_CASE_P(Photo, fastNlMeansDenoisingColored, Combine(Values(Channels(3)), Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoisingColored, Combine(Values(3, 4), Bool()));
 
 } } // namespace cvtest::ocl
 

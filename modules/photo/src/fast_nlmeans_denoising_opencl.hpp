@@ -149,10 +149,10 @@ static bool ocl_fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
     fastNlMeansDenoising(l_ab[0], l_ab_denoised[0], h, templateWindowSize, searchWindowSize);
     fastNlMeansDenoising(l_ab[1], l_ab_denoised[1], hForColorComponents, templateWindowSize, searchWindowSize);
 
-    UMat dst_lab(src.size(), src.type());
+    UMat dst_lab(src.size(), CV_8UC3);
     mixChannels(l_ab_denoised, std::vector<UMat>(1, dst_lab), from_to, 3);
 
-    cvtColor(dst_lab, dst, COLOR_Lab2LBGR);
+    cvtColor(dst_lab, dst, COLOR_Lab2LBGR, src.channels());
     return true;
 }
 
