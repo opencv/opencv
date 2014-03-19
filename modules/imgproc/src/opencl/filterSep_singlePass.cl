@@ -75,6 +75,7 @@
 #endif
 
 #define SRC(_x,_y) convertToWT(((global srcT*)(Src+(_y)*src_step))[_x])
+#define DST(_x,_y) (((global dstT*)(Dst+dst_offset+(_y)*dst_step))[_x])
 
 #ifdef BORDER_CONSTANT
 // CCCCCC|abcdefgh|CCCCCCC
@@ -82,8 +83,6 @@
 #else
 #define ELEM(_x,_y,r_edge,t_edge,const_v) SRC((_x),(_y))
 #endif
-
-#define DST(_x,_y) (((global dstT*)(Dst+dst_offset+(_y)*dst_step))[_x])
 
 #define noconvert
 
@@ -101,15 +100,15 @@ __kernel void sep_filter(__global uchar* Src, int src_step, int srcOffsetX, int 
     // all these should be defined on host during compile time
     // first lsmem array for source pixels used in first pass,
     // second lsmemDy for storing first pass results
-    __local WT lsmem[BLK_Y+2*RADIUSY][BLK_X+2*RADIUSX];
-    __local WT lsmemDy[BLK_Y][BLK_X+2*RADIUSX];
+    __local WT lsmem[BLK_Y + 2 * RADIUSY][BLK_X + 2 * RADIUSX];
+    __local WT lsmemDy[BLK_Y][BLK_X + 2 * RADIUSX];
 
     // get local and global ids - used as image and local memory array indexes
     int lix = get_local_id(0);
     int liy = get_local_id(1);
 
-    int x = (int)get_global_id(0);
-    int y = (int)get_global_id(1);
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
     // calculate pixel position in source image taking image offset into account
     int srcX = x + srcOffsetX - RADIUSX;
