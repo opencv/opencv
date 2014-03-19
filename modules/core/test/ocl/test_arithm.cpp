@@ -839,7 +839,7 @@ OCL_TEST_P(Pow, Mat)
             OCL_OFF(cv::pow(src1_roi, pows[k], dst1_roi));
             OCL_ON(cv::pow(usrc1_roi, pows[k], udst1_roi));
 
-            OCL_EXPECT_MATS_NEAR_RELATIVE(dst1, 1e-6);
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst1, 1e-5);
         }
 }
 

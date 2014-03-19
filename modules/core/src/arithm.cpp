@@ -1299,7 +1299,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
     bool haveMask = !_mask.empty();
 
-    if( ((haveMask || haveScalar) && cn > 4) )
+    if ( (haveMask || haveScalar) && cn > 4 )
         return false;
 
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), wdepth = std::max(CV_32S, CV_MAT_DEPTH(wtype));
@@ -1320,14 +1320,11 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             "-D convertToWT2=%s -D convertToDT=%s%s -D cn=%d",
             (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"),
             oclop2str[oclop], ocl::typeToStr(CV_MAKETYPE(depth1, kercn)),
-            ocl::typeToStr(CV_MAKETYPE(depth1, 1)),
-            ocl::typeToStr(CV_MAKETYPE(depth2, kercn)),
-            ocl::typeToStr(CV_MAKETYPE(depth2, 1)),
-            ocl::typeToStr(CV_MAKETYPE(ddepth, kercn)),
-            ocl::typeToStr(CV_MAKETYPE(ddepth, 1)),
-            ocl::typeToStr(CV_MAKETYPE(wdepth, kercn)),
+            ocl::typeToStr(depth1), ocl::typeToStr(CV_MAKETYPE(depth2, kercn)),
+            ocl::typeToStr(depth2), ocl::typeToStr(CV_MAKETYPE(ddepth, kercn)),
+            ocl::typeToStr(ddepth), ocl::typeToStr(CV_MAKETYPE(wdepth, kercn)),
             ocl::typeToStr(CV_MAKETYPE(wdepth, scalarcn)),
-            ocl::typeToStr(CV_MAKETYPE(wdepth, 1)), wdepth,
+            ocl::typeToStr(wdepth), wdepth,
             ocl::convertTypeStr(depth1, wdepth, kercn, cvtstr[0]),
             ocl::convertTypeStr(depth2, wdepth, kercn, cvtstr[1]),
             ocl::convertTypeStr(wdepth, ddepth, kercn, cvtstr[2]),
@@ -1347,7 +1344,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     }
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
-    if( k.empty() )
+    if (k.empty())
         return false;
 
     UMat src1 = _src1.getUMat(), src2;
@@ -1388,12 +1385,12 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
         if( !haveMask )
         {
-            if(n == 0)
+            if (n == 0)
                 k.args(src1arg, src2arg, dstarg);
-            else if(n == 1)
+            else if (n == 1)
                 k.args(src1arg, src2arg, dstarg,
                        ocl::KernelArg(0, 0, 0, 0, usrdata_p, usrdata_esz));
-            else if(n == 3)
+            else if (n == 3)
                 k.args(src1arg, src2arg, dstarg,
                        ocl::KernelArg(0, 0, 0, 0, usrdata_p, usrdata_esz),
                        ocl::KernelArg(0, 0, 0, 0, usrdata_p + usrdata_esz, usrdata_esz),
