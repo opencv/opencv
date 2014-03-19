@@ -1014,10 +1014,8 @@ namespace
             return;
 
 #ifdef HAVE_OPENCL
-        if (isUmat_ && curFrame_.channels() == 1)
+        if (isUmat_)
             curFrame_.copyTo(ucurFrame_);
-        else
-            isUmat_ = false;
 #endif
         ++storePos_;
 
