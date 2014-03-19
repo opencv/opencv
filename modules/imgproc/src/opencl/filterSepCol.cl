@@ -34,29 +34,36 @@
 //
 //
 
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
+#endif
+#endif
+
 #define READ_TIMES_COL ((2*(RADIUSY+LSIZE1)-1)/LSIZE1)
 #define RADIUS 1
 
 #define noconvert
 
-/**********************************************************************************
-These kernels are written for separable filters such as Sobel, Scharr, GaussianBlur.
-Now(6/29/2011) the kernels only support 8U data type and the anchor of the convovle
-kernel must be in the center. ROI is not supported either.
-Each kernels read 4 elements(not 4 pixels), save them to LDS and read the data needed
-from LDS to calculate the result.
-The length of the convovle kernel supported is only related to the MAX size of LDS,
-which is HW related.
-Niko
-6/29/2011
-The info above maybe obsolete.
-***********************************************************************************/
+#if CN != 3
+#define loadpix(addr) *(__global const srcT *)(addr)
+#define storepix(val, addr)  *(__global dstT *)(addr) = val
+#define SRCSIZE (int)sizeof(srcT)
+#define DSTSIZE (int)sizeof(dstT)
+#else
+#define loadpix(addr)  vload3(0, (__global const srcT1 *)(addr))
+#define storepix(val, addr) vstore3(val, 0, (__global dstT1 *)(addr))
+#define SRCSIZE (int)sizeof(srcT1)*3
+#define DSTSIZE (int)sizeof(dstT1)*3
+#endif
 
 #define DIG(a) a,
 __constant float mat_kernel[] = { COEFF };
 
-__kernel void col_filter(__global const srcT * src, int src_step_in_pixel, int src_whole_cols, int src_whole_rows,
-                         __global dstT * dst, int dst_offset_in_pixel, int dst_step_in_pixel, int dst_cols, int dst_rows)
+__kernel void col_filter(__global const uchar * src, int src_step, int src_offset, int src_whole_rows, int src_whole_cols,
+                         __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -64,8 +71,8 @@ __kernel void col_filter(__global const srcT * src, int src_step_in_pixel, int s
     int l_x = get_local_id(0);
     int l_y = get_local_id(1);
 
-    int start_addr = mad24(y, src_step_in_pixel, x);
-    int end_addr = mad24(src_whole_rows - 1, src_step_in_pixel, src_whole_cols);
+    int start_addr = mad24(y, src_step, x * SRCSIZE);
+    int end_addr = mad24(src_whole_rows - 1, src_step, src_whole_cols * SRCSIZE);
 
     srcT sum, temp[READ_TIMES_COL];
     __local srcT LDS_DAT[LSIZE1 * READ_TIMES_COL][LSIZE0 + 1];
@@ -73,9 +80,9 @@ __kernel void col_filter(__global const srcT * src, int src_step_in_pixel, int s
     // read pixels from src
     for (int i = 0; i < READ_TIMES_COL; ++i)
     {
-        int current_addr = mad24(i, LSIZE1 * src_step_in_pixel, start_addr);
+        int current_addr = mad24(i, LSIZE1 * src_step, start_addr);
         current_addr = current_addr < end_addr ? current_addr : 0;
-        temp[i] = src[current_addr];
+        temp[i] = loadpix(src + current_addr);
     }
 
     // save pixels to lds
@@ -95,7 +102,7 @@ __kernel void col_filter(__global const srcT * src, int src_step_in_pixel, int s
     // write the result to dst
     if (x < dst_cols && y < dst_rows)
     {
-        start_addr = mad24(y, dst_step_in_pixel, x + dst_offset_in_pixel);
-        dst[start_addr] = convertToDstT(sum);
+        start_addr = mad24(y, dst_step, mad24(DSTSIZE, x, dst_offset));
+        storepix(convertToDstT(sum), dst + start_addr);
     }
 }
