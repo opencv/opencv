@@ -141,9 +141,8 @@ __kernel void compute_hists_lut_kernel(
             final_hist[(cell_x * 2 + cell_y) * cnbins + bin_id] =
                 hist_[0] + hist_[1] + hist_[2];
     }
-#ifdef CPU
+
     barrier(CLK_LOCAL_MEM_FENCE);
-#endif
 
     int tid = (cell_y * CELLS_PER_BLOCK_Y + cell_x) * 12 + cell_thread_x;
     if ((tid < cblock_hist_size) && (gid < blocks_total))
