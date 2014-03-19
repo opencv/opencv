@@ -56,7 +56,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/video/tracking.hpp"
 
-#ifdef HAVE_OPENCV_GPU
+#if defined(HAVE_OPENCV_GPU) && !defined(DYNAMIC_CUDA_SUPPORT)
     #include "opencv2/gpu/gpu.hpp"
     #ifdef HAVE_CUDA
         #include "opencv2/gpu/stream_accessor.hpp"

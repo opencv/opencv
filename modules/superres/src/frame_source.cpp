@@ -200,7 +200,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
 //////////////////////////////////////////////////////
 // VideoFrameSource_GPU
 
-#ifndef HAVE_OPENCV_GPU
+#if !defined(HAVE_OPENCV_GPU) || defined(DYNAMIC_CUDA_SUPPORT)
 
 Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const string& fileName)
 {
