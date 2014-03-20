@@ -4348,7 +4348,7 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
                               InputArray src4, InputArray src5, InputArray src6,
                               InputArray src7, InputArray src8, InputArray src9)
 {
-    int type = src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int type = src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(depth);
     Size ssize = src1.size();
     const ocl::Device & d = ocl::Device::getDefault();
 
@@ -4372,7 +4372,8 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
     PROCESS_SRC(src9);
 
     size_t size = offsets.size();
-    std::vector<int> dividers(size, width);
+    int wsz = width * esz;
+    std::vector<int> dividers(size, wsz);
 
     for (size_t i = 0; i < size; ++i)
         while (offsets[i] % dividers[i] != 0 || steps[i] % dividers[i] != 0 || cols[i] % dividers[i] != 0)
@@ -4380,7 +4381,7 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
 
     // default strategy
     for (size_t i = 0; i < size; ++i)
-        if (dividers[i] != width)
+        if (dividers[i] != wsz)
         {
             width = 1;
             break;

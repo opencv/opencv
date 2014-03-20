@@ -45,7 +45,7 @@
 
 #define DECLARE_SRC_PARAM(index) __global const uchar * src##index##ptr, int src##index##_step, int src##index##_offset,
 #define DECLARE_DATA(index) __global const T * src##index = \
-    (__global T *)(src##index##ptr + mad24(src##index##_step, y, mad24(x, (int)sizeof(T), src##index##_offset)));
+    (__global T *)(src##index##ptr + mad24(src##index##_step, y, mad24(x, (int)sizeof(T) * scn##index, src##index##_offset)));
 #define PROCESS_ELEM(index) dst[index] = src##index[0];
 
 __kernel void merge(DECLARE_SRC_PARAMS_N
