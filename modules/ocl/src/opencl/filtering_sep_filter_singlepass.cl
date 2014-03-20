@@ -84,6 +84,8 @@
 
 #define DST(_x,_y) (((global DSTTYPE*)(Dst+DstOffset+(_y)*DstPitch))[_x])
 
+#define DIG(a) a,
+
 //horizontal and vertical filter kernels
 //should be defined on host during compile time to avoid overhead
 __constant uint mat_kernelX[] = {KERNEL_MATRIX_X};
