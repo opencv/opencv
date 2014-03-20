@@ -795,4 +795,42 @@ TEST(UMat, ReadBufferRect)
     EXPECT_MAT_NEAR(t, t2, 0);
 }
 
+// Use iGPU or OPENCV_OPENCL_DEVICE=:CPU: to catch problem
+TEST(UMat, DISABLED_synchronization_map_unmap)
+{
+    class TestParallelLoopBody : public cv::ParallelLoopBody
+    {
+        UMat u_;
+    public:
+        TestParallelLoopBody(const UMat& u) : u_(u) { }
+        void operator() (const cv::Range& range) const
+        {
+            printf("range: %d, %d -- begin\n", range.start, range.end);
+            for (int i = 0; i < 10; i++)
+            {
+                printf("%d: %d map...\n", range.start, i);
+                Mat m = u_.getMat(cv::ACCESS_READ);
+
+                printf("%d: %d unmap...\n", range.start, i);
+                m.release();
+            }
+            printf("range: %d, %d -- end\n", range.start, range.end);
+        }
+    };
+    try
+    {
+        UMat u(1000, 1000, CV_32FC1);
+        parallel_for_(cv::Range(0, 2), TestParallelLoopBody(u));
+    }
+    catch (const cv::Exception& e)
+    {
+        FAIL() << "Exception: " << e.what();
+        ADD_FAILURE();
+    }
+    catch (...)
+    {
+        FAIL() << "Exception!";
+    }
+}
+
 } } // namespace cvtest::ocl
