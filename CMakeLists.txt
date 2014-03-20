@@ -467,7 +467,6 @@ include(cmake/OpenCVFindLibsGUI.cmake)
 include(cmake/OpenCVFindLibsVideo.cmake)
 include(cmake/OpenCVFindLibsPerf.cmake)
 
-
 # ----------------------------------------------------------------------------
 #  Detect other 3rd-party libraries/tools
 # ----------------------------------------------------------------------------
@@ -511,16 +510,6 @@ include(cmake/OpenCVDetectVTK.cmake)
 # ----------------------------------------------------------------------------
 if(NOT HAVE_CUDA)
   set(ENABLE_DYNAMIC_CUDA OFF)
-endif()
-
-if(HAVE_CUDA AND NOT ENABLE_DYNAMIC_CUDA)
-  set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
-  if(HAVE_CUBLAS)
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cublas_LIBRARY})
-  endif()
-  if(HAVE_CUFFT)
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cufft_LIBRARY})
-  endif()
 endif()
 
 # ----------------------------------------------------------------------------
