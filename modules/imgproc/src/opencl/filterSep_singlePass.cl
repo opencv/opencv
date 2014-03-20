@@ -74,8 +74,19 @@
 #error No extrapolation method
 #endif
 
-#define SRC(_x,_y) convertToWT(((global srcT*)(Src+(_y)*src_step))[_x])
-#define DST(_x,_y) (((global dstT*)(Dst+dst_offset+(_y)*dst_step))[_x])
+#if CN != 3
+#define loadpix(addr) *(__global const srcT *)(addr)
+#define storepix(val, addr)  *(__global dstT *)(addr) = val
+#define SRCSIZE (int)sizeof(srcT)
+#define DSTSIZE (int)sizeof(dstT)
+#else
+#define loadpix(addr)  vload3(0, (__global const srcT1 *)(addr))
+#define storepix(val, addr) vstore3(val, 0, (__global dstT1 *)(addr))
+#define SRCSIZE (int)sizeof(srcT1)*3
+#define DSTSIZE (int)sizeof(dstT1)*3
+#endif
+
+#define SRC(_x,_y) convertToWT(loadpix(Src + mad24(_y, src_step, SRCSIZE * _x)))
 
 #ifdef BORDER_CONSTANT
 // CCCCCC|abcdefgh|CCCCCCC
@@ -172,5 +183,5 @@ __kernel void sep_filter(__global uchar* Src, int src_step, int srcOffsetX, int 
         sum = mad(lsmemDy[liy][lix+i], mat_kernelX[i], sum);
 
     //store result into destination image
-    DST(x,y) = convertToDstT(sum);
+    storepix(convertToDstT(sum), Dst + mad24(y, dst_step, mad24(x, DSTSIZE, dst_offset)));
 }

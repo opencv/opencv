@@ -1416,6 +1416,16 @@ int _InputArray::kind() const
     return flags & KIND_MASK;
 }
 
+int _InputArray::rows(int i) const
+{
+    return size(i).height;
+}
+
+int _InputArray::cols(int i) const
+{
+    return size(i).width;
+}
+
 Size _InputArray::size(int i) const
 {
     int k = kind();
@@ -2078,45 +2088,45 @@ void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, int 
     create(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
 }
 
-void _OutputArray::create(int rows, int cols, int mtype, int i, bool allowTransposed, int fixedDepthMask) const
+void _OutputArray::create(int _rows, int _cols, int mtype, int i, bool allowTransposed, int fixedDepthMask) const
 {
     int k = kind();
     if( k == MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
-        CV_Assert(!fixedSize() || ((Mat*)obj)->size.operator()() == Size(cols, rows));
+        CV_Assert(!fixedSize() || ((Mat*)obj)->size.operator()() == Size(_cols, _rows));
         CV_Assert(!fixedType() || ((Mat*)obj)->type() == mtype);
-        ((Mat*)obj)->create(rows, cols, mtype);
+        ((Mat*)obj)->create(_rows, _cols, mtype);
         return;
     }
     if( k == UMAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
-        CV_Assert(!fixedSize() || ((UMat*)obj)->size.operator()() == Size(cols, rows));
+        CV_Assert(!fixedSize() || ((UMat*)obj)->size.operator()() == Size(_cols, _rows));
         CV_Assert(!fixedType() || ((UMat*)obj)->type() == mtype);
-        ((UMat*)obj)->create(rows, cols, mtype);
+        ((UMat*)obj)->create(_rows, _cols, mtype);
         return;
     }
     if( k == GPU_MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
-        CV_Assert(!fixedSize() || ((cuda::GpuMat*)obj)->size() == Size(cols, rows));
+        CV_Assert(!fixedSize() || ((cuda::GpuMat*)obj)->size() == Size(_cols, _rows));
         CV_Assert(!fixedType() || ((cuda::GpuMat*)obj)->type() == mtype);
-        ((cuda::GpuMat*)obj)->create(rows, cols, mtype);
+        ((cuda::GpuMat*)obj)->create(_rows, _cols, mtype);
         return;
     }
     if( k == OPENGL_BUFFER && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
-        CV_Assert(!fixedSize() || ((ogl::Buffer*)obj)->size() == Size(cols, rows));
+        CV_Assert(!fixedSize() || ((ogl::Buffer*)obj)->size() == Size(_cols, _rows));
         CV_Assert(!fixedType() || ((ogl::Buffer*)obj)->type() == mtype);
-        ((ogl::Buffer*)obj)->create(rows, cols, mtype);
+        ((ogl::Buffer*)obj)->create(_rows, _cols, mtype);
         return;
     }
     if( k == CUDA_MEM && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
-        CV_Assert(!fixedSize() || ((cuda::CudaMem*)obj)->size() == Size(cols, rows));
+        CV_Assert(!fixedSize() || ((cuda::CudaMem*)obj)->size() == Size(_cols, _rows));
         CV_Assert(!fixedType() || ((cuda::CudaMem*)obj)->type() == mtype);
-        ((cuda::CudaMem*)obj)->create(rows, cols, mtype);
+        ((cuda::CudaMem*)obj)->create(_rows, _cols, mtype);
         return;
     }
-    int sizes[] = {rows, cols};
+    int sizes[] = {_rows, _cols};
     create(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
 }
 
