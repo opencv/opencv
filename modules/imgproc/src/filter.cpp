@@ -3428,7 +3428,7 @@ static bool ocl_sepColFilter2D(const UMat & buf, UMat & dst, const Mat & kernelY
 const int optimizedSepFilterLocalSize = 16;
 
 static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
-                                       InputArray _row_kernel, InputArray _col_kernel,
+                                       Mat row_kernel, Mat col_kernel,
                                        int borderType, int ddepth)
 {
     Size size = _src.size(), wholeSize;
@@ -3439,7 +3439,7 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
     size_t src_step = _src.step(), src_offset = _src.offset();
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
-    if ((src_offset % src_step) % esz != 0 || (!doubleSupport && sdepth == CV_64F) ||
+    if ((src_offset % src_step) % esz != 0 || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
             !(borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE ||
               borderType == BORDER_REFLECT || borderType == BORDER_WRAP ||
               borderType == BORDER_REFLECT_101))
@@ -3454,10 +3454,10 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
 
     String opts = cv::format("-D BLK_X=%d -D BLK_Y=%d -D RADIUSX=%d -D RADIUSY=%d%s%s"
                              " -D srcT=%s -D convertToWT=%s -D WT=%s -D dstT=%s -D convertToDstT=%s"
-                             " -D %s -D srcT1=%s -D dstT1=%s -D cn=%d", (int)lt2[0], (int)lt2[1],
-                             _row_kernel.size().height / 2, _col_kernel.size().height / 2,
-                             ocl::kernelToStr(_row_kernel, CV_32F, "KERNEL_MATRIX_X").c_str(),
-                             ocl::kernelToStr(_col_kernel, CV_32F, "KERNEL_MATRIX_Y").c_str(),
+                             " -D %s -D srcT1=%s -D dstT1=%s -D CN=%d", (int)lt2[0], (int)lt2[1],
+                             row_kernel.cols / 2, col_kernel.cols / 2,
+                             ocl::kernelToStr(row_kernel, CV_32F, "KERNEL_MATRIX_X").c_str(),
+                             ocl::kernelToStr(col_kernel, CV_32F, "KERNEL_MATRIX_Y").c_str(),
                              ocl::typeToStr(stype), ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
                              ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), ocl::typeToStr(dtype),
                              ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), borderMap[borderType],
@@ -3486,12 +3486,13 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                       InputArray _kernelX, InputArray _kernelY, Point anchor,
                       double delta, int borderType )
 {
+    const ocl::Device & d = ocl::Device::getDefault();
     Size imgSize = _src.size();
 
     if (abs(delta)> FLT_MIN)
         return false;
 
-    int type = _src.type(), cn = CV_MAT_CN(type);
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if (cn > 4)
         return false;
 
@@ -3502,20 +3503,20 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
     if (kernelY.cols % 2 != 1)
         return false;
 
-    int sdepth = CV_MAT_DEPTH(type);
+    if (ddepth < 0)
+        ddepth = sdepth;
+
+    CV_OCL_RUN_(kernelY.cols <= 21 && kernelX.cols <= 21 &&
+                imgSize.width > optimizedSepFilterLocalSize + (kernelX.cols >> 1) &&
+                imgSize.height > optimizedSepFilterLocalSize + (kernelY.cols >> 1) &&
+                (!(borderType & BORDER_ISOLATED) || _src.offset() == 0) && anchor == Point(-1, -1) &&
+                (d.isIntel() || (d.isAMD() && !d.hostUnifiedMemory())),
+                ocl_sepFilter2D_SinglePass(_src, _dst, kernelX, kernelY, borderType, ddepth), true)
+
     if (anchor.x < 0)
         anchor.x = kernelX.cols >> 1;
     if (anchor.y < 0)
         anchor.y = kernelY.cols >> 1;
-
-    if (ddepth < 0)
-        ddepth = sdepth;
-
-    CV_OCL_RUN_(kernelY.rows <= 21 && kernelX.rows <= 21 &&
-        imgSize.width > optimizedSepFilterLocalSize + (kernelX.rows >> 1) &&
-        imgSize.height > optimizedSepFilterLocalSize + (kernelY.rows >> 1) &&
-        (borderType & BORDER_ISOLATED) != 0,
-        ocl_sepFilter2D_SinglePass(_src, _dst, _kernelX, _kernelY, borderType, ddepth), true)
 
     UMat src = _src.getUMat();
     Size srcWholeSize; Point srcOffset;
