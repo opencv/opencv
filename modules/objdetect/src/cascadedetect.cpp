@@ -765,11 +765,8 @@ bool LBPEvaluator::read( const FileNode& node, Size _origWinSize )
     nchannels = 1;
     localSize = lbufSize = Size(0, 0);
     if (ocl::haveOpenCL())
-    {
-        const ocl::Device& device = ocl::Device::getDefault();
-        if (device.isAMD() && !device.hostUnifiedMemory())
-            localSize = Size(8, 8);
-    }
+        localSize = Size(8, 8);
+
     return true;
 }
 
