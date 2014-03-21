@@ -77,7 +77,12 @@
 #endif
 
 #ifdef ERODE
+#ifdef INTEL_DEVICE
+// workaround for bug in Intel HD graphics drivers (10.18.10.3496 or older)
+#define MORPH_OP(A,B) ((A) < (B) ? (A) : (B))
+#else
 #define MORPH_OP(A,B) min((A),(B))
+#endif
 #endif
 #ifdef DILATE
 #define MORPH_OP(A,B) max((A),(B))
