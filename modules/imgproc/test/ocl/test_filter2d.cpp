@@ -62,6 +62,7 @@ PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool, bool)
     int borderType;
     bool useRoi;
     Mat kernel;
+    double delta;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
     TEST_DECLARE_OUTPUT_PARAMETER(dst);
@@ -91,6 +92,8 @@ PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool, bool)
         anchor.x = randomInt(-1, ksize.width);
         anchor.y = randomInt(-1, ksize.height);
 
+        delta = randomDouble(-100, 100);
+
         UMAT_UPLOAD_INPUT_PARAMETER(src);
         UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
@@ -108,8 +111,8 @@ OCL_TEST_P(Filter2D, Mat)
     {
         random_roi();
 
-        OCL_OFF(cv::filter2D(src_roi, dst_roi, -1, kernel, anchor, 0.0, borderType));
-        OCL_ON(cv::filter2D(usrc_roi, udst_roi, -1, kernel, anchor, 0.0, borderType));
+        OCL_OFF(cv::filter2D(src_roi, dst_roi, -1, kernel, anchor, delta, borderType));
+        OCL_ON(cv::filter2D(usrc_roi, udst_roi, -1, kernel, anchor, delta, borderType));
 
         Near(1.0);
     }
