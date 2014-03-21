@@ -310,6 +310,8 @@ extlinks = {
             'calib3d' : ('http://docs.opencv.org/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#%s', None ),
             'feature2d' : ('http://docs.opencv.org/modules/imgproc/doc/feature_detection.html#%s', None ),
             'imgproc_geometric' : ('http://docs.opencv.org/modules/imgproc/doc/geometric_transformations.html#%s', None ),
+            'miscellaneous_transformations': ('http://docs.opencv.org/modules/imgproc/doc/miscellaneous_transformations.html#%s', None),
+            'user_interface':    ('http://docs.opencv.org/modules/highgui/doc/user_interface.html#%s', None),
 
             # 'opencv_group' : ('http://answers.opencv.org/%s', None),
             'opencv_qa' : ('http://answers.opencv.org/%s', None),
