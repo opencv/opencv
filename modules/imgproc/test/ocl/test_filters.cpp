@@ -152,8 +152,8 @@ OCL_TEST_P(LaplacianTest, Accuracy)
     {
         random_roi();
 
-        OCL_OFF(cv::Laplacian(src_roi, dst_roi, -1, ksize, scale, 0, borderType));
-        OCL_ON(cv::Laplacian(usrc_roi, udst_roi, -1, ksize, scale, 0, borderType));
+        OCL_OFF(cv::Laplacian(src_roi, dst_roi, -1, ksize, scale, 10, borderType));
+        OCL_ON(cv::Laplacian(usrc_roi, udst_roi, -1, ksize, scale, 10, borderType));
 
         Near();
     }
