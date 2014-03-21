@@ -1,5 +1,5 @@
 #
-# The script to detect Intel(R) Integrated Performance Primitives (IPP)
+# The script to setting up Intel(R) Integrated Performance Primitives (IPP)
 # installation/package
 #
 # Windows host:
@@ -19,10 +19,10 @@
 # IPP_ROOT_DIR      - root of IPP installation
 # IPP_INCLUDE_DIRS  - IPP include folder
 # IPP_LIBRARIES     - IPP libraries that are used by OpenCV
-# IPP_VERSION_STR   - string with the newest detected IPP version
-# IPP_VERSION_MAJOR - numbers of IPP version (MAJOR.MINOR.BUILD)
-# IPP_VERSION_MINOR
-# IPP_VERSION_BUILD
+# IPP_FOUND        - True if Intel IPP found
+# IPP_INCLUDE_DIR - IPP include folder
+# IPP_LIBRARY_DIR - IPP libraries folder
+# IPP_LIBRARIES    - IPP libraries names that are used by OpenCV
 #
 # Created: 30 Dec 2010 by Vladimir Dudnik (vladimir.dudnik@intel.com)
 #
@@ -222,9 +222,53 @@ if(IPP_H_PATH)
 
     ipp_get_version(${IPP_ROOT_DIR})
     ipp_set_variables(${IPP_VERSION_STR})
+=======
+
+set(IPP_FOUND TRUE)
+set(IPP_VERSION_STR "5.3.0.0") # will not detect earlier versions
+set(IPP_VERSION_MAJOR 0)
+set(IPP_VERSION_MINOR 0)
+set(IPP_VERSION_BUILD 0)
+set(IPP_INCLUDE_DIR ${OpenCV_SOURCE_DIR}/3rdparty/ippicv/include)
+set(IPP_LIBRARY_DIRS)
+set(IPP_LIBRARIES)
+if(WIN32 AND NOT ARM)
+  if (X86_64)
+    set(IPP_LIBRARY_DIR ${OpenCV_SOURCE_DIR}/3rdparty/ippicv/libs/windows/intel64)
+  else()
+    set(IPP_LIBRARY_DIR ${OpenCV_SOURCE_DIR}/3rdparty/ippicv/libs/windows/ia32/)
+  endif()
+  set(IPP_LIBRARIES ippccmt.lib  ippcoremt.lib  ippcvmt.lib  ippimt.lib  ippsmt.lib  ippvmmt.lib)
+elseif(UNIX)
+  if (X86_64)
+    set(IPP_LIBRARY_DIR ${OpenCV_SOURCE_DIR}/3rdparty/ippicv/libs/linux/intel64)
+  else()
+    set(IPP_LIBRARY_DIR ${OpenCV_SOURCE_DIR}/3rdparty/ippicv/libs/linux/ia32/)
+  endif()
+  set(IPP_LIBRARIES libippcc.a  libippcore.a  libippcv.a  libippi.a  libipps.a  libippvm.a)
 endif()
 
+# read IPP version info from file
+set(_VERSION_STR)
+set(_MAJOR)
+set(_MINOR)
+set(_BUILD)
+file(STRINGS ${IPP_INCLUDE_DIR}/ippversion.h STR1 REGEX "IPP_VERSION_MAJOR")
+file(STRINGS ${IPP_INCLUDE_DIR}/ippversion.h  STR2 REGEX "IPP_VERSION_MINOR")
+file(STRINGS ${IPP_INCLUDE_DIR}/ippversion.h  STR3 REGEX "IPP_VERSION_BUILD")
+if("${STR3}" STREQUAL "")
+    file(STRINGS ${IPP_INCLUDE_DIR}/ippversion.h STR3 REGEX "IPP_VERSION_UPDATE")
+>>>>>>> Prepare codes for ippicv library
+endif()
+file(STRINGS ${IPP_INCLUDE_DIR}/ippversion.h STR4 REGEX "IPP_VERSION_STR")
 
+# extract info and assign to variables
+string(REGEX MATCHALL "[0-9]+" _MAJOR ${STR1})
+string(REGEX MATCHALL "[0-9]+" _MINOR ${STR2})
+string(REGEX MATCHALL "[0-9]+" _BUILD ${STR3})
+string(REGEX MATCHALL "[0-9]+[.]+[0-9]+[^\"]+|[0-9]+[.]+[0-9]+" _VERSION_STR ${STR4})
+
+<<<<<<< HEAD
 if(WIN32 AND MINGW AND NOT IPP_VERSION_MAJOR LESS 7)
     # Since IPP built with Microsoft compiler and /GS option
     # ======================================================
@@ -242,3 +286,12 @@ if(WIN32 AND MINGW AND NOT IPP_VERSION_MAJOR LESS 7)
     set(MSV_NTDLL    "ntdll")
     set(IPP_LIBRARIES ${IPP_LIBRARIES} ${MSV_NTDLL}${IPP_LIB_SUFFIX})
 endif()
+=======
+# export info to parent scope
+set(IPP_VERSION_STR   ${_VERSION_STR})
+set(IPP_VERSION_MAJOR ${_MAJOR})
+set(IPP_VERSION_MINOR ${_MINOR})
+set(IPP_VERSION_BUILD ${_BUILD})
+
+message(STATUS "found IPP: ${_MAJOR}.${_MINOR}.${_BUILD} [${_VERSION_STR}]")
+>>>>>>> Prepare codes for ippicv library

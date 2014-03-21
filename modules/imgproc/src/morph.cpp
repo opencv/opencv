@@ -1149,26 +1149,26 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
         _src = &temp;
     }
     //DEPRECATED. Allocates and initializes morphology state structure for erosion or dilation operation.
-    typedef IppStatus (CV_STDCALL* ippiMorphologyInitAllocFunc)(int, const void*, IppiSize, IppiPoint, IppiMorphState **);
-    typedef IppStatus (CV_STDCALL* ippiMorphologyBorderReplicateFunc)(const void*, int, void *, int,
+    typedef IppStatus (CV_STDCALL* ippicviMorphologyInitAllocFunc)(int, const void*, IppiSize, IppiPoint, IppiMorphState **);
+    typedef IppStatus (CV_STDCALL* ippicviMorphologyBorderReplicateFunc)(const void*, int, void *, int,
                                                                       IppiSize, IppiBorderType, IppiMorphState *);
-    typedef IppStatus (CV_STDCALL* ippiFilterMinMaxGetBufferSizeFunc)(int, IppiSize, int*);
-    typedef IppStatus (CV_STDCALL* ippiFilterMinMaxBorderReplicateFunc)(const void*, int, void*, int,
+    typedef IppStatus (CV_STDCALL* ippicviFilterMinMaxGetBufferSizeFunc)(int, IppiSize, int*);
+    typedef IppStatus (CV_STDCALL* ippicviFilterMinMaxBorderReplicateFunc)(const void*, int, void*, int,
                                                                         IppiSize, IppiSize, IppiPoint, void*);
 
-    ippiMorphologyInitAllocFunc initAllocFunc = 0;
-    ippiMorphologyBorderReplicateFunc morphFunc = 0;
-    ippiFilterMinMaxGetBufferSizeFunc getBufSizeFunc = 0;
-    ippiFilterMinMaxBorderReplicateFunc morphRectFunc = 0;
+    ippicviMorphologyInitAllocFunc initAllocFunc = 0;
+    ippicviMorphologyBorderReplicateFunc morphFunc = 0;
+    ippicviFilterMinMaxGetBufferSizeFunc getBufSizeFunc = 0;
+    ippicviFilterMinMaxBorderReplicateFunc morphRectFunc = 0;
 
     #define IPP_MORPH_CASE(type, flavor) \
     case type: \
-        initAllocFunc = (ippiMorphologyInitAllocFunc)ippiMorphologyInitAlloc_##flavor; \
-        morphFunc = op == MORPH_ERODE ? (ippiMorphologyBorderReplicateFunc)ippiErodeBorderReplicate_##flavor : \
-                                        (ippiMorphologyBorderReplicateFunc)ippiDilateBorderReplicate_##flavor; \
-        getBufSizeFunc = (ippiFilterMinMaxGetBufferSizeFunc)ippiFilterMinGetBufferSize_##flavor; \
-        morphRectFunc = op == MORPH_ERODE ? (ippiFilterMinMaxBorderReplicateFunc)ippiFilterMinBorderReplicate_##flavor : \
-                                            (ippiFilterMinMaxBorderReplicateFunc)ippiFilterMaxBorderReplicate_##flavor; \
+        initAllocFunc = (ippicviMorphologyInitAllocFunc)ippicviMorphologyInitAlloc_##flavor; \
+        morphFunc = op == MORPH_ERODE ? (ippicviMorphologyBorderReplicateFunc)ippicviErodeBorderReplicate_##flavor : \
+                                        (ippicviMorphologyBorderReplicateFunc)ippicviDilateBorderReplicate_##flavor; \
+        getBufSizeFunc = (ippicviFilterMinMaxGetBufferSizeFunc)ippicviFilterMinGetBufferSize_##flavor; \
+        morphRectFunc = op == MORPH_ERODE ? (ippicviFilterMinMaxBorderReplicateFunc)ippicviFilterMinBorderReplicate_##flavor : \
+                                            (ippicviFilterMinMaxBorderReplicateFunc)ippicviFilterMaxBorderReplicate_##flavor; \
         break
 
     switch( type )
@@ -1196,7 +1196,7 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
         bool is_ok = morphFunc( _src->data, (int)_src->step[0],
                                dst.data, (int)dst.step[0],
                                roiSize, ippBorderRepl, pState ) >= 0;
-        ippiMorphologyFree(pState);
+        ippicviMorphologyFree(pState);
         return is_ok;
     }
     else if( rectKernel && morphRectFunc && getBufSizeFunc )
