@@ -6,12 +6,12 @@ Adding (blending) two images using OpenCV
 Goal
 =====
 
-In this tutorial you will learn how to:
+In this tutorial you will learn:
 
 .. container:: enumeratevisibleitemswithsquare
 
-   * What is *linear blending* and why it is useful.
-   * Add two images using :add_weighted:`addWeighted <>`
+   * what is *linear blending* and why it is useful;
+   * how to add two images using :add_weighted:`addWeighted <>`
 
 Theory
 =======
