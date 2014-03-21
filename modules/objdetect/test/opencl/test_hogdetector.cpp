@@ -110,7 +110,7 @@ OCL_TEST_P(HOG, Detect)
     OCL_OFF(hog.detectMultiScale(img, cpu_found, 0, Size(8, 8), Size(0, 0), 1.05, 6));
     OCL_ON(hog.detectMultiScale(uimg, gpu_found, 0, Size(8, 8), Size(0, 0), 1.05, 6));
 
-    EXPECT_LT(checkRectSimilarity(img.size(), cpu_found, gpu_found), 1.0);
+    EXPECT_LT(checkRectSimilarity(img.size(), cpu_found, gpu_found), 0.05);
 }
 
 INSTANTIATE_TEST_CASE_P(OCL_ObjDetect, HOG, testing::Combine(
