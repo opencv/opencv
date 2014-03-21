@@ -1115,14 +1115,16 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         Mat src = _src.getMat(), dst = _dst.getMat();
         IppiSize roi = { src.cols, src.rows };
         int bufSize = 0;
-        ippiFilterGaussGetBufferSize_32f_C1R(roi, ksize.width, &bufSize);
-        AutoBuffer<uchar> buf(bufSize+128);
-        if( ippiFilterGaussBorder_32f_C1R((const Ipp32f *)src.data, (int)src.step,
-                                          (Ipp32f *)dst.data, (int)dst.step,
-                                          roi, ksize.width, (Ipp32f)sigma1,
-                                          (IppiBorderType)borderType, 0.0,
-                                          alignPtr(&buf[0],32)) >= 0 )
-            return;
+        if (ippStsNoErr == ippicviFilterGaussGetBufferSize_32f_C1R(roi, ksize.width, &bufSize))
+        {
+            AutoBuffer<uchar> buf(bufSize+128);
+            if( ippicviFilterGaussBorder_32f_C1R((const Ipp32f *)src.data, (int)src.step,
+                                              (Ipp32f *)dst.data, (int)dst.step,
+                                              roi, ksize.width, (Ipp32f)sigma1,
+                                              (IppiBorderType)borderType, 0.0,
+                                              alignPtr(&buf[0],32)) >= 0 )
+                return;
+        }
     }
 #endif
 
@@ -2180,11 +2182,19 @@ public:
           IppiSize kernel = {d, d};
           IppiSize roi={dst.cols, range.end - range.start};
           int bufsize=0;
-          ippiFilterBilateralGetBufSize_8u_C1R( ippiFilterBilateralGauss, roi, kernel, &bufsize);
+          if (ippStsNoErr != ippicviFilterBilateralGetBufSize_8u_C1R( ippiFilterBilateralGauss, roi, kernel, &bufsize))
+          {
+              *ok = false;
+              return;
+          }
           AutoBuffer<uchar> buf(bufsize);
           IppiFilterBilateralSpec *pSpec = (IppiFilterBilateralSpec *)alignPtr(&buf[0], 32);
-          ippiFilterBilateralInit_8u_C1R( ippiFilterBilateralGauss, kernel, (Ipp32f)sigma_color, (Ipp32f)sigma_space, 1, pSpec );
-          if( ippiFilterBilateral_8u_C1R( src.ptr<uchar>(range.start) + radius * ((int)src.step[0] + 1), (int)src.step[0], dst.ptr<uchar>(range.start), (int)dst.step[0], roi, kernel, pSpec ) < 0)
+          if (ippStsNoErr != ippicviFilterBilateralInit_8u_C1R( ippiFilterBilateralGauss, kernel, (Ipp32f)sigma_color, (Ipp32f)sigma_space, 1, pSpec ))
+          {
+              *ok = false;
+              return;
+          }
+          if( ippicviFilterBilateral_8u_C1R( src.ptr<uchar>(range.start) + radius * ((int)src.step[0] + 1), (int)src.step[0], dst.ptr<uchar>(range.start), (int)dst.step[0], roi, kernel, pSpec ) < 0)
               *ok = false;
       }
 private:

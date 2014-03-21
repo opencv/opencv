@@ -375,7 +375,7 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
     Mat patch = _patch.getMat();
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    typedef IppStatus (CV_STDCALL *ippiGetRectSubPixFunc)( const void* src, int src_step,
+    typedef IppStatus (CV_STDCALL *ippicviGetRectSubPixFunc)( const void* src, int src_step,
                                                             IppiSize src_size, void* dst,
                                                             int dst_step, IppiSize win_size,
                                                             IppiPoint_32f center,
@@ -385,10 +385,10 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
     IppiPoint_32f icenter = {center.x, center.y};
     IppiSize src_size={image.cols, image.rows}, win_size={patch.cols, patch.rows};
     int srctype = image.type();
-    ippiGetRectSubPixFunc ippfunc =
-        srctype == CV_8UC1 && ddepth == CV_8U ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_8u_C1R :
-        srctype == CV_8UC1 && ddepth == CV_32F ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_8u32f_C1R :
-        srctype == CV_32FC1 && ddepth == CV_32F ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_32f_C1R : 0;
+    ippicviGetRectSubPixFunc ippfunc =
+        srctype == CV_8UC1 && ddepth == CV_8U ? (ippicviGetRectSubPixFunc)ippicviCopySubpixIntersect_8u_C1R :
+        srctype == CV_8UC1 && ddepth == CV_32F ? (ippicviGetRectSubPixFunc)ippicviCopySubpixIntersect_8u32f_C1R :
+        srctype == CV_32FC1 && ddepth == CV_32F ? (ippicviGetRectSubPixFunc)ippicviCopySubpixIntersect_32f_C1R : 0;
 
     if( ippfunc && ippfunc(image.data, (int)image.step, src_size, patch.data,
                            (int)patch.step, win_size, icenter, &minpt, &maxpt) >= 0 )
