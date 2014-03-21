@@ -56,8 +56,11 @@ if(ANDROID)
 
   # remove CUDA runtime and NPP from regular deps
   # it can be added separately if needed.
-  ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "libcu")
-  ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "libnpp")
+  ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "cusparse")
+  ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "cufft")
+  ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "cublas")
+  ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "npp")
+  ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "cudart")
 
   if(HAVE_CUDA)
     # CUDA runtime libraries and are required always
