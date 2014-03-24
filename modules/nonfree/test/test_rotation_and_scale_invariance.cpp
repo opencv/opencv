@@ -619,7 +619,7 @@ protected:
 /*
  * Detector's rotation invariance check
  */
-TEST(Features2d_RotationInvariance_Detector_SURF, regression)
+TEST(DISABLED_Features2d_RotationInvariance_Detector_SURF, regression)
 {
     DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>(SURF_NAME),
                                         0.44f,
@@ -638,7 +638,7 @@ TEST(Features2d_RotationInvariance_Detector_SIFT, DISABLED_regression)
 /*
  * Descriptors's rotation invariance check
  */
-TEST(Features2d_RotationInvariance_Descriptor_SURF, regression)
+TEST(DISABLED_Features2d_RotationInvariance_Descriptor_SURF, regression)
 {
     DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>(SURF_NAME),
                                           Algorithm::create<DescriptorExtractor>(SURF_NAME),
