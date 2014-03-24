@@ -16,7 +16,7 @@ typedef perf::TestBaseWithParam<std::string> surf;
 #define OCL_TEST_CYCLE() for( ; startTimer(), next(); cv::ocl::finish(), stopTimer())
 #endif
 
-PERF_TEST_P(surf, detect, testing::Values(SURF_IMAGES))
+PERF_TEST_P(surf, DISABLED_detect, testing::Values(SURF_IMAGES))
 {
     String filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
@@ -45,7 +45,7 @@ PERF_TEST_P(surf, detect, testing::Values(SURF_IMAGES))
     SANITY_CHECK_KEYPOINTS(points, 1e-3);
 }
 
-PERF_TEST_P(surf, extract, testing::Values(SURF_IMAGES))
+PERF_TEST_P(surf, DISABLED_extract, testing::Values(SURF_IMAGES))
 {
     String filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
@@ -77,7 +77,7 @@ PERF_TEST_P(surf, extract, testing::Values(SURF_IMAGES))
     SANITY_CHECK(descriptors, 1e-4);
 }
 
-PERF_TEST_P(surf, full, testing::Values(SURF_IMAGES))
+PERF_TEST_P(surf, DISABLED_full, testing::Values(SURF_IMAGES))
 {
     String filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
