@@ -63,9 +63,7 @@ Here it is:
 Explanation
 ============
 
-#. We begin by:
-
-   * Load an image using :readwriteimagevideo:`imread <imread>`, located in the path given by *imageName*. Fort this example, assume you are loading a RGB image.
+#. We begin by loading an image using :readwriteimagevideo:`imread <imread>`, located in the path given by *imageName*. For this example, assume you are loading a RGB image.
 
 #. Now we are going to convert our image from BGR to Grayscale format. OpenCV has a really nice function to do this kind of transformations:
 
