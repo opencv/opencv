@@ -2210,7 +2210,7 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
                                    double sigma_color, double sigma_space,
                                    int borderType)
 {
-    int type = _src.type(), cn = CV_MAT_CN(type);
+    int type = _src.type();
     int i, j, maxk, radius;
 
     if ( type != CV_8UC1 )
@@ -2237,19 +2237,14 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
 
     copyMakeBorder(src, temp, radius, radius, radius, radius, borderType);
 
-    std::vector<float> _color_weight(cn * 256);
     std::vector<float> _space_weight(d * d);
     std::vector<int> _space_ofs(d * d);
-    float *color_weight = &_color_weight[0];
     float *space_weight = &_space_weight[0];
     int *space_ofs = &_space_ofs[0];
 
-    // initialize color-related bilateral filter coefficients
-    for( i = 0; i < 256 * cn; i++ )
-        color_weight[i] = (float)std::exp(i * i * gauss_color_coeff);
-
     // initialize space-related bilateral filter coefficients
     for( i = -radius, maxk = 0; i <= radius; i++ )
+    {
         for( j = -radius; j <= radius; j++ )
         {
             double r = std::sqrt((double)i * i + (double)j * j);
@@ -2258,26 +2253,43 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
             space_weight[maxk] = (float)std::exp(r * r * gauss_space_coeff);
             space_ofs[maxk++] = (int)(i * temp.step + j);
         }
+    }
 
-    ocl::Kernel k("bilateral", ocl::imgproc::bilateral_oclsrc,
-                  format("-D radius=%d -D maxk=%d", radius, maxk));
+    String kernelName("bilateral");
+    size_t sizeDiv = 1;
+
+    if ((ocl::Device::getDefault().isIntel()) &&
+        (ocl::Device::getDefault().type() == ocl::Device::TYPE_GPU))
+    {
+            //Intel GPU
+            if (dst.cols % 4 == 0)
+            {
+                    kernelName = "bilateral_float4";
+                    sizeDiv = 4;
+            }
+            else
+            {
+                    kernelName = "bilateral_float";
+            }
+    }
+    ocl::Kernel k(kernelName.c_str(), ocl::imgproc::bilateral_oclsrc,
+                  format("-D radius=%d -D maxk=%d "
+                         "-D gauss_color_coeff=%f", radius, maxk,
+                         (float)gauss_color_coeff));
     if (k.empty())
         return false;
 
-    Mat mcolor_weight(1, cn * 256, CV_32FC1, color_weight);
     Mat mspace_weight(1, d * d, CV_32FC1, space_weight);
     Mat mspace_ofs(1, d * d, CV_32SC1, space_ofs);
-    UMat ucolor_weight, uspace_weight, uspace_ofs;
-    mcolor_weight.copyTo(ucolor_weight);
+    UMat uspace_weight, uspace_ofs;
     mspace_weight.copyTo(uspace_weight);
     mspace_ofs.copyTo(uspace_ofs);
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(temp), ocl::KernelArg::WriteOnly(dst),
-           ocl::KernelArg::PtrReadOnly(ucolor_weight),
            ocl::KernelArg::PtrReadOnly(uspace_weight),
            ocl::KernelArg::PtrReadOnly(uspace_ofs));
 
-    size_t globalsize[2] = { dst.cols, dst.rows };
+    size_t globalsize[2] = { dst.cols / sizeDiv, dst.rows };
     return k.run(2, globalsize, NULL, false);
 }
 
