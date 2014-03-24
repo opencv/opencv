@@ -289,6 +289,10 @@ double CvCapture_Android::getProperty( int propIdx )
         return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_FOCUS_DISTANCE_OPTIMAL);
     case CV_CAP_PROP_ANDROID_FOCUS_DISTANCE_FAR:
         return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_FOCUS_DISTANCE_FAR);
+    case CV_CAP_PROP_ANDROID_EXPOSE_LOCK:
+        return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_EXPOSE_LOCK);
+    case CV_CAP_PROP_ANDROID_WHITEBALANCE_LOCK:
+        return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_WHITEBALANCE_LOCK);
     default:
         CV_Error( CV_StsOutOfRange, "Failed attempt to GET unsupported camera property." );
         break;
@@ -327,14 +331,23 @@ bool CvCapture_Android::setProperty( int propIdx, double propValue )
         case CV_CAP_PROP_ANDROID_ANTIBANDING:
             m_activity->setProperty(ANDROID_CAMERA_PROPERTY_ANTIBANDING, propValue);
             break;
+        case CV_CAP_PROP_ANDROID_EXPOSE_LOCK:
+            m_activity->setProperty(ANDROID_CAMERA_PROPERTY_EXPOSE_LOCK, propValue);
+            break;
+        case CV_CAP_PROP_ANDROID_WHITEBALANCE_LOCK:
+            m_activity->setProperty(ANDROID_CAMERA_PROPERTY_WHITEBALANCE_LOCK, propValue);
+            break;
         default:
             CV_Error( CV_StsOutOfRange, "Failed attempt to SET unsupported camera property." );
             return false;
         }
 
-        if (propIdx != CV_CAP_PROP_AUTOGRAB) {// property for highgui class CvCapture_Android only
+        // Only changes in frame size require camera restart
+        if ((propIdx == CV_CAP_PROP_FRAME_WIDTH) || (propIdx == CV_CAP_PROP_FRAME_HEIGHT))
+        {   // property for highgui class CvCapture_Android only
             m_CameraParamsChanged = true;
         }
+
         res = true;
     }
 
