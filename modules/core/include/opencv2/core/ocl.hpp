@@ -592,7 +592,7 @@ protected:
 CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf);
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
-CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1);
+CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1, const char * name = NULL);
 CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo>& platform_info);
 CV_EXPORTS int predictOptimalVectorWidth(InputArray src1, InputArray src2 = noArray(), InputArray src3 = noArray(),
                                          InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
