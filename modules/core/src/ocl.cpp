@@ -1581,7 +1581,7 @@ void finish()
 
 #define IMPLEMENT_REFCOUNTABLE() \
     void addref() { CV_XADD(&refcount, 1); } \
-    void release() { if( CV_XADD(&refcount, -1) == 1 ) delete this; } \
+    void release() { if( CV_XADD(&refcount, -1) == 1 && !cv::__termination) delete this; } \
     int refcount
 
 /////////////////////////////////////////// Platform /////////////////////////////////////////////
