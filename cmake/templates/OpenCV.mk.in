@@ -152,11 +152,14 @@ ifeq ($(OPENCV_MK_$(OPENCV_TARGET_ARCH_ABI)_ALREADY_INCLUDED),)
     OPENCV_MK_$(OPENCV_TARGET_ARCH_ABI)_ALREADY_INCLUDED:=on
 endif
 
-ifeq ($(OPENCV_USE_GPU_MODULE),on)
-    include $(CLEAR_VARS)
-    LOCAL_MODULE:=opencv_gpu
-    LOCAL_SRC_FILES:=$(OPENCV_LIBS_DIR)/libopencv_gpu.a
-    include $(PREBUILT_STATIC_LIBRARY)
+ifeq ($(OPENCV_MK_$(OPENCV_TARGET_ARCH_ABI)_GPU_ALREADY_INCLUDED),)
+    ifeq ($(OPENCV_USE_GPU_MODULE),on)
+        include $(CLEAR_VARS)
+        LOCAL_MODULE:=opencv_gpu
+        LOCAL_SRC_FILES:=$(OPENCV_LIBS_DIR)/libopencv_gpu.a
+        include $(PREBUILT_STATIC_LIBRARY)
+    endif
+    OPENCV_MK_$(OPENCV_TARGET_ARCH_ABI)_GPU_ALREADY_INCLUDED:=on
 endif
 
 ifeq ($(OPENCV_LOCAL_CFLAGS),)
