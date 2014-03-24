@@ -53,7 +53,7 @@ namespace cv
         //! Speeded up robust features, port from GPU module.
         ////////////////////////////////// SURF //////////////////////////////////////////
 
-        class CV_EXPORTS SURF_OCL : public Feature2D
+        class CV_EXPORTS SURF_OCL : public cv::Feature2D
         {
         public:
             enum KeypointLayout
