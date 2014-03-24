@@ -33,7 +33,9 @@ int main(int argc, char **argv)
     ::perf::TestBase::setPerformanceStrategy(::perf::PERF_STRATEGY_SIMPLE);
 #if defined(HAVE_CUDA)
     CV_PERF_TEST_MAIN_INTERNALS(nonfree, impls, perf::printCudaInfo());
-#else if defined(HAVE_OPENCL)
+#elif defined(HAVE_OPENCL)
     CV_PERF_TEST_MAIN_INTERNALS(nonfree, impls, dumpOpenCLDevice());
+#else
+    CV_PERF_TEST_MAIN_INTERNALS(ocl, impls)
 #endif
 }

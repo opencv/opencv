@@ -1008,7 +1008,7 @@ TEST( Features2d_DescriptorExtractor_SIFT, regression )
     test.safe_run();
 }
 
-TEST( Features2d_DescriptorExtractor_SURF, regression )
+TEST( DISABLED_Features2d_DescriptorExtractor_SURF, regression )
 {
     CV_DescriptorExtractorTest<L2<float> > test( "descriptor-surf",  0.05f,
                                                  Ptr<DescriptorExtractor>(getSURF()) );
@@ -1047,7 +1047,7 @@ TEST( Features2d_DescriptorExtractor_Calonder_float, regression )
 }
 #endif*/ // CV_SSE2
 
-TEST(Features2d_BruteForceDescriptorMatcher_knnMatch, regression)
+TEST(DISABLED_Features2d_BruteForceDescriptorMatcher_knnMatch, regression)
 {
     const int sz = 100;
     const int k = 3;
