@@ -32,28 +32,79 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 
+
+
 __kernel void bilateral(__global const uchar * src, int src_step, int src_offset,
                         __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                        __constant float * color_weight, __constant float * space_weight, __constant int * space_ofs)
+                        __constant float * space_weight, __constant int * space_ofs)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
-
     if (y < dst_rows && x < dst_cols)
     {
         int src_index = mad24(y + radius, src_step, x + radius + src_offset);
         int dst_index = mad24(y, dst_step, x + dst_offset);
         float sum = 0.f, wsum = 0.f;
         int val0 = convert_int(src[src_index]);
-
         #pragma unroll
         for (int k = 0; k < maxk; k++ )
         {
             int val = convert_int(src[src_index + space_ofs[k]]);
-            float w = space_weight[k] * color_weight[abs(val - val0)];
+            float w = space_weight[k] * native_exp((float)((val - val0) * (val - val0) * gauss_color_coeff));
             sum += (float)(val) * w;
             wsum += w;
         }
         dst[dst_index] = convert_uchar_rtz(sum / wsum + 0.5f);
+    }
+}
+
+__kernel void bilateral_float(__global const uchar * src, int src_step, int src_offset,
+                              __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                              __constant float * space_weight, __constant int * space_ofs)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    if (y < dst_rows && x < dst_cols)
+    {
+        int src_index = mad24(y + radius, src_step, x + radius + src_offset);
+        int dst_index = mad24(y, dst_step, x + dst_offset);
+        float sum = 0.f, wsum = 0.f;
+        float val0 = convert_float(src[src_index]);
+        #pragma unroll
+        for (int k = 0; k < maxk; k++ )
+        {
+            float val = convert_float(src[src_index + space_ofs[k]]);
+            float w = space_weight[k] * native_exp((val - val0) * (val - val0) * gauss_color_coeff);
+            sum += (float)(val) * w;
+            wsum += w;
+        }
+        dst[dst_index] = convert_uchar_rtz(sum / wsum + 0.5f);
+    }
+}
+
+
+__kernel void bilateral_float4(__global const uchar * src, int src_step, int src_offset,
+                               __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                               __constant float * space_weight, __constant int * space_ofs)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    if (y < dst_rows && x < dst_cols / 4 )
+    {
+        int src_index = ((y + radius) * src_step) + x * 4  + (radius + src_offset);
+        int dst_index = (y  * dst_step) +  x * 4 + dst_offset ;
+        float4 sum = 0.f, wsum = 0.f;
+        float4 val0 = convert_float4(vload4(0, src + src_index));
+        #pragma unroll
+        for (int k = 0; k < maxk; k++ )
+        {
+            float4 val = convert_float4(vload4(0, src + src_index + space_ofs[k]));
+            float spacew = space_weight[k];
+            float4 w = spacew * native_exp((val - val0) * (val - val0) * gauss_color_coeff);
+            sum += val * w;
+            wsum += w;
+        }
+        sum = sum / wsum + .5f;
+        vstore4(convert_uchar4_rtz(sum), 0, dst + dst_index);
     }
 }

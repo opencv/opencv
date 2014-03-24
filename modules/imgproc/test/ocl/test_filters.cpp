@@ -62,12 +62,14 @@ PARAM_TEST_CASE(FilterTestBase, MatType,
                 Size, // dx, dy
                 BorderType, // border type
                 double, // optional parameter
-                bool) // roi or not
+                bool, // roi or not
+                int)  //width multiplier
 {
     int type, borderType, ksize;
     Size size;
     double param;
     bool useRoi;
+    int widthMultiple;
 
     TEST_DECLARE_INPUT_PARAMETER(src)
     TEST_DECLARE_OUTPUT_PARAMETER(dst)
@@ -80,6 +82,7 @@ PARAM_TEST_CASE(FilterTestBase, MatType,
         borderType = GET_PARAM(3);
         param = GET_PARAM(4);
         useRoi = GET_PARAM(5);
+        widthMultiple = GET_PARAM(6);
     }
 
     void random_roi(int minSize = 1)
@@ -88,6 +91,9 @@ PARAM_TEST_CASE(FilterTestBase, MatType,
             minSize = ksize;
 
         Size roiSize = randomSize(minSize, MAX_VALUE);
+        roiSize.width &= ~((widthMultiple * 2) - 1);
+        roiSize.width += widthMultiple;
+
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(src, src_roi, roiSize, srcBorder, type, 5, 256);
 
@@ -320,7 +326,8 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, Bilateral, Combine(
                             Values(Size(0, 0)), // not used
                             FILTER_BORDER_SET_NO_ISOLATED,
                             Values(0.0), // not used
-                            Bool()));
+                            Bool(),
+                            Values(1, 4)));
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, LaplacianTest, Combine(
                             FILTER_TYPES,
@@ -328,7 +335,8 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, LaplacianTest, Combine(
                             Values(Size(0, 0)), // not used
                             FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
                             Values(1.0, 0.2, 3.0), // kernel scale
-                            Bool()));
+                            Bool(),
+                            Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, SobelTest, Combine(
                             FILTER_TYPES,
@@ -336,7 +344,8 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, SobelTest, Combine(
                             Values(Size(1, 0), Size(1, 1), Size(2, 0), Size(2, 1)), // dx, dy
                             FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
                             Values(0.0), // not used
-                            Bool()));
+                            Bool(),
+                            Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, ScharrTest, Combine(
                             FILTER_TYPES,
@@ -344,7 +353,8 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, ScharrTest, Combine(
                             Values(Size(0, 1), Size(1, 0)), // dx, dy
                             FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
                             Values(1.0, 0.2), // kernel scale
-                            Bool()));
+                            Bool(),
+                            Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, GaussianBlurTest, Combine(
                             FILTER_TYPES,
@@ -352,7 +362,8 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, GaussianBlurTest, Combine(
                             Values(Size(0, 0)), // not used
                             FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
                             Values(0.0), // not used
-                            Bool()));
+                            Bool(),
+                            Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(
                             Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4, CV_64FC1, CV_64FC4),
@@ -360,7 +371,8 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(
                             Values(Size(0,0)),//not used
                             Values((BorderType)BORDER_CONSTANT),//not used
                             Values(1.0, 2.0, 3.0),
-                            Bool() ) );
+                            Bool(),
+                            Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(
                             Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4, CV_64FC1, CV_64FC4),
@@ -368,7 +380,8 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(
                             Values(Size(0,0)),//not used
                             Values((BorderType)BORDER_CONSTANT),//not used
                             Values(1.0, 2.0, 3.0),
-                            Bool() ) );
+                            Bool(),
+                            Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, MorphologyEx, Combine(
                             Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4, CV_64FC1, CV_64FC4),
@@ -376,7 +389,8 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, MorphologyEx, Combine(
                             Values(Size(0,0), Size(0,1), Size(0,2), Size(0,3), Size(0,4), Size(0,5),Size(0,6)),//uses as generator of operations
                             Values((BorderType)BORDER_CONSTANT),//not used
                             Values(1.0, 2.0, 3.0),
-                            Bool() ) );
+                            Bool(),
+                            Values(1))); // not used
 
 
 } } // namespace cvtest::ocl
