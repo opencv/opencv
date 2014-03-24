@@ -19,8 +19,8 @@
 #    This file will define the following variables:
 #      - OpenCV_LIBS                     : The list of all imported targets for OpenCV modules.
 #      - OpenCV_INCLUDE_DIRS             : The OpenCV include directories.
-#      - OpenCV_COMPUTE_CAPABILITIES     : The version of compute capability
-#      - OpenCV_ANDROID_NATIVE_API_LEVEL : Minimum required level of Android API
+#      - OpenCV_COMPUTE_CAPABILITIES     : The version of compute capability.
+#      - OpenCV_ANDROID_NATIVE_API_LEVEL : Minimum required level of Android API.
 #      - OpenCV_VERSION                  : The version of this OpenCV build: "@OPENCV_VERSION_PLAIN@"
 #      - OpenCV_VERSION_MAJOR            : Major version part of OpenCV_VERSION: "@OPENCV_VERSION_MAJOR@"
 #      - OpenCV_VERSION_MINOR            : Minor version part of OpenCV_VERSION: "@OPENCV_VERSION_MINOR@"
@@ -28,25 +28,29 @@
 #      - OpenCV_VERSION_STATUS           : Development status of this build: "@OPENCV_VERSION_STATUS@"
 #
 #    Advanced variables:
-#      - OpenCV_SHARED
-#      - OpenCV_CONFIG_PATH
-#      - OpenCV_INSTALL_PATH  (not set on Windows)
-#      - OpenCV_LIB_COMPONENTS
-#      - OpenCV_USE_MANGLED_PATHS
-#      - OpenCV_HAVE_ANDROID_CAMERA
+#      - OpenCV_SHARED                   : Use OpenCV as shared library
+#      - OpenCV_CONFIG_PATH              : Path to this OpenCVConfig.cmake
+#      - OpenCV_INSTALL_PATH             : OpenCV location (not set on Windows)
+#      - OpenCV_LIB_COMPONENTS           : Present OpenCV modules list
+#      - OpenCV_USE_MANGLED_PATHS        : Mangled OpenCV path flag
+#      - OpenCV_MODULES_SUFFIX           : The suffix for OpenCVModules-XXX.cmake file
+#      - OpenCV_HAVE_ANDROID_CAMERA      : Presence of Android native camera wrappers
 #
 #    Deprecated variables:
 #      - OpenCV_VERSION_TWEAK            : Always "0"
 #
 # ===================================================================================
 
-set(modules_file_suffix "")
-if(ANDROID)
-  string(REPLACE - _ modules_file_suffix "_${ANDROID_NDK_ABI_NAME}")
+if(NOT DEFINED OpenCV_MODULES_SUFFIX)
+  if(ANDROID)
+    string(REPLACE - _ OpenCV_MODULES_SUFFIX "_${ANDROID_NDK_ABI_NAME}")
+  else()
+    set(OpenCV_MODULES_SUFFIX "")
+  endif()
 endif()
 
 if(NOT TARGET opencv_core)
-  include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${modules_file_suffix}.cmake)
+  include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${OpenCV_MODULES_SUFFIX}.cmake)
 endif()
 
 # TODO All things below should be reviewed. What is about of moving this code into related modules (special vars/hooks/files)
