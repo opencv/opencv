@@ -2179,7 +2179,6 @@ static cl_device_id selectOpenCLDevice()
             goto not_found;
         }
     }
-
     if (deviceTypes.size() == 0)
     {
         if (!isID)
@@ -2193,13 +2192,16 @@ static cl_device_id selectOpenCLDevice()
     for (size_t t = 0; t < deviceTypes.size(); t++)
     {
         int deviceType = 0;
-        if (deviceTypes[t] == "GPU")
+        std::string tempStrDeviceType = deviceTypes[t];
+        std::transform( tempStrDeviceType.begin(), tempStrDeviceType.end(), tempStrDeviceType.begin(), tolower );
+
+        if (tempStrDeviceType == "gpu" || tempStrDeviceType == "dgpu" || tempStrDeviceType == "igpu")
             deviceType = Device::TYPE_GPU;
-        else if (deviceTypes[t] == "CPU")
+        else if (tempStrDeviceType == "cpu")
             deviceType = Device::TYPE_CPU;
-        else if (deviceTypes[t] == "ACCELERATOR")
+        else if (tempStrDeviceType == "accelerator")
             deviceType = Device::TYPE_ACCELERATOR;
-        else if (deviceTypes[t] == "ALL")
+        else if (tempStrDeviceType == "all")
             deviceType = Device::TYPE_ALL;
         else
         {
@@ -2229,7 +2231,14 @@ static cl_device_id selectOpenCLDevice()
         {
             std::string name;
             CV_OclDbgAssert(getStringInfo(clGetDeviceInfo, devices[i], CL_DEVICE_NAME, name) == CL_SUCCESS);
-            if (isID || name.find(deviceName) != std::string::npos)
+            cl_bool useGPU = true;
+            if(tempStrDeviceType == "dgpu" || tempStrDeviceType == "igpu")
+            {
+                cl_bool isIGPU = CL_FALSE;
+                clGetDeviceInfo(devices[i], CL_DEVICE_HOST_UNIFIED_MEMORY, sizeof(isIGPU), &isIGPU, NULL);
+                useGPU = tempStrDeviceType == "dgpu" ? !isIGPU : isIGPU;
+            }
+            if ( (isID || name.find(deviceName) != std::string::npos) && useGPU)
             {
                 // TODO check for OpenCL 1.1
                 return devices[i];
