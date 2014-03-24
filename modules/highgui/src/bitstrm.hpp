@@ -53,7 +53,7 @@ enum
     RBS_THROW_EOS=-123,  // <end of stream> exception code
     RBS_THROW_FORB=-124,  // <forrbidden huffman code> exception code
     RBS_HUFF_FORB=2047,  // forrbidden huffman code "value"
-    RBS_BAD_HEADER=-125, // invalid header
+    RBS_BAD_HEADER=-125 // invalid header
 };
 
 typedef unsigned long ulong;

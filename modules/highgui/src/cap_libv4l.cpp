@@ -321,7 +321,6 @@ typedef struct CvCaptureCAM_V4L
    struct v4l2_control control;
    enum v4l2_buf_type type;
    struct v4l2_queryctrl queryctrl;
-   struct v4l2_querymenu querymenu;
 
    /* V4L2 control variables */
    v4l2_ctrl_range** v4l2_ctrl_ranges;
@@ -491,25 +490,6 @@ static int try_init_v4l2(CvCaptureCAM_V4L* capture, char *deviceName)
 }
 
 
-static void v4l2_scan_controls_enumerate_menu(CvCaptureCAM_V4L* capture)
-{
-//  printf (" Menu items:\n");
-  CLEAR (capture->querymenu);
-  capture->querymenu.id = capture->queryctrl.id;
-  for (capture->querymenu.index = capture->queryctrl.minimum;
-       (int)capture->querymenu.index <= capture->queryctrl.maximum;
-       capture->querymenu.index++)
-  {
-    if (0 == xioctl (capture->deviceHandle, VIDIOC_QUERYMENU,
-                     &capture->querymenu))
-    {
-      //printf (" %s\n", capture->querymenu.name);
-    } else {
-        perror ("VIDIOC_QUERYMENU");
-    }
-  }
-}
-
 static void v4l2_free_ranges(CvCaptureCAM_V4L* capture) {
   int i;
   if (capture->v4l2_ctrl_ranges != NULL) {
@@ -590,9 +570,6 @@ static void v4l2_scan_controls(CvCaptureCAM_V4L* capture) {
       if(capture->queryctrl.flags & V4L2_CTRL_FLAG_DISABLED) {
         continue;
       }
-      if (capture->queryctrl.type == V4L2_CTRL_TYPE_MENU) {
-        v4l2_scan_controls_enumerate_menu(capture);
-      }
       if(capture->queryctrl.type != V4L2_CTRL_TYPE_INTEGER &&
          capture->queryctrl.type != V4L2_CTRL_TYPE_BOOLEAN &&
          capture->queryctrl.type != V4L2_CTRL_TYPE_MENU) {
@@ -612,9 +589,6 @@ static void v4l2_scan_controls(CvCaptureCAM_V4L* capture) {
       if(v4l2_ioctl(capture->deviceHandle, VIDIOC_QUERYCTRL, &capture->queryctrl) == 0) {
         if(capture->queryctrl.flags & V4L2_CTRL_FLAG_DISABLED) {
           continue;
-        }
-        if (capture->queryctrl.type == V4L2_CTRL_TYPE_MENU) {
-          v4l2_scan_controls_enumerate_menu(capture);
         }
         if(capture->queryctrl.type != V4L2_CTRL_TYPE_INTEGER &&
            capture->queryctrl.type != V4L2_CTRL_TYPE_BOOLEAN &&
@@ -637,9 +611,6 @@ static void v4l2_scan_controls(CvCaptureCAM_V4L* capture) {
           continue;
         }
 
-        if (capture->queryctrl.type == V4L2_CTRL_TYPE_MENU) {
-          v4l2_scan_controls_enumerate_menu(capture);
-        }
 
         if(capture->queryctrl.type != V4L2_CTRL_TYPE_INTEGER &&
            capture->queryctrl.type != V4L2_CTRL_TYPE_BOOLEAN &&

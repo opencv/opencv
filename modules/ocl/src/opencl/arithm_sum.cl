@@ -63,21 +63,19 @@
 
 /**************************************Array buffer SUM**************************************/
 
-__kernel void arithm_op_sum(int cols,int invalid_cols,int offset,int elemnum,int groupnum,
-                                __global srcT *src, __global dstT *dst)
+__kernel void arithm_op_sum(__global srcT * src, int src_step, int src_offset, int src_cols,
+                            int total, int groupnum, __global dstT * dst)
 {
     int lid = get_local_id(0);
     int gid = get_group_id(0);
     int id = get_global_id(0);
-    int idx = offset + id + (id / cols) * invalid_cols;
 
     __local dstT localmem_sum[128];
     dstT sum = (dstT)(0), temp;
 
-    for (int grainSize = groupnum << 8; id < elemnum; id += grainSize)
+    for (int grainSize = groupnum << 8; id < total; id += grainSize)
     {
-        idx = offset + id + (id / cols) * invalid_cols;
-        temp = convertToDstT(src[idx]);
+        temp = convertToDstT(src[mad24(id / src_cols, src_step, id % src_cols + src_offset)]);
         FUNC(temp, sum);
     }
 

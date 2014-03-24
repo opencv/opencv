@@ -208,7 +208,7 @@ __kernel void normalize_hists_36_kernel(__global float* block_hists,
 //-------------------------------------------------------------
 //  Normalization of histograms via L2Hys_norm
 //
-static float reduce_smem(volatile __local float* smem, int size)
+inline float reduce_smem(volatile __local float* smem, int size)
 {
     unsigned int tid = get_local_id(0);
     float sum = smem[tid];

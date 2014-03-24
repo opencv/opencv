@@ -382,7 +382,7 @@ result.
            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_6, this, mLoaderCallback);
        }
 
-#. Defines that your activity implements ``CvViewFrameListener2`` interface and fix activity related
+#. Defines that your activity implements ``CvCameraViewListener2`` interface and fix activity related
    errors by defining missed methods. For this activity define ``onCreate``, ``onDestroy`` and
    ``onPause`` and implement them according code snippet bellow. Fix errors by adding requited
    imports.
@@ -432,7 +432,7 @@ result.
 Lets discuss some most important steps. Every Android application with UI must implement Activity
 and View. By the first steps we create blank activity and default view layout. The simplest
 OpenCV-centric application must implement OpenCV initialization, create its own view to show
-preview from camera and implements ``CvViewFrameListener2`` interface to get frames from camera and
+preview from camera and implements ``CvCameraViewListener2`` interface to get frames from camera and
 process it.
 
 First of all we create our application view using xml layout. Our layout consists of the only

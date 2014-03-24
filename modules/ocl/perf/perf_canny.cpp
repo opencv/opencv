@@ -46,11 +46,21 @@
 #include "perf_precomp.hpp"
 
 using namespace perf;
+using std::tr1::tuple;
+using std::tr1::get;
 
 ///////////// Canny ////////////////////////
 
-PERF_TEST(CannyFixture, Canny)
+typedef tuple<int, bool> CannyParams;
+typedef TestBaseWithParam<CannyParams> CannyFixture;
+
+OCL_PERF_TEST_P(CannyFixture, Canny,
+                ::testing::Combine(OCL_PERF_ENUM(3, 5), testing::Bool()))
 {
+    const CannyParams params = GetParam();
+    int apertureSize = get<0>(params);
+    bool L2Grad = get<1>(params);
+
     Mat img = imread(getDataPath("gpu/stereobm/aloe-L.png"), cv::IMREAD_GRAYSCALE),
             edges(img.size(), CV_8UC1);
     ASSERT_TRUE(!img.empty()) << "can't open aloe-L.png";
@@ -61,16 +71,15 @@ PERF_TEST(CannyFixture, Canny)
     {
         ocl::oclMat oclImg(img), oclEdges(img.size(), CV_8UC1);
 
-        OCL_TEST_CYCLE() ocl::Canny(oclImg, oclEdges, 50.0, 100.0);
+        OCL_TEST_CYCLE() ocl::Canny(oclImg, oclEdges, 50.0, 100.0, apertureSize, L2Grad);
         oclEdges.download(edges);
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() Canny(img, edges, 50.0, 100.0);
+        TEST_CYCLE() Canny(img, edges, 50.0, 100.0, apertureSize, L2Grad);
     }
     else
         OCL_PERF_ELSE
 
-    int value = 0;
-    SANITY_CHECK(value);
+    SANITY_CHECK_NOTHING();
 }

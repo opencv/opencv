@@ -88,7 +88,7 @@ public:
             stringstream s;
             s << tag;
 
-            const string filename = "output_"+s.str()+".avi";
+            const string filename = tempfile((s.str()+".avi").c_str());
 
             try
             {

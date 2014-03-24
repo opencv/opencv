@@ -16,7 +16,7 @@ Required Packages
   * CMake 2.6 or higher;
   * Git;
   * GTK+2.x or higher, including headers (libgtk2.0-dev);
-  * pkgconfig;
+  * pkg-config;
   * Python 2.6 or later and Numpy 1.5 or later with developer packages (python-dev, python-numpy);
   * ffmpeg or libav development packages: libavcodec-dev, libavformat-dev, libswscale-dev;
   * [optional] libdc1394 2.x;

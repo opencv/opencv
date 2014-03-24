@@ -81,24 +81,39 @@ if(PYTHON_EXECUTABLE)
     SET(PYTHON_PACKAGES_PATH "${_PYTHON_PACKAGES_PATH}" CACHE PATH "Where to install the python packages.")
 
     if(NOT PYTHON_NUMPY_INCLUDE_DIR)
-      # Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
-      execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print numpy.distutils.misc_util.get_numpy_include_dirs()[0]"
-                      RESULT_VARIABLE PYTHON_NUMPY_PROCESS
-                      OUTPUT_VARIABLE PYTHON_NUMPY_INCLUDE_DIR
-                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+      if(CMAKE_CROSSCOMPILING)
+        message(STATUS "Cannot probe for Python/Numpy support (because we are cross-compiling OpenCV)")
+        message(STATUS "If you want to enable Python/Numpy support, set the following variables:")
+        message(STATUS "  PYTHON_INCLUDE_PATH")
+        message(STATUS "  PYTHON_LIBRARIES")
+        message(STATUS "  PYTHON_NUMPY_INCLUDE_DIR")
+      else()
+        # Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
+        execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print numpy.distutils.misc_util.get_numpy_include_dirs()[0]"
+                        RESULT_VARIABLE PYTHON_NUMPY_PROCESS
+                        OUTPUT_VARIABLE PYTHON_NUMPY_INCLUDE_DIR
+                        OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-      if(PYTHON_NUMPY_PROCESS EQUAL 0)
-        file(TO_CMAKE_PATH "${PYTHON_NUMPY_INCLUDE_DIR}" _PYTHON_NUMPY_INCLUDE_DIR)
-        set(PYTHON_NUMPY_INCLUDE_DIR ${_PYTHON_NUMPY_INCLUDE_DIR} CACHE PATH "Path to numpy headers")
+        if(NOT PYTHON_NUMPY_PROCESS EQUAL 0)
+          unset(PYTHON_NUMPY_INCLUDE_DIR)
+        endif()
       endif()
     endif()
 
     if(PYTHON_NUMPY_INCLUDE_DIR)
+      file(TO_CMAKE_PATH "${PYTHON_NUMPY_INCLUDE_DIR}" _PYTHON_NUMPY_INCLUDE_DIR)
+      set(PYTHON_NUMPY_INCLUDE_DIR ${_PYTHON_NUMPY_INCLUDE_DIR} CACHE PATH "Path to numpy headers")
       set(PYTHON_USE_NUMPY TRUE)
-      execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import numpy; print numpy.version.version"
+      if(CMAKE_CROSSCOMPILING)
+        if(NOT PYTHON_NUMPY_VERSION)
+          set(PYTHON_NUMPY_VERSION "undefined - cannot be probed because of the cross-compilation")
+        endif()
+      else()
+        execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import numpy; print numpy.version.version"
                         RESULT_VARIABLE PYTHON_NUMPY_PROCESS
                         OUTPUT_VARIABLE PYTHON_NUMPY_VERSION
                         OUTPUT_STRIP_TRAILING_WHITESPACE)
+      endif()
     endif()
   endif(NOT ANDROID AND NOT IOS)
 

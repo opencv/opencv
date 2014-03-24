@@ -83,10 +83,10 @@ __kernel void resizeLN_C1_D0(__global uchar * dst, __global uchar const * restri
     int y = floor(sy);
     float v = sy - y;
 
-    u = x < 0 ? 0 : u;
-    u = (x >= src_cols) ? 0 : u;
-    x = x < 0 ? 0 : x;
-    x = (x >= src_cols) ? src_cols-1 : x;
+    u = x < (int4)0 ? (float4)0 : u;
+    u = (x >= (int4)src_cols) ? (float4)0 : u;
+    x = x < (int4)0 ? (int4)0 : x;
+    x = (x >= (int4)src_cols) ? (int4)(src_cols-1) : x;
 
     y<0 ? y=0,v=0 : y;
     y>=src_rows ? y=src_rows-1,v=0 : y;

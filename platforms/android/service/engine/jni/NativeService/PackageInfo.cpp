@@ -203,7 +203,7 @@ inline int SplitPlatform(const vector<string>& features)
 }
 
 /* Package naming convention
- * All parts of package name seporated by "_" symbol
+ * All parts of package name separated by "_" symbol
  * First part is base namespace.
  * Second part is version. Version starts from "v" symbol. After "v" symbol version nomber without dot symbol added.
  * If platform is known third part is platform name

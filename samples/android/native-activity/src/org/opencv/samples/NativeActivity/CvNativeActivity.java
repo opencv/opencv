@@ -21,6 +21,7 @@ public class CvNativeActivity extends Activity {
                     System.loadLibrary("native_activity");
                     Intent intent = new Intent(CvNativeActivity.this, android.app.NativeActivity.class);
                     CvNativeActivity.this.startActivity(intent);
+                    CvNativeActivity.this.finish();
                 } break;
                 default:
                 {
@@ -34,7 +35,7 @@ public class CvNativeActivity extends Activity {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
-   @Override
+    @Override
     public void onResume()
     {
         super.onResume();

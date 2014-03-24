@@ -214,12 +214,12 @@ public class ManagerActivity extends Activity
             }
         });
 
-        mPackageChangeReciever = new BroadcastReceiver() {
+        mPackageChangeReceiver = new BroadcastReceiver() {
 
             @Override
             public void onReceive(Context context, Intent intent) {
-                Log.d("OpenCVManager/Reciever", "Bradcast message " + intent.getAction() + " reciever");
-                Log.d("OpenCVManager/Reciever", "Filling package list on broadcast message");
+                Log.d("OpenCVManager/Receiver", "Broadcast message " + intent.getAction() + " receiver");
+                Log.d("OpenCVManager/Receiver", "Filling package list on broadcast message");
                 if (!bindService(new Intent("org.opencv.engine.BIND"), new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE))
                 {
                     TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
@@ -235,14 +235,14 @@ public class ManagerActivity extends Activity
         filter.addAction(Intent.ACTION_PACKAGE_REMOVED);
         filter.addAction(Intent.ACTION_PACKAGE_REPLACED);
 
-        registerReceiver(mPackageChangeReciever, filter);
+        registerReceiver(mPackageChangeReceiver, filter);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (mPackageChangeReciever != null)
-            unregisterReceiver(mPackageChangeReciever);
+        if (mPackageChangeReceiver != null)
+            unregisterReceiver(mPackageChangeReceiver);
     }
 
     @Override
@@ -273,7 +273,7 @@ public class ManagerActivity extends Activity
     protected int ManagerApiLevel = 0;
     protected String ManagerVersion;
 
-    protected BroadcastReceiver mPackageChangeReciever = null;
+    protected BroadcastReceiver mPackageChangeReceiver = null;
 
     protected class OpenCVEngineServiceConnection implements ServiceConnection
     {

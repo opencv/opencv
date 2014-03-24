@@ -52,22 +52,21 @@ using std::tr1::get;
 
 ///////////// GoodFeaturesToTrack ////////////////////////
 
-typedef tuple<string, double> GoodFeaturesToTrackParams;
+typedef tuple<String, double, bool> GoodFeaturesToTrackParams;
 typedef TestBaseWithParam<GoodFeaturesToTrackParams> GoodFeaturesToTrackFixture;
 
-PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
-            ::testing::Combine(::testing::Values(string("gpu/opticalflow/rubberwhale1.png"),
-                                                 string("gpu/stereobm/aloe-L.png")),
-                               ::testing::Range(0.0, 4.0, 3.0)))
+OCL_PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
+                ::testing::Combine(OCL_PERF_ENUM(String("gpu/opticalflow/rubberwhale1.png")),
+                                   OCL_PERF_ENUM(0.0, 3.0), testing::Bool()))
 {
+    const GoodFeaturesToTrackParams params = GetParam();
+    const String fileName = get<0>(params);
+    const double minDistance = get<1>(params), qualityLevel = 0.01;
+    const bool harrisDetector = get<2>(params);
+    const int maxCorners = 1000;
 
-    const GoodFeaturesToTrackParams param = GetParam();
-    const string fileName = getDataPath(get<0>(param));
-    const int maxCorners = 2000;
-    const double qualityLevel = 0.01, minDistance = get<1>(param);
-
-    Mat frame = imread(fileName, IMREAD_GRAYSCALE);
-    ASSERT_TRUE(!frame.empty()) << "no input image";
+    Mat frame = imread(getDataPath(fileName), IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame.empty()) << "no input image";
 
     vector<Point2f> pts_gold;
     declare.in(frame);
@@ -75,7 +74,8 @@ PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
     if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclFrame(frame), pts_oclmat;
-        ocl::GoodFeaturesToTrackDetector_OCL detector(maxCorners, qualityLevel, minDistance);
+        ocl::GoodFeaturesToTrackDetector_OCL detector(maxCorners, qualityLevel, minDistance, 3,
+                                                      harrisDetector);
 
         OCL_TEST_CYCLE() detector(oclFrame, pts_oclmat);
 
@@ -86,7 +86,7 @@ PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::goodFeaturesToTrack(frame, pts_gold,
-                                             maxCorners, qualityLevel, minDistance);
+                                             maxCorners, qualityLevel, minDistance, noArray(), 3, harrisDetector);
 
         SANITY_CHECK(pts_gold);
     }

@@ -9,6 +9,8 @@
 #ifndef __OPENCV_PERF_PRECOMP_HPP__
 #define __OPENCV_PERF_PRECOMP_HPP__
 
+#include "cvconfig.h"
+
 #include "opencv2/ts/ts.hpp"
 
 #include "opencv2/nonfree/nonfree.hpp"

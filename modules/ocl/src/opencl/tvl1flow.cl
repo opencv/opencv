@@ -62,7 +62,7 @@ __kernel void centeredGradientKernel(__global const float* src, int src_col, int
 
 }
 
-static float bicubicCoeff(float x_)
+inline float bicubicCoeff(float x_)
 {
 
     float x = fabs(x_);
@@ -156,7 +156,7 @@ __kernel void warpBackwardKernel(__global const float* I0, int I0_step, int I0_c
 
 }
 
-static float readImage(__global float *image,  int x,  int y,  int rows,  int cols, int elemCntPerRow)
+inline float readImage(__global float *image,  int x,  int y,  int rows,  int cols, int elemCntPerRow)
 {
     int i0 = clamp(x, 0, cols - 1);
     int j0 = clamp(y, 0, rows - 1);
@@ -284,7 +284,7 @@ __kernel void estimateDualVariablesKernel(__global const float* u1, int u1_col, 
 
 }
 
-static float divergence(__global const float* v1, __global const float* v2, int y, int x, int v1_step, int v2_step)
+inline float divergence(__global const float* v1, __global const float* v2, int y, int x, int v1_step, int v2_step)
 {
 
     if (x > 0 && y > 0)

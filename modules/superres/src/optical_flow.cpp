@@ -149,7 +149,7 @@ namespace
                       obj.info()->addParam(obj, "numIters", obj.numIters_);
                       obj.info()->addParam(obj, "polyN", obj.polyN_);
                       obj.info()->addParam(obj, "polySigma", obj.polySigma_);
-                      obj.info()->addParam(obj, "flags", obj.flags_));
+                      obj.info()->addParam(obj, "flags", obj.flags_))
 
     Farneback::Farneback() : CpuOpticalFlow(CV_8UC1)
     {
@@ -217,7 +217,7 @@ namespace
                       obj.info()->addParam(obj, "upscaleAveragingRadius", obj.upscaleAveragingRadius_);
                       obj.info()->addParam(obj, "upscaleSigmaDist", obj.upscaleSigmaDist_);
                       obj.info()->addParam(obj, "upscaleSigmaColor", obj.upscaleSigmaColor_);
-                      obj.info()->addParam(obj, "speedUpThr", obj.speedUpThr_));
+                      obj.info()->addParam(obj, "speedUpThr", obj.speedUpThr_))
 
     Simple::Simple() : CpuOpticalFlow(CV_8UC3)
     {
@@ -300,7 +300,7 @@ namespace
                       obj.info()->addParam(obj, "warps", obj.warps_);
                       obj.info()->addParam(obj, "epsilon", obj.epsilon_);
                       obj.info()->addParam(obj, "iterations", obj.iterations_);
-                      obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow_));
+                      obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow_))
 
     DualTVL1::DualTVL1() : CpuOpticalFlow(CV_8UC1)
     {
@@ -344,7 +344,7 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1()
 ///////////////////////////////////////////////////////////////////
 // GpuOpticalFlow
 
-#ifndef HAVE_OPENCV_GPU
+#if !defined(HAVE_OPENCV_GPU) || defined(DYNAMIC_CUDA_SUPPORT)
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Farneback_GPU()
 {
@@ -471,7 +471,7 @@ namespace
                       obj.info()->addParam(obj, "scaleFactor", obj.scaleFactor_, false, 0, 0, "Pyramid scale factor");
                       obj.info()->addParam(obj, "innerIterations", obj.innerIterations_, false, 0, 0, "Number of lagged non-linearity iterations (inner loop)");
                       obj.info()->addParam(obj, "outerIterations", obj.outerIterations_, false, 0, 0, "Number of warping iterations (number of pyramid levels)");
-                      obj.info()->addParam(obj, "solverIterations", obj.solverIterations_, false, 0, 0, "Number of linear system solver iterations"));
+                      obj.info()->addParam(obj, "solverIterations", obj.solverIterations_, false, 0, 0, "Number of linear system solver iterations"))
 
     Brox_GPU::Brox_GPU() : GpuOpticalFlow(CV_32FC1), alg_(0.197f, 50.0f, 0.8f, 10, 77, 10)
     {
@@ -535,7 +535,7 @@ namespace
     CV_INIT_ALGORITHM(PyrLK_GPU, "DenseOpticalFlowExt.PyrLK_GPU",
                       obj.info()->addParam(obj, "winSize", obj.winSize_);
                       obj.info()->addParam(obj, "maxLevel", obj.maxLevel_);
-                      obj.info()->addParam(obj, "iterations", obj.iterations_));
+                      obj.info()->addParam(obj, "iterations", obj.iterations_))
 
     PyrLK_GPU::PyrLK_GPU() : GpuOpticalFlow(CV_8UC1)
     {
@@ -602,7 +602,7 @@ namespace
                       obj.info()->addParam(obj, "numIters", obj.numIters_);
                       obj.info()->addParam(obj, "polyN", obj.polyN_);
                       obj.info()->addParam(obj, "polySigma", obj.polySigma_);
-                      obj.info()->addParam(obj, "flags", obj.flags_));
+                      obj.info()->addParam(obj, "flags", obj.flags_))
 
     Farneback_GPU::Farneback_GPU() : GpuOpticalFlow(CV_8UC1)
     {
@@ -678,7 +678,7 @@ namespace
                       obj.info()->addParam(obj, "warps", obj.warps_);
                       obj.info()->addParam(obj, "epsilon", obj.epsilon_);
                       obj.info()->addParam(obj, "iterations", obj.iterations_);
-                      obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow_));
+                      obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow_))
 
     DualTVL1_GPU::DualTVL1_GPU() : GpuOpticalFlow(CV_8UC1)
     {
@@ -800,7 +800,7 @@ namespace
     CV_INIT_ALGORITHM(PyrLK_OCL, "DenseOpticalFlowExt.PyrLK_OCL",
         obj.info()->addParam(obj, "winSize", obj.winSize_);
     obj.info()->addParam(obj, "maxLevel", obj.maxLevel_);
-    obj.info()->addParam(obj, "iterations", obj.iterations_));
+    obj.info()->addParam(obj, "iterations", obj.iterations_))
 
     PyrLK_OCL::PyrLK_OCL() : oclOpticalFlow(CV_8UC1)
     {
@@ -869,7 +869,7 @@ namespace
     obj.info()->addParam(obj, "warps", obj.warps_);
     obj.info()->addParam(obj, "epsilon", obj.epsilon_);
     obj.info()->addParam(obj, "iterations", obj.iterations_);
-    obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow_));
+    obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow_))
 
     DualTVL1_OCL::DualTVL1_OCL() : oclOpticalFlow(CV_8UC1)
     {
@@ -946,7 +946,7 @@ namespace
     obj.info()->addParam(obj, "numIters", obj.numIters_);
     obj.info()->addParam(obj, "polyN", obj.polyN_);
     obj.info()->addParam(obj, "polySigma", obj.polySigma_);
-    obj.info()->addParam(obj, "flags", obj.flags_));
+    obj.info()->addParam(obj, "flags", obj.flags_))
 
     FarneBack_OCL::FarneBack_OCL() : oclOpticalFlow(CV_8UC1)
     {

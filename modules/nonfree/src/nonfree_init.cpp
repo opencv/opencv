@@ -52,7 +52,7 @@ CV_INIT_ALGORITHM(SURF, "Feature2D.SURF",
                   obj.info()->addParam(obj, "nOctaves", obj.nOctaves);
                   obj.info()->addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
                   obj.info()->addParam(obj, "extended", obj.extended);
-                  obj.info()->addParam(obj, "upright", obj.upright));
+                  obj.info()->addParam(obj, "upright", obj.upright))
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -61,7 +61,7 @@ CV_INIT_ALGORITHM(SIFT, "Feature2D.SIFT",
                   obj.info()->addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
                   obj.info()->addParam(obj, "contrastThreshold", obj.contrastThreshold);
                   obj.info()->addParam(obj, "edgeThreshold", obj.edgeThreshold);
-                  obj.info()->addParam(obj, "sigma", obj.sigma));
+                  obj.info()->addParam(obj, "sigma", obj.sigma))
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 

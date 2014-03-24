@@ -44,7 +44,7 @@
 //
 //M*/
 
-static float distance_(__global const float * center, __global const float * src, int feature_length)
+inline float distance_(__global const float * center, __global const float * src, int feature_length)
 {
     float res = 0;
     float4 v0, v1, v2;

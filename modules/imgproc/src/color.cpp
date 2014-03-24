@@ -3214,7 +3214,7 @@ struct YUV420p2RGB888Invoker : ParallelLoopBody
         const int rangeBegin = range.start * 2;
         const int rangeEnd = range.end * 2;
 
-        size_t uvsteps[2] = {width/2, stride - width/2};
+        int uvsteps[2] = {width/2, stride - width/2};
         int usIdx = ustepIdx, vsIdx = vstepIdx;
 
         const uchar* y1 = my1 + rangeBegin * stride;
@@ -3282,7 +3282,7 @@ struct YUV420p2RGBA8888Invoker : ParallelLoopBody
         int rangeBegin = range.start * 2;
         int rangeEnd = range.end * 2;
 
-        size_t uvsteps[2] = {width/2, stride - width/2};
+        int uvsteps[2] = {width/2, stride - width/2};
         int usIdx = ustepIdx, vsIdx = vstepIdx;
 
         const uchar* y1 = my1 + rangeBegin * stride;
@@ -3737,7 +3737,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             CV_Assert( scn == 3 || scn == 4 );
             _dst.create(sz, CV_MAKETYPE(depth, 1));
             dst = _dst.getMat();
-
+/*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
             if( code == CV_BGR2GRAY )
             {
@@ -3760,7 +3760,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                     return;
             }
 #endif
-
+*/
             bidx = code == CV_BGR2GRAY || code == CV_BGRA2GRAY ? 0 : 2;
 
             if( depth == CV_8U )

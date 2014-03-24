@@ -88,10 +88,10 @@ typedef void (*blendFunction)(const Mat &img1, const Mat &img2,
                               const Mat &weights1, const Mat &weights2,
                               Mat &result_gold);
 
-typedef Size_MatType blendLinearFixture;
+typedef Size_MatType BlendLinearFixture;
 
-PERF_TEST_P(blendLinearFixture, blendLinear, ::testing::Combine(
-                OCL_TYPICAL_MAT_SIZES, testing::Values(CV_8UC1, CV_8UC3, CV_32FC1)))
+OCL_PERF_TEST_P(BlendLinearFixture, BlendLinear,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
 {
     Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);

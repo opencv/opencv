@@ -150,8 +150,8 @@ __kernel void gpuRunHaarClassifierCascadePacked(
         int     index = i+lid; // index in shared local memory
         if(index<DATA_SIZE)
         {// calc global x,y coordinat and read data from there
-            int     x = min(GroupX + (index % (DATA_SIZE_X)),Width-1);
-            int     y = min(GroupY + (index / (DATA_SIZE_X)),Height-1);
+            int     x = min(GroupX + (index % (DATA_SIZE_X)),Width-1+WND_SIZE_X);
+            int     y = min(GroupY + (index / (DATA_SIZE_X)),Height-1+WND_SIZE_Y);
             SumL[index] = sum[ImgOffset+y*pixelstep+x];
         }
     }
@@ -217,7 +217,7 @@ __kernel void gpuRunHaarClassifierCascadePacked(
                 (SumL[M0(n0.x)+lcl_off] - SumL[M1(n0.x)+lcl_off] - SumL[M0(n0.y)+lcl_off] + SumL[M1(n0.y)+lcl_off]) * as_float(n1.z) +
                 (SumL[M0(n0.z)+lcl_off] - SumL[M1(n0.z)+lcl_off] - SumL[M0(n0.w)+lcl_off] + SumL[M1(n0.w)+lcl_off]) * as_float(n1.w) +
                 (SumL[M0(n1.x)+lcl_off] - SumL[M1(n1.x)+lcl_off] - SumL[M0(n1.y)+lcl_off] + SumL[M1(n1.y)+lcl_off]) * as_float(n2.x);
-            //accumulate stage responce
+            //accumulate stage response
             stage_sum += (classsum >= nodethreshold) ? as_float(n2.w) : as_float(n2.z);
         }
         result = (stage_sum >= stagethreshold);

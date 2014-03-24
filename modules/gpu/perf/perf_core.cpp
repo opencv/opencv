@@ -1303,6 +1303,8 @@ PERF_TEST_P(Sz_3Depth, Core_AddWeighted,
 //////////////////////////////////////////////////////////////////////
 // GEMM
 
+#ifdef HAVE_CUBLAS
+
 CV_FLAGS(GemmFlags, 0, GEMM_1_T, GEMM_2_T, GEMM_3_T)
 #define ALL_GEMM_FLAGS Values(0, CV_GEMM_A_T, CV_GEMM_B_T, CV_GEMM_C_T, CV_GEMM_A_T | CV_GEMM_B_T, CV_GEMM_A_T | CV_GEMM_C_T, CV_GEMM_A_T | CV_GEMM_B_T | CV_GEMM_C_T)
 
@@ -1350,6 +1352,8 @@ PERF_TEST_P(Sz_Type_Flags, Core_GEMM,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+#endif
 
 //////////////////////////////////////////////////////////////////////
 // Transpose

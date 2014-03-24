@@ -55,7 +55,7 @@ TEST(Parse, ParseEmptyString)
     EXPECT_FALSE(ParseString(a, key, value));
 }
 
-TEST(Parse, ParseStringWithoutSeporator)
+TEST(Parse, ParseStringWithoutSeparator)
 {
     string a = "qqqwww";
     string key;

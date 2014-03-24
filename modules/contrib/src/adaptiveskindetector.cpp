@@ -53,7 +53,7 @@ void CvAdaptiveSkinDetector::initData(IplImage *src, int widthDivider, int heigh
     imgGrayFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
     imgLastGrayFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
     imgHSVFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 3);
-};
+}
 
 CvAdaptiveSkinDetector::CvAdaptiveSkinDetector(int samplingDivider, int morphingMethod)
 {
@@ -78,7 +78,7 @@ CvAdaptiveSkinDetector::CvAdaptiveSkinDetector(int samplingDivider, int morphing
     imgLastGrayFrame = NULL;
     imgSaturationFrame = NULL;
     imgHSVFrame = NULL;
-};
+}
 
 CvAdaptiveSkinDetector::~CvAdaptiveSkinDetector()
 {
@@ -91,7 +91,7 @@ CvAdaptiveSkinDetector::~CvAdaptiveSkinDetector()
     cvReleaseImage(&imgGrayFrame);
     cvReleaseImage(&imgLastGrayFrame);
     cvReleaseImage(&imgHSVFrame);
-};
+}
 
 void CvAdaptiveSkinDetector::process(IplImage *inputBGRImage, IplImage *outputHueMask)
 {
@@ -188,7 +188,7 @@ void CvAdaptiveSkinDetector::process(IplImage *inputBGRImage, IplImage *outputHu
 
     if (outputHueMask != NULL)
         cvCopy(imgFilteredFrame, outputHueMask);
-};
+}
 
 
 //------------------------- Histogram for Adaptive Skin Detector -------------------------//
@@ -200,12 +200,12 @@ CvAdaptiveSkinDetector::Histogram::Histogram()
     float *ranges[] = { range };
     fHistogram = cvCreateHist(1, histogramSize, CV_HIST_ARRAY, ranges, 1);
     cvClearHist(fHistogram);
-};
+}
 
 CvAdaptiveSkinDetector::Histogram::~Histogram()
 {
     cvReleaseHist(&fHistogram);
-};
+}
 
 int CvAdaptiveSkinDetector::Histogram::findCoverageIndex(double surfaceToCover, int defaultValue)
 {
@@ -219,7 +219,7 @@ int CvAdaptiveSkinDetector::Histogram::findCoverageIndex(double surfaceToCover, 
         }
     }
     return defaultValue;
-};
+}
 
 void CvAdaptiveSkinDetector::Histogram::findCurveThresholds(int &x1, int &x2, double percent)
 {
@@ -242,7 +242,7 @@ void CvAdaptiveSkinDetector::Histogram::findCurveThresholds(int &x1, int &x2, do
         x2 = GSD_HUE_UT;
     else
         x2 += GSD_HUE_LT;
-};
+}
 
 void CvAdaptiveSkinDetector::Histogram::mergeWith(CvAdaptiveSkinDetector::Histogram *source, double weight)
 {
@@ -283,4 +283,4 @@ void CvAdaptiveSkinDetector::Histogram::mergeWith(CvAdaptiveSkinDetector::Histog
             }
         }
     }
-};
+}

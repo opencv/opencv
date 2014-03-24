@@ -892,6 +892,7 @@ public:
 typedef Point_<int> Point2i;
 typedef Point2i Point;
 typedef Size_<int> Size2i;
+typedef Size_<double> Size2d;
 typedef Size2i Size;
 typedef Rect_<int> Rect;
 typedef Point_<float> Point2f;

@@ -313,32 +313,28 @@ void cv::ocl::compare(const oclMat &src1, const oclMat &src2, oclMat &dst , int 
 
 enum { SUM = 0, ABS_SUM, SQR_SUM };
 
-static void arithmetic_sum_buffer_run(const oclMat &src, cl_mem &dst, int groupnum, int type, int ddepth)
+static void arithmetic_sum_buffer_run(const oclMat &src, cl_mem &dst, int groupnum, int type, int ddepth, int vlen)
 {
-    int ochannels = src.oclchannels();
-    int all_cols = src.step / src.elemSize();
-    int pre_cols = (src.offset % src.step) / src.elemSize();
-    int sec_cols = all_cols - (src.offset % src.step + src.cols * src.elemSize() - 1) / src.elemSize() - 1;
-    int invalid_cols = pre_cols + sec_cols;
-    int cols = all_cols - invalid_cols , elemnum = cols * src.rows;;
-    int offset = src.offset / src.elemSize();
+    int vElemSize = vlen * src.elemSize();
+    int src_offset = src.offset / vElemSize, src_step = src.step / vElemSize;
+    int src_cols = src.cols / vlen, total = src.size().area() / vlen;
+
+    vlen *= src.oclchannels();
 
     const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
     const char * const funcMap[] = { "FUNC_SUM", "FUNC_ABS_SUM", "FUNC_SQR_SUM" };
-    const char * const channelMap[] = { " ", " ", "2", "4", "4" };
+    const char * const channelMap[] = { " ", " ", "2", "4", "4", "", "", "", "8" };
     string buildOptions = format("-D srcT=%s%s -D dstT=%s%s -D convertToDstT=convert_%s%s -D %s",
-                                 typeMap[src.depth()], channelMap[ochannels],
-                                 typeMap[ddepth], channelMap[ochannels],
-                                 typeMap[ddepth], channelMap[ochannels],
-                                 funcMap[type]);
+                                 typeMap[src.depth()], channelMap[vlen], typeMap[ddepth],
+                                 channelMap[vlen], typeMap[ddepth], channelMap[vlen], funcMap[type]);
 
     vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&invalid_cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&offset));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&elemnum));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_step ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_offset ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_cols ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&total ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum ));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
     size_t globalThreads[3] = { groupnum * 256, 1, 1 };
 
@@ -360,7 +356,11 @@ Scalar arithmetic_sum(const oclMat &src, int type, int ddepth)
     size_t groupnum = src.clCxt->getDeviceInfo().maxComputeUnits;
     CV_Assert(groupnum != 0);
 
-    int dbsize = groupnum * src.oclchannels();
+    int vlen = 8 / src.channels(), vElemSize = vlen * src.elemSize1();
+    while (src.offset % vElemSize != 0 || src.step % vElemSize != 0 || src.cols % vlen != 0)
+        vlen >>= 1, vElemSize >>= 1;
+
+    int dbsize = groupnum * src.oclchannels() * vlen;
     Context *clCxt = src.clCxt;
 
     AutoBuffer<T> _buf(dbsize);
@@ -368,12 +368,12 @@ Scalar arithmetic_sum(const oclMat &src, int type, int ddepth)
     memset(p, 0, dbsize * sizeof(T));
 
     cl_mem dstBuffer = openCLCreateBuffer(clCxt, CL_MEM_WRITE_ONLY, dbsize * sizeof(T));
-    arithmetic_sum_buffer_run(src, dstBuffer, groupnum, type, ddepth);
+    arithmetic_sum_buffer_run(src, dstBuffer, groupnum, type, ddepth, vlen);
     openCLReadBuffer(clCxt, dstBuffer, (void *)p, dbsize * sizeof(T));
     openCLFree(dstBuffer);
 
     Scalar s = Scalar::all(0.0);
-    for (int i = 0; i < dbsize;)
+    for (int i = 0; i < dbsize; )
          for (int j = 0; j < src.oclchannels(); j++, i++)
             s.val[j] += p[i];
 
@@ -473,20 +473,13 @@ void cv::ocl::meanStdDev(const oclMat &src, Scalar &mean, Scalar &stddev)
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename T, typename WT>
-static void arithmetic_minMax_run(const oclMat &src, const oclMat & mask, cl_mem &dst, int groupnum, string kernelName)
+static void arithmetic_minMax_run(const oclMat &src, const oclMat & mask, cl_mem &dst, int vlen, int groupnum)
 {
-    int all_cols = src.step / src.elemSize();
-    int pre_cols = (src.offset % src.step) / src.elemSize();
-    int sec_cols = all_cols - (src.offset % src.step + src.cols * src.elemSize() - 1) / src.elemSize() - 1;
-    int invalid_cols = pre_cols + sec_cols;
-    int cols = all_cols - invalid_cols , elemnum = cols * src.rows;
-    int offset = src.offset / src.elemSize();
-
     const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
-    const char * const channelMap[] = { " ", " ", "2", "4", "4" };
+    const char * const channelMap[] = { " ", " ", "2", "4", "4", "", "", "", "8" };
 
     ostringstream stream;
-    stream << "-D T=" << typeMap[src.depth()] << channelMap[src.channels()];
+    stream << "-D T=" << typeMap[src.depth()] << channelMap[vlen];
     if (numeric_limits<T>::is_integer)
     {
         stream << " -D MAX_VAL=" << (WT)numeric_limits<T>::max();
@@ -494,38 +487,38 @@ static void arithmetic_minMax_run(const oclMat &src, const oclMat & mask, cl_mem
     }
     else
         stream << " -D DEPTH_" << src.depth();
+    stream << " -D vlen=" << vlen;
     std::string buildOptions = stream.str();
+
+    int vElemSize = src.elemSize1() * vlen, src_cols = src.cols / vlen;
+    int src_step = src.step / vElemSize, src_offset = src.offset / vElemSize;
+    int mask_step = mask.step / vlen, mask_offset = mask.offset / vlen;
+    int total = src.size().area() / vlen;
 
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&invalid_cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&offset));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&elemnum));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_step ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_offset ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_cols ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&total));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum));
+    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst));
 
-    int minvalid_cols = 0, moffset = 0;
     if (!mask.empty())
     {
-        int mall_cols = mask.step / mask.elemSize();
-        int mpre_cols = (mask.offset % mask.step) / mask.elemSize();
-        int msec_cols = mall_cols - (mask.offset % mask.step + mask.cols * mask.elemSize() - 1) / mask.elemSize() - 1;
-        minvalid_cols = mpre_cols + msec_cols;
-        moffset = mask.offset / mask.elemSize();
-
         args.push_back( make_pair( sizeof(cl_mem) , (void *)&mask.data ));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&minvalid_cols ));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&moffset ));
+        args.push_back( make_pair( sizeof(cl_int) , (void *)&mask_step ));
+        args.push_back( make_pair( sizeof(cl_int) , (void *)&mask_offset ));
 
-        kernelName += "_mask";
+        buildOptions += " -D WITH_MASK";
     }
 
-    size_t globalThreads[3] = {groupnum * 256, 1, 1};
-    size_t localThreads[3] = {256, 1, 1};
+    size_t globalThreads[3] = { groupnum * 256, 1, 1 };
+    size_t localThreads[3] = { 256, 1, 1 };
 
-    // kernel use fixed grid size, replace lt on NULL is imposible without kernel changes
-    openCLExecuteKernel(src.clCxt, &arithm_minMax, kernelName, globalThreads, localThreads,
+    // kernel use fixed grid size, replace lt on NULL is impossible without kernel changes
+    openCLExecuteKernel(src.clCxt, &arithm_minMax, "arithm_op_minMax", globalThreads, localThreads,
                         args, -1, -1, buildOptions.c_str());
 }
 
@@ -535,25 +528,33 @@ void arithmetic_minMax(const oclMat &src, double *minVal, double *maxVal, const 
     size_t groupnum = src.clCxt->getDeviceInfo().maxComputeUnits;
     CV_Assert(groupnum != 0);
 
-    int dbsize = groupnum * 2 * src.elemSize();
+    int vlen = mask.empty() ? 8 : 1, vElemSize = vlen * src.elemSize1();
+    while (src.offset % vElemSize != 0 || src.step % vElemSize != 0 || src.cols % vlen != 0)
+    {
+        vlen >>= 1;
+        vElemSize >>= 1;
+    }
+
+    int dbsize = groupnum * 2 * vElemSize;
     oclMat buf;
     ensureSizeIsEnough(1, dbsize, CV_8UC1, buf);
 
     cl_mem buf_data = reinterpret_cast<cl_mem>(buf.data);
-    arithmetic_minMax_run<T, WT>(src, mask, buf_data, groupnum, "arithm_op_minMax");
+    arithmetic_minMax_run<T, WT>(src, mask, buf_data, vlen, groupnum);
 
     Mat matbuf = Mat(buf);
     T *p = matbuf.ptr<T>();
+
     if (minVal != NULL)
     {
         *minVal = std::numeric_limits<double>::max();
-        for (int i = 0, end = src.oclchannels() * (int)groupnum; i < end; i++)
+        for (int i = 0, end = vlen * (int)groupnum; i < end; i++)
             *minVal = *minVal < p[i] ? *minVal : p[i];
     }
     if (maxVal != NULL)
     {
         *maxVal = -std::numeric_limits<double>::max();
-        for (int i = src.oclchannels() * (int)groupnum, end = i << 1; i < end; i++)
+        for (int i = vlen * (int)groupnum, end = i << 1; i < end; i++)
             *maxVal = *maxVal > p[i] ? *maxVal : p[i];
     }
 }
@@ -564,7 +565,7 @@ void cv::ocl::minMax(const oclMat &src, double *minVal, double *maxVal, const oc
 {
     CV_Assert(src.channels() == 1);
     CV_Assert(src.size() == mask.size() || mask.empty());
-    CV_Assert(src.step % src.elemSize() == 0);
+    CV_Assert(src.step % src.elemSize1() == 0);
 
     if (minVal == NULL && maxVal == NULL)
         return;
@@ -1139,7 +1140,7 @@ static void arithmetic_minMaxLoc_run(const oclMat &src, cl_mem &dst, int vlen , 
     sprintf(build_options, "-D DEPTH_%d -D REPEAT_S%d -D REPEAT_E%d", src.depth(), repeat_s, repeat_e);
     size_t gt[3] = {groupnum * 256, 1, 1}, lt[3] = {256, 1, 1};
 
-    // kernel use fixed grid size, replace lt on NULL is imposible without kernel changes
+    // kernel use fixed grid size, replace lt on NULL is impossible without kernel changes
     openCLExecuteKernel(src.clCxt, &arithm_minMaxLoc, "arithm_op_minMaxLoc", gt, lt, args, -1, -1, build_options);
 }
 
@@ -1169,7 +1170,7 @@ static void arithmetic_minMaxLoc_mask_run(const oclMat &src, const oclMat &mask,
         args.push_back( make_pair( sizeof(cl_mem) , (void *)&mask.data ));
         args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
 
-        // kernel use fixed grid size, replace lt on NULL is imposible without kernel changes
+        // kernel use fixed grid size, replace lt on NULL is impossible without kernel changes
         openCLExecuteKernel(src.clCxt, &arithm_minMaxLoc_mask, "arithm_op_minMaxLoc_mask", gt, lt, args, -1, -1, build_options);
     }
 }
@@ -1262,38 +1263,35 @@ void cv::ocl::minMaxLoc(const oclMat &src, double *minVal, double *maxVal,
 ///////////////////////////// countNonZero ///////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-static void arithmetic_countNonZero_run(const oclMat &src, cl_mem &dst, int groupnum, string kernelName)
+static void arithmetic_countNonZero_run(const oclMat &src, cl_mem &dst, int groupnum, int vlen)
 {
-    int ochannels = src.oclchannels();
-    int all_cols = src.step / src.elemSize();
-    int pre_cols = (src.offset % src.step) / src.elemSize();
-    int sec_cols = all_cols - (src.offset % src.step + src.cols * src.elemSize() - 1) / src.elemSize() - 1;
-    int invalid_cols = pre_cols + sec_cols;
-    int cols = all_cols - invalid_cols , elemnum = cols * src.rows;;
-    int offset = src.offset / src.elemSize();
+    int vElemSize = vlen * src.elemSize1();
+    int src_step = src.step / vElemSize, src_offset = src.offset / vElemSize;
+    int src_cols = src.cols / vlen, total = src.size().area() / vlen;
 
     const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
-    const char * const channelMap[] = { " ", " ", "2", "4", "4" };
-    string buildOptions = format("-D srcT=%s%s -D dstT=int%s", typeMap[src.depth()], channelMap[ochannels],
-                                 channelMap[ochannels]);
+    const char * const channelMap[] = { "", "", "2", "4", "4", "", "", "", "8" };
+    string buildOptions = format("-D srcT=%s%s -D dstT=int%s -D convertToDstT=convert_int%s",
+                                 typeMap[src.depth()], channelMap[vlen],
+                                 channelMap[vlen], channelMap[vlen]);
 
     vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&invalid_cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&offset));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&elemnum));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_step ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_offset ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_cols ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&total ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum ));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
 
     size_t globalThreads[3] = { groupnum * 256, 1, 1 };
 
 #ifdef ANDROID
-    openCLExecuteKernel(src.clCxt, &arithm_nonzero, kernelName, globalThreads, NULL,
+    openCLExecuteKernel(src.clCxt, &arithm_nonzero, "arithm_op_nonzero", globalThreads, NULL,
                         args, -1, -1, buildOptions.c_str());
 #else
     size_t localThreads[3] = { 256, 1, 1 };
-    openCLExecuteKernel(src.clCxt, &arithm_nonzero, kernelName, globalThreads, localThreads,
+    openCLExecuteKernel(src.clCxt, &arithm_nonzero, "arithm_op_nonzero", globalThreads, localThreads,
                         args, -1, -1, buildOptions.c_str());
 #endif
 }
@@ -1310,18 +1308,20 @@ int cv::ocl::countNonZero(const oclMat &src)
         return -1;
     }
 
+    int vlen = 8, vElemSize = src.elemSize1() * vlen;
+    while (src.offset % vElemSize != 0 || src.step % vElemSize != 0 || src.cols % vlen != 0)
+        vlen >>= 1, vElemSize >>= 1;
+
     size_t groupnum = src.clCxt->getDeviceInfo().maxComputeUnits;
     CV_Assert(groupnum != 0);
-    int dbsize = groupnum;
-
-    string kernelName = "arithm_op_nonzero";
+    int dbsize = groupnum * vlen;
 
     AutoBuffer<int> _buf(dbsize);
     int *p = (int*)_buf, nonzero = 0;
     memset(p, 0, dbsize * sizeof(int));
 
     cl_mem dstBuffer = openCLCreateBuffer(clCxt, CL_MEM_WRITE_ONLY, dbsize * sizeof(int));
-    arithmetic_countNonZero_run(src, dstBuffer, groupnum, kernelName);
+    arithmetic_countNonZero_run(src, dstBuffer, groupnum, vlen);
     openCLReadBuffer(clCxt, dstBuffer, (void *)p, dbsize * sizeof(int));
 
     for (int i = 0; i < dbsize; i++)
@@ -1336,157 +1336,118 @@ int cv::ocl::countNonZero(const oclMat &src)
 ////////////////////////////////bitwise_op////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-static void bitwise_unary_run(const oclMat &src1, oclMat &dst, string kernelName, const cv::ocl::ProgramEntry* source)
+enum { AND = 0, OR, XOR, NOT };
+
+static void bitwise_run(const oclMat & src1, const oclMat & src2, const Scalar & src3, const oclMat & mask,
+                        oclMat & dst, int operationType)
 {
-    dst.create(src1.size(), src1.type());
-
-    int channels = dst.oclchannels();
-    int depth = dst.depth();
-
-    int vector_lengths[4][7] = {{4, 4, 4, 4, 1, 1, 1},
-        {4, 4, 4, 4, 1, 1, 1},
-        {4, 4, 4, 4, 1, 1, 1},
-        {4, 4, 4, 4, 1, 1, 1}
-    };
-
-    size_t vector_length = vector_lengths[channels - 1][depth];
-    int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
-    int cols = divUp(dst.cols * channels + offset_cols, vector_length);
-
-#ifdef ANDROID
-    size_t localThreads[3]  = { 64, 2, 1 };
-#else
-    size_t localThreads[3]  = { 64, 4, 1 };
-#endif
-    size_t globalThreads[3] = { cols, dst.rows, 1 };
-
-    int dst_step1 = dst.cols * dst.elemSize();
-    vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.offset ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
-
-    openCLExecuteKernel(src1.clCxt, source, kernelName, globalThreads, localThreads, args, -1, depth);
-}
-
-enum { AND = 0, OR, XOR };
-
-static void bitwise_binary_run(const oclMat &src1, const oclMat &src2, const Scalar& src3, const oclMat &mask,
-                               oclMat &dst, int operationType)
-{
-    CV_Assert(operationType >= AND && operationType <= XOR);
-    CV_Assert(src2.empty() || (!src2.empty() && src1.type() == src2.type() && src1.size() == src2.size()));
-    CV_Assert(mask.empty() || (!mask.empty() && mask.type() == CV_8UC1 && mask.size() == src1.size()));
+    CV_Assert(operationType >= AND && operationType <= NOT);
+    CV_Assert(src2.empty() || (src1.type() == src2.type() && src1.size() == src2.size()));
+    CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src1.size()));
 
     dst.create(src1.size(), src1.type());
-    oclMat m;
+    double scalar[4];
 
-    const char operationMap[] = { '&', '|', '^' };
-    std::string kernelName("arithm_bitwise_binary");
+    bool haveScalar = src2.empty() && operationType != NOT, haveMask = !mask.empty();
+    int ocn = dst.oclchannels(), depth = dst.depth();
+    const char operationMap[] = { '&', '|', '^', '~' };
+    const char * const typeMap[] = { "uchar", "uchar", "ushort", "ushort", "int", "int", "ulong" };
+    const char * const channelMap[] = { "", "", "2", "4", "4", "", "", "", "8", "", "", "", "", "", "", "", "16" };
+    const int preferredVectorWidth[] = { 4, 4, 2, 2, 1, 1, 1 };
+    int kercn = haveMask || haveScalar ? ocn : preferredVectorWidth[depth];
 
-    int vlen = std::min<int>(8, src1.elemSize1() * src1.oclchannels());
-    std::string vlenstr = vlen > 1 ? format("%d", vlen) : "";
-    std::string buildOptions = format("-D Operation=%c -D vloadn=vload%s -D vstoren=vstore%s -D elemSize=%d -D vlen=%d"
-                                      " -D ucharv=uchar%s",
-                                      operationMap[operationType], vlenstr.c_str(), vlenstr.c_str(),
-                                      (int)src1.elemSize(), vlen, vlenstr.c_str());
-
-#ifdef ANDROID
-    size_t localThreads[3]  = { 16, 10, 1 };
-#else
-    size_t localThreads[3]  = { 16, 16, 1 };
-#endif
-    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
-
-    vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.offset ));
-
-    if (src2.empty())
+    if (!haveScalar && !haveMask)
     {
-        m.create(1, 1, dst.type());
-        m.setTo(src3);
-
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&m.data ));
-
-        kernelName += "_scalar";
+        int velemsize = dst.elemSize1() * kercn;
+        while (src1.offset % velemsize != 0 || src1.step % velemsize != 0 || src1.cols * ocn % kercn != 0 ||
+               src2.offset % velemsize != 0 || src2.step % velemsize != 0 || src2.cols * ocn % kercn != 0 ||
+               dst.offset % velemsize != 0 || dst.step % velemsize != 0 || dst.cols * ocn % kercn != 0)
+            kercn >>= 1, velemsize >>= 1;
     }
-    else
+
+    int cols = dst.cols * ocn / kercn;
+
+    std::string buildOptions = format("-D Operation=%c -D T=%s%s", operationMap[operationType],
+                                      typeMap[depth], channelMap[kercn]);
+
+    vector<pair<size_t , const void *> > args;
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.step ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.offset ));
+
+    if (haveScalar)
+    {
+        int sctype = CV_MAKE_TYPE(dst.depth(), ocn);
+        cv::scalarToRawData(src3, scalar, sctype);
+
+        args.push_back( make_pair( CV_ELEM_SIZE(sctype), (void *)scalar ));
+
+        buildOptions += " -D HAVE_SCALAR";
+    }
+    else if (operationType != NOT)
     {
         args.push_back( make_pair( sizeof(cl_mem), (void *)&src2.data ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&src2.step ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&src2.offset ));
+
+        buildOptions += " -D OP_BINARY";
     }
 
-    if (!mask.empty())
+    if (haveMask)
     {
         args.push_back( make_pair( sizeof(cl_mem), (void *)&mask.data ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&mask.step ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&mask.offset ));
 
-        kernelName += "_mask";
+        buildOptions += " -D HAVE_MASK";
     }
 
     args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset ));
 
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.rows ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
 
-    openCLExecuteKernel(src1.clCxt, mask.empty() ? (!src2.empty() ? &arithm_bitwise_binary : &arithm_bitwise_binary_scalar) :
-                                              (!src2.empty() ? &arithm_bitwise_binary_mask : &arithm_bitwise_binary_scalar_mask),
-                        kernelName, globalThreads, localThreads,
+    size_t globalsize[3] = { dst.cols * ocn / kercn, dst.rows, 1 };
+    globalsize[0] = divUp(globalsize[0], 256) * 256;
+    openCLExecuteKernel(src1.clCxt, &arithm_bitwise, "arithm_bitwise", globalsize, NULL,
                         args, -1, -1, buildOptions.c_str());
 }
 
 void cv::ocl::bitwise_not(const oclMat &src, oclMat &dst)
 {
-    if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
-    {
-        CV_Error(CV_OpenCLDoubleNotSupported, "Selected device doesn't support double");
-        return;
-    }
-
-    dst.create(src.size(), src.type());
-    bitwise_unary_run(src, dst, "arithm_bitwise_not", &arithm_bitwise_not);
+    bitwise_run(src, oclMat(), Scalar(), oclMat(), dst, NOT);
 }
 
 void cv::ocl::bitwise_or(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
 {
-    bitwise_binary_run(src1, src2, Scalar(), mask, dst, OR);
+    bitwise_run(src1, src2, Scalar(), mask, dst, OR);
 }
 
 void cv::ocl::bitwise_or(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask)
 {
-    bitwise_binary_run(src1, oclMat(), src2, mask, dst, OR);
+    bitwise_run(src1, oclMat(), src2, mask, dst, OR);
 }
 
 void cv::ocl::bitwise_and(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
 {
-    bitwise_binary_run(src1, src2, Scalar(), mask, dst, AND);
+    bitwise_run(src1, src2, Scalar(), mask, dst, AND);
 }
 
 void cv::ocl::bitwise_and(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask)
 {
-    bitwise_binary_run(src1, oclMat(), src2, mask, dst, AND);
+    bitwise_run(src1, oclMat(), src2, mask, dst, AND);
 }
 
 void cv::ocl::bitwise_xor(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
 {
-    bitwise_binary_run(src1, src2, Scalar(), mask, dst, XOR);
+    bitwise_run(src1, src2, Scalar(), mask, dst, XOR);
 }
 
 void cv::ocl::bitwise_xor(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask)
 {
-    bitwise_binary_run(src1, oclMat(), src2, mask, dst, XOR);
+    bitwise_run(src1, oclMat(), src2, mask, dst, XOR);
 }
 
 oclMat cv::ocl::operator ~ (const oclMat &src)

@@ -52,23 +52,18 @@
 
 /**************************************Count NonZero**************************************/
 
-__kernel void arithm_op_nonzero(int cols, int invalid_cols, int offset, int elemnum, int groupnum,
-                                  __global srcT *src, __global dstT *dst)
+__kernel void arithm_op_nonzero(__global srcT * src, int src_step, int src_offset, int src_cols,
+                                int total, int groupnum, __global dstT * dst)
 {
     int lid = get_local_id(0);
     int gid = get_group_id(0);
     int  id = get_global_id(0);
 
-    int idx = offset + id + (id / cols) * invalid_cols;
     __local dstT localmem_nonzero[128];
     dstT nonzero = (dstT)(0);
-    srcT zero = (srcT)(0), one = (srcT)(1);
 
-    for (int grain = groupnum << 8; id < elemnum; id += grain)
-    {
-        idx = offset + id + (id / cols) * invalid_cols;
-        nonzero += src[idx] == zero ? zero : one;
-    }
+    for (int grain = groupnum << 8; id < total; id += grain)
+        nonzero += convertToDstT(src[mad24(id / src_cols, src_step, id % src_cols + src_offset)] == (srcT)(0)) ? (dstT)(0) : (dstT)(1);
 
     if (lid > 127)
         localmem_nonzero[lid - 128] = nonzero;

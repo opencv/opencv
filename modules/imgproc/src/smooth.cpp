@@ -718,7 +718,7 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         ddepth = sdepth;
     _dst.create( src.size(), CV_MAKETYPE(ddepth, cn) );
     Mat dst = _dst.getMat();
-    if( borderType != BORDER_CONSTANT && normalize )
+    if( borderType != BORDER_CONSTANT && normalize && (borderType & BORDER_ISOLATED) != 0 )
     {
         if( src.rows == 1 )
             ksize.height = 1;

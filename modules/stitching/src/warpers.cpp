@@ -212,7 +212,7 @@ void SphericalWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_b
 }
 
 
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
+#if defined(HAVE_OPENCV_GPU) && !defined(DYNAMIC_CUDA_SUPPORT)
 Rect PlaneWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, gpu::GpuMat &xmap, gpu::GpuMat &ymap)
 {
     return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32F), xmap, ymap);
@@ -293,6 +293,96 @@ Point CylindricalWarperGpu::warp(const gpu::GpuMat &src, const Mat &K, const Mat
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
     gpu::remap(src, dst, d_xmap_, d_ymap_, interp_mode, border_mode);
     return dst_roi.tl();
+}
+#else
+Rect PlaneWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, gpu::GpuMat &xmap, gpu::GpuMat &ymap)
+{
+    return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32F), xmap, ymap);
+}
+
+Rect PlaneWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, gpu::GpuMat &xmap, gpu::GpuMat &ymap)
+{
+    (void)src_size;
+    (void)K;
+    (void)R;
+    (void)T;
+    (void)xmap;
+    (void)ymap;
+    CV_Error(CV_StsNotImplemented, "CUDA optimization is unavailable");
+    return Rect();
+}
+
+Point PlaneWarperGpu::warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+                           gpu::GpuMat &dst)
+{
+    return warp(src, K, R, Mat::zeros(3, 1, CV_32F), interp_mode, border_mode, dst);
+}
+
+
+Point PlaneWarperGpu::warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode,
+                           gpu::GpuMat &dst)
+{
+    (void)src;
+    (void)K;
+    (void)R;
+    (void)T;
+    (void)interp_mode;
+    (void)border_mode;
+    (void)dst;
+    CV_Error(CV_StsNotImplemented, "CUDA optimization is unavailable");
+    return Point();
+}
+
+
+Rect SphericalWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, gpu::GpuMat &xmap, gpu::GpuMat &ymap)
+{
+    (void)src_size;
+    (void)K;
+    (void)R;
+    (void)xmap;
+    (void)ymap;
+    CV_Error(CV_StsNotImplemented, "CUDA optimization is unavailable");
+    return Rect();
+}
+
+
+Point SphericalWarperGpu::warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+                               gpu::GpuMat &dst)
+{
+    (void)src;
+    (void)K;
+    (void)R;
+    (void)interp_mode;
+    (void)border_mode;
+    (void)dst;
+    CV_Error(CV_StsNotImplemented, "CUDA optimization is unavailable");
+    return Point();
+}
+
+
+Rect CylindricalWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, gpu::GpuMat &xmap, gpu::GpuMat &ymap)
+{
+    (void)src_size;
+    (void)K;
+    (void)R;
+    (void)xmap;
+    (void)ymap;
+    CV_Error(CV_StsNotImplemented, "CUDA optimization is unavailable");
+    return Rect();
+}
+
+
+Point CylindricalWarperGpu::warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+                                 gpu::GpuMat &dst)
+{
+    (void)src;
+    (void)K;
+    (void)R;
+    (void)interp_mode;
+    (void)border_mode;
+    (void)dst;
+    CV_Error(CV_StsNotImplemented, "CUDA optimization is unavailable");
+    return Point();
 }
 #endif
 
