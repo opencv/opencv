@@ -104,7 +104,7 @@ __constant float mat_kernelX[] = { KERNEL_MATRIX_X };
 __constant float mat_kernelY[] = { KERNEL_MATRIX_Y };
 
 __kernel void sep_filter(__global uchar* Src, int src_step, int srcOffsetX, int srcOffsetY, int height, int width,
-                         __global uchar* Dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
+                         __global uchar* Dst, int dst_step, int dst_offset, int dst_rows, int dst_cols, float delta)
 {
     // RADIUSX, RADIUSY are filter dimensions
     // BLK_X, BLK_Y are local wrogroup sizes
@@ -182,6 +182,6 @@ __kernel void sep_filter(__global uchar* Src, int src_step, int srcOffsetX, int 
     for (i=0; i<=2*RADIUSX; i++)
         sum = mad(lsmemDy[liy][lix+i], mat_kernelX[i], sum);
 
-    //store result into destination image
-    storepix(convertToDstT(sum), Dst + mad24(y, dst_step, mad24(x, DSTSIZE, dst_offset)));
+    // store result into destination image
+    storepix(convertToDstT(sum + (WT)(delta)), Dst + mad24(y, dst_step, mad24(x, DSTSIZE, dst_offset)));
 }
