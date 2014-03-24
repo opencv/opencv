@@ -3385,7 +3385,7 @@ static bool ocl_sepRowFilter2D(const UMat & src, UMat & buf, const Mat & kernelX
     return k.run(2, globalsize, localsize, false);
 }
 
-static bool ocl_sepColFilter2D(const UMat & buf, UMat & dst, const Mat & kernelY, int anchor)
+static bool ocl_sepColFilter2D(const UMat & buf, UMat & dst, const Mat & kernelY, double delta, int anchor)
 {
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
     if (dst.depth() == CV_64F && !doubleSupport)
@@ -3420,7 +3420,8 @@ static bool ocl_sepColFilter2D(const UMat & buf, UMat & dst, const Mat & kernelY
     if (k.empty())
         return false;
 
-    k.args(ocl::KernelArg::ReadOnly(buf), ocl::KernelArg::WriteOnly(dst));
+    k.args(ocl::KernelArg::ReadOnly(buf), ocl::KernelArg::WriteOnly(dst),
+           static_cast<float>(delta));
 
     return k.run(2, globalsize, localsize, false);
 }
@@ -3429,7 +3430,7 @@ const int optimizedSepFilterLocalSize = 16;
 
 static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
                                        Mat row_kernel, Mat col_kernel,
-                                       int borderType, int ddepth)
+                                       double delta, int borderType, int ddepth)
 {
     Size size = _src.size(), wholeSize;
     Point origin;
@@ -3477,7 +3478,8 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
     src.locateROI(wholeSize, origin);
 
     k.args(ocl::KernelArg::PtrReadOnly(src), (int)src_step, src_offset_x, src_offset_y,
-           wholeSize.height, wholeSize.width, ocl::KernelArg::WriteOnly(dst));
+           wholeSize.height, wholeSize.width, ocl::KernelArg::WriteOnly(dst),
+           static_cast<float>(delta));
 
     return k.run(2, gt2, lt2, false);
 }
@@ -3488,9 +3490,6 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
 {
     const ocl::Device & d = ocl::Device::getDefault();
     Size imgSize = _src.size();
-
-    if (abs(delta)> FLT_MIN)
-        return false;
 
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if (cn > 4)
@@ -3511,7 +3510,8 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                 imgSize.height > optimizedSepFilterLocalSize + (kernelY.cols >> 1) &&
                 (!(borderType & BORDER_ISOLATED) || _src.offset() == 0) && anchor == Point(-1, -1) &&
                 (d.isIntel() || (d.isAMD() && !d.hostUnifiedMemory())),
-                ocl_sepFilter2D_SinglePass(_src, _dst, kernelX, kernelY, borderType, ddepth), true)
+                ocl_sepFilter2D_SinglePass(_src, _dst, kernelX, kernelY, delta,
+                                           borderType & ~BORDER_ISOLATED, ddepth), true)
 
     if (anchor.x < 0)
         anchor.x = kernelX.cols >> 1;
@@ -3534,7 +3534,7 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
     _dst.create(srcSize, CV_MAKETYPE(ddepth, cn));
     UMat dst = _dst.getUMat();
 
-    return ocl_sepColFilter2D(buf, dst, kernelY, anchor.y);
+    return ocl_sepColFilter2D(buf, dst, kernelY, delta, anchor.y);
 }
 
 #endif

@@ -63,7 +63,7 @@
 __constant float mat_kernel[] = { COEFF };
 
 __kernel void col_filter(__global const uchar * src, int src_step, int src_offset, int src_whole_rows, int src_whole_cols,
-                         __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
+                         __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols, float delta)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -103,6 +103,6 @@ __kernel void col_filter(__global const uchar * src, int src_step, int src_offse
     if (x < dst_cols && y < dst_rows)
     {
         start_addr = mad24(y, dst_step, mad24(DSTSIZE, x, dst_offset));
-        storepix(convertToDstT(sum), dst + start_addr);
+        storepix(convertToDstT(sum + (srcT)(delta)), dst + start_addr);
     }
 }
