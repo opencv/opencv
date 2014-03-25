@@ -102,7 +102,7 @@ __kernel void mog2_kernel(__global const uchar* frame, int frame_step, int frame
         {
 
             float c_weight = alpha1 * _weight[(mode * frame_row + y) * weight_step + x] + prune;
-
+            int swap_count = 0;
             if (!fitsPDF)
             {
                 float c_var = _variance[(mode * frame_row + y) * var_step + x];
@@ -132,6 +132,7 @@ __kernel void mog2_kernel(__global const uchar* frame, int frame_step, int frame
                     {
                         if (c_weight < _weight[((i - 1) * frame_row + y) * weight_step + x])
                             break;
+                        swap_count++;
                         swap(_weight, x, y, i - 1, frame_row, weight_step);
                         swap(_variance, x, y, i - 1, frame_row, var_step);
                         #if (CN==1)
@@ -149,7 +150,7 @@ __kernel void mog2_kernel(__global const uchar* frame, int frame_step, int frame
                 nmodes--;
             }
 
-            _weight[(mode * frame_row + y) * weight_step + x] = c_weight; //update weight by the calculated value
+            _weight[((mode - swap_count) * frame_row + y) * weight_step + x] = c_weight; //update weight by the calculated value
             totalWeight += c_weight;
         }
 
