@@ -133,7 +133,7 @@ OCL_TEST_P(SqrBoxFilter, Mat)
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, BoxFilter,
                             Combine(
                                 Values(CV_8U, CV_16U, CV_16S, CV_32S, CV_32F),
-                                Values(1, 2, 4),
+                                OCL_ALL_CHANNELS,
                                 Values((BorderType)BORDER_CONSTANT,
                                        (BorderType)BORDER_REPLICATE,
                                        (BorderType)BORDER_REFLECT,
@@ -146,7 +146,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, BoxFilter,
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, SqrBoxFilter,
                             Combine(
                                 Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
-                                Values(1, 2, 4),
+                                OCL_ALL_CHANNELS,
                                 Values((BorderType)BORDER_CONSTANT,
                                        (BorderType)BORDER_REPLICATE,
                                        (BorderType)BORDER_REFLECT,
