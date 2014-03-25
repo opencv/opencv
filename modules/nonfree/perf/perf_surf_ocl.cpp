@@ -121,4 +121,93 @@ PERF_TEST_P(OCL_SURF, without_data_transfer, testing::Values(SURF_IMAGES))
     SANITY_CHECK_NOTHING();
 }
 
+
+
+PERF_TEST_P(OCL_SURF, DISABLED_detect, testing::Values(SURF_IMAGES))
+{
+    String filename = getDataPath(GetParam());
+    Mat frame = imread(filename, IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame.empty()) << "Unable to load source image " << filename;
+
+    declare.in(frame);
+
+    Mat mask;
+    vector<KeyPoint> points;
+    Ptr<Feature2D> detector;
+
+    if (getSelectedImpl() == "plain")
+    {
+        detector = new SURF;
+        TEST_CYCLE() detector->operator()(frame, mask, points, noArray());
+    }
+    else if (getSelectedImpl() == "ocl")
+    {
+        detector = new ocl::SURF_OCL;
+        OCL_TEST_CYCLE() detector->operator()(frame, mask, points, noArray());
+    }
+    else CV_TEST_FAIL_NO_IMPL();
+
+    SANITY_CHECK_KEYPOINTS(points, 1e-3);
+}
+
+PERF_TEST_P(OCL_SURF, DISABLED_extract, testing::Values(SURF_IMAGES))
+{
+    String filename = getDataPath(GetParam());
+    Mat frame = imread(filename, IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame.empty()) << "Unable to load source image " << filename;
+
+    declare.in(frame);
+
+    Mat mask;
+    Ptr<Feature2D> detector;
+    vector<KeyPoint> points;
+    vector<float> descriptors;
+
+    if (getSelectedImpl() == "plain")
+    {
+        detector = new SURF;
+        detector->operator()(frame, mask, points, noArray());
+        TEST_CYCLE() detector->operator()(frame, mask, points, descriptors, true);
+    }
+    else if (getSelectedImpl() == "ocl")
+    {
+        detector = new ocl::SURF_OCL;
+        detector->operator()(frame, mask, points, noArray());
+        OCL_TEST_CYCLE() detector->operator()(frame, mask, points, descriptors, true);
+    }
+    else CV_TEST_FAIL_NO_IMPL();
+
+    SANITY_CHECK(descriptors, 1e-4);
+}
+
+PERF_TEST_P(OCL_SURF, DISABLED_full, testing::Values(SURF_IMAGES))
+{
+    String filename = getDataPath(GetParam());
+    Mat frame = imread(filename, IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame.empty()) << "Unable to load source image " << filename;
+
+    declare.in(frame).time(90);
+
+    Mat mask;
+    Ptr<Feature2D> detector;
+    vector<KeyPoint> points;
+    vector<float> descriptors;
+
+    if (getSelectedImpl() == "plain")
+    {
+        detector = new SURF;
+        TEST_CYCLE() detector->operator()(frame, mask, points, descriptors, false);
+    }
+    else if (getSelectedImpl() == "ocl")
+    {
+        detector = new ocl::SURF_OCL;
+        detector->operator()(frame, mask, points, noArray());
+        OCL_TEST_CYCLE() detector->operator()(frame, mask, points, descriptors, false);
+    }
+    else CV_TEST_FAIL_NO_IMPL();
+
+    SANITY_CHECK_KEYPOINTS(points, 1e-3);
+    SANITY_CHECK(descriptors, 1e-4);
+}
+
 #endif // HAVE_OPENCV_OCL

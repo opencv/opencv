@@ -36,6 +36,6 @@ int main(int argc, char **argv)
 #elif defined(HAVE_OPENCL)
     CV_PERF_TEST_MAIN_INTERNALS(nonfree, impls, dumpOpenCLDevice());
 #else
-    CV_PERF_TEST_MAIN_INTERNALS(ocl, impls)
+    CV_PERF_TEST_MAIN_INTERNALS(nonfree, impls)
 #endif
 }
