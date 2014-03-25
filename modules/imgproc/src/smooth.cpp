@@ -639,7 +639,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     if (ddepth < 0)
         ddepth = sdepth;
 
-    if (!(cn == 1 || cn == 2 || cn == 4) || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
+    if (cn > 4 || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
         _src.offset() % esz != 0 || _src.step() % esz != 0)
         return false;
 
@@ -687,15 +687,17 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
             return false;
 
         char cvt[2][50];
-        String opts = format("-D LOCAL_SIZE_X=%d -D BLOCK_SIZE_Y=%d -D ST=%s -D DT=%s -D WT=%s -D convertToDT=%s -D convertToWT=%s "
-                             "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D %s%s%s%s%s",
+        String opts = format("-D LOCAL_SIZE_X=%d -D BLOCK_SIZE_Y=%d -D ST=%s -D DT=%s -D WT=%s -D convertToDT=%s -D convertToWT=%s"
+                             " -D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D %s%s%s%s%s"
+                             " -D ST1=%s -D DT1=%s -D cn=%d",
                              BLOCK_SIZE_X, BLOCK_SIZE_Y, ocl::typeToStr(type), ocl::typeToStr(CV_MAKE_TYPE(ddepth, cn)),
                              ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
                              ocl::convertTypeStr(wdepth, ddepth, cn, cvt[0]),
                              ocl::convertTypeStr(sdepth, wdepth, cn, cvt[1]),
                              anchor.x, anchor.y, ksize.width, ksize.height, borderMap[borderType],
                              isolated ? " -D BORDER_ISOLATED" : "", doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-                             normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "");
+                             normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "",
+                             ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), cn);
 
         localsize[0] = BLOCK_SIZE_X;
         globalsize[0] = DIVUP(size.width, BLOCK_SIZE_X - (ksize.width - 1)) * BLOCK_SIZE_X;
@@ -1902,35 +1904,27 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_medianFilter ( InputArray _src, OutputArray _dst, int m)
+static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
 {
-    int type = _src.type();
-    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
-    if (!((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && (cn != 3 && cn <= 4)))
+    if ( !((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && cn <= 4 && (m == 3 || m == 5)) )
         return false;
 
-    const char * kernelName;
-
-    if (m == 3)
-        kernelName = "medianFilter3";
-    else if (m == 5)
-        kernelName = "medianFilter5";
-    else
-        return false;
-
-    ocl::Kernel k(kernelName,ocl::imgproc::medianFilter_oclsrc,format("-D type=%s",ocl::typeToStr(type)));
+    ocl::Kernel k(format("medianFilter%d", m).c_str(), ocl::imgproc::medianFilter_oclsrc,
+                  format("-D T=%s -D T1=%s -D cn=%d", ocl::typeToStr(type),
+                         ocl::typeToStr(depth), cn));
     if (k.empty())
         return false;
 
     UMat src = _src.getUMat();
-    _dst.create(_src.size(),type);
+    _dst.create(src.size(), type);
     UMat dst = _dst.getUMat();
 
-    size_t globalsize[2] = {(src.cols + 18) / 16 * 16, (src.rows + 15) / 16 * 16};
-    size_t localsize[2] = {16, 16};
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst));
 
-    return k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst)).run(2,globalsize,localsize,false);
+    size_t globalsize[2] = { (src.cols + 18) / 16 * 16, (src.rows + 15) / 16 * 16}, localsize[2] = { 16, 16 };
+    return k.run(2, globalsize, localsize, false);
 }
 
 #endif
@@ -2210,10 +2204,10 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
                                    double sigma_color, double sigma_space,
                                    int borderType)
 {
-    int type = _src.type(), cn = CV_MAT_CN(type);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     int i, j, maxk, radius;
 
-    if ( type != CV_8UC1 )
+    if (depth != CV_8U || cn > 4)
         return false;
 
     if (sigma_color <= 0)
@@ -2240,9 +2234,9 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
     std::vector<float> _color_weight(cn * 256);
     std::vector<float> _space_weight(d * d);
     std::vector<int> _space_ofs(d * d);
-    float *color_weight = &_color_weight[0];
-    float *space_weight = &_space_weight[0];
-    int *space_ofs = &_space_ofs[0];
+    float * const color_weight = &_color_weight[0];
+    float * const space_weight = &_space_weight[0];
+    int * const space_ofs = &_space_ofs[0];
 
     // initialize color-related bilateral filter coefficients
     for( i = 0; i < 256 * cn; i++ )
@@ -2256,11 +2250,19 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
             if ( r > radius )
                 continue;
             space_weight[maxk] = (float)std::exp(r * r * gauss_space_coeff);
-            space_ofs[maxk++] = (int)(i * temp.step + j);
+            space_ofs[maxk++] = (int)(i * temp.step + j * cn);
         }
 
+    char cvt[3][40];
+    String cnstr = cn > 1 ? format("%d", cn) : "";
     ocl::Kernel k("bilateral", ocl::imgproc::bilateral_oclsrc,
-                  format("-D radius=%d -D maxk=%d", radius, maxk));
+                  format("-D radius=%d -D maxk=%d -D cn=%d -D int_t=%s -D uint_t=uint%s -D convert_int_t=%s"
+                         " -D uchar_t=%s -D float_t=%s -D convert_float_t=%s -D convert_uchar_t=%s",
+                         radius, maxk, cn, ocl::typeToStr(CV_32SC(cn)), cnstr.c_str(),
+                         ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0]),
+                         ocl::typeToStr(type), ocl::typeToStr(CV_32FC(cn)),
+                         ocl::convertTypeStr(CV_32S, CV_32F, cn, cvt[1]),
+                         ocl::convertTypeStr(CV_32F, CV_8U, cn, cvt[2])));
     if (k.empty())
         return false;
 
