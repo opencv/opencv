@@ -4824,7 +4824,7 @@ cvRegisterType( const CvTypeInfo* _info )
             "Type name should contain only letters, digits, - and _" );
     }
 
-    info = (CvTypeInfo*)malloc( sizeof(*info) + len + 1 );
+    info = (CvTypeInfo*)cvAlloc( sizeof(*info) + len + 1 );
 
     *info = *_info;
     info->type_name = (char*)(info + 1);
@@ -4862,7 +4862,7 @@ cvUnregisterType( const char* type_name )
         if( !CvType::first || !CvType::last )
             CvType::first = CvType::last = 0;
 
-        free( info );
+        cvFree( &info );
     }
 }
 

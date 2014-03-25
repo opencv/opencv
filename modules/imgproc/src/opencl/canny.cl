@@ -43,6 +43,18 @@
 //
 //M*/
 
+#ifdef OP_SOBEL
+
+#if cn != 3
+#define loadpix(addr) convertToIntT(*(__global const ucharT *)(addr))
+#define storepix(val, addr) *(__global shortT *)(addr) = convertToShortT(val)
+#define shortSize (int)sizeof(shortT)
+#else
+#define loadpix(addr) convertToIntT(vload3(0, (__global const uchar *)(addr)))
+#define storepix(val, addr) vstore3(convertToShortT(val), 0, (__global short *)(addr))
+#define shortSize (int)sizeof(short) * cn
+#endif
+
 // Smoothing perpendicular to the derivative direction with a triangle filter
 // only support 3x3 Sobel kernel
 // h (-1) =  1, h (0) =  2, h (1) =  1
@@ -54,11 +66,9 @@
 // dx_buf	output dx buffer
 // dy_buf	output dy buffer
 
-__kernel void __attribute__((reqd_work_group_size(16, 16, 1)))
-calcSobelRowPass
-    (__global const uchar * src, int src_step, int src_offset, int rows, int cols,
-     __global uchar * dx_buf, int dx_buf_step, int dx_buf_offset,
-     __global uchar * dy_buf, int dy_buf_step, int dy_buf_offset)
+__kernel void calcSobelRowPass(__global const uchar * src, int src_step, int src_offset, int rows, int cols,
+                               __global uchar * dx_buf, int dx_buf_step, int dx_buf_offset,
+                               __global uchar * dy_buf, int dy_buf_step, int dy_buf_offset)
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -66,33 +76,38 @@ calcSobelRowPass
     int lidx = get_local_id(0);
     int lidy = get_local_id(1);
 
-    __local int smem[16][18];
+    __local intT smem[16][18];
 
-    smem[lidy][lidx + 1] = src[mad24(src_step, min(gidy, rows - 1), gidx + src_offset)];
+    smem[lidy][lidx + 1] = loadpix(src + mad24(src_step, min(gidy, rows - 1), mad24(gidx, cn, src_offset)));
     if (lidx == 0)
     {
-        smem[lidy][0]  = src[mad24(src_step, min(gidy, rows - 1), max(gidx - 1,  0)        + src_offset)];
-        smem[lidy][17] = src[mad24(src_step, min(gidy, rows - 1), min(gidx + 16, cols - 1) + src_offset)];
+        smem[lidy][0]  = loadpix(src + mad24(src_step, min(gidy, rows - 1), mad24(max(gidx - 1,  0), cn, src_offset)));
+        smem[lidy][17] = loadpix(src + mad24(src_step, min(gidy, rows - 1), mad24(min(gidx + 16, cols - 1), cn, src_offset)));
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (gidy < rows && gidx < cols)
     {
-        *(__global short *)(dx_buf + mad24(gidy, dx_buf_step, gidx * (int)sizeof(short) + dx_buf_offset)) =
-            smem[lidy][lidx + 2] - smem[lidy][lidx];
-        *(__global short *)(dy_buf + mad24(gidy, dy_buf_step, gidx * (int)sizeof(short) + dy_buf_offset)) =
-            smem[lidy][lidx] + 2 * smem[lidy][lidx + 1] + smem[lidy][lidx + 2];
+        storepix(smem[lidy][lidx + 2] - smem[lidy][lidx],
+                 dx_buf + mad24(gidy, dx_buf_step, mad24(gidx, shortSize, dx_buf_offset)));
+        storepix(mad24(2, smem[lidy][lidx + 1], smem[lidy][lidx] + smem[lidy][lidx + 2]),
+                 dy_buf + mad24(gidy, dy_buf_step, mad24(gidx, shortSize, dy_buf_offset)));
     }
 }
 
-inline int calc(short x, short y)
+#elif defined OP_MAG_BUF || defined OP_MAG
+
+inline intT calc(shortT x, shortT y)
 {
 #ifdef L2GRAD
-    return x * x + y * y;
+    intT intx = convertToIntT(x), inty = convertToIntT(y);
+    return intx * intx + inty * inty;
 #else
-    return (x >= 0 ? x : -x) + (y >= 0 ? y : -y);
+    return convertToIntT( (x >= (shortT)(0) ? x : -x) + (y >= (shortT)(0) ? y : -y) );
 #endif
 }
+
+#ifdef OP_MAG
 
 // calculate the magnitude of the filter pass combining both x and y directions
 // This is the non-buffered version(non-3x3 sobel)
@@ -112,17 +127,42 @@ __kernel void calcMagnitude(__global const uchar * dxptr, int dx_step, int dx_of
 
     if (y < rows && x < cols)
     {
-        int dx_index = mad24(dx_step, y, x * (int)sizeof(short) + dx_offset);
-        int dy_index = mad24(dy_step, y, x * (int)sizeof(short) + dy_offset);
-        int mag_index = mad24(mag_step, y + 1, (x + 1) * (int)sizeof(int) + mag_offset);
+        int dx_index = mad24(dx_step, y, mad24(x, (int)sizeof(short) * cn, dx_offset));
+        int dy_index = mad24(dy_step, y, mad24(x, (int)sizeof(short) * cn, dy_offset));
+        int mag_index = mad24(mag_step, y + 1, mad24(x + 1, (int)sizeof(int), mag_offset));
 
-        __global const short * dx = (__global const short *)(dxptr + dx_index);
-        __global const short * dy = (__global const short *)(dyptr + dy_index);
+        __global short * dx = (__global short *)(dxptr + dx_index);
+        __global short * dy = (__global short *)(dyptr + dy_index);
         __global int * mag = (__global int *)(magptr + mag_index);
 
-        mag[0] = calc(dx[0], dy[0]);
+        int cmag = calc(dx[0], dy[0]);
+#if cn > 1
+        short cx = dx[0], cy = dy[0];
+        int pmag;
+
+        #pragma unroll
+        for (int i = 1; i < cn; ++i)
+        {
+            pmag = calc(dx[i], dy[i]);
+            if (pmag > cmag)
+                cmag = pmag, cx = dx[i], cy = dy[i];
+        }
+
+        dx[0] = cx, dy[0] = cy;
+#endif
+        mag[0] = cmag;
     }
 }
+
+#elif defined OP_MAG_BUF
+
+#if cn != 3
+#define loadpix(addr) *(__global const shortT *)(addr)
+#define shortSize (int)sizeof(shortT)
+#else
+#define loadpix(addr) vload3(0, (__global const short *)(addr))
+#define shortSize (int)sizeof(short)*cn
+#endif
 
 // calculate the magnitude of the filter pass combining both x and y directions
 // This is the buffered version(3x3 sobel)
@@ -132,59 +172,64 @@ __kernel void calcMagnitude(__global const uchar * dxptr, int dx_step, int dx_of
 // dx			direvitive in x direction output
 // dy			direvitive in y direction output
 // mag			magnitude direvitive of xy output
-__kernel void __attribute__((reqd_work_group_size(16, 16, 1)))
-calcMagnitude_buf
-    (__global const short * dx_buf, int dx_buf_step, int dx_buf_offset,
-     __global const short * dy_buf, int dy_buf_step, int dy_buf_offset,
-     __global short * dx, int dx_step, int dx_offset,
-     __global short * dy, int dy_step, int dy_offset,
-     __global int * mag, int mag_step, int mag_offset,
-     int rows, int cols)
+__kernel void calcMagnitude_buf(__global const uchar * dx_buf, int dx_buf_step, int dx_buf_offset,
+                                __global const uchar * dy_buf, int dy_buf_step, int dy_buf_offset,
+                                __global uchar * dx, int dx_step, int dx_offset,
+                                __global uchar * dy, int dy_step, int dy_offset,
+                                __global uchar * mag, int mag_step, int mag_offset, int rows, int cols)
 {
-    dx_buf_step    /= sizeof(*dx_buf);
-    dx_buf_offset  /= sizeof(*dx_buf);
-    dy_buf_step    /= sizeof(*dy_buf);
-    dy_buf_offset  /= sizeof(*dy_buf);
-    dx_step    /= sizeof(*dx);
-    dx_offset  /= sizeof(*dx);
-    dy_step    /= sizeof(*dy);
-    dy_offset  /= sizeof(*dy);
-    mag_step   /= sizeof(*mag);
-    mag_offset /= sizeof(*mag);
-
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
 
     int lidx = get_local_id(0);
     int lidy = get_local_id(1);
 
-    __local short sdx[18][16];
-    __local short sdy[18][16];
+    __local shortT sdx[18][16];
+    __local shortT sdy[18][16];
 
-    sdx[lidy + 1][lidx] = dx_buf[gidx + min(gidy, rows - 1) * dx_buf_step + dx_buf_offset];
-    sdy[lidy + 1][lidx] = dy_buf[gidx + min(gidy, rows - 1) * dy_buf_step + dy_buf_offset];
+    sdx[lidy + 1][lidx] = loadpix(dx_buf + mad24(min(gidy, rows - 1), dx_buf_step, mad24(gidx, shortSize, dx_buf_offset)));
+    sdy[lidy + 1][lidx] = loadpix(dy_buf + mad24(min(gidy, rows - 1), dy_buf_step, mad24(gidx, shortSize, dy_buf_offset)));
     if (lidy == 0)
     {
-        sdx[0][lidx]  = dx_buf[gidx + min(max(gidy - 1, 0), rows - 1) * dx_buf_step + dx_buf_offset];
-        sdx[17][lidx] = dx_buf[gidx + min(gidy + 16, rows - 1)        * dx_buf_step + dx_buf_offset];
+        sdx[0][lidx]  = loadpix(dx_buf + mad24(clamp(gidy - 1, 0, rows - 1), dx_buf_step, mad24(gidx, shortSize, dx_buf_offset)));
+        sdx[17][lidx] = loadpix(dx_buf + mad24(min(gidy + 16, rows - 1), dx_buf_step, mad24(gidx, shortSize, dx_buf_offset)));
 
-        sdy[0][lidx]  = dy_buf[gidx + min(max(gidy - 1, 0), rows - 1) * dy_buf_step + dy_buf_offset];
-        sdy[17][lidx] = dy_buf[gidx + min(gidy + 16, rows - 1)        * dy_buf_step + dy_buf_offset];
+        sdy[0][lidx]  = loadpix(dy_buf + mad24(clamp(gidy - 1, 0, rows - 1), dy_buf_step, mad24(gidx, shortSize, dy_buf_offset)));
+        sdy[17][lidx] = loadpix(dy_buf + mad24(min(gidy + 16, rows - 1), dy_buf_step, mad24(gidx, shortSize, dy_buf_offset)));
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (gidx < cols && gidy < rows)
     {
-        short x =  sdx[lidy][lidx] + 2 * sdx[lidy + 1][lidx] + sdx[lidy + 2][lidx];
-        short y = -sdy[lidy][lidx] + sdy[lidy + 2][lidx];
+        shortT x = sdx[lidy + 1][lidx] * (shortT)(2) + sdx[lidy][lidx] + sdx[lidy + 2][lidx];
+        shortT y = -sdy[lidy][lidx] + sdy[lidy + 2][lidx];
 
-        dx[gidx + gidy * dx_step + dx_offset] = x;
-        dy[gidx + gidy * dy_step + dy_offset] = y;
+#if cn == 1
+        *(__global short *)(dx + mad24(gidy, dx_step, mad24(gidx, shortSize, dx_offset))) = x;
+        *(__global short *)(dy + mad24(gidy, dy_step, mad24(gidx, shortSize, dy_offset))) = y;
 
-        mag[(gidx + 1) + (gidy + 1) * mag_step + mag_offset] = calc(x, y);
+        *(__global int *)(mag + mad24(gidy + 1, mag_step, mad24(gidx + 1, (int)sizeof(int), mag_offset))) = calc(x, y);
+#elif cn == 3
+        intT magv = calc(x, y);
+        short cx = x.x, cy = y.x;
+        int cmag = magv.x;
+
+        if (cmag < magv.y)
+            cx = x.y, cy = y.y, cmag = magv.y;
+        if (cmag < magv.z)
+            cx = x.z, cy = y.z, cmag = magv.z;
+
+        *(__global short *)(dx + mad24(gidy, dx_step, mad24(gidx, shortSize, dx_offset))) = cx;
+        *(__global short *)(dy + mad24(gidy, dy_step, mad24(gidx, shortSize, dy_offset))) = cy;
+
+        *(__global int *)(mag + mad24(gidy + 1, mag_step, mad24(gidx + 1, (int)sizeof(int), mag_offset))) = cmag;
+#endif
     }
 }
 
+#endif
+
+#elif defined OP_MAP
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // 0.4142135623730950488016887242097 is tan(22.5)
@@ -208,13 +253,11 @@ calcMagnitude_buf
 // mag			magnitudes calculated from calcMagnitude function
 // map			output containing raw edge types
 
-__kernel void __attribute__((reqd_work_group_size(16,16,1)))
-calcMap(
-    __global const uchar * dx, int dx_step, int dx_offset,
-    __global const uchar * dy, int dy_step, int dy_offset,
-    __global const uchar * mag, int mag_step, int mag_offset,
-    __global uchar * map, int map_step, int map_offset,
-    int rows, int cols, int low_thresh, int high_thresh)
+__kernel void calcMap(__global const uchar * dx, int dx_step, int dx_offset,
+                      __global const uchar * dy, int dy_step, int dy_offset,
+                      __global const uchar * mag, int mag_step, int mag_offset,
+                      __global uchar * map, int map_step, int map_offset,
+                      int rows, int cols, int low_thresh, int high_thresh)
 {
     __local int smem[18][18];
 
@@ -227,7 +270,7 @@ calcMap(
     int grp_idx = get_global_id(0) & 0xFFFFF0;
     int grp_idy = get_global_id(1) & 0xFFFFF0;
 
-    int tid = lidx + lidy * 16;
+    int tid = mad24(lidy, 16, lidx);
     int lx = tid % 18;
     int ly = tid / 18;
 
@@ -250,8 +293,8 @@ calcMap(
 
         if (m > low_thresh)
         {
-            short xs = *(__global const short *)(dx + mad24(gidy, dx_step, dx_offset + (int)sizeof(short) * gidx));
-            short ys = *(__global const short *)(dy + mad24(gidy, dy_step, dy_offset + (int)sizeof(short) * gidx));
+            short xs = *(__global const short *)(dx + mad24(gidy, dx_step, mad24(gidx, (int)sizeof(short) * cn, dx_offset)));
+            short ys = *(__global const short *)(dy + mad24(gidy, dy_step, mad24(gidx, (int)sizeof(short) * cn, dy_offset)));
             int x = abs(xs), y = abs(ys);
 
             int tg22x = x * TG22;
@@ -278,12 +321,14 @@ calcMap(
                 }
             }
         }
-        *(__global int *)(map + mad24(map_step, gidy + 1, (gidx + 1) * (int)sizeof(int) + map_offset)) = edge_type;
+        *(__global int *)(map + mad24(map_step, gidy + 1, mad24(gidx + 1, (int)sizeof(int), + map_offset))) = edge_type;
     }
 }
 
 #undef CANNY_SHIFT
 #undef TG22
+
+#elif defined OP_HYST_LOCAL
 
 struct PtrStepSz
 {
@@ -312,11 +357,9 @@ inline void set(struct PtrStepSz data, int y, int x, int value)
 // stack	the potiential edge points found in this kernel call
 // counter	the number of potiential edge points
 
-__kernel void __attribute__((reqd_work_group_size(16,16,1)))
-edgesHysteresisLocal
-    (__global uchar * map_ptr, int map_step, int map_offset,
-     __global ushort2 * st, __global unsigned int * counter,
-    int rows, int cols)
+__kernel void edgesHysteresisLocal(__global uchar * map_ptr, int map_step, int map_offset,
+                                   __global ushort2 * st, __global unsigned int * counter,
+                                   int rows, int cols)
 {
     struct PtrStepSz map = { map_ptr + map_offset, map_step, rows + 1, cols + 1 };
 
@@ -402,6 +445,8 @@ edgesHysteresisLocal
     }
 }
 
+#elif defined OP_HYST_GLOBAL
+
 __constant int c_dx[8] = {-1,  0,  1, -1, 1, -1, 0, 1};
 __constant int c_dy[8] = {-1, -1, -1,  0, 0,  1, 1, 1};
 
@@ -409,10 +454,9 @@ __constant int c_dy[8] = {-1, -1, -1,  0, 0,  1, 1, 1};
 #define stack_size 512
 #define map_index mad24(map_step, pos.y, pos.x * (int)sizeof(int))
 
-__kernel void __attribute__((reqd_work_group_size(128, 1, 1)))
-edgesHysteresisGlobal(__global uchar * map, int map_step, int map_offset,
-    __global ushort2 * st1, __global ushort2 * st2, __global int * counter,
-    int rows, int cols, int count)
+__kernel void edgesHysteresisGlobal(__global uchar * map, int map_step, int map_offset,
+                                    __global ushort2 * st1, __global ushort2 * st2, __global int * counter,
+                                    int rows, int cols, int count)
 {
     map += map_offset;
 
@@ -492,6 +536,8 @@ edgesHysteresisGlobal(__global uchar * map, int map_step, int map_offset,
 #undef map_index
 #undef stack_size
 
+#elif defined OP_EDGES
+
 // Get the edge result. egde type of value 2 will be marked as an edge point and set to 255. Otherwise 0.
 // map		edge type mappings
 // dst		edge output
@@ -504,7 +550,7 @@ __kernel void getEdges(__global const uchar * mapptr, int map_step, int map_offs
 
     if (y < rows && x < cols)
     {
-        int map_index = mad24(map_step, y + 1, (x + 1) * (int)sizeof(int) + map_offset);
+        int map_index = mad24(map_step, y + 1, mad24(x + 1, (int)sizeof(int), map_offset));
         int dst_index = mad24(dst_step, y, x + dst_offset);
 
         __global const int * map = (__global const int *)(mapptr + map_index);
@@ -512,3 +558,5 @@ __kernel void getEdges(__global const uchar * mapptr, int map_step, int map_offs
         dst[dst_index] = (uchar)(-(map[0] >> 1));
     }
 }
+
+#endif

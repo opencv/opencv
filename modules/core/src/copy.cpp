@@ -482,9 +482,9 @@ enum { FLIP_COLS = 1 << 0, FLIP_ROWS = 1 << 1, FLIP_BOTH = FLIP_ROWS | FLIP_COLS
 static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 {
     CV_Assert(flipCode >= - 1 && flipCode <= 1);
-    int type = _src.type(), cn = CV_MAT_CN(type), flipType;
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), flipType;
 
-    if (cn > 4 || cn == 3)
+    if (cn > 4)
         return false;
 
     const char * kernelName;
@@ -506,7 +506,8 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     }
 
     ocl::Kernel k(kernelName, ocl::core::flip_oclsrc,
-        format( "-D type=%s", ocl::memopTypeToStr(type)));
+        format( "-D T=%s -D T1=%s -D cn=%d", ocl::memopTypeToStr(type),
+                ocl::memopTypeToStr(depth), cn));
     if (k.empty())
         return false;
 
