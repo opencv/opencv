@@ -145,7 +145,7 @@ public:
 
 
 
-#ifdef HAVE_OPENCV_GPUWARPING
+#ifdef HAVE_OPENCV_CUDAWARPING
 class PlaneWarperGpu: public WarperCreator
 {
 public:
@@ -166,6 +166,24 @@ public:
     Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::SphericalWarperGpu>(scale); }
 };
 #endif
+
+class PlaneWarperOcl: public WarperCreator
+{
+public:
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::PlaneWarperOcl>(scale); }
+};
+
+class SphericalWarperOcl: public WarperCreator
+{
+public:
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::SphericalWarperOcl>(scale); }
+};
+
+class CylindricalWarperOcl: public WarperCreator
+{
+public:
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::CylindricalWarperOcl>(scale); }
+};
 
 } // namespace cv
 

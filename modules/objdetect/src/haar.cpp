@@ -336,7 +336,7 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
             out->isStumpBased &= node_count == 1;
         }
     }
-
+/*
 #ifdef HAVE_IPP
     int can_use_ipp = !out->has_tilted_features && !out->is_tree && out->isStumpBased;
 
@@ -392,7 +392,7 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
         }
     }
 #endif
-
+*/
     cascade->hid_cascade = out;
     assert( (char*)haar_node_ptr - (char*)out <= datasize );
 
@@ -1564,7 +1564,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
         int use_ipp = cascade->hid_cascade->ipp_stages != 0;
 
         if( use_ipp )
-            normImg = cvCreateMat( img->rows, img->cols, CV_32FC1 );
+            normImg.reset(cvCreateMat( img->rows, img->cols, CV_32FC1));
 #endif
         imgSmall.reset(cvCreateMat( img->rows + 1, img->cols + 1, CV_8UC1 ));
 

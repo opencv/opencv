@@ -83,7 +83,7 @@ The constructors.
 
     :param abufId: Buffer object name.
 
-    :param arr: Input array (host or device memory, it can be :ocv:class:`Mat` , :ocv:class:`gpu::GpuMat` or ``std::vector`` ).
+    :param arr: Input array (host or device memory, it can be :ocv:class:`Mat` , :ocv:class:`cuda::GpuMat` or ``std::vector`` ).
 
     :param target: Buffer usage. See :ocv:enum:`ogl::Buffer::Target` .
 
@@ -148,7 +148,7 @@ Copies from host/device memory to OpenGL buffer.
 
 .. ocv:function:: void ogl::Buffer::copyFrom(InputArray arr, Target target = ARRAY_BUFFER, bool autoRelease = false)
 
-    :param arr: Input array (host or device memory, it can be :ocv:class:`Mat` , :ocv:class:`gpu::GpuMat` or ``std::vector`` ).
+    :param arr: Input array (host or device memory, it can be :ocv:class:`Mat` , :ocv:class:`cuda::GpuMat` or ``std::vector`` ).
 
     :param target: Buffer usage. See :ocv:enum:`ogl::Buffer::Target` .
 
@@ -162,7 +162,7 @@ Copies from OpenGL buffer to host/device memory or another OpenGL buffer object.
 
 .. ocv:function:: void ogl::Buffer::copyTo(OutputArray arr) const
 
-    :param arr: Destination array (host or device memory, can be :ocv:class:`Mat` , :ocv:class:`gpu::GpuMat` , ``std::vector`` or ``ogl::Buffer`` ).
+    :param arr: Destination array (host or device memory, can be :ocv:class:`Mat` , :ocv:class:`cuda::GpuMat` , ``std::vector`` or ``ogl::Buffer`` ).
 
 
 
@@ -229,7 +229,7 @@ ogl::Buffer::mapDevice
 ----------------------
 Maps OpenGL buffer to CUDA device memory.
 
-.. ocv:function:: gpu::GpuMat ogl::Buffer::mapDevice()
+.. ocv:function:: cuda::GpuMat ogl::Buffer::mapDevice()
 
 This operatation doesn't copy data.
 Several buffer objects can be mapped to CUDA memory at a time.
@@ -291,7 +291,7 @@ The constructors.
 
     :param aformat: Image format. See :ocv:enum:`ogl::Texture2D::Format` .
 
-    :param arr: Input array (host or device memory, it can be :ocv:class:`Mat` , :ocv:class:`gpu::GpuMat` or :ocv:class:`ogl::Buffer` ).
+    :param arr: Input array (host or device memory, it can be :ocv:class:`Mat` , :ocv:class:`cuda::GpuMat` or :ocv:class:`ogl::Buffer` ).
 
     :param autoRelease: Auto release mode (if true, release will be called in object's destructor).
 
@@ -351,7 +351,7 @@ Copies from host/device memory to OpenGL texture.
 
 .. ocv:function:: void ogl::Texture2D::copyFrom(InputArray arr, bool autoRelease = false)
 
-    :param arr: Input array (host or device memory, it can be :ocv:class:`Mat` , :ocv:class:`gpu::GpuMat` or :ocv:class:`ogl::Buffer` ).
+    :param arr: Input array (host or device memory, it can be :ocv:class:`Mat` , :ocv:class:`cuda::GpuMat` or :ocv:class:`ogl::Buffer` ).
 
     :param autoRelease: Auto release mode (if true, release will be called in object's destructor).
 
@@ -363,7 +363,7 @@ Copies from OpenGL texture to host/device memory or another OpenGL texture objec
 
 .. ocv:function:: void ogl::Texture2D::copyTo(OutputArray arr, int ddepth = CV_32F, bool autoRelease = false) const
 
-    :param arr: Destination array (host or device memory, can be :ocv:class:`Mat` , :ocv:class:`gpu::GpuMat` , :ocv:class:`ogl::Buffer` or ``ogl::Texture2D`` ).
+    :param arr: Destination array (host or device memory, can be :ocv:class:`Mat` , :ocv:class:`cuda::GpuMat` , :ocv:class:`ogl::Buffer` or ``ogl::Texture2D`` ).
 
     :param ddepth: Destination depth.
 
@@ -532,12 +532,12 @@ Render OpenGL texture or primitives.
 
 
 
-gpu::setGlDevice
-----------------
+cuda::setGlDevice
+-----------------
 Sets a CUDA device and initializes it for the current thread with OpenGL interoperability.
 
-.. ocv:function:: void gpu::setGlDevice( int device = 0 )
+.. ocv:function:: void cuda::setGlDevice( int device = 0 )
 
-    :param device: System index of a GPU device starting with 0.
+    :param device: System index of a CUDA device starting with 0.
 
 This function should be explicitly called after OpenGL context creation and before any CUDA calls.

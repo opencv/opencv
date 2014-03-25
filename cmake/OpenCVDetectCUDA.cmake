@@ -8,7 +8,23 @@ if(CMAKE_COMPILER_IS_GNUCXX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Cl
   return()
 endif()
 
-find_package(CUDA 4.2 QUIET)
+set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
+foreach(var INCLUDE LIBRARY PROGRAM)
+  set(__old_frpm_${var} "${CMAKE_FIND_ROOT_PATH_MODE_${var}}")
+endforeach()
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER)
+
+find_package(CUDA "${MIN_VER_CUDA}" QUIET)
+
+foreach(var INCLUDE LIBRARY PROGRAM)
+  set(CMAKE_FIND_ROOT_PATH_MODE_${var} "${__old_frpm_${var}}")
+endforeach()
+
+list(REMOVE_AT CMAKE_MODULE_PATH 0)
 
 if(CUDA_FOUND)
   set(HAVE_CUDA 1)
@@ -19,47 +35,6 @@ if(CUDA_FOUND)
 
   if(WITH_CUBLAS)
     set(HAVE_CUBLAS 1)
-  endif()
-
-  if(${CUDA_VERSION} VERSION_LESS "5.5")
-    find_cuda_helper_libs(npp)
-  else()
-    # hack for CUDA 5.5
-    if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm")
-      unset(CUDA_TOOLKIT_INCLUDE CACHE)
-      unset(CUDA_CUDART_LIBRARY CACHE)
-      unset(CUDA_cublas_LIBRARY CACHE)
-      unset(CUDA_cufft_LIBRARY CACHE)
-      unset(CUDA_npp_LIBRARY CACHE)
-
-      if(SOFTFP)
-        set(cuda_arm_path "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-gnueabi")
-      else()
-        set(cuda_arm_path "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-gnueabihf")
-      endif()
-
-      set(CUDA_TOOLKIT_INCLUDE "${cuda_arm_path}/include" CACHE PATH "include path")
-      set(CUDA_INCLUDE_DIRS ${CUDA_TOOLKIT_INCLUDE})
-
-      set(cuda_arm_library_path "${cuda_arm_path}/lib")
-
-      set(CUDA_CUDART_LIBRARY "${cuda_arm_library_path}/libcudart.so" CACHE FILEPATH "cudart library")
-      set(CUDA_LIBRARIES ${CUDA_CUDART_LIBRARY})
-      set(CUDA_cublas_LIBRARY "${cuda_arm_library_path}/libcublas.so" CACHE FILEPATH "cublas library")
-      set(CUDA_cufft_LIBRARY "${cuda_arm_library_path}/libcufft.so" CACHE FILEPATH "cufft library")
-      set(CUDA_nppc_LIBRARY "${cuda_arm_library_path}/libnppc.so" CACHE FILEPATH "nppc library")
-      set(CUDA_nppi_LIBRARY "${cuda_arm_library_path}/libnppi.so" CACHE FILEPATH "nppi library")
-      set(CUDA_npps_LIBRARY "${cuda_arm_library_path}/libnpps.so" CACHE FILEPATH "npps library")
-      set(CUDA_npp_LIBRARY "${CUDA_nppc_LIBRARY};${CUDA_nppi_LIBRARY};${CUDA_npps_LIBRARY}" CACHE STRING "npp library")
-    else()
-      unset(CUDA_npp_LIBRARY CACHE)
-
-      find_cuda_helper_libs(nppc)
-      find_cuda_helper_libs(nppi)
-      find_cuda_helper_libs(npps)
-
-      set(CUDA_npp_LIBRARY "${CUDA_nppc_LIBRARY};${CUDA_nppi_LIBRARY};${CUDA_npps_LIBRARY}" CACHE STRING "npp library")
-    endif()
   endif()
 
   if(WITH_NVCUVID)
@@ -108,16 +83,22 @@ if(CUDA_FOUND)
       message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
     else()
       set(__cuda_arch_bin "${_nvcc_out}")
+      string(REPLACE "2.1" "2.1(2.0)" __cuda_arch_bin "${__cuda_arch_bin}")
     endif()
   endif()
 
   if(NOT DEFINED __cuda_arch_bin)
-    if(${CUDA_VERSION} VERSION_LESS "5.0")
-      set(__cuda_arch_bin "1.1 1.2 1.3 2.0 2.1(2.0) 3.0")
+    if(ANDROID)
+      set(__cuda_arch_bin "3.2")
+      set(__cuda_arch_ptx "")
     else()
-      set(__cuda_arch_bin "1.1 1.2 1.3 2.0 2.1(2.0) 3.0 3.5")
+      if(${CUDA_VERSION} VERSION_LESS "5.0")
+        set(__cuda_arch_bin "1.1 1.2 1.3 2.0 2.1(2.0) 3.0")
+      else()
+        set(__cuda_arch_bin "1.1 1.2 1.3 2.0 2.1(2.0) 3.0 3.5")
+      endif()
+      set(__cuda_arch_ptx "3.0")
     endif()
-    set(__cuda_arch_ptx "3.0")
   endif()
 
   set(CUDA_ARCH_BIN ${__cuda_arch_bin} CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
@@ -165,13 +146,14 @@ if(CUDA_FOUND)
     set(OPENCV_CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES} ${ARCH}")
   endforeach()
 
-  if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm")
-    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --target-cpu-architecture=ARM")
-  endif()
-
   # These vars will be processed in other scripts
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${NVCC_FLAGS_EXTRA})
   set(OpenCV_CUDA_CC "${NVCC_FLAGS_EXTRA}")
+
+  if(ANDROID)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xptxas;-dlcm=ca")
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-target-os-variant=Android")
+  endif()
 
   message(STATUS "CUDA NVCC target flags: ${CUDA_NVCC_FLAGS}")
 
@@ -196,9 +178,16 @@ if(CUDA_FOUND)
       # we remove -Wsign-promo as it generates warnings under linux
       string(REPLACE "-Wsign-promo" "" ${var} "${${var}}")
 
-      # we remove -fvisibility-inlines-hidden because it's used for C++ compiler
+      # we remove -Wno-sign-promo as it generates warnings under linux
+      string(REPLACE "-Wno-sign-promo" "" ${var} "${${var}}")
+
+      # we remove -Wno-delete-non-virtual-dtor because it's used for C++ compiler
       # but NVCC uses C compiler by default
-      string(REPLACE "-fvisibility-inlines-hidden" "" ${var} "${${var}}")
+      string(REPLACE "-Wno-delete-non-virtual-dtor" "" ${var} "${${var}}")
+
+      # we remove -frtti because it's used for C++ compiler
+      # but NVCC uses C compiler by default
+      string(REPLACE "-frtti" "" ${var} "${${var}}")
     endforeach()
 
     if(BUILD_SHARED_LIBS)
@@ -227,4 +216,43 @@ if(CUDA_FOUND)
 else()
   unset(CUDA_ARCH_BIN CACHE)
   unset(CUDA_ARCH_PTX CACHE)
+endif()
+
+if(HAVE_CUDA)
+  set(CUDA_LIBS_PATH "")
+  foreach(p ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+    get_filename_component(_tmp ${p} PATH)
+    list(APPEND CUDA_LIBS_PATH ${_tmp})
+  endforeach()
+
+  if(HAVE_CUBLAS)
+    foreach(p ${CUDA_cublas_LIBRARY})
+      get_filename_component(_tmp ${p} PATH)
+      list(APPEND CUDA_LIBS_PATH ${_tmp})
+    endforeach()
+  endif()
+
+  if(HAVE_CUFFT)
+    foreach(p ${CUDA_cufft_LIBRARY})
+      get_filename_component(_tmp ${p} PATH)
+      list(APPEND CUDA_LIBS_PATH ${_tmp})
+    endforeach()
+  endif()
+
+  list(REMOVE_DUPLICATES CUDA_LIBS_PATH)
+  link_directories(${CUDA_LIBS_PATH})
+
+  set(CUDA_LIBRARIES_ABS ${CUDA_LIBRARIES})
+  ocv_convert_to_lib_name(CUDA_LIBRARIES ${CUDA_LIBRARIES})
+  set(CUDA_npp_LIBRARY_ABS ${CUDA_npp_LIBRARY})
+  ocv_convert_to_lib_name(CUDA_npp_LIBRARY ${CUDA_npp_LIBRARY})
+  if(HAVE_CUBLAS)
+    set(CUDA_cublas_LIBRARY_ABS ${CUDA_cublas_LIBRARY})
+    ocv_convert_to_lib_name(CUDA_cublas_LIBRARY ${CUDA_cublas_LIBRARY})
+  endif()
+
+  if(HAVE_CUFFT)
+    set(CUDA_cufft_LIBRARY_ABS ${CUDA_cufft_LIBRARY})
+    ocv_convert_to_lib_name(CUDA_cufft_LIBRARY ${CUDA_cufft_LIBRARY})
+  endif()
 endif()

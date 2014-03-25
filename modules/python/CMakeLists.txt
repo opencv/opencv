@@ -106,9 +106,28 @@ else()
   set(PYTHON_INSTALL_CONFIGURATIONS "")
 endif()
 
-install(TARGETS ${the_module}
-        ${PYTHON_INSTALL_CONFIGURATIONS}
-        RUNTIME DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT main
-        LIBRARY DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT main
-        ARCHIVE DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT main
-        )
+if(WIN32)
+  set(PYTHON_INSTALL_ARCHIVE "")
+else()
+  set(PYTHON_INSTALL_ARCHIVE ARCHIVE DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT python)
+endif()
+
+if(NOT INSTALL_CREATE_DISTRIB)
+  install(TARGETS ${the_module}
+          ${PYTHON_INSTALL_CONFIGURATIONS}
+          RUNTIME DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT python
+          LIBRARY DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT python
+          ${PYTHON_INSTALL_ARCHIVE}
+          )
+else()
+  if(DEFINED PYTHON_VERSION_MAJOR)
+    set(__ver "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
+  else()
+    set(__ver "unknown")
+  endif()
+  install(TARGETS ${the_module}
+          CONFIGURATIONS Release
+          RUNTIME DESTINATION python/${__ver}/${OpenCV_ARCH} COMPONENT python
+          LIBRARY DESTINATION python/${__ver}/${OpenCV_ARCH} COMPONENT python
+          )
+endif()

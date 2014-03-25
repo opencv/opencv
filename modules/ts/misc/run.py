@@ -7,6 +7,8 @@ from subprocess import Popen, PIPE
 hostos = os.name # 'nt', 'posix'
 hostmachine = platform.machine() # 'x86', 'AMD64', 'x86_64'
 
+errorCode = 0
+
 SIMD_DETECTION_PROGRAM="""
 #if __SSE5__
 # error SSE5
@@ -560,7 +562,10 @@ class TestSuite(object):
             else:
                 hw = ""
             tstamp = timestamp.strftime("%Y%m%d-%H%M%S")
-            return "%s_%s_%s_%s%s%s.xml" % (app, self.targetos, self.targetarch, hw, rev, tstamp)
+            lname = "%s_%s_%s_%s%s%s.xml" % (app, self.targetos, self.targetarch, hw, rev, tstamp)
+            lname = str.replace(lname, '(', '_')
+            lname = str.replace(lname, ')', '_')
+            return lname
 
     def getTest(self, name):
         # full path
@@ -641,6 +646,8 @@ class TestSuite(object):
         return True
 
     def runTest(self, path, workingDir, _stdout, _stderr, args = []):
+        global errorCode
+
         if self.error:
             return
         args = args[:]
@@ -755,13 +762,16 @@ class TestSuite(object):
                 return hostlogpath
             return None
         elif path == "java":
-            cmd = [self.ant_executable, "-DjavaLibraryPath=" + self.tests_dir, "buildAndTest"]
+            cmd = [self.ant_executable,
+                   "-Dopencv.build.type="
+                     + (self.options.configuration if self.options.configuration else self.build_type),
+                   "buildAndTest"]
 
             print >> _stderr, "Run command:", " ".join(cmd)
             try:
-                Popen(cmd, stdout=_stdout, stderr=_stderr, cwd = self.java_test_binary_dir + "/.build").wait()
-            except OSError:
-                pass
+                errorCode = Popen(cmd, stdout=_stdout, stderr=_stderr, cwd = self.java_test_binary_dir + "/.build").wait()
+            except:
+                print "Unexpected error:", sys.exc_info()[0]
 
             return None
         else:
@@ -777,9 +787,9 @@ class TestSuite(object):
 
             print >> _stderr, "Run command:", " ".join(cmd)
             try:
-                Popen(cmd, stdout=_stdout, stderr=_stderr, cwd = workingDir).wait()
-            except OSError:
-                pass
+                errorCode = Popen(cmd, stdout=_stdout, stderr=_stderr, cwd = workingDir).wait()
+            except:
+                print "Unexpected error:", sys.exc_info()[0]
 
             # clean temporary files
             if orig_temp_path:
@@ -891,3 +901,7 @@ if __name__ == "__main__":
 
     if logs:
         print >> sys.stderr, "Collected:  ", " ".join(logs)
+
+    if errorCode != 0:
+        print "Error code: ", errorCode, (" (0x%x)" % (errorCode & 0xffffffff))
+    exit(errorCode)

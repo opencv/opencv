@@ -6,11 +6,12 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/video.hpp"
-#include "opencv2/gpu.hpp"
+#include "opencv2/cudaoptflow.hpp"
+#include "opencv2/cudaimgproc.hpp"
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 static void download(const GpuMat& d_mat, vector<Point2f>& vec)
 {
@@ -179,7 +180,7 @@ int main(int argc, const char* argv[])
     GpuMat d_frame0Gray(frame0Gray);
     GpuMat d_prevPts;
 
-    Ptr<gpu::CornersDetector> detector = gpu::createGoodFeaturesToTrackDetector(d_frame0Gray.type(), points, 0.01, minDist);
+    Ptr<cuda::CornersDetector> detector = cuda::createGoodFeaturesToTrackDetector(d_frame0Gray.type(), points, 0.01, minDist);
 
     detector->detect(d_frame0Gray, d_prevPts);
 

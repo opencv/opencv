@@ -5,7 +5,7 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/gpuimgproc.hpp"
+#include "opencv2/cudaimgproc.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/contrib.hpp"
 
@@ -87,7 +87,7 @@ int main(int argc, const char* argv[])
 
     if (!full)
     {
-        Ptr<GeneralizedHoughBallard> ballard = useGpu ? gpu::createGeneralizedHoughBallard() : createGeneralizedHoughBallard();
+        Ptr<GeneralizedHoughBallard> ballard = useGpu ? cuda::createGeneralizedHoughBallard() : createGeneralizedHoughBallard();
 
         ballard->setMinDist(minDist);
         ballard->setLevels(levels);
@@ -99,7 +99,7 @@ int main(int argc, const char* argv[])
     }
     else
     {
-        Ptr<GeneralizedHoughGuil> guil = useGpu ? gpu::createGeneralizedHoughGuil() : createGeneralizedHoughGuil();
+        Ptr<GeneralizedHoughGuil> guil = useGpu ? cuda::createGeneralizedHoughGuil() : createGeneralizedHoughGuil();
 
         guil->setMinDist(minDist);
         guil->setLevels(levels);
@@ -126,9 +126,9 @@ int main(int argc, const char* argv[])
 
     if (useGpu)
     {
-        gpu::GpuMat d_templ(templ);
-        gpu::GpuMat d_image(image);
-        gpu::GpuMat d_position;
+        cuda::GpuMat d_templ(templ);
+        cuda::GpuMat d_image(image);
+        cuda::GpuMat d_position;
 
         alg->setTemplate(d_templ);
 

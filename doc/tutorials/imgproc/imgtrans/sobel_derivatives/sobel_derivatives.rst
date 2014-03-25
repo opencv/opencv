@@ -121,7 +121,7 @@ Code
 
    * Applies the *Sobel Operator* and generates as output an image with the detected *edges* bright on a darker background.
 
-#. The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp>`_
+#. The tutorial code's is shown lines below. You can also download it from `here <https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp>`_
 
 .. code-block:: cpp
 

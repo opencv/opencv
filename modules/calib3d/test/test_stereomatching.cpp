@@ -398,7 +398,7 @@ protected:
 
 void CV_StereoMatchingTest::run(int)
 {
-    string dataPath = ts->get_data_path();
+    string dataPath = ts->get_data_path() + "cv/";
     string algorithmName = name;
     assert( !algorithmName.empty() );
     if( dataPath.empty() )

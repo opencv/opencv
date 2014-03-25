@@ -116,7 +116,7 @@ Mat randomMat(RNG& rng, Size size, int type, double minVal, double maxVal, bool 
 
     Mat m(size0, type);
 
-    rng.fill(m, RNG::UNIFORM, Scalar::all(minVal), Scalar::all(maxVal));
+    rng.fill(m, RNG::UNIFORM, minVal, maxVal);
     if( size0 == size )
         return m;
     return m(Rect((size0.width-size.width)/2, (size0.height-size.height)/2, size.width, size.height));
@@ -142,7 +142,7 @@ Mat randomMat(RNG& rng, const vector<int>& size, int type, double minVal, double
 
     Mat m(dims, &size0[0], type);
 
-    rng.fill(m, RNG::UNIFORM, Scalar::all(minVal), Scalar::all(maxVal));
+    rng.fill(m, RNG::UNIFORM, minVal, maxVal);
     if( eqsize )
         return m;
     return m(&r[0]);
@@ -2897,7 +2897,7 @@ static std::ostream& operator << (std::ostream& out, const MatPart& m)
 }
 
 MatComparator::MatComparator(double _maxdiff, int _context)
-    : maxdiff(_maxdiff), context(_context) {}
+    : maxdiff(_maxdiff), realmaxdiff(DBL_MAX), context(_context) {}
 
 ::testing::AssertionResult
 MatComparator::operator()(const char* expr1, const char* expr2,
@@ -2967,6 +2967,16 @@ void printVersionInfo(bool useStdOut)
         ::testing::Test::RecordProperty("cv_inner_vcs_version", ver);
         if(useStdOut) std::cout << "Inner VCS version: " << ver << std::endl;
     }
+
+    const char * build_type =
+#ifdef _DEBUG
+        "debug";
+#else
+        "release";
+#endif
+
+    ::testing::Test::RecordProperty("cv_build_type", build_type);
+    if (useStdOut) std::cout << "Build type: " << build_type << std::endl;
 
     const char* parallel_framework = currentParallelFramework();
 

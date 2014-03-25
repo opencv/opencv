@@ -99,11 +99,11 @@ The function converts images to CIELAB colorspace and then separately denoise L 
 
 
 
-gpu::nonLocalMeans
+cuda::nonLocalMeans
 -------------------
 Performs pure non local means denoising without any simplification, and thus it is not fast.
 
-.. ocv:function:: void gpu::nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null())
+.. ocv:function:: void cuda::nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null())
 
     :param src: Source image. Supports only CV_8UC1, CV_8UC2 and CV_8UC3.
 
@@ -125,9 +125,9 @@ Performs pure non local means denoising without any simplification, and thus it 
 
 
 
-gpu::FastNonLocalMeansDenoising
--------------------------------
-.. ocv:class:: gpu::FastNonLocalMeansDenoising
+cuda::FastNonLocalMeansDenoising
+--------------------------------
+.. ocv:class:: cuda::FastNonLocalMeansDenoising
 
     ::
 
@@ -144,11 +144,11 @@ The class implements fast approximate Non Local Means Denoising algorithm.
 
 
 
-gpu::FastNonLocalMeansDenoising::simpleMethod()
------------------------------------------------
+cuda::FastNonLocalMeansDenoising::simpleMethod()
+------------------------------------------------
 Perform image denoising using Non-local Means Denoising algorithm http://www.ipol.im/pub/algo/bcm_non_local_means_denoising with several computational optimizations. Noise expected to be a gaussian white noise
 
-.. ocv:function:: void gpu::FastNonLocalMeansDenoising::simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
+.. ocv:function:: void cuda::FastNonLocalMeansDenoising::simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
 
     :param src: Input 8-bit 1-channel, 2-channel or 3-channel image.
 
@@ -170,11 +170,11 @@ This function expected to be applied to grayscale images. For colored images loo
 
 
 
-gpu::FastNonLocalMeansDenoising::labMethod()
---------------------------------------------
+cuda::FastNonLocalMeansDenoising::labMethod()
+---------------------------------------------
 Modification of ``FastNonLocalMeansDenoising::simpleMethod`` for color images
 
-.. ocv:function:: void gpu::FastNonLocalMeansDenoising::labMethod(const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
+.. ocv:function:: void cuda::FastNonLocalMeansDenoising::labMethod(const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
 
     :param src: Input 8-bit 3-channel image.
 

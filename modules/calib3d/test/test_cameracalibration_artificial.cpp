@@ -85,7 +85,8 @@ Mat calcRvec(const vector<Point3f>& points, const Size& cornerSize)
 class CV_CalibrateCameraArtificialTest : public cvtest::BaseTest
 {
 public:
-    CV_CalibrateCameraArtificialTest()
+    CV_CalibrateCameraArtificialTest() :
+        r(0)
     {
     }
     ~CV_CalibrateCameraArtificialTest() {}

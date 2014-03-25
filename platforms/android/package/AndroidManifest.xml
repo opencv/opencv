@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.opencv.lib_v@OPENCV_VERSION_MAJOR@@OPENCV_VERSION_MINOR@_@ANDROID_PACKAGE_PLATFORM@"
-    android:versionCode="@OPENCV_VERSION_PATCH@@OPENCV_VERSION_TWEAK@@ANDROID_PACKAGE_RELEASE@"
-    android:versionName="@OPENCV_VERSION_PATCH@.@OPENCV_VERSION_TWEAK@.@ANDROID_PACKAGE_RELEASE@" >
+    android:versionCode="@OPENCV_VERSION_PATCH@0@ANDROID_PACKAGE_RELEASE@"
+    android:versionName="@OPENCV_VERSION_PATCH@.@ANDROID_PACKAGE_RELEASE@" >
 
     <uses-sdk android:minSdkVersion="@ANDROID_SDK_VERSION@" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>

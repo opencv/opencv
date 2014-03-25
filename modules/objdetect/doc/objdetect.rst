@@ -9,3 +9,4 @@ objdetect. Object Detection
 
     cascade_classification
     latent_svm
+    erfilter

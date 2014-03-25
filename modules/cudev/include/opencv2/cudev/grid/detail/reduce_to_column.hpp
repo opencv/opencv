@@ -54,12 +54,52 @@ namespace cv { namespace cudev {
 
 namespace grid_reduce_to_vec_detail
 {
+    template <int BLOCK_SIZE, typename work_type, typename work_elem_type, class Reductor, int cn> struct Reduce;
+
+    template <int BLOCK_SIZE, typename work_type, typename work_elem_type, class Reductor> struct Reduce<BLOCK_SIZE, work_type, work_elem_type, Reductor, 1>
+    {
+        __device__ __forceinline__ static void call(work_elem_type smem[1][BLOCK_SIZE], work_type& myVal)
+        {
+            typename Reductor::template rebind<work_elem_type>::other op;
+            blockReduce<BLOCK_SIZE>(smem[0], myVal, threadIdx.x, op);
+        }
+    };
+
+    template <int BLOCK_SIZE, typename work_type, typename work_elem_type, class Reductor> struct Reduce<BLOCK_SIZE, work_type, work_elem_type, Reductor, 2>
+    {
+        __device__ __forceinline__ static void call(work_elem_type smem[2][BLOCK_SIZE], work_type& myVal)
+        {
+            typename Reductor::template rebind<work_elem_type>::other op;
+            blockReduce<BLOCK_SIZE>(smem_tuple(smem[0], smem[1]), tie(myVal.x, myVal.y), threadIdx.x, make_tuple(op, op));
+        }
+    };
+
+    template <int BLOCK_SIZE, typename work_type, typename work_elem_type, class Reductor> struct Reduce<BLOCK_SIZE, work_type, work_elem_type, Reductor, 3>
+    {
+        __device__ __forceinline__ static void call(work_elem_type smem[3][BLOCK_SIZE], work_type& myVal)
+        {
+            typename Reductor::template rebind<work_elem_type>::other op;
+            blockReduce<BLOCK_SIZE>(smem_tuple(smem[0], smem[1], smem[2]), tie(myVal.x, myVal.y, myVal.z), threadIdx.x, make_tuple(op, op, op));
+        }
+    };
+
+    template <int BLOCK_SIZE, typename work_type, typename work_elem_type, class Reductor> struct Reduce<BLOCK_SIZE, work_type, work_elem_type, Reductor, 4>
+    {
+        __device__ __forceinline__ static void call(work_elem_type smem[4][BLOCK_SIZE], work_type& myVal)
+        {
+            typename Reductor::template rebind<work_elem_type>::other op;
+            blockReduce<BLOCK_SIZE>(smem_tuple(smem[0], smem[1], smem[2], smem[3]), tie(myVal.x, myVal.y, myVal.z, myVal.w), threadIdx.x, make_tuple(op, op, op, op));
+        }
+    };
+
     template <class Reductor, int BLOCK_SIZE, class SrcPtr, typename ResType, class MaskPtr>
     __global__ void reduceToColumn(const SrcPtr src, ResType* dst, const MaskPtr mask, const int cols)
     {
         typedef typename Reductor::work_type work_type;
+        typedef typename VecTraits<work_type>::elem_type work_elem_type;
+        const int cn = VecTraits<work_type>::cn;
 
-        __shared__ work_type smem[BLOCK_SIZE];
+        __shared__ work_elem_type smem[cn][BLOCK_SIZE];
 
         const int y = blockIdx.x;
 
@@ -75,7 +115,7 @@ namespace grid_reduce_to_vec_detail
             }
         }
 
-        blockReduce<BLOCK_SIZE>(smem, myVal, threadIdx.x, op);
+        Reduce<BLOCK_SIZE, work_type, work_elem_type, Reductor, cn>::call(smem, myVal);
 
         if (threadIdx.x == 0)
             dst[y] = saturate_cast<ResType>(Reductor::result(myVal, cols));

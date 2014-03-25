@@ -126,7 +126,7 @@ void printHelp()
             "  --mosaic-stdev=<float_number>\n"
             "      Consistent mosaicing stdev threshold. The default is 10.0.\n\n"
             "  -mi, --motion-inpaint=(yes|no)\n"
-            "      Do motion inpainting (requires GPU support). The default is no.\n"
+            "      Do motion inpainting (requires CUDA support). The default is no.\n"
             "  --mi-dist-thresh=<float_number>\n"
             "      Estimated flow distance threshold for motion inpainting. The default is 5.0.\n\n"
             "  -ci, --color-inpaint=(no|average|ns|telea)\n"
@@ -160,7 +160,7 @@ void printHelp()
             "  -lm2, --load-motions2=(<file_path>|no)\n"
             "      Load motions for wobble suppression from file. The default is no.\n\n"
             "  -gpu=(yes|no)\n"
-            "      Use GPU optimization whenever possible. The default is no.\n\n"
+            "      Use CUDA optimization whenever possible. The default is no.\n\n"
             "  -o, --output=(no|<file_path>)\n"
             "      Set output file path explicitely. The default is stabilized.avi.\n"
             "  --fps=(<float_number>|auto)\n"
@@ -216,7 +216,7 @@ public:
             outlierRejector = tblor;
         }
 
-#if defined(HAVE_OPENCV_GPUIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAOPTFLOW)
         if (gpu)
         {
             Ptr<KeypointBasedMotionEstimatorGpu> kbest = makePtr<KeypointBasedMotionEstimatorGpu>(est);
@@ -257,7 +257,7 @@ public:
             outlierRejector = tblor;
         }
 
-#if defined(HAVE_OPENCV_GPUIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAOPTFLOW)
         if (gpu)
         {
             Ptr<KeypointBasedMotionEstimatorGpu> kbest = makePtr<KeypointBasedMotionEstimatorGpu>(est);
@@ -342,12 +342,12 @@ int main(int argc, const char **argv)
             return 0;
         }
 
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_CUDA
         if (arg("gpu") == "yes")
         {
             cout << "initializing GPU..."; cout.flush();
             Mat hostTmp = Mat::zeros(1, 1, CV_32F);
-            gpu::GpuMat deviceTmp;
+            cuda::GpuMat deviceTmp;
             deviceTmp.upload(hostTmp);
             cout << endl;
         }
@@ -420,10 +420,10 @@ int main(int argc, const char **argv)
             {
                 Ptr<MoreAccurateMotionWobbleSuppressorBase> ws = makePtr<MoreAccurateMotionWobbleSuppressor>();
                 if (arg("gpu") == "yes")
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_CUDA
                     ws = makePtr<MoreAccurateMotionWobbleSuppressorGpu>();
 #else
-                    throw runtime_error("OpenCV is built without GPU support");
+                    throw runtime_error("OpenCV is built without CUDA support");
 #endif
 
                 ws->setMotionEstimator(wsMotionEstBuilder->build());

@@ -80,10 +80,10 @@ static Mat readMatFromBin( const string& filename )
         size_t elements_read4 = fread( (void*)&dataSize, sizeof(int), 1, f );
         CV_Assert(elements_read1 == 1 && elements_read2 == 1 && elements_read3 == 1 && elements_read4 == 1);
 
-        size_t step = dataSize / rows / CV_ELEM_SIZE(type);
-        CV_Assert(step >= (size_t)cols);
+        int step = dataSize / rows / CV_ELEM_SIZE(type);
+        CV_Assert(step >= cols);
 
-        Mat m = Mat( rows, step, type).colRange(0, cols);
+        Mat m = Mat(rows, step, type).colRange(0, cols);
 
         size_t elements_read = fread( m.ptr(), 1, dataSize, f );
         CV_Assert(elements_read == (size_t)(dataSize));

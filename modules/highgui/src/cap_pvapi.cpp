@@ -254,6 +254,11 @@ double CvCaptureCAM_PvAPI::getProperty( int property_id )
     case CV_CAP_PROP_FRAME_HEIGHT:
         PvAttrUint32Get(Camera.Handle, "Height", &nTemp);
         return (double)nTemp;
+    case CV_CAP_PROP_MONOCROME:
+        if (monocrome)
+          return 1;
+        else
+          return 0;
     case CV_CAP_PROP_EXPOSURE:
         PvAttrUint32Get(Camera.Handle,"ExposureValue",&nTemp);
         return (double)nTemp;
@@ -280,6 +285,21 @@ double CvCaptureCAM_PvAPI::getProperty( int property_id )
     case CV_CAP_PROP_GAIN:
         PvAttrUint32Get(Camera.Handle, "GainValue", &nTemp);
         return (double)nTemp;
+    case CV_CAP_PROP_PVAPI_FRAMESTARTTRIGGERMODE:
+        char triggerMode[256];
+        PvAttrEnumGet(Camera.Handle, "FrameStartTriggerMode", triggerMode, 256, NULL);
+        if (strcmp(triggerMode, "Freerun")==0)
+            return 0.0;
+        else if (strcmp(triggerMode, "SyncIn1")==0)
+            return 1.0;
+        else if (strcmp(triggerMode, "SyncIn2")==0)
+            return 2.0;
+        else if (strcmp(triggerMode, "FixedRate")==0)
+            return 3.0;
+        else if (strcmp(triggerMode, "Software")==0)
+            return 4.0;
+        else
+            return -1.0;
     }
     return -1.0;
 }
@@ -368,6 +388,24 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
             return false;
         }
         break;
+    case CV_CAP_PROP_PVAPI_FRAMESTARTTRIGGERMODE:
+        tPvErr error;
+        if (value==0)
+            error = PvAttrEnumSet(Camera.Handle, "FrameStartTriggerMode", "Freerun");
+        else if (value==1)
+            error = PvAttrEnumSet(Camera.Handle, "FrameStartTriggerMode", "SyncIn1");
+        else if (value==2)
+            error = PvAttrEnumSet(Camera.Handle, "FrameStartTriggerMode", "SyncIn2");
+        else if (value==3)
+            error = PvAttrEnumSet(Camera.Handle, "FrameStartTriggerMode", "FixedRate");
+        else if (value==4)
+            error = PvAttrEnumSet(Camera.Handle, "FrameStartTriggerMode", "Software");
+        else
+            error = ePvErrOutOfRange;
+        if(error==ePvErrSuccess)
+            break;
+        else
+            return false;
     default:
         return false;
     }

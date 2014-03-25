@@ -46,7 +46,7 @@ private:
     Point3f generateChessBoardCenter(const Mat& camMat, const Size& imgSize) const;
     Mat rvec, tvec;
 };
-};
+}
 
 
 

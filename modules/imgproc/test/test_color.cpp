@@ -99,6 +99,8 @@ CV_ColorCvtBaseTest::CV_ColorCvtBaseTest( bool _custom_inv_transform, bool _allo
 
     test_cpp = false;
     hue_range = 0;
+    blue_idx = 0;
+    inplace = false;
 }
 
 

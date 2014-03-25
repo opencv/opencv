@@ -118,7 +118,7 @@ public:
 using cv::softcascade::ChannelFeatureBuilder;
 using cv::softcascade::ChannelFeature;
 
-CV_INIT_ALGORITHM(HOG6MagLuv,  "ChannelFeatureBuilder.HOG6MagLuv", );
+CV_INIT_ALGORITHM(HOG6MagLuv,  "ChannelFeatureBuilder.HOG6MagLuv", )
 
 ChannelFeatureBuilder::~ChannelFeatureBuilder() {}
 

@@ -594,7 +594,7 @@ namespace integral_detail
             CV_CUDEV_SAFE_CALL( cudaDeviceSynchronize() );
     }
 
-    __host__ static void integral(const GlobPtr<uchar> src, GlobPtr<uint> dst, int rows, int cols, cudaStream_t stream)
+    __host__ static void integral(const GlobPtr<uchar>& src, const GlobPtr<uint>& dst, int rows, int cols, cudaStream_t stream)
     {
         if (deviceSupports(FEATURE_SET_COMPUTE_30)
             && (cols % 16 == 0)
@@ -614,7 +614,7 @@ namespace integral_detail
             CV_CUDEV_SAFE_CALL( cudaDeviceSynchronize() );
     }
 
-    __host__ static void integral(const GlobPtr<uchar> src, GlobPtr<int> dst, int rows, int cols, cudaStream_t stream)
+    __host__ __forceinline__ void integral(const GlobPtr<uchar>& src, const GlobPtr<int>& dst, int rows, int cols, cudaStream_t stream)
     {
         GlobPtr<uint> dstui = globPtr((uint*) dst.data, dst.step);
         integral(src, dstui, rows, cols, stream);

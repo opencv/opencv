@@ -142,9 +142,9 @@ The process is the same as described in case of the local approach. Just add the
 Test it!
 ========
 
-Now to try this out download our little test :download:`source code <../../../../samples/cpp/tutorial_code/introduction/windows_visual_studio_Opencv/Test.cpp>` or get it from the sample code folder of the OpenCV sources. Add this to your project and build it. Here's its content:
+Now to try this out download our little test :download:`source code <../../../../samples/cpp/tutorial_code/introduction/windows_visual_studio_Opencv/introduction_windows_vs.cpp>` or get it from the sample code folder of the OpenCV sources. Add this to your project and build it. Here's its content:
 
-.. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/windows_visual_studio_Opencv/Test.cpp
+.. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/windows_visual_studio_Opencv/introduction_windows_vs.cpp
    :language: cpp
    :tab-width: 4
    :linenos:

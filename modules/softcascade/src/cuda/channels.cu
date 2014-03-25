@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include "opencv2/core/gpu_types.hpp"
+#include "opencv2/core/cuda_types.hpp"
 #include "opencv2/core/cuda/common.hpp"
 
 namespace cv { namespace softcascade { namespace cudev
@@ -59,7 +59,7 @@ namespace cv { namespace softcascade { namespace cudev
         return bytes;
     }
 
-    __global__ void shfl_integral_horizontal(const cv::gpu::PtrStep<uint4> img, cv::gpu::PtrStep<uint4> integral)
+    __global__ void shfl_integral_horizontal(const cv::cuda::PtrStep<uint4> img, cv::cuda::PtrStep<uint4> integral)
     {
     #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 300)
         __shared__ int sums[128];
@@ -299,7 +299,7 @@ namespace cv { namespace softcascade { namespace cudev
     // The final set of sums from the block is then propgated, with the block
     // computing "down" the image and adding the running sum to the local
     // block sums.
-    __global__ void shfl_integral_vertical(cv::gpu::PtrStepSz<unsigned int> integral)
+    __global__ void shfl_integral_vertical(cv::cuda::PtrStepSz<unsigned int> integral)
     {
     #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 300)
         __shared__ unsigned int sums[32][9];
@@ -357,7 +357,7 @@ namespace cv { namespace softcascade { namespace cudev
     #endif
     }
 
-    void shfl_integral(const cv::gpu::PtrStepSzb& img, cv::gpu::PtrStepSz<unsigned int> integral, cudaStream_t stream)
+    void shfl_integral(const cv::cuda::PtrStepSzb& img, cv::cuda::PtrStepSz<unsigned int> integral, cudaStream_t stream)
     {
         {
             // each thread handles 16 values, use 1 block/row
@@ -369,13 +369,13 @@ namespace cv { namespace softcascade { namespace cudev
 
             cudaSafeCall( cudaFuncSetCacheConfig(shfl_integral_horizontal, cudaFuncCachePreferL1) );
 
-            shfl_integral_horizontal<<<grid, block, 0, stream>>>((const cv::gpu::PtrStepSz<uint4>) img, (cv::gpu::PtrStepSz<uint4>) integral);
+            shfl_integral_horizontal<<<grid, block, 0, stream>>>((const cv::cuda::PtrStepSz<uint4>) img, (cv::cuda::PtrStepSz<uint4>) integral);
             cudaSafeCall( cudaGetLastError() );
         }
 
         {
             const dim3 block(32, 8);
-            const dim3 grid(cv::gpu::cudev::divUp(integral.cols, block.x), 1);
+            const dim3 grid(cv::cuda::device::divUp(integral.cols, block.x), 1);
 
             shfl_integral_vertical<<<grid, block, 0, stream>>>(integral);
             cudaSafeCall( cudaGetLastError() );
@@ -385,7 +385,7 @@ namespace cv { namespace softcascade { namespace cudev
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    __global__ void shfl_integral_vertical(cv::gpu::PtrStepSz<unsigned int> buffer, cv::gpu::PtrStepSz<unsigned int> integral)
+    __global__ void shfl_integral_vertical(cv::cuda::PtrStepSz<unsigned int> buffer, cv::cuda::PtrStepSz<unsigned int> integral)
     {
     #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 300)
         __shared__ unsigned int sums[32][9];
@@ -445,7 +445,7 @@ namespace cv { namespace softcascade { namespace cudev
     }
 
     // used for frame preprocessing before Soft Cascade evaluation: no synchronization needed
-    void shfl_integral_gpu_buffered(cv::gpu::PtrStepSzb img, cv::gpu::PtrStepSz<uint4> buffer, cv::gpu::PtrStepSz<unsigned int> integral,
+    void shfl_integral_gpu_buffered(cv::cuda::PtrStepSzb img, cv::cuda::PtrStepSz<uint4> buffer, cv::cuda::PtrStepSz<unsigned int> integral,
         int blockStep, cudaStream_t stream)
     {
         {
@@ -454,15 +454,15 @@ namespace cv { namespace softcascade { namespace cudev
 
             cudaSafeCall( cudaFuncSetCacheConfig(shfl_integral_horizontal, cudaFuncCachePreferL1) );
 
-            shfl_integral_horizontal<<<grid, block, 0, stream>>>((cv::gpu::PtrStepSz<uint4>) img, buffer);
+            shfl_integral_horizontal<<<grid, block, 0, stream>>>((cv::cuda::PtrStepSz<uint4>) img, buffer);
             cudaSafeCall( cudaGetLastError() );
         }
 
         {
             const dim3 block(32, 8);
-            const dim3 grid(cv::gpu::cudev::divUp(integral.cols, block.x), 1);
+            const dim3 grid(cv::cuda::device::divUp(integral.cols, block.x), 1);
 
-            shfl_integral_vertical<<<grid, block, 0, stream>>>((cv::gpu::PtrStepSz<unsigned int>)buffer, integral);
+            shfl_integral_vertical<<<grid, block, 0, stream>>>((cv::cuda::PtrStepSz<unsigned int>)buffer, integral);
             cudaSafeCall( cudaGetLastError() );
         }
     }
@@ -486,7 +486,7 @@ namespace cv { namespace softcascade { namespace cudev
         return CV_DESCALE((unsigned int)(b * B2Y + g * G2Y + r * R2Y), yuv_shift);
     }
 
-    __global__ void device_transform(const cv::gpu::PtrStepSz<uchar3> bgr, cv::gpu::PtrStepSzb gray)
+    __global__ void device_transform(const cv::cuda::PtrStepSz<uchar3> bgr, cv::cuda::PtrStepSzb gray)
     {
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -497,10 +497,10 @@ namespace cv { namespace softcascade { namespace cudev
     }
 
     ///////
-    void transform(const cv::gpu::PtrStepSz<uchar3>& bgr, cv::gpu::PtrStepSzb gray)
+    void transform(const cv::cuda::PtrStepSz<uchar3>& bgr, cv::cuda::PtrStepSzb gray)
     {
         const dim3 block(32, 8);
-        const dim3 grid(cv::gpu::cudev::divUp(bgr.cols, block.x), cv::gpu::cudev::divUp(bgr.rows, block.y));
+        const dim3 grid(cv::cuda::device::divUp(bgr.cols, block.x), cv::cuda::device::divUp(bgr.rows, block.y));
         device_transform<<<grid, block>>>(bgr, gray);
         cudaSafeCall(cudaDeviceSynchronize());
     }

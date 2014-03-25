@@ -741,8 +741,11 @@ int LSVMparser(const char * filename, CvLSVMFilterObject *** model, int *last, i
     //printf("parse : %s\n", filename);
 
     xmlf = fopen(filename, "rb");
-    if(xmlf == NULL)
+    if(xmlf == NULL) {
+        free(*model);
+        *model = NULL;
         return LSVM_PARSER_FILE_NOT_FOUND;
+    }
 
     //i   = 0;
     j   = 0;
@@ -787,7 +790,7 @@ int loadModel(
               float *scoreThreshold){
     int last;
     int max;
-    int *comp;
+    int *comp = NULL;
     int count;
     int i;
     int err;
@@ -808,6 +811,7 @@ int loadModel(
         (*kPartFilters)[i] = (comp[i] - comp[i - 1]) - 1;
     }
     (*kPartFilters)[0] = comp[0];
+    free(comp);
 
     return 0;
 }

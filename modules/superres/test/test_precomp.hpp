@@ -52,9 +52,9 @@
 #define __OPENCV_TEST_PRECOMP_HPP__
 
 #include "opencv2/opencv_modules.hpp"
-#include "opencv2/core.hpp"
-#include "opencv2/imgproc.hpp"
+#include "opencv2/core/ocl.hpp"
 #include "opencv2/ts.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/superres.hpp"
 #include "cvconfig.h"
 #include "input_array_utility.hpp"

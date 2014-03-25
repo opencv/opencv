@@ -140,7 +140,7 @@ int main(int ac, char ** av)
 
     vector<DMatch> matches;
 
-    BFMatcher desc_matcher(NORM_HAMMING);
+    BFMatcher desc_matcher(brief.defaultNorm());
 
     vector<Point2f> train_pts, query_pts;
     vector<KeyPoint> train_kpts, query_kpts;

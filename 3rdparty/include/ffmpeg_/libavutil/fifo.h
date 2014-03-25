@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include "avutil.h"
+#include "attributes.h"
 
 typedef struct AVFifoBuffer {
     uint8_t *buffer;
@@ -103,6 +104,17 @@ int av_fifo_generic_write(AVFifoBuffer *f, void *src, int size, int (*func)(void
 int av_fifo_realloc2(AVFifoBuffer *f, unsigned int size);
 
 /**
+ * Enlarge an AVFifoBuffer.
+ * In case of reallocation failure, the old FIFO is kept unchanged.
+ * The new fifo size may be larger than the requested size.
+ *
+ * @param f AVFifoBuffer to resize
+ * @param additional_space the amount of space in bytes to allocate in addition to av_fifo_size()
+ * @return <0 for failure, >=0 otherwise
+ */
+int av_fifo_grow(AVFifoBuffer *f, unsigned int additional_space);
+
+/**
  * Read and discard the specified amount of data from an AVFifoBuffer.
  * @param f AVFifoBuffer to read from
  * @param size amount of data to read in bytes
@@ -128,16 +140,5 @@ static inline uint8_t *av_fifo_peek2(const AVFifoBuffer *f, int offs)
         ptr = f->end - (f->buffer - ptr);
     return ptr;
 }
-
-#if FF_API_AV_FIFO_PEEK
-/**
- * @deprecated Use av_fifo_peek2() instead.
- */
-attribute_deprecated
-static inline uint8_t av_fifo_peek(AVFifoBuffer *f, int offs)
-{
-    return *av_fifo_peek2(f, offs);
-}
-#endif
 
 #endif /* AVUTIL_FIFO_H */

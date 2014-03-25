@@ -1,13 +1,19 @@
+#include "opencv2/opencv_modules.hpp"
 #include "opencv2/core/core.hpp"
 #include "opencv2/ml/ml.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#ifdef HAVE_OPENCV_OCL
+#define _OCL_KNN_ 1 // select whether using ocl::KNN method or not, default is using
+#define _OCL_SVM_ 1 // select whether using ocl::svm method or not, default is using
+#include "opencv2/ocl/ocl.hpp"
+#endif
 
 #include <stdio.h>
 
 using namespace std;
 using namespace cv;
 
-const Scalar WHITE_COLOR = CV_RGB(255,255,255);
+const Scalar WHITE_COLOR = Scalar(255,255,255);
 const string winName = "points";
 const int testStep = 5;
 
@@ -69,15 +75,15 @@ static void on_mouse( int event, int x, int y, int /*flags*/, void* )
         // put the text
         stringstream text;
         text << "current class " << classColors.size()-1;
-        putText( img, text.str(), Point(10,25), CV_FONT_HERSHEY_SIMPLEX, 0.8f, WHITE_COLOR, 2 );
+        putText( img, text.str(), Point(10,25), FONT_HERSHEY_SIMPLEX, 0.8f, WHITE_COLOR, 2 );
 
         text.str("");
         text << "total classes " << classColors.size();
-        putText( img, text.str(), Point(10,50), CV_FONT_HERSHEY_SIMPLEX, 0.8f, WHITE_COLOR, 2 );
+        putText( img, text.str(), Point(10,50), FONT_HERSHEY_SIMPLEX, 0.8f, WHITE_COLOR, 2 );
 
         text.str("");
         text << "total points " << trainedPoints.size();
-        putText(img, text.str(), cvPoint(10,75), CV_FONT_HERSHEY_SIMPLEX, 0.8f, WHITE_COLOR, 2 );
+        putText(img, text.str(), Point(10,75), FONT_HERSHEY_SIMPLEX, 0.8f, WHITE_COLOR, 2 );
 
         // draw points
         for( size_t i = 0; i < trainedPoints.size(); i++ )
@@ -133,7 +139,14 @@ static void find_decision_boundary_KNN( int K )
     prepare_train_data( trainSamples, trainClasses );
 
     // learn classifier
+#if defined HAVE_OPENCV_OCL && _OCL_KNN_
+    cv::ocl::KNearestNeighbour knnClassifier;
+    Mat temp, result;
+    knnClassifier.train(trainSamples, trainClasses, temp, false, K);
+    cv::ocl::oclMat testSample_ocl, reslut_ocl;
+#else
     CvKNearest knnClassifier( trainSamples, trainClasses, Mat(), false, K );
+#endif
 
     Mat testSample( 1, 2, CV_32FC1 );
     for( int y = 0; y < img.rows; y += testStep )
@@ -142,9 +155,19 @@ static void find_decision_boundary_KNN( int K )
         {
             testSample.at<float>(0) = (float)x;
             testSample.at<float>(1) = (float)y;
+#if defined HAVE_OPENCV_OCL && _OCL_KNN_
+            testSample_ocl.upload(testSample);
+
+            knnClassifier.find_nearest(testSample_ocl, K, reslut_ocl);
+
+            reslut_ocl.download(result);
+            int response = saturate_cast<int>(result.at<float>(0));
+            circle(imgDst, Point(x, y), 1, classColors[response]);
+#else
 
             int response = (int)knnClassifier.find_nearest( testSample, K );
             circle( imgDst, Point(x,y), 1, classColors[response] );
+#endif
         }
     }
 }
@@ -159,7 +182,11 @@ static void find_decision_boundary_SVM( CvSVMParams params )
     prepare_train_data( trainSamples, trainClasses );
 
     // learn classifier
+#if defined HAVE_OPENCV_OCL && _OCL_SVM_
+    cv::ocl::CvSVM_OCL svmClassifier(trainSamples, trainClasses, Mat(), Mat(), params);
+#else
     CvSVM svmClassifier( trainSamples, trainClasses, Mat(), Mat(), params );
+#endif
 
     Mat testSample( 1, 2, CV_32FC1 );
     for( int y = 0; y < img.rows; y += testStep )
@@ -178,7 +205,7 @@ static void find_decision_boundary_SVM( CvSVMParams params )
     for( int i = 0; i < svmClassifier.get_support_vector_count(); i++ )
     {
         const float* supportVector = svmClassifier.get_support_vector(i);
-        circle( imgDst, Point(supportVector[0],supportVector[1]), 5, CV_RGB(255,255,255), -1 );
+        circle( imgDst, Point(saturate_cast<int>(supportVector[0]),saturate_cast<int>(supportVector[1])), 5, CV_RGB(255,255,255), -1 );
     }
 
 }
@@ -526,7 +553,7 @@ int main()
         {
 #if _NBC_
             find_decision_boundary_NBC();
-            cvNamedWindow( "NormalBayesClassifier", WINDOW_AUTOSIZE );
+            namedWindow( "NormalBayesClassifier", WINDOW_AUTOSIZE );
             imshow( "NormalBayesClassifier", imgDst );
 #endif
 #if _KNN_
@@ -560,7 +587,7 @@ int main()
 
             params.C = 10;
             find_decision_boundary_SVM( params );
-            cvNamedWindow( "classificationSVM2", WINDOW_AUTOSIZE );
+            namedWindow( "classificationSVM2", WINDOW_AUTOSIZE );
             imshow( "classificationSVM2", imgDst );
 #endif
 

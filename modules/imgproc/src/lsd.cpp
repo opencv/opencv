@@ -388,7 +388,7 @@ private:
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-CV_EXPORTS Ptr<LineSegmentDetector> createLineSegmentDetectorPtr(
+CV_EXPORTS Ptr<LineSegmentDetector> createLineSegmentDetector(
         int _refine, double _scale, double _sigma_scale, double _quant, double _ang_th,
         double _log_eps, double _density_th, int _n_bins)
 {
@@ -473,8 +473,7 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4i>& lines,
 
     // Search for line segments
     unsigned int ls_count = 0;
-    unsigned int list_size = list.size();
-    for(unsigned int i = 0; i < list_size; ++i)
+    for(size_t i = 0, list_size = list.size(); i < list_size; ++i)
     {
         unsigned int adx = list[i].p.x + list[i].p.y * img_width;
         if((used.data[adx] == NOTUSED) && (angles_data[adx] != NOTDEF))

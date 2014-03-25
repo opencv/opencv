@@ -180,37 +180,20 @@ bool cv::DetectionBasedTracker::SeparateDetectionWork::run()
     return true;
 }
 
-#ifdef __GNUC__
-#define CATCH_ALL_AND_LOG(_block)                                                       \
-do {                                                                               \
+#define CATCH_ALL_AND_LOG(_block)                                                           \
+do {                                                                                        \
     try {                                                                                   \
         _block;                                                                             \
         break;                                                                              \
     }                                                                                       \
     catch(cv::Exception& e) {                                                               \
-        LOGE0("\n %s: ERROR: OpenCV Exception caught: \n'%s'\n\n", __func__, e.what());      \
+        LOGE0("\n %s: ERROR: OpenCV Exception caught: \n'%s'\n\n", CV_Func, e.what());     \
     } catch(std::exception& e) {                                                            \
-        LOGE0("\n %s: ERROR: Exception caught: \n'%s'\n\n", __func__, e.what());             \
+        LOGE0("\n %s: ERROR: Exception caught: \n'%s'\n\n", CV_Func, e.what());            \
     } catch(...) {                                                                          \
-        LOGE0("\n %s: ERROR: UNKNOWN Exception caught\n\n", __func__);                       \
+        LOGE0("\n %s: ERROR: UNKNOWN Exception caught\n\n", CV_Func);                      \
     }                                                                                       \
 } while(0)
-#else
-#define CATCH_ALL_AND_LOG(_block)                                                       \
-do {                                                                               \
-    try {                                                                                   \
-        _block;                                                                             \
-        break;                                                                              \
-    }                                                                                       \
-    catch(cv::Exception& e) {                                                               \
-        LOGE0("\n ERROR: OpenCV Exception caught: \n'%s'\n\n", e.what());                    \
-    } catch(std::exception& e) {                                                            \
-        LOGE0("\n ERROR: Exception caught: \n'%s'\n\n", e.what());                           \
-    } catch(...) {                                                                          \
-        LOGE0("\n ERROR: UNKNOWN Exception caught\n\n");                                     \
-    }                                                                                       \
-} while(0)
-#endif
 
 void* cv::workcycleObjectDetectorFunction(void* p)
 {

@@ -260,7 +260,7 @@ private:
 
         pHist->m_HistVolume = Volume;
 
-    };  /* CollectHist */
+    }  /* CollectHist */
 
     double calcBhattacharyya(DefHist* pHM = NULL, DefHist* pHC = NULL, DefHist* pHT = NULL)
     {
@@ -370,7 +370,7 @@ public:
         if(pImg)
             CollectHist(pImg, pImgFG, pBlobInit, &m_HistModel);
         m_Blob = pBlobInit[0];
-    };
+    }
 
     virtual CvBlob* Process(CvBlob* pBlobPrev, IplImage* pImg, IplImage* pImgFG = NULL)
     {
@@ -603,7 +603,7 @@ public:
 
         return &m_Blob;
 
-    };  /* CvBlobTrackerOneMSFG::Process */
+    }  /* CvBlobTrackerOneMSFG::Process */
 
     virtual double GetConfidence(CvBlob* pBlob, IplImage* pImg, IplImage* /*pImgFG*/ = NULL, IplImage* pImgUnusedReg = NULL)
     {
@@ -611,14 +611,14 @@ public:
         double  B = GetBhattacharyya(pImg, pImgUnusedReg, pBlob, &m_HistTemp);
         return exp((B-1)/(2*S));
 
-    };  /*CvBlobTrackerOneMSFG::*/
+    }  /*CvBlobTrackerOneMSFG::*/
 
     virtual void Update(CvBlob* pBlob, IplImage* pImg, IplImage* pImgFG = NULL)
     {   /* Update histogram: */
         UpdateModelHist(pImg, pImgFG, pBlob?pBlob:&m_Blob);
     }   /*CvBlobTrackerOneMSFG::*/
 
-    virtual void Release(){delete this;};
+    virtual void Release(){delete this;}
     virtual void SetCollision(int CollisionFlag)
     {
         m_Collision = CollisionFlag;
@@ -629,7 +629,7 @@ public:
         cvWriteInt(fs,"Collision", m_Collision);
         cvWriteInt(fs,"HistVolume", cvRound(m_HistModel.m_HistVolume));
         cvWrite(fs,"Hist", m_HistModel.m_pHist);
-    };
+    }
     virtual void LoadState(CvFileStorage* fs, CvFileNode* node)
     {
         CvMat* pM;
@@ -641,7 +641,7 @@ public:
             m_HistModel.m_pHist = pM;
             m_HistModel.m_HistVolume = (float)cvSum(pM).val[0];
         }
-    };
+    }
 
 };  /*CvBlobTrackerOneMSFG*/
 
@@ -782,7 +782,7 @@ public:
         cvWriteInt(fs,"ParticleNum",m_ParticleNum);
         cvWriteStruct(fs,"ParticlesPredicted",m_pParticlesPredicted,"ffffiffd",m_ParticleNum);
         cvWriteStruct(fs,"ParticlesResampled",m_pParticlesResampled,"ffffiffd",m_ParticleNum);
-    };
+    }
 
     virtual void LoadState(CvFileStorage* fs, CvFileNode* node)
     {
@@ -796,7 +796,7 @@ public:
             cvReadStructByName(fs,node,"ParticlesPredicted",m_pParticlesPredicted,"ffffiffd");
             cvReadStructByName(fs,node,"ParticlesResampled",m_pParticlesResampled,"ffffiffd");
         }
-    };
+    }
     CvBlobTrackerOneMSPF()
     {
         m_pParticlesPredicted = NULL;
@@ -847,7 +847,7 @@ private:
         if(m_pParticlesPredicted)cvFree(&m_pParticlesPredicted);
         m_pParticlesPredicted = (DefParticle*)cvAlloc(sizeof(DefParticle)*m_ParticleNum);
         m_pParticlesResampled = (DefParticle*)cvAlloc(sizeof(DefParticle)*m_ParticleNum);
-    };  /* Realloc*/
+    }  /* Realloc*/
 
     void DrawDebug(IplImage* pImg, IplImage* /*pImgFG*/)
     {
@@ -1161,7 +1161,7 @@ public:
         }
     }
 
-    virtual void Release(){delete this;};
+    virtual void Release(){delete this;}
     virtual void ParamUpdate()
     {
         Realloc();

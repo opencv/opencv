@@ -125,23 +125,23 @@ public:
         CommentParam("ConfidenceType","Type of calculated Confidence (NearestBlob, AverFG, BC)");
 
         SetModuleName("CC");
-    };
+    }
 
     ~CvBlobTrackerCC()
     {
         if(m_pMem)cvReleaseMemStorage(&m_pMem);
-    };
+    }
 
     /* Blob functions: */
-    virtual int     GetBlobNum() {return m_BlobList.GetBlobNum();};
-    virtual CvBlob* GetBlob(int BlobIndex){return m_BlobList.GetBlob(BlobIndex);};
+    virtual int     GetBlobNum() {return m_BlobList.GetBlobNum();}
+    virtual CvBlob* GetBlob(int BlobIndex){return m_BlobList.GetBlob(BlobIndex);}
     virtual void    SetBlob(int BlobIndex, CvBlob* pBlob)
     {
         CvBlob* pB = m_BlobList.GetBlob(BlobIndex);
         if(pB) pB[0] = pBlob[0];
-    };
+    }
 
-    virtual CvBlob* GetBlobByID(int BlobID){return m_BlobList.GetBlobByID(BlobID);};
+    virtual CvBlob* GetBlobByID(int BlobID){return m_BlobList.GetBlobByID(BlobID);}
     virtual void    DelBlob(int BlobIndex)
     {
         DefBlobTracker* pBT = (DefBlobTracker*)m_BlobList.GetBlob(BlobIndex);
@@ -156,7 +156,7 @@ public:
         }
         delete pBT->pBlobHyp;
         m_BlobList.DelBlob(BlobIndex);
-    };
+    }
 #if 0
     virtual void    DelBlobByID(int BlobID)
     {
@@ -166,7 +166,7 @@ public:
         m_BlobList.DelBlobByID(BlobID);
     };
 #endif
-    virtual void    Release(){delete this;};
+    virtual void    Release(){delete this;}
 
     /* Add new blob to track it and assign to this blob personal ID */
     /* pBlob - pinter to structure with blob parameters (ID is ignored)*/
@@ -185,7 +185,7 @@ public:
         NewB.AverFG = pImgFG?CalcAverageMask(pB,pImgFG):0;
         m_BlobList.AddBlob((CvBlob*)&NewB);
         return m_BlobList.GetBlob(m_BlobList.GetBlobNum()-1);
-    };
+    }
 
     virtual void    Process(IplImage* pImg, IplImage* pImgFG = NULL)
     {
@@ -390,7 +390,7 @@ public:
 
         pBlob[0] = pB[0];
         pBlob->ID = ID;
-    };
+    }
 
     virtual double  GetConfidence(int BlobIndex, CvBlob* pBlob, IplImage* /*pImg*/, IplImage* pImgFG = NULL)
     {
@@ -443,7 +443,7 @@ public:
         }   /* Calculate sum of mask. */
 
         return W;
-    };
+    }
 
     virtual void UpdateBlob(int BlobIndex, CvBlob* /*pBlob*/, IplImage* /*pImg*/, IplImage* pImgFG = NULL)
     {
@@ -455,7 +455,7 @@ public:
         {
         //pBT->AverFG = pBT->AverFG * (1-m_Alpha) + m_Alpha * CalcAverageMask(pBlob,pImgFG);
         }
-    };
+    }
 
     virtual void ParamUpdate()
     {
@@ -481,7 +481,7 @@ public:
         DefBlobTracker* pBT = (DefBlobTracker*)m_BlobList.GetBlob(BlobIdx);
         assert(pBT->pBlobHyp);
         return pBT->pBlobHyp->GetBlobNum();
-    };  /* CvBlobtrackerList::GetBlobHypNum() */
+    }  /* CvBlobtrackerList::GetBlobHypNum() */
 
     /* Return pointer to specified blob hypothesis by index blob: */
     virtual CvBlob* GetBlobHyp(int BlobIndex, int hypothesis)
@@ -489,7 +489,7 @@ public:
         DefBlobTracker* pBT = (DefBlobTracker*)m_BlobList.GetBlob(BlobIndex);
         assert(pBT->pBlobHyp);
         return pBT->pBlobHyp->GetBlob(hypothesis);
-    };  /* CvBlobtrackerList::GetBlobHyp() */
+    }  /* CvBlobtrackerList::GetBlobHyp() */
 
     /* Set new parameters for specified (by index) blob hypothesis
      * (can be called several times for each hypothesis):
@@ -512,7 +512,7 @@ public:
             assert(pBT->pBlobHyp);
             pBT->pBlobHyp->AddBlob(pBlob);
         }
-    };
+    }
 
 private:
     CvBlob* GetNearestBlob(CvBlob* pB)
@@ -542,7 +542,7 @@ private:
 
         return pBBest;
 
-    }; /* GetNearestBlob */
+    } /* GetNearestBlob */
 
 };
 

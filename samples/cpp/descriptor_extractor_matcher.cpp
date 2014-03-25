@@ -208,7 +208,7 @@ static void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
                 matchesMask[i1] = 1;
         }
         // draw inliers
-        drawMatches( img1, keypoints1, img2, keypoints2, filteredMatches, drawImg, Scalar(0, 255, 0), Scalar(0, 0, 255), matchesMask
+        drawMatches( img1, keypoints1, img2, keypoints2, filteredMatches, drawImg, Scalar(0, 255, 0), Scalar(255, 0, 0), matchesMask
 #if DRAW_RICH_KEYPOINTS_MODE
                      , DrawMatchesFlags::DRAW_RICH_KEYPOINTS
 #endif
@@ -218,7 +218,7 @@ static void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
         // draw outliers
         for( size_t i1 = 0; i1 < matchesMask.size(); i1++ )
             matchesMask[i1] = !matchesMask[i1];
-        drawMatches( img1, keypoints1, img2, keypoints2, filteredMatches, drawImg, Scalar(0, 0, 255), Scalar(255, 0, 0), matchesMask,
+        drawMatches( img1, keypoints1, img2, keypoints2, filteredMatches, drawImg, Scalar(255, 0, 0), Scalar(0, 0, 255), matchesMask,
                      DrawMatchesFlags::DRAW_OVER_OUTIMG | DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 #endif
 

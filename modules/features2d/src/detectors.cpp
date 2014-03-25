@@ -51,7 +51,7 @@ namespace cv
 FeatureDetector::~FeatureDetector()
 {}
 
-void FeatureDetector::detect( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
+void FeatureDetector::detect( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask ) const
 {
     keypoints.clear();
 
@@ -63,11 +63,29 @@ void FeatureDetector::detect( const Mat& image, std::vector<KeyPoint>& keypoints
     detectImpl( image, keypoints, mask );
 }
 
-void FeatureDetector::detect(const std::vector<Mat>& imageCollection, std::vector<std::vector<KeyPoint> >& pointCollection, const std::vector<Mat>& masks ) const
+void FeatureDetector::detect(InputArrayOfArrays _imageCollection, std::vector<std::vector<KeyPoint> >& pointCollection,
+                             InputArrayOfArrays _masks ) const
 {
+    if (_imageCollection.isUMatVector())
+    {
+        std::vector<UMat> uimageCollection, umasks;
+        _imageCollection.getUMatVector(uimageCollection);
+        _masks.getUMatVector(umasks);
+
+        pointCollection.resize( uimageCollection.size() );
+        for( size_t i = 0; i < uimageCollection.size(); i++ )
+            detect( uimageCollection[i], pointCollection[i], umasks.empty() ? noArray() : umasks[i] );
+
+        return;
+    }
+
+    std::vector<Mat> imageCollection, masks;
+    _imageCollection.getMatVector(imageCollection);
+    _masks.getMatVector(masks);
+
     pointCollection.resize( imageCollection.size() );
     for( size_t i = 0; i < imageCollection.size(); i++ )
-        detect( imageCollection[i], pointCollection[i], masks.empty() ? Mat() : masks[i] );
+        detect( imageCollection[i], pointCollection[i], masks.empty() ? noArray() : masks[i] );
 }
 
 /*void FeatureDetector::read( const FileNode& )
@@ -125,21 +143,37 @@ GFTTDetector::GFTTDetector( int _nfeatures, double _qualityLevel,
 {
 }
 
-void GFTTDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
+void GFTTDetector::detectImpl( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask) const
 {
-    Mat grayImage = image;
-    if( image.type() != CV_8U ) cvtColor( image, grayImage, COLOR_BGR2GRAY );
-
     std::vector<Point2f> corners;
-    goodFeaturesToTrack( grayImage, corners, nfeatures, qualityLevel, minDistance, mask,
-                         blockSize, useHarrisDetector, k );
+
+    if (_image.isUMat())
+    {
+        UMat ugrayImage;
+        if( _image.type() != CV_8U )
+            cvtColor( _image, ugrayImage, COLOR_BGR2GRAY );
+        else
+            ugrayImage = _image.getUMat();
+
+        goodFeaturesToTrack( ugrayImage, corners, nfeatures, qualityLevel, minDistance, _mask,
+                             blockSize, useHarrisDetector, k );
+    }
+    else
+    {
+        Mat image = _image.getMat(), grayImage = image;
+        if( image.type() != CV_8U )
+            cvtColor( image, grayImage, COLOR_BGR2GRAY );
+
+        goodFeaturesToTrack( grayImage, corners, nfeatures, qualityLevel, minDistance, _mask,
+                             blockSize, useHarrisDetector, k );
+    }
+
     keypoints.resize(corners.size());
     std::vector<Point2f>::const_iterator corner_it = corners.begin();
     std::vector<KeyPoint>::iterator keypoint_it = keypoints.begin();
     for( ; corner_it != corners.end(); ++corner_it, ++keypoint_it )
-    {
         *keypoint_it = KeyPoint( *corner_it, (float)blockSize );
-    }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -157,8 +191,10 @@ DenseFeatureDetector::DenseFeatureDetector( float _initFeatureScale, int _featur
 {}
 
 
-void DenseFeatureDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
+void DenseFeatureDetector::detectImpl( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) const
 {
+    Mat image = _image.getMat(), mask = _mask.getMat();
+
     float curScale = static_cast<float>(initFeatureScale);
     int curStep = initXyStep;
     int curBound = initImgBound;
@@ -271,15 +307,17 @@ public:
 };
 } // namepace
 
-void GridAdaptedFeatureDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
+void GridAdaptedFeatureDetector::detectImpl( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) const
 {
-    if (image.empty() || maxTotalKeypoints < gridRows * gridCols)
+    if (_image.empty() || maxTotalKeypoints < gridRows * gridCols)
     {
         keypoints.clear();
         return;
     }
     keypoints.reserve(maxTotalKeypoints);
     int maxPerCell = maxTotalKeypoints / (gridRows * gridCols);
+
+    Mat image = _image.getMat(), mask = _mask.getMat();
 
     cv::Mutex kptLock;
     cv::parallel_for_(cv::Range(0, gridRows * gridCols),
@@ -298,8 +336,9 @@ bool PyramidAdaptedFeatureDetector::empty() const
     return !detector || detector->empty();
 }
 
-void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
+void PyramidAdaptedFeatureDetector::detectImpl( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) const
 {
+    Mat image = _image.getMat(), mask = _mask.getMat();
     Mat src = image;
     Mat src_mask = mask;
 

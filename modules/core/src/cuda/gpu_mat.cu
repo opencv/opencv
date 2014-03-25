@@ -48,17 +48,65 @@
 
 #else
 
-#include "opencv2/core/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
 #include "opencv2/cudev.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 using namespace cv::cudev;
+
+namespace
+{
+    class DefaultAllocator : public GpuMat::Allocator
+    {
+    public:
+        bool allocate(GpuMat* mat, int rows, int cols, size_t elemSize);
+        void free(GpuMat* mat);
+    };
+
+    bool DefaultAllocator::allocate(GpuMat* mat, int rows, int cols, size_t elemSize)
+    {
+        if (rows > 1 && cols > 1)
+        {
+            CV_CUDEV_SAFE_CALL( cudaMallocPitch(&mat->data, &mat->step, elemSize * cols, rows) );
+        }
+        else
+        {
+            // Single row or single column must be continuous
+            CV_CUDEV_SAFE_CALL( cudaMalloc(&mat->data, elemSize * cols * rows) );
+            mat->step = elemSize * cols;
+        }
+
+        mat->refcount = (int*) fastMalloc(sizeof(int));
+
+        return true;
+    }
+
+    void DefaultAllocator::free(GpuMat* mat)
+    {
+        cudaFree(mat->datastart);
+        fastFree(mat->refcount);
+    }
+
+    DefaultAllocator cudaDefaultAllocator;
+    GpuMat::Allocator* g_defaultAllocator = &cudaDefaultAllocator;
+}
+
+GpuMat::Allocator* cv::cuda::GpuMat::defaultAllocator()
+{
+    return g_defaultAllocator;
+}
+
+void cv::cuda::GpuMat::setDefaultAllocator(Allocator* allocator)
+{
+    CV_Assert( allocator != 0 );
+    g_defaultAllocator = allocator;
+}
 
 /////////////////////////////////////////////////////
 /// create
 
-void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
+void cv::cuda::GpuMat::create(int _rows, int _cols, int _type)
 {
     CV_DbgAssert( _rows >= 0 && _cols >= 0 );
 
@@ -76,19 +124,16 @@ void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
         rows = _rows;
         cols = _cols;
 
-        size_t esz = elemSize();
+        const size_t esz = elemSize();
 
-        void* devPtr;
+        bool allocSuccess = allocator->allocate(this, rows, cols, esz);
 
-        if (rows > 1 && cols > 1)
+        if (!allocSuccess)
         {
-            CV_CUDEV_SAFE_CALL( cudaMallocPitch(&devPtr, &step, esz * cols, rows) );
-        }
-        else
-        {
-            // Single row or single column must be continuous
-            CV_CUDEV_SAFE_CALL( cudaMalloc(&devPtr, esz * cols * rows) );
-            step = esz * cols;
+            // custom allocator fails, try default allocator
+            allocator = defaultAllocator();
+            allocSuccess = allocator->allocate(this, rows, cols, esz);
+            CV_Assert( allocSuccess );
         }
 
         if (esz * cols == step)
@@ -97,24 +142,23 @@ void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
         int64 _nettosize = static_cast<int64>(step) * rows;
         size_t nettosize = static_cast<size_t>(_nettosize);
 
-        datastart = data = static_cast<uchar*>(devPtr);
+        datastart = data;
         dataend = data + nettosize;
 
-        refcount = static_cast<int*>(fastMalloc(sizeof(*refcount)));
-        *refcount = 1;
+        if (refcount)
+            *refcount = 1;
     }
 }
 
 /////////////////////////////////////////////////////
 /// release
 
-void cv::gpu::GpuMat::release()
+void cv::cuda::GpuMat::release()
 {
+    CV_DbgAssert( allocator != 0 );
+
     if (refcount && CV_XADD(refcount, -1) == 1)
-    {
-        cudaFree(datastart);
-        fastFree(refcount);
-    }
+        allocator->free(this);
 
     data = datastart = dataend = 0;
     step = rows = cols = 0;
@@ -124,7 +168,7 @@ void cv::gpu::GpuMat::release()
 /////////////////////////////////////////////////////
 /// upload
 
-void cv::gpu::GpuMat::upload(InputArray arr)
+void cv::cuda::GpuMat::upload(InputArray arr)
 {
     Mat mat = arr.getMat();
 
@@ -135,7 +179,7 @@ void cv::gpu::GpuMat::upload(InputArray arr)
     CV_CUDEV_SAFE_CALL( cudaMemcpy2D(data, step, mat.data, mat.step, cols * elemSize(), rows, cudaMemcpyHostToDevice) );
 }
 
-void cv::gpu::GpuMat::upload(InputArray arr, Stream& _stream)
+void cv::cuda::GpuMat::upload(InputArray arr, Stream& _stream)
 {
     Mat mat = arr.getMat();
 
@@ -150,7 +194,7 @@ void cv::gpu::GpuMat::upload(InputArray arr, Stream& _stream)
 /////////////////////////////////////////////////////
 /// download
 
-void cv::gpu::GpuMat::download(OutputArray _dst) const
+void cv::cuda::GpuMat::download(OutputArray _dst) const
 {
     CV_DbgAssert( !empty() );
 
@@ -160,7 +204,7 @@ void cv::gpu::GpuMat::download(OutputArray _dst) const
     CV_CUDEV_SAFE_CALL( cudaMemcpy2D(dst.data, dst.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToHost) );
 }
 
-void cv::gpu::GpuMat::download(OutputArray _dst, Stream& _stream) const
+void cv::cuda::GpuMat::download(OutputArray _dst, Stream& _stream) const
 {
     CV_DbgAssert( !empty() );
 
@@ -174,7 +218,7 @@ void cv::gpu::GpuMat::download(OutputArray _dst, Stream& _stream) const
 /////////////////////////////////////////////////////
 /// copyTo
 
-void cv::gpu::GpuMat::copyTo(OutputArray _dst) const
+void cv::cuda::GpuMat::copyTo(OutputArray _dst) const
 {
     CV_DbgAssert( !empty() );
 
@@ -184,7 +228,7 @@ void cv::gpu::GpuMat::copyTo(OutputArray _dst) const
     CV_CUDEV_SAFE_CALL( cudaMemcpy2D(dst.data, dst.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToDevice) );
 }
 
-void cv::gpu::GpuMat::copyTo(OutputArray _dst, Stream& _stream) const
+void cv::cuda::GpuMat::copyTo(OutputArray _dst, Stream& _stream) const
 {
     CV_DbgAssert( !empty() );
 
@@ -216,11 +260,11 @@ namespace
     template <typename T>
     void copyWithMask(const GpuMat& src, const GpuMat& dst, const GpuMat& mask, Stream& stream)
     {
-        gridTransform_< CopyToPolicy<sizeof(typename VecTraits<T>::elem_type)> >(globPtr<T>(src), globPtr<T>(dst), identity<T>(), globPtr<uchar>(mask), stream);
+        gridTransformUnary_< CopyToPolicy<sizeof(typename VecTraits<T>::elem_type)> >(globPtr<T>(src), globPtr<T>(dst), identity<T>(), globPtr<uchar>(mask), stream);
     }
 }
 
-void cv::gpu::GpuMat::copyTo(OutputArray _dst, InputArray _mask, Stream& stream) const
+void cv::cuda::GpuMat::copyTo(OutputArray _dst, InputArray _mask, Stream& stream) const
 {
     CV_DbgAssert( !empty() );
     CV_DbgAssert( depth() <= CV_64F && channels() <= 4 );
@@ -228,8 +272,14 @@ void cv::gpu::GpuMat::copyTo(OutputArray _dst, InputArray _mask, Stream& stream)
     GpuMat mask = _mask.getGpuMat();
     CV_DbgAssert( size() == mask.size() && mask.depth() == CV_8U && (mask.channels() == 1 || mask.channels() == channels()) );
 
+    uchar* data0 = _dst.getGpuMat().data;
+
     _dst.create(size(), type());
     GpuMat dst = _dst.getGpuMat();
+
+    // do not leave dst uninitialized
+    if (dst.data != data0)
+        dst.setTo(Scalar::all(0), stream);
 
     typedef void (*func_t)(const GpuMat& src, const GpuMat& dst, const GpuMat& mask, Stream& stream);
     static const func_t funcs[9][4] =
@@ -268,18 +318,18 @@ namespace
     void setToWithOutMask(const GpuMat& mat, Scalar _scalar, Stream& stream)
     {
         Scalar_<typename VecTraits<T>::elem_type> scalar = _scalar;
-        gridTransform(constantPtr(VecTraits<T>::make(scalar.val), mat.rows, mat.cols), globPtr<T>(mat), identity<T>(), stream);
+        gridTransformUnary(constantPtr(VecTraits<T>::make(scalar.val), mat.rows, mat.cols), globPtr<T>(mat), identity<T>(), stream);
     }
 
     template <typename T>
     void setToWithMask(const GpuMat& mat, const GpuMat& mask, Scalar _scalar, Stream& stream)
     {
         Scalar_<typename VecTraits<T>::elem_type> scalar = _scalar;
-        gridTransform(constantPtr(VecTraits<T>::make(scalar.val), mat.rows, mat.cols), globPtr<T>(mat), identity<T>(), globPtr<uchar>(mask), stream);
+        gridTransformUnary(constantPtr(VecTraits<T>::make(scalar.val), mat.rows, mat.cols), globPtr<T>(mat), identity<T>(), globPtr<uchar>(mask), stream);
     }
 }
 
-GpuMat& cv::gpu::GpuMat::setTo(Scalar value, Stream& stream)
+GpuMat& cv::cuda::GpuMat::setTo(Scalar value, Stream& stream)
 {
     CV_DbgAssert( !empty() );
     CV_DbgAssert( depth() <= CV_64F && channels() <= 4 );
@@ -333,7 +383,7 @@ GpuMat& cv::gpu::GpuMat::setTo(Scalar value, Stream& stream)
     return *this;
 }
 
-GpuMat& cv::gpu::GpuMat::setTo(Scalar value, InputArray _mask, Stream& stream)
+GpuMat& cv::cuda::GpuMat::setTo(Scalar value, InputArray _mask, Stream& stream)
 {
     CV_DbgAssert( !empty() );
     CV_DbgAssert( depth() <= CV_64F && channels() <= 4 );
@@ -382,7 +432,7 @@ namespace
         typedef typename LargerType<src_elem_type, float>::type larger_elem_type;
         typedef typename LargerType<float, dst_elem_type>::type scalar_type;
 
-        gridTransform_< ConvertToPolicy<scalar_type> >(globPtr<T>(src), globPtr<D>(dst), saturate_cast_func<T, D>(), stream);
+        gridTransformUnary_< ConvertToPolicy<scalar_type> >(globPtr<T>(src), globPtr<D>(dst), saturate_cast_func<T, D>(), stream);
     }
 
     template <typename T, typename D, typename S> struct Convertor : unary_function<T, D>
@@ -408,11 +458,11 @@ namespace
         op.alpha = cv::saturate_cast<scalar_type>(alpha);
         op.beta = cv::saturate_cast<scalar_type>(beta);
 
-        gridTransform_< ConvertToPolicy<scalar_type> >(globPtr<T>(src), globPtr<D>(dst), op, stream);
+        gridTransformUnary_< ConvertToPolicy<scalar_type> >(globPtr<T>(src), globPtr<D>(dst), op, stream);
     }
 }
 
-void cv::gpu::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& stream) const
+void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& stream) const
 {
     if (rtype < 0)
         rtype = type();
@@ -453,7 +503,7 @@ void cv::gpu::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& stream) con
     funcs[sdepth][ddepth](reshape(1), dst.reshape(1), stream);
 }
 
-void cv::gpu::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, double beta, Stream& stream) const
+void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, double beta, Stream& stream) const
 {
     if (rtype < 0)
         rtype = type();

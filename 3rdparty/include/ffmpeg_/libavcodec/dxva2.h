@@ -23,10 +23,30 @@
 #ifndef AVCODEC_DXVA_H
 #define AVCODEC_DXVA_H
 
-#include <stdint.h>
+/**
+ * @file
+ * @ingroup lavc_codec_hwaccel_dxva2
+ * Public libavcodec DXVA2 header.
+ */
 
+#if defined(_WIN32_WINNT) && _WIN32_WINNT < 0x0600
+#undef _WIN32_WINNT
+#endif
+
+#if !defined(_WIN32_WINNT)
+#define _WIN32_WINNT 0x0600
+#endif
+
+#include <stdint.h>
 #include <d3d9.h>
 #include <dxva2api.h>
+
+/**
+ * @defgroup lavc_codec_hwaccel_dxva2 DXVA2
+ * @ingroup lavc_codec_hwaccel
+ *
+ * @{
+ */
 
 #define FF_DXVA2_WORKAROUND_SCALING_LIST_ZIGZAG 1 ///< Work around for DXVA2 and old UVD/UVD+ ATI video cards
 
@@ -67,5 +87,9 @@ struct dxva_context {
      */
     unsigned report_id;
 };
+
+/**
+ * @}
+ */
 
 #endif /* AVCODEC_DXVA_H */

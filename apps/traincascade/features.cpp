@@ -4,6 +4,7 @@
 #include "cascadeclassifier.h"
 
 using namespace std;
+using namespace cv;
 
 float calcNormFactor( const Mat& sum, const Mat& sqSum )
 {

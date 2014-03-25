@@ -212,8 +212,8 @@ static bool IPPDerivScharr(const Mat& src, Mat& dst, int ddepth, int dx, int dy,
                      ippiFilterScharrVertGetBufferSize_8u16s_C1R(roi,&bufSize);
                      buffer.allocate(bufSize);
 
-                     ippiFilterScharrVertBorder_8u16s_C1R((const Ipp8u*)src.data, src.step,
-                        (Ipp16s*)dst.data, dst.step, roi, ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
+                     ippiFilterScharrVertBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+                        (Ipp16s*)dst.data, (int)dst.step, roi, ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
 
                      return true;
                   }
@@ -223,8 +223,8 @@ static bool IPPDerivScharr(const Mat& src, Mat& dst, int ddepth, int dx, int dy,
                      ippiFilterScharrHorizGetBufferSize_8u16s_C1R(roi,&bufSize);
                      buffer.allocate(bufSize);
 
-                     ippiFilterScharrHorizBorder_8u16s_C1R((const Ipp8u*)src.data, src.step,
-                        (Ipp16s*)dst.data, dst.step, roi, ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
+                     ippiFilterScharrHorizBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+                        (Ipp16s*)dst.data, (int)dst.step, roi, ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
 
                      return true;
                   }
@@ -245,12 +245,12 @@ static bool IPPDerivScharr(const Mat& src, Mat& dst, int ddepth, int dx, int dy,
                   ippiFilterScharrVertGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows),&bufSize);
                   buffer.allocate(bufSize);
 
-                  ippiFilterScharrVertBorder_32f_C1R((const Ipp32f*)src.data, src.step,
-                     (Ipp32f*)dst.data, dst.step, ippiSize(src.cols, src.rows),
+                  ippiFilterScharrVertBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+                     (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows),
                                             ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
                   if(scale != 1)
                      /* IPP is fast, so MulC produce very little perf degradation */
-                     ippiMulC_32f_C1IR((Ipp32f)scale,(Ipp32f*)dst.data,dst.step,ippiSize(dst.cols*dst.channels(),dst.rows));
+                     ippiMulC_32f_C1IR((Ipp32f)scale, (Ipp32f*)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
 
                   return true;
                }
@@ -260,11 +260,11 @@ static bool IPPDerivScharr(const Mat& src, Mat& dst, int ddepth, int dx, int dy,
                   ippiFilterScharrHorizGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows),&bufSize);
                   buffer.allocate(bufSize);
 
-                  ippiFilterScharrHorizBorder_32f_C1R((const Ipp32f*)src.data, src.step,
-                     (Ipp32f*)dst.data, dst.step, ippiSize(src.cols, src.rows),
+                  ippiFilterScharrHorizBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+                     (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows),
                                             ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
                   if(scale != 1)
-                     ippiMulC_32f_C1IR((Ipp32f)scale,(Ipp32f *)dst.data,dst.step,ippiSize(dst.cols*dst.channels(),dst.rows));
+                     ippiMulC_32f_C1IR((Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
 
                   return true;
                }
@@ -297,8 +297,8 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
             ippiFilterSobelNegVertGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize);
             buffer.allocate(bufSize);
 
-            ippiFilterSobelNegVertBorder_8u16s_C1R((const Ipp8u*)src.data, src.step,
-               (Ipp16s*)dst.data, dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+            ippiFilterSobelNegVertBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+               (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                       ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
             return true;
          }
@@ -308,8 +308,8 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
             ippiFilterSobelHorizGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize);
             buffer.allocate(bufSize);
 
-            ippiFilterSobelHorizBorder_8u16s_C1R((const Ipp8u*)src.data, src.step,
-               (Ipp16s*)dst.data, dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+            ippiFilterSobelHorizBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+               (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                       ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
 
             return true;
@@ -320,8 +320,8 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
             ippiFilterSobelVertSecondGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize);
             buffer.allocate(bufSize);
 
-            ippiFilterSobelVertSecondBorder_8u16s_C1R((const Ipp8u*)src.data, src.step,
-               (Ipp16s*)dst.data, dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+            ippiFilterSobelVertSecondBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+               (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                       ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
 
             return true;
@@ -332,8 +332,8 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
             ippiFilterSobelHorizSecondGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize);
             buffer.allocate(bufSize);
 
-            ippiFilterSobelHorizSecondBorder_8u16s_C1R((const Ipp8u*)src.data, src.step,
-               (Ipp16s*)dst.data, dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+            ippiFilterSobelHorizSecondBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+               (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                       ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
 
             return true;
@@ -344,14 +344,14 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
       {
          if((dx == 1) && (dy == 0))
          {
-            ippiFilterSobelNegVertGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize);
+            ippiFilterSobelNegVertGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize), &bufSize);
             buffer.allocate(bufSize);
 
-            ippiFilterSobelNegVertBorder_32f_C1R((const Ipp32f*)src.data, src.step,
-               (Ipp32f*)dst.data, dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+            ippiFilterSobelNegVertBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+               (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                       ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
             if(scale != 1)
-               ippiMulC_32f_C1IR((Ipp32f)scale,(Ipp32f *)dst.data,dst.step,ippiSize(dst.cols*dst.channels(),dst.rows));
+               ippiMulC_32f_C1IR((Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
 
             return true;
          }
@@ -361,11 +361,11 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
             ippiFilterSobelHorizGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize);
             buffer.allocate(bufSize);
 
-            ippiFilterSobelHorizBorder_32f_C1R((const Ipp32f*)src.data, src.step,
-               (Ipp32f*)dst.data, dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+            ippiFilterSobelHorizBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+               (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                       ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
             if(scale != 1)
-               ippiMulC_32f_C1IR((Ipp32f)scale,(Ipp32f *)dst.data,dst.step,ippiSize(dst.cols*dst.channels(),dst.rows));
+               ippiMulC_32f_C1IR((Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
 
             return true;
          }
@@ -375,11 +375,11 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
             ippiFilterSobelVertSecondGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize);
             buffer.allocate(bufSize);
 
-            ippiFilterSobelVertSecondBorder_32f_C1R((const Ipp32f*)src.data, src.step,
-               (Ipp32f*)dst.data, dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+            ippiFilterSobelVertSecondBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+               (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                       ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
             if(scale != 1)
-               ippiMulC_32f_C1IR((Ipp32f)scale,(Ipp32f *)dst.data,dst.step,ippiSize(dst.cols*dst.channels(),dst.rows));
+               ippiMulC_32f_C1IR((Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
 
             return true;
          }
@@ -389,11 +389,11 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
             ippiFilterSobelHorizSecondGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize);
             buffer.allocate(bufSize);
 
-            ippiFilterSobelHorizSecondBorder_32f_C1R((const Ipp32f*)src.data, src.step,
-               (Ipp32f*)dst.data, dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+            ippiFilterSobelHorizSecondBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+               (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                       ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
             if(scale != 1)
-               ippiMulC_32f_C1IR((Ipp32f)scale,(Ipp32f *)dst.data,dst.step,ippiSize(dst.cols*dst.channels(),dst.rows));
+               ippiMulC_32f_C1IR((Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
 
             return true;
          }
@@ -413,15 +413,15 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
 void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
                 int ksize, double scale, double delta, int borderType )
 {
-    Mat src = _src.getMat();
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
-        ddepth = src.depth();
-    _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
-    Mat dst = _dst.getMat();
+        ddepth = sdepth;
+    _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (scale == 1.0 && delta == 0)
     {
+        Mat src = _src.getMat(), dst = _dst.getMat();
         if (ksize == 3 && tegra::sobel3x3(src, dst, dx, dy, borderType))
             return;
         if (ksize == -1 && tegra::scharr(src, dst, dx, dy, borderType))
@@ -430,13 +430,14 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
 #endif
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    if(dx < 3 && dy < 3 && src.channels() == 1 && borderType == 1)
+    if(dx < 3 && dy < 3 && cn == 1 && borderType == BORDER_REPLICATE)
     {
+        Mat src = _src.getMat(), dst = _dst.getMat();
         if(IPPDeriv(src, dst, ddepth, dx, dy, ksize,scale))
             return;
     }
 #endif
-    int ktype = std::max(CV_32F, std::max(ddepth, src.depth()));
+    int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
 
     Mat kx, ky;
     getDerivKernels( kx, ky, dx, dy, ksize, false, ktype );
@@ -449,33 +450,36 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
         else
             ky *= scale;
     }
-    sepFilter2D( src, dst, ddepth, kx, ky, Point(-1,-1), delta, borderType );
+    sepFilter2D( _src, _dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
 
 
 void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
                  double scale, double delta, int borderType )
 {
-    Mat src = _src.getMat();
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
-        ddepth = src.depth();
-    _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
-    Mat dst = _dst.getMat();
+        ddepth = sdepth;
+    _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (scale == 1.0 && delta == 0)
+    {
+        Mat src = _src.getMat(), dst = _dst.getMat();
         if (tegra::scharr(src, dst, dx, dy, borderType))
             return;
+    }
 #endif
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    if(dx < 2 && dy < 2 && src.channels() == 1 && borderType == 1)
+    if(dx < 2 && dy < 2 && _src.channels() == 1 && borderType == 1)
     {
+        Mat src = _src.getMat(), dst = _dst.getMat();
         if(IPPDerivScharr(src, dst, ddepth, dx, dy, scale))
             return;
     }
 #endif
-    int ktype = std::max(CV_32F, std::max(ddepth, src.depth()));
+    int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
 
     Mat kx, ky;
     getScharrKernels( kx, ky, dx, dy, false, ktype );
@@ -488,22 +492,22 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
         else
             ky *= scale;
     }
-    sepFilter2D( src, dst, ddepth, kx, ky, Point(-1,-1), delta, borderType );
+    sepFilter2D( _src, _dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
 
 
 void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                     double scale, double delta, int borderType )
 {
-    Mat src = _src.getMat();
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
-        ddepth = src.depth();
-    _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
-    Mat dst = _dst.getMat();
+        ddepth = sdepth;
+    _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (scale == 1.0 && delta == 0)
     {
+        Mat src = _src.getMat(), dst = _dst.getMat();
         if (ksize == 1 && tegra::laplace1(src, dst, borderType))
             return;
         if (ksize == 3 && tegra::laplace3(src, dst, borderType))
@@ -516,15 +520,18 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
     if( ksize == 1 || ksize == 3 )
     {
         float K[2][9] =
-        {{0, 1, 0, 1, -4, 1, 0, 1, 0},
-         {2, 0, 2, 0, -8, 0, 2, 0, 2}};
+        {
+            { 0, 1, 0, 1, -4, 1, 0, 1, 0 },
+            { 2, 0, 2, 0, -8, 0, 2, 0, 2 }
+        };
         Mat kernel(3, 3, CV_32F, K[ksize == 3]);
         if( scale != 1 )
             kernel *= scale;
-        filter2D( src, dst, ddepth, kernel, Point(-1,-1), delta, borderType );
+        filter2D( _src, _dst, ddepth, kernel, Point(-1, -1), delta, borderType );
     }
     else
     {
+        Mat src = _src.getMat(), dst = _dst.getMat();
         const size_t STRIPE_SIZE = 1 << 14;
 
         int depth = src.depth();
@@ -533,8 +540,6 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         int wtype = CV_MAKETYPE(wdepth, src.channels());
         Mat kd, ks;
         getSobelKernels( kd, ks, 2, 0, ksize, false, ktype );
-        if( ddepth < 0 )
-            ddepth = src.depth();
         int dtype = CV_MAKETYPE(ddepth, src.channels());
 
         int dy0 = std::min(std::max((int)(STRIPE_SIZE/(getElemSize(src.type())*src.cols)), 1), src.rows);

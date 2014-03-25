@@ -49,7 +49,7 @@
 #include "opencv2/opencv_modules.hpp"
 
 #ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree/gpu.hpp"
+#  include "opencv2/nonfree/cuda.hpp"
 #endif
 
 namespace cv {
@@ -116,11 +116,11 @@ public:
 private:
     void find(const Mat &image, ImageFeatures &features);
 
-    gpu::GpuMat image_;
-    gpu::GpuMat gray_image_;
-    gpu::SURF_GPU surf_;
-    gpu::GpuMat keypoints_;
-    gpu::GpuMat descriptors_;
+    cuda::GpuMat image_;
+    cuda::GpuMat gray_image_;
+    cuda::SURF_CUDA surf_;
+    cuda::GpuMat keypoints_;
+    cuda::GpuMat descriptors_;
     int num_octaves_, num_layers_;
     int num_octaves_descr_, num_layers_descr_;
 };

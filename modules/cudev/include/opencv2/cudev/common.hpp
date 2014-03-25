@@ -47,12 +47,12 @@
 #define __OPENCV_CUDEV_COMMON_HPP__
 
 #include <cuda_runtime.h>
-#include "opencv2/core/gpu.hpp"
-#include "opencv2/core/gpu_stream_accessor.hpp"
+#include "opencv2/core/cuda.hpp"
+#include "opencv2/core/cuda_stream_accessor.hpp"
 
 namespace cv { namespace cudev {
 
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 // CV_CUDEV_ARCH
 
@@ -70,11 +70,7 @@ __host__ __forceinline__ void checkCudaError(cudaError_t err, const char* file, 
         cv::error(cv::Error::GpuApiCallError, cudaGetErrorString(err), func, file, line);
 }
 
-#ifdef __GNUC__
-#   define CV_CUDEV_SAFE_CALL(expr) cv::cudev::checkCudaError((expr), __FILE__, __LINE__, __func__)
-#else
-#   define CV_CUDEV_SAFE_CALL(expr) cv::cudev::checkCudaError((expr), __FILE__, __LINE__, "")
-#endif
+#define CV_CUDEV_SAFE_CALL(expr) cv::cudev::checkCudaError((expr), __FILE__, __LINE__, CV_Func)
 
 // divUp
 

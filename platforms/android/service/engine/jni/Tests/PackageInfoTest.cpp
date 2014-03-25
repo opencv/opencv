@@ -34,6 +34,13 @@ TEST(PackageInfo, FullNameArmv7VFPv3)
     EXPECT_STREQ("org.opencv.lib_v23_armv7a", name.c_str());
 }
 
+TEST(PackageInfo, FullNameArmv7VFPv4)
+{
+    PackageInfo info(2030300, PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_VFPv4);
+    string name = info.GetFullName();
+    EXPECT_STREQ("org.opencv.lib_v23_armv7a", name.c_str());
+}
+
 TEST(PackageInfo, FullNameArmv7VFPv3Neon)
 {
     PackageInfo info(2030000, PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON);
@@ -74,30 +81,60 @@ TEST(PackageInfo, FullNameTegra3)
 {
     PackageInfo info(2030000, PLATFORM_TEGRA3, ARCH_ARMv7 | FEATURES_HAS_NEON);
     string name = info.GetFullName();
-    #ifdef __SUPPORT_TEGRA3
+#ifdef __SUPPORT_TEGRA3
     EXPECT_STREQ("org.opencv.lib_v23_tegra3", name.c_str());
-    #else
-    #ifdef __SUPPORT_ARMEABI_V7A_FEATURES
+#else
+# ifdef __SUPPORT_ARMEABI_V7A_FEATURES
     EXPECT_STREQ("org.opencv.lib_v23_armv7a_neon", name.c_str());
-    #else
+# else
     EXPECT_STREQ("org.opencv.lib_v23_armv7a", name.c_str());
-    #endif
-    #endif
+# endif
+#endif
 }
 
 TEST(PackageInfo, FullNameTegra4)
 {
     PackageInfo info(2040400, PLATFORM_TEGRA4, ARCH_ARMv7 | FEATURES_HAS_NEON);
     string name = info.GetFullName();
-    #ifdef __SUPPORT_TEGRA3
+#ifdef __SUPPORT_TEGRA3
     EXPECT_STREQ("org.opencv.lib_v24_tegra4", name.c_str());
-    #else
-    #ifdef __SUPPORT_ARMEABI_V7A_FEATURES
+#else
+# ifdef __SUPPORT_ARMEABI_V7A_FEATURES
     EXPECT_STREQ("org.opencv.lib_v24_armv7a_neon", name.c_str());
-    #else
+# else
     EXPECT_STREQ("org.opencv.lib_v24_armv7a", name.c_str());
-    #endif
-    #endif
+# endif
+#endif
+}
+
+TEST(PackageInfo, FullNameTegra4i)
+{
+    PackageInfo info(2040700, PLATFORM_TEGRA4i, ARCH_ARMv7 | FEATURES_HAS_NEON);
+    string name = info.GetFullName();
+#ifdef __SUPPORT_TEGRA3
+    EXPECT_STREQ("org.opencv.lib_v24_tegra4", name.c_str());
+#else
+# ifdef __SUPPORT_ARMEABI_V7A_FEATURES
+    EXPECT_STREQ("org.opencv.lib_v24_armv7a_neon", name.c_str());
+# else
+    EXPECT_STREQ("org.opencv.lib_v24_armv7a", name.c_str());
+# endif
+#endif
+}
+
+TEST(PackageInfo, FullNameTegra5)
+{
+    PackageInfo info(2040700, PLATFORM_TEGRA5, ARCH_ARMv7 | FEATURES_HAS_NEON);
+    string name = info.GetFullName();
+#ifdef __SUPPORT_TEGRA3
+    EXPECT_STREQ("org.opencv.lib_v24_tegra5", name.c_str());
+#else
+# ifdef __SUPPORT_ARMEABI_V7A_FEATURES
+    EXPECT_STREQ("org.opencv.lib_v24_armv7a_neon", name.c_str());
+# else
+    EXPECT_STREQ("org.opencv.lib_v24_armv7a", name.c_str());
+# endif
+#endif
 }
 
 TEST(PackageInfo, FullNameX86SSE2)

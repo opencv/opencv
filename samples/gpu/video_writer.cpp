@@ -2,13 +2,13 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#if defined(HAVE_OPENCV_GPUCODEC) && defined(WIN32)
+#if defined(HAVE_OPENCV_CUDACODEC) && defined(WIN32)
 
 #include <vector>
 #include <numeric>
 
 #include "opencv2/core.hpp"
-#include "opencv2/gpucodec.hpp"
+#include "opencv2/cudacodec.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/contrib.hpp"
 
@@ -30,13 +30,13 @@ int main(int argc, const char* argv[])
         return -1;
     }
 
-    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+    cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
     cv::VideoWriter writer;
-    cv::Ptr<cv::gpucodec::VideoWriter> d_writer;
+    cv::Ptr<cv::cudacodec::VideoWriter> d_writer;
 
     cv::Mat frame;
-    cv::gpu::GpuMat d_frame;
+    cv::cuda::GpuMat d_frame;
 
     std::vector<double> cpu_times;
     std::vector<double> gpu_times;
@@ -66,9 +66,9 @@ int main(int argc, const char* argv[])
 
         if (d_writer.empty())
         {
-            std::cout << "Open GPU Writer" << std::endl;
+            std::cout << "Open CUDA Writer" << std::endl;
 
-            d_writer = cv::gpucodec::createVideoWriter("output_gpu.avi", frame.size(), FPS);
+            d_writer = cv::cudacodec::createVideoWriter("output_gpu.avi", frame.size(), FPS);
         }
 
         d_frame.upload(frame);
@@ -104,7 +104,7 @@ int main(int argc, const char* argv[])
 
 int main()
 {
-    std::cout << "OpenCV was built without GPU Video encoding support\n" << std::endl;
+    std::cout << "OpenCV was built without CUDA Video encoding support\n" << std::endl;
     return 0;
 }
 

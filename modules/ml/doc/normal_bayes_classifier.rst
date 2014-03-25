@@ -52,12 +52,12 @@ CvNormalBayesClassifier::predict
 --------------------------------
 Predicts the response for sample(s).
 
-.. ocv:function:: float CvNormalBayesClassifier::predict(  const Mat& samples,  Mat* results=0 ) const
+.. ocv:function:: float CvNormalBayesClassifier::predict(  const Mat& samples,  Mat* results=0, Mat* results_prob=0 ) const
 
-.. ocv:function:: float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results=0 ) const
+.. ocv:function:: float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results=0, CvMat* results_prob=0 ) const
 
 .. ocv:pyfunction:: cv2.NormalBayesClassifier.predict(samples) -> retval, results
 
-The method estimates the most probable classes for input vectors. Input vectors (one or more) are stored as rows of the matrix ``samples``. In case of multiple input vectors, there should be one output vector ``results``. The predicted class for a single input vector is returned by the method.
+The method estimates the most probable classes for input vectors. Input vectors (one or more) are stored as rows of the matrix ``samples``. In case of multiple input vectors, there should be one output vector ``results``. The predicted class for a single input vector is returned by the method. The vector ``results_prob`` contains the output probabilities coresponding to each element of ``result``.
 
 The function is parallelized with the TBB library.

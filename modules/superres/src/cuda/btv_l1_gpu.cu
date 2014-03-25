@@ -42,15 +42,15 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#if defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING) && defined(HAVE_OPENCV_GPUFILTERS)
+#if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING) && defined(HAVE_OPENCV_CUDAFILTERS)
 
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/transform.hpp"
 #include "opencv2/core/cuda/vec_traits.hpp"
 #include "opencv2/core/cuda/vec_math.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::cudev;
+using namespace cv::cuda;
+using namespace cv::cuda::device;
 
 namespace btv_l1_cudev
 {
@@ -173,7 +173,7 @@ namespace btv_l1_cudev
     };
 }
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <> struct TransformFunctorTraits<btv_l1_cudev::DiffSign> : DefaultTransformFunctorTraits<btv_l1_cudev::DiffSign>
     {

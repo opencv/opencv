@@ -80,7 +80,7 @@ Mat DrawCorrespondences(const Mat& img1, const vector<KeyPoint>& features1, cons
 
     for (size_t i = 0; i < features1.size(); i++)
     {
-        circle(img_corr, features1[i].pt, 3, Scalar(255, 0, 0));
+        circle(img_corr, features1[i].pt, 3, Scalar(0, 0, 255));
     }
 
     for (size_t i = 0; i < features2.size(); i++)

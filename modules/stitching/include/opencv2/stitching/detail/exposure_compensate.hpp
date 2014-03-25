@@ -68,8 +68,8 @@ class CV_EXPORTS NoExposureCompensator : public ExposureCompensator
 {
 public:
     void feed(const std::vector<Point> &/*corners*/, const std::vector<Mat> &/*images*/,
-              const std::vector<std::pair<Mat,uchar> > &/*masks*/) {};
-    void apply(int /*index*/, Point /*corner*/, Mat &/*image*/, const Mat &/*mask*/) {};
+              const std::vector<std::pair<Mat,uchar> > &/*masks*/) { }
+    void apply(int /*index*/, Point /*corner*/, Mat &/*image*/, const Mat &/*mask*/) { }
 };
 
 

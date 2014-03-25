@@ -902,7 +902,7 @@ int icvComputeProjectMatricesNPoints(  CvMat* points1,CvMat* points2,CvMat* poin
         tmpProjMatr[1] = cvMat(9,4,CV_64F,tmpProjMatr_dat+36);
         tmpProjMatr[2] = cvMat(9,4,CV_64F,tmpProjMatr_dat+72);
 
-        /* choosen points */
+        /* chosen points */
 
         while( wasCount < NumSamples )
         {
@@ -1494,7 +1494,7 @@ void GetGeneratorReduceFundSolution(CvMat* points1,CvMat* points2,CvMat* fundRed
     matrV = cvMat(5,5,CV_64F,matrV_dat);
 
     /* From svd we need just two last vectors of V or two last row V' */
-    /* We get transposed matrixes U and V */
+    /* We get transposed matrices U and V */
 
     cvSVD(&matrA,&matrW,0,&matrV,CV_SVD_V_T);
 
@@ -1529,7 +1529,7 @@ int GetGoodReduceFundamMatrFromTwo(CvMat* fundReduceCoef1,CvMat* fundReduceCoef2
         CV_ERROR( CV_StsUnsupportedFormat, "Input parameters must be a matrices" );
     }
 
-    /* using two fundamental matrix comute matrixes for det(F)=0 */
+    /* using two fundamental matrix comute matrices for det(F)=0 */
     /* May compute 1 or 3 matrices. Returns number of solutions */
     /* Here we will use case F=a*F1+(1-a)*F2  instead of F=m*F1+l*F2 */
 
@@ -1667,7 +1667,7 @@ void GetProjMatrFromReducedFundamental(CvMat* fundReduceCoefs,CvMat* projMatrCoe
     matrV = cvMat(3,3,CV_64F,matrV_dat);
 
     /* From svd we need just last vector of V or last row V' */
-    /* We get transposed matrixes U and V */
+    /* We get transposed matrices U and V */
 
     cvSVD(&matrA,&matrW,0,&matrV,CV_SVD_V_T);
 
@@ -1733,7 +1733,7 @@ void GetProjMatrFromReducedFundamental(CvMat* fundReduceCoefs,CvMat* projMatrCoe
         matrV1 = cvMat(6,6,CV_64F,matrV_dat1);
 
         /* From svd we need just last vector of V or last row V' */
-        /* We get transposed matrixes U and V */
+        /* We get transposed matrices U and V */
 
         cvSVD(&matrK,&matrW1,0,&matrV1,CV_SVD_V_T);
 
@@ -2034,7 +2034,7 @@ void icvComputeTransform4D(CvMat* points1,CvMat* points2,CvMat* transMatr)
     }
 
     /* From svd we need just two last vectors of V or two last row V' */
-    /* We get transposed matrixes U and V */
+    /* We get transposed matrices U and V */
 
     cvSVD(matrA,matrW,0,&matrV,CV_SVD_V_T);
 

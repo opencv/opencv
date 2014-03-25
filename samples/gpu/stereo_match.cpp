@@ -4,8 +4,9 @@
 #include <iomanip>
 #include <stdexcept>
 #include <opencv2/core/utility.hpp>
-#include "opencv2/gpu.hpp"
+#include "opencv2/cudastereo.hpp"
 #include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 
 using namespace cv;
 using namespace std;
@@ -63,11 +64,11 @@ private:
 
     Mat left_src, right_src;
     Mat left, right;
-    gpu::GpuMat d_left, d_right;
+    cuda::GpuMat d_left, d_right;
 
-    Ptr<gpu::StereoBM> bm;
-    Ptr<gpu::StereoBeliefPropagation> bp;
-    Ptr<gpu::StereoConstantSpaceBP> csbp;
+    Ptr<cuda::StereoBM> bm;
+    Ptr<cuda::StereoBeliefPropagation> bp;
+    Ptr<cuda::StereoConstantSpaceBP> csbp;
 
     int64 work_begin;
     double work_fps;
@@ -140,7 +141,7 @@ Params Params::read(int argc, char** argv)
 App::App(const Params& params)
     : p(params), running(false)
 {
-    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+    cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
     cout << "stereo_match_gpu sample\n";
     cout << "\nControls:\n"
@@ -172,13 +173,13 @@ void App::run()
     imshow("right", right);
 
     // Set common parameters
-    bm = gpu::createStereoBM(p.ndisp);
-    bp = gpu::createStereoBeliefPropagation(p.ndisp);
-    csbp = cv::gpu::createStereoConstantSpaceBP(p.ndisp);
+    bm = cuda::createStereoBM(p.ndisp);
+    bp = cuda::createStereoBeliefPropagation(p.ndisp);
+    csbp = cv::cuda::createStereoConstantSpaceBP(p.ndisp);
 
     // Prepare disparity map of specified type
     Mat disp(left.size(), CV_8U);
-    gpu::GpuMat d_disp(left.size(), CV_8U);
+    cuda::GpuMat d_disp(left.size(), CV_8U);
 
     cout << endl;
     printParams();

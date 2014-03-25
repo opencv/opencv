@@ -44,7 +44,7 @@ int main(int argc, char** argv)
     extractor.compute(img2, keypoints2, descriptors2);
 
     // matching descriptors
-    BFMatcher matcher(NORM_L2);
+    BFMatcher matcher(extractor.defaultNorm());
     vector<DMatch> matches;
     matcher.match(descriptors1, descriptors2, matches);
 

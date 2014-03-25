@@ -47,6 +47,7 @@
 #include "grfmts.hpp"
 #undef min
 #undef max
+#include <iostream>
 
 /****************************************************************************************\
 *                                      Image Codecs                                      *
@@ -60,6 +61,8 @@ struct ImageCodecInitializer
     {
         decoders.push_back( makePtr<BmpDecoder>() );
         encoders.push_back( makePtr<BmpEncoder>() );
+        decoders.push_back( makePtr<HdrDecoder>() );
+        encoders.push_back( makePtr<HdrEncoder>() );
     #ifdef HAVE_JPEG
         decoders.push_back( makePtr<JpegDecoder>() );
         encoders.push_back( makePtr<JpegEncoder>() );
@@ -203,7 +206,6 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     decoder->setSource(filename);
     if( !decoder->readHeader() )
         return 0;
-
     CvSize size;
     size.width = decoder->width();
     size.height = decoder->height();
@@ -271,7 +273,6 @@ static bool imwrite_( const String& filename, const Mat& image,
     ImageEncoder encoder = findEncoder( filename );
     if( !encoder )
         CV_Error( CV_StsError, "could not find a writer for the specified extension" );
-
     if( !encoder->isFormatSupported(image.depth()) )
     {
         CV_Assert( encoder->isFormatSupported(CV_8U) );

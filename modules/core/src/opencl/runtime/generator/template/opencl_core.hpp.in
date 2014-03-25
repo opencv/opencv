@@ -1,0 +1,15 @@
+#ifndef __OPENCV_CORE_OCL_RUNTIME_OPENCL_CORE_HPP__
+#error "Invalid usage"
+#endif
+
+@CL_REMAP_ORIGIN@
+
+#if defined __APPLE__
+#include <OpenCL/cl.h>
+#else
+#include <CL/cl.h>
+#endif
+
+@CL_REMAP_DYNAMIC@
+
+@CL_FN_DECLARATIONS@

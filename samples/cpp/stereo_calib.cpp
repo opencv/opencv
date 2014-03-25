@@ -172,12 +172,12 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
                     cameraMatrix[0], distCoeffs[0],
                     cameraMatrix[1], distCoeffs[1],
                     imageSize, R, T, E, F,
-                    TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-5),
                     CALIB_FIX_ASPECT_RATIO +
                     CALIB_ZERO_TANGENT_DIST +
                     CALIB_SAME_FOCAL_LENGTH +
                     CALIB_RATIONAL_MODEL +
-                    CALIB_FIX_K3 + CALIB_FIX_K4 + CALIB_FIX_K5);
+                    CALIB_FIX_K3 + CALIB_FIX_K4 + CALIB_FIX_K5,
+                    TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-5) );
     cout << "done with RMS error=" << rms << endl;
 
 // CALIBRATION QUALITY CHECK

@@ -296,15 +296,15 @@ int main( int argc, char** argv )
     help();
 
     const string winName = "image";
-    namedWindow( winName.c_str(), WINDOW_AUTOSIZE );
-    setMouseCallback( winName.c_str(), on_mouse, 0 );
+    namedWindow( winName, WINDOW_AUTOSIZE );
+    setMouseCallback( winName, on_mouse, 0 );
 
     gcapp.setImageAndWinName( image, winName );
     gcapp.showImage();
 
     for(;;)
     {
-        int c = waitKey();
+        int c = waitKey(0);
         switch( (char) c )
         {
         case '\x1b':
@@ -331,6 +331,6 @@ int main( int argc, char** argv )
     }
 
 exit_main:
-    destroyWindow( winName.c_str() );
+    destroyWindow( winName );
     return 0;
 }

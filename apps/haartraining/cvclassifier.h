@@ -340,7 +340,7 @@ typedef enum CvBoostType
     CV_LKCLASS  = 5, /* classification (K class problem)    */
     CV_LSREG    = 6, /* least squares regression            */
     CV_LADREG   = 7, /* least absolute deviation regression */
-    CV_MREG     = 8, /* M-regression (Huber loss)           */
+    CV_MREG     = 8  /* M-regression (Huber loss)           */
 } CvBoostType;
 
 /****************************************************************************************\
