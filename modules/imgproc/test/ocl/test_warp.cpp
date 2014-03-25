@@ -210,12 +210,15 @@ OCL_TEST_P(Resize, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
+        int depth = CV_MAT_DEPTH(type);
+        double eps = depth <= CV_32S ? 1 : 1e-2;
+
         random_roi();
 
         OCL_OFF(cv::resize(src_roi, dst_roi, Size(), fx, fy, interpolation));
         OCL_ON(cv::resize(usrc_roi, udst_roi, Size(), fx, fy, interpolation));
 
-        Near(1.0);
+        Near(eps);
     }
 }
 
@@ -328,8 +331,8 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpPerspective, Combine(
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Resize, Combine(
                             Values(CV_8UC1, CV_8UC4, CV_16UC2, CV_32FC1, CV_32FC4),
-                            Values(0.5, 1.5, 2.0),
-                            Values(0.5, 1.5, 2.0),
+                            Values(0.5, 1.5, 2.0, 0.2),
+                            Values(0.5, 1.5, 2.0, 0.2),
                             Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR),
                             Bool()));
 
