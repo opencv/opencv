@@ -61,6 +61,12 @@
 
 using namespace android;
 
+// non-public camera related classes are not binary compatible
+// objects of these classes have different sizeof on different platforms
+// additional memory tail to all system objects to overcome sizeof issue
+#define MAGIC_TAIL 4096
+
+
 void debugShowFPS();
 
 #if defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0) || defined(ANDROID_r4_3_0)
@@ -89,6 +95,7 @@ public:
     }
 };
 #endif
+
 
 std::string getProcessName()
 {
@@ -142,11 +149,21 @@ class CameraHandler: public CameraListener
 protected:
     int cameraId;
     sp<Camera> camera;
-    CameraParameters params;
+#if defined(ANDROID_r3_0_1) || defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3)
+    sp<SurfaceTexture> surface;
+#endif
+#if defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0) || defined(ANDROID_r4_3_0) || defined(ANDROID_r4_4_0)
+    sp<BufferQueue> queue;
+    sp<ConsumerListenerStub> listener;
+#endif
+    CameraParameters* params;
     CameraCallback cameraCallback;
     void* userData;
 
     int emptyCameraCallbackReported;
+
+    int width;
+    int height;
 
     static const char* flashModesNames[ANDROID_CAMERA_FLASH_MODES_NUM];
     static const char* focusModesNames[ANDROID_CAMERA_FOCUS_MODES_NUM];
@@ -258,7 +275,7 @@ protected:
 
     int is_supported(const char* supp_modes_key, const char* mode)
     {
-        const char* supported_modes = params.get(supp_modes_key);
+        const char* supported_modes = params->get(supp_modes_key);
         return (supported_modes && mode && (strstr(supported_modes, mode) > 0));
     }
 
@@ -268,7 +285,7 @@ protected:
         if (focus_distance_type >= 0 && focus_distance_type < 3)
     {
             float focus_distances[3];
-            const char* output = params.get(CameraParameters::KEY_FOCUS_DISTANCES);
+            const char* output = params->get(CameraParameters::KEY_FOCUS_DISTANCES);
             int val_num = CameraHandler::split_float(output, focus_distances, ',', 3);
             if(val_num == 3)
         {
@@ -300,10 +317,15 @@ public:
         emptyCameraCallbackReported(0)
     {
         LOGD("Instantiated new CameraHandler (%p, %p)", callback, _userData);
+        void* params_buffer = operator new(sizeof(CameraParameters) + MAGIC_TAIL);
+        params = new(params_buffer) CameraParameters();
     }
 
     virtual ~CameraHandler()
     {
+        if (params)
+            params->~CameraParameters();
+            operator delete(params);
         LOGD("CameraHandler destructor is called");
     }
 
@@ -371,10 +393,18 @@ const char* CameraHandler::focusModesNames[ANDROID_CAMERA_FOCUS_MODES_NUM] =
     CameraParameters::FOCUS_MODE_AUTO,
 #if !defined(ANDROID_r2_2_0)
     CameraParameters::FOCUS_MODE_CONTINUOUS_VIDEO,
+#else
+    CameraParameters::FOCUS_MODE_AUTO,
 #endif
     CameraParameters::FOCUS_MODE_EDOF,
     CameraParameters::FOCUS_MODE_FIXED,
-    CameraParameters::FOCUS_MODE_INFINITY
+    CameraParameters::FOCUS_MODE_INFINITY,
+    CameraParameters::FOCUS_MODE_MACRO,
+#if !defined(ANDROID_r2_2_0) && !defined(ANDROID_r2_3_3) && !defined(ANDROID_r3_0_1)
+    CameraParameters::FOCUS_MODE_CONTINUOUS_PICTURE
+#else
+    CameraParameters::FOCUS_MODE_AUTO
+#endif
 };
 
 const char* CameraHandler::whiteBalanceModesNames[ANDROID_CAMERA_WHITE_BALANCE_MODES_NUM] =
@@ -534,39 +564,39 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
     {
         LOGI("initCameraConnect: Setting paramers from previous camera handler");
         camera->setParameters(prevCameraParameters->flatten());
-        handler->params.unflatten(prevCameraParameters->flatten());
+        handler->params->unflatten(prevCameraParameters->flatten());
     }
     else
     {
         android::String8 params_str = camera->getParameters();
         LOGI("initCameraConnect: [%s]", params_str.string());
 
-        handler->params.unflatten(params_str);
+        handler->params->unflatten(params_str);
 
-        LOGD("Supported Cameras: %s", handler->params.get("camera-indexes"));
-        LOGD("Supported Picture Sizes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES));
-        LOGD("Supported Picture Formats: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PICTURE_FORMATS));
-        LOGD("Supported Preview Sizes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES));
-        LOGD("Supported Preview Formats: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_FORMATS));
-        LOGD("Supported Preview Frame Rates: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_FRAME_RATES));
-        LOGD("Supported Thumbnail Sizes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_JPEG_THUMBNAIL_SIZES));
-        LOGD("Supported Whitebalance Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_WHITE_BALANCE));
-        LOGD("Supported Effects: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_EFFECTS));
-        LOGD("Supported Scene Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_SCENE_MODES));
-        LOGD("Supported Focus Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_FOCUS_MODES));
-        LOGD("Supported Antibanding Options: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_ANTIBANDING));
-        LOGD("Supported Flash Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_FLASH_MODES));
+        LOGD("Supported Cameras: %s", handler->params->get("camera-indexes"));
+        LOGD("Supported Picture Sizes: %s", handler->params->get(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES));
+        LOGD("Supported Picture Formats: %s", handler->params->get(CameraParameters::KEY_SUPPORTED_PICTURE_FORMATS));
+        LOGD("Supported Preview Sizes: %s", handler->params->get(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES));
+        LOGD("Supported Preview Formats: %s", handler->params->get(CameraParameters::KEY_SUPPORTED_PREVIEW_FORMATS));
+        LOGD("Supported Preview Frame Rates: %s", handler->params->get(CameraParameters::KEY_SUPPORTED_PREVIEW_FRAME_RATES));
+        LOGD("Supported Thumbnail Sizes: %s", handler->params->get(CameraParameters::KEY_SUPPORTED_JPEG_THUMBNAIL_SIZES));
+        LOGD("Supported Whitebalance Modes: %s", handler->params->get(CameraParameters::KEY_SUPPORTED_WHITE_BALANCE));
+        LOGD("Supported Effects: %s", handler->params->get(CameraParameters::KEY_SUPPORTED_EFFECTS));
+        LOGD("Supported Scene Modes: %s", handler->params->get(CameraParameters::KEY_SUPPORTED_SCENE_MODES));
+        LOGD("Supported Focus Modes: %s", handler->params->get(CameraParameters::KEY_SUPPORTED_FOCUS_MODES));
+        LOGD("Supported Antibanding Options: %s", handler->params->get(CameraParameters::KEY_SUPPORTED_ANTIBANDING));
+        LOGD("Supported Flash Modes: %s", handler->params->get(CameraParameters::KEY_SUPPORTED_FLASH_MODES));
 
 #if !defined(ANDROID_r2_2_0)
         // Set focus mode to continuous-video if supported
-        const char* available_focus_modes = handler->params.get(CameraParameters::KEY_SUPPORTED_FOCUS_MODES);
+        const char* available_focus_modes = handler->params->get(CameraParameters::KEY_SUPPORTED_FOCUS_MODES);
         if (available_focus_modes != 0)
         {
             if (strstr(available_focus_modes, "continuous-video") != NULL)
             {
-                handler->params.set(CameraParameters::KEY_FOCUS_MODE, CameraParameters::FOCUS_MODE_CONTINUOUS_VIDEO);
+                handler->params->set(CameraParameters::KEY_FOCUS_MODE, CameraParameters::FOCUS_MODE_CONTINUOUS_VIDEO);
 
-                status_t resParams = handler->camera->setParameters(handler->params.flatten());
+                status_t resParams = handler->camera->setParameters(handler->params->flatten());
 
                 if (resParams != 0)
                 {
@@ -581,7 +611,7 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
 #endif
 
         //check if yuv420sp format available. Set this format as preview format.
-        const char* available_formats = handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_FORMATS);
+        const char* available_formats = handler->params->get(CameraParameters::KEY_SUPPORTED_PREVIEW_FORMATS);
         if (available_formats != 0)
         {
             const char* format_to_set = 0;
@@ -607,9 +637,9 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
 
             if (0 != format_to_set)
             {
-                handler->params.setPreviewFormat(format_to_set);
+                handler->params->setPreviewFormat(format_to_set);
 
-                status_t resParams = handler->camera->setParameters(handler->params.flatten());
+                status_t resParams = handler->camera->setParameters(handler->params->flatten());
 
                 if (resParams != 0)
                     LOGE("initCameraConnect: failed to set preview format to %s", format_to_set);
@@ -617,6 +647,13 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
                     LOGD("initCameraConnect: preview format is set to %s", format_to_set);
             }
         }
+
+        handler->params->setPreviewSize(640, 480);
+        status_t resParams = handler->camera->setParameters(handler->params->flatten());
+        if (resParams != 0)
+            LOGE("initCameraConnect: failed to set preview resolution to 640x480");
+        else
+            LOGD("initCameraConnect: preview format is set to 640x480");
     }
 
     status_t bufferStatus;
@@ -627,22 +664,27 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
 #elif defined(ANDROID_r2_3_3)
     /* Do nothing in case of 2.3 for now */
 #elif defined(ANDROID_r3_0_1) || defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3)
-    sp<SurfaceTexture> surfaceTexture = new SurfaceTexture(MAGIC_OPENCV_TEXTURE_ID);
-    bufferStatus = camera->setPreviewTexture(surfaceTexture);
+    void* surface_texture_obj = operator new(sizeof(SurfaceTexture) + MAGIC_TAIL);
+    handler->surface = new(surface_texture_obj) SurfaceTexture(MAGIC_OPENCV_TEXTURE_ID);
+    bufferStatus = camera->setPreviewTexture(handler->surface);
     if (bufferStatus != 0)
         LOGE("initCameraConnect: failed setPreviewTexture call (status %d); camera might not work correctly", bufferStatus);
 #elif defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0) || defined(ANDROID_r4_3_0)
-    sp<BufferQueue> bufferQueue = new BufferQueue();
-    sp<BufferQueue::ConsumerListener> queueListener = new ConsumerListenerStub();
-    bufferQueue->consumerConnect(queueListener);
-    bufferStatus = camera->setPreviewTexture(bufferQueue);
+    void* buffer_queue_obj = operator new(sizeof(BufferQueue) + MAGIC_TAIL);
+    handler->queue = new(buffer_queue_obj) BufferQueue();
+    void* consumer_listener_obj = operator new(sizeof(ConsumerListenerStub) + MAGIC_TAIL);
+    handler->listener = new(consumer_listener_obj) ConsumerListenerStub();
+    handler->queue->consumerConnect(handler->listener);
+    bufferStatus = camera->setPreviewTexture(handler->queue);
     if (bufferStatus != 0)
         LOGE("initCameraConnect: failed setPreviewTexture call; camera might not work correctly");
 # elif defined(ANDROID_r4_4_0)
-    sp<BufferQueue> bufferQueue = new BufferQueue();
-    sp<IConsumerListener> queueListener = new ConsumerListenerStub();
-    bufferQueue->consumerConnect(queueListener, true);
-    bufferStatus = handler->camera->setPreviewTarget(bufferQueue);
+    void* buffer_queue_obj = operator new(sizeof(BufferQueue) + MAGIC_TAIL);
+    handler->queue = new(buffer_queue_obj) BufferQueue();
+    void* consumer_listener_obj = operator new(sizeof(ConsumerListenerStub) + MAGIC_TAIL);
+    handler->listener = new(consumer_listener_obj) ConsumerListenerStub();
+    handler->queue->consumerConnect(handler->listener, true);
+    bufferStatus = handler->camera->setPreviewTarget(handler->queue);
     if (bufferStatus != 0)
         LOGE("applyProperties: failed setPreviewTexture call; camera might not work correctly");
 # endif
@@ -723,18 +765,18 @@ double CameraHandler::getProperty(int propIdx)
     case ANDROID_CAMERA_PROPERTY_FRAMEWIDTH:
     {
         int w,h;
-        params.getPreviewSize(&w, &h);
+        params->getPreviewSize(&w, &h);
         return w;
     }
     case ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT:
     {
         int w,h;
-        params.getPreviewSize(&w, &h);
+        params->getPreviewSize(&w, &h);
         return h;
     }
     case ANDROID_CAMERA_PROPERTY_SUPPORTED_PREVIEW_SIZES_STRING:
     {
-        cameraPropertySupportedPreviewSizesString = params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES);
+        cameraPropertySupportedPreviewSizesString = params->get(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES);
         union {const char* str;double res;} u;
         memset(&u.res, 0, sizeof(u.res));
         u.str = cameraPropertySupportedPreviewSizesString.c_str();
@@ -742,7 +784,7 @@ double CameraHandler::getProperty(int propIdx)
     }
     case ANDROID_CAMERA_PROPERTY_PREVIEW_FORMAT_STRING:
     {
-        const char* fmt = params.get(CameraParameters::KEY_PREVIEW_FORMAT);
+        const char* fmt = params->get(CameraParameters::KEY_PREVIEW_FORMAT);
         if (fmt == CameraParameters::PIXEL_FORMAT_YUV422SP)
             fmt = "yuv422sp";
         else if (fmt == CameraParameters::PIXEL_FORMAT_YUV420SP)
@@ -762,44 +804,44 @@ double CameraHandler::getProperty(int propIdx)
     }
     case ANDROID_CAMERA_PROPERTY_EXPOSURE:
     {
-        int exposure = params.getInt(CameraParameters::KEY_EXPOSURE_COMPENSATION);
+        int exposure = params->getInt(CameraParameters::KEY_EXPOSURE_COMPENSATION);
         return exposure;
     }
     case ANDROID_CAMERA_PROPERTY_FPS:
     {
-        return params.getPreviewFrameRate();
+        return params->getPreviewFrameRate();
     }
     case ANDROID_CAMERA_PROPERTY_FLASH_MODE:
     {
         int flash_mode = getModeNum(CameraHandler::flashModesNames,
                                     ANDROID_CAMERA_FLASH_MODES_NUM,
-                                    params.get(CameraParameters::KEY_FLASH_MODE));
+                                    params->get(CameraParameters::KEY_FLASH_MODE));
         return flash_mode;
     }
     case ANDROID_CAMERA_PROPERTY_FOCUS_MODE:
     {
         int focus_mode = getModeNum(CameraHandler::focusModesNames,
                                     ANDROID_CAMERA_FOCUS_MODES_NUM,
-                                    params.get(CameraParameters::KEY_FOCUS_MODE));
+                                    params->get(CameraParameters::KEY_FOCUS_MODE));
         return focus_mode;
     }
     case ANDROID_CAMERA_PROPERTY_WHITE_BALANCE:
     {
         int white_balance = getModeNum(CameraHandler::whiteBalanceModesNames,
                                        ANDROID_CAMERA_WHITE_BALANCE_MODES_NUM,
-                                       params.get(CameraParameters::KEY_WHITE_BALANCE));
+                                       params->get(CameraParameters::KEY_WHITE_BALANCE));
         return white_balance;
     }
     case ANDROID_CAMERA_PROPERTY_ANTIBANDING:
     {
         int antibanding = getModeNum(CameraHandler::antibandingModesNames,
                                      ANDROID_CAMERA_ANTIBANDING_MODES_NUM,
-                                     params.get(CameraParameters::KEY_ANTIBANDING));
+                                     params->get(CameraParameters::KEY_ANTIBANDING));
         return antibanding;
     }
     case ANDROID_CAMERA_PROPERTY_FOCAL_LENGTH:
     {
-        float focal_length = params.getFloat(CameraParameters::KEY_FOCAL_LENGTH);
+        float focal_length = params->getFloat(CameraParameters::KEY_FOCAL_LENGTH);
         return focal_length;
     }
     case ANDROID_CAMERA_PROPERTY_FOCUS_DISTANCE_NEAR:
@@ -814,6 +856,24 @@ double CameraHandler::getProperty(int propIdx)
     {
         return getFocusDistance(ANDROID_CAMERA_FOCUS_DISTANCE_FAR_INDEX);
     }
+#if !defined(ANDROID_r2_2_0) && !defined(ANDROID_r2_3_3) && !defined(ANDROID_r3_0_1)
+    case ANDROID_CAMERA_PROPERTY_WHITEBALANCE_LOCK:
+    {
+        const char* status = params->get(CameraParameters::KEY_AUTO_WHITEBALANCE_LOCK);
+        if (status == CameraParameters::TRUE)
+            return 1.;
+        else
+            return 0.;
+    }
+    case ANDROID_CAMERA_PROPERTY_EXPOSE_LOCK:
+    {
+        const char* status = params->get(CameraParameters::KEY_AUTO_EXPOSURE_LOCK);
+        if (status == CameraParameters::TRUE)
+            return 1.;
+        else
+            return 0.;
+    }
+#endif
     default:
         LOGW("CameraHandler::getProperty - Unsupported property.");
     };
@@ -824,99 +884,151 @@ void CameraHandler::setProperty(int propIdx, double value)
 {
     LOGD("CameraHandler::setProperty(%d, %f)", propIdx, value);
 
+    android::String8 params_str;
+    params_str = camera->getParameters();
+    LOGI("Params before set: [%s]", params_str.string());
+
     switch (propIdx)
     {
     case ANDROID_CAMERA_PROPERTY_FRAMEWIDTH:
     {
         int w,h;
-        params.getPreviewSize(&w, &h);
-        w = (int)value;
-        params.setPreviewSize(w, h);
+        params->getPreviewSize(&w, &h);
+        width = (int)value;
     }
     break;
     case ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT:
     {
         int w,h;
-        params.getPreviewSize(&w, &h);
-        h = (int)value;
-        params.setPreviewSize(w, h);
+        params->getPreviewSize(&w, &h);
+        height = (int)value;
     }
     break;
     case ANDROID_CAMERA_PROPERTY_EXPOSURE:
     {
-        int max_exposure = params.getInt("max-exposure-compensation");
-        int min_exposure = params.getInt("min-exposure-compensation");
-        if(max_exposure && min_exposure){
+        int max_exposure = params->getInt("max-exposure-compensation");
+        int min_exposure = params->getInt("min-exposure-compensation");
+        if(max_exposure && min_exposure)
+        {
             int exposure = (int)value;
-            if(exposure >= min_exposure && exposure <= max_exposure){
-                params.set("exposure-compensation", exposure);
-            } else {
+            if(exposure >= min_exposure && exposure <= max_exposure)
+                params->set("exposure-compensation", exposure);
+            else
                 LOGE("Exposure compensation not in valid range (%i,%i).", min_exposure, max_exposure);
-            }
-        } else {
+        } else
             LOGE("Exposure compensation adjust is not supported.");
-        }
+
+        camera->setParameters(params->flatten());
     }
     break;
     case ANDROID_CAMERA_PROPERTY_FLASH_MODE:
     {
         int new_val = (int)value;
-        if(new_val >= 0 && new_val < ANDROID_CAMERA_FLASH_MODES_NUM){
+        if(new_val >= 0 && new_val < ANDROID_CAMERA_FLASH_MODES_NUM)
+        {
             const char* mode_name = flashModesNames[new_val];
             if(is_supported(CameraParameters::KEY_SUPPORTED_FLASH_MODES, mode_name))
-                params.set(CameraParameters::KEY_FLASH_MODE, mode_name);
+                params->set(CameraParameters::KEY_FLASH_MODE, mode_name);
             else
                 LOGE("Flash mode %s is not supported.", mode_name);
-        } else {
-            LOGE("Flash mode value not in valid range.");
         }
+        else
+            LOGE("Flash mode value not in valid range.");
+
+        camera->setParameters(params->flatten());
     }
     break;
     case ANDROID_CAMERA_PROPERTY_FOCUS_MODE:
     {
         int new_val = (int)value;
-        if(new_val >= 0 && new_val < ANDROID_CAMERA_FOCUS_MODES_NUM){
+        if(new_val >= 0 && new_val < ANDROID_CAMERA_FOCUS_MODES_NUM)
+        {
             const char* mode_name = focusModesNames[new_val];
             if(is_supported(CameraParameters::KEY_SUPPORTED_FOCUS_MODES, mode_name))
-                params.set(CameraParameters::KEY_FOCUS_MODE, mode_name);
+                params->set(CameraParameters::KEY_FOCUS_MODE, mode_name);
             else
                 LOGE("Focus mode %s is not supported.", mode_name);
-        } else {
-            LOGE("Focus mode value not in valid range.");
         }
+        else
+            LOGE("Focus mode value not in valid range.");
+
+        camera->setParameters(params->flatten());
     }
     break;
     case ANDROID_CAMERA_PROPERTY_WHITE_BALANCE:
     {
         int new_val = (int)value;
-        if(new_val >= 0 && new_val < ANDROID_CAMERA_WHITE_BALANCE_MODES_NUM){
+        if(new_val >= 0 && new_val < ANDROID_CAMERA_WHITE_BALANCE_MODES_NUM)
+        {
             const char* mode_name = whiteBalanceModesNames[new_val];
             if(is_supported(CameraParameters::KEY_SUPPORTED_WHITE_BALANCE, mode_name))
-                params.set(CameraParameters::KEY_WHITE_BALANCE, mode_name);
+                params->set(CameraParameters::KEY_WHITE_BALANCE, mode_name);
             else
                 LOGE("White balance mode %s is not supported.", mode_name);
-        } else {
-            LOGE("White balance mode value not in valid range.");
         }
+        else
+            LOGE("White balance mode value not in valid range.");
+
+        camera->setParameters(params->flatten());
     }
     break;
     case ANDROID_CAMERA_PROPERTY_ANTIBANDING:
     {
         int new_val = (int)value;
-        if(new_val >= 0 && new_val < ANDROID_CAMERA_ANTIBANDING_MODES_NUM){
+        if(new_val >= 0 && new_val < ANDROID_CAMERA_ANTIBANDING_MODES_NUM)
+        {
             const char* mode_name = antibandingModesNames[new_val];
             if(is_supported(CameraParameters::KEY_SUPPORTED_ANTIBANDING, mode_name))
-                params.set(CameraParameters::KEY_ANTIBANDING, mode_name);
+                params->set(CameraParameters::KEY_ANTIBANDING, mode_name);
             else
                 LOGE("Antibanding mode %s is not supported.", mode_name);
-        } else {
-            LOGE("Antibanding mode value not in valid range.");
         }
+        else
+            LOGE("Antibanding mode value not in valid range.");
+
+        camera->setParameters(params->flatten());
     }
     break;
+#if !defined(ANDROID_r2_2_0) && !defined(ANDROID_r2_3_3) && !defined(ANDROID_r3_0_1)
+    case ANDROID_CAMERA_PROPERTY_EXPOSE_LOCK:
+    {
+        if (is_supported(CameraParameters::KEY_AUTO_EXPOSURE_LOCK_SUPPORTED, "true"))
+        {
+            if (value != 0)
+                params->set(CameraParameters::KEY_AUTO_EXPOSURE_LOCK, CameraParameters::TRUE);
+            else
+                params->set(CameraParameters::KEY_AUTO_EXPOSURE_LOCK, CameraParameters::FALSE);
+            LOGE("Expose lock is set");
+        }
+        else
+            LOGE("Expose lock is not supported");
+
+        camera->setParameters(params->flatten());
+    }
+    break;
+    case ANDROID_CAMERA_PROPERTY_WHITEBALANCE_LOCK:
+    {
+        if (is_supported(CameraParameters::KEY_AUTO_WHITEBALANCE_LOCK_SUPPORTED, "true"))
+        {
+            if (value != 0)
+                params->set(CameraParameters::KEY_AUTO_WHITEBALANCE_LOCK, CameraParameters::TRUE);
+            else
+                params->set(CameraParameters::KEY_AUTO_WHITEBALANCE_LOCK, CameraParameters::FALSE);
+            LOGE("White balance lock is set");
+        }
+        else
+            LOGE("White balance lock is not supported");
+
+        camera->setParameters(params->flatten());
+    }
+    break;
+#endif
     default:
         LOGW("CameraHandler::setProperty - Unsupported property.");
     };
+
+    params_str = camera->getParameters();
+    LOGI("Params after set: [%s]", params_str.string());
 }
 
 void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
@@ -935,7 +1047,10 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
         return;
     }
 
-    CameraParameters curCameraParameters((*ppcameraHandler)->params.flatten());
+    // delayed resolution setup to exclude errors during other parameres setup on the fly
+    // without camera restart
+    if (((*ppcameraHandler)->width != 0) && ((*ppcameraHandler)->height != 0))
+        (*ppcameraHandler)->params->setPreviewSize((*ppcameraHandler)->width, (*ppcameraHandler)->height);
 
 #if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3) || defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0) \
  || defined(ANDROID_r4_3_0) || defined(ANDROID_r4_4_0)
@@ -951,27 +1066,27 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
         return;
     }
 
-    handler->camera->setParameters(curCameraParameters.flatten());
-    handler->params.unflatten(curCameraParameters.flatten());
+    handler->camera->setParameters((*ppcameraHandler)->params->flatten());
 
     status_t bufferStatus;
 # if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3)
-    sp<SurfaceTexture> surfaceTexture = new SurfaceTexture(MAGIC_OPENCV_TEXTURE_ID);
-    bufferStatus = handler->camera->setPreviewTexture(surfaceTexture);
+    void* surface_texture_obj = operator new(sizeof(SurfaceTexture) + MAGIC_TAIL);
+    handler->surface = new(surface_texture_obj) SurfaceTexture(MAGIC_OPENCV_TEXTURE_ID);
+    bufferStatus = handler->camera->setPreviewTexture(handler->surface);
     if (bufferStatus != 0)
         LOGE("applyProperties: failed setPreviewTexture call (status %d); camera might not work correctly", bufferStatus);
 # elif defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0) || defined(ANDROID_r4_3_0)
-    sp<BufferQueue> bufferQueue = new BufferQueue();
-    sp<BufferQueue::ConsumerListener> queueListener = new ConsumerListenerStub();
-    bufferQueue->consumerConnect(queueListener);
-    bufferStatus = handler->camera->setPreviewTexture(bufferQueue);
+    void* buffer_queue_obj = operator new(sizeof(BufferQueue) + MAGIC_TAIL);
+    handler->queue = new(buffer_queue_obj) BufferQueue();
+    handler->queue->consumerConnect(handler->listener);
+    bufferStatus = handler->camera->setPreviewTexture(handler->queue);
     if (bufferStatus != 0)
         LOGE("applyProperties: failed setPreviewTexture call; camera might not work correctly");
 # elif defined(ANDROID_r4_4_0)
-    sp<BufferQueue> bufferQueue = new BufferQueue();
-    sp<IConsumerListener> queueListener = new ConsumerListenerStub();
-    bufferQueue->consumerConnect(queueListener, true);
-    bufferStatus = handler->camera->setPreviewTarget(bufferQueue);
+    void* buffer_queue_obj = operator new(sizeof(BufferQueue) + MAGIC_TAIL);
+    handler->queue = new(buffer_queue_obj) BufferQueue();
+    handler->queue->consumerConnect(handler->listener, true);
+    bufferStatus = handler->camera->setPreviewTarget(handler->queue);
     if (bufferStatus != 0)
         LOGE("applyProperties: failed setPreviewTexture call; camera might not work correctly");
 # endif
@@ -1002,7 +1117,7 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
     LOGD("CameraHandler::applyProperties(): after previousCameraHandler->closeCameraConnect");
 
     LOGD("CameraHandler::applyProperties(): before initCameraConnect");
-    CameraHandler* handler=initCameraConnect(cameraCallback, cameraId, userData, &curCameraParameters);
+    CameraHandler* handler=initCameraConnect(cameraCallback, cameraId, userData, (*ppcameraHandler)->params);
     LOGD("CameraHandler::applyProperties(): after initCameraConnect, handler=0x%x", (int)handler);
     if (handler == NULL) {
         LOGE("ERROR in applyProperties --- cannot reinit camera");

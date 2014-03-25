@@ -483,7 +483,7 @@ VideoWriter constructors
 
     :param filename: Name of the output video file.
 
-    :param fourcc: 4-character code of codec used to compress the frames. For example, ``CV_FOURCC('P','I','M,'1')``  is a MPEG-1 codec, ``CV_FOURCC('M','J','P','G')``  is a motion-jpeg codec etc. List of codes can be obtained at `Video Codecs by FOURCC <http://www.fourcc.org/codecs.php>`_ page.
+    :param fourcc: 4-character code of codec used to compress the frames. For example, ``CV_FOURCC('P','I','M','1')``  is a MPEG-1 codec, ``CV_FOURCC('M','J','P','G')``  is a motion-jpeg codec etc. List of codes can be obtained at `Video Codecs by FOURCC <http://www.fourcc.org/codecs.php>`_ page.
 
     :param fps: Framerate of the created video stream.
 
