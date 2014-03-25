@@ -102,7 +102,7 @@ OCL_TEST_P(MedianFilter, Mat)
 
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, MedianFilter, Combine(
                                 Values(CV_8U, CV_16U, CV_16S, CV_32F),
-                                Values(1, 2, 4),
+                                OCL_ALL_CHANNELS,
                                 Values(3, 5),
                                 Bool())
                            );

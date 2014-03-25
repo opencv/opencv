@@ -29,52 +29,52 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 
-#define DATA_TYPE type
+#if cn != 3
+#define loadpix(addr) *(__global const T *)(addr)
+#define storepix(val, addr)  *(__global T *)(addr) = val
+#define TSIZE (int)sizeof(T)
+#else
+#define loadpix(addr) vload3(0, (__global const T1 *)(addr))
+#define storepix(val, addr) vstore3(val, 0, (__global T1 *)(addr))
+#define TSIZE (int)sizeof(T1) * cn
+#endif
 
-#define scnbytes ((int)sizeof(type))
+#define op(a, b) { mid = a; a = min(a, b); b = max(mid, b); }
 
-#define op(a,b) {    mid=a; a=min(a,b); b=max(mid,b);}
-
-__kernel void medianFilter3(__global const uchar* srcptr, int srcStep, int srcOffset,
-                            __global uchar* dstptr, int dstStep, int dstOffset,
-                            int rows, int cols)
+__kernel void medianFilter3(__global const uchar * srcptr, int src_step, int src_offset,
+                            __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols)
 {
-    __local DATA_TYPE data[18][18];
+    __local T data[18][18];
 
     int x = get_local_id(0);
     int y = get_local_id(1);
 
-    int gx= get_global_id(0);
-    int gy= get_global_id(1);
+    int gx = get_global_id(0);
+    int gy = get_global_id(1);
 
     int dx = gx - x - 1;
     int dy = gy - y - 1;
 
-    const int id = min((int)(x*16+y), 9*18-1);
+    int id = min(mad24(x, 16, y), 9*18-1);
 
     int dr = id / 18;
     int dc = id % 18;
 
-    int c = clamp(dx+dc, 0, cols-1);
+    int c = clamp(dx + dc, 0, dst_cols - 1);
 
-    int r = clamp(dy+dr, 0, rows-1);
-    int index1 = mad24(r, srcStep, srcOffset + c*scnbytes);
+    int r = clamp(dy + dr, 0, dst_rows - 1);
+    int index1 = mad24(r, src_step, mad24(c, TSIZE, src_offset));
+    r = clamp(dy + dr + 9, 0, dst_rows - 1);
+    int index9 = mad24(r, src_step, mad24(c, TSIZE, src_offset));
 
-    r = clamp(dy+dr+9, 0, rows-1);
-    int index9 = mad24(r, srcStep, srcOffset + c*scnbytes);
-
-    __global DATA_TYPE * src = (__global DATA_TYPE *)(srcptr + index1);
-    data[dr][dc] = src[0];
-
-    src = (__global DATA_TYPE *)(srcptr + index9);
-    data[dr+9][dc] = src[0];
-
+    data[dr][dc] = loadpix(srcptr + index1);
+    data[dr+9][dc] = loadpix(srcptr + index9);
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    DATA_TYPE p0=data[y][x], p1=data[y][(x+1)], p2=data[y][(x+2)];
-    DATA_TYPE p3=data[y+1][x], p4=data[y+1][(x+1)], p5=data[y+1][(x+2)];
-    DATA_TYPE p6=data[y+2][x], p7=data[y+2][(x+1)], p8=data[y+2][(x+2)];
-    DATA_TYPE mid;
+    T p0 = data[y][x], p1 = data[y][(x+1)], p2 = data[y][(x+2)];
+    T p3 = data[y+1][x], p4 = data[y+1][(x+1)], p5 = data[y+1][(x+2)];
+    T p6 = data[y+2][x], p7 = data[y+2][(x+1)], p8 = data[y+2][(x+2)];
+    T mid;
 
     op(p1, p2); op(p4, p5); op(p7, p8); op(p0, p1);
     op(p3, p4); op(p6, p7); op(p1, p2); op(p4, p5);
@@ -82,56 +82,48 @@ __kernel void medianFilter3(__global const uchar* srcptr, int srcStep, int srcOf
     op(p3, p6); op(p1, p4); op(p2, p5); op(p4, p7);
     op(p4, p2); op(p6, p4); op(p4, p2);
 
-    int dst_index = mad24( gy, dstStep, dstOffset + gx * scnbytes);
+    int dst_index = mad24( gy, dst_step, mad24(gx, TSIZE, dst_offset));
 
-    if( gy < rows && gx < cols)
-    {
-        __global DATA_TYPE* dst = (__global DATA_TYPE *)(dstptr + dst_index);
-        dst[0] = p4;
-    }
+    if (gy < dst_rows && gx < dst_cols)
+        storepix(p4, dstptr + dst_index);
 }
 
-__kernel void medianFilter5(__global const uchar* srcptr, int srcStep, int srcOffset,
-                            __global uchar* dstptr, int dstStep, int dstOffset,
-                            int rows, int cols)
+__kernel void medianFilter5(__global const uchar * srcptr, int src_step, int src_offset,
+                            __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols)
 {
-    __local DATA_TYPE data[20][20];
+    __local T data[20][20];
 
-    int x =get_local_id(0);
-    int y =get_local_id(1);
+    int x = get_local_id(0);
+    int y = get_local_id(1);
 
-    int gx=get_global_id(0);
-    int gy=get_global_id(1);
+    int gx = get_global_id(0);
+    int gy = get_global_id(1);
 
     int dx = gx - x - 2;
     int dy = gy - y - 2;
 
-    const int id = min((int)(x*16+y), 10*20-1);
+    int id = min(mad24(x, 16, y), 10*20-1);
 
-    int dr=id/20;
-    int dc=id%20;
+    int dr = id / 20;
+    int dc = id % 20;
 
-    int c=clamp(dx+dc, 0, cols-1);
+    int c = clamp(dx + dc, 0, dst_cols - 1);
+    int r = clamp(dy + dr, 0, dst_rows - 1);
+    int index1 = mad24(r, src_step, mad24(c, TSIZE, src_offset));
 
-    int r = clamp(dy+dr, 0, rows-1);
-    int index1 = mad24(r, srcStep, srcOffset + c*scnbytes);
+    r = clamp(dy + dr + 10, 0, dst_rows - 1);
+    int index10 = mad24(r, src_step, mad24(c, TSIZE, src_offset));
 
-    r = clamp(dy+dr+10, 0, rows-1);
-    int index10 = mad24(r, srcStep, srcOffset + c*scnbytes);
-
-    __global DATA_TYPE * src = (__global DATA_TYPE *)(srcptr + index1);
-    data[dr][dc] = src[0];
-    src = (__global DATA_TYPE *)(srcptr + index10);
-    data[dr+10][dc] = src[0];
-
+    data[dr][dc] = loadpix(srcptr + index1);
+    data[dr+10][dc] = loadpix(srcptr + index10);
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    DATA_TYPE p0=data[y][x], p1=data[y][x+1], p2=data[y][x+2], p3=data[y][x+3], p4=data[y][x+4];
-    DATA_TYPE p5=data[y+1][x], p6=data[y+1][x+1], p7=data[y+1][x+2], p8=data[y+1][x+3], p9=data[y+1][x+4];
-    DATA_TYPE p10=data[y+2][x], p11=data[y+2][x+1], p12=data[y+2][x+2], p13=data[y+2][x+3], p14=data[y+2][x+4];
-    DATA_TYPE p15=data[y+3][x], p16=data[y+3][x+1], p17=data[y+3][x+2], p18=data[y+3][x+3], p19=data[y+3][x+4];
-    DATA_TYPE p20=data[y+4][x], p21=data[y+4][x+1], p22=data[y+4][x+2], p23=data[y+4][x+3], p24=data[y+4][x+4];
-    DATA_TYPE mid;
+    T p0 = data[y][x], p1 = data[y][x+1], p2 = data[y][x+2], p3 = data[y][x+3], p4 = data[y][x+4];
+    T p5 = data[y+1][x], p6 = data[y+1][x+1], p7 = data[y+1][x+2], p8 = data[y+1][x+3], p9 = data[y+1][x+4];
+    T p10 = data[y+2][x], p11 = data[y+2][x+1], p12 = data[y+2][x+2], p13 = data[y+2][x+3], p14 = data[y+2][x+4];
+    T p15 = data[y+3][x], p16 = data[y+3][x+1], p17 = data[y+3][x+2], p18 = data[y+3][x+3], p19 = data[y+3][x+4];
+    T p20 = data[y+4][x], p21 = data[y+4][x+1], p22 = data[y+4][x+2], p23 = data[y+4][x+3], p24 = data[y+4][x+4];
+    T mid;
 
     op(p1, p2); op(p0, p1); op(p1, p2); op(p4, p5); op(p3, p4);
     op(p4, p5); op(p0, p3); op(p2, p5); op(p2, p3); op(p1, p4);
@@ -157,11 +149,8 @@ __kernel void medianFilter5(__global const uchar* srcptr, int srcStep, int srcOf
     op(p13, p17); op(p3, p15); op(p11, p23); op(p11, p15); op(p7, p19);
     op(p7, p11); op(p11, p13); op(p11, p12);
 
-    int dst_index = mad24( gy, dstStep, dstOffset + gx * scnbytes);
+    int dst_index = mad24(gy, dst_step, mad24(gx, TSIZE, dst_offset));
 
-    if( gy < rows && gx < cols)
-    {
-        __global DATA_TYPE* dst = (__global DATA_TYPE *)(dstptr + dst_index);
-        dst[0] = p12;
-    }
+    if (gy < dst_rows && gx < dst_cols)
+        storepix(p12, dstptr + dst_index);
 }

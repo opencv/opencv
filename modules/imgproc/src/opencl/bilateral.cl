@@ -32,6 +32,28 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 
+#if cn != 3
+#define loadpix(addr) *(__global const uchar_t *)(addr)
+#define storepix(val, addr)  *(__global uchar_t *)(addr) = val
+#define TSIZE cn
+#else
+#define loadpix(addr) vload3(0, (__global const uchar *)(addr))
+#define storepix(val, addr) vstore3(val, 0, (__global uchar *)(addr))
+#define TSIZE 3
+#endif
+
+#if cn == 1
+#define SUM(a) a
+#elif cn == 2
+#define SUM(a) a.x + a.y
+#elif cn == 3
+#define SUM(a) a.x + a.y + a.z
+#elif cn == 4
+#define SUM(a) a.x + a.y + a.z + a.w
+#else
+#error "cn should be <= 4"
+#endif
+
 __kernel void bilateral(__global const uchar * src, int src_step, int src_offset,
                         __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                         __constant float * color_weight, __constant float * space_weight, __constant int * space_ofs)
@@ -41,19 +63,23 @@ __kernel void bilateral(__global const uchar * src, int src_step, int src_offset
 
     if (y < dst_rows && x < dst_cols)
     {
-        int src_index = mad24(y + radius, src_step, x + radius + src_offset);
-        int dst_index = mad24(y, dst_step, x + dst_offset);
-        float sum = 0.f, wsum = 0.f;
-        int val0 = convert_int(src[src_index]);
+        int src_index = mad24(y + radius, src_step, mad24(x + radius, TSIZE, src_offset));
+        int dst_index = mad24(y, dst_step, mad24(x, TSIZE, dst_offset));
+
+        float_t sum = (float_t)(0.0f);
+        float wsum = 0.0f;
+        int_t val0 = convert_int_t(loadpix(src + src_index));
 
         #pragma unroll
         for (int k = 0; k < maxk; k++ )
         {
-            int val = convert_int(src[src_index + space_ofs[k]]);
-            float w = space_weight[k] * color_weight[abs(val - val0)];
-            sum += (float)(val) * w;
+            int_t val = convert_int_t(loadpix(src + src_index + space_ofs[k]));
+            uint_t diff = abs(val - val0);
+            float w = space_weight[k] * color_weight[SUM(diff)];
+            sum += convert_float_t(val) * (float_t)(w);
             wsum += w;
         }
-        dst[dst_index] = convert_uchar_rtz(sum / wsum + 0.5f);
+
+        storepix(convert_uchar_t(sum / (float_t)(wsum)), dst + dst_index);
     }
 }

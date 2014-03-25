@@ -152,8 +152,8 @@ OCL_TEST_P(LaplacianTest, Accuracy)
     {
         random_roi();
 
-        OCL_OFF(cv::Laplacian(src_roi, dst_roi, -1, ksize, scale, 0, borderType));
-        OCL_ON(cv::Laplacian(usrc_roi, udst_roi, -1, ksize, scale, 0, borderType));
+        OCL_OFF(cv::Laplacian(src_roi, dst_roi, -1, ksize, scale, 10, borderType));
+        OCL_ON(cv::Laplacian(usrc_roi, udst_roi, -1, ksize, scale, 10, borderType));
 
         Near();
     }
@@ -290,8 +290,6 @@ OCL_TEST_P(MorphologyEx, Mat)
     }
 }
 
-
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define FILTER_BORDER_SET_NO_ISOLATED \
@@ -306,10 +304,10 @@ OCL_TEST_P(MorphologyEx, Mat)
             (int)BORDER_REFLECT|BORDER_ISOLATED, (int)BORDER_WRAP|BORDER_ISOLATED, \
             (int)BORDER_REFLECT_101|BORDER_ISOLATED*/) // WRAP and ISOLATED are not supported by cv:: version
 
-#define FILTER_TYPES Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4)
+#define FILTER_TYPES Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4)
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Bilateral, Combine(
-                            Values((MatType)CV_8UC1),
+                            Values(CV_8UC1, CV_8UC3),
                             Values(5, 9), // kernel size
                             Values(Size(0, 0)), // not used
                             FILTER_BORDER_SET_NO_ISOLATED,
@@ -371,7 +369,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, MorphologyEx, Combine(
                             Values((BorderType)BORDER_CONSTANT),// not used
                             Values(1.0, 2.0, 3.0),
                             Bool()));
-
 
 } } // namespace cvtest::ocl
 
