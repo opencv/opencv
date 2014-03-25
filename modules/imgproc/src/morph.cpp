@@ -1367,7 +1367,10 @@ static bool ocl_morphology_op(InputArray _src, OutputArray _dst, Mat kernel,
             int cols =  src.cols, rows = src.rows;
             src.locateROI(wholesize,ofs);
             src.adjustROI(ofs.y, wholesize.height - rows - ofs.y, ofs.x, wholesize.width - cols - ofs.x);
-            src.copyTo(source);
+            if(src.u != dst.u)
+                source = src;
+            else
+                src.copyTo(source);
             src.adjustROI(-ofs.y, -wholesize.height + rows + ofs.y, -ofs.x, -wholesize.width + cols + ofs.x);
             source.adjustROI(-ofs.y, -wholesize.height + rows + ofs.y, -ofs.x, -wholesize.width + cols + ofs.x);
         }
@@ -1400,7 +1403,7 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
                      int borderType, const Scalar& borderValue )
 {
 #ifdef HAVE_OPENCL
-    int src_type = _src.type(), dst_type = _dst.type(),
+    int src_type = _src.type(),
         src_cn = CV_MAT_CN(src_type), src_depth = CV_MAT_DEPTH(src_type);
 #endif
 
@@ -1435,8 +1438,7 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
         iterations = 1;
     }
 
-    CV_OCL_RUN(_dst.isUMat() && _src.size() == _dst.size() && src_type == dst_type &&
-               _src.dims() <= 2 && src_cn <= 4 &&
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && src_cn <= 4 &&
                (src_depth == CV_8U || src_depth == CV_32F || src_depth == CV_64F ) &&
                borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue() &&
                (op == MORPH_ERODE || op == MORPH_DILATE),
