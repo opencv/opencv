@@ -55,7 +55,7 @@ class CV_EXPORTS Octree
 public:
     struct Node
     {
-        Node() {}
+        Node() { memset(this, 0, sizeof(Node)); }
         int begin, end;
         float x_min, x_max, y_min, y_max, z_min, z_max;
         int maxLevels;
@@ -523,7 +523,7 @@ public:
     // Initializes a LDA with num_components (default 0) and specifies how
     // samples are aligned (default dataAsRow=true).
     LDA(int num_components = 0) :
-        _num_components(num_components) {};
+        _num_components(num_components) { }
 
     // Initializes and performs a Discriminant Analysis with Fisher's
     // Optimization Criterion on given data in src and corresponding labels
@@ -561,7 +561,7 @@ public:
     Mat reconstruct(InputArray src);
 
     // Returns the eigenvectors of this LDA.
-    Mat eigenvectors() const { return _eigenvectors; };
+    Mat eigenvectors() const { return _eigenvectors; }
 
     // Returns the eigenvalues of this LDA.
     Mat eigenvalues() const { return _eigenvalues; }

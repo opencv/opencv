@@ -940,7 +940,7 @@ static void fjac(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, C
 
 #endif
 
-};
+}
 static void func(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, CvMat* estim, void* /*data*/) {
   //just do projections
   CvMat _Mi;
@@ -979,17 +979,17 @@ static void func(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, C
   cvTranspose( _mp2, estim );
   cvReleaseMat( &_mp );
   cvReleaseMat( &_mp2 );
-};
+}
 
 static void fjac_new(int i, int j, Mat& point_params, Mat& cam_params, Mat& A, Mat& B, void* data) {
   CvMat _point_params = point_params, _cam_params = cam_params, _Al = A, _Bl = B;
   fjac(i,j, &_point_params, &_cam_params, &_Al, &_Bl, data);
-};
+}
 
 static void func_new(int i, int j, Mat& point_params, Mat& cam_params, Mat& estim, void* data)  {
   CvMat _point_params = point_params, _cam_params = cam_params, _estim = estim;
   func(i,j,&_point_params,&_cam_params,&_estim,data);
-};
+}
 
 void LevMarqSparse::bundleAdjust( std::vector<Point3d>& points, //positions of points in global coordinate system (input and output)
           const std::vector<std::vector<Point2d> >& imagePoints, //projections of 3d points for every camera

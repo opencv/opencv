@@ -55,7 +55,7 @@ public:
     ~CV_CameraCalibrationBadArgTest() {}
 protected:
     void run(int);
-    void run_func(void) {};
+    void run_func(void) {}
 
     const static int M = 1;
 
@@ -334,7 +334,7 @@ public:
     CV_Rodrigues2BadArgTest() {}
     ~CV_Rodrigues2BadArgTest() {}
 protected:
-    void run_func(void) {};
+    void run_func(void) {}
 
     struct C_Caller
     {
@@ -459,10 +459,10 @@ public:
         Size imsSize(800, 600);
         camMat << 300.f, 0.f, imsSize.width/2.f, 0, 300.f, imsSize.height/2.f, 0.f, 0.f, 1.f;
         distCoeffs << 1.2f, 0.2f, 0.f, 0.f, 0.f;
-    };
-    ~CV_ProjectPoints2BadArgTest() {} ;
+    }
+    ~CV_ProjectPoints2BadArgTest() {}
 protected:
-    void run_func(void) {};
+    void run_func(void) {}
 
     Mat_<float> camMat;
     Mat_<float> distCoeffs;

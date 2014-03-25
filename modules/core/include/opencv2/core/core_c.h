@@ -120,7 +120,7 @@ CVAPI(void)  cvResetImageROI( IplImage* image );
 /* Retrieves image ROI */
 CVAPI(CvRect) cvGetImageROI( const IplImage* image );
 
-/* Allocates and initalizes CvMat header */
+/* Allocates and initializes CvMat header */
 CVAPI(CvMat*)  cvCreateMatHeader( int rows, int cols, int type );
 
 #define CV_AUTOSTEP  0x7fffffff
@@ -1144,7 +1144,7 @@ CVAPI(void)   cvSetRemove( CvSet* set_header, int index );
    NULL is returned */
 CV_INLINE CvSetElem* cvGetSetElem( const CvSet* set_header, int idx )
 {
-    CvSetElem* elem = (CvSetElem*)cvGetSeqElem( (CvSeq*)set_header, idx );
+    CvSetElem* elem = (CvSetElem*)(void *)cvGetSeqElem( (CvSeq*)set_header, idx );
     return elem && CV_IS_SET_ELEM( elem ) ? elem : 0;
 }
 

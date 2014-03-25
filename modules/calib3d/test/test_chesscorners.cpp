@@ -185,13 +185,13 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
     switch( pattern )
     {
         case CHESSBOARD:
-            folder = string(ts->get_data_path()) + "cameracalibration/";
+            folder = string(ts->get_data_path()) + "cv/cameracalibration/";
             break;
         case CIRCLES_GRID:
-            folder = string(ts->get_data_path()) + "cameracalibration/circles/";
+            folder = string(ts->get_data_path()) + "cv/cameracalibration/circles/";
             break;
         case ASYMMETRIC_CIRCLES_GRID:
-            folder = string(ts->get_data_path()) + "cameracalibration/asymmetric_circles/";
+            folder = string(ts->get_data_path()) + "cv/cameracalibration/asymmetric_circles/";
             break;
     }
 
@@ -208,7 +208,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
     }
 
     int progress = 0;
-    int max_idx = board_list.size()/2;
+    int max_idx = (int)board_list.size()/2;
     double sum_error = 0.0;
     int count = 0;
 
@@ -309,8 +309,9 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         progress = update_progress( progress, idx, max_idx, 0 );
     }
 
-    sum_error /= count;
-    ts->printf(cvtest::TS::LOG, "Average error is %f\n", sum_error);
+    if (count != 0)
+        sum_error /= count;
+    ts->printf(cvtest::TS::LOG, "Average error is %f (%d patterns have been found)\n", sum_error, count);
 }
 
 double calcErrorMinError(const Size& cornSz, const vector<Point2f>& corners_found, const vector<Point2f>& corners_generated)

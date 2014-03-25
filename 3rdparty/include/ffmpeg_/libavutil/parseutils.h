@@ -29,6 +29,30 @@
  */
 
 /**
+ * Parse str and store the parsed ratio in q.
+ *
+ * Note that a ratio with infinite (1/0) or negative value is
+ * considered valid, so you should check on the returned value if you
+ * want to exclude those values.
+ *
+ * The undefined value can be expressed using the "0:0" string.
+ *
+ * @param[in,out] q pointer to the AVRational which will contain the ratio
+ * @param[in] str the string to parse: it has to be a string in the format
+ * num:den, a float number or an expression
+ * @param[in] max the maximum allowed numerator and denominator
+ * @param[in] log_offset log level offset which is applied to the log
+ * level of log_ctx
+ * @param[in] log_ctx parent logging context
+ * @return >= 0 on success, a negative error code otherwise
+ */
+int av_parse_ratio(AVRational *q, const char *str, int max,
+                   int log_offset, void *log_ctx);
+
+#define av_parse_ratio_quiet(rate, str, max) \
+    av_parse_ratio(rate, str, max, AV_LOG_MAX_OFFSET, NULL)
+
+/**
  * Parse str and put in width_ptr and height_ptr the detected values.
  *
  * @param[in,out] width_ptr pointer to the variable which will contain the detected
@@ -88,7 +112,7 @@ int av_parse_color(uint8_t *rgba_color, const char *color_string, int slen,
  * @param timestr a string representing a date or a duration.
  * - If a date the syntax is:
  * @code
- * [{YYYY-MM-DD|YYYYMMDD}[T|t| ]]{{HH[:MM[:SS[.m...]]]}|{HH[MM[SS[.m...]]]}}[Z]
+ * [{YYYY-MM-DD|YYYYMMDD}[T|t| ]]{{HH:MM:SS[.m...]]]}|{HHMMSS[.m...]]]}}[Z]
  * now
  * @endcode
  * If the value is "now" it takes the current time.
@@ -98,7 +122,7 @@ int av_parse_color(uint8_t *rgba_color, const char *color_string, int slen,
  * year-month-day.
  * - If a duration the syntax is:
  * @code
- * [-]HH[:MM[:SS[.m...]]]
+ * [-][HH:]MM:SS[.m...]
  * [-]S+[.m...]
  * @endcode
  * @param duration flag which tells how to interpret timestr, if not
@@ -107,6 +131,32 @@ int av_parse_color(uint8_t *rgba_color, const char *color_string, int slen,
  * AVERROR code otherwise
  */
 int av_parse_time(int64_t *timeval, const char *timestr, int duration);
+
+/**
+ * Parse the input string p according to the format string fmt and
+ * store its results in the structure dt.
+ * This implementation supports only a subset of the formats supported
+ * by the standard strptime().
+ *
+ * In particular it actually supports the parameters:
+ * - %H: the hour as a decimal number, using a 24-hour clock, in the
+ * range '00' through '23'
+ * - %J: hours as a decimal number, in the range '0' through INT_MAX
+ * - %M: the minute as a decimal number, using a 24-hour clock, in the
+ * range '00' through '59'
+ * - %S: the second as a decimal number, using a 24-hour clock, in the
+ * range '00' through '59'
+ * - %Y: the year as a decimal number, using the Gregorian calendar
+ * - %m: the month as a decimal number, in the range '1' through '12'
+ * - %d: the day of the month as a decimal number, in the range '1'
+ * through '31'
+ * - %%: a literal '%'
+ *
+ * @return a pointer to the first character not processed in this
+ * function call, or NULL in case the function fails to match all of
+ * the fmt string and therefore an error occurred
+ */
+char *av_small_strptime(const char *p, const char *fmt, struct tm *dt);
 
 /**
  * Attempt to find a specific tag in a URL.

@@ -5,7 +5,7 @@ Interactive Image Segmentation using GrabCut algorithm.
 
 This sample shows interactive image segmentation using grabcut algorithm.
 
-USAGE :
+USAGE:
     python grabcut.py <filename>
 
 README FIRST:
@@ -63,14 +63,14 @@ def onmouse(event,x,y,flags,param):
         if rectangle == True:
             img = img2.copy()
             cv2.rectangle(img,(ix,iy),(x,y),BLUE,2)
-            rect = (ix,iy,abs(ix-x),abs(iy-y))
+            rect = (min(ix,x),min(iy,y),abs(ix-x),abs(iy-y))
             rect_or_mask = 0
 
     elif event == cv2.EVENT_RBUTTONUP:
         rectangle = False
         rect_over = True
         cv2.rectangle(img,(ix,iy),(x,y),BLUE,2)
-        rect = (ix,iy,abs(ix-x),abs(iy-y))
+        rect = (min(ix,x),min(iy,y),abs(ix-x),abs(iy-y))
         rect_or_mask = 0
         print " Now press the key 'n' a few times until no further change \n"
 
@@ -103,7 +103,7 @@ if len(sys.argv) == 2:
     filename = sys.argv[1] # for drawing purposes
 else:
     print "No input image given, so loading default image, lena.jpg \n"
-    print "Correct Usage : python grabcut.py <filename> \n"
+    print "Correct Usage: python grabcut.py <filename> \n"
     filename = '../cpp/lena.jpg'
 
 img = cv2.imread(filename)
@@ -117,7 +117,7 @@ cv2.namedWindow('input')
 cv2.setMouseCallback('input',onmouse)
 cv2.moveWindow('input',img.shape[1]+10,90)
 
-print " Instructions : \n"
+print " Instructions: \n"
 print " Draw a rectangle around the object using right mouse button \n"
 
 while(1):

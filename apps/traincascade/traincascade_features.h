@@ -30,13 +30,13 @@
     (p3) = (rect).x + (rect).width - (rect).height                        \
            + (step) * ((rect).y + (rect).width + (rect).height);
 
-float calcNormFactor( const Mat& sum, const Mat& sqSum );
+float calcNormFactor( const cv::Mat& sum, const cv::Mat& sqSum );
 
 template<class Feature>
-void _writeFeatures( const std::vector<Feature> features, FileStorage &fs, const Mat& featureMap )
+void _writeFeatures( const std::vector<Feature> features, cv::FileStorage &fs, const cv::Mat& featureMap )
 {
     fs << FEATURES << "[";
-    const Mat_<int>& featureMap_ = (const Mat_<int>&)featureMap;
+    const cv::Mat_<int>& featureMap_ = (const cv::Mat_<int>&)featureMap;
     for ( int fi = 0; fi < featureMap.cols; fi++ )
         if ( featureMap_(0, fi) >= 0 )
         {
@@ -53,8 +53,8 @@ public:
     CvParams();
     virtual ~CvParams() {}
     // from|to file
-    virtual void write( FileStorage &fs ) const = 0;
-    virtual bool read( const FileNode &node ) = 0;
+    virtual void write( cv::FileStorage &fs ) const = 0;
+    virtual bool read( const cv::FileNode &node ) = 0;
     // from|to screen
     virtual void printDefaults() const;
     virtual void printAttrs() const;
@@ -68,9 +68,9 @@ public:
     enum { HAAR = 0, LBP = 1, HOG = 2 };
     CvFeatureParams();
     virtual void init( const CvFeatureParams& fp );
-    virtual void write( FileStorage &fs ) const;
-    virtual bool read( const FileNode &node );
-    static Ptr<CvFeatureParams> create( int featureType );
+    virtual void write( cv::FileStorage &fs ) const;
+    virtual bool read( const cv::FileNode &node );
+    static cv::Ptr<CvFeatureParams> create( int featureType );
     int maxCatCount; // 0 in case of numerical features
     int featSize; // 1 in case of simple features (HAAR, LBP) and N_BINS(9)*N_CELLS(4) in case of Dalal's HOG features
 };
@@ -80,25 +80,25 @@ class CvFeatureEvaluator
 public:
     virtual ~CvFeatureEvaluator() {}
     virtual void init(const CvFeatureParams *_featureParams,
-                      int _maxSampleCount, Size _winSize );
-    virtual void setImage(const Mat& img, uchar clsLabel, int idx);
-    virtual void writeFeatures( FileStorage &fs, const Mat& featureMap ) const = 0;
+                      int _maxSampleCount, cv::Size _winSize );
+    virtual void setImage(const cv::Mat& img, uchar clsLabel, int idx);
+    virtual void writeFeatures( cv::FileStorage &fs, const cv::Mat& featureMap ) const = 0;
     virtual float operator()(int featureIdx, int sampleIdx) const = 0;
-    static Ptr<CvFeatureEvaluator> create(int type);
+    static cv::Ptr<CvFeatureEvaluator> create(int type);
 
     int getNumFeatures() const { return numFeatures; }
     int getMaxCatCount() const { return featureParams->maxCatCount; }
     int getFeatureSize() const { return featureParams->featSize; }
-    const Mat& getCls() const { return cls; }
+    const cv::Mat& getCls() const { return cls; }
     float getCls(int si) const { return cls.at<float>(si, 0); }
 protected:
     virtual void generateFeatures() = 0;
 
     int npos, nneg;
     int numFeatures;
-    Size winSize;
+    cv::Size winSize;
     CvFeatureParams *featureParams;
-    Mat cls;
+    cv::Mat cls;
 };
 
 #endif

@@ -236,7 +236,7 @@ Approximates a polygonal curve(s) with the specified precision.
 The functions ``approxPolyDP`` approximate a curve or a polygon with another curve/polygon with less vertices so that the distance between them is less or equal to the specified precision. It uses the Douglas-Peucker algorithm
 http://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm
 
-See http://code.opencv.org/projects/opencv/repository/revisions/master/entry/samples/cpp/contours.cpp for the function usage model.
+See https://github.com/Itseez/opencv/tree/master/samples/cpp/contours2.cpp for the function usage model.
 
 
 ApproxChains
@@ -291,8 +291,6 @@ Calculates the up-right bounding rectangle of a point set.
     :param points: Input 2D point set, stored in ``std::vector`` or ``Mat``.
 
 The function calculates and returns the minimal up-right bounding rectangle for the specified point set.
-
-
 
 
 contourArea
@@ -417,6 +415,7 @@ Fits an ellipse around a set of 2D points.
         * Nx2 numpy array (Python interface)
 
 The function calculates the ellipse that fits (in a least-squares sense) a set of 2D points best of all. It returns the rotated rectangle in which the ellipse is inscribed. The algorithm [Fitzgibbon95]_ is used.
+Developer should keep in mind that it is possible that the returned ellipse/rotatedRect data contains negative indices, due to the data points being close to the border of the containing Mat element.
 
 .. note::
 
@@ -539,7 +538,7 @@ Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
         * Nx2 numpy array (Python interface)
 
 The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a specified point set. See the OpenCV sample ``minarea.cpp`` .
-
+Developer should keep in mind that the returned rotatedRect can contain negative indices when data is close the the containing Mat element boundary.
 
 
 boxPoints
@@ -557,6 +556,41 @@ Finds the four vertices of a rotated rect. Useful to draw the rotated rectangle.
     :param points: The output array of four vertices of rectangles.
 
 The function finds the four vertices of a rotated rectangle. This function is useful to draw the rectangle. In C++, instead of using this function, you can directly use box.points() method. Please visit the `tutorial on bounding rectangle <http://docs.opencv.org/doc/tutorials/imgproc/shapedescriptors/bounding_rects_circles/bounding_rects_circles.html#bounding-rects-circles>`_ for more information.
+
+
+
+minEnclosingTriangle
+----------------------
+Finds a triangle of minimum area enclosing a 2D point set and returns its area.
+
+.. ocv:function:: double minEnclosingTriangle( InputArray points, OutputArray triangle )
+
+.. ocv:pyfunction:: cv2.minEnclosingTriangle(points[, triangle]) -> retval, triangle
+
+    :param points: Input vector of 2D points with depth ``CV_32S`` or ``CV_32F``, stored in:
+
+            * ``std::vector<>`` or ``Mat`` (C++ interface)
+
+            * Nx2 numpy array (Python interface)
+
+    :param triangle: Output vector of three 2D points defining the vertices of the triangle. The depth of the OutputArray must be ``CV_32F``.
+
+The function finds a triangle of minimum area enclosing the given set of 2D points and returns its area. The output for a given 2D point set is shown in the image below. 2D points are depicted in *red* and the enclosing triangle in *yellow*.
+
+.. image:: pics/minenclosingtriangle.png
+    :height: 250px
+    :width: 250px
+    :alt: Sample output of the minimum enclosing triangle function
+
+The implementation of the algorithm is based on O'Rourke's [ORourke86]_ and Klee and Laskowski's [KleeLaskowski85]_ papers. O'Rourke provides a
+:math:`\theta(n)`
+algorithm for finding the minimal enclosing triangle of a 2D convex polygon with ``n`` vertices. Since the :ocv:func:`minEnclosingTriangle` function takes a 2D point set as input an additional preprocessing step of computing the convex hull of the 2D point set is required. The complexity of the :ocv:func:`convexHull` function is
+:math:`O(n log(n))` which is higher than
+:math:`\theta(n)`.
+Thus the overall complexity of the function is
+:math:`O(n log(n))`.
+
+.. note:: See ``opencv_source/samples/cpp/minarea.cpp`` for a usage example.
 
 
 
@@ -672,8 +706,41 @@ See below a sample output of the function where each image pixel is tested again
 
 .. [Hu62] M. Hu. *Visual Pattern Recognition by Moment Invariants*, IRE Transactions on Information Theory, 8:2, pp. 179-187, 1962.
 
+.. [KleeLaskowski85] Klee, V. and Laskowski, M.C., *Finding the smallest triangles containing a given convex polygon*, Journal of Algorithms, vol. 6, no. 3, pp. 359-375 (1985)
+
+.. [ORourke86] O’Rourke, J., Aggarwal, A., Maddila, S., and Baldwin, M., *An optimal algorithm for finding minimal enclosing triangles*, Journal of Algorithms, vol. 7, no. 2, pp. 258-269 (1986)
+
 .. [Sklansky82] Sklansky, J., *Finding the Convex Hull of a Simple Polygon*. PRL 1 $number, pp 79-83 (1982)
 
 .. [Suzuki85] Suzuki, S. and Abe, K., *Topological Structural Analysis of Digitized Binary Images by Border Following*. CVGIP 30 1, pp 32-46 (1985)
 
 .. [TehChin89] Teh, C.H. and Chin, R.T., *On the Detection of Dominant Points on Digital Curve*. PAMI 11 8, pp 859-872 (1989)
+
+
+
+rotatedRectangleIntersection
+-------------------------------
+Finds out if there is any intersection between two rotated rectangles. If there is then the vertices of the interesecting region are returned as well.
+
+.. ocv:function:: int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, OutputArray intersectingRegion  )
+.. ocv:pyfunction:: cv2.rotatedRectangleIntersection( rect1, rect2 ) -> retval, intersectingRegion
+
+    :param rect1: First rectangle
+
+    :param rect2: Second rectangle
+
+    :param intersectingRegion: The output array of the verticies of the intersecting region. It returns at most 8 vertices. Stored as ``std::vector<cv::Point2f>`` or ``cv::Mat`` as Mx1 of type CV_32FC2.
+
+    :param pointCount: The number of vertices.
+
+The following values are returned by the function:
+
+    * INTERSECT_NONE=0 - No intersection
+
+    * INTERSECT_PARTIAL=1 - There is a partial intersection
+
+    * INTERSECT_FULL=2 - One of the rectangle is fully enclosed in the other
+
+Below are some examples of intersection configurations. The hatched pattern indicates the intersecting region and the red vertices are returned by the function.
+
+.. image:: pics/intersection.png

@@ -147,7 +147,7 @@ public:
         m_Size = cvSize(2,2);
 
         SetModuleName("YML");
-    };
+    }
 
     ~CvBlobTrackGenYML()
     {
@@ -164,7 +164,7 @@ public:
 
     }   /* Destructor. */
 
-    void    SetFileName(char* pFileName){m_pFileName = pFileName;};
+    void    SetFileName(char* pFileName){m_pFileName = pFileName;}
     void    AddBlob(CvBlob* pBlob)
     {
         DefBlobTrack* pTrack = (DefBlobTrack*)m_TrackList.GetBlobByID(CV_BLOB_ID(pBlob));
@@ -184,7 +184,7 @@ public:
         pTrack->FrameLast = m_Frame;
         assert(pTrack->pSeq);
         pTrack->pSeq->AddBlob(pBlob);
-    };
+    }
     void    Process(IplImage* pImg = NULL, IplImage* /*pFG*/ = NULL)
     {
         int i;

@@ -861,8 +861,8 @@ inline FileNode::operator String() const { String value; read(*this, value, valu
 inline FileNodeIterator FileNode::begin() const { return FileNodeIterator(fs, node); }
 inline FileNodeIterator FileNode::end() const   { return FileNodeIterator(fs, node, size()); }
 inline void FileNode::readRaw( const String& fmt, uchar* vec, size_t len ) const { begin().readRaw( fmt, vec, len ); }
-inline FileNode FileNodeIterator::operator *() const  { return FileNode(fs, (const CvFileNode*)reader.ptr); }
-inline FileNode FileNodeIterator::operator ->() const { return FileNode(fs, (const CvFileNode*)reader.ptr); }
+inline FileNode FileNodeIterator::operator *() const  { return FileNode(fs, (const CvFileNode*)(const void*)reader.ptr); }
+inline FileNode FileNodeIterator::operator ->() const { return FileNode(fs, (const CvFileNode*)(const void*)reader.ptr); }
 inline String::String(const FileNode& fn): cstr_(0), len_(0) { read(fn, *this, *this); }
 
 } // cv

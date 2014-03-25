@@ -75,34 +75,35 @@ bool CvCaptureCAM_XIMEA::open( int wIndex )
         return false;
     }
 
+    int width   = 0;
+    int height  = 0;
+    int isColor = 0;
+
     // always use auto exposure/gain
     mvret = xiSetParamInt( hmv, XI_PRM_AEAG, 1);
     HandleXiResult(mvret);
 
-    int width = 0;
     mvret = xiGetParamInt( hmv, XI_PRM_WIDTH, &width);
     HandleXiResult(mvret);
 
-    int height = 0;
     mvret = xiGetParamInt( hmv, XI_PRM_HEIGHT, &height);
     HandleXiResult(mvret);
 
-    int isColor = 0;
     mvret = xiGetParamInt(hmv, XI_PRM_IMAGE_IS_COLOR, &isColor);
     HandleXiResult(mvret);
 
-    if(isColor)	// for color cameras
+    if(isColor) // for color cameras
     {
         // default image format RGB24
         mvret = xiSetParamInt( hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_RGB24);
         HandleXiResult(mvret);
 
-        // always use auto white ballance for color cameras
+        // always use auto white balance for color cameras
         mvret = xiSetParamInt( hmv, XI_PRM_AUTO_WB, 1);
         HandleXiResult(mvret);
 
         // allocate frame buffer for RGB24 image
-        frame = cvCreateImage(cvSize( width, height), IPL_DEPTH_8U, 3);
+        frame = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 3);
     }
     else // for mono cameras
     {
@@ -111,7 +112,7 @@ bool CvCaptureCAM_XIMEA::open( int wIndex )
         HandleXiResult(mvret);
 
         // allocate frame buffer for MONO8 image
-        frame = cvCreateImage(cvSize( width, height), IPL_DEPTH_8U, 1);
+        frame = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
     }
 
     //default capture timeout 10s

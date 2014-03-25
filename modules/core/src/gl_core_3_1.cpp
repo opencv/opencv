@@ -44,22 +44,27 @@
 #include "gl_core_3_1.hpp"
 
 #ifdef HAVE_OPENGL
-    #if defined(__APPLE__)
-        #include <mach-o/dyld.h>
+
+    #ifdef __APPLE__
+        #include <dlfcn.h>
 
         static void* AppleGLGetProcAddress (const char* name)
         {
-            static const struct mach_header* image = 0;
-            if (!image)
-                image = NSAddImage("/System/Library/Frameworks/OpenGL.framework/Versions/Current/OpenGL", NSADDIMAGE_OPTION_RETURN_ON_ERROR);
+            static bool initialized = false;
+            static void * handle = NULL;
+            if (!handle)
+            {
+                if (!initialized)
+                {
+                    initialized = true;
+                    const char * const path = "/System/Library/Frameworks/OpenGL.framework/Versions/Current/OpenGL";
 
-            // prepend a '_' for the Unix C symbol mangling convention
-            String symbolName = "_";
-            symbolName += String(name);
-
-            NSSymbol symbol = image ? NSLookupSymbolInImage(image, &symbolName[0], NSLOOKUPSYMBOLINIMAGE_OPTION_BIND | NSLOOKUPSYMBOLINIMAGE_OPTION_RETURN_ON_ERROR) : 0;
-
-            return symbol ? NSAddressOfSymbol(symbol) : 0;
+                    handle = dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
+                }
+                if (!handle)
+                    return NULL;
+            }
+            return dlsym(handle, name);
         }
     #endif // __APPLE__
 

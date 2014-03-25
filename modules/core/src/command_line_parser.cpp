@@ -41,6 +41,8 @@ static String get_type_name(int type)
 {
     if( type == Param::INT )
         return "int";
+    if( type == Param::BOOLEAN )
+        return "bool";
     if( type == Param::UNSIGNED_INT )
         return "unsigned";
     if( type == Param::UINT64 )
@@ -59,6 +61,12 @@ static void from_str(const String& str, int type, void* dst)
     std::stringstream ss(str.c_str());
     if( type == Param::INT )
         ss >> *(int*)dst;
+    else if( type == Param::BOOLEAN )
+    {
+        std::string temp;
+        ss >> temp;
+        *(bool*) dst = temp == "true";
+    }
     else if( type == Param::UNSIGNED_INT )
         ss >> *(unsigned*)dst;
     else if( type == Param::UINT64 )
@@ -211,16 +219,15 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const S
             }
             impl->apply_params(k_v[0], k_v[1]);
         }
+        else if (s.length() > 2 && s[0] == '-' && s[1] == '-')
+        {
+            impl->apply_params(s.substr(2), "true");
+        }
         else if (s.length() > 1 && s[0] == '-')
         {
-            for (int h = 0; h < 2; h++)
-            {
-                if (s[0] == '-')
-                    s = s.substr(1, s.length() - 1);
-            }
-            impl->apply_params(s, "true");
+            impl->apply_params(s.substr(1), "true");
         }
-        else if (s[0] != '-')
+        else
         {
             impl->apply_params(jj, s);
             jj++;
@@ -230,6 +237,11 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const S
     impl->sort_params();
 }
 
+CommandLineParser::~CommandLineParser()
+{
+    if (CV_XADD(&impl->refcount, -1) == 1)
+        delete impl;
+}
 
 CommandLineParser::CommandLineParser(const CommandLineParser& parser)
 {

@@ -114,16 +114,21 @@ public:
             cap.set(CAP_PROP_POS_FRAMES, 0);
             int N = (int)cap.get(CAP_PROP_FRAME_COUNT);
 
-            if (N != n_frames || N != N0)
+            // See the same hack in CV_HighGuiTest::SpecificVideoTest for explanation.
+            int allowed_extra_frames = 0;
+            if (fmt.fourcc == VideoWriter::fourcc('M', 'P', 'E', 'G') && fmt.ext == "mkv")
+                allowed_extra_frames = 1;
+
+            if (N < n_frames || N > n_frames + allowed_extra_frames || N != N0)
             {
                 ts->printf(ts->LOG, "\nError: returned frame count (N0=%d, N=%d) is different from the reference number %d\n", N0, N, n_frames);
                 ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                 return;
             }
 
-            for (int k = 0; k < N; ++k)
+            for (int k = 0; k < n_frames; ++k)
             {
-                int idx = theRNG().uniform(0, N);
+                int idx = theRNG().uniform(0, n_frames);
 
                 if( !cap.set(CAP_PROP_POS_FRAMES, idx) )
                 {

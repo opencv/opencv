@@ -1225,7 +1225,7 @@ public class ImgprocTest extends OpenCVTestCase {
         expSqsum.put(2, 0, 0, 18, 36, 54);
         expSqsum.put(3, 0, 0, 27, 54, 81);
 
-        Imgproc.integral2(src, sum, sqsum, CvType.CV_64F);
+        Imgproc.integral2(src, sum, sqsum, CvType.CV_64F, CvType.CV_64F);
 
         assertMatEqual(expSum, sum, EPS);
         assertMatEqual(expSqsum, sqsum, EPS);
@@ -1274,7 +1274,7 @@ public class ImgprocTest extends OpenCVTestCase {
         expTilted.put(0, 0, 0, 0);
         expTilted.put(1, 0, 0, 1);
 
-        Imgproc.integral3(src, sum, sqsum, tilted, CvType.CV_64F);
+        Imgproc.integral3(src, sum, sqsum, tilted, CvType.CV_64F, CvType.CV_64F);
 
         assertMatEqual(expSum, sum, EPS);
         assertMatEqual(expSqsum, sqsum, EPS);

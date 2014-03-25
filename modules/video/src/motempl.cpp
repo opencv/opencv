@@ -40,34 +40,62 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
+
+#ifdef HAVE_OPENCL
+
+namespace  cv {
+
+static bool ocl_updateMotionHistory( InputArray _silhouette, InputOutputArray _mhi,
+                                     float timestamp, float delbound )
+{
+    ocl::Kernel k("updateMotionHistory", ocl::video::updatemotionhistory_oclsrc);
+    if (k.empty())
+        return false;
+
+    UMat silh = _silhouette.getUMat(), mhi = _mhi.getUMat();
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(silh), ocl::KernelArg::ReadWrite(mhi),
+           timestamp, delbound);
+
+    size_t globalsize[2] = { silh.cols, silh.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+
+}
+
+#endif
 
 void cv::updateMotionHistory( InputArray _silhouette, InputOutputArray _mhi,
                               double timestamp, double duration )
 {
+    CV_Assert( _silhouette.type() == CV_8UC1 && _mhi.type() == CV_32FC1 );
+    CV_Assert( _silhouette.sameSize(_mhi) );
+
+    float ts = (float)timestamp;
+    float delbound = (float)(timestamp - duration);
+
+    CV_OCL_RUN(_mhi.isUMat() && _mhi.dims() <= 2,
+               ocl_updateMotionHistory(_silhouette, _mhi, ts, delbound))
+
     Mat silh = _silhouette.getMat(), mhi = _mhi.getMat();
-
-    CV_Assert( silh.type() == CV_8U && mhi.type() == CV_32F );
-    CV_Assert( silh.size() == mhi.size() );
-
     Size size = silh.size();
+
     if( silh.isContinuous() && mhi.isContinuous() )
     {
         size.width *= size.height;
         size.height = 1;
     }
 
-    float ts = (float)timestamp;
-    float delbound = (float)(timestamp - duration);
-    int x, y;
 #if CV_SSE2
     volatile bool useSIMD = cv::checkHardwareSupport(CV_CPU_SSE2);
 #endif
 
-    for( y = 0; y < size.height; y++ )
+    for(int y = 0; y < size.height; y++ )
     {
         const uchar* silhData = silh.ptr<uchar>(y);
         float* mhiData = mhi.ptr<float>(y);
-        x = 0;
+        int x = 0;
 
 #if CV_SSE2
         if( useSIMD )

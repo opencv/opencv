@@ -48,7 +48,7 @@
  * new elements have been added after this struct in AVFormatContext
  * or AVIOContext.
  */
-typedef struct {
+typedef struct AVIOInterruptCB {
     int (*callback)(void*);
     void *opaque;
 } AVIOInterruptCB;
@@ -65,8 +65,7 @@ typedef struct {
  *       when implementing custom I/O. Normally these are set to the
  *       function pointers specified in avio_alloc_context()
  */
-typedef struct {
-#if !FF_API_OLD_AVIO
+typedef struct AVIOContext {
     /**
      * A class for private options.
      *
@@ -79,8 +78,7 @@ typedef struct {
      * warning -- this field can be NULL, be sure to not pass this AVIOContext
      * to any av_opt_* functions in that case.
      */
-    AVClass *av_class;
-#endif
+    const AVClass *av_class;
     unsigned char *buffer;  /**< Start of the buffer. */
     int buffer_size;        /**< Maximum buffer size */
     unsigned char *buf_ptr; /**< Current position in the buffer */
@@ -97,9 +95,6 @@ typedef struct {
     int must_flush;         /**< true if the next seek should flush */
     int eof_reached;        /**< true if eof reached */
     int write_flag;         /**< true if open for writing */
-#if FF_API_OLD_AVIO
-    attribute_deprecated int is_streamed;
-#endif
     int max_packet_size;
     unsigned long checksum;
     unsigned char *checksum_ptr;
@@ -125,263 +120,35 @@ typedef struct {
      * max filesize, used to limit allocations
      * This field is internal to libavformat and access from outside is not allowed.
      */
-     int64_t maxsize;
+    int64_t maxsize;
+
+    /**
+     * avio_read and avio_write should if possible be satisfied directly
+     * instead of going through a buffer, and avio_seek will always
+     * call the underlying seek function directly.
+     */
+    int direct;
+
+    /**
+     * Bytes read statistic
+     * This field is internal to libavformat and access from outside is not allowed.
+     */
+    int64_t bytes_read;
+
+    /**
+     * seek statistic
+     * This field is internal to libavformat and access from outside is not allowed.
+     */
+    int seek_count;
+
+    /**
+     * writeout statistic
+     * This field is internal to libavformat and access from outside is not allowed.
+     */
+    int writeout_count;
 } AVIOContext;
 
 /* unbuffered I/O */
-
-#if FF_API_OLD_AVIO
-/**
- * URL Context.
- * New fields can be added to the end with minor version bumps.
- * Removal, reordering and changes to existing fields require a major
- * version bump.
- * sizeof(URLContext) must not be used outside libav*.
- * @deprecated This struct will be made private
- */
-typedef struct URLContext {
-    const AVClass *av_class; ///< information for av_log(). Set by url_open().
-    struct URLProtocol *prot;
-    int flags;
-    int is_streamed;  /**< true if streamed (no seek possible), default = false */
-    int max_packet_size;  /**< if non zero, the stream is packetized with this max packet size */
-    void *priv_data;
-    char *filename; /**< specified URL */
-    int is_connected;
-    AVIOInterruptCB interrupt_callback;
-} URLContext;
-
-#define URL_PROTOCOL_FLAG_NESTED_SCHEME 1 /*< The protocol name can be the first part of a nested protocol scheme */
-#define URL_PROTOCOL_FLAG_NETWORK       2 /*< The protocol uses network */
-
-/**
- * @deprecated This struct is to be made private. Use the higher-level
- *             AVIOContext-based API instead.
- */
-typedef struct URLProtocol {
-    const char *name;
-    int (*url_open)(URLContext *h, const char *url, int flags);
-    int (*url_read)(URLContext *h, unsigned char *buf, int size);
-    int (*url_write)(URLContext *h, const unsigned char *buf, int size);
-    int64_t (*url_seek)(URLContext *h, int64_t pos, int whence);
-    int (*url_close)(URLContext *h);
-    struct URLProtocol *next;
-    int (*url_read_pause)(URLContext *h, int pause);
-    int64_t (*url_read_seek)(URLContext *h, int stream_index,
-                             int64_t timestamp, int flags);
-    int (*url_get_file_handle)(URLContext *h);
-    int priv_data_size;
-    const AVClass *priv_data_class;
-    int flags;
-    int (*url_check)(URLContext *h, int mask);
-} URLProtocol;
-
-typedef struct URLPollEntry {
-    URLContext *handle;
-    int events;
-    int revents;
-} URLPollEntry;
-
-/* not implemented */
-attribute_deprecated int url_poll(URLPollEntry *poll_table, int n, int timeout);
-
-/**
- * @name URL open modes
- * The flags argument to url_open and cosins must be one of the following
- * constants, optionally ORed with other flags.
- * @{
- */
-#define URL_RDONLY 1  /**< read-only */
-#define URL_WRONLY 2  /**< write-only */
-#define URL_RDWR   (URL_RDONLY|URL_WRONLY)  /**< read-write */
-/**
- * @}
- */
-
-/**
- * Use non-blocking mode.
- * If this flag is set, operations on the context will return
- * AVERROR(EAGAIN) if they can not be performed immediately.
- * If this flag is not set, operations on the context will never return
- * AVERROR(EAGAIN).
- * Note that this flag does not affect the opening/connecting of the
- * context. Connecting a protocol will always block if necessary (e.g. on
- * network protocols) but never hang (e.g. on busy devices).
- * Warning: non-blocking protocols is work-in-progress; this flag may be
- * silently ignored.
- */
-#define URL_FLAG_NONBLOCK 8
-
-typedef int URLInterruptCB(void);
-extern URLInterruptCB *url_interrupt_cb;
-
-/**
- * @defgroup old_url_funcs Old url_* functions
- * The following functions are deprecated. Use the buffered API based on #AVIOContext instead.
- * @{
- * @ingroup lavf_io
- */
-attribute_deprecated int url_open_protocol (URLContext **puc, struct URLProtocol *up,
-                                            const char *url, int flags);
-attribute_deprecated int url_alloc(URLContext **h, const char *url, int flags);
-attribute_deprecated int url_connect(URLContext *h);
-attribute_deprecated int url_open(URLContext **h, const char *url, int flags);
-attribute_deprecated int url_read(URLContext *h, unsigned char *buf, int size);
-attribute_deprecated int url_read_complete(URLContext *h, unsigned char *buf, int size);
-attribute_deprecated int url_write(URLContext *h, const unsigned char *buf, int size);
-attribute_deprecated int64_t url_seek(URLContext *h, int64_t pos, int whence);
-attribute_deprecated int url_close(URLContext *h);
-attribute_deprecated int64_t url_filesize(URLContext *h);
-attribute_deprecated int url_get_file_handle(URLContext *h);
-attribute_deprecated int url_get_max_packet_size(URLContext *h);
-attribute_deprecated void url_get_filename(URLContext *h, char *buf, int buf_size);
-attribute_deprecated int av_url_read_pause(URLContext *h, int pause);
-attribute_deprecated int64_t av_url_read_seek(URLContext *h, int stream_index,
-                                              int64_t timestamp, int flags);
-attribute_deprecated void url_set_interrupt_cb(int (*interrupt_cb)(void));
-
-/**
- * returns the next registered protocol after the given protocol (the first if
- * NULL is given), or NULL if protocol is the last one.
- */
-URLProtocol *av_protocol_next(URLProtocol *p);
-
-/**
- * Register the URLProtocol protocol.
- *
- * @param size the size of the URLProtocol struct referenced
- */
-attribute_deprecated int av_register_protocol2(URLProtocol *protocol, int size);
-/**
- * @}
- */
-
-
-typedef attribute_deprecated AVIOContext ByteIOContext;
-
-attribute_deprecated int init_put_byte(AVIOContext *s,
-                  unsigned char *buffer,
-                  int buffer_size,
-                  int write_flag,
-                  void *opaque,
-                  int (*read_packet)(void *opaque, uint8_t *buf, int buf_size),
-                  int (*write_packet)(void *opaque, uint8_t *buf, int buf_size),
-                  int64_t (*seek)(void *opaque, int64_t offset, int whence));
-attribute_deprecated AVIOContext *av_alloc_put_byte(
-                  unsigned char *buffer,
-                  int buffer_size,
-                  int write_flag,
-                  void *opaque,
-                  int (*read_packet)(void *opaque, uint8_t *buf, int buf_size),
-                  int (*write_packet)(void *opaque, uint8_t *buf, int buf_size),
-                  int64_t (*seek)(void *opaque, int64_t offset, int whence));
-
-/**
- * @defgroup old_avio_funcs Old put_/get_*() functions
- * The following functions are deprecated. Use the "avio_"-prefixed functions instead.
- * @{
- * @ingroup lavf_io
- */
-attribute_deprecated int          get_buffer(AVIOContext *s, unsigned char *buf, int size);
-attribute_deprecated int          get_partial_buffer(AVIOContext *s, unsigned char *buf, int size);
-attribute_deprecated int          get_byte(AVIOContext *s);
-attribute_deprecated unsigned int get_le16(AVIOContext *s);
-attribute_deprecated unsigned int get_le24(AVIOContext *s);
-attribute_deprecated unsigned int get_le32(AVIOContext *s);
-attribute_deprecated uint64_t     get_le64(AVIOContext *s);
-attribute_deprecated unsigned int get_be16(AVIOContext *s);
-attribute_deprecated unsigned int get_be24(AVIOContext *s);
-attribute_deprecated unsigned int get_be32(AVIOContext *s);
-attribute_deprecated uint64_t     get_be64(AVIOContext *s);
-
-attribute_deprecated void         put_byte(AVIOContext *s, int b);
-attribute_deprecated void         put_nbyte(AVIOContext *s, int b, int count);
-attribute_deprecated void         put_buffer(AVIOContext *s, const unsigned char *buf, int size);
-attribute_deprecated void         put_le64(AVIOContext *s, uint64_t val);
-attribute_deprecated void         put_be64(AVIOContext *s, uint64_t val);
-attribute_deprecated void         put_le32(AVIOContext *s, unsigned int val);
-attribute_deprecated void         put_be32(AVIOContext *s, unsigned int val);
-attribute_deprecated void         put_le24(AVIOContext *s, unsigned int val);
-attribute_deprecated void         put_be24(AVIOContext *s, unsigned int val);
-attribute_deprecated void         put_le16(AVIOContext *s, unsigned int val);
-attribute_deprecated void         put_be16(AVIOContext *s, unsigned int val);
-attribute_deprecated void         put_tag(AVIOContext *s, const char *tag);
-/**
- * @}
- */
-
-attribute_deprecated int     av_url_read_fpause(AVIOContext *h,    int pause);
-attribute_deprecated int64_t av_url_read_fseek (AVIOContext *h,    int stream_index,
-                                                int64_t timestamp, int flags);
-
-/**
- * @defgroup old_url_f_funcs Old url_f* functions
- * The following functions are deprecated, use the "avio_"-prefixed functions instead.
- * @{
- * @ingroup lavf_io
- */
-attribute_deprecated int url_fopen( AVIOContext **s, const char *url, int flags);
-attribute_deprecated int url_fclose(AVIOContext *s);
-attribute_deprecated int64_t url_fseek(AVIOContext *s, int64_t offset, int whence);
-attribute_deprecated int url_fskip(AVIOContext *s, int64_t offset);
-attribute_deprecated int64_t url_ftell(AVIOContext *s);
-attribute_deprecated int64_t url_fsize(AVIOContext *s);
-#define URL_EOF (-1)
-attribute_deprecated int url_fgetc(AVIOContext *s);
-attribute_deprecated int url_setbufsize(AVIOContext *s, int buf_size);
-attribute_deprecated int url_fprintf(AVIOContext *s, const char *fmt, ...) av_printf_format(2, 3);
-attribute_deprecated void put_flush_packet(AVIOContext *s);
-attribute_deprecated int url_open_dyn_buf(AVIOContext **s);
-attribute_deprecated int url_open_dyn_packet_buf(AVIOContext **s, int max_packet_size);
-attribute_deprecated int url_close_dyn_buf(AVIOContext *s, uint8_t **pbuffer);
-attribute_deprecated int url_fdopen(AVIOContext **s, URLContext *h);
-/**
- * @}
- */
-
-attribute_deprecated int url_ferror(AVIOContext *s);
-
-attribute_deprecated int udp_set_remote_url(URLContext *h, const char *uri);
-attribute_deprecated int udp_get_local_port(URLContext *h);
-
-attribute_deprecated void init_checksum(AVIOContext *s,
-                   unsigned long (*update_checksum)(unsigned long c, const uint8_t *p, unsigned int len),
-                   unsigned long checksum);
-attribute_deprecated unsigned long get_checksum(AVIOContext *s);
-attribute_deprecated void put_strz(AVIOContext *s, const char *buf);
-/** @note unlike fgets, the EOL character is not returned and a whole
-    line is parsed. return NULL if first char read was EOF */
-attribute_deprecated char *url_fgets(AVIOContext *s, char *buf, int buf_size);
-/**
- * @deprecated use avio_get_str instead
- */
-attribute_deprecated char *get_strz(AVIOContext *s, char *buf, int maxlen);
-/**
- * @deprecated Use AVIOContext.seekable field directly.
- */
-attribute_deprecated static inline int url_is_streamed(AVIOContext *s)
-{
-    return !s->seekable;
-}
-attribute_deprecated URLContext *url_fileno(AVIOContext *s);
-
-/**
- * @deprecated use AVIOContext.max_packet_size directly.
- */
-attribute_deprecated int url_fget_max_packet_size(AVIOContext *s);
-
-attribute_deprecated int url_open_buf(AVIOContext **s, uint8_t *buf, int buf_size, int flags);
-
-/** return the written or read size */
-attribute_deprecated int url_close_buf(AVIOContext *s);
-
-/**
- * Return a non-zero value if the resource indicated by url
- * exists, 0 otherwise.
- * @deprecated Use avio_check instead.
- */
-attribute_deprecated int url_exist(const char *url);
-#endif // FF_API_OLD_AVIO
 
 /**
  * Return AVIO_FLAG_* access flags corresponding to the access permissions
@@ -397,18 +164,6 @@ attribute_deprecated int url_exist(const char *url);
  */
 int avio_check(const char *url, int flags);
 
-#if FF_API_OLD_INTERRUPT_CB
-/**
- * The callback is called in blocking functions to test regulary if
- * asynchronous interruption is needed. AVERROR_EXIT is returned
- * in this case by the interrupted function. 'NULL' means no interrupt
- * callback is given.
- * @deprecated Use interrupt_callback in AVFormatContext/avio_open2
- *             instead.
- */
-attribute_deprecated void avio_set_interrupt_cb(int (*interrupt_cb)(void));
-#endif
-
 /**
  * Allocate and initialize an AVIOContext for buffered I/O. It must be later
  * freed with av_free().
@@ -422,6 +177,7 @@ attribute_deprecated void avio_set_interrupt_cb(int (*interrupt_cb)(void));
  * @param opaque An opaque pointer to user-specific data.
  * @param read_packet  A function for refilling the buffer, may be NULL.
  * @param write_packet A function for writing the buffer contents, may be NULL.
+ *        The function may not change the input buffers content.
  * @param seek A function for seeking to specified byte position, may be NULL.
  *
  * @return Allocated AVIOContext or NULL on failure.
@@ -467,8 +223,8 @@ int avio_put_str16le(AVIOContext *s, const char *str);
 
 /**
  * Oring this flag as into the "whence" parameter to a seek function causes it to
- * seek by any means (like reopening and linear reading) or other normally unreasonble
- * means that can be extreemly slow.
+ * seek by any means (like reopening and linear reading) or other normally unreasonable
+ * means that can be extremely slow.
  * This may be ignored by the seek code.
  */
 #define AVSEEK_FORCE 0x20000
@@ -509,8 +265,13 @@ int url_feof(AVIOContext *s);
 /** @warning currently size is limited */
 int avio_printf(AVIOContext *s, const char *fmt, ...) av_printf_format(2, 3);
 
+/**
+ * Force flushing of buffered data to the output s.
+ *
+ * Force the buffered data to be immediately written to the output,
+ * without to wait to fill the internal buffer.
+ */
 void avio_flush(AVIOContext *s);
-
 
 /**
  * Read size bytes from AVIOContext into buf.
@@ -590,6 +351,14 @@ int avio_get_str16be(AVIOContext *pb, int maxlen, char *buf, int buflen);
 #define AVIO_FLAG_NONBLOCK 8
 
 /**
+ * Use direct mode.
+ * avio_read and avio_write should if possible be satisfied directly
+ * instead of going through a buffer, and avio_seek will always
+ * call the underlying seek function directly.
+ */
+#define AVIO_FLAG_DIRECT 0x8000
+
+/**
  * Create and initialize a AVIOContext for accessing the
  * resource indicated by url.
  * @note When the resource indicated by url has been opened in
@@ -628,9 +397,27 @@ int avio_open2(AVIOContext **s, const char *url, int flags,
  * Close the resource accessed by the AVIOContext s and free it.
  * This function can only be used if s was opened by avio_open().
  *
+ * The internal buffer is automatically flushed before closing the
+ * resource.
+ *
  * @return 0 on success, an AVERROR < 0 on error.
+ * @see avio_closep
  */
 int avio_close(AVIOContext *s);
+
+/**
+ * Close the resource accessed by the AVIOContext *s, free it
+ * and set the pointer pointing to it to NULL.
+ * This function can only be used if s was opened by avio_open().
+ *
+ * The internal buffer is automatically flushed before closing the
+ * resource.
+ *
+ * @return 0 on success, an AVERROR < 0 on error.
+ * @see avio_close
+ */
+int avio_closep(AVIOContext **s);
+
 
 /**
  * Open a write only memory stream.
@@ -653,7 +440,6 @@ int avio_close_dyn_buf(AVIOContext *s, uint8_t **pbuffer);
 
 /**
  * Iterate through names of available protocols.
- * @note it is recommanded to use av_protocol_next() instead of this
  *
  * @param opaque A private pointer representing current protocol.
  *        It must be a pointer to NULL on first iteration and will

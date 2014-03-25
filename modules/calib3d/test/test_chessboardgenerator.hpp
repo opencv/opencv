@@ -34,7 +34,7 @@ private:
     Mat rvec, tvec;
 };
 
-};
+}
 
 
 #endif

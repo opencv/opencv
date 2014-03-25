@@ -45,6 +45,12 @@
 #include "opencv2/calib3d.hpp"
 #include "opencv2/contrib/hybridtracker.hpp"
 
+#ifdef HAVE_OPENCV_NONFREE
+#include "opencv2/nonfree/nonfree.hpp"
+
+static bool makeUseOfNonfree = initModule_nonfree();
+#endif
+
 using namespace cv;
 
 CvFeatureTracker::CvFeatureTracker(CvFeatureTrackerParams _params) :

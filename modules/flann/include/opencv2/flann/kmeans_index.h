@@ -758,10 +758,13 @@ private:
 
                     for (int k=0; k<indices_length; ++k) {
                         if (belongs_to[k]==j) {
-                            belongs_to[k] = i;
-                            count[j]--;
-                            count[i]++;
-                            break;
+                            // for cluster j, we move the furthest element from the center to the empty cluster i
+                            if ( distance_(dataset_[indices[k]], dcenters[j], veclen_) == radiuses[j] ) {
+                                belongs_to[k] = i;
+                                count[j]--;
+                                count[i]++;
+                                break;
+                            }
                         }
                     }
                     converged = false;

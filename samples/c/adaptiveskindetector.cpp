@@ -34,13 +34,16 @@
 //
 //M*/
 
-
 #include <iostream>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
 #include "opencv2/contrib/compat.hpp"
 #include "opencv2/highgui/highgui_c.h"
+
+#ifndef _CRT_SECURE_NO_WARNINGS
+# define _CRT_SECURE_NO_WARNINGS
+#endif
 
 static void help(char **argv)
 {
@@ -123,12 +126,12 @@ ASDFrameHolder::ASDFrameHolder( )
 {
     image = NULL;
     timeStamp = 0;
-};
+}
 
 ASDFrameHolder::~ASDFrameHolder( )
 {
     cvReleaseImage(&image);
-};
+}
 
 void ASDFrameHolder::assignFrame(IplImage *sourceImage, double frameTime)
 {
@@ -140,22 +143,22 @@ void ASDFrameHolder::assignFrame(IplImage *sourceImage, double frameTime)
 
     image = cvCloneImage(sourceImage);
     timeStamp = frameTime;
-};
+}
 
 IplImage *ASDFrameHolder::getImage()
 {
     return image;
-};
+}
 
 double ASDFrameHolder::getTimeStamp()
 {
     return timeStamp;
-};
+}
 
 void ASDFrameHolder::setImage(IplImage *sourceImage)
 {
     image = sourceImage;
-};
+}
 
 
 //-------------------- ASDFrameSequencer -----------------------//
@@ -163,26 +166,26 @@ void ASDFrameHolder::setImage(IplImage *sourceImage)
 ASDFrameSequencer::~ASDFrameSequencer()
 {
     close();
-};
+}
 
 IplImage *ASDFrameSequencer::getNextImage()
 {
     return NULL;
-};
+}
 
 void ASDFrameSequencer::close()
 {
 
-};
+}
 
 bool ASDFrameSequencer::isOpen()
 {
     return false;
-};
+}
 
 void ASDFrameSequencer::getFrameCaption(char* /*caption*/) {
     return;
-};
+}
 
 IplImage* ASDCVFrameSequencer::getNextImage()
 {
@@ -198,7 +201,7 @@ IplImage* ASDCVFrameSequencer::getNextImage()
     {
         return NULL;
     }
-};
+}
 
 void ASDCVFrameSequencer::close()
 {
@@ -206,12 +209,12 @@ void ASDCVFrameSequencer::close()
     {
         cvReleaseCapture(&capture);
     }
-};
+}
 
 bool ASDCVFrameSequencer::isOpen()
 {
     return (capture != NULL);
-};
+}
 
 
 //-------------------- ASDFrameSequencerWebCam -----------------------//
@@ -230,7 +233,7 @@ bool ASDFrameSequencerWebCam::open(int cameraIndex)
     {
         return true;
     }
-};
+}
 
 
 //-------------------- ASDFrameSequencerVideoFile -----------------------//
@@ -248,7 +251,7 @@ bool ASDFrameSequencerVideoFile::open(const char *fileName)
     {
         return true;
     }
-};
+}
 
 
 //-------------------- ASDFrameSequencerImageFile -----------------------//
@@ -260,11 +263,11 @@ void ASDFrameSequencerImageFile::open(const char *fileNameMask, int startIndex, 
     nEndIndex = endIndex;
 
     std::sprintf(sFileNameMask, "%s", fileNameMask);
-};
+}
 
 void ASDFrameSequencerImageFile::getFrameCaption(char *caption) {
     std::sprintf(caption, sFileNameMask, nCurrentIndex);
-};
+}
 
 IplImage* ASDFrameSequencerImageFile::getNextImage()
 {
@@ -280,23 +283,23 @@ IplImage* ASDFrameSequencerImageFile::getNextImage()
     IplImage* img = cvLoadImage(fileName);
 
     return img;
-};
+}
 
 void ASDFrameSequencerImageFile::close()
 {
     nCurrentIndex = nEndIndex+1;
-};
+}
 
 bool ASDFrameSequencerImageFile::isOpen()
 {
     return (nCurrentIndex <= nEndIndex);
-};
+}
 
 static void putTextWithShadow(IplImage *img, const char *str, CvPoint point, CvFont *font, CvScalar color = CV_RGB(255, 255, 128))
 {
     cvPutText(img, str, cvPoint(point.x-1,point.y-1), font, CV_RGB(0, 0, 0));
     cvPutText(img, str, point, font, color);
-};
+}
 
 #define ASD_RGB_SET_PIXEL(pointer, r, g, b) { (*pointer) = (unsigned char)b; (*(pointer+1)) = (unsigned char)g; (*(pointer+2)) = (unsigned char)r; }
 
@@ -333,7 +336,7 @@ static void displayBuffer(IplImage *rgbDestImage, IplImage *buffer, int rValue, 
         destY = 0;
         destX += dx;
     }
-};
+}
 
 int main(int argc, char** argv )
 {

@@ -79,7 +79,7 @@ The function ``imshow`` displays an image in the specified window. If the window
 
     * If the image is 32-bit floating-point, the pixel values are multiplied by 255. That is, the value range [0,1] is mapped to [0,255].
 
-If window was created with OpenGL support, ``imshow`` also support :ocv:class:`ogl::Buffer` ,  :ocv:class:`ogl::Texture2D` and  :ocv:class:`gpu::GpuMat` as input.
+If window was created with OpenGL support, ``imshow`` also support :ocv:class:`ogl::Buffer` ,  :ocv:class:`ogl::Texture2D` and  :ocv:class:`cuda::GpuMat` as input.
 
 .. note:: This function should be followed by ``waitKey`` function which displays the image for specified milliseconds. Otherwise, it won't display the image. For example, ``waitKey(0)`` will display the window infinitely until any keypress (it is suitable for image display). ``waitKey(25)`` will display a frame for 25 ms, after which display will be automatically closed. (If you put it in a loop to read videos, it will display the video frame-by-frame)
 
@@ -203,10 +203,30 @@ Sets mouse handler for the specified window
 
     :param winname: Window name
 
-    :param onMouse: Mouse callback. See OpenCV samples, such as  http://code.opencv.org/projects/opencv/repository/revisions/master/entry/samples/cpp/ffilldemo.cpp, on how to specify and use the callback.
+    :param onMouse: Mouse callback. See OpenCV samples, such as  https://github.com/Itseez/opencv/tree/master/samples/cpp/ffilldemo.cpp, on how to specify and use the callback.
 
     :param userdata: The optional parameter passed to the callback.
 
+
+getMouseWheelDelta
+------------------
+Gets the mouse-wheel motion delta, when handling mouse-wheel events EVENT_MOUSEWHEEL and EVENT_MOUSEHWHEEL.
+
+.. ocv:function:: int getMouseWheelDelta(int flags)
+
+    :param flags: The mouse callback flags parameter.
+
+For regular mice with a scroll-wheel, delta will be a multiple of 120. The value 120 corresponds to a one notch rotation of the wheel or the threshold for action to be taken and one such action should occur for each delta.
+Some high-precision mice with higher-resolution freely-rotating wheels may generate smaller values.
+
+For EVENT_MOUSEWHEEL positive and negative values mean forward and backward scrolling, respectively.
+For EVENT_MOUSEHWHEEL, where available, positive and negative values mean right and left scrolling, respectively.
+
+With the C API, the macro CV_GET_WHEEL_DELTA(flags) can be used alternatively.
+
+.. note::
+
+    Mouse-wheel events are currently supported only on Windows.
 
 setTrackbarPos
 ------------------

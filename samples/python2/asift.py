@@ -11,10 +11,10 @@ is used to reject outliers. Threading is used for faster affine sampling.
 [1] http://www.ipol.im/pub/algo/my_affine_sift/
 
 USAGE
-  asift.py [--feature=<sift|surf|orb>[-flann]] [ <image1> <image2> ]
+  asift.py [--feature=<sift|surf|orb|brisk>[-flann]] [ <image1> <image2> ]
 
-  --feature  - Feature to use. Can be sift, surf of orb. Append '-flann' to feature name
-                to use Flann-based matcher instead bruteforce.
+  --feature  - Feature to use. Can be sift, surf, orb or brisk. Append '-flann'
+               to feature name to use Flann-based matcher instead bruteforce.
 
   Press left mouse button on a feature point to see its mathcing point.
 '''

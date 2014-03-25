@@ -40,14 +40,14 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_VEC_DISTANCE_HPP__
-#define __OPENCV_GPU_VEC_DISTANCE_HPP__
+#ifndef __OPENCV_CUDA_VEC_DISTANCE_HPP__
+#define __OPENCV_CUDA_VEC_DISTANCE_HPP__
 
 #include "reduce.hpp"
 #include "functional.hpp"
 #include "detail/vec_distance_detail.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <typename T> struct L1Dist
     {
@@ -219,6 +219,6 @@ namespace cv { namespace gpu { namespace cudev
 
         U vec1Vals[MAX_LEN / THREAD_DIM];
     };
-}}} // namespace cv { namespace gpu { namespace cudev
+}}} // namespace cv { namespace cuda { namespace cudev
 
-#endif // __OPENCV_GPU_VEC_DISTANCE_HPP__
+#endif // __OPENCV_CUDA_VEC_DISTANCE_HPP__

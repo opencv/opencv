@@ -76,8 +76,8 @@ typedef struct _CvRightImData
     uchar min_val, max_val;
 } _CvRightImData;
 
-#define CV_IMAX3(a,b,c) ((temp2 = (a) >= (b) ? (a) : (b)),(temp2 >= (c) ? temp2 : (c)))
-#define CV_IMIN3(a,b,c) ((temp3 = (a) <= (b) ? (a) : (b)),(temp3 <= (c) ? temp3 : (c)))
+#define CV_IMAX3(a,b,c) (std::max(std::max((a), (b)), (c)))
+#define CV_IMIN3(a,b,c) (std::min(std::min((a), (b)), (c)))
 
 static void icvFindStereoCorrespondenceByBirchfieldDP( uchar* src1, uchar* src2,
                                                 uchar* disparities,
@@ -87,7 +87,7 @@ static void icvFindStereoCorrespondenceByBirchfieldDP( uchar* src1, uchar* src2,
                                                 float  _param3, float _param4,
                                                 float  _param5 )
 {
-    int     x, y, i, j, temp2, temp3;
+    int     x, y, i, j;
     int     d, s;
     int     dispH =  maxDisparity + 3;
     uchar  *dispdata;

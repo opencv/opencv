@@ -40,13 +40,13 @@
 //
 //M*/
 
-#ifndef OPENCV_GPU_EMULATION_HPP_
-#define OPENCV_GPU_EMULATION_HPP_
+#ifndef OPENCV_CUDA_EMULATION_HPP_
+#define OPENCV_CUDA_EMULATION_HPP_
 
 #include "common.hpp"
 #include "warp_reduce.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     struct Emulation
     {
@@ -256,6 +256,6 @@ namespace cv { namespace gpu { namespace cudev
             }
         };
     }; //struct Emulation
-}}} // namespace cv { namespace gpu { namespace cudev
+}}} // namespace cv { namespace cuda { namespace cudev
 
-#endif /* OPENCV_GPU_EMULATION_HPP_ */
+#endif /* OPENCV_CUDA_EMULATION_HPP_ */

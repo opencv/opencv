@@ -50,7 +50,7 @@
 #endif
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 namespace
 {
@@ -58,16 +58,9 @@ namespace
         inline void throw_no_ogl() { CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support"); }
     #else
         inline void throw_no_ogl() { CV_Error(cv::Error::OpenGlApiCallError, "OpenGL context doesn't exist"); }
-    #endif
 
     bool checkError(const char* file, const int line, const char* func = 0)
     {
-    #ifndef HAVE_OPENGL
-        (void) file;
-        (void) line;
-        (void) func;
-        return true;
-    #else
         GLenum err = gl::GetError();
 
         if (err != gl::NO_ERROR_)
@@ -102,14 +95,10 @@ namespace
         }
 
         return true;
-    #endif
     }
-
-    #if defined(__GNUC__)
-        #define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__, __func__)) )
-    #else
-        #define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__)) )
     #endif
+
+    #define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__, CV_Func)) )
 } // namespace
 
 #ifdef HAVE_OPENGL
@@ -122,7 +111,7 @@ namespace
 ////////////////////////////////////////////////////////////////////////
 // setGlDevice
 
-void cv::gpu::setGlDevice(int device)
+void cv::cuda::setGlDevice(int device)
 {
 #ifndef HAVE_OPENGL
     (void) device;
@@ -627,7 +616,7 @@ void cv::ogl::Buffer::copyFrom(InputArray arr, Target target, bool autoRelease)
 #endif
 }
 
-void cv::ogl::Buffer::copyFrom(InputArray arr, gpu::Stream& stream, Target target, bool autoRelease)
+void cv::ogl::Buffer::copyFrom(InputArray arr, cuda::Stream& stream, Target target, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -647,7 +636,7 @@ void cv::ogl::Buffer::copyFrom(InputArray arr, gpu::Stream& stream, Target targe
 
         create(dmat.size(), dmat.type(), target, autoRelease);
 
-        impl_->copyFrom(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, gpu::StreamAccessor::getStream(stream));
+        impl_->copyFrom(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, cuda::StreamAccessor::getStream(stream));
     #endif
 #endif
 }
@@ -692,7 +681,7 @@ void cv::ogl::Buffer::copyTo(OutputArray arr) const
 #endif
 }
 
-void cv::ogl::Buffer::copyTo(OutputArray arr, gpu::Stream& stream) const
+void cv::ogl::Buffer::copyTo(OutputArray arr, cuda::Stream& stream) const
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -706,7 +695,7 @@ void cv::ogl::Buffer::copyTo(OutputArray arr, gpu::Stream& stream) const
     #else
         arr.create(rows_, cols_, type_);
         GpuMat dmat = arr.getGpuMat();
-        impl_->copyTo(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, gpu::StreamAccessor::getStream(stream));
+        impl_->copyTo(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, cuda::StreamAccessor::getStream(stream));
     #endif
 #endif
 }
@@ -794,7 +783,7 @@ void cv::ogl::Buffer::unmapDevice()
 #endif
 }
 
-gpu::GpuMat cv::ogl::Buffer::mapDevice(gpu::Stream& stream)
+cuda::GpuMat cv::ogl::Buffer::mapDevice(cuda::Stream& stream)
 {
 #ifndef HAVE_OPENGL
     (void) stream;
@@ -806,12 +795,12 @@ gpu::GpuMat cv::ogl::Buffer::mapDevice(gpu::Stream& stream)
         throw_no_cuda();
         return GpuMat();
     #else
-        return GpuMat(rows_, cols_, type_, impl_->mapDevice(gpu::StreamAccessor::getStream(stream)));
+        return GpuMat(rows_, cols_, type_, impl_->mapDevice(cuda::StreamAccessor::getStream(stream)));
     #endif
 #endif
 }
 
-void cv::ogl::Buffer::unmapDevice(gpu::Stream& stream)
+void cv::ogl::Buffer::unmapDevice(cuda::Stream& stream)
 {
 #ifndef HAVE_OPENGL
     (void) stream;
@@ -821,7 +810,7 @@ void cv::ogl::Buffer::unmapDevice(gpu::Stream& stream)
         (void) stream;
         throw_no_cuda();
     #else
-        impl_->unmapDevice(gpu::StreamAccessor::getStream(stream));
+        impl_->unmapDevice(cuda::StreamAccessor::getStream(stream));
     #endif
 #endif
 }
@@ -1036,6 +1025,7 @@ cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols
             #else
                 GpuMat dmat = arr.getGpuMat();
                 ogl::Buffer buf(dmat, ogl::Buffer::PIXEL_UNPACK_BUFFER);
+                buf.setAutoRelease(true);
                 buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
                 impl_.reset(new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0, autoRelease));
                 ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
@@ -1149,6 +1139,7 @@ void cv::ogl::Texture2D::copyFrom(InputArray arr, bool autoRelease)
             #else
                 GpuMat dmat = arr.getGpuMat();
                 ogl::Buffer buf(dmat, ogl::Buffer::PIXEL_UNPACK_BUFFER);
+                buf.setAutoRelease(true);
                 buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
                 impl_->copyFrom(asize.width, asize.height, srcFormats[cn], gl_types[depth], 0);
                 ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
@@ -1199,6 +1190,7 @@ void cv::ogl::Texture2D::copyTo(OutputArray arr, int ddepth, bool autoRelease) c
                 throw_no_cuda();
             #else
                 ogl::Buffer buf(rows_, cols_, CV_MAKE_TYPE(ddepth, cn), ogl::Buffer::PIXEL_PACK_BUFFER);
+                buf.setAutoRelease(true);
                 buf.bind(ogl::Buffer::PIXEL_PACK_BUFFER);
                 impl_->copyTo(dstFormat, gl_types[ddepth], 0);
                 ogl::Buffer::unbind(ogl::Buffer::PIXEL_PACK_BUFFER);

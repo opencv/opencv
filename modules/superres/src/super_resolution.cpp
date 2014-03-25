@@ -54,16 +54,20 @@ cv::superres::SuperResolution::SuperResolution()
 {
     frameSource_ = createFrameSource_Empty();
     firstCall_ = true;
+    isUmat_ = false;
 }
 
 void cv::superres::SuperResolution::setInput(const Ptr<FrameSource>& frameSource)
 {
     frameSource_ = frameSource;
     firstCall_ = true;
+    isUmat_ = false;
 }
 
 void cv::superres::SuperResolution::nextFrame(OutputArray frame)
 {
+    isUmat_ = frame.isUMat();
+
     if (firstCall_)
     {
         initImpl(frameSource_);
@@ -77,6 +81,7 @@ void cv::superres::SuperResolution::reset()
 {
     frameSource_->reset();
     firstCall_ = true;
+    isUmat_ = false;
 }
 
 void cv::superres::SuperResolution::collectGarbage()

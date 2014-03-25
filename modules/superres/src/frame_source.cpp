@@ -42,7 +42,7 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 using namespace cv::superres;
 using namespace cv::superres::detail;
 
@@ -115,25 +115,18 @@ namespace
     void CaptureFrameSource::nextFrame(OutputArray _frame)
     {
         if (_frame.kind() == _InputArray::MAT)
-        {
             vc_ >> _frame.getMatRef();
-        }
         else if(_frame.kind() == _InputArray::GPU_MAT)
         {
             vc_ >> frame_;
             arrCopy(frame_, _frame);
         }
-        else if(_frame.kind() == _InputArray::OCL_MAT)
-        {
-            vc_ >> frame_;
-            if(!frame_.empty())
-            {
-                arrCopy(frame_, _frame);
-            }
-        }
+        else if (_frame.isUMat())
+            vc_ >> *(UMat *)_frame.getObj();
         else
         {
-            //should never get here
+            // should never get here
+            CV_Assert(0);
         }
     }
 
@@ -197,41 +190,41 @@ Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
 #endif // HAVE_OPENCV_HIGHGUI
 
 //////////////////////////////////////////////////////
-// VideoFrameSource_GPU
+// VideoFrameSource_CUDA
 
-#ifndef HAVE_OPENCV_GPUCODEC
+#ifndef HAVE_OPENCV_CUDACODEC
 
-Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const String& fileName)
+Ptr<FrameSource> cv::superres::createFrameSource_Video_CUDA(const String& fileName)
 {
     (void) fileName;
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
     return Ptr<FrameSource>();
 }
 
-#else // HAVE_OPENCV_GPUCODEC
+#else // HAVE_OPENCV_CUDACODEC
 
 namespace
 {
-    class VideoFrameSource_GPU : public FrameSource
+    class VideoFrameSource_CUDA : public FrameSource
     {
     public:
-        VideoFrameSource_GPU(const String& fileName);
+        VideoFrameSource_CUDA(const String& fileName);
 
         void nextFrame(OutputArray frame);
         void reset();
 
     private:
         String fileName_;
-        Ptr<gpucodec::VideoReader> reader_;
+        Ptr<cudacodec::VideoReader> reader_;
         GpuMat frame_;
     };
 
-    VideoFrameSource_GPU::VideoFrameSource_GPU(const String& fileName) : fileName_(fileName)
+    VideoFrameSource_CUDA::VideoFrameSource_CUDA(const String& fileName) : fileName_(fileName)
     {
         reset();
     }
 
-    void VideoFrameSource_GPU::nextFrame(OutputArray _frame)
+    void VideoFrameSource_CUDA::nextFrame(OutputArray _frame)
     {
         if (_frame.kind() == _InputArray::GPU_MAT)
         {
@@ -249,15 +242,15 @@ namespace
         }
     }
 
-    void VideoFrameSource_GPU::reset()
+    void VideoFrameSource_CUDA::reset()
     {
-        reader_ = gpucodec::createVideoReader(fileName_);
+        reader_ = cudacodec::createVideoReader(fileName_);
     }
 }
 
-Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const String& fileName)
+Ptr<FrameSource> cv::superres::createFrameSource_Video_CUDA(const String& fileName)
 {
     return makePtr<VideoFrameSource>(fileName);
 }
 
-#endif // HAVE_OPENCV_GPUCODEC
+#endif // HAVE_OPENCV_CUDACODEC

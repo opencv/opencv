@@ -1316,7 +1316,7 @@ void GraphCutSeamFinder::find(const std::vector<Mat> &src, const std::vector<Poi
 }
 
 
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_CUDA
 void GraphCutSeamFinderGpu::find(const std::vector<Mat> &src, const std::vector<Point> &corners,
                                  std::vector<Mat> &masks)
 {
@@ -1423,14 +1423,14 @@ void GraphCutSeamFinderGpu::findInPair(size_t first, size_t second, Rect roi)
         CV_Error(Error::StsBadArg, "unsupported pixel similarity measure");
     }
 
-    gpu::GpuMat terminals_d(terminals);
-    gpu::GpuMat leftT_d(leftT);
-    gpu::GpuMat rightT_d(rightT);
-    gpu::GpuMat top_d(top);
-    gpu::GpuMat bottom_d(bottom);
-    gpu::GpuMat labels_d, buf_d;
+    cuda::GpuMat terminals_d(terminals);
+    cuda::GpuMat leftT_d(leftT);
+    cuda::GpuMat rightT_d(rightT);
+    cuda::GpuMat top_d(top);
+    cuda::GpuMat bottom_d(bottom);
+    cuda::GpuMat labels_d, buf_d;
 
-    gpu::graphcut(terminals_d, leftT_d, rightT_d, top_d, bottom_d, labels_d, buf_d);
+    cuda::graphcut(terminals_d, leftT_d, rightT_d, top_d, bottom_d, labels_d, buf_d);
 
     Mat_<uchar> labels = (Mat)labels_d;
     for (int y = 0; y < roi.height; ++y)

@@ -98,7 +98,7 @@ inline void FaceFeature::SetWeight(double  dWeight)
 class FaceTemplate
 {
 public:
-    FaceTemplate(long lFeatureCount) {m_lFeturesCount = lFeatureCount;	m_lpFeaturesList = new FaceFeature[lFeatureCount];};
+    FaceTemplate(long lFeatureCount) {m_lFeturesCount = lFeatureCount;	m_lpFeaturesList = new FaceFeature[lFeatureCount];}
     virtual ~FaceTemplate();
 
     inline long GetCount();

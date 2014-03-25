@@ -46,13 +46,13 @@ int main( int, char** argv )
 
   /// Create Trackbar to select kernel type
   createTrackbar( "Element:\n 0: Rect - 1: Cross - 2: Ellipse", window_name,
-          &morph_elem, max_elem,
-          Morphology_Operations );
+                  &morph_elem, max_elem,
+                  Morphology_Operations );
 
   /// Create Trackbar to choose kernel size
   createTrackbar( "Kernel size:\n 2n +1", window_name,
-          &morph_size, max_kernel_size,
-          Morphology_Operations );
+                  &morph_size, max_kernel_size,
+                  Morphology_Operations );
 
   /// Default start
   Morphology_Operations( 0, 0 );

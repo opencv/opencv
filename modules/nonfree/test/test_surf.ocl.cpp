@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -195,7 +195,7 @@ TEST_P(SURF, DISABLED_Descriptor)
     cv::Mat descriptors_gold;
     surf_gold(image, cv::noArray(), keypoints, descriptors_gold, true);
 
-    cv::BFMatcher matcher(cv::NORM_L2);
+    cv::BFMatcher matcher(surf.defaultNorm());
     std::vector<cv::DMatch> matches;
     matcher.match(descriptors_gold, cv::Mat(descriptors), matches);
 

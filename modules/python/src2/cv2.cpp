@@ -1,3 +1,8 @@
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+// eliminating duplicated round() declaration
+#define HAVE_ROUND
+#endif
+
 #include <Python.h>
 
 #define MODULESTR "cv2"
@@ -135,8 +140,22 @@ typedef Ptr<StereoMatcher> Ptr_StereoMatcher;
 typedef Ptr<StereoBM> Ptr_StereoBM;
 typedef Ptr<StereoSGBM> Ptr_StereoSGBM;
 
+typedef Ptr<Tonemap> Ptr_Tonemap;
+typedef Ptr<TonemapDrago> Ptr_TonemapDrago;
+typedef Ptr<TonemapReinhard> Ptr_TonemapReinhard;
+typedef Ptr<TonemapDurand> Ptr_TonemapDurand;
+typedef Ptr<TonemapMantiuk> Ptr_TonemapMantiuk;
+typedef Ptr<AlignMTB> Ptr_AlignMTB;
+typedef Ptr<CalibrateDebevec> Ptr_CalibrateDebevec;
+typedef Ptr<CalibrateRobertson> Ptr_CalibrateRobertson;
+typedef Ptr<MergeDebevec> Ptr_MergeDebevec;
+typedef Ptr<MergeRobertson> Ptr_MergeRobertson;
+typedef Ptr<MergeMertens> Ptr_MergeMertens;
+typedef Ptr<MergeRobertson> Ptr_MergeRobertson;
+
 typedef Ptr<cv::softcascade::ChannelFeatureBuilder> Ptr_ChannelFeatureBuilder;
 typedef Ptr<CLAHE> Ptr_CLAHE;
+typedef Ptr<LineSegmentDetector > Ptr_LineSegmentDetector;
 
 typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
 
@@ -161,38 +180,43 @@ static PyObject* failmsgp(const char *fmt, ...)
   return 0;
 }
 
-static size_t REFCOUNT_OFFSET = (size_t)&(((PyObject*)0)->ob_refcnt) +
-    (0x12345678 != *(const size_t*)"\x78\x56\x34\x12\0\0\0\0\0")*sizeof(int);
-
-static inline PyObject* pyObjectFromRefcount(const int* refcount)
-{
-    return (PyObject*)((size_t)refcount - REFCOUNT_OFFSET);
-}
-
-static inline int* refcountFromPyObject(const PyObject* obj)
-{
-    return (int*)((size_t)obj + REFCOUNT_OFFSET);
-}
-
 class NumpyAllocator : public MatAllocator
 {
 public:
-    NumpyAllocator() {}
+    NumpyAllocator() { stdAllocator = Mat::getStdAllocator(); }
     ~NumpyAllocator() {}
 
-    void allocate(int dims, const int* sizes, int type, int*& refcount,
-                  uchar*& datastart, uchar*& data, size_t* step)
+    UMatData* allocate(PyObject* o, int dims, const int* sizes, int type, size_t* step) const
     {
+        UMatData* u = new UMatData(this);
+        u->data = u->origdata = (uchar*)PyArray_DATA((PyArrayObject*) o);
+        npy_intp* _strides = PyArray_STRIDES((PyArrayObject*) o);
+        for( int i = 0; i < dims - 1; i++ )
+            step[i] = (size_t)_strides[i];
+        step[dims-1] = CV_ELEM_SIZE(type);
+        u->size = sizes[0]*step[0];
+        u->userdata = o;
+        return u;
+    }
+
+    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const
+    {
+        if( data != 0 )
+        {
+            CV_Error(Error::StsAssert, "The data should normally be NULL!");
+            // probably this is safe to do in such extreme case
+            return stdAllocator->allocate(dims0, sizes, type, data, step, flags, usageFlags);
+        }
         PyEnsureGIL gil;
 
         int depth = CV_MAT_DEPTH(type);
         int cn = CV_MAT_CN(type);
         const int f = (int)(sizeof(size_t)/8);
         int typenum = depth == CV_8U ? NPY_UBYTE : depth == CV_8S ? NPY_BYTE :
-                      depth == CV_16U ? NPY_USHORT : depth == CV_16S ? NPY_SHORT :
-                      depth == CV_32S ? NPY_INT : depth == CV_32F ? NPY_FLOAT :
-                      depth == CV_64F ? NPY_DOUBLE : f*NPY_ULONGLONG + (f^1)*NPY_UINT;
-        int i;
+        depth == CV_16U ? NPY_USHORT : depth == CV_16S ? NPY_SHORT :
+        depth == CV_32S ? NPY_INT : depth == CV_32F ? NPY_FLOAT :
+        depth == CV_64F ? NPY_DOUBLE : f*NPY_ULONGLONG + (f^1)*NPY_UINT;
+        int i, dims = dims0;
         cv::AutoBuffer<npy_intp> _sizes(dims + 1);
         for( i = 0; i < dims; i++ )
             _sizes[i] = sizes[i];
@@ -201,22 +225,26 @@ public:
         PyObject* o = PyArray_SimpleNew(dims, _sizes, typenum);
         if(!o)
             CV_Error_(Error::StsError, ("The numpy array of typenum=%d, ndims=%d can not be created", typenum, dims));
-        refcount = refcountFromPyObject(o);
-        npy_intp* _strides = PyArray_STRIDES((PyArrayObject*) o);
-        for( i = 0; i < dims - (cn > 1); i++ )
-            step[i] = (size_t)_strides[i];
-        datastart = data = (uchar*)PyArray_DATA((PyArrayObject*) o);
+        return allocate(o, dims0, sizes, type, step);
     }
 
-    void deallocate(int* refcount, uchar*, uchar*)
+    bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const
     {
-        PyEnsureGIL gil;
-        if( !refcount )
-            return;
-        PyObject* o = pyObjectFromRefcount(refcount);
-        Py_INCREF(o);
-        Py_DECREF(o);
+        return stdAllocator->allocate(u, accessFlags, usageFlags);
     }
+
+    void deallocate(UMatData* u) const
+    {
+        if(u)
+        {
+            PyEnsureGIL gil;
+            PyObject* o = (PyObject*)u->userdata;
+            Py_XDECREF(o);
+            delete u;
+        }
+    }
+
+    const MatAllocator* stdAllocator;
 };
 
 NumpyAllocator g_numpyAllocator;
@@ -386,16 +414,13 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
     }
 
     m = Mat(ndims, size, type, PyArray_DATA(oarr), step);
+    m.u = g_numpyAllocator.allocate(o, ndims, size, type, step);
+    m.addref();
 
-    if( m.data )
+    if( !needcopy )
     {
-        m.refcount = refcountFromPyObject(o);
-        if (!needcopy)
-        {
-            m.addref(); // protect the original numpy array from deallocation
-                        // (since Mat destructor will decrement the reference counter)
-        }
-    };
+        Py_INCREF(o);
+    }
     m.allocator = &g_numpyAllocator;
 
     return true;
@@ -407,14 +432,15 @@ PyObject* pyopencv_from(const Mat& m)
     if( !m.data )
         Py_RETURN_NONE;
     Mat temp, *p = (Mat*)&m;
-    if(!p->refcount || p->allocator != &g_numpyAllocator)
+    if(!p->u || p->allocator != &g_numpyAllocator)
     {
         temp.allocator = &g_numpyAllocator;
         ERRWRAP2(m.copyTo(temp));
         p = &temp;
     }
-    p->addref();
-    return pyObjectFromRefcount(p->refcount);
+    PyObject* o = (PyObject*)p->u->userdata;
+    Py_INCREF(o);
+    return o;
 }
 
 template<>

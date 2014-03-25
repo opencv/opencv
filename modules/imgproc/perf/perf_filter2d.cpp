@@ -8,7 +8,7 @@ using std::tr1::make_tuple;
 using std::tr1::get;
 
 
-CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101);
+CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)
 
 typedef TestBaseWithParam< tr1::tuple<Size, int, BorderMode> > TestFilter2d;
 typedef TestBaseWithParam< tr1::tuple<string, int> > Image_KernelSize;

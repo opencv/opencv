@@ -4,10 +4,10 @@
 Feature-based image matching sample.
 
 USAGE
-  find_obj.py [--feature=<sift|surf|orb>[-flann]] [ <image1> <image2> ]
+  find_obj.py [--feature=<sift|surf|orb|brisk>[-flann]] [ <image1> <image2> ]
 
-  --feature  - Feature to use. Can be sift, surf of orb. Append '-flann' to feature name
-                to use Flann-based matcher instead bruteforce.
+  --feature  - Feature to use. Can be sift, surf, orb or brisk. Append '-flann'
+               to feature name to use Flann-based matcher instead bruteforce.
 
   Press left mouse button on a feature point to see its matching point.
 '''
@@ -30,6 +30,9 @@ def init_feature(name):
         norm = cv2.NORM_L2
     elif chunks[0] == 'orb':
         detector = cv2.ORB(400)
+        norm = cv2.NORM_HAMMING
+    elif chunks[0] == 'brisk':
+        detector = cv2.BRISK()
         norm = cv2.NORM_HAMMING
     else:
         return None, None

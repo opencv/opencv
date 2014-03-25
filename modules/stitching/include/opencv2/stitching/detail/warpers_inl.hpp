@@ -51,7 +51,7 @@ namespace cv {
 namespace detail {
 
 template <class P>
-Point2f RotationWarperBase<P>::warpPoint(const Point2f &pt, const Mat &K, const Mat &R)
+Point2f RotationWarperBase<P>::warpPoint(const Point2f &pt, InputArray K, InputArray R)
 {
     projector_.setCameraParams(K, R);
     Point2f uv;
@@ -61,15 +61,17 @@ Point2f RotationWarperBase<P>::warpPoint(const Point2f &pt, const Mat &K, const 
 
 
 template <class P>
-Rect RotationWarperBase<P>::buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap)
+Rect RotationWarperBase<P>::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray _xmap, OutputArray _ymap)
 {
     projector_.setCameraParams(K, R);
 
     Point dst_tl, dst_br;
     detectResultRoi(src_size, dst_tl, dst_br);
 
-    xmap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
-    ymap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
+    _xmap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
+    _ymap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
+
+    Mat xmap = _xmap.getMat(), ymap = _ymap.getMat();
 
     float x, y;
     for (int v = dst_tl.y; v <= dst_br.y; ++v)
@@ -87,8 +89,8 @@ Rect RotationWarperBase<P>::buildMaps(Size src_size, const Mat &K, const Mat &R,
 
 
 template <class P>
-Point RotationWarperBase<P>::warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-                                  Mat &dst)
+Point RotationWarperBase<P>::warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode,
+                                  OutputArray dst)
 {
     Mat xmap, ymap;
     Rect dst_roi = buildMaps(src.size(), K, R, xmap, ymap);
@@ -101,14 +103,16 @@ Point RotationWarperBase<P>::warp(const Mat &src, const Mat &K, const Mat &R, in
 
 
 template <class P>
-void RotationWarperBase<P>::warpBackward(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-                                         Size dst_size, Mat &dst)
+void RotationWarperBase<P>::warpBackward(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode,
+                                         Size dst_size, OutputArray dst)
 {
     projector_.setCameraParams(K, R);
 
     Point src_tl, src_br;
     detectResultRoi(dst_size, src_tl, src_br);
-    CV_Assert(src_br.x - src_tl.x + 1 == src.cols && src_br.y - src_tl.y + 1 == src.rows);
+
+    Size size = src.size();
+    CV_Assert(src_br.x - src_tl.x + 1 == size.width && src_br.y - src_tl.y + 1 == size.height);
 
     Mat xmap(dst_size, CV_32F);
     Mat ymap(dst_size, CV_32F);
@@ -130,7 +134,7 @@ void RotationWarperBase<P>::warpBackward(const Mat &src, const Mat &K, const Mat
 
 
 template <class P>
-Rect RotationWarperBase<P>::warpRoi(Size src_size, const Mat &K, const Mat &R)
+Rect RotationWarperBase<P>::warpRoi(Size src_size, InputArray K, InputArray R)
 {
     projector_.setCameraParams(K, R);
 

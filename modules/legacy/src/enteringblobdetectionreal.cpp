@@ -156,7 +156,7 @@ public:
 
     }   /* cvDetectNewBlob */
 
-    void Release(){delete this;};
+    void Release(){delete this;}
 };
 
 /* Blob detector constructor: */

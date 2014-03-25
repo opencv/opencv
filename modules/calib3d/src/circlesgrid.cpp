@@ -218,6 +218,7 @@ void CirclesGridClusterFinder::findCorners(const std::vector<cv::Point2f> &hull2
 
 void CirclesGridClusterFinder::findOutsideCorners(const std::vector<cv::Point2f> &corners, std::vector<cv::Point2f> &outsideCorners)
 {
+  CV_Assert(!corners.empty());
   outsideCorners.clear();
   //find two pairs of the most nearest corners
   int i, j, n = (int)corners.size();
@@ -835,6 +836,9 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const std::vector<Poin
 
   Mat H = findHomography(Mat(centers), Mat(dstPoints), RANSAC);
   //Mat H = findHomography( Mat( corners ), Mat( dstPoints ) );
+
+  if (H.empty())
+      H = Mat::zeros(3, 3, CV_64FC1);
 
   std::vector<Point2f> srcKeypoints;
   for (size_t i = 0; i < keypoints.size(); i++)

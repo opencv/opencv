@@ -108,6 +108,8 @@ public:
 protected:
     void* m_tif;
     int normalizeChannelsNumber(int channels) const;
+    bool readHdrData(Mat& img);
+    bool m_hdr;
 };
 
 #endif
@@ -130,6 +132,7 @@ protected:
                     int count, int value );
 
     bool writeLibTiff( const Mat& img, const std::vector<int>& params );
+    bool writeHdr( const Mat& img );
 };
 
 }

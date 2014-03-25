@@ -174,12 +174,12 @@ bool WebPDecoder::readData(Mat &img)
         if (channels == 3)
         {
             res_ptr = WebPDecodeBGRInto(data.data, data.total(), out_data,
-                                        out_data_size, img.step);
+                                        (int)out_data_size, (int)img.step);
         }
         else if (channels == 4)
         {
             res_ptr = WebPDecodeBGRAInto(data.data, data.total(), out_data,
-                                         out_data_size, img.step);
+                                         (int)out_data_size, (int)img.step);
         }
 
         if(res_ptr == out_data)
@@ -255,22 +255,22 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     {
         if(channels == 3)
         {
-            size = WebPEncodeLosslessBGR(image->data, width, height, image->step, &out);
+            size = WebPEncodeLosslessBGR(image->data, width, height, (int)image->step, &out);
         }
         else if(channels == 4)
         {
-            size = WebPEncodeLosslessBGRA(image->data, width, height, image->step, &out);
+            size = WebPEncodeLosslessBGRA(image->data, width, height, (int)image->step, &out);
         }
     }
     else
     {
         if(channels == 3)
         {
-            size = WebPEncodeBGR(image->data, width, height, image->step, quality, &out);
+            size = WebPEncodeBGR(image->data, width, height, (int)image->step, quality, &out);
         }
         else if(channels == 4)
         {
-            size = WebPEncodeBGRA(image->data, width, height, image->step, quality, &out);
+            size = WebPEncodeBGRA(image->data, width, height, (int)image->step, quality, &out);
         }
     }
 

@@ -7,9 +7,9 @@ drawMatches
 ---------------
 Draws the found matches of keypoints from two images.
 
-.. ocv:function:: void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1, const Mat& img2, const vector<KeyPoint>& keypoints2, const vector<DMatch>& matches1to2, Mat& outImg, const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1), const vector<char>& matchesMask=vector<char>(), int flags=DrawMatchesFlags::DEFAULT )
+.. ocv:function:: void drawMatches( InputArray img1, const vector<KeyPoint>& keypoints1, InputArray img2, const vector<KeyPoint>& keypoints2, const vector<DMatch>& matches1to2, InputOutputArray outImg, const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1), const vector<char>& matchesMask=vector<char>(), int flags=DrawMatchesFlags::DEFAULT )
 
-.. ocv:function:: void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1, const Mat& img2, const vector<KeyPoint>& keypoints2, const vector<vector<DMatch> >& matches1to2, Mat& outImg, const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1), const vector<vector<char> >& matchesMask=vector<vector<char> >(), int flags=DrawMatchesFlags::DEFAULT )
+.. ocv:function:: void drawMatches( InputArray img1, const vector<KeyPoint>& keypoints1, InputArray img2, const vector<KeyPoint>& keypoints2, const vector<vector<DMatch> >& matches1to2, InputOutputArray outImg, const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1), const vector<vector<char> >& matchesMask=vector<vector<char> >(), int flags=DrawMatchesFlags::DEFAULT )
 
 .. ocv:pyfunction:: cv2.drawMatches(img1, keypoints1, img2, keypoints2, matches1to2[, outImg[, matchColor[, singlePointColor[, matchesMask[, flags]]]]]) -> outImg
 
@@ -69,7 +69,7 @@ drawKeypoints
 -----------------
 Draws keypoints.
 
-.. ocv:function:: void drawKeypoints( const Mat& image, const vector<KeyPoint>& keypoints, Mat& outImage, const Scalar& color=Scalar::all(-1), int flags=DrawMatchesFlags::DEFAULT )
+.. ocv:function:: void drawKeypoints( InputArray image, const vector<KeyPoint>& keypoints, InputOutputArray outImage, const Scalar& color=Scalar::all(-1), int flags=DrawMatchesFlags::DEFAULT )
 
 .. ocv:pyfunction:: cv2.drawKeypoints(image, keypoints[, outImage[, color[, flags]]]) -> outImage
 

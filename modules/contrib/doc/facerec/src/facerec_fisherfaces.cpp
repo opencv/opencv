@@ -70,7 +70,7 @@ int main(int argc, const char *argv[]) {
         cout << "usage: " << argv[0] << " <csv.ext> <output_folder> " << endl;
         exit(1);
     }
-    string output_folder;
+    string output_folder = ".";
     if (argc == 3) {
         output_folder = string(argv[2]);
     }

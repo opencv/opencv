@@ -8,14 +8,10 @@ ScriptHome = os.path.split(sys.argv[0])[0]
 ConfFile = open(os.path.join(ScriptHome, "camera_build.conf"), "rt")
 HomeDir = os.getcwd()
 
-stub = ""
-try:
-    stub = os.environ["ANDROID_STUB_ROOT"]
-except:
-    None
+stub = os.environ.get("ANDROID_STUB_ROOT", "")
 
 if (stub == ""):
-    print("Warning: ANDROID_STUB_ROOT environment variable is not set")
+    print("Warning: ANDROID_STUB_ROOT environment variable is not set or is empty")
 
 for s in ConfFile.readlines():
     s = s[0:s.find("#")]

@@ -52,7 +52,7 @@ namespace
             if (frame.empty())
                 break;
             cv::Mat gray;
-            cv::cvtColor(frame,gray, COLOR_RGB2GRAY);
+            cv::cvtColor(frame,gray,COLOR_RGB2GRAY);
             vector<String> codes;
             Mat corners;
             findDataMatrix(gray, codes, corners);

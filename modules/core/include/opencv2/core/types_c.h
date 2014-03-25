@@ -158,7 +158,7 @@ enum {
  CV_StsVecLengthErr=           -28, /* incorrect vector length */
  CV_StsFilterStructContentErr= -29, /* incorr. filter structure content */
  CV_StsKernelStructContentErr= -30, /* incorr. transform kernel content */
- CV_StsFilterOffsetErr=        -31, /* incorrect filter ofset value */
+ CV_StsFilterOffsetErr=        -31, /* incorrect filter offset value */
  CV_StsBadSize=                -201, /* the input/output structure size is incorrect  */
  CV_StsDivByZero=              -202, /* division by zero */
  CV_StsInplaceNotSupported=    -203, /* in-place operation is not supported */
@@ -177,7 +177,11 @@ enum {
  CV_GpuNotSupported=           -216,
  CV_GpuApiCallError=           -217,
  CV_OpenGlNotSupported=        -218,
- CV_OpenGlApiCallError=        -219
+ CV_OpenGlApiCallError=        -219,
+ CV_OpenCLApiCallError=        -220,
+ CV_OpenCLDoubleNotSupported=  -221,
+ CV_OpenCLInitError=           -222,
+ CV_OpenCLNoAMDBlasFft=        -223
 };
 
 /****************************************************************************************\
@@ -523,11 +527,11 @@ CV_INLINE  double  cvmGet( const CvMat* mat, int row, int col )
             (unsigned)col < (unsigned)mat->cols );
 
     if( type == CV_32FC1 )
-        return ((float*)(mat->data.ptr + (size_t)mat->step*row))[col];
+        return ((float*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col];
     else
     {
         assert( type == CV_64FC1 );
-        return ((double*)(mat->data.ptr + (size_t)mat->step*row))[col];
+        return ((double*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col];
     }
 }
 
@@ -540,11 +544,11 @@ CV_INLINE  void  cvmSet( CvMat* mat, int row, int col, double value )
             (unsigned)col < (unsigned)mat->cols );
 
     if( type == CV_32FC1 )
-        ((float*)(mat->data.ptr + (size_t)mat->step*row))[col] = (float)value;
+        ((float*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col] = (float)value;
     else
     {
         assert( type == CV_64FC1 );
-        ((double*)(mat->data.ptr + (size_t)mat->step*row))[col] = (double)value;
+        ((double*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col] = (double)value;
     }
 }
 

@@ -34,7 +34,7 @@ http://en.wikipedia.org/wiki/Canny_edge_detector
 
    * An example on using the canny edge detector can be found at opencv_source_code/samples/cpp/edge.cpp
 
-   * (Python) An example on using the canny edge detector can be found at opencv_source_code/samples/cpp/edge.py
+   * (Python) An example on using the canny edge detector can be found at opencv_source_code/samples/python/edge.py
 
 cornerEigenValsAndVecs
 ----------------------
@@ -97,7 +97,7 @@ Harris corner detector.
 
 .. ocv:pyfunction:: cv2.cornerHarris(src, blockSize, ksize, k[, dst[, borderType]]) -> dst
 
-.. ocv:cfunction:: void cvCornerHarris( const CvArr* image, CvArr* harris_responce, int block_size, int aperture_size=3, double k=0.04 )
+.. ocv:cfunction:: void cvCornerHarris( const CvArr* image, CvArr* harris_response, int block_size, int aperture_size=3, double k=0.04 )
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -358,11 +358,11 @@ HoughLines
 ----------
 Finds lines in a binary image using the standard Hough transform.
 
-.. ocv:function:: void HoughLines( InputArray image, OutputArray lines, double rho, double theta, int threshold, double srn=0, double stn=0 )
+.. ocv:function:: void HoughLines( InputArray image, OutputArray lines, double rho, double theta, int threshold, double srn=0, double stn=0, double min_theta=0, double max_theta=CV_PI )
 
-.. ocv:pyfunction:: cv2.HoughLines(image, rho, theta, threshold[, lines[, srn[, stn]]]) -> lines
+.. ocv:pyfunction:: cv2.HoughLines(image, rho, theta, threshold[, lines[, srn[, stn[, min_theta[, max_theta]]]]]) -> lines
 
-.. ocv:cfunction:: CvSeq* cvHoughLines2( CvArr* image, void* line_storage, int method, double rho, double theta, int threshold, double param1=0, double param2=0 )
+.. ocv:cfunction:: CvSeq* cvHoughLines2( CvArr* image, void* line_storage, int method, double rho, double theta, int threshold, double param1=0, double param2=0, double min_theta=0, double max_theta=CV_PI )
 
     :param image: 8-bit, single-channel binary source image. The image may be modified by the function.
 
@@ -377,6 +377,10 @@ Finds lines in a binary image using the standard Hough transform.
     :param srn: For the multi-scale Hough transform, it is a divisor for the distance resolution  ``rho`` . The coarse accumulator distance resolution is  ``rho``  and the accurate accumulator resolution is  ``rho/srn`` . If both  ``srn=0``  and  ``stn=0`` , the classical Hough transform is used. Otherwise, both these parameters should be positive.
 
     :param stn: For the multi-scale Hough transform, it is a divisor for the distance resolution  ``theta``.
+
+    :param min_theta: For standard and multi-scale Hough transform, minimum angle to check for lines. Must fall between 0 and max_theta.
+
+    :param max_theta: For standard and multi-scale Hough transform, maximum angle to check for lines. Must fall between min_theta and CV_PI.
 
     :param method: One of the following Hough transform variants:
 
@@ -509,11 +513,11 @@ Line segment detector class, following the algorithm described at [Rafael12]_.
 .. ocv:class:: LineSegmentDetector : public Algorithm
 
 
-createLineSegmentDetectorPtr
-----------------------------
+createLineSegmentDetector
+-------------------------
 Creates a smart pointer to a LineSegmentDetector object and initializes it.
 
-.. ocv:function:: Ptr<LineSegmentDetector> createLineSegmentDetectorPtr(int _refine = LSD_REFINE_STD, double _scale = 0.8, double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5, double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024)
+.. ocv:function:: Ptr<LineSegmentDetector> createLineSegmentDetector(int _refine = LSD_REFINE_STD, double _scale = 0.8, double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5, double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024)
 
     :param _refine: The way found lines will be refined:
 

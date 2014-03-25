@@ -58,6 +58,7 @@
 #include <vector>
 #include <fstream>
 #include <assert.h>
+#include <algorithm> // for std::max()
 
 
 namespace Imf {

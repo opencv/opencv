@@ -9,19 +9,20 @@
 #ifndef __OPENCV_PERF_PRECOMP_HPP__
 #define __OPENCV_PERF_PRECOMP_HPP__
 
+#include "cvconfig.h"
+
 #include "opencv2/ts.hpp"
 #include "opencv2/nonfree.hpp"
 #include "opencv2/highgui.hpp"
 
 #include "opencv2/opencv_modules.hpp"
-#include "cvconfig.h"
 
 #ifdef HAVE_OPENCV_OCL
 #  include "opencv2/nonfree/ocl.hpp"
 #endif
 
 #ifdef HAVE_CUDA
-#  include "opencv2/nonfree/gpu.hpp"
+#  include "opencv2/nonfree/cuda.hpp"
 #endif
 
 #ifdef GTEST_CREATE_SHARED_LIBRARY

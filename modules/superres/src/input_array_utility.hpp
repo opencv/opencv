@@ -44,26 +44,21 @@
 #define __OPENCV_SUPERRES_INPUT_ARRAY_UTILITY_HPP__
 
 #include "opencv2/core.hpp"
-#include "opencv2/core/gpu.hpp"
-#ifdef HAVE_OPENCV_OCL
-#include "opencv2/ocl.hpp"
-#endif
+#include "opencv2/core/cuda.hpp"
 
 namespace cv
 {
     namespace superres
     {
         CV_EXPORTS Mat arrGetMat(InputArray arr, Mat& buf);
-        CV_EXPORTS gpu::GpuMat arrGetGpuMat(InputArray arr, gpu::GpuMat& buf);
+        CV_EXPORTS UMat arrGetUMat(InputArray arr, UMat& buf);
+        CV_EXPORTS cuda::GpuMat arrGetGpuMat(InputArray arr, cuda::GpuMat& buf);
 
         CV_EXPORTS void arrCopy(InputArray src, OutputArray dst);
 
         CV_EXPORTS Mat convertToType(const Mat& src, int type, Mat& buf0, Mat& buf1);
-        CV_EXPORTS gpu::GpuMat convertToType(const gpu::GpuMat& src, int type, gpu::GpuMat& buf0, gpu::GpuMat& buf1);
-
-#ifdef HAVE_OPENCV_OCL
-        CV_EXPORTS ocl::oclMat convertToType(const ocl::oclMat& src, int type, ocl::oclMat& buf0, ocl::oclMat& buf1);
-#endif
+        CV_EXPORTS UMat convertToType(const UMat& src, int type, UMat& buf0, UMat& buf1);
+        CV_EXPORTS cuda::GpuMat convertToType(const cuda::GpuMat& src, int type, cuda::GpuMat& buf0, cuda::GpuMat& buf1);
     }
 }
 

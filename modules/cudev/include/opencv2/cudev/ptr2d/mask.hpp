@@ -62,6 +62,42 @@ struct WithOutMask
     }
 };
 
+template <class MaskPtr> struct SingleMaskChannels
+{
+    typedef typename PtrTraits<MaskPtr>::value_type value_type;
+    typedef typename PtrTraits<MaskPtr>::index_type index_type;
+
+    MaskPtr mask;
+    int channels;
+
+    __device__ __forceinline__ value_type operator()(index_type y, index_type x) const
+    {
+        return mask(y, x / channels);
+    }
+
+};
+
+template <class MaskPtr> struct SingleMaskChannelsSz : SingleMaskChannels<MaskPtr>
+{
+    int rows, cols;
+};
+
+template <class MaskPtr>
+__host__ SingleMaskChannelsSz<typename PtrTraits<MaskPtr>::ptr_type>
+singleMaskChannels(const MaskPtr& mask, int channels)
+{
+    SingleMaskChannelsSz<typename PtrTraits<MaskPtr>::ptr_type> ptr;
+    ptr.mask = shrinkPtr(mask);
+    ptr.channels = channels;
+    ptr.rows = getRows(mask);
+    ptr.cols = getCols(mask) * channels;
+    return ptr;
+}
+
+template <class MaskPtr> struct PtrTraits< SingleMaskChannelsSz<MaskPtr> > : PtrTraitsBase<SingleMaskChannelsSz<MaskPtr>, SingleMaskChannels<MaskPtr> >
+{
+};
+
 }}
 
 #endif

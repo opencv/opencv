@@ -23,12 +23,12 @@ Abstract base class for 2D image feature detectors. ::
     public:
         virtual ~FeatureDetector();
 
-        void detect( const Mat& image, vector<KeyPoint>& keypoints,
-                     const Mat& mask=Mat() ) const;
+        void detect( InputArray image, vector<KeyPoint>& keypoints,
+                     InputArray mask=noArray() ) const;
 
-        void detect( const vector<Mat>& images,
+        void detect( InputArrayOfArrays images,
                      vector<vector<KeyPoint> >& keypoints,
-                     const vector<Mat>& masks=vector<Mat>() ) const;
+                     InputArrayOfArrays masks=noArray() ) const;
 
         virtual void read(const FileNode&);
         virtual void write(FileStorage&) const;
@@ -43,9 +43,9 @@ FeatureDetector::detect
 ---------------------------
 Detects keypoints in an image (first variant) or image set (second variant).
 
-.. ocv:function:: void FeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const
+.. ocv:function:: void FeatureDetector::detect( InputArray image, vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const
 
-.. ocv:function:: void FeatureDetector::detect( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, const vector<Mat>& masks=vector<Mat>() ) const
+.. ocv:function:: void FeatureDetector::detect( InputArrayOfArrays images, vector<vector<KeyPoint> >& keypoints, InputArrayOfArrays masks=noArray() ) const
 
 .. ocv:pyfunction:: cv2.FeatureDetector_create.detect(image[, mask]) -> keypoints
 

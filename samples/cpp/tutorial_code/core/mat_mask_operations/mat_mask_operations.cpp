@@ -43,7 +43,7 @@ int main( int argc, char* argv[])
     cout << "Hand written function times passed in seconds: " << t << endl;
 
     imshow("Output", J);
-    waitKey();
+    waitKey(0);
 
     Mat kern = (Mat_<char>(3,3) <<  0, -1,  0,
                                    -1,  5, -1,
@@ -55,7 +55,7 @@ int main( int argc, char* argv[])
 
     imshow("Output", K);
 
-    waitKey();
+    waitKey(0);
     return 0;
 }
 void Sharpen(const Mat& myImage,Mat& Result)

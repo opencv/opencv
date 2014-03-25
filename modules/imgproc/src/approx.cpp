@@ -220,7 +220,7 @@ CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size,
     current = temp.next;
 
     /* Pass 2.
-       Performs non-maxima supression */
+       Performs non-maxima suppression */
     do
     {
         int k2 = current->k >> 1;

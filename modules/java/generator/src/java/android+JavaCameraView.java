@@ -146,6 +146,9 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                     Log.d(TAG, "Set preview size to " + Integer.valueOf((int)frameSize.width) + "x" + Integer.valueOf((int)frameSize.height));
                     params.setPreviewSize((int)frameSize.width, (int)frameSize.height);
 
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH)
+                        params.setRecordingHint(true);
+
                     List<String> FocusModes = params.getSupportedFocusModes();
                     if (FocusModes != null && FocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO))
                     {

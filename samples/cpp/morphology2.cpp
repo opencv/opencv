@@ -10,7 +10,7 @@ static void help()
 
 printf("\nShow off image morphology: erosion, dialation, open and close\n"
     "Call:\n   morphology2 [image]\n"
-    "This program also shows use of rect, elipse and cross kernels\n\n");
+    "This program also shows use of rect, ellipse and cross kernels\n\n");
 printf( "Hot keys: \n"
     "\tESC - quit the program\n"
     "\tr - use rectangle structuring element\n"
@@ -77,7 +77,7 @@ int main( int argc, char** argv )
 
         OpenClose(open_close_pos, 0);
         ErodeDilate(erode_dilate_pos, 0);
-        c = waitKey();
+        c = waitKey(0);
 
         if( (char)c == 27 )
             break;

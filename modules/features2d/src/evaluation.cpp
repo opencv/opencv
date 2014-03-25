@@ -127,7 +127,7 @@ public:
 
     Point2f center;
     Scalar ellipse; // 3 elements a, b, c: ax^2+2bxy+cy^2=1
-    Size_<float> axes; // half lenght of elipse axes
+    Size_<float> axes; // half length of ellipse axes
     Size_<float> boundingBox; // half sizes of bounding box which sides are parallel to the coordinate axes
 };
 

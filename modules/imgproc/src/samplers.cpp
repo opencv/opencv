@@ -64,7 +64,7 @@ adjustRect( const uchar* src, size_t src_step, int pix_size,
             rect.x = win_size.width;
     }
 
-    if( ip.x + win_size.width < src_size.width )
+    if( ip.x < src_size.width - win_size.width )
         rect.width = win_size.width;
     else
     {
@@ -85,7 +85,7 @@ adjustRect( const uchar* src, size_t src_step, int pix_size,
     else
         rect.y = -ip.y;
 
-    if( ip.y + win_size.height < src_size.height )
+    if( ip.y < src_size.height - win_size.height )
         rect.height = win_size.height;
     else
     {
@@ -155,8 +155,8 @@ void getRectSubPix_Cn_(const _Tp* src, size_t src_step, Size src_size,
     src_step /= sizeof(src[0]);
     dst_step /= sizeof(dst[0]);
 
-    if( 0 <= ip.x && ip.x + win_size.width < src_size.width &&
-       0 <= ip.y && ip.y + win_size.height < src_size.height )
+    if( 0 <= ip.x && ip.x < src_size.width - win_size.width &&
+       0 <= ip.y && ip.y < src_size.height - win_size.height)
     {
         // extracted rectangle is totally inside the image
         src += ip.y * src_step + ip.x*cn;
@@ -267,12 +267,6 @@ static void getRectSubPix_8u32f
     }
 }
 
-typedef CvStatus (CV_STDCALL *CvIPPGetRectSubPixFunc)( const void* src, int src_step,
-                                                       CvSize src_size, void* dst,
-                                                       int dst_step, CvSize win_size,
-                                                       CvPoint2D32f center,
-                                                       CvPoint* minpt, CvPoint* maxpt );
-
 static void
 getQuadrangleSubPix_8u32f_CnR( const uchar* src, size_t src_step, Size src_size,
                                float* dst, size_t dst_step, Size win_size,
@@ -367,6 +361,7 @@ getQuadrangleSubPix_8u32f_CnR( const uchar* src, size_t src_step, Size src_size,
 
 }
 
+
 void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
                        OutputArray _patch, int patchType )
 {
@@ -380,15 +375,23 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
     Mat patch = _patch.getMat();
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    CvPoint minpt, maxpt;
-    int srctype = CV_MAT_TYPE(src->type), dsttype = CV_MAT_TYPE(dst->type);
-    CvIPPGetRectSubPixFunc ippfunc =
-        srctype == CV_8UC1 && dsttype == CV_8UC1 ? (CvIPPGetRectSubPixFunc)ippiCopySubpixIntersect_8u_C1R :
-        srctype == CV_8UC1 && dsttype == CV_32FC1 ? (CvIPPGetRectSubPixFunc)ippiCopySubpixIntersect_8u32f_C1R :
-        srctype == CV_32FC1 && dsttype == CV_32FC1 ? (CvIPPGetRectSubPixFunc)ippiCopySubpixIntersect_32f_C1R : 0;
+    typedef IppStatus (CV_STDCALL *ippiGetRectSubPixFunc)( const void* src, int src_step,
+                                                            IppiSize src_size, void* dst,
+                                                            int dst_step, IppiSize win_size,
+                                                            IppiPoint_32f center,
+                                                            IppiPoint* minpt, IppiPoint* maxpt );
 
-    if( ippfunc && ippfunc(src->data.ptr, src->step, src_size, dst->data.ptr,
-                           dst->step, dst_size, center, &minpt, &maxpt) >= 0 )
+    IppiPoint minpt={0,0}, maxpt={0,0};
+    IppiPoint_32f icenter = {center.x, center.y};
+    IppiSize src_size={image.cols, image.rows}, win_size={patch.cols, patch.rows};
+    int srctype = image.type();
+    ippiGetRectSubPixFunc ippfunc =
+        srctype == CV_8UC1 && ddepth == CV_8U ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_8u_C1R :
+        srctype == CV_8UC1 && ddepth == CV_32F ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_8u32f_C1R :
+        srctype == CV_32FC1 && ddepth == CV_32F ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_32f_C1R : 0;
+
+    if( ippfunc && ippfunc(image.data, (int)image.step, src_size, patch.data,
+                           (int)patch.step, win_size, icenter, &minpt, &maxpt) >= 0 )
         return;
 #endif
 

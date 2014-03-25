@@ -142,13 +142,13 @@ The function is parallelized with the TBB library.
 If you are using the C version, make sure you call ``cv::initModule_nonfree()`` from ``nonfree/nonfree.hpp``.
 
 
-gpu::SURF_GPU
--------------
-.. ocv:class:: gpu::SURF_GPU
+cuda::SURF_CUDA
+---------------
+.. ocv:class:: cuda::SURF_CUDA
 
 Class used for extracting Speeded Up Robust Features (SURF) from an image. ::
 
-    class SURF_GPU
+    class SURF_CUDA
     {
     public:
         enum KeypointLayout
@@ -164,9 +164,9 @@ Class used for extracting Speeded Up Robust Features (SURF) from an image. ::
         };
 
         //! the default constructor
-        SURF_GPU();
+        SURF_CUDA();
         //! the full constructor taking all the necessary parameters
-        explicit SURF_GPU(double _hessianThreshold, int _nOctaves=4,
+        explicit SURF_CUDA(double _hessianThreshold, int _nOctaves=4,
              int _nOctaveLayers=2, bool _extended=false, float _keypointsRatio=0.01f);
 
         //! returns the descriptor size in float's (64 or 128)
@@ -225,9 +225,9 @@ Class used for extracting Speeded Up Robust Features (SURF) from an image. ::
     };
 
 
-The class ``SURF_GPU`` implements Speeded Up Robust Features descriptor. There is a fast multi-scale Hessian keypoint detector that can be used to find the keypoints (which is the default option). But the descriptors can also be computed for the user-specified keypoints. Only 8-bit grayscale images are supported.
+The class ``SURF_CUDA`` implements Speeded Up Robust Features descriptor. There is a fast multi-scale Hessian keypoint detector that can be used to find the keypoints (which is the default option). But the descriptors can also be computed for the user-specified keypoints. Only 8-bit grayscale images are supported.
 
-The class ``SURF_GPU`` can store results in the GPU and CPU memory. It provides functions to convert results between CPU and GPU version ( ``uploadKeypoints``, ``downloadKeypoints``, ``downloadDescriptors`` ). The format of CPU results is the same as ``SURF`` results. GPU results are stored in ``GpuMat``. The ``keypoints`` matrix is :math:`\texttt{nFeatures} \times 7` matrix with the ``CV_32FC1`` type.
+The class ``SURF_CUDA`` can store results in the GPU and CPU memory. It provides functions to convert results between CPU and GPU version ( ``uploadKeypoints``, ``downloadKeypoints``, ``downloadDescriptors`` ). The format of CPU results is the same as ``SURF`` results. GPU results are stored in ``GpuMat``. The ``keypoints`` matrix is :math:`\texttt{nFeatures} \times 7` matrix with the ``CV_32FC1`` type.
 
 * ``keypoints.ptr<float>(X_ROW)[i]`` contains x coordinate of the i-th feature.
 * ``keypoints.ptr<float>(Y_ROW)[i]`` contains y coordinate of the i-th feature.
@@ -239,112 +239,10 @@ The class ``SURF_GPU`` can store results in the GPU and CPU memory. It provides 
 
 The ``descriptors`` matrix is :math:`\texttt{nFeatures} \times \texttt{descriptorSize}` matrix with the ``CV_32FC1`` type.
 
-The class ``SURF_GPU`` uses some buffers and provides access to it. All buffers can be safely released between function calls.
+The class ``SURF_CUDA`` uses some buffers and provides access to it. All buffers can be safely released between function calls.
 
 .. seealso:: :ocv:class:`SURF`
 
 .. note::
 
    * An example for using the SURF keypoint matcher on GPU can be found at opencv_source_code/samples/gpu/surf_keypoint_matcher.cpp
-
-ocl::SURF_OCL
--------------
-.. ocv:class:: ocl::SURF_OCL
-
-Class used for extracting Speeded Up Robust Features (SURF) from an image. ::
-
-    class SURF_OCL
-    {
-    public:
-        enum KeypointLayout
-        {
-            X_ROW = 0,
-            Y_ROW,
-            LAPLACIAN_ROW,
-            OCTAVE_ROW,
-            SIZE_ROW,
-            ANGLE_ROW,
-            HESSIAN_ROW,
-            ROWS_COUNT
-        };
-
-        //! the default constructor
-        SURF_OCL();
-        //! the full constructor taking all the necessary parameters
-        explicit SURF_OCL(double _hessianThreshold, int _nOctaves=4,
-             int _nOctaveLayers=2, bool _extended=false, float _keypointsRatio=0.01f, bool _upright = false);
-
-        //! returns the descriptor size in float's (64 or 128)
-        int descriptorSize() const;
-
-        //! upload host keypoints to device memory
-        void uploadKeypoints(const vector<KeyPoint>& keypoints,
-            oclMat& keypointsocl);
-        //! download keypoints from device to host memory
-        void downloadKeypoints(const oclMat& keypointsocl,
-            vector<KeyPoint>& keypoints);
-
-        //! download descriptors from device to host memory
-        void downloadDescriptors(const oclMat& descriptorsocl,
-            vector<float>& descriptors);
-
-        void operator()(const oclMat& img, const oclMat& mask,
-            oclMat& keypoints);
-
-        void operator()(const oclMat& img, const oclMat& mask,
-            oclMat& keypoints, oclMat& descriptors,
-            bool useProvidedKeypoints = false);
-
-        void operator()(const oclMat& img, const oclMat& mask,
-            std::vector<KeyPoint>& keypoints);
-
-        void operator()(const oclMat& img, const oclMat& mask,
-            std::vector<KeyPoint>& keypoints, oclMat& descriptors,
-            bool useProvidedKeypoints = false);
-
-        void operator()(const oclMat& img, const oclMat& mask,
-            std::vector<KeyPoint>& keypoints,
-            std::vector<float>& descriptors,
-            bool useProvidedKeypoints = false);
-
-        void releaseMemory();
-
-        // SURF parameters
-        double hessianThreshold;
-        int nOctaves;
-        int nOctaveLayers;
-        bool extended;
-        bool upright;
-
-        //! max keypoints = min(keypointsRatio * img.size().area(), 65535)
-        float keypointsRatio;
-
-        oclMat sum, mask1, maskSum, intBuffer;
-
-        oclMat det, trace;
-
-        oclMat maxPosBuffer;
-    };
-
-
-The class ``SURF_OCL`` implements Speeded Up Robust Features descriptor. There is a fast multi-scale Hessian keypoint detector that can be used to find the keypoints (which is the default option). But the descriptors can also be computed for the user-specified keypoints. Only 8-bit grayscale images are supported.
-
-The class ``SURF_OCL`` can store results in the GPU and CPU memory. It provides functions to convert results between CPU and GPU version ( ``uploadKeypoints``, ``downloadKeypoints``, ``downloadDescriptors`` ). The format of CPU results is the same as ``SURF`` results. GPU results are stored in ``oclMat``. The ``keypoints`` matrix is :math:`\texttt{nFeatures} \times 7` matrix with the ``CV_32FC1`` type.
-
-* ``keypoints.ptr<float>(X_ROW)[i]`` contains x coordinate of the i-th feature.
-* ``keypoints.ptr<float>(Y_ROW)[i]`` contains y coordinate of the i-th feature.
-* ``keypoints.ptr<float>(LAPLACIAN_ROW)[i]``  contains the laplacian sign of the i-th feature.
-* ``keypoints.ptr<float>(OCTAVE_ROW)[i]`` contains the octave of the i-th feature.
-* ``keypoints.ptr<float>(SIZE_ROW)[i]`` contains the size of the i-th feature.
-* ``keypoints.ptr<float>(ANGLE_ROW)[i]`` contain orientation of the i-th feature.
-* ``keypoints.ptr<float>(HESSIAN_ROW)[i]`` contains the response of the i-th feature.
-
-The ``descriptors`` matrix is :math:`\texttt{nFeatures} \times \texttt{descriptorSize}` matrix with the ``CV_32FC1`` type.
-
-The class ``SURF_OCL`` uses some buffers and provides access to it. All buffers can be safely released between function calls.
-
-.. seealso:: :ocv:class:`SURF`
-
-.. note::
-
-   * OCL : An example of the SURF detector can be found at opencv_source_code/samples/ocl/surf_matcher.cpp

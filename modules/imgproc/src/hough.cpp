@@ -75,7 +75,8 @@ Functions return the actual number of found lines.
 */
 static void
 HoughLinesStandard( const Mat& img, float rho, float theta,
-                    int threshold, std::vector<Vec2f>& lines, int linesMax )
+                    int threshold, std::vector<Vec2f>& lines, int linesMax,
+                    double min_theta, double max_theta )
 {
     int i, j;
     float irho = 1 / rho;
@@ -87,7 +88,13 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     int width = img.cols;
     int height = img.rows;
 
-    int numangle = cvRound(CV_PI / theta);
+    if (max_theta < 0 || max_theta > CV_PI ) {
+        CV_Error( CV_StsBadArg, "max_theta must fall between 0 and pi" );
+    }
+    if (min_theta < 0 || min_theta > max_theta ) {
+        CV_Error( CV_StsBadArg, "min_theta must fall between 0 and max_theta" );
+    }
+    int numangle = cvRound((max_theta - min_theta) / theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
     AutoBuffer<int> _accum((numangle+2) * (numrho+2));
@@ -99,7 +106,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
 
     memset( accum, 0, sizeof(accum[0]) * (numangle+2) * (numrho+2) );
 
-    float ang = 0;
+    float ang = static_cast<float>(min_theta);
     for(int n = 0; n < numangle; ang += theta, n++ )
     {
         tabSin[n] = (float)(sin((double)ang) * irho);
@@ -166,7 +173,8 @@ static void
 HoughLinesSDiv( const Mat& img,
                 float rho, float theta, int threshold,
                 int srn, int stn,
-                std::vector<Vec2f>& lines, int linesMax )
+                std::vector<Vec2f>& lines, int linesMax,
+                double min_theta, double max_theta )
 {
     #define _POINT(row, column)\
         (image_src[(row)*step+(column)])
@@ -293,7 +301,7 @@ HoughLinesSDiv( const Mat& img,
 
     if( count * 100 > rn * tn )
     {
-        HoughLinesStandard( img, rho, theta, threshold, lines, linesMax );
+        HoughLinesStandard( img, rho, theta, threshold, lines, linesMax, min_theta, max_theta );
         return;
     }
 
@@ -601,15 +609,15 @@ HoughLinesProbabilistic( Mat& image,
 
 void cv::HoughLines( InputArray _image, OutputArray _lines,
                     double rho, double theta, int threshold,
-                    double srn, double stn )
+                    double srn, double stn, double min_theta, double max_theta )
 {
     Mat image = _image.getMat();
     std::vector<Vec2f> lines;
 
     if( srn == 0 && stn == 0 )
-        HoughLinesStandard(image, (float)rho, (float)theta, threshold, lines, INT_MAX);
+        HoughLinesStandard(image, (float)rho, (float)theta, threshold, lines, INT_MAX, min_theta, max_theta );
     else
-        HoughLinesSDiv(image, (float)rho, (float)theta, threshold, cvRound(srn), cvRound(stn), lines, INT_MAX);
+        HoughLinesSDiv(image, (float)rho, (float)theta, threshold, cvRound(srn), cvRound(stn), lines, INT_MAX, min_theta, max_theta);
 
     Mat(lines).copyTo(_lines);
 }
@@ -631,7 +639,8 @@ void cv::HoughLinesP(InputArray _image, OutputArray _lines,
 CV_IMPL CvSeq*
 cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
                double rho, double theta, int threshold,
-               double param1, double param2 )
+               double param1, double param2,
+               double min_theta, double max_theta )
 {
     cv::Mat image = cv::cvarrToMat(src_image);
     std::vector<cv::Vec2f> l2;
@@ -694,11 +703,11 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
     {
     case CV_HOUGH_STANDARD:
         HoughLinesStandard( image, (float)rho,
-                (float)theta, threshold, l2, linesMax );
+                (float)theta, threshold, l2, linesMax, min_theta, max_theta );
         break;
     case CV_HOUGH_MULTI_SCALE:
         HoughLinesSDiv( image, (float)rho, (float)theta,
-                threshold, iparam1, iparam2, l2, linesMax );
+                threshold, iparam1, iparam2, l2, linesMax, min_theta, max_theta );
         break;
     case CV_HOUGH_PROBABILISTIC:
         HoughLinesProbabilistic( image, (float)rho, (float)theta,

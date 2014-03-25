@@ -378,7 +378,7 @@ Calculates the covariance matrix of a set of vectors.
 
 .. ocv:function:: void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, Mat& mean, int flags, int ctype=CV_64F)
 
-.. ocv:function:: void calcCovarMatrix( InputArray samples, OutputArray covar, OutputArray mean, int flags, int ctype=CV_64F)
+.. ocv:function:: void calcCovarMatrix( InputArray samples, OutputArray covar, InputOutputArray mean, int flags, int ctype=CV_64F)
 
 .. ocv:pyfunction:: cv2.calcCovarMatrix(samples, flags[, covar[, mean[, ctype]]]) -> covar, mean
 
@@ -903,7 +903,7 @@ So, the function chooses an operation mode depending on the flags and size of th
 
     * When ``DFT_COMPLEX_OUTPUT`` is set, the output is a complex matrix of the same size as input.
 
-    * When ``DFT_COMPLEX_OUTPUT`` is not set, the output is a real matrix of the same size as input. In case of 2D transform, it uses the packed format as shown above. In case of a single 1D transform, it looks like the first row of the matrix above. In case of multiple 1D transforms (when using the ``DCT_ROWS``         flag), each row of the output matrix looks like the first row of the matrix above.
+    * When ``DFT_COMPLEX_OUTPUT`` is not set, the output is a real matrix of the same size as input. In case of 2D transform, it uses the packed format as shown above. In case of a single 1D transform, it looks like the first row of the matrix above. In case of multiple 1D transforms (when using the ``DFT_ROWS``         flag), each row of the output matrix looks like the first row of the matrix above.
 
  * If the input array is complex and either ``DFT_INVERSE``     or ``DFT_REAL_OUTPUT``     are not set, the output is a complex array of the same size as input. The function performs a forward or inverse 1D or 2D transform of the whole input array or each row of the input array independently, depending on the flags ``DFT_INVERSE`` and ``DFT_ROWS``.
 

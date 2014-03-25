@@ -52,8 +52,8 @@
 #include "opencv2/videostab/motion_core.hpp"
 #include "opencv2/videostab/outlier_rejection.hpp"
 
-#ifdef HAVE_OPENCV_GPUIMGPROC
-#  include "opencv2/gpuimgproc.hpp"
+#ifdef HAVE_OPENCV_CUDAIMGPROC
+#  include "opencv2/cudaimgproc.hpp"
 #endif
 
 namespace cv
@@ -199,7 +199,7 @@ private:
     std::vector<Point2f> pointsPrevGood_, pointsGood_;
 };
 
-#if defined(HAVE_OPENCV_GPUIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAOPTFLOW)
 
 class CV_EXPORTS KeypointBasedMotionEstimatorGpu : public ImageMotionEstimatorBase
 {
@@ -213,24 +213,24 @@ public:
     Ptr<IOutlierRejector> outlierRejector() const { return outlierRejector_; }
 
     virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
-    Mat estimate(const gpu::GpuMat &frame0, const gpu::GpuMat &frame1, bool *ok = 0);
+    Mat estimate(const cuda::GpuMat &frame0, const cuda::GpuMat &frame1, bool *ok = 0);
 
 private:
     Ptr<MotionEstimatorBase> motionEstimator_;
-    Ptr<gpu::CornersDetector> detector_;
+    Ptr<cuda::CornersDetector> detector_;
     SparsePyrLkOptFlowEstimatorGpu optFlowEstimator_;
     Ptr<IOutlierRejector> outlierRejector_;
 
-    gpu::GpuMat frame0_, grayFrame0_, frame1_;
-    gpu::GpuMat pointsPrev_, points_;
-    gpu::GpuMat status_;
+    cuda::GpuMat frame0_, grayFrame0_, frame1_;
+    cuda::GpuMat pointsPrev_, points_;
+    cuda::GpuMat status_;
 
     Mat hostPointsPrev_, hostPoints_;
     std::vector<Point2f> hostPointsPrevTmp_, hostPointsTmp_;
     std::vector<uchar> rejectionStatus_;
 };
 
-#endif // defined(HAVE_OPENCV_GPUIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
+#endif // defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAOPTFLOW)
 
 CV_EXPORTS Mat getMotion(int from, int to, const std::vector<Mat> &motions);
 

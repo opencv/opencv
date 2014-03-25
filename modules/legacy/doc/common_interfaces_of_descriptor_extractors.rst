@@ -28,6 +28,7 @@ Wrapping class for computing descriptors by using the
         virtual void write( FileStorage &fs ) const;
         virtual int descriptorSize() const;
         virtual int descriptorType() const;
+        virtual int defaultNorm() const;
     protected:
         ...
     }

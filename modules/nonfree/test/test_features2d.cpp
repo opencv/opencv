@@ -275,8 +275,8 @@ static Mat readMatFromBin( const string& filename )
         size_t elements_read4 = fread( (void*)&dataSize, sizeof(int), 1, f );
         CV_Assert(elements_read1 == 1 && elements_read2 == 1 && elements_read3 == 1 && elements_read4 == 1);
 
-        size_t step = dataSize / rows / CV_ELEM_SIZE(type);
-        CV_Assert(step >= (size_t)cols);
+        int step = dataSize / rows / CV_ELEM_SIZE(type);
+        CV_Assert(step >= cols);
 
         Mat m = Mat( rows, step, type).colRange(0, cols);
 
@@ -1124,7 +1124,7 @@ protected:
             CV_Assert(kpt2[i].response > 0 );
 
         vector<DMatch> matches;
-        BFMatcher(NORM_L2, true).match(d1, d2, matches);
+        BFMatcher(f->defaultNorm(), true).match(d1, d2, matches);
 
         vector<Point2f> pt1, pt2;
         for( size_t i = 0; i < matches.size(); i++ ) {

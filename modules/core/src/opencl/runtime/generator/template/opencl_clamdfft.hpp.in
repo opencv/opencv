@@ -1,0 +1,11 @@
+#ifndef __OPENCV_CORE_OCL_RUNTIME_CLAMDFFT_HPP__
+#error "Invalid usage"
+#endif
+
+@CLAMDFFT_REMAP_ORIGIN@
+
+#include <clAmdFft.h>
+
+@CLAMDFFT_REMAP_DYNAMIC@
+
+@CLAMDFFT_FN_DECLARATIONS@

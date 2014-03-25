@@ -20,23 +20,23 @@ class CvHOGEvaluator : public CvFeatureEvaluator
 public:
     virtual ~CvHOGEvaluator() {}
     virtual void init(const CvFeatureParams *_featureParams,
-        int _maxSampleCount, Size _winSize );
-    virtual void setImage(const Mat& img, uchar clsLabel, int idx);
+        int _maxSampleCount, cv::Size _winSize );
+    virtual void setImage(const cv::Mat& img, uchar clsLabel, int idx);
     virtual float operator()(int varIdx, int sampleIdx) const;
-    virtual void writeFeatures( FileStorage &fs, const Mat& featureMap ) const;
+    virtual void writeFeatures( cv::FileStorage &fs, const cv::Mat& featureMap ) const;
 protected:
     virtual void generateFeatures();
-    virtual void integralHistogram(const Mat &img, std::vector<Mat> &histogram, Mat &norm, int nbins) const;
+    virtual void integralHistogram(const cv::Mat &img, std::vector<cv::Mat> &histogram, cv::Mat &norm, int nbins) const;
     class Feature
     {
     public:
         Feature();
         Feature( int offset, int x, int y, int cellW, int cellH );
-        float calc( const std::vector<Mat> &_hists, const Mat &_normSum, size_t y, int featComponent ) const;
-        void write( FileStorage &fs ) const;
-        void write( FileStorage &fs, int varIdx ) const;
+        float calc( const std::vector<cv::Mat> &_hists, const cv::Mat &_normSum, size_t y, int featComponent ) const;
+        void write( cv::FileStorage &fs ) const;
+        void write( cv::FileStorage &fs, int varIdx ) const;
 
-        Rect rect[N_CELLS]; //cells
+        cv::Rect rect[N_CELLS]; //cells
 
         struct
         {
@@ -45,8 +45,8 @@ protected:
     };
     std::vector<Feature> features;
 
-    Mat normSum; //for nomalization calculation (L1 or L2)
-    std::vector<Mat> hist;
+    cv::Mat normSum; //for nomalization calculation (L1 or L2)
+    std::vector<cv::Mat> hist;
 };
 
 inline float CvHOGEvaluator::operator()(int varIdx, int sampleIdx) const
@@ -57,7 +57,7 @@ inline float CvHOGEvaluator::operator()(int varIdx, int sampleIdx) const
     return features[featureIdx].calc( hist, normSum, sampleIdx, componentIdx);
 }
 
-inline float CvHOGEvaluator::Feature::calc( const std::vector<Mat>& _hists, const Mat& _normSum, size_t y, int featComponent ) const
+inline float CvHOGEvaluator::Feature::calc( const std::vector<cv::Mat>& _hists, const cv::Mat& _normSum, size_t y, int featComponent ) const
 {
     float normFactor;
     float res;

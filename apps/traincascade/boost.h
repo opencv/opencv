@@ -13,8 +13,8 @@ struct CvCascadeBoostParams : CvBoostParams
     CvCascadeBoostParams( int _boostType, float _minHitRate, float _maxFalseAlarm,
                           double _weightTrimRate, int _maxDepth, int _maxWeakCount );
     virtual ~CvCascadeBoostParams() {}
-    void write( FileStorage &fs ) const;
-    bool read( const FileNode &node );
+    void write( cv::FileStorage &fs ) const;
+    bool read( const cv::FileNode &node );
     virtual void printDefaults() const;
     virtual void printAttrs() const;
     virtual bool scanAttr( const std::string prmName, const std::string val);
@@ -45,7 +45,7 @@ struct CvCascadeBoostTrainData : CvDTreeTrainData
     virtual void free_train_data();
 
     const CvFeatureEvaluator* featureEvaluator;
-    Mat valCache; // precalculated feature values (CV_32FC1)
+    cv::Mat valCache; // precalculated feature values (CV_32FC1)
     CvMat _resp; // for casting
     int numPrecalcVal, numPrecalcIdx;
 };
@@ -54,9 +54,9 @@ class CvCascadeBoostTree : public CvBoostTree
 {
 public:
     virtual CvDTreeNode* predict( int sampleIdx ) const;
-    void write( FileStorage &fs, const Mat& featureMap );
-    void read( const FileNode &node, CvBoost* _ensemble, CvDTreeTrainData* _data );
-    void markFeaturesInMap( Mat& featureMap );
+    void write( cv::FileStorage &fs, const cv::Mat& featureMap );
+    void read( const cv::FileNode &node, CvBoost* _ensemble, CvDTreeTrainData* _data );
+    void markFeaturesInMap( cv::Mat& featureMap );
 protected:
     virtual void split_node_data( CvDTreeNode* n );
 };
@@ -70,10 +70,10 @@ public:
     virtual float predict( int sampleIdx, bool returnSum = false ) const;
 
     float getThreshold() const { return threshold; }
-    void write( FileStorage &fs, const Mat& featureMap ) const;
-    bool read( const FileNode &node, const CvFeatureEvaluator* _featureEvaluator,
+    void write( cv::FileStorage &fs, const cv::Mat& featureMap ) const;
+    bool read( const cv::FileNode &node, const CvFeatureEvaluator* _featureEvaluator,
                const CvCascadeBoostParams& _params );
-    void markUsedFeaturesInMap( Mat& featureMap );
+    void markUsedFeaturesInMap( cv::Mat& featureMap );
 protected:
     virtual bool set_params( const CvBoostParams& _params );
     virtual void update_weights( CvBoostTree* tree );

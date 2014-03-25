@@ -3,15 +3,15 @@
 
 #include "highgui.h"
 
-using namespace cv;
+
 
 class CvCascadeImageReader
 {
 public:
-    bool create( const std::string _posFilename, const std::string _negFilename, Size _winSize );
+    bool create( const std::string _posFilename, const std::string _negFilename, cv::Size _winSize );
     void restart() { posReader.restart(); }
-    bool getNeg(Mat &_img) { return negReader.get( _img ); }
-    bool getPos(Mat &_img) { return posReader.get( _img ); }
+    bool getNeg(cv::Mat &_img) { return negReader.get( _img ); }
+    bool getPos(cv::Mat &_img) { return posReader.get( _img ); }
 
 private:
     class PosReader
@@ -20,7 +20,7 @@ private:
         PosReader();
         virtual ~PosReader();
         bool create( const std::string _filename );
-        bool get( Mat &_img );
+        bool get( cv::Mat &_img );
         void restart();
 
         short* vec;
@@ -35,18 +35,18 @@ private:
     {
     public:
         NegReader();
-        bool create( const std::string _filename, Size _winSize );
-        bool get( Mat& _img );
+        bool create( const std::string _filename, cv::Size _winSize );
+        bool get( cv::Mat& _img );
         bool nextImg();
 
-        Mat     src, img;
+        cv::Mat     src, img;
         std::vector<std::string> imgFilenames;
-        Point   offset, point;
+        cv::Point   offset, point;
         float   scale;
         float   scaleFactor;
         float   stepFactor;
         size_t  last, round;
-        Size    winSize;
+        cv::Size    winSize;
     } negReader;
 };
 
