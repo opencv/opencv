@@ -53,7 +53,7 @@ namespace cv
         //! Speeded up robust features, port from GPU module.
         ////////////////////////////////// SURF //////////////////////////////////////////
 
-        class CV_EXPORTS SURF_OCL
+        class CV_EXPORTS SURF_OCL : public cv::Feature2D
         {
         public:
             enum KeypointLayout
@@ -72,10 +72,13 @@ namespace cv
             SURF_OCL();
             //! the full constructor taking all the necessary parameters
             explicit SURF_OCL(double _hessianThreshold, int _nOctaves = 4,
-                              int _nOctaveLayers = 2, bool _extended = false, float _keypointsRatio = 0.01f, bool _upright = false);
+                              int _nOctaveLayers = 2, bool _extended = true, float _keypointsRatio = 0.01f, bool _upright = false);
 
             //! returns the descriptor size in float's (64 or 128)
             int descriptorSize() const;
+
+            int descriptorType() const;
+
             //! upload host keypoints to device memory
             void uploadKeypoints(const vector<cv::KeyPoint> &keypoints, oclMat &keypointsocl);
             //! download keypoints from device to host memory
@@ -103,6 +106,17 @@ namespace cv
             void operator()(const oclMat &img, const oclMat &mask, std::vector<KeyPoint> &keypoints, std::vector<float> &descriptors,
                             bool useProvidedKeypoints = false);
 
+            //! finds the keypoints using fast hessian detector used in SURF
+            void operator()(InputArray img, InputArray mask,
+                            CV_OUT vector<KeyPoint>& keypoints) const;
+            //! finds the keypoints and computes their descriptors. Optionally it can compute descriptors for the user-provided keypoints
+            void operator()(InputArray img, InputArray mask,
+                            CV_OUT vector<KeyPoint>& keypoints,
+                            OutputArray descriptors,
+                            bool useProvidedKeypoints=false) const;
+
+            AlgorithmInfo* info() const;
+
             void releaseMemory();
 
             // SURF parameters
@@ -116,7 +130,9 @@ namespace cv
             oclMat sum, mask1, maskSum, intBuffer;
             oclMat det, trace;
             oclMat maxPosBuffer;
-
+        protected:
+            void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const;
+            void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const;
         };
     }
 }
