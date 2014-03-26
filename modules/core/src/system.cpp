@@ -414,24 +414,23 @@ const String& getBuildInformation()
 
 String format( const char* fmt, ... )
 {
-    char buf[1024];
+    AutoBuffer<char, 1024> buf;
 
-    va_list va;
-    va_start(va, fmt);
-    int len = vsnprintf(buf, sizeof(buf), fmt, va);
-    va_end(va);
-
-    if (len >= (int)sizeof(buf))
+    for ( ; ; )
     {
-        String s(len, '\0');
+        va_list va;
         va_start(va, fmt);
-        len = vsnprintf((char*)s.c_str(), len + 1, fmt, va);
-        (void)len;
+        int bsize = static_cast<int>(buf.size()),
+                len = vsnprintf((char *)buf, bsize, fmt, va);
         va_end(va);
-        return s;
-    }
 
-    return String(buf, len);
+        if (len < 0 || len >= bsize)
+        {
+            buf.resize(std::max(bsize << 1, len + 1));
+            continue;
+        }
+        return String((char *)buf, len);
+    }
 }
 
 String tempfile( const char* suffix )
