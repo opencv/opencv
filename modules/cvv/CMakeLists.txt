@@ -8,6 +8,7 @@ ocv_define_module(cvv opencv_core opencv_imgproc opencv_features2d)
 
 # we need C++11 and want warnings:
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -pedantic")
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
