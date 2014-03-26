@@ -95,6 +95,34 @@ OCL_PERF_TEST_P(CalcHistFixture, CalcHist, OCL_TEST_SIZES)
     SANITY_CHECK(hist);
 }
 
+///////////// calcHist ////////////////////////
+
+typedef TestBaseWithParam<Size> CalcBackProjFixture;
+
+OCL_PERF_TEST_P(CalcBackProjFixture, CalcBackProj, OCL_TEST_SIZES)
+{
+    const Size srcSize = GetParam();
+
+    const std::vector<int> channels(1, 0);
+    std::vector<float> ranges(2);
+    std::vector<int> histSize(1, 256);
+    ranges[0] = 0;
+    ranges[1] = 256;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, CV_8UC1);
+
+    UMat src(srcSize, CV_8UC1), hist(256, 1, CV_32FC1), dst(srcSize, CV_8UC1);
+    declare.in(src, WARMUP_RNG).out(hist);
+
+    cv::calcHist(std::vector<UMat>(1, src), channels, noArray(), hist, histSize, ranges, false);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+    OCL_TEST_CYCLE() cv::calcBackProject(std::vector<UMat>(1,src), channels, hist, dst, ranges, 1);
+
+    SANITY_CHECK_NOTHING();
+}
+
+
 /////////// CopyMakeBorder //////////////////////
 
 CV_ENUM(Border, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_WRAP, BORDER_REFLECT_101)
