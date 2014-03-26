@@ -834,3 +834,137 @@ TEST(UMat, DISABLED_synchronization_map_unmap)
 }
 
 } } // namespace cvtest::ocl
+
+TEST(UMat, DISABLED_bug_with_unmap)
+{
+    for (int i = 0; i < 20; i++)
+    {
+        try
+        {
+            Mat m = Mat(1000, 1000, CV_8UC1);
+            UMat u = m.getUMat(ACCESS_READ);
+            UMat dst;
+            add(u, Scalar::all(0), dst); // start async operation
+            u.release();
+            m.release();
+        }
+        catch (const cv::Exception& e)
+        {
+            printf("i = %d... %s\n", i, e.what());
+            ADD_FAILURE();
+        }
+        catch (...)
+        {
+            printf("i = %d...\n", i);
+            ADD_FAILURE();
+        }
+    }
+}
+
+TEST(UMat, DISABLED_bug_with_unmap_in_class)
+{
+    class Logic
+    {
+    public:
+        Logic() {}
+        void processData(InputArray input)
+        {
+            Mat m = input.getMat();
+            {
+                Mat dst;
+                m.convertTo(dst, CV_32FC1);
+                // some additional CPU-based per-pixel processing into dst
+                intermediateResult = dst.getUMat(ACCESS_READ);
+                std::cout << "data processed..." << std::endl;
+            } // problem is here: dst::~Mat()
+            std::cout << "leave ProcessData()" << std::endl;
+        }
+        UMat getResult() const { return intermediateResult; }
+    protected:
+        UMat intermediateResult;
+    };
+    try
+    {
+        Mat m = Mat(1000, 1000, CV_8UC1);
+        Logic l;
+        l.processData(m);
+        UMat result = l.getResult();
+    }
+    catch (const cv::Exception& e)
+    {
+        printf("exception... %s\n", e.what());
+        ADD_FAILURE();
+    }
+    catch (...)
+    {
+        printf("exception... \n");
+        ADD_FAILURE();
+    }
+}
+
+TEST(UMat, Test_same_behaviour_read_and_read)
+{
+    bool exceptionDetected = false;
+    try
+    {
+        UMat u(Size(10, 10), CV_8UC1);
+        Mat m = u.getMat(ACCESS_READ);
+        UMat dst;
+        add(u, Scalar::all(1), dst);
+    }
+    catch (...)
+    {
+        exceptionDetected = true;
+    }
+    ASSERT_FALSE(exceptionDetected); // no data race, 2+ reads are valid
+}
+
+// VP: this test (and probably others from same_behaviour series) is not valid in my opinion.
+TEST(UMat, DISABLED_Test_same_behaviour_read_and_write)
+{
+    bool exceptionDetected = false;
+    try
+    {
+        UMat u(Size(10, 10), CV_8UC1);
+        Mat m = u.getMat(ACCESS_READ);
+        add(u, Scalar::all(1), u);
+    }
+    catch (...)
+    {
+        exceptionDetected = true;
+    }
+    ASSERT_TRUE(exceptionDetected); // data race
+}
+
+TEST(UMat, DISABLED_Test_same_behaviour_write_and_read)
+{
+    bool exceptionDetected = false;
+    try
+    {
+        UMat u(Size(10, 10), CV_8UC1);
+        Mat m = u.getMat(ACCESS_WRITE);
+        UMat dst;
+        add(u, Scalar::all(1), dst);
+    }
+    catch (...)
+    {
+        exceptionDetected = true;
+    }
+    ASSERT_TRUE(exceptionDetected); // data race
+}
+
+TEST(UMat, DISABLED_Test_same_behaviour_write_and_write)
+{
+    bool exceptionDetected = false;
+    try
+    {
+        UMat u(Size(10, 10), CV_8UC1);
+        Mat m = u.getMat(ACCESS_WRITE);
+        add(u, Scalar::all(1), u);
+    }
+    catch (...)
+    {
+        exceptionDetected = true;
+    }
+    ASSERT_TRUE(exceptionDetected); // data race
+}
