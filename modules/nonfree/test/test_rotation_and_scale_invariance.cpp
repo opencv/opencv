@@ -48,6 +48,12 @@ using namespace cv;
 const string IMAGE_TSUKUBA = "/features2d/tsukuba.png";
 const string IMAGE_BIKES = "/detectors_descriptors_evaluation/images_datasets/bikes/img1.png";
 
+#if defined(HAVE_OPENCV_OCL) && 0 // unblock this to see SURF_OCL tests failures
+#define SURF_NAME "Feature2D.SURF_OCL"
+#else
+#define SURF_NAME "Feature2D.SURF"
+#endif
+
 #define SHOW_DEBUG_LOG 0
 
 static
@@ -615,7 +621,7 @@ protected:
  */
 TEST(Features2d_RotationInvariance_Detector_SURF, regression)
 {
-    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"),
+    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>(SURF_NAME),
                                         0.44f,
                                         0.76f);
     test.safe_run();
@@ -634,8 +640,8 @@ TEST(Features2d_RotationInvariance_Detector_SIFT, DISABLED_regression)
  */
 TEST(Features2d_RotationInvariance_Descriptor_SURF, regression)
 {
-    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"),
-                                          Algorithm::create<DescriptorExtractor>("Feature2D.SURF"),
+    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>(SURF_NAME),
+                                          Algorithm::create<DescriptorExtractor>(SURF_NAME),
                                           NORM_L1,
                                           0.83f);
     test.safe_run();
@@ -655,7 +661,7 @@ TEST(Features2d_RotationInvariance_Descriptor_SIFT, regression)
  */
 TEST(Features2d_ScaleInvariance_Detector_SURF, regression)
 {
-    DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"),
+    DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>(SURF_NAME),
                                      0.64f,
                                      0.84f);
     test.safe_run();
@@ -674,8 +680,8 @@ TEST(Features2d_ScaleInvariance_Detector_SIFT, regression)
  */
 TEST(Features2d_ScaleInvariance_Descriptor_SURF, regression)
 {
-    DescriptorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"),
-                                       Algorithm::create<DescriptorExtractor>("Feature2D.SURF"),
+    DescriptorScaleInvarianceTest test(Algorithm::create<FeatureDetector>(SURF_NAME),
+                                       Algorithm::create<DescriptorExtractor>(SURF_NAME),
                                        NORM_L1,
                                        0.61f);
     test.safe_run();
