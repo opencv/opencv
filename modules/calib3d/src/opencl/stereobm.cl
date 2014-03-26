@@ -147,6 +147,7 @@ __kernel void stereoBM(__global const uchar * leftptr, __global const uchar * ri
     __local int best_disp[2];
     __local int best_cost[2];
     best_cost[nthread] = MAX_VAL;
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     short costbuf[wsz];
     int head = 0;
@@ -159,7 +160,7 @@ __kernel void stereoBM(__global const uchar * leftptr, __global const uchar * ri
     int costIdx = calcLocalIdx(lx, ly, d, sizeY);
     cost = costFunc + costIdx;
 
-    short tempcost = 0;
+    int tempcost = 0;
     if(x < cols-wsz2-mindisp && y < rows-wsz2)
     {
         int shift = 1*nthread + cols*(1-nthread);
@@ -186,7 +187,11 @@ __kernel void stereoBM(__global const uchar * leftptr, __global const uchar * ri
     if(nthread==1)
     {
         cost[0] = tempcost;
+#ifndef CPU
         atomic_min(best_cost+nthread, tempcost);
+#else
+        *(best_cost+nthread) = min(*(best_cost+nthread), tempcost);
+#endif
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -223,7 +228,11 @@ __kernel void stereoBM(__global const uchar * leftptr, __global const uchar * ri
                     cost[0], cost[1], cost[-1], winsize);
         }
         cost[0] = tempcost;
+#ifndef CPU
         atomic_min(best_cost + nthread, tempcost);
+#else
+        *(best_cost + nthread) = min(*(best_cost + nthread), tempcost);
+#endif
         barrier(CLK_LOCAL_MEM_FENCE);
 
         if(best_cost[nthread] == tempcost)
