@@ -616,14 +616,14 @@ protected:
 };
 
 
-class CV_EXPORTS DenseFeatureDetector : public FeatureDetector
+class CV_EXPORTS_W DenseFeatureDetector : public FeatureDetector
 {
 public:
-    explicit DenseFeatureDetector( float initFeatureScale=1.f, int featureScaleLevels=1,
-                                   float featureScaleMul=0.1f,
-                                   int initXyStep=6, int initImgBound=0,
-                                   bool varyXyStepWithScale=true,
-                                   bool varyImgBoundWithScale=false );
+    CV_WRAP explicit DenseFeatureDetector( float initFeatureScale=1.f, int featureScaleLevels=1,
+                                           float featureScaleMul=0.1f,
+                                           int initXyStep=6, int initImgBound=0,
+                                           bool varyXyStepWithScale=true,
+                                           bool varyImgBoundWithScale=false );
     AlgorithmInfo* info() const;
 
 protected:
