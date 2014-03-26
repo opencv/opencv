@@ -190,223 +190,231 @@ namespace cv
 
 static bool IPPDerivScharr(const Mat& src, Mat& dst, int ddepth, int dx, int dy, double scale)
 {
-   int bufSize = 0;
-   cv::AutoBuffer<char> buffer;
-   IppiSize roi = ippiSize(src.cols, src.rows);
+    int bufSize = 0;
+    cv::AutoBuffer<char> buffer;
+    IppiSize roi = ippiSize(src.cols, src.rows);
 
-   if( ddepth < 0 )
-     ddepth = src.depth();
+    if( ddepth < 0 )
+        ddepth = src.depth();
 
-   dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
+    dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
 
-   switch(src.type())
-   {
-      case CV_8U:
-         {
+    switch(src.type())
+    {
+    case CV_8U:
+        {
             if(scale != 1)
                 return false;
 
             switch(dst.type())
             {
-               case CV_16S:
-               {
-                  if((dx == 1) && (dy == 0))
-                  {
-                     ippicviFilterScharrVertGetBufferSize_8u16s_C1R(roi,&bufSize);
-                     buffer.allocate(bufSize);
-
-                     ippicviFilterScharrVertBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
-                        (Ipp16s*)dst.data, (int)dst.step, roi, ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
-
-                     return true;
-                  }
-
-                  if((dx == 0) && (dy == 1))
-                  {
-                     ippicviFilterScharrHorizGetBufferSize_8u16s_C1R(roi,&bufSize);
-                     buffer.allocate(bufSize);
-
-                     ippicviFilterScharrHorizBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
-                        (Ipp16s*)dst.data, (int)dst.step, roi, ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
-
-                     return true;
-                  }
-               }
-
-               default:
-                  return false;
+            case CV_16S:
+                {
+                    if ((dx == 1) && (dy == 0))
+                    {
+                        if (ippStsNoErr != ippicviFilterScharrVertGetBufferSize_8u16s_C1R(roi,&bufSize))
+                            return false;
+                        buffer.allocate(bufSize);
+                        return (ippStsNoErr == ippicviFilterScharrVertBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+                                        (Ipp16s*)dst.data, (int)dst.step, roi, ippBorderRepl, 0, (Ipp8u*)(char*)buffer));
+                    }
+                    if ((dx == 0) && (dy == 1))
+                    {
+                        if (ippStsNoErr != ippicviFilterScharrHorizGetBufferSize_8u16s_C1R(roi,&bufSize))
+                            return false;
+                        buffer.allocate(bufSize);
+                        return (ippStsNoErr == ippicviFilterScharrHorizBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+                                            (Ipp16s*)dst.data, (int)dst.step, roi, ippBorderRepl, 0, (Ipp8u*)(char*)buffer));
+                    }
+                    return false;
+                }
+            default:
+                return false;
             }
-         }
-
-      case CV_32F:
-         {
+        }
+    case CV_32F:
+        {
             switch(dst.type())
             {
-               case CV_32F:
-               if((dx == 1) && (dy == 0))
-               {
-                  ippicviFilterScharrVertGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows),&bufSize);
-                  buffer.allocate(bufSize);
+            case CV_32F:
+                {
+                    if ((dx == 1) && (dy == 0))
+                    {
+                        if (ippStsNoErr != ippicviFilterScharrVertGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows),&bufSize))
+                            return false;
+                        buffer.allocate(bufSize);
 
-                  ippicviFilterScharrVertBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
-                     (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows),
-                                            ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
-                  if(scale != 1)
-                     /* IPP is fast, so MulC produce very little perf degradation */
-                     ippicviMulC_32f_C1IR((Ipp32f)scale, (Ipp32f*)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
+                        if (ippStsNoErr != ippicviFilterScharrVertBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+                                        (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows),
+                                        ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
+                        {
+                            return false;
+                        }
 
-                  return true;
-               }
+                        if (scale != 1)
+                            /* IPP is fast, so MulC produce very little perf degradation.*/
+                            //ippicviMulC_32f_C1IR((Ipp32f)scale, (Ipp32f*)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
+                            ippicviMulC_32f_C1R((Ipp32f*)dst.data, (int)dst.step, (Ipp32f)scale, (Ipp32f*)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
+                        return true;
+                    }
+                    if ((dx == 0) && (dy == 1))
+                    {
+                        if (ippStsNoErr != ippicviFilterScharrHorizGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows),&bufSize))
+                            return false;
+                        buffer.allocate(bufSize);
 
-               if((dx == 0) && (dy == 1))
-               {
-                  ippicviFilterScharrHorizGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows),&bufSize);
-                  buffer.allocate(bufSize);
+                        if (ippStsNoErr != ippicviFilterScharrHorizBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+                                        (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows),
+                                        ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
+                            return false;
 
-                  ippicviFilterScharrHorizBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
-                     (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows),
-                                            ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
-                  if(scale != 1)
-                     ippicviMulC_32f_C1IR((Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
-
-                  return true;
-               }
-
-               default:
-                  return false;
+                        if (scale != 1)
+                            ippicviMulC_32f_C1R((Ipp32f *)dst.data, (int)dst.step, (Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
+                        return true;
+                    }
+                }
+            default:
+                return false;
             }
-         }
-
-      default:
-         return false;
-   }
+        }
+    default:
+        return false;
+    }
 }
 
 
 static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int ksize, double scale)
 {
-   int bufSize = 0;
-   cv::AutoBuffer<char> buffer;
+    int bufSize = 0;
+    cv::AutoBuffer<char> buffer;
+    if (ksize == 3 || ksize == 5)
+    {
+        if ( ddepth < 0 )
+            ddepth = src.depth();
 
-   if(ksize == 3 || ksize == 5)
-   {
-      if( ddepth < 0 )
-          ddepth = src.depth();
+        if (src.type() == CV_8U && dst.type() == CV_16S && scale == 1)
+        {
+            if ((dx == 1) && (dy == 0))
+            {
+                if (ippStsNoErr != ippicviFilterSobelNegVertGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
+                    return false;
+                buffer.allocate(bufSize);
 
-      if(src.type() == CV_8U && dst.type() == CV_16S && scale == 1)
-      {
-         if((dx == 1) && (dy == 0))
-         {
-            ippicviFilterSobelNegVertGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize);
-            buffer.allocate(bufSize);
+                return (ippStsNoErr == ippicviFilterSobelNegVertBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+                                    (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+                                    ippBorderRepl, 0, (Ipp8u*)(char*)buffer));
+            }
 
-            ippicviFilterSobelNegVertBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
-               (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
-                                      ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
-            return true;
-         }
+            if ((dx == 0) && (dy == 1))
+            {
+                if (ippStsNoErr != ippicviFilterSobelHorizGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
+                    return false;
+                buffer.allocate(bufSize);
 
-         if((dx == 0) && (dy == 1))
-         {
-            ippicviFilterSobelHorizGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize);
-            buffer.allocate(bufSize);
+                return (ippStsNoErr == ippicviFilterSobelHorizBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+                                    (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+                                    ippBorderRepl, 0, (Ipp8u*)(char*)buffer));
+            }
 
-            ippicviFilterSobelHorizBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
-               (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
-                                      ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
+            if ((dx == 2) && (dy == 0))
+            {
+                if (ippStsNoErr != ippicviFilterSobelVertSecondGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
+                    return false;
+                buffer.allocate(bufSize);
 
-            return true;
-         }
+                return (ippStsNoErr == ippicviFilterSobelVertSecondBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+                                    (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+                                    ippBorderRepl, 0, (Ipp8u*)(char*)buffer));
+            }
 
-         if((dx == 2) && (dy == 0))
-         {
-            ippicviFilterSobelVertSecondGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize);
-            buffer.allocate(bufSize);
+            if ((dx == 0) && (dy == 2))
+            {
+                if (ippStsNoErr != ippicviFilterSobelHorizSecondGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
+                    return false;
+                buffer.allocate(bufSize);
 
-            ippicviFilterSobelVertSecondBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
-               (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
-                                      ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
+                return (ippStsNoErr == ippicviFilterSobelHorizSecondBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+                                    (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+                                    ippBorderRepl, 0, (Ipp8u*)(char*)buffer));
+            }
+        }
 
-            return true;
-         }
+        if (src.type() == CV_32F && dst.type() == CV_32F)
+        {
+            if ((dx == 1) && (dy == 0))
+            {
+                if (ippStsNoErr != ippicviFilterSobelNegVertGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize), &bufSize))
+                    return false;
+                buffer.allocate(bufSize);
 
-         if((dx == 0) && (dy == 2))
-         {
-            ippicviFilterSobelHorizSecondGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize);
-            buffer.allocate(bufSize);
+                if (ippStsNoErr != ippicviFilterSobelNegVertBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+                                (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+                                ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
+                {
+                    return false;
+                }
+                if(scale != 1)
+                    ippicviMulC_32f_C1R((Ipp32f *)dst.data, (int)dst.step, (Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
+                return true;
+            }
 
-            ippicviFilterSobelHorizSecondBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
-               (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
-                                      ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
+            if ((dx == 0) && (dy == 1))
+            {
+                if (ippStsNoErr != ippicviFilterSobelHorizGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
+                    return false;
+                buffer.allocate(bufSize);
 
-            return true;
-         }
-      }
+                if (ippStsNoErr != ippicviFilterSobelHorizBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+                                (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+                                ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
+                {
+                    return false;
+                }
+                if(scale != 1)
+                    ippicviMulC_32f_C1R((Ipp32f *)dst.data, (int)dst.step, (Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
+                return true;
+            }
 
-      if(src.type() == CV_32F && dst.type() == CV_32F)
-      {
-         if((dx == 1) && (dy == 0))
-         {
-            ippicviFilterSobelNegVertGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize), &bufSize);
-            buffer.allocate(bufSize);
+            if((dx == 2) && (dy == 0))
+            {
+                if (ippStsNoErr != ippicviFilterSobelVertSecondGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
+                    return false;
+                buffer.allocate(bufSize);
 
-            ippicviFilterSobelNegVertBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
-               (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
-                                      ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
-            if(scale != 1)
-               ippicviMulC_32f_C1IR((Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
+                if (ippStsNoErr != ippicviFilterSobelVertSecondBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+                                (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+                                ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
+                {
+                    return false;
+                }
+                if(scale != 1)
+                    ippicviMulC_32f_C1R((Ipp32f *)dst.data, (int)dst.step, (Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
+                return true;
+            }
 
-            return true;
-         }
+            if((dx == 0) && (dy == 2))
+            {
+                if (ippStsNoErr != ippicviFilterSobelHorizSecondGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
+                    return false;
+                buffer.allocate(bufSize);
 
-         if((dx == 0) && (dy == 1))
-         {
-            ippicviFilterSobelHorizGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize);
-            buffer.allocate(bufSize);
+                if (ippStsNoErr != ippicviFilterSobelHorizSecondBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+                                (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
+                                ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
+                {
+                    return false;
+                }
 
-            ippicviFilterSobelHorizBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
-               (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
-                                      ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
-            if(scale != 1)
-               ippicviMulC_32f_C1IR((Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
+                if(scale != 1)
+                    ippicviMulC_32f_C1R((Ipp32f *)dst.data, (int)dst.step, (Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
+                return true;
+            }
+        }
+    }
 
-            return true;
-         }
-
-         if((dx == 2) && (dy == 0))
-         {
-            ippicviFilterSobelVertSecondGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize);
-            buffer.allocate(bufSize);
-
-            ippicviFilterSobelVertSecondBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
-               (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
-                                      ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
-            if(scale != 1)
-               ippicviMulC_32f_C1IR((Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
-
-            return true;
-         }
-
-         if((dx == 0) && (dy == 2))
-         {
-            ippicviFilterSobelHorizSecondGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize);
-            buffer.allocate(bufSize);
-
-            ippicviFilterSobelHorizSecondBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
-               (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
-                                      ippBorderRepl, 0, (Ipp8u*)(char*)buffer);
-            if(scale != 1)
-               ippicviMulC_32f_C1IR((Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
-
-            return true;
-         }
-      }
-   }
-
-   if(ksize <= 0)
-      return IPPDerivScharr(src, dst, ddepth, dx, dy, scale);
-
-   return false;
+    if(ksize <= 0)
+        return IPPDerivScharr(src, dst, ddepth, dx, dy, scale);
+    return false;
 }
 
 }
@@ -436,7 +444,7 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     if(dx < 3 && dy < 3 && cn == 1 && borderType == BORDER_REPLICATE)
     {
         Mat src = _src.getMat(), dst = _dst.getMat();
-        if(IPPDeriv(src, dst, ddepth, dx, dy, ksize,scale))
+        if (IPPDeriv(src, dst, ddepth, dx, dy, ksize,scale))
             return;
     }
 #endif
