@@ -201,6 +201,21 @@ As always, we would be happy to hear your comments and receive your contribution
                    :width:  80pt
                    :alt: viz icon
 
+*  :ref:`Table-Of-Content-CVV`
+
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+
+   =========== =======================================================
+      |Cvv|     Visual development and debugging aids.
+
+   =========== =======================================================
+
+     .. |Cvv| image:: images/cvv.jpg
+                   :height: 80pt
+                   :width:  80pt
+                   :alt: viz icon
+
 *  :ref:`Table-Of-Content-General`
 
       .. tabularcolumns:: m{100pt} m{300pt}
