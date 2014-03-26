@@ -3,7 +3,7 @@
 
 #include <thread>
 
-#include "debug_mode.hpp"
+#include "opencv2/cvv/debug_mode.hpp"
 
 /**
  * Tests whether cvv::debugMode() and cvv::setDebugFlag(bool)`  

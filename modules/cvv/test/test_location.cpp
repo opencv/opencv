@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "call_meta_data.hpp"
+#include "opencv2/cvv/call_meta_data.hpp"
 
 /**
  * Tests whether the `CVVISUAL_LOCATION` macro (from /include/opencv2/call_meta_data.hpp)
