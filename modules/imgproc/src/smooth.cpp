@@ -1114,16 +1114,21 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     {
         Mat src = _src.getMat(), dst = _dst.getMat();
         IppiSize roi = { src.cols, src.rows };
-        int bufSize = 0;
-        if (ippStsNoErr == ippicviFilterGaussGetBufferSize_32f_C1R(roi, ksize.width, &bufSize))
+        int specSize = 0, bufferSize = 0;
+        if (ippStsNoErr ==  ippicviFilterGaussianGetBufferSize(roi, (Ipp32u)ksize.width, ipp32f, 1, &specSize, &bufferSize))
         {
-            AutoBuffer<uchar> buf(bufSize+128);
-            if( ippicviFilterGaussBorder_32f_C1R((const Ipp32f *)src.data, (int)src.step,
-                                              (Ipp32f *)dst.data, (int)dst.step,
-                                              roi, ksize.width, (Ipp32f)sigma1,
-                                              (IppiBorderType)borderType, 0.0,
-                                              alignPtr(&buf[0],32)) >= 0 )
-                return;
+            IppFilterGaussianSpec *pSpec = (IppFilterGaussianSpec*)ippicvMalloc(specSize);
+            Ipp8u *pBuffer = (Ipp8u*)ippicvMalloc(bufferSize);
+            if (ippStsNoErr == ippicviFilterGaussianInit(roi, (Ipp32u)ksize.width, (Ipp32f)sigma1, (IppiBorderType)borderType, ipp32f, 1, pSpec, pBuffer))
+            {
+                IppStatus sts = ippicviFilterGaussianBorder_32f_C1R( (const Ipp32f *)src.data, (int)src.step,
+                                                                     (Ipp32f *)dst.data, (int)dst.step,
+                                                                     roi,  0.0, pSpec, pBuffer);
+                ippicvFree(pBuffer);
+                ippicvFree(pSpec);
+                if (ippStsNoErr == sts)
+                    return;
+            }
         }
     }
 #endif
