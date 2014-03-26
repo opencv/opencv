@@ -1137,33 +1137,40 @@ private:
 };
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if 0
 static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kernel,
                               const Size& ksize, const Point &anchor, bool rectKernel)
 {
     int type = src.type();
     const Mat* _src = &src;
     Mat temp;
-    if( src.data == dst.data )
+    if (src.data == dst.data)
     {
         src.copyTo(temp);
         _src = &temp;
     }
     //DEPRECATED. Allocates and initializes morphology state structure for erosion or dilation operation.
-    typedef IppStatus (CV_STDCALL* ippicviMorphologyInitAllocFunc)(int, const void*, IppiSize, IppiPoint, IppiMorphState **);
-    typedef IppStatus (CV_STDCALL* ippicviMorphologyBorderReplicateFunc)(const void*, int, void *, int,
-                                                                      IppiSize, IppiBorderType, IppiMorphState *);
+//    typedef IppStatus (CV_STDCALL* ippicviMorphologyInitAllocFunc)(int, const void*, IppiSize, IppiPoint, IppiMorphState **);
+    typedef IppStatus (CV_STDCALL* ippicviMorphologyGetSizeFunc)(int, const Ipp8u*, IppiSize, int*);
+    typedef IppStatus (CV_STDCALL* ippicviMorphologyInit)(int, const Ipp8u*, IppiSize, IppiPoint, IppiMorphState*);
+    typedef IppStatus (CV_STDCALL* ippicviMorphologyBorderReplicateFunc)(const void*, int, void *, int, IppiSize, IppiBorderType, IppiMorphState *);
+    typedef IppStatus (CV_STDCALL* ippicviMorphologyBorderFunc8u)(const Ipp8u*, int, Ipp8u*, int, IppiSize, IppiBorderType, Ipp8u, IppiMorphState*, Ipp8u*);
+    typedef IppStatus (CV_STDCALL* ippicviMorphologyBorderFunc32f)(const Ipp32f*, int, Ipp32f*, int, IppiSize, IppiBorderType, Ipp32f, IppiMorphState*, Ipp8u*);
     typedef IppStatus (CV_STDCALL* ippicviFilterMinMaxGetBufferSizeFunc)(int, IppiSize, int*);
-    typedef IppStatus (CV_STDCALL* ippicviFilterMinMaxBorderReplicateFunc)(const void*, int, void*, int,
-                                                                        IppiSize, IppiSize, IppiPoint, void*);
+    typedef IppStatus (CV_STDCALL* ippicviFilterMinMaxBorderReplicateFunc)(const void*, int, void*, int, IppiSize, IppiSize, IppiPoint, void*);
 
-    ippicviMorphologyInitAllocFunc initAllocFunc = 0;
+    //ippicviMorphologyInitAllocFunc initAllocFunc = 0;
+    ippicviMorphologyGetSizeFunc getSizeFunc = 0;
+    ippicviMorphologyInit initFunc = 0;
     ippicviMorphologyBorderReplicateFunc morphFunc = 0;
     ippicviFilterMinMaxGetBufferSizeFunc getBufSizeFunc = 0;
     ippicviFilterMinMaxBorderReplicateFunc morphRectFunc = 0;
 
-    #define IPP_MORPH_CASE(type, flavor) \
+    #define IPP_MORPH_CASE(type, flavor, datatype) \
     case type: \
-        initAllocFunc = (ippicviMorphologyInitAllocFunc)ippicviMorphologyInitAlloc_##flavor; \
+/*        initAllocFunc = (ippicviMorphologyInitAllocFunc)ippicviMorphologyInitAlloc_##flavor; */\
+        getSizeFunc = (ippicviMorphologyGetSizeFunc)ippicviMorphologyGetSize_##flavor ; \
+        initFunc = (ippicviMorphologyInit)ippicviMorphologyInit_##flavor ; \
         morphFunc = op == MORPH_ERODE ? (ippicviMorphologyBorderReplicateFunc)ippicviErodeBorderReplicate_##flavor : \
                                         (ippicviMorphologyBorderReplicateFunc)ippicviDilateBorderReplicate_##flavor; \
         getBufSizeFunc = (ippicviFilterMinMaxGetBufferSizeFunc)ippicviFilterMinGetBufferSize_##flavor; \
@@ -1173,12 +1180,12 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
 
     switch( type )
     {
-    IPP_MORPH_CASE(CV_8UC1, 8u_C1R);
-    IPP_MORPH_CASE(CV_8UC3, 8u_C3R);
-    IPP_MORPH_CASE(CV_8UC4, 8u_C4R);
-    IPP_MORPH_CASE(CV_32FC1, 32f_C1R);
-    IPP_MORPH_CASE(CV_32FC3, 32f_C3R);
-    IPP_MORPH_CASE(CV_32FC4, 32f_C4R);
+    IPP_MORPH_CASE(CV_8UC1, 8u_C1R, 8u);
+    IPP_MORPH_CASE(CV_8UC3, 8u_C3R, 8u);
+    IPP_MORPH_CASE(CV_8UC4, 8u_C4R, 8u);
+    IPP_MORPH_CASE(CV_32FC1, 32f_C1R, 32f);
+    IPP_MORPH_CASE(CV_32FC3, 32f_C3R, 32f);
+    IPP_MORPH_CASE(CV_32FC4, 32f_C4R, 32f);
     default:
         return false;
     }
@@ -1188,16 +1195,26 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
     IppiSize kernelSize = {ksize.width, ksize.height};
     IppiPoint point = {anchor.x, anchor.y};
 
-    if( !rectKernel && morphFunc && initAllocFunc )
+    if( !rectKernel && morphFunc && getSizeFunc && initFunc)
     {
-        IppiMorphState* pState;
-        if( initAllocFunc( roiSize.width, kernel.data, kernelSize, point, &pState ) < 0 )
+        //IppiMorphState* pState;
+        //if( initAllocFunc( roiSize.width, kernel.data, kernelSize, point, &pState ) < 0 )
+        //    return false;
+        int stateSize = 0;
+        if (getSizeFunc(roiSize.width, kernel.data, kernelSize, &stateSize) < 0)
             return false;
-        bool is_ok = morphFunc( _src->data, (int)_src->step[0],
-                               dst.data, (int)dst.step[0],
-                               roiSize, ippBorderRepl, pState ) >= 0;
-        ippicviMorphologyFree(pState);
-        return is_ok;
+
+        bool ok = false;
+        IppiMorphState* pState =  (IppiMorphState*)ippicvMalloc(stateSize);
+        if (initFunc(roiSize.width, kernel.data, kernelSize, point, pState) >= 0)
+        {
+            ok = morphFunc( _src->data, (int)_src->step[0],
+                            dst.data, (int)dst.step[0],
+                            roiSize, ippBorderRepl, pState ) >= 0;
+        }
+        ippicvFree(pState);
+        //ippicviMorphologyFree(pState);
+        return ok;
     }
     else if( rectKernel && morphRectFunc && getBufSizeFunc )
     {
@@ -1210,6 +1227,129 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
                              roiSize, kernelSize, point, buffer) >= 0;
     }
     return false;
+}
+#endif
+static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kernel,
+                              const Size& ksize, const Point &anchor, bool rectKernel)
+{
+    int type = src.type();
+    const Mat* _src = &src;
+    Mat temp;
+    if (src.data == dst.data)
+    {
+        src.copyTo(temp);
+        _src = &temp;
+    }
+
+    IppiSize roiSize = {src.cols, src.rows};
+    IppiSize kernelSize = {ksize.width, ksize.height};
+
+    if (!rectKernel)
+    {
+#if 1
+        if (((kernel.cols - 1) / 2 != anchor.x) || ((kernel.rows - 1) / 2 != anchor.y))
+            return false;
+        #define IPP_MORPH_CASE(cvtype, flavor, data_type) \
+        case cvtype: \
+            {\
+                int specSize = 0, bufferSize = 0;\
+                if (ippStsNoErr != ippicviMorphologyBorderGetSize_##flavor(roiSize.width, kernelSize, &specSize, &bufferSize))\
+                    return false;\
+                IppiMorphState *pSpec = (IppiMorphState*)ippicvMalloc(specSize);\
+                Ipp8u *pBuffer = (Ipp8u*)ippicvMalloc(bufferSize);\
+                if (ippStsNoErr != ippicviMorphologyBorderInit_##flavor(roiSize.width, kernel.data, kernelSize, pSpec, pBuffer))\
+                {\
+                    ippicvFree(pBuffer);\
+                    ippicvFree(pSpec);\
+                    return false;\
+                }\
+                bool ok = false;\
+                if (op == MORPH_ERODE)\
+                    ok = (ippStsNoErr == ippicviErodeBorder_##flavor((Ipp##data_type *)_src->data, (int)_src->step[0], (Ipp##data_type *)dst.data, (int)dst.step[0],\
+                                            roiSize, ippBorderRepl, 0, pSpec, pBuffer));\
+                else\
+                    ok = (ippStsNoErr == ippicviDilateBorder_##flavor((Ipp##data_type *)_src->data, (int)_src->step[0], (Ipp##data_type *)dst.data, (int)dst.step[0],\
+                                            roiSize, ippBorderRepl, 0, pSpec, pBuffer));\
+                ippicvFree(pBuffer);\
+                ippicvFree(pSpec);\
+                return ok;\
+            }\
+            break;
+#else
+        IppiPoint point = {anchor.x, anchor.y};
+        // this is case, which can be used with the anchor not in center of the kernel, but
+        // ippicviMorphologyBorderGetSize_, ippicviErodeBorderReplicate_ and ippicviDilateBorderReplicate_ are deprecate.
+        #define IPP_MORPH_CASE(cvtype, flavor, data_type) \
+        case cvtype: \
+            {\
+                int specSize = 0;\
+                int bufferSize = 0;\
+                if (ippStsNoErr != ippicviMorphologyBorderGetSize_##flavor( roiSize.width, kernelSize, &specSize, &bufferSize))\
+                    return false;\
+                bool ok = false;\
+                IppiMorphState* pState = (IppiMorphState*)ippicvMalloc(specSize);;\
+                if (ippicviMorphologyInit_##flavor(roiSize.width, kernel.data, kernelSize, point, pState) >= 0)\
+                {\
+                    if (op == MORPH_ERODE)\
+                        ok = ippicviErodeBorderReplicate_##flavor((Ipp##data_type *)_src->data, (int)_src->step[0],\
+                            (Ipp##data_type *)dst.data, (int)dst.step[0],\
+                            roiSize, ippBorderRepl, pState ) >= 0;\
+                    else\
+                        ok = ippicviDilateBorderReplicate_##flavor((Ipp##data_type *)_src->data, (int)_src->step[0],\
+                            (Ipp##data_type *)dst.data, (int)dst.step[0],\
+                            roiSize, ippBorderRepl, pState ) >= 0;\
+                }\
+                ippicvFree(pState);\
+                return ok;\
+            }\
+            break;
+#endif
+        switch (type)
+        {
+        IPP_MORPH_CASE(CV_8UC1, 8u_C1R, 8u);
+        IPP_MORPH_CASE(CV_8UC3, 8u_C3R, 8u);
+        IPP_MORPH_CASE(CV_8UC4, 8u_C4R, 8u);
+        IPP_MORPH_CASE(CV_32FC1, 32f_C1R, 32f);
+        IPP_MORPH_CASE(CV_32FC3, 32f_C3R, 32f);
+        IPP_MORPH_CASE(CV_32FC4, 32f_C4R, 32f);
+        default:
+            return false;
+        }
+
+        #undef IPP_MORPH_CASE
+    }
+    else
+    {
+        IppiPoint point = {anchor.x, anchor.y};
+
+        #define IPP_MORPH_CASE(cvtype, flavor, data_type) \
+        case cvtype: \
+            {\
+                int bufSize = 0;\
+                if (ippStsNoErr != ippicviFilterMinGetBufferSize_##flavor(src.cols, kernelSize, &bufSize))\
+                    return false;\
+                AutoBuffer<uchar> buf(bufSize + 64);\
+                uchar* buffer = alignPtr((uchar*)buf, 32);\
+                if (op == MORPH_ERODE)\
+                    return (ippStsNoErr == ippicviFilterMinBorderReplicate_##flavor((Ipp##data_type *)_src->data, (int)_src->step[0], (Ipp##data_type *)dst.data, (int)dst.step[0], roiSize, kernelSize, point, buffer));\
+                return (ippStsNoErr == ippicviFilterMaxBorderReplicate_##flavor((Ipp##data_type *)_src->data, (int)_src->step[0], (Ipp##data_type *)dst.data, (int)dst.step[0], roiSize, kernelSize, point, buffer));\
+            }\
+            break;
+
+        switch (type)
+        {
+        IPP_MORPH_CASE(CV_8UC1, 8u_C1R, 8u);
+        IPP_MORPH_CASE(CV_8UC3, 8u_C3R, 8u);
+        IPP_MORPH_CASE(CV_8UC4, 8u_C4R, 8u);
+        IPP_MORPH_CASE(CV_32FC1, 32f_C1R, 32f);
+        IPP_MORPH_CASE(CV_32FC3, 32f_C3R, 32f);
+        IPP_MORPH_CASE(CV_32FC4, 32f_C4R, 32f);
+        default:
+            return false;
+        }
+
+        #undef IPP_MORPH_CASE
+    }
 }
 
 static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
