@@ -9,7 +9,7 @@ OpenCV
 
 OpenCV was started at Intel in 1999 by **Gary Bradsky**, and the first release came out in 2000. **Vadim Pisarevsky** joined Gary Bradsky to manage Intel's Russian software OpenCV team. In 2005, OpenCV was used on Stanley, the vehicle that won the 2005 DARPA Grand Challenge. Later, its active development continued under the support of Willow Garage with Gary Bradsky and Vadim Pisarevsky leading the project. OpenCV now supports a multitude of algorithms related to Computer Vision and Machine Learning and is expanding day by day.
 
-OpenCV supports a wide variety of programming languages such as C++, Python, Java, etc., and is available on different platforms including Windows, Linux, OS X, Android, and iOS. Interfaces for high-speed GPU operations based on CUDA and OpenCL are also under active development.
+OpenCV supports a wide variety of programming languages such as C++, gPython, Java, etc., and is available on different platforms including Windows, Linux, OS X, Android, and iOS. Interfaces for high-speed GPU operations based on CUDA and OpenCL are also under active development.
 
 OpenCV-Python is the Python API for OpenCV, combining the best qualities of the OpenCV C++ API and the Python language.
 
@@ -39,7 +39,7 @@ This tutorial was originally started by *Abid Rahman K.* as part of the Google S
 OpenCV Needs You !!!
 ==========================
 
-Since OpenCV is an open source initiative, all are welcome to make contributions to the library, documentation, and tutorials. If you find any mistake in this tutorial (from a small spelling mistake to an egregious error in code or concept), feel free to correct it by cloning OpenCV in GitHub and submitting a pull request. OpenCV developers will check your pull request, give you important feedback and (once it passes the approval of the reviewer) it will be merged into OpenCV. You will then become an open source contributor :-)
+Since OpenCV is an open source initiative, all are welcome to make contributions to the library, documentation, and tutorials. If you find any mistake in this tutorial (from a small spelling mistake to an egregious error in code or concept), feel free to correct it by cloning OpenCV in `GitHub <https://github.com/Itseez/opencv>`_ and submitting a pull request. OpenCV developers will check your pull request, give you important feedback and (once it passes the approval of the reviewer) it will be merged into OpenCV. You will then become an open source contributor :-)
 
 As new modules are added to OpenCV-Python, this tutorial will have to be expanded. If you are familiar with a particular algorithm and can write up a tutorial including basic theory of the algorithm and code showing example usage, please do so.
 
