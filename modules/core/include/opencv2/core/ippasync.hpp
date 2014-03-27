@@ -1,16 +1,14 @@
 #ifndef __OPENCV_CORE_IPPASYNC_HPP__
 #define __OPENCV_CORE_IPPASYNC_HPP__
 
+#ifdef HAVE_IPP_A
+
 #include "opencv2/core.hpp"
 #include <ipp_async_op.h>
 #include <ipp_async_accel.h>
 
 namespace cv
 {
-    void DefaultDeleter<hppiMatrix>::operator () (hppiMatrix* p) const
-    {
-        hppiFreeMatrix(p);
-    }
 
 namespace hpp
 {
@@ -25,7 +23,7 @@ namespace hpp
                      depth == CV_32F ? HPP_DATA_TYPE_32F :
                      depth == CV_64F ? HPP_DATA_TYPE_64F : -1;
         CV_Assert( hppType >= 0 );
-        return hppType; 
+        return hppType;
     }
 
     //convert hppDataType to OpenCV data type
@@ -47,7 +45,8 @@ namespace hpp
         hpp32u width, height;
         hppStatus sts;
 
-        CV_Assert(src!=NULL);
+        if (src == NULL)
+            return dst.release();
 
         sts = hppiInquireMatrix(src, &type, &width, &height);
 
@@ -76,17 +75,31 @@ namespace hpp
         return dst;
     }
 
-     //create hppiMatrix from cv::Mat
-    inline Ptr<hppiMatrix> getHpp(const Mat& src)
+    //create hppiMatrix from cv::Mat
+    inline hppiMatrix* getHpp(const Mat& src, hppAccel accel)
     {
         int htype = toHppType(src.type());
         int cn = src.channels();
 
         CV_Assert(src.data);
-        hppiMatrix *dst = hppiCreateMatrix(htype, src.cols*cn, src.rows, src.data, (hpp32s)(src.step));
+        hppAccelType accelType = hppQueryAccelType(accel);
 
-        return Ptr<hppiMatrix>(dst);
+        if (accelType!=HPP_ACCEL_TYPE_CPU)
+        {
+            hpp32u pitch, size;
+            hppQueryMatrixAllocParams(accel, src.cols*cn, src.rows, htype, &pitch, &size);
+            if (pitch!=0 && size!=0)
+                if ((int)(src.data)%4096==0 && pitch==(hpp32u)(src.step))
+                {
+                    return hppiCreateSharedMatrix(htype, src.cols*cn, src.rows, src.data, pitch, size);
+                }
+        }
+
+        return hppiCreateMatrix(htype, src.cols*cn, src.rows, src.data, (hpp32s)(src.step));;
     }
+
 }}
+
+#endif
 
 #endif

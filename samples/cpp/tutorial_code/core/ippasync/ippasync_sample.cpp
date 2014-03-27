@@ -1,9 +1,15 @@
 #include <stdio.h>
 
 #include "opencv2/core/utility.hpp"
-#include "opencv2/core/ippasync.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
+#include "cvconfig.h"
+
+using namespace std;
+using namespace cv;
+
+#ifdef HAVE_IPP_A
+#include "opencv2/core/ippasync.hpp"
 
 #define CHECK_STATUS(STATUS, NAME)\
     if(STATUS!=HPP_STATUS_NO_ERROR){ printf("%s error %d\n", NAME, STATUS);\
@@ -14,9 +20,7 @@
 #define CHECK_DEL_STATUS(STATUS, NAME)\
     if(STATUS!=HPP_STATUS_NO_ERROR){ printf("%s error %d\n", NAME, STATUS); return -1;}
 
-using namespace std;
-using namespace cv;
-using namespace hpp;
+#endif
 
 static void help()
 {
@@ -42,15 +46,17 @@ int main(int argc, const char** argv)
     help();
 
     VideoCapture cap;
+    CommandLineParser parser(argc, argv, keys);
     Mat image, gray, result;
 
-    Ptr<hppiMatrix> src, dst;
+#ifdef HAVE_IPP_A
+
+    hppiMatrix* src,* dst;
     hppAccel accel = 0;
     hppAccelType accelType;
     hppStatus sts;
     hppiVirtualMatrix * virtMatrix;
 
-    CommandLineParser parser(argc, argv, keys);
     bool useCamera = parser.has("camera");
     string file = parser.get<string>("file_name");
     string sAccel = parser.get<string>("accel");
@@ -104,10 +110,10 @@ int main(int argc, const char** argv)
         result.create( image.rows, image.cols, CV_8U);
 
         double execTime = (double)getTickCount();
-            
+
         //convert Mat to hppiMatrix
-        src = getHpp(gray);
-        dst = getHpp(result);
+        src = hpp::getHpp(gray,accel);
+        dst = hpp::getHpp(result,accel);
 
         sts = hppiSobel(accel,src, HPP_MASK_SIZE_3X3,HPP_NORM_L1,virtMatrix[0]);
         CHECK_STATUS(sts,"hppiSobel");
@@ -127,6 +133,13 @@ int main(int argc, const char** argv)
         imshow("rez", result);
 
         waitKey(15);
+
+        sts =  hppiFreeMatrix(src);
+        CHECK_DEL_STATUS(sts,"hppiFreeMatrix");
+
+        sts =  hppiFreeMatrix(dst);
+        CHECK_DEL_STATUS(sts,"hppiFreeMatrix");
+
     }
 
     if (!useCamera)
@@ -145,5 +158,12 @@ int main(int argc, const char** argv)
     }
 
     printf("SUCCESS\n");
-    return -1;
+
+#else
+
+    printf("IPP Async not supported\n");
+
+#endif
+
+    return 0;
 }
