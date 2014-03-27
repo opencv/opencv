@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
-#include <sstream>
 
 /****************************************************************************************\
                                     Base Image Filter
@@ -3197,6 +3196,8 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
     size_t tryWorkItems = maxWorkItemSizes[0];
     char cvt[2][40];
 
+    String kerStr = ocl::kernelToStr(kernelMatDataFloat, CV_32F);
+
     for ( ; ; )
     {
         size_t BLOCK_SIZE = tryWorkItems;
@@ -3226,14 +3227,14 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
 
         String opts = format("-D LOCAL_SIZE=%d -D BLOCK_SIZE_Y=%d -D cn=%d "
                              "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
-                             "-D KERNEL_SIZE_Y2_ALIGNED=%d -D %s -D %s -D %s%s "
+                             "-D KERNEL_SIZE_Y2_ALIGNED=%d -D %s -D %s -D %s%s%s "
                              "-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D WT=%s -D WT1=%s "
                              "-D convertToWT=%s -D convertToDstT=%s",
                              (int)BLOCK_SIZE, (int)BLOCK_SIZE_Y, cn, anchor.x, anchor.y,
                              ksize.width, ksize.height, kernel_size_y2_aligned, borderMap[borderType],
                              extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
                              isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
-                             doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                             doubleSupport ? " -D DOUBLE_SUPPORT" : "", kerStr.c_str(),
                              ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
                              ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
                              ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
@@ -3255,7 +3256,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
     }
 
     _dst.create(sz, dtype);
-    UMat dst = _dst.getUMat(), kernalDataUMat(kernelMatDataFloat, true);
+    UMat dst = _dst.getUMat();
 
     int srcOffsetX = (int)((src.offset % src.step) / src.elemSize());
     int srcOffsetY = (int)(src.offset / src.step);
@@ -3263,8 +3264,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
     int srcEndY = (isolated ? (srcOffsetY + sz.height) : wholeSize.height);
 
     k.args(ocl::KernelArg::PtrReadOnly(src), (int)src.step, srcOffsetX, srcOffsetY,
-           srcEndX, srcEndY, ocl::KernelArg::WriteOnly(dst),
-           ocl::KernelArg::PtrReadOnly(kernalDataUMat), (float)delta);
+           srcEndX, srcEndY, ocl::KernelArg::WriteOnly(dst), (float)delta);
 
     return k.run(2, globalsize, localsize, false);
 }
