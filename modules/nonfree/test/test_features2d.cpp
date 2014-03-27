@@ -50,6 +50,22 @@ const string DETECTOR_DIR = FEATURES2D_DIR + "/feature_detectors";
 const string DESCRIPTOR_DIR = FEATURES2D_DIR + "/descriptor_extractors";
 const string IMAGE_FILENAME = "tsukuba.png";
 
+#if defined(HAVE_OPENCV_OCL) && 0 // unblock this to see SURF_OCL tests failures
+static Ptr<Feature2D> getSURF()
+{
+    ocl::PlatformsInfo p;
+    if(ocl::getOpenCLPlatforms(p) > 0)
+        return new ocl::SURF_OCL;
+    else
+        return new SURF;
+}
+#else
+static Ptr<Feature2D> getSURF()
+{
+    return new SURF;
+}
+#endif
+
 /****************************************************************************************\
 *            Regression tests for feature detectors comparing keypoints.                 *
 \****************************************************************************************/
@@ -978,7 +994,7 @@ TEST( Features2d_Detector_SIFT, regression )
 
 TEST( Features2d_Detector_SURF, regression )
 {
-    CV_FeatureDetectorTest test( "detector-surf", FeatureDetector::create("SURF") );
+    CV_FeatureDetectorTest test( "detector-surf", Ptr<FeatureDetector>(getSURF()) );
     test.safe_run();
 }
 
@@ -995,7 +1011,7 @@ TEST( Features2d_DescriptorExtractor_SIFT, regression )
 TEST( Features2d_DescriptorExtractor_SURF, regression )
 {
     CV_DescriptorExtractorTest<L2<float> > test( "descriptor-surf",  0.05f,
-                                                 DescriptorExtractor::create("SURF") );
+                                                 Ptr<DescriptorExtractor>(getSURF()) );
     test.safe_run();
 }
 
@@ -1036,10 +1052,10 @@ TEST(Features2d_BruteForceDescriptorMatcher_knnMatch, regression)
     const int sz = 100;
     const int k = 3;
 
-    Ptr<DescriptorExtractor> ext = DescriptorExtractor::create("SURF");
+    Ptr<DescriptorExtractor> ext = Ptr<DescriptorExtractor>(getSURF());
     ASSERT_TRUE(ext != NULL);
 
-    Ptr<FeatureDetector> det = FeatureDetector::create("SURF");
+    Ptr<FeatureDetector> det = Ptr<FeatureDetector>(getSURF());
     //"%YAML:1.0\nhessianThreshold: 8000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n"
     ASSERT_TRUE(det != NULL);
 
@@ -1096,7 +1112,11 @@ public:
 protected:
     void run(int)
     {
-        Ptr<Feature2D> f = Algorithm::create<Feature2D>("Feature2D." + fname);
+        Ptr<Feature2D> f;
+        if(fname == "SURF")
+            f = getSURF();
+        else
+            f = Algorithm::create<Feature2D>("Feature2D." + fname);
         if(f.empty())
             return;
         string path = string(ts->get_data_path()) + "detectors_descriptors_evaluation/planar/";
