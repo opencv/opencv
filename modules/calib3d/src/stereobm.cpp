@@ -744,9 +744,8 @@ static bool ocl_stereobm( InputArray _left, InputArray _right,
     int wsz2 = wsz/2;
 
     int sizeX = std::max(11, 27 - ocl::Device::getDefault().maxComputeUnits() ), sizeY = sizeX-1, N = ndisp*2;
-    bool is_cpu = cv::ocl::Device::getDefault().type() == cv::ocl::Device::TYPE_CPU;
 
-    ocl::Kernel k("stereoBM", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D wsz=%d%s", (2*sizeY)*ndisp, wsz, is_cpu ? " -D CPU" : ""));
+    ocl::Kernel k("stereoBM", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D wsz=%d", (2*sizeY)*ndisp, wsz) );
     if(k.empty())
         return false;
 
