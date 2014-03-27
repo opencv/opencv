@@ -1,3 +1,4 @@
+import collections
 from textwrap import fill
 from filters import *
 
@@ -333,23 +334,31 @@ def constants(tree):
             for gen in constants(val):
                 yield gen
 
+def isstring(s):
+    """
+    Check if variable is string representable (regular/unicode/raw)
+    in a Python 2 and 3 compatible manner
+    """
+    try:
+        return isinstance(s, basestring)
+    except NameError:
+        return isinstance(s, str)
+
 def todict(obj, classkey=None):
     """
     Convert the ParseTree to a dictionary, stripping all objects of their
     methods and converting class names to strings
     """
+    if isstring(obj):
+        return obj
     if isinstance(obj, dict):
-        for k in obj.keys():
-            obj[k] = todict(obj[k], classkey)
+        obj.update((key, todict(val, classkey)) for key, val in obj.items())
         return obj
-    elif isinstance(obj, list):
-        return [todict(v, classkey) for v in obj]
-    elif hasattr(obj, "__dict__"):
-        data = dict([(key, todict(value, classkey))
-            for key, value in obj.__dict__.items()
-            if not callable(value) and not key.startswith('_')])
-        if classkey is not None and hasattr(obj, "__class__"):
+    if isinstance(obj, collections.Iterable):
+        return [todict(val, classkey) for val in obj]
+    if hasattr(obj, '__dict__'):
+        attrs = dict((key, todict(val, classkey)) for key, val in vars(obj).items())
+        if classkey is not None and hasattr(obj, '__class__'):
             data[classkey] = obj.__class__.__name__
-        return data
-    else:
-        return obj
+        return attrs
+    return obj
