@@ -200,8 +200,11 @@ inline WT readSrcPixel(int2 pos, __global const uchar * srcptr, int src_step, co
     }
 }
 
+#define DIG(a) a,
+__constant WT1 kernelData[] = { COEFF };
+
 __kernel void filter2D(__global const uchar * srcptr, int src_step, int srcOffsetX, int srcOffsetY, int srcEndX, int srcEndY,
-                       __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols, __constant WT1 * kernelData, float delta)
+                       __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols, float delta)
 {
     const struct RectCoords srcCoords = { srcOffsetX, srcOffsetY, srcEndX, srcEndY }; // for non-isolated border: offsetX, offsetY, wholeX, wholeY
 
