@@ -204,7 +204,7 @@ Here you will learn the about the basic building blocks of the library. A must r
 +
   .. tabularcolumns:: m{100pt} m{300pt}
   .. cssclass:: toctableopencv
-  
+
   =============== ======================================================
    |IPPIma|       **Title:** :ref:`howToUseIPPAconversion`
 
@@ -213,15 +213,16 @@ Here you will learn the about the basic building blocks of the library. A must r
                   *Author:* |Author_ElenaG|
 
                   You will see how to use the IPP Async with OpenCV.
-                  
+
   =============== ======================================================
-  
+
   .. |IPPIma| image:: images/How_To_Use_IPPA.jpg
                    :height: 90pt
                    :width:  90pt
-  .. |Author_ElenaG| unicode:: Elena U+0020 Gvozdeva              
+  .. |Author_ElenaG| unicode:: Elena U+0020 Gvozdeva
 
   =============== ======================================================
+
 .. raw:: latex
 
    \pagebreak
