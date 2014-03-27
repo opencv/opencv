@@ -311,7 +311,6 @@ class Constant(object):
     ref     is the constant a reference? ('*'/'&')
     default default value, required for constants
     """
-    __slots__ = ['name', 'clss', 'tp', 'ref', 'const', 'default']
     def __init__(self, name='', clss='', tp='', const=False, ref='', default=''):
         self.name = name
         self.clss = clss
