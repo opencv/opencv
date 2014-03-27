@@ -1,6 +1,12 @@
 import collections
 from textwrap import fill
 from filters import *
+try:
+  # Python 2.7+
+  basestring
+except NameError:
+  # Python 3.3+
+  basestring = str
 
 class ParseTree(object):
     """
@@ -305,6 +311,7 @@ class Constant(object):
     ref     is the constant a reference? ('*'/'&')
     default default value, required for constants
     """
+    __slots__ = ['name', 'clss', 'tp', 'ref', 'const', 'default']
     def __init__(self, name='', clss='', tp='', const=False, ref='', default=''):
         self.name = name
         self.clss = clss
@@ -334,31 +341,20 @@ def constants(tree):
             for gen in constants(val):
                 yield gen
 
-def isstring(s):
-    """
-    Check if variable is string representable (regular/unicode/raw)
-    in a Python 2 and 3 compatible manner
-    """
-    try:
-        return isinstance(s, basestring)
-    except NameError:
-        return isinstance(s, str)
 
-def todict(obj, classkey=None):
+def todict(obj):
     """
-    Convert the ParseTree to a dictionary, stripping all objects of their
-    methods and converting class names to strings
+    Recursively convert a Python object graph to sequences (lists)
+    and mappings (dicts) of primitives (bool, int, float, string, ...)
     """
-    if isstring(obj):
+    if isinstance(obj, basestring):
         return obj
-    if isinstance(obj, dict):
-        obj.update((key, todict(val, classkey)) for key, val in obj.items())
-        return obj
-    if isinstance(obj, collections.Iterable):
-        return [todict(val, classkey) for val in obj]
-    if hasattr(obj, '__dict__'):
-        attrs = dict((key, todict(val, classkey)) for key, val in vars(obj).items())
-        if classkey is not None and hasattr(obj, '__class__'):
-            data[classkey] = obj.__class__.__name__
-        return attrs
+    elif isinstance(obj, dict):
+        return dict((key, todict(val)) for key, val in obj.items())
+    elif isinstance(obj, collections.Iterable):
+        return [todict(val) for val in obj]
+    elif hasattr(obj, '__dict__'):
+        return todict(vars(obj))
+    elif hasattr(obj, '__slots__'):
+        return todict(dict((name, getattr(obj, name)) for name in getattr(obj, '__slots__')))
     return obj
