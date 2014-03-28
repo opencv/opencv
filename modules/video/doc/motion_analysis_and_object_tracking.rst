@@ -780,7 +780,7 @@ Sets the threshold on the squared distance
 
 BackgroundSubtractorKNN::getkNNSamples
 ---------------------------------------------
-Returns the k in the kNN. K is the number of samples that need to be within dist2Threshold in order to decide that that pixel is matching the kNN background model.
+Returns the number of neighbours, the k in the kNN. K is the number of samples that need to be within dist2Threshold in order to decide that that pixel is matching the kNN background model.
 
 .. ocv:function:: int BackgroundSubtractorKNN::getkNNSamples() const
 
@@ -1108,9 +1108,9 @@ Releases all inner buffers.
 
 .. [Bradski98] Bradski, G.R. "Computer Vision Face Tracking for Use in a Perceptual User Interface", Intel, 1998
 
-.. [Bradski00] Davis, J.W. and Bradski, G.R. â€œMotion Segmentation and Pose Recognition with Motion History Gradientsâ€?, WACV00, 2000
+.. [Bradski00] Davis, J.W. and Bradski, G.R. "Motion Segmentation and Pose Recognition with Motion History Gradients", WACV00, 2000
 
-.. [Davis97] Davis, J.W. and Bobick, A.F. â€œThe Representation and Recognition of Action Using Temporal Templatesâ€?, CVPR97, 1997
+.. [Davis97] Davis, J.W. and Bobick, A.F. "The Representation and Recognition of Action Using Temporal Templates", CVPR97, 1997
 
 .. [EP08] Evangelidis, G.D. and Psarakis E.Z. "Parametric Image Alignment using Enhanced Correlation Coefficient Maximization", IEEE Transactions on PAMI, vol. 32, no. 10, 2008
 
@@ -1124,7 +1124,7 @@ Releases all inner buffers.
 
 .. [Lucas81] Lucas, B., and Kanade, T. An Iterative Image Registration Technique with an Application to Stereo Vision, Proc. of 7th International Joint Conference on Artificial Intelligence (IJCAI), pp. 674-679.
 
-.. [Welch95] Greg Welch and Gary Bishop â€œAn Introduction to the Kalman Filterâ€?, 1995
+.. [Welch95] Greg Welch and Gary Bishop "An Introduction to the Kalman Filter", 1995
 
 .. [Tao2012] Michael Tao, Jiamin Bai, Pushmeet Kohli and Sylvain Paris. SimpleFlow: A Non-iterative, Sublinear Optical Flow Algorithm. Computer Graphics Forum (Eurographics 2012)
 
