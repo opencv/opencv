@@ -40,6 +40,7 @@ if __name__ == "__main__":
     parser.add_option("", "--with-cycles-reduction", action="store_true", dest="calc_cr", default=False, help="output cycle reduction percentages")
     parser.add_option("", "--with-score", action="store_true", dest="calc_score", default=False, help="output automatic classification of speedups")
     parser.add_option("", "--progress", action="store_true", dest="progress_mode", default=False, help="enable progress mode")
+    parser.add_option("", "--regressions", dest="regressions", default=None, metavar="LIST", help="comma-separated custom regressions map: \"[r][c]#current-#reference\" (indexes of columns are 0-based, \"r\" - reverse flag, \"c\" - color flag for base data)")
     parser.add_option("", "--show-all", action="store_true", dest="showall", default=False, help="also include empty and \"notrun\" lines")
     parser.add_option("", "--match", dest="match", default=None)
     parser.add_option("", "--match-replace", dest="match_replace", default="")
@@ -55,6 +56,24 @@ if __name__ == "__main__":
         options.calc_cr = False
     if options.columns:
         options.columns = [s.strip().replace("\\n", "\n") for s in options.columns.split(",")]
+
+    if options.regressions:
+        assert not options.progress_mode, 'unsupported mode'
+
+        def parseRegressionColumn(s):
+            """ Format: '[r][c]<uint>-<uint>' """
+            reverse = s.startswith('r')
+            if reverse:
+                s = s[1:]
+            addColor = s.startswith('c')
+            if addColor:
+                s = s[1:]
+            parts = s.split('-', 1)
+            link = (int(parts[0]), int(parts[1]), reverse, addColor)
+            assert link[0] != link[1]
+            return link
+
+        options.regressions = [parseRegressionColumn(s) for s in options.regressions.split(',')]
 
     # expand wildcards and filter duplicates
     files = []
@@ -90,8 +109,18 @@ if __name__ == "__main__":
         sys.stderr.write("Error: no test data found" + os.linesep)
         quit()
 
-    # find matches
     setsCount = len(test_sets)
+
+    if options.regressions is None:
+        reference = -1 if options.progress_mode else 0
+        options.regressions = [(i, reference, False, True) for i in range(1, len(test_sets))]
+
+    for link in options.regressions:
+        (i, ref, reverse, addColor) = link
+        assert i >= 0 and i < setsCount
+        assert ref < setsCount
+
+    # find matches
     test_cases = {}
 
     name_extractor = lambda name: str(name)
@@ -117,29 +146,29 @@ if __name__ == "__main__":
 
     # header
     tbl.newColumn("name", "Name of Test", align = "left", cssclass = "col_name")
-    i = 0
-    for set in test_sets:
-        tbl.newColumn(str(i), getSetName(set, i, options.columns, False), align = "center")
-        i += 1
-    metric_sets = test_sets[1:]
+    for i in range(setsCount):
+        tbl.newColumn(str(i), getSetName(test_sets[i], i, options.columns, False), align = "center")
+
+    def addHeaderColumns(suffix, description, cssclass):
+        for link in options.regressions:
+            (i, ref, reverse, addColor) = link
+            if reverse:
+                i, ref = ref, i
+            current_set = test_sets[i]
+            current = getSetName(current_set, i, options.columns)
+            if ref >= 0:
+                reference_set = test_sets[ref]
+                reference = getSetName(reference_set, ref, options.columns)
+            else:
+                reference = 'previous'
+            tbl.newColumn(str(i) + '-' + str(ref) + suffix, '%s\nvs\n%s\n(%s)' % (current, reference, description), align='center', cssclass=cssclass)
+
     if options.calc_cr:
-        i = 1
-        for set in metric_sets:
-            reference = getSetName(test_sets[0], 0, options.columns) if not options.progress_mode else 'previous'
-            tbl.newColumn(str(i) + "$", getSetName(set, i, options.columns) + "\nvs\n" + reference + "\n(cycles reduction)", align = "center", cssclass = "col_cr")
-            i += 1
+        addHeaderColumns(suffix='$', description='cycles reduction', cssclass='col_cr')
     if options.calc_relatives:
-        i = 1
-        for set in metric_sets:
-            reference = getSetName(test_sets[0], 0, options.columns) if not options.progress_mode else 'previous'
-            tbl.newColumn(str(i) + "%", getSetName(set, i, options.columns) + "\nvs\n" + reference + "\n(x-factor)", align = "center", cssclass = "col_rel")
-            i += 1
+        addHeaderColumns(suffix='%', description='x-factor', cssclass='col_rel')
     if options.calc_score:
-        i = 1
-        for set in metric_sets:
-            reference = getSetName(test_sets[0], 0, options.columns) if not options.progress_mode else 'previous'
-            tbl.newColumn(str(i) + "S", getSetName(set, i, options.columns) + "\nvs\n" + reference + "\n(score)", align = "center", cssclass = "col_name")
-            i += 1
+        addHeaderColumns(suffix='S', description='score', cssclass='col_name')
 
     # rows
     prevGroupName = None
@@ -166,68 +195,87 @@ if __name__ == "__main__":
                 if options.intersect_logs:
                     needNewRow = False
                     break
-
                 tbl.newCell(str(i), "-")
-                if options.calc_relatives and i > 0:
-                    tbl.newCell(str(i) + "%", "-")
-                if options.calc_cr and i > 0:
-                    tbl.newCell(str(i) + "$", "-")
-                if options.calc_score and i > 0:
-                    tbl.newCell(str(i) + "$", "-")
             else:
                 status = case.get("status")
                 if status != "run":
-                    tbl.newCell(str(i), status, color = "red")
-                    if status != "notrun":
-                        needNewRow = True
-                    if options.calc_relatives and i > 0:
-                        tbl.newCell(str(i) + "%", "-", color = "red")
-                    if options.calc_cr and i > 0:
-                        tbl.newCell(str(i) + "$", "-", color = "red")
-                    if options.calc_score and i > 0:
-                        tbl.newCell(str(i) + "S", "-", color = "red")
+                    tbl.newCell(str(i), status, color="red")
                 else:
                     val = getter(case, cases[0], options.units)
-                    def getter_fn(fn):
-                        if fn and i > 0 and val:
-                            for j in reversed(range(i)) if options.progress_mode else [0]:
-                                r = cases[j]
-                                if r is not None and r.get("status") == 'run':
-                                    return fn(case, r, options.units)
-                        return None
-                    valp = getter_fn(getter_p) if options.calc_relatives or options.progress_mode else None
-                    valcr = getter_fn(getter_cr) if options.calc_cr else None
-                    val_score = getter_fn(getter_score) if options.calc_score else None
-                    if not valp or i == 0:
-                        color = None
-                    elif valp > 1.05:
-                        color = "green"
-                    elif valp < 0.95:
-                        color = "red"
-                    else:
-                        color = None
                     if val:
                         needNewRow = True
-                    tbl.newCell(str(i), formatValue(val, options.metric, options.units), val, color = color)
-                    if options.calc_relatives and i > 0:
-                        tbl.newCell(str(i) + "%", formatValue(valp, "%"), valp, color = color, bold = color)
-                    if options.calc_cr and i > 0:
-                        tbl.newCell(str(i) + "$", formatValue(valcr, "$"), valcr, color = color, bold = color)
-                    if options.calc_score and i > 0:
-                        tbl.newCell(str(i) + "S", formatValue(val_score, "S"), val_score, color = color, bold = color)
+                    tbl.newCell(str(i), formatValue(val, options.metric, options.units), val)
+
+        if needNewRow:
+            for link in options.regressions:
+                (i, reference, reverse, addColor) = link
+                if reverse:
+                    i, reference = reference, i
+                tblCellID = str(i) + '-' + str(reference)
+                case = cases[i]
+                if case is None:
+                    if options.calc_relatives:
+                        tbl.newCell(tblCellID + "%", "-")
+                    if options.calc_cr:
+                        tbl.newCell(tblCellID + "$", "-")
+                    if options.calc_score:
+                        tbl.newCell(tblCellID + "$", "-")
+                else:
+                    status = case.get("status")
+                    if status != "run":
+                        tbl.newCell(str(i), status, color="red")
+                        if status != "notrun":
+                            needNewRow = True
+                        if options.calc_relatives:
+                            tbl.newCell(tblCellID + "%", "-", color="red")
+                        if options.calc_cr:
+                            tbl.newCell(tblCellID + "$", "-", color="red")
+                        if options.calc_score:
+                            tbl.newCell(tblCellID + "S", "-", color="red")
+                    else:
+                        val = getter(case, cases[0], options.units)
+                        def getRegression(fn):
+                            if fn and val:
+                                for j in reversed(range(i)) if reference < 0 else [reference]:
+                                    r = cases[j]
+                                    if r is not None and r.get("status") == 'run':
+                                        return fn(case, r, options.units)
+                        valp = getRegression(getter_p) if options.calc_relatives or options.progress_mode else None
+                        valcr = getRegression(getter_cr) if options.calc_cr else None
+                        val_score = getRegression(getter_score) if options.calc_score else None
+                        if not valp:
+                            color = None
+                        elif valp > 1.05:
+                            color = 'green'
+                        elif valp < 0.95:
+                            color = 'red'
+                        else:
+                            color = None
+                        if addColor:
+                            if not reverse:
+                                tbl.newCell(str(i), formatValue(val, options.metric, options.units), val, color=color)
+                            else:
+                                r = cases[reference]
+                                if r is not None and r.get("status") == 'run':
+                                    val = getter(r, cases[0], options.units)
+                                    tbl.newCell(str(reference), formatValue(val, options.metric, options.units), val, color=color)
+                        if options.calc_relatives:
+                            tbl.newCell(tblCellID + "%", formatValue(valp, "%"), valp, color=color, bold=color)
+                        if options.calc_cr:
+                            tbl.newCell(tblCellID + "$", formatValue(valcr, "$"), valcr, color=color, bold=color)
+                        if options.calc_score:
+                            tbl.newCell(tblCellID + "S", formatValue(val_score, "S"), val_score, color = color, bold = color)
+
     if not needNewRow:
         tbl.trimLastRow()
 
     if options.regressionsOnly:
         for r in reversed(range(len(tbl.rows))):
-            delete = True
-            i = 1
-            for set in metric_sets:
-                val = tbl.rows[r].cells[len(tbl.rows[r].cells)-i].value
+            for i in range(1, len(options.regressions) + 1):
+                val = tbl.rows[r].cells[len(tbl.rows[r].cells) - i].value
                 if val is not None and val < float(options.regressionsOnly):
-                    delete = False
-                i += 1
-            if (delete):
+                    break
+            else:
                 tbl.rows.pop(r)
 
     # output table
