@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
+#include <iostream>
 
 /*
  * This file includes the code, contributed by Simon Perreault
@@ -1069,6 +1070,73 @@ static void createGaussianKernels( Mat & kx, Mat & ky, int type, Size ksize,
         ky = getGaussianKernel( ksize.height, sigma2, std::max(depth, CV_32F) );
 }
 
+#define GAUSSIAN_COEF_BITS 11
+
+static bool GaussianBlur_8u(InputArray _src, OutputArray _dst, Size ksize,
+                   double sigma1, double sigma2,
+                   int borderType)
+{
+    int type = _src.type();
+    Mat kx, ky;
+    createGaussianKernels(kx, ky, CV_64F, ksize, sigma1, sigma2);
+    Mat kx_8u, ky_8u;
+
+    int scale_coef = 1 << GAUSSIAN_COEF_BITS;
+    kx.convertTo(kx_8u, CV_32S, scale_coef);
+    ky.convertTo(ky_8u, CV_32S, scale_coef);
+
+    kx_8u.reshape(1, 1);
+    ky_8u.reshape(1, 1);
+
+    Size size = _src.size(), wholeSize;
+    Point origin;
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
+            esz = CV_ELEM_SIZE(stype), wdepth = CV_32S,
+            ddepth = sdepth;
+    size_t src_step = _src.step(), src_offset = _src.offset();
+
+    if ((src_offset % src_step) % esz != 0 || !(borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE ||
+              borderType == BORDER_REFLECT || borderType == BORDER_WRAP ||
+              borderType == BORDER_REFLECT_101))
+        return false;
+
+    size_t lt2[2] = { 16, 16 };
+    size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), lt2[1] * (1 + (size.height - 1) / lt2[1]) };
+
+    char cvt[2][40];
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
+                                       "BORDER_REFLECT_101" };
+
+    String opts = cv::format("-D BLK_X=%d -D BLK_Y=%d -D RADIUSX=%d -D RADIUSY=%d%s%s"
+                             " -D srcT=%s -D convertToWT=%s -D WT=%s -D dstT=%s -D convertToDstT=%s"
+                             " -D %s -D srcT1=%s -D dstT1=%s -D CN=%d -D GAUSSIAN_COEF_BITS=%d", (int)lt2[0], (int)lt2[1],
+                             kx.rows / 2, kx.rows / 2,
+                             ocl::kernelToStr(kx_8u, CV_32S, "KERNEL_MATRIX_X").c_str(),
+                             ocl::kernelToStr(ky_8u, CV_32S, "KERNEL_MATRIX_Y").c_str(),
+                             ocl::typeToStr(stype), ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
+                             ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), ocl::typeToStr(stype),
+                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), borderMap[borderType],
+                             ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), cn, GAUSSIAN_COEF_BITS);
+
+    ocl::Kernel k("gaussian_blur_8u", ocl::imgproc::gaussian_blur_8u_oclsrc, opts);
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(size, stype);
+    UMat dst = _dst.getUMat();
+
+    int src_offset_x = static_cast<int>((src_offset % src_step) / esz);
+    int src_offset_y = static_cast<int>(src_offset / src_step);
+
+    src.locateROI(wholeSize, origin);
+
+    k.args(ocl::KernelArg::PtrReadOnly(src), (int)src_step, src_offset_x, src_offset_y,
+        wholeSize.height, wholeSize.width, ocl::KernelArg::WriteOnly(dst));
+
+    return k.run(2, gt2, lt2, false);
+}
+
 }
 
 cv::Ptr<cv::FilterEngine> cv::createGaussianFilter( int type, Size ksize,
@@ -1080,6 +1148,8 @@ cv::Ptr<cv::FilterEngine> cv::createGaussianFilter( int type, Size ksize,
 
     return createSeparableLinearFilter( type, type, kx, ky, Point(-1,-1), 0, borderType );
 }
+
+
 
 
 void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
@@ -1125,6 +1195,13 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
             return;
     }
 #endif
+
+    if (type == CV_8U)
+    {
+        CV_OCL_RUN_(_dst.isUMat() && _src.dims() <= 2 && 
+                (!(borderType & BORDER_ISOLATED) || _src.offset() == 0),
+                GaussianBlur_8u(_src, _dst, ksize, sigma1, sigma2, borderType))
+    }
 
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);

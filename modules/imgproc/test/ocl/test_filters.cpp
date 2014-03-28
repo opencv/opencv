@@ -219,7 +219,23 @@ OCL_TEST_P(GaussianBlurTest, Mat)
         OCL_OFF(cv::GaussianBlur(src_roi, dst_roi, Size(ksize, ksize), sigma1, sigma2, borderType));
         OCL_ON(cv::GaussianBlur(usrc_roi, udst_roi, Size(ksize, ksize), sigma1, sigma2, borderType));
 
-        Near(CV_MAT_DEPTH(type) == CV_8U ? 3 : 5e-5, false);
+
+        if (checkNorm2(dst_roi, udst_roi) > 2 && CV_MAT_DEPTH(type) == CV_8U)
+        {
+            Mat udst = udst_roi.getMat(ACCESS_READ);
+            Mat diff; 
+            absdiff(dst_roi, udst, diff);
+            int nonZero = countNonZero(diff);
+            double max;
+            Point maxn;
+            minMaxLoc(diff, (double*)0, &max, (Point*) 0, &maxn);
+
+            uchar a = dst_roi.at<uchar>(maxn);
+            uchar b = udst.at<uchar>(maxn);
+
+        }
+
+        Near(CV_MAT_DEPTH(type) == CV_8U ? 2 : 5e-5, false);
     }
 }
 
