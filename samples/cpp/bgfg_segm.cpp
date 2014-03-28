@@ -52,7 +52,7 @@ int main(int argc, const char** argv)
     namedWindow("foreground image", WINDOW_NORMAL);
     namedWindow("mean background image", WINDOW_NORMAL);
 
-    Ptr<BackgroundSubtractor> bg_model = createBackgroundSubtractorKNN();
+    Ptr<BackgroundSubtractor> bg_model = createBackgroundSubtractorMOG2();
 
     Mat img, fgmask, fgimg;
 
