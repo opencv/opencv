@@ -701,6 +701,7 @@ void write( FileStorage& fs, const String& name, const std::vector<_Tp>& vec )
     write(fs, vec);
 }
 
+
 static inline
 void read(const FileNode& node, bool& value, bool default_value)
 {

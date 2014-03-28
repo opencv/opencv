@@ -5486,15 +5486,14 @@ internal::WriteStructContext::WriteStructContext(FileStorage& _fs,
 {
     cvStartWriteStruct(**fs, !name.empty() ? name.c_str() : 0, flags,
                        !typeName.empty() ? typeName.c_str() : 0);
+    fs->elname = String();
     if ((flags & FileNode::TYPE_MASK) == FileNode::SEQ)
     {
-        fs->elname = String();
         fs->state = FileStorage::VALUE_EXPECTED;
         fs->structs.push_back('[');
     }
     else
     {
-        fs->elname = String();
         fs->state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
         fs->structs.push_back('{');
     }
