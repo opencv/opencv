@@ -410,6 +410,30 @@ TEST(Highgui_Jpeg, encode_decode_progressive_jpeg)
 
     remove(output_progressive.c_str());
 }
+
+TEST(Highgui_Jpeg, encode_decode_optimize_jpeg)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    string input = string(ts.get_data_path()) + "../cv/shared/lena.png";
+    cv::Mat img = cv::imread(input);
+    ASSERT_FALSE(img.empty());
+
+    std::vector<int> params;
+    params.push_back(IMWRITE_JPEG_OPTIMIZE);
+    params.push_back(1);
+
+    string output_optimized = cv::tempfile(".jpg");
+    EXPECT_NO_THROW(cv::imwrite(output_optimized, img, params));
+    cv::Mat img_jpg_optimized = cv::imread(output_optimized);
+
+    string output_normal = cv::tempfile(".jpg");
+    EXPECT_NO_THROW(cv::imwrite(output_normal, img));
+    cv::Mat img_jpg_normal = cv::imread(output_normal);
+
+    EXPECT_EQ(0, cv::norm(img_jpg_optimized, img_jpg_normal, NORM_INF));
+
+    remove(output_optimized.c_str());
+}
 #endif
 
 
