@@ -215,15 +215,16 @@ void SIFT::buildGaussianPyramid( const Mat& base, vector<Mat>& pyr, int nOctaves
     pyr.resize(nOctaves*(nOctaveLayers + 3));
 
     // precompute Gaussian sigmas using the following formula:
-    //  \sigma_{total}^2 = \sigma_{i}^2 + \sigma_{i-1}^2
+    // \sigma_{total}^2 = \sigma_{i}^2 + \sigma_{i-1}^2
+    
+    // Note: sig[i] is not the sigma value at level i, but the
+    // incremental sigma that level i-1 must be convolved with
+    // to attain the desired sigma at level i.
+    double k = std::pow( 2., 1. / nOctaveLayers );
     sig[0] = sigma;
-    double k = pow( 2., 1. / nOctaveLayers );
-    for( int i = 1; i < nOctaveLayers + 3; i++ )
-    {
-        double sig_prev = pow(k, (double)(i-1))*sigma;
-        double sig_total = sig_prev*k;
-        sig[i] = std::sqrt(sig_total*sig_total - sig_prev*sig_prev);
-    }
+    sig[1] = sigma * std::sqrt(k*k - 1);
+    for( int i = 2; i < nOctaveLayers + 3; i++ )
+        sig[i] = sig[i-1] * k;
 
     for( int o = 0; o < nOctaves; o++ )
     {
