@@ -109,13 +109,13 @@ OCL_PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate,
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst, 3e-2);
+        SANITY_CHECK(dst, 2e-2);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::matchTemplate(src, templ, dst, CV_TM_CCORR_NORMED);
 
-        SANITY_CHECK(dst, 3e-2);
+        SANITY_CHECK(dst, 2e-2);
     }
     else
         OCL_PERF_ELSE

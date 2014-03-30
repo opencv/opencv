@@ -245,15 +245,12 @@ namespace cv
         void matchTemplate_CCORR_NORMED(
             const oclMat &image, const oclMat &templ, oclMat &result, MatchTemplateBuf &buf)
         {
-            cv::ocl::oclMat temp;
             matchTemplate_CCORR(image, templ, result, buf);
             buf.image_sums.resize(1);
             buf.image_sqsums.resize(1);
-            integral(image.reshape(1), buf.image_sums[0], temp);
-            if(temp.depth() == CV_64F)
-                temp.convertTo(buf.image_sqsums[0], CV_32FC1);
-            else
-                buf.image_sqsums[0] = temp;
+
+            integral(image.reshape(1), buf.image_sums[0], buf.image_sqsums[0]);
+
             unsigned long long templ_sqsum = (unsigned long long)sqrSum(templ.reshape(1))[0];
 
             Context *clCxt = image.clCxt;
@@ -419,12 +416,7 @@ namespace cv
             {
                 buf.image_sums.resize(1);
                 buf.image_sqsums.resize(1);
-                cv::ocl::oclMat temp;
-                integral(image, buf.image_sums[0], temp);
-                if(temp.depth() == CV_64F)
-                    temp.convertTo(buf.image_sqsums[0], CV_32FC1);
-                else
-                    buf.image_sqsums[0] = temp;
+                integral(image, buf.image_sums[0], buf.image_sqsums[0]);
 
                 templ_sum[0]   = (float)sum(templ)[0];
 
@@ -460,14 +452,10 @@ namespace cv
                 templ_sum   *= scale;
                 buf.image_sums.resize(buf.images.size());
                 buf.image_sqsums.resize(buf.images.size());
-                cv::ocl::oclMat temp;
+
                 for(int i = 0; i < image.oclchannels(); i ++)
                 {
-                    integral(buf.images[i], buf.image_sums[i], temp);
-                    if(temp.depth() == CV_64F)
-                        temp.convertTo(buf.image_sqsums[i], CV_32FC1);
-                    else
-                        buf.image_sqsums[i] = temp;
+                    integral(buf.images[i], buf.image_sums[i], buf.image_sqsums[i]);
                 }
 
                 switch(image.oclchannels())
