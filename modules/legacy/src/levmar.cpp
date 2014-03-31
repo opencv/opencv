@@ -58,7 +58,7 @@ void cvLevenbergMarquardtOptimization(pointer_LMJac JacobianFunction,
                                     CvMat *X0,CvMat *observRes,CvMat *resultX,
                                     int maxIter,double epsilon)
 {
-    /* This is not sparce method */
+    /* This is not sparse method */
     /* Make optimization using  */
     /* func - function to compute */
     /* uses function to compute jacobian */
