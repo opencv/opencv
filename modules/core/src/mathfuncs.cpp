@@ -2037,7 +2037,7 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
     if (depth == CV_64F && !doubleSupport)
         return false;
 
-    bool issqrt = std::abs(power - 0.5) < DBL_EPSILON;
+    bool issqrt = fabs(power - 0.5) < DBL_EPSILON;
     const char * const op = issqrt ? "OP_SQRT" : is_ipower ? "OP_POWN" : "OP_POW";
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
@@ -2073,13 +2073,15 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
 
 void pow( InputArray _src, double power, OutputArray _dst )
 {
-    bool is_ipower = false, same = false;
     int type = _src.type(), depth = CV_MAT_DEPTH(type),
             cn = CV_MAT_CN(type), ipower = cvRound(power);
+    bool is_ipower = fabs(ipower - power) < DBL_EPSILON, same = false,
+            igpu = ocl::Device::getDefault().type() == ocl::Device::TYPE_IGPU,
+            oclumat = _dst.isUMat() && ocl::useOpenCL();
 
-    if( fabs(ipower - power) < DBL_EPSILON )
+    if( is_ipower )
     {
-        if( ipower < 0 )
+        if( ipower < 0 && (!ocl::useOpenCL() || ((oclumat && !igpu) || ipower == -1)) )
         {
             divide( Scalar::all(1), _src, _dst );
             if( ipower == -1 )
