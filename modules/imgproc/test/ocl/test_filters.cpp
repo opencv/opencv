@@ -316,7 +316,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, Bilateral, Combine(
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, LaplacianTest, Combine(
                             FILTER_TYPES,
-                            Values(1, 3), // kernel size
+                            Values(1, 3, 5), // kernel size
                             Values(Size(0, 0)), // not used
                             FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
                             Values(1.0, 0.2, 3.0), // kernel scale
