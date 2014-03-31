@@ -216,7 +216,7 @@ void SIFT::buildGaussianPyramid( const Mat& base, vector<Mat>& pyr, int nOctaves
 
     // precompute Gaussian sigmas using the following formula:
     // \sigma_{total}^2 = \sigma_{i}^2 + \sigma_{i-1}^2
-    
+
     // Note: sig[i] is not the sigma value at level i, but the
     // incremental sigma that level i-1 must be convolved with
     // to attain the desired sigma at level i.
