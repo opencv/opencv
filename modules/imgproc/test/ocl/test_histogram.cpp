@@ -154,15 +154,16 @@ PARAM_TEST_CASE(CalcBackProject, MatDepth, int, bool)
         frame1.copyTo(usrc);
         int histSize = randomInt(3, 29);
         float hue_range[] = { 0, 180 };
-        const float* ranges = { hue_range };
+        const float* ranges1 = { hue_range };
+        Mat hist1;
 
         //compute histogram
-        calcHist(&frame1, 1, 0, Mat(), hist, 1, &histSize, &ranges, true, false);
-        normalize(hist, hist, 0, 255, NORM_MINMAX, -1, Mat());
+        calcHist(&frame1, 1, 0, Mat(), hist1, 1, &histSize, &ranges1, true, false);
+        normalize(hist1, hist1, 0, 255, NORM_MINMAX, -1, Mat());
 
-        Mat dst;
-        UMat udst, src, uhist;
-        hist.copyTo(uhist);
+        Mat dst1;
+        UMat udst1, src, uhist1;
+        hist1.copyTo(uhist1);
         std::vector<UMat> uims;
         uims.push_back(usrc);
         std::vector<float> urngs;
@@ -171,9 +172,9 @@ PARAM_TEST_CASE(CalcBackProject, MatDepth, int, bool)
         std::vector<int> chs;
         chs.push_back(0);
 
-        OCL_OFF(calcBackProject(&frame1, 1, 0, hist, dst, &ranges, 1, true));
-        OCL_ON(calcBackProject(uims, chs, uhist, udst, urngs, 1.0));
-        EXPECT_MAT_NEAR(dst, udst, 0.0);
+        OCL_OFF(calcBackProject(&frame1, 1, 0, hist1, dst1, &ranges1, 1, true));
+        OCL_ON(calcBackProject(uims, chs, uhist1, udst1, urngs, 1.0));
+        EXPECT_MAT_NEAR(dst1, udst1, 0.0);
     }
 };
 
