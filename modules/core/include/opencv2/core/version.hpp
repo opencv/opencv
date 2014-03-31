@@ -49,7 +49,7 @@
 
 #define CV_VERSION_EPOCH    2
 #define CV_VERSION_MAJOR    4
-#define CV_VERSION_MINOR    8
+#define CV_VERSION_MINOR    9
 #define CV_VERSION_REVISION 0
 
 #define CVAUX_STR_EXP(__A)  #__A

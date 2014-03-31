@@ -117,7 +117,7 @@ public class ManagerActivity extends Activity
             }
             else
             {
-                HardwarePlatformView.setText("Tegra 5");
+                HardwarePlatformView.setText("Tegra K1");
             }
         }
         else
