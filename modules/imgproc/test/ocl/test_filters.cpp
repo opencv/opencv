@@ -209,7 +209,7 @@ typedef FilterTestBase GaussianBlurTest;
 
 OCL_TEST_P(GaussianBlurTest, Mat)
 {
-    for (int j = 0; j < test_loop_times; j++)
+    for (int j = 0; j < test_loop_times + 100; j++)
     {
         random_roi();
 
@@ -222,7 +222,8 @@ OCL_TEST_P(GaussianBlurTest, Mat)
 
         if (checkNorm2(dst_roi, udst_roi) > 2 && CV_MAT_DEPTH(type) == CV_8U)
         {
-            Mat udst = udst_roi.getMat(ACCESS_READ);
+            std::cout << "i = " << j << std::endl;
+            Mat uudst = udst_roi.getMat(ACCESS_READ);
             Mat diff; 
             absdiff(dst_roi, udst, diff);
             int nonZero = countNonZero(diff);
@@ -231,11 +232,15 @@ OCL_TEST_P(GaussianBlurTest, Mat)
             minMaxLoc(diff, (double*)0, &max, (Point*) 0, &maxn);
 
             uchar a = dst_roi.at<uchar>(maxn);
-            uchar b = udst.at<uchar>(maxn);
+            uchar b = uudst.at<uchar>(maxn);
 
+            std::cout << "dst_roi" << dst_roi << std::endl;
+            std::cout << "udst_roi" << uudst << std::endl;
         }
 
-        Near(CV_MAT_DEPTH(type) == CV_8U ? 2 : 5e-5, false);
+        
+
+        Near(CV_MAT_DEPTH(type) == CV_8U ? 1 : 5e-5, false);
     }
 }
 

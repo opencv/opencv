@@ -138,7 +138,7 @@
 #endif
 
 #define DIG(a) a,
-__constant float mat_kernel[] = { COEFF };
+__constant dstT1 mat_kernel[] = { COEFF };
 
 __kernel void row_filter_C1_D0(__global const uchar * src, int src_step_in_pixel, int src_offset_x, int src_offset_y,
                                int src_cols, int src_rows, int src_whole_cols, int src_whole_rows,
@@ -356,6 +356,7 @@ __kernel void row_filter(__global const uchar * src, int src_step, int src_offse
         temp[0] = LDS_DAT[l_y][l_x + RADIUSX - i];
         temp[1] = LDS_DAT[l_y][l_x + RADIUSX + i];
         sum += mad(convertToDstT(temp[0]), mat_kernel[RADIUSX - i], convertToDstT(temp[1]) * mat_kernel[RADIUSX + i]);
+        //sum += convertToDstT(temp[0])*mat_kernel[RADIUSX - i] + convertToDstT(temp[1]) * mat_kernel[RADIUSX + i];
     }
 
     // write the result to dst

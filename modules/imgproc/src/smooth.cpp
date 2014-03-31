@@ -1196,12 +1196,12 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     }
 #endif
 
-    if (type == CV_8U)
-    {
-        CV_OCL_RUN_(_dst.isUMat() && _src.dims() <= 2 && 
-                (!(borderType & BORDER_ISOLATED) || _src.offset() == 0),
-                GaussianBlur_8u(_src, _dst, ksize, sigma1, sigma2, borderType))
-    }
+    //if (type == CV_8U)
+    //{
+    //    CV_OCL_RUN_(_dst.isUMat() && _src.dims() <= 2 && 
+    //            (!(borderType & BORDER_ISOLATED) || _src.offset() == 0),
+    //            GaussianBlur_8u(_src, _dst, ksize, sigma1, sigma2, borderType))
+    //}
 
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);

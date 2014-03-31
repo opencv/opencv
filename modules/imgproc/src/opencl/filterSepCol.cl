@@ -60,7 +60,7 @@
 #endif
 
 #define DIG(a) a,
-__constant float mat_kernel[] = { COEFF };
+__constant srcT1 mat_kernel[] = { COEFF };
 
 __kernel void col_filter(__global const uchar * src, int src_step, int src_offset, int src_whole_rows, int src_whole_cols,
                          __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols, float delta)
@@ -97,7 +97,12 @@ __kernel void col_filter(__global const uchar * src, int src_step, int src_offse
         temp[0] = LDS_DAT[l_y + RADIUSY - i][l_x];
         temp[1] = LDS_DAT[l_y + RADIUSY + i][l_x];
         sum += mad(temp[0], mat_kernel[RADIUSY - i], temp[1] * mat_kernel[RADIUSY + i]);
+        //sum += temp[0]*mat_kernel[RADIUSY - i] + temp[1] * mat_kernel[RADIUSY + i];
     }
+
+#if BITS > 0
+    sum = sum >> BITS;
+#endif
 
     // write the result to dst
     if (x < dst_cols && y < dst_rows)
