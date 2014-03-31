@@ -59,7 +59,7 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
             cvSetModeWindow_QT(name,prop_value);
         #elif defined(HAVE_WIN32UI)
             cvSetModeWindow_W32(name,prop_value);
-        #elif defined (HAVE_GTK) | defined (HAVE_GTK3)
+        #elif defined (HAVE_GTK)
             cvSetModeWindow_GTK(name,prop_value);
         #elif defined (HAVE_CARBON)
             cvSetModeWindow_CARBON(name,prop_value);
@@ -98,7 +98,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetModeWindow_QT(name);
         #elif defined(HAVE_WIN32UI)
             return cvGetModeWindow_W32(name);
-        #elif defined (HAVE_GTK) | defined(HAVE_GTK3)
+        #elif defined (HAVE_GTK)
             return cvGetModeWindow_GTK(name);
         #elif defined (HAVE_CARBON)
             return cvGetModeWindow_CARBON(name);
@@ -115,7 +115,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetPropWindow_QT(name);
         #elif defined(HAVE_WIN32UI)
             return cvGetPropWindowAutoSize_W32(name);
-        #elif defined (HAVE_GTK) | defined(HAVE_GTK3)
+        #elif defined (HAVE_GTK)
             return cvGetPropWindowAutoSize_GTK(name);
         #else
             return -1;
@@ -128,7 +128,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetRatioWindow_QT(name);
         #elif defined(HAVE_WIN32UI)
             return cvGetRatioWindow_W32(name);
-        #elif defined (HAVE_GTK) | defined(HAVE_GTK3)
+        #elif defined (HAVE_GTK)
             return cvGetRatioWindow_GTK(name);
         #else
             return -1;
@@ -141,7 +141,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetOpenGlProp_QT(name);
         #elif defined(HAVE_WIN32UI)
             return cvGetOpenGlProp_W32(name);
-        #elif defined (HAVE_GTK) | defined(HAVE_GTK3)
+        #elif defined (HAVE_GTK)
             return cvGetOpenGlProp_GTK(name);
         #else
             return -1;
@@ -477,7 +477,6 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 
 #if   defined(HAVE_WIN32UI)   // see window_w32.cpp
 #elif defined (HAVE_GTK)      // see window_gtk.cpp
-#elif defined (HAVE_GTK3)     // see window_gtk.cpp
 #elif defined (HAVE_COCOA)    // see window_carbon.cpp
 #elif defined (HAVE_CARBON)
 #elif defined (HAVE_QT)       //YV see window_QT.cpp
