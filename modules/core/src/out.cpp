@@ -148,7 +148,7 @@ public:
     void write(std::ostream& out, const Mat& m, const int*, int) const
     {
         out << "[";
-        writeMat(out, m, ';', ' ', m.cols == 1);
+        writeMat(out, m, ';', ' ', m.rows == 1);
         out << "]";
     }
 
@@ -165,7 +165,7 @@ public:
     void write(std::ostream& out, const Mat& m, const int*, int) const
     {
         out << "[";
-        writeMat(out, m, m.cols > 1 ? '[' : ' ', '[', m.cols*m.channels() == 1);
+        writeMat(out, m, m.cols > 1 ? '[' : ' ', '[', m.rows*m.channels() == 1);
         out << "]";
     }
 
@@ -187,7 +187,7 @@ public:
             "uint8", "int8", "uint16", "int16", "int32", "float32", "float64", "uint64"
         };
         out << "array([";
-        writeMat(out, m, m.cols > 1 ? '[' : ' ', '[', m.cols*m.channels() == 1);
+        writeMat(out, m, m.cols > 1 ? '[' : ' ', '[', m.rows*m.channels() == 1);
         out << "], type='" << numpyTypes[m.depth()] << "')";
     }
 
@@ -204,7 +204,7 @@ public:
     virtual ~CSVFormatter() {}
     void write(std::ostream& out, const Mat& m, const int*, int) const
     {
-        writeMat(out, m, ' ', ' ', m.cols*m.channels() == 1);
+        writeMat(out, m, ' ', ' ', m.rows*m.channels() == 1);
         if(m.rows > 1)
             out << "\n";
     }
@@ -223,7 +223,7 @@ public:
     void write(std::ostream& out, const Mat& m, const int*, int) const
     {
         out << "{";
-        writeMat(out, m, ',', ' ', m.cols==1);
+        writeMat(out, m, ',', ' ', m.rows==1);
         out << "}";
     }
 
