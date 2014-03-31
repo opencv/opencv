@@ -11,6 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2014, Itseez, Inc, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,6 +41,8 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
+
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
 static IppStatus sts = ippInit();
 #endif
@@ -495,6 +498,58 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     sepFilter2D( _src, _dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
 
+#ifdef HAVE_OPENCL
+
+namespace cv {
+
+static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
+                           const Mat & kd, const Mat & ks, double scale, double delta,
+                           int borderType, int depth, int ddepth)
+{
+    int iscale = cvRound(scale), idelta = cvRound(delta);
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
+            floatCoeff = std::fabs(delta - idelta) > DBL_EPSILON || std::fabs(scale - iscale) > DBL_EPSILON;
+    int cn = _src.channels(), wdepth = std::max(depth, floatCoeff ? CV_32F : CV_32S), kercn = 1;
+
+    if (!doubleSupport && wdepth == CV_64F)
+        return false;
+
+    char cvt[2][40];
+    ocl::Kernel k("sumConvert", ocl::imgproc::laplacian5_oclsrc,
+                  format("-D srcT=%s -D WT=%s -D dstT=%s -D coeffT=%s -D wdepth=%d "
+                         "-D convertToWT=%s -D convertToDT=%s%s",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
+                         ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)),
+                         ocl::typeToStr(CV_MAKE_TYPE(ddepth, kercn)),
+                         ocl::typeToStr(wdepth), wdepth,
+                         ocl::convertTypeStr(depth, wdepth, kercn, cvt[0]),
+                         ocl::convertTypeStr(wdepth, ddepth, kercn, cvt[1]),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat d2x, d2y;
+    sepFilter2D(_src, d2x, depth, kd, ks, Point(-1, -1), 0, borderType);
+    sepFilter2D(_src, d2y, depth, ks, kd, Point(-1, -1), 0, borderType);
+
+    UMat dst = _dst.getUMat();
+
+    ocl::KernelArg d2xarg = ocl::KernelArg::ReadOnlyNoSize(d2x),
+            d2yarg = ocl::KernelArg::ReadOnlyNoSize(d2y),
+            dstarg = ocl::KernelArg::WriteOnly(dst, cn, kercn);
+
+    if (wdepth >= CV_32F)
+        k.args(d2xarg, d2yarg, dstarg, (float)scale, (float)delta);
+    else
+        k.args(d2xarg, d2yarg, dstarg, iscale, idelta);
+
+    size_t globalsize[] = { dst.cols * cn / kercn, dst.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+
+}
+
+#endif
 
 void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                     double scale, double delta, int borderType )
@@ -531,27 +586,28 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
     }
     else
     {
-        Mat src = _src.getMat(), dst = _dst.getMat();
-        const size_t STRIPE_SIZE = 1 << 14;
-
-        int depth = src.depth();
-        int ktype = std::max(CV_32F, std::max(ddepth, depth));
-        int wdepth = depth == CV_8U && ksize <= 5 ? CV_16S : depth <= CV_32F ? CV_32F : CV_64F;
-        int wtype = CV_MAKETYPE(wdepth, src.channels());
+        int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
+        int wdepth = sdepth == CV_8U && ksize <= 5 ? CV_16S : sdepth <= CV_32F ? CV_32F : CV_64F;
+        int wtype = CV_MAKETYPE(wdepth, cn);
         Mat kd, ks;
         getSobelKernels( kd, ks, 2, 0, ksize, false, ktype );
-        int dtype = CV_MAKETYPE(ddepth, src.channels());
 
-        int dy0 = std::min(std::max((int)(STRIPE_SIZE/(getElemSize(src.type())*src.cols)), 1), src.rows);
-        Ptr<FilterEngine> fx = createSeparableLinearFilter(src.type(),
+        CV_OCL_RUN(_dst.isUMat(),
+                   ocl_Laplacian5(_src, _dst, kd, ks, scale,
+                                  delta, borderType, wdepth, ddepth))
+
+        const size_t STRIPE_SIZE = 1 << 14;
+        Ptr<FilterEngine> fx = createSeparableLinearFilter(stype,
             wtype, kd, ks, Point(-1,-1), 0, borderType, borderType, Scalar() );
-        Ptr<FilterEngine> fy = createSeparableLinearFilter(src.type(),
+        Ptr<FilterEngine> fy = createSeparableLinearFilter(stype,
             wtype, ks, kd, Point(-1,-1), 0, borderType, borderType, Scalar() );
 
+        Mat src = _src.getMat(), dst = _dst.getMat();
         int y = fx->start(src), dsty = 0, dy = 0;
         fy->start(src);
         const uchar* sptr = src.data + y*src.step;
 
+        int dy0 = std::min(std::max((int)(STRIPE_SIZE/(CV_ELEM_SIZE(stype)*src.cols)), 1), src.rows);
         Mat d2x( dy0 + kd.rows - 1, src.cols, wtype );
         Mat d2y( dy0 + kd.rows - 1, src.cols, wtype );
 
@@ -564,7 +620,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                 Mat dstripe = dst.rowRange(dsty, dsty + dy);
                 d2x.rows = d2y.rows = dy; // modify the headers, which should work
                 d2x += d2y;
-                d2x.convertTo( dstripe, dtype, scale, delta );
+                d2x.convertTo( dstripe, ddepth, scale, delta );
             }
         }
     }
