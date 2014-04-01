@@ -3,6 +3,7 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2014, Itseez, Inc, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -96,12 +97,15 @@ __kernel void col_filter(__global const uchar * src, int src_step, int src_offse
     {
         temp[0] = LDS_DAT[l_y + RADIUSY - i][l_x];
         temp[1] = LDS_DAT[l_y + RADIUSY + i][l_x];
+#ifndef INTEGER_ARITHMETIC
         sum += mad(temp[0], mat_kernel[RADIUSY - i], temp[1] * mat_kernel[RADIUSY + i]);
-        //sum += temp[0]*mat_kernel[RADIUSY - i] + temp[1] * mat_kernel[RADIUSY + i];
+#else
+        sum += mad24(temp[0],mat_kernel[RADIUSY - i], temp[1] * mat_kernel[RADIUSY + i]);
+#endif
     }
 
-#if BITS > 0
-    sum = sum >> BITS;
+#ifdef INTEGER_ARITHMETIC
+    sum = (sum + (1 << (SHIFT_BITS-1))) >> SHIFT_BITS;
 #endif
 
     // write the result to dst
