@@ -1,10 +1,11 @@
-### OpenCV: Open Source Computer Vision Library
+### OpenCV: Open Source Computer Vision Library (weightwatchers edition)
 
-[![Gittip](http://img.shields.io/gittip/OpenCV.png)](https://www.gittip.com/OpenCV/)
+this version is for embedded systems that are limited in size. Mainly for face
+recognition and all other functions are stripped out.
 
 #### Resources
 
-* Homepage: <http://opencv.org>
+* Homepage: <https://github.com/stalinizer/opencv>
 * Docs: <http://docs.opencv.org>
 * Q&A forum: <http://answers.opencv.org>
 * Issue tracking: <http://code.opencv.org>
@@ -20,3 +21,6 @@ Summary of guidelines:
 * Include tests and documentation;
 * Clean up "oops" commits before submitting;
 * Follow the coding style guide.
+
+#### Installing to a prefix
+cmake -DCMAKE_INSTALL_PREFIX:PATH=~/experiments/orca-sonar/dist/ CMakeLists.txt
