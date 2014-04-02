@@ -210,7 +210,12 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 \****************************************************************************************/
 
 #ifdef HAVE_IPP
-#  include "ipp.h"
+#  ifdef HAVE_IPP_ICV_ONLY
+#    include "ippicv.h"
+#    include "ippicv_fn_map.h"
+#  else
+#    include "ipp.h"
+#  endif
 
 static inline IppiSize ippiSize(int width, int height)
 {
