@@ -202,7 +202,11 @@ public:
     static void makeExpr(MatExpr& res, int method, Size sz, int type, double alpha=1);
 };
 
-static MatOp_Initializer g_MatOp_Initializer;
+static MatOp_Initializer* getGlobalMatOpInitializer()
+{
+    static MatOp_Initializer initializer;
+    return &initializer;
+}
 
 static inline bool isIdentity(const MatExpr& e) { return e.op == &g_MatOp_Identity; }
 static inline bool isAddEx(const MatExpr& e) { return e.op == &g_MatOp_AddEx; }
@@ -215,7 +219,7 @@ static inline bool isInv(const MatExpr& e) { return e.op == &g_MatOp_Invert; }
 static inline bool isSolve(const MatExpr& e) { return e.op == &g_MatOp_Solve; }
 static inline bool isGEMM(const MatExpr& e) { return e.op == &g_MatOp_GEMM; }
 static inline bool isMatProd(const MatExpr& e) { return e.op == &g_MatOp_GEMM && (!e.c.data || e.beta == 0); }
-static inline bool isInitializer(const MatExpr& e) { return e.op == &g_MatOp_Initializer; }
+static inline bool isInitializer(const MatExpr& e) { return e.op == getGlobalMatOpInitializer(); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1570,7 +1574,7 @@ void MatOp_Initializer::multiply(const MatExpr& e, double s, MatExpr& res) const
 
 inline void MatOp_Initializer::makeExpr(MatExpr& res, int method, Size sz, int type, double alpha)
 {
-    res = MatExpr(&g_MatOp_Initializer, method, Mat(sz, type, (void*)0), Mat(), Mat(), alpha, 0);
+    res = MatExpr(getGlobalMatOpInitializer(), method, Mat(sz, type, (void*)0), Mat(), Mat(), alpha, 0);
 }
 
 
