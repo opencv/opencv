@@ -42,13 +42,13 @@
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
 
-/*
+
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
 #define USE_IPP_CANNY 1
 #else
 #undef USE_IPP_CANNY
 #endif
-*/
+
 
 namespace cv
 {
@@ -59,30 +59,30 @@ static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
     int size = 0, size1 = 0;
     IppiSize roi = { _src.cols, _src.rows };
 
-    ippiFilterSobelNegVertGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size);
-    ippiFilterSobelHorizGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size1);
+    ippicviFilterSobelNegVertGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size);
+    ippicviFilterSobelHorizGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size1);
     size = std::max(size, size1);
-    ippiCannyGetSize(roi, &size1);
+    ippicviCannyGetSize(roi, &size1);
     size = std::max(size, size1);
 
     AutoBuffer<uchar> buf(size + 64);
     uchar* buffer = alignPtr((uchar*)buf, 32);
 
     Mat _dx(_src.rows, _src.cols, CV_16S);
-    if( ippiFilterSobelNegVertBorder_8u16s_C1R(_src.data, (int)_src.step,
+    if( ippicviFilterSobelNegVertBorder_8u16s_C1R(_src.data, (int)_src.step,
                     _dx.ptr<short>(), (int)_dx.step, roi,
                     ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
         return false;
 
     Mat _dy(_src.rows, _src.cols, CV_16S);
-    if( ippiFilterSobelHorizBorder_8u16s_C1R(_src.data, (int)_src.step,
+    if( ippicviFilterSobelHorizBorder_8u16s_C1R(_src.data, (int)_src.step,
                     _dy.ptr<short>(), (int)_dy.step, roi,
                     ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
         return false;
 
-    if( ippiCanny_16s8u_C1R(_dx.ptr<short>(), (int)_dx.step,
-                            _dy.ptr<short>(), (int)_dy.step,
-                            _dst.data, (int)_dst.step, roi, low, high, buffer) < 0 )
+    if( ippicviCanny_16s8u_C1R(_dx.ptr<short>(), (int)_dx.step,
+                               _dy.ptr<short>(), (int)_dy.step,
+                              _dst.data, (int)_dst.step, roi, low, high, buffer) < 0 )
         return false;
     return true;
 }
@@ -286,7 +286,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
 #endif
 
 #ifdef USE_IPP_CANNY
-    if( aperture_size == 3 && !L2gradient &&
+    if( aperture_size == 3 && !L2gradient && 1 == cn &&
         ippCanny(src, dst, (float)low_thresh, (float)high_thresh) )
         return;
 #endif
