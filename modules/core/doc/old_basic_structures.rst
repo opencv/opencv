@@ -1387,7 +1387,7 @@ description rewritten using
 
     IplImage* color_img = cvCreateImage(cvSize(320,240), IPL_DEPTH_8U, 3);
     IplImage gray_img_hdr, *gray_img;
-    gray_img = (IplImage*)cvReshapeND(color_img, &gray_img_hdr, 1, 0, 0);
+    gray_img = (IplImage*)cvReshapeMatND(color_img, sizeof(gray_img_hdr), &gray_img_hdr, 1, 0, 0);
 
     ...
 
@@ -1395,6 +1395,18 @@ description rewritten using
     int size[] = { 2, 2, 2 };
     CvMatND* mat = cvCreateMatND(3, size, CV_32F);
     CvMat row_header, *row;
+    row = (CvMat*)cvReshapeMatND(mat, sizeof(row_header), &row_header, 0, 1, 0);
+
+..
+
+In C, the header file for this function includes a convenient macro ``cvReshapeND`` that does away with the ``sizeof_header`` parameter. So, the lines containing the call to ``cvReshapeMatND`` in the examples may be replaced as follow:
+
+::
+
+    gray_img = (IplImage*)cvReshapeND(color_img, &gray_img_hdr, 1, 0, 0);
+
+    ...
+
     row = (CvMat*)cvReshapeND(mat, &row_header, 0, 1, 0);
 
 ..
