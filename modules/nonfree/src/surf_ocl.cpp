@@ -283,9 +283,9 @@ private:
 cv::ocl::SURF_OCL::SURF_OCL()
 {
     hessianThreshold = 100.0f;
-    extended = true;
+    extended = false;
     nOctaves = 4;
-    nOctaveLayers = 2;
+    nOctaveLayers = 3;
     keypointsRatio = 0.01f;
     upright = false;
 }
@@ -303,6 +303,11 @@ cv::ocl::SURF_OCL::SURF_OCL(double _threshold, int _nOctaves, int _nOctaveLayers
 int cv::ocl::SURF_OCL::descriptorSize() const
 {
     return extended ? 128 : 64;
+}
+
+int cv::ocl::SURF_OCL::descriptorType() const
+{
+    return CV_32F;
 }
 
 void cv::ocl::SURF_OCL::uploadKeypoints(const vector<KeyPoint> &keypoints, oclMat &keypointsGPU)
@@ -445,6 +450,81 @@ void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, vector
     (*this)(img, mask, keypoints, descriptorsGPU, useProvidedKeypoints);
 
     downloadDescriptors(descriptorsGPU, descriptors);
+}
+
+
+void cv::ocl::SURF_OCL::operator()(InputArray img, InputArray mask,
+                                   CV_OUT vector<KeyPoint>& keypoints) const
+{
+    this->operator()(img, mask, keypoints, noArray(), false);
+}
+
+void cv::ocl::SURF_OCL::operator()(InputArray img, InputArray mask, vector<KeyPoint> &keypoints,
+                                   OutputArray descriptors, bool useProvidedKeypoints) const
+{
+    oclMat _img, _mask;
+    if(img.kind() == _InputArray::OCL_MAT)
+        _img = *(oclMat*)img.obj;
+    else
+        _img.upload(img.getMat());
+    if(_img.channels() != 1)
+    {
+        oclMat temp;
+        cvtColor(_img, temp, COLOR_BGR2GRAY);
+        _img = temp;
+    }
+
+    if( !mask.empty() )
+    {
+        if(mask.kind() == _InputArray::OCL_MAT)
+            _mask = *(oclMat*)mask.obj;
+        else
+            _mask.upload(mask.getMat());
+    }
+
+    SURF_OCL_Invoker surf((SURF_OCL&)*this, _img, _mask);
+    oclMat keypointsGPU;
+
+    if (!useProvidedKeypoints || !upright)
+        ((SURF_OCL*)this)->uploadKeypoints(keypoints, keypointsGPU);
+
+    if (!useProvidedKeypoints)
+        surf.detectKeypoints(keypointsGPU);
+    else if (!upright)
+        surf.findOrientation(keypointsGPU);
+    if(keypointsGPU.cols*keypointsGPU.rows != 0)
+        ((SURF_OCL*)this)->downloadKeypoints(keypointsGPU, keypoints);
+
+    if( descriptors.needed() )
+    {
+        oclMat descriptorsGPU;
+        surf.computeDescriptors(keypointsGPU, descriptorsGPU, descriptorSize());
+        Size sz = descriptorsGPU.size();
+        if( descriptors.kind() == _InputArray::STD_VECTOR )
+        {
+            CV_Assert(descriptors.type() == CV_32F);
+            std::vector<float>* v = (std::vector<float>*)descriptors.obj;
+            v->resize(sz.width*sz.height);
+            Mat m(sz, CV_32F, &v->at(0));
+            descriptorsGPU.download(m);
+        }
+        else
+        {
+            descriptors.create(sz, CV_32F);
+            Mat m = descriptors.getMat();
+            descriptorsGPU.download(m);
+        }
+    }
+}
+
+void cv::ocl::SURF_OCL::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
+{
+    (*this)(image, mask, keypoints, noArray(), false);
+}
+
+void cv::ocl::SURF_OCL::computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const
+{
+    (*this)(image, Mat(), keypoints, descriptors, true);
 }
 
 void cv::ocl::SURF_OCL::releaseMemory()

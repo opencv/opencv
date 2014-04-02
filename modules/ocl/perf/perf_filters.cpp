@@ -262,13 +262,13 @@ OCL_PERF_TEST_P(SobelFixture, Sobel,
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 1e-3);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::Sobel(src, dst, -1, dx, dy);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 1e-3);
     }
     else
         OCL_PERF_ELSE
@@ -326,7 +326,7 @@ OCL_PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    const double eps = src.depth() == CV_8U ? 1 + DBL_EPSILON : 3e-4;
+    const double eps = src.depth() == CV_8U ? 1 + DBL_EPSILON : 5e-4;
 
     if (RUN_OCL_IMPL)
     {

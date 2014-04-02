@@ -319,7 +319,7 @@ struct MOG2Invoker : ParallelLoopBody
                 for( int mode = 0; mode < nmodes; mode++, mean_m += nchannels )
                 {
                     float weight = alpha1*gmm[mode].weight + prune;//need only weight if fit is found
-
+                    int swap_count = 0;
                     ////
                     //fit not found yet
                     if( !fitsPDF )
@@ -384,6 +384,7 @@ struct MOG2Invoker : ParallelLoopBody
                                 if( weight < gmm[i-1].weight )
                                     break;
 
+                                swap_count++;
                                 //swap one up
                                 std::swap(gmm[i], gmm[i-1]);
                                 for( int c = 0; c < nchannels; c++ )
@@ -401,7 +402,7 @@ struct MOG2Invoker : ParallelLoopBody
                         nmodes--;
                     }
 
-                    gmm[mode].weight = weight;//update weight by the calculated value
+                    gmm[mode-swap_count].weight = weight;//update weight by the calculated value
                     totalWeight += weight;
                 }
                 //go through all modes

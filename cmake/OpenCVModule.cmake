@@ -27,7 +27,8 @@
 # The verbose template for OpenCV module:
 #
 #   ocv_add_module(modname <dependencies>)
-#   ocv_glob_module_sources() or glob them manually and ocv_set_module_sources(...)
+#   ocv_glob_module_sources(([EXCLUDE_CUDA] <extra sources&headers>)
+#                          or glob them manually and ocv_set_module_sources(...)
 #   ocv_module_include_directories(<extra include directories>)
 #   ocv_create_module()
 #   <add extra link dependencies, compiler options, etc>
@@ -478,8 +479,14 @@ endmacro()
 
 # finds and sets headers and sources for the standard OpenCV module
 # Usage:
-# ocv_glob_module_sources(<extra sources&headers in the same format as used in ocv_set_module_sources>)
+# ocv_glob_module_sources([EXCLUDE_CUDA] <extra sources&headers in the same format as used in ocv_set_module_sources>)
 macro(ocv_glob_module_sources)
+  set(_argn ${ARGN})
+  list(FIND _argn "EXCLUDE_CUDA" exclude_cuda)
+  if(NOT exclude_cuda EQUAL -1)
+    list(REMOVE_AT _argn ${exclude_cuda})
+  endif()
+
   file(GLOB_RECURSE lib_srcs "src/*.cpp")
   file(GLOB_RECURSE lib_int_hdrs "src/*.hpp" "src/*.h")
   file(GLOB lib_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
@@ -489,15 +496,21 @@ macro(ocv_glob_module_sources)
     list(APPEND lib_srcs ${lib_srcs_apple})
   endif()
 
-  file(GLOB lib_cuda_srcs "src/cuda/*.cu")
-  set(cuda_objs "")
-  set(lib_cuda_hdrs "")
-  if(HAVE_CUDA)
-    ocv_include_directories(${CUDA_INCLUDE_DIRS})
-    file(GLOB lib_cuda_hdrs "src/cuda/*.hpp")
+  if (exclude_cuda EQUAL -1)
+    file(GLOB lib_cuda_srcs "src/cuda/*.cu")
+    set(cuda_objs "")
+    set(lib_cuda_hdrs "")
+    if(HAVE_CUDA)
+      ocv_include_directories(${CUDA_INCLUDE_DIRS})
+      file(GLOB lib_cuda_hdrs "src/cuda/*.hpp")
 
-    ocv_cuda_compile(cuda_objs ${lib_cuda_srcs} ${lib_cuda_hdrs})
-    source_group("Src\\Cuda"      FILES ${lib_cuda_srcs} ${lib_cuda_hdrs})
+      ocv_cuda_compile(cuda_objs ${lib_cuda_srcs} ${lib_cuda_hdrs})
+      source_group("Src\\Cuda"      FILES ${lib_cuda_srcs} ${lib_cuda_hdrs})
+    endif()
+  else()
+    set(cuda_objs "")
+    set(lib_cuda_srcs "")
+    set(lib_cuda_hdrs "")
   endif()
 
   source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
@@ -516,8 +529,8 @@ macro(ocv_glob_module_sources)
   source_group("Include" FILES ${lib_hdrs})
   source_group("Include\\detail" FILES ${lib_hdrs_detail})
 
-  ocv_set_module_sources(${ARGN} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
-                                 SOURCES ${lib_srcs} ${lib_int_hdrs} ${cuda_objs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
+  ocv_set_module_sources(${_argn} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
+                         SOURCES ${lib_srcs} ${lib_int_hdrs} ${cuda_objs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
 endmacro()
 
 # creates OpenCV module in current folder
@@ -616,11 +629,20 @@ endmacro()
 # short command for adding simple OpenCV module
 # see ocv_add_module for argument details
 # Usage:
-# ocv_define_module(module_name  [INTERNAL] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>])
+# ocv_define_module(module_name  [INTERNAL] [EXCLUDE_CUDA] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>])
 macro(ocv_define_module module_name)
-  ocv_add_module(${module_name} ${ARGN})
+  set(_argn ${ARGN})
+  set(exclude_cuda "")
+  foreach(arg ${_argn})
+    if("${arg}" STREQUAL "EXCLUDE_CUDA")
+      set(exclude_cuda "${arg}")
+      list(REMOVE_ITEM _argn ${arg})
+    endif()
+  endforeach()
+
+  ocv_add_module(${module_name} ${_argn})
   ocv_module_include_directories()
-  ocv_glob_module_sources()
+  ocv_glob_module_sources(${exclude_cuda})
   ocv_create_module()
   ocv_add_precompiled_headers(${the_module})
 

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
+#include <ctype.h>
 
 #include "cvconfig.h"
 #include "opencv2/core/core.hpp"
