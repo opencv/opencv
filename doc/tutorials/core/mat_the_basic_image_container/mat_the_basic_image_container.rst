@@ -45,7 +45,7 @@ All the above objects, in the end, point to the same single data matrix. Their h
    :linenos:
 
    Mat D (A, Rect(10, 10, 100, 100) ); // using a rectangle
-   Mat E = A(Range:all(), Range(1,3)); // using row and column boundaries
+   Mat E = A(Range::all(), Range(1,3)); // using row and column boundaries
 
 Now you may ask if the matrix itself may belong to multiple *Mat* objects who takes responsibility for cleaning it up when it's no longer needed. The short answer is: the last object that used it. This is handled by using a reference counting mechanism. Whenever somebody copies a header of a *Mat* object, a counter is increased for the matrix. Whenever a header is cleaned this counter is decreased. When the counter reaches zero the matrix too is freed. Sometimes you will want to copy the matrix itself too, so OpenCV provides the :basicstructures:`clone() <mat-clone>` and :basicstructures:`copyTo() <mat-copyto>` functions.
 
@@ -86,7 +86,7 @@ Each of the building components has their own valid domains. This leads to the d
 Creating a *Mat* object explicitly
 ==================================
 
-In the :ref:`Load_Save_Image` tutorial you have already learned how to write a matrix to an image file by using the :readWriteImageVideo:` imwrite() <imwrite>` function. However, for debugging purposes it's much more convenient to see the actual values. You can do this using the << operator of *Mat*. Be aware that this only works for two dimensional matrices.
+In the :ref:`Load_Save_Image` tutorial you have already learned how to write a matrix to an image file by using the :readwriteimagevideo:`imwrite() <imwrite>` function. However, for debugging purposes it's much more convenient to see the actual values. You can do this using the << operator of *Mat*. Be aware that this only works for two dimensional matrices.
 
 Although *Mat* works really well as an image container, it is also a general matrix class. Therefore, it is possible to create and manipulate multidimensional matrices. You can create a Mat object in multiple ways:
 
