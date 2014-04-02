@@ -972,7 +972,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
             ippicviMeanStdDevFuncC1 ippFuncC1 =
             type == CV_8UC1 ? (ippicviMeanStdDevFuncC1)ippicviMean_StdDev_8u_C1R :
             type == CV_16UC1 ? (ippicviMeanStdDevFuncC1)ippicviMean_StdDev_16u_C1R :
-            //type == CV_32FC1 ? (ippicviMeanStdDevFuncC1)ippicviMean_StdDev_32f_C1R ://Aug 2013: bug in IPP 7.1, 8.0
+            type == CV_32FC1 ? (ippicviMeanStdDevFuncC1)ippicviMean_StdDev_32f_C1R ://Aug 2013: bug in IPP 7.1, 8.0
             0;
             if( ippFuncC1 )
             {
