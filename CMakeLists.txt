@@ -176,7 +176,7 @@ OCV_OPTION(BUILD_TBB                "Download and build TBB from source" ANDROID
 # ===================================================
 OCV_OPTION(INSTALL_CREATE_DISTRIB   "Change install rules to build the distribution package" OFF )
 OCV_OPTION(INSTALL_C_EXAMPLES       "Install C examples"        OFF )
-OCV_OPTION(INSTALL_PYTHON_EXAMPLES  "Install Python examples"   OFF )
+#OCV_OPTION(INSTALL_PYTHON_EXAMPLES  "Install Python examples"   OFF )
 OCV_OPTION(INSTALL_TO_MANGLED_PATHS "Enables mangled install paths, that help with side by side installs." OFF IF (UNIX AND NOT ANDROID AND NOT IOS AND BUILD_SHARED_LIBS) )
 OCV_OPTION(INSTALL_TESTS            "Install accuracy and performance test binaries and test data" OFF)
 
@@ -430,27 +430,27 @@ include(cmake/OpenCVFindLibsPerf.cmake)
 # ----------------------------------------------------------------------------
 
 # --- LATEX for pdf documentation ---
-if(BUILD_DOCS)
-  include(cmake/OpenCVFindLATEX.cmake)
-endif(BUILD_DOCS)
+#if(BUILD_DOCS)
+#  include(cmake/OpenCVFindLATEX.cmake)
+#endif(BUILD_DOCS)
 
 # --- Python Support ---
-include(cmake/OpenCVDetectPython.cmake)
+#include(cmake/OpenCVDetectPython.cmake)
 
 # --- Java Support ---
-include(cmake/OpenCVDetectApacheAnt.cmake)
-if(ANDROID)
-  include(cmake/OpenCVDetectAndroidSDK.cmake)
+# include(cmake/OpenCVDetectApacheAnt.cmake)
+# if(ANDROID)
+#   include(cmake/OpenCVDetectAndroidSDK.cmake)
 
-  if(NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
-    message(WARNING "OpenCV requires Android SDK tools revision 14 or newer. Otherwise tests and samples will no be compiled.")
-  endif()
-else()
-  find_package(JNI)
-endif()
+#   if(NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
+#     message(WARNING "OpenCV requires Android SDK tools revision 14 or newer. Otherwise tests and samples will no be compiled.")
+#   endif()
+# else()
+#   find_package(JNI)
+# endif()
 
 
-SET(CAN_BUILD_ANDROID_PROJECTS FALSE)
+# SET(CAN_BUILD_ANDROID_PROJECTS FALSE)
 
 
 # --- OpenCL ---
@@ -462,15 +462,15 @@ SET(CAN_BUILD_ANDROID_PROJECTS FALSE)
 # ----------------------------------------------------------------------------
 # Add CUDA libraries (needed for apps/tools, samples)
 # ----------------------------------------------------------------------------
-if(HAVE_CUDA)
-  set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
-  if(HAVE_CUBLAS)
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cublas_LIBRARY})
-  endif()
-  if(HAVE_CUFFT)
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cufft_LIBRARY})
-  endif()
-endif()
+# if(HAVE_CUDA)
+#   set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+#   if(HAVE_CUBLAS)
+#     set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cublas_LIBRARY})
+#   endif()
+#   if(HAVE_CUFFT)
+#     set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cufft_LIBRARY})
+#   endif()
+# endif()
 # ----------------------------------------------------------------------------
 # Solution folders:
 # ----------------------------------------------------------------------------
@@ -505,21 +505,21 @@ if(BUILD_opencv_apps)
 endif()
 
 # examples
-if(BUILD_EXAMPLES OR BUILD_ANDROID_EXAMPLES OR INSTALL_PYTHON_EXAMPLES)
-  add_subdirectory(samples)
-endif()
+# if(BUILD_EXAMPLES OR BUILD_ANDROID_EXAMPLES OR INSTALL_PYTHON_EXAMPLES)
+#   add_subdirectory(samples)
+# endif()
 
-if(ANDROID)
-  add_subdirectory(platforms/android/service)
-endif()
+# if(ANDROID)
+#   add_subdirectory(platforms/android/service)
+# endif()
 
-if(BUILD_ANDROID_PACKAGE)
-  add_subdirectory(platforms/android/package)
-endif()
+# if(BUILD_ANDROID_PACKAGE)
+#   add_subdirectory(platforms/android/package)
+# endif()
 
-if (ANDROID)
-  add_subdirectory(platforms/android/libinfo)
-endif()
+# if (ANDROID)
+#   add_subdirectory(platforms/android/libinfo)
+# endif()
 
 # ----------------------------------------------------------------------------
 # Finalization: generate configuration-based files
@@ -856,50 +856,50 @@ if(HAVE_CUDA)
 endif()
 
 
-# ========================== python ==========================
-status("")
-status("  Python:")
-status("    Interpreter:"     PYTHONINTERP_FOUND  THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_STRING})"       ELSE NO)
-if(BUILD_opencv_python)
-  if(PYTHONLIBS_VERSION_STRING)
-    status("    Libraries:"   HAVE_opencv_python  THEN  "${PYTHON_LIBRARIES} (ver ${PYTHONLIBS_VERSION_STRING})"   ELSE NO)
-  else()
-    status("    Libraries:"   HAVE_opencv_python  THEN  "${PYTHON_LIBRARIES}"                                      ELSE NO)
-  endif()
-  status("    numpy:"         PYTHON_NUMPY_INCLUDE_DIRS THEN "${PYTHON_NUMPY_INCLUDE_DIRS} (ver ${PYTHON_NUMPY_VERSION})" ELSE "NO (Python wrappers can not be generated)")
-  status("    packages path:" PYTHON_EXECUTABLE         THEN "${PYTHON_PACKAGES_PATH}"                                    ELSE "-")
-endif()
+# # ========================== python ==========================
+# status("")
+# status("  Python:")
+# status("    Interpreter:"     PYTHONINTERP_FOUND  THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_STRING})"       ELSE NO)
+# if(BUILD_opencv_python)
+#   if(PYTHONLIBS_VERSION_STRING)
+#     status("    Libraries:"   HAVE_opencv_python  THEN  "${PYTHON_LIBRARIES} (ver ${PYTHONLIBS_VERSION_STRING})"   ELSE NO)
+#   else()
+#     status("    Libraries:"   HAVE_opencv_python  THEN  "${PYTHON_LIBRARIES}"                                      ELSE NO)
+#   endif()
+# #  status("    numpy:"         PYTHON_NUMPY_INCLUDE_DIRS THEN "${PYTHON_NUMPY_INCLUDE_DIRS} (ver ${PYTHON_NUMPY_VERSION})" ELSE "NO (Python wrappers can not be generated)")
+#   status("    packages path:" PYTHON_EXECUTABLE         THEN "${PYTHON_PACKAGES_PATH}"                                    ELSE "-")
+# endif()
 
-# ========================== java ==========================
-status("")
-status("  Java:")
-status("    ant:"           ANT_EXECUTABLE      THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})"                    ELSE NO)
-if(NOT ANDROID)
-  status("    JNI:"         JNI_INCLUDE_DIRS    THEN "${JNI_INCLUDE_DIRS}"                                       ELSE NO)
-endif()
-status("    Java tests:"    BUILD_TESTS AND (CAN_BUILD_ANDROID_PROJECTS OR HAVE_opencv_java)            THEN YES ELSE NO)
+# # ========================== java ==========================
+# status("")
+# status("  Java:")
+# status("    ant:"           ANT_EXECUTABLE      THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})"                    ELSE NO)
+# if(NOT ANDROID)
+#   status("    JNI:"         JNI_INCLUDE_DIRS    THEN "${JNI_INCLUDE_DIRS}"                                       ELSE NO)
+# endif()
+# status("    Java tests:"    BUILD_TESTS AND (CAN_BUILD_ANDROID_PROJECTS OR HAVE_opencv_java)            THEN YES ELSE NO)
 
-# ========================= matlab =========================
-status("")
-status("  Matlab:")
-status("    mex:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"   ELSE NO)
-if (MATLAB_FOUND)
-  status("    Compiler/generator:" MEX_WORKS    THEN  "Working"                ELSE "Not working (bindings will not be generated)")
-endif()
+# # ========================= matlab =========================
+# status("")
+# status("  Matlab:")
+# status("    mex:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"   ELSE NO)
+# if (MATLAB_FOUND)
+#   status("    Compiler/generator:" MEX_WORKS    THEN  "Working"                ELSE "Not working (bindings will not be generated)")
+# endif()
 
-# ========================== documentation ==========================
-if(BUILD_DOCS)
-  status("")
-  status("  Documentation:")
-  if(HAVE_SPHINX)
-    status("    Build Documentation:" PDFLATEX_COMPILER      THEN YES ELSE "YES (only HTML and without math expressions)")
-  else()
-    status("    Build Documentation:" NO)
-  endif()
-  status("    Sphinx:"              HAVE_SPHINX              THEN "${SPHINX_BUILD} (ver ${SPHINX_VERSION})" ELSE NO)
-  status("    PdfLaTeX compiler:"   PDFLATEX_COMPILER        THEN "${PDFLATEX_COMPILER}" ELSE NO)
-  status("    PlantUML:"            PLANTUML                 THEN "${PLANTUML}" ELSE NO)
-endif()
+# # ========================== documentation ==========================
+# if(BUILD_DOCS)
+#   status("")
+#   status("  Documentation:")
+#   if(HAVE_SPHINX)
+#     status("    Build Documentation:" PDFLATEX_COMPILER      THEN YES ELSE "YES (only HTML and without math expressions)")
+#   else()
+#     status("    Build Documentation:" NO)
+#   endif()
+#   status("    Sphinx:"              HAVE_SPHINX              THEN "${SPHINX_BUILD} (ver ${SPHINX_VERSION})" ELSE NO)
+#   status("    PdfLaTeX compiler:"   PDFLATEX_COMPILER        THEN "${PDFLATEX_COMPILER}" ELSE NO)
+#   status("    PlantUML:"            PLANTUML                 THEN "${PLANTUML}" ELSE NO)
+# endif()
 
 # ========================== samples and tests ==========================
 status("")
