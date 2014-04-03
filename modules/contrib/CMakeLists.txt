@@ -1,1 +1,0 @@
-ocv_define_module(contrib opencv_imgproc opencv_calib3d opencv_ml opencv_video opencv_objdetect OPTIONAL opencv_highgui opencv_nonfree)
