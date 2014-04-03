@@ -367,11 +367,11 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
     for (int i = 0; i <= num_bands_; ++i)
     {
         Rect rc(x_tl, y_tl, x_br - x_tl, y_br - y_tl);
-        CV_OPENCL_RUN(SuppressWarning(true),
-                ocl_MultiBandBlender_feed(src_pyr_laplace[i], weight_pyr_gauss[i],
-                        dst_pyr_laplace_[i](rc),
-                        dst_band_weights_[i](rc)),
-                goto next_band;)
+#ifdef HAVE_OPENCL
+        if ( !cv::ocl::useOpenCL() ||
+             !ocl_MultiBandBlender_feed(src_pyr_laplace[i], weight_pyr_gauss[i],
+                    dst_pyr_laplace_[i](rc), dst_band_weights_[i](rc)) )
+#endif
         {
             Mat _src_pyr_laplace = src_pyr_laplace[i].getMat(ACCESS_READ);
             Mat _dst_pyr_laplace = dst_pyr_laplace_[i](rc).getMat(ACCESS_RW);
@@ -414,9 +414,7 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
                 }
             }
         }
-#ifdef HAVE_OPENCL
-next_band:
-#endif
+
         x_tl /= 2; y_tl /= 2;
         x_br /= 2; y_br /= 2;
     }
@@ -477,9 +475,10 @@ void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
         return;
 #endif
 
-    CV_OPENCL_RUN(SuppressWarning(true),
-                  ocl_normalizeUsingWeightMap(_weight, _src),
-                  return;)
+#ifdef HAVE_OPENCL
+        if ( !cv::ocl::useOpenCL() ||
+             !ocl_normalizeUsingWeightMap(_weight, _src) )
+#endif
     {
         Mat weight = _weight.getMat();
         Mat src = _src.getMat();
