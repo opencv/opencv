@@ -2621,12 +2621,11 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
     int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1),
             type2 = _src2.type(), depth2 = CV_MAT_DEPTH(type2);
 
-    if (!haveScalar)
-    {
-        if ( (!doubleSupport && depth1 == CV_64F) ||
-            !_src1.sameSize(_src2) || type1 != type2)
+    if (!doubleSupport && depth1 == CV_64F)
+        return false;
+
+    if (!haveScalar && (!_src1.sameSize(_src2) || type1 != type2))
             return false;
-    }
 
     int kercn = haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
     // Workaround for bug with "?:" operator in AMD OpenCL compiler
