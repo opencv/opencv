@@ -49,3 +49,10 @@ FIND_LIBRARY(LIBDL_LIBRARIES NAMES dl libdl   )
 
 
 target_link_libraries( face ${LIBDL_LIBRARIES} )
+
+
+find_package(PNG REQUIRED)
+target_link_libraries(face ${PNG_LIBRARY})
+
+find_package(JPEG REQUIRED)
+target_link_libraries(face ${JPEG_LIBRARY})

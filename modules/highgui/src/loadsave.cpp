@@ -64,10 +64,10 @@ struct ImageCodecInitializer
         encoders.push_back( makePtr<BmpEncoder>() );
         decoders.push_back( makePtr<HdrDecoder>() );
         encoders.push_back( makePtr<HdrEncoder>() );
-    #ifdef HAVE_JPEG
+
         decoders.push_back( makePtr<JpegDecoder>() );
         encoders.push_back( makePtr<JpegEncoder>() );
-    #endif
+
     #ifdef HAVE_WEBP
         decoders.push_back( makePtr<WebPDecoder>() );
         encoders.push_back( makePtr<WebPEncoder>() );
@@ -80,10 +80,10 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<TiffDecoder>() );
     #endif
         encoders.push_back( makePtr<TiffEncoder>() );
-    #ifdef HAVE_PNG
+
         decoders.push_back( makePtr<PngDecoder>() );
         encoders.push_back( makePtr<PngEncoder>() );
-    #endif
+
     #ifdef HAVE_JASPER
         decoders.push_back( makePtr<Jpeg2KDecoder>() );
         encoders.push_back( makePtr<Jpeg2KEncoder>() );
@@ -111,7 +111,9 @@ static ImageDecoder findDecoder( const String& filename )
 
     FILE* f= fopen( filename.c_str(), "rb" );
     if( !f )
-        return ImageDecoder();
+      //return ImageDecoder();
+      throw (filename);
+
     String signature(maxlen, ' ');
     maxlen = fread( (void*)signature.c_str(), 1, maxlen, f );
     fclose(f);
@@ -123,7 +125,8 @@ static ImageDecoder findDecoder( const String& filename )
             return codecs.decoders[i]->newDecoder();
     }
 
-    return ImageDecoder();
+    throw (filename);
+    //return ImageDecoder();
 }
 
 static ImageDecoder findDecoder( const Mat& buf )

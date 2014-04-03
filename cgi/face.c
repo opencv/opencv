@@ -44,8 +44,6 @@ int main( int argc, const char** argv )
     string inputName;
     bool tryflip = false;
 
-    help();
-
     CascadeClassifier cascade, nestedCascade;
     double scale = 1;
 
@@ -88,13 +86,13 @@ int main( int argc, const char** argv )
         image = cv::imread( inputName, 1 );
         if( image.empty() )
         {
+          cout << "Image was empty" << inputName << endl;
+        } else {
+          cout << "Image loaded" << inputName << endl;
+          detectAndDraw( image, cascade, nestedCascade, scale, tryflip );
         }
-      }
-
-    cout << "In image read" << endl;
-    if( !image.empty() )
-      {
-        detectAndDraw( image, cascade, nestedCascade, scale, tryflip );
+      } else {
+        help();
       }
     return 0;
 }
@@ -153,8 +151,8 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
         center.x = cvRound((r->x + r->width*0.5)*scale);
         center.y = cvRound((r->y + r->height*0.5)*scale);
         radius = cvRound((r->width + r->height)*0.25*scale);
-        cout << center.x;
-        cout << center.y;
-        cout << radius;
+        cout << " x="<< center.x << " y=";
+        cout << center.y << " radius=";
+        cout << radius << std::endl;
     }
 }

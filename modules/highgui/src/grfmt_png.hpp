@@ -43,7 +43,7 @@
 #ifndef _GRFMT_PNG_H_
 #define _GRFMT_PNG_H_
 
-#ifdef HAVE_PNG
+
 
 #include "grfmt_base.hpp"
 #include "bitstrm.hpp"
@@ -96,6 +96,6 @@ protected:
 
 }
 
-#endif
+
 
 #endif/*_GRFMT_PNG_H_*/

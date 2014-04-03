@@ -39,10 +39,10 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "../precomp.hpp"
 #include "grfmt_jpeg.hpp"
 
-#ifdef HAVE_JPEG
+
 
 #ifdef _MSC_VER
 //interaction between '_setjmp' and C++ object destruction is non-portable
@@ -671,6 +671,5 @@ _exit_:
 
 }
 
-#endif
 
 /* End of file. */

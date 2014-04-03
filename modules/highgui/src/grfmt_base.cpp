@@ -78,7 +78,17 @@ size_t BaseImageDecoder::signatureLength() const
 bool BaseImageDecoder::checkSignature( const String& signature ) const
 {
     size_t len = signatureLength();
-    return signature.size() >= len && memcmp( signature.c_str(), m_signature.c_str(), len ) == 0;
+    // std::cout << "check";
+    const char * b = m_signature.c_str();
+    const char * a = signature.c_str();
+    //   for (int i = 0; i < len; ++i)
+    //     {
+    //       std::cout << "| " << std::hex  << (int)a[i] 
+    //                 << "== "  <<  std::hex << (int)b[i];
+    //     }
+    //   std::cout << std::endl;
+    return signature.size() >= len 
+      && memcmp( a, b, len ) == 0;
 }
 
 ImageDecoder BaseImageDecoder::newDecoder() const

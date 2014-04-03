@@ -46,7 +46,7 @@
 #include "grfmt_base.hpp"
 #include "bitstrm.hpp"
 
-#ifdef HAVE_JPEG
+
 
 // IJG-based Jpeg codec
 
@@ -85,6 +85,5 @@ public:
 
 }
 
-#endif
 
 #endif/*_GRFMT_JPEG_H_*/
