@@ -3851,11 +3851,11 @@ protected:
                 NO_BRACKET;
     }
 
-    inline string getBracketString(const bracket c) const
+    inline const string getBracketString(const bracket c) const
     {
-        char bracket[2] = {'\0', '\0'};
-        bracket[0] = (char)c;
-        return string(bracket);
+        char br[2] = {'\0', '\0'};
+        br[0] = (char)c;
+        return string(br);
     }
 
     virtual void writeRow(std::ostream& out, const Mat& m) const
