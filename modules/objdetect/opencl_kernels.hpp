@@ -10,9 +10,9 @@ namespace ocl
 namespace objdetect
 {
 
-extern const struct ProgramEntry cascadedetect;
-extern ProgramSource cascadedetect_oclsrc;
-extern const struct ProgramEntry objdetect_hog;
-extern ProgramSource objdetect_hog_oclsrc;
+  //extern const struct ProgramEntry cascadedetect;
+  //extern ProgramSource cascadedetect_oclsrc;
+  //extern const struct ProgramEntry objdetect_hog;
+  //extern ProgramSource objdetect_hog_oclsrc;
 }
 }}

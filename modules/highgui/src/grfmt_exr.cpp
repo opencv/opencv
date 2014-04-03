@@ -52,7 +52,7 @@
 #  pragma GCC diagnostic ignored "-Wshadow"
 #endif
 
-#include <ImfHeader.h>
+//#include <ImfHeader.h>
 #include <ImfInputFile.h>
 #include <ImfOutputFile.h>
 #include <ImfChannelList.h>

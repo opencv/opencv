@@ -4,7 +4,7 @@
 # ----------------------------------------------------------------------------
 cmake_minimum_required(VERSION 2.8)
 
-SET(opencv "~/experiments/stalinizer/opencv-small/")
+SET(opencv "../")
 include_directories(
   ${opencv}include 
   ${opencv}modules/objdetect/include 

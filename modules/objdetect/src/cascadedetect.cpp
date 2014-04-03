@@ -1072,7 +1072,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
             else
                 opts = format("-D LOCAL_SIZE_X=%d -D LOCAL_SIZE_Y=%d -D NODE_COUNT=%d",
                               localsz.width, localsz.height, data.maxNodesPerTree);
-            haarKernel.create("runHaarClassifier", ocl::objdetect::cascadedetect_oclsrc, opts);
+            //haarKernel.create("runHaarClassifier", ocl::objdetect::cascadedetect_oclsrc, opts);
             if( haarKernel.empty() )
                 return false;
         }
@@ -1113,7 +1113,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
                               localsz.width, localsz.height, lbufSize.area(), lbufSize.width);
             else
                 opts = format("-D LOCAL_SIZE_X=%d -D LOCAL_SIZE_Y=%d", localsz.width, localsz.height);
-            lbpKernel.create("runLBPClassifierStumpSimple", ocl::objdetect::cascadedetect_oclsrc, opts);
+            //lbpKernel.create("runLBPClassifierStumpSimple", ocl::objdetect::cascadedetect_oclsrc, opts);
             if( lbpKernel.empty() )
                 return false;
         }
