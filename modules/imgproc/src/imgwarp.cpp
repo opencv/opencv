@@ -4016,54 +4016,54 @@ private:
 /*
 #if defined (HAVE_IPP) && IPP_VERSION_MAJOR >= 8 IPP_VERSION_MINOR >= 1
 class IPPWarpAffineInvoker :
-   public ParallelLoopBody
+    public ParallelLoopBody
 {
 public:
-   IPPWarpAffineInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[2][3], int &_interpolation, int _borderType,
-                        const Scalar &_borderValue, ippiWarpAffineBackFunc _func, bool *_ok) :
-       ParallelLoopBody(), src(_src), dst(_dst), mode(_interpolation), coeffs(_coeffs),
-       borderType(_borderType), borderValue(_borderValue), func(_func), ok(_ok)
-   {
-       *ok = true;
-   }
+    IPPWarpAffineInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[2][3], int &_interpolation, int _borderType,
+                         const Scalar &_borderValue, ippiWarpAffineBackFunc _func, bool *_ok) :
+        ParallelLoopBody(), src(_src), dst(_dst), mode(_interpolation), coeffs(_coeffs),
+        borderType(_borderType), borderValue(_borderValue), func(_func), ok(_ok)
+    {
+        *ok = true;
+    }
 
-   virtual void operator() (const Range& range) const
-   {
-       IppiSize srcsize = { src.cols, src.rows };
-       IppiRect srcroi = { 0, 0, src.cols, src.rows };
-       IppiRect dstroi = { 0, range.start, dst.cols, range.end - range.start };
-       int cnn = src.channels();
-       if( borderType == BORDER_CONSTANT )
-       {
-           IppiSize setSize = { dst.cols, range.end - range.start };
-           void *dataPointer = dst.data + dst.step[0] * range.start;
-           if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
-           {
-               *ok = false;
-               return;
-           }
-       }
+    virtual void operator() (const Range& range) const
+    {
+        IppiSize srcsize = { src.cols, src.rows };
+        IppiRect srcroi = { 0, 0, src.cols, src.rows };
+        IppiRect dstroi = { 0, range.start, dst.cols, range.end - range.start };
+        int cnn = src.channels();
+        if( borderType == BORDER_CONSTANT )
+        {
+            IppiSize setSize = { dst.cols, range.end - range.start };
+            void *dataPointer = dst.data + dst.step[0] * range.start;
+            if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
+            {
+                *ok = false;
+                return;
+            }
+        }
 
-       ////Aug 2013: problem in IPP 7.1, 8.0 : sometimes function return ippStsCoeffErr
-       IppStatus status = func( src.data, srcsize, (int)src.step[0], srcroi, dst.data,
-                               (int)dst.step[0], dstroi, coeffs, mode );
-       printf("%d\n", status);
-       if( status != ippStsNoErr)
-           *ok = false;
-   }
+        ////Aug 2013: problem in IPP 7.1, 8.0 : sometimes function return ippStsCoeffErr
+        IppStatus status = func( src.data, srcsize, (int)src.step[0], srcroi, dst.data,
+                                (int)dst.step[0], dstroi, coeffs, mode );
+        printf("%d\n", status);
+        if( status != ippStsNoErr)
+            *ok = false;
+    }
 private:
-   Mat &src;
-   Mat &dst;
-   int mode;
-   double (&coeffs)[2][3];
-   int borderType;
-   Scalar borderValue;
-   ippiWarpAffineBackFunc func;
-   bool *ok;
-   const IPPWarpAffineInvoker& operator= (const IPPWarpAffineInvoker&);
+    Mat &src;
+    Mat &dst;
+    int mode;
+    double (&coeffs)[2][3];
+    int borderType;
+    Scalar borderValue;
+    ippiWarpAffineBackFunc func;
+    bool *ok;
+    const IPPWarpAffineInvoker& operator= (const IPPWarpAffineInvoker&);
 };
 #endif
-   */
+    */
 
 #ifdef HAVE_OPENCL
 
