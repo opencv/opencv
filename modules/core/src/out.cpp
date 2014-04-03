@@ -46,132 +46,85 @@
 namespace cv
 {
 
-static inline char getCloseBrace(char c)
+class DefaultFormatter : public Formatter
 {
-    return c == '[' ? ']' : c == '(' ? ')' : c == '{' ? '}' : '\0';
-}
-
-
-template<typename _Tp> static void writeElems(std::ostream& out, const _Tp* data,
-                                              int nelems, int cn, char obrace, char cbrace)
-{
-    typedef typename DataType<_Tp>::work_type _WTp;
-    nelems *= cn;
-    for(int i = 0; i < nelems; i += cn)
+public:
+    DefaultFormatter() : Formatter(SQUARE_BRACKET_OPEN, NO_BRACKET,
+                                    NO_BRACKET, NO_BRACKET,
+                                    SEMICOLON_SEPARATOR, COMMA_SEPARATOR, COMMA_SEPARATOR) {}
+    virtual ~DefaultFormatter() {}
+    void write(std::ostream& out, const Mat& m, const int*, int) const
     {
-        if(cn == 1)
-        {
-            out << (_WTp)data[i] << (i+1 < nelems ? ", " : "");
-            continue;
-        }
-        out << obrace;
-        for(int j = 0; j < cn; j++)
-            out << (_WTp)data[i + j] << (j+1 < cn ? ", " : "");
-        out << cbrace << (i+cn < nelems ? ", " : "");
+        out << getBracket(matrixOpen);
+        writeRow(out, m);
+        out << getBracket(getCloseBracket(matrixOpen)) << "\n";
     }
-}
-
-
-static void writeElems(std::ostream& out, const void* data, int nelems, int type, char brace)
-{
-    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    char cbrace = ' ';
-    if(!brace || isspace(brace))
-    {
-        nelems *= cn;
-        cn = 1;
-    }
-    else
-        cbrace = getCloseBrace(brace);
-    if(depth == CV_8U)
-        writeElems(out, (const uchar*)data, nelems, cn, brace, cbrace);
-    else if(depth == CV_8S)
-        writeElems(out, (const schar*)data, nelems, cn, brace, cbrace);
-    else if(depth == CV_16U)
-        writeElems(out, (const ushort*)data, nelems, cn, brace, cbrace);
-    else if(depth == CV_16S)
-        writeElems(out, (const short*)data, nelems, cn, brace, cbrace);
-    else if(depth == CV_32S)
-        writeElems(out, (const int*)data, nelems, cn, brace, cbrace);
-    else if(depth == CV_32F)
-    {
-        std::streamsize pp = out.precision();
-        out.precision(8);
-        writeElems(out, (const float*)data, nelems, cn, brace, cbrace);
-        out.precision(pp);
-    }
-    else if(depth == CV_64F)
-    {
-        std::streamsize pp = out.precision();
-        out.precision(16);
-        writeElems(out, (const double*)data, nelems, cn, brace, cbrace);
-        out.precision(pp);
-    }
-    else
-        CV_Error(CV_StsUnsupportedFormat, "");
-}
-
-
-static void writeMat(std::ostream& out, const Mat& m, char rowsep, char elembrace, bool singleLine)
-{
-    CV_Assert(m.dims <= 2);
-    int type = m.type();
-
-    char crowbrace = getCloseBrace(rowsep);
-    char orowbrace = crowbrace ? rowsep : '\0';
-
-    if( orowbrace || isspace(rowsep) )
-        rowsep = '\0';
-
-    for( int i = 0; i < m.rows; i++ )
-    {
-        if(orowbrace)
-            out << orowbrace;
-        if( m.data )
-            writeElems(out, m.ptr(i), m.cols, type, elembrace);
-        if(orowbrace)
-            out << crowbrace << (i+1 < m.rows ? ", " : "");
-        if(i+1 < m.rows)
-        {
-            if(rowsep)
-                out << rowsep << (singleLine ? " " : "");
-            if(!singleLine)
-                out << "\n  ";
-        }
-    }
-}
+};
 
 class MatlabFormatter : public Formatter
 {
 public:
+    MatlabFormatter() : Formatter(NO_BRACKET, NO_BRACKET,
+                                    NO_BRACKET, NO_BRACKET,
+                                    SPACE_SEPARATOR, SPACE_SEPARATOR, SPACE_SEPARATOR) {}
     virtual ~MatlabFormatter() {}
     void write(std::ostream& out, const Mat& m, const int*, int) const
     {
-        out << "[";
-        writeMat(out, m, ';', ' ', m.rows == 1);
-        out << "]";
+        out << getBracket(matrixOpen);
+        writeRow(out, m);
+        out << getBracket(getCloseBracket(matrixOpen)) << "\n";
     }
 
-    void write(std::ostream& out, const void* data, int nelems, int type, const int*, int) const
+protected:
+    void writeRow(std::ostream& out, const Mat& m) const
     {
-        writeElems(out, data, nelems, type, ' ');
+        CV_Assert(m.dims <= 2);
+        for( int cn = 0; cn < m.channels(); cn++ )
+        {
+            if (m.channels() == 1)
+                out << "(:,:) = \n";
+            else
+                out << "(:,:," << cn << ") = \n";
+
+            for (int row = 0; row < m.rows; row++ )
+            {
+                out << getBracket(rowOpen);
+                for( int col = 0; col < m.cols; col++ )
+                {
+                    out << getBracket(colOpen) << getBracket(valueOpen);
+                    if( m.data ) {
+                        Formatter::writeValue(out, m, row, col, cn);
+                    }
+
+                    out << getBracket(getCloseBracket(valueOpen)) << getBracket(getCloseBracket(colOpen));
+
+                    if (col+1 < m.cols)
+                        out << (char)colsep;
+                }
+
+                // close row bracket, row separator, and new line feed
+                out << getBracket(getCloseBracket(rowOpen));
+                if (row+1 < m.rows)
+                    out << (char)rowsep << "\n";
+            }
+            if (cn+1 < m.channels())
+                out << "\n";
+        }
     }
 };
 
 class PythonFormatter : public Formatter
 {
 public:
+    PythonFormatter() : Formatter(SQUARE_BRACKET_OPEN, SQUARE_BRACKET_OPEN,
+                                    SQUARE_BRACKET_OPEN, NO_BRACKET,
+                                    COMMA_SEPARATOR, COMMA_SEPARATOR, COMMA_SEPARATOR) {}
     virtual ~PythonFormatter() {}
     void write(std::ostream& out, const Mat& m, const int*, int) const
     {
-        out << "[";
-        writeMat(out, m, m.cols > 1 ? '[' : ' ', '[', m.rows*m.channels() == 1);
-        out << "]";
-    }
-
-    void write(std::ostream& out, const void* data, int nelems, int type, const int*, int) const
-    {
-        writeElems(out, data, nelems, type, '[');
+        out << getBracket(matrixOpen);
+        writeRow(out, m);
+        out << getBracket(getCloseBracket(matrixOpen)) << "\n";
     }
 };
 
@@ -179,6 +132,9 @@ public:
 class NumpyFormatter : public Formatter
 {
 public:
+    NumpyFormatter() : Formatter(SQUARE_BRACKET_OPEN, SQUARE_BRACKET_OPEN,
+                                    SQUARE_BRACKET_OPEN, NO_BRACKET,
+                                    COMMA_SEPARATOR, COMMA_SEPARATOR, COMMA_SEPARATOR) {}
     virtual ~NumpyFormatter() {}
     void write(std::ostream& out, const Mat& m, const int*, int) const
     {
@@ -186,14 +142,11 @@ public:
         {
             "uint8", "int8", "uint16", "int16", "int32", "float32", "float64", "uint64"
         };
-        out << "array([";
-        writeMat(out, m, m.cols > 1 ? '[' : ' ', '[', m.rows*m.channels() == 1);
-        out << "], type='" << numpyTypes[m.depth()] << "')";
-    }
 
-    void write(std::ostream& out, const void* data, int nelems, int type, const int*, int) const
-    {
-        writeElems(out, data, nelems, type, '[');
+        out << "array(";
+        out << getBracket(matrixOpen);
+        writeRow(out, m);
+        out << getBracket(getCloseBracket(matrixOpen)) << ", type='" << numpyTypes[m.depth()] << "')" << "\n";
     }
 };
 
@@ -201,17 +154,15 @@ public:
 class CSVFormatter : public Formatter
 {
 public:
+    CSVFormatter() : Formatter(NO_BRACKET, NO_BRACKET,
+                                NO_BRACKET, NO_BRACKET,
+                                SPACE_SEPARATOR, COMMA_SEPARATOR, COMMA_SEPARATOR) {}
     virtual ~CSVFormatter() {}
     void write(std::ostream& out, const Mat& m, const int*, int) const
     {
-        writeMat(out, m, ' ', ' ', m.rows*m.channels() == 1);
-        if(m.rows > 1)
-            out << "\n";
-    }
-
-    void write(std::ostream& out, const void* data, int nelems, int type, const int*, int) const
-    {
-        writeElems(out, data, nelems, type, ' ');
+        out << getBracket(matrixOpen);
+        writeRow(out, m);
+        out << getBracket(getCloseBracket(matrixOpen)) << "\n";
     }
 };
 
@@ -219,29 +170,28 @@ public:
 class CFormatter : public Formatter
 {
 public:
+    CFormatter() : Formatter(PARENTHESES_OPEN, NO_BRACKET,
+                                NO_BRACKET, NO_BRACKET,
+                                COMMA_SEPARATOR, COMMA_SEPARATOR, COMMA_SEPARATOR) {}
     virtual ~CFormatter() {}
     void write(std::ostream& out, const Mat& m, const int*, int) const
     {
-        out << "{";
-        writeMat(out, m, ',', ' ', m.rows==1);
-        out << "}";
-    }
-
-    void write(std::ostream& out, const void* data, int nelems, int type, const int*, int) const
-    {
-        writeElems(out, data, nelems, type, ' ');
+        out << getBracket(matrixOpen);
+        writeRow(out, m);
+        out << getBracket(getCloseBracket(matrixOpen)) << "\n";
     }
 };
 
 
+static DefaultFormatter defaultFormatter;
 static MatlabFormatter matlabFormatter;
 static PythonFormatter pythonFormatter;
 static NumpyFormatter numpyFormatter;
 static CSVFormatter csvFormatter;
 static CFormatter cFormatter;
 
-static const Formatter* g_defaultFormatter0 = &matlabFormatter;
-static const Formatter* g_defaultFormatter = &matlabFormatter;
+static const Formatter* g_defaultFormatter0 = &defaultFormatter;
+static const Formatter* g_defaultFormatter = &defaultFormatter;
 
 static bool my_streq(const char* a, const char* b)
 {

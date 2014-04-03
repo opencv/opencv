@@ -3820,11 +3820,144 @@ public:
 
 class CV_EXPORTS Formatter
 {
+protected:
+    enum bracket {
+        PARENTHESES_OPEN = '(',
+        PARENTHESES_CLOSE = ')',
+        SQUARE_BRACKET_OPEN = '[',
+        SQUARE_BRACKET_CLOSE = ']',
+        BRACES_OPEN = '{',
+        BRACES_CLOSE = '}',
+        ANGLE_BRACKET_OPEN = '<',
+        ANGLE_BRACKET_CLOSE = '>',
+        NO_BRACKET = '\0'
+    };
+
+    enum separator {
+        COMMA_SEPARATOR = ',',
+        SEMICOLON_SEPARATOR = ';',
+        SPACE_SEPARATOR = ' '
+    };
+
+    bracket matrixOpen, rowOpen, colOpen, valueOpen;
+    separator rowsep, valuesep, colsep;
+
+    inline bracket getCloseBracket(const bracket c) const
+    {
+        return c == SQUARE_BRACKET_OPEN ? SQUARE_BRACKET_CLOSE :
+                c == PARENTHESES_OPEN ? PARENTHESES_CLOSE :
+                c == BRACES_OPEN ? BRACES_CLOSE :
+                c == ANGLE_BRACKET_OPEN ? ANGLE_BRACKET_CLOSE :
+                NO_BRACKET;
+    }
+
+    inline string getBracket(const bracket c) const
+    {
+        char bracket[2] = {'\0', '\0'};
+        bracket[0] = (char)c;
+        return string(bracket);
+    }
+
+    virtual void writeRow(std::ostream& out, const Mat& m) const
+    {
+        CV_Assert(m.dims <= 2);
+        for( int i = 0; i < m.rows; i++ )
+        {
+            out << getBracket(rowOpen);
+            if( m.data ) {
+                writeCol(out, m, i);
+            }
+
+            // add close row bracket, row separator, and new line feed
+            out << getBracket(getCloseBracket(rowOpen));
+            if (i+1 < m.rows)
+                out << (char)rowsep << "\n";
+        }
+    }
+
+    virtual void writeCol(std::ostream& out, const Mat& m, const int row) const
+    {
+        for( int i = 0; i < m.cols; i++ )
+        {
+            out << getBracket(colOpen);
+            if( m.data ) {
+                writeValue(out, m, row, i);
+            }
+
+            // add close col bracket, col separator, and space
+            out << getBracket(getCloseBracket(colOpen));
+            if (i+1 < m.cols)
+                out << (char)colsep << " ";
+        }
+    }
+
+    virtual void writeValue(std::ostream& out, const Mat& m, const int row, const int col) const
+    {
+        int cn = CV_MAT_CN(m.type());
+
+        for( int i = 0; i < cn; i++ )
+        {
+            out << getBracket(valueOpen);
+            if( m.data ) {
+                writeValue(out, m, row, col, i);
+            }
+
+            // add close value bracket, value separator, and space
+            out << getBracket(getCloseBracket(valueOpen));
+            if (i+1 < cn)
+                out << (char)valuesep << " ";
+        }
+    }
+
+    void writeValue(std::ostream& out, const Mat& m, const int row, const int col, const int cn) const
+    {
+        int depth = CV_MAT_DEPTH(m.type());
+
+        if(depth == CV_8U)
+            writeValue(out, m, (const uchar*)m.data, row, col, cn);
+        else if(depth == CV_8S)
+            writeValue(out, m, (const schar*)m.data, row, col, cn);
+        else if(depth == CV_16U)
+            writeValue(out, m, (const ushort*)m.data, row, col, cn);
+        else if(depth == CV_16S)
+            writeValue(out, m, (const short*)m.data, row, col, cn);
+        else if(depth == CV_32S)
+            writeValue(out, m, (const int*)m.data, row, col, cn);
+        else if(depth == CV_32F)
+        {
+            std::streamsize pp = out.precision();
+            out.precision(8);
+            writeValue(out, m, (const float*)m.data, row, col, cn);
+            out.precision(pp);
+        }
+        else if(depth == CV_64F)
+        {
+            std::streamsize pp = out.precision();
+            out.precision(16);
+            writeValue(out, m, (const double*)m.data, row, col, cn);
+            out.precision(pp);
+        }
+        else
+            CV_Error(CV_StsUnsupportedFormat, "");
+    }
+
+    template<typename _Tp> void writeValue(std::ostream& out, const Mat& m, const _Tp* data,
+                                            const int row, const int col, const int cn) const
+    {
+        typedef typename DataType<_Tp>::work_type _WTp;
+        out << (_WTp)data[row*m.cols*CV_MAT_CN(m.type()) + col*CV_MAT_CN(m.type()) + cn];
+    }
+
+
 public:
     virtual ~Formatter() {}
+    Formatter() { CV_Error(CV_StsBadArg, "Formatter() initializer MUST have arguments"); }
+    Formatter(bracket _matrixOpen, bracket _rowOpen, bracket _colOpen, bracket _valueOpen,
+              separator _rowsep, separator _colsep, separator _elemsep) :
+              matrixOpen(_matrixOpen), rowOpen(_rowOpen), colOpen(_colOpen), valueOpen(_valueOpen),
+              rowsep(_rowsep), colsep(_colsep), valuesep(_elemsep) {}
+
     virtual void write(std::ostream& out, const Mat& m, const int* params=0, int nparams=0) const = 0;
-    virtual void write(std::ostream& out, const void* data, int nelems, int type,
-                       const int* params=0, int nparams=0) const = 0;
     static const Formatter* get(const char* fmt="");
     static const Formatter* setDefault(const Formatter* fmt);
 };
