@@ -389,7 +389,7 @@ int showRootFilterBoxes(IplImage *image,
                     color, thickness, line_type, shift);
     }
 #ifdef HAVE_OPENCV_HIGHGUI
-    cv::imshow("Initial image", cv::cvarrToMat(image));
+    //    cv::imshow("Initial image", cv::cvarrToMat(image));
 #endif
     return LATENT_SVM_OK;
 }
@@ -445,7 +445,7 @@ int showPartFilterBoxes(IplImage *image,
         }
     }
 #ifdef HAVE_OPENCV_HIGHGUI
-    cv::imshow("Initial image", cv::cvarrToMat(image));
+    //    cv::imshow("Initial image", cv::cvarrToMat(image));
 #endif
     return LATENT_SVM_OK;
 }
@@ -481,7 +481,7 @@ int showBoxes(IplImage *img,
                     color, thickness, line_type, shift);
     }
 #ifdef HAVE_OPENCV_HIGHGUI
-    cv::imshow("Initial image", cv::cvarrToMat(img));
+    //    cv::imshow("Initial image", cv::cvarrToMat(img));
 #endif
     return LATENT_SVM_OK;
 }

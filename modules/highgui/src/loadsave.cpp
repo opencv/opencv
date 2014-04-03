@@ -43,7 +43,8 @@
 //  Loading and saving IPL images.
 //
 
-#include "precomp.hpp"
+//#include "precomp.hpp"
+#include "../precomp.hpp"
 #include "grfmts.hpp"
 #undef min
 #undef max

@@ -406,9 +406,7 @@ int64 getCPUTickCount(void)
 
 const String& getBuildInformation()
 {
-    static String build_info =
-#include "version_string.inc"
-    ;
+    static String build_info = "totally experimental version";
     return build_info;
 }
 

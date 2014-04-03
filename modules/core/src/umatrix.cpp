@@ -40,9 +40,8 @@
 //
 //M*/
 
-#include "precomp.hpp"
-#include "opencl_kernels.hpp"
-
+#include "../precomp.hpp"
+#include "../opencl_kernels.hpp" //modules/core/opencl_kernels.hpp
 ///////////////////////////////// UMat implementation ///////////////////////////////
 
 namespace cv {

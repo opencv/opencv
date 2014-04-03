@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "../precomp.hpp"
 #include "utils.hpp"
 #include "grfmt_pxm.hpp"
 
