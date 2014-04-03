@@ -362,7 +362,7 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
         sqsum = _sqsum.getMat();
     };
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7) && 0
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     if( ( depth == CV_8U ) && ( sdepth == CV_32F || sdepth == CV_32S ) && ( !_tilted.needed() ) && ( !_sqsum.needed() || sqdepth == CV_64F ) && ( cn == 1 ) )
     {
         IppStatus status = ippStsErr;
