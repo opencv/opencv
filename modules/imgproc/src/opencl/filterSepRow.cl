@@ -141,6 +141,14 @@
 #define DIG(a) a,
 __constant dstT1 mat_kernel[] = { COEFF };
 
+#ifndef INTEGER_ARITHMETIC
+#define dstT4 float4
+#define convertDstVec convert_float4
+#else
+#define dstT4 int4
+#define convertDstVec convert_int4
+#endif
+
 __kernel void row_filter_C1_D0(__global const uchar * src, int src_step_in_pixel, int src_offset_x, int src_offset_y,
                                int src_cols, int src_rows, int src_whole_cols, int src_whole_rows,
                                __global float * dst, int dst_step_in_pixel, int dst_cols, int dst_rows,
@@ -156,7 +164,7 @@ __kernel void row_filter_C1_D0(__global const uchar * src, int src_step_in_pixel
     int start_y = y + src_offset_y - radiusy;
     int start_addr = mad24(start_y, src_step_in_pixel, start_x);
 
-    float4 sum;
+    dstT4 sum;
     uchar4 temp[READ_TIMES_ROW];
 
     __local uchar4 LDS_DAT[LSIZE1][READ_TIMES_ROW * LSIZE0 + 1];
@@ -250,19 +258,23 @@ __kernel void row_filter_C1_D0(__global const uchar * src, int src_step_in_pixel
     barrier(CLK_LOCAL_MEM_FENCE);
 
     // read pixels from lds and calculate the result
-    sum = convert_float4(vload4(0,(__local uchar *)&LDS_DAT[l_y][l_x]+RADIUSX+offset)) * mat_kernel[RADIUSX];
+    sum = convertDstVec(vload4(0,(__local uchar *)&LDS_DAT[l_y][l_x]+RADIUSX+offset)) * mat_kernel[RADIUSX];
     for (int i = 1; i <= RADIUSX; ++i)
     {
         temp[0] = vload4(0, (__local uchar*)&LDS_DAT[l_y][l_x] + RADIUSX + offset - i);
         temp[1] = vload4(0, (__local uchar*)&LDS_DAT[l_y][l_x] + RADIUSX + offset + i);
-        sum += mad(convert_float4(temp[0]), mat_kernel[RADIUSX-i], convert_float4(temp[1]) * mat_kernel[RADIUSX + i]);
+#ifndef INTEGER_ARITHMETIC
+        sum += mad(convertDstVec(temp[0]), mat_kernel[RADIUSX-i], convertDstVec(temp[1]) * mat_kernel[RADIUSX + i]);
+#else
+        sum += mad24(convertDstVec(temp[0]), mat_kernel[RADIUSX-i], convertDstVec(temp[1]) * mat_kernel[RADIUSX + i]);
+#endif
     }
 
     start_addr = mad24(y, dst_step_in_pixel, x);
 
     // write the result to dst
     if ((x+3<dst_cols) & (y<dst_rows))
-        *(__global float4*)&dst[start_addr] = sum;
+        *(__global dstT4*)&dst[start_addr] = sum;
     else if ((x+2<dst_cols) && (y<dst_rows))
     {
         dst[start_addr] = sum.x;

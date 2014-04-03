@@ -3475,14 +3475,13 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
 
     int bdepth = CV_32F;
     bool int_arithm = false;
-    if( sdepth == CV_8U &&
-        ((rtype == KERNEL_SMOOTH+KERNEL_SYMMETRICAL &&
-          ctype == KERNEL_SMOOTH+KERNEL_SYMMETRICAL &&
-          ddepth == CV_8U)))
+    if( sdepth == CV_8U && ddepth == CV_8U &&
+        rtype == KERNEL_SMOOTH+KERNEL_SYMMETRICAL &&
+        ctype == KERNEL_SMOOTH+KERNEL_SYMMETRICAL)
     {
         bdepth = CV_32S;
-        _kernelX.getMat().reshape(1,1).convertTo( kernelX, CV_32S, 1 << shift_bits );
-        _kernelY.getMat().reshape(1,1).convertTo( kernelY, CV_32S, 1 << shift_bits );
+        kernelX.convertTo( kernelX, CV_32S, 1 << shift_bits );
+        kernelY.convertTo( kernelY, CV_32S, 1 << shift_bits );
         int_arithm = true;
     }
 
@@ -3500,7 +3499,7 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
     src.locateROI(srcWholeSize, srcOffset);
 
     bool fast8uc1 = type == CV_8UC1 && srcOffset.x % 4 == 0 &&
-            src.cols % 4 == 0 && src.step % 4 == 0 && !int_arithm;
+            src.cols % 4 == 0 && src.step % 4 == 0;
 
     Size srcSize = src.size();
     Size bufSize(srcSize.width, srcSize.height + kernelY.cols - 1);
