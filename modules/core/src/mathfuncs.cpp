@@ -729,6 +729,22 @@ void polarToCart( InputArray src1, InputArray src2,
     dst2.create( Angle.dims, Angle.size, type );
     Mat X = dst1.getMat(), Y = dst2.getMat();
 
+#ifdef HAVE_IPP
+    if (Mag.isContinuous() && Angle.isContinuous() && X.isContinuous() && Y.isContinuous() && !angleInDegrees)
+    {
+        typedef IppStatus (CV_STDCALL * ippsPolarToCart)(const void * pSrcMagn, const void * pSrcPhase,
+                                                         void * pDstRe, void * pDstIm, int len);
+        ippsPolarToCart ippFunc =
+        depth == CV_32F ? (ippsPolarToCart)ippsPolarToCart_32f :
+        depth == CV_64F ? (ippsPolarToCart)ippsPolarToCart_64f : 0;
+        CV_Assert(ippFunc != 0);
+
+        IppStatus status = ippFunc(Mag.data, Angle.data, X.data, Y.data, static_cast<int>(cn * X.total()));
+        if (status == ippStsNoErr)
+            return;
+    }
+#endif
+
     const Mat* arrays[] = {&Mag, &Angle, &X, &Y, 0};
     uchar* ptrs[4];
     NAryMatIterator it(arrays, ptrs);
