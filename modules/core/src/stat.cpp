@@ -2540,8 +2540,8 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 type == CV_16UC3 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_16u_C3R :
                 type == CV_16UC4 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_16u_C4R :
                 type == CV_16SC1 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_16s_C1R :
-                //type == CV_16SC3 ? (ippicviNormDiffFunc)ippicviNormDiff_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
-                //type == CV_16SC4 ? (ippicviNormDiffFunc)ippicviNormDiff_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
+                type == CV_16SC3 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
+                type == CV_16SC4 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
                 type == CV_32FC1 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_32f_C1R :
                 type == CV_32FC3 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_32f_C3R :
                 type == CV_32FC4 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_32f_C4R :
