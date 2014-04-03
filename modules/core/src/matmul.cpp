@@ -44,10 +44,6 @@
 #include "opencl_kernels.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
 
-//#ifdef HAVE_IPP
-//#include "ippversion.h"
-//#endif
-
 namespace cv
 {
 
