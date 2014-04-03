@@ -362,10 +362,10 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
         sqsum = _sqsum.getMat();
     };
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7) && 0
     if( ( depth == CV_8U ) && ( sdepth == CV_32F || sdepth == CV_32S ) && ( !_tilted.needed() ) && ( !_sqsum.needed() || sqdepth == CV_64F ) && ( cn == 1 ) )
     {
-        IppStatus status;
+        IppStatus status = ippStsErr;
         IppiSize srcRoiSize = ippiSize( src.cols, src.rows );
         if( sdepth == CV_32F )
         {
@@ -378,7 +378,7 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
                 status = ippicviIntegral_8u32f_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32f*)sum.data, (int)sum.step, srcRoiSize, 0 );
             }
         }
-        else// if( sdepth == CV_32S )
+        else if( sdepth == CV_32S )
         {
             if( _sqsum.needed() )
             {
