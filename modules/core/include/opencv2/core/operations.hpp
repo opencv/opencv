@@ -3840,7 +3840,7 @@ protected:
     };
 
     bracket matrixOpen, rowOpen, colOpen, valueOpen;
-    separator rowsep, valuesep, colsep;
+    separator rowsep, colsep, valuesep;
 
     inline bracket getCloseBracket(const bracket c) const
     {
@@ -3851,7 +3851,7 @@ protected:
                 NO_BRACKET;
     }
 
-    inline string getBracket(const bracket c) const
+    inline string getBracketString(const bracket c) const
     {
         char bracket[2] = {'\0', '\0'};
         bracket[0] = (char)c;
@@ -3863,13 +3863,13 @@ protected:
         CV_Assert(m.dims <= 2);
         for( int i = 0; i < m.rows; i++ )
         {
-            out << getBracket(rowOpen);
+            out << getBracketString(rowOpen);
             if( m.data ) {
                 writeCol(out, m, i);
             }
 
             // add close row bracket, row separator, and new line feed
-            out << getBracket(getCloseBracket(rowOpen));
+            out << getBracketString(getCloseBracket(rowOpen));
             if (i+1 < m.rows)
                 out << (char)rowsep << "\n";
         }
@@ -3879,13 +3879,13 @@ protected:
     {
         for( int i = 0; i < m.cols; i++ )
         {
-            out << getBracket(colOpen);
+            out << getBracketString(colOpen);
             if( m.data ) {
                 writeValue(out, m, row, i);
             }
 
             // add close col bracket, col separator, and space
-            out << getBracket(getCloseBracket(colOpen));
+            out << getBracketString(getCloseBracket(colOpen));
             if (i+1 < m.cols)
                 out << (char)colsep << " ";
         }
@@ -3897,13 +3897,13 @@ protected:
 
         for( int i = 0; i < cn; i++ )
         {
-            out << getBracket(valueOpen);
+            out << getBracketString(valueOpen);
             if( m.data ) {
                 writeValue(out, m, row, col, i);
             }
 
             // add close value bracket, value separator, and space
-            out << getBracket(getCloseBracket(valueOpen));
+            out << getBracketString(getCloseBracket(valueOpen));
             if (i+1 < cn)
                 out << (char)valuesep << " ";
         }
@@ -3953,9 +3953,9 @@ public:
     virtual ~Formatter() {}
     Formatter() { CV_Error(CV_StsBadArg, "Formatter() initializer MUST have arguments"); }
     Formatter(bracket _matrixOpen, bracket _rowOpen, bracket _colOpen, bracket _valueOpen,
-              separator _rowsep, separator _colsep, separator _elemsep) :
+              separator _rowsep, separator _colsep, separator _valuesep) :
               matrixOpen(_matrixOpen), rowOpen(_rowOpen), colOpen(_colOpen), valueOpen(_valueOpen),
-              rowsep(_rowsep), colsep(_colsep), valuesep(_elemsep) {}
+              rowsep(_rowsep), colsep(_colsep), valuesep(_valuesep) {}
 
     virtual void write(std::ostream& out, const Mat& m, const int* params=0, int nparams=0) const = 0;
     static const Formatter* get(const char* fmt="");

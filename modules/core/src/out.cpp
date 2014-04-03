@@ -55,9 +55,9 @@ public:
     virtual ~DefaultFormatter() {}
     void write(std::ostream& out, const Mat& m, const int*, int) const
     {
-        out << getBracket(matrixOpen);
+        out << getBracketString(matrixOpen);
         writeRow(out, m);
-        out << getBracket(getCloseBracket(matrixOpen)) << "\n";
+        out << getBracketString(getCloseBracket(matrixOpen)) << "\n";
     }
 };
 
@@ -70,9 +70,9 @@ public:
     virtual ~MatlabFormatter() {}
     void write(std::ostream& out, const Mat& m, const int*, int) const
     {
-        out << getBracket(matrixOpen);
+        out << getBracketString(matrixOpen);
         writeRow(out, m);
-        out << getBracket(getCloseBracket(matrixOpen)) << "\n";
+        out << getBracketString(getCloseBracket(matrixOpen)) << "\n";
     }
 
 protected:
@@ -88,22 +88,22 @@ protected:
 
             for (int row = 0; row < m.rows; row++ )
             {
-                out << getBracket(rowOpen);
+                out << getBracketString(rowOpen);
                 for( int col = 0; col < m.cols; col++ )
                 {
-                    out << getBracket(colOpen) << getBracket(valueOpen);
+                    out << getBracketString(colOpen) << getBracketString(valueOpen);
                     if( m.data ) {
                         Formatter::writeValue(out, m, row, col, cn);
                     }
 
-                    out << getBracket(getCloseBracket(valueOpen)) << getBracket(getCloseBracket(colOpen));
+                    out << getBracketString(getCloseBracket(valueOpen)) << getBracketString(getCloseBracket(colOpen));
 
                     if (col+1 < m.cols)
                         out << (char)colsep;
                 }
 
                 // close row bracket, row separator, and new line feed
-                out << getBracket(getCloseBracket(rowOpen));
+                out << getBracketString(getCloseBracket(rowOpen));
                 if (row+1 < m.rows)
                     out << (char)rowsep << "\n";
             }
@@ -122,9 +122,9 @@ public:
     virtual ~PythonFormatter() {}
     void write(std::ostream& out, const Mat& m, const int*, int) const
     {
-        out << getBracket(matrixOpen);
+        out << getBracketString(matrixOpen);
         writeRow(out, m);
-        out << getBracket(getCloseBracket(matrixOpen)) << "\n";
+        out << getBracketString(getCloseBracket(matrixOpen)) << "\n";
     }
 };
 
@@ -144,9 +144,9 @@ public:
         };
 
         out << "array(";
-        out << getBracket(matrixOpen);
+        out << getBracketString(matrixOpen);
         writeRow(out, m);
-        out << getBracket(getCloseBracket(matrixOpen)) << ", type='" << numpyTypes[m.depth()] << "')" << "\n";
+        out << getBracketString(getCloseBracket(matrixOpen)) << ", type='" << numpyTypes[m.depth()] << "')" << "\n";
     }
 };
 
@@ -160,9 +160,9 @@ public:
     virtual ~CSVFormatter() {}
     void write(std::ostream& out, const Mat& m, const int*, int) const
     {
-        out << getBracket(matrixOpen);
+        out << getBracketString(matrixOpen);
         writeRow(out, m);
-        out << getBracket(getCloseBracket(matrixOpen)) << "\n";
+        out << getBracketString(getCloseBracket(matrixOpen)) << "\n";
     }
 };
 
@@ -176,9 +176,9 @@ public:
     virtual ~CFormatter() {}
     void write(std::ostream& out, const Mat& m, const int*, int) const
     {
-        out << getBracket(matrixOpen);
+        out << getBracketString(matrixOpen);
         writeRow(out, m);
-        out << getBracket(getCloseBracket(matrixOpen)) << "\n";
+        out << getBracketString(getCloseBracket(matrixOpen)) << "\n";
     }
 };
 
