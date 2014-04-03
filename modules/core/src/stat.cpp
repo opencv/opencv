@@ -971,7 +971,9 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
             ippicviMeanStdDevFuncC1 ippFuncC1 =
             type == CV_8UC1 ? (ippicviMeanStdDevFuncC1)ippicviMean_StdDev_8u_C1R :
             type == CV_16UC1 ? (ippicviMeanStdDevFuncC1)ippicviMean_StdDev_16u_C1R :
+#if (IPP_VERSION_MAJOR >= 8) && (IPP_VERSION_MINOR >= 1)
             type == CV_32FC1 ? (ippicviMeanStdDevFuncC1)ippicviMean_StdDev_32f_C1R ://Aug 2013: bug in IPP 7.1, 8.0
+#endif
             0;
             if( ippFuncC1 )
             {
@@ -2110,8 +2112,10 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
                 type == CV_16UC3 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_16u_C3R :
                 type == CV_16UC4 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_16u_C4R :
                 type == CV_16SC1 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_16s_C1R :
+#if (IPP_VERSION_MAJOR >= 8) && (IPP_VERSION_MINOR >= 1)
                 type == CV_16SC3 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
                 type == CV_16SC4 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
+#endif
                 type == CV_32FC1 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_32f_C1R :
                 type == CV_32FC3 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_32f_C3R :
                 type == CV_32FC4 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_32f_C4R :
@@ -2540,8 +2544,10 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 type == CV_16UC3 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_16u_C3R :
                 type == CV_16UC4 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_16u_C4R :
                 type == CV_16SC1 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_16s_C1R :
+#if (IPP_VERSION_MAJOR >= 8) && (IPP_VERSION_MINOR >= 1)
                 type == CV_16SC3 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
                 type == CV_16SC4 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
+#endif
                 type == CV_32FC1 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_32f_C1R :
                 type == CV_32FC3 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_32f_C3R :
                 type == CV_32FC4 ? (ippicviNormDiffFuncNoHint)ippicviNormDiff_Inf_32f_C4R :
