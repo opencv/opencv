@@ -512,6 +512,39 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
+#ifdef HAVE_IPP
+    typedef IppStatus (CV_STDCALL * ippiAddWeighted)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep, IppiSize roiSize, Ipp32f alpha);
+    typedef IppStatus (CV_STDCALL * ippiAddWeightedMask)(const void * pSrc, int srcStep, const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst,
+                                                         int srcDstStep, IppiSize roiSize, Ipp32f alpha);
+    ippiAddWeighted ippFunc = 0;
+    ippiAddWeightedMask ippFuncMask = 0;
+
+    if (mask.empty())
+    {
+        ippFunc = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_8u32f_C1IR :
+            sdepth == CV_16U && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_16u32f_C1IR :
+            sdepth == CV_32F && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_32f_C1IR : 0;
+    }
+    else
+    {
+        ippFuncMask = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_8u32f_C1IMR :
+            sdepth == CV_16U && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_16u32f_C1IMR :
+            sdepth == CV_32F && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_32f_C1IMR : 0;
+    }
+    if (ippFunc || ippFuncMask)
+    {
+        IppStatus status = ippStsNoErr;
+        if (mask.empty())
+            status = ippFunc(src.data, (int)src.step, (Ipp32f *)dst.data, (int)dst.step, ippiSize(src.cols * scn, src.rows), (Ipp32f)alpha);
+        else
+            status = ippFuncMask(src.data, (int)src.step, (Ipp8u *)mask.data, (int)mask.step,
+                                 (Ipp32f *)dst.data, (int)dst.step, ippiSize(src.cols * scn, src.rows), (Ipp32f)alpha);
+
+        if (status == ippStsNoErr)
+            return;
+    }
+#endif
+
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccWFunc func = fidx >= 0 ? accWTab[fidx] : 0;
     CV_Assert( func != 0 );
