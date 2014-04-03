@@ -748,7 +748,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
             if( maskSize == CV_DIST_MASK_5 )
             {
                 IppiSize roi = { src.cols, src.rows };
-                if( ippicviDistanceTransform_5x5_8u32f_C1R(
+                if( ippiDistanceTransform_5x5_8u32f_C1R(
                         src.ptr<uchar>(), (int)src.step,
                         dst.ptr<float>(), (int)dst.step, roi, _mask) >= 0 )
                     return;

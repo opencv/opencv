@@ -1276,14 +1276,14 @@ static void Exp_64fnoipp( const double *_x, double *y, int n )
 #ifdef HAVE_IPP
 static void Exp_32f(const float *x, float *y, int n)
 {
-    if (ippStsNoErr == ippicvsExp_32f_A21(x, y, n))
+    if (ippStsNoErr == ippsExp_32f_A21(x, y, n))
         return;
     Exp_32fnoipp(x, y, n);
 }
 
 static void Exp_64f(const double *x, double *y, int n)
 {
-    if (ippStsNoErr == ippicvsExp_64f_A50(x, y, n))
+    if (ippStsNoErr == ippsExp_64f_A50(x, y, n))
         return;
     Exp_64fnoipp(x, y, n);
 }
@@ -1934,14 +1934,14 @@ static void Log_64fnoipp( const double *x, double *y, int n )
 #ifdef HAVE_IPP
 static void Log_32f(const float *x, float *y, int n)
 {
-    if (ippStsNoErr == ippicvsLn_32f_A21(x, y, n))
+    if (ippStsNoErr == ippsLn_32f_A21(x, y, n))
         return;
     Log_32fnoipp(x, y, n);
 }
 
 static void Log_64f(const double *x, double *y, int n)
 {
-    if (ippStsNoErr == ippicvsLn_64f_A50(x, y, n))
+    if (ippStsNoErr == ippsLn_64f_A50(x, y, n))
         return;
     Log_64fnoipp(x, y, n);
 }

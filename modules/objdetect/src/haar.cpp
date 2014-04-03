@@ -165,7 +165,7 @@ icvReleaseHidHaarClassifierCascade( CvHidHaarClassifierCascade** _cascade )
             for( i = 0; i < cascade->count; i++ )
             {
                 if( cascade->ipp_stages[i] )
-                    ippicviHaarClassifierFree_32f( (IppiHaarClassifier_32f*)cascade->ipp_stages[i] );
+                    ippiHaarClassifierFree_32f( (IppiHaarClassifier_32f*)cascade->ipp_stages[i] );
             }
         }
         cvFree( &cascade->ipp_stages );
@@ -1318,7 +1318,7 @@ public:
         if( cascade->hid_cascade->ipp_stages )
         {
             IppiRect iequRect = {equRect.x, equRect.y, equRect.width, equRect.height};
-            ippicviRectStdDev_32f_C1R(sum1.ptr<float>(y1), (int)sum1.step,
+            ippiRectStdDev_32f_C1R(sum1.ptr<float>(y1), (int)sum1.step,
                                    sqsum1.ptr<double>(y1), (int)sqsum1.step,
                                    norm1->ptr<float>(y1), (int)norm1->step,
                                    ippiSize(ssz.width, ssz.height), iequRect );
@@ -1340,7 +1340,7 @@ public:
 
             for( int j = 0; j < cascade->count; j++ )
             {
-                if( ippicviApplyHaarClassifier_32f_C1R(
+                if( ippiApplyHaarClassifier_32f_C1R(
                             sum1.ptr<float>(y1), (int)sum1.step,
                             norm1->ptr<float>(y1), (int)norm1->step,
                             mask1->ptr<uchar>(y1), (int)mask1->step,

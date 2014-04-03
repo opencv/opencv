@@ -460,7 +460,7 @@ static void add8u( const uchar* src1, size_t step1,
 {
 #if (ARITHM_USE_IPP == 1)
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    if (0 <= ippicviAdd_8u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz, 0))
+    if (0 <= ippiAdd_8u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz, 0))
         return;
 #endif
     (vBinOp<uchar, OpAdd<uchar>, IF_SIMD(VAdd<uchar>)>(src1, step1, src2, step2, dst, step, sz));
@@ -479,7 +479,7 @@ static void add16u( const ushort* src1, size_t step1,
 {
 #if (ARITHM_USE_IPP == 1)
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    if (0 <= ippicviAdd_16u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz, 0))
+    if (0 <= ippiAdd_16u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz, 0))
         return;
 #endif
     (vBinOp<ushort, OpAdd<ushort>, IF_SIMD(VAdd<ushort>)>(src1, step1, src2, step2, dst, step, sz));
@@ -491,7 +491,7 @@ static void add16s( const short* src1, size_t step1,
 {
 #if (ARITHM_USE_IPP == 1)
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    if (0 <= ippicviAdd_16s_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz, 0))
+    if (0 <= ippiAdd_16s_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz, 0))
         return;
 #endif
     (vBinOp<short, OpAdd<short>, IF_SIMD(VAdd<short>)>(src1, step1, src2, step2, dst, step, sz));
@@ -510,7 +510,7 @@ static void add32f( const float* src1, size_t step1,
 {
 #if (ARITHM_USE_IPP == 1)
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    if (0 <= ippicviAdd_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
+    if (0 <= ippiAdd_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
         return;
 #endif
     (vBinOp32<float, OpAdd<float>, IF_SIMD(VAdd<float>)>(src1, step1, src2, step2, dst, step, sz));
@@ -529,7 +529,7 @@ static void sub8u( const uchar* src1, size_t step1,
 {
 #if (ARITHM_USE_IPP == 1)
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    if (0 <= ippicviSub_8u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz, 0))
+    if (0 <= ippiSub_8u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz, 0))
         return;
 #endif
     (vBinOp<uchar, OpSub<uchar>, IF_SIMD(VSub<uchar>)>(src1, step1, src2, step2, dst, step, sz));
@@ -548,7 +548,7 @@ static void sub16u( const ushort* src1, size_t step1,
 {
 #if (ARITHM_USE_IPP == 1)
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    if (0 <= ippicviSub_16u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz, 0))
+    if (0 <= ippiSub_16u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz, 0))
         return;
 #endif
     (vBinOp<ushort, OpSub<ushort>, IF_SIMD(VSub<ushort>)>(src1, step1, src2, step2, dst, step, sz));
@@ -560,7 +560,7 @@ static void sub16s( const short* src1, size_t step1,
 {
 #if (ARITHM_USE_IPP == 1)
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    if (0 <= ippicviSub_16s_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz, 0))
+    if (0 <= ippiSub_16s_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz, 0))
         return;
 #endif
     (vBinOp<short, OpSub<short>, IF_SIMD(VSub<short>)>(src1, step1, src2, step2, dst, step, sz));
@@ -579,7 +579,7 @@ static void sub32f( const float* src1, size_t step1,
 {
 #if (ARITHM_USE_IPP == 1)
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    if (0 <= ippicviSub_32f_C1R(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz))
+    if (0 <= ippiSub_32f_C1R(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz))
         return;
 #endif
     (vBinOp32<float, OpSub<float>, IF_SIMD(VSub<float>)>(src1, step1, src2, step2, dst, step, sz));
@@ -607,7 +607,7 @@ static void max8u( const uchar* src1, size_t step1,
     int i = 0;
     for(; i < sz.height; i++)
     {
-        if (0 > ippicvsMaxEvery_8u(s1, s2, d, sz.width))
+        if (0 > ippsMaxEvery_8u(s1, s2, d, sz.width))
             break;
         s1 += step1;
         s2 += step2;
@@ -638,7 +638,7 @@ static void max16u( const ushort* src1, size_t step1,
     int i = 0;
     for(; i < sz.height; i++)
     {
-        if (0 > ippicvsMaxEvery_16u(s1, s2, d, sz.width))
+        if (0 > ippsMaxEvery_16u(s1, s2, d, sz.width))
             break;
         s1 = (ushort*)((uchar*)s1 + step1);
         s2 = (ushort*)((uchar*)s2 + step2);
@@ -676,7 +676,7 @@ static void max32f( const float* src1, size_t step1,
     int i = 0;
     for(; i < sz.height; i++)
     {
-        if (0 > ippicvsMaxEvery_32f(s1, s2, d, sz.width))
+        if (0 > ippsMaxEvery_32f(s1, s2, d, sz.width))
             break;
         s1 = (float*)((uchar*)s1 + step1);
         s2 = (float*)((uchar*)s2 + step2);
@@ -707,7 +707,7 @@ static void min8u( const uchar* src1, size_t step1,
     int i = 0;
     for(; i < sz.height; i++)
     {
-        if (0 > ippicvsMinEvery_8u(s1, s2, d, sz.width))
+        if (0 > ippsMinEvery_8u(s1, s2, d, sz.width))
             break;
         s1 += step1;
         s2 += step2;
@@ -738,7 +738,7 @@ static void min16u( const ushort* src1, size_t step1,
     int i = 0;
     for(; i < sz.height; i++)
     {
-        if (0 > ippicvsMinEvery_16u(s1, s2, d, sz.width))
+        if (0 > ippsMinEvery_16u(s1, s2, d, sz.width))
             break;
         s1 = (ushort*)((uchar*)s1 + step1);
         s2 = (ushort*)((uchar*)s2 + step2);
@@ -776,7 +776,7 @@ static void min32f( const float* src1, size_t step1,
     int i = 0;
     for(; i < sz.height; i++)
     {
-        if (0 > ippicvsMinEvery_32f(s1, s2, d, sz.width))
+        if (0 > ippsMinEvery_32f(s1, s2, d, sz.width))
             break;
         s1 = (float*)((uchar*)s1 + step1);
         s2 = (float*)((uchar*)s2 + step2);
@@ -801,7 +801,7 @@ static void absdiff8u( const uchar* src1, size_t step1,
 {
 #if (ARITHM_USE_IPP == 1)
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    if (0 <= ippicviAbsDiff_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
+    if (0 <= ippiAbsDiff_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
         return;
 #endif
     (vBinOp<uchar, OpAbsDiff<uchar>, IF_SIMD(VAbsDiff<uchar>)>(src1, step1, src2, step2, dst, step, sz));
@@ -820,7 +820,7 @@ static void absdiff16u( const ushort* src1, size_t step1,
 {
 #if (ARITHM_USE_IPP == 1)
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    if (0 <= ippicviAbsDiff_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
+    if (0 <= ippiAbsDiff_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
         return;
 #endif
     (vBinOp<ushort, OpAbsDiff<ushort>, IF_SIMD(VAbsDiff<ushort>)>(src1, step1, src2, step2, dst, step, sz));
@@ -846,7 +846,7 @@ static void absdiff32f( const float* src1, size_t step1,
 {
 #if (ARITHM_USE_IPP == 1)
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    if (0 <= ippicviAbsDiff_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
+    if (0 <= ippiAbsDiff_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
         return;
 #endif
     (vBinOp32<float, OpAbsDiff<float>, IF_SIMD(VAbsDiff<float>)>(src1, step1, src2, step2, dst, step, sz));
@@ -866,7 +866,7 @@ static void and8u( const uchar* src1, size_t step1,
 {
 #if (ARITHM_USE_IPP == 1)
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    if (0 <= ippicviAnd_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
+    if (0 <= ippiAnd_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
         return;
 #endif
     (vBinOp<uchar, OpAnd<uchar>, IF_SIMD(VAnd<uchar>)>(src1, step1, src2, step2, dst, step, sz));
@@ -878,7 +878,7 @@ static void or8u( const uchar* src1, size_t step1,
 {
 #if (ARITHM_USE_IPP == 1)
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    if (0 <= ippicviOr_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
+    if (0 <= ippiOr_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
         return;
 #endif
     (vBinOp<uchar, OpOr<uchar>, IF_SIMD(VOr<uchar>)>(src1, step1, src2, step2, dst, step, sz));
@@ -890,7 +890,7 @@ static void xor8u( const uchar* src1, size_t step1,
 {
 #if (ARITHM_USE_IPP == 1)
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    if (0 <= ippicviXor_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
+    if (0 <= ippiXor_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
         return;
 #endif
     (vBinOp<uchar, OpXor<uchar>, IF_SIMD(VXor<uchar>)>(src1, step1, src2, step2, dst, step, sz));
@@ -902,7 +902,7 @@ static void not8u( const uchar* src1, size_t step1,
 {
 #if (ARITHM_USE_IPP == 1)
     fixSteps(sz, sizeof(dst[0]), step1, step2, step); (void *)src2;
-    if (0 <= ippicviNot_8u_C1R(src1, (int)step1, dst, (int)step, (IppiSize&)sz))
+    if (0 <= ippiNot_8u_C1R(src1, (int)step1, dst, (int)step, (IppiSize&)sz))
         return;
 #endif
     (vBinOp<uchar, OpNot<uchar>, IF_SIMD(VNot<uchar>)>(src1, step1, src2, step2, dst, step, sz));
@@ -2386,7 +2386,7 @@ static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t ste
     if( op  >= 0 )
     {
         fixSteps(size, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippicviCompare_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op))
+        if (0 <= ippiCompare_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op))
             return;
     }
 #endif
@@ -2469,7 +2469,7 @@ static void cmp16u(const ushort* src1, size_t step1, const ushort* src2, size_t 
     if( op  >= 0 )
     {
         fixSteps(size, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippicviCompare_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op))
+        if (0 <= ippiCompare_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op))
             return;
     }
 #endif
@@ -2484,7 +2484,7 @@ static void cmp16s(const short* src1, size_t step1, const short* src2, size_t st
     if( op  > 0 )
     {
         fixSteps(size, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippicviCompare_16s_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op))
+        if (0 <= ippiCompare_16s_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op))
             return;
     }
 #endif
@@ -2590,7 +2590,7 @@ static void cmp32f(const float* src1, size_t step1, const float* src2, size_t st
     if( op  >= 0 )
     {
         fixSteps(size, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippicviCompare_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op))
+        if (0 <= ippiCompare_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op))
             return;
     }
 #endif
