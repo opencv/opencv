@@ -1929,7 +1929,6 @@ public:
         dstSize.width  = dst.cols;
         dstSize.height = dst.rows;
 
-<<<<<<< HEAD
         switch (type)
         {
             case CV_8UC1:  SET_IPP_RESIZE_PTR(8u,C1);  break;
@@ -1981,38 +1980,6 @@ public:
         if( func( pSrc, (int)src.step[0], pDst, (int)dst.step[0], dstOffset, dstSize, ippBorderRepl, 0, pSpec, bufptr ) < 0 )
             *ok = false;
     }
-
-=======
-    ~IPPresizeInvoker()
-    {
-    }
-
-    virtual void operator() (const Range& range) const
-    {
-        if (*ok == false) return;
-
-        int cn = src.channels();
-        int dsty = min(cvRound(range.start * inv_scale_y), dst.rows);
-        int dstwidth  = min(cvRound(src.cols * inv_scale_x), dst.cols);
-        int dstheight = min(cvRound(range.end * inv_scale_y), dst.rows);
-
-        IppiPoint dstOffset = { 0, dsty }, srcOffset = {0, 0};
-        IppiSize  dstSize   = { dstwidth, dstheight - dsty };
-        int bufsize = 0, itemSize = (int)src.elemSize1();
-
-        CHECK_IPP_STATUS(getBufferSizeFunc(pSpec, dstSize, cn, &bufsize));
-        CHECK_IPP_STATUS(getSrcOffsetFunc(pSpec, dstOffset, &srcOffset));
-
-        Ipp8u* pSrc = (Ipp8u*)src.data + (int)src.step[0] * srcOffset.y + srcOffset.x * cn * itemSize;
-        Ipp8u* pDst = (Ipp8u*)dst.data + (int)dst.step[0] * dstOffset.y + dstOffset.x * cn * itemSize;
-
-        AutoBuffer<uchar> buf(bufsize + 64);
-        uchar* bufptr = alignPtr((uchar*)buf, 32);
-
-        if( func( pSrc, (int)src.step[0], pDst, (int)dst.step[0], dstOffset, dstSize, ippBorderRepl, 0, pSpec, bufptr ) < 0 )
-            *ok = false;
-    }
->>>>>>> Prepare codes for ippicv library
 private:
     const Mat & src;
     Mat & dst;
