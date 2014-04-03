@@ -466,56 +466,56 @@ template<> struct DFT_VecR4<float>
 #endif
 
 #ifdef USE_IPP_DFT
-static void ippicvsDFTFwd_CToC( const Complex<float>* src, Complex<float>* dst,
+static void ippsDFTFwd_CToC( const Complex<float>* src, Complex<float>* dst,
                              const void* spec, uchar* buf)
 {
-    ippicvsDFTFwd_CToC_32fc( (const Ipp32fc*)src, (Ipp32fc*)dst,
+    ippsDFTFwd_CToC_32fc( (const Ipp32fc*)src, (Ipp32fc*)dst,
                           (const IppsDFTSpec_C_32fc*)spec, buf);
 }
 
-static void ippicvsDFTFwd_CToC( const Complex<double>* src, Complex<double>* dst,
+static void ippsDFTFwd_CToC( const Complex<double>* src, Complex<double>* dst,
                              const void* spec, uchar* buf)
 {
-    ippicvsDFTFwd_CToC_64fc( (const Ipp64fc*)src, (Ipp64fc*)dst,
+    ippsDFTFwd_CToC_64fc( (const Ipp64fc*)src, (Ipp64fc*)dst,
                           (const IppsDFTSpec_C_64fc*)spec, buf);
 }
 
-static void ippicvsDFTInv_CToC( const Complex<float>* src, Complex<float>* dst,
+static void ippsDFTInv_CToC( const Complex<float>* src, Complex<float>* dst,
                              const void* spec, uchar* buf)
 {
-    ippicvsDFTInv_CToC_32fc( (const Ipp32fc*)src, (Ipp32fc*)dst,
+    ippsDFTInv_CToC_32fc( (const Ipp32fc*)src, (Ipp32fc*)dst,
                           (const IppsDFTSpec_C_32fc*)spec, buf);
 }
 
-static void ippicvsDFTInv_CToC( const Complex<double>* src, Complex<double>* dst,
+static void ippsDFTInv_CToC( const Complex<double>* src, Complex<double>* dst,
                              const void* spec, uchar* buf)
 {
-    ippicvsDFTInv_CToC_64fc( (const Ipp64fc*)src, (Ipp64fc*)dst,
+    ippsDFTInv_CToC_64fc( (const Ipp64fc*)src, (Ipp64fc*)dst,
                           (const IppsDFTSpec_C_64fc*)spec, buf);
 }
 
-static void ippicvsDFTFwd_RToPack( const float* src, float* dst,
+static void ippsDFTFwd_RToPack( const float* src, float* dst,
                                 const void* spec, uchar* buf)
 {
-    ippicvsDFTFwd_RToPack_32f( src, dst, (const IppsDFTSpec_R_32f*)spec, buf);
+    ippsDFTFwd_RToPack_32f( src, dst, (const IppsDFTSpec_R_32f*)spec, buf);
 }
 
-static void ippicvsDFTFwd_RToPack( const double* src, double* dst,
+static void ippsDFTFwd_RToPack( const double* src, double* dst,
                                 const void* spec, uchar* buf)
 {
-    ippicvsDFTFwd_RToPack_64f( src, dst, (const IppsDFTSpec_R_64f*)spec, buf);
+    ippsDFTFwd_RToPack_64f( src, dst, (const IppsDFTSpec_R_64f*)spec, buf);
 }
 
-static void ippicvsDFTInv_PackToR( const float* src, float* dst,
+static void ippsDFTInv_PackToR( const float* src, float* dst,
                                 const void* spec, uchar* buf)
 {
-    ippicvsDFTInv_PackToR_32f( src, dst, (const IppsDFTSpec_R_32f*)spec, buf);
+    ippsDFTInv_PackToR_32f( src, dst, (const IppsDFTSpec_R_32f*)spec, buf);
 }
 
-static void ippicvsDFTInv_PackToR( const double* src, double* dst,
+static void ippsDFTInv_PackToR( const double* src, double* dst,
                                 const void* spec, uchar* buf)
 {
-    ippicvsDFTInv_PackToR_64f( src, dst, (const IppsDFTSpec_R_64f*)spec, buf);
+    ippsDFTInv_PackToR_64f( src, dst, (const IppsDFTSpec_R_64f*)spec, buf);
 }
 #endif
 
@@ -551,9 +551,9 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
     if( spec )
     {
         if( !inv )
-            ippicvsDFTFwd_CToC( src, dst, spec, (uchar*)buf );
+            ippsDFTFwd_CToC( src, dst, spec, (uchar*)buf );
         else
-            ippicvsDFTInv_CToC( src, dst, spec, (uchar*)buf );
+            ippsDFTInv_CToC( src, dst, spec, (uchar*)buf );
         return;
     }
 #endif
@@ -981,7 +981,7 @@ RealDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
 #ifdef USE_IPP_DFT
     if( spec )
     {
-        ippicvsDFTFwd_RToPack( src, dst, spec, (uchar*)buf );
+        ippsDFTFwd_RToPack( src, dst, spec, (uchar*)buf );
         if( complex_output )
         {
             dst[-1] = dst[0];
@@ -1113,7 +1113,7 @@ CCSIDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
 #ifdef USE_IPP_DFT
     if( spec )
     {
-        ippicvsDFTInv_PackToR( src, dst, spec, (uchar*)buf );
+        ippsDFTInv_PackToR( src, dst, spec, (uchar*)buf );
         goto finalize;
     }
 #endif
@@ -1824,26 +1824,26 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
             {
                 if( depth == CV_32F )
                 {
-                    getSizeFunc = ippicvsDFTGetSize_R_32f;
-                    initFunc = (IppDFTInitFunc)ippicvsDFTInit_R_32f;
+                    getSizeFunc = ippsDFTGetSize_R_32f;
+                    initFunc = (IppDFTInitFunc)ippsDFTInit_R_32f;
                 }
                 else
                 {
-                    getSizeFunc = ippicvsDFTGetSize_R_64f;
-                    initFunc = (IppDFTInitFunc)ippicvsDFTInit_R_64f;
+                    getSizeFunc = ippsDFTGetSize_R_64f;
+                    initFunc = (IppDFTInitFunc)ippsDFTInit_R_64f;
                 }
             }
             else
             {
                 if( depth == CV_32F )
                 {
-                    getSizeFunc = ippicvsDFTGetSize_C_32fc;
-                    initFunc = (IppDFTInitFunc)ippicvsDFTInit_C_32fc;
+                    getSizeFunc = ippsDFTGetSize_C_32fc;
+                    initFunc = (IppDFTInitFunc)ippsDFTInit_C_32fc;
                 }
                 else
                 {
-                    getSizeFunc = ippicvsDFTGetSize_C_64fc;
-                    initFunc = (IppDFTInitFunc)ippicvsDFTInit_C_64fc;
+                    getSizeFunc = ippsDFTGetSize_C_64fc;
+                    initFunc = (IppDFTInitFunc)ippsDFTInit_C_64fc;
                 }
             }
             if( getSizeFunc(len, ipp_norm_flag, ippAlgHintNone, &specsize, &initsize, &worksize) >= 0 )

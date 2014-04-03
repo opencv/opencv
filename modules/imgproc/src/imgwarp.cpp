@@ -50,24 +50,24 @@
 #include "opencl_kernels.hpp"
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-static IppStatus sts = ippicvInit();
+static IppStatus sts = ippInit();
 #endif
 
 namespace cv
 {
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR*100 + IPP_VERSION_MINOR >= 701)
-    typedef IppStatus (CV_STDCALL* ippicviResizeFunc)(const void*, int, const void*, int, IppiPoint, IppiSize, IppiBorderType, void*, void*, Ipp8u*);
-    typedef IppStatus (CV_STDCALL* ippicviResizeGetBufferSize)(void*, IppiSize, Ipp32u, int*);
-    typedef IppStatus (CV_STDCALL* ippicviResizeGetSrcOffset)(void*, IppiPoint, IppiPoint*);
+    typedef IppStatus (CV_STDCALL* ippiResizeFunc)(const void*, int, const void*, int, IppiPoint, IppiSize, IppiBorderType, void*, void*, Ipp8u*);
+    typedef IppStatus (CV_STDCALL* ippiResizeGetBufferSize)(void*, IppiSize, Ipp32u, int*);
+    typedef IppStatus (CV_STDCALL* ippiResizeGetSrcOffset)(void*, IppiPoint, IppiPoint*);
 #endif
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    typedef IppStatus (CV_STDCALL* ippicviSetFunc)(const void*, void *, int, IppiSize);
-    typedef IppStatus (CV_STDCALL* ippicviWarpPerspectiveBackFunc)(const void*, IppiSize, int, IppiRect, void *, int, IppiRect, double [3][3], int);
-    typedef IppStatus (CV_STDCALL* ippicviWarpAffineBackFunc)(const void*, IppiSize, int, IppiRect, void *, int, IppiRect, double [2][3], int);
+    typedef IppStatus (CV_STDCALL* ippiSetFunc)(const void*, void *, int, IppiSize);
+    typedef IppStatus (CV_STDCALL* ippiWarpPerspectiveBackFunc)(const void*, IppiSize, int, IppiRect, void *, int, IppiRect, double [3][3], int);
+    typedef IppStatus (CV_STDCALL* ippiWarpAffineBackFunc)(const void*, IppiSize, int, IppiRect, void *, int, IppiRect, double [2][3], int);
 
     template <int channels, typename Type>
-    bool IPPSetSimple(cv::Scalar value, void *dataPointer, int step, IppiSize &size, ippicviSetFunc func)
+    bool IPPSetSimple(cv::Scalar value, void *dataPointer, int step, IppiSize &size, ippiSetFunc func)
     {
         Type values[channels];
         for( int i = 0; i < channels; i++ )
@@ -82,11 +82,11 @@ namespace cv
             switch( depth )
             {
             case CV_8U:
-                return ippicviSet_8u_C1R((Ipp8u)value[0], (Ipp8u *)dataPointer, step, size) >= 0;
+                return ippiSet_8u_C1R((Ipp8u)value[0], (Ipp8u *)dataPointer, step, size) >= 0;
             case CV_16U:
-                return ippicviSet_16u_C1R((Ipp16u)value[0], (Ipp16u *)dataPointer, step, size) >= 0;
+                return ippiSet_16u_C1R((Ipp16u)value[0], (Ipp16u *)dataPointer, step, size) >= 0;
             case CV_32F:
-                return ippicviSet_32f_C1R((Ipp32f)value[0], (Ipp32f *)dataPointer, step, size) >= 0;
+                return ippiSet_32f_C1R((Ipp32f)value[0], (Ipp32f *)dataPointer, step, size) >= 0;
             }
         }
         else
@@ -96,11 +96,11 @@ namespace cv
                 switch( depth )
                 {
                 case CV_8U:
-                    return IPPSetSimple<3, Ipp8u>(value, dataPointer, step, size, (ippicviSetFunc)ippicviSet_8u_C3R);
+                    return IPPSetSimple<3, Ipp8u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_8u_C3R);
                 case CV_16U:
-                    return IPPSetSimple<3, Ipp16u>(value, dataPointer, step, size, (ippicviSetFunc)ippicviSet_16u_C3R);
+                    return IPPSetSimple<3, Ipp16u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_16u_C3R);
                 case CV_32F:
-                    return IPPSetSimple<3, Ipp32f>(value, dataPointer, step, size, (ippicviSetFunc)ippicviSet_32f_C3R);
+                    return IPPSetSimple<3, Ipp32f>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_32f_C3R);
                 }
             }
             else if( channels == 4 )
@@ -108,11 +108,11 @@ namespace cv
                 switch( depth )
                 {
                 case CV_8U:
-                    return IPPSetSimple<4, Ipp8u>(value, dataPointer, step, size, (ippicviSetFunc)ippicviSet_8u_C4R);
+                    return IPPSetSimple<4, Ipp8u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_8u_C4R);
                 case CV_16U:
-                    return IPPSetSimple<4, Ipp16u>(value, dataPointer, step, size, (ippicviSetFunc)ippicviSet_16u_C4R);
+                    return IPPSetSimple<4, Ipp16u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_16u_C4R);
                 case CV_32F:
-                    return IPPSetSimple<4, Ipp32f>(value, dataPointer, step, size, (ippicviSetFunc)ippicviSet_32f_C4R);
+                    return IPPSetSimple<4, Ipp32f>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_32f_C4R);
                 }
             }
         }
@@ -1880,37 +1880,37 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
 #define CHECK_IPP_STATUS(STATUS) if( STATUS!=ippStsNoErr ) { *ok = false; return;}
 
 #define SET_IPP_RESIZE_LINEAR_FUNC_PTR(TYPE, CN) \
-    func = (ippicviResizeFunc)ippicviResizeLinear_##TYPE##_##CN##R; CHECK_IPP_FUNC(func);\
-    CHECK_IPP_STATUS(ippicviResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
+    func = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; CHECK_IPP_FUNC(func);\
+    CHECK_IPP_STATUS(ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
     specBuf.allocate(specSize);\
     pSpec = (uchar*)specBuf;\
-    CHECK_IPP_STATUS(ippicviResizeLinearInit_##TYPE(srcSize, dstSize, (IppiResizeSpec_32f*)pSpec));
+    CHECK_IPP_STATUS(ippiResizeLinearInit_##TYPE(srcSize, dstSize, (IppiResizeSpec_32f*)pSpec));
 
 #define SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(TYPE, CN) \
     if (mode==(int)ippCubic) { *ok = false; return;}\
-    func = (ippicviResizeFunc)ippicviResizeLinear_##TYPE##_##CN##R; CHECK_IPP_FUNC(func);\
-    CHECK_IPP_STATUS(ippicviResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
+    func = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; CHECK_IPP_FUNC(func);\
+    CHECK_IPP_STATUS(ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
     specBuf.allocate(specSize);\
     pSpec = (uchar*)specBuf;\
-    CHECK_IPP_STATUS(ippicviResizeLinearInit_##TYPE(srcSize, dstSize, (IppiResizeSpec_64f*)pSpec));\
-    getBufferSizeFunc = (ippicviResizeGetBufferSize)ippicviResizeGetBufferSize_##TYPE;\
-    getSrcOffsetFunc =  (ippicviResizeGetSrcOffset) ippicviResizeGetBufferSize_##TYPE;
+    CHECK_IPP_STATUS(ippiResizeLinearInit_##TYPE(srcSize, dstSize, (IppiResizeSpec_64f*)pSpec));\
+    getBufferSizeFunc = (ippiResizeGetBufferSize)ippiResizeGetBufferSize_##TYPE;\
+    getSrcOffsetFunc =  (ippiResizeGetSrcOffset) ippiResizeGetBufferSize_##TYPE;
 
 #define SET_IPP_RESIZE_CUBIC_FUNC_PTR(TYPE, CN) \
-    func = (ippicviResizeFunc)ippicviResizeCubic_##TYPE##_##CN##R; CHECK_IPP_FUNC(func);\
-    CHECK_IPP_STATUS(ippicviResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
+    func = (ippiResizeFunc)ippiResizeCubic_##TYPE##_##CN##R; CHECK_IPP_FUNC(func);\
+    CHECK_IPP_STATUS(ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
     specBuf.allocate(specSize);\
     pSpec = (uchar*)specBuf;\
     AutoBuffer<uchar> buf(initSize);\
     uchar* pInit = (uchar*)buf;\
-    CHECK_IPP_STATUS(ippicviResizeCubicInit_##TYPE(srcSize, dstSize,  0.f, 0.75f, (IppiResizeSpec_32f*)pSpec, pInit));
+    CHECK_IPP_STATUS(ippiResizeCubicInit_##TYPE(srcSize, dstSize,  0.f, 0.75f, (IppiResizeSpec_32f*)pSpec, pInit));
 
 #define SET_IPP_RESIZE_PTR(TYPE, CN) \
     if (mode == (int)ippLinear)     { SET_IPP_RESIZE_LINEAR_FUNC_PTR(TYPE, CN);}\
     else if (mode == (int)ippCubic) { SET_IPP_RESIZE_CUBIC_FUNC_PTR(TYPE, CN);}\
     else { *ok = false; return;}\
-    getBufferSizeFunc = (ippicviResizeGetBufferSize)ippicviResizeGetBufferSize_##TYPE;\
-    getSrcOffsetFunc =  (ippicviResizeGetSrcOffset)ippicviResizeGetSrcOffset_##TYPE;
+    getBufferSizeFunc = (ippiResizeGetBufferSize)ippiResizeGetBufferSize_##TYPE;\
+    getSrcOffsetFunc =  (ippiResizeGetSrcOffset)ippiResizeGetSrcOffset_##TYPE;
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR*100 + IPP_VERSION_MINOR >= 701)
 class IPPresizeInvoker :
@@ -2021,9 +2021,9 @@ private:
     void *pSpec;
     AutoBuffer<uchar>   specBuf;
     int mode;
-    ippicviResizeFunc func;
-    ippicviResizeGetBufferSize getBufferSizeFunc;
-    ippicviResizeGetSrcOffset getSrcOffsetFunc;
+    ippiResizeFunc func;
+    ippiResizeGetBufferSize getBufferSizeFunc;
+    ippiResizeGetSrcOffset getSrcOffsetFunc;
     bool *ok;
     const IPPresizeInvoker& operator= (const IPPresizeInvoker&);
 };
@@ -4051,7 +4051,7 @@ class IPPwarpAffineInvoker :
     public ParallelLoopBody
 {
 public:
-    IPPwarpAffineInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[2][3], int &_interpolation, int &_borderType, const Scalar &_borderValue, ippicviWarpAffineBackFunc _func, bool *_ok) :
+    IPPwarpAffineInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[2][3], int &_interpolation, int &_borderType, const Scalar &_borderValue, ippiWarpAffineBackFunc _func, bool *_ok) :
       ParallelLoopBody(), src(_src), dst(_dst), mode(_interpolation), coeffs(_coeffs), borderType(_borderType), borderValue(_borderValue), func(_func), ok(_ok)
       {
           *ok = true;
@@ -4083,7 +4083,7 @@ private:
     int mode;
     int borderType;
     Scalar borderValue;
-    ippicviWarpAffineBackFunc func;
+    ippiWarpAffineBackFunc func;
     bool *ok;
     const IPPwarpAffineInvoker& operator= (const IPPwarpAffineInvoker&);
 };
@@ -4246,16 +4246,16 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         ( borderType == cv::BORDER_TRANSPARENT || ( borderType == cv::BORDER_CONSTANT ) ) )
     {
         int type = src.type();
-        ippicviWarpAffineBackFunc ippFunc =
-            type == CV_8UC1 ? (ippicviWarpAffineBackFunc)ippicviWarpAffineBack_8u_C1R :
-            type == CV_8UC3 ? (ippicviWarpAffineBackFunc)ippicviWarpAffineBack_8u_C3R :
-            type == CV_8UC4 ? (ippicviWarpAffineBackFunc)ippicviWarpAffineBack_8u_C4R :
-            type == CV_16UC1 ? (ippicviWarpAffineBackFunc)ippicviWarpAffineBack_16u_C1R :
-            type == CV_16UC3 ? (ippicviWarpAffineBackFunc)ippicviWarpAffineBack_16u_C3R :
-            type == CV_16UC4 ? (ippicviWarpAffineBackFunc)ippicviWarpAffineBack_16u_C4R :
-            type == CV_32FC1 ? (ippicviWarpAffineBackFunc)ippicviWarpAffineBack_32f_C1R :
-            type == CV_32FC3 ? (ippicviWarpAffineBackFunc)ippicviWarpAffineBack_32f_C3R :
-            type == CV_32FC4 ? (ippicviWarpAffineBackFunc)ippicviWarpAffineBack_32f_C4R :
+        ippiWarpAffineBackFunc ippFunc =
+            type == CV_8UC1 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_8u_C1R :
+            type == CV_8UC3 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_8u_C3R :
+            type == CV_8UC4 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_8u_C4R :
+            type == CV_16UC1 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_16u_C1R :
+            type == CV_16UC3 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_16u_C3R :
+            type == CV_16UC4 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_16u_C4R :
+            type == CV_32FC1 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_32f_C1R :
+            type == CV_32FC3 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_32f_C3R :
+            type == CV_32FC4 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_32f_C4R :
             0;
         int mode =
             flags == INTER_LINEAR ? IPPI_INTER_LINEAR :
@@ -4394,7 +4394,7 @@ class IPPwarpPerspectiveInvoker :
     public ParallelLoopBody
 {
 public:
-    IPPwarpPerspectiveInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[3][3], int &_interpolation, int &_borderType, const Scalar &_borderValue, ippicviWarpPerspectiveBackFunc _func, bool *_ok) :
+    IPPwarpPerspectiveInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[3][3], int &_interpolation, int &_borderType, const Scalar &_borderValue, ippiWarpPerspectiveBackFunc _func, bool *_ok) :
       ParallelLoopBody(), src(_src), dst(_dst), mode(_interpolation), coeffs(_coeffs), borderType(_borderType), borderValue(_borderValue), func(_func), ok(_ok)
       {
           *ok = true;
@@ -4427,7 +4427,7 @@ private:
     int mode;
     int borderType;
     const Scalar borderValue;
-    ippicviWarpPerspectiveBackFunc func;
+    ippiWarpPerspectiveBackFunc func;
     bool *ok;
     const IPPwarpPerspectiveInvoker& operator= (const IPPwarpPerspectiveInvoker&);
 };
@@ -4476,16 +4476,16 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
         ( borderType == cv::BORDER_TRANSPARENT || borderType == cv::BORDER_CONSTANT ) )
     {
         int type = src.type();
-        ippicviWarpPerspectiveBackFunc ippFunc =
-            type == CV_8UC1 ? (ippicviWarpPerspectiveBackFunc)ippicviWarpPerspectiveBack_8u_C1R :
-            type == CV_8UC3 ? (ippicviWarpPerspectiveBackFunc)ippicviWarpPerspectiveBack_8u_C3R :
-            type == CV_8UC4 ? (ippicviWarpPerspectiveBackFunc)ippicviWarpPerspectiveBack_8u_C4R :
-            type == CV_16UC1 ? (ippicviWarpPerspectiveBackFunc)ippicviWarpPerspectiveBack_16u_C1R :
-            type == CV_16UC3 ? (ippicviWarpPerspectiveBackFunc)ippicviWarpPerspectiveBack_16u_C3R :
-            type == CV_16UC4 ? (ippicviWarpPerspectiveBackFunc)ippicviWarpPerspectiveBack_16u_C4R :
-            type == CV_32FC1 ? (ippicviWarpPerspectiveBackFunc)ippicviWarpPerspectiveBack_32f_C1R :
-            type == CV_32FC3 ? (ippicviWarpPerspectiveBackFunc)ippicviWarpPerspectiveBack_32f_C3R :
-            type == CV_32FC4 ? (ippicviWarpPerspectiveBackFunc)ippicviWarpPerspectiveBack_32f_C4R :
+        ippiWarpPerspectiveBackFunc ippFunc =
+            type == CV_8UC1 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_8u_C1R :
+            type == CV_8UC3 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_8u_C3R :
+            type == CV_8UC4 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_8u_C4R :
+            type == CV_16UC1 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_16u_C1R :
+            type == CV_16UC3 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_16u_C3R :
+            type == CV_16UC4 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_16u_C4R :
+            type == CV_32FC1 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_32f_C1R :
+            type == CV_32FC3 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_32f_C3R :
+            type == CV_32FC4 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_32f_C4R :
             0;
         int mode =
             flags == INTER_LINEAR ? IPPI_INTER_LINEAR :
