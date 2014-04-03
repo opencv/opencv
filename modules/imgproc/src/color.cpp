@@ -3313,12 +3313,15 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 /**/
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+/*
             if( code == CV_BGR2GRAY )
             {
                 if( CvtColorIPPLoop(src, dst, IPPColor2GrayFunctor(ippicviColor2GrayC3Tab[depth])) )
                     return;
             }
-            else if( code == CV_RGB2GRAY )
+            else
+*/
+            if( code == CV_RGB2GRAY )
             {
                 if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippicviRGB2GrayC3Tab[depth])) )
                     return;
