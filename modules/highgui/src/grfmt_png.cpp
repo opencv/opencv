@@ -59,6 +59,9 @@
 #endif
 
 #ifdef HAVE_LIBPNG_PNG_H
+// if on netbsd
+//#include </sys/pkg6_amd64/include/libpng16/png.h>
+///else
 #include <libpng/png.h>
 #else
 #include <png.h>

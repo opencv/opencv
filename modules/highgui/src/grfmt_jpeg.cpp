@@ -72,6 +72,7 @@ typedef unsigned char boolean;
 #undef TRUE
 
 extern "C" {
+  // if on netbsd #include "/sys/pkg6_amd64/include/jpeglib.h"
 #include "jpeglib.h"
 }
 
