@@ -43,7 +43,6 @@
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
 #include <climits>
-#include <limits>
 
 namespace cv
 {
@@ -544,7 +543,7 @@ cv::Scalar cv::sum( InputArray _src )
     Mat src = _src.getMat();
     int k, cn = src.channels(), depth = src.depth();
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7) && 0
     size_t total_size = src.total();
     int rows = src.size[0], cols = (int)(total_size/rows);
     if( src.dims == 2 || (src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
@@ -2111,8 +2110,8 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
                 type == CV_16UC3 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_16u_C3R :
                 type == CV_16UC4 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_16u_C4R :
                 type == CV_16SC1 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_16s_C1R :
-                //type == CV_16SC3 ? (ippicviNormFunc)ippicviNorm_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
-                //type == CV_16SC4 ? (ippicviNormFunc)ippicviNorm_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
+                type == CV_16SC3 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
+                type == CV_16SC4 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
                 type == CV_32FC1 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_32f_C1R :
                 type == CV_32FC3 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_32f_C3R :
                 type == CV_32FC4 ? (ippicviNormFuncNoHint)ippicviNorm_Inf_32f_C4R :
