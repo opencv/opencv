@@ -15,7 +15,6 @@ include_directories(
   ${opencv}modules/objdetect/ 
   ${opencv} ${opencv} )
 
-find_package (Threads)
 
 
 add_definitions(-D__OPENCV_BUILD)
@@ -158,21 +157,22 @@ add_executable(face face.c
 
 target_link_libraries(face ${OPENCV_LINKER_LIBS} ${OPENCV_C_SAMPLES_REQUIRED_DEPS})
 
-target_link_libraries (face ${CMAKE_THREAD_LIBS_INIT})
-
 find_package( ZLIB REQUIRED )
-
 target_link_libraries( face ${ZLIB_LIBRARIES} )
 
+find_package (Threads)
+target_link_libraries (face ${CMAKE_THREAD_LIBS_INIT})
+
+include_directories(${PTHREAD_INCLUDE_DIR})
+target_link_libraries(face ${PTHREAD_LIBRARY})
 
 FIND_LIBRARY(LIBDL_LIBRARIES NAMES dl libdl   )
-
-
 target_link_libraries( face ${LIBDL_LIBRARIES} )
-
 
 find_package(PNG REQUIRED)
 target_link_libraries(face ${PNG_LIBRARY})
+include_directories(${PNG_INCLUDE_DIR})
 
 find_package(JPEG REQUIRED)
 target_link_libraries(face ${JPEG_LIBRARY})
+include_directories(${JPEG_INCLUDE_DIR})
