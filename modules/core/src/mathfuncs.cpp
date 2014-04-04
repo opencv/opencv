@@ -2041,7 +2041,7 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
     const char * const op = issqrt ? "OP_SQRT" : is_ipower ? "OP_POWN" : "OP_POW";
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D dstT=%s -D %s -D UNARY_OP%s", ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+                  format("-D dstT=%s -D %s -D UNARY_OP%s", ocl::typeToStr(depth),
                          op, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
@@ -2081,7 +2081,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
     {
         if( ipower < 0 )
         {
-            divide( 1., _src, _dst );
+            divide( Scalar::all(1), _src, _dst );
             if( ipower == -1 )
                 return;
             ipower = -ipower;
@@ -2115,10 +2115,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
 
     Mat src, dst;
     if (same)
-    {
-        dst = _dst.getMat();
-        src = dst;
-    }
+        src = dst = _dst.getMat();
     else
     {
         src = _src.getMat();

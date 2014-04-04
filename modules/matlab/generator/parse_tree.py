@@ -1,6 +1,12 @@
-from string import join
+import collections
 from textwrap import fill
 from filters import *
+try:
+  # Python 2.7+
+  basestring
+except NameError:
+  # Python 3.3+
+  basestring = str
 
 class ParseTree(object):
     """
@@ -74,7 +80,7 @@ class ParseTree(object):
         self.namespaces = namespaces if namespaces else []
 
     def __str__(self):
-        return join((ns.__str__() for ns in self.namespaces), '\n\n\n')
+        return '\n\n\n'.join(ns.__str__() for ns in self.namespaces)
 
     def build(self, namespaces):
         babel = Translator()
@@ -94,7 +100,7 @@ class ParseTree(object):
                     constants.append(obj)
                 else:
                     raise TypeError('Unexpected object type: '+str(type(obj)))
-            self.namespaces.append(Namespace(name, constants, class_tree.values(), methods))
+            self.namespaces.append(Namespace(name, constants, list(class_tree.values()), methods))
 
     def insertIntoClassTree(self, obj, class_tree):
         cname = obj.name if type(obj) is Class else obj.clss
@@ -208,9 +214,9 @@ class Namespace(object):
 
     def __str__(self):
         return 'namespace '+self.name+' {\n\n'+\
-          (join((c.__str__() for c in self.constants), '\n')+'\n\n' if self.constants else '')+\
-          (join((f.__str__() for f in self.methods), '\n')+'\n\n' if self.methods else '')+\
-          (join((o.__str__() for o in self.classes), '\n\n')        if self.classes   else '')+'\n};'
+          ('\n'.join(c.__str__() for c in self.constants)+'\n\n' if self.constants else '')+\
+          ('\n'.join(f.__str__() for f in self.methods)+'\n\n'   if self.methods   else '')+\
+          ('\n\n'.join(o.__str__() for o in self.classes)        if self.classes   else '')+'\n};'
 
 class Class(object):
     """
@@ -228,8 +234,8 @@ class Class(object):
 
     def __str__(self):
         return 'class '+self.name+' {\n\t'+\
-          (join((c.__str__() for c in self.constants), '\n\t')+'\n\n\t' if self.constants else '')+\
-          (join((f.__str__() for f in self.methods), '\n\t')          if self.methods else '')+'\n};'
+          ('\n\t'.join(c.__str__() for c in self.constants)+'\n\n\t' if self.constants else '')+\
+          ('\n\t'.join(f.__str__() for f in self.methods)            if self.methods   else '')+'\n};'
 
 class Method(object):
     """
@@ -260,7 +266,7 @@ class Method(object):
 
     def __str__(self):
         return (self.rtp+' ' if self.rtp else '')+self.name+'('+\
-          join((arg.__str__() for arg in self.req+self.opt), ', ')+\
+          ', '.join(arg.__str__() for arg in self.req+self.opt)+\
           ')'+(' const' if self.const else '')+';'
 
 class Argument(object):
@@ -334,23 +340,20 @@ def constants(tree):
             for gen in constants(val):
                 yield gen
 
-def todict(obj, classkey=None):
+
+def todict(obj):
     """
-    Convert the ParseTree to a dictionary, stripping all objects of their
-    methods and converting class names to strings
+    Recursively convert a Python object graph to sequences (lists)
+    and mappings (dicts) of primitives (bool, int, float, string, ...)
     """
-    if isinstance(obj, dict):
-        for k in obj.keys():
-            obj[k] = todict(obj[k], classkey)
+    if isinstance(obj, basestring):
         return obj
-    elif hasattr(obj, "__iter__"):
-        return [todict(v, classkey) for v in obj]
-    elif hasattr(obj, "__dict__"):
-        data = dict([(key, todict(value, classkey))
-            for key, value in obj.__dict__.iteritems()
-            if not callable(value) and not key.startswith('_')])
-        if classkey is not None and hasattr(obj, "__class__"):
-            data[classkey] = obj.__class__.__name__
-        return data
-    else:
-        return obj
+    elif isinstance(obj, dict):
+        return dict((key, todict(val)) for key, val in obj.items())
+    elif isinstance(obj, collections.Iterable):
+        return [todict(val) for val in obj]
+    elif hasattr(obj, '__dict__'):
+        return todict(vars(obj))
+    elif hasattr(obj, '__slots__'):
+        return todict(dict((name, getattr(obj, name)) for name in getattr(obj, '__slots__')))
+    return obj

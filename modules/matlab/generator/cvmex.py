@@ -22,7 +22,7 @@ def substitute(cv, output_dir):
     # populate template
     populated = template.render(cv=cv, time=time)
     with open(os.path.join(output_dir, 'mex.m'), 'wb') as f:
-        f.write(populated)
+        f.write(populated.encode('utf-8'))
 
 if __name__ == "__main__":
     """

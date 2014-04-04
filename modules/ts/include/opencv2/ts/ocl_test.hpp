@@ -62,53 +62,73 @@ extern int test_loop_times;
 #define MAX_VALUE 357
 
 #define EXPECT_MAT_NORM(mat, eps) \
+do \
 { \
-    EXPECT_LE(TestUtils::checkNorm(mat), eps) \
-}
+    EXPECT_LE(TestUtils::checkNorm1(mat), eps) \
+} while ((void)0, 0)
 
 #define EXPECT_MAT_NEAR(mat1, mat2, eps) \
+do \
 { \
     ASSERT_EQ(mat1.type(), mat2.type()); \
     ASSERT_EQ(mat1.size(), mat2.size()); \
-    EXPECT_LE(TestUtils::checkNorm(mat1, mat2), eps) \
+    EXPECT_LE(TestUtils::checkNorm2(mat1, mat2), eps) \
         << "Size: " << mat1.size() << std::endl; \
-}
+} while ((void)0, 0)
 
 #define EXPECT_MAT_NEAR_RELATIVE(mat1, mat2, eps) \
+do \
 { \
     ASSERT_EQ(mat1.type(), mat2.type()); \
     ASSERT_EQ(mat1.size(), mat2.size()); \
     EXPECT_LE(TestUtils::checkNormRelative(mat1, mat2), eps) \
         << "Size: " << mat1.size() << std::endl; \
-}
+} while ((void)0, 0)
 
 #define OCL_EXPECT_MATS_NEAR(name, eps) \
+do \
 { \
-    EXPECT_MAT_NEAR(name ## _roi, u ## name ## _roi, eps); \
-    int nextValue = rng.next(); \
-    RNG dataRng1(nextValue), dataRng2(nextValue); \
-    dataRng1.fill(name ## _roi, RNG::UNIFORM, Scalar::all(-MAX_VALUE), Scalar::all(MAX_VALUE)); \
-    dataRng2.fill(u ## name ## _roi, RNG::UNIFORM, Scalar::all(-MAX_VALUE), Scalar::all(MAX_VALUE)); \
-    EXPECT_MAT_NEAR(name, u ## name, 0/*FLT_EPSILON*/); \
-}
+    ASSERT_EQ(name ## _roi.type(), u ## name ## _roi.type()); \
+    ASSERT_EQ(name ## _roi.size(), u ## name ## _roi.size()); \
+    EXPECT_LE(TestUtils::checkNorm2(name ## _roi, u ## name ## _roi), eps) \
+        << "Size: " << name ## _roi.size() << std::endl; \
+    Point _offset; \
+    Size _wholeSize; \
+    u ## name ## _roi.locateROI(_wholeSize, _offset); \
+    Mat _mask(name.size(), CV_8UC1, Scalar::all(255)); \
+    _mask(Rect(_offset, name ## _roi.size())).setTo(Scalar::all(0)); \
+    ASSERT_EQ(name.type(), u ## name.type()); \
+    ASSERT_EQ(name.size(), u ## name.size()); \
+    EXPECT_LE(TestUtils::checkNorm2(name, u ## name, _mask), eps) \
+        << "Size: " << name ## _roi.size() << std::endl; \
+} while ((void)0, 0)
 
 #define OCL_EXPECT_MATS_NEAR_RELATIVE(name, eps) \
+do \
 { \
-    EXPECT_MAT_NEAR_RELATIVE(name ## _roi, u ## name ## _roi, eps); \
-    int nextValue = rng.next(); \
-    RNG dataRng1(nextValue), dataRng2(nextValue); \
-    dataRng1.fill(name ## _roi, RNG::UNIFORM, Scalar::all(-MAX_VALUE), Scalar::all(MAX_VALUE)); \
-    dataRng2.fill(u ## name ## _roi, RNG::UNIFORM, Scalar::all(-MAX_VALUE), Scalar::all(MAX_VALUE)); \
-    EXPECT_MAT_NEAR_RELATIVE(name, u ## name, 0/*FLT_EPSILON*/); \
-}
+    ASSERT_EQ(name ## _roi.type(), u ## name ## _roi.type()); \
+    ASSERT_EQ(name ## _roi.size(), u ## name ## _roi.size()); \
+    EXPECT_LE(TestUtils::checkNormRelative(name ## _roi, u ## name ## _roi), eps) \
+        << "Size: " << name ## _roi.size() << std::endl; \
+    Point _offset; \
+    Size _wholeSize; \
+    name ## _roi.locateROI(_wholeSize, _offset); \
+    Mat _mask(name.size(), CV_8UC1, Scalar::all(255)); \
+    _mask(Rect(_offset, name ## _roi.size())).setTo(Scalar::all(0)); \
+    ASSERT_EQ(name.type(), u ## name.type()); \
+    ASSERT_EQ(name.size(), u ## name.size()); \
+    EXPECT_LE(TestUtils::checkNormRelative(name, u ## name, _mask), eps) \
+        << "Size: " << name ## _roi.size() << std::endl; \
+} while ((void)0, 0)
 
 #define EXPECT_MAT_SIMILAR(mat1, mat2, eps) \
+do \
 { \
     ASSERT_EQ(mat1.type(), mat2.type()); \
     ASSERT_EQ(mat1.size(), mat2.size()); \
     EXPECT_LE(checkSimilarity(mat1, mat2), eps) \
         << "Size: " << mat1.size() << std::endl; \
-}
+} while ((void)0, 0)
 
 using perf::MatDepth;
 using perf::MatType;
@@ -205,28 +225,30 @@ struct CV_EXPORTS TestUtils
     static cv::Mat readImage(const String &fileName, int flags = cv::IMREAD_COLOR);
     static cv::Mat readImageType(const String &fname, int type);
 
-    static double checkNorm(InputArray m);
-    static double checkNorm(InputArray m1, InputArray m2);
+    static double checkNorm1(InputArray m, InputArray mask = noArray());
+    static double checkNorm2(InputArray m1, InputArray m2, InputArray mask = noArray());
     static double checkSimilarity(InputArray m1, InputArray m2);
     static void showDiff(InputArray _src, InputArray _gold, InputArray _actual, double eps, bool alwaysShow);
 
-    static inline double checkNormRelative(InputArray m1, InputArray m2)
+    static inline double checkNormRelative(InputArray m1, InputArray m2, InputArray mask = noArray())
     {
-        return cv::norm(m1.getMat(), m2.getMat(), cv::NORM_INF) /
+        return cv::norm(m1.getMat(), m2.getMat(), cv::NORM_INF, mask) /
                 std::max((double)std::numeric_limits<float>::epsilon(),
                          (double)std::max(cv::norm(m1.getMat(), cv::NORM_INF), norm(m2.getMat(), cv::NORM_INF)));
     }
 };
 
-#define TEST_DECLARE_INPUT_PARAMETER(name) Mat name, name ## _roi; UMat u ## name, u ## name ## _roi;
+#define TEST_DECLARE_INPUT_PARAMETER(name) Mat name, name ## _roi; UMat u ## name, u ## name ## _roi
 #define TEST_DECLARE_OUTPUT_PARAMETER(name) TEST_DECLARE_INPUT_PARAMETER(name)
 
 #define UMAT_UPLOAD_INPUT_PARAMETER(name) \
+do \
 { \
     name.copyTo(u ## name); \
     Size _wholeSize; Point ofs; name ## _roi.locateROI(_wholeSize, ofs); \
     u ## name ## _roi = u ## name(Rect(ofs.x, ofs.y, name ## _roi.size().width, name ## _roi.size().height)); \
-}
+} while ((void)0, 0)
+
 #define UMAT_UPLOAD_OUTPUT_PARAMETER(name) UMAT_UPLOAD_INPUT_PARAMETER(name)
 
 template <typename T>

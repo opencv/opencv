@@ -61,8 +61,8 @@ PARAM_TEST_CASE(BoxFilterBase, MatDepth, Channels, BorderType, bool, bool)
     Point anchor;
     bool normalize, useRoi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -76,7 +76,6 @@ PARAM_TEST_CASE(BoxFilterBase, MatDepth, Channels, BorderType, bool, bool)
     void random_roi()
     {
         int type = CV_MAKE_TYPE(depth, cn);
-        dsize = randomSize(1, MAX_VALUE);
         ksize = randomSize(kernelMinSize, kernelMaxSize);
 
         Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
@@ -84,18 +83,18 @@ PARAM_TEST_CASE(BoxFilterBase, MatDepth, Channels, BorderType, bool, bool)
         randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(dst, dst_roi, dsize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
 
         anchor.x = randomInt(-1, ksize.width);
         anchor.y = randomInt(-1, ksize.height);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 
     void Near(double threshold = 0.0)
     {
-        OCL_EXPECT_MATS_NEAR(dst, threshold)
+        OCL_EXPECT_MATS_NEAR(dst, threshold);
     }
 };
 
@@ -134,7 +133,7 @@ OCL_TEST_P(SqrBoxFilter, Mat)
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, BoxFilter,
                             Combine(
                                 Values(CV_8U, CV_16U, CV_16S, CV_32S, CV_32F),
-                                Values(1, 2, 4),
+                                OCL_ALL_CHANNELS,
                                 Values((BorderType)BORDER_CONSTANT,
                                        (BorderType)BORDER_REPLICATE,
                                        (BorderType)BORDER_REFLECT,
@@ -147,7 +146,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, BoxFilter,
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, SqrBoxFilter,
                             Combine(
                                 Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
-                                Values(1, 2, 4),
+                                OCL_ALL_CHANNELS,
                                 Values((BorderType)BORDER_CONSTANT,
                                        (BorderType)BORDER_REPLICATE,
                                        (BorderType)BORDER_REFLECT,

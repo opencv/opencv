@@ -1299,7 +1299,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
     bool haveMask = !_mask.empty();
 
-    if( ((haveMask || haveScalar) && cn > 4) )
+    if ( (haveMask || haveScalar) && cn > 4 )
         return false;
 
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), wdepth = std::max(CV_32S, CV_MAT_DEPTH(wtype));
@@ -1320,14 +1320,11 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             "-D convertToWT2=%s -D convertToDT=%s%s -D cn=%d",
             (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"),
             oclop2str[oclop], ocl::typeToStr(CV_MAKETYPE(depth1, kercn)),
-            ocl::typeToStr(CV_MAKETYPE(depth1, 1)),
-            ocl::typeToStr(CV_MAKETYPE(depth2, kercn)),
-            ocl::typeToStr(CV_MAKETYPE(depth2, 1)),
-            ocl::typeToStr(CV_MAKETYPE(ddepth, kercn)),
-            ocl::typeToStr(CV_MAKETYPE(ddepth, 1)),
-            ocl::typeToStr(CV_MAKETYPE(wdepth, kercn)),
+            ocl::typeToStr(depth1), ocl::typeToStr(CV_MAKETYPE(depth2, kercn)),
+            ocl::typeToStr(depth2), ocl::typeToStr(CV_MAKETYPE(ddepth, kercn)),
+            ocl::typeToStr(ddepth), ocl::typeToStr(CV_MAKETYPE(wdepth, kercn)),
             ocl::typeToStr(CV_MAKETYPE(wdepth, scalarcn)),
-            ocl::typeToStr(CV_MAKETYPE(wdepth, 1)), wdepth,
+            ocl::typeToStr(wdepth), wdepth,
             ocl::convertTypeStr(depth1, wdepth, kercn, cvtstr[0]),
             ocl::convertTypeStr(depth2, wdepth, kercn, cvtstr[1]),
             ocl::convertTypeStr(wdepth, ddepth, kercn, cvtstr[2]),
@@ -1347,7 +1344,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     }
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
-    if( k.empty() )
+    if (k.empty())
         return false;
 
     UMat src1 = _src1.getUMat(), src2;
@@ -1388,12 +1385,12 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
         if( !haveMask )
         {
-            if(n == 0)
+            if (n == 0)
                 k.args(src1arg, src2arg, dstarg);
-            else if(n == 1)
+            else if (n == 1)
                 k.args(src1arg, src2arg, dstarg,
                        ocl::KernelArg(0, 0, 0, 0, usrdata_p, usrdata_esz));
-            else if(n == 3)
+            else if (n == 3)
                 k.args(src1arg, src2arg, dstarg,
                        ocl::KernelArg(0, 0, 0, 0, usrdata_p, usrdata_esz),
                        ocl::KernelArg(0, 0, 0, 0, usrdata_p + usrdata_esz, usrdata_esz),
@@ -2621,53 +2618,37 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
 {
     const ocl::Device& dev = ocl::Device::getDefault();
     bool doubleSupport = dev.doubleFPConfig() > 0;
-    int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
-    int type2 = _src2.type();
-
-    if (!haveScalar)
-    {
-        if ( (!doubleSupport && (depth1 == CV_64F || _src2.depth() == CV_64F)) ||
-            !_src1.sameSize(_src2) || type1 != type2)
-            return false;
-    }
-    else
-    {
-        if (cn > 1 || depth1 <= CV_32S) // FIXIT: if (cn > 4): Need to clear CPU-based compare behavior
-            return false;
-    }
+    int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1),
+            type2 = _src2.type(), depth2 = CV_MAT_DEPTH(type2);
 
     if (!doubleSupport && depth1 == CV_64F)
         return false;
 
+    if (!haveScalar && (!_src1.sameSize(_src2) || type1 != type2))
+            return false;
+
     int kercn = haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
     // Workaround for bug with "?:" operator in AMD OpenCL compiler
-    bool workaroundForAMD = /*dev.isAMD() &&*/
-            (
-                (depth1 != CV_8U && depth1 != CV_8S)
-            );
-    if (workaroundForAMD)
+    if (depth1 >= CV_16U)
         kercn = 1;
 
     int scalarcn = kercn == 3 ? 4 : kercn;
-
     const char * const operationMap[] = { "==", ">", ">=", "<", "<=", "!=" };
     char cvt[40];
 
-    String buildOptions = format(
-            "-D %s -D srcT1=%s -D dstT=%s -D workT=srcT1 -D cn=%d"
-            " -D convertToDT=%s -D OP_CMP -D CMP_OPERATOR=%s -D srcT1_C1=%s"
-            " -D srcT2_C1=%s -D dstT_C1=%s -D workST=%s%s",
-            (haveScalar ? "UNARY_OP" : "BINARY_OP"),
-            ocl::typeToStr(CV_MAKE_TYPE(depth1, kercn)),
-            ocl::typeToStr(CV_8UC(kercn)), kercn,
-            ocl::convertTypeStr(depth1, CV_8U, kercn, cvt),
-            operationMap[op],
-            ocl::typeToStr(depth1), ocl::typeToStr(depth1), ocl::typeToStr(CV_8U),
-            ocl::typeToStr(CV_MAKE_TYPE(depth1, scalarcn)),
-            doubleSupport ? " -D DOUBLE_SUPPORT" : ""
-            );
+    String opts = format("-D %s -D srcT1=%s -D dstT=%s -D workT=srcT1 -D cn=%d"
+                         " -D convertToDT=%s -D OP_CMP -D CMP_OPERATOR=%s -D srcT1_C1=%s"
+                         " -D srcT2_C1=%s -D dstT_C1=%s -D workST=%s%s",
+                         haveScalar ? "UNARY_OP" : "BINARY_OP",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth1, kercn)),
+                         ocl::typeToStr(CV_8UC(kercn)), kercn,
+                         ocl::convertTypeStr(depth1, CV_8U, kercn, cvt),
+                         operationMap[op], ocl::typeToStr(depth1),
+                         ocl::typeToStr(depth1), ocl::typeToStr(CV_8U),
+                         ocl::typeToStr(CV_MAKE_TYPE(depth1, scalarcn)),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
-    ocl::Kernel k("KF", ocl::core::arithm_oclsrc, buildOptions);
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
     if (k.empty())
         return false;
 
@@ -2678,24 +2659,43 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
 
     if (haveScalar)
     {
-        size_t esz = CV_ELEM_SIZE1(type1)*scalarcn;
-        double buf[4]={0,0,0,0};
-        Mat src2sc = _src2.getMat();
+        size_t esz = CV_ELEM_SIZE1(type1) * scalarcn;
+        double buf[4] = { 0, 0, 0, 0 };
+        Mat src2 = _src2.getMat();
 
-        if (!src2sc.empty())
-            convertAndUnrollScalar(src2sc, type1, (uchar*)buf, 1);
+        if( depth1 > CV_32S )
+            convertAndUnrollScalar( src2, depth1, (uchar *)buf, kercn );
+        else
+        {
+            double fval = 0;
+            getConvertFunc(depth2, CV_64F)(src2.data, 0, 0, 0, (uchar *)&fval, 0, Size(1, 1), 0);
+            if( fval < getMinVal(depth1) )
+                return dst.setTo(Scalar::all(op == CMP_GT || op == CMP_GE || op == CMP_NE ? 255 : 0)), true;
+
+            if( fval > getMaxVal(depth1) )
+                return dst.setTo(Scalar::all(op == CMP_LT || op == CMP_LE || op == CMP_NE ? 255 : 0)), true;
+
+            int ival = cvRound(fval);
+            if( fval != ival )
+            {
+                if( op == CMP_LT || op == CMP_GE )
+                    ival = cvCeil(fval);
+                else if( op == CMP_LE || op == CMP_GT )
+                    ival = cvFloor(fval);
+                else
+                    return dst.setTo(Scalar::all(op == CMP_NE ? 255 : 0)), true;
+            }
+            convertAndUnrollScalar(Mat(1, 1, CV_32S, &ival), depth1, (uchar *)buf, kercn);
+        }
 
         ocl::KernelArg scalararg = ocl::KernelArg(0, 0, 0, 0, buf, esz);
 
         k.args(ocl::KernelArg::ReadOnlyNoSize(src1, cn, kercn),
-               ocl::KernelArg::WriteOnly(dst, cn, kercn),
-               scalararg);
+               ocl::KernelArg::WriteOnly(dst, cn, kercn), scalararg);
     }
     else
     {
-        CV_DbgAssert(type1 == type2);
         UMat src2 = _src2.getUMat();
-        CV_DbgAssert(size == src2.size());
 
         k.args(ocl::KernelArg::ReadOnlyNoSize(src1),
                ocl::KernelArg::ReadOnlyNoSize(src2),

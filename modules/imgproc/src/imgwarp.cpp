@@ -1917,71 +1917,73 @@ class IPPresizeInvoker :
     public ParallelLoopBody
 {
 public:
-    IPPresizeInvoker(Mat &_src, Mat &_dst, double _inv_scale_x, double _inv_scale_y, int _mode, bool *_ok) :
-      ParallelLoopBody(), src(_src), dst(_dst), inv_scale_x(_inv_scale_x), inv_scale_y(_inv_scale_y), mode(_mode), ok(_ok)
-      {
-          *ok = true;
-          IppiSize srcSize, dstSize;
-          int type = src.type();
-          int specSize = 0, initSize = 0;
-          srcSize.width  = src.cols;
-          srcSize.height = src.rows;
-          dstSize.width  = dst.cols;
-          dstSize.height = dst.rows;
+    IPPresizeInvoker(const Mat & _src, Mat & _dst, double _inv_scale_x, double _inv_scale_y, int _mode, bool *_ok) :
+        ParallelLoopBody(), src(_src), dst(_dst), inv_scale_x(_inv_scale_x), inv_scale_y(_inv_scale_y), mode(_mode), ok(_ok)
+    {
+        *ok = true;
+        IppiSize srcSize, dstSize;
+        int type = src.type();
+        int specSize = 0, initSize = 0;
+        srcSize.width  = src.cols;
+        srcSize.height = src.rows;
+        dstSize.width  = dst.cols;
+        dstSize.height = dst.rows;
 
-          switch (type)
-          {
-          case CV_8UC1:  SET_IPP_RESIZE_PTR(8u,C1);  break;
-          case CV_8UC3:  SET_IPP_RESIZE_PTR(8u,C3);  break;
-          case CV_8UC4:  SET_IPP_RESIZE_PTR(8u,C4);  break;
-          case CV_16UC1: SET_IPP_RESIZE_PTR(16u,C1); break;
-          case CV_16UC3: SET_IPP_RESIZE_PTR(16u,C3); break;
-          case CV_16UC4: SET_IPP_RESIZE_PTR(16u,C4); break;
-          case CV_16SC1: SET_IPP_RESIZE_PTR(16s,C1); break;
-          case CV_16SC3: SET_IPP_RESIZE_PTR(16s,C3); break;
-          case CV_16SC4: SET_IPP_RESIZE_PTR(16s,C4); break;
-          case CV_32FC1: SET_IPP_RESIZE_PTR(32f,C1); break;
-          case CV_32FC3: SET_IPP_RESIZE_PTR(32f,C3); break;
-          case CV_32FC4: SET_IPP_RESIZE_PTR(32f,C4); break;
-          case CV_64FC1: SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(64f,C1); break;
-          case CV_64FC3: SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(64f,C3); break;
-          case CV_64FC4: SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(64f,C4); break;
-          default: { *ok = false; return;} break;
-          }
-      }
+        switch (type)
+        {
+            case CV_8UC1:  SET_IPP_RESIZE_PTR(8u,C1);  break;
+            case CV_8UC3:  SET_IPP_RESIZE_PTR(8u,C3);  break;
+            case CV_8UC4:  SET_IPP_RESIZE_PTR(8u,C4);  break;
+            case CV_16UC1: SET_IPP_RESIZE_PTR(16u,C1); break;
+            case CV_16UC3: SET_IPP_RESIZE_PTR(16u,C3); break;
+            case CV_16UC4: SET_IPP_RESIZE_PTR(16u,C4); break;
+            case CV_16SC1: SET_IPP_RESIZE_PTR(16s,C1); break;
+            case CV_16SC3: SET_IPP_RESIZE_PTR(16s,C3); break;
+            case CV_16SC4: SET_IPP_RESIZE_PTR(16s,C4); break;
+            case CV_32FC1: SET_IPP_RESIZE_PTR(32f,C1); break;
+            case CV_32FC3: SET_IPP_RESIZE_PTR(32f,C3); break;
+            case CV_32FC4: SET_IPP_RESIZE_PTR(32f,C4); break;
+            case CV_64FC1: SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(64f,C1); break;
+            case CV_64FC3: SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(64f,C3); break;
+            case CV_64FC4: SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(64f,C4); break;
+            default: { *ok = false; return; } break;
+        }
+    }
 
-      ~IPPresizeInvoker()
-      {
-      }
+    ~IPPresizeInvoker()
+    {
+    }
 
-      virtual void operator() (const Range& range) const
-      {
-          if (*ok == false) return;
+    virtual void operator() (const Range& range) const
+    {
+        if (*ok == false)
+          return;
 
-          int cn = src.channels();
-          int dsty = min(cvRound(range.start * inv_scale_y), dst.rows);
-          int dstwidth  = min(cvRound(src.cols * inv_scale_x), dst.cols);
-          int dstheight = min(cvRound(range.end * inv_scale_y), dst.rows);
+        int cn = src.channels();
+        int dsty = min(cvRound(range.start * inv_scale_y), dst.rows);
+        int dstwidth  = min(cvRound(src.cols * inv_scale_x), dst.cols);
+        int dstheight = min(cvRound(range.end * inv_scale_y), dst.rows);
 
-          IppiPoint dstOffset = { 0, dsty }, srcOffset = {0, 0};
-          IppiSize  dstSize   = { dstwidth, dstheight - dsty };
-          int bufsize = 0, itemSize = (int)src.elemSize1();
+        IppiPoint dstOffset = { 0, dsty }, srcOffset = {0, 0};
+        IppiSize  dstSize   = { dstwidth, dstheight - dsty };
+        int bufsize = 0, itemSize = (int)src.elemSize1();
 
-          CHECK_IPP_STATUS(getBufferSizeFunc(pSpec, dstSize, cn, &bufsize));
-          CHECK_IPP_STATUS(getSrcOffsetFunc(pSpec, dstOffset, &srcOffset));
+        CHECK_IPP_STATUS(getBufferSizeFunc(pSpec, dstSize, cn, &bufsize));
+        CHECK_IPP_STATUS(getSrcOffsetFunc(pSpec, dstOffset, &srcOffset));
 
-          Ipp8u* pSrc = (Ipp8u*)src.data + (int)src.step[0] * srcOffset.y + srcOffset.x * cn * itemSize;
-          Ipp8u* pDst = (Ipp8u*)dst.data + (int)dst.step[0] * dstOffset.y + dstOffset.x * cn * itemSize;
+        Ipp8u* pSrc = (Ipp8u*)src.data + (int)src.step[0] * srcOffset.y + srcOffset.x * cn * itemSize;
+        Ipp8u* pDst = (Ipp8u*)dst.data + (int)dst.step[0] * dstOffset.y + dstOffset.x * cn * itemSize;
 
-          AutoBuffer<uchar> buf(bufsize + 64);
-          uchar* bufptr = alignPtr((uchar*)buf, 32);
+        AutoBuffer<uchar> buf(bufsize + 64);
+        uchar* bufptr = alignPtr((uchar*)buf, 32);
 
-          if( func( pSrc, (int)src.step[0], pDst, (int)dst.step[0], dstOffset, dstSize, ippBorderRepl, 0, pSpec, bufptr ) < 0 )
-              *ok = false;
-      }
+        if( func( pSrc, (int)src.step[0], pDst, (int)dst.step[0], dstOffset, dstSize, ippBorderRepl, 0, pSpec, bufptr ) < 0 )
+            *ok = false;
+    }
+
 private:
-    Mat &src;
-    Mat &dst;
+    Mat & src;
+    Mat & dst;
     double inv_scale_x;
     double inv_scale_y;
     void *pSpec;
@@ -1993,12 +1995,13 @@ private:
     bool *ok;
     const IPPresizeInvoker& operator= (const IPPresizeInvoker&);
 };
+
 #endif
 
 #ifdef HAVE_OPENCL
 
 static void ocl_computeResizeAreaTabs(int ssize, int dsize, double scale, int * const map_tab,
-                                          float * const alpha_tab, int * const ofs_tab)
+                                      float * const alpha_tab, int * const ofs_tab)
 {
     int k = 0, dx = 0;
     for ( ; dx < dsize; dx++)
@@ -2049,8 +2052,16 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
-    double inv_fx = 1. / fx, inv_fy = 1. / fy;
+    double inv_fx = 1.0 / fx, inv_fy = 1.0 / fy;
     float inv_fxf = (float)inv_fx, inv_fyf = (float)inv_fy;
+    int iscale_x = saturate_cast<int>(inv_fx), iscale_y = saturate_cast<int>(inv_fx);
+    bool is_area_fast = std::abs(inv_fx - iscale_x) < DBL_EPSILON &&
+        std::abs(inv_fy - iscale_y) < DBL_EPSILON;
+
+    // in case of scale_x && scale_y is equal to 2
+    // INTER_AREA (fast) also is equal to INTER_LINEAR
+    if( interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 )
+        /*interpolation = INTER_AREA*/(void)0; // INTER_AREA is slower
 
     if( !(cn <= 4 &&
            (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR ||
@@ -2061,39 +2072,105 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     _dst.create(dsize, type);
     UMat dst = _dst.getUMat();
 
+    Size ssize = src.size();
     ocl::Kernel k;
     size_t globalsize[] = { dst.cols, dst.rows };
 
     if (interpolation == INTER_LINEAR)
     {
-        int wdepth = std::max(depth, CV_32S);
-        int wtype = CV_MAKETYPE(wdepth, cn);
         char buf[2][32];
-        k.create("resizeLN", ocl::imgproc::resize_oclsrc,
-                 format("-D INTER_LINEAR -D depth=%d -D PIXTYPE=%s -D PIXTYPE1=%s "
-                        "-D WORKTYPE=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d",
-                        depth, ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
-                        ocl::convertTypeStr(depth, wdepth, cn, buf[0]),
-                        ocl::convertTypeStr(wdepth, depth, cn, buf[1]),
-                        cn));
+
+        // integer path is slower because of CPU part, so it's disabled
+        if (depth == CV_8U && ((void)0, 0))
+        {
+            AutoBuffer<uchar> _buffer((dsize.width + dsize.height)*(sizeof(int) + sizeof(short)*2));
+            int* xofs = (int*)(uchar*)_buffer, * yofs = xofs + dsize.width;
+            short* ialpha = (short*)(yofs + dsize.height), * ibeta = ialpha + dsize.width*2;
+            float fxx, fyy;
+            int sx, sy;
+
+            for (int dx = 0; dx < dsize.width; dx++)
+            {
+                fxx = (float)((dx+0.5)*inv_fx - 0.5);
+                sx = cvFloor(fxx);
+                fxx -= sx;
+
+                if (sx < 0)
+                    fxx = 0, sx = 0;
+
+                if (sx >= ssize.width-1)
+                    fxx = 0, sx = ssize.width-1;
+
+                xofs[dx] = sx;
+                ialpha[dx*2 + 0] = saturate_cast<short>((1.f - fxx) * INTER_RESIZE_COEF_SCALE);
+                ialpha[dx*2 + 1] = saturate_cast<short>(fxx         * INTER_RESIZE_COEF_SCALE);
+            }
+
+            for (int dy = 0; dy < dsize.height; dy++)
+            {
+                fyy = (float)((dy+0.5)*inv_fy - 0.5);
+                sy = cvFloor(fyy);
+                fyy -= sy;
+
+                yofs[dy] = sy;
+                ibeta[dy*2 + 0] = saturate_cast<short>((1.f - fyy) * INTER_RESIZE_COEF_SCALE);
+                ibeta[dy*2 + 1] = saturate_cast<short>(fyy         * INTER_RESIZE_COEF_SCALE);
+            }
+
+            int wdepth = std::max(depth, CV_32S), wtype = CV_MAKETYPE(wdepth, cn);
+            UMat coeffs;
+            Mat(1, static_cast<int>(_buffer.size()), CV_8UC1, (uchar *)_buffer).copyTo(coeffs);
+
+            k.create("resizeLN", ocl::imgproc::resize_oclsrc,
+                     format("-D INTER_LINEAR_INTEGER -D depth=%d -D T=%s -D T1=%s "
+                            "-D WT=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d "
+                            "-D INTER_RESIZE_COEF_BITS=%d",
+                            depth, ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
+                            ocl::convertTypeStr(depth, wdepth, cn, buf[0]),
+                            ocl::convertTypeStr(wdepth, depth, cn, buf[1]),
+                            cn, INTER_RESIZE_COEF_BITS));
+            if (k.empty())
+                return false;
+
+            k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
+                   ocl::KernelArg::PtrReadOnly(coeffs));
+        }
+        else
+        {
+            int wdepth = std::max(depth, CV_32S), wtype = CV_MAKETYPE(wdepth, cn);
+            k.create("resizeLN", ocl::imgproc::resize_oclsrc,
+                     format("-D INTER_LINEAR -D depth=%d -D T=%s -D T1=%s "
+                            "-D WT=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d "
+                            "-D INTER_RESIZE_COEF_BITS=%d",
+                            depth, ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
+                            ocl::convertTypeStr(depth, wdepth, cn, buf[0]),
+                            ocl::convertTypeStr(wdepth, depth, cn, buf[1]),
+                            cn, INTER_RESIZE_COEF_BITS));
+            if (k.empty())
+                return false;
+
+            k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
+                   (float)inv_fx, (float)inv_fy);
+        }
     }
     else if (interpolation == INTER_NEAREST)
     {
         k.create("resizeNN", ocl::imgproc::resize_oclsrc,
-                 format("-D INTER_NEAREST -D PIXTYPE=%s -D PIXTYPE1=%s -D cn=%d",
+                 format("-D INTER_NEAREST -D T=%s -D T1=%s -D cn=%d",
                         ocl::memopTypeToStr(type), ocl::memopTypeToStr(depth), cn));
+        if (k.empty())
+            return false;
+
+        k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
+               (float)inv_fx, (float)inv_fy);
     }
     else if (interpolation == INTER_AREA)
     {
-        int iscale_x = saturate_cast<int>(inv_fx);
-        int iscale_y = saturate_cast<int>(inv_fy);
-        bool is_area_fast = std::abs(inv_fx - iscale_x) < DBL_EPSILON &&
-                        std::abs(inv_fy - iscale_y) < DBL_EPSILON;
         int wdepth = std::max(depth, is_area_fast ? CV_32S : CV_32F);
         int wtype = CV_MAKE_TYPE(wdepth, cn);
 
         char cvt[2][40];
-        String buildOption = format("-D INTER_AREA -D PIXTYPE=%s -D PIXTYPE1=%s -D WTV=%s -D convertToWTV=%s -D cn=%d",
+        String buildOption = format("-D INTER_AREA -D T=%s -D T1=%s -D WTV=%s -D convertToWTV=%s -D cn=%d",
                                     ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
                                     ocl::convertTypeStr(depth, wdepth, cn, cvt[0]), cn);
 
@@ -2103,7 +2180,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         if (is_area_fast)
         {
             int wdepth2 = std::max(CV_32F, depth), wtype2 = CV_MAKE_TYPE(wdepth2, cn);
-            buildOption = buildOption + format(" -D convertToPIXTYPE=%s -D WT2V=%s -D convertToWT2V=%s -D INTER_AREA_FAST"
+            buildOption = buildOption + format(" -D convertToT=%s -D WT2V=%s -D convertToWT2V=%s -D INTER_AREA_FAST"
                                                " -D XSCALE=%d -D YSCALE=%d -D SCALE=%ff",
                                                ocl::convertTypeStr(wdepth2, depth, cn, cvt[0]),
                                                ocl::typeToStr(wtype2), ocl::convertTypeStr(wdepth, wdepth2, cn, cvt[1]),
@@ -2126,12 +2203,11 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         }
         else
         {
-            buildOption = buildOption + format(" -D convertToPIXTYPE=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0]));
+            buildOption = buildOption + format(" -D convertToT=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0]));
             k.create("resizeAREA", ocl::imgproc::resize_oclsrc, buildOption);
             if (k.empty())
                 return false;
 
-            Size ssize = src.size();
             int xytab_size = (ssize.width + ssize.height) << 1;
             int tabofs_size = dsize.height + dsize.width + 2;
 
@@ -2160,11 +2236,6 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 
         return k.run(2, globalsize, NULL, false);
     }
-
-    if( k.empty() )
-        return false;
-    k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
-           (float)inv_fx, (float)inv_fy);
 
     return k.run(2, globalsize, 0, false);
 }

@@ -62,9 +62,10 @@ PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool, bool)
     int borderType;
     bool useRoi;
     Mat kernel;
+    double delta;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -91,8 +92,10 @@ PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool, bool)
         anchor.x = randomInt(-1, ksize.width);
         anchor.y = randomInt(-1, ksize.height);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        delta = randomDouble(-100, 100);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 
     void Near(double threshold = 0.0)
@@ -108,18 +111,17 @@ OCL_TEST_P(Filter2D, Mat)
     {
         random_roi();
 
-        OCL_OFF(cv::filter2D(src_roi, dst_roi, -1, kernel, anchor, 0.0, borderType));
-        OCL_ON(cv::filter2D(usrc_roi, udst_roi, -1, kernel, anchor, 0.0, borderType));
+        OCL_OFF(cv::filter2D(src_roi, dst_roi, -1, kernel, anchor, delta, borderType));
+        OCL_ON(cv::filter2D(usrc_roi, udst_roi, -1, kernel, anchor, delta, borderType));
 
         Near(1.0);
     }
 }
 
-
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, Filter2D,
                             Combine(
-                                Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
-                                Values(1, 2, 4),
+                                Values(CV_8U, CV_16U, CV_32F),
+                                OCL_ALL_CHANNELS,
                                 Values((BorderType)BORDER_CONSTANT,
                                        (BorderType)BORDER_REPLICATE,
                                        (BorderType)BORDER_REFLECT,
