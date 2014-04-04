@@ -841,7 +841,7 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     CV_OCL_RUN(_dst.isUMat(), ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType, normalize))
 
     Mat src = _src.getMat();
-    int sdepth = src.depth(), cn = src.channels();
+    int stype = src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if( ddepth < 0 )
         ddepth = sdepth;
     _dst.create( src.size(), CV_MAKETYPE(ddepth, cn) );
@@ -857,6 +857,64 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     if ( tegra::box(src, dst, ksize, anchor, normalize, borderType) )
         return;
 #endif
+
+    /*
+#ifdef HAVE_IPP
+    bool isolated = (borderType & BORDER_ISOLATED) != 0;
+    if (!normalize && !isolated && (borderType & ~BORDER_ISOLATED) == BORDER_REPLICATE && ddepth == sdepth &&
+        (anchor == Point(-1, -1) || anchor == Point(ksize.width >> 1, ksize.height >> 1)) && ksize.width == ksize.width)
+    {
+        Ipp32s bufSize;
+        IppiSize roiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize.width, ksize.height);
+
+#define IPP_FILTER_BOX_BORDER(ippType, ippDataType, flavor) \
+        do \
+        { \
+            if (ippiFilterBoxBorderGetBufferSize(roiSize, maskSize, ippDataType, cn, &bufSize) >= 0) \
+            { \
+                Ipp8u * buffer = ippsMalloc_8u(bufSize); \
+                ippType borderValue[4] = { 0, 0, 0, 0 }; \
+                IppStatus status = ippiFilterBoxBorder_##flavor((ippType *)src.data, (int)src.step, (ippType *)dst.data, (int)dst.step, roiSize, maskSize, \
+                                                              ippBorderRepl, borderValue, buffer); \
+                ippFree(buffer); \
+                printf("%d\n", status); \
+                IPPI_CALL(status); \
+                if (status >= 0) \
+                    return; \
+            } \
+        } while ((void)0, 0)
+
+        if (stype == CV_8UC1)
+            IPP_FILTER_BOX_BORDER(Ipp8u, ipp8u, 8u_C1R);
+        else if (stype == CV_8UC3)
+            IPP_FILTER_BOX_BORDER(Ipp8u, ipp8u, 8u_C3R);
+        else if (stype == CV_8UC4)
+            IPP_FILTER_BOX_BORDER(Ipp8u, ipp8u, 8u_C4R);
+
+        else if (stype == CV_16UC1)
+            IPP_FILTER_BOX_BORDER(Ipp16u, ipp16u, 16u_C1R);
+        else if (stype == CV_16UC3)
+            IPP_FILTER_BOX_BORDER(Ipp16u, ipp16u, 16u_C3R);
+        else if (stype == CV_16UC4)
+            IPP_FILTER_BOX_BORDER(Ipp16u, ipp16u, 16u_C4R);
+
+        else if (stype == CV_16SC1)
+            IPP_FILTER_BOX_BORDER(Ipp16s, ipp16s, 16s_C1R);
+        else if (stype == CV_16SC3)
+            IPP_FILTER_BOX_BORDER(Ipp16s, ipp16s, 16s_C3R);
+        else if (stype == CV_16SC4)
+            IPP_FILTER_BOX_BORDER(Ipp16s, ipp16s, 16s_C4R);
+
+        else if (stype == CV_32FC1)
+            IPP_FILTER_BOX_BORDER(Ipp32f, ipp32f, 32f_C1R);
+        else if (stype == CV_32FC3)
+            IPP_FILTER_BOX_BORDER(Ipp32f, ipp32f, 32f_C3R);
+        else if (stype == CV_32FC4)
+            IPP_FILTER_BOX_BORDER(Ipp32f, ipp32f, 32f_C4R);
+    }
+#undef IPP_FILTER_BOX_BORDER
+#endif
+    */
 
     Ptr<FilterEngine> f = createBoxFilter( src.type(), dst.type(),
                         ksize, anchor, normalize, borderType );
@@ -1962,7 +2020,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
         if (ippiFilterMedianBorderGetBufferSize(dstRoiSize, maskSize, \
             ippDataType, CV_MAT_CN(type), &bufSize) >= 0) \
         { \
-            Ipp8u * buffer = (Ipp8u *)ippMalloc(bufSize); \
+            Ipp8u * buffer = ippsMalloc_8u(bufSize); \
             IppStatus status = ippiFilterMedianBorder_##flavor((const ippType *)src0.data, (int)src0.step, \
                 (ippType *)dst.data, (int)dst.step, dstRoiSize, maskSize, \
                 ippBorderRepl, (ippType)0, buffer); \
