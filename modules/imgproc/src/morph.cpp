@@ -1136,7 +1136,7 @@ private:
     Scalar borderValue;
 };
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 8) && (IPP_VERSION_MINOR >= 1)
 static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kernel,
                               const Size& ksize, const Point &anchor, bool rectKernel)
 {
@@ -1186,16 +1186,16 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
 #else
         IppiPoint point = {anchor.x, anchor.y};
         // this is case, which can be used with the anchor not in center of the kernel, but
-        // ippiMorphologyBorderGetSize_, ippiErodeBorderReplicate_ and ippiDilateBorderReplicate_ are deprecate.
+        // ippiMorphologyBorderGetSize_, ippiErodeBorderReplicate_ and ippiDilateBorderReplicate_ are deprecated.
         #define IPP_MORPH_CASE(cvtype, flavor, data_type) \
         case cvtype: \
             {\
                 int specSize = 0;\
                 int bufferSize = 0;\
-                if (ippStsNoErr != ippiMorphologyBorderGetSize_##flavor( roiSize.width, kernelSize, &specSize, &bufferSize))\
+                if (ippStsNoErr != ippiMorphologyGetSize_##flavor( roiSize.width, kernel.data kernelSize, &specSize))\
                     return false;\
                 bool ok = false;\
-                IppiMorphState* pState = (IppiMorphState*)ippMalloc(specSize);;\
+                IppiMorphState* pState = (IppiMorphState*)ippMalloc(specSize);\
                 if (ippiMorphologyInit_##flavor(roiSize.width, kernel.data, kernelSize, point, pState) >= 0)\
                 {\
                     if (op == MORPH_ERODE)\
