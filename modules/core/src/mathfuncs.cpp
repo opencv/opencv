@@ -896,7 +896,7 @@ static const double exp_prescale = 1.4426950408889634073599246810019 * (1 << EXP
 static const double exp_postscale = 1./(1 << EXPTAB_SCALE);
 static const double exp_max_val = 3000.*(1 << EXPTAB_SCALE); // log10(DBL_MAX) < 3000
 
-static void Exp_32fnoipp( const float *_x, float *y, int n )
+static void Exp_32f( const float *_x, float *y, int n )
 {
     static const float
         A4 = (float)(1.000000000000002438532970795181890933776 / EXPPOLY_32F_A0),
@@ -1096,7 +1096,7 @@ static void Exp_32fnoipp( const float *_x, float *y, int n )
 }
 
 
-static void Exp_64fnoipp( const double *_x, double *y, int n )
+static void Exp_64f( const double *_x, double *y, int n )
 {
     static const double
     A5 = .99999999999999999998285227504999 / EXPPOLY_32F_A0,
@@ -1274,22 +1274,22 @@ static void Exp_64fnoipp( const double *_x, double *y, int n )
 #undef EXPPOLY_32F_A0
 
 #ifdef HAVE_IPP
-static void Exp_32f(const float *x, float *y, int n)
+static void Exp_32f_ipp(const float *x, float *y, int n)
 {
     if (ippStsNoErr == ippsExp_32f_A21(x, y, n))
         return;
-    Exp_32fnoipp(x, y, n);
+    Exp_32f(x, y, n);
 }
 
-static void Exp_64f(const double *x, double *y, int n)
+static void Exp_64f_ipp(const double *x, double *y, int n)
 {
     if (ippStsNoErr == ippsExp_64f_A50(x, y, n))
         return;
-    Exp_64fnoipp(x, y, n);
+    Exp_64f(x, y, n);
 }
-#else
-    #define Exp_32f Exp_32fnoipp
-    #define Exp_64f Exp_64fnoipp
+
+#define Exp_32f Exp_32f_ipp
+#define Exp_64f Exp_64f_ipp
 #endif
 
 
@@ -1593,7 +1593,7 @@ static const double CV_DECL_ALIGNED(16) icvLogTab[] = {
 #define LOGTAB_TRANSLATE(x,h) (((x) - 1.)*icvLogTab[(h)+1])
 static const double ln_2 = 0.69314718055994530941723212145818;
 
-static void Log_32fnoipp( const float *_x, float *y, int n )
+static void Log_32f( const float *_x, float *y, int n )
 {
     static const float shift[] = { 0, -1.f/512 };
     static const float
@@ -1742,7 +1742,7 @@ static void Log_32fnoipp( const float *_x, float *y, int n )
 }
 
 
-static void Log_64fnoipp( const double *x, double *y, int n )
+static void Log_64f( const double *x, double *y, int n )
 {
     static const double shift[] = { 0, -1./512 };
     static const double
@@ -1932,22 +1932,22 @@ static void Log_64fnoipp( const double *x, double *y, int n )
 }
 
 #ifdef HAVE_IPP
-static void Log_32f(const float *x, float *y, int n)
+static void Log_32f_ipp(const float *x, float *y, int n)
 {
     if (ippStsNoErr == ippsLn_32f_A21(x, y, n))
         return;
-    Log_32fnoipp(x, y, n);
+    Log_32f(x, y, n);
 }
 
-static void Log_64f(const double *x, double *y, int n)
+static void Log_64f_ipp(const double *x, double *y, int n)
 {
     if (ippStsNoErr == ippsLn_64f_A50(x, y, n))
         return;
-    Log_64fnoipp(x, y, n);
+    Log_64f(x, y, n);
 }
-#else
-    #define Log_32f Log_32fnoipp
-    #define Log_64f Log_64fnoipp
+
+#define Log_32f Log_32f_ipp
+#define Log_64f Log_64f_ipp
 #endif
 
 void log( InputArray _src, OutputArray _dst )
