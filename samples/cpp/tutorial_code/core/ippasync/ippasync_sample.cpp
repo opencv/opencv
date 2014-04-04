@@ -37,7 +37,7 @@ const char* keys =
 {
     "{c  camera   |           | use camera or not}"
     "{fn file_name|baboon.jpg | image file       }"
-    "{a accel     |cpu        | accelerator type: auto (default), cpu, gpu}"
+    "{a accel     |auto       | accelerator type: auto (default), cpu, gpu}"
 };
 
 //this is a sample for hppiSobel functions
@@ -92,8 +92,7 @@ int main(int argc, const char** argv)
 
     sAccel = accelType == HPP_ACCEL_TYPE_CPU ? "cpu":
              accelType == HPP_ACCEL_TYPE_GPU ? "gpu":
-             accelType == HPP_ACCEL_TYPE_GPU_VIA_DX9 ? "gpu":
-             accelType == HPP_ACCEL_TYPE_OCL ? "ocl": "?";
+             accelType == HPP_ACCEL_TYPE_GPU_VIA_DX9 ? "gpu dx9": "?";
 
     printf("accelType %s\n", sAccel.c_str());
 
