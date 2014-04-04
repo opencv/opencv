@@ -49,7 +49,7 @@ PARAM_TEST_CASE(IPPAsync, MatDepth, Channels, hppAccelType)
 TEST_P(IPPAsync, accuracy)
 {
     sts = hppCreateInstance(accelType, 0, &accel);
-    if (sts!=HPP_STATUS_NO_ERROR) printf("hppStatus= %d\n",sts);
+    if (sts!=HPP_STATUS_NO_ERROR) printf("hppStatus = %d\n",sts);
     CV_Assert(sts==HPP_STATUS_NO_ERROR);
 
     virtMatrix = hppiCreateVirtualMatrices(accel, 2);
@@ -133,7 +133,7 @@ PARAM_TEST_CASE(IPPAsyncShared, Channels, hppAccelType)
 TEST_P(IPPAsyncShared, accuracy)
 {
     sts = hppCreateInstance(accelType, 0, &accel);
-    if (sts!=HPP_STATUS_NO_ERROR) printf("hppStatus= %d\n",sts);
+    if (sts!=HPP_STATUS_NO_ERROR) printf("hppStatus = %d\n",sts);
     CV_Assert(sts==HPP_STATUS_NO_ERROR);
 
     virtMatrix = hppiCreateVirtualMatrices(accel, 2);
