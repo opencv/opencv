@@ -2175,6 +2175,27 @@ void pow( InputArray _src, double power, OutputArray _dst )
     }
     else if( fabs(fabs(power) - 0.5) < DBL_EPSILON )
     {
+#ifdef HAVE_IPP
+        if (power > 0 && (src.dims <= 2 || (src.isContinuous() && dst.isContinuous()))) // power is 0.5
+        {
+            Size size = src.size();
+            int srcstep = (int)src.step, dststep = (int)dst.step, esz = src.elemSize();
+            if (src.isContinuous() && dst.isContinuous())
+            {
+                srcstep = dststep = (int)src.total() * esz;
+                size.width = (int)src.total();
+                size.height = 1;
+            }
+            size.width *= cn;
+
+            IppStatus status = ippiSqrt_32f_C1R((const Ipp32f *)src.data, srcstep, (Ipp32f *)dst.data, dststep,
+                                                ippiSize(size.width, size.height));
+
+            if (status == ippStsNoErr)
+                return;
+        }
+#endif
+
         MathFunc func = power < 0 ?
             (depth == CV_32F ? (MathFunc)InvSqrt_32f : (MathFunc)InvSqrt_64f) :
             (depth == CV_32F ? (MathFunc)Sqrt_32f : (MathFunc)Sqrt_64f);
