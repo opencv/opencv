@@ -238,6 +238,12 @@ float  cubeRoot( float value )
 
 static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
 {
+#ifdef HAVE_IPP
+    IppStatus status = ippsMagnitude_32f(x, y, mag, len);
+    if (status == ippStsNoErr)
+        return;
+#endif
+
     int i = 0;
 
 #if CV_SSE
@@ -264,6 +270,12 @@ static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
 
 static void Magnitude_64f(const double* x, const double* y, double* mag, int len)
 {
+#ifdef HAVE_IPP
+    IppStatus status = ippsMagnitude_64f(x, y, mag, len);
+    if (status == ippStsNoErr)
+        return;
+#endif
+
     int i = 0;
 
 #if CV_SSE2
