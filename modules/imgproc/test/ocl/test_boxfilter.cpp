@@ -102,7 +102,7 @@ typedef BoxFilterBase BoxFilter;
 
 OCL_TEST_P(BoxFilter, Mat)
 {
-    for (int j = 0; j < test_loop_times; j++)
+    for (int j = 0; j < 100; j++)
     {
         random_roi();
 
