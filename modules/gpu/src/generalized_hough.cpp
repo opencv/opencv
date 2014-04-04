@@ -46,6 +46,10 @@ using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
+#if defined(__GNUC__) && (__GNUC__ * 10 + __GNUC_MINOR__ == 47)
+#   define CUDA_DISABLER
+#endif
+
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 Ptr<GeneralizedHough_GPU> cv::gpu::GeneralizedHough_GPU::create(int) { throw_nogpu(); return Ptr<GeneralizedHough_GPU>(); }
