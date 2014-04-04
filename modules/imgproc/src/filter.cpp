@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
-#include <sstream>
 
 /****************************************************************************************\
                                     Base Image Filter
@@ -3134,7 +3133,7 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
 // b e h b e h 0 0
 // c f i c f i 0 0
 template <typename T>
-static int _prepareKernelFilter2D(std::vector<T>& data, const Mat &kernel)
+static int _prepareKernelFilter2D(std::vector<T> & data, const Mat & kernel)
 {
     Mat _kernel; kernel.convertTo(_kernel, DataDepth<T>::value);
     int size_y_aligned = ROUNDUP(kernel.rows * 2, 4);
@@ -3154,75 +3153,52 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                    InputArray _kernel, Point anchor,
                    double delta, int borderType )
 {
-    if (abs(delta) > FLT_MIN)
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ddepth = ddepth < 0 ? sdepth : ddepth;
+    int dtype = CV_MAKE_TYPE(ddepth, cn), wdepth = std::max(std::max(sdepth, ddepth), CV_32F),
+            wtype = CV_MAKE_TYPE(wdepth, cn);
+    if (cn > 4)
         return false;
 
-    int type = _src.type();
-    int cn = CV_MAT_CN(type);
-    if ((1 != cn) && (2 != cn) && (4 != cn))
-        return false;//TODO
-
-    int sdepth = CV_MAT_DEPTH(type);
     Size ksize = _kernel.size();
-    if( anchor.x < 0 )
+    if (anchor.x < 0)
         anchor.x = ksize.width / 2;
-    if( anchor.y < 0 )
+    if (anchor.y < 0)
         anchor.y = ksize.height / 2;
-    if( ddepth < 0 )
-        ddepth = sdepth;
-    else if (ddepth != sdepth)
-        return false;
 
-    bool isIsolatedBorder = (borderType & BORDER_ISOLATED) != 0;
-    bool useDouble = (CV_64F == sdepth);
+    bool isolated = (borderType & BORDER_ISOLATED) != 0;
+    borderType &= ~BORDER_ISOLATED;
     const cv::ocl::Device &device = cv::ocl::Device::getDefault();
-    int doubleFPConfig = device.doubleFPConfig();
-    if (useDouble && (0 == doubleFPConfig))
+    bool doubleSupport = device.doubleFPConfig() > 0;
+    if (wdepth == CV_64F && !doubleSupport)
         return false;
 
-    const char* btype = NULL;
-    switch (borderType & ~BORDER_ISOLATED)
-    {
-    case BORDER_CONSTANT:
-        btype = "BORDER_CONSTANT";
-        break;
-    case BORDER_REPLICATE:
-        btype = "BORDER_REPLICATE";
-        break;
-    case BORDER_REFLECT:
-        btype = "BORDER_REFLECT";
-        break;
-    case BORDER_WRAP:
-        return false;
-    case BORDER_REFLECT101:
-        btype = "BORDER_REFLECT_101";
-        break;
-    }
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT",
+                                       "BORDER_WRAP", "BORDER_REFLECT_101" };
 
     cv::Mat kernelMat = _kernel.getMat();
     std::vector<float> kernelMatDataFloat;
-    std::vector<double> kernelMatDataDouble;
-    int kernel_size_y2_aligned = useDouble ?
-            _prepareKernelFilter2D<double>(kernelMatDataDouble, kernelMat)
-            : _prepareKernelFilter2D<float>(kernelMatDataFloat, kernelMat);
+    int kernel_size_y2_aligned = _prepareKernelFilter2D<float>(kernelMatDataFloat, kernelMat);
 
+    cv::Size sz = _src.size(), wholeSize;
+    size_t globalsize[2] = { sz.width, sz.height }, localsize[2] = { 0, 1 };
 
-    cv::Size sz = _src.size();
-    size_t globalsize[2] = {sz.width, sz.height};
-    size_t localsize[2] = {0, 1};
-
-    ocl::Kernel kernel;
-    UMat src; Size wholeSize;
-    if (!isIsolatedBorder)
+    ocl::Kernel k;
+    UMat src = _src.getUMat();
+    if (!isolated)
     {
-        src = _src.getUMat();
         Point ofs;
         src.locateROI(wholeSize, ofs);
     }
 
-    size_t maxWorkItemSizes[32]; device.maxWorkItemSizes(maxWorkItemSizes);
+    size_t maxWorkItemSizes[32];
+    device.maxWorkItemSizes(maxWorkItemSizes);
     size_t tryWorkItems = maxWorkItemSizes[0];
-    for (;;)
+    char cvt[2][40];
+
+    String kerStr = ocl::kernelToStr(kernelMatDataFloat, CV_32F);
+
+    for ( ; ; )
     {
         size_t BLOCK_SIZE = tryWorkItems;
         while (BLOCK_SIZE > 32 && BLOCK_SIZE >= (size_t)ksize.width * 2 && BLOCK_SIZE > (size_t)sz.width * 2)
@@ -3242,32 +3218,36 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
         int requiredLeft = (int)BLOCK_SIZE; // not this: anchor.x;
         int requiredBottom = ksize.height - 1 - anchor.y;
         int requiredRight = (int)BLOCK_SIZE; // not this: ksize.width - 1 - anchor.x;
-        int h = isIsolatedBorder ? sz.height : wholeSize.height;
-        int w = isIsolatedBorder ? sz.width : wholeSize.width;
+        int h = isolated ? sz.height : wholeSize.height;
+        int w = isolated ? sz.width : wholeSize.width;
         bool extra_extrapolation = h < requiredTop || h < requiredBottom || w < requiredLeft || w < requiredRight;
 
         if ((w < ksize.width) || (h < ksize.height))
             return false;
 
-        char build_options[1024];
-        sprintf(build_options, "-D LOCAL_SIZE=%d -D BLOCK_SIZE_Y=%d -D DATA_DEPTH=%d -D DATA_CHAN=%d -D USE_DOUBLE=%d "
-                "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D KERNEL_SIZE_Y2_ALIGNED=%d "
-                "-D %s -D %s -D %s",
-                (int)BLOCK_SIZE, (int)BLOCK_SIZE_Y,
-                sdepth, cn, useDouble ? 1 : 0,
-                anchor.x, anchor.y, ksize.width, ksize.height, kernel_size_y2_aligned,
-                btype,
-                extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
-                isIsolatedBorder ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED");
+        String opts = format("-D LOCAL_SIZE=%d -D BLOCK_SIZE_Y=%d -D cn=%d "
+                             "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
+                             "-D KERNEL_SIZE_Y2_ALIGNED=%d -D %s -D %s -D %s%s%s "
+                             "-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D WT=%s -D WT1=%s "
+                             "-D convertToWT=%s -D convertToDstT=%s",
+                             (int)BLOCK_SIZE, (int)BLOCK_SIZE_Y, cn, anchor.x, anchor.y,
+                             ksize.width, ksize.height, kernel_size_y2_aligned, borderMap[borderType],
+                             extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
+                             isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
+                             doubleSupport ? " -D DOUBLE_SUPPORT" : "", kerStr.c_str(),
+                             ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
+                             ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
+                             ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
+                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]));
 
         localsize[0] = BLOCK_SIZE;
         globalsize[0] = DIVUP(sz.width, BLOCK_SIZE - (ksize.width - 1)) * BLOCK_SIZE;
         globalsize[1] = DIVUP(sz.height, BLOCK_SIZE_Y);
 
-        cv::String errmsg;
-        if (!kernel.create("filter2D", cv::ocl::imgproc::filter2D_oclsrc, build_options))
+        if (!k.create("filter2D", cv::ocl::imgproc::filter2D_oclsrc, opts))
             return false;
-        size_t kernelWorkGroupSize = kernel.workGroupSize();
+
+        size_t kernelWorkGroupSize = k.workGroupSize();
         if (localsize[0] <= kernelWorkGroupSize)
             break;
         if (BLOCK_SIZE < kernelWorkGroupSize)
@@ -3275,242 +3255,238 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
         tryWorkItems = kernelWorkGroupSize;
     }
 
-    _dst.create(sz, CV_MAKETYPE(ddepth, cn));
+    _dst.create(sz, dtype);
     UMat dst = _dst.getUMat();
-    if (src.empty())
-        src = _src.getUMat();
-
-    int idxArg = 0;
-    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(src));
-    idxArg = kernel.set(idxArg, (int)src.step);
 
     int srcOffsetX = (int)((src.offset % src.step) / src.elemSize());
     int srcOffsetY = (int)(src.offset / src.step);
-    int srcEndX = (isIsolatedBorder ? (srcOffsetX + sz.width) : wholeSize.width);
-    int srcEndY = (isIsolatedBorder ? (srcOffsetY + sz.height) : wholeSize.height);
-    idxArg = kernel.set(idxArg, srcOffsetX);
-    idxArg = kernel.set(idxArg, srcOffsetY);
-    idxArg = kernel.set(idxArg, srcEndX);
-    idxArg = kernel.set(idxArg, srcEndY);
+    int srcEndX = (isolated ? (srcOffsetX + sz.width) : wholeSize.width);
+    int srcEndY = (isolated ? (srcOffsetY + sz.height) : wholeSize.height);
 
-    idxArg = kernel.set(idxArg, ocl::KernelArg::WriteOnly(dst));
-    float borderValue[4] = {0, 0, 0, 0};
-    double borderValueDouble[4] = {0, 0, 0, 0};
-    if ((borderType & ~BORDER_ISOLATED) == BORDER_CONSTANT)
-    {
-        int cnocl = (3 == cn) ? 4 : cn;
-        if (useDouble)
-            idxArg = kernel.set(idxArg, (void *)&borderValueDouble[0], sizeof(double) * cnocl);
-        else
-            idxArg = kernel.set(idxArg, (void *)&borderValue[0], sizeof(float) * cnocl);
-    }
-    if (useDouble)
-    {
-        UMat kernalDataUMat(kernelMatDataDouble, true);
-        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(kernalDataUMat));
-    }
-    else
-    {
-        UMat kernalDataUMat(kernelMatDataFloat, true);
-        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(kernalDataUMat));
-    }
-    return kernel.run(2, globalsize, localsize, true);
+    k.args(ocl::KernelArg::PtrReadOnly(src), (int)src.step, srcOffsetX, srcOffsetY,
+           srcEndX, srcEndY, ocl::KernelArg::WriteOnly(dst), (float)delta);
+
+    return k.run(2, globalsize, localsize, false);
 }
 
-static bool ocl_sepRowFilter2D( UMat &src, UMat &buf, Mat &kernelX, int anchor, int borderType, bool sync)
+static bool ocl_sepRowFilter2D(const UMat & src, UMat & buf, const Mat & kernelX, int anchor,
+                               int borderType, int ddepth, bool fast8uc1)
 {
-    int type = src.type();
-    int cn = CV_MAT_CN(type);
-    int sdepth = CV_MAT_DEPTH(type);
+    int type = src.type(), cn = CV_MAT_CN(type), sdepth = CV_MAT_DEPTH(type);
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
     Size bufSize = buf.size();
+
+    if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
+        return false;
 
 #ifdef ANDROID
     size_t localsize[2] = {16, 10};
 #else
     size_t localsize[2] = {16, 16};
 #endif
+
     size_t globalsize[2] = {DIVUP(bufSize.width, localsize[0]) * localsize[0], DIVUP(bufSize.height, localsize[1]) * localsize[1]};
-    if (CV_8U == sdepth)
-    {
-        switch (cn)
-        {
-        case 1:
-            globalsize[0] = DIVUP((bufSize.width + 3) >> 2, localsize[0]) * localsize[0];
-            break;
-        case 2:
-            globalsize[0] = DIVUP((bufSize.width + 1) >> 1, localsize[0]) * localsize[0];
-            break;
-        case 4:
-            globalsize[0] = DIVUP(bufSize.width, localsize[0]) * localsize[0];
-            break;
-        }
-    }
+    if (fast8uc1)
+        globalsize[0] = DIVUP((bufSize.width + 3) >> 2, localsize[0]) * localsize[0];
 
-    int radiusX = anchor;
-    int radiusY = (int)((buf.rows - src.rows) >> 1);
+    int radiusX = anchor, radiusY = (buf.rows - src.rows) >> 1;
 
-    bool isIsolatedBorder = (borderType & BORDER_ISOLATED) != 0;
-    const char* btype = NULL;
-    switch (borderType & ~BORDER_ISOLATED)
-    {
-    case BORDER_CONSTANT:
-        btype = "BORDER_CONSTANT";
-        break;
-    case BORDER_REPLICATE:
-        btype = "BORDER_REPLICATE";
-        break;
-    case BORDER_REFLECT:
-        btype = "BORDER_REFLECT";
-        break;
-    case BORDER_WRAP:
-        btype = "BORDER_WRAP";
-        break;
-    case BORDER_REFLECT101:
-        btype = "BORDER_REFLECT_101";
-        break;
-    default:
-        return false;
-    }
+    bool isolated = (borderType & BORDER_ISOLATED) != 0;
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101" },
+        * const btype = borderMap[borderType & ~BORDER_ISOLATED];
 
     bool extra_extrapolation = src.rows < (int)((-radiusY + globalsize[1]) >> 1) + 1;
     extra_extrapolation |= src.rows < radiusY;
     extra_extrapolation |= src.cols < (int)((-radiusX + globalsize[0] + 8 * localsize[0] + 3) >> 1) + 1;
     extra_extrapolation |= src.cols < radiusX;
 
-    cv::String build_options = cv::format("-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D %s -D %s",
-        radiusX, (int)localsize[0], (int)localsize[1], cn,
-        btype,
-        extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
-        isIsolatedBorder ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED");
+    char cvt[40];
+    cv::String build_options = cv::format("-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D %s -D %s"
+                                          " -D srcT=%s -D dstT=%s -D convertToDstT=%s -D srcT1=%s -D dstT1=%s%s",
+                                          radiusX, (int)localsize[0], (int)localsize[1], cn, btype,
+                                          extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
+                                          isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
+                                          ocl::typeToStr(type), ocl::typeToStr(CV_32FC(cn)),
+                                          ocl::convertTypeStr(sdepth, CV_32F, cn, cvt),
+                                          ocl::typeToStr(sdepth), ocl::typeToStr(CV_32F),
+                                          doubleSupport ? " -D DOUBLE_SUPPORT" : "");
     build_options += ocl::kernelToStr(kernelX, CV_32F);
 
     Size srcWholeSize; Point srcOffset;
     src.locateROI(srcWholeSize, srcOffset);
 
-    std::stringstream strKernel;
-    strKernel << "row_filter";
-    if (-1 != cn)
-        strKernel << "_C" << cn;
-    if (-1 != sdepth)
-        strKernel << "_D" << sdepth;
+    String kernelName("row_filter");
+    if (fast8uc1)
+        kernelName += "_C1_D0";
 
-    ocl::Kernel kernelRow;
-    if (!kernelRow.create(strKernel.str().c_str(), cv::ocl::imgproc::filterSepRow_oclsrc,
-                          build_options))
+    ocl::Kernel k(kernelName.c_str(), cv::ocl::imgproc::filterSepRow_oclsrc,
+                  build_options);
+    if (k.empty())
         return false;
 
-    int idxArg = 0;
-    idxArg = kernelRow.set(idxArg, ocl::KernelArg::PtrReadOnly(src));
-    idxArg = kernelRow.set(idxArg, (int)(src.step / src.elemSize()));
+    if (fast8uc1)
+        k.args(ocl::KernelArg::PtrReadOnly(src), (int)(src.step / src.elemSize()), srcOffset.x,
+               srcOffset.y, src.cols, src.rows, srcWholeSize.width, srcWholeSize.height,
+               ocl::KernelArg::PtrWriteOnly(buf), (int)(buf.step / buf.elemSize()),
+               buf.cols, buf.rows, radiusY);
+    else
+        k.args(ocl::KernelArg::PtrReadOnly(src), (int)src.step, srcOffset.x,
+               srcOffset.y, src.cols, src.rows, srcWholeSize.width, srcWholeSize.height,
+               ocl::KernelArg::PtrWriteOnly(buf), (int)buf.step, buf.cols, buf.rows, radiusY);
 
-    idxArg = kernelRow.set(idxArg, srcOffset.x);
-    idxArg = kernelRow.set(idxArg, srcOffset.y);
-    idxArg = kernelRow.set(idxArg, src.cols);
-    idxArg = kernelRow.set(idxArg, src.rows);
-    idxArg = kernelRow.set(idxArg, srcWholeSize.width);
-    idxArg = kernelRow.set(idxArg, srcWholeSize.height);
-
-    idxArg = kernelRow.set(idxArg, ocl::KernelArg::PtrWriteOnly(buf));
-    idxArg = kernelRow.set(idxArg, (int)(buf.step / buf.elemSize()));
-    idxArg = kernelRow.set(idxArg, buf.cols);
-    idxArg = kernelRow.set(idxArg, buf.rows);
-    idxArg = kernelRow.set(idxArg, radiusY);
-
-    return kernelRow.run(2, globalsize, localsize, sync);
+    return k.run(2, globalsize, localsize, false);
 }
 
-static bool ocl_sepColFilter2D(const UMat &buf, UMat &dst, Mat &kernelY, int anchor, bool sync)
+static bool ocl_sepColFilter2D(const UMat & buf, UMat & dst, const Mat & kernelY, double delta, int anchor)
 {
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    if (dst.depth() == CV_64F && !doubleSupport)
+        return false;
+
 #ifdef ANDROID
-    size_t localsize[2] = {16, 10};
+    size_t localsize[2] = { 16, 10 };
 #else
-    size_t localsize[2] = {16, 16};
+    size_t localsize[2] = { 16, 16 };
 #endif
-    size_t globalsize[2] = {0, 0};
+    size_t globalsize[2] = { 0, 0 };
 
     int dtype = dst.type(), cn = CV_MAT_CN(dtype), ddepth = CV_MAT_DEPTH(dtype);
     Size sz = dst.size();
 
     globalsize[1] = DIVUP(sz.height, localsize[1]) * localsize[1];
-
-    if (dtype == CV_8UC2)
-        globalsize[0] = DIVUP((sz.width + 1) / 2, localsize[0]) * localsize[0];
-    else
-        globalsize[0] = DIVUP(sz.width, localsize[0]) * localsize[0];
+    globalsize[0] = DIVUP(sz.width, localsize[0]) * localsize[0];
 
     char cvt[40];
-    cv::String build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, (int)localsize[0], (int)localsize[1], cn, ocl::typeToStr(buf.type()),
-                                          ocl::typeToStr(dtype), ocl::convertTypeStr(CV_32F, ddepth, cn, cvt));
+    cv::String build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d"
+                                          " -D srcT=%s -D dstT=%s -D convertToDstT=%s"
+                                          " -D srcT1=%s -D dstT1=%s%s",
+                                          anchor, (int)localsize[0], (int)localsize[1], cn,
+                                          ocl::typeToStr(buf.type()), ocl::typeToStr(dtype),
+                                          ocl::convertTypeStr(CV_32F, ddepth, cn, cvt),
+                                          ocl::typeToStr(CV_32F), ocl::typeToStr(ddepth),
+                                          doubleSupport ? " -D DOUBLE_SUPPORT" : "");
     build_options += ocl::kernelToStr(kernelY, CV_32F);
 
-    ocl::Kernel kernelCol;
-    if (!kernelCol.create("col_filter", cv::ocl::imgproc::filterSepCol_oclsrc, build_options))
+    ocl::Kernel k("col_filter", cv::ocl::imgproc::filterSepCol_oclsrc,
+                  build_options);
+    if (k.empty())
         return false;
 
-    int idxArg = 0;
-    idxArg = kernelCol.set(idxArg, ocl::KernelArg::PtrReadOnly(buf));
-    idxArg = kernelCol.set(idxArg, (int)(buf.step / buf.elemSize()));
-    idxArg = kernelCol.set(idxArg, buf.cols);
-    idxArg = kernelCol.set(idxArg, buf.rows);
+    k.args(ocl::KernelArg::ReadOnly(buf), ocl::KernelArg::WriteOnly(dst),
+           static_cast<float>(delta));
 
-    idxArg = kernelCol.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
-    idxArg = kernelCol.set(idxArg, (int)(dst.offset / dst.elemSize()));
-    idxArg = kernelCol.set(idxArg, (int)(dst.step / dst.elemSize()));
-    idxArg = kernelCol.set(idxArg, dst.cols);
-    idxArg = kernelCol.set(idxArg, dst.rows);
+    return k.run(2, globalsize, localsize, false);
+}
 
-    return kernelCol.run(2, globalsize, localsize, sync);
+const int optimizedSepFilterLocalSize = 16;
+
+static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
+                                       Mat row_kernel, Mat col_kernel,
+                                       double delta, int borderType, int ddepth)
+{
+    Size size = _src.size(), wholeSize;
+    Point origin;
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
+            esz = CV_ELEM_SIZE(stype), wdepth = std::max(std::max(sdepth, ddepth), CV_32F),
+            dtype = CV_MAKE_TYPE(ddepth, cn);
+    size_t src_step = _src.step(), src_offset = _src.offset();
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if ((src_offset % src_step) % esz != 0 || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
+            !(borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE ||
+              borderType == BORDER_REFLECT || borderType == BORDER_WRAP ||
+              borderType == BORDER_REFLECT_101))
+        return false;
+
+    size_t lt2[2] = { optimizedSepFilterLocalSize, optimizedSepFilterLocalSize };
+    size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), lt2[1] * (1 + (size.height - 1) / lt2[1]) };
+
+    char cvt[2][40];
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
+                                       "BORDER_REFLECT_101" };
+
+    String opts = cv::format("-D BLK_X=%d -D BLK_Y=%d -D RADIUSX=%d -D RADIUSY=%d%s%s"
+                             " -D srcT=%s -D convertToWT=%s -D WT=%s -D dstT=%s -D convertToDstT=%s"
+                             " -D %s -D srcT1=%s -D dstT1=%s -D CN=%d", (int)lt2[0], (int)lt2[1],
+                             row_kernel.cols / 2, col_kernel.cols / 2,
+                             ocl::kernelToStr(row_kernel, CV_32F, "KERNEL_MATRIX_X").c_str(),
+                             ocl::kernelToStr(col_kernel, CV_32F, "KERNEL_MATRIX_Y").c_str(),
+                             ocl::typeToStr(stype), ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
+                             ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), ocl::typeToStr(dtype),
+                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), borderMap[borderType],
+                             ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), cn);
+
+    ocl::Kernel k("sep_filter", ocl::imgproc::filterSep_singlePass_oclsrc, opts);
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(size, dtype);
+    UMat dst = _dst.getUMat();
+
+    int src_offset_x = static_cast<int>((src_offset % src_step) / esz);
+    int src_offset_y = static_cast<int>(src_offset / src_step);
+
+    src.locateROI(wholeSize, origin);
+
+    k.args(ocl::KernelArg::PtrReadOnly(src), (int)src_step, src_offset_x, src_offset_y,
+           wholeSize.height, wholeSize.width, ocl::KernelArg::WriteOnly(dst),
+           static_cast<float>(delta));
+
+    return k.run(2, gt2, lt2, false);
 }
 
 static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                       InputArray _kernelX, InputArray _kernelY, Point anchor,
                       double delta, int borderType )
 {
-    if (abs(delta)> FLT_MIN)
-        return false;
+    const ocl::Device & d = ocl::Device::getDefault();
+    Size imgSize = _src.size();
 
-    int type = _src.type();
-    if ( !( (type == CV_8UC1 || type == CV_8UC4 || type == CV_32FC1 || type == CV_32FC4) &&
-            (ddepth == CV_32F || ddepth == CV_16S || ddepth == CV_8U || ddepth < 0) ) )
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    if (cn > 4)
         return false;
-
-    int cn = CV_MAT_CN(type);
 
     Mat kernelX = _kernelX.getMat().reshape(1, 1);
-    if (1 != (kernelX.cols % 2))
+    if (kernelX.cols % 2 != 1)
         return false;
     Mat kernelY = _kernelY.getMat().reshape(1, 1);
-    if (1 != (kernelY.cols % 2))
+    if (kernelY.cols % 2 != 1)
         return false;
 
-    int sdepth = CV_MAT_DEPTH(type);
-    if( anchor.x < 0 )
-        anchor.x = kernelX.cols >> 1;
-    if( anchor.y < 0 )
-        anchor.y = kernelY.cols >> 1;
-
-    if( ddepth < 0 )
+    if (ddepth < 0)
         ddepth = sdepth;
+
+    CV_OCL_RUN_(kernelY.cols <= 21 && kernelX.cols <= 21 &&
+                imgSize.width > optimizedSepFilterLocalSize + (kernelX.cols >> 1) &&
+                imgSize.height > optimizedSepFilterLocalSize + (kernelY.cols >> 1) &&
+                (!(borderType & BORDER_ISOLATED) || _src.offset() == 0) && anchor == Point(-1, -1) &&
+                (d.isIntel() || (d.isAMD() && !d.hostUnifiedMemory())),
+                ocl_sepFilter2D_SinglePass(_src, _dst, kernelX, kernelY, delta,
+                                           borderType & ~BORDER_ISOLATED, ddepth), true)
+
+    if (anchor.x < 0)
+        anchor.x = kernelX.cols >> 1;
+    if (anchor.y < 0)
+        anchor.y = kernelY.cols >> 1;
 
     UMat src = _src.getUMat();
     Size srcWholeSize; Point srcOffset;
     src.locateROI(srcWholeSize, srcOffset);
-    if ( (0 != (srcOffset.x % 4))   ||
-         (0 != (src.cols % 4))      ||
-         (0 != ((src.step / src.elemSize()) % 4))
-       )
-        return false;
+
+    bool fast8uc1 = type == CV_8UC1 && srcOffset.x % 4 == 0 &&
+            src.cols % 4 == 0 && src.step % 4 == 0;
 
     Size srcSize = src.size();
     Size bufSize(srcSize.width, srcSize.height + kernelY.cols - 1);
-    UMat buf; buf.create(bufSize, CV_MAKETYPE(CV_32F, cn));
-    if (!ocl_sepRowFilter2D(src, buf, kernelX, anchor.x, borderType, false))
+    UMat buf(bufSize, CV_32FC(cn));
+    if (!ocl_sepRowFilter2D(src, buf, kernelX, anchor.x, borderType, ddepth, fast8uc1))
         return false;
 
     _dst.create(srcSize, CV_MAKETYPE(ddepth, cn));
     UMat dst = _dst.getUMat();
-    return ocl_sepColFilter2D(buf, dst, kernelY, anchor.y, false);
+
+    return ocl_sepColFilter2D(buf, dst, kernelY, delta, anchor.y);
 }
 
 #endif

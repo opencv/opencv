@@ -59,8 +59,8 @@ PARAM_TEST_CASE(ConvertTo, MatDepth, MatDepth, Channels, bool)
     int src_depth, cn, dstType;
     bool use_roi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -80,8 +80,8 @@ PARAM_TEST_CASE(ConvertTo, MatDepth, MatDepth, Channels, bool)
         Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, dstType, 5, 16);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 };
 
@@ -108,9 +108,9 @@ PARAM_TEST_CASE(CopyTo, MatDepth, Channels, bool, bool)
     int depth, cn;
     bool use_roi, use_mask;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_INPUT_PARAMETER(mask)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_INPUT_PARAMETER(mask);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -139,10 +139,10 @@ PARAM_TEST_CASE(CopyTo, MatDepth, Channels, bool, bool)
         Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, type, 5, 16);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
         if (use_mask)
-            UMAT_UPLOAD_INPUT_PARAMETER(mask)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+            UMAT_UPLOAD_INPUT_PARAMETER(mask);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 };
 
@@ -169,7 +169,7 @@ OCL_TEST_P(CopyTo, Accuracy)
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(MatrixOperation, ConvertTo, Combine(
-                            OCL_ALL_DEPTHS, OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+                                OCL_ALL_DEPTHS, OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(MatrixOperation, CopyTo, Combine(
                                 OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));

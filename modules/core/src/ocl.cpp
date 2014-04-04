@@ -1410,7 +1410,7 @@ bool useOpenCL()
 {
     CoreTLSData* data = coreTlsData.get();
     if( data->useOpenCL < 0 )
-        data->useOpenCL = (int)haveOpenCL();
+        data->useOpenCL = (int)haveOpenCL() && Device::getDefault().ptr() != NULL;
     return data->useOpenCL > 0;
 }
 
@@ -1419,7 +1419,7 @@ void setUseOpenCL(bool flag)
     if( haveOpenCL() )
     {
         CoreTLSData* data = coreTlsData.get();
-        data->useOpenCL = flag ? 1 : 0;
+        data->useOpenCL = (flag && Device::getDefault().ptr() != NULL) ? 1 : 0;
     }
 }
 
@@ -2179,7 +2179,6 @@ static cl_device_id selectOpenCLDevice()
             goto not_found;
         }
     }
-
     if (deviceTypes.size() == 0)
     {
         if (!isID)
@@ -2193,13 +2192,16 @@ static cl_device_id selectOpenCLDevice()
     for (size_t t = 0; t < deviceTypes.size(); t++)
     {
         int deviceType = 0;
-        if (deviceTypes[t] == "GPU")
+        std::string tempStrDeviceType = deviceTypes[t];
+        std::transform( tempStrDeviceType.begin(), tempStrDeviceType.end(), tempStrDeviceType.begin(), tolower );
+
+        if (tempStrDeviceType == "gpu" || tempStrDeviceType == "dgpu" || tempStrDeviceType == "igpu")
             deviceType = Device::TYPE_GPU;
-        else if (deviceTypes[t] == "CPU")
+        else if (tempStrDeviceType == "cpu")
             deviceType = Device::TYPE_CPU;
-        else if (deviceTypes[t] == "ACCELERATOR")
+        else if (tempStrDeviceType == "accelerator")
             deviceType = Device::TYPE_ACCELERATOR;
-        else if (deviceTypes[t] == "ALL")
+        else if (tempStrDeviceType == "all")
             deviceType = Device::TYPE_ALL;
         else
         {
@@ -2229,7 +2231,14 @@ static cl_device_id selectOpenCLDevice()
         {
             std::string name;
             CV_OclDbgAssert(getStringInfo(clGetDeviceInfo, devices[i], CL_DEVICE_NAME, name) == CL_SUCCESS);
-            if (isID || name.find(deviceName) != std::string::npos)
+            cl_bool useGPU = true;
+            if(tempStrDeviceType == "dgpu" || tempStrDeviceType == "igpu")
+            {
+                cl_bool isIGPU = CL_FALSE;
+                clGetDeviceInfo(devices[i], CL_DEVICE_HOST_UNIFIED_MEMORY, sizeof(isIGPU), &isIGPU, NULL);
+                useGPU = tempStrDeviceType == "dgpu" ? !isIGPU : isIGPU;
+            }
+            if ( (isID || name.find(deviceName) != std::string::npos) && useGPU)
             {
                 // TODO check for OpenCL 1.1
                 return devices[i];
@@ -2245,6 +2254,7 @@ not_found:
         std::cerr << deviceTypes[t] << " ";
 
     std::cerr << std::endl << "    Device name: " << (deviceName.length() == 0 ? "any" : deviceName) << std::endl;
+    CV_Error(CL_INVALID_DEVICE, "Requested OpenCL device is not found");
     return NULL;
 }
 
@@ -4306,7 +4316,7 @@ static std::string kerToStr(const Mat & k)
     return stream.str();
 }
 
-String kernelToStr(InputArray _kernel, int ddepth)
+String kernelToStr(InputArray _kernel, int ddepth, const char * name)
 {
     Mat kernel = _kernel.getMat().reshape(1, 1);
 
@@ -4317,13 +4327,13 @@ String kernelToStr(InputArray _kernel, int ddepth)
     if (ddepth != depth)
         kernel.convertTo(kernel, ddepth);
 
-    typedef std::string (*func_t)(const Mat &);
-    static const func_t funcs[] = { kerToStr<uchar>, kerToStr<char>, kerToStr<ushort>,kerToStr<short>,
+    typedef std::string (* func_t)(const Mat &);
+    static const func_t funcs[] = { kerToStr<uchar>, kerToStr<char>, kerToStr<ushort>, kerToStr<short>,
                                     kerToStr<int>, kerToStr<float>, kerToStr<double>, 0 };
     const func_t func = funcs[depth];
     CV_Assert(func != 0);
 
-    return cv::format(" -D COEFF=%s", func(kernel).c_str());
+    return cv::format(" -D %s=%s", name ? name : "COEFF", func(kernel).c_str());
 }
 
 #define PROCESS_SRC(src) \
@@ -4347,7 +4357,7 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
                               InputArray src4, InputArray src5, InputArray src6,
                               InputArray src7, InputArray src8, InputArray src9)
 {
-    int type = src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int type = src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(depth);
     Size ssize = src1.size();
     const ocl::Device & d = ocl::Device::getDefault();
 
@@ -4371,7 +4381,8 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
     PROCESS_SRC(src9);
 
     size_t size = offsets.size();
-    std::vector<int> dividers(size, width);
+    int wsz = width * esz;
+    std::vector<int> dividers(size, wsz);
 
     for (size_t i = 0; i < size; ++i)
         while (offsets[i] % dividers[i] != 0 || steps[i] % dividers[i] != 0 || cols[i] % dividers[i] != 0)
@@ -4379,7 +4390,7 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
 
     // default strategy
     for (size_t i = 0; i < size; ++i)
-        if (dividers[i] != width)
+        if (dividers[i] != wsz)
         {
             width = 1;
             break;

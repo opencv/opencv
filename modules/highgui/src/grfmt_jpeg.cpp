@@ -598,6 +598,8 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
         cinfo.in_color_space = channels > 1 ? JCS_RGB : JCS_GRAYSCALE;
 
         int quality = 95;
+        int progressive = 0;
+        int optimize = 0;
 
         for( size_t i = 0; i < params.size(); i += 2 )
         {
@@ -606,11 +608,25 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                 quality = params[i+1];
                 quality = MIN(MAX(quality, 0), 100);
             }
+
+            if( params[i] == CV_IMWRITE_JPEG_PROGRESSIVE )
+            {
+                progressive = params[i+1];
+            }
+
+            if( params[i] == CV_IMWRITE_JPEG_OPTIMIZE )
+            {
+                optimize = params[i+1];
+            }
         }
 
         jpeg_set_defaults( &cinfo );
         jpeg_set_quality( &cinfo, quality,
                           TRUE /* limit to baseline-JPEG values */ );
+        if( progressive )
+            jpeg_simple_progression( &cinfo );
+        if( optimize )
+            cinfo.optimize_coding = TRUE;
         jpeg_start_compress( &cinfo, TRUE );
 
         if( channels > 1 )

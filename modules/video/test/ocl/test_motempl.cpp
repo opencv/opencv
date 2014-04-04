@@ -18,8 +18,8 @@ PARAM_TEST_CASE(UpdateMotionHistory, bool)
     double timestamp, duration;
     bool use_roi;
 
-    TEST_DECLARE_INPUT_PARAMETER(silhouette)
-    TEST_DECLARE_OUTPUT_PARAMETER(mhi)
+    TEST_DECLARE_INPUT_PARAMETER(silhouette);
+    TEST_DECLARE_OUTPUT_PARAMETER(mhi);
 
     virtual void SetUp()
     {
@@ -40,8 +40,8 @@ PARAM_TEST_CASE(UpdateMotionHistory, bool)
         if (timestamp < duration)
             std::swap(timestamp, duration);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(silhouette)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(mhi)
+        UMAT_UPLOAD_INPUT_PARAMETER(silhouette);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(mhi);
     }
 };
 
@@ -54,7 +54,7 @@ OCL_TEST_P(UpdateMotionHistory, Mat)
         OCL_OFF(cv::updateMotionHistory(silhouette_roi, mhi_roi, timestamp, duration));
         OCL_ON(cv::updateMotionHistory(usilhouette_roi, umhi_roi, timestamp, duration));
 
-        OCL_EXPECT_MATS_NEAR(mhi, 0)
+        OCL_EXPECT_MATS_NEAR(mhi, 0);
     }
 }
 

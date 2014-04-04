@@ -58,29 +58,29 @@ IMPLEMENT_PARAM_CLASS(AppertureSize, int)
 IMPLEMENT_PARAM_CLASS(L2gradient, bool)
 IMPLEMENT_PARAM_CLASS(UseRoi, bool)
 
-PARAM_TEST_CASE(Canny, AppertureSize, L2gradient, UseRoi)
+PARAM_TEST_CASE(Canny, Channels, AppertureSize, L2gradient, UseRoi)
 {
-    int apperture_size;
+    int cn, apperture_size;
     bool useL2gradient, use_roi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
-        apperture_size = GET_PARAM(0);
-        useL2gradient = GET_PARAM(1);
-        use_roi = GET_PARAM(2);
+        cn = GET_PARAM(0);
+        apperture_size = GET_PARAM(1);
+        useL2gradient = GET_PARAM(2);
+        use_roi = GET_PARAM(3);
     }
 
     void generateTestData()
     {
-        Mat img = readImage("shared/fruits.png", IMREAD_GRAYSCALE);
+        Mat img = readImageType("shared/fruits.png", CV_8UC(cn));
         ASSERT_FALSE(img.empty()) << "cann't load shared/fruits.png";
 
         Size roiSize = img.size();
         int type = img.type();
-        ASSERT_EQ(CV_8UC1, type);
 
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(src, src_roi, roiSize, srcBorder, type, 2, 100);
@@ -89,8 +89,8 @@ PARAM_TEST_CASE(Canny, AppertureSize, L2gradient, UseRoi)
         Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, type, 5, 16);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 };
 
@@ -108,6 +108,7 @@ OCL_TEST_P(Canny, Accuracy)
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgProc, Canny, testing::Combine(
+                                testing::Values(1, 3),
                                 testing::Values(AppertureSize(3), AppertureSize(5)),
                                 testing::Values(L2gradient(false), L2gradient(true)),
                                 testing::Values(UseRoi(false), UseRoi(true))));

@@ -39,10 +39,18 @@
 //
 //M*/
 
-#define sizeoftype ((int)sizeof(type))
+#if cn != 3
+#define loadpix(addr) *(__global const T *)(addr)
+#define storepix(val, addr)  *(__global T *)(addr) = val
+#define TSIZE (int)sizeof(T)
+#else
+#define loadpix(addr) vload3(0, (__global const T1 *)(addr))
+#define storepix(val, addr) vstore3(val, 0, (__global T1 *)(addr))
+#define TSIZE ((int)sizeof(T1)*3)
+#endif
 
-__kernel void arithm_flip_rows(__global const uchar* srcptr, int srcstep, int srcoffset,
-                               __global uchar* dstptr, int dststep, int dstoffset,
+__kernel void arithm_flip_rows(__global const uchar * srcptr, int src_step, int src_offset,
+                               __global uchar * dstptr, int dst_step, int dst_offset,
                                int rows, int cols, int thread_rows, int thread_cols)
 {
     int x = get_global_id(0);
@@ -50,19 +58,16 @@ __kernel void arithm_flip_rows(__global const uchar* srcptr, int srcstep, int sr
 
     if (x < cols && y < thread_rows)
     {
-        __global const type* src0 = (__global const type*)(srcptr + mad24(y, srcstep, mad24(x, sizeoftype, srcoffset)));
-        __global const type* src1 = (__global const type*)(srcptr + mad24(rows - y - 1, srcstep, mad24(x, sizeoftype, srcoffset)));
+        T src0 = loadpix(srcptr + mad24(y, src_step, mad24(x, TSIZE, src_offset)));
+        T src1 = loadpix(srcptr + mad24(rows - y - 1, src_step, mad24(x, TSIZE, src_offset)));
 
-        __global type* dst0 = (__global type*)(dstptr + mad24(y, dststep, mad24(x, sizeoftype, dstoffset)));
-        __global type* dst1 = (__global type*)(dstptr + mad24(rows - y - 1, dststep, mad24(x, sizeoftype, dstoffset)));
-
-        dst0[0] = src1[0];
-        dst1[0] = src0[0];
+        storepix(src1, dstptr + mad24(y, dst_step, mad24(x, TSIZE, dst_offset)));
+        storepix(src0, dstptr + mad24(rows - y - 1, dst_step, mad24(x, TSIZE, dst_offset)));
     }
 }
 
-__kernel void arithm_flip_rows_cols(__global const uchar* srcptr, int srcstep, int srcoffset,
-                                    __global uchar* dstptr, int dststep, int dstoffset,
+__kernel void arithm_flip_rows_cols(__global const uchar * srcptr, int src_step, int src_offset,
+                                    __global uchar * dstptr, int dst_step, int dst_offset,
                                     int rows, int cols, int thread_rows, int thread_cols)
 {
     int x = get_global_id(0);
@@ -71,19 +76,16 @@ __kernel void arithm_flip_rows_cols(__global const uchar* srcptr, int srcstep, i
     if (x < cols && y < thread_rows)
     {
         int x1 = cols - x - 1;
-        __global const type* src0 = (__global const type*)(srcptr + mad24(y, srcstep, mad24(x, sizeoftype, srcoffset)));
-        __global const type* src1 = (__global const type*)(srcptr + mad24(rows - y - 1, srcstep, mad24(x1, sizeoftype, srcoffset)));
+        T src0 = loadpix(srcptr + mad24(y, src_step, mad24(x, TSIZE, src_offset)));
+        T src1 = loadpix(srcptr + mad24(rows - y - 1, src_step, mad24(x1, TSIZE, src_offset)));
 
-        __global type* dst0 = (__global type*)(dstptr + mad24(rows - y - 1, dststep, mad24(x1, sizeoftype, dstoffset)));
-        __global type* dst1 = (__global type*)(dstptr + mad24(y, dststep, mad24(x, sizeoftype, dstoffset)));
-
-        dst0[0] = src0[0];
-        dst1[0] = src1[0];
+        storepix(src0, dstptr + mad24(rows - y - 1, dst_step, mad24(x1, TSIZE, dst_offset)));
+        storepix(src1, dstptr + mad24(y, dst_step, mad24(x, TSIZE, dst_offset)));
     }
 }
 
-__kernel void arithm_flip_cols(__global const uchar* srcptr, int srcstep, int srcoffset,
-                               __global uchar* dstptr, int dststep, int dstoffset,
+__kernel void arithm_flip_cols(__global const uchar * srcptr, int src_step, int src_offset,
+                               __global uchar * dstptr, int dst_step, int dst_offset,
                                int rows, int cols, int thread_rows, int thread_cols)
 {
     int x = get_global_id(0);
@@ -92,13 +94,10 @@ __kernel void arithm_flip_cols(__global const uchar* srcptr, int srcstep, int sr
     if (x < thread_cols && y < rows)
     {
         int x1 = cols - x - 1;
-        __global const type* src0 = (__global const type*)(srcptr + mad24(y, srcstep, mad24(x, sizeoftype, srcoffset)));
-        __global const type* src1 = (__global const type*)(srcptr + mad24(y, srcstep, mad24(x1, sizeoftype, srcoffset)));
+        T src0 = loadpix(srcptr + mad24(y, src_step, mad24(x, TSIZE, src_offset)));
+        T src1 = loadpix(srcptr + mad24(y, src_step, mad24(x1, TSIZE, src_offset)));
 
-        __global type* dst0 = (__global type*)(dstptr + mad24(y, dststep, mad24(x1, sizeoftype, dstoffset)));
-        __global type* dst1 = (__global type*)(dstptr + mad24(y, dststep, mad24(x, sizeoftype, dstoffset)));
-
-        dst1[0] = src1[0];
-        dst0[0] = src0[0];
+        storepix(src0, dstptr + mad24(y, dst_step, mad24(x1, TSIZE, dst_offset)));
+        storepix(src1, dstptr + mad24(y, dst_step, mad24(x, TSIZE, dst_offset)));
     }
 }
