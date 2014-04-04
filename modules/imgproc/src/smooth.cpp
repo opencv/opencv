@@ -1948,12 +1948,45 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
         return;
     }
 
-    CV_OCL_RUN(_src0.dims() <= 2 && _dst.isUMat(),
+    CV_OCL_RUN(_dst.isUMat(),
                ocl_medianFilter(_src0,_dst, ksize))
 
     Mat src0 = _src0.getMat();
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
+
+#ifdef HAVE_IPP
+#define IPP_FILTER_MEDIAN_BORDER(ippType, ippDataType, flavor) \
+    do \
+    { \
+        if (ippiFilterMedianBorderGetBufferSize(dstRoiSize, maskSize, \
+            ippDataType, CV_MAT_CN(type), &bufSize) >= 0) \
+        { \
+            Ipp8u * buffer = (Ipp8u *)ippMalloc(bufSize); \
+            IppStatus status = ippiFilterMedianBorder_##flavor((const ippType *)src0.data, (int)src0.step, \
+                (ippType *)dst.data, (int)dst.step, dstRoiSize, maskSize, \
+                ippBorderRepl, (ippType)0, buffer); \
+            ippiFree(buffer); \
+            if (status >= 0) \
+                return; \
+        } \
+    } \
+    while ((void)0, 0)
+
+    Ipp32s bufSize;
+    IppiSize dstRoiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize, ksize);
+
+    int type = src0.type();
+    if (type == CV_8UC1)
+        IPP_FILTER_MEDIAN_BORDER(Ipp8u, ipp8u, 8u_C1R);
+    else if (type == CV_16UC1)
+        IPP_FILTER_MEDIAN_BORDER(Ipp16u, ipp16u, 16u_C1R);
+    else if (type == CV_16SC1)
+        IPP_FILTER_MEDIAN_BORDER(Ipp16s, ipp16s, 16s_C1R);
+    else if (type == CV_32FC1)
+        IPP_FILTER_MEDIAN_BORDER(Ipp32f, ipp32f, 32f_C1R);
+#undef IPP_FILTER_MEDIAN_BORDER
+#endif
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::medianBlur(src0, dst, ksize))
