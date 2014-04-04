@@ -2205,6 +2205,18 @@ void pow( InputArray _src, double power, OutputArray _dst )
     }
     else
     {
+#ifdef HAVE_IPP
+        if (src.isContinuous() && dst.isContinuous())
+        {
+            IppStatus status = depth == CV_32F ?
+                        ippsPowx_32f_A21((const Ipp32f *)src.data, (Ipp32f)power, (Ipp32f*)dst.data, (Ipp32s)(src.total() * cn)) :
+                        ippsPowx_64f_A50((const Ipp64f *)src.data, power, (Ipp64f*)dst.data, (Ipp32s)(src.total() * cn));
+
+            if (status == ippStsNoErr)
+                return;
+        }
+#endif
+
         int j, k, blockSize = std::min(len, ((BLOCK_SIZE + cn-1)/cn)*cn);
         size_t esz1 = src.elemSize1();
 
