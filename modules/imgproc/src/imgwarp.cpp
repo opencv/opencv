@@ -4013,8 +4013,9 @@ private:
     double *M;
 };
 
-/*
-#if defined (HAVE_IPP) && IPP_VERSION_MAJOR >= 8 IPP_VERSION_MINOR >= 1
+
+    /*
+#if defined (HAVE_IPP) && IPP_VERSION_MAJOR >= 8 && IPP_VERSION_MINOR >= 1
 class IPPWarpAffineInvoker :
     public ParallelLoopBody
 {
@@ -4215,7 +4216,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     const int AB_SCALE = 1 << AB_BITS;
 
     /*
-#if defined (HAVE_IPP) && IPP_VERSION_MAJOR >= 8 IPP_VERSION_MINOR >= 1
+#if defined (HAVE_IPP) && IPP_VERSION_MAJOR >= 8 && IPP_VERSION_MINOR >= 1
     int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if( ( depth == CV_8U || depth == CV_16U || depth == CV_32F ) &&
        ( cn == 1 || cn == 3 || cn == 4 ) &&
@@ -4380,7 +4381,7 @@ private:
     Scalar borderValue;
 };
 
-/*
+    /*
 #if defined (HAVE_IPP) && IPP_VERSION_MAJOR >= 8 && IPP_VERSION_MINOR >= 1
 class IPPWarpPerspectiveInvoker :
    public ParallelLoopBody
