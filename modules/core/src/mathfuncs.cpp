@@ -240,7 +240,7 @@ static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
 {
 #ifdef HAVE_IPP
     IppStatus status = ippsMagnitude_32f(x, y, mag, len);
-    if (status == ippStsNoErr)
+    if (status >= 0)
         return;
 #endif
 
@@ -272,7 +272,7 @@ static void Magnitude_64f(const double* x, const double* y, double* mag, int len
 {
 #ifdef HAVE_IPP
     IppStatus status = ippsMagnitude_64f(x, y, mag, len);
-    if (status == ippStsNoErr)
+    if (status >= 0)
         return;
 #endif
 
@@ -303,6 +303,11 @@ static void Magnitude_64f(const double* x, const double* y, double* mag, int len
 
 static void InvSqrt_32f(const float* src, float* dst, int len)
 {
+#ifdef HAVE_IPP
+    if (ippsInvSqrt_32f_A21(src, dst, len) >= 0)
+        return;
+#endif
+
     int i = 0;
 
 #if CV_SSE
@@ -346,6 +351,10 @@ static void InvSqrt_64f(const double* src, double* dst, int len)
 
 static void Sqrt_32f(const float* src, float* dst, int len)
 {
+#ifdef HAVE_IPP
+    if (ippsSqrt_32f_A21(src, dst, len) >= 0)
+        return;
+#endif
     int i = 0;
 
 #if CV_SSE
@@ -375,6 +384,11 @@ static void Sqrt_32f(const float* src, float* dst, int len)
 
 static void Sqrt_64f(const double* src, double* dst, int len)
 {
+#ifdef HAVE_IPP
+    if (ippsSqrt_64f_A50(src, dst, len) >= 0)
+        return;
+#endif
+
     int i = 0;
 
 #if CV_SSE2
@@ -2147,6 +2161,29 @@ void pow( InputArray _src, double power, OutputArray _dst )
             _src.copyTo(_dst);
             return;
         case 2:
+#ifdef HAVE_IPP
+            if (depth == CV_32F && !same && ( (_src.dims() <= 2 && !ocl::useOpenCL()) || (_src.dims() > 2 && _src.isContinuous() && _dst.isContinuous()) ))
+            {
+                Mat src = _src.getMat();
+                _dst.create( src.dims, src.size, type );
+                Mat dst = _dst.getMat();
+
+                Size size = src.size();
+                int srcstep = (int)src.step, dststep = (int)dst.step, esz = CV_ELEM_SIZE(type);
+                if (src.isContinuous() && dst.isContinuous())
+                {
+                    size.width = (int)src.total();
+                    size.height = 1;
+                    srcstep = dststep = (int)src.total() * esz;
+                }
+                size.width *= cn;
+
+                IppStatus status = ippiSqr_32f_C1R((const Ipp32f *)src.data, srcstep, (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
+
+                if (status >= 0)
+                    return;
+            }
+#endif
             if (same)
                 multiply(_dst, _dst, _dst);
             else
@@ -2187,27 +2224,6 @@ void pow( InputArray _src, double power, OutputArray _dst )
     }
     else if( fabs(fabs(power) - 0.5) < DBL_EPSILON )
     {
-#ifdef HAVE_IPP
-        if (power > 0 && (src.dims <= 2 || (src.isContinuous() && dst.isContinuous()))) // power is 0.5
-        {
-            Size size = src.size();
-            int srcstep = (int)src.step, dststep = (int)dst.step, esz = src.elemSize();
-            if (src.isContinuous() && dst.isContinuous())
-            {
-                srcstep = dststep = (int)src.total() * esz;
-                size.width = (int)src.total();
-                size.height = 1;
-            }
-            size.width *= cn;
-
-            IppStatus status = ippiSqrt_32f_C1R((const Ipp32f *)src.data, srcstep, (Ipp32f *)dst.data, dststep,
-                                                ippiSize(size.width, size.height));
-
-            if (status == ippStsNoErr)
-                return;
-        }
-#endif
-
         MathFunc func = power < 0 ?
             (depth == CV_32F ? (MathFunc)InvSqrt_32f : (MathFunc)InvSqrt_64f) :
             (depth == CV_32F ? (MathFunc)Sqrt_32f : (MathFunc)Sqrt_64f);
