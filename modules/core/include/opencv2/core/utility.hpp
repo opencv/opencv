@@ -274,6 +274,11 @@ public:
 
 CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes=-1.);
 
+/*!
+  Allows to use lambda functions as a parallel body invoker for in-place parallelization
+ */
+CV_EXPORTS void parallel_for_(const Range& range, std::function<void(const Range&)> body, double nstripes = -1.);
+
 /////////////////////////// Synchronization Primitives ///////////////////////////////
 
 class CV_EXPORTS Mutex

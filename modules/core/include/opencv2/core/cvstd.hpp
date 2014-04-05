@@ -53,6 +53,7 @@
 #include <cstddef>
 #include <cstring>
 #include <cctype>
+#include <functional>
 
 #ifndef OPENCV_NOSTL
 #  include <string>

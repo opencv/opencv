@@ -296,6 +296,31 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
     }
 }
 
+// Helper implementation of parallel loop body for lambda functions
+struct ParallelLoopBodyLambdaInvoker : public cv::ParallelLoopBody
+{
+    ParallelLoopBodyLambdaInvoker(std::function<void(const cv::Range&)> body_)
+        : _body(body_)
+    {
+    }
+
+    virtual ~ParallelLoopBodyLambdaInvoker()
+    {
+    }
+
+    void operator() (const cv::Range& range) const
+    {
+        _body(range);
+    }
+
+    std::function<void(const cv::Range&)> _body;
+};
+
+void cv::parallel_for_(const cv::Range& range, std::function<void(const cv::Range&)> body, double nstripes)
+{
+    cv::parallel_for_(range, ParallelLoopBodyLambdaInvoker(body), nstripes);
+}
+
 int cv::getNumThreads(void)
 {
 #ifdef CV_PARALLEL_FRAMEWORK
