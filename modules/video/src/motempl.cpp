@@ -80,12 +80,26 @@ void cv::updateMotionHistory( InputArray _silhouette, InputOutputArray _mhi,
 
     Mat silh = _silhouette.getMat(), mhi = _mhi.getMat();
     Size size = silh.size();
+#ifdef HAVE_IPP
+    int silhstep = (int)silh.step, mhistep = (int)mhi.step;
+#endif
 
     if( silh.isContinuous() && mhi.isContinuous() )
     {
         size.width *= size.height;
         size.height = 1;
+#ifdef HAVE_IPP
+        silhstep = (int)silh.total();
+        mhistep = (int)mhi.total() * sizeof(Ipp32f);
+#endif
     }
+
+#ifdef HAVE_IPP
+    IppStatus status = ippiUpdateMotionHistory_8u32f_C1IR((const Ipp8u *)silh.data, silhstep, (Ipp32f *)mhi.data, mhistep,
+                                                          ippiSize(size.width, size.height), (Ipp32f)timestamp, (Ipp32f)duration);
+    if (status >= 0)
+        return;
+#endif
 
 #if CV_SSE2
     volatile bool useSIMD = cv::checkHardwareSupport(CV_CPU_SSE2);
