@@ -887,7 +887,73 @@ protected:
     PixelTestFn test_fn_;
 };
 
+/*!
+KAZE implementation
+*/
+class CV_EXPORTS_W KAZE : public Feature2D
+{
+public:
+    CV_WRAP explicit KAZE(bool _extended = false);
 
+    virtual ~KAZE();
+
+    // returns the descriptor size in bytes
+    int descriptorSize() const;
+    // returns the descriptor type
+    int descriptorType() const;
+    // returns the default norm type
+    int defaultNorm() const;
+
+    AlgorithmInfo* info() const;
+
+    void operator()(InputArray image, InputArray mask,
+        std::vector<KeyPoint>& keypoints,
+        OutputArray descriptors,
+        bool useProvidedKeypoints) const;
+
+protected:
+    void detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const;
+    void computeImpl(InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const;
+
+    CV_PROP bool extended;
+};
+
+/*!
+AKAZE implementation
+*/
+class CV_EXPORTS_W AKAZE : public Feature2D
+{
+public:
+    CV_WRAP explicit AKAZE(int _descriptor = 5, int _descriptor_size = 0, int _descriptor_channels = 3);
+
+    virtual ~AKAZE();
+
+    // returns the descriptor size in bytes
+    int descriptorSize() const;
+    // returns the descriptor type
+    int descriptorType() const;
+    // returns the default norm type
+    int defaultNorm() const;
+
+    // Compute the AKAZE features on an image
+    void operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const;
+
+    // Compute the BRISK features and descriptors on an image
+    void operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
+        OutputArray descriptors, bool useProvidedKeypoints = false) const;
+
+    AlgorithmInfo* info() const;
+
+protected:
+
+    void computeImpl(InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const;
+    void detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask = noArray()) const;
+
+    CV_PROP int descriptor_channels;
+    CV_PROP int descriptor;
+    CV_PROP int descriptor_size;
+
+};
 /****************************************************************************************\
 *                                      Distance                                          *
 \****************************************************************************************/

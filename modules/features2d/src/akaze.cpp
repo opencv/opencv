@@ -1,38 +1,73 @@
 #include "precomp.hpp"
-#include "kaze/KAZE.h"
+#include "akaze/AKAZE.h"
 
 namespace cv
 {
-    KAZE::KAZE(bool _extended /* = false */)
-        : extended(_extended)
+
+    AKAZE::AKAZE(int _descriptor, int _descriptor_size, int _descriptor_channels)
+        : descriptor_channels(_descriptor_channels)
+        , descriptor(_descriptor)
+        , descriptor_size(_descriptor_size)
     {
+
     }
 
-    KAZE::~KAZE()
+    AKAZE::~AKAZE()
     {
 
     }
 
     // returns the descriptor size in bytes
-    int KAZE::descriptorSize() const
+    int AKAZE::descriptorSize() const
     {
-        return extended ? 128 : 64;
+        if (descriptor < MLDB_UPRIGHT)
+        {
+            return 64;
+        }
+        else
+        {
+            // We use the full length binary descriptor -> 486 bits
+            if (descriptor_size == 0)
+            {
+                int t = (6 + 36 + 120) * descriptor_channels;
+                return ceil(t / 8.);
+            }
+            else
+            {
+                // We use the random bit selection length binary descriptor
+                return ceil(descriptor_size / 8.);
+            }
+        }
     }
 
     // returns the descriptor type
-    int KAZE::descriptorType() const
+    int AKAZE::descriptorType() const
     {
-        return CV_32F;
+        if (descriptor < MLDB_UPRIGHT)
+        {
+            return CV_32FC1;
+        }
+        else
+        {
+            return CV_8UC1;
+        }
     }
 
     // returns the default norm type
-    int KAZE::defaultNorm() const
+    int AKAZE::defaultNorm() const
     {
-        return NORM_L2;
+        if (descriptor < MLDB_UPRIGHT)
+        {
+            return NORM_L2;
+        }
+        else
+        {
+            return NORM_HAMMING;
+        }
     }
 
 
-    void KAZE::operator()(InputArray image, InputArray mask,
+    void AKAZE::operator()(InputArray image, InputArray mask,
         std::vector<KeyPoint>& keypoints,
         OutputArray descriptors,
         bool useProvidedKeypoints) const
@@ -46,12 +81,11 @@ namespace cv
 
         cv::Mat& desc = descriptors.getMatRef();
 
-        KAZEOptions options;
+        AKAZEOptions options;
         options.img_width = img.cols;
         options.img_height = img.rows;
-        options.extended = extended;
 
-        KAZEFeatures impl(options);
+        AKAZEFeatures impl(options);
         impl.Create_Nonlinear_Scale_Space(img1_32);
 
         if (!useProvidedKeypoints)
@@ -64,27 +98,23 @@ namespace cv
             cv::KeyPointsFilter::runByPixelsMask(keypoints, mask.getMat());
         }
 
-        impl.Feature_Description(keypoints, desc);
-
-        CV_Assert(!desc.rows || desc.cols == descriptorSize() && "Descriptor size does not match expected");
-        CV_Assert(!desc.rows || (desc.type() & descriptorType()) && "Descriptor type does not match expected");
+        impl.Compute_Descriptors(keypoints, desc);
     }
 
-    void KAZE::detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
+    void AKAZE::detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
     {
-        Mat img = image.getMat();
+        cv::Mat img = image.getMat();
         if (img.type() != CV_8UC1)
             cvtColor(image, img, COLOR_BGR2GRAY);
 
         Mat img1_32;
         img.convertTo(img1_32, CV_32F, 1.0 / 255.0, 0);
 
-        KAZEOptions options;
+        AKAZEOptions options;
         options.img_width = img.cols;
         options.img_height = img.rows;
-        options.extended = extended;
 
-        KAZEFeatures impl(options);
+        AKAZEFeatures impl(options);
         impl.Create_Nonlinear_Scale_Space(img1_32);
         impl.Feature_Detection(keypoints);
 
@@ -94,7 +124,7 @@ namespace cv
         }
     }
 
-    void KAZE::computeImpl(InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
+    void AKAZE::computeImpl(InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
     {
         cv::Mat img = image.getMat();
         if (img.type() != CV_8UC1)
@@ -105,14 +135,13 @@ namespace cv
 
         cv::Mat& desc = descriptors.getMatRef();
 
-        KAZEOptions options;
+        AKAZEOptions options;
         options.img_width = img.cols;
         options.img_height = img.rows;
-        options.extended = extended;
 
-        KAZEFeatures impl(options);
+        AKAZEFeatures impl(options);
         impl.Create_Nonlinear_Scale_Space(img1_32);
-        impl.Feature_Description(keypoints, desc);
+        impl.Compute_Descriptors(keypoints, desc);
 
         CV_Assert(!desc.rows || desc.cols == descriptorSize() && "Descriptor size does not match expected");
         CV_Assert(!desc.rows || (desc.type() & descriptorType()) && "Descriptor type does not match expected");
