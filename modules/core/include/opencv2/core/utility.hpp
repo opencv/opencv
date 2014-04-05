@@ -50,6 +50,12 @@
 
 #include "opencv2/core.hpp"
 
+#if __cplusplus >= 201103L || (defined _MSC_VER && _MSC_VER >= 1700)
+#include <functional>
+#else
+#include <tr1/functional>
+#endif
+
 namespace cv
 {
 
@@ -274,10 +280,16 @@ public:
 
 CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes=-1.);
 
+#if __cplusplus >= 201103L || (defined _MSC_VER && _MSC_VER >= 1700)
+typedef std::function< void(const Range&) > ParallelFunctionBody;
+#else
+typedef std::tr1::function< void(const Range&) > ParallelFunctionBody;
+#endif
+
 /*!
-  Allows to use lambda functions as a parallel body invoker for in-place parallelization
- */
-CV_EXPORTS void parallel_for_(const Range& range, std::function<void(const Range&)> body, double nstripes = -1.);
+Allows to use lambda functions as a parallel body invoker for in-place parallelization
+*/
+CV_EXPORTS void parallel_for_(const Range& range, ParallelFunctionBody body, double nstripes = -1.);
 
 /////////////////////////// Synchronization Primitives ///////////////////////////////
 
