@@ -1,0 +1,15 @@
+language: cpp
+
+compiler:
+  - clang
+  - gcc
+
+script:
+  - mkdir build
+  - cd build
+  - cmake -DCMAKE_BUILD_TYPE=RELEASE -DBUILD_EXAMPLES=ON -DBUILD_opencv_java=OFF -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTS=ON -DBUILD_PERF_TESTS=ON ..
+  - make
+  - make test
+
+env:
+  - OMP_NUM_THREADS=4
