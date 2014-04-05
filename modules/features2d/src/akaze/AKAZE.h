@@ -15,7 +15,6 @@
 // Includes
 #include "config.h"
 #include "fed.h"
-#include "utils.h"
 #include "nldiffusion_functions.h"
 
 //*************************************************************************************
