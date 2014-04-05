@@ -6,8 +6,8 @@
  * @author Pablo F. Alcantarilla
  */
 
-#ifndef _CONFIG_H_
-#define _CONFIG_H_
+#ifndef __OPENCV_FEATURES_2D_KAZE_CONFIG_HPP__
+#define __OPENCV_FEATURES_2D_KAZE_CONFIG_HPP__
 
 //******************************************************************************
 //******************************************************************************
@@ -38,30 +38,30 @@
 #define NMAX_CHAR 400
 
 // Some default options
-const float DEFAULT_SCALE_OFFSET = 1.60; // Base scale offset (sigma units)
-const float DEFAULT_OCTAVE_MAX = 4.0; // Maximum octave evolution of the image 2^sigma (coarsest scale sigma units)
-const int DEFAULT_NSUBLEVELS = 4; // Default number of sublevels per scale level
-const float DEFAULT_DETECTOR_THRESHOLD = 0.001; // Detector response threshold to accept point
-const float DEFAULT_MIN_DETECTOR_THRESHOLD = 0.00001;     // Minimum Detector response threshold to accept point
-const int DEFAULT_DESCRIPTOR_MODE = 1; // Descriptor Mode 0->SURF, 1->M-SURF
-const bool DEFAULT_USE_FED = true;  // 0->AOS, 1->FED
-const bool DEFAULT_UPRIGHT = false;  // Upright descriptors, not invariant to rotation
-const bool DEFAULT_EXTENDED = false; // Extended descriptor, dimension 128
-const bool DEFAULT_SAVE_SCALE_SPACE = false; // For saving the scale space images
-const bool DEFAULT_VERBOSITY = false; // Verbosity level (0->no verbosity)
-const bool DEFAULT_SHOW_RESULTS = true; // For showing the output image with the detected features plus some ratios
-const bool DEFAULT_SAVE_KEYPOINTS = false; // For saving the list of keypoints
+static const float DEFAULT_SCALE_OFFSET = 1.60; // Base scale offset (sigma units)
+static const float DEFAULT_OCTAVE_MAX = 4.0; // Maximum octave evolution of the image 2^sigma (coarsest scale sigma units)
+static const int DEFAULT_NSUBLEVELS = 4; // Default number of sublevels per scale level
+static const float DEFAULT_DETECTOR_THRESHOLD = 0.001; // Detector response threshold to accept point
+static const float DEFAULT_MIN_DETECTOR_THRESHOLD = 0.00001;     // Minimum Detector response threshold to accept point
+static const int DEFAULT_DESCRIPTOR_MODE = 1; // Descriptor Mode 0->SURF, 1->M-SURF
+static const bool DEFAULT_USE_FED = true;  // 0->AOS, 1->FED
+static const bool DEFAULT_UPRIGHT = false;  // Upright descriptors, not invariant to rotation
+static const bool DEFAULT_EXTENDED = false; // Extended descriptor, dimension 128
+static const bool DEFAULT_SAVE_SCALE_SPACE = false; // For saving the scale space images
+static const bool DEFAULT_VERBOSITY = false; // Verbosity level (0->no verbosity)
+static const bool DEFAULT_SHOW_RESULTS = true; // For showing the output image with the detected features plus some ratios
+static const bool DEFAULT_SAVE_KEYPOINTS = false; // For saving the list of keypoints
 
 // Some important configuration variables
-const float DEFAULT_SIGMA_SMOOTHING_DERIVATIVES = 1.0;
-const float DEFAULT_KCONTRAST = .01;
-const float KCONTRAST_PERCENTILE = 0.7;
-const int KCONTRAST_NBINS = 300;
-const bool COMPUTE_KCONTRAST = true;
-const int DEFAULT_DIFFUSIVITY_TYPE = 1;  // 0 -> PM G1, 1 -> PM G2, 2 -> Weickert
-const bool USE_CLIPPING_NORMALIZATION = false;
-const float CLIPPING_NORMALIZATION_RATIO = 1.6;
-const int CLIPPING_NORMALIZATION_NITER = 5;
+static const float DEFAULT_SIGMA_SMOOTHING_DERIVATIVES = 1.0;
+static const float DEFAULT_KCONTRAST = .01;
+static const float KCONTRAST_PERCENTILE = 0.7;
+static const int KCONTRAST_NBINS = 300;
+static const bool COMPUTE_KCONTRAST = true;
+static const int DEFAULT_DIFFUSIVITY_TYPE = 1;  // 0 -> PM G1, 1 -> PM G2, 2 -> Weickert
+static const bool USE_CLIPPING_NORMALIZATION = false;
+static const float CLIPPING_NORMALIZATION_RATIO = 1.6;
+static const int CLIPPING_NORMALIZATION_NITER = 5;
 
 //*************************************************************************************
 //*************************************************************************************

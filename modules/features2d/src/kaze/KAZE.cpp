@@ -35,7 +35,7 @@ using namespace cv;
  * @param options KAZE configuration options
  * @note The constructor allocates memory for the nonlinear scale space
 */
-KAZE::KAZE(KAZEOptions& options) {
+KAZEFeatures::KAZEFeatures(KAZEOptions& options) {
 
   soffset_ = options.soffset;
   sderivatives_ = options.sderivatives;
@@ -71,7 +71,7 @@ KAZE::KAZE(KAZEOptions& options) {
 /**
  * @brief KAZE destructor
 */
-KAZE::~KAZE(void) {
+KAZEFeatures::~KAZEFeatures(void) {
 
   evolution_.clear();
 }
@@ -82,7 +82,7 @@ KAZE::~KAZE(void) {
 /**
  * @brief This method allocates the memory for the nonlinear diffusion evolution
 */
-void KAZE::Allocate_Memory_Evolution(void) {
+void KAZEFeatures::Allocate_Memory_Evolution(void) {
 
   // Allocate the dimension of the matrices for the evolution
   for (int i = 0; i <= omax_-1; i++) {
@@ -145,7 +145,7 @@ void KAZE::Allocate_Memory_Evolution(void) {
  * @param img Input image for which the nonlinear scale space needs to be created
  * @return 0 if the nonlinear scale space was created successfully. -1 otherwise
 */
-int KAZE::Create_Nonlinear_Scale_Space(const cv::Mat &img) {
+int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img) {
 
   double t2 = 0.0, t1 = 0.0;
 
@@ -226,7 +226,7 @@ int KAZE::Create_Nonlinear_Scale_Space(const cv::Mat &img) {
  * @param img Input image
  * @param kpercentile Percentile of the gradient histogram
 */
-void KAZE::Compute_KContrast(const cv::Mat &img, const float &kpercentile) {
+void KAZEFeatures::Compute_KContrast(const cv::Mat &img, const float &kpercentile) {
 
   if (verbosity_ == true) {
     cout << "Computing Kcontrast factor." << endl;
@@ -248,7 +248,7 @@ void KAZE::Compute_KContrast(const cv::Mat &img, const float &kpercentile) {
 /**
  * @brief This method computes the multiscale derivatives for the nonlinear scale space
 */
-void KAZE::Compute_Multiscale_Derivatives(void)
+void KAZEFeatures::Compute_Multiscale_Derivatives(void)
 {
   double t2 = 0.0, t1 = 0.0;
   t1 = getTickCount();
@@ -288,7 +288,7 @@ void KAZE::Compute_Multiscale_Derivatives(void)
  * @brief This method computes the feature detector response for the nonlinear scale space
  * @note We use the Hessian determinant as feature detector
 */
-void KAZE::Compute_Detector_Response(void) {
+void KAZEFeatures::Compute_Detector_Response(void) {
 
   double t2 = 0.0, t1 = 0.0;
   float lxx = 0.0, lxy = 0.0, lyy = 0.0;
@@ -326,7 +326,7 @@ void KAZE::Compute_Detector_Response(void) {
  * @brief This method selects interesting keypoints through the nonlinear scale space
  * @param kpts Vector of keypoints
 */
-void KAZE::Feature_Detection(std::vector<cv::KeyPoint>& kpts) {
+void KAZEFeatures::Feature_Detection(std::vector<cv::KeyPoint>& kpts) {
 
   double t2 = 0.0, t1 = 0.0;
   t1 = getTickCount();
@@ -353,7 +353,7 @@ void KAZE::Feature_Detection(std::vector<cv::KeyPoint>& kpts) {
  * @param kpts Vector of keypoints
  * @note We compute features for each of the nonlinear scale space level in a different processing thread
 */
-void KAZE::Determinant_Hessian_Parallel(std::vector<cv::KeyPoint>& kpts) {
+void KAZEFeatures::Determinant_Hessian_Parallel(std::vector<cv::KeyPoint>& kpts) {
 
   int level = 0;
   float dist = 0.0, smax = 3.0;
@@ -444,7 +444,7 @@ void KAZE::Determinant_Hessian_Parallel(std::vector<cv::KeyPoint>& kpts) {
  * at a given nonlinear scale level
  * @param level Index in the nonlinear scale space evolution
 */
-void KAZE::Find_Extremum_Threading(const int& level) {
+void KAZEFeatures::Find_Extremum_Threading(const int& level) {
 
   float value = 0.0;
   bool is_extremum = false;
@@ -497,7 +497,7 @@ void KAZE::Find_Extremum_Threading(const int& level) {
  * @brief This method performs subpixel refinement of the detected keypoints
  * @param kpts Vector of detected keypoints
 */
-void KAZE::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
+void KAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
 
   int step = 1;
   int x = 0, y = 0;
@@ -603,7 +603,7 @@ void KAZE::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
  * @param kpts Vector of keypoints
  * @param mdist Maximum distance in pixels
 */
-void KAZE::Feature_Suppression_Distance(std::vector<cv::KeyPoint>& kpts, const float& mdist) {
+void KAZEFeatures::Feature_Suppression_Distance(std::vector<cv::KeyPoint>& kpts, const float& mdist) {
 
   vector<KeyPoint> aux;
   vector<int> to_delete;
@@ -659,7 +659,7 @@ void KAZE::Feature_Suppression_Distance(std::vector<cv::KeyPoint>& kpts, const f
  * @param kpts Vector of keypoints
  * @param desc Matrix with the feature descriptors
 */
-void KAZE::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat &desc) {
+void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat &desc) {
 
   double t2 = 0.0, t1 = 0.0;
   t1 = getTickCount();
@@ -807,7 +807,7 @@ void KAZE::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat &desc) {
  * @note The orientation is computed using a similar approach as described in the
  * original SURF method. See Bay et al., Speeded Up Robust Features, ECCV 2006
 */
-void KAZE::Compute_Main_Orientation_SURF(cv::KeyPoint &kpt)
+void KAZEFeatures::Compute_Main_Orientation_SURF(cv::KeyPoint &kpt)
 {
   int ix = 0, iy = 0, idx = 0, s = 0, level = 0;
   float xf = 0.0, yf = 0.0, gweight = 0.0;
@@ -888,7 +888,7 @@ void KAZE::Compute_Main_Orientation_SURF(cv::KeyPoint &kpt)
  * Gaussian weighting is performed. The descriptor is inspired from Bay et al.,
  * Speeded Up Robust Features, ECCV, 2006
 */
-void KAZE::Get_SURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
+void KAZEFeatures::Get_SURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
 {
   float dx = 0.0, dy = 0.0, mdx = 0.0, mdy = 0.0;
   float rx = 0.0, ry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, sample_x = 0.0, sample_y = 0.0;
@@ -987,7 +987,7 @@ void KAZE::Get_SURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
  * Gaussian weighting is performed. The descriptor is inspired from Bay et al.,
  * Speeded Up Robust Features, ECCV, 2006
 */
-void KAZE::Get_SURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc) {
+void KAZEFeatures::Get_SURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc) {
 
   float dx = 0.0, dy = 0.0, mdx = 0.0, mdy = 0.0;
   float rx = 0.0, ry = 0.0, rrx = 0.0, rry = 0.0, len = 0.0, xf = 0.0, yf = 0.0;
@@ -1094,7 +1094,7 @@ void KAZE::Get_SURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc) {
  * from Agrawal et al., CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching,
  * ECCV 2008
 */
-void KAZE::Get_MSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
+void KAZEFeatures::Get_MSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
 {
   float dx = 0.0, dy = 0.0, mdx = 0.0, mdy = 0.0, gauss_s1 = 0.0, gauss_s2 = 0.0;
   float rx = 0.0, ry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, ys = 0.0, xs = 0.0;
@@ -1226,7 +1226,7 @@ void KAZE::Get_MSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
  * from Agrawal et al., CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching,
  * ECCV 2008
 */
-void KAZE::Get_MSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
+void KAZEFeatures::Get_MSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
 {
   float dx = 0.0, dy = 0.0, mdx = 0.0, mdy = 0.0, gauss_s1 = 0.0, gauss_s2 = 0.0;
   float rx = 0.0, ry = 0.0, rrx = 0.0, rry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, ys = 0.0, xs = 0.0;
@@ -1359,7 +1359,7 @@ void KAZE::Get_MSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
  * G-SURF descriptor as described in Pablo F. Alcantarilla, Luis M. Bergasa and
  * Andrew J. Davison, Gauge-SURF Descriptors, Image and Vision Computing 31(1), 2013
 */
-void KAZE::Get_GSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
+void KAZEFeatures::Get_GSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
 {
   float dx = 0.0, dy = 0.0, mdx = 0.0, mdy = 0.0;
   float rx = 0.0, ry = 0.0, rxx = 0.0, rxy = 0.0, ryy = 0.0, len = 0.0, xf = 0.0, yf = 0.0;
@@ -1494,7 +1494,7 @@ void KAZE::Get_GSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
  * G-SURF descriptor as described in Pablo F. Alcantarilla, Luis M. Bergasa and
  * Andrew J. Davison, Gauge-SURF Descriptors, Image and Vision Computing 31(1), 2013
 */
-void KAZE::Get_GSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
+void KAZEFeatures::Get_GSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
 {
   float dx = 0.0, dy = 0.0, mdx = 0.0, mdy = 0.0;
   float rx = 0.0, ry = 0.0, rxx = 0.0, rxy = 0.0, ryy = 0.0, len = 0.0, xf = 0.0, yf = 0.0;
@@ -1633,7 +1633,7 @@ void KAZE::Get_GSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
  * Gaussian weighting is performed. The descriptor is inspired from Bay et al.,
  * Speeded Up Robust Features, ECCV, 2006
 */
-void KAZE::Get_SURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, float *desc)
+void KAZEFeatures::Get_SURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, float *desc)
 {
   float rx = 0.0, ry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, sample_x = 0.0, sample_y = 0.0;
   float fx = 0.0, fy = 0.0, res1 = 0.0, res2 = 0.0, res3 = 0.0, res4 = 0.0;
@@ -1752,7 +1752,7 @@ void KAZE::Get_SURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, float *desc)
  * Gaussian weighting is performed. The descriptor is inspired from Bay et al.,
  * Speeded Up Robust Features, ECCV, 2006
 */
-void KAZE::Get_SURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc)
+void KAZEFeatures::Get_SURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc)
 {
   float rx = 0.0, ry = 0.0, rrx = 0.0, rry = 0.0, len = 0.0, xf = 0.0, yf = 0.0;
   float sample_x = 0.0, sample_y = 0.0, co = 0.0, si = 0.0, angle = 0.0;
@@ -1880,7 +1880,7 @@ void KAZE::Get_SURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc)
  * from Agrawal et al., CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching,
  * ECCV 2008
 */
-void KAZE::Get_MSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, float *desc) {
+void KAZEFeatures::Get_MSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, float *desc) {
 
   float gauss_s1 = 0.0, gauss_s2 = 0.0;
   float rx = 0.0, ry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, ys = 0.0, xs = 0.0;
@@ -2036,7 +2036,7 @@ void KAZE::Get_MSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, float *desc
  * from Agrawal et al., CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching,
  * ECCV 2008
 */
-void KAZE::Get_MSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc) {
+void KAZEFeatures::Get_MSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc) {
 
   float gauss_s1 = 0.0, gauss_s2 = 0.0;
   float rx = 0.0, ry = 0.0, rrx = 0.0, rry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, ys = 0.0, xs = 0.0;
@@ -2197,7 +2197,7 @@ void KAZE::Get_MSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc) {
  * G-SURF descriptor as described in Pablo F. Alcantarilla, Luis M. Bergasa and
  * Andrew J. Davison, Gauge-SURF Descriptors, Image and Vision Computing 31(1), 2013
 */
-void KAZE::Get_GSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, float *desc)
+void KAZEFeatures::Get_GSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, float *desc)
 {
   float len = 0.0, xf = 0.0, yf = 0.0, sample_x = 0.0, sample_y = 0.0;
   float rx = 0.0, ry = 0.0, rxx = 0.0, rxy = 0.0, ryy = 0.0, modg = 0.0;
@@ -2350,7 +2350,7 @@ void KAZE::Get_GSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, float *desc
  * G-SURF descriptor as described in Pablo F. Alcantarilla, Luis M. Bergasa and
  * Andrew J. Davison, Gauge-SURF Descriptors, Image and Vision Computing 31(1), 2013
 */
-void KAZE::Get_GSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc) {
+void KAZEFeatures::Get_GSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc) {
 
   float len = 0.0, xf = 0.0, yf = 0.0;
   float rx = 0.0, ry = 0.0, rxx = 0.0, rxy = 0.0, ryy = 0.0;
@@ -2509,7 +2509,7 @@ void KAZE::Get_GSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc) {
  * If c is a matrix of the same size as Ld, the diffusion will be nonlinear
  * The stepsize can be arbitrarilly large
 */
-void KAZE::AOS_Step_Scalar(cv::Mat &Ld, const cv::Mat &Ldprev, const cv::Mat &c, const float& stepsize) {
+void KAZEFeatures::AOS_Step_Scalar(cv::Mat &Ld, const cv::Mat &Ldprev, const cv::Mat &c, const float& stepsize) {
 
 #ifdef _OPENMP
 #pragma omp sections
@@ -2540,7 +2540,7 @@ void KAZE::AOS_Step_Scalar(cv::Mat &Ld, const cv::Mat &Ldprev, const cv::Mat &c,
  * @param c Conductivity image
  * @param stepsize Stepsize for the nonlinear diffusion evolution
 */
-void KAZE::AOS_Rows(const cv::Mat &Ldprev, const cv::Mat &c, const float& stepsize) {
+void KAZEFeatures::AOS_Rows(const cv::Mat &Ldprev, const cv::Mat &c, const float& stepsize) {
 
   // Operate on rows
   for (int i = 0; i < qr_.rows; i++) {
@@ -2581,7 +2581,7 @@ void KAZE::AOS_Rows(const cv::Mat &Ldprev, const cv::Mat &c, const float& stepsi
  * @param c Conductivity image
  * @param stepsize Stepsize for the nonlinear diffusion evolution
 */
-void KAZE::AOS_Columns(const cv::Mat &Ldprev, const cv::Mat &c, const float& stepsize) {
+void KAZEFeatures::AOS_Columns(const cv::Mat &Ldprev, const cv::Mat &c, const float& stepsize) {
 
   // Operate on columns
   for (int j = 0; j < qc_.cols; j++) {
@@ -2624,7 +2624,7 @@ void KAZE::AOS_Columns(const cv::Mat &Ldprev, const cv::Mat &c, const float& ste
  * @brief This method does the Thomas algorithm for solving a tridiagonal linear system
  * @note The matrix A must be strictly diagonally dominant for a stable solution
 */
-void KAZE::Thomas(const cv::Mat &a, const cv::Mat &b, const cv::Mat &Ld, cv::Mat &x) {
+void KAZEFeatures::Thomas(const cv::Mat &a, const cv::Mat &b, const cv::Mat &Ld, cv::Mat &x) {
 
   // Auxiliary variables
   int n = a.rows;
