@@ -1,5 +1,5 @@
-#ifndef _CONFIG_H_
-#define _CONFIG_H_
+#ifndef __OPENCV_FEATURES_2D_AKAZE_CONFIG_HPP__
+#define __OPENCV_FEATURES_2D_AKAZE_CONFIG_HPP__
 
 // STL
 #include <string>
@@ -17,7 +17,7 @@
 #endif
 
 // Lookup table for 2d gaussian (sigma = 2.5) where (0,0) is top left and (6,6) is bottom right
-const float gauss25[7][7] = {
+static const float gauss25[7][7] = {
   {0.02546481f,	0.02350698f,	0.01849125f,	0.01239505f,	0.00708017f,	0.00344629f,	0.00142946f},
   {0.02350698f,	0.02169968f,	0.01706957f,	0.01144208f,	0.00653582f,	0.00318132f,	0.00131956f},
   {0.01849125f,	0.01706957f,	0.01342740f,	0.00900066f,	0.00514126f,	0.00250252f,	0.00103800f},
@@ -29,24 +29,24 @@ const float gauss25[7][7] = {
 
 
 // Scale Space parameters
-const float DEFAULT_SCALE_OFFSET = 1.60f;    // Base scale offset (sigma units)
-const float DEFAULT_FACTOR_SIZE = 1.5f;      // Factor for the multiscale derivatives
-const int DEFAULT_OCTAVE_MIN = 0;            // Initial octave level (-1 means that the size of the input image is duplicated)
-const int DEFAULT_OCTAVE_MAX = 4;            // Maximum octave evolution of the image 2^sigma (coarsest scale sigma units)
-const int DEFAULT_NSUBLEVELS = 4;            // Default number of sublevels per scale level
-const int DEFAULT_DIFFUSIVITY_TYPE = 1;
-const float KCONTRAST_PERCENTILE = 0.7f;
-const int KCONTRAST_NBINS = 300;
-const float DEFAULT_SIGMA_SMOOTHING_DERIVATIVES = 1.0f;
-const float DEFAULT_KCONTRAST = .01f;
+static const float DEFAULT_SCALE_OFFSET = 1.60f;    // Base scale offset (sigma units)
+static const float DEFAULT_FACTOR_SIZE = 1.5f;      // Factor for the multiscale derivatives
+static const int DEFAULT_OCTAVE_MIN = 0;            // Initial octave level (-1 means that the size of the input image is duplicated)
+static const int DEFAULT_OCTAVE_MAX = 4;            // Maximum octave evolution of the image 2^sigma (coarsest scale sigma units)
+static const int DEFAULT_NSUBLEVELS = 4;            // Default number of sublevels per scale level
+static const int DEFAULT_DIFFUSIVITY_TYPE = 1;
+static const float KCONTRAST_PERCENTILE = 0.7f;
+static const int KCONTRAST_NBINS = 300;
+static const float DEFAULT_SIGMA_SMOOTHING_DERIVATIVES = 1.0f;
+static const float DEFAULT_KCONTRAST = .01f;
 
 
 // Detector Parameters
-const float DEFAULT_DETECTOR_THRESHOLD = 0.001f;           // Detector response threshold to accept point
-const float DEFAULT_MIN_DETECTOR_THRESHOLD = 0.00001f;     // Minimum Detector response threshold to accept point
-const int DEFAULT_LDB_DESCRIPTOR_SIZE = 0;  // Use 0 for the full descriptor, or the number of bits
-const int DEFAULT_LDB_PATTERN_SIZE = 10;    // Actual patch size is 2*pattern_size*point.scale;
-const int DEFAULT_LDB_CHANNELS = 3;
+static const float DEFAULT_DETECTOR_THRESHOLD = 0.001f;           // Detector response threshold to accept point
+static const float DEFAULT_MIN_DETECTOR_THRESHOLD = 0.00001f;     // Minimum Detector response threshold to accept point
+static const int DEFAULT_LDB_DESCRIPTOR_SIZE = 0;  // Use 0 for the full descriptor, or the number of bits
+static const int DEFAULT_LDB_PATTERN_SIZE = 10;    // Actual patch size is 2*pattern_size*point.scale;
+static const int DEFAULT_LDB_CHANNELS = 3;
 
 // Descriptor Parameters
 enum DESCRIPTOR_TYPE
@@ -59,13 +59,13 @@ enum DESCRIPTOR_TYPE
   MLDB = 5
 };
 
-const int DEFAULT_DESCRIPTOR = MLDB;
+static const int DEFAULT_DESCRIPTOR = MLDB;
 
 // Some debugging options
-const bool DEFAULT_SAVE_SCALE_SPACE = false; // For saving the scale space images
-const bool DEFAULT_VERBOSITY = false; // Verbosity level (0->no verbosity)
-const bool DEFAULT_SHOW_RESULTS = true; // For showing the output image with the detected features plus some ratios
-const bool DEFAULT_SAVE_KEYPOINTS = false; // For saving the list of keypoints
+static const bool DEFAULT_SAVE_SCALE_SPACE = false; // For saving the scale space images
+static const bool DEFAULT_VERBOSITY = false; // Verbosity level (0->no verbosity)
+static const bool DEFAULT_SHOW_RESULTS = true; // For showing the output image with the detected features plus some ratios
+static const bool DEFAULT_SAVE_KEYPOINTS = false; // For saving the list of keypoints
 
 // Options structure
 struct AKAZEOptions

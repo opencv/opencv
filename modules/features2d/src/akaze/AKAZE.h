@@ -22,7 +22,7 @@
 //*************************************************************************************
 
 // AKAZE Class Declaration
-class AKAZE {
+class AKAZEFeatures {
 
 private:
 
@@ -72,10 +72,10 @@ private:
 public:
 
   // Constructor
-  AKAZE(const AKAZEOptions &options);
+  AKAZEFeatures(const AKAZEOptions &options);
 
   // Destructor
-  ~AKAZE(void);
+  ~AKAZEFeatures(void);
 
   // Setters
   void Set_Octave_Max(const int& omax) {
@@ -144,11 +144,6 @@ public:
   void Get_MLDB_Full_Descriptor(const cv::KeyPoint& kpt, unsigned char *desc);
   void Get_Upright_MLDB_Descriptor_Subset(const cv::KeyPoint& kpt, unsigned char *desc);
   void Get_MLDB_Descriptor_Subset(const cv::KeyPoint& kpt, unsigned char *desc);
-
-  // Methods for saving some results and showing computation times
-  void Save_Scale_Space(void);
-  void Save_Detector_Responses(void);
-  void Show_Computation_Times(void);
 };
 
 //*************************************************************************************

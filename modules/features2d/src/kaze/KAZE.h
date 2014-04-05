@@ -23,7 +23,7 @@
 //*************************************************************************************
 
 // KAZE Class Declaration
-class KAZE {
+class KAZEFeatures {
 
 private:
 
@@ -69,21 +69,16 @@ private:
 public:
 
   // Constructor
-  KAZE(KAZEOptions& options);
+  KAZEFeatures(KAZEOptions& options);
 
   // Destructor
-  ~KAZE(void);
+  ~KAZEFeatures(void);
 
   // Public methods for KAZE interface
   void Allocate_Memory_Evolution(void);
   int Create_Nonlinear_Scale_Space(const cv::Mat& img);
   void Feature_Detection(std::vector<cv::KeyPoint>& kpts);
   void Feature_Description(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc);
-
-  // Methods for saving the scale space set of images and detector responses
-  void Save_Nonlinear_Scale_Space(void);
-  void Save_Detector_Responses(void);
-  void Save_Flow_Responses(void);
 
 private:
 
