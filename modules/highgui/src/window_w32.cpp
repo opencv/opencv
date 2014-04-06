@@ -52,6 +52,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+#include <windowsx.h>
 
 #ifdef HAVE_OPENGL
 #include <memory>
@@ -1459,8 +1460,8 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             if( uMsg == WM_LBUTTONUP || uMsg == WM_RBUTTONUP || uMsg == WM_MBUTTONUP )
                 ReleaseCapture();
 
-            pt.x = LOWORD( lParam );
-            pt.y = HIWORD( lParam );
+            pt.x = GET_X_LPARAM( lParam );
+            pt.y = GET_Y_LPARAM( lParam );
 
             GetClientRect( window->hwnd, &rect );
             icvGetBitmapData( window, &size, 0, 0 );
