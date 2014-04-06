@@ -9,7 +9,7 @@
     :license: BSD, see LICENSE for more details.
 """
 import re
-from _compat import text_type, string_types, int_types, \
+from ._compat import text_type, string_types, int_types, \
      unichr, PY2
 
 
@@ -227,7 +227,7 @@ class _MarkupEscapeHelper(object):
 try:
     from _speedups import escape, escape_silent, soft_unicode
 except ImportError:
-    from _native import escape, escape_silent, soft_unicode
+    from ._native import escape, escape_silent, soft_unicode
 
 if not PY2:
     soft_str = soft_unicode

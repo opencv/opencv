@@ -4,6 +4,8 @@
 #include "opencv2/core.hpp"
 #include "ts_gtest.h"
 
+#include <functional>
+
 #if !(defined(LOGD) || defined(LOGI) || defined(LOGW) || defined(LOGE))
 # if defined(ANDROID) && defined(USE_ANDROID_LOGGING)
 #  include <android/log.h>
@@ -555,31 +557,33 @@ namespace comparators
 {
 
 template<typename T>
-struct CV_EXPORTS RectLess_
+struct CV_EXPORTS RectLess_ :
+        public std::binary_function<cv::Rect_<T>, cv::Rect_<T>, bool>
 {
   bool operator()(const cv::Rect_<T>& r1, const cv::Rect_<T>& r2) const
   {
-    return r1.x < r2.x
-      || (r1.x == r2.x && r1.y < r2.y)
-      || (r1.x == r2.x && r1.y == r2.y && r1.width < r2.width)
-      || (r1.x == r2.x && r1.y == r2.y && r1.width == r2.width && r1.height < r2.height);
+    return r1.x < r2.x ||
+            (r1.x == r2.x && r1.y < r2.y) ||
+            (r1.x == r2.x && r1.y == r2.y && r1.width < r2.width) ||
+            (r1.x == r2.x && r1.y == r2.y && r1.width == r2.width && r1.height < r2.height);
   }
 };
 
 typedef RectLess_<int> RectLess;
 
-struct CV_EXPORTS KeypointGreater
+struct CV_EXPORTS KeypointGreater :
+        public std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
 {
     bool operator()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
     {
-        if(kp1.response > kp2.response) return true;
-        if(kp1.response < kp2.response) return false;
-        if(kp1.size > kp2.size) return true;
-        if(kp1.size < kp2.size) return false;
-        if(kp1.octave > kp2.octave) return true;
-        if(kp1.octave < kp2.octave) return false;
-        if(kp1.pt.y < kp2.pt.y) return false;
-        if(kp1.pt.y > kp2.pt.y) return true;
+        if (kp1.response > kp2.response) return true;
+        if (kp1.response < kp2.response) return false;
+        if (kp1.size > kp2.size) return true;
+        if (kp1.size < kp2.size) return false;
+        if (kp1.octave > kp2.octave) return true;
+        if (kp1.octave < kp2.octave) return false;
+        if (kp1.pt.y < kp2.pt.y) return false;
+        if (kp1.pt.y > kp2.pt.y) return true;
         return kp1.pt.x < kp2.pt.x;
     }
 };
