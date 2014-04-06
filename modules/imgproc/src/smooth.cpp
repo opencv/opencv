@@ -858,11 +858,17 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         return;
 #endif
 
-    /*
 #ifdef HAVE_IPP
-    bool isolated = (borderType & BORDER_ISOLATED) != 0;
-    if (!normalize && !isolated && (borderType & ~BORDER_ISOLATED) == BORDER_REPLICATE && ddepth == sdepth &&
-        (anchor == Point(-1, -1) || anchor == Point(ksize.width >> 1, ksize.height >> 1)) && ksize.width == ksize.width)
+    int ippBorderType = borderType & ~BORDER_ISOLATED;
+    Point ocvAnchor, ippAnchor;
+    ocvAnchor.x = anchor.x < 0 ? ksize.width / 2 : anchor.x;
+    ocvAnchor.y = anchor.y < 0 ? ksize.height / 2 : anchor.y;
+    ippAnchor.x = ksize.width / 2 - (ksize.width % 2 == 0 ? 1 : 0);
+    ippAnchor.y = ksize.height / 2 - (ksize.height % 2 == 0 ? 1 : 0);
+
+    if (normalize && !src.isSubmatrix() && ddepth == sdepth &&
+        (ippBorderType == BORDER_REPLICATE || ippBorderType == BORDER_CONSTANT) &&
+        ocvAnchor == ippAnchor )
     {
         Ipp32s bufSize;
         IppiSize roiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize.width, ksize.height);
@@ -874,11 +880,11 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
             { \
                 Ipp8u * buffer = ippsMalloc_8u(bufSize); \
                 ippType borderValue[4] = { 0, 0, 0, 0 }; \
+                ippBorderType = ippBorderType == BORDER_CONSTANT ? ippBorderConst : ippBorderType == BORDER_REPLICATE ? ippBorderRepl : -1; \
+                CV_Assert(ippBorderType >= 0); \
                 IppStatus status = ippiFilterBoxBorder_##flavor((ippType *)src.data, (int)src.step, (ippType *)dst.data, (int)dst.step, roiSize, maskSize, \
-                                                              ippBorderRepl, borderValue, buffer); \
-                ippFree(buffer); \
-                printf("%d\n", status); \
-                IPPI_CALL(status); \
+                                                                (IppiBorderType)ippBorderType, borderValue, buffer); \
+                ippsFree(buffer); \
                 if (status >= 0) \
                     return; \
             } \
@@ -914,7 +920,6 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     }
 #undef IPP_FILTER_BOX_BORDER
 #endif
-    */
 
     Ptr<FilterEngine> f = createBoxFilter( src.type(), dst.type(),
                         ksize, anchor, normalize, borderType );
@@ -2024,7 +2029,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
             IppStatus status = ippiFilterMedianBorder_##flavor((const ippType *)src0.data, (int)src0.step, \
                 (ippType *)dst.data, (int)dst.step, dstRoiSize, maskSize, \
                 ippBorderRepl, (ippType)0, buffer); \
-            ippiFree(buffer); \
+            ippsFree(buffer); \
             if (status >= 0) \
                 return; \
         } \

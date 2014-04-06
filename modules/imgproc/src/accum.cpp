@@ -501,7 +501,7 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
                 status = ippFuncMask(src.data, srcstep, (Ipp8u *)mask.data, maskstep,
                                      (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
 
-            if (status == ippStsNoErr)
+            if (status >= 0)
                 return;
         }
     }
@@ -582,7 +582,7 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
                 status = ippFuncMask(src1.data, src1step, src2.data, src2step, (Ipp8u *)mask.data, maskstep,
                                      (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
 
-            if (status == ippStsNoErr)
+            if (status >= 0)
                 return;
         }
     }
@@ -661,7 +661,7 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
                 status = ippFuncMask(src.data, srcstep, (Ipp8u *)mask.data, maskstep,
                                      (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
 
-            if (status == ippStsNoErr)
+            if (status >= 0)
                 return;
         }
     }

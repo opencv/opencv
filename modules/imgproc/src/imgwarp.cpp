@@ -4048,8 +4048,12 @@ public:
         ////Aug 2013: problem in IPP 7.1, 8.0 : sometimes function return ippStsCoeffErr
         IppStatus status = func( src.data, srcsize, (int)src.step[0], srcroi, dst.data,
                                 (int)dst.step[0], dstroi, coeffs, mode );
+<<<<<<< HEAD
         printf("%d\n", status);
         if( status != ippStsNoErr)
+=======
+        if( status < 0)
+>>>>>>> cv::blur
             *ok = false;
     }
 private:
