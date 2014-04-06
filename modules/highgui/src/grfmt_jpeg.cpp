@@ -599,6 +599,7 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
 
         int quality = 95;
         int progressive = 0;
+        int optimize = 0;
 
         for( size_t i = 0; i < params.size(); i += 2 )
         {
@@ -612,6 +613,11 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
             {
                 progressive = params[i+1];
             }
+
+            if( params[i] == CV_IMWRITE_JPEG_OPTIMIZE )
+            {
+                optimize = params[i+1];
+            }
         }
 
         jpeg_set_defaults( &cinfo );
@@ -619,6 +625,8 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                           TRUE /* limit to baseline-JPEG values */ );
         if( progressive )
             jpeg_simple_progression( &cinfo );
+        if( optimize )
+            cinfo.optimize_coding = TRUE;
         jpeg_start_compress( &cinfo, TRUE );
 
         if( channels > 1 )
