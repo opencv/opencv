@@ -2987,7 +2987,7 @@ void cv::transpose( InputArray _src, OutputArray _dst )
     type == CV_32FC4 ? (ippiTranspose)ippiTranspose_32f_C4R : 0;
 
     IppiSize roiSize = { src.cols, src.rows };
-    if (ippFunc != 0 && ippFunc(src.data, (int)src.step, dst.data, (int)dst.step, roiSize) == ippStsNoErr)
+    if (ippFunc != 0 && ippFunc(src.data, (int)src.step, dst.data, (int)dst.step, roiSize) >= 0)
         return;
 #endif
 

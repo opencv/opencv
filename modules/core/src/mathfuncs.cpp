@@ -766,7 +766,7 @@ void polarToCart( InputArray src1, InputArray src2,
         CV_Assert(ippFunc != 0);
 
         IppStatus status = ippFunc(Mag.data, Angle.data, X.data, Y.data, static_cast<int>(cn * X.total()));
-        if (status == ippStsNoErr)
+        if (status >= 0)
             return;
     }
 #endif
@@ -2240,7 +2240,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
                         ippsPowx_32f_A21((const Ipp32f *)src.data, (Ipp32f)power, (Ipp32f*)dst.data, (Ipp32s)(src.total() * cn)) :
                         ippsPowx_64f_A50((const Ipp64f *)src.data, power, (Ipp64f*)dst.data, (Ipp32s)(src.total() * cn));
 
-            if (status == ippStsNoErr)
+            if (status >= 0)
                 return;
         }
 #endif
