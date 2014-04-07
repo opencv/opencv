@@ -480,9 +480,9 @@ protected:
             fs["g1"] >> og1;
             CV_Assert( mi2.empty() );
             CV_Assert( mv2.empty() );
-            CV_Assert( norm(mi3, mi4, CV_C) == 0 );
+            CV_Assert( cvtest::norm(Mat(mi3), Mat(mi4), CV_C) == 0 );
             CV_Assert( mv4.size() == 1 );
-            double n = norm(mv3[0], mv4[0], CV_C);
+            double n = cvtest::norm(mv3[0], mv4[0], CV_C);
             CV_Assert( vudt2.empty() );
             CV_Assert( vudt3 == vudt4 );
             CV_Assert( n == 0 );
