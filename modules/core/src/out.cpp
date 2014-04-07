@@ -257,7 +257,7 @@ namespace
         {
             char braces[5] = {'\0', '\0', ';', '\0', '\0'};
             return cv::makePtr<FormattedImpl>("[", "]", mtx, &*braces,
-                mtx.cols == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
+                mtx.rows == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
@@ -271,7 +271,7 @@ namespace
             if (mtx.cols == 1)
                 braces[0] = braces[1] = '\0';
             return cv::makePtr<FormattedImpl>("[", "]", mtx, &*braces,
-                mtx.cols*mtx.channels() == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
+                mtx.rows*mtx.channels() == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
@@ -290,7 +290,7 @@ namespace
                 braces[0] = braces[1] = '\0';
             return cv::makePtr<FormattedImpl>("array([",
                 cv::format("], type='%s')", numpyTypes[mtx.depth()]), mtx, &*braces,
-                mtx.cols*mtx.channels() == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
+                mtx.rows*mtx.channels() == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
@@ -303,7 +303,7 @@ namespace
             char braces[5] = {'\0', '\0', '\0', '\0', '\0'};
             return cv::makePtr<FormattedImpl>(cv::String(),
                 mtx.rows > 1 ? cv::String("\n") : cv::String(), mtx, &*braces,
-                mtx.cols*mtx.channels() == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
+                mtx.rows*mtx.channels() == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
@@ -315,7 +315,7 @@ namespace
         {
             char braces[5] = {'\0', '\0', ',', '\0', '\0'};
             return cv::makePtr<FormattedImpl>("{", "}", mtx, &*braces,
-                mtx.cols == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
+                mtx.rows == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
