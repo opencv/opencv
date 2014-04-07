@@ -185,6 +185,8 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HoughCircles, testing::Combine(
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // GeneralizedHough
 
+#if !defined(__GNUC__) || (__GNUC__ * 10 + __GNUC_MINOR__ != 47)
+
 PARAM_TEST_CASE(GeneralizedHough, cv::gpu::DeviceInfo, UseRoi)
 {
 };
@@ -251,5 +253,7 @@ GPU_TEST_P(GeneralizedHough, POSITION)
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, GeneralizedHough, testing::Combine(
     ALL_DEVICES,
     WHOLE_SUBMAT));
+
+#endif
 
 #endif // HAVE_CUDA
