@@ -2018,7 +2018,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
 
-#ifdef HAVE_IPP
+#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 8 && IPP_VERSION_MINOR >= 1
 #define IPP_FILTER_MEDIAN_BORDER(ippType, ippDataType, flavor) \
     do \
     { \
