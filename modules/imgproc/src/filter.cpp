@@ -1420,35 +1420,15 @@ struct RowVec_32f
 
     int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
+#ifdef USE_IPP_SEP_FILTERS
+        int ret = ippiOperator(_src, _dst, width, cn);
+        if (ret > 0)
+            return ret;
+#endif
         int _ksize = kernel.rows + kernel.cols - 1;
         const float* src0 = (const float*)_src;
         float* dst = (float*)_dst;
         const float* _kx = (const float*)kernel.data;
-
-#ifdef USE_IPP_SEP_FILTERS
-        IppiSize roisz = { width, 1 };
-        if( (cn == 1 || cn == 3) && width >= _ksize*8 )
-        {
-            if( bufsz < 0 )
-            {
-                if( (cn == 1 && ippiFilterRowBorderPipelineGetBufferSize_32f_C1R(roisz, _ksize, &bufsz) < 0) ||
-                    (cn == 3 && ippiFilterRowBorderPipelineGetBufferSize_32f_C3R(roisz, _ksize, &bufsz) < 0))
-                    return 0;
-            }
-            AutoBuffer<uchar> buf(bufsz + 64);
-            uchar* bufptr = alignPtr((uchar*)buf, 32);
-            int step = (int)(width*sizeof(dst[0])*cn);
-            float borderValue[] = {0.f, 0.f, 0.f};
-            // here is the trick. IPP needs border type and extrapolates the row. We did it already.
-            // So we pass anchor=0 and ignore the right tail of results since they are incorrect there.
-            if( (cn == 1 && ippiFilterRowBorderPipeline_32f_C1R(src0, step, &dst, roisz, _kx, _ksize, 0,
-                                                                ippBorderRepl, borderValue[0], bufptr) < 0) ||
-                (cn == 3 && ippiFilterRowBorderPipeline_32f_C3R(src0, step, &dst, roisz, _kx, _ksize, 0,
-                                                                ippBorderRepl, borderValue, bufptr) < 0))
-                return 0;
-            return width - _ksize + 1;
-        }
-#endif
 
         if( !haveSSE )
             return 0;
@@ -1479,7 +1459,38 @@ struct RowVec_32f
     Mat kernel;
     bool haveSSE;
 #ifdef USE_IPP_SEP_FILTERS
+private:
     mutable int bufsz;
+    int ippiOperator(const uchar* _src, uchar* _dst, int width, int cn) const
+    {
+        int _ksize = kernel.rows + kernel.cols - 1;
+        if ((1 != cn && 3 != cn) || width < _ksize*8)
+            return 0;
+
+        const float* src = (const float*)_src;
+        float* dst = (float*)_dst;
+        const float* _kx = (const float*)kernel.data;
+
+        IppiSize roisz = { width, 1 };
+        if( bufsz < 0 )
+        {
+            if( (cn == 1 && ippiFilterRowBorderPipelineGetBufferSize_32f_C1R(roisz, _ksize, &bufsz) < 0) ||
+                (cn == 3 && ippiFilterRowBorderPipelineGetBufferSize_32f_C3R(roisz, _ksize, &bufsz) < 0))
+                return 0;
+        }
+        AutoBuffer<uchar> buf(bufsz + 64);
+        uchar* bufptr = alignPtr((uchar*)buf, 32);
+        int step = (int)(width*sizeof(dst[0])*cn);
+        float borderValue[] = {0.f, 0.f, 0.f};
+        // here is the trick. IPP needs border type and extrapolates the row. We did it already.
+        // So we pass anchor=0 and ignore the right tail of results since they are incorrect there.
+        if( (cn == 1 && ippiFilterRowBorderPipeline_32f_C1R(src, step, &dst, roisz, _kx, _ksize, 0,
+                                                            ippBorderRepl, borderValue[0], bufptr) < 0) ||
+            (cn == 3 && ippiFilterRowBorderPipeline_32f_C3R(src, step, &dst, roisz, _kx, _ksize, 0,
+                                                            ippBorderRepl, borderValue, bufptr) < 0))
+            return 0;
+        return width - _ksize + 1;
+    }
 #endif
 };
 
