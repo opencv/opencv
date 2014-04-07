@@ -641,28 +641,7 @@ static const char* oclFuncToCheck = "clEnqueueReadBufferRect";
 
 static void* initOpenCLAndLoad(const char* funcname)
 {
-    static bool initialized = false;
-    static void* handle = 0;
-    if (!handle)
-    {
-        if(!initialized)
-        {
-            const char* oclpath = getenv("OPENCV_OPENCL_RUNTIME");
-            oclpath = oclpath && strlen(oclpath) > 0 ? oclpath :
-                "/System/Library/Frameworks/OpenCL.framework/Versions/Current/OpenCL";
-            handle = dlopen(oclpath, RTLD_LAZY);
-            initialized = true;
-            g_haveOpenCL = handle != 0 && dlsym(handle, oclFuncToCheck) != 0;
-            if( g_haveOpenCL )
-                fprintf(stderr, "Successfully loaded OpenCL v1.1+ runtime from %s\n", oclpath);
-            else
-                fprintf(stderr, "Failed to load OpenCL runtime\n");
-        }
-        if(!handle)
-            return 0;
-    }
-
-    return funcname && handle ? dlsym(handle, funcname) : 0;
+  return 0;
 }
 
 #elif defined WIN32 || defined _WIN32
@@ -705,23 +684,7 @@ static void* initOpenCLAndLoad(const char* funcname)
 
 static void* initOpenCLAndLoad(const char* funcname)
 {
-    static bool initialized = false;
-    static void* handle = 0;
-    if (!handle)
-    {
-        if(!initialized)
-        {
-            handle = dlopen("libOpenCL.so", RTLD_LAZY);
-            if(!handle)
-                handle = dlopen("libCL.so", RTLD_LAZY);
-            initialized = true;
-            g_haveOpenCL = handle != 0 && dlsym(handle, oclFuncToCheck) != 0;
-        }
-        if(!handle)
-            return 0;
-    }
-
-    return funcname ? (void*)dlsym(handle, funcname) : 0;
+  return 0;
 }
 
 #else
