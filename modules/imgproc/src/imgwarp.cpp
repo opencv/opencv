@@ -1982,7 +1982,7 @@ public:
     }
 
 private:
-    Mat & src;
+    const Mat & src;
     Mat & dst;
     double inv_scale_x;
     double inv_scale_y;
