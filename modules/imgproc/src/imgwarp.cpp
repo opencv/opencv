@@ -1971,7 +1971,7 @@ public:
         CHECK_IPP_STATUS(getBufferSizeFunc(pSpec, dstSize, cn, &bufsize));
         CHECK_IPP_STATUS(getSrcOffsetFunc(pSpec, dstOffset, &srcOffset));
 
-        Ipp8u* pSrc = (Ipp8u*)src.data + (int)src.step[0] * srcOffset.y + srcOffset.x * cn * itemSize;
+        const Ipp8u* pSrc = (const Ipp8u*)src.data + (int)src.step[0] * srcOffset.y + srcOffset.x * cn * itemSize;
         Ipp8u* pDst = (Ipp8u*)dst.data + (int)dst.step[0] * dstOffset.y + dstOffset.x * cn * itemSize;
 
         AutoBuffer<uchar> buf(bufsize + 64);
@@ -1980,7 +1980,6 @@ public:
         if( func( pSrc, (int)src.step[0], pDst, (int)dst.step[0], dstOffset, dstSize, ippBorderRepl, 0, pSpec, bufptr ) < 0 )
             *ok = false;
     }
-
 private:
     const Mat & src;
     Mat & dst;
@@ -4025,25 +4024,25 @@ public:
           *ok = true;
       }
 
-      virtual void operator() (const Range& range) const
-      {
-          IppiSize srcsize = { src.cols, src.rows };
-          IppiRect srcroi = { 0, 0, src.cols, src.rows };
-          IppiRect dstroi = { 0, range.start, dst.cols, range.end - range.start };
-          int cnn = src.channels();
-          if( borderType == BORDER_CONSTANT )
-          {
-              IppiSize setSize = { dst.cols, range.end - range.start };
-              void *dataPointer = dst.data + dst.step[0] * range.start;
-              if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
-              {
-                  *ok = false;
-                  return;
-              }
-          }
-          if( func( src.data, srcsize, (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, coeffs, mode ) < 0) ////Aug 2013: problem in IPP 7.1, 8.0 : sometimes function return ippStsCoeffErr
-              *ok = false;
-      }
+    virtual void operator() (const Range& range) const
+    {
+        IppiSize srcsize = { src.cols, src.rows };
+        IppiRect srcroi = { 0, 0, src.cols, src.rows };
+        IppiRect dstroi = { 0, range.start, dst.cols, range.end - range.start };
+        int cnn = src.channels();
+        if( borderType == BORDER_CONSTANT )
+        {
+            IppiSize setSize = { dst.cols, range.end - range.start };
+            void *dataPointer = dst.data + dst.step[0] * range.start;
+            if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
+            {
+                *ok = false;
+                return;
+            }
+        }
+        if( func( src.data, srcsize, (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, coeffs, mode ) < 0) ////Aug 2013: problem in IPP 7.1, 8.0 : sometimes function return ippStsCoeffErr
+            *ok = false;
+    }
 private:
     Mat &src;
     Mat &dst;
@@ -4368,26 +4367,26 @@ public:
           *ok = true;
       }
 
-      virtual void operator() (const Range& range) const
-      {
-          IppiSize srcsize = {src.cols, src.rows};
-          IppiRect srcroi = {0, 0, src.cols, src.rows};
-          IppiRect dstroi = {0, range.start, dst.cols, range.end - range.start};
-          int cnn = src.channels();
+    virtual void operator() (const Range& range) const
+    {
+        IppiSize srcsize = {src.cols, src.rows};
+        IppiRect srcroi = {0, 0, src.cols, src.rows};
+        IppiRect dstroi = {0, range.start, dst.cols, range.end - range.start};
+        int cnn = src.channels();
 
-          if( borderType == BORDER_CONSTANT )
-          {
-              IppiSize setSize = {dst.cols, range.end - range.start};
-              void *dataPointer = dst.data + dst.step[0] * range.start;
-              if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
-              {
-                  *ok = false;
-                  return;
-              }
-          }
-          if( func(src.data, srcsize, (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, coeffs, mode) < 0)
-              *ok = false;
-      }
+        if( borderType == BORDER_CONSTANT )
+        {
+            IppiSize setSize = {dst.cols, range.end - range.start};
+            void *dataPointer = dst.data + dst.step[0] * range.start;
+            if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
+            {
+                *ok = false;
+                return;
+            }
+        }
+        if( func(src.data, srcsize, (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, coeffs, mode) < 0)
+            *ok = false;
+    }
 private:
     Mat &src;
     Mat &dst;

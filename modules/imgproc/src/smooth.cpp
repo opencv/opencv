@@ -1109,20 +1109,27 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         return;
 #endif
 
-#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 8) && (IPP_VERSION_MINOR >= 1)
     if( type == CV_32FC1 && sigma1 == sigma2 && ksize.width == ksize.height && sigma1 != 0.0 )
     {
         Mat src = _src.getMat(), dst = _dst.getMat();
         IppiSize roi = { src.cols, src.rows };
-        int bufSize = 0;
-        ippiFilterGaussGetBufferSize_32f_C1R(roi, ksize.width, &bufSize);
-        AutoBuffer<uchar> buf(bufSize+128);
-        if( ippiFilterGaussBorder_32f_C1R((const Ipp32f *)src.data, (int)src.step,
-                                          (Ipp32f *)dst.data, (int)dst.step,
-                                          roi, ksize.width, (Ipp32f)sigma1,
-                                          (IppiBorderType)borderType, 0.0,
-                                          alignPtr(&buf[0],32)) >= 0 )
-            return;
+        int specSize = 0, bufferSize = 0;
+        if (0 <=  ippiFilterGaussianGetBufferSize(roi, (Ipp32u)ksize.width, ipp32f, 1, &specSize, &bufferSize))
+        {
+            IppFilterGaussianSpec *pSpec = (IppFilterGaussianSpec*)ippMalloc(specSize);
+            Ipp8u *pBuffer = (Ipp8u*)ippMalloc(bufferSize);
+            if (0 <= ippiFilterGaussianInit(roi, (Ipp32u)ksize.width, (Ipp32f)sigma1, (IppiBorderType)borderType, ipp32f, 1, pSpec, pBuffer))
+            {
+                IppStatus sts = ippiFilterGaussianBorder_32f_C1R( (const Ipp32f *)src.data, (int)src.step,
+                                                                     (Ipp32f *)dst.data, (int)dst.step,
+                                                                     roi,  0.0, pSpec, pBuffer);
+                ippFree(pBuffer);
+                ippFree(pSpec);
+                if (0 <= sts)
+                    return;
+            }
+        }
     }
 #endif
 
@@ -2180,11 +2187,19 @@ public:
           IppiSize kernel = {d, d};
           IppiSize roi={dst.cols, range.end - range.start};
           int bufsize=0;
-          ippiFilterBilateralGetBufSize_8u_C1R( ippiFilterBilateralGauss, roi, kernel, &bufsize);
+          if (0 > ippiFilterBilateralGetBufSize_8u_C1R( ippiFilterBilateralGauss, roi, kernel, &bufsize))
+          {
+              *ok = false;
+              return;
+          }
           AutoBuffer<uchar> buf(bufsize);
           IppiFilterBilateralSpec *pSpec = (IppiFilterBilateralSpec *)alignPtr(&buf[0], 32);
-          ippiFilterBilateralInit_8u_C1R( ippiFilterBilateralGauss, kernel, (Ipp32f)sigma_color, (Ipp32f)sigma_space, 1, pSpec );
-          if( ippiFilterBilateral_8u_C1R( src.ptr<uchar>(range.start) + radius * ((int)src.step[0] + 1), (int)src.step[0], dst.ptr<uchar>(range.start), (int)dst.step[0], roi, kernel, pSpec ) < 0)
+          if (0 > ippiFilterBilateralInit_8u_C1R( ippiFilterBilateralGauss, kernel, (Ipp32f)sigma_color, (Ipp32f)sigma_space, 1, pSpec ))
+          {
+              *ok = false;
+              return;
+          }
+          if (0 > ippiFilterBilateral_8u_C1R( src.ptr<uchar>(range.start) + radius * ((int)src.step[0] + 1), (int)src.step[0], dst.ptr<uchar>(range.start), (int)dst.step[0], roi, kernel, pSpec ))
               *ok = false;
       }
 private:

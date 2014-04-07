@@ -252,6 +252,7 @@ bool CvtColorIPPLoopCopy(Mat& src, Mat& dst, const Cvt& cvt)
     }
     bool ok;
     parallel_for_(Range(0, source.rows), CvtColorIPPLoop_Invoker<Cvt>(source, dst, cvt, &ok), source.total()/(double)(1<<16) );
+    //ok = cvt(src.ptr<uchar>(0), (int)src.step[0], dst.ptr<uchar>(0), (int)dst.step[0], src.cols, src.rows);
     return ok;
 }
 
@@ -297,11 +298,13 @@ static ippiReorderFunc ippiSwapChannelsC3RTab[] =
     0, (ippiReorderFunc)ippiSwapChannels_32f_C3R, 0, 0
 };
 
+#if (IPP_VERSION_MAJOR >= 8) && (IPP_VERSION_MINOR >= 1)
 static ippiReorderFunc ippiSwapChannelsC4RTab[] =
 {
-    (ippiReorderFunc)ippiSwapChannels_8u_AC4R, 0, (ippiReorderFunc)ippiSwapChannels_16u_AC4R, 0,
-    0, (ippiReorderFunc)ippiSwapChannels_32f_AC4R, 0, 0
+    (ippiReorderFunc)ippiSwapChannels_8u_C4R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4R, 0,
+    0, (ippiReorderFunc)ippiSwapChannels_32f_C4R, 0, 0
 };
+#endif
 
 static ippiColor2GrayFunc ippiColor2GrayC3Tab[] =
 {
@@ -3251,11 +3254,13 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC3RTab[depth], 2, 1, 0)) )
                     return;
             }
+#if (IPP_VERSION_MAJOR >= 8) && (IPP_VERSION_MINOR >= 1)
             else if( code == CV_RGBA2BGRA )
             {
                 if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC4RTab[depth], 2, 1, 0)) )
                     return;
             }
+#endif
 #endif
 
             if( depth == CV_8U )
@@ -3310,14 +3315,17 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             CV_Assert( scn == 3 || scn == 4 );
             _dst.create(sz, CV_MAKETYPE(depth, 1));
             dst = _dst.getMat();
-/*
+/**/
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+/*
             if( code == CV_BGR2GRAY )
             {
                 if( CvtColorIPPLoop(src, dst, IPPColor2GrayFunctor(ippiColor2GrayC3Tab[depth])) )
                     return;
             }
-            else if( code == CV_RGB2GRAY )
+            else
+*/
+            if( code == CV_RGB2GRAY )
             {
                 if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGB2GrayC3Tab[depth])) )
                     return;
@@ -3333,7 +3341,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                     return;
             }
 #endif
-*/
+/**/
             bidx = code == CV_BGR2GRAY || code == CV_BGRA2GRAY ? 0 : 2;
 
             if( depth == CV_8U )
