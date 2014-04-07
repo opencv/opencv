@@ -3413,15 +3413,15 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
 
     String opts = cv::format("-D BLK_X=%d -D BLK_Y=%d -D RADIUSX=%d -D RADIUSY=%d%s%s"
                              " -D srcT=%s -D convertToWT=%s -D WT=%s -D dstT=%s -D convertToDstT=%s"
-                             " -D %s -D srcT1=%s -D dstT1=%s -D CN=%d -D SHIFT_BITS=%d%s", 
+                             " -D %s -D srcT1=%s -D dstT1=%s -D WT1=%s -D CN=%d -D SHIFT_BITS=%d%s",
                              (int)lt2[0], (int)lt2[1], row_kernel.cols / 2, col_kernel.cols / 2,
                              ocl::kernelToStr(row_kernel, wdepth, "KERNEL_MATRIX_X").c_str(),
                              ocl::kernelToStr(col_kernel, wdepth, "KERNEL_MATRIX_Y").c_str(),
                              ocl::typeToStr(stype), ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
                              ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), ocl::typeToStr(dtype),
                              ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), borderMap[borderType],
-                             ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), cn, 2*shift_bits,
-                             int_arithm ? " -D INTEGER_ARITHMETIC" : "");
+                             ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), ocl::typeToStr(wdepth),
+                             cn, 2*shift_bits, int_arithm ? " -D INTEGER_ARITHMETIC" : "");
 
     ocl::Kernel k("sep_filter", ocl::imgproc::filterSep_singlePass_oclsrc, opts);
     if (k.empty())
@@ -3481,8 +3481,8 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
         ctype == KERNEL_SMOOTH+KERNEL_SYMMETRICAL)
     {
         bdepth = CV_32S;
-        kernelX.convertTo( kernelX, CV_32S, 1 << shift_bits );
-        kernelY.convertTo( kernelY, CV_32S, 1 << shift_bits );
+        kernelX.convertTo( kernelX, bdepth, 1 << shift_bits );
+        kernelY.convertTo( kernelY, bdepth, 1 << shift_bits );
         int_arithm = true;
     }
 
