@@ -2227,7 +2227,7 @@ void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray
         if (depth == CV_32F &&
                 ippmSaxpy_vava_32f((const Ipp32f *)src1.data, (int)src1.step, sizeof(Ipp32f), falpha,
                 (const Ipp32f *)src2.data, (int)src2.step, sizeof(Ipp32f),
-                (Ipp32f *)dst.data, (int)dst.step, sizeof(Ipp32f), len, 1) >= 0)
+                (Ipp32f *)dst.data, (int)dst.step, sizeof(Ipp32f), (int)len, 1) >= 0)
             return;
 #endif
         func(src1.data, src2.data, dst.data, (int)len, palpha);

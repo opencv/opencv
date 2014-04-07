@@ -3254,11 +3254,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC3RTab[depth], 2, 1, 0)) )
                     return;
             }
-<<<<<<< HEAD
 #if (IPP_VERSION_X100 >= 801)
-=======
-#if IPP_VERSION_MAJOR * 10 + IPP_VERSION_MINOR >= 81
->>>>>>> cv::scaleAdd
             else if( code == CV_RGBA2BGRA )
             {
                 if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC4RTab[depth], 2, 1, 0)) )

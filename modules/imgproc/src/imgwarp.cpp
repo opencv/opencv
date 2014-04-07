@@ -61,7 +61,7 @@ namespace cv
     typedef IppStatus (CV_STDCALL* ippiResizeGetSrcOffset)(void*, IppiPoint, IppiPoint*);
 #endif
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7) && 0
     typedef IppStatus (CV_STDCALL* ippiSetFunc)(const void*, void *, int, IppiSize);
     typedef IppStatus (CV_STDCALL* ippiWarpPerspectiveFunc)(const void*, IppiSize, int, IppiRect, void *, int, IppiRect, double [3][3], int);
     typedef IppStatus (CV_STDCALL* ippiWarpAffineBackFunc)(const void*, IppiSize, int, IppiRect, void *, int, IppiRect, double [2][3], int);
@@ -4015,7 +4015,7 @@ private:
 
 
     /*
-#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 10 + IPP_VERSION_MINOR >= 81
+#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR >= 801
 class IPPWarpAffineInvoker :
     public ParallelLoopBody
 {
@@ -4215,7 +4215,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     const int AB_SCALE = 1 << AB_BITS;
 
     /*
-#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 10 + IPP_VERSION_MINOR >= 81
+#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR >= 801
     int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if( ( depth == CV_8U || depth == CV_16U || depth == CV_32F ) &&
        ( cn == 1 || cn == 3 || cn == 4 ) &&
@@ -4381,53 +4381,52 @@ private:
 };
 
     /*
-#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 10 + IPP_VERSION_MINOR >= 81
+#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR >= 801
 class IPPWarpPerspectiveInvoker :
-   public ParallelLoopBody
+    public ParallelLoopBody
 {
 public:
-   IPPWarpPerspectiveInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[3][3], int &_interpolation,
-                             int &_borderType, const Scalar &_borderValue, ippiWarpPerspectiveFunc _func, bool *_ok) :
-       ParallelLoopBody(), src(_src), dst(_dst), mode(_interpolation), coeffs(_coeffs),
-       borderType(_borderType), borderValue(_borderValue), func(_func), ok(_ok)
-   {
-       *ok = true;
-   }
+    IPPWarpPerspectiveInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[3][3], int &_interpolation,
+        int &_borderType, const Scalar &_borderValue, ippiWarpPerspectiveFunc _func, bool *_ok) :
+        ParallelLoopBody(), src(_src), dst(_dst), mode(_interpolation), coeffs(_coeffs),
+        borderType(_borderType), borderValue(_borderValue), func(_func), ok(_ok)
+    {
+        *ok = true;
+    }
 
-   virtual void operator() (const Range& range) const
-   {
-       IppiSize srcsize = {src.cols, src.rows};
-       IppiRect srcroi = {0, 0, src.cols, src.rows};
-       IppiRect dstroi = {0, range.start, dst.cols, range.end - range.start};
-       int cnn = src.channels();
+    virtual void operator() (const Range& range) const
+    {
+        IppiSize srcsize = {src.cols, src.rows};
+        IppiRect srcroi = {0, 0, src.cols, src.rows};
+        IppiRect dstroi = {0, range.start, dst.cols, range.end - range.start};
+        int cnn = src.channels();
 
-       if( borderType == BORDER_CONSTANT )
-       {
-           IppiSize setSize = {dst.cols, range.end - range.start};
-           void *dataPointer = dst.data + dst.step[0] * range.start;
-           if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
-           {
-               *ok = false;
-               return;
-           }
-       }
+        if( borderType == BORDER_CONSTANT )
+        {
+            IppiSize setSize = {dst.cols, range.end - range.start};
+            void *dataPointer = dst.data + dst.step[0] * range.start;
+            if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
+            {
+                *ok = false;
+                return;
+            }
+        }
 
-       IppStatus status = func(src.data, srcsize, (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, coeffs, mode);
-       printf("%d\n", status);
-       if (status != ippStsNoErr)
-           *ok = false;
-   }
+        IppStatus status = func(src.data, srcsize, (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, coeffs, mode);
+        if (status != ippStsNoErr)
+            *ok = false;
+    }
 private:
-   Mat &src;
-   Mat &dst;
-   int mode;
-   double (&coeffs)[3][3];
-   int borderType;
-   const Scalar borderValue;
-   ippiWarpPerspectiveFunc func;
-   bool *ok;
+    Mat &src;
+    Mat &dst;
+    int mode;
+    double (&coeffs)[3][3];
+    int borderType;
+    const Scalar borderValue;
+    ippiWarpPerspectiveFunc func;
+    bool *ok;
 
-   const IPPWarpPerspectiveInvoker& operator= (const IPPWarpPerspectiveInvoker&);
+    const IPPWarpPerspectiveInvoker& operator= (const IPPWarpPerspectiveInvoker&);
 };
 #endif
     */
@@ -4464,7 +4463,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 #endif
 
     /*
-#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 10 + IPP_VERSION_MINOR >= 81
+#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR >= 801
     int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if( (depth == CV_8U || depth == CV_16U || depth == CV_32F) &&
        (cn == 1 || cn == 3 || cn == 4) &&

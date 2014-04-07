@@ -223,6 +223,13 @@ static inline IppiSize ippiSize(int width, int height)
     IppiSize size = { width, height };
     return size;
 }
+
+static inline IppiSize ippiSize(const cv::Size & _size)
+{
+    IppiSize size = { _size.width, _size.height };
+    return size;
+}
+
 #else
 #  define IPP_VERSION_X100 0
 #endif
