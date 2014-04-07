@@ -389,7 +389,7 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
                 status = ippiIntegral_8u32s_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32s*)sum.data, (int)sum.step, srcRoiSize, 0 );
             }
         }
-        if (ippStsNoErr == status)
+        if (0 <= status)
             return;
     }
 #endif

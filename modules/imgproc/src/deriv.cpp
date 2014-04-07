@@ -212,18 +212,18 @@ static bool IPPDerivScharr(const Mat& src, Mat& dst, int ddepth, int dx, int dy,
                 {
                     if ((dx == 1) && (dy == 0))
                     {
-                        if (ippStsNoErr != ippiFilterScharrVertGetBufferSize_8u16s_C1R(roi,&bufSize))
+                        if (0 > ippiFilterScharrVertGetBufferSize_8u16s_C1R(roi,&bufSize))
                             return false;
                         buffer.allocate(bufSize);
-                        return (ippStsNoErr == ippiFilterScharrVertBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+                        return (0 <= ippiFilterScharrVertBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
                                         (Ipp16s*)dst.data, (int)dst.step, roi, ippBorderRepl, 0, (Ipp8u*)(char*)buffer));
                     }
                     if ((dx == 0) && (dy == 1))
                     {
-                        if (ippStsNoErr != ippiFilterScharrHorizGetBufferSize_8u16s_C1R(roi,&bufSize))
+                        if (0 > ippiFilterScharrHorizGetBufferSize_8u16s_C1R(roi,&bufSize))
                             return false;
                         buffer.allocate(bufSize);
-                        return (ippStsNoErr == ippiFilterScharrHorizBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+                        return (0 <= ippiFilterScharrHorizBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
                                             (Ipp16s*)dst.data, (int)dst.step, roi, ippBorderRepl, 0, (Ipp8u*)(char*)buffer));
                     }
                     return false;
@@ -240,11 +240,11 @@ static bool IPPDerivScharr(const Mat& src, Mat& dst, int ddepth, int dx, int dy,
                 {
                     if ((dx == 1) && (dy == 0))
                     {
-                        if (ippStsNoErr != ippiFilterScharrVertGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows),&bufSize))
+                        if (0 > ippiFilterScharrVertGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows),&bufSize))
                             return false;
                         buffer.allocate(bufSize);
 
-                        if (ippStsNoErr != ippiFilterScharrVertBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+                        if (0 > ippiFilterScharrVertBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
                                         (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows),
                                         ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
                         {
@@ -259,11 +259,11 @@ static bool IPPDerivScharr(const Mat& src, Mat& dst, int ddepth, int dx, int dy,
                     }
                     if ((dx == 0) && (dy == 1))
                     {
-                        if (ippStsNoErr != ippiFilterScharrHorizGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows),&bufSize))
+                        if (0 > ippiFilterScharrHorizGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows),&bufSize))
                             return false;
                         buffer.allocate(bufSize);
 
-                        if (ippStsNoErr != ippiFilterScharrHorizBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+                        if (0 > ippiFilterScharrHorizBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
                                         (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows),
                                         ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
                             return false;
@@ -296,44 +296,44 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
         {
             if ((dx == 1) && (dy == 0))
             {
-                if (ippStsNoErr != ippiFilterSobelNegVertGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
+                if (0 > ippiFilterSobelNegVertGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
                     return false;
                 buffer.allocate(bufSize);
 
-                return (ippStsNoErr == ippiFilterSobelNegVertBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+                return (0 <= ippiFilterSobelNegVertBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
                                     (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                     ippBorderRepl, 0, (Ipp8u*)(char*)buffer));
             }
 
             if ((dx == 0) && (dy == 1))
             {
-                if (ippStsNoErr != ippiFilterSobelHorizGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
+                if (0 > ippiFilterSobelHorizGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
                     return false;
                 buffer.allocate(bufSize);
 
-                return (ippStsNoErr == ippiFilterSobelHorizBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+                return (0 <= ippiFilterSobelHorizBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
                                     (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                     ippBorderRepl, 0, (Ipp8u*)(char*)buffer));
             }
 
             if ((dx == 2) && (dy == 0))
             {
-                if (ippStsNoErr != ippiFilterSobelVertSecondGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
+                if (0 > ippiFilterSobelVertSecondGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
                     return false;
                 buffer.allocate(bufSize);
 
-                return (ippStsNoErr == ippiFilterSobelVertSecondBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+                return (0 <= ippiFilterSobelVertSecondBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
                                     (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                     ippBorderRepl, 0, (Ipp8u*)(char*)buffer));
             }
 
             if ((dx == 0) && (dy == 2))
             {
-                if (ippStsNoErr != ippiFilterSobelHorizSecondGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
+                if (0 > ippiFilterSobelHorizSecondGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
                     return false;
                 buffer.allocate(bufSize);
 
-                return (ippStsNoErr == ippiFilterSobelHorizSecondBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
+                return (0 <= ippiFilterSobelHorizSecondBorder_8u16s_C1R((const Ipp8u*)src.data, (int)src.step,
                                     (Ipp16s*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                     ippBorderRepl, 0, (Ipp8u*)(char*)buffer));
             }
@@ -343,11 +343,11 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
         {
             if ((dx == 1) && (dy == 0))
             {
-                if (ippStsNoErr != ippiFilterSobelNegVertGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize), &bufSize))
+                if (0 > ippiFilterSobelNegVertGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize), &bufSize))
                     return false;
                 buffer.allocate(bufSize);
 
-                if (ippStsNoErr != ippiFilterSobelNegVertBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+                if (0 > ippiFilterSobelNegVertBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
                                 (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                 ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
                 {
@@ -360,11 +360,11 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
 
             if ((dx == 0) && (dy == 1))
             {
-                if (ippStsNoErr != ippiFilterSobelHorizGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
+                if (0 > ippiFilterSobelHorizGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
                     return false;
                 buffer.allocate(bufSize);
 
-                if (ippStsNoErr != ippiFilterSobelHorizBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+                if (0 > ippiFilterSobelHorizBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
                                 (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                 ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
                 {
@@ -377,11 +377,11 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
 
             if((dx == 2) && (dy == 0))
             {
-                if (ippStsNoErr != ippiFilterSobelVertSecondGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
+                if (0 > ippiFilterSobelVertSecondGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
                     return false;
                 buffer.allocate(bufSize);
 
-                if (ippStsNoErr != ippiFilterSobelVertSecondBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+                if (0 > ippiFilterSobelVertSecondBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
                                 (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                 ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
                 {
@@ -394,11 +394,11 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
 
             if((dx == 0) && (dy == 2))
             {
-                if (ippStsNoErr != ippiFilterSobelHorizSecondGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
+                if (0 > ippiFilterSobelHorizSecondGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
                     return false;
                 buffer.allocate(bufSize);
 
-                if (ippStsNoErr != ippiFilterSobelHorizSecondBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
+                if (0 > ippiFilterSobelHorizSecondBorder_32f_C1R((const Ipp32f*)src.data, (int)src.step,
                                 (Ipp32f*)dst.data, (int)dst.step, ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),
                                 ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
                 {

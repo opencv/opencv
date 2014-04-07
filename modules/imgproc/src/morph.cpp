@@ -1161,11 +1161,11 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
         case cvtype: \
             {\
                 int specSize = 0, bufferSize = 0;\
-                if (ippStsNoErr != ippiMorphologyBorderGetSize_##flavor(roiSize.width, kernelSize, &specSize, &bufferSize))\
+                if (0 > ippiMorphologyBorderGetSize_##flavor(roiSize.width, kernelSize, &specSize, &bufferSize))\
                     return false;\
                 IppiMorphState *pSpec = (IppiMorphState*)ippMalloc(specSize);\
                 Ipp8u *pBuffer = (Ipp8u*)ippMalloc(bufferSize);\
-                if (ippStsNoErr != ippiMorphologyBorderInit_##flavor(roiSize.width, kernel.data, kernelSize, pSpec, pBuffer))\
+                if (0 > ippiMorphologyBorderInit_##flavor(roiSize.width, kernel.data, kernelSize, pSpec, pBuffer))\
                 {\
                     ippFree(pBuffer);\
                     ippFree(pSpec);\
@@ -1173,10 +1173,10 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
                 }\
                 bool ok = false;\
                 if (op == MORPH_ERODE)\
-                    ok = (ippStsNoErr == ippiErodeBorder_##flavor((Ipp##data_type *)_src->data, (int)_src->step[0], (Ipp##data_type *)dst.data, (int)dst.step[0],\
+                    ok = (0 <= ippiErodeBorder_##flavor((Ipp##data_type *)_src->data, (int)_src->step[0], (Ipp##data_type *)dst.data, (int)dst.step[0],\
                                             roiSize, ippBorderRepl, 0, pSpec, pBuffer));\
                 else\
-                    ok = (ippStsNoErr == ippiDilateBorder_##flavor((Ipp##data_type *)_src->data, (int)_src->step[0], (Ipp##data_type *)dst.data, (int)dst.step[0],\
+                    ok = (0 <= ippiDilateBorder_##flavor((Ipp##data_type *)_src->data, (int)_src->step[0], (Ipp##data_type *)dst.data, (int)dst.step[0],\
                                             roiSize, ippBorderRepl, 0, pSpec, pBuffer));\
                 ippFree(pBuffer);\
                 ippFree(pSpec);\
@@ -1192,7 +1192,7 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
             {\
                 int specSize = 0;\
                 int bufferSize = 0;\
-                if (ippStsNoErr != ippiMorphologyGetSize_##flavor( roiSize.width, kernel.data kernelSize, &specSize))\
+                if (0 > ippiMorphologyGetSize_##flavor( roiSize.width, kernel.data kernelSize, &specSize))\
                     return false;\
                 bool ok = false;\
                 IppiMorphState* pState = (IppiMorphState*)ippMalloc(specSize);\
@@ -1234,13 +1234,13 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
         case cvtype: \
             {\
                 int bufSize = 0;\
-                if (ippStsNoErr != ippiFilterMinGetBufferSize_##flavor(src.cols, kernelSize, &bufSize))\
+                if (0 > ippiFilterMinGetBufferSize_##flavor(src.cols, kernelSize, &bufSize))\
                     return false;\
                 AutoBuffer<uchar> buf(bufSize + 64);\
                 uchar* buffer = alignPtr((uchar*)buf, 32);\
                 if (op == MORPH_ERODE)\
-                    return (ippStsNoErr == ippiFilterMinBorderReplicate_##flavor((Ipp##data_type *)_src->data, (int)_src->step[0], (Ipp##data_type *)dst.data, (int)dst.step[0], roiSize, kernelSize, point, buffer));\
-                return (ippStsNoErr == ippiFilterMaxBorderReplicate_##flavor((Ipp##data_type *)_src->data, (int)_src->step[0], (Ipp##data_type *)dst.data, (int)dst.step[0], roiSize, kernelSize, point, buffer));\
+                    return (0 <= ippiFilterMinBorderReplicate_##flavor((Ipp##data_type *)_src->data, (int)_src->step[0], (Ipp##data_type *)dst.data, (int)dst.step[0], roiSize, kernelSize, point, buffer));\
+                return (0 <= ippiFilterMaxBorderReplicate_##flavor((Ipp##data_type *)_src->data, (int)_src->step[0], (Ipp##data_type *)dst.data, (int)dst.step[0], roiSize, kernelSize, point, buffer));\
             }\
             break;
 
