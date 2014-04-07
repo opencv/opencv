@@ -397,17 +397,17 @@ int64 getCPUTickCount(void)
 
 #else
 
-#ifdef HAVE_IPP
-int64 getCPUTickCount(void)
-{
-    return ippGetCpuClocks();
-}
-#else
+//#ifdef HAVE_IPP
+//int64 getCPUTickCount(void)
+//{
+//    return ippGetCpuClocks();
+//}
+//#else
 int64 getCPUTickCount(void)
 {
     return getTickCount();
 }
-#endif
+//#endif
 
 #endif
 
