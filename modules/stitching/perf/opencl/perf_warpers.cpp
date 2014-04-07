@@ -63,24 +63,12 @@ public:
     explicit WarperBase(int type, Size srcSize)
     {
         Ptr<WarperCreator> creator;
-        if (cv::ocl::useOpenCL())
-        {
-            if (type == SphericalWarperType)
-                creator = makePtr<SphericalWarperOcl>();
-            else if (type == CylindricalWarperType)
-                creator = makePtr<CylindricalWarperOcl>();
-            else if (type == PlaneWarperType)
-                creator = makePtr<PlaneWarperOcl>();
-        }
-        else
-        {
-            if (type == SphericalWarperType)
-                creator = makePtr<SphericalWarper>();
-            else if (type == CylindricalWarperType)
-                creator = makePtr<CylindricalWarper>();
-            else if (type == PlaneWarperType)
-                creator = makePtr<PlaneWarper>();
-        }
+        if (type == SphericalWarperType)
+            creator = makePtr<SphericalWarper>();
+        else if (type == CylindricalWarperType)
+            creator = makePtr<CylindricalWarper>();
+        else if (type == PlaneWarperType)
+            creator = makePtr<PlaneWarper>();
         CV_Assert(!creator.empty());
 
         K = Mat::eye(3, 3, CV_32FC1);

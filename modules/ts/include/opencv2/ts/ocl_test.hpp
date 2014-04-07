@@ -57,6 +57,31 @@ namespace ocl {
 using namespace cv;
 using namespace testing;
 
+inline std::vector<UMat> ToUMat(const std::vector<Mat>& src)
+{
+    std::vector<UMat> dst;
+    dst.resize(src.size());
+    for (size_t i = 0; i < src.size(); ++i)
+    {
+        src[i].copyTo(dst[i]);
+    }
+    return dst;
+}
+
+inline UMat ToUMat(const Mat& src)
+{
+    UMat dst;
+    src.copyTo(dst);
+    return dst;
+}
+
+inline UMat ToUMat(InputArray src)
+{
+    UMat dst;
+    src.getMat().copyTo(dst);
+    return dst;
+}
+
 extern int test_loop_times;
 
 #define MAX_VALUE 357

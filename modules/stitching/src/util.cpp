@@ -113,7 +113,7 @@ bool overlapRoi(Point tl1, Point tl2, Size sz1, Size sz2, Rect &roi)
 }
 
 
-Rect resultRoi(const std::vector<Point> &corners, const std::vector<Mat> &images)
+Rect resultRoi(const std::vector<Point> &corners, const std::vector<UMat> &images)
 {
     std::vector<Size> sizes(images.size());
     for (size_t i = 0; i < images.size(); ++i)
