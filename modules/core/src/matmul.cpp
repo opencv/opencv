@@ -2799,11 +2799,11 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
 {
     double r = 0;
 #if ARITHM_USE_IPP
-    ippiDotProd_8u64f_C1R(src1, (int)(len*sizeof(src1[0])),
-                          src2, (int)(len*sizeof(src2[0])),
-                          ippiSize(len, 1), &r);
-    return r;
-#else
+    if (0 <= ippiDotProd_8u64f_C1R(src1, (int)(len*sizeof(src1[0])),
+                                   src2, (int)(len*sizeof(src2[0])),
+                                   ippiSize(len, 1), &r))
+        return r;
+#endif
     int i = 0;
 
 #if CV_SSE2
@@ -2849,7 +2849,6 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
     }
 #endif
     return r + dotProd_(src1, src2, len - i);
-#endif
 }
 
 
