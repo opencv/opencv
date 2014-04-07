@@ -274,7 +274,14 @@ volatile bool useOptimizedFlag = true;
 #ifdef HAVE_IPP
 struct IPPInitializer
 {
-    IPPInitializer(void) { ippStaticInit(); }
+    IPPInitializer(void)
+    {
+#if IPP_VERSION_MAJOR >= 8
+        ippInit();
+#else
+        ippStaticInit();
+#endif
+    }
 };
 
 IPPInitializer ippInitializer;

@@ -52,18 +52,6 @@
 namespace cv
 {
 
-#if ARITHM_USE_IPP
-struct IPPArithmInitializer
-{
-    IPPArithmInitializer(void)
-    {
-        ippStaticInit();
-    }
-};
-
-IPPArithmInitializer ippArithmInitializer;
-#endif
-
 struct NOP {};
 
 #if CV_SSE2
