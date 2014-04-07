@@ -487,10 +487,10 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
             int srcstep = (int)src.step, dststep = (int)dst.step, maskstep = (int)mask.step;
             if (src.isContinuous() && dst.isContinuous() && mask.isContinuous())
             {
-                srcstep = src.total() * src.elemSize();
-                dststep = dst.total() * dst.elemSize();
-                maskstep = mask.total() * mask.elemSize();
-                size.width = (int)src.total();
+                srcstep = static_cast<int>(src.total() * src.elemSize());
+                dststep = static_cast<int>(dst.total() * dst.elemSize());
+                maskstep = static_cast<int>(mask.total() * mask.elemSize());
+                size.width = static_cast<int>(src.total());
                 size.height = 1;
             }
             size.width *= scn;
@@ -564,13 +564,13 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
 
             Size size = src1.size();
             int src1step = (int)src1.step, src2step = (int)src2.step, dststep = (int)dst.step, maskstep = (int)mask.step;
-            if (src1.isContinuous() && src2.isContinuous() && dst.isContinuous() && mask.empty())
+            if (src1.isContinuous() && src2.isContinuous() && dst.isContinuous() && mask.isContinuous())
             {
-                src1step = src1.total() * src1.elemSize();
-                src2step = src2.total() * src2.elemSize();
-                dststep = dst.total() * dst.elemSize();
-                maskstep = mask.total() * mask.elemSize();
-                size.width = (int)src1.total();
+                src1step = static_cast<int>(src1.total() * src1.elemSize());
+                src2step = static_cast<int>(src2.total() * src2.elemSize());
+                dststep = static_cast<int>(dst.total() * dst.elemSize());
+                maskstep = static_cast<int>(mask.total() * mask.elemSize());
+                size.width = static_cast<int>(src1.total());
                 size.height = 1;
             }
             size.width *= scn;
@@ -645,12 +645,12 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
 
             Size size = src.size();
             int srcstep = (int)src.step, dststep = (int)dst.step, maskstep = (int)mask.step;
-            if (src.isContinuous() && dst.isContinuous() && mask.empty())
+            if (src.isContinuous() && dst.isContinuous() && mask.isContinuous())
             {
-                srcstep = src.total() * src.elemSize();
-                dststep = dst.total() * dst.elemSize();
-                maskstep = mask.total() * mask.elemSize();
-                size.width = (int)src.total();
+                srcstep = static_cast<int>(src.total() * src.elemSize());
+                dststep = static_cast<int>(dst.total() * dst.elemSize());
+                maskstep = static_cast<int>(mask.total() * mask.elemSize());
+                size.width = static_cast<int>((int)src.total());
                 size.height = 1;
             }
             size.width *= scn;

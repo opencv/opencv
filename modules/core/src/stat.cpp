@@ -2114,11 +2114,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
                 type == CV_16UC3 ? (ippiNormFuncNoHint)ippiNorm_Inf_16u_C3R :
                 type == CV_16UC4 ? (ippiNormFuncNoHint)ippiNorm_Inf_16u_C4R :
                 type == CV_16SC1 ? (ippiNormFuncNoHint)ippiNorm_Inf_16s_C1R :
-<<<<<<< HEAD
 #if (IPP_VERSION_X100 >= 801)
-=======
-#if IPP_VERSION_MAJOR * 10 + IPP_VERSION_MINOR >= 81
->>>>>>> cv::scaleAdd
                 type == CV_16SC3 ? (ippiNormFuncNoHint)ippiNorm_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
                 type == CV_16SC4 ? (ippiNormFuncNoHint)ippiNorm_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
 #endif
@@ -2550,11 +2546,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 type == CV_16UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16u_C3R :
                 type == CV_16UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16u_C4R :
                 type == CV_16SC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C1R :
-<<<<<<< HEAD
 #if (IPP_VERSION_X100 >= 801)
-=======
-#if IPP_VERSION_MAJOR * 10 + IPP_VERSION_MINOR >= 81
->>>>>>> cv::scaleAdd
                 type == CV_16SC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
                 type == CV_16SC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
 #endif
