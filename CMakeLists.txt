@@ -1,4 +1,4 @@
-# ----------------------------------------------------------------------------
+﻿# ----------------------------------------------------------------------------
 #  Root CMake file for OpenCV
 #
 #    From the off-tree build directory, invoke:
@@ -917,14 +917,9 @@ endif(DEFINED WITH_INTELPERC)
 status("")
 status("  Other third-party libraries:")
 
-<<<<<<< HEAD
 if((WITH_IPP OR WITH_ICV) AND HAVE_IPP)
   status("    Use IPP:" "${IPP_VERSION_STR} [${IPP_VERSION_MAJOR}.${IPP_VERSION_MINOR}.${IPP_VERSION_BUILD}]")
   status("         at:" "${IPP_ROOT_DIR}")
-=======
-if(WITH_IPP AND IPP_FOUND)
-  status("    Use IPP:" "${IPP_VERSION_STR} [${IPP_VERSION_MAJOR}.${IPP_VERSION_MINOR}.${IPP_VERSION_BUILD}]")
->>>>>>> Prepare codes for ippicv library
 else()
   status("    Use IPP:"   (WITH_IPP OR WITH_ICV) AND NOT HAVE_IPP THEN "IPP not found" ELSE NO)
 endif()
