@@ -52,7 +52,9 @@ void nbayes_check_data( CvMLData* _data )
         CV_Error( CV_StsBadArg, "missing values are not supported" );
     const CvMat* var_types = _data->get_var_types();
     bool is_classifier = var_types->data.ptr[var_types->cols-1] == CV_VAR_CATEGORICAL;
-    if( ( fabs( cvNorm( var_types, 0, CV_L1 ) -
+
+    Mat _var_types = cvarrToMat(var_types);
+    if( ( fabs( cvtest::norm( _var_types, Mat::zeros(_var_types.dims, _var_types.size, _var_types.type()), CV_L1 ) -
         (var_types->rows + var_types->cols - 2)*CV_VAR_ORDERED - CV_VAR_CATEGORICAL ) > FLT_EPSILON ) ||
         !is_classifier )
         CV_Error( CV_StsBadArg, "incorrect types of predictors or responses" );

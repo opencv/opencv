@@ -1362,7 +1362,8 @@ TEST_P(ElemWiseTest, accuracy)
 
         double maxErr = op->getMaxErr(depth);
         vector<int> pos;
-        ASSERT_PRED_FORMAT2(cvtest::MatComparator(maxErr, op->context), dst0, dst) << "\nsrc[0] ~ " << cvtest::MatInfo(!src.empty() ? src[0] : Mat()) << "\ntestCase #" << testIdx << "\n";
+        ASSERT_PRED_FORMAT2(cvtest::MatComparator(maxErr, op->context), dst0, dst) << "\nsrc[0] ~ " <<
+            cvtest::MatInfo(!src.empty() ? src[0] : Mat()) << "\ntestCase #" << testIdx << "\n";
     }
 }
 
@@ -1500,7 +1501,7 @@ protected:
                 }
                 Mat d1;
                 d.convertTo(d1, depth);
-                CV_Assert( norm(c, d1, CV_C) <= DBL_EPSILON );
+                CV_Assert( cvtest::norm(c, d1, CV_C) <= DBL_EPSILON );
             }
 
             Mat_<uchar> tmpSrc(100,100);
@@ -1574,7 +1575,7 @@ TEST_P(Mul1, One)
 
     cv::multiply(3, src, dst);
 
-    ASSERT_EQ(0, cv::norm(dst, ref_dst, cv::NORM_INF));
+    ASSERT_EQ(0, cvtest::norm(dst, ref_dst, cv::NORM_INF));
 }
 
 INSTANTIATE_TEST_CASE_P(Arithm, Mul1, testing::Values(Size(2, 2), Size(1, 1)));

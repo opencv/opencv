@@ -279,7 +279,7 @@ float dispRMS( const Mat& computedDisp, const Mat& groundTruthDisp, const Mat& m
         checkTypeAndSizeOfMask( mask, sz );
         pointsCount = countNonZero(mask);
     }
-    return 1.f/sqrt((float)pointsCount) * (float)norm(computedDisp, groundTruthDisp, NORM_L2, mask);
+    return 1.f/sqrt((float)pointsCount) * (float)cvtest::norm(computedDisp, groundTruthDisp, NORM_L2, mask);
 }
 
 /*

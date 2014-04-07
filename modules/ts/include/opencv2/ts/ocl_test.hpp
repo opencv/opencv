@@ -243,9 +243,9 @@ struct CV_EXPORTS TestUtils
 
     static inline double checkNormRelative(InputArray m1, InputArray m2, InputArray mask = noArray())
     {
-        return cv::norm(m1.getMat(), m2.getMat(), cv::NORM_INF, mask) /
+        return cvtest::norm(m1.getMat(), m2.getMat(), cv::NORM_INF, mask) /
                 std::max((double)std::numeric_limits<float>::epsilon(),
-                         (double)std::max(cv::norm(m1.getMat(), cv::NORM_INF), norm(m2.getMat(), cv::NORM_INF)));
+                         (double)std::max(cvtest::norm(m1.getMat(), cv::NORM_INF), cvtest::norm(m2.getMat(), cv::NORM_INF)));
     }
 };
 
