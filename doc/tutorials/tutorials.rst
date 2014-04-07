@@ -102,7 +102,7 @@ As always, we would be happy to hear your comments and receive your contribution
    .. cssclass:: toctableopencv
 
    =========== =======================================================
-   |Video|     Look here in order to find use on your video stream algoritms like: motion extraction, feature tracking and foreground extractions.
+   |Video|     Look here in order to find use on your video stream algorithms like: motion extraction, feature tracking and foreground extractions.
 
    =========== =======================================================
 

@@ -323,7 +323,7 @@ CUDA_TEST_P(MOG2, getBackgroundImage)
     cv::Mat background_gold;
     mog2_gold->getBackgroundImage(background_gold);
 
-    ASSERT_MAT_NEAR(background_gold, background, 0);
+    ASSERT_MAT_NEAR(background_gold, background, 1);
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_BgSegm, MOG2, testing::Combine(
