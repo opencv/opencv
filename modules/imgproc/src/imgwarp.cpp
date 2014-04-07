@@ -4015,7 +4015,7 @@ private:
 
 
     /*
-#if defined (HAVE_IPP) && IPP_VERSION_MAJOR >= 8 && IPP_VERSION_MINOR >= 1
+#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 10 + IPP_VERSION_MINOR >= 81
 class IPPWarpAffineInvoker :
     public ParallelLoopBody
 {
@@ -4045,15 +4045,10 @@ public:
             }
         }
 
-        ////Aug 2013: problem in IPP 7.1, 8.0 : sometimes function return ippStsCoeffErr
+        // Aug 2013: problem in IPP 7.1, 8.0 : sometimes function return ippStsCoeffErr
         IppStatus status = func( src.data, srcsize, (int)src.step[0], srcroi, dst.data,
                                 (int)dst.step[0], dstroi, coeffs, mode );
-<<<<<<< HEAD
-        printf("%d\n", status);
-        if( status != ippStsNoErr)
-=======
         if( status < 0)
->>>>>>> cv::blur
             *ok = false;
     }
 private:
@@ -4220,7 +4215,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     const int AB_SCALE = 1 << AB_BITS;
 
     /*
-#if defined (HAVE_IPP) && IPP_VERSION_MAJOR >= 8 && IPP_VERSION_MINOR >= 1
+#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 10 + IPP_VERSION_MINOR >= 81
     int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if( ( depth == CV_8U || depth == CV_16U || depth == CV_32F ) &&
        ( cn == 1 || cn == 3 || cn == 4 ) &&
@@ -4386,7 +4381,7 @@ private:
 };
 
     /*
-#if defined (HAVE_IPP) && IPP_VERSION_MAJOR >= 8 && IPP_VERSION_MINOR >= 1
+#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 10 + IPP_VERSION_MINOR >= 81
 class IPPWarpPerspectiveInvoker :
    public ParallelLoopBody
 {
@@ -4469,7 +4464,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 #endif
 
     /*
-#if defined (HAVE_IPP) && IPP_VERSION_MAJOR >= 8 && IPP_VERSION_MINOR >= 1
+#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 10 + IPP_VERSION_MINOR >= 81
     int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if( (depth == CV_8U || depth == CV_16U || depth == CV_32F) &&
        (cn == 1 || cn == 3 || cn == 4) &&

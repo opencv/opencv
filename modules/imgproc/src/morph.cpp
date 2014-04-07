@@ -1136,7 +1136,11 @@ private:
     Scalar borderValue;
 };
 
+<<<<<<< HEAD
 #if IPP_VERSION_X100 >= 801
+=======
+#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 10 + IPP_VERSION_MINOR >= 81
+>>>>>>> cv::scaleAdd
 static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kernel,
                               const Size& ksize, const Point &anchor, bool rectKernel)
 {

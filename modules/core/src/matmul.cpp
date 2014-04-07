@@ -2220,19 +2220,16 @@ void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray
 
     ScaleAddFunc func = depth == CV_32F ? (ScaleAddFunc)scaleAdd_32f : (ScaleAddFunc)scaleAdd_64f;
 
-    if( src1.isContinuous() && src2.isContinuous() && dst.isContinuous() )
+    if (src1.isContinuous() && src2.isContinuous() && dst.isContinuous())
     {
         size_t len = src1.total()*cn;
-//#ifdef HAVE_IPP
-//        if (depth == CV_32F)
-//        {
-//            IppStatus status = ippmSaxpy_vava_32f((const Ipp32f *)src1.data, 1, 0, falpha,
-//                                                  (const Ipp32f *)src2.data, 1, 0, (Ipp32f *)dst.data, 1, 0, (int)len, 1);
-//            printf("%s\n", ippGetStatusString(status));
-//            if (status >= 0)
-//                return;
-//        }
-//#endif
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+        if (depth == CV_32F &&
+                ippmSaxpy_vava_32f((const Ipp32f *)src1.data, (int)src1.step, sizeof(Ipp32f), falpha,
+                (const Ipp32f *)src2.data, (int)src2.step, sizeof(Ipp32f),
+                (Ipp32f *)dst.data, (int)dst.step, sizeof(Ipp32f), len, 1) >= 0)
+            return;
+#endif
         func(src1.data, src2.data, dst.data, (int)len, palpha);
         return;
     }
