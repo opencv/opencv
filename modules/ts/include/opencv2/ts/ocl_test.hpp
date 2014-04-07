@@ -85,6 +85,17 @@ do \
         << "Size: " << mat1.size() << std::endl; \
 } while ((void)0, 0)
 
+#define EXPECT_MAT_N_DIFF(mat1, mat2, num) \
+do \
+{ \
+    ASSERT_EQ(mat1.type(), mat2.type()); \
+    ASSERT_EQ(mat1.size(), mat2.size()); \
+    Mat diff; \
+    absdiff(mat1, mat2, diff); \
+    EXPECT_LE(countNonZero(diff.reshape(1)), num) \
+    << "Size: " << mat1.size() << std::endl; \
+} while ((void)0, 0)
+
 #define OCL_EXPECT_MATS_NEAR(name, eps) \
 do \
 { \
