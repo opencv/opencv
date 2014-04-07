@@ -200,7 +200,28 @@ Here you will learn the about the basic building blocks of the library. A must r
                    :height: 90pt
                    :width:  90pt
 
+  =============== ======================================================
++
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
 
+  =============== ======================================================
+   |IPPIma|       **Title:** :ref:`howToUseIPPAconversion`
+
+                  *Compatibility:* > OpenCV 2.0
+
+                  *Author:* |Author_ElenaG|
+
+                  You will see how to use the IPP Async with OpenCV.
+
+  =============== ======================================================
+
+  .. |IPPIma| image:: images/How_To_Use_IPPA.jpg
+                   :height: 90pt
+                   :width:  90pt
+  .. |Author_ElenaG| unicode:: Elena U+0020 Gvozdeva
+
+  =============== ======================================================
 
 .. raw:: latex
 
@@ -219,3 +240,4 @@ Here you will learn the about the basic building blocks of the library. A must r
    ../discrete_fourier_transform/discrete_fourier_transform
    ../file_input_output_with_xml_yml/file_input_output_with_xml_yml
    ../interoperability_with_OpenCV_1/interoperability_with_OpenCV_1
+   ../how_to_use_ippa_conversion/how_to_use_ippa_conversion
