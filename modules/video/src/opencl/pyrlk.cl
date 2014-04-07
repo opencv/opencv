@@ -297,7 +297,7 @@ void ReadPatchIToLocalMem(image2d_t I, float2 Point, local float IPatchLocal[LSy
 
 __attribute__((reqd_work_group_size(LSx, LSy, 1)))
 __kernel void lkSparse(image2d_t I, image2d_t J,
-                       __global const float2* prevPts, int prevPtsStep, __global float2* nextPts, int nextPtsStep, __global uchar* status, __global float* err,
+                       __global const float2* prevPts, __global float2* nextPts, __global uchar* status, __global float* err,
                        const int level, const int rows, const int cols, int PATCH_X, int PATCH_Y, int c_winSize_x, int c_winSize_y, int c_iters, char calcErr)
 {
     __local float smem1[BUFFER];
