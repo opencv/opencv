@@ -248,6 +248,22 @@ TEST(Viz, show_sampled_normals)
     viz.spin();
 }
 
+TEST(Viz, show_cloud_shaded_by_normals)
+{
+    Mesh mesh = Mesh::load(get_dragon_ply_file_path());
+    computeNormals(mesh, mesh.normals);
+
+    Affine3d pose = Affine3d().rotate(Vec3d(0, 0.8, 0));
+
+    WCloud cloud(mesh.cloud, Color::white(), mesh.normals);
+    cloud.setRenderingProperty(SHADING, SHADING_GOURAUD);
+
+    Viz3d viz("show_cloud_shaded_by_normals");
+    viz.showWidget("cloud", cloud, pose);
+    viz.showWidget("text2d", WText("Cloud shaded by normals", Point(20, 20), 20, Color::green()));
+    viz.spin();
+}
+
 TEST(Viz, show_trajectories)
 {
     std::vector<Affine3d> path = generate_test_trajectory<double>(), sub0, sub1, sub2, sub3, sub4, sub5;
