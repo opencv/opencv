@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------------------------------
 set(prefix      "${CMAKE_INSTALL_PREFIX}")
 set(exec_prefix "\${prefix}")
-set(libdir      "") #TODO: need link paths for OpenCV_EXTRA_COMPONENTS
+set(libdir      "\${prefix}/${OPENCV_LIB_INSTALL_PATH}")
 set(includedir  "\${prefix}/${OPENCV_INCLUDE_INSTALL_PATH}")
 
 if(CMAKE_BUILD_TYPE MATCHES "Release")
@@ -35,7 +35,7 @@ ocv_list_reverse(OpenCV_LIB_COMPONENTS)
 ocv_list_reverse(OpenCV_EXTRA_COMPONENTS)
 
 #build the list of components
-set(OpenCV_LIB_COMPONENTS_ "")
+set(OpenCV_LIB_COMPONENTS_ "-L\${libdir}")
 foreach(CVLib ${OpenCV_LIB_COMPONENTS})
   get_target_property(libpath ${CVLib} LOCATION_${CMAKE_BUILD_TYPE})
   get_filename_component(libname "${libpath}" NAME)
@@ -50,8 +50,10 @@ foreach(CVLib ${OpenCV_LIB_COMPONENTS})
   else()
     set(installDir "${OPENCV_LIB_INSTALL_PATH}")
   endif()
-
-  set(OpenCV_LIB_COMPONENTS_ "${OpenCV_LIB_COMPONENTS_} \${exec_prefix}/${installDir}/${libname}")
+  string(REPLACE "libopencv" "-lopencv" libname "${libname}")
+  string(REPLACE ".so"    "" libname "${libname}")
+  string(REPLACE ".dylib" "" libname "${libname}")
+  set(OpenCV_LIB_COMPONENTS_ "${OpenCV_LIB_COMPONENTS_} ${libname}")
 endforeach()
 
 # add extra dependencies required for OpenCV
