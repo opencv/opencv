@@ -121,7 +121,7 @@ public:
                         CV_Assert(img.type() == img_test.type());
                         CV_Assert(num_channels == img_test.channels());
 
-                        double n = norm(img, img_test);
+                        double n = cvtest::norm(img, img_test, NORM_L2);
                         if ( n > 1.0)
                         {
                             ts->printf(ts->LOG, "norm = %f \n", n);
@@ -151,7 +151,7 @@ public:
                     CV_Assert(img.size() == img_test.size());
                     CV_Assert(img.type() == img_test.type());
 
-                    double n = norm(img, img_test);
+                    double n = cvtest::norm(img, img_test, NORM_L2);
                     if ( n > 1.0)
                     {
                         ts->printf(ts->LOG, "norm = %f \n", n);
@@ -183,7 +183,7 @@ public:
                     CV_Assert(img.type() == img_test.type());
 
 
-                    double n = norm(img, img_test);
+                    double n = cvtest::norm(img, img_test, NORM_L2);
                     if ( n > 1.0)
                     {
                         ts->printf(ts->LOG, "norm = %f \n", n);
@@ -210,7 +210,7 @@ public:
         {
             Mat rle = imread(string(ts->get_data_path()) + "readwrite/rle8.bmp");
             Mat bmp = imread(string(ts->get_data_path()) + "readwrite/ordinary.bmp");
-            if (norm(rle-bmp)>1.e-10)
+            if (cvtest::norm(rle-bmp, NORM_L2)>1.e-10)
                 ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
         }
         catch(...)
@@ -406,7 +406,7 @@ TEST(Highgui_Jpeg, encode_decode_progressive_jpeg)
     EXPECT_NO_THROW(cv::imwrite(output_normal, img));
     cv::Mat img_jpg_normal = cv::imread(output_normal);
 
-    EXPECT_EQ(0, cv::norm(img_jpg_progressive, img_jpg_normal, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(img_jpg_progressive, img_jpg_normal, NORM_INF));
 
     remove(output_progressive.c_str());
 }
@@ -430,7 +430,7 @@ TEST(Highgui_Jpeg, encode_decode_optimize_jpeg)
     EXPECT_NO_THROW(cv::imwrite(output_normal, img));
     cv::Mat img_jpg_normal = cv::imread(output_normal);
 
-    EXPECT_EQ(0, cv::norm(img_jpg_optimized, img_jpg_normal, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(img_jpg_optimized, img_jpg_normal, NORM_INF));
 
     remove(output_optimized.c_str());
 }
@@ -612,11 +612,11 @@ TEST(Highgui_WebP, encode_decode_lossless_webp)
 
     cv::Mat decode = cv::imdecode(buf, IMREAD_COLOR);
     ASSERT_FALSE(decode.empty());
-    EXPECT_TRUE(cv::norm(decode, img_webp, NORM_INF) == 0);
+    EXPECT_TRUE(cvtest::norm(decode, img_webp, NORM_INF) == 0);
 
     ASSERT_FALSE(img_webp.empty());
 
-    EXPECT_TRUE(cv::norm(img, img_webp, NORM_INF) == 0);
+    EXPECT_TRUE(cvtest::norm(img, img_webp, NORM_INF) == 0);
 }
 
 TEST(Highgui_WebP, encode_decode_lossy_webp)

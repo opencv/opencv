@@ -47,6 +47,8 @@ using cv::Scalar;
 using cv::Size;
 using cv::Point;
 using cv::Rect;
+using cv::InputArray;
+using cv::noArray;
 
 class CV_EXPORTS TS;
 
@@ -124,8 +126,8 @@ CV_EXPORTS void initUndistortMap( const Mat& a, const Mat& k, Size sz, Mat& mapx
 
 CV_EXPORTS void minMaxLoc(const Mat& src, double* minval, double* maxval,
                           vector<int>* minloc, vector<int>* maxloc, const Mat& mask=Mat());
-CV_EXPORTS double norm(const Mat& src, int normType, const Mat& mask=Mat());
-CV_EXPORTS double norm(const Mat& src1, const Mat& src2, int normType, const Mat& mask=Mat());
+CV_EXPORTS double norm(InputArray src, int normType, InputArray mask=noArray());
+CV_EXPORTS double norm(InputArray src1, InputArray src2, int normType, InputArray mask=noArray());
 CV_EXPORTS Scalar mean(const Mat& src, const Mat& mask=Mat());
 
 CV_EXPORTS bool cmpUlps(const Mat& data, const Mat& refdata, int expMaxDiff, double* realMaxDiff, vector<int>* idx);

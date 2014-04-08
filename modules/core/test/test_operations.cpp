@@ -83,11 +83,11 @@ protected:
 
     void checkDiff(const Mat& m1, const Mat& m2, const string& s)
     {
-        if (norm(m1, m2, NORM_INF) != 0) throw test_excep(s);
+        if (cvtest::norm(m1, m2, NORM_INF) != 0) throw test_excep(s);
     }
     void checkDiffF(const Mat& m1, const Mat& m2, const string& s)
     {
-        if (norm(m1, m2, NORM_INF) > 1e-5) throw test_excep(s);
+        if (cvtest::norm(m1, m2, NORM_INF) > 1e-5) throw test_excep(s);
     }
 };
 
@@ -488,7 +488,7 @@ bool CV_OperationsTest::TestSubMatAccess()
             coords.push_back(T_bs(i));
             //std::cout << T_bs1(i) << std::endl;
         }
-        CV_Assert( norm(coords, T_bs.reshape(1,1), NORM_INF) == 0 );
+        CV_Assert( cvtest::norm(coords, T_bs.reshape(1,1), NORM_INF) == 0 );
     }
     catch (const test_excep& e)
     {
@@ -776,14 +776,14 @@ bool CV_OperationsTest::TestTemplateMat()
         mvf.push_back(Mat_<float>::zeros(4, 3));
         merge(mvf, mf2);
         split(mf2, mvf2);
-        CV_Assert( norm(mvf2[0], mvf[0], CV_C) == 0 &&
-                  norm(mvf2[1], mvf[1], CV_C) == 0 );
+        CV_Assert( cvtest::norm(mvf2[0], mvf[0], CV_C) == 0 &&
+                  cvtest::norm(mvf2[1], mvf[1], CV_C) == 0 );
 
         {
         Mat a(2,2,CV_32F,1.f);
         Mat b(1,2,CV_32F,1.f);
         Mat c = (a*b.t()).t();
-        CV_Assert( norm(c, CV_L1) == 4. );
+        CV_Assert( cvtest::norm(c, CV_L1) == 4. );
         }
 
         bool badarg_catched = false;
@@ -988,7 +988,7 @@ bool CV_OperationsTest::operations1()
 
         Vec<double,10> v10dzero;
         for (int ii = 0; ii < 10; ++ii) {
-            if (!v10dzero[ii] == 0.0)
+            if (v10dzero[ii] != 0.0)
                 throw test_excep();
         }
 
@@ -1014,13 +1014,13 @@ bool CV_OperationsTest::operations1()
         Matx33f b(1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f);
         Mat c;
         add(Mat::zeros(3, 3, CV_32F), b, c);
-        CV_Assert( norm(b, c, CV_C) == 0 );
+        CV_Assert( cvtest::norm(b, c, CV_C) == 0 );
 
         add(Mat::zeros(3, 3, CV_64F), b, c, noArray(), c.type());
-        CV_Assert( norm(b, c, CV_C) == 0 );
+        CV_Assert( cvtest::norm(b, c, CV_C) == 0 );
 
         add(Mat::zeros(6, 1, CV_64F), 1, c, noArray(), c.type());
-        CV_Assert( norm(Matx61f(1.f, 1.f, 1.f, 1.f, 1.f, 1.f), c, CV_C) == 0 );
+        CV_Assert( cvtest::norm(Matx61f(1.f, 1.f, 1.f, 1.f, 1.f, 1.f), c, CV_C) == 0 );
 
         vector<Point2f> pt2d(3);
         vector<Point3d> pt3d(2);
@@ -1066,11 +1066,11 @@ bool CV_OperationsTest::TestSVD()
         Mat A = (Mat_<double>(3,4) << 1, 2, -1, 4, 2, 4, 3, 5, -1, -2, 6, 7);
         Mat x;
         SVD::solveZ(A,x);
-        if( norm(A*x, CV_C) > FLT_EPSILON )
+        if( cvtest::norm(A*x, CV_C) > FLT_EPSILON )
             throw test_excep();
 
         SVD svd(A, SVD::FULL_UV);
-        if( norm(A*svd.vt.row(3).t(), CV_C) > FLT_EPSILON )
+        if( cvtest::norm(A*svd.vt.row(3).t(), CV_C) > FLT_EPSILON )
             throw test_excep();
 
         Mat Dp(3,3,CV_32FC1);
@@ -1094,11 +1094,11 @@ bool CV_OperationsTest::TestSVD()
         W=decomp.w;
         Mat I = Mat::eye(3, 3, CV_32F);
 
-        if( norm(U*U.t(), I, CV_C) > FLT_EPSILON ||
-            norm(Vt*Vt.t(), I, CV_C) > FLT_EPSILON ||
+        if( cvtest::norm(U*U.t(), I, CV_C) > FLT_EPSILON ||
+            cvtest::norm(Vt*Vt.t(), I, CV_C) > FLT_EPSILON ||
             W.at<float>(2) < 0 || W.at<float>(1) < W.at<float>(2) ||
             W.at<float>(0) < W.at<float>(1) ||
-            norm(U*Mat::diag(W)*Vt, Q, CV_C) > FLT_EPSILON )
+            cvtest::norm(U*Mat::diag(W)*Vt, Q, CV_C) > FLT_EPSILON )
             throw test_excep();
     }
     catch(const test_excep&)
