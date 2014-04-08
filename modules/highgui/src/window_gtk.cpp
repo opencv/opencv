@@ -45,8 +45,8 @@
 
 #if defined (HAVE_GTK)
 
-#include "gtk/gtk.h"
-#include "gdk/gdkkeysyms.h"
+#include <gtk/gtk.h>
+#include <gdk/gdkkeysyms.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <stdio.h>
 
