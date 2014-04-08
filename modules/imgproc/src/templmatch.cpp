@@ -341,6 +341,67 @@ static bool ocl_matchTemplate( InputArray _img, InputArray _templ, OutputArray _
 
 #endif
 
+#if defined (HAVE_IPP)
+
+typedef IppStatus (CV_STDCALL * ippiGetBufferSize)(IppiSize, IppiSize, IppEnum, int*);
+typedef IppStatus (CV_STDCALL * ippimatchTemplate)(const void*, int, IppiSize, const void*, int, IppiSize, Ipp32f* , int , IppEnum , Ipp8u*);
+
+
+static bool ipp_matchTemplate(const Mat& src, const Mat& tpl, Mat& dst, int method)
+{
+    if (src.channels() != 1 || (method!=CV_TM_SQDIFF && method!=CV_TM_CCORR))
+        return false;
+
+    IppStatus status;
+
+    IppiSize srcRoiSize = {src.cols,src.rows};
+    IppiSize tplRoiSize = {tpl.cols,tpl.rows};
+
+    IppEnum funCfg;
+    ippimatchTemplate ippFunc;
+    ippiGetBufferSize ippGetBufSize;
+    Ipp8u *pBuffer;
+    int bufSize=0;
+
+    int depth = src.depth();
+
+    if (method==CV_TM_SQDIFF)
+    {
+        ippFunc =
+            depth==CV_8U ? (ippimatchTemplate)ippiSqrDistanceNorm_8u32f_C1R:
+            depth==CV_32F? (ippimatchTemplate)ippiSqrDistanceNorm_32f_C1R: 0;
+
+        ippGetBufSize = (ippiGetBufferSize)ippiSqrDistanceNormGetBufferSize;
+    }
+    else
+    {
+        ippFunc =
+            depth==CV_8U ? (ippimatchTemplate)ippiCrossCorrNorm_8u32f_C1R:
+            depth==CV_32F? (ippimatchTemplate)ippiCrossCorrNorm_32f_C1R: 0;
+
+        ippGetBufSize = (ippiGetBufferSize)ippiCrossCorrNormGetBufferSize;
+    }
+    if (ippFunc==0)
+        return false;
+
+    funCfg = (IppEnum)(ippAlgAuto | ippiNormNone | ippiROIValid);
+
+    status = ippGetBufSize(srcRoiSize, tplRoiSize, funCfg, &bufSize);
+    if ( status < 0 )
+        return false;
+
+    pBuffer = ippsMalloc_8u( bufSize );
+
+    status = ippFunc(src.data, (int)src.step, srcRoiSize, tpl.data, (int)tpl.step, tplRoiSize, (Ipp32f*)dst.data, dst.step, funCfg, pBuffer);
+    if (status < 0)
+        return false;
+
+    ippsFree( pBuffer );
+    return true;
+}
+
+#endif
+
 void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                 Size corrsize, int ctype,
                 Point anchor, double delta, int borderType )
@@ -554,6 +615,11 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
     _result.create(corrSize, CV_32F);
     Mat result = _result.getMat();
+
+#if defined (HAVE_IPP)
+    if (ipp_matchTemplate(img, templ, result, method))
+        return;
+#endif
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::matchTemplate(img, templ, result, method))
