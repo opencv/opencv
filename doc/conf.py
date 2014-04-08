@@ -418,5 +418,7 @@ extlinks = {
             'background_subtractor' : ('http://docs.opencv.org/modules/video/doc/motion_analysis_and_object_tracking.html?highlight=backgroundsubtractor#backgroundsubtractor%s', None),
             'background_subtractor_mog' : ('http://docs.opencv.org/modules/video/doc/motion_analysis_and_object_tracking.html?highlight=backgroundsubtractorMOG#backgroundsubtractormog%s', None),
             'background_subtractor_mog_two' : ('http://docs.opencv.org/modules/video/doc/motion_analysis_and_object_tracking.html?highlight=backgroundsubtractorMOG2#backgroundsubtractormog2%s', None),
-            'video_capture' : ('http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html?highlight=videocapture#videocapture%s', None)
+            'video_capture' : ('http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html?highlight=videocapture#videocapture%s', None),
+            'ippa_convert': ('http://docs.opencv.org/modules/core/doc/ipp_async_converters.html#%s', None),
+            'ptr':('http://docs.opencv.org/modules/core/doc/basic_structures.html?highlight=Ptr#Ptr%s', None)
            }
