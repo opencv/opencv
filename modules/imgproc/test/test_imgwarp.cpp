@@ -1530,7 +1530,7 @@ TEST(Imgproc_resize_area, regression)
             }
     }
 
-    ASSERT_EQ(norm(one_channel_diff, cv::NORM_INF), 0);
+    ASSERT_EQ(cvtest::norm(one_channel_diff, cv::NORM_INF), 0);
 }
 
 
