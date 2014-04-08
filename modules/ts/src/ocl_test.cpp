@@ -225,12 +225,12 @@ Mat TestUtils::readImageType(const String &fname, int type)
 
 double TestUtils::checkNorm1(InputArray m, InputArray mask)
 {
-    return norm(m.getMat(), NORM_INF, mask);
+    return cvtest::norm(m.getMat(), NORM_INF, mask.getMat());
 }
 
 double TestUtils::checkNorm2(InputArray m1, InputArray m2, InputArray mask)
 {
-    return norm(m1.getMat(), m2.getMat(), NORM_INF, mask);
+    return cvtest::norm(m1.getMat(), m2.getMat(), NORM_INF, mask.getMat());
 }
 
 double TestUtils::checkSimilarity(InputArray m1, InputArray m2)

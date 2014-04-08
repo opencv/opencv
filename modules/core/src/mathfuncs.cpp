@@ -812,8 +812,6 @@ typedef union
 }
 DBLINT;
 
-#ifndef HAVE_IPP
-
 #define EXPTAB_SCALE 6
 #define EXPTAB_MASK  ((1 << EXPTAB_SCALE) - 1)
 
@@ -1275,12 +1273,25 @@ static void Exp_64f( const double *_x, double *y, int n )
 #undef EXPTAB_MASK
 #undef EXPPOLY_32F_A0
 
-#else
+#ifdef HAVE_IPP
+static void Exp_32f_ipp(const float *x, float *y, int n)
+{
+    if (0 <= ippsExp_32f_A21(x, y, n))
+        return;
+    Exp_32f(x, y, n);
+}
 
-#define Exp_32f ippsExp_32f_A21
-#define Exp_64f ippsExp_64f_A50
+static void Exp_64f_ipp(const double *x, double *y, int n)
+{
+    if (0 <= ippsExp_64f_A50(x, y, n))
+        return;
+    Exp_64f(x, y, n);
+}
 
+#define Exp_32f Exp_32f_ipp
+#define Exp_64f Exp_64f_ipp
 #endif
+
 
 void exp( InputArray _src, OutputArray _dst )
 {
@@ -1302,9 +1313,9 @@ void exp( InputArray _src, OutputArray _dst )
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         if( depth == CV_32F )
-            Exp_32f( (const float*)ptrs[0], (float*)ptrs[1], len );
+            Exp_32f((const float*)ptrs[0], (float*)ptrs[1], len);
         else
-            Exp_64f( (const double*)ptrs[0], (double*)ptrs[1], len );
+            Exp_64f((const double*)ptrs[0], (double*)ptrs[1], len);
     }
 }
 
@@ -1312,8 +1323,6 @@ void exp( InputArray _src, OutputArray _dst )
 /****************************************************************************************\
 *                                          L O G                                         *
 \****************************************************************************************/
-
-#ifndef HAVE_IPP
 
 #define LOGTAB_SCALE    8
 #define LOGTAB_MASK         ((1 << LOGTAB_SCALE) - 1)
@@ -1922,11 +1931,23 @@ static void Log_64f( const double *x, double *y, int n )
     }
 }
 
-#else
+#ifdef HAVE_IPP
+static void Log_32f_ipp(const float *x, float *y, int n)
+{
+    if (0 <= ippsLn_32f_A21(x, y, n))
+        return;
+    Log_32f(x, y, n);
+}
 
-#define Log_32f ippsLn_32f_A21
-#define Log_64f ippsLn_64f_A50
+static void Log_64f_ipp(const double *x, double *y, int n)
+{
+    if (0 <= ippsLn_64f_A50(x, y, n))
+        return;
+    Log_64f(x, y, n);
+}
 
+#define Log_32f Log_32f_ipp
+#define Log_64f Log_64f_ipp
 #endif
 
 void log( InputArray _src, OutputArray _dst )

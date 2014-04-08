@@ -164,6 +164,12 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             return false;
 
         total = std::min<size_t>(counter.getMat(ACCESS_READ).at<int>(0, 0), possibleCornersCount);
+        if (total == 0)
+        {
+            _corners.release();
+            return true;
+        }
+
         tmpCorners.resize(total);
 
         Mat mcorners(1, (int)total, CV_32FC2, &tmpCorners[0]);

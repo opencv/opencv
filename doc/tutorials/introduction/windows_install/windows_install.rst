@@ -62,6 +62,8 @@ Building the OpenCV library from scratch requires a couple of tools installed be
 .. _IntelTBB: http://threadingbuildingblocks.org/file.php?fid=77
 .. |IntelIIP| replace:: Intel |copy| Integrated Performance Primitives (*IPP*)
 .. _IntelIIP: http://software.intel.com/en-us/articles/intel-ipp/
+.. |IntelIIPA| replace:: Intel |copy| IPP Asynchronous C/C++
+.. _IntelIIPA: http://software.intel.com/en-us/intel-ipp-preview
 .. |qtframework| replace:: Qt framework
 .. _qtframework: http://qt.nokia.com/downloads
 .. |Eigen| replace:: Eigen
@@ -96,6 +98,8 @@ OpenCV may come in multiple flavors. There is a "core" section that will work on
    + |IntelTBB|_ is used inside OpenCV for parallel code snippets. Using this will make sure that the OpenCV library will take advantage of all the cores you have in your systems CPU.
 
    + |IntelIIP|_ may be used to improve the performance of color conversion, Haar training and DFT functions of the OpenCV library. Watch out, since this isn't a free service.
+
+   + |IntelIIPA|_ is currently focused delivering Intel |copy| Graphics support for advanced image processing and computer vision functions.
 
    + OpenCV offers a somewhat fancier and more useful graphical user interface, than the default one by using the |qtframework|_. For a quick overview of what this has to offer look into the documentations *highgui* module, under the *Qt New Functions* section. Version 4.6 or later of the framework is required.
 
@@ -167,6 +171,8 @@ Building the library
       .. image:: images/IntelTBB.png
          :alt: The Miktex Install Screen
          :align: center
+
+   #) For the |IntelIIPA|_ download the source files and set environment variable **IPP_ASYNC_ROOT**. It should point to :file:`<your Program Files(x86) directory>/Intel/IPP Preview */ipp directory`. Here ``*`` denotes the particular preview name.
 
    #) In case of the |Eigen|_ library it is again a case of download and extract to the :file:`D:/OpenCV/dep` directory.
 

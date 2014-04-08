@@ -566,6 +566,8 @@ int CV_ConvHullTest::validate_test_results( int test_case_idx )
     hull = cvCreateMat( 1, hull_count, CV_32FC2 );
     mask = cvCreateMat( 1, hull_count, CV_8UC1 );
     cvZero( mask );
+    Mat _mask = cvarrToMat(mask);
+
     h = (CvPoint2D32f*)(hull->data.ptr);
 
     // extract convex hull points
@@ -643,7 +645,7 @@ int CV_ConvHullTest::validate_test_results( int test_case_idx )
             mask->data.ptr[idx] = (uchar)1;
     }
 
-    if( cvNorm( mask, 0, CV_L1 ) != hull_count )
+    if( cvtest::norm( _mask, Mat::zeros(_mask.dims, _mask.size, _mask.type()), NORM_L1 ) != hull_count )
     {
         ts->printf( cvtest::TS::LOG, "Not every convex hull vertex coincides with some input point\n" );
         code = cvtest::TS::FAIL_BAD_ACCURACY;

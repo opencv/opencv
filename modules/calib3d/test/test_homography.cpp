@@ -119,7 +119,7 @@ bool CV_HomographyTest::check_matrix_size(const cv::Mat& H)
 
 bool CV_HomographyTest::check_matrix_diff(const cv::Mat& original, const cv::Mat& found, const int norm_type, double &diff)
 {
-    diff = cv::norm(original, found, norm_type);
+    diff = cvtest::norm(original, found, norm_type);
     return diff <= max_diff;
 }
 

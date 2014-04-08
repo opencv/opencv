@@ -855,7 +855,7 @@ protected:
             merge(mv, 2, srcz);
             dft(srcz, dstz);
             dft(src, dst, DFT_COMPLEX_OUTPUT);
-            if(norm(dst, dstz, NORM_INF) > 1e-3)
+            if (cvtest::norm(dst, dstz, NORM_INF) > 1e-3)
             {
                 cout << "actual:\n" << dst << endl << endl;
                 cout << "reference:\n" << dstz << endl << endl;

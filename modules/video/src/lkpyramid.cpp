@@ -987,7 +987,7 @@ namespace cv
             idxArg = kernel.set(idxArg, (int)winSize.height); // int c_winSize_y
             idxArg = kernel.set(idxArg, (int)iters); // int c_iters
             idxArg = kernel.set(idxArg, (char)calcErr); //char calcErr
-            return kernel.run(2, globalThreads, localThreads, true);
+            return kernel.run(2, globalThreads, localThreads, false);
         }
     private:
         inline static bool isDeviceCPU()
