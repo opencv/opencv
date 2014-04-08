@@ -298,7 +298,7 @@ static ippiReorderFunc ippiSwapChannelsC3RTab[] =
     0, (ippiReorderFunc)ippiSwapChannels_32f_C3R, 0, 0
 };
 
-#if (IPP_VERSION_MAJOR >= 8) && (IPP_VERSION_MINOR >= 1)
+#if (IPP_VERSION_X100 >= 801)
 static ippiReorderFunc ippiSwapChannelsC4RTab[] =
 {
     (ippiReorderFunc)ippiSwapChannels_8u_C4R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4R, 0,
@@ -3254,7 +3254,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC3RTab[depth], 2, 1, 0)) )
                     return;
             }
-#if (IPP_VERSION_MAJOR >= 8) && (IPP_VERSION_MINOR >= 1)
+#if (IPP_VERSION_X100 >= 801)
             else if( code == CV_RGBA2BGRA )
             {
                 if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC4RTab[depth], 2, 1, 0)) )
