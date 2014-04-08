@@ -32,14 +32,14 @@ Here's a function that will do this:
 
 .. code-block:: cpp
 
-   void Sharpen(const Mat& myImage,Mat& Result)
+   void Sharpen(const Mat& myImage, Mat& Result)
    {
        CV_Assert(myImage.depth() == CV_8U);  // accept only uchar images
 
-       Result.create(myImage.size(),myImage.type());
+       Result.create(myImage.size(), myImage.type());
        const int nChannels = myImage.channels();
 
-       for(int j = 1 ; j < myImage.rows-1; ++j)
+       for(int j = 1; j < myImage.rows - 1; ++j)
        {
            const uchar* previous = myImage.ptr<uchar>(j - 1);
            const uchar* current  = myImage.ptr<uchar>(j    );
@@ -47,17 +47,17 @@ Here's a function that will do this:
 
            uchar* output = Result.ptr<uchar>(j);
 
-           for(int i= nChannels;i < nChannels*(myImage.cols-1); ++i)
+           for(int i = nChannels; i < nChannels * (myImage.cols - 1); ++i)
            {
-               *output++ = saturate_cast<uchar>(5*current[i]
-                            -current[i-nChannels] - current[i+nChannels] - previous[i] - next[i]);
+               *output++ = saturate_cast<uchar>(5 * current[i]
+                            -current[i - nChannels] - current[i + nChannels] - previous[i] - next[i]);
            }
        }
 
        Result.row(0).setTo(Scalar(0));
-       Result.row(Result.rows-1).setTo(Scalar(0));
+       Result.row(Result.rows - 1).setTo(Scalar(0));
        Result.col(0).setTo(Scalar(0));
-       Result.col(Result.cols-1).setTo(Scalar(0));
+       Result.col(Result.cols - 1).setTo(Scalar(0));
    }
 
 At first we make sure that the input images data is in unsigned char format. For this we use the :utilitysystemfunctions:`CV_Assert <cv-assert>` function that throws an error when the expression inside it is false.
@@ -70,14 +70,14 @@ We create an output image with the same size and the same type as our input. As 
 
 .. code-block:: cpp
 
-   Result.create(myImage.size(),myImage.type());
+   Result.create(myImage.size(), myImage.type());
    const int nChannels = myImage.channels();
 
 We'll use the plain C [] operator to access pixels. Because we need to access multiple rows at the same time we'll acquire the pointers for each of them (a previous, a current and a next line). We need another pointer to where we're going to save the calculation. Then simply access the right items with the [] operator. For moving the output pointer ahead we simply increase this (with one byte) after each operation:
 
 .. code-block:: cpp
 
-   for(int j = 1 ; j < myImage.rows-1; ++j)
+   for(int j = 1; j < myImage.rows - 1; ++j)
    {
        const uchar* previous = myImage.ptr<uchar>(j - 1);
        const uchar* current  = myImage.ptr<uchar>(j    );
@@ -85,21 +85,21 @@ We'll use the plain C [] operator to access pixels. Because we need to access mu
 
        uchar* output = Result.ptr<uchar>(j);
 
-       for(int i= nChannels;i < nChannels*(myImage.cols-1); ++i)
+       for(int i = nChannels; i < nChannels * (myImage.cols - 1); ++i)
        {
-           *output++ = saturate_cast<uchar>(5*current[i]
-                        -current[i-nChannels] - current[i+nChannels] - previous[i] - next[i]);
+           *output++ = saturate_cast<uchar>(5 * current[i]
+                        -current[i - nChannels] - current[i + nChannels] - previous[i] - next[i]);
        }
    }
 
-On the borders of the image the upper notation results inexistent pixel locations (like minus one - minus one). In these points our formula is undefined. A simple solution is to not apply the mask in these points and, for example, set the pixels on the borders to zeros:
+On the borders of the image the upper notation results inexistent pixel locations (like minus one - minus one). In these points our formula is undefined. A simple solution is to not apply the kernel in these points and, for example, set the pixels on the borders to zeros:
 
 .. code-block:: cpp
 
-   Result.row(0).setTo(Scalar(0));             // The top row
-   Result.row(Result.rows-1).setTo(Scalar(0)); // The bottom row
-   Result.col(0).setTo(Scalar(0));             // The left column
-   Result.col(Result.cols-1).setTo(Scalar(0)); // The right column
+   Result.row(0).setTo(Scalar(0));               // The top row
+   Result.row(Result.rows - 1).setTo(Scalar(0)); // The bottom row
+   Result.col(0).setTo(Scalar(0));               // The left column
+   Result.col(Result.cols - 1).setTo(Scalar(0)); // The right column
 
 The filter2D function
 =====================
@@ -116,7 +116,7 @@ Then call the :filtering:`filter2D <filter2d>` function specifying the input, th
 
 .. code-block:: cpp
 
-   filter2D(I, K, I.depth(), kern );
+   filter2D(I, K, I.depth(), kern);
 
 The function even has a fifth optional argument to specify the center of the kernel, and a sixth one for determining what to do in the regions where the operation is undefined (borders). Using this function has the advantage that it's shorter, less verbose and because there are some optimization techniques implemented it is usually faster than the *hand-coded method*. For example in my test while the second one took only 13 milliseconds the first took around 31 milliseconds. Quite some difference.
 

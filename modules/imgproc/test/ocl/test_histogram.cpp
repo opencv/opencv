@@ -13,6 +13,7 @@
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
 // Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2014, Itseez, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -144,6 +145,37 @@ PARAM_TEST_CASE(CalcBackProject, MatDepth, int, bool)
 
         scale = randomDouble(0.1, 1);
     }
+
+    virtual void test_by_pict()
+    {
+        Mat frame1 = readImage("optflow/RubberWhale1.png", IMREAD_GRAYSCALE);
+
+        UMat usrc;
+        frame1.copyTo(usrc);
+        int histSize = randomInt(3, 29);
+        float hue_range[] = { 0, 180 };
+        const float* ranges1 = { hue_range };
+        Mat hist1;
+
+        //compute histogram
+        calcHist(&frame1, 1, 0, Mat(), hist1, 1, &histSize, &ranges1, true, false);
+        normalize(hist1, hist1, 0, 255, NORM_MINMAX, -1, Mat());
+
+        Mat dst1;
+        UMat udst1, src, uhist1;
+        hist1.copyTo(uhist1);
+        std::vector<UMat> uims;
+        uims.push_back(usrc);
+        std::vector<float> urngs;
+        urngs.push_back(0);
+        urngs.push_back(180);
+        std::vector<int> chs;
+        chs.push_back(0);
+
+        OCL_OFF(calcBackProject(&frame1, 1, 0, hist1, dst1, &ranges1, 1, true));
+        OCL_ON(calcBackProject(uims, chs, uhist1, udst1, urngs, 1.0));
+        EXPECT_MAT_NEAR(dst1, udst1, 0.0);
+    }
 };
 
 //////////////////////////////// CalcBackProject //////////////////////////////////////////////
@@ -157,7 +189,14 @@ OCL_TEST_P(CalcBackProject, Mat)
         OCL_OFF(cv::calcBackProject(images_roi, channels, hist_roi, dst_roi, ranges, scale));
         OCL_ON(cv::calcBackProject(uimages_roi, channels, uhist_roi, udst_roi, ranges, scale));
 
-        OCL_EXPECT_MATS_NEAR(dst, 0.0);
+        Size dstSize = dst_roi.size();
+        int nDiffs = (int)(0.03f*dstSize.height*dstSize.width);
+
+        //check if the dst mats are the same except 3% difference
+        EXPECT_MAT_N_DIFF(dst_roi, udst_roi, nDiffs);
+
+        //check in addition on given image
+        test_by_pict();
     }
 }
 

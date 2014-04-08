@@ -84,7 +84,7 @@ void CV_UndistortTest::run(int /* start_from */)
         Mat p;
         perspectiveTransform(undistortedPoints, p, intrinsics);
         undistortedPoints = p;
-        double diff = norm(Mat(realUndistortedPoints), undistortedPoints);
+        double diff = cvtest::norm(Mat(realUndistortedPoints), undistortedPoints, NORM_L2);
         if (diff > thresh)
         {
             ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);

@@ -163,7 +163,7 @@ public:
 
             CV_Assert( !img0.empty() && !img.empty() && img_next.empty() );
 
-            double diff = norm(img0, img, CV_C);
+            double diff = cvtest::norm(img0, img, CV_C);
             CV_Assert( diff == 0 );
         }
         catch(...)

@@ -108,9 +108,9 @@ bool CV_Affine3D_EstTest::test4Points()
     estimateAffine3D(fpts, tpts, aff_est, outliers);
 
     const double thres = 1e-3;
-    if (norm(aff_est, aff, NORM_INF) > thres)
+    if (cvtest::norm(aff_est, aff, NORM_INF) > thres)
     {
-        //cout << norm(aff_est, aff, NORM_INF) << endl;
+        //cout << cvtest::norm(aff_est, aff, NORM_INF) << endl;
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         return false;
     }
@@ -161,7 +161,7 @@ bool CV_Affine3D_EstTest::testNPoints()
     }
 
     const double thres = 1e-4;
-    if (norm(aff_est, aff, NORM_INF) > thres)
+    if (cvtest::norm(aff_est, aff, NORM_INF) > thres)
     {
         cout << "aff est: " << aff_est << endl;
         cout << "aff ref: " << aff << endl;

@@ -217,6 +217,7 @@ enum { IMREAD_UNCHANGED  = -1, // 8bit, color or not
 
 enum { IMWRITE_JPEG_QUALITY     = 1,
        IMWRITE_JPEG_PROGRESSIVE = 2,
+       IMWRITE_JPEG_OPTIMIZE    = 3,
        IMWRITE_PNG_COMPRESSION  = 16,
        IMWRITE_PNG_STRATEGY     = 17,
        IMWRITE_PNG_BILEVEL      = 18,

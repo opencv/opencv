@@ -52,18 +52,6 @@
 namespace cv
 {
 
-#if ARITHM_USE_IPP
-struct IPPArithmInitializer
-{
-    IPPArithmInitializer(void)
-    {
-        ippStaticInit();
-    }
-};
-
-IPPArithmInitializer ippArithmInitializer;
-#endif
-
 struct NOP {};
 
 #if CV_SSE2
@@ -470,9 +458,12 @@ static void add8u( const uchar* src1, size_t step1,
                    const uchar* src2, size_t step2,
                    uchar* dst, size_t step, Size sz, void* )
 {
-    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-           ippiAdd_8u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz, 0),
-           (vBinOp<uchar, OpAdd<uchar>, IF_SIMD(VAdd<uchar>)>(src1, step1, src2, step2, dst, step, sz)));
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAdd_8u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz, 0))
+        return;
+#endif
+    (vBinOp<uchar, OpAdd<uchar>, IF_SIMD(VAdd<uchar>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
 static void add8s( const schar* src1, size_t step1,
@@ -486,18 +477,24 @@ static void add16u( const ushort* src1, size_t step1,
                     const ushort* src2, size_t step2,
                     ushort* dst, size_t step, Size sz, void* )
 {
-    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-           ippiAdd_16u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz, 0),
-           (vBinOp<ushort, OpAdd<ushort>, IF_SIMD(VAdd<ushort>)>(src1, step1, src2, step2, dst, step, sz)));
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAdd_16u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz, 0))
+        return;
+#endif
+    (vBinOp<ushort, OpAdd<ushort>, IF_SIMD(VAdd<ushort>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
 static void add16s( const short* src1, size_t step1,
                     const short* src2, size_t step2,
                     short* dst, size_t step, Size sz, void* )
 {
-    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-           ippiAdd_16s_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz, 0),
-           (vBinOp<short, OpAdd<short>, IF_SIMD(VAdd<short>)>(src1, step1, src2, step2, dst, step, sz)));
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAdd_16s_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz, 0))
+        return;
+#endif
+    (vBinOp<short, OpAdd<short>, IF_SIMD(VAdd<short>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
 static void add32s( const int* src1, size_t step1,
@@ -511,9 +508,12 @@ static void add32f( const float* src1, size_t step1,
                     const float* src2, size_t step2,
                     float* dst, size_t step, Size sz, void* )
 {
-    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-           ippiAdd_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz),
-           (vBinOp32<float, OpAdd<float>, IF_SIMD(VAdd<float>)>(src1, step1, src2, step2, dst, step, sz)));
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAdd_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
+        return;
+#endif
+    (vBinOp32<float, OpAdd<float>, IF_SIMD(VAdd<float>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
 static void add64f( const double* src1, size_t step1,
@@ -527,9 +527,12 @@ static void sub8u( const uchar* src1, size_t step1,
                    const uchar* src2, size_t step2,
                    uchar* dst, size_t step, Size sz, void* )
 {
-    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-           ippiSub_8u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz, 0),
-           (vBinOp<uchar, OpSub<uchar>, IF_SIMD(VSub<uchar>)>(src1, step1, src2, step2, dst, step, sz)));
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiSub_8u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz, 0))
+        return;
+#endif
+    (vBinOp<uchar, OpSub<uchar>, IF_SIMD(VSub<uchar>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
 static void sub8s( const schar* src1, size_t step1,
@@ -543,18 +546,24 @@ static void sub16u( const ushort* src1, size_t step1,
                     const ushort* src2, size_t step2,
                     ushort* dst, size_t step, Size sz, void* )
 {
-    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-           ippiSub_16u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz, 0),
-           (vBinOp<ushort, OpSub<ushort>, IF_SIMD(VSub<ushort>)>(src1, step1, src2, step2, dst, step, sz)));
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiSub_16u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz, 0))
+        return;
+#endif
+    (vBinOp<ushort, OpSub<ushort>, IF_SIMD(VSub<ushort>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
 static void sub16s( const short* src1, size_t step1,
                     const short* src2, size_t step2,
                     short* dst, size_t step, Size sz, void* )
 {
-    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-           ippiSub_16s_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz, 0),
-           (vBinOp<short, OpSub<short>, IF_SIMD(VSub<short>)>(src1, step1, src2, step2, dst, step, sz)));
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiSub_16s_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz, 0))
+        return;
+#endif
+    (vBinOp<short, OpSub<short>, IF_SIMD(VSub<short>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
 static void sub32s( const int* src1, size_t step1,
@@ -568,9 +577,12 @@ static void sub32f( const float* src1, size_t step1,
                    const float* src2, size_t step2,
                    float* dst, size_t step, Size sz, void* )
 {
-    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-           ippiSub_32f_C1R(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz),
-           (vBinOp32<float, OpSub<float>, IF_SIMD(VSub<float>)>(src1, step1, src2, step2, dst, step, sz)));
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiSub_32f_C1R(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz))
+        return;
+#endif
+    (vBinOp32<float, OpSub<float>, IF_SIMD(VSub<float>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
 static void sub64f( const double* src1, size_t step1,
@@ -588,26 +600,23 @@ static void max8u( const uchar* src1, size_t step1,
                    uchar* dst, size_t step, Size sz, void* )
 {
 #if (ARITHM_USE_IPP == 1)
-  {
     uchar* s1 = (uchar*)src1;
     uchar* s2 = (uchar*)src2;
     uchar* d  = dst;
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    for(int i = 0; i < sz.height; i++)
+    int i = 0;
+    for(; i < sz.height; i++)
     {
-      ippsMaxEvery_8u(s1, s2, d, sz.width);
-      s1 += step1;
-      s2 += step2;
-      d  += step;
+        if (0 > ippsMaxEvery_8u(s1, s2, d, sz.width))
+            break;
+        s1 += step1;
+        s2 += step2;
+        d  += step;
     }
-  }
-#else
-  vBinOp<uchar, OpMax<uchar>, IF_SIMD(VMax<uchar>)>(src1, step1, src2, step2, dst, step, sz);
+    if (i == sz.height)
+        return;
 #endif
-
-//    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-//           ippiMaxEvery_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
-//           (vBinOp8<uchar, OpMax<uchar>, IF_SIMD(_VMax8u)>(src1, step1, src2, step2, dst, step, sz)));
+    vBinOp<uchar, OpMax<uchar>, IF_SIMD(VMax<uchar>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void max8s( const schar* src1, size_t step1,
@@ -622,26 +631,23 @@ static void max16u( const ushort* src1, size_t step1,
                     ushort* dst, size_t step, Size sz, void* )
 {
 #if (ARITHM_USE_IPP == 1)
-  {
     ushort* s1 = (ushort*)src1;
     ushort* s2 = (ushort*)src2;
     ushort* d  = dst;
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    for(int i = 0; i < sz.height; i++)
+    int i = 0;
+    for(; i < sz.height; i++)
     {
-      ippsMaxEvery_16u(s1, s2, d, sz.width);
-      s1 = (ushort*)((uchar*)s1 + step1);
-      s2 = (ushort*)((uchar*)s2 + step2);
-      d  = (ushort*)((uchar*)d + step);
+        if (0 > ippsMaxEvery_16u(s1, s2, d, sz.width))
+            break;
+        s1 = (ushort*)((uchar*)s1 + step1);
+        s2 = (ushort*)((uchar*)s2 + step2);
+        d  = (ushort*)((uchar*)d + step);
     }
-  }
-#else
-  vBinOp<ushort, OpMax<ushort>, IF_SIMD(VMax<ushort>)>(src1, step1, src2, step2, dst, step, sz);
+    if (i == sz.height)
+        return;
 #endif
-
-//    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-//           ippiMaxEvery_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
-//           (vBinOp16<ushort, OpMax<ushort>, IF_SIMD(_VMax16u)>(src1, step1, src2, step2, dst, step, sz)));
+    vBinOp<ushort, OpMax<ushort>, IF_SIMD(VMax<ushort>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void max16s( const short* src1, size_t step1,
@@ -663,25 +669,23 @@ static void max32f( const float* src1, size_t step1,
                     float* dst, size_t step, Size sz, void* )
 {
 #if (ARITHM_USE_IPP == 1)
-  {
     float* s1 = (float*)src1;
     float* s2 = (float*)src2;
     float* d  = dst;
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    for(int i = 0; i < sz.height; i++)
+    int i = 0;
+    for(; i < sz.height; i++)
     {
-      ippsMaxEvery_32f(s1, s2, d, sz.width);
-      s1 = (float*)((uchar*)s1 + step1);
-      s2 = (float*)((uchar*)s2 + step2);
-      d  = (float*)((uchar*)d + step);
+        if (0 > ippsMaxEvery_32f(s1, s2, d, sz.width))
+            break;
+        s1 = (float*)((uchar*)s1 + step1);
+        s2 = (float*)((uchar*)s2 + step2);
+        d  = (float*)((uchar*)d + step);
     }
-  }
-#else
-  vBinOp32<float, OpMax<float>, IF_SIMD(VMax<float>)>(src1, step1, src2, step2, dst, step, sz);
+    if (i == sz.height)
+        return;
 #endif
-//    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-//           ippiMaxEvery_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
-//           (vBinOp32f<OpMax<float>, IF_SIMD(_VMax32f)>(src1, step1, src2, step2, dst, step, sz)));
+    vBinOp32<float, OpMax<float>, IF_SIMD(VMax<float>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void max64f( const double* src1, size_t step1,
@@ -696,26 +700,23 @@ static void min8u( const uchar* src1, size_t step1,
                    uchar* dst, size_t step, Size sz, void* )
 {
 #if (ARITHM_USE_IPP == 1)
-  {
     uchar* s1 = (uchar*)src1;
     uchar* s2 = (uchar*)src2;
     uchar* d  = dst;
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    for(int i = 0; i < sz.height; i++)
+    int i = 0;
+    for(; i < sz.height; i++)
     {
-      ippsMinEvery_8u(s1, s2, d, sz.width);
-      s1 += step1;
-      s2 += step2;
-      d  += step;
+        if (0 > ippsMinEvery_8u(s1, s2, d, sz.width))
+            break;
+        s1 += step1;
+        s2 += step2;
+        d  += step;
     }
-  }
-#else
-  vBinOp<uchar, OpMin<uchar>, IF_SIMD(VMin<uchar>)>(src1, step1, src2, step2, dst, step, sz);
+    if (i == sz.height)
+        return;
 #endif
-
-//    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-//           ippiMinEvery_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
-//           (vBinOp8<uchar, OpMin<uchar>, IF_SIMD(_VMin8u)>(src1, step1, src2, step2, dst, step, sz)));
+    vBinOp<uchar, OpMin<uchar>, IF_SIMD(VMin<uchar>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void min8s( const schar* src1, size_t step1,
@@ -730,26 +731,23 @@ static void min16u( const ushort* src1, size_t step1,
                     ushort* dst, size_t step, Size sz, void* )
 {
 #if (ARITHM_USE_IPP == 1)
-  {
     ushort* s1 = (ushort*)src1;
     ushort* s2 = (ushort*)src2;
     ushort* d  = dst;
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    for(int i = 0; i < sz.height; i++)
+    int i = 0;
+    for(; i < sz.height; i++)
     {
-      ippsMinEvery_16u(s1, s2, d, sz.width);
-      s1 = (ushort*)((uchar*)s1 + step1);
-      s2 = (ushort*)((uchar*)s2 + step2);
-      d  = (ushort*)((uchar*)d + step);
+        if (0 > ippsMinEvery_16u(s1, s2, d, sz.width))
+            break;
+        s1 = (ushort*)((uchar*)s1 + step1);
+        s2 = (ushort*)((uchar*)s2 + step2);
+        d  = (ushort*)((uchar*)d + step);
     }
-  }
-#else
-  vBinOp<ushort, OpMin<ushort>, IF_SIMD(VMin<ushort>)>(src1, step1, src2, step2, dst, step, sz);
+    if (i == sz.height)
+        return;
 #endif
-
-//    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-//           ippiMinEvery_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
-//           (vBinOp16<ushort, OpMin<ushort>, IF_SIMD(_VMin16u)>(src1, step1, src2, step2, dst, step, sz)));
+    vBinOp<ushort, OpMin<ushort>, IF_SIMD(VMin<ushort>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void min16s( const short* src1, size_t step1,
@@ -771,25 +769,23 @@ static void min32f( const float* src1, size_t step1,
                     float* dst, size_t step, Size sz, void* )
 {
 #if (ARITHM_USE_IPP == 1)
-  {
     float* s1 = (float*)src1;
     float* s2 = (float*)src2;
     float* d  = dst;
     fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-    for(int i = 0; i < sz.height; i++)
+    int i = 0;
+    for(; i < sz.height; i++)
     {
-      ippsMinEvery_32f(s1, s2, d, sz.width);
-      s1 = (float*)((uchar*)s1 + step1);
-      s2 = (float*)((uchar*)s2 + step2);
-      d  = (float*)((uchar*)d + step);
+        if (0 > ippsMinEvery_32f(s1, s2, d, sz.width))
+            break;
+        s1 = (float*)((uchar*)s1 + step1);
+        s2 = (float*)((uchar*)s2 + step2);
+        d  = (float*)((uchar*)d + step);
     }
-  }
-#else
-  vBinOp32<float, OpMin<float>, IF_SIMD(VMin<float>)>(src1, step1, src2, step2, dst, step, sz);
+    if (i == sz.height)
+        return;
 #endif
-//    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-//           ippiMinEvery_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
-//           (vBinOp32f<OpMin<float>, IF_SIMD(_VMin32f)>(src1, step1, src2, step2, dst, step, sz)));
+    vBinOp32<float, OpMin<float>, IF_SIMD(VMin<float>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void min64f( const double* src1, size_t step1,
@@ -803,9 +799,12 @@ static void absdiff8u( const uchar* src1, size_t step1,
                        const uchar* src2, size_t step2,
                        uchar* dst, size_t step, Size sz, void* )
 {
-    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-           ippiAbsDiff_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz),
-           (vBinOp<uchar, OpAbsDiff<uchar>, IF_SIMD(VAbsDiff<uchar>)>(src1, step1, src2, step2, dst, step, sz)));
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAbsDiff_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
+        return;
+#endif
+    (vBinOp<uchar, OpAbsDiff<uchar>, IF_SIMD(VAbsDiff<uchar>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
 static void absdiff8s( const schar* src1, size_t step1,
@@ -819,9 +818,12 @@ static void absdiff16u( const ushort* src1, size_t step1,
                         const ushort* src2, size_t step2,
                         ushort* dst, size_t step, Size sz, void* )
 {
-    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-           ippiAbsDiff_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz),
-           (vBinOp<ushort, OpAbsDiff<ushort>, IF_SIMD(VAbsDiff<ushort>)>(src1, step1, src2, step2, dst, step, sz)));
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAbsDiff_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
+        return;
+#endif
+    (vBinOp<ushort, OpAbsDiff<ushort>, IF_SIMD(VAbsDiff<ushort>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
 static void absdiff16s( const short* src1, size_t step1,
@@ -842,9 +844,12 @@ static void absdiff32f( const float* src1, size_t step1,
                         const float* src2, size_t step2,
                         float* dst, size_t step, Size sz, void* )
 {
-    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-           ippiAbsDiff_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz),
-           (vBinOp32<float, OpAbsDiff<float>, IF_SIMD(VAbsDiff<float>)>(src1, step1, src2, step2, dst, step, sz)));
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAbsDiff_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
+        return;
+#endif
+    (vBinOp32<float, OpAbsDiff<float>, IF_SIMD(VAbsDiff<float>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
 static void absdiff64f( const double* src1, size_t step1,
@@ -859,36 +864,48 @@ static void and8u( const uchar* src1, size_t step1,
                    const uchar* src2, size_t step2,
                    uchar* dst, size_t step, Size sz, void* )
 {
-    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-           ippiAnd_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz),
-           (vBinOp<uchar, OpAnd<uchar>, IF_SIMD(VAnd<uchar>)>(src1, step1, src2, step2, dst, step, sz)));
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAnd_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
+        return;
+#endif
+    (vBinOp<uchar, OpAnd<uchar>, IF_SIMD(VAnd<uchar>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
 static void or8u( const uchar* src1, size_t step1,
                   const uchar* src2, size_t step2,
                   uchar* dst, size_t step, Size sz, void* )
 {
-    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-           ippiOr_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz),
-           (vBinOp<uchar, OpOr<uchar>, IF_SIMD(VOr<uchar>)>(src1, step1, src2, step2, dst, step, sz)));
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiOr_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
+        return;
+#endif
+    (vBinOp<uchar, OpOr<uchar>, IF_SIMD(VOr<uchar>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
 static void xor8u( const uchar* src1, size_t step1,
                    const uchar* src2, size_t step2,
                    uchar* dst, size_t step, Size sz, void* )
 {
-    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-           ippiXor_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz),
-           (vBinOp<uchar, OpXor<uchar>, IF_SIMD(VXor<uchar>)>(src1, step1, src2, step2, dst, step, sz)));
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiXor_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz))
+        return;
+#endif
+    (vBinOp<uchar, OpXor<uchar>, IF_SIMD(VXor<uchar>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
 static void not8u( const uchar* src1, size_t step1,
                    const uchar* src2, size_t step2,
                    uchar* dst, size_t step, Size sz, void* )
 {
-    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step); (void *)src2;
-           ippiNot_8u_C1R(src1, (int)step1, dst, (int)step, (IppiSize&)sz),
-           (vBinOp<uchar, OpNot<uchar>, IF_SIMD(VNot<uchar>)>(src1, step1, src2, step2, dst, step, sz)));
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step); (void *)src2;
+    if (0 <= ippiNot_8u_C1R(src1, (int)step1, dst, (int)step, (IppiSize&)sz))
+        return;
+#endif
+    (vBinOp<uchar, OpNot<uchar>, IF_SIMD(VNot<uchar>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
 /****************************************************************************************\
@@ -2369,7 +2386,7 @@ static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t ste
     if( op  >= 0 )
     {
         fixSteps(size, sizeof(dst[0]), step1, step2, step);
-        if( ippiCompare_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op) >= 0 )
+        if (0 <= ippiCompare_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op))
             return;
     }
 #endif
@@ -2452,7 +2469,7 @@ static void cmp16u(const ushort* src1, size_t step1, const ushort* src2, size_t 
     if( op  >= 0 )
     {
         fixSteps(size, sizeof(dst[0]), step1, step2, step);
-        if( ippiCompare_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op) >= 0 )
+        if (0 <= ippiCompare_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op))
             return;
     }
 #endif
@@ -2467,7 +2484,7 @@ static void cmp16s(const short* src1, size_t step1, const short* src2, size_t st
     if( op  > 0 )
     {
         fixSteps(size, sizeof(dst[0]), step1, step2, step);
-        if( ippiCompare_16s_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op) >= 0 )
+        if (0 <= ippiCompare_16s_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op))
             return;
     }
 #endif
@@ -2573,7 +2590,7 @@ static void cmp32f(const float* src1, size_t step1, const float* src2, size_t st
     if( op  >= 0 )
     {
         fixSteps(size, sizeof(dst[0]), step1, step2, step);
-        if( ippiCompare_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op) >= 0 )
+        if (0 <= ippiCompare_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op))
             return;
     }
 #endif
@@ -2618,53 +2635,37 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
 {
     const ocl::Device& dev = ocl::Device::getDefault();
     bool doubleSupport = dev.doubleFPConfig() > 0;
-    int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
-    int type2 = _src2.type();
-
-    if (!haveScalar)
-    {
-        if ( (!doubleSupport && (depth1 == CV_64F || _src2.depth() == CV_64F)) ||
-            !_src1.sameSize(_src2) || type1 != type2)
-            return false;
-    }
-    else
-    {
-        if (cn > 1 || depth1 <= CV_32S) // FIXIT: if (cn > 4): Need to clear CPU-based compare behavior
-            return false;
-    }
+    int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1),
+            type2 = _src2.type(), depth2 = CV_MAT_DEPTH(type2);
 
     if (!doubleSupport && depth1 == CV_64F)
         return false;
 
+    if (!haveScalar && (!_src1.sameSize(_src2) || type1 != type2))
+            return false;
+
     int kercn = haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
     // Workaround for bug with "?:" operator in AMD OpenCL compiler
-    bool workaroundForAMD = /*dev.isAMD() &&*/
-            (
-                (depth1 != CV_8U && depth1 != CV_8S)
-            );
-    if (workaroundForAMD)
+    if (depth1 >= CV_16U)
         kercn = 1;
 
     int scalarcn = kercn == 3 ? 4 : kercn;
-
     const char * const operationMap[] = { "==", ">", ">=", "<", "<=", "!=" };
     char cvt[40];
 
-    String buildOptions = format(
-            "-D %s -D srcT1=%s -D dstT=%s -D workT=srcT1 -D cn=%d"
-            " -D convertToDT=%s -D OP_CMP -D CMP_OPERATOR=%s -D srcT1_C1=%s"
-            " -D srcT2_C1=%s -D dstT_C1=%s -D workST=%s%s",
-            (haveScalar ? "UNARY_OP" : "BINARY_OP"),
-            ocl::typeToStr(CV_MAKE_TYPE(depth1, kercn)),
-            ocl::typeToStr(CV_8UC(kercn)), kercn,
-            ocl::convertTypeStr(depth1, CV_8U, kercn, cvt),
-            operationMap[op],
-            ocl::typeToStr(depth1), ocl::typeToStr(depth1), ocl::typeToStr(CV_8U),
-            ocl::typeToStr(CV_MAKE_TYPE(depth1, scalarcn)),
-            doubleSupport ? " -D DOUBLE_SUPPORT" : ""
-            );
+    String opts = format("-D %s -D srcT1=%s -D dstT=%s -D workT=srcT1 -D cn=%d"
+                         " -D convertToDT=%s -D OP_CMP -D CMP_OPERATOR=%s -D srcT1_C1=%s"
+                         " -D srcT2_C1=%s -D dstT_C1=%s -D workST=%s%s",
+                         haveScalar ? "UNARY_OP" : "BINARY_OP",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth1, kercn)),
+                         ocl::typeToStr(CV_8UC(kercn)), kercn,
+                         ocl::convertTypeStr(depth1, CV_8U, kercn, cvt),
+                         operationMap[op], ocl::typeToStr(depth1),
+                         ocl::typeToStr(depth1), ocl::typeToStr(CV_8U),
+                         ocl::typeToStr(CV_MAKE_TYPE(depth1, scalarcn)),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
-    ocl::Kernel k("KF", ocl::core::arithm_oclsrc, buildOptions);
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
     if (k.empty())
         return false;
 
@@ -2675,24 +2676,43 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
 
     if (haveScalar)
     {
-        size_t esz = CV_ELEM_SIZE1(type1)*scalarcn;
-        double buf[4]={0,0,0,0};
-        Mat src2sc = _src2.getMat();
+        size_t esz = CV_ELEM_SIZE1(type1) * scalarcn;
+        double buf[4] = { 0, 0, 0, 0 };
+        Mat src2 = _src2.getMat();
 
-        if (!src2sc.empty())
-            convertAndUnrollScalar(src2sc, type1, (uchar*)buf, 1);
+        if( depth1 > CV_32S )
+            convertAndUnrollScalar( src2, depth1, (uchar *)buf, kercn );
+        else
+        {
+            double fval = 0;
+            getConvertFunc(depth2, CV_64F)(src2.data, 0, 0, 0, (uchar *)&fval, 0, Size(1, 1), 0);
+            if( fval < getMinVal(depth1) )
+                return dst.setTo(Scalar::all(op == CMP_GT || op == CMP_GE || op == CMP_NE ? 255 : 0)), true;
+
+            if( fval > getMaxVal(depth1) )
+                return dst.setTo(Scalar::all(op == CMP_LT || op == CMP_LE || op == CMP_NE ? 255 : 0)), true;
+
+            int ival = cvRound(fval);
+            if( fval != ival )
+            {
+                if( op == CMP_LT || op == CMP_GE )
+                    ival = cvCeil(fval);
+                else if( op == CMP_LE || op == CMP_GT )
+                    ival = cvFloor(fval);
+                else
+                    return dst.setTo(Scalar::all(op == CMP_NE ? 255 : 0)), true;
+            }
+            convertAndUnrollScalar(Mat(1, 1, CV_32S, &ival), depth1, (uchar *)buf, kercn);
+        }
 
         ocl::KernelArg scalararg = ocl::KernelArg(0, 0, 0, 0, buf, esz);
 
         k.args(ocl::KernelArg::ReadOnlyNoSize(src1, cn, kercn),
-               ocl::KernelArg::WriteOnly(dst, cn, kercn),
-               scalararg);
+               ocl::KernelArg::WriteOnly(dst, cn, kercn), scalararg);
     }
     else
     {
-        CV_DbgAssert(type1 == type2);
         UMat src2 = _src2.getUMat();
-        CV_DbgAssert(size == src2.size());
 
         k.args(ocl::KernelArg::ReadOnlyNoSize(src1),
                ocl::KernelArg::ReadOnlyNoSize(src2),

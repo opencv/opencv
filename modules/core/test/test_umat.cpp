@@ -563,12 +563,12 @@ protected:
 
     void checkDiff(const Mat& m1, const Mat& m2, const string& s)
     {
-        if (norm(m1, m2, NORM_INF) != 0)
+        if (cvtest::norm(m1, m2, NORM_INF) != 0)
             throw test_excep(s);
     }
     void checkDiffF(const Mat& m1, const Mat& m2, const string& s)
     {
-        if (norm(m1, m2, NORM_INF) > 1e-5)
+        if (cvtest::norm(m1, m2, NORM_INF) > 1e-5)
             throw test_excep(s);
     }
 };
@@ -721,7 +721,7 @@ TEST(Core_UMat, getUMat)
             um.setTo(17);
         }
 
-        double err = norm(m, ref, NORM_INF);
+        double err = cvtest::norm(m, ref, NORM_INF);
         if (err > 0)
         {
             std::cout << "m: " << std::endl << m << std::endl;
@@ -742,7 +742,7 @@ TEST(UMat, Sync)
 
     um.setTo(cv::Scalar::all(19));
 
-    EXPECT_EQ(0, cv::norm(um.getMat(ACCESS_READ), cv::Mat(um.size(), um.type(), 19), NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(um.getMat(ACCESS_READ), cv::Mat(um.size(), um.type(), 19), NORM_INF));
 }
 
 TEST(UMat, setOpenCL)

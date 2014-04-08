@@ -34,5 +34,5 @@ PERF_TEST_P( TestBilateralFilter, BilateralFilter,
 
     TEST_CYCLE() bilateralFilter(src, dst, d, sigmaColor, sigmaSpace, BORDER_DEFAULT);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, .01, ERROR_RELATIVE);
 }

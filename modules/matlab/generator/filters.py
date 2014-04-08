@@ -1,5 +1,4 @@
 from textwrap import TextWrapper
-from string import split, join
 import re, os
 # precompile a URL matching regular expression
 urlexpr = re.compile(r"((https?):((//)|(\\\\))+[\w\d:#@%/;$()~_?\+-=\\\.&]*)", re.MULTILINE|re.UNICODE)
@@ -177,4 +176,4 @@ def comment(text, wrap=80, escape='% ', escape_first='', escape_last=''):
     escapn = '\n'+escape
     lines  = text.split('\n')
     wlines = (tw.wrap(line) for line in lines)
-    return escape_first+escape+join((join(line, escapn) for line in wlines), escapn)+escape_last
+    return escape_first+escape+escapn.join(escapn.join(line) for line in wlines)+escape_last

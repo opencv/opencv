@@ -213,7 +213,7 @@ foreach(__opttype OPT DBG)
   SET(OpenCV_EXTRA_LIBS_${__opttype} "")
 
   # CUDA
-  if(OpenCV_CUDA_VERSION AND (CMAKE_CROSSCOMPILING OR (WIN32 AND NOT OpenCV_SHARED)))
+  if(OpenCV_CUDA_VERSION)
     if(NOT CUDA_FOUND)
       find_package(CUDA ${OpenCV_CUDA_VERSION} EXACT REQUIRED)
     else()
@@ -222,32 +222,41 @@ foreach(__opttype OPT DBG)
       endif()
     endif()
 
-    list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_LIBRARIES})
+    set(OpenCV_CUDA_LIBS_ABSPATH ${CUDA_LIBRARIES})
 
     if(${CUDA_VERSION} VERSION_LESS "5.5")
-      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_npp_LIBRARY})
+      list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_npp_LIBRARY})
     else()
       find_cuda_helper_libs(nppc)
       find_cuda_helper_libs(nppi)
       find_cuda_helper_libs(npps)
-      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_nppc_LIBRARY} ${CUDA_nppi_LIBRARY} ${CUDA_npps_LIBRARY})
+      list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_nppc_LIBRARY} ${CUDA_nppi_LIBRARY} ${CUDA_npps_LIBRARY})
     endif()
 
     if(OpenCV_USE_CUBLAS)
-      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_CUBLAS_LIBRARIES})
+      list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_CUBLAS_LIBRARIES})
     endif()
 
     if(OpenCV_USE_CUFFT)
-      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_CUFFT_LIBRARIES})
+      list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_CUFFT_LIBRARIES})
     endif()
 
     if(OpenCV_USE_NVCUVID)
-      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_nvcuvid_LIBRARIES})
+      list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_nvcuvid_LIBRARIES})
     endif()
 
     if(WIN32)
-      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_nvcuvenc_LIBRARIES})
+      list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_nvcuvenc_LIBRARIES})
     endif()
+
+    set(OpenCV_CUDA_LIBS_RELPATH "")
+    foreach(l ${OpenCV_CUDA_LIBS_ABSPATH})
+      get_filename_component(_tmp ${l} PATH)
+      list(APPEND OpenCV_CUDA_LIBS_RELPATH ${_tmp})
+    endforeach()
+
+    list(REMOVE_DUPLICATES OpenCV_CUDA_LIBS_RELPATH)
+    link_directories(${OpenCV_CUDA_LIBS_RELPATH})
   endif()
 endforeach()
 
