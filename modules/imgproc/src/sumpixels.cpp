@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
 static IppStatus sts = ippInit();
@@ -348,7 +348,11 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
             CV_OCL_RUN(ocl::useOpenCL(), ocl_integral(_src, _sum, sdepth))
         }
         else if (_sqsum.isUMat())
+          {
+#ifdef HAVE_OPENCL
             CV_OCL_RUN(ocl::useOpenCL(), ocl_integral(_src, _sum, _sqsum, sdepth, sqdepth))
+#endif
+              }
     }
 #endif
 

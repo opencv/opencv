@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 /*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
@@ -274,10 +274,10 @@ void cv::Canny( InputArray _src, OutputArray _dst,
 
     if (low_thresh > high_thresh)
         std::swap(low_thresh, high_thresh);
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_dst.isUMat() && (cn == 1 || cn == 3),
                ocl_Canny(_src, _dst, (float)low_thresh, (float)high_thresh, aperture_size, L2gradient, cn, size))
-
+#endif
     Mat src = _src.getMat(), dst = _dst.getMat();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION

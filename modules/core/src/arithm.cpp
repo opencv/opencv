@@ -47,7 +47,7 @@
 // */
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -1019,8 +1019,10 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
     if( dims1 <= 2 && dims2 <= 2 && kind1 == kind2 && sz1 == sz2 && type1 == type2 && !haveMask )
     {
         _dst.create(sz1, type1);
+#ifdef HAVE_OPENCL
         CV_OCL_RUN(use_opencl,
                    ocl_binary_op(*psrc1, *psrc2, _dst, _mask, bitwise, oclop, false))
+#endif
 
         if( bitwise )
         {
@@ -1088,8 +1090,10 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
     if( haveMask && reallocate )
         _dst.setTo(0.);
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(use_opencl,
                ocl_binary_op(*psrc1, *psrc2, _dst, _mask, bitwise, oclop, haveScalar))
+#endif
 
 
     Mat src1 = psrc1->getMat(), src2 = psrc2->getMat();
@@ -1433,10 +1437,12 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         ((src1Scalar && src2Scalar) || (!src1Scalar && !src2Scalar)) )
     {
         _dst.createSameSize(*psrc1, type1);
+#ifdef HAVE_OPENCL
         CV_OCL_RUN(use_opencl,
             ocl_arithm_op(*psrc1, *psrc2, _dst, _mask,
                           (!usrdata ? type1 : std::max(depth1, CV_32F)),
                           usrdata, oclop, false))
+#endif
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
         Size sz = getContinuousSize(src1, src2, dst, src1.channels());
@@ -1532,11 +1538,11 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     _dst.createSameSize(*psrc1, dtype);
     if( reallocate )
         _dst.setTo(0.);
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(use_opencl,
                ocl_arithm_op(*psrc1, *psrc2, _dst, _mask, wtype,
                usrdata, oclop, haveScalar))
-
+#endif
     BinaryFunc cvtsrc1 = type1 == wtype ? 0 : getConvertFunc(type1, wtype);
     BinaryFunc cvtsrc2 = type2 == type1 ? cvtsrc1 : type2 == wtype ? 0 : getConvertFunc(type2, wtype);
     BinaryFunc cvtdst = dtype == wtype ? 0 : getConvertFunc(wtype, dtype);
@@ -2732,10 +2738,10 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
                      "nor 'array op scalar', nor 'scalar op array'" );
         haveScalar = true;
     }
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && _dst.isUMat(),
                ocl_compare(_src1, _src2, _dst, op, haveScalar))
-
+#endif
     int kind1 = _src1.kind(), kind2 = _src2.kind();
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
 
@@ -3061,10 +3067,11 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
 void cv::inRange(InputArray _src, InputArray _lowerb,
                  InputArray _upperb, OutputArray _dst)
 {
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src.dims() <= 2 && _lowerb.dims() <= 2 &&
                _upperb.dims() <= 2 && _dst.isUMat(),
                ocl_inRange(_src, _lowerb, _upperb, _dst))
-
+#endif
     int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Mat src = _src.getMat(), lb = _lowerb.getMat(), ub = _upperb.getMat();
 

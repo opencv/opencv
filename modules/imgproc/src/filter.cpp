@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 /****************************************************************************************\
                                     Base Image Filter
@@ -3457,6 +3457,7 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
     if (ddepth < 0)
         ddepth = sdepth;
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN_(kernelY.cols <= 21 && kernelX.cols <= 21 &&
                 imgSize.width > optimizedSepFilterLocalSize + (kernelX.cols >> 1) &&
                 imgSize.height > optimizedSepFilterLocalSize + (kernelY.cols >> 1) &&
@@ -3464,6 +3465,7 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                 (d.isIntel() || (d.isAMD() && !d.hostUnifiedMemory())),
                 ocl_sepFilter2D_SinglePass(_src, _dst, kernelX, kernelY, delta,
                                            borderType & ~BORDER_ISOLATED, ddepth), true)
+#endif
 
     if (anchor.x < 0)
         anchor.x = kernelX.cols >> 1;
@@ -3608,8 +3610,10 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
                    InputArray _kernel, Point anchor,
                    double delta, int borderType )
 {
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
                ocl_filter2D(_src, _dst, ddepth, _kernel, anchor, delta, borderType))
+#endif
 
     Mat src = _src.getMat(), kernel = _kernel.getMat();
 
@@ -3657,8 +3661,10 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                       InputArray _kernelX, InputArray _kernelY, Point anchor,
                       double delta, int borderType )
 {
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
                ocl_sepFilter2D(_src, _dst, ddepth, _kernelX, _kernelY, anchor, delta, borderType))
+#endif
 
     Mat src = _src.getMat(), kernelX = _kernelX.getMat(), kernelY = _kernelY.getMat();
 

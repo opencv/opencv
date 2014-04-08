@@ -249,6 +249,7 @@ CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
 
 
 
+
 ////////////////////////////////// video io /////////////////////////////////
 
 typedef struct CvCapture CvCapture;

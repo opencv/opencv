@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 /*
  * This file includes the code, contributed by Simon Perreault
@@ -838,8 +838,9 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 Size ksize, Point anchor,
                 bool normalize, int borderType )
 {
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_dst.isUMat(), ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType, normalize))
-
+#endif
     Mat src = _src.getMat();
     int sdepth = src.depth(), cn = src.channels();
     if( ddepth < 0 )
@@ -962,8 +963,10 @@ void cv::sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
             ksize.width = 1;
     }
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
                ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType, normalize, true))
+#endif
 
     int sumDepth = CV_64F;
     if( sdepth == CV_8U )
@@ -1941,9 +1944,10 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
         return;
     }
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src0.dims() <= 2 && _dst.isUMat(),
                ocl_medianFilter(_src0,_dst, ksize))
-
+#endif
     Mat src0 = _src0.getMat();
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
@@ -2635,8 +2639,10 @@ void cv::bilateralFilter( InputArray _src, OutputArray _dst, int d,
 {
     _dst.create( _src.size(), _src.type() );
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_bilateralFilter_8u(_src, _dst, d, sigmaColor, sigmaSpace, borderType))
+#endif
 
     Mat src = _src.getMat(), dst = _dst.getMat();
 

@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 #include "bufferpool.impl.hpp"
 
@@ -2712,10 +2712,10 @@ static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
 void cv::setIdentity( InputOutputArray _m, const Scalar& s )
 {
     CV_Assert( _m.dims() <= 2 );
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_m.isUMat(),
                ocl_setIdentity(_m, s))
-
+#endif
     Mat m = _m.getMat();
     int i, j, rows = m.rows, cols = m.cols, type = m.type();
 
@@ -2945,10 +2945,10 @@ void cv::transpose( InputArray _src, OutputArray _dst )
 {
     int type = _src.type(), esz = CV_ELEM_SIZE(type);
     CV_Assert( _src.dims() <= 2 && esz <= 32 );
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_dst.isUMat(),
                ocl_transpose(_src, _dst))
-
+#endif
     Mat src = _src.getMat();
     if( src.empty() )
     {
@@ -3247,10 +3247,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     CV_Assert( cn == CV_MAT_CN(dtype) );
     CV_Assert( op == CV_REDUCE_SUM || op == CV_REDUCE_MAX ||
                op == CV_REDUCE_MIN || op == CV_REDUCE_AVG );
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_dst.isUMat(),
                ocl_reduce(_src, _dst, dim, op, op0, stype, dtype))
-
+#endif
     Mat src = _src.getMat();
     _dst.create(dim == 0 ? 1 : src.rows, dim == 0 ? src.cols : 1, dtype);
     Mat dst = _dst.getMat(), temp = dst;

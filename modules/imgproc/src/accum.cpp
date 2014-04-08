@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -425,10 +425,10 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
 
     CV_Assert( _src.sameSize(_dst) && dcn == scn );
     CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8U) );
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE))
-
+#endif
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
     int fidx = getAccTabIdx(sdepth, ddepth);
@@ -452,8 +452,10 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
     CV_Assert( _src.sameSize(_dst) && dcn == scn );
     CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8U) );
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE_SQUARE))
+#endif
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
@@ -479,10 +481,10 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
     CV_Assert( _src1.sameSize(_src2) && stype == _src2.type() );
     CV_Assert( _src1.sameSize(_dst) && dcn == scn );
     CV_Assert( _mask.empty() || (_src1.sameSize(_mask) && _mask.type() == CV_8U) );
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src1.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src1, _src2, _dst, 0.0, _mask, ACCUMULATE_PRODUCT))
-
+#endif
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
     int fidx = getAccTabIdx(sdepth, ddepth);
@@ -507,8 +509,10 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
     CV_Assert( _src.sameSize(_dst) && dcn == scn );
     CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8U) );
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, alpha, _mask, ACCUMULATE_WEIGHTED))
+#endif
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 

@@ -44,7 +44,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 namespace cv {
 
@@ -129,10 +129,10 @@ void cv::blendLinear( InputArray _src1, InputArray _src2, InputArray _weights1, 
     CV_Assert(type == _src2.type() && _weights1.type() == CV_32FC1 && _weights2.type() == CV_32FC1);
 
     _dst.create(size, type);
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_dst.isUMat(),
                ocl_blendLinear(_src1, _src2, _weights1, _weights2, _dst))
-
+#endif
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), weights1 = _weights1.getMat(),
             weights2 = _weights2.getMat(), dst = _dst.getMat();
 

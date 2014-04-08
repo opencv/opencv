@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -310,9 +310,10 @@ static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
 
 void cv::split(InputArray _m, OutputArrayOfArrays _mv)
 {
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_m.dims() <= 2 && _mv.isUMatVector(),
                ocl_split(_m, _mv))
-
+#endif
     Mat m = _m.getMat();
     if( m.empty() )
     {
@@ -475,9 +476,10 @@ static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
 
 void cv::merge(InputArrayOfArrays _mv, OutputArray _dst)
 {
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_mv.isUMatVector() && _dst.isUMat(),
                ocl_merge(_mv, _dst))
-
+#endif
     std::vector<Mat> mv;
     _mv.getMatVector(mv);
     merge(!mv.empty() ? &mv[0] : 0, mv.size(), _dst);
@@ -743,9 +745,10 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
     if (npairs == 0 || fromTo == NULL)
         return;
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(dst.isUMatVector(),
                ocl_mixChannels(src, dst, fromTo, npairs))
-
+#endif
     bool src_is_mat = src.kind() != _InputArray::STD_VECTOR_MAT &&
             src.kind() != _InputArray::STD_VECTOR_VECTOR &&
             src.kind() != _InputArray::STD_VECTOR_UMAT;
@@ -772,9 +775,10 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
     if (fromTo.empty())
         return;
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(dst.isUMatVector(),
                ocl_mixChannels(src, dst, &fromTo[0], fromTo.size()>>1))
-
+#endif
     bool src_is_mat = src.kind() != _InputArray::STD_VECTOR_MAT &&
             src.kind() != _InputArray::STD_VECTOR_VECTOR &&
             src.kind() != _InputArray::STD_VECTOR_UMAT;
@@ -1366,9 +1370,10 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
 
 void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
 {
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_convertScaleAbs(_src, _dst, alpha, beta))
-
+#endif
     Mat src = _src.getMat();
     int cn = src.channels();
     double scale[] = {alpha, beta};
@@ -1540,9 +1545,10 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
         _lut.total() == 256 && _lut.isContinuous() &&
         (depth == CV_8U || depth == CV_8S) );
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
                ocl_LUT(_src, _lut, _dst))
-
+#endif
     Mat src = _src.getMat(), lut = _lut.getMat();
     _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
@@ -1610,9 +1616,10 @@ void cv::normalize( InputArray _src, OutputArray _dst, double a, double b,
         rtype = _dst.fixedType() ? _dst.depth() : depth;
     _dst.createSameSize(_src, CV_MAKETYPE(rtype, cn));
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_dst.isUMat(),
                ocl_normalize(_src, _dst, _mask, rtype, scale, shift))
-
+#endif
     Mat src = _src.getMat(), dst = _dst.getMat();
     if( _mask.empty() )
         src.convertTo( dst, rtype, scale, shift );

@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -749,9 +749,10 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, d
 
 double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double maxval, int type )
 {
+#ifdef HAVE_OPENCL
     CV_OCL_RUN_(_src.dims() <= 2 && _dst.isUMat(),
                 ocl_threshold(_src, _dst, thresh, maxval, type), thresh)
-
+#endif
     Mat src = _src.getMat();
     bool use_otsu = (type & THRESH_OTSU) != 0;
     type &= THRESH_MASK;

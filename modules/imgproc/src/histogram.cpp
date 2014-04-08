@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -1474,11 +1474,13 @@ void cv::calcHist( InputArrayOfArrays images, const std::vector<int>& channels,
                    const std::vector<float>& ranges,
                    bool accumulate )
 {
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(images.total() == 1 && channels.size() == 1 && images.channels(0) == 1 &&
                channels[0] == 0 && images.isUMatVector() && mask.empty() && !accumulate &&
                histSize.size() == 1 && histSize[0] == BINS && ranges.size() == 2 &&
                ranges[0] == 0 && ranges[1] == 256,
                ocl_calcHist(images, hist))
+#endif
 
     int i, dims = (int)histSize.size(), rsz = (int)ranges.size(), csz = (int)channels.size();
     int nimages = (int)images.total();
@@ -2149,9 +2151,11 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
     size_t histdims = _1D ? 1 : hist.dims();
 #endif
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(dst.isUMat() && hist.type() == CV_32FC1 &&
                histdims <= 2 && ranges.size() == histdims * 2 && histdims == channels.size(),
                ocl_calcBackProject(images, channels, hist, dst, ranges, (float)scale, histdims))
+#endif
 
     Mat H0 = hist.getMat(), H;
     int hcn = H0.channels();
@@ -3389,10 +3393,10 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
 
     if (_src.empty())
         return;
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_equalizeHist(_src, _dst))
-
+#endif
     Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();

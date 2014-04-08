@@ -46,7 +46,7 @@
 // */
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -531,9 +531,9 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
     CV_Assert( _src.dims() <= 2 );
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN( _dst.isUMat(), ocl_flip(_src,_dst, flip_mode))
-
+#endif
     Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
@@ -573,10 +573,10 @@ void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 
     Size ssize = _src.size();
     _dst.create(ssize.height*ny, ssize.width*nx, _src.type());
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_dst.isUMat(),
                ocl_repeat(_src, ny, nx, _dst))
-
+#endif
     Mat src = _src.getMat(), dst = _dst.getMat();
     Size dsize = dst.size();
     int esz = (int)src.elemSize();
@@ -848,9 +848,10 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
                          int left, int right, int borderType, const Scalar& value )
 {
     CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 );
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
                ocl_copyMakeBorder(_src, _dst, top, bottom, left, right, borderType, value))
+#endif
 
     Mat src = _src.getMat();
 

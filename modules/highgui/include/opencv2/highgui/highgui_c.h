@@ -131,6 +131,9 @@ enum
 CVAPI(void) cvConvertImage( const CvArr* src, CvArr* dst, int flags CV_DEFAULT(0));
 
 
+  int cvHaveImageReader( const char* filename );
+  int cvHaveImageWriter(const char*);
+
 #ifdef __cplusplus
 }
 #endif

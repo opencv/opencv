@@ -47,7 +47,7 @@
 // */
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
 static IppStatus sts = ippInit();
@@ -2297,9 +2297,10 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         inv_scale_x = (double)dsize.width/ssize.width;
         inv_scale_y = (double)dsize.height/ssize.height;
     }
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
+#endif
 
     Mat src = _src.getMat();
     _dst.create(dsize, src.type());
@@ -3620,8 +3621,10 @@ void cv::remap( InputArray _src, OutputArray _dst,
     CV_Assert( _map1.size().area() > 0 );
     CV_Assert( _map2.empty() || (_map2.size() == _map1.size()));
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_remap(_src, _dst, _map1, _map2, interpolation, borderType, borderValue))
+#endif
 
     Mat src = _src.getMat(), map1 = _map1.getMat(), map2 = _map2.getMat();
     _dst.create( map1.size(), src.type() );
@@ -4092,10 +4095,11 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                      InputArray _M0, Size dsize,
                      int flags, int borderType, const Scalar& borderValue )
 {
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType,
                                  borderValue, OCL_OP_AFFINE))
-
+#endif
     Mat src = _src.getMat(), M0 = _M0.getMat();
     _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
     Mat dst = _dst.getMat();
@@ -4337,9 +4341,11 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 {
     CV_Assert( _src.total() > 0 );
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType, borderValue,
                               OCL_OP_PERSPECTIVE))
+#endif
 
     Mat src = _src.getMat(), M0 = _M0.getMat();
     _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );

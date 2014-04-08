@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
 
 #ifdef HAVE_IPP
@@ -2203,10 +2203,10 @@ void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray
 {
     int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert( type == _src2.type() );
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && _dst.isUMat(),
             ocl_scaleAdd(_src1, alpha, _src2, _dst, type))
-
+#endif
     if( depth < CV_32F )
     {
         addWeighted(_src1, alpha, _src2, 1, 0, _dst, depth);

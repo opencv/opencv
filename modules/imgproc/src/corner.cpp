@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -454,8 +454,10 @@ static bool ocl_preCornerDetect( InputArray _src, OutputArray _dst, int ksize, i
 
 void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, int ksize, int borderType )
 {
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, 0.0, borderType, MINEIGENVAL))
+#endif
 
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
@@ -466,8 +468,10 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
 
 void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksize, double k, int borderType )
 {
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, k, borderType, HARRIS))
+#endif
 
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
@@ -494,8 +498,10 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
     int type = _src.type();
     CV_Assert( type == CV_8UC1 || type == CV_32FC1 );
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat(),
                 ocl_preCornerDetect(_src, _dst, ksize, borderType, CV_MAT_DEPTH(type)))
+#endif
 
     Mat Dx, Dy, D2x, D2y, Dxy, src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );

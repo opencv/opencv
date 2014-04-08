@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 #include <climits>
 #include <limits>
 
@@ -897,9 +897,10 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 
 void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src.isUMat() && _src.dims() <= 2,
                ocl_meanStdDev(_src, _mean, _sdv, _mask))
-
+#endif
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8U );
 
@@ -1331,8 +1332,10 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     CV_Assert( (_src.channels() == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
         (_src.channels() >= 1 && _mask.empty() && !minIdx && !maxIdx) );
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_src.isUMat() && _src.dims() <= 2  && (_mask.empty() || _src.size() == _mask.size()),
                ocl_minMaxIdx(_src, minVal, maxVal, minIdx, maxIdx, _mask))
+#endif
 
     Mat src = _src.getMat(), mask = _mask.getMat();
     int depth = src.depth(), cn = src.channels();

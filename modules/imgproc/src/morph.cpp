@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 #include <limits.h>
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 /****************************************************************************************\
                      Basic Morphological Operations: Erosion & Dilation
@@ -1437,12 +1437,13 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
                                        anchor);
         iterations = 1;
     }
-
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && src_cn <= 4 &&
                (src_depth == CV_8U || src_depth == CV_32F || src_depth == CV_64F ) &&
                borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue() &&
                (op == MORPH_ERODE || op == MORPH_DILATE),
                ocl_morphology_op(_src, _dst, kernel, ksize, anchor, iterations, op) )
+#endif
 
     Mat src = _src.getMat();
 

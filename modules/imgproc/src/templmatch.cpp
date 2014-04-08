@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 ////////////////////////////////////////////////// matchTemplate //////////////////////////////////////////////////////////
 
@@ -538,8 +538,10 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
         CV_Assert(_img.size().height <= _templ.size().height && _img.size().width <= _templ.size().width);
     }
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_img.dims() <= 2 && _result.isUMat(),
                (!needswap ? ocl_matchTemplate(_img, _templ, _result, method) : ocl_matchTemplate(_templ, _img, _result, method)))
+#endif
 
     int numType = method == CV_TM_CCORR || method == CV_TM_CCORR_NORMED ? 0 :
                   method == CV_TM_CCOEFF || method == CV_TM_CCOEFF_NORMED ? 1 : 2;

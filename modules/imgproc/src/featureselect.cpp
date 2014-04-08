@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+//#include "opencl_kernels.hpp"
 
 #include <cstdio>
 #include <vector>
@@ -269,9 +269,11 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     CV_Assert( qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0 );
     CV_Assert( _mask.empty() || (_mask.type() == CV_8UC1 && _mask.sameSize(_image)) );
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(_image.dims() <= 2 && _image.isUMat(),
                ocl_goodFeaturesToTrack(_image, _corners, maxCorners, qualityLevel, minDistance,
                                     _mask, blockSize, useHarrisDetector, harrisK))
+#endif
 
     Mat image = _image.getMat(), eig, tmp;
     if( useHarrisDetector )

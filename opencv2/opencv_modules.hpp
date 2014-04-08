@@ -6,7 +6,6 @@
  *
 */
 
-
 #define HAVE_OPENCV_CORE
 #define HAVE_OPENCV_HIGHGUI
 #define HAVE_OPENCV_IMGPROC
