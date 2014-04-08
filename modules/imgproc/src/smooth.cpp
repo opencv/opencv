@@ -2329,13 +2329,14 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
 
-#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
+#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7) && 0
     if( cn == 1 )
     {
         bool ok;
         IPPBilateralFilter_8u_Invoker body(temp, dst, sigma_color * sigma_color, sigma_space * sigma_space, radius, &ok );
         parallel_for_(Range(0, dst.rows), body, dst.total()/(double)(1<<16));
-        if( ok ) return;
+        if( ok )
+            return;
     }
 #endif
 
