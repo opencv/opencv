@@ -237,7 +237,7 @@ OCL_PERF_TEST_P(CornerHarrisFixture, CornerHarris,
 typedef tuple<Size, MatDepth> IntegralParams;
 typedef TestBaseWithParam<IntegralParams> IntegralFixture;
 
-OCL_PERF_TEST_P(IntegralFixture, Integral1, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32S, CV_32F)))
+OCL_PERF_TEST_P(IntegralFixture, DISABLED_Integral1, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32S, CV_32F)))
 {
     const IntegralParams params = GetParam();
     const Size srcSize = get<0>(params);
@@ -250,7 +250,7 @@ OCL_PERF_TEST_P(IntegralFixture, Integral1, ::testing::Combine(OCL_TEST_SIZES, O
     {
         ocl::oclMat oclSrc(src), oclDst;
 
-        OCL_TEST_CYCLE() cv::ocl::integral(oclSrc, oclDst, sdepth);
+//        OCL_TEST_CYCLE() cv::ocl::integral(oclSrc, oclDst, sdepth);
 
         oclDst.download(dst);
 
