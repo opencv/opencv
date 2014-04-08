@@ -54,8 +54,8 @@ TEST(Calib3d_Affine3f, accuracy)
     cv::Rodrigues(rvec, expected);
 
 
-    ASSERT_EQ(0, norm(cv::Mat(affine.matrix, false).colRange(0, 3).rowRange(0, 3) != expected));
-    ASSERT_EQ(0, norm(cv::Mat(affine.linear()) != expected));
+    ASSERT_EQ(0, cvtest::norm(cv::Mat(affine.matrix, false).colRange(0, 3).rowRange(0, 3) != expected, cv::NORM_L2));
+    ASSERT_EQ(0, cvtest::norm(cv::Mat(affine.linear()) != expected, cv::NORM_L2));
 
 
     cv::Matx33d R = cv::Matx33d::eye();
@@ -77,7 +77,7 @@ TEST(Calib3d_Affine3f, accuracy)
     cv::Mat diff;
     cv::absdiff(expected, result.matrix, diff);
 
-    ASSERT_LT(cv::norm(diff, cv::NORM_INF), 1e-15);
+    ASSERT_LT(cvtest::norm(diff, cv::NORM_INF), 1e-15);
 }
 
 TEST(Calib3d_Affine3f, accuracy_rvec)
@@ -103,6 +103,6 @@ TEST(Calib3d_Affine3f, accuracy_rvec)
         cv::Rodrigues(R, vo);
         //std::cout << "O:" <<(cv::getTickCount() - s)*1000/cv::getTickFrequency() << std::endl;
 
-        ASSERT_LT(cv::norm(va - vo), 1e-9);
+        ASSERT_LT(cvtest::norm(va, vo, cv::NORM_L2), 1e-9);
     }
 }

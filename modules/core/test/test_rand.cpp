@@ -174,7 +174,7 @@ void Core_RandTest::run( int )
             }
         }
 
-        if( maxk >= 1 && norm(arr[0], arr[1], NORM_INF) > eps)
+        if( maxk >= 1 && cvtest::norm(arr[0], arr[1], NORM_INF) > eps)
         {
             ts->printf( cvtest::TS::LOG, "RNG output depends on the array lengths (some generated numbers get lost?)" );
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
