@@ -47,6 +47,8 @@
 #  error mat.inl.hpp header must be compiled as C++
 #endif
 
+#include "opencv2/core/utility.hpp"
+
 namespace cv
 {
 
@@ -999,6 +1001,89 @@ MatIterator_<_Tp> Mat::end()
     return it;
 }
 
+template<typename _Tp, typename Functor> inline
+void Mat::forEach(const Functor& operation) {
+    union Index {
+        int idx[10];
+        Index() {
+            for (int i = 0; i < 10; ++i) {
+                idx[i] = 0;
+            }
+        };
+        operator const int*() {
+            return idx;
+        };
+        operator void*() {
+            return 0;
+        }
+        int& operator [](int i) {
+            return idx[i];
+        }
+    };
+
+    if (false) {
+        operation(*reinterpret_cast<_Tp*>(0), Index());
+        // If your compiler fail in this line.
+        // Please check that your functor signature is
+        //     (_Tp&, const int*)   <- multidimential
+        //  or (_Tp&, void*)        <- in case of you don't need current idx.
+    }
+
+    const size_t LINES = this->total() / this->size[this->dims - 1];
+
+    class PixelOperationWrapper :public ParallelLoopBody
+    {
+    public:
+        PixelOperationWrapper(Mat_<_Tp> * const frame, const Functor& _operation)
+            : mat(frame), op(_operation) {};
+        virtual ~PixelOperationWrapper(){};
+        // ! Overloaded virtual operator
+        // convert range call to row call.
+        virtual void operator()(const Range &range) const {
+            const int DIMS = mat->dims;
+            const int COLS = mat->size[DIMS - 1];
+            Index idx;
+            idx[DIMS - 2] = range.start - 1;
+
+            for (int line_num = range.start; line_num < range.end; ++line_num) {
+                idx[DIMS - 2]++;
+                for (int i = DIMS - 2; i >= 0; --i) {
+                    if (idx[i] >= mat->size[i]) {
+                        idx[i - 1] += idx[i] / mat->size[i];
+                        idx[i] %= mat->size[i];
+                        continue; // carry-over;
+                    }
+                    else {
+                        break;
+                    }
+                }
+                _Tp* line_start = &(mat->at<_Tp>(idx));
+                this->rowCall(line_start, idx, COLS, DIMS);
+            }
+        };
+        //PixelOperationWrapper & operator=(const PixelOperationWrapper & that) :
+        //mat(that.mat), op(that.op) {}
+    private:
+        Mat_<_Tp>* mat;
+        Functor op;
+        // ! Call operator for each elements in this row.
+        inline void rowCall(_Tp * pixel, Index& idx, const int COLS, const int DIMS) const {
+            int &col = idx[DIMS - 1];
+            for (col = 0; col < COLS; ++col) {
+                op(*pixel++, idx);
+            }
+        };
+    };
+    
+    parallel_for_(cv::Range(0, LINES), PixelOperationWrapper(reinterpret_cast<Mat_<_Tp>*>(this), operation));
+};
+
+template<typename _Tp, typename Functor> inline
+void Mat::forEach(const Functor& operation) const {
+    // call as not const
+    (const_cast<Mat*>(this))->forEach<const _Tp>(operation);
+};
+
 template<typename _Tp> inline
 Mat::operator std::vector<_Tp>() const
 {
@@ -1584,6 +1669,15 @@ MatIterator_<_Tp> Mat_<_Tp>::end()
     return Mat::end<_Tp>();
 }
 
+template<typename _Tp> template<typename Functor> inline
+void Mat_<_Tp>::forEach(const Functor& operation) {
+    Mat::forEach<_Tp, Functor>(operation);
+}
+
+template<typename _Tp> template<typename Functor> inline
+void Mat_<_Tp>::forEach(const Functor& operation) const {
+    Mat::forEach<_Tp, Functor>(operation);
+}
 
 ///////////////////////////// SparseMat /////////////////////////////
 

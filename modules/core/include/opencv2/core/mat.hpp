@@ -894,6 +894,11 @@ public:
     template<typename _Tp> MatConstIterator_<_Tp> begin() const;
     template<typename _Tp> MatConstIterator_<_Tp> end() const;
 
+    //! template methods for for operation over all matrix elements.
+    // the operations take care of skipping gaps in the end of rows (if any)
+    template<typename _Tp, typename Functor> void forEach(const Functor& operation);
+    template<typename _Tp, typename Functor> void forEach(const Functor& operation) const;
+
     enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
     enum { MAGIC_MASK = 0xFFFF0000, TYPE_MASK = 0x00000FFF, DEPTH_MASK = 7 };
 
@@ -1036,6 +1041,11 @@ public:
     iterator end();
     const_iterator begin() const;
     const_iterator end() const;
+
+    //! template methods for for operation over all matrix elements.
+    // the operations take care of skipping gaps in the end of rows (if any)
+    template<typename Functor> void forEach(const Functor& operation);
+    template<typename Functor> void forEach(const Functor& operation) const;
 
     //! equivalent to Mat::create(_rows, _cols, DataType<_Tp>::type)
     void create(int _rows, int _cols);
