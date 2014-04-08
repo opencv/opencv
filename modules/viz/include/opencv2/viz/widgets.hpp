@@ -320,8 +320,15 @@ namespace cv
         public:
             //! Each point in cloud is mapped to a color in colors
             WCloud(InputArray cloud, InputArray colors);
+
             //! All points in cloud have the same color
             WCloud(InputArray cloud, const Color &color = Color::white());
+
+            //! Each point in cloud is mapped to a color in colors, normals are used for shading
+            WCloud(InputArray cloud, InputArray colors, InputArray normals);
+
+            //! All points in cloud have the same color, normals are used for shading
+            WCloud(InputArray cloud, const Color &color, InputArray normals);
         };
 
         class CV_EXPORTS WPaintedCloud: public Widget3D
