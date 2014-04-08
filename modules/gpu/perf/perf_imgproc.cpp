@@ -1832,6 +1832,8 @@ PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles,
 //////////////////////////////////////////////////////////////////////
 // GeneralizedHough
 
+#if !defined(__GNUC__) || (__GNUC__ * 10 + __GNUC_MINOR__ != 47)
+
 CV_FLAGS(GHMethod, GHT_POSITION, GHT_SCALE, GHT_ROTATION)
 
 DEF_PARAM_TEST(Method_Sz, GHMethod, cv::Size);
@@ -1918,3 +1920,5 @@ PERF_TEST_P(Method_Sz, DISABLED_ImgProc_GeneralizedHough,
         CPU_SANITY_CHECK(positions);
     }
 }
+
+#endif

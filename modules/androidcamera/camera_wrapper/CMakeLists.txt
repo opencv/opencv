@@ -58,7 +58,7 @@ SET_TARGET_PROPERTIES(${the_target} PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
                       )
 
-if (NOT (CMAKE_BUILD_TYPE MATCHES "debug"))
+if (NOT (CMAKE_BUILD_TYPE MATCHES "Debug"))
     ADD_CUSTOM_COMMAND( TARGET ${the_target} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${LIBRARY_OUTPUT_PATH}/lib${the_target}.so" )
 endif()
 
