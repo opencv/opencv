@@ -448,11 +448,13 @@ template<typename T> struct OpNot
     T operator()( T a, T ) const { return ~a; }
 };
 
+#if (ARITHM_USE_IPP == 1)
 static inline void fixSteps(Size sz, size_t elemSize, size_t& step1, size_t& step2, size_t& step)
 {
     if( sz.height == 1 )
         step1 = step2 = step = sz.width*elemSize;
 }
+#endif
 
 static void add8u( const uchar* src1, size_t step1,
                    const uchar* src2, size_t step2,
