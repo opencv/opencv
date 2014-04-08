@@ -184,8 +184,8 @@ TEST(DISABLED_ML_SVM, linear_save_load)
     svm3.predict(samples, r3);
 
     double eps = 1e-4;
-    EXPECT_LE(norm(r1, r2, NORM_INF), eps);
-    EXPECT_LE(norm(r1, r3, NORM_INF), eps);
+    EXPECT_LE(cvtest::norm(r1, r2, NORM_INF), eps);
+    EXPECT_LE(cvtest::norm(r1, r3, NORM_INF), eps);
 
     remove(tname.c_str());
 }

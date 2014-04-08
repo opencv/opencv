@@ -85,6 +85,17 @@ do \
         << "Size: " << mat1.size() << std::endl; \
 } while ((void)0, 0)
 
+#define EXPECT_MAT_N_DIFF(mat1, mat2, num) \
+do \
+{ \
+    ASSERT_EQ(mat1.type(), mat2.type()); \
+    ASSERT_EQ(mat1.size(), mat2.size()); \
+    Mat diff; \
+    absdiff(mat1, mat2, diff); \
+    EXPECT_LE(countNonZero(diff.reshape(1)), num) \
+    << "Size: " << mat1.size() << std::endl; \
+} while ((void)0, 0)
+
 #define OCL_EXPECT_MATS_NEAR(name, eps) \
 do \
 { \
@@ -232,9 +243,9 @@ struct CV_EXPORTS TestUtils
 
     static inline double checkNormRelative(InputArray m1, InputArray m2, InputArray mask = noArray())
     {
-        return cv::norm(m1.getMat(), m2.getMat(), cv::NORM_INF, mask) /
+        return cvtest::norm(m1.getMat(), m2.getMat(), cv::NORM_INF, mask) /
                 std::max((double)std::numeric_limits<float>::epsilon(),
-                         (double)std::max(cv::norm(m1.getMat(), cv::NORM_INF), norm(m2.getMat(), cv::NORM_INF)));
+                         (double)std::max(cvtest::norm(m1.getMat(), cv::NORM_INF), cvtest::norm(m2.getMat(), cv::NORM_INF)));
     }
 };
 
