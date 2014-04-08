@@ -1109,7 +1109,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         return;
 #endif
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR * 10 + IPP_VERSION_MINOR >= 81)
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 801)
     if( type == CV_32FC1 && sigma1 == sigma2 && ksize.width == ksize.height && sigma1 != 0.0 )
     {
         Mat src = _src.getMat(), dst = _dst.getMat();
