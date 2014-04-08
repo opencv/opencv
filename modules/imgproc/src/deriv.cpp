@@ -341,6 +341,7 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
 
         if (src.type() == CV_32F && dst.type() == CV_32F)
         {
+#if 0
             if ((dx == 1) && (dy == 0))
             {
                 if (0 > ippiFilterSobelNegVertGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize), &bufSize))
@@ -374,6 +375,7 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
                     ippiMulC_32f_C1R((Ipp32f *)dst.data, (int)dst.step, (Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
                 return true;
             }
+#endif
 
             if((dx == 2) && (dy == 0))
             {
