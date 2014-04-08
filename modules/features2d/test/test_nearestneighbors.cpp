@@ -193,8 +193,8 @@ int CV_KDTreeTest_CPP::checkGetPoins( const Mat& data )
     // 3d way
     tr->getPoints( idxs, res3 );
 
-    if( norm( res1, data, NORM_L1) != 0 ||
-        norm( res3, data, NORM_L1) != 0)
+    if( cvtest::norm( res1, data, NORM_L1) != 0 ||
+        cvtest::norm( res3, data, NORM_L1) != 0)
         return cvtest::TS::FAIL_BAD_ACCURACY;
     return cvtest::TS::OK;
 }
@@ -232,7 +232,7 @@ int CV_KDTreeTest_CPP::findNeighbors( Mat& points, Mat& neighbors )
     }
 
     // compare results
-    if( norm( neighbors, neighbors2, NORM_L1 ) != 0 )
+    if( cvtest::norm( neighbors, neighbors2, NORM_L1 ) != 0 )
         return cvtest::TS::FAIL_BAD_ACCURACY;
 
     return cvtest::TS::OK;
@@ -284,7 +284,7 @@ int CV_FlannTest::knnSearch( Mat& points, Mat& neighbors )
     }
 
     // compare results
-    if( norm( neighbors, neighbors1, NORM_L1 ) != 0 )
+    if( cvtest::norm( neighbors, neighbors1, NORM_L1 ) != 0 )
         return cvtest::TS::FAIL_BAD_ACCURACY;
 
     return cvtest::TS::OK;
@@ -316,7 +316,7 @@ int CV_FlannTest::radiusSearch( Mat& points, Mat& neighbors )
             neighbors1.at<int>(i,j) = *it;
     }
     // compare results
-    if( norm( neighbors, neighbors1, NORM_L1 ) != 0 )
+    if( cvtest::norm( neighbors, neighbors1, NORM_L1 ) != 0 )
         return cvtest::TS::FAIL_BAD_ACCURACY;
 
     return cvtest::TS::OK;

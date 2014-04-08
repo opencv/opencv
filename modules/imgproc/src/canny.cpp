@@ -42,13 +42,13 @@
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
 
-/*
+
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
 #define USE_IPP_CANNY 1
 #else
 #undef USE_IPP_CANNY
 #endif
-*/
+
 
 namespace cv
 {
@@ -81,8 +81,8 @@ static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
         return false;
 
     if( ippiCanny_16s8u_C1R(_dx.ptr<short>(), (int)_dx.step,
-                            _dy.ptr<short>(), (int)_dy.step,
-                            _dst.data, (int)_dst.step, roi, low, high, buffer) < 0 )
+                               _dy.ptr<short>(), (int)_dy.step,
+                              _dst.data, (int)_dst.step, roi, low, high, buffer) < 0 )
         return false;
     return true;
 }
@@ -286,7 +286,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
 #endif
 
 #ifdef USE_IPP_CANNY
-    if( aperture_size == 3 && !L2gradient &&
+    if( aperture_size == 3 && !L2gradient && 1 == cn &&
         ippCanny(src, dst, (float)low_thresh, (float)high_thresh) )
         return;
 #endif

@@ -199,10 +199,8 @@ enum { BLOCK_SIZE = 1024 };
 
 #if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
 #define ARITHM_USE_IPP 1
-#define IF_IPP(then_call, else_call) then_call
 #else
 #define ARITHM_USE_IPP 0
-#define IF_IPP(then_call, else_call) else_call
 #endif
 
 inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)

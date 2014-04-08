@@ -274,7 +274,14 @@ volatile bool useOptimizedFlag = true;
 #ifdef HAVE_IPP
 struct IPPInitializer
 {
-    IPPInitializer(void) { ippStaticInit(); }
+    IPPInitializer(void)
+    {
+#if IPP_VERSION_MAJOR >= 8
+        ippInit();
+#else
+        ippStaticInit();
+#endif
+    }
 };
 
 IPPInitializer ippInitializer;
@@ -390,17 +397,17 @@ int64 getCPUTickCount(void)
 
 #else
 
-#ifdef HAVE_IPP
-int64 getCPUTickCount(void)
-{
-    return ippGetCpuClocks();
-}
-#else
+//#ifdef HAVE_IPP
+//int64 getCPUTickCount(void)
+//{
+//    return ippGetCpuClocks();
+//}
+//#else
 int64 getCPUTickCount(void)
 {
     return getTickCount();
 }
-#endif
+//#endif
 
 #endif
 
