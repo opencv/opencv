@@ -933,10 +933,10 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
             dcn_stddev = (int)stddev.total();
             pstddev = (Ipp64f *)stddev.data;
         }
-        for( int k = cn; k < dcn_mean; k++ )
-            pmean[k] = 0;
-        for( int k = cn; k < dcn_stddev; k++ )
-            pstddev[k] = 0;
+        for( int c = cn; c < dcn_mean; c++ )
+            pmean[c] = 0;
+        for( int c = cn; c < dcn_stddev; c++ )
+            pstddev[c] = 0;
         IppiSize sz = { cols, rows };
         int type = src.type();
         if( !mask.empty() )
@@ -2016,6 +2016,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     size_t total_size = src.total();
     int rows = src.size[0], cols = (int)(total_size/rows);
+
     if( (src.dims == 2 || (src.isContinuous() && mask.isContinuous()))
         && cols > 0 && (size_t)rows*cols == total_size
         && (normType == NORM_INF || normType == NORM_L1 ||
