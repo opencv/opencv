@@ -99,7 +99,6 @@
 #define MAX_IPP8u   255
 #define MAX_IPP16u  65535
 #define MAX_IPP32f  1.0
-static IppStatus sts = ippInit();
 #endif
 
 namespace cv
