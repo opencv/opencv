@@ -131,6 +131,7 @@ __kernel void RGB2Gray(__global const uchar* srcptr, int srcstep, int srcoffset,
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -158,6 +159,7 @@ __kernel void Gray2RGB(__global const uchar* srcptr, int srcstep, int srcoffset,
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -189,6 +191,7 @@ __kernel void RGB2YUV(__global const uchar* srcptr, int srcstep, int srcoffset,
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -232,6 +235,7 @@ __kernel void YUV2RGB(__global const uchar* srcptr, int srcstep, int srcoffset,
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -281,6 +285,7 @@ __kernel void YUV2RGB_NV12(__global const uchar* srcptr, int srcstep, int srcoff
 
     if (x < cols / 2)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows / 2 )
@@ -353,6 +358,7 @@ __kernel void RGB2YCrCb(__global const uchar* srcptr, int srcstep, int srcoffset
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -396,6 +402,7 @@ __kernel void YCrCb2RGB(__global const uchar* src, int src_step, int src_offset,
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -443,6 +450,7 @@ __kernel void RGB2XYZ(__global const uchar * srcptr, int src_step, int src_offse
 
     if (dx < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (dy < rows)
@@ -483,6 +491,7 @@ __kernel void XYZ2RGB(__global const uchar * srcptr, int src_step, int src_offse
 
     if (dx < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (dy < rows)
@@ -528,6 +537,7 @@ __kernel void RGB(__global const uchar* srcptr, int src_step, int src_offset,
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -573,6 +583,7 @@ __kernel void RGB5x52RGB(__global const uchar* src, int src_step, int src_offset
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -613,6 +624,7 @@ __kernel void RGB2RGB5x5(__global const uchar* src, int src_step, int src_offset
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -646,6 +658,7 @@ __kernel void BGR5x52Gray(__global const uchar* src, int src_step, int src_offse
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -678,6 +691,7 @@ __kernel void Gray2BGR5x5(__global const uchar* src, int src_step, int src_offse
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -719,6 +733,7 @@ __kernel void RGB2HSV(__global const uchar* src, int src_step, int src_offset,
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -765,6 +780,7 @@ __kernel void HSV2RGB(__global const uchar* src, int src_step, int src_offset,
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -828,6 +844,7 @@ __kernel void RGB2HSV(__global const uchar* srcptr, int src_step, int src_offset
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -880,6 +897,7 @@ __kernel void HSV2RGB(__global const uchar* srcptr, int src_step, int src_offset
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -950,6 +968,7 @@ __kernel void RGB2HLS(__global const uchar* src, int src_step, int src_offset,
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -1004,6 +1023,7 @@ __kernel void HLS2RGB(__global const uchar* src, int src_step, int src_offset,
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -1066,6 +1086,7 @@ __kernel void RGB2HLS(__global const uchar* srcptr, int src_step, int src_offset
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -1123,6 +1144,7 @@ __kernel void HLS2RGB(__global const uchar* srcptr, int src_step, int src_offset
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -1193,6 +1215,7 @@ __kernel void RGBA2mRGBA(__global const uchar* src, int src_step, int src_offset
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -1223,6 +1246,7 @@ __kernel void mRGBA2RGBA(__global const uchar* src, int src_step, int src_offset
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -1275,6 +1299,7 @@ __kernel void BGR2Lab(__global const uchar * src, int src_step, int src_offset,
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -1322,6 +1347,7 @@ __kernel void BGR2Lab(__global const uchar * srcptr, int src_step, int src_offse
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -1430,6 +1456,7 @@ __kernel void Lab2BGR(__global const uchar * src, int src_step, int src_offset,
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)
@@ -1478,6 +1505,7 @@ __kernel void Lab2BGR(__global const uchar * srcptr, int src_step, int src_offse
 
     if (x < cols)
     {
+        #pragma unroll
         for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
         {
             if (y < rows)

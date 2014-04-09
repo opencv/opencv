@@ -2690,6 +2690,8 @@ struct mRGBA2RGBA
 
 #ifdef HAVE_OPENCL
 
+#define DIVUP(total, grain) (((total) + (grain) - 1) / (grain))
+
 static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 {
     bool ok = false;
@@ -2711,7 +2713,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     {
         pxPerWIy = 4;
     }
-    globalsize[1] /= pxPerWIy;
+    globalsize[1] = DIVUP(globalsize[1], pxPerWIy);
     opts +=  format("-D PIX_PER_WI_Y=%d ", pxPerWIy);
 
     switch (code)
