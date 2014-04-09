@@ -49,10 +49,6 @@
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-static IppStatus sts = ippInit();
-#endif
-
 namespace cv
 {
 #if IPP_VERSION_X100 >= 701
