@@ -1927,10 +1927,22 @@ bool Device::imageFromBufferSupport() const
 }
 
 uint Device::imagePitchAlignment() const
-{ return p ? p->getProp<cl_uint, uint>(CL_DEVICE_IMAGE_PITCH_ALIGNMENT) : 0; }
+{
+#ifdef CL_DEVICE_IMAGE_PITCH_ALIGNMENT
+    return p ? p->getProp<cl_uint, uint>(CL_DEVICE_IMAGE_PITCH_ALIGNMENT) : 0;
+#else
+    return 0;
+#endif
+}
 
 uint Device::imageBaseAddressAlignment() const
-{ return p ? p->getProp<cl_uint, uint>(CL_DEVICE_IMAGE_BASE_ADDRESS_ALIGNMENT) : 0; }
+{
+#ifdef CL_DEVICE_IMAGE_BASE_ADDRESS_ALIGNMENT
+    return p ? p->getProp<cl_uint, uint>(CL_DEVICE_IMAGE_BASE_ADDRESS_ALIGNMENT) : 0;
+#else
+    return 0;
+#endif
+}
 
 size_t Device::image2DMaxWidth() const
 { return p ? p->getProp<size_t, size_t>(CL_DEVICE_IMAGE2D_MAX_WIDTH) : 0; }
@@ -4514,7 +4526,7 @@ struct Image2D::Impl
             desc.image_height     = src.rows;
             desc.image_depth      = 0;
             desc.image_array_size = 1;
-            desc.image_row_pitch  = alias ? src.step : 0;
+            desc.image_row_pitch  = alias ? src.step[0] : 0;
             desc.image_slice_pitch = 0;
             desc.buffer           = alias ? (cl_mem)src.handle(ACCESS_RW) : 0;
             desc.num_mip_levels   = 0;
