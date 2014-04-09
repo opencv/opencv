@@ -1399,6 +1399,12 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
     return isRelative ? result / (cvtest::norm(src2, normType) + DBL_EPSILON) : result;
 }
 
+double PSNR(InputArray _src1, InputArray _src2)
+{
+    CV_Assert( _src1.depth() == CV_8U );
+    double diff = std::sqrt(cvtest::norm(_src1, _src2, NORM_L2SQR)/(_src1.total()*_src1.channels()));
+    return 20*log10(255./(diff+DBL_EPSILON));
+}
 
 template<typename _Tp> static double
 crossCorr_(const _Tp* src1, const _Tp* src2, size_t total)

@@ -129,6 +129,7 @@ CV_EXPORTS void minMaxLoc(const Mat& src, double* minval, double* maxval,
 CV_EXPORTS double norm(InputArray src, int normType, InputArray mask=noArray());
 CV_EXPORTS double norm(InputArray src1, InputArray src2, int normType, InputArray mask=noArray());
 CV_EXPORTS Scalar mean(const Mat& src, const Mat& mask=Mat());
+CV_EXPORTS double PSNR(InputArray src1, InputArray src2);
 
 CV_EXPORTS bool cmpUlps(const Mat& data, const Mat& refdata, int expMaxDiff, double* realMaxDiff, vector<int>* idx);
 
