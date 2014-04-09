@@ -466,13 +466,13 @@ cv::Moments cv::moments( InputArray _src, bool binary )
         if( cn > 1 )
             CV_Error( CV_StsBadArg, "Invalid image type (must be single-channel)" );
 
-#if defined HAVE_IPP && (IPP_VERSION_MAJOR * 10 + IPP_VERSION_MINOR >= 81)
+#if (IPP_VERSION_X100 >= 801)
         if (!binary)
         {
             IppiSize roi = {mat.cols, mat.rows};
             IppiMomentState_64f *moment;
-            // ippiMomentInitAlloc_64f, ippiMomentFree_64f are deprecate in 8.1, but there are not another way
-            // to initialize IppiMomentState_64f. When GetStateSize and Init functions will appears we have to
+            // ippiMomentInitAlloc_64f, ippiMomentFree_64f are deprecated in 8.1, but there are not another way
+            // to initialize IppiMomentState_64f. When GetStateSize and Init functions will appear we have to
             // change our code.
             if (0 <= ippiMomentInitAlloc_64f(&moment, ippAlgHintAccurate))
             {
