@@ -1464,7 +1464,7 @@ private:
     int ippiOperator(const uchar* _src, uchar* _dst, int width, int cn) const
     {
         int _ksize = kernel.rows + kernel.cols - 1;
-        if ((1 != cn && 3 != cn) || width < _ksize*8)
+//        if ((1 != cn && 3 != cn) || width < _ksize*8)
             return 0;
 
         const float* src = (const float*)_src;
