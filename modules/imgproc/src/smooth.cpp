@@ -858,7 +858,7 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         return;
 #endif
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
     int ippBorderType = borderType & ~BORDER_ISOLATED;
     Point ocvAnchor, ippAnchor;
     ocvAnchor.x = anchor.x < 0 ? ksize.width / 2 : anchor.x;
@@ -2018,7 +2018,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
 
-#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 8 && IPP_VERSION_MINOR >= 1
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801
 #define IPP_FILTER_MEDIAN_BORDER(ippType, ippDataType, flavor) \
     do \
     { \

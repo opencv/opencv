@@ -1079,7 +1079,7 @@ dtype* dst, size_t dstep, Size size, double* scale) \
     cvtScale_(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
 }
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
 #define DEF_CVT_FUNC_F(suffix, stype, dtype, ippFavor) \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \

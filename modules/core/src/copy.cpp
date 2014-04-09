@@ -548,7 +548,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
     Mat dst = _dst.getMat();
     size_t esz = CV_ELEM_SIZE(type);
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
     typedef IppStatus (CV_STDCALL * ippiMirror)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize, IppiAxis flip);
     ippiMirror ippFunc =
         type == CV_8UC1 ? (ippiMirror)ippiMirror_8u_C1R :
