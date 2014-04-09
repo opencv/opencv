@@ -1190,6 +1190,26 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     Mat hist = _hist.getMat(), ihist = hist;
     ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK)|CV_32S;
 
+#ifdef HAVE_IPP
+    if (nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && channels &&
+            channels[0] == 0 && mask.empty() && images[0].dims <= 2 &&
+            !accumulate && uniform)
+    {
+        hist.setTo(Scalar::all(0));
+        AutoBuffer<Ipp32s> levels(histSize[0] + 1);
+        IppStatus status =
+                ippiHistogramEven_8u_C1R(
+                    (const Ipp8u *)images[0].data, (int)images[0].step, ippiSize(images[0].size()),
+                    (Ipp32s *)ihist.data, (Ipp32s *)levels, histSize[0] + 1, (Ipp32s)ranges[0][0], (Ipp32s)ranges[0][1]);
+
+        if (status >= 0)
+        {
+            ihist.convertTo(hist, CV_32F);
+            return;
+        }
+    }
+#endif
+
     if( !accumulate || histdata != hist.data )
         hist = Scalar(0.);
     else
@@ -1477,7 +1497,7 @@ void cv::calcHist( InputArrayOfArrays images, const std::vector<int>& channels,
     CV_OCL_RUN(images.total() == 1 && channels.size() == 1 && images.channels(0) == 1 &&
                channels[0] == 0 && images.isUMatVector() && mask.empty() && !accumulate &&
                histSize.size() == 1 && histSize[0] == BINS && ranges.size() == 2 &&
-               ranges[0] == 0 && ranges[1] == 256,
+               ranges[0] == 0 && ranges[1] == BINS,
                ocl_calcHist(images, hist))
 
     int i, dims = (int)histSize.size(), rsz = (int)ranges.size(), csz = (int)channels.size();
