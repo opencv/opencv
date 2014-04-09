@@ -2967,7 +2967,7 @@ void cv::transpose( InputArray _src, OutputArray _dst )
         return;
     }
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
     typedef IppStatus (CV_STDCALL * ippiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
     ippiTranspose ippFunc =
     type == CV_8UC1 ? (ippiTranspose)ippiTranspose_8u_C1R :

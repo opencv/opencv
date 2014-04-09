@@ -457,7 +457,7 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
     if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && (mask.empty() || mask.isContinuous())))
     {
         typedef IppStatus (CV_STDCALL * ippiAddSquare)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep, IppiSize roiSize);
@@ -535,7 +535,7 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
 
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
     if (src1.dims <= 2 || (src1.isContinuous() && src2.isContinuous() && dst.isContinuous()))
     {
         typedef IppStatus (CV_STDCALL * ippiAddProduct)(const void * pSrc1, int src1Step, const void * pSrc2,
@@ -615,7 +615,7 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
     if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && mask.isContinuous()))
     {
         typedef IppStatus (CV_STDCALL * ippiAddWeighted)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep,
