@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include "opencv2/ts.hpp"
+#include "opencv2/core/private.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 
