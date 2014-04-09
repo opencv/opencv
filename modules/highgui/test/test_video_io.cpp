@@ -198,7 +198,7 @@ void CV_HighGuiTest::ImageTest(const string& dir)
         }
 
         const double thresDbell = 20;
-        double psnr = PSNR(loaded, image);
+        double psnr = cvtest::PSNR(loaded, image);
         if (psnr < thresDbell)
         {
             ts->printf(ts->LOG, "Reading image from file: too big difference (=%g) with fmt=%s\n", psnr, ext.c_str());
@@ -235,7 +235,7 @@ void CV_HighGuiTest::ImageTest(const string& dir)
             continue;
         }
 
-        psnr = PSNR(buf_loaded, image);
+        psnr = cvtest::PSNR(buf_loaded, image);
 
         if (psnr < thresDbell)
         {
@@ -316,7 +316,7 @@ void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt
         Mat img = frames[i];
         Mat img1 = cv::cvarrToMat(ipl1);
 
-        double psnr = PSNR(img1, img);
+        double psnr = cvtest::PSNR(img1, img);
         if (psnr < thresDbell)
         {
             ts->printf(ts->LOG, "Too low frame %d psnr = %gdb\n", i, psnr);
@@ -371,7 +371,7 @@ void CV_HighGuiTest::SpecificImageTest(const string& dir)
         }
 
         const double thresDbell = 20;
-        double psnr = PSNR(loaded, image);
+        double psnr = cvtest::PSNR(loaded, image);
         if (psnr < thresDbell)
         {
             ts->printf(ts->LOG, "Reading image from file: too big difference (=%g) with fmt=bmp\n", psnr);
@@ -408,7 +408,7 @@ void CV_HighGuiTest::SpecificImageTest(const string& dir)
             continue;
         }
 
-        psnr = PSNR(buf_loaded, image);
+        psnr = cvtest::PSNR(buf_loaded, image);
 
         if (psnr < thresDbell)
         {
@@ -521,7 +521,7 @@ void CV_HighGuiTest::SpecificVideoTest(const string& dir, const cvtest::VideoFor
         Mat img = images[i];
 
         const double thresDbell = 40;
-        double psnr = PSNR(img, frame);
+        double psnr = cvtest::PSNR(img, frame);
 
         if (psnr > thresDbell)
         {
