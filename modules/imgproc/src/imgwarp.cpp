@@ -1912,7 +1912,7 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
     getBufferSizeFunc = (ippiResizeGetBufferSize)ippiResizeGetBufferSize_##TYPE;\
     getSrcOffsetFunc =  (ippiResizeGetSrcOffset)ippiResizeGetSrcOffset_##TYPE;
 
-#if IPP_VERSION_X100 >= 701
+#if !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 701
 class IPPresizeInvoker :
     public ParallelLoopBody
 {
@@ -2384,7 +2384,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
     int k, sx, sy, dx, dy;
 
-#if IPP_VERSION_X100 >= 701
+#if !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 701
 #define IPP_RESIZE_EPS    1.e-10
 
     double ex = fabs((double)dsize.width/src.cols  - inv_scale_x)/inv_scale_x;
