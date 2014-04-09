@@ -346,7 +346,6 @@ static bool ocl_matchTemplate( InputArray _img, InputArray _templ, OutputArray _
 typedef IppStatus (CV_STDCALL * ippiGetBufferSize)(IppiSize, IppiSize, IppEnum, int*);
 typedef IppStatus (CV_STDCALL * ippimatchTemplate)(const void*, int, IppiSize, const void*, int, IppiSize, Ipp32f* , int , IppEnum , Ipp8u*);
 
-
 static bool ipp_matchTemplate(const Mat& src, const Mat& tpl, Mat& dst, int method)
 {
     if (src.channels() != 1 || (method!=CV_TM_SQDIFF && method!=CV_TM_CCORR))
@@ -392,12 +391,10 @@ static bool ipp_matchTemplate(const Mat& src, const Mat& tpl, Mat& dst, int meth
 
     pBuffer = ippsMalloc_8u( bufSize );
 
-    status = ippFunc(src.data, (int)src.step, srcRoiSize, tpl.data, (int)tpl.step, tplRoiSize, (Ipp32f*)dst.data, dst.step, funCfg, pBuffer);
-    if (status < 0)
-        return false;
+    status = ippFunc(src.data, (int)src.step, srcRoiSize, tpl.data, (int)tpl.step, tplRoiSize, (Ipp32f*)dst.data, (int)dst.step, funCfg, pBuffer);
 
     ippsFree( pBuffer );
-    return true;
+    return status >= 0;
 }
 
 #endif
