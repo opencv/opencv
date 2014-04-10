@@ -366,7 +366,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(
                             Bool(),
                             Values(1))); // not used
 
-
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC4),
                             Values(3, 5, 7),
@@ -374,8 +373,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(
                             Values((BorderType)BORDER_CONSTANT),//not used
                             Values(1.0, 2.0, 3.0),
                             Bool(),
-                            Values(1))); // not used
-
+							Values(1))); //not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, MorphologyEx, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC4),
@@ -384,8 +382,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, MorphologyEx, Combine(
                             Values((BorderType)BORDER_CONSTANT),// not used
                             Values(1.0, 2.0, 3.0),
                             Bool(),
-                            Values(1))); // not used
-
+							Values(1))); //not used
 
 
 } } // namespace cvtest::ocl
