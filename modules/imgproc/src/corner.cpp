@@ -465,44 +465,39 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
     typedef IppStatus (CV_STDCALL * ippiMinEigenValGetBufferSize)(IppiSize, int, int, int*);
     typedef IppStatus (CV_STDCALL * ippiMinEigenVal)(const void*, int, Ipp32f*, int, IppiSize, IppiKernelType, int, int, Ipp8u*);
 
-    Size srcWholeSize; Point srcOffset;
-    src.locateROI(srcWholeSize, srcOffset);
-    if (borderType == BORDER_REPLICATE && srcWholeSize == src.size())
+    if (borderType == BORDER_REPLICATE && !src.isSubmatrix())
     {
-        IppiKernelType kerType = ksize > 0 ? ippKernelSobel : ippKernelScharr;
-        IppiSize srcRoi = { src.cols, src.rows };
-
         ippiMinEigenValGetBufferSize getBufferSizeFunc = 0;
         ippiMinEigenVal minEigenValFunc = 0;
-        float multiplier = 0.f;
+        float norm_coef = 0.f;
 
         if (src.type() == CV_8UC1)
         {
             getBufferSizeFunc = (ippiMinEigenValGetBufferSize) ippiMinEigenValGetBufferSize_8u32f_C1R;
             minEigenValFunc = (ippiMinEigenVal) ippiMinEigenVal_8u32f_C1R;
-            multiplier = (float) 1 / 255;
+            norm_coef = 1.f / 255;
         } else if (src.type() == CV_32FC1)
         {
             getBufferSizeFunc = (ippiMinEigenValGetBufferSize) ippiMinEigenValGetBufferSize_32f_C1R;
             minEigenValFunc = (ippiMinEigenVal) ippiMinEigenVal_32f_C1R;
-            multiplier = 255.f;
+            norm_coef = 255.f;
         }
 
         if (getBufferSizeFunc && minEigenValFunc)
         {
             int bufferSize;
+            IppiKernelType kerType = ksize > 0 ? ippKernelSobel : ippKernelScharr;
+            IppiSize srcRoi = { src.cols, src.rows };
+            IppiSize dstRoi = { dst.cols, dst.rows };
             IppStatus ok = getBufferSizeFunc(srcRoi, ksize, blockSize, &bufferSize);
             if (ok >= 0)
             {
-
                 Ipp8u* buffer = ippsMalloc_8u(bufferSize);
-                ok = minEigenValFunc(src.data, src.step, (Ipp32f*) dst.data, (int) dst.step, srcRoi, kerType, ksize, blockSize, buffer);
+                ok = minEigenValFunc(src.data, (int) src.step, (Ipp32f*) dst.data, (int) dst.step, srcRoi, kerType, ksize, blockSize, buffer);
+                if (ok >= 0) ippiMulC_32f_C1IR(norm_coef, (Ipp32f*) dst.data, (int) dst.step, dstRoi);
                 ippsFree(buffer);
                 if (ok >= 0) 
-                {
-                    dst *= multiplier;
                     return;
-                }
             }
         }
     }
