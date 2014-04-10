@@ -53,16 +53,38 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     uchar tab[256];
     Size roi = _src.size();
     roi.width *= _src.channels();
+    size_t src_step = _src.step;
+    size_t dst_step = _dst.step;
 
     if( _src.isContinuous() && _dst.isContinuous() )
     {
         roi.width *= roi.height;
         roi.height = 1;
+        src_step = dst_step = roi.width;
     }
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::thresh_8u(_src, _dst, roi.width, roi.height, thresh, maxval, type))
         return;
+#endif
+
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+    IppiSize sz = { roi.width, roi.height };
+    switch( type )
+    {
+    case THRESH_TRUNC:
+        if (0 <= ippiThreshold_GT_8u_C1R(_src.data, (int)src_step, _dst.data, (int)dst_step, sz, thresh))
+            return;
+        break;
+    case THRESH_TOZERO:
+        if (0 <= ippiThreshold_LTVal_8u_C1R(_src.data, (int)src_step, _dst.data, (int)dst_step, sz, thresh+1, 0))
+            return;
+        break;
+    case THRESH_TOZERO_INV:
+        if (0 <= ippiThreshold_GTVal_8u_C1R(_src.data, (int)src_step, _dst.data, (int)dst_step, sz, thresh, 0))
+            return;
+        break;
+    }
 #endif
 
     switch( type )
@@ -112,8 +134,8 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
 
         for( i = 0; i < roi.height; i++ )
         {
-            const uchar* src = (const uchar*)(_src.data + _src.step*i);
-            uchar* dst = (uchar*)(_dst.data + _dst.step*i);
+            const uchar* src = (const uchar*)(_src.data + src_step*i);
+            uchar* dst = (uchar*)(_dst.data + dst_step*i);
 
             switch( type )
             {
@@ -231,8 +253,8 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     {
         for( i = 0; i < roi.height; i++ )
         {
-            const uchar* src = (const uchar*)(_src.data + _src.step*i);
-            uchar* dst = (uchar*)(_dst.data + _dst.step*i);
+            const uchar* src = (const uchar*)(_src.data + src_step*i);
+            uchar* dst = (uchar*)(_dst.data + dst_step*i);
             j = j_scalar;
 #if CV_ENABLE_UNROLLED
             for( ; j <= roi.width - 4; j += 4 )
@@ -276,11 +298,31 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
     {
         roi.width *= roi.height;
         roi.height = 1;
+        src_step = dst_step = roi.width;
     }
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::thresh_16s(_src, _dst, roi.width, roi.height, thresh, maxval, type))
         return;
+#endif
+
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+    IppiSize sz = { roi.width, roi.height };
+    switch( type )
+    {
+    case THRESH_TRUNC:
+        if (0 <= ippiThreshold_GT_16s_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh))
+            return;
+        break;
+    case THRESH_TOZERO:
+        if (0 <= ippiThreshold_LTVal_16s_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh+1, 0))
+            return;
+        break;
+    case THRESH_TOZERO_INV:
+        if (0 <= ippiThreshold_GTVal_16s_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0))
+            return;
+        break;
+    }
 #endif
 
     switch( type )
@@ -453,6 +495,25 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::thresh_32f(_src, _dst, roi.width, roi.height, thresh, maxval, type))
         return;
+#endif
+
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+    IppiSize sz = { roi.width, roi.height };
+    switch( type )
+    {
+    case THRESH_TRUNC:
+        if (0 <= ippiThreshold_GT_32f_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh))
+            return;
+        break;
+    case THRESH_TOZERO:
+        if (0 <= ippiThreshold_LTVal_32f_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh+FLT_EPSILON, 0))
+            return;
+        break;
+    case THRESH_TOZERO_INV:
+        if (0 <= ippiThreshold_GTVal_32f_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0))
+            return;
+        break;
+    }
 #endif
 
     switch( type )

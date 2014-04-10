@@ -200,12 +200,14 @@ void CvtColorLoop(const Mat& src, Mat& dst, const Cvt& cvt)
 }
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+
 typedef IppStatus (CV_STDCALL* ippiReorderFunc)(const void *, int, void *, int, IppiSize, const int *);
 typedef IppStatus (CV_STDCALL* ippiGeneralFunc)(const void *, int, void *, int, IppiSize);
 typedef IppStatus (CV_STDCALL* ippiColor2GrayFunc)(const void *, int, void *, int, IppiSize, const Ipp32f *);
 
 template <typename Cvt>
-class CvtColorIPPLoop_Invoker : public ParallelLoopBody
+class CvtColorIPPLoop_Invoker :
+        public ParallelLoopBody
 {
 public:
 
@@ -251,8 +253,8 @@ bool CvtColorIPPLoopCopy(Mat& src, Mat& dst, const Cvt& cvt)
         source = temp;
     }
     bool ok;
-    parallel_for_(Range(0, source.rows), CvtColorIPPLoop_Invoker<Cvt>(source, dst, cvt, &ok), source.total()/(double)(1<<16) );
-    //ok = cvt(src.ptr<uchar>(0), (int)src.step[0], dst.ptr<uchar>(0), (int)dst.step[0], src.cols, src.rows);
+    parallel_for_(Range(0, source.rows), CvtColorIPPLoop_Invoker<Cvt>(source, dst, cvt, &ok),
+                  source.total()/(double)(1<<16) );
     return ok;
 }
 
@@ -298,7 +300,7 @@ static ippiReorderFunc ippiSwapChannelsC3RTab[] =
     0, (ippiReorderFunc)ippiSwapChannels_32f_C3R, 0, 0
 };
 
-#if (IPP_VERSION_X100 >= 801)
+#if !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801
 static ippiReorderFunc ippiSwapChannelsC4RTab[] =
 {
     (ippiReorderFunc)ippiSwapChannels_8u_C4R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4R, 0,
@@ -308,8 +310,8 @@ static ippiReorderFunc ippiSwapChannelsC4RTab[] =
 
 static ippiColor2GrayFunc ippiColor2GrayC3Tab[] =
 {
-    (ippiColor2GrayFunc)ippiColorToGray_8u_C3C1R, 0, (ippiColor2GrayFunc)ippiColorToGray_16u_C3C1R, 0,
-    0, (ippiColor2GrayFunc)ippiColorToGray_32f_C3C1R, 0, 0
+    /*(ippiColor2GrayFunc)ippiColorToGray_8u_C3C1R*/ 0, 0, /*(ippiColor2GrayFunc)ippiColorToGray_16u_C3C1R*/ 0, 0,
+    0, /*(ippiColor2GrayFunc)ippiColorToGray_32f_C3C1R*/ 0, 0, 0
 };
 
 static ippiColor2GrayFunc ippiColor2GrayC4Tab[] =
@@ -339,18 +341,18 @@ static ippiGeneralFunc ippiCopyP3C3RTab[] =
 static ippiGeneralFunc ippiRGB2XYZTab[] =
 {
     (ippiGeneralFunc)ippiRGBToXYZ_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToXYZ_16u_C3R, 0,
-    0, (ippiGeneralFunc)ippiRGBToXYZ_32f_C3R, 0, 0
+    0, /*(ippiGeneralFunc)ippiRGBToXYZ_32f_C3R*/ 0, 0, 0
 };
 
 static ippiGeneralFunc ippiXYZ2RGBTab[] =
 {
     (ippiGeneralFunc)ippiXYZToRGB_8u_C3R, 0, (ippiGeneralFunc)ippiXYZToRGB_16u_C3R, 0,
-    0, (ippiGeneralFunc)ippiXYZToRGB_32f_C3R, 0, 0
+    0, /*(ippiGeneralFunc)ippiXYZToRGB_32f_C3R*/ 0, 0, 0
 };
 
 static ippiGeneralFunc ippiRGB2HSVTab[] =
 {
-    (ippiGeneralFunc)ippiRGBToHSV_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToHSV_16u_C3R, 0,
+    /*(ippiGeneralFunc)ippiRGBToHSV_8u_C3R*/ 0, 0, /*(ippiGeneralFunc)ippiRGBToHSV_16u_C3R*/ 0, 0,
     0, 0, 0, 0
 };
 
@@ -377,7 +379,7 @@ struct IPPGeneralFunctor
     IPPGeneralFunctor(ippiGeneralFunc _func) : func(_func){}
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
-        return func(src, srcStep, dst, dstStep, ippiSize(cols, rows)) >= 0;
+        return func ? func(src, srcStep, dst, dstStep, ippiSize(cols, rows)) >= 0 : false;
     }
 private:
     ippiGeneralFunc func;
@@ -394,7 +396,7 @@ struct IPPReorderFunctor
     }
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
-        return func(src, srcStep, dst, dstStep, ippiSize(cols, rows), order) >= 0;
+        return func ? func(src, srcStep, dst, dstStep, ippiSize(cols, rows), order) >= 0 : false;
     }
 private:
     ippiReorderFunc func;
@@ -403,7 +405,8 @@ private:
 
 struct IPPColor2GrayFunctor
 {
-    IPPColor2GrayFunctor(ippiColor2GrayFunc _func) : func(_func)
+    IPPColor2GrayFunctor(ippiColor2GrayFunc _func) :
+        func(_func)
     {
         coeffs[0] = 0.114f;
         coeffs[1] = 0.587f;
@@ -411,7 +414,7 @@ struct IPPColor2GrayFunctor
     }
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
-        return func(src, srcStep, dst, dstStep, ippiSize(cols, rows), coeffs) >= 0;
+        return func ? func(src, srcStep, dst, dstStep, ippiSize(cols, rows), coeffs) >= 0 : false;
     }
 private:
     ippiColor2GrayFunc func;
@@ -420,9 +423,16 @@ private:
 
 struct IPPGray2BGRFunctor
 {
-    IPPGray2BGRFunctor(ippiGeneralFunc _func) : func(_func){}
+    IPPGray2BGRFunctor(ippiGeneralFunc _func) :
+        func(_func)
+    {
+    }
+
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
+        if (func == 0)
+            return false;
+
         const void* srcarray[3] = { src, src, src };
         return func(srcarray, srcStep, dst, dstStep, ippiSize(cols, rows)) >= 0;
     }
@@ -432,9 +442,16 @@ private:
 
 struct IPPGray2BGRAFunctor
 {
-    IPPGray2BGRAFunctor(ippiGeneralFunc _func1, ippiReorderFunc _func2, int _depth) : func1(_func1), func2(_func2), depth(_depth){}
+    IPPGray2BGRAFunctor(ippiGeneralFunc _func1, ippiReorderFunc _func2, int _depth) :
+        func1(_func1), func2(_func2), depth(_depth)
+    {
+    }
+
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
+        if (func1 == 0 || func2 == 0)
+            return false;
+
         const void* srcarray[3] = { src, src, src };
         Mat temp(rows, cols, CV_MAKETYPE(depth, 3));
         if(func1(srcarray, srcStep, temp.data, (int)temp.step[0], ippiSize(cols, rows)) < 0)
@@ -450,7 +467,8 @@ private:
 
 struct IPPReorderGeneralFunctor
 {
-    IPPReorderGeneralFunctor(ippiReorderFunc _func1, ippiGeneralFunc _func2, int _order0, int _order1, int _order2, int _depth) : func1(_func1), func2(_func2), depth(_depth)
+    IPPReorderGeneralFunctor(ippiReorderFunc _func1, ippiGeneralFunc _func2, int _order0, int _order1, int _order2, int _depth) :
+        func1(_func1), func2(_func2), depth(_depth)
     {
         order[0] = _order0;
         order[1] = _order1;
@@ -459,6 +477,9 @@ struct IPPReorderGeneralFunctor
     }
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
+        if (func1 == 0 || func2 == 0)
+            return false;
+
         Mat temp;
         temp.create(rows, cols, CV_MAKETYPE(depth, 3));
         if(func1(src, srcStep, temp.data, (int)temp.step[0], ippiSize(cols, rows), order) < 0)
@@ -474,7 +495,8 @@ private:
 
 struct IPPGeneralReorderFunctor
 {
-    IPPGeneralReorderFunctor(ippiGeneralFunc _func1, ippiReorderFunc _func2, int _order0, int _order1, int _order2, int _depth) : func1(_func1), func2(_func2), depth(_depth)
+    IPPGeneralReorderFunctor(ippiGeneralFunc _func1, ippiReorderFunc _func2, int _order0, int _order1, int _order2, int _depth) :
+        func1(_func1), func2(_func2), depth(_depth)
     {
         order[0] = _order0;
         order[1] = _order1;
@@ -483,6 +505,9 @@ struct IPPGeneralReorderFunctor
     }
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
+        if (func1 == 0 || func2 == 0)
+            return false;
+
         Mat temp;
         temp.create(rows, cols, CV_MAKETYPE(depth, 3));
         if(func1(src, srcStep, temp.data, (int)temp.step[0], ippiSize(cols, rows)) < 0)
@@ -495,6 +520,7 @@ private:
     int order[4];
     int depth;
 };
+
 #endif
 
 ////////////////// Various 3/4-channel to 3/4-channel RGB transformations /////////////////
@@ -3254,7 +3280,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC3RTab[depth], 2, 1, 0)) )
                     return;
             }
-#if (IPP_VERSION_X100 >= 801)
+#if !defined(HAVE_IPP_ICV_ONLY) && (IPP_VERSION_X100 >= 801)
             else if( code == CV_RGBA2BGRA )
             {
                 if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC4RTab[depth], 2, 1, 0)) )
@@ -3315,17 +3341,14 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             CV_Assert( scn == 3 || scn == 4 );
             _dst.create(sz, CV_MAKETYPE(depth, 1));
             dst = _dst.getMat();
-/**/
+
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-/*
             if( code == CV_BGR2GRAY )
             {
                 if( CvtColorIPPLoop(src, dst, IPPColor2GrayFunctor(ippiColor2GrayC3Tab[depth])) )
                     return;
             }
-            else
-*/
-            if( code == CV_RGB2GRAY )
+            else if( code == CV_RGB2GRAY )
             {
                 if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGB2GrayC3Tab[depth])) )
                     return;
@@ -3341,7 +3364,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                     return;
             }
 #endif
-/**/
+
             bidx = code == CV_BGR2GRAY || code == CV_BGRA2GRAY ? 0 : 2;
 
             if( depth == CV_8U )

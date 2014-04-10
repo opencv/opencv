@@ -160,7 +160,7 @@ public:
                     return;
                 }
 
-                double err = PSNR(img, img0);
+                double err = cvtest::PSNR(img, img0);
 
                 if( err < 20 )
                 {
