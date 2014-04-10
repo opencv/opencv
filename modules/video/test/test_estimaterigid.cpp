@@ -109,8 +109,8 @@ bool CV_RigidTransform_Test::testNPoints(int from)
 
         Mat aff_est = estimateRigidTransform(fpts, tpts, true);
 
-        double thres = 0.1*norm(aff);
-        double d = norm(aff_est, aff, NORM_L2);
+        double thres = 0.1*cvtest::norm(aff, NORM_L2);
+        double d = cvtest::norm(aff_est, aff, NORM_L2);
         if (d > thres)
         {
             double dB=0, nB=0;
@@ -120,7 +120,7 @@ bool CV_RigidTransform_Test::testNPoints(int from)
                 Mat B = A - repeat(A.row(0), 3, 1), Bt = B.t();
                 B = Bt*B;
                 dB = cv::determinant(B);
-                nB = norm(B);
+                nB = cvtest::norm(B, NORM_L2);
                 if( fabs(dB) < 0.01*nB )
                     continue;
             }
@@ -154,11 +154,11 @@ bool CV_RigidTransform_Test::testImage()
     Mat aff_est = estimateRigidTransform(img, rotated, true);
 
     const double thres = 0.033;
-    if (norm(aff_est, aff, NORM_INF) > thres)
+    if (cvtest::norm(aff_est, aff, NORM_INF) > thres)
     {
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
         ts->printf( cvtest::TS::LOG, "Threshold = %f, norm of difference = %f", thres,
-            norm(aff_est, aff, NORM_INF) );
+            cvtest::norm(aff_est, aff, NORM_INF) );
         return false;
     }
 

@@ -2212,7 +2212,7 @@ void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
     CV_Assert(src1.size == src2.size);
 
-    _dst.create(src1.dims, src1.size, src1.type());
+    _dst.create(src1.dims, src1.size, type);
     Mat dst = _dst.getMat();
 
     float falpha = (float)alpha;
@@ -2220,9 +2220,16 @@ void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray
 
     ScaleAddFunc func = depth == CV_32F ? (ScaleAddFunc)scaleAdd_32f : (ScaleAddFunc)scaleAdd_64f;
 
-    if( src1.isContinuous() && src2.isContinuous() && dst.isContinuous() )
+    if (src1.isContinuous() && src2.isContinuous() && dst.isContinuous())
     {
         size_t len = src1.total()*cn;
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+        if (depth == CV_32F &&
+                ippmSaxpy_vava_32f((const Ipp32f *)src1.data, (int)src1.step, sizeof(Ipp32f), falpha,
+                (const Ipp32f *)src2.data, (int)src2.step, sizeof(Ipp32f),
+                (Ipp32f *)dst.data, (int)dst.step, sizeof(Ipp32f), (int)len, 1) >= 0)
+            return;
+#endif
         func(src1.data, src2.data, dst.data, (int)len, palpha);
         return;
     }
