@@ -918,16 +918,22 @@ public:
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif
 
-BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID);
-
+extern "C"
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
 {
     if (fdwReason == DLL_THREAD_DETACH || fdwReason == DLL_PROCESS_DETACH)
     {
         if (lpReserved != NULL) // called after ExitProcess() call
+        {
             cv::__termination = true;
-        cv::deleteThreadAllocData();
-        cv::deleteThreadData();
+        }
+        else
+        {
+            // Not allowed to free resources if lpReserved is non-null
+            // http://msdn.microsoft.com/en-us/library/windows/desktop/ms682583.aspx
+            cv::deleteThreadAllocData();
+            cv::deleteThreadData();
+        }
     }
     return TRUE;
 }

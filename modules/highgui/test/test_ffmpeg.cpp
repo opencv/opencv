@@ -329,7 +329,7 @@ public:
                 EXPECT_EQ(reference.depth(), actual.depth());
                 EXPECT_EQ(reference.channels(), actual.channels());
 
-                double psnr = PSNR(actual, reference);
+                double psnr = cvtest::PSNR(actual, reference);
                 if (psnr < eps)
                 {
     #define SUM cvtest::TS::SUMMARY
