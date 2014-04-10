@@ -630,7 +630,6 @@ typedef TestBaseWithParam<Size> CLAHEFixture;
 OCL_PERF_TEST_P(CLAHEFixture, CLAHE, OCL_TEST_SIZES)
 {
     const Size srcSize = GetParam();
-    const string impl = getSelectedImpl();
 
     Mat src(srcSize, CV_8UC1), dst;
     const double clipLimit = 40.0;

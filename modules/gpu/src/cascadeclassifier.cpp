@@ -778,8 +778,6 @@ NCVStatus loadFromXML(const std::string &filename,
     haar.bNeedsTiltedII = false;
     Ncv32u curMaxTreeDepth;
 
-    std::vector<char> xmlFileCont;
-
     std::vector<HaarClassifierNode128> h_TmpClassifierNotRootNodes;
     haarStages.resize(0);
     haarClassifierNodes.resize(0);
