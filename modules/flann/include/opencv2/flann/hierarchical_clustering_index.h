@@ -257,6 +257,84 @@ private:
     }
 
 
+    /**
+     * Chooses the initial centers in a way inspired by Gonzales (by Pierre-Emmanuel Viel):
+     * select the first point of the list as a candidate, then parse the points list. If another
+     * point is further than current candidate from the other centers, test if it is a good center
+     * of a local aggregation. If it is, replace current candidate by this point. And so on...
+     *
+     * Used with KMeansIndex that computes centers coordinates by averaging positions of clusters points,
+     * this doesn't make a real difference with previous methods. But used with HierarchicalClusteringIndex
+     * class that pick centers among existing points instead of computing the barycenters, there is a real
+     * improvement.
+     *
+     * Params:
+     *     k = number of centers
+     *     vecs = the dataset of points
+     *     indices = indices in the dataset
+     * Returns:
+     */
+    void GroupWiseCenterChooser(int k, int* dsindices, int indices_length, int* centers, int& centers_length)
+    {
+        const float kSpeedUpFactor = 1.3f;
+
+        int n = indices_length;
+
+        DistanceType* closestDistSq = new DistanceType[n];
+
+        // Choose one random center and set the closestDistSq values
+        int index = rand_int(n);
+        assert(index >=0 && index < n);
+        centers[0] = dsindices[index];
+
+        for (int i = 0; i < n; i++) {
+            closestDistSq[i] = distance(dataset[dsindices[i]], dataset[dsindices[index]], dataset.cols);
+        }
+
+
+        // Choose each center
+        int centerCount;
+        for (centerCount = 1; centerCount < k; centerCount++) {
+
+            // Repeat several trials
+            double bestNewPot = -1;
+            int bestNewIndex = 0;
+            DistanceType furthest = 0;
+            for (index = 0; index < n; index++) {
+
+                // We will test only the potential of the points further than current candidate
+                if( closestDistSq[index] > kSpeedUpFactor * (float)furthest ) {
+
+                    // Compute the new potential
+                    double newPot = 0;
+                    for (int i = 0; i < n; i++) {
+                        newPot += std::min( distance(dataset[dsindices[i]], dataset[dsindices[index]], dataset.cols)
+                                            , closestDistSq[i] );
+                    }
+
+                    // Store the best result
+                    if ((bestNewPot < 0)||(newPot <= bestNewPot)) {
+                        bestNewPot = newPot;
+                        bestNewIndex = index;
+                        furthest = closestDistSq[index];
+                    }
+                }
+            }
+
+            // Add the appropriate center
+            centers[centerCount] = dsindices[bestNewIndex];
+            for (int i = 0; i < n; i++) {
+                closestDistSq[i] = std::min( distance(dataset[dsindices[i]], dataset[dsindices[bestNewIndex]], dataset.cols)
+                                             , closestDistSq[i] );
+            }
+        }
+
+        centers_length = centerCount;
+
+        delete[] closestDistSq;
+    }
+
+
 public:
 
 
@@ -289,6 +367,9 @@ public:
         }
         else if (centers_init_==FLANN_CENTERS_KMEANSPP) {
             chooseCenters = &HierarchicalClusteringIndex::chooseCentersKMeanspp;
+        }
+        else if (centers_init_==FLANN_CENTERS_GROUPWISE) {
+            chooseCenters = &HierarchicalClusteringIndex::GroupWiseCenterChooser;
         }
         else {
             throw FLANNException("Unknown algorithm for choosing initial centers.");
