@@ -2404,7 +2404,6 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
 }
 
 #endif
-
 static void
 bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     double sigma_color, double sigma_space,
