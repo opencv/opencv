@@ -219,6 +219,8 @@ static void integral_##suffix( T* src, size_t srcstep, ST* sum, size_t sumstep, 
 DEF_INTEGRAL_FUNC(8u32s, uchar, int, double)
 DEF_INTEGRAL_FUNC(8u32f64f, uchar, float, double)
 DEF_INTEGRAL_FUNC(8u64f64f, uchar, double, double)
+DEF_INTEGRAL_FUNC(16u64f64f, ushort, double, double)
+DEF_INTEGRAL_FUNC(16s64f64f, short, double, double)
 DEF_INTEGRAL_FUNC(32f32f64f, float, float, double)
 DEF_INTEGRAL_FUNC(32f64f64f, float, double, double)
 DEF_INTEGRAL_FUNC(64f64f64f, double, double, double)
@@ -411,6 +413,10 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
         func = (IntegralFunc)integral_8u32f32f;
     else if( depth == CV_8U && sdepth == CV_64F && sqdepth == CV_64F )
         func = (IntegralFunc)integral_8u64f64f;
+    else if( depth == CV_16U && sdepth == CV_64F && sqdepth == CV_64F )
+        func = (IntegralFunc)integral_16u64f64f;
+    else if( depth == CV_16S && sdepth == CV_64F && sqdepth == CV_64F )
+        func = (IntegralFunc)integral_16s64f64f;
     else if( depth == CV_32F && sdepth == CV_32F && sqdepth == CV_64F )
         func = (IntegralFunc)integral_32f32f64f;
     else if( depth == CV_32F && sdepth == CV_32F && sqdepth == CV_32F )
