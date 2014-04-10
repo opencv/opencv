@@ -2,15 +2,12 @@
 # The script to detect Intel(R) Integrated Performance Primitives (IPP)
 # installation/package
 #
-# Windows host:
-# Run script like this before cmake:
-#   call "<IPP_INSTALL_DIR>\bin\ippvars.bat" intel64
-# for example:
-#   call "C:\Program Files (x86)\Intel\Composer XE\ipp\bin\ippvars.bat" intel64
+# By default, ICV version will be used.
+# To use standalone IPP update cmake command line:
+# cmake ... -DIPPROOT=<path> ...
 #
-# Linux host:
-# Run script like this before cmake:
-#   source /opt/intel/ipp/bin/ippvars.sh [ia32|intel64]
+# Note: Backward compatibility is broken, IPPROOT environment path is ignored
+#
 #
 # On return this will define:
 #
@@ -39,14 +36,6 @@ unset(IPP_VERSION_BUILD)
 
 set(IPP_LIB_PREFIX ${CMAKE_STATIC_LIBRARY_PREFIX})
 set(IPP_LIB_SUFFIX  ${CMAKE_STATIC_LIBRARY_SUFFIX})
-set(IPP_PREFIX "ipp")
-set(IPP_SUFFIX "_l")
-set(IPPCORE    "core") # core functionality
-set(IPPS       "s")    # signal processing
-set(IPPI       "i")    # image processing
-set(IPPCC      "cc")   # color conversion
-set(IPPCV      "cv")   # computer vision
-set(IPPVM      "vm")   # vector math
 
 set(IPP_X64 0)
 if(CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
@@ -56,21 +45,21 @@ if(CMAKE_CL_64)
     set(IPP_X64 1)
 endif()
 
-# This function detects IPP version by analyzing ippversion.h file
-macro(ipp_get_version _ROOT_DIR)
+# This function detects IPP version by analyzing .h file
+macro(ipp_get_version VERSION_FILE)
   unset(_VERSION_STR)
   unset(_MAJOR)
   unset(_MINOR)
   unset(_BUILD)
 
   # read IPP version info from file
-  file(STRINGS ${_ROOT_DIR}/include/ippversion.h STR1 REGEX "IPP_VERSION_MAJOR")
-  file(STRINGS ${_ROOT_DIR}/include/ippversion.h STR2 REGEX "IPP_VERSION_MINOR")
-  file(STRINGS ${_ROOT_DIR}/include/ippversion.h STR3 REGEX "IPP_VERSION_BUILD")
+  file(STRINGS ${VERSION_FILE} STR1 REGEX "IPP_VERSION_MAJOR")
+  file(STRINGS ${VERSION_FILE} STR2 REGEX "IPP_VERSION_MINOR")
+  file(STRINGS ${VERSION_FILE} STR3 REGEX "IPP_VERSION_BUILD")
   if("${STR3}" STREQUAL "")
-    file(STRINGS ${_ROOT_DIR}/include/ippversion.h STR3 REGEX "IPP_VERSION_UPDATE")
+    file(STRINGS ${VERSION_FILE} STR3 REGEX "IPP_VERSION_UPDATE")
   endif()
-  file(STRINGS ${_ROOT_DIR}/include/ippversion.h STR4 REGEX "IPP_VERSION_STR")
+  file(STRINGS ${VERSION_FILE} STR4 REGEX "IPP_VERSION_STR")
 
   # extract info and assign to variables
   string(REGEX MATCHALL "[0-9]+" _MAJOR ${STR1})
@@ -83,66 +72,92 @@ macro(ipp_get_version _ROOT_DIR)
   set(IPP_VERSION_MAJOR ${_MAJOR})
   set(IPP_VERSION_MINOR ${_MINOR})
   set(IPP_VERSION_BUILD ${_BUILD})
-
-  set(__msg)
-  if(EXISTS ${_ROOT_DIR}/include/ippicv.h)
-    ocv_assert(WITH_ICV AND NOT WITH_IPP)
-    set(__msg " ICV version")
-    set(HAVE_IPP_ICV_ONLY 1)
-  endif()
-
-  message(STATUS "found IPP: ${_MAJOR}.${_MINOR}.${_BUILD} [${_VERSION_STR}]${__msg}")
-  message(STATUS "at: ${_ROOT_DIR}")
 endmacro()
 
+macro(_ipp_not_supported)
+  message(STATUS ${ARGN})
+  unset(HAVE_IPP)
+  unset(HAVE_IPP_ICV_ONLY)
+  unset(IPP_VERSION_STR)
+  return()
+endmacro()
 
-# This function sets IPP_INCLUDE_DIRS and IPP_LIBRARIES variables
-macro(ipp_set_variables _LATEST_VERSION)
-  if(${_LATEST_VERSION} VERSION_LESS "7.0")
-    message(SEND_ERROR "IPP ${_LATEST_VERSION} is not supported")
-    unset(HAVE_IPP)
-    return()
+# This macro uses IPP_ROOT_DIR variable
+# TODO Cleanup code after ICV package stabilization
+macro(ipp_detect_version)
+  set(IPP_INCLUDE_DIRS ${IPP_ROOT_DIR}/include)
+
+  set(__msg)
+  if(EXISTS ${IPP_ROOT_DIR}/ippicv.h)
+    set(__msg " (ICV version)")
+    set(HAVE_IPP_ICV_ONLY 1)
+    if(EXISTS ${IPP_ROOT_DIR}/ippversion.h)
+      _ipp_not_supported("Can't resolve IPP directory: ${IPP_ROOT_DIR}")
+    else()
+      ipp_get_version(${IPP_ROOT_DIR}/ippicv.h)
+    endif()
+    ocv_assert(IPP_VERSION_STR VERSION_GREATER "8.0")
+    set(IPP_INCLUDE_DIRS ${IPP_ROOT_DIR}/)
+  elseif(EXISTS ${IPP_ROOT_DIR}/include/ipp.h)
+    ipp_get_version(${IPP_ROOT_DIR}/include/ippversion.h)
+    ocv_assert(IPP_VERSION_STR VERSION_GREATER "1.0")
+  else()
+    _ipp_not_supported("Can't resolve IPP directory: ${IPP_ROOT_DIR}")
   endif()
 
-  # set INCLUDE and LIB folders
-  set(IPP_INCLUDE_DIRS ${IPP_ROOT_DIR}/include)
+  message(STATUS "found IPP${__msg}: ${_MAJOR}.${_MINOR}.${_BUILD} [${IPP_VERSION_STR}]")
+  message(STATUS "at: ${IPP_ROOT_DIR}")
+
+  if(${IPP_VERSION_STR} VERSION_LESS "7.0")
+    _ipp_not_supported("IPP ${IPP_VERSION_STR} is not supported")
+  endif()
+
+  set(HAVE_IPP 1)
+  if(EXISTS ${IPP_INCLUDE_DIRS}/ipp_redefine.h)
+    set(HAVE_IPP_REDEFINE 1)
+  else()
+    unset(HAVE_IPP_REDEFINE)
+  endif()
+
+  macro(_ipp_set_library_dir DIR)
+    if(NOT EXISTS ${DIR})
+      _ipp_not_supported("IPP library directory not found")
+    endif()
+    set(IPP_LIBRARY_DIR ${DIR})
+  endmacro()
 
   if(NOT HAVE_IPP_ICV_ONLY)
     if(APPLE)
-      set(IPP_LIBRARY_DIR ${IPP_ROOT_DIR}/lib)
+      _ipp_set_library_dir(${IPP_ROOT_DIR}/lib)
     elseif(IPP_X64)
-      if(NOT EXISTS ${IPP_ROOT_DIR}/lib/intel64)
-        message(SEND_ERROR "IPP EM64T libraries not found")
-      endif()
-      set(IPP_LIBRARY_DIR ${IPP_ROOT_DIR}/lib/intel64)
+      _ipp_set_library_dir(${IPP_ROOT_DIR}/lib/intel64)
     else()
-      if(NOT EXISTS ${IPP_ROOT_DIR}/lib/ia32)
-        message(SEND_ERROR "IPP IA32 libraries not found")
-      endif()
-      set(IPP_LIBRARY_DIR ${IPP_ROOT_DIR}/lib/ia32)
+      _ipp_set_library_dir(${IPP_ROOT_DIR}/lib/ia32)
     endif()
   else()
-    if(APPLE)
-      set(IPP_LIBRARY_DIR ${IPP_ROOT_DIR}/libs/macosx)
-    elseif(WIN32 AND NOT ARM)
-      set(IPP_LIBRARY_DIR ${IPP_ROOT_DIR}/libs/windows)
-    elseif(UNIX)
-      set(IPP_LIBRARY_DIR ${IPP_ROOT_DIR}/libs/linux)
+    if(EXISTS ${IPP_ROOT_DIR}/lib)
+      set(IPP_LIBRARY_DIR ${IPP_ROOT_DIR}/lib)
     else()
-      message(MESSAGE "IPP ${_LATEST_VERSION} at ${IPP_ROOT_DIR} is not supported")
-      unset(HAVE_IPP)
-      return()
+      _ipp_not_supported("IPP ${IPP_VERSION_STR} at ${IPP_ROOT_DIR} is not supported")
     endif()
     if(X86_64)
-      set(IPP_LIBRARY_DIR ${IPP_LIBRARY_DIR}/intel64)
+      _ipp_set_library_dir(${IPP_LIBRARY_DIR}/intel64)
     else()
-      set(IPP_LIBRARY_DIR ${IPP_LIBRARY_DIR}/ia32)
+      _ipp_set_library_dir(${IPP_LIBRARY_DIR}/ia32)
     endif()
   endif()
 
+  macro(_ipp_add_library name)
+    if (EXISTS ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
+      list(APPEND IPP_LIBRARIES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
+    else()
+      message(STATUS "Can't find IPP library: ${name}")
+    endif()
+  endmacro()
+
   set(IPP_PREFIX "ipp")
-  if(${_LATEST_VERSION} VERSION_LESS "8.0")
-    set(IPP_SUFFIX "_l")        # static not threaded libs suffix IPP 7.x
+  if(${IPP_VERSION_STR} VERSION_LESS "8.0")
+    set(IPP_SUFFIX "_l")      # static not threaded libs suffix IPP 7.x
   else()
     if(WIN32)
       set(IPP_SUFFIX "mt")    # static not threaded libs suffix IPP 8.x for Windows
@@ -150,78 +165,92 @@ macro(ipp_set_variables _LATEST_VERSION)
       set(IPP_SUFFIX "")      # static not threaded libs suffix IPP 8.x for Linux/OS X
     endif()
   endif()
-  set(IPPCORE "core")     # core functionality
-  set(IPPSP   "s")        # signal processing
-  set(IPPIP   "i")        # image processing
-  set(IPPCC   "cc")       # color conversion
-  set(IPPCV   "cv")       # computer vision
-  set(IPPVM   "vm")       # vector math
 
-  list(APPEND IPP_LIBRARIES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${IPPVM}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
-  list(APPEND IPP_LIBRARIES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${IPPCC}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
-  list(APPEND IPP_LIBRARIES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${IPPCV}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
-  list(APPEND IPP_LIBRARIES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${IPPI}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
-  list(APPEND IPP_LIBRARIES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${IPPS}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
-  list(APPEND IPP_LIBRARIES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${IPPCORE}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
+  if(HAVE_IPP_ICV_ONLY)
+    _ipp_add_library(icv)
+  else()
+    _ipp_add_library(core)
+    _ipp_add_library(s)
+    _ipp_add_library(i)
+    _ipp_add_library(cc)
+    _ipp_add_library(cv)
+    _ipp_add_library(vm)
+    _ipp_add_library(m)
 
-# FIXIT
-#  if(UNIX AND NOT HAVE_IPP_ICV_ONLY)
-#    get_filename_component(INTEL_COMPILER_LIBRARY_DIR ${IPP_ROOT_DIR}/../lib REALPATH)
-  if(UNIX)
-    if(NOT HAVE_IPP_ICV_ONLY)
+    if(UNIX)
       get_filename_component(INTEL_COMPILER_LIBRARY_DIR ${IPP_ROOT_DIR}/../lib REALPATH)
-    else()
-      set(INTEL_COMPILER_LIBRARY_DIR "/opt/intel/lib")
-    endif()
-    if(IPP_X64)
-      if(NOT EXISTS ${INTEL_COMPILER_LIBRARY_DIR}/intel64)
-        message(SEND_ERROR "Intel compiler EM64T libraries not found")
+      if(NOT EXISTS ${INTEL_COMPILER_LIBRARY_DIR})
+        get_filename_component(INTEL_COMPILER_LIBRARY_DIR ${IPP_ROOT_DIR}/../compiler/lib REALPATH)
       endif()
-      set(INTEL_COMPILER_LIBRARY_DIR ${INTEL_COMPILER_LIBRARY_DIR}/intel64)
-    else()
-      if(NOT EXISTS ${INTEL_COMPILER_LIBRARY_DIR}/ia32)
-        message(SEND_ERROR "Intel compiler IA32 libraries not found")
+      if(NOT EXISTS ${INTEL_COMPILER_LIBRARY_DIR})
+        _ipp_not_supported("IPP configuration error: can't find Intel compiler library dir ${INTEL_COMPILER_LIBRARY_DIR}")
       endif()
-      set(INTEL_COMPILER_LIBRARY_DIR ${INTEL_COMPILER_LIBRARY_DIR}/ia32)
-    endif()
-    list(APPEND IPP_LIBRARIES ${INTEL_COMPILER_LIBRARY_DIR}/${IPP_LIB_PREFIX}irc${CMAKE_SHARED_LIBRARY_SUFFIX})
-    list(APPEND IPP_LIBRARIES ${INTEL_COMPILER_LIBRARY_DIR}/${IPP_LIB_PREFIX}imf${CMAKE_SHARED_LIBRARY_SUFFIX})
-    list(APPEND IPP_LIBRARIES ${INTEL_COMPILER_LIBRARY_DIR}/${IPP_LIB_PREFIX}svml${CMAKE_SHARED_LIBRARY_SUFFIX})
+      if(NOT APPLE)
+        if(IPP_X64)
+          if(NOT EXISTS ${INTEL_COMPILER_LIBRARY_DIR}/intel64)
+            message(SEND_ERROR "Intel compiler EM64T libraries not found")
+          endif()
+          set(INTEL_COMPILER_LIBRARY_DIR ${INTEL_COMPILER_LIBRARY_DIR}/intel64)
+        else()
+          if(NOT EXISTS ${INTEL_COMPILER_LIBRARY_DIR}/ia32)
+            message(SEND_ERROR "Intel compiler IA32 libraries not found")
+          endif()
+          set(INTEL_COMPILER_LIBRARY_DIR ${INTEL_COMPILER_LIBRARY_DIR}/ia32)
+        endif()
+      endif()
+
+      macro(_ipp_add_compiler_library name)
+        if (EXISTS ${INTEL_COMPILER_LIBRARY_DIR}/${IPP_LIB_PREFIX}${name}${CMAKE_SHARED_LIBRARY_SUFFIX})
+          list(APPEND IPP_LIBRARIES ${INTEL_COMPILER_LIBRARY_DIR}/${IPP_LIB_PREFIX}${name}${CMAKE_SHARED_LIBRARY_SUFFIX})
+        else()
+          message(STATUS "Can't find compiler library: ${name}")
+        endif()
+      endmacro()
+
+      _ipp_add_compiler_library(irc)
+      _ipp_add_compiler_library(imf)
+      _ipp_add_compiler_library(svml)
+    endif(UNIX)
   endif()
 
   #message(STATUS "IPP libs: ${IPP_LIBRARIES}")
 endmacro()
 
-if(WITH_IPP)
-  set(IPPPATH $ENV{IPPROOT})
-  if(UNIX)
-    list(APPEND IPPPATH /opt/intel/ipp)
-  endif()
-elseif(WITH_ICV)
-  if(DEFINED ENV{IPPICVROOT})
-    set(IPPPATH $ENV{IPPICVROOT})
-  else()
-    set(IPPPATH ${OpenCV_SOURCE_DIR}/3rdparty/ippicv)
+# OPENCV_IPP_PATH is an environment variable for internal usage only, do not use it
+if(DEFINED ENV{OPENCV_IPP_PATH} AND NOT DEFINED IPPROOT)
+  set(IPPROOT "$ENV{OPENCV_IPP_PATH}")
+endif()
+if(NOT DEFINED IPPROOT)
+  set(IPPROOT "${OpenCV_SOURCE_DIR}/3rdparty/ippicv")
+endif()
+
+# Try ICV
+find_path(
+    IPP_ICV_H_PATH
+    NAMES ippicv.h
+    PATHS ${IPPROOT}
+    DOC "The path to Intel(R) IPP ICV header files"
+    NO_DEFAULT_PATH
+    NO_CMAKE_PATH)
+set(IPP_ROOT_DIR ${IPP_ICV_H_PATH})
+
+if(NOT IPP_ICV_H_PATH)
+  # Try standalone IPP
+  find_path(
+      IPP_H_PATH
+      NAMES ippversion.h
+      PATHS ${IPPROOT}
+      PATH_SUFFIXES include
+      DOC "The path to Intel(R) IPP header files"
+      NO_DEFAULT_PATH
+      NO_CMAKE_PATH)
+  if(IPP_H_PATH)
+    get_filename_component(IPP_ROOT_DIR ${IPP_H_PATH} PATH)
   endif()
 endif()
 
-
-find_path(
-    IPP_H_PATH
-    NAMES ippversion.h
-    PATHS ${IPPPATH}
-    PATH_SUFFIXES include
-    DOC "The path to Intel(R) IPP header files"
-    NO_DEFAULT_PATH
-    NO_CMAKE_PATH)
-
-if(IPP_H_PATH)
-    set(HAVE_IPP 1)
-
-    get_filename_component(IPP_ROOT_DIR ${IPP_H_PATH} PATH)
-
-    ipp_get_version(${IPP_ROOT_DIR})
-    ipp_set_variables(${IPP_VERSION_STR})
+if(IPP_ROOT_DIR)
+  ipp_detect_version()
 endif()
 
 

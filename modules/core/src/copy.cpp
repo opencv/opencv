@@ -495,25 +495,17 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     else
         kernelName = "arithm_flip_rows_cols", flipType = FLIP_BOTH;
 
-    Size size = _src.size();
-    int cols = size.width, rows = size.height;
-    if ((cols == 1 && flipType == FLIP_COLS) ||
-            (rows == 1 && flipType == FLIP_ROWS) ||
-            (rows == 1 && cols == 1 && flipType == FLIP_BOTH))
-    {
-        _src.copyTo(_dst);
-        return true;
-    }
-
     ocl::Kernel k(kernelName, ocl::core::flip_oclsrc,
         format( "-D T=%s -D T1=%s -D cn=%d", ocl::memopTypeToStr(type),
                 ocl::memopTypeToStr(depth), cn));
     if (k.empty())
         return false;
 
+    Size size = _src.size();
     _dst.create(size, type);
     UMat src = _src.getUMat(), dst = _dst.getUMat();
 
+    int cols = size.width, rows = size.height;
     cols = flipType == FLIP_COLS ? (cols + 1) >> 1 : cols;
     rows = flipType & FLIP_ROWS ? (rows + 1) >> 1 : rows;
 
@@ -531,13 +523,59 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
     CV_Assert( _src.dims() <= 2 );
+    Size size = _src.size();
 
-    CV_OCL_RUN( _dst.isUMat(), ocl_flip(_src,_dst, flip_mode))
+    if (flip_mode < 0)
+    {
+        if (size.width == 1)
+            flip_mode = 0;
+        if (size.height == 1)
+            flip_mode = 1;
+    }
+
+    if ((size.width == 1 && flip_mode > 0) ||
+        (size.height == 1 && flip_mode == 0) ||
+        (size.height == 1 && size.width == 1 && flip_mode < 0))
+    {
+        return _src.copyTo(_dst);
+    }
+
+    CV_OCL_RUN( _dst.isUMat(), ocl_flip(_src, _dst, flip_mode))
 
     Mat src = _src.getMat();
-    _dst.create( src.size(), src.type() );
+    int type = src.type();
+    _dst.create( size, type );
     Mat dst = _dst.getMat();
-    size_t esz = src.elemSize();
+    size_t esz = CV_ELEM_SIZE(type);
+
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+    typedef IppStatus (CV_STDCALL * ippiMirror)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize, IppiAxis flip);
+    ippiMirror ippFunc =
+        type == CV_8UC1 ? (ippiMirror)ippiMirror_8u_C1R :
+        type == CV_8UC3 ? (ippiMirror)ippiMirror_8u_C3R :
+        type == CV_8UC4 ? (ippiMirror)ippiMirror_8u_C4R :
+        type == CV_16UC1 ? (ippiMirror)ippiMirror_16u_C1R :
+        type == CV_16UC3 ? (ippiMirror)ippiMirror_16u_C3R :
+        type == CV_16UC4 ? (ippiMirror)ippiMirror_16u_C4R :
+        type == CV_16SC1 ? (ippiMirror)ippiMirror_16s_C1R :
+        type == CV_16SC3 ? (ippiMirror)ippiMirror_16s_C3R :
+        type == CV_16SC4 ? (ippiMirror)ippiMirror_16s_C4R :
+        type == CV_32SC1 ? (ippiMirror)ippiMirror_32s_C1R :
+        type == CV_32SC3 ? (ippiMirror)ippiMirror_32s_C3R :
+        type == CV_32SC4 ? (ippiMirror)ippiMirror_32s_C4R :
+        type == CV_32FC1 ? (ippiMirror)ippiMirror_32f_C1R :
+        type == CV_32FC3 ? (ippiMirror)ippiMirror_32f_C3R :
+        type == CV_32FC4 ? (ippiMirror)ippiMirror_32f_C4R : 0;
+    IppiAxis axis = flip_mode == 0 ? ippAxsHorizontal :
+        flip_mode > 0 ? ippAxsVertical : ippAxsBoth;
+
+    if (ippFunc != 0)
+    {
+        IppStatus status = ippFunc(src.data, (int)src.step, dst.data, (int)dst.step, ippiSize(src.cols, src.rows), axis);
+        if (status >= 0)
+            return;
+    }
+#endif
 
     if( flip_mode <= 0 )
         flipVert( src.data, src.step, dst.data, dst.step, src.size(), esz );

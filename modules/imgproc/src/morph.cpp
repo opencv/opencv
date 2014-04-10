@@ -1228,6 +1228,9 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
     }
     else
     {
+#if defined(HAVE_IPP_ICV_ONLY) // N/A: ippiFilterMin*/ippiFilterMax*
+        return false;
+#else
         IppiPoint point = {anchor.x, anchor.y};
 
         #define IPP_MORPH_CASE(cvtype, flavor, data_type) \
@@ -1257,6 +1260,7 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
         }
 
         #undef IPP_MORPH_CASE
+#endif
     }
 }
 
