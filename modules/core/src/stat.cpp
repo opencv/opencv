@@ -2479,9 +2479,18 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
     }
     CV_Assert( (type == CV_8U && dtype == CV_32S) || dtype == CV_32F);
 
+    if ( update == 0 || _dist.empty() )
+    {
+        _dist.create(src1.rows, (K > 0 ? K : src2.rows), dtype);
+    }
+    else
+    {
+        Size distSize = _dist.size();
+        CV_Assert( (distSize.height == src1.rows) && (distSize.width == (K > 0 ? K : src2.rows)) );
+    }
+
     K = std::min(K, src2.rows);
 
-    _dist.create(src1.rows, (K > 0 ? K : src2.rows), dtype);
     Mat dist = _dist.getMat(), nidx;
     if( _nidx.needed() )
     {
