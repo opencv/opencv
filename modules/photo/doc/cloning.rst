@@ -95,4 +95,3 @@ region, giving its contents a flat aspect. Here Canny Edge Detector is used.
 The algorithm assumes that the color of the source image is close to that of the destination. This assumption means that when the colors don't match, the source image color gets tinted toward the color of the destination image.
 
 .. [PM03] Patrick Perez, Michel Gangnet, Andrew Blake, "Poisson image editing", ACM Transactions on Graphics (SIGGRAPH), 2003.
-      

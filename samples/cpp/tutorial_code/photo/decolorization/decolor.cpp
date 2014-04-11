@@ -6,6 +6,9 @@
 *
 * This tutorial demonstrates how to use OpenCV Decolorization Module.
 *
+* Input:
+* Color Image
+*
 * Output:
 * 1) Grayscale image
 * 2) Color boost image
@@ -23,6 +26,7 @@ using namespace cv;
 
 int main(int argc, char *argv[])
 {
+    CV_Assert(argc == 2);
     Mat I;
     I = imread(argv[1]);
 
