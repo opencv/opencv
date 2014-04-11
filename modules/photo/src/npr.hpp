@@ -192,7 +192,7 @@ void Domain_Filter::compute_Rfilter(Mat &output, Mat &hz, float sigma_h)
         {
             for(int c = 0; c<channel; c++)
             {
-                temp.at<float>(i,j*channel+c) = temp.at<float>(i,j*channel+c) + 
+                temp.at<float>(i,j*channel+c) = temp.at<float>(i,j*channel+c) +
                     (temp.at<float>(i,(j-1)*channel+c) - temp.at<float>(i,j*channel+c)) * V.at<float>(i,j);
             }
         }
