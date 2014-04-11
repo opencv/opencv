@@ -965,7 +965,7 @@ bool CV_OperationsTest::operations1()
 
         Vec<double,10> v10dzero;
         for (int ii = 0; ii < 10; ++ii) {
-            if (!v10dzero[ii] == 0.0)
+            if (v10dzero[ii] != 0.0)
                 throw test_excep();
         }
 
