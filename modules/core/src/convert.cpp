@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <iostream>
 //#include "opencl_kernels.hpp"
 
 namespace cv
@@ -350,8 +351,8 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
         allch1 = allch1 && mv[i].channels() == 1;
         cn += mv[i].channels();
     }
-
-    CV_Assert( 0 < cn && cn <= CV_CN_MAX );
+    CV_Assert( 0 < cn );
+    CV_Assert( n <= CV_CN_MAX );
     _dst.create(mv[0].dims, mv[0].size, CV_MAKETYPE(depth, cn));
     Mat dst = _dst.getMat();
 
@@ -569,13 +570,24 @@ static MixChannelsFunc getMixchFunc(int depth)
 
 }
 
+/**
+   Source Matricies :
+   const Mat* src, size_t nsrcs, 
+
+   Destination matricies
+   Mat* dst, size_t ndsts, 
+
+   From to mapping
+   const int* fromTo, size_t npairs
+ **/
 void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const int* fromTo, size_t npairs )
 {
     if( npairs == 0 )
         return;
     CV_Assert( src && nsrcs > 0 && dst && ndsts > 0 && fromTo && npairs > 0 );
 
-    size_t i, j, k, esz1 = dst[0].elemSize1();
+    size_t i =0, j=0, k=0;
+    size_t esz1 = dst[0].elemSize1();
     int depth = dst[0].depth();
 
     AutoBuffer<uchar> buf((nsrcs + ndsts + 1)*(sizeof(Mat*) + sizeof(uchar*)) + npairs*(sizeof(uchar*)*2 + sizeof(int)*6));
@@ -588,19 +600,37 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
 
     for( i = 0; i < nsrcs; i++ )
         arrays[i] = &src[i];
+
+    // append the destination matricies at the end
     for( i = 0; i < ndsts; i++ )
         arrays[i + nsrcs] = &dst[i];
+
     ptrs[nsrcs + ndsts] = 0;
 
+    // for each pair
     for( i = 0; i < npairs; i++ )
     {
         int i0 = fromTo[i*2], i1 = fromTo[i*2+1];
-        if( i0 >= 0 )
+        std::cout << "pair i :" << i << std::endl;
+        std::cout << "i0 :" << i0 << std::endl;
+        std::cout << "i1 :" << i1 << std::endl;
+
+        if( i0 >= 0 ) // from channel is greater than 0 
         {
             for( j = 0; j < nsrcs; i0 -= src[j].channels(), j++ )
                 if( i0 < src[j].channels() )
                     break;
-            CV_Assert(j < nsrcs && src[j].depth() == depth);
+
+            int n_depth = src[j].depth();
+            std::cout << "j :" << j << std::endl;
+            std::cout << "nsrcs :" << nsrcs << std::endl;
+            CV_Assert(j < nsrcs);
+
+            std::cout << "depth :" << depth << std::endl;
+            std::cout << "ndepth :" << n_depth << std::endl;
+
+            CV_Assert(n_depth == depth);
+
             tab[i*4] = (int)j; tab[i*4+1] = (int)(i0*esz1);
             sdelta[i] = src[j].channels();
         }
@@ -610,10 +640,26 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
             sdelta[i] = 0;
         }
 
-        for( j = 0; j < ndsts; i1 -= dst[j].channels(), j++ )
-            if( i1 < dst[j].channels() )
-                break;
-        CV_Assert(i1 >= 0 && j < ndsts && dst[j].depth() == depth);
+        for( j = 0; j < ndsts; i1 -= dst[j].channels(), j++ ) {
+          int d_channels = dst[j].channels();
+          std::cout << "check d_channels :" << d_channels << std::endl;
+          std::cout << "check i1 :" << i1 << std::endl;
+          
+          if( i1 < d_channels )
+            break;          
+        }  
+
+        std::cout << "i1 :" << i1 << std::endl;
+        CV_Assert(i1 >= 0 );
+
+        std::cout << "j :" << j << std::endl;
+        std::cout << "ndsts :" << ndsts << std::endl;
+        CV_Assert(j < ndsts);
+
+        int n_depth = dst[j].depth();        
+        std::cout << "ndepth :" << n_depth << std::endl;
+        CV_Assert(n_depth == depth);
+
         tab[i*4+2] = (int)(j + nsrcs); tab[i*4+3] = (int)(i1*esz1);
         ddelta[i] = dst[j].channels();
     }
