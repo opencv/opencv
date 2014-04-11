@@ -680,7 +680,8 @@ static bool ocl_countNonZero( InputArray _src, int & res )
 
 int cv::countNonZero( InputArray _src )
 {
-    CV_Assert( _src.channels() == 1 );
+    int type = _src.type(), cn = CV_MAT_CN(type);
+    CV_Assert( cn == 1 );
 
 #ifdef HAVE_OPENCL
     int res = -1;
@@ -690,8 +691,33 @@ int cv::countNonZero( InputArray _src )
 #endif
 
     Mat src = _src.getMat();
-    CountNonZeroFunc func = getCountNonZeroTab(src.depth());
 
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+    if (src.dims <= 2 || src.isContinuous())
+    {
+        IppiSize roiSize = { src.cols, src.rows };
+        Ipp32s count, srcstep = (Ipp32s)src.step;
+        IppStatus status = (IppStatus)-1;
+
+        if (src.isContinuous())
+        {
+            roiSize.width = (Ipp32s)src.total();
+            roiSize.height = 1;
+            srcstep = (Ipp32s)src.total() * CV_ELEM_SIZE(type);
+        }
+
+        int depth = CV_MAT_DEPTH(type);
+        if (depth == CV_8U)
+            status = ippiCountInRange_8u_C1R((const Ipp8u *)src.data, srcstep, roiSize, &count, 0, 0);
+        else if (depth == CV_32F)
+            status = ippiCountInRange_32f_C1R((const Ipp32f *)src.data, srcstep, roiSize, &count, 0, 0);
+
+        if (status >= 0)
+            return (Ipp32s)src.total() - count;
+    }
+#endif
+
+    CountNonZeroFunc func = getCountNonZeroTab(src.depth());
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, 0};
