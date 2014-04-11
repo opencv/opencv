@@ -4466,7 +4466,9 @@ struct Image2D::Impl
         else
 #endif
         {
+            CV_SUPPRESS_DEPRECATED_START
             handle = clCreateImage2D(context, CL_MEM_READ_WRITE, &format, src.cols, src.rows, 0, NULL, &err);
+            CV_SUPPRESS_DEPRECATED_END
         }
         CV_OclDbgAssert(err == CL_SUCCESS);
 
