@@ -882,7 +882,6 @@ OCL_FUNC_P(cl_mem, clCreateImage2D,
     cl_int *errcode_ret),
     (context, flags, image_format, image_width, image_height, image_row_pitch, host_ptr, errcode_ret))
 
-/*
 OCL_FUNC(cl_int, clGetSupportedImageFormats,
  (cl_context context,
  cl_mem_flags flags,
@@ -892,6 +891,7 @@ OCL_FUNC(cl_int, clGetSupportedImageFormats,
  cl_uint * num_image_formats),
  (context, flags, image_type, num_entries, image_formats, num_image_formats))
 
+/*
 OCL_FUNC(cl_int, clGetMemObjectInfo,
  (cl_mem memobj,
  cl_mem_info param_name,
@@ -4480,21 +4480,30 @@ struct Image2D::Impl
     static bool isFormatSupported(cl_image_format format)
     {
         cl_context context = (cl_context)Context::getDefault().ptr();
-        const cl_uint maxFormats = 64;
-        cl_image_format formats[maxFormats];
+        // Figure out how many formats are supported by this context.
         cl_uint numFormats = 0;
         cl_int err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
-                                                CL_MEM_OBJECT_IMAGE2D, maxFormats,
-                                                formats, &numFormats);
+                                                CL_MEM_OBJECT_IMAGE2D, numFormats,
+                                                NULL, &numFormats);
+        cl_image_format* formats =
+                (cl_image_format*)fastMalloc(sizeof(*formats) * numFormats);
+        if (!formats)
+        {
+            return false;
+        }
+        err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
+                                         CL_MEM_OBJECT_IMAGE2D, numFormats,
+                                         formats, NULL);
         CV_OclDbgAssert(err == CL_SUCCESS);
-        numFormats = (numFormats > maxFormats) ? maxFormats : numFormats;
         for (cl_uint i = 0; i < numFormats; ++i)
         {
             if (!memcmp(&formats[i], &format, sizeof(format)))
             {
+                fastFree(formats);
                 return true;
             }
         }
+        fastFree(formats);
         return false;
     }
 
