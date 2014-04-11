@@ -158,7 +158,7 @@ OCL_TEST_P(CvtColor, YCrCb2BGRA) { performTest(3, 4, CVTCODE(YCrCb2BGR)); }
 #if IPP_VERSION_X100 > 0
 #define IPP_EPS depth <= CV_32S ? 1 : 4e-5
 #else
-#define IPP_EPS 0
+#define IPP_EPS 1e-3
 #endif
 
 OCL_TEST_P(CvtColor, RGB2XYZ) { performTest(3, 3, CVTCODE(RGB2XYZ), IPP_EPS); }
