@@ -2463,7 +2463,7 @@ struct BatchDistInvoker : public ParallelLoopBody
 }
 
 void cv::batchDistance( InputArray _src1, InputArray _src2,
-                        OutputArray _dist, int dtype, OutputArray _nidx,
+                        InputOutputArray _dist, int dtype, OutputArray _nidx,
                         int normType, int K, InputArray _mask,
                         int update, bool crosscheck )
 {
