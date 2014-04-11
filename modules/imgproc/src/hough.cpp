@@ -97,6 +97,25 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     int numangle = cvRound((max_theta - min_theta) / theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
+#if (defined(HAVE_IPP) && IPP_VERSION_MAJOR >= 8)
+    IppiSize srcSize = { width, height };
+    IppPointPolar delta = { rho, theta };
+    IppPointPolar dstRoi[2] = {{(Ipp32f) -(width + height), (Ipp32f) min_theta},{(Ipp32f) (width + height), (Ipp32f) max_theta}};
+    int bufferSize;
+    int ipp_linesMax = std::min(linesMax, numangle*numrho);
+    int linesCount = 0;
+    lines.resize(ipp_linesMax);
+    IppStatus ok = ippiHoughLineGetSize_8u_C1R(srcSize, delta, ipp_linesMax, &bufferSize);
+    Ipp8u* buffer = ippsMalloc_8u(bufferSize); 
+    if (ok >= 0) ok = ippiHoughLine_Region_8u32f_C1R(image, step, srcSize, (IppPointPolar*) &lines[0], dstRoi, ipp_linesMax, &linesCount, delta, threshold, buffer);
+    ippsFree(buffer);
+    if (ok >= 0)
+    {
+        lines.resize(linesCount);
+        return;
+    }
+#endif
+
     AutoBuffer<int> _accum((numangle+2) * (numrho+2));
     std::vector<int> _sort_buf;
     AutoBuffer<float> _tabSin(numangle);
