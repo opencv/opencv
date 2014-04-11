@@ -110,7 +110,6 @@ static void findCorners_caller(
     oclMat&         counter)        //output value with number of detected corners, have to be 0 before call
 {
     string  opt;
-    std::vector<int> k;
     Context * cxt = Context::getContext();
 
     std::vector< std::pair<size_t, const void*> > args;
