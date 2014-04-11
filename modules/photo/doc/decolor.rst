@@ -10,7 +10,7 @@ Transforms a color image to a grayscale image. It is a basic tool in digital pri
 
 .. ocv:function:: void decolor( InputArray src, OutputArray grayscale, OutputArray color_boost )
 
-    :param src: Input 8-bit 3-channel image. 
+    :param src: Input 8-bit 3-channel image.
 
     :param grayscale: Output 8-bit 1-channel image.
 
