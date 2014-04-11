@@ -466,6 +466,61 @@ cv::Moments cv::moments( InputArray _src, bool binary )
         if( cn > 1 )
             CV_Error( CV_StsBadArg, "Invalid image type (must be single-channel)" );
 
+#if (IPP_VERSION_X100 >= 801)
+        if (!binary)
+        {
+            IppiSize roi = {mat.cols, mat.rows};
+            IppiMomentState_64f *moment;
+            // ippiMomentInitAlloc_64f, ippiMomentFree_64f are deprecated in 8.1, but there are not another way
+            // to initialize IppiMomentState_64f. When GetStateSize and Init functions will appear we have to
+            // change our code.
+            if (0 <= ippiMomentInitAlloc_64f(&moment, ippAlgHintAccurate))
+            {
+                IppStatus sts = (IppStatus)(-1);
+                if (depth == CV_8U)
+                    sts = ippiMoments64f_8u_C1R((const Ipp8u *)mat.data, (int)mat.step, roi, moment);
+                else if( depth == CV_16U )
+                    sts = ippiMoments64f_16u_C1R((const Ipp16u *)mat.data, (int)mat.step, roi, moment);
+                else if( depth == CV_32F )
+                    sts = ippiMoments64f_32f_C1R((const Ipp32f *)mat.data, (int)mat.step, roi, moment);
+                if (0 <= sts)
+                {
+                    IppiPoint point = {0, 0};
+                    ippiGetSpatialMoment_64f(moment, 0, 0, 0, point, &m.m00);
+                    ippiGetSpatialMoment_64f(moment, 1, 0, 0, point, &m.m10);
+                    ippiGetSpatialMoment_64f(moment, 0, 1, 0, point, &m.m01);
+
+                    ippiGetSpatialMoment_64f(moment, 2, 0, 0, point, &m.m20);
+                    ippiGetSpatialMoment_64f(moment, 1, 1, 0, point, &m.m11);
+                    ippiGetSpatialMoment_64f(moment, 0, 2, 0, point, &m.m02);
+
+                    ippiGetSpatialMoment_64f(moment, 3, 0, 0, point, &m.m30);
+                    ippiGetSpatialMoment_64f(moment, 2, 1, 0, point, &m.m21);
+                    ippiGetSpatialMoment_64f(moment, 1, 2, 0, point, &m.m12);
+                    ippiGetSpatialMoment_64f(moment, 0, 3, 0, point, &m.m03);
+                    ippiGetCentralMoment_64f(moment, 2, 0, 0, &m.mu20);
+                    ippiGetCentralMoment_64f(moment, 1, 1, 0, &m.mu11);
+                    ippiGetCentralMoment_64f(moment, 0, 2, 0, &m.mu02);
+                    ippiGetCentralMoment_64f(moment, 3, 0, 0, &m.mu30);
+                    ippiGetCentralMoment_64f(moment, 2, 1, 0, &m.mu21);
+                    ippiGetCentralMoment_64f(moment, 1, 2, 0, &m.mu12);
+                    ippiGetCentralMoment_64f(moment, 0, 3, 0, &m.mu03);
+                    ippiGetNormalizedCentralMoment_64f(moment, 2, 0, 0, &m.nu20);
+                    ippiGetNormalizedCentralMoment_64f(moment, 1, 1, 0, &m.nu11);
+                    ippiGetNormalizedCentralMoment_64f(moment, 0, 2, 0, &m.nu02);
+                    ippiGetNormalizedCentralMoment_64f(moment, 3, 0, 0, &m.nu30);
+                    ippiGetNormalizedCentralMoment_64f(moment, 2, 1, 0, &m.nu21);
+                    ippiGetNormalizedCentralMoment_64f(moment, 1, 2, 0, &m.nu12);
+                    ippiGetNormalizedCentralMoment_64f(moment, 0, 3, 0, &m.nu03);
+
+                    ippiMomentFree_64f(moment);
+                    return m;
+                }
+                ippiMomentFree_64f(moment);
+            }
+        }
+#endif
+
         if( binary || depth == CV_8U )
             func = momentsInTile<uchar, int, int>;
         else if( depth == CV_16U )
