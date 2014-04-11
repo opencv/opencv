@@ -215,7 +215,8 @@ OCL_TEST_P(Resize, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
-        double eps = 2.0;
+        int depth = CV_MAT_DEPTH(type);
+        double eps = depth <= CV_32S ? 1 : 1e-2;
 
         random_roi();
 

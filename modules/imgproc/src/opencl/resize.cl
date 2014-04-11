@@ -112,7 +112,11 @@ __kernel void resizeSampler(__read_only image2d_t srcImage,
 
     INTERMEDIATE_TYPE intermediate = READ_IMAGE(srcImage, sampler, (float2)(sx, sy));
 
+#if depth <= 4
+    T uval = convertToDT(round(intermediate * RESULT_SCALE));
+#else
     T uval = convertToDT(intermediate * RESULT_SCALE);
+#endif
 
     if(dx < dstcols && dy < dstrows)
     {

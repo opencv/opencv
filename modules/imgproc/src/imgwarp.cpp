@@ -2068,13 +2068,12 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 
     ocl::Image2D srcImage;
 
-    // If this is an integer datatype, we need normalized image data types
-    bool norm = (depth <= 4);
-
-    // See if this could be done with a sampler
-    if (interpolation == INTER_LINEAR && ocl::Device::getDefault().imageSupport() &&
-        ocl::Image2D::canCreateAlias(src) &&
-        ocl::Image2D::isFormatSupported(depth, cn, norm))
+    // See if this could be done with a sampler.  We stick with integer
+    // datatypes because the observed error is low.
+    bool useSampler = (interpolation == INTER_LINEAR && ocl::Device::getDefault().imageSupport() &&
+                       ocl::Image2D::canCreateAlias(src) && depth <= 4 &&
+                       ocl::Image2D::isFormatSupported(depth, cn, true));
+    if (useSampler)
     {
         int wdepth = std::max(depth, CV_32S);
         char buf[2][32];
@@ -2085,16 +2084,21 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
                         cn);
         k.create("resizeSampler", ocl::imgproc::resize_oclsrc, compileOpts);
 
-        if( k.empty() )
-            return false;
-
-        // Convert the input into an OpenCL image type, using normalized channel data types
-        // and aliasing the UMat.
-        srcImage = ocl::Image2D(src, norm, true);
-        k.args(srcImage, ocl::KernelArg::WriteOnly(dst),
-               (float)inv_fx, (float)inv_fy);
+        if(k.empty())
+        {
+            useSampler = false;
+        }
+        else
+        {
+            // Convert the input into an OpenCL image type, using normalized channel data types
+            // and aliasing the UMat.
+            srcImage = ocl::Image2D(src, true, true);
+            k.args(srcImage, ocl::KernelArg::WriteOnly(dst),
+                   (float)inv_fx, (float)inv_fy);
+        }
     }
-    else if (interpolation == INTER_LINEAR)
+
+    if (interpolation == INTER_LINEAR && !useSampler)
     {
         char buf[2][32];
 
@@ -2236,7 +2240,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         ocl::KernelArg srcarg = ocl::KernelArg::ReadOnly(src), dstarg = ocl::KernelArg::WriteOnly(dst);
 
         if (is_area_fast)
-            k.args(srcarg, dstarg, ocl::KernelArg::PtrReadOnly(dmap), ocl::KernelArg::PtrReadOnly(smap));
+            k.args(srcarg, dstarg);
         else
             k.args(srcarg, dstarg, inv_fxf, inv_fyf, ocl::KernelArg::PtrReadOnly(tabofsOcl),
                    ocl::KernelArg::PtrReadOnly(mapOcl), ocl::KernelArg::PtrReadOnly(alphaOcl));
