@@ -93,6 +93,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
   ocv_list_filterout(cpp_samples "viz")
 
+  if(NOT HAVE_IPP_A)
+    ocv_list_filterout(cpp_samples "/ippasync/")
+  endif()
+
   foreach(sample_filename ${cpp_samples})
     get_filename_component(sample ${sample_filename} NAME_WE)
     OPENCV_DEFINE_CPP_EXAMPLE(${sample}  ${sample_filename})
