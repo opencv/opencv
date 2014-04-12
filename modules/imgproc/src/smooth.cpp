@@ -2343,11 +2343,10 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
     copyMakeBorder(src, temp, radius, radius, radius, radius, borderType);
     std::vector<float> _space_weight(d * d);
     std::vector<int> _space_ofs(d * d);
-    
     float * const space_weight = &_space_weight[0];
     int * const space_ofs = &_space_ofs[0];
 
-	// initialize space-related bilateral filter coefficients
+    // initialize space-related bilateral filter coefficients
     for( i = -radius, maxk = 0; i <= radius; i++ )
         for( j = -radius; j <= radius; j++ )
         {
@@ -2358,13 +2357,13 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
             space_ofs[maxk++] = (int)(i * temp.step + j * cn);
         }
 
-        char cvt[3][40];
-        String cnstr = cn > 1 ? format("%d", cn) : "";
-        String kernelName("bilateral");
-        size_t sizeDiv = 1;
-		if ((ocl::Device::getDefault().isIntel()) &&
-           (ocl::Device::getDefault().type() == ocl::Device::TYPE_GPU))
-		{
+    char cvt[3][40];
+    String cnstr = cn > 1 ? format("%d", cn) : "";
+    String kernelName("bilateral");
+    size_t sizeDiv = 1;
+    if ((ocl::Device::getDefault().isIntel()) &&
+        (ocl::Device::getDefault().type() == ocl::Device::TYPE_GPU))
+    {
             //Intel GPU
             if (dst.cols % 4 == 0 && cn == 1) // For single channel x4 sized images.
             {
@@ -2376,12 +2375,12 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
                 kernelName = "bilateral_float";
             }
      }
-	ocl::Kernel k(kernelName.c_str(), ocl::imgproc::bilateral_oclsrc,
-	        format("-D radius=%d -D maxk=%d -D cn=%d -D int_t=%s -D uint_t=uint%s -D convert_int_t=%s"
-	        " -D uchar_t=%s -D float_t=%s -D convert_float_t=%s -D convert_uchar_t=%s -D gauss_color_coeff=%f",
-	        radius, maxk, cn, ocl::typeToStr(CV_32SC(cn)), cnstr.c_str(),
+     ocl::Kernel k(kernelName.c_str(), ocl::imgproc::bilateral_oclsrc,
+            format("-D radius=%d -D maxk=%d -D cn=%d -D int_t=%s -D uint_t=uint%s -D convert_int_t=%s"
+            " -D uchar_t=%s -D float_t=%s -D convert_float_t=%s -D convert_uchar_t=%s -D gauss_color_coeff=%f",
+            radius, maxk, cn, ocl::typeToStr(CV_32SC(cn)), cnstr.c_str(),
             ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0]),
-	        ocl::typeToStr(type), ocl::typeToStr(CV_32FC(cn)),
+            ocl::typeToStr(type), ocl::typeToStr(CV_32FC(cn)),
             ocl::convertTypeStr(CV_32S, CV_32F, cn, cvt[1]),
             ocl::convertTypeStr(CV_32F, CV_8U, cn, cvt[2]), gauss_color_coeff));
     if (k.empty())
