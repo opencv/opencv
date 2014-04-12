@@ -2837,8 +2837,35 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
             convertAndUnrollScalar(Mat(1, 1, CV_32S, &ival), depth1, buf, blocksize);
         }
 
+#ifdef HAVE_IPP
+        IppCmpOp ippOp = convert_cmp(op);
+#endif
+
         for( size_t i = 0; i < it.nplanes; i++, ++it )
         {
+#ifdef HAVE_IPP
+            if (depth1 == CV_8U)
+            {
+                if (ippOp >= 0 && ippiCompareC_8u_C1R((const Ipp8u *)ptrs[0], 1, buf[0], (Ipp8u *)ptrs[1], 1, ippiSize((int)total, 1), ippOp))
+                    continue;
+            }
+            else if (depth1 == CV_16U)
+            {
+                if (ippOp >= 0 && ippiCompareC_16u_C1R((const Ipp16u *)ptrs[0], 1, ((const Ipp16u *)buf)[0], (Ipp8u *)ptrs[1], 1, ippiSize((int)total, 1), ippOp))
+                    continue;
+            }
+            else if (depth1 == CV_16S)
+            {
+                if (ippOp >= 0 && ippiCompareC_16s_C1R((const Ipp16s *)ptrs[0], 1, ((const Ipp16s *)buf)[0], (Ipp8u *)ptrs[1], 1, ippiSize((int)total, 1), ippOp))
+                    continue;
+            }
+            else if (depth1 == CV_32F)
+            {
+                if (ippOp >= 0 && ippiCompareC_32f_C1R((const Ipp32f *)ptrs[0], 1, ((const Ipp32f *)buf)[0], (Ipp8u *)ptrs[1], 1, ippiSize((int)total, 1), ippOp))
+                    continue;
+            }
+#endif
+
             for( size_t j = 0; j < total; j += blocksize )
             {
                 int bsz = (int)MIN(total - j, blocksize);
