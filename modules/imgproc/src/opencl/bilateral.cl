@@ -77,7 +77,7 @@ __kernel void bilateral(__global const uchar * src, int src_step, int src_offset
             int_t val = convert_int_t(loadpix(src + src_index + space_ofs[k]));
             uint diff = (uint)SUM(abs(val - val0));
             float w = space_weight[k] * native_exp((float)(diff * diff * as_float(gauss_color_coeff)));
-			sum += convert_float_t(val) * (float_t)(w);
+		    sum += convert_float_t(val) * (float_t)(w);
             wsum += w;
         }
 
@@ -107,7 +107,7 @@ __kernel void bilateral_float(__global const uchar * src, int src_step, int src_
             float_t val = convert_float_t(loadpix(src + src_index + space_ofs[k]));
             float i = SUM(fabs(val - val0));
             float w = space_weight[k] * native_exp(i * i * as_float(gauss_color_coeff));
-			sum += val * w;
+		    sum += val * w;
             wsum += w;
         }
         storepix(convert_uchar_t(sum / (float_t)(wsum)), dst + dst_index);
@@ -140,4 +140,3 @@ __kernel void bilateral_float4(__global const uchar * src, int src_step, int src
         vstore4(convert_uchar4_rtz(sum), 0, dst + dst_index);
     }
 }
-
