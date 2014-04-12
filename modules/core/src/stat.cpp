@@ -2386,7 +2386,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 _result)
 #endif
 
-    if( normType & CV_RELATIVE )
+    if( normType & NORM_RELATIVE )
     {
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
         Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
@@ -2469,7 +2469,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
     int depth = src1.depth(), cn = src1.channels();
 
-    normType &= 7;
+    normType &= NORM_TYPE_MASK;
     CV_Assert( normType == NORM_INF || normType == NORM_L1 ||
                normType == NORM_L2 || normType == NORM_L2SQR ||
               ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
