@@ -81,6 +81,11 @@ copyMask_(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, ucha
 template<> void
 copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+    if (ippiCopy_8u_C1MR(_src, (int)sstep, _dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
+        return;
+#endif
+
     for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
     {
         const uchar* src = (const uchar*)_src;
@@ -111,6 +116,11 @@ copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
 template<> void
 copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+    if (ippiCopy_16u_C1MR((const Ipp16u *)_src, (int)sstep, (Ipp16u *)_dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
+        return;
+#endif
+
     for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
     {
         const ushort* src = (const ushort*)_src;
@@ -165,15 +175,33 @@ static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, 
     copyMask_<type>(src, sstep, mask, mstep, dst, dstep, size); \
 }
 
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#define DEF_COPY_MASK_F(suffix, type, ippfavor, ipptype) \
+static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, size_t mstep, \
+                             uchar* dst, size_t dstep, Size size, void*) \
+{ \
+    if (ippiCopy_##ippfavor((const ipptype *)src, (int)sstep, (ipptype *)dst, (int)dstep, ippiSize(size), (const Ipp8u *)mask, (int)mstep) >= 0) \
+        return; \
+    copyMask_<type>(src, sstep, mask, mstep, dst, dstep, size); \
+}
+#else
+#define DEF_COPY_MASK_F(suffix, type, ippfavor, ipptype) \
+static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, size_t mstep, \
+                             uchar* dst, size_t dstep, Size size, void*) \
+{ \
+    copyMask_<type>(src, sstep, mask, mstep, dst, dstep, size); \
+}
+#endif
+
 
 DEF_COPY_MASK(8u, uchar)
 DEF_COPY_MASK(16u, ushort)
-DEF_COPY_MASK(8uC3, Vec3b)
-DEF_COPY_MASK(32s, int)
-DEF_COPY_MASK(16uC3, Vec3s)
+DEF_COPY_MASK_F(8uC3, Vec3b, 8u_C3MR, Ipp8u)
+DEF_COPY_MASK_F(32s, int, 32s_C1MR, Ipp32s)
+DEF_COPY_MASK_F(16uC3, Vec3s, 16u_C3MR, Ipp16u)
 DEF_COPY_MASK(32sC2, Vec2i)
-DEF_COPY_MASK(32sC3, Vec3i)
-DEF_COPY_MASK(32sC4, Vec4i)
+DEF_COPY_MASK_F(32sC3, Vec3i, 32s_C3MR, Ipp32s)
+DEF_COPY_MASK_F(32sC4, Vec4i, 32s_C4MR, Ipp32s)
 DEF_COPY_MASK(32sC6, Vec6i)
 DEF_COPY_MASK(32sC8, Vec8i)
 
