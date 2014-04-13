@@ -548,35 +548,66 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
     Mat dst = _dst.getMat();
     size_t esz = CV_ELEM_SIZE(type);
 
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
     typedef IppStatus (CV_STDCALL * ippiMirror)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize, IppiAxis flip);
-    ippiMirror ippFunc =
-        type == CV_8UC1 ? (ippiMirror)ippiMirror_8u_C1R :
-        type == CV_8UC3 ? (ippiMirror)ippiMirror_8u_C3R :
-        type == CV_8UC4 ? (ippiMirror)ippiMirror_8u_C4R :
-        type == CV_16UC1 ? (ippiMirror)ippiMirror_16u_C1R :
-        type == CV_16UC3 ? (ippiMirror)ippiMirror_16u_C3R :
-        type == CV_16UC4 ? (ippiMirror)ippiMirror_16u_C4R :
-        type == CV_16SC1 ? (ippiMirror)ippiMirror_16s_C1R :
-        type == CV_16SC3 ? (ippiMirror)ippiMirror_16s_C3R :
-        type == CV_16SC4 ? (ippiMirror)ippiMirror_16s_C4R :
-        type == CV_32SC1 ? (ippiMirror)ippiMirror_32s_C1R :
-        type == CV_32SC3 ? (ippiMirror)ippiMirror_32s_C3R :
-        type == CV_32SC4 ? (ippiMirror)ippiMirror_32s_C4R :
-        type == CV_32FC1 ? (ippiMirror)ippiMirror_32f_C1R :
-        type == CV_32FC3 ? (ippiMirror)ippiMirror_32f_C3R :
-        type == CV_32FC4 ? (ippiMirror)ippiMirror_32f_C4R : 0;
+    typedef IppStatus (CV_STDCALL * ippiMirrorI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize, IppiAxis flip);
+    ippiMirror ippFunc = 0;
+    ippiMirrorI ippFuncI = 0;
+
+    if (src.data == dst.data)
+    {
+        ippFuncI =
+            type == CV_8UC1 ? (ippiMirrorI)ippiMirror_8u_C1IR :
+            type == CV_8UC3 ? (ippiMirrorI)ippiMirror_8u_C3IR :
+            type == CV_8UC4 ? (ippiMirrorI)ippiMirror_8u_C4IR :
+            type == CV_16UC1 ? (ippiMirrorI)ippiMirror_16u_C1IR :
+            type == CV_16UC3 ? (ippiMirrorI)ippiMirror_16u_C3IR :
+            type == CV_16UC4 ? (ippiMirrorI)ippiMirror_16u_C4IR :
+            type == CV_16SC1 ? (ippiMirrorI)ippiMirror_16s_C1IR :
+            type == CV_16SC3 ? (ippiMirrorI)ippiMirror_16s_C3IR :
+            type == CV_16SC4 ? (ippiMirrorI)ippiMirror_16s_C4IR :
+            type == CV_32SC1 ? (ippiMirrorI)ippiMirror_32s_C1IR :
+            type == CV_32SC3 ? (ippiMirrorI)ippiMirror_32s_C3IR :
+            type == CV_32SC4 ? (ippiMirrorI)ippiMirror_32s_C4IR :
+            type == CV_32FC1 ? (ippiMirrorI)ippiMirror_32f_C1IR :
+            type == CV_32FC3 ? (ippiMirrorI)ippiMirror_32f_C3IR :
+            type == CV_32FC4 ? (ippiMirrorI)ippiMirror_32f_C4IR : 0;
+    }
+    else
+    {
+        ippFunc =
+            type == CV_8UC1 ? (ippiMirror)ippiMirror_8u_C1R :
+            type == CV_8UC3 ? (ippiMirror)ippiMirror_8u_C3R :
+            type == CV_8UC4 ? (ippiMirror)ippiMirror_8u_C4R :
+            type == CV_16UC1 ? (ippiMirror)ippiMirror_16u_C1R :
+            type == CV_16UC3 ? (ippiMirror)ippiMirror_16u_C3R :
+            type == CV_16UC4 ? (ippiMirror)ippiMirror_16u_C4R :
+            type == CV_16SC1 ? (ippiMirror)ippiMirror_16s_C1R :
+            type == CV_16SC3 ? (ippiMirror)ippiMirror_16s_C3R :
+            type == CV_16SC4 ? (ippiMirror)ippiMirror_16s_C4R :
+            type == CV_32SC1 ? (ippiMirror)ippiMirror_32s_C1R :
+            type == CV_32SC3 ? (ippiMirror)ippiMirror_32s_C3R :
+            type == CV_32SC4 ? (ippiMirror)ippiMirror_32s_C4R :
+            type == CV_32FC1 ? (ippiMirror)ippiMirror_32f_C1R :
+            type == CV_32FC3 ? (ippiMirror)ippiMirror_32f_C3R :
+            type == CV_32FC4 ? (ippiMirror)ippiMirror_32f_C4R : 0;
+    }
     IppiAxis axis = flip_mode == 0 ? ippAxsHorizontal :
         flip_mode > 0 ? ippAxsVertical : ippAxsBoth;
+    IppiSize roisize = { dst.cols, dst.rows };
 
     if (ippFunc != 0)
     {
-        IppStatus status = ippFunc(src.data, (int)src.step, dst.data, (int)dst.step, ippiSize(src.cols, src.rows), axis);
-        if (status >= 0)
+        if (ippFunc(src.data, (int)src.step, dst.data, (int)dst.step, ippiSize(src.cols, src.rows), axis) >= 0)
             return;
         setIppErrorStatus();
     }
-#endif
+    else if (ippFuncI != 0)
+    {
+        if (ippFuncI(dst.data, (int)dst.step, roisize, axis) >= 0)
+            return;
+        setIppErrorStatus();
+    }
 
     if( flip_mode <= 0 )
         flipVert( src.data, src.step, dst.data, dst.step, src.size(), esz );
