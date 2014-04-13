@@ -705,6 +705,23 @@ static void max64f( const double* src1, size_t step1,
                     const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* )
 {
+#if ARITHM_USE_IPP == 1
+    double* s1 = (double*)src1;
+    double* s2 = (double*)src2;
+    double* d  = dst;
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    int i = 0;
+    for(; i < sz.height; i++)
+    {
+        if (0 > ippsMaxEvery_64f(s1, s2, d, sz.width))
+            break;
+        s1 = (double*)((uchar*)s1 + step1);
+        s2 = (double*)((uchar*)s2 + step2);
+        d  = (double*)((uchar*)d + step);
+    }
+    if (i == sz.height)
+        return;
+#endif
     vBinOp64<double, OpMax<double>, IF_SIMD(VMax<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
@@ -808,6 +825,23 @@ static void min64f( const double* src1, size_t step1,
                     const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* )
 {
+#if ARITHM_USE_IPP == 1
+    double* s1 = (double*)src1;
+    double* s2 = (double*)src2;
+    double* d  = dst;
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    int i = 0;
+    for(; i < sz.height; i++)
+    {
+        if (0 > ippsMinEvery_64f(s1, s2, d, sz.width))
+            break;
+        s1 = (double*)((uchar*)s1 + step1);
+        s2 = (double*)((uchar*)s2 + step2);
+        d  = (double*)((uchar*)d + step);
+    }
+    if (i == sz.height)
+        return;
+#endif
     vBinOp64<double, OpMin<double>, IF_SIMD(VMin<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
