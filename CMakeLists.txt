@@ -158,7 +158,7 @@ OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      ON 
 OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     ON   IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_DIRECTX        "Include DirectX support"                     ON   IF WIN32 )
 OCV_OPTION(WITH_INTELPERC      "Include Intel Perceptual Computing support"  OFF  IF WIN32 )
-
+OCV_OPTION(WITH_IPP_A          "Include Intel IPP_A support"                 OFF  IF (MSVC OR X86 OR X86_64) )
 
 # OpenCV build components
 # ===================================================
@@ -749,17 +749,6 @@ else()
       endif()
     else()
       if(HAVE_GTK3)
-<<<<<<< HEAD
-        status("    GTK+ 3.x:" HAVE_GTK     THEN "YES (ver ${ALIASOF_gtk+-3.0_VERSION})"     ELSE NO)
-      elseif(HAVE_GTK)
-        status("    GTK+ 2.x:" HAVE_GTK      THEN "YES (ver ${ALIASOF_gtk+-2.0_VERSION})"     ELSE NO)
-      else()
-        if(DEFINED WITH_GTK)
-          staus("    GTK+:" NO)
-        endif()
-      endif()
-      status("    GThread :" HAVE_GTHREAD  THEN "YES (ver ${ALIASOF_gthread-2.0_VERSION})"  ELSE NO)
-=======
         status("    GTK+ 3.x:" HAVE_GTK THEN "YES (ver ${ALIASOF_gtk+-3.0_VERSION})" ELSE NO)
       elseif(HAVE_GTK)
         status("    GTK+ 2.x:" HAVE_GTK THEN "YES (ver ${ALIASOF_gtk+-2.0_VERSION})" ELSE NO)
@@ -767,7 +756,6 @@ else()
         status("    GTK+:" NO)
       endif()
       status("    GThread :" HAVE_GTHREAD THEN "YES (ver ${ALIASOF_gthread-2.0_VERSION})" ELSE NO)
->>>>>>> Correction to enable compilation on platform with only GTK2 libs
       status("    GtkGlExt:" HAVE_GTKGLEXT THEN "YES (ver ${ALIASOF_gtkglext-1.0_VERSION})" ELSE NO)
     endif()
   endif()
@@ -935,12 +923,16 @@ endif(DEFINED WITH_INTELPERC)
 status("")
 status("  Other third-party libraries:")
 
-if(WITH_IPP AND IPP_FOUND)
-  status("    Use IPP:" "${IPP_LATEST_VERSION_STR} [${IPP_LATEST_VERSION_MAJOR}.${IPP_LATEST_VERSION_MINOR}.${IPP_LATEST_VERSION_BUILD}]")
+if(WITH_IPP AND HAVE_IPP)
+  status("    Use IPP:" "${IPP_VERSION_STR} [${IPP_VERSION_MAJOR}.${IPP_VERSION_MINOR}.${IPP_VERSION_BUILD}]")
   status("         at:" "${IPP_ROOT_DIR}")
 else()
-  status("    Use IPP:"   WITH_IPP AND NOT IPP_FOUND THEN "IPP not found" ELSE NO)
+  status("    Use IPP:"   WITH_IPP AND NOT HAVE_IPP THEN "IPP not found" ELSE NO)
 endif()
+
+if(DEFINED WITH_IPP_A)
+status("    Use IPP Async:"  HAVE_IPP_A       THEN "YES" ELSE NO)
+endif(DEFINED WITH_IPP_A)
 
 status("    Use Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 status("    Use TBB:"        HAVE_TBB         THEN "YES (ver ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} interface ${TBB_INTERFACE_VERSION})" ELSE NO)
