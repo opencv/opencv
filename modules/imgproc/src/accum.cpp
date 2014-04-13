@@ -431,6 +431,56 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+    if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && (mask.empty() || mask.isContinuous())))
+    {
+        typedef IppStatus (CV_STDCALL * ippiAdd)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep, IppiSize roiSize);
+        typedef IppStatus (CV_STDCALL * ippiAddMask)(const void * pSrc, int srcStep, const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst,
+                                                    int srcDstStep, IppiSize roiSize);
+        ippiAdd ippFunc = 0;
+        ippiAddMask ippFuncMask = 0;
+
+        if (mask.empty())
+        {
+            ippFunc = sdepth == CV_8U && ddepth == CV_32F ? (ippiAdd)ippiAdd_8u32f_C1IR :
+                sdepth == CV_16U && ddepth == CV_32F ? (ippiAdd)ippiAdd_16u32f_C1IR :
+                sdepth == CV_32F && ddepth == CV_32F ? (ippiAdd)ippiAdd_32f_C1IR : 0;
+        }
+        else if (scn == 1)
+        {
+            ippFuncMask = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddMask)ippiAdd_8u32f_C1IMR :
+                sdepth == CV_16U && ddepth == CV_32F ? (ippiAddMask)ippiAdd_16u32f_C1IMR :
+                sdepth == CV_32F && ddepth == CV_32F ? (ippiAddMask)ippiAdd_32f_C1IMR : 0;
+        }
+
+        if (ippFunc || ippFuncMask)
+        {
+            IppStatus status = ippStsNoErr;
+
+            Size size = src.size();
+            int srcstep = (int)src.step, dststep = (int)dst.step, maskstep = (int)mask.step;
+            if (src.isContinuous() && dst.isContinuous() && mask.isContinuous())
+            {
+                srcstep = static_cast<int>(src.total() * src.elemSize());
+                dststep = static_cast<int>(dst.total() * dst.elemSize());
+                maskstep = static_cast<int>(mask.total() * mask.elemSize());
+                size.width = static_cast<int>(src.total());
+                size.height = 1;
+            }
+            size.width *= scn;
+
+            if (mask.empty())
+                status = ippFunc(src.data, srcstep, (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
+            else
+                status = ippFuncMask(src.data, srcstep, (const Ipp8u *)mask.data, maskstep,
+                                     (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
+
+            if (status >= 0)
+                return;
+        }
+    }
+#endif
+
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccFunc func = fidx >= 0 ? accTab[fidx] : 0;
     CV_Assert( func != 0 );
@@ -498,7 +548,7 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
             if (mask.empty())
                 status = ippFunc(src.data, srcstep, (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
             else
-                status = ippFuncMask(src.data, srcstep, (Ipp8u *)mask.data, maskstep,
+                status = ippFuncMask(src.data, srcstep, (const Ipp8u *)mask.data, maskstep,
                                      (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
 
             if (status >= 0)
@@ -580,7 +630,7 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
                 status = ippFunc(src1.data, src1step, src2.data, src2step, (Ipp32f *)dst.data,
                                  dststep, ippiSize(size.width, size.height));
             else
-                status = ippFuncMask(src1.data, src1step, src2.data, src2step, (Ipp8u *)mask.data, maskstep,
+                status = ippFuncMask(src1.data, src1step, src2.data, src2step, (const Ipp8u *)mask.data, maskstep,
                                      (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
 
             if (status >= 0)
@@ -660,7 +710,7 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
             if (mask.empty())
                 status = ippFunc(src.data, srcstep, (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
             else
-                status = ippFuncMask(src.data, srcstep, (Ipp8u *)mask.data, maskstep,
+                status = ippFuncMask(src.data, srcstep, (const Ipp8u *)mask.data, maskstep,
                                      (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
 
             if (status >= 0)
