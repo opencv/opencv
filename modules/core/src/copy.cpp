@@ -356,6 +356,25 @@ Mat& Mat::operator = (const Scalar& s)
 
     if( is[0] == 0 && is[1] == 0 && is[2] == 0 && is[3] == 0 )
     {
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+        if (dims <= 2 || isContinuous())
+        {
+            IppiSize roisize = { cols, rows };
+            if (isContinuous())
+            {
+                roisize.width = (int)total();
+                roisize.height = 1;
+
+                if (ippsZero_8u(data, roisize.width * elemSize()) >= 0)
+                    return *this;
+            }
+            roisize.width *= elemSize();
+
+            if (ippiSet_8u_C1R(0, data, (int)step, roisize) >= 0)
+                return *this;
+        }
+#endif
+
         for( size_t i = 0; i < it.nplanes; i++, ++it )
             memset( dptr, 0, elsize );
     }
