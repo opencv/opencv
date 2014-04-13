@@ -1175,6 +1175,48 @@ calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
     }
 }
 
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+
+class IPPCalcHistInvoker :
+    public ParallelLoopBody
+{
+public:
+    IPPCalcHistInvoker(const Mat & _src, Mat & _hist, AutoBuffer<Ipp32s> & _levels, Ipp32s _histSize, Ipp32s _low, Ipp32s _high, bool * _ok) :
+        ParallelLoopBody(), src(&_src), hist(&_hist), levels(&_levels), histSize(_histSize), low(_low), high(_high), ok(_ok)
+    {
+        *ok = true;
+    }
+
+    virtual void operator() (const Range & range) const
+    {
+        Mat phist(hist->size(), hist->type(), Scalar::all(0));
+
+        IppStatus status = ippiHistogramEven_8u_C1R(
+            src->data + src->step * range.start, (int)src->step, ippiSize(src->cols, range.end - range.start),
+            (Ipp32s *)phist.data, (Ipp32s *)*levels, histSize, low, high);
+
+        if (status < 0)
+        {
+            *ok = false;
+            return;
+        }
+
+        for (int i = 0; i < histSize; ++i)
+            CV_XADD((int *)(hist->data + i * hist->step), *(int *)(phist.data + i * phist.step));
+    }
+
+private:
+    const Mat * src;
+    Mat * hist;
+    AutoBuffer<Ipp32s> * levels;
+    Ipp32s histSize, low, high;
+    bool * ok;
+
+    const IPPCalcHistInvoker & operator = (const IPPCalcHistInvoker & );
+};
+
+#endif
+
 }
 
 void cv::calcHist( const Mat* images, int nimages, const int* channels,
@@ -1189,6 +1231,32 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     _hist.create(dims, histSize, CV_32F);
     Mat hist = _hist.getMat(), ihist = hist;
     ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK)|CV_32S;
+
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+    if (nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && channels &&
+            channels[0] == 0 && mask.empty() && images[0].dims <= 2 &&
+            !accumulate && uniform)
+    {
+        ihist.setTo(Scalar::all(0));
+        AutoBuffer<Ipp32s> levels(histSize[0] + 1);
+
+        bool ok = true;
+        const Mat & src = images[0];
+        int nstripes = std::min<int>(8, src.total() / (1 << 16));
+#ifdef HAVE_CONCURRENCY
+        nstripes = 1;
+#endif
+        IPPCalcHistInvoker invoker(src, ihist, levels, histSize[0] + 1, (Ipp32s)ranges[0][0], (Ipp32s)ranges[0][1], &ok);
+        Range range(0, src.rows);
+        parallel_for_(range, invoker, nstripes);
+
+        if (ok)
+        {
+            ihist.convertTo(hist, CV_32F);
+            return;
+        }
+    }
+#endif
 
     if( !accumulate || histdata != hist.data )
         hist = Scalar(0.);
@@ -1477,7 +1545,7 @@ void cv::calcHist( InputArrayOfArrays images, const std::vector<int>& channels,
     CV_OCL_RUN(images.total() == 1 && channels.size() == 1 && images.channels(0) == 1 &&
                channels[0] == 0 && images.isUMatVector() && mask.empty() && !accumulate &&
                histSize.size() == 1 && histSize[0] == BINS && ranges.size() == 2 &&
-               ranges[0] == 0 && ranges[1] == 256,
+               ranges[0] == 0 && ranges[1] == BINS,
                ocl_calcHist(images, hist))
 
     int i, dims = (int)histSize.size(), rsz = (int)ranges.size(), csz = (int)channels.size();
