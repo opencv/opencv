@@ -1078,13 +1078,36 @@ void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSi
                          double _maxDiff, InputOutputArray __buf )
 {
     Mat img = _img.getMat();
+    int type = img.type(), cn = CV_MAT_CN(type);
     Mat temp, &_buf = __buf.needed() ? __buf.getMatRef() : temp;
-    CV_Assert( img.type() == CV_8UC1 || img.type() == CV_16SC1 );
+    CV_Assert( type == CV_8UC1 || type == CV_16SC1 );
 
-    int newVal = cvRound(_newval);
-    int maxDiff = cvRound(_maxDiff);
+    int newVal = cvRound(_newval), maxDiff = cvRound(_maxDiff);
 
-    if (img.type() == CV_8UC1)
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+    Ipp32s bufsize = 0;
+    IppiSize roisize = { img.cols, img.rows };
+    IppDataType datatype = type == CV_8UC1 ? ipp8u : ipp16s;
+
+    if (!__buf.needed() && ippiMarkSpecklesGetBufferSize(roisize, datatype, cn, &bufsize))
+    {
+        Ipp8u * buffer = ippsMalloc_8u(bufsize);
+        IppStatus status = (IppStatus)-1;
+
+        if (type == CV_8UC1)
+            status = ippiMarkSpeckles_8u_C1IR((Ipp8u *)img.data, (int)img.step, roisize,
+                                              (Ipp8u)newVal, maxSpeckleSize, maxDiff, ippiNormL1, buffer);
+        else if (type == CV_16SC1)
+            status = ippiMarkSpeckles_16s_C1IR((Ipp16s *)img.data, (int)img.step, roisize,
+                                               (Ipp16s)newVal, maxSpeckleSize, maxDiff, ippiNormL1, buffer);
+
+        printf("%s\n", ippGetStatusString(status));
+        if (status >= 0)
+            return;
+    }
+#endif
+
+    if (type == CV_8UC1)
         filterSpecklesImpl<uchar>(img, newVal, maxSpeckleSize, maxDiff, _buf);
     else
         filterSpecklesImpl<short>(img, newVal, maxSpeckleSize, maxDiff, _buf);
