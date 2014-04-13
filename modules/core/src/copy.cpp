@@ -278,6 +278,11 @@ void Mat::copyTo( OutputArray _dst ) const
             Size sz = getContinuousSize(*this, dst);
             size_t len = sz.width*elemSize();
 
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+            if (ippiCopy_8u_C1R(sptr, (int)step, dptr, (int)dst.step, ippiSize((int)len, sz.height)) >= 0)
+                return;
+#endif
+
             for( ; sz.height--; sptr += step, dptr += dst.step )
                 memcpy( dptr, sptr, len );
         }
