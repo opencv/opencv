@@ -607,6 +607,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         } \
     } while ((void)0, 0)
 
+            CV_SUPPRESS_DEPRECATED_START
             if (sdepth == CV_8U && ddepth == CV_16S && !floatScale && !floatDelta)
             {
                 IPP_FILTER_LAPLACIAN(Ipp8u, Ipp16s, 8u16s);
@@ -625,6 +626,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                 if (needDelta && status >= 0)
                     status = ippiAddC_32f_C1IR((Ipp32f)delta, (Ipp32f *)dst.data, (int)dst.step, roisize);
             }
+            CV_SUPPRESS_DEPRECATED_END
 
             if (status >= 0)
                 return;
