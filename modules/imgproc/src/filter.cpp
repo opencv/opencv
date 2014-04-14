@@ -1413,14 +1413,14 @@ struct RowVec_32f
     {
         kernel = _kernel;
         haveSSE = checkHardwareSupport(CV_CPU_SSE);
-#ifdef USE_IPP_SEP_FILTERS
+#if defined USE_IPP_SEP_FILTERS && 0
         bufsz = -1;
 #endif
     }
 
     int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
-#ifdef USE_IPP_SEP_FILTERS
+#if defined USE_IPP_SEP_FILTERS && 0
         int ret = ippiOperator(_src, _dst, width, cn);
         if (ret > 0)
             return ret;
@@ -1458,13 +1458,13 @@ struct RowVec_32f
 
     Mat kernel;
     bool haveSSE;
-#ifdef USE_IPP_SEP_FILTERS
+#if defined USE_IPP_SEP_FILTERS && 0
 private:
     mutable int bufsz;
     int ippiOperator(const uchar* _src, uchar* _dst, int width, int cn) const
     {
         int _ksize = kernel.rows + kernel.cols - 1;
-//        if ((1 != cn && 3 != cn) || width < _ksize*8)
+        if ((1 != cn && 3 != cn) || width < _ksize*8)
             return 0;
 
         const float* src = (const float*)_src;

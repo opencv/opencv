@@ -230,6 +230,15 @@ static inline IppiSize ippiSize(const cv::Size & _size)
     return size;
 }
 
+static inline IppiBorderType ippiGetBorderType(int borderTypeNI)
+{
+    return borderTypeNI == cv::BORDER_CONSTANT ? ippBorderConst :
+        borderTypeNI == cv::BORDER_WRAP ? ippBorderWrap :
+        borderTypeNI == cv::BORDER_REPLICATE ? ippBorderRepl :
+        borderTypeNI == cv::BORDER_REFLECT_101 ? ippBorderMirror :
+        borderTypeNI == cv::BORDER_REFLECT ? ippBorderMirrorR : (IppiBorderType)-1;
+}
+
 #else
 #  define IPP_VERSION_X100 0
 #endif
