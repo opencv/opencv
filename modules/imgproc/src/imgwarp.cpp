@@ -2037,15 +2037,6 @@ static void ocl_computeResizeAreaTabs(int ssize, int dsize, double scale, int * 
     ofs_tab[dx] = k;
 }
 
-static void ocl_computeResizeAreaFastTabs(int * dmap_tab, int * smap_tab, int scale, int dcols, int scol)
-{
-    for (int i = 0; i < dcols; ++i)
-        dmap_tab[i] = scale * i;
-
-    for (int i = 0, size = dcols * scale; i < size; ++i)
-        smap_tab[i] = std::min(scol - 1, i);
-}
-
 static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
                         double fx, double fy, int interpolation)
 {
@@ -2075,7 +2066,39 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     ocl::Kernel k;
     size_t globalsize[] = { dst.cols, dst.rows };
 
-    if (interpolation == INTER_LINEAR)
+    ocl::Image2D srcImage;
+
+    // See if this could be done with a sampler.  We stick with integer
+    // datatypes because the observed error is low.
+    bool useSampler = (interpolation == INTER_LINEAR && ocl::Device::getDefault().imageSupport() &&
+                       ocl::Image2D::canCreateAlias(src) && depth <= 4 &&
+                       ocl::Image2D::isFormatSupported(depth, cn, true));
+    if (useSampler)
+    {
+        int wdepth = std::max(depth, CV_32S);
+        char buf[2][32];
+        cv::String compileOpts = format("-D USE_SAMPLER -D depth=%d -D T=%s -D T1=%s "
+                        "-D convertToDT=%s -D cn=%d",
+                        depth, ocl::typeToStr(type), ocl::typeToStr(depth),
+                        ocl::convertTypeStr(wdepth, depth, cn, buf[1]),
+                        cn);
+        k.create("resizeSampler", ocl::imgproc::resize_oclsrc, compileOpts);
+
+        if(k.empty())
+        {
+            useSampler = false;
+        }
+        else
+        {
+            // Convert the input into an OpenCL image type, using normalized channel data types
+            // and aliasing the UMat.
+            srcImage = ocl::Image2D(src, true, true);
+            k.args(srcImage, ocl::KernelArg::WriteOnly(dst),
+                   (float)inv_fx, (float)inv_fy);
+        }
+    }
+
+    if (interpolation == INTER_LINEAR && !useSampler)
     {
         char buf[2][32];
 
@@ -2180,25 +2203,14 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         {
             int wdepth2 = std::max(CV_32F, depth), wtype2 = CV_MAKE_TYPE(wdepth2, cn);
             buildOption = buildOption + format(" -D convertToT=%s -D WT2V=%s -D convertToWT2V=%s -D INTER_AREA_FAST"
-                                               " -D XSCALE=%d -D YSCALE=%d -D SCALE=%ff",
-                                               ocl::convertTypeStr(wdepth2, depth, cn, cvt[0]),
-                                               ocl::typeToStr(wtype2), ocl::convertTypeStr(wdepth, wdepth2, cn, cvt[1]),
-                                  iscale_x, iscale_y, 1.0f / (iscale_x * iscale_y));
+                                                " -D XSCALE=%d -D YSCALE=%d -D SCALE=%ff",
+                                                ocl::convertTypeStr(wdepth2, depth, cn, cvt[0]),
+                                                ocl::typeToStr(wtype2), ocl::convertTypeStr(wdepth, wdepth2, cn, cvt[1]),
+                                    iscale_x, iscale_y, 1.0f / (iscale_x * iscale_y));
 
             k.create("resizeAREA_FAST", ocl::imgproc::resize_oclsrc, buildOption);
             if (k.empty())
                 return false;
-
-            int smap_tab_size = dst.cols * iscale_x + dst.rows * iscale_y;
-            AutoBuffer<int> dmap_tab(dst.cols + dst.rows), smap_tab(smap_tab_size);
-            int * dxmap_tab = dmap_tab, * dymap_tab = dxmap_tab + dst.cols;
-            int * sxmap_tab = smap_tab, * symap_tab = smap_tab + dst.cols * iscale_y;
-
-            ocl_computeResizeAreaFastTabs(dxmap_tab, sxmap_tab, iscale_x, dst.cols, src.cols);
-            ocl_computeResizeAreaFastTabs(dymap_tab, symap_tab, iscale_y, dst.rows, src.rows);
-
-            Mat(1, dst.cols + dst.rows, CV_32SC1, (void *)dmap_tab).copyTo(dmap);
-            Mat(1, smap_tab_size, CV_32SC1, (void *)smap_tab).copyTo(smap);
         }
         else
         {
@@ -2228,7 +2240,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         ocl::KernelArg srcarg = ocl::KernelArg::ReadOnly(src), dstarg = ocl::KernelArg::WriteOnly(dst);
 
         if (is_area_fast)
-            k.args(srcarg, dstarg, ocl::KernelArg::PtrReadOnly(dmap), ocl::KernelArg::PtrReadOnly(smap));
+            k.args(srcarg, dstarg);
         else
             k.args(srcarg, dstarg, inv_fxf, inv_fyf, ocl::KernelArg::PtrReadOnly(tabofsOcl),
                    ocl::KernelArg::PtrReadOnly(mapOcl), ocl::KernelArg::PtrReadOnly(alphaOcl));
