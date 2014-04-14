@@ -692,7 +692,7 @@ int cv::countNonZero( InputArray _src )
 
     Mat src = _src.getMat();
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && 0
     if (src.dims <= 2 || src.isContinuous())
     {
         IppiSize roiSize = { src.cols, src.rows };
