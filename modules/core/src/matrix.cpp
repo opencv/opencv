@@ -3027,6 +3027,7 @@ void cv::transpose( InputArray _src, OutputArray _dst )
 
     if (dst.data == src.data && dst.cols == dst.rows)
     {
+        CV_SUPPRESS_DEPRECATED_START
         ippFuncI =
             type == CV_8UC1 ? (ippiTransposeI)ippiTranspose_8u_C1IR :
             type == CV_8UC3 ? (ippiTransposeI)ippiTranspose_8u_C3IR :
@@ -3043,6 +3044,7 @@ void cv::transpose( InputArray _src, OutputArray _dst )
             type == CV_32FC1 ? (ippiTransposeI)ippiTranspose_32f_C1IR :
             type == CV_32FC3 ? (ippiTransposeI)ippiTranspose_32f_C3IR :
             type == CV_32FC4 ? (ippiTransposeI)ippiTranspose_32f_C4IR : 0;
+        CV_SUPPRESS_DEPRECATED_END
     }
     else
     {

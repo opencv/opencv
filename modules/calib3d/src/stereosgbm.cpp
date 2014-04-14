@@ -1096,10 +1096,10 @@ void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSi
 
         if (type == CV_8UC1)
             status = ippiMarkSpeckles_8u_C1IR((Ipp8u *)img.data, (int)img.step, roisize,
-                                              (Ipp8u)newVal, maxSpeckleSize, maxDiff, ippiNormL1, buffer);
+                                              (Ipp8u)newVal, maxSpeckleSize, (Ipp8u)maxDiff, ippiNormL1, buffer);
         else if (type == CV_16SC1)
             status = ippiMarkSpeckles_16s_C1IR((Ipp16s *)img.data, (int)img.step, roisize,
-                                               (Ipp16s)newVal, maxSpeckleSize, maxDiff, ippiNormL1, buffer);
+                                               (Ipp16s)newVal, maxSpeckleSize, (Ipp16s)maxDiff, ippiNormL1, buffer);
 
         if (status >= 0)
             return;

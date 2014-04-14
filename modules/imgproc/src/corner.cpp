@@ -389,7 +389,7 @@ static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int blo
     scale = 1.0 / scale;
 
     UMat Dx, Dy;
-    if (!extractCovData(_src, Dx, Dy, depth, (double)scale, aperture_size, borderType))
+    if (!extractCovData(_src, Dx, Dy, depth, (float)scale, aperture_size, borderType))
         return false;
 
     ocl::Kernel cornelKernel("corner", ocl::imgproc::corner_oclsrc,

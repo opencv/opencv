@@ -356,7 +356,7 @@ Mat& Mat::operator = (const Scalar& s)
 
     if( is[0] == 0 && is[1] == 0 && is[2] == 0 && is[3] == 0 )
     {
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && 0
         if (dims <= 2 || isContinuous())
         {
             IppiSize roisize = { cols, rows };
@@ -365,10 +365,10 @@ Mat& Mat::operator = (const Scalar& s)
                 roisize.width = (int)total();
                 roisize.height = 1;
 
-                if (ippsZero_8u(data, roisize.width * elemSize()) >= 0)
+                if (ippsZero_8u(data, static_cast<int>(roisize.width * elemSize())) >= 0)
                     return *this;
             }
-            roisize.width *= elemSize();
+            roisize.width *= (int)elemSize();
 
             if (ippiSet_8u_C1R(0, data, (int)step, roisize) >= 0)
                 return *this;
@@ -416,8 +416,9 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
 #if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
     if (!mask.empty() && (dims <= 2 || (isContinuous() && mask.isContinuous())))
     {
-        uchar buf[32];
-        convertAndUnrollScalar( value, type(), buf, 1 );
+        uchar _buf[32];
+        void * buf = _buf;
+        convertAndUnrollScalar( value, type(), _buf, 1 );
 
         int cn = channels(), depth0 = depth();
         IppStatus status = (IppStatus)-1;
@@ -678,6 +679,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
 
     if (src.data == dst.data)
     {
+        CV_SUPPRESS_DEPRECATED_START
         ippFuncI =
             type == CV_8UC1 ? (ippiMirrorI)ippiMirror_8u_C1IR :
             type == CV_8UC3 ? (ippiMirrorI)ippiMirror_8u_C3IR :
@@ -694,6 +696,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
             type == CV_32FC1 ? (ippiMirrorI)ippiMirror_32f_C1IR :
             type == CV_32FC3 ? (ippiMirrorI)ippiMirror_32f_C3IR :
             type == CV_32FC4 ? (ippiMirrorI)ippiMirror_32f_C4IR : 0;
+        CV_SUPPRESS_DEPRECATED_END
     }
     else
     {
