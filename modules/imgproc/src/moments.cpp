@@ -474,6 +474,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
             // ippiMomentInitAlloc_64f, ippiMomentFree_64f are deprecated in 8.1, but there are not another way
             // to initialize IppiMomentState_64f. When GetStateSize and Init functions will appear we have to
             // change our code.
+            CV_SUPPRESS_DEPRECATED_START
             if (0 <= ippiMomentInitAlloc_64f(&moment, ippAlgHintAccurate))
             {
                 IppStatus sts = (IppStatus)(-1);
@@ -518,6 +519,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
                 }
                 ippiMomentFree_64f(moment);
             }
+            CV_SUPPRESS_DEPRECATED_END
         }
 #endif
 
