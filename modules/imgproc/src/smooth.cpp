@@ -2370,10 +2370,6 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
                 kernelName = "bilateral_float4";
                 sizeDiv = 4;
             }
-            else
-            {
-                kernelName = "bilateral_float";
-            }
      }
      ocl::Kernel k(kernelName.c_str(), ocl::imgproc::bilateral_oclsrc,
             format("-D radius=%d -D maxk=%d -D cn=%d -D int_t=%s -D uint_t=uint%s -D convert_int_t=%s"
