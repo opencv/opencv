@@ -3467,6 +3467,30 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
 namespace cv
 {
 
+#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+
+typedef IppStatus (CV_STDCALL *IppSortFunc)(void *, int);
+
+static IppSortFunc getSortFunc(int depth, bool sortDescending)
+{
+    if (!sortDescending)
+        return depth == CV_8U ? (IppSortFunc)ippsSortAscend_8u_I :
+            depth == CV_16U ? (IppSortFunc)ippsSortAscend_16u_I :
+            depth == CV_16S ? (IppSortFunc)ippsSortAscend_16s_I :
+            depth == CV_32S ? (IppSortFunc)ippsSortAscend_32s_I :
+            depth == CV_32F ? (IppSortFunc)ippsSortAscend_32f_I :
+            depth == CV_64F ? (IppSortFunc)ippsSortAscend_64f_I : 0;
+    else
+        return depth == CV_8U ? (IppSortFunc)ippsSortDescend_8u_I :
+            depth == CV_16U ? (IppSortFunc)ippsSortDescend_16u_I :
+            depth == CV_16S ? (IppSortFunc)ippsSortDescend_16s_I :
+            depth == CV_32S ? (IppSortFunc)ippsSortDescend_32s_I :
+            depth == CV_32F ? (IppSortFunc)ippsSortDescend_32f_I :
+            depth == CV_64F ? (IppSortFunc)ippsSortDescend_64f_I : 0;
+}
+
+#endif
+
 template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 {
     AutoBuffer<T> buf;
@@ -3485,6 +3509,10 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
     }
     bptr = (T*)buf;
 
+#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+    IppSortFunc ippFunc = getSortFunc(src.depth(), sortDescending);
+#endif
+
     for( i = 0; i < n; i++ )
     {
         T* ptr = bptr;
@@ -3494,8 +3522,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
             if( !inplace )
             {
                 const T* sptr = (const T*)(src.data + src.step*i);
-                for( j = 0; j < len; j++ )
-                    dptr[j] = sptr[j];
+                memcpy(dptr, sptr, sizeof(T) * len);
             }
             ptr = dptr;
         }
@@ -3504,10 +3531,17 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
             for( j = 0; j < len; j++ )
                 ptr[j] = ((const T*)(src.data + src.step*j))[i];
         }
-        std::sort( ptr, ptr + len );
-        if( sortDescending )
-            for( j = 0; j < len/2; j++ )
-                std::swap(ptr[j], ptr[len-1-j]);
+
+#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+        if (!ippFunc || ippFunc(ptr, len) < 0)
+#endif
+        {
+            std::sort( ptr, ptr + len );
+            if( sortDescending )
+                for( j = 0; j < len/2; j++ )
+                    std::swap(ptr[j], ptr[len-1-j]);
+        }
+
         if( !sortRows )
             for( j = 0; j < len; j++ )
                 ((T*)(dst.data + dst.step*j))[i] = ptr[j];
