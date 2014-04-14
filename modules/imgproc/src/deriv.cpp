@@ -408,7 +408,7 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
 
 static bool IPPDeriv(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, int ksize, double scale, double delta)
 {
-    if (ksize != 3 || ksize != 5)
+    if (ksize != 3 && ksize != 5)
         return false;
     if (fabs(delta) > 0.0001)
         return false;
