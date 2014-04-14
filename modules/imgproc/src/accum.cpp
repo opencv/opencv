@@ -442,9 +442,11 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
 
         if (mask.empty())
         {
+            CV_SUPPRESS_DEPRECATED_START
             ippFunc = sdepth == CV_8U && ddepth == CV_32F ? (ippiAdd)ippiAdd_8u32f_C1IR :
                 sdepth == CV_16U && ddepth == CV_32F ? (ippiAdd)ippiAdd_16u32f_C1IR :
                 sdepth == CV_32F && ddepth == CV_32F ? (ippiAdd)ippiAdd_32f_C1IR : 0;
+            CV_SUPPRESS_DEPRECATED_END
         }
         else if (scn == 1)
         {

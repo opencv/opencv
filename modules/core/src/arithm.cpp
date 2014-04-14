@@ -2011,7 +2011,8 @@ recip_( const T*, size_t, const T* src2, size_t step2,
 static void mul8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
                    uchar* dst, size_t step, Size sz, void* scale)
 {
-    mul_(src1, step1, src2, step2, dst, step, sz, (float)*(const double*)scale);
+    float fscale = (float)*(const double*)scale;
+    mul_(src1, step1, src2, step2, dst, step, sz, fscale);
 }
 
 static void mul8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
