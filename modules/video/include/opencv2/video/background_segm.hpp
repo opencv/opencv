@@ -113,7 +113,7 @@ public:
     CV_WRAP virtual void setHistory(int history) = 0;
 
     CV_WRAP virtual int getNMixtures() const = 0;
-    CV_WRAP virtual void setNMixtures(int nmixtures) = 0;
+    CV_WRAP virtual void setNMixtures(int nmixtures) = 0;//needs reinitialization!
 
     CV_WRAP virtual double getBackgroundRatio() const = 0;
     CV_WRAP virtual void setBackgroundRatio(double ratio) = 0;
@@ -148,6 +148,45 @@ public:
 
 CV_EXPORTS_W Ptr<BackgroundSubtractorMOG2>
     createBackgroundSubtractorMOG2(int history=500, double varThreshold=16,
+                                   bool detectShadows=true);
+
+/*!
+ The class implements the K nearest neigbours algorithm from:
+ "Efficient Adaptive Density Estimation per Image Pixel for the Task of Background Subtraction"
+ Z.Zivkovic, F. van der Heijden
+ Pattern Recognition Letters, vol. 27, no. 7, pages 773-780, 2006
+ http://www.zoranz.net/Publications/zivkovicPRL2006.pdf
+
+ Fast for small foreground object. Results on the benchmark data is at http://www.changedetection.net.
+*/
+
+class CV_EXPORTS_W BackgroundSubtractorKNN : public BackgroundSubtractor
+{
+public:
+    CV_WRAP virtual int getHistory() const = 0;
+    CV_WRAP virtual void setHistory(int history) = 0;
+
+    CV_WRAP virtual int getNSamples() const = 0;
+    CV_WRAP virtual void setNSamples(int _nN) = 0;//needs reinitialization!
+
+    CV_WRAP virtual double getDist2Threshold() const = 0;
+    CV_WRAP virtual void setDist2Threshold(double _dist2Threshold) = 0;
+
+    CV_WRAP virtual int getkNNSamples() const = 0;
+    CV_WRAP virtual void setkNNSamples(int _nkNN) = 0;
+
+    CV_WRAP virtual bool getDetectShadows() const = 0;
+    CV_WRAP virtual void setDetectShadows(bool detectShadows) = 0;
+
+    CV_WRAP virtual int getShadowValue() const = 0;
+    CV_WRAP virtual void setShadowValue(int value) = 0;
+
+    CV_WRAP virtual double getShadowThreshold() const = 0;
+    CV_WRAP virtual void setShadowThreshold(double threshold) = 0;
+};
+
+CV_EXPORTS_W Ptr<BackgroundSubtractorKNN>
+    createBackgroundSubtractorKNN(int history=500, double dist2Threshold=400.0,
                                    bool detectShadows=true);
 
 /**
