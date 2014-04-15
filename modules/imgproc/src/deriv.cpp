@@ -188,7 +188,6 @@ cv::Ptr<cv::FilterEngine> cv::createDerivFilter(int srcType, int dstType,
 namespace cv
 {
 #if (IPP_VERSION_X100 >= 801)
-typedef IppStatus (CV_STDCALL* ippiFilterScharrMaskBorder)(const void* pSrc, int srcStep, void* pDst, int dstStep, IppiSize dstRoiSize, IppiMaskSize mask, IppiBorderType borderType, Ipp8u borderValue, Ipp8u* pBuffer);
 static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, double scale, double delta, int borderType)
 {
     if ((0 > dx) || (0 > dy) || (1 != dx + dy))
@@ -197,10 +196,7 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
         return false;
 
     IppiBorderType ippiBorderType = ippiGetBorderType(borderType & (~BORDER_ISOLATED));
-    if ((ippBorderRepl    != ippiBorderType) &&
-        (ippBorderMirrorR != ippiBorderType) &&
-        (ippBorderWrap    != ippiBorderType) &&
-        (ippBorderMirror  != ippiBorderType))
+    if ((int)ippiBorderType < 0)
         return false;
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
@@ -226,64 +222,86 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
     bool horz = (0 == dx) && (1 == dy);
     IppiSize roiSize = {src.cols, src.rows};
 
-    IppStatus sts = ippStsErr;
-    int bufferSize = 0;
-    ippiFilterScharrMaskBorder func = NULL;
+    _dst.create( _src.size(), dtype);
+    Mat dst = _dst.getMat();
     if ((CV_8U == stype) && (CV_16S == dtype))
     {
+        int bufferSize = 0; Ipp8u *pBuffer; IppStatus sts;
         if (horz)
         {
-            sts = ippiFilterScharrHorizMaskBorderGetBufferSize(roiSize, ippMskSize3x3, ipp8u, ipp16s, 1, &bufferSize);
-            func = (ippiFilterScharrMaskBorder)ippiFilterScharrHorizMaskBorder_8u16s_C1R;
+            if (0 > ippiFilterScharrHorizMaskBorderGetBufferSize(roiSize, ippMskSize3x3, ipp8u, ipp16s, 1, &bufferSize))
+                return false;
+            pBuffer = ippsMalloc_8u(bufferSize);
+            if (NULL == pBuffer)
+                return false;
+            sts = ippiFilterScharrHorizMaskBorder_8u16s_C1R(src.data, (int)src.step, (Ipp16s *)dst.data, (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
         }
         else
         {
-            sts = ippiFilterScharrVertMaskBorderGetBufferSize(roiSize, ippMskSize3x3, ipp8u, ipp16s, 1, &bufferSize);
-            func = (ippiFilterScharrMaskBorder)ippiFilterScharrVertMaskBorder_8u16s_C1R;
+            if (0 > ippiFilterScharrVertMaskBorderGetBufferSize(roiSize, ippMskSize3x3, ipp8u, ipp16s, 1, &bufferSize))
+                return false;
+            pBuffer = ippsMalloc_8u(bufferSize);
+            if (NULL == pBuffer)
+                return false;
+            sts = ippiFilterScharrVertMaskBorder_8u16s_C1R(src.data, (int)src.step, (Ipp16s *)dst.data, (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
         }
+        ippsFree(pBuffer);
+        return (0 <= sts);
     }
     else if ((CV_16S == stype) && (CV_16S == dtype))
     {
+        int bufferSize = 0; Ipp8u *pBuffer; IppStatus sts;
         if (horz)
         {
-            sts = ippiFilterScharrHorizMaskBorderGetBufferSize(roiSize, ippMskSize3x3, ipp16s, ipp16s, 1, &bufferSize);
-            func = (ippiFilterScharrMaskBorder)ippiFilterScharrHorizMaskBorder_16s_C1R;
+            if (0 > ippiFilterScharrHorizMaskBorderGetBufferSize(roiSize, ippMskSize3x3, ipp16s, ipp16s, 1, &bufferSize))
+                return false;
+            pBuffer = ippsMalloc_8u(bufferSize);
+            if (NULL == pBuffer)
+                return false;
+            sts = ippiFilterScharrHorizMaskBorder_16s_C1R((Ipp16s *)src.data, (int)src.step, (Ipp16s *)dst.data, (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
         }
         else
         {
-            sts = ippiFilterScharrVertMaskBorderGetBufferSize(roiSize, ippMskSize3x3, ipp16s, ipp16s, 1, &bufferSize);
-            func = (ippiFilterScharrMaskBorder)ippiFilterScharrVertMaskBorder_16s_C1R;
+            if (0 > ippiFilterScharrVertMaskBorderGetBufferSize(roiSize, ippMskSize3x3, ipp16s, ipp16s, 1, &bufferSize))
+                return false;
+            pBuffer = ippsMalloc_8u(bufferSize);
+            if (NULL == pBuffer)
+                return false;
+            sts = ippiFilterScharrVertMaskBorder_16s_C1R((Ipp16s *)src.data, (int)src.step, (Ipp16s *)dst.data, (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
         }
+        ippsFree(pBuffer);
+        return (0 <= sts);
     }
     else if ((CV_32F == stype) && (CV_32F == dtype))
     {
+        int bufferSize = 0; Ipp8u *pBuffer; IppStatus sts;
         if (horz)
         {
-            sts = ippiFilterScharrHorizMaskBorderGetBufferSize(roiSize, ippMskSize3x3, ipp32f, ipp32f, 1, &bufferSize);
-            func = (ippiFilterScharrMaskBorder)ippiFilterScharrHorizMaskBorder_32f_C1R;
+            if (0 > ippiFilterScharrHorizMaskBorderGetBufferSize(roiSize, ippMskSize3x3, ipp32f, ipp32f, 1, &bufferSize))
+                return false;
+            pBuffer = ippsMalloc_8u(bufferSize);
+            if (NULL == pBuffer)
+                return false;
+            sts = ippiFilterScharrHorizMaskBorder_32f_C1R((Ipp32f *)src.data, (int)src.step, (Ipp32f *)dst.data, (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
         }
         else
         {
-            sts = ippiFilterScharrVertMaskBorderGetBufferSize(roiSize, ippMskSize3x3, ipp32f, ipp32f, 1, &bufferSize);
-            func = (ippiFilterScharrMaskBorder)ippiFilterScharrVertMaskBorder_32f_C1R;
+            if (0 > ippiFilterScharrVertMaskBorderGetBufferSize(roiSize, ippMskSize3x3, ipp32f, ipp32f, 1, &bufferSize))
+                return false;
+            pBuffer = ippsMalloc_8u(bufferSize);
+            if (NULL == pBuffer)
+                return false;
+            sts = ippiFilterScharrVertMaskBorder_32f_C1R((Ipp32f *)src.data, (int)src.step, (Ipp32f *)dst.data, (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
         }
+        ippsFree(pBuffer);
+        if (sts < 0)
+            return false;
+
+        if (FLT_EPSILON < fabs(scale - 1.0))
+            ippiMulC_32f_C1R((Ipp32f *)dst.data, (int)dst.step, (Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, roiSize);
+        return true;
     }
-    if ((sts < 0) || (NULL == func))
-        return false;
-
-    Ipp8u *pBuffer = ippsMalloc_8u(bufferSize);
-    if (NULL == pBuffer)
-        return false;
-
-    _dst.create( _src.size(), dtype);
-    Mat dst = _dst.getMat();
-    sts = func(src.data, (int)src.step, dst.data, (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
-    ippsFree(pBuffer);
-    if (0 > sts)
-        return false;
-    if ((CV_32F == dtype) && (FLT_EPSILON < fabs(scale - 1.0)))
-        ippiMulC_32f_C1R((Ipp32f *)dst.data, (int)dst.step, (Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, roiSize);
-    return true;
+    return false;
 }
 #elif (IPP_VERSION_MAJOR >= 7)
 static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, double scale, double delta, int borderType)
@@ -394,11 +412,11 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
 }
 #endif
 
-static bool IPPDeriv(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, int ksize, double scale, double delta)
+static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, int ksize, double scale, double delta)
 {
     if (ksize != 3 && ksize != 5)
         return false;
-    if (fabs(delta) > 0.0001)
+    if (fabs(delta) > FLT_EPSILON)
         return false;
 
     int bufSize = 0;
@@ -564,7 +582,7 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     }
     else if (0 < ksize && cn == 1 && borderType == BORDER_REPLICATE)
     {
-        if (IPPDeriv(_src, _dst, ddepth, dx, dy, ksize, scale, delta))
+        if (IPPDerivSobel(_src, _dst, ddepth, dx, dy, ksize, scale, delta))
             return;
     }
 #endif
