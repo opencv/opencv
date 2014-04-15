@@ -3245,16 +3245,53 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 #define reduceSumC32f64f reduceC_<float, double,OpAdd<double> >
 #define reduceSumC64f64f reduceC_<double,double,OpAdd<double> >
 
+#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+#define REDUCE_OP(favor, optype, type1, type2) \
+static inline void reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& dstmat) \
+{ \
+    typedef Ipp##favor IppType; \
+    cv::Size size = srcmat.size(); \
+    if (srcmat.channels() == 1) \
+    { \
+        for (int y = 0; y < size.height; ++y) \
+        { \
+            if (ippi##optype##_##favor##_C1R(srcmat.ptr<IppType>(y), (int)srcmat.step, \
+                ippiSize(size.width, 1), dstmat.ptr<IppType>(y)) < 0) \
+            { \
+                cv::Mat dstroi = dstmat.rowRange(y, y + 1); \
+                cv::reduceC_ < type1, type2, cv::Op##optype < type2 > >(srcmat.rowRange(y, y + 1), dstroi); \
+            } \
+        } \
+        return; \
+    } \
+    cv::reduceC_ < type1, type2, cv::Op##optype < type2 > >(srcmat, dstmat); \
+}
+#endif
+
+#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+REDUCE_OP(8u, Max, uchar, uchar)
+REDUCE_OP(16u, Max, ushort, ushort)
+REDUCE_OP(16s, Max, short, short)
+REDUCE_OP(32f, Max, float, float)
+#else
 #define reduceMaxC8u  reduceC_<uchar, uchar, OpMax<uchar> >
 #define reduceMaxC16u reduceC_<ushort,ushort,OpMax<ushort> >
 #define reduceMaxC16s reduceC_<short, short, OpMax<short> >
 #define reduceMaxC32f reduceC_<float, float, OpMax<float> >
+#endif
 #define reduceMaxC64f reduceC_<double,double,OpMax<double> >
 
+#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+REDUCE_OP(8u, Min, uchar, uchar)
+REDUCE_OP(16u, Min, ushort, ushort)
+REDUCE_OP(16s, Min, short, short)
+REDUCE_OP(32f, Min, float, float)
+#else
 #define reduceMinC8u  reduceC_<uchar, uchar, OpMin<uchar> >
 #define reduceMinC16u reduceC_<ushort,ushort,OpMin<ushort> >
 #define reduceMinC16s reduceC_<short, short, OpMin<short> >
 #define reduceMinC32f reduceC_<float, float, OpMin<float> >
+#endif
 #define reduceMinC64f reduceC_<double,double,OpMin<double> >
 
 #ifdef HAVE_OPENCL
