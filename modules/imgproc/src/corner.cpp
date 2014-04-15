@@ -464,8 +464,20 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
 #if defined(HAVE_IPP) && (IPP_VERSION_MAJOR >= 8)
     typedef IppStatus (CV_STDCALL * ippiMinEigenValGetBufferSize)(IppiSize, int, int, int*);
     typedef IppStatus (CV_STDCALL * ippiMinEigenVal)(const void*, int, Ipp32f*, int, IppiSize, IppiKernelType, int, int, Ipp8u*);
-
-    if (borderType == BORDER_REPLICATE && !src.isSubmatrix())
+    IppiKernelType kerType;
+    int kerSize = ksize;
+    if (ksize < 0)
+    {
+        kerType = ippKernelScharr;
+        kerSize = 3;
+    } else
+    {
+        kerType = ippKernelSobel;
+    }
+    bool isolated = (borderType & BORDER_ISOLATED) != 0;
+    int borderTypeNI = borderType & ~BORDER_ISOLATED;
+    if ((borderTypeNI == BORDER_REPLICATE && (!src.isSubmatrix() || isolated)) &&
+        (kerSize == 3 || kerSize == 5) && (kerSize == 3 || blockSize == 5))
     {
         ippiMinEigenValGetBufferSize getBufferSizeFunc = 0;
         ippiMinEigenVal minEigenValFunc = 0;
@@ -475,7 +487,7 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
         {
             getBufferSizeFunc = (ippiMinEigenValGetBufferSize) ippiMinEigenValGetBufferSize_8u32f_C1R;
             minEigenValFunc = (ippiMinEigenVal) ippiMinEigenVal_8u32f_C1R;
-            norm_coef = 1.f / 255;
+            norm_coef = 1.f / 255.f;
         } else if (src.type() == CV_32FC1)
         {
             getBufferSizeFunc = (ippiMinEigenValGetBufferSize) ippiMinEigenValGetBufferSize_32f_C1R;
@@ -486,16 +498,14 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
         if (getBufferSizeFunc && minEigenValFunc)
         {
             int bufferSize;
-            IppiKernelType kerType = ksize > 0 ? ippKernelSobel : ippKernelScharr;
             IppiSize srcRoi = { src.cols, src.rows };
-            IppiSize dstRoi = { dst.cols, dst.rows };
             IppStatus ok = getBufferSizeFunc(srcRoi, ksize, blockSize, &bufferSize);
             if (ok >= 0)
             {
                 Ipp8u* buffer = ippsMalloc_8u(bufferSize);
-                ok = minEigenValFunc(src.data, (int) src.step, (Ipp32f*) dst.data, (int) dst.step, srcRoi, kerType, ksize, blockSize, buffer);
+                ok = minEigenValFunc(src.data, (int) src.step, (Ipp32f*) dst.data, (int) dst.step, srcRoi, kerType, kerSize, blockSize, buffer);
                 CV_SUPPRESS_DEPRECATED_START
-                if (ok >= 0) ippiMulC_32f_C1IR(norm_coef, (Ipp32f*) dst.data, (int) dst.step, dstRoi);
+                if (ok >= 0) ippiMulC_32f_C1IR(norm_coef, (Ipp32f*) dst.data, (int) dst.step, srcRoi);
                 CV_SUPPRESS_DEPRECATED_END
                 ippsFree(buffer);
                 if (ok >= 0)

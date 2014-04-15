@@ -35,7 +35,7 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_k_BorderType, cornerHarris,
 
     TEST_CYCLE() cornerHarris(src, dst, blockSize, apertureSize, k, borderType);
 
-    SANITY_CHECK(dst, 2e-5);
+    SANITY_CHECK(dst, 2e-5, ERROR_RELATIVE);
 }
 
 typedef std::tr1::tuple<string, int, int, BorderType> Img_BlockSize_ApertureSize_BorderType_t;
@@ -66,7 +66,7 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_BorderType, cornerEigenValsAndVecs,
     Mat l1;
     extractChannel(dst, l1, 0);
 
-    SANITY_CHECK(l1, 2e-5);
+    SANITY_CHECK(l1, 2e-5, ERROR_RELATIVE);
 }
 
 PERF_TEST_P(Img_BlockSize_ApertureSize_BorderType, cornerMinEigenVal,
@@ -91,5 +91,5 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_BorderType, cornerMinEigenVal,
 
     TEST_CYCLE() cornerMinEigenVal(src, dst, blockSize, apertureSize, borderType);
 
-    SANITY_CHECK(dst, 2e-5);
+    SANITY_CHECK(dst, 2e-5, ERROR_RELATIVE);
 }
