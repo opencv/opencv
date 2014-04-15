@@ -80,10 +80,10 @@ __kernel void bilateral(__global const uchar * src, int src_step, int src_offset
         {
             #ifdef INTEL_DEVICE
             float_t val = convert_float_t(loadpix(src + src_index + space_ofs[k]));
-			float diff = SUM(fabs(val - val0));
+            float diff = SUM(fabs(val - val0));
             #else
-			int_t val = convert_int_t(loadpix(src + src_index + space_ofs[k]));
-		    int diff = SUM(abs(val - val0));
+            int_t val = convert_int_t(loadpix(src + src_index + space_ofs[k]));
+            int diff = SUM(abs(val - val0));
             #endif
             float w = space_weight[k] * native_exp((float)(diff * diff * gauss_color_coeff));
             sum += convert_float_t(val) * (float_t)(w);
@@ -93,7 +93,7 @@ __kernel void bilateral(__global const uchar * src, int src_step, int src_offset
     }
 }
 
-#ifdef INTEL_DEVICE 
+#ifdef INTEL_DEVICE
 #if cn == 1
 //for single channgel x4 sized images.
 __kernel void bilateral_float4(__global const uchar * src, int src_step, int src_offset,
