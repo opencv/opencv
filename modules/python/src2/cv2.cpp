@@ -134,6 +134,7 @@ typedef Ptr<DescriptorMatcher> Ptr_DescriptorMatcher;
 typedef Ptr<BackgroundSubtractor> Ptr_BackgroundSubtractor;
 typedef Ptr<BackgroundSubtractorMOG> Ptr_BackgroundSubtractorMOG;
 typedef Ptr<BackgroundSubtractorMOG2> Ptr_BackgroundSubtractorMOG2;
+typedef Ptr<BackgroundSubtractorKNN> Ptr_BackgroundSubtractorKNN;
 typedef Ptr<BackgroundSubtractorGMG> Ptr_BackgroundSubtractorGMG;
 
 typedef Ptr<StereoMatcher> Ptr_StereoMatcher;
