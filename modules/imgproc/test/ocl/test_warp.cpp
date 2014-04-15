@@ -158,9 +158,10 @@ OCL_TEST_P(WarpPerspective, Mat)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //// resize
 
-PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool)
+PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool, int)
 {
     int type, interpolation;
+    int widthMultiple;
     double fx, fy;
     bool useRoi;
 
@@ -174,6 +175,7 @@ PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool)
         fy = GET_PARAM(2);
         interpolation = GET_PARAM(3);
         useRoi = GET_PARAM(4);
+        widthMultiple = GET_PARAM(5);
     }
 
     void random_roi()
@@ -181,6 +183,9 @@ PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool)
         CV_Assert(fx > 0 && fy > 0);
 
         Size srcRoiSize = randomSize(1, MAX_VALUE), dstRoiSize;
+        // Make sure the width is a multiple of the requested value, and no more
+        srcRoiSize.width &= ~((widthMultiple * 2) - 1);
+        srcRoiSize.width += widthMultiple;
         dstRoiSize.width = cvRound(srcRoiSize.width * fx);
         dstRoiSize.height = cvRound(srcRoiSize.height * fy);
 
@@ -334,14 +339,16 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Resize, Combine(
                             Values(0.5, 1.5, 2.0, 0.2),
                             Values(0.5, 1.5, 2.0, 0.2),
                             Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR),
-                            Bool()));
+                            Bool(),
+                            Values(1, 16)));
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpResizeArea, Resize, Combine(
                             Values((MatType)CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
                             Values(0.7, 0.4, 0.5),
                             Values(0.3, 0.6, 0.5),
                             Values((Interpolation)INTER_AREA),
-                            Bool()));
+                            Bool(),
+                            Values(1, 16)));
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_LINEAR, Combine(
                             Values(CV_8U, CV_16U, CV_32F),
