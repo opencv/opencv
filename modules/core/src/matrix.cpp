@@ -3556,7 +3556,29 @@ public:
     const _Tp* arr;
 };
 
+#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
 
+typedef IppStatus (CV_STDCALL *IppSortIndexFunc)(void *, int *, int);
+
+static IppSortIndexFunc getSortIndexFunc(int depth, bool sortDescending)
+{
+    if (!sortDescending)
+        return depth == CV_8U ? (IppSortIndexFunc)ippsSortIndexAscend_8u_I :
+            depth == CV_16U ? (IppSortIndexFunc)ippsSortIndexAscend_16u_I :
+            depth == CV_16S ? (IppSortIndexFunc)ippsSortIndexAscend_16s_I :
+            depth == CV_32S ? (IppSortIndexFunc)ippsSortIndexAscend_32s_I :
+            depth == CV_32F ? (IppSortIndexFunc)ippsSortIndexAscend_32f_I :
+            depth == CV_64F ? (IppSortIndexFunc)ippsSortIndexAscend_64f_I : 0;
+    else
+        return depth == CV_8U ? (IppSortIndexFunc)ippsSortIndexDescend_8u_I :
+            depth == CV_16U ? (IppSortIndexFunc)ippsSortIndexDescend_16u_I :
+            depth == CV_16S ? (IppSortIndexFunc)ippsSortIndexDescend_16s_I :
+            depth == CV_32S ? (IppSortIndexFunc)ippsSortIndexDescend_32s_I :
+            depth == CV_32F ? (IppSortIndexFunc)ippsSortIndexDescend_32f_I :
+            depth == CV_64F ? (IppSortIndexFunc)ippsSortIndexDescend_64f_I : 0;
+}
+
+#endif
 
 template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 {
@@ -3581,6 +3603,10 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
     bptr = (T*)buf;
     _iptr = (int*)ibuf;
 
+#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+    IppSortIndexFunc ippFunc = getSortIndexFunc(src.depth(), sortDescending);
+#endif
+
     for( i = 0; i < n; i++ )
     {
         T* ptr = bptr;
@@ -3598,10 +3624,17 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
         }
         for( j = 0; j < len; j++ )
             iptr[j] = j;
-        std::sort( iptr, iptr + len, LessThanIdx<T>(ptr) );
-        if( sortDescending )
-            for( j = 0; j < len/2; j++ )
-                std::swap(iptr[j], iptr[len-1-j]);
+
+#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+        if (sortRows || !ippFunc || ippFunc(ptr, iptr, len) < 0)
+#endif
+        {
+            std::sort( iptr, iptr + len, LessThanIdx<T>(ptr) );
+            if( sortDescending )
+                for( j = 0; j < len/2; j++ )
+                    std::swap(iptr[j], iptr[len-1-j]);
+        }
+
         if( !sortRows )
             for( j = 0; j < len; j++ )
                 ((int*)(dst.data + dst.step*j))[i] = iptr[j];
