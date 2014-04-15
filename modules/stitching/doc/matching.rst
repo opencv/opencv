@@ -40,9 +40,9 @@ detail::FeaturesFinder::operator()
 
 Finds features in the given image.
 
-.. ocv:function:: void detail::FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features)
+.. ocv:function:: void detail::FeaturesFinder::operator ()(InputArray image, ImageFeatures &features)
 
-.. ocv:function:: void detail::FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features, const std::vector<cv::Rect> &rois)
+.. ocv:function:: void detail::FeaturesFinder::operator ()(InputArray image, ImageFeatures &features, const std::vector<cv::Rect> &rois)
 
     :param image: Source image
 
@@ -64,7 +64,7 @@ detail::FeaturesFinder::find
 
 This method must implement features finding logic in order to make the wrappers `detail::FeaturesFinder::operator()`_ work.
 
-.. ocv:function:: void detail::FeaturesFinder::find(const Mat &image, ImageFeatures &features)
+.. ocv:function:: void detail::FeaturesFinder::find(InputArray image, ImageFeatures &features)
 
     :param image: Source image
 
@@ -171,7 +171,7 @@ Performs images matching.
 
     :param matches_info: Found matches
 
-.. ocv:function:: void detail::FeaturesMatcher::operator ()( const std::vector<ImageFeatures> & features, std::vector<MatchesInfo> & pairwise_matches, const Mat & mask=Mat() )
+.. ocv:function:: void detail::FeaturesMatcher::operator ()( const std::vector<ImageFeatures> & features, std::vector<MatchesInfo> & pairwise_matches, const UMat & mask=UMat() )
 
     :param features: Features of the source images
 

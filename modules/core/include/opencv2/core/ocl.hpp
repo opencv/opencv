@@ -598,6 +598,8 @@ CV_EXPORTS int predictOptimalVectorWidth(InputArray src1, InputArray src2 = noAr
                                          InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
                                          InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray());
 
+CV_EXPORTS void buildOptionsAddMatrixDescription(String& buildOptions, const String& name, InputArray _m);
+
 class CV_EXPORTS Image2D
 {
 public:

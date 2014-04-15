@@ -86,15 +86,15 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
 }
 
 
-Stitcher::Status Stitcher::estimateTransform(InputArray images)
+Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images)
 {
     return estimateTransform(images, std::vector<std::vector<Rect> >());
 }
 
 
-Stitcher::Status Stitcher::estimateTransform(InputArray images, const std::vector<std::vector<Rect> > &rois)
+Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois)
 {
-    images.getMatVector(imgs_);
+    images.getUMatVector(imgs_);
     rois_ = rois;
 
     Status status;
@@ -112,21 +112,21 @@ Stitcher::Status Stitcher::estimateTransform(InputArray images, const std::vecto
 
 Stitcher::Status Stitcher::composePanorama(OutputArray pano)
 {
-    return composePanorama(std::vector<Mat>(), pano);
+    return composePanorama(std::vector<UMat>(), pano);
 }
 
 
-Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
+Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArray pano)
 {
     LOGLN("Warping images (auxiliary)... ");
 
-    std::vector<Mat> imgs;
-    images.getMatVector(imgs);
+    std::vector<UMat> imgs;
+    images.getUMatVector(imgs);
     if (!imgs.empty())
     {
         CV_Assert(imgs.size() == imgs_.size());
 
-        Mat img;
+        UMat img;
         seam_est_imgs_.resize(imgs.size());
 
         for (size_t i = 0; i < imgs.size(); ++i)
@@ -136,8 +136,8 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
             seam_est_imgs_[i] = img.clone();
         }
 
-        std::vector<Mat> seam_est_imgs_subset;
-        std::vector<Mat> imgs_subset;
+        std::vector<UMat> seam_est_imgs_subset;
+        std::vector<UMat> imgs_subset;
 
         for (size_t i = 0; i < indices_.size(); ++i)
         {
@@ -149,17 +149,17 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
         imgs_ = imgs_subset;
     }
 
-    Mat &pano_ = pano.getMatRef();
+    UMat pano_;
 
 #if ENABLE_LOG
     int64 t = getTickCount();
 #endif
 
     std::vector<Point> corners(imgs_.size());
-    std::vector<Mat> masks_warped(imgs_.size());
-    std::vector<Mat> images_warped(imgs_.size());
+    std::vector<UMat> masks_warped(imgs_.size());
+    std::vector<UMat> images_warped(imgs_.size());
     std::vector<Size> sizes(imgs_.size());
-    std::vector<Mat> masks(imgs_.size());
+    std::vector<UMat> masks(imgs_.size());
 
     // Prepare image masks
     for (size_t i = 0; i < imgs_.size(); ++i)
@@ -179,13 +179,13 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
         K(1,1) *= (float)seam_work_aspect_;
         K(1,2) *= (float)seam_work_aspect_;
 
-        corners[i] = w->warp(seam_est_imgs_[i], K, cameras_[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
+        corners[i] = w->warp(seam_est_imgs_[i], K, cameras_[i].R, INTER_LINEAR, BORDER_CONSTANT, images_warped[i]);
         sizes[i] = images_warped[i].size();
 
         w->warp(masks[i], K, cameras_[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
     }
 
-    std::vector<Mat> images_warped_f(imgs_.size());
+    std::vector<UMat> images_warped_f(imgs_.size());
     for (size_t i = 0; i < imgs_.size(); ++i)
         images_warped[i].convertTo(images_warped_f[i], CV_32F);
 
@@ -206,8 +206,8 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
     t = getTickCount();
 #endif
 
-    Mat img_warped, img_warped_s;
-    Mat dilated_mask, seam_mask, mask, mask_warped;
+    UMat img_warped, img_warped_s;
+    UMat dilated_mask, seam_mask, mask, mask_warped;
 
     //double compose_seam_aspect = 1;
     double compose_work_aspect = 1;
@@ -216,10 +216,13 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
     double compose_scale = 1;
     bool is_compose_scale_set = false;
 
-    Mat full_img, img;
+    UMat full_img, img;
     for (size_t img_idx = 0; img_idx < imgs_.size(); ++img_idx)
     {
         LOGLN("Compositing image #" << indices_[img_idx] + 1);
+#if ENABLE_LOG
+        int64 compositing_t = getTickCount();
+#endif
 
         // Read image and resize it if necessary
         full_img = imgs_[img_idx];
@@ -261,25 +264,48 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
             }
         }
         if (std::abs(compose_scale - 1) > 1e-1)
+        {
+#if ENABLE_LOG
+            int64 resize_t = getTickCount();
+#endif
             resize(full_img, img, Size(), compose_scale, compose_scale);
+            LOGLN("  resize time: " << ((getTickCount() - resize_t) / getTickFrequency()) << " sec");
+        }
         else
             img = full_img;
         full_img.release();
         Size img_size = img.size();
 
+        LOGLN(" after resize time: " << ((getTickCount() - compositing_t) / getTickFrequency()) << " sec");
+
         Mat K;
         cameras_[img_idx].K().convertTo(K, CV_32F);
 
+#if ENABLE_LOG
+        int64 pt = getTickCount();
+#endif
         // Warp the current image
-        w->warp(img, K, cameras_[img_idx].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
+        w->warp(img, K, cameras_[img_idx].R, INTER_LINEAR, BORDER_CONSTANT, img_warped);
+        LOGLN(" warp the current image: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
+#if ENABLE_LOG
+        pt = getTickCount();
+#endif
 
         // Warp the current image mask
         mask.create(img_size, CV_8U);
         mask.setTo(Scalar::all(255));
         w->warp(mask, K, cameras_[img_idx].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
+        LOGLN(" warp the current image mask: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
+#if ENABLE_LOG
+        pt = getTickCount();
+#endif
 
         // Compensate exposure
         exposure_comp_->apply((int)img_idx, corners[img_idx], img_warped, mask_warped);
+        LOGLN(" compensate exposure: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
+#if ENABLE_LOG
+        pt = getTickCount();
+#endif
 
         img_warped.convertTo(img_warped_s, CV_16S);
         img_warped.release();
@@ -290,7 +316,12 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
         dilate(masks_warped[img_idx], dilated_mask, Mat());
         resize(dilated_mask, seam_mask, mask_warped.size());
 
-        mask_warped = seam_mask & mask_warped;
+        bitwise_and(seam_mask, mask_warped, mask_warped);
+
+        LOGLN(" other: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
+#if ENABLE_LOG
+        pt = getTickCount();
+#endif
 
         if (!is_blender_prepared)
         {
@@ -298,24 +329,36 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
             is_blender_prepared = true;
         }
 
+        LOGLN(" other2: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
+
+        LOGLN(" feed...");
+#if ENABLE_LOG
+        int64 feed_t = getTickCount();
+#endif
         // Blend the current image
         blender_->feed(img_warped_s, mask_warped, corners[img_idx]);
+        LOGLN(" feed time: " << ((getTickCount() - feed_t) / getTickFrequency()) << " sec");
+        LOGLN("Compositing ## time: " << ((getTickCount() - compositing_t) / getTickFrequency()) << " sec");
     }
 
-    Mat result, result_mask;
+#if ENABLE_LOG
+        int64 blend_t = getTickCount();
+#endif
+    UMat result, result_mask;
     blender_->blend(result, result_mask);
+    LOGLN("blend time: " << ((getTickCount() - blend_t) / getTickFrequency()) << " sec");
 
     LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     // Preliminary result is in CV_16SC3 format, but all values are in [0,255] range,
     // so convert it to avoid user confusing
-    result.convertTo(pano_, CV_8U);
+    result.convertTo(pano, CV_8U);
 
     return OK;
 }
 
 
-Stitcher::Status Stitcher::stitch(InputArray images, OutputArray pano)
+Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, OutputArray pano)
 {
     Status status = estimateTransform(images);
     if (status != OK)
@@ -324,7 +367,7 @@ Stitcher::Status Stitcher::stitch(InputArray images, OutputArray pano)
 }
 
 
-Stitcher::Status Stitcher::stitch(InputArray images, const std::vector<std::vector<Rect> > &rois, OutputArray pano)
+Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois, OutputArray pano)
 {
     Status status = estimateTransform(images, rois);
     if (status != OK)
@@ -346,7 +389,7 @@ Stitcher::Status Stitcher::matchImages()
     seam_scale_ = 1;
     bool is_work_scale_set = false;
     bool is_seam_scale_set = false;
-    Mat full_img, img;
+    UMat full_img, img;
     features_.resize(imgs_.size());
     seam_est_imgs_.resize(imgs_.size());
     full_img_sizes_.resize(imgs_.size());
@@ -420,8 +463,8 @@ Stitcher::Status Stitcher::matchImages()
 
     // Leave only images we are sure are from the same panorama
     indices_ = detail::leaveBiggestComponent(features_, pairwise_matches_, (float)conf_thresh_);
-    std::vector<Mat> seam_est_imgs_subset;
-    std::vector<Mat> imgs_subset;
+    std::vector<UMat> seam_est_imgs_subset;
+    std::vector<UMat> imgs_subset;
     std::vector<Size> full_img_sizes_subset;
     for (size_t i = 0; i < indices_.size(); ++i)
     {
@@ -454,7 +497,7 @@ Stitcher::Status Stitcher::estimateCameraParams()
         Mat R;
         cameras_[i].R.convertTo(R, CV_32F);
         cameras_[i].R = R;
-        LOGLN("Initial intrinsic parameters #" << indices_[i] + 1 << ":\n " << cameras_[i].K());
+        //LOGLN("Initial intrinsic parameters #" << indices_[i] + 1 << ":\n " << cameras_[i].K());
     }
 
     bundle_adjuster_->setConfThresh(conf_thresh_);
@@ -465,7 +508,7 @@ Stitcher::Status Stitcher::estimateCameraParams()
     std::vector<double> focals;
     for (size_t i = 0; i < cameras_.size(); ++i)
     {
-        LOGLN("Camera #" << indices_[i] + 1 << ":\n" << cameras_[i].K());
+        //LOGLN("Camera #" << indices_[i] + 1 << ":\n" << cameras_[i].K());
         focals.push_back(cameras_[i].focal);
     }
 
