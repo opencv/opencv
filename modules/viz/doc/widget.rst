@@ -898,6 +898,10 @@ This 3D Widget defines a point cloud. ::
         WCloud(InputArray cloud, InputArray colors);
         //! All points in cloud have the same color
         WCloud(InputArray cloud, const Color &color = Color::white());
+        //! Each point in cloud is mapped to a color in colors, normals are used for shading
+        WCloud(InputArray cloud, InputArray colors, InputArray normals);
+        //! All points in cloud have the same color, normals are used for shading
+        WCloud(InputArray cloud, const Color &color, InputArray normals);
     };
 
 viz::WCloud::WCloud
@@ -915,6 +919,22 @@ Constructs a WCloud.
 
     :param cloud: Set of points which can be of type: ``CV_32FC3``, ``CV_32FC4``, ``CV_64FC3``, ``CV_64FC4``.
     :param color: A single :ocv:class:`Color` for the whole cloud.
+
+    Points in the cloud belong to mask when they are set to (NaN, NaN, NaN).
+
+.. ocv:function:: WCloud(InputArray cloud, InputArray colors, InputArray normals)
+
+    :param cloud: Set of points which can be of type: ``CV_32FC3``, ``CV_32FC4``, ``CV_64FC3``, ``CV_64FC4``.
+    :param colors: Set of colors. It has to be of the same size with cloud.
+    :param normals: Normals for each point in cloud. Size and type should match with the cloud parameter.
+
+    Points in the cloud belong to mask when they are set to (NaN, NaN, NaN).
+
+.. ocv:function:: WCloud(InputArray cloud, const Color &color, InputArray normals)
+
+    :param cloud: Set of points which can be of type: ``CV_32FC3``, ``CV_32FC4``, ``CV_64FC3``, ``CV_64FC4``.
+    :param color: A single :ocv:class:`Color` for the whole cloud.
+    :param normals: Normals for each point in cloud. Size and type should match with the cloud parameter.
 
     Points in the cloud belong to mask when they are set to (NaN, NaN, NaN).
 
