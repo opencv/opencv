@@ -3468,8 +3468,10 @@ namespace cv
 {
 
 #if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+#define USE_IPP_SORT
 
 typedef IppStatus (CV_STDCALL *IppSortFunc)(void *, int);
+typedef IppSortFunc IppFlipFunc;
 
 static IppSortFunc getSortFunc(int depth, bool sortDescending)
 {
@@ -3488,6 +3490,18 @@ static IppSortFunc getSortFunc(int depth, bool sortDescending)
             depth == CV_32F ? (IppSortFunc)ippsSortDescend_32f_I :
             depth == CV_64F ? (IppSortFunc)ippsSortDescend_64f_I : 0;
 }
+
+static IppFlipFunc getFlipFunc(int depth)
+{
+    CV_SUPPRESS_DEPRECATED_START
+    return
+            depth == CV_8U || depth == CV_8S ? (IppFlipFunc)ippsFlip_8u_I :
+            depth == CV_16U || depth == CV_16S ? (IppFlipFunc)ippsFlip_16u_I :
+            depth == CV_32S || depth == CV_32F ? (IppFlipFunc)ippsFlip_32f_I :
+            depth == CV_64F ? (IppFlipFunc)ippsFlip_64f_I : 0;
+    CV_SUPPRESS_DEPRECATED_END
+}
+
 
 #endif
 
@@ -3509,8 +3523,10 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
     }
     bptr = (T*)buf;
 
-#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
-    IppSortFunc ippFunc = getSortFunc(src.depth(), sortDescending);
+#ifdef USE_IPP_SORT
+    int depth = src.depth();
+    IppSortFunc ippSortFunc = getSortFunc(depth, sortDescending);
+    IppFlipFunc ippFlipFunc = getFlipFunc(depth);
 #endif
 
     for( i = 0; i < n; i++ )
@@ -3532,14 +3548,27 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
                 ptr[j] = ((const T*)(src.data + src.step*j))[i];
         }
 
-#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
-        if (!ippFunc || ippFunc(ptr, len) < 0)
+#ifdef USE_IPP_SORT
+        if (!ippSortFunc || ippSortFunc(ptr, len) < 0)
 #endif
         {
+#ifdef USE_IPP_SORT
+            setIppErrorStatus();
+#endif
             std::sort( ptr, ptr + len );
             if( sortDescending )
-                for( j = 0; j < len/2; j++ )
-                    std::swap(ptr[j], ptr[len-1-j]);
+            {
+#ifdef USE_IPP_SORT
+                if (!ippFlipFunc || ippFlipFunc(ptr, len) < 0)
+#endif
+                {
+#ifdef USE_IPP_SORT
+                    setIppErrorStatus();
+#endif
+                    for( j = 0; j < len/2; j++ )
+                        std::swap(ptr[j], ptr[len-1-j]);
+                }
+            }
         }
 
         if( !sortRows )
@@ -3556,7 +3585,7 @@ public:
     const _Tp* arr;
 };
 
-#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+#ifdef USE_IPP_SORT
 
 typedef IppStatus (CV_STDCALL *IppSortIndexFunc)(void *, int *, int);
 
@@ -3603,8 +3632,10 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
     bptr = (T*)buf;
     _iptr = (int*)ibuf;
 
-#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
-    IppSortIndexFunc ippFunc = getSortIndexFunc(src.depth(), sortDescending);
+#ifdef USE_IPP_SORT
+    int depth = src.depth();
+    IppSortIndexFunc ippFunc = getSortIndexFunc(depth, sortDescending);
+    IppFlipFunc ippFlipFunc = getFlipFunc(depth);
 #endif
 
     for( i = 0; i < n; i++ )
@@ -3625,14 +3656,27 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
         for( j = 0; j < len; j++ )
             iptr[j] = j;
 
-#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+#ifdef USE_IPP_SORT
         if (sortRows || !ippFunc || ippFunc(ptr, iptr, len) < 0)
 #endif
         {
+#ifdef USE_IPP_SORT
+            setIppErrorStatus();
+#endif
             std::sort( iptr, iptr + len, LessThanIdx<T>(ptr) );
             if( sortDescending )
-                for( j = 0; j < len/2; j++ )
-                    std::swap(iptr[j], iptr[len-1-j]);
+            {
+#ifdef USE_IPP_SORT
+                if (!ippFlipFunc || ippFlipFunc(iptr, len) < 0)
+#endif
+                {
+#ifdef USE_IPP_SORT
+                    setIppErrorStatus();
+#endif
+                    for( j = 0; j < len/2; j++ )
+                        std::swap(iptr[j], iptr[len-1-j]);
+                }
+            }
         }
 
         if( !sortRows )
