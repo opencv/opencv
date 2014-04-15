@@ -306,11 +306,11 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
 #elif (IPP_VERSION_MAJOR >= 7)
 static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, double scale, double delta, int borderType)
 {
-    if (BORDER_REPLICATE != IppiBorderType)
+    if (BORDER_REPLICATE != borderType)
         return false;
     if ((0 > dx) || (0 > dy) || (1 != dx + dy))
         return false;
-    if (fabs(delta) > 0.0001)
+    if (fabs(delta) > FLT_EPSILON)
         return false;
 
     Mat src = _src.getMat(), dst = _dst.getMat();
