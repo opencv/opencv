@@ -193,27 +193,15 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
 {
     if ((0 > dx) || (0 > dy) || (1 != dx + dy))
         return false;
-    if (fabs(delta) > 0.0001)
+    if (fabs(delta) > FLT_EPSILON)
         return false;
 
-    IppiBorderType ippiBorderType;
-    switch (borderType & (~BORDER_ISOLATED))
-    {
-    case BORDER_REPLICATE:
-        ippiBorderType = (IppiBorderType)ippBorderRepl;
-        break;
-    case BORDER_REFLECT:
-        ippiBorderType = (IppiBorderType)ippBorderMirrorR;
-        break;
-    case BORDER_WRAP:
-        ippiBorderType = (IppiBorderType)ippBorderWrap;
-        break;
-    case BORDER_REFLECT_101:
-        ippiBorderType = (IppiBorderType)ippBorderMirror;
-        break;
-    default:
+    IppiBorderType ippiBorderType = ippiGetBorderType(borderType & (~BORDER_ISOLATED));
+    if ((ippBorderRepl    != ippiBorderType) &&
+        (ippBorderMirrorR != ippiBorderType) &&
+        (ippBorderWrap    != ippiBorderType) &&
+        (ippBorderMirror  != ippiBorderType))
         return false;
-    };
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
@@ -293,7 +281,7 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
     ippsFree(pBuffer);
     if (0 > sts)
         return false;
-    if ((CV_32F == dtype) && (0.0001 < fabs(scale - 1.0)))
+    if ((CV_32F == dtype) && (FLT_EPSILON < fabs(scale - 1.0)))
         ippiMulC_32f_C1R((Ipp32f *)dst.data, (int)dst.step, (Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, roiSize);
     return true;
 }
