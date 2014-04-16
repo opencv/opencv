@@ -501,13 +501,43 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     Size dsz = _dsz.area() == 0 ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
+    int depth = src.depth();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if(borderType == BORDER_DEFAULT && tegra::pyrDown(src, dst))
         return;
 #endif
 
-    int depth = src.depth();
+#if (defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801)
+    typedef IppStatus (CV_STDCALL * ippiPyrDown)(const void* pSrc, int srcStep, void* pDst, int dstStep, IppiSize srcRoi, Ipp8u* buffer);
+    int type = src.type();
+    CV_SUPPRESS_DEPRECATED_START
+    ippiPyrDown pyrDownFunc = type == CV_8UC1 ? (ippiPyrDown) ippiPyrDown_Gauss5x5_8u_C1R :
+                              type == CV_8UC3 ? (ippiPyrDown) ippiPyrDown_Gauss5x5_8u_C3R :
+                              type == CV_32FC1 ? (ippiPyrDown) ippiPyrDown_Gauss5x5_32f_C1R :
+                              type == CV_32FC3 ? (ippiPyrDown) ippiPyrDown_Gauss5x5_32f_C3R : 0;
+    CV_SUPPRESS_DEPRECATED_END
+
+    if (pyrDownFunc)
+    {
+        int bufferSize;
+        IppiSize srcRoi = { src.cols, src.rows };
+        IppDataType dataType = depth == CV_8U ? ipp8u : ipp32f;
+        CV_SUPPRESS_DEPRECATED_START
+        IppStatus ok = ippiPyrDownGetBufSize_Gauss5x5(srcRoi.width, dataType, src.channels(), &bufferSize);
+        CV_SUPPRESS_DEPRECATED_END
+        if (ok >= 0)
+        {
+            Ipp8u* buffer = ippsMalloc_8u(bufferSize);
+            ok = pyrDownFunc(src.data, (int) src.step, dst.data, (int) dst.step, srcRoi, buffer);
+            ippsFree(buffer);
+
+            if (ok >= 0)
+                return;
+        }
+    }
+#endif
+
     PyrFunc func = 0;
     if( depth == CV_8U )
         func = pyrDown_<FixPtCast<uchar, 8>, PyrDownVec_32s8u>;
