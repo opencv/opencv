@@ -2934,7 +2934,6 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, const
             float a1=((int)meaningful_clusters.at(i).size()*sumxy-sumx*sumy) /
                ((int)meaningful_clusters.at(i).size()*sumx2-sumx*sumx);
 
-            vector<float> data;
             if (a1 != a1)
                 data_arrays.at(i).push_back(1.f);
             else
