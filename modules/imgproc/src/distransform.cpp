@@ -577,7 +577,7 @@ trueDistTrans( const Mat& src, Mat& dst )
     for( ; i <= m*3; i++ )
         sat_tab[i] = i - shift;
 
-    cv::parallel_for_(cv::Range(0, n), cv::DTColumnInvoker(&src, &dst, sat_tab, sqr_tab)); //dst.total()/(double)(1<<16)
+    cv::parallel_for_(cv::Range(0, n), cv::DTColumnInvoker(&src, &dst, sat_tab, sqr_tab));
 
     // stage 2: compute modified distance transform for each row
     float* inv_tab = sqr_tab + n;
@@ -732,21 +732,26 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
 
     if( maskSize == CV_DIST_MASK_PRECISE )
     {
-        //ipp version is slower than the parallel in OpenCV
-        /*#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-        IppStatus status;
-        IppiSize roi = { src.cols, src.rows };
-        Ipp8u *pBuffer;
-        int bufSize=0;
 
-        status = ippiTrueDistanceTransformGetBufferSize_8u32f_C1R(roi, &bufSize);
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+        if ((currentParallelFramework()==NULL) || (src.total()<(int)(1<<16)))
+        {
+            IppStatus status;
+            IppiSize roi = { src.cols, src.rows };
+            Ipp8u *pBuffer;
+            int bufSize=0;
 
-        pBuffer = ippsMalloc_8u( bufSize );
-        status = ippiTrueDistanceTransform_8u32f_C1R(src.ptr<uchar>(),(int)src.step, dst.ptr<float>(), (int)dst.step, roi, pBuffer);
-        ippsFree( pBuffer );
-        return;
-
-        #endif*/
+            status = ippiTrueDistanceTransformGetBufferSize_8u32f_C1R(roi, &bufSize);
+            if (status>=0)
+            {
+                pBuffer = ippsMalloc_8u( bufSize );
+                status = ippiTrueDistanceTransform_8u32f_C1R(src.ptr<uchar>(),(int)src.step, dst.ptr<float>(), (int)dst.step, roi, pBuffer);
+                ippsFree( pBuffer );
+                if (status>=0)
+                    return;
+            }
+        }
+#endif
 
         trueDistTrans( src, dst );
         return;
