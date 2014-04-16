@@ -882,7 +882,6 @@ OCL_FUNC_P(cl_mem, clCreateImage2D,
     cl_int *errcode_ret),
     (context, flags, image_format, image_width, image_height, image_row_pitch, host_ptr, errcode_ret))
 
-/*
 OCL_FUNC(cl_int, clGetSupportedImageFormats,
  (cl_context context,
  cl_mem_flags flags,
@@ -892,6 +891,7 @@ OCL_FUNC(cl_int, clGetSupportedImageFormats,
  cl_uint * num_image_formats),
  (context, flags, image_type, num_entries, image_formats, num_image_formats))
 
+/*
 OCL_FUNC(cl_int, clGetMemObjectInfo,
  (cl_mem memobj,
  cl_mem_info param_name,
@@ -1912,6 +1912,38 @@ bool Device::hostUnifiedMemory() const
 bool Device::imageSupport() const
 { return p ? p->getBoolProp(CL_DEVICE_IMAGE_SUPPORT) : false; }
 
+bool Device::imageFromBufferSupport() const
+{
+    bool ret = false;
+    if (p)
+    {
+        size_t pos = p->getStrProp(CL_DEVICE_EXTENSIONS).find("cl_khr_image2d_from_buffer");
+        if (pos != String::npos)
+        {
+            ret = true;
+        }
+    }
+    return ret;
+}
+
+uint Device::imagePitchAlignment() const
+{
+#ifdef CL_DEVICE_IMAGE_PITCH_ALIGNMENT
+    return p ? p->getProp<cl_uint, uint>(CL_DEVICE_IMAGE_PITCH_ALIGNMENT) : 0;
+#else
+    return 0;
+#endif
+}
+
+uint Device::imageBaseAddressAlignment() const
+{
+#ifdef CL_DEVICE_IMAGE_BASE_ADDRESS_ALIGNMENT
+    return p ? p->getProp<cl_uint, uint>(CL_DEVICE_IMAGE_BASE_ADDRESS_ALIGNMENT) : 0;
+#else
+    return 0;
+#endif
+}
+
 size_t Device::image2DMaxWidth() const
 { return p ? p->getProp<size_t, size_t>(CL_DEVICE_IMAGE2D_MAX_WIDTH) : 0; }
 
@@ -2705,9 +2737,15 @@ struct Kernel::Impl
             haveTempDstUMats = true;
     }
 
+    void addImage(const Image2D& image)
+    {
+        images.push_back(image);
+    }
+
     void finit()
     {
         cleanupUMats();
+        images.clear();
         if(e) { clReleaseEvent(e); e = 0; }
         release();
     }
@@ -2725,6 +2763,7 @@ struct Kernel::Impl
     enum { MAX_ARRS = 16 };
     UMatData* u[MAX_ARRS];
     int nu;
+    std::list<Image2D> images;
     bool haveTempDstUMats;
 };
 
@@ -2838,6 +2877,7 @@ int Kernel::set(int i, const void* value, size_t sz)
 
 int Kernel::set(int i, const Image2D& image2D)
 {
+    p->addImage(image2D);
     cl_mem h = (cl_mem)image2D.ptr();
     return set(i, &h, sizeof(h));
 }
@@ -3798,11 +3838,16 @@ public:
 
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
-        if( u->refcount == 0 )
+        // FIXIT Workaround for UMat synchronization issue
+        // if( u->refcount == 0 )
         {
             if( !u->copyOnMap() )
             {
-                CV_Assert(u->data == 0);
+                if (u->data) // FIXIT Workaround for UMat synchronization issue
+                {
+                    //CV_Assert(u->hostCopyObsolete() == false);
+                    return;
+                }
                 // because there can be other map requests for the same UMat with different access flags,
                 // we use the universal (read-write) access mode.
                 cl_int retval = 0;
@@ -3843,6 +3888,10 @@ public:
         CV_Assert(u->handle != 0);
 
         UMatDataAutoLock autolock(u);
+
+        // FIXIT Workaround for UMat synchronization issue
+        if(u->refcount > 0)
+            return;
 
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
         cl_int retval = 0;
@@ -4404,15 +4453,32 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
 
 #undef PROCESS_SRC
 
-/////////////////////////////////////////// Image2D ////////////////////////////////////////////////////
+
+// TODO Make this as a method of OpenCL "BuildOptions" class
+void buildOptionsAddMatrixDescription(String& buildOptions, const String& name, InputArray _m)
+{
+    if (!buildOptions.empty())
+        buildOptions += " ";
+    int type = _m.type(), depth = CV_MAT_DEPTH(type);
+    buildOptions += format(
+            "-D %s_T=%s -D %s_T1=%s -D %s_CN=%d -D %s_TSIZE=%d -D %s_T1SIZE=%d -D %s_DEPTH=%d",
+            name.c_str(), ocl::typeToStr(type),
+            name.c_str(), ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+            name.c_str(), (int)CV_MAT_CN(type),
+            name.c_str(), (int)CV_ELEM_SIZE(type),
+            name.c_str(), (int)CV_ELEM_SIZE1(type),
+            name.c_str(), (int)depth
+            );
+}
+
 
 struct Image2D::Impl
 {
-    Impl(const UMat &src)
+    Impl(const UMat &src, bool norm, bool alias)
     {
         handle = 0;
         refcount = 1;
-        init(src);
+        init(src, norm, alias);
     }
 
     ~Impl()
@@ -4421,24 +4487,55 @@ struct Image2D::Impl
             clReleaseMemObject(handle);
     }
 
-    void init(const UMat &src)
+    static cl_image_format getImageFormat(int depth, int cn, bool norm)
+    {
+        cl_image_format format;
+        static const int channelTypes[] = { CL_UNSIGNED_INT8, CL_SIGNED_INT8, CL_UNSIGNED_INT16,
+                                       CL_SIGNED_INT16, CL_SIGNED_INT32, CL_FLOAT, -1, -1 };
+        static const int channelTypesNorm[] = { CL_UNORM_INT8, CL_SNORM_INT8, CL_UNORM_INT16,
+                                                CL_SNORM_INT16, -1, -1, -1, -1 };
+        static const int channelOrders[] = { -1, CL_R, CL_RG, -1, CL_RGBA };
+
+        int channelType = norm ? channelTypesNorm[depth] : channelTypes[depth];
+        int channelOrder = channelOrders[cn];
+        format.image_channel_data_type = (cl_channel_type)channelType;
+        format.image_channel_order = (cl_channel_order)channelOrder;
+        return format;
+    }
+
+    static bool isFormatSupported(cl_image_format format)
+    {
+        cl_context context = (cl_context)Context::getDefault().ptr();
+        // Figure out how many formats are supported by this context.
+        cl_uint numFormats = 0;
+        cl_int err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
+                                                CL_MEM_OBJECT_IMAGE2D, numFormats,
+                                                NULL, &numFormats);
+        AutoBuffer<cl_image_format> formats(numFormats);
+        err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
+                                         CL_MEM_OBJECT_IMAGE2D, numFormats,
+                                         formats, NULL);
+        CV_OclDbgAssert(err == CL_SUCCESS);
+        for (cl_uint i = 0; i < numFormats; ++i)
+        {
+            if (!memcmp(&formats[i], &format, sizeof(format)))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void init(const UMat &src, bool norm, bool alias)
     {
         CV_Assert(ocl::Device::getDefault().imageSupport());
 
-        cl_image_format format;
         int err, depth = src.depth(), cn = src.channels();
         CV_Assert(cn <= 4);
+        cl_image_format format = getImageFormat(depth, cn, norm);
 
-        static const int channelTypes[] = { CL_UNSIGNED_INT8, CL_SIGNED_INT8, CL_UNSIGNED_INT16,
-                                       CL_SIGNED_INT16, CL_SIGNED_INT32, CL_FLOAT, -1, -1 };
-        static const int channelOrders[] = { -1, CL_R, CL_RG, -1, CL_RGBA };
-
-        int channelType = channelTypes[depth], channelOrder = channelOrders[cn];
-        if (channelType < 0 || channelOrder < 0)
+        if (!isFormatSupported(format))
             CV_Error(Error::OpenCLApiCallError, "Image format is not supported");
-
-        format.image_channel_data_type = (cl_channel_type)channelType;
-        format.image_channel_order = (cl_channel_order)channelOrder;
 
         cl_context context = (cl_context)Context::getDefault().ptr();
         cl_command_queue queue = (cl_command_queue)Queue::getDefault().ptr();
@@ -4448,6 +4545,7 @@ struct Image2D::Impl
         // run on OpenCL 1.1 platform if library binaries are compiled with OpenCL 1.2 support
         const Device & d = ocl::Device::getDefault();
         int minor = d.deviceVersionMinor(), major = d.deviceVersionMajor();
+        CV_Assert(!alias || canCreateAlias(src));
         if (1 < major || (1 == major && 2 <= minor))
         {
             cl_image_desc desc;
@@ -4456,9 +4554,9 @@ struct Image2D::Impl
             desc.image_height     = src.rows;
             desc.image_depth      = 0;
             desc.image_array_size = 1;
-            desc.image_row_pitch  = 0;
+            desc.image_row_pitch  = alias ? src.step[0] : 0;
             desc.image_slice_pitch = 0;
-            desc.buffer           = NULL;
+            desc.buffer           = alias ? (cl_mem)src.handle(ACCESS_RW) : 0;
             desc.num_mip_levels   = 0;
             desc.num_samples      = 0;
             handle = clCreateImage(context, CL_MEM_READ_WRITE, &format, &desc, NULL, &err);
@@ -4466,7 +4564,10 @@ struct Image2D::Impl
         else
 #endif
         {
+            CV_SUPPRESS_DEPRECATED_START
+            CV_Assert(!alias);  // This is an OpenCL 1.2 extension
             handle = clCreateImage2D(context, CL_MEM_READ_WRITE, &format, src.cols, src.rows, 0, NULL, &err);
+            CV_SUPPRESS_DEPRECATED_END
         }
         CV_OclDbgAssert(err == CL_SUCCESS);
 
@@ -4474,7 +4575,7 @@ struct Image2D::Impl
         size_t region[] = { src.cols, src.rows, 1 };
 
         cl_mem devData;
-        if (!src.isContinuous())
+        if (!alias && !src.isContinuous())
         {
             devData = clCreateBuffer(context, CL_MEM_READ_ONLY, src.cols * src.rows * src.elemSize(), NULL, &err);
             CV_OclDbgAssert(err == CL_SUCCESS);
@@ -4485,14 +4586,19 @@ struct Image2D::Impl
             CV_OclDbgAssert(clFlush(queue) == CL_SUCCESS);
         }
         else
+        {
             devData = (cl_mem)src.handle(ACCESS_READ);
+        }
         CV_Assert(devData != NULL);
 
-        CV_OclDbgAssert(clEnqueueCopyBufferToImage(queue, devData, handle, 0, origin, region, 0, NULL, 0) == CL_SUCCESS);
-        if (!src.isContinuous())
+        if (!alias)
         {
-            CV_OclDbgAssert(clFlush(queue) == CL_SUCCESS);
-            CV_OclDbgAssert(clReleaseMemObject(devData) == CL_SUCCESS);
+            CV_OclDbgAssert(clEnqueueCopyBufferToImage(queue, devData, handle, 0, origin, region, 0, NULL, 0) == CL_SUCCESS);
+            if (!src.isContinuous())
+            {
+                CV_OclDbgAssert(clFlush(queue) == CL_SUCCESS);
+                CV_OclDbgAssert(clReleaseMemObject(devData) == CL_SUCCESS);
+            }
         }
     }
 
@@ -4506,9 +4612,37 @@ Image2D::Image2D()
     p = NULL;
 }
 
-Image2D::Image2D(const UMat &src)
+Image2D::Image2D(const UMat &src, bool norm, bool alias)
 {
-    p = new Impl(src);
+    p = new Impl(src, norm, alias);
+}
+
+bool Image2D::canCreateAlias(const UMat &m)
+{
+    bool ret = false;
+    const Device & d = ocl::Device::getDefault();
+    if (d.imageFromBufferSupport())
+    {
+        // This is the required pitch alignment in pixels
+        uint pitchAlign = d.imagePitchAlignment();
+        if (pitchAlign && !(m.step % (pitchAlign * m.elemSize())))
+        {
+            // We don't currently handle the case where the buffer was created
+            // with CL_MEM_USE_HOST_PTR
+            if (!m.u->tempUMat())
+            {
+                ret = true;
+            }
+        }
+    }
+    return ret;
+}
+
+bool Image2D::isFormatSupported(int depth, int cn, bool norm)
+{
+    cl_image_format format = Impl::getImageFormat(depth, cn, norm);
+
+    return Impl::isFormatSupported(format);
 }
 
 Image2D::Image2D(const Image2D & i)

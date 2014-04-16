@@ -48,6 +48,9 @@
 #define GRIDSIZE    3
 #define LSx 8
 #define LSy 8
+// defeine local memory sizes
+#define LM_W (LSx*GRIDSIZE+2)
+#define LM_H (LSy*GRIDSIZE+2)
 #define BUFFER  (LSx*LSy)
 #define BUFFER2 BUFFER>>1
 #ifndef WAVE_SIZE
@@ -224,8 +227,9 @@ inline void reduce1(float val1, __local volatile float* smem1, int tid)
 __constant sampler_t sampler    = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;
 
 // macro to get pixel value from local memory
-#define VAL(_y,_x,_yy,_xx)    (IPatchLocal[yid+((_y)*LSy)+1+(_yy)][xid+((_x)*LSx)+1+(_xx)])
-inline void SetPatch(local float IPatchLocal[LSy*GRIDSIZE+2][LSx*GRIDSIZE+2], int TileY, int TileX,
+
+#define VAL(_y,_x,_yy,_xx)    (IPatchLocal[(yid+((_y)*LSy)+1+(_yy))*LM_W+(xid+((_x)*LSx)+1+(_xx))])
+inline void SetPatch(local float* IPatchLocal, int TileY, int TileX,
               float* Pch, float* Dx, float* Dy,
               float* A11, float* A12, float* A22, float w)
 {
@@ -266,8 +270,8 @@ inline void GetError(image2d_t J, const float x, const float y, const float* Pch
 
 
 //macro to read pixel value into local memory.
-#define READI(_y,_x)    IPatchLocal[yid+((_y)*LSy)][xid+((_x)*LSx)] = read_imagef(I, sampler, (float2)(Point.x + xid+(_x)*LSx + 0.5f-1, Point.y + yid+(_y)*LSy+ 0.5f-1)).x;
-void ReadPatchIToLocalMem(image2d_t I, float2 Point, local float IPatchLocal[LSy*GRIDSIZE+2][LSx*GRIDSIZE+2])
+#define READI(_y,_x)    IPatchLocal[(yid+((_y)*LSy))*LM_W+(xid+((_x)*LSx))] = read_imagef(I, sampler, (float2)(Point.x + xid+(_x)*LSx + 0.5f-1, Point.y + yid+(_y)*LSy+ 0.5f-1)).x;
+void ReadPatchIToLocalMem(image2d_t I, float2 Point, local float* IPatchLocal)
 {
     unsigned int xid=get_local_id(0);
     unsigned int yid=get_local_id(1);
@@ -341,7 +345,7 @@ __kernel void lkSparse(image2d_t I, image2d_t J,
     float dIdy_patch[GRIDSIZE][GRIDSIZE];
 
     // local memory to read image with border to calc sobels
-    local float IPatchLocal[LSy*GRIDSIZE+2][LSx*GRIDSIZE+2];
+    local float IPatchLocal[LM_W*LM_H];
     ReadPatchIToLocalMem(I,prevPt,IPatchLocal);
 
     {

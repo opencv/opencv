@@ -50,10 +50,28 @@
 
 cv::viz::WCloud::WCloud(InputArray cloud, InputArray colors)
 {
+    WCloud cloud_widget(cloud, colors, cv::noArray());
+    *this = cloud_widget;
+}
+
+cv::viz::WCloud::WCloud(InputArray cloud, const Color &color)
+{
+    WCloud cloud_widget(cloud, Mat(cloud.size(), CV_8UC3, color));
+    *this = cloud_widget;
+}
+
+cv::viz::WCloud::WCloud(InputArray cloud, const Color &color, InputArray normals)
+{
+    WCloud cloud_widget(cloud, Mat(cloud.size(), CV_8UC3, color), normals);
+    *this = cloud_widget;
+}
+
+cv::viz::WCloud::WCloud(cv::InputArray cloud, cv::InputArray colors, cv::InputArray normals)
+{
     CV_Assert(!cloud.empty() && !colors.empty());
 
     vtkSmartPointer<vtkCloudMatSource> cloud_source = vtkSmartPointer<vtkCloudMatSource>::New();
-    cloud_source->SetColorCloud(cloud, colors);
+    cloud_source->SetColorCloudNormals(cloud, colors, normals);
     cloud_source->Update();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
@@ -69,12 +87,7 @@ cv::viz::WCloud::WCloud(InputArray cloud, InputArray colors)
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-}
 
-cv::viz::WCloud::WCloud(InputArray cloud, const Color &color)
-{
-    WCloud cloud_widget(cloud, Mat(cloud.size(), CV_8UC3, color));
-    *this = cloud_widget;
 }
 
 

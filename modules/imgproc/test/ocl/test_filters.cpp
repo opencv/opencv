@@ -219,7 +219,7 @@ OCL_TEST_P(GaussianBlurTest, Mat)
         OCL_OFF(cv::GaussianBlur(src_roi, dst_roi, Size(ksize, ksize), sigma1, sigma2, borderType));
         OCL_ON(cv::GaussianBlur(usrc_roi, udst_roi, Size(ksize, ksize), sigma1, sigma2, borderType));
 
-        Near(CV_MAT_DEPTH(type) == CV_8U ? 3 : 5e-5, false);
+        Near(CV_MAT_DEPTH(type) >= CV_32F ? 5e-5 : 1, false);
     }
 }
 

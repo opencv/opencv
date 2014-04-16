@@ -210,7 +210,30 @@ enum {
 #  endif
 #endif
 
+//! Suppress warning "-Wdeprecated-declarations" / C4996
 
+#if defined(_MSC_VER)
+    #define CV_DO_PRAGMA(x) __pragma(x)
+#elif defined(__GNUC__)
+    #define CV_DO_PRAGMA(x) _Pragma (#x)
+#else
+    #define CV_DO_PRAGMA(x)
+#endif
+
+#ifdef _MSC_VER
+#define CV_SUPPRESS_DEPRECATED_START \
+    CV_DO_PRAGMA(warning(push)) \
+    CV_DO_PRAGMA(warning(disable: 4996))
+#define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(warning(pop))
+#elif defined __GNUC__
+#define CV_SUPPRESS_DEPRECATED_START \
+    CV_DO_PRAGMA(GCC diagnostic push) \
+    CV_DO_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
+#define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(GCC diagnostic pop)
+#else
+#define CV_SUPPRESS_DEPRECATED_START
+#define CV_SUPPRESS_DEPRECATED_END
+#endif
 
 //! Signals an error and raises the exception.
 /*!

@@ -1361,7 +1361,6 @@ TEST_P(ElemWiseTest, accuracy)
         op->op(src, dst, mask);
 
         double maxErr = op->getMaxErr(depth);
-        vector<int> pos;
         ASSERT_PRED_FORMAT2(cvtest::MatComparator(maxErr, op->context), dst0, dst) << "\nsrc[0] ~ " <<
             cvtest::MatInfo(!src.empty() ? src[0] : Mat()) << "\ntestCase #" << testIdx << "\n";
     }

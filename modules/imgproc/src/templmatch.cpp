@@ -341,7 +341,7 @@ static bool ocl_matchTemplate( InputArray _img, InputArray _templ, OutputArray _
 
 #endif
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7 && !defined HAVE_IPP_ICV_ONLY
 
 typedef IppStatus (CV_STDCALL * ippimatchTemplate)(const void*, int, IppiSize, const void*, int, IppiSize, Ipp32f* , int , IppEnum , Ipp8u*);
 
@@ -423,11 +423,6 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                 Size corrsize, int ctype,
                 Point anchor, double delta, int borderType )
 {
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    if (ipp_crossCorr(img, _templ, corr))
-        return;
-#endif
-
     const double blockScale = 4.5;
     const int minBlockSize = 256;
     std::vector<uchar> buf;
@@ -643,12 +638,16 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
         return;
 #endif
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7 && !defined HAVE_IPP_ICV_ONLY
     if (method == CV_TM_SQDIFF && ipp_sqrDistance(img, templ, result))
         return;
 #endif
 
     int cn = img.channels();
+
+#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7 && !defined HAVE_IPP_ICV_ONLY
+    if (!ipp_crossCorr(img, templ, result))
+#endif
     crossCorr( img, templ, result, result.size(), result.type(), Point(0,0), 0, 0);
 
     if( method == CV_TM_CCORR )

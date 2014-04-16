@@ -146,7 +146,7 @@ PARAM_TEST_CASE(CalcBackProject, MatDepth, int, bool)
         scale = randomDouble(0.1, 1);
     }
 
-    virtual void test_by_pict()
+    void test_by_pict()
     {
         Mat frame1 = readImage("optflow/RubberWhale1.png", IMREAD_GRAYSCALE);
 
@@ -174,7 +174,19 @@ PARAM_TEST_CASE(CalcBackProject, MatDepth, int, bool)
 
         OCL_OFF(calcBackProject(&frame1, 1, 0, hist1, dst1, &ranges1, 1, true));
         OCL_ON(calcBackProject(uims, chs, uhist1, udst1, urngs, 1.0));
-        EXPECT_MAT_NEAR(dst1, udst1, 0.0);
+
+        if (cv::ocl::useOpenCL() && cv::ocl::Device::getDefault().isAMD())
+        {
+            Size dstSize = dst1.size();
+            int nDiffs = (int)(0.03f*dstSize.height*dstSize.width);
+
+            //check if the dst mats are the same except 3% difference
+            EXPECT_MAT_N_DIFF(dst1, udst1, nDiffs);
+        }
+        else
+        {
+            EXPECT_MAT_NEAR(dst1, udst1, 0.0);
+        }
     }
 };
 
@@ -194,10 +206,13 @@ OCL_TEST_P(CalcBackProject, Mat)
 
         //check if the dst mats are the same except 3% difference
         EXPECT_MAT_N_DIFF(dst_roi, udst_roi, nDiffs);
-
-        //check in addition on given image
-        test_by_pict();
     }
+}
+
+OCL_TEST_P(CalcBackProject, Mat_RealImage)
+{
+    //check on given image
+    test_by_pict();
 }
 
 //////////////////////////////// CalcHist //////////////////////////////////////////////

@@ -110,9 +110,9 @@ These functions try to match the given images and to estimate rotations of each 
 
 .. note:: Use the functions only if you're aware of the stitching pipeline, otherwise use :ocv:func:`Stitcher::stitch`.
 
-.. ocv:function:: Status Stitcher::estimateTransform(InputArray images)
+.. ocv:function:: Status Stitcher::estimateTransform(InputArrayOfArrays images)
 
-.. ocv:function:: Status Stitcher::estimateTransform(InputArray images, const std::vector<std::vector<Rect> > &rois)
+.. ocv:function:: Status Stitcher::estimateTransform(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois)
 
     :param images: Input images.
 
@@ -129,7 +129,7 @@ These functions try to compose the given images (or images stored internally fro
 
 .. ocv:function:: Status Stitcher::composePanorama(OutputArray pano)
 
-.. ocv:function:: Status Stitcher::composePanorama(InputArray images, OutputArray pano)
+.. ocv:function:: Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArray pano)
 
     :param images: Input images.
 
@@ -142,9 +142,9 @@ Stitcher::stitch
 
 These functions try to stitch the given images.
 
-.. ocv:function:: Status Stitcher::stitch(InputArray images, OutputArray pano)
+.. ocv:function:: Status Stitcher::stitch(InputArrayOfArrays images, OutputArray pano)
 
-.. ocv:function:: Status Stitcher::stitch(InputArray images, const std::vector<std::vector<Rect> > &rois, OutputArray pano)
+.. ocv:function:: Status Stitcher::stitch(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois, OutputArray pano)
 
     :param images: Input images.
 
