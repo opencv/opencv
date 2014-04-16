@@ -374,6 +374,7 @@ static ippiGeneralFunc ippiHLS2RGBTab[] =
     0, (ippiGeneralFunc)ippiHLSToRGB_32f_C3R, 0, 0
 };
 
+#if !defined(HAVE_IPP_ICV_ONLY)
 static ippiGeneralFunc ippiRGBToLUVTab[] =
 {
     (ippiGeneralFunc)ippiRGBToLUV_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToLUV_16u_C3R, 0,
@@ -385,6 +386,7 @@ static ippiGeneralFunc ippiLUVToRGBTab[] =
     (ippiGeneralFunc)ippiLUVToRGB_8u_C3R, 0, (ippiGeneralFunc)ippiLUVToRGB_16u_C3R, 0,
     0, (ippiGeneralFunc)ippiLUVToRGB_32f_C3R, 0, 0
 };
+#endif
 
 struct IPPGeneralFunctor
 {
@@ -3335,7 +3337,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             _dst.create(sz, CV_8UC2);
             dst = _dst.getMat();
 
-#if defined HAVE_IPP
+#if defined HAVE_IPP && !defined(HAVE_IPP_ICV_ONLY)
             CV_SUPPRESS_DEPRECATED_START
             if (code == CV_BGR2BGR565 && scn == 3)
             {
@@ -3384,7 +3386,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
 
-#ifdef HAVE_IPP
+#if defined HAVE_IPP && !defined(HAVE_IPP_ICV_ONLY)
             CV_SUPPRESS_DEPRECATED_START
             if (code == CV_BGR5652BGR)
             {
@@ -3861,7 +3863,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
 
-#ifdef HAVE_IPP
+#if defined HAVE_IPP && !defined(HAVE_IPP_ICV_ONLY)
             if (code == CV_LBGR2Lab && scn == 3 && depth == CV_8U)
             {
                 if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiBGRToLab_8u_C3R)))
@@ -3941,7 +3943,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
 
-#if defined (HAVE_IPP)
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
 #if 0
             if( code == CV_Lab2LBGR && dcn == 3 && depth == CV_8U)
             {
@@ -4189,7 +4191,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
                 if( depth == CV_8U )
                 {
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
                     if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiAlphaPremul_8u_AC4R)))
                         return;
 #endif
