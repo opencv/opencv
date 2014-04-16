@@ -1063,14 +1063,26 @@ TLSStorage::~TLSStorage()
 
 TLSData<CoreTLSData> coreTlsData;
 
-void setIppStatus(int status)
+static int ippStatus = 0; // 0 - all is ok, -1 - IPP functions failed
+static const char * funcname, * filename;
+static int linen;
+
+void setIppStatus(int status, const char * const _funcname, const char * const _filename, int _line)
 {
-    coreTlsData.get()->ippStatus = status;
+    ippStatus = status;
+    funcname = _funcname;
+    filename = _filename;
+    linen = _line;
 }
 
 int getIppStatus()
 {
-    return coreTlsData.get()->ippStatus;
+    return ippStatus;
+}
+
+String getIppErrorLocation()
+{
+    return format("%s:%d %s", filename ? filename : "", linen, funcname ? funcname : "");
 }
 
 } // namespace cv

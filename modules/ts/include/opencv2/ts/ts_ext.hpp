@@ -4,7 +4,7 @@
 #define CHECK_IPP_STATUS \
     do \
     { \
-        EXPECT_LE(0, getIppStatus()); \
+        EXPECT_LE(0, getIppStatus()) << getIppErrorLocation().c_str(); \
     } while ((void)0, 0)
 
 #undef TEST

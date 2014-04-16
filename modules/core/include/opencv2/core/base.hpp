@@ -560,8 +560,11 @@ namespace cudev
     template <typename _Tp> class GpuMat_;
 }
 
-CV_EXPORTS void setIppStatus(int status);
+CV_EXPORTS void setIppStatus(int status, const char * const funcname = NULL, const char * const filename = NULL,
+                             int line = 0);
 CV_EXPORTS int getIppStatus();
+CV_EXPORTS String getIppErrorLocation();
+#define setIppErrorStatus() setIppStatus(-1, CV_Func, __FILE__, __LINE__)
 
 } // cv
 
