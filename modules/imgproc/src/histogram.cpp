@@ -1242,7 +1242,7 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
 
         bool ok = true;
         const Mat & src = images[0];
-        int nstripes = std::min<int>(8, src.total() / (1 << 16));
+        int nstripes = std::min<int>(8, static_cast<int>(src.total() / (1 << 16)));
 #ifdef HAVE_CONCURRENCY
         nstripes = 1;
 #endif

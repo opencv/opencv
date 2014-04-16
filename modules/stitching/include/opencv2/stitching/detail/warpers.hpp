@@ -160,6 +160,8 @@ class CV_EXPORTS SphericalWarper : public RotationWarperBase<SphericalProjector>
 public:
     SphericalWarper(float scale) { projector_.scale = scale; }
 
+    Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap);
+    Point warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode, OutputArray dst);
 protected:
     void detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br);
 };
@@ -178,6 +180,8 @@ class CV_EXPORTS CylindricalWarper : public RotationWarperBase<CylindricalProjec
 public:
     CylindricalWarper(float scale) { projector_.scale = scale; }
 
+    Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap);
+    Point warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode, OutputArray dst);
 protected:
     void detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
     {
@@ -501,45 +505,6 @@ protected:
     {
         RotationWarperBase<PlanePortraitProjector>::detectResultRoiByBorder(src_size, dst_tl, dst_br);
     }
-};
-
-/////////////////////////////////////// OpenCL Accelerated Warpers /////////////////////////////////////
-
-class CV_EXPORTS PlaneWarperOcl : public PlaneWarper
-{
-public:
-    PlaneWarperOcl(float scale = 1.f) : PlaneWarper(scale) { }
-
-    virtual Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap)
-    {
-        return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32FC1), xmap, ymap);
-    }
-
-    virtual Point warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode, OutputArray dst)
-    {
-        return warp(src, K, R, Mat::zeros(3, 1, CV_32FC1), interp_mode, border_mode, dst);
-    }
-
-    virtual Rect buildMaps(Size src_size, InputArray K, InputArray R, InputArray T, OutputArray xmap, OutputArray ymap);
-    virtual Point warp(InputArray src, InputArray K, InputArray R, InputArray T, int interp_mode, int border_mode, OutputArray dst);
-};
-
-class CV_EXPORTS SphericalWarperOcl :  public SphericalWarper
-{
-public:
-    SphericalWarperOcl(float scale) : SphericalWarper(scale) { }
-
-    virtual Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap);
-    virtual Point warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode, OutputArray dst);
-};
-
-class CV_EXPORTS CylindricalWarperOcl :  public CylindricalWarper
-{
-public:
-    CylindricalWarperOcl(float scale) : CylindricalWarper(scale) { }
-
-    virtual Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap);
-    virtual Point warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode, OutputArray dst);
 };
 
 } // namespace detail

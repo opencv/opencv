@@ -3525,7 +3525,6 @@ void HOGDescriptor::groupRectangles(std::vector<cv::Rect>& rectList, std::vector
     std::vector<cv::Rect_<double> > rrects(nclasses);
     std::vector<int> numInClass(nclasses, 0);
     std::vector<double> foundWeights(nclasses, DBL_MIN);
-    std::vector<double> totalFactorsPerClass(nclasses, 1);
     int i, j, nlabels = (int)labels.size();
 
     for( i = 0; i < nlabels; i++ )

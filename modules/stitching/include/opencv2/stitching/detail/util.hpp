@@ -71,6 +71,7 @@
 #define LOG_(_level, _msg)                     \
     for(;;)                                    \
     {                                          \
+        using namespace std;                   \
         if ((_level) >= ::cv::detail::stitchingLogLevel()) \
         {                                      \
             LOG_STITCHING_MSG(_msg);           \
@@ -145,7 +146,7 @@ private:
 // Auxiliary functions
 
 CV_EXPORTS bool overlapRoi(Point tl1, Point tl2, Size sz1, Size sz2, Rect &roi);
-CV_EXPORTS Rect resultRoi(const std::vector<Point> &corners, const std::vector<Mat> &images);
+CV_EXPORTS Rect resultRoi(const std::vector<Point> &corners, const std::vector<UMat> &images);
 CV_EXPORTS Rect resultRoi(const std::vector<Point> &corners, const std::vector<Size> &sizes);
 CV_EXPORTS Point resultTl(const std::vector<Point> &corners);
 

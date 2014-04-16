@@ -60,11 +60,11 @@ public:
 
     void prepare(const std::vector<Point> &corners, const std::vector<Size> &sizes);
     virtual void prepare(Rect dst_roi);
-    virtual void feed(const Mat &img, const Mat &mask, Point tl);
-    virtual void blend(Mat &dst, Mat &dst_mask);
+    virtual void feed(InputArray img, InputArray mask, Point tl);
+    virtual void blend(InputOutputArray dst, InputOutputArray dst_mask);
 
 protected:
-    Mat dst_, dst_mask_;
+    UMat dst_, dst_mask_;
     Rect dst_roi_;
 };
 
@@ -78,18 +78,18 @@ public:
     void setSharpness(float val) { sharpness_ = val; }
 
     void prepare(Rect dst_roi);
-    void feed(const Mat &img, const Mat &mask, Point tl);
-    void blend(Mat &dst, Mat &dst_mask);
+    void feed(InputArray img, InputArray mask, Point tl);
+    void blend(InputOutputArray dst, InputOutputArray dst_mask);
 
     // Creates weight maps for fixed set of source images by their masks and top-left corners.
     // Final image can be obtained by simple weighting of the source images.
-    Rect createWeightMaps(const std::vector<Mat> &masks, const std::vector<Point> &corners,
-                          std::vector<Mat> &weight_maps);
+    Rect createWeightMaps(const std::vector<UMat> &masks, const std::vector<Point> &corners,
+                          std::vector<UMat> &weight_maps);
 
 private:
     float sharpness_;
-    Mat weight_map_;
-    Mat dst_weight_map_;
+    UMat weight_map_;
+    UMat dst_weight_map_;
 };
 
 inline FeatherBlender::FeatherBlender(float _sharpness) { setSharpness(_sharpness); }
@@ -104,13 +104,13 @@ public:
     void setNumBands(int val) { actual_num_bands_ = val; }
 
     void prepare(Rect dst_roi);
-    void feed(const Mat &img, const Mat &mask, Point tl);
-    void blend(Mat &dst, Mat &dst_mask);
+    void feed(InputArray img, InputArray mask, Point tl);
+    void blend(InputOutputArray dst, InputOutputArray dst_mask);
 
 private:
     int actual_num_bands_, num_bands_;
-    std::vector<Mat> dst_pyr_laplace_;
-    std::vector<Mat> dst_band_weights_;
+    std::vector<UMat> dst_pyr_laplace_;
+    std::vector<UMat> dst_band_weights_;
     Rect dst_roi_final_;
     bool can_use_gpu_;
     int weight_type_; //CV_32F or CV_16S
@@ -120,16 +120,16 @@ private:
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
-void CV_EXPORTS normalizeUsingWeightMap(const Mat& weight, Mat& src);
+void CV_EXPORTS normalizeUsingWeightMap(InputArray weight, InputOutputArray src);
 
-void CV_EXPORTS createWeightMap(const Mat& mask, float sharpness, Mat& weight);
+void CV_EXPORTS createWeightMap(InputArray mask, float sharpness, InputOutputArray weight);
 
-void CV_EXPORTS createLaplacePyr(const Mat &img, int num_levels, std::vector<Mat>& pyr);
-void CV_EXPORTS createLaplacePyrGpu(const Mat &img, int num_levels, std::vector<Mat>& pyr);
+void CV_EXPORTS createLaplacePyr(InputArray img, int num_levels, std::vector<UMat>& pyr);
+void CV_EXPORTS createLaplacePyrGpu(InputArray img, int num_levels, std::vector<UMat>& pyr);
 
 // Restores source image
-void CV_EXPORTS restoreImageFromLaplacePyr(std::vector<Mat>& pyr);
-void CV_EXPORTS restoreImageFromLaplacePyrGpu(std::vector<Mat>& pyr);
+void CV_EXPORTS restoreImageFromLaplacePyr(std::vector<UMat>& pyr);
+void CV_EXPORTS restoreImageFromLaplacePyrGpu(std::vector<UMat>& pyr);
 
 } // namespace detail
 } // namespace cv

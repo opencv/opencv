@@ -46,8 +46,8 @@
 namespace cv {
 namespace detail {
 
-void PairwiseSeamFinder::find(const std::vector<Mat> &src, const std::vector<Point> &corners,
-                              std::vector<Mat> &masks)
+void PairwiseSeamFinder::find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+                              std::vector<UMat> &masks)
 {
     LOGLN("Finding seams...");
     if (src.size() == 0)
@@ -84,7 +84,7 @@ void PairwiseSeamFinder::run()
 
 
 void VoronoiSeamFinder::find(const std::vector<Size> &sizes, const std::vector<Point> &corners,
-                             std::vector<Mat> &masks)
+                             std::vector<UMat> &masks)
 {
     LOGLN("Finding seams...");
     if (sizes.size() == 0)
@@ -110,7 +110,7 @@ void VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
     Mat submask2(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
 
     Size img1 = sizes_[first], img2 = sizes_[second];
-    Mat mask1 = masks_[first], mask2 = masks_[second];
+    Mat mask1 = masks_[first].getMat(ACCESS_READ), mask2 = masks_[second].getMat(ACCESS_READ);
     Point tl1 = corners_[first], tl2 = corners_[second];
 
     // Cut submasks with some gap
@@ -160,7 +160,7 @@ void VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
 DpSeamFinder::DpSeamFinder(CostFunction costFunc) : costFunc_(costFunc) {}
 
 
-void DpSeamFinder::find(const std::vector<Mat> &src, const std::vector<Point> &corners, std::vector<Mat> &masks)
+void DpSeamFinder::find(const std::vector<UMat> &src, const std::vector<Point> &corners, std::vector<UMat> &masks)
 {
     LOGLN("Finding seams...");
 #if ENABLE_LOG
@@ -176,13 +176,18 @@ void DpSeamFinder::find(const std::vector<Mat> &src, const std::vector<Point> &c
         for (size_t j = i+1; j < src.size(); ++j)
             pairs.push_back(std::make_pair(i, j));
 
-    sort(pairs.begin(), pairs.end(), ImagePairLess(src, corners));
+    {
+        std::vector<Mat> _src(src.size());
+        for (size_t i = 0; i < src.size(); ++i) _src[i] = src[i].getMat(ACCESS_READ);
+        sort(pairs.begin(), pairs.end(), ImagePairLess(_src, corners));
+    }
     std::reverse(pairs.begin(), pairs.end());
 
     for (size_t i = 0; i < pairs.size(); ++i)
     {
         size_t i0 = pairs[i].first, i1 = pairs[i].second;
-        process(src[i0], src[i1], corners[i0], corners[i1], masks[i0], masks[i1]);
+        Mat mask0 = masks[i0].getMat(ACCESS_RW), mask1 = masks[i1].getMat(ACCESS_RW);
+        process(src[i0].getMat(ACCESS_READ), src[i1].getMat(ACCESS_READ), corners[i0], corners[i1], mask0, mask1);
     }
 
     LOGLN("Finding seams, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
@@ -1055,7 +1060,7 @@ public:
 
     ~Impl() {}
 
-    void find(const std::vector<Mat> &src, const std::vector<Point> &corners, std::vector<Mat> &masks);
+    void find(const std::vector<UMat> &src, const std::vector<Point> &corners, std::vector<UMat> &masks);
     void findInPair(size_t first, size_t second, Rect roi);
 
 private:
@@ -1072,8 +1077,8 @@ private:
 };
 
 
-void GraphCutSeamFinder::Impl::find(const std::vector<Mat> &src, const std::vector<Point> &corners,
-                                    std::vector<Mat> &masks)
+void GraphCutSeamFinder::Impl::find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+                                    std::vector<UMat> &masks)
 {
     // Compute gradients
     dx_.resize(src.size());
@@ -1207,10 +1212,10 @@ void GraphCutSeamFinder::Impl::setGraphWeightsColorGrad(
 
 void GraphCutSeamFinder::Impl::findInPair(size_t first, size_t second, Rect roi)
 {
-    Mat img1 = images_[first], img2 = images_[second];
+    Mat img1 = images_[first].getMat(ACCESS_READ), img2 = images_[second].getMat(ACCESS_READ);
     Mat dx1 = dx_[first], dx2 = dx_[second];
     Mat dy1 = dy_[first], dy2 = dy_[second];
-    Mat mask1 = masks_[first], mask2 = masks_[second];
+    Mat mask1 = masks_[first].getMat(ACCESS_RW), mask2 = masks_[second].getMat(ACCESS_RW);
     Point tl1 = corners_[first], tl2 = corners_[second];
 
     const int gap = 10;
@@ -1309,16 +1314,16 @@ GraphCutSeamFinder::GraphCutSeamFinder(int cost_type, float terminal_cost, float
 GraphCutSeamFinder::~GraphCutSeamFinder() {}
 
 
-void GraphCutSeamFinder::find(const std::vector<Mat> &src, const std::vector<Point> &corners,
-                              std::vector<Mat> &masks)
+void GraphCutSeamFinder::find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+                              std::vector<UMat> &masks)
 {
     impl_->find(src, corners, masks);
 }
 
 
 #ifdef HAVE_OPENCV_CUDA
-void GraphCutSeamFinderGpu::find(const std::vector<Mat> &src, const std::vector<Point> &corners,
-                                 std::vector<Mat> &masks)
+void GraphCutSeamFinderGpu::find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+                                 std::vector<UMat> &masks)
 {
     // Compute gradients
     dx_.resize(src.size());
@@ -1350,10 +1355,10 @@ void GraphCutSeamFinderGpu::find(const std::vector<Mat> &src, const std::vector<
 
 void GraphCutSeamFinderGpu::findInPair(size_t first, size_t second, Rect roi)
 {
-    Mat img1 = images_[first], img2 = images_[second];
+    Mat img1 = images_[first].getMat(ACCESS_READ), img2 = images_[second].getMat(ACCESS_READ);
     Mat dx1 = dx_[first], dx2 = dx_[second];
     Mat dy1 = dy_[first], dy2 = dy_[second];
-    Mat mask1 = masks_[first], mask2 = masks_[second];
+    Mat mask1 = masks_[first].getMat(ACCESS_READ), mask2 = masks_[second].getMat(ACCESS_READ);
     Point tl1 = corners_[first], tl2 = corners_[second];
 
     const int gap = 10;

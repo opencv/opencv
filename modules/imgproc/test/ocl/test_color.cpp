@@ -158,7 +158,7 @@ OCL_TEST_P(CvtColor, YCrCb2BGRA) { performTest(3, 4, CVTCODE(YCrCb2BGR)); }
 #if IPP_VERSION_X100 > 0
 #define IPP_EPS depth <= CV_32S ? 1 : 4e-5
 #else
-#define IPP_EPS 0
+#define IPP_EPS 1e-3
 #endif
 
 OCL_TEST_P(CvtColor, RGB2XYZ) { performTest(3, 3, CVTCODE(RGB2XYZ), IPP_EPS); }
@@ -261,19 +261,27 @@ OCL_TEST_P(CvtColor8u, GRAY2BGR555) { performTest(1, 2, CVTCODE(GRAY2BGR555)); }
 
 // RGBA <-> mRGBA
 
-OCL_TEST_P(CvtColor8u, RGBA2mRGBA) { performTest(4, 4, CVTCODE(RGBA2mRGBA)); }
+#if IPP_VERSION_X100 > 0
+#define IPP_EPS depth <= CV_32S ? 1 : 1e-3
+#else
+#define IPP_EPS 1e-3
+#endif
+
+OCL_TEST_P(CvtColor8u, RGBA2mRGBA) { performTest(4, 4, CVTCODE(RGBA2mRGBA), IPP_EPS); }
 OCL_TEST_P(CvtColor8u, mRGBA2RGBA) { performTest(4, 4, CVTCODE(mRGBA2RGBA)); }
 
 // RGB <-> Lab
 
 OCL_TEST_P(CvtColor8u32f, BGR2Lab) { performTest(3, 3, CVTCODE(BGR2Lab)); }
 OCL_TEST_P(CvtColor8u32f, RGB2Lab) { performTest(3, 3, CVTCODE(RGB2Lab)); }
-OCL_TEST_P(CvtColor8u32f, LBGR2Lab) { performTest(3, 3, CVTCODE(LBGR2Lab)); }
-OCL_TEST_P(CvtColor8u32f, LRGB2Lab) { performTest(3, 3, CVTCODE(LRGB2Lab)); }
+OCL_TEST_P(CvtColor8u32f, LBGR2Lab) { performTest(3, 3, CVTCODE(LBGR2Lab), IPP_EPS); }
+OCL_TEST_P(CvtColor8u32f, LRGB2Lab) { performTest(3, 3, CVTCODE(LRGB2Lab), IPP_EPS); }
 OCL_TEST_P(CvtColor8u32f, BGRA2Lab) { performTest(4, 3, CVTCODE(BGR2Lab)); }
 OCL_TEST_P(CvtColor8u32f, RGBA2Lab) { performTest(4, 3, CVTCODE(RGB2Lab)); }
-OCL_TEST_P(CvtColor8u32f, LBGRA2Lab) { performTest(4, 3, CVTCODE(LBGR2Lab)); }
-OCL_TEST_P(CvtColor8u32f, LRGBA2Lab) { performTest(4, 3, CVTCODE(LRGB2Lab)); }
+OCL_TEST_P(CvtColor8u32f, LBGRA2Lab) { performTest(4, 3, CVTCODE(LBGR2Lab), IPP_EPS); }
+OCL_TEST_P(CvtColor8u32f, LRGBA2Lab) { performTest(4, 3, CVTCODE(LRGB2Lab), IPP_EPS); }
+
+#undef IPP_EPS
 
 OCL_TEST_P(CvtColor8u32f, Lab2BGR) { performTest(3, 3, CVTCODE(Lab2BGR), depth == CV_8U ? 1 : 1e-5); }
 OCL_TEST_P(CvtColor8u32f, Lab2RGB) { performTest(3, 3, CVTCODE(Lab2RGB), depth == CV_8U ? 1 : 1e-5); }

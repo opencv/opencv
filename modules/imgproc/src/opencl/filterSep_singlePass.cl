@@ -100,8 +100,8 @@
 // horizontal and vertical filter kernels
 // should be defined on host during compile time to avoid overhead
 #define DIG(a) a,
-__constant float mat_kernelX[] = { KERNEL_MATRIX_X };
-__constant float mat_kernelY[] = { KERNEL_MATRIX_Y };
+__constant WT1 mat_kernelX[] = { KERNEL_MATRIX_X };
+__constant WT1 mat_kernelY[] = { KERNEL_MATRIX_Y };
 
 __kernel void sep_filter(__global uchar* Src, int src_step, int srcOffsetX, int srcOffsetY, int height, int width,
                          __global uchar* Dst, int dst_step, int dst_offset, int dst_rows, int dst_cols, float delta)
@@ -124,8 +124,6 @@ __kernel void sep_filter(__global uchar* Src, int src_step, int srcOffsetX, int 
     // calculate pixel position in source image taking image offset into account
     int srcX = x + srcOffsetX - RADIUSX;
     int srcY = y + srcOffsetY - RADIUSY;
-    int xb = srcX;
-    int yb = srcY;
 
     // extrapolate coordinates, if needed
     // and read my own source pixel into local memory
@@ -159,12 +157,16 @@ __kernel void sep_filter(__global uchar* Src, int src_step, int srcOffsetX, int 
     // do vertical filter pass
     // and store intermediate results to second local memory array
     int i, clocX = lix;
-    WT sum = 0.0f;
+    WT sum = (WT) 0;
     do
     {
-        sum = 0.0f;
+        sum = (WT) 0;
         for (i=0; i<=2*RADIUSY; i++)
+#ifndef INTEGER_ARITHMETIC
             sum = mad(lsmem[liy+i][clocX], mat_kernelY[i], sum);
+#else
+            sum = mad24(lsmem[liy+i][clocX], mat_kernelY[i], sum);
+#endif
         lsmemDy[liy][clocX] = sum;
         clocX += BLK_X;
     }
@@ -180,7 +182,13 @@ __kernel void sep_filter(__global uchar* Src, int src_step, int srcOffsetX, int 
     // and calculate final result
     sum = 0.0f;
     for (i=0; i<=2*RADIUSX; i++)
+#ifndef INTEGER_ARITHMETIC
         sum = mad(lsmemDy[liy][lix+i], mat_kernelX[i], sum);
+#else
+        sum = mad24(lsmemDy[liy][lix+i], mat_kernelX[i], sum);
+
+    sum = (sum + (1 << (SHIFT_BITS-1))) >> SHIFT_BITS;
+#endif
 
     // store result into destination image
     storepix(convertToDstT(sum + (WT)(delta)), Dst + mad24(y, dst_step, mad24(x, DSTSIZE, dst_offset)));
