@@ -25,6 +25,7 @@
 #define GTEST_DONT_DEFINE_TEST      0
 
 #include "opencv2/ts/ts_gtest.h"
+#include "opencv2/ts/ts_ext.hpp"
 
 #ifndef GTEST_USES_SIMPLE_RE
 #  define GTEST_USES_SIMPLE_RE 0
@@ -553,7 +554,7 @@ CV_EXPORTS void printVersionInfo(bool useStdOut = true);
 #endif
 #endif
 
-#if defined(HAVE_OPENCL) && !defined(CV_BUILD_OCL_MODULE)
+#if defined(HAVE_OPENCL)
 namespace cvtest { namespace ocl {
 void dumpOpenCLDevice();
 }}

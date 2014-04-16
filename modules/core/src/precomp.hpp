@@ -235,13 +235,14 @@ void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t bl
 
 struct CoreTLSData
 {
-    CoreTLSData() : device(0), useOpenCL(-1)
+    CoreTLSData() : device(0), useOpenCL(-1), ippStatus(0)
     {}
 
     RNG rng;
     int device;
     ocl::Queue oclQueue;
     int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
+    int ippStatus; // 0 - all is ok, -1 - IPP functions failed
 };
 
 extern TLSData<CoreTLSData> coreTlsData;
