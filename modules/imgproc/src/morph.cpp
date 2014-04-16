@@ -1269,10 +1269,13 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
     int borderType, const Scalar &borderValue)
 {
     Mat src = _src.getMat(), kernel = _kernel;
-    if( !( src.depth() == CV_8U || src.depth() == CV_32F ) || ( iterations > 1 ) ||
+    int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if( !( depth == CV_8U || depth == CV_32F ) || !(cn == 1 || cn == 3 || cn == 4) ||
         !( borderType == cv::BORDER_REPLICATE || (borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue()) )
         || !( op == MORPH_DILATE || op == MORPH_ERODE) )
         return false;
+
     if( borderType == cv::BORDER_CONSTANT && kernel.data )
     {
         int x, y;
@@ -1331,7 +1334,11 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
     if( iterations > 1 )
         return false;
 
-    return IPPMorphReplicate( op, src, dst, kernel, ksize, anchor, rectKernel );
+    if (IPPMorphReplicate( op, src, dst, kernel, ksize, anchor, rectKernel ))
+        return true;
+
+    setIppErrorStatus();
+    return false;
 }
 #endif
 
@@ -1466,7 +1473,6 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
 #if IPP_VERSION_X100 >= 801
     if( IPPMorphOp(op, _src, _dst, kernel, anchor, iterations, borderType, borderValue) )
         return;
-    setIppErrorStatus();
 #endif
 
     if (iterations == 0 || kernel.rows*kernel.cols == 1)
