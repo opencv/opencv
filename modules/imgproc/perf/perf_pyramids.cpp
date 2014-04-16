@@ -14,6 +14,7 @@ PERF_TEST_P(Size_MatType, pyrDown, testing::Combine(
 {
     Size sz = get<0>(GetParam());
     int matType = get<1>(GetParam());
+    const double eps = CV_MAT_DEPTH(matType) <= CV_32S ? 1 : 1e-5;
 
     Mat src(sz, matType);
     Mat dst((sz.height + 1)/2, (sz.width + 1)/2, matType);
@@ -22,7 +23,7 @@ PERF_TEST_P(Size_MatType, pyrDown, testing::Combine(
 
     TEST_CYCLE() pyrDown(src, dst);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, eps, ERROR_RELATIVE);
 }
 
 PERF_TEST_P(Size_MatType, pyrUp, testing::Combine(
@@ -33,6 +34,7 @@ PERF_TEST_P(Size_MatType, pyrUp, testing::Combine(
 {
     Size sz = get<0>(GetParam());
     int matType = get<1>(GetParam());
+    const double eps = CV_MAT_DEPTH(matType) <= CV_32S ? 1 : 1e-5;
 
     Mat src(sz, matType);
     Mat dst(sz.height*2, sz.width*2, matType);
@@ -41,7 +43,7 @@ PERF_TEST_P(Size_MatType, pyrUp, testing::Combine(
 
     TEST_CYCLE() pyrUp(src, dst);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, eps, ERROR_RELATIVE);
 }
 
 PERF_TEST_P(Size_MatType, buildPyramid, testing::Combine(
