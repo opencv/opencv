@@ -1466,6 +1466,7 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
 #if IPP_VERSION_X100 >= 801
     if( IPPMorphOp(op, _src, _dst, kernel, anchor, iterations, borderType, borderValue) )
         return;
+    setIppErrorStatus();
 #endif
 
     if (iterations == 0 || kernel.rows*kernel.cols == 1)

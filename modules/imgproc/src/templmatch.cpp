@@ -423,6 +423,12 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                 Size corrsize, int ctype,
                 Point anchor, double delta, int borderType )
 {
+#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7 && !defined HAVE_IPP_ICV_ONLY
+    if (ipp_crossCorr(img, _templ, corr))
+        return;
+    setIppErrorStatus();
+#endif
+
     const double blockScale = 4.5;
     const int minBlockSize = 256;
     std::vector<uchar> buf;
@@ -639,8 +645,12 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
 #endif
 
 #if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7 && !defined HAVE_IPP_ICV_ONLY
-    if (method == CV_TM_SQDIFF && ipp_sqrDistance(img, templ, result))
-        return;
+    if (method == CV_TM_SQDIFF)
+    {
+        if (ipp_sqrDistance(img, templ, result))
+            return;
+        setIppErrorStatus();
+    }
 #endif
 
     int cn = img.channels();

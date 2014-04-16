@@ -1488,7 +1488,10 @@ private:
                                                             ippBorderRepl, borderValue[0], bufptr) < 0) ||
             (cn == 3 && ippiFilterRowBorderPipeline_32f_C3R(src, step, &dst, roisz, _kx, _ksize, 0,
                                                             ippBorderRepl, borderValue, bufptr) < 0))
+        {
+            setIppErrorStatus();
             return 0;
+        }
         return width - _ksize + 1;
     }
 #endif

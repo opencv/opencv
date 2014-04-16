@@ -2424,6 +2424,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
             parallel_for_(range, invoker, dst.total()/(double)(1<<16));
             if( ok )
                 return;
+            setIppErrorStatus();
         }
     }
 #undef IPP_RESIZE_EPS
@@ -4281,6 +4282,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         parallel_for_(range, invoker, dst.total()/(double)(1<<16));
         if( ok )
             return;
+        setIppErrorStatus();
     }
 #endif
      */
@@ -4524,6 +4526,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
         parallel_for_(range, invoker, dst.total()/(double)(1<<16));
         if( ok )
             return;
+        setIppErrorStatus();
     }
 #endif
     */
