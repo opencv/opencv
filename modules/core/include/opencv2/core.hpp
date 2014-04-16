@@ -953,12 +953,12 @@ public:
 class CV_EXPORTS Formatter
 {
 public:
-    enum { FMT_MATLAB  = 0,
-           FMT_CSV     = 1,
-           FMT_PYTHON  = 2,
-           FMT_NUMPY   = 3,
-           FMT_C       = 4,
-           FMT_DEFAULT = FMT_MATLAB
+    enum { FMT_DEFAULT = 0,
+           FMT_MATLAB  = 1,
+           FMT_CSV     = 2,
+           FMT_PYTHON  = 3,
+           FMT_NUMPY   = 4,
+           FMT_C       = 5
          };
 
     virtual ~Formatter();
