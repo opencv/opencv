@@ -939,7 +939,7 @@ void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t bl
 {
     int scn = (int)sc.total(), cn = CV_MAT_CN(buftype);
     size_t esz = CV_ELEM_SIZE(buftype);
-    getConvertFunc(sc.depth(), buftype)(sc.data, 0, 0, 0, scbuf, 0, Size(std::min(cn, scn), 1), 0);
+    getConvertFunc(sc.depth(), buftype)(sc.data, 1, 0, 1, scbuf, 1, Size(std::min(cn, scn), 1), 0);
     // unroll the scalar
     if( scn < cn )
     {
@@ -1628,33 +1628,33 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 uchar* dptr = ptrs[2];
                 if( cvtsrc1 )
                 {
-                    cvtsrc1( sptr1, 0, 0, 0, buf1, 0, bszn, 0 );
+                    cvtsrc1( sptr1, 1, 0, 1, buf1, 1, bszn, 0 );
                     sptr1 = buf1;
                 }
                 if( ptrs[0] == ptrs[1] )
                     sptr2 = sptr1;
                 else if( cvtsrc2 )
                 {
-                    cvtsrc2( sptr2, 0, 0, 0, buf2, 0, bszn, 0 );
+                    cvtsrc2( sptr2, 1, 0, 1, buf2, 1, bszn, 0 );
                     sptr2 = buf2;
                 }
 
                 if( !haveMask && !cvtdst )
-                    func( sptr1, 0, sptr2, 0, dptr, 0, bszn, usrdata );
+                    func( sptr1, 1, sptr2, 1, dptr, 1, bszn, usrdata );
                 else
                 {
-                    func( sptr1, 0, sptr2, 0, wbuf, 0, bszn, usrdata );
+                    func( sptr1, 1, sptr2, 1, wbuf, 0, bszn, usrdata );
                     if( !haveMask )
-                        cvtdst( wbuf, 0, 0, 0, dptr, 0, bszn, 0 );
+                        cvtdst( wbuf, 1, 0, 1, dptr, 1, bszn, 0 );
                     else if( !cvtdst )
                     {
-                        copymask( wbuf, 0, ptrs[3], 0, dptr, 0, Size(bsz, 1), &dsz );
+                        copymask( wbuf, 1, ptrs[3], 1, dptr, 1, Size(bsz, 1), &dsz );
                         ptrs[3] += bsz;
                     }
                     else
                     {
-                        cvtdst( wbuf, 0, 0, 0, maskbuf, 0, bszn, 0 );
-                        copymask( maskbuf, 0, ptrs[3], 0, dptr, 0, Size(bsz, 1), &dsz );
+                        cvtdst( wbuf, 1, 0, 1, maskbuf, 1, bszn, 0 );
+                        copymask( maskbuf, 1, ptrs[3], 1, dptr, 1, Size(bsz, 1), &dsz );
                         ptrs[3] += bsz;
                     }
                 }
@@ -1695,7 +1695,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
                 if( cvtsrc1 )
                 {
-                    cvtsrc1( sptr1, 0, 0, 0, buf1, 0, bszn, 0 );
+                    cvtsrc1( sptr1, 1, 0, 1, buf1, 1, bszn, 0 );
                     sptr1 = buf1;
                 }
 
@@ -1703,21 +1703,21 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                     std::swap(sptr1, sptr2);
 
                 if( !haveMask && !cvtdst )
-                    func( sptr1, 0, sptr2, 0, dptr, 0, bszn, usrdata );
+                    func( sptr1, 1, sptr2, 1, dptr, 1, bszn, usrdata );
                 else
                 {
-                    func( sptr1, 0, sptr2, 0, wbuf, 0, bszn, usrdata );
+                    func( sptr1, 1, sptr2, 1, wbuf, 1, bszn, usrdata );
                     if( !haveMask )
-                        cvtdst( wbuf, 0, 0, 0, dptr, 0, bszn, 0 );
+                        cvtdst( wbuf, 1, 0, 1, dptr, 1, bszn, 0 );
                     else if( !cvtdst )
                     {
-                        copymask( wbuf, 0, ptrs[2], 0, dptr, 0, Size(bsz, 1), &dsz );
+                        copymask( wbuf, 1, ptrs[2], 1, dptr, 1, Size(bsz, 1), &dsz );
                         ptrs[2] += bsz;
                     }
                     else
                     {
-                        cvtdst( wbuf, 0, 0, 0, maskbuf, 0, bszn, 0 );
-                        copymask( maskbuf, 0, ptrs[2], 0, dptr, 0, Size(bsz, 1), &dsz );
+                        cvtdst( wbuf, 1, 0, 1, maskbuf, 1, bszn, 0 );
+                        copymask( maskbuf, 1, ptrs[2], 1, dptr, 1, Size(bsz, 1), &dsz );
                         ptrs[2] += bsz;
                     }
                 }
@@ -2712,7 +2712,7 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
         else
         {
             double fval = 0;
-            getConvertFunc(depth2, CV_64F)(src2.data, 0, 0, 0, (uchar *)&fval, 0, Size(1, 1), 0);
+            getConvertFunc(depth2, CV_64F)(src2.data, 1, 0, 1, (uchar *)&fval, 1, Size(1, 1), 0);
             if( fval < getMinVal(depth1) )
                 return dst.setTo(Scalar::all(op == CMP_GT || op == CMP_GE || op == CMP_NE ? 255 : 0)), true;
 
@@ -2833,7 +2833,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         else
         {
             double fval=0;
-            getConvertFunc(depth2, CV_64F)(src2.data, 0, 0, 0, (uchar*)&fval, 0, Size(1,1), 0);
+            getConvertFunc(depth2, CV_64F)(src2.data, 1, 0, 1, (uchar*)&fval, 1, Size(1,1), 0);
             if( fval < getMinVal(depth1) )
             {
                 dst = Scalar::all(op == CMP_GT || op == CMP_GE || op == CMP_NE ? 255 : 0);
@@ -3060,8 +3060,8 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
             int* iubuf = ilbuf + cn;
 
             BinaryFunc sccvtfunc = getConvertFunc(ldepth, CV_32S);
-            sccvtfunc(lscalar.data, 0, 0, 0, (uchar*)ilbuf, 0, Size(cn, 1), 0);
-            sccvtfunc(uscalar.data, 0, 0, 0, (uchar*)iubuf, 0, Size(cn, 1), 0);
+            sccvtfunc(lscalar.data, 1, 0, 1, (uchar*)ilbuf, 1, Size(cn, 1), 0);
+            sccvtfunc(uscalar.data, 1, 0, 1, (uchar*)iubuf, 1, Size(cn, 1), 0);
             int minval = cvRound(getMinVal(sdepth)), maxval = cvRound(getMaxVal(sdepth));
 
             for( int k = 0; k < cn; k++ )
@@ -3171,8 +3171,8 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
             int* iubuf = ilbuf + cn;
 
             BinaryFunc sccvtfunc = getConvertFunc(scdepth, CV_32S);
-            sccvtfunc(lb.data, 0, 0, 0, (uchar*)ilbuf, 0, Size(cn, 1), 0);
-            sccvtfunc(ub.data, 0, 0, 0, (uchar*)iubuf, 0, Size(cn, 1), 0);
+            sccvtfunc(lb.data, 1, 0, 1, (uchar*)ilbuf, 1, Size(cn, 1), 0);
+            sccvtfunc(ub.data, 1, 0, 1, (uchar*)iubuf, 1, Size(cn, 1), 0);
             int minval = cvRound(getMinVal(depth)), maxval = cvRound(getMaxVal(depth));
 
             for( int k = 0; k < cn; k++ )
