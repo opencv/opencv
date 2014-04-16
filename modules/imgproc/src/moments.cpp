@@ -519,6 +519,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
                 }
                 ippiMomentFree_64f(moment);
             }
+            setIppErrorStatus();
             CV_SUPPRESS_DEPRECATED_END
         }
 #endif

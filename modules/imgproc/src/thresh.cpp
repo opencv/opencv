@@ -75,14 +75,17 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     case THRESH_TRUNC:
         if (0 <= ippiThreshold_GT_8u_C1R(_src.data, (int)src_step, _dst.data, (int)dst_step, sz, thresh))
             return;
+        setIppErrorStatus();
         break;
     case THRESH_TOZERO:
         if (0 <= ippiThreshold_LTVal_8u_C1R(_src.data, (int)src_step, _dst.data, (int)dst_step, sz, thresh+1, 0))
             return;
+        setIppErrorStatus();
         break;
     case THRESH_TOZERO_INV:
         if (0 <= ippiThreshold_GTVal_8u_C1R(_src.data, (int)src_step, _dst.data, (int)dst_step, sz, thresh, 0))
             return;
+        setIppErrorStatus();
         break;
     }
 #endif
@@ -313,14 +316,17 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
     case THRESH_TRUNC:
         if (0 <= ippiThreshold_GT_16s_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh))
             return;
+        setIppErrorStatus();
         break;
     case THRESH_TOZERO:
         if (0 <= ippiThreshold_LTVal_16s_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh+1, 0))
             return;
+        setIppErrorStatus();
         break;
     case THRESH_TOZERO_INV:
         if (0 <= ippiThreshold_GTVal_16s_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0))
             return;
+        setIppErrorStatus();
         break;
     }
 #endif
@@ -504,14 +510,17 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
     case THRESH_TRUNC:
         if (0 <= ippiThreshold_GT_32f_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh))
             return;
+        setIppErrorStatus();
         break;
     case THRESH_TOZERO:
         if (0 <= ippiThreshold_LTVal_32f_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh+FLT_EPSILON, 0))
             return;
+        setIppErrorStatus();
         break;
     case THRESH_TOZERO_INV:
         if (0 <= ippiThreshold_GTVal_32f_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0))
             return;
+        setIppErrorStatus();
         break;
     }
 #endif

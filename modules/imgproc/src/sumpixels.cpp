@@ -393,6 +393,7 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
         }
         if (0 <= status)
             return;
+        setIppErrorStatus();
     }
 #endif
 

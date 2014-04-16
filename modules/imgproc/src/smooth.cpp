@@ -888,6 +888,7 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 if (status >= 0) \
                     return; \
             } \
+            setIppErrorStatus(); \
         } while ((void)0, 0)
 
         if (stype == CV_8UC1)
@@ -1193,6 +1194,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                     return;
             }
         }
+        setIppErrorStatus();
     }
 #endif
 
@@ -2033,6 +2035,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
             if (status >= 0) \
                 return; \
         } \
+        setIppErrorStatus(); \
     } \
     while ((void)0, 0)
 
@@ -2433,6 +2436,7 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
         parallel_for_(Range(0, dst.rows), body, dst.total()/(double)(1<<16));
         if( ok )
             return;
+        setIppErrorStatus();
     }
 #endif
 

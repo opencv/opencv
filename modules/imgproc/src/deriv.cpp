@@ -456,6 +456,7 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
         Mat src = _src.getMat(), dst = _dst.getMat();
         if (IPPDeriv(src, dst, ddepth, dx, dy, ksize,scale))
             return;
+        setIppErrorStatus();
     }
 #endif
     int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
@@ -498,6 +499,7 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
         Mat src = _src.getMat(), dst = _dst.getMat();
         if(IPPDerivScharr(src, dst, ddepth, dx, dy, scale))
             return;
+        setIppErrorStatus();
     }
 #endif
     int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
@@ -630,6 +632,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
 
             if (status >= 0)
                 return;
+            setIppErrorStatus();
         }
     }
 #undef IPP_FILTER_LAPLACIAN
