@@ -1063,6 +1063,16 @@ TLSStorage::~TLSStorage()
 
 TLSData<CoreTLSData> coreTlsData;
 
+void setIppStatus(int status)
+{
+    coreTlsData.get()->ippStatus = status;
+}
+
+int getIppStatus()
+{
+    return coreTlsData.get()->ippStatus;
+}
+
 } // namespace cv
 
 /* End of file. */

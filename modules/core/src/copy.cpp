@@ -574,6 +574,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
         IppStatus status = ippFunc(src.data, (int)src.step, dst.data, (int)dst.step, ippiSize(src.cols, src.rows), axis);
         if (status >= 0)
             return;
+        setIppStatus(-1);
     }
 #endif
 
