@@ -2880,6 +2880,132 @@ static void IDCT_64f(const double* src, int src_step, double* dft_src, double* d
 
 }
 
+namespace cv
+{
+#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7
+
+typedef IppStatus (CV_STDCALL * ippiDCTFwdFunc)(const Ipp32f*, int, Ipp32f*, int, const IppiDCTFwdSpec_32f*, Ipp8u*);
+typedef IppStatus (CV_STDCALL * ippiDCTInvFunc)(const Ipp32f*, int, Ipp32f*, int, const IppiDCTInvSpec_32f*, Ipp8u*);
+
+static bool ippi_DCT_Fwd(const Mat& src, Mat& dst, bool row)
+{
+    if (src.type() != CV_32F)
+        return false;
+
+    IppStatus status;
+    IppiDCTFwdSpec_32f* pDCTSpec;
+    Ipp8u *pBuffer;
+    int bufSize=0;
+
+    ippiDCTFwdFunc ippFunc = (ippiDCTFwdFunc)ippiDCTFwd_32f_C1R;
+
+    if (ippFunc==0)
+        return false;
+
+    IppiSize srcRoiSize = {src.cols, row ? 1 : src.rows};
+
+    CV_SUPPRESS_DEPRECATED_START
+    status = ippiDCTFwdInitAlloc_32f (&pDCTSpec, srcRoiSize, ippAlgHintNone);
+
+    if ( status < 0 )
+    {
+        ippiDCTFwdFree_32f(pDCTSpec);
+        return false;
+    }
+
+    status = ippiDCTFwdGetBufSize_32f (pDCTSpec, &bufSize);
+    if ( status < 0 )
+    {
+        ippiDCTFwdFree_32f(pDCTSpec);
+        return false;
+    }
+
+    pBuffer = ippsMalloc_8u( bufSize );
+
+    if (row)
+    {
+        for (int i=0; i<src.rows; i++)
+        {
+            status = ippFunc((float*)(src.data+i*src.step), (int)src.step,(float*)(dst.data+i*dst.step), (int)dst.step, pDCTSpec, pBuffer);
+            if ( status < 0 )
+            {
+                ippsFree( pBuffer );
+                ippiDCTFwdFree_32f(pDCTSpec);
+                return false;
+            }
+        }
+    }
+    else
+        status = ippFunc((float*)src.data, (int)src.step, (float*)dst.data, (int)dst.step, pDCTSpec, pBuffer);
+
+    ippsFree( pBuffer );
+    ippiDCTFwdFree_32f(pDCTSpec);
+    CV_SUPPRESS_DEPRECATED_END
+
+    return status >= 0;
+}
+
+static bool ippi_DCT_Inv(const Mat& src, Mat& dst, bool row)
+{
+    if (src.type() != CV_32F)
+        return false;
+
+    IppStatus status;
+    IppiDCTInvSpec_32f* pDCTSpec;
+    Ipp8u *pBuffer;
+    int bufSize=0;
+
+    ippiDCTInvFunc ippFunc = (ippiDCTInvFunc)ippiDCTInv_32f_C1R;
+
+    if (ippFunc==0)
+        return false;
+
+    IppiSize srcRoiSize = {src.cols, row ? 1 : src.rows};
+
+    CV_SUPPRESS_DEPRECATED_START
+    status = ippiDCTInvInitAlloc_32f (&pDCTSpec, srcRoiSize, ippAlgHintNone);
+
+    if ( status < 0 )
+    {
+        ippiDCTInvFree_32f(pDCTSpec);
+        return false;
+    }
+
+    status = ippiDCTInvGetBufSize_32f (pDCTSpec, &bufSize);
+    if ( status < 0 )
+    {
+        ippiDCTInvFree_32f(pDCTSpec);
+        return false;
+    }
+
+    pBuffer = ippsMalloc_8u( bufSize );
+
+    if (row)
+    {
+        for (int i=0; i<src.rows; i++)
+        {
+            status = ippFunc((float*)(src.data+i*src.step), (int)src.step,(float*)(dst.data+i*dst.step), (int)dst.step, pDCTSpec, pBuffer);
+            if ( status < 0 )
+            {
+                ippsFree( pBuffer );
+                ippiDCTInvFree_32f(pDCTSpec);
+                return false;
+            }
+        }
+    }
+    else
+        status = ippFunc((float*)src.data, (int)src.step, (float*)dst.data, (int)dst.step, pDCTSpec, pBuffer);
+
+    ippFree( pBuffer );
+    ippiDCTInvFree_32f(pDCTSpec);
+    CV_SUPPRESS_DEPRECATED_END
+
+    return status >= 0;
+}
+
+#endif
+}
+
 void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 {
     static DCTFunc dct_tbl[4] =
@@ -2909,6 +3035,14 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
     CV_Assert( type == CV_32FC1 || type == CV_64FC1 );
     _dst.create( src.rows, src.cols, type );
     Mat dst = _dst.getMat();
+
+#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7
+    bool row = (flags & DCT_ROWS) != 0;
+    if (inv && ippi_DCT_Inv(src,dst,row))
+        return;
+    if(ippi_DCT_Fwd(src,dst,row))
+        return;
+#endif
 
     DCTFunc dct_func = dct_tbl[(int)inv + (depth == CV_64F)*2];
 
@@ -2962,27 +3096,6 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 
             spec = 0;
             inplace_transform = 1;
-            /*if( len*count >= 64 && DFTInitAlloc_R_32f_p )
-            {
-                int ipp_sz = 0;
-                if( depth == CV_32F )
-                {
-                    if( spec_dft )
-                        IPPI_CALL( DFTFree_R_32f_p( spec_dft ));
-                    IPPI_CALL( DFTInitAlloc_R_32f_p( &spec_dft, len, 8, cvAlgHintNone ));
-                    IPPI_CALL( DFTGetBufSize_R_32f_p( spec_dft, &ipp_sz ));
-                }
-                else
-                {
-                    if( spec_dft )
-                        IPPI_CALL( DFTFree_R_64f_p( spec_dft ));
-                    IPPI_CALL( DFTInitAlloc_R_64f_p( &spec_dft, len, 8, cvAlgHintNone ));
-                    IPPI_CALL( DFTGetBufSize_R_64f_p( spec_dft, &ipp_sz ));
-                }
-                spec = spec_dft;
-                sz += ipp_sz;
-            }
-            else*/
             {
                 sz += len*(complex_elem_size + sizeof(int)) + complex_elem_size;
 
