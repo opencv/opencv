@@ -2935,7 +2935,7 @@ double Mat::dot(InputArray _mat) const
     Mat mat = _mat.getMat();
     int cn = channels();
     DotProdFunc func = getDotProdFunc(depth());
-    CV_Assert( mat.type() == type() && mat.size == size && func != 0 );
+    CV_Assert( mat.type() == type() && mat.cols == rows && mat.rows == cols && func != 0 );
 
     if( isContinuous() && mat.isContinuous() )
     {
