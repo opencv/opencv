@@ -67,7 +67,64 @@
 #define TSIZE (int)sizeof(T1)*cn
 #endif
 
-#ifdef INTER_LINEAR_INTEGER
+#if defined USE_SAMPLER
+
+#if cn == 1
+#define READ_IMAGE(X,Y,Z)  read_imagef(X,Y,Z).x
+#elif cn == 2
+#define READ_IMAGE(X,Y,Z)  read_imagef(X,Y,Z).xy
+#elif cn == 3
+#define READ_IMAGE(X,Y,Z)  read_imagef(X,Y,Z).xyz
+#elif cn == 4
+#define READ_IMAGE(X,Y,Z)  read_imagef(X,Y,Z)
+#endif
+
+#define __CAT(x, y) x##y
+#define CAT(x, y) __CAT(x, y)
+#define INTERMEDIATE_TYPE CAT(float, cn)
+#define float1 float
+
+#if depth == 0
+#define RESULT_SCALE    255.0f
+#elif depth == 1
+#define RESULT_SCALE    127.0f
+#elif depth == 2
+#define RESULT_SCALE    65535.0f
+#elif depth == 3
+#define RESULT_SCALE    32767.0f
+#else
+#define RESULT_SCALE    1.0f
+#endif
+
+__kernel void resizeSampler(__read_only image2d_t srcImage,
+                            __global uchar* dstptr, int dststep, int dstoffset,
+                            int dstrows, int dstcols,
+                            float ifx, float ify)
+{
+    const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE |
+                              CLK_ADDRESS_CLAMP_TO_EDGE |
+                              CLK_FILTER_LINEAR;
+
+    int dx = get_global_id(0);
+    int dy = get_global_id(1);
+
+    float sx = ((dx+0.5f) * ifx), sy = ((dy+0.5f) * ify);
+
+    INTERMEDIATE_TYPE intermediate = READ_IMAGE(srcImage, sampler, (float2)(sx, sy));
+
+#if depth <= 4
+    T uval = convertToDT(round(intermediate * RESULT_SCALE));
+#else
+    T uval = convertToDT(intermediate * RESULT_SCALE);
+#endif
+
+    if(dx < dstcols && dy < dstrows)
+    {
+        storepix(uval, dstptr + mad24(dy, dststep, dstoffset + dx*TSIZE));
+    }
+}
+
+#elif defined INTER_LINEAR_INTEGER
 
 __kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
                        __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
@@ -185,8 +242,7 @@ __kernel void resizeNN(__global const uchar * srcptr, int src_step, int src_offs
 #ifdef INTER_AREA_FAST
 
 __kernel void resizeAREA_FAST(__global const uchar * src, int src_step, int src_offset, int src_rows, int src_cols,
-                              __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                              __global const int * dmap_tab, __global const int * smap_tab)
+                              __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
@@ -195,21 +251,21 @@ __kernel void resizeAREA_FAST(__global const uchar * src, int src_step, int src_
     {
         int dst_index = mad24(dy, dst_step, dst_offset);
 
-        __global const int * xmap_tab = dmap_tab;
-        __global const int * ymap_tab = dmap_tab + dst_cols;
-        __global const int * sxmap_tab = smap_tab;
-        __global const int * symap_tab = smap_tab + XSCALE * dst_cols;
-
-        int sx = xmap_tab[dx], sy = ymap_tab[dy];
+        int sx = XSCALE * dx;
+        int sy = YSCALE * dy;
         WTV sum = (WTV)(0);
 
         #pragma unroll
-        for (int y = 0; y < YSCALE; ++y)
+        for (int py = 0; py < YSCALE; ++py)
         {
-            int src_index = mad24(symap_tab[y + sy], src_step, src_offset);
+            int y = min(sy + py, src_rows - 1);
+            int src_index = mad24(y, src_step, src_offset);
             #pragma unroll
-            for (int x = 0; x < XSCALE; ++x)
-                sum += convertToWTV(loadpix(src + mad24(sxmap_tab[sx + x], TSIZE, src_index)));
+            for (int px = 0; px < XSCALE; ++px)
+            {
+                int x = min(sx + px, src_cols - 1);
+                sum += convertToWTV(loadpix(src + src_index + x*TSIZE));
+            }
         }
 
         storepix(convertToT(convertToWT2V(sum) * (WT2V)(SCALE)), dst + mad24(dx, TSIZE, dst_index));

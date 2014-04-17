@@ -218,6 +218,9 @@ public:
     virtual void release() const;
     virtual void clear() const;
     virtual void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
+
+    void assign(const UMat& u) const;
+    void assign(const Mat& m) const;
 };
 
 

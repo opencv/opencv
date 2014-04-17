@@ -42,7 +42,7 @@ PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateSmall,
         method == TM_CCORR_NORMED ||
         method == TM_SQDIFF_NORMED ||
         method == TM_CCOEFF_NORMED;
-    double eps = isNormed ? 1e-6
+    double eps = isNormed ? 1e-5
         : 255 * 255 * tmpl.total() * 1e-6;
 
     SANITY_CHECK(result, eps);
