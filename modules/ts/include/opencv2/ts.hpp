@@ -554,14 +554,16 @@ CV_EXPORTS void printVersionInfo(bool useStdOut = true);
 #endif
 #endif
 
-#if defined(HAVE_OPENCL)
+#ifdef HAVE_OPENCL
 namespace cvtest { namespace ocl {
 void dumpOpenCLDevice();
-}}
+} }
 #define TEST_DUMP_OCL_INFO cvtest::ocl::dumpOpenCLDevice();
 #else
 #define TEST_DUMP_OCL_INFO
 #endif
+
+void parseCustomOptions(int argc, char **argv);
 
 #define CV_TEST_MAIN(resourcesubdir, ...) \
 int main(int argc, char **argv) \
@@ -571,6 +573,7 @@ int main(int argc, char **argv) \
     cvtest::printVersionInfo(); \
     __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
     TEST_DUMP_OCL_INFO \
+    parseCustomOptions(argc, argv); \
     return RUN_ALL_TESTS(); \
 }
 

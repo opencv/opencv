@@ -1876,7 +1876,7 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
     return k;
 }
 
-#define CHECK_IPP_STATUS(STATUS) if (STATUS < 0) { *ok = false; return; }
+#define CHECK_IPP_STATUS(STATUS) if (STATUS != 0) { *ok = false; return; }
 
 #define SET_IPP_RESIZE_LINEAR_FUNC_PTR(TYPE, CN) \
     func = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; \

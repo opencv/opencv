@@ -1,11 +1,14 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
+// Copyright (C) 2014, Intel, Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
+
 #ifndef __OPENCV_TS_EXT_HPP__
 #define __OPENCV_TS_EXT_HPP__
 
-#define CHECK_IPP_STATUS \
-    do \
-    { \
-        EXPECT_LE(0, getIppStatus()) << getIppErrorLocation().c_str(); \
-    } while ((void)0, 0)
+void checkIppStatus();
 
 #undef TEST
 #define TEST(test_case_name, test_name) \
@@ -29,7 +32,7 @@
             ::testing::Test::TearDownTestCase, \
             new ::testing::internal::TestFactoryImpl<\
                 GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>);\
-    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() { setIppStatus(0); Body(); CHECK_IPP_STATUS; } \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() { cv::ipp::setIppStatus(0); Body(); checkIppStatus(); } \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::Body()
 
 #undef TEST_F
@@ -54,7 +57,7 @@
             test_fixture::TearDownTestCase, \
             new ::testing::internal::TestFactoryImpl<\
                 GTEST_TEST_CLASS_NAME_(test_fixture, test_name)>);\
-    void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::TestBody() { setIppStatus(0); Body(); CHECK_IPP_STATUS; } \
+    void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::TestBody() { cv::ipp::setIppStatus(0); Body(); checkIppStatus(); } \
     void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::Body()
 
 #undef TEST_P
@@ -83,7 +86,7 @@
   int GTEST_TEST_CLASS_NAME_(test_case_name, \
                              test_name)::gtest_registering_dummy_ = \
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::AddToRegistry(); \
-    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() { setIppStatus(0); Body(); CHECK_IPP_STATUS; } \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() { cv::ipp::setIppStatus(0); Body(); checkIppStatus(); } \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::Body()
 
 #endif  // __OPENCV_TS_EXT_HPP__
