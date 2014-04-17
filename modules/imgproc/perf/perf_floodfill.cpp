@@ -5,7 +5,7 @@ using namespace cv;
 using namespace perf;
 using namespace testing;
 
-typedef tr1::tuple<string, int, int, int, bool, int> Size_Source_t;
+typedef tr1::tuple<string, int, int, int, bool, int, bool> Size_Source_t;
 typedef TestBaseWithParam<Size_Source_t> Size_Source;
 
 PERF_TEST_P(Size_Source, floodFill1, Combine(
@@ -14,7 +14,8 @@ PERF_TEST_P(Size_Source, floodFill1, Combine(
             testing::Values(82, 140),//, seed point y
             testing::Values(4,8), //connectivity
             testing::Bool(), //color image, or not
-            testing::Values(0, 1, 2) //use fixed(2), gradient mode (1) or simple(0)
+            testing::Values(0, 1, 2), //use fixed(2), gradient mode (1) or simple(0)
+            testing::Bool() //8U image (1) or 32f(0)
             ))
 {
     //test given image(s)
@@ -28,16 +29,31 @@ PERF_TEST_P(Size_Source, floodFill1, Combine(
     int connectivity = get<3>(GetParam());
     bool isColored = get<4>(GetParam());
     int isGradient = get<5>(GetParam());
+    bool is8u = get<6>(GetParam());
 
     Mat source;
     if (isColored)
     {
-        image0.copyTo(source);
+        if (is8u)
+        {
+            image0.copyTo(source);
+        }
+        else
+        {
+            image0.convertTo(source, CV_32FC3);
+        }
     }
     else
     {
         //convert to grayscale
-        cvtColor(image0, source, COLOR_BGR2GRAY);
+        if (is8u)
+        {
+            image0.convertTo(source, CV_8UC1);
+        }
+        else
+        {
+            image0.convertTo(source, CV_32FC1);
+        }
     }
 
     int newMaskVal = 255;
@@ -73,12 +89,26 @@ PERF_TEST_P(Size_Source, floodFill1, Combine(
         stopTimer();
         if (isColored)
         {
-            image0.copyTo(source);
+            if (is8u)
+            {
+                image0.copyTo(source);
+            }
+            else
+            {
+                image0.convertTo(source, CV_32FC3);
+            }
         }
         else
         {
             //convert to grayscale
-            cvtColor(image0, source, COLOR_BGR2GRAY);
+            if (is8u)
+            {
+                image0.convertTo(source, CV_8UC1);
+            }
+            else
+            {
+                image0.convertTo(source, CV_32FC1);
+            }
         }
     }
 
