@@ -71,7 +71,7 @@ static void onMouse( int event, int x, int y, int, void* )
 
 int main( int argc, char** argv )
 {
-    char* filename = argc >= 2 ? argv[1] : (char*)"D:/Work/ml_OpenCV/opencv/samples/cpp/fruits.jpg";
+    char* filename = argc >= 2 ? argv[1] : (char*)"fruits.jpg";
     image0 = imread(filename, 1);
 
     if( image0.empty() )

@@ -665,6 +665,7 @@ cvbr:       if( type == CV_8UC1 )
 
     uchar newMaskVal = (uchar)((flags & ~0xff) == 0 ? 1 : ((flags >> 8) & 255));
     bool is_gradient = !(flags & FLOODFILL_FIXED_RANGE);
+//#if 0
 #if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
     //if (is_gradient )
     {
