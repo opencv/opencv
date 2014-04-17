@@ -671,16 +671,6 @@ void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, 
             pyrInitAllocFunc = (ippiPyramidLayerDownInitAlloc) ippiPyramidLayerDownInitAlloc_8u_C3R;
             pyrDownFunc = (ippiPyramidLayerDown) ippiPyramidLayerDown_8u_C3R;
             pyrFreeFunc = (ippiPyramidLayerDownFree) ippiPyramidLayerDownFree_8u_C3R;
-        } else if (type == CV_16UC1)
-        {
-            pyrInitAllocFunc = (ippiPyramidLayerDownInitAlloc) ippiPyramidLayerDownInitAlloc_16u_C1R;
-            pyrDownFunc = (ippiPyramidLayerDown) ippiPyramidLayerDown_16u_C1R;
-            pyrFreeFunc = (ippiPyramidLayerDownFree) ippiPyramidLayerDownFree_16u_C1R;
-        } else if (type == CV_16UC3)
-        {
-            pyrInitAllocFunc = (ippiPyramidLayerDownInitAlloc) ippiPyramidLayerDownInitAlloc_16u_C3R;
-            pyrDownFunc = (ippiPyramidLayerDown) ippiPyramidLayerDown_16u_C3R;
-            pyrFreeFunc = (ippiPyramidLayerDownFree) ippiPyramidLayerDownFree_16u_C3R;
         } else if (type == CV_32FC1)
         {
             pyrInitAllocFunc = (ippiPyramidLayerDownInitAlloc) ippiPyramidLayerDownInitAlloc_32f_C1R;
