@@ -1086,6 +1086,7 @@ static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
 { \
     if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height)) >= 0) \
         return; \
+    setIppErrorStatus(); \
     cvt_(src, sstep, dst, dstep, size); \
 }
 
@@ -1095,6 +1096,7 @@ static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
 { \
     if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height), ippRndFinancial, 0) >= 0) \
         return; \
+    setIppErrorStatus(); \
     cvt_(src, sstep, dst, dstep, size); \
 }
 #else

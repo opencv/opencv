@@ -59,10 +59,14 @@ static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
     int size = 0, size1 = 0;
     IppiSize roi = { _src.cols, _src.rows };
 
-    ippiFilterSobelNegVertGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size);
-    ippiFilterSobelHorizGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size1);
+    if (ippiFilterSobelNegVertGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size) < 0)
+        return false;
+    if (ippiFilterSobelHorizGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size1) < 0)
+        return false;
     size = std::max(size, size1);
-    ippiCannyGetSize(roi, &size1);
+
+    if (ippiCannyGetSize(roi, &size1) < 0)
+        return false;
     size = std::max(size, size1);
 
     AutoBuffer<uchar> buf(size + 64);
@@ -286,9 +290,12 @@ void cv::Canny( InputArray _src, OutputArray _dst,
 #endif
 
 #ifdef USE_IPP_CANNY
-    if( aperture_size == 3 && !L2gradient && 1 == cn &&
-        ippCanny(src, dst, (float)low_thresh, (float)high_thresh) )
-        return;
+    if( aperture_size == 3 && !L2gradient && 1 == cn )
+    {
+        if (ippCanny(src, dst, (float)low_thresh, (float)high_thresh))
+            return;
+        setIppErrorStatus();
+    }
 #endif
 
     Mat dx(src.rows, src.cols, CV_16SC(cn));
