@@ -1198,7 +1198,6 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1
     _lines1 = lines1.getMat();
     _lines2 = lines2.getMat();
     // Draw segments
-    std::vector<Mat> _lines;
     for(int i = 0; i < _lines1.size().width; ++i)
     {
         Point b(_lines1.at<Vec4i>(i)[0], _lines1.at<Vec4i>(i)[1]);

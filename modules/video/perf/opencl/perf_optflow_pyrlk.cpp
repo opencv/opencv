@@ -83,9 +83,7 @@ OCL_PERF_TEST_P(PyrLKOpticalFlowFixture, PyrLKOpticalFlow,
     const PyrLKOpticalFlowParams params = GetParam();
     const int pointsCount = get<0>(params);
 
-    vector<Point2f> pts, nextPts;
-    vector<unsigned char> status;
-    vector<float> err;
+    vector<Point2f> pts;
     goodFeaturesToTrack(frame0, pts, pointsCount, 0.01, 0.0);
     Mat ptsMat(1, static_cast<int>(pts.size()), CV_32FC2, (void *)&pts[0]);
 
