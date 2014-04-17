@@ -1063,9 +1063,12 @@ TLSStorage::~TLSStorage()
 
 TLSData<CoreTLSData> coreTlsData;
 
+namespace ipp
+{
+
 static int ippStatus = 0; // 0 - all is ok, -1 - IPP functions failed
-static const char * funcname, * filename;
-static int linen;
+static const char * funcname = NULL, * filename = NULL;
+static int linen = 0;
 
 void setIppStatus(int status, const char * const _funcname, const char * const _filename, int _line)
 {
@@ -1084,6 +1087,8 @@ String getIppErrorLocation()
 {
     return format("%s:%d %s", filename ? filename : "", linen, funcname ? funcname : "");
 }
+
+} // namespace ipp
 
 } // namespace cv
 

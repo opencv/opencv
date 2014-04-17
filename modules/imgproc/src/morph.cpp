@@ -1337,7 +1337,6 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
     if (IPPMorphReplicate( op, src, dst, kernel, ksize, anchor, rectKernel ))
         return true;
 
-    setIppErrorStatus();
     return false;
 }
 #endif

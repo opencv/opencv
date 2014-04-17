@@ -374,7 +374,7 @@ static ippiGeneralFunc ippiHLS2RGBTab[] =
     0, (ippiGeneralFunc)ippiHLSToRGB_32f_C3R, 0, 0
 };
 
-#if !defined(HAVE_IPP_ICV_ONLY)
+#if !defined(HAVE_IPP_ICV_ONLY) && 0
 static ippiGeneralFunc ippiRGBToLUVTab[] =
 {
     (ippiGeneralFunc)ippiRGBToLUV_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToLUV_16u_C3R, 0,
@@ -3920,6 +3920,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 
 #if defined HAVE_IPP && !defined(HAVE_IPP_ICV_ONLY)
+#if 0
             if (code == CV_LBGR2Lab && scn == 3 && depth == CV_8U)
             {
                 if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiBGRToLab_8u_C3R)))
@@ -3933,7 +3934,9 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                     return;
                 setIppErrorStatus();
             }
-            else if (code == CV_LRGB2Lab && scn == 3 && depth == CV_8U)
+            else
+#endif
+            if (code == CV_LRGB2Lab && scn == 3 && depth == CV_8U)
             {
                 if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
                                                                        (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 2, 1, 0, depth)))
@@ -3947,6 +3950,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                     return;
                 setIppErrorStatus();
             }
+#if 0
             else if (code == CV_LRGB2Luv && scn == 3)
             {
                 if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGBToLUVTab[depth])))
@@ -3974,6 +3978,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                     return;
                 setIppErrorStatus();
             }
+#endif
 #endif
 
             if( code == CV_BGR2Lab || code == CV_RGB2Lab ||
@@ -4036,7 +4041,6 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                     return;
                 setIppErrorStatus();
             }
-#endif
             if( code == CV_Luv2LRGB && dcn == 3 )
             {
                 if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiLUVToRGBTab[depth])) )
@@ -4060,6 +4064,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                                                                        ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
                     return;
             }
+#endif
 #endif
 
             if( code == CV_Lab2BGR || code == CV_Lab2RGB ||
