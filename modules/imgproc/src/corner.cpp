@@ -461,7 +461,7 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
     _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
 
-#if defined(HAVE_IPP) && (IPP_VERSION_MAJOR >= 8)
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && (IPP_VERSION_MAJOR >= 8)
     typedef IppStatus (CV_STDCALL * ippiMinEigenValGetBufferSize)(IppiSize, int, int, int*);
     typedef IppStatus (CV_STDCALL * ippiMinEigenVal)(const void*, int, Ipp32f*, int, IppiSize, IppiKernelType, int, int, Ipp8u*);
     IppiKernelType kerType;
@@ -505,12 +505,13 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
                 Ipp8u* buffer = ippsMalloc_8u(bufferSize);
                 ok = minEigenValFunc(src.data, (int) src.step, (Ipp32f*) dst.data, (int) dst.step, srcRoi, kerType, kerSize, blockSize, buffer);
                 CV_SUPPRESS_DEPRECATED_START
-                if (ok >= 0) ippiMulC_32f_C1IR(norm_coef, (Ipp32f*) dst.data, (int) dst.step, srcRoi);
+                if (ok >= 0) ok = ippiMulC_32f_C1IR(norm_coef, (Ipp32f*) dst.data, (int) dst.step, srcRoi);
                 CV_SUPPRESS_DEPRECATED_END
                 ippsFree(buffer);
                 if (ok >= 0)
                     return;
             }
+            setIppErrorStatus();
         }
     }
 #endif

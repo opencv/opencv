@@ -28,8 +28,7 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_k_BorderType, cornerHarris,
     BorderType borderType = get<4>(GetParam());
 
     Mat src = imread(filename, IMREAD_GRAYSCALE);
-    if (src.empty())
-        FAIL() << "Unable to load source image" << filename;
+    ASSERT_FALSE(src.empty()) << "Unable to load source image: " << filename;
 
     Mat dst;
 
@@ -56,8 +55,7 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_BorderType, cornerEigenValsAndVecs,
     BorderType borderType = get<3>(GetParam());
 
     Mat src = imread(filename, IMREAD_GRAYSCALE);
-    if (src.empty())
-        FAIL() << "Unable to load source image" << filename;
+    ASSERT_FALSE(src.empty()) << "Unable to load source image: " << filename;
 
     Mat dst;
 
@@ -84,8 +82,7 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_BorderType, cornerMinEigenVal,
     BorderType borderType = get<3>(GetParam());
 
     Mat src = imread(filename, IMREAD_GRAYSCALE);
-    if (src.empty())
-        FAIL() << "Unable to load source image" << filename;
+    ASSERT_FALSE(src.empty()) << "Unable to load source image: " << filename;
 
     Mat dst;
 
