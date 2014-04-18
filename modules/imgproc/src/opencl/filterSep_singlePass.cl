@@ -162,10 +162,10 @@ __kernel void sep_filter(__global uchar* Src, int src_step, int srcOffsetX, int 
     {
         sum = (WT) 0;
         for (i=0; i<=2*RADIUSY; i++)
-#ifndef INTEGER_ARITHMETIC
-            sum = mad(lsmem[liy+i][clocX], mat_kernelY[i], sum);
-#else
+#if (defined(INTEGER_ARITHMETIC) && !INTEL_DEVICE)
             sum = mad24(lsmem[liy+i][clocX], mat_kernelY[i], sum);
+#else
+            sum = mad(lsmem[liy+i][clocX], mat_kernelY[i], sum);
 #endif
         lsmemDy[liy][clocX] = sum;
         clocX += BLK_X;
@@ -182,12 +182,18 @@ __kernel void sep_filter(__global uchar* Src, int src_step, int srcOffsetX, int 
     // and calculate final result
     sum = 0.0f;
     for (i=0; i<=2*RADIUSX; i++)
-#ifndef INTEGER_ARITHMETIC
-        sum = mad(lsmemDy[liy][lix+i], mat_kernelX[i], sum);
-#else
+#if (defined(INTEGER_ARITHMETIC) && !INTEL_DEVICE)
         sum = mad24(lsmemDy[liy][lix+i], mat_kernelX[i], sum);
+#else
+        sum = mad(lsmemDy[liy][lix+i], mat_kernelX[i], sum);
+#endif
 
+#ifdef INTEGER_ARITHMETIC
+#ifdef INTEL_DEVICE
+    sum = (sum + (1 << (SHIFT_BITS-1))) / (1 << SHIFT_BITS);
+#else
     sum = (sum + (1 << (SHIFT_BITS-1))) >> SHIFT_BITS;
+#endif
 #endif
 
     // store result into destination image

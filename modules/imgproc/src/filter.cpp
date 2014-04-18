@@ -3491,9 +3491,19 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
         rtype == KERNEL_SMOOTH+KERNEL_SYMMETRICAL &&
         ctype == KERNEL_SMOOTH+KERNEL_SYMMETRICAL)
     {
-        bdepth = CV_32S;
-        kernelX.convertTo( kernelX, bdepth, 1 << shift_bits );
-        kernelY.convertTo( kernelY, bdepth, 1 << shift_bits );
+        if (ocl::Device::getDefault().isIntel())
+        {
+            for (int i=0; i<kernelX.cols; i++)
+                kernelX.at<float>(0, i) = (float) cvRound(kernelX.at<float>(0, i) * (1 << shift_bits));
+            if (kernelX.data != kernelY.data)
+                for (int i=0; i<kernelX.cols; i++)
+                    kernelY.at<float>(0, i) = (float) cvRound(kernelY.at<float>(0, i) * (1 << shift_bits));
+        } else
+        {
+            bdepth = CV_32S;
+            kernelX.convertTo( kernelX, bdepth, 1 << shift_bits );
+            kernelY.convertTo( kernelY, bdepth, 1 << shift_bits );
+        }
         int_arithm = true;
     }
 
