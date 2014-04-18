@@ -31,6 +31,7 @@ static double       param_time_limit;
 static int          param_threads;
 static bool         param_write_sanity;
 static bool         param_verify_sanity;
+extern bool         test_ipp_check;
 #ifdef HAVE_CUDA
 static int          param_cuda_device;
 #endif
@@ -670,6 +671,9 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         "{   perf_time_limit             |3.0      |default time limit for a single test (in seconds)}"
 #endif
         "{   perf_max_deviation          |1.0      |}"
+#ifdef HAVE_IPP
+        "{   perf_ipp_check              |false    |check whether IPP works without failures}"
+#endif
         "{   help h                      |false    |print help info}"
 #ifdef HAVE_CUDA
         "{   perf_cuda_device            |0        |run CUDA test suite onto specific CUDA capable device}"
@@ -713,7 +717,8 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     param_force_samples = args.get<unsigned int>("perf_force_samples");
     param_write_sanity  = args.has("perf_write_sanity");
     param_verify_sanity = args.has("perf_verify_sanity");
-    param_threads  = args.get<int>("perf_threads");
+    test_ipp_check      = !args.has("perf_ipp_check") ? getenv("OPENCV_IPP_CHECK") != NULL : true;
+    param_threads       = args.get<int>("perf_threads");
 #ifdef ANDROID
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
     log_power_checkpoints = args.has("perf_log_power_checkpoints");

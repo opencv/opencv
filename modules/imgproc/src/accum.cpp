@@ -503,6 +503,7 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
 
             if (status >= 0)
                 return;
+            setIppErrorStatus();
         }
     }
 #endif
@@ -584,6 +585,7 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
 
             if (status >= 0)
                 return;
+            setIppErrorStatus();
         }
     }
 #endif
@@ -663,6 +665,7 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
 
             if (status >= 0)
                 return;
+            setIppErrorStatus();
         }
     }
 #endif
