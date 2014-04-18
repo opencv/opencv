@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(__ANDROID__)
+#if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(__ANDROID__) || ( defined(__cplusplus) &&  __cplusplus > 199711L) || (defined(_MSC_VER) && _MSC_VER >= 1700)
 
 #include <opencv2/core.hpp>
 #include <opencv2/objdetect.hpp>
