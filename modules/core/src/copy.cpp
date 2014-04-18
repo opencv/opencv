@@ -84,6 +84,7 @@ copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
 #if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
     if (ippiCopy_8u_C1MR(_src, (int)sstep, _dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
         return;
+    setIppErrorStatus();
 #endif
 
     for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
@@ -119,6 +120,7 @@ copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mst
 #if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
     if (ippiCopy_16u_C1MR((const Ipp16u *)_src, (int)sstep, (Ipp16u *)_dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
         return;
+    setIppErrorStatus();
 #endif
 
     for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
@@ -182,6 +184,7 @@ static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, 
 { \
     if (ippiCopy_##ippfavor((const ipptype *)src, (int)sstep, (ipptype *)dst, (int)dstep, ippiSize(size), (const Ipp8u *)mask, (int)mstep) >= 0) \
         return; \
+    setIppErrorStatus(); \
     copyMask_<type>(src, sstep, mask, mstep, dst, dstep, size); \
 }
 #else
@@ -281,6 +284,7 @@ void Mat::copyTo( OutputArray _dst ) const
 #if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
             if (ippiCopy_8u_C1R(sptr, (int)step, dptr, (int)dst.step, ippiSize((int)len, sz.height)) >= 0)
                 return;
+            setIppErrorStatus();
 #endif
 
             for( ; sz.height--; sptr += step, dptr += dst.step )
@@ -367,11 +371,13 @@ Mat& Mat::operator = (const Scalar& s)
 
                 if (ippsZero_8u(data, static_cast<int>(roisize.width * elemSize())) >= 0)
                     return *this;
+                setIppErrorStatus();
             }
             roisize.width *= (int)elemSize();
 
             if (ippiSet_8u_C1R(0, data, (int)step, roisize) >= 0)
                 return *this;
+            setIppErrorStatus();
         }
 #endif
 
@@ -414,13 +420,16 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     CV_Assert( mask.empty() || (mask.type() == CV_8U && size == mask.size) );
 
 #if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
-    if (!mask.empty() && (dims <= 2 || (isContinuous() && mask.isContinuous())))
+    int cn = channels(), depth0 = depth();
+
+    if (!mask.empty() && (dims <= 2 || (isContinuous() && mask.isContinuous())) &&
+            (depth0 == CV_8U || depth0 == CV_16U || depth0 == CV_16S || depth0 == CV_32S || depth0 == CV_32F) &&
+            (cn == 1 || cn == 3 || cn == 4))
     {
         uchar _buf[32];
         void * buf = _buf;
         convertAndUnrollScalar( value, type(), _buf, 1 );
 
-        int cn = channels(), depth0 = depth();
         IppStatus status = (IppStatus)-1;
         IppiSize roisize = { cols, rows };
         int mstep = (int)mask.step, dstep = (int)step;
@@ -444,13 +453,13 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
             else if (depth0 == CV_32F)
                 status = ippiSet_32f_C1MR(*(Ipp32f *)buf, (Ipp32f *)data, dstep, roisize, mask.data, mstep);
         }
-        else if (cn == 3 || cn == 3)
+        else if (cn == 3 || cn == 4)
         {
 #define IPP_SET(ippfavor, ippcn) \
     do \
     { \
         typedef Ipp##ippfavor ipptype; \
-        ipptype ippvalue[4] = { ((ipptype *)buf)[0], ((ipptype *)buf)[1], ((ipptype *)buf)[2], ((ipptype *)buf)[4] }; \
+        ipptype ippvalue[4] = { ((ipptype *)buf)[0], ((ipptype *)buf)[1], ((ipptype *)buf)[2], ((ipptype *)buf)[3] }; \
         status = ippiSet_##ippfavor##_C##ippcn##MR(ippvalue, (ipptype *)data, dstep, roisize, mask.data, mstep); \
     } while ((void)0, 0)
 
@@ -481,6 +490,7 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
 
         if (status >= 0)
             return *this;
+        setIppErrorStatus();
     }
 #endif
 
@@ -733,6 +743,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
             return;
         setIppErrorStatus();
     }
+#endif
 
     if( flip_mode <= 0 )
         flipVert( src.data, src.step, dst.data, dst.step, src.size(), esz );

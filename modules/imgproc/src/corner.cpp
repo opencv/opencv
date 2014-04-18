@@ -510,7 +510,10 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
 
             if (status >= 0)
                 return;
+            setIppErrorStatus();
         }
+        else
+            setIppErrorStatus();
     }
 #endif
 
