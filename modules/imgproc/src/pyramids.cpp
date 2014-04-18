@@ -538,6 +538,7 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
 
                 if (ok >= 0)
                     return;
+                setIppErrorStatus();
             }
         }
     }
@@ -606,6 +607,7 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
 
                 if (ok >= 0)
                     return;
+                setIppErrorStatus();
             }
         }
     }
@@ -714,9 +716,15 @@ void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, 
                                                   gPyr->pImage[i], gPyr->pStep[i], gPyr->pRoi[i], gPyr->pState);
 
                     if (ok < 0)
+                    {
+                        setIppErrorStatus();
                         break;
+                    }
                 }
                 pyrFreeFunc(gPyr->pState);
+            } else
+            {
+                setIppErrorStatus();
             }
             ippiPyramidFree(gPyr);
         }
