@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2014, Itseez, Inc, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -97,7 +98,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     int numangle = cvRound((max_theta - min_theta) / theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
-#if (defined(HAVE_IPP) && IPP_VERSION_MAJOR >= 8)
+#if (defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801)
     IppiSize srcSize = { width, height };
     IppPointPolar delta = { rho, theta };
     IppPointPolar dstRoi[2] = {{(Ipp32f) -(width + height), (Ipp32f) min_theta},{(Ipp32f) (width + height), (Ipp32f) max_theta}};
