@@ -5,7 +5,7 @@ using namespace cv;
 using namespace perf;
 using namespace testing;
 
-typedef tr1::tuple<string, int, int, int, bool, int, bool> Size_Source_t;
+typedef tr1::tuple<string, int, int, int, int, int, int> Size_Source_t;
 typedef TestBaseWithParam<Size_Source_t> Size_Source;
 
 PERF_TEST_P(Size_Source, floodFill1, Combine(
@@ -13,47 +13,36 @@ PERF_TEST_P(Size_Source, floodFill1, Combine(
             testing::Values(120, 200 ), //seed point x
             testing::Values(82, 140),//, seed point y
             testing::Values(4,8), //connectivity
-            testing::Bool(), //color image, or not
-            testing::Values(0, 1, 2), //use fixed(2), gradient mode (1) or simple(0)
-            testing::Bool() //8U image (1) or 32f(0)
+            testing::Values(IMREAD_COLOR, IMREAD_GRAYSCALE), //color image, or not
+            testing::Values(0, 1, 2), //use fixed(1), gradient (2) or simple(0) mode
+            testing::Values(CV_8U, CV_32F, CV_32S) //image depth
             ))
 {
     //test given image(s)
     string filename = getDataPath(get<0>(GetParam()));
-    Mat image0 = imread(filename, 1);
-
     Point pseed;
     pseed.x = get<1>(GetParam());
     pseed.y = get<2>(GetParam());
 
     int connectivity = get<3>(GetParam());
-    bool isColored = get<4>(GetParam());
-    int isGradient = get<5>(GetParam());
-    bool is8u = get<6>(GetParam());
+    int colorType = get<4>(GetParam());
+    int modeType = get<5>(GetParam());
+    int imdepth = get<6>(GetParam());
+
+    Mat image0 = imread(filename, colorType);
 
     Mat source;
-    if (isColored)
+    if (imdepth == CV_8U)
     {
-        if (is8u)
-        {
-            image0.copyTo(source);
-        }
-        else
-        {
-            image0.convertTo(source, CV_32FC3);
-        }
+        image0.copyTo(source);
     }
-    else
+    else if (imdepth == CV_32F)
     {
-        //convert to grayscale
-        if (is8u)
-        {
-            image0.convertTo(source, CV_8UC1);
-        }
-        else
-        {
-            image0.convertTo(source, CV_32FC1);
-        }
+        image0.convertTo(source, CV_32F);
+    }
+    else if (imdepth == CV_32S)
+    {
+        image0.convertTo(source, CV_32S);
     }
 
     int newMaskVal = 255;
@@ -62,21 +51,19 @@ PERF_TEST_P(Size_Source, floodFill1, Combine(
     int b = 152;//(unsigned)theRNG() & 255;
     int g = 136;//(unsigned)theRNG() & 255;
     int r = 53;//(unsigned)theRNG() & 255;
-    if (isGradient)
-    {
-        loVal = Scalar(4, 4, 4);
-        upVal = Scalar(20, 20, 20);
-    }
-    else
+    if (modeType == 0)
     {
         loVal = Scalar(0, 0, 0);
         upVal = Scalar(0, 0, 0);
     }
-    newval = isColored ? Scalar(b, g, r) : Scalar(r*0.299 + g*0.587 + b*0.114);
+    else
+    {
+        loVal = Scalar(4, 4, 4);
+        upVal = Scalar(20, 20, 20);
+    }
+    newval = (colorType == IMREAD_COLOR) ? Scalar(b, g, r) : Scalar(r*0.299 + g*0.587 + b*0.114);
     Rect prect;
-    int flags = connectivity + (newMaskVal << 8);
-    if (isGradient == 2)
-        flags += (FLOODFILL_FIXED_RANGE);
+    int flags = connectivity + (newMaskVal << 8) + (modeType == 1 ? FLOODFILL_FIXED_RANGE : 0);
     int numpix;
 
     declare.in(source);
@@ -87,28 +74,17 @@ PERF_TEST_P(Size_Source, floodFill1, Combine(
         startTimer();
         numpix = cv::floodFill(source, pseed, newval, &prect, loVal, upVal, flags);
         stopTimer();
-        if (isColored)
+        if (imdepth == CV_8U)
         {
-            if (is8u)
-            {
-                image0.copyTo(source);
-            }
-            else
-            {
-                image0.convertTo(source, CV_32FC3);
-            }
+            image0.copyTo(source);
         }
-        else
+        else if (imdepth == CV_32F)
         {
-            //convert to grayscale
-            if (is8u)
-            {
-                image0.convertTo(source, CV_8UC1);
-            }
-            else
-            {
-                image0.convertTo(source, CV_32FC1);
-            }
+            image0.convertTo(source, CV_32F);
+        }
+        else if (imdepth == CV_32S)
+        {
+            image0.convertTo(source, CV_32S);
         }
     }
 
