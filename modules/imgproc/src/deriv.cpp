@@ -412,11 +412,13 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
 }
 #endif
 
-static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, int ksize, double scale, double delta)
+static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, int ksize, double scale, double delta, int borderType)
 {
-    if (ksize != 3 && ksize != 5)
+    if ((borderType != BORDER_REPLICATE) || (3 != ksize) || (5 != ksize))
         return false;
     if (fabs(delta) > FLT_EPSILON)
+        return false;
+    if (1 != _src.channels())
         return false;
 
     int bufSize = 0;
@@ -579,11 +581,13 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     {
         if (IPPDerivScharr(_src, _dst, ddepth, dx, dy, scale, delta, borderType))
             return;
+        setIppErrorStatus();
     }
-    else if (0 < ksize && cn == 1 && borderType == BORDER_REPLICATE)
+    else if (0 < ksize)
     {
-        if (IPPDerivSobel(_src, _dst, ddepth, dx, dy, ksize, scale, delta))
+        if (IPPDerivSobel(_src, _dst, ddepth, dx, dy, ksize, scale, delta, borderType))
             return;
+        setIppErrorStatus();
     }
 #endif
     int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
