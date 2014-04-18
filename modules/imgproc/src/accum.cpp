@@ -479,6 +479,7 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
 
             if (status >= 0)
                 return;
+            setIppErrorStatus();
         }
     }
 #endif

@@ -3079,6 +3079,7 @@ void cv::transpose( InputArray _src, OutputArray _dst )
             return;
         setIppErrorStatus();
     }
+#endif
 
     if( dst.data == src.data )
     {
