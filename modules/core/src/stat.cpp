@@ -579,11 +579,10 @@ cv::Scalar cv::sum( InputArray _src )
             {
                 Scalar sc;
                 for( int i = 0; i < cn; i++ )
-                {
                     sc[i] = res[i];
-                }
                 return sc;
             }
+            setIppErrorStatus();
         }
     }
 #endif
@@ -714,6 +713,7 @@ int cv::countNonZero( InputArray _src )
 
         if (status >= 0)
             return (Ipp32s)src.total() - count;
+        setIppErrorStatus();
     }
 #endif
 
@@ -757,9 +757,8 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
             {
                 Ipp64f res;
                 if( ippFuncC1(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, &res) >= 0 )
-                {
                     return Scalar(res);
-                }
+                setIppErrorStatus();
             }
             typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC3)(const void *, int, void *, int, IppiSize, int, Ipp64f *);
             ippiMaskMeanFuncC3 ippFuncC3 =
@@ -776,6 +775,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
                 {
                     return Scalar(res1, res2, res3);
                 }
+                setIppErrorStatus();
             }
         }
         else
@@ -809,11 +809,10 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
                 {
                     Scalar sc;
                     for( int i = 0; i < cn; i++ )
-                    {
                         sc[i] = res[i];
-                    }
                     return sc;
                 }
+                setIppErrorStatus();
             }
         }
     }
@@ -977,6 +976,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
             {
                 if( ippFuncC1(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, pmean, pstddev) >= 0 )
                     return;
+                setIppErrorStatus();
             }
             typedef IppStatus (CV_STDCALL* ippiMaskMeanStdDevFuncC3)(const void *, int, void *, int, IppiSize, int, Ipp64f *, Ipp64f *);
             ippiMaskMeanStdDevFuncC3 ippFuncC3 =
@@ -990,6 +990,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
                     ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 2, &pmean[1], &pstddev[1]) >= 0 &&
                     ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 3, &pmean[2], &pstddev[2]) >= 0 )
                     return;
+                setIppErrorStatus();
             }
         }
         else
@@ -1006,6 +1007,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
             {
                 if( ippFuncC1(src.data, (int)src.step[0], sz, pmean, pstddev) >= 0 )
                     return;
+                setIppErrorStatus();
             }
             typedef IppStatus (CV_STDCALL* ippiMeanStdDevFuncC3)(const void *, int, IppiSize, int, Ipp64f *, Ipp64f *);
             ippiMeanStdDevFuncC3 ippFuncC3 =
@@ -1019,6 +1021,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
                     ippFuncC3(src.data, (int)src.step[0], sz, 2, &pmean[1], &pstddev[1]) >= 0 &&
                     ippFuncC3(src.data, (int)src.step[0], sz, 3, &pmean[2], &pstddev[2]) >= 0 )
                     return;
+                setIppErrorStatus();
             }
         }
     }
@@ -1404,6 +1407,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                     }
                     return;
                 }
+                setIppErrorStatus();
             }
         }
         else
@@ -1436,6 +1440,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                     }
                     return;
                 }
+                setIppErrorStatus();
             }
         }
     }
@@ -2076,9 +2081,9 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
             {
                 Ipp64f norm;
                 if( ippFuncC1(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, &norm) >= 0 )
-                {
                     return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
-                }
+
+                setIppErrorStatus();
             }
             typedef IppStatus (CV_STDCALL* ippiMaskNormFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
             ippiMaskNormFuncC3 ippFuncC3 =
@@ -2114,6 +2119,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
                         0;
                     return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
                 }
+                setIppErrorStatus();
             }
         }
         else
@@ -2190,6 +2196,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
                     }
                     return normType == NORM_L2 ? (double)std::sqrt(norm) : (double)norm;
                 }
+                setIppErrorStatus();
             }
         }
     }
@@ -2430,6 +2437,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                     Ipp64f norm;
                     if( ippFuncC1(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, &norm) >= 0 )
                         return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
+                    setIppErrorStatus();
                 }
             }
             else
@@ -2459,6 +2467,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                     Ipp64f norm;
                     if( ippFunc(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], sz, &norm, ippAlgHintAccurate) >= 0 )
                         return (double)norm;
+                    setIppErrorStatus();
                 }
             }
         }
@@ -2511,6 +2520,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 Ipp64f norm;
                 if( ippFuncC1(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, &norm) >= 0 )
                     return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
+                setIppErrorStatus();
             }
             typedef IppStatus (CV_STDCALL* ippiMaskNormDiffFuncC3)(const void *, int, const void *, int, const void *, int, IppiSize, int, Ipp64f *);
             ippiMaskNormDiffFuncC3 ippFuncC3 =
@@ -2546,6 +2556,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                         0;
                     return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
                 }
+                setIppErrorStatus();
             }
         }
         else
@@ -2622,6 +2633,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                     }
                     return normType == NORM_L2 ? (double)std::sqrt(norm) : (double)norm;
                 }
+                setIppErrorStatus();
             }
         }
     }

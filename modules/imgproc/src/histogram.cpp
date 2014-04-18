@@ -1255,6 +1255,7 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
             ihist.convertTo(hist, CV_32F);
             return;
         }
+        setIppErrorStatus();
     }
 #endif
 

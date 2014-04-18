@@ -658,4 +658,33 @@ void smoothBorder(Mat& img, const Scalar& color, int delta)
 
 } //namespace cvtest
 
+bool test_ipp_check = false;
+
+void checkIppStatus()
+{
+    if (test_ipp_check)
+    {
+        int status = cv::ipp::getIppStatus();
+        EXPECT_LE(0, status) << cv::ipp::getIppErrorLocation().c_str();
+    }
+}
+
+void parseCustomOptions(int argc, char **argv)
+{
+    const char * const command_line_keys =
+        "{ ipp test_ipp_check |false    |check whether IPP works without failures }"
+        "{ h   help           |false    |print help info                          }";
+
+    cv::CommandLineParser parser(argc, argv, command_line_keys);
+    if (parser.get<bool>("help"))
+    {
+        std::cout << "\nAvailable options besides google test option: \n";
+        parser.printMessage();
+    }
+
+    test_ipp_check = parser.get<bool>("test_ipp_check");
+    if (!test_ipp_check)
+        test_ipp_check = getenv("OPENCV_IPP_CHECK") != NULL;
+}
+
 /* End of file. */
