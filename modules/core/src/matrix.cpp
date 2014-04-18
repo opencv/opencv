@@ -3234,27 +3234,140 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 #define reduceMinR32f reduceR_<float, float, OpMin<float> >
 #define reduceMinR64f reduceR_<double,double,OpMin<double> >
 
+#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+
+static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& dstmat)
+{
+    cv::Size size = srcmat.size();
+    IppiSize roisize = { size.width, 1 };
+    int sstep = (int)srcmat.step, stype = srcmat.type(),
+            sdepth = CV_MAT_DEPTH(stype), ddepth = dstmat.depth();
+
+    typedef IppStatus (CV_STDCALL * ippiSum)(const void * pSrc, int srcStep, IppiSize roiSize, Ipp64f* pSum);
+    typedef IppStatus (CV_STDCALL * ippiSumHint)(const void * pSrc, int srcStep, IppiSize roiSize, Ipp64f* pSum, IppHintAlgorithm hint);
+    ippiSum ippFunc = 0;
+    ippiSumHint ippFuncHint = 0;
+    cv::ReduceFunc func = 0;
+
+    if (ddepth == CV_64F)
+    {
+        ippFunc =
+            stype == CV_8UC1 ? (ippiSum)ippiSum_8u_C1R :
+            stype == CV_8UC3 ? (ippiSum)ippiSum_8u_C3R :
+            stype == CV_8UC4 ? (ippiSum)ippiSum_8u_C4R :
+            stype == CV_16UC1 ? (ippiSum)ippiSum_16u_C1R :
+            stype == CV_16UC3 ? (ippiSum)ippiSum_16u_C3R :
+            stype == CV_16UC4 ? (ippiSum)ippiSum_16u_C4R :
+            stype == CV_16SC1 ? (ippiSum)ippiSum_16s_C1R :
+            stype == CV_16SC3 ? (ippiSum)ippiSum_16s_C3R :
+            stype == CV_16SC4 ? (ippiSum)ippiSum_16s_C4R : 0;
+        ippFuncHint =
+            stype == CV_32FC1 ? (ippiSumHint)ippiSum_32f_C1R :
+            stype == CV_32FC3 ? (ippiSumHint)ippiSum_32f_C3R :
+            stype == CV_32FC4 ? (ippiSumHint)ippiSum_32f_C4R : 0;
+        func =
+        sdepth == CV_8U ? (cv::ReduceFunc)cv::reduceC_<uchar, double,   cv::OpAdd<double> > :
+            sdepth == CV_16U ? (cv::ReduceFunc)cv::reduceC_<ushort, double,   cv::OpAdd<double> > :
+            sdepth == CV_16S ? (cv::ReduceFunc)cv::reduceC_<short, double,   cv::OpAdd<double> > :
+            sdepth == CV_32F ? (cv::ReduceFunc)cv::reduceC_<float, double,   cv::OpAdd<double> > : 0;
+    }
+    CV_Assert(!(ippFunc && ippFuncHint) && func);
+
+    if (ippFunc)
+    {
+        for (int y = 0; y < size.height; ++y)
+            if (ippFunc(srcmat.data + sstep * y, sstep, roisize, dstmat.ptr<Ipp64f>(y)) < 0)
+            {
+                setIppErrorStatus();
+                cv::Mat dstroi = dstmat.rowRange(y, y + 1);
+                func(srcmat.rowRange(y, y + 1), dstroi);
+            }
+        return;
+    }
+    else if (ippFuncHint)
+    {
+        for (int y = 0; y < size.height; ++y)
+            if (ippFuncHint(srcmat.data + sstep * y, sstep, roisize, dstmat.ptr<Ipp64f>(y), ippAlgHintAccurate) < 0)
+            {
+                setIppErrorStatus();
+                cv::Mat dstroi = dstmat.rowRange(y, y + 1);
+                func(srcmat.rowRange(y, y + 1), dstroi);
+            }
+        return;
+    }
+
+    func(srcmat, dstmat);
+}
+
+#endif
+
 #define reduceSumC8u32s  reduceC_<uchar, int,   OpAdd<int> >
 #define reduceSumC8u32f  reduceC_<uchar, float, OpAdd<int> >
-#define reduceSumC8u64f  reduceC_<uchar, double,OpAdd<int> >
 #define reduceSumC16u32f reduceC_<ushort,float, OpAdd<float> >
-#define reduceSumC16u64f reduceC_<ushort,double,OpAdd<double> >
 #define reduceSumC16s32f reduceC_<short, float, OpAdd<float> >
-#define reduceSumC16s64f reduceC_<short, double,OpAdd<double> >
 #define reduceSumC32f32f reduceC_<float, float, OpAdd<float> >
-#define reduceSumC32f64f reduceC_<float, double,OpAdd<double> >
 #define reduceSumC64f64f reduceC_<double,double,OpAdd<double> >
 
+#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+#define reduceSumC8u64f  reduceSumC_8u16u16s32f_64f
+#define reduceSumC16u64f reduceSumC_8u16u16s32f_64f
+#define reduceSumC16s64f reduceSumC_8u16u16s32f_64f
+#define reduceSumC32f64f reduceSumC_8u16u16s32f_64f
+#else
+#define reduceSumC8u64f  reduceC_<uchar, double,OpAdd<int> >
+#define reduceSumC16u64f reduceC_<ushort,double,OpAdd<double> >
+#define reduceSumC16s64f reduceC_<short, double,OpAdd<double> >
+#define reduceSumC32f64f reduceC_<float, double,OpAdd<double> >
+#endif
+
+#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+#define REDUCE_OP(favor, optype, type1, type2) \
+static inline void reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& dstmat) \
+{ \
+    typedef Ipp##favor IppType; \
+    cv::Size size = srcmat.size(); \
+    IppiSize roisize = ippiSize(size.width, 1);\
+    int sstep = (int)srcmat.step; \
+     \
+    if (srcmat.channels() == 1) \
+    { \
+        for (int y = 0; y < size.height; ++y) \
+            if (ippi##optype##_##favor##_C1R(srcmat.ptr<IppType>(y), sstep, roisize, dstmat.ptr<IppType>(y)) < 0) \
+            { \
+                setIppErrorStatus(); \
+                cv::Mat dstroi = dstmat.rowRange(y, y + 1); \
+                cv::reduceC_ < type1, type2, cv::Op##optype < type2 > >(srcmat.rowRange(y, y + 1), dstroi); \
+            } \
+        return; \
+    } \
+    cv::reduceC_ < type1, type2, cv::Op##optype < type2 > >(srcmat, dstmat); \
+}
+#endif
+
+#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+REDUCE_OP(8u, Max, uchar, uchar)
+REDUCE_OP(16u, Max, ushort, ushort)
+REDUCE_OP(16s, Max, short, short)
+REDUCE_OP(32f, Max, float, float)
+#else
 #define reduceMaxC8u  reduceC_<uchar, uchar, OpMax<uchar> >
 #define reduceMaxC16u reduceC_<ushort,ushort,OpMax<ushort> >
 #define reduceMaxC16s reduceC_<short, short, OpMax<short> >
 #define reduceMaxC32f reduceC_<float, float, OpMax<float> >
+#endif
 #define reduceMaxC64f reduceC_<double,double,OpMax<double> >
 
+#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+REDUCE_OP(8u, Min, uchar, uchar)
+REDUCE_OP(16u, Min, ushort, ushort)
+REDUCE_OP(16s, Min, short, short)
+REDUCE_OP(32f, Min, float, float)
+#else
 #define reduceMinC8u  reduceC_<uchar, uchar, OpMin<uchar> >
 #define reduceMinC16u reduceC_<ushort,ushort,OpMin<ushort> >
 #define reduceMinC16s reduceC_<short, short, OpMin<short> >
 #define reduceMinC32f reduceC_<float, float, OpMin<float> >
+#endif
 #define reduceMinC64f reduceC_<double,double,OpMin<double> >
 
 #ifdef HAVE_OPENCL
