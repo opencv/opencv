@@ -241,6 +241,7 @@ static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
     IppStatus status = ippsMagnitude_32f(x, y, mag, len);
     if (status >= 0)
         return;
+    setIppErrorStatus();
 #endif
 
     int i = 0;
@@ -273,6 +274,7 @@ static void Magnitude_64f(const double* x, const double* y, double* mag, int len
     IppStatus status = ippsMagnitude_64f(x, y, mag, len);
     if (status >= 0)
         return;
+    setIppErrorStatus();
 #endif
 
     int i = 0;
@@ -305,6 +307,7 @@ static void InvSqrt_32f(const float* src, float* dst, int len)
 #if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
     if (ippsInvSqrt_32f_A21(src, dst, len) >= 0)
         return;
+    setIppErrorStatus();
 #endif
 
     int i = 0;
@@ -353,6 +356,7 @@ static void Sqrt_32f(const float* src, float* dst, int len)
 #if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
     if (ippsSqrt_32f_A21(src, dst, len) >= 0)
         return;
+    setIppErrorStatus();
 #endif
     int i = 0;
 
@@ -386,6 +390,7 @@ static void Sqrt_64f(const double* src, double* dst, int len)
 #if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
     if (ippsSqrt_64f_A50(src, dst, len) >= 0)
         return;
+    setIppErrorStatus();
 #endif
 
     int i = 0;
@@ -767,6 +772,7 @@ void polarToCart( InputArray src1, InputArray src2,
         IppStatus status = ippFunc(Mag.data, Angle.data, X.data, Y.data, static_cast<int>(cn * X.total()));
         if (status >= 0)
             return;
+        setIppErrorStatus();
     }
 #endif
 
@@ -1319,6 +1325,7 @@ static void Exp_32f_ipp(const float *x, float *y, int n)
 {
     if (0 <= ippsExp_32f_A21(x, y, n))
         return;
+    setIppErrorStatus();
     Exp_32f(x, y, n);
 }
 
@@ -1326,6 +1333,7 @@ static void Exp_64f_ipp(const double *x, double *y, int n)
 {
     if (0 <= ippsExp_64f_A50(x, y, n))
         return;
+    setIppErrorStatus();
     Exp_64f(x, y, n);
 }
 
@@ -1977,6 +1985,7 @@ static void Log_32f_ipp(const float *x, float *y, int n)
 {
     if (0 <= ippsLn_32f_A21(x, y, n))
         return;
+    setIppErrorStatus();
     Log_32f(x, y, n);
 }
 
@@ -1984,6 +1993,7 @@ static void Log_64f_ipp(const double *x, double *y, int n)
 {
     if (0 <= ippsLn_64f_A50(x, y, n))
         return;
+    setIppErrorStatus();
     Log_64f(x, y, n);
 }
 
@@ -2181,6 +2191,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
 
                 if (status >= 0)
                     return;
+                setIppErrorStatus();
             }
 #endif
             if (same)
@@ -2241,6 +2252,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
 
             if (status >= 0)
                 return;
+            setIppErrorStatus();
         }
 #endif
 

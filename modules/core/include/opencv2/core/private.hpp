@@ -218,6 +218,8 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 #  endif
 #  define IPP_VERSION_X100 (IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR)
 
+#define setIppErrorStatus() cv::ipp::setIppStatus(-1, CV_Func, __FILE__, __LINE__)
+
 static inline IppiSize ippiSize(int width, int height)
 {
     IppiSize size = { width, height };

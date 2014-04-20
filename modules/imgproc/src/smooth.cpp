@@ -867,11 +867,11 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     ippAnchor.y = ksize.height / 2 - (ksize.height % 2 == 0 ? 1 : 0);
 
     if (normalize && !src.isSubmatrix() && ddepth == sdepth &&
-        (ippBorderType == BORDER_REPLICATE || ippBorderType == BORDER_CONSTANT) &&
-        ocvAnchor == ippAnchor )
+        (/*ippBorderType == BORDER_REPLICATE ||*/ /* returns ippStsStepErr: Step value is not valid */
+         ippBorderType == BORDER_CONSTANT) && ocvAnchor == ippAnchor )
     {
-        Ipp32s bufSize;
-        IppiSize roiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize.width, ksize.height);
+        Ipp32s bufSize = 0;
+        IppiSize roiSize = { dst.cols, dst.rows }, maskSize = { ksize.width, ksize.height };
 
 #define IPP_FILTER_BOX_BORDER(ippType, ippDataType, flavor) \
         do \
@@ -880,14 +880,16 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
             { \
                 Ipp8u * buffer = ippsMalloc_8u(bufSize); \
                 ippType borderValue[4] = { 0, 0, 0, 0 }; \
-                ippBorderType = ippBorderType == BORDER_CONSTANT ? ippBorderConst : ippBorderType == BORDER_REPLICATE ? ippBorderRepl : -1; \
-                CV_Assert(ippBorderType >= 0); \
-                IppStatus status = ippiFilterBoxBorder_##flavor((ippType *)src.data, (int)src.step, (ippType *)dst.data, (int)dst.step, roiSize, maskSize, \
+                ippBorderType = ippBorderType == BORDER_CONSTANT ? ippBorderConst : ippBorderRepl; \
+                IppStatus status = ippiFilterBoxBorder_##flavor((const ippType *)src.data, (int)src.step, (ippType *)dst.data, \
+                                                                (int)dst.step, roiSize, maskSize, \
                                                                 (IppiBorderType)ippBorderType, borderValue, buffer); \
                 ippsFree(buffer); \
+                printf("%s %d %d\n", ippGetStatusString(status), (int)src.step, (int)dst.step); \
                 if (status >= 0) \
                     return; \
             } \
+            setIppErrorStatus(); \
         } while ((void)0, 0)
 
         if (stype == CV_8UC1)
@@ -1193,6 +1195,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                     return;
             }
         }
+        setIppErrorStatus();
     }
 #endif
 
@@ -2033,6 +2036,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
             if (status >= 0) \
                 return; \
         } \
+        setIppErrorStatus(); \
     } \
     while ((void)0, 0)
 
@@ -2433,6 +2437,7 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
         parallel_for_(Range(0, dst.rows), body, dst.total()/(double)(1<<16));
         if( ok )
             return;
+        setIppErrorStatus();
     }
 #endif
 

@@ -752,6 +752,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
                         src.ptr<uchar>(), (int)src.step,
                         dst.ptr<float>(), (int)dst.step, roi, _mask) >= 0 )
                     return;
+                setIppErrorStatus();
             }
         #endif
             Mat zpix = src == 0;

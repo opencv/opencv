@@ -2223,13 +2223,6 @@ void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray
     if (src1.isContinuous() && src2.isContinuous() && dst.isContinuous())
     {
         size_t len = src1.total()*cn;
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
-        if (depth == CV_32F &&
-                ippmSaxpy_vava_32f((const Ipp32f *)src1.data, (int)src1.step, sizeof(Ipp32f), falpha,
-                (const Ipp32f *)src2.data, (int)src2.step, sizeof(Ipp32f),
-                (Ipp32f *)dst.data, (int)dst.step, sizeof(Ipp32f), (int)len, 1) >= 0)
-            return;
-#endif
         func(src1.data, src2.data, dst.data, (int)len, palpha);
         return;
     }
@@ -2810,6 +2803,7 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
                                    src2, (int)(len*sizeof(src2[0])),
                                    ippiSize(len, 1), &r))
         return r;
+    setIppErrorStatus();
 #endif
     int i = 0;
 
@@ -2870,6 +2864,7 @@ static double dotProd_16u(const ushort* src1, const ushort* src2, int len)
     double r = 0;
     if (0 <= ippiDotProd_16u64f_C1R(src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
         return r;
+    setIppErrorStatus();
 #endif
     return dotProd_(src1, src2, len);
 }
@@ -2880,6 +2875,7 @@ static double dotProd_16s(const short* src1, const short* src2, int len)
     double r = 0;
     if (0 <= ippiDotProd_16s64f_C1R(src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
         return r;
+    setIppErrorStatus();
 #endif
     return dotProd_(src1, src2, len);
 }
@@ -2890,6 +2886,7 @@ static double dotProd_32s(const int* src1, const int* src2, int len)
     double r = 0;
     if (0 <= ippiDotProd_32s64f_C1R(src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
         return r;
+    setIppErrorStatus();
 #endif
     return dotProd_(src1, src2, len);
 }
@@ -2900,6 +2897,7 @@ static double dotProd_32f(const float* src1, const float* src2, int len)
     double r = 0;
     if (0 <= ippsDotProd_32f64f(src1, src2, len, &r))
         return r;
+    setIppErrorStatus();
 #endif
     return dotProd_(src1, src2, len);
 }
@@ -2910,6 +2908,7 @@ static double dotProd_64f(const double* src1, const double* src2, int len)
     double r = 0;
     if (0 <= ippsDotProd_64f(src1, src2, len, &r))
         return r;
+    setIppErrorStatus();
 #endif
     return dotProd_(src1, src2, len);
 }
