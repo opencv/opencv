@@ -689,10 +689,11 @@ static void distanceTransform_L1_8U(InputArray _src, OutputArray _dst)
     Mat dst = _dst.getMat();
 
     #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7) && !defined HAVE_IPP_ICV_ONLY
-                IppiSize roi = { src.cols, src.rows };
-                Ipp32s pMetrics[2] = { 1, 2 }; //L1, 3x3 mask
-                if (ippiDistanceTransform_3x3_8u_C1R(src.ptr<uchar>(), (int)src.step, dst.ptr<uchar>(), (int)dst.step, roi, pMetrics)>=0)
-                    return;
+        IppiSize roi = { src.cols, src.rows };
+        Ipp32s pMetrics[2] = { 1, 2 }; //L1, 3x3 mask
+        if (ippiDistanceTransform_3x3_8u_C1R(src.ptr<uchar>(), (int)src.step, dst.ptr<uchar>(), (int)dst.step, roi, pMetrics)>=0)
+            return;
+        setIppErrorStatus();
     #endif
 
     distanceATS_L1_8u(src, dst);
@@ -734,7 +735,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
     {
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-        if ((currentParallelFramework()==NULL) || (src.total()<(int)(1<<16)))
+        if ((currentParallelFramework()==NULL) || (src.total()<(int)(1<<14)))
         {
             IppStatus status;
             IppiSize roi = { src.cols, src.rows };
@@ -749,6 +750,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
                 ippsFree( pBuffer );
                 if (status>=0)
                     return;
+                setIppErrorStatus();
             }
         }
 #endif
@@ -775,6 +777,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
                 IppiSize roi = { src.cols, src.rows };
                 if (ippiDistanceTransform_3x3_8u32f_C1R(src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask)>=0)
                     return;
+                setIppErrorStatus();
             #endif
 
             distanceTransform_3x3(src, temp, dst, _mask);
@@ -785,6 +788,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
             IppiSize roi = { src.cols, src.rows };
                 if (ippiDistanceTransform_5x5_8u32f_C1R(src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask)>=0)
                     return;
+                setIppErrorStatus();
             #endif
 
             distanceTransform_5x5(src, temp, dst, _mask);
@@ -796,7 +800,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
 
         if( labelType == CV_DIST_LABEL_CCOMP )
         {
-        #endif            Mat zpix = src == 0;
+            Mat zpix = src == 0;
             connectedComponents(zpix, labels, 8, CV_32S);
         }
         else
