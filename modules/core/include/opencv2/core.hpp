@@ -1257,6 +1257,47 @@ template<> struct ParamType<uchar>
     enum { type = Param::UCHAR };
 };
 
+namespace color
+{
+// Color constants in BGR format
+const Scalar WHITE(255,255,255);
+const Scalar SILVER(192,192,192);
+const Scalar GRAY(128,128,128);
+const Scalar BLACK(0,0,0);
+const Scalar RED(0,0,255);
+const Scalar MAROON(0,0,128);
+const Scalar ORANGE(0,165,255);
+const Scalar YELLOW(0,255,255);
+const Scalar OLIVE(0,128,128);
+const Scalar LIME(0,255,0);
+const Scalar GREEN(0,128,0);
+const Scalar AQUA(255,255,0);
+const Scalar TEAL(128,128,0);
+const Scalar BLUE(255,0,0);
+const Scalar NAVY(128,0,0);
+const Scalar FUCHSIA(255,0,255);
+const Scalar PURPLE(128,0,128);
+
+const Vec3b V3B_WHITE(255,255,255);
+const Vec3b V3B_SILVER(192,192,192);
+const Vec3b V3B_GRAY(128,128,128);
+const Vec3b V3B_BLACK(0,0,0);
+const Vec3b V3B_RED(0,0,255);
+const Vec3b V3B_MAROON(0,0,128);
+const Vec3b V3B_ORANGE(0,165,255);
+const Vec3b V3B_YELLOW(0,255,255);
+const Vec3b V3B_OLIVE(0,128,128);
+const Vec3b V3B_LIME(0,255,0);
+const Vec3b V3B_GREEN(0,128,0);
+const Vec3b V3B_AQUA(255,255,0);
+const Vec3b V3B_TEAL(128,128,0);
+const Vec3b V3B_BLUE(255,0,0);
+const Vec3b V3B_NAVY(128,0,0);
+const Vec3b V3B_FUCHSIA(255,0,255);
+const Vec3b V3B_PURPLE(128,0,128);
+
+} //namespace cv::color
+
 } //namespace cv
 
 #include "opencv2/core/operations.hpp"
