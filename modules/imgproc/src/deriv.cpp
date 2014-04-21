@@ -193,7 +193,8 @@ namespace cv
 static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, double scale, double delta, int borderType)
 {
 #if defined(HAVE_IPP_ICV_ONLY)
-        return false;
+    _src; _dst; ddepth; dx; dy; scale; delta; borderType;
+    return false;
 #else
     if ((0 > dx) || (0 > dy) || (1 != dx + dy))
         return false;
