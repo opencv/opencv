@@ -192,6 +192,9 @@ namespace cv
 #if (IPP_VERSION_X100 >= 801)
 static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, double scale, double delta, int borderType)
 {
+#if defined(HAVE_IPP_ICV_ONLY)
+        return false;
+#else
     if ((0 > dx) || (0 > dy) || (1 != dx + dy))
         return false;
     if (fabs(delta) > FLT_EPSILON)
@@ -302,6 +305,7 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
             sts = ippiMulC_32f_C1R((Ipp32f *)dst.data, (int)dst.step, (Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, roiSize);
     }
     return (0 <= sts);
+#endif
 }
 #elif (IPP_VERSION_MAJOR >= 7)
 static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, double scale, double delta, int borderType)
