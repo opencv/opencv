@@ -1084,9 +1084,12 @@ dtype* dst, size_t dstep, Size size, double* scale) \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
 { \
-    if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height)) >= 0) \
-        return; \
-    setIppErrorStatus(); \
+    if (src && sstep && dst && dstep && size.width && size.height)\
+    {\
+        if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height)) >= 0) \
+            return; \
+        setIppErrorStatus(); \
+    }\
     cvt_(src, sstep, dst, dstep, size); \
 }
 
@@ -1094,9 +1097,12 @@ static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
 { \
-    if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height), ippRndFinancial, 0) >= 0) \
-        return; \
-    setIppErrorStatus(); \
+    if (src && sstep && dst && dstep && size.width && size.height)\
+    {\
+        if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height), ippRndFinancial, 0) >= 0) \
+            return; \
+        setIppErrorStatus(); \
+    }\
     cvt_(src, sstep, dst, dstep, size); \
 }
 #else
