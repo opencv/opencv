@@ -411,7 +411,7 @@ distanceTransform
 -----------------
 Calculates the distance to the closest zero pixel for each pixel of the source image.
 
-.. ocv:function:: void distanceTransform( InputArray src, OutputArray dst, int distanceType, int maskSize )
+.. ocv:function:: void distanceTransform( InputArray src, OutputArray dst, int distanceType, int maskSize, int dstType=CV_32F )
 
 .. ocv:function:: void distanceTransform( InputArray src, OutputArray dst, OutputArray labels, int distanceType, int maskSize, int labelType=DIST_LABEL_CCOMP )
 
@@ -421,11 +421,13 @@ Calculates the distance to the closest zero pixel for each pixel of the source i
 
     :param src: 8-bit, single-channel (binary) source image.
 
-    :param dst: Output image with calculated distances. It is a 32-bit floating-point, single-channel image of the same size as  ``src`` .
+    :param dst: Output image with calculated distances. It is a 8-bit or 32-bit floating-point, single-channel image of the same size as  ``src`` .
 
     :param distanceType: Type of distance. It can be  ``CV_DIST_L1, CV_DIST_L2`` , or  ``CV_DIST_C`` .
 
     :param maskSize: Size of the distance transform mask. It can be 3, 5, or  ``CV_DIST_MASK_PRECISE``  (the latter option is only supported by the first function). In case of the ``CV_DIST_L1``  or  ``CV_DIST_C``  distance type, the parameter is forced to 3 because a  :math:`3\times 3`  mask gives the same result as  :math:`5\times 5`  or any larger aperture.
+
+    :param dstType: Type of output image. It can be ``CV_8U`` or ``CV_32F``. Type ``CV_8U`` can be used only for the first variant of the function and ``distanceType == CV_DIST_L1``.
 
     :param labels: Optional output 2D array of labels (the discrete Voronoi diagram). It has the type  ``CV_32SC1``  and the same size as  ``src`` . See the details below.
 

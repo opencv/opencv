@@ -1389,7 +1389,7 @@ CV_EXPORTS_AS(distanceTransformWithLabels) void distanceTransform( InputArray sr
 
 //! computes the distance transform map
 CV_EXPORTS_W void distanceTransform( InputArray src, OutputArray dst,
-                                     int distanceType, int maskSize );
+                                     int distanceType, int maskSize, int dstType=CV_32F);
 
 
 //! fills the semi-uniform image region starting from the specified seed point
