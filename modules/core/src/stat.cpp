@@ -2442,7 +2442,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
             }
             else
             {
-                typedef IppStatus (CV_STDCALL* ippiNormRelFunc)(const void *, int, const void *, int, IppiSize, Ipp64f *, IppHintAlgorithm hint);
+                typedef IppStatus (CV_STDCALL* ippiNormRelFunc)(const void *, int, const void *, int, IppiSize, Ipp64f *);
                 ippiNormRelFunc ippFunc =
                     normType == NORM_INF ?
                     (type == CV_8UC1 ? (ippiNormRelFunc)ippiNormRel_Inf_8u_C1R :
@@ -2465,7 +2465,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 if( ippFunc )
                 {
                     Ipp64f norm;
-                    if( ippFunc(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], sz, &norm, ippAlgHintAccurate) >= 0 )
+                    if( ippFunc(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], sz, &norm) >= 0 )
                         return (double)norm;
                     setIppErrorStatus();
                 }
