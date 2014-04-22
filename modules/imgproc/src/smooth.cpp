@@ -2345,17 +2345,10 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
         return false;
 
     copyMakeBorder(src, temp, radius, radius, radius, radius, borderType);
-
-    std::vector<float> _color_weight(cn * 256);
     std::vector<float> _space_weight(d * d);
     std::vector<int> _space_ofs(d * d);
-    float * const color_weight = &_color_weight[0];
     float * const space_weight = &_space_weight[0];
     int * const space_ofs = &_space_ofs[0];
-
-    // initialize color-related bilateral filter coefficients
-    for( i = 0; i < 256 * cn; i++ )
-        color_weight[i] = (float)std::exp(i * i * gauss_color_coeff);
 
     // initialize space-related bilateral filter coefficients
     for( i = -radius, maxk = 0; i <= radius; i++ )
@@ -2370,36 +2363,45 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
 
     char cvt[3][40];
     String cnstr = cn > 1 ? format("%d", cn) : "";
-    ocl::Kernel k("bilateral", ocl::imgproc::bilateral_oclsrc,
-                  format("-D radius=%d -D maxk=%d -D cn=%d -D int_t=%s -D uint_t=uint%s -D convert_int_t=%s"
-                         " -D uchar_t=%s -D float_t=%s -D convert_float_t=%s -D convert_uchar_t=%s",
-                         radius, maxk, cn, ocl::typeToStr(CV_32SC(cn)), cnstr.c_str(),
-                         ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0]),
-                         ocl::typeToStr(type), ocl::typeToStr(CV_32FC(cn)),
-                         ocl::convertTypeStr(CV_32S, CV_32F, cn, cvt[1]),
-                         ocl::convertTypeStr(CV_32F, CV_8U, cn, cvt[2])));
+    String kernelName("bilateral");
+    size_t sizeDiv = 1;
+    if ((ocl::Device::getDefault().isIntel()) &&
+        (ocl::Device::getDefault().type() == ocl::Device::TYPE_GPU))
+    {
+            //Intel GPU
+            if (dst.cols % 4 == 0 && cn == 1) // For single channel x4 sized images.
+            {
+                kernelName = "bilateral_float4";
+                sizeDiv = 4;
+            }
+     }
+     ocl::Kernel k(kernelName.c_str(), ocl::imgproc::bilateral_oclsrc,
+            format("-D radius=%d -D maxk=%d -D cn=%d -D int_t=%s -D uint_t=uint%s -D convert_int_t=%s"
+            " -D uchar_t=%s -D float_t=%s -D convert_float_t=%s -D convert_uchar_t=%s -D gauss_color_coeff=%f",
+            radius, maxk, cn, ocl::typeToStr(CV_32SC(cn)), cnstr.c_str(),
+            ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0]),
+            ocl::typeToStr(type), ocl::typeToStr(CV_32FC(cn)),
+            ocl::convertTypeStr(CV_32S, CV_32F, cn, cvt[1]),
+            ocl::convertTypeStr(CV_32F, CV_8U, cn, cvt[2]), gauss_color_coeff));
     if (k.empty())
         return false;
 
-    Mat mcolor_weight(1, cn * 256, CV_32FC1, color_weight);
     Mat mspace_weight(1, d * d, CV_32FC1, space_weight);
     Mat mspace_ofs(1, d * d, CV_32SC1, space_ofs);
     UMat ucolor_weight, uspace_weight, uspace_ofs;
-    mcolor_weight.copyTo(ucolor_weight);
+
     mspace_weight.copyTo(uspace_weight);
     mspace_ofs.copyTo(uspace_ofs);
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(temp), ocl::KernelArg::WriteOnly(dst),
-           ocl::KernelArg::PtrReadOnly(ucolor_weight),
            ocl::KernelArg::PtrReadOnly(uspace_weight),
            ocl::KernelArg::PtrReadOnly(uspace_ofs));
 
-    size_t globalsize[2] = { dst.cols, dst.rows };
+    size_t globalsize[2] = { dst.cols / sizeDiv, dst.rows };
     return k.run(2, globalsize, NULL, false);
 }
 
 #endif
-
 static void
 bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     double sigma_color, double sigma_space,
