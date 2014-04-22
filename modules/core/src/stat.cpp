@@ -1359,30 +1359,37 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                    double* maxVal, int* minIdx, int* maxIdx,
                    InputArray _mask)
 {
-    CV_Assert( (_src.channels() == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
-        (_src.channels() >= 1 && _mask.empty() && !minIdx && !maxIdx) );
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
+        (cn > 1 && _mask.empty() && !minIdx && !maxIdx) );
 
     CV_OCL_RUN(_src.isUMat() && _src.dims() <= 2  && (_mask.empty() || _src.size() == _mask.size()),
                ocl_minMaxIdx(_src, minVal, maxVal, minIdx, maxIdx, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-    int depth = src.depth(), cn = src.channels();
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     size_t total_size = src.total();
     int rows = src.size[0], cols = (int)(total_size/rows);
-    if( cn == 1 && ( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) ) )
+    if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
     {
-        IppiSize sz = { cols, rows };
-        int type = src.type();
+        IppiSize sz = { cols * cn, rows };
+
         if( !mask.empty() )
         {
-            typedef IppStatus (CV_STDCALL* ippiMaskMinMaxIndxFuncC1)(const void *, int, const void *, int, IppiSize, Ipp32f *, Ipp32f *, IppiPoint *, IppiPoint *);
+            typedef IppStatus (CV_STDCALL* ippiMaskMinMaxIndxFuncC1)(const void *, int, const void *, int,
+                                                                     IppiSize, Ipp32f *, Ipp32f *, IppiPoint *, IppiPoint *);
+
+            CV_SUPPRESS_DEPRECATED_START
             ippiMaskMinMaxIndxFuncC1 ippFuncC1 =
-            type == CV_8UC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1MR :
-            type == CV_16UC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1MR :
-            type == CV_32FC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1MR :
-            0;
+                type == CV_8UC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1MR :
+#ifndef HAVE_IPP_ICV_ONLY
+                type == CV_8SC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1MR :
+#endif
+                type == CV_16UC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1MR :
+                type == CV_32FC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1MR : 0;
+            CV_SUPPRESS_DEPRECATED_END
+
             if( ippFuncC1 )
             {
                 Ipp32f min, max;
@@ -1413,11 +1420,17 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
         else
         {
             typedef IppStatus (CV_STDCALL* ippiMinMaxIndxFuncC1)(const void *, int, IppiSize, Ipp32f *, Ipp32f *, IppiPoint *, IppiPoint *);
+
+            CV_SUPPRESS_DEPRECATED_START
             ippiMinMaxIndxFuncC1 ippFuncC1 =
-                type == CV_8UC1 ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1R :
-                type == CV_16UC1 ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1R :
-                type == CV_32FC1 ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R :
-                0;
+                depth == CV_8U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1R :
+#ifndef HAVE_IPP_ICV_ONLY
+                depth == CV_8S ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1R :
+#endif
+                depth == CV_16U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1R :
+                depth == CV_32F ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R : 0;
+            CV_SUPPRESS_DEPRECATED_END
+
             if( ippFuncC1 )
             {
                 Ipp32f min, max;
