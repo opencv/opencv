@@ -1084,7 +1084,7 @@ dtype* dst, size_t dstep, Size size, double* scale) \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
 { \
-    if (src && sstep && dst && dstep && size.width && size.height)\
+    if (src && dst)\
     {\
         if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height)) >= 0) \
             return; \
@@ -1097,7 +1097,7 @@ static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
 { \
-    if (src && sstep && dst && dstep && size.width && size.height)\
+    if (src && dst)\
     {\
         if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height), ippRndFinancial, 0) >= 0) \
             return; \
