@@ -745,9 +745,9 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
             status = ippiTrueDistanceTransformGetBufferSize_8u32f_C1R(roi, &bufSize);
             if (status>=0)
             {
-                pBuffer = ippsMalloc_8u( bufSize );
+                pBuffer = (Ipp8u *)ippMalloc( bufSize );
                 status = ippiTrueDistanceTransform_8u32f_C1R(src.ptr<uchar>(),(int)src.step, dst.ptr<float>(), (int)dst.step, roi, pBuffer);
-                ippsFree( pBuffer );
+                ippFree( pBuffer );
                 if (status>=0)
                     return;
                 setIppErrorStatus();
