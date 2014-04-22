@@ -1177,25 +1177,29 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 #if IPP_VERSION_X100 >= 801
     if( type == CV_32FC1 && sigma1 == sigma2 && ksize.width == ksize.height && sigma1 != 0.0 )
     {
-        Mat src = _src.getMat(), dst = _dst.getMat();
-        IppiSize roi = { src.cols, src.rows };
-        int specSize = 0, bufferSize = 0;
-        if (0 <=  ippiFilterGaussianGetBufferSize(roi, (Ipp32u)ksize.width, ipp32f, 1, &specSize, &bufferSize))
+        IppiBorderType ippBorder = ippiGetBorderType(borderType);
+        if ((ippBorderConst == ippBorder) || (ippBorderRepl == ippBorder))
         {
-            IppFilterGaussianSpec *pSpec = (IppFilterGaussianSpec*)ippMalloc(specSize);
-            Ipp8u *pBuffer = (Ipp8u*)ippMalloc(bufferSize);
-            if (0 <= ippiFilterGaussianInit(roi, (Ipp32u)ksize.width, (Ipp32f)sigma1, (IppiBorderType)borderType, ipp32f, 1, pSpec, pBuffer))
+            Mat src = _src.getMat(), dst = _dst.getMat();
+            IppiSize roi = { src.cols, src.rows };
+            int specSize = 0, bufferSize = 0;
+            if (0 <=  ippiFilterGaussianGetBufferSize(roi, (Ipp32u)ksize.width, ipp32f, 1, &specSize, &bufferSize))
             {
-                IppStatus sts = ippiFilterGaussianBorder_32f_C1R( (const Ipp32f *)src.data, (int)src.step,
-                                                                     (Ipp32f *)dst.data, (int)dst.step,
-                                                                     roi,  0.0, pSpec, pBuffer);
-                ippFree(pBuffer);
-                ippFree(pSpec);
-                if (0 <= sts)
-                    return;
+                IppFilterGaussianSpec *pSpec = (IppFilterGaussianSpec*)ippMalloc(specSize);
+                Ipp8u *pBuffer = (Ipp8u*)ippMalloc(bufferSize);
+                if (0 <= ippiFilterGaussianInit(roi, (Ipp32u)ksize.width, (Ipp32f)sigma1, ippBorder, ipp32f, 1, pSpec, pBuffer))
+                {
+                    IppStatus sts = ippiFilterGaussianBorder_32f_C1R( (const Ipp32f *)src.data, (int)src.step,
+                                                                         (Ipp32f *)dst.data, (int)dst.step,
+                                                                         roi,  0.0, pSpec, pBuffer);
+                    ippFree(pBuffer);
+                    ippFree(pSpec);
+                    if (0 <= sts)
+                        return;
+                }
             }
+            setIppErrorStatus();
         }
-        setIppErrorStatus();
     }
 #endif
 
