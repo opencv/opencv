@@ -81,6 +81,12 @@ copyMask_(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, ucha
 template<> void
 copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+    if (ippiCopy_8u_C1MR(_src, (int)sstep, _dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
+        return;
+    setIppErrorStatus();
+#endif
+
     for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
     {
         const uchar* src = (const uchar*)_src;
@@ -111,6 +117,12 @@ copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
 template<> void
 copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+    if (ippiCopy_16u_C1MR((const Ipp16u *)_src, (int)sstep, (Ipp16u *)_dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
+        return;
+    setIppErrorStatus();
+#endif
+
     for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
     {
         const ushort* src = (const ushort*)_src;
@@ -165,15 +177,34 @@ static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, 
     copyMask_<type>(src, sstep, mask, mstep, dst, dstep, size); \
 }
 
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#define DEF_COPY_MASK_F(suffix, type, ippfavor, ipptype) \
+static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, size_t mstep, \
+                             uchar* dst, size_t dstep, Size size, void*) \
+{ \
+    if (ippiCopy_##ippfavor((const ipptype *)src, (int)sstep, (ipptype *)dst, (int)dstep, ippiSize(size), (const Ipp8u *)mask, (int)mstep) >= 0) \
+        return; \
+    setIppErrorStatus(); \
+    copyMask_<type>(src, sstep, mask, mstep, dst, dstep, size); \
+}
+#else
+#define DEF_COPY_MASK_F(suffix, type, ippfavor, ipptype) \
+static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, size_t mstep, \
+                             uchar* dst, size_t dstep, Size size, void*) \
+{ \
+    copyMask_<type>(src, sstep, mask, mstep, dst, dstep, size); \
+}
+#endif
+
 
 DEF_COPY_MASK(8u, uchar)
 DEF_COPY_MASK(16u, ushort)
-DEF_COPY_MASK(8uC3, Vec3b)
-DEF_COPY_MASK(32s, int)
-DEF_COPY_MASK(16uC3, Vec3s)
+DEF_COPY_MASK_F(8uC3, Vec3b, 8u_C3MR, Ipp8u)
+DEF_COPY_MASK_F(32s, int, 32s_C1MR, Ipp32s)
+DEF_COPY_MASK_F(16uC3, Vec3s, 16u_C3MR, Ipp16u)
 DEF_COPY_MASK(32sC2, Vec2i)
-DEF_COPY_MASK(32sC3, Vec3i)
-DEF_COPY_MASK(32sC4, Vec4i)
+DEF_COPY_MASK_F(32sC3, Vec3i, 32s_C3MR, Ipp32s)
+DEF_COPY_MASK_F(32sC4, Vec4i, 32s_C4MR, Ipp32s)
 DEF_COPY_MASK(32sC6, Vec6i)
 DEF_COPY_MASK(32sC8, Vec8i)
 
@@ -250,6 +281,12 @@ void Mat::copyTo( OutputArray _dst ) const
             Size sz = getContinuousSize(*this, dst);
             size_t len = sz.width*elemSize();
 
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+            if (ippiCopy_8u_C1R(sptr, (int)step, dptr, (int)dst.step, ippiSize((int)len, sz.height)) >= 0)
+                return;
+            setIppErrorStatus();
+#endif
+
             for( ; sz.height--; sptr += step, dptr += dst.step )
                 memcpy( dptr, sptr, len );
         }
@@ -323,6 +360,27 @@ Mat& Mat::operator = (const Scalar& s)
 
     if( is[0] == 0 && is[1] == 0 && is[2] == 0 && is[3] == 0 )
     {
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && 0
+        if (dims <= 2 || isContinuous())
+        {
+            IppiSize roisize = { cols, rows };
+            if (isContinuous())
+            {
+                roisize.width = (int)total();
+                roisize.height = 1;
+
+                if (ippsZero_8u(data, static_cast<int>(roisize.width * elemSize())) >= 0)
+                    return *this;
+                setIppErrorStatus();
+            }
+            roisize.width *= (int)elemSize();
+
+            if (ippiSet_8u_C1R(0, data, (int)step, roisize) >= 0)
+                return *this;
+            setIppErrorStatus();
+        }
+#endif
+
         for( size_t i = 0; i < it.nplanes; i++, ++it )
             memset( dptr, 0, elsize );
     }
@@ -359,7 +417,82 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     Mat value = _value.getMat(), mask = _mask.getMat();
 
     CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::MAT ));
-    CV_Assert( mask.empty() || mask.type() == CV_8U );
+    CV_Assert( mask.empty() || (mask.type() == CV_8U && size == mask.size) );
+
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+    int cn = channels(), depth0 = depth();
+
+    if (!mask.empty() && (dims <= 2 || (isContinuous() && mask.isContinuous())) &&
+            (depth0 == CV_8U || depth0 == CV_16U || depth0 == CV_16S || depth0 == CV_32S || depth0 == CV_32F) &&
+            (cn == 1 || cn == 3 || cn == 4))
+    {
+        uchar _buf[32];
+        void * buf = _buf;
+        convertAndUnrollScalar( value, type(), _buf, 1 );
+
+        IppStatus status = (IppStatus)-1;
+        IppiSize roisize = { cols, rows };
+        int mstep = (int)mask.step, dstep = (int)step;
+
+        if (isContinuous() && mask.isContinuous())
+        {
+            roisize.width = (int)total();
+            roisize.height = 1;
+        }
+
+        if (cn == 1)
+        {
+            if (depth0 == CV_8U)
+                status = ippiSet_8u_C1MR(*(Ipp8u *)buf, (Ipp8u *)data, dstep, roisize, mask.data, mstep);
+            else if (depth0 == CV_16U)
+                status = ippiSet_16u_C1MR(*(Ipp16u *)buf, (Ipp16u *)data, dstep, roisize, mask.data, mstep);
+            else if (depth0 == CV_16S)
+                status = ippiSet_16s_C1MR(*(Ipp16s *)buf, (Ipp16s *)data, dstep, roisize, mask.data, mstep);
+            else if (depth0 == CV_32S)
+                status = ippiSet_32s_C1MR(*(Ipp32s *)buf, (Ipp32s *)data, dstep, roisize, mask.data, mstep);
+            else if (depth0 == CV_32F)
+                status = ippiSet_32f_C1MR(*(Ipp32f *)buf, (Ipp32f *)data, dstep, roisize, mask.data, mstep);
+        }
+        else if (cn == 3 || cn == 4)
+        {
+#define IPP_SET(ippfavor, ippcn) \
+    do \
+    { \
+        typedef Ipp##ippfavor ipptype; \
+        ipptype ippvalue[4] = { ((ipptype *)buf)[0], ((ipptype *)buf)[1], ((ipptype *)buf)[2], ((ipptype *)buf)[3] }; \
+        status = ippiSet_##ippfavor##_C##ippcn##MR(ippvalue, (ipptype *)data, dstep, roisize, mask.data, mstep); \
+    } while ((void)0, 0)
+
+#define IPP_SET_CN(ippcn) \
+    do \
+    { \
+        if (cn == ippcn) \
+        { \
+            if (depth0 == CV_8U) \
+                IPP_SET(8u, ippcn); \
+            else if (depth0 == CV_16U) \
+                IPP_SET(16u, ippcn); \
+            else if (depth0 == CV_16S) \
+                IPP_SET(16s, ippcn); \
+            else if (depth0 == CV_32S) \
+                IPP_SET(32s, ippcn); \
+            else if (depth0 == CV_32F) \
+                IPP_SET(32f, ippcn); \
+        } \
+    } while ((void)0, 0)
+
+            IPP_SET_CN(3);
+            IPP_SET_CN(4);
+
+#undef IPP_SET_CN
+#undef IPP_SET
+        }
+
+        if (status >= 0)
+            return *this;
+        setIppErrorStatus();
+    }
+#endif
 
     size_t esz = elemSize();
     BinaryFunc copymask = getCopyMaskFunc(esz);
@@ -548,31 +681,65 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
     Mat dst = _dst.getMat();
     size_t esz = CV_ELEM_SIZE(type);
 
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
     typedef IppStatus (CV_STDCALL * ippiMirror)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize, IppiAxis flip);
-    ippiMirror ippFunc =
-        type == CV_8UC1 ? (ippiMirror)ippiMirror_8u_C1R :
-        type == CV_8UC3 ? (ippiMirror)ippiMirror_8u_C3R :
-        type == CV_8UC4 ? (ippiMirror)ippiMirror_8u_C4R :
-        type == CV_16UC1 ? (ippiMirror)ippiMirror_16u_C1R :
-        type == CV_16UC3 ? (ippiMirror)ippiMirror_16u_C3R :
-        type == CV_16UC4 ? (ippiMirror)ippiMirror_16u_C4R :
-        type == CV_16SC1 ? (ippiMirror)ippiMirror_16s_C1R :
-        type == CV_16SC3 ? (ippiMirror)ippiMirror_16s_C3R :
-        type == CV_16SC4 ? (ippiMirror)ippiMirror_16s_C4R :
-        type == CV_32SC1 ? (ippiMirror)ippiMirror_32s_C1R :
-        type == CV_32SC3 ? (ippiMirror)ippiMirror_32s_C3R :
-        type == CV_32SC4 ? (ippiMirror)ippiMirror_32s_C4R :
-        type == CV_32FC1 ? (ippiMirror)ippiMirror_32f_C1R :
-        type == CV_32FC3 ? (ippiMirror)ippiMirror_32f_C3R :
-        type == CV_32FC4 ? (ippiMirror)ippiMirror_32f_C4R : 0;
+    typedef IppStatus (CV_STDCALL * ippiMirrorI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize, IppiAxis flip);
+    ippiMirror ippFunc = 0;
+    ippiMirrorI ippFuncI = 0;
+
+    if (src.data == dst.data)
+    {
+        CV_SUPPRESS_DEPRECATED_START
+        ippFuncI =
+            type == CV_8UC1 ? (ippiMirrorI)ippiMirror_8u_C1IR :
+            type == CV_8UC3 ? (ippiMirrorI)ippiMirror_8u_C3IR :
+            type == CV_8UC4 ? (ippiMirrorI)ippiMirror_8u_C4IR :
+            type == CV_16UC1 ? (ippiMirrorI)ippiMirror_16u_C1IR :
+            type == CV_16UC3 ? (ippiMirrorI)ippiMirror_16u_C3IR :
+            type == CV_16UC4 ? (ippiMirrorI)ippiMirror_16u_C4IR :
+            type == CV_16SC1 ? (ippiMirrorI)ippiMirror_16s_C1IR :
+            type == CV_16SC3 ? (ippiMirrorI)ippiMirror_16s_C3IR :
+            type == CV_16SC4 ? (ippiMirrorI)ippiMirror_16s_C4IR :
+            type == CV_32SC1 ? (ippiMirrorI)ippiMirror_32s_C1IR :
+            type == CV_32SC3 ? (ippiMirrorI)ippiMirror_32s_C3IR :
+            type == CV_32SC4 ? (ippiMirrorI)ippiMirror_32s_C4IR :
+            type == CV_32FC1 ? (ippiMirrorI)ippiMirror_32f_C1IR :
+            type == CV_32FC3 ? (ippiMirrorI)ippiMirror_32f_C3IR :
+            type == CV_32FC4 ? (ippiMirrorI)ippiMirror_32f_C4IR : 0;
+        CV_SUPPRESS_DEPRECATED_END
+    }
+    else
+    {
+        ippFunc =
+            type == CV_8UC1 ? (ippiMirror)ippiMirror_8u_C1R :
+            type == CV_8UC3 ? (ippiMirror)ippiMirror_8u_C3R :
+            type == CV_8UC4 ? (ippiMirror)ippiMirror_8u_C4R :
+            type == CV_16UC1 ? (ippiMirror)ippiMirror_16u_C1R :
+            type == CV_16UC3 ? (ippiMirror)ippiMirror_16u_C3R :
+            type == CV_16UC4 ? (ippiMirror)ippiMirror_16u_C4R :
+            type == CV_16SC1 ? (ippiMirror)ippiMirror_16s_C1R :
+            type == CV_16SC3 ? (ippiMirror)ippiMirror_16s_C3R :
+            type == CV_16SC4 ? (ippiMirror)ippiMirror_16s_C4R :
+            type == CV_32SC1 ? (ippiMirror)ippiMirror_32s_C1R :
+            type == CV_32SC3 ? (ippiMirror)ippiMirror_32s_C3R :
+            type == CV_32SC4 ? (ippiMirror)ippiMirror_32s_C4R :
+            type == CV_32FC1 ? (ippiMirror)ippiMirror_32f_C1R :
+            type == CV_32FC3 ? (ippiMirror)ippiMirror_32f_C3R :
+            type == CV_32FC4 ? (ippiMirror)ippiMirror_32f_C4R : 0;
+    }
     IppiAxis axis = flip_mode == 0 ? ippAxsHorizontal :
         flip_mode > 0 ? ippAxsVertical : ippAxsBoth;
+    IppiSize roisize = { dst.cols, dst.rows };
 
     if (ippFunc != 0)
     {
-        IppStatus status = ippFunc(src.data, (int)src.step, dst.data, (int)dst.step, ippiSize(src.cols, src.rows), axis);
-        if (status >= 0)
+        if (ippFunc(src.data, (int)src.step, dst.data, (int)dst.step, ippiSize(src.cols, src.rows), axis) >= 0)
+            return;
+        setIppErrorStatus();
+    }
+    else if (ippFuncI != 0)
+    {
+        if (ippFuncI(dst.data, (int)dst.step, roisize, axis) >= 0)
             return;
         setIppErrorStatus();
     }
