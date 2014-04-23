@@ -3446,25 +3446,25 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-            if( code == CV_BGR2GRAY && depth == CV_32F )
+            if( code == CV_BGR2GRAY )
             {
                 if( CvtColorIPPLoop(src, dst, IPPColor2GrayFunctor(ippiColor2GrayC3Tab[depth])) )
                     return;
                 setIppErrorStatus();
             }
-            else if( code == CV_RGB2GRAY && depth == CV_32F )
+            else if( code == CV_RGB2GRAY )
             {
                 if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGB2GrayC3Tab[depth])) )
                     return;
                 setIppErrorStatus();
             }
-            else if( code == CV_BGRA2GRAY && depth == CV_32F )
+            else if( code == CV_BGRA2GRAY )
             {
                 if( CvtColorIPPLoop(src, dst, IPPColor2GrayFunctor(ippiColor2GrayC4Tab[depth])) )
                     return;
                 setIppErrorStatus();
             }
-            else if( code == CV_RGBA2GRAY && depth == CV_32F )
+            else if( code == CV_RGBA2GRAY )
             {
                 if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGB2GrayC4Tab[depth])) )
                     return;
