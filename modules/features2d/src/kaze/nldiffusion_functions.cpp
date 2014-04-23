@@ -262,11 +262,7 @@ void compute_derivative_kernels(cv::OutputArray _kx, cv::OutputArray _ky,
   for (int k = 0; k < 2; k++) {
     Mat* kernel = k == 0 ? &kx : &ky;
     int order = k == 0 ? dx : dy;
-	std::vector<float> kerI(ksize);
-
-    for (int t=0; t<ksize; t++) {
-      kerI[t] = 0;
-    }
+    std::vector<float> kerI(ksize, 0.0f);
 
     if (order == 0) {
       kerI[0] = norm, kerI[ksize/2] = w*norm, kerI[ksize-1] = norm;
