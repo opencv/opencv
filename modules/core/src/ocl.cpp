@@ -4379,7 +4379,7 @@ String kernelToStr(InputArray _kernel, int ddepth, const char * name)
     typedef std::string (* func_t)(const Mat &);
     static const func_t funcs[] = { kerToStr<uchar>, kerToStr<char>, kerToStr<ushort>, kerToStr<short>,
                                     kerToStr<int>, kerToStr<float>, kerToStr<double>, 0 };
-    const func_t func = funcs[depth];
+    const func_t func = funcs[ddepth];
     CV_Assert(func != 0);
 
     return cv::format(" -D %s=%s", name ? name : "COEFF", func(kernel).c_str());
