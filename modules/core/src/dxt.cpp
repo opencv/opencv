@@ -1476,6 +1476,111 @@ typedef IppStatus (CV_STDCALL* IppDFTGetSizeFunc)(int, int, IppHintAlgorithm, in
 typedef IppStatus (CV_STDCALL* IppDFTInitFunc)(int, int, IppHintAlgorithm, void*, uchar*);
 #endif
 
+namespace cv
+{
+#if defined USE_IPP_DFT && !defined HAVE_IPP_ICV_ONLY
+
+static bool ippi_DFT_C_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
+{
+    IppStatus status;
+    Ipp8u* pBuffer = 0;
+    Ipp8u* pMemInit= 0;
+    int sizeBuffer=0;
+    int sizeSpec=0;
+    int sizeInit=0;
+
+    IppiSize srcRoiSize = {src.cols, src.rows};
+
+    status = ippiDFTGetSize_C_32fc(srcRoiSize, norm_flag, ippAlgHintNone, &sizeSpec, &sizeInit, &sizeBuffer );
+    if ( status < 0 )
+        return false;
+
+    IppiDFTSpec_C_32fc* pDFTSpec = (IppiDFTSpec_C_32fc*)ippMalloc( sizeSpec );
+
+    if ( sizeInit > 0 )
+        pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+
+    if ( sizeBuffer > 0 )
+        pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+
+    status = ippiDFTInit_C_32fc( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
+
+    if ( sizeInit > 0 )
+        ippFree( pMemInit );
+
+    if ( status < 0 )
+    {
+        ippFree( pDFTSpec );
+        if ( sizeBuffer > 0 )
+            ippFree( pBuffer );
+        return false;
+    }
+
+    if (!inv)
+        status = ippiDFTFwd_CToC_32fc_C1R( (Ipp32fc*)src.data, (int)src.step, (Ipp32fc*)dst.data, (int)dst.step, pDFTSpec, pBuffer );
+    else
+        status = ippiDFTInv_CToC_32fc_C1R( (Ipp32fc*)src.data, (int)src.step, (Ipp32fc*)dst.data, (int)dst.step, pDFTSpec, pBuffer );
+
+    if ( sizeBuffer > 0 )
+        ippFree( pBuffer );
+
+    ippFree( pDFTSpec );
+
+    return status >= 0;
+    }
+
+static bool ippi_DFT_R_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
+{
+    IppStatus status;
+    Ipp8u* pBuffer = 0;
+    Ipp8u* pMemInit= 0;
+    int sizeBuffer=0;
+    int sizeSpec=0;
+    int sizeInit=0;
+
+    IppiSize srcRoiSize = {src.cols, src.rows};
+
+    status = ippiDFTGetSize_R_32f(srcRoiSize, norm_flag, ippAlgHintNone, &sizeSpec, &sizeInit, &sizeBuffer );
+    if ( status < 0 )
+        return false;
+
+    IppiDFTSpec_R_32f* pDFTSpec = (IppiDFTSpec_R_32f*)ippMalloc( sizeSpec );
+
+    if ( sizeInit > 0 )
+        pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+
+    if ( sizeBuffer > 0 )
+        pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+
+    status = ippiDFTInit_R_32f( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
+
+    if ( sizeInit > 0 )
+        ippFree( pMemInit );
+
+    if ( status < 0 )
+    {
+        ippFree( pDFTSpec );
+        if ( sizeBuffer > 0 )
+            ippFree( pBuffer );
+        return false;
+    }
+
+    if (!inv)
+        status = ippiDFTFwd_RToPack_32f_C1R( (float*)src.data, (int)(src.step), (float*)(dst.data), (int)dst.step, pDFTSpec, pBuffer );
+    else
+        status = ippiDFTInv_PackToR_32f_C1R( (float*)src.data, (int)src.step, (float*)dst.data, (int)dst.step, pDFTSpec, pBuffer );
+
+    if ( sizeBuffer > 0 )
+        ippFree( pBuffer );
+
+    ippFree( pDFTSpec );
+
+    return status >= 0;
+    }
+
+#endif
+}
+
 #ifdef HAVE_CLAMDFFT
 
 namespace cv {
@@ -1768,6 +1873,23 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
         _dst.create( src.size(), type );
 
     Mat dst = _dst.getMat();
+
+#if defined USE_IPP_DFT && !defined HAVE_IPP_ICV_ONLY
+
+    if ((src.depth() == CV_32F) && (flags & DFT_ROWS) == 0 && (src.total()>(int)(1<<6)))
+        if (!real_transform)
+        {
+            if (ippi_DFT_C_32F(src,dst, inv, ipp_norm_flag))
+                return;
+            setIppErrorStatus();
+        }
+        else if (inv || !(flags & DFT_COMPLEX_OUTPUT))
+        {
+            if (ippi_DFT_R_32F(src,dst, inv, ipp_norm_flag))
+                return;
+            setIppErrorStatus();
+        }
+#endif
 
     if( !real_transform )
         elem_size = complex_elem_size;
