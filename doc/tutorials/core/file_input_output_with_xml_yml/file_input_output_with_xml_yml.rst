@@ -31,15 +31,15 @@ Here's a sample code of how to achieve all the stuff enumerated at the goal list
 Explanation
 ===========
 
-Here we talk only about XML and YAML file inputs. Your output (and its respective input) file may have only one of these extensions and the structure coming from this. They are two kinds of data structures you may serialize: *mappings* (like the STL map) and *element sequence* (like the STL vector>. The difference between these is that in a map every element has a unique name through what you may access it. For sequences you need to go through them to query a specific item.
+Here we talk only about XML and YAML file inputs. Your output (and its respective input) file may have only one of these extensions and the structure coming from this. They are two kinds of data structures you may serialize: *mappings* (like the STL map) and *element sequence* (like the STL vector). The difference between these is that in a map every element has a unique name through what you may access it. For sequences you need to go through them to query a specific item.
 
-1. **XML\\YAML File Open and Close.** Before you write any content to such file you need to open it and at the end to close it. The XML\YAML data structure in OpenCV is :xmlymlpers:`FileStorage <filestorage>`. To specify that this structure to which file binds on your hard drive you can use either its constructor or the *open()* function of this:
+1. **XML/YAML File Open and Close.** Before you write any content to such file you need to open it and at the end to close it. The XML/YAML data structure in OpenCV is :xmlymlpers:`FileStorage <filestorage>`. To specify that this structure to which file binds on your hard drive you can use either its constructor or the *open()* function of this:
 
    .. code-block:: cpp
 
       string filename = "I.xml";
       FileStorage fs(filename, FileStorage::WRITE);
-      \\...
+      //...
       fs.open(filename, FileStorage::READ);
 
    Either one of this you use the second argument is a constant specifying the type of operations you'll be able to on them: WRITE, READ or APPEND. The extension specified in the file name also determinates the output format that will be used. The output may be even compressed if you specify an extension such as *.xml.gz*.
@@ -64,7 +64,7 @@ Here we talk only about XML and YAML file inputs. Your output (and its respectiv
       fs["iterationNr"] >> itNr;
       itNr = (int) fs["iterationNr"];
 
-#. **Input\\Output of OpenCV Data structures.** Well these behave exactly just as the basic C++ types:
+#. **Input/Output of OpenCV Data structures.** Well these behave exactly just as the basic C++ types:
 
    .. code-block:: cpp
 
@@ -77,7 +77,7 @@ Here we talk only about XML and YAML file inputs. Your output (and its respectiv
       fs["R"] >> R;                                      // Read cv::Mat
       fs["T"] >> T;
 
-#. **Input\\Output of vectors (arrays) and associative maps.** As I mentioned beforehand we can output maps and sequences (array, vector) too. Again we first print the name of the variable and then we have to specify if our output is either a sequence or map.
+#. **Input/Output of vectors (arrays) and associative maps.** As I mentioned beforehand, we can output maps and sequences (array, vector) too. Again we first print the name of the variable and then we have to specify if our output is either a sequence or map.
 
    For sequence before the first element print the "[" character and after the last one the "]" character:
 
