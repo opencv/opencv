@@ -705,6 +705,24 @@ static void max64f( const double* src1, size_t step1,
                     const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* )
 {
+#if ARITHM_USE_IPP == 1 && !defined HAVE_IPP_ICV_ONLY
+    double* s1 = (double*)src1;
+    double* s2 = (double*)src2;
+    double* d  = dst;
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    int i = 0;
+    for(; i < sz.height; i++)
+    {
+        if (0 > ippsMaxEvery_64f(s1, s2, d, sz.width))
+            break;
+        s1 = (double*)((uchar*)s1 + step1);
+        s2 = (double*)((uchar*)s2 + step2);
+        d  = (double*)((uchar*)d + step);
+    }
+    if (i == sz.height)
+        return;
+    setIppErrorStatus();
+#endif
     vBinOp64<double, OpMax<double>, IF_SIMD(VMax<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
@@ -808,6 +826,24 @@ static void min64f( const double* src1, size_t step1,
                     const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* )
 {
+#if ARITHM_USE_IPP == 1 && !defined HAVE_IPP_ICV_ONLY
+    double* s1 = (double*)src1;
+    double* s2 = (double*)src2;
+    double* d  = dst;
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    int i = 0;
+    for(; i < sz.height; i++)
+    {
+        if (0 > ippsMinEvery_64f(s1, s2, d, sz.width))
+            break;
+        s1 = (double*)((uchar*)s1 + step1);
+        s2 = (double*)((uchar*)s2 + step2);
+        d  = (double*)((uchar*)d + step);
+    }
+    if (i == sz.height)
+        return;
+    setIppErrorStatus();
+#endif
     vBinOp64<double, OpMin<double>, IF_SIMD(VMin<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
@@ -1977,7 +2013,16 @@ recip_( const T*, size_t, const T* src2, size_t step2,
 static void mul8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
                    uchar* dst, size_t step, Size sz, void* scale)
 {
-    mul_(src1, step1, src2, step2, dst, step, sz, (float)*(const double*)scale);
+    float fscale = (float)*(const double*)scale;
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+    if (std::fabs(fscale - 1) <= FLT_EPSILON)
+    {
+        if (ippiMul_8u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz), 0) >= 0)
+            return;
+        setIppErrorStatus();
+    }
+#endif
+    mul_(src1, step1, src2, step2, dst, step, sz, fscale);
 }
 
 static void mul8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
@@ -1989,13 +2034,31 @@ static void mul8s( const schar* src1, size_t step1, const schar* src2, size_t st
 static void mul16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2,
                     ushort* dst, size_t step, Size sz, void* scale)
 {
-    mul_(src1, step1, src2, step2, dst, step, sz, (float)*(const double*)scale);
+    float fscale = (float)*(const double*)scale;
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+    if (std::fabs(fscale - 1) <= FLT_EPSILON)
+    {
+        if (ippiMul_16u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz), 0) >= 0)
+            return;
+        setIppErrorStatus();
+    }
+#endif
+    mul_(src1, step1, src2, step2, dst, step, sz, fscale);
 }
 
 static void mul16s( const short* src1, size_t step1, const short* src2, size_t step2,
                     short* dst, size_t step, Size sz, void* scale)
 {
-    mul_(src1, step1, src2, step2, dst, step, sz, (float)*(const double*)scale);
+    float fscale = (float)*(const double*)scale;
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+    if (std::fabs(fscale - 1) <= FLT_EPSILON)
+    {
+        if (ippiMul_16s_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz), 0) >= 0)
+            return;
+        setIppErrorStatus();
+    }
+#endif
+    mul_(src1, step1, src2, step2, dst, step, sz, fscale);
 }
 
 static void mul32s( const int* src1, size_t step1, const int* src2, size_t step2,
@@ -2007,7 +2070,16 @@ static void mul32s( const int* src1, size_t step1, const int* src2, size_t step2
 static void mul32f( const float* src1, size_t step1, const float* src2, size_t step2,
                     float* dst, size_t step, Size sz, void* scale)
 {
-    mul_(src1, step1, src2, step2, dst, step, sz, (float)*(const double*)scale);
+    float fscale = (float)*(const double*)scale;
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+    if (std::fabs(fscale - 1) <= FLT_EPSILON)
+    {
+        if (ippiMul_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)) >= 0)
+            return;
+        setIppErrorStatus();
+    }
+#endif
+    mul_(src1, step1, src2, step2, dst, step, sz, fscale);
 }
 
 static void mul64f( const double* src1, size_t step1, const double* src2, size_t step2,

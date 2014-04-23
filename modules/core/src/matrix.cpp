@@ -3019,29 +3019,63 @@ void cv::transpose( InputArray _src, OutputArray _dst )
         return;
     }
 
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
     typedef IppStatus (CV_STDCALL * ippiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
-    ippiTranspose ippFunc =
-    type == CV_8UC1 ? (ippiTranspose)ippiTranspose_8u_C1R :
-    type == CV_8UC3 ? (ippiTranspose)ippiTranspose_8u_C3R :
-    type == CV_8UC4 ? (ippiTranspose)ippiTranspose_8u_C4R :
-    type == CV_16UC1 ? (ippiTranspose)ippiTranspose_16u_C1R :
-    type == CV_16UC3 ? (ippiTranspose)ippiTranspose_16u_C3R :
-    type == CV_16UC4 ? (ippiTranspose)ippiTranspose_16u_C4R :
-    type == CV_16SC1 ? (ippiTranspose)ippiTranspose_16s_C1R :
-    type == CV_16SC3 ? (ippiTranspose)ippiTranspose_16s_C3R :
-    type == CV_16SC4 ? (ippiTranspose)ippiTranspose_16s_C4R :
-    type == CV_32SC1 ? (ippiTranspose)ippiTranspose_32s_C1R :
-    type == CV_32SC3 ? (ippiTranspose)ippiTranspose_32s_C3R :
-    type == CV_32SC4 ? (ippiTranspose)ippiTranspose_32s_C4R :
-    type == CV_32FC1 ? (ippiTranspose)ippiTranspose_32f_C1R :
-    type == CV_32FC3 ? (ippiTranspose)ippiTranspose_32f_C3R :
-    type == CV_32FC4 ? (ippiTranspose)ippiTranspose_32f_C4R : 0;
+    typedef IppStatus (CV_STDCALL * ippiTransposeI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize);
+    ippiTranspose ippFunc = 0;
+    ippiTransposeI ippFuncI = 0;
+
+    if (dst.data == src.data && dst.cols == dst.rows)
+    {
+        CV_SUPPRESS_DEPRECATED_START
+        ippFuncI =
+            type == CV_8UC1 ? (ippiTransposeI)ippiTranspose_8u_C1IR :
+            type == CV_8UC3 ? (ippiTransposeI)ippiTranspose_8u_C3IR :
+            type == CV_8UC4 ? (ippiTransposeI)ippiTranspose_8u_C4IR :
+            type == CV_16UC1 ? (ippiTransposeI)ippiTranspose_16u_C1IR :
+            type == CV_16UC3 ? (ippiTransposeI)ippiTranspose_16u_C3IR :
+            type == CV_16UC4 ? (ippiTransposeI)ippiTranspose_16u_C4IR :
+            type == CV_16SC1 ? (ippiTransposeI)ippiTranspose_16s_C1IR :
+            type == CV_16SC3 ? (ippiTransposeI)ippiTranspose_16s_C3IR :
+            type == CV_16SC4 ? (ippiTransposeI)ippiTranspose_16s_C4IR :
+            type == CV_32SC1 ? (ippiTransposeI)ippiTranspose_32s_C1IR :
+            type == CV_32SC3 ? (ippiTransposeI)ippiTranspose_32s_C3IR :
+            type == CV_32SC4 ? (ippiTransposeI)ippiTranspose_32s_C4IR :
+            type == CV_32FC1 ? (ippiTransposeI)ippiTranspose_32f_C1IR :
+            type == CV_32FC3 ? (ippiTransposeI)ippiTranspose_32f_C3IR :
+            type == CV_32FC4 ? (ippiTransposeI)ippiTranspose_32f_C4IR : 0;
+        CV_SUPPRESS_DEPRECATED_END
+    }
+    else
+    {
+        ippFunc =
+            type == CV_8UC1 ? (ippiTranspose)ippiTranspose_8u_C1R :
+            type == CV_8UC3 ? (ippiTranspose)ippiTranspose_8u_C3R :
+            type == CV_8UC4 ? (ippiTranspose)ippiTranspose_8u_C4R :
+            type == CV_16UC1 ? (ippiTranspose)ippiTranspose_16u_C1R :
+            type == CV_16UC3 ? (ippiTranspose)ippiTranspose_16u_C3R :
+            type == CV_16UC4 ? (ippiTranspose)ippiTranspose_16u_C4R :
+            type == CV_16SC1 ? (ippiTranspose)ippiTranspose_16s_C1R :
+            type == CV_16SC3 ? (ippiTranspose)ippiTranspose_16s_C3R :
+            type == CV_16SC4 ? (ippiTranspose)ippiTranspose_16s_C4R :
+            type == CV_32SC1 ? (ippiTranspose)ippiTranspose_32s_C1R :
+            type == CV_32SC3 ? (ippiTranspose)ippiTranspose_32s_C3R :
+            type == CV_32SC4 ? (ippiTranspose)ippiTranspose_32s_C4R :
+            type == CV_32FC1 ? (ippiTranspose)ippiTranspose_32f_C1R :
+            type == CV_32FC3 ? (ippiTranspose)ippiTranspose_32f_C3R :
+            type == CV_32FC4 ? (ippiTranspose)ippiTranspose_32f_C4R : 0;
+    }
 
     IppiSize roiSize = { src.cols, src.rows };
     if (ippFunc != 0)
     {
         if (ippFunc(src.data, (int)src.step, dst.data, (int)dst.step, roiSize) >= 0)
+            return;
+        setIppErrorStatus();
+    }
+    else if (ippFuncI != 0)
+    {
+        if (ippFuncI(dst.data, (int)dst.step, roiSize) >= 0)
             return;
         setIppErrorStatus();
     }
