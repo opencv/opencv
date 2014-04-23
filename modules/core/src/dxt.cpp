@@ -1480,6 +1480,195 @@ namespace cv
 {
 #if defined USE_IPP_DFT && !defined HAVE_IPP_ICV_ONLY
 
+typedef IppStatus (CV_STDCALL* ippiDFT_C_Func)(const Ipp32fc*, int, Ipp32fc*, int, const IppiDFTSpec_C_32fc*, Ipp8u*);
+typedef IppStatus (CV_STDCALL* ippiDFT_R_Func)(const Ipp32f* , int, Ipp32f* , int, const IppiDFTSpec_R_32f* , Ipp8u*);
+
+template <typename Dft>
+class Dft_C_IPPLoop_Invoker : public ParallelLoopBody
+{
+public:
+
+    Dft_C_IPPLoop_Invoker(const Mat& _src, Mat& _dst, const Dft& _ippidft, int _norm_flag, bool *_ok) :
+        ParallelLoopBody(), src(_src), dst(_dst), ippidft(_ippidft), norm_flag(_norm_flag), ok(_ok)
+    {
+        *ok = true;
+    }
+
+    virtual void operator()(const Range& range) const
+    {
+        IppStatus status;
+        Ipp8u* pBuffer = 0;
+        Ipp8u* pMemInit= 0;
+        int sizeBuffer=0;
+        int sizeSpec=0;
+        int sizeInit=0;
+
+        IppiSize srcRoiSize = {src.cols, 1};
+
+        status = ippiDFTGetSize_C_32fc(srcRoiSize, norm_flag, ippAlgHintNone, &sizeSpec, &sizeInit, &sizeBuffer );
+        if ( status < 0 )
+        {
+            *ok = false;
+            return;
+        }
+
+        IppiDFTSpec_C_32fc* pDFTSpec = (IppiDFTSpec_C_32fc*)ippMalloc( sizeSpec );
+
+        if ( sizeInit > 0 )
+            pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+
+        if ( sizeBuffer > 0 )
+            pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+
+        status = ippiDFTInit_C_32fc( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
+
+        if ( sizeInit > 0 )
+            ippFree( pMemInit );
+
+        if ( status < 0 )
+        {
+            ippFree( pDFTSpec );
+            if ( sizeBuffer > 0 )
+                ippFree( pBuffer );
+            *ok = false;
+            return;
+        }
+
+        for( int i = range.start; i < range.end; ++i)
+            if(!ippidft((Ipp32fc*)(src.data+i*src.step), (int)src.step,(Ipp32fc*)(dst.data+i*dst.step), (int)dst.step, pDFTSpec, (Ipp8u*)pBuffer))
+            {
+                *ok = false;
+            }
+
+        if ( sizeBuffer > 0 )
+            ippFree( pBuffer );
+
+        ippFree( pDFTSpec );
+    }
+
+private:
+    const Mat& src;
+    Mat& dst;
+    const Dft& ippidft;
+    int norm_flag;
+    bool *ok;
+
+    const Dft_C_IPPLoop_Invoker& operator= (const Dft_C_IPPLoop_Invoker&);
+};
+
+template <typename Dft>
+class Dft_R_IPPLoop_Invoker : public ParallelLoopBody
+{
+public:
+
+    Dft_R_IPPLoop_Invoker(const Mat& _src, Mat& _dst, const Dft& _ippidft, int _norm_flag, bool *_ok) :
+        ParallelLoopBody(), src(_src), dst(_dst), ippidft(_ippidft), norm_flag(_norm_flag), ok(_ok)
+    {
+        *ok = true;
+    }
+
+    virtual void operator()(const Range& range) const
+    {
+        IppStatus status;
+        Ipp8u* pBuffer = 0;
+        Ipp8u* pMemInit= 0;
+        int sizeBuffer=0;
+        int sizeSpec=0;
+        int sizeInit=0;
+
+        IppiSize srcRoiSize = {src.cols, 1};
+
+        status = ippiDFTGetSize_R_32f(srcRoiSize, norm_flag, ippAlgHintNone, &sizeSpec, &sizeInit, &sizeBuffer );
+        if ( status < 0 )
+        {
+            *ok = false;
+            return;
+        }
+
+        IppiDFTSpec_R_32f* pDFTSpec = (IppiDFTSpec_R_32f*)ippMalloc( sizeSpec );
+
+        if ( sizeInit > 0 )
+            pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+
+        if ( sizeBuffer > 0 )
+            pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+
+        status = ippiDFTInit_R_32f( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
+
+        if ( sizeInit > 0 )
+            ippFree( pMemInit );
+
+        if ( status < 0 )
+        {
+            ippFree( pDFTSpec );
+            if ( sizeBuffer > 0 )
+                ippFree( pBuffer );
+            *ok = false;
+            return;
+        }
+
+        for( int i = range.start; i < range.end; ++i)
+            if(!ippidft(src.ptr<float>(i), (int)src.step,dst.ptr<float>(i), (int)dst.step, pDFTSpec, (Ipp8u*)pBuffer))
+            {
+                *ok = false;
+            }
+
+        if ( sizeBuffer > 0 )
+            ippFree( pBuffer );
+
+        ippFree( pDFTSpec );
+    }
+
+private:
+    const Mat& src;
+    Mat& dst;
+    const Dft& ippidft;
+    int norm_flag;
+    bool *ok;
+
+    const Dft_R_IPPLoop_Invoker& operator= (const Dft_R_IPPLoop_Invoker&);
+};
+
+template <typename Dft>
+bool Dft_C_IPPLoop(const Mat& src, Mat& dst, const Dft& ippidft, int norm_flag)
+{
+    bool ok;
+    parallel_for_(Range(0, src.rows), Dft_C_IPPLoop_Invoker<Dft>(src, dst, ippidft, norm_flag, &ok), src.total()/(double)(1<<16) );
+    return ok;
+}
+
+template <typename Dft>
+bool Dft_R_IPPLoop(const Mat& src, Mat& dst, const Dft& ippidft, int norm_flag)
+{
+    bool ok;
+    parallel_for_(Range(0, src.rows), Dft_R_IPPLoop_Invoker<Dft>(src, dst, ippidft, norm_flag, &ok), src.total()/(double)(1<<16) );
+    return ok;
+}
+
+struct IPPDFT_C_Functor
+{
+    IPPDFT_C_Functor(ippiDFT_C_Func _func) : func(_func){}
+
+    bool operator()(const Ipp32fc* src, int srcStep, Ipp32fc* dst, int dstStep, const IppiDFTSpec_C_32fc* pDFTSpec, Ipp8u* pBuffer) const
+    {
+        return func ? func(src, srcStep, dst, dstStep, pDFTSpec, pBuffer) >= 0 : false;
+    }
+private:
+    ippiDFT_C_Func func;
+};
+
+struct IPPDFT_R_Functor
+{
+    IPPDFT_R_Functor(ippiDFT_R_Func _func) : func(_func){}
+
+    bool operator()(const Ipp32f* src, int srcStep, Ipp32f* dst, int dstStep, const IppiDFTSpec_R_32f* pDFTSpec, Ipp8u* pBuffer) const
+    {
+        return func ? func(src, srcStep, dst, dstStep, pDFTSpec, pBuffer) >= 0 : false;
+    }
+private:
+    ippiDFT_R_Func func;
+};
+
 static bool ippi_DFT_C_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
 {
     IppStatus status;
@@ -1566,9 +1755,9 @@ static bool ippi_DFT_R_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
     }
 
     if (!inv)
-        status = ippiDFTFwd_RToPack_32f_C1R( (float*)src.data, (int)(src.step), (float*)(dst.data), (int)dst.step, pDFTSpec, pBuffer );
+        status = ippiDFTFwd_RToPack_32f_C1R( src.ptr<float>(), (int)(src.step), dst.ptr<float>(), (int)dst.step, pDFTSpec, pBuffer );
     else
-        status = ippiDFTInv_PackToR_32f_C1R( (float*)src.data, (int)src.step, (float*)dst.data, (int)dst.step, pDFTSpec, pBuffer );
+        status = ippiDFTInv_PackToR_32f_C1R( src.ptr<float>(), (int)src.step, dst.ptr<float>(), (int)dst.step, pDFTSpec, pBuffer );
 
     if ( sizeBuffer > 0 )
         ippFree( pBuffer );
@@ -1576,7 +1765,7 @@ static bool ippi_DFT_R_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
     ippFree( pDFTSpec );
 
     return status >= 0;
-    }
+}
 
 #endif
 }
@@ -1876,18 +2065,38 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 
 #if defined USE_IPP_DFT && !defined HAVE_IPP_ICV_ONLY
 
-    if ((src.depth() == CV_32F) && (flags & DFT_ROWS) == 0 && (src.total()>(int)(1<<6)))
-        if (!real_transform)
+    if ((src.depth() == CV_32F) && (src.total()>(int)(1<<6)))
+        if ((flags & DFT_ROWS) == 0)
         {
-            if (ippi_DFT_C_32F(src,dst, inv, ipp_norm_flag))
-                return;
-            setIppErrorStatus();
+            if (!real_transform)
+            {
+                if (ippi_DFT_C_32F(src,dst, inv, ipp_norm_flag))
+                    return;
+                setIppErrorStatus();
+            }
+            else if (inv || !(flags & DFT_COMPLEX_OUTPUT))
+            {
+                if (ippi_DFT_R_32F(src,dst, inv, ipp_norm_flag))
+                    return;
+                setIppErrorStatus();
+            }
         }
-        else if (inv || !(flags & DFT_COMPLEX_OUTPUT))
+        else
         {
-            if (ippi_DFT_R_32F(src,dst, inv, ipp_norm_flag))
-                return;
-            setIppErrorStatus();
+            if (!real_transform)
+            {
+                ippiDFT_C_Func ippiFunc = inv ? (ippiDFT_C_Func)ippiDFTInv_CToC_32fc_C1R : (ippiDFT_C_Func)ippiDFTFwd_CToC_32fc_C1R;
+                if (Dft_C_IPPLoop(src,dst, IPPDFT_C_Functor(ippiFunc),ipp_norm_flag))
+                    return;
+                setIppErrorStatus();
+            }
+            else if (inv || !(flags & DFT_COMPLEX_OUTPUT))
+            {
+                ippiDFT_R_Func ippiFunc = inv ? (ippiDFT_R_Func)ippiDFTInv_PackToR_32f_C1R : (ippiDFT_R_Func)ippiDFTFwd_RToPack_32f_C1R;
+                if (Dft_R_IPPLoop(src,dst, IPPDFT_R_Functor(ippiFunc),ipp_norm_flag))
+                    return;
+                setIppErrorStatus();
+            }
         }
 #endif
 
