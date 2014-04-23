@@ -50,26 +50,26 @@ template<typename T>
 struct SimilarWith
 {
     T value;
-    double eps;
-    double rho_eps;
-    SimilarWith<T>(T val, double e, double r_e): value(val), eps(e), rho_eps(r_e) { };
+    float theta_eps;
+    float rho_eps;
+    SimilarWith<T>(T val, float e, float r_e): value(val), theta_eps(e), rho_eps(r_e) { };
     bool operator()(T other);
 };
 
 template<>
 bool SimilarWith<Vec2f>::operator()(Vec2f other)
 {
-    return abs(other[0] - value[0]) < rho_eps && abs(other[1] - value[1]) < eps;
+    return abs(other[0] - value[0]) < rho_eps && abs(other[1] - value[1]) < theta_eps;
 }
 
 template<>
 bool SimilarWith<Vec4i>::operator()(Vec4i other)
 {
-    return abs(other[0] - value[0]) < eps && abs(other[1] - value[1]) < eps && abs(other[2] - value[2]) < eps && abs(other[2] - value[2]) < eps;
+    return norm(value, other) < theta_eps;
 }
 
 template <typename T>
-int countMatIntersection(Mat expect, Mat actual, double eps, double rho_eps)
+int countMatIntersection(Mat expect, Mat actual, float eps, float rho_eps)
 {
     int count = 0;
     if (!expect.empty() && !actual.empty())
@@ -116,27 +116,27 @@ class StandartHoughLinesTest : public BaseHoughLineTest, public testing::TestWit
 public:
     StandartHoughLinesTest()
     {
-        picture_name = get<0>(GetParam());
-        rhoStep = get<1>(GetParam());
-        thetaStep = get<2>(GetParam());
-        threshold = get<3>(GetParam());
+        picture_name = std::tr1::get<0>(GetParam());
+        rhoStep = std::tr1::get<1>(GetParam());
+        thetaStep = std::tr1::get<2>(GetParam());
+        threshold = std::tr1::get<3>(GetParam());
         minLineLength = 0;
         maxGap = 0;
     }
 };
 
 typedef std::tr1::tuple<string, double, double, int, int, int> Image_RhoStep_ThetaStep_Threshold_MinLine_MaxGap_t;
-class ProbabilisticHoughLinesTest : public BaseHoughLineTest, public testing::TestWithParam<Image_RhoStep_ThetaStep_Threshold_MinLine_MaxGap_t> 
+class ProbabilisticHoughLinesTest : public BaseHoughLineTest, public testing::TestWithParam<Image_RhoStep_ThetaStep_Threshold_MinLine_MaxGap_t>
 {
 public:
     ProbabilisticHoughLinesTest()
     {
-        picture_name = get<0>(GetParam());
-        rhoStep = get<1>(GetParam());
-        thetaStep = get<2>(GetParam());
-        threshold = get<3>(GetParam());
-        minLineLength = get<4>(GetParam());
-        maxGap = get<5>(GetParam());
+        picture_name = std::tr1::get<0>(GetParam());
+        rhoStep = std::tr1::get<1>(GetParam());
+        thetaStep = std::tr1::get<2>(GetParam());
+        threshold = std::tr1::get<3>(GetParam());
+        minLineLength = std::tr1::get<4>(GetParam());
+        maxGap = std::tr1::get<5>(GetParam());
     }
 };
 
@@ -153,7 +153,7 @@ void BaseHoughLineTest::run_test(int type)
         xml = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/HoughLinesP.xml";
 
     Mat dst;
-    Canny(src, dst, 50, 200, 3);
+    Canny(src, dst, 100, 150, 3);
     EXPECT_FALSE(dst.empty()) << "Failed Canny edge detector";
 
     Mat lines;
@@ -162,7 +162,7 @@ void BaseHoughLineTest::run_test(int type)
     else if (type == PROBABILISTIC)
         HoughLinesP(dst, lines, rhoStep, thetaStep, threshold, minLineLength, maxGap);
 
-    String test_case_name = format("lines_%s_%.0f_%.2f_%d_%d_%d", picture_name.c_str(), rhoStep, thetaStep, 
+    String test_case_name = format("lines_%s_%.0f_%.2f_%d_%d_%d", picture_name.c_str(), rhoStep, thetaStep,
                                     threshold, minLineLength, maxGap);
     test_case_name = getTestCaseName(test_case_name);
 
@@ -183,12 +183,11 @@ void BaseHoughLineTest::run_test(int type)
     read( fs[test_case_name], exp_lines, Mat() );
     fs.release();
 
-    float eps = 1e-2f;
     int count = -1;
     if (type == STANDART)
-        count = countMatIntersection<Vec2f>(exp_lines, lines, thetaStep + FLT_EPSILON, rhoStep + FLT_EPSILON);
+        count = countMatIntersection<Vec2f>(exp_lines, lines, (float) thetaStep + FLT_EPSILON, (float) rhoStep + FLT_EPSILON);
     else if (type == PROBABILISTIC)
-        count = countMatIntersection<Vec4i>(exp_lines, lines, thetaStep, 0.0);
+        count = countMatIntersection<Vec4i>(exp_lines, lines, 1e-4f, 0.f);
 
     EXPECT_GE( count, (int) (exp_lines.total() * 0.8) );
 }
@@ -205,13 +204,13 @@ TEST_P(ProbabilisticHoughLinesTest, regression)
 
 INSTANTIATE_TEST_CASE_P( ImgProc, StandartHoughLinesTest, testing::Combine(testing::Values( "shared/pic5.png", "../stitching/a1.png" ),
                                                                            testing::Values( 1, 10 ),
-                                                                           testing::Values( 0.01, 0.1 ),
-                                                                           testing::Values( 100, 200 )
+                                                                           testing::Values( 0.05, 0.1 ),
+                                                                           testing::Values( 80, 150 )
                                                                            ));
 
 INSTANTIATE_TEST_CASE_P( ImgProc, ProbabilisticHoughLinesTest, testing::Combine(testing::Values( "shared/pic5.png", "shared/pic1.png" ),
                                                                                 testing::Values( 5, 10 ),
-                                                                                testing::Values( 0.01, 0.1 ),
+                                                                                testing::Values( 0.05, 0.1 ),
                                                                                 testing::Values( 75, 150 ),
                                                                                 testing::Values( 0, 10 ),
                                                                                 testing::Values( 0, 4 )

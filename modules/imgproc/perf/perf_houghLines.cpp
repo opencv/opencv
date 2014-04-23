@@ -8,11 +8,6 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-bool polarComp(Vec2f a, Vec2f b)
-{
-    return a[1] > b[1] || (a[1] == b[1] && a[0] < b[0]);
-}
-
 typedef std::tr1::tuple<string, double, double, int> Image_RhoStep_ThetaStep_Threshold_t;
 typedef perf::TestBaseWithParam<Image_RhoStep_ThetaStep_Threshold_t> Image_RhoStep_ThetaStep_Threshold;
 
@@ -20,8 +15,8 @@ PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
             testing::Combine(
                 testing::Values( "cv/shared/pic5.png", "stitching/a1.png" ),
                 testing::Values( 1, 10 ),
-                testing::Values( 0.01, 0.1 ),
-                testing::Values( 300, 500 )
+                testing::Values( 0.05, 0.1 ),
+                testing::Values( 80 , 150 )
                 )
             )
 {
@@ -34,7 +29,7 @@ PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
     if (image.empty())
         FAIL() << "Unable to load source image" << filename;
 
-    Canny(image, image, 0, 0);
+    Canny(image, image, 100, 150, 3);
 
     Mat lines;
     declare.time(60);
