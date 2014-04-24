@@ -526,7 +526,7 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
     _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
 
-#if IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 801 && 0
     int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
@@ -563,10 +563,8 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
 
             if (status >= 0)
                 return;
-            setIppErrorStatus();
         }
-        else
-            setIppErrorStatus();
+        setIppErrorStatus();
     }
 #endif
 
