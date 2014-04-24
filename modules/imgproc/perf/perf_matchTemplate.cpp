@@ -77,7 +77,7 @@ PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateBig,
         method == TM_SQDIFF_NORMED ||
         method == TM_CCOEFF_NORMED;
     double eps = isNormed ? 1e-6
-        : 255 * 255 * tmpl.total() * 1e-6;
+        : 255.0 * 255.0 * (double)tmpl.total() * 1e-6;
 
     SANITY_CHECK(result, eps);
 }
