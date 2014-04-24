@@ -906,10 +906,12 @@ public:
 
     AlgorithmInfo* info() const;
 
-    void operator()(InputArray image, InputArray mask,
-        std::vector<KeyPoint>& keypoints,
-        OutputArray descriptors,
-        bool useProvidedKeypoints) const;
+    // Compute the KAZE features on an image
+    void operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const;
+
+    // Compute the KAZE features and descriptors on an image
+    void operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
+        OutputArray descriptors, bool useProvidedKeypoints = false) const;
 
 protected:
     void detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const;
@@ -938,7 +940,7 @@ public:
     // Compute the AKAZE features on an image
     void operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const;
 
-    // Compute the BRISK features and descriptors on an image
+    // Compute the AKAZE features and descriptors on an image
     void operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
         OutputArray descriptors, bool useProvidedKeypoints = false) const;
 
