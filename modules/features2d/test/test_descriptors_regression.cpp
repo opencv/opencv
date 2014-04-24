@@ -189,7 +189,12 @@ protected:
         assert( dextractor );
 
         // Read the test image.
-        string imgFilename =  string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
+        string imgFilename;
+
+        if (name!="descriptor-brief")
+            imgFilename =  string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
+        else
+            imgFilename =  string(ts->get_data_path()) + FEATURES2D_DIR + "/" + "tsukubaGray.png";
 
         Mat img = imread( imgFilename );
         if( img.empty() )
