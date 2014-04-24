@@ -31,6 +31,10 @@ namespace cv
         return NORM_L2;
     }
 
+    void KAZE::operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const
+    {
+        detectImpl(image, keypoints, mask);
+    }
 
     void KAZE::operator()(InputArray image, InputArray mask,
         std::vector<KeyPoint>& keypoints,
