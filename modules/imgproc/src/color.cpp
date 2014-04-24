@@ -3977,22 +3977,20 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 setIppErrorStatus();
             }
             else
-#endif
-            if (code == CV_LRGB2Lab && scn == 3 && depth == CV_8U)
+            if (code == CV_LRGB2Lab && scn == 3 && depth == CV_8U) // slower than OpenCV
             {
                 if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
                                                                        (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 2, 1, 0, depth)))
                     return;
                 setIppErrorStatus();
             }
-            else if (code == CV_LRGB2Lab && scn == 4 && depth == CV_8U)
+            else if (code == CV_LRGB2Lab && scn == 4 && depth == CV_8U) // slower than OpenCV
             {
                 if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
                                                                        (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 2, 1, 0, depth)))
                     return;
                 setIppErrorStatus();
             }
-#if 0
             else if (code == CV_LRGB2Luv && scn == 3)
             {
                 if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGBToLUVTab[depth])))
@@ -4054,7 +4052,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
 
-#if defined(HAVE_IPP) && 0
+#if defined HAVE_IPP && 0
             if( code == CV_Lab2LBGR && dcn == 3 && depth == CV_8U)
             {
                 if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R)) )
