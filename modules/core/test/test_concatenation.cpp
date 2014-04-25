@@ -72,10 +72,10 @@ private:
 
 };
 
-Core_ConcatenationTest::Core_ConcatenationTest(bool horizontal, bool firstEmpty, bool secondEmpty)
-    : horizontal(horizontal)
-    , firstEmpty(firstEmpty)
-    , secondEmpty(secondEmpty)
+Core_ConcatenationTest::Core_ConcatenationTest(bool horizontal_, bool firstEmpty_, bool secondEmpty_)
+    : horizontal(horizontal_)
+    , firstEmpty(firstEmpty_)
+    , secondEmpty(secondEmpty_)
 {
     test_case_count = 1;
 
