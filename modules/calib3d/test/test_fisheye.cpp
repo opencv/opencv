@@ -1,18 +1,13 @@
 #include "test_precomp.hpp"
-
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <climits>
-#include <algorithm>
-
+#include<fstream>
 #include <opencv2/ts/gpu_test.hpp>
-#include <opencv2/ts/ts_perf.hpp>
-#include <opencv2/ts/ts.hpp>
 
 #define DEF_PARAM_TEST(name, ...)  typedef ::perf::TestBaseWithParam< std::tr1::tuple< __VA_ARGS__ > > name
 #define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
 
+/// Change this parameter via CMake: cmake -DDATASETS_REPOSITORY_FOLDER=<path>
+//const static std::string datasets_repository_path = "DATASETS_REPOSITORY_FOLDER";
+const static std::string datasets_repository_path = "/home/krylov/data";
 
 namespace FishEye
 {
@@ -111,7 +106,7 @@ void readExtrinsics(const std::string& file, cv::OutputArray _R, cv::OutputArray
     if(_P1.needed()) P1.copyTo(_P1); if(_P2.needed()) P2.copyTo(_P2); if(_Q.needed()) Q.copyTo(_Q);
 }
 
-cv::Mat mergeRectification(const cv::Mat& l, const cv::Mat& r, double scale)
+cv::Mat mergeRectification(const cv::Mat& l, const cv::Mat& r)
 {
     CV_Assert(l.type() == r.type() && l.size() == r.size());
     cv::Mat merged(l.rows, l.cols * 2, l.type());
@@ -127,12 +122,6 @@ cv::Mat mergeRectification(const cv::Mat& l, const cv::Mat& r, double scale)
 }
 
 }
-
-
-
-/// Change this parameter via CMake: cmake -DDATASETS_REPOSITORY_FOLDER=<path>
-//const static std::string datasets_repository_path = "DATASETS_REPOSITORY_FOLDER";
-const static std::string datasets_repository_path = "/home/krylov/data";
 
 TEST(FisheyeTest, projectPoints)
 {
@@ -213,7 +202,7 @@ TEST(FisheyeTest, undistortImage)
 TEST(FisheyeTest, jacobians)
 {
     int n = 10;
-    cv::Mat X(1, n, CV_32FC4);
+    cv::Mat X(1, n, CV_64FC3);
     cv::Mat om(3, 1, CV_64F), T(3, 1, CV_64F);
     cv::Mat f(2, 1, CV_64F), c(2, 1, CV_64F);
     cv::Mat k(4, 1, CV_64F);
@@ -221,7 +210,7 @@ TEST(FisheyeTest, jacobians)
 
     cv::RNG& r = cv::theRNG();
 
-    r.fill(X, cv::RNG::NORMAL, 0, 1);
+    r.fill(X, cv::RNG::NORMAL, 2, 1);
     X = cv::abs(X) * 10;
 
     r.fill(om, cv::RNG::NORMAL, 0, 1);
@@ -241,8 +230,68 @@ TEST(FisheyeTest, jacobians)
 
     alpha = 0.01*r.gaussian(1);
 
+    cv::Mat x1, x2, xpred;
+    cv::Matx33d K(f.at<double>(0), alpha * f.at<double>(0), c.at<double>(0),
+                     0,            f.at<double>(1), c.at<double>(1),
+                     0,            0,    1);
 
-    CV_Assert(!"/////////");
+    cv::Mat jacobians;
+    cv::Fisheye::projectPoints(X, x1, om, T, K, k, alpha, jacobians);
+
+    //test on T:
+    cv::Mat dT(3, 1, CV_64FC1);
+    r.fill(dT, cv::RNG::NORMAL, 0, 1);
+    dT *= 1e-9*cv::norm(T);
+    cv::Mat T2 = T + dT;
+    cv::Fisheye::projectPoints(X, x2, om, T2, K, k, alpha, cv::noArray());
+    xpred = x1 + cv::Mat(jacobians.colRange(11,14) * dT).reshape(2, 1);
+    CV_Assert (cv::norm(x2 - xpred) < 1e-12);
+
+    //test on om:
+    cv::Mat dom(3, 1, CV_64FC1);
+    r.fill(dom, cv::RNG::NORMAL, 0, 1);
+    dom *= 1e-9*cv::norm(om);
+    cv::Mat om2 = om + dom;
+    cv::Fisheye::projectPoints(X, x2, om2, T, K, k, alpha, cv::noArray());
+    xpred = x1 + cv::Mat(jacobians.colRange(8,11) * dom).reshape(2, 1);
+    CV_Assert (cv::norm(x2 - xpred) < 1e-12);
+
+    //test on f:
+    cv::Mat df(2, 1, CV_64FC1);
+    r.fill(df, cv::RNG::NORMAL, 0, 1);
+    df *= 1e-9*cv::norm(f);
+    cv::Matx33d K2 = K + cv::Matx33d(df.at<double>(0), df.at<double>(0) * alpha, 0, 0, df.at<double>(1), 0, 0, 0, 0);
+    cv::Fisheye::projectPoints(X, x2, om, T, K2, k, alpha, cv::noArray());
+    xpred = x1 + cv::Mat(jacobians.colRange(0,2) * df).reshape(2, 1);
+    CV_Assert (cv::norm(x2 - xpred) < 1e-12);
+
+    //test on c:
+    cv::Mat dc(2, 1, CV_64FC1);
+    r.fill(dc, cv::RNG::NORMAL, 0, 1);
+    dc *= 1e-9*cv::norm(c);
+    K2 = K + cv::Matx33d(0, 0, dc.at<double>(0), 0, 0, dc.at<double>(1), 0, 0, 0);
+    cv::Fisheye::projectPoints(X, x2, om, T, K2, k, alpha, cv::noArray());
+    xpred = x1 + cv::Mat(jacobians.colRange(2,4) * dc).reshape(2, 1);
+    CV_Assert (cv::norm(x2 - xpred) < 1e-12);
+
+    //test on k:
+    cv::Mat dk(4, 1, CV_64FC1);
+    r.fill(dk, cv::RNG::NORMAL, 0, 1);
+    dk *= 1e-9*cv::norm(k);
+    cv::Mat k2 = k + dk;
+    cv::Fisheye::projectPoints(X, x2, om, T, K, k2, alpha, cv::noArray());
+    xpred = x1 + cv::Mat(jacobians.colRange(4,8) * dk).reshape(2, 1);
+    CV_Assert (cv::norm(x2 - xpred) < 1e-12);
+
+    //test on alpha:
+    cv::Mat dalpha(1, 1, CV_64FC1);
+    r.fill(dalpha, cv::RNG::NORMAL, 0, 1);
+    dalpha *= 1e-9*cv::norm(f);
+    double alpha2 = alpha + dalpha.at<double>(0);
+    K2 = K + cv::Matx33d(0, f.at<double>(0) * dalpha.at<double>(0), 0, 0, 0, 0, 0, 0, 0);
+    cv::Fisheye::projectPoints(X, x2, om, T, K, k, alpha2, cv::noArray());
+    xpred = x1 + cv::Mat(jacobians.col(14) * dalpha).reshape(2, 1);
+    CV_Assert (cv::norm(x2 - xpred) < 1e-12);
 }
 
 TEST(FisheyeTest, Calibration)
@@ -407,7 +456,7 @@ TEST(FisheyeTest, rectify)
         cv::remap(l, lundist, lmapx, lmapy, cv::INTER_LINEAR);
         cv::remap(r, rundist, rmapx, rmapy, cv::INTER_LINEAR);
 
-        cv::Mat rectification = mergeRectification(lundist, rundist, 0.75);
+        cv::Mat rectification = mergeRectification(lundist, rundist);
 
         cv::Mat correct = cv::imread(combine_format(folder, "test_rectify/rectification_AB_%03d.png", i));
         if (correct.empty())
