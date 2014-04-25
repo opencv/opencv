@@ -2960,7 +2960,7 @@ template <typename Dct>
 bool DctIPPLoop(const Mat& src, Mat& dst, const Dct& ippidct, bool inv)
 {
     bool ok;
-    parallel_for_(Range(0, src.rows), DctIPPLoop_Invoker<Dct>(src, dst, ippidct, inv, &ok), src.total()/(double)(1<<16) );
+    parallel_for_(Range(0, src.rows), DctIPPLoop_Invoker<Dct>(src, dst, ippidct, inv, &ok), src.rows/(double)(1<<4) );
     return ok;
 }
 
@@ -2976,11 +2976,8 @@ private:
     ippiDCTFunc func;
 };
 
-static bool ippi_DCT(const Mat& src, Mat& dst, bool inv, bool row)
+static bool ippi_DCT_32f(const Mat& src, Mat& dst, bool inv, bool row)
 {
-    if (src.type() != CV_32F)
-        return false;
-
     ippiDCTFunc ippFunc = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R : (ippiDCTFunc)ippiDCTFwd_32f_C1R ;
 
     if (row)
@@ -3066,9 +3063,9 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7) && !defined HAVE_IPP_ICV_ONLY
     bool row = (flags & DCT_ROWS) != 0;
-    if(!row || src.rows>(int)(1<<8))
+    if (src.type() == CV_32F)
     {
-        if(ippi_DCT(src,dst,inv, row))
+        if(ippi_DCT_32f(src,dst,inv, row))
             return;
         setIppErrorStatus();
     }

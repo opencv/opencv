@@ -30,19 +30,20 @@ PERF_TEST_P(Size_MatType_FlagsType, dft, TEST_MATS_DFT)
     TEST_CYCLE() dft(src, dst, flags);
 
     SANITY_CHECK(dst, 1e-5, ERROR_RELATIVE);
+}
 
 ///////////////////////////////////////////////////////dct//////////////////////////////////////////////////////
 
-CV_ENUM(FlagsType, 0, DCT_INVERSE , DCT_ROWS, DCT_INVERSE|DCT_ROWS)
+CV_ENUM(DCT_FlagsType, 0, DCT_INVERSE , DCT_ROWS, DCT_INVERSE|DCT_ROWS)
 
-typedef std::tr1::tuple<Size, MatType, FlagsType> Size_MatType_Flag_t;
+typedef std::tr1::tuple<Size, MatType, DCT_FlagsType> Size_MatType_Flag_t;
 typedef perf::TestBaseWithParam<Size_MatType_Flag_t> Size_MatType_Flag;
 
 PERF_TEST_P(Size_MatType_Flag, dct, testing::Combine(
                                     testing::Values(cv::Size(320, 240),cv::Size(800, 600),
                                                     cv::Size(1024, 768), cv::Size(1280, 1024),
                                                     sz1080p, sz2K),
-                                    testing::Values(CV_32FC1, CV_64FC1), FlagsType::all()))
+                                    testing::Values(CV_32FC1, CV_64FC1), DCT_FlagsType::all()))
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
@@ -56,7 +57,7 @@ PERF_TEST_P(Size_MatType_Flag, dct, testing::Combine(
         .out(dst)
         .time(60);
 
-    TEST_CYCLE() dct(src, dst,flags);
+    TEST_CYCLE() dct(src, dst, flags);
 
     SANITY_CHECK(dst, 1e-5, ERROR_RELATIVE);
 }
