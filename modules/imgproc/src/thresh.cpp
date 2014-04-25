@@ -691,6 +691,7 @@ getThreshVal_Otsu_8u( const Mat& _src )
     CV_SUPPRESS_DEPRECATED_END
     if (ok >= 0)
         return thresh;
+    setIppErrorStatus();
 #endif
 
     const int N = 256;
