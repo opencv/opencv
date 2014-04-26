@@ -3847,17 +3847,24 @@ bool CvCaptureFile_MSMF::open(const char* filename)
         hr = enumerateCaptureFormats(videoFileSource);
     }
 
-    if (SUCCEEDED(hr))
+    if( captureFormats.empty() )
     {
-        hr = ImageGrabberThread::CreateInstance(&grabberThread, videoFileSource, (unsigned int)-2, true);
+        isOpened = false;
+    }
+    else
+    {
+        if (SUCCEEDED(hr))
+        {
+            hr = ImageGrabberThread::CreateInstance(&grabberThread, videoFileSource, (unsigned int)-2, true);
+        }
+
+        isOpened = SUCCEEDED(hr);
     }
 
-    if (SUCCEEDED(hr))
+    if (isOpened)
     {
         grabberThread->start();
     }
-
-    isOpened = SUCCEEDED(hr);
 
     return isOpened;
 }
@@ -3990,7 +3997,9 @@ HRESULT CvCaptureFile_MSMF::enumerateCaptureFormats(IMFMediaSource *pSource)
             goto done;
         }
         MediaType MT = FormatReader::Read(pType.Get());
-        captureFormats.push_back(MT);
+        // We can capture only RGB video.
+        if( MT.MF_MT_SUBTYPE == MFVideoFormat_RGB24 )
+            captureFormats.push_back(MT);
     }
 
 done:
