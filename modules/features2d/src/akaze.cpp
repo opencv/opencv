@@ -45,11 +45,11 @@ namespace cv
     {
         if (descriptor < MLDB_UPRIGHT)
         {
-            return CV_32FC1;
+            return CV_32F;
         }
         else
         {
-            return CV_8UC1;
+            return CV_8U;
         }
     }
 
