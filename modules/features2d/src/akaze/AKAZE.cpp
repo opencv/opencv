@@ -227,8 +227,8 @@ public:
     }
 
 private:
-    mutable std::vector<TEvolution> & evolution_;
-    AKAZEOptions                      options_;
+    std::vector<TEvolution> & evolution_;
+    AKAZEOptions              options_;
 };
 
 /**
