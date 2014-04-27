@@ -68,9 +68,9 @@ protected:
         decomposeHomographyMat(_H, _K, rotations, translations, normals);
 
         //there should be at least 1 solution
-        ASSERT_GT(rotations.size(), 0);
-        ASSERT_GT(translations.size(), 0);
-        ASSERT_GT(normals.size(), 0);
+        ASSERT_GT(static_cast<int>(rotations.size()), 0);
+        ASSERT_GT(static_cast<int>(translations.size()), 0);
+        ASSERT_GT(static_cast<int>(normals.size()), 0);
 
         ASSERT_EQ(rotations.size(), normals.size());
         ASSERT_EQ(translations.size(), normals.size());
@@ -78,7 +78,7 @@ protected:
         ASSERT_TRUE(containsValidMotion(rotations, translations, normals));
 
         decomposeHomographyMat(_H, _K, rotations, noArray(), noArray());
-        ASSERT_GT(rotations.size(), 0);
+        ASSERT_GT(static_cast<int>(rotations.size()), 0);
     }
 
 private:
