@@ -1207,7 +1207,7 @@ void KAZEFeatures::Get_MSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, floa
     // convert to unit vector
     len = sqrt(len);
 
-    for (int i = 0; i < dsize; i++) {
+    for (i = 0; i < dsize; i++) {
         desc[i] /= len;
     }
 
@@ -1340,7 +1340,7 @@ void KAZEFeatures::Get_MSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
     // convert to unit vector
     len = sqrt(len);
 
-    for (int i = 0; i < dsize; i++) {
+    for (i = 0; i < dsize; i++) {
         desc[i] /= len;
     }
 
@@ -2017,7 +2017,7 @@ void KAZEFeatures::Get_MSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, flo
     // convert to unit vector
     len = sqrt(len);
 
-    for (int i = 0; i < dsize; i++) {
+    for (i = 0; i < dsize; i++) {
         desc[i] /= len;
     }
 
@@ -2178,7 +2178,7 @@ void KAZEFeatures::Get_MSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc
     // convert to unit vector
     len = sqrt(len);
 
-    for (int i = 0; i < dsize; i++) {
+    for (i = 0; i < dsize; i++) {
         desc[i] /= len;
     }
 
