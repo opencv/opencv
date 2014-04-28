@@ -422,7 +422,7 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts) {
         }
 
         if (is_repeated == false)
-            kpts.push_back(point);
+            kpts.push_back(pt);
     }
 
     //t2 = cv::getTickCount();
