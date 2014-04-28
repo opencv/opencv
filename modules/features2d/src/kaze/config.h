@@ -1,4 +1,3 @@
-
 /**
  * @file config.h
  * @brief Configuration file
@@ -23,13 +22,6 @@
 
 // OpenCV Includes
 #include "precomp.hpp"
-
-// OpenMP Includes
-#ifdef _OPENMP
-#include <omp.h>
-#else
-#define omp_get_thread_num() 0
-#endif
 
 //*************************************************************************************
 //*************************************************************************************
@@ -123,7 +115,3 @@ struct TEvolution {
 //*************************************************************************************
 
 #endif
-
-
-
-
