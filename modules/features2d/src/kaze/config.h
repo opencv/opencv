@@ -30,11 +30,11 @@
 #define NMAX_CHAR 400
 
 // Some default options
-static const float DEFAULT_SCALE_OFFSET = 1.60; // Base scale offset (sigma units)
-static const float DEFAULT_OCTAVE_MAX = 4.0; // Maximum octave evolution of the image 2^sigma (coarsest scale sigma units)
+static const float DEFAULT_SCALE_OFFSET = 1.60f; // Base scale offset (sigma units)
+static const float DEFAULT_OCTAVE_MAX = 4.0f; // Maximum octave evolution of the image 2^sigma (coarsest scale sigma units)
 static const int DEFAULT_NSUBLEVELS = 4; // Default number of sublevels per scale level
-static const float DEFAULT_DETECTOR_THRESHOLD = 0.001; // Detector response threshold to accept point
-static const float DEFAULT_MIN_DETECTOR_THRESHOLD = 0.00001;     // Minimum Detector response threshold to accept point
+static const float DEFAULT_DETECTOR_THRESHOLD = 0.001f; // Detector response threshold to accept point
+static const float DEFAULT_MIN_DETECTOR_THRESHOLD = 0.00001f;     // Minimum Detector response threshold to accept point
 static const int DEFAULT_DESCRIPTOR_MODE = 1; // Descriptor Mode 0->SURF, 1->M-SURF
 static const bool DEFAULT_USE_FED = true;  // 0->AOS, 1->FED
 static const bool DEFAULT_UPRIGHT = false;  // Upright descriptors, not invariant to rotation
@@ -45,14 +45,14 @@ static const bool DEFAULT_SHOW_RESULTS = true; // For showing the output image w
 static const bool DEFAULT_SAVE_KEYPOINTS = false; // For saving the list of keypoints
 
 // Some important configuration variables
-static const float DEFAULT_SIGMA_SMOOTHING_DERIVATIVES = 1.0;
-static const float DEFAULT_KCONTRAST = .01;
-static const float KCONTRAST_PERCENTILE = 0.7;
+static const float DEFAULT_SIGMA_SMOOTHING_DERIVATIVES = 1.0f;
+static const float DEFAULT_KCONTRAST = 0.01f;
+static const float KCONTRAST_PERCENTILE = 0.7f;
 static const int KCONTRAST_NBINS = 300;
 static const bool COMPUTE_KCONTRAST = true;
 static const int DEFAULT_DIFFUSIVITY_TYPE = 1;  // 0 -> PM G1, 1 -> PM G2, 2 -> Weickert
 static const bool USE_CLIPPING_NORMALIZATION = false;
-static const float CLIPPING_NORMALIZATION_RATIO = 1.6;
+static const float CLIPPING_NORMALIZATION_RATIO = 1.6f;
 static const int CLIPPING_NORMALIZATION_NITER = 5;
 
 //*************************************************************************************
