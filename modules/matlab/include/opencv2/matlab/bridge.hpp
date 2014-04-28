@@ -49,6 +49,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/calib3d.hpp>
+#include <opencv2/photo.hpp>
 
 namespace cv {
 namespace bridge {
@@ -71,6 +72,18 @@ typedef cv::Ptr<cv::StereoBM> Ptr_StereoBM;
 typedef cv::Ptr<cv::StereoSGBM> Ptr_StereoSGBM;
 typedef cv::Ptr<cv::FeatureDetector> Ptr_FeatureDetector;
 typedef cv::Ptr<CLAHE> Ptr_CLAHE;
+typedef cv::Ptr<LineSegmentDetector> Ptr_LineSegmentDetector;
+typedef cv::Ptr<AlignMTB> Ptr_AlignMTB;
+typedef cv::Ptr<CalibrateDebevec> Ptr_CalibrateDebevec;
+typedef cv::Ptr<CalibrateRobertson> Ptr_CalibrateRobertson;
+typedef cv::Ptr<MergeDebevec> Ptr_MergeDebevec;
+typedef cv::Ptr<MergeMertens> Ptr_MergeMertens;
+typedef cv::Ptr<MergeRobertson> Ptr_MergeRobertson;
+typedef cv::Ptr<Tonemap> Ptr_Tonemap;
+typedef cv::Ptr<TonemapDrago> Ptr_TonemapDrago;
+typedef cv::Ptr<TonemapDurand> Ptr_TonemapDurand;
+typedef cv::Ptr<TonemapMantiuk> Ptr_TonemapMantiuk;
+typedef cv::Ptr<TonemapReinhard> Ptr_TonemapReinhard;
 
 
 // ----------------------------------------------------------------------------
@@ -419,6 +432,66 @@ public:
   Bridge& operator=(const Ptr_CLAHE& ) { return *this; }
   Ptr_CLAHE toPtrCLAHE() { return Ptr_CLAHE(); }
   operator Ptr_CLAHE() { return toPtrCLAHE(); }
+
+  // ---------------------------   Ptr_LineSegmentDetector   ------------------
+  Bridge& operator=(const Ptr_LineSegmentDetector& ) { return *this; }
+  Ptr_LineSegmentDetector toPtrLineSegmentDetector() { return Ptr_LineSegmentDetector(); }
+  operator Ptr_LineSegmentDetector() { return toPtrLineSegmentDetector(); }
+
+  // ---------------------------   Ptr_AlignMTB   -----------------------------
+  Bridge& operator=(const Ptr_AlignMTB& ) { return *this; }
+  Ptr_AlignMTB toPtrAlignMTB() { return Ptr_AlignMTB(); }
+  operator Ptr_AlignMTB() { return toPtrAlignMTB(); }
+
+  // ---------------------------   Ptr_CalibrateDebevec   -------------------
+  Bridge& operator=(const Ptr_CalibrateDebevec& ) { return *this; }
+  Ptr_CalibrateDebevec toPtrCalibrateDebevec() { return Ptr_CalibrateDebevec(); }
+  operator Ptr_CalibrateDebevec() { return toPtrCalibrateDebevec(); }
+
+  // ---------------------------   Ptr_CalibrateRobertson   -------------------
+  Bridge& operator=(const Ptr_CalibrateRobertson& ) { return *this; }
+  Ptr_CalibrateRobertson toPtrCalibrateRobertson() { return Ptr_CalibrateRobertson(); }
+  operator Ptr_CalibrateRobertson() { return toPtrCalibrateRobertson(); }
+
+  // ---------------------------   Ptr_MergeDebevec   -----------------------
+  Bridge& operator=(const Ptr_MergeDebevec& ) { return *this; }
+  Ptr_MergeDebevec toPtrMergeDebevec() { return Ptr_MergeDebevec(); }
+  operator Ptr_MergeDebevec() { return toPtrMergeDebevec(); }
+
+  // ---------------------------   Ptr_MergeMertens   -----------------------
+  Bridge& operator=(const Ptr_MergeMertens& ) { return *this; }
+  Ptr_MergeMertens toPtrMergeMertens() { return Ptr_MergeMertens(); }
+  operator Ptr_MergeMertens() { return toPtrMergeMertens(); }
+
+  // ---------------------------   Ptr_MergeRobertson   -----------------------
+  Bridge& operator=(const Ptr_MergeRobertson& ) { return *this; }
+  Ptr_MergeRobertson toPtrMergeRobertson() { return Ptr_MergeRobertson(); }
+  operator Ptr_MergeRobertson() { return toPtrMergeRobertson(); }
+
+  // ---------------------------   Ptr_Tonemap   ------------------------------
+  Bridge& operator=(const Ptr_Tonemap& ) { return *this; }
+  Ptr_Tonemap toPtrTonemap() { return Ptr_Tonemap(); }
+  operator Ptr_Tonemap() { return toPtrTonemap(); }
+
+  // ---------------------------   Ptr_TonemapDrago   -------------------------
+  Bridge& operator=(const Ptr_TonemapDrago& ) { return *this; }
+  Ptr_TonemapDrago toPtrTonemapDrago() { return Ptr_TonemapDrago(); }
+  operator Ptr_TonemapDrago() { return toPtrTonemapDrago(); }
+
+  // ---------------------------   Ptr_TonemapDurand   ------------------------
+  Bridge& operator=(const Ptr_TonemapDurand& ) { return *this; }
+  Ptr_TonemapDurand toPtrTonemapDurand() { return Ptr_TonemapDurand(); }
+  operator Ptr_TonemapDurand() { return toPtrTonemapDurand(); }
+
+  // ---------------------------   Ptr_TonemapMantiuk   -----------------------
+  Bridge& operator=(const Ptr_TonemapMantiuk& ) { return *this; }
+  Ptr_TonemapMantiuk toPtrTonemapMantiuk() { return Ptr_TonemapMantiuk(); }
+  operator Ptr_TonemapMantiuk() { return toPtrTonemapMantiuk(); }
+
+  // ---------------------------   Ptr_TonemapReinhard   ----------------------
+  Bridge& operator=(const Ptr_TonemapReinhard& ) { return *this; }
+  Ptr_TonemapReinhard toPtrTonemapReinhard() { return Ptr_TonemapReinhard(); }
+  operator Ptr_TonemapReinhard() { return toPtrTonemapReinhard(); }
 }; // class Bridge
 
 
