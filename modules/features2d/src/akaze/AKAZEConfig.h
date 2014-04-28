@@ -114,7 +114,7 @@ struct AKAZEOptions {
 
     float kcontrast;                ///< The contrast factor parameter
     float kcontrast_percentile;     ///< Percentile level for the contrast factor
-    size_t kcontrast_nbins;         ///< Number of bins for the contrast factor histogram
+    int kcontrast_nbins;            ///< Number of bins for the contrast factor histogram
 
     bool save_scale_space;          ///< Set to true for saving the scale space images
     bool save_keypoints;            ///< Set to true for saving the detected keypoints and descriptors

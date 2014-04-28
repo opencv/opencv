@@ -12,6 +12,7 @@
 
 using namespace std;
 using namespace cv;
+using namespace cv::details::akaze;
 
 /* ************************************************************************* */
 /**
@@ -110,8 +111,7 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat& img) {
     evolution_[0].Lt.copyTo(evolution_[0].Lsmooth);
 
     // First compute the kcontrast factor
-    options_.kcontrast = compute_k_percentile(img, options_.kcontrast_percentile,
-        1.0f, options_.kcontrast_nbins, 0, 0);
+    options_.kcontrast = compute_k_percentile(img, options_.kcontrast_percentile, 1.0f, options_.kcontrast_nbins, 0, 0);
 
     //t2 = cv::getTickCount();
     //timing_.kcontrast = 1000.0*(t2 - t1) / cv::getTickFrequency();
