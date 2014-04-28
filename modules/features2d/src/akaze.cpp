@@ -150,8 +150,8 @@ namespace cv
 
         impl.Compute_Descriptors(keypoints, desc);
 
-        CV_Assert((!desc.rows || desc.cols == descriptorSize())    && "Descriptor size does not match expected");
-        CV_Assert((!desc.rows || (desc.type() & descriptorType())) && "Descriptor type does not match expected");
+        CV_Assert((!desc.rows || desc.cols == descriptorSize()));
+        CV_Assert((!desc.rows || (desc.type() & descriptorType())));
     }
 
     void AKAZE::detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
@@ -196,7 +196,7 @@ namespace cv
         impl.Create_Nonlinear_Scale_Space(img1_32);
         impl.Compute_Descriptors(keypoints, desc);
 
-        CV_Assert((!desc.rows || desc.cols == descriptorSize())    && "Descriptor size does not match expected");
-        CV_Assert((!desc.rows || (desc.type() & descriptorType())) && "Descriptor type does not match expected");
+        CV_Assert((!desc.rows || desc.cols == descriptorSize()));
+        CV_Assert((!desc.rows || (desc.type() & descriptorType())));
     }
 }
