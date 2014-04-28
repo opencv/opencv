@@ -68,7 +68,7 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         return;
 #endif
 
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
     IppiSize sz = { roi.width, roi.height };
     switch( type )
     {
@@ -309,7 +309,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
         return;
 #endif
 
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
     IppiSize sz = { roi.width, roi.height };
     switch( type )
     {
@@ -503,7 +503,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
         return;
 #endif
 
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
     IppiSize sz = { roi.width, roi.height };
     switch( type )
     {
@@ -683,7 +683,7 @@ getThreshVal_Otsu_8u( const Mat& _src )
         step = size.width;
     }
 
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 801 && !defined(HAVE_IPP_ICV_ONLY)
     IppiSize srcSize = { size.width, size.height };
     Ipp8u thresh;
     CV_SUPPRESS_DEPRECATED_START
