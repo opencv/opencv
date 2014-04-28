@@ -2145,7 +2145,7 @@ void generateDescriptorSubsample(cv::Mat& sampleList, cv::Mat& comparisons, int 
     }
     ssz *= nchannels;
 
-    CV_Assert((nbits <= ssz) && "descriptor size can't be bigger than full descriptor");
+    CV_Assert(nbits <= ssz); // Descriptor size can't be bigger than full descriptor
 
     // Since the full descriptor is usually under 10k elements, we pick
     // the selection from the full matrix.  We take as many samples per
