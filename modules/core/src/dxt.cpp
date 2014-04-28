@@ -53,7 +53,7 @@ namespace cv
 # pragma warning(disable: 4748)
 #endif
 
-#if IPP_VERSION_X100 >= 701
+#if IPP_VERSION_X100 >= 701 && !defined(HAVE_IPP_ICV_ONLY)
 #define USE_IPP_DFT 1
 #else
 #undef USE_IPP_DFT
