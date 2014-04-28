@@ -572,8 +572,8 @@ public:
     void Get_SURF_Descriptor_Upright_64(const cv::KeyPoint& kpt, float* desc) const;
 
 private:
-    std::vector<cv::KeyPoint>&     keypoints_;
-    cv::Mat&                       descriptors_;
+    std::vector<cv::KeyPoint>& keypoints_;
+    cv::Mat&                   descriptors_;
     std::vector<TEvolution>&   evolution_;
     AKAZEOptions&              options_;
 };
@@ -601,8 +601,8 @@ public:
     void Get_SURF_Descriptor_64(const cv::KeyPoint& kpt, float* desc) const;
 
 private:
-    std::vector<cv::KeyPoint>&     keypoints_;
-    cv::Mat&                       descriptors_;
+    std::vector<cv::KeyPoint>& keypoints_;
+    cv::Mat&                   descriptors_;
     std::vector<TEvolution>&   evolution_;
     AKAZEOptions&              options_;
 };
@@ -612,7 +612,7 @@ class MSURF_Upright_Descriptor_64_Invoker : public cv::ParallelLoopBody
 public:
     MSURF_Upright_Descriptor_64_Invoker(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc, std::vector<TEvolution>& evolution, AKAZEOptions& options)
     : keypoints_(kpts)
-        , descriptors_(desc)
+    , descriptors_(desc)
     , evolution_(evolution)
     , options_(options)
     {
@@ -629,8 +629,8 @@ public:
     void Get_MSURF_Upright_Descriptor_64(const cv::KeyPoint& kpt, float* desc) const;
 
 private:
-    std::vector<cv::KeyPoint>&     keypoints_;
-    cv::Mat&                       descriptors_;
+    std::vector<cv::KeyPoint>& keypoints_;
+    cv::Mat&                   descriptors_;
     std::vector<TEvolution>&   evolution_;
     AKAZEOptions&              options_;
 };
@@ -640,7 +640,7 @@ class MSURF_Descriptor_64_Invoker : public cv::ParallelLoopBody
 public:
     MSURF_Descriptor_64_Invoker(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc, std::vector<TEvolution>& evolution, AKAZEOptions& options)
     : keypoints_(kpts)
-        , descriptors_(desc)
+    , descriptors_(desc)
     , evolution_(evolution)
     , options_(options)
     {
@@ -658,8 +658,8 @@ public:
     void Get_MSURF_Descriptor_64(const cv::KeyPoint& kpt, float* desc) const;
 
 private:
-    std::vector<cv::KeyPoint>&     keypoints_;
-    cv::Mat&                       descriptors_;
+    std::vector<cv::KeyPoint>& keypoints_;
+    cv::Mat&                   descriptors_;
     std::vector<TEvolution>&   evolution_;
     AKAZEOptions&              options_;
 };
@@ -669,7 +669,7 @@ class Upright_MLDB_Full_Descriptor_Invoker : public cv::ParallelLoopBody
 public:
     Upright_MLDB_Full_Descriptor_Invoker(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc, std::vector<TEvolution>& evolution, AKAZEOptions& options)
     : keypoints_(kpts)
-        , descriptors_(desc)
+    , descriptors_(desc)
     , evolution_(evolution)
     , options_(options)
     {
@@ -686,8 +686,8 @@ public:
     void Get_Upright_MLDB_Full_Descriptor(const cv::KeyPoint& kpt, unsigned char* desc) const;
 
 private:
-    std::vector<cv::KeyPoint>&     keypoints_;
-    cv::Mat&                       descriptors_;
+    std::vector<cv::KeyPoint>& keypoints_;
+    cv::Mat&                   descriptors_;
     std::vector<TEvolution>&   evolution_;
     AKAZEOptions&              options_;
 };
@@ -721,8 +721,8 @@ public:
     void Get_Upright_MLDB_Descriptor_Subset(const cv::KeyPoint& kpt, unsigned char* desc) const;
 
 private:
-    std::vector<cv::KeyPoint>&     keypoints_;
-    cv::Mat&                       descriptors_;
+    std::vector<cv::KeyPoint>& keypoints_;
+    cv::Mat&                   descriptors_;
     std::vector<TEvolution>&   evolution_;
     AKAZEOptions&              options_;
 
@@ -735,7 +735,7 @@ class MLDB_Full_Descriptor_Invoker : public cv::ParallelLoopBody
 public:
     MLDB_Full_Descriptor_Invoker(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc, std::vector<TEvolution>& evolution, AKAZEOptions& options)
     : keypoints_(kpts)
-        , descriptors_(desc)
+    , descriptors_(desc)
     , evolution_(evolution)
     , options_(options)
     {
@@ -753,8 +753,8 @@ public:
     void Get_MLDB_Full_Descriptor(const cv::KeyPoint& kpt, unsigned char* desc) const;
 
 private:
-    std::vector<cv::KeyPoint>&     keypoints_;
-    cv::Mat&                       descriptors_;
+    std::vector<cv::KeyPoint>& keypoints_;
+    cv::Mat&                   descriptors_;
     std::vector<TEvolution>&   evolution_;
     AKAZEOptions&              options_;
 };
@@ -789,8 +789,8 @@ public:
     void Get_MLDB_Descriptor_Subset(const cv::KeyPoint& kpt, unsigned char* desc) const;
 
 private:
-    std::vector<cv::KeyPoint>&     keypoints_;
-    cv::Mat&                       descriptors_;
+    std::vector<cv::KeyPoint>& keypoints_;
+    cv::Mat&                   descriptors_;
     std::vector<TEvolution>&   evolution_;
     AKAZEOptions&              options_;
 
@@ -2296,4 +2296,3 @@ inline void check_descriptor_limits(int &x, int &y, int width, int height) {
 inline int fRound(float flt) {
     return (int)(flt + 0.5f);
 }
-
