@@ -70,8 +70,8 @@ namespace cv
 
         impl.Feature_Description(keypoints, desc);
 
-        CV_Assert(!desc.rows || desc.cols == descriptorSize() && "Descriptor size does not match expected");
-        CV_Assert(!desc.rows || (desc.type() & descriptorType()) && "Descriptor type does not match expected");
+        CV_Assert((!desc.rows || desc.cols == descriptorSize())    && "Descriptor size does not match expected");
+        CV_Assert((!desc.rows || (desc.type() & descriptorType())) && "Descriptor type does not match expected");
     }
 
     void KAZE::detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
@@ -118,7 +118,7 @@ namespace cv
         impl.Create_Nonlinear_Scale_Space(img1_32);
         impl.Feature_Description(keypoints, desc);
 
-        CV_Assert(!desc.rows || desc.cols == descriptorSize() && "Descriptor size does not match expected");
-        CV_Assert(!desc.rows || (desc.type() & descriptorType()) && "Descriptor type does not match expected");
+        CV_Assert((!desc.rows || desc.cols == descriptorSize())    && "Descriptor size does not match expected");
+        CV_Assert((!desc.rows || (desc.type() & descriptorType())) && "Descriptor type does not match expected");
     }
 }
