@@ -43,6 +43,7 @@ private:
   bool use_fed_;        // Set to true in case we want to use FED for the nonlinear diffusion filtering. Set false for using AOS
   bool use_upright_;	// Set to true in case we want to use the upright version of the descriptors
   bool use_extended_;	// Set to true in case we want to use the extended version of the descriptors
+  bool use_normalization;
 
   // Vector of keypoint vectors for finding extrema in multiple threads
   std::vector<std::vector<cv::KeyPoint> > kpts_par_;

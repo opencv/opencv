@@ -51,6 +51,8 @@ KAZEFeatures::KAZEFeatures(KAZEOptions& options) {
     use_fed_ = options.use_fed;
     use_upright_ = options.upright;
     use_extended_ = options.extended;
+    use_normalization = USE_CLIPPING_NORMALIZATION;
+
     kcontrast_ = DEFAULT_KCONTRAST;
     ncycles_ = 0;
     reordering_ = true;
@@ -232,9 +234,9 @@ void KAZEFeatures::Compute_KContrast(const cv::Mat &img, const float &kpercentil
     //    cout << "Computing Kcontrast factor." << endl;
     //}
 
-    if (COMPUTE_KCONTRAST) {
+    //if (COMPUTE_KCONTRAST) {
         kcontrast_ = compute_k_percentile(img, kpercentile, sderivatives_, KCONTRAST_NBINS, 0, 0);
-    }
+    //}
 
     //if (verbosity_ == true) {
     //    cout << "kcontrast = " << kcontrast_ << endl;
@@ -972,7 +974,7 @@ void KAZEFeatures::Get_SURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, float
         desc[i] /= len;
     }
 
-    if (USE_CLIPPING_NORMALIZATION == true) {
+    if (use_normalization == true) {
         clippingDescriptor(desc, dsize, CLIPPING_NORMALIZATION_NITER, CLIPPING_NORMALIZATION_RATIO);
     }
 }
@@ -1079,7 +1081,7 @@ void KAZEFeatures::Get_SURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc) 
         desc[i] /= len;
     }
 
-    if (USE_CLIPPING_NORMALIZATION == true) {
+    if (use_normalization == true) {
         clippingDescriptor(desc, dsize, CLIPPING_NORMALIZATION_NITER, CLIPPING_NORMALIZATION_RATIO);
     }
 }
@@ -1211,7 +1213,7 @@ void KAZEFeatures::Get_MSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, floa
         desc[i] /= len;
     }
 
-    if (USE_CLIPPING_NORMALIZATION == true) {
+    if (use_normalization == true) {
         clippingDescriptor(desc, dsize, CLIPPING_NORMALIZATION_NITER, CLIPPING_NORMALIZATION_RATIO);
     }
 }
@@ -1344,7 +1346,7 @@ void KAZEFeatures::Get_MSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
         desc[i] /= len;
     }
 
-    if (USE_CLIPPING_NORMALIZATION == true) {
+    if (use_normalization == true) {
         clippingDescriptor(desc, dsize, CLIPPING_NORMALIZATION_NITER, CLIPPING_NORMALIZATION_RATIO);
     }
 }
@@ -1479,7 +1481,7 @@ void KAZEFeatures::Get_GSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, floa
         desc[i] /= len;
     }
 
-    if (USE_CLIPPING_NORMALIZATION == true) {
+    if (use_normalization == true) {
         clippingDescriptor(desc, dsize, CLIPPING_NORMALIZATION_NITER, CLIPPING_NORMALIZATION_RATIO);
     }
 }
@@ -1617,7 +1619,7 @@ void KAZEFeatures::Get_GSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
         desc[i] /= len;
     }
 
-    if (USE_CLIPPING_NORMALIZATION == true) {
+    if (use_normalization == true) {
         clippingDescriptor(desc, dsize, CLIPPING_NORMALIZATION_NITER, CLIPPING_NORMALIZATION_RATIO);
     }
 
@@ -1737,7 +1739,7 @@ void KAZEFeatures::Get_SURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, floa
         desc[i] /= len;
     }
 
-    if (USE_CLIPPING_NORMALIZATION == true) {
+    if (use_normalization == true) {
         clippingDescriptor(desc, dsize, CLIPPING_NORMALIZATION_NITER, CLIPPING_NORMALIZATION_RATIO);
     }
 }
@@ -1865,7 +1867,7 @@ void KAZEFeatures::Get_SURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc)
         desc[i] /= len;
     }
 
-    if (USE_CLIPPING_NORMALIZATION == true) {
+    if (use_normalization == true) {
         clippingDescriptor(desc, dsize, CLIPPING_NORMALIZATION_NITER, CLIPPING_NORMALIZATION_RATIO);
     }
 }
@@ -2021,7 +2023,7 @@ void KAZEFeatures::Get_MSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, flo
         desc[i] /= len;
     }
 
-    if (USE_CLIPPING_NORMALIZATION == true) {
+    if (use_normalization == true) {
         clippingDescriptor(desc, dsize, CLIPPING_NORMALIZATION_NITER, CLIPPING_NORMALIZATION_RATIO);
     }
 }
@@ -2182,7 +2184,7 @@ void KAZEFeatures::Get_MSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc
         desc[i] /= len;
     }
 
-    if (USE_CLIPPING_NORMALIZATION == true) {
+    if (use_normalization == true) {
         clippingDescriptor(desc, dsize, CLIPPING_NORMALIZATION_NITER, CLIPPING_NORMALIZATION_RATIO);
     }
 }
@@ -2335,7 +2337,7 @@ void KAZEFeatures::Get_GSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, flo
         desc[i] /= len;
     }
 
-    if (USE_CLIPPING_NORMALIZATION == true) {
+    if (use_normalization == true) {
         clippingDescriptor(desc, dsize, CLIPPING_NORMALIZATION_NITER, CLIPPING_NORMALIZATION_RATIO);
     }
 }
@@ -2493,7 +2495,7 @@ void KAZEFeatures::Get_GSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc
         desc[i] /= len;
     }
 
-    if (USE_CLIPPING_NORMALIZATION == true) {
+    if (use_normalization == true) {
         clippingDescriptor(desc, dsize, CLIPPING_NORMALIZATION_NITER, CLIPPING_NORMALIZATION_RATIO);
     }
 }
