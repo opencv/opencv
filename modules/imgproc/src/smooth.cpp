@@ -2274,7 +2274,7 @@ private:
     float *space_weight, *color_weight;
 };
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7) && !defined(HAVE_IPP_ICV_ONLY)
 class IPPBilateralFilter_8u_Invoker :
     public ParallelLoopBody
 {

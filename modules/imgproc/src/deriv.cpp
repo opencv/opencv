@@ -193,7 +193,7 @@ namespace cv
 static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, double scale, double delta, int borderType)
 {
 #if defined(HAVE_IPP_ICV_ONLY)
-    _src; _dst; ddepth; dx; dy; scale; delta; borderType;
+    (void)_src; (void)_dst; (void)ddepth; (void)dx; (void)dy; (void)scale; (void)delta; (void)borderType;
     return false;
 #else
     if ((0 > dx) || (0 > dy) || (1 != dx + dy))
@@ -460,6 +460,9 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
             return true;
         }
 
+#if defined(HAVE_IPP_ICV_ONLY)
+        return false;
+#else
         if ((dx == 2) && (dy == 0))
         {
             if (0 > ippiFilterSobelVertSecondGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
@@ -485,6 +488,7 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
                 IPP_RETURN_ERROR
             return true;
         }
+#endif
     }
 
     if (src.type() == CV_32F && dst.type() == CV_32F)

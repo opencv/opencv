@@ -210,12 +210,8 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 \****************************************************************************************/
 
 #ifdef HAVE_IPP
-#  ifdef HAVE_IPP_ICV_ONLY
-#    include "ipp_redefine.h"
-#    include "ippicv.h"
-#  else
-#    include "ipp.h"
-#  endif
+#  include "ipp.h"
+
 #  define IPP_VERSION_X100 (IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR)
 
 #define IPP_ALIGN 32 // required for AVX optimization
