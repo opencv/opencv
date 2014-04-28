@@ -1175,27 +1175,59 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 #endif
 
 #if IPP_VERSION_X100 >= 801
-    if( type == CV_32FC1 && sigma1 == sigma2 && ksize.width == ksize.height && sigma1 != 0.0 )
+    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if ((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && (cn == 1 || cn == 3) &&
+            sigma1 == sigma2 && ksize.width == ksize.height && sigma1 != 0.0 )
     {
         IppiBorderType ippBorder = ippiGetBorderType(borderType);
-        if ((ippBorderConst == ippBorder) || (ippBorderRepl == ippBorder))
+        if (ippBorderConst == ippBorder || ippBorderRepl == ippBorder)
         {
             Mat src = _src.getMat(), dst = _dst.getMat();
-            IppiSize roi = { src.cols, src.rows };
-            int specSize = 0, bufferSize = 0;
-            if (0 <=  ippiFilterGaussianGetBufferSize(roi, (Ipp32u)ksize.width, ipp32f, 1, &specSize, &bufferSize))
+            IppiSize roiSize = { src.cols, src.rows };
+            IppDataType dataType = ippiGetDataType(depth);
+            Ipp32s specSize = 0, bufferSize = 0;
+
+            if (ippiFilterGaussianGetBufferSize(roiSize, (Ipp32u)ksize.width, dataType, cn, &specSize, &bufferSize) >= 0)
             {
-                IppFilterGaussianSpec *pSpec = (IppFilterGaussianSpec*)ippMalloc(specSize);
-                Ipp8u *pBuffer = (Ipp8u*)ippMalloc(bufferSize);
-                if (0 <= ippiFilterGaussianInit(roi, (Ipp32u)ksize.width, (Ipp32f)sigma1, ippBorder, ipp32f, 1, pSpec, pBuffer))
+                IppFilterGaussianSpec * pSpec = (IppFilterGaussianSpec *)ippMalloc(specSize);
+                Ipp8u * pBuffer = (Ipp8u*)ippMalloc(bufferSize);
+
+                if (ippiFilterGaussianInit(roiSize, (Ipp32u)ksize.width, (Ipp32f)sigma1, ippBorder, dataType, 1, pSpec, pBuffer) >= 0)
                 {
-                    IppStatus sts = ippiFilterGaussianBorder_32f_C1R( (const Ipp32f *)src.data, (int)src.step,
-                                                                         (Ipp32f *)dst.data, (int)dst.step,
-                                                                         roi,  0.0, pSpec, pBuffer);
-                    ippFree(pBuffer);
-                    ippFree(pSpec);
-                    if (0 <= sts)
-                        return;
+#define IPP_FILTER_GAUSS(ippfavor, ippcn) \
+    do \
+    { \
+        typedef Ipp##ippfavor ippType; \
+        ippType borderValues[] = { 0, 0, 0 }; \
+        IppStatus status = ippcn == 1 ? \
+            ippiFilterGaussianBorder_##ippfavor##_C1R((const ippType *)src.data, (int)src.step, \
+                (ippType *)dst.data, (int)dst.step, roiSize, borderValues[0], pSpec, pBuffer) : \
+            ippiFilterGaussianBorder_##ippfavor##_C3R((const ippType *)src.data, (int)src.step, \
+                (ippType *)dst.data, (int)dst.step, roiSize, borderValues, pSpec, pBuffer); \
+        ippFree(pBuffer); \
+        ippFree(pSpec); \
+        if (status >= 0) \
+            return; \
+    } while ((void)0, 0)
+
+                    if (type == CV_8UC1)
+                        IPP_FILTER_GAUSS(8u, 1);
+                    else if (type == CV_8UC3)
+                        IPP_FILTER_GAUSS(8u, 3);
+                    else if (type == CV_16UC1)
+                        IPP_FILTER_GAUSS(16u, 1);
+                    else if (type == CV_16UC3)
+                        IPP_FILTER_GAUSS(16u, 3);
+                    else if (type == CV_16SC1)
+                        IPP_FILTER_GAUSS(16s, 1);
+                    else if (type == CV_16SC3)
+                        IPP_FILTER_GAUSS(16s, 3);
+                    else if (type == CV_32FC1)
+                        IPP_FILTER_GAUSS(32f, 1);
+                    else if (type == CV_32FC3)
+                        IPP_FILTER_GAUSS(32f, 3);
+#undef IPP_FILTER_GAUSS
                 }
             }
             setIppErrorStatus();
