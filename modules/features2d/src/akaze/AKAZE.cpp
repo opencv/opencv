@@ -157,7 +157,8 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat& img) {
             charbonnier_diffusivity(evolution_[i].Lx, evolution_[i].Ly, evolution_[i].Lflow, options_.kcontrast);
             break;
         default:
-            cerr << "Diffusivity: " << options_.diffusivity << " is not supported" << endl;
+            cerr << "Diffusivity: " << static_cast<int>(options_.diffusivity) << " is not supported" << endl;
+            break;
         }
 
         // Perform FED n inner steps
@@ -402,14 +403,14 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts) {
     for (size_t i = 0; i < kpts_aux.size(); i++) {
 
         is_repeated = false;
-        const cv::KeyPoint& point = kpts_aux[i];
+        const cv::KeyPoint& pt = kpts_aux[i];
         for (size_t j = i + 1; j < kpts_aux.size(); j++) {
 
             // Compare response with the upper scale
-            if ((point.class_id + 1) == kpts_aux[j].class_id) {
-                dist = sqrt(pow(point.pt.x - kpts_aux[j].pt.x, 2) + pow(point.pt.y - kpts_aux[j].pt.y, 2));
-                if (dist <= point.size) {
-                    if (point.response < kpts_aux[j].response) {
+            if ((pt.class_id + 1) == kpts_aux[j].class_id) {
+                dist = sqrt(pow(pt.pt.x - kpts_aux[j].pt.x, 2) + pow(pt.pt.y - kpts_aux[j].pt.y, 2));
+                if (dist <= pt.size) {
+                    if (pt.response < kpts_aux[j].response) {
                         is_repeated = true;
                         break;
                     }
@@ -1278,7 +1279,7 @@ void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const 
     // convert to unit vector
     len = sqrt(len);
 
-    for (int i = 0; i < dsize; i++) {
+    for (i = 0; i < dsize; i++) {
         desc[i] /= len;
     }
 }
@@ -1403,7 +1404,7 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const cv::KeyPoint& kp
     // convert to unit vector
     len = sqrt(len);
 
-    for (int i = 0; i < dsize; i++) {
+    for (i = 0; i < dsize; i++) {
         desc[i] /= len;
     }
 }
