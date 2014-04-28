@@ -23,12 +23,10 @@ void weickert_diffusivity(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, co
 void charbonnier_diffusivity(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, const float& k);
 float compute_k_percentile(const cv::Mat& img, float perc, float gscale,
                            size_t nbins, size_t ksize_x, size_t ksize_y);
-void compute_scharr_derivatives(const cv::Mat& src, cv::Mat& dst, const size_t& xorder,
-                                const size_t& yorder, const size_t& scale);
+void compute_scharr_derivatives(const cv::Mat& src, cv::Mat& dst, int xorder, int, int scale);
 void nld_step_scalar(cv::Mat& Ld, const cv::Mat& c, cv::Mat& Lstep, const float& stepsize);
 void downsample_image(const cv::Mat& src, cv::Mat& dst);
 void halfsample_image(const cv::Mat& src, cv::Mat& dst);
-void compute_derivative_kernels(cv::OutputArray kx_, cv::OutputArray ky_,
-                                const size_t& dx, const size_t& dy, const size_t& scale);
+void compute_derivative_kernels(cv::OutputArray kx_, cv::OutputArray ky_, int dx, int dy, int scale);
 bool check_maximum_neighbourhood(const cv::Mat& img, int dsize, float value,
                                  int row, int col, bool same_img);

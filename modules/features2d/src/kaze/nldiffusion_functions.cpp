@@ -43,11 +43,11 @@ using namespace cv;
 void gaussian_2D_convolution(const cv::Mat& src, cv::Mat& dst,
                              int ksize_x, int ksize_y, float sigma) {
 
-  size_t ksize_x_ = 0, ksize_y_ = 0;
+  int ksize_x_ = 0, ksize_y_ = 0;
 
   // Compute an appropriate kernel size according to the specified sigma
   if (sigma > ksize_x || sigma > ksize_y || ksize_x == 0 || ksize_y == 0) {
-    ksize_x_ = (size_t)ceil(2.0f*(1.0f + (sigma-0.8f)/(0.3f)));
+    ksize_x_ = (int)ceil(2.0f*(1.0f + (sigma-0.8f)/(0.3f)));
     ksize_y_ = ksize_x_;
   }
 
@@ -196,7 +196,7 @@ float compute_k_percentile(const cv::Mat& img, float perc, float gscale,
   }
 
   if (nelements < nthreshold)  {
-    kperc = 0.03;
+    kperc = 0.03f;
   }
   else {
     kperc = hmax*((float)(k)/(float)nbins);

@@ -69,8 +69,7 @@ void gaussian_2D_convolution(const cv::Mat& src, cv::Mat& dst, const size_t& ksi
  * A Scheme for Coherence-Enhancing Diffusion Filtering with Optimized Rotation Invariance,
  * Journal of Visual Communication and Image Representation 2002
  */
-void image_derivatives_scharr(const cv::Mat& src, cv::Mat& dst,
-    const size_t& xorder, const size_t& yorder) {
+void image_derivatives_scharr(const cv::Mat& src, cv::Mat& dst, int xorder, int yorder) {
     Scharr(src, dst, CV_32F, xorder, yorder, 1.0, 0, BORDER_DEFAULT);
 }
 
@@ -233,8 +232,7 @@ float compute_k_percentile(const cv::Mat& img, float perc, float gscale,
  * @param yorder Derivative order in Y-direction (vertical)
  * @param scale Scale factor for the derivative size
  */
-void compute_scharr_derivatives(const cv::Mat& src, cv::Mat& dst, const size_t& xorder,
-    const size_t& yorder, const size_t& scale) {
+void compute_scharr_derivatives(const cv::Mat& src, cv::Mat& dst, int xorder, int yorder, int scale) {
 
     Mat kx, ky;
     compute_derivative_kernels(kx, ky, xorder, yorder, scale);
@@ -344,10 +342,9 @@ void halfsample_image(const cv::Mat& src, cv::Mat& dst) {
  * @param dy The derivative order in y-direction
  * @param scale The kernel size
  */
-void compute_derivative_kernels(cv::OutputArray kx_, cv::OutputArray ky_,
-    const size_t& dx, const size_t& dy, const size_t& scale) {
+void compute_derivative_kernels(cv::OutputArray kx_, cv::OutputArray ky_, int dx, int dy, int scale) {
 
-    const int ksize = 3 + 2 * ( (int)scale - 1);
+    const int ksize = 3 + 2 * (scale - 1);
 
     // The usual Scharr kernel
     if (scale == 1) {
