@@ -229,7 +229,7 @@ public:
         }
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
+    virtual AlgorithmInfo* info() const;
 
     virtual int getHistory() const { return history; }
     virtual void setHistory(int _nframes) { history = _nframes; }
@@ -373,6 +373,20 @@ protected:
     bool ocl_getBackgroundImage(OutputArray backgroundImage) const;
     bool ocl_apply(InputArray _image, OutputArray _fgmask, double learningRate=-1);
 };
+
+CV_INIT_ALGORITHM(BackgroundSubtractorMOG2Impl, "BackgroundSubtractor.MOG2",
+    obj.info()->addParam(obj, "history", obj. history);
+    obj.info()->addParam(obj, "nmixtures", obj.nmixtures);
+    obj.info()->addParam(obj, "backgroundRatio", obj.backgroundRatio);
+    obj.info()->addParam(obj, "varThreshold", obj.varThreshold);
+    obj.info()->addParam(obj, "varThresholdGen", obj.varThresholdGen);
+    obj.info()->addParam(obj, "fVarInit", obj.fVarInit);
+    obj.info()->addParam(obj, "fVarMin", obj.fVarMin);
+    obj.info()->addParam(obj, "fVarMax", obj.fVarMax);
+    obj.info()->addParam(obj, "fCT", obj.fCT);
+    obj.info()->addParam(obj, "bShadowDetection", obj.bShadowDetection);
+    obj.info()->addParam(obj, "nShadowDetection", obj.nShadowDetection);
+    obj.info()->addParam(obj, "fTau", obj.fTau))
 
 struct GaussBGStatModel2Params
 {
