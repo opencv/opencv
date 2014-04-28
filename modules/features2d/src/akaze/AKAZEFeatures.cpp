@@ -6,7 +6,7 @@
  * @author Pablo F. Alcantarilla, Jesus Nuevo
  */
 
-#include "AKAZE.h"
+#include "AKAZEFeatures.h"
 #include "fed.h"
 #include "nldiffusion_functions.h"
 

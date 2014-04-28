@@ -14,14 +14,14 @@
 //=============================================================================
 
 /**
- * @file KAZE.cpp
+ * @file KAZEFeatures.cpp
  * @brief Main class for detecting and describing features in a nonlinear
  * scale space
  * @date Jan 21, 2012
  * @author Pablo F. Alcantarilla
  */
 
-#include "KAZE.h"
+#include "KAZEFeatures.h"
 
 // Namespaces
 using namespace std;
@@ -381,20 +381,20 @@ void KAZEFeatures::Determinant_Hessian_Parallel(std::vector<cv::KeyPoint>& kpts)
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-    for (int i = 1; i < evolution_.size() - 1; i++) {
+    for (int i = 1; i < (int)evolution_.size() - 1; i++) {
         Find_Extremum_Threading(i);
     }
 
     // Now fill the vector of keypoints!!!
-    for (int i = 0; i < kpts_par_.size(); i++) {
-        for (int j = 0; j < kpts_par_[i].size(); j++) {
+    for (int i = 0; i < (int)kpts_par_.size(); i++) {
+        for (int j = 0; j < (int)kpts_par_[i].size(); j++) {
             level = i + 1;
             is_extremum = true;
             is_repeated = false;
             is_out = false;
 
             // Check in case we have the same point as maxima in previous evolution levels
-            for (int ik = 0; ik < kpts.size(); ik++) {
+            for (int ik = 0; ik < (int)kpts.size(); ik++) {
                 if (kpts[ik].class_id == level || kpts[ik].class_id == level + 1 || kpts[ik].class_id == level - 1) {
                     dist = pow(kpts_par_[i][j].pt.x - kpts[ik].pt.x, 2) + pow(kpts_par_[i][j].pt.y - kpts[ik].pt.y, 2);
 

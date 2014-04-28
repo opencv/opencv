@@ -48,7 +48,7 @@ http://www.robesafe.com/personal/pablo.alcantarilla/papers/Alcantarilla12eccv.pd
 */
 
 #include "precomp.hpp"
-#include "kaze/KAZE.h"
+#include "kaze/KAZEFeatures.h"
 
 namespace cv
 {

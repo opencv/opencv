@@ -49,7 +49,7 @@ http://www.robesafe.com/personal/pablo.alcantarilla/papers/Alcantarilla13bmvc.pd
 */
 
 #include "precomp.hpp"
-#include "akaze/AKAZE.h"
+#include "akaze/AKAZEFeatures.h"
 
 namespace cv
 {
