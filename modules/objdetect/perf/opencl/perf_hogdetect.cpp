@@ -85,7 +85,7 @@ OCL_PERF_TEST(HOGFixture, HOG)
     OCL_TEST_CYCLE() hog.detectMultiScale(src, found_locations);
 
     std::sort(found_locations.begin(), found_locations.end(), RectLess());
-    SANITY_CHECK(found_locations, 1 + DBL_EPSILON);
+    SANITY_CHECK(found_locations, 3);
 }
 
 }
