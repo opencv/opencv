@@ -184,8 +184,7 @@ PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool, int)
 
         Size srcRoiSize = randomSize(1, MAX_VALUE), dstRoiSize;
         // Make sure the width is a multiple of the requested value, and no more
-        srcRoiSize.width &= ~((widthMultiple * 2) - 1);
-        srcRoiSize.width += widthMultiple;
+        srcRoiSize.width += widthMultiple - 1 - (srcRoiSize.width - 1) % widthMultiple;
         dstRoiSize.width = cvRound(srcRoiSize.width * fx);
         dstRoiSize.height = cvRound(srcRoiSize.height * fy);
 
