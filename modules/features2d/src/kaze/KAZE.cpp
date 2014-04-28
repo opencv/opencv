@@ -54,12 +54,12 @@ KAZEFeatures::KAZEFeatures(KAZEOptions& options) {
     kcontrast_ = DEFAULT_KCONTRAST;
     ncycles_ = 0;
     reordering_ = true;
-    tkcontrast_ = 0.0;
-    tnlscale_ = 0.0;
-    tdetector_ = 0.0;
-    tmderivatives_ = 0.0;
-    tdresponse_ = 0.0;
-    tdescriptor_ = 0.0;
+    //tkcontrast_ = 0.0;
+    //tnlscale_ = 0.0;
+    //tdetector_ = 0.0;
+    //tmderivatives_ = 0.0;
+    //tdresponse_ = 0.0;
+    //tdescriptor_ = 0.0;
 
     // Now allocate memory for the evolution
     Allocate_Memory_Evolution();
@@ -99,11 +99,11 @@ void KAZEFeatures::Allocate_Memory_Evolution(void) {
             aux.Lsmooth = cv::Mat::zeros(img_height_, img_width_, CV_32F);
             aux.Lstep = cv::Mat::zeros(img_height_, img_width_, CV_32F);
             aux.Ldet = cv::Mat::zeros(img_height_, img_width_, CV_32F);
-            aux.esigma = soffset_*pow((float)2.0, (float)(j) / (float)(nsublevels_)+i);
-            aux.etime = 0.5*(aux.esigma*aux.esigma);
+            aux.esigma = soffset_*pow((float)2.0f, (float)(j) / (float)(nsublevels_)+i);
+            aux.etime = 0.5f*(aux.esigma*aux.esigma);
             aux.sigma_size = fRound(aux.esigma);
-            aux.octave = i;
-            aux.sublevel = j;
+            aux.octave = (float)i;
+            aux.sublevel = (float)j;
             evolution_.push_back(aux);
         }
     }
@@ -115,7 +115,7 @@ void KAZEFeatures::Allocate_Memory_Evolution(void) {
             vector<float> tau;
             float ttime = 0.0;
             ttime = evolution_[i].etime - evolution_[i - 1].etime;
-            naux = fed_tau_by_process_time(ttime, 1, 0.25, reordering_, tau);
+            naux = fed_tau_by_process_time(ttime, 1, 0.25f, reordering_, tau);
             nsteps_.push_back(naux);
             tsteps_.push_back(tau);
             ncycles_++;
@@ -147,7 +147,7 @@ void KAZEFeatures::Allocate_Memory_Evolution(void) {
  */
 int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img) {
 
-    double t2 = 0.0, t1 = 0.0;
+    //double t2 = 0.0, t1 = 0.0;
 
     if (evolution_.size() == 0) {
         cout << "Error generating the nonlinear scale space!!" << endl;
@@ -155,7 +155,7 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img) {
         return -1;
     }
 
-    t1 = getTickCount();
+    //t1 = getTickCount();
 
     // Copy the original image to the first level of the evolution
     img.copyTo(evolution_[0].Lt);
@@ -165,8 +165,8 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img) {
     // Firstly compute the kcontrast factor
     Compute_KContrast(evolution_[0].Lt, KCONTRAST_PERCENTILE);
 
-    t2 = getTickCount();
-    tkcontrast_ = 1000.0*(t2 - t1) / getTickFrequency();
+    //t2 = getTickCount();
+    //tkcontrast_ = 1000.0*(t2 - t1) / getTickFrequency();
 
     if (verbosity_ == true) {
         cout << "Computed image evolution step. Evolution time: " << evolution_[0].etime <<
@@ -212,8 +212,8 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img) {
         }
     }
 
-    t2 = getTickCount();
-    tnlscale_ = 1000.0*(t2 - t1) / getTickFrequency();
+    //t2 = getTickCount();
+    //tnlscale_ = 1000.0*(t2 - t1) / getTickFrequency();
 
     return 0;
 }
@@ -228,18 +228,18 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img) {
  */
 void KAZEFeatures::Compute_KContrast(const cv::Mat &img, const float &kpercentile) {
 
-    if (verbosity_ == true) {
-        cout << "Computing Kcontrast factor." << endl;
-    }
+    //if (verbosity_ == true) {
+    //    cout << "Computing Kcontrast factor." << endl;
+    //}
 
-    if (COMPUTE_KCONTRAST == true) {
+    if (COMPUTE_KCONTRAST) {
         kcontrast_ = compute_k_percentile(img, kpercentile, sderivatives_, KCONTRAST_NBINS, 0, 0);
     }
 
-    if (verbosity_ == true) {
-        cout << "kcontrast = " << kcontrast_ << endl;
-        cout << endl << "Now computing the nonlinear scale space!!" << endl;
-    }
+    //if (verbosity_ == true) {
+    //    cout << "kcontrast = " << kcontrast_ << endl;
+    //    cout << endl << "Now computing the nonlinear scale space!!" << endl;
+    //}
 }
 
 //*************************************************************************************
@@ -250,18 +250,18 @@ void KAZEFeatures::Compute_KContrast(const cv::Mat &img, const float &kpercentil
  */
 void KAZEFeatures::Compute_Multiscale_Derivatives(void)
 {
-    double t2 = 0.0, t1 = 0.0;
-    t1 = getTickCount();
+    //double t2 = 0.0, t1 = 0.0;
+    //t1 = getTickCount();
 
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
     for (size_t i = 0; i < evolution_.size(); i++) {
 
-        if (verbosity_ == true) {
-            cout << "Computing multiscale derivatives. Evolution time: " << evolution_[i].etime
-                << " Step (pixels): " << evolution_[i].sigma_size << endl;
-        }
+        //if (verbosity_ == true) {
+        //    cout << "Computing multiscale derivatives. Evolution time: " << evolution_[i].etime
+        //        << " Step (pixels): " << evolution_[i].sigma_size << endl;
+        //}
 
         // Compute multiscale derivatives for the detector
         compute_scharr_derivatives(evolution_[i].Lsmooth, evolution_[i].Lx, 1, 0, evolution_[i].sigma_size);
@@ -277,8 +277,8 @@ void KAZEFeatures::Compute_Multiscale_Derivatives(void)
         evolution_[i].Lyy = evolution_[i].Lyy*((evolution_[i].sigma_size)*(evolution_[i].sigma_size));
     }
 
-    t2 = getTickCount();
-    tmderivatives_ = 1000.0*(t2 - t1) / getTickFrequency();
+    //t2 = getTickCount();
+    //tmderivatives_ = 1000.0*(t2 - t1) / getTickFrequency();
 }
 
 //*************************************************************************************
@@ -290,10 +290,10 @@ void KAZEFeatures::Compute_Multiscale_Derivatives(void)
  */
 void KAZEFeatures::Compute_Detector_Response(void) {
 
-    double t2 = 0.0, t1 = 0.0;
+    //double t2 = 0.0, t1 = 0.0;
     float lxx = 0.0, lxy = 0.0, lyy = 0.0;
 
-    t1 = getTickCount();
+    //t1 = getTickCount();
 
     // Firstly compute the multiscale derivatives
     Compute_Multiscale_Derivatives();
@@ -301,9 +301,9 @@ void KAZEFeatures::Compute_Detector_Response(void) {
     for (size_t i = 0; i < evolution_.size(); i++) {
 
         // Determinant of the Hessian
-        if (verbosity_ == true) {
-            cout << "Computing detector response. Determinant of Hessian. Evolution time: " << evolution_[i].etime << endl;
-        }
+        //if (verbosity_ == true) {
+        //    cout << "Computing detector response. Determinant of Hessian. Evolution time: " << evolution_[i].etime << endl;
+        //}
 
         for (int ix = 0; ix < img_height_; ix++) {
             for (int jx = 0; jx < img_width_; jx++) {
@@ -315,8 +315,8 @@ void KAZEFeatures::Compute_Detector_Response(void) {
         }
     }
 
-    t2 = getTickCount();
-    tdresponse_ = 1000.0*(t2 - t1) / getTickFrequency();
+    //t2 = getTickCount();
+    //tdresponse_ = 1000.0*(t2 - t1) / getTickFrequency();
 }
 
 //*************************************************************************************
@@ -328,8 +328,8 @@ void KAZEFeatures::Compute_Detector_Response(void) {
  */
 void KAZEFeatures::Feature_Detection(std::vector<cv::KeyPoint>& kpts) {
 
-    double t2 = 0.0, t1 = 0.0;
-    t1 = getTickCount();
+    //double t2 = 0.0, t1 = 0.0;
+    //t1 = getTickCount();
 
     kpts.clear();
 
@@ -342,8 +342,8 @@ void KAZEFeatures::Feature_Detection(std::vector<cv::KeyPoint>& kpts) {
     // Perform some subpixel refinement
     Do_Subpixel_Refinement(kpts);
 
-    t2 = getTickCount();
-    tdetector_ = 1000.0*(t2 - t1) / getTickFrequency();
+    //t2 = getTickCount();
+    //tdetector_ = 1000.0*(t2 - t1) / getTickFrequency();
 }
 
 //*************************************************************************************
@@ -476,11 +476,11 @@ void KAZEFeatures::Find_Extremum_Threading(const int& level) {
             // Add the point of interest!!
             if (is_extremum == true) {
                 KeyPoint point;
-                point.pt.x = jx;
-                point.pt.y = ix;
+                point.pt.x = (float)jx;
+                point.pt.y = (float)ix;
                 point.response = fabs(value);
                 point.size = evolution_[level].esigma;
-                point.octave = evolution_[level].octave;
+                point.octave = (int)evolution_[level].octave;
                 point.class_id = level;
 
                 // We use the angle field for the sublevel value
@@ -508,50 +508,50 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
     Mat A = Mat::zeros(3, 3, CV_32F);
     Mat b = Mat::zeros(3, 1, CV_32F);
     Mat dst = Mat::zeros(3, 1, CV_32F);
-    double t2 = 0.0, t1 = 0.0;
+    //double t2 = 0.0, t1 = 0.0;
 
-    t1 = cv::getTickCount();
+    //t1 = cv::getTickCount();
     vector<KeyPoint> kpts_(kpts);
 
     for (size_t i = 0; i < kpts_.size(); i++) {
 
-        x = kpts_[i].pt.x;
-        y = kpts_[i].pt.y;
+        x = static_cast<int>(kpts_[i].pt.x);
+        y = static_cast<int>(kpts_[i].pt.y);
 
         // Compute the gradient
-        Dx = (1.0 / (2.0*step))*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y)+x + step)
+        Dx = (1.0f / (2.0f*step))*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y)+x + step)
             - *(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y)+x - step));
-        Dy = (1.0 / (2.0*step))*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y + step) + x)
+        Dy = (1.0f / (2.0f*step))*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y + step) + x)
             - *(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y - step) + x));
-        Ds = 0.5*(*(evolution_[kpts_[i].class_id + 1].Ldet.ptr<float>(y)+x)
+        Ds = 0.5f*(*(evolution_[kpts_[i].class_id + 1].Ldet.ptr<float>(y)+x)
             - *(evolution_[kpts_[i].class_id - 1].Ldet.ptr<float>(y)+x));
 
         // Compute the Hessian
-        Dxx = (1.0 / (step*step))*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y)+x + step)
+        Dxx = (1.0f / (step*step))*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y)+x + step)
             + *(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y)+x - step)
-            - 2.0*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y)+x)));
+            - 2.0f*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y)+x)));
 
-        Dyy = (1.0 / (step*step))*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y + step) + x)
+        Dyy = (1.0f / (step*step))*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y + step) + x)
             + *(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y - step) + x)
-            - 2.0*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y)+x)));
+            - 2.0f*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y)+x)));
 
         Dss = *(evolution_[kpts_[i].class_id + 1].Ldet.ptr<float>(y)+x)
             + *(evolution_[kpts_[i].class_id - 1].Ldet.ptr<float>(y)+x)
-            - 2.0*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y)+x));
+            - 2.0f*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y)+x));
 
-        Dxy = (1.0 / (4.0*step))*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y + step) + x + step)
+        Dxy = (1.0f / (4.0f*step))*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y + step) + x + step)
             + (*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y - step) + x - step)))
-            - (1.0 / (4.0*step))*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y - step) + x + step)
+            - (1.0f / (4.0f*step))*(*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y - step) + x + step)
             + (*(evolution_[kpts_[i].class_id].Ldet.ptr<float>(y + step) + x - step)));
 
-        Dxs = (1.0 / (4.0*step))*(*(evolution_[kpts_[i].class_id + 1].Ldet.ptr<float>(y)+x + step)
+        Dxs = (1.0f / (4.0f*step))*(*(evolution_[kpts_[i].class_id + 1].Ldet.ptr<float>(y)+x + step)
             + (*(evolution_[kpts_[i].class_id - 1].Ldet.ptr<float>(y)+x - step)))
-            - (1.0 / (4.0*step))*(*(evolution_[kpts_[i].class_id + 1].Ldet.ptr<float>(y)+x - step)
+            - (1.0f / (4.0f*step))*(*(evolution_[kpts_[i].class_id + 1].Ldet.ptr<float>(y)+x - step)
             + (*(evolution_[kpts_[i].class_id - 1].Ldet.ptr<float>(y)+x + step)));
 
-        Dys = (1.0 / (4.0*step))*(*(evolution_[kpts_[i].class_id + 1].Ldet.ptr<float>(y + step) + x)
+        Dys = (1.0f / (4.0f*step))*(*(evolution_[kpts_[i].class_id + 1].Ldet.ptr<float>(y + step) + x)
             + (*(evolution_[kpts_[i].class_id - 1].Ldet.ptr<float>(y - step) + x)))
-            - (1.0 / (4.0*step))*(*(evolution_[kpts_[i].class_id + 1].Ldet.ptr<float>(y - step) + x)
+            - (1.0f / (4.0f*step))*(*(evolution_[kpts_[i].class_id + 1].Ldet.ptr<float>(y - step) + x)
             + (*(evolution_[kpts_[i].class_id - 1].Ldet.ptr<float>(y + step) + x)));
 
         // Solve the linear system
@@ -569,13 +569,13 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
 
         solve(A, b, dst, DECOMP_LU);
 
-        if (fabs(*(dst.ptr<float>(0))) <= 1.0 && fabs(*(dst.ptr<float>(1))) <= 1.0 && fabs(*(dst.ptr<float>(2))) <= 1.0) {
+        if (fabs(*(dst.ptr<float>(0))) <= 1.0f && fabs(*(dst.ptr<float>(1))) <= 1.0f && fabs(*(dst.ptr<float>(2))) <= 1.0f) {
             kpts_[i].pt.x += *(dst.ptr<float>(0));
             kpts_[i].pt.y += *(dst.ptr<float>(1));
             dsc = kpts_[i].octave + (kpts_[i].angle + *(dst.ptr<float>(2))) / ((float)(nsublevels_));
 
             // In OpenCV the size of a keypoint is the diameter!!
-            kpts_[i].size = 2.0*soffset_*pow((float)2.0, dsc);
+            kpts_[i].size = 2.0f*soffset_*pow((float)2.0f, dsc);
             kpts_[i].angle = 0.0;
         }
         // Set the points to be deleted after the for loop
@@ -593,8 +593,8 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
         }
     }
 
-    t2 = getTickCount();
-    tsubpixel_ = 1000.0*(t2 - t1) / getTickFrequency();
+    //t2 = getTickCount();
+    //tsubpixel_ = 1000.0*(t2 - t1) / getTickFrequency();
 }
 
 //*************************************************************************************
@@ -663,8 +663,8 @@ void KAZEFeatures::Feature_Suppression_Distance(std::vector<cv::KeyPoint>& kpts,
  */
 void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat &desc) {
 
-    double t2 = 0.0, t1 = 0.0;
-    t1 = getTickCount();
+    //double t2 = 0.0, t1 = 0.0;
+    //t1 = getTickCount();
 
     // Allocate memory for the matrix of descriptors
     if (use_extended_ == true) {
@@ -796,8 +796,8 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
         }
     }
 
-    t2 = getTickCount();
-    tdescriptor_ = 1000.0*(t2 - t1) / getTickFrequency();
+    //t2 = getTickCount();
+    //tdescriptor_ = 1000.0*(t2 - t1) / getTickFrequency();
 }
 
 //*************************************************************************************
@@ -822,7 +822,7 @@ void KAZEFeatures::Compute_Main_Orientation_SURF(cv::KeyPoint &kpt)
     xf = kpt.pt.x;
     yf = kpt.pt.y;
     level = kpt.class_id;
-    s = fRound(kpt.size / 2.0);
+    s = fRound(kpt.size / 2.0f);
 
     // Calculate derivatives responses for points within radius of 6*scale
     for (int i = -6; i <= 6; ++i) {
@@ -832,7 +832,7 @@ void KAZEFeatures::Compute_Main_Orientation_SURF(cv::KeyPoint &kpt)
                 ix = fRound(xf + i*s);
 
                 if (iy >= 0 && iy < img_height_ && ix >= 0 && ix < img_width_) {
-                    gweight = gaussian(iy - yf, ix - xf, 2.5*s);
+                    gweight = gaussian(iy - yf, ix - xf, 2.5f*s);
                     resX[idx] = gweight*(*(evolution_[level].Lx.ptr<float>(iy)+ix));
                     resY[idx] = gweight*(*(evolution_[level].Ly.ptr<float>(iy)+ix));
                 }
@@ -848,8 +848,8 @@ void KAZEFeatures::Compute_Main_Orientation_SURF(cv::KeyPoint &kpt)
     }
 
     // Loop slides pi/3 window around feature point
-    for (ang1 = 0; ang1 < 2.0*CV_PI; ang1 += 0.15f) {
-        ang2 = (ang1 + CV_PI / 3.0f > 2.0*CV_PI ? ang1 - 5.0f*CV_PI / 3.0f : ang1 + CV_PI / 3.0f);
+    for (ang1 = 0; ang1 < 2.0f*CV_PI; ang1 += 0.15f) {
+        ang2 = (ang1 + (float)(CV_PI / 3.0) > (float)(2.0*CV_PI) ? ang1 - (float)(5.0*CV_PI / 3.0) : ang1 + (float)(CV_PI / 3.0));
         sumX = sumY = 0.f;
 
         for (size_t k = 0; k < Ang.size(); ++k) {
@@ -862,7 +862,7 @@ void KAZEFeatures::Compute_Main_Orientation_SURF(cv::KeyPoint &kpt)
                 sumY += resY[k];
             }
             else if (ang2 < ang1 &&
-                ((ang > 0 && ang < ang2) || (ang > ang1 && ang < 2.0*CV_PI))) {
+                ((ang > 0 && ang < ang2) || (ang > ang1 && ang < (float)(2.0*CV_PI)))) {
                 sumX += resX[k];
                 sumY += resY[k];
             }
@@ -907,7 +907,7 @@ void KAZEFeatures::Get_SURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, float
     yf = kpt.pt.y;
     xf = kpt.pt.x;
     level = kpt.class_id;
-    scale = fRound(kpt.size / 2.0);
+    scale = fRound(kpt.size / 2.0f);
 
     // Calculate descriptor for this interest point
     for (int i = -pattern_size; i < pattern_size; i += sample_step) {
@@ -921,13 +921,13 @@ void KAZEFeatures::Get_SURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, float
                     sample_y = k*scale + yf;
                     sample_x = l*scale + xf;
 
-                    y1 = (int)(sample_y - .5);
-                    x1 = (int)(sample_x - .5);
+                    y1 = (int)(sample_y - .5f);
+                    x1 = (int)(sample_x - .5f);
 
                     checkDescriptorLimits(x1, y1, img_width_, img_height_);
 
-                    y2 = (int)(sample_y + .5);
-                    x2 = (int)(sample_x + .5);
+                    y2 = (int)(sample_y + .5f);
+                    x2 = (int)(sample_x + .5f);
 
                     checkDescriptorLimits(x2, y2, img_width_, img_height_);
 
@@ -938,13 +938,13 @@ void KAZEFeatures::Get_SURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, float
                     res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
                     res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     // Sum the derivatives to the cumulative descriptor
                     dx += rx;
@@ -1006,7 +1006,7 @@ void KAZEFeatures::Get_SURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc) 
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0);
+    scale = fRound(kpt.size / 2.0f);
     angle = kpt.angle;
     level = kpt.class_id;
     co = cos(angle);
@@ -1024,13 +1024,13 @@ void KAZEFeatures::Get_SURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc) 
                     sample_y = yf + (l*scale*co + k*scale*si);
                     sample_x = xf + (-l*scale*si + k*scale*co);
 
-                    y1 = (int)(sample_y - .5);
-                    x1 = (int)(sample_x - .5);
+                    y1 = (int)(sample_y - .5f);
+                    x1 = (int)(sample_x - .5f);
 
                     checkDescriptorLimits(x1, y1, img_width_, img_height_);
 
-                    y2 = (int)(sample_y + .5);
-                    x2 = (int)(sample_x + .5);
+                    y2 = (int)(sample_y + .5f);
+                    x2 = (int)(sample_x + .5f);
 
                     checkDescriptorLimits(x2, y2, img_width_, img_height_);
 
@@ -1041,13 +1041,13 @@ void KAZEFeatures::Get_SURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc) 
                     res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
                     res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     // Get the x and y derivatives on the rotated axis
                     rry = rx*co + ry*si;
@@ -1107,7 +1107,7 @@ void KAZEFeatures::Get_MSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, floa
     int dsize = 0, scale = 0, level = 0;
 
     // Subregion centers for the 4x4 gaussian weighting
-    float cx = -0.5, cy = 0.5;
+    float cx = -0.5f, cy = 0.5f;
 
     // Set the descriptor size and the sample and pattern sizes
     dsize = 64;
@@ -1117,7 +1117,7 @@ void KAZEFeatures::Get_MSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, floa
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0);
+    scale = fRound(kpt.size / 2.0f);
     level = kpt.class_id;
 
     i = -8;
@@ -1128,13 +1128,13 @@ void KAZEFeatures::Get_MSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, floa
         j = -8;
         i = i - 4;
 
-        cx += 1.0;
-        cy = -0.5;
+        cx += 1.0f;
+        cy = -0.5f;
 
         while (j < pattern_size) {
 
             dx = dy = mdx = mdy = 0.0;
-            cy += 1.0;
+            cy += 1.0f;
             j = j - 4;
 
             ky = i + sample_step;
@@ -1150,15 +1150,15 @@ void KAZEFeatures::Get_MSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, floa
                     sample_x = l*scale + xf;
 
                     //Get the gaussian weighted x and y responses
-                    gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.5*scale);
+                    gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.5f*scale);
 
-                    y1 = (int)(sample_y - .5);
-                    x1 = (int)(sample_x - .5);
+                    y1 = (int)(sample_y - 0.5f);
+                    x1 = (int)(sample_x - 0.5f);
 
                     checkDescriptorLimits(x1, y1, img_width_, img_height_);
 
-                    y2 = (int)(sample_y + .5);
-                    x2 = (int)(sample_x + .5);
+                    y2 = (int)(sample_y + 0.5f);
+                    x2 = (int)(sample_x + 0.5f);
 
                     checkDescriptorLimits(x2, y2, img_width_, img_height_);
 
@@ -1169,13 +1169,13 @@ void KAZEFeatures::Get_MSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, floa
                     res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
                     res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     rx = gauss_s1*rx;
                     ry = gauss_s1*ry;
@@ -1239,7 +1239,7 @@ void KAZEFeatures::Get_MSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
     int dsize = 0, scale = 0, level = 0;
 
     // Subregion centers for the 4x4 gaussian weighting
-    float cx = -0.5, cy = 0.5;
+    float cx = -0.5f, cy = 0.5f;
 
     // Set the descriptor size and the sample and pattern sizes
     dsize = 64;
@@ -1249,7 +1249,7 @@ void KAZEFeatures::Get_MSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0);
+    scale = fRound(kpt.size / 2.0f);
     angle = kpt.angle;
     level = kpt.class_id;
     co = cos(angle);
@@ -1264,13 +1264,13 @@ void KAZEFeatures::Get_MSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
         j = -8;
         i = i - 4;
 
-        cx += 1.0;
-        cy = -0.5;
+        cx += 1.0f;
+        cy = -0.5f;
 
         while (j < pattern_size) {
 
             dx = dy = mdx = mdy = 0.0;
-            cy += 1.0;
+            cy += 1.0f;
             j = j - 4;
 
             ky = i + sample_step;
@@ -1287,14 +1287,14 @@ void KAZEFeatures::Get_MSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
                     sample_x = xf + (-l*scale*si + k*scale*co);
 
                     // Get the gaussian weighted x and y responses
-                    gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.5*scale);
-                    y1 = fRound(sample_y - .5);
-                    x1 = fRound(sample_x - .5);
+                    gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.5f*scale);
+                    y1 = fRound(sample_y - 0.5f);
+                    x1 = fRound(sample_x - 0.5f);
 
                     checkDescriptorLimits(x1, y1, img_width_, img_height_);
 
-                    y2 = (int)(sample_y + .5);
-                    x2 = (int)(sample_x + .5);
+                    y2 = (int)(sample_y + 0.5f);
+                    x2 = (int)(sample_x + 0.5f);
 
                     checkDescriptorLimits(x2, y2, img_width_, img_height_);
 
@@ -1305,13 +1305,13 @@ void KAZEFeatures::Get_MSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
                     res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
                     res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     // Get the x and y derivatives on the rotated axis
                     rry = gauss_s1*(rx*co + ry*si);
@@ -1379,7 +1379,7 @@ void KAZEFeatures::Get_GSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, floa
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0);
+    scale = fRound(kpt.size / 2.0f);
     level = kpt.class_id;
 
     // Calculate descriptor for this interest point
@@ -1395,13 +1395,13 @@ void KAZEFeatures::Get_GSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, floa
                     sample_y = yf + l*scale;
                     sample_x = xf + k*scale;
 
-                    y1 = (int)(sample_y - .5);
-                    x1 = (int)(sample_x - .5);
+                    y1 = (int)(sample_y - 0.5f);
+                    x1 = (int)(sample_x - 0.5f);
 
                     checkDescriptorLimits(x1, y1, img_width_, img_height_);
 
-                    y2 = (int)(sample_y + .5);
-                    x2 = (int)(sample_x + .5);
+                    y2 = (int)(sample_y + 0.5f);
+                    x2 = (int)(sample_x + 0.5f);
 
                     checkDescriptorLimits(x2, y2, img_width_, img_height_);
 
@@ -1412,13 +1412,13 @@ void KAZEFeatures::Get_GSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, floa
                     res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
                     res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     modg = pow(rx, 2) + pow(ry, 2);
 
@@ -1428,25 +1428,25 @@ void KAZEFeatures::Get_GSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, floa
                         res2 = *(evolution_[level].Lxx.ptr<float>(y1)+x2);
                         res3 = *(evolution_[level].Lxx.ptr<float>(y2)+x1);
                         res4 = *(evolution_[level].Lxx.ptr<float>(y2)+x2);
-                        rxx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                        rxx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                         res1 = *(evolution_[level].Lxy.ptr<float>(y1)+x1);
                         res2 = *(evolution_[level].Lxy.ptr<float>(y1)+x2);
                         res3 = *(evolution_[level].Lxy.ptr<float>(y2)+x1);
                         res4 = *(evolution_[level].Lxy.ptr<float>(y2)+x2);
-                        rxy = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                        rxy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                         res1 = *(evolution_[level].Lyy.ptr<float>(y1)+x1);
                         res2 = *(evolution_[level].Lyy.ptr<float>(y1)+x2);
                         res3 = *(evolution_[level].Lyy.ptr<float>(y2)+x1);
                         res4 = *(evolution_[level].Lyy.ptr<float>(y2)+x2);
-                        ryy = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                        ryy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                         // Lww = (Lx^2 * Lxx + 2*Lx*Lxy*Ly + Ly^2*Lyy) / (Lx^2 + Ly^2)
-                        lww = (pow(rx, 2)*rxx + 2.0*rx*rxy*ry + pow(ry, 2)*ryy) / (modg);
+                        lww = (pow(rx, 2)*rxx + 2.0f*rx*rxy*ry + pow(ry, 2)*ryy) / (modg);
 
                         // Lvv = (-2*Lx*Lxy*Ly + Lxx*Ly^2 + Lx^2*Lyy) / (Lx^2 + Ly^2)
-                        lvv = (-2.0*rx*rxy*ry + rxx*pow(ry, 2) + pow(rx, 2)*ryy) / (modg);
+                        lvv = (-2.0f*rx*rxy*ry + rxx*pow(ry, 2) + pow(rx, 2)*ryy) / (modg);
                     }
                     else {
                         lww = 0.0;
@@ -1514,7 +1514,7 @@ void KAZEFeatures::Get_GSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0);
+    scale = fRound(kpt.size / 2.0f);
     angle = kpt.angle;
     level = kpt.class_id;
     co = cos(angle);
@@ -1533,13 +1533,13 @@ void KAZEFeatures::Get_GSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
                     sample_y = yf + (l*scale*co + k*scale*si);
                     sample_x = xf + (-l*scale*si + k*scale*co);
 
-                    y1 = (int)(sample_y - .5);
-                    x1 = (int)(sample_x - .5);
+                    y1 = (int)(sample_y - 0.5f);
+                    x1 = (int)(sample_x - 0.5f);
 
                     checkDescriptorLimits(x1, y1, img_width_, img_height_);
 
-                    y2 = (int)(sample_y + .5);
-                    x2 = (int)(sample_x + .5);
+                    y2 = (int)(sample_y + 0.5f);
+                    x2 = (int)(sample_x + 0.5f);
 
                     checkDescriptorLimits(x2, y2, img_width_, img_height_);
 
@@ -1550,13 +1550,13 @@ void KAZEFeatures::Get_GSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
                     res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
                     res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     modg = pow(rx, 2) + pow(ry, 2);
 
@@ -1566,25 +1566,25 @@ void KAZEFeatures::Get_GSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc)
                         res2 = *(evolution_[level].Lxx.ptr<float>(y1)+x2);
                         res3 = *(evolution_[level].Lxx.ptr<float>(y2)+x1);
                         res4 = *(evolution_[level].Lxx.ptr<float>(y2)+x2);
-                        rxx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                        rxx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                         res1 = *(evolution_[level].Lxy.ptr<float>(y1)+x1);
                         res2 = *(evolution_[level].Lxy.ptr<float>(y1)+x2);
                         res3 = *(evolution_[level].Lxy.ptr<float>(y2)+x1);
                         res4 = *(evolution_[level].Lxy.ptr<float>(y2)+x2);
-                        rxy = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                        rxy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                         res1 = *(evolution_[level].Lyy.ptr<float>(y1)+x1);
                         res2 = *(evolution_[level].Lyy.ptr<float>(y1)+x2);
                         res3 = *(evolution_[level].Lyy.ptr<float>(y2)+x1);
                         res4 = *(evolution_[level].Lyy.ptr<float>(y2)+x2);
-                        ryy = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                        ryy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                         // Lww = (Lx^2 * Lxx + 2*Lx*Lxy*Ly + Ly^2*Lyy) / (Lx^2 + Ly^2)
-                        lww = (pow(rx, 2)*rxx + 2.0*rx*rxy*ry + pow(ry, 2)*ryy) / (modg);
+                        lww = (pow(rx, 2)*rxx + 2.0f*rx*rxy*ry + pow(ry, 2)*ryy) / (modg);
 
                         // Lvv = (-2*Lx*Lxy*Ly + Lxx*Ly^2 + Lx^2*Lyy) / (Lx^2 + Ly^2)
-                        lvv = (-2.0*rx*rxy*ry + rxx*pow(ry, 2) + pow(rx, 2)*ryy) / (modg);
+                        lvv = (-2.0f*rx*rxy*ry + rxx*pow(ry, 2) + pow(rx, 2)*ryy) / (modg);
                     }
                     else {
                         lww = 0.0;
@@ -1652,7 +1652,7 @@ void KAZEFeatures::Get_SURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, floa
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0);
+    scale = fRound(kpt.size / 2.0f);
     level = kpt.class_id;
 
     // Calculate descriptor for this interest point
@@ -1668,13 +1668,13 @@ void KAZEFeatures::Get_SURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, floa
                     sample_y = k*scale + yf;
                     sample_x = l*scale + xf;
 
-                    y1 = (int)(sample_y - .5);
-                    x1 = (int)(sample_x - .5);
+                    y1 = (int)(sample_y - 0.5f);
+                    x1 = (int)(sample_x - 0.5f);
 
                     checkDescriptorLimits(x1, y1, img_width_, img_height_);
 
-                    y2 = (int)(sample_y + .5);
-                    x2 = (int)(sample_x + .5);
+                    y2 = (int)(sample_y + 0.5f);
+                    x2 = (int)(sample_x + 0.5f);
 
                     checkDescriptorLimits(x2, y2, img_width_, img_height_);
 
@@ -1685,13 +1685,13 @@ void KAZEFeatures::Get_SURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, floa
                     res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
                     res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     // Sum the derivatives to the cumulative descriptor
                     if (ry >= 0.0) {
@@ -1772,7 +1772,7 @@ void KAZEFeatures::Get_SURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc)
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0);
+    scale = fRound(kpt.size / 2.0f);
     angle = kpt.angle;
     level = kpt.class_id;
     co = cos(angle);
@@ -1792,13 +1792,13 @@ void KAZEFeatures::Get_SURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc)
                     sample_y = yf + (l*scale*co + k*scale*si);
                     sample_x = xf + (-l*scale*si + k*scale*co);
 
-                    y1 = (int)(sample_y - .5);
-                    x1 = (int)(sample_x - .5);
+                    y1 = (int)(sample_y - 0.5f);
+                    x1 = (int)(sample_x - 0.5f);
 
                     checkDescriptorLimits(x1, y1, img_width_, img_height_);
 
-                    y2 = (int)(sample_y + .5);
-                    x2 = (int)(sample_x + .5);
+                    y2 = (int)(sample_y + 0.5f);
+                    x2 = (int)(sample_x + 0.5f);
 
                     checkDescriptorLimits(x2, y2, img_width_, img_height_);
 
@@ -1809,13 +1809,13 @@ void KAZEFeatures::Get_SURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc)
                     res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
                     res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     // Get the x and y derivatives on the rotated axis
                     rry = rx*co + ry*si;
@@ -1895,7 +1895,7 @@ void KAZEFeatures::Get_MSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, flo
     int dsize = 0, scale = 0, level = 0;
 
     // Subregion centers for the 4x4 gaussian weighting
-    float cx = -0.5, cy = 0.5;
+    float cx = -0.5f, cy = 0.5f;
 
     // Set the descriptor size and the sample and pattern sizes
     dsize = 128;
@@ -1905,7 +1905,7 @@ void KAZEFeatures::Get_MSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, flo
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0);
+    scale = fRound(kpt.size / 2.0f);
     level = kpt.class_id;
 
     i = -8;
@@ -1917,15 +1917,15 @@ void KAZEFeatures::Get_MSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, flo
         j = -8;
         i = i - 4;
 
-        cx += 1.0;
-        cy = -0.5;
+        cx += 1.0f;
+        cy = -0.5f;
 
         while (j < pattern_size) {
 
             dxp = dxn = mdxp = mdxn = 0.0;
             dyp = dyn = mdyp = mdyn = 0.0;
 
-            cy += 1.0;
+            cy += 1.0f;
             j = j - 4;
 
             ky = i + sample_step;
@@ -1941,15 +1941,15 @@ void KAZEFeatures::Get_MSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, flo
                     sample_x = l*scale + xf;
 
                     //Get the gaussian weighted x and y responses
-                    gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.50*scale);
+                    gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.5f*scale);
 
-                    y1 = (int)(sample_y - .5);
-                    x1 = (int)(sample_x - .5);
+                    y1 = (int)(sample_y - 0.5f);
+                    x1 = (int)(sample_x - 0.5f);
 
                     checkDescriptorLimits(x1, y1, img_width_, img_height_);
 
-                    y2 = (int)(sample_y + .5);
-                    x2 = (int)(sample_x + .5);
+                    y2 = (int)(sample_y + 0.5f);
+                    x2 = (int)(sample_x + 0.5f);
 
                     checkDescriptorLimits(x2, y2, img_width_, img_height_);
 
@@ -1960,13 +1960,13 @@ void KAZEFeatures::Get_MSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, flo
                     res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
                     res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     rx = gauss_s1*rx;
                     ry = gauss_s1*ry;
@@ -2051,7 +2051,7 @@ void KAZEFeatures::Get_MSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc
     int dsize = 0, scale = 0, level = 0;
 
     // Subregion centers for the 4x4 gaussian weighting
-    float cx = -0.5, cy = 0.5;
+    float cx = -0.5f, cy = 0.5f;
 
     // Set the descriptor size and the sample and pattern sizes
     dsize = 128;
@@ -2061,7 +2061,7 @@ void KAZEFeatures::Get_MSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0);
+    scale = fRound(kpt.size / 2.0f);
     angle = kpt.angle;
     level = kpt.class_id;
     co = cos(angle);
@@ -2076,8 +2076,8 @@ void KAZEFeatures::Get_MSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc
         j = -8;
         i = i - 4;
 
-        cx += 1.0;
-        cy = -0.5;
+        cx += 1.0f;
+        cy = -0.5f;
 
         while (j < pattern_size) {
 
@@ -2101,15 +2101,15 @@ void KAZEFeatures::Get_MSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc
                     sample_x = xf + (-l*scale*si + k*scale*co);
 
                     // Get the gaussian weighted x and y responses
-                    gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.5*scale);
+                    gauss_s1 = gaussian(xs - sample_x, ys - sample_y, 2.5f*scale);
 
-                    y1 = fRound(sample_y - .5);
-                    x1 = fRound(sample_x - .5);
+                    y1 = fRound(sample_y - 0.5f);
+                    x1 = fRound(sample_x - 0.5f);
 
                     checkDescriptorLimits(x1, y1, img_width_, img_height_);
 
-                    y2 = (int)(sample_y + .5);
-                    x2 = (int)(sample_x + .5);
+                    y2 = (int)(sample_y + 0.5f);
+                    x2 = (int)(sample_x + 0.5f);
 
                     checkDescriptorLimits(x2, y2, img_width_, img_height_);
 
@@ -2120,13 +2120,13 @@ void KAZEFeatures::Get_MSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc
                     res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
                     res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     // Get the x and y derivatives on the rotated axis
                     rry = gauss_s1*(rx*co + ry*si);
@@ -2217,7 +2217,7 @@ void KAZEFeatures::Get_GSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, flo
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0);
+    scale = fRound(kpt.size / 2.0f);
     level = kpt.class_id;
 
     // Calculate descriptor for this interest point
@@ -2233,13 +2233,13 @@ void KAZEFeatures::Get_GSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, flo
                     sample_y = k*scale + yf;
                     sample_x = l*scale + xf;
 
-                    y1 = (int)(sample_y - .5);
-                    x1 = (int)(sample_x - .5);
+                    y1 = (int)(sample_y - 0.5f);
+                    x1 = (int)(sample_x - 0.5f);
 
                     checkDescriptorLimits(x1, y1, img_width_, img_height_);
 
-                    y2 = (int)(sample_y + .5);
-                    x2 = (int)(sample_x + .5);
+                    y2 = (int)(sample_y + 0.5f);
+                    x2 = (int)(sample_x + 0.5f);
 
                     checkDescriptorLimits(x2, y2, img_width_, img_height_);
 
@@ -2250,13 +2250,13 @@ void KAZEFeatures::Get_GSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, flo
                     res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
                     res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     modg = pow(rx, 2) + pow(ry, 2);
 
@@ -2266,25 +2266,25 @@ void KAZEFeatures::Get_GSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, flo
                         res2 = *(evolution_[level].Lxx.ptr<float>(y1)+x2);
                         res3 = *(evolution_[level].Lxx.ptr<float>(y2)+x1);
                         res4 = *(evolution_[level].Lxx.ptr<float>(y2)+x2);
-                        rxx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                        rxx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                         res1 = *(evolution_[level].Lxy.ptr<float>(y1)+x1);
                         res2 = *(evolution_[level].Lxy.ptr<float>(y1)+x2);
                         res3 = *(evolution_[level].Lxy.ptr<float>(y2)+x1);
                         res4 = *(evolution_[level].Lxy.ptr<float>(y2)+x2);
-                        rxy = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                        rxy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                         res1 = *(evolution_[level].Lyy.ptr<float>(y1)+x1);
                         res2 = *(evolution_[level].Lyy.ptr<float>(y1)+x2);
                         res3 = *(evolution_[level].Lyy.ptr<float>(y2)+x1);
                         res4 = *(evolution_[level].Lyy.ptr<float>(y2)+x2);
-                        ryy = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                        ryy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                         // Lww = (Lx^2 * Lxx + 2*Lx*Lxy*Ly + Ly^2*Lyy) / (Lx^2 + Ly^2)
-                        lww = (pow(rx, 2)*rxx + 2.0*rx*rxy*ry + pow(ry, 2)*ryy) / (modg);
+                        lww = (pow(rx, 2)*rxx + 2.0f*rx*rxy*ry + pow(ry, 2)*ryy) / (modg);
 
                         // Lvv = (-2*Lx*Lxy*Ly + Lxx*Ly^2 + Lx^2*Lyy) / (Lx^2 + Ly^2)
-                        lvv = (-2.0*rx*rxy*ry + rxx*pow(ry, 2) + pow(rx, 2)*ryy) / (modg);
+                        lvv = (-2.0f*rx*rxy*ry + rxx*pow(ry, 2) + pow(rx, 2)*ryy) / (modg);
                     }
                     else {
                         lww = 0.0;
@@ -2372,7 +2372,7 @@ void KAZEFeatures::Get_GSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0);
+    scale = fRound(kpt.size / 2.0f);
     angle = kpt.angle;
     level = kpt.class_id;
     co = cos(angle);
@@ -2392,13 +2392,13 @@ void KAZEFeatures::Get_GSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc
                     sample_y = yf + (l*scale*co + k*scale*si);
                     sample_x = xf + (-l*scale*si + k*scale*co);
 
-                    y1 = (int)(sample_y - .5);
-                    x1 = (int)(sample_x - .5);
+                    y1 = (int)(sample_y - 0.5f);
+                    x1 = (int)(sample_x - 0.5f);
 
                     checkDescriptorLimits(x1, y1, img_width_, img_height_);
 
-                    y2 = (int)(sample_y + .5);
-                    x2 = (int)(sample_x + .5);
+                    y2 = (int)(sample_y + 0.5f);
+                    x2 = (int)(sample_x + 0.5f);
 
                     checkDescriptorLimits(x2, y2, img_width_, img_height_);
 
@@ -2409,13 +2409,13 @@ void KAZEFeatures::Get_GSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc
                     res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
                     res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
                     res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
                     res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     modg = pow(rx, 2) + pow(ry, 2);
 
@@ -2424,25 +2424,25 @@ void KAZEFeatures::Get_GSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc
                         res2 = *(evolution_[level].Lxx.ptr<float>(y1)+x2);
                         res3 = *(evolution_[level].Lxx.ptr<float>(y2)+x1);
                         res4 = *(evolution_[level].Lxx.ptr<float>(y2)+x2);
-                        rxx = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                        rxx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                         res1 = *(evolution_[level].Lxy.ptr<float>(y1)+x1);
                         res2 = *(evolution_[level].Lxy.ptr<float>(y1)+x2);
                         res3 = *(evolution_[level].Lxy.ptr<float>(y2)+x1);
                         res4 = *(evolution_[level].Lxy.ptr<float>(y2)+x2);
-                        rxy = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                        rxy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                         res1 = *(evolution_[level].Lyy.ptr<float>(y1)+x1);
                         res2 = *(evolution_[level].Lyy.ptr<float>(y1)+x2);
                         res3 = *(evolution_[level].Lyy.ptr<float>(y2)+x1);
                         res4 = *(evolution_[level].Lyy.ptr<float>(y2)+x2);
-                        ryy = (1.0 - fx)*(1.0 - fy)*res1 + fx*(1.0 - fy)*res2 + (1.0 - fx)*fy*res3 + fx*fy*res4;
+                        ryy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                         // Lww = (Lx^2 * Lxx + 2*Lx*Lxy*Ly + Ly^2*Lyy) / (Lx^2 + Ly^2)
-                        lww = (pow(rx, 2)*rxx + 2.0*rx*rxy*ry + pow(ry, 2)*ryy) / (modg);
+                        lww = (pow(rx, 2)*rxx + 2.0f*rx*rxy*ry + pow(ry, 2)*ryy) / (modg);
 
                         // Lvv = (-2*Lx*Lxy*Ly + Lxx*Ly^2 + Lx^2*Lyy) / (Lx^2 + Ly^2)
-                        lvv = (-2.0*rx*rxy*ry + rxx*pow(ry, 2) + pow(rx, 2)*ryy) / (modg);
+                        lvv = (-2.0f*rx*rxy*ry + rxx*pow(ry, 2) + pow(rx, 2)*ryy) / (modg);
                     }
                     else {
                         lww = 0.0;
@@ -2530,7 +2530,7 @@ void KAZEFeatures::AOS_Step_Scalar(cv::Mat &Ld, const cv::Mat &Ldprev, const cv:
     AOS_Columns(Ldprev, c, stepsize);
 #endif
 
-    Ld = 0.5*(Lty_ + Ltx_.t());
+    Ld = 0.5f*(Lty_ + Ltx_.t());
 }
 
 //*************************************************************************************
@@ -2567,7 +2567,7 @@ void KAZEFeatures::AOS_Rows(const cv::Mat &Ldprev, const cv::Mat &c, const float
 
     // a = 1 + t.*p; (p is -1*p)
     // b = -t.*q;
-    ay_ = 1.0 + stepsize*py_; // p is -1*p
+    ay_ = 1.0f + stepsize*py_; // p is -1*p
     by_ = -stepsize*qr_;
 
     // Do Thomas algorithm to solve the linear system of equations
@@ -2607,7 +2607,7 @@ void KAZEFeatures::AOS_Columns(const cv::Mat &Ldprev, const cv::Mat &c, const fl
     }
 
     // a = 1 + t.*p';
-    ax_ = 1.0 + stepsize*px_.t();
+    ax_ = 1.0f + stepsize*px_.t();
 
     // b = -t.*q';
     bx_ = -stepsize*qc_.t();
@@ -2697,15 +2697,15 @@ inline float getAngle(const float& x, const float& y) {
     }
 
     if (x < 0 && y >= 0) {
-        return CV_PI - atan(-y / x);
+        return (float)CV_PI - atan(-y / x);
     }
 
     if (x < 0 && y < 0) {
-        return CV_PI + atan(y / x);
+        return (float)CV_PI + atan(y / x);
     }
 
     if (x >= 0 && y < 0) {
-        return 2.0*CV_PI - atan(-y / x);
+        return 2.0f * (float)CV_PI - atan(-y / x);
     }
 
     return 0;
@@ -2723,7 +2723,7 @@ inline float getAngle(const float& x, const float& y) {
  */
 inline void clippingDescriptor(float *desc, const int& dsize, const int& niter, const float& ratio) {
 
-    float cratio = ratio / sqrt(dsize);
+    float cratio = ratio / sqrtf(static_cast<float>(dsize));
     float len = 0.0;
 
     for (int i = 0; i < niter; i++) {

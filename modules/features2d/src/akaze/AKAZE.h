@@ -33,9 +33,6 @@ private:
     cv::Mat descriptorBits_;
     cv::Mat bitMask_;
 
-    /// Computation times variables in ms
-    AKAZETiming timing_;
-
 public:
 
     /// Constructor with input arguments
@@ -74,14 +71,14 @@ public:
     //void Get_MLDB_Descriptor_Subset(const cv::KeyPoint& kpt, unsigned char* desc);
 
     // Methods for saving some results and showing computation times
-    void Save_Scale_Space();
-    void Save_Detector_Responses();
-    void Show_Computation_Times() const;
+    //void Save_Scale_Space();
+    //void Save_Detector_Responses();
+    //void Show_Computation_Times() const;
 
     /// Return the computation times
-    AKAZETiming Get_Computation_Times() const {
-        return timing_;
-    }
+    //AKAZETiming Get_Computation_Times() const {
+    //    return timing_;
+    //}
 };
 
 /* ************************************************************************* */

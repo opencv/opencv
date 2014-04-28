@@ -54,13 +54,13 @@ private:
   std::vector<int> nsteps_;      // Vector of number of steps per cycle
 
   // Computation times variables in ms
-  double tkcontrast_;       // Kcontrast factor computation
-  double tnlscale_;         // Nonlinear Scale space generation
-  double tdetector_;        // Feature detector
-  double tmderivatives_;    // Multiscale derivatives computation
-  double tdresponse_;       // Detector response computation
-  double tdescriptor_;      // Feature descriptor
-  double tsubpixel_;        // Subpixel refinement
+  //double tkcontrast_;       // Kcontrast factor computation
+  //double tnlscale_;         // Nonlinear Scale space generation
+  //double tdetector_;        // Feature detector
+  //double tmderivatives_;    // Multiscale derivatives computation
+  //double tdresponse_;       // Detector response computation
+  //double tdescriptor_;      // Feature descriptor
+  //double tsubpixel_;        // Subpixel refinement
 
   // Some auxiliary variables used in the AOS step
   cv::Mat Ltx_, Lty_, px_, py_, ax_, ay_, bx_, by_, qr_, qc_;
@@ -243,33 +243,33 @@ public:
     return use_extended_;
   }
 
-  float Get_Time_KContrast(void) {
-    return tkcontrast_;
-  }
+  //float Get_Time_KContrast(void) {
+  //  return tkcontrast_;
+  //}
 
-  float Get_Time_NLScale(void) {
-    return tnlscale_;
-  }
+  //float Get_Time_NLScale(void) {
+  //  return tnlscale_;
+  //}
 
-  float Get_Time_Detector(void) {
-    return tdetector_;
-  }
+  //float Get_Time_Detector(void) {
+  //  return tdetector_;
+  //}
 
-  float Get_Time_Multiscale_Derivatives(void) {
-    return tmderivatives_;
-  }
+  //float Get_Time_Multiscale_Derivatives(void) {
+  //  return tmderivatives_;
+  //}
 
-  float Get_Time_Detector_Response(void) {
-    return tdresponse_;
-  }
+  //float Get_Time_Detector_Response(void) {
+  //  return tdresponse_;
+  //}
 
-  float Get_Time_Descriptor(void) {
-    return tdescriptor_;
-  }
+  //float Get_Time_Descriptor(void) {
+  //  return tdescriptor_;
+  //}
 
-  float Get_Time_Subpixel(void) {
-    return tsubpixel_;
-  }
+  //float Get_Time_Subpixel(void) {
+  //  return tsubpixel_;
+  //}
 };
 
 //*************************************************************************************

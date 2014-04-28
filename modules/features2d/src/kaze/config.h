@@ -63,7 +63,7 @@ struct KAZEOptions {
   KAZEOptions() {
     // Load the default options
     soffset = DEFAULT_SCALE_OFFSET;
-    omax = DEFAULT_OCTAVE_MAX;
+    omax = static_cast<int>(DEFAULT_OCTAVE_MAX);
     nsublevels = DEFAULT_NSUBLEVELS;
     dthreshold = DEFAULT_DETECTOR_THRESHOLD;
     use_fed = DEFAULT_USE_FED;
