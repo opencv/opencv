@@ -381,20 +381,20 @@ void KAZEFeatures::Determinant_Hessian_Parallel(std::vector<cv::KeyPoint>& kpts)
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-    for (size_t i = 1; i < evolution_.size() - 1; i++) {
+    for (int i = 1; i < evolution_.size() - 1; i++) {
         Find_Extremum_Threading(i);
     }
 
     // Now fill the vector of keypoints!!!
-    for (size_t i = 0; i < kpts_par_.size(); i++) {
-        for (size_t j = 0; j < kpts_par_[i].size(); j++) {
+    for (int i = 0; i < kpts_par_.size(); i++) {
+        for (int j = 0; j < kpts_par_[i].size(); j++) {
             level = i + 1;
             is_extremum = true;
             is_repeated = false;
             is_out = false;
 
             // Check in case we have the same point as maxima in previous evolution levels
-            for (size_t ik = 0; ik < kpts.size(); ik++) {
+            for (int ik = 0; ik < kpts.size(); ik++) {
                 if (kpts[ik].class_id == level || kpts[ik].class_id == level + 1 || kpts[ik].class_id == level - 1) {
                     dist = pow(kpts_par_[i][j].pt.x - kpts[ik].pt.x, 2) + pow(kpts_par_[i][j].pt.y - kpts[ik].pt.y, 2);
 
@@ -610,7 +610,7 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
 void KAZEFeatures::Feature_Suppression_Distance(std::vector<cv::KeyPoint>& kpts, const float& mdist) {
 
     vector<KeyPoint> aux;
-    vector<int> to_delete;
+    vector<size_t> to_delete;
     float dist = 0.0, x1 = 0.0, y1 = 0.0, x2 = 0.0, y2 = 0.0;
     bool found = false;
 
@@ -639,7 +639,7 @@ void KAZEFeatures::Feature_Suppression_Distance(std::vector<cv::KeyPoint>& kpts,
         found = false;
 
         for (size_t j = 0; j < to_delete.size(); j++) {
-            if (i == (size_t)(to_delete[j])) {
+            if (i == to_delete[j]) {
                 found = true;
                 break;
             }
@@ -670,10 +670,10 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
 
     // Allocate memory for the matrix of descriptors
     if (use_extended_ == true) {
-        desc = Mat::zeros(kpts.size(), 128, CV_32FC1);
+        desc = Mat::zeros((int)kpts.size(), 128, CV_32FC1);
     }
     else {
-        desc = Mat::zeros(kpts.size(), 64, CV_32FC1);
+        desc = Mat::zeros((int)kpts.size(), 64, CV_32FC1);
     }
 
     if (use_upright_ == true) {
@@ -684,7 +684,7 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
 #endif
                 for (size_t i = 0; i < kpts.size(); i++) {
                     kpts[i].angle = 0.0;
-                    Get_SURF_Upright_Descriptor_64(kpts[i], desc.ptr<float>(i));
+                    Get_SURF_Upright_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
                 }
             }
             else if (descriptor_mode_ == 1) {
@@ -693,7 +693,7 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
 #endif
                 for (size_t i = 0; i < kpts.size(); i++) {
                     kpts[i].angle = 0.0;
-                    Get_MSURF_Upright_Descriptor_64(kpts[i], desc.ptr<float>(i));
+                    Get_MSURF_Upright_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
                 }
             }
             else if (descriptor_mode_ == 2) {
@@ -702,7 +702,7 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
 #endif
                 for (size_t i = 0; i < kpts.size(); i++) {
                     kpts[i].angle = 0.0;
-                    Get_GSURF_Upright_Descriptor_64(kpts[i], desc.ptr<float>(i));
+                    Get_GSURF_Upright_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
                 }
             }
         }
@@ -714,7 +714,7 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
 #endif
                 for (size_t i = 0; i < kpts.size(); i++) {
                     kpts[i].angle = 0.0;
-                    Get_SURF_Upright_Descriptor_128(kpts[i], desc.ptr<float>(i));
+                    Get_SURF_Upright_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
                 }
             }
             else if (descriptor_mode_ == 1) {
@@ -723,7 +723,7 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
 #endif
                 for (size_t i = 0; i < kpts.size(); i++) {
                     kpts[i].angle = 0.0;
-                    Get_MSURF_Upright_Descriptor_128(kpts[i], desc.ptr<float>(i));
+                    Get_MSURF_Upright_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
                 }
             }
             else if (descriptor_mode_ == 2) {
@@ -732,7 +732,7 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
 #endif
                 for (size_t i = 0; i < kpts.size(); i++) {
                     kpts[i].angle = 0.0;
-                    Get_GSURF_Upright_Descriptor_128(kpts[i], desc.ptr<float>(i));
+                    Get_GSURF_Upright_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
                 }
             }
         }
@@ -745,7 +745,7 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
 #endif
                 for (size_t i = 0; i < kpts.size(); i++) {
                     Compute_Main_Orientation_SURF(kpts[i]);
-                    Get_SURF_Descriptor_64(kpts[i], desc.ptr<float>(i));
+                    Get_SURF_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
                 }
             }
             else if (descriptor_mode_ == 1) {
@@ -754,7 +754,7 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
 #endif
                 for (size_t i = 0; i < kpts.size(); i++) {
                     Compute_Main_Orientation_SURF(kpts[i]);
-                    Get_MSURF_Descriptor_64(kpts[i], desc.ptr<float>(i));
+                    Get_MSURF_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
                 }
             }
             else if (descriptor_mode_ == 2) {
@@ -763,7 +763,7 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
 #endif
                 for (size_t i = 0; i < kpts.size(); i++) {
                     Compute_Main_Orientation_SURF(kpts[i]);
-                    Get_GSURF_Descriptor_64(kpts[i], desc.ptr<float>(i));
+                    Get_GSURF_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
                 }
             }
         }
@@ -774,7 +774,7 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
 #endif
                 for (size_t i = 0; i < kpts.size(); i++) {
                     Compute_Main_Orientation_SURF(kpts[i]);
-                    Get_SURF_Descriptor_128(kpts[i], desc.ptr<float>(i));
+                    Get_SURF_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
                 }
             }
             else if (descriptor_mode_ == 1) {
@@ -783,7 +783,7 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
 #endif
                 for (size_t i = 0; i < kpts.size(); i++) {
                     Compute_Main_Orientation_SURF(kpts[i]);
-                    Get_MSURF_Descriptor_128(kpts[i], desc.ptr<float>(i));
+                    Get_MSURF_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
                 }
             }
             else if (descriptor_mode_ == 2) {
@@ -792,7 +792,7 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
 #endif
                 for (size_t i = 0; i < kpts.size(); i++) {
                     Compute_Main_Orientation_SURF(kpts[i]);
-                    Get_GSURF_Descriptor_128(kpts[i], desc.ptr<float>(i));
+                    Get_GSURF_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
                 }
             }
         }

@@ -234,7 +234,7 @@ void AKAZEFeatures::Compute_Multiscale_Derivatives(void) {
 
     //t1 = cv::getTickCount();
 
-    cv::parallel_for_(cv::Range(0, evolution_.size()), MultiscaleDerivativesInvoker(evolution_, options_));
+    cv::parallel_for_(cv::Range(0, (int)evolution_.size()), MultiscaleDerivativesInvoker(evolution_, options_));
     /*
     for (int i = 0; i < (int)(evolution_.size()); i++) {
 
@@ -334,8 +334,8 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts) {
                     is_extremum = true;
                     point.response = fabs(value);
                     point.size = evolution_[i].esigma*options_.derivative_factor;
-                    point.octave = evolution_[i].octave;
-                    point.class_id = i;
+                    point.octave = (int)evolution_[i].octave;
+                    point.class_id = (int)i;
                     ratio = pow(2.f, point.octave);
                     sigma_size_ = fRound(point.size / ratio);
                     point.pt.x = static_cast<float>(jx);
@@ -349,7 +349,7 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts) {
                             dist = sqrt(pow(point.pt.x*ratio - kpts_aux[ik].pt.x, 2) + pow(point.pt.y*ratio - kpts_aux[ik].pt.y, 2));
                             if (dist <= point.size) {
                                 if (point.response > kpts_aux[ik].response) {
-                                    id_repeated = ik;
+                                    id_repeated = (int)ik;
                                     is_repeated = true;
                                 }
                                 else {
@@ -501,7 +501,7 @@ void AKAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint>& kpts) {
 void AKAZEFeatures::Feature_Suppression_Distance(std::vector<cv::KeyPoint>& kpts, float mdist) const {
 
     vector<cv::KeyPoint> aux;
-    vector<int> to_delete;
+    vector<size_t> to_delete;
     float dist = 0.0, x1 = 0.0, y1 = 0.0, x2 = 0.0, y2 = 0.0;
     bool found = false;
 
@@ -527,7 +527,7 @@ void AKAZEFeatures::Feature_Suppression_Distance(std::vector<cv::KeyPoint>& kpts
     for (size_t i = 0; i < kpts.size(); i++) {
         found = false;
         for (size_t j = 0; j < to_delete.size(); j++) {
-            if (i == (size_t)(to_delete[j])) {
+            if (i == to_delete[j]) {
                 found = true;
                 break;
             }
@@ -805,17 +805,17 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
 
     // Allocate memory for the matrix with the descriptors
     if (options_.descriptor < MLDB_UPRIGHT) {
-        desc = cv::Mat::zeros(kpts.size(), 64, CV_32FC1);
+        desc = cv::Mat::zeros((int)kpts.size(), 64, CV_32FC1);
     }
     else {
         // We use the full length binary descriptor -> 486 bits
         if (options_.descriptor_size == 0) {
             int t = (6 + 36 + 120)*options_.descriptor_channels;
-            desc = cv::Mat::zeros(kpts.size(), (int)ceil(t / 8.), CV_8UC1);
+            desc = cv::Mat::zeros((int)kpts.size(), (int)ceil(t / 8.), CV_8UC1);
         }
         else {
             // We use the random bit selection length binary descriptor
-            desc = cv::Mat::zeros(kpts.size(), (int)ceil(options_.descriptor_size / 8.), CV_8UC1);
+            desc = cv::Mat::zeros((int)kpts.size(), (int)ceil(options_.descriptor_size / 8.), CV_8UC1);
         }
     }
 
@@ -823,7 +823,7 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
 
     case SURF_UPRIGHT: // Upright descriptors, not invariant to rotation
     {
-        cv::parallel_for_(cv::Range(0, kpts.size()), SURF_Descriptor_Upright_64_Invoker(kpts, desc, evolution_, options_));
+        cv::parallel_for_(cv::Range(0, (int)kpts.size()), SURF_Descriptor_Upright_64_Invoker(kpts, desc, evolution_, options_));
 
         //for (int i = 0; i < (int)(kpts.size()); i++) {
         //    Get_SURF_Descriptor_Upright_64(kpts[i], desc.ptr<float>(i));
@@ -832,7 +832,7 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
         break;
     case SURF:
     {
-        cv::parallel_for_(cv::Range(0, kpts.size()), SURF_Descriptor_64_Invoker(kpts, desc, evolution_, options_));
+        cv::parallel_for_(cv::Range(0, (int)kpts.size()), SURF_Descriptor_64_Invoker(kpts, desc, evolution_, options_));
 
         //for (int i = 0; i < (int)(kpts.size()); i++) {
         //    Compute_Main_Orientation(kpts[i]);
@@ -842,7 +842,7 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
         break;
     case MSURF_UPRIGHT: // Upright descriptors, not invariant to rotation
     {
-        cv::parallel_for_(cv::Range(0, kpts.size()), MSURF_Upright_Descriptor_64_Invoker(kpts, desc, evolution_, options_));
+        cv::parallel_for_(cv::Range(0, (int)kpts.size()), MSURF_Upright_Descriptor_64_Invoker(kpts, desc, evolution_, options_));
 
         //for (int i = 0; i < (int)(kpts.size()); i++) {
         //    Get_MSURF_Upright_Descriptor_64(kpts[i], desc.ptr<float>(i));
@@ -851,7 +851,7 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
         break;
     case MSURF:
     {
-        cv::parallel_for_(cv::Range(0, kpts.size()), MSURF_Descriptor_64_Invoker(kpts, desc, evolution_, options_));
+        cv::parallel_for_(cv::Range(0, (int)kpts.size()), MSURF_Descriptor_64_Invoker(kpts, desc, evolution_, options_));
 
         //for (int i = 0; i < (int)(kpts.size()); i++) {
         //    Compute_Main_Orientation(kpts[i]);
@@ -862,9 +862,9 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
     case MLDB_UPRIGHT: // Upright descriptors, not invariant to rotation
     {
         if (options_.descriptor_size == 0)
-            cv::parallel_for_(cv::Range(0, kpts.size()), Upright_MLDB_Full_Descriptor_Invoker(kpts, desc, evolution_, options_));
+            cv::parallel_for_(cv::Range(0, (int)kpts.size()), Upright_MLDB_Full_Descriptor_Invoker(kpts, desc, evolution_, options_));
         else
-            cv::parallel_for_(cv::Range(0, kpts.size()), Upright_MLDB_Descriptor_Subset_Invoker(kpts, desc, evolution_, options_, descriptorSamples_, descriptorBits_));
+            cv::parallel_for_(cv::Range(0, (int)kpts.size()), Upright_MLDB_Descriptor_Subset_Invoker(kpts, desc, evolution_, options_, descriptorSamples_, descriptorBits_));
 
         //for (int i = 0; i < (int)(kpts.size()); i++) {
         //    if (options_.descriptor_size == 0)
@@ -877,9 +877,9 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
     case MLDB:
     {
         if (options_.descriptor_size == 0)
-            cv::parallel_for_(cv::Range(0, kpts.size()), MLDB_Full_Descriptor_Invoker(kpts, desc, evolution_, options_));
+            cv::parallel_for_(cv::Range(0, (int)kpts.size()), MLDB_Full_Descriptor_Invoker(kpts, desc, evolution_, options_));
         else
-            cv::parallel_for_(cv::Range(0, kpts.size()), MLDB_Descriptor_Subset_Invoker(kpts, desc, evolution_, options_, descriptorSamples_, descriptorBits_));
+            cv::parallel_for_(cv::Range(0, (int)kpts.size()), MLDB_Descriptor_Subset_Invoker(kpts, desc, evolution_, options_, descriptorSamples_, descriptorBits_));
 
         //for (int i = 0; i < (int)(kpts.size()); i++) {
         //    Compute_Main_Orientation(kpts[i]);
@@ -2145,7 +2145,7 @@ void generateDescriptorSubsample(cv::Mat& sampleList, cv::Mat& comparisons, int 
     }
     ssz *= nchannels;
 
-    CV_Assert(nbits <= ssz && "descriptor size can't be bigger than full descriptor");
+    CV_Assert((nbits <= ssz) && "descriptor size can't be bigger than full descriptor");
 
     // Since the full descriptor is usually under 10k elements, we pick
     // the selection from the full matrix.  We take as many samples per
@@ -2153,7 +2153,7 @@ void generateDescriptorSubsample(cv::Mat& sampleList, cv::Mat& comparisons, int 
     // take the two samples involved and put them in the sampling list
 
     Mat_<int> fullM(ssz / nchannels, 5);
-    for (size_t i = 0, c = 0; i < 3; i++) {
+    for (int i = 0, c = 0; i < 3; i++) {
         int gdiv = i + 2; //grid divisions, per row
         int gsz = gdiv*gdiv;
         int psz = (int)ceil(2.f*pattern_size / (float)gdiv);
@@ -2175,13 +2175,13 @@ void generateDescriptorSubsample(cv::Mat& sampleList, cv::Mat& comparisons, int 
 
     // Select some samples. A sample includes all channels
     int count = 0;
-    size_t npicks = (size_t)ceil(nbits / (float)nchannels);
+    int npicks = (int)ceil(nbits / (float)nchannels);
     Mat_<int> samples(29, 3);
     Mat_<int> fullcopy = fullM.clone();
     samples = -1;
 
-    for (size_t i = 0; i < npicks; i++) {
-        size_t k = rand() % (fullM.rows - i);
+    for (int i = 0; i < npicks; i++) {
+        int k = rand() % (fullM.rows - i);
         if (i < 6) {
             // Force use of the coarser grid values and comparisons
             k = i;
