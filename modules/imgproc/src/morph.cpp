@@ -1258,8 +1258,11 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
         default:
             return false;
         }
-
         #undef IPP_MORPH_CASE
+
+#if defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ == 8
+        return false; /// It disables false positive warning in GCC 4.8.2
+#endif
 #endif
     }
 }
