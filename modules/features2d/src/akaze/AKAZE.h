@@ -38,9 +38,6 @@ public:
     /// Constructor with input arguments
     AKAZEFeatures(const AKAZEOptions& options);
 
-    /// Destructor
-    ~AKAZEFeatures();
-
     /// Scale Space methods
     void Allocate_Memory_Evolution();
     int Create_Nonlinear_Scale_Space(const cv::Mat& img);
