@@ -1543,10 +1543,10 @@ static LUTFunc lutTab[] =
 
 static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 {
-    int dtype = _dst.type(), lcn = _lut.channels(), dcn = CV_MAT_CN(dtype), ddepth = CV_MAT_DEPTH(dtype);
+    int lcn = _lut.channels(), dcn = _src.channels(), ddepth = _lut.depth();
 
     UMat src = _src.getUMat(), lut = _lut.getUMat();
-    _dst.create(src.size(), dtype);
+    _dst.create(src.size(), CV_MAKETYPE(ddepth, dcn));
     UMat dst = _dst.getUMat();
 
     ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
@@ -1563,6 +1563,201 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 }
 
 #endif
+
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+namespace ipp {
+
+#if 0 // there are no performance benefits (PR #2653)
+class IppLUTParallelBody_LUTC1 : public ParallelLoopBody
+{
+public:
+    bool* ok;
+    const Mat& src_;
+    const Mat& lut_;
+    Mat& dst_;
+
+    typedef IppStatus (*IppFn)(const Ipp8u* pSrc, int srcStep, void* pDst, int dstStep,
+                          IppiSize roiSize, const void* pTable, int nBitSize);
+    IppFn fn;
+
+    int width;
+
+    IppLUTParallelBody_LUTC1(const Mat& src, const Mat& lut, Mat& dst, bool* _ok)
+        : ok(_ok), src_(src), lut_(lut), dst_(dst)
+    {
+        width = dst.cols * dst.channels();
+
+        size_t elemSize1 = CV_ELEM_SIZE1(dst.depth());
+
+        fn =
+                elemSize1 == 1 ? (IppFn)ippiLUTPalette_8u_C1R :
+                elemSize1 == 4 ? (IppFn)ippiLUTPalette_8u32u_C1R :
+                NULL;
+
+        *ok = (fn != NULL);
+    }
+
+    void operator()( const cv::Range& range ) const
+    {
+        if (!*ok)
+            return;
+
+        const int row0 = range.start;
+        const int row1 = range.end;
+
+        Mat src = src_.rowRange(row0, row1);
+        Mat dst = dst_.rowRange(row0, row1);
+
+        IppiSize sz = { width, dst.rows };
+
+        CV_DbgAssert(fn != NULL);
+        if (fn(src.data, (int)src.step[0], dst.data, (int)dst.step[0], sz, lut_.data, 8) < 0)
+        {
+            setIppErrorStatus();
+            *ok = false;
+        }
+    }
+private:
+    IppLUTParallelBody_LUTC1(const IppLUTParallelBody_LUTC1&);
+    IppLUTParallelBody_LUTC1& operator=(const IppLUTParallelBody_LUTC1&);
+};
+#endif
+
+class IppLUTParallelBody_LUTCN : public ParallelLoopBody
+{
+public:
+    bool *ok;
+    const Mat& src_;
+    const Mat& lut_;
+    Mat& dst_;
+
+    int lutcn;
+
+    uchar* lutBuffer;
+    uchar* lutTable[4];
+
+    IppLUTParallelBody_LUTCN(const Mat& src, const Mat& lut, Mat& dst, bool* _ok)
+        : ok(_ok), src_(src), lut_(lut), dst_(dst), lutBuffer(NULL)
+    {
+        lutcn = lut.channels();
+        IppiSize sz256 = {256, 1};
+
+        size_t elemSize1 = dst.elemSize1();
+        CV_DbgAssert(elemSize1 == 1);
+        lutBuffer = (uchar*)ippMalloc(256 * (int)elemSize1 * 4);
+        lutTable[0] = lutBuffer + 0;
+        lutTable[1] = lutBuffer + 1 * 256 * elemSize1;
+        lutTable[2] = lutBuffer + 2 * 256 * elemSize1;
+        lutTable[3] = lutBuffer + 3 * 256 * elemSize1;
+
+        CV_DbgAssert(lutcn == 3 || lutcn == 4);
+        if (lutcn == 3)
+        {
+            IppStatus status = ippiCopy_8u_C3P3R(lut.data, (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
+            if (status < 0)
+            {
+                setIppErrorStatus();
+                return;
+            }
+        }
+        else if (lutcn == 4)
+        {
+            IppStatus status = ippiCopy_8u_C4P4R(lut.data, (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
+            if (status < 0)
+            {
+                setIppErrorStatus();
+                return;
+            }
+        }
+
+        *ok = true;
+    }
+
+    ~IppLUTParallelBody_LUTCN()
+    {
+        if (lutBuffer != NULL)
+            ippFree(lutBuffer);
+        lutBuffer = NULL;
+        lutTable[0] = NULL;
+    }
+
+    void operator()( const cv::Range& range ) const
+    {
+        if (!*ok)
+            return;
+
+        const int row0 = range.start;
+        const int row1 = range.end;
+
+        Mat src = src_.rowRange(row0, row1);
+        Mat dst = dst_.rowRange(row0, row1);
+
+        if (lutcn == 3)
+        {
+            if (ippiLUTPalette_8u_C3R(
+                    src.data, (int)src.step[0], dst.data, (int)dst.step[0],
+                    ippiSize(dst.size()), lutTable, 8) >= 0)
+                return;
+        }
+        else if (lutcn == 4)
+        {
+            if (ippiLUTPalette_8u_C4R(
+                    src.data, (int)src.step[0], dst.data, (int)dst.step[0],
+                    ippiSize(dst.size()), lutTable, 8) >= 0)
+                return;
+        }
+        setIppErrorStatus();
+        *ok = false;
+    }
+private:
+    IppLUTParallelBody_LUTCN(const IppLUTParallelBody_LUTCN&);
+    IppLUTParallelBody_LUTCN& operator=(const IppLUTParallelBody_LUTCN&);
+};
+} // namespace ipp
+#endif // IPP
+
+class LUTParallelBody : public ParallelLoopBody
+{
+public:
+    bool* ok;
+    const Mat& src_;
+    const Mat& lut_;
+    Mat& dst_;
+
+    LUTFunc func;
+
+    LUTParallelBody(const Mat& src, const Mat& lut, Mat& dst, bool* _ok)
+        : ok(_ok), src_(src), lut_(lut), dst_(dst)
+    {
+        func = lutTab[lut.depth()];
+        *ok = (func != NULL);
+    }
+
+    void operator()( const cv::Range& range ) const
+    {
+        CV_DbgAssert(*ok);
+
+        const int row0 = range.start;
+        const int row1 = range.end;
+
+        Mat src = src_.rowRange(row0, row1);
+        Mat dst = dst_.rowRange(row0, row1);
+
+        int cn = src.channels();
+        int lutcn = lut_.channels();
+
+        const Mat* arrays[] = {&src, &dst, 0};
+        uchar* ptrs[2];
+        NAryMatIterator it(arrays, ptrs);
+        int len = (int)it.size;
+
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+            func(ptrs[0], lut_.data, ptrs[1], len, cn, lutcn);
+    }
+private:
+    LUTParallelBody(const LUTParallelBody&);
+    LUTParallelBody& operator=(const LUTParallelBody&);
+};
 
 }
 
@@ -1581,6 +1776,44 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     Mat src = _src.getMat(), lut = _lut.getMat();
     _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
+
+    if (_src.dims() <= 2)
+    {
+        bool ok = false;
+        Ptr<ParallelLoopBody> body;
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+        size_t elemSize1 = CV_ELEM_SIZE1(dst.depth());
+#if 0 // there are no performance benefits (PR #2653)
+        if (lutcn == 1)
+        {
+            ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTC1(src, lut, dst, &ok);
+            body.reset(p);
+        }
+        else
+#endif
+        if ((lutcn == 3 || lutcn == 4) && elemSize1 == 1)
+        {
+            ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTCN(src, lut, dst, &ok);
+            body.reset(p);
+        }
+#endif
+        if (body == NULL || ok == false)
+        {
+            ok = false;
+            ParallelLoopBody* p = new LUTParallelBody(src, lut, dst, &ok);
+            body.reset(p);
+        }
+        if (body != NULL && ok)
+        {
+            Range all(0, dst.rows);
+            if (dst.total()>>18)
+                parallel_for_(all, *body, (double)std::max((size_t)1, dst.total()>>16));
+            else
+                (*body)(all);
+            if (ok)
+                return;
+        }
+    }
 
     LUTFunc func = lutTab[lut.depth()];
     CV_Assert( func != 0 );
