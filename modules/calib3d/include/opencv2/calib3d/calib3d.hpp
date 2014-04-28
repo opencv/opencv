@@ -802,7 +802,7 @@ public:
     static void initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P,
         const cv::Size& size, int m1type, OutputArray map1, OutputArray map2);
 
-    //! undistorts image, optinally chanes resolution and camera matrix. If Knew zero identity matrix is used
+    //! undistorts image, optionally changes resolution and camera matrix. If Knew zero identity matrix is used
     static void undistortImage(InputArray distorted, OutputArray undistorted,
         InputArray K, InputArray D, InputArray Knew = cv::noArray(), const Size& new_size = Size());
 
