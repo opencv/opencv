@@ -120,7 +120,7 @@ public:
         bgmodel = Scalar::all(0);
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
+    virtual AlgorithmInfo* info() const;
 
     virtual void getBackgroundImage(OutputArray) const
     {
@@ -170,6 +170,11 @@ protected:
     String name_;
 };
 
+CV_INIT_ALGORITHM(BackgroundSubtractorMOGImpl, "BackgroundSubtractor.MOG",
+    obj.info()->addParam(obj, "history", obj. history, false, 0, 0, "Length of the history");
+    obj.info()->addParam(obj, "nmixtures", obj.nmixtures, false, 0, 0, "Number of Gaussian mixtures");
+    obj.info()->addParam(obj, "backgroundRatio", obj.backgroundRatio, false, 0, 0, "Background ratio");
+    obj.info()->addParam(obj, "noiseSigma", obj.noiseSigma, false, 0, 0, "Noise strength"))
 
 template<typename VT> struct MixData
 {
