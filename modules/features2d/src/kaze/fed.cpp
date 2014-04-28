@@ -72,8 +72,8 @@ int fed_tau_by_cycle_time(const float& t, const float& tau_max,
   float scale = 0.0;  // Ratio of t we search to maximal t
 
   // Compute necessary number of time steps
-  n = (int)(ceilf(sqrtf(3.0*t/tau_max+0.25f)-0.5f-1.0e-8f)+ 0.5f);
-  scale = 3.0*t/(tau_max*(float)(n*(n+1)));
+  n = (int)(ceilf(sqrtf(3.0f*t/tau_max+0.25f)-0.5f-1.0e-8f)+ 0.5f);
+  scale = 3.0f*t/(tau_max*(float)(n*(n+1)));
 
   // Call internal FED time step creation routine
   return fed_tau_internal(n,scale,tau_max,reordering,tau);
@@ -114,7 +114,7 @@ int fed_tau_internal(const int& n, const float& scale, const float& tau_max,
 
   // Set up originally ordered tau vector
   for (int k = 0; k < n; ++k) {
-    float h = cosf(CV_PI * (2.0f * (float)k + 1.0f) * c);
+    float h = cosf((float)CV_PI * (2.0f * (float)k + 1.0f) * c);
 
     if (reordering) {
       tauh[k] = d / (h * h);
@@ -175,7 +175,7 @@ bool fed_is_prime_internal(const int& number) {
   }
   else {
     is_prime = true;
-    int upperLimit = sqrt(number+1.0);
+    int upperLimit = (int)sqrt(1.0f + number);
     int divisor = 11;
 
     while (divisor <= upperLimit ) {

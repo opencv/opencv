@@ -36,11 +36,11 @@ using namespace cv;
 void gaussian_2D_convolution(const cv::Mat& src, cv::Mat& dst, const size_t& ksize_x,
     const size_t& ksize_y, const float& sigma) {
 
-    size_t ksize_x_ = 0, ksize_y_ = 0;
+    int ksize_x_ = 0, ksize_y_ = 0;
 
     // Compute an appropriate kernel size according to the specified sigma
     if (sigma > ksize_x || sigma > ksize_y || ksize_x == 0 || ksize_y == 0) {
-        ksize_x_ = ceil(2.0*(1.0 + (sigma - 0.8) / (0.3)));
+        ksize_x_ = (int)ceil(2.0f*(1.0f + (sigma - 0.8f) / (0.3f)));
         ksize_y_ = ksize_x_;
     }
 
@@ -158,16 +158,12 @@ float compute_k_percentile(const cv::Mat& img, float perc, float gscale,
     float hmax = 0.0;
 
     // Create the array for the histogram
-    float *hist = new float[nbins];
+    std::vector<size_t> hist(nbins, 0);
 
     // Create the matrices
     cv::Mat gaussian = cv::Mat::zeros(img.rows, img.cols, CV_32F);
     cv::Mat Lx = cv::Mat::zeros(img.rows, img.cols, CV_32F);
     cv::Mat Ly = cv::Mat::zeros(img.rows, img.cols, CV_32F);
-
-    // Set the histogram to zero
-    for (size_t i = 0; i < nbins; i++)
-        hist[i] = 0.0;
 
     // Perform the Gaussian convolution
     gaussian_2D_convolution(img, gaussian, ksize_x, ksize_y, gscale);
@@ -199,7 +195,7 @@ float compute_k_percentile(const cv::Mat& img, float perc, float gscale,
 
             // Find the correspondent bin
             if (modg != 0.0) {
-                nbin = floor(nbins*(modg / hmax));
+                nbin = (size_t)floor(nbins*(modg / hmax));
 
                 if (nbin == nbins) {
                     nbin--;
@@ -219,13 +215,12 @@ float compute_k_percentile(const cv::Mat& img, float perc, float gscale,
     }
 
     if (nelements < nthreshold) {
-        kperc = 0.03;
+        kperc = 0.03f;
     }
     else {
         kperc = hmax*((float)(k) / (float)nbins);
     }
 
-    delete[] hist;
     return kperc;
 }
 
@@ -268,7 +263,7 @@ void nld_step_scalar(cv::Mat& Ld, const cv::Mat& c, cv::Mat& Lstep, const float&
             float xneg = ((*(c.ptr<float>(i)+j - 1)) + (*(c.ptr<float>(i)+j)))*((*(Ld.ptr<float>(i)+j)) - (*(Ld.ptr<float>(i)+j - 1)));
             float ypos = ((*(c.ptr<float>(i)+j)) + (*(c.ptr<float>(i + 1) + j)))*((*(Ld.ptr<float>(i + 1) + j)) - (*(Ld.ptr<float>(i)+j)));
             float yneg = ((*(c.ptr<float>(i - 1) + j)) + (*(c.ptr<float>(i)+j)))*((*(Ld.ptr<float>(i)+j)) - (*(Ld.ptr<float>(i - 1) + j)));
-            *(Lstep.ptr<float>(i)+j) = 0.5*stepsize*(xpos - xneg + ypos - yneg);
+            *(Lstep.ptr<float>(i)+j) = 0.5f*stepsize*(xpos - xneg + ypos - yneg);
         }
     }
 
@@ -276,7 +271,7 @@ void nld_step_scalar(cv::Mat& Ld, const cv::Mat& c, cv::Mat& Lstep, const float&
         float xpos = ((*(c.ptr<float>(0) + j)) + (*(c.ptr<float>(0) + j + 1)))*((*(Ld.ptr<float>(0) + j + 1)) - (*(Ld.ptr<float>(0) + j)));
         float xneg = ((*(c.ptr<float>(0) + j - 1)) + (*(c.ptr<float>(0) + j)))*((*(Ld.ptr<float>(0) + j)) - (*(Ld.ptr<float>(0) + j - 1)));
         float ypos = ((*(c.ptr<float>(0) + j)) + (*(c.ptr<float>(1) + j)))*((*(Ld.ptr<float>(1) + j)) - (*(Ld.ptr<float>(0) + j)));
-        *(Lstep.ptr<float>(0) + j) = 0.5*stepsize*(xpos - xneg + ypos);
+        *(Lstep.ptr<float>(0) + j) = 0.5f*stepsize*(xpos - xneg + ypos);
     }
 
     for (int j = 1; j < Lstep.cols - 1; j++) {
@@ -284,7 +279,7 @@ void nld_step_scalar(cv::Mat& Ld, const cv::Mat& c, cv::Mat& Lstep, const float&
         float xneg = ((*(c.ptr<float>(Lstep.rows - 1) + j - 1)) + (*(c.ptr<float>(Lstep.rows - 1) + j)))*((*(Ld.ptr<float>(Lstep.rows - 1) + j)) - (*(Ld.ptr<float>(Lstep.rows - 1) + j - 1)));
         float ypos = ((*(c.ptr<float>(Lstep.rows - 1) + j)) + (*(c.ptr<float>(Lstep.rows - 1) + j)))*((*(Ld.ptr<float>(Lstep.rows - 1) + j)) - (*(Ld.ptr<float>(Lstep.rows - 1) + j)));
         float yneg = ((*(c.ptr<float>(Lstep.rows - 2) + j)) + (*(c.ptr<float>(Lstep.rows - 1) + j)))*((*(Ld.ptr<float>(Lstep.rows - 1) + j)) - (*(Ld.ptr<float>(Lstep.rows - 2) + j)));
-        *(Lstep.ptr<float>(Lstep.rows - 1) + j) = 0.5*stepsize*(xpos - xneg + ypos - yneg);
+        *(Lstep.ptr<float>(Lstep.rows - 1) + j) = 0.5f*stepsize*(xpos - xneg + ypos - yneg);
     }
 
     for (int i = 1; i < Lstep.rows - 1; i++) {
@@ -292,14 +287,14 @@ void nld_step_scalar(cv::Mat& Ld, const cv::Mat& c, cv::Mat& Lstep, const float&
         float xneg = ((*(c.ptr<float>(i))) + (*(c.ptr<float>(i))))*((*(Ld.ptr<float>(i))) - (*(Ld.ptr<float>(i))));
         float ypos = ((*(c.ptr<float>(i))) + (*(c.ptr<float>(i + 1))))*((*(Ld.ptr<float>(i + 1))) - (*(Ld.ptr<float>(i))));
         float yneg = ((*(c.ptr<float>(i - 1))) + (*(c.ptr<float>(i))))*((*(Ld.ptr<float>(i))) - (*(Ld.ptr<float>(i - 1))));
-        *(Lstep.ptr<float>(i)) = 0.5*stepsize*(xpos - xneg + ypos - yneg);
+        *(Lstep.ptr<float>(i)) = 0.5f*stepsize*(xpos - xneg + ypos - yneg);
     }
 
     for (int i = 1; i < Lstep.rows - 1; i++) {
         float xneg = ((*(c.ptr<float>(i)+Lstep.cols - 2)) + (*(c.ptr<float>(i)+Lstep.cols - 1)))*((*(Ld.ptr<float>(i)+Lstep.cols - 1)) - (*(Ld.ptr<float>(i)+Lstep.cols - 2)));
         float ypos = ((*(c.ptr<float>(i)+Lstep.cols - 1)) + (*(c.ptr<float>(i + 1) + Lstep.cols - 1)))*((*(Ld.ptr<float>(i + 1) + Lstep.cols - 1)) - (*(Ld.ptr<float>(i)+Lstep.cols - 1)));
         float yneg = ((*(c.ptr<float>(i - 1) + Lstep.cols - 1)) + (*(c.ptr<float>(i)+Lstep.cols - 1)))*((*(Ld.ptr<float>(i)+Lstep.cols - 1)) - (*(Ld.ptr<float>(i - 1) + Lstep.cols - 1)));
-        *(Lstep.ptr<float>(i)+Lstep.cols - 1) = 0.5*stepsize*(-xneg + ypos - yneg);
+        *(Lstep.ptr<float>(i)+Lstep.cols - 1) = 0.5f*stepsize*(-xneg + ypos - yneg);
     }
 
     Ld = Ld + Lstep;
@@ -318,7 +313,7 @@ void downsample_image(const cv::Mat& src, cv::Mat& dst) {
     for (i1 = 1; i1 < src.rows; i1 += 2) {
         j2 = 0;
         for (j1 = 1; j1 < src.cols; j1 += 2) {
-            *(dst.ptr<float>(i2)+j2) = 0.5*(*(src.ptr<float>(i1)+j1)) + 0.25*(*(src.ptr<float>(i1)+j1 - 1) + *(src.ptr<float>(i1)+j1 + 1));
+            *(dst.ptr<float>(i2)+j2) = 0.5f*(*(src.ptr<float>(i1)+j1)) + 0.25f*(*(src.ptr<float>(i1)+j1 - 1) + *(src.ptr<float>(i1)+j1 + 1));
             j2++;
         }
 
@@ -352,7 +347,7 @@ void halfsample_image(const cv::Mat& src, cv::Mat& dst) {
 void compute_derivative_kernels(cv::OutputArray kx_, cv::OutputArray ky_,
     const size_t& dx, const size_t& dy, const size_t& scale) {
 
-    const int ksize = 3 + 2 * (scale - 1);
+    const int ksize = 3 + 2 * ( (int)scale - 1);
 
     // The usual Scharr kernel
     if (scale == 1) {
@@ -365,8 +360,8 @@ void compute_derivative_kernels(cv::OutputArray kx_, cv::OutputArray ky_,
     Mat kx = kx_.getMat();
     Mat ky = ky_.getMat();
 
-    float w = 10.0 / 3.0;
-    float norm = 1.0 / (2.0*scale*(w + 2.0));
+    float w = 10.0f / 3.0f;
+    float norm = 1.0f / (2.0f*scale*(w + 2.0f));
 
     for (int k = 0; k < 2; k++) {
         Mat* kernel = k == 0 ? &kx : &ky;
