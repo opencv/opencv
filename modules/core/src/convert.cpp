@@ -1079,7 +1079,7 @@ dtype* dst, size_t dstep, Size size, double* scale) \
     cvtScale_(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
 }
 
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
 #define DEF_CVT_FUNC_F(suffix, stype, dtype, ippFavor) \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
@@ -1564,7 +1564,7 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 
 #endif
 
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
 namespace ipp {
 
 #if 0 // there are no performance benefits (PR #2653)
@@ -1781,7 +1781,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     {
         bool ok = false;
         Ptr<ParallelLoopBody> body;
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
         size_t elemSize1 = CV_ELEM_SIZE1(dst.depth());
 #if 0 // there are no performance benefits (PR #2653)
         if (lutcn == 1)

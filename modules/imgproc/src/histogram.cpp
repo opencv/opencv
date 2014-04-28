@@ -1175,7 +1175,7 @@ calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
     }
 }
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#ifdef HAVE_IPP
 
 class IPPCalcHistInvoker :
     public ParallelLoopBody
@@ -1232,7 +1232,7 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     Mat hist = _hist.getMat(), ihist = hist;
     ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK)|CV_32S;
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#ifdef HAVE_IPP
     if (nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && channels &&
             channels[0] == 0 && mask.empty() && images[0].dims <= 2 &&
             !accumulate && uniform)

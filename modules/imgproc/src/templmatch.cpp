@@ -341,7 +341,7 @@ static bool ocl_matchTemplate( InputArray _img, InputArray _templ, OutputArray _
 
 #endif
 
-#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7 && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
 
 typedef IppStatus (CV_STDCALL * ippimatchTemplate)(const void*, int, IppiSize, const void*, int, IppiSize, Ipp32f* , int , IppEnum , Ipp8u*);
 
@@ -633,7 +633,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
         return;
 #endif
 
-#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7 && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
     if (method == CV_TM_SQDIFF && cn == 1)
     {
         if (ipp_sqrDistance(img, templ, result))
@@ -642,7 +642,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     }
 #endif
 
-#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7 && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
     if (cn == 1)
     {
         if (!ipp_crossCorr(img, templ, result))
