@@ -113,7 +113,7 @@ Although *Mat* works really well as an image container, it is also a general mat
 
     For instance, *CV_8UC3* means we use unsigned char types that are 8 bit long and each pixel has three of these to form the three channels. This are predefined for up to four channel numbers. The :basicstructures:`Scalar <scalar>` is four element short vector. Specify this and you can initialize all matrix points with a custom value. If you need more you can create the type with the upper macro, setting the channel number in parenthesis as you can see below.
 
-   + Use C\\C++ arrays and initialize via constructor
+   + Use C/C++ arrays and initialize via constructor
 
      .. literalinclude:: ../../../../samples/cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
         :language: cpp
