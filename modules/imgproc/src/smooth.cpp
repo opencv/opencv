@@ -1174,7 +1174,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         return;
 #endif
 
-#if IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 801 && 0 // these functions are slower in IPP 8.1
     int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
     if ((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && (cn == 1 || cn == 3) &&
