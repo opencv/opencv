@@ -120,7 +120,7 @@ namespace cv
         impl.Feature_Description(keypoints, desc);
 
         CV_Assert((!desc.rows || desc.cols == descriptorSize()));
-        CV_Assert((!desc.rows || (desc.type() & descriptorType())));
+        CV_Assert((!desc.rows || (desc.type() == descriptorType())));
     }
 
     void KAZE::detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
@@ -168,6 +168,6 @@ namespace cv
         impl.Feature_Description(keypoints, desc);
 
         CV_Assert((!desc.rows || desc.cols == descriptorSize()));
-        CV_Assert((!desc.rows || (desc.type() & descriptorType())));
+        CV_Assert((!desc.rows || (desc.type() == descriptorType())));
     }
 }
