@@ -34,15 +34,6 @@ AKAZEFeatures::AKAZEFeatures(const AKAZEOptions& options) : options_(options) {
 
 /* ************************************************************************* */
 /**
- * @brief AKAZEFeatures destructor
- */
-AKAZEFeatures::~AKAZEFeatures(void) {
-
-    evolution_.clear();
-}
-
-/* ************************************************************************* */
-/**
  * @brief This method allocates the memory for the nonlinear diffusion evolution
  */
 void AKAZEFeatures::Allocate_Memory_Evolution(void) {
