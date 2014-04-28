@@ -151,7 +151,7 @@ namespace cv
         impl.Compute_Descriptors(keypoints, desc);
 
         CV_Assert((!desc.rows || desc.cols == descriptorSize()));
-        CV_Assert((!desc.rows || (desc.type() & descriptorType())));
+        CV_Assert((!desc.rows || (desc.type() == descriptorType())));
     }
 
     void AKAZE::detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
@@ -197,6 +197,6 @@ namespace cv
         impl.Compute_Descriptors(keypoints, desc);
 
         CV_Assert((!desc.rows || desc.cols == descriptorSize()));
-        CV_Assert((!desc.rows || (desc.type() & descriptorType())));
+        CV_Assert((!desc.rows || (desc.type() == descriptorType())));
     }
 }
