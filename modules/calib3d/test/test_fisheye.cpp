@@ -1,6 +1,7 @@
 #include "test_precomp.hpp"
-#include<fstream>
+#include <fstream>
 #include <opencv2/ts/gpu_test.hpp>
+#include "../src/fisheye.hpp"
 
 class FisheyeTest : public ::testing::Test {
 
@@ -21,9 +22,9 @@ protected:
 
     std::string combine_format(const std::string& item1, const std::string& item2, ...);
 
-    void readPoins(std::vector<std::vector<cv::Point3d> >& objectPoints,
+    void readPoints(std::vector<std::vector<cv::Point3d> >& objectPoints,
                    std::vector<std::vector<cv::Point2d> >& imagePoints,
-                   const std::string& path, const int n_images, const int n_points);
+                   const std::string& path, const int n_images);
 
     void readExtrinsics(const std::string& file, cv::OutputArray _R, cv::OutputArray _T, cv::OutputArray _R1, cv::OutputArray _R2,
                         cv::OutputArray _P1, cv::OutputArray _P2, cv::OutputArray _Q);
@@ -104,8 +105,6 @@ TEST_F(FisheyeTest, undistortImage)
         else
             EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
     }
-
-    cv::waitKey();
 }
 
 TEST_F(FisheyeTest, jacobians)
@@ -206,13 +205,11 @@ TEST_F(FisheyeTest, jacobians)
 TEST_F(FisheyeTest, Calibration)
 {
     const int n_images = 34;
-    const int n_points = 48;
 
-    cv::Size imageSize = cv::Size(1280, 800);
     std::vector<std::vector<cv::Point2d> > imagePoints;
     std::vector<std::vector<cv::Point3d> > objectPoints;
 
-    readPoins(objectPoints, imagePoints, combine(datasets_repository_path, "calib-3_stereo_from_JY/left"), n_images, n_points);
+    readPoints(objectPoints, imagePoints, combine(datasets_repository_path, "calib-3_stereo_from_JY/left"), n_images);
 
     int flag = 0;
     flag |= cv::Fisheye::CALIB_RECOMPUTE_EXTRINSIC;
@@ -232,13 +229,11 @@ TEST_F(FisheyeTest, Calibration)
 TEST_F(FisheyeTest, Homography)
 {
     const int n_images = 1;
-    const int n_points = 48;
 
-    cv::Size imageSize = cv::Size(1280, 800);
     std::vector<std::vector<cv::Point2d> > imagePoints;
     std::vector<std::vector<cv::Point3d> > objectPoints;
 
-    readPoins(objectPoints, imagePoints, combine(datasets_repository_path, "calib-3_stereo_from_JY/left"), n_images, n_points);
+    readPoints(objectPoints, imagePoints, combine(datasets_repository_path, "calib-3_stereo_from_JY/left"), n_images);
     cv::internal::IntrinsicParams param;
     param.Init(cv::Vec2d(cv::max(imageSize.width, imageSize.height) / CV_PI, cv::max(imageSize.width, imageSize.height) / CV_PI),
                cv::Vec2d(imageSize.width  / 2.0 - 0.5, imageSize.height / 2.0 - 0.5));
@@ -283,13 +278,11 @@ TEST_F(FisheyeTest, Homography)
 TEST_F(FisheyeTest, EtimateUncertainties)
 {
     const int n_images = 34;
-    const int n_points = 48;
 
-    cv::Size imageSize = cv::Size(1280, 800);
     std::vector<std::vector<cv::Point2d> > imagePoints;
     std::vector<std::vector<cv::Point3d> > objectPoints;
 
-    readPoins(objectPoints, imagePoints, combine(datasets_repository_path, "calib-3_stereo_from_JY/left"), n_images, n_points);
+    readPoints(objectPoints, imagePoints, combine(datasets_repository_path, "calib-3_stereo_from_JY/left"), n_images);
 
     int flag = 0;
     flag |= cv::Fisheye::CALIB_RECOMPUTE_EXTRINSIC;
@@ -325,7 +318,7 @@ TEST_F(FisheyeTest, EtimateUncertainties)
     EXPECT_MAT_NEAR(err_std, cv::Vec2d(0.187475975266883, 0.185678953263995), 1e-10);
     CV_Assert(abs(rms - 0.263782587133546) < 1e-10);
     CV_Assert(errors.alpha == 0);
-  }
+}
 
 TEST_F(FisheyeTest, rectify)
 {
@@ -375,7 +368,6 @@ TEST_F(FisheyeTest, rectify)
     }
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///  FisheyeTest::
 
@@ -392,7 +384,6 @@ const cv::Matx33d FisheyeTest::R ( 9.9756700084424932e-01, 6.9698277640183867e-0
                             -5.8331736398316541e-04,-1.3069635393884985e-02, 9.9991441852366736e-01);
 
 const cv::Vec3d FisheyeTest::T(-9.9217369356044638e-02, 3.1741831972356663e-03, 1.8551007952921010e-04);
-
 
 std::string FisheyeTest::combine(const std::string& _item1, const std::string& _item2)
 {
@@ -421,44 +412,28 @@ std::string FisheyeTest::combine_format(const std::string& item1, const std::str
     return std::string(buffer);
 }
 
-void FisheyeTest::readPoins(std::vector<std::vector<cv::Point3d> >& objectPoints,
+void FisheyeTest::readPoints(std::vector<std::vector<cv::Point3d> >& objectPoints,
                std::vector<std::vector<cv::Point2d> >& imagePoints,
-               const std::string& path, const int n_images, const int n_points)
+               const std::string& path, const int n_images)
 {
     objectPoints.resize(n_images);
     imagePoints.resize(n_images);
 
-    std::vector<cv::Point2d> image(n_points);
-    std::vector<cv::Point3d> object(n_points);
-
-    std::ifstream ipStream;
-    std::ifstream opStream;
-
-    for (int image_idx = 0; image_idx < n_images; image_idx++)
+    cv::FileStorage fs1(combine(path, "objectPoints.xml"), cv::FileStorage::READ);
+    CV_Assert(fs1.isOpened());
+    for (size_t i = 0; i < objectPoints.size(); ++i)
     {
-        std::stringstream ss;
-        ss << image_idx;
-        std::string idxStr = ss.str();
-
-        ipStream.open(combine(path, std::string(std::string("x_") + idxStr + std::string(".csv"))).c_str(), std::ifstream::in);
-        opStream.open(combine(path, std::string(std::string("X_") + idxStr + std::string(".csv"))).c_str(), std::ifstream::in);
-        CV_Assert(ipStream.is_open() && opStream.is_open());
-
-        for (int point_idx = 0; point_idx < n_points; point_idx++)
-        {
-            double x, y, z;
-            char delim;
-            ipStream >> x >> delim >> y;
-            image[point_idx] = cv::Point2d(x, y);
-            opStream >> x >> delim >> y >> delim >> z;
-            object[point_idx] = cv::Point3d(x, y, z);
-        }
-        ipStream.close();
-        opStream.close();
-
-        imagePoints[image_idx] = image;
-        objectPoints[image_idx] = object;
+        fs1[cv::format("image_%d", i)] >> objectPoints[i];
     }
+    fs1.release();
+
+    cv::FileStorage fs2(combine(path, "imagePoints.xml"), cv::FileStorage::READ);
+    CV_Assert(fs2.isOpened());
+    for (size_t i = 0; i < imagePoints.size(); ++i)
+    {
+        fs2[cv::format("image_%d", i)] >> imagePoints[i];
+    }
+    fs2.release();
 }
 
 void FisheyeTest::readExtrinsics(const std::string& file, cv::OutputArray _R, cv::OutputArray _T, cv::OutputArray _R1, cv::OutputArray _R2,

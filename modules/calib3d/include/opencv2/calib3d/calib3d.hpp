@@ -745,31 +745,9 @@ CV_EXPORTS_W  int estimateAffine3D(InputArray src, InputArray dst,
                                    OutputArray out, OutputArray inliers,
                                    double ransacThreshold=3, double confidence=0.99);
 
-
 class Fisheye
 {
 public:
-
-    //Definitions:
-    //  Let P be a point in 3D of coordinates X in the world reference frame (stored in the matrix X)
-    //  The coordinate vector of P in the camera reference frame is: Xc = R*X + T
-    //  where R is the rotation matrix corresponding to the rotation vector om: R = rodrigues(om);
-    //  call x, y and z the 3 coordinates of Xc: x = Xc(1); y = Xc(2); z = Xc(3);
-    //  The pinehole projection coordinates of P is [a;b] where a=x/z and b=y/z.
-    //    call r^2 = a^2 + b^2,
-    //    call theta = atan(r),
-    //
-    //  Fisheye distortion -> theta_d = theta * (1 + k(1)*theta^2 + k(2)*theta^4 + k(3)*theta^6 + k(4)*theta^8)
-    //
-    //  The distorted point coordinates are: xd = [xx;yy] where:
-    //
-    //    xx = (theta_d / r) * x
-    //    yy = (theta_d / r) * y
-    //
-    //  Finally, convertion into pixel coordinates: The final pixel coordinates vector xp=[xxp;yyp] where:
-    //
-    //    xxp = f(1)*(xx + alpha*yy) + c(1)
-    //    yyp = f(2)*yy + c(2)
 
     enum{
         CALIB_USE_INTRINSIC_GUESS   = 1,
@@ -826,53 +804,7 @@ public:
         double balance = 0.0, double fov_scale = 1.0);
 };
 
-
-
-namespace internal {
-
-struct IntrinsicParams
-{
-    Vec2d f;
-    Vec2d c;
-    Vec4d k;
-    double alpha;
-    std::vector<int> isEstimate;
-
-    IntrinsicParams();
-    IntrinsicParams(Vec2d f, Vec2d c, Vec4d k, double alpha = 0);
-    IntrinsicParams operator+(const Mat& a);
-    IntrinsicParams& operator =(const Mat& a);
-    void Init(const cv::Vec2d& f, const cv::Vec2d& c, const cv::Vec4d& k = Vec4d(0,0,0,0), const double& alpha = 0);
-};
-
-void projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints,
-                   cv::InputArray _rvec,cv::InputArray _tvec,
-                   const IntrinsicParams& param, cv::OutputArray jacobian);
-
-void ComputeExtrinsicRefine(const Mat& imagePoints, const Mat& objectPoints, Mat& rvec,
-                            Mat&  tvec, Mat& J, const int MaxIter,
-                            const IntrinsicParams& param, const double thresh_cond);
-Mat ComputeHomography(Mat m, Mat M);
-
-Mat NormalizePixels(const Mat& imagePoints, const IntrinsicParams& param);
-
-void InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk);
-
-void CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
-                         const IntrinsicParams& param, const int check_cond,
-                         const double thresh_cond, InputOutputArray omc, InputOutputArray Tc);
-
-void ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
-                      const IntrinsicParams& param,  InputArray omc, InputArray Tc,
-                      const int& check_cond, const double& thresh_cond, Mat& JJ2_inv, Mat& ex3);
-
-void EstimateUncertainties(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
-                           const IntrinsicParams& params, InputArray omc, InputArray Tc,
-                           IntrinsicParams& errors, Vec2d& std_err, double thresh_cond, int check_cond, double& rms);
-
-}
 }
 
 #endif
-
 #endif
