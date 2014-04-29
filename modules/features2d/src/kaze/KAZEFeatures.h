@@ -34,7 +34,6 @@ private:
   int img_width_;	// Width of the original image
   int img_height_; // Height of the original image
   bool save_scale_space_; // For saving scale space images
-  bool verbosity_;	// Verbosity level
   std::vector<TEvolution> evolution_;	// Vector of nonlinear diffusion evolution
   float kcontrast_; // The contrast parameter for the scalar nonlinear diffusion
   float dthreshold_;	// Feature detector threshold response
@@ -70,9 +69,6 @@ public:
 
   // Constructor
   KAZEFeatures(KAZEOptions& options);
-
-  // Destructor
-  ~KAZEFeatures(void);
 
   // Public methods for KAZE interface
   void Allocate_Memory_Evolution(void);
@@ -155,10 +151,6 @@ public:
     img_height_ = img_height;
   }
 
-  void Set_Verbosity_Level(bool verbosity) {
-    verbosity_ = verbosity;
-  }
-
   void Set_KContrast(float kcontrast) {
     kcontrast_ = kcontrast;
   }
@@ -214,10 +206,6 @@ public:
 
   int Get_Image_Height(void) {
     return img_height_;
-  }
-
-  bool Get_Verbosity_Level(void) {
-    return verbosity_;
   }
 
   float Get_KContrast(void) {

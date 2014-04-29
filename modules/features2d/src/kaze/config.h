@@ -39,10 +39,6 @@ static const int DEFAULT_DESCRIPTOR_MODE = 1; // Descriptor Mode 0->SURF, 1->M-S
 static const bool DEFAULT_USE_FED = true;  // 0->AOS, 1->FED
 static const bool DEFAULT_UPRIGHT = false;  // Upright descriptors, not invariant to rotation
 static const bool DEFAULT_EXTENDED = false; // Extended descriptor, dimension 128
-static const bool DEFAULT_SAVE_SCALE_SPACE = false; // For saving the scale space images
-static const bool DEFAULT_VERBOSITY = false; // Verbosity level (0->no verbosity)
-static const bool DEFAULT_SHOW_RESULTS = true; // For showing the output image with the detected features plus some ratios
-static const bool DEFAULT_SAVE_KEYPOINTS = false; // For saving the list of keypoints
 
 // Some important configuration variables
 static const float DEFAULT_SIGMA_SMOOTHING_DERIVATIVES = 1.0f;
@@ -72,10 +68,6 @@ struct KAZEOptions {
     descriptor = DEFAULT_DESCRIPTOR_MODE;
     diffusivity = DEFAULT_DIFFUSIVITY_TYPE;
     sderivatives = DEFAULT_SIGMA_SMOOTHING_DERIVATIVES;
-    save_scale_space = DEFAULT_SAVE_SCALE_SPACE;
-    save_keypoints = DEFAULT_SAVE_KEYPOINTS;
-    verbosity = DEFAULT_VERBOSITY;
-    show_results = DEFAULT_SHOW_RESULTS;
   }
 
   float soffset;
@@ -90,10 +82,6 @@ struct KAZEOptions {
   bool upright;
   bool extended;
   int descriptor;
-  bool save_scale_space;
-  bool save_keypoints;
-  bool verbosity;
-  bool show_results;
 };
 
 struct TEvolution {

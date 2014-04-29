@@ -80,11 +80,6 @@ public:
 
 /* ************************************************************************* */
 // Inline functions
-/**
- * @brief This function sets default parameters for the A-KAZE detector.
- * @param options AKAZE options
- */
-void setDefaultAKAZEOptions(AKAZEOptions& options);
 
 // Inline functions
 void generateDescriptorSubsample(cv::Mat& sampleList, cv::Mat& comparisons,

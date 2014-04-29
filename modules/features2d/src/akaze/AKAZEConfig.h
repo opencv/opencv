@@ -44,57 +44,33 @@ enum DIFFUSIVITY_TYPE {
 };
 
 /* ************************************************************************* */
-/// AKAZE Timing structure
-struct AKAZETiming {
-
-    AKAZETiming() {
-        kcontrast = 0.0;
-        scale = 0.0;
-        derivatives = 0.0;
-        detector = 0.0;
-        extrema = 0.0;
-        subpixel = 0.0;
-        descriptor = 0.0;
-    }
-
-    double kcontrast;       ///< Contrast factor computation time in ms
-    double scale;           ///< Nonlinear scale space computation time in ms
-    double derivatives;     ///< Multiscale derivatives computation time in ms
-    double detector;        ///< Feature detector computation time in ms
-    double extrema;         ///< Scale space extrema computation time in ms
-    double subpixel;        ///< Subpixel refinement computation time in ms
-    double descriptor;      ///< Descriptors computation time in ms
-};
-
-/* ************************************************************************* */
 /// AKAZE configuration options structure
 struct AKAZEOptions {
 
-    AKAZEOptions() {
-        soffset = 1.6f;
-        derivative_factor = 1.5f;
-        omax = 4;
-        nsublevels = 4;
-        dthreshold = 0.001f;
-        min_dthreshold = 0.00001f;
+    AKAZEOptions()
+        : omax(4)
+        , nsublevels(4)
+        , img_width(0)
+        , img_height(0)
+        , soffset(1.6f)
+        , derivative_factor(1.5f)
+        , sderivatives(1.0)
+        , diffusivity(PM_G2)
 
-        diffusivity = PM_G2;
-        descriptor = MLDB;
-        descriptor_size = 0;
-        descriptor_channels = 3;
-        descriptor_pattern_size = 10;
-        sderivatives = 1.0;
+        , dthreshold(0.001f)
+        , min_dthreshold(0.00001f)
 
-        kcontrast = 0.001f;
-        kcontrast_percentile = 0.7f;
-        kcontrast_nbins = 300;
+        , descriptor(MLDB)
+        , descriptor_size(0)
+        , descriptor_channels(3)
+        , descriptor_pattern_size(10)
 
-        save_scale_space = false;
-        save_keypoints = false;
-        verbosity = false;
+        , kcontrast(0.001f)
+        , kcontrast_percentile(0.7f)
+        , kcontrast_nbins(300)
+    {
     }
 
-    int omin;                       ///< Initial octave level (-1 means that the size of the input image is duplicated)
     int omax;                       ///< Maximum octave evolution of the image 2^sigma (coarsest scale sigma units)
     int nsublevels;                 ///< Default number of sublevels per scale level
     int img_width;                  ///< Width of the input image
@@ -115,10 +91,6 @@ struct AKAZEOptions {
     float kcontrast;                ///< The contrast factor parameter
     float kcontrast_percentile;     ///< Percentile level for the contrast factor
     int kcontrast_nbins;            ///< Number of bins for the contrast factor histogram
-
-    bool save_scale_space;          ///< Set to true for saving the scale space images
-    bool save_keypoints;            ///< Set to true for saving the detected keypoints and descriptors
-    bool verbosity;                 ///< Set to true for displaying verbosity information
 };
 
 /* ************************************************************************* */
