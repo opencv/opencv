@@ -1084,7 +1084,7 @@ void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSi
 
     int newVal = cvRound(_newval), maxDiff = cvRound(_maxDiff);
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if IPP_VERSION_X100 >= 801 && !defined HAVE_IPP_ICV_ONLY
     Ipp32s bufsize = 0;
     IppiSize roisize = { img.cols, img.rows };
     IppDataType datatype = type == CV_8UC1 ? ipp8u : ipp16s;
