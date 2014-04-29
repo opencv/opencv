@@ -42,8 +42,6 @@ KAZEFeatures::KAZEFeatures(KAZEOptions& options) {
     sderivatives_ = options.sderivatives;
     omax_ = options.omax;
     nsublevels_ = options.nsublevels;
-    save_scale_space_ = options.save_scale_space;
-    verbosity_ = options.verbosity;
     img_width_ = options.img_width;
     img_height_ = options.img_height;
     dthreshold_ = options.dthreshold;
@@ -66,17 +64,6 @@ KAZEFeatures::KAZEFeatures(KAZEOptions& options) {
 
     // Now allocate memory for the evolution
     Allocate_Memory_Evolution();
-}
-
-//*******************************************************************************
-//*******************************************************************************
-
-/**
- * @brief KAZE destructor
- */
-KAZEFeatures::~KAZEFeatures(void) {
-
-    evolution_.clear();
 }
 
 //*******************************************************************************
@@ -171,10 +158,10 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img) {
     //t2 = getTickCount();
     //tkcontrast_ = 1000.0*(t2 - t1) / getTickFrequency();
 
-    if (verbosity_ == true) {
-        cout << "Computed image evolution step. Evolution time: " << evolution_[0].etime <<
-            " Sigma: " << evolution_[0].esigma << endl;
-    }
+    //if (verbosity_ == true) {
+    //    cout << "Computed image evolution step. Evolution time: " << evolution_[0].etime <<
+    //        " Sigma: " << evolution_[0].esigma << endl;
+    //}
 
     // Now generate the rest of evolution levels
     for (size_t i = 1; i < evolution_.size(); i++) {
@@ -209,10 +196,10 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img) {
                 evolution_[i].etime - evolution_[i - 1].etime);
         }
 
-        if (verbosity_ == true) {
-            cout << "Computed image evolution step " << i << " Evolution time: " << evolution_[i].etime <<
-                " Sigma: " << evolution_[i].esigma << endl;
-        }
+        //if (verbosity_ == true) {
+        //    cout << "Computed image evolution step " << i << " Evolution time: " << evolution_[i].etime <<
+        //        " Sigma: " << evolution_[i].esigma << endl;
+        //}
     }
 
     //t2 = getTickCount();

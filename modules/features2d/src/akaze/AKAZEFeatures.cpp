@@ -547,11 +547,10 @@ void AKAZEFeatures::Feature_Suppression_Distance(std::vector<cv::KeyPoint>& kpts
 class SURF_Descriptor_Upright_64_Invoker : public cv::ParallelLoopBody
 {
 public:
-    SURF_Descriptor_Upright_64_Invoker(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc, std::vector<TEvolution>& evolution, AKAZEOptions& options)
+    SURF_Descriptor_Upright_64_Invoker(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc, std::vector<TEvolution>& evolution)
         : keypoints_(&kpts)
         , descriptors_(&desc)
         , evolution_(&evolution)
-        , options_(&options)
     {
     }
 
@@ -569,17 +568,15 @@ private:
     std::vector<cv::KeyPoint>* keypoints_;
     cv::Mat*                   descriptors_;
     std::vector<TEvolution>*   evolution_;
-    AKAZEOptions*              options_;
 };
 
 class SURF_Descriptor_64_Invoker : public cv::ParallelLoopBody
 {
 public:
-    SURF_Descriptor_64_Invoker(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc, std::vector<TEvolution>& evolution, AKAZEOptions& options)
+    SURF_Descriptor_64_Invoker(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc, std::vector<TEvolution>& evolution)
         : keypoints_(&kpts)
         , descriptors_(&desc)
         , evolution_(&evolution)
-        , options_(&options)
     {
     }
 
@@ -598,17 +595,15 @@ private:
     std::vector<cv::KeyPoint>* keypoints_;
     cv::Mat*                   descriptors_;
     std::vector<TEvolution>*   evolution_;
-    AKAZEOptions*              options_;
 };
 
 class MSURF_Upright_Descriptor_64_Invoker : public cv::ParallelLoopBody
 {
 public:
-    MSURF_Upright_Descriptor_64_Invoker(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc, std::vector<TEvolution>& evolution, AKAZEOptions& options)
+    MSURF_Upright_Descriptor_64_Invoker(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc, std::vector<TEvolution>& evolution)
         : keypoints_(&kpts)
         , descriptors_(&desc)
         , evolution_(&evolution)
-        , options_(&options)
     {
     }
 
@@ -626,17 +621,15 @@ private:
     std::vector<cv::KeyPoint>* keypoints_;
     cv::Mat*                   descriptors_;
     std::vector<TEvolution>*   evolution_;
-    AKAZEOptions*              options_;
 };
 
 class MSURF_Descriptor_64_Invoker : public cv::ParallelLoopBody
 {
 public:
-    MSURF_Descriptor_64_Invoker(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc, std::vector<TEvolution>& evolution, AKAZEOptions& options)
+    MSURF_Descriptor_64_Invoker(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc, std::vector<TEvolution>& evolution)
         : keypoints_(&kpts)
         , descriptors_(&desc)
         , evolution_(&evolution)
-        , options_(&options)
     {
     }
 
@@ -655,7 +648,6 @@ private:
     std::vector<cv::KeyPoint>* keypoints_;
     cv::Mat*                   descriptors_;
     std::vector<TEvolution>*   evolution_;
-    AKAZEOptions*              options_;
 };
 
 class Upright_MLDB_Full_Descriptor_Invoker : public cv::ParallelLoopBody
@@ -823,7 +815,7 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
 
     case SURF_UPRIGHT: // Upright descriptors, not invariant to rotation
     {
-        cv::parallel_for_(cv::Range(0, (int)kpts.size()), SURF_Descriptor_Upright_64_Invoker(kpts, desc, evolution_, options_));
+        cv::parallel_for_(cv::Range(0, (int)kpts.size()), SURF_Descriptor_Upright_64_Invoker(kpts, desc, evolution_));
 
         //for (int i = 0; i < (int)(kpts.size()); i++) {
         //    Get_SURF_Descriptor_Upright_64(kpts[i], desc.ptr<float>(i));
@@ -832,7 +824,7 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
         break;
     case SURF:
     {
-        cv::parallel_for_(cv::Range(0, (int)kpts.size()), SURF_Descriptor_64_Invoker(kpts, desc, evolution_, options_));
+        cv::parallel_for_(cv::Range(0, (int)kpts.size()), SURF_Descriptor_64_Invoker(kpts, desc, evolution_));
 
         //for (int i = 0; i < (int)(kpts.size()); i++) {
         //    Compute_Main_Orientation(kpts[i]);
@@ -842,7 +834,7 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
         break;
     case MSURF_UPRIGHT: // Upright descriptors, not invariant to rotation
     {
-        cv::parallel_for_(cv::Range(0, (int)kpts.size()), MSURF_Upright_Descriptor_64_Invoker(kpts, desc, evolution_, options_));
+        cv::parallel_for_(cv::Range(0, (int)kpts.size()), MSURF_Upright_Descriptor_64_Invoker(kpts, desc, evolution_));
 
         //for (int i = 0; i < (int)(kpts.size()); i++) {
         //    Get_MSURF_Upright_Descriptor_64(kpts[i], desc.ptr<float>(i));
@@ -851,7 +843,7 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
         break;
     case MSURF:
     {
-        cv::parallel_for_(cv::Range(0, (int)kpts.size()), MSURF_Descriptor_64_Invoker(kpts, desc, evolution_, options_));
+        cv::parallel_for_(cv::Range(0, (int)kpts.size()), MSURF_Descriptor_64_Invoker(kpts, desc, evolution_));
 
         //for (int i = 0; i < (int)(kpts.size()); i++) {
         //    Compute_Main_Orientation(kpts[i]);
