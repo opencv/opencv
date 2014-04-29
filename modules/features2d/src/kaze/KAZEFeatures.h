@@ -14,7 +14,7 @@
 //*************************************************************************************
 
 // Includes
-#include "config.h"
+#include "KAZEConfig.h"
 #include "nldiffusion_functions.h"
 #include "fed.h"
 
