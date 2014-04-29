@@ -1,5 +1,5 @@
 /**
- * @file config.h
+ * @file KAZEConfig.h
  * @brief Configuration file
  * @date Dec 27, 2011
  * @author Pablo F. Alcantarilla
@@ -10,15 +10,6 @@
 
 //******************************************************************************
 //******************************************************************************
-
-// System Includes
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <cstdlib>
-#include <string>
-#include <vector>
-#include <math.h>
 
 // OpenCV Includes
 #include "precomp.hpp"
