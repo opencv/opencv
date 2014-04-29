@@ -410,7 +410,7 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
 
 static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, int ksize, double scale, double delta, int borderType)
 {
-    if ((borderType != BORDER_REPLICATE) || (3 != ksize) || (5 != ksize))
+    if ((borderType != BORDER_REPLICATE) || ((3 != ksize) && (5 != ksize)))
         return false;
     if (fabs(delta) > FLT_EPSILON)
         return false;
