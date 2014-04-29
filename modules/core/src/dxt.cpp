@@ -2065,7 +2065,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 
 #if defined USE_IPP_DFT && !defined HAVE_IPP_ICV_ONLY
 
-    if ((src.depth() == CV_32F) && (src.total()>(int)(1<<6)))
+    if ((src.depth() == CV_32F) && (src.total()>(int)(1<<6)) && nonzero_rows == 0)
         if ((flags & DFT_ROWS) == 0)
         {
             if (!real_transform)
