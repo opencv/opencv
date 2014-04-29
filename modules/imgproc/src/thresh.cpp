@@ -675,16 +675,30 @@ static double
 getThreshVal_Otsu_8u( const Mat& _src )
 {
     Size size = _src.size();
+    int step = (int) _src.step;
     if( _src.isContinuous() )
     {
         size.width *= size.height;
         size.height = 1;
+        step = size.width;
     }
+
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801
+    IppiSize srcSize = { size.width, size.height };
+    Ipp8u thresh;
+    CV_SUPPRESS_DEPRECATED_START
+    IppStatus ok = ippiComputeThreshold_Otsu_8u_C1R(_src.data, step, srcSize, &thresh);
+    CV_SUPPRESS_DEPRECATED_END
+    if (ok >= 0)
+        return thresh;
+    setIppErrorStatus();
+#endif
+
     const int N = 256;
     int i, j, h[N] = {0};
     for( i = 0; i < size.height; i++ )
     {
-        const uchar* src = _src.data + _src.step*i;
+        const uchar* src = _src.data + step*i;
         j = 0;
         #if CV_ENABLE_UNROLLED
         for( ; j <= size.width - 4; j += 4 )
