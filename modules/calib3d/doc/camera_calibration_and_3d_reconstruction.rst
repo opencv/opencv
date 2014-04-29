@@ -1702,12 +1702,6 @@ Estimates new camera matrix for undistortion or rectification.
 
     :param P: New camera matrix (3x3) or new projection matrix (3x4)
 
-    :param new_size: New size
-
-    :param balance: Balance.
-
-    :param fov_scale: Field of View scale.
-
 Fisheye::stereoRectify
 ------------------------------
 Stereo rectification for fisheye camera model

@@ -1,9 +1,7 @@
 #include "opencv2/opencv.hpp"
 #include "opencv2/core/affine.hpp"
 #include "opencv2/core/affine.hpp"
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::Fisheye::projectPoints
+#include "fisheye.hpp"
 
 namespace cv { namespace
 {
@@ -15,6 +13,9 @@ namespace cv { namespace
         double dalpha;
     };
 }}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// cv::Fisheye::projectPoints
 
 void cv::Fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints, const Affine3d& affine,
     InputArray K, InputArray D, double alpha, OutputArray jacobian)

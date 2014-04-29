@@ -1,0 +1,48 @@
+#ifndef FISHEYE_INTERNAL_H
+#define FISHEYE_INTERNAL_H
+
+namespace cv { namespace internal {
+
+struct IntrinsicParams
+{
+    Vec2d f;
+    Vec2d c;
+    Vec4d k;
+    double alpha;
+    std::vector<int> isEstimate;
+
+    IntrinsicParams();
+    IntrinsicParams(Vec2d f, Vec2d c, Vec4d k, double alpha = 0);
+    IntrinsicParams operator+(const Mat& a);
+    IntrinsicParams& operator =(const Mat& a);
+    void Init(const cv::Vec2d& f, const cv::Vec2d& c, const cv::Vec4d& k = Vec4d(0,0,0,0), const double& alpha = 0);
+};
+
+void projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints,
+                   cv::InputArray _rvec,cv::InputArray _tvec,
+                   const IntrinsicParams& param, cv::OutputArray jacobian);
+
+void ComputeExtrinsicRefine(const Mat& imagePoints, const Mat& objectPoints, Mat& rvec,
+                            Mat&  tvec, Mat& J, const int MaxIter,
+                            const IntrinsicParams& param, const double thresh_cond);
+Mat ComputeHomography(Mat m, Mat M);
+
+Mat NormalizePixels(const Mat& imagePoints, const IntrinsicParams& param);
+
+void InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk);
+
+void CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
+                         const IntrinsicParams& param, const int check_cond,
+                         const double thresh_cond, InputOutputArray omc, InputOutputArray Tc);
+
+void ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
+                      const IntrinsicParams& param,  InputArray omc, InputArray Tc,
+                      const int& check_cond, const double& thresh_cond, Mat& JJ2_inv, Mat& ex3);
+
+void EstimateUncertainties(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
+                           const IntrinsicParams& params, InputArray omc, InputArray Tc,
+                           IntrinsicParams& errors, Vec2d& std_err, double thresh_cond, int check_cond, double& rms);
+
+}}
+
+#endif
