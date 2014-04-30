@@ -50,6 +50,36 @@
 #endif
 #endif
 
+#if defined OP_NORM_INF_MASK || defined OP_MIN_MAX_LOC || defined OP_MIN_MAX_LOC_MASK
+
+#ifdef DEPTH_0
+#define MIN_VAL 0
+#define MAX_VAL 255
+#elif defined DEPTH_1
+#define MIN_VAL -128
+#define MAX_VAL 127
+#elif defined DEPTH_2
+#define MIN_VAL 0
+#define MAX_VAL 65535
+#elif defined DEPTH_3
+#define MIN_VAL -32768
+#define MAX_VAL 32767
+#elif defined DEPTH_4
+#define MIN_VAL INT_MIN
+#define MAX_VAL INT_MAX
+#elif defined DEPTH_5
+#define MIN_VAL (-FLT_MAX)
+#define MAX_VAL FLT_MAX
+#elif defined DEPTH_6
+#define MIN_VAL (-DBL_MAX)
+#define MAX_VAL DBL_MAX
+#endif
+
+#define dstT srcT
+#define dstT1 srcT1
+
+#endif // min/max stuff
+
 #define noconvert
 
 #if cn != 3
@@ -145,40 +175,31 @@
 #define CALC_RESULT \
     storepix(localmem[0], dstptr + dstTSIZE * gid)
 
+// norm (NORM_INF) with cn > 1 and mask
+#elif defined OP_NORM_INF_MASK
+
+#define DECLARE_LOCAL_MEM \
+    __local srcT localmem_max[WGS2_ALIGNED]
+#define DEFINE_ACCUMULATOR \
+    srcT maxval = MIN_VAL, temp
+#define REDUCE_GLOBAL \
+    int mask_index = mad24(id / cols, mask_step, mask_offset + (id % cols)); \
+    if (mask[mask_index]) \
+    { \
+        temp = loadpix(srcptr + src_index); \
+        maxval = max(maxval, (srcT)(temp >= 0 ? temp : -temp)); \
+    }
+#define SET_LOCAL_1 \
+    localmem_max[lid] = maxval
+#define REDUCE_LOCAL_1 \
+    localmem_max[lid - WGS2_ALIGNED] = max(maxval, localmem_max[lid - WGS2_ALIGNED])
+#define REDUCE_LOCAL_2 \
+    localmem_max[lid] = max(localmem_max[lid], localmem_max[lid2])
+#define CALC_RESULT \
+    storepix(localmem_max[0], dstptr + dstTSIZE * gid)
+
 // minMaxLoc stuff
 #elif defined OP_MIN_MAX_LOC || defined OP_MIN_MAX_LOC_MASK
-
-#ifdef DEPTH_0
-#define srcT uchar
-#define MIN_VAL 0
-#define MAX_VAL 255
-#elif defined DEPTH_1
-#define srcT char
-#define MIN_VAL -128
-#define MAX_VAL 127
-#elif defined DEPTH_2
-#define srcT ushort
-#define MIN_VAL 0
-#define MAX_VAL 65535
-#elif defined DEPTH_3
-#define srcT short
-#define MIN_VAL -32768
-#define MAX_VAL 32767
-#elif defined DEPTH_4
-#define srcT int
-#define MIN_VAL INT_MIN
-#define MAX_VAL INT_MAX
-#elif defined DEPTH_5
-#define srcT float
-#define MIN_VAL (-FLT_MAX)
-#define MAX_VAL FLT_MAX
-#elif defined DEPTH_6
-#define srcT double
-#define MIN_VAL (-DBL_MAX)
-#define MAX_VAL DBL_MAX
-#endif
-
-#define dstT srcT
 
 #define DECLARE_LOCAL_MEM \
     __local srcT localmem_min[WGS2_ALIGNED]; \
