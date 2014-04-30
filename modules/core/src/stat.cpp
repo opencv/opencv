@@ -41,9 +41,10 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
 #include <climits>
 #include <limits>
+
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -1245,7 +1246,7 @@ void getMinMaxRes(const Mat &minv, const Mat &maxv, const Mat &minl, const Mat &
     T min = std::numeric_limits<T>::max();
     T max = std::numeric_limits<T>::min() > 0 ? -std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
     int minloc = INT_MAX, maxloc = INT_MAX;
-    for( int i = 0; i < groupnum; i++)
+    for (int i = 0; i < groupnum; i++)
     {
         T current_min = minv.at<T>(0,i);
         T current_max = maxv.at<T>(0,i);
@@ -1262,16 +1263,16 @@ void getMinMaxRes(const Mat &minv, const Mat &maxv, const Mat &minl, const Mat &
         }
     }
     bool zero_mask = (maxloc == INT_MAX) || (minloc == INT_MAX);
-    if(minVal)
+    if (minVal)
         *minVal = zero_mask ? 0 : (double)min;
-    if(maxVal)
+    if (maxVal)
         *maxVal = zero_mask ? 0 : (double)max;
-    if(minLoc)
+    if (minLoc)
     {
         minLoc[0] = zero_mask ? -1 : minloc/cols;
         minLoc[1] = zero_mask ? -1 : minloc%cols;
     }
-    if(maxLoc)
+    if (maxLoc)
     {
         maxLoc[0] = zero_mask ? -1 : maxloc/cols;
         maxLoc[1] = zero_mask ? -1 : maxloc%cols;
@@ -1300,8 +1301,9 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
         wgs2_aligned <<= 1;
     wgs2_aligned >>= 1;
 
-    String opts = format("-D DEPTH_%d -D OP_MIN_MAX_LOC%s -D WGS=%d -D WGS2_ALIGNED=%d%s",
-        depth, _mask.empty() ? "" : "_MASK", (int)wgs, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+    String opts = format("-D DEPTH_%d -D srcT=%s -D OP_MIN_MAX_LOC%s -D WGS=%d -D WGS2_ALIGNED=%d%s",
+                         depth, ocl::typeToStr(depth), _mask.empty() ? "" : "_MASK", (int)wgs,
+                         wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc, opts);
     if (k.empty())
@@ -1980,39 +1982,70 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
             haveMask = _mask.kind() != _InputArray::NONE;
 
     if ( !(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR) ||
-         (!doubleSupport && depth == CV_64F) || (normType == NORM_INF && haveMask && cn != 1))
+         (!doubleSupport && depth == CV_64F))
         return false;
 
     UMat src = _src.getUMat();
 
     if (normType == NORM_INF)
     {
-        UMat abssrc;
-
-        if (depth != CV_8U && depth != CV_16U)
+        if (cn == 1 || !haveMask)
         {
-            int wdepth = std::max(CV_32S, depth);
-            char cvt[50];
+            UMat abssrc;
 
-            ocl::Kernel kabs("KF", ocl::core::arithm_oclsrc,
-                             format("-D UNARY_OP -D OP_ABS_NOSAT -D dstT=%s -D srcT1=%s -D convertToDT=%s%s",
-                                    ocl::typeToStr(wdepth), ocl::typeToStr(depth),
-                                    ocl::convertTypeStr(depth, wdepth, 1, cvt),
-                                    doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
-            if (kabs.empty())
-                return false;
+            if (depth != CV_8U && depth != CV_16U)
+            {
+                int wdepth = std::max(CV_32S, depth);
+                char cvt[50];
 
-            abssrc.create(src.size(), CV_MAKE_TYPE(wdepth, cn));
-            kabs.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(abssrc, cn));
+                ocl::Kernel kabs("KF", ocl::core::arithm_oclsrc,
+                                 format("-D UNARY_OP -D OP_ABS_NOSAT -D dstT=%s -D srcT1=%s -D convertToDT=%s%s",
+                                        ocl::typeToStr(wdepth), ocl::typeToStr(depth),
+                                        ocl::convertTypeStr(depth, wdepth, 1, cvt),
+                                        doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                if (kabs.empty())
+                    return false;
 
-            size_t globalsize[2] = { src.cols * cn, src.rows };
-            if (!kabs.run(2, globalsize, NULL, false))
-                return false;
+                abssrc.create(src.size(), CV_MAKE_TYPE(wdepth, cn));
+                kabs.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(abssrc, cn));
+
+                size_t globalsize[2] = { src.cols * cn, src.rows };
+                if (!kabs.run(2, globalsize, NULL, false))
+                    return false;
+            }
+            else
+                abssrc = src;
+
+            cv::minMaxIdx(haveMask ? abssrc : abssrc.reshape(1), NULL, &result, NULL, NULL, _mask);
         }
         else
-            abssrc = src;
+        {
+            int dbsize = ocl::Device::getDefault().maxComputeUnits();
+            size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
 
-        cv::minMaxIdx(haveMask ? abssrc : abssrc.reshape(1), NULL, &result, NULL, NULL, _mask);
+            int wgs2_aligned = 1;
+            while (wgs2_aligned < (int)wgs)
+                wgs2_aligned <<= 1;
+            wgs2_aligned >>= 1;
+
+            ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
+                          format("-D OP_NORM_INF_MASK -D HAVE_MASK -D DEPTH_%d"
+                                 " -D srcT=%s -D srcT1=%s -D WGS=%d -D cn=%d -D WGS2_ALIGNED=%d%s",
+                                 depth, ocl::typeToStr(type), ocl::typeToStr(depth),
+                                 wgs, cn, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+            if (k.empty())
+                return false;
+
+            UMat db(1, dbsize, type), mask = _mask.getUMat();
+            k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
+                   dbsize, ocl::KernelArg::PtrWriteOnly(db), ocl::KernelArg::ReadOnlyNoSize(mask));
+
+            size_t globalsize = dbsize * wgs;
+            if (!k.run(1, &globalsize, &wgs, true))
+                return false;
+
+            minMaxIdx(db.getMat(ACCESS_READ), NULL, &result, NULL, NULL, noArray());
+        }
     }
     else if (normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR)
     {
