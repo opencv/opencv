@@ -139,11 +139,12 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img) {
 
     //double t2 = 0.0, t1 = 0.0;
 
-    if (evolution_.size() == 0) {
-        cout << "Error generating the nonlinear scale space!!" << endl;
-        cout << "Firstly you need to call KAZE::Allocate_Memory_Evolution()" << endl;
-        return -1;
-    }
+    CV_Assert(evolution_.size() > 0);
+    //if (evolution_.size() == 0) {
+    //    cout << "Error generating the nonlinear scale space!!" << endl;
+    //    cout << "Firstly you need to call KAZE::Allocate_Memory_Evolution()" << endl;
+    //    return -1;
+    //}
 
     //t1 = getTickCount();
 

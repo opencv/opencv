@@ -96,12 +96,12 @@ void AKAZEFeatures::Allocate_Memory_Evolution(void) {
 int AKAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat& img) {
 
     //double t1 = 0.0, t2 = 0.0;
-
-    if (evolution_.size() == 0) {
-        cerr << "Error generating the nonlinear scale space!!" << endl;
-        cerr << "Firstly you need to call AKAZEFeatures::Allocate_Memory_Evolution()" << endl;
-        return -1;
-    }
+    CV_Assert(evolution_.size() > 0);
+    //if (evolution_.size() == 0) {
+    //    cerr << "Error generating the nonlinear scale space!!" << endl;
+    //    cerr << "Firstly you need to call AKAZEFeatures::Allocate_Memory_Evolution()" << endl;
+    //    return -1;
+    //}
 
     //t1 = cv::getTickCount();
 
@@ -148,7 +148,7 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat& img) {
             charbonnier_diffusivity(evolution_[i].Lx, evolution_[i].Ly, evolution_[i].Lflow, options_.kcontrast);
             break;
         default:
-            cerr << "Diffusivity: " << static_cast<int>(options_.diffusivity) << " is not supported" << endl;
+            CV_Error(options_.diffusivity, "Diffusivity is not supported");
             break;
         }
 
