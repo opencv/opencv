@@ -7,7 +7,7 @@
  */
 
 #include "AKAZEFeatures.h"
-#include "fed.h"
+#include "../kaze/fed.h"
 #include "nldiffusion_functions.h"
 
 using namespace std;
