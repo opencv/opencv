@@ -46,7 +46,6 @@ public:
     void Compute_Multiscale_Derivatives(void);
     void Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts);
     void Do_Subpixel_Refinement(std::vector<cv::KeyPoint>& kpts);
-    void Feature_Suppression_Distance(std::vector<cv::KeyPoint>& kpts, float mdist) const;
 
     // Feature description methods
     void Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc);

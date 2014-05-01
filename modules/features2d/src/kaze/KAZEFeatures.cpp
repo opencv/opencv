@@ -591,62 +591,6 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
 //*************************************************************************************
 
 /**
- * @brief This method performs feature suppression based on 2D distance
- * @param kpts Vector of keypoints
- * @param mdist Maximum distance in pixels
- */
-void KAZEFeatures::Feature_Suppression_Distance(std::vector<cv::KeyPoint>& kpts, const float& mdist) {
-
-    vector<KeyPoint> aux;
-    vector<size_t> to_delete;
-    float dist = 0.0, x1 = 0.0, y1 = 0.0, x2 = 0.0, y2 = 0.0;
-    bool found = false;
-
-    for (size_t i = 0; i < kpts.size(); i++) {
-        x1 = kpts[i].pt.x;
-        y1 = kpts[i].pt.y;
-
-        for (size_t j = i + 1; j < kpts.size(); j++) {
-            x2 = kpts[j].pt.x;
-            y2 = kpts[j].pt.y;
-            dist = sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
-
-            if (dist < mdist) {
-                if (fabs(kpts[i].response) >= fabs(kpts[j].response)) {
-                    to_delete.push_back(j);
-                }
-                else {
-                    to_delete.push_back(i);
-                    break;
-                }
-            }
-        }
-    }
-
-    for (size_t i = 0; i < kpts.size(); i++) {
-        found = false;
-
-        for (size_t j = 0; j < to_delete.size(); j++) {
-            if (i == to_delete[j]) {
-                found = true;
-                break;
-            }
-        }
-
-        if (found == false) {
-            aux.push_back(kpts[i]);
-        }
-    }
-
-    kpts.clear();
-    kpts = aux;
-    aux.clear();
-}
-
-//*************************************************************************************
-//*************************************************************************************
-
-/**
  * @brief This method  computes the set of descriptors through the nonlinear scale space
  * @param kpts Vector of keypoints
  * @param desc Matrix with the feature descriptors
