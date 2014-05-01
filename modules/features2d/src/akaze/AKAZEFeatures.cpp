@@ -8,11 +8,11 @@
 
 #include "AKAZEFeatures.h"
 #include "../kaze/fed.h"
-#include "nldiffusion_functions.h"
+#include "../kaze/nldiffusion_functions.h"
 
 using namespace std;
 using namespace cv;
-using namespace cv::details::akaze;
+using namespace cv::details::kaze;
 
 /* ************************************************************************* */
 /**
@@ -154,7 +154,7 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat& img) {
 
         // Perform FED n inner steps
         for (int j = 0; j < nsteps_[i - 1]; j++) {
-            nld_step_scalar(evolution_[i].Lt, evolution_[i].Lflow, evolution_[i].Lstep, tsteps_[i - 1][j]);
+            cv::details::kaze::nld_step_scalar(evolution_[i].Lt, evolution_[i].Lflow, evolution_[i].Lstep, tsteps_[i - 1][j]);
         }
     }
 
