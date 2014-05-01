@@ -79,15 +79,13 @@ T get_param(const IndexParams& params, std::string name)
     }
 }
 
-inline void print_params(const IndexParams& params)
+inline void print_params(const IndexParams& params, std::ostringstream& stream)
 {
     IndexParams::const_iterator it;
-
     for(it=params.begin(); it!=params.end(); ++it) {
-        std::cout << it->first << " : " << it->second << std::endl;
+        stream << it->first << " : " << it->second << std::endl;
     }
 }
-
 
 
 }
