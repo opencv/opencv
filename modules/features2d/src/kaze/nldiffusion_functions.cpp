@@ -28,14 +28,14 @@
 // Namespaces
 using namespace std;
 using namespace cv;
-using namespace cv::details::kaze;
 
-//*************************************************************************************
-//*************************************************************************************
+/* ************************************************************************* */
 
 namespace cv {
     namespace details {
         namespace kaze {
+
+            /* ************************************************************************* */
             /**
              * @brief This function smoothes an image with a Gaussian kernel
              * @param src Input image
@@ -44,8 +44,7 @@ namespace cv {
              * @param ksize_y Kernel size in Y-direction (vertical)
              * @param sigma Kernel standard deviation
              */
-            void gaussian_2D_convolution(const cv::Mat& src, cv::Mat& dst,
-                int ksize_x, int ksize_y, float sigma) {
+            void gaussian_2D_convolution(const cv::Mat& src, cv::Mat& dst, int ksize_x, int ksize_y, float sigma) {
 
                 int ksize_x_ = 0, ksize_y_ = 0;
 
@@ -68,9 +67,7 @@ namespace cv {
                 GaussianBlur(src, dst, Size(ksize_x_, ksize_y_), sigma, sigma, cv::BORDER_REPLICATE);
             }
 
-            //*************************************************************************************
-            //*************************************************************************************
-
+            /* ************************************************************************* */
             /**
              * @brief This function computes the Perona and Malik conductivity coefficient g1
              * g1 = exp(-|dL|^2/k^2)
@@ -83,9 +80,7 @@ namespace cv {
                 cv::exp(-(Lx.mul(Lx) + Ly.mul(Ly)) / (k*k), dst);
             }
 
-            //*************************************************************************************
-            //*************************************************************************************
-
+            /* ************************************************************************* */
             /**
              * @brief This function computes the Perona and Malik conductivity coefficient g2
              * g2 = 1 / (1 + dL^2 / k^2)
@@ -98,9 +93,7 @@ namespace cv {
                 dst = 1. / (1. + (Lx.mul(Lx) + Ly.mul(Ly)) / (k*k));
             }
 
-            //*************************************************************************************
-            //*************************************************************************************
-
+            /* ************************************************************************* */
             /**
              * @brief This function computes Weickert conductivity coefficient g3
              * @param Lx First order image derivative in X-direction (horizontal)
@@ -118,9 +111,7 @@ namespace cv {
                 dst = 1.0f - dst;
             }
 
-            //*************************************************************************************
-            //*************************************************************************************
-
+            /* ************************************************************************* */
             /**
              * @brief This function computes a good empirical value for the k contrast factor
              * given an input image, the percentile (0-1), the gradient scale and the number of
@@ -208,9 +199,7 @@ namespace cv {
                 return kperc;
             }
 
-            //*************************************************************************************
-            //*************************************************************************************
-
+            /* ************************************************************************* */
             /**
              * @brief This function computes Scharr image derivatives
              * @param src Input image
@@ -219,16 +208,13 @@ namespace cv {
              * @param yorder Derivative order in Y-direction (vertical)
              * @param scale Scale factor or derivative size
              */
-            void compute_scharr_derivatives(const cv::Mat& src, cv::Mat& dst,
-                int xorder, int yorder, int scale) {
+            void compute_scharr_derivatives(const cv::Mat& src, cv::Mat& dst, int xorder, int yorder, int scale) {
                 Mat kx, ky;
                 compute_derivative_kernels(kx, ky, xorder, yorder, scale);
                 sepFilter2D(src, dst, CV_32F, kx, ky);
             }
 
-            //*************************************************************************************
-            //*************************************************************************************
-
+            /* ************************************************************************* */
             /**
              * @brief Compute derivative kernels for sizes different than 3
              * @param _kx Horizontal kernel values
@@ -237,8 +223,7 @@ namespace cv {
              * @param dy Derivative order in Y-direction (vertical)
              * @param scale_ Scale factor or derivative size
              */
-            void compute_derivative_kernels(cv::OutputArray _kx, cv::OutputArray _ky,
-                int dx, int dy, int scale) {
+            void compute_derivative_kernels(cv::OutputArray _kx, cv::OutputArray _ky, int dx, int dy, int scale) {
 
                 int ksize = 3 + 2 * (scale - 1);
 
@@ -273,9 +258,7 @@ namespace cv {
                 }
             }
 
-            //*************************************************************************************
-            //*************************************************************************************
-
+            /* ************************************************************************* */
             /**
              * @brief This function performs a scalar non-linear diffusion step
              * @param Ld2 Output image in the evolution
@@ -336,9 +319,7 @@ namespace cv {
                 Ld = Ld + Lstep;
             }
 
-            //*************************************************************************************
-            //*************************************************************************************
-
+            /* ************************************************************************* */
             /**
              * @brief This function checks if a given pixel is a maximum in a local neighbourhood
              * @param img Input image where we will perform the maximum search
@@ -349,8 +330,7 @@ namespace cv {
              * @param same_img Flag to indicate if the image value at (x,y) is in the input image
              * @return 1->is maximum, 0->otherwise
              */
-            bool check_maximum_neighbourhood(const cv::Mat& img, int dsize, float value,
-                int row, int col, bool same_img) {
+            bool check_maximum_neighbourhood(const cv::Mat& img, int dsize, float value, int row, int col, bool same_img) {
 
                 bool response = true;
 

@@ -235,10 +235,61 @@ namespace cv {
              * @param scale Scale factor for the derivative size
              */
             void compute_scharr_derivatives(const cv::Mat& src, cv::Mat& dst, int xorder, int yorder, int scale) {
-
                 Mat kx, ky;
                 compute_derivative_kernels(kx, ky, xorder, yorder, scale);
                 sepFilter2D(src, dst, CV_32F, kx, ky);
+            }
+
+            /* ************************************************************************* */
+            /**
+             * @brief Compute Scharr derivative kernels for sizes different than 3
+             * @param kx_ The derivative kernel in x-direction
+             * @param ky_ The derivative kernel in y-direction
+             * @param dx The derivative order in x-direction
+             * @param dy The derivative order in y-direction
+             * @param scale The kernel size
+             */
+            void compute_derivative_kernels(cv::OutputArray kx_, cv::OutputArray ky_, int dx, int dy, int scale) {
+
+                const int ksize = 3 + 2 * (scale - 1);
+
+                // The usual Scharr kernel
+                if (scale == 1) {
+                    getDerivKernels(kx_, ky_, dx, dy, 0, true, CV_32F);
+                    return;
+                }
+
+                kx_.create(ksize, 1, CV_32F, -1, true);
+                ky_.create(ksize, 1, CV_32F, -1, true);
+                Mat kx = kx_.getMat();
+                Mat ky = ky_.getMat();
+
+                float w = 10.0f / 3.0f;
+                float norm = 1.0f / (2.0f*scale*(w + 2.0f));
+
+                for (int k = 0; k < 2; k++) {
+                    Mat* kernel = k == 0 ? &kx : &ky;
+                    int order = k == 0 ? dx : dy;
+                    float kerI[1000];
+
+                    for (int t = 0; t < ksize; t++) {
+                        kerI[t] = 0;
+                    }
+
+                    if (order == 0) {
+                        kerI[0] = norm;
+                        kerI[ksize / 2] = w*norm;
+                        kerI[ksize - 1] = norm;
+                    }
+                    else if (order == 1) {
+                        kerI[0] = -1;
+                        kerI[ksize / 2] = 0;
+                        kerI[ksize - 1] = 1;
+                    }
+
+                    Mat temp(kernel->rows, kernel->cols, CV_32F, &kerI[0]);
+                    temp.copyTo(*kernel);
+                }
             }
 
             /* ************************************************************************* */
@@ -302,27 +353,6 @@ namespace cv {
 
             /* ************************************************************************* */
             /**
-             * @brief This function downsamples the input image with the kernel [1/4,1/2,1/4]
-             * @param img Input image to be downsampled
-             * @param dst Output image with half of the resolution of the input image
-             */
-            void downsample_image(const cv::Mat& src, cv::Mat& dst) {
-
-                int i1 = 0, j1 = 0, i2 = 0, j2 = 0;
-
-                for (i1 = 1; i1 < src.rows; i1 += 2) {
-                    j2 = 0;
-                    for (j1 = 1; j1 < src.cols; j1 += 2) {
-                        *(dst.ptr<float>(i2)+j2) = 0.5f*(*(src.ptr<float>(i1)+j1)) + 0.25f*(*(src.ptr<float>(i1)+j1 - 1) + *(src.ptr<float>(i1)+j1 + 1));
-                        j2++;
-                    }
-
-                    i2++;
-                }
-            }
-
-            /* ************************************************************************* */
-            /**
              * @brief This function downsamples the input image using OpenCV resize
              * @param img Input image to be downsampled
              * @param dst Output image with half of the resolution of the input image
@@ -335,57 +365,7 @@ namespace cv {
                 resize(src, dst, dst.size(), 0, 0, cv::INTER_AREA);
             }
 
-            /* ************************************************************************* */
-            /**
-             * @brief Compute Scharr derivative kernels for sizes different than 3
-             * @param kx_ The derivative kernel in x-direction
-             * @param ky_ The derivative kernel in y-direction
-             * @param dx The derivative order in x-direction
-             * @param dy The derivative order in y-direction
-             * @param scale The kernel size
-             */
-            void compute_derivative_kernels(cv::OutputArray kx_, cv::OutputArray ky_, int dx, int dy, int scale) {
 
-                const int ksize = 3 + 2 * (scale - 1);
-
-                // The usual Scharr kernel
-                if (scale == 1) {
-                    getDerivKernels(kx_, ky_, dx, dy, 0, true, CV_32F);
-                    return;
-                }
-
-                kx_.create(ksize, 1, CV_32F, -1, true);
-                ky_.create(ksize, 1, CV_32F, -1, true);
-                Mat kx = kx_.getMat();
-                Mat ky = ky_.getMat();
-
-                float w = 10.0f / 3.0f;
-                float norm = 1.0f / (2.0f*scale*(w + 2.0f));
-
-                for (int k = 0; k < 2; k++) {
-                    Mat* kernel = k == 0 ? &kx : &ky;
-                    int order = k == 0 ? dx : dy;
-                    float kerI[1000];
-
-                    for (int t = 0; t < ksize; t++) {
-                        kerI[t] = 0;
-                    }
-
-                    if (order == 0) {
-                        kerI[0] = norm;
-                        kerI[ksize / 2] = w*norm;
-                        kerI[ksize - 1] = norm;
-                    }
-                    else if (order == 1) {
-                        kerI[0] = -1;
-                        kerI[ksize / 2] = 0;
-                        kerI[ksize - 1] = 1;
-                    }
-
-                    Mat temp(kernel->rows, kernel->cols, CV_32F, &kerI[0]);
-                    temp.copyTo(*kernel);
-                }
-            }
         }
     }
 }
