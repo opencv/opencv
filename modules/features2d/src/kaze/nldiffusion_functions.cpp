@@ -1,4 +1,3 @@
-
 //=============================================================================
 //
 // nldiffusion_functions.cpp
@@ -64,7 +63,23 @@ namespace cv {
                 }
 
                 // Perform the Gaussian Smoothing with border replication
-                GaussianBlur(src, dst, Size(ksize_x_, ksize_y_), sigma, sigma, cv::BORDER_REPLICATE);
+                GaussianBlur(src, dst, Size(ksize_x_, ksize_y_), sigma, sigma, BORDER_REPLICATE);
+            }
+
+            /* ************************************************************************* */
+            /**
+             * @brief This function computes image derivatives with Scharr kernel
+             * @param src Input image
+             * @param dst Output image
+             * @param xorder Derivative order in X-direction (horizontal)
+             * @param yorder Derivative order in Y-direction (vertical)
+             * @note Scharr operator approximates better rotation invariance than
+             * other stencils such as Sobel. See Weickert and Scharr,
+             * A Scheme for Coherence-Enhancing Diffusion Filtering with Optimized Rotation Invariance,
+             * Journal of Visual Communication and Image Representation 2002
+             */
+            void image_derivatives_scharr(const cv::Mat& src, cv::Mat& dst, int xorder, int yorder) {
+                Scharr(src, dst, CV_32F, xorder, yorder, 1.0, 0, BORDER_DEFAULT);
             }
 
             /* ************************************************************************* */
@@ -90,12 +105,12 @@ namespace cv {
              * @param k Contrast factor parameter
              */
             void pm_g2(const cv::Mat &Lx, const cv::Mat& Ly, cv::Mat& dst, float k) {
-                dst = 1. / (1. + (Lx.mul(Lx) + Ly.mul(Ly)) / (k*k));
+                dst = 1.0f / (1.0f + (Lx.mul(Lx) + Ly.mul(Ly)) / (k*k));
             }
 
             /* ************************************************************************* */
             /**
-             * @brief This function computes Weickert conductivity coefficient g3
+             * @brief This function computes Weickert conductivity coefficient gw
              * @param Lx First order image derivative in X-direction (horizontal)
              * @param Ly First order image derivative in Y-direction (vertical)
              * @param dst Output image
@@ -107,8 +122,26 @@ namespace cv {
             void weickert_diffusivity(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, float k) {
                 Mat modg;
                 cv::pow((Lx.mul(Lx) + Ly.mul(Ly)) / (k*k), 4, modg);
-                cv::exp(-3.315 / modg, dst);
+                cv::exp(-3.315f / modg, dst);
                 dst = 1.0f - dst;
+            }
+
+            /* ************************************************************************* */
+            /**
+            * @brief This function computes Charbonnier conductivity coefficient gc
+            * gc = 1 / sqrt(1 + dL^2 / k^2)
+            * @param Lx First order image derivative in X-direction (horizontal)
+            * @param Ly First order image derivative in Y-direction (vertical)
+            * @param dst Output image
+            * @param k Contrast factor parameter
+            * @note For more information check the following paper: J. Weickert
+            * Applications of nonlinear diffusion in image processing and computer vision,
+            * Proceedings of Algorithmy 2000
+            */
+            void charbonnier_diffusivity(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, float k) {
+                Mat den;
+                cv::sqrt(1.0f + (Lx.mul(Lx) + Ly.mul(Ly)) / (k*k), den);
+                dst = 1.0f / den;
             }
 
             /* ************************************************************************* */
@@ -182,8 +215,7 @@ namespace cv {
                 }
 
                 // Now find the perc of the histogram percentile
-                nthreshold = (size_t)(npoints*perc);
-
+                nthreshold = (int)(npoints*perc);
 
                 for (k = 0; nelements < nthreshold && k < nbins; k++) {
                     nelements = nelements + hist[k];
@@ -206,7 +238,7 @@ namespace cv {
              * @param dst Output image
              * @param xorder Derivative order in X-direction (horizontal)
              * @param yorder Derivative order in Y-direction (vertical)
-             * @param scale Scale factor or derivative size
+             * @param scale Scale factor for the derivative size
              */
             void compute_scharr_derivatives(const cv::Mat& src, cv::Mat& dst, int xorder, int yorder, int scale) {
                 Mat kx, ky;
@@ -260,15 +292,15 @@ namespace cv {
 
             /* ************************************************************************* */
             /**
-             * @brief This function performs a scalar non-linear diffusion step
-             * @param Ld2 Output image in the evolution
-             * @param c Conductivity image
-             * @param Lstep Previous image in the evolution
-             * @param stepsize The step size in time units
-             * @note Forward Euler Scheme 3x3 stencil
-             * The function c is a scalar value that depends on the gradient norm
-             * dL_by_ds = d(c dL_by_dx)_by_dx + d(c dL_by_dy)_by_dy
-             */
+            * @brief This function performs a scalar non-linear diffusion step
+            * @param Ld2 Output image in the evolution
+            * @param c Conductivity image
+            * @param Lstep Previous image in the evolution
+            * @param stepsize The step size in time units
+            * @note Forward Euler Scheme 3x3 stencil
+            * The function c is a scalar value that depends on the gradient norm
+            * dL_by_ds = d(c dL_by_dx)_by_dx + d(c dL_by_dy)_by_dy
+            */
             void nld_step_scalar(cv::Mat& Ld, const cv::Mat& c, cv::Mat& Lstep, float stepsize) {
 
 #ifdef _OPENMP
@@ -288,8 +320,7 @@ namespace cv {
                     float xpos = ((*(c.ptr<float>(0) + j)) + (*(c.ptr<float>(0) + j + 1)))*((*(Ld.ptr<float>(0) + j + 1)) - (*(Ld.ptr<float>(0) + j)));
                     float xneg = ((*(c.ptr<float>(0) + j - 1)) + (*(c.ptr<float>(0) + j)))*((*(Ld.ptr<float>(0) + j)) - (*(Ld.ptr<float>(0) + j - 1)));
                     float ypos = ((*(c.ptr<float>(0) + j)) + (*(c.ptr<float>(1) + j)))*((*(Ld.ptr<float>(1) + j)) - (*(Ld.ptr<float>(0) + j)));
-                    float yneg = ((*(c.ptr<float>(0) + j)) + (*(c.ptr<float>(0) + j)))*((*(Ld.ptr<float>(0) + j)) - (*(Ld.ptr<float>(0) + j)));
-                    *(Lstep.ptr<float>(0) + j) = 0.5f*stepsize*(xpos - xneg + ypos - yneg);
+                    *(Lstep.ptr<float>(0) + j) = 0.5f*stepsize*(xpos - xneg + ypos);
                 }
 
                 for (int j = 1; j < Lstep.cols - 1; j++) {
@@ -309,14 +340,27 @@ namespace cv {
                 }
 
                 for (int i = 1; i < Lstep.rows - 1; i++) {
-                    float xpos = ((*(c.ptr<float>(i)+Lstep.cols - 1)) + (*(c.ptr<float>(i)+Lstep.cols - 1)))*((*(Ld.ptr<float>(i)+Lstep.cols - 1)) - (*(Ld.ptr<float>(i)+Lstep.cols - 1)));
                     float xneg = ((*(c.ptr<float>(i)+Lstep.cols - 2)) + (*(c.ptr<float>(i)+Lstep.cols - 1)))*((*(Ld.ptr<float>(i)+Lstep.cols - 1)) - (*(Ld.ptr<float>(i)+Lstep.cols - 2)));
                     float ypos = ((*(c.ptr<float>(i)+Lstep.cols - 1)) + (*(c.ptr<float>(i + 1) + Lstep.cols - 1)))*((*(Ld.ptr<float>(i + 1) + Lstep.cols - 1)) - (*(Ld.ptr<float>(i)+Lstep.cols - 1)));
                     float yneg = ((*(c.ptr<float>(i - 1) + Lstep.cols - 1)) + (*(c.ptr<float>(i)+Lstep.cols - 1)))*((*(Ld.ptr<float>(i)+Lstep.cols - 1)) - (*(Ld.ptr<float>(i - 1) + Lstep.cols - 1)));
-                    *(Lstep.ptr<float>(i)+Lstep.cols - 1) = 0.5f*stepsize*(xpos - xneg + ypos - yneg);
+                    *(Lstep.ptr<float>(i)+Lstep.cols - 1) = 0.5f*stepsize*(-xneg + ypos - yneg);
                 }
 
                 Ld = Ld + Lstep;
+            }
+
+            /* ************************************************************************* */
+            /**
+            * @brief This function downsamples the input image using OpenCV resize
+            * @param img Input image to be downsampled
+            * @param dst Output image with half of the resolution of the input image
+            */
+            void halfsample_image(const cv::Mat& src, cv::Mat& dst) {
+
+                // Make sure the destination image is of the right size
+                CV_Assert(src.cols / 2 == dst.cols);
+                CV_Assert(src.rows / 2 == dst.rows);
+                resize(src, dst, dst.size(), 0, 0, cv::INTER_AREA);
             }
 
             /* ************************************************************************* */
