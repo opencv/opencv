@@ -84,7 +84,6 @@ private:
   void Determinant_Hessian_Parallel(std::vector<cv::KeyPoint>& kpts);
   void Find_Extremum_Threading(const int& level);
   void Do_Subpixel_Refinement(std::vector<cv::KeyPoint>& kpts);
-  void Feature_Suppression_Distance(std::vector<cv::KeyPoint>& kpts, const float& mdist);
 
   // AOS Methods
   void AOS_Step_Scalar(cv::Mat &Ld, const cv::Mat &Ldprev, const cv::Mat &c, const float& stepsize);
