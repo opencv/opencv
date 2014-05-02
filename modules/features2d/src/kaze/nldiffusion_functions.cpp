@@ -290,6 +290,48 @@ namespace cv {
                 }
             }
 
+            class Nld_Step_Scalar_Invoker : public cv::ParallelLoopBody
+            {
+            public:
+                Nld_Step_Scalar_Invoker(cv::Mat& Ld, const cv::Mat& c, cv::Mat& Lstep, float _stepsize)
+                    : _Ld(&Ld)
+                    , _c(&c)
+                    , _Lstep(&Lstep)
+                    , stepsize(_stepsize)
+                {
+                }
+
+                virtual ~Nld_Step_Scalar_Invoker()
+                {
+
+                }
+
+                void operator()(const cv::Range& range) const
+                {
+                    cv::Mat& Ld = *_Ld;
+                    const cv::Mat& c = *_c;
+                    cv::Mat& Lstep = *_Lstep;
+
+                    for (int i = range.start; i < range.end; i++)
+                    {
+                        for (int j = 1; j < Lstep.cols - 1; j++)
+                        {
+                            float xpos = ((*(c.ptr<float>(i)+j)) + (*(c.ptr<float>(i)+j + 1)))*((*(Ld.ptr<float>(i)+j + 1)) - (*(Ld.ptr<float>(i)+j)));
+                            float xneg = ((*(c.ptr<float>(i)+j - 1)) + (*(c.ptr<float>(i)+j)))*((*(Ld.ptr<float>(i)+j)) - (*(Ld.ptr<float>(i)+j - 1)));
+                            float ypos = ((*(c.ptr<float>(i)+j)) + (*(c.ptr<float>(i + 1) + j)))*((*(Ld.ptr<float>(i + 1) + j)) - (*(Ld.ptr<float>(i)+j)));
+                            float yneg = ((*(c.ptr<float>(i - 1) + j)) + (*(c.ptr<float>(i)+j)))*((*(Ld.ptr<float>(i)+j)) - (*(Ld.ptr<float>(i - 1) + j)));
+                            *(Lstep.ptr<float>(i)+j) = 0.5f*stepsize*(xpos - xneg + ypos - yneg);
+                        }
+                    }
+                }
+
+            private:
+                cv::Mat * _Ld;
+                const cv::Mat * _c;
+                cv::Mat * _Lstep;
+                float stepsize;
+            };
+
             /* ************************************************************************* */
             /**
             * @brief This function performs a scalar non-linear diffusion step
@@ -303,18 +345,7 @@ namespace cv {
             */
             void nld_step_scalar(cv::Mat& Ld, const cv::Mat& c, cv::Mat& Lstep, float stepsize) {
 
-#ifdef _OPENMP
-#pragma omp parallel for schedule(dynamic)
-#endif
-                for (int i = 1; i < Lstep.rows - 1; i++) {
-                    for (int j = 1; j < Lstep.cols - 1; j++) {
-                        float xpos = ((*(c.ptr<float>(i)+j)) + (*(c.ptr<float>(i)+j + 1)))*((*(Ld.ptr<float>(i)+j + 1)) - (*(Ld.ptr<float>(i)+j)));
-                        float xneg = ((*(c.ptr<float>(i)+j - 1)) + (*(c.ptr<float>(i)+j)))*((*(Ld.ptr<float>(i)+j)) - (*(Ld.ptr<float>(i)+j - 1)));
-                        float ypos = ((*(c.ptr<float>(i)+j)) + (*(c.ptr<float>(i + 1) + j)))*((*(Ld.ptr<float>(i + 1) + j)) - (*(Ld.ptr<float>(i)+j)));
-                        float yneg = ((*(c.ptr<float>(i - 1) + j)) + (*(c.ptr<float>(i)+j)))*((*(Ld.ptr<float>(i)+j)) - (*(Ld.ptr<float>(i - 1) + j)));
-                        *(Lstep.ptr<float>(i)+j) = 0.5f*stepsize*(xpos - xneg + ypos - yneg);
-                    }
-                }
+                cv::parallel_for_(cv::Range(1, Lstep.rows - 1), Nld_Step_Scalar_Invoker(Ld, c, Lstep, stepsize));
 
                 for (int j = 1; j < Lstep.cols - 1; j++) {
                     float xpos = ((*(c.ptr<float>(0) + j)) + (*(c.ptr<float>(0) + j + 1)))*((*(Ld.ptr<float>(0) + j + 1)) - (*(Ld.ptr<float>(0) + j)));
