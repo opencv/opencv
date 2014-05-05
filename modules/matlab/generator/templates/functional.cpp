@@ -110,7 +110,7 @@ addVariant("{{ fun.name }}", {{ fun.req|inputs|length }}, {{ fun.opt|inputs|leng
   {{arg.tp}} {{arg.name}} = inputs[{{ loop.index0 }}].to{{arg.tp|toUpperCamelCase}}();
   {% endfor %}
   {% for opt in fun.opt|inputs %}
-  {{opt.tp}} {{opt.name}} = inputs[{{loop.index0 + fun.req|inputs|length}}].empty() ? {% if opt.ref == '*' -%} {{opt.tp}}() {%- else -%} {{opt.default}} {%- endif %} : inputs[{{loop.index0 + fun.req|inputs|length}}].to{{opt.tp|toUpperCamelCase}}();
+  {{opt.tp}} {{opt.name}} = inputs[{{loop.index0 + fun.req|inputs|length}}].empty() ? ({{opt.tp}}) {% if opt.ref == '*' -%} {{opt.tp}}() {%- else -%} {{opt.default}} {%- endif %} : inputs[{{loop.index0 + fun.req|inputs|length}}].to{{opt.tp|toUpperCamelCase}}();
   {% endfor %}
   {# ----------- Outputs ------------ #}
   {% for arg in fun.req|only|outputs %}

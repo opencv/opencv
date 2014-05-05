@@ -104,7 +104,11 @@ set(RST_PARSER_PATH ${CMAKE_SOURCE_DIR}/modules/java/generator)
 
 # set mex compiler options
 prepend("-I" MEX_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
-prepend("-L" MEX_LIB_DIR  ${LIBRARY_OUTPUT_PATH}/${CMAKE_CFG_INTDIR} )
+if (MSVC)
+    prepend("-L" MEX_LIB_DIR  ${LIBRARY_OUTPUT_PATH}/${CMAKE_CFG_INTDIR})
+else()
+    prepend("-L" MEX_LIB_DIR  ${LIBRARY_OUTPUT_PATH})
+endif()
 set(MEX_OPTS "-largeArrayDims")
 
 if (BUILD_TESTS)
