@@ -806,10 +806,10 @@ public:
 
     //! performs stereo calibaration
     static double stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
-                                  InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2,
-                                  InputOutputArrayOfArrays rvecs1, InputOutputArrayOfArrays tvecs1,
-                                  InputOutputArrayOfArrays rvecs2, InputOutputArrayOfArrays tvecs2,
+                                  InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
+                                  OutputArray R, OutputArray T, int flags,
                                   TermCriteria criteria = TermCriteria(3, 100, 1e-10));
+
 };
 
 }
