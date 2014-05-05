@@ -2894,21 +2894,20 @@ class DctIPPLoop_Invoker : public ParallelLoopBody
 {
 public:
 
-    DctIPPLoop_Invoker(const Mat& _src, Mat& _dst, const Dct& _ippidct, bool _inv, bool *_ok) :
-        ParallelLoopBody(), src(_src), dst(_dst), ippidct(_ippidct), inv(_inv), ok(_ok)
+    DctIPPLoop_Invoker(const Mat& _src, Mat& _dst, const Dct* _ippidct, bool _inv, bool *_ok) :
+        ParallelLoopBody(), src(&_src), dst(&_dst), ippidct(_ippidct), inv(_inv), ok(_ok)
     {
         *ok = true;
     }
 
     virtual void operator()(const Range& range) const
     {
-        IppStatus status;
         void* pDCTSpec;
         AutoBuffer<uchar> buf;
         uchar* pBuffer = 0;
         int bufSize=0;
 
-        IppiSize srcRoiSize = {src.cols, 1};
+        IppiSize srcRoiSize = {src->cols, 1};
 
         CV_SUPPRESS_DEPRECATED_START
 
@@ -2916,51 +2915,37 @@ public:
         ippiDCTFree ippFree             = inv ? (ippiDCTFree)ippiDCTInvFree_32f             : (ippiDCTFree)ippiDCTFwdFree_32f;
         ippiDCTGetBufSize ippGetBufSize = inv ? (ippiDCTGetBufSize)ippiDCTInvGetBufSize_32f : (ippiDCTGetBufSize)ippiDCTFwdGetBufSize_32f;
 
-        status = ippInitAlloc(&pDCTSpec, srcRoiSize, ippAlgHintNone);
-
-        if ( status < 0 )
+        if (ippInitAlloc(&pDCTSpec, srcRoiSize, ippAlgHintNone)>=0 && ippGetBufSize(pDCTSpec, &bufSize)>=0)
         {
-            ippFree(pDCTSpec);
-            *ok = false;
-            return;
+            buf.allocate( bufSize );
+            pBuffer = (uchar*)buf;
+
+            for( int i = range.start; i < range.end; ++i)
+                if(!(*ippidct)((float*)(src->data+i*src->step), (int)src->step,(float*)(dst->data+i*dst->step), (int)dst->step, pDCTSpec, (Ipp8u*)pBuffer))
+                    *ok = false;
         }
-
-        status = ippGetBufSize(pDCTSpec, &bufSize);
-        if ( status < 0 )
-        {
-            ippFree(pDCTSpec);
+        else
             *ok = false;
-            return;
-        }
 
-        buf.allocate( bufSize );
-        pBuffer = (uchar*)buf;
+        if (pDCTSpec)
+            ippFree(pDCTSpec);
 
-        for( int i = range.start; i < range.end; ++i)
-            if(!ippidct((float*)(src.data+i*src.step), (int)src.step,(float*)(dst.data+i*dst.step), (int)dst.step, pDCTSpec, (Ipp8u*)pBuffer))
-            {
-                *ok = false;
-            }
-
-        ippFree( pDCTSpec);
         CV_SUPPRESS_DEPRECATED_END
     }
 
 private:
-    const Mat& src;
-    Mat& dst;
-    const Dct& ippidct;
+    const Mat* src;
+    Mat* dst;
+    const Dct* ippidct;
     bool inv;
     bool *ok;
-
-    const DctIPPLoop_Invoker& operator= (const DctIPPLoop_Invoker&);
 };
 
 template <typename Dct>
 bool DctIPPLoop(const Mat& src, Mat& dst, const Dct& ippidct, bool inv)
 {
     bool ok;
-    parallel_for_(Range(0, src.rows), DctIPPLoop_Invoker<Dct>(src, dst, ippidct, inv, &ok), src.rows/(double)(1<<4) );
+    parallel_for_(Range(0, src.rows), DctIPPLoop_Invoker<Dct>(src, dst, &ippidct, inv, &ok), src.rows/(double)(1<<4) );
     return ok;
 }
 
@@ -2981,10 +2966,7 @@ static bool ippi_DCT_32f(const Mat& src, Mat& dst, bool inv, bool row)
     ippiDCTFunc ippFunc = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R : (ippiDCTFunc)ippiDCTFwd_32f_C1R ;
 
     if (row)
-        if(DctIPPLoop(src,dst,IPPDCTFunctor(ippFunc),inv))
-            return true;
-        else
-            return false;
+        return(DctIPPLoop(src,dst,IPPDCTFunctor(ippFunc),inv));
     else
     {
         IppStatus status;
@@ -3001,27 +2983,19 @@ static bool ippi_DCT_32f(const Mat& src, Mat& dst, bool inv, bool row)
         ippiDCTFree ippFree             = inv ? (ippiDCTFree)ippiDCTInvFree_32f             : (ippiDCTFree)ippiDCTFwdFree_32f;
         ippiDCTGetBufSize ippGetBufSize = inv ? (ippiDCTGetBufSize)ippiDCTInvGetBufSize_32f : (ippiDCTGetBufSize)ippiDCTFwdGetBufSize_32f;
 
-        status = ippInitAlloc(&pDCTSpec, srcRoiSize, ippAlgHintNone);
+        status = ippStsErr;
 
-        if ( status < 0 )
+        if (ippInitAlloc(&pDCTSpec, srcRoiSize, ippAlgHintNone)>=0 && ippGetBufSize(pDCTSpec, &bufSize)>=0)
         {
-            ippFree(pDCTSpec);
-            return false;
+            buf.allocate( bufSize );
+            pBuffer = (uchar*)buf;
+
+            status = ippFunc((float*)src.data, (int)src.step, (float*)dst.data, (int)dst.step, pDCTSpec, (Ipp8u*)pBuffer);
         }
 
-        status = ippGetBufSize(pDCTSpec, &bufSize);
-        if ( status < 0 )
-        {
+        if (pDCTSpec)
             ippFree(pDCTSpec);
-            return false;
-        }
 
-        buf.allocate( bufSize );
-        pBuffer = (uchar*)buf;
-
-        status = ippFunc((float*)src.data, (int)src.step, (float*)dst.data, (int)dst.step, pDCTSpec, (Ipp8u*)pBuffer);
-
-        ippFree(pDCTSpec);
         CV_SUPPRESS_DEPRECATED_END
 
         return status >= 0;
