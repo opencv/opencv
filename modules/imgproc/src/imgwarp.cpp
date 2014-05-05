@@ -1930,9 +1930,11 @@ public:
 
         switch (type)
         {
+#if 0 // disabled since it breaks tests for CascadeClassifier
             case CV_8UC1:  SET_IPP_RESIZE_PTR(8u,C1);  break;
             case CV_8UC3:  SET_IPP_RESIZE_PTR(8u,C3);  break;
             case CV_8UC4:  SET_IPP_RESIZE_PTR(8u,C4);  break;
+#endif
             case CV_16UC1: SET_IPP_RESIZE_PTR(16u,C1); break;
             case CV_16UC3: SET_IPP_RESIZE_PTR(16u,C3); break;
             case CV_16UC4: SET_IPP_RESIZE_PTR(16u,C4); break;
@@ -2411,7 +2413,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
             mode = ippCubic;
 
         if( mode >= 0 && (cn == 1 || cn == 3 || cn == 4) &&
-            (depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F ||
+            (depth == CV_16U || depth == CV_16S || depth == CV_32F ||
             (depth == CV_64F && mode == ippLinear)))
         {
             bool ok = true;
