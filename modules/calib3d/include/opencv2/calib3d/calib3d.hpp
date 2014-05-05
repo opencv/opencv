@@ -757,7 +757,8 @@ public:
         CALIB_FIX_K1                = 16,
         CALIB_FIX_K2                = 32,
         CALIB_FIX_K3                = 64,
-        CALIB_FIX_K4                = 128
+        CALIB_FIX_K4                = 128,
+        CALIB_FIX_INTRINSIC         = 256
     };
 
     //! projects 3D points using fisheye model
@@ -802,6 +803,13 @@ public:
     static void stereoRectify(InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size &imageSize, InputArray R, InputArray tvec,
         OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags, const Size &newImageSize = Size(),
         double balance = 0.0, double fov_scale = 1.0);
+
+    //! performs stereo calibaration
+    static double stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+                                  InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2,
+                                  InputOutputArrayOfArrays rvecs1, InputOutputArrayOfArrays tvecs1,
+                                  InputOutputArrayOfArrays rvecs2, InputOutputArrayOfArrays tvecs2,
+                                  TermCriteria criteria = TermCriteria(3, 100, 1e-10));
 };
 
 }
