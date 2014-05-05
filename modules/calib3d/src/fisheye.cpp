@@ -764,10 +764,8 @@ double cv::Fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 /// cv::Fisheye::stereoCalibrate
 
 double cv::Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
-                                    InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2,
-                                    InputOutputArray rvecs1, InputOutputArrayOfArrays tvecs1,
-                                    InputOutputArrayOfArrays rvecs2, InputOutputArrayOfArrays tvecs2,
-                                    TermCriteria criteria)
+                                    InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
+                                    OutputArray R, OutputArray T, int flags, TermCriteria criteria)
 {
     CV_Assert(!objectPoints.empty() && !imagePoints1.empty() && !imagePoints2.empty());
     CV_Assert(objectPoints.total() == imagePoints1.total() || imagePoints1.total() == imagePoints2.total());
@@ -780,14 +778,13 @@ double cv::Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     CV_Assert((!K2.empty() && K1.size() == Size(3,3)) || K2.empty());
     CV_Assert((!D2.empty() && D1.total() == 4) || D2.empty());
 
-    CV_Assert((!rvecs1.empty() && rvecs1.channels() == 3) || rvecs1.empty());
-    CV_Assert((!tvecs1.empty() && tvecs1.channels() == 3) || tvecs1.empty());
-    CV_Assert((!rvecs2.empty() && rvecs2.channels() == 3) || rvecs2.empty());
-    CV_Assert((!tvecs2.empty() && tvecs2.channels() == 3) || tvecs2.empty());
+    CV_Assert(((flags & CALIB_FIX_INTRINSIC) && !K1.empty() && !K2.empty() && !D1.empty() && !D2.empty()) || !(flags & CALIB_FIX_INTRINSIC));
 
     //-------------------------------Initialization
 
     const int threshold = 50;
+    const double thresh_cond = 1e6;
+    const int check_cond = 1;
 
     size_t n_points = objectPoints.getMat(0).total();
     size_t n_images = objectPoints.total();
@@ -800,38 +797,52 @@ double cv::Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     cv::internal::IntrinsicParams intrinsicLeft_errors;
     cv::internal::IntrinsicParams intrinsicRight_errors;
 
-    Matx33d _K;
-    Vec4d _D;
+    Matx33d _K1, _K2;
+    Vec4d _D1, _D2;
+    if (!K1.empty()) K1.getMat().convertTo(_K1, CV_64FC1);
+    if (!D1.empty()) D1.getMat().convertTo(_D1, CV_64FC1);
+    if (!K2.empty()) K2.getMat().convertTo(_K2, CV_64FC1);
+    if (!D2.empty()) D2.getMat().convertTo(_D2, CV_64FC1);
 
-    K1.getMat().convertTo(_K, CV_64FC1);
-    D1.getMat().convertTo(_D, CV_64FC1);
-    intrinsicLeft.Init(Vec2d(_K(0,0), _K(1, 1)), Vec2d(_K(0,2), _K(1, 2)),
-                       Vec4d(_D[0], _D[1], _D[2], _D[3]), _K(0, 1) / _K(0, 0));
+    std::vector<Vec3d> rvecs1(n_images), tvecs1(n_images), rvecs2(n_images), tvecs2(n_images);
 
-    K2.getMat().convertTo(_K, CV_64FC1);
-    D2.getMat().convertTo(_D, CV_64FC1);
-    intrinsicRight.Init(Vec2d(_K(0,0), _K(1, 1)), Vec2d(_K(0,2), _K(1, 2)),
-                        Vec4d(_D[0], _D[1], _D[2], _D[3]), _K(0, 1) / _K(0, 0));
+    if (!(flags & CALIB_FIX_INTRINSIC))
+    {
+        calibrate(objectPoints, imagePoints1, imageSize, _K1, _D1, rvecs1, tvecs1, flags, TermCriteria(3, 20, 1e-6));
+        calibrate(objectPoints, imagePoints2, imageSize, _K2, _D2, rvecs2, tvecs2, flags, TermCriteria(3, 20, 1e-6));
+    }
 
-    intrinsicLeft.isEstimate[0] = 1;
-    intrinsicLeft.isEstimate[1] = 1;
-    intrinsicLeft.isEstimate[2] = 1;
-    intrinsicLeft.isEstimate[3] = 1;
-        intrinsicLeft.isEstimate[4] = 0;
-    intrinsicLeft.isEstimate[5] = 1;
-    intrinsicLeft.isEstimate[6] = 1;
-    intrinsicLeft.isEstimate[7] = 1;
-    intrinsicLeft.isEstimate[8] = 1;
+    intrinsicLeft.Init(Vec2d(_K1(0,0), _K1(1, 1)), Vec2d(_K1(0,2), _K1(1, 2)),
+                       Vec4d(_D1[0], _D1[1], _D1[2], _D1[3]), _K1(0, 1) / _K1(0, 0));
 
-    intrinsicRight.isEstimate[0] = 1;
-    intrinsicRight.isEstimate[1] = 1;
-    intrinsicRight.isEstimate[2] = 1;
-    intrinsicRight.isEstimate[3] = 1;
-        intrinsicRight.isEstimate[4] = 0;
-    intrinsicRight.isEstimate[5] = 1;
-    intrinsicRight.isEstimate[6] = 1;
-    intrinsicRight.isEstimate[7] = 1;
-    intrinsicRight.isEstimate[8] = 1;
+    intrinsicRight.Init(Vec2d(_K2(0,0), _K2(1, 1)), Vec2d(_K2(0,2), _K2(1, 2)),
+                        Vec4d(_D2[0], _D2[1], _D2[2], _D2[3]), _K2(0, 1) / _K2(0, 0));
+
+    if ((flags & CALIB_FIX_INTRINSIC))
+    {
+        internal::CalibrateExtrinsics(objectPoints,  imagePoints1, intrinsicLeft, check_cond, thresh_cond, rvecs1, tvecs1);
+        internal::CalibrateExtrinsics(objectPoints,  imagePoints2, intrinsicRight, check_cond, thresh_cond, rvecs2, tvecs2);
+    }
+
+    intrinsicLeft.isEstimate[0] = flags & CALIB_FIX_INTRINSIC ? 0 : 1;
+    intrinsicLeft.isEstimate[1] = flags & CALIB_FIX_INTRINSIC ? 0 : 1;
+    intrinsicLeft.isEstimate[2] = flags & CALIB_FIX_INTRINSIC ? 0 : 1;
+    intrinsicLeft.isEstimate[3] = flags & CALIB_FIX_INTRINSIC ? 0 : 1;
+    intrinsicLeft.isEstimate[4] = flags & (CALIB_FIX_SKEW | CALIB_FIX_INTRINSIC) ? 0 : 1;
+    intrinsicLeft.isEstimate[5] = flags & (CALIB_FIX_K1 | CALIB_FIX_INTRINSIC) ? 0 : 1;
+    intrinsicLeft.isEstimate[6] = flags & (CALIB_FIX_K2 | CALIB_FIX_INTRINSIC) ? 0 : 1;
+    intrinsicLeft.isEstimate[7] = flags & (CALIB_FIX_K3 | CALIB_FIX_INTRINSIC) ? 0 : 1;
+    intrinsicLeft.isEstimate[8] = flags & (CALIB_FIX_K4 | CALIB_FIX_INTRINSIC) ? 0 : 1;
+
+    intrinsicRight.isEstimate[0] = flags & CALIB_FIX_INTRINSIC ? 0 : 1;
+    intrinsicRight.isEstimate[1] = flags & CALIB_FIX_INTRINSIC ? 0 : 1;
+    intrinsicRight.isEstimate[2] = flags & CALIB_FIX_INTRINSIC ? 0 : 1;
+    intrinsicRight.isEstimate[3] = flags & CALIB_FIX_INTRINSIC ? 0 : 1;
+    intrinsicRight.isEstimate[4] = flags & (CALIB_FIX_SKEW | CALIB_FIX_INTRINSIC) ? 0 : 1;
+    intrinsicRight.isEstimate[5] = flags & (CALIB_FIX_K1 | CALIB_FIX_INTRINSIC) ? 0 : 1;
+    intrinsicRight.isEstimate[6] = flags & (CALIB_FIX_K2 | CALIB_FIX_INTRINSIC) ? 0 : 1;
+    intrinsicRight.isEstimate[7] = flags & (CALIB_FIX_K3 | CALIB_FIX_INTRINSIC) ? 0 : 1;
+    intrinsicRight.isEstimate[8] = flags & (CALIB_FIX_K4 | CALIB_FIX_INTRINSIC) ? 0 : 1;
 
     intrinsicLeft_errors.isEstimate = intrinsicLeft.isEstimate;
     intrinsicRight_errors.isEstimate = intrinsicRight.isEstimate;
@@ -847,10 +858,10 @@ double cv::Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     cv::Mat om_ref, R_ref, T_ref, R1, R2;
     for (size_t image_idx = 0; image_idx < n_images; ++image_idx)
     {
-        cv::Rodrigues(rvecs1.getMat(image_idx), R1);
-        cv::Rodrigues(rvecs2.getMat(image_idx), R2);
+        cv::Rodrigues(rvecs1[image_idx], R1);
+        cv::Rodrigues(rvecs2[image_idx], R2);
         R_ref = R2 * R1.t();
-        T_ref = tvecs2.getMat(image_idx).reshape(1, 3) - R_ref * tvecs1.getMat(image_idx).reshape(1, 3);
+        T_ref = cv::Mat(tvecs2[image_idx]) - R_ref * cv::Mat(tvecs1[image_idx]);
         cv::Rodrigues(R_ref, om_ref);
         om_ref.reshape(3, 1).copyTo(om_list.col(image_idx));
         T_ref.reshape(3, 1).copyTo(T_list.col(image_idx));
@@ -861,6 +872,7 @@ double cv::Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     cv::Mat J = cv::Mat::zeros(4 * n_points * n_images, 18 + 6 * (n_images + 1), CV_64FC1),
             e = cv::Mat::zeros(4 * n_points * n_images, 1, CV_64FC1), Jkk, ekk;
     cv::Mat J2_inv;
+
     for(int iter = 0; ; ++iter)
     {
         if ((criteria.type == 1 && iter >= criteria.maxCount)  ||
@@ -885,8 +897,8 @@ double cv::Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
             cv::Mat jacobians, projected;
 
             //left camera jacobian
-            cv::Mat rvec = rvecs1.getMat(image_idx).clone();
-            cv::Mat tvec  = tvecs1.getMat(image_idx).clone();
+            cv::Mat rvec = cv::Mat(rvecs1[image_idx]);
+            cv::Mat tvec  = cv::Mat(tvecs1[image_idx]);
             cv::internal::projectPoints(object, projected, rvec, tvec, intrinsicLeft, jacobians);
             cv::Mat(cv::Mat((imageLeft - projected).t()).reshape(1, 1).t()).copyTo(ekk.rowRange(0, 2 * n_points));
             jacobians.colRange(8, 11).copyTo(Jkk.colRange(24 + image_idx * 6, 27 + image_idx * 6).rowRange(0, 2 * n_points));
@@ -898,8 +910,8 @@ double cv::Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
 
             //right camera jacobian
             internal::compose_motion(rvec, tvec, omcur, Tcur, omr, Tr, domrdomckk, domrdTckk, domrdom, domrdT, dTrdomckk, dTrdTckk, dTrdom, dTrdT);
-            rvec = rvecs2.getMat(image_idx).clone();
-            tvec  = tvecs2.getMat(image_idx).clone();
+            rvec = cv::Mat(rvecs2[image_idx]);
+            tvec  = cv::Mat(tvecs2[image_idx]);
 
             cv::internal::projectPoints(object, projected, omr, Tr, intrinsicRight, jacobians);
             cv::Mat(cv::Mat((imageRight - projected).t()).reshape(1, 1).t()).copyTo(ekk.rowRange(2 * n_points, 4 * n_points));
@@ -952,103 +964,43 @@ double cv::Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
         Tcur = Tcur + cv::Vec3d(deltas.rowRange(a + b + 3, a + b + 6));
         for (size_t image_idx = 0; image_idx < n_images; ++image_idx)
         {
-            rvecs1.getMat(image_idx) = rvecs1.getMat(image_idx) + deltas.rowRange(a + b + 6 + image_idx * 6, a + b + 9 + image_idx * 6).reshape(3);
-            tvecs1.getMat(image_idx) = tvecs1.getMat(image_idx) + deltas.rowRange(a + b + 9 + image_idx * 6, a + b + 12 + image_idx * 6).reshape(3);
+            rvecs1[image_idx] = cv::Mat(cv::Mat(rvecs1[image_idx]) + deltas.rowRange(a + b + 6 + image_idx * 6, a + b + 9 + image_idx * 6));
+            tvecs1[image_idx] = cv::Mat(cv::Mat(tvecs1[image_idx]) + deltas.rowRange(a + b + 9 + image_idx * 6, a + b + 12 + image_idx * 6));
         }
 
         cv::Vec6d newTom(Tcur[0], Tcur[1], Tcur[2], omcur[0], omcur[1], omcur[2]);
         change = cv::norm(newTom - oldTom) / cv::norm(newTom);
     }
 
-    //estimate uncertainties
-    cv::Mat sigma_x;
-    cv::meanStdDev(e, cv::noArray(), sigma_x);
-    sigma_x *= sqrt((double)e.total() / (e.total() - 1));
-    cv::sqrt(J2_inv, J2_inv);
-    cv::Mat errors = 3 * J2_inv.diag() * sigma_x;
-    int a1 = cv::countNonZero(intrinsicLeft_errors.isEstimate);
-    int b1 = cv::countNonZero(intrinsicRight_errors.isEstimate);
-    intrinsicLeft_errors =  errors.rowRange(0, a1);
-    intrinsicRight_errors = errors.rowRange(a1, a1 + b1);
-    cv::Vec3d om_error = cv::Vec3d(errors.rowRange(a1 + b1, a1 + b1 + 3));
-    cv::Vec3d T_error  = cv::Vec3d(errors.rowRange(a1 + b1 + 3, a1 + b1 + 6));
+    double rms = 0;
+    const Vec2d* ptr_e = e.ptr<Vec2d>();
+    for (size_t i = 0; i < e.total() / 2; i++)
+    {
+        rms += ptr_e[i][0] * ptr_e[i][0] + ptr_e[i][1] * ptr_e[i][1];
+    }
 
-    std::cout << std::setprecision(15) << "left f = " << intrinsicLeft.f << std::endl;
-    std::cout << std::setprecision(15) << "left c = " << intrinsicLeft.c << std::endl;
-    std::cout << std::setprecision(15) << "left alpha = " << intrinsicLeft.alpha << std::endl;
-    std::cout << std::setprecision(15) << "left k = " << intrinsicLeft.k << std::endl;
+    rms /= (e.total() / 2);
+    rms = sqrt(rms);
 
-    std::cout << std::setprecision(15) << "right f = " << intrinsicRight.f << std::endl;
-    std::cout << std::setprecision(15) << "right c = " << intrinsicRight.c << std::endl;
-    std::cout << std::setprecision(15) << "right alpha = " << intrinsicRight.alpha << std::endl;
-    std::cout << std::setprecision(15) << "right k = " << intrinsicRight.k << std::endl;
-
-    std::cout << omcur << std::endl;
-    std::cout << Tcur  << std::endl;
-    std::cout << "===================================================================================="  << std::endl;
-    std::cout.flush();
-
-    std::cout << std::setprecision(15) << "left f = " << intrinsicLeft_errors.f << std::endl;
-    std::cout << std::setprecision(15) << "left c = " << intrinsicLeft_errors.c << std::endl;
-    std::cout << std::setprecision(15) << "left alpha = " << intrinsicLeft_errors.alpha << std::endl;
-    std::cout << std::setprecision(15) << "left k = " << intrinsicLeft_errors.k << std::endl;
-
-    std::cout << std::setprecision(15) << "right f = " << intrinsicRight_errors.f << std::endl;
-    std::cout << std::setprecision(15) << "right c = " << intrinsicRight_errors.c << std::endl;
-    std::cout << std::setprecision(15) << "right alpha = " << intrinsicRight_errors.alpha << std::endl;
-    std::cout << std::setprecision(15) << "right k = " << intrinsicRight_errors.k << std::endl;
-
-    std::cout << om_error << std::endl;
-    std::cout << T_error  << std::endl;
-    std::cout << "===================================================================================="  << std::endl;
-    std::cout.flush();
-
-    CV_Assert(cv::norm(intrinsicLeft.f - cv::Vec2d(561.195925927249, 562.849402029712)) < 1e-12);
-    CV_Assert(cv::norm(intrinsicLeft.c - cv::Vec2d(621.282400272412, 380.555455380889)) < 1e-12);
-    CV_Assert(intrinsicLeft.alpha == 0);
-    CV_Assert(cv::norm(intrinsicLeft.k - cv::Vec4d(-7.44253716539556e-05, -0.00702662033932424, 0.00737569823650885, -0.00342230256441771)) < 1e-12);
-    CV_Assert(cv::norm(intrinsicRight.f - cv::Vec2d(560.395452535348, 561.90171021422)) < 1e-12);
-    CV_Assert(cv::norm(intrinsicRight.c - cv::Vec2d(678.971652040359, 380.401340535339)) < 1e-12);
-    CV_Assert(intrinsicRight.alpha == 0);
-    CV_Assert(cv::norm(intrinsicRight.k - cv::Vec4d(-0.0130785435677431, 0.0284434505383497, -0.0360333869900506, 0.0144724062347222)) < 1e-12);
-    CV_Assert(cv::norm(omcur - cv::Vec3d(-0.00605728469659871, 0.006287139337868821, -0.06960627514977027)) < 1e-12);
-    CV_Assert(cv::norm(Tcur - cv::Vec3d(-0.09940272472412097, 0.002708121392654134, 0.001293302924726987)) < 1e-12);
-
-    CV_Assert(cv::norm(intrinsicLeft_errors.f - cv::Vec2d(0.71024293066476, 0.717596249442966)) < 1e-12);
-    CV_Assert(cv::norm(intrinsicLeft_errors.c - cv::Vec2d(0.782164491020839, 0.538718002947604)) < 1e-12);
-    CV_Assert(intrinsicLeft_errors.alpha == 0);
-    CV_Assert(cv::norm(intrinsicLeft_errors.k - cv::Vec4d(0.00525819017878291, 0.0179451746982225, 0.0236417266063274, 0.0104757238170252)) < 1e-12);
-    CV_Assert(cv::norm(intrinsicRight_errors.f - cv::Vec2d(0.748707568264116, 0.745355483082726)) < 1e-12);
-    CV_Assert(cv::norm(intrinsicRight_errors.c - cv::Vec2d(0.788236834082615, 0.538854504490304)) < 1e-12);
-    CV_Assert(intrinsicRight_errors.alpha == 0);
-    CV_Assert(cv::norm(intrinsicRight_errors.k - cv::Vec4d(0.00534743998208779, 0.0175804116710864, 0.0226549382734192, 0.00979255348533809)) < 1e-12);
-    CV_Assert(cv::norm(om_error - cv::Vec3d(0.0005903298904975326, 0.001048251127879415, 0.0001775640833531587)) < 1e-12);
-    CV_Assert(cv::norm(T_error - cv::Vec3d(6.691282702437657e-05, 5.566841336891827e-05, 0.0001954901454589594)) < 1e-12);
-
-
-    Matx33d _K1 = Matx33d(intrinsicLeft.f[0], intrinsicLeft.f[0] * intrinsicLeft.alpha, intrinsicLeft.c[0],
+    _K1 = Matx33d(intrinsicLeft.f[0], intrinsicLeft.f[0] * intrinsicLeft.alpha, intrinsicLeft.c[0],
                                        0,                       intrinsicLeft.f[1], intrinsicLeft.c[1],
                                        0,                                        0,                 1);
 
-    Matx33d _K2 = Matx33d(intrinsicRight.f[0], intrinsicRight.f[0] * intrinsicRight.alpha, intrinsicRight.c[0],
+    _K2 = Matx33d(intrinsicRight.f[0], intrinsicRight.f[0] * intrinsicRight.alpha, intrinsicRight.c[0],
                                         0,                        intrinsicRight.f[1], intrinsicRight.c[1],
                                         0,                                          0,                  1);
 
     Mat _R;
     Rodrigues(omcur, _R);
 
-//    if (K1.needed()) cv::Mat(_K1).convertTo(K2, K1.empty() ? CV_64FC1 : K1.type());
-//    if (K2.needed()) cv::Mat(_K2).convertTo(K2, K2.empty() ? CV_64FC1 : K2.type());
-//    if (D1.needed()) cv::Mat(intrinsicLeft.k).convertTo(D1, D1.empty() ? CV_64FC1 : D1.type());
-//    if (D2.needed()) cv::Mat(intrinsicRight.k).convertTo(D2, D2.empty() ? CV_64FC1 : D2.type());
-//    if (R.needed()) _R.convertTo(R, R.empty() ? CV_64FC1 : R.type());
-//    if (T.needed()) Tcur.convertTo(R, R.empty() ? CV_64FC1 : R.type());
+    if (K1.needed()) cv::Mat(_K1).convertTo(K1, K1.empty() ? CV_64FC1 : K1.type());
+    if (K2.needed()) cv::Mat(_K2).convertTo(K2, K2.empty() ? CV_64FC1 : K2.type());
+    if (D1.needed()) cv::Mat(intrinsicLeft.k).convertTo(D1, D1.empty() ? CV_64FC1 : D1.type());
+    if (D2.needed()) cv::Mat(intrinsicRight.k).convertTo(D2, D2.empty() ? CV_64FC1 : D2.type());
+    if (R.needed()) _R.convertTo(R, R.empty() ? CV_64FC1 : R.type());
+    if (T.needed()) cv::Mat(Tcur).convertTo(T, T.empty() ? CV_64FC1 : T.type());
 
-//    if (rvecs1.needed()) cv::Mat(omc).convertTo(rvecs, rvecs.empty() ? CV_64FC3 : rvecs.type());
-//    if (tvecs.needed()) cv::Mat(Tc).convertTo(tvecs, tvecs.empty() ? CV_64FC3 : tvecs.type());
-
-
-    return 0;
+    return rms;
 }
 
 namespace cv{ namespace {
