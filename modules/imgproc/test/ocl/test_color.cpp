@@ -156,7 +156,7 @@ OCL_TEST_P(CvtColor, YCrCb2BGRA) { performTest(3, 4, CVTCODE(YCrCb2BGR)); }
 // RGB <-> XYZ
 
 #if IPP_VERSION_X100 > 0
-#define IPP_EPS depth <= CV_32S ? 1 : 4e-5
+#define IPP_EPS depth <= CV_32S ? 1 : 5e-5
 #else
 #define IPP_EPS 1e-3
 #endif
@@ -299,6 +299,26 @@ OCL_TEST_P(CvtColor8u32f, Lab2BGRA) { performTest(3, 4, CVTCODE(Lab2BGR), depth 
 OCL_TEST_P(CvtColor8u32f, Lab2RGBA) { performTest(3, 4, CVTCODE(Lab2RGB), depth == CV_8U ? 1 : 1e-5); }
 OCL_TEST_P(CvtColor8u32f, Lab2LBGRA) { performTest(3, 4, CVTCODE(Lab2LBGR), depth == CV_8U ? 1 : 1e-5); }
 OCL_TEST_P(CvtColor8u32f, Lab2LRGBA) { performTest(3, 4, CVTCODE(Lab2LRGB), depth == CV_8U ? 1 : 1e-5); }
+
+// RGB -> Luv
+
+OCL_TEST_P(CvtColor8u32f, BGR2Luv) { performTest(3, 3, CVTCODE(BGR2Luv), depth == CV_8U ? 1 : 1e-2); }
+OCL_TEST_P(CvtColor8u32f, RGB2Luv) { performTest(3, 3, CVTCODE(RGB2Luv), depth == CV_8U ? 1 : 1e-2); }
+OCL_TEST_P(CvtColor8u32f, LBGR2Luv) { performTest(3, 3, CVTCODE(LBGR2Luv), depth == CV_8U ? 1 : 3e-3); }
+OCL_TEST_P(CvtColor8u32f, LRGB2Luv) { performTest(3, 3, CVTCODE(LRGB2Luv), depth == CV_8U ? 1 : 4e-3); }
+OCL_TEST_P(CvtColor8u32f, BGRA2Luv) { performTest(4, 3, CVTCODE(BGR2Luv), depth == CV_8U ? 1 : 8e-3); }
+OCL_TEST_P(CvtColor8u32f, RGBA2Luv) { performTest(4, 3, CVTCODE(RGB2Luv), depth == CV_8U ? 1 : 7e-3); }
+OCL_TEST_P(CvtColor8u32f, LBGRA2Luv) { performTest(4, 3, CVTCODE(LBGR2Luv), depth == CV_8U ? 1 : 4e-3); }
+OCL_TEST_P(CvtColor8u32f, LRGBA2Luv) { performTest(4, 3, CVTCODE(LRGB2Luv), depth == CV_8U ? 1 : 4e-3); }
+
+OCL_TEST_P(CvtColor8u32f, Luv2BGR) { performTest(3, 3, CVTCODE(Luv2BGR), depth == CV_8U ? 1 : 7e-5); }
+OCL_TEST_P(CvtColor8u32f, Luv2RGB) { performTest(3, 3, CVTCODE(Luv2RGB), depth == CV_8U ? 1 : 7e-5); }
+OCL_TEST_P(CvtColor8u32f, Luv2LBGR) { performTest(3, 3, CVTCODE(Luv2LBGR), depth == CV_8U ? 1 : 1e-5); }
+OCL_TEST_P(CvtColor8u32f, Luv2LRGB) { performTest(3, 3, CVTCODE(Luv2LRGB), depth == CV_8U ? 1 : 1e-5); }
+OCL_TEST_P(CvtColor8u32f, Luv2BGRA) { performTest(3, 4, CVTCODE(Luv2BGR), depth == CV_8U ? 1 : 7e-5); }
+OCL_TEST_P(CvtColor8u32f, Luv2RGBA) { performTest(3, 4, CVTCODE(Luv2RGB), depth == CV_8U ? 1 : 7e-5); }
+OCL_TEST_P(CvtColor8u32f, Luv2LBGRA) { performTest(3, 4, CVTCODE(Luv2LBGR), depth == CV_8U ? 1 : 1e-5); }
+OCL_TEST_P(CvtColor8u32f, Luv2LRGBA) { performTest(3, 4, CVTCODE(Luv2LRGB), depth == CV_8U ? 1 : 1e-5); }
 
 // YUV -> RGBA_NV12
 
