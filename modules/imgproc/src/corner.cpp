@@ -502,12 +502,11 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
             IppStatus ok = getBufferSizeFunc(srcRoi, ksize, blockSize, &bufferSize);
             if (ok >= 0)
             {
-                Ipp8u* buffer = ippsMalloc_8u(bufferSize);
+                AutoBuffer<uchar> buffer(bufferSize);
                 ok = minEigenValFunc(src.data, (int) src.step, (Ipp32f*) dst.data, (int) dst.step, srcRoi, kerType, kerSize, blockSize, buffer);
                 CV_SUPPRESS_DEPRECATED_START
                 if (ok >= 0) ok = ippiMulC_32f_C1IR(norm_coef, (Ipp32f*) dst.data, (int) dst.step, srcRoi);
                 CV_SUPPRESS_DEPRECATED_END
-                ippsFree(buffer);
                 if (ok >= 0)
                     return;
             }
