@@ -186,20 +186,23 @@ MAKE_MAP(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypeMap(StreamSinkMarkerTypeP
 #define _StringReference ref new Platform::String
 #define _DeviceInformationCollection Windows::Devices::Enumeration::DeviceInformationCollection
 #define _MediaCapture Windows::Media::Capture::MediaCapture
+#define _MediaCaptureVideoPreview Windows::Media::Capture::MediaCapture
 #define _MediaCaptureInitializationSettings Windows::Media::Capture::MediaCaptureInitializationSettings
 #define _VideoDeviceController Windows::Media::Devices::VideoDeviceController
+#define _MediaDeviceController Windows::Media::Devices::VideoDeviceController
 #define _MediaEncodingProperties Windows::Media::MediaProperties::IMediaEncodingProperties
-#define _VideoPreview Windows::Media::Capture::MediaStreamType::VideoPreview
+#define _VideoEncodingProperties Windows::Media::MediaProperties::VideoEncodingProperties
+#define _MediaStreamType Windows::Media::Capture::MediaStreamType
 #define _AsyncAction Windows::Foundation::IAsyncAction
 #define _AsyncOperation Windows::Foundation::IAsyncOperation
 #define _DeviceClass Windows::Devices::Enumeration::DeviceClass
-#define _VideoCapture Windows::Devices::Enumeration::DeviceClass::VideoCapture
 #define _IDeviceInformation Windows::Devices::Enumeration::DeviceInformation
 #define _DeviceInformation Windows::Devices::Enumeration::DeviceInformation
 #define _DeviceInformationStatics Windows::Devices::Enumeration::DeviceInformation
 #define _MediaEncodingProfile Windows::Media::MediaProperties::MediaEncodingProfile
-#define _Video Windows::Media::Capture::StreamingCaptureMode::Video
+#define _StreamingCaptureMode Windows::Media::Capture::StreamingCaptureMode
 #define _PropertySet Windows::Foundation::Collections::PropertySet
+#define _Map Windows::Foundation::Collections::PropertySet
 #define _PropertyValueStatics Windows::Foundation::PropertyValue
 #define _VectorView Windows::Foundation::Collections::IVectorView
 #define _StartPreviewToCustomSinkIdAsync StartPreviewToCustomSinkAsync
@@ -208,16 +211,16 @@ MAKE_MAP(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypeMap(StreamSinkMarkerTypeP
 #define _MediaExtension Windows::Media::IMediaExtension
 #define _ContextCallback Concurrency::details::_ContextCallback
 #define BEGIN_CALL_IN_CONTEXT(hr, var, ...) hr = S_OK;\
-    var._CallInContext([__VA_ARGS__]() {
+var._CallInContext([__VA_ARGS__]() {
 #define END_CALL_IN_CONTEXT(hr) if (FAILED(hr)) throw Platform::Exception::CreateException(hr);\
-    });
+});
 #define DO_ACTION_SYNCHRONOUSLY(hr, action, ctxt) hr = S_OK;\
-    CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(action), ctxt)
+CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(action), ctxt)
 #define DO_OPERATION_SYNCHRONOUSLY_VECTOR(hr, action, ctxt, pResult, vectortype, elementtype, _type) hr = S_OK;\
-    pResult = CCompletionHandler::PerformSynchronously<_type^>(reinterpret_cast<Windows::Foundation::IAsyncOperation<_type^>^>(action), ctxt)
+pResult = CCompletionHandler::PerformSynchronously<_type^>(reinterpret_cast<Windows::Foundation::IAsyncOperation<_type^>^>(action), ctxt)
 #define BEGIN_CREATE_ASYNC(...) reinterpret_cast<ABI::Windows::Foundation::IAsyncAction*>(Concurrency::create_async([__VA_ARGS__]() {
 #define END_CREATE_ASYNC(hr) if (FAILED(hr)) throw Platform::Exception::CreateException(hr);\
-    }))
+}))
 #define DEFINE_TASK Concurrency::task
 #define CREATE_TASK Concurrency::create_task
 #define CREATE_OR_CONTINUE_TASK(_task, rettype, func) _task = (_task == Concurrency::task<rettype>()) ? Concurrency::create_task(func) : _task.then([func](rettype) -> rettype { return func(); });
@@ -226,53 +229,53 @@ MAKE_MAP(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypeMap(StreamSinkMarkerTypeP
 #define MAKE_WRL_AGILE_REF(x) Platform::Agile<x^>
 #define RELEASE_AGILE_WRL(x) x = nullptr;
 #define RELEASE_WRL(x) x = nullptr;
-#define GET_WRL_VIDEO_PREVIEW(medCap, prevMedCap, hr) Windows::Media::Capture::MediaCapture^ prevMedCap = medCap;\
-    hr = S_OK;
-#define GET_WRL_MEDIA_DEVICE_CONTROLLER(devCont, medDevCont, hr) Windows::Media::Devices::VideoDeviceController^ medDevCont = devCont;\
-    hr = S_OK;
-#define GET_WRL_VIDEO_ENCODING_PROPERTIES(encProp, vidEncProp, hr) Windows::Media::MediaProperties::VideoEncodingProperties^ vidEncProp = safe_cast<Windows::Media::MediaProperties::VideoEncodingProperties^>(encProp);\
-    hr = S_OK;
-#define GET_WRL_MAP(pSet, map, hr) Windows::Foundation::Collections::PropertySet^ map = pSet;\
-    hr = S_OK;
+#define GET_WRL_OBJ_FROM_REF(objtype, obj, orig, hr) objtype^ obj = orig;\
+hr = S_OK;
+#define GET_WRL_OBJ_FROM_OBJ(objtype, obj, orig, hr) objtype^ obj = orig;\
+hr = S_OK;
+#define WRL_ENUM_GET(obj, prefix, prop) obj::##prop
 #define WRL_PROP_GET(obj, prop, arg, hr) arg = obj->##prop;\
-    hr = S_OK;
+hr = S_OK;
 #define WRL_PROP_PUT(obj, prop, arg, hr) obj->##prop = arg;\
-    hr = S_OK;
+hr = S_OK;
 #define WRL_METHOD_BASE(obj, method, ret, hr) ret = obj->##method();\
-    hr = S_OK;
+hr = S_OK;
 #define WRL_METHOD(obj, method, ret, hr, ...) ret = obj->##method(__VA_ARGS__);\
-    hr = S_OK;
+hr = S_OK;
 #define REF_WRL_OBJ(obj) &obj
 #define DEREF_WRL_OBJ(obj) obj
 #define DEREF_AGILE_WRL_OBJ(obj) obj.Get()
 #define DEREF_AS_NATIVE_WRL_OBJ(type, obj) reinterpret_cast<type*>(obj)
 #define PREPARE_TRANSFER_WRL_OBJ(obj) obj
-#define ACTIVATE_OBJ(rtclass, objtype, obj, hr) objtype obj;\
-    hr = S_OK;
+#define ACTIVATE_OBJ(rtclass, objtype, obj, hr) MAKE_WRL_OBJ(objtype) obj = ref new objtype();\
+hr = S_OK;
 #define ACTIVATE_STATIC_OBJ(rtclass, objtype, obj, hr) objtype obj;\
-    hr = S_OK;
+hr = S_OK;
 #else
 #define _Object IInspectable*
 #define _ObjectObj Microsoft::WRL::ComPtr<IInspectable>
 #define _String HSTRING
-#define _StringObj HString
-#define _StringReference HStringReference
+#define _StringObj Microsoft::WRL::Wrappers::HString
+#define _StringReference Microsoft::WRL::Wrappers::HStringReference
 #define _DeviceInformationCollection ABI::Windows::Devices::Enumeration::DeviceInformationCollection
 #define _MediaCapture ABI::Windows::Media::Capture::IMediaCapture
+#define _MediaCaptureVideoPreview ABI::Windows::Media::Capture::IMediaCaptureVideoPreview
 #define _MediaCaptureInitializationSettings ABI::Windows::Media::Capture::IMediaCaptureInitializationSettings
 #define _VideoDeviceController ABI::Windows::Media::Devices::IVideoDeviceController
+#define _MediaDeviceController ABI::Windows::Media::Devices::IMediaDeviceController
 #define _MediaEncodingProperties ABI::Windows::Media::MediaProperties::IMediaEncodingProperties
-#define _VideoPreview ABI::Windows::Media::Capture::MediaStreamType::MediaStreamType_VideoPreview
+#define _VideoEncodingProperties ABI::Windows::Media::MediaProperties::IVideoEncodingProperties
+#define _MediaStreamType ABI::Windows::Media::Capture::MediaStreamType
 #define _AsyncAction ABI::Windows::Foundation::IAsyncAction
 #define _AsyncOperation ABI::Windows::Foundation::IAsyncOperation
 #define _DeviceClass ABI::Windows::Devices::Enumeration::DeviceClass
-#define _VideoCapture ABI::Windows::Devices::Enumeration::DeviceClass::DeviceClass_VideoCapture
 #define _IDeviceInformation ABI::Windows::Devices::Enumeration::IDeviceInformation
 #define _DeviceInformation ABI::Windows::Devices::Enumeration::DeviceInformation
 #define _DeviceInformationStatics ABI::Windows::Devices::Enumeration::IDeviceInformationStatics
 #define _MediaEncodingProfile ABI::Windows::Media::MediaProperties::IMediaEncodingProfile
-#define _Video ABI::Windows::Media::Capture::StreamingCaptureMode::StreamingCaptureMode_Video
+#define _StreamingCaptureMode ABI::Windows::Media::Capture::StreamingCaptureMode
 #define _PropertySet ABI::Windows::Foundation::Collections::IPropertySet
+#define _Map ABI::Windows::Foundation::Collections::IMap<HSTRING, IInspectable *>
 #define _PropertyValueStatics ABI::Windows::Foundation::IPropertyValueStatics
 #define _VectorView ABI::Windows::Foundation::Collections::IVectorView
 #define _StartPreviewToCustomSinkIdAsync StartPreviewToCustomSinkIdAsync
@@ -282,12 +285,12 @@ MAKE_MAP(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypeMap(StreamSinkMarkerTypeP
 #define _ContextCallback Concurrency_winrt::details::_ContextCallback
 #define BEGIN_CALL_IN_CONTEXT(hr, var, ...) hr = var._CallInContext([__VA_ARGS__]() -> HRESULT {
 #define END_CALL_IN_CONTEXT(hr) return hr;\
-    });
+});
 #define DO_ACTION_SYNCHRONOUSLY(hr, action, ctxt) hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(action, ctxt)
 #define DO_OPERATION_SYNCHRONOUSLY_VECTOR(hr, action, ctxt, pResult, vectortype, elementtype, _type) hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncOperationCompletedHandler<_type*>, ABI::Windows::Foundation::IAsyncOperation<_type*>>::PerformSynchronously<vectortype<elementtype*>*>(action, ctxt, pResult.GetAddressOf())
 #define BEGIN_CREATE_ASYNC(...) Concurrency_winrt::create_async([__VA_ARGS__]() -> HRESULT {
 #define END_CREATE_ASYNC(hr) return hr;\
-    })
+})
 #define DEFINE_TASK Concurrency_winrt::task
 #define CREATE_TASK Concurrency_winrt::create_task
 #define CREATE_OR_CONTINUE_TASK(_task, rettype, func) _task = (_task == Concurrency_winrt::task<rettype>()) ? Concurrency_winrt::create_task(func) : _task.then([func](rettype) -> rettype { return func(); });
@@ -296,14 +299,11 @@ MAKE_MAP(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypeMap(StreamSinkMarkerTypeP
 #define MAKE_WRL_AGILE_REF(x) x*
 #define RELEASE_AGILE_WRL(x) if (x) { (x)->Release(); x = nullptr; }
 #define RELEASE_WRL(x) if (x) { (x)->Release(); x = nullptr; }
-#define GET_WRL_VIDEO_PREVIEW(medCap, prevMedCap, hr) Microsoft::WRL::ComPtr<ABI::Windows::Media::Capture::IMediaCaptureVideoPreview> prevMedCap;\
-    hr = medCap->QueryInterface(__uuidof(ABI::Windows::Media::Capture::IMediaCaptureVideoPreview), &prevMedCap);
-#define GET_WRL_MEDIA_DEVICE_CONTROLLER(devCont, medDevCont, hr) Microsoft::WRL::ComPtr<ABI::Windows::Media::Devices::IMediaDeviceController> medDevCont;\
-    hr = devCont.As(&medDevCont);
-#define GET_WRL_VIDEO_ENCODING_PROPERTIES(encProp, vidEncProp, hr) Microsoft::WRL::ComPtr<ABI::Windows::Media::MediaProperties::IVideoEncodingProperties> vidEncProp;\
-    hr = encProp.As(&vidEncProp);
-#define GET_WRL_MAP(pSet, map, hr) Microsoft::WRL::ComPtr<ABI::Windows::Foundation::Collections::IMap<HSTRING, IInspectable *>> map;\
-    hr = pSet.As(&map);
+#define GET_WRL_OBJ_FROM_REF(objtype, obj, orig, hr) Microsoft::WRL::ComPtr<objtype> obj;\
+hr = orig->QueryInterface(__uuidof(objtype), &obj);
+#define GET_WRL_OBJ_FROM_OBJ(objtype, obj, orig, hr) Microsoft::WRL::ComPtr<objtype> obj;\
+hr = orig.As(&obj);
+#define WRL_ENUM_GET(obj, prefix, prop) obj::prefix##_##prop
 #define WRL_PROP_GET(obj, prop, arg, hr) hr = obj->get_##prop(&arg);
 #define WRL_PROP_PUT(obj, prop, arg, hr) hr = obj->put_##prop(arg);
 #define WRL_METHOD_BASE(obj, method, ret, hr) hr = obj->##method(&ret);
@@ -313,10 +313,10 @@ MAKE_MAP(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypeMap(StreamSinkMarkerTypeP
 #define DEREF_AGILE_WRL_OBJ(obj) obj
 #define DEREF_AS_NATIVE_WRL_OBJ(type, obj) obj.Get()
 #define PREPARE_TRANSFER_WRL_OBJ(obj) obj.Detach()
-#define ACTIVATE_OBJ(rtclass, objtype, obj, hr) objtype obj;\
+#define ACTIVATE_OBJ(rtclass, objtype, obj, hr) MAKE_WRL_OBJ(objtype) obj;\
 {\
     Microsoft::WRL::ComPtr<IActivationFactory> objFactory;\
-    hr = Windows::Foundation::GetActivationFactory(HStringReference(rtclass).Get(), objFactory.ReleaseAndGetAddressOf());\
+    hr = Windows::Foundation::GetActivationFactory(Microsoft::WRL::Wrappers::HStringReference(rtclass).Get(), objFactory.ReleaseAndGetAddressOf());\
     if (SUCCEEDED(hr)) {\
         Microsoft::WRL::ComPtr<IInspectable> pInsp;\
         hr = objFactory->ActivateInstance(pInsp.GetAddressOf());\
@@ -326,7 +326,7 @@ MAKE_MAP(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypeMap(StreamSinkMarkerTypeP
 #define ACTIVATE_STATIC_OBJ(rtclass, objtype, obj, hr) objtype obj;\
 {\
     Microsoft::WRL::ComPtr<IActivationFactory> objFactory;\
-    hr = Windows::Foundation::GetActivationFactory(HStringReference(rtclass).Get(), objFactory.ReleaseAndGetAddressOf());\
+    hr = Windows::Foundation::GetActivationFactory(Microsoft::WRL::Wrappers::HStringReference(rtclass).Get(), objFactory.ReleaseAndGetAddressOf());\
     if (SUCCEEDED(hr)) {\
         if (SUCCEEDED(hr)) hr = objFactory.As(&obj);\
     }\
@@ -346,6 +346,7 @@ class CCompletionHandler
     TCompletionHandler, IAgileObject, FtmBase>
 #endif
 {
+    MixInHelper()
 #ifndef __cplusplus_winrt
 public:
     CCompletionHandler() {}

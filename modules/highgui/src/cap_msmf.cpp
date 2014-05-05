@@ -1075,12 +1075,12 @@ HRESULT ImageGrabberWinRT::initImageGrabber(MAKE_WRL_REF(_MediaCapture) pSource,
     MAKE_WRL_OBJ(_VideoDeviceController) pDevCont;
     WRL_PROP_GET(pSource, VideoDeviceController, pDevCont, hr)
     if (FAILED(hr)) return hr;
-    GET_WRL_MEDIA_DEVICE_CONTROLLER(pDevCont, pMedDevCont, hr)
+    GET_WRL_OBJ_FROM_OBJ(_MediaDeviceController, pMedDevCont, pDevCont, hr)
     if (FAILED(hr)) return hr;
     MAKE_WRL_OBJ(_MediaEncodingProperties) pMedEncProps;
-    WRL_METHOD(pMedDevCont, GetMediaStreamProperties, pMedEncProps, hr, _VideoPreview)
+    WRL_METHOD(pMedDevCont, GetMediaStreamProperties, pMedEncProps, hr, WRL_ENUM_GET(_MediaStreamType, MediaStreamType, VideoPreview))
     if (FAILED(hr)) return hr;
-    GET_WRL_VIDEO_ENCODING_PROPERTIES(pMedEncProps, pVidProps, hr);
+    GET_WRL_OBJ_FROM_OBJ(_VideoEncodingProperties, pVidProps, pMedEncProps, hr);
     if (FAILED(hr)) return hr;
     ComPtr<IMFMediaType> pType = NULL;
     hr = MediaSink::ConvertPropertiesToMediaType(DEREF_AS_NATIVE_WRL_OBJ(ABI::Windows::Media::MediaProperties::IMediaEncodingProperties, pMedEncProps), &pType);
@@ -1108,7 +1108,7 @@ HRESULT ImageGrabberWinRT::stopGrabbing(MAKE_WRL_REF(_AsyncAction)* action)
 {
     HRESULT hr = S_OK;
     if (ig_pMedCapSource != nullptr) {
-        GET_WRL_VIDEO_PREVIEW(DEREF_AGILE_WRL_OBJ(ig_pMedCapSource), imedPrevCap, hr);
+        GET_WRL_OBJ_FROM_REF(_MediaCaptureVideoPreview, imedPrevCap, DEREF_AGILE_WRL_OBJ(ig_pMedCapSource), hr)
         if (FAILED(hr)) return hr;
         MAKE_WRL_REF(_AsyncAction) pAction;
         WRL_METHOD_BASE(imedPrevCap, StopPreviewAsync, pAction, hr)
@@ -1128,17 +1128,17 @@ HRESULT ImageGrabberWinRT::stopGrabbing(MAKE_WRL_REF(_AsyncAction)* action)
 HRESULT ImageGrabberWinRT::startGrabbing(MAKE_WRL_REF(_AsyncAction)* action)
 {
     HRESULT hr = S_OK;
-    GET_WRL_VIDEO_PREVIEW(DEREF_AGILE_WRL_OBJ(ig_pMedCapSource), imedPrevCap, hr);
+    GET_WRL_OBJ_FROM_REF(_MediaCaptureVideoPreview, imedPrevCap, DEREF_AGILE_WRL_OBJ(ig_pMedCapSource), hr)
     if (FAILED(hr)) return hr;
-    ACTIVATE_OBJ(RuntimeClass_Windows_Foundation_Collections_PropertySet, MAKE_WRL_OBJ(_PropertySet), pSet, hr)
+    ACTIVATE_OBJ(RuntimeClass_Windows_Foundation_Collections_PropertySet, _PropertySet, pSet, hr)
     if (FAILED(hr)) return hr;
-    GET_WRL_MAP(pSet, spSetting, hr)
+    GET_WRL_OBJ_FROM_OBJ(_Map, spSetting, pSet, hr)
     if (FAILED(hr)) return hr;
     ACTIVATE_STATIC_OBJ(RuntimeClass_Windows_Foundation_PropertyValue, MAKE_WRL_OBJ(_PropertyValueStatics), spPropVal, hr)
     if (FAILED(hr)) return hr;
     _ObjectObj pVal;
     boolean bReplaced;
-    WRL_METHOD(spPropVal, CreateUInt32, pVal, hr, (unsigned int)_VideoPreview)
+    WRL_METHOD(spPropVal, CreateUInt32, pVal, hr, (unsigned int)WRL_ENUM_GET(_MediaStreamType, MediaStreamType, VideoPreview))
     if (FAILED(hr)) return hr;
     WRL_METHOD(spSetting, Insert, bReplaced, hr, DEREF_WRL_OBJ(_StringReference(MF_PROP_VIDTYPE)), DEREF_WRL_OBJ(pVal))
     if (FAILED(hr)) return hr;
@@ -1147,14 +1147,14 @@ HRESULT ImageGrabberWinRT::startGrabbing(MAKE_WRL_REF(_AsyncAction)* action)
     MAKE_WRL_OBJ(_VideoDeviceController) pDevCont;
     WRL_PROP_GET(ig_pMedCapSource, VideoDeviceController, pDevCont, hr)
     if (FAILED(hr)) return hr;
-    GET_WRL_MEDIA_DEVICE_CONTROLLER(pDevCont, pMedDevCont, hr)
+    GET_WRL_OBJ_FROM_OBJ(_MediaDeviceController, pMedDevCont, pDevCont, hr)
     if (FAILED(hr)) return hr;
     MAKE_WRL_OBJ(_MediaEncodingProperties) pMedEncProps;
-    WRL_METHOD(pMedDevCont, GetMediaStreamProperties, pMedEncProps, hr, _VideoPreview)
+    WRL_METHOD(pMedDevCont, GetMediaStreamProperties, pMedEncProps, hr, WRL_ENUM_GET(_MediaStreamType, MediaStreamType, VideoPreview))
     if (FAILED(hr)) return hr;
-    GET_WRL_VIDEO_ENCODING_PROPERTIES(pMedEncProps, pVidProps, hr);
+    GET_WRL_OBJ_FROM_OBJ(_VideoEncodingProperties, pVidProps, pMedEncProps, hr);
     if (FAILED(hr)) return hr;
-    ACTIVATE_OBJ(RuntimeClass_Windows_Media_MediaProperties_MediaEncodingProfile, MAKE_WRL_OBJ(_MediaEncodingProfile), pEncProps, hr)
+    ACTIVATE_OBJ(RuntimeClass_Windows_Media_MediaProperties_MediaEncodingProfile, _MediaEncodingProfile, pEncProps, hr)
     if (FAILED(hr)) return hr;
     WRL_PROP_PUT(pEncProps, Video, DEREF_WRL_OBJ(pVidProps), hr)
     if (FAILED(hr)) return hr;
@@ -1718,7 +1718,7 @@ bool Media_Foundation::buildListOfDevices()
     HRESULT hr = S_OK;
 #ifdef HAVE_WINRT
     videoDevices *vDs = &videoDevices::getInstance();
-    hr = vDs->initDevices(_VideoCapture);
+    hr = vDs->initDevices(WRL_ENUM_GET(_DeviceClass, DeviceClass, VideoCapture));
 #else
     ComPtr<IMFAttributes> pAttributes = NULL;
     CoInitialize(NULL);
@@ -1907,9 +1907,9 @@ long videoDevice::resetDevice(IMFActivate *pActivate)
 #ifdef HAVE_WINRT
     if (pDevice)
     {
-        ACTIVATE_OBJ(RuntimeClass_Windows_Media_Capture_MediaCapture, MAKE_WRL_OBJ(_MediaCapture), pIMedCap, hr)
+        ACTIVATE_OBJ(RuntimeClass_Windows_Media_Capture_MediaCapture, _MediaCapture, pIMedCap, hr)
         if (FAILED(hr)) return hr;
-        ACTIVATE_OBJ(RuntimeClass_Windows_Media_Capture_MediaCaptureInitializationSettings, MAKE_WRL_OBJ(_MediaCaptureInitializationSettings), pCapInitSet, hr)
+        ACTIVATE_OBJ(RuntimeClass_Windows_Media_Capture_MediaCaptureInitializationSettings, _MediaCaptureInitializationSettings, pCapInitSet, hr)
         if (FAILED(hr)) return hr;
         _StringObj str;
         WRL_PROP_GET(pDevice, Name, *REF_WRL_OBJ(str), hr)
@@ -1922,7 +1922,7 @@ long videoDevice::resetDevice(IMFActivate *pActivate)
         if (FAILED(hr)) return hr;
         WRL_PROP_PUT(pCapInitSet, VideoDeviceId, DEREF_WRL_OBJ(str), hr)
         if (FAILED(hr)) return hr;
-        WRL_PROP_PUT(pCapInitSet, StreamingCaptureMode, _Video, hr)
+        WRL_PROP_PUT(pCapInitSet, StreamingCaptureMode, WRL_ENUM_GET(_StreamingCaptureMode, StreamingCaptureMode, Video), hr)
         if (FAILED(hr)) return hr;
         MAKE_WRL_REF(_AsyncAction) pAction;
         WRL_METHOD(DEREF_WRL_OBJ(pIMedCap), _InitializeWithSettingsAsync, pAction, hr, DEREF_WRL_OBJ(pCapInitSet))
@@ -2100,17 +2100,17 @@ long videoDevice::initDevice()
         if (pOldAction) DO_ACTION_SYNCHRONOUSLY(hr, pOldAction, GET_CURRENT_CONTEXT);
         DEFINE_TASK<HRESULT> pTask;
         MAKE_WRL_OBJ(_IDeviceInformation) pDevInfo;
-        hr = checkDevice(_VideoCapture, &pTask, REF_WRL_OBJ(pDevInfo));
+        hr = checkDevice(WRL_ENUM_GET(_DeviceClass, DeviceClass, VideoCapture), &pTask, REF_WRL_OBJ(pDevInfo));
         if (SUCCEEDED(hr)) hr = pTask.get();
         if (SUCCEEDED(hr)) {
             MAKE_WRL_REF(_AsyncAction) pAction;
             BEGIN_CALL_IN_CONTEXT(hr, context, pDevInfo, &pAction, context, this)
                 HRESULT hr;
-                ACTIVATE_OBJ(RuntimeClass_Windows_Media_Capture_MediaCapture, MAKE_WRL_OBJ(_MediaCapture), pIMedCap, hr)
+                ACTIVATE_OBJ(RuntimeClass_Windows_Media_Capture_MediaCapture, _MediaCapture, pIMedCap, hr)
                 if (SUCCEEDED(hr)) {
                     RELEASE_WRL(vd_pMedCap);
                     vd_pMedCap = PREPARE_TRANSFER_WRL_OBJ(pIMedCap);
-                    ACTIVATE_OBJ(RuntimeClass_Windows_Media_Capture_MediaCaptureInitializationSettings, MAKE_WRL_OBJ(_MediaCaptureInitializationSettings), pCapInitSet, hr)
+                    ACTIVATE_OBJ(RuntimeClass_Windows_Media_Capture_MediaCaptureInitializationSettings, _MediaCaptureInitializationSettings, pCapInitSet, hr)
                     _StringObj str;
                     if (SUCCEEDED(hr)) {
                         WRL_PROP_GET(pDevInfo, Id, *REF_WRL_OBJ(str), hr)
@@ -2119,7 +2119,7 @@ long videoDevice::initDevice()
                         }
                     }
                     if (SUCCEEDED(hr))
-                        WRL_PROP_PUT(pCapInitSet, StreamingCaptureMode, _Video, hr)
+                        WRL_PROP_PUT(pCapInitSet, StreamingCaptureMode, WRL_ENUM_GET(_StreamingCaptureMode, StreamingCaptureMode, Video), hr)
                     if (SUCCEEDED(hr)) {
                         vd_pMedCapFail = create_medcapfailedhandler([this, context](){
                             HRESULT hr;
@@ -2332,15 +2332,15 @@ long videoDevice::setDeviceFormat(MAKE_WRL_REF(_MediaCapture) pSource, unsigned 
     MAKE_WRL_OBJ(_VideoDeviceController) pDevCont;
     WRL_PROP_GET(pSource, VideoDeviceController, pDevCont, hr)
     if (FAILED(hr)) return hr;
-    GET_WRL_MEDIA_DEVICE_CONTROLLER(pDevCont, pMedDevCont, hr)
+    GET_WRL_OBJ_FROM_OBJ(_MediaDeviceController, pMedDevCont, pDevCont, hr)
     if (FAILED(hr)) return hr;
     MAKE_WRL_OBJ(_VectorView<MAKE_WRL_REF(_MediaEncodingProperties)>) pVector;
-    WRL_METHOD(pMedDevCont, GetAvailableMediaStreamProperties, pVector, hr, _VideoPreview)
+    WRL_METHOD(pMedDevCont, GetAvailableMediaStreamProperties, pVector, hr, WRL_ENUM_GET(_MediaStreamType, MediaStreamType, VideoPreview))
     if (FAILED(hr)) return hr;
     MAKE_WRL_OBJ(_MediaEncodingProperties) pMedEncProps;
     WRL_METHOD(pVector, GetAt, pMedEncProps, hr, dwFormatIndex)
     if (FAILED(hr)) return hr;
-    WRL_METHOD(pMedDevCont, SetMediaStreamPropertiesAsync, *pAction, hr, _VideoPreview, DEREF_WRL_OBJ(pMedEncProps))
+    WRL_METHOD(pMedDevCont, SetMediaStreamPropertiesAsync, *pAction, hr, WRL_ENUM_GET(_MediaStreamType, MediaStreamType, VideoPreview), DEREF_WRL_OBJ(pMedEncProps))
     return hr;
 }
 #endif
@@ -2542,10 +2542,10 @@ HRESULT videoDevice::enumerateCaptureFormats(MAKE_WRL_REF(_MediaCapture) pSource
     MAKE_WRL_OBJ(_VideoDeviceController) pDevCont;
     WRL_PROP_GET(pSource, VideoDeviceController, pDevCont, hr)
     if (FAILED(hr)) return hr;
-    GET_WRL_MEDIA_DEVICE_CONTROLLER(pDevCont, pMedDevCont, hr)
+    GET_WRL_OBJ_FROM_OBJ(_MediaDeviceController, pMedDevCont, pDevCont, hr)
     if (FAILED(hr)) return hr;
     MAKE_WRL_OBJ(_VectorView<MAKE_WRL_REF(_MediaEncodingProperties)>) pVector;
-    WRL_METHOD(pMedDevCont, GetAvailableMediaStreamProperties, pVector, hr, _VideoPreview)
+    WRL_METHOD(pMedDevCont, GetAvailableMediaStreamProperties, pVector, hr, WRL_ENUM_GET(_MediaStreamType, MediaStreamType, VideoPreview))
     if (FAILED(hr)) return hr;
     UINT32 count;
     WRL_PROP_GET(pVector, Size, count, hr)
