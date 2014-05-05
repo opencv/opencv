@@ -135,18 +135,9 @@ void KAZEFeatures::Allocate_Memory_Evolution(void) {
  * @param img Input image for which the nonlinear scale space needs to be created
  * @return 0 if the nonlinear scale space was created successfully. -1 otherwise
  */
-int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img) {
-
-    //double t2 = 0.0, t1 = 0.0;
-
+int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img)
+{
     CV_Assert(evolution_.size() > 0);
-    //if (evolution_.size() == 0) {
-    //    cout << "Error generating the nonlinear scale space!!" << endl;
-    //    cout << "Firstly you need to call KAZE::Allocate_Memory_Evolution()" << endl;
-    //    return -1;
-    //}
-
-    //t1 = getTickCount();
 
     // Copy the original image to the first level of the evolution
     img.copyTo(evolution_[0].Lt);
@@ -155,14 +146,6 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img) {
 
     // Firstly compute the kcontrast factor
     Compute_KContrast(evolution_[0].Lt, KCONTRAST_PERCENTILE);
-
-    //t2 = getTickCount();
-    //tkcontrast_ = 1000.0*(t2 - t1) / getTickFrequency();
-
-    //if (verbosity_ == true) {
-    //    cout << "Computed image evolution step. Evolution time: " << evolution_[0].etime <<
-    //        " Sigma: " << evolution_[0].esigma << endl;
-    //}
 
     // Now generate the rest of evolution levels
     for (size_t i = 1; i < evolution_.size(); i++) {
@@ -196,15 +179,7 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img) {
             AOS_Step_Scalar(evolution_[i].Lt, evolution_[i - 1].Lt, evolution_[i].Lflow,
                 evolution_[i].etime - evolution_[i - 1].etime);
         }
-
-        //if (verbosity_ == true) {
-        //    cout << "Computed image evolution step " << i << " Evolution time: " << evolution_[i].etime <<
-        //        " Sigma: " << evolution_[i].esigma << endl;
-        //}
     }
-
-    //t2 = getTickCount();
-    //tnlscale_ = 1000.0*(t2 - t1) / getTickFrequency();
 
     return 0;
 }
@@ -217,20 +192,9 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img) {
  * @param img Input image
  * @param kpercentile Percentile of the gradient histogram
  */
-void KAZEFeatures::Compute_KContrast(const cv::Mat &img, const float &kpercentile) {
-
-    //if (verbosity_ == true) {
-    //    cout << "Computing Kcontrast factor." << endl;
-    //}
-
-    //if (COMPUTE_KCONTRAST) {
-        kcontrast_ = compute_k_percentile(img, kpercentile, sderivatives_, KCONTRAST_NBINS, 0, 0);
-    //}
-
-    //if (verbosity_ == true) {
-    //    cout << "kcontrast = " << kcontrast_ << endl;
-    //    cout << endl << "Now computing the nonlinear scale space!!" << endl;
-    //}
+void KAZEFeatures::Compute_KContrast(const cv::Mat &img, const float &kpercentile)
+{
+    kcontrast_ = compute_k_percentile(img, kpercentile, sderivatives_, KCONTRAST_NBINS, 0, 0);
 }
 
 //*************************************************************************************
@@ -241,19 +205,9 @@ void KAZEFeatures::Compute_KContrast(const cv::Mat &img, const float &kpercentil
  */
 void KAZEFeatures::Compute_Multiscale_Derivatives(void)
 {
-    //double t2 = 0.0, t1 = 0.0;
-    //t1 = getTickCount();
-
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
-    for (size_t i = 0; i < evolution_.size(); i++) {
-
-        //if (verbosity_ == true) {
-        //    cout << "Computing multiscale derivatives. Evolution time: " << evolution_[i].etime
-        //        << " Step (pixels): " << evolution_[i].sigma_size << endl;
-        //}
-
+    // TODO: use cv::parallel_for_
+    for (size_t i = 0; i < evolution_.size(); i++)
+    {
         // Compute multiscale derivatives for the detector
         compute_scharr_derivatives(evolution_[i].Lsmooth, evolution_[i].Lx, 1, 0, evolution_[i].sigma_size);
         compute_scharr_derivatives(evolution_[i].Lsmooth, evolution_[i].Ly, 0, 1, evolution_[i].sigma_size);
@@ -267,9 +221,6 @@ void KAZEFeatures::Compute_Multiscale_Derivatives(void)
         evolution_[i].Lxy = evolution_[i].Lxy*((evolution_[i].sigma_size)*(evolution_[i].sigma_size));
         evolution_[i].Lyy = evolution_[i].Lyy*((evolution_[i].sigma_size)*(evolution_[i].sigma_size));
     }
-
-    //t2 = getTickCount();
-    //tmderivatives_ = 1000.0*(t2 - t1) / getTickFrequency();
 }
 
 //*************************************************************************************
@@ -279,25 +230,19 @@ void KAZEFeatures::Compute_Multiscale_Derivatives(void)
  * @brief This method computes the feature detector response for the nonlinear scale space
  * @note We use the Hessian determinant as feature detector
  */
-void KAZEFeatures::Compute_Detector_Response(void) {
-
-    //double t2 = 0.0, t1 = 0.0;
+void KAZEFeatures::Compute_Detector_Response(void)
+{
     float lxx = 0.0, lxy = 0.0, lyy = 0.0;
-
-    //t1 = getTickCount();
 
     // Firstly compute the multiscale derivatives
     Compute_Multiscale_Derivatives();
 
-    for (size_t i = 0; i < evolution_.size(); i++) {
-
-        // Determinant of the Hessian
-        //if (verbosity_ == true) {
-        //    cout << "Computing detector response. Determinant of Hessian. Evolution time: " << evolution_[i].etime << endl;
-        //}
-
-        for (int ix = 0; ix < img_height_; ix++) {
-            for (int jx = 0; jx < img_width_; jx++) {
+    for (size_t i = 0; i < evolution_.size(); i++)
+    {
+        for (int ix = 0; ix < img_height_; ix++)
+        {
+            for (int jx = 0; jx < img_width_; jx++)
+            {
                 lxx = *(evolution_[i].Lxx.ptr<float>(ix)+jx);
                 lxy = *(evolution_[i].Lxy.ptr<float>(ix)+jx);
                 lyy = *(evolution_[i].Lyy.ptr<float>(ix)+jx);
@@ -305,9 +250,6 @@ void KAZEFeatures::Compute_Detector_Response(void) {
             }
         }
     }
-
-    //t2 = getTickCount();
-    //tdresponse_ = 1000.0*(t2 - t1) / getTickFrequency();
 }
 
 //*************************************************************************************
@@ -317,11 +259,8 @@ void KAZEFeatures::Compute_Detector_Response(void) {
  * @brief This method selects interesting keypoints through the nonlinear scale space
  * @param kpts Vector of keypoints
  */
-void KAZEFeatures::Feature_Detection(std::vector<cv::KeyPoint>& kpts) {
-
-    //double t2 = 0.0, t1 = 0.0;
-    //t1 = getTickCount();
-
+void KAZEFeatures::Feature_Detection(std::vector<cv::KeyPoint>& kpts)
+{
     kpts.clear();
 
     // Firstly compute the detector response for each pixel and scale level
@@ -332,9 +271,6 @@ void KAZEFeatures::Feature_Detection(std::vector<cv::KeyPoint>& kpts) {
 
     // Perform some subpixel refinement
     Do_Subpixel_Refinement(kpts);
-
-    //t2 = getTickCount();
-    //tdetector_ = 1000.0*(t2 - t1) / getTickFrequency();
 }
 
 //*************************************************************************************
@@ -346,8 +282,8 @@ void KAZEFeatures::Feature_Detection(std::vector<cv::KeyPoint>& kpts) {
  * @param kpts Vector of keypoints
  * @note We compute features for each of the nonlinear scale space level in a different processing thread
  */
-void KAZEFeatures::Determinant_Hessian_Parallel(std::vector<cv::KeyPoint>& kpts) {
-
+void KAZEFeatures::Determinant_Hessian_Parallel(std::vector<cv::KeyPoint>& kpts)
+{
     int level = 0;
     float dist = 0.0, smax = 3.0;
     int npoints = 0, id_repeated = 0;
@@ -367,9 +303,7 @@ void KAZEFeatures::Determinant_Hessian_Parallel(std::vector<cv::KeyPoint>& kpts)
         kpts_par_.push_back(aux);
     }
 
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
+    // TODO: Use cv::parallel_for_
     for (int i = 1; i < (int)evolution_.size() - 1; i++) {
         Find_Extremum_Threading(i);
     }
@@ -499,9 +433,7 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
     Mat A = Mat::zeros(3, 3, CV_32F);
     Mat b = Mat::zeros(3, 1, CV_32F);
     Mat dst = Mat::zeros(3, 1, CV_32F);
-    //double t2 = 0.0, t1 = 0.0;
 
-    //t1 = cv::getTickCount();
     vector<KeyPoint> kpts_(kpts);
 
     for (size_t i = 0; i < kpts_.size(); i++) {
@@ -583,9 +515,6 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
             kpts.push_back(kpts_[i]);
         }
     }
-
-    //t2 = getTickCount();
-    //tsubpixel_ = 1000.0*(t2 - t1) / getTickFrequency();
 }
 
 //*************************************************************************************
@@ -596,11 +525,8 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
  * @param kpts Vector of keypoints
  * @param desc Matrix with the feature descriptors
  */
-void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat &desc) {
-
-    //double t2 = 0.0, t1 = 0.0;
-    //t1 = getTickCount();
-
+void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat &desc)
+{
     // Allocate memory for the matrix of descriptors
     if (use_extended_ == true) {
         desc = Mat::zeros((int)kpts.size(), 128, CV_32FC1);
@@ -730,9 +656,6 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
             }
         }
     }
-
-    //t2 = getTickCount();
-    //tdescriptor_ = 1000.0*(t2 - t1) / getTickFrequency();
 }
 
 //*************************************************************************************
