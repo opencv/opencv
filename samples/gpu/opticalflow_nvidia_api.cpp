@@ -12,13 +12,10 @@
 #include "cvconfig.h"
 #include <iostream>
 #include <iomanip>
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
+#include "opencv2/cudalegacy.hpp"
 #include "opencv2/highgui/highgui.hpp"
-
-#ifdef HAVE_CUDA
-#include "NPP_staging/NPP_staging.hpp"
-#include "NCVBroxOpticalFlow.hpp"
-#endif
+#include "opencv2/highgui/highgui_c.h"
 
 #if !defined(HAVE_CUDA)
 int main( int, const char** )
@@ -394,7 +391,7 @@ int main(int argc, char **argv)
         return result;
     }
 
-    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+    cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
     std::cout << "OpenCV / NVIDIA Computer Vision\n";
     std::cout << "Optical Flow Demo: Frame Interpolation\n";

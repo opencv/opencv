@@ -41,19 +41,19 @@ int main(int argc, char *argv[])
 
     string::size_type pAt = source.find_last_of('.');                  // Find extension point
     const string NAME = source.substr(0, pAt) + argv[2][0] + ".avi";   // Form the new name with container
-    int ex = static_cast<int>(inputVideo.get(CV_CAP_PROP_FOURCC));     // Get Codec Type- Int form
+    int ex = static_cast<int>(inputVideo.get(CAP_PROP_FOURCC));     // Get Codec Type- Int form
 
     // Transform from int to char via Bitwise operators
     char EXT[] = {(char)(ex & 0XFF) , (char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24), 0};
 
-    Size S = Size((int) inputVideo.get(CV_CAP_PROP_FRAME_WIDTH),    // Acquire input size
-                  (int) inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT));
+    Size S = Size((int) inputVideo.get(CAP_PROP_FRAME_WIDTH),    // Acquire input size
+                  (int) inputVideo.get(CAP_PROP_FRAME_HEIGHT));
 
     VideoWriter outputVideo;                                        // Open the output
     if (askOutputType)
-        outputVideo.open(NAME, ex=-1, inputVideo.get(CV_CAP_PROP_FPS), S, true);
+        outputVideo.open(NAME, ex=-1, inputVideo.get(CAP_PROP_FPS), S, true);
     else
-        outputVideo.open(NAME, ex, inputVideo.get(CV_CAP_PROP_FPS), S, true);
+        outputVideo.open(NAME, ex, inputVideo.get(CAP_PROP_FPS), S, true);
 
     if (!outputVideo.isOpened())
     {
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     }
 
     cout << "Input frame resolution: Width=" << S.width << "  Height=" << S.height
-         << " of nr#: " << inputVideo.get(CV_CAP_PROP_FRAME_COUNT) << endl;
+         << " of nr#: " << inputVideo.get(CAP_PROP_FRAME_COUNT) << endl;
     cout << "Input codec type: " << EXT << endl;
 
     int channel = 2; // Select the channel to save

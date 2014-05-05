@@ -85,7 +85,8 @@ Mat calcRvec(const vector<Point3f>& points, const Size& cornerSize)
 class CV_CalibrateCameraArtificialTest : public cvtest::BaseTest
 {
 public:
-    CV_CalibrateCameraArtificialTest()
+    CV_CalibrateCameraArtificialTest() :
+        r(0)
     {
     }
     ~CV_CalibrateCameraArtificialTest() {}
@@ -203,7 +204,7 @@ protected:
             Rodrigues(rvecs[i], rmat);
             Rodrigues(rvecs_est[i], rmat_est);
 
-            if (norm(rmat_est, rmat) > eps* (norm(rmat) + dlt))
+            if (cvtest::norm(rmat_est, rmat, NORM_L2) > eps* (cvtest::norm(rmat, NORM_L2) + dlt))
             {
                 if (err_count++ < errMsgNum)
                 {
@@ -212,7 +213,8 @@ protected:
                     else
                     {
                         ts->printf( cvtest::TS::LOG, "%d) Bad accuracy in returned rvecs (rotation matrs). Index = %d\n", r, i);
-                        ts->printf( cvtest::TS::LOG, "%d) norm(rot_mat_est - rot_mat_exp) = %f, norm(rot_mat_exp) = %f \n", r, norm(rmat_est, rmat), norm(rmat));
+                        ts->printf( cvtest::TS::LOG, "%d) norm(rot_mat_est - rot_mat_exp) = %f, norm(rot_mat_exp) = %f \n", r,
+                                   cvtest::norm(rmat_est, rmat, NORM_L2), cvtest::norm(rmat, NORM_L2));
 
                     }
                 }
@@ -304,7 +306,7 @@ protected:
             for(size_t i = 0; i < brdsNum; ++i)
             {
                 Mat gray;
-                cvtColor(boards[i], gray, CV_BGR2GRAY);
+                cvtColor(boards[i], gray, COLOR_BGR2GRAY);
                 vector<Point2f> tmp = imagePoints_findCb[i];
                 cornerSubPix(gray, tmp, Size(5, 5), Size(-1,-1), tc);
                 imagePoints.push_back(tmp);
@@ -314,7 +316,7 @@ protected:
             for(size_t i = 0; i < brdsNum; ++i)
             {
                 Mat gray;
-                cvtColor(boards[i], gray, CV_BGR2GRAY);
+                cvtColor(boards[i], gray, COLOR_BGR2GRAY);
                 vector<Point2f> tmp = imagePoints_findCb[i];
                 find4QuadCornerSubpix(gray, tmp, Size(5, 5));
                 imagePoints.push_back(tmp);
@@ -327,7 +329,7 @@ protected:
         Mat camMat_est = Mat::eye(3, 3, CV_64F), distCoeffs_est = Mat::zeros(1, 5, CV_64F);
         vector<Mat> rvecs_est, tvecs_est;
 
-        int flags = /*CV_CALIB_FIX_K3|*/CV_CALIB_FIX_K4|CV_CALIB_FIX_K5|CV_CALIB_FIX_K6; //CALIB_FIX_K3; //CALIB_FIX_ASPECT_RATIO |  | CALIB_ZERO_TANGENT_DIST;
+        int flags = /*CALIB_FIX_K3|*/CALIB_FIX_K4|CALIB_FIX_K5|CALIB_FIX_K6; //CALIB_FIX_K3; //CALIB_FIX_ASPECT_RATIO |  | CALIB_ZERO_TANGENT_DIST;
         TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, DBL_EPSILON);
         double rep_error = calibrateCamera(objectPoints, imagePoints, imgSize, camMat_est, distCoeffs_est, rvecs_est, tvecs_est, flags, criteria);
         rep_error /= brdsNum * cornersSize.area();

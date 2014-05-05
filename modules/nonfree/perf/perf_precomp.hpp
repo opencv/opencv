@@ -11,18 +11,18 @@
 
 #include "cvconfig.h"
 
-#include "opencv2/ts/ts.hpp"
+#include "opencv2/ts.hpp"
+#include "opencv2/nonfree.hpp"
+#include "opencv2/highgui.hpp"
 
-#include "opencv2/nonfree/nonfree.hpp"
-#include "opencv2/highgui/highgui.hpp"
 #include "opencv2/opencv_modules.hpp"
 
 #ifdef HAVE_OPENCV_OCL
 #  include "opencv2/nonfree/ocl.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPU
-#  include "opencv2/nonfree/gpu.hpp"
+#ifdef HAVE_CUDA
+#  include "opencv2/nonfree/cuda.hpp"
 #endif
 
 #ifdef GTEST_CREATE_SHARED_LIBRARY

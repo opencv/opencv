@@ -898,8 +898,8 @@ struct median_pair
 {
     int col;
     int val;
-    median_pair() {};
-    median_pair( int _col, int _val ) : col(_col), val(_val) {};
+    median_pair() { }
+    median_pair( int _col, int _val ) : col(_col), val(_val) { }
 };
 
 

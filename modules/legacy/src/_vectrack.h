@@ -87,8 +87,8 @@ int PointInRect(const CvPoint& p, const CvRect& r)
 inline
 int RectInRect(const CvRect& r1, const CvRect& r2)
 {
-        CvPoint plt = {r1.x, r1.y};
-        CvPoint prb = {r1.x + r1.width, r1.y + r1.height};
+        CvPoint plt(r1.x, r1.y);
+        CvPoint prb(r1.x + r1.width, r1.y + r1.height);
         return (PointInRect(plt, r2) && PointInRect(prb, r2));
 }
 

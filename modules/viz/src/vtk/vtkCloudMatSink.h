@@ -45,7 +45,7 @@
 #ifndef __vtkCloudMatSink_h
 #define __vtkCloudMatSink_h
 
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 #include <vtkWriter.h>
 
 namespace cv

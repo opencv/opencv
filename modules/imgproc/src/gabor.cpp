@@ -84,7 +84,7 @@ cv::Mat cv::getGaborKernel( Size ksize, double sigma, double theta,
             double xr = x*c + y*s;
             double yr = -x*s + y*c;
 
-            double v = scale*exp(ex*xr*xr + ey*yr*yr)*cos(cscale*xr + psi);
+            double v = scale*std::exp(ex*xr*xr + ey*yr*yr)*cos(cscale*xr + psi);
             if( ktype == CV_32F )
                 kernel.at<float>(ymax - y, xmax - x) = (float)v;
             else

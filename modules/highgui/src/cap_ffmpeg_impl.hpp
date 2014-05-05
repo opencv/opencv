@@ -41,9 +41,14 @@
 //M*/
 
 #include "cap_ffmpeg_api.hpp"
+#if !(defined(WIN32) || defined(_WIN32) || defined(WINCE))
+# include <pthread.h>
+#endif
 #include <assert.h>
 #include <algorithm>
 #include <limits>
+
+#define CALC_FFMPEG_VERSION(a,b,c) ( a<<16 | b<<8 | c )
 
 #if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4244 4510 4512 4610 )
@@ -60,6 +65,10 @@ extern "C" {
 #include "ffmpeg_codecs.hpp"
 
 #include <libavutil/mathematics.h>
+
+#if LIBAVUTIL_BUILD > CALC_FFMPEG_VERSION(51,11,0)
+  #include <libavutil/opt.h>
+#endif
 
 #ifdef WIN32
   #define HAVE_FFMPEG_SWSCALE 1
@@ -123,7 +132,6 @@ extern "C" {
 #define PIX_FMT_RGBA32 PIX_FMT_RGB32
 #endif
 
-#define CALC_FFMPEG_VERSION(a,b,c) ( a<<16 | b<<8 | c )
 
 #if defined WIN32 || defined _WIN32
     #include <windows.h>
@@ -1130,6 +1138,14 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 
     c->codec_type = AVMEDIA_TYPE_VIDEO;
 
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54,25,0)
+    // Set per-codec defaults
+    AVCodecID c_id = c->codec_id;
+    avcodec_get_context_defaults3(c, codec);
+    // avcodec_get_context_defaults3 erases codec_id for some reason
+    c->codec_id = c_id;
+#endif
+
     /* put sample parameters */
     int64_t lbit_rate = (int64_t)bitrate;
     lbit_rate += (bitrate / 2);
@@ -1192,6 +1208,20 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
         /* avoid FFMPEG warning 'clipping 1 dct coefficients...' */
         c->mb_decision=2;
     }
+
+#if LIBAVUTIL_BUILD > CALC_FFMPEG_VERSION(51,11,0)
+    /* Some settings for libx264 encoding, restore dummy values for gop_size
+     and qmin since they will be set to reasonable defaults by the libx264
+     preset system. Also, use a crf encode with the default quality rating,
+     this seems easier than finding an appropriate default bitrate. */
+    if (c->codec_id == CODEC_ID_H264) {
+      c->gop_size = -1;
+      c->qmin = -1;
+      c->bit_rate = 0;
+      av_opt_set(c->priv_data,"crf","23", 0);
+    }
+#endif
+
 #if LIBAVCODEC_VERSION_INT>0x000409
     // some formats want stream headers to be seperate
     if(oc->oformat->flags & AVFMT_GLOBALHEADER)

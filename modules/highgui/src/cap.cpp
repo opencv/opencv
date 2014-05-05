@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "cap_intelperc.hpp"
 
 #if defined _M_X64 && defined _MSC_VER && !defined CV_ICC
 #pragma optimize("",off)
@@ -49,10 +50,10 @@
 namespace cv
 {
 
-template<> void Ptr<CvCapture>::delete_obj()
+template<> void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const
 { cvReleaseCapture(&obj); }
 
-template<> void Ptr<CvVideoWriter>::delete_obj()
+template<> void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const
 { cvReleaseVideoWriter(&obj); }
 
 }
@@ -345,14 +346,6 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
         break; // CV_CAP_GIGANETIX
 #endif
-
-#ifdef HAVE_INTELPERC
-        case CV_CAP_INTELPERC:
-            capture = cvCreateCameraCapture_IntelPerC(index);
-            if (capture)
-                return capture;
-        break; // CV_CAP_INTEL_PERC
-#endif
         }
     }
 
@@ -485,7 +478,7 @@ namespace cv
 VideoCapture::VideoCapture()
 {}
 
-VideoCapture::VideoCapture(const string& filename)
+VideoCapture::VideoCapture(const String& filename)
 {
     open(filename);
 }
@@ -497,37 +490,50 @@ VideoCapture::VideoCapture(int device)
 
 VideoCapture::~VideoCapture()
 {
+    icap.release();
     cap.release();
 }
 
-bool VideoCapture::open(const string& filename)
+bool VideoCapture::open(const String& filename)
 {
     if (isOpened()) release();
-    cap = cvCreateFileCapture(filename.c_str());
+    cap.reset(cvCreateFileCapture(filename.c_str()));
     return isOpened();
 }
 
 bool VideoCapture::open(int device)
 {
     if (isOpened()) release();
-    cap = cvCreateCameraCapture(device);
+    icap = createCameraCapture(device);
+    if (!icap.empty())
+        return true;
+    cap.reset(cvCreateCameraCapture(device));
     return isOpened();
 }
 
-bool VideoCapture::isOpened() const { return !cap.empty(); }
+bool VideoCapture::isOpened() const
+{
+    return (!cap.empty() || !icap.empty());
+}
 
 void VideoCapture::release()
 {
+    icap.release();
     cap.release();
 }
 
 bool VideoCapture::grab()
 {
+    if (!icap.empty())
+        return icap->grabFrame();
     return cvGrabFrame(cap) != 0;
 }
 
-bool VideoCapture::retrieve(Mat& image, int channel)
+bool VideoCapture::retrieve(OutputArray image, int channel)
 {
+    if (!icap.empty())
+        return icap->retrieveFrame(channel, image);
+
     IplImage* _img = cvRetrieveFrame(cap, channel);
     if( !_img )
     {
@@ -535,16 +541,16 @@ bool VideoCapture::retrieve(Mat& image, int channel)
         return false;
     }
     if(_img->origin == IPL_ORIGIN_TL)
-        Mat(_img).copyTo(image);
+        cv::cvarrToMat(_img).copyTo(image);
     else
     {
-        Mat temp(_img);
+        Mat temp = cv::cvarrToMat(_img);
         flip(temp, image, 0);
     }
     return true;
 }
 
-bool VideoCapture::read(Mat& image)
+bool VideoCapture::read(OutputArray image)
 {
     if(grab())
         retrieve(image);
@@ -559,22 +565,76 @@ VideoCapture& VideoCapture::operator >> (Mat& image)
     return *this;
 }
 
+VideoCapture& VideoCapture::operator >> (UMat& image)
+{
+    read(image);
+    return *this;
+}
+
 bool VideoCapture::set(int propId, double value)
 {
+    if (!icap.empty())
+        return icap->setProperty(propId, value);
     return cvSetCaptureProperty(cap, propId, value) != 0;
 }
 
 double VideoCapture::get(int propId)
 {
+    if (!icap.empty())
+        return icap->getProperty(propId);
     return cvGetCaptureProperty(cap, propId);
 }
+
+Ptr<IVideoCapture> VideoCapture::createCameraCapture(int index)
+{
+    int  domains[] =
+    {
+#ifdef HAVE_INTELPERC
+        CV_CAP_INTELPERC,
+#endif
+        -1, -1
+    };
+
+    // interpret preferred interface (0 = autodetect)
+    int pref = (index / 100) * 100;
+    if (pref)
+    {
+        domains[0]=pref;
+        index %= 100;
+        domains[1]=-1;
+    }
+
+    // try every possibly installed camera API
+    for (int i = 0; domains[i] >= 0; i++)
+    {
+#if defined(HAVE_INTELPERC)    || \
+    (0)
+        Ptr<IVideoCapture> capture;
+
+        switch (domains[i])
+        {
+#ifdef HAVE_INTELPERC
+        case CV_CAP_INTELPERC:
+            capture = Ptr<IVideoCapture>(new cv::VideoCapture_IntelPerC());
+            if (capture)
+                return capture;
+        break; // CV_CAP_INTEL_PERC
+#endif
+        }
+#endif
+    }
+
+    // failed open a camera
+    return Ptr<IVideoCapture>();
+}
+
 
 VideoWriter::VideoWriter()
 {}
 
-VideoWriter::VideoWriter(const string& filename, int fourcc, double fps, Size frameSize, bool isColor)
+VideoWriter::VideoWriter(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
 {
-    open(filename, fourcc, fps, frameSize, isColor);
+    open(filename, _fourcc, fps, frameSize, isColor);
 }
 
 void VideoWriter::release()
@@ -587,9 +647,9 @@ VideoWriter::~VideoWriter()
     release();
 }
 
-bool VideoWriter::open(const string& filename, int fourcc, double fps, Size frameSize, bool isColor)
+bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
 {
-    writer = cvCreateVideoWriter(filename.c_str(), fourcc, fps, frameSize, isColor);
+    writer.reset(cvCreateVideoWriter(filename.c_str(), _fourcc, fps, frameSize, isColor));
     return isOpened();
 }
 
@@ -608,6 +668,11 @@ VideoWriter& VideoWriter::operator << (const Mat& image)
 {
     write(image);
     return *this;
+}
+
+int VideoWriter::fourcc(char c1, char c2, char c3, char c4)
+{
+    return (c1 & 255) + ((c2 & 255) << 8) + ((c3 & 255) << 16) + ((c4 & 255) << 24);
 }
 
 }

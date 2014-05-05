@@ -694,11 +694,6 @@ void fastFree( void* ptr )
 
 }
 
-CV_IMPL void cvSetMemoryManager( CvAllocFunc, CvFreeFunc, void * )
-{
-    CV_Error( -1, "Custom memory allocator is not supported" );
-}
-
 CV_IMPL void* cvAlloc( size_t size )
 {
     return cv::fastMalloc( size );

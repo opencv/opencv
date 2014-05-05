@@ -49,9 +49,11 @@
 //
 //M*/
 
+#include <iostream>
 
-#include "opencv2/opencv.hpp"
-#include "opencv2/nonfree/nonfree.hpp"
+#include "opencv2/contrib.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/nonfree.hpp"
 
 using namespace cv;
 using namespace std;
@@ -129,11 +131,11 @@ int main(int argc, char * argv[]) {
     //generate test data
     cout << "Extracting Test Data from images" << endl <<
         endl;
-    Ptr<FeatureDetector> detector =
+    Ptr<FeatureDetector> detector(
         new DynamicAdaptedFeatureDetector(
-        AdjusterAdapter::create("STAR"), 130, 150, 5);
-    Ptr<DescriptorExtractor> extractor =
-        new SurfDescriptorExtractor(1000, 4, 2, false, true);
+            AdjusterAdapter::create("STAR"), 130, 150, 5));
+    Ptr<DescriptorExtractor> extractor(
+        new SurfDescriptorExtractor(1000, 4, 2, false, true));
     Ptr<DescriptorMatcher> matcher =
         DescriptorMatcher::create("FlannBased");
 
@@ -181,8 +183,8 @@ int main(int argc, char * argv[]) {
         endl;
     Ptr<of2::FabMap> fabmap;
 
-    fabmap = new of2::FabMap2(tree, 0.39, 0, of2::FabMap::SAMPLED |
-        of2::FabMap::CHOW_LIU);
+    fabmap.reset(new of2::FabMap2(tree, 0.39, 0, of2::FabMap::SAMPLED |
+        of2::FabMap::CHOW_LIU));
     fabmap->addTraining(trainData);
 
     vector<of2::IMatch> matches;
@@ -204,7 +206,7 @@ int main(int argc, char * argv[]) {
     }
 
     Mat result_large(100, 100, CV_8UC1);
-    resize(result_small, result_large, Size(500, 500), 0, 0, CV_INTER_NN);
+    resize(result_small, result_large, Size(500, 500), 0, 0, INTER_NEAREST);
 
     cout << endl << "Press any key to exit" << endl;
     imshow("Confusion Matrix", result_large);

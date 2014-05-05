@@ -199,7 +199,7 @@ int _cvNodeMultyplicity(CvVoronoiSite2D* pSite,
 //      pLCM : in, information about graph
 //    Returns: pointer to graph node
 //F*/
-CV_IMPL
+CV_INLINE
 CvLCMNode* _cvCreateLCMNode(CvLCM* pLCM);
 
 /*F///////////////////////////////////////////////////////////////////////////////////////
@@ -211,7 +211,7 @@ CvLCMNode* _cvCreateLCMNode(CvLCM* pLCM);
 //      pLCM : in, information about graph
 //    Returns: pointer to graph edge
 //F*/
-CV_IMPL
+CV_INLINE
 CvLCMEdge* _cvCreateLCMEdge(CvLCM* pLCM);
 
 /*F///////////////////////////////////////////////////////////////////////////////////////
@@ -228,7 +228,7 @@ CvLCMEdge* _cvCreateLCMEdge(CvLCM* pLCM);
 //             =1, if node  is terminal for edge
 //    Returns:
 //F*/
-CV_IMPL
+CV_INLINE
 void _cvAttachLCMEdgeToLCMNode(CvLCMNode* LCMNode,
                                CvLCMEdge* LCMEdge,
                                CvLCMEdge* &LCMEdge_prev,
@@ -263,7 +263,7 @@ void _cvProjectionPointToSegment(CvPoint2D32f* PointO,
 //      pLCMCCNData : out
 //    Returns:
 //F*/
-CV_IMPL
+CV_INLINE
 void _cvPrepareData(CvLCMComplexNodeData* pLCMCCNData,
                     CvLCMData* pLCMData);
 
@@ -694,7 +694,7 @@ void _cvProjectionPointToSegment(CvPoint2D32f* PointO,
                                  float* dist)
 {
     float scal_AO_AB, scal_AB_AB;
-    CvPoint2D32f VectorAB = {PointB->x - PointA->x, PointB->y - PointA->y};
+    CvPoint2D32f VectorAB(PointB->x - PointA->x, PointB->y - PointA->y);
     scal_AB_AB = VectorAB.x*VectorAB.x + VectorAB.y*VectorAB.y;
     if(scal_AB_AB < LCM_CONST_ZERO)
     {
@@ -704,7 +704,7 @@ void _cvProjectionPointToSegment(CvPoint2D32f* PointO,
         return;
     }
 
-    CvPoint2D32f VectorAO = {PointO->x - PointA->x, PointO->y - PointA->y};
+    CvPoint2D32f VectorAO(PointO->x - PointA->x, PointO->y - PointA->y);
     scal_AO_AB = VectorAO.x*VectorAB.x + VectorAO.y*VectorAB.y;
 
     if(dist)

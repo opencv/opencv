@@ -57,14 +57,14 @@ void show_points( const Mat& gray, const Mat& u, const vector<Point2f>& v, Size 
     merge(vector<Mat>(3, gray), rgb);
 
     for(size_t i = 0; i < v.size(); i++ )
-        circle( rgb, v[i], 3, CV_RGB(255, 0, 0), CV_FILLED);
+        circle( rgb, v[i], 3, Scalar(255, 0, 0), FILLED);
 
     if( !u.empty() )
     {
         const Point2f* u_data = u.ptr<Point2f>();
         size_t count = u.cols * u.rows;
         for(size_t i = 0; i < count; i++ )
-            circle( rgb, u_data[i], 3, CV_RGB(0, 255, 0), CV_FILLED);
+            circle( rgb, u_data[i], 3, Scalar(0, 255, 0), FILLED);
     }
     if (!v.empty())
     {
@@ -185,13 +185,13 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
     switch( pattern )
     {
         case CHESSBOARD:
-            folder = string(ts->get_data_path()) + "cameracalibration/";
+            folder = string(ts->get_data_path()) + "cv/cameracalibration/";
             break;
         case CIRCLES_GRID:
-            folder = string(ts->get_data_path()) + "cameracalibration/circles/";
+            folder = string(ts->get_data_path()) + "cv/cameracalibration/circles/";
             break;
         case ASYMMETRIC_CIRCLES_GRID:
-            folder = string(ts->get_data_path()) + "cameracalibration/asymmetric_circles/";
+            folder = string(ts->get_data_path()) + "cv/cameracalibration/asymmetric_circles/";
             break;
     }
 
@@ -208,7 +208,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
     }
 
     int progress = 0;
-    int max_idx = board_list.node->data.seq->total/2;
+    int max_idx = (int)board_list.size()/2;
     double sum_error = 0.0;
     int count = 0;
 
@@ -217,7 +217,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         ts->update_context( this, idx, true );
 
         /* read the image */
-        string img_file = board_list[idx * 2];
+        String img_file = board_list[idx * 2];
         Mat gray = imread( folder + img_file, 0);
 
         if( gray.empty() )
@@ -227,7 +227,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
             return;
         }
 
-        string _filename = folder + (string)board_list[idx * 2 + 1];
+        String _filename = folder + (String)board_list[idx * 2 + 1];
         bool doesContatinChessboard;
         Mat expected;
         {
@@ -244,7 +244,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         switch( pattern )
         {
             case CHESSBOARD:
-                result = findChessboardCorners(gray, pattern_size, v, CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_NORMALIZE_IMAGE);
+                result = findChessboardCorners(gray, pattern_size, v, CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE);
                 break;
             case CIRCLES_GRID:
                 result = findCirclesGrid(gray, pattern_size, v);
@@ -309,8 +309,9 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         progress = update_progress( progress, idx, max_idx, 0 );
     }
 
-    sum_error /= count;
-    ts->printf(cvtest::TS::LOG, "Average error is %f\n", sum_error);
+    if (count != 0)
+        sum_error /= count;
+    ts->printf(cvtest::TS::LOG, "Average error is %f (%d patterns have been found)\n", sum_error, count);
 }
 
 double calcErrorMinError(const Size& cornSz, const vector<Point2f>& corners_found, const vector<Point2f>& corners_generated)
@@ -459,7 +460,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
         vector<Point>& cnt = cnts[0];
         cnt.push_back(cg[  0]); cnt.push_back(cg[0+2]);
         cnt.push_back(cg[7+0]); cnt.push_back(cg[7+2]);
-        cv::drawContours(cb, cnts, -1, Scalar::all(128), CV_FILLED);
+        cv::drawContours(cb, cnts, -1, Scalar::all(128), FILLED);
 
         found = findChessboardCorners(cb, cbg.cornersSize(), corners_found);
         if (found)

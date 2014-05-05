@@ -3,7 +3,7 @@ package org.opencv.core;
 import java.util.Arrays;
 import java.util.List;
 
-import org.opencv.features2d.DMatch;
+import org.opencv.core.DMatch;
 
 public class MatOfDMatch extends Mat {
     // 32FC4

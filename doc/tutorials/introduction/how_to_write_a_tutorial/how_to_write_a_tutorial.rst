@@ -20,12 +20,10 @@ is an extension of these efforts.
 
 Goal
 ====
+
 .. _reST: http://docutils.sourceforge.net/rst.html
-
 .. |reST| replace:: reStructuredText
-
 .. |Sphinx| replace:: Sphinx
-
 .. _Sphinx: http://sphinx.pocoo.org/
 
 The tutorials are just as an important part of the library as the implementation of
@@ -40,23 +38,26 @@ way to create and edit documents. Sphinx extends this with some new features and
 creates the resulting document in both HTML (for web) and PDF (for offline usage)
 format.
 
+
 Usually, an OpenCV tutorial has the following parts:
 
-  1. A source code demonstration of an OpenCV feature:
+1. A source code demonstration of an OpenCV feature:
 
-    a. One or more CPP, Python, Java or other type of files depending for what OpenCV offers support and for what language you make the tutorial.
-    #. Occasionaly, input resource files required for running your tutorials application.
+   a. One or more CPP, Python, Java or other type of files depending for what OpenCV offers support and for what language you make the tutorial.
+   #. Occasionaly, input resource files required for running your tutorials application.
 
-  2. A table of content entry (so people may easily find the tutorial):
 
-    a. Adding your stuff to the tutorials table of content (**reST** file).
-    #. Add an image file near the TOC entry.
+#. A table of content entry (so people may easily find the tutorial):
 
-  3. The content of the tutorial itself:
+   a. Adding your stuff to the tutorials table of content (**reST** file).
+   #. Add an image file near the TOC entry.
 
-    a. The **reST** text of the tutorial
-    #. Images following the idea that "*A picture is worth a thousand words*".
-    #. For more complex demonstrations you may create a video.
+
+#. The content of the tutorial itself:
+
+   a. The **reST** text of the tutorial
+   #. Images following the idea that "*A picture is worth a thousand words*".
+   #. For more complex demonstrations you may create a video.
 
 As you can see you will need at least some basic knowledge of the *reST* system in order to complete the task at hand with success. However, don't worry *reST* (and *Sphinx*) was made with simplicity in mind. It is easy to grasp its basics. I found that the `OpenAlea documentations introduction on this subject <http://openalea.gforge.inria.fr/doc/openalea/doc/_build/html/source/tutorial/rest_syntax.html>`_ (or the `Thomas Cokelaer one <http://thomas-cokelaer.info/tutorials/sphinx/rest_syntax.html>`_ ) should enough for this. If for some directive or feature you need a more in-depth description look it up in the official |reST|_ help files or at the |Sphinx|_ documentation.
 
@@ -66,10 +67,12 @@ Now the best would be if you could make the integration yourself. For this you n
 
 Once you have downloaded the repository to your hard drive you can take a look in the OpenCV directory to make sure you have both the samples and doc folder present. Anyone may download the latest source files from :file:`git://github.com/Itseez/opencv.git` . Nevertheless, not everyone has upload (commit/submit) rights. This is to protect the integrity of the library. If you plan doing more than one tutorial, and would like to have an account with commit user rights you should first register an account at http://code.opencv.org/ and then contact OpenCV administrator -delete-admin@-delete-opencv.org. Otherwise, you can just send the resulting files to us at -delete-admin@-delete-opencv.org and we'll add it.
 
+
 Format the Source Code
 ======================
 
 Before I start this let it be clear: the main goal is to have a working sample code. However, for your tutorial to be of a top notch quality you should follow a few guide lines I am going to present here. In case you have an application by using the older interface (with *IplImage*, *cvMat*, *cvLoadImage* and such) consider migrating it to the new C++ interface. The tutorials are intended to be an up to date help for our users. And as of OpenCV 2 the OpenCV emphasis on using the less error prone and clearer C++ interface. Therefore, if possible please convert your code to the C++ interface. For this it may help to read the :ref:`InteroperabilityWithOpenCV1` tutorial. However, once you have an OpenCV 2 working code, then you should make your source code snippet as easy to read as possible. Here're a couple of advices for this:
+
 
 .. container:: enumeratevisibleitemswithsquare
 
@@ -122,9 +125,13 @@ Navigate to the :file:`opencv/doc/tutorials/section/table_of_content_section` fo
 
    Section title
    -----------------------------------------------------------
+
    Description about the section.
+
    .. include:: ../../definitions/noContent.rst
+
    .. raw:: latex
+
       \pagebreak
 
 The first line is a reference to the section title in the reST system. The section title will be a link and you may refer to it via the ``:ref:`` directive. The *include* directive imports the template text from the definitions directories *noContent.rst* file. *Sphinx* does not creates the PDF from scratch. It does this by first creating a latex file. Then creates the PDF from the latex file. With the *raw* directive you can directly add to this output commands. Its unique argument is for what kind of output to add the content of the directive. For the PDFs it may happen that multiple sections will overlap on a single page. To avoid this at the end of the TOC we add a *pagebreak* latex command, that hints to the LATEX system that the next line should be on a new page.
@@ -136,28 +143,38 @@ If you have one of this, try to transform it to the following form:
 .. code-block:: rst
 
    .. _Table-Of-Content-Section:
+
    Section title
    -----------------------------------------------------------
+
    .. include:: ../../definitions/tocDefinitions.rst
+
    +
      .. tabularcolumns:: m{100pt} m{300pt}
      .. cssclass:: toctableopencv
+
      =============== ======================================================
       |MatBasicIma|  **Title:** :ref:`matTheBasicImageContainer`
+
                      *Compatibility:* > OpenCV 2.0
+
                      *Author:* |Author_BernatG|
+
                      You will learn how to store images in the memory and how to print out their content to the console.
+
      =============== =====================================================
+
      .. |MatBasicIma| image:: images/matTheBasicImageStructure.jpg
                       :height: 90pt
                       :width:  90pt
+
    .. raw:: latex
 
       \pagebreak
 
    .. toctree::
-
       :hidden:
+
       ../mat - the basic image container/mat - the basic image container
 
 If this is already present just add a new section of the content between the include and the raw directives (excluding those lines). Here you'll see a new include directive. This should be present only once in a TOC tree and the reST file contains the definitions of all the authors contributing to the OpenCV tutorials. We are a multicultural community and some of our name may contain some funky characters. However, reST **only supports** ANSI characters. Luckily we can specify Unicode characters with the *unicode* directive. Doing this for all of your tutorials is a troublesome procedure. Therefore, the tocDefinitions file contains the definition of your author name. Add it here once and afterwards just use the replace construction. For example here's the definition for my name:
@@ -167,18 +184,24 @@ If this is already present just add a new section of the content between the inc
    .. |Author_BernatG| unicode:: Bern U+00E1 t U+0020 G U+00E1 bor
 
 The ``|Author_BernatG|`` is the text definitions alias. I can use later this to add the definition, like I've done in the TOCs *Author* part. After the ``::`` and a space you start the definition. If you want to add an UNICODE character (non-ASCI) leave an empty space and specify it in the format U+(UNICODE code). To find the UNICODE code of a character I recommend using the `FileFormat <http://www.fileformat.info>`_ websites service. Spaces are trimmed from the definition, therefore we add a space by its UNICODE character (U+0020).
+
 Until the *raw* directive what you can see is a TOC tree entry. Here's how a TOC entry will look like:
 
-.. code-block:: rst
-
++
   .. tabularcolumns:: m{100pt} m{300pt}
   .. cssclass:: toctableopencv
+
   =============== ======================================================
    |MatBasicIma|  **Title:** :ref:`matTheBasicImageContainer`
+
                   *Compatibility:* > OpenCV 2.0
+
                   *Author:* |Author_BernatG|
+
                   You will learn how to store images in the memory and how to print out their content to the console.
+
   =============== ======================================================
+
   .. |MatBasicIma| image:: images/matTheBasicImageStructure.jpg
                    :height: 90pt
                    :width:  90pt
@@ -187,11 +210,15 @@ As you can see we have an image to the left and a description box to the right. 
 
 Now your images should be as small as possible, while still offering the intended information for the user. Remember that the tutorial will become part of the OpenCV source code. If you add large images (that manifest in form of large image size) it will just increase the size of the repository pointlessly. If someone wants to download it later, its download time will be that much longer. Not to mention the larger PDF size for the tutorials and the longer load time for the web pages. In terms of pixels a TOC image should not be larger than 120 X 120 pixels. Resize your images if they are larger!
 
-.. note:: If you add a larger image and specify a smaller image size, *Sphinx* will not resize that. At build time will add the full size image and the resize will be done by your browser after the image is loaded. A 120 X 120 image is somewhere below 10KB. If you add a 110KB image, you have just pointlessly added a 100KB extra data to transfer over the internet for every user!
+.. note::
+
+   If you add a larger image and specify a smaller image size, *Sphinx* will not resize that. At build time will add the full size image and the resize will be done by your browser after the image is loaded. A 120 X 120 image is somewhere below 10KB. If you add a 110KB image, you have just pointlessly added a 100KB extra data to transfer over the internet for every user!
 
 Generally speaking you shouldn't need to specify your images size (excluding the TOC entries). If no such is found *Sphinx* will use the size of the image itself (so no resize occurs). Then again if for some reason you decide to specify a size that should be the **width** of the image rather than its height. The reason for this again goes back to the PDFs. On a PDF page the height is larger than the width. In the PDF the images will not be resized. If you specify a size that does not fit in the page, then what does not fits in **will be cut off**. When creating your images for your tutorial you should try to keep the image widths below 500 pixels, and calculate with around 400 point page width when specifying image widths.
 
-The image format depends on the content of the image. If you have some complex scene (many random like colors) then use *jpg*. Otherwise, prefer using *png*. They are even some tools out there that optimize the size of *PNG* images, such as `PNGGauntlet <http://pnggauntlet.com/>`_. Use them to make your images as small as possible in size. Now on the right side column of the table we add the information about the tutorial:
+The image format depends on the content of the image. If you have some complex scene (many random like colors) then use *jpg*. Otherwise, prefer using *png*. They are even some tools out there that optimize the size of *PNG* images, such as `PNGGauntlet <http://pnggauntlet.com/>`_. Use them to make your images as small as possible in size.
+
+Now on the right side column of the table we add the information about the tutorial:
 
 .. container:: enumeratevisibleitemswithsquare
 
@@ -200,12 +227,16 @@ The image format depends on the content of the image. If you have some complex s
      .. code-block:: rst
 
         .. _matTheBasicImageContainer:
+
            Mat - The Basic Image Container
            *******************************
 
      Note, that according to the |reST|_ rules the * should be as long as your title.
+
    + Compatibility. What version of OpenCV is required to run your sample code.
+
    + Author. Use the substitution markup of |reST|_.
+
    + A short sentence describing the essence of your tutorial.
 
 Now before each TOC entry you need to add the three lines of:
@@ -229,12 +260,15 @@ It turns out that the automatic formatting of both the HTML and PDF(LATEX) syste
     width: 100% ;
     table-layout: fixed;
    }
+
+
    .toctableopencv colgroup col:first-child
    {
     width: 100pt !important;
     max-width: 100pt !important;
     min-width: 100pt !important;
    }
+
    .toctableopencv colgroup col:nth-child(2)
    {
     width: 100% !important;
@@ -245,9 +279,12 @@ However, you should not need to modify this. Just add these three lines (plus ke
 .. code-block:: rst
 
    .. raw:: latex
+
       \pagebreak
+
    .. toctree::
       :hidden:
+
       ../mat - the basic image container/mat - the basic image container
 
 The page break entry comes for separating sections and should be only one in a TOC tree |reST|_ file. Finally, at the end of the TOC tree we need to add our tutorial to the *Sphinx* TOC tree system. *Sphinx* will generate from this the previous-next-up information for the HTML file and add items to the PDF according to the order here. By default this TOC tree directive generates a simple table of contents. However, we already created a fancy looking one so we no longer need this basic one. Therefore, we add the *hidden* option to do not show it.
@@ -261,6 +298,7 @@ Create a folder with the name of your tutorial. Preferably, use small letters on
 
 Now here's our recommendation for the structure of the tutorial (although, remember that this is not carved in the stone; if you have a better idea, use it!):
 
+
 .. container:: enumeratevisibleitemswithsquare
 
    + Create the reference point and the title.
@@ -268,20 +306,24 @@ Now here's our recommendation for the structure of the tutorial (although, remem
      .. code-block:: rst
 
         .. _matTheBasicImageContainer:
+
         Mat - The Basic Image Container
         *******************************
 
      You start the tutorial by specifying a reference point by the ``.. _matTheBasicImageContainer:`` and then its title. The name of the reference point should be a unique one over the whole documentation. Therefore, do not use general names like *tutorial1*. Use the * character to underline the title for its full width. The subtitles of the tutorial should be underlined with = charachter.
+
    + Goals. You start your tutorial by specifying what you will present. You can also enumerate the sub jobs to be done. For this you can use a bullet point construction. There is a single configuration file for both the reference manual and the tutorial documentation. In the reference manuals at the argument enumeration we do not want any kind of bullet point style enumeration. Therefore, by default all the bullet points at this level are set to do not show the dot before the entries in the HTML. You can override this by putting the bullet point in a container. I've defined a square type bullet point view under the name *enumeratevisibleitemswithsquare*. The CSS style definition for this is again in the  :file:`opencv\doc\_themes\blue\static\default.css_t` file. Here's a quick example of using it:
 
      .. code-block:: rst
 
         .. container:: enumeratevisibleitemswithsquare
+
            + Create the reference point and the title.
            + Second entry
            + Third entry
 
      Note that you need the keep the indentation of the container directive. Directive indentations are always three (3) spaces. Here you may even give usage tips for your sample code.
+
    + Source code. Present your samples code to the user. It's a good idea to offer a quick download link for the HTML page by using the *download* directive and pointing out where the user may find your source code in the file system by using the *file* directive:
 
      .. code-block:: rst
@@ -295,6 +337,7 @@ Now here's our recommendation for the structure of the tutorial (although, remem
      .. code-block:: rst
 
         .. code-block:: cpp
+
            int i = 0;
            l = ++j;
 
@@ -309,7 +352,9 @@ Now here's our recommendation for the structure of the tutorial (although, remem
            :lines: 1-8, 21-22, 24-
 
      After the directive you specify a relative path to the file from what to import. It has four options: the language to use, if you add the ``:linenos:`` the line numbers will be shown, you can specify the tab size with the ``:tab-width:`` and you do not need to load the whole file, you can show just the important lines. Use the *lines* option to do not show redundant information (such as the *help* function). Here basically you specify ranges, if the second range line number is missing than that means that until the end of the file. The ranges specified here do no need to be in an ascending order, you may even reorganize the structure of how you want to show your sample inside the tutorial.
+
    + The tutorial. Well here goes the explanation for why and what have you used. Try to be short, clear, concise and yet a thorough one. There's no magic formula. Look into a few already made tutorials and start out from there. Try to mix sample OpenCV code with your explanations. If with words is hard to describe something do not hesitate to add in a reasonable size image, to overcome this issue.
+
      When you present OpenCV functionality it's a good idea to give a link to the used OpenCV data structure or function. Because the OpenCV tutorials and reference manual are in separate PDF files it is not possible to make this link work for the PDF format. Therefore, we use here only web page links to the http://docs.opencv.org website. The OpenCV functions and data structures may be used for multiple tasks. Nevertheless, we want to avoid that every users creates its own reference to a commonly used function. So for this we use the global link collection of *Sphinx*. This is defined in the file:`opencv/doc/conf.py` configuration file. Open it and go all the way down to the last entry:
 
      .. code-block:: py
@@ -326,11 +371,13 @@ Now here's our recommendation for the structure of the tutorial (although, remem
        A sample function of the highgui modules image write and read page is the :hgvideo:`imread() function <imread>`.
 
      Which turns to: A sample function of the highgui modules image write and read page is the :hgvideo:`imread() function <imread>`. The argument you give between the <> will be put in place of the ``%s`` in the upper definition, and as the link will anchor to the correct function. To find out the anchor of a given function just open up a web page, search for the function and click on it. In the address bar it should appear like: ``http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html#imread`` .  Look here for the name of the directives for each page of the OpenCV reference manual. If none present for one of them feel free to add one for it.
+
      For formulas you can add LATEX code that will translate in the web pages into images. You do this by using the *math* directive. A usage tip:
 
      .. code-block:: latex
 
         .. math::
+
            MSE = \frac{1}{c*i*j} \sum{(I_1-I_2)^2}
 
      That after build turns into:
@@ -340,8 +387,11 @@ Now here's our recommendation for the structure of the tutorial (although, remem
         MSE = \frac{1}{c*i*j} \sum{(I_1-I_2)^2}
 
      You can even use it inline as ``:math:` MSE = \frac{1}{c*i*j} \sum{(I_1-I_2)^2}``` that turns into :math:`MSE = \frac{1}{c*i*j} \sum{(I_1-I_2)^2}`.
+
      If you use some crazy LATEX library extension you need to add those to the ones to use at build time. Look into the file:`opencv/doc/conf.py` configuration file for more information on this.
+
    + Results. Well, here depending on your program show one of more of the following:
+
      - Console outputs by using the code block directive.
      - Output images.
      - Runtime videos, visualization. For this use your favorite screens capture software. `Camtasia Studio <http://www.techsmith.com/camtasia/>`_ certainly is one of the better choices, however their prices are out of this world. `CamStudio <http://camstudio.org/>`_ is a free alternative, but less powerful. If you do a video you can upload it to YouTube and then use the raw directive with HTML option to embed it into the generated web page:
@@ -365,8 +415,11 @@ Now here's our recommendation for the structure of the tutorial (although, remem
           </div>
 
      When these aren't self-explanatory make sure to throw in a few guiding lines about what and why we can see.
+
    + Build the documentation and check for errors or warnings. In the CMake make sure you check or pass the option for building documentation. Then simply build the **docs** project for the PDF file and the **docs_html** project for the web page. Read the output of the build and check for errors/warnings for what you have added. This is also the time to observe and correct any kind of *not so good looking* parts. Remember to keep clean our build logs.
+
    + Read again your tutorial and check for both programming and spelling errors. If found any, please correct them.
+
 
 Take home the pride and joy of a job well done!
 ===============================================

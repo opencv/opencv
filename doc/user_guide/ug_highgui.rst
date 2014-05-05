@@ -69,7 +69,7 @@ For getting several data maps use ``VideoCapture::grab`` and ``VideoCapture::ret
     for(;;)
     {
         Mat depthMap;
-        Mat rgbImage
+        Mat bgrImage;
 
         capture.grab();
 

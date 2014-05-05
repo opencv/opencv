@@ -1,6 +1,7 @@
+#include <opencv2/core/utility.hpp>
 #include "opencv2/video/tracking.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <iostream>
 #include <ctype.h>
@@ -32,12 +33,12 @@ static void onMouse( int event, int x, int y, int, void* )
 
     switch( event )
     {
-    case CV_EVENT_LBUTTONDOWN:
+    case EVENT_LBUTTONDOWN:
         origin = Point(x,y);
         selection = Rect(x,y,0,0);
         selectObject = true;
         break;
-    case CV_EVENT_LBUTTONUP:
+    case EVENT_LBUTTONUP:
         selectObject = false;
         if( selection.width > 0 && selection.height > 0 )
             trackObject = -1;
@@ -64,7 +65,7 @@ static void help()
 
 const char* keys =
 {
-    "{1|  | 0 | camera number}"
+    "{@camera_number| 0 | camera number}"
 };
 
 int main( int argc, const char** argv )
@@ -77,7 +78,7 @@ int main( int argc, const char** argv )
     float hranges[] = {0,180};
     const float* phranges = hranges;
     CommandLineParser parser(argc, argv, keys);
-    int camNum = parser.get<int>("1");
+    int camNum = parser.get<int>(0);
 
     cap.open(camNum);
 
@@ -86,7 +87,7 @@ int main( int argc, const char** argv )
         help();
         cout << "***Could not initialize capturing...***\n";
         cout << "Current parameter's value: \n";
-        parser.printParams();
+        parser.printMessage();
         return -1;
     }
 
@@ -129,7 +130,7 @@ int main( int argc, const char** argv )
                 {
                     Mat roi(hue, selection), maskroi(mask, selection);
                     calcHist(&roi, 1, 0, maskroi, hist, 1, &hsize, &phranges);
-                    normalize(hist, hist, 0, 255, CV_MINMAX);
+                    normalize(hist, hist, 0, 255, NORM_MINMAX);
 
                     trackWindow = selection;
                     trackObject = 1;
@@ -139,7 +140,7 @@ int main( int argc, const char** argv )
                     Mat buf(1, hsize, CV_8UC3);
                     for( int i = 0; i < hsize; i++ )
                         buf.at<Vec3b>(i) = Vec3b(saturate_cast<uchar>(i*180./hsize), 255, 255);
-                    cvtColor(buf, buf, CV_HSV2BGR);
+                    cvtColor(buf, buf, COLOR_HSV2BGR);
 
                     for( int i = 0; i < hsize; i++ )
                     {
@@ -153,7 +154,7 @@ int main( int argc, const char** argv )
                 calcBackProject(&hue, 1, 0, hist, backproj, &phranges);
                 backproj &= mask;
                 RotatedRect trackBox = CamShift(backproj, trackWindow,
-                                    TermCriteria( CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 10, 1 ));
+                                    TermCriteria( TermCriteria::EPS | TermCriteria::COUNT, 10, 1 ));
                 if( trackWindow.area() <= 1 )
                 {
                     int cols = backproj.cols, rows = backproj.rows, r = (MIN(cols, rows) + 5)/6;
@@ -164,7 +165,7 @@ int main( int argc, const char** argv )
 
                 if( backprojMode )
                     cvtColor( backproj, image, COLOR_GRAY2BGR );
-                ellipse( image, trackBox, Scalar(0,0,255), 3, CV_AA );
+                ellipse( image, trackBox, Scalar(0,0,255), 3, LINE_AA );
             }
         }
         else if( trackObject < 0 )

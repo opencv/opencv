@@ -6,6 +6,7 @@
 
 #include <cstdio>
 
+using namespace std;
 using namespace cv;
 
 static void help()
@@ -32,15 +33,15 @@ int main(int argc, char** argv)
     std::string params_filename = std::string(argv[4]);
 
     Ptr<GenericDescriptorMatcher> descriptorMatcher = GenericDescriptorMatcher::create(alg_name, params_filename);
-    if( descriptorMatcher == 0 )
+    if( !descriptorMatcher )
     {
         printf ("Cannot create descriptor\n");
         return 0;
     }
 
     //printf("Reading the images...\n");
-    Mat img1 = imread(img1_name, CV_LOAD_IMAGE_GRAYSCALE);
-    Mat img2 = imread(img2_name, CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img1 = imread(img1_name, IMREAD_GRAYSCALE);
+    Mat img2 = imread(img2_name, IMREAD_GRAYSCALE);
 
     // extract keypoints from the first image
     SURF surf_extractor(5.0e3);

@@ -42,7 +42,7 @@
 #include "precomp.hpp"
 #include <stdio.h>
 #include <iostream>
-#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/calib3d.hpp"
 #include "opencv2/contrib/hybridtracker.hpp"
 
 #ifdef HAVE_OPENCV_NONFREE
@@ -60,7 +60,7 @@ CvFeatureTracker::CvFeatureTracker(CvFeatureTrackerParams _params) :
     {
     case CvFeatureTrackerParams::SIFT:
         dd = Algorithm::create<Feature2D>("Feature2D.SIFT");
-        if( dd.empty() )
+        if( !dd )
             CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without SIFT support");
         dd->set("nOctaveLayers", 5);
         dd->set("contrastThreshold", 0.04);
@@ -68,7 +68,7 @@ CvFeatureTracker::CvFeatureTracker(CvFeatureTrackerParams _params) :
         break;
     case CvFeatureTrackerParams::SURF:
         dd = Algorithm::create<Feature2D>("Feature2D.SURF");
-        if( dd.empty() )
+        if( !dd )
             CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without SURF support");
         dd->set("hessianThreshold", 400);
         dd->set("nOctaves", 3);
@@ -79,7 +79,7 @@ CvFeatureTracker::CvFeatureTracker(CvFeatureTrackerParams _params) :
         break;
     }
 
-    matcher = new BFMatcher(NORM_L2);
+    matcher = makePtr<BFMatcher>(int(NORM_L2));
 }
 
 CvFeatureTracker::~CvFeatureTracker()
@@ -89,7 +89,7 @@ CvFeatureTracker::~CvFeatureTracker()
 void CvFeatureTracker::newTrackingWindow(Mat image, Rect selection)
 {
     image.copyTo(prev_image);
-    cvtColor(prev_image, prev_image_bw, CV_BGR2GRAY);
+    cvtColor(prev_image, prev_image_bw, COLOR_BGR2GRAY);
     prev_trackwindow = selection;
     prev_center.x = selection.x;
     prev_center.y = selection.y;
@@ -107,8 +107,8 @@ Rect CvFeatureTracker::updateTrackingWindow(Mat image)
 Rect CvFeatureTracker::updateTrackingWindowWithSIFT(Mat image)
 {
     ittr++;
-    vector<KeyPoint> prev_keypoints, curr_keypoints;
-    vector<Point2f> prev_keys, curr_keys;
+    std::vector<KeyPoint> prev_keypoints, curr_keypoints;
+    std::vector<Point2f> prev_keys, curr_keys;
     Mat prev_desc, curr_desc;
 
     Rect window = prev_trackwindow;
@@ -140,7 +140,7 @@ Rect CvFeatureTracker::updateTrackingWindowWithSIFT(Mat image)
             curr_keys.push_back(curr_keypoints[matches[i].trainIdx].pt);
         }
 
-        Mat T = findHomography(prev_keys, curr_keys, CV_LMEDS);
+        Mat T = findHomography(prev_keys, curr_keys, LMEDS);
 
         prev_trackwindow.x += cvRound(T.at<double> (0, 2));
         prev_trackwindow.y += cvRound(T.at<double> (1, 2));
@@ -157,12 +157,12 @@ Rect CvFeatureTracker::updateTrackingWindowWithFlow(Mat image)
     ittr++;
     Size subPixWinSize(10,10), winSize(31,31);
     Mat image_bw;
-    TermCriteria termcrit(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.03);
-    vector<uchar> status;
-    vector<float> err;
+    TermCriteria termcrit(TermCriteria::COUNT | TermCriteria::EPS, 20, 0.03);
+    std::vector<uchar> status;
+    std::vector<float> err;
 
-    cvtColor(image, image_bw, CV_BGR2GRAY);
-    cvtColor(prev_image, prev_image_bw, CV_BGR2GRAY);
+    cvtColor(image, image_bw, COLOR_BGR2GRAY);
+    cvtColor(prev_image, prev_image_bw, COLOR_BGR2GRAY);
 
     if (ittr == 1)
     {

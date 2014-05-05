@@ -23,9 +23,9 @@ OpenCV 2 received reorganization. No longer are all the functions crammed into a
 
 .. code-block:: cpp
 
-   #include <opencv2/core/core.hpp>
-   #include <opencv2/imgproc/imgproc.hpp>
-   #include <opencv2/highgui/highgui.hpp>
+   #include <opencv2/core.hpp>
+   #include <opencv2/imgproc.hpp>
+   #include <opencv2/highgui.hpp>
 
 
 All the OpenCV related stuff is put into the *cv* namespace to avoid name conflicts with other libraries data structures and functions. Therefore, either you need to prepend the *cv::* keyword before everything that comes from OpenCV or after the includes, you just add a directive to use this:

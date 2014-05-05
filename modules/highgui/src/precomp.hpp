@@ -42,12 +42,13 @@
 #ifndef __HIGHGUI_H_
 #define __HIGHGUI_H_
 
-#include "cvconfig.h"
+#include "opencv2/highgui.hpp"
 
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/highgui/highgui_c.h"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/core/private.hpp"
+
 #include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/core/internal.hpp"
+#include "opencv2/highgui/highgui_c.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -135,8 +136,6 @@ CvCapture* cvCreateFileCapture_OpenNI( const char* filename );
 CvCapture* cvCreateCameraCapture_Android( int index );
 CvCapture* cvCreateCameraCapture_XIMEA( int index );
 CvCapture* cvCreateCameraCapture_AVFoundation(int index);
-CvCapture* cvCreateCameraCapture_IntelPerC(int index);
-
 
 CVAPI(int) cvHaveImageReader(const char* filename);
 CVAPI(int) cvHaveImageWriter(const char* filename);
@@ -197,6 +196,20 @@ double cvGetRatioWindow_GTK(const char* name);
 double cvGetOpenGlProp_W32(const char* name);
 double cvGetOpenGlProp_GTK(const char* name);
 
+namespace cv
+{
+    class IVideoCapture
+    {
+    public:
+        virtual ~IVideoCapture() {}
+        virtual double getProperty(int) { return 0; }
+        virtual bool setProperty(int, double) { return 0; }
+        virtual bool grabFrame() = 0;
+        virtual bool retrieveFrame(int, cv::OutputArray) = 0;
+        virtual int getCaptureDomain() { return CAP_ANY; } // Return the type of the capture object: CAP_VFW, etc...
+    };
+};
+
 //for QT
 #if defined (HAVE_QT)
 double cvGetModeWindow_QT(const char* name);
@@ -210,42 +223,5 @@ void cvSetRatioWindow_QT(const char* name,double prop_value);
 
 double cvGetOpenGlProp_QT(const char* name);
 #endif
-
-
-
-/*namespace cv
-{
-
-class CV_EXPORTS BaseWindow
-{
-public:
-    BaseWindow(const String& name, int flags=0);
-    virtual ~BaseWindow();
-    virtual void close();
-    virtual void show(const Mat& mat);
-    virtual void resize(Size size);
-    virtual void move(Point topleft);
-    virtual Size size() const;
-    virtual Point topLeft() const;
-    virtual void setGeometry(Point topLeft, Size size);
-    virtual void getGeometry(Point& topLeft, Size& size) const;
-    virtual String getTitle() const;
-    virtual void setTitle(const String& str);
-    virtual String getName() const;
-    virtual void setScaleMode(int mode);
-    virtual int getScaleMode();
-    virtual void setScrollPos(double pos);
-    virtual double getScrollPos() const;
-    virtual void setScale(double scale);
-    virtual double getScale() const;
-    virtual Point getImageCoords(Point pos) const;
-    virtual Scalar getPixelValue(Point pos, const String& colorspace=String()) const;
-
-    virtual void addTrackbar( const String& trackbar, int low, int high, int step );
-};
-
-typedef Ptr<BaseWindow> Window;
-
-}*/
 
 #endif /* __HIGHGUI_H_ */

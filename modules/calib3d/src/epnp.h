@@ -2,6 +2,7 @@
 #define epnp_h
 
 #include "precomp.hpp"
+#include "opencv2/core/core_c.h"
 
 class epnp {
  public:
@@ -73,7 +74,6 @@ class epnp {
   int number_of_correspondences;
 
   double cws[4][3], ccs[4][3];
-  double cws_determinant;
   int max_nr;
   double * A1, * A2;
 };

@@ -4,7 +4,7 @@
  * @author Ozan Cagri Tonkal
  */
 
-#include <opencv2/viz/vizcore.hpp>
+#include <opencv2/viz.hpp>
 #include <opencv2/viz/widget_accessor.hpp>
 #include <iostream>
 

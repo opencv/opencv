@@ -34,14 +34,14 @@ int newMaskVal = 255;
 
 static void onMouse( int event, int x, int y, int, void* )
 {
-    if( event != CV_EVENT_LBUTTONDOWN )
+    if( event != EVENT_LBUTTONDOWN )
         return;
 
     Point seed = Point(x,y);
     int lo = ffillMode == 0 ? 0 : loDiff;
     int up = ffillMode == 0 ? 0 : upDiff;
     int flags = connectivity + (newMaskVal << 8) +
-                (ffillMode == 1 ? CV_FLOODFILL_FIXED_RANGE : 0);
+                (ffillMode == 1 ? FLOODFILL_FIXED_RANGE : 0);
     int b = (unsigned)theRNG() & 255;
     int g = (unsigned)theRNG() & 255;
     int r = (unsigned)theRNG() & 255;
@@ -53,7 +53,7 @@ static void onMouse( int event, int x, int y, int, void* )
 
     if( useMask )
     {
-        threshold(mask, mask, 1, 128, CV_THRESH_BINARY);
+        threshold(mask, mask, 1, 128, THRESH_BINARY);
         area = floodFill(dst, mask, seed, newVal, &ccomp, Scalar(lo, lo, lo),
                   Scalar(up, up, up), flags);
         imshow( "mask", mask );

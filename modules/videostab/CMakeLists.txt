@@ -1,6 +1,3 @@
 set(the_description "Video stabilization")
-if(ENABLE_DYNAMIC_CUDA)
-  ocv_define_module(videostab opencv_imgproc opencv_features2d opencv_video opencv_photo opencv_calib3d opencv_highgui)
-else()
-  ocv_define_module(videostab opencv_imgproc opencv_features2d opencv_video opencv_photo opencv_calib3d opencv_highgui OPTIONAL opencv_gpu)
-endif()
+ocv_define_module(videostab opencv_imgproc opencv_features2d opencv_video opencv_photo opencv_calib3d
+                  OPTIONAL opencv_cuda opencv_cudawarping opencv_cudaoptflow opencv_highgui)

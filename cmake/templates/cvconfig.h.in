@@ -31,6 +31,9 @@
 /* AMD's OpenCL Fast Fourier Transform Library*/
 #cmakedefine HAVE_CLAMDFFT
 
+/* Clp support */
+#cmakedefine HAVE_CLP
+
 /* Cocoa API */
 #cmakedefine HAVE_COCOA
 
@@ -51,6 +54,12 @@
 
 /* IEEE1394 capturing support - libdc1394 v2.x */
 #cmakedefine HAVE_DC1394_2
+
+/* DirectX */
+#cmakedefine HAVE_DIRECTX
+#cmakedefine HAVE_D3D11
+#cmakedefine HAVE_D3D10
+#cmakedefine HAVE_D3D9
 
 /* DirectShow Video Capture library */
 #cmakedefine HAVE_DSHOW
@@ -73,23 +82,21 @@
 /* GTK+ 2.0 Thread support */
 #cmakedefine HAVE_GTHREAD
 
-/* Windows Runtime support */
-#cmakedefine HAVE_WINRT
-
-/* Win32 UI */
-#cmakedefine HAVE_WIN32UI
-
 /* GTK+ 2.x toolkit */
 #cmakedefine HAVE_GTK
 
-/* Apple ImageIO Framework */
-#cmakedefine HAVE_IMAGEIO
+/* Define to 1 if you have the <inttypes.h> header file. */
+#cmakedefine HAVE_INTTYPES_H 1
 
 /* Intel Perceptual Computing SDK library */
 #cmakedefine HAVE_INTELPERC
 
 /* Intel Integrated Performance Primitives */
 #cmakedefine HAVE_IPP
+#cmakedefine HAVE_IPP_ICV_ONLY
+
+/* Intel IPP Async */
+#cmakedefine HAVE_IPP_A
 
 /* JPEG-2000 codec */
 #cmakedefine HAVE_JASPER
@@ -154,6 +161,9 @@
 
 /* Win32 UI */
 #cmakedefine HAVE_WIN32UI
+
+/* Windows Runtime support */
+#cmakedefine HAVE_WINRT
 
 /* XIMEA camera support */
 #cmakedefine HAVE_XIMEA

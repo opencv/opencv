@@ -75,13 +75,13 @@ LogPolar_Interp::LogPolar_Interp(int w, int h, Point2i center, int _R, double _r
         int rtmp;
 
         if (center.x<=w/2 && center.y>=h/2)
-            rtmp=(int)sqrt((float)center.y*center.y + (float)(w-center.x)*(w-center.x));
+            rtmp=(int)std::sqrt((float)center.y*center.y + (float)(w-center.x)*(w-center.x));
         else if (center.x>=w/2 && center.y>=h/2)
-            rtmp=(int)sqrt((float)center.y*center.y + (float)center.x*center.x);
+            rtmp=(int)std::sqrt((float)center.y*center.y + (float)center.x*center.x);
         else if (center.x>=w/2 && center.y<=h/2)
-            rtmp=(int)sqrt((float)(h-center.y)*(h-center.y) + (float)center.x*center.x);
+            rtmp=(int)std::sqrt((float)(h-center.y)*(h-center.y) + (float)center.x*center.x);
         else //if (center.x<=w/2 && center.y<=h/2)
-            rtmp=(int)sqrt((float)(h-center.y)*(h-center.y) + (float)(w-center.x)*(w-center.x));
+            rtmp=(int)std::sqrt((float)(h-center.y)*(h-center.y) + (float)(w-center.x)*(w-center.x));
 
         M=2*rtmp; N=2*rtmp;
 
@@ -97,8 +97,8 @@ LogPolar_Interp::LogPolar_Interp(int w, int h, Point2i center, int _R, double _r
 
     if (sp){
         int jc=M/2-1, ic=N/2-1;
-        int _romax=min(ic, jc);
-        double _a=exp(log((double)(_romax/2-1)/(double)ro0)/(double)R);
+        int _romax=std::min(ic, jc);
+        double _a=std::exp(std::log((double)(_romax/2-1)/(double)ro0)/(double)R);
         S=(int) floor(2*CV_PI/(_a-1)+0.5);
     }
 
@@ -116,8 +116,8 @@ void LogPolar_Interp::create_map(int _M, int _n, int _R, int _s, double _ro0)
     ro0=_ro0;
 
     int jc=N/2-1, ic=M/2-1;
-    romax=min(ic, jc);
-    a=exp(log((double)romax/(double)ro0)/(double)R);
+    romax=std::min(ic, jc);
+    a=std::exp(std::log((double)romax/(double)ro0)/(double)R);
     q=((double)S)/(2*CV_PI);
 
     Rsri = Mat::zeros(S,R,CV_32FC1);
@@ -129,8 +129,8 @@ void LogPolar_Interp::create_map(int _M, int _n, int _R, int _s, double _ro0)
     {
         for(int u=0; u<R; u++)
         {
-            Rsri.at<float>(v,u)=(float)(ro0*pow(a,u)*sin(v/q)+jc);
-            Csri.at<float>(v,u)=(float)(ro0*pow(a,u)*cos(v/q)+ic);
+            Rsri.at<float>(v,u)=(float)(ro0*std::pow(a,u)*sin(v/q)+jc);
+            Csri.at<float>(v,u)=(float)(ro0*std::pow(a,u)*cos(v/q)+ic);
         }
     }
 
@@ -150,7 +150,7 @@ void LogPolar_Interp::create_map(int _M, int _n, int _R, int _s, double _ro0)
             ETAyx.at<float>(j,i)=(float)(q*theta);
 
             double ro2=(j-jc)*(j-jc)+(i-ic)*(i-ic);
-            CSIyx.at<float>(j,i)=(float)(0.5*log(ro2/(ro0*ro0))/log(a));
+            CSIyx.at<float>(j,i)=(float)(0.5*std::log(ro2/(ro0*ro0))/std::log(a));
         }
     }
 }
@@ -221,13 +221,13 @@ LogPolar_Overlapping::LogPolar_Overlapping(int w, int h, Point2i center, int _R,
         int rtmp;
 
         if (center.x<=w/2 && center.y>=h/2)
-            rtmp=(int)sqrt((float)center.y*center.y + (float)(w-center.x)*(w-center.x));
+            rtmp=(int)std::sqrt((float)center.y*center.y + (float)(w-center.x)*(w-center.x));
         else if (center.x>=w/2 && center.y>=h/2)
-            rtmp=(int)sqrt((float)center.y*center.y + (float)center.x*center.x);
+            rtmp=(int)std::sqrt((float)center.y*center.y + (float)center.x*center.x);
         else if (center.x>=w/2 && center.y<=h/2)
-            rtmp=(int)sqrt((float)(h-center.y)*(h-center.y) + (float)center.x*center.x);
+            rtmp=(int)std::sqrt((float)(h-center.y)*(h-center.y) + (float)center.x*center.x);
         else //if (center.x<=w/2 && center.y<=h/2)
-            rtmp=(int)sqrt((float)(h-center.y)*(h-center.y) + (float)(w-center.x)*(w-center.x));
+            rtmp=(int)std::sqrt((float)(h-center.y)*(h-center.y) + (float)(w-center.x)*(w-center.x));
 
         M=2*rtmp; N=2*rtmp;
 
@@ -244,8 +244,8 @@ LogPolar_Overlapping::LogPolar_Overlapping(int w, int h, Point2i center, int _R,
 
     if (sp){
         int jc=M/2-1, ic=N/2-1;
-        int _romax=min(ic, jc);
-        double _a=exp(log((double)(_romax/2-1)/(double)ro0)/(double)R);
+        int _romax=std::min(ic, jc);
+        double _a=std::exp(std::log((double)(_romax/2-1)/(double)ro0)/(double)R);
         S=(int) floor(2*CV_PI/(_a-1)+0.5);
     }
 
@@ -261,8 +261,8 @@ void LogPolar_Overlapping::create_map(int _M, int _n, int _R, int _s, double _ro
     ro0=_ro0;
 
     int jc=N/2-1, ic=M/2-1;
-    romax=min(ic, jc);
-    a=exp(log((double)romax/(double)ro0)/(double)R);
+    romax=std::min(ic, jc);
+    a=std::exp(std::log((double)romax/(double)ro0)/(double)R);
     q=((double)S)/(2*CV_PI);
     ind1=0;
 
@@ -279,8 +279,8 @@ void LogPolar_Overlapping::create_map(int _M, int _n, int _R, int _s, double _ro
     {
         for(int u=0; u<R; u++)
         {
-            Rsri.at<float>(v,u)=(float)(ro0*pow(a,u)*sin(v/q)+jc);
-            Csri.at<float>(v,u)=(float)(ro0*pow(a,u)*cos(v/q)+ic);
+            Rsri.at<float>(v,u)=(float)(ro0*std::pow(a,u)*sin(v/q)+jc);
+            Csri.at<float>(v,u)=(float)(ro0*std::pow(a,u)*cos(v/q)+ic);
             Rsr[v*R+u]=(int)floor(Rsri.at<float>(v,u));
             Csr[v*R+u]=(int)floor(Csri.at<float>(v,u));
         }
@@ -290,7 +290,7 @@ void LogPolar_Overlapping::create_map(int _M, int _n, int _R, int _s, double _ro
 
     for(int i=0; i<R; i++)
     {
-        Wsr[i]=ro0*(a-1)*pow(a,i-1);
+        Wsr[i]=ro0*(a-1)*std::pow(a,i-1);
         if((Wsr[i]>1)&&(done==false))
         {
             ind1=i;
@@ -314,7 +314,7 @@ void LogPolar_Overlapping::create_map(int _M, int _n, int _R, int _s, double _ro
             ETAyx.at<float>(j,i)=(float)(q*theta);
 
             double ro2=(j-jc)*(j-jc)+(i-ic)*(i-ic);
-            CSIyx.at<float>(j,i)=(float)(0.5*log(ro2/(ro0*ro0))/log(a));
+            CSIyx.at<float>(j,i)=(float)(0.5*std::log(ro2/(ro0*ro0))/std::log(a));
         }
     }
 
@@ -332,7 +332,7 @@ void LogPolar_Overlapping::create_map(int _M, int _n, int _R, int _s, double _ro
             for(int j=0; j<2*w+1; j++)
                 for(int i=0; i<2*w+1; i++)
                 {
-                    (w_ker_2D[v*R+u].weights)[j*(2*w+1)+i]=exp(-(pow(i-w-dx, 2)+pow(j-w-dy, 2))/(2*sigma*sigma));
+                    (w_ker_2D[v*R+u].weights)[j*(2*w+1)+i]=std::exp(-(std::pow(i-w-dx, 2)+std::pow(j-w-dy, 2))/(2*sigma*sigma));
                     tot+=(w_ker_2D[v*R+u].weights)[j*(2*w+1)+i];
                 }
             for(int j=0; j<(2*w+1); j++)
@@ -351,7 +351,7 @@ const Mat LogPolar_Overlapping::to_cortical(const Mat &source)
     remap(source_border,out,Csri,Rsri,INTER_LINEAR);
 
     int wm=w_ker_2D[R-1].w;
-    vector<int> IMG((M+2*wm+1)*(N+2*wm+1), 0);
+    std::vector<int> IMG((M+2*wm+1)*(N+2*wm+1), 0);
 
     for(int j=0; j<N; j++)
         for(int i=0; i<M; i++)
@@ -388,8 +388,8 @@ const Mat LogPolar_Overlapping::to_cartesian(const Mat &source)
 
     int wm=w_ker_2D[R-1].w;
 
-    vector<double> IMG((N+2*wm+1)*(M+2*wm+1), 0.);
-    vector<double> NOR((N+2*wm+1)*(M+2*wm+1), 0.);
+    std::vector<double> IMG((N+2*wm+1)*(M+2*wm+1), 0.);
+    std::vector<double> NOR((N+2*wm+1)*(M+2*wm+1), 0.);
 
     for(int v=0; v<S; v++)
         for(int u=ind1; u<R; u++)
@@ -416,7 +416,7 @@ const Mat LogPolar_Overlapping::to_cartesian(const Mat &source)
         {
             /*if(NOR[(M+2*wm+1)*j+i]>0)
                 ret[M*(j-wm)+i-wm]=(int) floor(IMG[(M+2*wm+1)*j+i]+0.5);*/
-            //int ro=(int)floor(sqrt((double)((j-wm-yc)*(j-wm-yc)+(i-wm-xc)*(i-wm-xc))));
+            //int ro=(int)floor(std::sqrt((double)((j-wm-yc)*(j-wm-yc)+(i-wm-xc)*(i-wm-xc))));
             int csi=(int) floor(CSIyx.at<float>(j-wm,i-wm));
 
             if((csi>=(ind1-(w_ker_2D[ind1]).w))&&(csi<R))
@@ -446,13 +446,13 @@ LogPolar_Adjacent::LogPolar_Adjacent(int w, int h, Point2i center, int _R, doubl
         int rtmp;
 
         if (center.x<=w/2 && center.y>=h/2)
-            rtmp=(int)sqrt((float)center.y*center.y + (float)(w-center.x)*(w-center.x));
+            rtmp=(int)std::sqrt((float)center.y*center.y + (float)(w-center.x)*(w-center.x));
         else if (center.x>=w/2 && center.y>=h/2)
-            rtmp=(int)sqrt((float)center.y*center.y + (float)center.x*center.x);
+            rtmp=(int)std::sqrt((float)center.y*center.y + (float)center.x*center.x);
         else if (center.x>=w/2 && center.y<=h/2)
-            rtmp=(int)sqrt((float)(h-center.y)*(h-center.y) + (float)center.x*center.x);
+            rtmp=(int)std::sqrt((float)(h-center.y)*(h-center.y) + (float)center.x*center.x);
         else //if (center.x<=w/2 && center.y<=h/2)
-            rtmp=(int)sqrt((float)(h-center.y)*(h-center.y) + (float)(w-center.x)*(w-center.x));
+            rtmp=(int)std::sqrt((float)(h-center.y)*(h-center.y) + (float)(w-center.x)*(w-center.x));
 
         M=2*rtmp; N=2*rtmp;
 
@@ -468,8 +468,8 @@ LogPolar_Adjacent::LogPolar_Adjacent(int w, int h, Point2i center, int _R, doubl
 
     if (sp){
         int jc=M/2-1, ic=N/2-1;
-        int _romax=min(ic, jc);
-        double _a=exp(log((double)(_romax/2-1)/(double)ro0)/(double)R);
+        int _romax=std::min(ic, jc);
+        double _a=std::exp(std::log((double)(_romax/2-1)/(double)ro0)/(double)R);
         S=(int) floor(2*CV_PI/(_a-1)+0.5);
     }
 
@@ -484,9 +484,9 @@ void LogPolar_Adjacent::create_map(int _M, int _n, int _R, int _s, double _ro0, 
     R=_R;
     S=_s;
     ro0=_ro0;
-    romax=min(M/2.0, N/2.0);
+    romax=std::min(M/2.0, N/2.0);
 
-    a=exp(log(romax/ro0)/(double)R);
+    a=std::exp(std::log(romax/ro0)/(double)R);
     q=S/(2*CV_PI);
 
     A.resize(R*S);
@@ -572,7 +572,7 @@ const Mat LogPolar_Adjacent::to_cortical(const Mat &source)
     Mat source_border;
     copyMakeBorder(source,source_border,top,bottom,left,right,BORDER_CONSTANT,Scalar(0));
 
-    vector<double> map(R*S, 0.);
+    std::vector<double> map(R*S, 0.);
 
     for(int j=0; j<N; j++)
         for(int i=0; i<M; i++)
@@ -597,7 +597,7 @@ const Mat LogPolar_Adjacent::to_cortical(const Mat &source)
 
 const Mat LogPolar_Adjacent::to_cartesian(const Mat &source)
 {
-    vector<double> map(M*N, 0.);
+    std::vector<double> map(M*N, 0.);
 
     for(int j=0; j<N; j++)
         for(int i=0; i<M; i++)
@@ -621,7 +621,7 @@ const Mat LogPolar_Adjacent::to_cartesian(const Mat &source)
 
 bool LogPolar_Adjacent::get_uv(double x, double y, int&u, int&v)
 {
-    double ro=sqrt(x*x+y*y), theta;
+    double ro=std::sqrt(x*x+y*y), theta;
     if(x>0)
         theta=atan(y/x);
     else
@@ -635,7 +635,7 @@ bool LogPolar_Adjacent::get_uv(double x, double y, int&u, int&v)
     }
     else
     {
-        u= (int) floor(log(ro/ro0)/log(a));
+        u= (int) floor(std::log(ro/ro0)/std::log(a));
         if(theta>=0)
             v= (int) floor(q*theta);
         else

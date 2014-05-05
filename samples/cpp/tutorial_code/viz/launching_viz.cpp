@@ -4,7 +4,7 @@
  * @author Ozan Cagri Tonkal
  */
 
-#include <opencv2/viz/vizcore.hpp>
+#include <opencv2/viz.hpp>
 #include <iostream>
 
 using namespace cv;
@@ -41,7 +41,7 @@ int main()
     cout << "First event loop is over" << endl;
 
     /// Access window via its name
-    viz::Viz3d sameWindow = viz::getWindowByName("Viz Demo");
+    viz::Viz3d sameWindow = viz::get("Viz Demo");
 
     /// Start event loop
     sameWindow.spin();

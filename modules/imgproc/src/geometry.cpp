@@ -92,97 +92,38 @@ cvBoxPoints( CvBox2D box, CvPoint2D32f pt[4] )
 }
 
 
-int
-icvIntersectLines( double x1, double dx1, double y1, double dy1,
-                   double x2, double dx2, double y2, double dy2, double *t2 )
-{
-    double d = dx1 * dy2 - dx2 * dy1;
-    int result = -1;
-
-    if( d != 0 )
-    {
-        *t2 = ((x2 - x1) * dy1 - (y2 - y1) * dx1) / d;
-        result = 0;
-    }
-    return result;
-}
-
-
-void
-icvIntersectLines3( double *a0, double *b0, double *c0,
-                    double *a1, double *b1, double *c1, CvPoint2D32f * point )
-{
-    double det = a0[0] * b1[0] - a1[0] * b0[0];
-
-    if( det != 0 )
-    {
-        det = 1. / det;
-        point->x = (float) ((b0[0] * c1[0] - b1[0] * c0[0]) * det);
-        point->y = (float) ((a1[0] * c0[0] - a0[0] * c1[0]) * det);
-    }
-    else
-    {
-        point->x = point->y = FLT_MAX;
-    }
-}
-
-
-CV_IMPL double
-cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
+double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
 {
     double result = 0;
+    Mat contour = _contour.getMat();
+    int i, total = contour.checkVector(2), counter = 0;
+    int depth = contour.depth();
+    CV_Assert( total >= 0 && (depth == CV_32S || depth == CV_32F));
 
-    CvSeqBlock block;
-    CvContour header;
-    CvSeq* contour = (CvSeq*)_contour;
-    CvSeqReader reader;
-    int i, total, counter = 0;
-    int is_float;
+    bool is_float = depth == CV_32F;
     double min_dist_num = FLT_MAX, min_dist_denom = 1;
-    CvPoint ip = {0,0};
+    Point ip(cvRound(pt.x), cvRound(pt.y));
 
-    if( !CV_IS_SEQ(contour) )
-    {
-        contour = cvPointSeqFromMat( CV_SEQ_KIND_CURVE + CV_SEQ_FLAG_CLOSED,
-                                    _contour, &header, &block );
-    }
-    else if( CV_IS_SEQ_POINT_SET(contour) )
-    {
-        if( contour->header_size == sizeof(CvContour) && !measure_dist )
-        {
-            CvRect r = ((CvContour*)contour)->rect;
-            if( pt.x < r.x || pt.y < r.y ||
-                pt.x >= r.x + r.width || pt.y >= r.y + r.height )
-                return -1;
-        }
-    }
-    else if( CV_IS_SEQ_CHAIN(contour) )
-    {
-        CV_Error( CV_StsBadArg,
-            "Chains are not supported. Convert them to polygonal representation using cvApproxChains()" );
-    }
-    else
-        CV_Error( CV_StsBadArg, "Input contour is neither a valid sequence nor a matrix" );
+    if( total == 0 )
+        return measureDist ? -DBL_MAX : -1;
 
-    total = contour->total;
-    is_float = CV_SEQ_ELTYPE(contour) == CV_32FC2;
-    cvStartReadSeq( contour, &reader, -1 );
+    const Point* cnt = (const Point*)contour.data;
+    const Point2f* cntf = (const Point2f*)cnt;
 
-    if( !is_float && !measure_dist && (ip.x = cvRound(pt.x)) == pt.x && (ip.y = cvRound(pt.y)) == pt.y )
+    if( !is_float && !measureDist && ip.x == pt.x && ip.y == pt.y )
     {
-        // the fastest "pure integer" branch
-        CvPoint v0, v;
-        CV_READ_SEQ_ELEM( v, reader );
+        // the fastest "purely integer" branch
+        Point v0, v = cnt[total-1];
 
         for( i = 0; i < total; i++ )
         {
             int dist;
             v0 = v;
-            CV_READ_SEQ_ELEM( v, reader );
+            v = cnt[i];
 
             if( (v0.y <= ip.y && v.y <= ip.y) ||
-                (v0.y > ip.y && v.y > ip.y) ||
-                (v0.x < ip.x && v.x < ip.x) )
+               (v0.y > ip.y && v.y > ip.y) ||
+               (v0.x < ip.x && v.x < ip.x) )
             {
                 if( ip.y == v.y && (ip.x == v.x || (ip.y == v0.y &&
                     ((v0.x <= ip.x && ip.x <= v.x) || (v.x <= ip.x && ip.x <= v0.x)))) )
@@ -202,38 +143,32 @@ cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
     }
     else
     {
-        CvPoint2D32f v0, v;
-        CvPoint iv;
+        Point2f v0, v;
+        Point iv;
 
         if( is_float )
         {
-            CV_READ_SEQ_ELEM( v, reader );
+            v = cntf[total-1];
         }
         else
         {
-            CV_READ_SEQ_ELEM( iv, reader );
-            v = cvPointTo32f( iv );
+            v = cnt[total-1];
         }
 
-        if( !measure_dist )
+        if( !measureDist )
         {
             for( i = 0; i < total; i++ )
             {
                 double dist;
                 v0 = v;
                 if( is_float )
-                {
-                    CV_READ_SEQ_ELEM( v, reader );
-                }
+                    v = cntf[i];
                 else
-                {
-                    CV_READ_SEQ_ELEM( iv, reader );
-                    v = cvPointTo32f( iv );
-                }
+                    v = cnt[i];
 
                 if( (v0.y <= pt.y && v.y <= pt.y) ||
-                    (v0.y > pt.y && v.y > pt.y) ||
-                    (v0.x < pt.x && v.x < pt.x) )
+                   (v0.y > pt.y && v.y > pt.y) ||
+                   (v0.x < pt.x && v.x < pt.x) )
                 {
                     if( pt.y == v.y && (pt.x == v.x || (pt.y == v0.y &&
                         ((v0.x <= pt.x && pt.x <= v.x) || (v.x <= pt.x && pt.x <= v0.x)))) )
@@ -259,14 +194,9 @@ cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
 
                 v0 = v;
                 if( is_float )
-                {
-                    CV_READ_SEQ_ELEM( v, reader );
-                }
+                    v = cntf[i];
                 else
-                {
-                    CV_READ_SEQ_ELEM( iv, reader );
-                    v = cvPointTo32f( iv );
-                }
+                    v = cnt[i];
 
                 dx = v.x - v0.x; dy = v.y - v0.y;
                 dx1 = pt.x - v0.x; dy1 = pt.y - v0.y;
@@ -292,8 +222,8 @@ cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
                 }
 
                 if( (v0.y <= pt.y && v.y <= pt.y) ||
-                    (v0.y > pt.y && v.y > pt.y) ||
-                    (v0.x < pt.x && v.x < pt.x) )
+                   (v0.y > pt.y && v.y > pt.y) ||
+                   (v0.x < pt.x && v.x < pt.x) )
                     continue;
 
                 dist_num = dy1*dx - dx1*dy;
@@ -302,7 +232,7 @@ cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
                 counter += dist_num > 0;
             }
 
-            result = sqrt(min_dist_num/min_dist_denom);
+            result = std::sqrt(min_dist_num/min_dist_denom);
             if( counter % 2 == 0 )
                 result = -result;
         }
@@ -311,6 +241,14 @@ cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
     return result;
 }
 
+
+CV_IMPL double
+cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
+{
+    cv::AutoBuffer<double> abuf;
+    cv::Mat contour = cv::cvarrToMat(_contour, false, false, 0, &abuf);
+    return cv::pointPolygonTest(contour, pt, measure_dist != 0);
+}
 
 /*
  This code is described in "Computational Geometry in C" (Second Edition),
@@ -651,124 +589,3 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
     }
     return (float)fabs(area);
 }
-
-/*
-static void testConvConv()
-{
-    static const int P1[] =
-    {
-        0,	0,
-        100, 0,
-        100, 100,
-        0, 100,
-    };
-
-    static const int Q1[] =
-    {
-        100, 80,
-        50, 80,
-        50, 50,
-        100, 50
-    };
-
-    static const int P2[] =
-    {
-        0, 0,
-        200, 0,
-        200, 100,
-        100, 200,
-        0, 100
-    };
-
-    static const int Q2[] =
-    {
-        100, 100,
-        300, 100,
-        300, 200,
-        100, 200
-    };
-
-    static const int P3[] =
-    {
-        0,   0,
-        100, 0,
-        100, 100,
-        0, 100
-    };
-
-    static const int Q3[] =
-    {
-        50, 50,
-        150, 50,
-        150, 150,
-        50, 150
-    };
-
-    static const int P4[] =
-    {
-        0, 160,
-        50, 80,
-        130, 0,
-        190, 20,
-        240, 100,
-        240, 260,
-        190, 290,
-        130, 320,
-        70, 320,
-        30, 290
-    };
-
-    static const int Q4[] =
-    {
-        160, -30,
-        280, 160,
-        160, 320,
-        0, 220,
-        30, 100
-    };
-
-    static const void* PQs[] =
-    {
-        P1, Q1, P2, Q2, P3, Q3, P4, Q4
-    };
-
-    static const int lens[] =
-    {
-        CV_DIM(P1), CV_DIM(Q1),
-        CV_DIM(P2), CV_DIM(Q2),
-        CV_DIM(P3), CV_DIM(Q3),
-        CV_DIM(P4), CV_DIM(Q4)
-    };
-
-    Mat img(800, 800, CV_8UC3);
-
-    for( int i = 0; i < CV_DIM(PQs)/2; i++ )
-    {
-        Mat Pm = Mat(lens[i*2]/2, 1, CV_32SC2, (void*)PQs[i*2]) + Scalar(100, 100);
-        Mat Qm = Mat(lens[i*2+1]/2, 1, CV_32SC2, (void*)PQs[i*2+1]) + Scalar(100, 100);
-        Point* P = Pm.ptr<Point>();
-        Point* Q = Qm.ptr<Point>();
-
-        flip(Pm, Pm, 0);
-        flip(Qm, Qm, 0);
-
-        Mat Rm;
-        intersectConvexConvex(Pm, Qm, Rm);
-        std::cout << Rm << std::endl << std::endl;
-
-        img = Scalar::all(0);
-
-        polylines(img, Pm, true, Scalar(0,255,0), 1, CV_AA, 0);
-        polylines(img, Qm, true, Scalar(0,0,255), 1, CV_AA, 0);
-        Mat temp;
-        Rm.convertTo(temp, CV_32S, 256);
-        polylines(img, temp, true, Scalar(128, 255, 255), 3, CV_AA, 8);
-
-        namedWindow("test", 1);
-        imshow("test", img);
-        waitKey();
-    }
-}
-*/
-
-/* End of file. */

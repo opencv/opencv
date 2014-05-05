@@ -43,9 +43,9 @@ Now we will learn how to write a simple Hello World Application in Xcode using O
 
 .. code-block:: cpp
 
-        #ifdef __cplusplus
-        #import <opencv2/opencv.hpp>
-        #endif
+    #ifdef __cplusplus
+    #import <opencv2/opencv.hpp>
+    #endif
 
 .. image:: images/header_directive.png
      :alt: header

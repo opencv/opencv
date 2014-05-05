@@ -6,7 +6,7 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-typedef std::tr1::tuple<String, int, bool, std::tr1::tuple<double, double> > Img_Aperture_L2_thresholds_t;
+typedef std::tr1::tuple<string, int, bool, std::tr1::tuple<double, double> > Img_Aperture_L2_thresholds_t;
 typedef perf::TestBaseWithParam<Img_Aperture_L2_thresholds_t> Img_Aperture_L2_thresholds;
 
 PERF_TEST_P(Img_Aperture_L2_thresholds, canny,
@@ -18,7 +18,7 @@ PERF_TEST_P(Img_Aperture_L2_thresholds, canny,
                 )
             )
 {
-    String filename = getDataPath(get<0>(GetParam()));
+    string filename = getDataPath(get<0>(GetParam()));
     int aperture = get<1>(GetParam());
     bool useL2 = get<2>(GetParam());
     double thresh_low = get<0>(get<3>(GetParam()));

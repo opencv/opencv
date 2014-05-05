@@ -347,10 +347,10 @@ static void initMaskWithRect( Mat& mask, Size imgSize, Rect rect )
     mask.create( imgSize, CV_8UC1 );
     mask.setTo( GC_BGD );
 
-    rect.x = max(0, rect.x);
-    rect.y = max(0, rect.y);
-    rect.width = min(rect.width, imgSize.width-rect.x);
-    rect.height = min(rect.height, imgSize.height-rect.y);
+    rect.x = std::max(0, rect.x);
+    rect.y = std::max(0, rect.y);
+    rect.width = std::min(rect.width, imgSize.width-rect.x);
+    rect.height = std::min(rect.height, imgSize.height-rect.y);
 
     (mask(rect)).setTo( Scalar(GC_PR_FGD) );
 }
@@ -364,7 +364,7 @@ static void initGMMs( const Mat& img, const Mat& mask, GMM& bgdGMM, GMM& fgdGMM 
     const int kMeansType = KMEANS_PP_CENTERS;
 
     Mat bgdLabels, fgdLabels;
-    vector<Vec3f> bgdSamples, fgdSamples;
+    std::vector<Vec3f> bgdSamples, fgdSamples;
     Point p;
     for( p.y = 0; p.y < img.rows; p.y++ )
     {

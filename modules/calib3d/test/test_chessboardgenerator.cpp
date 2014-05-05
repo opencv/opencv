@@ -51,7 +51,7 @@ using namespace cv;
 using namespace std;
 
 ChessBoardGenerator::ChessBoardGenerator(const Size& _patternSize) : sensorWidth(32), sensorHeight(24),
-    squareEdgePointsNum(200), min_cos(sqrt(2.f)*0.5f), cov(0.5),
+    squareEdgePointsNum(200), min_cos(std::sqrt(2.f)*0.5f), cov(0.5),
     patternSize(_patternSize), rendererResolutionMultiplier(4), tvec(Mat::zeros(1, 3, CV_32F))
 {
     Rodrigues(Mat::eye(3, 3, CV_32F), rvec);
@@ -161,15 +161,15 @@ Mat cv::ChessBoardGenerator::generateChessBoard(const Mat& bg, const Mat& camMat
     if (rendererResolutionMultiplier == 1)
     {
         result = bg.clone();
-        drawContours(result, whole_contour, -1, Scalar::all(255), CV_FILLED, CV_AA);
-        drawContours(result, squares_black, -1, Scalar::all(0), CV_FILLED, CV_AA);
+        drawContours(result, whole_contour, -1, Scalar::all(255), FILLED, LINE_AA);
+        drawContours(result, squares_black, -1, Scalar::all(0), FILLED, LINE_AA);
     }
     else
     {
         Mat tmp;
         resize(bg, tmp, bg.size() * rendererResolutionMultiplier);
-        drawContours(tmp, whole_contour, -1, Scalar::all(255), CV_FILLED, CV_AA);
-        drawContours(tmp, squares_black, -1, Scalar::all(0), CV_FILLED, CV_AA);
+        drawContours(tmp, whole_contour, -1, Scalar::all(255), FILLED, LINE_AA);
+        drawContours(tmp, squares_black, -1, Scalar::all(0), FILLED, LINE_AA);
         resize(tmp, result, bg.size(), 0, 0, INTER_AREA);
     }
 
@@ -178,7 +178,7 @@ Mat cv::ChessBoardGenerator::generateChessBoard(const Mat& bg, const Mat& camMat
 
 Mat cv::ChessBoardGenerator::operator ()(const Mat& bg, const Mat& camMat, const Mat& distCoeffs, vector<Point2f>& corners) const
 {
-    cov = min(cov, 0.8);
+    cov = std::min(cov, 0.8);
     double fovx, fovy, focalLen;
     Point2d principalPoint;
     double aspect;
@@ -199,7 +199,7 @@ Mat cv::ChessBoardGenerator::operator ()(const Mat& bg, const Mat& camMat, const
     Point3f pb1, pb2;
     generateBasis(pb1, pb2);
 
-    float cbHalfWidth = static_cast<float>(norm(p) * sin( min(fovx, fovy) * 0.5 * CV_PI / 180));
+    float cbHalfWidth = static_cast<float>(norm(p) * sin( std::min(fovx, fovy) * 0.5 * CV_PI / 180));
     float cbHalfHeight = cbHalfWidth * patternSize.height / patternSize.width;
 
     float cbHalfWidthEx  =  cbHalfWidth * ( patternSize.width + 1) / patternSize.width;
@@ -243,7 +243,7 @@ Mat cv::ChessBoardGenerator::operator ()(const Mat& bg, const Mat& camMat, const
 Mat cv::ChessBoardGenerator::operator ()(const Mat& bg, const Mat& camMat, const Mat& distCoeffs,
                                          const Size2f& squareSize, vector<Point2f>& corners) const
 {
-    cov = min(cov, 0.8);
+    cov = std::min(cov, 0.8);
     double fovx, fovy, focalLen;
     Point2d principalPoint;
     double aspect;
@@ -302,7 +302,7 @@ Mat cv::ChessBoardGenerator::operator ()(const Mat& bg, const Mat& camMat, const
 Mat cv::ChessBoardGenerator::operator ()(const Mat& bg, const Mat& camMat, const Mat& distCoeffs,
                                          const Size2f& squareSize, const Point3f& pos, vector<Point2f>& corners) const
 {
-    cov = min(cov, 0.8);
+    cov = std::min(cov, 0.8);
     Point3f p = pos;
     Point3f pb1, pb2;
     generateBasis(pb1, pb2);

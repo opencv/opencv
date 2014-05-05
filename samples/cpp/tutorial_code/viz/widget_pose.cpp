@@ -4,8 +4,8 @@
  * @author Ozan Cagri Tonkal
  */
 
-#include <opencv2/viz/vizcore.hpp>
-#include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/viz.hpp>
+#include <opencv2/calib3d.hpp>
 #include <iostream>
 
 using namespace cv;

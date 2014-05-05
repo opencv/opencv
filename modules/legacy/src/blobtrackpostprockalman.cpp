@@ -39,6 +39,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/video/tracking_c.h"
 
 /*======================= KALMAN FILTER =========================*/
 /* State vector is (x,y,w,h,dx,dy,dw,dh). */

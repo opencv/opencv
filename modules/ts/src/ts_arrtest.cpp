@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/core_c.h"
 
 namespace cvtest
 {
@@ -158,7 +159,7 @@ int ArrayTest::prepare_test_case( int test_case_idx )
             unsigned t = randInt(rng);
             bool create_mask = true, use_roi = false;
             CvSize size = sizes[i][j], whole_size = size;
-            CvRect roi = {0,0,0,0};
+            CvRect roi;
 
             is_image = !cvmat_allowed ? true : iplimage_allowed ? (t & 1) != 0 : false;
             create_mask = (t & 6) == 0; // ~ each of 3 tests will use mask

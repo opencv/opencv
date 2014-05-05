@@ -47,26 +47,37 @@
 
 #include "precomp.hpp"
 
+typedef double polyfit_type;
+
 void cv::polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order)
 {
-    CV_Assert((src_x.rows>0)&&(src_y.rows>0)&&(src_x.cols==1)&&(src_y.cols==1)
-            &&(dst.cols==1)&&(dst.rows==(order+1))&&(order>=1));
-    Mat X;
-    X = Mat::zeros(src_x.rows, order+1,CV_32FC1);
-    Mat copy;
-    for(int i = 0; i <=order;i++)
+    const int wdepth = DataType<polyfit_type>::depth;
+    int npoints = src_x.checkVector(1);
+    int nypoints = src_y.checkVector(1);
+
+    CV_Assert(npoints == nypoints && npoints >= order+1);
+
+    Mat srcX = Mat_<polyfit_type>(src_x), srcY = Mat_<polyfit_type>(src_y);
+
+    Mat X = Mat::zeros(order + 1, npoints, wdepth);
+    polyfit_type* pSrcX = (polyfit_type*)srcX.data;
+    polyfit_type* pXData = (polyfit_type*)X.data;
+    int stepX = (int)(X.step/X.elemSize1());
+    for (int y = 0; y < order + 1; ++y)
     {
-        copy = src_x.clone();
-        pow(copy,i,copy);
-        Mat M1 = X.col(i);
-        copy.col(0).copyTo(M1);
+        for (int x = 0; x < npoints; ++x)
+        {
+            if (y == 0)
+                pXData[x] = 1;
+            else if (y == 1)
+                pXData[x + stepX] = pSrcX[x];
+            else pXData[x + y*stepX] = pSrcX[x]* pXData[x + (y-1)*stepX];
+        }
     }
-    Mat X_t, X_inv;
-    transpose(X,X_t);
-    Mat temp = X_t*X;
-    Mat temp2;
-    invert (temp,temp2);
-    Mat temp3 = temp2*X_t;
-    Mat W = temp3*src_y;
-    W.copyTo(dst);
+
+    Mat A, b, w;
+    mulTransposed(X, A, false);
+    b = X*srcY;
+    solve(A, b, w, DECOMP_SVD);
+    w.convertTo(dst, std::max(std::max(src_x.depth(), src_y.depth()), CV_32F));
 }

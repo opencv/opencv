@@ -46,7 +46,7 @@
 #ifndef __OPENCV_VIZ_WIDGET_ACCESSOR_HPP__
 #define __OPENCV_VIZ_WIDGET_ACCESSOR_HPP__
 
-#include <opencv2/core/types_c.h>
+#include <opencv2/core/cvdef.h>
 #include <vtkSmartPointer.h>
 #include <vtkProp.h>
 

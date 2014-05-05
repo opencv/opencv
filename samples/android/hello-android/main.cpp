@@ -11,9 +11,9 @@ int main(int argc, char* argv[])
   printf("%s\n", message);
 
   // put message to simple image
-  Size textsize = getTextSize(message, CV_FONT_HERSHEY_COMPLEX, 3, 5, 0);
+  Size textsize = getTextSize(message, FONT_HERSHEY_COMPLEX, 3, 5, 0);
   Mat img(textsize.height + 20, textsize.width + 20, CV_32FC1, Scalar(230,230,230));
-  putText(img, message, Point(10, img.rows - 10), CV_FONT_HERSHEY_COMPLEX, 3, Scalar(0, 0, 0), 5);
+  putText(img, message, Point(10, img.rows - 10), FONT_HERSHEY_COMPLEX, 3, Scalar(0, 0, 0), 5);
 
   // save\show resulting image
 #if ANDROID

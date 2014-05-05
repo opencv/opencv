@@ -42,18 +42,18 @@ In OpenCV 2.4 you only need :ocv:func:`applyColorMap` to apply a colormap on a g
 
 .. code-block:: cpp
 
-    #include <opencv2/contrib/contrib.hpp>
-    #include <opencv2/core/core.hpp>
-    #include <opencv2/highgui/highgui.hpp>
+    #include <opencv2/contrib.hpp>
+    #include <opencv2/core.hpp>
+    #include <opencv2/highgui.hpp>
 
     using namespace cv;
 
     int main(int argc, const char *argv[]) {
         // Get the path to the image, if it was given
         // if no arguments were given.
-        string filename;
+        String filename;
         if (argc > 1) {
-            filename = string(argv[1]);
+            filename = String(argv[1]);
         }
         // The following lines show how to apply a colormap on a given image
         // and show it with cv::imshow example with an image. An exception is

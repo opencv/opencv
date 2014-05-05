@@ -1,5 +1,4 @@
 #include <iostream>
-using namespace std;
 #include "precomp.hpp"
 #include "epnp.h"
 

@@ -21,8 +21,8 @@ You can download the code from :download:`here <../../../../samples/cpp/tutorial
 
 .. code-block:: cpp
 
-    #include <opencv2/viz/vizcore.hpp>
-    #include <opencv2/calib3d/calib3d.hpp>
+    #include <opencv2/viz.hpp>
+    #include <opencv2/calib3d.hpp>
     #include <iostream>
 
     using namespace cv;

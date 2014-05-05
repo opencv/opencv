@@ -21,7 +21,7 @@ int main()
     char wndname[] = "Drawing Demo";
     const int NUMBER = 100;
     const int DELAY = 5;
-    int lineType = CV_AA; // change it to 8 to see non-antialiased graphics
+    int lineType = LINE_AA; // change it to LINE_8 to see non-antialiased graphics
     int i, width = 1000, height = 700;
     int x1 = -width/2, x2 = width*3/2, y1 = -height/2, y2 = height*3/2;
     RNG rng(0xFFFFFFFF);

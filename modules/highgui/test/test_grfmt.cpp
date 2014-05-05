@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 using namespace std;
@@ -99,25 +99,29 @@ public:
                 {
                     if(ext_from_int(ext).empty())
                         continue;
-                    for (int num_channels = 1; num_channels <= 3; num_channels+=2)
+                    for (int num_channels = 1; num_channels <= 4; num_channels++)
                     {
+                        if (num_channels == 2) continue;
+                        if (num_channels == 4 && ext!=3 /*TIFF*/) continue;
+
                         ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U, num_channels, ext_from_int(ext).c_str());
                         Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_8U, num_channels), Scalar::all(0));
-                        circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+                        circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), std::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
 
                         string img_path = cv::tempfile(ext_from_int(ext).c_str());
                         ts->printf(ts->LOG, "writing      image : %s\n", img_path.c_str());
                         imwrite(img_path, img);
 
                         ts->printf(ts->LOG, "reading test image : %s\n", img_path.c_str());
-                        Mat img_test = imread(img_path, CV_LOAD_IMAGE_UNCHANGED);
+                        Mat img_test = imread(img_path, IMREAD_UNCHANGED);
 
                         if (img_test.empty()) ts->set_failed_test_info(ts->FAIL_MISMATCH);
 
                         CV_Assert(img.size() == img_test.size());
                         CV_Assert(img.type() == img_test.type());
+                        CV_Assert(num_channels == img_test.channels());
 
-                        double n = norm(img, img_test);
+                        double n = cvtest::norm(img, img_test, NORM_L2);
                         if ( n > 1.0)
                         {
                             ts->printf(ts->LOG, "norm = %f \n", n);
@@ -132,22 +136,22 @@ public:
                     // jpeg
                     ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U, num_channels, ".jpg");
                     Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_8U, num_channels), Scalar::all(0));
-                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), std::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
 
                     string filename = cv::tempfile(".jpg");
                     imwrite(filename, img);
-                    img = imread(filename, CV_LOAD_IMAGE_UNCHANGED);
+                    img = imread(filename, IMREAD_UNCHANGED);
 
                     filename = string(ts->get_data_path() + "readwrite/test_" + char(k + 48) + "_c" + char(num_channels + 48) + ".jpg");
                     ts->printf(ts->LOG, "reading test image : %s\n", filename.c_str());
-                    Mat img_test = imread(filename, CV_LOAD_IMAGE_UNCHANGED);
+                    Mat img_test = imread(filename, IMREAD_UNCHANGED);
 
                     if (img_test.empty()) ts->set_failed_test_info(ts->FAIL_MISMATCH);
 
                     CV_Assert(img.size() == img_test.size());
                     CV_Assert(img.type() == img_test.type());
 
-                    double n = norm(img, img_test);
+                    double n = cvtest::norm(img, img_test, NORM_L2);
                     if ( n > 1.0)
                     {
                         ts->printf(ts->LOG, "norm = %f \n", n);
@@ -162,12 +166,12 @@ public:
                     // tiff
                     ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_16U, num_channels, ".tiff");
                     Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_16U, num_channels), Scalar::all(0));
-                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), std::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
 
                     string filename = cv::tempfile(".tiff");
                     imwrite(filename, img);
                     ts->printf(ts->LOG, "reading test image : %s\n", filename.c_str());
-                    Mat img_test = imread(filename, CV_LOAD_IMAGE_UNCHANGED);
+                    Mat img_test = imread(filename, IMREAD_UNCHANGED);
 
                     if (img_test.empty()) ts->set_failed_test_info(ts->FAIL_MISMATCH);
 
@@ -179,7 +183,7 @@ public:
                     CV_Assert(img.type() == img_test.type());
 
 
-                    double n = norm(img, img_test);
+                    double n = cvtest::norm(img, img_test, NORM_L2);
                     if ( n > 1.0)
                     {
                         ts->printf(ts->LOG, "norm = %f \n", n);
@@ -206,7 +210,7 @@ public:
         {
             Mat rle = imread(string(ts->get_data_path()) + "readwrite/rle8.bmp");
             Mat bmp = imread(string(ts->get_data_path()) + "readwrite/ordinary.bmp");
-            if (norm(rle-bmp)>1.e-10)
+            if (cvtest::norm(rle-bmp, NORM_L2)>1.e-10)
                 ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
         }
         catch(...)
@@ -238,12 +242,12 @@ public:
             Mat im = Mat::zeros(1000,1000, CV_8U);
             //randu(im, 0, 256);
             vector<int> param;
-            param.push_back(CV_IMWRITE_PNG_COMPRESSION);
+            param.push_back(IMWRITE_PNG_COMPRESSION);
             param.push_back(3); //default(3) 0-9.
             cv::imencode(".png" ,im ,buff, param);
 
             // hangs
-            Mat im2 = imdecode(buff,CV_LOAD_IMAGE_ANYDEPTH);
+            Mat im2 = imdecode(buff,IMREAD_ANYDEPTH);
         }
         catch(...)
         {
@@ -382,6 +386,54 @@ TEST(Highgui_Jpeg, encode_empty)
 
     ASSERT_THROW(cv::imencode(".jpg", img, jpegImg), cv::Exception);
 }
+
+TEST(Highgui_Jpeg, encode_decode_progressive_jpeg)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    string input = string(ts.get_data_path()) + "../cv/shared/lena.png";
+    cv::Mat img = cv::imread(input);
+    ASSERT_FALSE(img.empty());
+
+    std::vector<int> params;
+    params.push_back(IMWRITE_JPEG_PROGRESSIVE);
+    params.push_back(1);
+
+    string output_progressive = cv::tempfile(".jpg");
+    EXPECT_NO_THROW(cv::imwrite(output_progressive, img, params));
+    cv::Mat img_jpg_progressive = cv::imread(output_progressive);
+
+    string output_normal = cv::tempfile(".jpg");
+    EXPECT_NO_THROW(cv::imwrite(output_normal, img));
+    cv::Mat img_jpg_normal = cv::imread(output_normal);
+
+    EXPECT_EQ(0, cvtest::norm(img_jpg_progressive, img_jpg_normal, NORM_INF));
+
+    remove(output_progressive.c_str());
+}
+
+TEST(Highgui_Jpeg, encode_decode_optimize_jpeg)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    string input = string(ts.get_data_path()) + "../cv/shared/lena.png";
+    cv::Mat img = cv::imread(input);
+    ASSERT_FALSE(img.empty());
+
+    std::vector<int> params;
+    params.push_back(IMWRITE_JPEG_OPTIMIZE);
+    params.push_back(1);
+
+    string output_optimized = cv::tempfile(".jpg");
+    EXPECT_NO_THROW(cv::imwrite(output_optimized, img, params));
+    cv::Mat img_jpg_optimized = cv::imread(output_optimized);
+
+    string output_normal = cv::tempfile(".jpg");
+    EXPECT_NO_THROW(cv::imwrite(output_normal, img));
+    cv::Mat img_jpg_normal = cv::imread(output_normal);
+
+    EXPECT_EQ(0, cvtest::norm(img_jpg_optimized, img_jpg_normal, NORM_INF));
+
+    remove(output_optimized.c_str());
+}
 #endif
 
 
@@ -414,8 +466,8 @@ TEST(Highgui_Tiff, decode_tile16384x16384)
 
     try
     {
-        cv::imread(file3, CV_LOAD_IMAGE_UNCHANGED);
-        EXPECT_NO_THROW(cv::imread(file4, CV_LOAD_IMAGE_UNCHANGED));
+        cv::imread(file3, IMREAD_UNCHANGED);
+        EXPECT_NO_THROW(cv::imread(file4, IMREAD_UNCHANGED));
     }
     catch(const std::bad_alloc&)
     {
@@ -459,7 +511,7 @@ TEST(Highgui_Tiff, write_read_16bit_big_little_endian)
         ASSERT_EQ((size_t)1, fwrite(tiff_sample_data, 86, 1, fp));
         fclose(fp);
 
-        Mat img = imread(filename, CV_LOAD_IMAGE_UNCHANGED);
+        Mat img = imread(filename, IMREAD_UNCHANGED);
 
         EXPECT_EQ(1, img.rows);
         EXPECT_EQ(2, img.cols);
@@ -515,3 +567,129 @@ TEST(Highgui_Tiff, decode_tile_remainder)
 }
 
 #endif
+
+#ifdef HAVE_WEBP
+
+TEST(Highgui_WebP, encode_decode_lossless_webp)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    string input = string(ts.get_data_path()) + "../cv/shared/lena.png";
+    cv::Mat img = cv::imread(input);
+    ASSERT_FALSE(img.empty());
+
+    string output = cv::tempfile(".webp");
+    EXPECT_NO_THROW(cv::imwrite(output, img)); // lossless
+
+    cv::Mat img_webp = cv::imread(output);
+
+    std::vector<unsigned char> buf;
+
+    FILE * wfile = NULL;
+
+    wfile = fopen(output.c_str(), "rb");
+    if (wfile != NULL)
+    {
+        fseek(wfile, 0, SEEK_END);
+        size_t wfile_size = ftell(wfile);
+        fseek(wfile, 0, SEEK_SET);
+
+        buf.resize(wfile_size);
+
+        size_t data_size = fread(&buf[0], 1, wfile_size, wfile);
+
+        if(wfile)
+        {
+            fclose(wfile);
+        }
+
+        if (data_size != wfile_size)
+        {
+            EXPECT_TRUE(false);
+        }
+    }
+
+    remove(output.c_str());
+
+    cv::Mat decode = cv::imdecode(buf, IMREAD_COLOR);
+    ASSERT_FALSE(decode.empty());
+    EXPECT_TRUE(cvtest::norm(decode, img_webp, NORM_INF) == 0);
+
+    ASSERT_FALSE(img_webp.empty());
+
+    EXPECT_TRUE(cvtest::norm(img, img_webp, NORM_INF) == 0);
+}
+
+TEST(Highgui_WebP, encode_decode_lossy_webp)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    std::string input = std::string(ts.get_data_path()) + "../cv/shared/lena.png";
+    cv::Mat img = cv::imread(input);
+    ASSERT_FALSE(img.empty());
+
+    for(int q = 100; q>=0; q-=20)
+    {
+        std::vector<int> params;
+        params.push_back(IMWRITE_WEBP_QUALITY);
+        params.push_back(q);
+        string output = cv::tempfile(".webp");
+
+        EXPECT_NO_THROW(cv::imwrite(output, img, params));
+        cv::Mat img_webp = cv::imread(output);
+        remove(output.c_str());
+        EXPECT_FALSE(img_webp.empty());
+        EXPECT_EQ(3,   img_webp.channels());
+        EXPECT_EQ(512, img_webp.cols);
+        EXPECT_EQ(512, img_webp.rows);
+    }
+}
+
+TEST(Highgui_WebP, encode_decode_with_alpha_webp)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    std::string input = std::string(ts.get_data_path()) + "../cv/shared/lena.png";
+    cv::Mat img = cv::imread(input);
+    ASSERT_FALSE(img.empty());
+
+    std::vector<cv::Mat> imgs;
+    cv::split(img, imgs);
+    imgs.push_back(cv::Mat(imgs[0]));
+    imgs[imgs.size() - 1] = cv::Scalar::all(128);
+    cv::merge(imgs, img);
+
+    string output = cv::tempfile(".webp");
+
+    EXPECT_NO_THROW(cv::imwrite(output, img));
+    cv::Mat img_webp = cv::imread(output);
+    remove(output.c_str());
+    EXPECT_FALSE(img_webp.empty());
+    EXPECT_EQ(4,   img_webp.channels());
+    EXPECT_EQ(512, img_webp.cols);
+    EXPECT_EQ(512, img_webp.rows);
+}
+
+#endif
+
+TEST(Highgui_Hdr, regression)
+{
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "/readwrite/";
+    string name_rle = folder + "rle.hdr";
+    string name_no_rle = folder + "no_rle.hdr";
+    Mat img_rle = imread(name_rle, -1);
+    ASSERT_FALSE(img_rle.empty()) << "Could not open " << name_rle;
+    Mat img_no_rle = imread(name_no_rle, -1);
+    ASSERT_FALSE(img_no_rle.empty()) << "Could not open " << name_no_rle;
+
+    double min = 0.0, max = 1.0;
+    minMaxLoc(abs(img_rle - img_no_rle), &min, &max);
+    ASSERT_FALSE(max > DBL_EPSILON);
+    string tmp_file_name = tempfile(".hdr");
+    vector<int>param(1);
+    for(int i = 0; i < 2; i++) {
+        param[0] = i;
+        imwrite(tmp_file_name, img_rle, param);
+        Mat written_img = imread(tmp_file_name, -1);
+        ASSERT_FALSE(written_img.empty()) << "Could not open " << tmp_file_name;
+        minMaxLoc(abs(img_rle - written_img), &min, &max);
+        ASSERT_FALSE(max > DBL_EPSILON);
+    }
+}

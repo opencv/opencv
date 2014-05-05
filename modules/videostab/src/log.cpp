@@ -45,8 +45,6 @@
 #include <cstdarg>
 #include "opencv2/videostab/log.hpp"
 
-using namespace std;
-
 namespace cv
 {
 namespace videostab

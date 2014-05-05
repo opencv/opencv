@@ -44,7 +44,7 @@
 #define __OPENCV_STITCHING_UTIL_INL_HPP__
 
 #include <queue>
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "util.hpp" // Make your IDE see declarations
 
 namespace cv {

@@ -1,9 +1,10 @@
 #define LOG_TAG "org.opencv.core.Mat"
 
 #include <stdexcept>
+#include <string>
 
 #include "common.h"
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 
 using namespace cv;
 
@@ -466,7 +467,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1dims
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
         return me->dims;
-    } catch(cv::Exception e) {
+    } catch(const cv::Exception& e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
         throwJavaException(env, 0, method_name);
@@ -2173,10 +2174,13 @@ JNIEXPORT jstring JNICALL Java_org_opencv_core_Mat_nDump
     try {
         LOGD("%s", method_name);
         cv::Mat* me = (cv::Mat*) self; //TODO: check for NULL
-        std::stringstream s;
-        s << *me;
-        std::string str = s.str();
-        return env->NewStringUTF(str.c_str());
+        String s;
+        Ptr<Formatted> fmtd = Formatter::get()->format(*me);
+        for(const char* str = fmtd->next(); str; str = fmtd->next())
+        {
+            s = s + String(str);
+        }
+        return env->NewStringUTF(s.c_str());
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {

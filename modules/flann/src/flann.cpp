@@ -27,7 +27,7 @@
  *************************************************************************/
 
 #include "precomp.hpp"
-#include "opencv2/flann/flann.hpp"
+#include "opencv2/flann.hpp"
 
 namespace cvflann
 {

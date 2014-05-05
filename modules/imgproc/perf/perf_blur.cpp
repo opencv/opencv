@@ -1,5 +1,4 @@
 #include "perf_precomp.hpp"
-#include "opencv2/core/internal.hpp"
 
 using namespace std;
 using namespace cv;

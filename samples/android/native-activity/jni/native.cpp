@@ -11,9 +11,10 @@
 #include <math.h>
 #include <queue>
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/core/utility.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 
 #define  LOG_TAG    "OCV:libnative_activity"
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)
@@ -115,10 +116,10 @@ static void engine_handle_cmd(android_app* app, int32_t cmd)
             {
                 LOGI("APP_CMD_INIT_WINDOW");
 
-                engine->capture = new cv::VideoCapture(0);
+                engine->capture = cv::makePtr<cv::VideoCapture>(0);
 
                 union {double prop; const char* name;} u;
-                u.prop = engine->capture->get(CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING);
+                u.prop = engine->capture->get(cv::CAP_PROP_ANDROID_PREVIEW_SIZES_STRING);
 
                 int view_width = ANativeWindow_getWidth(app->window);
                 int view_height = ANativeWindow_getHeight(app->window);
@@ -135,8 +136,8 @@ static void engine_handle_cmd(android_app* app, int32_t cmd)
 
                 if ((camera_resolution.width != 0) && (camera_resolution.height != 0))
                 {
-                    engine->capture->set(CV_CAP_PROP_FRAME_WIDTH, camera_resolution.width);
-                    engine->capture->set(CV_CAP_PROP_FRAME_HEIGHT, camera_resolution.height);
+                    engine->capture->set(cv::CAP_PROP_FRAME_WIDTH, camera_resolution.width);
+                    engine->capture->set(cv::CAP_PROP_FRAME_HEIGHT, camera_resolution.height);
                 }
 
                 float scale = std::min((float)view_width/camera_resolution.width,
@@ -210,7 +211,7 @@ void android_main(android_app* app)
         if (!engine.capture.empty())
         {
             if (engine.capture->grab())
-                engine.capture->retrieve(drawing_frame, CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+                engine.capture->retrieve(drawing_frame, cv::CAP_ANDROID_COLOR_FRAME_RGBA);
 
              char buffer[256];
              sprintf(buffer, "Display performance: %dx%d @ %.3f", drawing_frame.cols, drawing_frame.rows, fps);

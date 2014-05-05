@@ -43,14 +43,13 @@
 #ifndef __OPENCV_STITCHING_MATCHERS_HPP__
 #define __OPENCV_STITCHING_MATCHERS_HPP__
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/core/gpumat.hpp"
-#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/features2d.hpp"
 
 #include "opencv2/opencv_modules.hpp"
 
-#if defined(HAVE_OPENCV_NONFREE)
-    #include "opencv2/nonfree/gpu.hpp"
+#ifdef HAVE_OPENCV_NONFREE
+#  include "opencv2/nonfree/cuda.hpp"
 #endif
 
 namespace cv {
@@ -61,7 +60,7 @@ struct CV_EXPORTS ImageFeatures
     int img_idx;
     Size img_size;
     std::vector<KeyPoint> keypoints;
-    Mat descriptors;
+    UMat descriptors;
 };
 
 
@@ -69,12 +68,12 @@ class CV_EXPORTS FeaturesFinder
 {
 public:
     virtual ~FeaturesFinder() {}
-    void operator ()(const Mat &image, ImageFeatures &features);
-    void operator ()(const Mat &image, ImageFeatures &features, const std::vector<cv::Rect> &rois);
+    void operator ()(InputArray image, ImageFeatures &features);
+    void operator ()(InputArray image, ImageFeatures &features, const std::vector<cv::Rect> &rois);
     virtual void collectGarbage() {}
 
 protected:
-    virtual void find(const Mat &image, ImageFeatures &features) = 0;
+    virtual void find(InputArray image, ImageFeatures &features) = 0;
 };
 
 
@@ -85,7 +84,7 @@ public:
                        int num_octaves_descr = /*4*/3, int num_layers_descr = /*2*/4);
 
 private:
-    void find(const Mat &image, ImageFeatures &features);
+    void find(InputArray image, ImageFeatures &features);
 
     Ptr<FeatureDetector> detector_;
     Ptr<DescriptorExtractor> extractor_;
@@ -98,14 +97,14 @@ public:
     OrbFeaturesFinder(Size _grid_size = Size(3,1), int nfeatures=1500, float scaleFactor=1.3f, int nlevels=5);
 
 private:
-    void find(const Mat &image, ImageFeatures &features);
+    void find(InputArray image, ImageFeatures &features);
 
     Ptr<ORB> orb;
     Size grid_size;
 };
 
 
-#if defined(HAVE_OPENCV_NONFREE)
+#ifdef HAVE_OPENCV_NONFREE
 class CV_EXPORTS SurfFeaturesFinderGpu : public FeaturesFinder
 {
 public:
@@ -115,13 +114,13 @@ public:
     void collectGarbage();
 
 private:
-    void find(const Mat &image, ImageFeatures &features);
+    void find(InputArray image, ImageFeatures &features);
 
-    gpu::GpuMat image_;
-    gpu::GpuMat gray_image_;
-    gpu::SURF_GPU surf_;
-    gpu::GpuMat keypoints_;
-    gpu::GpuMat descriptors_;
+    cuda::GpuMat image_;
+    cuda::GpuMat gray_image_;
+    cuda::SURF_CUDA surf_;
+    cuda::GpuMat keypoints_;
+    cuda::GpuMat descriptors_;
     int num_octaves_, num_layers_;
     int num_octaves_descr_, num_layers_descr_;
 };
@@ -152,7 +151,7 @@ public:
                      MatchesInfo& matches_info) { match(features1, features2, matches_info); }
 
     void operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
-                     const cv::Mat &mask = cv::Mat());
+                     const cv::UMat &mask = cv::UMat());
 
     bool isThreadSafe() const { return is_thread_safe_; }
 

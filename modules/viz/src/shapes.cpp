@@ -781,7 +781,7 @@ namespace  cv  { namespace viz { namespace
                 }
             }
             else
-                image.getMat().copyTo(color);
+                image.copyTo(color);
             return color;
         }
     };
@@ -849,7 +849,7 @@ cv::viz::WCameraPosition::WCameraPosition(const Matx33d &K, InputArray _image, d
     double aspect_ratio = image.cols/(double)image.rows;
     double image_scale = far_end_height/image.rows;
 
-    WImage3D image_widget(image, Size2d(image.cols, image.rows) * image_scale);
+    WImage3D image_widget(image, Size2d(image.size()) * image_scale);
     image_widget.applyTransform(Affine3d().translate(Vec3d(0, 0, scale)));
     vtkSmartPointer<vtkPolyData> plane = getPolyData(image_widget);
 
@@ -881,7 +881,7 @@ cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, InputArray _image, d
     double aspect_ratio = image.cols/(double)image.rows;
     double image_scale = far_end_height/image.rows;
 
-    WImage3D image_widget(image, Size2d(image.cols, image.rows) * image_scale);
+    WImage3D image_widget(image, Size2d(image.size()) * image_scale);
     image_widget.applyTransform(Affine3d().translate(Vec3d(0, 0, scale)));
     vtkSmartPointer<vtkPolyData> plane = getPolyData(image_widget);
 

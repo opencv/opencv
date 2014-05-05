@@ -44,8 +44,6 @@
 #include <iostream>
 #include <fstream>
 
-using namespace std;
-
 class CSMatrixGenerator {
 public:
    typedef enum { PDT_GAUSS=1, PDT_BERNOULLI, PDT_DBFRIENDLY } PHI_DISTR_TYPE;
@@ -336,7 +334,7 @@ void RandomizedTree::train(std::vector<BaseKeypoint> const& base_set,
   Size patchSize(PATCH_SIZE, PATCH_SIZE);
   for (keypt_it = base_set.begin(); keypt_it != base_set.end(); ++keypt_it, ++class_id) {
     for (int i = 0; i < views; ++i) {
-      make_patch( Mat(keypt_it->image), Point(keypt_it->x, keypt_it->y ), patch, patchSize, rng );
+      make_patch( cv::cvarrToMat(keypt_it->image), Point(keypt_it->x, keypt_it->y ), patch, patchSize, rng );
       IplImage iplPatch = patch;
       addExample(class_id, getData(&iplPatch));
     }
@@ -628,7 +626,7 @@ void RandomizedTree::write(std::ostream &os) const
 }
 
 
-void RandomizedTree::savePosteriors(std::string url, bool append)
+void RandomizedTree::savePosteriors(String url, bool append)
 {
    std::ofstream file(url.c_str(), (append?std::ios::app:std::ios::out));
    for (int i=0; i<num_leaves_; i++) {
@@ -643,7 +641,7 @@ void RandomizedTree::savePosteriors(std::string url, bool append)
    file.close();
 }
 
-void RandomizedTree::savePosteriors2(std::string url, bool append)
+void RandomizedTree::savePosteriors2(String url, bool append)
 {
    std::ofstream file(url.c_str(), (append?std::ios::app:std::ios::out));
    for (int i=0; i<num_leaves_; i++) {
@@ -917,7 +915,7 @@ printf("RTreeClassifier::write: num_quant_bits_=%i\n", num_quant_bits_);
     tree_it->write(os);
 }
 
-void RTreeClassifier::saveAllFloatPosteriors(std::string url)
+void RTreeClassifier::saveAllFloatPosteriors(String url)
 {
   printf("[DEBUG] writing all float posteriors to %s...\n", url.c_str());
   for (int i=0; i<(int)trees_.size(); ++i)
@@ -925,7 +923,7 @@ void RTreeClassifier::saveAllFloatPosteriors(std::string url)
   printf("[DEBUG] done\n");
 }
 
-void RTreeClassifier::saveAllBytePosteriors(std::string url)
+void RTreeClassifier::saveAllBytePosteriors(String url)
 {
   printf("[DEBUG] writing all byte posteriors to %s...\n", url.c_str());
   for (int i=0; i<(int)trees_.size(); ++i)
@@ -934,7 +932,7 @@ void RTreeClassifier::saveAllBytePosteriors(std::string url)
 }
 
 
-void RTreeClassifier::setFloatPosteriorsFromTextfile_176(std::string url)
+void RTreeClassifier::setFloatPosteriorsFromTextfile_176(String url)
 {
    std::ifstream ifs(url.c_str());
 

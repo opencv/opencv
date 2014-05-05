@@ -47,7 +47,7 @@
 #define __OPENCV_VIZ_TYPES_HPP__
 
 #include <string>
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 #include <opencv2/core/affine.hpp>
 
 namespace cv

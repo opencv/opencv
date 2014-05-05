@@ -4,6 +4,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
 
+using namespace std;
 using namespace cv;
 
 static void help()
@@ -22,8 +23,8 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    Mat img1 = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
-    Mat img2 = imread(argv[2], CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img1 = imread(argv[1], IMREAD_GRAYSCALE);
+    Mat img2 = imread(argv[2], IMREAD_GRAYSCALE);
     if(img1.empty() || img2.empty())
     {
         printf("Can't read one of the images\n");
@@ -43,7 +44,7 @@ int main(int argc, char** argv)
     extractor.compute(img2, keypoints2, descriptors2);
 
     // matching descriptors
-    BFMatcher matcher(NORM_L2);
+    BFMatcher matcher(extractor.defaultNorm());
     vector<DMatch> matches;
     matcher.match(descriptors1, descriptors2, matches);
 

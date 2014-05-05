@@ -63,25 +63,11 @@ CV_INIT_ALGORITHM(SIFT, "Feature2D.SIFT",
                   obj.info()->addParam(obj, "edgeThreshold", obj.edgeThreshold);
                   obj.info()->addParam(obj, "sigma", obj.sigma))
 
-#ifdef HAVE_OPENCV_OCL
-
-namespace ocl {
-CV_INIT_ALGORITHM(SURF_OCL, "Feature2D.SURF_OCL",
-                  obj.info()->addParam(obj, "hessianThreshold", obj.hessianThreshold);
-                  obj.info()->addParam(obj, "nOctaves", obj.nOctaves);
-                  obj.info()->addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
-                  obj.info()->addParam(obj, "extended", obj.extended);
-                  obj.info()->addParam(obj, "upright", obj.upright))
-}
-
-#endif
-
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool initModule_nonfree(void)
 {
-    Ptr<Algorithm> sift = createSIFT(), surf = createSURF();
+    Ptr<Algorithm> sift = createSIFT_ptr_hidden(), surf = createSURF_ptr_hidden();
     return sift->info() != 0 && surf->info() != 0;
 }
 

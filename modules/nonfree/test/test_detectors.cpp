@@ -113,10 +113,10 @@ void showOrig(const Mat& img, const vector<KeyPoint>& orig_pts)
 {
 
     Mat img_color;
-    cvtColor(img, img_color, CV_GRAY2BGR);
+    cvtColor(img, img_color, COLOR_GRAY2BGR);
 
     for(size_t i = 0; i < orig_pts.size(); ++i)
-        circle(img_color, orig_pts[i].pt, (int)orig_pts[i].size/2, CV_RGB(0, 255, 0));
+        circle(img_color, orig_pts[i].pt, (int)orig_pts[i].size/2, Scalar(0, 255, 0));
 
     namedWindow("O"); imshow("O", img_color);
 }
@@ -125,13 +125,13 @@ void show(const string& name, const Mat& new_img, const vector<KeyPoint>& new_pt
 {
 
     Mat new_img_color;
-    cvtColor(new_img, new_img_color, CV_GRAY2BGR);
+    cvtColor(new_img, new_img_color, COLOR_GRAY2BGR);
 
     for(size_t i = 0; i < transf_pts.size(); ++i)
-        circle(new_img_color, transf_pts[i].pt, (int)transf_pts[i].size/2, CV_RGB(255, 0, 0));
+        circle(new_img_color, transf_pts[i].pt, (int)transf_pts[i].size/2, Scalar(255, 0, 0));
 
     for(size_t i = 0; i < new_pts.size(); ++i)
-        circle(new_img_color, new_pts[i].pt, (int)new_pts[i].size/2, CV_RGB(0, 0, 255));
+        circle(new_img_color, new_pts[i].pt, (int)new_pts[i].size/2, Scalar(0, 0, 255));
 
     namedWindow(name + "_T"); imshow(name + "_T", new_img_color);
 }

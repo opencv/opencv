@@ -73,7 +73,7 @@ hid_t get_hdf5_type<double>() { return H5T_NATIVE_DOUBLE; }
 #define CHECK_ERROR(x,y) if ((x)<0) throw FLANNException((y));
 
 template<typename T>
-void save_to_file(const cvflann::Matrix<T>& dataset, const std::string& filename, const std::string& name)
+void save_to_file(const cvflann::Matrix<T>& dataset, const String& filename, const String& name)
 {
 
 #if H5Eset_auto_vers == 2
@@ -125,7 +125,7 @@ void save_to_file(const cvflann::Matrix<T>& dataset, const std::string& filename
 
 
 template<typename T>
-void load_from_file(cvflann::Matrix<T>& dataset, const std::string& filename, const std::string& name)
+void load_from_file(cvflann::Matrix<T>& dataset, const String& filename, const String& name)
 {
     herr_t status;
     hid_t file_id = H5Fopen(filename.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
@@ -166,7 +166,7 @@ namespace mpi
  * @param name Name of dataset inside file
  */
 template<typename T>
-void load_from_file(cvflann::Matrix<T>& dataset, const std::string& filename, const std::string& name)
+void load_from_file(cvflann::Matrix<T>& dataset, const String& filename, const String& name)
 {
     MPI_Comm comm  = MPI_COMM_WORLD;
     MPI_Info info  = MPI_INFO_NULL;

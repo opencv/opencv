@@ -45,7 +45,7 @@
 #ifndef __vtkCloudMatSource_h
 #define __vtkCloudMatSource_h
 
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 #include <vtkPolyDataAlgorithm.h>
 #include <vtkSmartPointer.h>
 #include <vtkPoints.h>

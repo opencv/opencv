@@ -32,7 +32,8 @@
 #define OPENCV_FLANN_TIMER_H
 
 #include <time.h>
-
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
 
 namespace cvflann
 {
@@ -44,7 +45,7 @@ namespace cvflann
  */
 class StartStopTimer
 {
-    clock_t startTime;
+    int64 startTime;
 
 public:
     /**
@@ -66,7 +67,7 @@ public:
      */
     void start()
     {
-        startTime = clock();
+        startTime = cv::getTickCount();
     }
 
     /**
@@ -74,8 +75,8 @@ public:
      */
     void stop()
     {
-        clock_t stopTime = clock();
-        value += ( (double)stopTime - startTime) / CLOCKS_PER_SEC;
+        int64 stopTime = cv::getTickCount();
+        value += ( (double)stopTime - startTime) / cv::getTickFrequency();
     }
 
     /**

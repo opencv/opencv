@@ -26,6 +26,7 @@ static void help()
     printf("For example: ./one_way_sample . ../c/scene_l.bmp ../c/scene_r.bmp\n");
 }
 
+using namespace std;
 using namespace cv;
 
 Mat DrawCorrespondences(const Mat& img1, const vector<KeyPoint>& features1, const Mat& img2,
@@ -48,8 +49,8 @@ int main(int argc, char** argv)
     std::string img2_name = path_name + "/" + std::string(argv[3]);
 
     printf("Reading the images...\n");
-    Mat img1 = imread(img1_name, CV_LOAD_IMAGE_GRAYSCALE);
-    Mat img2 = imread(img2_name, CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img1 = imread(img1_name, IMREAD_GRAYSCALE);
+    Mat img2 = imread(img2_name, IMREAD_GRAYSCALE);
 
     // extract keypoints from the first image
     SURF surf_extractor(5.0e3);

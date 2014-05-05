@@ -40,6 +40,8 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/calib3d/calib3d_c.h"
 
 class CV_ChessboardDetectorTimingTest : public cvtest::BaseTest
 {
@@ -60,22 +62,22 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
     int code = cvtest::TS::OK;
 
     /* test parameters */
-    char   filepath[1000];
-    char   filename[1000];
+    std::string   filepath;
+    std::string   filename;
 
     CvMat*  _v = 0;
     CvPoint2D32f* v;
 
-    IplImage* img = 0;
+    IplImage img;
     IplImage* gray = 0;
     IplImage* thresh = 0;
 
     int  idx, max_idx;
     int  progress = 0;
 
-    sprintf( filepath, "%scameracalibration/", ts->get_data_path().c_str() );
-    sprintf( filename, "%schessboard_timing_list.dat", filepath );
-    CvFileStorage* fs = cvOpenFileStorage( filename, 0, CV_STORAGE_READ );
+    filepath = cv::format("%scv/cameracalibration/", ts->get_data_path().c_str() );
+    filename = cv::format("%schessboard_timing_list.dat", filepath.c_str() );
+    CvFileStorage* fs = cvOpenFileStorage( filename.c_str(), 0, CV_STORAGE_READ );
     CvFileNode* board_list = fs ? cvGetFileNodeByName( fs, 0, "boards" ) : 0;
 
     if( !fs || !board_list || !CV_NODE_IS_SEQ(board_list->tag) ||
@@ -103,13 +105,14 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
         ts->update_context( this, idx-1, true );
 
         /* read the image */
-        sprintf( filename, "%s%s", filepath, imgname );
+        filename = cv::format("%s%s", filepath.c_str(), imgname );
 
-        img = cvLoadImage( filename );
+        cv::Mat img2 = cv::imread( filename );
+        img = img2;
 
-        if( !img )
+        if( img2.empty() )
         {
-            ts->printf( cvtest::TS::LOG, "one of chessboard images can't be read: %s\n", filename );
+            ts->printf( cvtest::TS::LOG, "one of chessboard images can't be read: %s\n", filename.c_str() );
             if( max_idx == 1 )
             {
                 code = cvtest::TS::FAIL_MISSING_TEST_DATA;
@@ -120,9 +123,9 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
 
         ts->printf(cvtest::TS::LOG, "%s: chessboard %d:\n", imgname, is_chessboard);
 
-        gray = cvCreateImage( cvSize( img->width, img->height ), IPL_DEPTH_8U, 1 );
-        thresh = cvCreateImage( cvSize( img->width, img->height ), IPL_DEPTH_8U, 1 );
-        cvCvtColor( img, gray, CV_BGR2GRAY );
+        gray = cvCreateImage( cvSize( img.width, img.height ), IPL_DEPTH_8U, 1 );
+        thresh = cvCreateImage( cvSize( img.width, img.height ), IPL_DEPTH_8U, 1 );
+        cvCvtColor( &img, gray, CV_BGR2GRAY );
 
 
         count0 = pattern_size.width*pattern_size.height;
@@ -164,7 +167,6 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
                    find_chessboard_time*1e-6, find_chessboard_time/num_pixels);
 
         cvReleaseMat( &_v );
-        cvReleaseImage( &img );
         cvReleaseImage( &gray );
         cvReleaseImage( &thresh );
         progress = update_progress( progress, idx-1, max_idx, 0 );
@@ -175,7 +177,6 @@ _exit_:
     /* release occupied memory */
     cvReleaseMat( &_v );
     cvReleaseFileStorage( &fs );
-    cvReleaseImage( &img );
     cvReleaseImage( &gray );
     cvReleaseImage( &thresh );
 

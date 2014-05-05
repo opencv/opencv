@@ -40,7 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/calib3d.hpp"
 
 using namespace std;
 using namespace cv;
@@ -49,22 +49,6 @@ const string FEATURES2D_DIR = "features2d";
 const string DETECTOR_DIR = FEATURES2D_DIR + "/feature_detectors";
 const string DESCRIPTOR_DIR = FEATURES2D_DIR + "/descriptor_extractors";
 const string IMAGE_FILENAME = "tsukuba.png";
-
-#if defined(HAVE_OPENCV_OCL) && 0 // unblock this to see SURF_OCL tests failures
-static Ptr<Feature2D> getSURF()
-{
-    ocl::PlatformsInfo p;
-    if(ocl::getOpenCLPlatforms(p) > 0)
-        return new ocl::SURF_OCL;
-    else
-        return new SURF;
-}
-#else
-static Ptr<Feature2D> getSURF()
-{
-    return new SURF;
-}
-#endif
 
 /****************************************************************************************\
 *            Regression tests for feature detectors comparing keypoints.                 *
@@ -247,7 +231,7 @@ void CV_FeatureDetectorTest::regressionTest()
 
 void CV_FeatureDetectorTest::run( int /*start_from*/ )
 {
-    if( fdetector.empty() )
+    if( !fdetector )
     {
         ts->printf( cvtest::TS::LOG, "Feature detector is empty.\n" );
         ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
@@ -291,12 +275,16 @@ static Mat readMatFromBin( const string& filename )
         size_t elements_read4 = fread( (void*)&dataSize, sizeof(int), 1, f );
         CV_Assert(elements_read1 == 1 && elements_read2 == 1 && elements_read3 == 1 && elements_read4 == 1);
 
-        uchar* data = (uchar*)cvAlloc(dataSize);
-        size_t elements_read = fread( (void*)data, 1, dataSize, f );
+        int step = dataSize / rows / CV_ELEM_SIZE(type);
+        CV_Assert(step >= cols);
+
+        Mat m = Mat( rows, step, type).colRange(0, cols);
+
+        size_t elements_read = fread( m.ptr(), 1, dataSize, f );
         CV_Assert(elements_read == (size_t)(dataSize));
         fclose(f);
 
-        return Mat( rows, cols, type, data );
+        return m;
     }
     return Mat();
 }
@@ -418,7 +406,7 @@ protected:
             double t = (double)getTickCount();
             dextractor->compute( img, keypoints, calcDescriptors );
             t = getTickCount() - t;
-            ts->printf(cvtest::TS::LOG, "\nAverage time of computing one descriptor = %g ms.\n", t/((double)cvGetTickFrequency()*1000.)/calcDescriptors.rows );
+            ts->printf(cvtest::TS::LOG, "\nAverage time of computing one descriptor = %g ms.\n", t/((double)getTickFrequency()*1000.)/calcDescriptors.rows );
 
             if( calcDescriptors.rows != (int)keypoints.size() )
             {
@@ -476,7 +464,7 @@ protected:
     void run(int)
     {
         createDescriptorExtractor();
-        if( dextractor.empty() )
+        if( !dextractor )
         {
             ts->printf(cvtest::TS::LOG, "Descriptor extractor is empty.\n");
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
@@ -994,7 +982,7 @@ TEST( Features2d_Detector_SIFT, regression )
 
 TEST( Features2d_Detector_SURF, regression )
 {
-    CV_FeatureDetectorTest test( "detector-surf", Ptr<FeatureDetector>(getSURF()) );
+    CV_FeatureDetectorTest test( "detector-surf", FeatureDetector::create("SURF") );
     test.safe_run();
 }
 
@@ -1011,7 +999,7 @@ TEST( Features2d_DescriptorExtractor_SIFT, regression )
 TEST( Features2d_DescriptorExtractor_SURF, regression )
 {
     CV_DescriptorExtractorTest<L2<float> > test( "descriptor-surf",  0.05f,
-                                                 Ptr<DescriptorExtractor>(getSURF()) );
+                                                 DescriptorExtractor::create("SURF") );
     test.safe_run();
 }
 
@@ -1052,10 +1040,10 @@ TEST(Features2d_BruteForceDescriptorMatcher_knnMatch, regression)
     const int sz = 100;
     const int k = 3;
 
-    Ptr<DescriptorExtractor> ext = Ptr<DescriptorExtractor>(getSURF());
+    Ptr<DescriptorExtractor> ext = DescriptorExtractor::create("SURF");
     ASSERT_TRUE(ext != NULL);
 
-    Ptr<FeatureDetector> det = Ptr<FeatureDetector>(getSURF());
+    Ptr<FeatureDetector> det = FeatureDetector::create("SURF");
     //"%YAML:1.0\nhessianThreshold: 8000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n"
     ASSERT_TRUE(det != NULL);
 
@@ -1112,12 +1100,8 @@ public:
 protected:
     void run(int)
     {
-        Ptr<Feature2D> f;
-        if(fname == "SURF")
-            f = getSURF();
-        else
-            f = Algorithm::create<Feature2D>("Feature2D." + fname);
-        if(f.empty())
+        Ptr<Feature2D> f = Algorithm::create<Feature2D>("Feature2D." + fname);
+        if(!f)
             return;
         string path = string(ts->get_data_path()) + "detectors_descriptors_evaluation/planar/";
         string imgname1 = path + "box.png";
@@ -1140,7 +1124,7 @@ protected:
             CV_Assert(kpt2[i].response > 0 );
 
         vector<DMatch> matches;
-        BFMatcher(NORM_L2, true).match(d1, d2, matches);
+        BFMatcher(f->defaultNorm(), true).match(d1, d2, matches);
 
         vector<Point2f> pt1, pt2;
         for( size_t i = 0; i < matches.size(); i++ ) {
@@ -1172,7 +1156,7 @@ public:
     FeatureDetectorUsingMaskTest(const Ptr<FeatureDetector>& featureDetector) :
         featureDetector_(featureDetector)
     {
-        CV_Assert(!featureDetector_.empty());
+        CV_Assert(featureDetector_);
     }
 
 protected:

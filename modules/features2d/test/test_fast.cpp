@@ -42,6 +42,7 @@
 
 #include "test_precomp.hpp"
 
+using namespace std;
 using namespace cv;
 
 class CV_FastTest : public cvtest::BaseTest
@@ -70,24 +71,24 @@ void CV_FastTest::run( int )
     }
 
     Mat gray1, gray2;
-    cvtColor(image1, gray1, CV_BGR2GRAY);
-    cvtColor(image2, gray2, CV_BGR2GRAY);
+    cvtColor(image1, gray1, COLOR_BGR2GRAY);
+    cvtColor(image2, gray2, COLOR_BGR2GRAY);
 
     vector<KeyPoint> keypoints1;
     vector<KeyPoint> keypoints2;
-    FASTX(gray1, keypoints1, 30, true, type);
-    FASTX(gray2, keypoints2, (type > 0 ? 30 : 20), true, type);
+    FAST(gray1, keypoints1, 30, true, type);
+    FAST(gray2, keypoints2, (type > 0 ? 30 : 20), true, type);
 
     for(size_t i = 0; i < keypoints1.size(); ++i)
     {
         const KeyPoint& kp = keypoints1[i];
-        cv::circle(image1, kp.pt, cvRound(kp.size/2), CV_RGB(255, 0, 0));
+        cv::circle(image1, kp.pt, cvRound(kp.size/2), Scalar(255, 0, 0));
     }
 
     for(size_t i = 0; i < keypoints2.size(); ++i)
     {
         const KeyPoint& kp = keypoints2[i];
-        cv::circle(image2, kp.pt, cvRound(kp.size/2), CV_RGB(255, 0, 0));
+        cv::circle(image2, kp.pt, cvRound(kp.size/2), Scalar(255, 0, 0));
     }
 
     Mat kps1(1, (int)(keypoints1.size() * sizeof(KeyPoint)), CV_8U, &keypoints1[0]);
@@ -118,8 +119,8 @@ void CV_FastTest::run( int )
     read( fs["exp_kps2"], exp_kps2, Mat() );
     fs.release();
 
-    if ( exp_kps1.size != kps1.size || 0 != norm(exp_kps1, kps1, NORM_L2) ||
-         exp_kps2.size != kps2.size || 0 != norm(exp_kps2, kps2, NORM_L2))
+     if ( exp_kps1.size != kps1.size || 0 != cvtest::norm(exp_kps1, kps1, NORM_L2) ||
+          exp_kps2.size != kps2.size || 0 != cvtest::norm(exp_kps2, kps2, NORM_L2))
     {
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         return;

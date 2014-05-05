@@ -544,7 +544,7 @@ public:
     CvBlobDetectorCC();
    ~CvBlobDetectorCC();
     int DetectNewBlob(IplImage* pImg, IplImage* pFGMask, CvBlobSeq* pNewBlobList, CvBlobSeq* pOldBlobList);
-    void Release(){delete this;};
+    void Release(){delete this;}
 
     virtual void ParamUpdate()
     {

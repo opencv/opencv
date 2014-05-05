@@ -1,11 +1,16 @@
 #include <iostream>
+
+#include "opencv2/opencv_modules.hpp"
+
+#if defined(HAVE_OPENCV_CUDACODEC) && defined(WIN32)
+
 #include <vector>
 #include <numeric>
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/contrib/contrib.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/cudacodec.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/contrib.hpp"
 
 int main(int argc, const char* argv[])
 {
@@ -25,13 +30,13 @@ int main(int argc, const char* argv[])
         return -1;
     }
 
-    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+    cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
     cv::VideoWriter writer;
-    cv::gpu::VideoWriter_GPU d_writer;
+    cv::Ptr<cv::cudacodec::VideoWriter> d_writer;
 
     cv::Mat frame;
-    cv::gpu::GpuMat d_frame;
+    cv::cuda::GpuMat d_frame;
 
     std::vector<double> cpu_times;
     std::vector<double> gpu_times;
@@ -55,15 +60,15 @@ int main(int argc, const char* argv[])
 
             std::cout << "Open CPU Writer" << std::endl;
 
-            if (!writer.open("output_cpu.avi", CV_FOURCC('X', 'V', 'I', 'D'), FPS, frame.size()))
+            if (!writer.open("output_cpu.avi", cv::VideoWriter::fourcc('X', 'V', 'I', 'D'), FPS, frame.size()))
                 return -1;
         }
 
-        if (!d_writer.isOpened())
+        if (d_writer.empty())
         {
-            std::cout << "Open GPU Writer" << std::endl;
+            std::cout << "Open CUDA Writer" << std::endl;
 
-            d_writer.open("output_gpu.avi", frame.size(), FPS);
+            d_writer = cv::cudacodec::createVideoWriter("output_gpu.avi", frame.size(), FPS);
         }
 
         d_frame.upload(frame);
@@ -76,7 +81,7 @@ int main(int argc, const char* argv[])
         cpu_times.push_back(tm.getTimeMilli());
 
         tm.reset(); tm.start();
-        d_writer.write(d_frame);
+        d_writer->write(d_frame);
         tm.stop();
         gpu_times.push_back(tm.getTimeMilli());
     }
@@ -94,3 +99,13 @@ int main(int argc, const char* argv[])
 
     return 0;
 }
+
+#else
+
+int main()
+{
+    std::cout << "OpenCV was built without CUDA Video encoding support\n" << std::endl;
+    return 0;
+}
+
+#endif

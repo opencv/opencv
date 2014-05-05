@@ -99,7 +99,7 @@ bool EM::trainE(InputArray samples,
                 OutputArray probs)
 {
     Mat samplesMat = samples.getMat();
-    vector<Mat> covs0;
+    std::vector<Mat> covs0;
     _covs0.getMatVector(covs0);
 
     Mat means0 = _means0.getMat(), weights0 = _weights0.getMat();
@@ -156,7 +156,7 @@ bool EM::isTrained() const
 static
 void checkTrainData(int startStep, const Mat& samples,
                     int nclusters, int covMatType, const Mat* probs, const Mat* means,
-                    const vector<Mat>* covs, const Mat* weights)
+                    const std::vector<Mat>* covs, const Mat* weights)
 {
     // Check samples.
     CV_Assert(!samples.empty());
@@ -244,7 +244,7 @@ void preprocessProbability(Mat& probs)
 void EM::setTrainData(int startStep, const Mat& samples,
                       const Mat* probs0,
                       const Mat* means0,
-                      const vector<Mat>* covs0,
+                      const std::vector<Mat>* covs0,
                       const Mat* weights0)
 {
     clear();

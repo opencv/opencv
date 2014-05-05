@@ -17,8 +17,10 @@ static void help()
             "./laplace [camera #, default 0]\n" << endl;
 }
 
+enum {GAUSSIAN, BLUR, MEDIAN};
+
 int sigma = 3;
-int smoothType = CV_GAUSSIAN;
+int smoothType = GAUSSIAN;
 
 int main( int argc, char** argv )
 {
@@ -32,15 +34,15 @@ int main( int argc, char** argv )
         cap.open(argv[1]);
         if( cap.isOpened() )
             cout << "Video " << argv[1] <<
-                ": width=" << cap.get(CV_CAP_PROP_FRAME_WIDTH) <<
-                ", height=" << cap.get(CV_CAP_PROP_FRAME_HEIGHT) <<
-                ", nframes=" << cap.get(CV_CAP_PROP_FRAME_COUNT) << endl;
+                ": width=" << cap.get(CAP_PROP_FRAME_WIDTH) <<
+                ", height=" << cap.get(CAP_PROP_FRAME_HEIGHT) <<
+                ", nframes=" << cap.get(CAP_PROP_FRAME_COUNT) << endl;
         if( argc > 2 && isdigit(argv[2][0]) )
         {
             int pos;
             sscanf(argv[2], "%d", &pos);
             cout << "seeking to frame #" << pos << endl;
-            cap.set(CV_CAP_PROP_POS_FRAMES, pos);
+            cap.set(CAP_PROP_POS_FRAMES, pos);
         }
     }
 
@@ -63,9 +65,9 @@ int main( int argc, char** argv )
             break;
 
         int ksize = (sigma*5)|1;
-        if(smoothType == CV_GAUSSIAN)
+        if(smoothType == GAUSSIAN)
             GaussianBlur(frame, smoothed, Size(ksize, ksize), sigma, sigma);
-        else if(smoothType == CV_BLUR)
+        else if(smoothType == BLUR)
             blur(frame, smoothed, Size(ksize, ksize));
         else
             medianBlur(frame, smoothed, ksize);
@@ -76,7 +78,7 @@ int main( int argc, char** argv )
 
         int c = waitKey(30);
         if( c == ' ' )
-            smoothType = smoothType == CV_GAUSSIAN ? CV_BLUR : smoothType == CV_BLUR ? CV_MEDIAN : CV_GAUSSIAN;
+            smoothType = smoothType == GAUSSIAN ? BLUR : smoothType == BLUR ? MEDIAN : GAUSSIAN;
         if( c == 'q' || c == 'Q' || (c & 255) == 27 )
             break;
     }

@@ -279,7 +279,6 @@ CloneSeq
 Creates a copy of a sequence.
 
 .. ocv:cfunction:: CvSeq* cvCloneSeq(  const CvSeq* seq, CvMemStorage* storage=NULL )
-.. ocv:pyoldfunction:: cv.CloneSeq(seq, storage)-> None
 
     :param seq: Sequence
 
@@ -387,9 +386,6 @@ CreateMemStorage
 Creates memory storage.
 
 .. ocv:cfunction:: CvMemStorage* cvCreateMemStorage( int block_size=0 )
-
-.. ocv:pyoldfunction:: cv.CreateMemStorage(blockSize=0) -> memstorage
-
 
     :param block_size: Size of the storage blocks in bytes. If it is 0, the block size is set to a default value - currently it is  about 64K.
 

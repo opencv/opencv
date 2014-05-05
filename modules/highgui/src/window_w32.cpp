@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <windowsx.h> // required for GET_X_LPARAM() and GET_Y_LPARAM() macros
 
 #if defined WIN32 || defined _WIN32
 
@@ -52,14 +53,13 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
-#include <windowsx.h>
 
 #ifdef HAVE_OPENGL
 #include <memory>
 #include <algorithm>
 #include <vector>
 #include <functional>
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 #include <GL\gl.h>
 #endif
 
@@ -88,6 +88,10 @@ static const char* trackbar_text =
 #define CV_HCURSOR GCL_HCURSOR
 #define CV_HBRBACKGROUND GCL_HBRBACKGROUND
 
+#endif
+
+#ifndef WM_MOUSEHWHEEL
+    #define WM_MOUSEHWHEEL 0x020E
 #endif
 
 static void FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin )
@@ -1086,8 +1090,7 @@ cvShowImage( const char* name, const CvArr* arr )
 #ifdef HAVE_OPENGL
     if (window->useGl)
     {
-        cv::Mat im(image);
-        cv::imshow(name, im);
+        cv::imshow(name, cv::cvarrToMat(image));
         return;
     }
 #endif
@@ -1362,6 +1365,39 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
         if(LOWORD(wParam) == WA_ACTIVE || LOWORD(wParam) == WA_CLICKACTIVE)
             SetFocus(window->hwnd);
         break;
+
+    case WM_MOUSEWHEEL:
+    case WM_MOUSEHWHEEL:
+       if( window->on_mouse )
+       {
+          int flags = (wParam & MK_LBUTTON      ? CV_EVENT_FLAG_LBUTTON  : 0)|
+                      (wParam & MK_RBUTTON      ? CV_EVENT_FLAG_RBUTTON  : 0)|
+                      (wParam & MK_MBUTTON      ? CV_EVENT_FLAG_MBUTTON  : 0)|
+                      (wParam & MK_CONTROL      ? CV_EVENT_FLAG_CTRLKEY  : 0)|
+                      (wParam & MK_SHIFT        ? CV_EVENT_FLAG_SHIFTKEY : 0)|
+                      (GetKeyState(VK_MENU) < 0 ? CV_EVENT_FLAG_ALTKEY   : 0);
+          int event = (uMsg == WM_MOUSEWHEEL    ? CV_EVENT_MOUSEWHEEL    : CV_EVENT_MOUSEHWHEEL);
+
+          // Set the wheel delta of mouse wheel to be in the upper word of 'event'
+          int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+          flags |= (delta << 16);
+
+          POINT pt;
+          pt.x = GET_X_LPARAM( lParam );
+          pt.y = GET_Y_LPARAM( lParam );
+          ::ScreenToClient(hwnd, &pt); // Convert screen coordinates to client coordinates.
+
+          RECT rect;
+          GetClientRect( window->hwnd, &rect );
+
+          SIZE size = {0,0};
+          icvGetBitmapData( window, &size, 0, 0 );
+
+          window->on_mouse( event, pt.x*size.cx/MAX(rect.right - rect.left,1),
+                                   pt.y*size.cy/MAX(rect.bottom - rect.top,1), flags,
+                                   window->on_mouse_param );
+       }
+       break;
 
     case WM_ERASEBKGND:
         {

@@ -14,7 +14,7 @@ typedef perf::TestBaseWithParam<std::string> orb;
 
 PERF_TEST_P(orb, detect, testing::Values(ORB_IMAGES))
 {
-    String filename = getDataPath(GetParam());
+    string filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
 
     if (frame.empty())
@@ -28,12 +28,12 @@ PERF_TEST_P(orb, detect, testing::Values(ORB_IMAGES))
     TEST_CYCLE() detector(frame, mask, points);
 
     sort(points.begin(), points.end(), comparators::KeypointGreater());
-    SANITY_CHECK_KEYPOINTS(points);
+    SANITY_CHECK_KEYPOINTS(points, 1e-5);
 }
 
 PERF_TEST_P(orb, extract, testing::Values(ORB_IMAGES))
 {
-    String filename = getDataPath(GetParam());
+    string filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
 
     if (frame.empty())
@@ -56,7 +56,7 @@ PERF_TEST_P(orb, extract, testing::Values(ORB_IMAGES))
 
 PERF_TEST_P(orb, full, testing::Values(ORB_IMAGES))
 {
-    String filename = getDataPath(GetParam());
+    string filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
 
     if (frame.empty())
@@ -72,6 +72,6 @@ PERF_TEST_P(orb, full, testing::Values(ORB_IMAGES))
     TEST_CYCLE() detector(frame, mask, points, descriptors, false);
 
     perf::sort(points, descriptors);
-    SANITY_CHECK_KEYPOINTS(points);
+    SANITY_CHECK_KEYPOINTS(points, 1e-5);
     SANITY_CHECK(descriptors);
 }

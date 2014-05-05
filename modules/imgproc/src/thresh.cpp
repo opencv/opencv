@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -52,16 +53,41 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     uchar tab[256];
     Size roi = _src.size();
     roi.width *= _src.channels();
+    size_t src_step = _src.step;
+    size_t dst_step = _dst.step;
 
     if( _src.isContinuous() && _dst.isContinuous() )
     {
         roi.width *= roi.height;
         roi.height = 1;
+        src_step = dst_step = roi.width;
     }
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::thresh_8u(_src, _dst, roi.width, roi.height, thresh, maxval, type))
         return;
+#endif
+
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+    IppiSize sz = { roi.width, roi.height };
+    switch( type )
+    {
+    case THRESH_TRUNC:
+        if (0 <= ippiThreshold_GT_8u_C1R(_src.data, (int)src_step, _dst.data, (int)dst_step, sz, thresh))
+            return;
+        setIppErrorStatus();
+        break;
+    case THRESH_TOZERO:
+        if (0 <= ippiThreshold_LTVal_8u_C1R(_src.data, (int)src_step, _dst.data, (int)dst_step, sz, thresh+1, 0))
+            return;
+        setIppErrorStatus();
+        break;
+    case THRESH_TOZERO_INV:
+        if (0 <= ippiThreshold_GTVal_8u_C1R(_src.data, (int)src_step, _dst.data, (int)dst_step, sz, thresh, 0))
+            return;
+        setIppErrorStatus();
+        break;
+    }
 #endif
 
     switch( type )
@@ -111,8 +137,8 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
 
         for( i = 0; i < roi.height; i++ )
         {
-            const uchar* src = (const uchar*)(_src.data + _src.step*i);
-            uchar* dst = (uchar*)(_dst.data + _dst.step*i);
+            const uchar* src = (const uchar*)(_src.data + src_step*i);
+            uchar* dst = (uchar*)(_dst.data + dst_step*i);
 
             switch( type )
             {
@@ -230,8 +256,8 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     {
         for( i = 0; i < roi.height; i++ )
         {
-            const uchar* src = (const uchar*)(_src.data + _src.step*i);
-            uchar* dst = (uchar*)(_dst.data + _dst.step*i);
+            const uchar* src = (const uchar*)(_src.data + src_step*i);
+            uchar* dst = (uchar*)(_dst.data + dst_step*i);
             j = j_scalar;
 #if CV_ENABLE_UNROLLED
             for( ; j <= roi.width - 4; j += 4 )
@@ -275,11 +301,34 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
     {
         roi.width *= roi.height;
         roi.height = 1;
+        src_step = dst_step = roi.width;
     }
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::thresh_16s(_src, _dst, roi.width, roi.height, thresh, maxval, type))
         return;
+#endif
+
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+    IppiSize sz = { roi.width, roi.height };
+    switch( type )
+    {
+    case THRESH_TRUNC:
+        if (0 <= ippiThreshold_GT_16s_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh))
+            return;
+        setIppErrorStatus();
+        break;
+    case THRESH_TOZERO:
+        if (0 <= ippiThreshold_LTVal_16s_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh+1, 0))
+            return;
+        setIppErrorStatus();
+        break;
+    case THRESH_TOZERO_INV:
+        if (0 <= ippiThreshold_GTVal_16s_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0))
+            return;
+        setIppErrorStatus();
+        break;
+    }
 #endif
 
     switch( type )
@@ -454,6 +503,28 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
         return;
 #endif
 
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+    IppiSize sz = { roi.width, roi.height };
+    switch( type )
+    {
+    case THRESH_TRUNC:
+        if (0 <= ippiThreshold_GT_32f_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh))
+            return;
+        setIppErrorStatus();
+        break;
+    case THRESH_TOZERO:
+        if (0 <= ippiThreshold_LTVal_32f_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh+FLT_EPSILON, 0))
+            return;
+        setIppErrorStatus();
+        break;
+    case THRESH_TOZERO_INV:
+        if (0 <= ippiThreshold_GTVal_32f_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0))
+            return;
+        setIppErrorStatus();
+        break;
+    }
+#endif
+
     switch( type )
     {
         case THRESH_BINARY:
@@ -604,16 +675,30 @@ static double
 getThreshVal_Otsu_8u( const Mat& _src )
 {
     Size size = _src.size();
+    int step = (int) _src.step;
     if( _src.isContinuous() )
     {
         size.width *= size.height;
         size.height = 1;
+        step = size.width;
     }
+
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801
+    IppiSize srcSize = { size.width, size.height };
+    Ipp8u thresh;
+    CV_SUPPRESS_DEPRECATED_START
+    IppStatus ok = ippiComputeThreshold_Otsu_8u_C1R(_src.data, step, srcSize, &thresh);
+    CV_SUPPRESS_DEPRECATED_END
+    if (ok >= 0)
+        return thresh;
+    setIppErrorStatus();
+#endif
+
     const int N = 256;
     int i, j, h[N] = {0};
     for( i = 0; i < size.height; i++ )
     {
-        const uchar* src = _src.data + _src.step*i;
+        const uchar* src = _src.data + step*i;
         j = 0;
         #if CV_ENABLE_UNROLLED
         for( ; j <= size.width - 4; j += 4 )
@@ -699,17 +784,58 @@ public:
 private:
     Mat src;
     Mat dst;
-    int nStripes;
 
     double thresh;
     double maxval;
     int thresholdType;
 };
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, double maxval, int thresh_type )
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+        kercn = ocl::predictOptimalVectorWidth(_src, _dst), ktype = CV_MAKE_TYPE(depth, kercn);
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if ( !(thresh_type == THRESH_BINARY || thresh_type == THRESH_BINARY_INV || thresh_type == THRESH_TRUNC ||
+           thresh_type == THRESH_TOZERO || thresh_type == THRESH_TOZERO_INV) ||
+         (!doubleSupport && depth == CV_64F))
+        return false;
+
+    const char * const thresholdMap[] = { "THRESH_BINARY", "THRESH_BINARY_INV", "THRESH_TRUNC",
+                                          "THRESH_TOZERO", "THRESH_TOZERO_INV" };
+    ocl::Kernel k("threshold", ocl::imgproc::threshold_oclsrc,
+                  format("-D %s -D T=%s -D T1=%s%s", thresholdMap[thresh_type],
+                         ocl::typeToStr(ktype), ocl::typeToStr(depth),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(src.size(), type);
+    UMat dst = _dst.getUMat();
+
+    if (depth <= CV_32S)
+        thresh = cvFloor(thresh);
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst, cn, kercn),
+           ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(thresh))),
+           ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(maxval))));
+
+    size_t globalsize[2] = { dst.cols * cn / kercn, dst.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+
+#endif
+
 }
 
 double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double maxval, int type )
 {
+    CV_OCL_RUN_(_src.dims() <= 2 && _dst.isUMat(),
+                ocl_threshold(_src, _dst, thresh, maxval, type), thresh)
+
     Mat src = _src.getMat();
     bool use_otsu = (type & THRESH_OTSU) != 0;
     type &= THRESH_MASK;

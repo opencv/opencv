@@ -93,7 +93,7 @@ void goodFeaturesToTrack_Demo( int, void* )
   /// Set the neeed parameters to find the refined corners
   Size winSize = Size( 5, 5 );
   Size zeroZone = Size( -1, -1 );
-  TermCriteria criteria = TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 );
+  TermCriteria criteria = TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 40, 0.001 );
 
   /// Calculate the refined corner locations
   cornerSubPix( src_gray, corners, winSize, zeroZone, criteria );

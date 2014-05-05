@@ -5,8 +5,6 @@
 #include "polynom_solver.h"
 #include "p3p.h"
 
-using namespace std;
-
 void p3p::init_inverse_parameters()
 {
     inv_fx = 1. / fx;

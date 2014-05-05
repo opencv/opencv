@@ -39,9 +39,10 @@
 //
 //M*/
 
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/features2d.hpp"
 
 #include <stdlib.h>
 #include <stdio.h>

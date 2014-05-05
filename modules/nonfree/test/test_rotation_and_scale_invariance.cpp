@@ -40,19 +40,13 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
 
 const string IMAGE_TSUKUBA = "/features2d/tsukuba.png";
 const string IMAGE_BIKES = "/detectors_descriptors_evaluation/images_datasets/bikes/img1.png";
-
-#if defined(HAVE_OPENCV_OCL) && 0 // unblock this to see SURF_OCL tests failures
-#define SURF_NAME "Feature2D.SURF_OCL"
-#else
-#define SURF_NAME "Feature2D.SURF"
-#endif
 
 #define SHOW_DEBUG_LOG 0
 
@@ -216,7 +210,7 @@ public:
         minKeyPointMatchesRatio(_minKeyPointMatchesRatio),
         minAngleInliersRatio(_minAngleInliersRatio)
     {
-        CV_Assert(!featureDetector.empty());
+        CV_Assert(featureDetector);
     }
 
 protected:
@@ -238,7 +232,7 @@ protected:
         featureDetector->detect(image0, keypoints0);
         removeVerySmallKeypoints(keypoints0);
         if(keypoints0.size() < 15)
-            CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
+            CV_Error(Error::StsAssert, "Detector gives too few points in a test image\n");
 
         const int maxAngle = 360, angleStep = 15;
         for(int angle = 0; angle < maxAngle; angle += angleStep)
@@ -268,7 +262,7 @@ protected:
                 float angle0 = keypoints0[matches[m].queryIdx].angle;
                 float angle1 = keypoints1[matches[m].trainIdx].angle;
                 if(angle0 == -1 || angle1 == -1)
-                    CV_Error(CV_StsBadArg, "Given FeatureDetector is not rotation invariant, it can not be tested here.\n");
+                    CV_Error(Error::StsBadArg, "Given FeatureDetector is not rotation invariant, it can not be tested here.\n");
                 CV_Assert(angle0 >= 0.f && angle0 < 360.f);
                 CV_Assert(angle1 >= 0.f && angle1 < 360.f);
 
@@ -329,8 +323,8 @@ public:
         normType(_normType),
         minDescInliersRatio(_minDescInliersRatio)
     {
-        CV_Assert(!featureDetector.empty());
-        CV_Assert(!descriptorExtractor.empty());
+        CV_Assert(featureDetector);
+        CV_Assert(descriptorExtractor);
     }
 
 protected:
@@ -353,7 +347,7 @@ protected:
         featureDetector->detect(image0, keypoints0);
         removeVerySmallKeypoints(keypoints0);
         if(keypoints0.size() < 15)
-            CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
+            CV_Error(Error::StsAssert, "Detector gives too few points in a test image\n");
         descriptorExtractor->compute(image0, keypoints0, descriptors0);
 
         BFMatcher bfmatcher(normType);
@@ -416,7 +410,7 @@ public:
         minKeyPointMatchesRatio(_minKeyPointMatchesRatio),
         minScaleInliersRatio(_minScaleInliersRatio)
     {
-        CV_Assert(!featureDetector.empty());
+        CV_Assert(featureDetector);
     }
 
 protected:
@@ -438,7 +432,7 @@ protected:
         featureDetector->detect(image0, keypoints0);
         removeVerySmallKeypoints(keypoints0);
         if(keypoints0.size() < 15)
-            CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
+            CV_Error(Error::StsAssert, "Detector gives too few points in a test image\n");
 
         for(int scaleIdx = 1; scaleIdx <= 3; scaleIdx++)
         {
@@ -450,7 +444,7 @@ protected:
             featureDetector->detect(image1, keypoints1);
             removeVerySmallKeypoints(keypoints1);
             if(keypoints1.size() < 15)
-                CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
+                CV_Error(Error::StsAssert, "Detector gives too few points in a test image\n");
 
             if(keypoints1.size() > keypoints0.size())
             {
@@ -536,8 +530,8 @@ public:
         normType(_normType),
         minDescInliersRatio(_minDescInliersRatio)
     {
-        CV_Assert(!featureDetector.empty());
-        CV_Assert(!descriptorExtractor.empty());
+        CV_Assert(featureDetector);
+        CV_Assert(descriptorExtractor);
     }
 
 protected:
@@ -559,7 +553,7 @@ protected:
         featureDetector->detect(image0, keypoints0);
         removeVerySmallKeypoints(keypoints0);
         if(keypoints0.size() < 15)
-            CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
+            CV_Error(Error::StsAssert, "Detector gives too few points in a test image\n");
         Mat descriptors0;
         descriptorExtractor->compute(image0, keypoints0, descriptors0);
 
@@ -621,7 +615,7 @@ protected:
  */
 TEST(Features2d_RotationInvariance_Detector_SURF, regression)
 {
-    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>(SURF_NAME),
+    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"),
                                         0.44f,
                                         0.76f);
     test.safe_run();
@@ -640,8 +634,8 @@ TEST(Features2d_RotationInvariance_Detector_SIFT, DISABLED_regression)
  */
 TEST(Features2d_RotationInvariance_Descriptor_SURF, regression)
 {
-    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>(SURF_NAME),
-                                          Algorithm::create<DescriptorExtractor>(SURF_NAME),
+    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"),
+                                          Algorithm::create<DescriptorExtractor>("Feature2D.SURF"),
                                           NORM_L1,
                                           0.83f);
     test.safe_run();
@@ -661,7 +655,7 @@ TEST(Features2d_RotationInvariance_Descriptor_SIFT, regression)
  */
 TEST(Features2d_ScaleInvariance_Detector_SURF, regression)
 {
-    DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>(SURF_NAME),
+    DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"),
                                      0.64f,
                                      0.84f);
     test.safe_run();
@@ -680,8 +674,8 @@ TEST(Features2d_ScaleInvariance_Detector_SIFT, regression)
  */
 TEST(Features2d_ScaleInvariance_Descriptor_SURF, regression)
 {
-    DescriptorScaleInvarianceTest test(Algorithm::create<FeatureDetector>(SURF_NAME),
-                                       Algorithm::create<DescriptorExtractor>(SURF_NAME),
+    DescriptorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"),
+                                       Algorithm::create<DescriptorExtractor>("Feature2D.SURF"),
                                        NORM_L1,
                                        0.61f);
     test.safe_run();

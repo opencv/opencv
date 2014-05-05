@@ -140,7 +140,7 @@ int main(int ac, char ** av)
 
     vector<DMatch> matches;
 
-    BFMatcher desc_matcher(NORM_HAMMING);
+    BFMatcher desc_matcher(brief.defaultNorm());
 
     vector<Point2f> train_pts, query_pts;
     vector<KeyPoint> train_kpts, query_kpts;
@@ -152,7 +152,7 @@ int main(int ac, char ** av)
 
     Mat train_desc, query_desc;
     const int DESIRED_FTRS = 500;
-    GridAdaptedFeatureDetector detector(new FastFeatureDetector(10, true), DESIRED_FTRS, 4, 4);
+    GridAdaptedFeatureDetector detector(makePtr<FastFeatureDetector>(10, true), DESIRED_FTRS, 4, 4);
 
     Mat H_prev = Mat::eye(3, 3, CV_32FC1);
     for (;;)

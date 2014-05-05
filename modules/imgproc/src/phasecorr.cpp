@@ -359,7 +359,7 @@ static void fftShift(InputOutputArray _out)
         return;
     }
 
-    vector<Mat> planes;
+    std::vector<Mat> planes;
     split(out, planes);
 
     int xMid = out.cols >> 1;
@@ -488,7 +488,7 @@ static Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Siz
 
 }
 
-cv::Point2d cv::phaseCorrelateRes(InputArray _src1, InputArray _src2, InputArray _window, double* response)
+cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _window, double* response)
 {
     Mat src1 = _src1.getMat();
     Mat src2 = _src2.getMat();
@@ -568,10 +568,6 @@ cv::Point2d cv::phaseCorrelateRes(InputArray _src1, InputArray _src2, InputArray
     return (center - t);
 }
 
-cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _window)
-{
-    return phaseCorrelateRes(_src1, _src2, _window, 0);
-}
 
 void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
 {
@@ -580,20 +576,23 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
     _dst.create(winSize, type);
     Mat dst = _dst.getMat();
 
-    int rows = dst.rows;
-    int cols = dst.cols;
+    int rows = dst.rows, cols = dst.cols;
+
+    AutoBuffer<double> _wc(cols);
+    double * const wc = (double *)_wc;
+
+    double coeff0 = 2.0 * CV_PI / (double)(cols - 1), coeff1 = 2.0f * CV_PI / (double)(rows - 1);
+    for(int j = 0; j < cols; j++)
+        wc[j] = 0.5 * (1.0 - cos(coeff0 * j));
 
     if(dst.depth() == CV_32F)
     {
         for(int i = 0; i < rows; i++)
         {
             float* dstData = dst.ptr<float>(i);
-            double wr = 0.5 * (1.0f - cos(2.0f * CV_PI * (double)i / (double)(rows - 1)));
+            double wr = 0.5 * (1.0 - cos(coeff1 * i));
             for(int j = 0; j < cols; j++)
-            {
-                double wc = 0.5 * (1.0f - cos(2.0f * CV_PI * (double)j / (double)(cols - 1)));
-                dstData[j] = (float)(wr * wc);
-            }
+                dstData[j] = (float)(wr * wc[j]);
         }
     }
     else
@@ -601,12 +600,9 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
         for(int i = 0; i < rows; i++)
         {
             double* dstData = dst.ptr<double>(i);
-            double wr = 0.5 * (1.0 - cos(2.0 * CV_PI * (double)i / (double)(rows - 1)));
+            double wr = 0.5 * (1.0 - cos(coeff1 * i));
             for(int j = 0; j < cols; j++)
-            {
-                double wc = 0.5 * (1.0 - cos(2.0 * CV_PI * (double)j / (double)(cols - 1)));
-                dstData[j] = wr * wc;
-            }
+                dstData[j] = wr * wc[j];
         }
     }
 

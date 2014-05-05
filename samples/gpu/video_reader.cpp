@@ -1,14 +1,19 @@
 #include <iostream>
+
+#include "opencv2/opencv_modules.hpp"
+
+#if defined(HAVE_OPENCV_CUDACODEC)
+
 #include <string>
 #include <vector>
 #include <algorithm>
 #include <numeric>
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/core/opengl_interop.hpp>
-#include <opencv2/gpu/gpu.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/contrib/contrib.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/core/opengl.hpp>
+#include <opencv2/cudacodec.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/contrib.hpp>
 
 int main(int argc, const char* argv[])
 {
@@ -19,14 +24,13 @@ int main(int argc, const char* argv[])
 
     cv::namedWindow("CPU", cv::WINDOW_NORMAL);
     cv::namedWindow("GPU", cv::WINDOW_OPENGL);
-    cv::gpu::setGlDevice();
+    cv::cuda::setGlDevice();
 
     cv::Mat frame;
     cv::VideoCapture reader(fname);
 
-    cv::gpu::GpuMat d_frame;
-    cv::gpu::VideoReader_GPU d_reader(fname);
-    d_reader.dumpFormat(std::cout);
+    cv::cuda::GpuMat d_frame;
+    cv::Ptr<cv::cudacodec::VideoReader> d_reader = cv::cudacodec::createVideoReader(fname);
 
     cv::TickMeter tm;
     std::vector<double> cpu_times;
@@ -41,7 +45,7 @@ int main(int argc, const char* argv[])
         cpu_times.push_back(tm.getTimeMilli());
 
         tm.reset(); tm.start();
-        if (!d_reader.read(d_frame))
+        if (!d_reader->nextFrame(d_frame))
             break;
         tm.stop();
         gpu_times.push_back(tm.getTimeMilli());
@@ -69,3 +73,13 @@ int main(int argc, const char* argv[])
 
     return 0;
 }
+
+#else
+
+int main()
+{
+    std::cout << "OpenCV was built without CUDA Video decoding support\n" << std::endl;
+    return 0;
+}
+
+#endif

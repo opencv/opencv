@@ -124,7 +124,7 @@ cvCreateHandMask( CvSeq * numbers, IplImage * img_mask, CvRect * roi )
     __BEGIN__;
 
     if( img_mask->depth != IPL_DEPTH_8U )
-        CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+        CV_ERROR( CV_BadDepth, "Unsupported format" );
 
     if( img_mask->nChannels != 1 )
         CV_ERROR( CV_BadNumChannels, "output image have wrong number of channels" );

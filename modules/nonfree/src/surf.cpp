@@ -108,6 +108,7 @@ Modifications by Ian Mahon
 
 */
 #include "precomp.hpp"
+#include "surf.hpp"
 
 namespace cv
 {
@@ -260,9 +261,9 @@ interpolateKeypoint( float N9[3][9], int dx, int dy, int ds, KeyPoint& kpt )
 // Multi-threaded construction of the scale-space pyramid
 struct SURFBuildInvoker : ParallelLoopBody
 {
-    SURFBuildInvoker( const Mat& _sum, const vector<int>& _sizes,
-                      const vector<int>& _sampleSteps,
-                      vector<Mat>& _dets, vector<Mat>& _traces )
+    SURFBuildInvoker( const Mat& _sum, const std::vector<int>& _sizes,
+                      const std::vector<int>& _sampleSteps,
+                      std::vector<Mat>& _dets, std::vector<Mat>& _traces )
     {
         sum = &_sum;
         sizes = &_sizes;
@@ -278,19 +279,19 @@ struct SURFBuildInvoker : ParallelLoopBody
     }
 
     const Mat *sum;
-    const vector<int> *sizes;
-    const vector<int> *sampleSteps;
-    vector<Mat>* dets;
-    vector<Mat>* traces;
+    const std::vector<int> *sizes;
+    const std::vector<int> *sampleSteps;
+    std::vector<Mat>* dets;
+    std::vector<Mat>* traces;
 };
 
 // Multi-threaded search of the scale-space pyramid for keypoints
 struct SURFFindInvoker : ParallelLoopBody
 {
     SURFFindInvoker( const Mat& _sum, const Mat& _mask_sum,
-                     const vector<Mat>& _dets, const vector<Mat>& _traces,
-                     const vector<int>& _sizes, const vector<int>& _sampleSteps,
-                     const vector<int>& _middleIndices, vector<KeyPoint>& _keypoints,
+                     const std::vector<Mat>& _dets, const std::vector<Mat>& _traces,
+                     const std::vector<int>& _sizes, const std::vector<int>& _sampleSteps,
+                     const std::vector<int>& _middleIndices, std::vector<KeyPoint>& _keypoints,
                      int _nOctaveLayers, float _hessianThreshold )
     {
         sum = &_sum;
@@ -306,8 +307,8 @@ struct SURFFindInvoker : ParallelLoopBody
     }
 
     static void findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
-                   const vector<Mat>& dets, const vector<Mat>& traces,
-                   const vector<int>& sizes, vector<KeyPoint>& keypoints,
+                   const std::vector<Mat>& dets, const std::vector<Mat>& traces,
+                   const std::vector<int>& sizes, std::vector<KeyPoint>& keypoints,
                    int octave, int layer, float hessianThreshold, int sampleStep );
 
     void operator()(const Range& range) const
@@ -324,12 +325,12 @@ struct SURFFindInvoker : ParallelLoopBody
 
     const Mat *sum;
     const Mat *mask_sum;
-    const vector<Mat>* dets;
-    const vector<Mat>* traces;
-    const vector<int>* sizes;
-    const vector<int>* sampleSteps;
-    const vector<int>* middleIndices;
-    vector<KeyPoint>* keypoints;
+    const std::vector<Mat>* dets;
+    const std::vector<Mat>* traces;
+    const std::vector<int>* sizes;
+    const std::vector<int>* sampleSteps;
+    const std::vector<int>* middleIndices;
+    std::vector<KeyPoint>* keypoints;
     int nOctaveLayers;
     float hessianThreshold;
 
@@ -344,8 +345,8 @@ Mutex SURFFindInvoker::findMaximaInLayer_m;
  * scale-space pyramid
  */
 void SURFFindInvoker::findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
-                   const vector<Mat>& dets, const vector<Mat>& traces,
-                   const vector<int>& sizes, vector<KeyPoint>& keypoints,
+                   const std::vector<Mat>& dets, const std::vector<Mat>& traces,
+                   const std::vector<int>& sizes, std::vector<KeyPoint>& keypoints,
                    int octave, int layer, float hessianThreshold, int sampleStep )
 {
     // Wavelet Data
@@ -423,7 +424,7 @@ void SURFFindInvoker::findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
                     float center_j = sum_j + (size-1)*0.5f;
 
                     KeyPoint kpt( center_j, center_i, (float)sizes[layer],
-                                  -1, val0, octave, CV_SIGN(trace_ptr[j]) );
+                                  -1, val0, octave, (trace_ptr[j] > 0) - (trace_ptr[j] < 0) );
 
                     /* Interpolate maxima location within the 3x3x3 neighbourhood  */
                     int ds = size - sizes[layer-1];
@@ -459,7 +460,7 @@ struct KeypointGreater
 };
 
 
-static void fastHessianDetector( const Mat& sum, const Mat& mask_sum, vector<KeyPoint>& keypoints,
+static void fastHessianDetector( const Mat& sum, const Mat& mask_sum, std::vector<KeyPoint>& keypoints,
                                  int nOctaves, int nOctaveLayers, float hessianThreshold )
 {
     /* Sampling step along image x and y axes at first octave. This is doubled
@@ -470,11 +471,11 @@ static void fastHessianDetector( const Mat& sum, const Mat& mask_sum, vector<Key
     int nTotalLayers = (nOctaveLayers+2)*nOctaves;
     int nMiddleLayers = nOctaveLayers*nOctaves;
 
-    vector<Mat> dets(nTotalLayers);
-    vector<Mat> traces(nTotalLayers);
-    vector<int> sizes(nTotalLayers);
-    vector<int> sampleSteps(nTotalLayers);
-    vector<int> middleIndices(nMiddleLayers);
+    std::vector<Mat> dets(nTotalLayers);
+    std::vector<Mat> traces(nTotalLayers);
+    std::vector<int> sizes(nTotalLayers);
+    std::vector<int> sampleSteps(nTotalLayers);
+    std::vector<int> middleIndices(nMiddleLayers);
 
     keypoints.clear();
 
@@ -517,7 +518,7 @@ struct SURFInvoker : ParallelLoopBody
     enum { ORI_RADIUS = 6, ORI_WIN = 60, PATCH_SZ = 20 };
 
     SURFInvoker( const Mat& _img, const Mat& _sum,
-                 vector<KeyPoint>& _keypoints, Mat& _descriptors,
+                 std::vector<KeyPoint>& _keypoints, Mat& _descriptors,
                  bool _extended, bool _upright )
     {
         keypoints = &_keypoints;
@@ -544,7 +545,7 @@ struct SURFInvoker : ParallelLoopBody
             {
                 if( i*i + j*j <= ORI_RADIUS*ORI_RADIUS )
                 {
-                    apt[nOriSamples] = cvPoint(i,j);
+                    apt[nOriSamples] = Point(i,j);
                     aptw[nOriSamples++] = G_ori.at<float>(i+ORI_RADIUS,0) * G_ori.at<float>(j+ORI_RADIUS,0);
                 }
             }
@@ -574,9 +575,6 @@ struct SURFInvoker : ParallelLoopBody
         float X[nOriSampleBound], Y[nOriSampleBound], angle[nOriSampleBound];
         uchar PATCH[PATCH_SZ+1][PATCH_SZ+1];
         float DX[PATCH_SZ][PATCH_SZ], DY[PATCH_SZ][PATCH_SZ];
-        CvMat matX = cvMat(1, nOriSampleBound, CV_32F, X);
-        CvMat matY = cvMat(1, nOriSampleBound, CV_32F, Y);
-        CvMat _angle = cvMat(1, nOriSampleBound, CV_32F, angle);
         Mat _patch(PATCH_SZ+1, PATCH_SZ+1, CV_8U, PATCH);
 
         int dsize = extended ? 128 : 64;
@@ -588,7 +586,8 @@ struct SURFInvoker : ParallelLoopBody
             maxSize = std::max(maxSize, (*keypoints)[k].size);
         }
         int imaxSize = std::max(cvCeil((PATCH_SZ+1)*maxSize*1.2f/9.0f), 1);
-        Ptr<CvMat> winbuf = cvCreateMat( 1, imaxSize*imaxSize, CV_8U );
+        cv::AutoBuffer<uchar> winbuf(imaxSize*imaxSize);
+
         for( k = k1; k < k2; k++ )
         {
             int i, j, kk, nangle;
@@ -642,8 +641,8 @@ struct SURFInvoker : ParallelLoopBody
                     kp.size = -1;
                     continue;
                 }
-                matX.cols = matY.cols = _angle.cols = nangle;
-                cvCartToPolar( &matX, &matY, 0, &_angle, 1 );
+
+                phase( Mat(1, nangle, CV_32F, X), Mat(1, nangle, CV_32F, Y), Mat(1, nangle, CV_32F, angle), true );
 
                 float bestx = 0, besty = 0, descriptor_mod = 0;
                 for( i = 0; i < 360; i += SURF_ORI_SEARCH_INC )
@@ -674,8 +673,8 @@ struct SURFInvoker : ParallelLoopBody
 
             /* Extract a window of pixels around the keypoint of size 20s */
             int win_size = (int)((PATCH_SZ+1)*s);
-            CV_Assert( winbuf->cols >= win_size*win_size );
-            Mat win(win_size, win_size, CV_8U, winbuf->data.ptr);
+            CV_Assert( imaxSize >= win_size );
+            Mat win(win_size, win_size, CV_8U, winbuf);
 
             if( !upright )
             {
@@ -844,7 +843,7 @@ struct SURFInvoker : ParallelLoopBody
 
             // unit vector is essential for contrast invariance
             vec = descriptors->ptr<float>(k);
-            float scale = (float)(1./(sqrt(square_mag) + DBL_EPSILON));
+            float scale = (float)(1./(std::sqrt(square_mag) + DBL_EPSILON));
             for( kk = 0; kk < dsize; kk++ )
                 vec[kk] *= scale;
         }
@@ -853,16 +852,16 @@ struct SURFInvoker : ParallelLoopBody
     // Parameters
     const Mat* img;
     const Mat* sum;
-    vector<KeyPoint>* keypoints;
+    std::vector<KeyPoint>* keypoints;
     Mat* descriptors;
     bool extended;
     bool upright;
 
     // Pre-calculated values
     int nOriSamples;
-    vector<Point> apt;
-    vector<float> aptw;
-    vector<float> DW;
+    std::vector<Point> apt;
+    std::vector<float> aptw;
+    std::vector<float> DW;
 };
 
 
@@ -886,23 +885,55 @@ SURF::SURF(double _threshold, int _nOctaves, int _nOctaveLayers, bool _extended,
 
 int SURF::descriptorSize() const { return extended ? 128 : 64; }
 int SURF::descriptorType() const { return CV_32F; }
+int SURF::defaultNorm() const { return NORM_L2; }
 
 void SURF::operator()(InputArray imgarg, InputArray maskarg,
-                      CV_OUT vector<KeyPoint>& keypoints) const
+                      CV_OUT std::vector<KeyPoint>& keypoints) const
 {
     (*this)(imgarg, maskarg, keypoints, noArray(), false);
 }
 
 void SURF::operator()(InputArray _img, InputArray _mask,
-                      CV_OUT vector<KeyPoint>& keypoints,
+                      CV_OUT std::vector<KeyPoint>& keypoints,
                       OutputArray _descriptors,
                       bool useProvidedKeypoints) const
 {
-    Mat img = _img.getMat(), mask = _mask.getMat(), mask1, sum, msum;
+    int imgtype = _img.type(), imgcn = CV_MAT_CN(imgtype);
     bool doDescriptors = _descriptors.needed();
 
-    CV_Assert(!img.empty() && img.depth() == CV_8U);
-    if( img.channels() > 1 )
+    CV_Assert(!_img.empty() && CV_MAT_DEPTH(imgtype) == CV_8U && (imgcn == 1 || imgcn == 3 || imgcn == 4));
+    CV_Assert(_descriptors.needed() || !useProvidedKeypoints);
+
+    if( ocl::useOpenCL() )
+    {
+        SURF_OCL ocl_surf;
+        UMat gpu_kpt;
+        bool ok = ocl_surf.init(this);
+
+        if( ok )
+        {
+            if( !_descriptors.needed() )
+            {
+                ok = ocl_surf.detect(_img, _mask, gpu_kpt);
+            }
+            else
+            {
+                if(useProvidedKeypoints)
+                    ocl_surf.uploadKeypoints(keypoints, gpu_kpt);
+                ok = ocl_surf.detectAndCompute(_img, _mask, gpu_kpt, _descriptors, useProvidedKeypoints);
+            }
+        }
+        if( ok )
+        {
+            if(!useProvidedKeypoints)
+                ocl_surf.downloadKeypoints(gpu_kpt, keypoints);
+            return;
+        }
+    }
+
+    Mat img = _img.getMat(), mask = _mask.getMat(), mask1, sum, msum;
+
+    if( imgcn > 1 )
         cvtColor(img, img, COLOR_BGR2GRAY);
 
     CV_Assert(mask.empty() || (mask.type() == CV_8U && mask.size() == img.size()));
@@ -980,12 +1011,12 @@ void SURF::operator()(InputArray _img, InputArray _mask,
 }
 
 
-void SURF::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
+void SURF::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
 {
-    (*this)(image, mask, keypoints, noArray(), false);
+    (*this)(image.getMat(), mask.getMat(), keypoints, noArray(), false);
 }
 
-void SURF::computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const
+void SURF::computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
 {
     (*this)(image, Mat(), keypoints, descriptors, true);
 }

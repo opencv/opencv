@@ -39,6 +39,7 @@
 //
 //M*/
 #include "precomp.hpp"
+#include "opencv2/video/tracking_c.h"
 
 CvCamShiftTracker::CvCamShiftTracker()
 {

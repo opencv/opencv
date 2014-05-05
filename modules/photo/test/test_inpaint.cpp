@@ -43,6 +43,7 @@
 #include "test_precomp.hpp"
 #include <string>
 
+using namespace std;
 using namespace cv;
 
 class CV_InpaintTest : public cvtest::BaseTest
@@ -77,21 +78,21 @@ void CV_InpaintTest::run( int )
     mask.convertTo(inv_mask, CV_8UC3, -1.0, 255.0);
 
     Mat mask1ch;
-    cv::cvtColor(mask, mask1ch, CV_BGR2GRAY);
+    cv::cvtColor(mask, mask1ch, COLOR_BGR2GRAY);
 
     Mat test = orig.clone();
     test.setTo(Scalar::all(255), mask1ch);
 
     Mat res1, res2;
-    inpaint( test, mask1ch, res1, 5, CV_INPAINT_NS );
-    inpaint( test, mask1ch, res2, 5, CV_INPAINT_TELEA );
+    inpaint( test, mask1ch, res1, 5, INPAINT_NS );
+    inpaint( test, mask1ch, res2, 5, INPAINT_TELEA );
 
     Mat diff1, diff2;
     absdiff( orig, res1, diff1 );
     absdiff( orig, res2, diff2 );
 
-    double n1 = norm(diff1.reshape(1), NORM_INF, inv_mask.reshape(1));
-    double n2 = norm(diff2.reshape(1), NORM_INF, inv_mask.reshape(1));
+    double n1 = cvtest::norm(diff1.reshape(1), NORM_INF, inv_mask.reshape(1));
+    double n2 = cvtest::norm(diff2.reshape(1), NORM_INF, inv_mask.reshape(1));
 
     if (n1 != 0 || n2 != 0)
     {
@@ -102,8 +103,8 @@ void CV_InpaintTest::run( int )
     absdiff( exp1, res1, diff1 );
     absdiff( exp2, res2, diff2 );
 
-    n1 = norm(diff1.reshape(1), NORM_INF, mask.reshape(1));
-    n2 = norm(diff2.reshape(1), NORM_INF, mask.reshape(1));
+    n1 = cvtest::norm(diff1.reshape(1), NORM_INF, mask.reshape(1));
+    n2 = cvtest::norm(diff2.reshape(1), NORM_INF, mask.reshape(1));
 
     const int jpeg_thres = 3;
     if (n1 > jpeg_thres || n2 > jpeg_thres)

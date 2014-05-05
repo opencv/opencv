@@ -26,8 +26,7 @@ Here it is:
 .. code-block:: cpp
    :linenos:
 
-   #include <cv.h>
-   #include <highgui.h>
+   #include <opencv2/opencv.hpp>
 
    using namespace cv;
 
@@ -45,12 +44,12 @@ Here it is:
     }
 
     Mat gray_image;
-    cvtColor( image, gray_image, CV_BGR2GRAY );
+    cvtColor( image, gray_image, COLOR_BGR2GRAY );
 
     imwrite( "../../images/Gray_Image.jpg", gray_image );
 
-    namedWindow( imageName, CV_WINDOW_AUTOSIZE );
-    namedWindow( "Gray image", CV_WINDOW_AUTOSIZE );
+    namedWindow( imageName, WINDOW_AUTOSIZE );
+    namedWindow( "Gray image", WINDOW_AUTOSIZE );
 
     imshow( imageName, image );
     imshow( "Gray image", gray_image );

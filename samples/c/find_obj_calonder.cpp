@@ -61,7 +61,7 @@ static void trainCalonderClassifier( const string& classifierFilename, const str
         string str;
         getline( is, str );
         if (str.empty()) break;
-        Mat img = imread( str, CV_LOAD_IMAGE_GRAYSCALE );
+        Mat img = imread( str, IMREAD_GRAYSCALE );
         if( !img.empty() )
             trainImgs.push_back( img );
     }
@@ -106,7 +106,7 @@ static void trainCalonderClassifier( const string& classifierFilename, const str
  */
 static void testCalonderClassifier( const string& classifierFilename, const string& imgFilename )
 {
-    Mat img1 = imread( imgFilename, CV_LOAD_IMAGE_GRAYSCALE ), img2, H12;
+    Mat img1 = imread( imgFilename, IMREAD_GRAYSCALE ), img2, H12;
     if( img1.empty() )
     {
         cout << "Test image can not be read." << endl;
@@ -125,7 +125,7 @@ static void testCalonderClassifier( const string& classifierFilename, const stri
     Mat descriptors2;  de.compute( img2, keypoints2, descriptors2 );
 
     // Match descriptors
-    BFMatcher matcher(NORM_L1);
+    BFMatcher matcher(de.defaultNorm());
     vector<DMatch> matches;
     matcher.match( descriptors1, descriptors2, matches );
 

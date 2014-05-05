@@ -47,7 +47,7 @@ class CV_LshTableBadArgTest : public cvtest::BadArgTest
 {
 protected:
     void run(int);
-    void run_func(void) {};
+    void run_func(void) { }
 
     struct Caller
     {
@@ -74,13 +74,13 @@ void CV_LshTableBadArgTest::run( int /* start_from */ )
 
     int errors = 0;
     caller.key_size = 0;
-    errors += run_test_case(CV_StsBadArg, "key_size is zero", caller);
+    errors += run_test_case(Error::StsBadArg, "key_size is zero", caller);
 
     caller.key_size = static_cast<int>(sizeof(size_t) * CHAR_BIT);
-    errors += run_test_case(CV_StsBadArg, "key_size is too big", caller);
+    errors += run_test_case(Error::StsBadArg, "key_size is too big", caller);
 
     caller.key_size += cvtest::randInt(rng) % 100;
-    errors += run_test_case(CV_StsBadArg, "key_size is too big", caller);
+    errors += run_test_case(Error::StsBadArg, "key_size is too big", caller);
 
     if (errors != 0)
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);

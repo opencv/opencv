@@ -20,11 +20,12 @@
      Or: http://oreilly.com/catalog/9780596516130/
      ISBN-10: 0596516134 or: ISBN-13: 978-0596516130
 ************************************************** */
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
 #include "opencv2/video/background_segm.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/legacy/legacy.hpp"
+#include "opencv2/highgui/highgui_c.h"
+#include "opencv2/legacy.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,9 +73,9 @@ static void help()
 //
 const char *keys =
 {
-    "{nf|nframes   |300        |frames number}"
-    "{c |camera    |false      |use the camera or not}"
-    "{mf|movie_file|tree.avi   |used movie video file}"
+    "{nf nframes   |300        |frames number}"
+    "{c  camera    |false      |use the camera or not}"
+    "{mf movie_file|tree.avi   |used movie video file}"
 };
 int main(int argc, const char** argv)
 {
@@ -82,7 +83,7 @@ int main(int argc, const char** argv)
 
     CommandLineParser parser(argc, argv, keys);
     int nframesToLearnBG = parser.get<int>("nf");
-    bool useCamera = parser.get<bool>("c");
+    bool useCamera = parser.has("c");
     string filename = parser.get<string>("mf");
     IplImage* rawImage = 0, *yuvImage = 0; //yuvImage is for codebook method
     IplImage *ImaskCodeBook = 0,*ImaskCodeBookCC = 0;

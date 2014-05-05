@@ -59,7 +59,7 @@ void thresh_callback(int, void* )
   threshold( src_gray, threshold_output, thresh, 255, THRESH_BINARY );
 
   /// Find contours
-  findContours( threshold_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+  findContours( threshold_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
   /// Find the convex hull object for each contour
   vector<vector<Point> >hull( contours.size() );

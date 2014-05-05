@@ -31,6 +31,9 @@ from common import Sketcher
 class App:
     def __init__(self, fn):
         self.img = cv2.imread(fn)
+        if self.img is None:
+            raise Exception('Failed to load image file: %s' % fn)
+
         h, w = self.img.shape[:2]
         self.markers = np.zeros((h, w), np.int32)
         self.markers_vis = self.img.copy()
@@ -73,7 +76,9 @@ class App:
 
 if __name__ == '__main__':
     import sys
-    try: fn = sys.argv[1]
-    except: fn = '../cpp/fruits.jpg'
+    try:
+        fn = sys.argv[1]
+    except:
+        fn = '../cpp/fruits.jpg'
     print __doc__
     App(fn).run()

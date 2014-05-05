@@ -34,7 +34,7 @@
 #import <AssetsLibrary/AssetsLibrary.h>
 
 
-static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
+static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 
 #pragma mark - Private Interface
 

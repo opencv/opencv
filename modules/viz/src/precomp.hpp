@@ -147,9 +147,10 @@
 #include <vtk/vtkImageMatSource.h>
 
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/viz/vizcore.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/viz.hpp>
 #include <opencv2/viz/widget_accessor.hpp>
+#include <opencv2/core/utility.hpp>
 
 
 namespace cv

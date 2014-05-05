@@ -44,13 +44,18 @@ static const float ord_nan = FLT_MAX*0.5f;
 static const int min_block_size = 1 << 16;
 static const int block_size_delta = 1 << 10;
 
-#define CV_CMP_NUM_PTR(a,b) (*(a) < *(b))
-static CV_IMPLEMENT_QSORT_EX( icvSortIntPtr, int*, CV_CMP_NUM_PTR, int )
+template<typename T>
+class LessThanPtr
+{
+public:
+    bool operator()(T* a, T* b) const { return *a < *b; }
+};
 
-#define CV_CMP_PAIRS(a,b) (*((a).i) < *((b).i))
-static CV_IMPLEMENT_QSORT_EX( icvSortPairs, CvPair16u32s, CV_CMP_PAIRS, int )
-
-///
+class LessThanPairs
+{
+public:
+    bool operator()(const CvPair16u32s& a, const CvPair16u32s& b) const { return *a.i < *b.i; }
+};
 
 void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     const CvMat* _responses, const CvMat* _var_idx, const CvMat* _sample_idx,
@@ -353,7 +358,7 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
             if (is_buf_16u)
             {
-                icvSortPairs( pair16u32s_ptr, sample_count, 0 );
+                std::sort(pair16u32s_ptr, pair16u32s_ptr + sample_count, LessThanPairs());
                 // count the categories
                 for( i = 1; i < num_valid; i++ )
                     if (*pair16u32s_ptr[i].i != *pair16u32s_ptr[i-1].i)
@@ -361,7 +366,7 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
             }
             else
             {
-                icvSortIntPtr( int_ptr, sample_count, 0 );
+                std::sort(int_ptr, int_ptr + sample_count, LessThanPtr<int>());
                 // count the categories
                 for( i = 1; i < num_valid; i++ )
                     c_count += *int_ptr[i] != *int_ptr[i-1];
@@ -1537,7 +1542,7 @@ CvERTrees::~CvERTrees()
 {
 }
 
-std::string CvERTrees::getName() const
+cv::String CvERTrees::getName() const
 {
     return CV_TYPE_NAME_ML_ERTREES;
 }
@@ -1839,9 +1844,14 @@ bool CvERTrees::train( const Mat& _train_data, int _tflag,
                       const Mat& _sample_idx, const Mat& _var_type,
                       const Mat& _missing_mask, CvRTParams params )
 {
-    CvMat tdata = _train_data, responses = _responses, vidx = _var_idx,
-    sidx = _sample_idx, vtype = _var_type, mmask = _missing_mask;
-    return train(&tdata, _tflag, &responses, vidx.data.ptr ? &vidx : 0,
+    train_data_hdr = _train_data;
+    train_data_mat = _train_data;
+    responses_hdr = _responses;
+    responses_mat = _responses;
+
+    CvMat vidx = _var_idx, sidx = _sample_idx, vtype = _var_type, mmask = _missing_mask;
+
+    return train(&train_data_hdr, _tflag, &responses_hdr, vidx.data.ptr ? &vidx : 0,
                  sidx.data.ptr ? &sidx : 0, vtype.data.ptr ? &vtype : 0,
                  mmask.data.ptr ? &mmask : 0, params);
 }

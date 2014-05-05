@@ -45,7 +45,8 @@
 #include <fstream>
 #include <string>
 #include "opencv2/opencv_modules.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/highgui.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
 #include "opencv2/stitching/detail/camera.hpp"
@@ -70,8 +71,8 @@ static void printUsage()
         "  --preview\n"
         "      Run stitching in the preview mode. Works faster than usual mode,\n"
         "      but output image will have lower resolution.\n"
-        "  --try_gpu (yes|no)\n"
-        "      Try to use GPU. The default value is 'no'. All default values\n"
+        "  --try_cuda (yes|no)\n"
+        "      Try to use CUDA. The default value is 'no'. All default values\n"
         "      are for CPU mode.\n"
         "\nMotion Estimation Flags:\n"
         "  --work_megapix <float>\n"
@@ -120,9 +121,9 @@ static void printUsage()
 
 
 // Default command line args
-vector<string> img_names;
+vector<String> img_names;
 bool preview = false;
-bool try_gpu = false;
+bool try_cuda = false;
 double work_megapix = 0.6;
 double seam_megapix = 0.1;
 double compose_megapix = -1;
@@ -160,15 +161,15 @@ static int parseCmdArgs(int argc, char** argv)
         {
             preview = true;
         }
-        else if (string(argv[i]) == "--try_gpu")
+        else if (string(argv[i]) == "--try_cuda")
         {
             if (string(argv[i + 1]) == "no")
-                try_gpu = false;
+                try_cuda = false;
             else if (string(argv[i + 1]) == "yes")
-                try_gpu = true;
+                try_cuda = true;
             else
             {
-                cout << "Bad --try_gpu flag value\n";
+                cout << "Bad --try_cuda flag value\n";
                 return -1;
             }
             i++;
@@ -330,7 +331,9 @@ int main(int argc, char* argv[])
     int64 app_start_time = getTickCount();
 #endif
 
+#if 0
     cv::setBreakOnError(true);
+#endif
 
     int retval = parseCmdArgs(argc, argv);
     if (retval)
@@ -355,16 +358,16 @@ int main(int argc, char* argv[])
     Ptr<FeaturesFinder> finder;
     if (features_type == "surf")
     {
-#if defined(HAVE_OPENCV_NONFREE) && defined(HAVE_OPENCV_GPU)
-        if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
-            finder = new SurfFeaturesFinderGpu();
+#ifdef HAVE_OPENCV_NONFREE
+        if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
+            finder = makePtr<SurfFeaturesFinderGpu>();
         else
 #endif
-            finder = new SurfFeaturesFinder();
+            finder = makePtr<SurfFeaturesFinder>();
     }
     else if (features_type == "orb")
     {
-        finder = new OrbFeaturesFinder();
+        finder = makePtr<OrbFeaturesFinder>();
     }
     else
     {
@@ -429,7 +432,7 @@ int main(int argc, char* argv[])
     t = getTickCount();
 #endif
     vector<MatchesInfo> pairwise_matches;
-    BestOf2NearestMatcher matcher(try_gpu, match_conf);
+    BestOf2NearestMatcher matcher(try_cuda, match_conf);
     matcher(features, pairwise_matches);
     matcher.collectGarbage();
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
@@ -445,7 +448,7 @@ int main(int argc, char* argv[])
     // Leave only images we are sure are from the same panorama
     vector<int> indices = leaveBiggestComponent(features, pairwise_matches, conf_thresh);
     vector<Mat> img_subset;
-    vector<string> img_names_subset;
+    vector<String> img_names_subset;
     vector<Size> full_img_sizes_subset;
     for (size_t i = 0; i < indices.size(); ++i)
     {
@@ -468,7 +471,11 @@ int main(int argc, char* argv[])
 
     HomographyBasedEstimator estimator;
     vector<CameraParams> cameras;
-    estimator(features, pairwise_matches, cameras);
+    if (!estimator(features, pairwise_matches, cameras))
+    {
+        cout << "Homography estimation failed.\n";
+        return -1;
+    }
 
     for (size_t i = 0; i < cameras.size(); ++i)
     {
@@ -479,8 +486,8 @@ int main(int argc, char* argv[])
     }
 
     Ptr<detail::BundleAdjusterBase> adjuster;
-    if (ba_cost_func == "reproj") adjuster = new detail::BundleAdjusterReproj();
-    else if (ba_cost_func == "ray") adjuster = new detail::BundleAdjusterRay();
+    if (ba_cost_func == "reproj") adjuster = makePtr<detail::BundleAdjusterReproj>();
+    else if (ba_cost_func == "ray") adjuster = makePtr<detail::BundleAdjusterRay>();
     else
     {
         cout << "Unknown bundle adjustment cost function: '" << ba_cost_func << "'.\n";
@@ -494,7 +501,11 @@ int main(int argc, char* argv[])
     if (ba_refine_mask[3] == 'x') refine_mask(1,1) = 1;
     if (ba_refine_mask[4] == 'x') refine_mask(1,2) = 1;
     adjuster->setRefinementMask(refine_mask);
-    (*adjuster)(features, pairwise_matches, cameras);
+    if (!(*adjuster)(features, pairwise_matches, cameras))
+    {
+        cout << "Camera parameters adjusting failed.\n";
+        return -1;
+    }
 
     // Find median focal length
 
@@ -528,10 +539,10 @@ int main(int argc, char* argv[])
 #endif
 
     vector<Point> corners(num_images);
-    vector<Mat> masks_warped(num_images);
-    vector<Mat> images_warped(num_images);
+    vector<UMat> masks_warped(num_images);
+    vector<UMat> images_warped(num_images);
     vector<Size> sizes(num_images);
-    vector<Mat> masks(num_images);
+    vector<UMat> masks(num_images);
 
     // Preapre images masks
     for (int i = 0; i < num_images; ++i)
@@ -543,34 +554,52 @@ int main(int argc, char* argv[])
     // Warp images and their masks
 
     Ptr<WarperCreator> warper_creator;
-#if defined(HAVE_OPENCV_GPU)
-    if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+#ifdef HAVE_OPENCV_CUDAWARPING
+    if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
     {
-        if (warp_type == "plane") warper_creator = new cv::PlaneWarperGpu();
-        else if (warp_type == "cylindrical") warper_creator = new cv::CylindricalWarperGpu();
-        else if (warp_type == "spherical") warper_creator = new cv::SphericalWarperGpu();
+        if (warp_type == "plane")
+            warper_creator = makePtr<cv::PlaneWarperGpu>();
+        else if (warp_type == "cylindrical")
+            warper_creator = makePtr<cv::CylindricalWarperGpu>();
+        else if (warp_type == "spherical")
+            warper_creator = makePtr<cv::SphericalWarperGpu>();
     }
     else
 #endif
     {
-        if (warp_type == "plane") warper_creator = new cv::PlaneWarper();
-        else if (warp_type == "cylindrical") warper_creator = new cv::CylindricalWarper();
-        else if (warp_type == "spherical") warper_creator = new cv::SphericalWarper();
-        else if (warp_type == "fisheye") warper_creator = new cv::FisheyeWarper();
-        else if (warp_type == "stereographic") warper_creator = new cv::StereographicWarper();
-        else if (warp_type == "compressedPlaneA2B1") warper_creator = new cv::CompressedRectilinearWarper(2, 1);
-        else if (warp_type == "compressedPlaneA1.5B1") warper_creator = new cv::CompressedRectilinearWarper(1.5, 1);
-        else if (warp_type == "compressedPlanePortraitA2B1") warper_creator = new cv::CompressedRectilinearPortraitWarper(2, 1);
-        else if (warp_type == "compressedPlanePortraitA1.5B1") warper_creator = new cv::CompressedRectilinearPortraitWarper(1.5, 1);
-        else if (warp_type == "paniniA2B1") warper_creator = new cv::PaniniWarper(2, 1);
-        else if (warp_type == "paniniA1.5B1") warper_creator = new cv::PaniniWarper(1.5, 1);
-        else if (warp_type == "paniniPortraitA2B1") warper_creator = new cv::PaniniPortraitWarper(2, 1);
-        else if (warp_type == "paniniPortraitA1.5B1") warper_creator = new cv::PaniniPortraitWarper(1.5, 1);
-        else if (warp_type == "mercator") warper_creator = new cv::MercatorWarper();
-        else if (warp_type == "transverseMercator") warper_creator = new cv::TransverseMercatorWarper();
+        if (warp_type == "plane")
+            warper_creator = makePtr<cv::PlaneWarper>();
+        else if (warp_type == "cylindrical")
+            warper_creator = makePtr<cv::CylindricalWarper>();
+        else if (warp_type == "spherical")
+            warper_creator = makePtr<cv::SphericalWarper>();
+        else if (warp_type == "fisheye")
+            warper_creator = makePtr<cv::FisheyeWarper>();
+        else if (warp_type == "stereographic")
+            warper_creator = makePtr<cv::StereographicWarper>();
+        else if (warp_type == "compressedPlaneA2B1")
+            warper_creator = makePtr<cv::CompressedRectilinearWarper>(2.0f, 1.0f);
+        else if (warp_type == "compressedPlaneA1.5B1")
+            warper_creator = makePtr<cv::CompressedRectilinearWarper>(1.5f, 1.0f);
+        else if (warp_type == "compressedPlanePortraitA2B1")
+            warper_creator = makePtr<cv::CompressedRectilinearPortraitWarper>(2.0f, 1.0f);
+        else if (warp_type == "compressedPlanePortraitA1.5B1")
+            warper_creator = makePtr<cv::CompressedRectilinearPortraitWarper>(1.5f, 1.0f);
+        else if (warp_type == "paniniA2B1")
+            warper_creator = makePtr<cv::PaniniWarper>(2.0f, 1.0f);
+        else if (warp_type == "paniniA1.5B1")
+            warper_creator = makePtr<cv::PaniniWarper>(1.5f, 1.0f);
+        else if (warp_type == "paniniPortraitA2B1")
+            warper_creator = makePtr<cv::PaniniPortraitWarper>(2.0f, 1.0f);
+        else if (warp_type == "paniniPortraitA1.5B1")
+            warper_creator = makePtr<cv::PaniniPortraitWarper>(1.5f, 1.0f);
+        else if (warp_type == "mercator")
+            warper_creator = makePtr<cv::MercatorWarper>();
+        else if (warp_type == "transverseMercator")
+            warper_creator = makePtr<cv::TransverseMercatorWarper>();
     }
 
-    if (warper_creator.empty())
+    if (!warper_creator)
     {
         cout << "Can't create the following warper '" << warp_type << "'\n";
         return 1;
@@ -592,7 +621,7 @@ int main(int argc, char* argv[])
         warper->warp(masks[i], K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
     }
 
-    vector<Mat> images_warped_f(num_images);
+    vector<UMat> images_warped_f(num_images);
     for (int i = 0; i < num_images; ++i)
         images_warped[i].convertTo(images_warped_f[i], CV_32F);
 
@@ -603,32 +632,32 @@ int main(int argc, char* argv[])
 
     Ptr<SeamFinder> seam_finder;
     if (seam_find_type == "no")
-        seam_finder = new detail::NoSeamFinder();
+        seam_finder = makePtr<detail::NoSeamFinder>();
     else if (seam_find_type == "voronoi")
-        seam_finder = new detail::VoronoiSeamFinder();
+        seam_finder = makePtr<detail::VoronoiSeamFinder>();
     else if (seam_find_type == "gc_color")
     {
-#if defined(HAVE_OPENCV_GPU)
-        if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
-            seam_finder = new detail::GraphCutSeamFinderGpu(GraphCutSeamFinderBase::COST_COLOR);
+#ifdef HAVE_OPENCV_CUDA
+        if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
+            seam_finder = makePtr<detail::GraphCutSeamFinderGpu>(GraphCutSeamFinderBase::COST_COLOR);
         else
 #endif
-            seam_finder = new detail::GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR);
+            seam_finder = makePtr<detail::GraphCutSeamFinder>(GraphCutSeamFinderBase::COST_COLOR);
     }
     else if (seam_find_type == "gc_colorgrad")
     {
-#if defined(HAVE_OPENCV_GPU)
-        if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
-            seam_finder = new detail::GraphCutSeamFinderGpu(GraphCutSeamFinderBase::COST_COLOR_GRAD);
+#ifdef HAVE_OPENCV_CUDA
+        if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
+            seam_finder = makePtr<detail::GraphCutSeamFinderGpu>(GraphCutSeamFinderBase::COST_COLOR_GRAD);
         else
 #endif
-            seam_finder = new detail::GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR_GRAD);
+            seam_finder = makePtr<detail::GraphCutSeamFinder>(GraphCutSeamFinderBase::COST_COLOR_GRAD);
     }
     else if (seam_find_type == "dp_color")
-        seam_finder = new detail::DpSeamFinder(DpSeamFinder::COLOR);
+        seam_finder = makePtr<detail::DpSeamFinder>(DpSeamFinder::COLOR);
     else if (seam_find_type == "dp_colorgrad")
-        seam_finder = new detail::DpSeamFinder(DpSeamFinder::COLOR_GRAD);
-    if (seam_finder.empty())
+        seam_finder = makePtr<detail::DpSeamFinder>(DpSeamFinder::COLOR_GRAD);
+    if (!seam_finder)
     {
         cout << "Can't create the following seam finder '" << seam_find_type << "'\n";
         return 1;
@@ -726,22 +755,22 @@ int main(int argc, char* argv[])
         resize(dilated_mask, seam_mask, mask_warped.size());
         mask_warped = seam_mask & mask_warped;
 
-        if (blender.empty())
+        if (!blender)
         {
-            blender = Blender::createDefault(blend_type, try_gpu);
+            blender = Blender::createDefault(blend_type, try_cuda);
             Size dst_sz = resultRoi(corners, sizes).size();
             float blend_width = sqrt(static_cast<float>(dst_sz.area())) * blend_strength / 100.f;
             if (blend_width < 1.f)
-                blender = Blender::createDefault(Blender::NO, try_gpu);
+                blender = Blender::createDefault(Blender::NO, try_cuda);
             else if (blend_type == Blender::MULTI_BAND)
             {
-                MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(static_cast<Blender*>(blender));
+                MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(blender.get());
                 mb->setNumBands(static_cast<int>(ceil(log(blend_width)/log(2.)) - 1.));
                 LOGLN("Multi-band blender, number of bands: " << mb->numBands());
             }
             else if (blend_type == Blender::FEATHER)
             {
-                FeatherBlender* fb = dynamic_cast<FeatherBlender*>(static_cast<Blender*>(blender));
+                FeatherBlender* fb = dynamic_cast<FeatherBlender*>(blender.get());
                 fb->setSharpness(1.f/blend_width);
                 LOGLN("Feather blender, sharpness: " << fb->sharpness());
             }

@@ -13,7 +13,7 @@ Required Packages
 
        sudo apt-get install build-essential
 
-  * CMake 2.6 or higher;
+  * CMake 2.8.7 or higher;
   * Git;
   * GTK+2.x or higher, including headers (libgtk2.0-dev);
   * pkg-config;
@@ -74,7 +74,8 @@ Building OpenCV from Source Using CMake, Using the Command Line
 
    .. code-block:: bash
 
-      make
+      make -j8 # -j8 runs 8 jobs in parallel.
+               # Change 8 to number of hardware threads available.
       sudo make install
 
 .. note::

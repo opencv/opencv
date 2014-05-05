@@ -38,14 +38,12 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
-
-template<> void Ptr<CvHistogram>::delete_obj()
-{ cvReleaseHist(&obj); }
-
 
 ////////////////// Helper functions //////////////////////
 
@@ -54,7 +52,7 @@ static const size_t OUT_OF_RANGE = (size_t)1 << (sizeof(size_t)*8 - 2);
 static void
 calcHistLookupTables_8u( const Mat& hist, const SparseMat& shist,
                          int dims, const float** ranges, const double* uniranges,
-                         bool uniform, bool issparse, vector<size_t>& _tab )
+                         bool uniform, bool issparse, std::vector<size_t>& _tab )
 {
     const int low = 0, high = 256;
     int i, j;
@@ -117,8 +115,8 @@ calcHistLookupTables_8u( const Mat& hist, const SparseMat& shist,
 static void histPrepareImages( const Mat* images, int nimages, const int* channels,
                                const Mat& mask, int dims, const int* histSize,
                                const float** ranges, bool uniform,
-                               vector<uchar*>& ptrs, vector<int>& deltas,
-                               Size& imsize, vector<double>& uniranges )
+                               std::vector<uchar*>& ptrs, std::vector<int>& deltas,
+                               Size& imsize, std::vector<double>& uniranges )
 {
     int i, j, c;
     CV_Assert( channels != 0 || nimages == dims );
@@ -216,7 +214,7 @@ template<typename T>
 class calcHist1D_Invoker
 {
 public:
-    calcHist1D_Invoker( const vector<uchar*>& _ptrs, const vector<int>& _deltas,
+    calcHist1D_Invoker( const std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         Mat& hist, const double* _uniranges, int sz, int dims,
                         Size& imageSize )
         : mask_(_ptrs[dims]),
@@ -290,7 +288,7 @@ template<typename T>
 class calcHist2D_Invoker
 {
 public:
-    calcHist2D_Invoker( const vector<uchar*>& _ptrs, const vector<int>& _deltas,
+    calcHist2D_Invoker( const std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         Mat& hist, const double* _uniranges, const int* size,
                         int dims, Size& imageSize, size_t* hstep )
         : mask_(_ptrs[dims]),
@@ -366,7 +364,7 @@ template<typename T>
 class calcHist3D_Invoker
 {
 public:
-    calcHist3D_Invoker( const vector<uchar*>& _ptrs, const vector<int>& _deltas,
+    calcHist3D_Invoker( const std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         Size imsize, Mat& hist, const double* uniranges, int _dims,
                         size_t* hstep, int* size )
         : mask_(_ptrs[_dims]),
@@ -454,8 +452,8 @@ private:
 class CalcHist1D_8uInvoker
 {
 public:
-    CalcHist1D_8uInvoker( const vector<uchar*>& ptrs, const vector<int>& deltas,
-                          Size imsize, Mat& hist, int dims, const vector<size_t>& tab,
+    CalcHist1D_8uInvoker( const std::vector<uchar*>& ptrs, const std::vector<int>& deltas,
+                          Size imsize, Mat& hist, int dims, const std::vector<size_t>& tab,
                           tbb::mutex* lock )
         : mask_(ptrs[dims]),
           mstep_(deltas[dims*2 + 1]),
@@ -575,8 +573,8 @@ private:
 class CalcHist2D_8uInvoker
 {
 public:
-    CalcHist2D_8uInvoker( const vector<uchar*>& _ptrs, const vector<int>& _deltas,
-                          Size imsize, Mat& hist, int dims, const vector<size_t>& _tab,
+    CalcHist2D_8uInvoker( const std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
+                          Size imsize, Mat& hist, int dims, const std::vector<size_t>& _tab,
                           tbb::mutex* lock )
         : mask_(_ptrs[dims]),
           mstep_(_deltas[dims*2 + 1]),
@@ -660,8 +658,8 @@ private:
 class CalcHist3D_8uInvoker
 {
 public:
-    CalcHist3D_8uInvoker( const vector<uchar*>& _ptrs, const vector<int>& _deltas,
-                          Size imsize, Mat& hist, int dims, const vector<size_t>& tab )
+    CalcHist3D_8uInvoker( const std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
+                          Size imsize, Mat& hist, int dims, const std::vector<size_t>& tab )
         : mask_(_ptrs[dims]),
           mstep_(_deltas[dims*2 + 1]),
           histogramSize_(hist.size.p), histogramType_(hist.type()),
@@ -729,8 +727,8 @@ private:
 };
 
 static void
-callCalcHist2D_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
-                   Size imsize, Mat& hist, int dims,  vector<size_t>& _tab )
+callCalcHist2D_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
+                   Size imsize, Mat& hist, int dims,  std::vector<size_t>& _tab )
 {
     int grainSize = imsize.height / tbb::task_scheduler_init::default_num_threads();
     tbb::mutex histogramWriteLock;
@@ -740,8 +738,8 @@ callCalcHist2D_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 }
 
 static void
-callCalcHist3D_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
-                   Size imsize, Mat& hist, int dims,  vector<size_t>& _tab )
+callCalcHist3D_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
+                   Size imsize, Mat& hist, int dims,  std::vector<size_t>& _tab )
 {
     CalcHist3D_8uInvoker body(_ptrs, _deltas, imsize, hist, dims, _tab);
     parallel_for(BlockedRange(0, imsize.height), body);
@@ -749,7 +747,7 @@ callCalcHist3D_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 #endif
 
 template<typename T> static void
-calcHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
            Size imsize, Mat& hist, int dims, const float** _ranges,
            const double* _uniranges, bool uniform )
 {
@@ -984,7 +982,7 @@ calcHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 
 
 static void
-calcHist_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
              Size imsize, Mat& hist, int dims, const float** _ranges,
              const double* _uniranges, bool uniform )
 {
@@ -994,7 +992,7 @@ calcHist_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
     int x;
     const uchar* mask = _ptrs[dims];
     int mstep = _deltas[dims*2 + 1];
-    vector<size_t> _tab;
+    std::vector<size_t> _tab;
 
     calcHistLookupTables_8u( hist, SparseMat(), dims, _ranges, _uniranges, uniform, false, _tab );
     const size_t* tab = &_tab[0];
@@ -1177,6 +1175,48 @@ calcHist_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
     }
 }
 
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+
+class IPPCalcHistInvoker :
+    public ParallelLoopBody
+{
+public:
+    IPPCalcHistInvoker(const Mat & _src, Mat & _hist, AutoBuffer<Ipp32s> & _levels, Ipp32s _histSize, Ipp32s _low, Ipp32s _high, bool * _ok) :
+        ParallelLoopBody(), src(&_src), hist(&_hist), levels(&_levels), histSize(_histSize), low(_low), high(_high), ok(_ok)
+    {
+        *ok = true;
+    }
+
+    virtual void operator() (const Range & range) const
+    {
+        Mat phist(hist->size(), hist->type(), Scalar::all(0));
+
+        IppStatus status = ippiHistogramEven_8u_C1R(
+            src->data + src->step * range.start, (int)src->step, ippiSize(src->cols, range.end - range.start),
+            (Ipp32s *)phist.data, (Ipp32s *)*levels, histSize, low, high);
+
+        if (status < 0)
+        {
+            *ok = false;
+            return;
+        }
+
+        for (int i = 0; i < histSize; ++i)
+            CV_XADD((int *)(hist->data + i * hist->step), *(int *)(phist.data + i * phist.step));
+    }
+
+private:
+    const Mat * src;
+    Mat * hist;
+    AutoBuffer<Ipp32s> * levels;
+    Ipp32s histSize, low, high;
+    bool * ok;
+
+    const IPPCalcHistInvoker & operator = (const IPPCalcHistInvoker & );
+};
+
+#endif
+
 }
 
 void cv::calcHist( const Mat* images, int nimages, const int* channels,
@@ -1192,14 +1232,41 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     Mat hist = _hist.getMat(), ihist = hist;
     ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK)|CV_32S;
 
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+    if (nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && channels &&
+            channels[0] == 0 && mask.empty() && images[0].dims <= 2 &&
+            !accumulate && uniform)
+    {
+        ihist.setTo(Scalar::all(0));
+        AutoBuffer<Ipp32s> levels(histSize[0] + 1);
+
+        bool ok = true;
+        const Mat & src = images[0];
+        int nstripes = std::min<int>(8, static_cast<int>(src.total() / (1 << 16)));
+#ifdef HAVE_CONCURRENCY
+        nstripes = 1;
+#endif
+        IPPCalcHistInvoker invoker(src, ihist, levels, histSize[0] + 1, (Ipp32s)ranges[0][0], (Ipp32s)ranges[0][1], &ok);
+        Range range(0, src.rows);
+        parallel_for_(range, invoker, nstripes);
+
+        if (ok)
+        {
+            ihist.convertTo(hist, CV_32F);
+            return;
+        }
+        setIppErrorStatus();
+    }
+#endif
+
     if( !accumulate || histdata != hist.data )
         hist = Scalar(0.);
     else
         hist.convertTo(ihist, CV_32S);
 
-    vector<uchar*> ptrs;
-    vector<int> deltas;
-    vector<double> uniranges;
+    std::vector<uchar*> ptrs;
+    std::vector<int> deltas;
+    std::vector<double> uniranges;
     Size imsize;
 
     CV_Assert( !mask.data || mask.type() == CV_8UC1 );
@@ -1226,7 +1293,7 @@ namespace cv
 {
 
 template<typename T> static void
-calcSparseHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcSparseHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                  Size imsize, SparseMat& hist, int dims, const float** _ranges,
                  const double* _uniranges, bool uniform )
 {
@@ -1310,7 +1377,7 @@ calcSparseHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 
 
 static void
-calcSparseHist_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcSparseHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                    Size imsize, SparseMat& hist, int dims, const float** _ranges,
                    const double* _uniranges, bool uniform )
 {
@@ -1320,7 +1387,7 @@ calcSparseHist_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
     const uchar* mask = _ptrs[dims];
     int mstep = _deltas[dims*2 + 1];
     int idx[CV_MAX_DIM];
-    vector<size_t> _tab;
+    std::vector<size_t> _tab;
 
     calcHistLookupTables_8u( Mat(), hist, dims, _ranges, _uniranges, uniform, true, _tab );
     const size_t* tab = &_tab[0];
@@ -1370,9 +1437,9 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
         }
     }
 
-    vector<uchar*> ptrs;
-    vector<int> deltas;
-    vector<double> uniranges;
+    std::vector<uchar*> ptrs;
+    std::vector<int> deltas;
+    std::vector<double> uniranges;
     Size imsize;
 
     CV_Assert( !mask.data || mask.type() == CV_8UC1 );
@@ -1401,6 +1468,63 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
     }
 }
 
+#ifdef HAVE_OPENCL
+
+enum
+{
+    BINS = 256
+};
+
+static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32S)
+{
+    int compunits = ocl::Device::getDefault().maxComputeUnits();
+    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+    Size size = _src.size();
+    bool use16 = size.width % 16 == 0 && _src.offset() % 16 == 0 && _src.step() % 16 == 0;
+
+    ocl::Kernel k1("calculate_histogram", ocl::imgproc::histogram_oclsrc,
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D cn=%d",
+                          BINS, compunits, wgs, use16 ? 16 : 1));
+    if (k1.empty())
+        return false;
+
+    _hist.create(BINS, 1, ddepth);
+    UMat src = _src.getUMat(), ghist(1, BINS * compunits, CV_32SC1),
+            hist = ddepth == CV_32S ? _hist.getUMat() : UMat(BINS, 1, CV_32SC1);
+
+    k1.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::PtrWriteOnly(ghist), (int)src.total());
+
+    size_t globalsize = compunits * wgs;
+    if (!k1.run(1, &globalsize, &wgs, false))
+        return false;
+
+    ocl::Kernel k2("merge_histogram", ocl::imgproc::histogram_oclsrc,
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d", BINS, compunits, (int)wgs));
+    if (k2.empty())
+        return false;
+
+    k2.args(ocl::KernelArg::PtrReadOnly(ghist), ocl::KernelArg::PtrWriteOnly(hist));
+    if (!k2.run(1, &wgs, &wgs, false))
+        return false;
+
+    if (hist.depth() != ddepth)
+        hist.convertTo(_hist, ddepth);
+    else
+        _hist.getUMatRef() = hist;
+
+    return true;
+}
+
+static bool ocl_calcHist(InputArrayOfArrays images, OutputArray hist)
+{
+    std::vector<UMat> v;
+    images.getUMatVector(v);
+
+    return ocl_calcHist1(v[0], hist, CV_32F);
+}
+
+#endif
+
 }
 
 void cv::calcHist( const Mat* images, int nimages, const int* channels,
@@ -1413,12 +1537,18 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
 }
 
 
-void cv::calcHist( InputArrayOfArrays images, const vector<int>& channels,
+void cv::calcHist( InputArrayOfArrays images, const std::vector<int>& channels,
                    InputArray mask, OutputArray hist,
-                   const vector<int>& histSize,
-                   const vector<float>& ranges,
+                   const std::vector<int>& histSize,
+                   const std::vector<float>& ranges,
                    bool accumulate )
 {
+    CV_OCL_RUN(images.total() == 1 && channels.size() == 1 && images.channels(0) == 1 &&
+               channels[0] == 0 && images.isUMatVector() && mask.empty() && !accumulate &&
+               histSize.size() == 1 && histSize[0] == BINS && ranges.size() == 2 &&
+               ranges[0] == 0 && ranges[1] == BINS,
+               ocl_calcHist(images, hist))
+
     int i, dims = (int)histSize.size(), rsz = (int)ranges.size(), csz = (int)channels.size();
     int nimages = (int)images.total();
 
@@ -1448,7 +1578,7 @@ namespace cv
 {
 
 template<typename T, typename BT> static void
-calcBackProj_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcBackProj_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                Size imsize, const Mat& hist, int dims, const float** _ranges,
                const double* _uniranges, float scale, bool uniform )
 {
@@ -1613,7 +1743,7 @@ calcBackProj_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 
 
 static void
-calcBackProj_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcBackProj_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                  Size imsize, const Mat& hist, int dims, const float** _ranges,
                  const double* _uniranges, float scale, bool uniform )
 {
@@ -1623,7 +1753,7 @@ calcBackProj_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
     int i, x;
     uchar* bproj = _ptrs[dims];
     int bpstep = _deltas[dims*2 + 1];
-    vector<size_t> _tab;
+    std::vector<size_t> _tab;
 
     calcHistLookupTables_8u( hist, SparseMat(), dims, _ranges, _uniranges, uniform, false, _tab );
     const size_t* tab = &_tab[0];
@@ -1741,9 +1871,9 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
                           const float** ranges, double scale, bool uniform )
 {
     Mat hist = _hist.getMat();
-    vector<uchar*> ptrs;
-    vector<int> deltas;
-    vector<double> uniranges;
+    std::vector<uchar*> ptrs;
+    std::vector<int> deltas;
+    std::vector<double> uniranges;
     Size imsize;
     int dims = hist.dims == 2 && hist.size[1] == 1 ? 1 : hist.dims;
 
@@ -1770,7 +1900,7 @@ namespace cv
 {
 
 template<typename T, typename BT> static void
-calcSparseBackProj_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcSparseBackProj_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                      Size imsize, const SparseMat& hist, int dims, const float** _ranges,
                      const double* _uniranges, float scale, bool uniform )
 {
@@ -1855,7 +1985,7 @@ calcSparseBackProj_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 
 
 static void
-calcSparseBackProj_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcSparseBackProj_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                        Size imsize, const SparseMat& hist, int dims, const float** _ranges,
                        const double* _uniranges, float scale, bool uniform )
 {
@@ -1864,7 +1994,7 @@ calcSparseBackProj_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
     int i, x;
     uchar* bproj = _ptrs[dims];
     int bpstep = _deltas[dims*2 + 1];
-    vector<size_t> _tab;
+    std::vector<size_t> _tab;
     int idx[CV_MAX_DIM];
 
     calcHistLookupTables_8u( Mat(), hist, dims, _ranges, _uniranges, uniform, true, _tab );
@@ -1903,9 +2033,9 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
                           const SparseMat& hist, OutputArray _backProject,
                           const float** ranges, double scale, bool uniform )
 {
-    vector<uchar*> ptrs;
-    vector<int> deltas;
-    vector<double> uniranges;
+    std::vector<uchar*> ptrs;
+    std::vector<int> deltas;
+    std::vector<double> uniranges;
     Size imsize;
     int dims = hist.dims();
 
@@ -1931,14 +2061,170 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
         CV_Error(CV_StsUnsupportedFormat, "");
 }
 
+#ifdef HAVE_OPENCL
 
-void cv::calcBackProject( InputArrayOfArrays images, const vector<int>& channels,
+namespace cv {
+
+static void getUMatIndex(const std::vector<UMat> & um, int cn, int & idx, int & cnidx)
+{
+    int totalChannels = 0;
+    for (size_t i = 0, size = um.size(); i < size; ++i)
+    {
+        int ccn = um[i].channels();
+        totalChannels += ccn;
+
+        if (totalChannels == cn)
+        {
+            idx = (int)(i + 1);
+            cnidx = 0;
+            return;
+        }
+        else if (totalChannels > cn)
+        {
+            idx = (int)i;
+            cnidx = i == 0 ? cn : (cn - totalChannels + ccn);
+            return;
+        }
+    }
+
+    idx = cnidx = -1;
+}
+
+static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> channels,
+                                 InputArray _hist, OutputArray _dst,
+                                 const std::vector<float>& ranges,
+                                 float scale, size_t histdims )
+{
+    std::vector<UMat> images;
+    _images.getUMatVector(images);
+
+    size_t nimages = images.size(), totalcn = images[0].channels();
+
+    CV_Assert(nimages > 0);
+    Size size = images[0].size();
+    int depth = images[0].depth();
+
+    //kernels are valid for this type only
+    if (depth != CV_8U)
+        return false;
+
+    for (size_t i = 1; i < nimages; ++i)
+    {
+        const UMat & m = images[i];
+        totalcn += m.channels();
+        CV_Assert(size == m.size() && depth == m.depth());
+    }
+
+    std::sort(channels.begin(), channels.end());
+    for (size_t i = 0; i < histdims; ++i)
+        CV_Assert(channels[i] < (int)totalcn);
+
+    if (histdims == 1)
+    {
+        int idx, cnidx;
+        getUMatIndex(images, channels[0], idx, cnidx);
+        CV_Assert(idx >= 0);
+        UMat im = images[idx];
+
+        String opts = format("-D histdims=1 -D scn=%d", im.channels());
+        ocl::Kernel lutk("calcLUT", ocl::imgproc::calc_back_project_oclsrc, opts);
+        if (lutk.empty())
+            return false;
+
+        size_t lsize = 256;
+        UMat lut(1, (int)lsize, CV_32SC1), hist = _hist.getUMat(), uranges(ranges, true);
+
+        lutk.args(ocl::KernelArg::ReadOnlyNoSize(hist), hist.rows,
+                  ocl::KernelArg::PtrWriteOnly(lut), scale, ocl::KernelArg::PtrReadOnly(uranges));
+        if (!lutk.run(1, &lsize, NULL, false))
+            return false;
+
+        ocl::Kernel mapk("LUT", ocl::imgproc::calc_back_project_oclsrc, opts);
+        if (mapk.empty())
+            return false;
+
+        _dst.create(size, depth);
+        UMat dst = _dst.getUMat();
+
+        im.offset += cnidx;
+        mapk.args(ocl::KernelArg::ReadOnlyNoSize(im), ocl::KernelArg::PtrReadOnly(lut),
+                  ocl::KernelArg::WriteOnly(dst));
+
+        size_t globalsize[2] = { size.width, size.height };
+        return mapk.run(2, globalsize, NULL, false);
+    }
+    else if (histdims == 2)
+    {
+        int idx0, idx1, cnidx0, cnidx1;
+        getUMatIndex(images, channels[0], idx0, cnidx0);
+        getUMatIndex(images, channels[1], idx1, cnidx1);
+        CV_Assert(idx0 >= 0 && idx1 >= 0);
+        UMat im0 = images[idx0], im1 = images[idx1];
+
+        // Lut for the first dimension
+        String opts = format("-D histdims=2 -D scn1=%d -D scn2=%d", im0.channels(), im1.channels());
+        ocl::Kernel lutk1("calcLUT", ocl::imgproc::calc_back_project_oclsrc, opts);
+        if (lutk1.empty())
+            return false;
+
+        size_t lsize = 256;
+        UMat lut(1, (int)lsize<<1, CV_32SC1), uranges(ranges, true), hist = _hist.getUMat();
+
+        lutk1.args(hist.rows, ocl::KernelArg::PtrWriteOnly(lut), (int)0, ocl::KernelArg::PtrReadOnly(uranges), (int)0);
+        if (!lutk1.run(1, &lsize, NULL, false))
+            return false;
+
+        // lut for the second dimension
+        ocl::Kernel lutk2("calcLUT", ocl::imgproc::calc_back_project_oclsrc, opts);
+        if (lutk2.empty())
+            return false;
+
+        lut.offset += lsize * sizeof(int);
+        lutk2.args(hist.cols, ocl::KernelArg::PtrWriteOnly(lut), (int)256, ocl::KernelArg::PtrReadOnly(uranges), (int)2);
+        if (!lutk2.run(1, &lsize, NULL, false))
+            return false;
+
+        // perform lut
+        ocl::Kernel mapk("LUT", ocl::imgproc::calc_back_project_oclsrc, opts);
+        if (mapk.empty())
+            return false;
+
+        _dst.create(size, depth);
+        UMat dst = _dst.getUMat();
+
+        im0.offset += cnidx0;
+        im1.offset += cnidx1;
+        mapk.args(ocl::KernelArg::ReadOnlyNoSize(im0), ocl::KernelArg::ReadOnlyNoSize(im1),
+               ocl::KernelArg::ReadOnlyNoSize(hist), ocl::KernelArg::PtrReadOnly(lut), scale, ocl::KernelArg::WriteOnly(dst));
+
+        size_t globalsize[2] = { size.width, size.height };
+        return mapk.run(2, globalsize, NULL, false);
+    }
+    return false;
+}
+
+}
+
+#endif
+
+void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& channels,
                           InputArray hist, OutputArray dst,
-                          const vector<float>& ranges,
+                          const std::vector<float>& ranges,
                           double scale )
 {
+    Size histSize = hist.size();
+#ifdef HAVE_OPENCL
+    bool _1D = histSize.height == 1 || histSize.width == 1;
+    size_t histdims = _1D ? 1 : hist.dims();
+#endif
+
+    CV_OCL_RUN(dst.isUMat() && hist.type() == CV_32FC1 &&
+               histdims <= 2 && ranges.size() == histdims * 2 && histdims == channels.size(),
+               ocl_calcBackProject(images, channels, hist, dst, ranges, (float)scale, histdims))
+
     Mat H0 = hist.getMat(), H;
     int hcn = H0.channels();
+
     if( hcn > 1 )
     {
         CV_Assert( H0.isContinuous() );
@@ -1949,12 +2235,15 @@ void cv::calcBackProject( InputArrayOfArrays images, const vector<int>& channels
     }
     else
         H = H0;
+
     bool _1d = H.rows == 1 || H.cols == 1;
     int i, dims = H.dims, rsz = (int)ranges.size(), csz = (int)channels.size();
     int nimages = (int)images.total();
+
     CV_Assert(nimages > 0);
     CV_Assert(rsz == dims*2 || (rsz == 2 && _1d) || (rsz == 0 && images.depth(0) == CV_8U));
     CV_Assert(csz == 0 || csz == dims || (csz == 1 && _1d));
+
     float* _ranges[CV_MAX_DIM];
     if( rsz > 0 )
     {
@@ -1982,7 +2271,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
     double result = 0;
     int j, len = (int)it.size;
 
-    CV_Assert( H1.type() == H2.type() && H1.type() == CV_32F );
+    CV_Assert( H1.type() == H2.type() && H1.depth() == CV_32F );
 
     double s1 = 0, s2 = 0, s11 = 0, s12 = 0, s22 = 0;
 
@@ -1992,14 +2281,14 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
     {
         const float* h1 = (const float*)it.planes[0].data;
         const float* h2 = (const float*)it.planes[1].data;
-        len = it.planes[0].rows*it.planes[0].cols;
+        len = it.planes[0].rows*it.planes[0].cols*H1.channels();
 
-        if( method == CV_COMP_CHISQR )
+        if( (method == CV_COMP_CHISQR) || (method == CV_COMP_CHISQR_ALT))
         {
             for( j = 0; j < len; j++ )
             {
                 double a = h1[j] - h2[j];
-                double b = h1[j];
+                double b = (method == CV_COMP_CHISQR) ? h1[j] : h1[j] + h2[j];
                 if( fabs(b) > DBL_EPSILON )
                     result += a*a/b;
             }
@@ -2038,7 +2327,9 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             CV_Error( CV_StsBadArg, "Unknown comparison method" );
     }
 
-    if( method == CV_COMP_CORREL )
+    if( method == CV_COMP_CHISQR_ALT )
+        result *= 2;
+    else if( method == CV_COMP_CORREL )
     {
         size_t total = H1.total();
         double scale = 1./total;
@@ -2067,13 +2358,13 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
         CV_Assert( H1.size(i) == H2.size(i) );
 
     const SparseMat *PH1 = &H1, *PH2 = &H2;
-    if( PH1->nzcount() > PH2->nzcount() && method != CV_COMP_CHISQR )
+    if( PH1->nzcount() > PH2->nzcount() && method != CV_COMP_CHISQR && method != CV_COMP_CHISQR_ALT)
         std::swap(PH1, PH2);
 
     SparseMatConstIterator it = PH1->begin();
     int N1 = (int)PH1->nzcount(), N2 = (int)PH2->nzcount();
 
-    if( method == CV_COMP_CHISQR )
+    if( (method == CV_COMP_CHISQR) || (method == CV_COMP_CHISQR_ALT) )
     {
         for( i = 0; i < N1; i++, ++it )
         {
@@ -2081,7 +2372,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
             const SparseMat::Node* node = it.node();
             float v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
             double a = v1 - v2;
-            double b = v1;
+            double b = (method == CV_COMP_CHISQR) ? v1 : v1 + v2;
             if( fabs(b) > DBL_EPSILON )
                 result += a*a/b;
         }
@@ -2149,6 +2440,9 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
     }
     else
         CV_Error( CV_StsBadArg, "Unknown comparison method" );
+
+    if( method == CV_COMP_CHISQR_ALT )
+        result *= 2;
 
     return result;
 }
@@ -2464,7 +2758,8 @@ cvCompareHist( const CvHistogram* hist1,
 
     if( !CV_IS_SPARSE_MAT(hist1->bins) )
     {
-        cv::Mat H1((const CvMatND*)hist1->bins), H2((const CvMatND*)hist2->bins);
+        cv::Mat H1 = cv::cvarrToMat(hist1->bins);
+        cv::Mat H2 = cv::cvarrToMat(hist2->bins);
         return cv::compareHist(H1, H2, method);
     }
 
@@ -2488,13 +2783,13 @@ cvCompareHist( const CvHistogram* hist1,
     CvSparseMatIterator iterator;
     CvSparseNode *node1, *node2;
 
-    if( mat1->heap->active_count > mat2->heap->active_count && method != CV_COMP_CHISQR )
+    if( mat1->heap->active_count > mat2->heap->active_count && method != CV_COMP_CHISQR && method != CV_COMP_CHISQR_ALT)
     {
         CvSparseMat* t;
         CV_SWAP( mat1, mat2, t );
     }
 
-    if( method == CV_COMP_CHISQR )
+    if( (method == CV_COMP_CHISQR) || (method == CV_COMP_CHISQR_ALT) )
     {
         for( node1 = cvInitSparseMatIterator( mat1, &iterator );
              node1 != 0; node1 = cvGetNextSparseNode( &iterator ))
@@ -2503,7 +2798,7 @@ cvCompareHist( const CvHistogram* hist1,
             uchar* node2_data = cvPtrND( mat2, CV_NODE_IDX(mat1,node1), 0, 0, &node1->hashval );
             double v2 = node2_data ? *(float*)node2_data : 0.f;
             double a = v1 - v2;
-            double b = v1;
+            double b = (method == CV_COMP_CHISQR) ? v1 : v1 + v2;
             if( fabs(b) > DBL_EPSILON )
                 result += a*a/b;
         }
@@ -2592,6 +2887,9 @@ cvCompareHist( const CvHistogram* hist1,
     }
     else
         CV_Error( CV_StsBadArg, "Unknown comparison method" );
+
+    if( method == CV_COMP_CHISQR_ALT )
+        result *= 2;
 
     return result;
 }
@@ -2742,7 +3040,7 @@ cvCalcArrHist( CvArr** img, CvHistogram* hist, int accumulate, const CvArr* mask
     int i, dims = cvGetDims( hist->bins, size);
     bool uniform = CV_IS_UNIFORM_HIST(hist);
 
-    cv::vector<cv::Mat> images(dims);
+    std::vector<cv::Mat> images(dims);
     for( i = 0; i < dims; i++ )
         images[i] = cv::cvarrToMat(img[i]);
 
@@ -2766,7 +3064,7 @@ cvCalcArrHist( CvArr** img, CvHistogram* hist, int accumulate, const CvArr* mask
 
     if( !CV_IS_SPARSE_HIST(hist) )
     {
-        cv::Mat H((const CvMatND*)hist->bins);
+        cv::Mat H = cv::cvarrToMat(hist->bins);
         cv::calcHist( &images[0], (int)images.size(), 0, _mask,
                       H, cvGetDims(hist->bins), H.size, ranges, uniform, accumulate != 0 );
     }
@@ -2776,7 +3074,8 @@ cvCalcArrHist( CvArr** img, CvHistogram* hist, int accumulate, const CvArr* mask
 
         if( !accumulate )
             cvZero( hist->bins );
-        cv::SparseMat sH(sparsemat);
+        cv::SparseMat sH;
+        sparsemat->copyToSparseMat(sH);
         cv::calcHist( &images[0], (int)images.size(), 0, _mask, sH, sH.dims(),
                       sH.dims() > 0 ? sH.hdr->size : 0, ranges, uniform, accumulate != 0, true );
 
@@ -2818,7 +3117,7 @@ cvCalcArrBackProject( CvArr** img, CvArr* dst, const CvHistogram* hist )
         }
     }
 
-    cv::vector<cv::Mat> images(dims);
+    std::vector<cv::Mat> images(dims);
     for( i = 0; i < dims; i++ )
         images[i] = cv::cvarrToMat(img[i]);
 
@@ -2828,13 +3127,14 @@ cvCalcArrBackProject( CvArr** img, CvArr* dst, const CvHistogram* hist )
 
     if( !CV_IS_SPARSE_HIST(hist) )
     {
-        cv::Mat H((const CvMatND*)hist->bins);
+        cv::Mat H = cv::cvarrToMat(hist->bins);
         cv::calcBackProject( &images[0], (int)images.size(),
                             0, H, _dst, ranges, 1, uniform );
     }
     else
     {
-        cv::SparseMat sH((const CvSparseMat*)hist->bins);
+        cv::SparseMat sH;
+        ((const CvSparseMat*)hist->bins)->copyToSparseMat(sH);
         cv::calcBackProject( &images[0], (int)images.size(),
                              0, sH, _dst, ranges, 1, uniform );
     }
@@ -3122,16 +3422,49 @@ CV_IMPL void cvEqualizeHist( const CvArr* srcarr, CvArr* dstarr )
     cv::equalizeHist(cv::cvarrToMat(srcarr), cv::cvarrToMat(dstarr));
 }
 
+#ifdef HAVE_OPENCL
+
+namespace cv {
+
+static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
+{
+    size_t wgs = std::min<size_t>(ocl::Device::getDefault().maxWorkGroupSize(), BINS);
+
+    // calculation of histogram
+    UMat hist;
+    if (!ocl_calcHist1(_src, hist))
+        return false;
+
+    UMat lut(1, 256, CV_8UC1);
+    ocl::Kernel k("calcLUT", ocl::imgproc::histogram_oclsrc, format("-D BINS=%d -D HISTS_COUNT=1 -D WGS=%d", BINS, (int)wgs));
+    k.args(ocl::KernelArg::PtrWriteOnly(lut), ocl::KernelArg::PtrReadOnly(hist), (int)_src.total());
+
+    // calculation of LUT
+    if (!k.run(1, &wgs, &wgs, false))
+        return false;
+
+    // execute LUT transparently
+    LUT(_src, lut, _dst);
+    return true;
+}
+
+}
+
+#endif
+
 void cv::equalizeHist( InputArray _src, OutputArray _dst )
 {
-    Mat src = _src.getMat();
-    CV_Assert( src.type() == CV_8UC1 );
+    CV_Assert( _src.type() == CV_8UC1 );
 
+    if (_src.empty())
+        return;
+
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_equalizeHist(_src, _dst))
+
+    Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
-
-    if(src.empty())
-        return;
 
     Mutex histogramLockInstance;
 

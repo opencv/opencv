@@ -40,9 +40,11 @@
  //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
 #include <limits>
 #include "test_chessboardgenerator.hpp"
 
+using namespace std;
 using namespace cv;
 
 class CV_ChessboardSubpixelTest : public cvtest::BaseTest
@@ -209,6 +211,7 @@ void CV_ChessboardSubpixelTest::run( int )
 
         progress = update_progress( progress, i-1, runs_count, 0 );
     }
+    ASSERT_NE(0, count);
     sum_dist /= count;
     ts->printf(cvtest::TS::LOG, "Average error after findCornerSubpix: %f\n", sum_dist);
 

@@ -45,7 +45,7 @@ static int getMatcherFilterType( const string& str )
         return NONE_FILTER;
     if( str == "CrossCheckFilter" )
         return CROSS_CHECK_FILTER;
-    CV_Error(CV_StsBadArg, "Invalid filter name");
+    CV_Error(Error::StsBadArg, "Invalid filter name");
     return -1;
 }
 
@@ -109,12 +109,12 @@ static void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
                   Ptr<DescriptorMatcher>& descriptorMatcher, int matcherFilter, bool eval,
                   double ransacReprojThreshold, RNG& rng )
 {
-    assert( !img1.empty() );
+    CV_Assert( !img1.empty() );
     Mat H12;
     if( isWarpPerspective )
         warpPerspectiveRand(img1, img2, H12, rng );
     else
-        assert( !img2.empty()/* && img2.cols==img1.cols && img2.rows==img1.rows*/ );
+        CV_Assert( !img2.empty()/* && img2.cols==img1.cols && img2.rows==img1.rows*/ );
 
     cout << endl << "< Extracting keypoints from second image..." << endl;
     vector<KeyPoint> keypoints2;
@@ -153,7 +153,7 @@ static void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
     {
         cout << "< Evaluate descriptor matcher..." << endl;
         vector<Point2f> curve;
-        Ptr<GenericDescriptorMatcher> gdm = new VectorDescriptorMatcher( descriptorExtractor, descriptorMatcher );
+        Ptr<GenericDescriptorMatcher> gdm = makePtr<VectorDescriptorMatcher>( descriptorExtractor, descriptorMatcher );
         evaluateGenericDescriptorMatcher( img1, img2, H12, keypoints1, keypoints2, 0, 0, curve, gdm );
 
         Point2f firstPoint = *curve.begin();
@@ -189,7 +189,7 @@ static void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
         cout << "< Computing homography (RANSAC)..." << endl;
         vector<Point2f> points1; KeyPoint::convert(keypoints1, points1, queryIdxs);
         vector<Point2f> points2; KeyPoint::convert(keypoints2, points2, trainIdxs);
-        H12 = findHomography( Mat(points1), Mat(points2), CV_RANSAC, ransacReprojThreshold );
+        H12 = findHomography( Mat(points1), Mat(points2), RANSAC, ransacReprojThreshold );
         cout << ">" << endl;
     }
 
@@ -253,7 +253,7 @@ int main(int argc, char** argv)
     int mactherFilterType = getMatcherFilterType( argv[4] );
     bool eval = !isWarpPerspective ? false : (atoi(argv[6]) == 0 ? false : true);
     cout << ">" << endl;
-    if( detector.empty() || descriptorExtractor.empty() || descriptorMatcher.empty()  )
+    if( !detector || !descriptorExtractor || !descriptorMatcher )
     {
         cout << "Can not create detector or descriptor exstractor or descriptor matcher of given types" << endl;
         return -1;

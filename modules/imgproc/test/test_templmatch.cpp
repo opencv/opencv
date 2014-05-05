@@ -192,8 +192,8 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
     {
         for( j = 0; j < result->cols; j++ )
         {
-            CvScalar a_sum = {{ 0, 0, 0, 0 }}, a_sum2 = {{ 0, 0, 0, 0 }};
-            CvScalar ccorr = {{ 0, 0, 0, 0 }};
+            CvScalar a_sum(0), a_sum2(0);
+            CvScalar ccorr(0);
             double value = 0.;
 
             if( depth == CV_8U )

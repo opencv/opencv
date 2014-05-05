@@ -25,7 +25,7 @@ TEST(Core_Drawing, _914)
 }
 
 
-TEST(Core_OutputArraySreate, _1997)
+TEST(Core_OutputArrayCreate, _1997)
 {
     struct local {
         static void create(OutputArray arr, Size submatSize, int type)

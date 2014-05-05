@@ -41,60 +41,17 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 /****************************************************************************************\
                                     Base Image Filter
 \****************************************************************************************/
 
-#if defined HAVE_IPP && IPP_VERSION_MAJOR*100 + IPP_VERSION_MINOR >= 701
+#if IPP_VERSION_X100 >= 701
 #define USE_IPP_SEP_FILTERS 1
 #else
 #undef USE_IPP_SEP_FILTERS
 #endif
-
-/*
- Various border types, image boundaries are denoted with '|'
-
- * BORDER_REPLICATE:     aaaaaa|abcdefgh|hhhhhhh
- * BORDER_REFLECT:       fedcba|abcdefgh|hgfedcb
- * BORDER_REFLECT_101:   gfedcb|abcdefgh|gfedcba
- * BORDER_WRAP:          cdefgh|abcdefgh|abcdefg
- * BORDER_CONSTANT:      iiiiii|abcdefgh|iiiiiii  with some specified 'i'
- */
-int cv::borderInterpolate( int p, int len, int borderType )
-{
-    if( (unsigned)p < (unsigned)len )
-        ;
-    else if( borderType == BORDER_REPLICATE )
-        p = p < 0 ? 0 : len - 1;
-    else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
-    {
-        int delta = borderType == BORDER_REFLECT_101;
-        if( len == 1 )
-            return 0;
-        do
-        {
-            if( p < 0 )
-                p = -p - 1 + delta;
-            else
-                p = len - 1 - (p - len) - delta;
-        }
-        while( (unsigned)p >= (unsigned)len );
-    }
-    else if( borderType == BORDER_WRAP )
-    {
-        if( p < 0 )
-            p -= ((p-len+1)/len)*len;
-        if( p >= len )
-            p %= len;
-    }
-    else if( borderType == BORDER_CONSTANT )
-        p = -1;
-    else
-        CV_Error( CV_StsBadArg, "Unknown/unsupported border type" );
-    return p;
-}
-
 
 namespace cv
 {
@@ -167,7 +124,7 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
 
     if( isSeparable() )
     {
-        CV_Assert( !rowFilter.empty() && !columnFilter.empty() );
+        CV_Assert( rowFilter && columnFilter );
         ksize = Size(rowFilter->ksize, columnFilter->ksize);
         anchor = Point(rowFilter->anchor, columnFilter->anchor);
     }
@@ -199,7 +156,7 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     wholeSize = Size(-1,-1);
 }
 
-static const int VEC_ALIGN = CV_MALLOC_ALIGN;
+#define VEC_ALIGN CV_MALLOC_ALIGN
 
 int FilterEngine::start(Size _wholeSize, Rect _roi, int _maxBufRows)
 {
@@ -294,9 +251,9 @@ int FilterEngine::start(Size _wholeSize, Rect _roi, int _maxBufRows)
     rowCount = dstY = 0;
     startY = startY0 = std::max(roi.y - anchor.y, 0);
     endY = std::min(roi.y + roi.height + ksize.height - anchor.y - 1, wholeSize.height);
-    if( !columnFilter.empty() )
+    if( columnFilter )
         columnFilter->reset();
-    if( !filter2D.empty() )
+    if( filter2D )
         filter2D->reset();
 
     return startY;
@@ -1447,47 +1404,31 @@ struct SymmColumnVec_32f16s
 
 struct RowVec_32f
 {
-    RowVec_32f() {}
+    RowVec_32f()
+    {
+        haveSSE = checkHardwareSupport(CV_CPU_SSE);
+    }
+
     RowVec_32f( const Mat& _kernel )
     {
         kernel = _kernel;
         haveSSE = checkHardwareSupport(CV_CPU_SSE);
-#ifdef USE_IPP_SEP_FILTERS
+#if defined USE_IPP_SEP_FILTERS && 0
         bufsz = -1;
 #endif
     }
 
     int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
+#if defined USE_IPP_SEP_FILTERS && 0
+        int ret = ippiOperator(_src, _dst, width, cn);
+        if (ret > 0)
+            return ret;
+#endif
         int _ksize = kernel.rows + kernel.cols - 1;
         const float* src0 = (const float*)_src;
         float* dst = (float*)_dst;
         const float* _kx = (const float*)kernel.data;
-
-#ifdef USE_IPP_SEP_FILTERS
-        IppiSize roisz = { width, 1 };
-        if( (cn == 1 || cn == 3) && width >= _ksize*8 )
-        {
-            if( bufsz < 0 )
-            {
-                if( (cn == 1 && ippiFilterRowBorderPipelineGetBufferSize_32f_C1R(roisz, _ksize, &bufsz) < 0) ||
-                    (cn == 3 && ippiFilterRowBorderPipelineGetBufferSize_32f_C3R(roisz, _ksize, &bufsz) < 0))
-                    return 0;
-            }
-            AutoBuffer<uchar> buf(bufsz + 64);
-            uchar* bufptr = alignPtr((uchar*)buf, 32);
-            int step = (int)(width*sizeof(dst[0])*cn);
-            float borderValue[] = {0.f, 0.f, 0.f};
-            // here is the trick. IPP needs border type and extrapolates the row. We did it already.
-            // So we pass anchor=0 and ignore the right tail of results since they are incorrect there.
-            if( (cn == 1 && ippiFilterRowBorderPipeline_32f_C1R(src0, step, &dst, roisz, _kx, _ksize, 0,
-                                                                ippBorderRepl, borderValue[0], bufptr) < 0) ||
-                (cn == 3 && ippiFilterRowBorderPipeline_32f_C3R(src0, step, &dst, roisz, _kx, _ksize, 0,
-                                                                ippBorderRepl, borderValue, bufptr) < 0))
-                return 0;
-            return width - _ksize + 1;
-        }
-#endif
 
         if( !haveSSE )
             return 0;
@@ -1517,8 +1458,42 @@ struct RowVec_32f
 
     Mat kernel;
     bool haveSSE;
-#ifdef USE_IPP_SEP_FILTERS
+#if defined USE_IPP_SEP_FILTERS && 0
+private:
     mutable int bufsz;
+    int ippiOperator(const uchar* _src, uchar* _dst, int width, int cn) const
+    {
+        int _ksize = kernel.rows + kernel.cols - 1;
+        if ((1 != cn && 3 != cn) || width < _ksize*8)
+            return 0;
+
+        const float* src = (const float*)_src;
+        float* dst = (float*)_dst;
+        const float* _kx = (const float*)kernel.data;
+
+        IppiSize roisz = { width, 1 };
+        if( bufsz < 0 )
+        {
+            if( (cn == 1 && ippiFilterRowBorderPipelineGetBufferSize_32f_C1R(roisz, _ksize, &bufsz) < 0) ||
+                (cn == 3 && ippiFilterRowBorderPipelineGetBufferSize_32f_C3R(roisz, _ksize, &bufsz) < 0))
+                return 0;
+        }
+        AutoBuffer<uchar> buf(bufsz + 64);
+        uchar* bufptr = alignPtr((uchar*)buf, 32);
+        int step = (int)(width*sizeof(dst[0])*cn);
+        float borderValue[] = {0.f, 0.f, 0.f};
+        // here is the trick. IPP needs border type and extrapolates the row. We did it already.
+        // So we pass anchor=0 and ignore the right tail of results since they are incorrect there.
+        if( (cn == 1 && ippiFilterRowBorderPipeline_32f_C1R(src, step, &dst, roisz, _kx, _ksize, 0,
+                                                            ippBorderRepl, borderValue[0], bufptr) < 0) ||
+            (cn == 3 && ippiFilterRowBorderPipeline_32f_C3R(src, step, &dst, roisz, _kx, _ksize, 0,
+                                                            ippBorderRepl, borderValue, bufptr) < 0))
+        {
+            setIppErrorStatus();
+            return 0;
+        }
+        return width - _ksize + 1;
+    }
 #endif
 };
 
@@ -1996,7 +1971,7 @@ struct FilterVec_8u
         Mat kernel;
         _kernel.convertTo(kernel, CV_32F, 1./(1 << _bits), 0);
         delta = (float)(_delta/(1 << _bits));
-        vector<Point> coords;
+        std::vector<Point> coords;
         preprocess2DKernel(kernel, coords, coeffs);
         _nz = (int)coords.size();
     }
@@ -2066,7 +2041,7 @@ struct FilterVec_8u
     }
 
     int _nz;
-    vector<uchar> coeffs;
+    std::vector<uchar> coeffs;
     float delta;
 };
 
@@ -2079,7 +2054,7 @@ struct FilterVec_8u16s
         Mat kernel;
         _kernel.convertTo(kernel, CV_32F, 1./(1 << _bits), 0);
         delta = (float)(_delta/(1 << _bits));
-        vector<Point> coords;
+        std::vector<Point> coords;
         preprocess2DKernel(kernel, coords, coeffs);
         _nz = (int)coords.size();
     }
@@ -2149,7 +2124,7 @@ struct FilterVec_8u16s
     }
 
     int _nz;
-    vector<uchar> coeffs;
+    std::vector<uchar> coeffs;
     float delta;
 };
 
@@ -2160,7 +2135,7 @@ struct FilterVec_32f
     FilterVec_32f(const Mat& _kernel, int, double _delta)
     {
         delta = (float)_delta;
-        vector<Point> coords;
+        std::vector<Point> coords;
         preprocess2DKernel(_kernel, coords, coeffs);
         _nz = (int)coords.size();
     }
@@ -2221,7 +2196,7 @@ struct FilterVec_32f
     }
 
     int _nz;
-    vector<uchar> coeffs;
+    std::vector<uchar> coeffs;
     float delta;
 };
 
@@ -2821,42 +2796,42 @@ cv::Ptr<cv::BaseRowFilter> cv::getLinearRowFilter( int srcType, int bufType,
     if( (symmetryType & (KERNEL_SYMMETRICAL|KERNEL_ASYMMETRICAL)) != 0 && ksize <= 5 )
     {
         if( sdepth == CV_8U && ddepth == CV_32S )
-            return Ptr<BaseRowFilter>(new SymmRowSmallFilter<uchar, int, SymmRowSmallVec_8u32s>
-                (kernel, anchor, symmetryType, SymmRowSmallVec_8u32s(kernel, symmetryType)));
+            return makePtr<SymmRowSmallFilter<uchar, int, SymmRowSmallVec_8u32s> >
+                (kernel, anchor, symmetryType, SymmRowSmallVec_8u32s(kernel, symmetryType));
         if( sdepth == CV_32F && ddepth == CV_32F )
-            return Ptr<BaseRowFilter>(new SymmRowSmallFilter<float, float, SymmRowSmallVec_32f>
-                (kernel, anchor, symmetryType, SymmRowSmallVec_32f(kernel, symmetryType)));
+            return makePtr<SymmRowSmallFilter<float, float, SymmRowSmallVec_32f> >
+                (kernel, anchor, symmetryType, SymmRowSmallVec_32f(kernel, symmetryType));
     }
 
     if( sdepth == CV_8U && ddepth == CV_32S )
-        return Ptr<BaseRowFilter>(new RowFilter<uchar, int, RowVec_8u32s>
-            (kernel, anchor, RowVec_8u32s(kernel)));
+        return makePtr<RowFilter<uchar, int, RowVec_8u32s> >
+            (kernel, anchor, RowVec_8u32s(kernel));
     if( sdepth == CV_8U && ddepth == CV_32F )
-        return Ptr<BaseRowFilter>(new RowFilter<uchar, float, RowNoVec>(kernel, anchor));
+        return makePtr<RowFilter<uchar, float, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_8U && ddepth == CV_64F )
-        return Ptr<BaseRowFilter>(new RowFilter<uchar, double, RowNoVec>(kernel, anchor));
+        return makePtr<RowFilter<uchar, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_16U && ddepth == CV_32F )
-        return Ptr<BaseRowFilter>(new RowFilter<ushort, float, RowNoVec>(kernel, anchor));
+        return makePtr<RowFilter<ushort, float, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_16U && ddepth == CV_64F )
-        return Ptr<BaseRowFilter>(new RowFilter<ushort, double, RowNoVec>(kernel, anchor));
+        return makePtr<RowFilter<ushort, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_16S && ddepth == CV_32F )
-        return Ptr<BaseRowFilter>(new RowFilter<short, float, RowVec_16s32f>
-                                  (kernel, anchor, RowVec_16s32f(kernel)));
+        return makePtr<RowFilter<short, float, RowVec_16s32f> >
+                                  (kernel, anchor, RowVec_16s32f(kernel));
     if( sdepth == CV_16S && ddepth == CV_64F )
-        return Ptr<BaseRowFilter>(new RowFilter<short, double, RowNoVec>(kernel, anchor));
+        return makePtr<RowFilter<short, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_32F && ddepth == CV_32F )
-        return Ptr<BaseRowFilter>(new RowFilter<float, float, RowVec_32f>
-            (kernel, anchor, RowVec_32f(kernel)));
+        return makePtr<RowFilter<float, float, RowVec_32f> >
+            (kernel, anchor, RowVec_32f(kernel));
     if( sdepth == CV_32F && ddepth == CV_64F )
-        return Ptr<BaseRowFilter>(new RowFilter<float, double, RowNoVec>(kernel, anchor));
+        return makePtr<RowFilter<float, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_64F && ddepth == CV_64F )
-        return Ptr<BaseRowFilter>(new RowFilter<double, double, RowNoVec>(kernel, anchor));
+        return makePtr<RowFilter<double, double, RowNoVec> >(kernel, anchor);
 
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of source format (=%d), and buffer format (=%d)",
         srcType, bufType));
 
-    return Ptr<BaseRowFilter>(0);
+    return Ptr<BaseRowFilter>();
 }
 
 
@@ -2875,24 +2850,24 @@ cv::Ptr<cv::BaseColumnFilter> cv::getLinearColumnFilter( int bufType, int dstTyp
     if( !(symmetryType & (KERNEL_SYMMETRICAL|KERNEL_ASYMMETRICAL)) )
     {
         if( ddepth == CV_8U && sdepth == CV_32S )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<FixedPtCastEx<int, uchar>, ColumnNoVec>
-            (kernel, anchor, delta, FixedPtCastEx<int, uchar>(bits)));
+            return makePtr<ColumnFilter<FixedPtCastEx<int, uchar>, ColumnNoVec> >
+            (kernel, anchor, delta, FixedPtCastEx<int, uchar>(bits));
         if( ddepth == CV_8U && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<float, uchar>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<float, uchar>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_8U && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<double, uchar>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<double, uchar>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_16U && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<float, ushort>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<float, ushort>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_16U && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<double, ushort>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<double, ushort>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_16S && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<float, short>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<float, short>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_16S && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<double, short>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<double, short>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_32F && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<float, float>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<float, float>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_64F && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<double, double>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<double, double>, ColumnNoVec> >(kernel, anchor, delta);
     }
     else
     {
@@ -2900,60 +2875,60 @@ cv::Ptr<cv::BaseColumnFilter> cv::getLinearColumnFilter( int bufType, int dstTyp
         if( ksize == 3 )
         {
             if( ddepth == CV_8U && sdepth == CV_32S )
-                return Ptr<BaseColumnFilter>(new SymmColumnSmallFilter<
-                    FixedPtCastEx<int, uchar>, SymmColumnVec_32s8u>
+                return makePtr<SymmColumnSmallFilter<
+                    FixedPtCastEx<int, uchar>, SymmColumnVec_32s8u> >
                     (kernel, anchor, delta, symmetryType, FixedPtCastEx<int, uchar>(bits),
-                    SymmColumnVec_32s8u(kernel, symmetryType, bits, delta)));
+                    SymmColumnVec_32s8u(kernel, symmetryType, bits, delta));
             if( ddepth == CV_16S && sdepth == CV_32S && bits == 0 )
-                return Ptr<BaseColumnFilter>(new SymmColumnSmallFilter<Cast<int, short>,
-                    SymmColumnSmallVec_32s16s>(kernel, anchor, delta, symmetryType,
-                        Cast<int, short>(), SymmColumnSmallVec_32s16s(kernel, symmetryType, bits, delta)));
+                return makePtr<SymmColumnSmallFilter<Cast<int, short>,
+                    SymmColumnSmallVec_32s16s> >(kernel, anchor, delta, symmetryType,
+                        Cast<int, short>(), SymmColumnSmallVec_32s16s(kernel, symmetryType, bits, delta));
             if( ddepth == CV_32F && sdepth == CV_32F )
-                return Ptr<BaseColumnFilter>(new SymmColumnSmallFilter<
-                    Cast<float, float>,SymmColumnSmallVec_32f>
+                return makePtr<SymmColumnSmallFilter<
+                    Cast<float, float>,SymmColumnSmallVec_32f> >
                     (kernel, anchor, delta, symmetryType, Cast<float, float>(),
-                    SymmColumnSmallVec_32f(kernel, symmetryType, 0, delta)));
+                    SymmColumnSmallVec_32f(kernel, symmetryType, 0, delta));
         }
         if( ddepth == CV_8U && sdepth == CV_32S )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<FixedPtCastEx<int, uchar>, SymmColumnVec_32s8u>
+            return makePtr<SymmColumnFilter<FixedPtCastEx<int, uchar>, SymmColumnVec_32s8u> >
                 (kernel, anchor, delta, symmetryType, FixedPtCastEx<int, uchar>(bits),
-                SymmColumnVec_32s8u(kernel, symmetryType, bits, delta)));
+                SymmColumnVec_32s8u(kernel, symmetryType, bits, delta));
         if( ddepth == CV_8U && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<float, uchar>, ColumnNoVec>
-                (kernel, anchor, delta, symmetryType));
+            return makePtr<SymmColumnFilter<Cast<float, uchar>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
         if( ddepth == CV_8U && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<double, uchar>, ColumnNoVec>
-                (kernel, anchor, delta, symmetryType));
+            return makePtr<SymmColumnFilter<Cast<double, uchar>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
         if( ddepth == CV_16U && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<float, ushort>, ColumnNoVec>
-                (kernel, anchor, delta, symmetryType));
+            return makePtr<SymmColumnFilter<Cast<float, ushort>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
         if( ddepth == CV_16U && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<double, ushort>, ColumnNoVec>
-                (kernel, anchor, delta, symmetryType));
+            return makePtr<SymmColumnFilter<Cast<double, ushort>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
         if( ddepth == CV_16S && sdepth == CV_32S )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<int, short>, ColumnNoVec>
-                (kernel, anchor, delta, symmetryType));
+            return makePtr<SymmColumnFilter<Cast<int, short>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
         if( ddepth == CV_16S && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<float, short>, SymmColumnVec_32f16s>
+            return makePtr<SymmColumnFilter<Cast<float, short>, SymmColumnVec_32f16s> >
                  (kernel, anchor, delta, symmetryType, Cast<float, short>(),
-                  SymmColumnVec_32f16s(kernel, symmetryType, 0, delta)));
+                  SymmColumnVec_32f16s(kernel, symmetryType, 0, delta));
         if( ddepth == CV_16S && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<double, short>, ColumnNoVec>
-                (kernel, anchor, delta, symmetryType));
+            return makePtr<SymmColumnFilter<Cast<double, short>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
         if( ddepth == CV_32F && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<float, float>, SymmColumnVec_32f>
+            return makePtr<SymmColumnFilter<Cast<float, float>, SymmColumnVec_32f> >
                 (kernel, anchor, delta, symmetryType, Cast<float, float>(),
-                SymmColumnVec_32f(kernel, symmetryType, 0, delta)));
+                SymmColumnVec_32f(kernel, symmetryType, 0, delta));
         if( ddepth == CV_64F && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<double, double>, ColumnNoVec>
-                (kernel, anchor, delta, symmetryType));
+            return makePtr<SymmColumnFilter<Cast<double, double>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
     }
 
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of buffer format (=%d), and destination format (=%d)",
         bufType, dstType));
 
-    return Ptr<BaseColumnFilter>(0);
+    return Ptr<BaseColumnFilter>();
 }
 
 
@@ -3019,7 +2994,7 @@ cv::Ptr<cv::FilterEngine> cv::createSeparableLinearFilter(
     Ptr<BaseColumnFilter> _columnFilter = getLinearColumnFilter(
         _bufType, _dstType, columnKernel, _anchor.y, ctype, _delta, bits );
 
-    return Ptr<FilterEngine>( new FilterEngine(Ptr<BaseFilter>(0), _rowFilter, _columnFilter,
+    return Ptr<FilterEngine>( new FilterEngine(Ptr<BaseFilter>(), _rowFilter, _columnFilter,
         _srcType, _dstType, _bufType, _rowBorderType, _columnBorderType, _borderValue ));
 }
 
@@ -3031,7 +3006,7 @@ cv::Ptr<cv::FilterEngine> cv::createSeparableLinearFilter(
 namespace cv
 {
 
-void preprocess2DKernel( const Mat& kernel, vector<Point>& coords, vector<uchar>& coeffs )
+void preprocess2DKernel( const Mat& kernel, std::vector<Point>& coords, std::vector<uchar>& coeffs )
 {
     int i, j, k, nz = countNonZero(kernel), ktype = kernel.type();
     if(nz == 0)
@@ -3149,13 +3124,411 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
         }
     }
 
-    vector<Point> coords;
-    vector<uchar> coeffs;
-    vector<uchar*> ptrs;
+    std::vector<Point> coords;
+    std::vector<uchar> coeffs;
+    std::vector<uchar*> ptrs;
     KT delta;
     CastOp castOp0;
     VecOp vecOp;
 };
+
+#ifdef HAVE_OPENCL
+
+#define DIVUP(total, grain) (((total) + (grain) - 1) / (grain))
+#define ROUNDUP(sz, n)      ((sz) + (n) - 1 - (((sz) + (n) - 1) % (n)))
+
+// prepare kernel: transpose and make double rows (+align). Returns size of aligned row
+// Samples:
+//        a b c
+// Input: d e f
+//        g h i
+// Output, last two zeros is the alignment:
+// a d g a d g 0 0
+// b e h b e h 0 0
+// c f i c f i 0 0
+template <typename T>
+static int _prepareKernelFilter2D(std::vector<T> & data, const Mat & kernel)
+{
+    Mat _kernel; kernel.convertTo(_kernel, DataDepth<T>::value);
+    int size_y_aligned = ROUNDUP(kernel.rows * 2, 4);
+    data.clear(); data.resize(size_y_aligned * kernel.cols, 0);
+    for (int x = 0; x < kernel.cols; x++)
+    {
+        for (int y = 0; y < kernel.rows; y++)
+        {
+            data[x * size_y_aligned + y] = _kernel.at<T>(y, x);
+            data[x * size_y_aligned + y + kernel.rows] = _kernel.at<T>(y, x);
+        }
+    }
+    return size_y_aligned;
+}
+
+static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
+                   InputArray _kernel, Point anchor,
+                   double delta, int borderType )
+{
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ddepth = ddepth < 0 ? sdepth : ddepth;
+    int dtype = CV_MAKE_TYPE(ddepth, cn), wdepth = std::max(std::max(sdepth, ddepth), CV_32F),
+            wtype = CV_MAKE_TYPE(wdepth, cn);
+    if (cn > 4)
+        return false;
+
+    Size ksize = _kernel.size();
+    if (anchor.x < 0)
+        anchor.x = ksize.width / 2;
+    if (anchor.y < 0)
+        anchor.y = ksize.height / 2;
+
+    bool isolated = (borderType & BORDER_ISOLATED) != 0;
+    borderType &= ~BORDER_ISOLATED;
+    const cv::ocl::Device &device = cv::ocl::Device::getDefault();
+    bool doubleSupport = device.doubleFPConfig() > 0;
+    if (wdepth == CV_64F && !doubleSupport)
+        return false;
+
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT",
+                                       "BORDER_WRAP", "BORDER_REFLECT_101" };
+
+    cv::Mat kernelMat = _kernel.getMat();
+    std::vector<float> kernelMatDataFloat;
+    int kernel_size_y2_aligned = _prepareKernelFilter2D<float>(kernelMatDataFloat, kernelMat);
+
+    cv::Size sz = _src.size(), wholeSize;
+    size_t globalsize[2] = { sz.width, sz.height }, localsize[2] = { 0, 1 };
+
+    ocl::Kernel k;
+    UMat src = _src.getUMat();
+    if (!isolated)
+    {
+        Point ofs;
+        src.locateROI(wholeSize, ofs);
+    }
+
+    size_t maxWorkItemSizes[32];
+    device.maxWorkItemSizes(maxWorkItemSizes);
+    size_t tryWorkItems = maxWorkItemSizes[0];
+    char cvt[2][40];
+
+    String kerStr = ocl::kernelToStr(kernelMatDataFloat, CV_32F);
+
+    for ( ; ; )
+    {
+        size_t BLOCK_SIZE = tryWorkItems;
+        while (BLOCK_SIZE > 32 && BLOCK_SIZE >= (size_t)ksize.width * 2 && BLOCK_SIZE > (size_t)sz.width * 2)
+            BLOCK_SIZE /= 2;
+#if 1 // TODO Mode with several blocks requires a much more VGPRs, so this optimization is not actual for the current devices
+        size_t BLOCK_SIZE_Y = 1;
+#else
+        size_t BLOCK_SIZE_Y = 8; // TODO Check heuristic value on devices
+        while (BLOCK_SIZE_Y < BLOCK_SIZE / 8 && BLOCK_SIZE_Y * src.clCxt->getDeviceInfo().maxComputeUnits * 32 < (size_t)src.rows)
+            BLOCK_SIZE_Y *= 2;
+#endif
+
+        if ((size_t)ksize.width > BLOCK_SIZE)
+            return false;
+
+        int requiredTop = anchor.y;
+        int requiredLeft = (int)BLOCK_SIZE; // not this: anchor.x;
+        int requiredBottom = ksize.height - 1 - anchor.y;
+        int requiredRight = (int)BLOCK_SIZE; // not this: ksize.width - 1 - anchor.x;
+        int h = isolated ? sz.height : wholeSize.height;
+        int w = isolated ? sz.width : wholeSize.width;
+        bool extra_extrapolation = h < requiredTop || h < requiredBottom || w < requiredLeft || w < requiredRight;
+
+        if ((w < ksize.width) || (h < ksize.height))
+            return false;
+
+        String opts = format("-D LOCAL_SIZE=%d -D BLOCK_SIZE_Y=%d -D cn=%d "
+                             "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
+                             "-D KERNEL_SIZE_Y2_ALIGNED=%d -D %s -D %s -D %s%s%s "
+                             "-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D WT=%s -D WT1=%s "
+                             "-D convertToWT=%s -D convertToDstT=%s",
+                             (int)BLOCK_SIZE, (int)BLOCK_SIZE_Y, cn, anchor.x, anchor.y,
+                             ksize.width, ksize.height, kernel_size_y2_aligned, borderMap[borderType],
+                             extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
+                             isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
+                             doubleSupport ? " -D DOUBLE_SUPPORT" : "", kerStr.c_str(),
+                             ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
+                             ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
+                             ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
+                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]));
+
+        localsize[0] = BLOCK_SIZE;
+        globalsize[0] = DIVUP(sz.width, BLOCK_SIZE - (ksize.width - 1)) * BLOCK_SIZE;
+        globalsize[1] = DIVUP(sz.height, BLOCK_SIZE_Y);
+
+        if (!k.create("filter2D", cv::ocl::imgproc::filter2D_oclsrc, opts))
+            return false;
+
+        size_t kernelWorkGroupSize = k.workGroupSize();
+        if (localsize[0] <= kernelWorkGroupSize)
+            break;
+        if (BLOCK_SIZE < kernelWorkGroupSize)
+            return false;
+        tryWorkItems = kernelWorkGroupSize;
+    }
+
+    _dst.create(sz, dtype);
+    UMat dst = _dst.getUMat();
+
+    int srcOffsetX = (int)((src.offset % src.step) / src.elemSize());
+    int srcOffsetY = (int)(src.offset / src.step);
+    int srcEndX = (isolated ? (srcOffsetX + sz.width) : wholeSize.width);
+    int srcEndY = (isolated ? (srcOffsetY + sz.height) : wholeSize.height);
+
+    k.args(ocl::KernelArg::PtrReadOnly(src), (int)src.step, srcOffsetX, srcOffsetY,
+           srcEndX, srcEndY, ocl::KernelArg::WriteOnly(dst), (float)delta);
+
+    return k.run(2, globalsize, localsize, false);
+}
+
+const int shift_bits = 8;
+
+static bool ocl_sepRowFilter2D(const UMat & src, UMat & buf, const Mat & kernelX, int anchor,
+                               int borderType, int ddepth, bool fast8uc1, bool int_arithm)
+{
+    int type = src.type(), cn = CV_MAT_CN(type), sdepth = CV_MAT_DEPTH(type);
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    Size bufSize = buf.size();
+    int buf_type = buf.type(), bdepth = CV_MAT_DEPTH(buf_type);
+
+    if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
+        return false;
+
+#ifdef ANDROID
+    size_t localsize[2] = {16, 10};
+#else
+    size_t localsize[2] = {16, 16};
+#endif
+
+    size_t globalsize[2] = {DIVUP(bufSize.width, localsize[0]) * localsize[0], DIVUP(bufSize.height, localsize[1]) * localsize[1]};
+    if (fast8uc1)
+        globalsize[0] = DIVUP((bufSize.width + 3) >> 2, localsize[0]) * localsize[0];
+
+    int radiusX = anchor, radiusY = (buf.rows - src.rows) >> 1;
+
+    bool isolated = (borderType & BORDER_ISOLATED) != 0;
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101" },
+        * const btype = borderMap[borderType & ~BORDER_ISOLATED];
+
+    bool extra_extrapolation = src.rows < (int)((-radiusY + globalsize[1]) >> 1) + 1;
+    extra_extrapolation |= src.rows < radiusY;
+    extra_extrapolation |= src.cols < (int)((-radiusX + globalsize[0] + 8 * localsize[0] + 3) >> 1) + 1;
+    extra_extrapolation |= src.cols < radiusX;
+
+    char cvt[40];
+    cv::String build_options = cv::format("-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D %s -D %s"
+                                          " -D srcT=%s -D dstT=%s -D convertToDstT=%s -D srcT1=%s -D dstT1=%s%s%s",
+                                          radiusX, (int)localsize[0], (int)localsize[1], cn, btype,
+                                          extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
+                                          isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
+                                          ocl::typeToStr(type), ocl::typeToStr(buf_type),
+                                          ocl::convertTypeStr(sdepth, bdepth, cn, cvt),
+                                          ocl::typeToStr(sdepth), ocl::typeToStr(bdepth),
+                                          doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                                          int_arithm ? " -D INTEGER_ARITHMETIC" : "");
+    build_options += ocl::kernelToStr(kernelX, bdepth);
+
+    Size srcWholeSize; Point srcOffset;
+    src.locateROI(srcWholeSize, srcOffset);
+
+    String kernelName("row_filter");
+    if (fast8uc1)
+        kernelName += "_C1_D0";
+
+    ocl::Kernel k(kernelName.c_str(), cv::ocl::imgproc::filterSepRow_oclsrc,
+                  build_options);
+    if (k.empty())
+        return false;
+
+    if (fast8uc1)
+        k.args(ocl::KernelArg::PtrReadOnly(src), (int)(src.step / src.elemSize()), srcOffset.x,
+               srcOffset.y, src.cols, src.rows, srcWholeSize.width, srcWholeSize.height,
+               ocl::KernelArg::PtrWriteOnly(buf), (int)(buf.step / buf.elemSize()),
+               buf.cols, buf.rows, radiusY);
+    else
+        k.args(ocl::KernelArg::PtrReadOnly(src), (int)src.step, srcOffset.x,
+               srcOffset.y, src.cols, src.rows, srcWholeSize.width, srcWholeSize.height,
+               ocl::KernelArg::PtrWriteOnly(buf), (int)buf.step, buf.cols, buf.rows, radiusY);
+
+    return k.run(2, globalsize, localsize, false);
+}
+
+static bool ocl_sepColFilter2D(const UMat & buf, UMat & dst, const Mat & kernelY, double delta, int anchor, bool int_arithm)
+{
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    if (dst.depth() == CV_64F && !doubleSupport)
+        return false;
+
+#ifdef ANDROID
+    size_t localsize[2] = { 16, 10 };
+#else
+    size_t localsize[2] = { 16, 16 };
+#endif
+    size_t globalsize[2] = { 0, 0 };
+
+    int dtype = dst.type(), cn = CV_MAT_CN(dtype), ddepth = CV_MAT_DEPTH(dtype);
+    Size sz = dst.size();
+    int buf_type = buf.type(), bdepth = CV_MAT_DEPTH(buf_type);
+
+    globalsize[1] = DIVUP(sz.height, localsize[1]) * localsize[1];
+    globalsize[0] = DIVUP(sz.width, localsize[0]) * localsize[0];
+
+    char cvt[40];
+    cv::String build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d"
+                                          " -D srcT=%s -D dstT=%s -D convertToDstT=%s"
+                                          " -D srcT1=%s -D dstT1=%s -D SHIFT_BITS=%d%s%s",
+                                          anchor, (int)localsize[0], (int)localsize[1], cn,
+                                          ocl::typeToStr(buf_type), ocl::typeToStr(dtype),
+                                          ocl::convertTypeStr(bdepth, ddepth, cn, cvt),
+                                          ocl::typeToStr(bdepth), ocl::typeToStr(ddepth),
+                                          2*shift_bits, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                                          int_arithm ? " -D INTEGER_ARITHMETIC" : "");
+    build_options += ocl::kernelToStr(kernelY, bdepth);
+
+    ocl::Kernel k("col_filter", cv::ocl::imgproc::filterSepCol_oclsrc,
+                  build_options);
+    if (k.empty())
+        return false;
+
+    k.args(ocl::KernelArg::ReadOnly(buf), ocl::KernelArg::WriteOnly(dst),
+           static_cast<float>(delta));
+
+    return k.run(2, globalsize, localsize, false);
+}
+
+const int optimizedSepFilterLocalSize = 16;
+
+static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
+                                       Mat row_kernel, Mat col_kernel,
+                                       double delta, int borderType, int ddepth, int bdepth, bool int_arithm)
+{
+    Size size = _src.size(), wholeSize;
+    Point origin;
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
+            esz = CV_ELEM_SIZE(stype), wdepth = std::max(std::max(sdepth, ddepth), bdepth),
+            dtype = CV_MAKE_TYPE(ddepth, cn);
+    size_t src_step = _src.step(), src_offset = _src.offset();
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if ((src_offset % src_step) % esz != 0 || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
+            !(borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE ||
+              borderType == BORDER_REFLECT || borderType == BORDER_WRAP ||
+              borderType == BORDER_REFLECT_101))
+        return false;
+
+    size_t lt2[2] = { optimizedSepFilterLocalSize, optimizedSepFilterLocalSize };
+    size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), lt2[1] * (1 + (size.height - 1) / lt2[1]) };
+
+    char cvt[2][40];
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
+                                       "BORDER_REFLECT_101" };
+
+    String opts = cv::format("-D BLK_X=%d -D BLK_Y=%d -D RADIUSX=%d -D RADIUSY=%d%s%s"
+                             " -D srcT=%s -D convertToWT=%s -D WT=%s -D dstT=%s -D convertToDstT=%s"
+                             " -D %s -D srcT1=%s -D dstT1=%s -D WT1=%s -D CN=%d -D SHIFT_BITS=%d%s",
+                             (int)lt2[0], (int)lt2[1], row_kernel.cols / 2, col_kernel.cols / 2,
+                             ocl::kernelToStr(row_kernel, wdepth, "KERNEL_MATRIX_X").c_str(),
+                             ocl::kernelToStr(col_kernel, wdepth, "KERNEL_MATRIX_Y").c_str(),
+                             ocl::typeToStr(stype), ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
+                             ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), ocl::typeToStr(dtype),
+                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), borderMap[borderType],
+                             ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), ocl::typeToStr(wdepth),
+                             cn, 2*shift_bits, int_arithm ? " -D INTEGER_ARITHMETIC" : "");
+
+    ocl::Kernel k("sep_filter", ocl::imgproc::filterSep_singlePass_oclsrc, opts);
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(size, dtype);
+    UMat dst = _dst.getUMat();
+
+    int src_offset_x = static_cast<int>((src_offset % src_step) / esz);
+    int src_offset_y = static_cast<int>(src_offset / src_step);
+
+    src.locateROI(wholeSize, origin);
+
+    k.args(ocl::KernelArg::PtrReadOnly(src), (int)src_step, src_offset_x, src_offset_y,
+           wholeSize.height, wholeSize.width, ocl::KernelArg::WriteOnly(dst),
+           static_cast<float>(delta));
+
+    return k.run(2, gt2, lt2, false);
+}
+
+static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
+                      InputArray _kernelX, InputArray _kernelY, Point anchor,
+                      double delta, int borderType )
+{
+    const ocl::Device & d = ocl::Device::getDefault();
+    Size imgSize = _src.size();
+
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    if (cn > 4)
+        return false;
+
+    Mat kernelX = _kernelX.getMat().reshape(1, 1);
+    if (kernelX.cols % 2 != 1)
+        return false;
+    Mat kernelY = _kernelY.getMat().reshape(1, 1);
+    if (kernelY.cols % 2 != 1)
+        return false;
+
+    if (ddepth < 0)
+        ddepth = sdepth;
+
+    if (anchor.x < 0)
+        anchor.x = kernelX.cols >> 1;
+    if (anchor.y < 0)
+        anchor.y = kernelY.cols >> 1;
+
+    int rtype = getKernelType(kernelX,
+        kernelX.rows == 1 ? Point(anchor.x, 0) : Point(0, anchor.x));
+    int ctype = getKernelType(kernelY,
+        kernelY.rows == 1 ? Point(anchor.y, 0) : Point(0, anchor.y));
+
+    int bdepth = CV_32F;
+    bool int_arithm = false;
+    if( sdepth == CV_8U && ddepth == CV_8U &&
+        rtype == KERNEL_SMOOTH+KERNEL_SYMMETRICAL &&
+        ctype == KERNEL_SMOOTH+KERNEL_SYMMETRICAL)
+    {
+        bdepth = CV_32S;
+        kernelX.convertTo( kernelX, bdepth, 1 << shift_bits );
+        kernelY.convertTo( kernelY, bdepth, 1 << shift_bits );
+        int_arithm = true;
+    }
+
+    CV_OCL_RUN_(kernelY.cols <= 21 && kernelX.cols <= 21 &&
+                imgSize.width > optimizedSepFilterLocalSize + anchor.x &&
+                imgSize.height > optimizedSepFilterLocalSize + anchor.y &&
+                (!(borderType & BORDER_ISOLATED) || _src.offset() == 0) &&
+                anchor == Point(kernelX.cols >> 1, kernelY.cols >> 1) &&
+                (d.isIntel() || (d.isAMD() && !d.hostUnifiedMemory())),
+                ocl_sepFilter2D_SinglePass(_src, _dst, kernelX, kernelY, delta,
+                                           borderType & ~BORDER_ISOLATED, ddepth, bdepth, int_arithm), true)
+
+    UMat src = _src.getUMat();
+    Size srcWholeSize; Point srcOffset;
+    src.locateROI(srcWholeSize, srcOffset);
+
+    bool fast8uc1 = type == CV_8UC1 && srcOffset.x % 4 == 0 &&
+            src.cols % 4 == 0 && src.step % 4 == 0;
+
+    Size srcSize = src.size();
+    Size bufSize(srcSize.width, srcSize.height + kernelY.cols - 1);
+    UMat buf(bufSize, CV_MAKETYPE(bdepth, cn));
+    if (!ocl_sepRowFilter2D(src, buf, kernelX, anchor.x, borderType, ddepth, fast8uc1, int_arithm))
+        return false;
+
+    _dst.create(srcSize, CV_MAKETYPE(ddepth, cn));
+    UMat dst = _dst.getUMat();
+
+    return ocl_sepColFilter2D(buf, dst, kernelY, delta, anchor.y, int_arithm);
+}
+
+#endif
 
 }
 
@@ -3171,13 +3544,13 @@ cv::Ptr<cv::BaseFilter> cv::getLinearFilter(int srcType, int dstType,
     anchor = normalizeAnchor(anchor, _kernel.size());
 
     /*if( sdepth == CV_8U && ddepth == CV_8U && kdepth == CV_32S )
-        return Ptr<BaseFilter>(new Filter2D<uchar, FixedPtCastEx<int, uchar>, FilterVec_8u>
+        return makePtr<Filter2D<uchar, FixedPtCastEx<int, uchar>, FilterVec_8u> >
             (_kernel, anchor, delta, FixedPtCastEx<int, uchar>(bits),
-            FilterVec_8u(_kernel, bits, delta)));
+            FilterVec_8u(_kernel, bits, delta));
     if( sdepth == CV_8U && ddepth == CV_16S && kdepth == CV_32S )
-        return Ptr<BaseFilter>(new Filter2D<uchar, FixedPtCastEx<int, short>, FilterVec_8u16s>
+        return makePtr<Filter2D<uchar, FixedPtCastEx<int, short>, FilterVec_8u16s> >
             (_kernel, anchor, delta, FixedPtCastEx<int, short>(bits),
-            FilterVec_8u16s(_kernel, bits, delta)));*/
+            FilterVec_8u16s(_kernel, bits, delta));*/
 
     kdepth = sdepth == CV_64F || ddepth == CV_64F ? CV_64F : CV_32F;
     Mat kernel;
@@ -3187,53 +3560,53 @@ cv::Ptr<cv::BaseFilter> cv::getLinearFilter(int srcType, int dstType,
         _kernel.convertTo(kernel, kdepth, _kernel.type() == CV_32S ? 1./(1 << bits) : 1.);
 
     if( sdepth == CV_8U && ddepth == CV_8U )
-        return Ptr<BaseFilter>(new Filter2D<uchar, Cast<float, uchar>, FilterVec_8u>
-            (kernel, anchor, delta, Cast<float, uchar>(), FilterVec_8u(kernel, 0, delta)));
+        return makePtr<Filter2D<uchar, Cast<float, uchar>, FilterVec_8u> >
+            (kernel, anchor, delta, Cast<float, uchar>(), FilterVec_8u(kernel, 0, delta));
     if( sdepth == CV_8U && ddepth == CV_16U )
-        return Ptr<BaseFilter>(new Filter2D<uchar,
-            Cast<float, ushort>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<uchar,
+            Cast<float, ushort>, FilterNoVec> >(kernel, anchor, delta);
     if( sdepth == CV_8U && ddepth == CV_16S )
-        return Ptr<BaseFilter>(new Filter2D<uchar, Cast<float, short>, FilterVec_8u16s>
-            (kernel, anchor, delta, Cast<float, short>(), FilterVec_8u16s(kernel, 0, delta)));
+        return makePtr<Filter2D<uchar, Cast<float, short>, FilterVec_8u16s> >
+            (kernel, anchor, delta, Cast<float, short>(), FilterVec_8u16s(kernel, 0, delta));
     if( sdepth == CV_8U && ddepth == CV_32F )
-        return Ptr<BaseFilter>(new Filter2D<uchar,
-            Cast<float, float>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<uchar,
+            Cast<float, float>, FilterNoVec> >(kernel, anchor, delta);
     if( sdepth == CV_8U && ddepth == CV_64F )
-        return Ptr<BaseFilter>(new Filter2D<uchar,
-            Cast<double, double>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<uchar,
+            Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);
 
     if( sdepth == CV_16U && ddepth == CV_16U )
-        return Ptr<BaseFilter>(new Filter2D<ushort,
-            Cast<float, ushort>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<ushort,
+            Cast<float, ushort>, FilterNoVec> >(kernel, anchor, delta);
     if( sdepth == CV_16U && ddepth == CV_32F )
-        return Ptr<BaseFilter>(new Filter2D<ushort,
-            Cast<float, float>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<ushort,
+            Cast<float, float>, FilterNoVec> >(kernel, anchor, delta);
     if( sdepth == CV_16U && ddepth == CV_64F )
-        return Ptr<BaseFilter>(new Filter2D<ushort,
-            Cast<double, double>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<ushort,
+            Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);
 
     if( sdepth == CV_16S && ddepth == CV_16S )
-        return Ptr<BaseFilter>(new Filter2D<short,
-            Cast<float, short>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<short,
+            Cast<float, short>, FilterNoVec> >(kernel, anchor, delta);
     if( sdepth == CV_16S && ddepth == CV_32F )
-        return Ptr<BaseFilter>(new Filter2D<short,
-            Cast<float, float>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<short,
+            Cast<float, float>, FilterNoVec> >(kernel, anchor, delta);
     if( sdepth == CV_16S && ddepth == CV_64F )
-        return Ptr<BaseFilter>(new Filter2D<short,
-            Cast<double, double>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<short,
+            Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);
 
     if( sdepth == CV_32F && ddepth == CV_32F )
-        return Ptr<BaseFilter>(new Filter2D<float, Cast<float, float>, FilterVec_32f>
-            (kernel, anchor, delta, Cast<float, float>(), FilterVec_32f(kernel, 0, delta)));
+        return makePtr<Filter2D<float, Cast<float, float>, FilterVec_32f> >
+            (kernel, anchor, delta, Cast<float, float>(), FilterVec_32f(kernel, 0, delta));
     if( sdepth == CV_64F && ddepth == CV_64F )
-        return Ptr<BaseFilter>(new Filter2D<double,
-            Cast<double, double>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<double,
+            Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);
 
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of source format (=%d), and destination format (=%d)",
         srcType, dstType));
 
-    return Ptr<BaseFilter>(0);
+    return Ptr<BaseFilter>();
 }
 
 
@@ -3264,9 +3637,9 @@ cv::Ptr<cv::FilterEngine> cv::createLinearFilter( int _srcType, int _dstType,
     Ptr<BaseFilter> _filter2D = getLinearFilter(_srcType, _dstType,
         kernel, _anchor, _delta, bits);
 
-    return Ptr<FilterEngine>(new FilterEngine(_filter2D, Ptr<BaseRowFilter>(0),
-        Ptr<BaseColumnFilter>(0), _srcType, _dstType, _srcType,
-        _rowBorderType, _columnBorderType, _borderValue ));
+    return makePtr<FilterEngine>(_filter2D, Ptr<BaseRowFilter>(),
+        Ptr<BaseColumnFilter>(), _srcType, _dstType, _srcType,
+        _rowBorderType, _columnBorderType, _borderValue );
 }
 
 
@@ -3274,6 +3647,9 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
                    InputArray _kernel, Point anchor,
                    double delta, int borderType )
 {
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+               ocl_filter2D(_src, _dst, ddepth, _kernel, anchor, delta, borderType))
+
     Mat src = _src.getMat(), kernel = _kernel.getMat();
 
     if( ddepth < 0 )
@@ -3320,6 +3696,9 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                       InputArray _kernelX, InputArray _kernelY, Point anchor,
                       double delta, int borderType )
 {
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+               ocl_sepFilter2D(_src, _dst, ddepth, _kernelX, _kernelY, anchor, delta, borderType))
+
     Mat src = _src.getMat(), kernelX = _kernelX.getMat(), kernelY = _kernelY.getMat();
 
     if( ddepth < 0 )

@@ -60,10 +60,6 @@ extern "C" {
 #include <errno.h>
 #endif
 
-#ifdef WIN32
-  #include <libavformat/avformat.h>
-#else
-
 // if the header path is not specified explicitly, let's deduce it
 #if !defined HAVE_FFMPEG_AVCODEC_H && !defined HAVE_LIBAVCODEC_AVCODEC_H
 
@@ -77,10 +73,8 @@ extern "C" {
   #include <ffmpeg/avformat.h>
 #endif
 
-#if defined(HAVE_LIBAVFORMAT_AVFORMAT_H)
+#if defined(HAVE_LIBAVFORMAT_AVFORMAT_H) || defined(WIN32)
   #include <libavformat/avformat.h>
-#endif
-
 #endif
 
 #endif

@@ -45,8 +45,8 @@
 #include "opencv2/videostab/inpainting.hpp"
 #include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/videostab/fast_marching.hpp"
-
-using namespace std;
+#include "opencv2/videostab/ring_buffer.hpp"
+#include "opencv2/opencv_modules.hpp"
 
 namespace cv
 {
@@ -61,7 +61,7 @@ void InpaintingPipeline::setRadius(int val)
 }
 
 
-void InpaintingPipeline::setFrames(const vector<Mat> &val)
+void InpaintingPipeline::setFrames(const std::vector<Mat> &val)
 {
     for (size_t i = 0; i < inpainters_.size(); ++i)
         inpainters_[i]->setFrames(val);
@@ -69,7 +69,15 @@ void InpaintingPipeline::setFrames(const vector<Mat> &val)
 }
 
 
-void InpaintingPipeline::setMotions(const vector<Mat> &val)
+void InpaintingPipeline::setMotionModel(MotionModel val)
+{
+    for (size_t i = 0; i < inpainters_.size(); ++i)
+        inpainters_[i]->setMotionModel(val);
+    InpainterBase::setMotionModel(val);
+}
+
+
+void InpaintingPipeline::setMotions(const std::vector<Mat> &val)
 {
     for (size_t i = 0; i < inpainters_.size(); ++i)
         inpainters_[i]->setMotions(val);
@@ -77,7 +85,7 @@ void InpaintingPipeline::setMotions(const vector<Mat> &val)
 }
 
 
-void InpaintingPipeline::setStabilizedFrames(const vector<Mat> &val)
+void InpaintingPipeline::setStabilizedFrames(const std::vector<Mat> &val)
 {
     for (size_t i = 0; i < inpainters_.size(); ++i)
         inpainters_[i]->setStabilizedFrames(val);
@@ -85,19 +93,11 @@ void InpaintingPipeline::setStabilizedFrames(const vector<Mat> &val)
 }
 
 
-void InpaintingPipeline::setStabilizationMotions(const vector<Mat> &val)
+void InpaintingPipeline::setStabilizationMotions(const std::vector<Mat> &val)
 {
     for (size_t i = 0; i < inpainters_.size(); ++i)
         inpainters_[i]->setStabilizationMotions(val);
     InpainterBase::setStabilizationMotions(val);
-}
-
-
-void InpaintingPipeline::update()
-{
-    for (size_t i = 0; i < inpainters_.size(); ++i)
-        inpainters_[i]->update();
-    InpainterBase::update();
 }
 
 
@@ -128,13 +128,13 @@ void ConsistentMosaicInpainter::inpaint(int idx, Mat &frame, Mat &mask)
     CV_Assert(mask.size() == frame.size() && mask.type() == CV_8U);
 
     Mat invS = at(idx, *stabilizationMotions_).inv();
-    vector<Mat_<float> > _motions(2*radius_ + 1);
+    std::vector<Mat_<float> > vmotions(2*radius_ + 1);
     for (int i = -radius_; i <= radius_; ++i)
-        _motions[radius_ + i] = getMotion(idx, idx + i, *motions_) * invS;
+        vmotions[radius_ + i] = getMotion(idx, idx + i, *motions_) * invS;
 
     int n;
     float mean, var;
-    vector<Pixel3> pixels(2*radius_ + 1);
+    std::vector<Pixel3> pixels(2*radius_ + 1);
 
     Mat_<Point3_<uchar> > frame_(frame);
     Mat_<uchar> mask_(mask);
@@ -152,7 +152,7 @@ void ConsistentMosaicInpainter::inpaint(int idx, Mat &frame, Mat &mask)
                 for (int i = -radius_; i <= radius_; ++i)
                 {
                     const Mat_<Point3_<uchar> > &framei = at(idx + i, *frames_);
-                    const Mat_<float> &Mi = _motions[radius_ + i];
+                    const Mat_<float> &Mi = vmotions[radius_ + i];
                     int xi = cvRound(Mi(0,0)*x + Mi(0,1)*y + Mi(0,2));
                     int yi = cvRound(Mi(1,0)*x + Mi(1,1)*y + Mi(1,2));
                     if (xi >= 0 && xi < framei.cols && yi >= 0 && yi < framei.rows)
@@ -295,7 +295,7 @@ public:
                         float distColor = sqr(static_cast<float>(cp.x-cq.x))
                                         + sqr(static_cast<float>(cp.y-cq.y))
                                         + sqr(static_cast<float>(cp.z-cq.z));
-                        float w = 1.f / (sqrt(distColor * (dx*dx + dy*dy)) + eps);
+                        float w = 1.f / (std::sqrt(distColor * (dx*dx + dy*dy)) + eps);
 
                         uEst += w * (flowX(qy0,qx0) - dudx*dx - dudy*dy);
                         vEst += w * (flowY(qy0,qx0) - dvdx*dx - dvdy*dy);
@@ -323,10 +323,10 @@ public:
 
 MotionInpainter::MotionInpainter()
 {
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
-    setOptFlowEstimator(new DensePyrLkOptFlowEstimatorGpu());
+#ifdef HAVE_OPENCV_CUDAOPTFLOW
+    setOptFlowEstimator(makePtr<DensePyrLkOptFlowEstimatorGpu>());
 #else
-    CV_Error(CV_StsNotImplemented, "Current implementation of MotionInpainter requires GPU");
+    CV_Error(Error::StsNotImplemented, "Current implementation of MotionInpainter requires CUDA");
 #endif
     setFlowErrorThreshold(1e-4f);
     setDistThreshold(5.f);
@@ -336,18 +336,18 @@ MotionInpainter::MotionInpainter()
 
 void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
 {
-    priority_queue<pair<float,int> > neighbors;
-    vector<Mat> _motions(2*radius_ + 1);
+    std::priority_queue<std::pair<float,int> > neighbors;
+    std::vector<Mat> vmotions(2*radius_ + 1);
 
     for (int i = -radius_; i <= radius_; ++i)
     {
         Mat motion0to1 = getMotion(idx, idx + i, *motions_) * at(idx, *stabilizationMotions_).inv();
-        _motions[radius_ + i] = motion0to1;
+        vmotions[radius_ + i] = motion0to1;
 
         if (i != 0)
         {
             float err = alignementError(motion0to1, frame, mask, at(idx + i, *frames_));
-            neighbors.push(make_pair(-err, idx + i));
+            neighbors.push(std::make_pair(-err, idx + i));
         }
     }
 
@@ -357,7 +357,7 @@ void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
         mask1_.setTo(255);
     }
 
-    cvtColor(frame, grayFrame_, CV_BGR2GRAY);
+    cvtColor(frame, grayFrame_, COLOR_BGR2GRAY);
 
     MotionInpaintBody body;
     body.rad = 2;
@@ -368,18 +368,35 @@ void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
         int neighbor = neighbors.top().second;
         neighbors.pop();
 
-        Mat motion1to0 = _motions[radius_ + neighbor - idx].inv();
+        Mat motion1to0 = vmotions[radius_ + neighbor - idx].inv();
+
+        // warp frame
 
         frame1_ = at(neighbor, *frames_);
-        warpAffine(
-                frame1_, transformedFrame1_, motion1to0(Rect(0,0,3,2)), frame1_.size(),
-                INTER_LINEAR, borderMode_);
-        cvtColor(transformedFrame1_, transformedGrayFrame1_, CV_BGR2GRAY);
 
-        warpAffine(
-                mask1_, transformedMask1_, motion1to0(Rect(0,0,3,2)), mask1_.size(),
-                INTER_NEAREST);
+        if (motionModel_ != MM_HOMOGRAPHY)
+            warpAffine(
+                    frame1_, transformedFrame1_, motion1to0(Rect(0,0,3,2)), frame1_.size(),
+                    INTER_LINEAR, borderMode_);
+        else
+            warpPerspective(
+                    frame1_, transformedFrame1_, motion1to0, frame1_.size(), INTER_LINEAR,
+                    borderMode_);
+
+        cvtColor(transformedFrame1_, transformedGrayFrame1_, COLOR_BGR2GRAY);
+
+        // warp mask
+
+        if (motionModel_ != MM_HOMOGRAPHY)
+            warpAffine(
+                    mask1_, transformedMask1_, motion1to0(Rect(0,0,3,2)), mask1_.size(),
+                    INTER_NEAREST);
+        else
+            warpPerspective(mask1_, transformedMask1_, motion1to0, mask1_.size(), INTER_NEAREST);
+
         erode(transformedMask1_, transformedMask1_, Mat());
+
+        // update flow
 
         optFlowEstimator_->run(grayFrame_, transformedGrayFrame1_, flowX_, flowY_, flowErrors_);
 
@@ -502,7 +519,6 @@ void completeFrameAccordingToFlow(
     Mat_<uchar> flowMask_(flowMask), mask1_(mask1), mask0_(mask0);
     Mat_<float> flowX_(flowX), flowY_(flowY);
 
-    //int count = 0;
     for (int y0 = 0; y0 < frame0.rows; ++y0)
     {
         for (int x0 = 0; x0 < frame0.cols; ++x0)
@@ -517,12 +533,10 @@ void completeFrameAccordingToFlow(
                 {
                     frame0.at<Point3_<uchar> >(y0,x0) = frame1.at<Point3_<uchar> >(y1,x1);
                     mask0_(y0,x0) = 255;
-                    //count++;
                 }
             }
         }
     }
-    //cout << count << endl;
 }
 
 } // namespace videostab

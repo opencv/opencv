@@ -220,6 +220,8 @@ bool CvSVMKernel::create( const CvSVMParams* _params, Calc _calc_func )
         calc_func = params->kernel_type == CvSVM::RBF ? &CvSVMKernel::calc_rbf :
                     params->kernel_type == CvSVM::POLY ? &CvSVMKernel::calc_poly :
                     params->kernel_type == CvSVM::SIGMOID ? &CvSVMKernel::calc_sigmoid :
+                    params->kernel_type == CvSVM::CHI2 ? &CvSVMKernel::calc_chi2 :
+                    params->kernel_type == CvSVM::INTER ? &CvSVMKernel::calc_intersec :
                     &CvSVMKernel::calc_linear;
 
     return true;
@@ -318,6 +320,52 @@ void CvSVMKernel::calc_rbf( int vcount, int var_count, const float** vecs,
         cvExp( &R, &R );
 }
 
+/// Histogram intersection kernel
+void CvSVMKernel::calc_intersec( int vcount, int var_count, const float** vecs,
+                            const float* another, Qfloat* results )
+{
+    int j, k;
+    for( j = 0; j < vcount; j++ )
+    {
+        const float* sample = vecs[j];
+        double s = 0;
+        for( k = 0; k <= var_count - 4; k += 4 )
+            s += std::min(sample[k],another[k]) + std::min(sample[k+1],another[k+1]) +
+                 std::min(sample[k+2],another[k+2]) + std::min(sample[k+3],another[k+3]);
+        for( ; k < var_count; k++ )
+            s += std::min(sample[k],another[k]);
+        results[j] = (Qfloat)(s);
+    }
+}
+
+/// Exponential chi2 kernel
+void CvSVMKernel::calc_chi2( int vcount, int var_count, const float** vecs,
+                            const float* another, Qfloat* results )
+{
+    CvMat R = cvMat( 1, vcount, QFLOAT_TYPE, results );
+    double gamma = -params->gamma;
+    int j, k;
+    for( j = 0; j < vcount; j++ )
+    {
+        const float* sample = vecs[j];
+        double chi2 = 0;
+        for(k = 0 ; k < var_count; k++ )
+    {
+            double d = sample[k]-another[k];
+        double devisor = sample[k]+another[k];
+        /// if devisor == 0, the Chi2 distance would be zero, but calculation would rise an error because of deviding by zero
+        if (devisor != 0)
+        {
+          chi2 += d*d/devisor;
+        }
+    }
+        results[j] = (Qfloat) (gamma*chi2);
+    }
+    if( vcount > 0 )
+      cvExp( &R, &R );
+
+
+}
 
 void CvSVMKernel::calc( int vcount, int var_count, const float** vecs,
                         const float* another, Qfloat* results )
@@ -1197,7 +1245,6 @@ const float* CvSVM::get_support_vector(int i) const
     return sv && (unsigned)i < (unsigned)sv_total ? sv[i] : 0;
 }
 
-
 bool CvSVM::set_params( const CvSVMParams& _params )
 {
     bool ok = false;
@@ -1214,7 +1261,8 @@ bool CvSVM::set_params( const CvSVMParams& _params )
     svm_type = params.svm_type;
 
     if( kernel_type != LINEAR && kernel_type != POLY &&
-        kernel_type != SIGMOID && kernel_type != RBF )
+        kernel_type != SIGMOID && kernel_type != RBF &&
+        kernel_type != INTER && kernel_type != CHI2)
         CV_ERROR( CV_StsBadArg, "Unknown/unsupported kernel type" );
 
     if( kernel_type == LINEAR )
@@ -1880,7 +1928,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
         qsort(ratios, k_fold, sizeof(ratios[0]), icvCmpIndexedratio);
         double old_dist = 0.0;
         for (int k=0; k<k_fold; ++k)
-            old_dist += abs(ratios[k].val-class_ratio);
+            old_dist += cv::abs(ratios[k].val-class_ratio);
         double new_dist = 1.0;
         // iterate to make the folds more balanced
         while (new_dist > 0.0)
@@ -1897,7 +1945,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
             qsort(ratios, k_fold, sizeof(ratios[0]), icvCmpIndexedratio);
             new_dist = 0.0;
             for (int k=0; k<k_fold; ++k)
-                new_dist += abs(ratios[k].val-class_ratio);
+                new_dist += cv::abs(ratios[k].val-class_ratio);
             if (new_dist < old_dist)
             {
                 // swapping really improves, so swap the samples
@@ -2146,18 +2194,20 @@ float CvSVM::predict( const CvMat* sample, bool returnDFVal ) const
 }
 
 struct predict_body_svm : ParallelLoopBody {
-    predict_body_svm(const CvSVM* _pointer, float* _result, const CvMat* _samples, CvMat* _results)
+    predict_body_svm(const CvSVM* _pointer, float* _result, const CvMat* _samples, CvMat* _results, bool _returnDFVal)
     {
         pointer = _pointer;
         result = _result;
         samples = _samples;
         results = _results;
+        returnDFVal = _returnDFVal;
     }
 
     const CvSVM* pointer;
     float* result;
     const CvMat* samples;
     CvMat* results;
+    bool returnDFVal;
 
     void operator()( const cv::Range& range ) const
     {
@@ -2165,7 +2215,7 @@ struct predict_body_svm : ParallelLoopBody {
         {
             CvMat sample;
             cvGetRow( samples, &sample, i );
-            int r = (int)pointer->predict(&sample);
+            int r = (int)pointer->predict(&sample, returnDFVal);
             if (results)
                 results->data.fl[i] = (float)r;
             if (i == 0)
@@ -2174,11 +2224,11 @@ struct predict_body_svm : ParallelLoopBody {
     }
 };
 
-float CvSVM::predict(const CvMat* samples, CV_OUT CvMat* results) const
+float CvSVM::predict(const CvMat* samples, CV_OUT CvMat* results, bool returnDFVal) const
 {
     float result = 0;
     cv::parallel_for_(cv::Range(0, samples->rows),
-             predict_body_svm(this, &result, samples, results)
+             predict_body_svm(this, &result, samples, results, returnDFVal)
     );
     return result;
 }

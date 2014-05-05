@@ -387,6 +387,7 @@ Constructs repositioned planar circle.
     :param thickness: Thickness of the circle.
     :param color: :ocv:class:`Color` of the circle.
 
+
 viz::WCone
 -------------------------------
 .. ocv:class:: WCone

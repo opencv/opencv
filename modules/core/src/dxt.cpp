@@ -40,6 +40,9 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
+#include "opencv2/core/opencl/runtime/opencl_core.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -50,7 +53,7 @@ namespace cv
 # pragma warning(disable: 4748)
 #endif
 
-#if defined HAVE_IPP && IPP_VERSION_MAJOR*100 + IPP_VERSION_MINOR >= 701
+#if IPP_VERSION_X100 >= 701
 #define USE_IPP_DFT 1
 #else
 #undef USE_IPP_DFT
@@ -1473,8 +1476,556 @@ typedef IppStatus (CV_STDCALL* IppDFTGetSizeFunc)(int, int, IppHintAlgorithm, in
 typedef IppStatus (CV_STDCALL* IppDFTInitFunc)(int, int, IppHintAlgorithm, void*, uchar*);
 #endif
 
+namespace cv
+{
+#if defined USE_IPP_DFT && !defined HAVE_IPP_ICV_ONLY
+
+typedef IppStatus (CV_STDCALL* ippiDFT_C_Func)(const Ipp32fc*, int, Ipp32fc*, int, const IppiDFTSpec_C_32fc*, Ipp8u*);
+typedef IppStatus (CV_STDCALL* ippiDFT_R_Func)(const Ipp32f* , int, Ipp32f* , int, const IppiDFTSpec_R_32f* , Ipp8u*);
+
+template <typename Dft>
+class Dft_C_IPPLoop_Invoker : public ParallelLoopBody
+{
+public:
+
+    Dft_C_IPPLoop_Invoker(const Mat& _src, Mat& _dst, const Dft& _ippidft, int _norm_flag, bool *_ok) :
+        ParallelLoopBody(), src(_src), dst(_dst), ippidft(_ippidft), norm_flag(_norm_flag), ok(_ok)
+    {
+        *ok = true;
+    }
+
+    virtual void operator()(const Range& range) const
+    {
+        IppStatus status;
+        Ipp8u* pBuffer = 0;
+        Ipp8u* pMemInit= 0;
+        int sizeBuffer=0;
+        int sizeSpec=0;
+        int sizeInit=0;
+
+        IppiSize srcRoiSize = {src.cols, 1};
+
+        status = ippiDFTGetSize_C_32fc(srcRoiSize, norm_flag, ippAlgHintNone, &sizeSpec, &sizeInit, &sizeBuffer );
+        if ( status < 0 )
+        {
+            *ok = false;
+            return;
+        }
+
+        IppiDFTSpec_C_32fc* pDFTSpec = (IppiDFTSpec_C_32fc*)ippMalloc( sizeSpec );
+
+        if ( sizeInit > 0 )
+            pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+
+        if ( sizeBuffer > 0 )
+            pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+
+        status = ippiDFTInit_C_32fc( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
+
+        if ( sizeInit > 0 )
+            ippFree( pMemInit );
+
+        if ( status < 0 )
+        {
+            ippFree( pDFTSpec );
+            if ( sizeBuffer > 0 )
+                ippFree( pBuffer );
+            *ok = false;
+            return;
+        }
+
+        for( int i = range.start; i < range.end; ++i)
+            if(!ippidft((Ipp32fc*)(src.data+i*src.step), (int)src.step,(Ipp32fc*)(dst.data+i*dst.step), (int)dst.step, pDFTSpec, (Ipp8u*)pBuffer))
+            {
+                *ok = false;
+            }
+
+        if ( sizeBuffer > 0 )
+            ippFree( pBuffer );
+
+        ippFree( pDFTSpec );
+    }
+
+private:
+    const Mat& src;
+    Mat& dst;
+    const Dft& ippidft;
+    int norm_flag;
+    bool *ok;
+
+    const Dft_C_IPPLoop_Invoker& operator= (const Dft_C_IPPLoop_Invoker&);
+};
+
+template <typename Dft>
+class Dft_R_IPPLoop_Invoker : public ParallelLoopBody
+{
+public:
+
+    Dft_R_IPPLoop_Invoker(const Mat& _src, Mat& _dst, const Dft& _ippidft, int _norm_flag, bool *_ok) :
+        ParallelLoopBody(), src(_src), dst(_dst), ippidft(_ippidft), norm_flag(_norm_flag), ok(_ok)
+    {
+        *ok = true;
+    }
+
+    virtual void operator()(const Range& range) const
+    {
+        IppStatus status;
+        Ipp8u* pBuffer = 0;
+        Ipp8u* pMemInit= 0;
+        int sizeBuffer=0;
+        int sizeSpec=0;
+        int sizeInit=0;
+
+        IppiSize srcRoiSize = {src.cols, 1};
+
+        status = ippiDFTGetSize_R_32f(srcRoiSize, norm_flag, ippAlgHintNone, &sizeSpec, &sizeInit, &sizeBuffer );
+        if ( status < 0 )
+        {
+            *ok = false;
+            return;
+        }
+
+        IppiDFTSpec_R_32f* pDFTSpec = (IppiDFTSpec_R_32f*)ippMalloc( sizeSpec );
+
+        if ( sizeInit > 0 )
+            pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+
+        if ( sizeBuffer > 0 )
+            pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+
+        status = ippiDFTInit_R_32f( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
+
+        if ( sizeInit > 0 )
+            ippFree( pMemInit );
+
+        if ( status < 0 )
+        {
+            ippFree( pDFTSpec );
+            if ( sizeBuffer > 0 )
+                ippFree( pBuffer );
+            *ok = false;
+            return;
+        }
+
+        for( int i = range.start; i < range.end; ++i)
+            if(!ippidft(src.ptr<float>(i), (int)src.step,dst.ptr<float>(i), (int)dst.step, pDFTSpec, (Ipp8u*)pBuffer))
+            {
+                *ok = false;
+            }
+
+        if ( sizeBuffer > 0 )
+            ippFree( pBuffer );
+
+        ippFree( pDFTSpec );
+    }
+
+private:
+    const Mat& src;
+    Mat& dst;
+    const Dft& ippidft;
+    int norm_flag;
+    bool *ok;
+
+    const Dft_R_IPPLoop_Invoker& operator= (const Dft_R_IPPLoop_Invoker&);
+};
+
+template <typename Dft>
+bool Dft_C_IPPLoop(const Mat& src, Mat& dst, const Dft& ippidft, int norm_flag)
+{
+    bool ok;
+    parallel_for_(Range(0, src.rows), Dft_C_IPPLoop_Invoker<Dft>(src, dst, ippidft, norm_flag, &ok), src.total()/(double)(1<<16) );
+    return ok;
+}
+
+template <typename Dft>
+bool Dft_R_IPPLoop(const Mat& src, Mat& dst, const Dft& ippidft, int norm_flag)
+{
+    bool ok;
+    parallel_for_(Range(0, src.rows), Dft_R_IPPLoop_Invoker<Dft>(src, dst, ippidft, norm_flag, &ok), src.total()/(double)(1<<16) );
+    return ok;
+}
+
+struct IPPDFT_C_Functor
+{
+    IPPDFT_C_Functor(ippiDFT_C_Func _func) : func(_func){}
+
+    bool operator()(const Ipp32fc* src, int srcStep, Ipp32fc* dst, int dstStep, const IppiDFTSpec_C_32fc* pDFTSpec, Ipp8u* pBuffer) const
+    {
+        return func ? func(src, srcStep, dst, dstStep, pDFTSpec, pBuffer) >= 0 : false;
+    }
+private:
+    ippiDFT_C_Func func;
+};
+
+struct IPPDFT_R_Functor
+{
+    IPPDFT_R_Functor(ippiDFT_R_Func _func) : func(_func){}
+
+    bool operator()(const Ipp32f* src, int srcStep, Ipp32f* dst, int dstStep, const IppiDFTSpec_R_32f* pDFTSpec, Ipp8u* pBuffer) const
+    {
+        return func ? func(src, srcStep, dst, dstStep, pDFTSpec, pBuffer) >= 0 : false;
+    }
+private:
+    ippiDFT_R_Func func;
+};
+
+static bool ippi_DFT_C_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
+{
+    IppStatus status;
+    Ipp8u* pBuffer = 0;
+    Ipp8u* pMemInit= 0;
+    int sizeBuffer=0;
+    int sizeSpec=0;
+    int sizeInit=0;
+
+    IppiSize srcRoiSize = {src.cols, src.rows};
+
+    status = ippiDFTGetSize_C_32fc(srcRoiSize, norm_flag, ippAlgHintNone, &sizeSpec, &sizeInit, &sizeBuffer );
+    if ( status < 0 )
+        return false;
+
+    IppiDFTSpec_C_32fc* pDFTSpec = (IppiDFTSpec_C_32fc*)ippMalloc( sizeSpec );
+
+    if ( sizeInit > 0 )
+        pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+
+    if ( sizeBuffer > 0 )
+        pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+
+    status = ippiDFTInit_C_32fc( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
+
+    if ( sizeInit > 0 )
+        ippFree( pMemInit );
+
+    if ( status < 0 )
+    {
+        ippFree( pDFTSpec );
+        if ( sizeBuffer > 0 )
+            ippFree( pBuffer );
+        return false;
+    }
+
+    if (!inv)
+        status = ippiDFTFwd_CToC_32fc_C1R( (Ipp32fc*)src.data, (int)src.step, (Ipp32fc*)dst.data, (int)dst.step, pDFTSpec, pBuffer );
+    else
+        status = ippiDFTInv_CToC_32fc_C1R( (Ipp32fc*)src.data, (int)src.step, (Ipp32fc*)dst.data, (int)dst.step, pDFTSpec, pBuffer );
+
+    if ( sizeBuffer > 0 )
+        ippFree( pBuffer );
+
+    ippFree( pDFTSpec );
+
+    return status >= 0;
+    }
+
+static bool ippi_DFT_R_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
+{
+    IppStatus status;
+    Ipp8u* pBuffer = 0;
+    Ipp8u* pMemInit= 0;
+    int sizeBuffer=0;
+    int sizeSpec=0;
+    int sizeInit=0;
+
+    IppiSize srcRoiSize = {src.cols, src.rows};
+
+    status = ippiDFTGetSize_R_32f(srcRoiSize, norm_flag, ippAlgHintNone, &sizeSpec, &sizeInit, &sizeBuffer );
+    if ( status < 0 )
+        return false;
+
+    IppiDFTSpec_R_32f* pDFTSpec = (IppiDFTSpec_R_32f*)ippMalloc( sizeSpec );
+
+    if ( sizeInit > 0 )
+        pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+
+    if ( sizeBuffer > 0 )
+        pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+
+    status = ippiDFTInit_R_32f( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
+
+    if ( sizeInit > 0 )
+        ippFree( pMemInit );
+
+    if ( status < 0 )
+    {
+        ippFree( pDFTSpec );
+        if ( sizeBuffer > 0 )
+            ippFree( pBuffer );
+        return false;
+    }
+
+    if (!inv)
+        status = ippiDFTFwd_RToPack_32f_C1R( src.ptr<float>(), (int)(src.step), dst.ptr<float>(), (int)dst.step, pDFTSpec, pBuffer );
+    else
+        status = ippiDFTInv_PackToR_32f_C1R( src.ptr<float>(), (int)src.step, dst.ptr<float>(), (int)dst.step, pDFTSpec, pBuffer );
+
+    if ( sizeBuffer > 0 )
+        ippFree( pBuffer );
+
+    ippFree( pDFTSpec );
+
+    return status >= 0;
+}
+
+#endif
+}
+
+#ifdef HAVE_CLAMDFFT
+
+namespace cv {
+
+#define CLAMDDFT_Assert(func) \
+    { \
+        clAmdFftStatus s = (func); \
+        CV_Assert(s == CLFFT_SUCCESS); \
+    }
+
+enum FftType
+{
+    R2R = 0, // real to real
+    C2R = 1, // opencl HERMITIAN_INTERLEAVED to real
+    R2C = 2, // real to opencl HERMITIAN_INTERLEAVED
+    C2C = 3  // complex to complex
+};
+
+class PlanCache
+{
+    struct FftPlan
+    {
+        FftPlan(const Size & _dft_size, int _src_step, int _dst_step, bool _doubleFP, bool _inplace, int _flags, FftType _fftType) :
+            dft_size(_dft_size), src_step(_src_step), dst_step(_dst_step),
+            doubleFP(_doubleFP), inplace(_inplace), flags(_flags), fftType(_fftType),
+            context((cl_context)ocl::Context::getDefault().ptr()), plHandle(0)
+        {
+            bool dft_inverse = (flags & DFT_INVERSE) != 0;
+            bool dft_scale = (flags & DFT_SCALE) != 0;
+            bool dft_rows = (flags & DFT_ROWS) != 0;
+
+            clAmdFftLayout inLayout = CLFFT_REAL, outLayout = CLFFT_REAL;
+            clAmdFftDim dim = dft_size.height == 1 || dft_rows ? CLFFT_1D : CLFFT_2D;
+
+            size_t batchSize = dft_rows ? dft_size.height : 1;
+            size_t clLengthsIn[3] = { dft_size.width, dft_rows ? 1 : dft_size.height, 1 };
+            size_t clStridesIn[3] = { 1, 1, 1 };
+            size_t clStridesOut[3]  = { 1, 1, 1 };
+            int elemSize = doubleFP ? sizeof(double) : sizeof(float);
+
+            switch (fftType)
+            {
+            case C2C:
+                inLayout = CLFFT_COMPLEX_INTERLEAVED;
+                outLayout = CLFFT_COMPLEX_INTERLEAVED;
+                clStridesIn[1] = src_step / (elemSize << 1);
+                clStridesOut[1] = dst_step / (elemSize << 1);
+                break;
+            case R2C:
+                inLayout = CLFFT_REAL;
+                outLayout = CLFFT_HERMITIAN_INTERLEAVED;
+                clStridesIn[1] = src_step / elemSize;
+                clStridesOut[1] = dst_step / (elemSize << 1);
+                break;
+            case C2R:
+                inLayout = CLFFT_HERMITIAN_INTERLEAVED;
+                outLayout = CLFFT_REAL;
+                clStridesIn[1] = src_step / (elemSize << 1);
+                clStridesOut[1] = dst_step / elemSize;
+                break;
+            case R2R:
+            default:
+                CV_Error(Error::StsNotImplemented, "AMD Fft does not support this type");
+                break;
+            }
+
+            clStridesIn[2] = dft_rows ? clStridesIn[1] : dft_size.width * clStridesIn[1];
+            clStridesOut[2] = dft_rows ? clStridesOut[1] : dft_size.width * clStridesOut[1];
+
+            CLAMDDFT_Assert(clAmdFftCreateDefaultPlan(&plHandle, (cl_context)ocl::Context::getDefault().ptr(), dim, clLengthsIn))
+
+            // setting plan properties
+            CLAMDDFT_Assert(clAmdFftSetPlanPrecision(plHandle, doubleFP ? CLFFT_DOUBLE : CLFFT_SINGLE));
+            CLAMDDFT_Assert(clAmdFftSetResultLocation(plHandle, inplace ? CLFFT_INPLACE : CLFFT_OUTOFPLACE))
+            CLAMDDFT_Assert(clAmdFftSetLayout(plHandle, inLayout, outLayout))
+            CLAMDDFT_Assert(clAmdFftSetPlanBatchSize(plHandle, batchSize))
+            CLAMDDFT_Assert(clAmdFftSetPlanInStride(plHandle, dim, clStridesIn))
+            CLAMDDFT_Assert(clAmdFftSetPlanOutStride(plHandle, dim, clStridesOut))
+            CLAMDDFT_Assert(clAmdFftSetPlanDistance(plHandle, clStridesIn[dim], clStridesOut[dim]))
+
+            float scale = dft_scale ? 1.0f / (dft_rows ? dft_size.width : dft_size.area()) : 1.0f;
+            CLAMDDFT_Assert(clAmdFftSetPlanScale(plHandle, dft_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD, scale))
+
+            // ready to bake
+            cl_command_queue queue = (cl_command_queue)ocl::Queue::getDefault().ptr();
+            CLAMDDFT_Assert(clAmdFftBakePlan(plHandle, 1, &queue, NULL, NULL))
+        }
+
+        ~FftPlan()
+        {
+//            clAmdFftDestroyPlan(&plHandle);
+        }
+
+        friend class PlanCache;
+
+    private:
+        Size dft_size;
+        int src_step, dst_step;
+        bool doubleFP;
+        bool inplace;
+        int flags;
+        FftType fftType;
+
+        cl_context context;
+        clAmdFftPlanHandle plHandle;
+    };
+
+public:
+    static PlanCache & getInstance()
+    {
+        static PlanCache planCache;
+        return planCache;
+    }
+
+    clAmdFftPlanHandle getPlanHandle(const Size & dft_size, int src_step, int dst_step, bool doubleFP,
+                                     bool inplace, int flags, FftType fftType)
+    {
+        cl_context currentContext = (cl_context)ocl::Context::getDefault().ptr();
+
+        for (size_t i = 0, size = planStorage.size(); i < size; ++i)
+        {
+            const FftPlan * const plan = planStorage[i];
+
+            if (plan->dft_size == dft_size &&
+                plan->flags == flags &&
+                plan->src_step == src_step &&
+                plan->dst_step == dst_step &&
+                plan->doubleFP == doubleFP &&
+                plan->fftType == fftType &&
+                plan->inplace == inplace)
+            {
+                if (plan->context != currentContext)
+                {
+                    planStorage.erase(planStorage.begin() + i);
+                    break;
+                }
+
+                return plan->plHandle;
+            }
+        }
+
+        // no baked plan is found, so let's create a new one
+        FftPlan * newPlan = new FftPlan(dft_size, src_step, dst_step, doubleFP, inplace, flags, fftType);
+        planStorage.push_back(newPlan);
+
+        return newPlan->plHandle;
+    }
+
+    ~PlanCache()
+    {
+        for (std::vector<FftPlan *>::iterator i = planStorage.begin(), end = planStorage.end(); i != end; ++i)
+            delete (*i);
+        planStorage.clear();
+    }
+
+protected:
+    PlanCache() :
+        planStorage()
+    {
+    }
+
+    std::vector<FftPlan *> planStorage;
+};
+
+extern "C" {
+
+static void CL_CALLBACK oclCleanupCallback(cl_event e, cl_int, void *p)
+{
+    UMatData * u = (UMatData *)p;
+
+    if( u && CV_XADD(&u->urefcount, -1) == 1 )
+        u->currAllocator->deallocate(u);
+    u = 0;
+
+    clReleaseEvent(e), e = 0;
+}
+
+}
+
+static bool ocl_dft(InputArray _src, OutputArray _dst, int flags)
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    Size ssize = _src.size();
+
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    if ( (!doubleSupport && depth == CV_64F) ||
+         !(type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2) ||
+         _src.offset() != 0)
+        return false;
+
+    // if is not a multiplication of prime numbers { 2, 3, 5 }
+    if (ssize.area() != getOptimalDFTSize(ssize.area()))
+        return false;
+
+    int dst_complex_input = cn == 2 ? 1 : 0;
+    bool dft_inverse = (flags & DFT_INVERSE) != 0 ? 1 : 0;
+    int dft_complex_output = (flags & DFT_COMPLEX_OUTPUT) != 0;
+    bool dft_real_output = (flags & DFT_REAL_OUTPUT) != 0;
+
+    CV_Assert(dft_complex_output + dft_real_output < 2);
+    FftType fftType = (FftType)(dst_complex_input << 0 | dft_complex_output << 1);
+
+    switch (fftType)
+    {
+    case C2C:
+        _dst.create(ssize.height, ssize.width, CV_MAKE_TYPE(depth, 2));
+        break;
+    case R2C: // TODO implement it if possible
+    case C2R: // TODO implement it if possible
+    case R2R: // AMD Fft does not support this type
+    default:
+        return false;
+    }
+
+    UMat src = _src.getUMat(), dst = _dst.getUMat();
+    bool inplace = src.u == dst.u;
+
+    clAmdFftPlanHandle plHandle = PlanCache::getInstance().
+            getPlanHandle(ssize, (int)src.step, (int)dst.step,
+                          depth == CV_64F, inplace, flags, fftType);
+
+    // get the bufferSize
+    size_t bufferSize = 0;
+    CLAMDDFT_Assert(clAmdFftGetTmpBufSize(plHandle, &bufferSize))
+    UMat tmpBuffer(1, (int)bufferSize, CV_8UC1);
+
+    cl_mem srcarg = (cl_mem)src.handle(ACCESS_READ);
+    cl_mem dstarg = (cl_mem)dst.handle(ACCESS_RW);
+
+    cl_command_queue queue = (cl_command_queue)ocl::Queue::getDefault().ptr();
+    cl_event e = 0;
+
+    CLAMDDFT_Assert(clAmdFftEnqueueTransform(plHandle, dft_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD,
+                                       1, &queue, 0, NULL, &e,
+                                       &srcarg, &dstarg, (cl_mem)tmpBuffer.handle(ACCESS_RW)))
+
+    tmpBuffer.addref();
+    clSetEventCallback(e, CL_COMPLETE, oclCleanupCallback, tmpBuffer.u);
+
+    return true;
+}
+
+#undef DFT_ASSERT
+
+}
+
+#endif // HAVE_CLAMDFFT
+
 void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 {
+#ifdef HAVE_CLAMDFFT
+    CV_OCL_RUN(ocl::haveAmdFft() && ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
+            _dst.isUMat() && _src0.dims() <= 2 && nonzero_rows == 0,
+               ocl_dft(_src0, _dst, flags))
+#endif
+
     static DFTFunc dft_tbl[6] =
     {
         (DFTFunc)DFT_32f,
@@ -1511,6 +2062,43 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
         _dst.create( src.size(), type );
 
     Mat dst = _dst.getMat();
+
+#if defined USE_IPP_DFT && !defined HAVE_IPP_ICV_ONLY
+
+    if ((src.depth() == CV_32F) && (src.total()>(int)(1<<6)) && nonzero_rows == 0)
+        if ((flags & DFT_ROWS) == 0)
+        {
+            if (!real_transform)
+            {
+                if (ippi_DFT_C_32F(src,dst, inv, ipp_norm_flag))
+                    return;
+                setIppErrorStatus();
+            }
+            else if (inv || !(flags & DFT_COMPLEX_OUTPUT))
+            {
+                if (ippi_DFT_R_32F(src,dst, inv, ipp_norm_flag))
+                    return;
+                setIppErrorStatus();
+            }
+        }
+        else
+        {
+            if (!real_transform)
+            {
+                ippiDFT_C_Func ippiFunc = inv ? (ippiDFT_C_Func)ippiDFTInv_CToC_32fc_C1R : (ippiDFT_C_Func)ippiDFTFwd_CToC_32fc_C1R;
+                if (Dft_C_IPPLoop(src,dst, IPPDFT_C_Functor(ippiFunc),ipp_norm_flag))
+                    return;
+                setIppErrorStatus();
+            }
+            else if (inv || !(flags & DFT_COMPLEX_OUTPUT))
+            {
+                ippiDFT_R_Func ippiFunc = inv ? (ippiDFT_R_Func)ippiDFTInv_PackToR_32f_C1R : (ippiDFT_R_Func)ippiDFTFwd_RToPack_32f_C1R;
+                if (Dft_R_IPPLoop(src,dst, IPPDFT_R_Functor(ippiFunc),ipp_norm_flag))
+                    return;
+                setIppErrorStatus();
+            }
+        }
+#endif
 
     if( !real_transform )
         elem_size = complex_elem_size;
@@ -1879,9 +2467,49 @@ void cv::idft( InputArray src, OutputArray dst, int flags, int nonzero_rows )
     dft( src, dst, flags | DFT_INVERSE, nonzero_rows );
 }
 
+#ifdef HAVE_OPENCL
+
+namespace cv {
+
+static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
+                              OutputArray _dst, int flags, bool conjB )
+{
+    int atype = _srcA.type(), btype = _srcB.type();
+    Size asize = _srcA.size(), bsize = _srcB.size();
+    CV_Assert(asize == bsize);
+
+    if ( !(atype == CV_32FC2 && btype == CV_32FC2) || flags != 0 )
+        return false;
+
+    UMat A = _srcA.getUMat(), B = _srcB.getUMat();
+    CV_Assert(A.size() == B.size());
+
+    _dst.create(A.size(), atype);
+    UMat dst = _dst.getUMat();
+
+    ocl::Kernel k("mulAndScaleSpectrums",
+                  ocl::core::mulspectrums_oclsrc,
+                  format("%s", conjB ? "-D CONJ" : ""));
+    if (k.empty())
+        return false;
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(A), ocl::KernelArg::ReadOnlyNoSize(B),
+           ocl::KernelArg::WriteOnly(dst));
+
+    size_t globalsize[2] = { asize.width, asize.height };
+    return k.run(2, globalsize, NULL, false);
+}
+
+}
+
+#endif
+
 void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
                        OutputArray _dst, int flags, bool conjB )
 {
+    CV_OCL_RUN(_dst.isUMat() && _srcA.dims() <= 2 && _srcB.dims() <= 2,
+            ocl_mulSpectrums(_srcA, _srcB, _dst, flags, conjB))
+
     Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
     int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
     int rows = srcA.rows, cols = srcA.cols;

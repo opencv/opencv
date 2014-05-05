@@ -41,8 +41,9 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
+using namespace std;
 using namespace cv;
 
 //#define DRAW_TEST_IMAGE
@@ -75,7 +76,7 @@ void CV_DrawingTest::run( int )
     }
     else
     {
-        float err = (float)norm( testImg, valImg, CV_RELATIVE_L1 );
+        float err = (float)cvtest::norm( testImg, valImg, CV_RELATIVE_L1 );
         float Eps = 0.9f;
         if( err > Eps)
         {
@@ -228,7 +229,7 @@ int CV_DrawingTest_CPP::checkLineIterator( Mat& img )
     for(int i = 0; i < it.count; ++it, i++ )
     {
         Vec3b v = (Vec3b)(*(*it)) - img.at<Vec3b>(300,i);
-        float err = (float)norm( v );
+        float err = (float)cvtest::norm( v, NORM_L2 );
         if( err != 0 )
         {
             ts->printf( ts->LOG, "LineIterator works incorrect" );
@@ -394,7 +395,7 @@ int CV_DrawingTest_C::checkLineIterator( Mat& _img )
     for(int i = 0; i < count; i++ )
     {
         Vec3b v = (Vec3b)(*(it.ptr)) - _img.at<Vec3b>(300,i);
-        float err = (float)norm( v );
+        float err = (float)cvtest::norm( v, NORM_L2 );
         if( err != 0 )
         {
             ts->printf( ts->LOG, "CvLineIterator works incorrect" );

@@ -47,12 +47,12 @@ static void onMouse(int event, int x, int y, int, void*) {
     }
 
     switch (event) {
-    case CV_EVENT_LBUTTONDOWN:
+    case EVENT_LBUTTONDOWN:
         origin = Point(x, y);
         selection = Rect(x, y, 0, 0);
         selectObject = true;
         break;
-    case CV_EVENT_LBUTTONUP:
+    case EVENT_LBUTTONUP:
         selectObject = false;
         trackObject = -1;
         break;
@@ -96,8 +96,8 @@ int main(int argc, char** argv)
             return 0;
         }
         cout << "Opened camera" << endl;
-        cap.set(CV_CAP_PROP_FRAME_WIDTH, 640);
-        cap.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
+        cap.set(CAP_PROP_FRAME_WIDTH, 640);
+        cap.set(CAP_PROP_FRAME_HEIGHT, 480);
         cap >> frame;
     }
 
@@ -137,7 +137,7 @@ int main(int argc, char** argv)
             int values_read = fscanf(f, "%d %f %f %f %f\n", &i, &w[0], &w[1], &w[2], &w[3]);
             CV_Assert(values_read == 5);
             sprintf(img_file, "seqG/%04d.png", i);
-            image = imread(img_file, CV_LOAD_IMAGE_COLOR);
+            image = imread(img_file, IMREAD_COLOR);
             if (image.empty())
                 break;
             selection = Rect(cvRound(w[0]*image.cols), cvRound(w[1]*image.rows),

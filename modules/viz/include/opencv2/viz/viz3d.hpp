@@ -50,7 +50,7 @@
     //#error "Viz is in beta state now. Please define macro above to use it"
 #endif
 
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 #include <opencv2/viz/types.hpp>
 #include <opencv2/viz/widgets.hpp>
 

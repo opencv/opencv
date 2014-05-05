@@ -339,7 +339,7 @@ TEST(Viz, show_overlay_image)
     Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));
     Mat gray = make_gray(lena);
 
-    Size2d half_lsize = Size2d(lena.cols, lena.rows) * 0.5;
+    Size2d half_lsize = Size2d(lena.size()) * 0.5;
 
     Viz3d viz("show_overlay_image");
     viz.setBackgroundMeshLab();

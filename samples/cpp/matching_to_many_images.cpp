@@ -57,7 +57,7 @@ static void readTrainFilenames( const string& filename, string& dirName, vector<
 
     size_t pos = filename.rfind('\\');
     char dlmtr = '\\';
-    if (pos == String::npos)
+    if (pos == string::npos)
     {
         pos = filename.rfind('/');
         dlmtr = '/';
@@ -84,7 +84,7 @@ static bool createDetectorDescriptorMatcher( const string& detectorType, const s
     descriptorMatcher = DescriptorMatcher::create( matcherType );
     cout << ">" << endl;
 
-    bool isCreated = !( featureDetector.empty() || descriptorExtractor.empty() || descriptorMatcher.empty() );
+    bool isCreated = featureDetector && descriptorExtractor && descriptorMatcher;
     if( !isCreated )
         cout << "Can not create feature detector or descriptor extractor or descriptor matcher of given types." << endl << ">" << endl;
 
@@ -95,7 +95,7 @@ static bool readImages( const string& queryImageName, const string& trainFilenam
                  Mat& queryImage, vector <Mat>& trainImages, vector<string>& trainImageNames )
 {
     cout << "< Reading the images..." << endl;
-    queryImage = imread( queryImageName, CV_LOAD_IMAGE_GRAYSCALE);
+    queryImage = imread( queryImageName, IMREAD_GRAYSCALE);
     if( queryImage.empty() )
     {
         cout << "Query image can not be read." << endl << ">" << endl;
@@ -112,7 +112,7 @@ static bool readImages( const string& queryImageName, const string& trainFilenam
     for( size_t i = 0; i < trainImageNames.size(); i++ )
     {
         string filename = trainDirName + trainImageNames[i];
-        Mat img = imread( filename, CV_LOAD_IMAGE_GRAYSCALE );
+        Mat img = imread( filename, IMREAD_GRAYSCALE );
         if( img.empty() )
             cout << "Train image " << filename << " can not be read." << endl;
         else

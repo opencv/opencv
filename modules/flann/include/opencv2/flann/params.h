@@ -39,7 +39,7 @@
 namespace cvflann
 {
 
-typedef std::map<std::string, any> IndexParams;
+typedef std::map<cv::String, any> IndexParams;
 
 struct SearchParams : public IndexParams
 {
@@ -56,7 +56,7 @@ struct SearchParams : public IndexParams
 
 
 template<typename T>
-T get_param(const IndexParams& params, std::string name, const T& default_value)
+T get_param(const IndexParams& params, cv::String name, const T& default_value)
 {
     IndexParams::const_iterator it = params.find(name);
     if (it != params.end()) {
@@ -68,14 +68,14 @@ T get_param(const IndexParams& params, std::string name, const T& default_value)
 }
 
 template<typename T>
-T get_param(const IndexParams& params, std::string name)
+T get_param(const IndexParams& params, cv::String name)
 {
     IndexParams::const_iterator it = params.find(name);
     if (it != params.end()) {
         return it->second.cast<T>();
     }
     else {
-        throw FLANNException(std::string("Missing parameter '")+name+std::string("' in the parameters given"));
+        throw FLANNException(cv::String("Missing parameter '")+name+cv::String("' in the parameters given"));
     }
 }
 

@@ -21,7 +21,7 @@ You can download the code from :download:`here <../../../../samples/cpp/tutorial
 
 .. code-block:: cpp
 
-    #include <opencv2/viz/vizcore.hpp>
+    #include <opencv2/viz.hpp>
     #include <iostream>
     #include <fstream>
 

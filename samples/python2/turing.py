@@ -9,7 +9,6 @@ Inspired by http://www.jonathanmccabe.com/Cyclic_Symmetric_Multi-Scale_Turing_Pa
 
 import numpy as np
 import cv2
-import cv2.cv as cv
 from common import draw_str
 import getopt, sys
 from itertools import count
@@ -30,7 +29,7 @@ if __name__ == '__main__':
     out = None
     if '-o' in args:
         fn = args['-o']
-        out = cv2.VideoWriter(args['-o'], cv.CV_FOURCC(*'DIB '), 30.0, (w, h), False)
+        out = cv2.VideoWriter(args['-o'], cv2.VideoWriter_fourcc(*'DIB '), 30.0, (w, h), False)
         print 'writing %s ...' % fn
 
     a = np.zeros((h, w), np.float32)

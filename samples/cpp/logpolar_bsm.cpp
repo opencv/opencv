@@ -6,7 +6,9 @@
 * PSPC-lab - University of Genoa
 */
 
-#include "opencv2/opencv.hpp"
+#include "opencv2/contrib.hpp"
+#include "opencv2/highgui.hpp"
+
 #include <iostream>
 #include <cmath>
 

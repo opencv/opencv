@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/calib3d/calib3d_c.h"
 
 CvMat cvMatArray( int rows, int cols, int type,
                   int count, void* data)

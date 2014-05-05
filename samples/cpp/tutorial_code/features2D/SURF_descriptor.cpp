@@ -24,8 +24,8 @@ int main( int argc, char** argv )
   if( argc != 3 )
   { return -1; }
 
-  Mat img_1 = imread( argv[1], CV_LOAD_IMAGE_GRAYSCALE );
-  Mat img_2 = imread( argv[2], CV_LOAD_IMAGE_GRAYSCALE );
+  Mat img_1 = imread( argv[1], IMREAD_GRAYSCALE );
+  Mat img_2 = imread( argv[2], IMREAD_GRAYSCALE );
 
   if( !img_1.data || !img_2.data )
   { return -1; }
@@ -49,7 +49,7 @@ int main( int argc, char** argv )
   extractor.compute( img_2, keypoints_2, descriptors_2 );
 
   //-- Step 3: Matching descriptor vectors with a brute force matcher
-  BFMatcher matcher(NORM_L2);
+  BFMatcher matcher(extractor.defaultNorm());
   std::vector< DMatch > matches;
   matcher.match( descriptors_1, descriptors_2, matches );
 

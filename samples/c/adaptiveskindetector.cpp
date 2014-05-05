@@ -38,8 +38,8 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
-#include "opencv2/contrib/contrib.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/contrib/compat.hpp"
+#include "opencv2/highgui/highgui_c.h"
 
 #ifndef _CRT_SECURE_NO_WARNINGS
 # define _CRT_SECURE_NO_WARNINGS
