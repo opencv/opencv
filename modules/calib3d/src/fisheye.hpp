@@ -43,6 +43,18 @@ void EstimateUncertainties(InputArrayOfArrays objectPoints, InputArrayOfArrays i
                            const IntrinsicParams& params, InputArray omc, InputArray Tc,
                            IntrinsicParams& errors, Vec2d& std_err, double thresh_cond, int check_cond, double& rms);
 
+void dAB(cv::InputArray A, InputArray B, OutputArray dABdA, OutputArray dABdB);
+
+void JRodriguesMatlab(const Mat& src, Mat& dst);
+
+void compose_motion(InputArray _om1, InputArray _T1, InputArray _om2, InputArray _T2,
+                    Mat& om3, Mat& T3, Mat& dom3dom1, Mat& dom3dT1, Mat& dom3dom2,
+                    Mat& dom3dT2, Mat& dT3dom1, Mat& dT3dT1, Mat& dT3dom2, Mat& dT3dT2);
+
+double median(const Mat& row);
+
+Vec3d median3d(InputArray m);
+
 }}
 
 #endif
