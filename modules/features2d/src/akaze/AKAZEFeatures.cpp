@@ -93,17 +93,9 @@ void AKAZEFeatures::Allocate_Memory_Evolution(void) {
  * @param img Input image for which the nonlinear scale space needs to be created
  * @return 0 if the nonlinear scale space was created successfully, -1 otherwise
  */
-int AKAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat& img) {
-
-    //double t1 = 0.0, t2 = 0.0;
+int AKAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat& img)
+{
     CV_Assert(evolution_.size() > 0);
-    //if (evolution_.size() == 0) {
-    //    cerr << "Error generating the nonlinear scale space!!" << endl;
-    //    cerr << "Firstly you need to call AKAZEFeatures::Allocate_Memory_Evolution()" << endl;
-    //    return -1;
-    //}
-
-    //t1 = cv::getTickCount();
 
     // Copy the original image to the first level of the evolution
     img.copyTo(evolution_[0].Lt);
@@ -112,9 +104,6 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat& img) {
 
     // First compute the kcontrast factor
     options_.kcontrast = compute_k_percentile(img, options_.kcontrast_percentile, 1.0f, options_.kcontrast_nbins, 0, 0);
-
-    //t2 = cv::getTickCount();
-    //timing_.kcontrast = 1000.0*(t2 - t1) / cv::getTickFrequency();
 
     // Now generate the rest of evolution levels
     for (size_t i = 1; i < evolution_.size(); i++) {
@@ -158,9 +147,6 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat& img) {
         }
     }
 
-    //t2 = cv::getTickCount();
-    //timing_.scale = 1000.0*(t2 - t1) / cv::getTickFrequency();
-
     return 0;
 }
 
@@ -169,20 +155,13 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat& img) {
  * @brief This method selects interesting keypoints through the nonlinear scale space
  * @param kpts Vector of detected keypoints
  */
-void AKAZEFeatures::Feature_Detection(std::vector<cv::KeyPoint>& kpts) {
-
-    //double t1 = 0.0, t2 = 0.0;
-
-    //t1 = cv::getTickCount();
-
+void AKAZEFeatures::Feature_Detection(std::vector<cv::KeyPoint>& kpts)
+{
     kpts.clear();
 
     Compute_Determinant_Hessian_Response();
     Find_Scale_Space_Extrema(kpts);
     Do_Subpixel_Refinement(kpts);
-
-    //t2 = cv::getTickCount();
-    //timing_.detector = 1000.0*(t2 - t1) / cv::getTickFrequency();
 }
 
 /* ************************************************************************* */
@@ -228,34 +207,10 @@ private:
 /**
  * @brief This method computes the multiscale derivatives for the nonlinear scale space
  */
-void AKAZEFeatures::Compute_Multiscale_Derivatives(void) {
-
-    //double t1 = 0.0, t2 = 0.0;
-
-    //t1 = cv::getTickCount();
-
-    cv::parallel_for_(cv::Range(0, (int)evolution_.size()), MultiscaleDerivativesInvoker(evolution_, options_));
-    /*
-    for (int i = 0; i < (int)(evolution_.size()); i++) {
-
-        float ratio = pow(2.f, (float)evolution_[i].octave);
-        int sigma_size_ = fRound(evolution_[i].esigma*options_.derivative_factor / ratio);
-
-        compute_scharr_derivatives(evolution_[i].Lsmooth, evolution_[i].Lx, 1, 0, sigma_size_);
-        compute_scharr_derivatives(evolution_[i].Lsmooth, evolution_[i].Ly, 0, 1, sigma_size_);
-        compute_scharr_derivatives(evolution_[i].Lx, evolution_[i].Lxx, 1, 0, sigma_size_);
-        compute_scharr_derivatives(evolution_[i].Ly, evolution_[i].Lyy, 0, 1, sigma_size_);
-        compute_scharr_derivatives(evolution_[i].Lx, evolution_[i].Lxy, 0, 1, sigma_size_);
-
-        evolution_[i].Lx = evolution_[i].Lx*((sigma_size_));
-        evolution_[i].Ly = evolution_[i].Ly*((sigma_size_));
-        evolution_[i].Lxx = evolution_[i].Lxx*((sigma_size_)*(sigma_size_));
-        evolution_[i].Lxy = evolution_[i].Lxy*((sigma_size_)*(sigma_size_));
-        evolution_[i].Lyy = evolution_[i].Lyy*((sigma_size_)*(sigma_size_));
-    }
-    */
-    //t2 = cv::getTickCount();
-    //timing_.derivatives = 1000.0*(t2 - t1) / cv::getTickFrequency();
+void AKAZEFeatures::Compute_Multiscale_Derivatives(void)
+{
+    cv::parallel_for_(cv::Range(0, (int)evolution_.size()),
+                      MultiscaleDerivativesInvoker(evolution_, options_));
 }
 
 /* ************************************************************************* */
@@ -268,14 +223,12 @@ void AKAZEFeatures::Compute_Determinant_Hessian_Response(void) {
     // Firstly compute the multiscale derivatives
     Compute_Multiscale_Derivatives();
 
-    for (size_t i = 0; i < evolution_.size(); i++) {
-
-        //if (options_.verbosity == true) {
-        //    cout << "Computing detector response. Determinant of Hessian. Evolution time: " << evolution_[i].etime << endl;
-        //}
-
-        for (int ix = 0; ix < evolution_[i].Ldet.rows; ix++) {
-            for (int jx = 0; jx < evolution_[i].Ldet.cols; jx++) {
+    for (size_t i = 0; i < evolution_.size(); i++)
+    {
+        for (int ix = 0; ix < evolution_[i].Ldet.rows; ix++)
+        {
+            for (int jx = 0; jx < evolution_[i].Ldet.cols; jx++)
+            {
                 float lxx = *(evolution_[i].Lxx.ptr<float>(ix)+jx);
                 float lxy = *(evolution_[i].Lxy.ptr<float>(ix)+jx);
                 float lyy = *(evolution_[i].Lyy.ptr<float>(ix)+jx);
@@ -290,9 +243,9 @@ void AKAZEFeatures::Compute_Determinant_Hessian_Response(void) {
  * @brief This method finds extrema in the nonlinear scale space
  * @param kpts Vector of detected keypoints
  */
-void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts) {
+void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts)
+{
 
-    //double t1 = 0.0, t2 = 0.0;
     float value = 0.0;
     float dist = 0.0, ratio = 0.0, smax = 0.0;
     int npoints = 0, id_repeated = 0;
@@ -309,8 +262,6 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts) {
     else if (options_.descriptor == MSURF_UPRIGHT || options_.descriptor == MSURF) {
         smax = 12.0f*sqrtf(2.0f);
     }
-
-    //t1 = cv::getTickCount();
 
     for (size_t i = 0; i < evolution_.size(); i++) {
         for (int ix = 1; ix < evolution_[i].Ldet.rows - 1; ix++) {
@@ -415,9 +366,6 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts) {
         if (is_repeated == false)
             kpts.push_back(pt);
     }
-
-    //t2 = cv::getTickCount();
-    //timing_.extrema = 1000.0*(t2 - t1) / cv::getTickFrequency();
 }
 
 /* ************************************************************************* */
@@ -425,17 +373,14 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts) {
  * @brief This method performs subpixel refinement of the detected keypoints
  * @param kpts Vector of detected keypoints
  */
-void AKAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint>& kpts) {
-
-    //double t1 = 0.0, t2 = 0.0;
+void AKAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint>& kpts)
+{
     float Dx = 0.0, Dy = 0.0, ratio = 0.0;
     float Dxx = 0.0, Dyy = 0.0, Dxy = 0.0;
     int x = 0, y = 0;
     cv::Mat A = cv::Mat::zeros(2, 2, CV_32F);
     cv::Mat b = cv::Mat::zeros(2, 1, CV_32F);
     cv::Mat dst = cv::Mat::zeros(2, 1, CV_32F);
-
-    //t1 = cv::getTickCount();
 
     for (size_t i = 0; i < kpts.size(); i++) {
         ratio = pow(2.f, kpts[i].octave);
@@ -487,9 +432,6 @@ void AKAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint>& kpts) {
             i--;
         }
     }
-
-    //t2 = cv::getTickCount();
-    //timing_.subpixel = 1000.0*(t2 - t1) / cv::getTickFrequency();
 }
 
 /* ************************************************************************* */
@@ -739,12 +681,8 @@ private:
  * @param kpts Vector of detected keypoints
  * @param desc Matrix to store the descriptors
  */
-void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc) {
-
-    //double t1 = 0.0, t2 = 0.0;
-
-    //t1 = cv::getTickCount();
-
+void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc)
+{
     // Allocate memory for the matrix with the descriptors
     if (options_.descriptor < MLDB_UPRIGHT) {
         desc = cv::Mat::zeros((int)kpts.size(), 64, CV_32FC1);
@@ -766,39 +704,21 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
     case SURF_UPRIGHT: // Upright descriptors, not invariant to rotation
     {
         cv::parallel_for_(cv::Range(0, (int)kpts.size()), SURF_Descriptor_Upright_64_Invoker(kpts, desc, evolution_));
-
-        //for (int i = 0; i < (int)(kpts.size()); i++) {
-        //    Get_SURF_Descriptor_Upright_64(kpts[i], desc.ptr<float>(i));
-        //}
     }
         break;
     case SURF:
     {
         cv::parallel_for_(cv::Range(0, (int)kpts.size()), SURF_Descriptor_64_Invoker(kpts, desc, evolution_));
-
-        //for (int i = 0; i < (int)(kpts.size()); i++) {
-        //    Compute_Main_Orientation(kpts[i]);
-        //    Get_SURF_Descriptor_64(kpts[i], desc.ptr<float>(i));
-        //}
     }
         break;
     case MSURF_UPRIGHT: // Upright descriptors, not invariant to rotation
     {
         cv::parallel_for_(cv::Range(0, (int)kpts.size()), MSURF_Upright_Descriptor_64_Invoker(kpts, desc, evolution_));
-
-        //for (int i = 0; i < (int)(kpts.size()); i++) {
-        //    Get_MSURF_Upright_Descriptor_64(kpts[i], desc.ptr<float>(i));
-        //}
     }
         break;
     case MSURF:
     {
         cv::parallel_for_(cv::Range(0, (int)kpts.size()), MSURF_Descriptor_64_Invoker(kpts, desc, evolution_));
-
-        //for (int i = 0; i < (int)(kpts.size()); i++) {
-        //    Compute_Main_Orientation(kpts[i]);
-        //    Get_MSURF_Descriptor_64(kpts[i], desc.ptr<float>(i));
-        //}
     }
         break;
     case MLDB_UPRIGHT: // Upright descriptors, not invariant to rotation
@@ -807,13 +727,6 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
             cv::parallel_for_(cv::Range(0, (int)kpts.size()), Upright_MLDB_Full_Descriptor_Invoker(kpts, desc, evolution_, options_));
         else
             cv::parallel_for_(cv::Range(0, (int)kpts.size()), Upright_MLDB_Descriptor_Subset_Invoker(kpts, desc, evolution_, options_, descriptorSamples_, descriptorBits_));
-
-        //for (int i = 0; i < (int)(kpts.size()); i++) {
-        //    if (options_.descriptor_size == 0)
-        //        Get_Upright_MLDB_Full_Descriptor(kpts[i], desc.ptr<unsigned char>(i));
-        //    else
-        //        Get_Upright_MLDB_Descriptor_Subset(kpts[i], desc.ptr<unsigned char>(i));
-        //}
     }
         break;
     case MLDB:
@@ -822,20 +735,9 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
             cv::parallel_for_(cv::Range(0, (int)kpts.size()), MLDB_Full_Descriptor_Invoker(kpts, desc, evolution_, options_));
         else
             cv::parallel_for_(cv::Range(0, (int)kpts.size()), MLDB_Descriptor_Subset_Invoker(kpts, desc, evolution_, options_, descriptorSamples_, descriptorBits_));
-
-        //for (int i = 0; i < (int)(kpts.size()); i++) {
-        //    Compute_Main_Orientation(kpts[i]);
-        //    if (options_.descriptor_size == 0)
-        //        Get_MLDB_Full_Descriptor(kpts[i], desc.ptr<unsigned char>(i));
-        //    else
-        //        Get_MLDB_Descriptor_Subset(kpts[i], desc.ptr<unsigned char>(i));
-        //}
     }
         break;
     }
-
-    //t2 = cv::getTickCount();
-    //timing_.descriptor = 1000.0*(t2 - t1) / cv::getTickFrequency();
 }
 
 /* ************************************************************************* */
@@ -2046,22 +1948,6 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
         }
     }
 }
-
-
-
-/* ************************************************************************* */
-/**
- * @brief This method displays the computation times
- */
-//void AKAZEFeatures::Show_Computation_Times() const {
-//    cout << "(*) Time Scale Space: " << timing_.scale << endl;
-//    cout << "(*) Time Detector: " << timing_.detector << endl;
-//    cout << "   - Time Derivatives: " << timing_.derivatives << endl;
-//    cout << "   - Time Extrema: " << timing_.extrema << endl;
-//    cout << "   - Time Subpixel: " << timing_.subpixel << endl;
-//    cout << "(*) Time Descriptor: " << timing_.descriptor << endl;
-//    cout << endl;
-//}
 
 /* ************************************************************************* */
 /**

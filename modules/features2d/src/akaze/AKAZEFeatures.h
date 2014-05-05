@@ -51,30 +51,6 @@ public:
     void Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc);
 
     static void Compute_Main_Orientation(cv::KeyPoint& kpt, const std::vector<TEvolution>& evolution_);
-
-    // SURF Pattern Descriptor
-    //void Get_SURF_Descriptor_Upright_64(const cv::KeyPoint& kpt, float* desc) const;
-    //void Get_SURF_Descriptor_64(const cv::KeyPoint& kpt, float* desc) const;
-
-    // M-SURF Pattern Descriptor
-    //void Get_MSURF_Upright_Descriptor_64(const cv::KeyPoint& kpt, float* desc) const;
-    //void Get_MSURF_Descriptor_64(const cv::KeyPoint& kpt, float* desc) const;
-
-    // M-LDB Pattern Descriptor
-    //void Get_Upright_MLDB_Full_Descriptor(const cv::KeyPoint& kpt, unsigned char* desc) const;
-    //void Get_MLDB_Full_Descriptor(const cv::KeyPoint& kpt, unsigned char* desc) const;
-    //void Get_Upright_MLDB_Descriptor_Subset(const cv::KeyPoint& kpt, unsigned char* desc);
-    //void Get_MLDB_Descriptor_Subset(const cv::KeyPoint& kpt, unsigned char* desc);
-
-    // Methods for saving some results and showing computation times
-    //void Save_Scale_Space();
-    //void Save_Detector_Responses();
-    //void Show_Computation_Times() const;
-
-    /// Return the computation times
-    //AKAZETiming Get_Computation_Times() const {
-    //    return timing_;
-    //}
 };
 
 /* ************************************************************************* */
