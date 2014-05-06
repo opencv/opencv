@@ -1149,7 +1149,7 @@ OCL_TEST_P(MinMaxIdx, Mat)
         int p1[2], p2[2], up1[2], up2[2];
         double minv, maxv, uminv, umaxv;
 
-        if(src1_roi.channels() > 1)
+        if (cn > 1)
         {
             OCL_OFF(cv::minMaxIdx(src2_roi, &minv, &maxv) );
             OCL_ON(cv::minMaxIdx(usrc2_roi, &uminv, &umaxv));
@@ -1164,7 +1164,8 @@ OCL_TEST_P(MinMaxIdx, Mat)
 
             EXPECT_DOUBLE_EQ(minv, uminv);
             EXPECT_DOUBLE_EQ(maxv, umaxv);
-            for( int i = 0; i < 2; i++)
+
+            for (int i = 0; i < 2; i++)
             {
                 EXPECT_EQ(p1[i], up1[i]);
                 EXPECT_EQ(p2[i], up2[i]);
