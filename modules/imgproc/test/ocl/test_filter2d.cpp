@@ -51,7 +51,7 @@ namespace ocl {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Filter2D
-PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool, bool)
+PARAM_TEST_CASE(Filter2D, MatDepth, Channels, int, int, BorderType, bool, bool)
 {
     static const int kernelMinSize = 2;
     static const int kernelMaxSize = 10;
@@ -60,6 +60,7 @@ PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool, bool)
     Size dsize;
     Point anchor;
     int borderType;
+    int widthMultiple;
     bool useRoi;
     Mat kernel;
     double delta;
@@ -70,27 +71,30 @@ PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool, bool)
     virtual void SetUp()
     {
         type = CV_MAKE_TYPE(GET_PARAM(0), GET_PARAM(1));
-        borderType = GET_PARAM(2) | (GET_PARAM(3) ? BORDER_ISOLATED : 0);
-        useRoi = GET_PARAM(4);
+        Size ksize(GET_PARAM(2), GET_PARAM(2));
+        widthMultiple = GET_PARAM(3);
+        borderType = GET_PARAM(4) | (GET_PARAM(5) ? BORDER_ISOLATED : 0);
+        useRoi = GET_PARAM(6);
+        Mat temp = randomMat(ksize, CV_MAKE_TYPE(((CV_64F == CV_MAT_DEPTH(type)) ? CV_64F : CV_32F), 1), -MAX_VALUE, MAX_VALUE);
+        cv::normalize(temp, kernel, 1.0, 0.0, NORM_L1);
     }
 
     void random_roi()
     {
         dsize = randomSize(1, MAX_VALUE);
+        // Make sure the width is a multiple of the requested value, and no more.
+        dsize.width &= ~((widthMultiple * 2) - 1);
+        dsize.width += widthMultiple;
 
-        Size ksize = randomSize(kernelMinSize, kernelMaxSize);
-        Mat temp = randomMat(ksize, CV_MAKE_TYPE(((CV_64F == CV_MAT_DEPTH(type)) ? CV_64F : CV_32F), 1), -MAX_VALUE, MAX_VALUE);
-        cv::normalize(temp, kernel, 1.0, 0.0, NORM_L1);
-
-        Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
+        Size roiSize = randomSize(kernel.size[0], MAX_VALUE, kernel.size[1], MAX_VALUE);
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, dsize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
 
-        anchor.x = randomInt(-1, ksize.width);
-        anchor.y = randomInt(-1, ksize.height);
+        anchor.x = randomInt(-1, kernel.size[0]);
+        anchor.y = randomInt(-1, kernel.size[1]);
 
         delta = randomDouble(-100, 100);
 
@@ -122,6 +126,8 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, Filter2D,
                             Combine(
                                 Values(CV_8U, CV_16U, CV_32F),
                                 OCL_ALL_CHANNELS,
+                                Values(3, 5, 9),  // Kernel size
+                                Values(1, 4, 8),   // Width mutiple
                                 Values((BorderType)BORDER_CONSTANT,
                                        (BorderType)BORDER_REPLICATE,
                                        (BorderType)BORDER_REFLECT,
