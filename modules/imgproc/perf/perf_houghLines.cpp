@@ -15,8 +15,8 @@ PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
             testing::Combine(
                 testing::Values( "cv/shared/pic5.png", "stitching/a1.png" ),
                 testing::Values( 1, 10 ),
-                testing::Values( 0.05, 0.1 ),
-                testing::Values( 80 , 150 )
+                testing::Values( 0.01, 0.1 ),
+                testing::Values( 300, 500 )
                 )
             )
 {
@@ -29,13 +29,17 @@ PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
     if (image.empty())
         FAIL() << "Unable to load source image" << filename;
 
-    Canny(image, image, 100, 150, 3);
+    Canny(image, image, 0, 0);
 
     Mat lines;
     declare.time(60);
 
     TEST_CYCLE() HoughLines(image, lines, rhoStep, thetaStep, threshold);
 
-    EXPECT_FALSE(lines.empty());
+    transpose(lines, lines);
+#if (0 && defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801)
     SANITY_CHECK_NOTHING();
+#else
+    SANITY_CHECK(lines);
+#endif
 }
