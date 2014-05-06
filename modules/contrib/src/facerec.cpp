@@ -18,6 +18,43 @@
 #include "precomp.hpp"
 #include <set>
 
+struct LabelInfo
+{
+    LabelInfo():label(-1), value("") {}
+    LabelInfo(int _label, std::string _value): label(_label), value(_value) {}
+    std::string value;
+    int label;
+    void write(cv::FileStorage& fs) const
+    {
+        fs << "{" << "label" << label << "value" << value << "}";
+    }
+    void read(const cv::FileNode& node)
+    {
+        label = (int)node["label"];
+        value = (std::string)node["value"];
+    }
+    friend std::ostream& operator<<(std::ostream& out, const LabelInfo& info);
+};
+
+static void write(cv::FileStorage& fs, const std::string&, const LabelInfo& x)
+{
+    x.write(fs);
+}
+
+static void read(const cv::FileNode& node, LabelInfo& x, const LabelInfo& default_value = LabelInfo())
+{
+    if(node.empty())
+        x = default_value;
+    else
+        x.read(node);
+}
+
+std::ostream& operator<<(std::ostream& out, const LabelInfo& info)
+{
+    out << "{ label = " << info.label << ", " << "value = " << info.value << "}";
+    return out;
+}
+
 namespace cv
 {
 
@@ -98,7 +135,6 @@ inline vector<_Tp> remove_dups(const vector<_Tp>& src) {
     return elems;
 }
 
-
 // Turk, M., and Pentland, A. "Eigenfaces for recognition.". Journal of
 // Cognitive Neuroscience 3 (1991), 71–86.
 class Eigenfaces : public FaceRecognizer
@@ -111,6 +147,7 @@ private:
     Mat _eigenvectors;
     Mat _eigenvalues;
     Mat _mean;
+    std::map<int, string> _labelsInfo;
 
 public:
     using FaceRecognizer::save;
@@ -147,6 +184,15 @@ public:
     // See FaceRecognizer::save.
     void save(FileStorage& fs) const;
 
+    // Sets additions information as pairs label - info.
+    void setLabelsInfo(const std::map<int,string>& labelsInfo);
+
+    // Gets additional information by label
+    string getLabelInfo(const int label);
+
+    // Gets labels by string
+    std::vector<int> getLabelsByString(const string str);
+
     AlgorithmInfo* info() const;
 };
 
@@ -164,6 +210,7 @@ private:
     Mat _mean;
     vector<Mat> _projections;
     Mat _labels;
+    std::map<int, string> _labelsInfo;
 
 public:
     using FaceRecognizer::save;
@@ -202,6 +249,15 @@ public:
     // See FaceRecognizer::save.
     void save(FileStorage& fs) const;
 
+    // Sets additions information as pairs label - info.
+    void setLabelsInfo(const std::map<int,string>& labelsInfo);
+
+    // Gets additional information by label
+    string getLabelInfo(const int label);
+
+    // Gets labels by string
+    std::vector<int> getLabelsByString(const string str);
+
     AlgorithmInfo* info() const;
 };
 
@@ -222,6 +278,7 @@ private:
 
     vector<Mat> _histograms;
     Mat _labels;
+    std::map<int, string> _labelsInfo;
 
     // Computes a LBPH model with images in src and
     // corresponding labels in labels, possibly preserving
@@ -286,6 +343,15 @@ public:
 
     // See FaceRecognizer::save.
     void save(FileStorage& fs) const;
+
+    // Sets additions information as pairs label - info.
+    void setLabelsInfo(const std::map<int,string>& labelsInfo);
+
+    // Gets additional information by label
+    string getLabelInfo(const int label);
+
+    // Gets labels by string
+    std::vector<int> getLabelsByString(const string str);
 
     // Getter functions.
     int neighbors() const { return _neighbors; }
@@ -423,6 +489,17 @@ void Eigenfaces::load(const FileStorage& fs) {
     // read sequences
     readFileNodeList(fs["projections"], _projections);
     fs["labels"] >> _labels;
+    const FileNode& fn = fs["info"];
+    if (fn.type() == FileNode::SEQ)
+    {
+        _labelsInfo.clear();
+        for (FileNodeIterator it = fn.begin(); it != fn.end();)
+        {
+            LabelInfo item;
+            it >> item;
+            _labelsInfo.insert(std::make_pair(item.label, item.value));
+        }
+    }
 }
 
 void Eigenfaces::save(FileStorage& fs) const {
@@ -434,6 +511,34 @@ void Eigenfaces::save(FileStorage& fs) const {
     // write sequences
     writeFileNodeList(fs, "projections", _projections);
     fs << "labels" << _labels;
+    fs << "info" << "[";
+    for (std::map<int, string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
+        fs << LabelInfo(it->first, it->second);
+    fs << "]";
+}
+
+void Eigenfaces::setLabelsInfo(const std::map<int,string>& labelsInfo)
+{
+    _labelsInfo = labelsInfo;
+}
+
+string Eigenfaces::getLabelInfo(const int label)
+{
+    if(_labelsInfo.count(label) > 0)
+        return _labelsInfo[label];
+    return "";
+}
+
+vector<int> Eigenfaces::getLabelsByString(const string str)
+{
+    vector<int> labels;
+    for(std::map<int,string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
+    {
+        size_t found = (it->second).find(str);
+        if(found != string::npos)
+            labels.push_back(it->first);
+    }
+    return labels;
 }
 
 //------------------------------------------------------------------------------
@@ -544,6 +649,17 @@ void Fisherfaces::load(const FileStorage& fs) {
     // read sequences
     readFileNodeList(fs["projections"], _projections);
     fs["labels"] >> _labels;
+    const FileNode& fn = fs["info"];
+    if (fn.type() == FileNode::SEQ)
+    {
+        _labelsInfo.clear();
+        for (FileNodeIterator it = fn.begin(); it != fn.end();)
+        {
+            LabelInfo item;
+            it >> item;
+            _labelsInfo.insert(std::make_pair(item.label, item.value));
+        }
+    }
 }
 
 // See FaceRecognizer::save.
@@ -556,6 +672,34 @@ void Fisherfaces::save(FileStorage& fs) const {
     // write sequences
     writeFileNodeList(fs, "projections", _projections);
     fs << "labels" << _labels;
+    fs << "info" << "[";
+    for (std::map<int, string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
+        fs << LabelInfo(it->first, it->second);
+    fs << "]";
+}
+
+void Fisherfaces::setLabelsInfo(const std::map<int,string>& labelsInfo)
+{
+    _labelsInfo = labelsInfo;
+}
+
+string Fisherfaces::getLabelInfo(const int label)
+{
+    if(_labelsInfo.count(label) > 0)
+        return _labelsInfo[label];
+    return "";
+}
+
+vector<int> Fisherfaces::getLabelsByString(const string str)
+{
+    vector<int> labels;
+    for(std::map<int,string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
+    {
+        size_t found = (it->second).find(str);
+        if(found != string::npos)
+            labels.push_back(it->first);
+    }
+    return labels;
 }
 
 //------------------------------------------------------------------------------
@@ -743,6 +887,17 @@ void LBPH::load(const FileStorage& fs) {
     //read matrices
     readFileNodeList(fs["histograms"], _histograms);
     fs["labels"] >> _labels;
+    const FileNode& fn = fs["info"];
+    if (fn.type() == FileNode::SEQ)
+    {
+        _labelsInfo.clear();
+        for (FileNodeIterator it = fn.begin(); it != fn.end();)
+        {
+            LabelInfo item;
+            it >> item;
+            _labelsInfo.insert(std::make_pair(item.label, item.value));
+        }
+    }
 }
 
 // See FaceRecognizer::save.
@@ -754,6 +909,34 @@ void LBPH::save(FileStorage& fs) const {
     // write matrices
     writeFileNodeList(fs, "histograms", _histograms);
     fs << "labels" << _labels;
+    fs << "info" << "[";
+    for (std::map<int, string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
+        fs << LabelInfo(it->first, it->second);
+    fs << "]";
+}
+
+void LBPH::setLabelsInfo(const std::map<int,string>& labelsInfo)
+{
+    _labelsInfo = labelsInfo;
+}
+
+string LBPH::getLabelInfo(const int label)
+{
+    if(_labelsInfo.count(label) > 0)
+        return _labelsInfo[label];
+    return "";
+}
+
+vector<int> LBPH::getLabelsByString(const string str)
+{
+    vector<int> labels;
+    for(std::map<int,string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
+    {
+        size_t found = (it->second).find(str);
+        if(found != string::npos)
+            labels.push_back(it->first);
+    }
+    return labels;
 }
 
 void LBPH::train(InputArrayOfArrays _in_src, InputArray _in_labels) {
@@ -848,7 +1031,6 @@ int LBPH::predict(InputArray _src) const {
     predict(_src, label, dummy);
     return label;
 }
-
 
 Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components, double threshold)
 {
