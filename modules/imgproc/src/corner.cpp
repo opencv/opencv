@@ -544,7 +544,7 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
             scale *= 2.0;
         if (depth == CV_8U)
             scale *= 255.0;
-        scale = std::pow(scale, -4.0f);
+        scale = std::pow(scale, -4.0);
 
         if (ippiHarrisCornerGetBufferSize(roisize, masksize, blockSize, datatype, cn, &bufsize) >= 0)
         {
