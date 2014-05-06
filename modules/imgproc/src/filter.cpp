@@ -453,8 +453,12 @@ void FilterEngine::apply(const Mat& src, Mat& dst,
         dstOfs.y + srcRoi.height <= dst.rows );
 
     int y = start(src, srcRoi, isolated);
-    proceed( src.data + y*src.step, (int)src.step, endY - startY,
-             dst.data + dstOfs.y*dst.step + dstOfs.x*dst.elemSize(), (int)dst.step );
+    proceed( src.data + y*src.step
+             + srcRoi.x*src.elemSize(),/* Bugfix #3668 use the x-shift of ROI
+                                        */
+             (int)src.step, endY - startY,
+             dst.data + dstOfs.y*dst.step +
+             dstOfs.x*dst.elemSize(), (int)dst.step );
 }
 
 }
