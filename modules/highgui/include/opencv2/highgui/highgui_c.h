@@ -215,6 +215,11 @@ CVAPI(CvMat*) cvLoadImageM( const char* filename, int iscolor CV_DEFAULT(CV_LOAD
 enum
 {
     CV_IMWRITE_JPEG_QUALITY =1,
+/* custom jpeg tuning start */
+    CV_IMWRITE_JPEG_RST_INTERVAL =2,
+    CV_IMWRITE_JPEG_LUM_QUALITY =3,
+    CV_IMWRITE_JPEG_CHROM_QUALITY = 4,
+/* custom jpeg tuning end   */
     CV_IMWRITE_PNG_COMPRESSION =16,
     CV_IMWRITE_PNG_STRATEGY =17,
     CV_IMWRITE_PNG_BILEVEL =18,
