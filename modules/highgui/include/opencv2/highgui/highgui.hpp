@@ -176,6 +176,11 @@ enum
 enum
 {
     IMWRITE_JPEG_QUALITY =1,
+/* custom jpeg tuning start */
+    IMWRITE_JPEG_RST_INTERVAL =2,
+    IMWRITE_JPEG_LUM_QUALITY =3,
+    IMWRITE_JPEG_CHROM_QUALITY = 4,
+/* custom jpeg tuning end   */
     IMWRITE_PNG_COMPRESSION =16,
     IMWRITE_PNG_STRATEGY =17,
     IMWRITE_PNG_BILEVEL =18,
