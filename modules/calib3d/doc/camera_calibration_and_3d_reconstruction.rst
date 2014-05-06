@@ -1791,6 +1791,48 @@ Performs camera calibaration
     :param criteria: Termination criteria for the iterative optimization algorithm.
 
 
+Fisheye::stereoCalibrate
+----------------------------
+Performs stereo calibration calibaration
+
+.. ocv:function:: double stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2, InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize, OutputArray R, OutputArray T, int flags = CALIB_FIX_INTRINSIC, TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON))
+
+    :param objectPoints: Vector of vectors of the calibration pattern points.
+
+    :param imagePoints1: Vector of vectors of the projections of the calibration pattern points, observed by the first camera.
+
+    :param imagePoints2: Vector of vectors of the projections of the calibration pattern points, observed by the second camera.
+
+    :param K1: Input/output first camera matrix:  :math:`\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}` , :math:`j = 0,\, 1` . If any of  ``Fisheye::CALIB_USE_INTRINSIC_GUESS`` , ``Fisheye::CV_CALIB_FIX_INTRINSIC`` are specified, some or all of the matrix components must be initialized.
+
+    :param D1: Input/output vector of distortion coefficients  :math:`(k_1, k_2, k_3, k_4)`  of 4 elements.
+
+    :param K2: Input/output second camera matrix. The parameter is similar to ``K1`` .
+
+    :param D2: Input/output lens distortion coefficients for the second camera. The parameter is similar to  ``D1`` .
+
+    :param imageSize: Size of the image used only to initialize intrinsic camera matrix.
+
+    :param R: Output rotation matrix between the 1st and the 2nd camera coordinate systems.
+
+    :param T: Output translation vector between the coordinate systems of the cameras.
+
+    :param flags: Different flags that may be zero or a combination of the following values:
+
+        * **Fisheye::CV_CALIB_FIX_INTRINSIC** Fix ``K1, K2?`` and ``D1, D2?`` so that only ``R, T`` matrices are estimated.
+
+        * **Fisheye::CALIB_USE_INTRINSIC_GUESS** ``K1, K2`` contains valid initial values of ``fx, fy, cx, cy`` that are optimized further. Otherwise, ``(cx, cy)`` is initially set to the image center (``imageSize`` is used), and focal distances are computed in a least-squares fashion.
+
+        * **Fisheye::CALIB_RECOMPUTE_EXTRINSIC** Extrinsic will be recomputed after each iteration of intrinsic optimization.
+
+        * **Fisheye::CALIB_CHECK_COND** The functions will check validity of condition number.
+
+        * **Fisheye::CALIB_FIX_SKEW** Skew coefficient (alpha) is set to zero and stay zero.
+
+        * **Fisheye::CALIB_FIX_K1..4** Selected distortion coefficients are set to zeros and stay zero.
+
+    :param criteria: Termination criteria for the iterative optimization algorithm.
+
 .. [BT98] Birchfield, S. and Tomasi, C. A pixel dissimilarity measure that is insensitive to image sampling. IEEE Transactions on Pattern Analysis and Machine Intelligence. 1998.
 
 .. [BouguetMCT] J.Y.Bouguet. MATLAB calibration tool. http://www.vision.caltech.edu/bouguetj/calib_doc/
