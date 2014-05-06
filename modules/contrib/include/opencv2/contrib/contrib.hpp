@@ -948,6 +948,14 @@ namespace cv
         // Deserializes this object from a given cv::FileStorage.
         virtual void load(const FileStorage& fs) = 0;
 
+        // Sets additions information as pairs label - info.
+        virtual void setLabelsInfo(const std::map<int, string>& additionalInfo) = 0;
+
+        // Gets string information by label
+        virtual string getLabelInfo(const int label) = 0;
+
+        // Gets labels by string
+        virtual vector<int> getLabelsByString(const string str) = 0;
     };
 
     CV_EXPORTS_W Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
