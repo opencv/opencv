@@ -130,7 +130,7 @@ int main(int argc, const char *argv[]) {
     //
     string result_message = format("Predicted class = %d / Actual class = %d.", predictedLabel, testLabel);
     cout << result_message << endl;
-    if( (predictedLabel == testLabel) && (model->getLabelInfo(predictedLabel) != "") )
+    if( (predictedLabel == testLabel) && !model->getLabelInfo(predictedLabel).empty() )
         cout << format("%d-th label's info: %s", predictedLabel, model->getLabelInfo(predictedLabel).c_str()) << endl;
     // Sometimes you'll need to get/set internal model data,
     // which isn't exposed by the public cv::FaceRecognizer.

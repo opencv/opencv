@@ -21,9 +21,9 @@
 struct LabelInfo
 {
     LabelInfo():label(-1), value("") {}
-    LabelInfo(int _label, std::string _value): label(_label), value(_value) {}
-    std::string value;
+    LabelInfo(int _label, const std::string &_value): label(_label), value(_value) {}
     int label;
+    std::string value;
     void write(cv::FileStorage& fs) const
     {
         fs << "{" << "label" << label << "value" << value << "}";
@@ -33,7 +33,11 @@ struct LabelInfo
         label = (int)node["label"];
         value = (std::string)node["value"];
     }
-    friend std::ostream& operator<<(std::ostream& out, const LabelInfo& info);
+    std::ostream& operator<<(std::ostream& out)
+    {
+        out << "{ label = " << label << ", " << "value = " << value << "}";
+        return out;
+    }
 };
 
 static void write(cv::FileStorage& fs, const std::string&, const LabelInfo& x)
@@ -47,12 +51,6 @@ static void read(const cv::FileNode& node, LabelInfo& x, const LabelInfo& defaul
         x = default_value;
     else
         x.read(node);
-}
-
-std::ostream& operator<<(std::ostream& out, const LabelInfo& info)
-{
-    out << "{ label = " << info.label << ", " << "value = " << info.value << "}";
-    return out;
 }
 
 namespace cv
@@ -188,10 +186,10 @@ public:
     void setLabelsInfo(const std::map<int,string>& labelsInfo);
 
     // Gets additional information by label
-    string getLabelInfo(const int label);
+    string getLabelInfo(int label) const;
 
     // Gets labels by string
-    std::vector<int> getLabelsByString(const string str);
+    std::vector<int> getLabelsByString(const string& str);
 
     AlgorithmInfo* info() const;
 };
@@ -253,10 +251,10 @@ public:
     void setLabelsInfo(const std::map<int,string>& labelsInfo);
 
     // Gets additional information by label
-    string getLabelInfo(const int label);
+    string getLabelInfo(int label) const;
 
     // Gets labels by string
-    std::vector<int> getLabelsByString(const string str);
+    std::vector<int> getLabelsByString(const string& str);
 
     AlgorithmInfo* info() const;
 };
@@ -348,10 +346,10 @@ public:
     void setLabelsInfo(const std::map<int,string>& labelsInfo);
 
     // Gets additional information by label
-    string getLabelInfo(const int label);
+    string getLabelInfo(int label) const;
 
     // Gets labels by string
-    std::vector<int> getLabelsByString(const string str);
+    std::vector<int> getLabelsByString(const string& str);
 
     // Getter functions.
     int neighbors() const { return _neighbors; }
@@ -522,14 +520,14 @@ void Eigenfaces::setLabelsInfo(const std::map<int,string>& labelsInfo)
     _labelsInfo = labelsInfo;
 }
 
-string Eigenfaces::getLabelInfo(const int label)
+string Eigenfaces::getLabelInfo(int label) const
 {
     if(_labelsInfo.count(label) > 0)
-        return _labelsInfo[label];
+        return _labelsInfo.at(label);
     return "";
 }
 
-vector<int> Eigenfaces::getLabelsByString(const string str)
+vector<int> Eigenfaces::getLabelsByString(const string& str)
 {
     vector<int> labels;
     for(std::map<int,string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
@@ -683,14 +681,14 @@ void Fisherfaces::setLabelsInfo(const std::map<int,string>& labelsInfo)
     _labelsInfo = labelsInfo;
 }
 
-string Fisherfaces::getLabelInfo(const int label)
+string Fisherfaces::getLabelInfo(int label) const
 {
     if(_labelsInfo.count(label) > 0)
-        return _labelsInfo[label];
+        return _labelsInfo.at(label);
     return "";
 }
 
-vector<int> Fisherfaces::getLabelsByString(const string str)
+vector<int> Fisherfaces::getLabelsByString(const string& str)
 {
     vector<int> labels;
     for(std::map<int,string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
@@ -920,14 +918,14 @@ void LBPH::setLabelsInfo(const std::map<int,string>& labelsInfo)
     _labelsInfo = labelsInfo;
 }
 
-string LBPH::getLabelInfo(const int label)
+string LBPH::getLabelInfo(int label) const
 {
     if(_labelsInfo.count(label) > 0)
-        return _labelsInfo[label];
+        return _labelsInfo.at(label);
     return "";
 }
 
-vector<int> LBPH::getLabelsByString(const string str)
+vector<int> LBPH::getLabelsByString(const string& str)
 {
     vector<int> labels;
     for(std::map<int,string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
