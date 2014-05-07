@@ -952,10 +952,10 @@ namespace cv
         virtual void setLabelsInfo(const std::map<int, string>& additionalInfo) = 0;
 
         // Gets string information by label
-        virtual string getLabelInfo(const int label) = 0;
+        virtual string getLabelInfo(int label) const = 0;
 
         // Gets labels by string
-        virtual vector<int> getLabelsByString(const string str) = 0;
+        virtual vector<int> getLabelsByString(const string& str) = 0;
     };
 
     CV_EXPORTS_W Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
