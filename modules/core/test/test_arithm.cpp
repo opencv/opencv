@@ -1580,12 +1580,21 @@ TEST_P(Mul1, One)
 
 INSTANTIATE_TEST_CASE_P(Arithm, Mul1, testing::Values(Size(2, 2), Size(1, 1)));
 
-TEST(Subtract8u8u16s, EmptyOutputMat)
+TEST(Subtract, EmptyOutputMat)
 {
     cv::Mat src1 = cv::Mat::zeros(16, 16, CV_8UC1);
     cv::Mat src2 = cv::Mat::zeros(16, 16, CV_8UC1);
-    cv::Mat dst;
-    cv::subtract(src1, src2, dst, cv::noArray(), CV_16S);
-    ASSERT_FALSE(dst.empty());
-    ASSERT_EQ(0, cv::countNonZero(dst));
+    cv::Mat dst1, dst2, dst3;
+
+    cv::subtract(src1, src2, dst1, cv::noArray(), CV_16S);
+    cv::subtract(src1, src2, dst2);
+    cv::subtract(src1, cv::Scalar::all(0), dst3, cv::noArray(), CV_16S);
+
+    ASSERT_FALSE(dst1.empty());
+    ASSERT_FALSE(dst2.empty());
+    ASSERT_FALSE(dst3.empty());
+
+    ASSERT_EQ(0, cv::countNonZero(dst1));
+    ASSERT_EQ(0, cv::countNonZero(dst2));
+    ASSERT_EQ(0, cv::countNonZero(dst3));
 }
