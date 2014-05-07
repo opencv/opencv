@@ -300,7 +300,7 @@ static ippiReorderFunc ippiSwapChannelsC3RTab[] =
     0, (ippiReorderFunc)ippiSwapChannels_32f_C3R, 0, 0
 };
 
-#if !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 801
 static ippiReorderFunc ippiSwapChannelsC4RTab[] =
 {
     (ippiReorderFunc)ippiSwapChannels_8u_C4R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4R, 0,
@@ -3314,7 +3314,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                     return;
                 setIppErrorStatus();
             }
-#if !defined(HAVE_IPP_ICV_ONLY) && (IPP_VERSION_X100 >= 801)
+#if IPP_VERSION_X100 >= 801
             else if( code == CV_RGBA2BGRA )
             {
                 if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC4RTab[depth], 2, 1, 0)) )
@@ -3343,7 +3343,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             _dst.create(sz, CV_8UC2);
             dst = _dst.getMat();
 
-#if defined HAVE_IPP && !defined(HAVE_IPP_ICV_ONLY)
+#ifdef HAVE_IPP
             CV_SUPPRESS_DEPRECATED_START
 #if 0
             if (code == CV_BGR2BGR565 && scn == 3)
@@ -3400,7 +3400,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
 
-#if defined HAVE_IPP && !defined(HAVE_IPP_ICV_ONLY)
+#ifdef HAVE_IPP
             CV_SUPPRESS_DEPRECATED_START
             if (code == CV_BGR5652BGR && dcn == 3)
             {
@@ -3919,7 +3919,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
 
-#if defined HAVE_IPP && !defined(HAVE_IPP_ICV_ONLY)
+#ifdef HAVE_IPP
 #if 0
             if (code == CV_LBGR2Lab && scn == 3 && depth == CV_8U)
             {
@@ -4012,8 +4012,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
 
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
-#if 0
+#if defined(HAVE_IPP) && 0
             if( code == CV_Lab2LBGR && dcn == 3 && depth == CV_8U)
             {
                 if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R)) )
@@ -4064,7 +4063,6 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                                                                        ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
                     return;
             }
-#endif
 #endif
 
             if( code == CV_Lab2BGR || code == CV_Lab2RGB ||
@@ -4264,7 +4262,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
                 if( depth == CV_8U )
                 {
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
                     if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiAlphaPremul_8u_AC4R)))
                         return;
                     setIppErrorStatus();

@@ -81,7 +81,7 @@ copyMask_(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, ucha
 template<> void
 copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
     if (ippiCopy_8u_C1MR(_src, (int)sstep, _dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
         return;
     setIppErrorStatus();
@@ -117,7 +117,7 @@ copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
 template<> void
 copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
     if (ippiCopy_16u_C1MR((const Ipp16u *)_src, (int)sstep, (Ipp16u *)_dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
         return;
     setIppErrorStatus();
@@ -177,7 +177,7 @@ static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, 
     copyMask_<type>(src, sstep, mask, mstep, dst, dstep, size); \
 }
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
 #define DEF_COPY_MASK_F(suffix, type, ippfavor, ipptype) \
 static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, size_t mstep, \
                              uchar* dst, size_t dstep, Size size, void*) \
@@ -281,7 +281,7 @@ void Mat::copyTo( OutputArray _dst ) const
             Size sz = getContinuousSize(*this, dst);
             size_t len = sz.width*elemSize();
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
             if (ippiCopy_8u_C1R(sptr, (int)step, dptr, (int)dst.step, ippiSize((int)len, sz.height)) >= 0)
                 return;
             setIppErrorStatus();
@@ -419,7 +419,7 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::MAT ));
     CV_Assert( mask.empty() || (mask.type() == CV_8U && size == mask.size) );
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
     int cn = channels(), depth0 = depth();
 
     if (!mask.empty() && (dims <= 2 || (isContinuous() && mask.isContinuous())) &&
@@ -681,7 +681,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
     Mat dst = _dst.getMat();
     size_t esz = CV_ELEM_SIZE(type);
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
     typedef IppStatus (CV_STDCALL * ippiMirror)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize, IppiAxis flip);
     typedef IppStatus (CV_STDCALL * ippiMirrorI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize, IppiAxis flip);
     ippiMirror ippFunc = 0;

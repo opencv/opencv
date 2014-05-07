@@ -462,7 +462,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
         if( cn > 1 )
             CV_Error( CV_StsBadArg, "Invalid image type (must be single-channel)" );
 
-#if IPP_VERSION_X100 >= 801 && !defined HAVE_IPP_ICV_ONLY
+#if IPP_VERSION_X100 >= 801
         if (!binary)
         {
             IppiSize roi = { mat.cols, mat.rows };

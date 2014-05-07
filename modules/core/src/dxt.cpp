@@ -1489,7 +1489,7 @@ typedef IppStatus (CV_STDCALL* IppDFTInitFunc)(int, int, IppHintAlgorithm, void*
 
 namespace cv
 {
-#if defined USE_IPP_DFT && !defined HAVE_IPP_ICV_ONLY
+#if defined USE_IPP_DFT
 
 typedef IppStatus (CV_STDCALL* ippiDFT_C_Func)(const Ipp32fc*, int, Ipp32fc*, int, const IppiDFTSpec_C_32fc*, Ipp8u*);
 typedef IppStatus (CV_STDCALL* ippiDFT_R_Func)(const Ipp32f* , int, Ipp32f* , int, const IppiDFTSpec_R_32f* , Ipp8u*);
@@ -2074,9 +2074,10 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 
     Mat dst = _dst.getMat();
 
-#if defined USE_IPP_DFT && !defined HAVE_IPP_ICV_ONLY
+#if defined USE_IPP_DFT
 
     if ((src.depth() == CV_32F) && (src.total()>(int)(1<<6)) && nonzero_rows == 0)
+    {
         if ((flags & DFT_ROWS) == 0)
         {
             if (!real_transform)
@@ -2109,6 +2110,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
                 setIppErrorStatus();
             }
         }
+    }
 #endif
 
     if( !real_transform )

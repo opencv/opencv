@@ -858,7 +858,7 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         return;
 #endif
 
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
     int ippBorderType = borderType & ~BORDER_ISOLATED;
     Point ocvAnchor, ippAnchor;
     ocvAnchor.x = anchor.x < 0 ? ksize.width / 2 : anchor.x;
@@ -885,7 +885,6 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                                                                 (int)dst.step, roiSize, maskSize, \
                                                                 (IppiBorderType)ippBorderType, borderValue, buffer); \
                 ippsFree(buffer); \
-                printf("%s %d %d\n", ippGetStatusString(status), (int)src.step, (int)dst.step); \
                 if (status >= 0) \
                     return; \
             } \
@@ -2057,7 +2056,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
 
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 801
 #define IPP_FILTER_MEDIAN_BORDER(ippType, ippDataType, flavor) \
     do \
     { \
@@ -2306,7 +2305,7 @@ private:
     float *space_weight, *color_weight;
 };
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && 0
 class IPPBilateralFilter_8u_Invoker :
     public ParallelLoopBody
 {
