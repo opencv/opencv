@@ -243,6 +243,17 @@ static inline IppiBorderType ippiGetBorderType(int borderTypeNI)
         borderTypeNI == cv::BORDER_REFLECT ? ippBorderMirrorR : (IppiBorderType)-1;
 }
 
+static inline IppDataType ippiGetDataType(int depth)
+{
+    return depth == CV_8U ? ipp8u :
+        depth == CV_8S ? ipp8s :
+        depth == CV_16U ? ipp16u :
+        depth == CV_16S ? ipp16s :
+        depth == CV_32S ? ipp32s :
+        depth == CV_32F ? ipp32f :
+        depth == CV_64F ? ipp64f : (IppDataType)-1;
+}
+
 #else
 #  define IPP_VERSION_X100 0
 #endif

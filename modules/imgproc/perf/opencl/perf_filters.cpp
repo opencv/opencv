@@ -246,14 +246,14 @@ OCL_PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
     const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), ksize = get<2>(params);
-    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 + DBL_EPSILON : 3e-4;
+    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 2 + DBL_EPSILON : 3e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     UMat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::GaussianBlur(src, dst, Size(ksize, ksize), 0);
+    OCL_TEST_CYCLE() cv::GaussianBlur(src, dst, Size(ksize, ksize), 1, 1, cv::BORDER_CONSTANT);
 
     SANITY_CHECK(dst, eps);
 }
