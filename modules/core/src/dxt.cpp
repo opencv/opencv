@@ -2880,6 +2880,131 @@ static void IDCT_64f(const double* src, int src_step, double* dft_src, double* d
 
 }
 
+namespace cv
+{
+#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7 && !defined HAVE_IPP_ICV_ONLY
+
+typedef IppStatus (CV_STDCALL * ippiDCTFunc)(const Ipp32f*, int, Ipp32f*, int, const void*, Ipp8u*);
+typedef IppStatus (CV_STDCALL * ippiDCTInitAlloc)(void**, IppiSize, IppHintAlgorithm);
+typedef IppStatus (CV_STDCALL * ippiDCTFree)(void* pDCTSpec);
+typedef IppStatus (CV_STDCALL * ippiDCTGetBufSize)(const void*, int*);
+
+template <typename Dct>
+class DctIPPLoop_Invoker : public ParallelLoopBody
+{
+public:
+
+    DctIPPLoop_Invoker(const Mat& _src, Mat& _dst, const Dct* _ippidct, bool _inv, bool *_ok) :
+        ParallelLoopBody(), src(&_src), dst(&_dst), ippidct(_ippidct), inv(_inv), ok(_ok)
+    {
+        *ok = true;
+    }
+
+    virtual void operator()(const Range& range) const
+    {
+        void* pDCTSpec;
+        AutoBuffer<uchar> buf;
+        uchar* pBuffer = 0;
+        int bufSize=0;
+
+        IppiSize srcRoiSize = {src->cols, 1};
+
+        CV_SUPPRESS_DEPRECATED_START
+
+        ippiDCTInitAlloc ippInitAlloc   = inv ? (ippiDCTInitAlloc)ippiDCTInvInitAlloc_32f   : (ippiDCTInitAlloc)ippiDCTFwdInitAlloc_32f;
+        ippiDCTFree ippFree             = inv ? (ippiDCTFree)ippiDCTInvFree_32f             : (ippiDCTFree)ippiDCTFwdFree_32f;
+        ippiDCTGetBufSize ippGetBufSize = inv ? (ippiDCTGetBufSize)ippiDCTInvGetBufSize_32f : (ippiDCTGetBufSize)ippiDCTFwdGetBufSize_32f;
+
+        if (ippInitAlloc(&pDCTSpec, srcRoiSize, ippAlgHintNone)>=0 && ippGetBufSize(pDCTSpec, &bufSize)>=0)
+        {
+            buf.allocate( bufSize );
+            pBuffer = (uchar*)buf;
+
+            for( int i = range.start; i < range.end; ++i)
+                if(!(*ippidct)((float*)(src->data+i*src->step), (int)src->step,(float*)(dst->data+i*dst->step), (int)dst->step, pDCTSpec, (Ipp8u*)pBuffer))
+                    *ok = false;
+        }
+        else
+            *ok = false;
+
+        if (pDCTSpec)
+            ippFree(pDCTSpec);
+
+        CV_SUPPRESS_DEPRECATED_END
+    }
+
+private:
+    const Mat* src;
+    Mat* dst;
+    const Dct* ippidct;
+    bool inv;
+    bool *ok;
+};
+
+template <typename Dct>
+bool DctIPPLoop(const Mat& src, Mat& dst, const Dct& ippidct, bool inv)
+{
+    bool ok;
+    parallel_for_(Range(0, src.rows), DctIPPLoop_Invoker<Dct>(src, dst, &ippidct, inv, &ok), src.rows/(double)(1<<4) );
+    return ok;
+}
+
+struct IPPDCTFunctor
+{
+    IPPDCTFunctor(ippiDCTFunc _func) : func(_func){}
+
+    bool operator()(const Ipp32f* src, int srcStep, Ipp32f* dst, int dstStep, const void* pDCTSpec, Ipp8u* pBuffer) const
+    {
+        return func ? func(src, srcStep, dst, dstStep, pDCTSpec, pBuffer) >= 0 : false;
+    }
+private:
+    ippiDCTFunc func;
+};
+
+static bool ippi_DCT_32f(const Mat& src, Mat& dst, bool inv, bool row)
+{
+    ippiDCTFunc ippFunc = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R : (ippiDCTFunc)ippiDCTFwd_32f_C1R ;
+
+    if (row)
+        return(DctIPPLoop(src,dst,IPPDCTFunctor(ippFunc),inv));
+    else
+    {
+        IppStatus status;
+        void* pDCTSpec;
+        AutoBuffer<uchar> buf;
+        uchar* pBuffer = 0;
+        int bufSize=0;
+
+        IppiSize srcRoiSize = {src.cols, src.rows};
+
+        CV_SUPPRESS_DEPRECATED_START
+
+        ippiDCTInitAlloc ippInitAlloc   = inv ? (ippiDCTInitAlloc)ippiDCTInvInitAlloc_32f   : (ippiDCTInitAlloc)ippiDCTFwdInitAlloc_32f;
+        ippiDCTFree ippFree             = inv ? (ippiDCTFree)ippiDCTInvFree_32f             : (ippiDCTFree)ippiDCTFwdFree_32f;
+        ippiDCTGetBufSize ippGetBufSize = inv ? (ippiDCTGetBufSize)ippiDCTInvGetBufSize_32f : (ippiDCTGetBufSize)ippiDCTFwdGetBufSize_32f;
+
+        status = ippStsErr;
+
+        if (ippInitAlloc(&pDCTSpec, srcRoiSize, ippAlgHintNone)>=0 && ippGetBufSize(pDCTSpec, &bufSize)>=0)
+        {
+            buf.allocate( bufSize );
+            pBuffer = (uchar*)buf;
+
+            status = ippFunc((float*)src.data, (int)src.step, (float*)dst.data, (int)dst.step, pDCTSpec, (Ipp8u*)pBuffer);
+        }
+
+        if (pDCTSpec)
+            ippFree(pDCTSpec);
+
+        CV_SUPPRESS_DEPRECATED_END
+
+        return status >= 0;
+    }
+}
+
+#endif
+}
+
 void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 {
     static DCTFunc dct_tbl[4] =
@@ -2893,7 +3018,7 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
     bool inv = (flags & DCT_INVERSE) != 0;
     Mat src0 = _src0.getMat(), src = src0;
     int type = src.type(), depth = src.depth();
-    void /* *spec_dft = 0, */ *spec = 0;
+    void *spec = 0;
 
     double scale = 1.;
     int prev_len = 0, nf = 0, stage, end_stage;
@@ -2909,6 +3034,16 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
     CV_Assert( type == CV_32FC1 || type == CV_64FC1 );
     _dst.create( src.rows, src.cols, type );
     Mat dst = _dst.getMat();
+
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7) && !defined HAVE_IPP_ICV_ONLY
+    bool row = (flags & DCT_ROWS) != 0;
+    if (src.type() == CV_32F)
+    {
+        if(ippi_DCT_32f(src,dst,inv, row))
+            return;
+        setIppErrorStatus();
+    }
+#endif
 
     DCTFunc dct_func = dct_tbl[(int)inv + (depth == CV_64F)*2];
 
@@ -2962,27 +3097,6 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 
             spec = 0;
             inplace_transform = 1;
-            /*if( len*count >= 64 && DFTInitAlloc_R_32f_p )
-            {
-                int ipp_sz = 0;
-                if( depth == CV_32F )
-                {
-                    if( spec_dft )
-                        IPPI_CALL( DFTFree_R_32f_p( spec_dft ));
-                    IPPI_CALL( DFTInitAlloc_R_32f_p( &spec_dft, len, 8, cvAlgHintNone ));
-                    IPPI_CALL( DFTGetBufSize_R_32f_p( spec_dft, &ipp_sz ));
-                }
-                else
-                {
-                    if( spec_dft )
-                        IPPI_CALL( DFTFree_R_64f_p( spec_dft ));
-                    IPPI_CALL( DFTInitAlloc_R_64f_p( &spec_dft, len, 8, cvAlgHintNone ));
-                    IPPI_CALL( DFTGetBufSize_R_64f_p( spec_dft, &ipp_sz ));
-                }
-                spec = spec_dft;
-                sz += ipp_sz;
-            }
-            else*/
             {
                 sz += len*(complex_elem_size + sizeof(int)) + complex_elem_size;
 

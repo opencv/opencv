@@ -577,7 +577,7 @@ trueDistTrans( const Mat& src, Mat& dst )
     for( ; i <= m*3; i++ )
         sat_tab[i] = i - shift;
 
-    cv::parallel_for_(cv::Range(0, n), cv::DTColumnInvoker(&src, &dst, sat_tab, sqr_tab));
+    cv::parallel_for_(cv::Range(0, n), cv::DTColumnInvoker(&src, &dst, sat_tab, sqr_tab), src.total()/(double)(1<<16));
 
     // stage 2: compute modified distance transform for each row
     float* inv_tab = sqr_tab + n;
