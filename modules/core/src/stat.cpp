@@ -1385,9 +1385,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
             CV_SUPPRESS_DEPRECATED_START
             ippiMaskMinMaxIndxFuncC1 ippFuncC1 =
                 type == CV_8UC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1MR :
-#ifndef HAVE_IPP_ICV_ONLY
                 type == CV_8SC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1MR :
-#endif
                 type == CV_16UC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1MR : 0;
             CV_SUPPRESS_DEPRECATED_END
@@ -1426,9 +1424,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
             CV_SUPPRESS_DEPRECATED_START
             ippiMinMaxIndxFuncC1 ippFuncC1 =
                 depth == CV_8U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1R :
-#ifndef HAVE_IPP_ICV_ONLY
                 depth == CV_8S ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1R :
-#endif
                 depth == CV_16U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1R :
                 depth == CV_32F ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R : 0;
             CV_SUPPRESS_DEPRECATED_END
