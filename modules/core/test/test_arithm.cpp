@@ -1579,3 +1579,13 @@ TEST_P(Mul1, One)
 }
 
 INSTANTIATE_TEST_CASE_P(Arithm, Mul1, testing::Values(Size(2, 2), Size(1, 1)));
+
+TEST(Subtract8u8u16s, EmptyOutputMat)
+{
+    cv::Mat src1 = cv::Mat::zeros(16, 16, CV_8UC1);
+    cv::Mat src2 = cv::Mat::zeros(16, 16, CV_8UC1);
+    cv::Mat dst;
+    cv::subtract(src1, src2, dst, cv::noArray(), CV_16S);
+    ASSERT_FALSE(dst.empty());
+    ASSERT_EQ(0, cv::countNonZero(dst));
+}
