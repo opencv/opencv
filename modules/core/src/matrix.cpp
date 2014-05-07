@@ -3019,7 +3019,7 @@ void cv::transpose( InputArray _src, OutputArray _dst )
         return;
     }
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
     typedef IppStatus (CV_STDCALL * ippiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
     typedef IppStatus (CV_STDCALL * ippiTransposeI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize);
     ippiTranspose ippFunc = 0;
@@ -3268,7 +3268,7 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 #define reduceMinR32f reduceR_<float, float, OpMin<float> >
 #define reduceMinR64f reduceR_<double,double,OpMin<double> >
 
-#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+#if IPP_VERSION_X100 > 0
 
 static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& dstmat)
 {
@@ -3342,7 +3342,7 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSumC32f32f reduceC_<float, float, OpAdd<float> >
 #define reduceSumC64f64f reduceC_<double,double,OpAdd<double> >
 
-#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+#if IPP_VERSION_X100 > 0
 #define reduceSumC8u64f  reduceSumC_8u16u16s32f_64f
 #define reduceSumC16u64f reduceSumC_8u16u16s32f_64f
 #define reduceSumC16s64f reduceSumC_8u16u16s32f_64f
@@ -3354,7 +3354,7 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSumC32f64f reduceC_<float, double,OpAdd<double> >
 #endif
 
-#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+#if IPP_VERSION_X100 > 0
 #define REDUCE_OP(favor, optype, type1, type2) \
 static inline void reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& dstmat) \
 { \
@@ -3378,7 +3378,7 @@ static inline void reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& dstm
 }
 #endif
 
-#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+#if IPP_VERSION_X100 > 0
 REDUCE_OP(8u, Max, uchar, uchar)
 REDUCE_OP(16u, Max, ushort, ushort)
 REDUCE_OP(16s, Max, short, short)
@@ -3391,7 +3391,7 @@ REDUCE_OP(32f, Max, float, float)
 #endif
 #define reduceMaxC64f reduceC_<double,double,OpMax<double> >
 
-#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+#if IPP_VERSION_X100 > 0
 REDUCE_OP(8u, Min, uchar, uchar)
 REDUCE_OP(16u, Min, ushort, ushort)
 REDUCE_OP(16s, Min, short, short)
@@ -3614,7 +3614,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
 namespace cv
 {
 
-#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+#if IPP_VERSION_X100 > 0
 #define USE_IPP_SORT
 
 typedef IppStatus (CV_STDCALL *IppSortFunc)(void *, int);
