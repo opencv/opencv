@@ -1686,6 +1686,38 @@ Computes undistortion and rectification maps for image transform by cv::remap().
 
     :param map2: The second output map.
 
+Fisheye::undistortImage
+-------------
+Transforms an image to compensate for fisheye lens distortion.
+
+.. ocv:function:: void Fisheye::undistortImage(InputArray distorted, OutputArray undistorted,
+            InputArray K, InputArray D, InputArray Knew = cv::noArray(), const Size& new_size = Size())
+
+    :param distorted: image with fisheye lens distortion.
+
+    :param K: Camera matrix  :math:`K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}`.
+
+    :param D: Input vector of distortion coefficients  :math:`(k_1, k_2, k_3, k_4)`.
+
+    :param Knew: Camera matrix of the distorted image. By default, it is the same as  ``cameraMatrix``  but you may additionally scale and shift the result by using a different matrix.
+
+    :param undistorted: Output image with compensated fisheye lens distortion.
+
+The function transforms an image to compensate radial and tangential lens distortion.
+
+The function is simply a combination of
+:ocv:func:`Fisheye::initUndistortRectifyMap` (with unity ``R`` ) and
+:ocv:func:`remap` (with bilinear interpolation). See the former function for details of the transformation being performed.
+
+See below the results of undistortImage.
+    * a\) result of :ocv:func:`undistort` of perspective camera model (all possible coefficients (k_1, k_2, k_3, k_4, k_5, k_6) of distortion were optimized under calibration)
+    * b\) result of :ocv:func:`Fisheye::undistrortImage` of fisheye camera model (all possible coefficients (k_1, k_2, k_3, k_4) of fisheye distortion were optimized under calibration)
+    * c\) original image was captured with fisheye lens
+
+Pictures a) and b) almost the same. But if we consider points of image located far from the center of image, we can notice that on image a) these points are distorted.
+
+.. image:: pics/fisheye_undistorted.jpg
+
 
 Fisheye::estimateNewCameraMatrixForUndistortRectify
 ----------------------------------------------------------
