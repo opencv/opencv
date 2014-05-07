@@ -728,10 +728,10 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
             dcn_stddev = (int)stddev.total();
             pstddev = (Ipp64f *)stddev.data;
         }
-        for( int k = cn; k < dcn_mean; k++ )
-            pmean[k] = 0;
-        for( int k = cn; k < dcn_stddev; k++ )
-            pstddev[k] = 0;
+        for( int c = cn; c < dcn_mean; c++ )
+            pmean[c] = 0;
+        for( int c = cn; c < dcn_stddev; c++ )
+            pstddev[c] = 0;
         IppiSize sz = { cols, rows };
         int type = src.type();
         if( !mask.empty() )

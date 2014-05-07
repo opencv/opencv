@@ -72,7 +72,7 @@ namespace cv
         return func(values, dataPointer, step, size) >= 0;
     }
 
-    bool IPPSet(const cv::Scalar &value, void *dataPointer, int step, IppiSize &size, int channels, int depth)
+    static bool IPPSet(const cv::Scalar &value, void *dataPointer, int step, IppiSize &size, int channels, int depth)
     {
         if( channels == 1 )
         {
@@ -3404,31 +3404,33 @@ class IPPwarpAffineInvoker :
     public ParallelLoopBody
 {
 public:
-    IPPwarpAffineInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[2][3], int &_interpolation, int &_borderType, const Scalar &_borderValue, ippiWarpAffineBackFunc _func, bool *_ok) :
-      ParallelLoopBody(), src(_src), dst(_dst), mode(_interpolation), coeffs(_coeffs), borderType(_borderType), borderValue(_borderValue), func(_func), ok(_ok)
-      {
-          *ok = true;
-      }
+    IPPwarpAffineInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[2][3], int &_interpolation, int &_borderType,
+                         const Scalar &_borderValue, ippiWarpAffineBackFunc _func, bool *_ok) :
+        ParallelLoopBody(), src(_src), dst(_dst), coeffs(_coeffs), mode(_interpolation), borderType(_borderType),
+        borderValue(_borderValue), func(_func), ok(_ok)
+    {
+        *ok = true;
+    }
 
-      virtual void operator() (const Range& range) const
-      {
-          IppiSize srcsize = { src.cols, src.rows };
-          IppiRect srcroi = { 0, 0, src.cols, src.rows };
-          IppiRect dstroi = { 0, range.start, dst.cols, range.end - range.start };
-          int cnn = src.channels();
-          if( borderType == BORDER_CONSTANT )
-          {
-              IppiSize setSize = { dst.cols, range.end - range.start };
-              void *dataPointer = dst.data + dst.step[0] * range.start;
-              if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
-              {
-                  *ok = false;
-                  return;
-              }
-          }
-          if( func( src.data, srcsize, (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, coeffs, mode ) < 0) ////Aug 2013: problem in IPP 7.1, 8.0 : sometimes function return ippStsCoeffErr
-              *ok = false;
-      }
+    virtual void operator() (const Range& range) const
+    {
+        IppiSize srcsize = { src.cols, src.rows };
+        IppiRect srcroi = { 0, 0, src.cols, src.rows };
+        IppiRect dstroi = { 0, range.start, dst.cols, range.end - range.start };
+        int cnn = src.channels();
+        if( borderType == BORDER_CONSTANT )
+        {
+            IppiSize setSize = { dst.cols, range.end - range.start };
+            void *dataPointer = dst.data + dst.step[0] * range.start;
+            if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
+            {
+                *ok = false;
+                return;
+            }
+        }
+        if( func( src.data, srcsize, (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, coeffs, mode ) < 0) ////Aug 2013: problem in IPP 7.1, 8.0 : sometimes function return ippStsCoeffErr
+            *ok = false;
+    }
 private:
     Mat &src;
     Mat &dst;
@@ -3552,7 +3554,6 @@ class warpPerspectiveInvoker :
     public ParallelLoopBody
 {
 public:
-
     warpPerspectiveInvoker(const Mat &_src, Mat &_dst, double *_M, int _interpolation,
                            int _borderType, const Scalar &_borderValue) :
         ParallelLoopBody(), src(_src), dst(_dst), M(_M), interpolation(_interpolation),
@@ -3644,32 +3645,34 @@ class IPPwarpPerspectiveInvoker :
     public ParallelLoopBody
 {
 public:
-    IPPwarpPerspectiveInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[3][3], int &_interpolation, int &_borderType, const Scalar &_borderValue, ippiWarpPerspectiveBackFunc _func, bool *_ok) :
-      ParallelLoopBody(), src(_src), dst(_dst), mode(_interpolation), coeffs(_coeffs), borderType(_borderType), borderValue(_borderValue), func(_func), ok(_ok)
-      {
-          *ok = true;
-      }
+    IPPwarpPerspectiveInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[3][3], int &_interpolation,
+                              int &_borderType, const Scalar &_borderValue, ippiWarpPerspectiveBackFunc _func, bool *_ok) :
+        ParallelLoopBody(), src(_src), dst(_dst), coeffs(_coeffs), mode(_interpolation),
+        borderType(_borderType), borderValue(_borderValue), func(_func), ok(_ok)
+    {
+        *ok = true;
+    }
 
-      virtual void operator() (const Range& range) const
-      {
-          IppiSize srcsize = {src.cols, src.rows};
-          IppiRect srcroi = {0, 0, src.cols, src.rows};
-          IppiRect dstroi = {0, range.start, dst.cols, range.end - range.start};
-          int cnn = src.channels();
+    virtual void operator() (const Range& range) const
+    {
+        IppiSize srcsize = {src.cols, src.rows};
+        IppiRect srcroi = {0, 0, src.cols, src.rows};
+        IppiRect dstroi = {0, range.start, dst.cols, range.end - range.start};
+        int cnn = src.channels();
 
-          if( borderType == BORDER_CONSTANT )
-          {
-              IppiSize setSize = {dst.cols, range.end - range.start};
-              void *dataPointer = dst.data + dst.step[0] * range.start;
-              if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
-              {
-                  *ok = false;
-                  return;
-              }
-          }
-          if( func(src.data, srcsize, (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, coeffs, mode) < 0)
-              *ok = false;
-      }
+        if( borderType == BORDER_CONSTANT )
+        {
+            IppiSize setSize = {dst.cols, range.end - range.start};
+            void *dataPointer = dst.data + dst.step[0] * range.start;
+            if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
+            {
+                *ok = false;
+                return;
+            }
+        }
+        if( func(src.data, srcsize, (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, coeffs, mode) < 0)
+            *ok = false;
+    }
 private:
     Mat &src;
     Mat &dst;
