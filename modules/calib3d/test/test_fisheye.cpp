@@ -19,15 +19,7 @@ protected:
 
 protected:
     std::string combine(const std::string& _item1, const std::string& _item2);
-
     std::string combine_format(const std::string& item1, const std::string& item2, ...);
-
-    void readPoints(std::vector<std::vector<cv::Point3d> >& objectPoints,
-                   std::vector<std::vector<cv::Point2d> >& imagePoints,
-                   const std::string& path, const int n_images);
-
-    void readExtrinsics(const std::string& file, cv::OutputArray _R, cv::OutputArray _T, cv::OutputArray _R1, cv::OutputArray _R2,
-                        cv::OutputArray _P1, cv::OutputArray _P2, cv::OutputArray _Q);
 
     cv::Mat mergeRectification(const cv::Mat& l, const cv::Mat& r);
 };
@@ -71,16 +63,16 @@ TEST_F(FisheyeTest, undistortImage)
 {
     cv::Matx33d K = this->K;
     cv::Mat D = cv::Mat(this->D);
-    std::string file = combine(datasets_repository_path, "image000001.png");
+    std::string file = combine(datasets_repository_path, "/calib-3_stereo_from_JY/left/stereo_pair_014.jpg");
     cv::Matx33d newK = K;
     cv::Mat distorted = cv::imread(file), undistorted;
     {
         newK(0, 0) = 100;
         newK(1, 1) = 100;
         cv::Fisheye::undistortImage(distorted, undistorted, K, D, newK);
-        cv::Mat correct = cv::imread(combine(datasets_repository_path, "test_undistortImage/new_f_100.png"));
+        cv::Mat correct = cv::imread(combine(datasets_repository_path, "new_f_100.png"));
         if (correct.empty())
-            CV_Assert(cv::imwrite(combine(datasets_repository_path, "test_undistortImage/new_f_100.png"), undistorted));
+            CV_Assert(cv::imwrite(combine(datasets_repository_path, "new_f_100.png"), undistorted));
         else
             EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
     }
@@ -88,9 +80,9 @@ TEST_F(FisheyeTest, undistortImage)
         double balance = 1.0;
         cv::Fisheye::estimateNewCameraMatrixForUndistortRectify(K, D, distorted.size(), cv::noArray(), newK, balance);
         cv::Fisheye::undistortImage(distorted, undistorted, K, D, newK);
-        cv::Mat correct = cv::imread(combine(datasets_repository_path, "test_undistortImage/balance_1.0.png"));
+        cv::Mat correct = cv::imread(combine(datasets_repository_path, "balance_1.0.png"));
         if (correct.empty())
-            CV_Assert(cv::imwrite(combine(datasets_repository_path, "test_undistortImage/balance_1.0.png"), undistorted));
+            CV_Assert(cv::imwrite(combine(datasets_repository_path, "balance_1.0.png"), undistorted));
         else
             EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
     }
@@ -99,9 +91,9 @@ TEST_F(FisheyeTest, undistortImage)
         double balance = 0.0;
         cv::Fisheye::estimateNewCameraMatrixForUndistortRectify(K, D, distorted.size(), cv::noArray(), newK, balance);
         cv::Fisheye::undistortImage(distorted, undistorted, K, D, newK);
-        cv::Mat correct = cv::imread(combine(datasets_repository_path, "test_undistortImage/balance_0.0.png"));
+        cv::Mat correct = cv::imread(combine(datasets_repository_path, "balance_0.0.png"));
         if (correct.empty())
-            CV_Assert(cv::imwrite(combine(datasets_repository_path, "test_undistortImage/balance_0.0.png"), undistorted));
+            CV_Assert(cv::imwrite(combine(datasets_repository_path, "balance_0.0.png"), undistorted));
         else
             EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
     }
@@ -206,10 +198,21 @@ TEST_F(FisheyeTest, Calibration)
 {
     const int n_images = 34;
 
-    std::vector<std::vector<cv::Point2d> > imagePoints;
-    std::vector<std::vector<cv::Point3d> > objectPoints;
+    std::vector<std::vector<cv::Point2d> > imagePoints(n_images);
+    std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
 
-    readPoints(objectPoints, imagePoints, combine(datasets_repository_path, "calib-3_stereo_from_JY/left"), n_images);
+    const std::string folder =combine(datasets_repository_path, "calib-3_stereo_from_JY");
+    cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
+    CV_Assert(fs_left.isOpened());
+    for(int i = 0; i < n_images; ++i)
+    fs_left[cv::format("image_%d", i )] >> imagePoints[i];
+    fs_left.release();
+
+    cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
+    CV_Assert(fs_object.isOpened());
+    for(int i = 0; i < n_images; ++i)
+    fs_object[cv::format("image_%d", i )] >> objectPoints[i];
+    fs_object.release();
 
     int flag = 0;
     flag |= cv::Fisheye::CALIB_RECOMPUTE_EXTRINSIC;
@@ -230,10 +233,22 @@ TEST_F(FisheyeTest, Homography)
 {
     const int n_images = 1;
 
-    std::vector<std::vector<cv::Point2d> > imagePoints;
-    std::vector<std::vector<cv::Point3d> > objectPoints;
+    std::vector<std::vector<cv::Point2d> > imagePoints(n_images);
+    std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
 
-    readPoints(objectPoints, imagePoints, combine(datasets_repository_path, "calib-3_stereo_from_JY/left"), n_images);
+    const std::string folder =combine(datasets_repository_path, "calib-3_stereo_from_JY");
+    cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
+    CV_Assert(fs_left.isOpened());
+    for(int i = 0; i < n_images; ++i)
+    fs_left[cv::format("image_%d", i )] >> imagePoints[i];
+    fs_left.release();
+
+    cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
+    CV_Assert(fs_object.isOpened());
+    for(int i = 0; i < n_images; ++i)
+    fs_object[cv::format("image_%d", i )] >> objectPoints[i];
+    fs_object.release();
+
     cv::internal::IntrinsicParams param;
     param.Init(cv::Vec2d(cv::max(imageSize.width, imageSize.height) / CV_PI, cv::max(imageSize.width, imageSize.height) / CV_PI),
                cv::Vec2d(imageSize.width  / 2.0 - 0.5, imageSize.height / 2.0 - 0.5));
@@ -279,10 +294,21 @@ TEST_F(FisheyeTest, EtimateUncertainties)
 {
     const int n_images = 34;
 
-    std::vector<std::vector<cv::Point2d> > imagePoints;
-    std::vector<std::vector<cv::Point3d> > objectPoints;
+    std::vector<std::vector<cv::Point2d> > imagePoints(n_images);
+    std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
 
-    readPoints(objectPoints, imagePoints, combine(datasets_repository_path, "calib-3_stereo_from_JY/left"), n_images);
+    const std::string folder =combine(datasets_repository_path, "calib-3_stereo_from_JY");
+    cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
+    CV_Assert(fs_left.isOpened());
+    for(int i = 0; i < n_images; ++i)
+    fs_left[cv::format("image_%d", i )] >> imagePoints[i];
+    fs_left.release();
+
+    cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
+    CV_Assert(fs_object.isOpened());
+    for(int i = 0; i < n_images; ++i)
+    fs_object[cv::format("image_%d", i )] >> objectPoints[i];
+    fs_object.release();
 
     int flag = 0;
     flag |= cv::Fisheye::CALIB_RECOMPUTE_EXTRINSIC;
@@ -360,12 +386,13 @@ TEST_F(FisheyeTest, rectify)
 
         cv::Mat rectification = mergeRectification(lundist, rundist);
 
-        cv::Mat correct = cv::imread(combine_format(folder, "test_rectify/rectification_AB_%03d.png", i));
+        cv::Mat correct = cv::imread(combine_format(datasets_repository_path, "rectification_AB_%03d.png", i));
+
         if (correct.empty())
-            cv::imwrite(combine_format(folder, "test_rectify/rectification_AB_%03d.png", i), rectification);
-        else
-            EXPECT_MAT_NEAR(correct, rectification, 1e-10);
-    }
+            cv::imwrite(combine_format(datasets_repository_path, "rectification_AB_%03d.png", i), rectification);
+         else
+             EXPECT_MAT_NEAR(correct, rectification, 1e-10);
+     }
 }
 
 TEST_F(FisheyeTest, stereoCalibrate)
@@ -395,58 +422,6 @@ TEST_F(FisheyeTest, stereoCalibrate)
     for(int i = 0; i < n_images; ++i)
     fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
-
-    std::ofstream fs;
-
-    for (size_t i = 0; i < leftPoints.size(); i++)
-    {
-        std::string ss = combine(folder, "left");
-        ss = combine_format(ss, "%d", i);
-        fs.open(ss.c_str());
-        CV_Assert(fs.is_open());
-        for (size_t j = 0; j < leftPoints[i].size(); j++)
-        {
-            double x = leftPoints[i][j].x;
-            double y = leftPoints[i][j].y;
-            fs << std::setprecision(15) << x << "; " << y;
-            fs << std::endl;
-        }
-        fs.close();
-    }
-
-    for (size_t i = 0; i < rightPoints.size(); i++)
-    {
-        std::string ss = combine(folder, "right");
-        ss = combine_format(ss, "%d", i);
-        fs.open(ss.c_str());
-        CV_Assert(fs.is_open());
-        for (size_t j = 0; j < rightPoints[i].size(); j++)
-        {
-            double x = rightPoints[i][j].x;
-            double y = rightPoints[i][j].y;
-              fs << std::setprecision(15) << x << "; " << y;
-            fs << std::endl;
-        }
-        fs.close();
-    }
-
-    for (size_t i = 0; i < objectPoints.size(); i++)
-    {
-        std::string ss = combine(folder, "object");
-        ss = combine_format(ss, "%d", i);
-        fs.open(ss.c_str());
-        CV_Assert(fs.is_open());
-        for (size_t j = 0; j < objectPoints[i].size(); j++)
-        {
-            double x = objectPoints[i][j].x;
-            double y = objectPoints[i][j].y;
-            double z = objectPoints[i][j].z;
-               fs << std::setprecision(15) << x << "; " << y;
-            fs << std::setprecision(15) << "; " << z;
-            fs << std::endl;
-        }
-        fs.close();
-    }
 
     cv::Matx33d K1, K2, R;
     cv::Vec3d T;
@@ -515,59 +490,6 @@ TEST_F(FisheyeTest, stereoCalibrateFixIntrinsic)
     for(int i = 0; i < n_images; ++i)
     fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
-
-
-    std::ofstream fs;
-
-    for (size_t i = 0; i < leftPoints.size(); i++)
-    {
-        std::string ss = combine(folder, "left");
-        ss = combine_format(ss, "%d", i);
-        fs.open(ss.c_str());
-        CV_Assert(fs.is_open());
-        for (size_t j = 0; j < leftPoints[i].size(); j++)
-        {
-            double x = leftPoints[i][j].x;
-            double y = leftPoints[i][j].y;
-            fs << std::setprecision(15) << x << "; " << y;
-            fs << std::endl;
-        }
-        fs.close();
-    }
-
-    for (size_t i = 0; i < rightPoints.size(); i++)
-    {
-        std::string ss = combine(folder, "right");
-        ss = combine_format(ss, "%d", i);
-        fs.open(ss.c_str());
-        CV_Assert(fs.is_open());
-        for (size_t j = 0; j < rightPoints[i].size(); j++)
-        {
-            double x = rightPoints[i][j].x;
-            double y = rightPoints[i][j].y;
-              fs << std::setprecision(15) << x << "; " << y;
-            fs << std::endl;
-        }
-        fs.close();
-    }
-
-    for (size_t i = 0; i < objectPoints.size(); i++)
-    {
-        std::string ss = combine(folder, "object");
-        ss = combine_format(ss, "%d", i);
-        fs.open(ss.c_str());
-        CV_Assert(fs.is_open());
-        for (size_t j = 0; j < objectPoints[i].size(); j++)
-        {
-            double x = objectPoints[i][j].x;
-            double y = objectPoints[i][j].y;
-            double z = objectPoints[i][j].z;
-               fs << std::setprecision(15) << x << "; " << y;
-            fs << std::setprecision(15) << "; " << z;
-            fs << std::endl;
-        }
-        fs.close();
-    }
 
     cv::Matx33d R;
     cv::Vec3d T;
@@ -645,42 +567,6 @@ std::string FisheyeTest::combine_format(const std::string& item1, const std::str
     vsprintf( buffer, fmt.c_str(), args );
     va_end( args );
     return std::string(buffer);
-}
-
-void FisheyeTest::readPoints(std::vector<std::vector<cv::Point3d> >& objectPoints,
-               std::vector<std::vector<cv::Point2d> >& imagePoints,
-               const std::string& path, const int n_images)
-{
-    objectPoints.resize(n_images);
-    imagePoints.resize(n_images);
-
-    cv::FileStorage fs1(combine(path, "objectPoints.xml"), cv::FileStorage::READ);
-    CV_Assert(fs1.isOpened());
-    for (size_t i = 0; i < objectPoints.size(); ++i)
-    {
-        fs1[cv::format("image_%d", i)] >> objectPoints[i];
-    }
-    fs1.release();
-
-    cv::FileStorage fs2(combine(path, "imagePoints.xml"), cv::FileStorage::READ);
-    CV_Assert(fs2.isOpened());
-    for (size_t i = 0; i < imagePoints.size(); ++i)
-    {
-        fs2[cv::format("image_%d", i)] >> imagePoints[i];
-    }
-    fs2.release();
-}
-
-void FisheyeTest::readExtrinsics(const std::string& file, cv::OutputArray _R, cv::OutputArray _T, cv::OutputArray _R1, cv::OutputArray _R2,
-                    cv::OutputArray _P1, cv::OutputArray _P2, cv::OutputArray _Q)
-{
-    cv::FileStorage fs(file, cv::FileStorage::READ);
-    CV_Assert(fs.isOpened());
-
-    cv::Mat R, T, R1, R2, P1, P2, Q;
-    fs["R"] >> R;   fs["T"] >> T;   fs["R1"] >> R1;   fs["R2"] >> R2;   fs["P1"] >> P1;   fs["P2"] >> P2;   fs["Q"] >> Q;
-    if (_R.needed()) R.copyTo(_R); if(_T.needed()) T.copyTo(_T); if (_R1.needed()) R1.copyTo(_R1); if (_R2.needed()) R2.copyTo(_R2);
-    if(_P1.needed()) P1.copyTo(_P1); if(_P2.needed()) P2.copyTo(_P2); if(_Q.needed()) Q.copyTo(_Q);
 }
 
 cv::Mat FisheyeTest::mergeRectification(const cv::Mat& l, const cv::Mat& r)
