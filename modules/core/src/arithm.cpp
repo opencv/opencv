@@ -1562,8 +1562,12 @@ void cv::subtract( InputArray src1, InputArray src2, OutputArray dst,
         if (dtype == -1 && dst.fixedType())
             dtype = dst.depth();
 
-        if (!dst.fixedType() || dtype == dst.depth())
+        dtype = CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src1.channels());
+
+        if (!dst.fixedType() || dtype == dst.type())
         {
+            dst.create(src1.size(), dtype);
+
             if (dtype == CV_16S)
             {
                 Mat _dst = dst.getMat();
