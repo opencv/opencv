@@ -1537,3 +1537,205 @@ __kernel void Lab2BGR(__global const uchar * srcptr, int src_step, int src_offse
 }
 
 #endif
+
+/////////////////////////////////// [l|s]RGB <-> Luv ///////////////////////////
+
+#define LAB_CBRT_TAB_SIZE 1024
+#define LAB_CBRT_TAB_SIZE_B (256*3/2*(1<<gamma_shift))
+
+__constant float LabCbrtTabScale = LAB_CBRT_TAB_SIZE/1.5f;
+
+#ifdef DEPTH_5
+
+__kernel void BGR2Luv(__global const uchar * srcptr, int src_step, int src_offset,
+                      __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols,
+#ifdef SRGB
+                      __global const float * gammaTab,
+#endif
+                      __global const float * LabCbrtTab, __constant float * coeffs, float _un, float _vn)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < cols && y < rows)
+    {
+        int src_idx = mad24(y, src_step, mad24(x, scnbytes, src_offset));
+        int dst_idx = mad24(y, dst_step, mad24(x, dcnbytes, dst_offset));
+
+        __global const float * src = (__global const float *)(srcptr + src_idx);
+        __global float * dst = (__global float *)(dstptr + dst_idx);
+
+        float R = src[0], G = src[1], B = src[2];
+
+#ifdef SRGB
+        R = splineInterpolate(R*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+        G = splineInterpolate(G*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+        B = splineInterpolate(B*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+#endif
+        float X = R*coeffs[0] + G*coeffs[1] + B*coeffs[2];
+        float Y = R*coeffs[3] + G*coeffs[4] + B*coeffs[5];
+        float Z = R*coeffs[6] + G*coeffs[7] + B*coeffs[8];
+
+        float L = splineInterpolate(Y*LabCbrtTabScale, LabCbrtTab, LAB_CBRT_TAB_SIZE);
+        L = 116.f*L - 16.f;
+
+        float d = (4*13) / max(X + 15 * Y + 3 * Z, FLT_EPSILON);
+        float u = L*(X*d - _un);
+        float v = L*((9*0.25f)*Y*d - _vn);
+
+        dst[0] = L;
+        dst[1] = u;
+        dst[2] = v;
+    }
+}
+
+#elif defined DEPTH_0
+
+__kernel void BGR2Luv(__global const uchar * src, int src_step, int src_offset,
+                      __global uchar * dst, int dst_step, int dst_offset, int rows, int cols,
+#ifdef SRGB
+                      __global const float * gammaTab,
+#endif
+                      __global const float * LabCbrtTab, __constant float * coeffs, float _un, float _vn)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < cols && y < rows)
+    {
+        int src_idx = mad24(y, src_step, mad24(x, scnbytes, src_offset));
+        int dst_idx = mad24(y, dst_step, mad24(x, dcnbytes, dst_offset));
+
+        src += src_idx;
+        dst += dst_idx;
+
+        float scale = 1.0f / 255.0f;
+        float R = src[0]*scale, G = src[1]*scale, B = src[2]*scale;
+
+#ifdef SRGB
+        R = splineInterpolate(R*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+        G = splineInterpolate(G*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+        B = splineInterpolate(B*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+#endif
+        float X = R*coeffs[0] + G*coeffs[1] + B*coeffs[2];
+        float Y = R*coeffs[3] + G*coeffs[4] + B*coeffs[5];
+        float Z = R*coeffs[6] + G*coeffs[7] + B*coeffs[8];
+
+        float L = splineInterpolate(Y*LabCbrtTabScale, LabCbrtTab, LAB_CBRT_TAB_SIZE);
+        L = 116.f*L - 16.f;
+
+        float d = (4*13) / max(X + 15 * Y + 3 * Z, FLT_EPSILON);
+        float u = L*(X*d - _un);
+        float v = L*((9*0.25f)*Y*d - _vn);
+
+        dst[0] = SAT_CAST(L * 2.55f);
+        dst[1] = SAT_CAST(mad(u, 0.72033898305084743f, 96.525423728813564f));
+        dst[2] = SAT_CAST(mad(v, 0.99609375f, 139.453125f));
+    }
+}
+
+#endif
+
+#ifdef DEPTH_5
+
+__kernel void Luv2BGR(__global const uchar * srcptr, int src_step, int src_offset,
+                      __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols,
+#ifdef SRGB
+                      __global const float * gammaTab,
+#endif
+                      __constant float * coeffs, float _un, float _vn)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < cols && y < rows)
+    {
+        int src_idx = mad24(y, src_step, mad24(x, scnbytes, src_offset));
+        int dst_idx = mad24(y, dst_step, mad24(x, dcnbytes, dst_offset));
+
+        __global const float * src = (__global const float *)(srcptr + src_idx);
+        __global float * dst = (__global float *)(dstptr + dst_idx);
+
+        float L = src[0], u = src[1], v = src[2], d, X, Y, Z;
+        Y = (L + 16.f) * (1.f/116.f);
+        Y = Y*Y*Y;
+        d = (1.f/13.f)/L;
+        u = u*d + _un;
+        v = v*d + _vn;
+        float iv = 1.f/v;
+        X = 2.25f * u * Y * iv ;
+        Z = (12 - 3 * u - 20 * v) * Y * 0.25f * iv;
+
+        float R = X*coeffs[0] + Y*coeffs[1] + Z*coeffs[2];
+        float G = X*coeffs[3] + Y*coeffs[4] + Z*coeffs[5];
+        float B = X*coeffs[6] + Y*coeffs[7] + Z*coeffs[8];
+
+#ifdef SRGB
+        R = splineInterpolate(R*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+        G = splineInterpolate(G*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+        B = splineInterpolate(B*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+#endif
+
+        dst[0] = R;
+        dst[1] = G;
+        dst[2] = B;
+#if dcn == 4
+        dst[3] = MAX_NUM;
+#endif
+    }
+}
+
+#elif defined DEPTH_0
+
+__kernel void Luv2BGR(__global const uchar * src, int src_step, int src_offset,
+                      __global uchar * dst, int dst_step, int dst_offset, int rows, int cols,
+#ifdef SRGB
+                      __global const float * gammaTab,
+#endif
+                      __constant float * coeffs, float _un, float _vn)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < cols && y < rows)
+    {
+        int src_idx = mad24(y, src_step, mad24(x, scnbytes, src_offset));
+        int dst_idx = mad24(y, dst_step, mad24(x, dcnbytes, dst_offset));
+
+        src += src_idx;
+        dst += dst_idx;
+
+        float d, X, Y, Z;
+        float L = src[0]*(100.f/255.f);
+        float u = (float)(src[1]*1.388235294117647f - 134.f);
+        float v = (float)(src[2]*1.003921568627451f - 140.f);
+        Y = (L + 16.f) * (1.f/116.f);
+        Y = Y*Y*Y;
+        d = (1.f/13.f)/L;
+        u = u*d + _un;
+        v = v*d + _vn;
+        float iv = 1.f/v;
+        X = 2.25f * u * Y * iv ;
+        Z = (12 - 3 * u - 20 * v) * Y * 0.25f * iv;
+
+        float R = X*coeffs[0] + Y*coeffs[1] + Z*coeffs[2];
+        float G = X*coeffs[3] + Y*coeffs[4] + Z*coeffs[5];
+        float B = X*coeffs[6] + Y*coeffs[7] + Z*coeffs[8];
+
+#ifdef SRGB
+        R = splineInterpolate(R*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+        G = splineInterpolate(G*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+        B = splineInterpolate(B*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+#endif
+
+        dst[0] = SAT_CAST(R * 255.0f);
+        dst[1] = SAT_CAST(G * 255.0f);
+        dst[2] = SAT_CAST(B * 255.0f);
+
+#if dcn == 4
+        dst[3] = MAX_NUM;
+#endif
+    }
+}
+
+#endif
