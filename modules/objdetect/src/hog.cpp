@@ -747,7 +747,7 @@ void HOGCache::normalizeBlockHistogram(float* _hist) const
 
     float sum = 0;
 #ifdef HAVE_IPP
-    ippsDotProd_32f(hist,hist,sz,&sum);
+    ippsDotProd_32f(hist,hist,(int)sz,&sum);
 #else
     for( i = 0; i < sz; i++ )
         sum += hist[i]*hist[i];
@@ -755,9 +755,9 @@ void HOGCache::normalizeBlockHistogram(float* _hist) const
 
     float scale = 1.f/(std::sqrt(sum)+sz*0.1f), thresh = (float)descriptor->L2HysThreshold;
 #ifdef HAVE_IPP
-    ippsMulC_32f_I(scale,hist,sz);
-    ippsThreshold_32f_I( hist, sz, thresh, ippCmpGreater );
-    ippsDotProd_32f(hist,hist,sz,&sum);
+    ippsMulC_32f_I(scale,hist,(int)sz);
+    ippsThreshold_32f_I( hist, (int)sz, thresh, ippCmpGreater );
+    ippsDotProd_32f(hist,hist,(int)sz,&sum);
 #else
     for( i = 0, sum = 0; i < sz; i++ )
     {
@@ -768,7 +768,7 @@ void HOGCache::normalizeBlockHistogram(float* _hist) const
 
     scale = 1.f/(std::sqrt(sum)+1e-3f);
 #ifdef HAVE_IPP
-    ippsMulC_32f_I(scale,hist,sz);
+    ippsMulC_32f_I(scale,hist,(int)sz);
 #else
     for( i = 0; i < sz; i++ )
         hist[i] *= scale;
