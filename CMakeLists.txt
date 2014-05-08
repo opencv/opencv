@@ -223,6 +223,10 @@ OCV_OPTION(ENABLE_NOISY_WARNINGS      "Show all warnings even if they are too no
 OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
 OCV_OPTION(ENABLE_WINRT_MODE          "Build with Windows Runtime support"                       OFF  IF WIN32 )
 OCV_OPTION(ENABLE_WINRT_MODE_NATIVE   "Build with Windows Runtime native C++ support"            OFF  IF WIN32 )
+OCV_OPTION(ENABLE_LIBVS2013           "Build VS2013 with Visual Studio 2013 libraries"           OFF  IF WIN32 AND (MSVC_VERSION EQUAL 1800) )
+OCV_OPTION(ENABLE_WINSDK81            "Build VS2013 with Windows 8.1 SDK"                        OFF  IF WIN32 AND (MSVC_VERSION EQUAL 1800) )
+OCV_OPTION(ENABLE_WINPHONESDK80       "Build with Windows Phone 8.0 SDK"                         OFF  IF WIN32 AND (MSVC_VERSION EQUAL 1700) )
+OCV_OPTION(ENABLE_WINPHONESDK81       "Build VS2013 with Windows Phone 8.1 SDK"                  OFF  IF WIN32 AND (MSVC_VERSION EQUAL 1800) )
 
 # uncategorized options
 # ===================================================
@@ -745,8 +749,8 @@ if(WIN32)
 status("")
     status("  Windows RT support:" HAVE_WINRT THEN YES ELSE NO)
     if (ENABLE_WINRT_MODE OR ENABLE_WINRT_MODE_NATIVE)
-      status("    Windows SDK v8.0:" ${WINDOWS_SDK_PATH})
-      status("    Visual Studio 2012:" ${VISUAL_STUDIO_PATH})
+      status("  Windows (Phone) SDK v8.0/v8.1:" ${WINDOWS_SDK_PATH})
+      status("  Visual Studio 2012/2013:" ${VISUAL_STUDIO_PATH})
     endif()
 endif(WIN32)
 
