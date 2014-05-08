@@ -948,8 +948,8 @@ namespace cv
         // Deserializes this object from a given cv::FileStorage.
         virtual void load(const FileStorage& fs) = 0;
 
-        // Sets additions information as pairs label - info.
-        virtual void setLabelsInfo(const std::map<int, string>& additionalInfo) = 0;
+        // Sets additional information as pairs label - info.
+        virtual void setLabelsInfo(const std::map<int, string>& labelsInfo) = 0;
 
         // Gets string information by label
         virtual string getLabelInfo(int label) const = 0;

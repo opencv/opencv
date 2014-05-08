@@ -182,10 +182,10 @@ public:
     // See FaceRecognizer::save.
     void save(FileStorage& fs) const;
 
-    // Sets additions information as pairs label - info.
+    // Sets additional information as pairs label - info.
     void setLabelsInfo(const std::map<int,string>& labelsInfo);
 
-    // Gets additional information by label
+    // Gets string information by label
     string getLabelInfo(int label) const;
 
     // Gets labels by string
@@ -247,10 +247,10 @@ public:
     // See FaceRecognizer::save.
     void save(FileStorage& fs) const;
 
-    // Sets additions information as pairs label - info.
+    // Sets additional information as pairs label - info.
     void setLabelsInfo(const std::map<int,string>& labelsInfo);
 
-    // Gets additional information by label
+    // Gets string information by label
     string getLabelInfo(int label) const;
 
     // Gets labels by string
@@ -342,10 +342,10 @@ public:
     // See FaceRecognizer::save.
     void save(FileStorage& fs) const;
 
-    // Sets additions information as pairs label - info.
+    // Sets additional information as pairs label - info.
     void setLabelsInfo(const std::map<int,string>& labelsInfo);
 
-    // Gets additional information by label
+    // Gets string information by label
     string getLabelInfo(int label) const;
 
     // Gets labels by string
@@ -487,7 +487,7 @@ void Eigenfaces::load(const FileStorage& fs) {
     // read sequences
     readFileNodeList(fs["projections"], _projections);
     fs["labels"] >> _labels;
-    const FileNode& fn = fs["info"];
+    const FileNode& fn = fs["labelsInfo"];
     if (fn.type() == FileNode::SEQ)
     {
         _labelsInfo.clear();
@@ -509,7 +509,7 @@ void Eigenfaces::save(FileStorage& fs) const {
     // write sequences
     writeFileNodeList(fs, "projections", _projections);
     fs << "labels" << _labels;
-    fs << "info" << "[";
+    fs << "labelsInfo" << "[";
     for (std::map<int, string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
         fs << LabelInfo(it->first, it->second);
     fs << "]";
@@ -522,9 +522,8 @@ void Eigenfaces::setLabelsInfo(const std::map<int,string>& labelsInfo)
 
 string Eigenfaces::getLabelInfo(int label) const
 {
-    if(_labelsInfo.count(label) > 0)
-        return _labelsInfo.at(label);
-    return "";
+    std::map<int, string>::const_iterator iter(_labelsInfo.find(label));
+    return iter != _labelsInfo.end() ? iter->second : "";
 }
 
 vector<int> Eigenfaces::getLabelsByString(const string& str)
@@ -647,7 +646,7 @@ void Fisherfaces::load(const FileStorage& fs) {
     // read sequences
     readFileNodeList(fs["projections"], _projections);
     fs["labels"] >> _labels;
-    const FileNode& fn = fs["info"];
+    const FileNode& fn = fs["labelsInfo"];
     if (fn.type() == FileNode::SEQ)
     {
         _labelsInfo.clear();
@@ -670,7 +669,7 @@ void Fisherfaces::save(FileStorage& fs) const {
     // write sequences
     writeFileNodeList(fs, "projections", _projections);
     fs << "labels" << _labels;
-    fs << "info" << "[";
+    fs << "labelsInfo" << "[";
     for (std::map<int, string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
         fs << LabelInfo(it->first, it->second);
     fs << "]";
@@ -683,9 +682,8 @@ void Fisherfaces::setLabelsInfo(const std::map<int,string>& labelsInfo)
 
 string Fisherfaces::getLabelInfo(int label) const
 {
-    if(_labelsInfo.count(label) > 0)
-        return _labelsInfo.at(label);
-    return "";
+    std::map<int, string>::const_iterator iter(_labelsInfo.find(label));
+    return iter != _labelsInfo.end() ? iter->second : "";
 }
 
 vector<int> Fisherfaces::getLabelsByString(const string& str)
@@ -885,7 +883,7 @@ void LBPH::load(const FileStorage& fs) {
     //read matrices
     readFileNodeList(fs["histograms"], _histograms);
     fs["labels"] >> _labels;
-    const FileNode& fn = fs["info"];
+    const FileNode& fn = fs["labelsInfo"];
     if (fn.type() == FileNode::SEQ)
     {
         _labelsInfo.clear();
@@ -907,7 +905,7 @@ void LBPH::save(FileStorage& fs) const {
     // write matrices
     writeFileNodeList(fs, "histograms", _histograms);
     fs << "labels" << _labels;
-    fs << "info" << "[";
+    fs << "labelsInfo" << "[";
     for (std::map<int, string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
         fs << LabelInfo(it->first, it->second);
     fs << "]";
@@ -920,9 +918,8 @@ void LBPH::setLabelsInfo(const std::map<int,string>& labelsInfo)
 
 string LBPH::getLabelInfo(int label) const
 {
-    if(_labelsInfo.count(label) > 0)
-        return _labelsInfo.at(label);
-    return "";
+    std::map<int, string>::const_iterator iter(_labelsInfo.find(label));
+    return iter != _labelsInfo.end() ? iter->second : "";
 }
 
 vector<int> LBPH::getLabelsByString(const string& str)
