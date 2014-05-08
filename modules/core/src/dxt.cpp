@@ -2897,7 +2897,7 @@ static void IDCT_64f(const double* src, int src_step, double* dft_src, double* d
 
 namespace cv
 {
-#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7 && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7
 
 typedef IppStatus (CV_STDCALL * ippiDCTFunc)(const Ipp32f*, int, Ipp32f*, int, const void*, Ipp8u*);
 typedef IppStatus (CV_STDCALL * ippiDCTInitAlloc)(void**, IppiSize, IppHintAlgorithm);
@@ -3050,7 +3050,7 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
     _dst.create( src.rows, src.cols, type );
     Mat dst = _dst.getMat();
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7) && !defined HAVE_IPP_ICV_ONLY
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     bool row = (flags & DCT_ROWS) != 0;
     if (src.type() == CV_32F)
     {
