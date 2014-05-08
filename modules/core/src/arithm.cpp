@@ -1562,10 +1562,12 @@ void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
     bool src1Scalar = checkScalar(src1, _src2.type(), kind1, kind2);
     bool src2Scalar = checkScalar(src2, _src1.type(), kind2, kind1);
 
-    if (!src1Scalar && !src2Scalar && mask.empty() &&
-        src1.depth() == CV_8U && src2.depth() == CV_8U)
+    if (!src1Scalar && !src2Scalar &&
+        src1.depth() == CV_8U && src2.type() == src1.type() &&
+        src1.dims == 2 && src2.size() == src1.size() &&
+        mask.empty())
     {
-        if (dtype == -1)
+        if (dtype < 0)
         {
             if (_dst.fixedType())
             {
@@ -1577,11 +1579,11 @@ void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
             }
         }
 
-        dtype = CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), _src1.channels());
+        dtype = CV_MAT_DEPTH(dtype);
 
-        if (dtype == _dst.type())
+        if (!_dst.fixedType() || dtype == _dst.depth())
         {
-            _dst.create(_src1.size(), dtype);
+            _dst.create(src1.size(), CV_MAKE_TYPE(dtype, src1.channels()));
 
             if (dtype == CV_16S)
             {
