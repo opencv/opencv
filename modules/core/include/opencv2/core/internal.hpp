@@ -97,6 +97,13 @@ CV_INLINE IppiSize ippiSize(int width, int height)
     IppiSize size = { width, height };
     return size;
 }
+
+CV_INLINE IppiSize ippiSize(const cv::Size & _size)
+{
+    IppiSize size = { _size.width, _size.height };
+    return size;
+}
+
 #endif
 
 #ifndef IPPI_CALL
