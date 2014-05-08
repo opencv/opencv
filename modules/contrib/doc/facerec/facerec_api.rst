@@ -46,6 +46,15 @@ a unified access to all face recongition algorithms in OpenCV. ::
 
       // Deserializes this object from a given cv::FileStorage.
       virtual void load(const FileStorage& fs) = 0;
+
+      // Sets additional information as pairs label - info.
+      virtual void setLabelsInfo(const std::map<int, string>& labelsInfo) = 0;
+
+      // Gets string information by label
+      virtual string getLabelInfo(int label) const = 0;
+
+      // Gets labels by string
+      virtual vector<int> getLabelsByString(const string& str) = 0;
   };
 
 
@@ -69,6 +78,8 @@ Moreover every :ocv:class:`FaceRecognizer` supports the:
 * **Prediction** of a given sample image, that means a face. The image is given as a :ocv:class:`Mat`.
 
 * **Loading/Saving** the model state from/to a given XML or YAML.
+
+* **Setting/Getting labels info**, that is storaged as a string.
 
 .. note:: When using the FaceRecognizer interface in combination with Python, please stick to Python 2. Some underlying scripts like create_csv will not work in other versions, like Python 3.
 
@@ -293,6 +304,30 @@ to enable loading the model state. ``FaceRecognizer::load(FileStorage& fs)`` in
 turn gets called by ``FaceRecognizer::load(const string& filename)``, to ease
 saving a model.
 
+FaceRecognizer::setLabelsInfo
+-----------------------------
+
+Sets string information about labels into the model.
+.. ocv:function:: void FaceRecognizer::setLabelsInfo(const std::map<int, string>& labelsInfo) = 0
+
+Information about the label loads as a pair label-its info.
+
+FaceRecognizer::getLabelInfo
+----------------------------
+
+Gets string information by label.
+.. ocv:function:: string FaceRecognizer::getLabelInfo(int label) const = 0
+
+If there is no such label in the model or there is no information about the label it will return an empty string.
+
+FaceRecognizer::getLabelsByString
+---------------------------------
+Gets vector of labels by string.
+
+.. ocv:function:: vector<int> FaceRecognizer::getLabelsByString(const string& str) = 0
+
+If the string contained in a string information for a label, this label will be pushed into the vector.
+
 createEigenFaceRecognizer
 -------------------------
 
@@ -319,6 +354,7 @@ Model internal data:
 * ``mean`` The sample mean calculated from the training data.
 * ``projections`` The projections of the training data.
 * ``labels`` The threshold applied in the prediction. If the distance to the nearest neighbor is larger than the threshold, this method returns -1.
+* ``labelsInfo`` The string information about the labels.
 
 createFisherFaceRecognizer
 --------------------------
@@ -346,6 +382,7 @@ Model internal data:
 * ``mean`` The sample mean calculated from the training data.
 * ``projections`` The projections of the training data.
 * ``labels`` The labels corresponding to the projections.
+* ``labelsInfo`` The string information about the labels.
 
 
 createLBPHFaceRecognizer
@@ -375,3 +412,4 @@ Model internal data:
 * ``threshold`` see :ocv:func:`createLBPHFaceRecognizer`.
 * ``histograms`` Local Binary Patterns Histograms calculated from the given training data (empty if none was given).
 * ``labels`` Labels corresponding to the calculated Local Binary Patterns Histograms.
+* ``labelsInfo`` The string information about the labels.
