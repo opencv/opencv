@@ -60,8 +60,8 @@ namespace cv
     {
     }
 
-    AKAZE::AKAZE(DESCRIPTOR_TYPE descriptor_type, int _descriptor_size, int _descriptor_channels)
-        : descriptor(descriptor_type)
+    AKAZE::AKAZE(DESCRIPTOR_TYPE _descriptor_type, int _descriptor_size, int _descriptor_channels)
+        : descriptor(_descriptor_type)
         , descriptor_channels(_descriptor_channels)
         , descriptor_size(_descriptor_size)
     {
