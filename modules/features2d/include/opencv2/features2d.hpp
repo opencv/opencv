@@ -893,15 +893,14 @@ KAZE implementation
 class CV_EXPORTS_W KAZE : public Feature2D
 {
 public:
-
-    /// AKAZE Descriptor Type
+   /// AKAZE Descriptor Type
     enum DESCRIPTOR_TYPE {
         DESCRIPTOR_MSURF = 1,
         DESCRIPTOR_GSURF = 2
     };
 
     CV_WRAP KAZE();
-    CV_WRAP explicit KAZE(DESCRIPTOR_TYPE type, bool _extended, bool _upright);
+    explicit KAZE(DESCRIPTOR_TYPE descriptor_type, bool _extended, bool _upright);
 
     virtual ~KAZE();
 
@@ -945,7 +944,7 @@ public:
     };
 
     CV_WRAP AKAZE();
-    CV_WRAP explicit AKAZE(DESCRIPTOR_TYPE _descriptor, int _descriptor_size = 0, int _descriptor_channels = 3);
+    explicit AKAZE(DESCRIPTOR_TYPE descriptor_type, int _descriptor_size = 0, int _descriptor_channels = 3);
 
     virtual ~AKAZE();
 
