@@ -900,7 +900,7 @@ public:
     };
 
     CV_WRAP KAZE();
-    explicit KAZE(DESCRIPTOR_TYPE descriptor_type, bool _extended, bool _upright);
+    explicit KAZE(DESCRIPTOR_TYPE descriptor_type, bool extended, bool upright);
 
     virtual ~KAZE();
 
@@ -944,7 +944,7 @@ public:
     };
 
     CV_WRAP AKAZE();
-    explicit AKAZE(DESCRIPTOR_TYPE descriptor_type, int _descriptor_size = 0, int _descriptor_channels = 3);
+    explicit AKAZE(DESCRIPTOR_TYPE descriptor_type, int descriptor_size = 0, int descriptor_channels = 3);
 
     virtual ~AKAZE();
 
