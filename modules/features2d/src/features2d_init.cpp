@@ -126,6 +126,8 @@ CV_INIT_ALGORITHM(GFTTDetector, "Feature2D.GFTT",
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 CV_INIT_ALGORITHM(KAZE, "Feature2D.KAZE",
+                  obj.info()->addParam(obj, "descriptor", obj.descriptor);
+                  obj.info()->addParam(obj, "upright", obj.upright);
                   obj.info()->addParam(obj, "extended", obj.extended))
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
