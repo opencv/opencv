@@ -59,8 +59,8 @@ namespace cv
     {
     }
 
-    KAZE::KAZE(DESCRIPTOR_TYPE type, bool _extended, bool _upright)
-        : descriptor(type)
+    KAZE::KAZE(DESCRIPTOR_TYPE descriptor_type, bool _extended, bool _upright)
+        : descriptor(descriptor_type)
         , extended(_extended)
         , upright(_upright)
     {
