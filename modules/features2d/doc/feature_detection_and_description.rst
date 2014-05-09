@@ -273,7 +273,7 @@ Class implementing the KAZE keypoint detector and descriptor extractor, describe
     };
 
 KAZE::KAZE
---------
+----------
 The KAZE constructor
 
 .. ocv:function:: KAZE::KAZE(DESCRIPTOR_TYPE descriptor_type, bool extended, bool upright)
@@ -310,7 +310,7 @@ Class implementing the AKAZE keypoint detector and descriptor extractor, describ
     };
 
 AKAZE::AKAZE
---------
+------------
 The AKAZE constructor
 
 .. ocv:function:: AKAZE::AKAZE(DESCRIPTOR_TYPE descriptor_type, int descriptor_size = 0, int descriptor_channels = 3)
