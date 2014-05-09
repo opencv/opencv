@@ -52,11 +52,20 @@ http://www.robesafe.com/personal/pablo.alcantarilla/papers/Alcantarilla12eccv.pd
 
 namespace cv
 {
-    KAZE::KAZE(bool _extended /* = false */)
-        : extended(_extended)
+    KAZE::KAZE()
+        : descriptor(DESCRIPTOR_MSURF)
+        , extended(false)
+        , upright(false)
     {
     }
 
+    KAZE::KAZE(DESCRIPTOR_TYPE type, bool _extended, bool _upright)
+        : descriptor(type)
+        , extended(_extended)
+        , upright(_upright)
+    {
+
+    }
     KAZE::~KAZE()
     {
 
@@ -102,7 +111,9 @@ namespace cv
         KAZEOptions options;
         options.img_width = img.cols;
         options.img_height = img.rows;
+        options.descriptor = static_cast<DESCRIPTOR_TYPE>(descriptor);
         options.extended = extended;
+        options.upright = upright;
 
         KAZEFeatures impl(options);
         impl.Create_Nonlinear_Scale_Space(img1_32);
@@ -135,7 +146,9 @@ namespace cv
         KAZEOptions options;
         options.img_width = img.cols;
         options.img_height = img.rows;
+        options.descriptor = static_cast<DESCRIPTOR_TYPE>(descriptor);
         options.extended = extended;
+        options.upright = upright;
 
         KAZEFeatures impl(options);
         impl.Create_Nonlinear_Scale_Space(img1_32);
@@ -161,7 +174,9 @@ namespace cv
         KAZEOptions options;
         options.img_width = img.cols;
         options.img_height = img.rows;
+        options.descriptor = static_cast<DESCRIPTOR_TYPE>(descriptor);
         options.extended = extended;
+        options.upright = upright;
 
         KAZEFeatures impl(options);
         impl.Create_Nonlinear_Scale_Space(img1_32);

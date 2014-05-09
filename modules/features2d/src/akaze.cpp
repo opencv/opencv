@@ -53,10 +53,16 @@ http://www.robesafe.com/personal/pablo.alcantarilla/papers/Alcantarilla13bmvc.pd
 
 namespace cv
 {
+    AKAZE::AKAZE()
+        : descriptor(DESCRIPTOR_MLDB)
+        , descriptor_channels(3)
+        , descriptor_size(0)
+    {
+    }
 
-    AKAZE::AKAZE(int _descriptor, int _descriptor_size, int _descriptor_channels)
-        : descriptor_channels(_descriptor_channels)
-        , descriptor(_descriptor)
+    AKAZE::AKAZE(DESCRIPTOR_TYPE _descriptor, int _descriptor_size, int _descriptor_channels)
+        : descriptor(_descriptor)
+        , descriptor_channels(_descriptor_channels)
         , descriptor_size(_descriptor_size)
     {
 
@@ -70,12 +76,14 @@ namespace cv
     // returns the descriptor size in bytes
     int AKAZE::descriptorSize() const
     {
-        if (descriptor < MLDB_UPRIGHT)
+        switch (descriptor)
         {
+        case cv::AKAZE::DESCRIPTOR_KAZE:
+        case cv::AKAZE::DESCRIPTOR_KAZE_UPRIGHT:
             return 64;
-        }
-        else
-        {
+
+        case cv::AKAZE::DESCRIPTOR_MLDB:
+        case cv::AKAZE::DESCRIPTOR_MLDB_UPRIGHT:
             // We use the full length binary descriptor -> 486 bits
             if (descriptor_size == 0)
             {
@@ -87,32 +95,45 @@ namespace cv
                 // We use the random bit selection length binary descriptor
                 return (int)ceil(descriptor_size / 8.);
             }
+
+        default:
+            return -1;
         }
     }
 
     // returns the descriptor type
     int AKAZE::descriptorType() const
     {
-        if (descriptor < MLDB_UPRIGHT)
+        switch (descriptor)
         {
-            return CV_32F;
-        }
-        else
-        {
-            return CV_8U;
+        case cv::AKAZE::DESCRIPTOR_KAZE:
+        case cv::AKAZE::DESCRIPTOR_KAZE_UPRIGHT:
+                return CV_32F;
+
+        case cv::AKAZE::DESCRIPTOR_MLDB:
+        case cv::AKAZE::DESCRIPTOR_MLDB_UPRIGHT:
+                return CV_8U;
+
+            default:
+                return -1;
         }
     }
 
     // returns the default norm type
     int AKAZE::defaultNorm() const
     {
-        if (descriptor < MLDB_UPRIGHT)
+        switch (descriptor)
         {
-            return NORM_L2;
-        }
-        else
-        {
-            return NORM_HAMMING;
+        case cv::AKAZE::DESCRIPTOR_KAZE:
+        case cv::AKAZE::DESCRIPTOR_KAZE_UPRIGHT:
+            return cv::NORM_L2;
+
+        case cv::AKAZE::DESCRIPTOR_MLDB:
+        case cv::AKAZE::DESCRIPTOR_MLDB_UPRIGHT:
+            return cv::NORM_HAMMING;
+
+        default:
+            return -1;
         }
     }
 
@@ -132,6 +153,9 @@ namespace cv
         cv::Mat& desc = descriptors.getMatRef();
 
         AKAZEOptions options;
+        options.descriptor = static_cast<DESCRIPTOR_TYPE>(descriptor);
+        options.descriptor_channels = descriptor_channels;
+        options.descriptor_size = descriptor_size;
         options.img_width = img.cols;
         options.img_height = img.rows;
 
@@ -164,6 +188,9 @@ namespace cv
         img.convertTo(img1_32, CV_32F, 1.0 / 255.0, 0);
 
         AKAZEOptions options;
+        options.descriptor = static_cast<DESCRIPTOR_TYPE>(descriptor);
+        options.descriptor_channels = descriptor_channels;
+        options.descriptor_size = descriptor_size;
         options.img_width = img.cols;
         options.img_height = img.rows;
 
@@ -189,6 +216,9 @@ namespace cv
         cv::Mat& desc = descriptors.getMatRef();
 
         AKAZEOptions options;
+        options.descriptor = static_cast<DESCRIPTOR_TYPE>(descriptor);
+        options.descriptor_channels = descriptor_channels;
+        options.descriptor_size = descriptor_size;
         options.img_width = img.cols;
         options.img_height = img.rows;
 

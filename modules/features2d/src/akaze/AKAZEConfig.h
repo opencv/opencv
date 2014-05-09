@@ -10,6 +10,7 @@
 /* ************************************************************************* */
 // OpenCV
 #include "precomp.hpp"
+#include <opencv2/features2d.hpp>
 
 /* ************************************************************************* */
 /// Lookup table for 2d gaussian (sigma = 2.5) where (0,0) is top left and (6,6) is bottom right
@@ -24,28 +25,16 @@ const float gauss25[7][7] = {
 };
 
 /* ************************************************************************* */
-/// AKAZE Descriptor Type
-enum DESCRIPTOR_TYPE {
-    SURF_UPRIGHT = 0, ///< Upright descriptors, not invariant to rotation
-    SURF = 1,
-    MSURF_UPRIGHT = 2, ///< Upright descriptors, not invariant to rotation
-    MSURF = 3,
-    MLDB_UPRIGHT = 4, ///< Upright descriptors, not invariant to rotation
-    MLDB = 5
-};
-
-/* ************************************************************************* */
-/// AKAZE Diffusivities
-enum DIFFUSIVITY_TYPE {
-    PM_G1 = 0,
-    PM_G2 = 1,
-    WEICKERT = 2,
-    CHARBONNIER = 3
-};
-
-/* ************************************************************************* */
 /// AKAZE configuration options structure
 struct AKAZEOptions {
+
+    /// AKAZE Diffusivities
+    enum DIFFUSIVITY_TYPE {
+        PM_G1 = 0,
+        PM_G2 = 1,
+        WEICKERT = 2,
+        CHARBONNIER = 3
+    };
 
     AKAZEOptions()
         : omax(4)
@@ -60,7 +49,7 @@ struct AKAZEOptions {
         , dthreshold(0.001f)
         , min_dthreshold(0.00001f)
 
-        , descriptor(MLDB)
+        , descriptor(cv::AKAZE::DESCRIPTOR_MLDB)
         , descriptor_size(0)
         , descriptor_channels(3)
         , descriptor_pattern_size(10)
@@ -83,7 +72,7 @@ struct AKAZEOptions {
     float dthreshold;               ///< Detector response threshold to accept point
     float min_dthreshold;           ///< Minimum detector threshold to accept a point
 
-    DESCRIPTOR_TYPE descriptor;     ///< Type of descriptor
+    cv::AKAZE::DESCRIPTOR_TYPE descriptor;     ///< Type of descriptor
     int descriptor_size;            ///< Size of the descriptor in bits. 0->Full size
     int descriptor_channels;        ///< Number of channels in the descriptor (1, 2, 3)
     int descriptor_pattern_size;    ///< Actual patch size is 2*pattern_size*point.scale

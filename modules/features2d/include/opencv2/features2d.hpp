@@ -893,7 +893,15 @@ KAZE implementation
 class CV_EXPORTS_W KAZE : public Feature2D
 {
 public:
-    CV_WRAP explicit KAZE(bool _extended = false);
+
+    /// AKAZE Descriptor Type
+    enum DESCRIPTOR_TYPE {
+        DESCRIPTOR_MSURF = 1,
+        DESCRIPTOR_GSURF = 2
+    };
+
+    CV_WRAP KAZE();
+    CV_WRAP explicit KAZE(DESCRIPTOR_TYPE type, bool _extended, bool _upright);
 
     virtual ~KAZE();
 
@@ -917,7 +925,9 @@ protected:
     void detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const;
     void computeImpl(InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const;
 
+    CV_PROP int  descriptor;
     CV_PROP bool extended;
+    CV_PROP bool upright;
 };
 
 /*!
@@ -926,7 +936,16 @@ AKAZE implementation
 class CV_EXPORTS_W AKAZE : public Feature2D
 {
 public:
-    CV_WRAP explicit AKAZE(int _descriptor = 5, int _descriptor_size = 0, int _descriptor_channels = 3);
+    /// AKAZE Descriptor Type
+    enum DESCRIPTOR_TYPE {
+        DESCRIPTOR_KAZE_UPRIGHT = 2, ///< Upright descriptors, not invariant to rotation
+        DESCRIPTOR_KAZE = 3,
+        DESCRIPTOR_MLDB_UPRIGHT = 4, ///< Upright descriptors, not invariant to rotation
+        DESCRIPTOR_MLDB = 5
+    };
+
+    CV_WRAP AKAZE();
+    CV_WRAP explicit AKAZE(DESCRIPTOR_TYPE _descriptor, int _descriptor_size = 0, int _descriptor_channels = 3);
 
     virtual ~AKAZE();
 
@@ -951,8 +970,8 @@ protected:
     void computeImpl(InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const;
     void detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask = noArray()) const;
 
-    CV_PROP int descriptor_channels;
     CV_PROP int descriptor;
+    CV_PROP int descriptor_channels;
     CV_PROP int descriptor_size;
 
 };
