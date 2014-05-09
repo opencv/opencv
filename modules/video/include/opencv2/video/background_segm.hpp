@@ -234,6 +234,51 @@ public:
 CV_EXPORTS_W Ptr<BackgroundSubtractorGMG> createBackgroundSubtractorGMG(int initializationFrames=120,
                                                                         double decisionThreshold=0.8);
 
+
+/*!
+ The class implements the CodeBook algorithm from:
+ "Real-time foreground–background segmentation using codebook model"
+ Kyungnam Kima, Thanarat H. Chalidabhongseb, David Harwooda, Larry Davis
+ http://www.umiacs.umd.edu/~knkim/paper/Kim-RTI2005-FinalPublished.pdf
+*/
+class CV_EXPORTS_W BackgroundSubtractorCodeBook : public BackgroundSubtractor
+{
+public:
+    CV_WRAP virtual int getHistory() const = 0;
+    CV_WRAP virtual void setHistory(int nframes) = 0;
+
+    CV_WRAP virtual double getAlpha() const = 0;
+    CV_WRAP virtual void setAlpha(double alpha) = 0;
+
+    CV_WRAP virtual double getBeta() const = 0;
+    CV_WRAP virtual void setBeta(double Beta) = 0;
+
+    CV_WRAP virtual double getClusteringMinColorDistance() const = 0;
+    CV_WRAP virtual void setClusteringMinColorDistance(double threshold) = 0;
+
+    CV_WRAP virtual double getDetectionMinColorDistance() const = 0;
+    CV_WRAP virtual void setDetectionMinColorDistance(double threshold) = 0;
+
+    CV_WRAP virtual int getMaxCodeWordAge() const = 0;
+    CV_WRAP virtual void setMaxCodeWordAge(int age) = 0;
+
+    CV_WRAP virtual int getMaxCodeWordAgeInCache() const = 0;
+    CV_WRAP virtual void setMaxCodeWordAgeInCache(int age) = 0;
+
+    CV_WRAP virtual int getMaxDeleteTime() const = 0;
+    CV_WRAP virtual void setMaxDeleteTime(int time) = 0;
+
+    CV_WRAP virtual int getMinAddTime() const = 0;
+    CV_WRAP virtual void setMinAddTime(int time) = 0;
+};
+
+
+CV_EXPORTS_W Ptr<BackgroundSubtractorCodeBook>
+    createBackgroundSubtractorCodeBook(int history = 50,
+                                       double alpha=0.75,
+                                       double beta=1.3,
+                                       double colorThreshold=10);
+
 } // cv
 
 #endif
