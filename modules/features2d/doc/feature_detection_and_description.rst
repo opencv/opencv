@@ -251,10 +251,12 @@ We notice that for keypoint matching applications, image content has little effe
     :param verbose: Prints pair selection informations.
 
 KAZE
------
+----
 .. ocv:class:: KAZE : public Feature2D
 
-Class implementing the KAZE keypoint detector and descriptor extractor, described in [ABD12]_. ::
+Class implementing the KAZE keypoint detector and descriptor extractor, described in [ABD12]_.
+
+.. [ABD12] KAZE Features. Pablo F. Alcantarilla, Adrien Bartoli and Andrew J. Davison. In European Conference on Computer Vision (ECCV), Fiorenze, Italy, October 2012.
 
 KAZE::KAZE
 ----------
@@ -266,14 +268,15 @@ The KAZE constructor
     :param upright: Set to enable use of upright descriptors (non rotation-invariant).
 
 
-.. [ABD12] KAZE Features. Pablo F. Alcantarilla, Adrien Bartoli and Andrew J. Davison. In European Conference on Computer Vision (ECCV), Fiorenze, Italy, October 2012.
 
 
 AKAZE
 -----
 .. ocv:class:: AKAZE : public Feature2D
 
-Class implementing the AKAZE keypoint detector and descriptor extractor, described in [ANB13]_. ::
+Class implementing the AKAZE keypoint detector and descriptor extractor, described in [ANB13]_.
+
+.. [ANB13] Fast Explicit Diffusion for Accelerated Features in Nonlinear Scale Spaces. Pablo F. Alcantarilla, Jesús Nuevo and Adrien Bartoli. In British Machine Vision Conference (BMVC), Bristol, UK, September 2013.
 
     class CV_EXPORTS_W AKAZE : public Feature2D
     {
@@ -301,7 +304,3 @@ The AKAZE constructor
     :param descriptor_type: Type of the extracted descriptor.
     :param descriptor_size: Size of the descriptor in bits. 0 -> Full size
     :param descriptor_channels: Number of channels in the descriptor (1, 2, 3).
-
-
-
-.. [ANB13] Fast Explicit Diffusion for Accelerated Features in Nonlinear Scale Spaces. Pablo F. Alcantarilla, Jesús Nuevo and Adrien Bartoli. In British Machine Vision Conference (BMVC), Bristol, UK, September 2013.
