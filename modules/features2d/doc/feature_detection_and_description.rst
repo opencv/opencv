@@ -256,29 +256,12 @@ KAZE
 
 Class implementing the KAZE keypoint detector and descriptor extractor, described in [ABD12]_. ::
 
-    class CV_EXPORTS_W KAZE : public Feature2D
-    {
-    public:
-
-        /// KAZE Descriptor Type
-        enum DESCRIPTOR_TYPE {
-            DESCRIPTOR_MSURF = 1,
-            DESCRIPTOR_GSURF = 2
-        };
-
-        CV_WRAP KAZE();
-        explicit KAZE(DESCRIPTOR_TYPE descriptor_type, bool extended, bool upright);
-
-        ....
-    };
-
 KAZE::KAZE
 ----------
 The KAZE constructor
 
-.. ocv:function:: KAZE::KAZE(DESCRIPTOR_TYPE descriptor_type, bool extended, bool upright)
+.. ocv:function:: KAZE::KAZE(bool extended, bool upright)
 
-    :param descriptor_type: Type of the extracted descriptor.
     :param extended: Set to enable extraction of extended (128-byte) descriptor.
     :param upright: Set to enable use of upright descriptors (non rotation-invariant).
 

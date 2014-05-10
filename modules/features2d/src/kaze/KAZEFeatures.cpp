@@ -500,10 +500,10 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
 //*************************************************************************************
 //*************************************************************************************
 
-class MSURF_Descriptor_Invoker : public cv::ParallelLoopBody
+class KAZE_Descriptor_Invoker : public cv::ParallelLoopBody
 {
 public:
-    MSURF_Descriptor_Invoker(std::vector<cv::KeyPoint> &kpts, cv::Mat &desc, std::vector<TEvolution>& evolution, const KAZEOptions& _options)
+    KAZE_Descriptor_Invoker(std::vector<cv::KeyPoint> &kpts, cv::Mat &desc, std::vector<TEvolution>& evolution, const KAZEOptions& _options)
         : _kpts(&kpts)
         , _desc(&desc)
         , _evolution(&evolution)
@@ -511,7 +511,7 @@ public:
     {
     }
 
-    virtual ~MSURF_Descriptor_Invoker()
+    virtual ~KAZE_Descriptor_Invoker()
     {
     }
 
@@ -528,82 +528,26 @@ public:
             {
                 kpts[i].angle = 0.0;
                 if (options.extended)
-                    Get_MSURF_Upright_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
+                    Get_KAZE_Upright_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
                 else
-                    Get_MSURF_Upright_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
+                    Get_KAZE_Upright_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
             }
             else
             {
                 KAZEFeatures::Compute_Main_Orientation(kpts[i], evolution, options);
 
                 if (options.extended)
-                    Get_MSURF_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
+                    Get_KAZE_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
                 else
-                    Get_MSURF_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
+                    Get_KAZE_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
             }
         }
     }
 private:
-    void Get_MSURF_Upright_Descriptor_64(const cv::KeyPoint& kpt, float* desc) const;
-    void Get_MSURF_Descriptor_64(const cv::KeyPoint& kpt, float* desc) const;
-    void Get_MSURF_Upright_Descriptor_128(const cv::KeyPoint& kpt, float* desc) const;
-    void Get_MSURF_Descriptor_128(const cv::KeyPoint& kpt, float *desc) const;
-
-    std::vector<cv::KeyPoint> * _kpts;
-    cv::Mat                   * _desc;
-    std::vector<TEvolution>   * _evolution;
-    KAZEOptions                 options;
-};
-
-class GSURF_Descriptor_Invoker : public cv::ParallelLoopBody
-{
-public:
-    GSURF_Descriptor_Invoker(std::vector<cv::KeyPoint> &kpts, cv::Mat &desc, std::vector<TEvolution>& evolution, const KAZEOptions& _options)
-        : _kpts(&kpts)
-        , _desc(&desc)
-        , _evolution(&evolution)
-        , options(_options)
-    {
-    }
-
-    virtual ~GSURF_Descriptor_Invoker()
-    {
-    }
-
-    void operator() (const cv::Range& range) const
-    {
-        std::vector<cv::KeyPoint> &kpts = *_kpts;
-        cv::Mat                   &desc = *_desc;
-        std::vector<TEvolution>   &evolution = *_evolution;
-
-        for (int i = range.start; i < range.end; i++)
-        {
-            kpts[i].angle = 0.0;
-            if (options.upright)
-            {
-                kpts[i].angle = 0.0;
-                if (options.extended)
-                    Get_GSURF_Upright_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
-                else
-                    Get_GSURF_Upright_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
-            }
-            else
-            {
-                KAZEFeatures::Compute_Main_Orientation(kpts[i], evolution, options);
-
-                if (options.extended)
-                    Get_GSURF_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
-                else
-                    Get_GSURF_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
-            }
-        }
-    }
-
-private:
-    void Get_GSURF_Upright_Descriptor_64(const cv::KeyPoint& kpt, float* desc) const;
-    void Get_GSURF_Descriptor_64(const cv::KeyPoint& kpt, float *desc) const;
-    void Get_GSURF_Upright_Descriptor_128(const cv::KeyPoint& kpt, float* desc) const;
-    void Get_GSURF_Descriptor_128(const cv::KeyPoint& kpt, float* desc) const;
+    void Get_KAZE_Upright_Descriptor_64(const cv::KeyPoint& kpt, float* desc) const;
+    void Get_KAZE_Descriptor_64(const cv::KeyPoint& kpt, float* desc) const;
+    void Get_KAZE_Upright_Descriptor_128(const cv::KeyPoint& kpt, float* desc) const;
+    void Get_KAZE_Descriptor_128(const cv::KeyPoint& kpt, float *desc) const;
 
     std::vector<cv::KeyPoint> * _kpts;
     cv::Mat                   * _desc;
@@ -626,16 +570,7 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
         desc = Mat::zeros((int)kpts.size(), 64, CV_32FC1);
     }
 
-    switch (options.descriptor)
-    {
-    case cv::KAZE::DESCRIPTOR_MSURF:
-        cv::parallel_for_(cv::Range(0, (int)kpts.size()), MSURF_Descriptor_Invoker(kpts, desc, evolution_, options));
-        break;
-
-    case cv::KAZE::DESCRIPTOR_GSURF:
-        cv::parallel_for_(cv::Range(0, (int)kpts.size()), GSURF_Descriptor_Invoker(kpts, desc, evolution_, options));
-        break;
-    };
+    cv::parallel_for_(cv::Range(0, (int)kpts.size()), KAZE_Descriptor_Invoker(kpts, desc, evolution_, options));
 }
 
 //*************************************************************************************
@@ -728,7 +663,7 @@ void KAZEFeatures::Compute_Main_Orientation(cv::KeyPoint &kpt, const std::vector
  * from Agrawal et al., CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching,
  * ECCV 2008
  */
-void MSURF_Descriptor_Invoker::Get_MSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, float *desc) const
+void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_64(const cv::KeyPoint &kpt, float *desc) const
 {
     float dx = 0.0, dy = 0.0, mdx = 0.0, mdy = 0.0, gauss_s1 = 0.0, gauss_s2 = 0.0;
     float rx = 0.0, ry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, ys = 0.0, xs = 0.0;
@@ -862,7 +797,7 @@ void MSURF_Descriptor_Invoker::Get_MSURF_Upright_Descriptor_64(const cv::KeyPoin
  * from Agrawal et al., CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching,
  * ECCV 2008
  */
-void MSURF_Descriptor_Invoker::Get_MSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc) const
+void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_64(const cv::KeyPoint &kpt, float *desc) const
 {
     float dx = 0.0, dy = 0.0, mdx = 0.0, mdy = 0.0, gauss_s1 = 0.0, gauss_s2 = 0.0;
     float rx = 0.0, ry = 0.0, rrx = 0.0, rry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, ys = 0.0, xs = 0.0;
@@ -989,284 +924,6 @@ void MSURF_Descriptor_Invoker::Get_MSURF_Descriptor_64(const cv::KeyPoint &kpt, 
 //*************************************************************************************
 
 /**
- * @brief This method computes the upright G-SURF descriptor of the provided keypoint
- * given the main orientation
- * @param kpt Input keypoint
- * @param desc Descriptor vector
- * @note Rectangular grid of 20 s x 20 s. Descriptor Length 64. No additional
- * G-SURF descriptor as described in Pablo F. Alcantarilla, Luis M. Bergasa and
- * Andrew J. Davison, Gauge-SURF Descriptors, Image and Vision Computing 31(1), 2013
- */
-void GSURF_Descriptor_Invoker::Get_GSURF_Upright_Descriptor_64(const cv::KeyPoint &kpt, float *desc) const
-{
-    float dx = 0.0, dy = 0.0, mdx = 0.0, mdy = 0.0;
-    float rx = 0.0, ry = 0.0, rxx = 0.0, rxy = 0.0, ryy = 0.0, len = 0.0, xf = 0.0, yf = 0.0;
-    float sample_x = 0.0, sample_y = 0.0;
-    float fx = 0.0, fy = 0.0, res1 = 0.0, res2 = 0.0, res3 = 0.0, res4 = 0.0;
-    float lvv = 0.0, lww = 0.0, modg = 0.0;
-    int x1 = 0, y1 = 0, x2 = 0, y2 = 0, sample_step = 0, pattern_size = 0, dcount = 0;
-    int dsize = 0, scale = 0, level = 0;
-
-    std::vector<TEvolution>& evolution_ = *_evolution;
-
-    // Set the descriptor size and the sample and pattern sizes
-    dsize = 64;
-    sample_step = 5;
-    pattern_size = 10;
-
-    // Get the information from the keypoint
-    yf = kpt.pt.y;
-    xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0f);
-    level = kpt.class_id;
-
-    // Calculate descriptor for this interest point
-    for (int i = -pattern_size; i < pattern_size; i += sample_step) {
-        for (int j = -pattern_size; j < pattern_size; j += sample_step) {
-
-            dx = dy = mdx = mdy = 0.0;
-
-            for (int k = i; k < i + sample_step; k++) {
-                for (int l = j; l < j + sample_step; l++) {
-
-                    // Get the coordinates of the sample point on the rotated axis
-                    sample_y = yf + l*scale;
-                    sample_x = xf + k*scale;
-
-                    y1 = (int)(sample_y - 0.5f);
-                    x1 = (int)(sample_x - 0.5f);
-
-                    checkDescriptorLimits(x1, y1, options.img_width, options.img_height);
-
-                    y2 = (int)(sample_y + 0.5f);
-                    x2 = (int)(sample_x + 0.5f);
-
-                    checkDescriptorLimits(x2, y2, options.img_width, options.img_height);
-
-                    fx = sample_x - x1;
-                    fy = sample_y - y1;
-
-                    res1 = *(evolution_[level].Lx.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                    res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                    modg = pow(rx, 2) + pow(ry, 2);
-
-                    if (modg != 0.0) {
-
-                        res1 = *(evolution_[level].Lxx.ptr<float>(y1)+x1);
-                        res2 = *(evolution_[level].Lxx.ptr<float>(y1)+x2);
-                        res3 = *(evolution_[level].Lxx.ptr<float>(y2)+x1);
-                        res4 = *(evolution_[level].Lxx.ptr<float>(y2)+x2);
-                        rxx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                        res1 = *(evolution_[level].Lxy.ptr<float>(y1)+x1);
-                        res2 = *(evolution_[level].Lxy.ptr<float>(y1)+x2);
-                        res3 = *(evolution_[level].Lxy.ptr<float>(y2)+x1);
-                        res4 = *(evolution_[level].Lxy.ptr<float>(y2)+x2);
-                        rxy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                        res1 = *(evolution_[level].Lyy.ptr<float>(y1)+x1);
-                        res2 = *(evolution_[level].Lyy.ptr<float>(y1)+x2);
-                        res3 = *(evolution_[level].Lyy.ptr<float>(y2)+x1);
-                        res4 = *(evolution_[level].Lyy.ptr<float>(y2)+x2);
-                        ryy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                        // Lww = (Lx^2 * Lxx + 2*Lx*Lxy*Ly + Ly^2*Lyy) / (Lx^2 + Ly^2)
-                        lww = (pow(rx, 2)*rxx + 2.0f*rx*rxy*ry + pow(ry, 2)*ryy) / (modg);
-
-                        // Lvv = (-2*Lx*Lxy*Ly + Lxx*Ly^2 + Lx^2*Lyy) / (Lx^2 + Ly^2)
-                        lvv = (-2.0f*rx*rxy*ry + rxx*pow(ry, 2) + pow(rx, 2)*ryy) / (modg);
-                    }
-                    else {
-                        lww = 0.0;
-                        lvv = 0.0;
-                    }
-
-                    // Sum the derivatives to the cumulative descriptor
-                    dx += lww;
-                    dy += lvv;
-                    mdx += fabs(lww);
-                    mdy += fabs(lvv);
-                }
-            }
-
-            // Add the values to the descriptor vector
-            desc[dcount++] = dx;
-            desc[dcount++] = dy;
-            desc[dcount++] = mdx;
-            desc[dcount++] = mdy;
-
-            // Store the current length^2 of the vector
-            len += dx*dx + dy*dy + mdx*mdx + mdy*mdy;
-        }
-    }
-
-    // convert to unit vector
-    len = sqrt(len);
-
-    for (int i = 0; i < dsize; i++) {
-        desc[i] /= len;
-    }
-
-    if (options.use_clipping_normalilzation) {
-        clippingDescriptor(desc, dsize, options.clipping_normalization_niter, options.clipping_normalization_ratio);
-    }
-}
-
-//*************************************************************************************
-//*************************************************************************************
-
-/**
- * @brief This method computes the G-SURF descriptor of the provided keypoint given the
- * main orientation
- * @param kpt Input keypoint
- * @param desc Descriptor vector
- * @note Rectangular grid of 20 s x 20 s. Descriptor Length 64. No additional
- * G-SURF descriptor as described in Pablo F. Alcantarilla, Luis M. Bergasa and
- * Andrew J. Davison, Gauge-SURF Descriptors, Image and Vision Computing 31(1), 2013
- */
-void GSURF_Descriptor_Invoker::Get_GSURF_Descriptor_64(const cv::KeyPoint &kpt, float *desc) const
-{
-    float dx = 0.0, dy = 0.0, mdx = 0.0, mdy = 0.0;
-    float rx = 0.0, ry = 0.0, rxx = 0.0, rxy = 0.0, ryy = 0.0, len = 0.0, xf = 0.0, yf = 0.0;
-    float sample_x = 0.0, sample_y = 0.0, co = 0.0, si = 0.0, angle = 0.0;
-    float fx = 0.0, fy = 0.0, res1 = 0.0, res2 = 0.0, res3 = 0.0, res4 = 0.0;
-    float lvv = 0.0, lww = 0.0, modg = 0.0;
-    int x1 = 0, y1 = 0, x2 = 0, y2 = 0, sample_step = 0, pattern_size = 0, dcount = 0;
-    int dsize = 0, scale = 0, level = 0;
-
-    std::vector<TEvolution>& evolution_ = *_evolution;
-
-    // Set the descriptor size and the sample and pattern sizes
-    dsize = 64;
-    sample_step = 5;
-    pattern_size = 10;
-
-    // Get the information from the keypoint
-    yf = kpt.pt.y;
-    xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0f);
-    angle = kpt.angle;
-    level = kpt.class_id;
-    co = cos(angle);
-    si = sin(angle);
-
-    // Calculate descriptor for this interest point
-    for (int i = -pattern_size; i < pattern_size; i += sample_step) {
-        for (int j = -pattern_size; j < pattern_size; j += sample_step) {
-
-            dx = dy = mdx = mdy = 0.0;
-
-            for (int k = i; k < i + sample_step; k++) {
-                for (int l = j; l < j + sample_step; l++) {
-
-                    // Get the coordinates of the sample point on the rotated axis
-                    sample_y = yf + (l*scale*co + k*scale*si);
-                    sample_x = xf + (-l*scale*si + k*scale*co);
-
-                    y1 = (int)(sample_y - 0.5f);
-                    x1 = (int)(sample_x - 0.5f);
-
-                    checkDescriptorLimits(x1, y1, options.img_width, options.img_height);
-
-                    y2 = (int)(sample_y + 0.5f);
-                    x2 = (int)(sample_x + 0.5f);
-
-                    checkDescriptorLimits(x2, y2, options.img_width, options.img_height);
-
-                    fx = sample_x - x1;
-                    fy = sample_y - y1;
-
-                    res1 = *(evolution_[level].Lx.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                    res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                    modg = pow(rx, 2) + pow(ry, 2);
-
-                    if (modg != 0.0) {
-
-                        res1 = *(evolution_[level].Lxx.ptr<float>(y1)+x1);
-                        res2 = *(evolution_[level].Lxx.ptr<float>(y1)+x2);
-                        res3 = *(evolution_[level].Lxx.ptr<float>(y2)+x1);
-                        res4 = *(evolution_[level].Lxx.ptr<float>(y2)+x2);
-                        rxx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                        res1 = *(evolution_[level].Lxy.ptr<float>(y1)+x1);
-                        res2 = *(evolution_[level].Lxy.ptr<float>(y1)+x2);
-                        res3 = *(evolution_[level].Lxy.ptr<float>(y2)+x1);
-                        res4 = *(evolution_[level].Lxy.ptr<float>(y2)+x2);
-                        rxy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                        res1 = *(evolution_[level].Lyy.ptr<float>(y1)+x1);
-                        res2 = *(evolution_[level].Lyy.ptr<float>(y1)+x2);
-                        res3 = *(evolution_[level].Lyy.ptr<float>(y2)+x1);
-                        res4 = *(evolution_[level].Lyy.ptr<float>(y2)+x2);
-                        ryy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                        // Lww = (Lx^2 * Lxx + 2*Lx*Lxy*Ly + Ly^2*Lyy) / (Lx^2 + Ly^2)
-                        lww = (pow(rx, 2)*rxx + 2.0f*rx*rxy*ry + pow(ry, 2)*ryy) / (modg);
-
-                        // Lvv = (-2*Lx*Lxy*Ly + Lxx*Ly^2 + Lx^2*Lyy) / (Lx^2 + Ly^2)
-                        lvv = (-2.0f*rx*rxy*ry + rxx*pow(ry, 2) + pow(rx, 2)*ryy) / (modg);
-                    }
-                    else {
-                        lww = 0.0;
-                        lvv = 0.0;
-                    }
-
-                    // Sum the derivatives to the cumulative descriptor
-                    dx += lww;
-                    dy += lvv;
-                    mdx += fabs(lww);
-                    mdy += fabs(lvv);
-                }
-            }
-
-            // Add the values to the descriptor vector
-            desc[dcount++] = dx;
-            desc[dcount++] = dy;
-            desc[dcount++] = mdx;
-            desc[dcount++] = mdy;
-
-            // Store the current length^2 of the vector
-            len += dx*dx + dy*dy + mdx*mdx + mdy*mdy;
-        }
-    }
-
-    // convert to unit vector
-    len = sqrt(len);
-
-    for (int i = 0; i < dsize; i++) {
-        desc[i] /= len;
-    }
-
-    if (options.use_clipping_normalilzation) {
-        clippingDescriptor(desc, dsize, options.clipping_normalization_niter, options.clipping_normalization_ratio);
-    }
-
-}
-
-//*************************************************************************************
-//*************************************************************************************
-
-/**
  * @brief This method computes the extended upright descriptor (not rotation invariant) of
  * the provided keypoint
  * @param kpt Input keypoint
@@ -1275,7 +932,7 @@ void GSURF_Descriptor_Invoker::Get_GSURF_Descriptor_64(const cv::KeyPoint &kpt, 
  * from Agrawal et al., CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching,
  * ECCV 2008
  */
-void MSURF_Descriptor_Invoker::Get_MSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, float *desc) const
+void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_128(const cv::KeyPoint &kpt, float *desc) const
 {
     float gauss_s1 = 0.0, gauss_s2 = 0.0;
     float rx = 0.0, ry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, ys = 0.0, xs = 0.0;
@@ -1433,7 +1090,7 @@ void MSURF_Descriptor_Invoker::Get_MSURF_Upright_Descriptor_128(const cv::KeyPoi
  * from Agrawal et al., CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching,
  * ECCV 2008
  */
-void MSURF_Descriptor_Invoker::Get_MSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc) const
+void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const cv::KeyPoint &kpt, float *desc) const
 {
     float gauss_s1 = 0.0, gauss_s2 = 0.0;
     float rx = 0.0, ry = 0.0, rrx = 0.0, rry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, ys = 0.0, xs = 0.0;
@@ -1588,322 +1245,6 @@ void MSURF_Descriptor_Invoker::Get_MSURF_Descriptor_128(const cv::KeyPoint &kpt,
 //*************************************************************************************
 
 /**
- * @brief This method computes the G-SURF upright extended descriptor
- * (no rotation invariant) of the provided keypoint
- * @param kpt Input keypoint
- * @param desc Descriptor vector
- * @note Rectangular grid of 20 s x 20 s. Descriptor Length 128. No additional
- * G-SURF descriptor as described in Pablo F. Alcantarilla, Luis M. Bergasa and
- * Andrew J. Davison, Gauge-SURF Descriptors, Image and Vision Computing 31(1), 2013
- */
-void GSURF_Descriptor_Invoker::Get_GSURF_Upright_Descriptor_128(const cv::KeyPoint &kpt, float *desc) const
-{
-    float len = 0.0, xf = 0.0, yf = 0.0, sample_x = 0.0, sample_y = 0.0;
-    float rx = 0.0, ry = 0.0, rxx = 0.0, rxy = 0.0, ryy = 0.0, modg = 0.0;
-    float fx = 0.0, fy = 0.0, res1 = 0.0, res2 = 0.0, res3 = 0.0, res4 = 0.0;
-    float dxp = 0.0, dyp = 0.0, mdxp = 0.0, mdyp = 0.0;
-    float dxn = 0.0, dyn = 0.0, mdxn = 0.0, mdyn = 0.0, lvv = 0.0, lww = 0.0;
-    int x1 = 0, y1 = 0, x2 = 0, y2 = 0, sample_step = 0, pattern_size = 0, dcount = 0;
-    int dsize = 0, scale = 0, level = 0;
-
-    std::vector<TEvolution>& evolution_ = *_evolution;
-
-    // Set the descriptor size and the sample and pattern sizes
-    dsize = 128;
-    sample_step = 5;
-    pattern_size = 10;
-
-    // Get the information from the keypoint
-    yf = kpt.pt.y;
-    xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0f);
-    level = kpt.class_id;
-
-    // Calculate descriptor for this interest point
-    for (int i = -pattern_size; i < pattern_size; i += sample_step) {
-        for (int j = -pattern_size; j < pattern_size; j += sample_step) {
-
-            dxp = dxn = mdxp = mdxn = 0.0;
-            dyp = dyn = mdyp = mdyn = 0.0;
-
-            for (int k = i; k < i + sample_step; k++) {
-                for (int l = j; l < j + sample_step; l++) {
-
-                    sample_y = k*scale + yf;
-                    sample_x = l*scale + xf;
-
-                    y1 = (int)(sample_y - 0.5f);
-                    x1 = (int)(sample_x - 0.5f);
-
-                    checkDescriptorLimits(x1, y1, options.img_width, options.img_height);
-
-                    y2 = (int)(sample_y + 0.5f);
-                    x2 = (int)(sample_x + 0.5f);
-
-                    checkDescriptorLimits(x2, y2, options.img_width, options.img_height);
-
-                    fx = sample_x - x1;
-                    fy = sample_y - y1;
-
-                    res1 = *(evolution_[level].Lx.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                    res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                    modg = pow(rx, 2) + pow(ry, 2);
-
-                    if (modg != 0.0) {
-
-                        res1 = *(evolution_[level].Lxx.ptr<float>(y1)+x1);
-                        res2 = *(evolution_[level].Lxx.ptr<float>(y1)+x2);
-                        res3 = *(evolution_[level].Lxx.ptr<float>(y2)+x1);
-                        res4 = *(evolution_[level].Lxx.ptr<float>(y2)+x2);
-                        rxx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                        res1 = *(evolution_[level].Lxy.ptr<float>(y1)+x1);
-                        res2 = *(evolution_[level].Lxy.ptr<float>(y1)+x2);
-                        res3 = *(evolution_[level].Lxy.ptr<float>(y2)+x1);
-                        res4 = *(evolution_[level].Lxy.ptr<float>(y2)+x2);
-                        rxy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                        res1 = *(evolution_[level].Lyy.ptr<float>(y1)+x1);
-                        res2 = *(evolution_[level].Lyy.ptr<float>(y1)+x2);
-                        res3 = *(evolution_[level].Lyy.ptr<float>(y2)+x1);
-                        res4 = *(evolution_[level].Lyy.ptr<float>(y2)+x2);
-                        ryy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                        // Lww = (Lx^2 * Lxx + 2*Lx*Lxy*Ly + Ly^2*Lyy) / (Lx^2 + Ly^2)
-                        lww = (pow(rx, 2)*rxx + 2.0f*rx*rxy*ry + pow(ry, 2)*ryy) / (modg);
-
-                        // Lvv = (-2*Lx*Lxy*Ly + Lxx*Ly^2 + Lx^2*Lyy) / (Lx^2 + Ly^2)
-                        lvv = (-2.0f*rx*rxy*ry + rxx*pow(ry, 2) + pow(rx, 2)*ryy) / (modg);
-                    }
-                    else {
-                        lww = 0.0;
-                        lvv = 0.0;
-                    }
-
-                    // Sum the derivatives to the cumulative descriptor
-                    if (lww >= 0.0) {
-                        dxp += lvv;
-                        mdxp += fabs(lvv);
-                    }
-                    else {
-                        dxn += lvv;
-                        mdxn += fabs(lvv);
-                    }
-
-                    if (lvv >= 0.0) {
-                        dyp += lww;
-                        mdyp += fabs(lww);
-                    }
-                    else {
-                        dyn += lww;
-                        mdyn += fabs(lww);
-                    }
-                }
-            }
-
-            // Add the values to the descriptor vector
-            desc[dcount++] = dxp;
-            desc[dcount++] = dxn;
-            desc[dcount++] = mdxp;
-            desc[dcount++] = mdxn;
-            desc[dcount++] = dyp;
-            desc[dcount++] = dyn;
-            desc[dcount++] = mdyp;
-            desc[dcount++] = mdyn;
-
-            // Store the current length^2 of the vector
-            len += dxp*dxp + dxn*dxn + mdxp*mdxp + mdxn*mdxn +
-                dyp*dyp + dyn*dyn + mdyp*mdyp + mdyn*mdyn;
-        }
-    }
-
-    // convert to unit vector
-    len = sqrt(len);
-
-    for (int i = 0; i < dsize; i++) {
-        desc[i] /= len;
-    }
-
-    if (options.use_clipping_normalilzation) {
-        clippingDescriptor(desc, dsize, options.clipping_normalization_niter, options.clipping_normalization_ratio);
-    }
-}
-
-//*************************************************************************************
-//*************************************************************************************
-
-/**
- * @brief This method computes the extended descriptor of the provided keypoint given the
- * main orientation
- * @param kpt Input keypoint
- * @param desc Descriptor vector
- * @note Rectangular grid of 20 s x 20 s. Descriptor Length 128. No additional
- * G-SURF descriptor as described in Pablo F. Alcantarilla, Luis M. Bergasa and
- * Andrew J. Davison, Gauge-SURF Descriptors, Image and Vision Computing 31(1), 2013
- */
-void GSURF_Descriptor_Invoker::Get_GSURF_Descriptor_128(const cv::KeyPoint &kpt, float *desc) const
-{
-
-    float len = 0.0, xf = 0.0, yf = 0.0;
-    float rx = 0.0, ry = 0.0, rxx = 0.0, rxy = 0.0, ryy = 0.0;
-    float sample_x = 0.0, sample_y = 0.0, co = 0.0, si = 0.0, angle = 0.0;
-    float fx = 0.0, fy = 0.0, res1 = 0.0, res2 = 0.0, res3 = 0.0, res4 = 0.0;
-    float dxp = 0.0, dyp = 0.0, mdxp = 0.0, mdyp = 0.0;
-    float dxn = 0.0, dyn = 0.0, mdxn = 0.0, mdyn = 0.0;
-    float lvv = 0.0, lww = 0.0, modg = 0.0;
-    int x1 = 0, y1 = 0, x2 = 0, y2 = 0, sample_step = 0, pattern_size = 0, dcount = 0;
-    int dsize = 0, scale = 0, level = 0;
-
-    std::vector<TEvolution>& evolution_ = *_evolution;
-
-    // Set the descriptor size and the sample and pattern sizes
-    dsize = 128;
-    sample_step = 5;
-    pattern_size = 10;
-
-    // Get the information from the keypoint
-    yf = kpt.pt.y;
-    xf = kpt.pt.x;
-    scale = fRound(kpt.size / 2.0f);
-    angle = kpt.angle;
-    level = kpt.class_id;
-    co = cos(angle);
-    si = sin(angle);
-
-    // Calculate descriptor for this interest point
-    for (int i = -pattern_size; i < pattern_size; i += sample_step) {
-        for (int j = -pattern_size; j < pattern_size; j += sample_step) {
-
-            dxp = dxn = mdxp = mdxn = 0.0;
-            dyp = dyn = mdyp = mdyn = 0.0;
-
-            for (int k = i; k < i + sample_step; k++) {
-                for (int l = j; l < j + sample_step; l++) {
-
-                    // Get the coordinates of the sample point on the rotated axis
-                    sample_y = yf + (l*scale*co + k*scale*si);
-                    sample_x = xf + (-l*scale*si + k*scale*co);
-
-                    y1 = (int)(sample_y - 0.5f);
-                    x1 = (int)(sample_x - 0.5f);
-
-                    checkDescriptorLimits(x1, y1, options.img_width, options.img_height);
-
-                    y2 = (int)(sample_y + 0.5f);
-                    x2 = (int)(sample_x + 0.5f);
-
-                    checkDescriptorLimits(x2, y2, options.img_width, options.img_height);
-
-                    fx = sample_x - x1;
-                    fy = sample_y - y1;
-
-                    res1 = *(evolution_[level].Lx.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
-                    rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                    res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
-                    ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                    modg = pow(rx, 2) + pow(ry, 2);
-
-                    if (modg != 0.0) {
-                        res1 = *(evolution_[level].Lxx.ptr<float>(y1)+x1);
-                        res2 = *(evolution_[level].Lxx.ptr<float>(y1)+x2);
-                        res3 = *(evolution_[level].Lxx.ptr<float>(y2)+x1);
-                        res4 = *(evolution_[level].Lxx.ptr<float>(y2)+x2);
-                        rxx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                        res1 = *(evolution_[level].Lxy.ptr<float>(y1)+x1);
-                        res2 = *(evolution_[level].Lxy.ptr<float>(y1)+x2);
-                        res3 = *(evolution_[level].Lxy.ptr<float>(y2)+x1);
-                        res4 = *(evolution_[level].Lxy.ptr<float>(y2)+x2);
-                        rxy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                        res1 = *(evolution_[level].Lyy.ptr<float>(y1)+x1);
-                        res2 = *(evolution_[level].Lyy.ptr<float>(y1)+x2);
-                        res3 = *(evolution_[level].Lyy.ptr<float>(y2)+x1);
-                        res4 = *(evolution_[level].Lyy.ptr<float>(y2)+x2);
-                        ryy = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
-
-                        // Lww = (Lx^2 * Lxx + 2*Lx*Lxy*Ly + Ly^2*Lyy) / (Lx^2 + Ly^2)
-                        lww = (pow(rx, 2)*rxx + 2.0f*rx*rxy*ry + pow(ry, 2)*ryy) / (modg);
-
-                        // Lvv = (-2*Lx*Lxy*Ly + Lxx*Ly^2 + Lx^2*Lyy) / (Lx^2 + Ly^2)
-                        lvv = (-2.0f*rx*rxy*ry + rxx*pow(ry, 2) + pow(rx, 2)*ryy) / (modg);
-                    }
-                    else {
-                        lww = 0.0;
-                        lvv = 0.0;
-                    }
-
-                    // Sum the derivatives to the cumulative descriptor
-                    if (lww >= 0.0) {
-                        dxp += lvv;
-                        mdxp += fabs(lvv);
-                    }
-                    else {
-                        dxn += lvv;
-                        mdxn += fabs(lvv);
-                    }
-
-                    if (lvv >= 0.0) {
-                        dyp += lww;
-                        mdyp += fabs(lww);
-                    }
-                    else {
-                        dyn += lww;
-                        mdyn += fabs(lww);
-                    }
-                }
-            }
-
-            // Add the values to the descriptor vector
-            desc[dcount++] = dxp;
-            desc[dcount++] = dxn;
-            desc[dcount++] = mdxp;
-            desc[dcount++] = mdxn;
-            desc[dcount++] = dyp;
-            desc[dcount++] = dyn;
-            desc[dcount++] = mdyp;
-            desc[dcount++] = mdyn;
-
-            // Store the current length^2 of the vector
-            len += dxp*dxp + dxn*dxn + mdxp*mdxp + mdxn*mdxn +
-                dyp*dyp + dyn*dyn + mdyp*mdyp + mdyn*mdyn;
-        }
-    }
-
-    // convert to unit vector
-    len = sqrt(len);
-
-    for (int i = 0; i < dsize; i++) {
-        desc[i] /= len;
-    }
-
-    if (options.use_clipping_normalilzation) {
-        clippingDescriptor(desc, dsize, options.clipping_normalization_niter, options.clipping_normalization_ratio);
-    }
-}
-
-//*************************************************************************************
-//*************************************************************************************
-
-/**
  * @brief This method performs a scalar non-linear diffusion step using AOS schemes
  * @param Ld Image at a given evolution step
  * @param Ldprev Image at a previous evolution step
@@ -1911,7 +1252,7 @@ void GSURF_Descriptor_Invoker::Get_GSURF_Descriptor_128(const cv::KeyPoint &kpt,
  * @param stepsize Stepsize for the nonlinear diffusion evolution
  * @note If c is constant, the diffusion will be linear
  * If c is a matrix of the same size as Ld, the diffusion will be nonlinear
- * The stepsize can be arbitrarilly large
+ * The stepsize can be arbitrarily large
  */
 void KAZEFeatures::AOS_Step_Scalar(cv::Mat &Ld, const cv::Mat &Ldprev, const cv::Mat &c, const float& stepsize) {
 

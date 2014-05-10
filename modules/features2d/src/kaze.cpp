@@ -53,15 +53,13 @@ http://www.robesafe.com/personal/pablo.alcantarilla/papers/Alcantarilla12eccv.pd
 namespace cv
 {
     KAZE::KAZE()
-        : descriptor(DESCRIPTOR_MSURF)
-        , extended(false)
+        : extended(false)
         , upright(false)
     {
     }
 
-    KAZE::KAZE(DESCRIPTOR_TYPE _descriptor_type, bool _extended, bool _upright)
-        : descriptor(_descriptor_type)
-        , extended(_extended)
+    KAZE::KAZE(bool _extended, bool _upright)
+        : extended(_extended)
         , upright(_upright)
     {
 
@@ -111,7 +109,6 @@ namespace cv
         KAZEOptions options;
         options.img_width = img.cols;
         options.img_height = img.rows;
-        options.descriptor = static_cast<DESCRIPTOR_TYPE>(descriptor);
         options.extended = extended;
         options.upright = upright;
 
@@ -146,7 +143,6 @@ namespace cv
         KAZEOptions options;
         options.img_width = img.cols;
         options.img_height = img.rows;
-        options.descriptor = static_cast<DESCRIPTOR_TYPE>(descriptor);
         options.extended = extended;
         options.upright = upright;
 
@@ -174,7 +170,6 @@ namespace cv
         KAZEOptions options;
         options.img_width = img.cols;
         options.img_height = img.rows;
-        options.descriptor = static_cast<DESCRIPTOR_TYPE>(descriptor);
         options.extended = extended;
         options.upright = upright;
 
