@@ -22,8 +22,7 @@ struct KAZEOptions {
     };
 
     KAZEOptions()
-        : descriptor(cv::KAZE::DESCRIPTOR_MSURF)
-        , diffusivity(PM_G2)
+        : diffusivity(PM_G2)
 
         , soffset(1.60f)
         , omax(4)
@@ -46,7 +45,6 @@ struct KAZEOptions {
     {
     }
 
-    cv::KAZE::DESCRIPTOR_TYPE descriptor;
     DIFFUSIVITY_TYPE diffusivity;
 
     float soffset;
