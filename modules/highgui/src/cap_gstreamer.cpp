@@ -400,6 +400,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     gst_app_sink_set_max_buffers (GST_APP_SINK(sink), 1);
     gst_app_sink_set_drop (GST_APP_SINK(sink), stream);
     caps = gst_caps_new_simple("video/x-raw-rgb",
+                               "bpp",        G_TYPE_INT, 24,
                                "red_mask",   G_TYPE_INT, 0x0000FF,
                                "green_mask", G_TYPE_INT, 0x00FF00,
                                "blue_mask",  G_TYPE_INT, 0xFF0000,
