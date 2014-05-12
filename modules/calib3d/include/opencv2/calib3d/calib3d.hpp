@@ -789,11 +789,6 @@ public:
     static void estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
         OutputArray P, double balance = 0.0, const Size& new_size = Size(), double fov_scale = 1.0);
 
-    //! stereo rectification for fisheye camera model
-    static void stereoRectify( InputArray K1, InputArray D1, InputArray K2, InputArray D2, const cv::Size& imageSize,
-        InputArray rotaion, InputArray tvec, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q,
-            int flags = cv::CALIB_ZERO_DISPARITY, double alpha = -1, const Size& newImageSize = Size(), Rect* roi1 = 0, Rect* roi2 = 0 );
-
     //! performs camera calibaration
     static double calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
         InputOutputArray K, InputOutputArray D, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags = 0,
