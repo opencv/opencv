@@ -1288,7 +1288,7 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
                     return false;
             }
         }
-        for( x = 0; y < kernel.cols; x++ )
+        for( x = 0; x < kernel.cols; x++ )
         {
             if( kernel.at<uchar>(anchor.y, x) != 0 )
                 continue;
