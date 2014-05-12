@@ -4385,7 +4385,6 @@ class WarpPerspectiveInvoker :
     public ParallelLoopBody
 {
 public:
-
     WarpPerspectiveInvoker(const Mat &_src, Mat &_dst, double *_M, int _interpolation,
                            int _borderType, const Scalar &_borderValue) :
         ParallelLoopBody(), src(_src), dst(_dst), M(_M), interpolation(_interpolation),
@@ -4479,7 +4478,7 @@ class IPPWarpPerspectiveInvoker :
 {
 public:
     IPPWarpPerspectiveInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[3][3], int &_interpolation,
-        int &_borderType, const Scalar &_borderValue, ippiWarpPerspectiveFunc _func, bool *_ok) :
+                              int &_borderType, const Scalar &_borderValue, ippiWarpPerspectiveFunc _func, bool *_ok) :
         ParallelLoopBody(), src(_src), dst(_dst), mode(_interpolation), coeffs(_coeffs),
         borderType(_borderType), borderValue(_borderValue), func(_func), ok(_ok)
     {
