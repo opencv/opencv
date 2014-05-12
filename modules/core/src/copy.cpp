@@ -610,6 +610,7 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
 
 #ifdef HAVE_OPENCL
 
+#define DIVUP(total, grain) (((total) + (grain) - 1) / (grain))
 enum { FLIP_COLS = 1 << 0, FLIP_ROWS = 1 << 1, FLIP_BOTH = FLIP_ROWS | FLIP_COLS };
 
 static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
@@ -628,9 +629,12 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     else
         kernelName = "arithm_flip_rows_cols", flipType = FLIP_BOTH;
 
+    ocl::Device dev = ocl::Device::getDefault();
+    int pxPerWIy = (dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU)) ? 4 : 1;
+
     ocl::Kernel k(kernelName, ocl::core::flip_oclsrc,
-        format( "-D T=%s -D T1=%s -D cn=%d", ocl::memopTypeToStr(type),
-                ocl::memopTypeToStr(depth), cn));
+        format( "-D T=%s -D T1=%s -D cn=%d -D PIX_PER_WI_Y=%d", ocl::memopTypeToStr(type),
+                ocl::memopTypeToStr(depth), cn, pxPerWIy));
     if (k.empty())
         return false;
 
@@ -645,10 +649,13 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     k.args(ocl::KernelArg::ReadOnlyNoSize(src),
            ocl::KernelArg::WriteOnly(dst), rows, cols);
 
-    size_t maxWorkGroupSize = ocl::Device::getDefault().maxWorkGroupSize();
+    size_t maxWorkGroupSize = dev.maxWorkGroupSize();
     CV_Assert(maxWorkGroupSize % 4 == 0);
+
     size_t globalsize[2] = { cols, rows }, localsize[2] = { maxWorkGroupSize / 4, 4 };
-    return k.run(2, globalsize, flipType == FLIP_COLS ? localsize : NULL, false);
+    globalsize[1] = DIVUP(globalsize[1], pxPerWIy);
+
+    return k.run(2, globalsize, (flipType == FLIP_COLS) && (!dev.isIntel()) ? localsize : NULL, false);
 }
 
 #endif
