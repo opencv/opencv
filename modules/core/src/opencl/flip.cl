@@ -54,15 +54,19 @@ __kernel void arithm_flip_rows(__global const uchar * srcptr, int src_step, int 
                                int rows, int cols, int thread_rows, int thread_cols)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y = get_global_id(1)*PIX_PER_WI_Y;
 
-    if (x < cols && y < thread_rows)
+    if (x < cols)
     {
-        T src0 = loadpix(srcptr + mad24(y, src_step, mad24(x, TSIZE, src_offset)));
-        T src1 = loadpix(srcptr + mad24(rows - y - 1, src_step, mad24(x, TSIZE, src_offset)));
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI_Y && y < thread_rows; ++cy, ++y)
+        {
+            T src0 = loadpix(srcptr + mad24(y, src_step, mad24(x, TSIZE, src_offset)));
+            T src1 = loadpix(srcptr + mad24(rows - y - 1, src_step, mad24(x, TSIZE, src_offset)));
 
-        storepix(src1, dstptr + mad24(y, dst_step, mad24(x, TSIZE, dst_offset)));
-        storepix(src0, dstptr + mad24(rows - y - 1, dst_step, mad24(x, TSIZE, dst_offset)));
+            storepix(src1, dstptr + mad24(y, dst_step, mad24(x, TSIZE, dst_offset)));
+            storepix(src0, dstptr + mad24(rows - y - 1, dst_step, mad24(x, TSIZE, dst_offset)));
+        }
     }
 }
 
@@ -71,16 +75,20 @@ __kernel void arithm_flip_rows_cols(__global const uchar * srcptr, int src_step,
                                     int rows, int cols, int thread_rows, int thread_cols)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y = get_global_id(1)*PIX_PER_WI_Y;
 
-    if (x < cols && y < thread_rows)
+    if (x < cols)
     {
         int x1 = cols - x - 1;
-        T src0 = loadpix(srcptr + mad24(y, src_step, mad24(x, TSIZE, src_offset)));
-        T src1 = loadpix(srcptr + mad24(rows - y - 1, src_step, mad24(x1, TSIZE, src_offset)));
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI_Y && y < thread_rows; ++cy, ++y)
+        {
+            T src0 = loadpix(srcptr + mad24(y, src_step, mad24(x, TSIZE, src_offset)));
+            T src1 = loadpix(srcptr + mad24(rows - y - 1, src_step, mad24(x1, TSIZE, src_offset)));
 
-        storepix(src0, dstptr + mad24(rows - y - 1, dst_step, mad24(x1, TSIZE, dst_offset)));
-        storepix(src1, dstptr + mad24(y, dst_step, mad24(x, TSIZE, dst_offset)));
+            storepix(src0, dstptr + mad24(rows - y - 1, dst_step, mad24(x1, TSIZE, dst_offset)));
+            storepix(src1, dstptr + mad24(y, dst_step, mad24(x, TSIZE, dst_offset)));
+        }
     }
 }
 
@@ -89,15 +97,19 @@ __kernel void arithm_flip_cols(__global const uchar * srcptr, int src_step, int 
                                int rows, int cols, int thread_rows, int thread_cols)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y = get_global_id(1)*PIX_PER_WI_Y;
 
-    if (x < thread_cols && y < rows)
+    if (x < thread_cols)
     {
         int x1 = cols - x - 1;
-        T src0 = loadpix(srcptr + mad24(y, src_step, mad24(x, TSIZE, src_offset)));
-        T src1 = loadpix(srcptr + mad24(y, src_step, mad24(x1, TSIZE, src_offset)));
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI_Y && y < rows; ++cy, ++y)
+        {
+            T src0 = loadpix(srcptr + mad24(y, src_step, mad24(x, TSIZE, src_offset)));
+            T src1 = loadpix(srcptr + mad24(y, src_step, mad24(x1, TSIZE, src_offset)));
 
-        storepix(src0, dstptr + mad24(y, dst_step, mad24(x1, TSIZE, dst_offset)));
-        storepix(src1, dstptr + mad24(y, dst_step, mad24(x, TSIZE, dst_offset)));
+            storepix(src0, dstptr + mad24(y, dst_step, mad24(x1, TSIZE, dst_offset)));
+            storepix(src1, dstptr + mad24(y, dst_step, mad24(x, TSIZE, dst_offset)));
+        }
     }
 }
