@@ -1518,18 +1518,13 @@ The methods in this class use a so-called fisheye camera model. ::
         static void initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P,
             const cv::Size& size, int m1type, OutputArray map1, OutputArray map2);
 
-        //! undistorts image, optionally changes resolution and camera matrix. If Knew zero identity matrix is used
+        //! undistorts image, optionally changes resolution and camera matrix.
         static void undistortImage(InputArray distorted, OutputArray undistorted,
             InputArray K, InputArray D, InputArray Knew = cv::noArray(), const Size& new_size = Size());
 
         //! estimates new camera matrix for undistortion or rectification
         static void estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
             OutputArray P, double balance = 0.0, const Size& new_size = Size(), double fov_scale = 1.0);
-
-        //! stereo rectification for fisheye camera model
-        static void stereoRectify( InputArray K1, InputArray D1, InputArray K2, InputArray D2, const cv::Size& imageSize,
-            InputArray rotaion, InputArray tvec, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q,
-                int flags = cv::CALIB_ZERO_DISPARITY, double alpha = -1, const Size& newImageSize = Size(), Rect* roi1 = 0, Rect* roi2 = 0 );
 
         //! performs camera calibaration
         static double calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
@@ -1699,7 +1694,7 @@ Transforms an image to compensate for fisheye lens distortion.
 
     :param D: Input vector of distortion coefficients  :math:`(k_1, k_2, k_3, k_4)`.
 
-    :param Knew: Camera matrix of the distorted image. By default, it is the same as  ``cameraMatrix``  but you may additionally scale and shift the result by using a different matrix.
+    :param Knew: Camera matrix of the distorted image. By default, it is the identity matrix but you may additionally scale and shift the result by using a different matrix.
 
     :param undistorted: Output image with compensated fisheye lens distortion.
 
@@ -1734,13 +1729,13 @@ Estimates new camera matrix for undistortion or rectification.
 
     :param P: New camera matrix (3x3) or new projection matrix (3x4)
 
+    :param balance: Sets the new focal length in range between the min focal length and the max focal length. Balance is in range of [0, 1].
+
+    :param fov_scale: Divisor for new focal length.
+
 Fisheye::stereoRectify
 ------------------------------
 Stereo rectification for fisheye camera model
-
-.. ocv:function:: void Fisheye::stereoRectify( InputArray K1, InputArray D1, InputArray K2, InputArray D2, const cv::Size& imageSize,
-        InputArray rotaion, InputArray tvec, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q,
-            int flags = cv::CALIB_ZERO_DISPARITY, double alpha = -1, const Size& newImageSize = Size(), Rect* roi1 = 0, Rect* roi2 = 0 )
 
 .. ocv:function:: void Fisheye::stereoRectify(InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size &imageSize, InputArray R, InputArray tvec,
         OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags, const Size &newImageSize = Size(),
@@ -1780,9 +1775,9 @@ Stereo rectification for fisheye camera model
 
     :param roi2: Optional output rectangles inside the rectified images where all the pixels are valid. If  ``alpha=0`` , the ROIs cover the whole images. Otherwise, they are likely to be smaller (see the picture below).
 
-    :param balance: Balance.
+    :param balance: Sets the new focal length in range between the min focal length and the max focal length. Balance is in range of [0, 1].
 
-    :param fov_scale: Field of View scale.
+    :param fov_scale: Divisor for new focal length.
 
 
 
@@ -1794,7 +1789,7 @@ Performs camera calibaration
         InputOutputArray K, InputOutputArray D, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags = 0,
             TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON))
 
-    :param objectPoints: vector of vectors of calibration pattern points in the calibration pattern coordinate space. The outer vector contains as many elements as the number of the pattern views. If the same calibration pattern is shown in each view and it is fully visible, all the vectors will be the same. Although, it is possible to use partially occluded patterns, or even different patterns in different views. Then, the vectors will be different. The points are 3D, but since they are in a pattern coordinate system, then, if the rig is planar, it may make sense to put the model to a XY coordinate plane so that Z-coordinate of each input object point is 0.
+    :param objectPoints: vector of vectors of calibration pattern points in the calibration pattern coordinate space.
 
     :param imagePoints: vector of vectors of the projections of calibration pattern points. ``imagePoints.size()`` and ``objectPoints.size()`` and ``imagePoints[i].size()`` must be equal to ``objectPoints[i].size()`` for each ``i``.
 
