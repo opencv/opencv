@@ -351,9 +351,15 @@ class ConstInfo(object):
         self.name = self.name.upper()
         self.value = val
 
+def handle_ptr(tp):
+    if tp.startswith('Ptr_'):
+        tp = 'Ptr<' + "::".join(tp.split('_')[1:]) + '>'
+    return tp
+
+
 class ArgInfo(object):
     def __init__(self, arg_tuple):
-        self.tp = arg_tuple[0]
+        self.tp = handle_ptr(arg_tuple[0])
         self.name = arg_tuple[1]
         self.defval = arg_tuple[2]
         self.isarray = False
@@ -398,7 +404,7 @@ class FuncVariant(object):
             else:
                 self.wname = self.classname
 
-        self.rettype = decl[1]
+        self.rettype = handle_ptr(decl[1])
         if self.rettype == "void":
             self.rettype = ""
         self.args = []
@@ -736,6 +742,7 @@ class PythonWrapperGenerator(object):
         self.classes = {}
         self.funcs = {}
         self.consts = {}
+        self.code_include = StringIO()
         self.code_types = StringIO()
         self.code_funcs = StringIO()
         self.code_func_tab = StringIO()
@@ -823,6 +830,7 @@ class PythonWrapperGenerator(object):
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
+            self.code_include.write( '#include "{}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )
             decls = parser.parse(hdr)
             for decl in decls:
                 name = decl[0]
@@ -879,6 +887,7 @@ class PythonWrapperGenerator(object):
             self.gen_const_reg(constinfo)
 
         # That's it. Now save all the files
+        self.save(output_path, "pyopencv_generated_include.h", self.code_include)
         self.save(output_path, "pyopencv_generated_funcs.h", self.code_funcs)
         self.save(output_path, "pyopencv_generated_func_tab.h", self.code_func_tab)
         self.save(output_path, "pyopencv_generated_const_reg.h", self.code_const_reg)
