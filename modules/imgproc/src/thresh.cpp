@@ -847,9 +847,13 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, d
     if (depth <= CV_32S)
         thresh = cvFloor(thresh);
 
+    const double min_vals[] = { 0, CHAR_MIN, 0, SHRT_MIN, INT_MIN, -FLT_MAX, -DBL_MAX, 0 };
+    double min_val = min_vals[depth];
+
     k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst, cn, kercn),
            ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(thresh))),
-           ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(maxval))));
+           ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(maxval))),
+           ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(min_val))));
 
     size_t globalsize[2] = { dst.cols * cn / kercn, dst.rows };
     return k.run(2, globalsize, NULL, false);
