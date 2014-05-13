@@ -2701,6 +2701,8 @@ double cv::kmeans( InputArray _data, int K,
     CV_Assert( data.dims <= 2 && type == CV_32F && K > 0 );
     CV_Assert( N >= K );
 
+    data = data.reshape(1, N);
+
     _bestLabels.create(N, 1, CV_32S, -1, true);
 
     Mat _labels, best_labels = _bestLabels.getMat();
