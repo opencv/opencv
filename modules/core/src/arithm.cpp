@@ -1813,39 +1813,60 @@ void cv::add( InputArray src1, InputArray src2, OutputArray dst,
     arithm_op(src1, src2, dst, mask, dtype, getAddTab(), false, 0, OCL_OP_ADD );
 }
 
-void cv::subtract( InputArray src1, InputArray src2, OutputArray dst,
+void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
                InputArray mask, int dtype )
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (mask.empty() && src1.depth() == CV_8U && src2.depth() == CV_8U)
-    {
-        if (dtype == -1 && dst.fixedType())
-            dtype = dst.depth();
+    int kind1 = _src1.kind(), kind2 = _src2.kind();
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
+    bool src1Scalar = checkScalar(src1, _src2.type(), kind1, kind2);
+    bool src2Scalar = checkScalar(src2, _src1.type(), kind2, kind1);
 
-        if (!dst.fixedType() || dtype == dst.depth())
+    if (!src1Scalar && !src2Scalar &&
+        src1.depth() == CV_8U && src2.type() == src1.type() &&
+        src1.dims == 2 && src2.size() == src1.size() &&
+        mask.empty())
+    {
+        if (dtype < 0)
         {
+            if (_dst.fixedType())
+            {
+                dtype = _dst.depth();
+            }
+            else
+            {
+                dtype = src1.depth();
+            }
+        }
+
+        dtype = CV_MAT_DEPTH(dtype);
+
+        if (!_dst.fixedType() || dtype == _dst.depth())
+        {
+            _dst.create(src1.size(), CV_MAKE_TYPE(dtype, src1.channels()));
+
             if (dtype == CV_16S)
             {
-                Mat _dst = dst.getMat();
-                if(tegra::subtract_8u8u16s(src1.getMat(), src2.getMat(), _dst))
+                Mat dst = _dst.getMat();
+                if(tegra::subtract_8u8u16s(src1, src2, dst))
                     return;
             }
             else if (dtype == CV_32F)
             {
-                Mat _dst = dst.getMat();
-                if(tegra::subtract_8u8u32f(src1.getMat(), src2.getMat(), _dst))
+                Mat dst = _dst.getMat();
+                if(tegra::subtract_8u8u32f(src1, src2, dst))
                     return;
             }
             else if (dtype == CV_8S)
             {
-                Mat _dst = dst.getMat();
-                if(tegra::subtract_8u8u8s(src1.getMat(), src2.getMat(), _dst))
+                Mat dst = _dst.getMat();
+                if(tegra::subtract_8u8u8s(src1, src2, dst))
                     return;
             }
         }
     }
 #endif
-    arithm_op(src1, src2, dst, mask, dtype, getSubTab(), false, 0, OCL_OP_SUB );
+    arithm_op(_src1, _src2, _dst, mask, dtype, getSubTab(), false, 0, OCL_OP_SUB );
 }
 
 void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
