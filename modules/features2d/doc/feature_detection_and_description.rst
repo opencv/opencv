@@ -269,14 +269,11 @@ The KAZE constructor
 
 
 
-
 AKAZE
 -----
 .. ocv:class:: AKAZE : public Feature2D
 
-Class implementing the AKAZE keypoint detector and descriptor extractor, described in [ANB13]_.
-
-.. [ANB13] Fast Explicit Diffusion for Accelerated Features in Nonlinear Scale Spaces. Pablo F. Alcantarilla, Jesús Nuevo and Adrien Bartoli. In British Machine Vision Conference (BMVC), Bristol, UK, September 2013.
+Class implementing the AKAZE keypoint detector and descriptor extractor, described in [ANB13]_. ::
 
     class CV_EXPORTS_W AKAZE : public Feature2D
     {
@@ -291,6 +288,8 @@ Class implementing the AKAZE keypoint detector and descriptor extractor, describ
         CV_WRAP AKAZE();
         explicit AKAZE(DESCRIPTOR_TYPE descriptor_type, int descriptor_size = 0, int descriptor_channels = 3);
     };
+
+.. [ANB13] Fast Explicit Diffusion for Accelerated Features in Nonlinear Scale Spaces. Pablo F. Alcantarilla, Jesús Nuevo and Adrien Bartoli. In British Machine Vision Conference (BMVC), Bristol, UK, September 2013.
 
 AKAZE::AKAZE
 ------------
