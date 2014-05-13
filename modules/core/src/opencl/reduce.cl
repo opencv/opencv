@@ -187,7 +187,7 @@
     if (mask[mask_index]) \
     { \
         temp = loadpix(srcptr + src_index); \
-        maxval = max(maxval, (srcT)(temp >= 0 ? temp : -temp)); \
+        maxval = max(maxval, (srcT)(temp >= (srcT)(0) ? temp : -temp)); \
     }
 #define SET_LOCAL_1 \
     localmem_max[lid] = maxval
