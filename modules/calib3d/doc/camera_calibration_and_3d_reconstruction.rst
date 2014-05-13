@@ -1485,6 +1485,10 @@ Reconstructs points by triangulation.
 
 The function reconstructs 3-dimensional points (in homogeneous coordinates) by using their observations with a stereo camera. Projections matrices can be obtained from :ocv:func:`stereoRectify`.
 
+.. note::
+
+    Keep in mind that all input data should be of float type in order for this function to work.
+
 .. seealso::
 
     :ocv:func:`reprojectImageTo3D`
