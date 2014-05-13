@@ -62,7 +62,7 @@ set(OpenCV_USE_NVCUVID  @HAVE_NVCUVID@)
 # Android API level from which OpenCV has been compiled is remembered
 if(ANDROID)
   set(OpenCV_ANDROID_NATIVE_API_LEVEL @OpenCV_ANDROID_NATIVE_API_LEVEL_CONFIGCMAKE@)
-else
+else()
   set(OpenCV_ANDROID_NATIVE_API_LEVEL 0)
 endif()
 
