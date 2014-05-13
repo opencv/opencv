@@ -217,9 +217,9 @@ Computes useful camera characteristics from the camera matrix.
 
     :param imageSize: Input image size in pixels.
 
-    :param apertureWidth: Physical width of the sensor.
+    :param apertureWidth: Physical width in mm of the sensor.
 
-    :param apertureHeight: Physical height of the sensor.
+    :param apertureHeight: Physical height in mm of the sensor.
 
     :param fovx: Output field of view in degrees along the horizontal sensor axis.
 
@@ -227,13 +227,15 @@ Computes useful camera characteristics from the camera matrix.
 
     :param focalLength: Focal length of the lens in mm.
 
-    :param principalPoint: Principal point in pixels.
+    :param principalPoint: Principal point in mm.
 
     :param aspectRatio: :math:`f_y/f_x`
 
 The function computes various useful camera characteristics from the previously estimated camera matrix.
 
+.. note::
 
+    Do keep in mind that the unity measure 'mm' stands for whatever unit of measure one chooses for the chessboard pitch (it can thus be any value).
 
 composeRT
 -------------
