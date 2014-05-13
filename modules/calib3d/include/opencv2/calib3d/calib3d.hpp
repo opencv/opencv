@@ -745,7 +745,7 @@ CV_EXPORTS_W  int estimateAffine3D(InputArray src, InputArray dst,
                                    OutputArray out, OutputArray inliers,
                                    double ransacThreshold=3, double confidence=0.99);
 
-class Fisheye
+class CV_EXPORTS Fisheye
 {
 public:
 

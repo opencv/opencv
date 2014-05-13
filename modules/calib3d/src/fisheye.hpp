@@ -1,9 +1,10 @@
 #ifndef FISHEYE_INTERNAL_H
 #define FISHEYE_INTERNAL_H
+#include "precomp.hpp"
 
 namespace cv { namespace internal {
 
-struct IntrinsicParams
+struct CV_EXPORTS IntrinsicParams
 {
     Vec2d f;
     Vec2d c;
@@ -25,9 +26,9 @@ void projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints,
 void ComputeExtrinsicRefine(const Mat& imagePoints, const Mat& objectPoints, Mat& rvec,
                             Mat&  tvec, Mat& J, const int MaxIter,
                             const IntrinsicParams& param, const double thresh_cond);
-Mat ComputeHomography(Mat m, Mat M);
+CV_EXPORTS Mat ComputeHomography(Mat m, Mat M);
 
-Mat NormalizePixels(const Mat& imagePoints, const IntrinsicParams& param);
+CV_EXPORTS Mat NormalizePixels(const Mat& imagePoints, const IntrinsicParams& param);
 
 void InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk);
 
@@ -39,7 +40,7 @@ void ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayOfArrays imageP
                       const IntrinsicParams& param,  InputArray omc, InputArray Tc,
                       const int& check_cond, const double& thresh_cond, Mat& JJ2_inv, Mat& ex3);
 
-void EstimateUncertainties(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
+CV_EXPORTS void  EstimateUncertainties(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
                            const IntrinsicParams& params, InputArray omc, InputArray Tc,
                            IntrinsicParams& errors, Vec2d& std_err, double thresh_cond, int check_cond, double& rms);
 

@@ -1,8 +1,4 @@
-#include "opencv2/opencv.hpp"
-#include "opencv2/core/affine.hpp"
-#include "opencv2/core/affine.hpp"
 #include "fisheye.hpp"
-#include "iomanip"
 
 namespace cv { namespace
 {
@@ -46,6 +42,7 @@ void cv::Fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
     cv::Vec2d f, c;
     if (_K.depth() == CV_32F)
     {
+
         Matx33f K = _K.getMat();
         f = Vec2f(K(0, 0), K(1, 1));
         c = Vec2f(K(0, 2), K(1, 2));
@@ -786,8 +783,8 @@ double cv::Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     const double thresh_cond = 1e6;
     const int check_cond = 1;
 
-    size_t n_points = objectPoints.getMat(0).total();
-    size_t n_images = objectPoints.total();
+    int n_points = (int)objectPoints.getMat(0).total();
+    int n_images = (int)objectPoints.total();
 
     double change = 1;
 
@@ -856,7 +853,7 @@ double cv::Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     //Init values for rotation and translation between two views
     cv::Mat om_list(1, n_images, CV_64FC3), T_list(1, n_images, CV_64FC3);
     cv::Mat om_ref, R_ref, T_ref, R1, R2;
-    for (size_t image_idx = 0; image_idx < n_images; ++image_idx)
+    for (int image_idx = 0; image_idx < n_images; ++image_idx)
     {
         cv::Rodrigues(rvecs1[image_idx], R1);
         cv::Rodrigues(rvecs2[image_idx], R2);
@@ -887,7 +884,7 @@ double cv::Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
 
         cv::Mat omr, Tr, domrdomckk, domrdTckk, domrdom, domrdT, dTrdomckk, dTrdTckk, dTrdom, dTrdT;
 
-        for (size_t image_idx = 0; image_idx < n_images; ++image_idx)
+        for (int image_idx = 0; image_idx < n_images; ++image_idx)
         {
             Jkk = cv::Mat::zeros(4 * n_points, 18 + 6 * (n_images + 1), CV_64FC1);
 
@@ -931,22 +928,18 @@ double cv::Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
 
             //check goodness of sterepair
             double abs_max  = 0;
-            for (size_t i = 0; i < 4 * n_points; i++)
+            for (int i = 0; i < 4 * n_points; i++)
             {
                 if (fabs(ekk.at<double>(i)) > abs_max)
                 {
                     abs_max = fabs(ekk.at<double>(i));
                 }
             }
-            if (abs_max < threshold)
-            {
-                Jkk.copyTo(J.rowRange(image_idx * 4 * n_points, (image_idx + 1) * 4 * n_points));
-                ekk.copyTo(e.rowRange(image_idx * 4 * n_points, (image_idx + 1) * 4 * n_points));
-            }
-            else
-            {
-                CV_Assert(!"Bad stereo pair");
-            }
+
+            CV_Assert(abs_max < threshold); // bad stereo pair
+
+            Jkk.copyTo(J.rowRange(image_idx * 4 * n_points, (image_idx + 1) * 4 * n_points));
+            ekk.copyTo(e.rowRange(image_idx * 4 * n_points, (image_idx + 1) * 4 * n_points));
         }
 
         cv::Vec6d oldTom(Tcur[0], Tcur[1], Tcur[2], omcur[0], omcur[1], omcur[2]);
@@ -962,7 +955,7 @@ double cv::Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
         intrinsicRight = intrinsicRight + deltas.rowRange(a, a + b);
         omcur = omcur + cv::Vec3d(deltas.rowRange(a + b, a + b + 3));
         Tcur = Tcur + cv::Vec3d(deltas.rowRange(a + b + 3, a + b + 6));
-        for (size_t image_idx = 0; image_idx < n_images; ++image_idx)
+        for (int image_idx = 0; image_idx < n_images; ++image_idx)
         {
             rvecs1[image_idx] = cv::Mat(cv::Mat(rvecs1[image_idx]) + deltas.rowRange(a + b + 6 + image_idx * 6, a + b + 9 + image_idx * 6));
             tvecs1[image_idx] = cv::Mat(cv::Mat(tvecs1[image_idx]) + deltas.rowRange(a + b + 9 + image_idx * 6, a + b + 12 + image_idx * 6));
@@ -979,7 +972,7 @@ double cv::Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
         rms += ptr_e[i][0] * ptr_e[i][0] + ptr_e[i][1] * ptr_e[i][1];
     }
 
-    rms /= (e.total() / 2);
+    rms /= ((double)e.total() / 2.0);
     rms = sqrt(rms);
 
     _K1 = Matx33d(intrinsicLeft.f[0], intrinsicLeft.f[0] * intrinsicLeft.alpha, intrinsicLeft.c[0],
@@ -1011,7 +1004,7 @@ void subMatrix(const Mat& src, Mat& dst, const vector<int>& cols, const vector<i
     int nonzeros_cols = cv::countNonZero(cols);
     Mat tmp(src.rows, nonzeros_cols, CV_64FC1);
 
-    for (size_t i = 0, j = 0; i < cols.size(); i++)
+    for (int i = 0, j = 0; i < (int)cols.size(); i++)
     {
         if (cols[i])
         {
@@ -1021,7 +1014,7 @@ void subMatrix(const Mat& src, Mat& dst, const vector<int>& cols, const vector<i
 
     int nonzeros_rows  = cv::countNonZero(rows);
     Mat tmp1(nonzeros_rows, nonzeros_cols, CV_64FC1);
-    for (size_t i = 0, j = 0; i < rows.size(); i++)
+    for (int i = 0, j = 0; i < (int)rows.size(); i++)
     {
         if (rows[i])
         {
@@ -1328,10 +1321,7 @@ void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArr
         if (check_cond)
         {
             SVD svd(JJ_kk, SVD::NO_UV);
-            if (svd.w.at<double>(0) / svd.w.at<double>((int)svd.w.total() - 1) > thresh_cond)
-            {
-                CV_Assert(!"cond > thresh_cond");
-            }
+            CV_Assert(svd.w.at<double>(0) / svd.w.at<double>((int)svd.w.total() - 1) < thresh_cond);
         }
         omckk.reshape(3,1).copyTo(omc.getMat().col(image_idx));
         Tckk.reshape(3,1).copyTo(Tc.getMat().col(image_idx));
@@ -1392,11 +1382,7 @@ void cv::internal::ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayO
         {
             Mat JJ_kk = B.t();
             SVD svd(JJ_kk, SVD::NO_UV);
-            double cond = svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1);
-            if (cond  > thresh_cond)
-            {
-                CV_Assert(!"cond  > thresh_cond");
-            }
+            CV_Assert(svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1) < thresh_cond);
         }
     }
 
@@ -1420,7 +1406,7 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
 
     Mat ex((int)(objectPoints.getMat(0).total() * objectPoints.total()), 1, CV_64FC2);
 
-    for (size_t image_idx = 0; image_idx < objectPoints.total(); ++image_idx)
+    for (int image_idx = 0; image_idx < (int)objectPoints.total(); ++image_idx)
     {
         Mat image, object;
         objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
@@ -1435,11 +1421,11 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
     }
 
     meanStdDev(ex, noArray(), std_err);
-    std_err *= sqrt(ex.total()/(ex.total() - 1.0));
+    std_err *= sqrt((double)ex.total()/((double)ex.total() - 1.0));
 
     Mat sigma_x;
     meanStdDev(ex.reshape(1, 1), noArray(), sigma_x);
-    sigma_x  *= sqrt(2 * ex.total()/(2 * ex.total() - 1.0));
+    sigma_x  *= sqrt(2.0 * (double)ex.total()/(2.0 * (double)ex.total() - 1.0));
 
     Mat _JJ2_inv, ex3;
     ComputeJacobians(objectPoints, imagePoints, params, omc, Tc, check_cond, thresh_cond, _JJ2_inv, ex3);
@@ -1459,7 +1445,7 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
         rms += ptr_ex[i][0] * ptr_ex[i][0] + ptr_ex[i][1] * ptr_ex[i][1];
     }
 
-    rms /= ex.total();
+    rms /= (double)ex.total();
     rms = sqrt(rms);
 }
 
@@ -1468,9 +1454,9 @@ void cv::internal::dAB(InputArray A, InputArray B, OutputArray dABdA, OutputArra
     CV_Assert(A.getMat().cols == B.getMat().rows);
     CV_Assert(A.type() == CV_64FC1 && B.type() == CV_64FC1);
 
-    size_t p = A.getMat().rows;
-    size_t n = A.getMat().cols;
-    size_t q = B.getMat().cols;
+    int p = A.getMat().rows;
+    int n = A.getMat().cols;
+    int q = B.getMat().cols;
 
     dABdA.create(p * q, p * n, CV_64FC1);
     dABdB.create(p * q, q * n, CV_64FC1);
@@ -1478,20 +1464,20 @@ void cv::internal::dAB(InputArray A, InputArray B, OutputArray dABdA, OutputArra
     dABdA.getMat() = Mat::zeros(p * q, p * n, CV_64FC1);
     dABdB.getMat() = Mat::zeros(p * q, q * n, CV_64FC1);
 
-    for (size_t i = 0; i < q; ++i)
+    for (int i = 0; i < q; ++i)
     {
-        for (size_t j = 0; j < p; ++j)
+        for (int j = 0; j < p; ++j)
         {
-            size_t ij = j + i * p;
-            for (size_t k = 0; k < n; ++k)
+            int ij = j + i * p;
+            for (int k = 0; k < n; ++k)
             {
-                size_t kj = j + k * p;
+                int kj = j + k * p;
                 dABdA.getMat().at<double>(ij, kj) = B.getMat().at<double>(k, i);
             }
         }
     }
 
-    for (size_t i = 0; i < q; ++i)
+    for (int i = 0; i < q; ++i)
     {
         A.getMat().copyTo(dABdB.getMat().rowRange(i * p, i * p + p).colRange(i * n, i * n + n));
     }
@@ -1571,8 +1557,8 @@ double cv::internal::median(const Mat& row)
     CV_Assert(!row.empty() && row.rows == 1);
     Mat tmp = row.clone();
     sort(tmp, tmp, 0);
-    if (tmp.total() % 2) return tmp.at<double>(tmp.total() / 2);
-    else return 0.5 *(tmp.at<double>(tmp.total() / 2) + tmp.at<double>(tmp.total() / 2 - 1));
+    if ((int)tmp.total() % 2) return tmp.at<double>((int)tmp.total() / 2);
+    else return 0.5 *(tmp.at<double>((int)tmp.total() / 2) + tmp.at<double>((int)tmp.total() / 2 - 1));
 }
 
 cv::Vec3d cv::internal::median3d(InputArray m)
