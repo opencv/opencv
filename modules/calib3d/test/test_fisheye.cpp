@@ -1,5 +1,4 @@
 #include "test_precomp.hpp"
-#include <fstream>
 #include <opencv2/ts/gpu_test.hpp>
 #include "../src/fisheye.hpp"
 
