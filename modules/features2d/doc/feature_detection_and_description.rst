@@ -288,11 +288,8 @@ Class implementing the AKAZE keypoint detector and descriptor extractor, describ
             DESCRIPTOR_MLDB_UPRIGHT = 4, ///< Upright descriptors, not invariant to rotation
             DESCRIPTOR_MLDB = 5
         };
-
         CV_WRAP AKAZE();
         explicit AKAZE(DESCRIPTOR_TYPE descriptor_type, int descriptor_size = 0, int descriptor_channels = 3);
-
-        ...
     };
 
 AKAZE::AKAZE
