@@ -176,7 +176,7 @@ public:
             codeWord.frequency = 1;
             codeWord.minBrightness = pixelBrightness;
             codeWord.maxBrightness = pixelBrightness;
-            codeWord.maximumNegativeRunLength = T - 1;
+            codeWord.maximumNegativeRunLength = 0;
             codeWord.lastUpdate = T;
             codeWord.creationTime = T;
 
@@ -207,6 +207,7 @@ public:
             for (size_t k = 0; k < pixelCodeBook.size(); k++) {
                 CodeWord &codeWord = pixelCodeBook[k];
 
+                codeWord.maximumNegativeRunLength = std::max(codeWord.maximumNegativeRunLength, codeWord.creationTime - 1);
                 codeWord.maximumNegativeRunLength = std::max(codeWord.maximumNegativeRunLength, T - codeWord.lastUpdate + codeWord.creationTime - 1);
             }
         }
