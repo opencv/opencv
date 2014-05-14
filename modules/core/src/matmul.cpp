@@ -2153,9 +2153,10 @@ typedef void (*ScaleAddFunc)(const uchar* src1, const uchar* src2, uchar* dst, i
 
 static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray _dst, int type )
 {
+    const ocl::Device & d = ocl::Device::getDefault();
     int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), wdepth = std::max(depth, CV_32F),
-            kercn = ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+            kercn = ocl::predictOptimalVectorWidth(_src1, _src2, _dst), rowsPerWI = d.isIntel() ? 4 : 1;
+    bool doubleSupport = d.doubleFPConfig() > 0;
     Size size = _src1.size();
 
     if ( (!doubleSupport && depth == CV_64F) || size != _src2.size() )
@@ -2164,13 +2165,14 @@ static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, Outp
     char cvt[2][50];
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
                   format("-D OP_SCALE_ADD -D BINARY_OP -D dstT=%s -D workT=%s -D convertToWT1=%s"
-                         " -D srcT1=dstT -D srcT2=dstT -D convertToDT=%s -D workT1=%s -D wdepth=%d%s",
+                         " -D srcT1=dstT -D srcT2=dstT -D convertToDT=%s -D workT1=%s"
+                         " -D wdepth=%d%s -D rowsPerWI=%d",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
                          ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)),
                          ocl::convertTypeStr(depth, wdepth, kercn, cvt[0]),
                          ocl::convertTypeStr(wdepth, depth, kercn, cvt[1]),
                          ocl::typeToStr(wdepth), wdepth,
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : "", rowsPerWI));
     if (k.empty())
         return false;
 
@@ -2187,7 +2189,7 @@ static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, Outp
     else
         k.args(src1arg, src2arg, dstarg, alpha);
 
-    size_t globalsize[2] = { dst.cols * cn / kercn, dst.rows };
+    size_t globalsize[2] = { dst.cols * cn / kercn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
