@@ -508,7 +508,7 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
         return;
 #endif
 
-#if IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 801 && 0
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
     if (borderTypeNI == BORDER_DEFAULT && (!src.isSubmatrix() || isolated) && dsz == Size((src.cols + 1)/2, (src.rows + 1)/2))
@@ -577,7 +577,7 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
         return;
 #endif
 
-#if IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 801 && 0
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
     if (borderTypeNI == BORDER_DEFAULT && (!src.isSubmatrix() || isolated) && dsz == Size(src.cols*2, src.rows*2))
@@ -648,7 +648,7 @@ void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, 
 
     int i=1;
 
-#if IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 801 && 0
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
     if (borderTypeNI == BORDER_DEFAULT && (!src.isSubmatrix() || isolated))
@@ -668,17 +668,20 @@ void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, 
             pyrInitAllocFunc = (ippiPyramidLayerDownInitAlloc) ippiPyramidLayerDownInitAlloc_8u_C1R;
             pyrDownFunc = (ippiPyramidLayerDown) ippiPyramidLayerDown_8u_C1R;
             pyrFreeFunc = (ippiPyramidLayerDownFree) ippiPyramidLayerDownFree_8u_C1R;
-        } else if (type == CV_8UC3)
+        }
+        else if (type == CV_8UC3)
         {
             pyrInitAllocFunc = (ippiPyramidLayerDownInitAlloc) ippiPyramidLayerDownInitAlloc_8u_C3R;
             pyrDownFunc = (ippiPyramidLayerDown) ippiPyramidLayerDown_8u_C3R;
             pyrFreeFunc = (ippiPyramidLayerDownFree) ippiPyramidLayerDownFree_8u_C3R;
-        } else if (type == CV_32FC1)
+        }
+        else if (type == CV_32FC1)
         {
             pyrInitAllocFunc = (ippiPyramidLayerDownInitAlloc) ippiPyramidLayerDownInitAlloc_32f_C1R;
             pyrDownFunc = (ippiPyramidLayerDown) ippiPyramidLayerDown_32f_C1R;
             pyrFreeFunc = (ippiPyramidLayerDownFree) ippiPyramidLayerDownFree_32f_C1R;
-        } else if (type == CV_32FC3)
+        }
+        else if (type == CV_32FC3)
         {
             pyrInitAllocFunc = (ippiPyramidLayerDownInitAlloc) ippiPyramidLayerDownInitAlloc_32f_C3R;
             pyrDownFunc = (ippiPyramidLayerDown) ippiPyramidLayerDown_32f_C3R;
@@ -722,10 +725,10 @@ void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, 
                     }
                 }
                 pyrFreeFunc(gPyr->pState);
-            } else
-            {
-                setIppErrorStatus();
             }
+            else
+                setIppErrorStatus();
+
             ippiPyramidFree(gPyr);
         }
     }
