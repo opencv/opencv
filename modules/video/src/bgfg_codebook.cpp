@@ -57,6 +57,7 @@
 #include "precomp.hpp"
 
 using std::vector;
+using std::remove_if;
 
 namespace cv
 {
@@ -93,6 +94,44 @@ public:
     int creationTime;
     int lastUpdate;
 };
+
+class MNRLGreatherThan {
+public:
+    MNRLGreatherThan(int maxCodeWordAge, int T) : maxCodeWordAge(maxCodeWordAge),T(T)  {}
+
+    bool operator()(const CodeWord& codeWord) const {
+        return std::max(T-codeWord.lastUpdate,codeWord.maximumNegativeRunLength) > maxCodeWordAge;
+    }
+
+private:
+    int maxCodeWordAge;
+    int T;
+};
+
+class createdBefore {
+public:
+    createdBefore(int T) : T(T)  {}
+
+    bool operator()(const CodeWord& codeWord) const {
+        return codeWord.creationTime < T;
+    }
+
+private:
+    int T;
+};
+
+class updatedBefore {
+public:
+    updatedBefore(int T) : T(T)  {}
+
+    bool operator()(const CodeWord& codeWord) const {
+        return codeWord.lastUpdate < T;
+    }
+
+private:
+    int T;
+};
+
 
 class CodeBook {
 public:
@@ -177,16 +216,7 @@ public:
         for(int i=0; i < size.area(); i++ ) {
             vector<CodeWord> &pixelCodeBook = codeBook[i];
 
-            vector<CodeWord> clean;
-            for (size_t k = 0; k < pixelCodeBook.size(); k++) {
-                CodeWord &codeWord = pixelCodeBook[k];
-
-                if (std::max(T-codeWord.lastUpdate,codeWord.maximumNegativeRunLength) <= maxCodeWordAge) {
-                    clean.push_back(codeWord);
-                }
-            }
-
-            pixelCodeBook = clean;
+            remove_if(pixelCodeBook.begin(), pixelCodeBook.end(), MNRLGreatherThan(maxCodeWordAge, T));
         }
     }
 
@@ -448,35 +478,18 @@ void BackgroundSubtractorCodeBookImpl::apply(InputArray _image, OutputArray _fgm
             vector<CodeWord>& pixelCodeBook = codeBook->getPixelCodeBook(i);
             vector<CodeWord>& cachePixelCodeBook = cache->getPixelCodeBook(i);
 
-            {
-                vector<CodeWord> clean;
-                for (size_t k = 0; k < cachePixelCodeBook.size(); k++) {
-                    CodeWord &codeWord = cachePixelCodeBook[k];
+            for (size_t k = 0; k < cachePixelCodeBook.size(); k++) {
+                CodeWord &codeWord = cachePixelCodeBook[k];
 
-                    if (nframes - history - codeWord.creationTime > minAddTime) {
-                        codeWord.creationTime += history;
-                        codeWord.lastUpdate += history;
-                        pixelCodeBook.push_back(codeWord);
-                    } else {
-                        clean.push_back(codeWord);
-                    }
+                if (codeWord.creationTime < nframes - history - minAddTime) {
+                    codeWord.creationTime += history;
+                    codeWord.lastUpdate += history;
+                    pixelCodeBook.push_back(codeWord);
                 }
-
-                cachePixelCodeBook = clean;
             }
 
-            {
-                vector<CodeWord> clean;
-                for (size_t k = 0; k < pixelCodeBook.size(); k++) {
-                    const CodeWord &codeWord = pixelCodeBook[k];
-
-                    if (nframes - codeWord.lastUpdate <= maxDeleteTime) {
-                        clean.push_back(codeWord);
-                    }
-                }
-
-                pixelCodeBook = clean;
-            }
+            remove_if(cachePixelCodeBook.begin(), cachePixelCodeBook.end(), createdBefore(nframes - history - minAddTime));
+            remove_if(pixelCodeBook.begin(), pixelCodeBook.end(), updatedBefore(nframes - maxDeleteTime));
         }
     }
 }
