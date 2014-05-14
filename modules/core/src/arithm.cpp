@@ -3094,11 +3094,12 @@ static InRangeFunc getInRangeFunc(int depth)
 static bool ocl_inRange( InputArray _src, InputArray _lowerb,
                          InputArray _upperb, OutputArray _dst )
 {
+    const ocl::Device & d = ocl::Device::getDefault();
     int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Size ssize = _src.size(), lsize = _lowerb.size(), usize = _upperb.size();
     int stype = _src.type(), ltype = _lowerb.type(), utype = _upperb.type();
     int sdepth = CV_MAT_DEPTH(stype), ldepth = CV_MAT_DEPTH(ltype), udepth = CV_MAT_DEPTH(utype);
-    int cn = CV_MAT_CN(stype);
+    int cn = CV_MAT_CN(stype), rowsPerWI = d.isIntel() ? 4 : 1;
     bool lbScalar = false, ubScalar = false;
 
     if( (lkind == _InputArray::MATX && skind != _InputArray::MATX) ||
@@ -3122,7 +3123,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
     if (lbScalar != ubScalar)
         return false;
 
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
+    bool doubleSupport = d.doubleFPConfig() > 0,
             haveScalar = lbScalar && ubScalar;
 
     if ( (!doubleSupport && sdepth == CV_64F) ||
@@ -3187,13 +3188,13 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
         uscalar.copyTo(uscalaru);
 
         ker.args(srcarg, dstarg, ocl::KernelArg::PtrReadOnly(lscalaru),
-               ocl::KernelArg::PtrReadOnly(uscalaru));
+               ocl::KernelArg::PtrReadOnly(uscalaru), rowsPerWI);
     }
     else
         ker.args(srcarg, dstarg, ocl::KernelArg::ReadOnlyNoSize(lscalaru),
-               ocl::KernelArg::ReadOnlyNoSize(uscalaru));
+               ocl::KernelArg::ReadOnlyNoSize(uscalaru), rowsPerWI);
 
-    size_t globalsize[2] = { ssize.width, ssize.height };
+    size_t globalsize[2] = { ssize.width, (ssize.height + rowsPerWI - 1) / rowsPerWI };
     return ker.run(2, globalsize, NULL, false);
 }
 
