@@ -711,13 +711,13 @@ CvCaptureCAM_Giganetix::setProperty( int property_id, double value )
         INT64 w, wmax, val = (INT64)value;
         if((b_ret = m_device->GetIntegerNodeValue ("Width", w)))
           if((b_ret = m_device->GetIntegerNodeValue ("WidthMax", wmax)))
-            b_ret = m_device->SetIntegerNodeValue ("OffsetX", val w > wmax ? wmax - w : val);
+            b_ret = m_device->SetIntegerNodeValue ("OffsetX", (val + w) > wmax ? (wmax - w) : val);
       } break;
       case CV_CAP_PROP_GIGA_FRAME_OFFSET_Y: {
         INT64 h, hmax, val = (INT64)value;
         if((b_ret = m_device->GetIntegerNodeValue ("Height", h)))
           if((b_ret = m_device->GetIntegerNodeValue ("HeightMax", hmax)))
-            b_ret = m_device->SetIntegerNodeValue ("OffsetY", val h > hmax ? hmax - h : val);
+            b_ret = m_device->SetIntegerNodeValue ("OffsetY", (val + h) > hmax ? (hmax - h) : val);
         b_ret = m_device->SetIntegerNodeValue ("OffsetY", (INT64)value);
       }
         break;
