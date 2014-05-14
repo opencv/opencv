@@ -2798,7 +2798,7 @@ dotProd_(const T* src1, const T* src2, int len)
 static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
 {
     double r = 0;
-#if ARITHM_USE_IPP
+#if ARITHM_USE_IPP && 0
     if (0 <= ippiDotProd_8u64f_C1R(src1, (int)(len*sizeof(src1[0])),
                                    src2, (int)(len*sizeof(src2[0])),
                                    ippiSize(len, 1), &r))
