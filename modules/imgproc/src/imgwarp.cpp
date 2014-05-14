@@ -2085,10 +2085,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
                         cn);
         k.create("resizeSampler", ocl::imgproc::resize_oclsrc, compileOpts);
 
-        if(k.empty())
-        {
+        if (k.empty())
             useSampler = false;
-        }
         else
         {
             // Convert the input into an OpenCL image type, using normalized channel data types
@@ -2397,6 +2395,12 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
     int k, sx, sy, dx, dy;
 
+    int iscale_x = saturate_cast<int>(scale_x);
+    int iscale_y = saturate_cast<int>(scale_y);
+
+    bool is_area_fast = std::abs(scale_x - iscale_x) < DBL_EPSILON &&
+            std::abs(scale_y - iscale_y) < DBL_EPSILON;
+
 #if IPP_VERSION_X100 >= 701
 #define IPP_RESIZE_EPS 1e-10
 
@@ -2404,7 +2408,8 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     double ey = fabs((double)dsize.height / src.rows - inv_scale_y) / inv_scale_y;
 
     if ( ((ex < IPP_RESIZE_EPS && ey < IPP_RESIZE_EPS && depth != CV_64F) || (ex == 0 && ey == 0 && depth == CV_64F)) &&
-         (interpolation == INTER_LINEAR || interpolation == INTER_CUBIC))
+         (interpolation == INTER_LINEAR || interpolation == INTER_CUBIC) &&
+         !(interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 && depth == CV_8U))
     {
         int mode = -1;
         if (interpolation == INTER_LINEAR && src.rows >= 2 && src.cols >= 2)
@@ -2435,12 +2440,6 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     }
 
     {
-        int iscale_x = saturate_cast<int>(scale_x);
-        int iscale_y = saturate_cast<int>(scale_y);
-
-        bool is_area_fast = std::abs(scale_x - iscale_x) < DBL_EPSILON &&
-                std::abs(scale_y - iscale_y) < DBL_EPSILON;
-
         // in case of scale_x && scale_y is equal to 2
         // INTER_AREA (fast) also is equal to INTER_LINEAR
         if( interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 )

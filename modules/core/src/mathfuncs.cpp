@@ -237,7 +237,7 @@ float  cubeRoot( float value )
 
 static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
 {
-#if defined(HAVE_IPP)
+#if defined HAVE_IPP && 0
     IppStatus status = ippsMagnitude_32f(x, y, mag, len);
     if (status >= 0)
         return;
