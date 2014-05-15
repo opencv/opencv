@@ -474,7 +474,7 @@ __kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
                  int rows, int cols EXTRA_PARAMS )
 {
     int x = get_global_id(0);
-    int y0 = get_global_id(1);
+    int y0 = get_global_id(1) * rowsPerWI;
 
     if (x < cols)
     {
