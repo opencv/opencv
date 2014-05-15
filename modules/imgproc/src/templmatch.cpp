@@ -634,7 +634,9 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
 #endif
 
 #if defined HAVE_IPP
-    if (method == CV_TM_SQDIFF && cn == 1)
+    bool useIppMT = (templ.rows < img.rows/2 && templ.cols < img.cols/2);
+
+    if (method == CV_TM_SQDIFF && cn == 1 && useIppMT)
     {
         if (ipp_sqrDistance(img, templ, result))
             return;
@@ -643,7 +645,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
 #endif
 
 #if defined HAVE_IPP
-    if (cn == 1)
+    if (cn == 1 && useIppMT)
     {
         if (!ipp_crossCorr(img, templ, result))
         {
