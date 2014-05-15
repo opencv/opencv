@@ -25,9 +25,10 @@ int main( int /*argc*/, char** /*argv*/ )
 
     for(;;)
     {
-        int i, count = rng.uniform(1, 101);
+        int count = rng.uniform(3, 10);
+        std::cout << "using " << count << " random points." << std::endl;
         vector<Point> points;
-        for( i = 0; i < count; i++ )
+        for( int i = 0; i < count; i++ )
         {
             Point pt;
             pt.x = rng.uniform(img.cols/4, img.cols*3/4);
@@ -43,14 +44,36 @@ int main( int /*argc*/, char** /*argv*/ )
         minEnclosingCircle(Mat(points), center, radius);
         box.points(vtx);
 
-        img = Scalar::all(0);
-        for( i = 0; i < count; i++ )
-            circle( img, points[i], 3, Scalar(0, 0, 255), CV_FILLED, CV_AA );
+        // compare radius and minimal distance
+        double max_dist = 0;
+        Point max_begin, max_end;
+        for (int i = 0; i < count; ++i) {
+            for (int j = i + 1; j < count; ++j) {
+                double distance = norm(points[i] - points[j]);
+                if (distance > max_dist) {
+                    max_dist = distance;
+                    max_begin = points[i];
+                    max_end = points[j];
+                }
+            }
+        }
 
-        for( i = 0; i < 4; i++ )
+        std::cout << "2*radius: " << 2*radius << ", max distance: " << max_dist << ", rel. diff.: " << 2*radius / max_dist << std::endl;
+
+        img = Scalar::all(0);
+        // min rectangle
+        for(int i = 0; i < 4; i++ )
             line(img, vtx[i], vtx[(i+1)%4], Scalar(0, 255, 0), 1, CV_AA);
 
+        // min circle
         circle(img, center, cvRound(radius), Scalar(0, 255, 255), 1, CV_AA);
+
+        // points
+        for(int i = 0; i < count; i++ )
+            circle( img, points[i], 3, Scalar(0, 0, 255), CV_FILLED, CV_AA );
+
+        // max dist
+        line(img, max_begin, max_end, Scalar(255, 0, 255));
 
         imshow( "rect & circle", img );
 
