@@ -5,7 +5,8 @@
  * @author Pablo F. Alcantarilla, Jesus Nuevo
  */
 
-#pragma once
+#ifndef __OPENCV_FEATURES_2D_AKAZE_CONFIG_H__
+#define __OPENCV_FEATURES_2D_AKAZE_CONFIG_H__
 
 /* ************************************************************************* */
 // OpenCV
@@ -28,14 +29,6 @@ const float gauss25[7][7] = {
 /// AKAZE configuration options structure
 struct AKAZEOptions {
 
-    /// AKAZE Diffusivities
-    enum DIFFUSIVITY_TYPE {
-        PM_G1 = 0,
-        PM_G2 = 1,
-        WEICKERT = 2,
-        CHARBONNIER = 3
-    };
-
     AKAZEOptions()
         : omax(4)
         , nsublevels(4)
@@ -44,12 +37,12 @@ struct AKAZEOptions {
         , soffset(1.6f)
         , derivative_factor(1.5f)
         , sderivatives(1.0)
-        , diffusivity(PM_G2)
+        , diffusivity(cv::DIFF_PM_G2)
 
         , dthreshold(0.001f)
         , min_dthreshold(0.00001f)
 
-        , descriptor(cv::AKAZE::DESCRIPTOR_MLDB)
+        , descriptor(cv::DESCRIPTOR_MLDB)
         , descriptor_size(0)
         , descriptor_channels(3)
         , descriptor_pattern_size(10)
@@ -67,12 +60,12 @@ struct AKAZEOptions {
     float soffset;                  ///< Base scale offset (sigma units)
     float derivative_factor;        ///< Factor for the multiscale derivatives
     float sderivatives;             ///< Smoothing factor for the derivatives
-    DIFFUSIVITY_TYPE diffusivity;   ///< Diffusivity type
+    int diffusivity;   ///< Diffusivity type
 
     float dthreshold;               ///< Detector response threshold to accept point
     float min_dthreshold;           ///< Minimum detector threshold to accept a point
 
-    cv::AKAZE::DESCRIPTOR_TYPE descriptor;     ///< Type of descriptor
+    int descriptor;     ///< Type of descriptor
     int descriptor_size;            ///< Size of the descriptor in bits. 0->Full size
     int descriptor_channels;        ///< Number of channels in the descriptor (1, 2, 3)
     int descriptor_pattern_size;    ///< Actual patch size is 2*pattern_size*point.scale
@@ -82,28 +75,4 @@ struct AKAZEOptions {
     int kcontrast_nbins;            ///< Number of bins for the contrast factor histogram
 };
 
-/* ************************************************************************* */
-/// AKAZE nonlinear diffusion filtering evolution
-struct TEvolution {
-
-    TEvolution() {
-        etime = 0.0f;
-        esigma = 0.0f;
-        octave = 0;
-        sublevel = 0;
-        sigma_size = 0;
-    }
-
-    cv::Mat Lx, Ly;	// First order spatial derivatives
-    cv::Mat Lxx, Lxy, Lyy;	// Second order spatial derivatives
-    cv::Mat Lflow;	// Diffusivity image
-    cv::Mat Lt;	// Evolution image
-    cv::Mat Lsmooth; // Smoothed image
-    cv::Mat Lstep; // Evolution step update
-    cv::Mat Ldet; // Detector response
-    float etime;	// Evolution time
-    float esigma;	// Evolution sigma. For linear diffusion t = sigma^2 / 2
-    size_t octave;	// Image octave
-    size_t sublevel;	// Image sublevel in each octave
-    size_t sigma_size;	// Integer sigma. For computing the feature detector responses
-};
+#endif

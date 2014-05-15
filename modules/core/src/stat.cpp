@@ -1903,11 +1903,21 @@ int normHamming(const uchar* a, const uchar* b, int n)
         uint64x2_t bitSet2 = vpaddlq_u32 (bits);
         result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
         result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
-    }
+		}
+#elif __GNUC__
+		typedef unsigned long long pop_t;
+		const int size = n / sizeof(pop_t);
+		const pop_t* a2 = reinterpret_cast<const pop_t*> (a);
+		const pop_t* b2 = reinterpret_cast<const pop_t*> (b);
+		const pop_t* a2_end = a2 + size;
+		for (; a2 != a2_end; ++a2, ++b2) result += __builtin_popcountll((*a2) ^ (*b2));
+		i = size * sizeof(pop_t);
+#else
+		for( ; i <= n - 4; i += 4 )
+				result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
+								popCountTable[a[i+2] ^ b[i+2]] + popCountTable[a[i+3] ^ b[i+3]];
 #endif
-        for( ; i <= n - 4; i += 4 )
-            result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
-                    popCountTable[a[i+2] ^ b[i+2]] + popCountTable[a[i+3] ^ b[i+3]];
+
     for( ; i < n; i++ )
         result += popCountTable[a[i] ^ b[i]];
     return result;

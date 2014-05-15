@@ -255,6 +255,15 @@ KAZE
 .. ocv:class:: KAZE : public Feature2D
 
 Class implementing the KAZE keypoint detector and descriptor extractor, described in [ABD12]_.
+    class CV_EXPORTS_W KAZE : public Feature2D
+    {
+    public:
+        CV_WRAP KAZE();
+        CV_WRAP explicit KAZE(bool extended, bool upright, float threshold = 0.001f,
+                              int octaves = 4, int sublevels = 4, int diffusivity = DIFF_PM_G2);
+    };
+
+..note:: AKAZE descriptor can only be used with KAZE or AKAZE keypoints
 
 .. [ABD12] KAZE Features. Pablo F. Alcantarilla, Adrien Bartoli and Andrew J. Davison. In European Conference on Computer Vision (ECCV), Fiorenze, Italy, October 2012.
 
@@ -267,8 +276,6 @@ The KAZE constructor
     :param extended: Set to enable extraction of extended (128-byte) descriptor.
     :param upright: Set to enable use of upright descriptors (non rotation-invariant).
 
-
-
 AKAZE
 -----
 .. ocv:class:: AKAZE : public Feature2D
@@ -278,16 +285,12 @@ Class implementing the AKAZE keypoint detector and descriptor extractor, describ
     class CV_EXPORTS_W AKAZE : public Feature2D
     {
     public:
-        /// AKAZE Descriptor Type
-        enum DESCRIPTOR_TYPE {
-            DESCRIPTOR_KAZE_UPRIGHT = 2, ///< Upright descriptors, not invariant to rotation
-            DESCRIPTOR_KAZE = 3,
-            DESCRIPTOR_MLDB_UPRIGHT = 4, ///< Upright descriptors, not invariant to rotation
-            DESCRIPTOR_MLDB = 5
-        };
         CV_WRAP AKAZE();
-        explicit AKAZE(DESCRIPTOR_TYPE descriptor_type, int descriptor_size = 0, int descriptor_channels = 3);
+        CV_WRAP explicit AKAZE(int descriptor_type, int descriptor_size = 0, int descriptor_channels = 3,
+                               float threshold = 0.001f, int octaves = 4, int sublevels = 4, int diffusivity = DIFF_PM_G2);
     };
+
+..note:: AKAZE descriptor can only be used with KAZE or AKAZE keypoints
 
 .. [ANB13] Fast Explicit Diffusion for Accelerated Features in Nonlinear Scale Spaces. Pablo F. Alcantarilla, Jesús Nuevo and Adrien Bartoli. In British Machine Vision Conference (BMVC), Bristol, UK, September 2013.
 
