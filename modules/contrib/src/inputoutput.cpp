@@ -189,12 +189,12 @@ namespace cv
     {
         std::vector<String> list = Directory::GetListFiles(path, exten, addPath);
 
-        std::vector<String> dirs = Directory::GetListFolders(path, exten, addPath);
+        std::vector<String> dirs = Directory::GetListFolders(path, "", addPath); //Better call GetListFolders with "" extension or no dirs will be found
 
         std::vector<String>::const_iterator it;
         for (it = dirs.begin(); it != dirs.end(); ++it)
         {
-            std::vector<String> cl = Directory::GetListFiles(*it, exten, addPath);
+            std::vector<String> cl = Directory::GetListFilesR(path + "/" + *it, exten, addPath);    //Now its trully recursive
             list.insert(list.end(), cl.begin(), cl.end());
         }
 
