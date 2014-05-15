@@ -34,30 +34,149 @@
 //
 //
 
-__kernel void LUT(__global const uchar * srcptr, int src_step, int src_offset,
+__kernel void LUTC4(__global const uchar * srcptr, int src_step, int src_offset,
                   __global const uchar * lutptr, int lut_step, int lut_offset,
                   __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y = 2 * get_global_id(1);
+
+    __global const dstT * lut = (__global const dstT *)(lutptr + lut_offset);
+
+    __local dstT lut_l[256 * lcn];
+    int init = mad24(get_local_id(1), get_local_size(0), get_local_id(0));
+    int step = get_local_size(0) * get_local_size(1);
+
+    for (int i = init; i < 256 * lcn; i += step)
+    {
+        lut_l[i + 0] = lut[i + 0];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     if (x < cols && y < rows)
     {
         int src_index = mad24(y, src_step, mad24(x, (int)sizeof(srcT) * dcn, src_offset));
         int dst_index = mad24(y, dst_step, mad24(x, (int)sizeof(dstT) * dcn, dst_offset));
 
+        __global const uchar4 * src = (__global const uchar4 *)(srcptr + src_index);
+        int4 idx = convert_int4(src[0]) * lcn + (int4)(0, 1, 2, 3);
+        __global dstT * dst = (__global dstT *)(dstptr + dst_index);
+
+        dst[0] = lut_l[idx.x];
+        dst[1] = lut_l[idx.y];
+        dst[2] = lut_l[idx.z];
+        dst[3] = lut_l[idx.w];
+
+        if (y < rows - 1)
+        {
+            src = (__global const uchar4 *)(srcptr + src_index + src_step);
+            idx = convert_int4(src[0]) * lcn + (int4)(0, 1, 2, 3);
+            dst = (__global dstT *)(dstptr + dst_index + dst_step);
+
+            dst[0] = lut_l[idx.x];
+            dst[1] = lut_l[idx.y];
+            dst[2] = lut_l[idx.z];
+            dst[3] = lut_l[idx.w];
+        }
+    }
+}
+
+__kernel void LUTC3(__global const uchar * srcptr, int src_step, int src_offset,
+                  __global const uchar * lutptr, int lut_step, int lut_offset,
+                  __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols)
+{
+    int x = get_global_id(0);
+    int y = 2 * get_global_id(1);
+
+    __global const dstT * lut = (__global const dstT *)(lutptr + lut_offset);
+
+    __local dstT lut_l[256 * lcn];
+    int init = mad24(get_local_id(1), get_local_size(0), get_local_id(0));
+    int step = get_local_size(0) * get_local_size(1);
+
+    for (int i = init; i < 256 * lcn; i += step)
+    {
+        lut_l[i + 0] = lut[i + 0];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (x < cols && y < rows)
+    {
+        int src_index = mad24(y, src_step, mad24(x, (int)sizeof(srcT) * dcn, src_offset));
+        int dst_index = mad24(y, dst_step, mad24(x, (int)sizeof(dstT) * dcn, dst_offset));
+
+        uchar3 src_pixel = vload3(0, (__global const uchar *)(srcptr + src_index));
+        int3 idx = convert_int3(src_pixel) * lcn + (int3)(0, 1, 2);
+        __global dstT * dst = (__global dstT *)(dstptr + dst_index);
+
+        dst[0] = lut_l[idx.x];
+        dst[1] = lut_l[idx.y];
+        dst[2] = lut_l[idx.z];
+        if (y < rows - 1)
+        {
+            uchar3 src_pixel = vload3(0, (__global const uchar *)(srcptr + src_index + src_step));
+            idx = convert_int3(src_pixel) * lcn + (int3)(0, 1, 2);
+            dst = (__global dstT *)(dstptr + dst_index + dst_step);
+
+            dst[0] = lut_l[idx.x];
+            dst[1] = lut_l[idx.y];
+            dst[2] = lut_l[idx.z];
+        }
+    }
+}
+
+__kernel void LUT(__global const uchar * srcptr, int src_step, int src_offset,
+                  __global const uchar * lutptr, int lut_step, int lut_offset,
+                  __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols)
+{
+    __global const dstT * lut = (__global const dstT *)(lutptr + lut_offset);
+
+    __local dstT lut_l[256 * lcn];
+    int init = mad24(get_local_id(1), get_local_size(0), get_local_id(0));
+    int step = get_local_size(0) * get_local_size(1);
+
+    for (int i = init; i < 256 * lcn; i += step)
+    {
+        lut_l[i + 0] = lut[i + 0];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    int x = get_global_id(0);
+    int y = 2 * get_global_id(1);
+
+    if (x < cols && y < rows)
+    {
+        int src_index = mad24(y, src_step, mad24(x, (int)sizeof(srcT) * dcn, src_offset));
+
         __global const srcT * src = (__global const srcT *)(srcptr + src_index);
         __global const dstT * lut = (__global const dstT *)(lutptr + lut_offset);
+
+        int dst_index = mad24(y, dst_step, mad24(x, (int)sizeof(dstT) * dcn, dst_offset));
         __global dstT * dst = (__global dstT *)(dstptr + dst_index);
 
 #if lcn == 1
         #pragma unroll
         for (int cn = 0; cn < dcn; ++cn)
-            dst[cn] = lut[src[cn]];
-#else
+            dst[cn] = lut_l[src[cn]];
+#else //lcn == scn == dcn
         #pragma unroll
         for (int cn = 0; cn < dcn; ++cn)
-            dst[cn] = lut[mad24(src[cn], dcn, cn)];
+            dst[cn] = lut_l[mad24(src[cn], lcn, cn)];
 #endif
+        if (y < rows - 1)
+        {
+            src = (__global const srcT *)(srcptr + src_index + src_step);
+            dst = (__global dstT *)(dstptr + dst_index + dst_step);
+
+#if lcn == 1
+            #pragma unroll
+            for (int cn = 0; cn < dcn; ++cn)
+                dst[cn] = lut_l[src[cn]];
+#else //lcn == scn == dcn
+            #pragma unroll
+            for (int cn = 0; cn < dcn; ++cn)
+                dst[cn] = lut_l[mad24(src[cn], lcn, cn)];
+#endif
+        }
     }
 }

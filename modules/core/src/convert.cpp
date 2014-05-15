@@ -1544,22 +1544,33 @@ static LUTFunc lutTab[] =
 static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 {
     int lcn = _lut.channels(), dcn = _src.channels(), ddepth = _lut.depth();
+    int sdepth = _src.depth();
 
     UMat src = _src.getUMat(), lut = _lut.getUMat();
-    _dst.create(src.size(), CV_MAKETYPE(ddepth, dcn));
+    int dtype = CV_MAKETYPE(ddepth, dcn);
+    _dst.create(src.size(), dtype);
     UMat dst = _dst.getUMat();
 
-    ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
-                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", dcn, lcn,
-                         ocl::typeToStr(src.depth()), ocl::memopTypeToStr(ddepth)));
-    if (k.empty())
+    size_t globalSize[2] = { dst.cols, dst.rows / 2};
+
+    cv::String build_opt = format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", dcn, lcn,
+                         ocl::typeToStr(sdepth), ocl::memopTypeToStr(ddepth)
+                         );
+
+    ocl::Kernel kernel;
+    if ((4 == lcn) && (CV_8U == sdepth))
+        kernel.create("LUTC4", ocl::core::lut_oclsrc, build_opt);
+    else if ((3 == lcn) && (CV_8U == sdepth))
+        kernel.create("LUTC3", ocl::core::lut_oclsrc, build_opt);
+    else
+        kernel.create("LUT", ocl::core::lut_oclsrc, build_opt);
+    if (kernel.empty())
         return false;
 
-    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::ReadOnlyNoSize(lut),
+    kernel.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::ReadOnlyNoSize(lut),
            ocl::KernelArg::WriteOnly(dst));
 
-    size_t globalSize[2] = { dst.cols, dst.rows };
-    return k.run(2, globalSize, NULL, false);
+    return kernel.run(2, globalSize, NULL, true);
 }
 
 #endif
