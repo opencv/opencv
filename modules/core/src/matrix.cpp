@@ -3643,9 +3643,9 @@ static IppFlipFunc getFlipFunc(int depth)
     CV_SUPPRESS_DEPRECATED_START
     return
             depth == CV_8U || depth == CV_8S ? (IppFlipFunc)ippsFlip_8u_I :
-            /*depth == CV_16U || depth == CV_16S ? (IppFlipFunc)ippsFlip_16u_I :
+            depth == CV_16U || depth == CV_16S ? (IppFlipFunc)ippsFlip_16u_I :
             depth == CV_32S || depth == CV_32F ? (IppFlipFunc)ippsFlip_32f_I :
-            depth == CV_64F ? (IppFlipFunc)ippsFlip_64f_I : */0;
+            depth == CV_64F ? (IppFlipFunc)ippsFlip_64f_I : 0;
     CV_SUPPRESS_DEPRECATED_END
 }
 
@@ -3700,7 +3700,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 #endif
         {
 #ifdef USE_IPP_SORT
-            if (depth != CV_8U)
+            if (depth == CV_8U)
                 setIppErrorStatus();
 #endif
             std::sort( ptr, ptr + len );
