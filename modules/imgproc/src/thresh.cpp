@@ -833,9 +833,12 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, d
 
     const char * const thresholdMap[] = { "THRESH_BINARY", "THRESH_BINARY_INV", "THRESH_TRUNC",
                                           "THRESH_TOZERO", "THRESH_TOZERO_INV" };
+    ocl::Device dev = ocl::Device::getDefault();
+    int stride_size = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
+
     ocl::Kernel k("threshold", ocl::imgproc::threshold_oclsrc,
-                  format("-D %s -D T=%s -D T1=%s%s", thresholdMap[thresh_type],
-                         ocl::typeToStr(ktype), ocl::typeToStr(depth),
+                  format("-D %s -D T=%s -D T1=%s -D STRIDE_SIZE=%d%s", thresholdMap[thresh_type],
+                         ocl::typeToStr(ktype), ocl::typeToStr(depth), stride_size,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
@@ -856,6 +859,7 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, d
            ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(min_val))));
 
     size_t globalsize[2] = { dst.cols * cn / kercn, dst.rows };
+    globalsize[1] = (globalsize[1] + stride_size - 1) / stride_size;
     return k.run(2, globalsize, NULL, false);
 }
 
