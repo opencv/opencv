@@ -65725,4 +65725,546 @@
       <x>2026</x>
       <y>1529</y>
       <val>5.5196597184781414e+006</val></rng2></dst></Size_MatType_FlagsType_NzeroRows_dft--dft---2048x2048--64FC1--DFT_INVERSE-DFT_COMPLEX_OUTPUT--false->
+ <!-- resumed -->
+
+<OCL_NormFixture_NormRel--NormRel---640x480--8UC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--8UC1--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---640x480--8UC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.6900028830306491e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--8UC1--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---640x480--8UC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.0913822925937864e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--8UC1--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---640x480--32FC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9993013108973983e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--32FC1--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---640x480--32FC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3310179798536865e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--32FC1--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---640x480--32FC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4124694511299092e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--32FC1--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---640x480--8UC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--8UC3--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---640x480--8UC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.7092467476260331e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--8UC3--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---640x480--8UC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.1048613395697602e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--8UC3--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---640x480--32FC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9981813419946082e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--32FC3--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---640x480--32FC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3331278956146355e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--32FC3--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---640x480--32FC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4140893824034124e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--32FC3--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---640x480--8UC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--8UC4--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---640x480--8UC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.6940145881723900e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--8UC4--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---640x480--8UC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.0940637584229282e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--8UC4--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---640x480--32FC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9985895152656774e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--32FC4--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---640x480--32FC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3334824537492740e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--32FC4--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---640x480--32FC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4142758734703988e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---640x480--32FC4--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---1280x720--8UC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--8UC1--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---1280x720--8UC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.6982335751439459e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--8UC1--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---1280x720--8UC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.0978012624960196e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--8UC1--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---1280x720--32FC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9981813419946086e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--32FC1--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---1280x720--32FC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3331278956146355e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--32FC1--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---1280x720--32FC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4140893824034140e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--32FC1--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---1280x720--8UC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--8UC3--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---1280x720--8UC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.6895595620197834e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--8UC3--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---1280x720--8UC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.0889381699594334e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--8UC3--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---1280x720--32FC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9986525769183310e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--32FC3--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---1280x720--32FC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3339483039393072e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--32FC3--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---1280x720--32FC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4147023876945450e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--32FC3--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---1280x720--8UC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--8UC4--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---1280x720--8UC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.6869972877982375e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--8UC4--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---1280x720--8UC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.0881311471803277e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--8UC4--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---1280x720--32FC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9989758727492979e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--32FC4--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---1280x720--32FC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3332149582434343e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--32FC4--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---1280x720--32FC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4142275669076241e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1280x720--32FC4--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--8UC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--8UC1--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--8UC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.6964600147482622e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--8UC1--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--8UC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.0961429069984594e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--8UC1--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--32FC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9989964959014941e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--32FC1--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--32FC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3333524316230454e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--32FC1--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--32FC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4143203809956952e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--32FC1--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--8UC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--8UC3--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--8UC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.6964017272351994e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--8UC3--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--8UC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.0945207820109257e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--8UC3--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--32FC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9990291595458980e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--32FC3--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--32FC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3334577983622511e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--32FC3--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--32FC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4143376842230850e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--32FC3--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--8UC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--8UC4--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--8UC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.6963993561882051e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--8UC4--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--8UC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.0946105394783798e-01</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--8UC4--NORM_L2->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--32FC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9996674060821529e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--32FC4--NORM_INF->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--32FC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3333694957311863e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--32FC4--NORM_L1->
+<OCL_NormFixture_NormRel--NormRel---1920x1080--32FC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4142013739523016e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--32FC4--NORM_L2->
 </opencv_storage>
