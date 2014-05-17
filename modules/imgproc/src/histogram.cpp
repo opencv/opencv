@@ -2323,6 +2323,18 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
                 s2 += b;
             }
         }
+        else if( method == CV_COMP_KL_DIV )
+        {
+            for( j = 0; j < len; j++ ){
+                double p = h1[j];
+                double q = h2[j];
+                if( p == 0.0 )
+                    continue;
+                if( q == 0.0 )
+                    q += 1e-10;
+                result += p * cv::log( p / q );
+            }
+        }
         else
             CV_Error( CV_StsBadArg, "Unknown comparison method" );
     }
