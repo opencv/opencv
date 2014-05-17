@@ -948,7 +948,7 @@ int CV_ThreshHistTest::validate_test_results( int /*test_case_idx*/ )
 class CV_CompareHistTest : public CV_BaseHistTest
 {
 public:
-    enum { MAX_METHOD = 5 };
+    enum { MAX_METHOD = 6 };
 
     CV_CompareHistTest();
 protected:
@@ -1021,6 +1021,12 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             sq0 += v0*v0;
             sq1 += v1*v1;
             result0[CV_COMP_BHATTACHARYYA] += sqrt(v0*v1);
+            if( fabs(v0) > DBL_EPSILON )
+            {
+                if( fabs(v1) < DBL_EPSILON )
+                    v1 += 1e-10;
+                result0[CV_COMP_KL_DIV] += v0 * cv::log( v0 / v1 );
+            }
         }
     }
     else
@@ -1046,6 +1052,12 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             s0 += v0;
             sq0 += v0*v0;
             result0[CV_COMP_BHATTACHARYYA] += sqrt(v0*v1);
+            if( fabs(v0) > DBL_EPSILON )
+            {
+                if( fabs(v1) < DBL_EPSILON )
+                    v1 += 1e-10;
+                result0[CV_COMP_KL_DIV] += v0 * cv::log( v0 / v1 );
+            }
         }
 
         for( node = cvInitSparseMatIterator( sparse1, &iterator );
@@ -1076,7 +1088,8 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             i == CV_COMP_CHISQR_ALT ? "Alternative Chi-Square" :
             i == CV_COMP_CORREL ? "Correlation" :
             i == CV_COMP_INTERSECT ? "Intersection" :
-            i == CV_COMP_BHATTACHARYYA ? "Bhattacharyya" : "Unknown";
+            i == CV_COMP_BHATTACHARYYA ? "Bhattacharyya" :
+            i == CV_COMP_KL_DIV ? "Kullback-Leibler" : "Unknown";
 
         if( cvIsNaN(v) || cvIsInf(v) )
         {
