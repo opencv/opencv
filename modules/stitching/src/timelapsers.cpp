@@ -40,63 +40,68 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_PRECOMP_H__
-#define __OPENCV_STITCHING_PRECOMP_H__
+#include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
-#include "opencv2/opencv_modules.hpp"
+namespace cv {
+namespace detail {
 
-#include <vector>
-#include <algorithm>
-#include <utility>
-#include <set>
-#include <functional>
-#include <sstream>
-#include <iostream>
-#include <cmath>
-#include "opencv2/core.hpp"
-#include "opencv2/core/ocl.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/stitching.hpp"
-#include "opencv2/stitching/detail/autocalib.hpp"
-#include "opencv2/stitching/detail/blenders.hpp"
-#include "opencv2/stitching/detail/timelapsers.hpp"
-#include "opencv2/stitching/detail/camera.hpp"
-#include "opencv2/stitching/detail/exposure_compensate.hpp"
-#include "opencv2/stitching/detail/matchers.hpp"
-#include "opencv2/stitching/detail/motion_estimators.hpp"
-#include "opencv2/stitching/detail/seam_finders.hpp"
-#include "opencv2/stitching/detail/util.hpp"
-#include "opencv2/stitching/detail/warpers.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/features2d.hpp"
-#include "opencv2/calib3d.hpp"
+Ptr<Timelapser> Timelapser::createDefault(int type)
+{
+    if (type == AS_IS)
+        return makePtr<Timelapser>();
+    if (type == CROP)
+        return makePtr<TimelapserCrop>();
+    CV_Error(Error::StsBadArg, "unsupported timelapsing method");
+    return Ptr<Timelapser>();
+}
 
-#ifdef HAVE_OPENCV_CUDAARITHM
-#  include "opencv2/cudaarithm.hpp"
-#endif
 
-#ifdef HAVE_OPENCV_CUDAWARPING
-#  include "opencv2/cudawarping.hpp"
-#endif
+void Timelapser::initialize(const std::vector<Point> &corners, const std::vector<Size> &sizes)
+{
+    dst_roi_ = resultRoi(corners, sizes);
+    dst_.create(dst_roi_.size(), CV_16SC3);
+}
 
-#ifdef HAVE_OPENCV_CUDAFEATURES2D
-#  include "opencv2/cudafeatures2d.hpp"
-#endif
+void Timelapser::process(InputArray _img, InputArray /*_mask*/, Point tl)
+{
+    dst_.setTo(Scalar::all(0));
 
-#ifdef HAVE_OPENCV_CUDA
-#  include "opencv2/cuda.hpp"
-#endif
+    Mat img = _img.getMat();
+    Mat dst = dst_.getMat(ACCESS_RW);
 
-#ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree/cuda.hpp"
-#endif
+    CV_Assert(img.type() == CV_16SC3);
+    int dx = tl.x - dst_roi_.x;
+    int dy = tl.y - dst_roi_.y;
 
-#include "../../imgproc/src/gcgraph.hpp"
+    for (int y = 0; y < img.rows; ++y)
+    {
+        const Point3_<short> *src_row = img.ptr<Point3_<short> >(y);
 
-#include "opencv2/core/private.hpp"
+        for (int x = 0; x < img.cols; ++x)
+        {
+            if (test_point(Point(tl.x + x, tl.y + y)))
+            {
+                Point3_<short> *dst_row = dst.ptr<Point3_<short> >(dy + y);
+                dst_row[dx + x] = src_row[x];
+            }
+        }
+    }
+}
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-# include "opencv2/stitching/stitching_tegra.hpp"
-#endif
 
-#endif
+bool Timelapser::test_point(Point pt)
+{
+    return dst_roi_.contains(pt);
+}
+
+
+void TimelapserCrop::initialize(const std::vector<Point> &corners, const std::vector<Size> &sizes)
+{
+    dst_roi_ = resultRoiIntersection(corners, sizes);
+    dst_.create(dst_roi_.size(), CV_16SC3);
+}
+
+
+} // namespace detail
+} // namespace cv

@@ -148,6 +148,7 @@ private:
 CV_EXPORTS bool overlapRoi(Point tl1, Point tl2, Size sz1, Size sz2, Rect &roi);
 CV_EXPORTS Rect resultRoi(const std::vector<Point> &corners, const std::vector<UMat> &images);
 CV_EXPORTS Rect resultRoi(const std::vector<Point> &corners, const std::vector<Size> &sizes);
+CV_EXPORTS Rect resultRoiIntersection(const std::vector<Point> &corners, const std::vector<Size> &sizes);
 CV_EXPORTS Point resultTl(const std::vector<Point> &corners);
 
 // Returns random 'count' element subset of the {0,1,...,size-1} set
