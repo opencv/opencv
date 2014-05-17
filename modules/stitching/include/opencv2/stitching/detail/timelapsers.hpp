@@ -40,63 +40,47 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_PRECOMP_H__
-#define __OPENCV_STITCHING_PRECOMP_H__
 
-#include "opencv2/opencv_modules.hpp"
+#ifndef __OPENCV_STITCHING_TIMELAPSERS_HPP__
+#define __OPENCV_STITCHING_TIMELAPSERS_HPP__
 
-#include <vector>
-#include <algorithm>
-#include <utility>
-#include <set>
-#include <functional>
-#include <sstream>
-#include <iostream>
-#include <cmath>
 #include "opencv2/core.hpp"
-#include "opencv2/core/ocl.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/stitching.hpp"
-#include "opencv2/stitching/detail/autocalib.hpp"
-#include "opencv2/stitching/detail/blenders.hpp"
-#include "opencv2/stitching/detail/timelapsers.hpp"
-#include "opencv2/stitching/detail/camera.hpp"
-#include "opencv2/stitching/detail/exposure_compensate.hpp"
-#include "opencv2/stitching/detail/matchers.hpp"
-#include "opencv2/stitching/detail/motion_estimators.hpp"
-#include "opencv2/stitching/detail/seam_finders.hpp"
-#include "opencv2/stitching/detail/util.hpp"
-#include "opencv2/stitching/detail/warpers.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/features2d.hpp"
-#include "opencv2/calib3d.hpp"
 
-#ifdef HAVE_OPENCV_CUDAARITHM
-#  include "opencv2/cudaarithm.hpp"
-#endif
+namespace cv {
+namespace detail {
 
-#ifdef HAVE_OPENCV_CUDAWARPING
-#  include "opencv2/cudawarping.hpp"
-#endif
+//  Base Timelapser class, takes a sequence of images, applies appropriate shift, stores result in dst_.
 
-#ifdef HAVE_OPENCV_CUDAFEATURES2D
-#  include "opencv2/cudafeatures2d.hpp"
-#endif
+class CV_EXPORTS Timelapser
+{
+public:
 
-#ifdef HAVE_OPENCV_CUDA
-#  include "opencv2/cuda.hpp"
-#endif
+    enum {AS_IS, CROP};
 
-#ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree/cuda.hpp"
-#endif
+    virtual ~Timelapser() {}
 
-#include "../../imgproc/src/gcgraph.hpp"
+    static Ptr<Timelapser> createDefault(int type);
 
-#include "opencv2/core/private.hpp"
+    virtual void initialize(const std::vector<Point> &corners, const std::vector<Size> &sizes);
+    virtual void process(InputArray img, InputArray mask, Point tl);
+    virtual const UMat& getDst() {return dst_;}
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-# include "opencv2/stitching/stitching_tegra.hpp"
-#endif
+protected:
 
-#endif
+    virtual bool test_point(Point pt);
+
+    UMat dst_;
+    Rect dst_roi_;
+};
+
+
+class CV_EXPORTS TimelapserCrop : public Timelapser
+{
+public:
+    virtual void initialize(const std::vector<Point> &corners, const std::vector<Size> &sizes);
+};
+
+} // namespace detail
+} // namespace cv
+
+#endif // __OPENCV_STITCHING_TIMELAPSERS_HPP__
