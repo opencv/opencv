@@ -33,7 +33,7 @@ int main( int /*argc*/, char** /*argv*/ )
     {
         int k, clusterCount = rng.uniform(2, MAX_CLUSTERS+1);
         int i, sampleCount = rng.uniform(1, 1001);
-        Mat points(sampleCount, 2, CV_32F), labels;
+        Mat points(sampleCount, 1, CV_32FC2), labels;
 
         clusterCount = MIN(clusterCount, sampleCount);
         Mat centers;
