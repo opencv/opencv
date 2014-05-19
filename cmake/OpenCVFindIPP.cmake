@@ -206,32 +206,9 @@ if(NOT DEFINED IPPROOT)
   endif()
 endif()
 
-# Try ICV
-find_path(
-    IPP_ICV_H_PATH
-    NAMES ippicv.h
-    PATHS ${IPPROOT}
-    DOC "The path to Intel(R) IPP ICV header files"
-    NO_DEFAULT_PATH
-    NO_CMAKE_PATH)
-set(IPP_ROOT_DIR ${IPP_ICV_H_PATH})
-
-if(NOT IPP_ICV_H_PATH)
-  # Try standalone IPP
-  find_path(
-      IPP_H_PATH
-      NAMES ippversion.h
-      PATHS ${IPPROOT}
-      PATH_SUFFIXES include
-      DOC "The path to Intel(R) IPP header files"
-      NO_DEFAULT_PATH
-      NO_CMAKE_PATH)
-  if(IPP_H_PATH)
-    get_filename_component(IPP_ROOT_DIR ${IPP_H_PATH} PATH)
-  endif()
-endif()
-
-if(IPP_ROOT_DIR)
+file(TO_CMAKE_PATH "${IPPROOT}" __IPPROOT)
+if(EXISTS "${__IPPROOT}/include/ippversion.h")
+  set(IPP_ROOT_DIR ${__IPPROOT})
   ipp_detect_version()
 endif()
 
