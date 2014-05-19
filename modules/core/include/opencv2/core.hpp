@@ -389,7 +389,7 @@ CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
 
 //! implements generalized matrix product algorithm GEMM from BLAS
 CV_EXPORTS_W void gemm(InputArray src1, InputArray src2, double alpha,
-                       InputArray src3, double gamma, OutputArray dst, int flags = 0);
+                       InputArray src3, double beta, OutputArray dst, int flags = 0);
 
 //! multiplies matrix by its transposition from the left or from the right
 CV_EXPORTS_W void mulTransposed( InputArray src, OutputArray dst, bool aTa,
