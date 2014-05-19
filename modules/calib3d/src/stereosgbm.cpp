@@ -913,18 +913,6 @@ namespace
                             T dp = *dpp;
                             int* lpp = labels + width*p.y + p.x;
 
-                            if( p.x < width-1 && !lpp[+1] && dpp[+1] != newVal && std::abs(dp - dpp[+1]) <= maxDiff )
-                            {
-                                lpp[+1] = curlabel;
-                                *ws++ = Point2s(p.x+1, p.y);
-                            }
-
-                            if( p.x > 0 && !lpp[-1] && dpp[-1] != newVal && std::abs(dp - dpp[-1]) <= maxDiff )
-                            {
-                                lpp[-1] = curlabel;
-                                *ws++ = Point2s(p.x-1, p.y);
-                            }
-
                             if( p.y < height-1 && !lpp[+width] && dpp[+dstep] != newVal && std::abs(dp - dpp[+dstep]) <= maxDiff )
                             {
                                 lpp[+width] = curlabel;
@@ -935,6 +923,18 @@ namespace
                             {
                                 lpp[-width] = curlabel;
                                 *ws++ = Point2s(p.x, p.y-1);
+                            }
+
+                            if( p.x < width-1 && !lpp[+1] && dpp[+1] != newVal && std::abs(dp - dpp[+1]) <= maxDiff )
+                            {
+                                lpp[+1] = curlabel;
+                                *ws++ = Point2s(p.x+1, p.y);
+                            }
+
+                            if( p.x > 0 && !lpp[-1] && dpp[-1] != newVal && std::abs(dp - dpp[-1]) <= maxDiff )
+                            {
+                                lpp[-1] = curlabel;
+                                *ws++ = Point2s(p.x-1, p.y);
                             }
 
                             // pop most recent and propagate
