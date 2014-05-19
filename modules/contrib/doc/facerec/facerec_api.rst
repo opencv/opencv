@@ -310,7 +310,7 @@ FaceRecognizer::setLabelsInfo
 Sets string information about labels into the model.
 .. ocv:function:: void FaceRecognizer::setLabelsInfo(const std::map<int, string>& labelsInfo) = 0
 
-Information about the label loads as a pair label-its info.
+Information about the label loads as a pair "label id - string info".
 
 FaceRecognizer::getLabelInfo
 ----------------------------
@@ -318,7 +318,7 @@ FaceRecognizer::getLabelInfo
 Gets string information by label.
 .. ocv:function:: string FaceRecognizer::getLabelInfo(int label) const = 0
 
-If there is no such label in the model or there is no information about the label it will return an empty string.
+If an unknown label id is provided or there is no label information assosiated with the specified label id the method returns an empty string.
 
 FaceRecognizer::getLabelsByString
 ---------------------------------
@@ -326,7 +326,7 @@ Gets vector of labels by string.
 
 .. ocv:function:: vector<int> FaceRecognizer::getLabelsByString(const string& str) = 0
 
-If the string contained in a string information for a label, this label will be pushed into the vector.
+The function searches for the labels containing the specified substring in the associated string info.
 
 createEigenFaceRecognizer
 -------------------------
