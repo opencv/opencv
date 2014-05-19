@@ -166,3 +166,18 @@ TEST(Features2d_Detector_Keypoints_Dense, validation)
     CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.Dense"));
     test.safe_run();
 }
+
+TEST(Features2d_Detector_Keypoints_KAZE, validation)
+{
+    CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.KAZE"));
+    test.safe_run();
+}
+
+TEST(Features2d_Detector_Keypoints_AKAZE, validation)
+{
+    CV_FeatureDetectorKeypointsTest test_kaze(cv::Ptr<FeatureDetector>(new cv::AKAZE(cv::AKAZE::DESCRIPTOR_KAZE)));
+    test_kaze.safe_run();
+
+    CV_FeatureDetectorKeypointsTest test_mldb(cv::Ptr<FeatureDetector>(new cv::AKAZE(cv::AKAZE::DESCRIPTOR_MLDB)));
+    test_mldb.safe_run();
+}
