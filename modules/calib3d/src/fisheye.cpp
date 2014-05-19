@@ -14,15 +14,15 @@ namespace cv { namespace
 }}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::Fisheye::projectPoints
+/// cv::fisheye::projectPoints
 
-void cv::Fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints, const Affine3d& affine,
+void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints, const Affine3d& affine,
     InputArray K, InputArray D, double alpha, OutputArray jacobian)
 {
     projectPoints(objectPoints, imagePoints, affine.rvec(), affine.translation(), K, D, alpha, jacobian);
 }
 
-void cv::Fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints, InputArray _rvec,
+void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints, InputArray _rvec,
         InputArray _tvec, InputArray _K, InputArray _D, double alpha, OutputArray jacobian)
 {
     // will support only 3-channel data now for points
@@ -202,9 +202,9 @@ void cv::Fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::Fisheye::distortPoints
+/// cv::fisheye::distortPoints
 
-void cv::Fisheye::distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha)
+void cv::fisheye::distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha)
 {
     // will support only 2-channel data now for points
     CV_Assert(undistorted.type() == CV_32FC2 || undistorted.type() == CV_64FC2);
@@ -264,9 +264,9 @@ void cv::Fisheye::distortPoints(InputArray undistorted, OutputArray distorted, I
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::Fisheye::undistortPoints
+/// cv::fisheye::undistortPoints
 
-void cv::Fisheye::undistortPoints( InputArray distorted, OutputArray undistorted, InputArray _K, InputArray _D, InputArray _R, InputArray _P)
+void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted, InputArray _K, InputArray _D, InputArray _R, InputArray _P)
 {
     // will support only 2-channel data now for points
     CV_Assert(distorted.type() == CV_32FC2 || distorted.type() == CV_64FC2);
@@ -353,9 +353,9 @@ void cv::Fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::Fisheye::undistortPoints
+/// cv::fisheye::undistortPoints
 
-void cv::Fisheye::initUndistortRectifyMap( InputArray _K, InputArray _D, InputArray _R, InputArray _P,
+void cv::fisheye::initUndistortRectifyMap( InputArray _K, InputArray _D, InputArray _R, InputArray _P,
     const cv::Size& size, int m1type, OutputArray map1, OutputArray map2 )
 {
     CV_Assert( m1type == CV_16SC2 || m1type == CV_32F || m1type <=0 );
@@ -449,23 +449,23 @@ void cv::Fisheye::initUndistortRectifyMap( InputArray _K, InputArray _D, InputAr
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::Fisheye::undistortImage
+/// cv::fisheye::undistortImage
 
-void cv::Fisheye::undistortImage(InputArray distorted, OutputArray undistorted,
+void cv::fisheye::undistortImage(InputArray distorted, OutputArray undistorted,
         InputArray K, InputArray D, InputArray Knew, const Size& new_size)
 {
     Size size = new_size.area() != 0 ? new_size : distorted.size();
 
     cv::Mat map1, map2;
-    initUndistortRectifyMap(K, D, cv::Matx33d::eye(), Knew, size, CV_16SC2, map1, map2 );
+    fisheye::initUndistortRectifyMap(K, D, cv::Matx33d::eye(), Knew, size, CV_16SC2, map1, map2 );
     cv::remap(distorted, undistorted, map1, map2, INTER_LINEAR, BORDER_CONSTANT);
 }
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::Fisheye::estimateNewCameraMatrixForUndistortRectify
+/// cv::fisheye::estimateNewCameraMatrixForUndistortRectify
 
-void cv::Fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
+void cv::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
     OutputArray P, double balance, const Size& new_size, double fov_scale)
 {
     CV_Assert( K.size() == Size(3, 3)       && (K.depth() == CV_32F || K.depth() == CV_64F));
@@ -495,7 +495,7 @@ void cv::Fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, Input
     }
 #endif
 
-    undistortPoints(points, points, K, D, R);
+    fisheye::undistortPoints(points, points, K, D, R);
     cv::Scalar center_mass = mean(points);
     cv::Vec2d cn(center_mass.val);
 
@@ -560,9 +560,9 @@ void cv::Fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, Input
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::Fisheye::stereoRectify
+/// cv::fisheye::stereoRectify
 
-void cv::Fisheye::stereoRectify( InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size& imageSize,
+void cv::fisheye::stereoRectify( InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size& imageSize,
         InputArray _R, InputArray _tvec, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2,
         OutputArray Q, int flags, const Size& newImageSize, double balance, double fov_scale)
 {
@@ -642,9 +642,9 @@ void cv::Fisheye::stereoRectify( InputArray K1, InputArray D1, InputArray K2, In
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::Fisheye::calibrate
+/// cv::fisheye::calibrate
 
-double cv::Fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
+double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
                                     InputOutputArray K, InputOutputArray D, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                     int flags , cv::TermCriteria criteria)
 {
@@ -758,9 +758,9 @@ double cv::Fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::Fisheye::stereoCalibrate
+/// cv::fisheye::stereoCalibrate
 
-double cv::Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                     InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
                                     OutputArray R, OutputArray T, int flags, TermCriteria criteria)
 {
@@ -1094,7 +1094,7 @@ void cv::internal::projectPoints(cv::InputArray objectPoints, cv::OutputArray im
     Matx33d K(param.f[0], param.f[0] * param.alpha, param.c[0],
                        0,               param.f[1], param.c[1],
                        0,                        0,         1);
-    Fisheye::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.alpha, jacobian);
+    fisheye::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.alpha, jacobian);
 }
 
 void cv::internal::ComputeExtrinsicRefine(const Mat& imagePoints, const Mat& objectPoints, Mat& rvec,
@@ -1251,7 +1251,7 @@ cv::Mat cv::internal::NormalizePixels(const Mat& imagePoints, const IntrinsicPar
         ptr_d[i] = (ptr[i] - param.c).mul(Vec2d(1.0 / param.f[0], 1.0 / param.f[1]));
         ptr_d[i][0] = ptr_d[i][0] - param.alpha * ptr_d[i][1];
     }
-    cv::Fisheye::undistortPoints(distorted, undistorted, Matx33d::eye(), param.k);
+    cv::fisheye::undistortPoints(distorted, undistorted, Matx33d::eye(), param.k);
     return undistorted;
 }
 
