@@ -125,6 +125,21 @@ CV_INIT_ALGORITHM(GFTTDetector, "Feature2D.GFTT",
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+CV_INIT_ALGORITHM(KAZE, "Feature2D.KAZE",
+                  obj.info()->addParam(obj, "upright", obj.upright);
+                  obj.info()->addParam(obj, "extended", obj.extended))
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+CV_INIT_ALGORITHM(AKAZE, "Feature2D.AKAZE",
+                  obj.info()->addParam(obj, "descriptor_channels", obj.descriptor_channels);
+                  obj.info()->addParam(obj, "descriptor", obj.descriptor);
+                  obj.info()->addParam(obj, "descriptor_size", obj.descriptor_size))
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 CV_INIT_ALGORITHM(SimpleBlobDetector, "Feature2D.SimpleBlob",
                   obj.info()->addParam(obj, "thresholdStep",    obj.params.thresholdStep);
                   obj.info()->addParam(obj, "minThreshold",     obj.params.minThreshold);
@@ -202,7 +217,9 @@ bool cv::initModule_features2d(void)
     all &= !FREAK_info_auto.name().empty();
     all &= !ORB_info_auto.name().empty();
     all &= !GFTTDetector_info_auto.name().empty();
-    all &= !HarrisDetector_info_auto.name().empty();
+    all &= !KAZE_info_auto.name().empty();
+    all &= !AKAZE_info_auto.name().empty();
+        all &= !HarrisDetector_info_auto.name().empty();
     all &= !DenseFeatureDetector_info_auto.name().empty();
     all &= !GridAdaptedFeatureDetector_info_auto.name().empty();
     all &= !BFMatcher_info_auto.name().empty();
