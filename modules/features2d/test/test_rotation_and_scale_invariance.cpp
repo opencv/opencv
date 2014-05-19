@@ -652,6 +652,21 @@ TEST(Features2d_ScaleInvariance_Detector_BRISK, regression)
     test.safe_run();
 }
 
+TEST(Features2d_ScaleInvariance_Detector_KAZE, regression)
+{
+    DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.KAZE"),
+        0.08f,
+        0.49f);
+    test.safe_run();
+}
+
+TEST(Features2d_ScaleInvariance_Detector_AKAZE, regression)
+{
+    DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.AKAZE"),
+        0.08f,
+        0.49f);
+    test.safe_run();
+}
 //TEST(Features2d_ScaleInvariance_Detector_ORB, regression)
 //{
 //    DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"),
