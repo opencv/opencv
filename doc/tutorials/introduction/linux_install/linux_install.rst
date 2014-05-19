@@ -7,22 +7,24 @@ These steps have been tested for Ubuntu 10.04 but should work with other distros
 Required Packages
 =================
 
-  * GCC 4.4.x or later. This can be installed with:
+  * GCC 4.4.x or later
+  * CMake 2.8.7 or higher
+  * Git
+  * GTK+2.x or higher, including headers (libgtk2.0-dev)
+  * pkg-config
+  * Python 2.6 or later and Numpy 1.5 or later with developer packages (python-dev, python-numpy)
+  * ffmpeg or libav development packages: libavcodec-dev, libavformat-dev, libswscale-dev
+  * [optional] libtbb2 libtbb-dev
+  * [optional] libdc1394 2.x
+  * [optional] libjpeg-dev, libpng-dev, libtiff-dev, libjasper-dev, libdc1394-22-dev
+
+The packages can be installed using a terminal and the following commands or by using Synaptic Manager:
 
     .. code-block:: bash
 
-       sudo apt-get install build-essential
-
-  * CMake 2.8.7 or higher;
-  * Git;
-  * GTK+2.x or higher, including headers (libgtk2.0-dev);
-  * pkg-config;
-  * Python 2.6 or later and Numpy 1.5 or later with developer packages (python-dev, python-numpy);
-  * ffmpeg or libav development packages: libavcodec-dev, libavformat-dev, libswscale-dev;
-  * [optional] libdc1394 2.x;
-  * [optional] libjpeg-dev, libpng-dev, libtiff-dev, libjasper-dev.
-
-All the libraries above can be installed via Terminal or by using Synaptic Manager.
+       [compiler] sudo apt-get install build-essential
+       [required] sudo apt-get install cmake git libgtk2-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+       [optional] sudo apt-get install python-dev python-numpy libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev
 
 Getting OpenCV Source Code
 ==========================
