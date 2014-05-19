@@ -1487,57 +1487,53 @@ The function reconstructs 3-dimensional points (in homogeneous coordinates) by u
 
     :ocv:func:`reprojectImageTo3D`
 
-Fisheye
+fisheye
 ----------
 
-.. ocv:class:: Fisheye
+The methods in this namespace use a so-called fisheye camera model. ::
 
-The methods in this class use a so-called fisheye camera model. ::
-
-    class Fisheye
+    namespace fisheye
     {
-    public:
-
         //! projects 3D points using fisheye model
-        static void projectPoints(InputArray objectPoints, OutputArray imagePoints, const Affine3d& affine,
+        void projectPoints(InputArray objectPoints, OutputArray imagePoints, const Affine3d& affine,
             InputArray K, InputArray D, double alpha = 0, OutputArray jacobian = noArray());
 
         //! projects points using fisheye model
-        static void projectPoints(InputArray objectPoints, OutputArray imagePoints, InputArray rvec, InputArray tvec,
+        void projectPoints(InputArray objectPoints, OutputArray imagePoints, InputArray rvec, InputArray tvec,
             InputArray K, InputArray D, double alpha = 0, OutputArray jacobian = noArray());
 
         //! distorts 2D points using fisheye model
-        static void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0);
+        void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0);
 
         //! undistorts 2D points using fisheye model
-        static void undistortPoints(InputArray distorted, OutputArray undistorted,
+        void undistortPoints(InputArray distorted, OutputArray undistorted,
             InputArray K, InputArray D, InputArray R = noArray(), InputArray P  = noArray());
 
         //! computing undistortion and rectification maps for image transform by cv::remap()
         //! If D is empty zero distortion is used, if R or P is empty identity matrixes are used
-        static void initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P,
+        void initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P,
             const cv::Size& size, int m1type, OutputArray map1, OutputArray map2);
 
         //! undistorts image, optionally changes resolution and camera matrix.
-        static void undistortImage(InputArray distorted, OutputArray undistorted,
+        void undistortImage(InputArray distorted, OutputArray undistorted,
             InputArray K, InputArray D, InputArray Knew = cv::noArray(), const Size& new_size = Size());
 
         //! estimates new camera matrix for undistortion or rectification
-        static void estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
+        void estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
             OutputArray P, double balance = 0.0, const Size& new_size = Size(), double fov_scale = 1.0);
 
         //! performs camera calibaration
-        static double calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
+        double calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
             InputOutputArray K, InputOutputArray D, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags = 0,
                 TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
 
         //! stereo rectification estimation
-        static void stereoRectify(InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size &imageSize, InputArray R, InputArray tvec,
+        void stereoRectify(InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size &imageSize, InputArray R, InputArray tvec,
             OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags, const Size &newImageSize = Size(),
             double balance = 0.0, double fov_scale = 1.0);
 
         //! performs stereo calibration
-        static double stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+        double stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                       InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
                                       OutputArray R, OutputArray T, int flags = CALIB_FIX_INTRINSIC,
                                       TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
@@ -1594,13 +1590,13 @@ Finally, convertion into pixel coordinates: The final pixel coordinates vector [
     u = f_x (x' + \alpha y') + c_x \\
     v = f_y yy + c_y
 
-Fisheye::projectPoints
+fisheye::projectPoints
 ---------------------------
 Projects points using fisheye model
 
-.. ocv:function:: void Fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints, const Affine3d& affine, InputArray K, InputArray D, double alpha = 0, OutputArray jacobian = noArray())
+.. ocv:function:: void fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints, const Affine3d& affine, InputArray K, InputArray D, double alpha = 0, OutputArray jacobian = noArray())
 
-.. ocv:function:: void Fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints, InputArray rvec, InputArray tvec, InputArray K, InputArray D, double alpha = 0, OutputArray jacobian = noArray())
+.. ocv:function:: void fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints, InputArray rvec, InputArray tvec, InputArray K, InputArray D, double alpha = 0, OutputArray jacobian = noArray())
 
     :param objectPoints: Array of object points, 1xN/Nx1 3-channel  (or  ``vector<Point3f>`` ), where N is the number of points in the view.
 
@@ -1620,11 +1616,11 @@ Projects points using fisheye model
 
 The function computes projections of 3D points to the image plane given intrinsic and extrinsic camera parameters. Optionally, the function computes Jacobians - matrices of partial derivatives of image points coordinates (as functions of all the input parameters) with respect to the particular parameters, intrinsic and/or extrinsic.
 
-Fisheye::distortPoints
+fisheye::distortPoints
 -------------------------
 Distorts 2D points using fisheye model.
 
-.. ocv:function:: void Fisheye::distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0)
+.. ocv:function:: void fisheye::distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0)
 
     :param undistorted: Array of object points, 1xN/Nx1 2-channel  (or  ``vector<Point2f>`` ), where N is the number of points in the view.
 
@@ -1636,11 +1632,11 @@ Distorts 2D points using fisheye model.
 
     :param distorted: Output array of image points, 1xN/Nx1 2-channel, or  ``vector<Point2f>`` .
 
-Fisheye::undistortPoints
+fisheye::undistortPoints
 -----------------------------
 Undistorts 2D points using fisheye model
 
-.. ocv:function:: void Fisheye::undistortPoints(InputArray distorted, OutputArray undistorted, InputArray K, InputArray D, InputArray R = noArray(), InputArray P  = noArray())
+.. ocv:function:: void fisheye::undistortPoints(InputArray distorted, OutputArray undistorted, InputArray K, InputArray D, InputArray R = noArray(), InputArray P  = noArray())
 
     :param distorted: Array of object points, 1xN/Nx1 2-channel  (or  ``vector<Point2f>`` ), where N is the number of points in the view.
 
@@ -1655,11 +1651,11 @@ Undistorts 2D points using fisheye model
     :param undistorted: Output array of image points, 1xN/Nx1 2-channel, or ``vector<Point2f>`` .
 
 
-Fisheye::initUndistortRectifyMap
+fisheye::initUndistortRectifyMap
 -------------------------------------
 Computes undistortion and rectification maps for image transform by cv::remap(). If D is empty zero distortion is used, if R or P is empty identity matrixes are used.
 
-.. ocv:function:: void Fisheye::initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P, const cv::Size& size, int m1type, OutputArray map1, OutputArray map2)
+.. ocv:function:: void fisheye::initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P, const cv::Size& size, int m1type, OutputArray map1, OutputArray map2)
 
     :param K: Camera matrix  :math:`K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}`.
 
@@ -1677,11 +1673,11 @@ Computes undistortion and rectification maps for image transform by cv::remap().
 
     :param map2: The second output map.
 
-Fisheye::undistortImage
+fisheye::undistortImage
 -----------------------
 Transforms an image to compensate for fisheye lens distortion.
 
-.. ocv:function:: void Fisheye::undistortImage(InputArray distorted, OutputArray undistorted, InputArray K, InputArray D, InputArray Knew = cv::noArray(), const Size& new_size = Size())
+.. ocv:function:: void fisheye::undistortImage(InputArray distorted, OutputArray undistorted, InputArray K, InputArray D, InputArray Knew = cv::noArray(), const Size& new_size = Size())
 
     :param distorted: image with fisheye lens distortion.
 
@@ -1696,12 +1692,12 @@ Transforms an image to compensate for fisheye lens distortion.
 The function transforms an image to compensate radial and tangential lens distortion.
 
 The function is simply a combination of
-:ocv:func:`Fisheye::initUndistortRectifyMap` (with unity ``R`` ) and
+:ocv:func:`fisheye::initUndistortRectifyMap` (with unity ``R`` ) and
 :ocv:func:`remap` (with bilinear interpolation). See the former function for details of the transformation being performed.
 
 See below the results of undistortImage.
     * a\) result of :ocv:func:`undistort` of perspective camera model (all possible coefficients (k_1, k_2, k_3, k_4, k_5, k_6) of distortion were optimized under calibration)
-    * b\) result of :ocv:func:`Fisheye::undistortImage` of fisheye camera model (all possible coefficients (k_1, k_2, k_3, k_4) of fisheye distortion were optimized under calibration)
+    * b\) result of :ocv:func:`fisheye::undistortImage` of fisheye camera model (all possible coefficients (k_1, k_2, k_3, k_4) of fisheye distortion were optimized under calibration)
     * c\) original image was captured with fisheye lens
 
 Pictures a) and b) almost the same. But if we consider points of image located far from the center of image, we can notice that on image a) these points are distorted.
@@ -1709,11 +1705,11 @@ Pictures a) and b) almost the same. But if we consider points of image located f
 .. image:: pics/fisheye_undistorted.jpg
 
 
-Fisheye::estimateNewCameraMatrixForUndistortRectify
+fisheye::estimateNewCameraMatrixForUndistortRectify
 ----------------------------------------------------------
 Estimates new camera matrix for undistortion or rectification.
 
-.. ocv:function:: void Fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R, OutputArray P, double balance = 0.0, const Size& new_size = Size(), double fov_scale = 1.0)
+.. ocv:function:: void fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R, OutputArray P, double balance = 0.0, const Size& new_size = Size(), double fov_scale = 1.0)
 
     :param K: Camera matrix  :math:`K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}`.
 
@@ -1727,11 +1723,11 @@ Estimates new camera matrix for undistortion or rectification.
 
     :param fov_scale: Divisor for new focal length.
 
-Fisheye::stereoRectify
+fisheye::stereoRectify
 ------------------------------
 Stereo rectification for fisheye camera model
 
-.. ocv:function:: void Fisheye::stereoRectify(InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size &imageSize, InputArray R, InputArray tvec, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags, const Size &newImageSize = Size(), double balance = 0.0, double fov_scale = 1.0)
+.. ocv:function:: void fisheye::stereoRectify(InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size &imageSize, InputArray R, InputArray tvec, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags, const Size &newImageSize = Size(), double balance = 0.0, double fov_scale = 1.0)
 
     :param K1: First camera matrix.
 
@@ -1773,11 +1769,11 @@ Stereo rectification for fisheye camera model
 
 
 
-Fisheye::calibrate
+fisheye::calibrate
 ----------------------------
 Performs camera calibaration
 
-.. ocv:function:: double Fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size, InputOutputArray K, InputOutputArray D, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags = 0, TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON))
+.. ocv:function:: double fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size, InputOutputArray K, InputOutputArray D, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags = 0, TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON))
 
     :param objectPoints: vector of vectors of calibration pattern points in the calibration pattern coordinate space.
 
@@ -1785,7 +1781,7 @@ Performs camera calibaration
 
     :param image_size: Size of the image used only to initialize the intrinsic camera matrix.
 
-    :param K: Output 3x3 floating-point camera matrix  :math:`A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}` . If  ``Fisheye::CALIB_USE_INTRINSIC_GUESS``/ is specified, some or all of  ``fx, fy, cx, cy``  must be initialized before calling the function.
+    :param K: Output 3x3 floating-point camera matrix  :math:`A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}` . If  ``fisheye::CALIB_USE_INTRINSIC_GUESS``/ is specified, some or all of  ``fx, fy, cx, cy``  must be initialized before calling the function.
 
     :param D: Output vector of distortion coefficients  :math:`(k_1, k_2, k_3, k_4)`.
 
@@ -1795,24 +1791,24 @@ Performs camera calibaration
 
     :param flags: Different flags that may be zero or a combination of the following values:
 
-        * **Fisheye::CALIB_USE_INTRINSIC_GUESS** ``cameraMatrix``  contains valid initial values of  ``fx, fy, cx, cy``  that are optimized further. Otherwise, ``(cx, cy)``  is initially set to the image center ( ``imageSize``  is used), and focal distances are computed in a least-squares fashion.
+        * **fisheye::CALIB_USE_INTRINSIC_GUESS** ``cameraMatrix``  contains valid initial values of  ``fx, fy, cx, cy``  that are optimized further. Otherwise, ``(cx, cy)``  is initially set to the image center ( ``imageSize``  is used), and focal distances are computed in a least-squares fashion.
 
-        * **Fisheye::CALIB_RECOMPUTE_EXTRINSIC** Extrinsic will be recomputed after each iteration of intrinsic optimization.
+        * **fisheye::CALIB_RECOMPUTE_EXTRINSIC** Extrinsic will be recomputed after each iteration of intrinsic optimization.
 
-        * **Fisheye::CALIB_CHECK_COND** The functions will check validity of condition number.
+        * **fisheye::CALIB_CHECK_COND** The functions will check validity of condition number.
 
-        * **Fisheye::CALIB_FIX_SKEW** Skew coefficient (alpha) is set to zero and stay zero.
+        * **fisheye::CALIB_FIX_SKEW** Skew coefficient (alpha) is set to zero and stay zero.
 
-        * **Fisheye::CALIB_FIX_K1..4** Selected distortion coefficients are set to zeros and stay zero.
+        * **fisheye::CALIB_FIX_K1..4** Selected distortion coefficients are set to zeros and stay zero.
 
     :param criteria: Termination criteria for the iterative optimization algorithm.
 
 
-Fisheye::stereoCalibrate
+fisheye::stereoCalibrate
 ----------------------------
 Performs stereo calibration
 
-.. ocv:function:: double Fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2, InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize, OutputArray R, OutputArray T, int flags = CALIB_FIX_INTRINSIC, TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON))
+.. ocv:function:: double fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2, InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize, OutputArray R, OutputArray T, int flags = CALIB_FIX_INTRINSIC, TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON))
 
     :param objectPoints: Vector of vectors of the calibration pattern points.
 
@@ -1820,7 +1816,7 @@ Performs stereo calibration
 
     :param imagePoints2: Vector of vectors of the projections of the calibration pattern points, observed by the second camera.
 
-    :param K1: Input/output first camera matrix:  :math:`\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}` , :math:`j = 0,\, 1` . If any of  ``Fisheye::CALIB_USE_INTRINSIC_GUESS`` , ``Fisheye::CV_CALIB_FIX_INTRINSIC`` are specified, some or all of the matrix components must be initialized.
+    :param K1: Input/output first camera matrix:  :math:`\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}` , :math:`j = 0,\, 1` . If any of  ``fisheye::CALIB_USE_INTRINSIC_GUESS`` , ``fisheye::CV_CALIB_FIX_INTRINSIC`` are specified, some or all of the matrix components must be initialized.
 
     :param D1: Input/output vector of distortion coefficients  :math:`(k_1, k_2, k_3, k_4)`  of 4 elements.
 
@@ -1836,17 +1832,17 @@ Performs stereo calibration
 
     :param flags: Different flags that may be zero or a combination of the following values:
 
-        * **Fisheye::CV_CALIB_FIX_INTRINSIC** Fix ``K1, K2?`` and ``D1, D2?`` so that only ``R, T`` matrices are estimated.
+        * **fisheye::CV_CALIB_FIX_INTRINSIC** Fix ``K1, K2?`` and ``D1, D2?`` so that only ``R, T`` matrices are estimated.
 
-        * **Fisheye::CALIB_USE_INTRINSIC_GUESS** ``K1, K2`` contains valid initial values of ``fx, fy, cx, cy`` that are optimized further. Otherwise, ``(cx, cy)`` is initially set to the image center (``imageSize`` is used), and focal distances are computed in a least-squares fashion.
+        * **fisheye::CALIB_USE_INTRINSIC_GUESS** ``K1, K2`` contains valid initial values of ``fx, fy, cx, cy`` that are optimized further. Otherwise, ``(cx, cy)`` is initially set to the image center (``imageSize`` is used), and focal distances are computed in a least-squares fashion.
 
-        * **Fisheye::CALIB_RECOMPUTE_EXTRINSIC** Extrinsic will be recomputed after each iteration of intrinsic optimization.
+        * **fisheye::CALIB_RECOMPUTE_EXTRINSIC** Extrinsic will be recomputed after each iteration of intrinsic optimization.
 
-        * **Fisheye::CALIB_CHECK_COND** The functions will check validity of condition number.
+        * **fisheye::CALIB_CHECK_COND** The functions will check validity of condition number.
 
-        * **Fisheye::CALIB_FIX_SKEW** Skew coefficient (alpha) is set to zero and stay zero.
+        * **fisheye::CALIB_FIX_SKEW** Skew coefficient (alpha) is set to zero and stay zero.
 
-        * **Fisheye::CALIB_FIX_K1..4** Selected distortion coefficients are set to zeros and stay zero.
+        * **fisheye::CALIB_FIX_K1..4** Selected distortion coefficients are set to zeros and stay zero.
 
     :param criteria: Termination criteria for the iterative optimization algorithm.
 
