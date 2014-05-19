@@ -1550,9 +1550,8 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     _dst.create(src.size(), CV_MAKETYPE(ddepth, dcn));
     UMat dst = _dst.getUMat();
 
-    size_t globalSize[2] = { dst.cols, (dst.rows + 3) / 4};
-
-    ocl::Kernel k("LUT", ocl::core::lut_oclsrc, format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", dcn, lcn,
+    ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
+                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", dcn, lcn,
                          ocl::typeToStr(sdepth), ocl::memopTypeToStr(ddepth)
                          ));
     if (k.empty())
@@ -1561,6 +1560,7 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::ReadOnlyNoSize(lut),
            ocl::KernelArg::WriteOnly(dst));
 
+    size_t globalSize[2] = { dst.cols, (dst.rows + 3) / 4};
     return k.run(2, globalSize, NULL, false);
 }
 
