@@ -403,6 +403,8 @@ typedef void (*PyrFunc)(const Mat&, Mat&, int);
 
 void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
+    CV_Assert(borderType != BORDER_CONSTANT);
+
     Mat src = _src.getMat();
     Size dsz = _dsz == Size() ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
     _dst.create( dsz, src.type() );
@@ -433,6 +435,8 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
 
 void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
+    CV_Assert(borderType == BORDER_DEFAULT);
+
     Mat src = _src.getMat();
     Size dsz = _dsz == Size() ? Size(src.cols*2, src.rows*2) : _dsz;
     _dst.create( dsz, src.type() );
@@ -463,6 +467,8 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
 
 void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
+    CV_Assert(borderType != BORDER_CONSTANT);
+
     Mat src = _src.getMat();
     _dst.create( maxlevel + 1, 1, 0 );
     _dst.getMatRef(0) = src;
