@@ -1544,7 +1544,6 @@ static LUTFunc lutTab[] =
 static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 {
     int lcn = _lut.channels(), dcn = _src.channels(), ddepth = _lut.depth();
-    int sdepth = _src.depth();
 
     UMat src = _src.getUMat(), lut = _lut.getUMat();
     _dst.create(src.size(), CV_MAKETYPE(ddepth, dcn));
@@ -1552,7 +1551,7 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 
     ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
                   format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", dcn, lcn,
-                         ocl::typeToStr(sdepth), ocl::memopTypeToStr(ddepth)
+                         ocl::typeToStr(src.depth()), ocl::memopTypeToStr(ddepth)
                          ));
     if (k.empty())
         return false;
