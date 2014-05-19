@@ -60,7 +60,11 @@
 // TODO Move to some common place
 static size_t getConfigurationParameterForSize(const char* name, size_t defaultValue)
 {
+#ifdef HAVE_WINRT
+    const char* envValue = NULL;
+#else
     const char* envValue = getenv(name);
+#endif
     if (envValue == NULL)
     {
         return defaultValue;
@@ -685,12 +689,14 @@ static void* initOpenCLAndLoad(const char* funcname)
     static HMODULE handle = 0;
     if (!handle)
     {
+#ifndef HAVE_WINRT
         if(!initialized)
         {
             handle = LoadLibraryA("OpenCL.dll");
             initialized = true;
             g_haveOpenCL = handle != 0 && GetProcAddress(handle, oclFuncToCheck) != 0;
         }
+#endif
         if(!handle)
             return 0;
     }
@@ -2145,6 +2151,12 @@ static bool parseOpenCLDeviceConfiguration(const std::string& configurationStr,
     return true;
 }
 
+#ifdef HAVE_WINRT
+static cl_device_id selectOpenCLDevice()
+{
+    return NULL;
+}
+#else
 static cl_device_id selectOpenCLDevice()
 {
     std::string platform, deviceName;
@@ -2289,6 +2301,7 @@ not_found:
     CV_Error(CL_INVALID_DEVICE, "Requested OpenCL device is not found");
     return NULL;
 }
+#endif
 
 struct Context::Impl
 {
