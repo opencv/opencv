@@ -133,9 +133,51 @@ inline vector<_Tp> remove_dups(const vector<_Tp>& src) {
     return elems;
 }
 
+// This class was introduced to avoid an addition of new virtual functions in FaceRecognizer class.
+// It is safe for a binary compatibility.
+class FaceRecognizerBase : public FaceRecognizer
+{
+protected:
+    // Stored pairs "label id - string info"
+    std::map<int, string> _labelsInfo;
+
+public:
+    // Sets additional information as pairs label - info.
+    virtual void setLabelsInfo(const std::map<int, string>& labelsInfo);
+
+    // Gets string information by label
+    virtual string getLabelInfo(int label) const;
+
+    // Gets labels by string
+    virtual vector<int> getLabelsByString(const string& str);
+};
+
+void FaceRecognizerBase::setLabelsInfo(const std::map<int,string>& labelsInfo)
+{
+    _labelsInfo = labelsInfo;
+}
+
+string FaceRecognizerBase::getLabelInfo(int label) const
+{
+    std::map<int, string>::const_iterator iter(_labelsInfo.find(label));
+    return iter != _labelsInfo.end() ? iter->second : "";
+}
+
+vector<int> FaceRecognizerBase::getLabelsByString(const string& str)
+{
+    vector<int> labels;
+    for(std::map<int,string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
+    {
+        size_t found = (it->second).find(str);
+        if(found != string::npos)
+            labels.push_back(it->first);
+    }
+    return labels;
+}
+
 // Turk, M., and Pentland, A. "Eigenfaces for recognition.". Journal of
 // Cognitive Neuroscience 3 (1991), 71–86.
-class Eigenfaces : public FaceRecognizer
+class Eigenfaces : public FaceRecognizerBase
 {
 private:
     int _num_components;
@@ -145,7 +187,6 @@ private:
     Mat _eigenvectors;
     Mat _eigenvalues;
     Mat _mean;
-    std::map<int, string> _labelsInfo;
 
 public:
     using FaceRecognizer::save;
@@ -182,15 +223,6 @@ public:
     // See FaceRecognizer::save.
     void save(FileStorage& fs) const;
 
-    // Sets additional information as pairs label - info.
-    void setLabelsInfo(const std::map<int,string>& labelsInfo);
-
-    // Gets string information by label
-    string getLabelInfo(int label) const;
-
-    // Gets labels by string
-    std::vector<int> getLabelsByString(const string& str);
-
     AlgorithmInfo* info() const;
 };
 
@@ -198,7 +230,7 @@ public:
 // faces: Recognition using class specific linear projection.". IEEE
 // Transactions on Pattern Analysis and Machine Intelligence 19, 7 (1997),
 // 711–720.
-class Fisherfaces: public FaceRecognizer
+class Fisherfaces: public FaceRecognizerBase
 {
 private:
     int _num_components;
@@ -208,7 +240,6 @@ private:
     Mat _mean;
     vector<Mat> _projections;
     Mat _labels;
-    std::map<int, string> _labelsInfo;
 
 public:
     using FaceRecognizer::save;
@@ -247,15 +278,6 @@ public:
     // See FaceRecognizer::save.
     void save(FileStorage& fs) const;
 
-    // Sets additional information as pairs label - info.
-    void setLabelsInfo(const std::map<int,string>& labelsInfo);
-
-    // Gets string information by label
-    string getLabelInfo(int label) const;
-
-    // Gets labels by string
-    std::vector<int> getLabelsByString(const string& str);
-
     AlgorithmInfo* info() const;
 };
 
@@ -265,7 +287,7 @@ public:
 //  patterns: Application to face recognition." IEEE Transactions on Pattern
 //  Analysis and Machine Intelligence, 28(12):2037-2041.
 //
-class LBPH : public FaceRecognizer
+class LBPH : public FaceRecognizerBase
 {
 private:
     int _grid_x;
@@ -276,13 +298,11 @@ private:
 
     vector<Mat> _histograms;
     Mat _labels;
-    std::map<int, string> _labelsInfo;
 
     // Computes a LBPH model with images in src and
     // corresponding labels in labels, possibly preserving
     // old model data.
     void train(InputArrayOfArrays src, InputArray labels, bool preserveData);
-
 
 public:
     using FaceRecognizer::save;
@@ -342,15 +362,6 @@ public:
     // See FaceRecognizer::save.
     void save(FileStorage& fs) const;
 
-    // Sets additional information as pairs label - info.
-    void setLabelsInfo(const std::map<int,string>& labelsInfo);
-
-    // Gets string information by label
-    string getLabelInfo(int label) const;
-
-    // Gets labels by string
-    std::vector<int> getLabelsByString(const string& str);
-
     // Getter functions.
     int neighbors() const { return _neighbors; }
     int radius() const { return _radius; }
@@ -389,6 +400,27 @@ void FaceRecognizer::load(const string& filename) {
         CV_Error(CV_StsError, "File can't be opened for writing!");
     this->load(fs);
     fs.release();
+}
+
+void FaceRecognizer::setLabelsInfo(const std::map<int, string>& labelsInfo)
+{
+    FaceRecognizerBase* base = dynamic_cast<FaceRecognizerBase*>(this);
+    CV_Assert(base != 0);
+    base->setLabelsInfo(labelsInfo);
+}
+
+string FaceRecognizer::getLabelInfo(const int &label)
+{
+    FaceRecognizerBase* base = dynamic_cast<FaceRecognizerBase*>(this);
+    CV_Assert(base != 0);
+    return base->getLabelInfo(label);
+}
+
+vector<int> FaceRecognizer::getLabelsByString(const string& str)
+{
+    FaceRecognizerBase* base = dynamic_cast<FaceRecognizerBase*>(this);
+    CV_Assert(base != 0);
+    return base->getLabelsByString(str);
 }
 
 //------------------------------------------------------------------------------
@@ -513,29 +545,6 @@ void Eigenfaces::save(FileStorage& fs) const {
     for (std::map<int, string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
         fs << LabelInfo(it->first, it->second);
     fs << "]";
-}
-
-void Eigenfaces::setLabelsInfo(const std::map<int,string>& labelsInfo)
-{
-    _labelsInfo = labelsInfo;
-}
-
-string Eigenfaces::getLabelInfo(int label) const
-{
-    std::map<int, string>::const_iterator iter(_labelsInfo.find(label));
-    return iter != _labelsInfo.end() ? iter->second : "";
-}
-
-vector<int> Eigenfaces::getLabelsByString(const string& str)
-{
-    vector<int> labels;
-    for(std::map<int,string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
-    {
-        size_t found = (it->second).find(str);
-        if(found != string::npos)
-            labels.push_back(it->first);
-    }
-    return labels;
 }
 
 //------------------------------------------------------------------------------
@@ -673,29 +682,6 @@ void Fisherfaces::save(FileStorage& fs) const {
     for (std::map<int, string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
         fs << LabelInfo(it->first, it->second);
     fs << "]";
-}
-
-void Fisherfaces::setLabelsInfo(const std::map<int,string>& labelsInfo)
-{
-    _labelsInfo = labelsInfo;
-}
-
-string Fisherfaces::getLabelInfo(int label) const
-{
-    std::map<int, string>::const_iterator iter(_labelsInfo.find(label));
-    return iter != _labelsInfo.end() ? iter->second : "";
-}
-
-vector<int> Fisherfaces::getLabelsByString(const string& str)
-{
-    vector<int> labels;
-    for(std::map<int,string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
-    {
-        size_t found = (it->second).find(str);
-        if(found != string::npos)
-            labels.push_back(it->first);
-    }
-    return labels;
 }
 
 //------------------------------------------------------------------------------
@@ -909,29 +895,6 @@ void LBPH::save(FileStorage& fs) const {
     for (std::map<int, string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
         fs << LabelInfo(it->first, it->second);
     fs << "]";
-}
-
-void LBPH::setLabelsInfo(const std::map<int,string>& labelsInfo)
-{
-    _labelsInfo = labelsInfo;
-}
-
-string LBPH::getLabelInfo(int label) const
-{
-    std::map<int, string>::const_iterator iter(_labelsInfo.find(label));
-    return iter != _labelsInfo.end() ? iter->second : "";
-}
-
-vector<int> LBPH::getLabelsByString(const string& str)
-{
-    vector<int> labels;
-    for(std::map<int,string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
-    {
-        size_t found = (it->second).find(str);
-        if(found != string::npos)
-            labels.push_back(it->first);
-    }
-    return labels;
 }
 
 void LBPH::train(InputArrayOfArrays _in_src, InputArray _in_labels) {

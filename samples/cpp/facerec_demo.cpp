@@ -118,6 +118,7 @@ int main(int argc, const char *argv[]) {
     Ptr<FaceRecognizer> model = createEigenFaceRecognizer();
     model->setLabelsInfo(labelsInfo);
     model->train(images, labels);
+
     // The following line predicts the label of a given
     // test image:
     int predictedLabel = model->predict(testSample);
