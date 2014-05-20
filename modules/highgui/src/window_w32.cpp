@@ -1472,8 +1472,6 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         if( window->on_mouse )
         {
             POINT pt;
-            RECT rect;
-            SIZE size = {0,0};
 
             int flags = (wParam & MK_LBUTTON ? CV_EVENT_FLAG_LBUTTON : 0)|
                         (wParam & MK_RBUTTON ? CV_EVENT_FLAG_RBUTTON : 0)|
@@ -1499,12 +1497,23 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             pt.x = GET_X_LPARAM( lParam );
             pt.y = GET_Y_LPARAM( lParam );
 
-            GetClientRect( window->hwnd, &rect );
-            icvGetBitmapData( window, &size, 0, 0 );
+            if (window->flags & CV_WINDOW_AUTOSIZE)
+            {
+                // As user can't change window size, do not scale window coordinates. Underlying windowing system
+                // may prevent full window from being displayed and in this case coordinates should not be scaled.
+                window->on_mouse( event, pt.x, pt.y, flags, window->on_mouse_param );
+            } else {
+                // Full window is displayed using different size. Scale coordinates to match underlying positions.
+                RECT rect;
+                SIZE size = {0, 0};
 
-            window->on_mouse( event, pt.x*size.cx/MAX(rect.right - rect.left,1),
-                                     pt.y*size.cy/MAX(rect.bottom - rect.top,1), flags,
-                                     window->on_mouse_param );
+                GetClientRect( window->hwnd, &rect );
+                icvGetBitmapData( window, &size, 0, 0 );
+
+                window->on_mouse( event, pt.x*size.cx/MAX(rect.right - rect.left,1),
+                                         pt.y*size.cy/MAX(rect.bottom - rect.top,1), flags,
+                                         window->on_mouse_param );
+            }
         }
         break;
 
