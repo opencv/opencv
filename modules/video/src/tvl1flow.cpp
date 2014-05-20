@@ -928,7 +928,7 @@ CV_INIT_ALGORITHM(OpticalFlowDual_TVL1, "DenseOpticalFlow.DualTVL1",
                                        "Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time");
                   obj.info()->addParam(obj, "iterations", obj.iterations, false, 0, 0,
                                        "Stopping criterion iterations number used in the numerical scheme");
-                  obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow));
+                  obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow))
 
 } // namespace
 

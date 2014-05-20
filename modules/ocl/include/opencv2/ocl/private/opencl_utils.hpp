@@ -108,7 +108,7 @@ inline cl_int getStringInfo(Functor f, ObjectType obj, cl_uint name, std::string
     }
 
     return CL_SUCCESS;
-};
+}
 
 } // namespace cl_utils
 

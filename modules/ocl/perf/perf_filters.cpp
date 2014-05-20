@@ -49,31 +49,30 @@ using namespace perf;
 using std::tr1::get;
 using std::tr1::tuple;
 
+typedef tuple<Size, MatType, int> FilterParams;
+typedef TestBaseWithParam<FilterParams> FilterFixture;
+
 ///////////// Blur////////////////////////
 
-typedef Size_MatType BlurFixture;
+typedef FilterFixture BlurFixture;
 
-PERF_TEST_P(BlurFixture, Blur,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+OCL_PERF_TEST_P(BlurFixture, Blur,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, OCL_PERF_ENUM(3, 5)))
 {
-    const Size_MatType_t params = GetParam();
-    const Size srcSize = get<0>(params), ksize(3, 3);
-    const int type = get<1>(params), bordertype = BORDER_CONSTANT;
+    const FilterParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), ksize = get<2>(params), bordertype = BORDER_CONSTANT;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
-        declare.time(5);
-
     if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-        OCL_TEST_CYCLE() cv::ocl::blur(oclSrc, oclDst, ksize, Point(-1, -1), bordertype);
+        OCL_TEST_CYCLE() cv::ocl::blur(oclSrc, oclDst, Size(ksize, ksize), Point(-1, -1), bordertype);
 
         oclDst.download(dst);
 
@@ -81,7 +80,7 @@ PERF_TEST_P(BlurFixture, Blur,
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() cv::blur(src, dst, ksize, Point(-1, -1), bordertype);
+        TEST_CYCLE() cv::blur(src, dst, Size(ksize, ksize), Point(-1, -1), bordertype);
 
         SANITY_CHECK(dst, 1 + DBL_EPSILON);
     }
@@ -91,23 +90,19 @@ PERF_TEST_P(BlurFixture, Blur,
 
 ///////////// Laplacian////////////////////////
 
-typedef Size_MatType LaplacianFixture;
+typedef FilterFixture LaplacianFixture;
 
-PERF_TEST_P(LaplacianFixture, Laplacian,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+OCL_PERF_TEST_P(LaplacianFixture, Laplacian,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, OCL_PERF_ENUM(1, 3)))
 {
-    const Size_MatType_t params = GetParam();
+    const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ksize = 3;
+    const int type = get<1>(params), ksize = get<2>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
-
-    if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
-        declare.time(6);
 
     if (RUN_OCL_IMPL)
     {
@@ -117,13 +112,13 @@ PERF_TEST_P(LaplacianFixture, Laplacian,
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 5e-3);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::Laplacian(src, dst, -1, ksize, 1);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 5e-3);
     }
     else
         OCL_PERF_ELSE
@@ -131,24 +126,20 @@ PERF_TEST_P(LaplacianFixture, Laplacian,
 
 ///////////// Erode ////////////////////
 
-typedef Size_MatType ErodeFixture;
+typedef FilterFixture ErodeFixture;
 
-PERF_TEST_P(ErodeFixture, Erode,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4)))
+OCL_PERF_TEST_P(ErodeFixture, Erode,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, OCL_PERF_ENUM(3, 5)))
 {
-    const Size_MatType_t params = GetParam();
+    const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ksize = 3;
+    const int type = get<1>(params), ksize = get<2>(params);
     const Mat ker = getStructuringElement(MORPH_RECT, Size(ksize, ksize));
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst).in(ker);
-
-    if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
-        declare.time(5);
 
     if (RUN_OCL_IMPL)
     {
@@ -170,13 +161,89 @@ PERF_TEST_P(ErodeFixture, Erode,
         OCL_PERF_ELSE
 }
 
+///////////// Dilate ////////////////////
+
+typedef FilterFixture DilateFixture;
+
+OCL_PERF_TEST_P(DilateFixture, Dilate,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, OCL_PERF_ENUM(3, 5)))
+{
+    const FilterParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), ksize = get<2>(params);
+    const Mat ker = getStructuringElement(MORPH_RECT, Size(ksize, ksize));
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    Mat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst).in(ker);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type), oclKer(ker);
+
+        OCL_TEST_CYCLE() cv::ocl::dilate(oclSrc, oclDst, oclKer);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::dilate(src, dst, ker);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
+///////////// MorphologyEx ////////////////////
+
+CV_ENUM(MorphOp, MORPH_OPEN, MORPH_CLOSE, MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT)
+
+typedef tuple<Size, MatType, MorphOp, int> MorphologyExParams;
+typedef TestBaseWithParam<MorphologyExParams> MorphologyExFixture;
+
+OCL_PERF_TEST_P(MorphologyExFixture, MorphologyEx,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, MorphOp::all(), OCL_PERF_ENUM(3, 5)))
+{
+    const MorphologyExParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), op = get<2>(params), ksize = get<3>(params);
+    const Mat ker = getStructuringElement(MORPH_RECT, Size(ksize, ksize));
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    Mat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst).in(ker);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type), oclKer(ker);
+
+        OCL_TEST_CYCLE() cv::ocl::morphologyEx(oclSrc, oclDst, op, oclKer);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::morphologyEx(src, dst, op, ker);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
 ///////////// Sobel ////////////////////////
 
 typedef Size_MatType SobelFixture;
 
-PERF_TEST_P(SobelFixture, Sobel,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+OCL_PERF_TEST_P(SobelFixture, Sobel,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -187,12 +254,6 @@ PERF_TEST_P(SobelFixture, Sobel,
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    if ((srcSize == OCL_SIZE_2000 && type == CV_8UC4) ||
-            (srcSize == OCL_SIZE_4000 && type == CV_8UC1))
-        declare.time(5.5);
-    else if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
-        declare.time(20);
-
     if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
@@ -201,13 +262,13 @@ PERF_TEST_P(SobelFixture, Sobel,
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 1e-3);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::Sobel(src, dst, -1, dx, dy);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 1e-3);
     }
     else
         OCL_PERF_ELSE
@@ -217,9 +278,8 @@ PERF_TEST_P(SobelFixture, Sobel,
 
 typedef Size_MatType ScharrFixture;
 
-PERF_TEST_P(ScharrFixture, Scharr,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+OCL_PERF_TEST_P(ScharrFixture, Scharr,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -230,12 +290,6 @@ PERF_TEST_P(ScharrFixture, Scharr,
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    if ((srcSize == OCL_SIZE_2000 && type == CV_8UC4) ||
-            (srcSize == OCL_SIZE_4000 && type == CV_8UC1))
-        declare.time(5.5);
-    else if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
-        declare.time(21);
-
     if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
@@ -244,7 +298,7 @@ PERF_TEST_P(ScharrFixture, Scharr,
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 1e-2);
     }
     else if (RUN_PLAIN_IMPL)
     {
@@ -258,22 +312,21 @@ PERF_TEST_P(ScharrFixture, Scharr,
 
 ///////////// GaussianBlur ////////////////////////
 
-typedef Size_MatType GaussianBlurFixture;
+typedef FilterFixture GaussianBlurFixture;
 
-PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
-            ::testing::Combine(::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000),
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4)))
+OCL_PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, OCL_PERF_ENUM(3, 5, 7)))
 {
-    const Size_MatType_t params = GetParam();
+    const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ksize = 7;
+    const int type = get<1>(params), ksize = get<2>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    const double eps = src.depth() == CV_8U ? 1 + DBL_EPSILON : 3e-4;
+    const double eps = src.depth() == CV_8U ? 1 + DBL_EPSILON : 5e-4;
 
     if (RUN_OCL_IMPL)
     {
@@ -297,24 +350,20 @@ PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
 
 ///////////// filter2D////////////////////////
 
-typedef Size_MatType filter2DFixture;
+typedef FilterFixture Filter2DFixture;
 
-PERF_TEST_P(filter2DFixture, filter2D,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+OCL_PERF_TEST_P(Filter2DFixture, Filter2D,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, OCL_PERF_ENUM(3, 5)))
 {
-    const Size_MatType_t params = GetParam();
+    const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ksize = 3;
+    const int type = get<1>(params), ksize = get<2>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     Mat src(srcSize, type), dst(srcSize, type), kernel(ksize, ksize, CV_32SC1);
     declare.in(src, WARMUP_RNG).in(kernel).out(dst);
     randu(kernel, -3.0, 3.0);
-
-    if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
-        declare.time(8);
 
     if (RUN_OCL_IMPL)
     {
@@ -324,13 +373,13 @@ PERF_TEST_P(filter2DFixture, filter2D,
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 3e-2);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::filter2D(src, dst, -1, kernel);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 1e-2);
     }
     else
         OCL_PERF_ELSE
@@ -338,28 +387,22 @@ PERF_TEST_P(filter2DFixture, filter2D,
 
 ///////////// Bilateral////////////////////////
 
-typedef Size_MatType BilateralFixture;
+typedef TestBaseWithParam<Size> BilateralFixture;
 
-PERF_TEST_P(BilateralFixture, Bilateral,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC3)))
+OCL_PERF_TEST_P(BilateralFixture, Bilateral, OCL_TEST_SIZES)
 {
-    const Size_MatType_t params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params), d = 7;
+    const Size srcSize = GetParam();
+    const int d = 7;
     const double sigmacolor = 50.0, sigmaspace = 50.0;
 
-    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(srcSize, CV_8UC1);
 
-    Mat src(srcSize, type), dst(srcSize, type);
+    Mat src(srcSize, CV_8UC1), dst(srcSize, CV_8UC1);
     declare.in(src, WARMUP_RNG).out(dst);
-
-    if (srcSize == OCL_SIZE_4000)
-        declare.time(type == CV_8UC3 ? 8 : 4.5);
 
     if (RUN_OCL_IMPL)
     {
-        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
+        ocl::oclMat oclSrc(src), oclDst(srcSize, CV_8UC1);
 
         OCL_TEST_CYCLE() cv::ocl::bilateralFilter(oclSrc, oclDst, d, sigmacolor, sigmaspace);
 
@@ -377,37 +420,35 @@ PERF_TEST_P(BilateralFixture, Bilateral,
         OCL_PERF_ELSE
 }
 
-///////////// adaptiveBilateral////////////////////////
+///////////// MedianBlur////////////////////////
 
-typedef Size_MatType adaptiveBilateralFixture;
+typedef tuple<Size, int> MedianBlurParams;
+typedef TestBaseWithParam<MedianBlurParams> MedianBlurFixture;
 
-PERF_TEST_P(adaptiveBilateralFixture, adaptiveBilateral,
-            ::testing::Combine(::testing::Values(OCL_SIZE_1000), OCL_PERF_ENUM(CV_8UC1, CV_8UC3)))
+OCL_PERF_TEST_P(MedianBlurFixture, Bilateral, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(3, 5)))
 {
-    const Size_MatType_t params = GetParam();
+    MedianBlurParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
-    const double sigmaspace = 10.0;
-    Size ksize(9, 9);
+    const int ksize = get<1>(params);
 
-    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(srcSize, CV_8UC1);
 
-    Mat src(srcSize, type), dst(srcSize, type);
+    Mat src(srcSize, CV_8UC1), dst(srcSize, CV_8UC1);
     declare.in(src, WARMUP_RNG).out(dst);
 
     if (RUN_OCL_IMPL)
     {
-        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
+        ocl::oclMat oclSrc(src), oclDst(srcSize, CV_8UC1);
 
-        OCL_TEST_CYCLE() cv::ocl::adaptiveBilateralFilter(oclSrc, oclDst, ksize, sigmaspace);
+        OCL_TEST_CYCLE() cv::ocl::medianFilter(oclSrc, oclDst, ksize);
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst, 1.0);
+        SANITY_CHECK(dst);
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() cv::adaptiveBilateralFilter(src, dst, ksize, sigmaspace);
+        TEST_CYCLE() cv::medianBlur(src, dst, ksize);
 
         SANITY_CHECK(dst);
     }

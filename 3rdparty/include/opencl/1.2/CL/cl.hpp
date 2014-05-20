@@ -210,7 +210,7 @@
 #include <string>
 #endif 
 
-#if defined(linux) || defined(__APPLE__) || defined(__MACOSX)
+#if defined(__linux__) || defined(__APPLE__) || defined(__MACOSX)
 #include <alloca.h>
 
 #include <emmintrin.h>

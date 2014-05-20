@@ -209,7 +209,7 @@ private:
 #define SANITY_CHECK(array, ...) ::perf::Regression::add(this, #array, array , ## __VA_ARGS__)
 #define SANITY_CHECK_KEYPOINTS(array, ...) ::perf::Regression::addKeypoints(this, #array, array , ## __VA_ARGS__)
 #define SANITY_CHECK_MATCHES(array, ...) ::perf::Regression::addMatches(this, #array, array , ## __VA_ARGS__)
-#define SANITY_CHECK_NOTHING() this->setVerified();
+#define SANITY_CHECK_NOTHING() this->setVerified()
 
 class CV_EXPORTS GpuPerf
 {
@@ -258,7 +258,7 @@ typedef struct CV_EXPORTS performance_metrics
 enum PERF_STRATEGY
 {
     PERF_STRATEGY_BASE = 0,
-    PERF_STRATEGY_SIMPLE = 1,
+    PERF_STRATEGY_SIMPLE = 1
 };
 
 

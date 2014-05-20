@@ -304,7 +304,7 @@ CVAPI(int)  cvFindContours( CvArr* image, CvMemStorage* storage, CvSeq** first_c
                             int method CV_DEFAULT(CV_CHAIN_APPROX_SIMPLE),
                             CvPoint offset CV_DEFAULT(cvPoint(0,0)));
 
-/* Initalizes contour retrieving process.
+/* Initializes contour retrieving process.
    Calls cvStartFindContours.
    Calls cvFindNextContour until null pointer is returned
    or some other condition becomes true.
@@ -334,7 +334,7 @@ CVAPI(CvSeq*) cvApproxChains( CvSeq* src_seq, CvMemStorage* storage,
                             int  minimal_perimeter CV_DEFAULT(0),
                             int  recursive CV_DEFAULT(0));
 
-/* Initalizes Freeman chain reader.
+/* Initializes Freeman chain reader.
    The reader is used to iteratively get coordinates of all the chain points.
    If the Freeman codes should be read as is, a simple sequence reader should be used */
 CVAPI(void) cvStartReadChainPoints( CvChain* chain, CvChainPtReader* reader );
@@ -573,7 +573,7 @@ CVAPI(void)  cvCornerMinEigenVal( const CvArr* image, CvArr* eigenval,
 
 /* Harris corner detector:
    Calculates det(M) - k*(trace(M)^2), where M is 2x2 gradient covariation matrix for each pixel */
-CVAPI(void)  cvCornerHarris( const CvArr* image, CvArr* harris_responce,
+CVAPI(void)  cvCornerHarris( const CvArr* image, CvArr* harris_response,
                              int block_size, int aperture_size CV_DEFAULT(3),
                              double k CV_DEFAULT(0.04) );
 

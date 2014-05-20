@@ -141,7 +141,7 @@ Saves an image to a specified file.
 The function ``imwrite`` saves the image to the specified file. The image format is chosen based on the ``filename`` extension (see
 :ocv:func:`imread` for the list of extensions). Only 8-bit (or 16-bit unsigned (``CV_16U``) in case of PNG, JPEG 2000, and TIFF) single-channel or 3-channel (with 'BGR' channel order) images can be saved using this function. If the format, depth or channel order is different, use
 :ocv:func:`Mat::convertTo` , and
-:ocv:func:`cvtColor` to convert it before saving. Or, use the universal XML I/O functions to save the image to XML or YAML format.
+:ocv:func:`cvtColor` to convert it before saving. Or, use the universal :ocv:class:`FileStorage` I/O functions to save the image to XML or YAML format.
 
 It is possible to store PNG images with an alpha channel using this function. To do this, create 8-bit (or 16-bit) 4-channel image BGRA, where the alpha channel goes last. Fully transparent pixels should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535. The sample below shows how to create such a BGRA image and store to PNG file. It also demonstrates how to set custom compression parameters ::
 
@@ -496,7 +496,7 @@ VideoWriter constructors
 
     :param filename: Name of the output video file.
 
-    :param fourcc: 4-character code of codec used to compress the frames. For example, ``CV_FOURCC('P','I','M,'1')``  is a MPEG-1 codec, ``CV_FOURCC('M','J','P','G')``  is a motion-jpeg codec etc. List of codes can be obtained at `Video Codecs by FOURCC <http://www.fourcc.org/codecs.php>`_ page.
+    :param fourcc: 4-character code of codec used to compress the frames. For example, ``CV_FOURCC('P','I','M','1')``  is a MPEG-1 codec, ``CV_FOURCC('M','J','P','G')``  is a motion-jpeg codec etc. List of codes can be obtained at `Video Codecs by FOURCC <http://www.fourcc.org/codecs.php>`_ page.
 
     :param fps: Framerate of the created video stream.
 

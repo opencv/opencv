@@ -163,7 +163,7 @@ IplImage * CvCaptureCAM_TYZX::retrieveFrame(int)
 {
     if(!isOpened() || !g_tyzx_camera) return 0;
 
-    if(!image && !alocateImage())
+    if(!image && !allocateImage())
         return 0;
 
     // copy camera image into buffer.

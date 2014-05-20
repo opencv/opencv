@@ -7,6 +7,7 @@
 #include <memory>
 #include <exception>
 #include <ctime>
+#include <ctype.h>
 
 #include "cvconfig.h"
 #include <iostream>

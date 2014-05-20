@@ -301,6 +301,7 @@ static ippiReorderFunc ippiSwapChannelsC4RTab[] =
     0, (ippiReorderFunc)ippiSwapChannels_32f_AC4R, 0, 0
 };
 
+#if 0
 static ippiColor2GrayFunc ippiColor2GrayC3Tab[] =
 {
     (ippiColor2GrayFunc)ippiColorToGray_8u_C3C1R, 0, (ippiColor2GrayFunc)ippiColorToGray_16u_C3C1R, 0,
@@ -312,6 +313,7 @@ static ippiColor2GrayFunc ippiColor2GrayC4Tab[] =
     (ippiColor2GrayFunc)ippiColorToGray_8u_AC4C1R, 0, (ippiColor2GrayFunc)ippiColorToGray_16u_AC4C1R, 0,
     0, (ippiColor2GrayFunc)ippiColorToGray_32f_AC4C1R, 0, 0
 };
+#endif
 
 static ippiGeneralFunc ippiRGB2GrayC3Tab[] =
 {
@@ -3214,7 +3216,7 @@ struct YUV420p2RGB888Invoker : ParallelLoopBody
         const int rangeBegin = range.start * 2;
         const int rangeEnd = range.end * 2;
 
-        size_t uvsteps[2] = {width/2, stride - width/2};
+        int uvsteps[2] = {width/2, stride - width/2};
         int usIdx = ustepIdx, vsIdx = vstepIdx;
 
         const uchar* y1 = my1 + rangeBegin * stride;
@@ -3282,7 +3284,7 @@ struct YUV420p2RGBA8888Invoker : ParallelLoopBody
         int rangeBegin = range.start * 2;
         int rangeEnd = range.end * 2;
 
-        size_t uvsteps[2] = {width/2, stride - width/2};
+        int uvsteps[2] = {width/2, stride - width/2};
         int usIdx = ustepIdx, vsIdx = vstepIdx;
 
         const uchar* y1 = my1 + rangeBegin * stride;

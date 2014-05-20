@@ -2,6 +2,8 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
+INSTALL_CUDA_LIBRARIES:=on
+OPENCV_INSTALL_MODULES:=on
 CUDA_TOOLKIT_DIR=$(CUDA_TOOLKIT_ROOT)
 include ../../sdk/native/jni/OpenCV.mk
 

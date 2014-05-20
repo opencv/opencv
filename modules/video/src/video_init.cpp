@@ -52,7 +52,7 @@ CV_INIT_ALGORITHM(BackgroundSubtractorMOG, "BackgroundSubtractor.MOG",
     obj.info()->addParam(obj, "history", obj.history);
     obj.info()->addParam(obj, "nmixtures", obj.nmixtures);
     obj.info()->addParam(obj, "backgroundRatio", obj.backgroundRatio);
-    obj.info()->addParam(obj, "noiseSigma", obj.noiseSigma));
+    obj.info()->addParam(obj, "noiseSigma", obj.noiseSigma))
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -68,7 +68,7 @@ CV_INIT_ALGORITHM(BackgroundSubtractorMOG2, "BackgroundSubtractor.MOG2",
     obj.info()->addParam(obj, "fVarMax", obj.fVarMax);
     obj.info()->addParam(obj, "fCT", obj.fCT);
     obj.info()->addParam(obj, "nShadowDetection", obj.nShadowDetection);
-    obj.info()->addParam(obj, "fTau", obj.fTau));
+    obj.info()->addParam(obj, "fTau", obj.fTau))
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -88,7 +88,7 @@ CV_INIT_ALGORITHM(BackgroundSubtractorGMG, "BackgroundSubtractor.GMG",
                   obj.info()->addParam(obj, "decisionThreshold", obj.decisionThreshold,false,0,0,
                                        "Threshold for FG decision rule. Pixel is FG if posterior probability exceeds threshold.");
                   obj.info()->addParam(obj, "updateBackgroundModel", obj.updateBackgroundModel,false,0,0,
-                                       "Perform background model update."));
+                                       "Perform background model update."))
 
 bool initModule_video(void)
 {

@@ -110,6 +110,8 @@ Detects keypoints and computes SURF descriptors for them.
 
 .. ocv:pyfunction:: cv2.SURF.detect(image[, mask]) -> keypoints
 
+.. ocv:pyfunction:: cv2.SURF.detectAndCompute(image[, mask]) -> keypoints, descriptors
+
 .. ocv:cfunction:: void cvExtractSURF( const CvArr* image, const CvArr* mask, CvSeq** keypoints, CvSeq** descriptors, CvMemStorage* storage, CvSURFParams params )
 
 .. ocv:pyoldfunction:: cv.ExtractSURF(image, mask, storage, params)-> (keypoints, descriptors)
@@ -240,7 +242,7 @@ The class ``SURF_GPU`` uses some buffers and provides access to it. All buffers 
 
 ocl::SURF_OCL
 -------------
-.. ocv:class:: ocl::SURF_OCL
+.. ocv:class:: ocl::SURF_OCL : public Feature2D
 
 Class used for extracting Speeded Up Robust Features (SURF) from an image. ::
 

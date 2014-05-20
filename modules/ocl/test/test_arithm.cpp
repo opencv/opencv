@@ -198,7 +198,7 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
 
         Size roiSize = randomSize(1, MAX_VALUE);
         Border src1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(src1, src1_roi, roiSize, src1Border, type, 2, 11);
+        randomSubMat(src1, src1_roi, roiSize, src1Border, type, -11, 11);
 
         Border src2Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(src2, src2_roi, roiSize, src2Border, type, -1540, 1740);
@@ -1163,7 +1163,7 @@ OCL_TEST_P(CountNonZero, MAT)
         int cpures = cv::countNonZero(src1_roi);
         int gpures = cv::ocl::countNonZero(gsrc1_roi);
 
-        EXPECT_DOUBLE_EQ((double)cpures, (double)gpures);
+        EXPECT_EQ(cpures, gpures);
     }
 }
 

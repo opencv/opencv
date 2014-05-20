@@ -343,7 +343,7 @@ int cvFindNextMaximalClique( CvCliqueFinder* finder )
             break;
         case NEXT:
             //here we will look for candidate to translate into not
-            //s[k] now contains index of choosen candidate
+            //s[k] now contains index of chosen candidate
             {
                 int* new_ = All[k+1];
                 if( nod[k] != 0 )
@@ -590,7 +590,7 @@ void cvBronKerbosch( CvGraph* graph )
             break;
         case NEXT:
             //here we will look for candidate to translate into not
-            //s[k] now contains index of choosen candidate
+            //s[k] now contains index of chosen candidate
             {
                 int* new_ = All[k+1];
                 if( nod[k] != 0 )

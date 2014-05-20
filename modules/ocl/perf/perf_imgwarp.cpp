@@ -51,11 +51,13 @@ using std::tr1::get;
 
 ///////////// WarpAffine ////////////////////////
 
-typedef Size_MatType WarpAffineFixture;
+CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR)
 
-PERF_TEST_P(WarpAffineFixture, WarpAffine,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+typedef tuple<Size, MatType, InterType> WarpAffineParams;
+typedef TestBaseWithParam<WarpAffineParams> WarpAffineFixture;
+
+OCL_PERF_TEST_P(WarpAffineFixture, WarpAffine,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134, InterType::all()))
 {
     static const double coeffs[2][3] =
     {
@@ -63,11 +65,12 @@ PERF_TEST_P(WarpAffineFixture, WarpAffine,
         { sin(CV_PI / 6), cos(CV_PI / 6), -100.0 }
     };
     Mat M(2, 3, CV_64F, (void *)coeffs);
-    const int interpolation = INTER_NEAREST;
 
-    const Size_MatType_t params = GetParam();
+    const WarpAffineParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const int type = get<1>(params), interpolation = get<2>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
@@ -80,13 +83,13 @@ PERF_TEST_P(WarpAffineFixture, WarpAffine,
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 5e-4);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::warpAffine(src, dst, M, srcSize, interpolation);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 5e-4);
     }
     else
         OCL_PERF_ELSE
@@ -94,11 +97,11 @@ PERF_TEST_P(WarpAffineFixture, WarpAffine,
 
 ///////////// WarpPerspective ////////////////////////
 
-typedef Size_MatType WarpPerspectiveFixture;
+typedef WarpAffineParams WarpPerspectiveParams;
+typedef TestBaseWithParam<WarpPerspectiveParams> WarpPerspectiveFixture;
 
-PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+OCL_PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134, InterType::all()))
 {
     static const double coeffs[3][3] =
     {
@@ -107,15 +110,15 @@ PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
         {0.0, 0.0, 1.0}
     };
     Mat M(3, 3, CV_64F, (void *)coeffs);
-    const int interpolation = INTER_LINEAR;
 
-    const Size_MatType_t params = GetParam();
+    const WarpPerspectiveParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const int type = get<1>(params), interpolation = get<2>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     Mat src(srcSize, type), dst(srcSize, type);
-    declare.in(src, WARMUP_RNG).out(dst)
-            .time(srcSize == OCL_SIZE_4000 ? 18 : srcSize == OCL_SIZE_2000 ? 5 : 2);
+    declare.in(src, WARMUP_RNG).out(dst);
 
     if (RUN_OCL_IMPL)
     {
@@ -125,32 +128,28 @@ PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 5e-4);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::warpPerspective(src, dst, M, srcSize, interpolation);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 5e-4);
     }
     else
         OCL_PERF_ELSE
 }
 
-///////////// resize ////////////////////////
+///////////// Resize ////////////////////////
 
-CV_ENUM(resizeInterType, INTER_NEAREST, INTER_LINEAR)
+typedef tuple<Size, MatType, InterType, double> ResizeParams;
+typedef TestBaseWithParam<ResizeParams> ResizeFixture;
 
-typedef tuple<Size, MatType, resizeInterType, double> resizeParams;
-typedef TestBaseWithParam<resizeParams> resizeFixture;
-
-PERF_TEST_P(resizeFixture, resize,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4),
-                               resizeInterType::all(),
-                               ::testing::Values(0.5, 2.0)))
+OCL_PERF_TEST_P(ResizeFixture, Resize,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134,
+                               InterType::all(), ::testing::Values(0.5, 2.0)))
 {
-    const resizeParams params = GetParam();
+    const ResizeParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), interType = get<2>(params);
     double scale = get<3>(params);
@@ -162,8 +161,6 @@ PERF_TEST_P(resizeFixture, resize,
     Mat src(srcSize, type), dst;
     dst.create(dstSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
-    if (interType == INTER_LINEAR && type == CV_8UC4 && OCL_SIZE_4000 == srcSize)
-        declare.time(11);
 
     if (RUN_OCL_IMPL)
     {
@@ -185,15 +182,13 @@ PERF_TEST_P(resizeFixture, resize,
         OCL_PERF_ELSE
 }
 
-typedef tuple<Size, MatType, double> resizeAreaParams;
-typedef TestBaseWithParam<resizeAreaParams> resizeAreaFixture;
+typedef tuple<Size, MatType, double> ResizeAreaParams;
+typedef TestBaseWithParam<ResizeAreaParams> ResizeAreaFixture;
 
-PERF_TEST_P(resizeAreaFixture, resize,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
-                               ::testing::Values(0.3, 0.5, 0.6)))
+OCL_PERF_TEST_P(ResizeAreaFixture, Resize,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134, ::testing::Values(0.3, 0.5, 0.6)))
 {
-    const resizeAreaParams params = GetParam();
+    const ResizeAreaParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
     double scale = get<2>(params);
@@ -225,27 +220,20 @@ PERF_TEST_P(resizeAreaFixture, resize,
         OCL_PERF_ELSE
 }
 
-///////////// remap////////////////////////
+///////////// Remap ////////////////////////
 
-CV_ENUM(RemapInterType, INTER_NEAREST, INTER_LINEAR)
+typedef tuple<Size, MatType, InterType> RemapParams;
+typedef TestBaseWithParam<RemapParams> RemapFixture;
 
-typedef tuple<Size, MatType, RemapInterType> remapParams;
-typedef TestBaseWithParam<remapParams> remapFixture;
-
-PERF_TEST_P(remapFixture, remap,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4),
-                               RemapInterType::all()))
+OCL_PERF_TEST_P(RemapFixture, Remap,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, InterType::all()))
 {
-    const remapParams params = GetParam();
+    const RemapParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), interpolation = get<2>(params);
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
-
-    if (srcSize == OCL_SIZE_4000 && interpolation == INTER_LINEAR)
-        declare.time(9);
 
     Mat xmap, ymap;
     xmap.create(srcSize, CV_32FC1);
@@ -287,7 +275,7 @@ PERF_TEST_P(remapFixture, remap,
 }
 
 
-///////////// buildWarpPerspectiveMaps ////////////////////////
+///////////// BuildWarpPerspectiveMaps ////////////////////////
 
 static void buildWarpPerspectiveMaps(const Mat &M, bool inverse, Size dsize, Mat &xmap, Mat &ymap)
 {
@@ -323,9 +311,9 @@ static void buildWarpPerspectiveMaps(const Mat &M, bool inverse, Size dsize, Mat
     }
 }
 
-typedef TestBaseWithParam<Size> buildWarpPerspectiveMapsFixture;
+typedef TestBaseWithParam<Size> BuildWarpPerspectiveMapsFixture;
 
-PERF_TEST_P(buildWarpPerspectiveMapsFixture, Inverse, OCL_TYPICAL_MAT_SIZES)
+PERF_TEST_P(BuildWarpPerspectiveMapsFixture, Inverse, OCL_TYPICAL_MAT_SIZES)
 {
     static const double coeffs[3][3] =
     {

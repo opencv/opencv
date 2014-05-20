@@ -204,7 +204,7 @@ namespace cv
             CACHE_NONE    = 0,        // do not cache OpenCL binary
             CACHE_DEBUG   = 0x1 << 0, // cache OpenCL binary when built in debug mode
             CACHE_RELEASE = 0x1 << 1, // default behavior, only cache when built in release mode
-            CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE, // cache opencl binary
+            CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE // cache opencl binary
         };
         //! Enable or disable OpenCL program binary caching onto local disk
         // After a program (*.cl files in opencl/ folder) is built at runtime, we allow the
@@ -859,10 +859,10 @@ namespace cv
         CV_EXPORTS void warpPerspective(const oclMat &src, oclMat &dst, const Mat &M, Size dsize, int flags = INTER_LINEAR);
 
         //! computes the integral image and integral for the squared image
-        // sum will support CV_32S, CV_32F, sqsum - support CV32F, CV_64F
+        // sum will have CV_32S type, sqsum - CV32F type
         // supports only CV_8UC1 source type
-        CV_EXPORTS void integral(const oclMat &src, oclMat &sum, oclMat &sqsum, int sdepth=-1 );
-        CV_EXPORTS void integral(const oclMat &src, oclMat &sum, int sdepth=-1 );
+        CV_EXPORTS void integral(const oclMat &src, oclMat &sum, oclMat &sqsum);
+        CV_EXPORTS void integral(const oclMat &src, oclMat &sum);
         CV_EXPORTS void cornerHarris(const oclMat &src, oclMat &dst, int blockSize, int ksize, double k, int bordertype = cv::BORDER_DEFAULT);
         CV_EXPORTS void cornerHarris_dxdy(const oclMat &src, oclMat &dst, oclMat &Dx, oclMat &Dy,
             int blockSize, int ksize, double k, int bordertype = cv::BORDER_DEFAULT);
@@ -936,7 +936,7 @@ namespace cv
             Size m_maxSize;
             vector<CvSize> sizev;
             vector<float> scalev;
-            oclMat gimg1, gsum, gsqsum, gsqsum_t;
+            oclMat gimg1, gsum, gsqsum;
             void * buffers;
         };
 

@@ -51,21 +51,22 @@ using std::tr1::get;
 
 ///////////// Merge////////////////////////
 
-typedef Size_MatType MergeFixture;
+typedef tuple<Size, MatDepth, int> MergeParams;
+typedef TestBaseWithParam<MergeParams> MergeFixture;
 
-PERF_TEST_P(MergeFixture, Merge,
-            ::testing::Combine(::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000),
-                               OCL_PERF_ENUM(CV_8U, CV_32F)))
+OCL_PERF_TEST_P(MergeFixture, Merge,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_8U, CV_32F),
+                                   OCL_PERF_ENUM(2, 3)))
 {
-    const Size_MatType_t params = GetParam();
+    const MergeParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int depth = get<1>(params), channels = 3;
-    const int dstType = CV_MAKE_TYPE(depth, channels);
+    const int depth = get<1>(params), cn = get<2>(params),
+            dtype = CV_MAKE_TYPE(depth, cn);
 
-    checkDeviceMaxMemoryAllocSize(srcSize, dstType);
+    checkDeviceMaxMemoryAllocSize(srcSize, dtype);
 
-    Mat dst(srcSize, dstType);
-    vector<Mat> src(channels);
+    Mat dst(srcSize, dtype);
+    vector<Mat> src(cn);
     for (vector<Mat>::iterator i = src.begin(), end = src.end(); i != end; ++i)
     {
         i->create(srcSize, CV_MAKE_TYPE(depth, 1));
@@ -75,7 +76,7 @@ PERF_TEST_P(MergeFixture, Merge,
 
     if (RUN_OCL_IMPL)
     {
-        ocl::oclMat oclDst(srcSize, dstType);
+        ocl::oclMat oclDst(srcSize, dtype);
         vector<ocl::oclMat> oclSrc(src.size());
         for (vector<ocl::oclMat>::size_type i = 0, end = src.size(); i < end; ++i)
             oclSrc[i] = src[i];
@@ -98,49 +99,69 @@ PERF_TEST_P(MergeFixture, Merge,
 
 ///////////// Split////////////////////////
 
-typedef Size_MatType SplitFixture;
+typedef MergeParams SplitParams;
+typedef TestBaseWithParam<SplitParams> SplitFixture;
 
-PERF_TEST_P(SplitFixture, Split,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8U, CV_32F)))
+OCL_PERF_TEST_P(SplitFixture, Split,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_8U, CV_32F),
+                                   OCL_PERF_ENUM(2, 3)))
 {
-    const Size_MatType_t params = GetParam();
+    const SplitParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int depth = get<1>(params), channels = 3;
-    const int type = CV_MAKE_TYPE(depth, channels);
+    const int depth = get<1>(params), cn = get<2>(params);
+    const int type = CV_MAKE_TYPE(depth, cn);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     Mat src(srcSize, type);
+    Mat dst0, dst1, dst2;
     declare.in(src, WARMUP_RNG);
+
+    ASSERT_TRUE(cn == 3 || cn == 2);
 
     if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src);
-        vector<ocl::oclMat> oclDst(channels, ocl::oclMat(srcSize, CV_MAKE_TYPE(depth, 1)));
+        vector<ocl::oclMat> oclDst(cn);
+        oclDst[0] = ocl::oclMat(srcSize, depth);
+        oclDst[1] = ocl::oclMat(srcSize, depth);
+        if (cn == 3)
+            oclDst[2] = ocl::oclMat(srcSize, depth);
 
         OCL_TEST_CYCLE() cv::ocl::split(oclSrc, oclDst);
 
-        ASSERT_EQ(3, channels);
-        Mat dst0, dst1, dst2;
         oclDst[0].download(dst0);
         oclDst[1].download(dst1);
-        oclDst[2].download(dst2);
-        SANITY_CHECK(dst0);
-        SANITY_CHECK(dst1);
-        SANITY_CHECK(dst2);
+        if (cn == 3)
+            oclDst[2].download(dst2);
     }
     else if (RUN_PLAIN_IMPL)
     {
-        vector<Mat> dst(channels, Mat(srcSize, CV_MAKE_TYPE(depth, 1)));
+        vector<Mat> dst(cn);
+        dst[0] = Mat(srcSize, depth);
+        dst[1] = Mat(srcSize, depth);
+        if (cn == 3)
+            dst[2] = Mat(srcSize, depth);
+
         TEST_CYCLE() cv::split(src, dst);
 
-        ASSERT_EQ(3, channels);
-        Mat & dst0 = dst[0], & dst1 = dst[1], & dst2 = dst[2];
+        dst0 = dst[0];
+        dst1 = dst[1];
+        if (cn == 3)
+            dst2 = dst[2];
+    }
+    else
+        OCL_PERF_ELSE
+
+    if (cn == 2)
+    {
+        SANITY_CHECK(dst0);
+        SANITY_CHECK(dst1);
+    }
+    else if (cn == 3)
+    {
         SANITY_CHECK(dst0);
         SANITY_CHECK(dst1);
         SANITY_CHECK(dst2);
     }
-    else
-        OCL_PERF_ELSE
 }

@@ -40,6 +40,6 @@ else()
     get_filename_component(wrapper_name "${wrapper}" NAME)
     install(FILES "${LIBRARY_OUTPUT_PATH}/${wrapper_name}"
             DESTINATION ${OPENCV_LIB_INSTALL_PATH}
-            COMPONENT main)
+            COMPONENT libs)
   endforeach()
 endif()

@@ -478,7 +478,7 @@ void CV_CameraCalibrationTest::run( int start_from )
         values_read = fscanf(file,"%lf",goodDistortion+2); CV_Assert(values_read == 1);
         values_read = fscanf(file,"%lf",goodDistortion+3); CV_Assert(values_read == 1);
 
-        /* Read good Rot matrixes */
+        /* Read good Rot matrices */
         for( currImage = 0; currImage < numImages; currImage++ )
         {
             for( i = 0; i < 3; i++ )
@@ -1605,7 +1605,7 @@ void CV_StereoCalibrationTest::run( int )
         Mat _M1, _M2, _D1, _D2;
         vector<Mat> _R1, _R2, _T1, _T2;
         calibrateCamera( objpt, imgpt1, imgsize, _M1, _D1, _R1, _T1, 0 );
-        calibrateCamera( objpt, imgpt2, imgsize, _M2, _D2, _R2, _T1, 0 );
+        calibrateCamera( objpt, imgpt2, imgsize, _M2, _D2, _R2, _T2, 0 );
         undistortPoints( _imgpt1, _imgpt1, _M1, _D1, Mat(), _M1 );
         undistortPoints( _imgpt2, _imgpt2, _M2, _D2, Mat(), _M2 );
 

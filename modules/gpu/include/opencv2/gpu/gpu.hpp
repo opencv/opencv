@@ -733,11 +733,11 @@ CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, Gp
     int borderType=BORDER_REFLECT101, Stream& stream = Stream::Null());
 
 //! performs per-element multiplication of two full (not packed) Fourier spectrums
-//! supports 32FC2 matrixes only (interleaved format)
+//! supports 32FC2 matrices only (interleaved format)
 CV_EXPORTS void mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false, Stream& stream = Stream::Null());
 
 //! performs per-element multiplication of two full (not packed) Fourier spectrums
-//! supports 32FC2 matrixes only (interleaved format)
+//! supports 32FC2 matrices only (interleaved format)
 CV_EXPORTS void mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB=false, Stream& stream = Stream::Null());
 
 //! Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
@@ -1580,7 +1580,7 @@ public:
     // all features have same size
     static const int FEATURE_SIZE = 7;
 
-    explicit FAST_GPU(int threshold, bool nonmaxSupression = true, double keypointsRatio = 0.05);
+    explicit FAST_GPU(int threshold, bool nonmaxSuppression = true, double keypointsRatio = 0.05);
 
     //! finds the keypoints using FAST detector
     //! supports only CV_8UC1 images
@@ -1596,19 +1596,19 @@ public:
     //! release temporary buffer's memory
     void release();
 
-    bool nonmaxSupression;
+    bool nonmaxSuppression;
 
     int threshold;
 
     //! max keypoints = keypointsRatio * img.size().area()
     double keypointsRatio;
 
-    //! find keypoints and compute it's response if nonmaxSupression is true
+    //! find keypoints and compute it's response if nonmaxSuppression is true
     //! return count of detected keypoints
     int calcKeyPointsLocation(const GpuMat& image, const GpuMat& mask);
 
     //! get final array of keypoints
-    //! performs nonmax supression if needed
+    //! performs nonmax suppression if needed
     //! return final count of keypoints
     int getKeyPoints(GpuMat& keypoints);
 
@@ -1670,10 +1670,10 @@ public:
     //! returns the descriptor size in bytes
     inline int descriptorSize() const { return kBytes; }
 
-    inline void setFastParams(int threshold, bool nonmaxSupression = true)
+    inline void setFastParams(int threshold, bool nonmaxSuppression = true)
     {
         fastDetector_.threshold = threshold;
-        fastDetector_.nonmaxSupression = nonmaxSupression;
+        fastDetector_.nonmaxSuppression = nonmaxSuppression;
     }
 
     //! release temporary buffer's memory
@@ -2443,7 +2443,7 @@ public:
         Uncompressed_YV12   = (('Y'<<24)|('V'<<16)|('1'<<8)|('2')),   // Y,V,U (4:2:0)
         Uncompressed_NV12   = (('N'<<24)|('V'<<16)|('1'<<8)|('2')),   // Y,UV  (4:2:0)
         Uncompressed_YUYV   = (('Y'<<24)|('U'<<16)|('Y'<<8)|('V')),   // YUYV/YUY2 (4:2:2)
-        Uncompressed_UYVY   = (('U'<<24)|('Y'<<16)|('V'<<8)|('Y')),   // UYVY (4:2:2)
+        Uncompressed_UYVY   = (('U'<<24)|('Y'<<16)|('V'<<8)|('Y'))    // UYVY (4:2:2)
     };
 
     enum ChromaFormat
@@ -2451,7 +2451,7 @@ public:
         Monochrome=0,
         YUV420,
         YUV422,
-        YUV444,
+        YUV444
     };
 
     struct FormatInfo

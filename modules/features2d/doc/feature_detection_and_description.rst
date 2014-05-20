@@ -11,9 +11,9 @@ FAST
 ----
 Detects corners using the FAST algorithm
 
-.. ocv:function:: void FAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSupression=true )
+.. ocv:function:: void FAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSuppression=true )
 
-.. ocv:function:: void FASTX( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSupression, int type )
+.. ocv:function:: void FASTX( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSuppression, int type )
 
     :param image: grayscale image where keypoints (corners) are detected.
 
@@ -21,7 +21,7 @@ Detects corners using the FAST algorithm
 
     :param threshold: threshold on difference between intensity of the central pixel and pixels of a circle around this pixel.
 
-    :param nonmaxSupression: if true, non-maximum suppression is applied to detected corners (keypoints).
+    :param nonmaxSuppression: if true, non-maximum suppression is applied to detected corners (keypoints).
 
     :param type: one of the three neighborhoods as defined in the paper: ``FastFeatureDetector::TYPE_9_16``, ``FastFeatureDetector::TYPE_7_12``, ``FastFeatureDetector::TYPE_5_8``
 

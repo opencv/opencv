@@ -297,4 +297,4 @@ const Mat& KalmanFilter::correct(const Mat& measurement)
     return statePost;
 }
 
-};
+}

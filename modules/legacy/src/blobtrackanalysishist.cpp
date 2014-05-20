@@ -730,12 +730,12 @@ private:
         m_pFViVarRes = (int*)cvAlloc(sizeof(int)*m_Dim);
         m_Sizes = (int*)cvAlloc(sizeof(int)*m_Dim);
 
-        {   /* Create init sparce matrix: */
+        {   /* Create init sparse matrix: */
             int     i;
             for(i=0;i<m_Dim;++i)m_Sizes[i] = m_BinNum;
             m_HistMat.Realloc(m_Dim,m_Sizes,SPARSE);
             m_HistVolumeSaved = 0;
-        } /* Create init sparce matrix. */
+        } /* Create init sparse matrix. */
     } /* AllocData. */
 
     void FreeData()
