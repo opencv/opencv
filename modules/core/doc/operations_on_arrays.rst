@@ -1252,11 +1252,12 @@ gemm
 ----
 Performs generalized matrix multiplication.
 
-.. ocv:function:: void gemm( InputArray src1, InputArray src2, double alpha, InputArray src3, double gamma, OutputArray dst, int flags=0 )
+.. ocv:function:: void gemm( InputArray src1, InputArray src2, double alpha, InputArray src3, double beta, OutputArray dst, int flags=0 )
 
-.. ocv:pyfunction:: cv2.gemm(src1, src2, alpha, src3, gamma[, dst[, flags]]) -> dst
+.. ocv:pyfunction:: cv2.gemm(src1, src2, alpha, src3, beta[, dst[, flags]]) -> dst
 
 .. ocv:cfunction:: void cvGEMM( const CvArr* src1, const CvArr* src2, double alpha, const CvArr* src3, double beta, CvArr* dst, int tABC=0)
+
 .. ocv:pyoldfunction:: cv.GEMM(src1, src2, alpha, src3, beta, dst, tABC=0)-> None
 
     :param src1: first multiplied input matrix that should have ``CV_32FC1``, ``CV_64FC1``, ``CV_32FC2``, or ``CV_64FC2`` type.
