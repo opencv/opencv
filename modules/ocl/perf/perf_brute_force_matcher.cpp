@@ -46,21 +46,23 @@
 #include "perf_precomp.hpp"
 
 using namespace perf;
-
-#define OCL_BFMATCHER_TYPICAL_MAT_SIZES ::testing::Values(cv::Size(128, 500), cv::Size(128, 1000), cv::Size(128, 2000))
+using std::tr1::get;
 
 //////////////////// BruteForceMatch /////////////////
 
-typedef TestBaseWithParam<Size> BruteForceMatcherFixture;
+typedef Size_MatType BruteForceMatcherFixture;
 
-PERF_TEST_P(BruteForceMatcherFixture, match,
-            OCL_BFMATCHER_TYPICAL_MAT_SIZES)
+OCL_PERF_TEST_P(BruteForceMatcherFixture, Match,
+                ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
+                                   OCL_PERF_ENUM(MatType(CV_32FC1))))
 {
-    const Size srcSize = GetParam();
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
     vector<DMatch> matches;
-    Mat query(srcSize, CV_32F), train(srcSize, CV_32F);
-    declare.in(query, train).time(srcSize.height == 2000 ? 9 : 4 );
+    Mat query(srcSize, type), train(srcSize, type);
+    declare.in(query, train);
     randu(query, 0.0f, 1.0f);
     randu(train, 0.0f, 1.0f);
 
@@ -75,12 +77,9 @@ PERF_TEST_P(BruteForceMatcherFixture, match,
     {
         ocl::BruteForceMatcher_OCL_base oclMatcher(ocl::BruteForceMatcher_OCL_base::L2Dist);
         ocl::oclMat oclQuery(query), oclTrain(train);
-        ocl::oclMat oclTrainIdx, oclDistance;
 
         OCL_TEST_CYCLE()
-            oclMatcher.matchSingle(oclQuery, oclTrain, oclTrainIdx, oclDistance);
-
-        oclMatcher.matchDownload(oclTrainIdx, oclDistance, matches);
+            oclMatcher.match(oclQuery, oclTrain, matches);
 
         SANITY_CHECK_MATCHES(matches, 1e-5);
     }
@@ -88,19 +87,20 @@ PERF_TEST_P(BruteForceMatcherFixture, match,
         OCL_PERF_ELSE
 }
 
-PERF_TEST_P(BruteForceMatcherFixture, knnMatch,
-            OCL_BFMATCHER_TYPICAL_MAT_SIZES)
+OCL_PERF_TEST_P(BruteForceMatcherFixture, KnnMatch,
+                ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
+                                   OCL_PERF_ENUM(MatType(CV_32FC1))))
 {
-    const Size srcSize = GetParam();
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
     vector<vector<DMatch> > matches(2);
-    Mat query(srcSize, CV_32F), train(srcSize, CV_32F);
+    Mat query(srcSize, type), train(srcSize, type);
     randu(query, 0.0f, 1.0f);
     randu(train, 0.0f, 1.0f);
 
     declare.in(query, train);
-    if (srcSize.height == 2000)
-        declare.time(9);
 
     if (RUN_PLAIN_IMPL)
     {
@@ -115,10 +115,10 @@ PERF_TEST_P(BruteForceMatcherFixture, knnMatch,
     {
         ocl::BruteForceMatcher_OCL_base oclMatcher(ocl::BruteForceMatcher_OCL_base::L2Dist);
         ocl::oclMat oclQuery(query), oclTrain(train);
-        ocl::oclMat oclTrainIdx, oclDistance, oclAllDist;
+        ocl::oclMat oclTrainIdx, oclDistance;
 
         OCL_TEST_CYCLE()
-                oclMatcher.knnMatchSingle(oclQuery, oclTrain, oclTrainIdx, oclDistance, oclAllDist, 2);
+                oclMatcher.knnMatch(oclQuery, oclTrain, matches, 2);
 
         oclMatcher.knnMatchDownload(oclTrainIdx, oclDistance, matches);
 
@@ -130,21 +130,21 @@ PERF_TEST_P(BruteForceMatcherFixture, knnMatch,
         OCL_PERF_ELSE
 }
 
-PERF_TEST_P(BruteForceMatcherFixture, radiusMatch,
-            OCL_BFMATCHER_TYPICAL_MAT_SIZES)
+OCL_PERF_TEST_P(BruteForceMatcherFixture, RadiusMatch,
+                ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
+                                   OCL_PERF_ENUM(MatType(CV_32FC1))))
 {
-    const Size srcSize = GetParam();
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
     const float max_distance = 2.0f;
     vector<vector<DMatch> > matches(2);
-    Mat query(srcSize, CV_32F), train(srcSize, CV_32F);
+    Mat query(srcSize, type), train(srcSize, type);
     declare.in(query, train);
 
     randu(query, 0.0f, 1.0f);
     randu(train, 0.0f, 1.0f);
-
-    if (srcSize.height == 2000)
-        declare.time(9.15);
 
     if (RUN_PLAIN_IMPL)
     {
@@ -162,7 +162,7 @@ PERF_TEST_P(BruteForceMatcherFixture, radiusMatch,
         ocl::oclMat oclTrainIdx, oclDistance, oclNMatches;
 
         OCL_TEST_CYCLE()
-                oclMatcher.radiusMatchSingle(oclQuery, oclTrain, oclTrainIdx, oclDistance, oclNMatches, max_distance);
+                oclMatcher.radiusMatch(oclQuery, oclTrain, matches, max_distance);
 
         oclMatcher.radiusMatchDownload(oclTrainIdx, oclDistance, oclNMatches, matches);
 
@@ -173,5 +173,3 @@ PERF_TEST_P(BruteForceMatcherFixture, radiusMatch,
     else
         OCL_PERF_ELSE
 }
-
-#undef OCL_BFMATCHER_TYPICAL_MAT_SIZES

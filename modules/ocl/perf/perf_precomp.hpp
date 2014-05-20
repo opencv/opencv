@@ -70,14 +70,26 @@
 #include "opencv2/ocl/ocl.hpp"
 #include "opencv2/ts/ts.hpp"
 
-using namespace std;
-using namespace cv;
+// TODO remove it
 
 #define OCL_SIZE_1000 Size(1000, 1000)
 #define OCL_SIZE_2000 Size(2000, 2000)
 #define OCL_SIZE_4000 Size(4000, 4000)
 
 #define OCL_TYPICAL_MAT_SIZES ::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000, OCL_SIZE_4000)
+
+using namespace std;
+using namespace cv;
+
+#define OCL_SIZE_1 szVGA
+#define OCL_SIZE_2 sz720p
+#define OCL_SIZE_3 sz1080p
+#define OCL_SIZE_4 sz2160p
+
+#define OCL_TEST_SIZES ::testing::Values(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3, OCL_SIZE_4)
+#define OCL_TEST_TYPES ::testing::Values(CV_8UC1, CV_32FC1, CV_8UC4, CV_32FC4)
+#define OCL_TEST_TYPES_14 OCL_TEST_TYPES
+#define OCL_TEST_TYPES_134 ::testing::Values(CV_8UC1, CV_32FC1, CV_8UC3, CV_32FC3, CV_8UC4, CV_32FC4)
 
 #define OCL_PERF_ENUM(type, ...) ::testing::Values(type, ## __VA_ARGS__ )
 
@@ -102,6 +114,31 @@ using namespace cv;
 #define OCL_PERF_ELSE               \
             CV_TEST_FAIL_NO_IMPL();
 #endif
+
+#define OCL_PERF_TEST(fixture, name) \
+    class OCL##_##fixture##_##name : \
+        public ::perf::TestBase \
+    { \
+    public: \
+        OCL##_##fixture##_##name() { } \
+    protected: \
+        virtual void PerfTestBody(); \
+    }; \
+    TEST_F(OCL##_##fixture##_##name, name) { RunPerfTestBody(); } \
+    void OCL##_##fixture##_##name::PerfTestBody()
+
+#define OCL_PERF_TEST_P(fixture, name, params) \
+    class OCL##_##fixture##_##name : \
+        public fixture \
+    { \
+    public: \
+        OCL##_##fixture##_##name() { } \
+    protected: \
+        virtual void PerfTestBody(); \
+    }; \
+    TEST_P(OCL##_##fixture##_##name, name) { RunPerfTestBody(); } \
+    INSTANTIATE_TEST_CASE_P(/*none*/, OCL##_##fixture##_##name, params); \
+    void OCL##_##fixture##_##name::PerfTestBody()
 
 #define OCL_TEST_CYCLE_N(n) for(declare.iterations(n); startTimer(), next(); cv::ocl::finish(), stopTimer())
 #define OCL_TEST_CYCLE() for(; startTimer(), next(); cv::ocl::finish(), stopTimer())

@@ -89,6 +89,6 @@ add_custom_command(
          DEPENDS "${OpenCV_BINARY_DIR}/bin/classes.jar.dephelper" "${PACKAGE_DIR}/res/values/strings.xml" "${PACKAGE_DIR}/res/drawable/icon.png" ${camera_wrappers} opencv_java
        )
 
-install(FILES "${APK_NAME}" DESTINATION "apk/" COMPONENT main)
+install(FILES "${APK_NAME}" DESTINATION "apk/" COMPONENT libs)
 add_custom_target(android_package ALL SOURCES "${APK_NAME}" )
 add_dependencies(android_package opencv_java)

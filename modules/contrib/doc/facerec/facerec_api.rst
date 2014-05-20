@@ -75,7 +75,7 @@ Moreover every :ocv:class:`FaceRecognizer` supports the:
 Setting the Thresholds
 +++++++++++++++++++++++
 
-Sometimes you run into the situation, when you want to apply a threshold on the prediction. A common scenario in face recognition is to tell, wether a face belongs to the training dataset or if it is unknown. You might wonder, why there's no public API in :ocv:class:`FaceRecognizer` to set the threshold for the prediction, but rest assured: It's supported. It just means there's no generic way in an abstract class to provide an interface for setting/getting the thresholds of *every possible* :ocv:class:`FaceRecognizer` algorithm. The appropriate place to set the thresholds is in the constructor of the specific :ocv:class:`FaceRecognizer` and since every :ocv:class:`FaceRecognizer` is a :ocv:class:`Algorithm` (see above), you can get/set the thresholds at runtime!
+Sometimes you run into the situation, when you want to apply a threshold on the prediction. A common scenario in face recognition is to tell, whether a face belongs to the training dataset or if it is unknown. You might wonder, why there's no public API in :ocv:class:`FaceRecognizer` to set the threshold for the prediction, but rest assured: It's supported. It just means there's no generic way in an abstract class to provide an interface for setting/getting the thresholds of *every possible* :ocv:class:`FaceRecognizer` algorithm. The appropriate place to set the thresholds is in the constructor of the specific :ocv:class:`FaceRecognizer` and since every :ocv:class:`FaceRecognizer` is a :ocv:class:`Algorithm` (see above), you can get/set the thresholds at runtime!
 
 Here is an example of setting a threshold for the Eigenfaces method, when creating the model:
 

@@ -82,7 +82,7 @@ ocv_create_module(${cuda_link_libs})
 if(HAVE_CUDA)
   install(FILES src/nvidia/NPP_staging/NPP_staging.hpp  src/nvidia/core/NCV.hpp
     DESTINATION ${OPENCV_INCLUDE_INSTALL_PATH}/opencv2/${name}
-    COMPONENT main)
+    COMPONENT dev)
 endif()
 
 ocv_add_precompiled_headers(${the_module})

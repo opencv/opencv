@@ -259,8 +259,8 @@ namespace cv
 #ifdef MAKE_PARALLEL
         /******************************************************
         ** IF some parallelizing thread methods are available, then, main loops are parallelized using these functors
-        ** ==> main idea paralellise main filters loops, then, only the most used methods are parallelized... TODO : increase the number of parallelised methods as necessary
-        ** ==> functors names = Parallel_$$$ where $$$= the name of the serial method that is parallelised
+        ** ==> main idea parallelize main filters loops, then, only the most used methods are parallelized... TODO : increase the number of parallelized methods as necessary
+        ** ==> functors names = Parallel_$$$ where $$$= the name of the serial method that is parallelized
         ** ==> functors constructors can differ from the parameters used with their related serial functions
         */
 

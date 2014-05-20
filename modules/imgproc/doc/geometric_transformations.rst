@@ -256,6 +256,57 @@ The function computes an inverse affine transformation represented by
 The result is also a
 :math:`2 \times 3` matrix of the same type as ``M`` .
 
+LinearPolar
+-----------
+Remaps an image to polar space.
+
+.. ocv:cfunction:: void cvLinearPolar( const CvArr* src, CvArr* dst, CvPoint2D32f center, double maxRadius, int flags=CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS )
+
+    :param src: Source image
+
+    :param dst: Destination image
+
+    :param center: The transformation center;
+
+    :param maxRadius: Inverse magnitude scale parameter. See below
+
+    :param flags: A combination of interpolation methods and the following optional flags:
+
+            *  **CV_WARP_FILL_OUTLIERS** fills all of the destination image pixels. If some of them correspond to outliers in the source image, they are set to zero
+
+            *  **CV_WARP_INVERSE_MAP** See below
+
+The function ``cvLinearPolar`` transforms the source image using the following transformation:
+
+  *
+    Forward transformation (``CV_WARP_INVERSE_MAP`` is not set):
+
+        .. math::
+
+            dst( \phi , \rho ) = src(x,y)
+
+
+  *
+    Inverse transformation (``CV_WARP_INVERSE_MAP`` is set):
+
+        .. math::
+
+            dst(x,y) = src( \phi , \rho )
+
+
+where
+
+    .. math::
+
+        \rho = (src.width/maxRadius)  \cdot \sqrt{x^2 + y^2} , \phi =atan(y/x)
+
+
+The function can not operate in-place.
+
+.. note::
+
+   * An example using the LinearPolar operation can be found at opencv_source_code/samples/c/polar_transforms.c
+
 
 
 LogPolar
@@ -264,7 +315,7 @@ Remaps an image to log-polar space.
 
 .. ocv:cfunction:: void cvLogPolar( const CvArr* src, CvArr* dst, CvPoint2D32f center, double M, int flags=CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS )
 
-.. ocv:pyoldfunction:: cv.LogPolar(src, dst, center, M, flags=CV_INNER_LINEAR+CV_WARP_FILL_OUTLIERS)-> None
+.. ocv:pyoldfunction:: cv.LogPolar(src, dst, center, M, flags=CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS)-> None
 
     :param src: Source image
 
@@ -320,7 +371,7 @@ Applies a generic geometrical transformation to an image.
 .. ocv:pyfunction:: cv2.remap(src, map1, map2, interpolation[, dst[, borderMode[, borderValue]]]) -> dst
 
 .. ocv:cfunction:: void cvRemap( const CvArr* src, CvArr* dst, const CvArr* mapx, const CvArr* mapy, int flags=CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS, CvScalar fillval=cvScalarAll(0) )
-.. ocv:pyoldfunction:: cv.Remap(src, dst, mapx, mapy, flags=CV_INNER_LINEAR+CV_WARP_FILL_OUTLIERS, fillval=(0, 0, 0, 0))-> None
+.. ocv:pyoldfunction:: cv.Remap(src, dst, mapx, mapy, flags=CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS, fillval=(0, 0, 0, 0))-> None
 
     :param src: Source image.
 
@@ -488,7 +539,7 @@ Applies a perspective transformation to an image.
 
 .. ocv:cfunction:: void cvWarpPerspective( const CvArr* src, CvArr* dst, const CvMat* map_matrix, int flags=CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS, CvScalar fillval=cvScalarAll(0) )
 
-.. ocv:pyoldfunction:: cv.WarpPerspective(src, dst, mapMatrix, flags=CV_INNER_LINEAR+CV_WARP_FILL_OUTLIERS, fillval=(0, 0, 0, 0))-> None
+.. ocv:pyoldfunction:: cv.WarpPerspective(src, dst, mapMatrix, flags=CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS, fillval=(0, 0, 0, 0))-> None
 
     :param src: input image.
 

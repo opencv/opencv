@@ -956,7 +956,7 @@ void icvCalcOrientation(
     // This reduction searches for the longest wavelet response vector.  The first
     // step uses all of the work items in the workgroup to narrow the search
     // down to the three candidates.  It requires s_mod to have a few more
-    // elements alocated past the work-group size, which are pre-initialized to
+    // elements allocated past the work-group size, which are pre-initialized to
     // 0.0f above.
     for(int t = ORI_RESPONSE_REDUCTION_WIDTH; t >= 3; t /= 2) {
         if (tid < t) {

@@ -207,7 +207,7 @@ namespace
         switch (src.kind())
         {
         case _InputArray::GPU_MAT:
-            #ifdef HAVE_OPENCV_GPU
+            #if defined(HAVE_OPENCV_GPU) && !defined(DYNAMIC_CUDA_SUPPORT)
                 gpu::cvtColor(src.getGpuMat(), dst.getGpuMatRef(), code, cn);
             #else
                 CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");

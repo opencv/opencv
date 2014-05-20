@@ -210,8 +210,11 @@ private:
         assert(index >=0 && index < n);
         centers[0] = dsindices[index];
 
+        // Computing distance^2 will have the advantage of even higher probability further to pick new centers
+        // far from previous centers (and this complies to "k-means++: the advantages of careful seeding" article)
         for (int i = 0; i < n; i++) {
             closestDistSq[i] = distance(dataset[dsindices[i]], dataset[dsindices[index]], dataset.cols);
+            closestDistSq[i] = ensureSquareDistance<Distance>( closestDistSq[i] );
             currentPot += closestDistSq[i];
         }
 
@@ -237,7 +240,10 @@ private:
 
                 // Compute the new potential
                 double newPot = 0;
-                for (int i = 0; i < n; i++) newPot += std::min( distance(dataset[dsindices[i]], dataset[dsindices[index]], dataset.cols), closestDistSq[i] );
+                for (int i = 0; i < n; i++) {
+                    DistanceType dist = distance(dataset[dsindices[i]], dataset[dsindices[index]], dataset.cols);
+                    newPot += std::min( ensureSquareDistance<Distance>(dist), closestDistSq[i] );
+                }
 
                 // Store the best result
                 if ((bestNewPot < 0)||(newPot < bestNewPot)) {
@@ -249,7 +255,10 @@ private:
             // Add the appropriate center
             centers[centerCount] = dsindices[bestNewIndex];
             currentPot = bestNewPot;
-            for (int i = 0; i < n; i++) closestDistSq[i] = std::min( distance(dataset[dsindices[i]], dataset[dsindices[bestNewIndex]], dataset.cols), closestDistSq[i] );
+            for (int i = 0; i < n; i++) {
+                DistanceType dist = distance(dataset[dsindices[i]], dataset[dsindices[bestNewIndex]], dataset.cols);
+                closestDistSq[i] = std::min( ensureSquareDistance<Distance>(dist), closestDistSq[i] );
+            }
         }
 
         centers_length = centerCount;
@@ -414,12 +423,6 @@ public:
 
     void loadIndex(FILE* stream)
     {
-        load_value(stream, branching_);
-        load_value(stream, trees_);
-        load_value(stream, centers_init_);
-        load_value(stream, leaf_size_);
-        load_value(stream, memoryCounter);
-
         free_elements();
 
         if (root!=NULL) {
@@ -429,6 +432,12 @@ public:
         if (indices!=NULL) {
             delete[] indices;
         }
+
+        load_value(stream, branching_);
+        load_value(stream, trees_);
+        load_value(stream, centers_init_);
+        load_value(stream, leaf_size_);
+        load_value(stream, memoryCounter);
 
         indices = new int*[trees_];
         root = new NodePtr[trees_];

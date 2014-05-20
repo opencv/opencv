@@ -101,7 +101,7 @@ Harris edge detector.
 
 .. ocv:pyfunction:: cv2.cornerHarris(src, blockSize, ksize, k[, dst[, borderType]]) -> dst
 
-.. ocv:cfunction:: void cvCornerHarris( const CvArr* image, CvArr* harris_responce, int block_size, int aperture_size=3, double k=0.04 )
+.. ocv:cfunction:: void cvCornerHarris( const CvArr* image, CvArr* harris_response, int block_size, int aperture_size=3, double k=0.04 )
 
 .. ocv:pyoldfunction:: cv.CornerHarris(image, harris_dst, blockSize, aperture_size=3, k=0.04) -> None
 

@@ -500,7 +500,7 @@ PERF_TEST_P(ImagePair, Video_OpticalFlowBM,
     }
 }
 
-PERF_TEST_P(ImagePair, Video_FastOpticalFlowBM,
+PERF_TEST_P(ImagePair, DISABLED_Video_FastOpticalFlowBM,
             Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     declare.time(400);

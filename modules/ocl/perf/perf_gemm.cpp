@@ -46,30 +46,39 @@
 #include "perf_precomp.hpp"
 
 using namespace perf;
+using std::tr1::get;
+using std::tr1::tuple;
 
 ///////////// gemm ////////////////////////
 
-typedef TestBaseWithParam<Size> gemmFixture;
-
 #ifdef HAVE_CLAMDBLAS
 
-PERF_TEST_P(gemmFixture, gemm, ::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000))
+typedef tuple<Size, int> GemmParams;
+typedef TestBaseWithParam<GemmParams> GemmFixture;
+
+OCL_PERF_TEST_P(GemmFixture, Gemm, ::testing::Combine(
+                    ::testing::Values(Size(1000, 1000), Size(1500, 1500)),
+            ::testing::Values((int)cv::GEMM_1_T, (int)cv::GEMM_1_T | (int)cv::GEMM_2_T)))
 {
-    const Size srcSize = GetParam();
+    const GemmParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
     Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
             src3(srcSize, CV_32FC1), dst(srcSize, CV_32FC1);
-    declare.in(src1, src2, src3).out(dst).time(srcSize == OCL_SIZE_2000 ? 65 : 8);
+
     randu(src1, -10.0f, 10.0f);
     randu(src2, -10.0f, 10.0f);
     randu(src3, -10.0f, 10.0f);
+
+    declare.in(src1, src2, src3).out(dst);
 
     if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2),
                 oclSrc3(src3), oclDst(srcSize, CV_32FC1);
 
-        OCL_TEST_CYCLE() cv::ocl::gemm(oclSrc1, oclSrc2, 1.0, oclSrc3, 1.0, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::gemm(oclSrc1, oclSrc2, 1.0, oclSrc3, 1.0, oclDst, type);
 
         oclDst.download(dst);
 
@@ -77,7 +86,7 @@ PERF_TEST_P(gemmFixture, gemm, ::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000))
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() cv::gemm(src1, src2, 1.0, src3, 1.0, dst);
+        TEST_CYCLE() cv::gemm(src1, src2, 1.0, src3, 1.0, dst, type);
 
         SANITY_CHECK(dst, 0.01);
     }

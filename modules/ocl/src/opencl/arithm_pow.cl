@@ -66,7 +66,7 @@ __kernel void arithm_pow(__global VT * src, int src_step, int src_offset,
         int dst_index = mad24(y, dst_step, x + dst_offset);
 
         VT src_data = src[src_index];
-        VT tmp = src_data > 0 ? exp(p * log(src_data)) : (src_data == 0 ? 0 : exp(p * log(fabs(src_data))));
+        VT tmp = src_data > (VT)0 ? (VT)exp(p * log(src_data)) : (src_data == (VT)0 ? (VT)0 : (VT)exp(p * log(fabs(src_data))));
 
         dst[dst_index] = tmp;
     }

@@ -36,7 +36,7 @@ int main( int /*argc*/, char** /*argv*/ )
         Mat points(sampleCount, 1, CV_32FC2), labels;
 
         clusterCount = MIN(clusterCount, sampleCount);
-        Mat centers(clusterCount, 1, points.type());
+        Mat centers;
 
         /* generate random sample from multigaussian distribution */
         for( k = 0; k < clusterCount; k++ )

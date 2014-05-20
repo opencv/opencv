@@ -266,7 +266,7 @@ namespace cv
             int src_step = (int)(src.step/src.elemSize());
             int dstm_step = (int)(dst_m.step/dst_m.elemSize());
 
-            vector<pair<size_t , const void *> > args,args_sum;
+            vector<pair<size_t , const void *> > args;
             args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data ));
             args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows ));
             args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols ));

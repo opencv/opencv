@@ -48,8 +48,8 @@
 
 ////////////////////////////////////////////////////////
 // Canny
-IMPLEMENT_PARAM_CLASS(AppertureSize, int);
-IMPLEMENT_PARAM_CLASS(L2gradient, bool);
+IMPLEMENT_PARAM_CLASS(AppertureSize, int)
+IMPLEMENT_PARAM_CLASS(L2gradient, bool)
 
 PARAM_TEST_CASE(Canny, AppertureSize, L2gradient)
 {

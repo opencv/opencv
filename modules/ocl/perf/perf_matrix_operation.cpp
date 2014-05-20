@@ -53,9 +53,7 @@ using std::tr1::get;
 
 typedef Size_MatType ConvertToFixture;
 
-PERF_TEST_P(ConvertToFixture, ConvertTo,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+OCL_PERF_TEST_P(ConvertToFixture, ConvertTo, ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -92,11 +90,9 @@ PERF_TEST_P(ConvertToFixture, ConvertTo,
 
 ///////////// copyTo////////////////////////
 
-typedef Size_MatType copyToFixture;
+typedef Size_MatType CopyToFixture;
 
-PERF_TEST_P(copyToFixture, copyTo,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+OCL_PERF_TEST_P(CopyToFixture, CopyTo, ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -127,11 +123,9 @@ PERF_TEST_P(copyToFixture, copyTo,
 
 ///////////// setTo////////////////////////
 
-typedef Size_MatType setToFixture;
+typedef Size_MatType SetToFixture;
 
-PERF_TEST_P(setToFixture, setTo,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+OCL_PERF_TEST_P(SetToFixture, SetTo, ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -164,16 +158,16 @@ PERF_TEST_P(setToFixture, setTo,
 
 /////////////////// upload ///////////////////////////
 
-typedef tuple<Size, MatDepth, int> uploadParams;
-typedef TestBaseWithParam<uploadParams> uploadFixture;
+typedef tuple<Size, MatDepth, int> UploadParams;
+typedef TestBaseWithParam<uploadParams> UploadFixture;
 
-PERF_TEST_P(uploadFixture, upload,
+PERF_TEST_P(UploadFixture, Upload,
             testing::Combine(
                 OCL_TYPICAL_MAT_SIZES,
                 testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F),
                 testing::Range(1, 5)))
 {
-    const uploadParams params = GetParam();
+    const UploadParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int depth = get<1>(params), cn = get<2>(params);
     const int type = CV_MAKE_TYPE(depth, cn);
@@ -201,15 +195,15 @@ PERF_TEST_P(uploadFixture, upload,
 
 /////////////////// download ///////////////////////////
 
-typedef TestBaseWithParam<uploadParams> downloadFixture;
+typedef TestBaseWithParam<uploadParams> DownloadFixture;
 
-PERF_TEST_P(downloadFixture, download,
+PERF_TEST_P(DownloadFixture, Download,
             testing::Combine(
                 OCL_TYPICAL_MAT_SIZES,
                 testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F),
                 testing::Range(1, 5)))
 {
-    const uploadParams params = GetParam();
+    const UploadParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int depth = get<1>(params), cn = get<2>(params);
     const int type = CV_MAKE_TYPE(depth, cn);

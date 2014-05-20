@@ -892,6 +892,7 @@ public:
 typedef Point_<int> Point2i;
 typedef Point2i Point;
 typedef Size_<int> Size2i;
+typedef Size_<double> Size2d;
 typedef Size2i Size;
 typedef Rect_<int> Rect;
 typedef Point_<float> Point2f;
@@ -2318,7 +2319,7 @@ CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val=0);
 
 //! implements generalized matrix product algorithm GEMM from BLAS
 CV_EXPORTS_W void gemm(InputArray src1, InputArray src2, double alpha,
-                       InputArray src3, double gamma, OutputArray dst, int flags=0);
+                       InputArray src3, double beta, OutputArray dst, int flags=0);
 //! multiplies matrix by its transposition from the left or from the right
 CV_EXPORTS_W void mulTransposed( InputArray src, OutputArray dst, bool aTa,
                                  InputArray delta=noArray(),

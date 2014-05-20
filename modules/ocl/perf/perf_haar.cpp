@@ -46,8 +46,13 @@
 #include "perf_precomp.hpp"
 
 using namespace perf;
+using namespace std;
+using namespace cv;
+using std::tr1::make_tuple;
+using std::tr1::get;
 
 ///////////// Haar ////////////////////////
+
 PERF_TEST(HaarFixture, Haar)
 {
     vector<Rect> faces;
@@ -82,4 +87,64 @@ PERF_TEST(HaarFixture, Haar)
     }
     else
         OCL_PERF_ELSE
+}
+
+typedef std::tr1::tuple<std::string, std::string, int> Cascade_Image_MinSize_t;
+typedef perf::TestBaseWithParam<Cascade_Image_MinSize_t> Cascade_Image_MinSize;
+
+OCL_PERF_TEST_P(Cascade_Image_MinSize, CascadeClassifier,
+                testing::Combine(testing::Values( string("cv/cascadeandhog/cascades/haarcascade_frontalface_alt.xml"),
+                                                  string("cv/cascadeandhog/cascades/haarcascade_frontalface_alt2.xml") ),
+                                 testing::Values( string("cv/shared/lena.png"),
+                                                  string("cv/cascadeandhog/images/bttf301.png"),
+                                                  string("cv/cascadeandhog/images/class57.png") ),
+                                 testing::Values(30, 64, 90)))
+{
+    const string cascasePath = get<0>(GetParam());
+    const string imagePath   = get<1>(GetParam());
+    const int min_size = get<2>(GetParam());
+    Size minSize(min_size, min_size);
+    vector<Rect> faces;
+
+    Mat img = imread(getDataPath(imagePath), IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty()) << "Can't load source image: " << getDataPath(imagePath);
+    equalizeHist(img, img);
+    declare.in(img);
+
+    if (RUN_PLAIN_IMPL)
+    {
+        CascadeClassifier cc;
+        ASSERT_TRUE(cc.load(getDataPath(cascasePath))) << "Can't load cascade file: " << getDataPath(cascasePath);
+
+        while (next())
+        {
+            faces.clear();
+
+            startTimer();
+            cc.detectMultiScale(img, faces, 1.1, 3, CV_HAAR_SCALE_IMAGE, minSize);
+            stopTimer();
+        }
+    }
+    else if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat uimg(img);
+        ocl::OclCascadeClassifier cc;
+        ASSERT_TRUE(cc.load(getDataPath(cascasePath))) << "Can't load cascade file: " << getDataPath(cascasePath);
+
+        while (next())
+        {
+            faces.clear();
+            ocl::finish();
+
+            startTimer();
+            cc.detectMultiScale(uimg, faces, 1.1, 3, CV_HAAR_SCALE_IMAGE, minSize);
+            stopTimer();
+        }
+    }
+    else
+        OCL_PERF_ELSE
+
+    //sort(faces.begin(), faces.end(), comparators::RectLess());
+    SANITY_CHECK_NOTHING();//(faces, min_size/5);
+    // using SANITY_CHECK_NOTHING() since OCL and PLAIN version may find different faces number
 }

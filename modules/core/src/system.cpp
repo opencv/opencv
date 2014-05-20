@@ -87,10 +87,41 @@
 
 #ifdef HAVE_WINRT
 #include <wrl/client.h>
+#ifndef __cplusplus_winrt
+#include <windows.storage.h>
+#pragma comment(lib, "runtimeobject.lib")
+#endif
 
 std::wstring GetTempPathWinRT()
 {
+#ifdef __cplusplus_winrt
     return std::wstring(Windows::Storage::ApplicationData::Current->TemporaryFolder->Path->Data());
+#else
+    Microsoft::WRL::ComPtr<ABI::Windows::Storage::IApplicationDataStatics> appdataFactory;
+    Microsoft::WRL::ComPtr<ABI::Windows::Storage::IApplicationData> appdataRef;
+    Microsoft::WRL::ComPtr<ABI::Windows::Storage::IStorageFolder> storagefolderRef;
+    Microsoft::WRL::ComPtr<ABI::Windows::Storage::IStorageItem> storageitemRef;
+    HSTRING str;
+    HSTRING_HEADER hstrHead;
+    std::wstring wstr;
+    if (FAILED(WindowsCreateStringReference(RuntimeClass_Windows_Storage_ApplicationData,
+                                            (UINT32)wcslen(RuntimeClass_Windows_Storage_ApplicationData), &hstrHead, &str)))
+        return wstr;
+    if (FAILED(RoGetActivationFactory(str, IID_PPV_ARGS(appdataFactory.ReleaseAndGetAddressOf()))))
+        return wstr;
+    if (FAILED(appdataFactory->get_Current(appdataRef.ReleaseAndGetAddressOf())))
+        return wstr;
+    if (FAILED(appdataRef->get_TemporaryFolder(storagefolderRef.ReleaseAndGetAddressOf())))
+        return wstr;
+    if (FAILED(storagefolderRef.As(&storageitemRef)))
+        return wstr;
+    str = NULL;
+    if (FAILED(storageitemRef->get_Path(&str)))
+        return wstr;
+    wstr = WindowsGetStringRawBuffer(str, NULL);
+    WindowsDeleteString(str);
+    return wstr;
+#endif
 }
 
 std::wstring GetTempFileNameWinRT(std::wstring prefix)
@@ -392,27 +423,23 @@ string format( const char* fmt, ... )
 
 string tempfile( const char* suffix )
 {
-#ifdef HAVE_WINRT
-    std::wstring temp_dir = L"";
-    const wchar_t* opencv_temp_dir = _wgetenv(L"OPENCV_TEMP_PATH");
-    if (opencv_temp_dir)
-        temp_dir = std::wstring(opencv_temp_dir);
-#else
+    string fname;
+#ifndef HAVE_WINRT
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
 #endif
-    string fname;
 
 #if defined WIN32 || defined _WIN32
 #ifdef HAVE_WINRT
     RoInitialize(RO_INIT_MULTITHREADED);
-    std::wstring temp_dir2;
-    if (temp_dir.empty())
-        temp_dir = GetTempPathWinRT();
+    std::wstring temp_dir = L"";
+    const wchar_t* opencv_temp_dir = GetTempPathWinRT().c_str();
+    if (opencv_temp_dir)
+        temp_dir = std::wstring(opencv_temp_dir);
 
     std::wstring temp_file;
     temp_file = GetTempFileNameWinRT(L"ocv");
     if (temp_file.empty())
-        return std::string();
+        return string();
 
     temp_file = temp_dir + std::wstring(L"\\") + temp_file;
     DeleteFileW(temp_file.c_str());
@@ -420,7 +447,7 @@ string tempfile( const char* suffix )
     char aname[MAX_PATH];
     size_t copied = wcstombs(aname, temp_file.c_str(), MAX_PATH);
     CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
-    fname = std::string(aname);
+    fname = string(aname);
     RoUninitialize();
 #else
     char temp_dir2[MAX_PATH] = { 0 };
@@ -951,7 +978,9 @@ public:
 };
 
 #ifdef WIN32
+#ifdef _MSC_VER
 #pragma warning(disable:4505) // unreferenced local function has been removed
+#endif
 
 #ifdef HAVE_WINRT
     // using C++11 thread attribute for local thread data
@@ -1098,17 +1127,24 @@ public:
         }
     }
 };
-static TLSContainerStorage tlsContainerStorage;
+
+// This is a wrapper function that will ensure 'tlsContainerStorage' is constructed on first use.
+// For more information: http://www.parashift.com/c++-faq/static-init-order-on-first-use.html
+static TLSContainerStorage& getTLSContainerStorage()
+{
+    static TLSContainerStorage *tlsContainerStorage = new TLSContainerStorage();
+    return *tlsContainerStorage;
+}
 
 TLSDataContainer::TLSDataContainer()
     : key_(-1)
 {
-    key_ = tlsContainerStorage.allocateKey(this);
+    key_ = getTLSContainerStorage().allocateKey(this);
 }
 
 TLSDataContainer::~TLSDataContainer()
 {
-    tlsContainerStorage.releaseKey(key_, this);
+    getTLSContainerStorage().releaseKey(key_, this);
     key_ = -1;
 }
 
@@ -1133,7 +1169,7 @@ TLSStorage::~TLSStorage()
         void*& data = tlsData_[i];
         if (data)
         {
-            tlsContainerStorage.destroyData(i, data);
+            getTLSContainerStorage().destroyData(i, data);
             data = NULL;
         }
     }

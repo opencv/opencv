@@ -49,29 +49,6 @@ public class Tutorial4Activity extends Activity implements CvCameraViewListener2
                 {
                     Log.i(TAG, "OpenCV loaded successfully");
 
-                    // Check CUDA support
-                    if (Gpu.getCudaEnabledDeviceCount() <= 0)
-                    {
-                        Log.e(TAG, "No CUDA capable device found!");
-                        AlertDialog InitFailedDialog = new AlertDialog.Builder(Tutorial4Activity.this).create();
-                        InitFailedDialog.setTitle("OpenCV CUDA error");
-                        InitFailedDialog.setMessage("CUDA compatible device was not found!");
-                        InitFailedDialog.setCancelable(false); // This blocks the 'BACK' button
-                        InitFailedDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new OnClickListener() {
-
-                            public void onClick(DialogInterface dialog, int which) {
-                                Tutorial4Activity.this.finish();
-                            }
-                        });
-                        InitFailedDialog.show();
-                    }
-                    else
-                    {
-                        // Load native library after(!) OpenCV initialization
-                        Log.i(TAG, "Found CUDA capable device!");
-                        System.loadLibrary("cuda_sample");
-                        mOpenCvCameraView.enableView();
-                    }
                 } break;
                 default:
                 {
@@ -120,7 +97,32 @@ public class Tutorial4Activity extends Activity implements CvCameraViewListener2
     public void onResume()
     {
         super.onResume();
-        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_8, this, mLoaderCallback);
+        if (OpenCVLoader.initDebug(true))
+        {
+            // Check CUDA support
+            if (Gpu.getCudaEnabledDeviceCount() <= 0)
+            {
+                Log.e(TAG, "No CUDA capable device found!");
+                AlertDialog InitFailedDialog = new AlertDialog.Builder(Tutorial4Activity.this).create();
+                InitFailedDialog.setTitle("OpenCV CUDA error");
+                InitFailedDialog.setMessage("CUDA compatible device was not found!");
+                InitFailedDialog.setCancelable(false); // This blocks the 'BACK' button
+                InitFailedDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        Tutorial4Activity.this.finish();
+                    }
+                        });
+                InitFailedDialog.show();
+            }
+            else
+            {
+                // Load native library after(!) OpenCV initialization
+                Log.i(TAG, "Found CUDA capable device!");
+                System.loadLibrary("cuda_sample");
+                mOpenCvCameraView.enableView();
+            }
+
+        }
     }
 
     public void onDestroy() {

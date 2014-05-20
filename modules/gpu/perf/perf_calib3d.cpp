@@ -93,7 +93,7 @@ PERF_TEST_P(ImagePair, Calib3D_StereoBM,
 //////////////////////////////////////////////////////////////////////
 // StereoBeliefPropagation
 
-PERF_TEST_P(ImagePair, Calib3D_StereoBeliefPropagation,
+PERF_TEST_P(ImagePair, DISABLED_Calib3D_StereoBeliefPropagation,
             Values(pair_string("gpu/stereobp/aloe-L.png", "gpu/stereobp/aloe-R.png")))
 {
     declare.time(300.0);

@@ -51,11 +51,10 @@ using std::tr1::get;
 
 ///////////// pyrDown //////////////////////
 
-typedef Size_MatType pyrDownFixture;
+typedef Size_MatType PyrDownFixture;
 
-PERF_TEST_P(pyrDownFixture, pyrDown,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+OCL_PERF_TEST_P(PyrDownFixture, PyrDown,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -77,7 +76,7 @@ PERF_TEST_P(pyrDownFixture, pyrDown,
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 5e-4);
     }
     else if (RUN_PLAIN_IMPL)
     {
@@ -91,11 +90,10 @@ PERF_TEST_P(pyrDownFixture, pyrDown,
 
 ///////////// pyrUp ////////////////////////
 
-typedef Size_MatType pyrUpFixture;
+typedef Size_MatType PyrUpFixture;
 
-PERF_TEST_P(pyrUpFixture, pyrUp,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+OCL_PERF_TEST_P(PyrUpFixture, PyrUp,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -117,7 +115,7 @@ PERF_TEST_P(pyrUpFixture, pyrUp,
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 5e-4);
     }
     else if (RUN_PLAIN_IMPL)
     {
