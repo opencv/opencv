@@ -1067,13 +1067,17 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
     double left_x = min_y->p.x, right_x = min_y->p.x;
 
     // Loop around all points in the region and count those that are aligned.
-    int min_iter = std::max(min_y->p.y, 0);
-    int max_iter = std::min(max_y->p.y, img_height - 1);
+    int min_iter = min_y->p.y;
+    int max_iter = max_y->p.y;
     for(int y = min_iter; y <= max_iter; ++y)
     {
+        if (y < 0 || y >= img_height) continue;
+
         int adx = y * img_width + int(left_x);
         for(int x = int(left_x); x <= int(right_x); ++x, ++adx)
         {
+            if (x < 0 || x >= img_width) continue;
+
             ++total_pts;
             if(isAligned(adx, rec.theta, rec.prec))
             {
