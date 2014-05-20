@@ -1445,8 +1445,6 @@ void CvDTreeTrainData::read_params( CvFileStorage* fs, CvFileNode* node )
     var_type->data.i[var_count] = cat_var_count;
 
     ord_var_count = ~ord_var_count;
-    if( cat_var_count != cat_var_count || ord_var_count != ord_var_count )
-        CV_ERROR( CV_StsParseError, "var_type is inconsistent with cat_var_count and ord_var_count" );
     //////
 
     if( cat_var_count > 0 || is_classifier )

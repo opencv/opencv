@@ -1154,7 +1154,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     Size size = _src.size();
     _dst.create( size, type );
 
-    if( borderType != BORDER_CONSTANT )
+    if( borderType != BORDER_CONSTANT && (borderType & BORDER_ISOLATED) != 0 )
     {
         if( size.height == 1 )
             ksize.height = 1;
