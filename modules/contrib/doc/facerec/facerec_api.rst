@@ -48,13 +48,13 @@ a unified access to all face recongition algorithms in OpenCV. ::
       virtual void load(const FileStorage& fs) = 0;
 
       // Sets additional information as pairs label - info.
-      virtual void setLabelsInfo(const std::map<int, string>& labelsInfo) = 0;
+      void setLabelsInfo(const std::map<int, string>& labelsInfo);
 
       // Gets string information by label
-      virtual string getLabelInfo(int label) const = 0;
+      string getLabelInfo(const int &label);
 
       // Gets labels by string
-      virtual vector<int> getLabelsByString(const string& str) = 0;
+      vector<int> getLabelsByString(const string& str);
   };
 
 
@@ -308,7 +308,7 @@ FaceRecognizer::setLabelsInfo
 -----------------------------
 
 Sets string information about labels into the model.
-.. ocv:function:: void FaceRecognizer::setLabelsInfo(const std::map<int, string>& labelsInfo) = 0
+.. ocv:function:: void FaceRecognizer::setLabelsInfo(const std::map<int, string>& labelsInfo)
 
 Information about the label loads as a pair "label id - string info".
 
@@ -316,7 +316,7 @@ FaceRecognizer::getLabelInfo
 ----------------------------
 
 Gets string information by label.
-.. ocv:function:: string FaceRecognizer::getLabelInfo(int label) const = 0
+.. ocv:function:: string FaceRecognizer::getLabelInfo(const int &label)
 
 If an unknown label id is provided or there is no label information assosiated with the specified label id the method returns an empty string.
 
@@ -324,7 +324,7 @@ FaceRecognizer::getLabelsByString
 ---------------------------------
 Gets vector of labels by string.
 
-.. ocv:function:: vector<int> FaceRecognizer::getLabelsByString(const string& str) = 0
+.. ocv:function:: vector<int> FaceRecognizer::getLabelsByString(const string& str)
 
 The function searches for the labels containing the specified substring in the associated string info.
 
@@ -354,7 +354,6 @@ Model internal data:
 * ``mean`` The sample mean calculated from the training data.
 * ``projections`` The projections of the training data.
 * ``labels`` The threshold applied in the prediction. If the distance to the nearest neighbor is larger than the threshold, this method returns -1.
-* ``labelsInfo`` The string information about the labels.
 
 createFisherFaceRecognizer
 --------------------------
@@ -382,7 +381,6 @@ Model internal data:
 * ``mean`` The sample mean calculated from the training data.
 * ``projections`` The projections of the training data.
 * ``labels`` The labels corresponding to the projections.
-* ``labelsInfo`` The string information about the labels.
 
 
 createLBPHFaceRecognizer
@@ -412,4 +410,3 @@ Model internal data:
 * ``threshold`` see :ocv:func:`createLBPHFaceRecognizer`.
 * ``histograms`` Local Binary Patterns Histograms calculated from the given training data (empty if none was given).
 * ``labels`` Labels corresponding to the calculated Local Binary Patterns Histograms.
-* ``labelsInfo`` The string information about the labels.

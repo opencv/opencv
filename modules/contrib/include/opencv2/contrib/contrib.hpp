@@ -949,13 +949,13 @@ namespace cv
         virtual void load(const FileStorage& fs) = 0;
 
         // Sets additional information as pairs label - info.
-        virtual void setLabelsInfo(const std::map<int, string>& labelsInfo) = 0;
+        void setLabelsInfo(const std::map<int, string>& labelsInfo);
 
         // Gets string information by label
-        virtual string getLabelInfo(int label) const = 0;
+        string getLabelInfo(const int &label);
 
         // Gets labels by string
-        virtual vector<int> getLabelsByString(const string& str) = 0;
+        vector<int> getLabelsByString(const string& str);
     };
 
     CV_EXPORTS_W Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
