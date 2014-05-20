@@ -1009,7 +1009,7 @@ cvFindNextContour( CvContourScanner scanner )
     if( mode == CV_RETR_FLOODFILL )
     {
         prev = ((int*)img)[x - 1];
-        new_mask = INT_MIN >> 1;
+        new_mask = INT_MIN / 2;
     }
 
     for( ; y < height; y++, img += step )
