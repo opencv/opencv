@@ -202,47 +202,31 @@ static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArr
     matchTemplate(_image, _templ, _result, CV_TM_CCORR);
 
     UMat image_sums, temp;
-    integral(_image, temp);
-
-    if (temp.depth() == CV_64F)
-        temp.convertTo(image_sums, CV_32F);
-    else
-        image_sums = temp;
+    integral(_image, image_sums, CV_32F);
 
     int type = image_sums.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
     ocl::Kernel k("matchTemplate_Prepared_CCOEFF", ocl::imgproc::match_template_oclsrc,
-                  format("-D CCOEFF -D T=%s -D elem_type=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn));
+                  format("-D CCOEFF -D T=%s -D T1=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn));
     if (k.empty())
         return false;
 
-    UMat templ = _templ.getUMat();
-    Size size = _image.size(), tsize = templ.size();
-    _result.create(size.height - templ.rows + 1, size.width - templ.cols + 1, CV_32F);
+    UMat templ  = _templ.getUMat();
     UMat result = _result.getUMat();
+    Size tsize = templ.size();
 
-    if (cn == 1)
+    if (cn==1)
     {
         float templ_sum = static_cast<float>(sum(_templ)[0]) / tsize.area();
 
-        k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result),
-                templ.rows, templ.cols, templ_sum);
+        k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, templ_sum);
     }
     else
     {
         Vec4f templ_sum = Vec4f::all(0);
         templ_sum = sum(templ) / tsize.area();
 
-        if (cn == 2)
-            k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols,
-                   templ_sum[0], templ_sum[1]);
-        else if (cn==3)
-            k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols,
-                   templ_sum[0], templ_sum[1], templ_sum[2]);
-        else
-            k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols,
-                   templ_sum[0], templ_sum[1], templ_sum[2], templ_sum[3]);
-    }
+       k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, templ_sum);    }
 
     size_t globalsize[2] = { result.cols, result.rows };
     return k.run(2, globalsize, NULL, false);
@@ -258,7 +242,7 @@ static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, Ou
     int type = image_sums.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
     ocl::Kernel k("matchTemplate_CCOEFF_NORMED", ocl::imgproc::match_template_oclsrc,
-        format("-D CCOEFF_NORMED -D type=%s -D elem_type=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn));
+        format("-D CCOEFF_NORMED -D T=%s -D T1=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn));
     if (k.empty())
         return false;
 
@@ -308,19 +292,9 @@ static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, Ou
             return true;
         }
 
-        if (cn == 2)
-            k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadOnlyNoSize(image_sqsums),
+        k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadOnlyNoSize(image_sqsums),
                    ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, scale,
-                   templ_sum[0], templ_sum[1], templ_sqsum_sum);
-        else if (cn == 3)
-            k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadOnlyNoSize(image_sqsums),
-                   ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, scale,
-                   templ_sum[0], templ_sum[1], templ_sum[2], templ_sqsum_sum);
-        else
-            k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadOnlyNoSize(image_sqsums),
-                   ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, scale,
-                   templ_sum[0], templ_sum[1], templ_sum[2], templ_sum[3], templ_sqsum_sum);
-    }
+                   templ_sum, templ_sqsum_sum);    }
 
     size_t globalsize[2] = { result.cols, result.rows };
     return k.run(2, globalsize, NULL, false);
