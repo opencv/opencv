@@ -878,14 +878,76 @@ namespace cv {
 static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
     bool haveMask = _mask.kind() != _InputArray::NONE;
-
+    int nz = haveMask ? -1 : (int)_src.total();
     Scalar mean, stddev;
-    if (!ocl_sum(_src, mean, OCL_OP_SUM, _mask))
-        return false;
-    if (!ocl_sum(_src, stddev, OCL_OP_SUM_SQR, _mask))
-        return false;
 
-    int nz = haveMask ? countNonZero(_mask) : (int)_src.total();
+    {
+        int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+        bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
+                isContinuous = _src.isContinuous();
+        int groups = ocl::Device::getDefault().maxComputeUnits();
+        size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+
+        int ddepth = std::max(CV_32S, depth), sqddepth = std::max(CV_32F, depth),
+                dtype = CV_MAKE_TYPE(ddepth, cn),
+                sqdtype = CV_MAKETYPE(sqddepth, cn);
+        CV_Assert(!haveMask || _mask.type() == CV_8UC1);
+
+        int wgs2_aligned = 1;
+        while (wgs2_aligned < (int)wgs)
+            wgs2_aligned <<= 1;
+        wgs2_aligned >>= 1;
+
+        if ( (!doubleSupport && depth == CV_64F) || cn > 4 )
+            return false;
+
+        char cvt[2][40];
+        String opts = format("-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D sqddepth=%d"
+                             " -D sqdstT=%s -D sqdstT1=%s -D convertToSDT=%s -D cn=%d%s"
+                             " -D convertToDT=%s -D WGS=%d -D WGS2_ALIGNED=%d%s%s",
+                             ocl::typeToStr(type), ocl::typeToStr(depth),
+                             ocl::typeToStr(dtype), ocl::typeToStr(ddepth), sqddepth,
+                             ocl::typeToStr(sqdtype), ocl::typeToStr(sqddepth),
+                             ocl::convertTypeStr(depth, sqddepth, cn, cvt[0]),
+                             cn, isContinuous ? " -D HAVE_SRC_CONT" : "",
+                             ocl::convertTypeStr(depth, ddepth, cn, cvt[1]),
+                             (int)wgs, wgs2_aligned, haveMask ? " -D HAVE_MASK" : "",
+                             doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+
+        ocl::Kernel k("meanStdDev", ocl::core::meanstddev_oclsrc, opts);
+        if (k.empty())
+            return false;
+
+        int dbsize = groups * ((haveMask ? CV_ELEM_SIZE1(CV_32S) : 0) +
+                               CV_ELEM_SIZE(sqdtype) + CV_ELEM_SIZE(dtype));
+        UMat src = _src.getUMat(), db(1, dbsize, CV_8UC1), mask = _mask.getUMat();
+
+        ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+                dbarg = ocl::KernelArg::PtrWriteOnly(db),
+                maskarg = ocl::KernelArg::ReadOnlyNoSize(mask);
+
+        if (haveMask)
+            k.args(srcarg, src.cols, (int)src.total(), groups, dbarg, maskarg);
+        else
+            k.args(srcarg, src.cols, (int)src.total(), groups, dbarg);
+
+        size_t globalsize = groups * wgs;
+        if (!k.run(1, &globalsize, &wgs, false))
+            return false;
+
+        typedef Scalar (* part_sum)(Mat m);
+        part_sum funcs[3] = { ocl_part_sum<int>, ocl_part_sum<float>, ocl_part_sum<double> };
+        Mat dbm = db.getMat(ACCESS_READ);
+
+        mean = funcs[ddepth - CV_32S](Mat(1, groups, dtype, dbm.data));
+        stddev = funcs[sqddepth - CV_32S](Mat(1, groups, sqdtype, dbm.data + groups * CV_ELEM_SIZE(dtype)));
+
+        if (haveMask)
+            nz = saturate_cast<int>(funcs[0](Mat(1, groups, CV_32SC1, dbm.data +
+                                                 groups * (CV_ELEM_SIZE(dtype) +
+                                                           CV_ELEM_SIZE(sqdtype))))[0]);
+    }
+
     double total = nz != 0 ? 1.0 / nz : 0;
     int k, j, cn = _src.channels();
     for (int i = 0; i < cn; ++i)
@@ -927,7 +989,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
                ocl_meanStdDev(_src, _mean, _sdv, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-    CV_Assert( mask.empty() || mask.type() == CV_8U );
+    CV_Assert( mask.empty() || mask.type() == CV_8UC1 );
 
     int k, cn = src.channels(), depth = src.depth();
 
