@@ -4427,6 +4427,12 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
         d.preferredVectorWidthShort(), d.preferredVectorWidthShort(),
         d.preferredVectorWidthInt(), d.preferredVectorWidthFloat(),
         d.preferredVectorWidthDouble(), -1 }, width = vectorWidths[depth];
+    if (d.isIntel())
+    {
+        // it's heuristic
+        int vectorWidthsIntel[] = { 16, 16, 8, 8, 1, 1, 1, -1 };
+        width = vectorWidthsIntel[depth];
+    }
 
     if (ssize.width * cn < width || width <= 0)
         return 1;
