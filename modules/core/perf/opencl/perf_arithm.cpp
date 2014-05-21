@@ -701,6 +701,36 @@ OCL_PERF_TEST_P(MeanStdDevFixture, MeanStdDev,
     SANITY_CHECK(stddev3, eps, ERROR_RELATIVE);
 }
 
+OCL_PERF_TEST_P(MeanStdDevFixture, MeanStdDevWithMask,
+                ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
+                                   OCL_TEST_TYPES_134))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+    const double eps = 2e-5;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), mask(srcSize, CV_8UC1);
+    Scalar mean, stddev;
+    declare.in(src, mask, WARMUP_RNG);
+
+    OCL_TEST_CYCLE() cv::meanStdDev(src, mean, stddev, mask);
+
+    double mean0 = mean[0], mean1 = mean[1], mean2 = mean[2], mean3 = mean[3];
+    double stddev0 = stddev[0], stddev1 = stddev[1], stddev2 = stddev[2], stddev3 = stddev[3];
+
+    SANITY_CHECK(mean0, eps, ERROR_RELATIVE);
+    SANITY_CHECK(mean1, eps, ERROR_RELATIVE);
+    SANITY_CHECK(mean2, eps, ERROR_RELATIVE);
+    SANITY_CHECK(mean3, eps, ERROR_RELATIVE);
+    SANITY_CHECK(stddev0, eps, ERROR_RELATIVE);
+    SANITY_CHECK(stddev1, eps, ERROR_RELATIVE);
+    SANITY_CHECK(stddev2, eps, ERROR_RELATIVE);
+    SANITY_CHECK(stddev3, eps, ERROR_RELATIVE);
+}
+
 ///////////// Norm ////////////////////////
 
 CV_ENUM(NormType, NORM_INF, NORM_L1, NORM_L2)
