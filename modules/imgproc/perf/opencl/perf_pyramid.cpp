@@ -95,7 +95,7 @@ OCL_PERF_TEST_P(PyrUpFixture, PyrUp,
     UMat src(srcSize, type), dst(dstSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::pyrDown(src, dst);
+    OCL_TEST_CYCLE() cv::pyrUp(src, dst);
 
     SANITY_CHECK(dst, eps);
 }
