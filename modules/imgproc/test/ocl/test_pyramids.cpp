@@ -52,9 +52,9 @@
 namespace cvtest {
 namespace ocl {
 
-PARAM_TEST_CASE(PyrTestBase, MatDepth, Channels, bool)
+PARAM_TEST_CASE(PyrTestBase, MatDepth, Channels, BorderType, bool)
 {
-    int depth, channels;
+    int depth, channels, borderType;
     bool use_roi;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
@@ -64,7 +64,8 @@ PARAM_TEST_CASE(PyrTestBase, MatDepth, Channels, bool)
     {
         depth = GET_PARAM(0);
         channels = GET_PARAM(1);
-        use_roi = GET_PARAM(2);
+        borderType = GET_PARAM(2);
+        use_roi = GET_PARAM(3);
     }
 
     void generateTestData(Size src_roiSize, Size dst_roiSize)
@@ -99,8 +100,8 @@ OCL_TEST_P(PyrDown, Mat)
         dst_roiSize = dst_roiSize.area() == 0 ? Size((src_roiSize.width + 1) / 2, (src_roiSize.height + 1) / 2) : dst_roiSize;
         generateTestData(src_roiSize, dst_roiSize);
 
-        OCL_OFF(pyrDown(src_roi, dst_roi, dst_roiSize));
-        OCL_ON(pyrDown(usrc_roi, udst_roi, dst_roiSize));
+        OCL_OFF(pyrDown(src_roi, dst_roi, dst_roiSize, borderType));
+        OCL_ON(pyrDown(usrc_roi, udst_roi, dst_roiSize, borderType));
 
         Near(depth == CV_32F ? 1e-4f : 1.0f);
     }
@@ -109,6 +110,8 @@ OCL_TEST_P(PyrDown, Mat)
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocPyr, PyrDown, Combine(
                             Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
                             Values(1, 2, 3, 4),
+                            Values((BorderType)BORDER_REPLICATE,
+                            (BorderType)BORDER_REFLECT, (BorderType)BORDER_REFLECT_101),
                             Bool()
                             ));
 
@@ -124,8 +127,8 @@ OCL_TEST_P(PyrUp, Mat)
         Size dst_roiSize = Size(2 * src_roiSize.width, 2 * src_roiSize.height);
         generateTestData(src_roiSize, dst_roiSize);
 
-        OCL_OFF(pyrUp(src_roi, dst_roi, dst_roiSize));
-        OCL_ON(pyrUp(usrc_roi, udst_roi, dst_roiSize));
+        OCL_OFF(pyrUp(src_roi, dst_roi, dst_roiSize, borderType));
+        OCL_ON(pyrUp(usrc_roi, udst_roi, dst_roiSize, borderType));
 
         Near(depth == CV_32F ? 1e-4f : 1.0f);
     }
@@ -134,6 +137,7 @@ OCL_TEST_P(PyrUp, Mat)
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocPyr, PyrUp, Combine(
                             Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
                             Values(1, 2, 3, 4),
+                            Values((BorderType)BORDER_REFLECT_101),
                             Bool()
                             ));
 
