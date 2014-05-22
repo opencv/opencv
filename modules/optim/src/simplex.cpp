@@ -42,6 +42,99 @@
 #include "debug.hpp"
 #include "opencv2/core/core_c.h"
 
+/*
+
+****Error Message********************************************************************************************************************
+
+Downhill Simplex method in OpenCV dev 3.0.0 getting this error:
+
+OpenCV Error: Assertion failed (dims <= 2 && data && (unsigned)i0 < (unsigned)(s ize.p[0] * size.p[1])
+&& elemSize() == (((((DataType<_Tp>::type) & ((512 - 1) << 3)) >> 3) + 1) << ((((sizeof(size_t)/4+1)16384|0x3a50)
+>> ((DataType<_Tp>::typ e) & ((1 << 3) - 1))2) & 3))) in cv::Mat::at,
+file C:\builds\master_PackSlave-w in32-vc12-shared\opencv\modules\core\include\opencv2/core/mat.inl.hpp, line 893
+
+****Problem and Possible Fix*********************************************************************************************************
+
+DownhillSolverImpl::innerDownhillSimplex something looks broken here:
+Mat_<double> coord_sum(1,ndim,0.0),buf(1,ndim,0.0),y(1,ndim,0.0);
+nfunk = 0;
+for(i=0;i<ndim+1;++i)
+{
+y(i) = f->calc(p[i]);
+}
+
+y has only ndim elements, while the loop goes over ndim+1
+
+Edited the following for possible fix:
+
+Replaced y(1,ndim,0.0) ------> y(1,ndim+1,0.0)
+
+***********************************************************************************************************************************
+
+The code below was used in tesing the source code.
+Created by @SareeAlnaghy
+
+#include <iostream>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
+#include <opencv2\optim\optim.hpp>
+
+using namespace std;
+using namespace cv;
+
+void test(Ptr<optim::DownhillSolver> solver, Ptr<optim::Solver::Function> ptr_F, Mat &P, Mat &step)
+{
+try{
+
+solver->setFunction(ptr_F);
+solver->setInitStep(step);
+double res = solver->minimize(P);
+
+cout << "res " << res << endl;
+}
+catch (exception e)
+{
+cerr << "Error:: " << e.what() << endl;
+}
+}
+
+int main()
+{
+
+class DistanceToLines :public optim::Solver::Function {
+public:
+double calc(const double* x)const{
+
+return x[0] * x[0] + x[1] * x[1];
+
+}
+};
+
+Mat P = (Mat_<double>(1, 2) << 1.0, 1.0);
+Mat step = (Mat_<double>(2, 1) << -0.5, 0.5);
+
+Ptr<optim::Solver::Function> ptr_F(new DistanceToLines());
+Ptr<optim::DownhillSolver> solver = optim::createDownhillSolver();
+
+test(solver, ptr_F, P, step);
+
+system("pause");
+return 0;
+}
+
+****Suggesttion for imporving Simplex implentation***************************************************************************************
+
+Currently the downhilll simplex method outputs the function value that is minimized. It should also return the coordinate points where the
+function is minimized. This is very useful in many applications such as using back projection methods to find a point of intersection of
+multiple lines in three dimensions as not all lines intersect in three dimensions.
+
+*/
+
+
+
+
+
 namespace cv{namespace optim{
 
     class DownhillSolverImpl : public DownhillSolver
@@ -123,7 +216,7 @@ namespace cv{namespace optim{
         double res;
         int i,ihi,ilo,inhi,j,mpts=ndim+1;
         double error, range,ysave,ytry;
-        Mat_<double> coord_sum(1,ndim,0.0),buf(1,ndim,0.0),y(1,ndim,0.0);
+        Mat_<double> coord_sum(1,ndim,0.0),buf(1,ndim,0.0),y(1,ndim+1,0.0);
 
         nfunk = 0;
 
