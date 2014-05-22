@@ -407,11 +407,8 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
 
-    if (channels > 4 || borderType != BORDER_DEFAULT)
-        return false;
-
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-    if ((depth == CV_64F) && !(doubleSupport))
+    if (channels > 4 || (depth == CV_64F && !doubleSupport))
         return false;
 
     Size ssize = _src.size();
@@ -425,15 +422,18 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
     UMat dst = _dst.getUMat();
 
     int float_depth = depth == CV_64F ? CV_64F : CV_32F;
+    const int local_size = 256;
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
+                                       "BORDER_REFLECT_101" };
     char cvt[2][50];
     String buildOptions = format(
             "-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s "
-            "-D T1=%s -D cn=%d",
+            "-D T1=%s -D cn=%d -D %s -D LOCAL_SIZE=%d",
             ocl::typeToStr(type), ocl::typeToStr(CV_MAKETYPE(float_depth, channels)),
             ocl::convertTypeStr(float_depth, depth, channels, cvt[0]),
             ocl::convertTypeStr(depth, float_depth, channels, cvt[1]),
             doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-            ocl::typeToStr(depth), channels
+            ocl::typeToStr(depth), channels, borderMap[borderType], local_size
     );
     ocl::Kernel k("pyrDown", ocl::imgproc::pyr_down_oclsrc, buildOptions);
     if (k.empty())
@@ -441,7 +441,7 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst));
 
-    size_t localThreads[2]  = { 256, 1 };
+    size_t localThreads[2]  = { local_size, 1 };
     size_t globalThreads[2] = { src.cols, dst.rows };
     return k.run(2, globalThreads, localThreads, false);
 }
