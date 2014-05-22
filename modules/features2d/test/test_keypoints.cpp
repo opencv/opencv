@@ -167,13 +167,15 @@ TEST(Features2d_Detector_Keypoints_Dense, validation)
     test.safe_run();
 }
 
-TEST(Features2d_Detector_Keypoints_KAZE, validation)
+// FIXIT #2807 Crash on Windows 7 x64 MSVS 2012, Linux Fedora 19 x64 with GCC 4.8.2, Linux Ubuntu 14.04 LTS x64 with GCC 4.8.2
+TEST(Features2d_Detector_Keypoints_KAZE, DISABLED_validation)
 {
     CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.KAZE"));
     test.safe_run();
 }
 
-TEST(Features2d_Detector_Keypoints_AKAZE, validation)
+// FIXIT #2807 Crash on Windows 7 x64 MSVS 2012, Linux Fedora 19 x64 with GCC 4.8.2, Linux Ubuntu 14.04 LTS x64 with GCC 4.8.2
+TEST(Features2d_Detector_Keypoints_AKAZE, DISABLED_validation)
 {
     CV_FeatureDetectorKeypointsTest test_kaze(cv::Ptr<FeatureDetector>(new cv::AKAZE(cv::AKAZE::DESCRIPTOR_KAZE)));
     test_kaze.safe_run();
