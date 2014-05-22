@@ -515,9 +515,94 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
             if (seed_ptr[k] != nv_buf.b[k])
                 break;
 
-        if( k != elem_size )
+        if (k != elem_size)
         {
-            if( type == CV_8UC1 )
+//#if 0
+#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
+            IppiSize rois = { img.cols, img.rows };
+            int bufSize = 0, areaSize = 0;
+            IppiPoint iseed = { seedPoint.x, seedPoint.y };
+            IppStatus istat = ippiFloodFillGetSize(rois, &bufSize);
+            if (istat == ippStsNoErr)
+            {
+                void* buf = ippMalloc(bufSize);
+                IppiConnectedComp pReg;
+                if (type == CV_8UC1)
+                {
+                    if (connectivity == 4)
+                    {
+                        istat = ippiFloodFill_4Con_8u_C1IR((Ipp8u*)img.data,
+                            (int)img.step, rois, iseed, (Ipp8u)nv_buf.b,
+                            &pReg, (Ipp8u*)buf);
+                    }
+                    else//if (connectivity == 8)
+                    {
+                        istat = ippiFloodFill_8Con_8u_C1IR((Ipp8u*)img.data,
+                            (int)img.step, rois, iseed, (Ipp8u)nv_buf.b,
+                            &pReg, (Ipp8u*)buf);
+                    }
+                }
+                else if (type == CV_32FC1)
+                {
+                    if (connectivity == 4)
+                    {
+                        istat = ippiFloodFill_4Con_32f_C1IR((Ipp32f*)img.data,
+                            (int)img.step, rois, iseed, (Ipp32f)(nv_buf.f[0]),
+                            &pReg, (Ipp8u*)buf);
+                    }
+                    else//if (connectivity == 8)
+                    {
+                        istat = ippiFloodFill_8Con_32f_C1IR((Ipp32f*)img.data,
+                            (int)img.step, rois, iseed, (Ipp32f)(nv_buf.f[0]),
+                            &pReg, (Ipp8u*)buf);
+                    }
+                }
+                else if (type == CV_8UC3)
+                {
+                    if (connectivity == 4)
+                    {
+                        istat = ippiFloodFill_4Con_8u_C3IR((Ipp8u*)img.data,
+                            (int)img.step, rois, iseed, (Ipp8u*)&(nv_buf.b[0]), &pReg, (Ipp8u*)buf);
+                    }
+                    else//if (connectivity == 8)
+                    {
+                        istat = ippiFloodFill_8Con_8u_C3IR((Ipp8u*)img.data,
+                            (int)img.step, rois, iseed, (Ipp8u*)&(nv_buf.b[0]), &pReg, (Ipp8u*)buf);
+                    }
+                }
+                else if (type == CV_32FC3)
+                {
+                    if (connectivity == 4)
+                    {
+                        istat = ippiFloodFill_4Con_32f_C3IR((Ipp32f*)img.data,
+                            (int)img.step, rois, iseed, (Ipp32f*)&(nv_buf.b[0]), &pReg, (Ipp8u*)buf);
+                    }
+                    else//if (connectivity == 8)
+                    {
+                        istat = ippiFloodFill_8Con_32f_C3IR((Ipp32f*)img.data,
+                            (int)img.step, rois, iseed, (Ipp32f*)&(nv_buf.b[0]), &pReg, (Ipp8u*)buf);
+                    }
+                }
+                else goto cvbr;//go to non-ipp branch for 32S case
+                if (istat == ippStsNoErr)
+                {
+                    areaSize = (int)(pReg.area);
+                    if (rect)
+                    {
+                        rect->x = pReg.rect.x;
+                        rect->y = pReg.rect.y;
+                        rect->height = pReg.rect.height;
+                        rect->width = pReg.rect.width;
+                    }
+                }
+                ippFree(buf);
+                if ((istat >= 0) && (areaSize > 0))
+                {
+                    return areaSize;
+                }
+            }
+#endif
+cvbr:       if( type == CV_8UC1 )
                 floodFill_CnIR(img, seedPoint, nv_buf.b[0], &comp, flags, &buffer);
             else if( type == CV_8UC3 )
                 floodFill_CnIR(img, seedPoint, Vec3b(nv_buf.b), &comp, flags, &buffer);
@@ -579,8 +664,138 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
         CV_Error( CV_StsUnsupportedFormat, "" );
 
     uchar newMaskVal = (uchar)((flags & ~0xff) == 0 ? 1 : ((flags >> 8) & 255));
-
-    if( type == CV_8UC1 )
+    bool is_gradient = !(flags & FLOODFILL_FIXED_RANGE);
+//#if 0
+#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
+    //if (is_gradient )
+    {
+        IppiSize rois = { img.cols, img.rows };
+        int bufSize = 0, areaSize = 0;
+        IppiPoint iseed = { seedPoint.x, seedPoint.y };
+        IppStatus istat = ippiFloodFillGetSize_Grad(rois, &bufSize);
+        if (istat == ippStsNoErr)
+        {
+            void* buf = ippMalloc(bufSize);
+            IppiConnectedComp pReg;
+            if (type == CV_8UC1)
+            {
+                if (connectivity == 4)
+                {
+                    if (is_gradient)
+                    {
+                        istat = ippiFloodFill_Grad4Con_8u_C1IR((Ipp8u*)img.data,
+                            (int)img.step, rois, iseed, (Ipp8u)(nv_buf.b[0]), (Ipp8u)(ld_buf.b[0]),
+                            (Ipp8u)(ud_buf.b[0]), &pReg, (Ipp8u*)buf);
+                    }
+                    else
+                    {
+                        istat = ippiFloodFill_Range4Con_8u_C1IR((Ipp8u*)img.data,
+                            (int)img.step, rois, iseed, (Ipp8u)(nv_buf.b[0]), (Ipp8u)(ld_buf.b[0]),
+                            (Ipp8u)(ud_buf.b[0]), &pReg, (Ipp8u*)buf);
+                    }
+                }
+                else if (connectivity == 8)
+                {
+                    if (is_gradient)
+                    {
+                        istat = ippiFloodFill_Grad8Con_8u_C1IR((Ipp8u*)img.data,
+                            (int)img.step, rois, iseed, (Ipp8u)(nv_buf.b[0]), (Ipp8u)(ld_buf.b[0]),
+                            (Ipp8u)(ud_buf.b[0]), &pReg, (Ipp8u*)buf);
+                    }
+                    else
+                    {
+                        istat = ippiFloodFill_Range8Con_8u_C1IR((Ipp8u*)img.data,
+                            (int)img.step, rois, iseed, (Ipp8u)(nv_buf.b[0]), (Ipp8u)(ld_buf.b[0]),
+                            (Ipp8u)(ud_buf.b[0]), &pReg, (Ipp8u*)buf);
+                    }
+                }
+            }else if (type == CV_8UC3)
+            {
+                if (connectivity == 4)
+                {
+                    if (is_gradient)
+                    {
+                        istat = ippiFloodFill_Grad4Con_8u_C3IR((Ipp8u*)img.data,
+                            (int)img.step, rois, iseed, (Ipp8u*)&(nv_buf.b[0]), (Ipp8u*)&(ld_buf.b[0]),
+                            (Ipp8u*)&(ud_buf.b[0]), &pReg, (Ipp8u*)buf);
+                    }
+                    else
+                    {
+                        istat = ippiFloodFill_Range4Con_8u_C3IR((Ipp8u*)img.data,
+                            (int)img.step, rois, iseed, (Ipp8u*)&(nv_buf.b[0]), (Ipp8u*)&(ld_buf.b[0]),
+                            (Ipp8u*)&(ud_buf.b[0]), &pReg, (Ipp8u*)buf);
+                    }
+                }
+                else if (connectivity == 8)
+                {
+                    if (is_gradient)
+                    {
+                        istat = ippiFloodFill_Grad8Con_8u_C3IR((Ipp8u*)img.data,
+                            (int)img.step, rois, iseed, (Ipp8u*)&(nv_buf.b[0]), (Ipp8u*)&(ld_buf.b[0]),
+                            (Ipp8u*)&(ud_buf.b[0]), &pReg, (Ipp8u*)buf);
+                    }
+                    else
+                    {
+                        istat = ippiFloodFill_Range8Con_8u_C3IR((Ipp8u*)img.data,
+                            (int)img.step, rois, iseed, (Ipp8u*)&(nv_buf.b[0]), (Ipp8u*)&(ld_buf.b[0]),
+                            (Ipp8u*)&(ud_buf.b[0]), &pReg, (Ipp8u*)buf);
+                    }
+                }
+            }
+            else if (type == CV_32FC3)
+            {
+                if (connectivity == 4)
+                {
+                    if (is_gradient)
+                    {
+                        istat = ippiFloodFill_Grad4Con_32f_C3IR((Ipp32f*)img.data,
+                            (int)img.step, rois, iseed, (Ipp32f*)&(nv_buf.f[0]),
+                            (Ipp32f*)&(ld_buf.f[0]), (Ipp32f*)&(ud_buf.f[0]), &pReg, (Ipp8u*)buf);
+                    }
+                    else
+                    {
+                        istat = ippiFloodFill_Range4Con_32f_C3IR((Ipp32f*)img.data,
+                            (int)img.step, rois, iseed, (Ipp32f*)&(nv_buf.f[0]),
+                            (Ipp32f*)&(ld_buf.f[0]), (Ipp32f*)&(ud_buf.f[0]), &pReg, (Ipp8u*)buf);
+                    }
+                }
+                else if (connectivity == 8)
+                {
+                    if (is_gradient)
+                    {
+                        istat = ippiFloodFill_Grad8Con_32f_C3IR((Ipp32f*)img.data,
+                            (int)img.step, rois, iseed, (Ipp32f*)&(nv_buf.f[0]),
+                            (Ipp32f*)&(ld_buf.f[0]), (Ipp32f*)&(ud_buf.f[0]), &pReg, (Ipp8u*)buf);
+                    }
+                    else
+                    {
+                        istat = ippiFloodFill_Range8Con_32f_C3IR((Ipp32f*)img.data,
+                            (int)img.step, rois, iseed, (Ipp32f*)&(nv_buf.f[0]),
+                            (Ipp32f*)&(ld_buf.f[0]), (Ipp32f*)&(ud_buf.f[0]), &pReg, (Ipp8u*)buf);
+                    }
+                }
+            }
+            else goto cvbr1;
+            if (istat == ippStsNoErr)
+            {
+                areaSize = (int)(pReg.area);
+                if (rect)
+                {
+                    rect->x = pReg.rect.x;
+                    rect->y = pReg.rect.y;
+                    rect->height = pReg.rect.height;
+                    rect->width = pReg.rect.width;
+                }
+            }
+            ippFree(buf);
+            if ((istat >= 0) && (areaSize > 0))
+            {
+                return areaSize;
+            }
+        }
+    }
+#endif
+cvbr1:  if( type == CV_8UC1 )
         floodFillGrad_CnIR<uchar, uchar, int, Diff8uC1>(
                 img, mask, seedPoint, nv_buf.b[0], newMaskVal,
                 Diff8uC1(ld_buf.b[0], ud_buf.b[0]),
