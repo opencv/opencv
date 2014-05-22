@@ -92,7 +92,7 @@
 #endif
 
 #ifndef BUF_COLS
-#define BUF_COLS  64
+#define BUF_COLS  32
 #endif
 
 __kernel void reduce_horz_pre(__global const uchar * srcptr, int src_step, int src_offset, int rows, int cols,
