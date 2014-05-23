@@ -4406,8 +4406,8 @@ String kernelToStr(InputArray _kernel, int ddepth, const char * name)
             CV_Assert(src.isMat() || src.isUMat()); \
             int ctype = src.type(), ccn = CV_MAT_CN(ctype); \
             Size csize = src.size(); \
-            cols.push_back(ccn * src.size().width); \
-            if (ctype != type || csize != ssize) \
+            cols.push_back(ccn * csize.width); \
+            if (ctype != type) \
                 return 1; \
             offsets.push_back(src.offset()); \
             steps.push_back(src.step()); \
