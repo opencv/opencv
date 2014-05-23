@@ -59,12 +59,11 @@ function(_icv_downloader)
   
   if(NOT EXISTS "${OPENCV_ICV_PACKAGE_ARCHIVE}")
     if(NOT DEFINED OPENCV_ICV_URL)
-      if(NOT DEFINED ENV{OPENCV_ICV_URL})
-        # TODO Specify default URL after ICV publishing
-        message(STATUS "ICV: downloading URL is not specified, skip downloading")
-        return()
+      if(DEFINED ENV{OPENCV_ICV_URL})
+        set(OPENCV_ICV_URL $ENV{OPENCV_ICV_URL})
+      else()
+        set(OPENCV_ICV_URL "http://sourceforge.net/projects/opencvlibrary/files/3rdparty/ippicv")
       endif()
-      set(OPENCV_ICV_URL $ENV{OPENCV_ICV_URL})
     endif()
   
     file(MAKE_DIRECTORY ${OPENCV_ICV_PACKAGE_ARCHIVE_DIR})
