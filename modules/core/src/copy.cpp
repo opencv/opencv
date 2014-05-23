@@ -758,16 +758,28 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
 
 static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
-    UMat src = _src.getUMat(), dst = _dst.getUMat();
+    if (ny == 1 && nx == 1)
+    {
+        _src.copyTo(_dst);
+        return true;
+    }
 
-    for (int y = 0; y < ny; ++y)
-        for (int x = 0; x < nx; ++x)
-        {
-            Rect roi(x * src.cols, y * src.rows, src.cols, src.rows);
-            UMat hdr(dst, roi);
-            src.copyTo(hdr);
-        }
-    return true;
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1,
+            kercn = std::min(ocl::predictOptimalVectorWidth(_src, _dst), 4);
+
+    ocl::Kernel k("repeat", ocl::core::repeat_oclsrc,
+                  format("-D T=%s -D nx=%d -D ny=%d -D rowsPerWI=%d -D cn=%d",
+                         ocl::memopTypeToStr(CV_MAKE_TYPE(depth, kercn)),
+                         nx, ny, rowsPerWI, kercn));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat(), dst = _dst.getUMat();
+    k.args(ocl::KernelArg::ReadOnly(src, cn, kercn), ocl::KernelArg::WriteOnlyNoSize(dst));
+
+    size_t globalsize[] = { src.cols * cn / kercn, (src.rows + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, NULL, false);
 }
 
 #endif
