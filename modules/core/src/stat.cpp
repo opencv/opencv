@@ -678,38 +678,66 @@ static bool ocl_countNonZero( InputArray _src, int & res )
     if (depth == CV_64F && !doubleSupport)
         return false;
 
-    UMat src = _src.getUMat();
-    UMat buffer(1, src.cols, CV_32SC1);
-    cv::String build_opt = format("-D srcT=%s%s",
-                                    ocl::typeToStr(type),
-                                    doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+        int dbsize = ocl::Device::getDefault().maxComputeUnits();
+        size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
 
-    ocl::Kernel k("countNoneZero", ocl::core::count_none_zero_oclsrc, build_opt);
-    if (k.empty())
-        return false;
-
-    ocl::Kernel ksum("sumLine", ocl::core::count_none_zero_oclsrc, build_opt);
-    if (ksum.empty())
-        return false;
-
-    k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnlyNoSize(buffer));
-
-    size_t globalSize = src.cols;
-    if (k.run(1, &globalSize, NULL, false))
+    if (ocl::Device::getDefault().isIntel())
     {
-        const int bufSumCols = 32;
-        globalSize = bufSumCols;
-        ksum.args(ocl::KernelArg::ReadWrite(buffer));
-        if (ksum.run(1, &globalSize, NULL, false))
+        UMat src = _src.getUMat();
+        UMat buffer(1, src.cols, CV_32SC1);
+        cv::String build_opt = format("-D srcT=%s%s",
+                                        ocl::typeToStr(type),
+                                        doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+
+        ocl::Kernel k("countNoneZero", ocl::core::count_none_zero_oclsrc, build_opt);
+        if (k.empty())
+            return false;
+
+        ocl::Kernel ksum("sumLine", ocl::core::count_none_zero_oclsrc, build_opt);
+        if (ksum.empty())
+            return false;
+
+        k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnlyNoSize(buffer));
+
+        size_t globalSize = src.cols;
+        if (k.run(1, &globalSize, NULL, false))
         {
-            Mat buf = buffer.getMat(ACCESS_READ);
-            int *bufptr = (int *)buf.ptr(0);
-            double sum = 0.0;
-            for (int i = 0; i < bufSumCols; i++)
-                sum += bufptr[i];
-            res = saturate_cast<int>(sum);
-            return true;
+            const int bufSumCols = 32;
+            globalSize = bufSumCols;
+            ksum.args(ocl::KernelArg::ReadWrite(buffer));
+            if (ksum.run(1, &globalSize, NULL, false))
+            {
+                Mat buf = buffer.getMat(ACCESS_READ);
+                int *bufptr = (int *)buf.ptr(0);
+                double sum = 0.0;
+                for (int i = 0; i < bufSumCols; i++)
+                    sum += bufptr[i];
+                res = saturate_cast<int>(sum);
+                return true;
+            }
         }
+    }
+    else
+    {
+        int wgs2_aligned = 1;
+        while (wgs2_aligned < (int)wgs)
+            wgs2_aligned <<= 1;
+        wgs2_aligned >>= 1;
+
+        ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
+                      format("-D srcT=%s -D OP_COUNT_NON_ZERO -D WGS=%d -D WGS2_ALIGNED=%d%s",
+                             ocl::typeToStr(type), (int)wgs,
+                             wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+        if (k.empty())
+            return false;
+
+        UMat src = _src.getUMat(), db(1, dbsize, CV_32SC1);
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
+               dbsize, ocl::KernelArg::PtrWriteOnly(db));
+
+        size_t globalsize = dbsize * wgs;
+        if (k.run(1, &globalsize, &wgs, true))
+            return res = saturate_cast<int>(cv::sum(db.getMat(ACCESS_READ))[0]), true;
     }
     return false;
 }
