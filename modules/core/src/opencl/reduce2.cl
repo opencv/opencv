@@ -110,7 +110,7 @@ __kernel void reduce_horz_pre(__global const uchar * srcptr, int src_step, int s
         dstT tmp[cn] = { INIT_VALUE };
 
         int src_step_mul = BUF_COLS * cn;
-        for (int x = 0; x < cols; x += BUF_COLS, src += src_step_mul)
+        for (int idx = x; idx < cols; idx += BUF_COLS, src += src_step_mul)
         {
             #pragma unroll
             for (int c = 0; c < cn; ++c)
