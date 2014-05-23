@@ -248,7 +248,7 @@ PERF_TEST_P(Size_CvtMode, cvtColor8u,
             )
 {
     Size sz = get<0>(GetParam());
-    int mode = get<1>(GetParam());
+    int _mode = get<1>(GetParam()), mode = _mode;
     ChPair ch = getConversionInfo(mode);
     mode %= COLOR_COLORCVT_MAX;
 
@@ -261,7 +261,11 @@ PERF_TEST_P(Size_CvtMode, cvtColor8u,
     int runs = sz.width <= 320 ? 100 : 5;
     TEST_CYCLE_MULTIRUN(runs) cvtColor(src, dst, mode, ch.dcn);
 
+#if defined(__APPLE__) && defined(HAVE_IPP)
+    SANITY_CHECK(dst, _mode == CX_BGRA2HLS_FULL ? 2 : 1);
+#else
     SANITY_CHECK(dst, 1);
+#endif
 }
 
 typedef std::tr1::tuple<Size, CvtModeBayer> Size_CvtMode_Bayer_t;
