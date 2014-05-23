@@ -678,31 +678,39 @@ static bool ocl_countNonZero( InputArray _src, int & res )
     if (depth == CV_64F && !doubleSupport)
         return false;
 
-    int dbsize = ocl::Device::getDefault().maxComputeUnits();
-    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+    UMat src = _src.getUMat();
+    UMat buffer(1, src.cols, CV_32SC1);
+    cv::String build_opt = format("-D srcT=%s%s",
+                                    ocl::typeToStr(type),
+                                    doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
-    int wgs2_aligned = 1;
-    while (wgs2_aligned < (int)wgs)
-        wgs2_aligned <<= 1;
-    wgs2_aligned >>= 1;
-
-    ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
-                  format("-D srcT=%s -D srcT1=%s -D cn=1 -D OP_COUNT_NON_ZERO"
-                         " -D WGS=%d -D kercn=%d -D WGS2_ALIGNED=%d%s%s",
-                         ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
-                         ocl::typeToStr(depth), (int)wgs, kercn,
-                         wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-                         _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
+    ocl::Kernel k("countNoneZero", ocl::core::count_none_zero_oclsrc, build_opt);
     if (k.empty())
         return false;
 
-    UMat src = _src.getUMat(), db(1, dbsize, CV_32SC1);
-    k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
-           dbsize, ocl::KernelArg::PtrWriteOnly(db));
+    ocl::Kernel ksum("sumLine", ocl::core::count_none_zero_oclsrc, build_opt);
+    if (ksum.empty())
+        return false;
 
-    size_t globalsize = dbsize * wgs;
-    if (k.run(1, &globalsize, &wgs, true))
-        return res = saturate_cast<int>(cv::sum(db.getMat(ACCESS_READ))[0]), true;
+    k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnlyNoSize(buffer));
+
+    size_t globalSize = src.cols;
+    if (k.run(1, &globalSize, NULL, false))
+    {
+        const int bufSumCols = 32;
+        globalSize = bufSumCols;
+        ksum.args(ocl::KernelArg::ReadWrite(buffer));
+        if (ksum.run(1, &globalSize, NULL, false))
+        {
+            Mat buf = buffer.getMat(ACCESS_READ);
+            int *bufptr = (int *)buf.ptr(0);
+            double sum = 0.0;
+            for (int i = 0; i < bufSumCols; i++)
+                sum += bufptr[i];
+            res = saturate_cast<int>(sum);
+            return true;
+        }
+    }
     return false;
 }
 
