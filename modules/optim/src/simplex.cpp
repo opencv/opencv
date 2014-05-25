@@ -123,16 +123,16 @@ namespace cv{namespace optim{
         double res;
         int i,ihi,ilo,inhi,j,mpts=ndim+1;
         double error, range,ysave,ytry;
-        Mat_<double> coord_sum(1,ndim,0.0),buf(1,ndim,0.0),y(1,ndim,0.0);
+        Mat_<double> coord_sum(1,ndim,0.0),buf(1,ndim,0.0),y(1,mpts,0.0);
 
         nfunk = 0;
 
-        for(i=0;i<ndim+1;++i)
+        for(i=0;i<mpts;++i)
         {
             y(i) = f->calc(p[i]);
         }
 
-        nfunk = ndim+1;
+        nfunk = mpts;
 
         reduce(p,coord_sum,0,CV_REDUCE_SUM);
 
