@@ -3471,7 +3471,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
             return false;
 
         if (op0 == CV_REDUCE_AVG)
-            temp.convertTo(dst, ddepth0, 1. / (dim == 0 ? src.rows : src.cols));
+            temp.convertTo(dst, ddepth0, 1. / src.cols);
 
         return true;
     }
