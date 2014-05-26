@@ -681,7 +681,7 @@ static bool ocl_countNonZero( InputArray _src, int & res )
     if (ocl::Device::getDefault().isIntel())
     {
         UMat src = _src.getUMat();
-        bool halfRows = (src.cols < 1024) && (128 < src.rows);
+        bool halfRows = (src.cols <= 1024) && (128 < src.rows);
         int src_cols_tmp = halfRows ? 2 * src.cols : src.cols;
         UMat buffer(1, src_cols_tmp, CV_32SC1);
         cv::String build_opt = format("-D srcT=%s%s%s",
@@ -704,8 +704,9 @@ static bool ocl_countNonZero( InputArray _src, int & res )
         {
             const int bufSumCols = 32;
             size_t globalSizeSum = bufSumCols;
+            size_t localSizeSum = 8;
             ksum.args(ocl::KernelArg::ReadWrite(buffer));
-            if (ksum.run(1, &globalSizeSum, NULL, false))
+            if (ksum.run(1, &globalSizeSum, &localSizeSum, false))
             {
                 Mat buf = buffer.getMat(ACCESS_READ);
                 int *bufptr = (int *)buf.ptr(0);
