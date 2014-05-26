@@ -333,12 +333,6 @@ void CvCalibFilter::Stop( bool calibrate )
                                    points[0],points[1],
                                    buffer,
                                    &stereo);
-
-                for( i = 0; i < 9; i++ )
-                {
-                    stereo.fundMatr[i] = stereo.fundMatr[i];
-                }
-
             }
 
         }
