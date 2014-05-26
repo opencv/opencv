@@ -45,20 +45,20 @@
             dst[3] = lut_l[idx->w];
     #elif dcn == 3
         #define LUT_OP(num)\
-            uchar3 idx = vload3(0, (__global const uchar *)(srcptr + mad24(num, src_step, src_index)));\
+            uchar3 idx = vload3(0, srcptr + mad24(num, src_step, src_index));\
             dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
             dst[0] = lut_l[idx.x];\
             dst[1] = lut_l[idx.y];\
             dst[2] = lut_l[idx.z];
     #elif dcn == 2
         #define LUT_OP(num)\
-            __global const uchar2 * idx = (__global const uchar *)(srcptr + mad24(num, src_step, src_index));\
+            __global const uchar2 * idx = (__global const uchar2 *)(srcptr + mad24(num, src_step, src_index));\
             dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
             dst[0] = lut_l[idx->x];\
             dst[1] = lut_l[idx->y];
     #elif dcn == 1
         #define LUT_OP(num)\
-            uchar idx = (__global const uchar *)(srcptr + mad24(num, src_step, src_index))[0];\
+            uchar idx = (srcptr + mad24(num, src_step, src_index))[0];\
             dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
             dst[0] = lut_l[idx];
     #else
@@ -80,7 +80,7 @@
             dst[3] = lut_l[idx.w];
     #elif dcn == 3
         #define LUT_OP(num)\
-            uchar3 src_pixel = vload3(0, (__global const uchar *)(srcptr + mad24(num, src_step, src_index)));\
+            uchar3 src_pixel = vload3(0, srcptr + mad24(num, src_step, src_index));\
             int3 idx = convert_int3(src_pixel) * lcn + (int3)(0, 1, 2);\
             dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
             dst[0] = lut_l[idx.x];\
@@ -95,7 +95,7 @@
             dst[1] = lut_l[idx.y];
     #elif dcn == 1 //error case (1 < lcn) ==> lcn == scn == dcn
         #define LUT_OP(num)\
-            uchar idx = (__global const uchar *)(srcptr + mad24(num, src_step, src_index))[0];\
+            uchar idx = (srcptr + mad24(num, src_step, src_index))[0];\
             dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
             dst[0] = lut_l[idx];
     #else
