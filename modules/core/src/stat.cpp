@@ -678,15 +678,15 @@ static bool ocl_countNonZero( InputArray _src, int & res )
     if (depth == CV_64F && !doubleSupport)
         return false;
 
-        int dbsize = ocl::Device::getDefault().maxComputeUnits();
-        size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
-
     if (ocl::Device::getDefault().isIntel())
     {
         UMat src = _src.getUMat();
-        UMat buffer(1, src.cols, CV_32SC1);
-        cv::String build_opt = format("-D srcT=%s%s",
+        bool halfRows = (src.cols < 1024) && (128 < src.rows);
+        int src_cols_tmp = halfRows ? 2 * src.cols : src.cols;
+        UMat buffer(1, src_cols_tmp, CV_32SC1);
+        cv::String build_opt = format("-D srcT=%s%s%s",
                                         ocl::typeToStr(type),
+                                        halfRows ? " -D HALF_ROWS" : "",
                                         doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
         ocl::Kernel k("countNoneZero", ocl::core::count_none_zero_oclsrc, build_opt);
@@ -699,13 +699,13 @@ static bool ocl_countNonZero( InputArray _src, int & res )
 
         k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnlyNoSize(buffer));
 
-        size_t globalSize = src.cols;
+        size_t globalSize = src_cols_tmp;//src.cols;
         if (k.run(1, &globalSize, NULL, false))
         {
             const int bufSumCols = 32;
-            globalSize = bufSumCols;
+            size_t globalSizeSum = bufSumCols;
             ksum.args(ocl::KernelArg::ReadWrite(buffer));
-            if (ksum.run(1, &globalSize, NULL, false))
+            if (ksum.run(1, &globalSizeSum, NULL, false))
             {
                 Mat buf = buffer.getMat(ACCESS_READ);
                 int *bufptr = (int *)buf.ptr(0);
@@ -719,6 +719,9 @@ static bool ocl_countNonZero( InputArray _src, int & res )
     }
     else
     {
+        int dbsize = ocl::Device::getDefault().maxComputeUnits();
+        size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+
         int wgs2_aligned = 1;
         while (wgs2_aligned < (int)wgs)
             wgs2_aligned <<= 1;

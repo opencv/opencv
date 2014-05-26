@@ -17,19 +17,50 @@ __kernel void countNoneZero(__global const uchar * srcptr, int src_step, int src
                             __global uchar * bufptr, int buf_step, int buf_offset)
 {
     int x = get_global_id(0);
+#ifdef HALF_ROWS
     if (x < cols)
     {
         int src_index = mad24(x, (int)sizeof(srcT), src_offset);
         __global int * buf = (__global int *)(bufptr + buf_offset);
-        int temp = 0;
+        int accum = 0;
+        for (int y = 0; y < rows / 2; ++y, src_index += src_step)
+        {
+            __global const srcT *src = (__global const srcT *)(srcptr + src_index);
+            if (0 != (*src))
+                accum++;
+        }
+        buf[x] = accum;
+    }
+    else if (x < 2 * cols)
+    {
+        int y = rows / 2;
+        int xtemp = x % cols;
+        int src_index = mad24(y, src_step, mad24(xtemp, (int)sizeof(srcT), src_offset));
+        __global int * buf = (__global int *)(bufptr + buf_offset);
+        int accum = 0;
+        for (; y < rows; ++y, src_index += src_step)
+        {
+            __global const srcT *src = (__global const srcT *)(srcptr + src_index);
+            if (0 != (*src))
+                accum++;
+        }
+        buf[x] = accum;
+    }
+#else
+    if (x < cols)
+    {
+        int src_index = mad24(x, (int)sizeof(srcT), src_offset);
+        __global int * buf = (__global int *)(bufptr + buf_offset);
+        int accum = 0;
         for (int y = 0; y < rows; ++y, src_index += src_step)
         {
             __global const srcT *src = (__global const srcT *)(srcptr + src_index);
             if (0 != (*src))
-                temp++;
+                accum++;
         }
-        buf[x] = temp;
+        buf[x] = accum;
     }
+#endif
 }
 
 #ifndef BUF_COLS
