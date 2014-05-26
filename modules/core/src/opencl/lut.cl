@@ -37,71 +37,71 @@
 #if lcn == 1
     #if dcn == 4
         #define LUT_OP(num)\
-            uchar4 idx = vload4(0, (__global const uchar *)(srcptr + src_index  + num * src_step));\
-            dst = (__global dstT *)(dstptr + dst_index + num * dst_step);\
-            dst[0] = lut_l[idx.x];\
-            dst[1] = lut_l[idx.y];\
-            dst[2] = lut_l[idx.z];\
-            dst[3] = lut_l[idx.w];
+            __global const uchar4 *idx = (__global const uchar4 *)(srcptr + mad24(num, src_step, src_index));\
+            dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
+            dst[0] = lut_l[idx->x];\
+            dst[1] = lut_l[idx->y];\
+            dst[2] = lut_l[idx->z];\
+            dst[3] = lut_l[idx->w];
     #elif dcn == 3
         #define LUT_OP(num)\
-            uchar3 idx = vload3(0, (__global const uchar *)(srcptr + src_index  + num * src_step));\
-            dst = (__global dstT *)(dstptr + dst_index + num * dst_step);\
+            uchar3 idx = vload3(0, (__global const uchar *)(srcptr + mad24(num, src_step, src_index)));\
+            dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
             dst[0] = lut_l[idx.x];\
             dst[1] = lut_l[idx.y];\
             dst[2] = lut_l[idx.z];
     #elif dcn == 2
         #define LUT_OP(num)\
-            uchar2 idx = vload2(0, (__global const uchar *)(srcptr + src_index  + num * src_step));\
-            dst = (__global dstT *)(dstptr + dst_index + num * dst_step);\
-            dst[0] = lut_l[idx.x];\
-            dst[1] = lut_l[idx.y];
+            __global const uchar2 * idx = (__global const uchar *)(srcptr + mad24(num, src_step, src_index));\
+            dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
+            dst[0] = lut_l[idx->x];\
+            dst[1] = lut_l[idx->y];
     #elif dcn == 1
         #define LUT_OP(num)\
-            uchar idx = (__global const uchar *)(srcptr + src_index  + num * src_step)[0];\
-            dst = (__global dstT *)(dstptr + dst_index + num * dst_step);\
+            uchar idx = (__global const uchar *)(srcptr + mad24(num, src_step, src_index))[0];\
+            dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
             dst[0] = lut_l[idx];
     #else
         #define LUT_OP(num)\
-            src = (__global const srcT *)(srcptr + src_index + num * src_step);\
-            dst = (__global dstT *)(dstptr + dst_index + num * dst_step);\
+            src = (__global const srcT *)(srcptr + mad24(num, src_step, src_index));\
+            dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
             for (int cn = 0; cn < dcn; ++cn)\
                 dst[cn] = lut_l[src[cn]];
     #endif
 #else
     #if dcn == 4
         #define LUT_OP(num)\
-            uchar4 src_pixel = vload4(0, (__global const uchar *)(srcptr + src_index  + num * src_step));\
-            int4 idx = convert_int4(src_pixel) * lcn + (int4)(0, 1, 2, 3);\
-            dst = (__global dstT *)(dstptr + dst_index + num * dst_step);\
+            __global const uchar4 *src_pixel = (__global const uchar4 *)(srcptr + mad24(num, src_step, src_index));\
+            int4 idx = convert_int4(src_pixel[0]) * lcn + (int4)(0, 1, 2, 3);\
+            dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
             dst[0] = lut_l[idx.x];\
             dst[1] = lut_l[idx.y];\
             dst[2] = lut_l[idx.z];\
             dst[3] = lut_l[idx.w];
     #elif dcn == 3
         #define LUT_OP(num)\
-            uchar3 src_pixel = vload3(0, (__global const uchar *)(srcptr + src_index  + num * src_step));\
+            uchar3 src_pixel = vload3(0, (__global const uchar *)(srcptr + mad24(num, src_step, src_index)));\
             int3 idx = convert_int3(src_pixel) * lcn + (int3)(0, 1, 2);\
-            dst = (__global dstT *)(dstptr + dst_index + num * dst_step);\
+            dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
             dst[0] = lut_l[idx.x];\
             dst[1] = lut_l[idx.y];\
             dst[2] = lut_l[idx.z];
     #elif dcn == 2
         #define LUT_OP(num)\
-            uchar2 src_pixel = vload2(0, (__global const uchar *)(srcptr + src_index  + num * src_step));\
-            int2 idx = convert_int2(src_pixel) * lcn + (int2)(0, 1);\
-            dst = (__global dstT *)(dstptr + dst_index + num * dst_step);\
+            __global const uchar2 *src_pixel = (__global const uchar2 *)(srcptr + mad24(num, src_step, src_index));\
+            int2 idx = convert_int2(src_pixel[0]) * lcn + (int2)(0, 1);\
+            dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
             dst[0] = lut_l[idx.x];\
             dst[1] = lut_l[idx.y];
     #elif dcn == 1 //error case (1 < lcn) ==> lcn == scn == dcn
         #define LUT_OP(num)\
-            uchar idx = (__global const uchar *)(srcptr + src_index  + num * src_step)[0];\
-            dst = (__global dstT *)(dstptr + dst_index + num * dst_step);\
+            uchar idx = (__global const uchar *)(srcptr + mad24(num, src_step, src_index))[0];\
+            dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
             dst[0] = lut_l[idx];
     #else
         #define LUT_OP(num)\
-            src = (__global const srcT *)(srcptr + src_index + num * src_step);\
-            dst = (__global dstT *)(dstptr + dst_index + num * dst_step);\
+            src = (__global const srcT *)(srcptr + mad24(num, src_step, src_index));\
+            dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
             for (int cn = 0; cn < dcn; ++cn)\
                 dst[cn] = lut_l[mad24(src[cn], lcn, cn)];
     #endif
@@ -134,7 +134,7 @@ __kernel void LUT(__global const uchar * srcptr, int src_step, int src_offset,
         int src_index = mad24(y, src_step, mad24(x, (int)sizeof(srcT) * dcn, src_offset));
         int dst_index = mad24(y, dst_step, mad24(x, (int)sizeof(dstT) * dcn, dst_offset));
         __global const srcT * src; __global dstT * dst;
-
+        int tmp_idx;
         LUT_OP(0);
         if (y < rows - 1)
         {
