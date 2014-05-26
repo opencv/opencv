@@ -687,7 +687,8 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
     CV_Assert(nsrc > 0 && ndst > 0);
 
     Size size = src[0].size();
-    int depth = src[0].depth(), esz = CV_ELEM_SIZE(depth);
+    int depth = src[0].depth(), esz = CV_ELEM_SIZE(depth),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
     for (size_t i = 1, ssize = src.size(); i < ssize; ++i)
         CV_Assert(src[i].size() == size && src[i].depth() == depth);
@@ -733,9 +734,11 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
         argindex = k.set(argindex, ocl::KernelArg::ReadOnlyNoSize(srcargs[i]));
     for (size_t i = 0; i < npairs; ++i)
         argindex = k.set(argindex, ocl::KernelArg::WriteOnlyNoSize(dstargs[i]));
-    k.set(k.set(argindex, size.height), size.width);
+    argindex = k.set(argindex, size.height);
+    argindex = k.set(argindex, size.width);
+    k.set(argindex, rowsPerWI);
 
-    size_t globalsize[2] = { size.width, size.height };
+    size_t globalsize[2] = { size.width, (size.height + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
