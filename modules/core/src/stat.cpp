@@ -689,11 +689,11 @@ static bool ocl_countNonZero( InputArray _src, int & res )
                                         halfRows ? " -D HALF_ROWS" : "",
                                         doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
-        ocl::Kernel k("countNoneZero", ocl::core::count_none_zero_oclsrc, build_opt);
+        ocl::Kernel k("countNonZero", ocl::core::count_non_zero_oclsrc, build_opt);
         if (k.empty())
             return false;
 
-        ocl::Kernel ksum("sumLine", ocl::core::count_none_zero_oclsrc, build_opt);
+        ocl::Kernel ksum("sumLine", ocl::core::count_non_zero_oclsrc, build_opt);
         if (ksum.empty())
             return false;
 

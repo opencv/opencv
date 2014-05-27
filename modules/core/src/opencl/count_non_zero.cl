@@ -13,8 +13,8 @@
 #endif
 #endif
 
-__kernel void countNoneZero(__global const uchar * srcptr, int src_step, int src_offset, int rows, int cols,
-                            __global uchar * bufptr, int buf_step, int buf_offset)
+__kernel void countNonZero(__global const uchar * srcptr, int src_step, int src_offset, int rows, int cols,
+                           __global uchar * bufptr, int buf_step, int buf_offset)
 {
     int x = get_global_id(0);
 #ifdef HALF_ROWS
