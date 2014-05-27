@@ -2021,13 +2021,20 @@ static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
     if ( !((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && cn <= 4 && (m == 3 || m == 5)) )
         return false;
 
-    bool useOptimized = (1 == cn) && (ocl::Device::getDefault().isIntel());
+    Size imgSize = _src.size();
+    bool useOptimized = (1 == cn) &&
+                        imgSize.width >= localsize[0] * 8  &&
+                        imgSize.height >= localsize[1] * 8 &&
+                        (ocl::Device::getDefault().isIntel());
 
     cv::String kname = format( useOptimized ? "medianFilter%d_u" : "medianFilter%d", m) ;
+    cv::String kdefs = useOptimized ?
+                         format("-D T=%s -D T1=%s -D T4=%s%d -D cn=%d -D USE_4OPT", ocl::typeToStr(type),
+                         ocl::typeToStr(depth), ocl::typeToStr(depth), cn*4, cn)
+                         :
+                         format("-D T=%s -D T1=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn) ;
 
-    ocl::Kernel k(kname.c_str(), ocl::imgproc::medianFilter_oclsrc,
-                  format("-D T=%s -D T1=%s -D T4=%s%d -D cn=%d", ocl::typeToStr(type),
-                         ocl::typeToStr(depth), ocl::typeToStr(depth), cn*4, cn));
+    ocl::Kernel k(kname.c_str(), ocl::imgproc::medianFilter_oclsrc, kdefs.c_str() );
 
     if (k.empty())
         return false;

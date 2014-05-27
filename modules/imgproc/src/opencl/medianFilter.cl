@@ -39,6 +39,10 @@
 #define TSIZE (int)sizeof(T1) * cn
 #endif
 
+#define OP(a,b) {    mid=a; a=min(a,b); b=max(mid,b);}
+
+#ifdef USE_4OPT
+
 //Utility macros for for 1,2,4 channel images:
 //  - LOAD4/STORE4 - load/store 4-pixel groups from/to global memory
 
@@ -88,8 +92,6 @@
         dst4 = (T4)(dst2.s89abcdef, src3, src4); }
 
 #endif
-
-#define OP(a,b) {    mid=a; a=min(a,b); b=max(mid,b);}
 
 __kernel void medianFilter3_u(__global const uchar* srcptr, int srcStep, int srcOffset,
                             __global uchar*       dstptr, int dstStep, int dstOffset,
@@ -273,6 +275,8 @@ __kernel void medianFilter5_u(__global const uchar* srcptr, int srcStep, int src
         c15=c20; c16=c21; c17=c22; c18=c23; c19=c24;
     }
 }
+
+#endif
 
 __kernel void medianFilter3(__global const uchar * srcptr, int src_step, int src_offset,
                             __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols)
