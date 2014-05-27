@@ -478,12 +478,23 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
             doubleSupport ? " -D DOUBLE_SUPPORT" : "",
             ocl::typeToStr(depth), channels, local_size
     );
-    ocl::Kernel k("pyrUp", ocl::imgproc::pyr_up_oclsrc, buildOptions);
+    size_t globalThreads[2];
+    ocl::Kernel k;
+    if (ocl::Device::getDefault().isIntel() && channels == 1)
+    {
+        k.create("pyrUp_unrolled", ocl::imgproc::pyr_up_oclsrc, buildOptions);
+        globalThreads[0] = dst.cols/2; globalThreads[1] = dst.rows/2;
+    } 
+    else
+    {
+        k.create("pyrUp", ocl::imgproc::pyr_up_oclsrc, buildOptions);
+        local_size = 16;
+        globalThreads[0] = dst.cols; globalThreads[1] = dst.rows;
+    }
     if (k.empty())
         return false;
 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst));
-    size_t globalThreads[2] = {dst.cols/2, dst.rows/2};
     size_t localThreads[2]  = {local_size, local_size};
 
     return k.run(2, globalThreads, localThreads, false);
