@@ -82,6 +82,10 @@
 
 #define noconvert
 
+#ifndef kercn
+#define kercn 1
+#endif
+
 #ifdef HAVE_MASK_CONT
 #define MASK_INDEX int mask_index = id + mask_offset;
 #else
@@ -176,9 +180,39 @@
     __local dstT localmem[WGS2_ALIGNED]
 #define DEFINE_ACCUMULATOR \
     dstT accumulator = (dstT)(0); \
-    srcT zero = (srcT)(0), one = (srcT)(1)
+    srcT1 zero = (srcT1)(0), one = (srcT1)(1)
+#if kercn == 1
 #define REDUCE_GLOBAL \
     accumulator += loadpix(srcptr + src_index) == zero ? zero : one
+#elif kercn == 4
+#define REDUCE_GLOBAL \
+    srcT value = loadpix(srcptr + src_index); \
+    accumulator += value.s0 == zero ? zero : one; \
+    accumulator += value.s1 == zero ? zero : one; \
+    accumulator += value.s2 == zero ? zero : one; \
+    accumulator += value.s3 == zero ? zero : one
+#elif kercn == 16
+#define REDUCE_GLOBAL \
+    srcT value = loadpix(srcptr + src_index); \
+    accumulator += value.s0 == zero ? zero : one; \
+    accumulator += value.s1 == zero ? zero : one; \
+    accumulator += value.s2 == zero ? zero : one; \
+    accumulator += value.s3 == zero ? zero : one; \
+    accumulator += value.s4 == zero ? zero : one; \
+    accumulator += value.s5 == zero ? zero : one; \
+    accumulator += value.s6 == zero ? zero : one; \
+    accumulator += value.s7 == zero ? zero : one; \
+    accumulator += value.s8 == zero ? zero : one; \
+    accumulator += value.s9 == zero ? zero : one; \
+    accumulator += value.sA == zero ? zero : one; \
+    accumulator += value.sB == zero ? zero : one; \
+    accumulator += value.sC == zero ? zero : one; \
+    accumulator += value.sD == zero ? zero : one; \
+    accumulator += value.sE == zero ? zero : one; \
+    accumulator += value.sF == zero ? zero : one
+#else
+#error "kercn should be either 1, 4 or 16"
+#endif
 #define SET_LOCAL_1 \
     localmem[lid] = accumulator
 #define REDUCE_LOCAL_1 \
@@ -316,14 +350,14 @@ __kernel void reduce(__global const uchar * srcptr, int src_step, int src_offset
 {
     int lid = get_local_id(0);
     int gid = get_group_id(0);
-    int  id = get_global_id(0);
+    int  id = get_global_id(0) * kercn;
 
     srcptr += src_offset;
 
     DECLARE_LOCAL_MEM;
     DEFINE_ACCUMULATOR;
 
-    for (int grain = groupnum * WGS; id < total; id += grain)
+    for (int grain = groupnum * WGS * kercn; id < total; id += grain)
     {
 #ifdef HAVE_SRC_CONT
         int src_index = mul24(id, srcTSIZE);
