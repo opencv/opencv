@@ -133,37 +133,18 @@ inline vector<_Tp> remove_dups(const vector<_Tp>& src) {
     return elems;
 }
 
-// This class was introduced to avoid an addition of new virtual functions in FaceRecognizer class.
-// It is safe for a binary compatibility.
-class FaceRecognizerBase : public FaceRecognizer
-{
-protected:
-    // Stored pairs "label id - string info"
-    std::map<int, string> _labelsInfo;
-
-public:
-    // Sets additional information as pairs label - info.
-    virtual void setLabelsInfo(const std::map<int, string>& labelsInfo);
-
-    // Gets string information by label
-    virtual string getLabelInfo(int label) const;
-
-    // Gets labels by string
-    virtual vector<int> getLabelsByString(const string& str);
-};
-
-void FaceRecognizerBase::setLabelsInfo(const std::map<int,string>& labelsInfo)
+void FaceRecognizer2::setLabelsInfo(const std::map<int,string>& labelsInfo)
 {
     _labelsInfo = labelsInfo;
 }
 
-string FaceRecognizerBase::getLabelInfo(int label) const
+string FaceRecognizer2::getLabelInfo(int label) const
 {
     std::map<int, string>::const_iterator iter(_labelsInfo.find(label));
     return iter != _labelsInfo.end() ? iter->second : "";
 }
 
-vector<int> FaceRecognizerBase::getLabelsByString(const string& str)
+vector<int> FaceRecognizer2::getLabelsByString(const string& str)
 {
     vector<int> labels;
     for(std::map<int,string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
@@ -177,7 +158,7 @@ vector<int> FaceRecognizerBase::getLabelsByString(const string& str)
 
 // Turk, M., and Pentland, A. "Eigenfaces for recognition.". Journal of
 // Cognitive Neuroscience 3 (1991), 71–86.
-class Eigenfaces : public FaceRecognizerBase
+class Eigenfaces : public FaceRecognizer2
 {
 private:
     int _num_components;
@@ -230,7 +211,7 @@ public:
 // faces: Recognition using class specific linear projection.". IEEE
 // Transactions on Pattern Analysis and Machine Intelligence 19, 7 (1997),
 // 711–720.
-class Fisherfaces: public FaceRecognizerBase
+class Fisherfaces: public FaceRecognizer2
 {
 private:
     int _num_components;
@@ -287,7 +268,7 @@ public:
 //  patterns: Application to face recognition." IEEE Transactions on Pattern
 //  Analysis and Machine Intelligence, 28(12):2037-2041.
 //
-class LBPH : public FaceRecognizerBase
+class LBPH : public FaceRecognizer2
 {
 private:
     int _grid_x;
@@ -404,21 +385,21 @@ void FaceRecognizer::load(const string& filename) {
 
 void FaceRecognizer::setLabelsInfo(const std::map<int, string>& labelsInfo)
 {
-    FaceRecognizerBase* base = dynamic_cast<FaceRecognizerBase*>(this);
+    FaceRecognizer2* base = dynamic_cast<FaceRecognizer2*>(this);
     CV_Assert(base != 0);
     base->setLabelsInfo(labelsInfo);
 }
 
 string FaceRecognizer::getLabelInfo(const int &label)
 {
-    FaceRecognizerBase* base = dynamic_cast<FaceRecognizerBase*>(this);
+    FaceRecognizer2* base = dynamic_cast<FaceRecognizer2*>(this);
     CV_Assert(base != 0);
     return base->getLabelInfo(label);
 }
 
 vector<int> FaceRecognizer::getLabelsByString(const string& str)
 {
-    FaceRecognizerBase* base = dynamic_cast<FaceRecognizerBase*>(this);
+    FaceRecognizer2* base = dynamic_cast<FaceRecognizer2*>(this);
     CV_Assert(base != 0);
     return base->getLabelsByString(str);
 }

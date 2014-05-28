@@ -79,7 +79,7 @@ Moreover every :ocv:class:`FaceRecognizer` supports the:
 
 * **Loading/Saving** the model state from/to a given XML or YAML.
 
-* **Setting/Getting labels info**, that is storaged as a string.
+* **Setting/Getting labels info**, that is storaged as a string. String labels info is useful for keeping names of the recognized people.
 
 .. note:: When using the FaceRecognizer interface in combination with Python, please stick to Python 2. Some underlying scripts like create_csv will not work in other versions, like Python 3.
 
