@@ -95,7 +95,11 @@
 #if cn != 3
 #define loadpix(addr) *(__global const srcT *)(addr)
 #define storepix(val, addr)  *(__global dstT *)(addr) = val
+#if kercn == 1
 #define srcTSIZE (int)sizeof(srcT)
+#else
+#define srcTSIZE (int)sizeof(srcT1)
+#endif
 #define dstTSIZE (int)sizeof(dstT)
 #else
 #define loadpix(addr) vload3(0, (__global const srcT1 *)(addr))
@@ -159,9 +163,53 @@
     dstT temp = convertToDT(loadpix(srcptr + src_index)), temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
     FUNC(accumulator, temp, temp2)
 #else
+#if kercn == 1
 #define REDUCE_GLOBAL \
-    dstT temp = convertToDT(loadpix(srcptr + src_index)); \
+    dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     FUNC(accumulator, temp)
+#elif kercn == 2
+#define REDUCE_GLOBAL \
+    dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
+    FUNC(accumulator, temp.s0); \
+    FUNC(accumulator, temp.s1)
+#elif kercn == 4
+#define REDUCE_GLOBAL \
+    dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
+    FUNC(accumulator, temp.s0); \
+    FUNC(accumulator, temp.s1); \
+    FUNC(accumulator, temp.s2); \
+    FUNC(accumulator, temp.s3)
+#elif kercn == 8
+#define REDUCE_GLOBAL \
+    dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
+    FUNC(accumulator, temp.s0); \
+    FUNC(accumulator, temp.s1); \
+    FUNC(accumulator, temp.s2); \
+    FUNC(accumulator, temp.s3); \
+    FUNC(accumulator, temp.s4); \
+    FUNC(accumulator, temp.s5); \
+    FUNC(accumulator, temp.s6); \
+    FUNC(accumulator, temp.s7)
+#elif kercn == 16
+#define REDUCE_GLOBAL \
+    dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
+    FUNC(accumulator, temp.s0); \
+    FUNC(accumulator, temp.s1); \
+    FUNC(accumulator, temp.s2); \
+    FUNC(accumulator, temp.s3); \
+    FUNC(accumulator, temp.s4); \
+    FUNC(accumulator, temp.s5); \
+    FUNC(accumulator, temp.s6); \
+    FUNC(accumulator, temp.s7); \
+    FUNC(accumulator, temp.s8); \
+    FUNC(accumulator, temp.s9); \
+    FUNC(accumulator, temp.sA); \
+    FUNC(accumulator, temp.sB); \
+    FUNC(accumulator, temp.sC); \
+    FUNC(accumulator, temp.sD); \
+    FUNC(accumulator, temp.sE); \
+    FUNC(accumulator, temp.sF)
+#endif
 #endif
 
 #define SET_LOCAL_1 \
@@ -184,6 +232,11 @@
 #if kercn == 1
 #define REDUCE_GLOBAL \
     accumulator += loadpix(srcptr + src_index) == zero ? zero : one
+#elif kercn == 2
+#define REDUCE_GLOBAL \
+    srcT value = loadpix(srcptr + src_index); \
+    accumulator += value.s0 == zero ? zero : one; \
+    accumulator += value.s1 == zero ? zero : one
 #elif kercn == 4
 #define REDUCE_GLOBAL \
     srcT value = loadpix(srcptr + src_index); \
@@ -191,6 +244,17 @@
     accumulator += value.s1 == zero ? zero : one; \
     accumulator += value.s2 == zero ? zero : one; \
     accumulator += value.s3 == zero ? zero : one
+#elif kercn == 8
+#define REDUCE_GLOBAL \
+    srcT value = loadpix(srcptr + src_index); \
+    accumulator += value.s0 == zero ? zero : one; \
+    accumulator += value.s1 == zero ? zero : one; \
+    accumulator += value.s2 == zero ? zero : one; \
+    accumulator += value.s3 == zero ? zero : one; \
+    accumulator += value.s4 == zero ? zero : one; \
+    accumulator += value.s5 == zero ? zero : one; \
+    accumulator += value.s6 == zero ? zero : one; \
+    accumulator += value.s7 == zero ? zero : one
 #elif kercn == 16
 #define REDUCE_GLOBAL \
     srcT value = loadpix(srcptr + src_index); \
@@ -210,9 +274,8 @@
     accumulator += value.sD == zero ? zero : one; \
     accumulator += value.sE == zero ? zero : one; \
     accumulator += value.sF == zero ? zero : one
-#else
-#error "kercn should be either 1, 4 or 16"
 #endif
+
 #define SET_LOCAL_1 \
     localmem[lid] = accumulator
 #define REDUCE_LOCAL_1 \

@@ -836,7 +836,7 @@ UMat UMat::mul(InputArray m, double scale) const
 
 static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
 {
-    int type = _src1.type(), depth = CV_MAT_DEPTH(type);
+    int type = _src1.type(), depth = CV_MAT_DEPTH(type), kercn = 1;
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if ( !doubleSupport && depth == CV_64F )
@@ -853,11 +853,13 @@ static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
 
     char cvt[40];
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
-                  format("-D srcT=%s -D dstT=%s -D ddepth=%d -D convertToDT=%s -D OP_DOT -D WGS=%d -D WGS2_ALIGNED=%d%s%s%s",
-                         ocl::typeToStr(depth), ocl::typeToStr(ddepth), ddepth, ocl::convertTypeStr(depth, ddepth, 1, cvt),
+                  format("-D srcT=%s -D dstT=%s -D ddepth=%d -D convertToDT=%s -D OP_DOT "
+                         "-D WGS=%d -D WGS2_ALIGNED=%d%s%s%s -D kercn=%d",
+                         ocl::typeToStr(depth), ocl::typeToStr(ddepth), ddepth,
+                         ocl::convertTypeStr(depth, ddepth, 1, cvt),
                          (int)wgs, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                          _src1.isContinuous() ? " -D HAVE_SRC_CONT" : "",
-                         _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : ""));
+                         _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "", kercn));
     if (k.empty())
         return false;
 
