@@ -912,16 +912,7 @@ static void icvCNNSubSamplingForward( CvCNNLayer* _layer,
     cvScale( layer->exp2ssumWX, layer->exp2ssumWX, 2.0*layer->s );
     cvExp( layer->exp2ssumWX, layer->exp2ssumWX );
     cvMinS( layer->exp2ssumWX, FLT_MAX, layer->exp2ssumWX );
-//#ifdef _DEBUG
-    {
-        float* exp2ssumWX_data = layer->exp2ssumWX->data.fl;
-        for( ni = 0; ni < layer->exp2ssumWX->rows; ni++, exp2ssumWX_data++ )
-        {
-            if( *exp2ssumWX_data == FLT_MAX )
-                cvSetErrStatus( 1 );
-        }
-    }
-//#endif
+    
     // compute the output variable Y == ( a - 2a/(layer->exp2ssumWX + 1))
     cvAddS( layer->exp2ssumWX, cvRealScalar(1), Y );
     cvDiv( 0, Y, Y, -2.0*layer->a );
@@ -955,17 +946,6 @@ static void icvCNNFullConnectForward( CvCNNLayer* _layer, const CvMat* X, CvMat*
     cvGEMM( &sub_weights, X, 2*layer->s, &bias, 2*layer->s, layer->exp2ssumWX );
     cvExp( layer->exp2ssumWX, layer->exp2ssumWX );
     cvMinS( layer->exp2ssumWX, FLT_MAX, layer->exp2ssumWX );
-//#ifdef _DEBUG
-    {
-        float* exp2ssumWX_data = layer->exp2ssumWX->data.fl;
-        int i;
-        for( i = 0; i < layer->exp2ssumWX->rows; i++, exp2ssumWX_data++ )
-        {
-            if( *exp2ssumWX_data == FLT_MAX )
-                cvSetErrStatus( 1 );
-        }
-    }
-//#endif
     // compute the output variable Y == ( a - 2a/(layer->exp2ssumWX + 1))
     cvAddS( layer->exp2ssumWX, cvRealScalar(1), Y );
     cvDiv( 0, Y, Y, -2.0*layer->a );

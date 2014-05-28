@@ -1785,7 +1785,7 @@ cvError((status),(func),(context),__FILE__,__LINE__)
 {if (! (expr))                                      \
 {OPENCV_ERROR(CV_StsInternal,(func),(context));}}
 
-#define OPENCV_RSTERR() (cvSetErrStatus(CV_StsOk))
+#define OPENCV_RSTERR()
 
 #define OPENCV_CALL( Func )                                         \
 {                                                                   \

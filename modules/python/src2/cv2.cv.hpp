@@ -138,7 +138,6 @@ static PyObject *fromarray(PyObject *o, int allowND);
 static void translate_error_to_exception(void)
 {
   PyErr_SetString(opencv_error, cvErrorStr(cvGetErrStatus()));
-  cvSetErrStatus(0);
 }
 
 #define ERRCHK
