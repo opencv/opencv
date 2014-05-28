@@ -2187,7 +2187,7 @@ CvBtTrainer* cvBtStart( CvCARTClassifier** trees,
     {
         data_size += m * numclasses * sizeof( *(ptr->f) );
     }
-    CV_CALL( ptr = (CvBtTrainer*) cvAlloc( data_size ) );
+    ptr = (CvBtTrainer*) cvAlloc( data_size );
     memset( ptr, 0, data_size );
     ptr->f = (float*) (ptr + 1);
 
@@ -2222,7 +2222,7 @@ CvBtTrainer* cvBtStart( CvCARTClassifier** trees,
     ptr->type = type;
     ptr->numclasses = numclasses;
 
-    CV_CALL( ptr->y = cvCreateMat( 1, m, CV_32FC1 ) );
+    ptr->y = cvCreateMat( 1, m, CV_32FC1 );
     ptr->sampleIdx = sampleIdx;
     ptr->numsamples = ( sampleIdx == NULL ) ? ptr->m
                              : MAX( sampleIdx->rows, sampleIdx->cols );
@@ -2235,12 +2235,12 @@ CvBtTrainer* cvBtStart( CvCARTClassifier** trees,
         ptr->boosttrainer = cvBoostStartTraining( ptr->trainClasses, ptr->y,
             ptr->weights, NULL, type );
 
-        CV_CALL( cvBtNext( trees, ptr ) );
+        cvBtNext( trees, ptr );
     }
     else
     {
         data_size = sizeof( *zero_approx ) * numclasses;
-        CV_CALL( zero_approx = (float*) cvAlloc( data_size ) );
+        zero_approx = (float*) cvAlloc( data_size );
         icvZeroApproxFunc[type]( zero_approx, ptr );
         for( i = 0; i < m; i++ )
         {
@@ -2250,7 +2250,7 @@ CvBtTrainer* cvBtStart( CvCARTClassifier** trees,
             }
         }
 
-        CV_CALL( cvBtNext( trees, ptr ) );
+        cvBtNext( trees, ptr );
 
         for( i = 0; i < numclasses; i++ )
         {
@@ -2259,7 +2259,7 @@ CvBtTrainer* cvBtStart( CvCARTClassifier** trees,
                 trees[i]->val[j] += zero_approx[i];
             }
         }
-        CV_CALL( cvFree( &zero_approx ) );
+        cvFree( &zero_approx );
     }
 
     __END__;
@@ -2909,17 +2909,17 @@ void cvBtEnd( CvBtTrainer** trainer )
 
     if( (*trainer)->y != NULL )
     {
-        CV_CALL( cvReleaseMat( &((*trainer)->y) ) );
+        cvReleaseMat( &((*trainer)->y) );
     }
     if( (*trainer)->weights != NULL )
     {
-        CV_CALL( cvReleaseMat( &((*trainer)->weights) ) );
+        cvReleaseMat( &((*trainer)->weights) );
     }
     if( (*trainer)->boosttrainer != NULL )
     {
-        CV_CALL( cvBoostEndTraining( &((*trainer)->boosttrainer) ) );
+        cvBoostEndTraining( &((*trainer)->boosttrainer) );
     }
-    CV_CALL( cvFree( trainer ) );
+    cvFree( trainer );
 
     __END__;
 }
@@ -2945,7 +2945,7 @@ float cvEvalBtClassifier( CvClassifier* classifier, CvMat* sample )
         CvSeqReader reader;
         CvCARTClassifier* tree;
 
-        CV_CALL( cvStartReadSeq( ((CvBtClassifier*) classifier)->seq, &reader ) );
+        cvStartReadSeq( ((CvBtClassifier*) classifier)->seq, &reader );
         for( i = 0; i < ((CvBtClassifier*) classifier)->numiter; i++ )
         {
             CV_READ_SEQ_ELEM( tree, reader );
@@ -2978,7 +2978,7 @@ float cvEvalBtClassifier2( CvClassifier* classifier, CvMat* sample )
 
     __BEGIN__;
 
-    CV_CALL( val = cvEvalBtClassifier( classifier, sample ) );
+    val = cvEvalBtClassifier( classifier, sample );
 
     __END__;
 
@@ -3003,7 +3003,7 @@ float cvEvalBtClassifierK( CvClassifier* classifier, CvMat* sample )
 
     numclasses = ((CvBtClassifier*) classifier)->numclasses;
     data_size = sizeof( *vals ) * numclasses;
-    CV_CALL( vals = (float*) cvAlloc( data_size ) );
+    vals = (float*) cvAlloc( data_size );
     memset( vals, 0, data_size );
 
     if( CV_IS_TUNABLE( classifier->flags ) )
@@ -3011,7 +3011,7 @@ float cvEvalBtClassifierK( CvClassifier* classifier, CvMat* sample )
         CvSeqReader reader;
         CvCARTClassifier* tree;
 
-        CV_CALL( cvStartReadSeq( ((CvBtClassifier*) classifier)->seq, &reader ) );
+        cvStartReadSeq( ((CvBtClassifier*) classifier)->seq, &reader );
         for( i = 0; i < ((CvBtClassifier*) classifier)->numiter; i++ )
         {
             for( k = 0; k < numclasses; k++ )
@@ -3047,7 +3047,7 @@ float cvEvalBtClassifierK( CvClassifier* classifier, CvMat* sample )
         }
     }
 
-    CV_CALL( cvFree( &vals ) );
+    cvFree( &vals );
 
     __END__;
 
@@ -3092,7 +3092,7 @@ int cvSaveBtClassifier( CvClassifier* classifier, const char* filename )
 
     if( CV_IS_TUNABLE( classifier->flags ) )
     {
-        CV_CALL( cvStartReadSeq( ((CvBtClassifier*) classifier)->seq, &reader ) );
+        cvStartReadSeq( ((CvBtClassifier*) classifier)->seq, &reader );
     }
     fprintf( file, "%d %d\n%d\n%d\n", (int) ((CvBtClassifier*) classifier)->type,
                                       ((CvBtClassifier*) classifier)->numclasses,
@@ -3152,14 +3152,14 @@ void cvReleaseBtClassifier( CvClassifier** ptr )
         CvSeqReader reader;
         CvCARTClassifier* tree;
 
-        CV_CALL( cvStartReadSeq( ((CvBtClassifier*) *ptr)->seq, &reader ) );
+        cvStartReadSeq( ((CvBtClassifier*) *ptr)->seq, &reader );
         for( i = 0; i < ((CvBtClassifier*) *ptr)->numclasses *
                         ((CvBtClassifier*) *ptr)->numiter; i++ )
         {
             CV_READ_SEQ_ELEM( tree, reader );
             tree->release( (CvClassifier**) (&tree) );
         }
-        CV_CALL( cvReleaseMemStorage( &(((CvBtClassifier*) *ptr)->seq->storage) ) );
+        cvReleaseMemStorage( &(((CvBtClassifier*) *ptr)->seq->storage) );
     }
     else
     {
@@ -3174,7 +3174,7 @@ void cvReleaseBtClassifier( CvClassifier** ptr )
         }
     }
 
-    CV_CALL( cvFree( ptr ) );
+    cvFree( ptr );
     *ptr = NULL;
 
     __END__;
@@ -3204,12 +3204,12 @@ static void cvTuneBtClassifier( CvClassifier* classifier, CvMat*, int flags,
             printf( "Iteration %d\n", ((CvBtClassifier*) classifier)->numiter + 1 );
 
             data_size = sizeof( *trees ) * ((CvBtClassifier*) classifier)->numclasses;
-            CV_CALL( trees = (CvCARTClassifier**) cvAlloc( data_size ) );
-            CV_CALL( cvBtNext( trees,
-                (CvBtTrainer*) ((CvBtClassifier*) classifier)->trainer ) );
-            CV_CALL( cvSeqPushMulti( ((CvBtClassifier*) classifier)->seq,
-                trees, ((CvBtClassifier*) classifier)->numclasses ) );
-            CV_CALL( cvFree( &trees ) );
+            trees = (CvCARTClassifier**) cvAlloc( data_size );
+            cvBtNext( trees,
+                (CvBtTrainer*) ((CvBtClassifier*) classifier)->trainer );
+            cvSeqPushMulti( ((CvBtClassifier*) classifier)->seq,
+                trees, ((CvBtClassifier*) classifier)->numclasses );
+            cvFree( &trees );
             ((CvBtClassifier*) classifier)->numiter++;
         }
     }
@@ -3226,14 +3226,14 @@ static void cvTuneBtClassifier( CvClassifier* classifier, CvMat*, int flags,
 
             data_size = sizeof( ((CvBtClassifier*) classifier)->trees[0] ) *
                 ((CvBtClassifier*) classifier)->seq->total;
-            CV_CALL( ptr = cvAlloc( data_size ) );
-            CV_CALL( cvCvtSeqToArray( ((CvBtClassifier*) classifier)->seq, ptr ) );
-            CV_CALL( cvReleaseMemStorage(
-                    &(((CvBtClassifier*) classifier)->seq->storage) ) );
+            ptr = cvAlloc( data_size );
+            cvCvtSeqToArray( ((CvBtClassifier*) classifier)->seq, ptr );
+            cvReleaseMemStorage(
+                    &(((CvBtClassifier*) classifier)->seq->storage) );
             ((CvBtClassifier*) classifier)->trees = (CvCARTClassifier**) ptr;
             classifier->flags &= ~CV_TUNABLE;
-            CV_CALL( cvBtEnd( (CvBtTrainer**)
-                &(((CvBtClassifier*) classifier)->trainer )) );
+            cvBtEnd( (CvBtTrainer**)
+                &(((CvBtClassifier*) classifier)->trainer ));
             ((CvBtClassifier*) classifier)->trainer = NULL;
         }
     }
@@ -3346,14 +3346,14 @@ CvClassifier* cvCreateBtClassifier( CvMat* trainData,
     printf( "Iteration %d\n", 1 );
 
     data_size = sizeof( *trees ) * ptr->numclasses;
-    CV_CALL( trees = (CvCARTClassifier**) cvAlloc( data_size ) );
+    trees = (CvCARTClassifier**) cvAlloc( data_size );
 
-    CV_CALL( ptr->trainer = cvBtStart( trees, trainData, flags, trainClasses, sampleIdx,
+    ptr->trainer = cvBtStart( trees, trainData, flags, trainClasses, sampleIdx,
         ((CvBtClassifierTrainParams*) trainParams)->numsplits, type, num_classes,
-        &(((CvBtClassifierTrainParams*) trainParams)->param[0]) ) );
+        &(((CvBtClassifierTrainParams*) trainParams)->param[0]) );
 
-    CV_CALL( cvSeqPushMulti( ptr->seq, trees, ptr->numclasses ) );
-    CV_CALL( cvFree( &trees ) );
+    cvSeqPushMulti( ptr->seq, trees, ptr->numclasses );
+    cvFree( &trees );
     ptr->numiter++;
 
     for( i = 1; i < num_iter; i++ )
@@ -3424,7 +3424,7 @@ CvClassifier* cvCreateBtClassifierFromFile( const char* filename )
             + count * ( sizeof( *(tree->compidx) ) + sizeof( *(tree->threshold) ) +
                         sizeof( *(tree->right) ) + sizeof( *(tree->left) ) )
             + (count + 1) * ( sizeof( *(tree->val) ) );
-        CV_CALL( tree = (CvCARTClassifier*) cvAlloc( data_size ) );
+        tree = (CvCARTClassifier*) cvAlloc( data_size );
         memset( tree, 0, data_size );
         tree->eval = cvEvalCARTClassifier;
         tree->tune = NULL;
@@ -3518,7 +3518,7 @@ CvMat* cvTrimWeights( CvMat* weights, CvMat* idx, float factor )
 
         if( i > 0 || ( idx != NULL && CV_MAT_TYPE( idx->type ) != CV_32FC1 ) )
         {
-            CV_CALL( ptr = cvCreateMat( 1, num - i, CV_32FC1 ) );
+            ptr = cvCreateMat( 1, num - i, CV_32FC1 );
             count = 0;
             for( i = 0; i < num; i++ )
             {
@@ -3583,14 +3583,14 @@ void cvReadTrainData( const char* filename, int flags,
 
     if( CV_IS_ROW_SAMPLE( flags ) )
     {
-        CV_CALL( *trainData = cvCreateMat( m, n, CV_32FC1 ) );
+        *trainData = cvCreateMat( m, n, CV_32FC1 );
     }
     else
     {
-        CV_CALL( *trainData = cvCreateMat( n, m, CV_32FC1 ) );
+        *trainData = cvCreateMat( n, m, CV_32FC1 );
     }
 
-    CV_CALL( *trainClasses = cvCreateMat( 1, m, CV_32FC1 ) );
+    *trainClasses = cvCreateMat( 1, m, CV_32FC1 );
 
     for( i = 0; i < m; i++ )
     {

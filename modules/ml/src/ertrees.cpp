@@ -96,10 +96,10 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     var_all = 0;
     rng = &cv::theRNG();
 
-    CV_CALL( set_params( _params ));
+    set_params( _params );
 
     // check parameter types and sizes
-    CV_CALL( cvCheckTrainData( _train_data, _tflag, _missing_mask, &var_all, &sample_all ));
+    cvCheckTrainData( _train_data, _tflag, _missing_mask, &var_all, &sample_all );
 
     train_data = _train_data;
     responses = _responses;
@@ -126,14 +126,14 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
     if( _sample_idx )
     {
-        CV_CALL( sample_indices = cvPreprocessIndexArray( _sample_idx, sample_all ));
+        sample_indices = cvPreprocessIndexArray( _sample_idx, sample_all );
         sidx = sample_indices->data.i;
         sample_count = sample_indices->rows + sample_indices->cols - 1;
     }
 
     if( _var_idx )
     {
-        CV_CALL( var_idx = cvPreprocessIndexArray( _var_idx, var_all ));
+        var_idx = cvPreprocessIndexArray( _var_idx, var_all );
         vidx = var_idx->data.i;
         var_count = var_idx->rows + var_idx->cols - 1;
     }
@@ -153,9 +153,9 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
     r_type = CV_VAR_CATEGORICAL;
     if( _var_type )
-        CV_CALL( var_type0 = cvPreprocessVarType( _var_type, var_idx, var_count, &r_type ));
+        var_type0 = cvPreprocessVarType( _var_type, var_idx, var_count, &r_type );
 
-    CV_CALL( var_type = cvCreateMat( 1, var_count+2, CV_32SC1 ));
+    var_type = cvCreateMat( 1, var_count+2, CV_32SC1 );
 
     cat_var_count = 0;
     ord_var_count = -1;
@@ -204,23 +204,23 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
     if ( is_buf_16u )
     {
-        CV_CALL( buf = cvCreateMat( effective_buf_height, effective_buf_width, CV_16UC1 ));
-        CV_CALL( pair16u32s_ptr = (CvPair16u32s*)cvAlloc( sample_count*sizeof(pair16u32s_ptr[0]) ));
+        buf = cvCreateMat( effective_buf_height, effective_buf_width, CV_16UC1 );
+        pair16u32s_ptr = (CvPair16u32s*)cvAlloc( sample_count*sizeof(pair16u32s_ptr[0]) );
     }
     else
     {
-        CV_CALL( buf = cvCreateMat( effective_buf_height, effective_buf_width, CV_32SC1 ));
-        CV_CALL( int_ptr = (int**)cvAlloc( sample_count*sizeof(int_ptr[0]) ));
+        buf = cvCreateMat( effective_buf_height, effective_buf_width, CV_32SC1 );
+        int_ptr = (int**)cvAlloc( sample_count*sizeof(int_ptr[0]) );
     }
 
     size = is_classifier ? cat_var_count+1 : cat_var_count;
     size = !size ? 1 : size;
-    CV_CALL( cat_count = cvCreateMat( 1, size, CV_32SC1 ));
-    CV_CALL( cat_ofs = cvCreateMat( 1, size, CV_32SC1 ));
+    cat_count = cvCreateMat( 1, size, CV_32SC1 );
+    cat_ofs = cvCreateMat( 1, size, CV_32SC1 );
 
     size = is_classifier ? (cat_var_count + 1)*params.max_categories : cat_var_count*params.max_categories;
     size = !size ? 1 : size;
-    CV_CALL( cat_map = cvCreateMat( 1, size, CV_32SC1 ));
+    cat_map = cvCreateMat( 1, size, CV_32SC1 );
 
     // now calculate the maximum size of split,
     // create memory storage that will keep nodes and splits of the decision tree
@@ -229,8 +229,8 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
         (MAX(0,sample_count - 33)/32)*sizeof(int),sizeof(void*));
     tree_block_size = MAX((int)sizeof(CvDTreeNode)*8, max_split_size);
     tree_block_size = MAX(tree_block_size + block_size_delta, min_block_size);
-    CV_CALL( tree_storage = cvCreateMemStorage( tree_block_size ));
-    CV_CALL( node_heap = cvCreateSet( 0, sizeof(*node_heap), sizeof(CvDTreeNode), tree_storage ));
+    tree_storage = cvCreateMemStorage( tree_block_size );
+    node_heap = cvCreateSet( 0, sizeof(*node_heap), sizeof(CvDTreeNode), tree_storage );
 
     nv_size = var_count*sizeof(int);
     nv_size = cvAlign(MAX( nv_size, (int)sizeof(CvSetElem) ), sizeof(void*));
@@ -248,12 +248,12 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     }
 
     temp_block_size = MAX( temp_block_size + block_size_delta, min_block_size );
-    CV_CALL( temp_storage = cvCreateMemStorage( temp_block_size ));
-    CV_CALL( nv_heap = cvCreateSet( 0, sizeof(*nv_heap), nv_size, temp_storage ));
+    temp_storage = cvCreateMemStorage( temp_block_size );
+    nv_heap = cvCreateSet( 0, sizeof(*nv_heap), nv_size, temp_storage );
     if( cv_size )
-        CV_CALL( cv_heap = cvCreateSet( 0, sizeof(*cv_heap), cv_size, temp_storage ));
+        cv_heap = cvCreateSet( 0, sizeof(*cv_heap), cv_size, temp_storage );
 
-    CV_CALL( data_root = new_node( 0, sample_count, 0, 0 ));
+    data_root = new_node( 0, sample_count, 0, 0 );
 
     max_c_count = 1;
 
@@ -376,8 +376,8 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
             if( cat_map->cols < total_c_count + c_count )
             {
                 tmp_map = cat_map;
-                CV_CALL( cat_map = cvCreateMat( 1,
-                    MAX(cat_map->cols*3/2,total_c_count+c_count), CV_32SC1 ));
+                cat_map = cvCreateMat( 1,
+                    MAX(cat_map->cols*3/2,total_c_count+c_count), CV_32SC1 );
                 for( i = 0; i < total_c_count; i++ )
                     cat_map->data.i[i] = tmp_map->data.i[i];
                 cvReleaseMat( &tmp_map );
@@ -504,14 +504,14 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
     max_split_size = cvAlign(sizeof(CvDTreeSplit) +
         (MAX(0,max_c_count - 33)/32)*sizeof(int),sizeof(void*));
-    CV_CALL( split_heap = cvCreateSet( 0, sizeof(*split_heap), max_split_size, tree_storage ));
+    split_heap = cvCreateSet( 0, sizeof(*split_heap), max_split_size, tree_storage );
 
     have_priors = is_classifier && params.priors;
     if( is_classifier )
     {
         int m = get_num_classes();
         double sum = 0;
-        CV_CALL( priors = cvCreateMat( 1, m, CV_64F ));
+        priors = cvCreateMat( 1, m, CV_64F );
         for( i = 0; i < m; i++ )
         {
             double val = have_priors ? params.priors[i] : 1.;
@@ -525,12 +525,12 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
         if( have_priors )
             cvScale( priors, priors, 1./sum );
 
-        CV_CALL( priors_mult = cvCloneMat( priors ));
-        CV_CALL( counts = cvCreateMat( 1, m, CV_32SC1 ));
+        priors_mult = cvCloneMat( priors );
+        counts = cvCreateMat( 1, m, CV_32SC1 );
     }
 
-    CV_CALL( direction = cvCreateMat( 1, sample_count, CV_8UC1 ));
-    CV_CALL( split_buf = cvCreateMat( 1, sample_count, CV_32SC1 ));
+    direction = cvCreateMat( 1, sample_count, CV_8UC1 );
+    split_buf = cvCreateMat( 1, sample_count, CV_32SC1 );
 
     __END__;
 
@@ -627,9 +627,9 @@ void CvERTreeTrainData::get_vectors( const CvMat* _subsample_idx,
 
     if( _subsample_idx )
     {
-        CV_CALL( subsample_idx = cvPreprocessIndexArray( _subsample_idx, sample_count ));
+        subsample_idx = cvPreprocessIndexArray( _subsample_idx, sample_count );
         sidx = subsample_idx->data.i;
-        CV_CALL( subsample_co = cvCreateMat( 1, sample_count*2, CV_32SC1 ));
+        subsample_co = cvCreateMat( 1, sample_count*2, CV_32SC1 );
         co = subsample_co->data.i;
         cvZero( subsample_co );
         count = subsample_idx->cols + subsample_idx->rows - 1;
@@ -1560,8 +1560,8 @@ bool CvERTrees::train( const CvMat* _train_data, int _tflag,
         params.cv_folds, params.use_1se_rule, false, params.priors );
 
     data = new CvERTreeTrainData();
-    CV_CALL(data->set_data( _train_data, _tflag, _responses, _var_idx,
-        _sample_idx, _var_type, _missing_mask, tree_params, true));
+    data->set_data( _train_data, _tflag, _responses, _var_idx,
+        _sample_idx, _var_type, _missing_mask, tree_params, true);
 
     var_count = data->var_count;
     if( params.nactive_vars > var_count )
@@ -1572,10 +1572,10 @@ bool CvERTrees::train( const CvMat* _train_data, int _tflag,
         CV_ERROR( CV_StsBadArg, "<nactive_vars> must be non-negative" );
 
     // Create mask of active variables at the tree nodes
-    CV_CALL(active_var_mask = cvCreateMat( 1, var_count, CV_8UC1 ));
+    active_var_mask = cvCreateMat( 1, var_count, CV_8UC1 );
     if( params.calc_var_importance )
     {
-        CV_CALL(var_importance  = cvCreateMat( 1, var_count, CV_32FC1 ));
+        var_importance  = cvCreateMat( 1, var_count, CV_32FC1 );
         cvZero(var_importance);
     }
     { // initialize active variables mask
@@ -1590,7 +1590,7 @@ bool CvERTrees::train( const CvMat* _train_data, int _tflag,
         }
     }
 
-    CV_CALL(result = grow_forest( params.term_crit ));
+    result = grow_forest( params.term_crit );
 
     result = true;
 
@@ -1607,7 +1607,7 @@ bool CvERTrees::train( CvMLData* _data, CvRTParams params)
 
     __BEGIN__;
 
-    CV_CALL( result = CvRTrees::train( _data, params) );
+    result = CvRTrees::train( _data, params);
 
     __END__;
 
@@ -1653,7 +1653,7 @@ bool CvERTrees::grow_forest( const CvTermCriteria term_crit )
     {
         if( data->is_classifier )
         {
-            CV_CALL(oob_sample_votes = cvCreateMat( nsamples, nclasses, CV_32SC1 ));
+            oob_sample_votes = cvCreateMat( nsamples, nclasses, CV_32SC1 );
             cvZero(oob_sample_votes);
         }
         else
@@ -1662,18 +1662,18 @@ bool CvERTrees::grow_forest( const CvTermCriteria term_crit )
             //    = sum of predicted values for the i-th sample
             // oob_responses[1,i] = oob_num_of_predictions[i]
             //    = number of summands (number of predictions for the i-th sample)
-            CV_CALL(oob_responses = cvCreateMat( 2, nsamples, CV_32FC1 ));
+            oob_responses = cvCreateMat( 2, nsamples, CV_32FC1 );
             cvZero(oob_responses);
             cvGetRow( oob_responses, &oob_predictions_sum, 0 );
             cvGetRow( oob_responses, &oob_num_of_predictions, 1 );
         }
 
-        CV_CALL(oob_samples_perm_ptr     = (float*)cvAlloc( sizeof(float)*nsamples*dims ));
-        CV_CALL(samples_ptr              = (float*)cvAlloc( sizeof(float)*nsamples*dims ));
-        CV_CALL(missing_ptr              = (uchar*)cvAlloc( sizeof(uchar)*nsamples*dims ));
-        CV_CALL(true_resp_ptr            = (float*)cvAlloc( sizeof(float)*nsamples ));
+        oob_samples_perm_ptr     = (float*)cvAlloc( sizeof(float)*nsamples*dims );
+        samples_ptr              = (float*)cvAlloc( sizeof(float)*nsamples*dims );
+        missing_ptr              = (uchar*)cvAlloc( sizeof(uchar)*nsamples*dims );
+        true_resp_ptr            = (float*)cvAlloc( sizeof(float)*nsamples );
 
-        CV_CALL(data->get_vectors( 0, samples_ptr, missing_ptr, true_resp_ptr ));
+        data->get_vectors( 0, samples_ptr, missing_ptr, true_resp_ptr );
         {
             double minval, maxval;
             CvMat responses = cvMat(1, nsamples, CV_32FC1, true_resp_ptr);
@@ -1685,7 +1685,7 @@ bool CvERTrees::grow_forest( const CvTermCriteria term_crit )
     trees = (CvForestTree**)cvAlloc( sizeof(trees[0])*max_ntrees );
     memset( trees, 0, sizeof(trees[0])*max_ntrees );
 
-    CV_CALL(sample_idx_for_tree = cvCreateMat( 1, nsamples, CV_32SC1 ));
+    sample_idx_for_tree = cvCreateMat( 1, nsamples, CV_32SC1 );
 
     for (int i = 0; i < nsamples; i++)
         sample_idx_for_tree->data.i[i] = i;
@@ -1698,7 +1698,7 @@ bool CvERTrees::grow_forest( const CvTermCriteria term_crit )
 
         trees[ntrees] = new CvForestERTree();
         tree = (CvForestERTree*)trees[ntrees];
-        CV_CALL(tree->train( data, 0, this ));
+        tree->train( data, 0, this );
 
         if ( is_oob_or_vimportance )
         {
@@ -1715,7 +1715,7 @@ bool CvERTrees::grow_forest( const CvTermCriteria term_crit )
 
                 // predict oob samples
                 if( !predicted_node )
-                    CV_CALL(predicted_node = tree->predict(&sample, &missing, true));
+                    predicted_node = tree->predict(&sample, &missing, true);
 
                 if( !data->is_classifier ) //regression
                 {

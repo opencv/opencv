@@ -102,36 +102,36 @@ cvCreateTestSet( int type, CvMat** samples,
         CvSeq* seq = NULL;
         int i, cur_class;
 
-        CV_CALL( *samples = cvCreateMat( num_samples, num_features, CV_32FC1 ) );
-        CV_CALL( *responses = cvCreateMat( 1, num_samples, CV_32SC1 ) );
-        CV_CALL( mean = cvCreateMat( 1, num_features, CV_32FC1 ) );
-        CV_CALL( cvSetZero( mean ) );
-        CV_CALL( cov = cvCreateMat( num_features, num_features, CV_32FC1 ) );
-        CV_CALL( cvSetIdentity( cov ) );
+        *samples = cvCreateMat( num_samples, num_features, CV_32FC1 );
+        *responses = cvCreateMat( 1, num_samples, CV_32SC1 );
+        mean = cvCreateMat( 1, num_features, CV_32FC1 );
+        cvSetZero( mean );
+        cov = cvCreateMat( num_features, num_features, CV_32FC1 );
+        cvSetIdentity( cov );
 
         /* fill the feature values matrix with random numbers drawn from standard
            normal distribution */
-        CV_CALL( cvRandMVNormal( mean, cov, *samples ) );
+        cvRandMVNormal( mean, cov, *samples );
 
         /* calculate distances from the origin to the samples and put them
            into the sequence along with indices */
-        CV_CALL( storage = cvCreateMemStorage() );
-        CV_CALL( cvStartWriteSeq( 0, sizeof( CvSeq ), sizeof( CvDI ), storage, &writer ));
+        storage = cvCreateMemStorage();
+        cvStartWriteSeq( 0, sizeof( CvSeq ), sizeof( CvDI ), storage, &writer );
         for( i = 0; i < (*samples)->rows; ++i )
         {
-            CV_CALL( cvGetRow( *samples, &sample, i ));
+            cvGetRow( *samples, &sample, i );
             elem.i = i;
-            CV_CALL( elem.d = cvNorm( &sample, NULL, CV_L2 ));
+            elem.d = cvNorm( &sample, NULL, CV_L2 );
             CV_WRITE_SEQ_ELEM( elem, writer );
         }
-        CV_CALL( seq = cvEndWriteSeq( &writer ) );
+        seq = cvEndWriteSeq( &writer );
 
         /* sort the sequence in a distance ascending order */
-        CV_CALL( cvSeqSort( seq, icvCmpDI, NULL ) );
+        cvSeqSort( seq, icvCmpDI, NULL );
 
         /* assign class labels */
         num_classes = MIN( num_samples, num_classes );
-        CV_CALL( cvStartReadSeq( seq, &reader ) );
+        cvStartReadSeq( seq, &reader );
         CV_READ_SEQ_ELEM( elem, reader );
         for( i = 0, cur_class = 0; i < num_samples; ++cur_class )
         {
@@ -139,7 +139,7 @@ cvCreateTestSet( int type, CvMat** samples,
             double max_dst;
 
             last_idx = num_samples * (cur_class + 1) / num_classes - 1;
-            CV_CALL( max_dst = (*((CvDI*) cvGetSeqElem( seq, last_idx ))).d );
+            max_dst = (*((CvDI*) cvGetSeqElem( seq, last_idx ))).d;
             max_dst = MAX( max_dst, elem.d );
 
             for( ; elem.d <= max_dst && i < num_samples; ++i )

@@ -1332,8 +1332,8 @@ bool CvSVM::do_train( int svm_type, int sample_count, int var_count, const float
     {
         int sv_count = 0;
 
-        CV_CALL( decision_func = df =
-            (CvSVMDecisionFunc*)cvAlloc( sizeof(df[0]) ));
+        decision_func = df =
+            (CvSVMDecisionFunc*)cvAlloc( sizeof(df[0]) );
 
         df->rho = 0;
         if( !train1( sample_count, var_count, samples, svm_type == ONE_CLASS ? 0 :
@@ -1346,14 +1346,14 @@ bool CvSVM::do_train( int svm_type, int sample_count, int var_count, const float
         CV_Assert(sv_count != 0);
 
         sv_total = df->sv_count = sv_count;
-        CV_CALL( df->alpha = (double*)cvMemStorageAlloc( storage, sv_count*sizeof(df->alpha[0])) );
-        CV_CALL( sv = (float**)cvMemStorageAlloc( storage, sv_count*sizeof(sv[0])));
+        df->alpha = (double*)cvMemStorageAlloc( storage, sv_count*sizeof(df->alpha[0]));
+        sv = (float**)cvMemStorageAlloc( storage, sv_count*sizeof(sv[0]));
 
         for( i = k = 0; i < sample_count; i++ )
         {
             if( fabs(alpha[i]) > 0 )
             {
-                CV_CALL( sv[k] = (float*)cvMemStorageAlloc( storage, sample_size ));
+                sv[k] = (float*)cvMemStorageAlloc( storage, sample_size );
                 memcpy( sv[k], samples[i], sample_size );
                 df->alpha[k++] = alpha[i];
             }
@@ -1378,21 +1378,21 @@ bool CvSVM::do_train( int svm_type, int sample_count, int var_count, const float
                 CV_ERROR( CV_StsBadArg, "params.class_weights must be 1d floating-point vector "
                     "containing as many elements as the number of classes" );
 
-            CV_CALL( class_weights = cvCreateMat( cw->rows, cw->cols, CV_64F ));
-            CV_CALL( cvConvert( cw, class_weights ));
-            CV_CALL( cvScale( class_weights, class_weights, params.C ));
+            class_weights = cvCreateMat( cw->rows, cw->cols, CV_64F );
+            cvConvert( cw, class_weights );
+            cvScale( class_weights, class_weights, params.C );
         }
 
-        CV_CALL( decision_func = df = (CvSVMDecisionFunc*)cvAlloc(
-            (class_count*(class_count-1)/2)*sizeof(df[0])));
+        decision_func = df = (CvSVMDecisionFunc*)cvAlloc(
+            (class_count*(class_count-1)/2)*sizeof(df[0]));
 
-        CV_CALL( sv_tab = (int*)cvMemStorageAlloc( temp_storage, sample_count*sizeof(sv_tab[0]) ));
+        sv_tab = (int*)cvMemStorageAlloc( temp_storage, sample_count*sizeof(sv_tab[0]) );
         memset( sv_tab, 0, sample_count*sizeof(sv_tab[0]) );
-        CV_CALL( class_ranges = (int*)cvMemStorageAlloc( temp_storage,
-                            (class_count + 1)*sizeof(class_ranges[0])));
-        CV_CALL( temp_samples = (const float**)cvMemStorageAlloc( temp_storage,
-                            sample_count*sizeof(temp_samples[0])));
-        CV_CALL( temp_y = (schar*)cvMemStorageAlloc( temp_storage, sample_count));
+        class_ranges = (int*)cvMemStorageAlloc( temp_storage,
+                            (class_count + 1)*sizeof(class_ranges[0]));
+        temp_samples = (const float**)cvMemStorageAlloc( temp_storage,
+                            sample_count*sizeof(temp_samples[0]));
+        temp_y = (schar*)cvMemStorageAlloc( temp_storage, sample_count);
 
         class_ranges[class_count] = 0;
         cvSortSamplesByClasses( samples, responses, class_ranges, 0 );
@@ -1456,10 +1456,10 @@ bool CvSVM::do_train( int svm_type, int sample_count, int var_count, const float
 
                 df->sv_count = sv_count;
 
-                CV_CALL( df->alpha = (double*)cvMemStorageAlloc( temp_storage,
-                                                sv_count*sizeof(df->alpha[0])));
-                CV_CALL( df->sv_index = (int*)cvMemStorageAlloc( temp_storage,
-                                                sv_count*sizeof(df->sv_index[0])));
+                df->alpha = (double*)cvMemStorageAlloc( temp_storage,
+                                                sv_count*sizeof(df->alpha[0]));
+                df->sv_index = (int*)cvMemStorageAlloc( temp_storage,
+                                                sv_count*sizeof(df->sv_index[0]));
 
                 for( k = 0; k < ci; k++ )
                 {
@@ -1491,13 +1491,13 @@ bool CvSVM::do_train( int svm_type, int sample_count, int var_count, const float
         }
 
         sv_total = k;
-        CV_CALL( sv = (float**)cvMemStorageAlloc( storage, sv_total*sizeof(sv[0])));
+        sv = (float**)cvMemStorageAlloc( storage, sv_total*sizeof(sv[0]));
 
         for( i = 0, k = 0; i < sample_count; i++ )
         {
             if( sv_tab[i] )
             {
-                CV_CALL( sv[k] = (float*)cvMemStorageAlloc( storage, sample_size ));
+                sv[k] = (float*)cvMemStorageAlloc( storage, sample_size );
                 memcpy( sv[k], samples[i], sample_size );
                 k++;
             }
@@ -1600,18 +1600,18 @@ bool CvSVM::train( const CvMat* _train_data, const CvMat* _responses,
     double* alpha;
 
     clear();
-    CV_CALL( set_params( _params ));
+    set_params( _params );
 
     svm_type = _params.svm_type;
 
     /* Prepare training data and related parameters */
-    CV_CALL( cvPrepareTrainData( "CvSVM::train", _train_data, CV_ROW_SAMPLE,
+    cvPrepareTrainData( "CvSVM::train", _train_data, CV_ROW_SAMPLE,
                                  svm_type != CvSVM::ONE_CLASS ? _responses : 0,
                                  svm_type == CvSVM::C_SVC ||
                                  svm_type == CvSVM::NU_SVC ? CV_VAR_CATEGORICAL :
                                  CV_VAR_ORDERED, _var_idx, _sample_idx,
                                  false, &samples, &sample_count, &var_count, &var_all,
-                                 &responses, &class_labels, &var_idx ));
+                                 &responses, &class_labels, &var_idx );
 
 
     sample_size = var_count*sizeof(samples[0][0]);
@@ -1622,9 +1622,9 @@ bool CvSVM::train( const CvMat* _train_data, const CvMat* _responses,
     block_size = MAX( block_size, sample_count*2*(int)sizeof(double) + 1024 );
     block_size = MAX( block_size, sample_size*2 + 1024 );
 
-    CV_CALL( storage = cvCreateMemStorage(block_size + sizeof(CvMemBlock) + sizeof(CvSeqBlock)));
-    CV_CALL( temp_storage = cvCreateChildMemStorage(storage));
-    CV_CALL( alpha = (double*)cvMemStorageAlloc(temp_storage, sample_count*sizeof(double)));
+    storage = cvCreateMemStorage(block_size + sizeof(CvMemBlock) + sizeof(CvSeqBlock));
+    temp_storage = cvCreateChildMemStorage(storage);
+    alpha = (double*)cvMemStorageAlloc(temp_storage, sample_count*sizeof(double));
 
     create_kernel();
     create_solver();
@@ -1703,7 +1703,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
     if( k_fold < 2 )
         CV_ERROR( CV_StsBadArg, "Parameter <k_fold> must be > 1" );
 
-    CV_CALL(set_params( _params ));
+    set_params( _params );
     svm_type = _params.svm_type;
 
     // All the parameters except, possibly, <coef0> are positive.
@@ -1714,7 +1714,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
         C_grid.step = 10;
     }
     else
-        CV_CALL(C_grid.check());
+        C_grid.check();
 
     if( gamma_grid.step <= 1 )
     {
@@ -1722,7 +1722,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
         gamma_grid.step = 10;
     }
     else
-        CV_CALL(gamma_grid.check());
+        gamma_grid.check();
 
     if( p_grid.step <= 1 )
     {
@@ -1730,7 +1730,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
         p_grid.step = 10;
     }
     else
-        CV_CALL(p_grid.check());
+        p_grid.check();
 
     if( nu_grid.step <= 1 )
     {
@@ -1738,7 +1738,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
         nu_grid.step = 10;
     }
     else
-        CV_CALL(nu_grid.check());
+        nu_grid.check();
 
     if( coef_grid.step <= 1 )
     {
@@ -1746,7 +1746,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
         coef_grid.step = 10;
     }
     else
-        CV_CALL(coef_grid.check());
+        coef_grid.check();
 
     if( degree_grid.step <= 1 )
     {
@@ -1754,7 +1754,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
         degree_grid.step = 10;
     }
     else
-        CV_CALL(degree_grid.check());
+        degree_grid.check();
 
     // these parameters are not used:
     if( params.kernel_type != CvSVM::POLY )
@@ -1774,13 +1774,13 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
     CV_ASSERT( p_step > 1 && C_step > 1 && nu_step > 1 );
 
     /* Prepare training data and related parameters */
-    CV_CALL(cvPrepareTrainData( "CvSVM::train_auto", _train_data, CV_ROW_SAMPLE,
+    cvPrepareTrainData( "CvSVM::train_auto", _train_data, CV_ROW_SAMPLE,
                                  svm_type != CvSVM::ONE_CLASS ? _responses : 0,
                                  svm_type == CvSVM::C_SVC ||
                                  svm_type == CvSVM::NU_SVC ? CV_VAR_CATEGORICAL :
                                  CV_VAR_ORDERED, _var_idx, _sample_idx,
                                  false, &samples, &sample_count, &var_count, &var_all,
-                                 &responses, &class_labels, &var_idx ));
+                                 &responses, &class_labels, &var_idx );
 
     sample_size = var_count*sizeof(samples[0][0]);
 
@@ -1790,9 +1790,9 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
     block_size = MAX( block_size, sample_count*2*(int)sizeof(double) + 1024 );
     block_size = MAX( block_size, sample_size*2 + 1024 );
 
-    CV_CALL( storage = cvCreateMemStorage(block_size + sizeof(CvMemBlock) + sizeof(CvSeqBlock)));
-    CV_CALL(temp_storage = cvCreateChildMemStorage(storage));
-    CV_CALL(alpha = (double*)cvMemStorageAlloc(temp_storage, sample_count*sizeof(double)));
+    storage = cvCreateMemStorage(block_size + sizeof(CvMemBlock) + sizeof(CvSeqBlock));
+    temp_storage = cvCreateChildMemStorage(storage);
+    alpha = (double*)cvMemStorageAlloc(temp_storage, sample_count*sizeof(double));
 
     create_kernel();
     create_solver();
@@ -2030,7 +2030,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
     params.degree = best_degree;
     params.coef0  = best_coef;
 
-    CV_CALL(ok = do_train( svm_type, sample_count, var_count, samples, responses, temp_storage, alpha ));
+    ok = do_train( svm_type, sample_count, var_count, samples, responses, temp_storage, alpha );
 
     __END__;
 
@@ -2133,8 +2133,8 @@ float CvSVM::predict( const CvMat* sample, bool returnDFVal ) const
     class_count = class_labels ? class_labels->cols :
                   params.svm_type == ONE_CLASS ? 1 : 0;
 
-    CV_CALL( cvPreparePredictData( sample, var_all, var_idx,
-                                   class_count, 0, &row_sample ));
+    cvPreparePredictData( sample, var_all, var_idx,
+                                   class_count, 0, &row_sample );
     result = predict( row_sample, get_var_count(), returnDFVal );
 
     __END__;
@@ -2492,9 +2492,9 @@ void CvSVM::read( CvFileStorage* fs, CvFileNode* svm_node )
     if( !isSvmModelApplicable(sv_total, var_all, var_count, class_count) )
         CV_ERROR( CV_StsParseError, "SVM model data is invalid, check sv_count, var_* and class_count tags" );
 
-    CV_CALL( class_labels = (CvMat*)cvReadByName( fs, svm_node, "class_labels" ));
-    CV_CALL( class_weights = (CvMat*)cvReadByName( fs, svm_node, "class_weights" ));
-    CV_CALL( var_idx = (CvMat*)cvReadByName( fs, svm_node, "var_idx" ));
+    class_labels = (CvMat*)cvReadByName( fs, svm_node, "class_labels" );
+    class_weights = (CvMat*)cvReadByName( fs, svm_node, "class_weights" );
+    var_idx = (CvMat*)cvReadByName( fs, svm_node, "var_idx" );
 
     if( class_count > 1 && (!class_labels ||
         !CV_IS_MAT(class_labels) || class_labels->cols != class_count))
@@ -2512,11 +2512,11 @@ void CvSVM::read( CvFileStorage* fs, CvFileNode* svm_node )
     block_size = MAX( block_size, sv_total*2*(int)sizeof(double));
     block_size = MAX( block_size, var_all*(int)sizeof(double));
 
-    CV_CALL( storage = cvCreateMemStorage(block_size + sizeof(CvMemBlock) + sizeof(CvSeqBlock)));
-    CV_CALL( sv = (float**)cvMemStorageAlloc( storage,
-                                sv_total*sizeof(sv[0]) ));
+    storage = cvCreateMemStorage(block_size + sizeof(CvMemBlock) + sizeof(CvSeqBlock));
+    sv = (float**)cvMemStorageAlloc( storage,
+                                sv_total*sizeof(sv[0]) );
 
-    CV_CALL( cvStartReadSeq( sv_node->data.seq, &reader, 0 ));
+    cvStartReadSeq( sv_node->data.seq, &reader, 0 );
     sv_size = var_count*sizeof(sv[0][0]);
 
     for( i = 0; i < sv_total; i++ )
@@ -2525,8 +2525,8 @@ void CvSVM::read( CvFileStorage* fs, CvFileNode* svm_node )
         CV_ASSERT( var_count == 1 || (CV_NODE_IS_SEQ(sv_elem->tag) &&
                    sv_elem->data.seq->total == var_count) );
 
-        CV_CALL( sv[i] = (float*)cvMemStorageAlloc( storage, sv_size ));
-        CV_CALL( cvReadRawData( fs, sv_elem, sv[i], "f" ));
+        sv[i] = (float*)cvMemStorageAlloc( storage, sv_size );
+        cvReadRawData( fs, sv_elem, sv[i], "f" );
         CV_NEXT_SEQ_ELEM( sv_node->data.seq->elem_size, reader );
     }
 
@@ -2538,7 +2538,7 @@ void CvSVM::read( CvFileStorage* fs, CvFileNode* svm_node )
         CV_ERROR( CV_StsParseError, "decision_functions is missing or is not a collection "
                   "or has a wrong number of elements" );
 
-    CV_CALL( df = decision_func = (CvSVMDecisionFunc*)cvAlloc( df_count*sizeof(df[0]) ));
+    df = decision_func = (CvSVMDecisionFunc*)cvAlloc( df_count*sizeof(df[0]) );
     cvStartReadSeq( df_node->data.seq, &reader, 0 );
 
     for( i = 0; i < df_count; i++ )
@@ -2558,22 +2558,22 @@ void CvSVM::read( CvFileStorage* fs, CvFileNode* svm_node )
         if( !alpha_node )
             CV_ERROR( CV_StsParseError, "alpha is missing in the decision function" );
 
-        CV_CALL( df[i].alpha = (double*)cvMemStorageAlloc( storage,
-                                        sv_count*sizeof(df[i].alpha[0])));
+        df[i].alpha = (double*)cvMemStorageAlloc( storage,
+                                        sv_count*sizeof(df[i].alpha[0]));
         CV_ASSERT( sv_count == 1 || (CV_NODE_IS_SEQ(alpha_node->tag) &&
                    alpha_node->data.seq->total == sv_count) );
-        CV_CALL( cvReadRawData( fs, alpha_node, df[i].alpha, "d" ));
+        cvReadRawData( fs, alpha_node, df[i].alpha, "d" );
 
         if( class_count > 1 )
         {
             CvFileNode* index_node = cvGetFileNodeByName( fs, df_elem, "index" );
             if( !index_node )
                 CV_ERROR( CV_StsParseError, "index is missing in the decision function" );
-            CV_CALL( df[i].sv_index = (int*)cvMemStorageAlloc( storage,
-                                            sv_count*sizeof(df[i].sv_index[0])));
+            df[i].sv_index = (int*)cvMemStorageAlloc( storage,
+                                            sv_count*sizeof(df[i].sv_index[0]));
             CV_ASSERT( sv_count == 1 || (CV_NODE_IS_SEQ(index_node->tag) &&
                    index_node->data.seq->total == sv_count) );
-            CV_CALL( cvReadRawData( fs, index_node, df[i].sv_index, "i" ));
+            cvReadRawData( fs, index_node, df[i].sv_index, "i" );
         }
         else
             df[i].sv_index = 0;
@@ -2916,8 +2916,8 @@ cvTrainSVM_CrossValidation( const CvMat* train_data, int tflag,
                 svm_params.p = p;
                 //printf("               p = %.3f\n", p );
 
-                CV_CALL(rate = cvCrossValidation( train_data, tflag, responses, &cvTrainSVM,
-                    cross_valid_params, (CvStatModelParams*)&svm_params, comp_idx, sample_idx ));
+                rate = cvCrossValidation( train_data, tflag, responses, &cvTrainSVM,
+                    cross_valid_params, (CvStatModelParams*)&svm_params, comp_idx, sample_idx );
 
                 well =  rate > best_rate && !is_regression || rate < best_rate && is_regression;
                 if( well || (rate == best_rate && C < best_C) )
@@ -2947,7 +2947,7 @@ cvTrainSVM_CrossValidation( const CvMat* train_data, int tflag,
     psvm_params->degree = best_degree;
     psvm_params->coef0  = best_coef;
 
-    CV_CALL(svm = cvTrainSVM( train_data, tflag, responses, model_params, comp_idx, sample_idx ));
+    svm = cvTrainSVM( train_data, tflag, responses, model_params, comp_idx, sample_idx );
 
     __END__;
 

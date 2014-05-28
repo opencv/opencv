@@ -203,10 +203,10 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     var_all = 0;
     rng = &cv::theRNG();
 
-    CV_CALL( set_params( _params ));
+    set_params( _params );
 
     // check parameter types and sizes
-    CV_CALL( cvCheckTrainData( _train_data, _tflag, _missing_mask, &var_all, &sample_all ));
+    cvCheckTrainData( _train_data, _tflag, _missing_mask, &var_all, &sample_all );
 
     train_data = _train_data;
     responses = _responses;
@@ -232,14 +232,14 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
     if( _sample_idx )
     {
-        CV_CALL( sample_indices = cvPreprocessIndexArray( _sample_idx, sample_all ));
+        sample_indices = cvPreprocessIndexArray( _sample_idx, sample_all );
         sidx = sample_indices->data.i;
         sample_count = sample_indices->rows + sample_indices->cols - 1;
     }
 
     if( _var_idx )
     {
-        CV_CALL( var_idx = cvPreprocessIndexArray( _var_idx, var_all ));
+        var_idx = cvPreprocessIndexArray( _var_idx, var_all );
         vidx = var_idx->data.i;
         var_count = var_idx->rows + var_idx->cols - 1;
     }
@@ -259,9 +259,9 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
     r_type = CV_VAR_CATEGORICAL;
     if( _var_type )
-        CV_CALL( var_type0 = cvPreprocessVarType( _var_type, var_idx, var_count, &r_type ));
+        var_type0 = cvPreprocessVarType( _var_type, var_idx, var_count, &r_type );
 
-    CV_CALL( var_type = cvCreateMat( 1, var_count+2, CV_32SC1 ));
+    var_type = cvCreateMat( 1, var_count+2, CV_32SC1 );
 
     cat_var_count = 0;
     ord_var_count = -1;
@@ -313,23 +313,23 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
     if ( is_buf_16u )
     {
-        CV_CALL( buf = cvCreateMat( effective_buf_height, effective_buf_width, CV_16UC1 ));
-        CV_CALL( pair16u32s_ptr = (CvPair16u32s*)cvAlloc( sample_count*sizeof(pair16u32s_ptr[0]) ));
+        buf = cvCreateMat( effective_buf_height, effective_buf_width, CV_16UC1 );
+        pair16u32s_ptr = (CvPair16u32s*)cvAlloc( sample_count*sizeof(pair16u32s_ptr[0]) );
     }
     else
     {
-        CV_CALL( buf = cvCreateMat( effective_buf_height, effective_buf_width, CV_32SC1 ));
-        CV_CALL( int_ptr = (int**)cvAlloc( sample_count*sizeof(int_ptr[0]) ));
+        buf = cvCreateMat( effective_buf_height, effective_buf_width, CV_32SC1 );
+        int_ptr = (int**)cvAlloc( sample_count*sizeof(int_ptr[0]) );
     }
 
     size = is_classifier ? (cat_var_count+1) : cat_var_count;
     size = !size ? 1 : size;
-    CV_CALL( cat_count = cvCreateMat( 1, size, CV_32SC1 ));
-    CV_CALL( cat_ofs = cvCreateMat( 1, size, CV_32SC1 ));
+    cat_count = cvCreateMat( 1, size, CV_32SC1 );
+    cat_ofs = cvCreateMat( 1, size, CV_32SC1 );
 
     size = is_classifier ? (cat_var_count + 1)*params.max_categories : cat_var_count*params.max_categories;
     size = !size ? 1 : size;
-    CV_CALL( cat_map = cvCreateMat( 1, size, CV_32SC1 ));
+    cat_map = cvCreateMat( 1, size, CV_32SC1 );
 
     // now calculate the maximum size of split,
     // create memory storage that will keep nodes and splits of the decision tree
@@ -338,8 +338,8 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
         (MAX(0,sample_count - 33)/32)*sizeof(int),sizeof(void*));
     tree_block_size = MAX((int)sizeof(CvDTreeNode)*8, max_split_size);
     tree_block_size = MAX(tree_block_size + block_size_delta, min_block_size);
-    CV_CALL( tree_storage = cvCreateMemStorage( tree_block_size ));
-    CV_CALL( node_heap = cvCreateSet( 0, sizeof(*node_heap), sizeof(CvDTreeNode), tree_storage ));
+    tree_storage = cvCreateMemStorage( tree_block_size );
+    node_heap = cvCreateSet( 0, sizeof(*node_heap), sizeof(CvDTreeNode), tree_storage );
 
     nv_size = var_count*sizeof(int);
     nv_size = cvAlign(MAX( nv_size, (int)sizeof(CvSetElem) ), sizeof(void*));
@@ -357,12 +357,12 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     }
 
     temp_block_size = MAX( temp_block_size + block_size_delta, min_block_size );
-    CV_CALL( temp_storage = cvCreateMemStorage( temp_block_size ));
-    CV_CALL( nv_heap = cvCreateSet( 0, sizeof(*nv_heap), nv_size, temp_storage ));
+    temp_storage = cvCreateMemStorage( temp_block_size );
+    nv_heap = cvCreateSet( 0, sizeof(*nv_heap), nv_size, temp_storage );
     if( cv_size )
-        CV_CALL( cv_heap = cvCreateSet( 0, sizeof(*cv_heap), cv_size, temp_storage ));
+        cv_heap = cvCreateSet( 0, sizeof(*cv_heap), cv_size, temp_storage );
 
-    CV_CALL( data_root = new_node( 0, sample_count, 0, 0 ));
+    data_root = new_node( 0, sample_count, 0, 0 );
 
     max_c_count = 1;
 
@@ -484,8 +484,8 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
             if( cat_map->cols < total_c_count + c_count )
             {
                 tmp_map = cat_map;
-                CV_CALL( cat_map = cvCreateMat( 1,
-                    MAX(cat_map->cols*3/2,total_c_count+c_count), CV_32SC1 ));
+                cat_map = cvCreateMat( 1,
+                    MAX(cat_map->cols*3/2,total_c_count+c_count), CV_32SC1 );
                 for( i = 0; i < total_c_count; i++ )
                     cat_map->data.i[i] = tmp_map->data.i[i];
                 cvReleaseMat( &tmp_map );
@@ -629,14 +629,14 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
     max_split_size = cvAlign(sizeof(CvDTreeSplit) +
         (MAX(0,max_c_count - 33)/32)*sizeof(int),sizeof(void*));
-    CV_CALL( split_heap = cvCreateSet( 0, sizeof(*split_heap), max_split_size, tree_storage ));
+    split_heap = cvCreateSet( 0, sizeof(*split_heap), max_split_size, tree_storage );
 
     have_priors = is_classifier && params.priors;
     if( is_classifier )
     {
         int m = get_num_classes();
         double sum = 0;
-        CV_CALL( priors = cvCreateMat( 1, m, CV_64F ));
+        priors = cvCreateMat( 1, m, CV_64F );
         for( i = 0; i < m; i++ )
         {
             double val = have_priors ? params.priors[i] : 1.;
@@ -650,13 +650,13 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
         if( have_priors )
             cvScale( priors, priors, 1./sum );
 
-        CV_CALL( priors_mult = cvCloneMat( priors ));
-        CV_CALL( counts = cvCreateMat( 1, m, CV_32SC1 ));
+        priors_mult = cvCloneMat( priors );
+        counts = cvCreateMat( 1, m, CV_32SC1 );
     }
 
 
-    CV_CALL( direction = cvCreateMat( 1, sample_count, CV_8UC1 ));
-    CV_CALL( split_buf = cvCreateMat( 1, sample_count, CV_32SC1 ));
+    direction = cvCreateMat( 1, sample_count, CV_8UC1 );
+    split_buf = cvCreateMat( 1, sample_count, CV_32SC1 );
 
     __END__;
 
@@ -698,7 +698,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
 
     if( _subsample_idx )
     {
-        CV_CALL( isubsample_idx = cvPreprocessIndexArray( _subsample_idx, sample_count ));
+        isubsample_idx = cvPreprocessIndexArray( _subsample_idx, sample_count );
 
         if( isubsample_idx->cols + isubsample_idx->rows - 1 == sample_count )
         {
@@ -745,7 +745,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
 
         root = new_node( 0, count, 1, 0 );
 
-        CV_CALL( subsample_co = cvCreateMat( 1, sample_count*2, CV_32SC1 ));
+        subsample_co = cvCreateMat( 1, sample_count*2, CV_32SC1 );
         cvZero( subsample_co );
         co = subsample_co->data.i;
         for( i = 0; i < count; i++ )
@@ -903,9 +903,9 @@ void CvDTreeTrainData::get_vectors( const CvMat* _subsample_idx,
     cv::AutoBuffer<uchar> inn_buf(sample_count*(2*sizeof(int) + sizeof(float)));
     if( _subsample_idx )
     {
-        CV_CALL( subsample_idx = cvPreprocessIndexArray( _subsample_idx, sample_count ));
+        subsample_idx = cvPreprocessIndexArray( _subsample_idx, sample_count );
         sidx = subsample_idx->data.i;
-        CV_CALL( subsample_co = cvCreateMat( 1, sample_count*2, CV_32SC1 ));
+        subsample_co = cvCreateMat( 1, sample_count*2, CV_32SC1 );
         co = subsample_co->data.i;
         cvZero( subsample_co );
         count = subsample_idx->cols + subsample_idx->rows - 1;
@@ -1390,7 +1390,7 @@ void CvDTreeTrainData::read_params( CvFileStorage* fs, CvFileNode* node )
         }
     }
 
-    CV_CALL( var_idx = (CvMat*)cvReadByName( fs, node, "var_idx" ));
+    var_idx = (CvMat*)cvReadByName( fs, node, "var_idx" );
     if( var_idx )
     {
         if( !CV_IS_MAT(var_idx) ||
@@ -1406,7 +1406,7 @@ void CvDTreeTrainData::read_params( CvFileStorage* fs, CvFileNode* node )
     }
 
     ////// read var type
-    CV_CALL( var_type = cvCreateMat( 1, var_count + 2, CV_32SC1 ));
+    var_type = cvCreateMat( 1, var_count + 2, CV_32SC1 );
 
     cat_var_count = 0;
     ord_var_count = -1;
@@ -1439,8 +1439,8 @@ void CvDTreeTrainData::read_params( CvFileStorage* fs, CvFileNode* node )
     if( cat_var_count > 0 || is_classifier )
     {
         int ccount, total_c_count = 0;
-        CV_CALL( cat_count = (CvMat*)cvReadByName( fs, node, "cat_count" ));
-        CV_CALL( cat_map = (CvMat*)cvReadByName( fs, node, "cat_map" ));
+        cat_count = (CvMat*)cvReadByName( fs, node, "cat_count" );
+        cat_map = (CvMat*)cvReadByName( fs, node, "cat_map" );
 
         if( !CV_IS_MAT(cat_count) || !CV_IS_MAT(cat_map) ||
             (cat_count->cols != 1 && cat_count->rows != 1) ||
@@ -1453,7 +1453,7 @@ void CvDTreeTrainData::read_params( CvFileStorage* fs, CvFileNode* node )
 
         ccount = cat_var_count + is_classifier;
 
-        CV_CALL( cat_ofs = cvCreateMat( 1, ccount + 1, CV_32SC1 ));
+        cat_ofs = cvCreateMat( 1, ccount + 1, CV_32SC1 );
         cat_ofs->data.i[0] = 0;
         max_c_count = 1;
 
@@ -1476,11 +1476,11 @@ void CvDTreeTrainData::read_params( CvFileStorage* fs, CvFileNode* node )
 
     tree_block_size = MAX((int)sizeof(CvDTreeNode)*8, max_split_size);
     tree_block_size = MAX(tree_block_size + block_size_delta, min_block_size);
-    CV_CALL( tree_storage = cvCreateMemStorage( tree_block_size ));
-    CV_CALL( node_heap = cvCreateSet( 0, sizeof(node_heap[0]),
-            sizeof(CvDTreeNode), tree_storage ));
-    CV_CALL( split_heap = cvCreateSet( 0, sizeof(split_heap[0]),
-            max_split_size, tree_storage ));
+    tree_storage = cvCreateMemStorage( tree_block_size );
+    node_heap = cvCreateSet( 0, sizeof(node_heap[0]),
+            sizeof(CvDTreeNode), tree_storage );
+    split_heap = cvCreateSet( 0, sizeof(split_heap[0]),
+            max_split_size, tree_storage );
 
     __END__;
 }
@@ -1569,7 +1569,7 @@ bool CvDTree::train( const CvMat* _train_data, int _tflag,
     data = new CvDTreeTrainData( _train_data, _tflag, _responses,
                                  _var_idx, _sample_idx, _var_type,
                                  _missing_mask, _params, false );
-    CV_CALL( result = do_train(0) );
+    result = do_train(0);
 
     __END__;
 
@@ -1603,8 +1603,8 @@ bool CvDTree::train( CvMLData* _data, CvDTreeParams _params )
     const CvMat* train_sidx = _data->get_train_sample_idx();
     const CvMat* var_idx = _data->get_var_idx();
 
-    CV_CALL( result = train( values, CV_ROW_SAMPLE, response, var_idx,
-        train_sidx, var_types, missing, _params ) );
+    result = train( values, CV_ROW_SAMPLE, response, var_idx,
+        train_sidx, var_types, missing, _params );
 
     __END__;
 
@@ -1622,7 +1622,7 @@ bool CvDTree::train( CvDTreeTrainData* _data, const CvMat* _subsample_idx )
     clear();
     data = _data;
     data->shared = true;
-    CV_CALL( result = do_train(_subsample_idx));
+    result = do_train(_subsample_idx);
 
     __END__;
 
@@ -1640,7 +1640,7 @@ bool CvDTree::do_train( const CvMat* _subsample_idx )
 
     root = data->subsample_data( _subsample_idx );
 
-    CV_CALL( try_split_node(root));
+    try_split_node(root);
 
     if( root->split )
     {
@@ -1648,7 +1648,7 @@ bool CvDTree::do_train( const CvMat* _subsample_idx )
         CV_Assert( root->right );
 
         if( data->params.cv_folds > 0 )
-            CV_CALL( prune_cv() );
+            prune_cv();
 
         if( !data->shared )
             data->free_train_data();
@@ -3377,7 +3377,7 @@ void CvDTree::prune_cv()
     double min_err = 0, min_err_se = 0;
     int min_idx = -1;
 
-    CV_CALL( ab = cvCreateMat( 1, 256, CV_64F ));
+    ab = cvCreateMat( 1, 256, CV_64F );
 
     // build the main tree sequence, calculate alpha's
     for(;;tree_count++)
@@ -3388,7 +3388,7 @@ void CvDTree::prune_cv()
 
         if( ab->cols <= tree_count )
         {
-            CV_CALL( temp = cvCreateMat( 1, ab->cols*3/2, CV_64F ));
+            temp = cvCreateMat( 1, ab->cols*3/2, CV_64F );
             for( ti = 0; ti < ab->cols; ti++ )
                 temp->data.db[ti] = ab->data.db[ti];
             cvReleaseMat( &ab );
@@ -3407,7 +3407,7 @@ void CvDTree::prune_cv()
             ab->data.db[ti] = sqrt(ab->data.db[ti]*ab->data.db[ti+1]);
         ab->data.db[tree_count-1] = DBL_MAX*0.5;
 
-        CV_CALL( err_jk = cvCreateMat( cv_n, tree_count, CV_64F ));
+        err_jk = cvCreateMat( cv_n, tree_count, CV_64F );
         err = err_jk->data.db;
 
         for( j = 0; j < cv_n; j++ )
@@ -4009,7 +4009,7 @@ CvDTreeNode* CvDTree::read_node( CvFileStorage* fs, CvFileNode* fnode, CvDTreeNo
     if( !fnode || CV_NODE_TYPE(fnode->tag) != CV_NODE_MAP )
         CV_ERROR( CV_StsParseError, "some of the tree elements are not stored properly" );
 
-    CV_CALL( node = data->new_node( parent, 0, 0, 0 ));
+    node = data->new_node( parent, 0, 0, 0 );
     depth = cvReadIntByName( fs, fnode, "depth", -1 );
     if( depth != node->depth )
         CV_ERROR( CV_StsParseError, "incorrect node depth" );
@@ -4039,7 +4039,7 @@ CvDTreeNode* CvDTree::read_node( CvFileStorage* fs, CvFileNode* fnode, CvDTreeNo
         for( i = 0; i < reader.seq->total; i++ )
         {
             CvDTreeSplit* split;
-            CV_CALL( split = read_split( fs, (CvFileNode*)reader.ptr ));
+            split = read_split( fs, (CvFileNode*)reader.ptr );
             if( !last_split )
                 node->split = last_split = split;
             else
@@ -4073,7 +4073,7 @@ void CvDTree::read_tree_nodes( CvFileStorage* fs, CvFileNode* fnode )
     {
         CvDTreeNode* node;
 
-        CV_CALL( node = read_node( fs, (CvFileNode*)reader.ptr, parent != &_root ? parent : 0 ));
+        node = read_node( fs, (CvFileNode*)reader.ptr, parent != &_root ? parent : 0 );
         if( !parent->left )
             parent->left = node;
         else

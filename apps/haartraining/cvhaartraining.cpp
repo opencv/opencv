@@ -487,7 +487,7 @@ CvHaarTrainigData* icvCreateHaarTrainingData( CvSize winsize, int maxnumsamples 
           sizeof( float )        /* weight */
         ) * maxnumsamples;
 
-    CV_CALL( data = (CvHaarTrainigData*) cvAlloc( datasize ) );
+    data = (CvHaarTrainigData*) cvAlloc( datasize );
     memset( (void*)data, 0, datasize );
     data->maxnum = maxnumsamples;
     data->winsize = winsize;
@@ -678,11 +678,11 @@ void icvPrecalculate( CvHaarTrainingData* data, CvIntHaarFeatures* haarFeatures,
         m = data->sum.rows;
 
 #ifdef CV_COL_ARRANGEMENT
-        CV_CALL( data->valcache = cvCreateMat( numprecalculated, m, CV_32FC1 ) );
+        data->valcache = cvCreateMat( numprecalculated, m, CV_32FC1 );
 #else
-        CV_CALL( data->valcache = cvCreateMat( m, numprecalculated, CV_32FC1 ) );
+        data->valcache = cvCreateMat( m, numprecalculated, CV_32FC1 );
 #endif
-        CV_CALL( data->idxcache = cvCreateMat( numprecalculated, m, CV_IDX_MAT_TYPE ) );
+        data->idxcache = cvCreateMat( numprecalculated, m, CV_IDX_MAT_TYPE );
 
         userdata = cvUserdata( data, haarFeatures );
 
@@ -2278,7 +2278,7 @@ static CvMat* icvGetUsedValues( CvHaarTrainingData* training_data,
 
     num_splits = icvNumSplits( stage );
 
-    CV_CALL( feature_idx = cvCreateMat( 1, num_splits, CV_32SC1 ) );
+    feature_idx = cvCreateMat( 1, num_splits, CV_32SC1 );
 
     total = 0;
     for( i = 0; i < stage->count; i++ )
@@ -2302,7 +2302,7 @@ static CvMat* icvGetUsedValues( CvHaarTrainingData* training_data,
         }
     }
     total = last + 1;
-    CV_CALL( ptr = cvCreateMat( num, total, CV_32FC1 ) );
+    ptr = cvCreateMat( num, total, CV_32FC1 );
 
 
     #ifdef CV_OPENMP
@@ -2409,14 +2409,14 @@ void cvCreateTreeCascadeClassifier( const char* dirname,
 
     winsize = cvSize( winwidth, winheight );
 
-    CV_CALL( cluster_idx = cvCreateMat( 1, npos + nneg, CV_32SC1 ) );
-    CV_CALL( idx = cvCreateMat( 1, npos + nneg, CV_32SC1 ) );
+    cluster_idx = cvCreateMat( 1, npos + nneg, CV_32SC1 );
+    idx = cvCreateMat( 1, npos + nneg, CV_32SC1 );
 
-    CV_CALL( tcc = (CvTreeCascadeClassifier*)
-        icvLoadTreeCascadeClassifier( dirname, winwidth + 1, &total_splits ) );
-    CV_CALL( leaves = icvFindDeepestLeaves( tcc ) );
+    tcc = (CvTreeCascadeClassifier*)
+        icvLoadTreeCascadeClassifier( dirname, winwidth + 1, &total_splits );
+    leaves = icvFindDeepestLeaves( tcc );
 
-    CV_CALL( icvPrintTreeCascade( tcc->root ) );
+    icvPrintTreeCascade( tcc->root );
 
     haar_features = icvCreateIntHaarFeatures( winsize, mode, symmetric );
 
@@ -2518,7 +2518,7 @@ void cvCreateTreeCascadeClassifier( const char* dirname,
                     printf( "Precalculation time: %.2f\n", (proctime + TIME( 0 )) );
 
                     /* train stage classifier using all positive samples */
-                    CV_CALL( single_cluster = icvCreateTreeCascadeNode() );
+                    single_cluster = icvCreateTreeCascadeNode();
                     fflush( stdout );
 
                     proctime = -TIME( 0 );
@@ -2560,8 +2560,8 @@ void cvCreateTreeCascadeClassifier( const char* dirname,
                             if( k == 2 )
                             {
                                 proctime = -TIME( 0 );
-                                CV_CALL( vals = icvGetUsedValues( training_data, 0, poscount,
-                                    haar_features, single_cluster->stage ) );
+                                vals = icvGetUsedValues( training_data, 0, poscount,
+                                    haar_features, single_cluster->stage );
                                 printf( "Getting values for clustering time: %.2f\n", (proctime + TIME(0)) );
                                 printf( "Value matirx size: %d x %d\n", vals->rows, vals->cols );
                                 fflush( stdout );
@@ -2572,7 +2572,7 @@ void cvCreateTreeCascadeClassifier( const char* dirname,
 
                             proctime = -TIME( 0 );
 
-                            CV_CALL( cvKMeans2( vals, k, cluster_idx, CV_TERM_CRITERIA() ) );
+                            cvKMeans2( vals, k, cluster_idx, CV_TERM_CRITERIA() );
 
                             printf( "Clustering time: %.2f\n", (proctime + TIME( 0 )) );
 
@@ -2621,7 +2621,7 @@ void cvCreateTreeCascadeClassifier( const char* dirname,
                             printf( "# pos: %d of %d. (%d%%)\n", total_pos, poscount,
                                 100 * total_pos / poscount );
 
-                            CV_CALL( new_node = icvCreateTreeCascadeNode() );
+                            new_node = icvCreateTreeCascadeNode();
                             if( last_node ) last_node->next = new_node;
                             else cur_node = new_node;
                             last_node = new_node;
@@ -2675,7 +2675,7 @@ void cvCreateTreeCascadeClassifier( const char* dirname,
                     cvReleaseMat( &vals );
 
                     CvSplit* curSplit;
-                    CV_CALL( curSplit = (CvSplit*) cvAlloc( sizeof( *curSplit ) ) );
+                    curSplit = (CvSplit*) cvAlloc( sizeof( *curSplit ) );
                     CV_ZERO_OBJ( curSplit );
 
                     if( last_split ) last_split->next = curSplit;
@@ -2778,7 +2778,7 @@ void cvCreateTreeCascadeClassifier( const char* dirname,
             printf( "Total number of splits: %d\n", total_splits );
 
             if( !(tcc->root) ) tcc->root = leaves;
-            CV_CALL( icvPrintTreeCascade( tcc->root ) );
+            icvPrintTreeCascade( tcc->root );
 
         } while( leaves );
 

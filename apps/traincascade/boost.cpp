@@ -116,7 +116,7 @@ static CvMat* cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, b
                                            "(it should be 8uC1, 8sC1 or 32sC1)" );
     }
 
-    CV_CALL( idx = cvCreateMat( 1, idx_selected, CV_32SC1 ));
+    idx = cvCreateMat( 1, idx_selected, CV_32SC1 );
     dsti = idx->data.i;
 
     if( type < CV_32SC1 )

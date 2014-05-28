@@ -140,8 +140,8 @@ static void cvWarpPerspective( CvArr* src, CvArr* dst, double quad[4][2] )
     IplImage src_stub, dst_stub;
     IplImage* src_img;
     IplImage* dst_img;
-    CV_CALL( src_img = cvGetImage( src, &src_stub ) );
-    CV_CALL( dst_img = cvGetImage( dst, &dst_stub ) );
+    src_img = cvGetImage( src, &src_stub );
+    dst_img = cvGetImage( dst, &dst_stub );
     iplWarpPerspectiveQ( src_img, dst_img, quad, IPL_WARP_R_TO_Q,
                          IPL_INTER_CUBIC | IPL_SMOOTH_EDGE );
 #else
@@ -186,10 +186,10 @@ static void cvWarpPerspective( CvArr* src, CvArr* dst, double quad[4][2] )
             "Destination must be two-dimensional array of CV_8UC1 type." );
     }
 
-    CV_CALL( cvGetRawData( src, &src_data, &src_step, &src_size ) );
-    CV_CALL( cvGetRawData( dst, &dst_data, &dst_step, &dst_size ) );
+    cvGetRawData( src, &src_data, &src_step, &src_size );
+    cvGetRawData( dst, &dst_data, &dst_step, &dst_size );
 
-    CV_CALL( cvGetPerspectiveTransform( src_size, quad, c ) );
+    cvGetPerspectiveTransform( src_size, quad, c );
 
     /* if direction > 0 then vertices in quad follow in a CW direction,
        otherwise they follow in a CCW direction */

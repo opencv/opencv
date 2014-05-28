@@ -601,8 +601,8 @@ cvConvertImage( const CvArr* srcarr, CvArr* dstarr, int flags )
     CvMat dststub, *dst;
     int src_cn, dst_cn, swap_rb = flags & CV_CVTIMG_SWAP_RB;
 
-    CV_CALL( src = cvGetMat( srcarr, &srcstub ));
-    CV_CALL( dst = cvGetMat( dstarr, &dststub ));
+    src = cvGetMat( srcarr, &srcstub );
+    dst = cvGetMat( dstarr, &dststub );
 
     src_cn = CV_MAT_CN( src->type );
     dst_cn = CV_MAT_CN( dst->type );
@@ -676,11 +676,11 @@ cvConvertImage( const CvArr* srcarr, CvArr* dstarr, int flags )
 
     if( flags & CV_CVTIMG_FLIP )
     {
-        CV_CALL( cvFlip( src, dst, 0 ));
+        cvFlip( src, dst, 0 );
     }
     else if( src != dst )
     {
-        CV_CALL( cvCopy( src, dst ));
+        cvCopy( src, dst );
     }
 
     __END__;

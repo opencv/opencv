@@ -66,7 +66,7 @@ void CvStatModel::save( const char* filename, const char* name ) const
 
     __BEGIN__;
 
-    CV_CALL( fs = cvOpenFileStorage( filename, 0, CV_STORAGE_WRITE ));
+    fs = cvOpenFileStorage( filename, 0, CV_STORAGE_WRITE );
     if( !fs )
         CV_ERROR( CV_StsError, "Could not open the file storage. Check the path and permissions" );
 
@@ -88,7 +88,7 @@ void CvStatModel::load( const char* filename, const char* name )
 
     CvFileNode* model_node = 0;
 
-    CV_CALL( fs = cvOpenFileStorage( filename, 0, CV_STORAGE_READ ));
+    fs = cvOpenFileStorage( filename, 0, CV_STORAGE_READ );
     if( !fs )
         EXIT;
 
@@ -283,7 +283,7 @@ CvMat* icvGenerateRandomClusterCenters ( int seed, const CvMat* data,
             CV_ERROR(CV_StsBadArg,"");
         }
         else if( !_centers )
-            CV_CALL(centers = cvCreateMat (num_of_clusters, dim, CV_32FC1));
+            centers = cvCreateMat (num_of_clusters, dim, CV_32FC1);
     }
     else if( ICV_IS_MAT_OF_TYPE(data, CV_64FC1) )
     {
@@ -292,7 +292,7 @@ CvMat* icvGenerateRandomClusterCenters ( int seed, const CvMat* data,
             CV_ERROR(CV_StsBadArg,"");
         }
         else if( !_centers )
-            CV_CALL(centers = cvCreateMat (num_of_clusters, dim, CV_64FC1));
+            centers = cvCreateMat (num_of_clusters, dim, CV_64FC1);
     }
     else
         CV_ERROR (CV_StsBadArg,"");
@@ -303,10 +303,10 @@ CvMat* icvGenerateRandomClusterCenters ( int seed, const CvMat* data,
     rng = cvRNG(seed);
     for (i = 0; i < dim; i++)
     {
-        CV_CALL(cvGetCol (data, &data_comp, i));
-        CV_CALL(cvMinMaxLoc (&data_comp, &minVal, &maxVal, &minLoc, &maxLoc));
-        CV_CALL(cvGetCol (centers, &centers_comp, i));
-        CV_CALL(cvRandArr (&rng, &centers_comp, CV_RAND_UNI, cvScalarAll(minVal), cvScalarAll(maxVal)));
+        cvGetCol (data, &data_comp, i);
+        cvMinMaxLoc (&data_comp, &minVal, &maxVal, &minLoc, &maxLoc);
+        cvGetCol (centers, &centers_comp, i);
+        cvRandArr (&rng, &centers_comp, CV_RAND_UNI, cvScalarAll(minVal), cvScalarAll(maxVal));
     }
 
     __END__;
@@ -455,7 +455,7 @@ cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, bool check_for_
                                            "(it should be 8uC1, 8sC1 or 32sC1)" );
     }
 
-    CV_CALL( idx = cvCreateMat( 1, idx_selected, CV_32SC1 ));
+    idx = cvCreateMat( 1, idx_selected, CV_32SC1 );
     dsti = idx->data.i;
 
     if( type < CV_32SC1 )
@@ -539,7 +539,7 @@ cvPreprocessVarType( const CvMat* var_type, const CvMat* var_idx,
         var_count = var_idx->rows + var_idx->cols - 1;
     }
 
-    CV_CALL( out_var_type = cvCreateMat( 1, var_count, CV_8UC1 ));
+    out_var_type = cvCreateMat( 1, var_count, CV_8UC1 );
     src = var_type->data.ptr;
     dst = out_var_type->data.ptr;
 
@@ -603,7 +603,7 @@ cvPreprocessOrderedResponses( const CvMat* responses, const CvMat* sample_idx, i
         sample_count = sample_idx->rows + sample_idx->cols - 1;
     }
 
-    CV_CALL( out_responses = cvCreateMat( 1, sample_count, CV_32FC1 ));
+    out_responses = cvCreateMat( 1, sample_count, CV_32FC1 );
 
     dst = out_responses->data.fl;
     if( r_type == CV_32FC1 )
@@ -687,12 +687,12 @@ cvPreprocessCategoricalResponses( const CvMat* responses,
         sample_count = sample_idx->rows + sample_idx->cols - 1;
     }
 
-    CV_CALL( out_responses = cvCreateMat( 1, sample_count, CV_32SC1 ));
+    out_responses = cvCreateMat( 1, sample_count, CV_32SC1 );
 
     if( !out_response_map )
         CV_ERROR( CV_StsNullPtr, "out_response_map pointer is NULL" );
 
-    CV_CALL( response_ptr = (int**)cvAlloc( sample_count*sizeof(response_ptr[0])));
+    response_ptr = (int**)cvAlloc( sample_count*sizeof(response_ptr[0]));
 
     srci = responses->data.i;
     srcfl = responses->data.fl;
@@ -728,11 +728,11 @@ cvPreprocessCategoricalResponses( const CvMat* responses,
     if( cls_count < 2 )
         CV_ERROR( CV_StsBadArg, "There is only a single class" );
 
-    CV_CALL( *out_response_map = cvCreateMat( 1, cls_count, CV_32SC1 ));
+    *out_response_map = cvCreateMat( 1, cls_count, CV_32SC1 );
 
     if( class_counts )
     {
-        CV_CALL( *class_counts = cvCreateMat( 1, cls_count, CV_32SC1 ));
+        *class_counts = cvCreateMat( 1, cls_count, CV_32SC1 );
         cls_counts = (*class_counts)->data.i;
     }
 
@@ -798,8 +798,8 @@ cvGetTrainSamples( const CvMat* train_data, int tflag,
 
     copy_data = tflag != CV_ROW_SAMPLE || var_idx || always_copy_data;
 
-    CV_CALL( samples = (float**)cvAlloc(sample_count*sizeof(samples[0]) +
-                (copy_data ? 1 : 0)*var_count*sample_count*sizeof(samples[0][0])) );
+    samples = (float**)cvAlloc(sample_count*sizeof(samples[0]) +
+                (copy_data ? 1 : 0)*var_count*sample_count*sizeof(samples[0][0]));
     data = train_data->data.fl;
     s_step = train_data->step / sizeof(samples[0][0]);
     v_step = 1;
@@ -933,12 +933,12 @@ cvPrepareTrainData( const char* /*funcname*/,
     if( !out_train_samples )
         CV_ERROR( CV_StsBadArg, "output pointer to train samples is NULL" );
 
-    CV_CALL( cvCheckTrainData( train_data, tflag, 0, &var_all, &sample_all ));
+    cvCheckTrainData( train_data, tflag, 0, &var_all, &sample_all );
 
     if( sample_idx )
-        CV_CALL( _sample_idx = cvPreprocessIndexArray( sample_idx, sample_all ));
+        _sample_idx = cvPreprocessIndexArray( sample_idx, sample_all );
     if( var_idx )
-        CV_CALL( _var_idx = cvPreprocessIndexArray( var_idx, var_all ));
+        _var_idx = cvPreprocessIndexArray( var_idx, var_all );
 
     if( responses )
     {
@@ -947,19 +947,19 @@ cvPrepareTrainData( const char* /*funcname*/,
 
         if( response_type == CV_VAR_NUMERICAL )
         {
-            CV_CALL( _responses = cvPreprocessOrderedResponses( responses,
-                                                _sample_idx, sample_all ));
+            _responses = cvPreprocessOrderedResponses( responses,
+                                                _sample_idx, sample_all );
         }
         else
         {
-            CV_CALL( _responses = cvPreprocessCategoricalResponses( responses,
-                                _sample_idx, sample_all, out_response_map, 0 ));
+            _responses = cvPreprocessCategoricalResponses( responses,
+                                _sample_idx, sample_all, out_response_map, 0 );
         }
     }
 
-    CV_CALL( *out_train_samples =
+    *out_train_samples =
                 cvGetTrainSamples( train_data, tflag, _var_idx, _sample_idx,
-                                   &var_count, &sample_count, always_copy_data ));
+                                   &var_count, &sample_count, always_copy_data );
 
     ok = 1;
 
@@ -1042,7 +1042,7 @@ cvSortSamplesByClasses( const float** samples, const CvMat* classes,
         CV_ERROR( CV_StsBadArg, "classes array must be a single row of integers" );
 
     sample_count = classes->cols;
-    CV_CALL( pairs = (CvSampleResponsePair*)cvAlloc( (sample_count+1)*sizeof(pairs[0])));
+    pairs = (CvSampleResponsePair*)cvAlloc( (sample_count+1)*sizeof(pairs[0]));
 
     for( i = 0; i < sample_count; i++ )
     {
@@ -1101,7 +1101,7 @@ cvPreparePredictData( const CvArr* _sample, int dims_all,
     if( cvGetElemType( sample ) != CV_32FC1 )
         CV_ERROR( CV_StsUnsupportedFormat, "Input sample must have 32fC1 type" );
 
-    CV_CALL( d = cvGetDims( sample, sizes ));
+    d = cvGetDims( sample, sizes );
 
     if( !((is_sparse && d == 1) || (!is_sparse && d == 2 && (sample->rows == 1 || sample->cols == 1))) )
         CV_ERROR( CV_StsBadSize, "Input sample must be 1-dimensional vector" );
@@ -1151,7 +1151,7 @@ cvPreparePredictData( const CvArr* _sample, int dims_all,
             *_row_sample = sample_data;
         else
         {
-            CV_CALL( row_sample = (float*)cvAlloc( vec_size ));
+            row_sample = (float*)cvAlloc( vec_size );
 
             if( !comp_idx )
                 for( i = 0; i < dims_selected; i++ )
@@ -1187,11 +1187,11 @@ cvPreparePredictData( const CvArr* _sample, int dims_all,
         assert( is_sparse );
 
         node = cvInitSparseMatIterator( sparse, &mat_iterator );
-        CV_CALL( row_sample = (float*)cvAlloc( vec_size ));
+        row_sample = (float*)cvAlloc( vec_size );
 
         if( comp_idx )
         {
-            CV_CALL( inverse_comp_idx = (int*)cvAlloc( dims_all*sizeof(int) ));
+            inverse_comp_idx = (int*)cvAlloc( dims_all*sizeof(int) );
             memset( inverse_comp_idx, -1, dims_all*sizeof(int) );
             for( i = 0; i < dims_selected; i++ )
                 inverse_comp_idx[comp_idx->data.i[i]] = i;
@@ -1387,9 +1387,9 @@ cvWritebackLabels( const CvMat* labels, CvMat* dst_labels,
 
         CV_ASSERT( labels->cols == samples_selected );
 
-        CV_CALL( icvConvertDataToSparse( labels->data.ptr, labels->step, labels->type,
+        icvConvertDataToSparse( labels->data.ptr, labels->step, labels->type,
                         dst_labels->data.ptr, dst_labels->step, dst_labels->type,
-                        cvSize( 1, samples_selected ), sample_idx ? sample_idx->data.i : 0 ));
+                        cvSize( 1, samples_selected ), sample_idx ? sample_idx->data.i : 0 );
     }
 
     if( dst_centers && (!centers || centers->data.ptr != dst_centers->data.ptr) )
@@ -1410,9 +1410,9 @@ cvWritebackLabels( const CvMat* labels, CvMat* dst_labels,
         CV_ASSERT( centers->cols == dims_selected );
 
         for( i = 0; i < centers->rows; i++ )
-            CV_CALL( icvConvertDataToSparse( centers->data.ptr + i*centers->step, 0, centers->type,
+            icvConvertDataToSparse( centers->data.ptr + i*centers->step, 0, centers->type,
                         dst_centers->data.ptr + i*dst_centers->step, 0, dst_centers->type,
-                        cvSize( 1, dims_selected ), comp_idx ? comp_idx->data.i : 0 ));
+                        cvSize( 1, dims_selected ), comp_idx ? comp_idx->data.i : 0 );
     }
 
     if( dst_probs && (!probs || probs->data.ptr != dst_probs->data.ptr) )
@@ -1430,10 +1430,10 @@ cvWritebackLabels( const CvMat* labels, CvMat* dst_labels,
 
         CV_ASSERT( probs->rows == samples_selected );
 
-        CV_CALL( icvConvertDataToSparse( probs->data.ptr, probs->step, probs->type,
+        icvConvertDataToSparse( probs->data.ptr, probs->step, probs->type,
                         dst_probs->data.ptr, dst_probs->step, dst_probs->type,
                         cvSize( probs->cols, samples_selected ),
-                        sample_idx ? sample_idx->data.i : 0 ));
+                        sample_idx ? sample_idx->data.i : 0 );
     }
 
     __END__;
@@ -1695,14 +1695,14 @@ void cvCombineResponseMaps (CvMat*  _responses,
 // Prepare sorted responses.
     first = new_response_map->data.i;
     new_n = new_response_map->cols;
-    CV_CALL (new_data = (int**)cvAlloc (new_n * sizeof (new_data[0])));
+    new_data = (int**)cvAlloc (new_n * sizeof (new_data[0]));
     for (i = 0; i < new_n; i++)
         new_data[i] = first + i;
     qsort (new_data, new_n, sizeof(int*), icvCmpIntegersPtr);
 
     first = old_response_map->data.i;
     old_n = old_response_map->cols;
-    CV_CALL (old_data = (int**)cvAlloc (old_n * sizeof (old_data[0])));
+    old_data = (int**)cvAlloc (old_n * sizeof (old_data[0]));
     for (i = 0; i < old_n; i++)
         old_data[i] = first + i;
     qsort (old_data, old_n, sizeof(int*), icvCmpIntegersPtr);
@@ -1723,7 +1723,7 @@ void cvCombineResponseMaps (CvMat*  _responses,
     out_n += old_n - i + new_n - j;
 
 // Create and fill the result response maps.
-    CV_CALL (*out_response_map = cvCreateMat (1, out_n, CV_32SC1));
+    *out_response_map = cvCreateMat (1, out_n, CV_32SC1);
     out_data = (*out_response_map)->data.i;
     memcpy (out_data, first, old_n * sizeof (int));
 
@@ -1830,8 +1830,8 @@ void icvFindClusterLabels( const CvMat* probs, float outlier_thresh, float r,
     nsamples  = probs->rows;
     CV_ASSERT( nsamples == labels->cols );
 
-    CV_CALL( counts = cvCreateMat( 1, nclusters + 1, CV_32SC1 ) );
-    CV_CALL( cvSetZero( counts ));
+    counts = cvCreateMat( 1, nclusters + 1, CV_32SC1 );
+    cvSetZero( counts );
     for( i = 0; i < nsamples; i++ )
     {
         labels->data.i[i] = icvGetNumberOfCluster( probs->data.db + i*probs->cols,

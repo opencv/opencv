@@ -1045,7 +1045,7 @@ CvBoost::train( const CvMat* _train_data, int _tflag,
         if( data->get_num_classes() != 2 )
             CV_ERROR( CV_StsNotImplemented,
             "Boosted trees can only be used for 2-class classification." );
-        CV_CALL( storage = cvCreateMemStorage() );
+        storage = cvCreateMemStorage();
         weak = cvCreateSeq( 0, sizeof(CvSeq), sizeof(CvBoostTree*), storage );
         storage = 0;
     }
@@ -1108,8 +1108,8 @@ bool CvBoost::train( CvMLData* _data,
     const CvMat* train_sidx = _data->get_train_sample_idx();
     const CvMat* var_idx = _data->get_var_idx();
 
-    CV_CALL( result = train( values, CV_ROW_SAMPLE, response, var_idx,
-        train_sidx, var_types, missing, _params, update ) );
+    result = train( values, CV_ROW_SAMPLE, response, var_idx,
+        train_sidx, var_types, missing, _params, update );
 
     __END__;
 
@@ -1170,11 +1170,11 @@ CvBoost::update_weights_impl( CvBoostTree* tree, double initial_weights[2] )
         cvReleaseMat( &weights );
         cvReleaseMat( &subtree_weights );
 
-        CV_CALL( orig_response = cvCreateMat( 1, n, CV_32S ));
-        CV_CALL( weak_eval = cvCreateMat( 1, n, CV_64F ));
-        CV_CALL( subsample_mask = cvCreateMat( 1, n, CV_8U ));
-        CV_CALL( weights = cvCreateMat( 1, n, CV_64F ));
-        CV_CALL( subtree_weights = cvCreateMat( 1, n + 2, CV_64F ));
+        orig_response = cvCreateMat( 1, n, CV_32S );
+        weak_eval = cvCreateMat( 1, n, CV_64F );
+        subsample_mask = cvCreateMat( 1, n, CV_8U );
+        weights = cvCreateMat( 1, n, CV_64F );
+        subtree_weights = cvCreateMat( 1, n + 2, CV_64F );
 
         if( data->have_priors )
         {
@@ -1228,7 +1228,7 @@ CvBoost::update_weights_impl( CvBoostTree* tree, double initial_weights[2] )
 
         if( params.boost_type == LOGIT )
         {
-            CV_CALL( sum_response = cvCreateMat( 1, n, CV_64F ));
+            sum_response = cvCreateMat( 1, n, CV_64F );
 
             for( i = 0; i < n; i++ )
             {
@@ -1926,7 +1926,7 @@ void CvBoost::read_params( CvFileStorage* fs, CvFileNode* fnode )
         return;
 
     data = new CvDTreeTrainData();
-    CV_CALL( data->read_params(fs, fnode));
+    data->read_params(fs, fnode);
     data->shared = true;
 
     params.max_depth = data->params.max_depth;
@@ -2006,13 +2006,13 @@ CvBoost::read( CvFileStorage* fs, CvFileNode* node )
         CV_ERROR( CV_StsUnmatchedSizes,
         "The number of trees stored does not match <ntrees> tag value" );
 
-    CV_CALL( storage = cvCreateMemStorage() );
+    storage = cvCreateMemStorage();
     weak = cvCreateSeq( 0, sizeof(CvSeq), sizeof(CvBoostTree*), storage );
 
     for( i = 0; i < ntrees; i++ )
     {
         CvBoostTree* tree = new CvBoostTree();
-        CV_CALL(tree->read( fs, (CvFileNode*)reader.ptr, this, data ));
+        tree->read( fs, (CvFileNode*)reader.ptr, this, data );
         CV_NEXT_SEQ_ELEM( reader.seq->elem_size, reader );
         cvSeqPush( weak, &tree );
     }

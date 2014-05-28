@@ -136,7 +136,7 @@ void  cvPreparePredictData( const CvArr* _sample, int dims_all,
         CV_ERROR( CV_StsUnsupportedFormat, "Input sample must have 32fC1 type" );
     }
 
-    CV_CALL( d = cvGetDims( sample, sizes ));
+    d = cvGetDims( sample, sizes );
 
     if( !((is_sparse && d == 1) || (!is_sparse && d == 2 && (sample->rows == 1 || sample->cols == 1))) )
     {
@@ -194,7 +194,7 @@ void  cvPreparePredictData( const CvArr* _sample, int dims_all,
             *_row_sample = sample_data;
         else
         {
-            CV_CALL( row_sample = (float*)cvAlloc( vec_size ));
+            row_sample = (float*)cvAlloc( vec_size );
 
             if( !comp_idx )
                 for( i = 0; i < dims_selected; i++ )
@@ -230,11 +230,11 @@ void  cvPreparePredictData( const CvArr* _sample, int dims_all,
         assert( is_sparse );
 
         node = cvInitSparseMatIterator( sparse, &mat_iterator );
-        CV_CALL( row_sample = (float*)cvAlloc( vec_size ));
+        row_sample = (float*)cvAlloc( vec_size );
 
         if( comp_idx )
         {
-            CV_CALL( inverse_comp_idx = (int*)cvAlloc( dims_all * sizeof(int) ));
+            inverse_comp_idx = (int*)cvAlloc( dims_all * sizeof(int) );
             memset( inverse_comp_idx, -1, dims_all * sizeof(int) );
             for( i = 0; i < dims_selected; i++ )
                 inverse_comp_idx[comp_idx->data.i[i]] = i;
@@ -633,8 +633,8 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
         class_count = class_labels ? class_labels->cols :
                       params.svm_type == ONE_CLASS ? 1 : 0;
 
-        CV_CALL( cvPreparePredictData(&sample, var_all, var_idx,
-                                      class_count, 0, &row_sample ));
+        cvPreparePredictData(&sample, var_all, var_idx,
+                                      class_count, 0, &row_sample );
         for(int j = 0; j < var_count; ++j)
             src_temp.at<float>(i, j) = row_sample[j];
         __END__;

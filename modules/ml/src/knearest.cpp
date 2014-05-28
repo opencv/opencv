@@ -110,9 +110,9 @@ bool CvKNearest::train( const CvMat* _train_data, const CvMat* _responses,
     // Prepare training data and related parameters.
     // Treat categorical responses as ordered - to prevent class label compression and
     // to enable entering new classes in the updates
-    CV_CALL( cvPrepareTrainData( "CvKNearest::train", _train_data, CV_ROW_SAMPLE,
+    cvPrepareTrainData( "CvKNearest::train", _train_data, CV_ROW_SAMPLE,
         _responses, CV_VAR_ORDERED, 0, _sample_idx, true, (const float***)&_data,
-        &_count, &_dims, &_dims_all, &responses, 0, 0 ));
+        &_count, &_dims, &_dims_all, &responses, 0, 0 );
 
     if( !responses )
         CV_ERROR( CV_StsNoMem, "Could not allocate memory for responses" );
@@ -131,7 +131,7 @@ bool CvKNearest::train( const CvMat* _train_data, const CvMat* _responses,
     }
 
     _rsize = _count*sizeof(float);
-    CV_CALL( _samples = (CvVectors*)cvAlloc( sizeof(*_samples) + _rsize ));
+    _samples = (CvVectors*)cvAlloc( sizeof(*_samples) + _rsize );
     _samples->next = samples;
     _samples->type = CV_32F;
     _samples->data.fl = _data;

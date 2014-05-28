@@ -452,7 +452,7 @@ CvIntHaarClassifier* icvLoadCARTStageHaarClassifier( const char* filename, int s
     file = fopen( filename, "r" );
     if( file )
     {
-        CV_CALL( ptr = icvLoadCARTStageHaarClassifierF( file, step ) );
+        ptr = icvLoadCARTStageHaarClassifierF( file, step );
         fclose( file );
     }
 
@@ -558,7 +558,7 @@ CvTreeCascadeNode* icvCreateTreeCascadeNode()
     size_t data_size;
 
     data_size = sizeof( *ptr );
-    CV_CALL( ptr = (CvTreeCascadeNode*) cvAlloc( data_size ) );
+    ptr = (CvTreeCascadeNode*) cvAlloc( data_size );
     memset( ptr, 0, data_size );
 
     __END__;
@@ -712,7 +712,7 @@ CvIntHaarClassifier* icvLoadTreeCascadeClassifier( const char* filename, int ste
 
     data_size = sizeof( *ptr );
 
-    CV_CALL( ptr = (CvTreeCascadeClassifier*) cvAlloc( data_size ) );
+    ptr = (CvTreeCascadeClassifier*) cvAlloc( data_size );
     memset( ptr, 0, data_size );
 
     ptr->eval = icvEvalTreeCascadeClassifier;
@@ -733,14 +733,14 @@ CvIntHaarClassifier* icvLoadTreeCascadeClassifier( const char* filename, int ste
     if( num < 1 ) EXIT;
 
     data_size = sizeof( *nodes ) * num;
-    CV_CALL( nodes = (CvTreeCascadeNode**) cvAlloc( data_size ) );
+    nodes = (CvTreeCascadeNode**) cvAlloc( data_size );
 
     for( i = 0; i < num; i++ )
     {
         sprintf( suffix, "%d/%s", i, CV_STAGE_CART_FILE_NAME );
         f = fopen( stage_name, "r" );
-        CV_CALL( stage = (CvStageHaarClassifier*)
-            icvLoadCARTStageHaarClassifierF( f, step ) );
+        stage = (CvStageHaarClassifier*)
+            icvLoadCARTStageHaarClassifierF( f, step );
 
         result = ( f && stage ) ? fscanf( f, "%d%d", &parent, &next ) : 0;
         if( f ) fclose( f );
@@ -756,7 +756,7 @@ CvIntHaarClassifier* icvLoadTreeCascadeClassifier( const char* filename, int ste
         if( parent >= i || (next != -1 && next != i + 1) )
             CV_ERROR( CV_StsError, "Invalid tree links" );
 
-        CV_CALL( nodes[i] = icvCreateTreeCascadeNode() );
+        nodes[i] = icvCreateTreeCascadeNode();
         nodes[i]->stage = stage;
         nodes[i]->idx = i;
         nodes[i]->parent = (parent != -1 ) ? nodes[parent] : NULL;

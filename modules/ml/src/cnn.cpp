@@ -175,25 +175,25 @@ cvTrainCNNClassifier( const CvMat* _train_data, int tflag,
     int img_size;
     CvCNNStatModelParams* params = (CvCNNStatModelParams*)_params;
 
-    CV_CALL(cnn_model = (CvCNNStatModel*)cvCreateStatModel(
+    cnn_model = (CvCNNStatModel*)cvCreateStatModel(
         CV_STAT_MODEL_MAGIC_VAL|CV_CNN_MAGIC_VAL, sizeof(CvCNNStatModel),
-        icvCNNModelRelease, icvCNNModelPredict, icvCNNModelUpdate ));
+        icvCNNModelRelease, icvCNNModelPredict, icvCNNModelUpdate );
 
-    CV_CALL(cvPrepareTrainData( "cvTrainCNNClassifier",
+    cvPrepareTrainData( "cvTrainCNNClassifier",
         _train_data, tflag, _responses, CV_VAR_CATEGORICAL,
         0, _sample_idx, false, &out_train_data,
         &n_images, &img_size, &img_size, &responses,
-        &cnn_model->cls_labels, 0 ));
+        &cnn_model->cls_labels, 0 );
 
     ICV_CHECK_CNN_MODEL_PARAMS(params);
     ICV_CHECK_CNN_NETWORK(params->network);
 
     cnn_model->network = params->network;
-    CV_CALL(cnn_model->etalons = (CvMat*)cvClone( params->etalons ));
+    cnn_model->etalons = (CvMat*)cvClone( params->etalons );
 
-    CV_CALL( icvTrainCNNetwork( cnn_model->network, out_train_data, responses,
+    icvTrainCNNetwork( cnn_model->network, out_train_data, responses,
         cnn_model->etalons, params->grad_estim_type, params->max_iter,
-        params->start_iter ));
+        params->start_iter );
 
     __END__;
 
@@ -234,18 +234,18 @@ static void icvTrainCNNetwork( CvCNNetwork* network,
     int n;
     CvRNG rng = cvRNG(-1);
 
-    CV_CALL(X = (CvMat**)cvAlloc( (n_layers+1)*sizeof(CvMat*) ));
-    CV_CALL(dE_dX = (CvMat**)cvAlloc( (n_layers+1)*sizeof(CvMat*) ));
+    X = (CvMat**)cvAlloc( (n_layers+1)*sizeof(CvMat*) );
+    dE_dX = (CvMat**)cvAlloc( (n_layers+1)*sizeof(CvMat*) );
     memset( X, 0, (n_layers+1)*sizeof(CvMat*) );
     memset( dE_dX, 0, (n_layers+1)*sizeof(CvMat*) );
 
-    CV_CALL(X[0] = cvCreateMat( img_height*img_width,1,CV_32FC1 ));
-    CV_CALL(dE_dX[0] = cvCreateMat( 1, X[0]->rows, CV_32FC1 ));
+    X[0] = cvCreateMat( img_height*img_width,1,CV_32FC1 );
+    dE_dX[0] = cvCreateMat( 1, X[0]->rows, CV_32FC1 );
     for( k = 0, layer = first_layer; k < n_layers; k++, layer = layer->next_layer )
     {
-        CV_CALL(X[k+1] = cvCreateMat( layer->n_output_planes*layer->output_height*
-            layer->output_width, 1, CV_32FC1 ));
-        CV_CALL(dE_dX[k+1] = cvCreateMat( 1, X[k+1]->rows, CV_32FC1 ));
+        X[k+1] = cvCreateMat( layer->n_output_planes*layer->output_height*
+            layer->output_width, 1, CV_32FC1 );
+        dE_dX[k+1] = cvCreateMat( 1, X[k+1]->rows, CV_32FC1 );
     }
 
     for( n = 1; n <= max_iter; n++ )
@@ -265,7 +265,7 @@ static void icvTrainCNNetwork( CvCNNetwork* network,
                 cvTranspose( &image, X[0] );
 
                 for( k = 0, layer = first_layer; k < n_layers; k++, layer = layer->next_layer )
-                    CV_CALL(layer->forward( layer, X[k], X[k+1] ));
+                    layer->forward( layer, X[k], X[k+1] );
 
                 cvTranspose( X[n_layers], dE_dX[n_layers] );
                 cvGetRow( etalons, &etalon, *right_etal_idx );
@@ -283,11 +283,11 @@ static void icvTrainCNNetwork( CvCNNetwork* network,
         // Train network on the worst image
         // 1) Compute the network output on the <image>
         image.data.fl = (float*)images[worst_img_idx];
-        CV_CALL(cvTranspose( &image, X[0] ));
+        cvTranspose( &image, X[0] );
 
         for( k = 0, layer = first_layer; k < n_layers - 1; k++, layer = layer->next_layer )
-            CV_CALL(layer->forward( layer, X[k], X[k+1] ));
-        CV_CALL(layer->forward( layer, X[k], X[k+1] ));
+            layer->forward( layer, X[k], X[k+1] );
+        layer->forward( layer, X[k], X[k+1] );
 
         // 2) Compute the gradient
         cvTranspose( X[n_layers], dE_dX[n_layers] );
@@ -296,7 +296,7 @@ static void icvTrainCNNetwork( CvCNNetwork* network,
 
         // 3) Update weights by the gradient descent
         for( k = n_layers; k > 0; k--, layer = layer->prev_layer )
-            CV_CALL(layer->backward( layer, n + start_iter, X[k-1], dE_dX[k], dE_dX[k-1] ));
+            layer->backward( layer, n + start_iter, X[k-1], dE_dX[k], dE_dX[k-1] );
     }
 
     __END__;
@@ -344,20 +344,20 @@ static float icvCNNModelPredict( const CvStatModel* model,
 
     cvPreparePredictData( _image, img_size, 0, nclasses, probs, &img_data );
 
-    CV_CALL(X = (CvMat**)cvAlloc( (n_layers+1)*sizeof(CvMat*) ));
+    X = (CvMat**)cvAlloc( (n_layers+1)*sizeof(CvMat*) );
     memset( X, 0, (n_layers+1)*sizeof(CvMat*) );
 
-    CV_CALL(X[0] = cvCreateMat( img_size,1,CV_32FC1 ));
+    X[0] = cvCreateMat( img_size,1,CV_32FC1 );
     for( k = 0, layer = first_layer; k < n_layers; k++, layer = layer->next_layer )
     {
-        CV_CALL(X[k+1] = cvCreateMat( layer->n_output_planes*layer->output_height*
-            layer->output_width, 1, CV_32FC1 ));
+        X[k+1] = cvCreateMat( layer->n_output_planes*layer->output_height*
+            layer->output_width, 1, CV_32FC1 );
     }
 
     image = cvMat( 1, img_size, CV_32FC1, img_data );
     cvTranspose( &image, X[0] );
     for( k = 0, layer = first_layer; k < n_layers; k++, layer = layer->next_layer )
-        CV_CALL(layer->forward( layer, X[k], X[k+1] ));
+        layer->forward( layer, X[k], X[k+1] );
 
     probs_data = probs ? probs->data.fl : 0;
     etalon = cvMat( cnn_model->etalons->cols, 1, CV_32FC1, cnn_model->etalons->data.fl );
@@ -412,11 +412,11 @@ static void icvCNNModelUpdate(
     if( !CV_IS_CNN(cnn_model) )
         CV_ERROR( CV_StsBadArg, "Invalid model" );
 
-    CV_CALL(cvPrepareTrainData( "cvTrainCNNClassifier",
+    cvPrepareTrainData( "cvTrainCNNClassifier",
         _train_data, tflag, _responses, CV_VAR_CATEGORICAL,
         0, _sample_idx, false, &out_train_data,
         &n_images, &img_size, &img_size, &responses,
-        &cls_labels, 0, 0 ));
+        &cls_labels, 0, 0 );
 
     ICV_CHECK_CNN_MODEL_PARAMS(params);
 
@@ -429,9 +429,9 @@ static void icvCNNModelUpdate(
             CV_ERROR( CV_StsBadArg, "Number of classes must be left unchanged" );
     }
 
-    CV_CALL( icvTrainCNNetwork( cnn_model->network, out_train_data, responses,
+    icvTrainCNNetwork( cnn_model->network, out_train_data, responses,
         cnn_model->etalons, params->grad_estim_type, params->max_iter,
-        params->start_iter ));
+        params->start_iter );
 
     __END__;
 
@@ -474,7 +474,7 @@ ML_IMPL CvCNNetwork* cvCreateCNNetwork( CvCNNLayer* first_layer )
     if( !ICV_IS_CNN_LAYER(first_layer) )
         CV_ERROR( CV_StsBadArg, "Invalid layer" );
 
-    CV_CALL(network = (CvCNNetwork*)cvAlloc( sizeof(CvCNNetwork) ));
+    network = (CvCNNetwork*)cvAlloc( sizeof(CvCNNetwork) );
     memset( network, 0, sizeof(CvCNNetwork) );
 
     network->layers    = first_layer;
@@ -598,7 +598,7 @@ static CvCNNLayer* icvCreateCNNLayer( int layer_type, int header_size,
         learn_rate_decrease_type != CV_CNN_LEARN_RATE_DECREASE_LOG_INV )
         CV_ERROR( CV_StsBadArg, "Invalid type of learning rate dynamics" );
 
-    CV_CALL(layer = (CvCNNLayer*)cvAlloc( header_size ));
+    layer = (CvCNNLayer*)cvAlloc( header_size );
     memset( layer, 0, header_size );
 
     layer->flags = ICV_CNN_LAYER|layer_type;
@@ -646,15 +646,15 @@ ML_IMPL CvCNNLayer* cvCreateCNNConvolutionLayer(
     if( K < 1 || init_learn_rate <= 0 )
         CV_ERROR( CV_StsBadArg, "Incorrect parameters" );
 
-    CV_CALL(layer = (CvCNNConvolutionLayer*)icvCreateCNNLayer( ICV_CNN_CONVOLUTION_LAYER,
+    layer = (CvCNNConvolutionLayer*)icvCreateCNNLayer( ICV_CNN_CONVOLUTION_LAYER,
         sizeof(CvCNNConvolutionLayer), n_input_planes, input_height, input_width,
         n_output_planes, output_height, output_width,
         init_learn_rate, learn_rate_decrease_type,
-        icvCNNConvolutionRelease, icvCNNConvolutionForward, icvCNNConvolutionBackward ));
+        icvCNNConvolutionRelease, icvCNNConvolutionForward, icvCNNConvolutionBackward );
 
     layer->K = K;
-    CV_CALL(layer->weights = cvCreateMat( n_output_planes, K*K+1, CV_32FC1 ));
-    CV_CALL(layer->connect_mask = cvCreateMat( n_output_planes, n_input_planes, CV_8UC1));
+    layer->weights = cvCreateMat( n_output_planes, K*K+1, CV_32FC1 );
+    layer->connect_mask = cvCreateMat( n_output_planes, n_input_planes, CV_8UC1);
 
     if( weights )
     {
@@ -662,7 +662,7 @@ ML_IMPL CvCNNLayer* cvCreateCNNConvolutionLayer(
             CV_ERROR( CV_StsBadSize, "Type of initial weights matrix must be CV_32FC1" );
         if( !CV_ARE_SIZES_EQ( weights, layer->weights ) )
             CV_ERROR( CV_StsBadSize, "Invalid size of initial weights matrix" );
-        CV_CALL(cvCopy( weights, layer->weights ));
+        cvCopy( weights, layer->weights );
     }
     else
     {
@@ -676,10 +676,10 @@ ML_IMPL CvCNNLayer* cvCreateCNNConvolutionLayer(
             CV_ERROR( CV_StsBadSize, "Type of connection matrix must be CV_32FC1" );
         if( !CV_ARE_SIZES_EQ( connect_mask, layer->connect_mask ) )
             CV_ERROR( CV_StsBadSize, "Invalid size of connection matrix" );
-        CV_CALL(cvCopy( connect_mask, layer->connect_mask ));
+        cvCopy( connect_mask, layer->connect_mask );
     }
     else
-        CV_CALL(cvSet( layer->connect_mask, cvRealScalar(1) ));
+        cvSet( layer->connect_mask, cvRealScalar(1) );
 
     __END__;
 
@@ -712,32 +712,31 @@ ML_IMPL CvCNNLayer* cvCreateCNNSubSamplingLayer(
     if( sub_samp_scale < 1 || a <= 0 || s <= 0)
         CV_ERROR( CV_StsBadArg, "Incorrect parameters" );
 
-    CV_CALL(layer = (CvCNNSubSamplingLayer*)icvCreateCNNLayer( ICV_CNN_SUBSAMPLING_LAYER,
+    layer = (CvCNNSubSamplingLayer*)icvCreateCNNLayer( ICV_CNN_SUBSAMPLING_LAYER,
         sizeof(CvCNNSubSamplingLayer), n_input_planes, input_height, input_width,
         n_output_planes, output_height, output_width,
         init_learn_rate, learn_rate_decrease_type,
-        icvCNNSubSamplingRelease, icvCNNSubSamplingForward, icvCNNSubSamplingBackward ));
+        icvCNNSubSamplingRelease, icvCNNSubSamplingForward, icvCNNSubSamplingBackward );
 
     layer->sub_samp_scale  = sub_samp_scale;
     layer->a               = a;
     layer->s               = s;
 
-    CV_CALL(layer->sumX =
-        cvCreateMat( n_output_planes*output_width*output_height, 1, CV_32FC1 ));
-    CV_CALL(layer->exp2ssumWX =
-        cvCreateMat( n_output_planes*output_width*output_height, 1, CV_32FC1 ));
+    layer->sumX = cvCreateMat( n_output_planes*output_width*output_height, 1, CV_32FC1 );
+    layer->exp2ssumWX =
+        cvCreateMat( n_output_planes*output_width*output_height, 1, CV_32FC1 );
 
     cvZero( layer->sumX );
     cvZero( layer->exp2ssumWX );
 
-    CV_CALL(layer->weights = cvCreateMat( n_output_planes, 2, CV_32FC1 ));
+    layer->weights = cvCreateMat( n_output_planes, 2, CV_32FC1 );
     if( weights )
     {
         if( !ICV_IS_MAT_OF_TYPE( weights, CV_32FC1 ) )
             CV_ERROR( CV_StsBadSize, "Type of initial weights matrix must be CV_32FC1" );
         if( !CV_ARE_SIZES_EQ( weights, layer->weights ) )
             CV_ERROR( CV_StsBadSize, "Invalid size of initial weights matrix" );
-        CV_CALL(cvCopy( weights, layer->weights ));
+        cvCopy( weights, layer->weights );
     }
     else
     {
@@ -769,25 +768,25 @@ ML_IMPL CvCNNLayer* cvCreateCNNFullConnectLayer(
     if( a <= 0 || s <= 0 || init_learn_rate <= 0)
         CV_ERROR( CV_StsBadArg, "Incorrect parameters" );
 
-    CV_CALL(layer = (CvCNNFullConnectLayer*)icvCreateCNNLayer( ICV_CNN_FULLCONNECT_LAYER,
+    layer = (CvCNNFullConnectLayer*)icvCreateCNNLayer( ICV_CNN_FULLCONNECT_LAYER,
         sizeof(CvCNNFullConnectLayer), n_inputs, 1, 1, n_outputs, 1, 1,
         init_learn_rate, learn_rate_decrease_type,
-        icvCNNFullConnectRelease, icvCNNFullConnectForward, icvCNNFullConnectBackward ));
+        icvCNNFullConnectRelease, icvCNNFullConnectForward, icvCNNFullConnectBackward );
 
     layer->a = a;
     layer->s = s;
 
-    CV_CALL(layer->exp2ssumWX = cvCreateMat( n_outputs, 1, CV_32FC1 ));
+    layer->exp2ssumWX = cvCreateMat( n_outputs, 1, CV_32FC1 );
     cvZero( layer->exp2ssumWX );
 
-    CV_CALL(layer->weights = cvCreateMat( n_outputs, n_inputs+1, CV_32FC1 ));
+    layer->weights = cvCreateMat( n_outputs, n_inputs+1, CV_32FC1 );
     if( weights )
     {
         if( !ICV_IS_MAT_OF_TYPE( weights, CV_32FC1 ) )
             CV_ERROR( CV_StsBadSize, "Type of initial weights matrix must be CV_32FC1" );
         if( !CV_ARE_SIZES_EQ( weights, layer->weights ) )
             CV_ERROR( CV_StsBadSize, "Invalid size of initial weights matrix" );
-        CV_CALL(cvCopy( weights, layer->weights ));
+        cvCopy( weights, layer->weights );
     }
     else
     {
@@ -935,14 +934,14 @@ static void icvCNNSubSamplingForward( CvCNNLayer* _layer,
     cvGetRows( layer->exp2ssumWX, &exp2ssumWX_sub_col, 0, Ysize );
     for( ni = 0; ni < nplanes; ni++, w += 2 )
     {
-        CV_CALL(cvConvertScale( &sumX_sub_col, &exp2ssumWX_sub_col, w[0], w[1] ));
+        cvConvertScale( &sumX_sub_col, &exp2ssumWX_sub_col, w[0], w[1] );
         sumX_sub_col.data.fl += Ysize;
         exp2ssumWX_sub_col.data.fl += Ysize;
     }
 
-    CV_CALL(cvScale( layer->exp2ssumWX, layer->exp2ssumWX, 2.0*layer->s ));
-    CV_CALL(cvExp( layer->exp2ssumWX, layer->exp2ssumWX ));
-    CV_CALL(cvMinS( layer->exp2ssumWX, FLT_MAX, layer->exp2ssumWX ));
+    cvScale( layer->exp2ssumWX, layer->exp2ssumWX, 2.0*layer->s );
+    cvExp( layer->exp2ssumWX, layer->exp2ssumWX );
+    cvMinS( layer->exp2ssumWX, FLT_MAX, layer->exp2ssumWX );
 //#ifdef _DEBUG
     {
         float* exp2ssumWX_data = layer->exp2ssumWX->data.fl;
@@ -954,9 +953,9 @@ static void icvCNNSubSamplingForward( CvCNNLayer* _layer,
     }
 //#endif
     // compute the output variable Y == ( a - 2a/(layer->exp2ssumWX + 1))
-    CV_CALL(cvAddS( layer->exp2ssumWX, cvRealScalar(1), Y ));
-    CV_CALL(cvDiv( 0, Y, Y, -2.0*layer->a ));
-    CV_CALL(cvAddS( Y, cvRealScalar(layer->a), Y ));
+    cvAddS( layer->exp2ssumWX, cvRealScalar(1), Y );
+    cvDiv( 0, Y, Y, -2.0*layer->a );
+    cvAddS( Y, cvRealScalar(layer->a), Y );
 
     }__END__;
 }
@@ -978,14 +977,14 @@ static void icvCNNFullConnectForward( CvCNNLayer* _layer, const CvMat* X, CvMat*
     CV_ASSERT(X->cols == 1 && X->rows == layer->n_input_planes);
     CV_ASSERT(Y->cols == 1 && Y->rows == layer->n_output_planes);
 
-    CV_CALL(cvGetSubRect( weights, &sub_weights,
-                          cvRect(0, 0, weights->cols-1, weights->rows )));
-    CV_CALL(cvGetCol( weights, &bias, weights->cols-1));
+    cvGetSubRect( weights, &sub_weights,
+                          cvRect(0, 0, weights->cols-1, weights->rows ));
+    cvGetCol( weights, &bias, weights->cols-1);
 
     // update inner variable layer->exp2ssumWX, which will be used in Back-Propagation
-    CV_CALL(cvGEMM( &sub_weights, X, 2*layer->s, &bias, 2*layer->s, layer->exp2ssumWX ));
-    CV_CALL(cvExp( layer->exp2ssumWX, layer->exp2ssumWX ));
-    CV_CALL(cvMinS( layer->exp2ssumWX, FLT_MAX, layer->exp2ssumWX ));
+    cvGEMM( &sub_weights, X, 2*layer->s, &bias, 2*layer->s, layer->exp2ssumWX );
+    cvExp( layer->exp2ssumWX, layer->exp2ssumWX );
+    cvMinS( layer->exp2ssumWX, FLT_MAX, layer->exp2ssumWX );
 //#ifdef _DEBUG
     {
         float* exp2ssumWX_data = layer->exp2ssumWX->data.fl;
@@ -998,9 +997,9 @@ static void icvCNNFullConnectForward( CvCNNLayer* _layer, const CvMat* X, CvMat*
     }
 //#endif
     // compute the output variable Y == ( a - 2a/(layer->exp2ssumWX + 1))
-    CV_CALL(cvAddS( layer->exp2ssumWX, cvRealScalar(1), Y ));
-    CV_CALL(cvDiv( 0, Y, Y, -2.0*layer->a ));
-    CV_CALL(cvAddS( Y, cvRealScalar(layer->a), Y ));
+    cvAddS( layer->exp2ssumWX, cvRealScalar(1), Y );
+    cvDiv( 0, Y, Y, -2.0*layer->a );
+    cvAddS( Y, cvRealScalar(layer->a), Y );
 
     }__END__;
 }
@@ -1099,8 +1098,8 @@ static void icvCNNConvolutionBackward(
         }
     }
 
-    CV_CALL(cvMatMul( dE_dY, dY_dW, dE_dW ));
-    CV_CALL(cvMatMul( dE_dY, dY_dX, dE_dX ));
+    cvMatMul( dE_dY, dY_dW, dE_dW );
+    cvMatMul( dE_dY, dY_dX, dE_dX );
 
     // update weights
     {
@@ -1154,23 +1153,23 @@ static void icvCNNSubSamplingBackward(
     CvMat activ_func_der, sumX_row;
     CvMat dE_dY_sub_row, dY_dX_sub_col, dy_dw0_sub_row, dy_dw1_sub_row;
 
-    CV_CALL(dY_dX_elems = cvCreateMat( layer->sumX->rows, 1, CV_32FC1 ));
-    CV_CALL(dY_dW_elems = cvCreateMat( 2, layer->sumX->rows, CV_32FC1 ));
-    CV_CALL(dE_dW = cvCreateMat( 1, 2*layer->n_output_planes, CV_32FC1 ));
+    dY_dX_elems = cvCreateMat( layer->sumX->rows, 1, CV_32FC1 );
+    dY_dW_elems = cvCreateMat( 2, layer->sumX->rows, CV_32FC1 );
+    dE_dW = cvCreateMat( 1, 2*layer->n_output_planes, CV_32FC1 );
 
     // compute derivative of activ.func.
     // ==<dY_dX_elems> = 4as*(layer->exp2ssumWX)/(layer->exp2ssumWX + 1)^2
-    CV_CALL(cvAddS( layer->exp2ssumWX, cvRealScalar(1), dY_dX_elems ));
-    CV_CALL(cvPow( dY_dX_elems, dY_dX_elems, -2.0 ));
-    CV_CALL(cvMul( dY_dX_elems, layer->exp2ssumWX, dY_dX_elems, 4.0*layer->a*layer->s ));
+    cvAddS( layer->exp2ssumWX, cvRealScalar(1), dY_dX_elems );
+    cvPow( dY_dX_elems, dY_dX_elems, -2.0 );
+    cvMul( dY_dX_elems, layer->exp2ssumWX, dY_dX_elems, 4.0*layer->a*layer->s );
 
     // compute <dE_dW>
     // a) compute <dY_dW_elems>
     cvReshape( dY_dX_elems, &activ_func_der, 0, 1 );
     cvGetRow( dY_dW_elems, &dy_dw0, 0 );
     cvGetRow( dY_dW_elems, &dy_dw1, 1 );
-    CV_CALL(cvCopy( &activ_func_der, &dy_dw0 ));
-    CV_CALL(cvCopy( &activ_func_der, &dy_dw1 ));
+    cvCopy( &activ_func_der, &dy_dw0 );
+    cvCopy( &activ_func_der, &dy_dw1 );
 
     cvReshape( layer->sumX, &sumX_row, 0, 1 );
     cvMul( &dy_dw0, &sumX_row, &dy_dw0 );
@@ -1194,11 +1193,11 @@ static void icvCNNSubSamplingBackward(
     w = layer->weights->data.fl;
     cvGetRows( dY_dX_elems, &dY_dX_sub_col, 0, Ysize );
     for( i = 0; i < layer->n_input_planes; i++, w++, dY_dX_sub_col.data.fl += Ysize )
-        CV_CALL(cvConvertScale( &dY_dX_sub_col, &dY_dX_sub_col, (float)*w ));
+        cvConvertScale( &dY_dX_sub_col, &dY_dX_sub_col, (float)*w );
 
     // compute <dE_dX>
-    CV_CALL(cvReshape( dY_dX_elems, dY_dX_elems, 0, 1 ));
-    CV_CALL(cvMul( dY_dX_elems, dE_dY, dY_dX_elems ));
+    cvReshape( dY_dX_elems, dY_dX_elems, 0, 1 );
+    cvMul( dY_dX_elems, dE_dY, dY_dX_elems );
 
     dY_dX_current_elem = dY_dX_elems->data.fl;
     dE_dX_start = dE_dX->data.fl;
@@ -1279,29 +1278,29 @@ static void icvCNNFullConnectBackward( CvCNNLayer* _layer,
 
     // we violate the convetion about vector's orientation because
     // here is more convenient to make this parameter a row-vector
-    CV_CALL(dE_dY_activ_func_der = cvCreateMat( 1, n_outputs, CV_32FC1 ));
-    CV_CALL(dE_dW = cvCreateMat( 1, weights->rows*weights->cols, CV_32FC1 ));
+    dE_dY_activ_func_der = cvCreateMat( 1, n_outputs, CV_32FC1 );
+    dE_dW = cvCreateMat( 1, weights->rows*weights->cols, CV_32FC1 );
 
     // 1) compute gradients dE_dX and dE_dW
     // activ_func_der == 4as*(layer->exp2ssumWX)/(layer->exp2ssumWX + 1)^2
-    CV_CALL(cvReshape( layer->exp2ssumWX, &exp2ssumWXrow, 0, layer->exp2ssumWX->cols ));
-    CV_CALL(cvAddS( &exp2ssumWXrow, cvRealScalar(1), dE_dY_activ_func_der ));
-    CV_CALL(cvPow( dE_dY_activ_func_der, dE_dY_activ_func_der, -2.0 ));
-    CV_CALL(cvMul( dE_dY_activ_func_der, &exp2ssumWXrow, dE_dY_activ_func_der,
-                   4.0*layer->a*layer->s ));
-    CV_CALL(cvMul( dE_dY, dE_dY_activ_func_der, dE_dY_activ_func_der ));
+    cvReshape( layer->exp2ssumWX, &exp2ssumWXrow, 0, layer->exp2ssumWX->cols );
+    cvAddS( &exp2ssumWXrow, cvRealScalar(1), dE_dY_activ_func_der );
+    cvPow( dE_dY_activ_func_der, dE_dY_activ_func_der, -2.0 );
+    cvMul( dE_dY_activ_func_der, &exp2ssumWXrow, dE_dY_activ_func_der,
+                   4.0*layer->a*layer->s );
+    cvMul( dE_dY, dE_dY_activ_func_der, dE_dY_activ_func_der );
 
     // sub_weights = d(W*(X|1))/dX
-    CV_CALL(cvGetSubRect( weights, &sub_weights,
-        cvRect(0, 0, weights->cols-1, weights->rows) ));
-    CV_CALL(cvMatMul( dE_dY_activ_func_der, &sub_weights, dE_dX ));
+    cvGetSubRect( weights, &sub_weights,
+        cvRect(0, 0, weights->cols-1, weights->rows) );
+    cvMatMul( dE_dY_activ_func_der, &sub_weights, dE_dX );
 
     cvReshape( X, &Xrow, 0, 1 );
     dE_dY_activ_func_der_data = dE_dY_activ_func_der->data.fl;
     Xtemplate = cvMat( 1, n_inputs, CV_32FC1, dE_dW->data.fl );
     for( i = 0; i < n_outputs; i++, Xtemplate.data.fl += n_inputs + 1 )
     {
-        CV_CALL(cvConvertScale( &Xrow, &Xtemplate, *dE_dY_activ_func_der_data ));
+        cvConvertScale( &Xrow, &Xtemplate, *dE_dY_activ_func_der_data );
         Xtemplate.data.fl[n_inputs] = *dE_dY_activ_func_der_data++;
     }
 
@@ -1440,17 +1439,17 @@ static CvCNNLayer* icvReadCNNLayer( CvFileStorage* fs, CvFileNode* node )
     int learn_type, layer_type;
     float init_learn_rate;
 
-    CV_CALL(n_input_planes  = cvReadIntByName( fs, node, "n_input_planes",  -1 ));
-    CV_CALL(input_height    = cvReadIntByName( fs, node, "input_height",    -1 ));
-    CV_CALL(input_width     = cvReadIntByName( fs, node, "input_width",     -1 ));
-    CV_CALL(n_output_planes = cvReadIntByName( fs, node, "n_output_planes", -1 ));
-    CV_CALL(output_height   = cvReadIntByName( fs, node, "output_height",   -1 ));
-    CV_CALL(output_width    = cvReadIntByName( fs, node, "output_width",    -1 ));
-    CV_CALL(layer_type      = cvReadIntByName( fs, node, "layer_type",      -1 ));
+    n_input_planes  = cvReadIntByName( fs, node, "n_input_planes",  -1 );
+    input_height    = cvReadIntByName( fs, node, "input_height",    -1 );
+    input_width     = cvReadIntByName( fs, node, "input_width",     -1 );
+    n_output_planes = cvReadIntByName( fs, node, "n_output_planes", -1 );
+    output_height   = cvReadIntByName( fs, node, "output_height",   -1 );
+    output_width    = cvReadIntByName( fs, node, "output_width",    -1 );
+    layer_type      = cvReadIntByName( fs, node, "layer_type",      -1 );
 
-    CV_CALL(init_learn_rate = (float)cvReadRealByName( fs, node, "init_learn_rate", -1 ));
-    CV_CALL(learn_type = cvReadIntByName( fs, node, "learn_rate_decrease_type", -1 ));
-    CV_CALL(weights    = (CvMat*)cvReadByName( fs, node, "weights" ));
+    init_learn_rate = (float)cvReadRealByName( fs, node, "init_learn_rate", -1 );
+    learn_type = cvReadIntByName( fs, node, "learn_rate_decrease_type", -1 );
+    weights    = (CvMat*)cvReadByName( fs, node, "weights" );
 
     if( n_input_planes < 0  || input_height < 0  || input_width < 0 ||
         n_output_planes < 0 || output_height < 0 || output_width < 0 ||
@@ -1463,13 +1462,13 @@ static CvCNNLayer* icvReadCNNLayer( CvFileStorage* fs, CvFileNode* node )
         if( K <= 0 || K != input_width - output_width + 1 )
             CV_ERROR( CV_StsBadArg, "Invalid <K>" );
 
-        CV_CALL(connect_mask = (CvMat*)cvReadByName( fs, node, "connect_mask" ));
+        connect_mask = (CvMat*)cvReadByName( fs, node, "connect_mask" );
         if( !connect_mask )
             CV_ERROR( CV_StsParseError, "Missing <connect mask>" );
 
-        CV_CALL(layer = cvCreateCNNConvolutionLayer(
+        layer = cvCreateCNNConvolutionLayer(
             n_input_planes, input_height, input_width, n_output_planes, K,
-            init_learn_rate, learn_type, connect_mask, weights ));
+            init_learn_rate, learn_type, connect_mask, weights );
     }
     else if( layer_type == ICV_CNN_SUBSAMPLING_LAYER )
     {
@@ -1479,28 +1478,28 @@ static CvCNNLayer* icvReadCNNLayer( CvFileStorage* fs, CvFileNode* node )
         if( sub_samp_scale <= 0 || sub_samp_scale != input_width/output_width )
             CV_ERROR( CV_StsBadArg, "Invalid <sub_samp_scale>" );
 
-        CV_CALL(a = (float)cvReadRealByName( fs, node, "a", -1 ));
-        CV_CALL(s = (float)cvReadRealByName( fs, node, "s", -1 ));
+        a = (float)cvReadRealByName( fs, node, "a", -1 );
+        s = (float)cvReadRealByName( fs, node, "s", -1 );
         if( a  < 0 || s  < 0 )
             CV_ERROR( CV_StsParseError, "Missing <a> or <s>" );
 
-        CV_CALL(layer = cvCreateCNNSubSamplingLayer(
+        layer = cvCreateCNNSubSamplingLayer(
             n_input_planes, input_height, input_width, sub_samp_scale,
-            a, s, init_learn_rate, learn_type, weights ));
+            a, s, init_learn_rate, learn_type, weights );
     }
     else if( layer_type == ICV_CNN_FULLCONNECT_LAYER )
     {
         float a, s;
-        CV_CALL(a = (float)cvReadRealByName( fs, node, "a", -1 ));
-        CV_CALL(s = (float)cvReadRealByName( fs, node, "s", -1 ));
+        a = (float)cvReadRealByName( fs, node, "a", -1 );
+        s = (float)cvReadRealByName( fs, node, "s", -1 );
         if( a  < 0 || s  < 0 )
             CV_ERROR( CV_StsParseError, "" );
         if( input_height != 1  || input_width != 1 ||
             output_height != 1 || output_width != 1 )
             CV_ERROR( CV_StsBadArg, "" );
 
-        CV_CALL(layer = cvCreateCNNFullConnectLayer( n_input_planes, n_output_planes,
-            a, s, init_learn_rate, learn_type, weights ));
+        layer = cvCreateCNNFullConnectLayer( n_input_planes, n_output_planes,
+            a, s, init_learn_rate, learn_type, weights );
     }
     else
         CV_ERROR( CV_StsBadArg, "Invalid <layer_type>" );
@@ -1525,42 +1524,42 @@ static void icvWriteCNNLayer( CvFileStorage* fs, CvCNNLayer* layer )
     if( !ICV_IS_CNN_LAYER(layer) )
         CV_ERROR( CV_StsBadArg, "Invalid layer" );
 
-    CV_CALL( cvStartWriteStruct( fs, NULL, CV_NODE_MAP, "opencv-ml-cnn-layer" ));
+    cvStartWriteStruct( fs, NULL, CV_NODE_MAP, "opencv-ml-cnn-layer" );
 
-    CV_CALL(cvWriteInt( fs, "n_input_planes",  layer->n_input_planes ));
-    CV_CALL(cvWriteInt( fs, "input_height",    layer->input_height ));
-    CV_CALL(cvWriteInt( fs, "input_width",     layer->input_width ));
-    CV_CALL(cvWriteInt( fs, "n_output_planes", layer->n_output_planes ));
-    CV_CALL(cvWriteInt( fs, "output_height",   layer->output_height ));
-    CV_CALL(cvWriteInt( fs, "output_width",    layer->output_width ));
-    CV_CALL(cvWriteInt( fs, "learn_rate_decrease_type", layer->learn_rate_decrease_type));
-    CV_CALL(cvWriteReal( fs, "init_learn_rate", layer->init_learn_rate ));
-    CV_CALL(cvWrite( fs, "weights", layer->weights ));
+    cvWriteInt( fs, "n_input_planes",  layer->n_input_planes );
+    cvWriteInt( fs, "input_height",    layer->input_height );
+    cvWriteInt( fs, "input_width",     layer->input_width );
+    cvWriteInt( fs, "n_output_planes", layer->n_output_planes );
+    cvWriteInt( fs, "output_height",   layer->output_height );
+    cvWriteInt( fs, "output_width",    layer->output_width );
+    cvWriteInt( fs, "learn_rate_decrease_type", layer->learn_rate_decrease_type);
+    cvWriteReal( fs, "init_learn_rate", layer->init_learn_rate );
+    cvWrite( fs, "weights", layer->weights );
 
     if( ICV_IS_CNN_CONVOLUTION_LAYER( layer ))
     {
         CvCNNConvolutionLayer* l = (CvCNNConvolutionLayer*)layer;
-        CV_CALL(cvWriteInt( fs, "layer_type", ICV_CNN_CONVOLUTION_LAYER ));
-        CV_CALL(cvWrite( fs, "connect_mask", l->connect_mask ));
+        cvWriteInt( fs, "layer_type", ICV_CNN_CONVOLUTION_LAYER );
+        cvWrite( fs, "connect_mask", l->connect_mask );
     }
     else if( ICV_IS_CNN_SUBSAMPLING_LAYER( layer ) )
     {
         CvCNNSubSamplingLayer* l = (CvCNNSubSamplingLayer*)layer;
-        CV_CALL(cvWriteInt( fs, "layer_type", ICV_CNN_SUBSAMPLING_LAYER ));
-        CV_CALL(cvWriteReal( fs, "a", l->a ));
-        CV_CALL(cvWriteReal( fs, "s", l->s ));
+        cvWriteInt( fs, "layer_type", ICV_CNN_SUBSAMPLING_LAYER );
+        cvWriteReal( fs, "a", l->a );
+        cvWriteReal( fs, "s", l->s );
     }
     else if( ICV_IS_CNN_FULLCONNECT_LAYER( layer ) )
     {
         CvCNNFullConnectLayer* l = (CvCNNFullConnectLayer*)layer;
-        CV_CALL(cvWriteInt( fs, "layer_type", ICV_CNN_FULLCONNECT_LAYER ));
-        CV_CALL(cvWriteReal( fs, "a", l->a ));
-        CV_CALL(cvWriteReal( fs, "s", l->s ));
+        cvWriteInt( fs, "layer_type", ICV_CNN_FULLCONNECT_LAYER );
+        cvWriteReal( fs, "a", l->a );
+        cvWriteReal( fs, "s", l->s );
     }
     else
         CV_ERROR( CV_StsBadArg, "Invalid layer" );
 
-    CV_CALL( cvEndWriteStruct( fs )); //"opencv-ml-cnn-layer"
+    cvEndWriteStruct( fs ); //"opencv-ml-cnn-layer"
 
     __END__;
 }
@@ -1579,30 +1578,30 @@ static void* icvReadCNNModel( CvFileStorage* fs, CvFileNode* root_node )
     CvSeqReader reader;
     int i;
 
-    CV_CALL(cnn = (CvCNNStatModel*)cvCreateStatModel(
+    cnn = (CvCNNStatModel*)cvCreateStatModel(
         CV_STAT_MODEL_MAGIC_VAL|CV_CNN_MAGIC_VAL, sizeof(CvCNNStatModel),
-        icvCNNModelRelease, icvCNNModelPredict, icvCNNModelUpdate ));
+        icvCNNModelRelease, icvCNNModelPredict, icvCNNModelUpdate );
 
-    CV_CALL(cnn->etalons = (CvMat*)cvReadByName( fs, root_node, "etalons" ));
-    CV_CALL(cnn->cls_labels = (CvMat*)cvReadByName( fs, root_node, "cls_labels" ));
+    cnn->etalons = (CvMat*)cvReadByName( fs, root_node, "etalons" );
+    cnn->cls_labels = (CvMat*)cvReadByName( fs, root_node, "cls_labels" );
 
     if( !cnn->etalons || !cnn->cls_labels )
         CV_ERROR( CV_StsParseError, "No <etalons> or <cls_labels> in CNN model" );
 
-    CV_CALL( node = cvGetFileNodeByName( fs, root_node, "network" ));
+    node = cvGetFileNodeByName( fs, root_node, "network" );
     seq = node->data.seq;
     if( !CV_NODE_IS_SEQ(node->tag) )
         CV_ERROR( CV_StsBadArg, "" );
 
-    CV_CALL( cvStartReadSeq( seq, &reader, 0 ));
-    CV_CALL(layer = icvReadCNNLayer( fs, (CvFileNode*)reader.ptr ));
-    CV_CALL(cnn->network = cvCreateCNNetwork( layer ));
+    cvStartReadSeq( seq, &reader, 0 );
+    layer = icvReadCNNLayer( fs, (CvFileNode*)reader.ptr );
+    cnn->network = cvCreateCNNetwork( layer );
 
     for( i = 1; i < seq->total; i++ )
     {
         CV_NEXT_SEQ_ELEM( seq->elem_size, reader );
-        CV_CALL(layer = icvReadCNNLayer( fs, (CvFileNode*)reader.ptr ));
-        CV_CALL(cnn->network->add_layer( cnn->network, layer ));
+        layer = icvReadCNNLayer( fs, (CvFileNode*)reader.ptr );
+        cnn->network->add_layer( cnn->network, layer );
     }
 
     __END__;
@@ -1633,21 +1632,21 @@ icvWriteCNNModel( CvFileStorage* fs, const char* name,
 
     n_layers = cnn->network->n_layers;
 
-    CV_CALL( cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_ML_CNN ));
+    cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_ML_CNN );
 
-    CV_CALL(cvWrite( fs, "etalons", cnn->etalons ));
-    CV_CALL(cvWrite( fs, "cls_labels", cnn->cls_labels ));
+    cvWrite( fs, "etalons", cnn->etalons );
+    cvWrite( fs, "cls_labels", cnn->cls_labels );
 
-    CV_CALL( cvStartWriteStruct( fs, "network", CV_NODE_SEQ ));
+    cvStartWriteStruct( fs, "network", CV_NODE_SEQ );
 
     layer = cnn->network->layers;
     for( i = 0; i < n_layers && layer; i++, layer = layer->next_layer )
-        CV_CALL(icvWriteCNNLayer( fs, layer ));
+        icvWriteCNNLayer( fs, layer );
     if( i < n_layers || layer )
         CV_ERROR( CV_StsBadArg, "Invalid network" );
 
-    CV_CALL( cvEndWriteStruct( fs )); //"network"
-    CV_CALL( cvEndWriteStruct( fs )); //"opencv-ml-cnn"
+    cvEndWriteStruct( fs ); //"network"
+    cvEndWriteStruct( fs ); //"opencv-ml-cnn"
 
     __END__;
 }

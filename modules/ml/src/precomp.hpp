@@ -231,7 +231,7 @@
     for( i = 0; i < nsamples; i++, a.data.ptr += offset )           \
     {                                                               \
         b.data.fl = (float*)array[i];                               \
-        CV_CALL( cvConvert( &b, &a ) );                             \
+        cvConvert( &b, &a );                                        \
     }                                                               \
 }
 
