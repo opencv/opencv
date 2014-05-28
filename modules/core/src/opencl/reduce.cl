@@ -82,6 +82,12 @@
 
 #define noconvert
 
+#ifdef HAVE_MASK_CONT
+#define MASK_INDEX int mask_index = id + mask_offset;
+#else
+#define MASK_INDEX int mask_index = mad24(id / cols, mask_step, mask_offset + (id % cols))
+#endif
+
 #if cn != 3
 #define loadpix(addr) *(__global const srcT *)(addr)
 #define storepix(val, addr)  *(__global dstT *)(addr) = val
@@ -130,15 +136,22 @@
 
 #ifdef HAVE_MASK
 #define REDUCE_GLOBAL \
-    int mask_index = mad24(id / cols, mask_step, mask_offset + (id % cols)); \
+    MASK_INDEX; \
     if (mask[mask_index]) \
     { \
         dstT temp = convertToDT(loadpix(srcptr + src_index)); \
         FUNC(accumulator, temp); \
     }
 #elif defined OP_DOT
+
+#ifdef HAVE_SRC2_CONT
+#define SRC2_INDEX int src2_index = mad24(id, srcTSIZE, src2_offset);
+#else
+#define SRC2_INDEX int src2_index = mad24(id / cols, src2_step, mad24(id % cols, srcTSIZE, src2_offset))
+#endif
+
 #define REDUCE_GLOBAL \
-    int src2_index = mad24(id / cols, src2_step, mad24(id % cols, srcTSIZE, src2_offset)); \
+    SRC2_INDEX; \
     dstT temp = convertToDT(loadpix(srcptr + src_index)), temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
     FUNC(accumulator, temp, temp2)
 #else
@@ -183,7 +196,7 @@
 #define DEFINE_ACCUMULATOR \
     srcT maxval = MIN_VAL, temp
 #define REDUCE_GLOBAL \
-    int mask_index = mad24(id / cols, mask_step, mask_offset + (id % cols)); \
+    MASK_INDEX; \
     if (mask[mask_index]) \
     { \
         temp = loadpix(srcptr + src_index); \
@@ -270,7 +283,7 @@
 #define REDUCE_GLOBAL \
     temp = loadpix(srcptr + src_index); \
     temploc = id; \
-    int mask_index = mad24(id / cols, mask_step, mask_offset + (id % cols) * (int)sizeof(uchar)); \
+    MASK_INDEX; \
     __global const uchar * mask = (__global const uchar *)(maskptr + mask_index); \
     temp_mask = mask[0]; \
     srcT temp_minval = minval, temp_maxval = maxval; \
@@ -305,12 +318,18 @@ __kernel void reduce(__global const uchar * srcptr, int src_step, int src_offset
     int gid = get_group_id(0);
     int  id = get_global_id(0);
 
+    srcptr += src_offset;
+
     DECLARE_LOCAL_MEM;
     DEFINE_ACCUMULATOR;
 
     for (int grain = groupnum * WGS; id < total; id += grain)
     {
-        int src_index = mad24(id / cols, src_step, mad24(id % cols, srcTSIZE, src_offset));
+#ifdef HAVE_SRC_CONT
+        int src_index = mul24(id, srcTSIZE);
+#else
+        int src_index = mad24(id / cols, src_step, mul24(id % cols, srcTSIZE));
+#endif
         REDUCE_GLOBAL;
     }
 

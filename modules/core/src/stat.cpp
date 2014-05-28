@@ -496,13 +496,15 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
     char cvt[40];
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
                   format("-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D ddepth=%d -D cn=%d"
-                         " -D convertToDT=%s -D %s -D WGS=%d -D WGS2_ALIGNED=%d%s%s",
+                         " -D convertToDT=%s -D %s -D WGS=%d -D WGS2_ALIGNED=%d%s%s%s%s",
                          ocl::typeToStr(type), ocl::typeToStr(depth),
                          ocl::typeToStr(dtype), ocl::typeToStr(ddepth), ddepth, cn,
                          ocl::convertTypeStr(depth, ddepth, cn, cvt),
                          opMap[sum_op], (int)wgs, wgs2_aligned,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-                         haveMask ? " -D HAVE_MASK" : ""));
+                         haveMask ? " -D HAVE_MASK" : "",
+                         _src.isContinuous() ? " -D HAVE_SRC_CONT" : "",
+                         _mask.isContinuous() ? " -D HAVE_MASK_CONT" : ""));
     if (k.empty())
         return false;
 
@@ -658,9 +660,11 @@ static bool ocl_countNonZero( InputArray _src, int & res )
     wgs2_aligned >>= 1;
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
-                  format("-D srcT=%s -D OP_COUNT_NON_ZERO -D WGS=%d -D WGS2_ALIGNED=%d%s",
+                  format("-D srcT=%s -D OP_COUNT_NON_ZERO -D WGS=%d "
+                         "-D WGS2_ALIGNED=%d%s%s",
                          ocl::typeToStr(type), (int)wgs,
-                         wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                         wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                         _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
     if (k.empty())
         return false;
 
@@ -1301,9 +1305,11 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
         wgs2_aligned <<= 1;
     wgs2_aligned >>= 1;
 
-    String opts = format("-D DEPTH_%d -D srcT=%s -D OP_MIN_MAX_LOC%s -D WGS=%d -D WGS2_ALIGNED=%d%s",
+    String opts = format("-D DEPTH_%d -D srcT=%s -D OP_MIN_MAX_LOC%s -D WGS=%d -D WGS2_ALIGNED=%d%s%s%s",
                          depth, ocl::typeToStr(depth), _mask.empty() ? "" : "_MASK", (int)wgs,
-                         wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+                         wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                         _src.isContinuous() ? " -D HAVE_SRC_CONT" : "",
+                         _mask.isContinuous() ? " -D HAVE_MASK_CONT" : "");
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc, opts);
     if (k.empty())
@@ -2026,9 +2032,11 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
 
             ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
                           format("-D OP_NORM_INF_MASK -D HAVE_MASK -D DEPTH_%d"
-                                 " -D srcT=%s -D srcT1=%s -D WGS=%d -D cn=%d -D WGS2_ALIGNED=%d%s",
+                                 " -D srcT=%s -D srcT1=%s -D WGS=%d -D cn=%d -D WGS2_ALIGNED=%d%s%s%s",
                                  depth, ocl::typeToStr(type), ocl::typeToStr(depth),
-                                 wgs, cn, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                                 wgs, cn, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                                 src.isContinuous() ? " -D HAVE_CONT_SRC" : "",
+                                 _mask.isContinuous() ? " -D HAVE_MASK_CONT" : ""));
             if (k.empty())
                 return false;
 
