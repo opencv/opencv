@@ -617,8 +617,6 @@ void CvERTreeTrainData::get_vectors( const CvMat* _subsample_idx,
 
     cv::AutoBuffer<uchar> inn_buf(sample_count*(sizeof(float) + sizeof(int)));
 
-    CV_FUNCNAME( "CvERTreeTrainData::get_vectors" );
-
     __BEGIN__;
 
     int i, vi, total = sample_count, count = total, cur_ofs = 0;
@@ -1601,15 +1599,9 @@ bool CvERTrees::train( const CvMat* _train_data, int _tflag,
 
 bool CvERTrees::train( CvMLData* _data, CvRTParams params)
 {
-   bool result = false;
-
-    CV_FUNCNAME( "CvERTrees::train" );
-
-    __BEGIN__;
+    bool result = false;
 
     result = CvRTrees::train( _data, params);
-
-    __END__;
 
     return result;
 }
@@ -1620,7 +1612,6 @@ bool CvERTrees::grow_forest( const CvTermCriteria term_crit )
 
     CvMat* sample_idx_for_tree      = 0;
 
-    CV_FUNCNAME("CvERTrees::grow_forest");
     __BEGIN__;
 
     const int max_ntrees = term_crit.max_iter;

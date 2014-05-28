@@ -1591,8 +1591,6 @@ bool CvSVM::train( const CvMat* _train_data, const CvMat* _responses,
     CvMemStorage* temp_storage = 0;
     const float** samples = 0;
 
-    CV_FUNCNAME( "CvSVM::train" );
-
     __BEGIN__;
 
     int svm_type, sample_count, var_count, sample_size;

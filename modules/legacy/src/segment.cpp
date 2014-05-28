@@ -485,8 +485,6 @@ cvSegmentImage( const CvArr* srcarr, CvArr* dstarr,
     //CvMat* temp = 0;
     void* stack = 0;
 
-    CV_FUNCNAME( "cvSegmentImage" );
-
     __BEGIN__;
 
     CvMat srcstub, *src;

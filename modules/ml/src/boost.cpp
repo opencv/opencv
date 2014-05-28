@@ -1097,8 +1097,6 @@ bool CvBoost::train( CvMLData* _data,
 {
     bool result = false;
 
-    CV_FUNCNAME( "CvBoost::train" );
-
     __BEGIN__;
 
     const CvMat* values = _data->get_values();
@@ -1119,8 +1117,6 @@ bool CvBoost::train( CvMLData* _data,
 void
 CvBoost::update_weights_impl( CvBoostTree* tree, double initial_weights[2] )
 {
-    CV_FUNCNAME( "CvBoost::update_weights_impl" );
-
     __BEGIN__;
 
     int i, n = data->sample_count;

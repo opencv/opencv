@@ -892,8 +892,6 @@ void CvDTreeTrainData::get_vectors( const CvMat* _subsample_idx,
     CvMat* subsample_idx = 0;
     CvMat* subsample_co = 0;
 
-    CV_FUNCNAME( "CvDTreeTrainData::get_vectors" );
-
     __BEGIN__;
 
     int i, vi, total = sample_count, count = total, cur_ofs = 0;
@@ -1561,17 +1559,11 @@ bool CvDTree::train( const CvMat* _train_data, int _tflag,
 {
     bool result = false;
 
-    CV_FUNCNAME( "CvDTree::train" );
-
-    __BEGIN__;
-
     clear();
     data = new CvDTreeTrainData( _train_data, _tflag, _responses,
                                  _var_idx, _sample_idx, _var_type,
                                  _missing_mask, _params, false );
     result = do_train(0);
-
-    __END__;
 
     return result;
 }
@@ -1592,10 +1584,6 @@ bool CvDTree::train( CvMLData* _data, CvDTreeParams _params )
 {
    bool result = false;
 
-    CV_FUNCNAME( "CvDTree::train" );
-
-    __BEGIN__;
-
     const CvMat* values = _data->get_values();
     const CvMat* response = _data->get_responses();
     const CvMat* missing = _data->get_missing();
@@ -1606,8 +1594,6 @@ bool CvDTree::train( CvMLData* _data, CvDTreeParams _params )
     result = train( values, CV_ROW_SAMPLE, response, var_idx,
         train_sidx, var_types, missing, _params );
 
-    __END__;
-
     return result;
 }
 
@@ -1615,16 +1601,10 @@ bool CvDTree::train( CvDTreeTrainData* _data, const CvMat* _subsample_idx )
 {
     bool result = false;
 
-    CV_FUNCNAME( "CvDTree::train" );
-
-    __BEGIN__;
-
     clear();
     data = _data;
     data->shared = true;
     result = do_train(_subsample_idx);
-
-    __END__;
 
     return result;
 }
@@ -1633,8 +1613,6 @@ bool CvDTree::train( CvDTreeTrainData* _data, const CvMat* _subsample_idx )
 bool CvDTree::do_train( const CvMat* _subsample_idx )
 {
     bool result = false;
-
-    CV_FUNCNAME( "CvDTree::do_train" );
 
     __BEGIN__;
 
@@ -3366,8 +3344,6 @@ void CvDTree::prune_cv()
     // 2. choose the best tree index (if need, apply 1SE rule).
     // 3. store the best index and cut the branches.
 
-    CV_FUNCNAME( "CvDTree::prune_cv" );
-
     __BEGIN__;
 
     int ti, j, tree_count = 0, cv_n = data->params.cv_folds, n = root->sample_count;
@@ -4057,8 +4033,6 @@ CvDTreeNode* CvDTree::read_node( CvFileStorage* fs, CvFileNode* fnode, CvDTreeNo
 
 void CvDTree::read_tree_nodes( CvFileStorage* fs, CvFileNode* fnode )
 {
-    CV_FUNCNAME( "CvDTree::read_tree_nodes" );
-
     __BEGIN__;
 
     CvSeqReader reader;

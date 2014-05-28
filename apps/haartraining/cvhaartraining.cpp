@@ -471,10 +471,6 @@ CvHaarTrainigData* icvCreateHaarTrainingData( CvSize winsize, int maxnumsamples 
 {
     CvHaarTrainigData* data;
 
-    CV_FUNCNAME( "icvCreateHaarTrainingData" );
-
-    __BEGIN__;
-
     data = NULL;
     uchar* ptr = NULL;
     size_t datasize = 0;
@@ -506,8 +502,6 @@ CvHaarTrainigData* icvCreateHaarTrainingData( CvSize winsize, int maxnumsamples 
 
     data->valcache = NULL;
     data->idxcache = NULL;
-
-    __END__;
 
     return data;
 }
@@ -651,10 +645,6 @@ static
 void icvPrecalculate( CvHaarTrainingData* data, CvIntHaarFeatures* haarFeatures,
                       int numprecalculated )
 {
-    CV_FUNCNAME( "icvPrecalculate" );
-
-    __BEGIN__;
-
     icvReleaseHaarTrainingDataCache( &data );
 
     numprecalculated -= numprecalculated % CV_STUMP_TRAIN_PORTION;
@@ -738,8 +728,6 @@ void icvPrecalculate( CvHaarTrainingData* data, CvIntHaarFeatures* haarFeatures,
 #endif
         #endif /* CV_OPENMP */
     }
-
-    __END__;
 }
 
 static
@@ -2266,11 +2254,6 @@ static CvMat* icvGetUsedValues( CvHaarTrainingData* training_data,
 {
     CvMat* ptr = NULL;
     CvMat* feature_idx = NULL;
-
-    CV_FUNCNAME( "icvGetUsedValues" );
-
-    __BEGIN__;
-
     int num_splits;
     int i, j;
     int r;
@@ -2329,8 +2312,6 @@ static CvMat* icvGetUsedValues( CvHaarTrainingData* training_data,
             CV_MAT_ELEM( *ptr, float, r - start, c ) = val;
         }
     }
-
-    __END__;
 
     cvReleaseMat( &feature_idx );
 

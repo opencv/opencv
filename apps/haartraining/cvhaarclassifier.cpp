@@ -442,11 +442,6 @@ static CvIntHaarClassifier* icvLoadCARTStageHaarClassifierF( FILE* file, int ste
 CvIntHaarClassifier* icvLoadCARTStageHaarClassifier( const char* filename, int step )
 {
     CvIntHaarClassifier* ptr = NULL;
-
-    CV_FUNCNAME( "icvLoadCARTStageHaarClassifier" );
-
-    __BEGIN__;
-
     FILE* file;
 
     file = fopen( filename, "r" );
@@ -455,8 +450,6 @@ CvIntHaarClassifier* icvLoadCARTStageHaarClassifier( const char* filename, int s
         ptr = icvLoadCARTStageHaarClassifierF( file, step );
         fclose( file );
     }
-
-    __END__;
 
     return ptr;
 }
@@ -551,17 +544,11 @@ float icvEvalTreeCascadeClassifierFilter( CvIntHaarClassifier* classifier, sum_t
 CvTreeCascadeNode* icvCreateTreeCascadeNode()
 {
     CvTreeCascadeNode* ptr = NULL;
-
-    CV_FUNCNAME( "icvCreateTreeCascadeNode" );
-
-    __BEGIN__;
     size_t data_size;
 
     data_size = sizeof( *ptr );
     ptr = (CvTreeCascadeNode*) cvAlloc( data_size );
     memset( ptr, 0, data_size );
-
-    __END__;
 
     return ptr;
 }

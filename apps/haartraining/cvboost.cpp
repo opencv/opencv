@@ -2932,11 +2932,6 @@ static
 float cvEvalBtClassifier( CvClassifier* classifier, CvMat* sample )
 {
     float val;
-
-    CV_FUNCNAME( "cvEvalBtClassifier" );
-
-    __BEGIN__;
-
     int i;
 
     val = 0.0F;
@@ -2964,23 +2959,13 @@ float cvEvalBtClassifier( CvClassifier* classifier, CvMat* sample )
         }
     }
 
-    __END__;
-
     return val;
 }
 
 static
 float cvEvalBtClassifier2( CvClassifier* classifier, CvMat* sample )
 {
-    float val;
-
-    CV_FUNCNAME( "cvEvalBtClassifier2" );
-
-    __BEGIN__;
-
-    val = cvEvalBtClassifier( classifier, sample );
-
-    __END__;
+    float val = cvEvalBtClassifier( classifier, sample );
 
     return (float) (val >= 0.0F);
 }
@@ -2989,8 +2974,6 @@ static
 float cvEvalBtClassifierK( CvClassifier* classifier, CvMat* sample )
 {
     int cls = 0;
-
-    CV_FUNCNAME( "cvEvalBtClassifierK" );
 
     __BEGIN__;
 

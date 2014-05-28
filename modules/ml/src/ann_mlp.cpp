@@ -799,8 +799,6 @@ int CvANN_MLP::train( const CvMat* _inputs, const CvMat* _outputs,
 
     x0.data.ptr = u.data.ptr = 0;
 
-    CV_FUNCNAME( "CvANN_MLP::train" );
-
     __BEGIN__;
 
     int max_iter;
@@ -852,8 +850,6 @@ int CvANN_MLP::train_backprop( CvVectors x0, CvVectors u, const double* sw )
     double **x = 0, **df = 0;
     CvMat* _idx = 0;
     int iter = -1, count = x0.count;
-
-    CV_FUNCNAME( "CvANN_MLP::train_backprop" );
 
     __BEGIN__;
 
@@ -1215,8 +1211,6 @@ int CvANN_MLP::train_rprop( CvVectors x0, CvVectors u, const double* sw )
     CvMat* buf = 0;
     double **x = 0, **df = 0;
     int iter = -1, count = x0.count;
-
-    CV_FUNCNAME( "CvANN_MLP::train" );
 
     __BEGIN__;
 

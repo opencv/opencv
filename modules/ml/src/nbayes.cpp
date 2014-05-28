@@ -409,8 +409,6 @@ float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results ) c
 
 void CvNormalBayesClassifier::write( CvFileStorage* fs, const char* name ) const
 {
-    CV_FUNCNAME( "CvNormalBayesClassifier::write" );
-
     __BEGIN__;
 
     int nclasses, i;

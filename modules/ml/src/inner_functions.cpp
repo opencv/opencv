@@ -82,8 +82,6 @@ void CvStatModel::load( const char* filename, const char* name )
 {
     CvFileStorage* fs = 0;
 
-    CV_FUNCNAME( "CvStatModel::load" );
-
     __BEGIN__;
 
     CvFileNode* model_node = 0;
