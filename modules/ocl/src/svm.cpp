@@ -286,12 +286,6 @@ void  cvPreparePredictData( const CvArr* _sample, int dims_all,
 
     if( inverse_comp_idx )
         cvFree( &inverse_comp_idx );
-
-    if( cvGetErrStatus() < 0 && _row_sample )
-    {
-        cvFree( &row_sample );
-        *_row_sample = 0;
-    }
 }
 
 float CvSVM_OCL::predict( const int row_index, int row_len, Mat& src, bool returnDFVal ) const

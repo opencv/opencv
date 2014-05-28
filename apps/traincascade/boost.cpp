@@ -146,9 +146,6 @@ static CvMat* cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, b
 
     __END__;
 
-    if( cvGetErrStatus() < 0 )
-        cvReleaseMat( &idx );
-
     return idx;
 }
 

@@ -311,7 +311,7 @@ CvMat* icvGenerateRandomClusterCenters ( int seed, const CvMat* data,
 
     __END__;
 
-    if( (cvGetErrStatus () < 0) || (centers != _centers) )
+    if( centers != _centers )
         cvReleaseMat (&centers);
 
     return _centers ? _centers : centers;
@@ -484,9 +484,6 @@ cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, bool check_for_
     }
 
     __END__;
-
-    if( cvGetErrStatus() < 0 )
-        cvReleaseMat( &idx );
 
     return idx;
 }
@@ -1243,12 +1240,6 @@ cvPreparePredictData( const CvArr* _sample, int dims_all,
 
     if( inverse_comp_idx )
         cvFree( &inverse_comp_idx );
-
-    if( cvGetErrStatus() < 0 && _row_sample )
-    {
-        cvFree( &row_sample );
-        *_row_sample = 0;
-    }
 }
 
 

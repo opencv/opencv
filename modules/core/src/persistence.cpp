@@ -2923,7 +2923,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
 _exit_:
     if( fs )
     {
-        if( cvGetErrStatus() < 0 || (!fs->file && !fs->gzfile && !fs->outbuf && !fs->strbuf) )
+        if( !fs->file && !fs->gzfile && !fs->outbuf && !fs->strbuf )
         {
             cvReleaseFileStorage( &fs );
         }
@@ -5102,12 +5102,6 @@ stop_search:
     if( !memstorage && (CV_IS_SEQ( ptr ) || CV_IS_SET( ptr )) )
         CV_Error( CV_StsNullPtr,
         "NULL memory storage is passed - the loaded dynamic structure can not be stored" );
-
-    if( cvGetErrStatus() < 0 )
-    {
-        cvRelease( (void**)&ptr );
-        real_name = 0;
-    }
 
     if( _real_name)
     {

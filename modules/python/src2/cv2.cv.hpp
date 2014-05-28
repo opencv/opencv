@@ -141,7 +141,7 @@ static void translate_error_to_exception(void)
   cvSetErrStatus(0);
 }
 
-#define ERRCHK do { if (cvGetErrStatus() != 0) { translate_error_to_exception(); return 0; } } while (0)
+#define ERRCHK
 #define ERRWRAPN(F, N) \
     do { \
         try \
@@ -1566,12 +1566,10 @@ static int convert_to_IplImage(PyObject *o, IplImage **dst, const char *name)
     return failmsg("Argument '%s' must be IplImage", name);
   } else if (PyString_Check(ipl->data)) {
     cvSetData(ipl->a, PyString_AsString(ipl->data) + ipl->offset, ipl->a->widthStep);
-    assert(cvGetErrStatus() == 0);
     *dst = ipl->a;
     return 1;
   } else if (ipl->data && PyObject_AsWriteBuffer(ipl->data, &buffer, &buffer_len) == 0) {
     cvSetData(ipl->a, (void*)((char*)buffer + ipl->offset), ipl->a->widthStep);
-    assert(cvGetErrStatus() == 0);
     *dst = ipl->a;
     return 1;
   } else {
@@ -1598,15 +1596,12 @@ static int convert_to_CvMat(PyObject *o, CvMat **dst, const char *name)
   } else {
     m->a->refcount = NULL;
     if (m->data && PyString_Check(m->data)) {
-      assert(cvGetErrStatus() == 0);
       char *ptr = PyString_AsString(m->data) + m->offset;
       cvSetData(m->a, ptr, m->a->step);
-      assert(cvGetErrStatus() == 0);
       *dst = m->a;
       return 1;
     } else if (m->data && PyObject_AsWriteBuffer(m->data, &buffer, &buffer_len) == 0) {
       cvSetData(m->a, (void*)((char*)buffer + m->offset), m->a->step);
-      assert(cvGetErrStatus() == 0);
       *dst = m->a;
       return 1;
     } else if (m->data && m->a->data.ptr){
@@ -3102,10 +3097,6 @@ static int cvarr_SetItem(PyObject *o, PyObject *key, PyObject *v)
     ERRWRAPN(cvSetND(cva, dd.i, s), -1);
     // XXX - OpenCV bug? - seems as if an error in cvSetND does not set error status?
     break;
-  }
-  if (cvGetErrStatus() != 0) {
-    translate_error_to_exception();
-    return -1;
   }
 
   return 0;

@@ -197,10 +197,6 @@ cvTrainCNNClassifier( const CvMat* _train_data, int tflag,
 
     __END__;
 
-    if( cvGetErrStatus() < 0 && cnn_model )
-    {
-        cnn_model->release( (CvStatModel**)&cnn_model );
-    }
     cvFree( &out_train_data );
     cvReleaseMat( &responses );
 
@@ -484,9 +480,6 @@ ML_IMPL CvCNNetwork* cvCreateCNNetwork( CvCNNLayer* first_layer )
 
     __END__;
 
-    if( cvGetErrStatus() < 0 && network )
-        cvFree( &network );
-
     return network;
 
 }
@@ -621,9 +614,6 @@ static CvCNNLayer* icvCreateCNNLayer( int layer_type, int header_size,
 
     __END__;
 
-    if( cvGetErrStatus() < 0 && layer)
-        cvFree( &layer );
-
     return layer;
 }
 
@@ -683,13 +673,6 @@ ML_IMPL CvCNNLayer* cvCreateCNNConvolutionLayer(
 
     __END__;
 
-    if( cvGetErrStatus() < 0 && layer )
-    {
-        cvReleaseMat( &layer->weights );
-        cvReleaseMat( &layer->connect_mask );
-        cvFree( &layer );
-    }
-
     return (CvCNNLayer*)layer;
 }
 
@@ -746,12 +729,6 @@ ML_IMPL CvCNNLayer* cvCreateCNNSubSamplingLayer(
 
     __END__;
 
-    if( cvGetErrStatus() < 0 && layer )
-    {
-        cvReleaseMat( &layer->exp2ssumWX );
-        cvFree( &layer );
-    }
-
     return (CvCNNLayer*)layer;
 }
 
@@ -795,13 +772,6 @@ ML_IMPL CvCNNLayer* cvCreateCNNFullConnectLayer(
     }
 
     __END__;
-
-    if( cvGetErrStatus() < 0 && layer )
-    {
-        cvReleaseMat( &layer->exp2ssumWX );
-        cvReleaseMat( &layer->weights );
-        cvFree( &layer );
-    }
 
     return (CvCNNLayer*)layer;
 }
@@ -1506,9 +1476,6 @@ static CvCNNLayer* icvReadCNNLayer( CvFileStorage* fs, CvFileNode* node )
 
     __END__;
 
-    if( cvGetErrStatus() < 0 && layer )
-        layer->release( &layer );
-
     cvReleaseMat( &weights );
     cvReleaseMat( &connect_mask );
 
@@ -1606,11 +1573,6 @@ static void* icvReadCNNModel( CvFileStorage* fs, CvFileNode* root_node )
 
     __END__;
 
-    if( cvGetErrStatus() < 0 )
-    {
-        if( cnn ) cnn->release( (CvStatModel**)&cnn );
-        if( layer ) layer->release( &layer );
-    }
     return (void*)cnn;
 }
 

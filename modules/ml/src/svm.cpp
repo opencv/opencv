@@ -1642,7 +1642,7 @@ bool CvSVM::train( const CvMat* _train_data, const CvMat* _responses,
     cvReleaseMat( &responses );
     cvFree( &samples );
 
-    if( cvGetErrStatus() < 0 || !ok )
+    if( !ok )
         clear();
 
     return ok;
@@ -2042,7 +2042,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
     cvFree( &samples );
     cvFree( &samples_local );
 
-    if( cvGetErrStatus() < 0 || !ok )
+    if( !ok )
         clear();
 
     return ok;

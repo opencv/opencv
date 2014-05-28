@@ -268,7 +268,7 @@ bool CvNormalBayesClassifier::train( const CvMat* _train_data, const CvMat* _res
 
     __END__;
 
-    if( !result || cvGetErrStatus() < 0 )
+    if( !result )
         clear();
 
     cvReleaseMat( &cov );

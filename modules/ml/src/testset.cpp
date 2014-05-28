@@ -155,13 +155,6 @@ cvCreateTestSet( int type, CvMat** samples,
 
     __END__;
 
-    if( cvGetErrStatus() < 0 )
-    {
-        if( samples )
-            cvReleaseMat( samples );
-        if( responses )
-            cvReleaseMat( responses );
-    }
     cvReleaseMat( &mean );
     cvReleaseMat( &cov );
     cvReleaseMemStorage( &storage );
