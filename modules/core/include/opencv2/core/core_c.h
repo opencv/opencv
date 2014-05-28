@@ -1820,26 +1820,13 @@ static char cvFuncName[] = Name
     CV_ERROR( code, "" )
 
 /*
- CV_CHECK macro checks error status after CV (or IPL)
- function call. If error detected, control will be transferred to the exit
- label.
+ Deprecated macros
  */
-#define CV_CHECK()                                                  \
-{                                                                   \
-    if( cvGetErrStatus() < 0 )                                      \
-        CV_ERROR( CV_StsBackTrace, "Inner function failed." );      \
-}
+#define CV_CHECK()
 
-
-/*
- CV_CALL macro calls CV (or IPL) function, checks error status and
- signals a error if the function failed. Useful in "parent node"
- error procesing mode
- */
 #define CV_CALL( Func )                                             \
 {                                                                   \
     Func;                                                           \
-    CV_CHECK();                                                     \
 }
 
 
