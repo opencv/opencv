@@ -67583,4 +67583,1120 @@
       <dt>d</dt>
       <data>
         5.7732498066070193e-01</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDevWithMask--MeanStdDevWithMask---1920x1080--32FC4->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC1--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        39124894.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC1--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        8.1623095163072561e+004</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC1--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.9999219179153442e-001</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC1--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.5338522021484375e+005</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC1--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.1966636813099763e+002</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC1--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC3--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        117419397.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC3--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4140769065365577e+005</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC3--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.9999803304672241e-001</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC3--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.6052304296875000e+005</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC3--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.5403548386616217e+002</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC3--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC4--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        156585399.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC4--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6329946811915829e+005</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--8UC4--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.9999803304672241e-001</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC4--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.1409107812500000e+005</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC4--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.3974373378867494e+002</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---640x480--32FC4--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC1--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        117409808.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC1--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4139857130819958e+005</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC1--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.9999803304672241e-001</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC1--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.6052304296875000e+005</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC1--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.5403548386616217e+002</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC1--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC3--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        352296688.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC3--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.4492179088027263e+005</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC3--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.9999970197677612e-001</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC3--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3819078437500000e+006</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC3--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.5968307146487166e+002</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC3--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC4--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        469799591.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC4--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.8284218208746728e+005</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--8UC4--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.9999970197677612e-001</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC4--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.8424925546875000e+006</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC4--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.1081130516135302e+003</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1280x720--32FC4--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC1--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        264150490.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC1--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.1208068562695661e+005</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC1--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.9999940395355225e-001</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC1--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.0364492265625000e+006</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC1--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        8.3109096457984072e+002</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC1--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC3--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        793089426.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC3--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.6751960922922194e+005</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC3--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.9999970197677612e-001</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC3--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.1101522187500000e+006</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC3--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4398335732819958e+003</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC3--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC4--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1057347962.</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC4--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.2434255385007052e+005</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--8UC4--NORM_L2->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.9999994039535522e-001</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC4--NORM_INF->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.1471822812500000e+006</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC4--NORM_L1->
+<OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6626768561945523e+003</data></val></res></OCL_NormFixture_Norm1Arg--Norm1Arg---1920x1080--32FC4--NORM_L2->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--8UC1--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>66.</val></last>
+    <rng1>
+      <x>407</x>
+      <y>337</y>
+      <val>28.</val></rng1>
+    <rng2>
+      <x>63</x>
+      <y>55</y>
+      <val>37.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--8UC1--CV_MINMAX->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--8UC1--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>336</x>
+      <y>186</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>627</x>
+      <y>303</y>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--8UC1--CV_L2->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--8UC1--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>462</x>
+      <y>27</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>186</x>
+      <y>352</y>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--8UC1--CV_L1->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--8UC1--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>6.</val></last>
+    <rng1>
+      <x>1</x>
+      <y>383</y>
+      <val>3.</val></rng1>
+    <rng2>
+      <x>74</x>
+      <y>297</y>
+      <val>4.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--8UC1--CV_C->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--32FC1--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.8691445589065552e-001</min>
+    <max>110.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>9.4018363952636719e+001</val></last>
+    <rng1>
+      <x>569</x>
+      <y>3</y>
+      <val>4.7882308959960938e+001</val></rng1>
+    <rng2>
+      <x>13</x>
+      <y>384</y>
+      <val>4.8151432037353516e+001</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--32FC1--CV_MINMAX->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--32FC1--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.8691445589065552e-001</min>
+    <max>9.9997186660766602e-001</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>2.1321495994925499e-002</val></last>
+    <rng1>
+      <x>631</x>
+      <y>399</y>
+      <val>-1.9166693091392517e-002</val></rng1>
+    <rng2>
+      <x>456</x>
+      <y>51</y>
+      <val>-1.2297433800995350e-002</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--32FC1--CV_L2->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--32FC1--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.8691445589065552e-001</min>
+    <max>9.9997186660766602e-001</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>4.4519747461890802e-005</val></last>
+    <rng1>
+      <x>350</x>
+      <y>316</y>
+      <val>-1.5372230336652137e-005</val></rng1>
+    <rng2>
+      <x>514</x>
+      <y>435</y>
+      <val>1.4501040368486429e-006</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--32FC1--CV_L1->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--32FC1--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-10.</min>
+    <max>9.9996271133422852e+000</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>6.8033595085144043e+000</val></last>
+    <rng1>
+      <x>242</x>
+      <y>129</y>
+      <val>6.7622089385986328e+000</val></rng1>
+    <rng2>
+      <x>493</x>
+      <y>177</y>
+      <val>2.1906850337982178e+000</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---640x480--32FC1--CV_C->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--8UC1--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>80.</val></last>
+    <rng1>
+      <x>386</x>
+      <y>370</y>
+      <val>40.</val></rng1>
+    <rng2>
+      <x>312</x>
+      <y>302</y>
+      <val>75.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--8UC1--CV_MINMAX->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--8UC1--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>659</x>
+      <y>477</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>744</x>
+      <y>571</y>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--8UC1--CV_L2->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--8UC1--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>232</x>
+      <y>179</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>64</x>
+      <y>317</y>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--8UC1--CV_L1->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--8UC1--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>7.</val></last>
+    <rng1>
+      <x>991</x>
+      <y>168</y>
+      <val>6.</val></rng1>
+    <rng2>
+      <x>1227</x>
+      <y>368</y>
+      <val>2.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--8UC1--CV_C->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--32FC1--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.9986034631729126e-001</min>
+    <max>110.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>5.3562973022460938e+001</val></last>
+    <rng1>
+      <x>922</x>
+      <y>25</y>
+      <val>3.1088991165161133e+001</val></rng1>
+    <rng2>
+      <x>1064</x>
+      <y>139</y>
+      <val>9.5033569335937500e+001</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--32FC1--CV_MINMAX->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--32FC1--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.9986034631729126e-001</min>
+    <max>9.9959045648574829e-001</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-2.3282074835151434e-003</val></last>
+    <rng1>
+      <x>478</x>
+      <y>333</y>
+      <val>-7.6326970010995865e-003</val></rng1>
+    <rng2>
+      <x>1115</x>
+      <y>551</y>
+      <val>-1.2106142938137054e-002</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--32FC1--CV_L2->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--32FC1--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.9986034631729126e-001</min>
+    <max>9.9959045648574829e-001</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-2.8063300305802841e-006</val></last>
+    <rng1>
+      <x>423</x>
+      <y>696</y>
+      <val>-1.2010847967758309e-005</val></rng1>
+    <rng2>
+      <x>834</x>
+      <y>625</y>
+      <val>-1.4725137589266524e-005</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--32FC1--CV_L1->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--32FC1--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-10.</min>
+    <max>9.9999704360961914e+000</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-1.2874188423156738e+000</val></last>
+    <rng1>
+      <x>1238</x>
+      <y>541</y>
+      <val>7.3549904823303223e+000</val></rng1>
+    <rng2>
+      <x>147</x>
+      <y>197</y>
+      <val>2.4614999294281006e+000</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1280x720--32FC1--CV_C->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--8UC1--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>10.</val></last>
+    <rng1>
+      <x>1151</x>
+      <y>477</y>
+      <val>59.</val></rng1>
+    <rng2>
+      <x>335</x>
+      <y>634</y>
+      <val>92.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--8UC1--CV_MINMAX->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--8UC1--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1130</x>
+      <y>744</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1915</x>
+      <y>226</y>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--8UC1--CV_L2->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--8UC1--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>81</x>
+      <y>540</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1661</x>
+      <y>1045</y>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--8UC1--CV_L1->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--8UC1--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>493</x>
+      <y>606</y>
+      <val>7.</val></rng1>
+    <rng2>
+      <x>1551</x>
+      <y>13</y>
+      <val>3.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--8UC1--CV_C->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--32FC1--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.9959969520568848e-001</min>
+    <max>110.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>7.3563888549804687e+001</val></last>
+    <rng1>
+      <x>830</x>
+      <y>326</y>
+      <val>9.9854255676269531e+001</val></rng1>
+    <rng2>
+      <x>589</x>
+      <y>59</y>
+      <val>3.6907268524169922e+001</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--32FC1--CV_MINMAX->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--32FC1--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.9959969520568848e-001</min>
+    <max>9.9981945753097534e-001</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>3.2706593628972769e-003</val></last>
+    <rng1>
+      <x>1183</x>
+      <y>271</y>
+      <val>5.2982242777943611e-003</val></rng1>
+    <rng2>
+      <x>750</x>
+      <y>195</y>
+      <val>7.7420570887625217e-003</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--32FC1--CV_L2->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--32FC1--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.9959969520568848e-001</min>
+    <max>9.9981945753097534e-001</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>2.6278326004103292e-006</val></last>
+    <rng1>
+      <x>1896</x>
+      <y>370</y>
+      <val>6.5520112002559472e-006</val></rng1>
+    <rng2>
+      <x>1524</x>
+      <y>143</y>
+      <val>3.9660235415794887e-006</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--32FC1--CV_L1->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--32FC1--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-10.</min>
+    <max>10.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>2.7127783298492432e+000</val></last>
+    <rng1>
+      <x>1651</x>
+      <y>521</y>
+      <val>6.3239183425903320e+000</val></rng1>
+    <rng2>
+      <x>34</x>
+      <y>702</y>
+      <val>-2.4619312286376953e+000</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---1920x1080--32FC1--CV_C->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--8UC1--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>23.</val></last>
+    <rng1>
+      <x>1222</x>
+      <y>1768</y>
+      <val>79.</val></rng1>
+    <rng2>
+      <x>2482</x>
+      <y>592</y>
+      <val>46.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--8UC1--CV_MINMAX->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--8UC1--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>3414</x>
+      <y>438</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>2472</x>
+      <y>1893</y>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--8UC1--CV_L2->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--8UC1--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>832</x>
+      <y>640</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>2882</x>
+      <y>217</y>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--8UC1--CV_L1->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--8UC1--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>1.</val></last>
+    <rng1>
+      <x>3250</x>
+      <y>402</y>
+      <val>9.</val></rng1>
+    <rng2>
+      <x>2546</x>
+      <y>359</y>
+      <val>6.</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--8UC1--CV_C->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--32FC1--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.9984174966812134e-001</min>
+    <max>110.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>3.9187000274658203e+001</val></last>
+    <rng1>
+      <x>2334</x>
+      <y>1933</y>
+      <val>1.4951211929321289e+001</val></rng1>
+    <rng2>
+      <x>1418</x>
+      <y>1995</y>
+      <val>7.8269325256347656e+001</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--32FC1--CV_MINMAX->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--32FC1--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.9984174966812134e-001</min>
+    <max>9.9995356798171997e-001</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>-2.5084558874368668e-003</val></last>
+    <rng1>
+      <x>3744</x>
+      <y>1808</y>
+      <val>1.3238311512395740e-003</val></rng1>
+    <rng2>
+      <x>2846</x>
+      <y>861</y>
+      <val>1.9877112936228514e-003</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--32FC1--CV_L2->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--32FC1--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.9984174966812134e-001</min>
+    <max>9.9995356798171997e-001</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>-1.0076537364511751e-006</val></last>
+    <rng1>
+      <x>2975</x>
+      <y>1427</y>
+      <val>1.8386032252237783e-006</val></rng1>
+    <rng2>
+      <x>1095</x>
+      <y>80</y>
+      <val>1.5580334320475231e-006</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--32FC1--CV_L1->
+<OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--32FC1--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-10.</min>
+    <max>9.9999980926513672e+000</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>-4.1626005172729492e+000</val></last>
+    <rng1>
+      <x>3070</x>
+      <y>506</y>
+      <val>-1.4170935153961182e+000</val></rng1>
+    <rng2>
+      <x>3578</x>
+      <y>1115</y>
+      <val>-3.0033984184265137e+000</val></rng2></dst></OCL_NormalizeFixture_NormalizeWithMask--NormalizeWithMask---3840x2160--32FC1--CV_C->
 </opencv_storage>
