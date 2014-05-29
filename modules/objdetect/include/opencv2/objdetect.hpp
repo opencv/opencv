@@ -189,7 +189,7 @@ public:
                           Size minSize = Size(),
                           Size maxSize = Size() );
 
-    CV_WRAP void detectMultiScale( InputArray image,
+    CV_WRAP_AS(detectMultiScale2) void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
                           CV_OUT std::vector<int>& numDetections,
                           double scaleFactor=1.1,
@@ -197,7 +197,7 @@ public:
                           Size minSize=Size(),
                           Size maxSize=Size() );
 
-    CV_WRAP void detectMultiScale( InputArray image,
+    CV_WRAP_AS(detectMultiScale3) void detectMultiScale( InputArray image,
                                   CV_OUT std::vector<Rect>& objects,
                                   CV_OUT std::vector<int>& rejectLevels,
                                   CV_OUT std::vector<double>& levelWeights,
