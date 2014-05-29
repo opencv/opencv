@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import testlog_parser, sys, os, xml, glob, re
+import table_formatter
 from table_formatter import *
 from optparse import OptionParser
 
@@ -30,7 +31,7 @@ if __name__ == "__main__":
         exit(0)
 
     parser = OptionParser()
-    parser.add_option("-o", "--output", dest="format", help="output results in text format (can be 'txt', 'html' or 'auto' - default)", metavar="FMT", default="auto")
+    parser.add_option("-o", "--output", dest="format", help="output results in text format (can be 'txt', 'html', 'csv' or 'auto' - default)", metavar="FMT", default="auto")
     parser.add_option("-m", "--metric", dest="metric", help="output metric", metavar="NAME", default="gmean")
     parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), mks, ns or ticks)", metavar="UNITS", default="ms")
     parser.add_option("-f", "--filter", dest="filter", help="regex to filter tests", metavar="REGEX", default=None)
@@ -142,7 +143,13 @@ if __name__ == "__main__":
     getter_score = metrix_table["score"][1] if options.calc_score else None
     getter_p = metrix_table[options.metric + "%"][1] if options.calc_relatives else None
     getter_cr = metrix_table[options.metric + "$"][1] if options.calc_cr else None
-    tbl = table(metrix_table[options.metric][0])
+    if options.format == 'csv':
+        tbl = CSVTable(metrix_table[options.metric][0] + (' (%s)' % options.units))
+        def _formatValue(val, metric, units = None):
+            return table_formatter.formatValue(val, metric, None)
+        formatValue = _formatValue
+    else:
+        tbl = table(metrix_table[options.metric][0])
 
     # header
     tbl.newColumn("name", "Name of Test", align = "left", cssclass = "col_name")
