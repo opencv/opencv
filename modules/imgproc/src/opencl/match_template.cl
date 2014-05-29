@@ -330,15 +330,14 @@ __kernel void matchTemplate_Prepared_CCOEFF(__global const uchar * src_sums, int
 
     if (x < dst_cols && y < dst_rows)
     {
-        __global const T* sum = (__global const T*)(src_sums + mad24(y, src_sums_step, mad24(x, (int)sizeof(T), src_sums_offset)));
-
-        int step = src_sums_step/(int)sizeof(T);
-
         T image_sum = (T)(0), value;
 
-        value = (T)(sum[mad24(template_rows, step, template_cols)] - sum[mad24(template_rows, step, 0)] - sum[template_cols] + sum[0]);
+        value  = *(__global const T1 *)(src_sums + SUMS(template_cols, template_rows));
+        value -= *(__global const T1 *)(src_sums + SUMS(0, template_rows));
+        value -= *(__global const T1 *)(src_sums + SUMS(template_cols, 0));
+        value += *(__global const T1 *)(src_sums + SUMS(0, 0));
 
-        image_sum = mad(value, template_sum , image_sum);
+        image_sum = mad(value, template_sum, 0);
 
         int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
         *(__global float *)(dst + dst_idx) -= convertToDT(image_sum);
