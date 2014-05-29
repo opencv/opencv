@@ -158,10 +158,59 @@
 #define SRC2_INDEX int src2_index = mad24(id / cols, src2_step, mad24(id % cols, srcTSIZE, src2_offset))
 #endif
 
+#if kercn == 1
 #define REDUCE_GLOBAL \
     SRC2_INDEX; \
-    dstT temp = convertToDT(loadpix(srcptr + src_index)), temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
+    dstTK temp = convertToDT(loadpix(srcptr + src_index)), temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
     FUNC(accumulator, temp, temp2)
+#elif kercn == 2
+#define REDUCE_GLOBAL \
+    SRC2_INDEX; \
+    dstTK temp = convertToDT(loadpix(srcptr + src_index)), temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
+    FUNC(accumulator, temp.s0, temp2.s0); \
+    FUNC(accumulator, temp.s1, temp2.s1)
+#elif kercn == 4
+#define REDUCE_GLOBAL \
+    SRC2_INDEX; \
+    dstTK temp = convertToDT(loadpix(srcptr + src_index)), temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
+    FUNC(accumulator, temp.s0, temp2.s0); \
+    FUNC(accumulator, temp.s1, temp2.s1); \
+    FUNC(accumulator, temp.s2, temp2.s2); \
+    FUNC(accumulator, temp.s3, temp2.s3)
+#elif kercn == 8
+#define REDUCE_GLOBAL \
+    SRC2_INDEX; \
+    dstTK temp = convertToDT(loadpix(srcptr + src_index)), temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
+    FUNC(accumulator, temp.s0, temp2.s0); \
+    FUNC(accumulator, temp.s1, temp2.s1); \
+    FUNC(accumulator, temp.s2, temp2.s2); \
+    FUNC(accumulator, temp.s3, temp2.s3); \
+    FUNC(accumulator, temp.s4, temp2.s4); \
+    FUNC(accumulator, temp.s5, temp2.s5); \
+    FUNC(accumulator, temp.s6, temp2.s6); \
+    FUNC(accumulator, temp.s7, temp2.s7)
+#elif kercn == 16
+#define REDUCE_GLOBAL \
+    SRC2_INDEX; \
+    dstTK temp = convertToDT(loadpix(srcptr + src_index)), temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
+    FUNC(accumulator, temp.s0, temp2.s0); \
+    FUNC(accumulator, temp.s1, temp2.s1); \
+    FUNC(accumulator, temp.s2, temp2.s2); \
+    FUNC(accumulator, temp.s3, temp2.s3); \
+    FUNC(accumulator, temp.s4, temp2.s4); \
+    FUNC(accumulator, temp.s5, temp2.s5); \
+    FUNC(accumulator, temp.s6, temp2.s6); \
+    FUNC(accumulator, temp.s7, temp2.s7); \
+    FUNC(accumulator, temp.s8, temp2.s8); \
+    FUNC(accumulator, temp.s9, temp2.s9); \
+    FUNC(accumulator, temp.sA, temp2.sA); \
+    FUNC(accumulator, temp.sB, temp2.sB); \
+    FUNC(accumulator, temp.sC, temp2.sC); \
+    FUNC(accumulator, temp.sD, temp2.sD); \
+    FUNC(accumulator, temp.sE, temp2.sE); \
+    FUNC(accumulator, temp.sF, temp2.sF)
+#endif
+
 #else
 #if kercn == 1
 #define REDUCE_GLOBAL \

@@ -836,7 +836,10 @@ UMat UMat::mul(InputArray m, double scale) const
 
 static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
 {
-    int type = _src1.type(), depth = CV_MAT_DEPTH(type), kercn = 1;
+    UMat src1 = _src1.getUMat().reshape(1), src2 = _src2.getUMat().reshape(1);
+
+    int type = src1.type(), depth = CV_MAT_DEPTH(type),
+            kercn = ocl::predictOptimalVectorWidth(src1, src2);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if ( !doubleSupport && depth == CV_64F )
@@ -853,17 +856,18 @@ static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
 
     char cvt[40];
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
-                  format("-D srcT=%s -D dstT=%s -D ddepth=%d -D convertToDT=%s -D OP_DOT "
+                  format("-D srcT=%s -D srcT1=%s -D dstT=%s -D dstTK=%s -D ddepth=%d -D convertToDT=%s -D OP_DOT "
                          "-D WGS=%d -D WGS2_ALIGNED=%d%s%s%s -D kercn=%d",
-                         ocl::typeToStr(depth), ocl::typeToStr(ddepth), ddepth,
-                         ocl::convertTypeStr(depth, ddepth, 1, cvt),
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)), ocl::typeToStr(depth),
+                         ocl::typeToStr(ddepth), ocl::typeToStr(CV_MAKE_TYPE(ddepth, kercn)),
+                         ddepth, ocl::convertTypeStr(depth, ddepth, kercn, cvt),
                          (int)wgs, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                          _src1.isContinuous() ? " -D HAVE_SRC_CONT" : "",
                          _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "", kercn));
     if (k.empty())
         return false;
 
-    UMat src1 = _src1.getUMat().reshape(1), src2 = _src2.getUMat().reshape(1), db(1, dbsize, ddepth);
+    UMat db(1, dbsize, ddepth);
 
     ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1),
             src2arg = ocl::KernelArg::ReadOnlyNoSize(src2),
