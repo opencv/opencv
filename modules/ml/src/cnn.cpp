@@ -912,7 +912,7 @@ static void icvCNNSubSamplingForward( CvCNNLayer* _layer,
     cvScale( layer->exp2ssumWX, layer->exp2ssumWX, 2.0*layer->s );
     cvExp( layer->exp2ssumWX, layer->exp2ssumWX );
     cvMinS( layer->exp2ssumWX, FLT_MAX, layer->exp2ssumWX );
-    
+
     // compute the output variable Y == ( a - 2a/(layer->exp2ssumWX + 1))
     cvAddS( layer->exp2ssumWX, cvRealScalar(1), Y );
     cvDiv( 0, Y, Y, -2.0*layer->a );
