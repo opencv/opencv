@@ -2065,7 +2065,7 @@ normalize
 ---------
 Normalizes the norm or value range of an array.
 
-.. ocv:function:: void normalize( InputArray src, OutputArray dst, double alpha=1, double beta=0, int norm_type=NORM_L2, int dtype=-1, InputArray mask=noArray() )
+.. ocv:function:: void normalize( InputArray src, InputOutputArray dst, double alpha=1, double beta=0, int norm_type=NORM_L2, int dtype=-1, InputArray mask=noArray() )
 
 .. ocv:function:: void normalize(const SparseMat& src, SparseMat& dst, double alpha, int normType)
 
