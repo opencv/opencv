@@ -1831,18 +1831,86 @@ namespace cv {
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_normalize( InputArray _src, OutputArray _dst, InputArray _mask, int rtype,
-                           double scale, double shift )
+static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _mask, int dtype,
+                           double scale, double delta )
 {
-    UMat src = _src.getUMat(), dst = _dst.getUMat();
+    UMat src = _src.getUMat();
 
     if( _mask.empty() )
-        src.convertTo( dst, rtype, scale, shift );
+        src.convertTo( _dst, dtype, scale, delta );
+    else if (src.channels() <= 4)
+    {
+        const ocl::Device & dev = ocl::Device::getDefault();
+
+        int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
+                ddepth = CV_MAT_DEPTH(dtype), wdepth = std::max(CV_32F, std::max(sdepth, ddepth)),
+                rowsPerWI = dev.isIntel() ? 4 : 1;
+
+        float fscale = static_cast<float>(scale), fdelta = static_cast<float>(delta);
+        bool haveScale = std::fabs(scale - 1) > DBL_EPSILON,
+                haveZeroScale = !(std::fabs(scale) > DBL_EPSILON),
+                haveDelta = std::fabs(delta) > DBL_EPSILON,
+                doubleSupport = dev.doubleFPConfig() > 0;
+
+        if (!haveScale && !haveDelta && stype == dtype)
+        {
+            _src.copyTo(_dst, _mask);
+            return true;
+        }
+        if (haveZeroScale)
+        {
+            _dst.setTo(Scalar(delta), _mask);
+            return true;
+        }
+
+        if ((sdepth == CV_64F || ddepth == CV_64F) && !doubleSupport)
+            return false;
+
+        char cvt[2][40];
+        String opts = format("-D srcT=%s -D dstT=%s -D convertToWT=%s -D cn=%d -D rowsPerWI=%d"
+                             " -D convertToDT=%s -D workT=%s%s%s%s -D srcT1=%s -D dstT1=%s",
+                             ocl::typeToStr(stype), ocl::typeToStr(dtype),
+                             ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]), cn,
+                             rowsPerWI, ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
+                             ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
+                             doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                             haveScale ? " -D HAVE_SCALE" : "",
+                             haveDelta ? " -D HAVE_DELTA" : "",
+                             ocl::typeToStr(sdepth), ocl::typeToStr(ddepth));
+
+        ocl::Kernel k("normalizek", ocl::core::normalize_oclsrc, opts);
+        if (k.empty())
+            return false;
+
+        UMat mask = _mask.getUMat(), dst = _dst.getUMat();
+
+        ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+                maskarg = ocl::KernelArg::ReadOnlyNoSize(mask),
+                dstarg = ocl::KernelArg::ReadWrite(dst);
+
+        if (haveScale)
+        {
+            if (haveDelta)
+                k.args(srcarg, maskarg, dstarg, fscale, fdelta);
+            else
+                k.args(srcarg, maskarg, dstarg, fscale);
+        }
+        else
+        {
+            if (haveDelta)
+                k.args(srcarg, maskarg, dstarg, fdelta);
+            else
+                k.args(srcarg, maskarg, dstarg);
+        }
+
+        size_t globalsize[2] = { src.cols, (src.rows + rowsPerWI - 1) / rowsPerWI };
+        return k.run(2, globalsize, NULL, false);
+    }
     else
     {
         UMat temp;
-        src.convertTo( temp, rtype, scale, shift );
-        temp.copyTo( dst, _mask );
+        src.convertTo( temp, dtype, scale, delta );
+        temp.copyTo( _dst, _mask );
     }
 
     return true;
@@ -1852,7 +1920,7 @@ static bool ocl_normalize( InputArray _src, OutputArray _dst, InputArray _mask, 
 
 }
 
-void cv::normalize( InputArray _src, OutputArray _dst, double a, double b,
+void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
                     int norm_type, int rtype, InputArray _mask )
 {
     double scale = 1, shift = 0;

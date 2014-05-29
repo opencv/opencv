@@ -2051,6 +2051,23 @@ void _InputArray::copyTo(const _OutputArray& arr) const
         CV_Error(Error::StsNotImplemented, "");
 }
 
+void _InputArray::copyTo(const _OutputArray& arr, const _InputArray & mask) const
+{
+    int k = kind();
+
+    if( k == NONE )
+        arr.release();
+    else if( k == MAT || k == MATX || k == STD_VECTOR )
+    {
+        Mat m = getMat();
+        m.copyTo(arr, mask);
+    }
+    else if( k == UMAT )
+        ((UMat*)obj)->copyTo(arr, mask);
+    else
+        CV_Error(Error::StsNotImplemented, "");
+}
+
 bool _OutputArray::fixedSize() const
 {
     return (flags & FIXED_SIZE) == FIXED_SIZE;
