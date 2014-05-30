@@ -4166,11 +4166,12 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
                               int op_type)
 {
     CV_Assert(op_type == OCL_OP_AFFINE || op_type == OCL_OP_PERSPECTIVE);
+    const ocl::Device & dev = ocl::Device::getDefault();
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    double doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    double doubleSupport = dev.doubleFPConfig() > 0;
 
-    int interpolation = flags & INTER_MAX;
+    int interpolation = flags & INTER_MAX, rowsPerWI = dev.isIntel() && interpolation <= INTER_LINEAR ? 4 : 1;
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
 
@@ -4192,30 +4193,30 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     String opts;
     if (interpolation == INTER_NEAREST)
     {
-        opts = format("-D INTER_NEAREST -D T=%s%s -D T1=%s -D ST=%s -D cn=%d", ocl::typeToStr(type),
-                      doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+        opts = format("-D INTER_NEAREST -D T=%s%s -D T1=%s -D ST=%s -D cn=%d -D rowsPerWI=%d",
+                      ocl::typeToStr(type), doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                       ocl::typeToStr(CV_MAT_DEPTH(type)),
-                      ocl::typeToStr(sctype),
-                      cn);
+                      ocl::typeToStr(sctype), cn, rowsPerWI);
     }
     else
     {
         char cvt[2][50];
-        opts = format("-D INTER_%s -D T=%s -D T1=%s -D ST=%s -D WT=%s -D depth=%d -D convertToWT=%s -D convertToT=%s%s -D cn=%d",
+        opts = format("-D INTER_%s -D T=%s -D T1=%s -D ST=%s -D WT=%s -D depth=%d"
+                      " -D convertToWT=%s -D convertToT=%s%s -D cn=%d -D rowsPerWI=%d",
                       interpolationMap[interpolation], ocl::typeToStr(type),
                       ocl::typeToStr(CV_MAT_DEPTH(type)),
                       ocl::typeToStr(sctype),
                       ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), depth,
                       ocl::convertTypeStr(depth, wdepth, cn, cvt[0]),
                       ocl::convertTypeStr(wdepth, depth, cn, cvt[1]),
-                      doubleSupport ? " -D DOUBLE_SUPPORT" : "", cn);
+                      doubleSupport ? " -D DOUBLE_SUPPORT" : "", cn, rowsPerWI);
     }
 
     k.create(kernelName, program, opts);
     if (k.empty())
         return false;
 
-    double borderBuf[] = {0, 0, 0, 0};
+    double borderBuf[] = { 0, 0, 0, 0 };
     scalarToRawData(borderValue, borderBuf, sctype);
 
     UMat src = _src.getUMat(), M0;
@@ -4250,7 +4251,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(M0),
            ocl::KernelArg(0, 0, 0, 0, borderBuf, CV_ELEM_SIZE(sctype)));
 
-    size_t globalThreads[2] = { dst.cols, dst.rows };
+    size_t globalThreads[2] = { dst.cols, (dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalThreads, NULL, false);
 }
 
