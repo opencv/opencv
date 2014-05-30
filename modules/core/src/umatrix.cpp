@@ -678,16 +678,21 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
 
         UMat dst = _dst.getUMat();
 
+        bool haveDstUninit = false;
         if( prevu != dst.u ) // do not leave dst uninitialized
-            dst = Scalar(0);
+            haveDstUninit = true;
 
-        ocl::Kernel k("copyToMask", ocl::core::copyset_oclsrc,
-                      format("-D COPY_TO_MASK -D T=%s -D scn=%d -D mcn=%d",
-                             ocl::memopTypeToStr(depth()), cn, mcn));
+        String opts = format("-D COPY_TO_MASK -D T1=%s -D scn=%d -D mcn=%d%s",
+                             ocl::memopTypeToStr(depth()), cn, mcn,
+                             haveDstUninit ? " -D HAVE_DST_UNINIT" : "");
+
+        ocl::Kernel k("copyToMask", ocl::core::copyset_oclsrc, opts);
         if (!k.empty())
         {
-            k.args(ocl::KernelArg::ReadOnlyNoSize(*this), ocl::KernelArg::ReadOnlyNoSize(_mask.getUMat()),
-                   ocl::KernelArg::WriteOnly(dst));
+            k.args(ocl::KernelArg::ReadOnlyNoSize(*this),
+                   ocl::KernelArg::ReadOnlyNoSize(_mask.getUMat()),
+                   haveDstUninit ? ocl::KernelArg::WriteOnly(dst) :
+                                   ocl::KernelArg::ReadWrite(dst));
 
             size_t globalsize[2] = { cols, rows };
             if (k.run(2, globalsize, NULL, false))
