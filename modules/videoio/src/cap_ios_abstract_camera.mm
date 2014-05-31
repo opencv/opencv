@@ -193,6 +193,13 @@
 
     // Release any retained subviews of the main view.
     // e.g. self.myOutlet = nil;
+    for (AVCaptureInput *input in self.captureSession.inputs) {
+        [self.captureSession removeInput:input];
+    }
+
+    for (AVCaptureOutput *output in self.captureSession.outputs) {
+        [self.captureSession removeOutput:output];
+    }
 
     [self.captureSession stopRunning];
     self.captureSession = nil;
