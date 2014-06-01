@@ -132,7 +132,12 @@ CV_EXPORTS_W void calcOpticalFlowSF( InputArray from, InputArray to, OutputArray
                                      int upscale_averaging_radius, double upscale_sigma_dist,
                                      double upscale_sigma_color, double speed_up_thr );
 
+//! reads optical flow from a file, Middlebury format:
+// http://vision.middlebury.edu/flow/code/flow-code/README.txt
+CV_EXPORTS_W Mat readOpticalFlow( const String& path );
 
+//! writes optical flow to a file, Middlebury format
+CV_EXPORTS_W bool writeOpticalFlow( const String& path, InputArray flow );
 
 /*!
  Kalman filter.
