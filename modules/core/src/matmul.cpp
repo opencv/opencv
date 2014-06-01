@@ -2020,7 +2020,8 @@ void cv::perspectiveTransform( InputArray _src, OutputArray _dst, InputArray _mt
 {
     Mat src = _src.getMat(), m = _mtx.getMat();
     int depth = src.depth(), scn = src.channels(), dcn = m.rows-1;
-    CV_Assert( scn + 1 == m.cols && (depth == CV_32F || depth == CV_64F));
+    CV_Assert( scn + 1 == m.cols );
+    CV_Assert( depth == CV_32F || depth == CV_64F );
 
     _dst.create( src.size(), CV_MAKETYPE(depth, dcn) );
     Mat dst = _dst.getMat();
