@@ -1,9 +1,6 @@
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
-#include "cv.h"
-#include "cxcore.h"
-#include "highgui.h"
 #include "math.h"
 #include <vector>
 #include <limits>
@@ -12,22 +9,25 @@
 #include <opencv2/highgui.hpp>
 #include <iomanip>
 
+#include "intrinsic.hpp"
+
 using namespace std;
 using namespace cv;
 
-
-
-int main(int argc, char **argv)
+void intrinsic(InputArray _src, OutputArray _dst, int window, int no_of_iter, float rho)
 {
-     Mat source = imread(argv[1]);
+     Mat I = _src.getMat();
+     _dst.create(I.size(), CV_8UC1);
+     Mat dst = _dst.getMat();
 
-     Mat img = Mat(source.size(),CV_32FC3);
-     source.convertTo(img,CV_32FC3,1.0/255.0);
+
+     Mat img = Mat(I.size(),CV_32FC3);
+     I.convertTo(img,CV_32FC3,1.0/255.0);
 
      Mat ref = Mat(img.size(),CV_32FC3);
      Mat shade = Mat(img.size(),CV_32FC3);
-     automatic(img,ref,shade,3,100,1.9);
 
-     return 0;
+     Intrinsic obj;
+     obj.decompose(img,ref,shade,window,no_of_iter,rho);
 }
 

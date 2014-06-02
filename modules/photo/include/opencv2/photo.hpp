@@ -328,6 +328,8 @@ CV_EXPORTS_W void pencilSketch(InputArray src, OutputArray dst1, OutputArray dst
 CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 60,
         float sigma_r = 0.45f);
 
+CV_EXPORTS_W void intrinsic(InputArray src, OutputArray dst, int window = 3, int no_of_iter = 100,
+        float rho = 1.9f);
 } // cv
 
 #endif
