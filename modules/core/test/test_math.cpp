@@ -1356,7 +1356,7 @@ void Core_DetTest::get_test_array_types_and_sizes( int test_case_idx, vector<vec
 {
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
-    sizes[INPUT][0].width = sizes[INPUT][0].height = sizes[INPUT][0].height;
+    sizes[INPUT][0].width = sizes[INPUT][0].height;
     sizes[TEMP][0] = sizes[INPUT][0];
     types[TEMP][0] = CV_64FC1;
 }
