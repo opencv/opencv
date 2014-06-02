@@ -2025,6 +2025,8 @@ static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
     bool useOptimized = (1 == cn) &&
                         (size_t)imgSize.width >= localsize[0] * 8  &&
                         (size_t)imgSize.height >= localsize[1] * 8 &&
+                        imgSize.width % 4 == 0 &&
+                        imgSize.height % 4 == 0 &&
                         (ocl::Device::getDefault().isIntel());
 
     cv::String kname = format( useOptimized ? "medianFilter%d_u" : "medianFilter%d", m) ;
