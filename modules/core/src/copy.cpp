@@ -610,13 +610,13 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
 
 #ifdef HAVE_OPENCL
 
-#define DIVUP(total, grain) (((total) + (grain) - 1) / (grain))
 enum { FLIP_COLS = 1 << 0, FLIP_ROWS = 1 << 1, FLIP_BOTH = FLIP_ROWS | FLIP_COLS };
 
 static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 {
-    CV_Assert(flipCode >= - 1 && flipCode <= 1);
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), flipType;
+    CV_Assert(flipCode >= -1 && flipCode <= 1);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            flipType, kercn = std::min(ocl::predictOptimalVectorWidth(_src, _dst), 4);;
 
     if (cn > 4)
         return false;
@@ -631,10 +631,12 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 
     ocl::Device dev = ocl::Device::getDefault();
     int pxPerWIy = (dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU)) ? 4 : 1;
+    kercn = std::max(kercn, cn);
 
     ocl::Kernel k(kernelName, ocl::core::flip_oclsrc,
-        format( "-D T=%s -D T1=%s -D cn=%d -D PIX_PER_WI_Y=%d", ocl::memopTypeToStr(type),
-                ocl::memopTypeToStr(depth), cn, pxPerWIy));
+        format( "-D T=%s -D T1=%s -D cn=%d -D PIX_PER_WI_Y=%d -D kercn=%d",
+                ocl::memopTypeToStr(CV_MAKE_TYPE(depth, kercn)),
+                ocl::memopTypeToStr(depth), cn, pxPerWIy, kercn));
     if (k.empty())
         return false;
 
@@ -642,20 +644,19 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     _dst.create(size, type);
     UMat src = _src.getUMat(), dst = _dst.getUMat();
 
-    int cols = size.width, rows = size.height;
+    int cols = size.width * cn / kercn, rows = size.height;
     cols = flipType == FLIP_COLS ? (cols + 1) >> 1 : cols;
     rows = flipType & FLIP_ROWS ? (rows + 1) >> 1 : rows;
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(src),
-           ocl::KernelArg::WriteOnly(dst), rows, cols);
+           ocl::KernelArg::WriteOnly(dst, cn, kercn), rows, cols);
 
     size_t maxWorkGroupSize = dev.maxWorkGroupSize();
     CV_Assert(maxWorkGroupSize % 4 == 0);
 
-    size_t globalsize[2] = { cols, rows }, localsize[2] = { maxWorkGroupSize / 4, 4 };
-    globalsize[1] = DIVUP(globalsize[1], pxPerWIy);
-
-    return k.run(2, globalsize, (flipType == FLIP_COLS) && (!dev.isIntel()) ? localsize : NULL, false);
+    size_t globalsize[2] = { cols, (rows + pxPerWIy - 1) / pxPerWIy },
+            localsize[2] = { maxWorkGroupSize / 4, 4 };
+    return k.run(2, globalsize, (flipType == FLIP_COLS) && !dev.isIntel() ? localsize : NULL, false);
 }
 
 #endif
