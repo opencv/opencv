@@ -6,15 +6,15 @@
 using namespace std;
 using namespace cv;
 
-static void farneback(InputArray i1, InputArray i2, InputOutputArray flow)
+static void farneback( InputArray i1, InputArray i2, InputOutputArray flow )
 {
     calcOpticalFlowFarneback(i1, i2, flow, 0.5, 3, 15, 3, 5, 1.2, 0);
 }
-static void simpleflow(InputArray i1, InputArray i2, InputOutputArray flow)
+static void simpleflow( InputArray i1, InputArray i2, InputOutputArray flow )
 {
     calcOpticalFlowSF(i1, i2, flow, 3, 2, 4, 4.1, 25.5, 18, 55.0, 25.5, 0.35, 18, 55.0, 25.5, 10);
 }
-static void tvl1(InputArray i1, InputArray i2, InputOutputArray flow)
+static void tvl1( InputArray i1, InputArray i2, InputOutputArray flow )
 {
     Ptr<DenseOpticalFlow> tvl1 = createOptFlow_DualTVL1();
     tvl1->calc(i1, i2, flow);
@@ -24,7 +24,7 @@ static void tvl1(InputArray i1, InputArray i2, InputOutputArray flow)
 // http://vision.middlebury.edu/flow/data/
 // code duplicate from /modules/video/test/test_tvl1optflow.cpp
 // TODO: Middlebury methods in one place
-static void readOpticalFlowFromFile(Mat_<Point2f>& flow, const string& fileName)
+static void readOpticalFlowFromFile( Mat_<Point2f>& flow, const string& fileName )
 {
     const float FLO_TAG_FLOAT = 202021.25f;
     ifstream file(fileName.c_str(), ios_base::binary);
@@ -53,13 +53,21 @@ static void readOpticalFlowFromFile(Mat_<Point2f>& flow, const string& fileName)
         }
     }
 }
-inline bool isFlowCorrect(const Point2f u)
+inline bool isFlowCorrect( const Point2f u )
 {
     return !cvIsNaN(u.x) && !cvIsNaN(u.y) && (fabs(u.x) < 1e9) && (fabs(u.y) < 1e9);
 }
-///based on TV-L1 test, needs improvement
-static double averageEndpointError(const Mat_<Point2f>& flow1, const Mat_<Point2f>& flow2)
+inline bool isFlowCorrect( const Point3f u )
 {
+    return !cvIsNaN(u.x) && !cvIsNaN(u.y) && !cvIsNaN(u.z) && (fabs(u.x) < 1e9) && (fabs(u.y) < 1e9)
+            && (fabs(u.z) < 1e9);
+}
+///based on TV-L1 test, needs improvement
+static double averageEndpointError( const Mat_<Point2f>& flow1, const Mat_<Point2f>& flow2 )
+{
+    CV_Assert(flow1.rows == flow2.rows);
+    CV_Assert(flow1.cols == flow2.cols);
+    CV_Assert(flow1.channels() == 2 && flow2.channels() == 2);
     double sum = 0.0;
     int counter = 0;
 
@@ -80,8 +88,34 @@ static double averageEndpointError(const Mat_<Point2f>& flow1, const Mat_<Point2
     }
     return sum / (1e-9 + counter);
 }
+static double averageAngularError( const Mat_<Point2f>& flow1, const Mat_<Point2f>& flow2 )
+{
+    CV_Assert(flow1.rows == flow2.rows);
+    CV_Assert(flow1.cols == flow2.cols);
+    CV_Assert(flow1.channels() == 2 && flow2.channels() == 2);
+    double sum = 0.0;
+    int counter = 0;
 
-int main(int argc, char** argv)
+    for ( int i = 0; i < flow1.rows; ++i )
+    {
+        for ( int j = 0; j < flow1.cols; ++j )
+        {
+            const Point2f u1_2d = flow1(i, j);
+            const Point2f u2_2d = flow2(i, j);
+            const Point3f u1(u1_2d.x, u1_2d.y, 1);
+            const Point3f u2(u2_2d.x, u2_2d.y, 1);
+
+            if ( isFlowCorrect(u1) && isFlowCorrect(u2) )
+            {
+                sum += acos((u1.ddot(u2)) / (norm(u1) * norm(u2)));
+                ++counter;
+            }
+        }
+    }
+    return sum / (1e-9 + counter);
+}
+
+int main( int argc, char** argv )
 {
     if ( argc < 4 )
     {
@@ -129,8 +163,10 @@ int main(int argc, char** argv)
     { // compare to ground truth
         string flow_file(argv[4]);
         readOpticalFlowFromFile(ground_truth, flow_file);
-        double error = averageEndpointError(flow, ground_truth);
-        printf("Average enpoint error: %.2f\n", error);
+        double endpointError = averageEndpointError(flow, ground_truth);
+        printf("Average endpoint error: %.2f\n", endpointError);
+        double angularError = averageAngularError(flow, ground_truth);
+        printf("Average angular error: %.2f\n", angularError);
     }
     return 0;
 }
