@@ -46,103 +46,127 @@
 __kernel void buildWarpPlaneMaps(__global uchar * xmapptr, int xmap_step, int xmap_offset,
                                  __global uchar * ymapptr, int ymap_step, int ymap_offset, int rows, int cols,
                                  __constant float * ck_rinv, __constant float * ct,
-                                 int tl_u, int tl_v, float scale)
+                                 int tl_u, int tl_v, float scale, int rowsPerWI)
 {
     int du = get_global_id(0);
-    int dv = get_global_id(1);
+    int dv0 = get_global_id(1) * rowsPerWI;
 
-    if (du < cols && dv < rows)
+    if (du < cols)
     {
-        __global float * xmap = (__global float *)(xmapptr + mad24(dv, xmap_step, xmap_offset + du * (int)sizeof(float)));
-        __global float * ymap = (__global float *)(ymapptr + mad24(dv, ymap_step, ymap_offset + du * (int)sizeof(float)));
+        int xmap_index = mad24(dv0, xmap_step, mad24(du, (int)sizeof(float), xmap_offset));
+        int ymap_index = mad24(dv0, ymap_step, mad24(du, (int)sizeof(float), ymap_offset));
 
-        float u = tl_u + du;
-        float v = tl_v + dv;
-        float x, y;
+        for (int dv = dv0, dv1 = min(rows, dv0 + rowsPerWI); dv < dv1; ++dv, xmap_index += xmap_step,
+            ymap_index += ymap_step)
+        {
+            __global float * xmap = (__global float *)(xmapptr + xmap_index);
+            __global float * ymap = (__global float *)(ymapptr + ymap_index);
 
-        float x_ = u / scale - ct[0];
-        float y_ = v / scale - ct[1];
+            float u = tl_u + du;
+            float v = tl_v + dv;
 
-        float z;
-        x = ck_rinv[0] * x_ + ck_rinv[1] * y_ + ck_rinv[2] * (1 - ct[2]);
-        y = ck_rinv[3] * x_ + ck_rinv[4] * y_ + ck_rinv[5] * (1 - ct[2]);
-        z = ck_rinv[6] * x_ + ck_rinv[7] * y_ + ck_rinv[8] * (1 - ct[2]);
+            float x_ = u / scale - ct[0];
+            float y_ = v / scale - ct[1];
 
-        x /= z;
-        y /= z;
+            float ct1 = 1 - ct[2];
+            float x = fma(ck_rinv[0], x_, fma(ck_rinv[1], y_, ck_rinv[2] * ct1));
+            float y = fma(ck_rinv[3], x_, fma(ck_rinv[4], y_, ck_rinv[5] * ct1));
+            float z = fma(ck_rinv[6], x_, fma(ck_rinv[7], y_, ck_rinv[8] * ct1));
 
-        xmap[0] = x;
-        ymap[0] = y;
+            x /= z;
+            y /= z;
+
+            xmap[0] = x;
+            ymap[0] = y;
+        }
     }
 }
 
 __kernel void buildWarpCylindricalMaps(__global uchar * xmapptr, int xmap_step, int xmap_offset,
                                        __global uchar * ymapptr, int ymap_step, int ymap_offset, int rows, int cols,
-                                       __constant float * ck_rinv, int tl_u, int tl_v, float scale)
+                                       __constant float * ck_rinv, int tl_u, int tl_v, float scale, int rowsPerWI)
 {
     int du = get_global_id(0);
-    int dv = get_global_id(1);
+    int dv0 = get_global_id(1) * rowsPerWI;
 
-    if (du < cols && dv < rows)
+    if (du < cols)
     {
-        __global float * xmap = (__global float *)(xmapptr + mad24(dv, xmap_step, xmap_offset + du * (int)sizeof(float)));
-        __global float * ymap = (__global float *)(ymapptr + mad24(dv, ymap_step, ymap_offset + du * (int)sizeof(float)));
+        int xmap_index = mad24(dv0, xmap_step, mad24(du, (int)sizeof(float), xmap_offset));
+        int ymap_index = mad24(dv0, ymap_step, mad24(du, (int)sizeof(float), ymap_offset));
 
-        float u = tl_u + du;
-        float v = tl_v + dv;
-        float x, y;
+        for (int dv = dv0, dv1 = min(rows, dv0 + rowsPerWI); dv < dv1; ++dv, xmap_index += xmap_step,
+            ymap_index += ymap_step)
+        {
+            __global float * xmap = (__global float *)(xmapptr + xmap_index);
+            __global float * ymap = (__global float *)(ymapptr + ymap_index);
 
-        u /= scale;
-        float x_ = sin(u);
-        float y_ = v / scale;
-        float z_ = cos(u);
+            float u = tl_u + du;
+            float v = tl_v + dv;
+            float x, y;
 
-        float z;
-        x = ck_rinv[0] * x_ + ck_rinv[1] * y_ + ck_rinv[2] * z_;
-        y = ck_rinv[3] * x_ + ck_rinv[4] * y_ + ck_rinv[5] * z_;
-        z = ck_rinv[6] * x_ + ck_rinv[7] * y_ + ck_rinv[8] * z_;
+            u /= scale;
+            float x_, y_, z_;
+            x_ = sincos(u, &z_);
+            y_ = v / scale;
 
-        if (z > 0) x /= z, y /= z;
-        else x = y = -1;
+            float z;
+            x = fma(ck_rinv[0], x_, fma(ck_rinv[1], y_, ck_rinv[2] * z_));
+            y = fma(ck_rinv[3], x_, fma(ck_rinv[4], y_, ck_rinv[5] * z_));
+            z = fma(ck_rinv[6], x_, fma(ck_rinv[7], y_, ck_rinv[8] * z_));
 
-        xmap[0] = x;
-        ymap[0] = y;
+            if (z > 0)
+                x /= z, y /= z;
+            else
+                x = y = -1;
+
+            xmap[0] = x;
+            ymap[0] = y;
+        }
     }
 }
 
 __kernel void buildWarpSphericalMaps(__global uchar * xmapptr, int xmap_step, int xmap_offset,
                                      __global uchar * ymapptr, int ymap_step, int ymap_offset, int rows, int cols,
-                                     __constant float * ck_rinv, int tl_u, int tl_v, float scale)
+                                     __constant float * ck_rinv, int tl_u, int tl_v, float scale, int rowsPerWI)
 {
     int du = get_global_id(0);
-    int dv = get_global_id(1);
+    int dv0 = get_global_id(1) * rowsPerWI;
 
-    if (du < cols && dv < rows)
+    if (du < cols)
     {
-        __global float * xmap = (__global float *)(xmapptr + mad24(dv, xmap_step, xmap_offset + du * (int)sizeof(float)));
-        __global float * ymap = (__global float *)(ymapptr + mad24(dv, ymap_step, ymap_offset + du * (int)sizeof(float)));
+        int xmap_index = mad24(dv0, xmap_step, mad24(du, (int)sizeof(float), xmap_offset));
+        int ymap_index = mad24(dv0, ymap_step, mad24(du, (int)sizeof(float), ymap_offset));
 
-        float u = tl_u + du;
-        float v = tl_v + dv;
-        float x, y;
+        for (int dv = dv0, dv1 = min(rows, dv0 + rowsPerWI); dv < dv1; ++dv, xmap_index += xmap_step,
+            ymap_index += ymap_step)
+        {
+            __global float * xmap = (__global float *)(xmapptr + xmap_index);
+            __global float * ymap = (__global float *)(ymapptr + ymap_index);
 
-        v /= scale;
-        u /= scale;
+            float u = tl_u + du;
+            float v = tl_v + dv;
+            float x, y;
 
-        float sinv = sin(v);
-        float x_ = sinv * sin(u);
-        float y_ = -cos(v);
-        float z_ = sinv * cos(u);
+            v /= scale;
+            u /= scale;
 
-        float z;
-        x = ck_rinv[0] * x_ + ck_rinv[1] * y_ + ck_rinv[2] * z_;
-        y = ck_rinv[3] * x_ + ck_rinv[4] * y_ + ck_rinv[5] * z_;
-        z = ck_rinv[6] * x_ + ck_rinv[7] * y_ + ck_rinv[8] * z_;
+            float cosv, sinv = sincos(v, &cosv), cosu, sinu = sincos(u, &cosu);
+            float x_ = sinv * sinu;
+            float y_ = -cosv;
+            float z_ = sinv * cosu;
 
-        if (z > 0) x /= z, y /= z;
-        else x = y = -1;
+            float z;
+            x = fma(ck_rinv[0], x_, fma(ck_rinv[1], y_, ck_rinv[2] * z_));
+            y = fma(ck_rinv[3], x_, fma(ck_rinv[4], y_, ck_rinv[5] * z_));
+            z = fma(ck_rinv[6], x_, fma(ck_rinv[7], y_, ck_rinv[8] * z_));
 
-        xmap[0] = x;
-        ymap[0] = y;
+            if (z > 0)
+                x /= z, y /= z;
+            else
+                x = y = -1;
+
+            xmap[0] = x;
+            ymap[0] = y;
+        }
     }
 }
