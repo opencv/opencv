@@ -91,6 +91,41 @@
 #error "No operation is specified"
 #endif
 
+#ifndef BUF_COLS
+#define BUF_COLS  32
+#endif
+
+__kernel void reduce_horz_pre(__global const uchar * srcptr, int src_step, int src_offset, int rows, int cols,
+                     __global uchar * bufptr, int buf_step, int buf_offset)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    if (x < BUF_COLS)
+    {
+        int src_index = mad24(y, src_step, mad24(x, (int)sizeof(srcT) * cn, src_offset));
+        int buf_index = mad24(y, buf_step, mad24(x, (int)sizeof(dstT) * cn, buf_offset));
+
+        __global const srcT * src = (__global const srcT *)(srcptr + src_index);
+        __global dstT * buf = (__global dstT *)(bufptr + buf_index);
+        dstT tmp[cn] = { INIT_VALUE };
+
+        int src_step_mul = BUF_COLS * cn;
+        for (int idx = x; idx < cols; idx += BUF_COLS, src += src_step_mul)
+        {
+            #pragma unroll
+            for (int c = 0; c < cn; ++c)
+            {
+                dstT value = convertToDT(src[c]);
+                PROCESS_ELEM(tmp[c], value);
+            }
+        }
+
+        #pragma unroll
+        for (int c = 0; c < cn; ++c)
+            buf[c] = tmp[c];
+    }
+}
+
 __kernel void reduce(__global const uchar * srcptr, int src_step, int src_offset, int rows, int cols,
                      __global uchar * dstptr, int dst_step, int dst_offset)
 {
