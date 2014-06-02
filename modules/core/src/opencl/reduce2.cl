@@ -76,24 +76,20 @@
 
 #define noconvert
 
-#ifdef OCL_CV_REDUCE_SUM
+#if defined OCL_CV_REDUCE_SUM || defined OCL_CV_REDUCE_AVG
 #define INIT_VALUE 0
 #define PROCESS_ELEM(acc, value) acc += value
-#elif defined(OCL_CV_REDUCE_MAX)
+#elif defined OCL_CV_REDUCE_MAX
 #define INIT_VALUE MIN_VAL
 #define PROCESS_ELEM(acc, value) acc = value > acc ? value : acc
-#elif defined(OCL_CV_REDUCE_MIN)
+#elif defined OCL_CV_REDUCE_MIN
 #define INIT_VALUE MAX_VAL
 #define PROCESS_ELEM(acc, value) acc = value < acc ? value : acc
-#elif defined(OCL_CV_REDUCE_AVG)
-#error "This operation should be implemented through OCL_CV_REDUCE_SUM"
 #else
 #error "No operation is specified"
 #endif
 
-#ifndef BUF_COLS
-#define BUF_COLS  32
-#endif
+#ifdef OP_REDUCE_PRE
 
 __kernel void reduce_horz_pre(__global const uchar * srcptr, int src_step, int src_offset, int rows, int cols,
                      __global uchar * bufptr, int buf_step, int buf_offset)
@@ -126,15 +122,23 @@ __kernel void reduce_horz_pre(__global const uchar * srcptr, int src_step, int s
     }
 }
 
+#else
+
 __kernel void reduce(__global const uchar * srcptr, int src_step, int src_offset, int rows, int cols,
-                     __global uchar * dstptr, int dst_step, int dst_offset)
+                     __global uchar * dstptr, int dst_step, int dst_offset
+#ifdef OCL_CV_REDUCE_AVG
+                     , float fscale
+#endif
+                     )
 {
 #if dim == 0 // reduce to a single row
     int x = get_global_id(0);
     if (x < cols)
     {
         int src_index = mad24(x, (int)sizeof(srcT) * cn, src_offset);
-        __global dstT * dst = (__global dstT *)(dstptr + dst_offset) + x * cn;
+        int dst_index = mad24(x, (int)sizeof(dstT0) * cn, dst_offset);
+
+        __global dstT0 * dst = (__global dstT0 *)(dstptr + dst_index);
         dstT tmp[cn] = { INIT_VALUE };
 
         for (int y = 0; y < rows; ++y, src_index += src_step)
@@ -150,7 +154,11 @@ __kernel void reduce(__global const uchar * srcptr, int src_step, int src_offset
 
         #pragma unroll
         for (int c = 0; c < cn; ++c)
-            dst[c] = tmp[c];
+#ifdef OCL_CV_REDUCE_AVG
+            dst[c] = convertToDT0(convertToWT(tmp[c]) * fscale);
+#else
+            dst[c] = convertToDT0(tmp[c]);
+#endif
     }
 #elif dim == 1 // reduce to a single column
     int y = get_global_id(0);
@@ -175,9 +183,15 @@ __kernel void reduce(__global const uchar * srcptr, int src_step, int src_offset
 
         #pragma unroll
         for (int c = 0; c < cn; ++c)
-            dst[c] = tmp[c];
+#ifdef OCL_CV_REDUCE_AVG
+            dst[c] = convertToDT0(convertToWT(tmp[c]) * fscale);
+#else
+            dst[c] = convertToDT0(tmp[c]);
+#endif
     }
 #else
 #error "Dims must be either 0 or 1"
 #endif
 }
+
+#endif
