@@ -101,32 +101,39 @@ __kernel void copyToMask(__global const uchar * srcptr, int src_step, int src_of
 
 __kernel void setMask(__global const uchar* mask, int maskstep, int maskoffset,
                       __global uchar* dstptr, int dststep, int dstoffset,
-                      int rows, int cols, dstST value_ )
+                      int rows, int cols, dstST value_)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y0 = get_global_id(1) * rowsPerWI;
 
-    if (x < cols && y < rows)
+    if (x < cols)
     {
-        int mask_index = mad24(y, maskstep, x + maskoffset);
-        if( mask[mask_index] )
+        int mask_index = mad24(y0, maskstep, x + maskoffset);
+        int dst_index  = mad24(y0, dststep, mad24(x, (int)sizeof(dstT1) * cn, dstoffset));
+
+        for (int y = y0, y1 = min(rows, y0 + rowsPerWI); y < y1; ++y)
         {
-            int dst_index  = mad24(y, dststep, mad24(x, (int)sizeof(dstT1) * cn, dstoffset));
-            storedst(value);
+            if( mask[mask_index] )
+                storedst(value);
+
+            mask_index += maskstep;
+            dst_index += dststep;
         }
     }
 }
 
 __kernel void set(__global uchar* dstptr, int dststep, int dstoffset,
-                  int rows, int cols, dstST value_ )
+                  int rows, int cols, dstST value_)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y0 = get_global_id(1) * rowsPerWI;
 
-    if (x < cols && y < rows)
+    if (x < cols)
     {
-        int dst_index  = mad24(y, dststep, mad24(x, (int)sizeof(dstT1) * cn, dstoffset));
-        storedst(value);
+        int dst_index  = mad24(y0, dststep, mad24(x, (int)sizeof(dstT1) * cn, dstoffset));
+
+        for (int y = y0, y1 = min(rows, y0 + rowsPerWI); y < y1; ++y, dst_index += dststep)
+            storedst(value);
     }
 }
 
