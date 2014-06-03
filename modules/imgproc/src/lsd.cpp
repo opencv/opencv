@@ -422,10 +422,10 @@ void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
     std::vector<double> w, p, n;
     w_needed = _width.needed();
     p_needed = _prec.needed();
-    n_needed = _nfa.needed();
-
-    CV_Assert((!_nfa.needed()) ||                              // NFA InputArray will be filled _only_ when
-              (_nfa.needed() && doRefine >= LSD_REFINE_ADV));  // REFINE_ADV type LineSegmentDetectorImpl object is created.
+    if (doRefine < LSD_REFINE_ADV)
+        n_needed = false;
+    else
+        n_needed = _nfa.needed();
 
     flsd(lines, w, p, n);
 
@@ -1172,9 +1172,10 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray l
 
     Mat _lines;
     _lines = lines.getMat();
+    int N = _lines.checkVector(4);
 
     // Draw segments
-    for(int i = 0; i < _lines.size().width; ++i)
+    for(int i = 0; i < N; ++i)
     {
         const Vec4i& v = _lines.at<Vec4i>(i);
         Point b(v[0], v[1]);
@@ -1197,14 +1198,17 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1
     Mat _lines2;
     _lines1 = lines1.getMat();
     _lines2 = lines2.getMat();
+    int N1 = _lines1.checkVector(4);
+    int N2 = _lines2.checkVector(4);
+
     // Draw segments
-    for(int i = 0; i < _lines1.size().width; ++i)
+    for(int i = 0; i < N1; ++i)
     {
         Point b(_lines1.at<Vec4i>(i)[0], _lines1.at<Vec4i>(i)[1]);
         Point e(_lines1.at<Vec4i>(i)[2], _lines1.at<Vec4i>(i)[3]);
         line(I1, b, e, Scalar::all(255), 1);
     }
-    for(int i = 0; i < _lines2.size().width; ++i)
+    for(int i = 0; i < N2; ++i)
     {
         Point b(_lines2.at<Vec4i>(i)[0], _lines2.at<Vec4i>(i)[1]);
         Point e(_lines2.at<Vec4i>(i)[2], _lines2.at<Vec4i>(i)[3]);
