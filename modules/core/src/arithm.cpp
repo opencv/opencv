@@ -1008,7 +1008,8 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int srcdepth = CV_MAT_DEPTH(srctype);
     int cn = CV_MAT_CN(srctype);
 
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    const ocl::Device d = ocl::Device::getDefault();
+    bool doubleSupport = d.doubleFPConfig() > 0;
     if( oclop < 0 || ((haveMask || haveScalar) && cn > 4) ||
             (!doubleSupport && srcdepth == CV_64F && !bitwise))
         return false;
@@ -1016,8 +1017,9 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     char opts[1024];
     int kercn = haveMask || haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
     int scalarcn = kercn == 3 ? 4 : kercn;
+    int rowsPerWI = d.isIntel() ? 4 : 1;
 
-    sprintf(opts, "-D %s%s -D %s -D dstT=%s%s -D dstT_C1=%s -D workST=%s -D cn=%d",
+    sprintf(opts, "-D %s%s -D %s -D dstT=%s%s -D dstT_C1=%s -D workST=%s -D cn=%d -D rowsPerWI=%d",
             haveMask ? "MASK_" : "", haveScalar ? "UNARY_OP" : "BINARY_OP", oclop2str[oclop],
             bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, kercn)) :
                 ocl::typeToStr(CV_MAKETYPE(srcdepth, kercn)), doubleSupport ? " -D DOUBLE_SUPPORT" : "",
@@ -1025,7 +1027,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 ocl::typeToStr(CV_MAKETYPE(srcdepth, 1)),
             bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, scalarcn)) :
                 ocl::typeToStr(CV_MAKETYPE(srcdepth, scalarcn)),
-            kercn);
+            kercn, rowsPerWI);
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
     if (k.empty())
@@ -1068,7 +1070,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             k.args(src1arg, src2arg, maskarg, dstarg);
     }
 
-    size_t globalsize[] = { src1.cols * cn / kercn, src1.rows };
+    size_t globalsize[] = { src1.cols * cn / kercn, (src1.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, 0, false);
 }
 
@@ -1371,7 +1373,8 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                           void* usrdata, int oclop,
                           bool haveScalar )
 {
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    const ocl::Device d = ocl::Device::getDefault();
+    bool doubleSupport = d.doubleFPConfig() > 0;
     int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
     bool haveMask = !_mask.empty();
 
@@ -1388,12 +1391,12 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         return false;
 
     int kercn = haveMask || haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
-    int scalarcn = kercn == 3 ? 4 : kercn;
+    int scalarcn = kercn == 3 ? 4 : kercn, rowsPerWI = d.isIntel() ? 4 : 1;
 
     char cvtstr[4][32], opts[1024];
     sprintf(opts, "-D %s%s -D %s -D srcT1=%s -D srcT1_C1=%s -D srcT2=%s -D srcT2_C1=%s "
             "-D dstT=%s -D dstT_C1=%s -D workT=%s -D workST=%s -D scaleT=%s -D wdepth=%d -D convertToWT1=%s "
-            "-D convertToWT2=%s -D convertToDT=%s%s -D cn=%d",
+            "-D convertToWT2=%s -D convertToDT=%s%s -D cn=%d -D rowsPerWI=%d",
             (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"),
             oclop2str[oclop], ocl::typeToStr(CV_MAKETYPE(depth1, kercn)),
             ocl::typeToStr(depth1), ocl::typeToStr(CV_MAKETYPE(depth2, kercn)),
@@ -1404,7 +1407,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             ocl::convertTypeStr(depth1, wdepth, kercn, cvtstr[0]),
             ocl::convertTypeStr(depth2, wdepth, kercn, cvtstr[1]),
             ocl::convertTypeStr(wdepth, ddepth, kercn, cvtstr[2]),
-            doubleSupport ? " -D DOUBLE_SUPPORT" : "", kercn);
+            doubleSupport ? " -D DOUBLE_SUPPORT" : "", kercn, rowsPerWI);
 
     size_t usrdata_esz = CV_ELEM_SIZE(wdepth);
     const uchar* usrdata_p = (const uchar*)usrdata;
@@ -1478,7 +1481,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             k.args(src1arg, src2arg, maskarg, dstarg);
     }
 
-    size_t globalsize[] = { src1.cols * cn / kercn, src1.rows };
+    size_t globalsize[] = { src1.cols * cn / kercn, (src1.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -2764,7 +2767,7 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
     if (!haveScalar && (!_src1.sameSize(_src2) || type1 != type2))
             return false;
 
-    int kercn = haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
+    int kercn = haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst), rowsPerWI = dev.isIntel() ? 4 : 1;
     // Workaround for bug with "?:" operator in AMD OpenCL compiler
     if (depth1 >= CV_16U)
         kercn = 1;
@@ -2775,14 +2778,14 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
 
     String opts = format("-D %s -D srcT1=%s -D dstT=%s -D workT=srcT1 -D cn=%d"
                          " -D convertToDT=%s -D OP_CMP -D CMP_OPERATOR=%s -D srcT1_C1=%s"
-                         " -D srcT2_C1=%s -D dstT_C1=%s -D workST=%s%s",
+                         " -D srcT2_C1=%s -D dstT_C1=%s -D workST=%s -D rowsPerWI=%d%s",
                          haveScalar ? "UNARY_OP" : "BINARY_OP",
                          ocl::typeToStr(CV_MAKE_TYPE(depth1, kercn)),
                          ocl::typeToStr(CV_8UC(kercn)), kercn,
                          ocl::convertTypeStr(depth1, CV_8U, kercn, cvt),
                          operationMap[op], ocl::typeToStr(depth1),
                          ocl::typeToStr(depth1), ocl::typeToStr(CV_8U),
-                         ocl::typeToStr(CV_MAKE_TYPE(depth1, scalarcn)),
+                         ocl::typeToStr(CV_MAKE_TYPE(depth1, scalarcn)), rowsPerWI,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
@@ -2839,7 +2842,7 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
                ocl::KernelArg::WriteOnly(dst, cn, kercn));
     }
 
-    size_t globalsize[2] = { dst.cols * cn / kercn, dst.rows };
+    size_t globalsize[2] = { dst.cols * cn / kercn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -3091,11 +3094,12 @@ static InRangeFunc getInRangeFunc(int depth)
 static bool ocl_inRange( InputArray _src, InputArray _lowerb,
                          InputArray _upperb, OutputArray _dst )
 {
+    const ocl::Device & d = ocl::Device::getDefault();
     int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Size ssize = _src.size(), lsize = _lowerb.size(), usize = _upperb.size();
     int stype = _src.type(), ltype = _lowerb.type(), utype = _upperb.type();
     int sdepth = CV_MAT_DEPTH(stype), ldepth = CV_MAT_DEPTH(ltype), udepth = CV_MAT_DEPTH(utype);
-    int cn = CV_MAT_CN(stype);
+    int cn = CV_MAT_CN(stype), rowsPerWI = d.isIntel() ? 4 : 1;
     bool lbScalar = false, ubScalar = false;
 
     if( (lkind == _InputArray::MATX && skind != _InputArray::MATX) ||
@@ -3119,7 +3123,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
     if (lbScalar != ubScalar)
         return false;
 
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
+    bool doubleSupport = d.doubleFPConfig() > 0,
             haveScalar = lbScalar && ubScalar;
 
     if ( (!doubleSupport && sdepth == CV_64F) ||
@@ -3184,13 +3188,13 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
         uscalar.copyTo(uscalaru);
 
         ker.args(srcarg, dstarg, ocl::KernelArg::PtrReadOnly(lscalaru),
-               ocl::KernelArg::PtrReadOnly(uscalaru));
+               ocl::KernelArg::PtrReadOnly(uscalaru), rowsPerWI);
     }
     else
         ker.args(srcarg, dstarg, ocl::KernelArg::ReadOnlyNoSize(lscalaru),
-               ocl::KernelArg::ReadOnlyNoSize(uscalaru));
+               ocl::KernelArg::ReadOnlyNoSize(uscalaru), rowsPerWI);
 
-    size_t globalsize[2] = { ssize.width, ssize.height };
+    size_t globalsize[2] = { ssize.width, (ssize.height + rowsPerWI - 1) / rowsPerWI };
     return ker.run(2, globalsize, NULL, false);
 }
 

@@ -2489,7 +2489,8 @@ namespace cv {
 static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
                               OutputArray _dst, int flags, bool conjB )
 {
-    int atype = _srcA.type(), btype = _srcB.type();
+    int atype = _srcA.type(), btype = _srcB.type(),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     Size asize = _srcA.size(), bsize = _srcB.size();
     CV_Assert(asize == bsize);
 
@@ -2509,9 +2510,9 @@ static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
         return false;
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(A), ocl::KernelArg::ReadOnlyNoSize(B),
-           ocl::KernelArg::WriteOnly(dst));
+           ocl::KernelArg::WriteOnly(dst), rowsPerWI);
 
-    size_t globalsize[2] = { asize.width, asize.height };
+    size_t globalsize[2] = { asize.width, (asize.height + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 

@@ -270,21 +270,22 @@ namespace cv {
 
 static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
 {
-    int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
-    String dstargs, dstdecl, processelem;
+    String dstargs, processelem, indexdecl;
     for (int i = 0; i < cn; ++i)
     {
         dstargs += format("DECLARE_DST_PARAM(%d)", i);
-        dstdecl += format("DECLARE_DATA(%d)", i);
+        indexdecl += format("DECLARE_INDEX(%d)", i);
         processelem += format("PROCESS_ELEM(%d)", i);
     }
 
     ocl::Kernel k("split", ocl::core::split_merge_oclsrc,
-                  format("-D T=%s -D OP_SPLIT -D cn=%d -D DECLARE_DST_PARAMS=%s "
-                         "-D DECLARE_DATA_N=%s -D PROCESS_ELEMS_N=%s",
+                  format("-D T=%s -D OP_SPLIT -D cn=%d -D DECLARE_DST_PARAMS=%s"
+                         " -D PROCESS_ELEMS_N=%s -D DECLARE_INDEX_N=%s",
                          ocl::memopTypeToStr(depth), cn, dstargs.c_str(),
-                         dstdecl.c_str(), processelem.c_str()));
+                         processelem.c_str(), indexdecl.c_str()));
     if (k.empty())
         return false;
 
@@ -299,8 +300,9 @@ static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
     int argidx = k.set(0, ocl::KernelArg::ReadOnly(_m.getUMat()));
     for (int i = 0; i < cn; ++i)
         argidx = k.set(argidx, ocl::KernelArg::WriteOnlyNoSize(dst[i]));
+    k.set(argidx, rowsPerWI);
 
-    size_t globalsize[2] = { size.width, size.height };
+    size_t globalsize[2] = { size.width, (size.height + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -419,7 +421,8 @@ static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
     _mv.getUMatVector(src);
     CV_Assert(!src.empty());
 
-    int type = src[0].type(), depth = CV_MAT_DEPTH(type);
+    int type = src[0].type(), depth = CV_MAT_DEPTH(type),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     Size size = src[0].size();
 
     for (size_t i = 0, srcsize = src.size(); i < srcsize; ++i)
@@ -440,20 +443,20 @@ static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
     }
     int dcn = (int)ksrc.size();
 
-    String srcargs, srcdecl, processelem, cndecl;
+    String srcargs, processelem, cndecl, indexdecl;
     for (int i = 0; i < dcn; ++i)
     {
         srcargs += format("DECLARE_SRC_PARAM(%d)", i);
-        srcdecl += format("DECLARE_DATA(%d)", i);
         processelem += format("PROCESS_ELEM(%d)", i);
+        indexdecl += format("DECLARE_INDEX(%d)", i);
         cndecl += format(" -D scn%d=%d", i, ksrc[i].channels());
     }
 
     ocl::Kernel k("merge", ocl::core::split_merge_oclsrc,
                   format("-D OP_MERGE -D cn=%d -D T=%s -D DECLARE_SRC_PARAMS_N=%s"
-                         " -D DECLARE_DATA_N=%s -D PROCESS_ELEMS_N=%s%s",
+                         " -D DECLARE_INDEX_N=%s -D PROCESS_ELEMS_N=%s%s",
                          dcn, ocl::memopTypeToStr(depth), srcargs.c_str(),
-                         srcdecl.c_str(), processelem.c_str(), cndecl.c_str()));
+                         indexdecl.c_str(), processelem.c_str(), cndecl.c_str()));
     if (k.empty())
         return false;
 
@@ -463,9 +466,10 @@ static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
     int argidx = 0;
     for (int i = 0; i < dcn; ++i)
         argidx = k.set(argidx, ocl::KernelArg::ReadOnlyNoSize(ksrc[i]));
-    k.set(argidx, ocl::KernelArg::WriteOnly(dst));
+    argidx = k.set(argidx, ocl::KernelArg::WriteOnly(dst));
+    k.set(argidx, rowsPerWI);
 
-    size_t globalsize[2] = { dst.cols, dst.rows };
+    size_t globalsize[2] = { dst.cols, (dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -683,14 +687,15 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
     CV_Assert(nsrc > 0 && ndst > 0);
 
     Size size = src[0].size();
-    int depth = src[0].depth(), esz = CV_ELEM_SIZE(depth);
+    int depth = src[0].depth(), esz = CV_ELEM_SIZE(depth),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
     for (size_t i = 1, ssize = src.size(); i < ssize; ++i)
         CV_Assert(src[i].size() == size && src[i].depth() == depth);
     for (size_t i = 0, dsize = dst.size(); i < dsize; ++i)
         CV_Assert(dst[i].size() == size && dst[i].depth() == depth);
 
-    String declsrc, decldst, declproc, declcn;
+    String declsrc, decldst, declproc, declcn, indexdecl;
     std::vector<UMat> srcargs(npairs), dstargs(npairs);
 
     for (size_t i = 0; i < npairs; ++i)
@@ -711,14 +716,16 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
 
         declsrc += format("DECLARE_INPUT_MAT(%d)", i);
         decldst += format("DECLARE_OUTPUT_MAT(%d)", i);
+        indexdecl += format("DECLARE_INDEX(%d)", i);
         declproc += format("PROCESS_ELEM(%d)", i);
         declcn += format(" -D scn%d=%d -D dcn%d=%d", i, src[src_idx].channels(), i, dst[dst_idx].channels());
     }
 
     ocl::Kernel k("mixChannels", ocl::core::mixchannels_oclsrc,
-                  format("-D T=%s -D DECLARE_INPUT_MATS=%s -D DECLARE_OUTPUT_MATS=%s"
-                         " -D PROCESS_ELEMS=%s%s", ocl::memopTypeToStr(depth),
-                         declsrc.c_str(), decldst.c_str(), declproc.c_str(), declcn.c_str()));
+                  format("-D T=%s -D DECLARE_INPUT_MAT_N=%s -D DECLARE_OUTPUT_MAT_N=%s"
+                         " -D PROCESS_ELEM_N=%s -D DECLARE_INDEX_N=%s%s",
+                         ocl::memopTypeToStr(depth), declsrc.c_str(), decldst.c_str(),
+                         declproc.c_str(), indexdecl.c_str(), declcn.c_str()));
     if (k.empty())
         return false;
 
@@ -727,9 +734,11 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
         argindex = k.set(argindex, ocl::KernelArg::ReadOnlyNoSize(srcargs[i]));
     for (size_t i = 0; i < npairs; ++i)
         argindex = k.set(argindex, ocl::KernelArg::WriteOnlyNoSize(dstargs[i]));
-    k.set(k.set(argindex, size.height), size.width);
+    argindex = k.set(argindex, size.height);
+    argindex = k.set(argindex, size.width);
+    k.set(argindex, rowsPerWI);
 
-    size_t globalsize[2] = { size.width, size.height };
+    size_t globalsize[2] = { size.width, (size.height + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -1357,9 +1366,10 @@ static BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
 
 static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
 {
+    const ocl::Device & d = ocl::Device::getDefault();
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
-        kercn = ocl::predictOptimalVectorWidth(_src, _dst);
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+        kercn = ocl::predictOptimalVectorWidth(_src, _dst), rowsPerWI = d.isIntel() ? 4 : 1;
+    bool doubleSupport = d.doubleFPConfig() > 0;
 
     if (!doubleSupport && depth == CV_64F)
         return false;
@@ -1368,13 +1378,14 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
     int wdepth = std::max(depth, CV_32F);
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
                   format("-D OP_CONVERT_SCALE_ABS -D UNARY_OP -D dstT=%s -D srcT1=%s"
-                         " -D workT=%s -D wdepth=%d -D convertToWT1=%s -D convertToDT=%s -D workT1=%s%s",
+                         " -D workT=%s -D wdepth=%d -D convertToWT1=%s -D convertToDT=%s"
+                         " -D workT1=%s -D rowsPerWI=%d%s",
                          ocl::typeToStr(CV_8UC(kercn)),
                          ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
                          ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)), wdepth,
                          ocl::convertTypeStr(depth, wdepth, kercn, cvt[0]),
                          ocl::convertTypeStr(wdepth, CV_8U, kercn, cvt[1]),
-                         ocl::typeToStr(wdepth),
+                         ocl::typeToStr(wdepth), rowsPerWI,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
@@ -1391,7 +1402,7 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
     else if (wdepth == CV_64F)
         k.args(srcarg, dstarg, alpha, beta);
 
-    size_t globalsize[2] = { src.cols * cn / kercn, src.rows };
+    size_t globalsize[2] = { src.cols * cn / kercn, (src.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 

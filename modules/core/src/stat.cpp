@@ -2035,8 +2035,9 @@ static NormDiffFunc getNormDiffFunc(int normType, int depth)
 
 static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & result )
 {
+    const ocl::Device & d = ocl::Device::getDefault();
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
+    bool doubleSupport = d.doubleFPConfig() > 0,
             haveMask = _mask.kind() != _InputArray::NONE;
 
     if ( !(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR) ||
@@ -2053,13 +2054,14 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
 
             if (depth != CV_8U && depth != CV_16U)
             {
-                int wdepth = std::max(CV_32S, depth);
+                int wdepth = std::max(CV_32S, depth), rowsPerWI = d.isIntel() ? 4 : 1;
                 char cvt[50];
 
                 ocl::Kernel kabs("KF", ocl::core::arithm_oclsrc,
-                                 format("-D UNARY_OP -D OP_ABS_NOSAT -D dstT=%s -D srcT1=%s -D convertToDT=%s%s",
+                                 format("-D UNARY_OP -D OP_ABS_NOSAT -D dstT=%s -D srcT1=%s"
+                                        " -D convertToDT=%s -D rowsPerWI=%d%s",
                                         ocl::typeToStr(wdepth), ocl::typeToStr(depth),
-                                        ocl::convertTypeStr(depth, wdepth, 1, cvt),
+                                        ocl::convertTypeStr(depth, wdepth, 1, cvt), rowsPerWI,
                                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
                 if (kabs.empty())
                     return false;
@@ -2067,7 +2069,7 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
                 abssrc.create(src.size(), CV_MAKE_TYPE(wdepth, cn));
                 kabs.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(abssrc, cn));
 
-                size_t globalsize[2] = { src.cols * cn, src.rows };
+                size_t globalsize[2] = { src.cols * cn, (src.rows + rowsPerWI - 1) / rowsPerWI };
                 if (!kabs.run(2, globalsize, NULL, false))
                     return false;
             }
@@ -2078,8 +2080,8 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
         }
         else
         {
-            int dbsize = ocl::Device::getDefault().maxComputeUnits();
-            size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+            int dbsize = d.maxComputeUnits();
+            size_t wgs = d.maxWorkGroupSize();
 
             int wgs2_aligned = 1;
             while (wgs2_aligned < (int)wgs)
@@ -2446,8 +2448,9 @@ namespace cv {
 
 static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask, double & result )
 {
-    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    const ocl::Device & d = ocl::Device::getDefault();
+    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), rowsPerWI = d.isIntel() ? 4 : 1;
+    bool doubleSupport = d.doubleFPConfig() > 0;
     bool relative = (normType & NORM_RELATIVE) != 0;
     normType &= ~NORM_RELATIVE;
 
@@ -2459,9 +2462,9 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArr
     char cvt[50];
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
                   format("-D BINARY_OP -D OP_ABSDIFF -D dstT=%s -D workT=dstT -D srcT1=%s -D srcT2=srcT1"
-                         " -D convertToDT=%s -D convertToWT1=convertToDT -D convertToWT2=convertToDT%s",
+                         " -D convertToDT=%s -D convertToWT1=convertToDT -D convertToWT2=convertToDT -D rowsPerWI=%d%s",
                          ocl::typeToStr(wdepth), ocl::typeToStr(depth),
-                         ocl::convertTypeStr(depth, wdepth, 1, cvt),
+                         ocl::convertTypeStr(depth, wdepth, 1, cvt), rowsPerWI,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
@@ -2470,7 +2473,7 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArr
     k.args(ocl::KernelArg::ReadOnlyNoSize(src1), ocl::KernelArg::ReadOnlyNoSize(src2),
            ocl::KernelArg::WriteOnly(diff, cn));
 
-    size_t globalsize[2] = { diff.cols * cn, diff.rows };
+    size_t globalsize[2] = { diff.cols * cn, (diff.rows + rowsPerWI - 1) / rowsPerWI };
     if (!k.run(2, globalsize, NULL, false))
         return false;
 
