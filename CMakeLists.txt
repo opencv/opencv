@@ -923,11 +923,11 @@ endif(DEFINED WITH_INTELPERC)
 status("")
 status("  Other third-party libraries:")
 
-if(WITH_IPP AND HAVE_IPP)
+if((WITH_IPP OR WITH_ICV) AND HAVE_IPP)
   status("    Use IPP:" "${IPP_VERSION_STR} [${IPP_VERSION_MAJOR}.${IPP_VERSION_MINOR}.${IPP_VERSION_BUILD}]")
   status("         at:" "${IPP_ROOT_DIR}")
 else()
-  status("    Use IPP:"   WITH_IPP AND NOT HAVE_IPP THEN "IPP not found" ELSE NO)
+  status("    Use IPP:"   (WITH_IPP OR WITH_ICV) AND NOT HAVE_IPP THEN "IPP not found" ELSE NO)
 endif()
 
 if(DEFINED WITH_IPP_A)
