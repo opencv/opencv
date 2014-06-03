@@ -721,7 +721,7 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
     if( dims <= 2 && cn && _dst.isUMat() && ocl::useOpenCL() &&
             ((needDouble && doubleSupport) || !needDouble) )
     {
-        int wdepth = std::max(CV_32F, sdepth);
+        int wdepth = std::max(CV_32F, sdepth), rowsPerWI = 4;
 
         char cvt[2][40];
         ocl::Kernel k("convertTo", ocl::core::convert_oclsrc,
@@ -741,11 +741,11 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
                     dstarg = ocl::KernelArg::WriteOnly(dst, cn);
 
             if (wdepth == CV_32F)
-                k.args(srcarg, dstarg, alphaf, betaf);
+                k.args(srcarg, dstarg, alphaf, betaf, rowsPerWI);
             else
-                k.args(srcarg, dstarg, alpha, beta);
+                k.args(srcarg, dstarg, alpha, beta, rowsPerWI);
 
-            size_t globalsize[2] = { dst.cols * cn, dst.rows };
+            size_t globalsize[2] = { dst.cols * cn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
             if (k.run(2, globalsize, NULL, false))
                 return;
         }

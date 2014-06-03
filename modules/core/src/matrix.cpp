@@ -2742,7 +2742,8 @@ namespace cv {
 static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
 {
     int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
-            sctype = CV_MAKE_TYPE(depth, cn == 3 ? 4 : cn);
+            sctype = CV_MAKE_TYPE(depth, cn == 3 ? 4 : cn),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
     ocl::Kernel k("setIdentity", ocl::core::set_identity_oclsrc,
                   format("-D T=%s -D T1=%s -D cn=%d -D ST=%s", ocl::memopTypeToStr(type),
@@ -2751,9 +2752,10 @@ static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
         return false;
 
     UMat m = _m.getUMat();
-    k.args(ocl::KernelArg::WriteOnly(m), ocl::KernelArg::Constant(Mat(1, 1, sctype, s)));
+    k.args(ocl::KernelArg::WriteOnly(m), ocl::KernelArg::Constant(Mat(1, 1, sctype, s)),
+           rowsPerWI);
 
-    size_t globalsize[2] = { m.cols, m.rows };
+    size_t globalsize[2] = { m.cols, (m.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
