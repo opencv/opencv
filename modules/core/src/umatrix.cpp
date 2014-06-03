@@ -765,27 +765,27 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
     {
         Mat value = _value.getMat();
         CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::UMAT) );
-        double buf[4]={0,0,0,0};
-        convertAndUnrollScalar(value, tp, (uchar*)buf, 1);
+        double buf[4] = { 0, 0, 0, 0 };
+        convertAndUnrollScalar(value, tp, (uchar *)buf, 1);
 
-        int scalarcn = cn == 3 ? 4 : cn;
-        char opts[1024];
-        sprintf(opts, "-D dstT=%s -D dstST=%s -D dstT1=%s -D cn=%d", ocl::memopTypeToStr(tp),
-                ocl::memopTypeToStr(CV_MAKETYPE(tp,scalarcn)),
-                ocl::memopTypeToStr(CV_MAT_DEPTH(tp)), cn);
+        int scalarcn = cn == 3 ? 4 : cn, rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
+        String opts = format("-D dstT=%s -D rowsPerWI=%d -D dstST=%s -D dstT1=%s -D cn=%d",
+                             ocl::memopTypeToStr(tp), rowsPerWI,
+                             ocl::memopTypeToStr(CV_MAKETYPE(tp, scalarcn)),
+                             ocl::memopTypeToStr(CV_MAT_DEPTH(tp)), cn);
 
         ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::core::copyset_oclsrc, opts);
         if( !setK.empty() )
         {
-            ocl::KernelArg scalararg(0, 0, 0, 0, buf, CV_ELEM_SIZE1(tp)*scalarcn);
+            ocl::KernelArg scalararg(0, 0, 0, 0, buf, CV_ELEM_SIZE1(tp) * scalarcn);
             UMat mask;
 
             if( haveMask )
             {
                 mask = _mask.getUMat();
-                CV_Assert( mask.size() == size() && mask.type() == CV_8U );
-                ocl::KernelArg maskarg = ocl::KernelArg::ReadOnlyNoSize(mask);
-                ocl::KernelArg dstarg = ocl::KernelArg::ReadWrite(*this);
+                CV_Assert( mask.size() == size() && mask.type() == CV_8UC1 );
+                ocl::KernelArg maskarg = ocl::KernelArg::ReadOnlyNoSize(mask),
+                        dstarg = ocl::KernelArg::ReadWrite(*this);
                 setK.args(maskarg, dstarg, scalararg);
             }
             else
@@ -794,8 +794,8 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
                 setK.args(dstarg, scalararg);
             }
 
-            size_t globalsize[] = { cols, rows };
-            if( setK.run(2, globalsize, 0, false) )
+            size_t globalsize[] = { cols, (rows + rowsPerWI - 1) / rowsPerWI };
+            if( setK.run(2, globalsize, NULL, false) )
                 return *this;
         }
     }
