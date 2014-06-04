@@ -54,7 +54,7 @@ namespace ocl {
 
 ///////////// WarpAffine ////////////////////////
 
-CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR)
+CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC)
 
 typedef tuple<Size, MatType, InterType> WarpAffineParams;
 typedef TestBaseWithParam<WarpAffineParams> WarpAffineFixture;
@@ -72,7 +72,7 @@ OCL_PERF_TEST_P(WarpAffineFixture, WarpAffine,
     const WarpAffineParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), interpolation = get<2>(params);
-    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-4;
+    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : interpolation == INTER_CUBIC ? 2e-3 : 1e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -90,7 +90,8 @@ typedef WarpAffineParams WarpPerspectiveParams;
 typedef TestBaseWithParam<WarpPerspectiveParams> WarpPerspectiveFixture;
 
 OCL_PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134, InterType::all()))
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134,
+                                   OCL_PERF_ENUM(InterType(INTER_NEAREST), InterType(INTER_LINEAR))))
 {
     static const double coeffs[3][3] =
     {
@@ -122,7 +123,8 @@ typedef TestBaseWithParam<ResizeParams> ResizeFixture;
 
 OCL_PERF_TEST_P(ResizeFixture, Resize,
             ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134,
-                               InterType::all(), ::testing::Values(0.5, 2.0)))
+                               OCL_PERF_ENUM(InterType(INTER_NEAREST), InterType(INTER_LINEAR)),
+                               ::testing::Values(0.5, 2.0)))
 {
     const ResizeParams params = GetParam();
     const Size srcSize = get<0>(params);
@@ -172,7 +174,8 @@ typedef tuple<Size, MatType, InterType> RemapParams;
 typedef TestBaseWithParam<RemapParams> RemapFixture;
 
 OCL_PERF_TEST_P(RemapFixture, Remap,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134, InterType::all()))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134,
+                               OCL_PERF_ENUM(InterType(INTER_NEAREST), InterType(INTER_LINEAR))))
 {
     const RemapParams params = GetParam();
     const Size srcSize = get<0>(params);
