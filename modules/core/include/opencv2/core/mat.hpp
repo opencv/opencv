@@ -131,6 +131,7 @@ public:
     virtual bool isSubmatrix(int i=-1) const;
     virtual bool empty() const;
     virtual void copyTo(const _OutputArray& arr) const;
+    virtual void copyTo(const _OutputArray& arr, const _InputArray & mask) const;
     virtual size_t offset(int i=-1) const;
     virtual size_t step(int i=-1) const;
     bool isMat() const;
