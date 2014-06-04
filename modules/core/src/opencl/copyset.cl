@@ -44,14 +44,14 @@
 #ifdef COPY_TO_MASK
 
 #define DEFINE_DATA \
-    int src_index = mad24(y, src_step, mad24(x, (int)sizeof(T) * scn, src_offset)); \
-    int dst_index = mad24(y, dst_step, mad24(x, (int)sizeof(T) * scn, dst_offset)); \
+    int src_index = mad24(y, src_step, mad24(x, (int)sizeof(T1) * scn, src_offset)); \
+    int dst_index = mad24(y, dst_step, mad24(x, (int)sizeof(T1) * scn, dst_offset)); \
      \
-    __global const T * src = (__global const T *)(srcptr + src_index); \
-    __global T * dst = (__global T *)(dstptr + dst_index)
+    __global const T1 * src = (__global const T1 *)(srcptr + src_index); \
+    __global T1 * dst = (__global T1 *)(dstptr + dst_index)
 
 __kernel void copyToMask(__global const uchar * srcptr, int src_step, int src_offset,
-                         __global const uchar * maskptr, int mask_step, int mask_offset,
+                         __global const uchar * mask, int mask_step, int mask_offset,
                          __global uchar * dstptr, int dst_step, int dst_offset,
                          int dst_rows, int dst_cols)
 {
@@ -60,8 +60,7 @@ __kernel void copyToMask(__global const uchar * srcptr, int src_step, int src_of
 
     if (x < dst_cols && y < dst_rows)
     {
-        int mask_index = mad24(y, mask_step, mad24(x, mcn, mask_offset));
-        __global const uchar * mask = (__global const uchar *)(maskptr + mask_index);
+        mask += mad24(y, mask_step, mad24(x, mcn, mask_offset));
 
 #if mcn == 1
         if (mask[0])
@@ -72,6 +71,16 @@ __kernel void copyToMask(__global const uchar * srcptr, int src_step, int src_of
             for (int c = 0; c < scn; ++c)
                 dst[c] = src[c];
         }
+#ifdef HAVE_DST_UNINIT
+        else
+        {
+            DEFINE_DATA;
+
+            #pragma unroll
+            for (int c = 0; c < scn; ++c)
+                dst[c] = (T1)(0);
+        }
+#endif
 #elif scn == mcn
         DEFINE_DATA;
 
@@ -79,6 +88,10 @@ __kernel void copyToMask(__global const uchar * srcptr, int src_step, int src_of
         for (int c = 0; c < scn; ++c)
             if (mask[c])
                 dst[c] = src[c];
+#ifdef HAVE_DST_UNINIT
+            else
+                dst[c] = (T1)(0);
+#endif
 #else
 #error "(mcn == 1 || mcn == scn) should be true"
 #endif
