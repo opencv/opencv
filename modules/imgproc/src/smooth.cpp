@@ -2014,14 +2014,30 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
 
 static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
 {
+    size_t localsize[2] = { 16, 16 };
+    size_t globalsize[2];
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
     if ( !((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && cn <= 4 && (m == 3 || m == 5)) )
         return false;
 
-    ocl::Kernel k(format("medianFilter%d", m).c_str(), ocl::imgproc::medianFilter_oclsrc,
-                  format("-D T=%s -D T1=%s -D cn=%d", ocl::typeToStr(type),
-                         ocl::typeToStr(depth), cn));
+    Size imgSize = _src.size();
+    bool useOptimized = (1 == cn) &&
+                        (size_t)imgSize.width >= localsize[0] * 8  &&
+                        (size_t)imgSize.height >= localsize[1] * 8 &&
+                        imgSize.width % 4 == 0 &&
+                        imgSize.height % 4 == 0 &&
+                        (ocl::Device::getDefault().isIntel());
+
+    cv::String kname = format( useOptimized ? "medianFilter%d_u" : "medianFilter%d", m) ;
+    cv::String kdefs = useOptimized ?
+                         format("-D T=%s -D T1=%s -D T4=%s%d -D cn=%d -D USE_4OPT", ocl::typeToStr(type),
+                         ocl::typeToStr(depth), ocl::typeToStr(depth), cn*4, cn)
+                         :
+                         format("-D T=%s -D T1=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn) ;
+
+    ocl::Kernel k(kname.c_str(), ocl::imgproc::medianFilter_oclsrc, kdefs.c_str() );
+
     if (k.empty())
         return false;
 
@@ -2031,7 +2047,17 @@ static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst));
 
-    size_t globalsize[2] = { (src.cols + 18) / 16 * 16, (src.rows + 15) / 16 * 16}, localsize[2] = { 16, 16 };
+    if( useOptimized )
+    {
+        globalsize[0] = DIVUP(src.cols / 4, localsize[0]) * localsize[0];
+        globalsize[1] = DIVUP(src.rows / 4, localsize[1]) * localsize[1];
+    }
+    else
+    {
+        globalsize[0] = (src.cols + localsize[0] + 2) / localsize[0] * localsize[0];
+        globalsize[1] = (src.rows + localsize[1] - 1) / localsize[1] * localsize[1];
+    }
+
     return k.run(2, globalsize, localsize, false);
 }
 
