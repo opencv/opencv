@@ -1311,104 +1311,157 @@ static void ofs2idx(const Mat& a, size_t ofs, int* idx)
 #ifdef HAVE_OPENCL
 
 template <typename T>
-void getMinMaxRes(const Mat &minv, const Mat &maxv, const Mat &minl, const Mat &maxl, double* minVal,
-                  double* maxVal, int* minLoc, int* maxLoc, const int groupnum, const int cn, const int cols)
+void getMinMaxRes(const Mat & db, double* minVal, double* maxVal,
+                  int* minLoc, int* maxLoc,
+                  int groupnum, int cn, int cols)
 {
-    T min = std::numeric_limits<T>::max();
-    T max = std::numeric_limits<T>::min() > 0 ? -std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
-    int minloc = INT_MAX, maxloc = INT_MAX;
-    for (int i = 0; i < groupnum; i++)
+    uint index_max = std::numeric_limits<uint>::max();
+    T minval = std::numeric_limits<T>::max();
+    T maxval = std::numeric_limits<T>::min() > 0 ? -std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
+    uint minloc = index_max, maxloc = index_max;
+
+    int index = 0;
+    const T * minptr = NULL, * maxptr = NULL;
+    const uint * minlocptr = NULL, * maxlocptr = NULL;
+    if (minVal || minLoc)
     {
-        T current_min = minv.at<T>(0,i);
-        T current_max = maxv.at<T>(0,i);
-        T oldmin = min, oldmax = max;
-        min = std::min(min, current_min);
-        max = std::max(max, current_max);
-        if (cn == 1)
-        {
-            int current_minloc = minl.at<int>(0,i);
-            int current_maxloc = maxl.at<int>(0,i);
-            if(current_minloc < 0 || current_maxloc < 0) continue;
-            minloc = (oldmin == current_min) ? std::min(minloc, current_minloc) : (oldmin < current_min) ? minloc : current_minloc;
-            maxloc = (oldmax == current_max) ? std::min(maxloc, current_maxloc) : (oldmax > current_max) ? maxloc : current_maxloc;
-        }
+        minptr = (const T *)db.data;
+        index += sizeof(T) * groupnum;
     }
-    bool zero_mask = (maxloc == INT_MAX) || (minloc == INT_MAX);
-    if (minVal)
-        *minVal = zero_mask ? 0 : (double)min;
-    if (maxVal)
-        *maxVal = zero_mask ? 0 : (double)max;
+    if (maxVal || maxLoc)
+    {
+        maxptr = (const T *)(db.data + index);
+        index += sizeof(T) * groupnum;
+    }
     if (minLoc)
     {
-        minLoc[0] = zero_mask ? -1 : minloc/cols;
-        minLoc[1] = zero_mask ? -1 : minloc%cols;
+        minlocptr = (uint *)(db.data + index);
+        index += sizeof(uint) * groupnum;
+    }
+    if (maxLoc)
+        maxlocptr = (uint *)(db.data + index);
+
+    for (int i = 0; i < groupnum; i++)
+    {
+        if (minptr && minptr[i] <= minval)
+        {
+            if (minptr[i] == minval)
+            {
+                if (minlocptr)
+                    minloc = std::min(minlocptr[i], minloc);
+            }
+            else
+            {
+                if (minlocptr)
+                    minloc = minlocptr[i];
+                minval = minptr[i];
+            }
+        }
+        if (maxptr && maxptr[i] >= maxval)
+        {
+            if (maxptr[i] == maxval)
+            {
+                if (maxlocptr)
+                    maxloc = std::min(maxlocptr[i], maxloc);
+            }
+            else
+            {
+                if (maxlocptr)
+                    maxloc = maxlocptr[i];
+                maxval = maxptr[i];
+            }
+        }
+    }
+    bool zero_mask = (minLoc && minloc == index_max) ||
+            (maxLoc && maxloc == index_max);
+
+    if (minVal)
+        *minVal = zero_mask ? 0 : (double)minval;
+    if (maxVal)
+        *maxVal = zero_mask ? 0 : (double)maxval;
+
+    if (minLoc)
+    {
+        minLoc[0] = zero_mask ? -1 : minloc / cols;
+        minLoc[1] = zero_mask ? -1 : minloc % cols;
     }
     if (maxLoc)
     {
-        maxLoc[0] = zero_mask ? -1 : maxloc/cols;
-        maxLoc[1] = zero_mask ? -1 : maxloc%cols;
+        maxLoc[0] = zero_mask ? -1 : maxloc / cols;
+        maxLoc[1] = zero_mask ? -1 : maxloc % cols;
     }
 }
 
-typedef void (*getMinMaxResFunc)(const Mat &minv, const Mat &maxv, const Mat &minl, const Mat &maxl, double *minVal,
-                                 double *maxVal, int *minLoc, int *maxLoc, const int gropunum, const int cn, const int cols);
+typedef void (*getMinMaxResFunc)(const Mat & db, double *minVal, double *maxVal,
+                                 int *minLoc, int *maxLoc,
+                                 int gropunum, int cn, int cols);
 
 static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc, int* maxLoc, InputArray _mask)
 {
     CV_Assert( (_src.channels() == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
         (_src.channels() >= 1 && _mask.empty() && !minLoc && !maxLoc) );
 
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), kercn = 1;
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    const ocl::Device & dev = ocl::Device::getDefault();
+    bool doubleSupport = dev.doubleFPConfig() > 0, haveMask = !_mask.empty();
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            kercn = haveMask ? 1 : std::min(4, ocl::predictOptimalVectorWidth(_src));
 
     if (depth == CV_64F && !doubleSupport)
         return false;
 
-    int groupnum = ocl::Device::getDefault().maxComputeUnits();
-    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+    int groupnum = dev.maxComputeUnits();
+    size_t wgs = dev.maxWorkGroupSize();
 
     int wgs2_aligned = 1;
     while (wgs2_aligned < (int)wgs)
         wgs2_aligned <<= 1;
     wgs2_aligned >>= 1;
 
-    String opts = format("-D DEPTH_%d -D srcT=%s -D OP_MIN_MAX_LOC%s -D WGS=%d"
-                         " -D WGS2_ALIGNED=%d%s%s%s -D kercn=%d",
-                         depth, ocl::typeToStr(depth), _mask.empty() ? "" : "_MASK", (int)wgs,
-                         wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-                         _src.isContinuous() ? " -D HAVE_SRC_CONT" : "",
-                         _mask.isContinuous() ? " -D HAVE_MASK_CONT" : "", kercn);
+    bool needMinVal = minVal || minLoc, needMinLoc = minLoc != NULL,
+            needMaxVal = maxVal || maxLoc, needMaxLoc = maxLoc != NULL;
 
-    ocl::Kernel k("reduce", ocl::core::reduce_oclsrc, opts);
+    // in case of mask we must know whether mask is filled with zeros or not
+    // so let's calculate min or max location, if it's undefined, so mask is zeros
+    if (!(needMaxLoc || needMinLoc) && haveMask)
+        if (needMinVal)
+            needMinLoc = true;
+        else
+            needMaxVal = true;
+
+    String opts = format("-D DEPTH_%d -D srcT1=%s%s -D WGS=%d -D srcT=%s"
+                         " -D WGS2_ALIGNED=%d%s%s%s -D kercn=%d%s%s%s%s",
+                         depth, ocl::typeToStr(depth), haveMask ? " -D HAVE_MASK" : "", (int)wgs,
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)), wgs2_aligned,
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                         _src.isContinuous() ? " -D HAVE_SRC_CONT" : "",
+                         _mask.isContinuous() ? " -D HAVE_MASK_CONT" : "", kercn,
+                         needMinVal ? " -D NEED_MINVAL" : "", needMaxVal ? " -D NEED_MAXVAL" : "",
+                         needMinLoc ? " -D NEED_MINLOC" : "", needMaxLoc ? " -D NEED_MAXLOC" : "");
+
+    ocl::Kernel k("minmaxloc", ocl::core::minmaxloc_oclsrc, opts);
     if (k.empty())
         return false;
 
-    UMat src = _src.getUMat(), minval(1, groupnum, src.type()),
-        maxval(1, groupnum, src.type()), minloc( 1, groupnum, CV_32SC1),
-        maxloc( 1, groupnum, CV_32SC1), mask;
-    if (!_mask.empty())
-        mask = _mask.getUMat();
+    int esz = CV_ELEM_SIZE(depth), esz32s = CV_ELEM_SIZE1(CV_32S),
+            dbsize = groupnum * ((needMinVal ? esz : 0) + (needMaxVal ? esz : 0) +
+                                 (needMinLoc ? esz32s : 0) + (needMaxLoc ? esz32s : 0));
+    UMat src = _src.getUMat(), db(1, dbsize, CV_8UC1), mask = _mask.getUMat();
 
-    if (src.channels() > 1)
+    if (cn > 1)
         src = src.reshape(1);
 
-    if (mask.empty())
+    if (!haveMask)
         k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
-            groupnum, ocl::KernelArg::PtrWriteOnly(minval), ocl::KernelArg::PtrWriteOnly(maxval),
-            ocl::KernelArg::PtrWriteOnly(minloc), ocl::KernelArg::PtrWriteOnly(maxloc));
+               groupnum, ocl::KernelArg::PtrWriteOnly(db));
     else
-        k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(), groupnum,
-            ocl::KernelArg::PtrWriteOnly(minval), ocl::KernelArg::PtrWriteOnly(maxval),
-            ocl::KernelArg::PtrWriteOnly(minloc), ocl::KernelArg::PtrWriteOnly(maxloc), ocl::KernelArg::ReadOnlyNoSize(mask));
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
+               groupnum, ocl::KernelArg::PtrWriteOnly(db), ocl::KernelArg::ReadOnlyNoSize(mask));
 
     size_t globalsize = groupnum * wgs;
     if (!k.run(1, &globalsize, &wgs, false))
         return false;
 
-    Mat minv = minval.getMat(ACCESS_READ), maxv = maxval.getMat(ACCESS_READ),
-        minl = minloc.getMat(ACCESS_READ), maxl = maxloc.getMat(ACCESS_READ);
-
-    static getMinMaxResFunc functab[7] =
+    static const getMinMaxResFunc functab[7] =
     {
         getMinMaxRes<uchar>,
         getMinMaxRes<char>,
@@ -1419,10 +1472,12 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
         getMinMaxRes<double>
     };
 
-    getMinMaxResFunc func;
+    getMinMaxResFunc func = functab[depth];
 
-    func = functab[depth];
-    func(minv, maxv, minl, maxl, minVal, maxVal, minLoc, maxLoc, groupnum, src.channels(), src.cols);
+    int locTemp[2];
+    func(db.getMat(ACCESS_READ), minVal, maxVal,
+         needMinLoc ? minLoc ? minLoc : locTemp : minLoc,
+         needMaxLoc ? maxLoc ? maxLoc : locTemp : maxLoc, groupnum, cn, src.cols);
 
     return true;
 }
