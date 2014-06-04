@@ -37,12 +37,12 @@
 #if lcn == 1
     #if dcn == 4
         #define LUT_OP(num)\
-            __global const uchar4 *idx = (__global const uchar4 *)(srcptr + mad24(num, src_step, src_index));\
+            int idx = *(__global const int *)(srcptr + mad24(num, src_step, src_index));\
             dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
-            dst[0] = lut_l[idx->x];\
-            dst[1] = lut_l[idx->y];\
-            dst[2] = lut_l[idx->z];\
-            dst[3] = lut_l[idx->w];
+            dst[0] = lut_l[idx & 0xff];\
+            dst[1] = lut_l[(idx >> 8) & 0xff];\
+            dst[2] = lut_l[(idx >> 16) & 0xff];\
+            dst[3] = lut_l[(idx >> 24) & 0xff];
     #elif dcn == 3
         #define LUT_OP(num)\
             uchar3 idx = vload3(0, srcptr + mad24(num, src_step, src_index));\
