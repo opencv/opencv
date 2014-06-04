@@ -39,7 +39,7 @@
 //
 //M*/
 
-#if cn != 3
+#if kercn != 3
 #define loadpix(addr) *(__global const T *)(addr)
 #define storepix(val, addr)  *(__global T *)(addr) = val
 #define TSIZE (int)sizeof(T)
@@ -54,7 +54,7 @@ __kernel void arithm_flip_rows(__global const uchar * srcptr, int src_step, int 
                                int rows, int cols, int thread_rows, int thread_cols)
 {
     int x = get_global_id(0);
-    int y0 = get_global_id(1)*PIX_PER_WI_Y;
+    int y0 = get_global_id(1) * PIX_PER_WI_Y;
 
     if (x < cols)
     {
@@ -100,6 +100,21 @@ __kernel void arithm_flip_rows_cols(__global const uchar * srcptr, int src_step,
             T src0 = loadpix(srcptr + src_index0);
             T src1 = loadpix(srcptr + src_index1);
 
+#if kercn == 2
+#if cn == 1
+            src0 = src0.s10;
+            src1 = src1.s10;
+#endif
+#elif kercn == 4
+#if cn == 1
+            src0 = src0.s3210;
+            src1 = src1.s3210;
+#elif cn == 2
+            src0 = src0.s2301;
+            src1 = src1.s2301;
+#endif
+#endif
+
             storepix(src1, dstptr + dst_index0);
             storepix(src0, dstptr + dst_index1);
 
@@ -130,6 +145,21 @@ __kernel void arithm_flip_cols(__global const uchar * srcptr, int src_step, int 
         {
             T src0 = loadpix(srcptr + src_index0);
             T src1 = loadpix(srcptr + src_index1);
+
+#if kercn == 2
+#if cn == 1
+            src0 = src0.s10;
+            src1 = src1.s10;
+#endif
+#elif kercn == 4
+#if cn == 1
+            src0 = src0.s3210;
+            src1 = src1.s3210;
+#elif cn == 2
+            src0 = src0.s2301;
+            src1 = src1.s2301;
+#endif
+#endif
 
             storepix(src1, dstptr + dst_index0);
             storepix(src0, dstptr + dst_index1);
