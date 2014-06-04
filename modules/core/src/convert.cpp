@@ -1548,10 +1548,12 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     UMat src = _src.getUMat(), lut = _lut.getUMat();
     _dst.create(src.size(), CV_MAKETYPE(ddepth, dcn));
     UMat dst = _dst.getUMat();
+    bool bAligned = (1 == dcn) && (0 == (src.offset % 4)) && (0 == (src.cols % 4));
 
     ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
-                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", dcn, lcn,
-                         ocl::typeToStr(src.depth()), ocl::memopTypeToStr(ddepth)
+                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s%s", dcn, lcn,
+                         ocl::typeToStr(src.depth()), ocl::memopTypeToStr(ddepth),
+                         bAligned ? " -D USE_ALIGNED" : ""
                          ));
     if (k.empty())
         return false;
@@ -1560,6 +1562,8 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
            ocl::KernelArg::WriteOnly(dst));
 
     size_t globalSize[2] = { dst.cols, (dst.rows + 3) / 4};
+    if (bAligned)
+        globalSize[0] = (dst.cols + 3) / 4;
     return k.run(2, globalSize, NULL, false);
 }
 

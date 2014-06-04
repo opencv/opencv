@@ -57,10 +57,20 @@
             dst[0] = lut_l[idx->x];\
             dst[1] = lut_l[idx->y];
     #elif dcn == 1
-        #define LUT_OP(num)\
-            uchar idx = (srcptr + mad24(num, src_step, src_index))[0];\
-            dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
-            dst[0] = lut_l[idx];
+        #ifdef USE_ALIGNED
+            #define LUT_OP(num)\
+                int idx = *(__global const int *)(srcptr + mad24(num, src_step, src_index));\
+                dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
+                dst[0] = lut_l[idx & 0xff];\
+                dst[1] = lut_l[(idx >> 8) & 0xff];\
+                dst[2] = lut_l[(idx >> 16) & 0xff];\
+                dst[3] = lut_l[(idx >> 24) & 0xff];
+        #else
+            #define LUT_OP(num)\
+                uchar idx = (srcptr + mad24(num, src_step, src_index))[0];\
+                dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
+                dst[0] = lut_l[idx];
+        #endif
     #else
         #define LUT_OP(num)\
             src = (__global const srcT *)(srcptr + mad24(num, src_step, src_index));\
@@ -126,7 +136,11 @@ __kernel void LUT(__global const uchar * srcptr, int src_step, int src_offset,
     __local dstT lut_l[256 * lcn];
     LOCAL_LUT_INIT;
 
+#ifdef USE_ALIGNED
+    int x = 4 * get_global_id(0);
+#else
     int x = get_global_id(0);
+#endif
     int y = 4 * get_global_id(1);
 
     if (x < cols && y < rows)
