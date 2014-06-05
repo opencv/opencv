@@ -29,10 +29,6 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 
-#define DATA_SIZE ((int)sizeof(type))
-#define ELEM_TYPE elem_type
-#define ELEM_SIZE ((int)sizeof(elem_type))
-
 #define SQSUMS_PTR(ox, oy) mad24(y + oy, src_sqsums_step, mad24(x + ox, cn, src_sqsums_offset))
 #define SUMS_PTR(ox, oy) mad24(y + oy, src_sums_step, mad24(x + ox, cn, src_sums_offset))
 #define SUMS(ox, oy)    mad24(y+oy, src_sums_step, mad24(x+ox, (int)sizeof(T1)*cn, src_sums_offset))
@@ -121,6 +117,26 @@ __kernel void calcSum(__global const uchar * srcptr, int src_step, int src_offse
 
     if (lid == 0)
         dst[0] = convertToDT(localmem[0]);
+}
+
+#elif defined FIRST_CHANNEL
+
+__kernel void extractFirstChannel( const __global uchar* img, int img_step, int img_offset,
+                                   __global uchar* res, int res_step, int res_offset, int rows, int cols)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1)*PIX_PER_WI_Y;
+
+    if(x < cols )
+    {
+        #pragma unroll
+        for (int cy=0; cy < PIX_PER_WI_Y && y < rows; ++cy, ++y)
+        {
+            T1 image = *(__global const T1*)(img + mad24(y, img_step, mad24(x, (int)sizeof(T1)*cn, img_offset)));;
+            int res_idx = mad24(y, res_step, mad24(x, (int)sizeof(float), res_offset));
+            *(__global float *)(res + res_idx) = image;
+        }
+    }
 }
 
 #elif defined CCORR
@@ -291,6 +307,32 @@ __kernel void matchTemplate_Naive_SQDIFF(__global const uchar * srcptr, int src_
 
 #endif
 
+#elif defined SQDIFF_PREPARED
+
+__kernel void matchTemplate_Prepared_SQDIFF(__global const uchar * src_sqsums, int src_sqsums_step, int src_sqsums_offset,
+                                            __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                            int template_rows, int template_cols, __global const float * template_sqsum)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < dst_cols && y < dst_rows)
+    {
+        src_sqsums_step /= sizeof(float);
+        src_sqsums_offset /= sizeof(float);
+
+        __global const float * sqsum = (__global const float *)(src_sqsums);
+        float image_sqsum_ = (float)(
+                                 (sqsum[SQSUMS_PTR(template_cols, template_rows)] - sqsum[SQSUMS_PTR(template_cols, 0)]) -
+                                 (sqsum[SQSUMS_PTR(0, template_rows)] - sqsum[SQSUMS_PTR(0, 0)]));
+        float template_sqsum_value = template_sqsum[0];
+
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        __global float * dstult = (__global float *)(dst + dst_idx);
+        *dstult = image_sqsum_ - 2.0f * dstult[0] + template_sqsum_value;
+    }
+}
+
 #elif defined SQDIFF_NORMED
 
 __kernel void matchTemplate_SQDIFF_NORMED(__global const uchar * src_sqsums, int src_sqsums_step, int src_sqsums_offset,
@@ -330,14 +372,15 @@ __kernel void matchTemplate_Prepared_CCOEFF(__global const uchar * src_sums, int
 
     if (x < dst_cols && y < dst_rows)
     {
+        __global const T* sum = (__global const T*)(src_sums + mad24(y, src_sums_step, mad24(x, (int)sizeof(T), src_sums_offset)));
+
+        int step = src_sums_step/(int)sizeof(T);
+
         T image_sum = (T)(0), value;
 
-        value  = *(__global const T1 *)(src_sums + SUMS(template_cols, template_rows));
-        value -= *(__global const T1 *)(src_sums + SUMS(0, template_rows));
-        value -= *(__global const T1 *)(src_sums + SUMS(template_cols, 0));
-        value += *(__global const T1 *)(src_sums + SUMS(0, 0));
+        value = (T)(sum[mad24(template_rows, step, template_cols)] - sum[mad24(template_rows, step, 0)] - sum[template_cols] + sum[0]);
 
-        image_sum = mad(value, template_sum, 0);
+        image_sum = mad(value, template_sum , image_sum);
 
         int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
         *(__global float *)(dst + dst_idx) -= convertToDT(image_sum);
