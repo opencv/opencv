@@ -1548,22 +1548,22 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     UMat src = _src.getUMat(), lut = _lut.getUMat();
     _dst.create(src.size(), CV_MAKETYPE(ddepth, dcn));
     UMat dst = _dst.getUMat();
-    bool bAligned = (1 == dcn) && (0 == (src.offset % 4)) && (0 == (src.cols % 4));
+    bool bAligned = (1 == lcn) && (0 == (src.offset % 4)) && (0 == ((dcn * src.cols) % 4));
+    // dst.cols == src.cols by params of dst.create
 
     ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
-                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s%s", dcn, lcn,
-                         ocl::typeToStr(src.depth()), ocl::memopTypeToStr(ddepth),
-                         bAligned ? " -D USE_ALIGNED" : ""
+                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", bAligned ? 4 : dcn, lcn,
+                         ocl::typeToStr(src.depth()), ocl::memopTypeToStr(ddepth)
                          ));
     if (k.empty())
         return false;
 
-    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::ReadOnlyNoSize(lut),
-           ocl::KernelArg::WriteOnly(dst));
+    int cols = bAligned ? dcn * dst.cols / 4 : dst.cols;
 
-    size_t globalSize[2] = { dst.cols, (dst.rows + 3) / 4};
-    if (bAligned)
-        globalSize[0] = (dst.cols + 3) / 4;
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::ReadOnlyNoSize(lut),
+        ocl::KernelArg::WriteOnlyNoSize(dst), dst.rows, cols);
+
+    size_t globalSize[2] = { cols, (dst.rows + 3) / 4 };
     return k.run(2, globalSize, NULL, false);
 }
 
