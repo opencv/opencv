@@ -56,6 +56,25 @@ enum
     SUM_1 = 0, SUM_2 = 1
 };
 
+static bool extractFirstChannel_32F(InputArray _image, OutputArray _result, int cn)
+{
+    UMat image  = _image.getUMat();
+    UMat result = _result.getUMat();
+
+    int depth = image.depth();
+
+    ocl::Device dev = ocl::Device::getDefault();
+    int pxPerWIy = (dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU)) ? 4 : 1;
+
+    ocl::Kernel k("extractFirstChannel", ocl::imgproc::match_template_oclsrc, format("-D FIRST_CHANNEL -D T1=%s -D cn=%d -D PIX_PER_WI_Y=%d",
+                                                                            ocl::typeToStr(depth), cn, pxPerWIy));
+    if (k.empty())
+        return false;
+
+    size_t globalsize[2] = {result.cols, (result.rows+pxPerWIy-1)/pxPerWIy};
+    return k.args(ocl::KernelArg::ReadOnlyNoSize(image), ocl::KernelArg::WriteOnly(result)).run( 2, globalsize, NULL, false);
+}
+
 static bool sumTemplate(InputArray _src, UMat & result)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -88,6 +107,160 @@ static bool sumTemplate(InputArray _src, UMat & result)
     return k.run(1, &globalsize, &wgs, false);
 }
 
+static bool useNaive(int method, int depth, Size size)
+{
+/*            if (method == TM_SQDIFF && (depth == CV_32F))
+            {
+                return true;
+            }
+            else*/ if(method == TM_CCORR || method == TM_SQDIFF )
+            {
+                return size.height < 18 && size.width < 18;
+            }
+            else
+                return false;
+}
+
+struct ConvolveBuf
+        {
+            Size result_size;
+            Size block_size;
+            Size user_block_size;
+            Size dft_size;
+
+            UMat image_spect, templ_spect, result_spect;
+            UMat image_block, templ_block, result_data;
+
+            void create(Size image_size, Size templ_size);
+            static Size estimateBlockSize(Size result_size, Size templ_size);
+        };
+
+void ConvolveBuf::create(Size image_size, Size templ_size)
+{
+    result_size = Size(image_size.width - templ_size.width + 1,
+                       image_size.height - templ_size.height + 1);
+
+    block_size = user_block_size;
+    if (user_block_size.width == 0 || user_block_size.height == 0)
+        block_size = estimateBlockSize(result_size, templ_size);
+
+    dft_size.width  = 1 << int(ceil(std::log(block_size.width + templ_size.width - 1.) / std::log(2.)));
+    dft_size.height = 1 << int(ceil(std::log(block_size.height + templ_size.height - 1.) / std::log(2.)));
+
+    dft_size.width = getOptimalDFTSize(block_size.width + templ_size.width - 1);
+    dft_size.height = getOptimalDFTSize(block_size.height + templ_size.height - 1);
+
+    // To avoid wasting time doing small DFTs
+    dft_size.width = std::max(dft_size.width, 512);
+    dft_size.height = std::max(dft_size.height, 512);
+
+    image_block.create(dft_size, CV_32F);
+    templ_block.create(dft_size, CV_32F);
+    result_data.create(dft_size, CV_32F);
+
+    image_spect.create(dft_size.height, dft_size.width / 2 + 1, CV_32FC2);
+    templ_spect.create(dft_size.height, dft_size.width / 2 + 1, CV_32FC2);
+    result_spect.create(dft_size.height, dft_size.width / 2 + 1, CV_32FC2);
+
+    // Use maximum result matrix block size for the estimated DFT block size
+    block_size.width = std::min(dft_size.width - templ_size.width + 1, result_size.width);
+    block_size.height = std::min(dft_size.height - templ_size.height + 1, result_size.height);
+}
+
+Size ConvolveBuf::estimateBlockSize(Size result_size, Size /*templ_size*/)
+{
+    int width = (result_size.width + 2) / 3;
+    int height = (result_size.height + 2) / 3;
+    width = std::min(width, result_size.width);
+    height = std::min(height, result_size.height);
+    return Size(width, height);
+}
+
+static bool convolve_dft(InputArray _image, InputArray _templ, OutputArray _result)
+{
+    ConvolveBuf buf;
+    CV_Assert(_image.type() == CV_32F);
+    CV_Assert(_templ.type() == CV_32F);
+
+    buf.create(_image.size(), _templ.size());
+    _result.create(buf.result_size, CV_32F);
+
+    UMat image  = _image.getUMat();
+    UMat templ  = _templ.getUMat();
+
+    UMat result = _result.getUMat();
+
+    Size& block_size = buf.block_size;
+    Size& dft_size = buf.dft_size;
+
+    UMat& image_block = buf.image_block;
+    UMat& templ_block = buf.templ_block;
+    UMat& result_data = buf.result_data;
+
+    UMat& image_spect = buf.image_spect;
+    UMat& templ_spect = buf.templ_spect;
+    UMat& result_spect = buf.result_spect;
+
+    UMat templ_roi = templ;
+    copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0,
+                   templ_block.cols - templ_roi.cols, BORDER_ISOLATED);
+
+    dft(templ_block, templ_spect, 0);
+
+    // Process all blocks of the result matrix
+    for (int y = 0; y < result.rows; y += block_size.height)
+    {
+        for (int x = 0; x < result.cols; x += block_size.width)
+        {
+            Size image_roi_size(std::min(x + dft_size.width, image.cols) - x,
+                                std::min(y + dft_size.height, image.rows) - y);
+            Rect roi0(x, y, image_roi_size.width, image_roi_size.height);
+
+            UMat image_roi(image, roi0);
+
+            copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows,
+                           0, image_block.cols - image_roi.cols, BORDER_ISOLATED);
+
+            dft(image_block, image_spect, 0);
+
+            mulSpectrums(image_spect, templ_spect, result_spect, 0, true);
+
+            dft(result_spect, result_data, cv::DFT_INVERSE | cv::DFT_REAL_OUTPUT | cv::DFT_SCALE);
+
+            Size result_roi_size(std::min(x + block_size.width, result.cols) - x,
+                                 std::min(y + block_size.height, result.rows) - y);
+
+            Rect roi1(x, y, result_roi_size.width, result_roi_size.height);
+            Rect roi2(0, 0, result_roi_size.width, result_roi_size.height);
+
+            UMat result_roi(result, roi1);
+            UMat result_block(result_data, roi2);
+
+            result_block.copyTo(result_roi);
+        }
+    }
+    return true;
+}
+
+static bool convolve_32F(InputArray _image, InputArray _templ, OutputArray _result)
+{
+    _result.create(_image.rows() - _templ.rows() + 1, _image.cols() - _templ.cols() + 1, CV_32F);
+
+    if (_image.channels() == 1)
+        return(convolve_dft(_image, _templ, _result));
+    else
+    {
+        UMat image = _image.getUMat();
+        UMat templ = _templ.getUMat();
+        UMat result_(image.rows-templ.rows+1,(image.cols-templ.cols+1)*image.channels(), CV_32F);
+        bool ok = convolve_dft(image.reshape(1), templ.reshape(1), result_);
+        if (ok==false)
+            return false;
+        UMat result = _result.getUMat();
+        return (extractFirstChannel_32F(result_, _result, _image.channels()));
+    }
+}
+
 static bool matchTemplateNaive_CCORR(InputArray _image, InputArray _templ, OutputArray _result)
 {
     int type = _image.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -110,6 +283,30 @@ static bool matchTemplateNaive_CCORR(InputArray _image, InputArray _templ, Outpu
     size_t globalsize[2] = { result.cols, result.rows };
     return k.run(2, globalsize, NULL, false);
 }
+
+
+static bool matchTemplate_CCORR(InputArray _image, InputArray _templ, OutputArray _result)
+        {
+            if (useNaive(TM_CCORR, _image.depth(), _templ.size()))
+                return( matchTemplateNaive_CCORR(_image, _templ, _result));
+
+            else
+            {
+                if(_image.depth() == CV_8U && _templ.depth() == CV_8U)
+                {
+                    UMat imagef, templf;
+                    UMat image = _image.getUMat();
+                    UMat templ = _templ.getUMat();
+                    image.convertTo(imagef, CV_32F);
+                    templ.convertTo(templf, CV_32F);
+                    return(convolve_32F(imagef, templf, _result));
+                }
+                else
+                {
+                    return(convolve_32F(_image, _templ, _result));
+                }
+            }
+        }
 
 static bool matchTemplate_CCORR_NORMED(InputArray _image, InputArray _templ, OutputArray _result)
 {
@@ -163,6 +360,41 @@ static bool matchTemplateNaive_SQDIFF(InputArray _image, InputArray _templ, Outp
 
     size_t globalsize[2] = { result.cols, result.rows };
     return k.run(2, globalsize, NULL, false);
+}
+
+static bool matchTemplate_SQDIFF(InputArray _image, InputArray _templ, OutputArray _result)
+{
+    if (useNaive(TM_SQDIFF, _image.depth(), _templ.size()))
+        return( matchTemplateNaive_SQDIFF(_image, _templ, _result));
+    else
+    {
+        matchTemplate(_image, _templ, _result, CV_TM_CCORR);
+
+        int type = _image.type(), cn = CV_MAT_CN(type);
+
+        ocl::Kernel k("matchTemplate_Prepared_SQDIFF", ocl::imgproc::match_template_oclsrc,
+                  format("-D SQDIFF_PREPARED -D T=%s -D cn=%d", ocl::typeToStr(type),  cn));
+        if (k.empty())
+            return false;
+
+        UMat image = _image.getUMat(), templ = _templ.getUMat();
+        _result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+        UMat result = _result.getUMat();
+
+        UMat image_sums, image_sqsums;
+        integral(image.reshape(1), image_sums, image_sqsums, CV_32F, CV_32F);
+
+        UMat templ_sqsum;
+        if (!sumTemplate(_templ, templ_sqsum))
+            return false;
+
+        k.args(ocl::KernelArg::ReadOnlyNoSize(image_sqsums), ocl::KernelArg::ReadWrite(result),
+           templ.rows, templ.cols, ocl::KernelArg::PtrReadOnly(templ_sqsum));
+
+        size_t globalsize[2] = { result.cols, result.rows };
+
+        return k.run(2, globalsize, NULL, false);
+    }
 }
 
 static bool matchTemplate_SQDIFF_NORMED(InputArray _image, InputArray _templ, OutputArray _result)
@@ -313,7 +545,7 @@ static bool ocl_matchTemplate( InputArray _img, InputArray _templ, OutputArray _
 
     static const Caller callers[] =
     {
-        matchTemplateNaive_SQDIFF, matchTemplate_SQDIFF_NORMED, matchTemplateNaive_CCORR,
+        matchTemplate_SQDIFF, matchTemplate_SQDIFF_NORMED, matchTemplate_CCORR,
         matchTemplate_CCORR_NORMED, matchTemplate_CCOEFF, matchTemplate_CCOEFF_NORMED
     };
     const Caller caller = callers[method];
