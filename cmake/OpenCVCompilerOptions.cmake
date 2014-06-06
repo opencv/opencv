@@ -143,8 +143,12 @@ if(CMAKE_COMPILER_IS_GNUCXX)
       add_extra_compiler_option(-mavx)
     endif()
 
+    if(ENABLE_AVX2)
+      add_extra_compiler_option(-mavx2)
+    endif()
+
     # GCC depresses SSEx instructions when -mavx is used. Instead, it generates new AVX instructions or AVX equivalence for all SSEx instructions when needed.
-    if(NOT OPENCV_EXTRA_CXX_FLAGS MATCHES "-mavx")
+    if(NOT OPENCV_EXTRA_CXX_FLAGS MATCHES "-m(avx|avx2)")
       if(ENABLE_SSE3)
         add_extra_compiler_option(-msse3)
       endif()
@@ -165,7 +169,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 
   if(X86 OR X86_64)
     if(NOT APPLE AND CMAKE_SIZEOF_VOID_P EQUAL 4)
-      if(OPENCV_EXTRA_CXX_FLAGS MATCHES "-m(sse2|avx)")
+      if(OPENCV_EXTRA_CXX_FLAGS MATCHES "-m(sse2|avx|avx2)")
         add_extra_compiler_option(-mfpmath=sse)# !! important - be on the same wave with x64 compilers
       else()
         add_extra_compiler_option(-mfpmath=387)
@@ -220,6 +224,10 @@ if(MSVC)
     set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /arch:AVX")
   endif()
 
+  if(ENABLE_AVX2 AND NOT MSVC_VERSION LESS 1800)
+    set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /arch:AVX2")
+  endif()
+
   if(ENABLE_SSE4_1 AND CV_ICC AND NOT OPENCV_EXTRA_FLAGS MATCHES "/arch:")
     set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /arch:SSE4.1")
   endif()
@@ -238,7 +246,7 @@ if(MSVC)
     endif()
   endif()
 
-  if(ENABLE_SSE OR ENABLE_SSE2 OR ENABLE_SSE3 OR ENABLE_SSE4_1 OR ENABLE_AVX)
+  if(ENABLE_SSE OR ENABLE_SSE2 OR ENABLE_SSE3 OR ENABLE_SSE4_1 OR ENABLE_AVX OR ENABLE_AVX2)
     set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /Oi")
   endif()
 
