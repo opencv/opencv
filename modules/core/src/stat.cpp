@@ -1313,7 +1313,7 @@ static void ofs2idx(const Mat& a, size_t ofs, int* idx)
 template <typename T>
 void getMinMaxRes(const Mat & db, double* minVal, double* maxVal,
                   int* minLoc, int* maxLoc,
-                  int groupnum, int cn, int cols)
+                  int groupnum, int cols)
 {
     uint index_max = std::numeric_limits<uint>::max();
     T minval = std::numeric_limits<T>::max();
@@ -1393,10 +1393,10 @@ void getMinMaxRes(const Mat & db, double* minVal, double* maxVal,
 }
 
 typedef void (*getMinMaxResFunc)(const Mat & db, double *minVal, double *maxVal,
-                                 int *minLoc, int *maxLoc,
-                                 int gropunum, int cn, int cols);
+                                 int *minLoc, int *maxLoc, int gropunum, int cols);
 
-static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc, int* maxLoc, InputArray _mask)
+static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc, int* maxLoc, InputArray _mask,
+                           int ddepth = -1, bool absValues = false)
 {
     CV_Assert( (_src.channels() == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
         (_src.channels() >= 1 && _mask.empty() && !minLoc && !maxLoc) );
@@ -1405,8 +1405,10 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     bool doubleSupport = dev.doubleFPConfig() > 0, haveMask = !_mask.empty();
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
             kercn = haveMask ? 1 : std::min(4, ocl::predictOptimalVectorWidth(_src));
+    if (ddepth < 0)
+        ddepth = depth;
 
-    if (depth == CV_64F && !doubleSupport)
+    if ((depth == CV_64F || ddepth == CV_64F) && !doubleSupport)
         return false;
 
     int groupnum = dev.maxComputeUnits();
@@ -1423,26 +1425,32 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     // in case of mask we must know whether mask is filled with zeros or not
     // so let's calculate min or max location, if it's undefined, so mask is zeros
     if (!(needMaxLoc || needMinLoc) && haveMask)
+    {
         if (needMinVal)
             needMinLoc = true;
         else
             needMaxVal = true;
+    }
 
+    char cvt[40];
     String opts = format("-D DEPTH_%d -D srcT1=%s%s -D WGS=%d -D srcT=%s"
-                         " -D WGS2_ALIGNED=%d%s%s%s -D kercn=%d%s%s%s%s",
+                         " -D WGS2_ALIGNED=%d%s%s%s -D kercn=%d%s%s%s%s"
+                         " -D dstT1=%s -D dstT=%s -D convertToDT=%s%s",
                          depth, ocl::typeToStr(depth), haveMask ? " -D HAVE_MASK" : "", (int)wgs,
                          ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)), wgs2_aligned,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                          _src.isContinuous() ? " -D HAVE_SRC_CONT" : "",
                          _mask.isContinuous() ? " -D HAVE_MASK_CONT" : "", kercn,
                          needMinVal ? " -D NEED_MINVAL" : "", needMaxVal ? " -D NEED_MAXVAL" : "",
-                         needMinLoc ? " -D NEED_MINLOC" : "", needMaxLoc ? " -D NEED_MAXLOC" : "");
+                         needMinLoc ? " -D NEED_MINLOC" : "", needMaxLoc ? " -D NEED_MAXLOC" : "",
+                         ocl::typeToStr(ddepth), ocl::typeToStr(CV_MAKE_TYPE(ddepth, kercn)),
+                         ocl::convertTypeStr(depth, ddepth, kercn, cvt), absValues ? " -D OP_ABS" : "");
 
     ocl::Kernel k("minmaxloc", ocl::core::minmaxloc_oclsrc, opts);
     if (k.empty())
         return false;
 
-    int esz = CV_ELEM_SIZE(depth), esz32s = CV_ELEM_SIZE1(CV_32S),
+    int esz = CV_ELEM_SIZE(ddepth), esz32s = CV_ELEM_SIZE1(CV_32S),
             dbsize = groupnum * ((needMinVal ? esz : 0) + (needMaxVal ? esz : 0) +
                                  (needMinLoc ? esz32s : 0) + (needMaxLoc ? esz32s : 0));
     UMat src = _src.getUMat(), db(1, dbsize, CV_8UC1), mask = _mask.getUMat();
@@ -1477,7 +1485,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     int locTemp[2];
     func(db.getMat(ACCESS_READ), minVal, maxVal,
          needMinLoc ? minLoc ? minLoc : locTemp : minLoc,
-         needMaxLoc ? maxLoc ? maxLoc : locTemp : maxLoc, groupnum, cn, src.cols);
+         needMaxLoc ? maxLoc ? maxLoc : locTemp : maxLoc, groupnum, src.cols);
 
     return true;
 }
@@ -2116,35 +2124,8 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
     if (normType == NORM_INF)
     {
         if (cn == 1 || !haveMask)
-        {
-            UMat abssrc;
-
-            if (depth != CV_8U && depth != CV_16U)
-            {
-                int wdepth = std::max(CV_32S, depth), rowsPerWI = d.isIntel() ? 4 : 1;
-                char cvt[50];
-
-                ocl::Kernel kabs("KF", ocl::core::arithm_oclsrc,
-                                 format("-D UNARY_OP -D OP_ABS_NOSAT -D dstT=%s -D srcT1=%s"
-                                        " -D convertToDT=%s -D rowsPerWI=%d%s",
-                                        ocl::typeToStr(wdepth), ocl::typeToStr(depth),
-                                        ocl::convertTypeStr(depth, wdepth, 1, cvt), rowsPerWI,
-                                        doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
-                if (kabs.empty())
-                    return false;
-
-                abssrc.create(src.size(), CV_MAKE_TYPE(wdepth, cn));
-                kabs.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(abssrc, cn));
-
-                size_t globalsize[2] = { src.cols * cn, (src.rows + rowsPerWI - 1) / rowsPerWI };
-                if (!kabs.run(2, globalsize, NULL, false))
-                    return false;
-            }
-            else
-                abssrc = src;
-
-            cv::minMaxIdx(haveMask ? abssrc : abssrc.reshape(1), NULL, &result, NULL, NULL, _mask);
-        }
+            ocl_minMaxIdx(_src, NULL, &result, NULL, NULL, _mask,
+                          std::max(depth, CV_32S), depth != CV_8U && depth != CV_16U);
         else
         {
             int dbsize = d.maxComputeUnits();

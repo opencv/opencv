@@ -50,7 +50,7 @@
 #endif
 #endif
 
-#if defined OP_NORM_INF_MASK || defined OP_MIN_MAX_LOC || defined OP_MIN_MAX_LOC_MASK
+#if defined OP_NORM_INF_MASK
 
 #ifdef DEPTH_0
 #define MIN_VAL 0
@@ -74,8 +74,6 @@
 #define MIN_VAL (-DBL_MAX)
 #define MAX_VAL DBL_MAX
 #endif
-
-#define INDEX_MAX UINT_MAX
 
 #define dstT srcT
 #define dstT1 srcT1
