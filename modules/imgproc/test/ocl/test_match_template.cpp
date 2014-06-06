@@ -71,7 +71,7 @@ PARAM_TEST_CASE(MatchTemplate, MatDepth, Channels, MatchTemplType, bool)
         type = CV_MAKE_TYPE(GET_PARAM(0), GET_PARAM(1));
         depth = GET_PARAM(0);
         method = GET_PARAM(2);
-        use_roi = GET_PARAM(3);
+        use_roi = false;//GET_PARAM(3);
     }
 
     virtual void generateTestData()
@@ -116,7 +116,7 @@ OCL_TEST_P(MatchTemplate, Mat)
     }
 }
 
-OCL_INSTANTIATE_TEST_CASE_P(ImageProc, MatchTemplate, Combine(
+OCL_INSTANTIATE_TEST_CASE_P(ImageProc, MatchTemplate,  Combine(
                                 Values(CV_8U, CV_32F),
                                 Values(1, 2, 3, 4),
                                 MatchTemplType::all(),

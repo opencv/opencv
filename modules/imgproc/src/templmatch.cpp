@@ -58,10 +58,7 @@ enum
 
 static bool extractFirstChannel_32F(InputArray _image, OutputArray _result, int cn)
 {
-    UMat image  = _image.getUMat();
-    UMat result = _result.getUMat();
-
-    int depth = image.depth();
+    int depth = _image.depth();
 
     ocl::Device dev = ocl::Device::getDefault();
     int pxPerWIy = (dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU)) ? 4 : 1;
@@ -70,6 +67,10 @@ static bool extractFirstChannel_32F(InputArray _image, OutputArray _result, int 
                                                                             ocl::typeToStr(depth), cn, pxPerWIy));
     if (k.empty())
         return false;
+
+    UMat image  = _image.getUMat();
+    UMat result = _result.getUMat();
+
 
     size_t globalsize[2] = {result.cols, (result.rows+pxPerWIy-1)/pxPerWIy};
     return k.args(ocl::KernelArg::ReadOnlyNoSize(image), ocl::KernelArg::WriteOnly(result)).run( 2, globalsize, NULL, false);
@@ -107,33 +108,29 @@ static bool sumTemplate(InputArray _src, UMat & result)
     return k.run(1, &globalsize, &wgs, false);
 }
 
-static bool useNaive(int method, int depth, Size size)
+static bool useNaive(int method, Size size)
 {
-/*            if (method == TM_SQDIFF && (depth == CV_32F))
-            {
-                return true;
-            }
-            else*/ if(method == TM_CCORR || method == TM_SQDIFF )
-            {
-                return size.height < 18 && size.width < 18;
-            }
-            else
-                return false;
+    if(method == TM_CCORR || method == TM_SQDIFF )
+    {
+        return size.height < 18 && size.width < 18;
+    }
+    else
+        return false;
 }
 
 struct ConvolveBuf
-        {
-            Size result_size;
-            Size block_size;
-            Size user_block_size;
-            Size dft_size;
+{
+    Size result_size;
+    Size block_size;
+    Size user_block_size;
+    Size dft_size;
 
-            UMat image_spect, templ_spect, result_spect;
-            UMat image_block, templ_block, result_data;
+    UMat image_spect, templ_spect, result_spect;
+    UMat image_block, templ_block, result_data;
 
-            void create(Size image_size, Size templ_size);
-            static Size estimateBlockSize(Size result_size, Size templ_size);
-        };
+    void create(Size image_size, Size templ_size);
+    static Size estimateBlockSize(Size result_size);
+};
 
 void ConvolveBuf::create(Size image_size, Size templ_size)
 {
@@ -142,7 +139,7 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
 
     block_size = user_block_size;
     if (user_block_size.width == 0 || user_block_size.height == 0)
-        block_size = estimateBlockSize(result_size, templ_size);
+        block_size = estimateBlockSize(result_size);
 
     dft_size.width  = 1 << int(ceil(std::log(block_size.width + templ_size.width - 1.) / std::log(2.)));
     dft_size.height = 1 << int(ceil(std::log(block_size.height + templ_size.height - 1.) / std::log(2.)));
@@ -167,7 +164,7 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
     block_size.height = std::min(dft_size.height - templ_size.height + 1, result_size.height);
 }
 
-Size ConvolveBuf::estimateBlockSize(Size result_size, Size /*templ_size*/)
+Size ConvolveBuf::estimateBlockSize(Size result_size)
 {
     int width = (result_size.width + 2) / 3;
     int height = (result_size.height + 2) / 3;
@@ -266,10 +263,26 @@ static bool matchTemplateNaive_CCORR(InputArray _image, InputArray _templ, Outpu
     int type = _image.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     int wdepth = std::max(depth, CV_32S), wtype = CV_MAKE_TYPE(wdepth, cn);
 
+    ocl::Device dev = ocl::Device::getDefault();
+    int pxPerWIx = (cn!=3 && dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU)) ? 4 : 1;
+    int rated_cn = cn;
+    int wtype1 = wtype;
+
+    if (pxPerWIx!=1 && cn==1)
+    {
+        rated_cn = pxPerWIx;
+        type = CV_MAKE_TYPE(depth, rated_cn);
+        wtype1 = CV_MAKE_TYPE(wdepth, rated_cn);
+    }
+
     char cvt[40];
+    char cvt1[40];
+    const char* convertToWT1 = ocl::convertTypeStr(depth, wdepth, cn, cvt);
+    const char* convertToWT = ocl::convertTypeStr(depth, wdepth, rated_cn, cvt1);
+
     ocl::Kernel k("matchTemplate_Naive_CCORR", ocl::imgproc::match_template_oclsrc,
-                  format("-D CCORR -D T=%s -D T1=%s -D WT=%s -D convertToWT=%s -D cn=%d -D wdepth=%d", ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
-                         ocl::convertTypeStr(depth, wdepth, cn, cvt), cn, wdepth));
+                  format("-D CCORR -D T=%s -D T1=%s -D WT=%s -D WT1=%s -D convertToWT=%s -D convertToWT1=%s -D cn=%d -D wdepth=%d -D PIX_PER_WI_X=%d", ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype1), ocl::typeToStr(wtype),
+                         convertToWT, convertToWT1, cn, wdepth, pxPerWIx));
     if (k.empty())
         return false;
 
@@ -280,14 +293,14 @@ static bool matchTemplateNaive_CCORR(InputArray _image, InputArray _templ, Outpu
     k.args(ocl::KernelArg::ReadOnlyNoSize(image), ocl::KernelArg::ReadOnly(templ),
            ocl::KernelArg::WriteOnly(result));
 
-    size_t globalsize[2] = { result.cols, result.rows };
+    size_t globalsize[2] = { (result.cols+pxPerWIx-1)/pxPerWIx, result.rows};
     return k.run(2, globalsize, NULL, false);
 }
 
 
 static bool matchTemplate_CCORR(InputArray _image, InputArray _templ, OutputArray _result)
         {
-            if (useNaive(TM_CCORR, _image.depth(), _templ.size()))
+            if (useNaive(TM_CCORR, _templ.size()))
                 return( matchTemplateNaive_CCORR(_image, _templ, _result));
 
             else
@@ -364,7 +377,7 @@ static bool matchTemplateNaive_SQDIFF(InputArray _image, InputArray _templ, Outp
 
 static bool matchTemplate_SQDIFF(InputArray _image, InputArray _templ, OutputArray _result)
 {
-    if (useNaive(TM_SQDIFF, _image.depth(), _templ.size()))
+    if (useNaive(TM_SQDIFF, _templ.size()))
         return( matchTemplateNaive_SQDIFF(_image, _templ, _result));
     else
     {

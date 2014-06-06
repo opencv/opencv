@@ -173,37 +173,130 @@ __kernel void matchTemplate_Naive_CCORR(__global const uchar * srcptr, int src_s
     }
 }
 
+#elif cn==1 && PIX_PER_WI_X==4
+
+__kernel void matchTemplate_Naive_CCORR(__global const uchar * srcptr, int src_step, int src_offset,
+                                        __global const uchar * templateptr, int template_step, int template_offset, int template_rows, int template_cols,
+                                        __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
+{
+    int x0 = get_global_id(0)*PIX_PER_WI_X;
+    int y = get_global_id(1);
+
+    if (y < dst_rows)
+    {
+        if (x0 + PIX_PER_WI_X <= dst_cols)
+        {
+            WT sum = (WT)(0);
+
+            int ind = mad24(y, src_step, mad24(x0, (int)sizeof(T1), src_offset));
+            __global const T1 * template = (__global const T1*)(templateptr + template_offset);
+
+            for (int i = 0; i < template_rows; ++i)
+            {
+                for (int j = 0; j < template_cols; ++j)
+                {
+                    T temp = (T)(template[j]);
+                    T src = *(__global const T*)(srcptr + ind + j*(int)sizeof(T1));
+#if wdepth == 4
+                        sum = mad24(convertToWT(src), convertToWT(temp), sum);
+#else
+                        sum = mad(convertToWT(src), convertToWT(temp), sum);
+#endif
+                }
+            ind += src_step;
+            template = (__global const T1 *)((__global const uchar *)template + template_step);
+            }
+
+            T temp = (T)(template[0]);
+            int dst_idx = mad24(y, dst_step, mad24(x0, (int)sizeof(float), dst_offset));
+            *(__global float4 *)(dst + dst_idx) = convert_float4(sum);
+        }
+        else
+        {
+            WT1 sum [PIX_PER_WI_X];
+            #pragma unroll
+            for (int i=0; i < PIX_PER_WI_X; i++) sum[i] = 0;
+
+            __global const T1 * src = (__global const T1 *)(srcptr + mad24(y, src_step, mad24(x0, (int)sizeof(T1), src_offset)));
+            __global const T1 * template = (__global const T1 *)(templateptr + template_offset);
+
+            for (int i = 0; i < template_rows; ++i)
+            {
+                for (int j = 0; j < template_cols; ++j)
+                {
+                    #pragma unroll
+                    for (int cx=0, x = x0; cx < PIX_PER_WI_X && x < dst_cols; ++cx, ++x)
+                    {
+
+#if wdepth == 4
+                        sum[cx] = mad24(convertToWT1(src[j+cx]), convertToWT1(template[j]), sum[cx]);
+#else
+                        sum[cx] = mad(convertToWT1(src[j+cx]), convertToWT1(template[j]), sum[cx]);
+#endif
+                    }
+                }
+
+            src = (__global const T1 *)((__global const uchar *)src + src_step);
+            template = (__global const T1 *)((__global const uchar *)template + template_step);
+            }
+
+            #pragma unroll
+            for (int cx=0; cx < PIX_PER_WI_X && x0 < dst_cols; ++cx, ++x0)
+            {
+                int dst_idx = mad24(y, dst_step, mad24(x0, (int)sizeof(float), dst_offset));
+                *(__global float *)(dst + dst_idx) = convertToDT(sum[cx]);
+            }
+        }
+    }
+}
+
 #else
 
 __kernel void matchTemplate_Naive_CCORR(__global const uchar * srcptr, int src_step, int src_offset,
                                         __global const uchar * templateptr, int template_step, int template_offset, int template_rows, int template_cols,
                                         __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
 {
-    int x = get_global_id(0);
+    int x0 = get_global_id(0)*PIX_PER_WI_X;
     int y = get_global_id(1);
 
-    if (x < dst_cols && y < dst_rows)
-    {
-        WT sum = (WT)(0);
+    int step = src_step/(int)sizeof(T);
 
-        __global const T * src = (__global const T *)(srcptr + mad24(y, src_step, mad24(x, (int)sizeof(T), src_offset)));
+    if (y < dst_rows)
+    {
+        WT sum [PIX_PER_WI_X];
+        #pragma unroll
+        for (int i=0; i < PIX_PER_WI_X; i++)
+            sum[i] = 0;
+
+        __global const T * src = (__global const T *)(srcptr + mad24(y, src_step, mad24(x0, (int)sizeof(T), src_offset)));
         __global const T * template = (__global const T *)(templateptr + template_offset);
 
         for (int i = 0; i < template_rows; ++i)
         {
             for (int j = 0; j < template_cols; ++j)
+            {
+                #pragma unroll
+                for (int cx=0, x = x0; cx < PIX_PER_WI_X && x < dst_cols; ++cx, ++x)
+                {
+
 #if wdepth == 4
-                sum = mad24(convertToWT(src[j]), convertToWT(template[j]), sum);
+                    sum[cx] = mad24(convertToWT(src[j+cx]), convertToWT(template[j]), sum[cx]);
 #else
-                sum = mad(convertToWT(src[j]), convertToWT(template[j]), sum);
+                    sum[cx] = mad(convertToWT(src[j+cx]), convertToWT(template[j]), sum[cx]);
 #endif
+                }
+            }
 
             src = (__global const T *)((__global const uchar *)src + src_step);
             template = (__global const T *)((__global const uchar *)template + template_step);
         }
 
-        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
-        *(__global float *)(dst + dst_idx) = convertToDT(sum);
+        #pragma unroll
+        for (int cx=0; cx < PIX_PER_WI_X && x0 < dst_cols; ++cx, ++x0)
+        {
+            int dst_idx = mad24(y, dst_step, mad24(x0, (int)sizeof(float), dst_offset));
+            *(__global float *)(dst + dst_idx) = convertToDT(sum[cx]);
+        }
     }
 }
 #endif
