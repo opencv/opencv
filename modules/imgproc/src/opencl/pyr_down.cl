@@ -51,6 +51,22 @@
 #endif
 #endif
 
+#if defined BORDER_REPLICATE
+// aaaaaa|abcdefgh|hhhhhhh
+#define EXTRAPOLATE(x, maxV) clamp(x, 0, maxV-1)
+#elif defined BORDER_WRAP
+// cdefgh|abcdefgh|abcdefg
+#define EXTRAPOLATE(x, maxV) ( (x) + (maxV) ) % (maxV)
+#elif defined BORDER_REFLECT
+// fedcba|abcdefgh|hgfedcb
+#define EXTRAPOLATE(x, maxV) min(((maxV)-1)*2-(x)+1, max((x),-(x)-1) )
+#elif defined BORDER_REFLECT_101 || defined BORDER_REFLECT101
+// gfedcb|abcdefgh|gfedcba
+#define EXTRAPOLATE(x, maxV) min(((maxV)-1)*2-(x), max((x),-(x)) )
+#else
+#error No extrapolation method
+#endif
+
 #if cn != 3
 #define loadpix(addr)  *(__global const T*)(addr)
 #define storepix(val, addr)  *(__global T*)(addr) = (val)
@@ -61,37 +77,9 @@
 #define PIXSIZE ((int)sizeof(T1)*3)
 #endif
 
+#define SRC(_x,_y) convertToFT(loadpix(srcData + mad24(_y, src_step, PIXSIZE * _x)))
+
 #define noconvert
-
-inline int idx_row_low(int y, int last_row)
-{
-    return abs(y) % (last_row + 1);
-}
-
-inline int idx_row_high(int y, int last_row)
-{
-    return abs(last_row - (int)abs(last_row - y)) % (last_row + 1);
-}
-
-inline int idx_row(int y, int last_row)
-{
-    return idx_row_low(idx_row_high(y, last_row), last_row);
-}
-
-inline int idx_col_low(int x, int last_col)
-{
-    return abs(x) % (last_col + 1);
-}
-
-inline int idx_col_high(int x, int last_col)
-{
-    return abs(last_col - (int)abs(last_col - x)) % (last_col + 1);
-}
-
-inline int idx_col(int x, int last_col)
-{
-    return idx_col_low(idx_col_high(x, last_col), last_col);
-}
 
 __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, int src_rows, int src_cols,
                          __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
@@ -99,7 +87,7 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
     const int x = get_global_id(0);
     const int y = get_group_id(1);
 
-    __local FT smem[256 + 4];
+    __local FT smem[LOCAL_SIZE + 4];
     __global uchar * dstData = dst + dst_offset;
     __global const uchar * srcData = src + src_offset;
 
@@ -109,16 +97,14 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
     FT co3 = 0.0625f;
 
     const int src_y = 2*y;
-    const int last_row = src_rows - 1;
-    const int last_col = src_cols - 1;
 
     if (src_y >= 2 && src_y < src_rows - 2 && x >= 2 && x < src_cols - 2)
     {
-        sum =       co3 * convertToFT(loadpix(srcData + (src_y - 2) * src_step + x * PIXSIZE));
-        sum = sum + co2 * convertToFT(loadpix(srcData + (src_y - 1) * src_step + x * PIXSIZE));
-        sum = sum + co1 * convertToFT(loadpix(srcData + (src_y    ) * src_step + x * PIXSIZE));
-        sum = sum + co2 * convertToFT(loadpix(srcData + (src_y + 1) * src_step + x * PIXSIZE));
-        sum = sum + co3 * convertToFT(loadpix(srcData + (src_y + 2) * src_step + x * PIXSIZE));
+        sum =       co3 * SRC(x, src_y - 2);
+        sum = sum + co2 * SRC(x, src_y - 1);
+        sum = sum + co1 * SRC(x, src_y    );
+        sum = sum + co2 * SRC(x, src_y + 1);
+        sum = sum + co3 * SRC(x, src_y + 2);
 
         smem[2 + get_local_id(0)] = sum;
 
@@ -126,66 +112,62 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
         {
             const int left_x = x - 2;
 
-            sum =       co3 * convertToFT(loadpix(srcData + (src_y - 2) * src_step + left_x * PIXSIZE));
-            sum = sum + co2 * convertToFT(loadpix(srcData + (src_y - 1) * src_step + left_x * PIXSIZE));
-            sum = sum + co1 * convertToFT(loadpix(srcData + (src_y    ) * src_step + left_x * PIXSIZE));
-            sum = sum + co2 * convertToFT(loadpix(srcData + (src_y + 1) * src_step + left_x * PIXSIZE));
-            sum = sum + co3 * convertToFT(loadpix(srcData + (src_y + 2) * src_step + left_x * PIXSIZE));
+            sum =       co3 * SRC(left_x, src_y - 2);
+            sum = sum + co2 * SRC(left_x, src_y - 1);
+            sum = sum + co1 * SRC(left_x, src_y    );
+            sum = sum + co2 * SRC(left_x, src_y + 1);
+            sum = sum + co3 * SRC(left_x, src_y + 2);
 
             smem[get_local_id(0)] = sum;
         }
 
-        if (get_local_id(0) > 253)
+        if (get_local_id(0) > LOCAL_SIZE - 3)
         {
             const int right_x = x + 2;
 
-            sum =       co3 * convertToFT(loadpix(srcData + (src_y - 2) * src_step + right_x * PIXSIZE));
-            sum = sum + co2 * convertToFT(loadpix(srcData + (src_y - 1) * src_step + right_x * PIXSIZE));
-            sum = sum + co1 * convertToFT(loadpix(srcData + (src_y    ) * src_step + right_x * PIXSIZE));
-            sum = sum + co2 * convertToFT(loadpix(srcData + (src_y + 1) * src_step + right_x * PIXSIZE));
-            sum = sum + co3 * convertToFT(loadpix(srcData + (src_y + 2) * src_step + right_x * PIXSIZE));
+            sum =       co3 * SRC(right_x, src_y - 2);
+            sum = sum + co2 * SRC(right_x, src_y - 1);
+            sum = sum + co1 * SRC(right_x, src_y    );
+            sum = sum + co2 * SRC(right_x, src_y + 1);
+            sum = sum + co3 * SRC(right_x, src_y + 2);
 
             smem[4 + get_local_id(0)] = sum;
         }
     }
     else
     {
-        int col = idx_col(x, last_col);
+        int col = EXTRAPOLATE(x, src_cols);
 
-        sum =       co3 * convertToFT(loadpix(srcData + idx_row(src_y - 2, last_row) * src_step + col * PIXSIZE));
-        sum = sum + co2 * convertToFT(loadpix(srcData + idx_row(src_y - 1, last_row) * src_step + col * PIXSIZE));
-        sum = sum + co1 * convertToFT(loadpix(srcData + idx_row(src_y    , last_row) * src_step + col * PIXSIZE));
-        sum = sum + co2 * convertToFT(loadpix(srcData + idx_row(src_y + 1, last_row) * src_step + col * PIXSIZE));
-        sum = sum + co3 * convertToFT(loadpix(srcData + idx_row(src_y + 2, last_row) * src_step + col * PIXSIZE));
+        sum =       co3 * SRC(col, EXTRAPOLATE(src_y - 2, src_rows));
+        sum = sum + co2 * SRC(col, EXTRAPOLATE(src_y - 1, src_rows));
+        sum = sum + co1 * SRC(col, EXTRAPOLATE(src_y    , src_rows));
+        sum = sum + co2 * SRC(col, EXTRAPOLATE(src_y + 1, src_rows));
+        sum = sum + co3 * SRC(col, EXTRAPOLATE(src_y + 2, src_rows));
 
         smem[2 + get_local_id(0)] = sum;
 
         if (get_local_id(0) < 2)
         {
-            const int left_x = x - 2;
+            col = EXTRAPOLATE(x - 2, src_cols);
 
-            col = idx_col(left_x, last_col);
-
-            sum =       co3 * convertToFT(loadpix(srcData + idx_row(src_y - 2, last_row) * src_step + col * PIXSIZE));
-            sum = sum + co2 * convertToFT(loadpix(srcData + idx_row(src_y - 1, last_row) * src_step + col * PIXSIZE));
-            sum = sum + co1 * convertToFT(loadpix(srcData + idx_row(src_y    , last_row) * src_step + col * PIXSIZE));
-            sum = sum + co2 * convertToFT(loadpix(srcData + idx_row(src_y + 1, last_row) * src_step + col * PIXSIZE));
-            sum = sum + co3 * convertToFT(loadpix(srcData + idx_row(src_y + 2, last_row) * src_step + col * PIXSIZE));
+            sum =       co3 * SRC(col, EXTRAPOLATE(src_y - 2, src_rows));
+            sum = sum + co2 * SRC(col, EXTRAPOLATE(src_y - 1, src_rows));
+            sum = sum + co1 * SRC(col, EXTRAPOLATE(src_y    , src_rows));
+            sum = sum + co2 * SRC(col, EXTRAPOLATE(src_y + 1, src_rows));
+            sum = sum + co3 * SRC(col, EXTRAPOLATE(src_y + 2, src_rows));
 
             smem[get_local_id(0)] = sum;
         }
 
-        if (get_local_id(0) > 253)
+        if (get_local_id(0) > LOCAL_SIZE - 3)
         {
-            const int right_x = x + 2;
+            col = EXTRAPOLATE(x + 2, src_cols);
 
-            col = idx_col(right_x, last_col);
-
-            sum =       co3 * convertToFT(loadpix(srcData + idx_row(src_y - 2, last_row) * src_step + col * PIXSIZE));
-            sum = sum + co2 * convertToFT(loadpix(srcData + idx_row(src_y - 1, last_row) * src_step + col * PIXSIZE));
-            sum = sum + co1 * convertToFT(loadpix(srcData + idx_row(src_y    , last_row) * src_step + col * PIXSIZE));
-            sum = sum + co2 * convertToFT(loadpix(srcData + idx_row(src_y + 1, last_row) * src_step + col * PIXSIZE));
-            sum = sum + co3 * convertToFT(loadpix(srcData + idx_row(src_y + 2, last_row) * src_step + col * PIXSIZE));
+            sum =       co3 * SRC(col, EXTRAPOLATE(src_y - 2, src_rows));
+            sum = sum + co2 * SRC(col, EXTRAPOLATE(src_y - 1, src_rows));
+            sum = sum + co1 * SRC(col, EXTRAPOLATE(src_y    , src_rows));
+            sum = sum + co2 * SRC(col, EXTRAPOLATE(src_y + 1, src_rows));
+            sum = sum + co3 * SRC(col, EXTRAPOLATE(src_y + 2, src_rows));
 
             smem[4 + get_local_id(0)] = sum;
         }
@@ -193,7 +175,7 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (get_local_id(0) < 128)
+    if (get_local_id(0) < LOCAL_SIZE / 2)
     {
         const int tid2 = get_local_id(0) * 2;
 
