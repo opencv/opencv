@@ -36,6 +36,7 @@
 #define MAX_VAL DBL_MAX
 #endif
 
+#define noconvert
 #define INDEX_MAX UINT_MAX
 
 #ifdef NEED_MINLOC
@@ -93,20 +94,20 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 #endif
 
 #ifdef NEED_MINVAL
-    __local srcT1 localmem_min[WGS2_ALIGNED];
+    __local dstT1 localmem_min[WGS2_ALIGNED];
 #ifdef NEED_MINLOC
     __local uint localmem_minloc[WGS2_ALIGNED];
 #endif
 #endif
 #ifdef NEED_MAXVAL
-    __local srcT1 localmem_max[WGS2_ALIGNED];
+    __local dstT1 localmem_max[WGS2_ALIGNED];
 #ifdef NEED_MAXLOC
     __local uint localmem_maxloc[WGS2_ALIGNED];
 #endif
 #endif
 
-    srcT1 minval = MAX_VAL, maxval = MIN_VAL;
-    srcT temp;
+    dstT1 minval = MAX_VAL, maxval = MIN_VAL;
+    dstT temp;
     uint minloc = INDEX_MAX, maxloc = INDEX_MAX;
     int src_index;
 #ifdef HAVE_MASK
@@ -130,7 +131,7 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
         if (mask[mask_index])
 #endif
         {
-            temp = *(__global const srcT *)(srcptr + src_index);
+            temp = convertToDT(*(__global const srcT *)(srcptr + src_index));
 #if kercn == 1
 #ifdef NEED_MINVAL
             if (minval > temp)
@@ -262,12 +263,12 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
     {
         int pos = 0;
 #ifdef NEED_MINVAL
-        *(__global srcT1 *)(dstptr + mad24(gid, (int)sizeof(srcT1), pos)) = localmem_min[0];
-        pos = mad24(groupnum, (int)sizeof(srcT1), pos);
+        *(__global dstT1 *)(dstptr + mad24(gid, (int)sizeof(dstT1), pos)) = localmem_min[0];
+        pos = mad24(groupnum, (int)sizeof(dstT1), pos);
 #endif
 #ifdef NEED_MAXVAL
-        *(__global srcT1 *)(dstptr + mad24(gid, (int)sizeof(srcT1), pos)) = localmem_max[0];
-        pos = mad24(groupnum, (int)sizeof(srcT1), pos);
+        *(__global dstT1 *)(dstptr + mad24(gid, (int)sizeof(dstT1), pos)) = localmem_max[0];
+        pos = mad24(groupnum, (int)sizeof(dstT1), pos);
 #endif
 #ifdef NEED_MINLOC
         *(__global uint *)(dstptr + mad24(gid, (int)sizeof(uint), pos)) = localmem_minloc[0];
