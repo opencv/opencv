@@ -1917,12 +1917,13 @@ class IPPresizeInvoker :
 {
 public:
     IPPresizeInvoker(const Mat & _src, Mat & _dst, double _inv_scale_x, double _inv_scale_y, int _mode, bool *_ok) :
-        ParallelLoopBody(), src(_src), dst(_dst), inv_scale_x(_inv_scale_x), inv_scale_y(_inv_scale_y), mode(_mode), ok(_ok)
+        ParallelLoopBody(), src(_src), dst(_dst), inv_scale_x(_inv_scale_x),
+        inv_scale_y(_inv_scale_y), pSpec(NULL), mode(_mode),
+        func(NULL), getBufferSizeFunc(NULL), getSrcOffsetFunc(NULL), ok(_ok)
     {
         *ok = true;
         IppiSize srcSize, dstSize;
-        int type = src.type();
-        int specSize = 0, initSize = 0;
+        int type = src.type(), specSize = 0, initSize = 0;
         srcSize.width  = src.cols;
         srcSize.height = src.rows;
         dstSize.width  = dst.cols;
@@ -1958,7 +1959,7 @@ public:
     virtual void operator() (const Range& range) const
     {
         if (*ok == false)
-          return;
+            return;
 
         int cn = src.channels();
         int dsty = min(cvRound(range.start * inv_scale_y), dst.rows);
@@ -1987,7 +1988,7 @@ private:
     double inv_scale_x;
     double inv_scale_y;
     void *pSpec;
-    AutoBuffer<uchar>   specBuf;
+    AutoBuffer<uchar> specBuf;
     int mode;
     ippiResizeFunc func;
     ippiResizeGetBufferSize getBufferSizeFunc;
