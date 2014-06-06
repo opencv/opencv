@@ -141,6 +141,10 @@ CV_INLINE IppiSize ippiSize(const cv::Size & _size)
 #      define __xgetbv() 0
 #    endif
 #  endif
+#  if defined __AVX2__
+#    include <immintrin.h>
+#    define CV_AVX2 1
+#  endif
 #endif
 
 
@@ -175,6 +179,9 @@ CV_INLINE IppiSize ippiSize(const cv::Size & _size)
 #endif
 #ifndef CV_AVX
 #  define CV_AVX 0
+#endif
+#ifndef CV_AVX2
+#  define CV_AVX2 0
 #endif
 #ifndef CV_NEON
 #  define CV_NEON 0
