@@ -473,8 +473,11 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
 {
     CV_Assert(sum_op == OCL_OP_SUM || sum_op == OCL_OP_SUM_ABS || sum_op == OCL_OP_SUM_SQR);
 
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
+            haveMask = _mask.kind() != _InputArray::NONE;
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            kercn = cn == 1 && !haveMask ? ocl::predictOptimalVectorWidth(_src) : 1,
+            mcn = std::max(cn, kercn);
 
     if ( (!doubleSupport && depth == CV_64F) || cn > 4 )
         return false;
@@ -484,7 +487,6 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
 
     int ddepth = std::max(sum_op == OCL_OP_SUM_SQR ? CV_32F : CV_32S, depth),
             dtype = CV_MAKE_TYPE(ddepth, cn);
-    bool haveMask = _mask.kind() != _InputArray::NONE;
     CV_Assert(!haveMask || _mask.type() == CV_8UC1);
 
     int wgs2_aligned = 1;
@@ -494,15 +496,19 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
 
     static const char * const opMap[3] = { "OP_SUM", "OP_SUM_ABS", "OP_SUM_SQR" };
     char cvt[40];
-    ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
-                  format("-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D ddepth=%d -D cn=%d"
-                         " -D convertToDT=%s -D %s -D WGS=%d -D WGS2_ALIGNED=%d%s%s",
-                         ocl::typeToStr(type), ocl::typeToStr(depth),
-                         ocl::typeToStr(dtype), ocl::typeToStr(ddepth), ddepth, cn,
-                         ocl::convertTypeStr(depth, ddepth, cn, cvt),
+    String opts = format("-D srcT=%s -D srcT1=%s -D dstT=%s -D dstTK=%s -D dstT1=%s -D ddepth=%d -D cn=%d"
+                         " -D convertToDT=%s -D %s -D WGS=%d -D WGS2_ALIGNED=%d%s%s%s%s -D kercn=%d",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, mcn)), ocl::typeToStr(depth),
+                         ocl::typeToStr(dtype), ocl::typeToStr(CV_MAKE_TYPE(ddepth, mcn)),
+                         ocl::typeToStr(ddepth), ddepth, cn,
+                         ocl::convertTypeStr(depth, ddepth, mcn, cvt),
                          opMap[sum_op], (int)wgs, wgs2_aligned,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-                         haveMask ? " -D HAVE_MASK" : ""));
+                         haveMask ? " -D HAVE_MASK" : "",
+                         _src.isContinuous() ? " -D HAVE_SRC_CONT" : "",
+                         _mask.isContinuous() ? " -D HAVE_MASK_CONT" : "", kercn);
+
+    ocl::Kernel k("reduce", ocl::core::reduce_oclsrc, opts);
     if (k.empty())
         return false;
 
@@ -643,7 +649,7 @@ namespace cv {
 
 static bool ocl_countNonZero( InputArray _src, int & res )
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), kercn = ocl::predictOptimalVectorWidth(_src);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if (depth == CV_64F && !doubleSupport)
@@ -658,9 +664,12 @@ static bool ocl_countNonZero( InputArray _src, int & res )
     wgs2_aligned >>= 1;
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
-                  format("-D srcT=%s -D OP_COUNT_NON_ZERO -D WGS=%d -D WGS2_ALIGNED=%d%s",
-                         ocl::typeToStr(type), (int)wgs,
-                         wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                  format("-D srcT=%s -D srcT1=%s -D cn=1 -D OP_COUNT_NON_ZERO"
+                         " -D WGS=%d -D kercn=%d -D WGS2_ALIGNED=%d%s%s",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
+                         ocl::typeToStr(depth), (int)wgs, kercn,
+                         wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                         _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
     if (k.empty())
         return false;
 
@@ -1349,7 +1358,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     CV_Assert( (_src.channels() == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
         (_src.channels() >= 1 && _mask.empty() && !minLoc && !maxLoc) );
 
-    int type = _src.type(), depth = CV_MAT_DEPTH(type);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), kercn = 1;
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if (depth == CV_64F && !doubleSupport)
@@ -1363,9 +1372,12 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
         wgs2_aligned <<= 1;
     wgs2_aligned >>= 1;
 
-    String opts = format("-D DEPTH_%d -D srcT=%s -D OP_MIN_MAX_LOC%s -D WGS=%d -D WGS2_ALIGNED=%d%s",
+    String opts = format("-D DEPTH_%d -D srcT=%s -D OP_MIN_MAX_LOC%s -D WGS=%d"
+                         " -D WGS2_ALIGNED=%d%s%s%s -D kercn=%d",
                          depth, ocl::typeToStr(depth), _mask.empty() ? "" : "_MASK", (int)wgs,
-                         wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+                         wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                         _src.isContinuous() ? " -D HAVE_SRC_CONT" : "",
+                         _mask.isContinuous() ? " -D HAVE_MASK_CONT" : "", kercn);
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc, opts);
     if (k.empty())
@@ -2090,9 +2102,11 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
 
             ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
                           format("-D OP_NORM_INF_MASK -D HAVE_MASK -D DEPTH_%d"
-                                 " -D srcT=%s -D srcT1=%s -D WGS=%d -D cn=%d -D WGS2_ALIGNED=%d%s",
+                                 " -D srcT=%s -D srcT1=%s -D WGS=%d -D cn=%d -D WGS2_ALIGNED=%d%s%s%s",
                                  depth, ocl::typeToStr(type), ocl::typeToStr(depth),
-                                 wgs, cn, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                                 wgs, cn, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                                 src.isContinuous() ? " -D HAVE_CONT_SRC" : "",
+                                 _mask.isContinuous() ? " -D HAVE_MASK_CONT" : ""));
             if (k.empty())
                 return false;
 
