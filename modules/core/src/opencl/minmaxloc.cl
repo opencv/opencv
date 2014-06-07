@@ -76,7 +76,7 @@
 #ifdef OP_CALC2
 #define CALC_MAX2(p) \
     if (maxval2 < temp.p) \
-        maxval2 = temp.p
+        maxval2 = temp.p;
 #else
 #define CALC_MAX2(p)
 #endif
@@ -171,6 +171,9 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 #endif
             temp2 = convertToDT(*(__global const srcT *)(src2ptr + src2_index));
             temp = temp > temp2 ? temp - temp2 : (temp2 - temp);
+#ifdef OP_CALC2
+            temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2;
+#endif
 #endif
 
 #if kercn == 1
@@ -192,7 +195,6 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 #endif
             }
 #ifdef OP_CALC2
-            temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2;
             if (maxval2 < temp2)
                 maxval2 = temp2;
 #endif

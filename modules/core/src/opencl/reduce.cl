@@ -580,6 +580,9 @@ __kernel void reduce(__global const uchar * srcptr, int src_step, int src_offset
     int  id = get_global_id(0) * kercn;
 
     srcptr += src_offset;
+#ifdef HAVE_SRC2
+    src2ptr += src2_offset;
+#endif
 
     DECLARE_LOCAL_MEM;
     DEFINE_ACCUMULATOR;

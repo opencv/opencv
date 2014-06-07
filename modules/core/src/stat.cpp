@@ -1334,17 +1334,17 @@ static void ofs2idx(const Mat& a, size_t ofs, int* idx)
 #ifdef HAVE_OPENCL
 
 template <typename T>
-void getMinMaxRes(const Mat & db, double* minVal, double* maxVal,
+void getMinMaxRes(const Mat & db, double * minVal, double * maxVal,
                   int* minLoc, int* maxLoc,
-                  int groupnum, int cols)
+                  int groupnum, int cols, double * maxVal2)
 {
     uint index_max = std::numeric_limits<uint>::max();
     T minval = std::numeric_limits<T>::max();
-    T maxval = std::numeric_limits<T>::min() > 0 ? -std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
+    T maxval = std::numeric_limits<T>::min() > 0 ? -std::numeric_limits<T>::max() : std::numeric_limits<T>::min(), maxval2 = maxval;
     uint minloc = index_max, maxloc = index_max;
 
     int index = 0;
-    const T * minptr = NULL, * maxptr = NULL;
+    const T * minptr = NULL, * maxptr = NULL, * maxptr2 = NULL;
     const uint * minlocptr = NULL, * maxlocptr = NULL;
     if (minVal || minLoc)
     {
@@ -1362,7 +1362,12 @@ void getMinMaxRes(const Mat & db, double* minVal, double* maxVal,
         index += sizeof(uint) * groupnum;
     }
     if (maxLoc)
+    {
         maxlocptr = (uint *)(db.data + index);
+        index += sizeof(uint) * groupnum;
+    }
+    if (maxVal2)
+        maxptr2 = (const T *)(db.data + index);
 
     for (int i = 0; i < groupnum; i++)
     {
@@ -1394,6 +1399,8 @@ void getMinMaxRes(const Mat & db, double* minVal, double* maxVal,
                 maxval = maxptr[i];
             }
         }
+        if (maxptr2 && maxptr2[i] > maxval2)
+            maxval2 = maxptr2[i];
     }
     bool zero_mask = (minLoc && minloc == index_max) ||
             (maxLoc && maxloc == index_max);
@@ -1402,6 +1409,8 @@ void getMinMaxRes(const Mat & db, double* minVal, double* maxVal,
         *minVal = zero_mask ? 0 : (double)minval;
     if (maxVal)
         *maxVal = zero_mask ? 0 : (double)maxval;
+    if (maxVal2)
+        *maxVal2 = zero_mask ? 0 : (double)maxval2;
 
     if (minLoc)
     {
@@ -1415,20 +1424,21 @@ void getMinMaxRes(const Mat & db, double* minVal, double* maxVal,
     }
 }
 
-typedef void (*getMinMaxResFunc)(const Mat & db, double *minVal, double *maxVal,
-                                 int *minLoc, int *maxLoc, int gropunum, int cols);
+typedef void (*getMinMaxResFunc)(const Mat & db, double * minVal, double * maxVal,
+                                 int * minLoc, int *maxLoc, int gropunum, int cols, double * maxVal2);
 
 static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc, int* maxLoc, InputArray _mask,
-                           int ddepth = -1, bool absValues = false, InputArray _src2 = noArray(), bool calc2 = false)
+                           int ddepth = -1, bool absValues = false, InputArray _src2 = noArray(), double * maxVal2 = NULL)
 {
-    CV_Assert( (_src.channels() == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
-        (_src.channels() >= 1 && _mask.empty() && !minLoc && !maxLoc) );
-
     const ocl::Device & dev = ocl::Device::getDefault();
     bool doubleSupport = dev.doubleFPConfig() > 0, haveMask = !_mask.empty(),
         haveSrc2 = _src2.kind() != _InputArray::NONE;
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
             kercn = haveMask ? 1 : std::min(4, ocl::predictOptimalVectorWidth(_src));
+
+    CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
+              (cn >= 1 && _mask.empty() && !minLoc && !maxLoc) );
+
     if (ddepth < 0)
         ddepth = depth;
 
@@ -1471,7 +1481,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
                          needMinLoc ? " -D NEED_MINLOC" : "", needMaxLoc ? " -D NEED_MAXLOC" : "",
                          ocl::typeToStr(ddepth), ocl::typeToStr(CV_MAKE_TYPE(ddepth, kercn)),
                          ocl::convertTypeStr(depth, ddepth, kercn, cvt), absValues ? " -D OP_ABS" : "",
-                         haveSrc2 ? " -D HAVE_SRC2" : "", calc2 ? " -D OP_CALC2" : "",
+                         haveSrc2 ? " -D HAVE_SRC2" : "", maxVal2 ? " -D OP_CALC2" : "",
                          haveSrc2 && _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "");
 
     ocl::Kernel k("minmaxloc", ocl::core::minmaxloc_oclsrc, opts);
@@ -1481,7 +1491,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     int esz = CV_ELEM_SIZE(ddepth), esz32s = CV_ELEM_SIZE1(CV_32S),
             dbsize = groupnum * ((needMinVal ? esz : 0) + (needMaxVal ? esz : 0) +
                                  (needMinLoc ? esz32s : 0) + (needMaxLoc ? esz32s : 0) +
-                                 (calc2 ? esz : 0));
+                                 (maxVal2 ? esz : 0));
     UMat src = _src.getUMat(), src2 = _src2.getUMat(), db(1, dbsize, CV_8UC1), mask = _mask.getUMat();
 
     if (cn > 1)
@@ -1525,12 +1535,13 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
         getMinMaxRes<double>
     };
 
-    getMinMaxResFunc func = functab[depth];
+    getMinMaxResFunc func = functab[ddepth];
 
     int locTemp[2];
     func(db.getMat(ACCESS_READ), minVal, maxVal,
          needMinLoc ? minLoc ? minLoc : locTemp : minLoc,
-         needMaxLoc ? maxLoc ? maxLoc : locTemp : maxLoc, groupnum, src.cols);
+         needMaxLoc ? maxLoc ? maxLoc : locTemp : maxLoc,
+         groupnum, src.cols, maxVal2);
 
     return true;
 }
@@ -2560,9 +2571,10 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArr
     }
     else
     {
-        if (!ocl_minMaxIdx(_src1, NULL, &result, NULL, NULL, _mask, std::max(CV_32S, depth),
-                           false, _src2, relative))
+        if (!ocl_minMaxIdx(_src1, NULL, &sc1[0], NULL, NULL, _mask, std::max(CV_32S, depth),
+                           false, _src2, relative ? &sc2[0] : NULL))
             return false;
+        cn = 1;
     }
 
     double s2 = 0;
