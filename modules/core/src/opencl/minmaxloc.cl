@@ -73,14 +73,26 @@
 #define CALC_MAX(p, inc)
 #endif
 
+#ifdef OP_CALC2
+#define CALC_MAX2(p) \
+    if (maxval2 < temp.p) \
+        maxval2 = temp.p
+#else
+#define CALC_MAX2(p)
+#endif
+
 #define CALC_P(p, inc) \
     CALC_MIN(p, inc) \
-    CALC_MAX(p, inc)
+    CALC_MAX(p, inc) \
+    CALC_MAX2(p)
 
 __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_offset, int cols,
                         int total, int groupnum, __global uchar * dstptr
 #ifdef HAVE_MASK
                         , __global const uchar * mask, int mask_step, int mask_offset
+#endif
+#ifdef HAVE_SRC2
+                        , __global const uchar * src2ptr, int src2_step, int src2_offset
 #endif
                         )
 {
@@ -92,36 +104,46 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 #ifdef HAVE_MASK
     mask += mask_offset;
 #endif
+#ifdef HAVE_SRC2
+    src2ptr += src2_offset;
+#endif
 
 #ifdef NEED_MINVAL
     __local dstT1 localmem_min[WGS2_ALIGNED];
+    dstT1 minval = MAX_VAL;
 #ifdef NEED_MINLOC
     __local uint localmem_minloc[WGS2_ALIGNED];
+    uint minloc = INDEX_MAX;
 #endif
 #endif
 #ifdef NEED_MAXVAL
+    dstT1 maxval = MIN_VAL;
     __local dstT1 localmem_max[WGS2_ALIGNED];
 #ifdef NEED_MAXLOC
     __local uint localmem_maxloc[WGS2_ALIGNED];
+    uint maxloc = INDEX_MAX;
 #endif
+#endif
+#ifdef OP_CALC2
+    __local dstT1 localmem_max2[WGS2_ALIGNED];
+    dstT1 maxval2 = MIN_VAL;
 #endif
 
-    dstT1 minval = MAX_VAL, maxval = MIN_VAL;
-    dstT temp;
-    uint minloc = INDEX_MAX, maxloc = INDEX_MAX;
     int src_index;
 #ifdef HAVE_MASK
     int mask_index;
 #endif
+#ifdef HAVE_SRC2
+    int src2_index;
+#endif
+
+    dstT temp;
+#ifdef HAVE_SRC2
+    dstT temp2;
+#endif
 
     for (int grain = groupnum * WGS * kercn; id < total; id += grain)
     {
-#ifdef HAVE_SRC_CONT
-        src_index = mul24(id, (int)sizeof(srcT1));
-#else
-        src_index = mad24(id / cols, src_step, mul24(id % cols, (int)sizeof(srcT1)));
-#endif
-
 #ifdef HAVE_MASK
 #ifdef HAVE_MASK_CONT
         mask_index = id;
@@ -131,7 +153,26 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
         if (mask[mask_index])
 #endif
         {
+#ifdef HAVE_SRC_CONT
+            src_index = mul24(id, (int)sizeof(srcT1));
+#else
+            src_index = mad24(id / cols, src_step, mul24(id % cols, (int)sizeof(srcT1)));
+#endif
             temp = convertToDT(*(__global const srcT *)(srcptr + src_index));
+#ifdef OP_ABS
+            temp = temp >= (dstT)(0) ? temp : -temp;
+#endif
+
+#ifdef HAVE_SRC2
+#ifdef HAVE_SRC2_CONT
+            src2_index = mul24(id, (int)sizeof(srcT1));
+#else
+            src2_index = mad24(id / cols, src2_step, mul24(id % cols, (int)sizeof(srcT1)));
+#endif
+            temp2 = convertToDT(*(__global const srcT *)(src2ptr + src2_index));
+            temp = temp > temp2 ? temp - temp2 : (temp2 - temp);
+#endif
+
 #if kercn == 1
 #ifdef NEED_MINVAL
             if (minval > temp)
@@ -150,6 +191,11 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
                 maxloc = id;
 #endif
             }
+#ifdef OP_CALC2
+            temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2;
+            if (maxval2 < temp2)
+                maxval2 = temp2;
+#endif
 #endif
 #elif kercn >= 2
             CALC_P(s0, 0)
@@ -192,6 +238,9 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 #ifdef NEED_MAXLOC
         localmem_maxloc[lid] = maxloc;
 #endif
+#ifdef OP_CALC2
+        localmem_max2[lid] = maxval2;
+#endif
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -221,6 +270,10 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 #endif
                 localmem_max[lid3] = maxval;
         }
+#endif
+#ifdef OP_CALC2
+        if (localmem_max2[lid3] < maxval2)
+            localmem_max2[lid3] = maxval2;
 #endif
     }
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -255,6 +308,10 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
                     localmem_max[lid] = localmem_max[lid2];
             }
 #endif
+#ifdef OP_CALC2
+            if (localmem_max2[lid] < localmem_max2[lid2])
+                localmem_max2[lid] = localmem_max2[lid2];
+#endif
         }
         barrier(CLK_LOCAL_MEM_FENCE);
     }
@@ -276,6 +333,10 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 #endif
 #ifdef NEED_MAXLOC
         *(__global uint *)(dstptr + mad24(gid, (int)sizeof(uint), pos)) = localmem_maxloc[0];
+#endif
+#ifdef OP_CALC2
+        pos = mad24(groupnum, (int)sizeof(uint), pos);
+        *(__global dstT1 *)(dstptr + mad24(gid, (int)sizeof(dstT1), pos)) = localmem_max2[0];
 #endif
     }
 }

@@ -469,21 +469,25 @@ template <typename T> Scalar ocl_part_sum(Mat m)
 
 enum { OCL_OP_SUM = 0, OCL_OP_SUM_ABS =  1, OCL_OP_SUM_SQR = 2 };
 
-static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask = noArray() )
+static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask = noArray(),
+                     InputArray _src2 = noArray(), bool calc2 = false, const Scalar & res2 = Scalar() )
 {
     CV_Assert(sum_op == OCL_OP_SUM || sum_op == OCL_OP_SUM_ABS || sum_op == OCL_OP_SUM_SQR);
 
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
-            haveMask = _mask.kind() != _InputArray::NONE;
+    const ocl::Device & dev = ocl::Device::getDefault();
+    bool doubleSupport = dev.doubleFPConfig() > 0,
+        haveMask = _mask.kind() != _InputArray::NONE,
+        haveSrc2 = _src2.kind() != _InputArray::NONE;
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
             kercn = cn == 1 && !haveMask ? ocl::predictOptimalVectorWidth(_src) : 1,
             mcn = std::max(cn, kercn);
+    CV_Assert(!haveSrc2 || _src2.type() == type);
 
     if ( (!doubleSupport && depth == CV_64F) || cn > 4 )
         return false;
 
-    int dbsize = ocl::Device::getDefault().maxComputeUnits();
-    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+    int ngroups = dev.maxComputeUnits(), dbsize = ngroups * (calc2 ? 2 : 1);
+    size_t wgs = dev.maxWorkGroupSize();
 
     int ddepth = std::max(sum_op == OCL_OP_SUM_SQR ? CV_32F : CV_32S, depth),
             dtype = CV_MAKE_TYPE(ddepth, cn);
@@ -497,7 +501,7 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
     static const char * const opMap[3] = { "OP_SUM", "OP_SUM_ABS", "OP_SUM_SQR" };
     char cvt[40];
     String opts = format("-D srcT=%s -D srcT1=%s -D dstT=%s -D dstTK=%s -D dstT1=%s -D ddepth=%d -D cn=%d"
-                         " -D convertToDT=%s -D %s -D WGS=%d -D WGS2_ALIGNED=%d%s%s%s%s -D kercn=%d",
+                         " -D convertToDT=%s -D %s -D WGS=%d -D WGS2_ALIGNED=%d%s%s%s%s -D kercn=%d%s%s%s",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, mcn)), ocl::typeToStr(depth),
                          ocl::typeToStr(dtype), ocl::typeToStr(CV_MAKE_TYPE(ddepth, mcn)),
                          ocl::typeToStr(ddepth), ddepth, cn,
@@ -506,30 +510,49 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
                          doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                          haveMask ? " -D HAVE_MASK" : "",
                          _src.isContinuous() ? " -D HAVE_SRC_CONT" : "",
-                         _mask.isContinuous() ? " -D HAVE_MASK_CONT" : "", kercn);
+                         haveMask && _mask.isContinuous() ? " -D HAVE_MASK_CONT" : "", kercn,
+                         haveSrc2 ? " -D HAVE_SRC2" : "", calc2 ? " -D OP_CALC2" : "",
+                         haveSrc2 && _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "");
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc, opts);
     if (k.empty())
         return false;
 
-    UMat src = _src.getUMat(), db(1, dbsize, dtype), mask = _mask.getUMat();
+    UMat src = _src.getUMat(), src2 = _src2.getUMat(),
+        db(1, dbsize, dtype), mask = _mask.getUMat();
 
     ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
             dbarg = ocl::KernelArg::PtrWriteOnly(db),
-            maskarg = ocl::KernelArg::ReadOnlyNoSize(mask);
+            maskarg = ocl::KernelArg::ReadOnlyNoSize(mask),
+            src2arg = ocl::KernelArg::ReadOnlyNoSize(src2);
 
     if (haveMask)
-        k.args(srcarg, src.cols, (int)src.total(), dbsize, dbarg, maskarg);
+    {
+        if (haveSrc2)
+            k.args(srcarg, src.cols, (int)src.total(), ngroups, dbarg, maskarg, src2arg);
+        else
+            k.args(srcarg, src.cols, (int)src.total(), ngroups, dbarg, maskarg);
+    }
     else
-        k.args(srcarg, src.cols, (int)src.total(), dbsize, dbarg);
+    {
+        if (haveSrc2)
+            k.args(srcarg, src.cols, (int)src.total(), ngroups, dbarg, src2arg);
+        else
+            k.args(srcarg, src.cols, (int)src.total(), ngroups, dbarg);
+    }
 
-    size_t globalsize = dbsize * wgs;
+    size_t globalsize = ngroups * wgs;
     if (k.run(1, &globalsize, &wgs, false))
     {
         typedef Scalar (*part_sum)(Mat m);
         part_sum funcs[3] = { ocl_part_sum<int>, ocl_part_sum<float>, ocl_part_sum<double> },
                 func = funcs[ddepth - CV_32S];
-        res = func(db.getMat(ACCESS_READ));
+
+        Mat mres = db.getMat(ACCESS_READ);
+        if (calc2)
+            const_cast<Scalar &>(res2) = func(mres.colRange(dbsize, dbsize));
+
+        res = func(mres.colRange(0, dbsize));
         return true;
     }
     return false;
@@ -1396,17 +1419,20 @@ typedef void (*getMinMaxResFunc)(const Mat & db, double *minVal, double *maxVal,
                                  int *minLoc, int *maxLoc, int gropunum, int cols);
 
 static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc, int* maxLoc, InputArray _mask,
-                           int ddepth = -1, bool absValues = false)
+                           int ddepth = -1, bool absValues = false, InputArray _src2 = noArray(), bool calc2 = false)
 {
     CV_Assert( (_src.channels() == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
         (_src.channels() >= 1 && _mask.empty() && !minLoc && !maxLoc) );
 
     const ocl::Device & dev = ocl::Device::getDefault();
-    bool doubleSupport = dev.doubleFPConfig() > 0, haveMask = !_mask.empty();
+    bool doubleSupport = dev.doubleFPConfig() > 0, haveMask = !_mask.empty(),
+        haveSrc2 = _src2.kind() != _InputArray::NONE;
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
             kercn = haveMask ? 1 : std::min(4, ocl::predictOptimalVectorWidth(_src));
     if (ddepth < 0)
         ddepth = depth;
+
+    CV_Assert(!haveSrc2 || _src2.type() == type);
 
     if ((depth == CV_64F || ddepth == CV_64F) && !doubleSupport)
         return false;
@@ -1435,7 +1461,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     char cvt[40];
     String opts = format("-D DEPTH_%d -D srcT1=%s%s -D WGS=%d -D srcT=%s"
                          " -D WGS2_ALIGNED=%d%s%s%s -D kercn=%d%s%s%s%s"
-                         " -D dstT1=%s -D dstT=%s -D convertToDT=%s%s",
+                         " -D dstT1=%s -D dstT=%s -D convertToDT=%s%s%s%s%s",
                          depth, ocl::typeToStr(depth), haveMask ? " -D HAVE_MASK" : "", (int)wgs,
                          ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)), wgs2_aligned,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : "",
@@ -1444,7 +1470,9 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
                          needMinVal ? " -D NEED_MINVAL" : "", needMaxVal ? " -D NEED_MAXVAL" : "",
                          needMinLoc ? " -D NEED_MINLOC" : "", needMaxLoc ? " -D NEED_MAXLOC" : "",
                          ocl::typeToStr(ddepth), ocl::typeToStr(CV_MAKE_TYPE(ddepth, kercn)),
-                         ocl::convertTypeStr(depth, ddepth, kercn, cvt), absValues ? " -D OP_ABS" : "");
+                         ocl::convertTypeStr(depth, ddepth, kercn, cvt), absValues ? " -D OP_ABS" : "",
+                         haveSrc2 ? " -D HAVE_SRC2" : "", calc2 ? " -D OP_CALC2" : "",
+                         haveSrc2 && _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "");
 
     ocl::Kernel k("minmaxloc", ocl::core::minmaxloc_oclsrc, opts);
     if (k.empty())
@@ -1452,18 +1480,35 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
 
     int esz = CV_ELEM_SIZE(ddepth), esz32s = CV_ELEM_SIZE1(CV_32S),
             dbsize = groupnum * ((needMinVal ? esz : 0) + (needMaxVal ? esz : 0) +
-                                 (needMinLoc ? esz32s : 0) + (needMaxLoc ? esz32s : 0));
-    UMat src = _src.getUMat(), db(1, dbsize, CV_8UC1), mask = _mask.getUMat();
+                                 (needMinLoc ? esz32s : 0) + (needMaxLoc ? esz32s : 0) +
+                                 (calc2 ? esz : 0));
+    UMat src = _src.getUMat(), src2 = _src2.getUMat(), db(1, dbsize, CV_8UC1), mask = _mask.getUMat();
 
     if (cn > 1)
+    {
         src = src.reshape(1);
+        src2 = src2.reshape(1);
+    }
 
-    if (!haveMask)
-        k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
-               groupnum, ocl::KernelArg::PtrWriteOnly(db));
+    if (haveSrc2)
+    {
+        if (!haveMask)
+            k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
+                   groupnum, ocl::KernelArg::PtrWriteOnly(db), ocl::KernelArg::ReadOnlyNoSize(src2));
+        else
+            k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
+                   groupnum, ocl::KernelArg::PtrWriteOnly(db), ocl::KernelArg::ReadOnlyNoSize(mask),
+                   ocl::KernelArg::ReadOnlyNoSize(src2));
+    }
     else
-        k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
-               groupnum, ocl::KernelArg::PtrWriteOnly(db), ocl::KernelArg::ReadOnlyNoSize(mask));
+    {
+        if (!haveMask)
+            k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
+                   groupnum, ocl::KernelArg::PtrWriteOnly(db));
+        else
+            k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
+                   groupnum, ocl::KernelArg::PtrWriteOnly(db), ocl::KernelArg::ReadOnlyNoSize(mask));
+    }
 
     size_t globalsize = groupnum * wgs;
     if (!k.run(1, &globalsize, &wgs, false))
@@ -2498,38 +2543,45 @@ namespace cv {
 
 static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask, double & result )
 {
-    const ocl::Device & d = ocl::Device::getDefault();
-    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), rowsPerWI = d.isIntel() ? 4 : 1;
-    bool doubleSupport = d.doubleFPConfig() > 0;
-    bool relative = (normType & NORM_RELATIVE) != 0;
+    Scalar sc1, sc2;
+    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    bool relative = (normType & NORM_RELATIVE) != 0,
+        normsum = normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR;
     normType &= ~NORM_RELATIVE;
 
-    if ( !(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR) ||
-         (!doubleSupport && depth == CV_64F))
+    if ( !(normType == NORM_INF || normsum) )
         return false;
 
-    int wdepth = std::max(CV_32S, depth);
-    char cvt[50];
-    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D BINARY_OP -D OP_ABSDIFF -D dstT=%s -D workT=dstT -D srcT1=%s -D srcT2=srcT1"
-                         " -D convertToDT=%s -D convertToWT1=convertToDT -D convertToWT2=convertToDT -D rowsPerWI=%d%s",
-                         ocl::typeToStr(wdepth), ocl::typeToStr(depth),
-                         ocl::convertTypeStr(depth, wdepth, 1, cvt), rowsPerWI,
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
-    if (k.empty())
-        return false;
+    if (normsum)
+    {
+        if (!ocl_sum(_src1, sc1, normType == NORM_L2 || normType == NORM_L2SQR ?
+                     OCL_OP_SUM_SQR : OCL_OP_SUM, _mask, _src2, relative, sc2))
+            return false;
+    }
+    else
+    {
+        if (!ocl_minMaxIdx(_src1, NULL, &result, NULL, NULL, _mask, std::max(CV_32S, depth),
+                           false, _src2, relative))
+            return false;
+    }
 
-    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat(), diff(src1.size(), CV_MAKE_TYPE(wdepth, cn));
-    k.args(ocl::KernelArg::ReadOnlyNoSize(src1), ocl::KernelArg::ReadOnlyNoSize(src2),
-           ocl::KernelArg::WriteOnly(diff, cn));
+    double s2 = 0;
+    for (int i = 0; i < cn; ++i)
+    {
+        result += sc1[i];
+        if (relative)
+            s2 += sc2[i];
+    }
 
-    size_t globalsize[2] = { diff.cols * cn, (diff.rows + rowsPerWI - 1) / rowsPerWI };
-    if (!k.run(2, globalsize, NULL, false))
-        return false;
+    if (normType == NORM_L2)
+    {
+        result = std::sqrt(result);
+        if (relative)
+            s2 = std::sqrt(s2);
+    }
 
-    result = cv::norm(diff, normType, _mask);
     if (relative)
-        result /= cv::norm(src2, normType, _mask) + DBL_EPSILON;
+        result /= (s2 + DBL_EPSILON);
 
     return true;
 }
