@@ -1293,6 +1293,8 @@ OCL_TEST_P(Norm, NORM_INF_2args)
         {
             generateTestData();
 
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
+
             int type = NORM_INF;
             if (relative == 1)
                 type |= NORM_RELATIVE;
@@ -1310,6 +1312,8 @@ OCL_TEST_P(Norm, NORM_INF_2args_mask)
         for (int j = 0; j < test_loop_times; j++)
         {
             generateTestData();
+
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
 
             int type = NORM_INF;
             if (relative == 1)
@@ -1329,6 +1333,8 @@ OCL_TEST_P(Norm, NORM_L1_2args)
         {
             generateTestData();
 
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
+
             int type = NORM_L1;
             if (relative == 1)
                 type |= NORM_RELATIVE;
@@ -1346,6 +1352,8 @@ OCL_TEST_P(Norm, NORM_L1_2args_mask)
         for (int j = 0; j < test_loop_times; j++)
         {
             generateTestData();
+
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
 
             int type = NORM_L1;
             if (relative == 1)
@@ -1365,6 +1373,8 @@ OCL_TEST_P(Norm, NORM_L2_2args)
         {
             generateTestData();
 
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
+
             int type = NORM_L2;
             if (relative == 1)
                 type |= NORM_RELATIVE;
@@ -1382,6 +1392,8 @@ OCL_TEST_P(Norm, NORM_L2_2args_mask)
         for (int j = 0; j < test_loop_times; j++)
         {
             generateTestData();
+
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
 
             int type = NORM_L2;
             if (relative == 1)
