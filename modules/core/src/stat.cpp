@@ -550,9 +550,9 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
 
         Mat mres = db.getMat(ACCESS_READ);
         if (calc2)
-            const_cast<Scalar &>(res2) = func(mres.colRange(dbsize, dbsize));
+            const_cast<Scalar &>(res2) = func(mres.colRange(ngroups, dbsize));
 
-        res = func(mres.colRange(0, dbsize));
+        res = func(mres.colRange(0, ngroups));
         return true;
     }
     return false;
@@ -1434,10 +1434,10 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     bool doubleSupport = dev.doubleFPConfig() > 0, haveMask = !_mask.empty(),
         haveSrc2 = _src2.kind() != _InputArray::NONE;
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
-            kercn = haveMask ? 1 : std::min(4, ocl::predictOptimalVectorWidth(_src));
+            kercn = haveMask ? cn : std::min(4, ocl::predictOptimalVectorWidth(_src));
 
-    CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
-              (cn >= 1 && _mask.empty() && !minLoc && !maxLoc) );
+    CV_Assert( (cn == 1 && (!haveMask || _mask.type() == CV_8U)) ||
+              (cn >= 1 && (!haveMask || haveSrc2) && !minLoc && !maxLoc) );
 
     if (ddepth < 0)
         ddepth = depth;
@@ -1483,6 +1483,8 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
                          ocl::convertTypeStr(depth, ddepth, kercn, cvt), absValues ? " -D OP_ABS" : "",
                          haveSrc2 ? " -D HAVE_SRC2" : "", maxVal2 ? " -D OP_CALC2" : "",
                          haveSrc2 && _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "");
+
+    printf("%s\n", opts.c_str());
 
     ocl::Kernel k("minmaxloc", ocl::core::minmaxloc_oclsrc, opts);
     if (k.empty())
@@ -2556,9 +2558,9 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArr
 {
     Scalar sc1, sc2;
     int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    bool relative = (normType & NORM_RELATIVE) != 0,
-        normsum = normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR;
+    bool relative = (normType & NORM_RELATIVE) != 0;
     normType &= ~NORM_RELATIVE;
+    bool normsum = normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR;
 
     if ( !(normType == NORM_INF || normsum) )
         return false;
@@ -2608,8 +2610,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 
 #ifdef HAVE_OPENCL
     double _result = 0;
-    CV_OCL_RUN_(_src1.isUMat() && _src2.isUMat() &&
-                _src1.dims() <= 2 && _src2.dims() <= 2,
+    CV_OCL_RUN_(_src1.isUMat(),
                 ocl_norm(_src1, _src2, normType, _mask, _result),
                 _result)
 #endif

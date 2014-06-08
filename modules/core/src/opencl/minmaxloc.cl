@@ -15,16 +15,16 @@
 
 #ifdef DEPTH_0
 #define MIN_VAL 0
-#define MAX_VAL 255
+#define MAX_VAL UCHAR_MAX
 #elif defined DEPTH_1
-#define MIN_VAL -128
-#define MAX_VAL 127
+#define MIN_VAL SCHAR_MIN
+#define MAX_VAL SCHAR_MAX
 #elif defined DEPTH_2
 #define MIN_VAL 0
-#define MAX_VAL 65535
+#define MAX_VAL USHRT_MAX
 #elif defined DEPTH_3
-#define MIN_VAL -32768
-#define MAX_VAL 32767
+#define MIN_VAL SHRT_MIN
+#define MAX_VAL SHRT_MAX
 #elif defined DEPTH_4
 #define MIN_VAL INT_MIN
 #define MAX_VAL INT_MAX
@@ -38,6 +38,14 @@
 
 #define noconvert
 #define INDEX_MAX UINT_MAX
+
+#if kercn != 3
+#define loadpix(addr) *(__global const srcT *)(addr)
+#define srcTSIZE (int)sizeof(srcT1)
+#else
+#define loadpix(addr) vload3(0, (__global const srcT1 *)(addr))
+#define srcTSIZE ((int)sizeof(srcT1))
+#endif
 
 #ifdef NEED_MINLOC
 #define CALC_MINLOC(inc) minloc = id + inc
@@ -154,22 +162,22 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 #endif
         {
 #ifdef HAVE_SRC_CONT
-            src_index = mul24(id, (int)sizeof(srcT1));
+            src_index = mul24(id, srcTSIZE);
 #else
-            src_index = mad24(id / cols, src_step, mul24(id % cols, (int)sizeof(srcT1)));
+            src_index = mad24(id / cols, src_step, mul24(id % cols, srcTSIZE));
 #endif
-            temp = convertToDT(*(__global const srcT *)(srcptr + src_index));
+            temp = convertToDT(loadpix(srcptr + src_index));
 #ifdef OP_ABS
             temp = temp >= (dstT)(0) ? temp : -temp;
 #endif
 
 #ifdef HAVE_SRC2
 #ifdef HAVE_SRC2_CONT
-            src2_index = mul24(id, (int)sizeof(srcT1));
+            src2_index = mul24(id, srcTSIZE);
 #else
-            src2_index = mad24(id / cols, src2_step, mul24(id % cols, (int)sizeof(srcT1)));
+            src2_index = mad24(id / cols, src2_step, mul24(id % cols, srcTSIZE));
 #endif
-            temp2 = convertToDT(*(__global const srcT *)(src2ptr + src2_index));
+            temp2 = convertToDT(loadpix(src2ptr + src2_index));
             temp = temp > temp2 ? temp - temp2 : (temp2 - temp);
 #ifdef OP_CALC2
             temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2;
@@ -202,8 +210,9 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 #elif kercn >= 2
             CALC_P(s0, 0)
             CALC_P(s1, 1)
-#if kercn >= 4
+#if kercn >= 3
             CALC_P(s2, 2)
+#if kercn >= 4
             CALC_P(s3, 3)
 #if kercn >= 8
             CALC_P(s4, 4)
@@ -219,6 +228,7 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
             CALC_P(sD, 13)
             CALC_P(sE, 14)
             CALC_P(sF, 15)
+#endif
 #endif
 #endif
 #endif
@@ -335,9 +345,11 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 #endif
 #ifdef NEED_MAXLOC
         *(__global uint *)(dstptr + mad24(gid, (int)sizeof(uint), pos)) = localmem_maxloc[0];
-#endif
 #ifdef OP_CALC2
         pos = mad24(groupnum, (int)sizeof(uint), pos);
+#endif
+#endif
+#ifdef OP_CALC2
         *(__global dstT1 *)(dstptr + mad24(gid, (int)sizeof(dstT1), pos)) = localmem_max2[0];
 #endif
     }
