@@ -148,11 +148,9 @@
 
 #ifdef OP_CALC2
 #define DECLARE_LOCAL_MEM \
-    __local dstT localmem[WGS2_ALIGNED]; \
-    __local dstT localmem2[WGS2_ALIGNED]
+    __local dstT localmem[WGS2_ALIGNED], localmem2[WGS2_ALIGNED]
 #define DEFINE_ACCUMULATOR \
-    dstT accumulator = (dstT)(0); \
-    dstT accumulator2 = (dstT)(0)
+    dstT accumulator = (dstT)(0), accumulator2 = (dstT)(0)
 #else
 #define DECLARE_LOCAL_MEM \
     __local dstT localmem[WGS2_ALIGNED]
@@ -163,10 +161,10 @@
 #ifdef HAVE_SRC2
 #ifdef OP_CALC2
 #define PROCESS_ELEMS \
-    dstT temp = convertToDT(loadpix(srcptr + src_index)) - convertToDT(loadpix(src2ptr + src2_index)); \
+    dstT temp = convertToDT(loadpix(srcptr + src_index)); \
     dstT temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
-    temp -= temp2; \
-    temp = temp > (dstT)(0) ? temp : -temp; \
+    temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
+    temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2; \
     FUNC(accumulator2, temp2); \
     FUNC(accumulator, temp)
 #else
@@ -258,6 +256,7 @@
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
     temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
+    temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2; \
     FUNC(accumulator, temp); \
     FUNC(accumulator2, temp2)
 #elif kercn == 2
@@ -265,6 +264,7 @@
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
     temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
+    temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2; \
     FUNC(accumulator, temp.s0); \
     FUNC(accumulator, temp.s1); \
     FUNC(accumulator2, temp2.s0); \
@@ -274,6 +274,7 @@
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
     temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
+    temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2; \
     FUNC(accumulator, temp.s0); \
     FUNC(accumulator, temp.s1); \
     FUNC(accumulator, temp.s2); \
@@ -287,6 +288,7 @@
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
     temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
+    temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2; \
     FUNC(accumulator, temp.s0); \
     FUNC(accumulator, temp.s1); \
     FUNC(accumulator, temp.s2); \
@@ -308,6 +310,7 @@
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
     temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
+    temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2; \
     FUNC(accumulator, temp.s0); \
     FUNC(accumulator, temp.s1); \
     FUNC(accumulator, temp.s2); \
@@ -452,6 +455,20 @@
 #endif
 #endif
 
+#ifdef OP_CALC2
+#define SET_LOCAL_1 \
+    localmem[lid] = accumulator; \
+    localmem2[lid] = accumulator2
+#define REDUCE_LOCAL_1 \
+    localmem[lid - WGS2_ALIGNED] += accumulator; \
+    localmem2[lid - WGS2_ALIGNED] += accumulator2
+#define REDUCE_LOCAL_2 \
+    localmem[lid] += localmem[lid2]; \
+    localmem2[lid] += localmem2[lid2]
+#define CALC_RESULT \
+    storepix(localmem[0], dstptr + dstTSIZE * gid); \
+    storepix(localmem2[0], dstptr + mad24(groupnum, dstTSIZE, dstTSIZE * gid))
+#else
 #define SET_LOCAL_1 \
     localmem[lid] = accumulator
 #define REDUCE_LOCAL_1 \
@@ -460,6 +477,7 @@
     localmem[lid] += localmem[lid2]
 #define CALC_RESULT \
     storepix(localmem[0], dstptr + dstTSIZE * gid)
+#endif
 
 // countNonZero stuff
 #elif defined OP_COUNT_NON_ZERO
@@ -516,20 +534,6 @@
     accumulator += value.sF == zero ? zero : one
 #endif
 
-#ifdef OP_CALC2
-#define SET_LOCAL_1 \
-    localmem[lid] = accumulator; \
-    localmem2[lid] = accumulator2; \
-#define REDUCE_LOCAL_1 \
-    localmem[lid - WGS2_ALIGNED] += accumulator; \
-    localmem2[lid - WGS2_ALIGNED] += accumulator2
-#define REDUCE_LOCAL_2 \
-    localmem[lid] += localmem[lid2]; \
-    localmem2[lid] += localmem2[lid2]
-#define CALC_RESULT \
-    storepix(localmem[0], dstptr + dstTSIZE * gid); \
-    storepix(localmem2[0], dstptr + mad24(groupnum, srcTSIZE, dstTSIZE * gid))
-#else
 #define SET_LOCAL_1 \
     localmem[lid] = accumulator
 #define REDUCE_LOCAL_1 \
@@ -538,7 +542,6 @@
     localmem[lid] += localmem[lid2]
 #define CALC_RESULT \
     storepix(localmem[0], dstptr + dstTSIZE * gid)
-#endif
 
 // norm (NORM_INF) with cn > 1 and mask
 #elif defined OP_NORM_INF_MASK
