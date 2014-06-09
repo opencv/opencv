@@ -1437,7 +1437,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
             kercn = haveMask ? cn : std::min(4, ocl::predictOptimalVectorWidth(_src));
 
     CV_Assert( (cn == 1 && (!haveMask || _mask.type() == CV_8U)) ||
-              (cn >= 1 && (!haveMask || haveSrc2) && !minLoc && !maxLoc) );
+              (cn >= 1 && !minLoc && !maxLoc) );
 
     if (ddepth < 0)
         ddepth = depth;
@@ -1465,7 +1465,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
         if (needMinVal)
             needMinLoc = true;
         else
-            needMaxVal = true;
+            needMaxLoc = true;
     }
 
     char cvt[40];
@@ -1484,8 +1484,6 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
                          haveSrc2 ? " -D HAVE_SRC2" : "", maxVal2 ? " -D OP_CALC2" : "",
                          haveSrc2 && _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "");
 
-    printf("%s\n", opts.c_str());
-
     ocl::Kernel k("minmaxloc", ocl::core::minmaxloc_oclsrc, opts);
     if (k.empty())
         return false;
@@ -1496,7 +1494,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
                                  (maxVal2 ? esz : 0));
     UMat src = _src.getUMat(), src2 = _src2.getUMat(), db(1, dbsize, CV_8UC1), mask = _mask.getUMat();
 
-    if (cn > 1)
+    if (cn > 1 && !haveMask)
     {
         src = src.reshape(1);
         src2 = src2.reshape(1);
@@ -2181,39 +2179,9 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
 
     if (normType == NORM_INF)
     {
-        if (cn == 1 || !haveMask)
-            ocl_minMaxIdx(_src, NULL, &result, NULL, NULL, _mask,
-                          std::max(depth, CV_32S), depth != CV_8U && depth != CV_16U);
-        else
-        {
-            int dbsize = d.maxComputeUnits();
-            size_t wgs = d.maxWorkGroupSize();
-
-            int wgs2_aligned = 1;
-            while (wgs2_aligned < (int)wgs)
-                wgs2_aligned <<= 1;
-            wgs2_aligned >>= 1;
-
-            ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
-                          format("-D OP_NORM_INF_MASK -D HAVE_MASK -D DEPTH_%d"
-                                 " -D srcT=%s -D srcT1=%s -D WGS=%d -D cn=%d -D WGS2_ALIGNED=%d%s%s%s",
-                                 depth, ocl::typeToStr(type), ocl::typeToStr(depth),
-                                 wgs, cn, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-                                 src.isContinuous() ? " -D HAVE_CONT_SRC" : "",
-                                 _mask.isContinuous() ? " -D HAVE_MASK_CONT" : ""));
-            if (k.empty())
-                return false;
-
-            UMat db(1, dbsize, type), mask = _mask.getUMat();
-            k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
-                   dbsize, ocl::KernelArg::PtrWriteOnly(db), ocl::KernelArg::ReadOnlyNoSize(mask));
-
-            size_t globalsize = dbsize * wgs;
-            if (!k.run(1, &globalsize, &wgs, true))
-                return false;
-
-            minMaxIdx(db.getMat(ACCESS_READ), NULL, &result, NULL, NULL, noArray());
-        }
+        if (!ocl_minMaxIdx(_src, NULL, &result, NULL, NULL, _mask,
+                           std::max(depth, CV_32S), depth != CV_8U && depth != CV_16U))
+            return false;
     }
     else if (normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR)
     {
