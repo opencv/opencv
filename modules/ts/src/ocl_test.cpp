@@ -50,6 +50,7 @@ using namespace cv;
 
 int test_loop_times = 1; // TODO Read from command line / environment
 
+#ifdef HAVE_OPENCL
 
 #define DUMP_PROPERTY_XML(propertyName, propertyValue) \
     do { \
@@ -204,6 +205,7 @@ void dumpOpenCLDevice()
 #undef DUMP_MESSAGE_STDOUT
 #undef DUMP_PROPERTY_XML
 
+#endif
 
 Mat TestUtils::readImage(const String &fileName, int flags)
 {

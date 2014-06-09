@@ -2212,8 +2212,8 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
                           const std::vector<float>& ranges,
                           double scale )
 {
-    Size histSize = hist.size();
 #ifdef HAVE_OPENCL
+    Size histSize = hist.size();
     bool _1D = histSize.height == 1 || histSize.width == 1;
     size_t histdims = _1D ? 1 : hist.dims();
 #endif
