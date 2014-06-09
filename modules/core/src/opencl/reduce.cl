@@ -50,7 +50,7 @@
 #endif
 #endif
 
-#if defined OP_NORM_INF_MASK || defined OP_MIN_MAX_LOC || defined OP_MIN_MAX_LOC_MASK
+#if defined OP_NORM_INF_MASK
 
 #ifdef DEPTH_0
 #define MIN_VAL 0
@@ -357,102 +357,11 @@
 #define CALC_RESULT \
     storepix(localmem_max[0], dstptr + dstTSIZE * gid)
 
-// minMaxLoc stuff
-#elif defined OP_MIN_MAX_LOC || defined OP_MIN_MAX_LOC_MASK
-
-#define DECLARE_LOCAL_MEM \
-    __local srcT localmem_min[WGS2_ALIGNED]; \
-    __local srcT localmem_max[WGS2_ALIGNED]; \
-    __local int localmem_minloc[WGS2_ALIGNED]; \
-    __local int localmem_maxloc[WGS2_ALIGNED]
-#define DEFINE_ACCUMULATOR \
-    srcT minval = MAX_VAL; \
-    srcT maxval = MIN_VAL; \
-    int negative = -1; \
-    int minloc = negative; \
-    int maxloc = negative; \
-    srcT temp; \
-    int temploc
-#define REDUCE_GLOBAL \
-    temp = loadpix(srcptr + src_index); \
-    temploc = id; \
-    srcT temp_minval = minval, temp_maxval = maxval; \
-    minval = min(minval, temp); \
-    maxval = max(maxval, temp); \
-    minloc = (minval == temp_minval) ? (temp_minval == MAX_VAL) ? temploc : minloc : temploc; \
-    maxloc = (maxval == temp_maxval) ? (temp_maxval == MIN_VAL) ? temploc : maxloc : temploc
-#define SET_LOCAL_1 \
-    localmem_min[lid] = minval; \
-    localmem_max[lid] = maxval; \
-    localmem_minloc[lid] = minloc; \
-    localmem_maxloc[lid] = maxloc
-#define REDUCE_LOCAL_1 \
-    srcT oldmin = localmem_min[lid-WGS2_ALIGNED]; \
-    srcT oldmax = localmem_max[lid-WGS2_ALIGNED]; \
-    localmem_min[lid - WGS2_ALIGNED] = min(minval, localmem_min[lid-WGS2_ALIGNED]); \
-    localmem_max[lid - WGS2_ALIGNED] = max(maxval, localmem_max[lid-WGS2_ALIGNED]); \
-    srcT minv = localmem_min[lid - WGS2_ALIGNED], maxv = localmem_max[lid - WGS2_ALIGNED]; \
-    localmem_minloc[lid - WGS2_ALIGNED] = (minv == minval) ? (minv == oldmin) ? \
-        min(minloc, localmem_minloc[lid-WGS2_ALIGNED]) : minloc : localmem_minloc[lid-WGS2_ALIGNED]; \
-    localmem_maxloc[lid - WGS2_ALIGNED] = (maxv == maxval) ? (maxv == oldmax) ? \
-        min(maxloc, localmem_maxloc[lid-WGS2_ALIGNED]) : maxloc : localmem_maxloc[lid-WGS2_ALIGNED]
-#define REDUCE_LOCAL_2 \
-    srcT oldmin = localmem_min[lid]; \
-    srcT oldmax = localmem_max[lid]; \
-    localmem_min[lid] = min(localmem_min[lid], localmem_min[lid2]); \
-    localmem_max[lid] = max(localmem_max[lid], localmem_max[lid2]); \
-    srcT min1 = localmem_min[lid], min2 = localmem_min[lid2]; \
-    localmem_minloc[lid] = (localmem_minloc[lid] == negative) ? localmem_minloc[lid2] : (localmem_minloc[lid2] == negative) ? \
-        localmem_minloc[lid] : (min1 == min2) ? (min1 == oldmin) ? min(localmem_minloc[lid2],localmem_minloc[lid]) : \
-        localmem_minloc[lid2] : localmem_minloc[lid]; \
-    srcT max1 = localmem_max[lid], max2 = localmem_max[lid2]; \
-    localmem_maxloc[lid] = (localmem_maxloc[lid] == negative) ? localmem_maxloc[lid2] : (localmem_maxloc[lid2] == negative) ? \
-        localmem_maxloc[lid] : (max1 == max2) ? (max1 == oldmax) ? min(localmem_maxloc[lid2],localmem_maxloc[lid]) : \
-        localmem_maxloc[lid2] : localmem_maxloc[lid]
-#define CALC_RESULT \
-    storepix(localmem_min[0], dstptr + dstTSIZE * gid); \
-    storepix(localmem_max[0], dstptr2 + dstTSIZE * gid); \
-    dstlocptr[gid] = localmem_minloc[0]; \
-    dstlocptr2[gid] = localmem_maxloc[0]
-
-#if defined OP_MIN_MAX_LOC_MASK
-#undef DEFINE_ACCUMULATOR
-#define DEFINE_ACCUMULATOR \
-    srcT minval = MAX_VAL; \
-    srcT maxval = MIN_VAL; \
-    int negative = -1; \
-    int minloc = negative; \
-    int maxloc = negative; \
-    srcT temp, temp_mask, zeroVal = (srcT)(0); \
-    int temploc
-#undef REDUCE_GLOBAL
-#define REDUCE_GLOBAL \
-    temp = loadpix(srcptr + src_index); \
-    temploc = id; \
-    MASK_INDEX; \
-    __global const uchar * mask = (__global const uchar *)(maskptr + mask_index); \
-    temp_mask = mask[0]; \
-    srcT temp_minval = minval, temp_maxval = maxval; \
-    minval = (temp_mask == zeroVal) ? minval : min(minval, temp); \
-    maxval = (temp_mask == zeroVal) ? maxval : max(maxval, temp); \
-    minloc = (temp_mask == zeroVal) ? minloc : (minval == temp_minval) ? (temp_minval == MAX_VAL) ? temploc : minloc : temploc; \
-    maxloc = (temp_mask == zeroVal) ? maxloc : (maxval == temp_maxval) ? (temp_maxval == MIN_VAL) ? temploc : maxloc : temploc
-#endif
-
 #else
 #error "No operation"
-#endif // end of minMaxLoc stuff
+#endif // end of norm (NORM_INF) with cn > 1 and mask
 
-#ifdef OP_MIN_MAX_LOC
-#undef EXTRA_PARAMS
-#define EXTRA_PARAMS , __global uchar * dstptr2, __global int * dstlocptr, __global int * dstlocptr2
-
-#elif defined OP_MIN_MAX_LOC_MASK
-#undef EXTRA_PARAMS
-#define EXTRA_PARAMS , __global uchar * dstptr2, __global int * dstlocptr, __global int * dstlocptr2, \
-    __global const uchar * maskptr, int mask_step, int mask_offset
-
-#elif defined OP_DOT
+#ifdef OP_DOT
 #undef EXTRA_PARAMS
 #define EXTRA_PARAMS , __global uchar * src2ptr, int src2_step, int src2_offset
 #endif
