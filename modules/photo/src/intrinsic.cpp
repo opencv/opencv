@@ -14,18 +14,21 @@
 using namespace std;
 using namespace cv;
 
-void intrinsic(InputArray _src, OutputArray _dst, int window, int no_of_iter, float rho)
+void cv::intrinsic_decompose(InputArray _src, OutputArray _ref, OutputArray _shade, int window, int no_of_iter, float rho)
 {
      Mat I = _src.getMat();
-     _dst.create(I.size(), CV_8UC1);
-     Mat dst = _dst.getMat();
+     _ref.create(I.size(), CV_8UC3);
+     Mat ref = _ref.getMat();
+     
+     _shade.create(I.size(), CV_8UC1);
+     Mat shade = _shade.getMat();
 
 
      Mat img = Mat(I.size(),CV_32FC3);
      I.convertTo(img,CV_32FC3,1.0/255.0);
 
-     Mat ref = Mat(img.size(),CV_32FC3);
-     Mat shade = Mat(img.size(),CV_32FC3);
+//     Mat ref = Mat(img.size(),CV_32FC3);
+//     Mat shade = Mat(img.size(),CV_32FC3);
 
      Intrinsic obj;
      obj.decompose(img,ref,shade,window,no_of_iter,rho);
