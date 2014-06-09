@@ -958,26 +958,6 @@ namespace cv
         vector<int> getLabelsByString(const string& str);
     };
 
-    // The FaceRecognizerBase class is introduced to keep the FaceRecognizer binary backward compatibility in 2.4
-    // In master setLabelInfo/getLabelInfo/getLabelsByString should be virtual and _labelsInfo should be moved to FaceRecognizer
-    // that allows to avoid FaceRecognizer2 in master
-    class FaceRecognizer2 : public FaceRecognizer
-    {
-    protected:
-        // Stored pairs "label id - string info"
-        std::map<int, string> _labelsInfo;
-
-    public:
-        // Sets additional information as pairs label - info.
-        virtual void setLabelsInfo(const std::map<int, string>& labelsInfo);
-
-        // Gets string information by label
-        virtual string getLabelInfo(int label) const;
-
-        // Gets labels by string
-        virtual vector<int> getLabelsByString(const string& str);
-    };
-
     CV_EXPORTS_W Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
     CV_EXPORTS_W Ptr<FaceRecognizer> createFisherFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
     CV_EXPORTS_W Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius=1, int neighbors=8,

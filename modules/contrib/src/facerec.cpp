@@ -18,41 +18,6 @@
 #include "precomp.hpp"
 #include <set>
 
-struct LabelInfo
-{
-    LabelInfo():label(-1), value("") {}
-    LabelInfo(int _label, const std::string &_value): label(_label), value(_value) {}
-    int label;
-    std::string value;
-    void write(cv::FileStorage& fs) const
-    {
-        fs << "{" << "label" << label << "value" << value << "}";
-    }
-    void read(const cv::FileNode& node)
-    {
-        label = (int)node["label"];
-        value = (std::string)node["value"];
-    }
-    std::ostream& operator<<(std::ostream& out)
-    {
-        out << "{ label = " << label << ", " << "value = " << value << "}";
-        return out;
-    }
-};
-
-static void write(cv::FileStorage& fs, const std::string&, const LabelInfo& x)
-{
-    x.write(fs);
-}
-
-static void read(const cv::FileNode& node, LabelInfo& x, const LabelInfo& default_value = LabelInfo())
-{
-    if(node.empty())
-        x = default_value;
-    else
-        x.read(node);
-}
-
 namespace cv
 {
 
@@ -133,28 +98,80 @@ inline vector<_Tp> remove_dups(const vector<_Tp>& src) {
     return elems;
 }
 
-void FaceRecognizer2::setLabelsInfo(const std::map<int,string>& labelsInfo)
+// The FaceRecognizer2 class is introduced to keep the FaceRecognizer binary backward compatibility in 2.4
+// In master setLabelInfo/getLabelInfo/getLabelsByString should be virtual and _labelsInfo should be moved
+// to FaceRecognizer, that allows to avoid FaceRecognizer2 in master
+class FaceRecognizer2 : public FaceRecognizer
 {
-    _labelsInfo = labelsInfo;
-}
+protected:
+    // Stored pairs "label id - string info"
+    std::map<int, string> _labelsInfo;
 
-string FaceRecognizer2::getLabelInfo(int label) const
-{
-    std::map<int, string>::const_iterator iter(_labelsInfo.find(label));
-    return iter != _labelsInfo.end() ? iter->second : "";
-}
-
-vector<int> FaceRecognizer2::getLabelsByString(const string& str)
-{
-    vector<int> labels;
-    for(std::map<int,string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
+public:
+    // Sets additional information as pairs label - info.
+    virtual void setLabelsInfo(const std::map<int, string>& labelsInfo)
     {
-        size_t found = (it->second).find(str);
-        if(found != string::npos)
-            labels.push_back(it->first);
+        _labelsInfo = labelsInfo;
     }
-    return labels;
+
+    // Gets string information by label
+    virtual string getLabelInfo(int label) const
+    {
+        std::map<int, string>::const_iterator iter(_labelsInfo.find(label));
+        return iter != _labelsInfo.end() ? iter->second : "";
+    }
+
+    // Gets labels by string
+    virtual vector<int> getLabelsByString(const string& str)
+    {
+        vector<int> labels;
+        for(std::map<int,string>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
+        {
+            size_t found = (it->second).find(str);
+            if(found != string::npos)
+                labels.push_back(it->first);
+        }
+        return labels;
+    }
+
+};
+
+// Utility structure to load/save face label info (a pair of int and string) via FileStorage
+struct LabelInfo
+{
+    LabelInfo():label(-1), value("") {}
+    LabelInfo(int _label, const std::string &_value): label(_label), value(_value) {}
+    int label;
+    std::string value;
+    void write(cv::FileStorage& fs) const
+    {
+        fs << "{" << "label" << label << "value" << value << "}";
+    }
+    void read(const cv::FileNode& node)
+    {
+        label = (int)node["label"];
+        value = (std::string)node["value"];
+    }
+    std::ostream& operator<<(std::ostream& out)
+    {
+        out << "{ label = " << label << ", " << "value = " << value << "}";
+        return out;
+    }
+};
+
+static void write(cv::FileStorage& fs, const std::string&, const LabelInfo& x)
+{
+    x.write(fs);
 }
+
+static void read(const cv::FileNode& node, LabelInfo& x, const LabelInfo& default_value = LabelInfo())
+{
+    if(node.empty())
+        x = default_value;
+    else
+        x.read(node);
+}
+
 
 // Turk, M., and Pentland, A. "Eigenfaces for recognition.". Journal of
 // Cognitive Neuroscience 3 (1991), 71–86.
