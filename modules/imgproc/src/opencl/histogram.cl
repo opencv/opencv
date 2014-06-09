@@ -37,58 +37,78 @@
 //
 //
 
-#ifndef cn
-#define cn 1
+#ifndef kercn
+#define kercn 1
 #endif
 
-#if cn == 16
-#define T uchar16
-#else
+#ifndef T
 #define T uchar
 #endif
 
 __kernel void calculate_histogram(__global const uchar * src, int src_step, int src_offset, int src_rows, int src_cols,
-                                  __global uchar * hist, int total)
+                                  __global uchar * histptr, int total)
 {
     int lid = get_local_id(0);
-    int id = get_global_id(0) * cn;
+    int id = get_global_id(0) * kercn;
     int gid = get_group_id(0);
 
     __local int localhist[BINS];
 
+    #pragma unroll
     for (int i = lid; i < BINS; i += WGS)
         localhist[i] = 0;
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    for (int grain = HISTS_COUNT * WGS * cn; id < total; id += grain)
+    int src_index;
+
+    for (int grain = HISTS_COUNT * WGS * kercn; id < total; id += grain)
     {
-        int src_index = mad24(id / src_cols, src_step, src_offset + id % src_cols);
-#if cn == 1
-        atomic_inc(localhist + convert_int(src[src_index]));
+#ifdef HAVE_SRC_CONT
+        src_index = id;
 #else
+        src_index = mad24(id / src_cols, src_step, src_offset + id % src_cols);
+#endif
+
+#if kercn == 1
+        atomic_inc(localhist + convert_int(src[src_index]));
+#elif kercn == 4
+        int value = *(__global const int *)(src + src_index);
+        atomic_inc(localhist + (value & 0xff));
+        atomic_inc(localhist + ((value >> 8) & 0xff));
+        atomic_inc(localhist + ((value >> 16) & 0xff));
+        atomic_inc(localhist + ((value >> 24) & 0xff));
+#elif kercn >= 2
         T value = *(__global const T *)(src + src_index);
-        atomic_inc(localhist + convert_int(value.s0));
-        atomic_inc(localhist + convert_int(value.s1));
-        atomic_inc(localhist + convert_int(value.s2));
-        atomic_inc(localhist + convert_int(value.s3));
-        atomic_inc(localhist + convert_int(value.s4));
-        atomic_inc(localhist + convert_int(value.s5));
-        atomic_inc(localhist + convert_int(value.s6));
-        atomic_inc(localhist + convert_int(value.s7));
-        atomic_inc(localhist + convert_int(value.s8));
-        atomic_inc(localhist + convert_int(value.s9));
-        atomic_inc(localhist + convert_int(value.sA));
-        atomic_inc(localhist + convert_int(value.sB));
-        atomic_inc(localhist + convert_int(value.sC));
-        atomic_inc(localhist + convert_int(value.sD));
-        atomic_inc(localhist + convert_int(value.sE));
-        atomic_inc(localhist + convert_int(value.sF));
+        atomic_inc(localhist + value.s0);
+        atomic_inc(localhist + value.s1);
+#if kercn >= 4
+        atomic_inc(localhist + value.s2);
+        atomic_inc(localhist + value.s3);
+#if kercn >= 8
+        atomic_inc(localhist + value.s4);
+        atomic_inc(localhist + value.s5);
+        atomic_inc(localhist + value.s6);
+        atomic_inc(localhist + value.s7);
+#if kercn == 16
+        atomic_inc(localhist + value.s8);
+        atomic_inc(localhist + value.s9);
+        atomic_inc(localhist + value.sA);
+        atomic_inc(localhist + value.sB);
+        atomic_inc(localhist + value.sC);
+        atomic_inc(localhist + value.sD);
+        atomic_inc(localhist + value.sE);
+        atomic_inc(localhist + value.sF);
+#endif
+#endif
+#endif
 #endif
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
+    __global int * hist = (__global int *)(histptr + gid * BINS * (int)sizeof(int));
+    #pragma unroll
     for (int i = lid; i < BINS; i += WGS)
-        *(__global int *)(hist + mad24(gid, BINS * (int)sizeof(int), i * (int)sizeof(int))) = localhist[i];
+        hist[i] = localhist[i];
 }
 
 __kernel void merge_histogram(__global const int * ghist, __global int * hist)
@@ -97,15 +117,16 @@ __kernel void merge_histogram(__global const int * ghist, __global int * hist)
 
     #pragma unroll
     for (int i = lid; i < BINS; i += WGS)
-        hist[i] = 0;
+        hist[i] = ghist[i];
     barrier(CLK_LOCAL_MEM_FENCE);
 
     #pragma unroll
-    for (int i = 0; i < HISTS_COUNT; ++i)
+    for (int i = 1; i < HISTS_COUNT; ++i)
     {
+        ghist += BINS;
         #pragma unroll
         for (int j = lid; j < BINS; j += WGS)
-            hist[j] += ghist[mad24(i, BINS, j)];
+            hist[j] += ghist[j];
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 }

@@ -1477,14 +1477,18 @@ enum
 
 static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32S)
 {
-    int compunits = ocl::Device::getDefault().maxComputeUnits();
-    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int compunits = dev.maxComputeUnits();
+    size_t wgs = dev.maxWorkGroupSize();
     Size size = _src.size();
     bool use16 = size.width % 16 == 0 && _src.offset() % 16 == 0 && _src.step() % 16 == 0;
+    int kercn = dev.isAMD() && use16 ? 16 : std::min(4, ocl::predictOptimalVectorWidth(_src));
 
     ocl::Kernel k1("calculate_histogram", ocl::imgproc::histogram_oclsrc,
-                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D cn=%d",
-                          BINS, compunits, wgs, use16 ? 16 : 1));
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D kercn=%d -D T=%s%s",
+                          BINS, compunits, wgs, kercn,
+                          kercn == 4 ? "int" : ocl::typeToStr(CV_8UC(kercn)),
+                          _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
     if (k1.empty())
         return false;
 
@@ -1492,18 +1496,21 @@ static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32
     UMat src = _src.getUMat(), ghist(1, BINS * compunits, CV_32SC1),
             hist = ddepth == CV_32S ? _hist.getUMat() : UMat(BINS, 1, CV_32SC1);
 
-    k1.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::PtrWriteOnly(ghist), (int)src.total());
+    k1.args(ocl::KernelArg::ReadOnly(src),
+            ocl::KernelArg::PtrWriteOnly(ghist), (int)src.total());
 
     size_t globalsize = compunits * wgs;
     if (!k1.run(1, &globalsize, &wgs, false))
         return false;
 
     ocl::Kernel k2("merge_histogram", ocl::imgproc::histogram_oclsrc,
-                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d", BINS, compunits, (int)wgs));
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d",
+                          BINS, compunits, (int)wgs));
     if (k2.empty())
         return false;
 
-    k2.args(ocl::KernelArg::PtrReadOnly(ghist), ocl::KernelArg::PtrWriteOnly(hist));
+    k2.args(ocl::KernelArg::PtrReadOnly(ghist),
+            ocl::KernelArg::PtrWriteOnly(hist));
     if (!k2.run(1, &wgs, &wgs, false))
         return false;
 
