@@ -467,6 +467,38 @@ CV_EXPORTS_AS(drawMatches2) void drawMatches( const Mat& img1, const vector<KeyP
 
 #endif
 
+
+/*
+ * Bag of visual words.
+ */
+
+class CV_EXPORTS_AS(BOWKMeansTrainer) javaBOWKMeansTrainer : public BOWKMeansTrainer 
+{
+public:
+#if 0
+    CV_WRAP BOWKMeansTrainer( int clusterCount, const TermCriteria& termcrit=TermCriteria(), int attempts=3, int flags=KMEANS_PP_CENTERS );
+    CV_WRAP void add( const Mat& descriptors );
+    CV_WRAP const vector<Mat>& getDescriptors() const;
+    CV_WRAP int descripotorsCount() const;
+    CV_WRAP virtual void clear();
+    CV_WRAP virtual Mat cluster() const;
+    CV_WRAP virtual Mat cluster( const Mat& descriptors ) const;
+#endif
+};
+
+class CV_EXPORTS_AS(BOWImgDescriptorExtractor) javaBOWImgDescriptorExtractor : public BOWImgDescriptorExtractor
+{
+public:
+#if 0
+    CV_WRAP BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor, const Ptr<DescriptorMatcher>& dmatcher );
+    CV_WRAP void setVocabulary( const Mat& vocabulary );
+    CV_WRAP const Mat& getVocabulary() const;
+    CV_WRAP int descriptorSize() const;
+    CV_WRAP int descriptorType() const;
+    CV_WRAP_AS(compute) void compute2( const Mat& image, vector<KeyPoint>& keypoints, Mat& imgDescriptor );
+#endif
+};
+
 } //cv
 
 #endif // HAVE_OPENCV_FEATURES2D
