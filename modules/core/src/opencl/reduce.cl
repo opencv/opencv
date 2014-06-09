@@ -543,32 +543,9 @@
 #define CALC_RESULT \
     storepix(localmem[0], dstptr + dstTSIZE * gid)
 
-// norm (NORM_INF) with cn > 1 and mask
-#elif defined OP_NORM_INF_MASK
-
-#define DECLARE_LOCAL_MEM \
-    __local srcT localmem_max[WGS2_ALIGNED]
-#define DEFINE_ACCUMULATOR \
-    srcT maxval = MIN_VAL, temp
-#define REDUCE_GLOBAL \
-    MASK_INDEX; \
-    if (mask[mask_index]) \
-    { \
-        temp = loadpix(srcptr + src_index); \
-        maxval = max(maxval, (srcT)(temp >= (srcT)(0) ? temp : -temp)); \
-    }
-#define SET_LOCAL_1 \
-    localmem_max[lid] = maxval
-#define REDUCE_LOCAL_1 \
-    localmem_max[lid - WGS2_ALIGNED] = max(maxval, localmem_max[lid - WGS2_ALIGNED])
-#define REDUCE_LOCAL_2 \
-    localmem_max[lid] = max(localmem_max[lid], localmem_max[lid2])
-#define CALC_RESULT \
-    storepix(localmem_max[0], dstptr + dstTSIZE * gid)
-
 #else
 #error "No operation"
-#endif // end of norm (NORM_INF) with cn > 1 and mask
+#endif
 
 #ifdef OP_DOT
 #undef EXTRA_PARAMS

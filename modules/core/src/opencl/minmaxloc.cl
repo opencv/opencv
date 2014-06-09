@@ -41,10 +41,15 @@
 
 #if kercn != 3
 #define loadpix(addr) *(__global const srcT *)(addr)
-#define srcTSIZE (int)sizeof(srcT1)
+#define srcTSIZE (int)sizeof(srcT)
 #else
 #define loadpix(addr) vload3(0, (__global const srcT1 *)(addr))
-#define srcTSIZE ((int)sizeof(srcT1))
+#define srcTSIZE ((int)sizeof(srcT1) * 3)
+#endif
+
+#ifndef HAVE_MASK
+#undef srcTSIZE
+#define srcTSIZE (int)sizeof(srcT1)
 #endif
 
 #ifdef NEED_MINLOC
@@ -106,7 +111,12 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 {
     int lid = get_local_id(0);
     int gid = get_group_id(0);
-    int  id = get_global_id(0) * kercn;
+    int  id = get_global_id(0)
+#ifndef HAVE_MASK
+    * kercn;
+#else
+    ;
+#endif
 
     srcptr += src_offset;
 #ifdef HAVE_MASK
@@ -150,7 +160,11 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
     dstT temp2;
 #endif
 
-    for (int grain = groupnum * WGS * kercn; id < total; id += grain)
+    for (int grain = groupnum * WGS
+#ifndef HAVE_MASK
+        * kercn
+#endif
+        ; id < total; id += grain)
     {
 #ifdef HAVE_MASK
 #ifdef HAVE_MASK_CONT
