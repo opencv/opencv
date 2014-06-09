@@ -1494,7 +1494,7 @@ static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32
 
     _hist.create(BINS, 1, ddepth);
     UMat src = _src.getUMat(), ghist(1, BINS * compunits, CV_32SC1),
-            hist = ddepth == CV_32S ? _hist.getUMat() : UMat(BINS, 1, CV_32SC1);
+            hist = _hist.getUMat();
 
     k1.args(ocl::KernelArg::ReadOnly(src),
             ocl::KernelArg::PtrWriteOnly(ghist), (int)src.total());
@@ -1503,23 +1503,18 @@ static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32
     if (!k1.run(1, &globalsize, &wgs, false))
         return false;
 
+    char cvt[40];
     ocl::Kernel k2("merge_histogram", ocl::imgproc::histogram_oclsrc,
-                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d",
-                          BINS, compunits, (int)wgs));
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D convertToHT=%s -D HT=%s",
+                          BINS, compunits, (int)wgs, ocl::convertTypeStr(CV_32S, ddepth, 1, cvt),
+                          ocl::typeToStr(ddepth)));
     if (k2.empty())
         return false;
 
     k2.args(ocl::KernelArg::PtrReadOnly(ghist),
-            ocl::KernelArg::PtrWriteOnly(hist));
-    if (!k2.run(1, &wgs, &wgs, false))
-        return false;
+            ocl::KernelArg::WriteOnlyNoSize(hist));
 
-    if (hist.depth() != ddepth)
-        hist.convertTo(_hist, ddepth);
-    else
-        _hist.getUMatRef() = hist;
-
-    return true;
+    return k2.run(1, &wgs, &wgs, false);
 }
 
 static bool ocl_calcHist(InputArrayOfArrays images, OutputArray hist)

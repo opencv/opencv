@@ -45,6 +45,8 @@
 #define T uchar
 #endif
 
+#define noconvert
+
 __kernel void calculate_histogram(__global const uchar * src, int src_step, int src_offset, int src_rows, int src_cols,
                                   __global uchar * histptr, int total)
 {
@@ -111,9 +113,19 @@ __kernel void calculate_histogram(__global const uchar * src, int src_step, int 
         hist[i] = localhist[i];
 }
 
-__kernel void merge_histogram(__global const int * ghist, __global int * hist)
+#ifndef HT
+#define HT int
+#endif
+
+#ifndef convertToHT
+#define convertToHT noconvert
+#endif
+
+__kernel void merge_histogram(__global const int * ghist, __global uchar * histptr, int hist_step, int hist_offset)
 {
     int lid = get_local_id(0);
+
+    __global HT * hist = (__global HT *)(histptr + hist_offset);
 
     #pragma unroll
     for (int i = lid; i < BINS; i += WGS)
@@ -126,7 +138,7 @@ __kernel void merge_histogram(__global const int * ghist, __global int * hist)
         ghist += BINS;
         #pragma unroll
         for (int j = lid; j < BINS; j += WGS)
-            hist[j] += ghist[j];
+            hist[j] += convertToHT(ghist[j]);
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 }
