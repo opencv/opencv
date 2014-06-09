@@ -126,21 +126,31 @@ __kernel void merge_histogram(__global const int * ghist, __global uchar * histp
     int lid = get_local_id(0);
 
     __global HT * hist = (__global HT *)(histptr + hist_offset);
-
+#if WGS >= BINS
+    HT res = (HT)(0);
+#else
     #pragma unroll
     for (int i = lid; i < BINS; i += WGS)
-        hist[i] = ghist[i];
-    barrier(CLK_LOCAL_MEM_FENCE);
+        hist[i] = (HT)(0);
+#endif
 
     #pragma unroll
-    for (int i = 1; i < HISTS_COUNT; ++i)
+    for (int i = 0; i < HISTS_COUNT; ++i)
     {
-        ghist += BINS;
         #pragma unroll
         for (int j = lid; j < BINS; j += WGS)
+#if WGS >= BINS
+            res += convertToHT(ghist[j]);
+#else
             hist[j] += convertToHT(ghist[j]);
-        barrier(CLK_LOCAL_MEM_FENCE);
+#endif
+        ghist += BINS;
     }
+
+#if WGS >= BINS
+    if (lid < BINS)
+        *(__global HT *)(histptr + mad24(lid, hist_step, hist_offset)) = res;
+#endif
 }
 
 __kernel void calcLUT(__global uchar * dst, __constant int * hist, int total)
