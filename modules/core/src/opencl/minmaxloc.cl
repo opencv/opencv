@@ -86,7 +86,7 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 {
     int lid = get_local_id(0);
     int gid = get_group_id(0);
-    int  id = get_global_id(0) * kercn;
+    int id = get_global_id(0) * kercn;
 
     srcptr += src_offset;
 #ifdef HAVE_MASK
@@ -132,6 +132,10 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 #endif
         {
             temp = convertToDT(*(__global const srcT *)(srcptr + src_index));
+#ifdef OP_ABS
+            temp = temp >= (dstT)(0) ? temp : -temp;
+#endif
+
 #if kercn == 1
 #ifdef NEED_MINVAL
             if (minval > temp)

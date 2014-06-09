@@ -1429,7 +1429,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
         if (needMinVal)
             needMinLoc = true;
         else
-            needMaxVal = true;
+            needMaxLoc = true;
     }
 
     char cvt[40];
@@ -1480,7 +1480,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
         getMinMaxRes<double>
     };
 
-    getMinMaxResFunc func = functab[depth];
+    getMinMaxResFunc func = functab[ddepth];
 
     int locTemp[2];
     func(db.getMat(ACCESS_READ), minVal, maxVal,
