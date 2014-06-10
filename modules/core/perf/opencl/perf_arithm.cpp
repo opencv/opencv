@@ -591,12 +591,12 @@ OCL_PERF_TEST_P(PowFixture, Pow, ::testing::Combine(
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     UMat src(srcSize, type), dst(srcSize, type);
-    randu(src, -100, 100);
+    randu(src, 0, 100);
     declare.in(src).out(dst);
 
-    OCL_TEST_CYCLE() cv::pow(src, -2.0, dst);
+    OCL_TEST_CYCLE() cv::pow(src, 2.17, dst);
 
-    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+    SANITY_CHECK(dst, 1.5e-6, ERROR_RELATIVE);
 }
 
 ///////////// AddWeighted////////////////////////
