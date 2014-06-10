@@ -926,7 +926,6 @@ protected:
     void detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const;
     void computeImpl(InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const;
 
-    CV_PROP int  descriptor;
     CV_PROP bool extended;
     CV_PROP bool upright;
 };
