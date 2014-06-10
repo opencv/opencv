@@ -704,6 +704,8 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         globalsize[1] = DIVUP(size.height, BLOCK_SIZE_Y);
 
         kernel.create("boxFilter", cv::ocl::imgproc::boxFilter_oclsrc, opts);
+        if (kernel.empty())
+            return false;
 
         size_t kernelWorkGroupSize = kernel.workGroupSize();
         if (localsize[0] <= kernelWorkGroupSize)
