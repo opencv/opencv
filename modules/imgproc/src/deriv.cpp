@@ -189,13 +189,9 @@ cv::Ptr<cv::FilterEngine> cv::createDerivFilter(int srcType, int dstType,
 
 namespace cv
 {
-#if (IPP_VERSION_X100 >= 801)
+#if IPP_VERSION_X100 >= 801
 static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, double scale, double delta, int borderType)
 {
-#if defined(HAVE_IPP_ICV_ONLY)
-    _src; _dst; ddepth; dx; dy; scale; delta; borderType;
-    return false;
-#else
     if ((0 > dx) || (0 > dy) || (1 != dx + dy))
         return false;
     if (fabs(delta) > FLT_EPSILON)
@@ -306,9 +302,8 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
             sts = ippiMulC_32f_C1R((Ipp32f *)dst.data, (int)dst.step, (Ipp32f)scale, (Ipp32f *)dst.data, (int)dst.step, roiSize);
     }
     return (0 <= sts);
-#endif
 }
-#elif (IPP_VERSION_MAJOR >= 7)
+#elif IPP_VERSION_X100 >= 700
 static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, double scale, double delta, int borderType)
 {
     if (BORDER_REPLICATE != borderType)
@@ -363,9 +358,6 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
             }
         }
     case CV_32FC1:
-#if defined(HAVE_IPP_ICV_ONLY) // N/A: ippiMulC_32f_C1R
-        return false;
-#else
         {
             switch(dst.type())
             {
@@ -410,7 +402,6 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
                 return false;
             }
         }
-#endif
     default:
         return false;
     }
@@ -419,7 +410,7 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
 
 static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, int ksize, double scale, double delta, int borderType)
 {
-    if ((borderType != BORDER_REPLICATE) || (3 != ksize) || (5 != ksize))
+    if ((borderType != BORDER_REPLICATE) || ((3 != ksize) && (5 != ksize)))
         return false;
     if (fabs(delta) > FLT_EPSILON)
         return false;
@@ -460,6 +451,7 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
             return true;
         }
 
+#if !defined(HAVE_IPP_ICV_ONLY)
         if ((dx == 2) && (dy == 0))
         {
             if (0 > ippiFilterSobelVertSecondGetBufferSize_8u16s_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
@@ -485,13 +477,11 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
                 IPP_RETURN_ERROR
             return true;
         }
+#endif
     }
 
     if (src.type() == CV_32F && dst.type() == CV_32F)
     {
-#if defined(HAVE_IPP_ICV_ONLY) // N/A: ippiMulC_32f_C1R
-        return false;
-#else
 #if 0
         if ((dx == 1) && (dy == 0))
         {
@@ -522,6 +512,7 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
             return true;
         }
 #endif
+#if !defined(HAVE_IPP_ICV_ONLY)
         if((dx == 2) && (dy == 0))
         {
             if (0 > ippiFilterSobelVertSecondGetBufferSize_32f_C1R(ippiSize(src.cols, src.rows), (IppiMaskSize)(ksize*10+ksize),&bufSize))
@@ -581,7 +572,7 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     }
 #endif
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#ifdef HAVE_IPP
     if (ksize < 0)
     {
         if (IPPDerivScharr(_src, _dst, ddepth, dx, dy, scale, delta, borderType))
@@ -709,7 +700,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         ddepth = sdepth;
     _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#ifdef HAVE_IPP
     if ((ksize == 3 || ksize == 5) && ((borderType & BORDER_ISOLATED) != 0 || !_src.isSubmatrix()) &&
         ((stype == CV_8UC1 && ddepth == CV_16S) || (ddepth == CV_32F && stype == CV_32FC1)))
     {

@@ -1228,9 +1228,6 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
     }
     else
     {
-#if defined(HAVE_IPP_ICV_ONLY) // N/A: ippiFilterMin*/ippiFilterMax*
-        return false;
-#else
         IppiPoint point = {anchor.x, anchor.y};
 
         #define IPP_MORPH_CASE(cvtype, flavor, data_type) \
@@ -1258,8 +1255,10 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
         default:
             return false;
         }
-
         #undef IPP_MORPH_CASE
+
+#if defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ == 8
+        return false; /// It disables false positive warning in GCC 4.8.2
 #endif
     }
 }
@@ -1289,7 +1288,7 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
                     return false;
             }
         }
-        for( x = 0; y < kernel.cols; x++ )
+        for( x = 0; x < kernel.cols; x++ )
         {
             if( kernel.at<uchar>(anchor.y, x) != 0 )
                 continue;

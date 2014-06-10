@@ -215,12 +215,12 @@ typedef FilterTestBase GaussianBlurTest;
 
 OCL_TEST_P(GaussianBlurTest, Mat)
 {
-    for (int j = 0; j < test_loop_times; j++)
+    for (int j = 0; j < test_loop_times + 1; j++)
     {
         random_roi();
 
         double sigma1 = rng.uniform(0.1, 1.0);
-        double sigma2 = rng.uniform(0.1, 1.0);
+        double sigma2 = j % 2 == 0 ? sigma1 : rng.uniform(0.1, 1.0);
 
         OCL_OFF(cv::GaussianBlur(src_roi, dst_roi, Size(ksize, ksize), sigma1, sigma2, borderType));
         OCL_ON(cv::GaussianBlur(usrc_roi, udst_roi, Size(ksize, ksize), sigma1, sigma2, borderType));

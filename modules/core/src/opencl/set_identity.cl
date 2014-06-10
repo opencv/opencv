@@ -56,15 +56,16 @@
 #endif
 
 __kernel void setIdentity(__global uchar * srcptr, int src_step, int src_offset, int rows, int cols,
-                          ST scalar_)
+                          ST scalar_, int rowsPerWI)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y0 = get_global_id(1) * rowsPerWI;
 
-    if (x < cols && y < rows)
+    if (x < cols)
     {
-        int src_index = mad24(y, src_step, mad24(x, TSIZE, src_offset));
+        int src_index = mad24(y0, src_step, mad24(x, TSIZE, src_offset));
 
-        storepix(x == y ? scalar : (T)(0), srcptr + src_index);
+        for (int y = y0, y1 = min(rows, y0 + rowsPerWI); y < y1; ++y, src_index += src_step)
+            storepix(x == y ? scalar : (T)(0), srcptr + src_index);
     }
 }

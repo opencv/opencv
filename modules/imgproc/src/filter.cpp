@@ -410,8 +410,11 @@ void FilterEngine::apply(const Mat& src, Mat& dst,
         dstOfs.y + srcRoi.height <= dst.rows );
 
     int y = start(src, srcRoi, isolated);
-    proceed( src.data + y*src.step, (int)src.step, endY - startY,
-             dst.data + dstOfs.y*dst.step + dstOfs.x*dst.elemSize(), (int)dst.step );
+    proceed( src.data + y*src.step
+             + srcRoi.x*src.elemSize(),
+             (int)src.step, endY - startY,
+             dst.data + dstOfs.y*dst.step +
+             dstOfs.x*dst.elemSize(), (int)dst.step );
 }
 
 }
@@ -3191,11 +3194,10 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                                        "BORDER_WRAP", "BORDER_REFLECT_101" };
 
     cv::Mat kernelMat = _kernel.getMat();
-    std::vector<float> kernelMatDataFloat;
-    int kernel_size_y2_aligned = _prepareKernelFilter2D<float>(kernelMatDataFloat, kernelMat);
-
     cv::Size sz = _src.size(), wholeSize;
-    size_t globalsize[2] = { sz.width, sz.height }, localsize[2] = { 0, 1 };
+    size_t globalsize[2] = { sz.width, sz.height };
+    size_t localsize_general[2] = {0, 1};
+    size_t* localsize = NULL;
 
     ocl::Kernel k;
     UMat src = _src.getUMat();
@@ -3210,63 +3212,134 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
     size_t tryWorkItems = maxWorkItemSizes[0];
     char cvt[2][40];
 
-    String kerStr = ocl::kernelToStr(kernelMatDataFloat, CV_32F);
-
-    for ( ; ; )
+    // For smaller filter kernels, there is a special kernel that is more
+    // efficient than the general one.
+    UMat kernalDataUMat;
+    if (device.isIntel() && (device.type() & ocl::Device::TYPE_GPU) &&
+        ((ksize.width < 5 && ksize.height < 5) ||
+        (ksize.width == 5 && ksize.height == 5 && cn == 1)))
     {
-        size_t BLOCK_SIZE = tryWorkItems;
-        while (BLOCK_SIZE > 32 && BLOCK_SIZE >= (size_t)ksize.width * 2 && BLOCK_SIZE > (size_t)sz.width * 2)
-            BLOCK_SIZE /= 2;
-#if 1 // TODO Mode with several blocks requires a much more VGPRs, so this optimization is not actual for the current devices
-        size_t BLOCK_SIZE_Y = 1;
-#else
-        size_t BLOCK_SIZE_Y = 8; // TODO Check heuristic value on devices
-        while (BLOCK_SIZE_Y < BLOCK_SIZE / 8 && BLOCK_SIZE_Y * src.clCxt->getDeviceInfo().maxComputeUnits * 32 < (size_t)src.rows)
-            BLOCK_SIZE_Y *= 2;
-#endif
-
-        if ((size_t)ksize.width > BLOCK_SIZE)
-            return false;
-
-        int requiredTop = anchor.y;
-        int requiredLeft = (int)BLOCK_SIZE; // not this: anchor.x;
-        int requiredBottom = ksize.height - 1 - anchor.y;
-        int requiredRight = (int)BLOCK_SIZE; // not this: ksize.width - 1 - anchor.x;
+        kernelMat.reshape(0, 1);
+        String kerStr = ocl::kernelToStr(kernelMat, CV_32F);
         int h = isolated ? sz.height : wholeSize.height;
         int w = isolated ? sz.width : wholeSize.width;
-        bool extra_extrapolation = h < requiredTop || h < requiredBottom || w < requiredLeft || w < requiredRight;
 
         if ((w < ksize.width) || (h < ksize.height))
             return false;
 
-        String opts = format("-D LOCAL_SIZE=%d -D BLOCK_SIZE_Y=%d -D cn=%d "
-                             "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
-                             "-D KERNEL_SIZE_Y2_ALIGNED=%d -D %s -D %s -D %s%s%s "
-                             "-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D WT=%s -D WT1=%s "
-                             "-D convertToWT=%s -D convertToDstT=%s",
-                             (int)BLOCK_SIZE, (int)BLOCK_SIZE_Y, cn, anchor.x, anchor.y,
-                             ksize.width, ksize.height, kernel_size_y2_aligned, borderMap[borderType],
-                             extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
-                             isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
-                             doubleSupport ? " -D DOUBLE_SUPPORT" : "", kerStr.c_str(),
-                             ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
-                             ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
-                             ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
-                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]));
+        // Figure out what vector size to use for loading the pixels.
+        int pxLoadNumPixels = ((cn != 1) || sz.width % 4) ? 1 : 4;
+        int pxLoadVecSize = cn * pxLoadNumPixels;
 
-        localsize[0] = BLOCK_SIZE;
-        globalsize[0] = DIVUP(sz.width, BLOCK_SIZE - (ksize.width - 1)) * BLOCK_SIZE;
-        globalsize[1] = DIVUP(sz.height, BLOCK_SIZE_Y);
+        // Figure out how many pixels per work item to compute in X and Y
+        // directions.  Too many and we run out of registers.
+        int pxPerWorkItemX = 1;
+        int pxPerWorkItemY = 1;
+        if (cn <= 2 && ksize.width <= 4 && ksize.height <= 4)
+        {
+            pxPerWorkItemX = sz.width % 8 ? sz.width % 4 ? sz.width % 2 ? 1 : 2 : 4 : 8;
+            pxPerWorkItemY = sz.height % 2 ? 1 : 2;
+        }
+        else if (cn < 4 || (ksize.width <= 4 && ksize.height <= 4))
+        {
+            pxPerWorkItemX = sz.width % 2 ? 1 : 2;
+            pxPerWorkItemY = sz.height % 2 ? 1 : 2;
+        }
+        globalsize[0] = sz.width / pxPerWorkItemX;
+        globalsize[1] = sz.height / pxPerWorkItemY;
 
-        if (!k.create("filter2D", cv::ocl::imgproc::filter2D_oclsrc, opts))
+        // Need some padding in the private array for pixels
+        int privDataWidth = ROUNDUP(pxPerWorkItemX + ksize.width - 1, pxLoadNumPixels);
+
+        // Make the global size a nice round number so the runtime can pick
+        // from reasonable choices for the workgroup size
+        const int wgRound = 256;
+        globalsize[0] = ROUNDUP(globalsize[0], wgRound);
+
+        char build_options[1024];
+        sprintf(build_options, "-D cn=%d "
+                "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
+                "-D PX_LOAD_VEC_SIZE=%d -D PX_LOAD_NUM_PX=%d "
+                "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "
+                "-D PX_LOAD_X_ITERATIONS=%d -D PX_LOAD_Y_ITERATIONS=%d "
+                "-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D WT=%s -D WT1=%s "
+                "-D convertToWT=%s -D convertToDstT=%s %s",
+                cn, anchor.x, anchor.y, ksize.width, ksize.height,
+                pxLoadVecSize, pxLoadNumPixels,
+                pxPerWorkItemX, pxPerWorkItemY, privDataWidth, borderMap[borderType],
+                isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
+                privDataWidth / pxLoadNumPixels, pxPerWorkItemY + ksize.height - 1,
+                ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
+                ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
+                ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
+                ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), kerStr.c_str());
+        cv::String errmsg;
+        if (!k.create("filter2DSmall", cv::ocl::imgproc::filter2DSmall_oclsrc, build_options, &errmsg))
             return false;
+    }
+    else
+    {
+        localsize = localsize_general;
+        std::vector<float> kernelMatDataFloat;
+        int kernel_size_y2_aligned = _prepareKernelFilter2D<float>(kernelMatDataFloat, kernelMat);
+        String kerStr = ocl::kernelToStr(kernelMatDataFloat, CV_32F);
 
-        size_t kernelWorkGroupSize = k.workGroupSize();
-        if (localsize[0] <= kernelWorkGroupSize)
-            break;
-        if (BLOCK_SIZE < kernelWorkGroupSize)
-            return false;
-        tryWorkItems = kernelWorkGroupSize;
+        for ( ; ; )
+        {
+            size_t BLOCK_SIZE = tryWorkItems;
+            while (BLOCK_SIZE > 32 && BLOCK_SIZE >= (size_t)ksize.width * 2 && BLOCK_SIZE > (size_t)sz.width * 2)
+                BLOCK_SIZE /= 2;
+    #if 1 // TODO Mode with several blocks requires a much more VGPRs, so this optimization is not actual for the current devices
+            size_t BLOCK_SIZE_Y = 1;
+    #else
+            size_t BLOCK_SIZE_Y = 8; // TODO Check heuristic value on devices
+            while (BLOCK_SIZE_Y < BLOCK_SIZE / 8 && BLOCK_SIZE_Y * src.clCxt->getDeviceInfo().maxComputeUnits * 32 < (size_t)src.rows)
+                BLOCK_SIZE_Y *= 2;
+    #endif
+
+            if ((size_t)ksize.width > BLOCK_SIZE)
+                return false;
+
+            int requiredTop = anchor.y;
+            int requiredLeft = (int)BLOCK_SIZE; // not this: anchor.x;
+            int requiredBottom = ksize.height - 1 - anchor.y;
+            int requiredRight = (int)BLOCK_SIZE; // not this: ksize.width - 1 - anchor.x;
+            int h = isolated ? sz.height : wholeSize.height;
+            int w = isolated ? sz.width : wholeSize.width;
+            bool extra_extrapolation = h < requiredTop || h < requiredBottom || w < requiredLeft || w < requiredRight;
+
+            if ((w < ksize.width) || (h < ksize.height))
+                return false;
+
+            String opts = format("-D LOCAL_SIZE=%d -D BLOCK_SIZE_Y=%d -D cn=%d "
+                                 "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
+                                 "-D KERNEL_SIZE_Y2_ALIGNED=%d -D %s -D %s -D %s%s%s "
+                                 "-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D WT=%s -D WT1=%s "
+                                 "-D convertToWT=%s -D convertToDstT=%s",
+                                 (int)BLOCK_SIZE, (int)BLOCK_SIZE_Y, cn, anchor.x, anchor.y,
+                                 ksize.width, ksize.height, kernel_size_y2_aligned, borderMap[borderType],
+                                 extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
+                                 isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
+                                 doubleSupport ? " -D DOUBLE_SUPPORT" : "", kerStr.c_str(),
+                                 ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
+                                 ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
+                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
+                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]));
+
+            localsize[0] = BLOCK_SIZE;
+            globalsize[0] = DIVUP(sz.width, BLOCK_SIZE - (ksize.width - 1)) * BLOCK_SIZE;
+            globalsize[1] = DIVUP(sz.height, BLOCK_SIZE_Y);
+
+            if (!k.create("filter2D", cv::ocl::imgproc::filter2D_oclsrc, opts))
+                return false;
+
+            size_t kernelWorkGroupSize = k.workGroupSize();
+            if (localsize[0] <= kernelWorkGroupSize)
+                break;
+            if (BLOCK_SIZE < kernelWorkGroupSize)
+                return false;
+            tryWorkItems = kernelWorkGroupSize;
+        }
     }
 
     _dst.create(sz, dtype);
@@ -3494,9 +3567,19 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
         rtype == KERNEL_SMOOTH+KERNEL_SYMMETRICAL &&
         ctype == KERNEL_SMOOTH+KERNEL_SYMMETRICAL)
     {
-        bdepth = CV_32S;
-        kernelX.convertTo( kernelX, bdepth, 1 << shift_bits );
-        kernelY.convertTo( kernelY, bdepth, 1 << shift_bits );
+        if (ocl::Device::getDefault().isIntel())
+        {
+            for (int i=0; i<kernelX.cols; i++)
+                kernelX.at<float>(0, i) = (float) cvRound(kernelX.at<float>(0, i) * (1 << shift_bits));
+            if (kernelX.data != kernelY.data)
+                for (int i=0; i<kernelX.cols; i++)
+                    kernelY.at<float>(0, i) = (float) cvRound(kernelY.at<float>(0, i) * (1 << shift_bits));
+        } else
+        {
+            bdepth = CV_32S;
+            kernelX.convertTo( kernelX, bdepth, 1 << shift_bits );
+            kernelY.convertTo( kernelY, bdepth, 1 << shift_bits );
+        }
         int_arithm = true;
     }
 
@@ -3644,11 +3727,11 @@ cv::Ptr<cv::FilterEngine> cv::createLinearFilter( int _srcType, int _dstType,
 
 
 void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
-                   InputArray _kernel, Point anchor,
+                   InputArray _kernel, Point anchor0,
                    double delta, int borderType )
 {
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
-               ocl_filter2D(_src, _dst, ddepth, _kernel, anchor, delta, borderType))
+               ocl_filter2D(_src, _dst, ddepth, _kernel, anchor0, delta, borderType))
 
     Mat src = _src.getMat(), kernel = _kernel.getMat();
 
@@ -3664,7 +3747,73 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
 
     _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
     Mat dst = _dst.getMat();
-    anchor = normalizeAnchor(anchor, kernel.size());
+    Point anchor = normalizeAnchor(anchor0, kernel.size());
+
+#if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
+    typedef IppStatus (CV_STDCALL * ippiFilterBorder)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize dstRoiSize,
+                                                      IppiBorderType border, const void * borderValue,
+                                                      const IppiFilterBorderSpec* pSpec, Ipp8u* pBuffer);
+
+    int stype = src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
+            ktype = kernel.type(), kdepth = CV_MAT_DEPTH(ktype);
+    bool isolated = (borderType & BORDER_ISOLATED) != 0;
+    Point ippAnchor(kernel.cols >> 1, kernel.rows >> 1);
+    int borderTypeNI = borderType & ~BORDER_ISOLATED;
+    IppiBorderType ippBorderType = ippiGetBorderType(borderTypeNI);
+
+    if (borderTypeNI == BORDER_CONSTANT || borderTypeNI == BORDER_REPLICATE)
+    {
+        ippiFilterBorder ippFunc =
+            stype == CV_8UC1 ? (ippiFilterBorder)ippiFilterBorder_8u_C1R :
+            stype == CV_8UC3 ? (ippiFilterBorder)ippiFilterBorder_8u_C3R :
+            stype == CV_8UC4 ? (ippiFilterBorder)ippiFilterBorder_8u_C4R :
+            stype == CV_16UC1 ? (ippiFilterBorder)ippiFilterBorder_16u_C1R :
+            stype == CV_16UC3 ? (ippiFilterBorder)ippiFilterBorder_16u_C3R :
+            stype == CV_16UC4 ? (ippiFilterBorder)ippiFilterBorder_16u_C4R :
+            stype == CV_16SC1 ? (ippiFilterBorder)ippiFilterBorder_16s_C1R :
+            stype == CV_16SC3 ? (ippiFilterBorder)ippiFilterBorder_16s_C3R :
+            stype == CV_16SC4 ? (ippiFilterBorder)ippiFilterBorder_16s_C4R :
+            stype == CV_32FC1 ? (ippiFilterBorder)ippiFilterBorder_32f_C1R :
+            stype == CV_32FC3 ? (ippiFilterBorder)ippiFilterBorder_32f_C3R :
+            stype == CV_32FC4 ? (ippiFilterBorder)ippiFilterBorder_32f_C4R : 0;
+
+        if (sdepth == ddepth && (ktype == CV_16SC1 || ktype == CV_32FC1) &&
+                ippFunc && (int)ippBorderType >= 0 && (!src.isSubmatrix() || isolated) &&
+                std::fabs(delta - 0) < DBL_EPSILON && ippAnchor == anchor && dst.data != src.data)
+        {
+            IppiSize kernelSize = { kernel.cols, kernel.rows }, dstRoiSize = { dst.cols, dst.rows };
+            IppDataType dataType = ippiGetDataType(ddepth), kernelType = ippiGetDataType(kdepth);
+            Ipp32s specSize = 0, bufsize = 0;
+            IppStatus status = (IppStatus)-1;
+
+            if ((status = ippiFilterBorderGetSize(kernelSize, dstRoiSize, dataType, kernelType, cn, &specSize, &bufsize)) >= 0)
+            {
+                IppiFilterBorderSpec * spec = (IppiFilterBorderSpec *)ippMalloc(specSize);
+                Ipp8u * buffer = ippsMalloc_8u(bufsize);
+                Ipp32f borderValue[4] = { 0, 0, 0, 0 };
+
+                Mat reversedKernel;
+                flip(kernel, reversedKernel, -1);
+
+                if ((kdepth == CV_32F && (status = ippiFilterBorderInit_32f((const Ipp32f *)reversedKernel.data, kernelSize,
+                        dataType, cn, ippRndFinancial, spec)) >= 0 ) ||
+                    (kdepth == CV_16S && (status = ippiFilterBorderInit_16s((const Ipp16s *)reversedKernel.data,
+                        kernelSize, 0, dataType, cn, ippRndFinancial, spec)) >= 0))
+                {
+                    status = ippFunc(src.data, (int)src.step, dst.data, (int)dst.step, dstRoiSize,
+                                     ippBorderType, borderValue, spec, buffer);
+                }
+
+                ippsFree(buffer);
+                ippsFree(spec);
+            }
+
+            if (status >= 0)
+                return;
+            setIppErrorStatus();
+        }
+    }
+#endif
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if( tegra::filter2D(src, dst, kernel, anchor, delta, borderType) )
@@ -3674,15 +3823,45 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
     if( kernel.cols*kernel.rows >= dft_filter_size )
     {
         Mat temp;
-        if( src.data != dst.data )
-            temp = dst;
+        // crossCorr doesn't accept non-zero delta with multiple channels
+        if( src.channels() != 1 && delta != 0 )
+        {
+            // The semantics of filter2D require that the delta be applied
+            // as floating-point math.  So wee need an intermediate Mat
+            // with a float datatype.  If the dest is already floats,
+            // we just use that.
+            int corrDepth = dst.depth();
+            if( (dst.depth() == CV_32F || dst.depth() == CV_64F) &&
+                src.data != dst.data )
+            {
+                temp = dst;
+            }
+            else
+            {
+                corrDepth = dst.depth() == CV_64F ? CV_64F : CV_32F;
+                temp.create( dst.size(), CV_MAKETYPE(corrDepth, dst.channels()) );
+            }
+            crossCorr( src, kernel, temp, src.size(),
+                       CV_MAKETYPE(corrDepth, src.channels()),
+                       anchor, 0, borderType );
+            add( temp, delta, temp );
+            if ( temp.data != dst.data )
+            {
+                temp.convertTo( dst, dst.type() );
+            }
+        }
         else
-            temp.create(dst.size(), dst.type());
-        crossCorr( src, kernel, temp, src.size(),
-                   CV_MAKETYPE(ddepth, src.channels()),
-                   anchor, delta, borderType );
-        if( temp.data != dst.data )
-            temp.copyTo(dst);
+        {
+            if( src.data != dst.data )
+                temp = dst;
+            else
+                temp.create(dst.size(), dst.type());
+            crossCorr( src, kernel, temp, src.size(),
+                       CV_MAKETYPE(ddepth, src.channels()),
+                       anchor, delta, borderType );
+            if( temp.data != dst.data )
+                temp.copyTo(dst);
+        }
         return;
     }
 

@@ -1175,7 +1175,7 @@ calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
     }
 }
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#ifdef HAVE_IPP
 
 class IPPCalcHistInvoker :
     public ParallelLoopBody
@@ -1232,7 +1232,7 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     Mat hist = _hist.getMat(), ihist = hist;
     ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK)|CV_32S;
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#ifdef HAVE_IPP
     if (nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && channels &&
             channels[0] == 0 && mask.empty() && images[0].dims <= 2 &&
             !accumulate && uniform)
@@ -2212,8 +2212,8 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
                           const std::vector<float>& ranges,
                           double scale )
 {
-    Size histSize = hist.size();
 #ifdef HAVE_OPENCL
+    Size histSize = hist.size();
     bool _1D = histSize.height == 1 || histSize.width == 1;
     size_t histdims = _1D ? 1 : hist.dims();
 #endif
@@ -3436,8 +3436,13 @@ static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
         return false;
 
     UMat lut(1, 256, CV_8UC1);
-    ocl::Kernel k("calcLUT", ocl::imgproc::histogram_oclsrc, format("-D BINS=%d -D HISTS_COUNT=1 -D WGS=%d", BINS, (int)wgs));
-    k.args(ocl::KernelArg::PtrWriteOnly(lut), ocl::KernelArg::PtrReadOnly(hist), (int)_src.total());
+    ocl::Kernel k("calcLUT", ocl::imgproc::histogram_oclsrc,
+                  format("-D BINS=%d -D HISTS_COUNT=1 -D WGS=%d", BINS, (int)wgs));
+    if (k.empty())
+        return false;
+
+    k.args(ocl::KernelArg::PtrWriteOnly(lut),
+           ocl::KernelArg::PtrReadOnly(hist), (int)_src.total());
 
     // calculation of LUT
     if (!k.run(1, &wgs, &wgs, false))
