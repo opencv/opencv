@@ -65,6 +65,12 @@
 #endif
 #endif
 
+#ifdef INTEL_DEVICE
+#pragma OPENCL FP_CONTRACT : on
+#pragma OPENCL FP_FAST_FMAF : on
+#pragma OPENCL FP_FAST_FMA : on
+#endif
+
 #if depth <= 5
 #define CV_PI M_PI_F
 #else
@@ -237,7 +243,7 @@
 #if wdepth <= 4
 #define PROCESS_ELEM storedst(convertToDT(mad24(srcelem1, alpha, mad24(srcelem2, beta, gamma))))
 #else
-#define PROCESS_ELEM storedst(convertToDT(mad(srcelem1, alpha, mad(srcelem2, beta, gamma))))
+#define PROCESS_ELEM storedst(convertToDT(fma(srcelem1, alpha, mad(srcelem2, beta, gamma))))
 #endif
 
 #elif defined OP_MAG
@@ -251,17 +257,23 @@
 #elif defined OP_PHASE_RADIANS
 #define PROCESS_ELEM \
         workT tmp = atan2(srcelem2, srcelem1); \
-        if(tmp < 0) tmp += 6.283185307179586232f; \
+        if (tmp < 0) \
+            tmp += 6.283185307179586232f; \
         storedst(tmp)
 
 #elif defined OP_PHASE_DEGREES
     #define PROCESS_ELEM \
-    workT tmp = atan2(srcelem2, srcelem1)*57.29577951308232286465f; \
-    if(tmp < 0) tmp += 360; \
+    workT tmp = degrees(atan2(srcelem2, srcelem1)); \
+    if (tmp < 0) \
+        tmp += 360; \
     storedst(tmp)
 
 #elif defined OP_EXP
+#if wdepth == 5
+#define PROCESS_ELEM storedst(native_exp(srcelem1))
+#else
 #define PROCESS_ELEM storedst(exp(srcelem1))
+#endif
 
 #elif defined OP_POW
 #define PROCESS_ELEM storedst(pow(srcelem1, srcelem2))
@@ -272,11 +284,11 @@
 #define PROCESS_ELEM storedst(pown(srcelem1, srcelem2))
 
 #elif defined OP_SQRT
-#define PROCESS_ELEM storedst(sqrt(srcelem1))
+#define PROCESS_ELEM storedst(native_sqrt(srcelem1))
 
 #elif defined OP_LOG
 #define PROCESS_ELEM \
-    dstT v = (dstT)(srcelem1);\
+    dstT v = (dstT)(srcelem1); \
     storedst(v > (dstT)(0) ? log(v) : log(-v))
 
 #elif defined OP_CMP
@@ -285,9 +297,8 @@
 #define convertToWT1
 #endif
 #define PROCESS_ELEM \
-    workT __s1 = srcelem1; \
-    workT __s2 = srcelem2; \
-    storedst(((__s1 CMP_OPERATOR __s2) ? (dstT)(255) : (dstT)(0)))
+    workT s1 = srcelem1, s2 = srcelem2; \
+    storedst(s1 CMP_OPERATOR s2 ? (dstT)(255) : (dstT)(0))
 
 #elif defined OP_CONVERT_SCALE_ABS
 #undef EXTRA_PARAMS
@@ -298,7 +309,7 @@
     storedst(convertToDT(value >= 0 ? value : -value))
 #else
 #define PROCESS_ELEM \
-    workT value = mad(srcelem1, (workT)(alpha), (workT)(beta)); \
+    workT value = fma(srcelem1, (workT)(alpha), (workT)(beta)); \
     storedst(convertToDT(value >= 0 ? value : -value))
 #endif
 
@@ -308,7 +319,7 @@
 #if wdepth <= 4
 #define PROCESS_ELEM storedst(convertToDT(mad24(srcelem1, (workT)(alpha), srcelem2)))
 #else
-#define PROCESS_ELEM storedst(convertToDT(mad(srcelem1, (workT)(alpha), srcelem2)))
+#define PROCESS_ELEM storedst(convertToDT(fma(srcelem1, (workT)(alpha), srcelem2)))
 #endif
 
 #elif defined OP_CTP_AD || defined OP_CTP_AR
@@ -318,7 +329,7 @@
 #define CV_EPSILON DBL_EPSILON
 #endif
 #ifdef OP_CTP_AD
-#define TO_DEGREE cartToPolar *= (180 / CV_PI);
+#define TO_DEGREE cartToPolar = degrees(cartToPolar);
 #elif defined OP_CTP_AR
 #define TO_DEGREE
 #endif
@@ -336,24 +347,21 @@
 
 #elif defined OP_PTC_AD || defined OP_PTC_AR
 #ifdef OP_PTC_AD
-#define FROM_DEGREE \
-    dstT ascale = CV_PI/180.0f; \
-    dstT alpha = y * ascale
+#define FROM_DEGREE y = radians(y)
 #else
-#define FROM_DEGREE \
-    dstT alpha = y
+#define FROM_DEGREE
 #endif
 #define PROCESS_ELEM \
-    dstT x = srcelem1, y = srcelem2; \
+    dstT x = srcelem1, y = srcelem2, cosval; \
     FROM_DEGREE; \
-    storedst(cos(alpha) * x); \
-    storedst2(sin(alpha) * x)
+    storedst2(sincos(y, &srcelem2) * x); \
+    storedst(cosval * x);
 
 #elif defined OP_PATCH_NANS
 #undef EXTRA_PARAMS
-#define EXTRA_PARAMS , int val
+#define EXTRA_PARAMS , dstT val
 #define PROCESS_ELEM \
-    if (( srcelem1 & 0x7fffffff) > 0x7f800000 ) \
+    if (isnan(srcelem1)) \
         storedst(val)
 
 #else
