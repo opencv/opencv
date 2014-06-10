@@ -430,7 +430,7 @@ Mat estimateGlobalMotionRansac(
     {
         subset0.resize(ninliersMax);
         subset1.resize(ninliersMax);
-        for (int i = 0, j = 0; i < npoints; ++i)
+        for (int i = 0, j = 0; i < npoints && j < ninliersMax ; ++i)
         {
             p0 = points0_[i];
             p1 = points1_[i];
