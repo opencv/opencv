@@ -39,20 +39,23 @@ static Mat toGrayscale(InputArray _src) {
     return dst;
 }
 
-static void read_csv(const string& filename, vector<Mat>& images, vector<int>& labels, char separator = ';') {
+static void read_csv(const string& filename, vector<Mat>& images, vector<int>& labels, std::map<int, string>& labelsInfo, char separator = ';') {
     std::ifstream file(filename.c_str(), ifstream::in);
     if (!file) {
         string error_message = "No valid input file was given, please check the given filename.";
         CV_Error(CV_StsBadArg, error_message);
     }
-    string line, path, classlabel;
+    string line, path, classlabel, info;
     while (getline(file, line)) {
         stringstream liness(line);
         getline(liness, path, separator);
-        getline(liness, classlabel);
+        getline(liness, classlabel, separator);
+        getline(liness, info, separator);
         if(!path.empty() && !classlabel.empty()) {
             images.push_back(imread(path, 0));
             labels.push_back(atoi(classlabel.c_str()));
+            if(!info.empty())
+                labelsInfo.insert(std::make_pair(labels.back(), info));
         }
     }
 }
@@ -69,15 +72,17 @@ int main(int argc, const char *argv[]) {
     // These vectors hold the images and corresponding labels.
     vector<Mat> images;
     vector<int> labels;
+    std::map<int, string> labelsInfo;
     // Read in the data. This can fail if no valid
     // input filename is given.
     try {
-        read_csv(fn_csv, images, labels);
+        read_csv(fn_csv, images, labels, labelsInfo);
     } catch (cv::Exception& e) {
         cerr << "Error opening file \"" << fn_csv << "\". Reason: " << e.msg << endl;
         // nothing more we can do
         exit(1);
     }
+
     // Quit if there are not enough images for this demo.
     if(images.size() <= 1) {
         string error_message = "This demo needs at least 2 images to work. Please add more images to your data set!";
@@ -111,7 +116,9 @@ int main(int argc, const char *argv[]) {
     //      cv::createEigenFaceRecognizer(10, 123.0);
     //
     Ptr<FaceRecognizer> model = createEigenFaceRecognizer();
+    model->setLabelsInfo(labelsInfo);
     model->train(images, labels);
+
     // The following line predicts the label of a given
     // test image:
     int predictedLabel = model->predict(testSample);
@@ -124,6 +131,8 @@ int main(int argc, const char *argv[]) {
     //
     string result_message = format("Predicted class = %d / Actual class = %d.", predictedLabel, testLabel);
     cout << result_message << endl;
+    if( (predictedLabel == testLabel) && !model->getLabelInfo(predictedLabel).empty() )
+        cout << format("%d-th label's info: %s", predictedLabel, model->getLabelInfo(predictedLabel).c_str()) << endl;
     // Sometimes you'll need to get/set internal model data,
     // which isn't exposed by the public cv::FaceRecognizer.
     // Since each cv::FaceRecognizer is derived from a

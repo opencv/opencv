@@ -46,6 +46,15 @@ a unified access to all face recongition algorithms in OpenCV. ::
 
       // Deserializes this object from a given cv::FileStorage.
       virtual void load(const FileStorage& fs) = 0;
+
+      // Sets additional information as pairs label - info.
+      void setLabelsInfo(const std::map<int, string>& labelsInfo);
+
+      // Gets string information by label
+      string getLabelInfo(const int &label);
+
+      // Gets labels by string
+      vector<int> getLabelsByString(const string& str);
   };
 
 
@@ -69,6 +78,8 @@ Moreover every :ocv:class:`FaceRecognizer` supports the:
 * **Prediction** of a given sample image, that means a face. The image is given as a :ocv:class:`Mat`.
 
 * **Loading/Saving** the model state from/to a given XML or YAML.
+
+* **Setting/Getting labels info**, that is storaged as a string. String labels info is useful for keeping names of the recognized people.
 
 .. note:: When using the FaceRecognizer interface in combination with Python, please stick to Python 2. Some underlying scripts like create_csv will not work in other versions, like Python 3.
 
@@ -292,6 +303,30 @@ Loads a persisted model and state from a given XML or YAML file . Every
 to enable loading the model state. ``FaceRecognizer::load(FileStorage& fs)`` in
 turn gets called by ``FaceRecognizer::load(const string& filename)``, to ease
 saving a model.
+
+FaceRecognizer::setLabelsInfo
+-----------------------------
+
+Sets string information about labels into the model.
+.. ocv:function:: void FaceRecognizer::setLabelsInfo(const std::map<int, string>& labelsInfo)
+
+Information about the label loads as a pair "label id - string info".
+
+FaceRecognizer::getLabelInfo
+----------------------------
+
+Gets string information by label.
+.. ocv:function:: string FaceRecognizer::getLabelInfo(const int &label)
+
+If an unknown label id is provided or there is no label information assosiated with the specified label id the method returns an empty string.
+
+FaceRecognizer::getLabelsByString
+---------------------------------
+Gets vector of labels by string.
+
+.. ocv:function:: vector<int> FaceRecognizer::getLabelsByString(const string& str)
+
+The function searches for the labels containing the specified substring in the associated string info.
 
 createEigenFaceRecognizer
 -------------------------
