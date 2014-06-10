@@ -266,6 +266,16 @@
 #elif defined OP_POW
 #define PROCESS_ELEM storedst(pow(srcelem1, srcelem2))
 
+#elif defined OP_ROOTN
+#define PROCESS_ELEM storedst(rootn(srcelem1, srcelem2))
+
+#elif defined OP_POWR
+#if depth == 5
+#define PROCESS_ELEM storedst(native_powr(srcelem1, srcelem2))
+#else
+#define PROCESS_ELEM storedst(powr(srcelem1, srcelem2))
+#endif
+
 #elif defined OP_POWN
 #undef workT
 #define workT int
@@ -374,7 +384,7 @@
 #if defined OP_AND || defined OP_OR || defined OP_XOR || defined OP_ADD || defined OP_SAT_ADD || \
     defined OP_SUB || defined OP_SAT_SUB || defined OP_RSUB || defined OP_SAT_RSUB || \
     defined OP_ABSDIFF || defined OP_CMP || defined OP_MIN || defined OP_MAX || defined OP_POW || \
-    defined OP_MUL || defined OP_DIV || defined OP_POWN
+    defined OP_MUL || defined OP_DIV || defined OP_POWN || defined OP_POWR || defined OP_ROOTN
     #undef EXTRA_PARAMS
     #define EXTRA_PARAMS , workST srcelem2_
     #undef srcelem2
