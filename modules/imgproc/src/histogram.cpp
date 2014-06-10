@@ -3436,8 +3436,13 @@ static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
         return false;
 
     UMat lut(1, 256, CV_8UC1);
-    ocl::Kernel k("calcLUT", ocl::imgproc::histogram_oclsrc, format("-D BINS=%d -D HISTS_COUNT=1 -D WGS=%d", BINS, (int)wgs));
-    k.args(ocl::KernelArg::PtrWriteOnly(lut), ocl::KernelArg::PtrReadOnly(hist), (int)_src.total());
+    ocl::Kernel k("calcLUT", ocl::imgproc::histogram_oclsrc,
+                  format("-D BINS=%d -D HISTS_COUNT=1 -D WGS=%d", BINS, (int)wgs));
+    if (k.empty())
+        return false;
+
+    k.args(ocl::KernelArg::PtrWriteOnly(lut),
+           ocl::KernelArg::PtrReadOnly(hist), (int)_src.total());
 
     // calculation of LUT
     if (!k.run(1, &wgs, &wgs, false))
