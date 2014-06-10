@@ -29,6 +29,14 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 
+#if cn != 3
+#define loadpix(addr) *(__global const T *)(addr)
+#define TSIZE (int)sizeof(T)
+#else
+#define loadpix(addr) vload3(0, (__global const T1 *)(addr))
+#define TSIZE ((int)sizeof(T1)*3)
+#endif
+
 #define SQSUMS_PTR(ox, oy) mad24(y + oy, src_sqsums_step, mad24(x + ox, cn, src_sqsums_offset))
 #define SUMS_PTR(ox, oy) mad24(y + oy, src_sums_step, mad24(x + ox, cn, src_sums_offset))
 #define SUMS(ox, oy)    mad24(y+oy, src_sums_step, mad24(x+ox, (int)sizeof(T1)*cn, src_sums_offset))
@@ -64,14 +72,6 @@ inline float normAcc_SQDIFF(float num, float denum)
 #define convertToDT(value) (float)(value.x + value.y + value.z + value.w)
 #else
 #error "cn should be 1-4"
-#endif
-
-#if cn != 3
-#define loadpix(addr) *(__global const T *)(addr)
-#define TSIZE (int)sizeof(T)
-#else
-#define loadpix(addr) vload3(0, (__global const T1 *)(addr))
-#define TSIZE ((int)sizeof(T1)*3)
 #endif
 
 #ifdef CALC_SUM
@@ -141,39 +141,7 @@ __kernel void extractFirstChannel( const __global uchar* img, int img_step, int 
 
 #elif defined CCORR
 
-#if cn==3
-
-__kernel void matchTemplate_Naive_CCORR(__global const uchar * srcptr, int src_step, int src_offset,
-                                        __global const uchar * templateptr, int template_step, int template_offset, int template_rows, int template_cols,
-                                        __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if (x < dst_cols && y < dst_rows)
-    {
-        WT sum = (WT)(0);
-
-        for (int i = 0; i < template_rows; ++i)
-        {
-            for (int j = 0; j < template_cols; ++j)
-            {
-                T src      = vload3(0, (__global const T1 *)(srcptr      + mad24(y+i, src_step,    mad24(x+j, (int)sizeof(T1)*cn, src_offset))));
-                T template = vload3(0, (__global const T1 *)(templateptr + mad24(i, template_step, mad24(j, (int)sizeof(T1)*cn, template_offset))));
-#if wdepth == 4
-                sum = mad24(convertToWT(src), convertToWT(template), sum);
-#else
-                sum = mad(convertToWT(src), convertToWT(template), sum);
-#endif
-            }
-        }
-
-        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
-        *(__global float *)(dst + dst_idx) = convertToDT(sum);
-    }
-}
-
-#elif cn==1 && PIX_PER_WI_X==4
+#if cn==1 && PIX_PER_WI_X==4
 
 __kernel void matchTemplate_Naive_CCORR(__global const uchar * srcptr, int src_step, int src_offset,
                                         __global const uchar * templateptr, int template_step, int template_offset, int template_rows, int template_cols,
@@ -256,47 +224,29 @@ __kernel void matchTemplate_Naive_CCORR(__global const uchar * srcptr, int src_s
                                         __global const uchar * templateptr, int template_step, int template_offset, int template_rows, int template_cols,
                                         __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
 {
-    int x0 = get_global_id(0)*PIX_PER_WI_X;
+    int x = get_global_id(0);
     int y = get_global_id(1);
 
-    int step = src_step/(int)sizeof(T);
-
-    if (y < dst_rows)
+    if (x < dst_cols && y < dst_rows)
     {
-        WT sum [PIX_PER_WI_X];
-        #pragma unroll
-        for (int i=0; i < PIX_PER_WI_X; i++)
-            sum[i] = 0;
-
-        __global const T * src = (__global const T *)(srcptr + mad24(y, src_step, mad24(x0, (int)sizeof(T), src_offset)));
-        __global const T * template = (__global const T *)(templateptr + template_offset);
+        WT sum = (WT)(0);
 
         for (int i = 0; i < template_rows; ++i)
         {
             for (int j = 0; j < template_cols; ++j)
             {
-                #pragma unroll
-                for (int cx=0, x = x0; cx < PIX_PER_WI_X && x < dst_cols; ++cx, ++x)
-                {
-
+                T src      = loadpix(srcptr      + mad24(y+i, src_step,    mad24(x+j, TSIZE, src_offset)));
+                T template = loadpix(templateptr + mad24(i, template_step, mad24(j, TSIZE, template_offset)));
 #if wdepth == 4
-                    sum[cx] = mad24(convertToWT(src[j+cx]), convertToWT(template[j]), sum[cx]);
+                sum = mad24(convertToWT(src), convertToWT(template), sum);
 #else
-                    sum[cx] = mad(convertToWT(src[j+cx]), convertToWT(template[j]), sum[cx]);
+                sum = mad(convertToWT(src), convertToWT(template), sum);
 #endif
-                }
             }
-
-            src = (__global const T *)((__global const uchar *)src + src_step);
-            template = (__global const T *)((__global const uchar *)template + template_step);
         }
 
-        #pragma unroll
-        for (int cx=0; cx < PIX_PER_WI_X && x0 < dst_cols; ++cx, ++x0)
-        {
-            int dst_idx = mad24(y, dst_step, mad24(x0, (int)sizeof(float), dst_offset));
-            *(__global float *)(dst + dst_idx) = convertToDT(sum[cx]);
-        }
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        *(__global float *)(dst + dst_idx) = convertToDT(sum);
     }
 }
 #endif
@@ -327,8 +277,6 @@ __kernel void matchTemplate_CCORR_NORMED(__global const uchar * src_sqsums, int 
 
 #elif defined SQDIFF
 
-#if cn==3
-
 __kernel void matchTemplate_Naive_SQDIFF(__global const uchar * srcptr, int src_step, int src_offset,
                                          __global const uchar * templateptr, int template_step, int template_offset, int template_rows, int template_cols,
                                          __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
@@ -344,8 +292,8 @@ __kernel void matchTemplate_Naive_SQDIFF(__global const uchar * srcptr, int src_
         {
             for (int j = 0; j < template_cols; ++j)
             {
-                T src      = vload3(0, (__global const T1 *)(srcptr      + mad24(y+i, src_step,    mad24(x+j, (int)sizeof(T1)*cn, src_offset))));
-                T template = vload3(0, (__global const T1 *)(templateptr + mad24(i, template_step, mad24(j, (int)sizeof(T1)*cn, template_offset))));
+                T src      = loadpix(srcptr      + mad24(y+i, src_step,    mad24(x+j, TSIZE, src_offset)));
+                T template = loadpix(templateptr + mad24(i, template_step, mad24(j, TSIZE, template_offset)));
 
                 value = convertToWT(src) - convertToWT(template);
 #if wdepth == 4
@@ -360,45 +308,6 @@ __kernel void matchTemplate_Naive_SQDIFF(__global const uchar * srcptr, int src_
         *(__global float *)(dst + dst_idx) = convertToDT(sum);
     }
 }
-
-#else
-
-__kernel void matchTemplate_Naive_SQDIFF(__global const uchar * srcptr, int src_step, int src_offset,
-                                         __global const uchar * templateptr, int template_step, int template_offset, int template_rows, int template_cols,
-                                         __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if (x < dst_cols && y < dst_rows)
-    {
-        __global const T * src = (__global const T *)(srcptr + mad24(y, src_step, mad24(x, (int)sizeof(T), src_offset)));
-        __global const T * template = (__global const T *)(templateptr + template_offset);
-
-        WT sum = (WT)(0), value;
-
-        for (int i = 0; i < template_rows; ++i)
-        {
-            for (int j = 0; j < template_cols; ++j)
-            {
-                value = convertToWT(src[j]) - convertToWT(template[j]);
-#if wdepth == 4
-                sum = mad24(value, value, sum);
-#else
-                sum = mad(value, value, sum);
-#endif
-            }
-
-            src = (__global const T *)((__global const uchar *)src + src_step);
-            template = (__global const T *)((__global const uchar *)template + template_step);
-        }
-
-        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
-        *(__global float *)(dst + dst_idx) = convertToDT(sum);
-    }
-}
-
-#endif
 
 #elif defined SQDIFF_PREPARED
 
