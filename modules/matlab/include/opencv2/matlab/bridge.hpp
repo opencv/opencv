@@ -50,7 +50,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/photo.hpp>
-#include <opencv2/video/tracking.hpp>
+#include <opencv2/video.hpp>
 
 namespace cv {
 namespace bridge {
