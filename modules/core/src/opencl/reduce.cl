@@ -109,8 +109,8 @@
 #endif
 
 #if ddepth <= 4
-#define SUM_ABS(a) convertToDT(abs(a))
-#define SUM_ABS2(a, b) convertToDT(abs_diff(a, b))
+#define SUM_ABS(a) convertFromU(abs(a))
+#define SUM_ABS2(a, b) convertFromU(abs_diff(a, b))
 #else
 #define SUM_ABS(a) fabs(a)
 #define SUM_ABS2(a, b) fabs(a - b)

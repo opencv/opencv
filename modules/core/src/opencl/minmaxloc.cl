@@ -40,8 +40,8 @@
 #define INDEX_MAX UINT_MAX
 
 #if wdepth <= 4
-#define MIN_ABS(a) convertToDT(abs(a))
-#define MIN_ABS2(a, b) convertToDT(abs_diff(a, b))
+#define MIN_ABS(a) convertFromU(abs(a))
+#define MIN_ABS2(a, b) convertFromU(abs_diff(a, b))
 #else
 #define MIN_ABS(a) fabs(a)
 #define MIN_ABS2(a, b) fabs(a - b)

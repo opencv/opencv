@@ -66,9 +66,9 @@
 #endif
 
 #ifdef INTEL_DEVICE
-#pragma OPENCL FP_CONTRACT : on
-#pragma OPENCL FP_FAST_FMAF : on
-#pragma OPENCL FP_FAST_FMA : on
+#pragma OPENCL FP_CONTRACT ON
+#pragma OPENCL FP_FAST_FMAF ON
+#pragma OPENCL FP_FAST_FMA ON
 #endif
 
 #if depth <= 5
@@ -165,7 +165,7 @@
 #elif defined OP_ABSDIFF
 #if wdepth <= 4
 #define PROCESS_ELEM \
-    storedst(convertToDT(abs_diff(srcelem1, srcelem2)))
+    storedst(convertToDT(convertFromU(abs_diff(srcelem1, srcelem2))))
 #else
 #define PROCESS_ELEM \
     storedst(convertToDT(fabs(srcelem1 - srcelem2)))
@@ -247,7 +247,7 @@
 #if wdepth <= 4
 #define PROCESS_ELEM storedst(convertToDT(mad24(srcelem1, alpha, mad24(srcelem2, beta, gamma))))
 #else
-#define PROCESS_ELEM storedst(convertToDT(fma(srcelem1, alpha, mad(srcelem2, beta, gamma))))
+#define PROCESS_ELEM storedst(convertToDT(fma(srcelem1, alpha, fma(srcelem2, beta, gamma))))
 #endif
 
 #elif defined OP_MAG
@@ -257,7 +257,7 @@
 #define PROCESS_ELEM \
     workT tmp = atan2(srcelem2, srcelem1); \
     if (tmp < 0) \
-        tmp += 6.283185307179586232f; \
+        tmp += 2 * CV_PI; \
     storedst(tmp)
 
 #elif defined OP_PHASE_DEGREES
@@ -295,7 +295,7 @@
 #define convertToWT1
 #endif
 #define PROCESS_ELEM \
-    storedst(srcelem1 CMP_OPERATOR srcelem2 ? (dstT)(255) : (dstT)(0)))
+    storedst(srcelem1 CMP_OPERATOR srcelem2 ? (dstT)(255) : (dstT)(0))
 
 #elif defined OP_CONVERT_SCALE_ABS
 #undef EXTRA_PARAMS
@@ -351,7 +351,7 @@
 #define PROCESS_ELEM \
     dstT x = srcelem1, y = srcelem2, cosval; \
     FROM_DEGREE; \
-    storedst2(sincos(y, &srcelem2) * x); \
+    storedst2(sincos(y, &cosval) * x); \
     storedst(cosval * x);
 
 #elif defined OP_PATCH_NANS
