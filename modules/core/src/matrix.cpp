@@ -2051,6 +2051,23 @@ void _InputArray::copyTo(const _OutputArray& arr) const
         CV_Error(Error::StsNotImplemented, "");
 }
 
+void _InputArray::copyTo(const _OutputArray& arr, const _InputArray & mask) const
+{
+    int k = kind();
+
+    if( k == NONE )
+        arr.release();
+    else if( k == MAT || k == MATX || k == STD_VECTOR )
+    {
+        Mat m = getMat();
+        m.copyTo(arr, mask);
+    }
+    else if( k == UMAT )
+        ((UMat*)obj)->copyTo(arr, mask);
+    else
+        CV_Error(Error::StsNotImplemented, "");
+}
+
 bool _OutputArray::fixedSize() const
 {
     return (flags & FIXED_SIZE) == FIXED_SIZE;
@@ -2742,7 +2759,8 @@ namespace cv {
 static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
 {
     int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
-            sctype = CV_MAKE_TYPE(depth, cn == 3 ? 4 : cn);
+            sctype = CV_MAKE_TYPE(depth, cn == 3 ? 4 : cn),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
     ocl::Kernel k("setIdentity", ocl::core::set_identity_oclsrc,
                   format("-D T=%s -D T1=%s -D cn=%d -D ST=%s", ocl::memopTypeToStr(type),
@@ -2751,9 +2769,10 @@ static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
         return false;
 
     UMat m = _m.getUMat();
-    k.args(ocl::KernelArg::WriteOnly(m), ocl::KernelArg::Constant(Mat(1, 1, sctype, s)));
+    k.args(ocl::KernelArg::WriteOnly(m), ocl::KernelArg::Constant(Mat(1, 1, sctype, s)),
+           rowsPerWI);
 
-    size_t globalsize[2] = { m.cols, m.rows };
+    size_t globalsize[2] = { m.cols, (m.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -3411,50 +3430,95 @@ namespace cv {
 static bool ocl_reduce(InputArray _src, OutputArray _dst,
                        int dim, int op, int op0, int stype, int dtype)
 {
+    const int min_opt_cols = 128, buf_cols = 32;
     int sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
             ddepth = CV_MAT_DEPTH(dtype), ddepth0 = ddepth;
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
+            useOptimized = 1 == dim && _src.cols() > min_opt_cols;
 
     if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
         return false;
 
     if (op == CV_REDUCE_AVG)
     {
-        op = CV_REDUCE_SUM;
         if (sdepth < CV_32S && ddepth < CV_32S)
             ddepth = CV_32S;
     }
 
     const char * const ops[4] = { "OCL_CV_REDUCE_SUM", "OCL_CV_REDUCE_AVG",
                                   "OCL_CV_REDUCE_MAX", "OCL_CV_REDUCE_MIN" };
-    char cvt[40];
-    ocl::Kernel k("reduce", ocl::core::reduce2_oclsrc,
-                  format("-D %s -D dim=%d -D cn=%d -D ddepth=%d -D srcT=%s -D dstT=%s -D convertToDT=%s%s",
-                         ops[op], dim, cn, ddepth, ocl::typeToStr(sdepth), ocl::typeToStr(ddepth),
-                         ocl::convertTypeStr(sdepth, ddepth, 1, cvt),
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    char cvt[2][40];
+
+    int wdepth = std::max(ddepth, CV_32F);
+    cv::String build_opt = format("-D %s -D dim=%d -D cn=%d -D ddepth=%d"
+                                  " -D srcT=%s -D dstT=%s -D dstT0=%s -D convertToWT=%s"
+                                  " -D convertToDT=%s -D convertToDT0=%s%s",
+                                  ops[op], dim, cn, ddepth, ocl::typeToStr(useOptimized ? ddepth : sdepth),
+                                  ocl::typeToStr(ddepth), ocl::typeToStr(ddepth0),
+                                  ocl::convertTypeStr(ddepth, wdepth, 1, cvt[0]),
+                                  ocl::convertTypeStr(sdepth, ddepth, 1, cvt[0]),
+                                  ocl::convertTypeStr(wdepth, ddepth0, 1, cvt[1]),
+                                  doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+
+    if (useOptimized)
+    {
+        cv::String build_opt_pre = format("-D OP_REDUCE_PRE -D BUF_COLS=%d -D %s -D dim=1"
+                                          "  -D cn=%d -D ddepth=%d -D srcT=%s -D dstT=%s -D convertToDT=%s%s",
+                                          buf_cols, ops[op], cn, ddepth, ocl::typeToStr(sdepth), ocl::typeToStr(ddepth),
+                                          ocl::convertTypeStr(sdepth, ddepth, 1, cvt[0]),
+                                          doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+        ocl::Kernel kpre("reduce_horz_pre", ocl::core::reduce2_oclsrc, build_opt_pre);
+        if (kpre.empty())
+            return false;
+
+        ocl::Kernel kmain("reduce", ocl::core::reduce2_oclsrc, build_opt);
+        if (kmain.empty())
+            return false;
+
+        UMat src = _src.getUMat();
+        Size dsize(1, src.rows);
+        _dst.create(dsize, dtype);
+        UMat dst = _dst.getUMat();
+
+        UMat buf(src.rows, buf_cols, dst.type());
+
+        kpre.args(ocl::KernelArg::ReadOnly(src),
+                  ocl::KernelArg::WriteOnlyNoSize(buf));
+
+        size_t globalSize[2] = { buf_cols, src.rows };
+        if (!kpre.run(2, globalSize, NULL, false))
+            return false;
+
+        if (op0 == CV_REDUCE_AVG)
+            kmain.args(ocl::KernelArg::ReadOnly(buf),
+                       ocl::KernelArg::WriteOnlyNoSize(dst), 1.0f / src.cols);
+        else
+            kmain.args(ocl::KernelArg::ReadOnly(buf),
+                       ocl::KernelArg::WriteOnlyNoSize(dst));
+
+        globalSize[0] = src.rows;
+        return kmain.run(1, globalSize, NULL, false);
+    }
+
+    ocl::Kernel k("reduce", ocl::core::reduce2_oclsrc, build_opt);
     if (k.empty())
         return false;
 
     UMat src = _src.getUMat();
     Size dsize(dim == 0 ? src.cols : 1, dim == 0 ? 1 : src.rows);
     _dst.create(dsize, dtype);
-    UMat dst = _dst.getUMat(), temp = dst;
+    UMat dst = _dst.getUMat();
 
-    if (op0 == CV_REDUCE_AVG && sdepth < CV_32S && ddepth0 < CV_32S)
-        temp.create(dsize, CV_32SC(cn));
-
-    size_t globalsize = std::max(dsize.width, dsize.height);
-
-    k.args(ocl::KernelArg::ReadOnly(src),
-           ocl::KernelArg::WriteOnlyNoSize(temp));
-    if (!k.run(1, &globalsize, NULL, false))
-        return false;
+    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnly(src),
+            temparg = ocl::KernelArg::WriteOnlyNoSize(dst);
 
     if (op0 == CV_REDUCE_AVG)
-        temp.convertTo(dst, ddepth0, 1. / (dim == 0 ? src.rows : src.cols));
+        k.args(srcarg, temparg, 1.0f / (dim == 0 ? src.rows : src.cols));
+    else
+        k.args(srcarg, temparg);
 
-    return true;
+    size_t globalsize = std::max(dsize.width, dsize.height);
+    return k.run(1, &globalsize, NULL, false);
 }
 
 }

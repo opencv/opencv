@@ -4406,8 +4406,8 @@ String kernelToStr(InputArray _kernel, int ddepth, const char * name)
             CV_Assert(src.isMat() || src.isUMat()); \
             int ctype = src.type(), ccn = CV_MAT_CN(ctype); \
             Size csize = src.size(); \
-            cols.push_back(ccn * src.size().width); \
-            if (ctype != type || csize != ssize) \
+            cols.push_back(ccn * csize.width); \
+            if (ctype != type) \
                 return 1; \
             offsets.push_back(src.offset()); \
             steps.push_back(src.step()); \
@@ -4419,22 +4419,22 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
                               InputArray src4, InputArray src5, InputArray src6,
                               InputArray src7, InputArray src8, InputArray src9)
 {
-    int type = src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(depth);
+    int type = src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), esz1 = CV_ELEM_SIZE1(depth);
     Size ssize = src1.size();
     const ocl::Device & d = ocl::Device::getDefault();
 
     int vectorWidths[] = { d.preferredVectorWidthChar(), d.preferredVectorWidthChar(),
         d.preferredVectorWidthShort(), d.preferredVectorWidthShort(),
         d.preferredVectorWidthInt(), d.preferredVectorWidthFloat(),
-        d.preferredVectorWidthDouble(), -1 }, width = vectorWidths[depth];
+        d.preferredVectorWidthDouble(), -1 }, kercn = vectorWidths[depth];
     if (d.isIntel())
     {
         // it's heuristic
         int vectorWidthsIntel[] = { 16, 16, 8, 8, 1, 1, 1, -1 };
-        width = vectorWidthsIntel[depth];
+        kercn = vectorWidthsIntel[depth];
     }
 
-    if (ssize.width * cn < width || width <= 0)
+    if (ssize.width * cn < kercn || kercn <= 0)
         return 1;
 
     std::vector<size_t> offsets, steps, cols;
@@ -4449,7 +4449,7 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
     PROCESS_SRC(src9);
 
     size_t size = offsets.size();
-    int wsz = width * esz;
+    int wsz = kercn * esz1;
     std::vector<int> dividers(size, wsz);
 
     for (size_t i = 0; i < size; ++i)
@@ -4460,14 +4460,14 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
     for (size_t i = 0; i < size; ++i)
         if (dividers[i] != wsz)
         {
-            width = 1;
+            kercn = 1;
             break;
         }
 
     // another strategy
 //    width = *std::min_element(dividers.begin(), dividers.end());
 
-    return width;
+    return kercn;
 }
 
 #undef PROCESS_SRC
