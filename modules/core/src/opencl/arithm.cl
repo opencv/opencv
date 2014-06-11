@@ -163,9 +163,13 @@
 #define PROCESS_ELEM storedst(convertToDT(srcelem2 - srcelem1))
 
 #elif defined OP_ABSDIFF
+#if wdepth <= 4
 #define PROCESS_ELEM \
-    workT v = srcelem1 - srcelem2; \
-    storedst(convertToDT(v >= (workT)(0) ? v : -v))
+    storedst(convertToDT(abs_diff(srcelem1, srcelem2)))
+#else
+#define PROCESS_ELEM \
+    storedst(convertToDT(fabs(srcelem1 - srcelem2)))
+#endif
 
 #elif defined OP_AND
 #define PROCESS_ELEM storedst(srcelem1 & srcelem2)
@@ -249,17 +253,12 @@
 #elif defined OP_MAG
 #define PROCESS_ELEM storedst(hypot(srcelem1, srcelem2))
 
-#elif defined OP_ABS_NOSAT
-#define PROCESS_ELEM \
-    dstT v = convertToDT(srcelem1); \
-    storedst(v >= 0 ? v : -v)
-
 #elif defined OP_PHASE_RADIANS
 #define PROCESS_ELEM \
-        workT tmp = atan2(srcelem2, srcelem1); \
-        if (tmp < 0) \
-            tmp += 6.283185307179586232f; \
-        storedst(tmp)
+    workT tmp = atan2(srcelem2, srcelem1); \
+    if (tmp < 0) \
+        tmp += 6.283185307179586232f; \
+    storedst(tmp)
 
 #elif defined OP_PHASE_DEGREES
     #define PROCESS_ELEM \
@@ -288,8 +287,7 @@
 
 #elif defined OP_LOG
 #define PROCESS_ELEM \
-    dstT v = (dstT)(srcelem1); \
-    storedst(v > (dstT)(0) ? log(v) : log(-v))
+    storedst(log(fabs(srcelem1)))
 
 #elif defined OP_CMP
 #define srcT2 srcT1
@@ -297,8 +295,7 @@
 #define convertToWT1
 #endif
 #define PROCESS_ELEM \
-    workT s1 = srcelem1, s2 = srcelem2; \
-    storedst(s1 CMP_OPERATOR s2 ? (dstT)(255) : (dstT)(0))
+    storedst(srcelem1 CMP_OPERATOR srcelem2 ? (dstT)(255) : (dstT)(0)))
 
 #elif defined OP_CONVERT_SCALE_ABS
 #undef EXTRA_PARAMS
@@ -306,11 +303,11 @@
 #if wdepth <= 4
 #define PROCESS_ELEM \
     workT value = mad24(srcelem1, (workT)(alpha), (workT)(beta)); \
-    storedst(convertToDT(value >= 0 ? value : -value))
+    storedst(convertToDT(abs(value)))
 #else
 #define PROCESS_ELEM \
     workT value = fma(srcelem1, (workT)(alpha), (workT)(beta)); \
-    storedst(convertToDT(value >= 0 ? value : -value))
+    storedst(convertToDT(fabs(value)))
 #endif
 
 #elif defined OP_SCALE_ADD
