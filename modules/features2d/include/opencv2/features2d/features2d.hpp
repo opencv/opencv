@@ -1593,7 +1593,7 @@ public:
                   vector<vector<int> >* pointIdxsOfClusters=0, Mat* descriptors=0 );
     // compute() is not constant because DescriptorMatcher::match is not constant
 
-    CV_WRAP_AS(compute) void compute2( const Mat& image, vector<KeyPoint>& keypoints, Mat& imgDescriptor )
+    CV_WRAP_AS(compute) void compute2( const Mat& image, vector<KeyPoint>& keypoints, CV_OUT Mat& imgDescriptor )
     { compute(image,keypoints,imgDescriptor); }
 
     CV_WRAP int descriptorSize() const;
