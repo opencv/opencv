@@ -4172,9 +4172,10 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     double doubleSupport = dev.doubleFPConfig() > 0;
 
-    int interpolation = flags & INTER_MAX, rowsPerWI = dev.isIntel() && interpolation <= INTER_LINEAR ? 4 : 1;
+    int interpolation = flags & INTER_MAX;
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
+    int rowsPerWI = dev.isIntel() && op_type == OCL_OP_AFFINE && interpolation <= INTER_LINEAR ? 4 : 1;
 
     if ( !(borderType == cv::BORDER_CONSTANT &&
            (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC)) ||
