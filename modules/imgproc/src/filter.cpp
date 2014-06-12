@@ -3219,16 +3219,16 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
         ((ksize.width < 5 && ksize.height < 5) ||
         (ksize.width == 5 && ksize.height == 5 && cn == 1)))
     {
-        kernelMat.reshape(0, 1);
+        kernelMat = kernelMat.reshape(0, 1);
         String kerStr = ocl::kernelToStr(kernelMat, CV_32F);
         int h = isolated ? sz.height : wholeSize.height;
         int w = isolated ? sz.width : wholeSize.width;
 
-        if ((w < ksize.width) || (h < ksize.height))
+        if (w < ksize.width || h < ksize.height)
             return false;
 
         // Figure out what vector size to use for loading the pixels.
-        int pxLoadNumPixels = ((cn != 1) || sz.width % 4) ? 1 : 4;
+        int pxLoadNumPixels = cn != 1 || sz.width % 4 ? 1 : 4;
         int pxLoadVecSize = cn * pxLoadNumPixels;
 
         // Figure out how many pixels per work item to compute in X and Y
@@ -3273,8 +3273,8 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                 ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), kerStr.c_str());
-        cv::String errmsg;
-        if (!k.create("filter2DSmall", cv::ocl::imgproc::filter2DSmall_oclsrc, build_options, &errmsg))
+
+        if (!k.create("filter2DSmall", cv::ocl::imgproc::filter2DSmall_oclsrc, build_options))
             return false;
     }
     else
@@ -3289,13 +3289,13 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
             size_t BLOCK_SIZE = tryWorkItems;
             while (BLOCK_SIZE > 32 && BLOCK_SIZE >= (size_t)ksize.width * 2 && BLOCK_SIZE > (size_t)sz.width * 2)
                 BLOCK_SIZE /= 2;
-    #if 1 // TODO Mode with several blocks requires a much more VGPRs, so this optimization is not actual for the current devices
+#if 1 // TODO Mode with several blocks requires a much more VGPRs, so this optimization is not actual for the current devices
             size_t BLOCK_SIZE_Y = 1;
-    #else
+#else
             size_t BLOCK_SIZE_Y = 8; // TODO Check heuristic value on devices
             while (BLOCK_SIZE_Y < BLOCK_SIZE / 8 && BLOCK_SIZE_Y * src.clCxt->getDeviceInfo().maxComputeUnits * 32 < (size_t)src.rows)
                 BLOCK_SIZE_Y *= 2;
-    #endif
+#endif
 
             if ((size_t)ksize.width > BLOCK_SIZE)
                 return false;
