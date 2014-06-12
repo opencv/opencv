@@ -115,7 +115,7 @@ If conversion adds the alpha channel, its value will set to the maximum of corre
 The function can do the following transformations:
 
 *
-    RGB :math:`\leftrightarrow` GRAY ( ``CV_BGR2GRAY, CV_RGB2GRAY, CV_GRAY2BGR, CV_GRAY2RGB``     )
+    RGB :math:`\leftrightarrow` GRAY ( ``COLOR_BGR2GRAY, COLOR_RGB2GRAY, COLOR_GRAY2BGR, COLOR_GRAY2RGB``     )
     Transformations within RGB space like adding/removing the alpha channel, reversing the channel order, conversion to/from 16-bit RGB color (R5:G6:B5 or R5:G5:B5), as well as conversion to/from grayscale using:
 
     .. math::
