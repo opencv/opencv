@@ -50,6 +50,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/photo.hpp>
+#include <opencv2/video.hpp>
 
 namespace cv {
 namespace bridge {
@@ -76,6 +77,7 @@ typedef cv::Ptr<LineSegmentDetector> Ptr_LineSegmentDetector;
 typedef cv::Ptr<AlignMTB> Ptr_AlignMTB;
 typedef cv::Ptr<CalibrateDebevec> Ptr_CalibrateDebevec;
 typedef cv::Ptr<CalibrateRobertson> Ptr_CalibrateRobertson;
+typedef cv::Ptr<DenseOpticalFlow> Ptr_DenseOpticalFlow;
 typedef cv::Ptr<MergeDebevec> Ptr_MergeDebevec;
 typedef cv::Ptr<MergeMertens> Ptr_MergeMertens;
 typedef cv::Ptr<MergeRobertson> Ptr_MergeRobertson;
@@ -452,6 +454,11 @@ public:
   Bridge& operator=(const Ptr_CalibrateRobertson& ) { return *this; }
   Ptr_CalibrateRobertson toPtrCalibrateRobertson() { return Ptr_CalibrateRobertson(); }
   operator Ptr_CalibrateRobertson() { return toPtrCalibrateRobertson(); }
+
+  // ---------------------------   Ptr_DenseOpticalFlow   -------------------
+  Bridge& operator=(const Ptr_DenseOpticalFlow& ) { return *this; }
+  Ptr_DenseOpticalFlow toPtrDenseOpticalFlow() { return Ptr_DenseOpticalFlow(); }
+  operator Ptr_DenseOpticalFlow() { return toPtrDenseOpticalFlow(); }
 
   // ---------------------------   Ptr_MergeDebevec   -----------------------
   Bridge& operator=(const Ptr_MergeDebevec& ) { return *this; }
