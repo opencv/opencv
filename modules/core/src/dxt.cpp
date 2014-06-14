@@ -2489,7 +2489,8 @@ namespace cv {
 static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
                               OutputArray _dst, int flags, bool conjB )
 {
-    int atype = _srcA.type(), btype = _srcB.type();
+    int atype = _srcA.type(), btype = _srcB.type(),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     Size asize = _srcA.size(), bsize = _srcB.size();
     CV_Assert(asize == bsize);
 
@@ -2509,9 +2510,9 @@ static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
         return false;
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(A), ocl::KernelArg::ReadOnlyNoSize(B),
-           ocl::KernelArg::WriteOnly(dst));
+           ocl::KernelArg::WriteOnly(dst), rowsPerWI);
 
-    size_t globalsize[2] = { asize.width, asize.height };
+    size_t globalsize[2] = { asize.width, (asize.height + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -2897,7 +2898,7 @@ static void IDCT_64f(const double* src, int src_step, double* dft_src, double* d
 
 namespace cv
 {
-#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7 && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7
 
 typedef IppStatus (CV_STDCALL * ippiDCTFunc)(const Ipp32f*, int, Ipp32f*, int, const void*, Ipp8u*);
 typedef IppStatus (CV_STDCALL * ippiDCTInitAlloc)(void**, IppiSize, IppHintAlgorithm);
@@ -3050,7 +3051,7 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
     _dst.create( src.rows, src.cols, type );
     Mat dst = _dst.getMat();
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7) && !defined HAVE_IPP_ICV_ONLY
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     bool row = (flags & DCT_ROWS) != 0;
     if (src.type() == CV_32F)
     {

@@ -410,8 +410,11 @@ void FilterEngine::apply(const Mat& src, Mat& dst,
         dstOfs.y + srcRoi.height <= dst.rows );
 
     int y = start(src, srcRoi, isolated);
-    proceed( src.data + y*src.step, (int)src.step, endY - startY,
-             dst.data + dstOfs.y*dst.step + dstOfs.x*dst.elemSize(), (int)dst.step );
+    proceed( src.data + y*src.step
+             + srcRoi.x*src.elemSize(),
+             (int)src.step, endY - startY,
+             dst.data + dstOfs.y*dst.step +
+             dstOfs.x*dst.elemSize(), (int)dst.step );
 }
 
 }
@@ -3235,12 +3238,12 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
         if (cn <= 2 && ksize.width <= 4 && ksize.height <= 4)
         {
             pxPerWorkItemX = sz.width % 8 ? sz.width % 4 ? sz.width % 2 ? 1 : 2 : 4 : 8;
-            pxPerWorkItemY = sz.width % 2 ? 1 : 2;
+            pxPerWorkItemY = sz.height % 2 ? 1 : 2;
         }
         else if (cn < 4 || (ksize.width <= 4 && ksize.height <= 4))
         {
             pxPerWorkItemX = sz.width % 2 ? 1 : 2;
-            pxPerWorkItemY = sz.width % 2 ? 1 : 2;
+            pxPerWorkItemY = sz.height % 2 ? 1 : 2;
         }
         globalsize[0] = sz.width / pxPerWorkItemX;
         globalsize[1] = sz.height / pxPerWorkItemY;
@@ -3820,26 +3823,45 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
     if( kernel.cols*kernel.rows >= dft_filter_size )
     {
         Mat temp;
-        if( src.data != dst.data )
-            temp = dst;
-        else
-            temp.create(dst.size(), dst.type());
         // crossCorr doesn't accept non-zero delta with multiple channels
         if( src.channels() != 1 && delta != 0 )
         {
+            // The semantics of filter2D require that the delta be applied
+            // as floating-point math.  So wee need an intermediate Mat
+            // with a float datatype.  If the dest is already floats,
+            // we just use that.
+            int corrDepth = dst.depth();
+            if( (dst.depth() == CV_32F || dst.depth() == CV_64F) &&
+                src.data != dst.data )
+            {
+                temp = dst;
+            }
+            else
+            {
+                corrDepth = dst.depth() == CV_64F ? CV_64F : CV_32F;
+                temp.create( dst.size(), CV_MAKETYPE(corrDepth, dst.channels()) );
+            }
             crossCorr( src, kernel, temp, src.size(),
-                       CV_MAKETYPE(ddepth, src.channels()),
+                       CV_MAKETYPE(corrDepth, src.channels()),
                        anchor, 0, borderType );
             add( temp, delta, temp );
+            if ( temp.data != dst.data )
+            {
+                temp.convertTo( dst, dst.type() );
+            }
         }
         else
         {
+            if( src.data != dst.data )
+                temp = dst;
+            else
+                temp.create(dst.size(), dst.type());
             crossCorr( src, kernel, temp, src.size(),
                        CV_MAKETYPE(ddepth, src.channels()),
                        anchor, delta, borderType );
+            if( temp.data != dst.data )
+                temp.copyTo(dst);
         }
-        if( temp.data != dst.data )
-            temp.copyTo(dst);
         return;
     }
 

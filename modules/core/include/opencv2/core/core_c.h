@@ -1764,15 +1764,9 @@ CVAPI(int) cvGuiBoxReport( int status, const char* func_name, const char* err_ms
 #define OPENCV_ERROR(status,func,context)                           \
 cvError((status),(func),(context),__FILE__,__LINE__)
 
-#define OPENCV_ERRCHK(func,context)                                 \
-{if (cvGetErrStatus() >= 0)                         \
-{OPENCV_ERROR(CV_StsBackTrace,(func),(context));}}
-
 #define OPENCV_ASSERT(expr,func,context)                            \
 {if (! (expr))                                      \
 {OPENCV_ERROR(CV_StsInternal,(func),(context));}}
-
-#define OPENCV_RSTERR() (cvSetErrStatus(CV_StsOk))
 
 #define OPENCV_CALL( Func )                                         \
 {                                                                   \
@@ -1799,10 +1793,6 @@ static char cvFuncName[] = Name
     cvError( (Code), cvFuncName, Msg, __FILE__, __LINE__ );        \
     __CV_EXIT__;                                                   \
 }
-
-/* Simplified form of CV_ERROR */
-#define CV_ERROR_FROM_CODE( code )   \
-    CV_ERROR( code, "" )
 
 /*
  CV_CHECK macro checks error status after CV (or IPL)

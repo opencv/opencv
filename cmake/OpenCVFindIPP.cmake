@@ -126,7 +126,18 @@ macro(ipp_detect_version)
 
   macro(_ipp_add_library name)
     if (EXISTS ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
-      list(APPEND IPP_LIBRARIES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
+      add_library(ipp${name} STATIC IMPORTED)
+      set_target_properties(ipp${name} PROPERTIES
+        IMPORTED_LINK_INTERFACE_LIBRARIES ""
+        IMPORTED_LOCATION ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
+      )
+      list(APPEND IPP_LIBRARIES ipp${name})
+      # CMake doesn't support "install(TARGETS ipp${name} " command with imported targets
+      install(FILES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
+              DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT main)
+      string(TOUPPER ${name} uname)
+      set(IPP${uname}_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_3P_LIB_INSTALL_PATH}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}" CACHE INTERNAL "" FORCE)
+      set(IPP${uname}_LOCATION_PATH "${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}" CACHE INTERNAL "" FORCE)
     else()
       message(STATUS "Can't find IPP library: ${name} at ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}")
     endif()
@@ -206,32 +217,9 @@ if(NOT DEFINED IPPROOT)
   endif()
 endif()
 
-# Try ICV
-find_path(
-    IPP_ICV_H_PATH
-    NAMES ippicv.h
-    PATHS ${IPPROOT}
-    DOC "The path to Intel(R) IPP ICV header files"
-    NO_DEFAULT_PATH
-    NO_CMAKE_PATH)
-set(IPP_ROOT_DIR ${IPP_ICV_H_PATH})
-
-if(NOT IPP_ICV_H_PATH)
-  # Try standalone IPP
-  find_path(
-      IPP_H_PATH
-      NAMES ippversion.h
-      PATHS ${IPPROOT}
-      PATH_SUFFIXES include
-      DOC "The path to Intel(R) IPP header files"
-      NO_DEFAULT_PATH
-      NO_CMAKE_PATH)
-  if(IPP_H_PATH)
-    get_filename_component(IPP_ROOT_DIR ${IPP_H_PATH} PATH)
-  endif()
-endif()
-
-if(IPP_ROOT_DIR)
+file(TO_CMAKE_PATH "${IPPROOT}" __IPPROOT)
+if(EXISTS "${__IPPROOT}/include/ippversion.h")
+  set(IPP_ROOT_DIR ${__IPPROOT})
   ipp_detect_version()
 endif()
 

@@ -25,6 +25,7 @@ set(opencv_hdrs
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/types.hpp"
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/persistence.hpp"
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/utility.hpp"
+    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/ocl.hpp"
     "${OPENCV_MODULE_opencv_flann_LOCATION}/include/opencv2/flann/miniflann.hpp"
     "${OPENCV_MODULE_opencv_imgproc_LOCATION}/include/opencv2/imgproc.hpp"
     "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/background_segm.hpp"
@@ -44,6 +45,7 @@ if(HAVE_opencv_nonfree)
 endif()
 
 set(cv2_generated_hdrs
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_funcs.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_func_tab.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_types.h"

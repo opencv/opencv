@@ -735,6 +735,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
 #if GST_VERSION_MAJOR == 0
     caps = gst_caps_new_simple("video/x-raw-rgb",
+                               "bpp",        G_TYPE_INT, 24,
                                "red_mask",   G_TYPE_INT, 0x0000FF,
                                "green_mask", G_TYPE_INT, 0x00FF00,
                                "blue_mask",  G_TYPE_INT, 0xFF0000,

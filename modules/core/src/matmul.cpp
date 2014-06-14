@@ -2020,7 +2020,8 @@ void cv::perspectiveTransform( InputArray _src, OutputArray _dst, InputArray _mt
 {
     Mat src = _src.getMat(), m = _mtx.getMat();
     int depth = src.depth(), scn = src.channels(), dcn = m.rows-1;
-    CV_Assert( scn + 1 == m.cols && (depth == CV_32F || depth == CV_64F));
+    CV_Assert( scn + 1 == m.cols );
+    CV_Assert( depth == CV_32F || depth == CV_64F );
 
     _dst.create( src.size(), CV_MAKETYPE(depth, dcn) );
     Mat dst = _dst.getMat();
@@ -2153,9 +2154,10 @@ typedef void (*ScaleAddFunc)(const uchar* src1, const uchar* src2, uchar* dst, i
 
 static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray _dst, int type )
 {
+    const ocl::Device & d = ocl::Device::getDefault();
     int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), wdepth = std::max(depth, CV_32F),
-            kercn = ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+            kercn = ocl::predictOptimalVectorWidth(_src1, _src2, _dst), rowsPerWI = d.isIntel() ? 4 : 1;
+    bool doubleSupport = d.doubleFPConfig() > 0;
     Size size = _src1.size();
 
     if ( (!doubleSupport && depth == CV_64F) || size != _src2.size() )
@@ -2164,13 +2166,14 @@ static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, Outp
     char cvt[2][50];
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
                   format("-D OP_SCALE_ADD -D BINARY_OP -D dstT=%s -D workT=%s -D convertToWT1=%s"
-                         " -D srcT1=dstT -D srcT2=dstT -D convertToDT=%s -D workT1=%s -D wdepth=%d%s",
+                         " -D srcT1=dstT -D srcT2=dstT -D convertToDT=%s -D workT1=%s"
+                         " -D wdepth=%d%s -D rowsPerWI=%d",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
                          ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)),
                          ocl::convertTypeStr(depth, wdepth, kercn, cvt[0]),
                          ocl::convertTypeStr(wdepth, depth, kercn, cvt[1]),
                          ocl::typeToStr(wdepth), wdepth,
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : "", rowsPerWI));
     if (k.empty())
         return false;
 
@@ -2187,7 +2190,7 @@ static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, Outp
     else
         k.args(src1arg, src2arg, dstarg, alpha);
 
-    size_t globalsize[2] = { dst.cols * cn / kercn, dst.rows };
+    size_t globalsize[2] = { dst.cols * cn / kercn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -2798,7 +2801,7 @@ dotProd_(const T* src1, const T* src2, int len)
 static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
 {
     double r = 0;
-#if ARITHM_USE_IPP
+#if ARITHM_USE_IPP && 0
     if (0 <= ippiDotProd_8u64f_C1R(src1, (int)(len*sizeof(src1[0])),
                                    src2, (int)(len*sizeof(src2[0])),
                                    ippiSize(len, 1), &r))

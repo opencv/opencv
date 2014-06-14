@@ -77,9 +77,14 @@
 #endif
 
 #ifdef ERODE
-#ifdef INTEL_DEVICE
+#if defined(INTEL_DEVICE) && (DEPTH_0)
 // workaround for bug in Intel HD graphics drivers (10.18.10.3496 or older)
-#define MORPH_OP(A,B) ((A) < (B) ? (A) : (B))
+#define __CAT(x, y) x##y
+#define CAT(x, y) __CAT(x, y)
+#define WA_CONVERT_1 CAT(convert_uint, cn)
+#define WA_CONVERT_2 CAT(convert_, T)
+#define convert_uint1 convert_uint
+#define MORPH_OP(A,B) WA_CONVERT_2(min(WA_CONVERT_1(A),WA_CONVERT_1(B)))
 #else
 #define MORPH_OP(A,B) min((A),(B))
 #endif

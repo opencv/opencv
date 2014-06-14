@@ -556,7 +556,6 @@ void CV_Resize_Test::resize_1d(const Mat& _src, Mat& _dst, int dy, const dim& _d
                 xyD[r] = 0;
                 for (int k = 0; k < ksize; ++k)
                     xyD[r] += w[k] * xyS[k * cn + r];
-                xyD[r] = xyD[r];
             }
         }
     }

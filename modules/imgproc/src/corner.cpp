@@ -460,8 +460,7 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
-
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && (IPP_VERSION_MAJOR >= 8)
+#if defined(HAVE_IPP) && (IPP_VERSION_MAJOR >= 8)
     typedef IppStatus (CV_STDCALL * ippiMinEigenValGetBufferSize)(IppiSize, int, int, int*);
     typedef IppStatus (CV_STDCALL * ippiMinEigenVal)(const void*, int, Ipp32f*, int, IppiSize, IppiKernelType, int, int, Ipp8u*);
     IppiKernelType kerType;
@@ -477,7 +476,7 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
     if ((borderTypeNI == BORDER_REPLICATE && (!src.isSubmatrix() || isolated)) &&
-        (kerSize == 3 || kerSize == 5) && (kerSize == 3 || blockSize == 5))
+        (kerSize == 3 || kerSize == 5) && (blockSize == 3 || blockSize == 5))
     {
         ippiMinEigenValGetBufferSize getBufferSizeFunc = 0;
         ippiMinEigenVal minEigenValFunc = 0;
@@ -494,12 +493,13 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
             minEigenValFunc = (ippiMinEigenVal) ippiMinEigenVal_32f_C1R;
             norm_coef = 255.f;
         }
+        norm_coef = kerType == ippKernelSobel ? norm_coef : norm_coef / 2.45f;
 
         if (getBufferSizeFunc && minEigenValFunc)
         {
             int bufferSize;
             IppiSize srcRoi = { src.cols, src.rows };
-            IppStatus ok = getBufferSizeFunc(srcRoi, ksize, blockSize, &bufferSize);
+            IppStatus ok = getBufferSizeFunc(srcRoi, kerSize, blockSize, &bufferSize);
             if (ok >= 0)
             {
                 AutoBuffer<uchar> buffer(bufferSize);
@@ -526,7 +526,7 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
     _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
 
-#if IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 801 && 0
     int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
@@ -544,7 +544,7 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
             scale *= 2.0;
         if (depth == CV_8U)
             scale *= 255.0;
-        scale = std::pow(scale, -4.0f);
+        scale = std::pow(scale, -4.0);
 
         if (ippiHarrisCornerGetBufferSize(roisize, masksize, blockSize, datatype, cn, &bufsize) >= 0)
         {
@@ -563,10 +563,8 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
 
             if (status >= 0)
                 return;
-            setIppErrorStatus();
         }
-        else
-            setIppErrorStatus();
+        setIppErrorStatus();
     }
 #endif
 

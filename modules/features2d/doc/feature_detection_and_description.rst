@@ -249,3 +249,54 @@ We notice that for keypoint matching applications, image content has little effe
     :param keypoints: Set of detected keypoints
     :param corrThresh: Correlation threshold.
     :param verbose: Prints pair selection informations.
+
+KAZE
+----
+.. ocv:class:: KAZE : public Feature2D
+
+Class implementing the KAZE keypoint detector and descriptor extractor, described in [ABD12]_.
+
+.. [ABD12] KAZE Features. Pablo F. Alcantarilla, Adrien Bartoli and Andrew J. Davison. In European Conference on Computer Vision (ECCV), Fiorenze, Italy, October 2012.
+
+KAZE::KAZE
+----------
+The KAZE constructor
+
+.. ocv:function:: KAZE::KAZE(bool extended, bool upright)
+
+    :param extended: Set to enable extraction of extended (128-byte) descriptor.
+    :param upright: Set to enable use of upright descriptors (non rotation-invariant).
+
+
+
+AKAZE
+-----
+.. ocv:class:: AKAZE : public Feature2D
+
+Class implementing the AKAZE keypoint detector and descriptor extractor, described in [ANB13]_. ::
+
+    class CV_EXPORTS_W AKAZE : public Feature2D
+    {
+    public:
+        /// AKAZE Descriptor Type
+        enum DESCRIPTOR_TYPE {
+            DESCRIPTOR_KAZE_UPRIGHT = 2, ///< Upright descriptors, not invariant to rotation
+            DESCRIPTOR_KAZE = 3,
+            DESCRIPTOR_MLDB_UPRIGHT = 4, ///< Upright descriptors, not invariant to rotation
+            DESCRIPTOR_MLDB = 5
+        };
+        CV_WRAP AKAZE();
+        explicit AKAZE(DESCRIPTOR_TYPE descriptor_type, int descriptor_size = 0, int descriptor_channels = 3);
+    };
+
+.. [ANB13] Fast Explicit Diffusion for Accelerated Features in Nonlinear Scale Spaces. Pablo F. Alcantarilla, Jesús Nuevo and Adrien Bartoli. In British Machine Vision Conference (BMVC), Bristol, UK, September 2013.
+
+AKAZE::AKAZE
+------------
+The AKAZE constructor
+
+.. ocv:function:: AKAZE::AKAZE(DESCRIPTOR_TYPE descriptor_type, int descriptor_size = 0, int descriptor_channels = 3)
+
+    :param descriptor_type: Type of the extracted descriptor.
+    :param descriptor_size: Size of the descriptor in bits. 0 -> Full size
+    :param descriptor_channels: Number of channels in the descriptor (1, 2, 3).
