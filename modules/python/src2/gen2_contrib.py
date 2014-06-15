@@ -769,15 +769,14 @@ class PythonWrapperGenerator(object):
         if constinfo.name in self.consts:
             print("Generator error: constant %s (cname=%s) already exists" \
                 % (constinfo.name, constinfo.cname))
-        #    sys.exit(-1)
-            return
+            sys.exit(-1)
         self.consts[constinfo.name] = constinfo
 
     def add_func(self, decl):
         classname = bareclassname = ""
         name = decl[0]
         dpos = name.rfind(".")
-        if dpos >= 0 and name[:dpos] not in ["cv", "cv.ocl", "cv.optim"]:
+        if dpos >= 0 and name[:dpos] != "cv":
             classname = bareclassname = re.sub(r"^cv\.", "", name[:dpos])
             name = name[dpos+1:]
             dpos = classname.rfind(".")
@@ -786,7 +785,6 @@ class PythonWrapperGenerator(object):
                 classname = classname.replace(".", "_")
         cname = name
         name = re.sub(r"^cv\.", "", name)
-        name = name.replace(".", "_")
         isconstructor = cname == bareclassname
         cname = cname.replace(".", "::")
         isclassmethod = False
@@ -832,11 +830,9 @@ class PythonWrapperGenerator(object):
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
-            print(hdr)
             decls = parser.parse(hdr)
             if len(decls)>0:
                 self.code_include.write( '#include "{}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )
-
             for decl in decls:
                 name = decl[0]
                 if name.startswith("struct") or name.startswith("class"):
@@ -892,12 +888,12 @@ class PythonWrapperGenerator(object):
             self.gen_const_reg(constinfo)
 
         # That's it. Now save all the files
-        self.save(output_path, "pyopencv_generated_include.h", self.code_include)
-        self.save(output_path, "pyopencv_generated_funcs.h", self.code_funcs)
-        self.save(output_path, "pyopencv_generated_func_tab.h", self.code_func_tab)
-        self.save(output_path, "pyopencv_generated_const_reg.h", self.code_const_reg)
-        self.save(output_path, "pyopencv_generated_types.h", self.code_types)
-        self.save(output_path, "pyopencv_generated_type_reg.h", self.code_type_reg)
+        self.save(output_path, "pyopencv_generated_contrib_include.h", self.code_include)
+        self.save(output_path, "pyopencv_generated_contrib_funcs.h", self.code_funcs)
+        self.save(output_path, "pyopencv_generated_contrib_func_tab.h", self.code_func_tab)
+        self.save(output_path, "pyopencv_generated_contrib_const_reg.h", self.code_const_reg)
+        self.save(output_path, "pyopencv_generated_contrib_types.h", self.code_types)
+        self.save(output_path, "pyopencv_generated_contrib_type_reg.h", self.code_type_reg)
 
 if __name__ == "__main__":
     srcfiles = hdr_parser.opencv_hdr_list
