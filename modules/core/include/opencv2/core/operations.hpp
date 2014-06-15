@@ -2704,6 +2704,7 @@ template<> CV_EXPORTS void Ptr<CvFileStorage>::delete_obj();
 
 //////////////////////////////////////// XML & YAML I/O ////////////////////////////////////
 
+CV_EXPORTS_W void write( FileStorage& fs, const string& name, unsigned int value );
 CV_EXPORTS_W void write( FileStorage& fs, const string& name, int value );
 CV_EXPORTS_W void write( FileStorage& fs, const string& name, float value );
 CV_EXPORTS_W void write( FileStorage& fs, const string& name, double value );
@@ -2712,10 +2713,16 @@ CV_EXPORTS_W void write( FileStorage& fs, const string& name, const string& valu
 template<typename _Tp> inline void write(FileStorage& fs, const _Tp& value)
 { write(fs, string(), value); }
 
+CV_EXPORTS void writeScalar( FileStorage& fs, unsigned int value );
 CV_EXPORTS void writeScalar( FileStorage& fs, int value );
 CV_EXPORTS void writeScalar( FileStorage& fs, float value );
 CV_EXPORTS void writeScalar( FileStorage& fs, double value );
 CV_EXPORTS void writeScalar( FileStorage& fs, const string& value );
+
+template<> inline void write( FileStorage& fs, const unsigned int& value )
+{
+    writeScalar(fs, value);
+}
 
 template<> inline void write( FileStorage& fs, const int& value )
 {
@@ -2943,6 +2950,13 @@ inline size_t FileNode::size() const
 
 inline CvFileNode* FileNode::operator *() { return (CvFileNode*)node; }
 inline const CvFileNode* FileNode::operator* () const { return node; }
+
+static inline void read(const FileNode& node, unsigned int& value, unsigned int default_value)
+{
+    value = !node.node ? default_value :
+    CV_NODE_IS_INT(node.node->tag) ? node.node->data.i :
+    CV_NODE_IS_REAL(node.node->tag) ? cvRound(node.node->data.f) : 0x7fffffff;
+}
 
 static inline void read(const FileNode& node, int& value, int default_value)
 {

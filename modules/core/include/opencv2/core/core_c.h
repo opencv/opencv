@@ -1542,6 +1542,9 @@ CVAPI(void) cvStartWriteStruct( CvFileStorage* fs, const char* name,
 /* finishes writing compound structure */
 CVAPI(void) cvEndWriteStruct( CvFileStorage* fs );
 
+/* writes an unsigned integer */
+CVAPI(void) cvWriteUInt( CvFileStorage* fs, const char* name, unsigned int value );
+
 /* writes an integer */
 CVAPI(void) cvWriteInt( CvFileStorage* fs, const char* name, int value );
 

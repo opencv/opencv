@@ -222,6 +222,7 @@ CvXMLStackRecord;
 typedef void (*CvStartWriteStruct)( struct CvFileStorage* fs, const char* key,
                                     int struct_flags, const char* type_name );
 typedef void (*CvEndWriteStruct)( struct CvFileStorage* fs );
+typedef void (*CvWriteUInt)( struct CvFileStorage* fs, const char* key, unsigned int value );
 typedef void (*CvWriteInt)( struct CvFileStorage* fs, const char* key, int value );
 typedef void (*CvWriteReal)( struct CvFileStorage* fs, const char* key, double value );
 typedef void (*CvWriteString)( struct CvFileStorage* fs, const char* key,
@@ -259,6 +260,7 @@ typedef struct CvFileStorage
 
     CvStartWriteStruct start_write_struct;
     CvEndWriteStruct end_write_struct;
+    CvWriteUInt write_uint;
     CvWriteInt write_int;
     CvWriteReal write_real;
     CvWriteString write_string;
@@ -1641,6 +1643,14 @@ icvYMLStartNextStream( CvFileStorage* fs )
 
 
 static void
+icvYMLWriteUInt( CvFileStorage* fs, const char* key, unsigned int value )
+{
+    char buf[128];
+    icvYMLWrite( fs, key, icv_itoa( value, buf, 10 ));
+}
+
+
+static void
 icvYMLWriteInt( CvFileStorage* fs, const char* key, int value )
 {
     char buf[128];
@@ -2512,6 +2522,15 @@ icvXMLWriteScalar( CvFileStorage* fs, const char* key, const char* data, int len
 
 
 static void
+icvXMLWriteUInt( CvFileStorage* fs, const char* key, unsigned int value )
+{
+    char buf[128], *ptr = icv_itoa( value, buf, 10 );
+    int len = (int)strlen(ptr);
+    icvXMLWriteScalar( fs, key, ptr, len );
+}
+
+
+static void
 icvXMLWriteInt( CvFileStorage* fs, const char* key, int value )
 {
     char buf[128], *ptr = icv_itoa( value, buf, 10 );
@@ -2850,6 +2869,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
             }
             fs->start_write_struct = icvXMLStartWriteStruct;
             fs->end_write_struct = icvXMLEndWriteStruct;
+            fs->write_uint = icvXMLWriteUInt;
             fs->write_int = icvXMLWriteInt;
             fs->write_real = icvXMLWriteReal;
             fs->write_string = icvXMLWriteString;
@@ -2864,6 +2884,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
                 icvPuts( fs, "...\n---\n" );
             fs->start_write_struct = icvYMLStartWriteStruct;
             fs->end_write_struct = icvYMLEndWriteStruct;
+            fs->write_uint = icvYMLWriteUInt;
             fs->write_int = icvYMLWriteInt;
             fs->write_real = icvYMLWriteReal;
             fs->write_string = icvYMLWriteString;
@@ -2962,6 +2983,13 @@ cvEndWriteStruct( CvFileStorage* fs )
     fs->end_write_struct( fs );
 }
 
+
+CV_IMPL void
+cvWriteUInt( CvFileStorage* fs, const char* key, unsigned int value )
+{
+    CV_CHECK_OUTPUT_FILE_STORAGE(fs);
+    fs->write_uint( fs, key, value );
+}
 
 CV_IMPL void
 cvWriteInt( CvFileStorage* fs, const char* key, int value )
@@ -5458,6 +5486,9 @@ FileNodeIterator& FileNodeIterator::readRaw( const string& fmt, uchar* vec, size
 }
 
 
+void write( FileStorage& fs, const string& name, unsigned int value )
+{ cvWriteUInt( *fs, name.size() ? name.c_str() : 0, value ); }
+
 void write( FileStorage& fs, const string& name, int value )
 { cvWriteInt( *fs, name.size() ? name.c_str() : 0, value ); }
 
@@ -5469,6 +5500,9 @@ void write( FileStorage& fs, const string& name, double value )
 
 void write( FileStorage& fs, const string& name, const string& value )
 { cvWriteString( *fs, name.size() ? name.c_str() : 0, value.c_str() ); }
+
+void writeScalar(FileStorage& fs, unsigned int value )
+{ cvWriteUInt( *fs, 0, value ); }
 
 void writeScalar(FileStorage& fs, int value )
 { cvWriteInt( *fs, 0, value ); }
