@@ -81,7 +81,7 @@ public:
 };
 
 // both minRange & minError are specified by termcrit.epsilon; In addition, user may specify the number of iterations that the algorithm does.
-CV_EXPORTS_W Ptr<DownhillSolver> createDownhillSolver(const Ptr<Solver::Function>& f=Ptr<Solver::Function>(),
+CV_EXPORTS Ptr<DownhillSolver> createDownhillSolver(const Ptr<Solver::Function>& f=Ptr<Solver::Function>(),
         InputArray initStep=Mat_<double>(1,1,0.0),
         TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5000,0.000001));
 
@@ -89,7 +89,7 @@ CV_EXPORTS_W Ptr<DownhillSolver> createDownhillSolver(const Ptr<Solver::Function
 class CV_EXPORTS ConjGradSolver : public Solver{
 };
 
-CV_EXPORTS_W Ptr<ConjGradSolver> createConjGradSolver(const Ptr<Solver::Function>& f=Ptr<ConjGradSolver::Function>(),
+CV_EXPORTS Ptr<ConjGradSolver> createConjGradSolver(const Ptr<Solver::Function>& f=Ptr<ConjGradSolver::Function>(),
         TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5000,0.000001));
 
 //!the return codes for solveLP() function
