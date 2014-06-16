@@ -71,10 +71,10 @@
 #endif
 
 
-kernel void integral_sum_cols(__global uchar4 *src, __global uchar *sum_ptr,
+kernel void integral_sum_cols(__global const uchar4 *src, __global uchar *sum_ptr,
                               int src_offset, int rows, int cols, int src_step, int dst_step)
 {
-    sumT *sum = (sumT *)sum_ptr;
+    __global sumT *sum = (__global sumT *)sum_ptr;
     int lid = get_local_id(0);
     int gid = get_group_id(0);
     vecSumT src_t[2], sum_t[2];
@@ -173,11 +173,11 @@ kernel void integral_sum_cols(__global uchar4 *src, __global uchar *sum_ptr,
 }
 
 
-kernel void integral_sum_rows(__global uchar *srcsum_ptr, __global uchar *sum_ptr,
+kernel void integral_sum_rows(__global const uchar *srcsum_ptr, __global uchar *sum_ptr,
                               int rows, int cols, int src_step, int sum_step, int sum_offset)
 {
-    vecSumT *srcsum = (vecSumT *)srcsum_ptr;
-    sumT *sum = (sumT *)sum_ptr;
+    __global const vecSumT *srcsum = (__global const vecSumT *)srcsum_ptr;
+    __global sumT *sum = (__global sumT *)sum_ptr;
     int lid = get_local_id(0);
     int gid = get_group_id(0);
     vecSumT src_t[2], sum_t[2];
