@@ -112,8 +112,6 @@ typedef std::vector<std::vector<Point3f> > vector_vector_Point3f;
 typedef std::vector<std::vector<DMatch> > vector_vector_DMatch;
 
 typedef cv::softcascade::ChannelFeatureBuilder softcascade_ChannelFeatureBuilder;
-typedef cv::optim::DownhillSolver optim_DownhillSolver;
-typedef cv::optim::Solver optim_Solver;
 typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
 
 typedef cvflann::flann_distance_t cvflann_flann_distance_t;
