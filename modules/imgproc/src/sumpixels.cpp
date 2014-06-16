@@ -266,7 +266,7 @@ static bool ocl_integral( InputArray _src, OutputArray _sum, int sdepth )
 
     ocl::Kernel k2("integral_sum_rows", ocl::imgproc::integral_sum_oclsrc,
                    format("-D sdepth=%d", sdepth));
-    k2.args(ocl::KernelArg::PtrReadWrite(t_sum), ocl::KernelArg::PtrWriteOnly(sum),
+    k2.args(ocl::KernelArg::PtrReadOnly(t_sum), ocl::KernelArg::PtrWriteOnly(sum),
             t_sum.rows, t_sum.cols, (int)t_sum.step, (int)sum.step, sum_offset);
 
     size_t gt2 = t_sum.cols  * 32, lt2 = 256;
