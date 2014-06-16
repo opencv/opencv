@@ -3313,9 +3313,6 @@ cvCloneGraph( const CvGraph* graph, CvMemStorage* storage )
     cvFree( &flag_buffer );
     cvFree( &ptr_buffer );
 
-    if( cvGetErrStatus() < 0 )
-        result = 0;
-
     return result;
 }
 

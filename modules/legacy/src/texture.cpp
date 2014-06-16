@@ -273,8 +273,6 @@ icvCreateGLCM_LookupTable_8u_C1R( const uchar* srcImageData,
 {
     int* stepIncrementsCounter = 0;
 
-    CV_FUNCNAME( "icvCreateGLCM_LookupTable_8u_C1R" );
-
     __BEGIN__;
 
     int matrixSideLength = destGLCM->matrixSideLength;

@@ -740,7 +740,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     ShowWindow(hWnd, SW_SHOW);
 
     len = (int)strlen(name);
-    CV_CALL( window = (CvWindow*)cvAlloc(sizeof(CvWindow) + len + 1));
+    window = (CvWindow*)cvAlloc(sizeof(CvWindow) + len + 1);
 
     window->signature = CV_WINDOW_MAGIC_VAL;
     window->hwnd = hWnd;
@@ -1081,7 +1081,7 @@ cvShowImage( const char* name, const CvArr* arr )
     if( CV_IS_IMAGE_HDR( arr ))
         origin = ((IplImage*)arr)->origin;
 
-    CV_CALL( image = cvGetMat( arr, &stub ));
+    image = cvGetMat( arr, &stub );
 
 #ifdef HAVE_OPENGL
     if (window->useGl)

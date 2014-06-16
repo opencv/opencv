@@ -194,8 +194,8 @@ void cvCrossValCheckClassifier (CvStatModel*  estimateModel,
     data = crVal->sampleIdxEval->data.i;
 
 // Eval tested feature vectors.
-    CV_CALL (cvStatModelMultiPredict (model, trainData, sample_t_flag,
-                                         crVal->predict_results, NULL, crVal->sampleIdxEval));
+    cvStatModelMultiPredict (model, trainData, sample_t_flag,
+                                         crVal->predict_results, NULL, crVal->sampleIdxEval);
 // Count number if correct results.
     responses_result = crVal->predict_results->data.fl;
     if (crVal->is_regression)
@@ -434,11 +434,11 @@ cvCreateCrossValidationEstimateModel(
     }
 
 // Alloc memory and fill standart StatModel's fields.
-    CV_CALL (crVal = (CvCrossValidationModel*)cvCreateStatModel (
+    crVal = (CvCrossValidationModel*)cvCreateStatModel (
                             CV_STAT_MODEL_MAGIC_VAL | CV_CROSSVAL_MAGIC_VAL,
                             sizeof(CvCrossValidationModel),
                             cvReleaseCrossValidationModel,
-                            NULL, NULL));
+                            NULL, NULL);
     crVal->current_fold    = -1;
     crVal->folds_all       = k_fold;
     if (estimateParams && ((CvCrossValidationParams*)estimateParams)->is_regression)
@@ -502,8 +502,7 @@ cvCreateCrossValidationEstimateModel(
         }
 
         // Alloc additional memory for internal Idx and fill it.
-/*!!*/  CV_CALL (res_s_data = crVal->sampleIdxAll =
-                                                 (int*)cvAlloc (2 * s_len * sizeof(int)));
+/*!!*/  res_s_data = crVal->sampleIdxAll = (int*)cvAlloc (2 * s_len * sizeof(int));
 
         if (s_type < CV_32SC1)
         {
@@ -542,7 +541,7 @@ cvCreateCrossValidationEstimateModel(
     {
         // Alloc additional memory for internal Idx and fill it.
         s_len = samples_all;
-        CV_CALL (res_s_data = crVal->sampleIdxAll = (int*)cvAlloc (2 * s_len * sizeof(int)));
+        res_s_data = crVal->sampleIdxAll = (int*)cvAlloc (2 * s_len * sizeof(int));
         for (i = 0; i < s_len; i++)
         {
             *res_s_data++ = i;
@@ -608,9 +607,9 @@ cvCreateCrossValidationEstimateModel(
     }
 
 // Prepare other internal fields to working.
-    CV_CALL (crVal->predict_results = cvCreateMat (1, samples_all, CV_32FC1));
-    CV_CALL (crVal->sampleIdxEval = cvCreateMatHeader (1, 1, CV_32SC1));
-    CV_CALL (crVal->sampleIdxTrain = cvCreateMatHeader (1, 1, CV_32SC1));
+    crVal->predict_results = cvCreateMat (1, samples_all, CV_32FC1);
+    crVal->sampleIdxEval = cvCreateMatHeader (1, 1, CV_32SC1);
+    crVal->sampleIdxTrain = cvCreateMatHeader (1, 1, CV_32SC1);
     crVal->sampleIdxEval->cols = 0;
     crVal->sampleIdxTrain->cols = 0;
     crVal->samples_all = s_len;
@@ -689,25 +688,24 @@ cvCrossValidation (const CvMat*            trueData,
     else
     {
         samples_all = ((tflag) ? trueData->rows : trueData->cols);
-        CV_CALL (crVal = (CvCrossValidationModel*)
-           cvCreateCrossValidationEstimateModel (samples_all, estimateParams, sampleIdx));
+        crVal = (CvCrossValidationModel*)
+           cvCreateCrossValidationEstimateModel (samples_all, estimateParams, sampleIdx);
     }
 
-    CV_CALL (trainDataIdx = crVal->getTrainIdxMat ((CvStatModel*)crVal));
+    trainDataIdx = crVal->getTrainIdxMat ((CvStatModel*)crVal);
 
 // operation loop
     for (; crVal->nextStep((CvStatModel*)crVal) != 0; )
     {
-        CV_CALL (pClassifier = createClassifier (trueData, tflag, trueClasses,
-                    trainParams, compIdx, trainDataIdx, typeMask, missedMeasurementMask));
-        CV_CALL (crVal->check ((CvStatModel*)crVal, pClassifier,
-                                                           trueData, tflag, trueClasses));
+        pClassifier = createClassifier (trueData, tflag, trueClasses,
+                    trainParams, compIdx, trainDataIdx, typeMask, missedMeasurementMask);
+        crVal->check ((CvStatModel*)crVal, pClassifier, trueData, tflag, trueClasses);
 
         pClassifier->release (&pClassifier);
     }
 
 // Get result and fill output field.
-    CV_CALL (result = crVal->getResult ((CvStatModel*)crVal, 0));
+    result = crVal->getResult ((CvStatModel*)crVal, 0);
 
     if (pCrValModel && !*pCrValModel)
         *pCrValModel = (CvStatModel*)crVal;

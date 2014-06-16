@@ -394,7 +394,7 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
     if( CV_IS_IMAGE_HDR( arr ))
         origin = ((IplImage*)arr)->origin;
 
-    CV_CALL( image = cvGetMat( arr, &stub ));
+    image = cvGetMat( arr, &stub );
 
     /*
      if( !window->image )
@@ -888,7 +888,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
         EXIT;
     }
     len = strlen(name);
-    CV_CALL( window = (CvWindow*)cvAlloc(sizeof(CvWindow) + len + 1));
+    window = (CvWindow*)cvAlloc(sizeof(CvWindow) + len + 1);
     memset( window, 0, sizeof(*window));
     window->name = (char*)(window + 1);
     memcpy( window->name, name, len + 1 );

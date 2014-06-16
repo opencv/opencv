@@ -123,11 +123,11 @@ bool CvNormalBayesClassifier::train( const CvMat* _train_data, const CvMat* _res
     int s, c1, c2;
     const int* responses_data;
 
-    CV_CALL( cvPrepareTrainData( 0,
+    cvPrepareTrainData( 0,
         _train_data, CV_ROW_SAMPLE, _responses, CV_VAR_CATEGORICAL,
         _var_idx, _sample_idx, false, &train_data,
         &nsamples, &_var_count, &_var_all, &responses,
-        &__cls_labels, &__var_idx ));
+        &__cls_labels, &__var_idx );
 
     if( !update )
     {
@@ -145,7 +145,7 @@ bool CvNormalBayesClassifier::train( const CvMat* _train_data, const CvMat* _res
         nclasses = cls_labels->cols;
         data_size = nclasses*6*mat_size;
 
-        CV_CALL( count = (CvMat**)cvAlloc( data_size ));
+        count = (CvMat**)cvAlloc( data_size );
         memset( count, 0, data_size );
 
         sum             = count      + nclasses;
@@ -154,22 +154,22 @@ bool CvNormalBayesClassifier::train( const CvMat* _train_data, const CvMat* _res
         inv_eigen_values= avg        + nclasses;
         cov_rotate_mats = inv_eigen_values         + nclasses;
 
-        CV_CALL( c = cvCreateMat( 1, nclasses, CV_64FC1 ));
+        c = cvCreateMat( 1, nclasses, CV_64FC1 );
 
         for( cls = 0; cls < nclasses; cls++ )
         {
-            CV_CALL(count[cls]            = cvCreateMat( 1, var_count, CV_32SC1 ));
-            CV_CALL(sum[cls]              = cvCreateMat( 1, var_count, CV_64FC1 ));
-            CV_CALL(productsum[cls]       = cvCreateMat( var_count, var_count, CV_64FC1 ));
-            CV_CALL(avg[cls]              = cvCreateMat( 1, var_count, CV_64FC1 ));
-            CV_CALL(inv_eigen_values[cls] = cvCreateMat( 1, var_count, CV_64FC1 ));
-            CV_CALL(cov_rotate_mats[cls]  = cvCreateMat( var_count, var_count, CV_64FC1 ));
-            CV_CALL(cvZero( count[cls] ));
-            CV_CALL(cvZero( sum[cls] ));
-            CV_CALL(cvZero( productsum[cls] ));
-            CV_CALL(cvZero( avg[cls] ));
-            CV_CALL(cvZero( inv_eigen_values[cls] ));
-            CV_CALL(cvZero( cov_rotate_mats[cls] ));
+            count[cls]            = cvCreateMat( 1, var_count, CV_32SC1 );
+            sum[cls]              = cvCreateMat( 1, var_count, CV_64FC1 );
+            productsum[cls]       = cvCreateMat( var_count, var_count, CV_64FC1 );
+            avg[cls]              = cvCreateMat( 1, var_count, CV_64FC1 );
+            inv_eigen_values[cls] = cvCreateMat( 1, var_count, CV_64FC1 );
+            cov_rotate_mats[cls]  = cvCreateMat( var_count, var_count, CV_64FC1 );
+            cvZero( count[cls] );
+            cvZero( sum[cls] );
+            cvZero( productsum[cls] );
+            cvZero( avg[cls] );
+            cvZero( inv_eigen_values[cls] );
+            cvZero( cov_rotate_mats[cls] );
         }
     }
     else
@@ -190,7 +190,7 @@ bool CvNormalBayesClassifier::train( const CvMat* _train_data, const CvMat* _res
     }
 
     responses_data = responses->data.i;
-    CV_CALL( cov = cvCreateMat( _var_count, _var_count, CV_64FC1 ));
+    cov = cvCreateMat( _var_count, _var_count, CV_64FC1 );
 
     /* process train data (count, sum , productsum) */
     for( s = 0; s < nsamples; s++ )
@@ -254,13 +254,13 @@ bool CvNormalBayesClassifier::train( const CvMat* _train_data, const CvMat* _res
             }
         }
 
-        CV_CALL( cvCompleteSymm( cov, 1 ));
-        CV_CALL( cvSVD( cov, w, cov_rotate_mats[cls], 0, CV_SVD_U_T ));
-        CV_CALL( cvMaxS( w, min_variation, w ));
+        cvCompleteSymm( cov, 1 );
+        cvSVD( cov, w, cov_rotate_mats[cls], 0, CV_SVD_U_T );
+        cvMaxS( w, min_variation, w );
         for( j = 0; j < _var_count; j++ )
             det *= w->data.db[j];
 
-        CV_CALL( cvDiv( NULL, w, w ));
+        cvDiv( NULL, w, w );
         c->data.db[cls] = det > 0 ? log(det) : -700;
     }
 
@@ -268,7 +268,7 @@ bool CvNormalBayesClassifier::train( const CvMat* _train_data, const CvMat* _res
 
     __END__;
 
-    if( !result || cvGetErrStatus() < 0 )
+    if( !result )
         clear();
 
     cvReleaseMat( &cov );
@@ -409,8 +409,6 @@ float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results ) c
 
 void CvNormalBayesClassifier::write( CvFileStorage* fs, const char* name ) const
 {
-    CV_FUNCNAME( "CvNormalBayesClassifier::write" );
-
     __BEGIN__;
 
     int nclasses, i;
@@ -419,44 +417,44 @@ void CvNormalBayesClassifier::write( CvFileStorage* fs, const char* name ) const
 
     cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_ML_NBAYES );
 
-    CV_CALL( cvWriteInt( fs, "var_count", var_count ));
-    CV_CALL( cvWriteInt( fs, "var_all", var_all ));
+    cvWriteInt( fs, "var_count", var_count );
+    cvWriteInt( fs, "var_all", var_all );
 
     if( var_idx )
-        CV_CALL( cvWrite( fs, "var_idx", var_idx ));
-    CV_CALL( cvWrite( fs, "cls_labels", cls_labels ));
+        cvWrite( fs, "var_idx", var_idx );
+    cvWrite( fs, "cls_labels", cls_labels );
 
-    CV_CALL( cvStartWriteStruct( fs, "count", CV_NODE_SEQ ));
+    cvStartWriteStruct( fs, "count", CV_NODE_SEQ );
     for( i = 0; i < nclasses; i++ )
-        CV_CALL( cvWrite( fs, NULL, count[i] ));
-    CV_CALL( cvEndWriteStruct( fs ));
+        cvWrite( fs, NULL, count[i] );
+    cvEndWriteStruct( fs );
 
-    CV_CALL( cvStartWriteStruct( fs, "sum", CV_NODE_SEQ ));
+    cvStartWriteStruct( fs, "sum", CV_NODE_SEQ );
     for( i = 0; i < nclasses; i++ )
-        CV_CALL( cvWrite( fs, NULL, sum[i] ));
-    CV_CALL( cvEndWriteStruct( fs ));
+        cvWrite( fs, NULL, sum[i] );
+    cvEndWriteStruct( fs );
 
-    CV_CALL( cvStartWriteStruct( fs, "productsum", CV_NODE_SEQ ));
+    cvStartWriteStruct( fs, "productsum", CV_NODE_SEQ );
     for( i = 0; i < nclasses; i++ )
-        CV_CALL( cvWrite( fs, NULL, productsum[i] ));
-    CV_CALL( cvEndWriteStruct( fs ));
+        cvWrite( fs, NULL, productsum[i] );
+    cvEndWriteStruct( fs );
 
-    CV_CALL( cvStartWriteStruct( fs, "avg", CV_NODE_SEQ ));
+    cvStartWriteStruct( fs, "avg", CV_NODE_SEQ );
     for( i = 0; i < nclasses; i++ )
-        CV_CALL( cvWrite( fs, NULL, avg[i] ));
-    CV_CALL( cvEndWriteStruct( fs ));
+        cvWrite( fs, NULL, avg[i] );
+    cvEndWriteStruct( fs );
 
-    CV_CALL( cvStartWriteStruct( fs, "inv_eigen_values", CV_NODE_SEQ ));
+    cvStartWriteStruct( fs, "inv_eigen_values", CV_NODE_SEQ );
     for( i = 0; i < nclasses; i++ )
-        CV_CALL( cvWrite( fs, NULL, inv_eigen_values[i] ));
-    CV_CALL( cvEndWriteStruct( fs ));
+        cvWrite( fs, NULL, inv_eigen_values[i] );
+    cvEndWriteStruct( fs );
 
-    CV_CALL( cvStartWriteStruct( fs, "cov_rotate_mats", CV_NODE_SEQ ));
+    cvStartWriteStruct( fs, "cov_rotate_mats", CV_NODE_SEQ );
     for( i = 0; i < nclasses; i++ )
-        CV_CALL( cvWrite( fs, NULL, cov_rotate_mats[i] ));
-    CV_CALL( cvEndWriteStruct( fs ));
+        cvWrite( fs, NULL, cov_rotate_mats[i] );
+    cvEndWriteStruct( fs );
 
-    CV_CALL( cvWrite( fs, "c", c ));
+    cvWrite( fs, "c", c );
 
     cvEndWriteStruct( fs );
 
@@ -479,10 +477,10 @@ void CvNormalBayesClassifier::read( CvFileStorage* fs, CvFileNode* root_node )
 
     clear();
 
-    CV_CALL( var_count = cvReadIntByName( fs, root_node, "var_count", -1 ));
-    CV_CALL( var_all = cvReadIntByName( fs, root_node, "var_all", -1 ));
-    CV_CALL( var_idx = (CvMat*)cvReadByName( fs, root_node, "var_idx" ));
-    CV_CALL( cls_labels = (CvMat*)cvReadByName( fs, root_node, "cls_labels" ));
+    var_count = cvReadIntByName( fs, root_node, "var_count", -1 );
+    var_all = cvReadIntByName( fs, root_node, "var_all", -1 );
+    var_idx = (CvMat*)cvReadByName( fs, root_node, "var_idx" );
+    cls_labels = (CvMat*)cvReadByName( fs, root_node, "cls_labels" );
     if( !cls_labels )
         CV_ERROR( CV_StsParseError, "No \"cls_labels\" in NBayes classifier" );
     if( cls_labels->cols < 1 )
@@ -493,7 +491,7 @@ void CvNormalBayesClassifier::read( CvFileStorage* fs, CvFileNode* root_node )
     nclasses = cls_labels->cols;
 
     data_size = nclasses*6*sizeof(CvMat*);
-    CV_CALL( count = (CvMat**)cvAlloc( data_size ));
+    count = (CvMat**)cvAlloc( data_size );
     memset( count, 0, data_size );
 
     sum = count + nclasses;
@@ -502,73 +500,73 @@ void CvNormalBayesClassifier::read( CvFileStorage* fs, CvFileNode* root_node )
     inv_eigen_values = avg + nclasses;
     cov_rotate_mats = inv_eigen_values + nclasses;
 
-    CV_CALL( node = cvGetFileNodeByName( fs, root_node, "count" ));
+    node = cvGetFileNodeByName( fs, root_node, "count" );
     seq = node->data.seq;
     if( !CV_NODE_IS_SEQ(node->tag) || seq->total != nclasses)
         CV_ERROR( CV_StsBadArg, "" );
-    CV_CALL( cvStartReadSeq( seq, &reader, 0 ));
+    cvStartReadSeq( seq, &reader, 0 );
     for( i = 0; i < nclasses; i++ )
     {
-        CV_CALL( count[i] = (CvMat*)cvRead( fs, (CvFileNode*)reader.ptr ));
+        count[i] = (CvMat*)cvRead( fs, (CvFileNode*)reader.ptr );
         CV_NEXT_SEQ_ELEM( seq->elem_size, reader );
     }
 
-    CV_CALL( node = cvGetFileNodeByName( fs, root_node, "sum" ));
+    node = cvGetFileNodeByName( fs, root_node, "sum" );
     seq = node->data.seq;
     if( !CV_NODE_IS_SEQ(node->tag) || seq->total != nclasses)
         CV_ERROR( CV_StsBadArg, "" );
-    CV_CALL( cvStartReadSeq( seq, &reader, 0 ));
+    cvStartReadSeq( seq, &reader, 0 );
     for( i = 0; i < nclasses; i++ )
     {
-        CV_CALL( sum[i] = (CvMat*)cvRead( fs, (CvFileNode*)reader.ptr ));
+        sum[i] = (CvMat*)cvRead( fs, (CvFileNode*)reader.ptr );
         CV_NEXT_SEQ_ELEM( seq->elem_size, reader );
     }
 
-    CV_CALL( node = cvGetFileNodeByName( fs, root_node, "productsum" ));
+    node = cvGetFileNodeByName( fs, root_node, "productsum" );
     seq = node->data.seq;
     if( !CV_NODE_IS_SEQ(node->tag) || seq->total != nclasses)
         CV_ERROR( CV_StsBadArg, "" );
-    CV_CALL( cvStartReadSeq( seq, &reader, 0 ));
+    cvStartReadSeq( seq, &reader, 0 );
     for( i = 0; i < nclasses; i++ )
     {
-        CV_CALL( productsum[i] = (CvMat*)cvRead( fs, (CvFileNode*)reader.ptr ));
+        productsum[i] = (CvMat*)cvRead( fs, (CvFileNode*)reader.ptr );
         CV_NEXT_SEQ_ELEM( seq->elem_size, reader );
     }
 
-    CV_CALL( node = cvGetFileNodeByName( fs, root_node, "avg" ));
+    node = cvGetFileNodeByName( fs, root_node, "avg" );
     seq = node->data.seq;
     if( !CV_NODE_IS_SEQ(node->tag) || seq->total != nclasses)
         CV_ERROR( CV_StsBadArg, "" );
-    CV_CALL( cvStartReadSeq( seq, &reader, 0 ));
+    cvStartReadSeq( seq, &reader, 0 );
     for( i = 0; i < nclasses; i++ )
     {
-        CV_CALL( avg[i] = (CvMat*)cvRead( fs, (CvFileNode*)reader.ptr ));
+        avg[i] = (CvMat*)cvRead( fs, (CvFileNode*)reader.ptr );
         CV_NEXT_SEQ_ELEM( seq->elem_size, reader );
     }
 
-    CV_CALL( node = cvGetFileNodeByName( fs, root_node, "inv_eigen_values" ));
+    node = cvGetFileNodeByName( fs, root_node, "inv_eigen_values" );
     seq = node->data.seq;
     if( !CV_NODE_IS_SEQ(node->tag) || seq->total != nclasses)
         CV_ERROR( CV_StsBadArg, "" );
-    CV_CALL( cvStartReadSeq( seq, &reader, 0 ));
+    cvStartReadSeq( seq, &reader, 0 );
     for( i = 0; i < nclasses; i++ )
     {
-        CV_CALL( inv_eigen_values[i] = (CvMat*)cvRead( fs, (CvFileNode*)reader.ptr ));
+        inv_eigen_values[i] = (CvMat*)cvRead( fs, (CvFileNode*)reader.ptr );
         CV_NEXT_SEQ_ELEM( seq->elem_size, reader );
     }
 
-    CV_CALL( node = cvGetFileNodeByName( fs, root_node, "cov_rotate_mats" ));
+    node = cvGetFileNodeByName( fs, root_node, "cov_rotate_mats" );
     seq = node->data.seq;
     if( !CV_NODE_IS_SEQ(node->tag) || seq->total != nclasses)
         CV_ERROR( CV_StsBadArg, "" );
-    CV_CALL( cvStartReadSeq( seq, &reader, 0 ));
+    cvStartReadSeq( seq, &reader, 0 );
     for( i = 0; i < nclasses; i++ )
     {
-        CV_CALL( cov_rotate_mats[i] = (CvMat*)cvRead( fs, (CvFileNode*)reader.ptr ));
+        cov_rotate_mats[i] = (CvMat*)cvRead( fs, (CvFileNode*)reader.ptr );
         CV_NEXT_SEQ_ELEM( seq->elem_size, reader );
     }
 
-    CV_CALL( c = (CvMat*)cvReadByName( fs, root_node, "c" ));
+    c = (CvMat*)cvReadByName( fs, root_node, "c" );
 
     ok = true;
 

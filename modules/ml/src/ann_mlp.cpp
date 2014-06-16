@@ -225,13 +225,13 @@ void CvANN_MLP::create( const CvMat* _layer_sizes, int _activ_func,
         CV_ERROR( CV_StsBadArg,
         "The array of layer neuron counters must be an integer vector" );
 
-    CV_CALL( set_activ_func( _activ_func, _f_param1, _f_param2 ));
+    set_activ_func( _activ_func, _f_param1, _f_param2 );
 
     l_count = _layer_sizes->rows + _layer_sizes->cols - 1;
     l_src = _layer_sizes->data.i;
     l_step = CV_IS_MAT_CONT(_layer_sizes->type) ? 1 :
                 _layer_sizes->step / sizeof(l_src[0]);
-    CV_CALL( layer_sizes = cvCreateMat( 1, l_count, CV_32SC1 ));
+    layer_sizes = cvCreateMat( 1, l_count, CV_32SC1 );
     l_dst = layer_sizes->data.i;
 
     max_count = 0;
@@ -250,8 +250,8 @@ void CvANN_MLP::create( const CvMat* _layer_sizes, int _activ_func,
 
     buf_sz += (l_dst[0] + l_dst[l_count-1]*2)*2;
 
-    CV_CALL( wbuf = cvCreateMat( 1, buf_sz, CV_64F ));
-    CV_CALL( weights = (double**)cvAlloc( (l_count+2)*sizeof(weights[0]) ));
+    wbuf = cvCreateMat( 1, buf_sz, CV_64F );
+    weights = (double**)cvAlloc( (l_count+2)*sizeof(weights[0]) );
 
     weights[0] = wbuf->data.db;
     weights[1] = weights[0] + l_dst[0]*2;
@@ -702,7 +702,7 @@ bool CvANN_MLP::prepare_to_train( const CvMat* _inputs, const CvMat* _outputs,
 
     if( _sample_idx )
     {
-        CV_CALL( sample_idx = cvPreprocessIndexArray( _sample_idx, _inputs->rows ));
+        sample_idx = cvPreprocessIndexArray( _sample_idx, _inputs->rows );
         sidx = sample_idx->data.i;
         count = sample_idx->cols + sample_idx->rows - 1;
     }
@@ -727,11 +727,11 @@ bool CvANN_MLP::prepare_to_train( const CvMat* _inputs, const CvMat* _outputs,
         sw_step = CV_IS_MAT_CONT(_sample_weights->type) ? 1 :
             _sample_weights->step/CV_ELEM_SIZE(sw_type);
 
-        CV_CALL( sw = (double*)cvAlloc( count*sizeof(sw[0]) ));
+        sw = (double*)cvAlloc( count*sizeof(sw[0]) );
     }
 
-    CV_CALL( ivecs.data.ptr = (uchar**)cvAlloc( count*sizeof(ivecs.data.ptr[0]) ));
-    CV_CALL( ovecs.data.ptr = (uchar**)cvAlloc( count*sizeof(ovecs.data.ptr[0]) ));
+    ivecs.data.ptr = (uchar**)cvAlloc( count*sizeof(ivecs.data.ptr[0]) );
+    ovecs.data.ptr = (uchar**)cvAlloc( count*sizeof(ovecs.data.ptr[0]) );
 
     ivecs.type = CV_MAT_TYPE(_inputs->type);
     ovecs.type = CV_MAT_TYPE(_outputs->type);
@@ -764,7 +764,7 @@ bool CvANN_MLP::prepare_to_train( const CvMat* _inputs, const CvMat* _outputs,
     }
 
     calc_input_scale( &ivecs, _flags );
-    CV_CALL( calc_output_scale( &ovecs, _flags ));
+    calc_output_scale( &ovecs, _flags );
 
     ok = true;
 
@@ -799,8 +799,6 @@ int CvANN_MLP::train( const CvMat* _inputs, const CvMat* _outputs,
 
     x0.data.ptr = u.data.ptr = 0;
 
-    CV_FUNCNAME( "CvANN_MLP::train" );
-
     __BEGIN__;
 
     int max_iter;
@@ -809,8 +807,8 @@ int CvANN_MLP::train( const CvMat* _inputs, const CvMat* _outputs,
     params = _params;
 
     // initialize training data
-    CV_CALL( prepare_to_train( _inputs, _outputs, _sample_weights,
-                               _sample_idx, &x0, &u, &sw, flags ));
+    prepare_to_train( _inputs, _outputs, _sample_weights,
+                               _sample_idx, &x0, &u, &sw, flags );
 
     // ... and link weights
     if( !(flags & UPDATE_WEIGHTS) )
@@ -828,11 +826,11 @@ int CvANN_MLP::train( const CvMat* _inputs, const CvMat* _outputs,
 
     if( params.train_method == CvANN_MLP_TrainParams::BACKPROP )
     {
-        CV_CALL( iter = train_backprop( x0, u, sw ));
+        iter = train_backprop( x0, u, sw );
     }
     else
     {
-        CV_CALL( iter = train_rprop( x0, u, sw ));
+        iter = train_rprop( x0, u, sw );
     }
 
     __END__;
@@ -853,8 +851,6 @@ int CvANN_MLP::train_backprop( CvVectors x0, CvVectors u, const double* sw )
     CvMat* _idx = 0;
     int iter = -1, count = x0.count;
 
-    CV_FUNCNAME( "CvANN_MLP::train_backprop" );
-
     __BEGIN__;
 
     int i, j, k, ivcount, ovcount, l_count, total = 0, max_iter;
@@ -872,14 +868,14 @@ int CvANN_MLP::train_backprop( CvVectors x0, CvVectors u, const double* sw )
     for( i = 0; i < l_count; i++ )
         total += layer_sizes->data.i[i] + 1;
 
-    CV_CALL( dw = cvCreateMat( wbuf->rows, wbuf->cols, wbuf->type ));
+    dw = cvCreateMat( wbuf->rows, wbuf->cols, wbuf->type );
     cvZero( dw );
-    CV_CALL( buf = cvCreateMat( 1, (total + max_count)*2, CV_64F ));
-    CV_CALL( _idx = cvCreateMat( 1, count, CV_32SC1 ));
+    buf = cvCreateMat( 1, (total + max_count)*2, CV_64F );
+    _idx = cvCreateMat( 1, count, CV_32SC1 );
     for( i = 0; i < count; i++ )
         _idx->data.i[i] = i;
 
-    CV_CALL( x = (double**)cvAlloc( total*2*sizeof(x[0]) ));
+    x = (double**)cvAlloc( total*2*sizeof(x[0]) );
     df = x + total;
     buf_ptr = buf->data.db;
 
@@ -1216,8 +1212,6 @@ int CvANN_MLP::train_rprop( CvVectors x0, CvVectors u, const double* sw )
     double **x = 0, **df = 0;
     int iter = -1, count = x0.count;
 
-    CV_FUNCNAME( "CvANN_MLP::train" );
-
     __BEGIN__;
 
     int i, ivcount, ovcount, l_count, total = 0, max_iter, buf_sz, dcount0;
@@ -1241,11 +1235,11 @@ int CvANN_MLP::train_rprop( CvVectors x0, CvVectors u, const double* sw )
     for( i = 0; i < l_count; i++ )
         total += layer_sizes->data.i[i];
 
-    CV_CALL( dw = cvCreateMat( wbuf->rows, wbuf->cols, wbuf->type ));
+    dw = cvCreateMat( wbuf->rows, wbuf->cols, wbuf->type );
     cvSet( dw, cvScalarAll(params.rp_dw0) );
-    CV_CALL( dEdw = cvCreateMat( wbuf->rows, wbuf->cols, wbuf->type ));
+    dEdw = cvCreateMat( wbuf->rows, wbuf->cols, wbuf->type );
     cvZero( dEdw );
-    CV_CALL( prev_dEdw_sign = cvCreateMat( wbuf->rows, wbuf->cols, CV_8SC1 ));
+    prev_dEdw_sign = cvCreateMat( wbuf->rows, wbuf->cols, CV_8SC1 );
     cvZero( prev_dEdw_sign );
 
     inv_count = 1./count;
@@ -1254,9 +1248,9 @@ int CvANN_MLP::train_rprop( CvVectors x0, CvVectors u, const double* sw )
     dcount0 = MIN( dcount0, count );
     buf_sz = dcount0*(total + max_count)*2;
 
-    CV_CALL( buf = cvCreateMat( 1, buf_sz, CV_64F ));
+    buf = cvCreateMat( 1, buf_sz, CV_64F );
 
-    CV_CALL( x = (double**)cvAlloc( total*2*sizeof(x[0]) ));
+    x = (double**)cvAlloc( total*2*sizeof(x[0]) );
     df = x + total;
     buf_ptr = buf->data.db;
 
@@ -1534,31 +1528,31 @@ void CvANN_MLP::read( CvFileStorage* fs, CvFileNode* node )
     int i, l_count;
 
     _layer_sizes = (CvMat*)cvReadByName( fs, node, "layer_sizes" );
-    CV_CALL( create( _layer_sizes, SIGMOID_SYM, 0, 0 ));
+    create( _layer_sizes, SIGMOID_SYM, 0, 0 );
     l_count = layer_sizes->cols;
 
-    CV_CALL( read_params( fs, node ));
+    read_params( fs, node );
 
     w = cvGetFileNodeByName( fs, node, "input_scale" );
     if( !w || CV_NODE_TYPE(w->tag) != CV_NODE_SEQ ||
         w->data.seq->total != layer_sizes->data.i[0]*2 )
         CV_ERROR( CV_StsParseError, "input_scale tag is not found or is invalid" );
 
-    CV_CALL( cvReadRawData( fs, w, weights[0], "d" ));
+    cvReadRawData( fs, w, weights[0], "d" );
 
     w = cvGetFileNodeByName( fs, node, "output_scale" );
     if( !w || CV_NODE_TYPE(w->tag) != CV_NODE_SEQ ||
         w->data.seq->total != layer_sizes->data.i[l_count-1]*2 )
         CV_ERROR( CV_StsParseError, "output_scale tag is not found or is invalid" );
 
-    CV_CALL( cvReadRawData( fs, w, weights[l_count], "d" ));
+    cvReadRawData( fs, w, weights[l_count], "d" );
 
     w = cvGetFileNodeByName( fs, node, "inv_output_scale" );
     if( !w || CV_NODE_TYPE(w->tag) != CV_NODE_SEQ ||
         w->data.seq->total != layer_sizes->data.i[l_count-1]*2 )
         CV_ERROR( CV_StsParseError, "inv_output_scale tag is not found or is invalid" );
 
-    CV_CALL( cvReadRawData( fs, w, weights[l_count+1], "d" ));
+    cvReadRawData( fs, w, weights[l_count+1], "d" );
 
     w = cvGetFileNodeByName( fs, node, "weights" );
     if( !w || CV_NODE_TYPE(w->tag) != CV_NODE_SEQ ||
@@ -1570,7 +1564,7 @@ void CvANN_MLP::read( CvFileStorage* fs, CvFileNode* node )
     for( i = 1; i < l_count; i++ )
     {
         w = (CvFileNode*)reader.ptr;
-        CV_CALL( cvReadRawData( fs, w, weights[i], "d" ));
+        cvReadRawData( fs, w, weights[i], "d" );
         CV_NEXT_SEQ_ELEM( reader.seq->elem_size, reader );
     }
 

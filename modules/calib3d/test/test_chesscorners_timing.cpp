@@ -137,8 +137,8 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
         result = cvCheckChessboard(gray, pattern_size);
         int64 _time01 = cvGetTickCount();
 
-        OPENCV_CALL( result1 = cvFindChessboardCorners(
-                 gray, pattern_size, v, &count, 15 ));
+        result1 = cvFindChessboardCorners(
+                 gray, pattern_size, v, &count, 15 );
         int64 _time1 = cvGetTickCount();
 
         if( result != is_chessboard )

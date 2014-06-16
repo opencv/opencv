@@ -1779,15 +1779,13 @@ CVAPI(int) cvGuiBoxReport( int status, const char* func_name, const char* err_ms
 #define OPENCV_ERROR(status,func,context)                           \
 cvError((status),(func),(context),__FILE__,__LINE__)
 
-#define OPENCV_ERRCHK(func,context)                                 \
-{if (cvGetErrStatus() >= 0)                         \
-{OPENCV_ERROR(CV_StsBackTrace,(func),(context));}}
+#define OPENCV_ERRCHK(func,context)
 
 #define OPENCV_ASSERT(expr,func,context)                            \
 {if (! (expr))                                      \
 {OPENCV_ERROR(CV_StsInternal,(func),(context));}}
 
-#define OPENCV_RSTERR() (cvSetErrStatus(CV_StsOk))
+#define OPENCV_RSTERR()
 
 #define OPENCV_CALL( Func )                                         \
 {                                                                   \
@@ -1820,26 +1818,13 @@ static char cvFuncName[] = Name
     CV_ERROR( code, "" )
 
 /*
- CV_CHECK macro checks error status after CV (or IPL)
- function call. If error detected, control will be transferred to the exit
- label.
+ Deprecated macros
  */
-#define CV_CHECK()                                                  \
-{                                                                   \
-    if( cvGetErrStatus() < 0 )                                      \
-        CV_ERROR( CV_StsBackTrace, "Inner function failed." );      \
-}
+#define CV_CHECK()
 
-
-/*
- CV_CALL macro calls CV (or IPL) function, checks error status and
- signals a error if the function failed. Useful in "parent node"
- error procesing mode
- */
 #define CV_CALL( Func )                                             \
 {                                                                   \
     Func;                                                           \
-    CV_CHECK();                                                     \
 }
 
 

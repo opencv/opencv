@@ -1059,7 +1059,7 @@ void CvGBTrees::read_params( CvFileStorage* fs, CvFileNode* fnode )
         return;
 
     data = new CvDTreeTrainData();
-    CV_CALL( data->read_params(fs, fnode));
+    data->read_params(fs, fnode);
     data->shared = true;
 
     params.max_depth = data->params.max_depth;
@@ -1195,13 +1195,13 @@ void CvGBTrees::read( CvFileStorage* fs, CvFileNode* node )
             CV_ERROR( CV_StsUnmatchedSizes,
             "The number of trees stored does not match <ntrees> tag value" );
 
-        CV_CALL( storage = cvCreateMemStorage() );
+        storage = cvCreateMemStorage();
         weak[j] = cvCreateSeq( 0, sizeof(CvSeq), sizeof(CvDTree*), storage );
 
         for( i = 0; i < ntrees; i++ )
         {
             CvDTree* tree = new CvDTree();
-            CV_CALL(tree->read( fs, (CvFileNode*)reader.ptr, data ));
+            tree->read( fs, (CvFileNode*)reader.ptr, data );
             CV_NEXT_SEQ_ELEM( reader.seq->elem_size, reader );
             cvSeqPush( weak[j], &tree );
         }

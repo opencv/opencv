@@ -1020,7 +1020,6 @@ static void *icvClearAlloc(int size)
 {
     void *ptr = 0;
 
-    CV_FUNCNAME( "icvClearAlloc" );
     __BEGIN__;
 
     if( size > 0 )
