@@ -63,7 +63,7 @@
 #if sdepth == 4
 
 kernel void integral_sum_cols(__global uchar4 *src, __global int *sum,
-                              int src_offset, int pre_invalid, int rows, int cols, int src_step, int dst_step)
+                              int src_offset, int rows, int cols, int src_step, int dst_step)
 {
     int lid = get_local_id(0);
     int gid = get_group_id(0);
@@ -122,19 +122,19 @@ kernel void integral_sum_cols(__global uchar4 *src, __global int *sum,
         barrier(CLK_LOCAL_MEM_FENCE);
         if(lid > 0 && (i+lid) <= rows)
         {
-            int loc_s0 = gid * dst_step + i + lid - 1 - pre_invalid * dst_step / 4, loc_s1 = loc_s0 + dst_step ;
+            int loc_s0 = gid * dst_step + i + lid - 1, loc_s1 = loc_s0 + dst_step ;
             lm_sum[0][bf_loc] += sum_t[0];
             lm_sum[1][bf_loc] += sum_t[1];
             sum_p = (__local int*)(&(lm_sum[0][bf_loc]));
             for(int k = 0; k < 4; k++)
             {
-                if(gid * 4 + k >= cols + pre_invalid || gid * 4 + k < pre_invalid) continue;
+                if(gid * 4 + k >= cols) continue;
                 sum[loc_s0 + k * dst_step / 4] = sum_p[k];
             }
             sum_p = (__local int*)(&(lm_sum[1][bf_loc]));
             for(int k = 0; k < 4; k++)
             {
-                if(gid * 4 + k + 4 >= cols + pre_invalid) break;
+                if(gid * 4 + k + 4 >= cols) break;
                 sum[loc_s1 + k * dst_step / 4] = sum_p[k];
             }
         }
@@ -238,7 +238,7 @@ kernel void integral_sum_rows(__global int4 *srcsum, __global int *sum,
 #elif sdepth == 5
 
 kernel void integral_sum_cols(__global uchar4 *src, __global float *sum,
-                              int src_offset, int pre_invalid, int rows, int cols, int src_step, int dst_step)
+                              int src_offset, int rows, int cols, int src_step, int dst_step)
 {
     int lid = get_local_id(0);
     int gid = get_group_id(0);
@@ -297,19 +297,19 @@ kernel void integral_sum_cols(__global uchar4 *src, __global float *sum,
         barrier(CLK_LOCAL_MEM_FENCE);
         if(lid > 0 && (i+lid) <= rows)
         {
-            int loc_s0 = gid * dst_step + i + lid - 1 - pre_invalid * dst_step / 4, loc_s1 = loc_s0 + dst_step ;
+            int loc_s0 = gid * dst_step + i + lid - 1, loc_s1 = loc_s0 + dst_step ;
             lm_sum[0][bf_loc] += sum_t[0];
             lm_sum[1][bf_loc] += sum_t[1];
             sum_p = (__local float*)(&(lm_sum[0][bf_loc]));
             for(int k = 0; k < 4; k++)
             {
-                if(gid * 4 + k >= cols + pre_invalid || gid * 4 + k < pre_invalid) continue;
+                if(gid * 4 + k >= cols) continue;
                 sum[loc_s0 + k * dst_step / 4] = sum_p[k];
             }
             sum_p = (__local float*)(&(lm_sum[1][bf_loc]));
             for(int k = 0; k < 4; k++)
             {
-                if(gid * 4 + k + 4 >= cols + pre_invalid) break;
+                if(gid * 4 + k + 4 >= cols) break;
                 sum[loc_s1 + k * dst_step / 4] = sum_p[k];
             }
         }

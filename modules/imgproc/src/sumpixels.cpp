@@ -254,12 +254,12 @@ static bool ocl_integral( InputArray _src, OutputArray _sum, int sdepth )
     UMat src = _src.getUMat(), t_sum(t_size, sdepth), sum = _sum.getUMat();
     t_sum = t_sum(Range::all(), Range(0, size.height));
 
-    int offset = (int)src.offset / vlen, pre_invalid = (int)src.offset % vlen;
-    int vcols = (pre_invalid + src.cols + vlen - 1) / vlen;
+    int offset = (int)src.offset / vlen;
+    int vcols = (src.cols + vlen - 1) / vlen;
     int sum_offset = (int)sum.offset / vlen;
 
     k1.args(ocl::KernelArg::PtrReadOnly(src), ocl::KernelArg::PtrWriteOnly(t_sum),
-            offset, pre_invalid, src.rows, src.cols, (int)src.step, (int)t_sum.step);
+            offset, src.rows, src.cols, (int)src.step, (int)t_sum.step);
     size_t gt = ((vcols + 1) / 2) * 256, lt = 256;
     if (!k1.run(1, &gt, &lt, false))
         return false;
