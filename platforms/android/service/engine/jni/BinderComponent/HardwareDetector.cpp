@@ -39,44 +39,57 @@ int GetCpuID()
 #else
     result = ARCH_UNKNOWN;
 #endif
-#else
+#elif defined(__arm__)
     LOGD("Using ARM HW detector");
     it = cpu_info.find("Processor");
 
     if (cpu_info.end() != it)
     {
-        size_t proc_name_pos = it->second.find(CPU_INFO_ARCH_X86_STR);
+        size_t proc_name_pos = it->second.find(CPU_INFO_ARCH_ARMV7_STR);
         if (string::npos != proc_name_pos)
         {
+            result |= ARCH_ARMv7;
         }
         else
         {
-            proc_name_pos = it->second.find(CPU_INFO_ARCH_ARMV7_STR);
+            proc_name_pos = it->second.find(CPU_INFO_ARCH_ARMV6_STR);
             if (string::npos != proc_name_pos)
             {
-                result |= ARCH_ARMv7;
+                result |= ARCH_ARMv6;
             }
             else
             {
-                proc_name_pos = it->second.find(CPU_INFO_ARCH_ARMV6_STR);
+                proc_name_pos = it->second.find(CPU_INFO_ARCH_ARMV5_STR);
                 if (string::npos != proc_name_pos)
                 {
-                    result |= ARCH_ARMv6;
+                    result |= ARCH_ARMv5;
                 }
                 else
                 {
-                    proc_name_pos = it->second.find(CPU_INFO_ARCH_ARMV5_STR);
-                    if (string::npos != proc_name_pos)
-                    {
-                        result |= ARCH_ARMv5;
-                    }
+                    // Treat the arch of current binary. Google Play checks
+                    // device hardware before installation. Let's assume that
+                    // if the binary works, it's compatible with current hardware
+#if defined __ARM_ARCH_7A__
+                    result |= ARCH_ARMv7;
+                    result |= FEATURES_HAS_VFPv3d16;
+#else
+                    result |= ARCH_ARMv5;
+#endif
                 }
             }
         }
     }
     else
     {
-        return ARCH_UNKNOWN;
+         // Treat the arch of current binary. Google Play checks
+         // device hardware before installation. Let's assume that
+         // if the binary works, it's compatible with current hardware
+#if defined __ARM_ARCH_7A__
+        result |= ARCH_ARMv7;
+        result |= FEATURES_HAS_VFPv3;
+#else
+        result |= ARCH_ARMv5;
+#endif
     }
 
     it = cpu_info.find("Features");
@@ -107,7 +120,9 @@ int GetCpuID()
             }
         }
     }
-    #endif
+#else
+    result = ARCH_UNKNOWN;
+#endif
 
     return result;
 }
