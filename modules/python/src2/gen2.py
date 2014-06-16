@@ -767,7 +767,7 @@ class PythonWrapperGenerator(object):
         constinfo = ConstInfo(name, decl[1])
 
         if constinfo.name in self.consts:
-            print("Generator error: constant %s (cname=%s) already exists" \
+            #print("Generator error: constant %s (cname=%s) already exists" \
                 % (constinfo.name, constinfo.cname))
         #    sys.exit(-1)
             return
