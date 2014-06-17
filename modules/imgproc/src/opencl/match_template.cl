@@ -35,6 +35,8 @@
 
 #define SQSUMS_PTR(ox, oy) mad24(y + oy, src_sqsums_step, mad24(x + ox, cn, src_sqsums_offset))
 #define SUMS_PTR(ox, oy) mad24(y + oy, src_sums_step, mad24(x + ox, cn, src_sums_offset))
+#define SUMS(ox, oy)    mad24(y+oy, src_sums_step, mad24(x+ox, (int)sizeof(T1)*cn, src_sums_offset))
+#define SQ_SUMS(ox, oy) mad24(y+oy, src_sqsums_step, mad24(x+ox, (int)sizeof(T1)*cn, src_sqsums_offset))
 
 inline float normAcc(float num, float denum)
 {
@@ -60,10 +62,20 @@ inline float normAcc_SQDIFF(float num, float denum)
 #define convertToDT(value) (float)(value)
 #elif cn == 2
 #define convertToDT(value) (float)(value.x + value.y)
+#elif cn == 3
+#define convertToDT(value) (float)(value.x + value.y + value.z)
 #elif cn == 4
 #define convertToDT(value) (float)(value.x + value.y + value.z + value.w)
 #else
-#error "cn should be 1, 2 or 4"
+#error "cn should be 1-4"
+#endif
+
+#if cn != 3
+#define loadpix(addr) *(__global const T *)(addr)
+#define TSIZE (int)sizeof(T)
+#else
+#define loadpix(addr) vload3(0, (__global const T1 *)(addr))
+#define TSIZE ((int)sizeof(T1)*3)
 #endif
 
 #ifdef CALC_SUM
@@ -78,10 +90,10 @@ __kernel void calcSum(__global const uchar * srcptr, int src_step, int src_offse
 
     for ( ; id < total; id += WGS)
     {
-        int src_index = mad24(id / cols, src_step, mad24(id % cols, (int)sizeof(T), src_offset));
-        __global const T * src = (__global const T *)(srcptr + src_index);
+        int src_index = mad24(id / cols, src_step, mad24(id % cols, TSIZE, src_offset));
+        T src = loadpix(srcptr + src_index);
 
-        tmp = convertToWT(src[0]);
+        tmp = convertToWT(src);
 #if wdepth == 4
         accumulator = mad24(tmp, tmp, accumulator);
 #else
@@ -112,6 +124,40 @@ __kernel void calcSum(__global const uchar * srcptr, int src_step, int src_offse
 }
 
 #elif defined CCORR
+
+#if cn==3
+
+__kernel void matchTemplate_Naive_CCORR(__global const uchar * srcptr, int src_step, int src_offset,
+                                        __global const uchar * templateptr, int template_step, int template_offset, int template_rows, int template_cols,
+                                        __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < dst_cols && y < dst_rows)
+    {
+        WT sum = (WT)(0);
+
+        for (int i = 0; i < template_rows; ++i)
+        {
+            for (int j = 0; j < template_cols; ++j)
+            {
+                T src      = vload3(0, (__global const T1 *)(srcptr      + mad24(y+i, src_step,    mad24(x+j, (int)sizeof(T1)*cn, src_offset))));
+                T template = vload3(0, (__global const T1 *)(templateptr + mad24(i, template_step, mad24(j, (int)sizeof(T1)*cn, template_offset))));
+#if wdepth == 4
+                sum = mad24(convertToWT(src), convertToWT(template), sum);
+#else
+                sum = mad(convertToWT(src), convertToWT(template), sum);
+#endif
+            }
+        }
+
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        *(__global float *)(dst + dst_idx) = convertToDT(sum);
+    }
+}
+
+#else
 
 __kernel void matchTemplate_Naive_CCORR(__global const uchar * srcptr, int src_step, int src_offset,
                                         __global const uchar * templateptr, int template_step, int template_offset, int template_rows, int template_cols,
@@ -144,6 +190,7 @@ __kernel void matchTemplate_Naive_CCORR(__global const uchar * srcptr, int src_s
         *(__global float *)(dst + dst_idx) = convertToDT(sum);
     }
 }
+#endif
 
 #elif defined CCORR_NORMED
 
@@ -170,6 +217,42 @@ __kernel void matchTemplate_CCORR_NORMED(__global const uchar * src_sqsums, int 
 }
 
 #elif defined SQDIFF
+
+#if cn==3
+
+__kernel void matchTemplate_Naive_SQDIFF(__global const uchar * srcptr, int src_step, int src_offset,
+                                         __global const uchar * templateptr, int template_step, int template_offset, int template_rows, int template_cols,
+                                         __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < dst_cols && y < dst_rows)
+    {
+        WT sum = (WT)(0), value;
+
+        for (int i = 0; i < template_rows; ++i)
+        {
+            for (int j = 0; j < template_cols; ++j)
+            {
+                T src      = vload3(0, (__global const T1 *)(srcptr      + mad24(y+i, src_step,    mad24(x+j, (int)sizeof(T1)*cn, src_offset))));
+                T template = vload3(0, (__global const T1 *)(templateptr + mad24(i, template_step, mad24(j, (int)sizeof(T1)*cn, template_offset))));
+
+                value = convertToWT(src) - convertToWT(template);
+#if wdepth == 4
+                sum = mad24(value, value, sum);
+#else
+                sum = mad(value, value, sum);
+#endif
+            }
+        }
+
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        *(__global float *)(dst + dst_idx) = convertToDT(sum);
+    }
+}
+
+#else
 
 __kernel void matchTemplate_Naive_SQDIFF(__global const uchar * srcptr, int src_step, int src_offset,
                                          __global const uchar * templateptr, int template_step, int template_offset, int template_rows, int template_cols,
@@ -205,6 +288,8 @@ __kernel void matchTemplate_Naive_SQDIFF(__global const uchar * srcptr, int src_
         *(__global float *)(dst + dst_idx) = convertToDT(sum);
     }
 }
+
+#endif
 
 #elif defined SQDIFF_NORMED
 
@@ -284,6 +369,37 @@ __kernel void matchTemplate_Prepared_CCOEFF(__global const uchar * src_sums, int
     }
 }
 
+#elif cn==3
+
+__kernel void matchTemplate_Prepared_CCOEFF(__global const uchar * src_sums, int src_sums_step, int src_sums_offset,
+                                            __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                            int template_rows, int template_cols, float template_sum_0, float template_sum_1, float template_sum_2)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < dst_cols && y < dst_rows)
+    {
+        src_sums_step /= ELEM_SIZE;
+        src_sums_offset /= ELEM_SIZE;
+
+        __global ELEM_TYPE* sum = (__global ELEM_TYPE*)(src_sums);
+
+        int c_r = SUMS_PTR(template_cols, template_rows);
+        int c_o = SUMS_PTR(template_cols, 0);
+        int o_r = SUMS_PTR(0,template_rows);
+        int oo = SUMS_PTR(0, 0);
+
+        float image_sum_ = template_sum_0 * (float)((sum[c_r]   - sum[c_o])  -(sum[o_r]   - sum[oo]));
+        image_sum_ += template_sum_1 * (float)((sum[c_r+1] - sum[c_o+1])-(sum[o_r+1] - sum[oo+1]));
+        image_sum_ += template_sum_2 * (float)((sum[c_r+2] - sum[c_o+2])-(sum[o_r+2] - sum[oo+2]));
+
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        __global float * dstult = (__global float *)(dst+dst_idx);
+        *dstult -= image_sum_;
+    }
+}
+
 #elif cn == 4
 
 __kernel void matchTemplate_Prepared_CCOEFF(__global const uchar * src_sums, int src_sums_step, int src_sums_offset,
@@ -317,7 +433,7 @@ __kernel void matchTemplate_Prepared_CCOEFF(__global const uchar * src_sums, int
 }
 
 #else
-#error "cn should be 1, 2 or 4"
+#error "cn should be 1-4"
 #endif
 
 #elif defined CCOEFF_NORMED
@@ -395,6 +511,61 @@ __kernel void matchTemplate_CCOEFF_NORMED(__global const uchar * src_sums, int s
     }
 }
 
+#elif cn==3
+
+__kernel void matchTemplate_CCOEFF_NORMED(__global const uchar * src_sums, int src_sums_step, int src_sums_offset,
+                                          __global const uchar * src_sqsums, int src_sqsums_step, int src_sqsums_offset,
+                                          __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                          int t_rows, int t_cols, float weight,  float template_sum_0, float template_sum_1, float template_sum_2,
+                                          float template_sqsum)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    float sum_[3];
+    float sqsum_[3];
+
+    if (x < dst_cols && y < dst_rows)
+    {
+        src_sums_offset   /= ELEM_SIZE;
+        src_sums_step     /= ELEM_SIZE;
+        src_sqsums_step   /= sizeof(float);
+        src_sqsums_offset /= sizeof(float);
+
+        __global ELEM_TYPE* sum = (__global ELEM_TYPE*)(src_sums);
+        __global float * sqsum = (__global float*)(src_sqsums);
+
+        int c_r = SUMS_PTR(t_cols, t_rows);
+        int c_o = SUMS_PTR(t_cols, 0);
+        int o_r = SUMS_PTR(0, t_rows);
+        int o_o = SUMS_PTR(0, 0);
+
+        sum_[0] =  (float)((sum[c_r]   - sum[c_o])  -(sum[o_r]   - sum[o_o ]));
+        sum_[1] =  (float)((sum[c_r+1] - sum[c_o+1])-(sum[o_r+1] - sum[o_o +1]));
+        sum_[2] =  (float)((sum[c_r+2] - sum[c_o+2])-(sum[o_r+2] - sum[o_o +2]));
+
+        c_r = SQSUMS_PTR(t_cols, t_rows);
+        c_o = SQSUMS_PTR(t_cols, 0);
+        o_r = SQSUMS_PTR(0, t_rows);
+        o_o = SQSUMS_PTR(0, 0);
+
+        sqsum_[0] = (float)((sqsum[c_r]   - sqsum[c_o])  -(sqsum[o_r]   - sqsum[o_o]));
+        sqsum_[1] = (float)((sqsum[c_r+1] - sqsum[c_o+1])-(sqsum[o_r+1] - sqsum[o_o+1]));
+        sqsum_[2] = (float)((sqsum[c_r+2] - sqsum[c_o+2])-(sqsum[o_r+2] - sqsum[o_o+2]));
+
+        float num = sum_[0]*template_sum_0 + sum_[1]*template_sum_1 + sum_[2]*template_sum_2;
+
+        float denum = sqrt( template_sqsum * (
+                                sqsum_[0] - weight * sum_[0]* sum_[0] +
+                                sqsum_[1] - weight * sum_[1]* sum_[1] +
+                                sqsum_[2] - weight * sum_[2]* sum_[2] ));
+
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        __global float * dstult = (__global float *)(dst+dst_idx);
+        *dstult = normAcc((*dstult) - num, denum);
+    }
+}
+
 #elif cn == 4
 
 __kernel void matchTemplate_CCOEFF_NORMED(__global const uchar * src_sums, int src_sums_step, int src_sums_offset,
@@ -455,7 +626,7 @@ __kernel void matchTemplate_CCOEFF_NORMED(__global const uchar * src_sums, int s
 }
 
 #else
-#error "cn should be 1, 2 or 4"
+#error "cn should be 1-4"
 #endif
 
 #endif
