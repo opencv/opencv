@@ -274,7 +274,7 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
                                 ST nVal)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y = get_global_id(1) * rowsPerWI;
 
     if (x < dst_cols)
     {
@@ -313,7 +313,15 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
     }
 }
 
-#elif INTER_LINEAR
+#elif defined INTER_LINEAR
+
+__constant float coeffs[64] =
+{ 1.000000f, 0.000000f, 0.968750f, 0.031250f, 0.937500f, 0.062500f, 0.906250f, 0.093750f, 0.875000f, 0.125000f, 0.843750f, 0.156250f,
+  0.812500f, 0.187500f, 0.781250f, 0.218750f, 0.750000f, 0.250000f, 0.718750f, 0.281250f, 0.687500f, 0.312500f, 0.656250f, 0.343750f,
+  0.625000f, 0.375000f, 0.593750f, 0.406250f, 0.562500f, 0.437500f, 0.531250f, 0.468750f, 0.500000f, 0.500000f, 0.468750f, 0.531250f,
+  0.437500f, 0.562500f, 0.406250f, 0.593750f, 0.375000f, 0.625000f, 0.343750f, 0.656250f, 0.312500f, 0.687500f, 0.281250f, 0.718750f,
+  0.250000f, 0.750000f, 0.218750f, 0.781250f, 0.187500f, 0.812500f, 0.156250f, 0.843750f, 0.125000f, 0.875000f, 0.093750f, 0.906250f,
+  0.062500f, 0.937500f, 0.031250f, 0.968750f };
 
 __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
                                 __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
@@ -326,6 +334,7 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
 
     if (x < dst_cols)
     {
+        WT scalar = convertToWT(convertScalar(nVal));
         int dst_index = mad24(y, dst_step, mad24(x, TSIZE, dst_offset));
         int map1_index = mad24(y, map1_step, mad24(x, (int)sizeof(short2), map1_offset));
         int map2_index = mad24(y, map2_step, mad24(x, (int)sizeof(ushort), map2_offset));
@@ -347,7 +356,6 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
                 ushort map2Value = (ushort)(map2[0] & (INTER_TAB_SIZE2 - 1));
                 WT2 u = (WT2)(map2Value & (INTER_TAB_SIZE - 1), map2Value >> INTER_BITS) / (WT2)(INTER_TAB_SIZE);
 
-                WT scalar = convertToWT(convertScalar(nVal));
                 WT a = scalar, b = scalar, c = scalar, d = scalar;
 
                 if (!NEED_EXTRAPOLATION(map_dataA.x, map_dataA.y))
@@ -390,6 +398,7 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
 
     if (x < dst_cols)
     {
+        WT scalar = convertToWT(convertScalar(nVal));
         int dst_index = mad24(y, dst_step, mad24(x, TSIZE, dst_offset));
         int map1_index = mad24(y, map1_step, mad24(x, (int)sizeof(float), map1_offset));
         int map2_index = mad24(y, map2_step, mad24(x, (int)sizeof(float), map2_offset));
@@ -403,6 +412,49 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                 __global const float * map2 = (__global const float *)(map2ptr + map2_index);
                 __global T * dst = (__global T *)(dstptr + dst_index);
 
+#if defined BORDER_CONSTANT
+
+                float xf = map1[0], yf = map2[0];
+                int sx = convert_int_sat_rtn(xf), sy = convert_int_sat_rtn(yf);
+
+                __constant float * coeffs_x = coeffs + ((convert_int_rte(xf * INTER_TAB_SIZE) & (INTER_TAB_SIZE - 1)) << 1);
+                __constant float * coeffs_y = coeffs + ((convert_int_rte(yf * INTER_TAB_SIZE) & (INTER_TAB_SIZE - 1)) << 1);
+
+                WT sum = (WT)(0), xsum;
+                int src_index = mad24(sy, src_step, mad24(sx, TSIZE, src_offset));
+
+                #pragma unroll
+                for (int yp = 0; yp < 2; ++yp, src_index += src_step)
+                {
+                    if (sy + yp >= 0 && sy + yp < src_rows)
+                    {
+                        xsum = (WT)(0);
+                        if (sx >= 0 && sx + 2 < src_cols)
+                        {
+#if depth == 0 && cn == 1
+                            uchar2 value = vload2(0, srcptr + src_index);
+                            xsum = dot(convert_float2(value), (float2)(coeffs_x[0], coeffs_x[1]));
+#else
+                            #pragma unroll
+                            for (int xp = 0; xp < 2; ++xp)
+                                xsum = fma(convertToWT(loadpix(srcptr + mad24(xp, TSIZE, src_index))), coeffs_x[xp], xsum);
+#endif
+                        }
+                        else
+                        {
+                            #pragma unroll
+                            for (int xp = 0; xp < 2; ++xp)
+                                xsum = fma(sx + xp >= 0 && sx + xp < src_cols ?
+                                           convertToWT(loadpix(srcptr + mad24(xp, TSIZE, src_index))) : scalar, coeffs_x[xp], xsum);
+                        }
+                        sum = fma(xsum, coeffs_y[yp], sum);
+                    }
+                    else
+                        sum = fma(scalar, coeffs_y[yp], sum);
+                }
+
+                storepix(convertToT(sum), dst);
+#else
                 float2 map_data = (float2)(map1[0], map2[0]);
 
                 int2 map_dataA = convert_int2_sat_rtn(map_data);
@@ -440,6 +492,7 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                               c * (1 - u.x) * (u.y) +
                               d * (u.x)     * (u.y);
                 storepix(convertToT(dst_data), dst);
+#endif
             }
     }
 }
@@ -454,6 +507,7 @@ __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_o
 
     if (x < dst_cols)
     {
+        WT scalar = convertToWT(convertScalar(nVal));
         int dst_index = mad24(y, dst_step, mad24(x, TSIZE, dst_offset));
         int map_index = mad24(y, map_step, mad24(x, (int)sizeof(float2), map_offset));
 
@@ -473,7 +527,6 @@ __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_o
 
                 float2 _u = map_data - convert_float2(map_dataA);
                 WT2 u = convertToWT2(convert_int2_rte(convertToWT2(_u) * (WT2)INTER_TAB_SIZE)) / (WT2)INTER_TAB_SIZE;
-                WT scalar = convertToWT(convertScalar(nVal));
                 WT a = scalar, b = scalar, c = scalar, d = scalar;
 
                 if (!NEED_EXTRAPOLATION(map_dataA.x, map_dataA.y))
