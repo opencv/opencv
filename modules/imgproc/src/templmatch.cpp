@@ -69,8 +69,8 @@ static bool sumTemplate(InputArray _src, UMat & result)
 
     char cvt[40];
     ocl::Kernel k("calcSum", ocl::imgproc::match_template_oclsrc,
-                  format("-D CALC_SUM -D T=%s -D WT=%s -D cn=%d -D convertToWT=%s -D WGS=%d -D WGS2_ALIGNED=%d -D wdepth=%d",
-                         ocl::typeToStr(type), ocl::typeToStr(wtype), cn,
+                  format("-D CALC_SUM -D T=%s -D T1=%s -D WT=%s -D cn=%d -D convertToWT=%s -D WGS=%d -D WGS2_ALIGNED=%d -D wdepth=%d",
+                         ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype), cn,
                          ocl::convertTypeStr(depth, wdepth, cn, cvt),
                          (int)wgs, wgs2_aligned, wdepth));
     if (k.empty())
@@ -95,7 +95,7 @@ static bool matchTemplateNaive_CCORR(InputArray _image, InputArray _templ, Outpu
 
     char cvt[40];
     ocl::Kernel k("matchTemplate_Naive_CCORR", ocl::imgproc::match_template_oclsrc,
-                  format("-D CCORR -D T=%s -D WT=%s -D convertToWT=%s -D cn=%d -D wdepth=%d", ocl::typeToStr(type), ocl::typeToStr(wtype),
+                  format("-D CCORR -D T=%s -D T1=%s -D WT=%s -D convertToWT=%s -D cn=%d -D wdepth=%d", ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
                          ocl::convertTypeStr(depth, wdepth, cn, cvt), cn, wdepth));
     if (k.empty())
         return false;
@@ -149,7 +149,7 @@ static bool matchTemplateNaive_SQDIFF(InputArray _image, InputArray _templ, Outp
 
     char cvt[40];
     ocl::Kernel k("matchTemplate_Naive_SQDIFF", ocl::imgproc::match_template_oclsrc,
-                  format("-D SQDIFF -D T=%s -D WT=%s -D convertToWT=%s -D cn=%d -D wdepth=%d", ocl::typeToStr(type),
+                  format("-D SQDIFF -D T=%s -D T1=%s -D WT=%s -D convertToWT=%s -D cn=%d -D wdepth=%d", ocl::typeToStr(type), ocl::typeToStr(depth),
                          ocl::typeToStr(wtype), ocl::convertTypeStr(depth, wdepth, cn, cvt), cn, wdepth));
     if (k.empty())
         return false;
@@ -191,6 +191,7 @@ static bool matchTemplate_SQDIFF_NORMED(InputArray _image, InputArray _templ, Ou
            templ.rows, templ.cols, ocl::KernelArg::PtrReadOnly(templ_sqsum));
 
     size_t globalsize[2] = { result.cols, result.rows };
+
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -235,6 +236,9 @@ static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArr
         if (cn == 2)
             k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols,
                    templ_sum[0], templ_sum[1]);
+        else if (cn==3)
+            k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols,
+                   templ_sum[0], templ_sum[1], templ_sum[2]);
         else
             k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols,
                    templ_sum[0], templ_sum[1], templ_sum[2], templ_sum[3]);
@@ -308,6 +312,10 @@ static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, Ou
             k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadOnlyNoSize(image_sqsums),
                    ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, scale,
                    templ_sum[0], templ_sum[1], templ_sqsum_sum);
+        else if (cn == 3)
+            k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadOnlyNoSize(image_sqsums),
+                   ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, scale,
+                   templ_sum[0], templ_sum[1], templ_sum[2], templ_sqsum_sum);
         else
             k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadOnlyNoSize(image_sqsums),
                    ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, scale,
@@ -324,7 +332,7 @@ static bool ocl_matchTemplate( InputArray _img, InputArray _templ, OutputArray _
 {
     int cn = _img.channels();
 
-    if (cn == 3 || cn > 4)
+    if (cn > 4)
         return false;
 
     typedef bool (*Caller)(InputArray _img, InputArray _templ, OutputArray _result);
