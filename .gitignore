@@ -1,4 +1,20 @@
 *.autosave
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+*.dyld
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+
+# Misc ignore files
 *.pyc
 *.user
 *~
@@ -8,3 +24,6 @@
 Thumbs.db
 tags
 tegra/
+
+## Files left around after merging
+*.orig
