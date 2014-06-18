@@ -672,7 +672,7 @@ namespace cv {
 
 static bool ocl_countNonZero( InputArray _src, int & res )
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), kercn = ocl::predictOptimalVectorWidth(_src);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if (depth == CV_64F && !doubleSupport)
@@ -720,6 +720,7 @@ static bool ocl_countNonZero( InputArray _src, int & res )
     }
     else
     {
+        int kercn = ocl::predictOptimalVectorWidth(_src);
         int dbsize = ocl::Device::getDefault().maxComputeUnits();
         size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
 
@@ -729,9 +730,12 @@ static bool ocl_countNonZero( InputArray _src, int & res )
         wgs2_aligned >>= 1;
 
         ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
-                      format("-D srcT=%s -D OP_COUNT_NON_ZERO -D WGS=%d -D WGS2_ALIGNED=%d%s",
-                             ocl::typeToStr(type), (int)wgs,
-                             wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                      format("-D srcT=%s -D srcT1=%s -D cn=1 -D OP_COUNT_NON_ZERO"
+                             " -D WGS=%d -D kercn=%d -D WGS2_ALIGNED=%d%s%s",
+                             ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
+                             ocl::typeToStr(depth), (int)wgs, kercn,
+                             wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                             _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
         if (k.empty())
             return false;
 
