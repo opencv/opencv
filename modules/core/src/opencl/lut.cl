@@ -63,7 +63,7 @@
             dst[0] = lut_l[idx];
     #else
         #define LUT_OP(num)\
-            src = (__global const srcT *)(srcptr + mad24(num, src_step, src_index));\
+            __global const srcT * src = (__global const srcT *)(srcptr + mad24(num, src_step, src_index));\
             dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
             for (int cn = 0; cn < dcn; ++cn)\
                 dst[cn] = lut_l[src[cn]];
@@ -100,7 +100,7 @@
             dst[0] = lut_l[idx];
     #else
         #define LUT_OP(num)\
-            src = (__global const srcT *)(srcptr + mad24(num, src_step, src_index));\
+            __global const srcT *src = (__global const srcT *)(srcptr + mad24(num, src_step, src_index));\
             dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
             for (int cn = 0; cn < dcn; ++cn)\
                 dst[cn] = lut_l[mad24(src[cn], lcn, cn)];
@@ -133,8 +133,7 @@ __kernel void LUT(__global const uchar * srcptr, int src_step, int src_offset,
     {
         int src_index = mad24(y, src_step, mad24(x, (int)sizeof(srcT) * dcn, src_offset));
         int dst_index = mad24(y, dst_step, mad24(x, (int)sizeof(dstT) * dcn, dst_offset));
-        __global const srcT * src; __global dstT * dst;
-        int tmp_idx;
+        __global dstT * dst;
         LUT_OP(0);
         if (y < rows - 1)
         {
