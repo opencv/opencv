@@ -52,10 +52,10 @@
             dst[2] = lut_l[idx.z];
     #elif dcn == 2
         #define LUT_OP(num)\
-            __global const uchar2 * idx = (__global const uchar2 *)(srcptr + mad24(num, src_step, src_index));\
+            short idx = *(__global const short *)(srcptr + mad24(num, src_step, src_index));\
             dst = (__global dstT *)(dstptr + mad24(num, dst_step, dst_index));\
-            dst[0] = lut_l[idx->x];\
-            dst[1] = lut_l[idx->y];
+            dst[0] = lut_l[idx & 0xff];\
+            dst[1] = lut_l[(idx >> 8) & 0xff];
     #elif dcn == 1
         #define LUT_OP(num)\
             uchar idx = (srcptr + mad24(num, src_step, src_index))[0];\
