@@ -575,43 +575,6 @@ protected:
     void lda(InputArrayOfArrays src, InputArray labels);
 };
 
-class CV_EXPORTS_W FaceRecognizer : public Algorithm
-{
-public:
-    //! virtual destructor
-    virtual ~FaceRecognizer() {}
-
-    // Trains a FaceRecognizer.
-    CV_WRAP virtual void train(InputArrayOfArrays src, InputArray labels) = 0;
-
-    // Updates a FaceRecognizer.
-    CV_WRAP virtual void update(InputArrayOfArrays src, InputArray labels);
-
-    // Gets a prediction from a FaceRecognizer.
-    virtual int predict(InputArray src) const = 0;
-
-    // Predicts the label and confidence for a given sample.
-    CV_WRAP virtual void predict(InputArray src, CV_OUT int &label, CV_OUT double &confidence) const = 0;
-
-    // Serializes this object to a given filename.
-    CV_WRAP virtual void save(const String& filename) const;
-
-    // Deserializes this object from a given filename.
-    CV_WRAP virtual void load(const String& filename);
-
-    // Serializes this object to a given cv::FileStorage.
-    virtual void save(FileStorage& fs) const = 0;
-
-    // Deserializes this object from a given cv::FileStorage.
-    virtual void load(const FileStorage& fs) = 0;
-
-};
-
-CV_EXPORTS_W Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
-CV_EXPORTS_W Ptr<FaceRecognizer> createFisherFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
-CV_EXPORTS_W Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius=1, int neighbors=8,
-                                                        int grid_x=8, int grid_y=8, double threshold = DBL_MAX);
-
 enum
 {
     COLORMAP_AUTUMN = 0,
@@ -634,5 +597,6 @@ CV_EXPORTS bool initModule_contrib();
 }
 
 #include "opencv2/contrib/openfabmap.hpp"
+#include "opencv2/contrib/facerec.hpp"
 
 #endif
