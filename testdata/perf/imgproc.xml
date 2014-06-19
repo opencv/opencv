@@ -89516,30 +89516,30 @@
       <y>480</y>
       <val>39124894.</val></last>
     <rng1>
-      <x>344</x>
-      <y>450</y>
-      <val>19702667.</val></rng1>
+      <x>153</x>
+      <y>258</y>
+      <val>4990078.</val></rng1>
     <rng2>
-      <x>491</x>
-      <y>346</y>
-      <val>21615171.</val></rng2></sum>
+      <x>483</x>
+      <y>383</y>
+      <val>23544707.</val></rng2></sum>
   <sqsum>
     <kind>655360</kind>
-    <type>4</type>
-    <min>-2147472089.</min>
-    <max>2147468981.</max>
+    <type>5</type>
+    <min>0.</min>
+    <max>6.6623298560000000e+009</max>
     <last>
       <x>640</x>
       <y>480</y>
-      <val>-1927604926.</val></last>
+      <val>6.6623298560000000e+009</val></last>
     <rng1>
-      <x>227</x>
-      <y>196</y>
-      <val>960637690.</val></rng1>
+      <x>243</x>
+      <y>197</y>
+      <val>1034838592.</val></rng1>
     <rng2>
-      <x>394</x>
-      <y>281</y>
-      <val>-1902285846.</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---640x480--CV_32S->
+      <x>280</x>
+      <y>349</y>
+      <val>2113381504.</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---640x480--CV_32S->
 <OCL_IntegralFixture_Integral2--Integral2---640x480--CV_32F->
   <sum>
     <kind>655360</kind>
@@ -89551,13 +89551,13 @@
       <y>480</y>
       <val>39124896.</val></last>
     <rng1>
-      <x>173</x>
-      <y>206</y>
-      <val>4515564.</val></rng1>
+      <x>614</x>
+      <y>324</y>
+      <val>25298104.</val></rng1>
     <rng2>
-      <x>95</x>
-      <y>309</y>
-      <val>3708899.</val></rng2></sum>
+      <x>131</x>
+      <y>429</y>
+      <val>7131188.</val></rng2></sum>
   <sqsum>
     <kind>655360</kind>
     <type>5</type>
@@ -89568,13 +89568,13 @@
       <y>480</y>
       <val>6.6623298560000000e+009</val></last>
     <rng1>
-      <x>259</x>
-      <y>199</y>
-      <val>1113949440.</val></rng1>
+      <x>635</x>
+      <y>113</y>
+      <val>1549385088.</val></rng1>
     <rng2>
-      <x>499</x>
-      <y>185</y>
-      <val>1996506880.</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---640x480--CV_32F->
+      <x>576</x>
+      <y>173</y>
+      <val>2.1537999360000000e+009</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---640x480--CV_32F->
 <OCL_IntegralFixture_Integral2--Integral2---1280x720--CV_32S->
   <sum>
     <kind>655360</kind>
@@ -89586,30 +89586,30 @@
       <y>720</y>
       <val>117409808.</val></last>
     <rng1>
-      <x>878</x>
-      <y>655</y>
-      <val>73286449.</val></rng1>
+      <x>1097</x>
+      <y>218</y>
+      <val>30451726.</val></rng1>
     <rng2>
-      <x>380</x>
-      <y>454</y>
-      <val>21965575.</val></rng2></sum>
+      <x>948</x>
+      <y>556</y>
+      <val>67174783.</val></rng2></sum>
   <sqsum>
     <kind>655360</kind>
-    <type>4</type>
-    <min>-2147480844.</min>
-    <max>2147482292.</max>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.9993559040000000e+010</max>
     <last>
       <x>1280</x>
       <y>720</y>
-      <val>-1481280596.</val></last>
+      <val>1.9993559040000000e+010</val></last>
     <rng1>
-      <x>703</x>
-      <y>479</y>
-      <val>-1286858194.</val></rng1>
+      <x>620</x>
+      <y>505</y>
+      <val>6.7927797760000000e+009</val></rng1>
     <rng2>
-      <x>340</x>
-      <y>142</y>
-      <val>1039754178.</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---1280x720--CV_32S->
+      <x>493</x>
+      <y>487</y>
+      <val>5.2046264320000000e+009</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---1280x720--CV_32S->
 <OCL_IntegralFixture_Integral2--Integral2---1280x720--CV_32F->
   <sum>
     <kind>655360</kind>
@@ -89621,13 +89621,13 @@
       <y>720</y>
       <val>117409816.</val></last>
     <rng1>
-      <x>1147</x>
-      <y>422</y>
-      <val>61666024.</val></rng1>
+      <x>334</x>
+      <y>226</y>
+      <val>9592488.</val></rng1>
     <rng2>
-      <x>244</x>
-      <y>561</y>
-      <val>17436664.</val></rng2></sum>
+      <x>1241</x>
+      <y>657</y>
+      <val>103890808.</val></rng2></sum>
   <sqsum>
     <kind>655360</kind>
     <type>5</type>
@@ -89638,13 +89638,13 @@
       <y>720</y>
       <val>1.9993559040000000e+010</val></last>
     <rng1>
-      <x>181</x>
-      <y>316</y>
-      <val>1233254400.</val></rng1>
+      <x>295</x>
+      <y>307</y>
+      <val>1957556992.</val></rng1>
     <rng2>
-      <x>620</x>
-      <y>437</y>
-      <val>5.8735216640000000e+009</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---1280x720--CV_32F->
+      <x>1218</x>
+      <y>311</y>
+      <val>8.2222382080000000e+009</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---1280x720--CV_32F->
 <OCL_IntegralFixture_Integral2--Integral2---1920x1080--CV_32S->
   <sum>
     <kind>655360</kind>
@@ -89656,30 +89656,30 @@
       <y>1080</y>
       <val>264150490.</val></last>
     <rng1>
-      <x>1391</x>
-      <y>183</y>
-      <val>32422757.</val></rng1>
+      <x>866</x>
+      <y>397</y>
+      <val>43798995.</val></rng1>
     <rng2>
-      <x>269</x>
-      <y>453</y>
-      <val>15505336.</val></rng2></sum>
+      <x>87</x>
+      <y>101</y>
+      <val>1099109.</val></rng2></sum>
   <sqsum>
     <kind>655360</kind>
-    <type>4</type>
-    <min>-2147478679.</min>
-    <max>2147481919.</max>
+    <type>5</type>
+    <min>0.</min>
+    <max>4.4978216960000000e+010</max>
     <last>
       <x>1920</x>
       <y>1080</y>
-      <val>2028544282.</val></last>
+      <val>4.4978216960000000e+010</val></last>
     <rng1>
-      <x>250</x>
-      <y>271</y>
-      <val>1457480595.</val></rng1>
+      <x>1093</x>
+      <y>480</y>
+      <val>1.1384518656000000e+010</val></rng1>
     <rng2>
-      <x>1666</x>
-      <y>294</y>
-      <val>2031246604.</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---1920x1080--CV_32S->
+      <x>1075</x>
+      <y>653</y>
+      <val>1.5240467456000000e+010</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---1920x1080--CV_32S->
 <OCL_IntegralFixture_Integral2--Integral2---1920x1080--CV_32F->
   <sum>
     <kind>655360</kind>
@@ -89691,13 +89691,13 @@
       <y>1080</y>
       <val>264150496.</val></last>
     <rng1>
-      <x>633</x>
-      <y>595</y>
-      <val>47978216.</val></rng1>
+      <x>223</x>
+      <y>1020</y>
+      <val>28915980.</val></rng1>
     <rng2>
-      <x>1873</x>
-      <y>326</y>
-      <val>77783096.</val></rng2></sum>
+      <x>376</x>
+      <y>945</y>
+      <val>45249656.</val></rng2></sum>
   <sqsum>
     <kind>655360</kind>
     <type>5</type>
@@ -89708,13 +89708,13 @@
       <y>1080</y>
       <val>4.4978216960000000e+010</val></last>
     <rng1>
-      <x>1465</x>
-      <y>1042</y>
-      <val>3.3112137728000000e+010</val></rng1>
+      <x>579</x>
+      <y>525</y>
+      <val>6.5927669760000000e+009</val></rng1>
     <rng2>
-      <x>1347</x>
-      <y>579</y>
-      <val>1.6927736832000000e+010</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---1920x1080--CV_32F->
+      <x>1442</x>
+      <y>46</y>
+      <val>1431452672.</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---1920x1080--CV_32F->
 <OCL_IntegralFixture_Integral2--Integral2---3840x2160--CV_32S->
   <sum>
     <kind>655360</kind>
@@ -89726,30 +89726,30 @@
       <y>2160</y>
       <val>1057347962.</val></last>
     <rng1>
-      <x>144</x>
-      <y>236</y>
-      <val>4326717.</val></rng1>
+      <x>2178</x>
+      <y>204</y>
+      <val>56562964.</val></rng1>
     <rng2>
-      <x>1217</x>
-      <y>1839</y>
-      <val>285430109.</val></rng2></sum>
+      <x>3181</x>
+      <y>985</y>
+      <val>399257181.</val></rng2></sum>
   <sqsum>
     <kind>655360</kind>
-    <type>4</type>
-    <min>-2147483301.</min>
-    <max>2147482805.</max>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.8006676275200000e+011</max>
     <last>
       <x>3840</x>
       <y>2160</y>
-      <val>-321840596.</val></last>
+      <val>1.8006676275200000e+011</val></last>
     <rng1>
-      <x>1017</x>
-      <y>1223</y>
-      <val>1213211393.</val></rng1>
+      <x>2628</x>
+      <y>291</y>
+      <val>1.6582952960000000e+010</val></rng1>
     <rng2>
-      <x>2815</x>
-      <y>50</y>
-      <val>-1253009255.</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---3840x2160--CV_32S->
+      <x>3341</x>
+      <y>632</y>
+      <val>4.5817155584000000e+010</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---3840x2160--CV_32S->
 <OCL_IntegralFixture_Integral2--Integral2---3840x2160--CV_32F->
   <sum>
     <kind>655360</kind>
@@ -89761,13 +89761,13 @@
       <y>2160</y>
       <val>1057347968.</val></last>
     <rng1>
-      <x>1786</x>
-      <y>1846</y>
-      <val>420263680.</val></rng1>
+      <x>1768</x>
+      <y>2143</y>
+      <val>482932288.</val></rng1>
     <rng2>
-      <x>3339</x>
-      <y>705</y>
-      <val>299941504.</val></rng2></sum>
+      <x>3270</x>
+      <y>783</y>
+      <val>326223520.</val></rng2></sum>
   <sqsum>
     <kind>655360</kind>
     <type>5</type>
@@ -89778,11 +89778,11 @@
       <y>2160</y>
       <val>1.8006676275200000e+011</val></last>
     <rng1>
-      <x>3403</x>
-      <y>1627</y>
-      <val>1.2022932275200000e+011</val></rng1>
+      <x>3331</x>
+      <y>516</y>
+      <val>3.7275652096000000e+010</val></rng1>
     <rng2>
-      <x>3400</x>
-      <y>1256</y>
-      <val>9.2671451136000000e+010</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---3840x2160--CV_32F->
+      <x>3654</x>
+      <y>963</y>
+      <val>7.6364627968000000e+010</val></rng2></sqsum></OCL_IntegralFixture_Integral2--Integral2---3840x2160--CV_32F->
 </opencv_storage>
