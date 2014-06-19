@@ -247,8 +247,8 @@ OCL_PERF_TEST_P(IntegralFixture, Integral2, ::testing::Combine(OCL_TEST_SIZES, O
 
     OCL_TEST_CYCLE() cv::integral(src, sum, sqsum, ddepth, CV_32F);
 
-    SANITY_CHECK(sum, 2e-6, ERROR_RELATIVE);
-    SANITY_CHECK(sqsum, 2e-5, ERROR_RELATIVE);
+    SANITY_CHECK(sum, 1e-6, ERROR_RELATIVE);
+    SANITY_CHECK(sqsum, 5e-5, ERROR_RELATIVE);
 }
 
 ///////////// Threshold ////////////////////////
