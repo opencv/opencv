@@ -18,6 +18,7 @@
 #include "precomp.hpp"
 #include <set>
 #include <limits>
+#include <iostream>
 
 #include "opencv2/contrib/facerec.hpp"
 
@@ -1003,8 +1004,7 @@ CV_INIT_ALGORITHM(LBPH, "FaceRecognizer.LBPH",
 
 bool initModule_contrib()
 {
-    Ptr<Algorithm> efaces = createEigenfaces_ptr_hidden(), ffaces = createFisherfaces_ptr_hidden(), lbph = createLBPH_ptr_hidden();
-    return efaces->info() != 0 && ffaces->info() != 0 && lbph->info() != 0;
+    return !Eigenfaces_info_auto.name().empty() && !Fisherfaces_info_auto.name().empty() && !LBPH_info_auto.name().empty();
 }
 
 }
