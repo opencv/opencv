@@ -746,7 +746,7 @@ is minimized. If the parameter ``method`` is set to the default value 0, the fun
 uses all the point pairs to compute an initial homography estimate with a simple least-squares scheme.
 
 However, if not all of the point pairs (
-:math:`srcPoints_i`,:math:`dstPoints_i` ) fit the rigid perspective transformation (that is, there
+:math:`srcPoints_i`, :math:`dstPoints_i` ) fit the rigid perspective transformation (that is, there
 are some outliers), this initial estimate will be poor.
 In this case, you can use one of the two robust methods. Both methods, ``RANSAC`` and ``LMeDS`` , try many different random subsets
 of the corresponding point pairs (of four pairs each), estimate
@@ -769,7 +769,7 @@ if there are no outliers and the noise is rather small, use the default method (
 
 The function is used to find initial intrinsic and extrinsic matrices.
 Homography matrix is determined up to a scale. Thus, it is normalized so that
-:math:`h_{33}=1` .
+:math:`h_{33}=1`. Note that whenever an H matrix cannot be estimated, an empty one will be returned.
 
 .. seealso::
 
