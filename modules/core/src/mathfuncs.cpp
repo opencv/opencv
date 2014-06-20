@@ -2114,15 +2114,27 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
             rowsPerWI = d.isIntel() ? 4 : 1;
     bool doubleSupport = d.doubleFPConfig() > 0;
 
+    _dst.createSameSize(_src, type);
+    if (is_ipower && (ipower == 0 || ipower == 1))
+    {
+        if (ipower == 0)
+            _dst.setTo(Scalar::all(1));
+        else if (ipower == 1)
+            _src.copyTo(_dst);
+
+        return true;
+    }
+
     if (depth == CV_64F && !doubleSupport)
         return false;
 
-    bool issqrt = std::abs(power - 0.5) < DBL_EPSILON;
-    const char * const op = issqrt ? "OP_SQRT" : is_ipower ? "OP_POWN" : "OP_POW";
+    bool issqrt = std::abs(power - 0.5) < DBL_EPSILON, nonnegative = power >= 0;
+    const char * const op = issqrt ? "OP_SQRT" : is_ipower ? nonnegative ? "OP_POWN" : "OP_ROOTN" : nonnegative ? "OP_POWR" : "OP_POW";
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D dstT=%s -D rowsPerWI=%d -D %s -D UNARY_OP%s", ocl::typeToStr(depth),
-                         rowsPerWI, op, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                  format("-D dstT=%s -D depth=%d -D rowsPerWI=%d -D %s -D UNARY_OP%s",
+                         ocl::typeToStr(depth), depth,  rowsPerWI, op,
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
 
@@ -2153,11 +2165,12 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
 
 void pow( InputArray _src, double power, OutputArray _dst )
 {
-    bool is_ipower = false, same = false;
     int type = _src.type(), depth = CV_MAT_DEPTH(type),
             cn = CV_MAT_CN(type), ipower = cvRound(power);
+    bool is_ipower = fabs(ipower - power) < DBL_EPSILON, same = false,
+            useOpenCL = _dst.isUMat() && _src.dims() <= 2;
 
-    if( fabs(ipower - power) < DBL_EPSILON )
+    if( is_ipower && !(ocl::Device::getDefault().isIntel() && useOpenCL && depth != CV_64F))
     {
         if( ipower < 0 )
         {
@@ -2179,7 +2192,8 @@ void pow( InputArray _src, double power, OutputArray _dst )
             return;
         case 2:
 #if defined(HAVE_IPP)
-            if (depth == CV_32F && !same && ( (_src.dims() <= 2 && !ocl::useOpenCL()) || (_src.dims() > 2 && _src.isContinuous() && _dst.isContinuous()) ))
+            if (depth == CV_32F && !same && ( (_src.dims() <= 2 && !ocl::useOpenCL()) ||
+                                              (_src.dims() > 2 && _src.isContinuous() && _dst.isContinuous()) ))
             {
                 Mat src = _src.getMat();
                 _dst.create( src.dims, src.size, type );
@@ -2207,14 +2221,12 @@ void pow( InputArray _src, double power, OutputArray _dst )
             else
                 multiply(_src, _src, _dst);
             return;
-        default:
-            is_ipower = true;
         }
     }
     else
         CV_Assert( depth == CV_32F || depth == CV_64F );
 
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN(useOpenCL,
                ocl_pow(same ? _dst : _src, power, _dst, is_ipower, ipower))
 
     Mat src, dst;
