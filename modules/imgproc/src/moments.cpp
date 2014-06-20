@@ -369,11 +369,16 @@ Moments::Moments( double _m00, double _m10, double _m01, double _m20, double _m1
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_moments( InputArray _src, Moments& m)
+static bool ocl_moments( InputArray _src, Moments& m, bool binary)
 {
     const int TILE_SIZE = 32;
     const int K = 10;
-    ocl::Kernel k("moments", ocl::imgproc::moments_oclsrc, format("-D TILE_SIZE=%d", TILE_SIZE));
+
+    ocl::Kernel k = ocl::Kernel("moments", ocl::imgproc::moments_oclsrc,
+        format("-D TILE_SIZE=%d%s",
+        TILE_SIZE,
+        binary ? " -D OP_MOMENTS_BINARY" : ""));
+
     if( k.empty() )
         return false;
 
@@ -451,8 +456,8 @@ cv::Moments cv::moments( InputArray _src, bool binary )
         return m;
 
 #ifdef HAVE_OPENCL
-    if( !(ocl::useOpenCL() && type == CV_8UC1 && !binary &&
-        _src.isUMat() && ocl_moments(_src, m)) )
+    if( !(ocl::useOpenCL() && type == CV_8UC1  &&
+        _src.isUMat() && ocl_moments(_src, m, binary)) )
 #endif
     {
         Mat mat = _src.getMat();
