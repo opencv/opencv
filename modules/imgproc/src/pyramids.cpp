@@ -467,24 +467,32 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
     UMat dst = _dst.getUMat();
 
     int float_depth = depth == CV_64F ? CV_64F : CV_32F;
+    const int local_size = 16;
     char cvt[2][50];
     String buildOptions = format(
             "-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s "
-            "-D T1=%s -D cn=%d",
+            "-D T1=%s -D cn=%d -D LOCAL_SIZE=%d",
             ocl::typeToStr(type), ocl::typeToStr(CV_MAKETYPE(float_depth, channels)),
             ocl::convertTypeStr(float_depth, depth, channels, cvt[0]),
             ocl::convertTypeStr(depth, float_depth, channels, cvt[1]),
             doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-            ocl::typeToStr(depth), channels
+            ocl::typeToStr(depth), channels, local_size
     );
-    ocl::Kernel k("pyrUp", ocl::imgproc::pyr_up_oclsrc, buildOptions);
+    size_t globalThreads[2] = { dst.cols, dst.rows };
+    size_t localThreads[2] = { local_size, local_size };
+    ocl::Kernel k;
+    if (ocl::Device::getDefault().isIntel() && channels == 1)
+    {
+        k.create("pyrUp_unrolled", ocl::imgproc::pyr_up_oclsrc, buildOptions);
+        globalThreads[0] = dst.cols/2; globalThreads[1] = dst.rows/2;
+    }
+    else
+        k.create("pyrUp", ocl::imgproc::pyr_up_oclsrc, buildOptions);
+
     if (k.empty())
         return false;
 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst));
-    size_t globalThreads[2] = {dst.cols, dst.rows};
-    size_t localThreads[2]  = {16, 16};
-
     return k.run(2, globalThreads, localThreads, false);
 }
 
