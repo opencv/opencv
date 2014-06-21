@@ -644,6 +644,7 @@ inline void Mat::release()
     u = NULL;
     data = datastart = dataend = datalimit = 0;
     size.p[0] = 0;
+    size.p[1] = 0;
 }
 
 inline
