@@ -68,6 +68,7 @@ foreach(module ${OPENCV_PYTHON_MODULES})
     # Python bindings doesn't seem to process *.h files. So remove them, so with cuda,ios,opencl etc.
     ocv_list_filterout(module_hdrs ".h$")
     ocv_list_filterout(module_hdrs "^.*(cuda|ios|opencl).*$")
+    ocv_list_filterout(module_hdrs "detection_based_tracker.hpp$")
     list(APPEND opencv_hdrs ${module_hdrs})
 endforeach()
 
