@@ -196,6 +196,10 @@ public:
 //   [2] Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
 CV_EXPORTS_W Ptr<DenseOpticalFlow> createOptFlow_DualTVL1();
 
+
+// DeepFlow implementation, based on:
+//   P. Weinzaepfel, J. Revaud, Z. Harchaoui, and C. Schmid, “DeepFlow: Large Displacement Optical Flow with Deep Matching,”
+CV_EXPORTS_W Ptr<DenseOpticalFlow> createOptFlow_DeepFlow();
 } // cv
 
 #endif
