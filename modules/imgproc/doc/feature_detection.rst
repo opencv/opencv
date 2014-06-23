@@ -529,7 +529,7 @@ Creates a smart pointer to a LineSegmentDetector object and initializes it.
 
     :param scale: The scale of the image that will be used to find the lines. Range (0..1].
 
-    :param sigma_scale: Sigma for Gaussian filter. It is computed as sigma = _sigma_scale/_scale.
+    :param sigma_scale: Sigma for Gaussian filter. It is computed as sigma = sigma_scale/scale.
 
     :param quant: Bound to the quantization error on the gradient norm.
 
@@ -548,20 +548,24 @@ LineSegmentDetector::detect
 ---------------------------
 Finds lines in the input image. See the lsd_lines.cpp sample for possible usage.
 
-.. ocv:function:: void LineSegmentDetector::detect(const InputArray _image, OutputArray _lines, OutputArray width = noArray(), OutputArray prec = noArray(), OutputArray nfa = noArray())
+.. ocv:function:: void LineSegmentDetector::detect(InputArray _image, OutputArray _lines, OutputArray width = noArray(), OutputArray prec = noArray(), OutputArray nfa = noArray())
 
-    :param _image A grayscale (CV_8UC1) input image.
-        If only a roi needs to be selected, use ::
-        lsd_ptr->detect(image(roi), lines, ...);
+    :param image: A grayscale (CV_8UC1) input image.
+        If only a roi needs to be selected, use
+
+.. code-block:: c
+
+        lsd_ptr->detect(image(roi), lines);
         lines += Scalar(roi.x, roi.y, roi.x, roi.y);
 
-    :param lines: A vector of Vec4i elements specifying the beginning and ending point of a line. Where Vec4i is (x1, y1, x2, y2), point 1 is the start, point 2 - end. Returned lines are strictly oriented depending on the gradient.
+
+    :param lines: A vector of ``Vec4i`` elements specifying the beginning and ending point of a line. Where Vec4i is (x_1, y_1, x_2, y_2), point 1 is the start, point 2 - end. Returned lines are strictly oriented depending on the gradient.
 
     :param width: Vector of widths of the regions, where the lines are found. E.g. Width of line.
 
     :param prec: Vector of precisions with which the lines are found.
 
-    :param nfa: Vector containing number of false alarms in the line region, with precision of 10%. The bigger the value, logarithmically better the detection.
+    :param nfa: Vector containing number of false alarms in the line region, with precision of 10%. This vector will be calculated only when the objects type is LSD_REFINE_ADV. The bigger the value, logarithmically better the detection.
 
         * -1 corresponds to 10 mean false alarms
 
@@ -569,7 +573,6 @@ Finds lines in the input image. See the lsd_lines.cpp sample for possible usage.
 
         * 1 corresponds to 0.1 mean false alarms
 
-    This vector will be calculated only when the objects type is LSD_REFINE_ADV.
 
 This is the output of the default parameters of the algorithm on the above shown image.
 
@@ -600,9 +603,75 @@ Draws two groups of lines in blue and red, counting the non overlapping (mismatc
 
     :param lines1: The first group of lines that needs to be drawn. It is visualized in blue color.
 
-    :param lines2: The second group of lines. They visualized in red color.
+    :param lines2: The second group of lines. They are visualized in red color.
 
     :param image: Optional image, where the lines will be drawn. The image should be color in order for lines1 and lines2 to be drawn in the above mentioned colors.
+
+
+LineSegmentDetector::filterOutAngle
+-----------------------------------
+Find all line elements that are *not* fullfilling the angle and range requirenmnets. Take all lines, whose angle is outside [min_angle, max_angle] range. This is useful when, for instance, only horizontal or vertical lines need to be removed.
+
+.. ocv:function:: int LineSegmentDetector::filterOutAngle(InputArray lines, OutputArray filtered, double min_angle, double max_angle)
+
+    :param lines: Input lines.
+
+    :param filtered: The output vector of lines not containing those fulfilling the requirement.
+
+    :param min_angle: The min angle to be considered in degrees. Should be in range [0..180).
+
+    :param max_angle: The max angle to be considered in degrees. Should be >= ``min_angle`` and widthin range [0..180).
+
+    :return Returns the number of line segments not included in the output vector.
+
+
+LineSegmentDetector::retainAngle
+--------------------------------
+Find all line elements that are fullfilling the angle and range requirenmnets. Take all lines, whose angle is inside [min_angle, max_angle] range. The opposite of the filterOutAngle method.
+
+.. ocv:function:: int LineSegmentDetector::retainAngle(InputArray lines, OutputArray filtered, double min_angle, double max_angle)
+
+    :param lines: Input lines.
+
+    :param filtered: The output vector of lines not containing those fulfilling the requirement.
+
+    :param min_angle: The min angle to be considered in degrees. Should be in range [0..180).
+
+    :param max_angle: The max angle to be considered in degrees. Should be >= ``min_angle`` and widthin range [0..180).
+
+    :return Returns the number of line segments not included in the output vector.
+
+
+LineSegmentDetector::filterSize
+-------------------------------
+Find all line elements that *are* fullfilling the size requirenmnets. Lines, which are shorter than max_length and longer or equal to min_length - [min_length; max_length) will be retained, everything else - discarded.
+
+.. ocv:function:: int LineSegmentDetector::filterSize(InputArray lines, OutputArray filtered, double min_length, double max_length = LSD_NO_SIZE_LIMIT)
+
+    :param lines: Input lines.
+
+    :param filtered: The output vector of lines containing those fulfilling the requirement.
+
+    :param min_length: Minimum inclusive length of the line segment.
+
+    :param max_length: Optional parameters setting the maximum length of the line segment.
+
+    :return Returns the number of line segments not included in the output vector.
+
+
+LineSegmentDetector::intersection
+---------------------------------
+Find the intersection point of 2 lines.
+
+.. ocv:function:: bool LineSegmentDetector::intersection(InputArray line1, InputArray line2, Point& P)
+
+    :param line1: First line in format Vec4i(x1, y1, x2, y2).
+
+    :param line2: Second line in the same format as ``line1``.
+
+    :param P: The point where ``line1`` and ``line2`` intersect.
+
+    :return The value in variable P is only valid when the return value is true. Otherwise, the lines are parallel and the value can be ignored.
 
 
 
@@ -651,4 +720,4 @@ The corners can be found as local maximums of the functions, as shown below: ::
 
 .. [Yuen90] Yuen, H. K. and Princen, J. and Illingworth, J. and Kittler, J., *Comparative study of Hough transform methods for circle finding*. Image Vision Comput. 8 1, pp 71–77 (1990)
 
-.. [Rafael12] Rafael Grompone von Gioi, Jérémie Jakubowicz, Jean-Michel Morel, and Gregory Randall, LSD: a Line Segment Detector, Image Processing On Line, vol. 2012. http://dx.doi.org/10.5201/ipol.2012.gjmr-lsd
+.. [Rafael12] Rafael Grompone von Gioi, Jérémie Jakubowicz, Jean-Michel Morel, and Gregory Randall, *LSD: a Line Segment Detector*, Image Processing On Line, vol. 2012. http://dx.doi.org/10.5201/ipol.2012.gjmr-lsd

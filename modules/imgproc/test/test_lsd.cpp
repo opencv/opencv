@@ -1,5 +1,6 @@
 #include "test_precomp.hpp"
 
+#include <cmath>
 #include <vector>
 
 using namespace cv;
@@ -8,6 +9,9 @@ using namespace std;
 const Size img_size(640, 480);
 const int LSD_TEST_SEED = 0x134679;
 const int EPOCHS = 20;
+const int DISPL = 20;
+const Point init_pnt(17, 13);
+const int NUM_LINES_F = 10;
 
 class LSDBase : public testing::Test
 {
@@ -24,6 +28,7 @@ protected:
     void GenerateConstColor(Mat& image);
     void GenerateLines(Mat& image, const unsigned int numLines);
     void GenerateRotatedRect(Mat& image);
+    void AddLine(vector<Vec4i>& l, const Point p, const float angle_deg, const double length);
     virtual void SetUp();
 };
 
@@ -47,6 +52,14 @@ class Imgproc_LSD_NONE: public LSDBase
 {
 public:
     Imgproc_LSD_NONE() { }
+protected:
+
+};
+
+class Imgproc_LSD_FILTERING: public LSDBase
+{
+public:
+    Imgproc_LSD_FILTERING() { }
 protected:
 
 };
@@ -94,6 +107,17 @@ void LSDBase::GenerateRotatedRect(Mat& image)
     {
         line(image, vertices[i], vertices[(i + 1) % 4], Scalar(255), 3);
     }
+}
+
+void LSDBase::AddLine(vector<Vec4i>& l, const Point p, const float angle_deg, const double length)
+{
+    int dy = int(sin(angle_deg * CV_PI / 180.0) * length);
+    int dx = int(cos(angle_deg * CV_PI / 180.0) * length);
+
+    l.push_back(Vec4i(p.x,
+                      p.y,
+                      p.x + dx,
+                      p.y + dy));
 }
 
 void LSDBase::SetUp()
@@ -260,6 +284,133 @@ TEST_F(Imgproc_LSD_NONE, rotatedRect)
         detector->detect(test_image, lines);
 
         if(8u <= lines.size()) ++passedtests;
+    }
+    ASSERT_EQ(EPOCHS, passedtests);
+}
+
+TEST_F(Imgproc_LSD_FILTERING, min_size)
+{
+    for (int i = 0; i < EPOCHS; ++i)
+    {
+        lines.clear();
+        for (int l = 0; l < NUM_LINES_F; ++l)
+            AddLine(lines, init_pnt, 0, l * DISPL); // Generate NUM_LINES_F lines
+
+        vector<Vec4i> filtered;
+        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_NONE);
+        double min_length = NUM_LINES_F * DISPL / 2.0;
+
+        detector->filterSize(lines, filtered, min_length);
+        cout << filtered.size() << endl;
+
+        if(filtered.size() == (NUM_LINES_F / 2u)) ++passedtests;
+    }
+    ASSERT_EQ(EPOCHS, passedtests);
+}
+
+TEST_F(Imgproc_LSD_FILTERING, max_size)
+{
+    for (int i = 0; i < EPOCHS; ++i)
+    {
+        lines.clear();
+        for (int l = 0; l < NUM_LINES_F; ++l)
+            AddLine(lines, init_pnt, 0, l * DISPL); // Generate NUM_LINES_F lines
+
+        vector<Vec4i> filtered;
+        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_NONE);
+        double max_length = NUM_LINES_F * DISPL / 2.0;
+        detector->filterSize(lines, filtered, 0, max_length);
+
+        if(filtered.size() == (NUM_LINES_F / 2u)) ++passedtests;
+    }
+    ASSERT_EQ(EPOCHS, passedtests);
+}
+
+TEST_F(Imgproc_LSD_FILTERING, angles_retain)
+{
+    const int split_pi = 18; // split 180deg in 18 parts
+    for (int i = 0; i < split_pi; ++i) // in ordder to select every line
+    {
+        lines.clear();
+        for (int a = 0; a < 180; a+=10)
+            AddLine(lines, init_pnt, float(a), DISPL); // Generate lines at 10deg separation
+
+        vector<Vec4i> filtered;
+        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_NONE);
+
+        double min_angle = max(0.0,   i * 10.0 - 5.0);
+        double max_angle = min(179.9, i * 10.0 + 5.0);
+        detector->retainAngle(lines, filtered, min_angle, max_angle); // select one line
+
+        if(filtered.size() == 1u) ++passedtests;
+    }
+    ASSERT_EQ(split_pi, passedtests);
+}
+
+TEST_F(Imgproc_LSD_FILTERING, angles_filterOut)
+{
+    const int split_pi = 18; // split 180deg in 18 parts
+    for (int i = 0; i < split_pi; ++i) // in ordder to select every line
+    {
+        lines.clear();
+        for (int a = 0; a < 180; a+=10)
+            AddLine(lines, init_pnt, float(a), DISPL); // Generate lines at 10deg separation
+
+        vector<Vec4i> filtered;
+        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_NONE);
+
+        double min_angle = max(0.0,   i * 10.0 - 5.0);
+        double max_angle = min(179.9, i * 10.0 + 5.0);
+        detector->filterOutAngle(lines, filtered, min_angle, max_angle); // select one line
+
+        if(filtered.size() == (split_pi - 1u)) ++passedtests;
+    }
+    ASSERT_EQ(split_pi, passedtests);
+}
+
+TEST_F(Imgproc_LSD_FILTERING, intersection_parallel)
+{
+    for (int i = 0; i < EPOCHS; ++i)
+    {
+        lines.clear();
+        AddLine(lines, init_pnt, 0, DISPL * (i + 1)); // Line A
+        AddLine(lines, init_pnt, 0, DISPL * (i + 2)); // Line B, A||B
+
+        Point P;
+        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_NONE);
+        if (!detector->intersection(lines[0], lines[1], P)) ++passedtests;
+    }
+    ASSERT_EQ(EPOCHS, passedtests);
+}
+
+TEST_F(Imgproc_LSD_FILTERING, intersection_perp)
+{
+    for (int i = 0; i < EPOCHS; ++i)
+    {
+        lines.clear();
+        AddLine(lines, init_pnt * i,  0.0, DISPL * (i + 1));
+        AddLine(lines, init_pnt * i, 90.0, DISPL * (i + 2));
+
+        Point P;
+        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_NONE);
+        detector->intersection(lines[0], lines[1], P);
+        if (P == (init_pnt * i)) ++passedtests;
+    }
+    ASSERT_EQ(EPOCHS, passedtests);
+}
+
+TEST_F(Imgproc_LSD_FILTERING, intersections)
+{
+    for (int i = 0; i < EPOCHS; ++i)
+    {
+        lines.clear();
+        AddLine(lines, init_pnt * i, 0.0, DISPL);
+        AddLine(lines, init_pnt, float((i + 1) * 8.0), DISPL);
+
+        Point P;
+        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_NONE);
+        bool not_parallel = detector->intersection(lines[0], lines[1], P);
+        if (not_parallel && P!=Point()) ++passedtests;
     }
     ASSERT_EQ(EPOCHS, passedtests);
 }
