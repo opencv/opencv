@@ -209,7 +209,7 @@ Building the library
          setx -m QTDIR D:/OpenCV/dep/qt/qt-everywhere-opensource-src-4.7.3
 
       .. |PathEditor| replace:: Path Editor
-      .. _PathEditor: http://www.redfernplace.com/software-projects/patheditor/
+      .. _PathEditor: http://patheditor2.codeplex.com/
 
       Also, add the built binary files path to the system path by using the  |PathEditor|_. In our case this is :file:`D:/OpenCV/dep/qt/qt-everywhere-opensource-src-4.7.3/bin`.
 
