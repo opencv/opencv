@@ -424,19 +424,19 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
     int float_depth = depth == CV_64F ? CV_64F : CV_32F;
     const int local_size = 256;
     int kercn = 1;
-    if (depth == CV_8U && cn == 1 && float_depth == CV_32F)
+    if (depth == CV_8U && float_depth == CV_32F && cn == 1 && ocl::Device::getDefault().isIntel())
         kercn = 4;
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
                                        "BORDER_REFLECT_101" };
     char cvt[2][50];
     String buildOptions = format(
             "-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s "
-            "-D T1=%s -D cn=%d -D kercn=%d -D %s -D LOCAL_SIZE=%d",
+            "-D T1=%s -D cn=%d -D kercn=%d -D fdepth=%d -D %s -D LOCAL_SIZE=%d",
             ocl::typeToStr(type), ocl::typeToStr(CV_MAKETYPE(float_depth, cn)),
             ocl::convertTypeStr(float_depth, depth, cn, cvt[0]),
             ocl::convertTypeStr(depth, float_depth, cn, cvt[1]),
-            doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-            ocl::typeToStr(depth), cn, kercn, borderMap[borderType], local_size
+            doubleSupport ? " -D DOUBLE_SUPPORT" : "", ocl::typeToStr(depth),
+            cn, kercn, float_depth, borderMap[borderType], local_size
     );
     ocl::Kernel k("pyrDown", ocl::imgproc::pyr_down_oclsrc, buildOptions);
     if (k.empty())

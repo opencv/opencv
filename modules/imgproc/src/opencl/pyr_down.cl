@@ -80,7 +80,13 @@
 #define SRC(_x,_y) convertToFT(loadpix(srcData + mad24(_y, src_step, PIXSIZE * _x)))
 
 #if kercn == 4
-#define SRC4(_x,_y) convert_float4(*(__global const uchar4*)(srcData + mad24(_y, src_step, PIXSIZE * _x)))
+#define SRC4(_x,_y) convert_float4(vload4(0, srcData + mad24(_y, src_step, PIXSIZE * _x)))
+#endif
+
+#ifdef INTEL_DEVICE
+#define MAD(x,y,z) fma((x),(y),(z))
+#else
+#define MAD(x,y,z) mad((x),(y),(z))
 #endif
 
 #define noconvert
@@ -109,10 +115,10 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
         col = EXTRAPOLATE(x, src_cols);
 
         sum =     co3* SRC(col, src_y - 2);
-        sum = fma(co2, SRC(col, src_y - 1), sum);
-        sum = fma(co1, SRC(col, src_y    ), sum);
-        sum = fma(co2, SRC(col, src_y + 1), sum);
-        sum = fma(co3, SRC(col, src_y + 2), sum);
+        sum = MAD(co2, SRC(col, src_y - 1), sum);
+        sum = MAD(co1, SRC(col, src_y    ), sum);
+        sum = MAD(co2, SRC(col, src_y + 1), sum);
+        sum = MAD(co3, SRC(col, src_y + 2), sum);
 
         smem[2 + get_local_id(0)] = sum;
 #else
@@ -120,10 +126,10 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
         {
             float4 sum4;
             sum4 =     co3* SRC4(x, src_y - 2);
-            sum4 = fma(co2, SRC4(x, src_y - 1), sum4);
-            sum4 = fma(co1, SRC4(x, src_y    ), sum4);
-            sum4 = fma(co2, SRC4(x, src_y + 1), sum4);
-            sum4 = fma(co3, SRC4(x, src_y + 2), sum4);
+            sum4 = MAD(co2, SRC4(x, src_y - 1), sum4);
+            sum4 = MAD(co1, SRC4(x, src_y    ), sum4);
+            sum4 = MAD(co2, SRC4(x, src_y + 1), sum4);
+            sum4 = MAD(co3, SRC4(x, src_y + 2), sum4);
 
             vstore4(sum4, get_local_id(0), (__local float*) &smem[2]);
         }
@@ -133,10 +139,10 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
             {
                 col = EXTRAPOLATE(x+i, src_cols);
                 sum =     co3* SRC(col, src_y - 2);
-                sum = fma(co2, SRC(col, src_y - 1), sum);
-                sum = fma(co1, SRC(col, src_y    ), sum);
-                sum = fma(co2, SRC(col, src_y + 1), sum);
-                sum = fma(co3, SRC(col, src_y + 2), sum);
+                sum = MAD(co2, SRC(col, src_y - 1), sum);
+                sum = MAD(co1, SRC(col, src_y    ), sum);
+                sum = MAD(co2, SRC(col, src_y + 1), sum);
+                sum = MAD(co3, SRC(col, src_y + 2), sum);
 
                 smem[2 + 4*get_local_id(0)+i] = sum;
             }
@@ -147,10 +153,10 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
             col = EXTRAPOLATE((int)(get_group_id(0)*LOCAL_SIZE + get_local_id(0) - 2), src_cols);
 
             sum =     co3* SRC(col, src_y - 2);
-            sum = fma(co2, SRC(col, src_y - 1), sum);
-            sum = fma(co1, SRC(col, src_y    ), sum);
-            sum = fma(co2, SRC(col, src_y + 1), sum);
-            sum = fma(co3, SRC(col, src_y + 2), sum);
+            sum = MAD(co2, SRC(col, src_y - 1), sum);
+            sum = MAD(co1, SRC(col, src_y    ), sum);
+            sum = MAD(co2, SRC(col, src_y + 1), sum);
+            sum = MAD(co3, SRC(col, src_y + 2), sum);
 
             smem[get_local_id(0)] = sum;
         }
@@ -160,10 +166,10 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
             col = EXTRAPOLATE((int)((get_group_id(0)+1)*LOCAL_SIZE + get_local_id(0) - 2), src_cols);
 
             sum =     co3* SRC(col, src_y - 2);
-            sum = fma(co2, SRC(col, src_y - 1), sum);
-            sum = fma(co1, SRC(col, src_y    ), sum);
-            sum = fma(co2, SRC(col, src_y + 1), sum);
-            sum = fma(co3, SRC(col, src_y + 2), sum);
+            sum = MAD(co2, SRC(col, src_y - 1), sum);
+            sum = MAD(co1, SRC(col, src_y    ), sum);
+            sum = MAD(co2, SRC(col, src_y + 1), sum);
+            sum = MAD(co3, SRC(col, src_y + 2), sum);
 
             smem[LOCAL_SIZE + get_local_id(0)] = sum;
         }
@@ -174,10 +180,10 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
         col = EXTRAPOLATE(x, src_cols);
 
         sum =     co3* SRC(col, EXTRAPOLATE(src_y - 2, src_rows));
-        sum = fma(co2, SRC(col, EXTRAPOLATE(src_y - 1, src_rows)), sum);
-        sum = fma(co1, SRC(col, EXTRAPOLATE(src_y    , src_rows)), sum);
-        sum = fma(co2, SRC(col, EXTRAPOLATE(src_y + 1, src_rows)), sum);
-        sum = fma(co3, SRC(col, EXTRAPOLATE(src_y + 2, src_rows)), sum);
+        sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y - 1, src_rows)), sum);
+        sum = MAD(co1, SRC(col, EXTRAPOLATE(src_y    , src_rows)), sum);
+        sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y + 1, src_rows)), sum);
+        sum = MAD(co3, SRC(col, EXTRAPOLATE(src_y + 2, src_rows)), sum);
 
         smem[2 + get_local_id(0)] = sum;
 #else
@@ -185,10 +191,10 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
         {
             float4 sum4;
             sum4 =     co3* SRC4(x, EXTRAPOLATE(src_y - 2, src_rows));
-            sum4 = fma(co2, SRC4(x, EXTRAPOLATE(src_y - 1, src_rows)), sum4);
-            sum4 = fma(co1, SRC4(x, EXTRAPOLATE(src_y    , src_rows)), sum4);
-            sum4 = fma(co2, SRC4(x, EXTRAPOLATE(src_y + 1, src_rows)), sum4);
-            sum4 = fma(co3, SRC4(x, EXTRAPOLATE(src_y + 2, src_rows)), sum4);
+            sum4 = MAD(co2, SRC4(x, EXTRAPOLATE(src_y - 1, src_rows)), sum4);
+            sum4 = MAD(co1, SRC4(x, EXTRAPOLATE(src_y    , src_rows)), sum4);
+            sum4 = MAD(co2, SRC4(x, EXTRAPOLATE(src_y + 1, src_rows)), sum4);
+            sum4 = MAD(co3, SRC4(x, EXTRAPOLATE(src_y + 2, src_rows)), sum4);
 
             vstore4(sum4, get_local_id(0), (__local float*) &smem[2]);
         }
@@ -198,10 +204,10 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
             {
                 col = EXTRAPOLATE(x+i, src_cols);
                 sum =     co3* SRC(col, EXTRAPOLATE(src_y - 2, src_rows));
-                sum = fma(co2, SRC(col, EXTRAPOLATE(src_y - 1, src_rows)), sum);
-                sum = fma(co1, SRC(col, EXTRAPOLATE(src_y    , src_rows)), sum);
-                sum = fma(co2, SRC(col, EXTRAPOLATE(src_y + 1, src_rows)), sum);
-                sum = fma(co3, SRC(col, EXTRAPOLATE(src_y + 2, src_rows)), sum);
+                sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y - 1, src_rows)), sum);
+                sum = MAD(co1, SRC(col, EXTRAPOLATE(src_y    , src_rows)), sum);
+                sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y + 1, src_rows)), sum);
+                sum = MAD(co3, SRC(col, EXTRAPOLATE(src_y + 2, src_rows)), sum);
 
                 smem[2 + 4*get_local_id(0)+i] = sum;
             }
@@ -212,10 +218,10 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
             col = EXTRAPOLATE((int)(get_group_id(0)*LOCAL_SIZE + get_local_id(0) - 2), src_cols);
 
             sum =     co3* SRC(col, EXTRAPOLATE(src_y - 2, src_rows));
-            sum = fma(co2, SRC(col, EXTRAPOLATE(src_y - 1, src_rows)), sum);
-            sum = fma(co1, SRC(col, EXTRAPOLATE(src_y    , src_rows)), sum);
-            sum = fma(co2, SRC(col, EXTRAPOLATE(src_y + 1, src_rows)), sum);
-            sum = fma(co3, SRC(col, EXTRAPOLATE(src_y + 2, src_rows)), sum);
+            sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y - 1, src_rows)), sum);
+            sum = MAD(co1, SRC(col, EXTRAPOLATE(src_y    , src_rows)), sum);
+            sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y + 1, src_rows)), sum);
+            sum = MAD(co3, SRC(col, EXTRAPOLATE(src_y + 2, src_rows)), sum);
 
             smem[get_local_id(0)] = sum;
         }
@@ -225,10 +231,10 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
             col = EXTRAPOLATE((int)((get_group_id(0)+1)*LOCAL_SIZE + get_local_id(0) - 2), src_cols);
 
             sum =     co3* SRC(col, EXTRAPOLATE(src_y - 2, src_rows));
-            sum = fma(co2, SRC(col, EXTRAPOLATE(src_y - 1, src_rows)), sum);
-            sum = fma(co1, SRC(col, EXTRAPOLATE(src_y    , src_rows)), sum);
-            sum = fma(co2, SRC(col, EXTRAPOLATE(src_y + 1, src_rows)), sum);
-            sum = fma(co3, SRC(col, EXTRAPOLATE(src_y + 2, src_rows)), sum);
+            sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y - 1, src_rows)), sum);
+            sum = MAD(co1, SRC(col, EXTRAPOLATE(src_y    , src_rows)), sum);
+            sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y + 1, src_rows)), sum);
+            sum = MAD(co3, SRC(col, EXTRAPOLATE(src_y + 2, src_rows)), sum);
 
             smem[LOCAL_SIZE + get_local_id(0)] = sum;
         }
@@ -241,15 +247,20 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
     {
         const int tid2 = get_local_id(0) * 2;
 
-        sum =     co3* smem[2 + tid2 + 2];
+        sum = 0.f;
 #if cn == 1
+#if fdepth <= 5
         sum = sum + dot(vload4(0, (__local float*) (&smem)+tid2), (float4)(co3, co2, co1, co2));
 #else
-        sum = fma(co3, smem[2 + tid2 - 2], sum);
-        sum = fma(co2, smem[2 + tid2 - 1], sum);
-        sum = fma(co1, smem[2 + tid2    ], sum);
-        sum = fma(co2, smem[2 + tid2 + 1], sum);
+        sum = sum + dot(vload4(0, (__local double*) (&smem)+tid2), (double4)(co3, co2, co1, co2));
 #endif
+#else
+        sum = MAD(co3, smem[2 + tid2 - 2], sum);
+        sum = MAD(co2, smem[2 + tid2 - 1], sum);
+        sum = MAD(co1, smem[2 + tid2    ], sum);
+        sum = MAD(co2, smem[2 + tid2 + 1], sum);
+#endif
+        sum = MAD(co3, smem[2 + tid2 + 2], sum);
 
         const int dst_x = (get_group_id(0) * get_local_size(0) + tid2) / 2;
 
@@ -260,10 +271,10 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
     int tid4 = get_local_id(0) * 4;
 
     sum =     co3* smem[2 + tid4 + 2];
-    sum = fma(co3, smem[2 + tid4 - 2], sum);
-    sum = fma(co2, smem[2 + tid4 - 1], sum);
-    sum = fma(co1, smem[2 + tid4    ], sum);
-    sum = fma(co2, smem[2 + tid4 + 1], sum);
+    sum = MAD(co3, smem[2 + tid4 - 2], sum);
+    sum = MAD(co2, smem[2 + tid4 - 1], sum);
+    sum = MAD(co1, smem[2 + tid4    ], sum);
+    sum = MAD(co2, smem[2 + tid4 + 1], sum);
 
     int dst_x = (get_group_id(0) * LOCAL_SIZE + tid4) / 2;
 
@@ -274,10 +285,10 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
     dst_x += 1;
 
     sum =     co3* smem[2 + tid4 + 2];
-    sum = fma(co3, smem[2 + tid4 - 2], sum);
-    sum = fma(co2, smem[2 + tid4 - 1], sum);
-    sum = fma(co1, smem[2 + tid4    ], sum);
-    sum = fma(co2, smem[2 + tid4 + 1], sum);
+    sum = MAD(co3, smem[2 + tid4 - 2], sum);
+    sum = MAD(co2, smem[2 + tid4 - 1], sum);
+    sum = MAD(co1, smem[2 + tid4    ], sum);
+    sum = MAD(co2, smem[2 + tid4 + 1], sum);
 
     if (dst_x < dst_cols)
         storepix(convertToT(sum), dstData + mad24(y, dst_step, dst_x * PIXSIZE));
