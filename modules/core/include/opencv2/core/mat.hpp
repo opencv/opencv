@@ -366,7 +366,8 @@ inline void Mat::release()
     if( refcount && CV_XADD(refcount, -1) == 1 )
         deallocate();
     data = datastart = dataend = datalimit = 0;
-    size.p[0] = 0;
+    for(int i = 0; i < dims; i++)
+        size.p[i] = 0;
     refcount = 0;
 }
 
