@@ -1272,7 +1272,7 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
 
     if( !( depth == CV_8U || depth == CV_32F ) || !(cn == 1 || cn == 3 || cn == 4) ||
         !( borderType == cv::BORDER_REPLICATE || (borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue()) )
-        || !( op == MORPH_DILATE || op == MORPH_ERODE) )
+        || !( op == MORPH_DILATE || op == MORPH_ERODE) || _src.isSubmatrix() )
         return false;
 
     if( borderType == cv::BORDER_CONSTANT && kernel.data )
