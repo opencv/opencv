@@ -643,8 +643,8 @@ inline void Mat::release()
         deallocate();
     u = NULL;
     data = datastart = dataend = datalimit = 0;
-    size.p[0] = 0;
-    size.p[1] = 0;
+    for( int i = 0; i < dims; i++)
+        size.p[i] = 0;
 }
 
 inline
@@ -3262,7 +3262,8 @@ inline void UMat::release()
 {
     if( u && CV_XADD(&(u->urefcount), -1) == 1 )
         deallocate();
-    size.p[0] = 0;
+    for( int i = 0; i < dims; i++)
+        size.p[i] = 0;
     u = 0;
 }
 
