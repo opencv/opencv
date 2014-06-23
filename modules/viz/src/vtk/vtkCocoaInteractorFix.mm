@@ -97,7 +97,7 @@
     if (renWin)
     {
         win = reinterpret_cast<NSWindow*> (renWin->GetRootWindow ());
-        
+
         // We don't want to be informed of every window closing, so check for nil.
         if (win != nil)
         {
@@ -122,7 +122,7 @@
 {
     NSApplication* application = [NSApplication sharedApplication];
     [application stop:application];
-    
+
     NSEvent *event = [NSEvent otherEventWithType:NSApplicationDefined
                                         location:NSMakePoint(0.0,0.0)
                                    modifierFlags:0
@@ -139,17 +139,17 @@
 - (void)windowWillClose:(NSNotification*)aNotification
 {
     (void)aNotification;
-    
+
     NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
     [nc removeObserver:self name:NSWindowWillCloseNotification object:nil];
-    
+
     if (renWin)
     {
         int windowCreated = renWin->GetWindowCreated ();
         if (windowCreated)
         {
             [self breakEventLoop];
-            
+
             // The NSWindow is closing, so prevent anyone from accidently using it
             renWin->SetRootWindow(NULL);
         }
@@ -258,21 +258,21 @@ namespace cv { namespace viz
         public:
             static vtkCocoaRenderWindowInteractorFix *New ();
             vtkTypeMacro (vtkCocoaRenderWindowInteractorFix, vtkCocoaRenderWindowInteractor)
-            
+
             virtual void Start ();
             virtual void TerminateApp ();
-            
+
         protected:
             vtkCocoaRenderWindowInteractorFix () {}
             ~vtkCocoaRenderWindowInteractorFix () {}
-            
+
         private:
             vtkCocoaRenderWindowInteractorFix (const vtkCocoaRenderWindowInteractorFix&);  // Not implemented.
             void operator = (const vtkCocoaRenderWindowInteractorFix&);  // Not implemented.
         };
-        
+
         vtkStandardNewMacro (vtkCocoaRenderWindowInteractorFix)
-        
+
         vtkSmartPointer<vtkRenderWindowInteractor> vtkCocoaRenderWindowInteractorNew();
     }}
 
@@ -287,7 +287,7 @@ void cv::viz::vtkCocoaRenderWindowInteractorFix::Start ()
             server = [vtkCocoaServerFix cocoaServerWithRenderWindow:renWin];
             this->SetCocoaServer (reinterpret_cast<void*> (server));
         }
-        
+
         [server start];
     }
 }
