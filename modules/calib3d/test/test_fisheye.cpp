@@ -149,7 +149,7 @@ TEST_F(fisheyeTest, jacobians)
     cv::Mat k(4, 1, CV_64F);
     double alpha;
 
-    cv::RNG& r = cv::theRNG();
+    cv::RNG r;
 
     r.fill(X, cv::RNG::NORMAL, 2, 1);
     X = cv::abs(X) * 10;

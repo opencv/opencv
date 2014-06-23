@@ -309,47 +309,47 @@ void cv::fisheye::distortPoints(InputArray undistorted, OutputArray distorted, I
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::undistortPoints
 
-void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted, InputArray _K, InputArray _D, InputArray _R, InputArray _P)
+void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted, InputArray K, InputArray D, InputArray R, InputArray P)
 {
     // will support only 2-channel data now for points
     CV_Assert(distorted.type() == CV_32FC2 || distorted.type() == CV_64FC2);
     undistorted.create(distorted.size(), distorted.type());
 
-    CV_Assert(_P.empty() || _P.size() == Size(3, 3) || _P.size() == Size(4, 3));
-    CV_Assert(_R.empty() || _R.size() == Size(3, 3) || _R.total() * _R.channels() == 3);
-    CV_Assert(_D.total() == 4 && _K.size() == Size(3, 3) && (_K.depth() == CV_32F || _K.depth() == CV_64F));
+    CV_Assert(P.empty() || P.size() == Size(3, 3) || P.size() == Size(4, 3));
+    CV_Assert(R.empty() || R.size() == Size(3, 3) || R.total() * R.channels() == 3);
+    CV_Assert(D.total() == 4 && K.size() == Size(3, 3) && (K.depth() == CV_32F || K.depth() == CV_64F));
 
     cv::Vec2d f, c;
-    if (_K.depth() == CV_32F)
+    if (K.depth() == CV_32F)
     {
-        Matx33f camMat = _K.getMat();
+        Matx33f camMat = K.getMat();
         f = Vec2f(camMat(0, 0), camMat(1, 1));
         c = Vec2f(camMat(0, 2), camMat(1, 2));
     }
     else
     {
-        Matx33d camMat = _K.getMat();
+        Matx33d camMat = K.getMat();
         f = Vec2d(camMat(0, 0), camMat(1, 1));
         c = Vec2d(camMat(0, 2), camMat(1, 2));
     }
 
-    Vec4d k = _D.depth() == CV_32F ? (Vec4d)*_D.getMat().ptr<Vec4f>(): *_D.getMat().ptr<Vec4d>();
+    Vec4d k = D.depth() == CV_32F ? (Vec4d)*D.getMat().ptr<Vec4f>(): *D.getMat().ptr<Vec4d>();
 
     cv::Matx33d RR = cv::Matx33d::eye();
-    if (!_R.empty() && _R.total() * _R.channels() == 3)
+    if (!R.empty() && R.total() * R.channels() == 3)
     {
         cv::Vec3d rvec;
-        _R.getMat().convertTo(rvec, CV_64F);
+        R.getMat().convertTo(rvec, CV_64F);
         RR = cv::Affine3d(rvec).rotation();
     }
-    else if (!_R.empty() && _R.size() == Size(3, 3))
-        _R.getMat().convertTo(RR, CV_64F);
+    else if (!R.empty() && R.size() == Size(3, 3))
+        R.getMat().convertTo(RR, CV_64F);
 
-    if(!_P.empty())
+    if(!P.empty())
     {
-        cv::Matx33d P;
-        _P.getMat().colRange(0, 3).convertTo(P, CV_64F);
-        RR = P * RR;
+        cv::Matx33d PP;
+        P.getMat().colRange(0, 3).convertTo(PP, CV_64F);
+        RR = PP * RR;
     }
 
     // start undistorting
@@ -398,52 +398,52 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::undistortPoints
 
-void cv::fisheye::initUndistortRectifyMap( InputArray _K, InputArray _D, InputArray _R, InputArray _P,
+void cv::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArray R, InputArray P,
     const cv::Size& size, int m1type, OutputArray map1, OutputArray map2 )
 {
     CV_Assert( m1type == CV_16SC2 || m1type == CV_32F || m1type <=0 );
     map1.create( size, m1type <= 0 ? CV_16SC2 : m1type );
     map2.create( size, map1.type() == CV_16SC2 ? CV_16UC1 : CV_32F );
 
-    CV_Assert((_K.depth() == CV_32F || _K.depth() == CV_64F) && (_D.depth() == CV_32F || _D.depth() == CV_64F));
-    CV_Assert((_P.depth() == CV_32F || _P.depth() == CV_64F) && (_R.depth() == CV_32F || _R.depth() == CV_64F));
-    CV_Assert(_K.size() == Size(3, 3) && (_D.empty() || _D.total() == 4));
-    CV_Assert(_R.empty() || _R.size() == Size(3, 3) || _R.total() * _R.channels() == 3);
-    CV_Assert(_P.empty() || _P.size() == Size(3, 3) || _P.size() == Size(4, 3));
+    CV_Assert((K.depth() == CV_32F || K.depth() == CV_64F) && (D.depth() == CV_32F || D.depth() == CV_64F));
+    CV_Assert((P.depth() == CV_32F || P.depth() == CV_64F) && (R.depth() == CV_32F || R.depth() == CV_64F));
+    CV_Assert(K.size() == Size(3, 3) && (D.empty() || D.total() == 4));
+    CV_Assert(R.empty() || R.size() == Size(3, 3) || R.total() * R.channels() == 3);
+    CV_Assert(P.empty() || P.size() == Size(3, 3) || P.size() == Size(4, 3));
 
     cv::Vec2d f, c;
-    if (_K.depth() == CV_32F)
+    if (K.depth() == CV_32F)
     {
-        Matx33f camMat = _K.getMat();
+        Matx33f camMat = K.getMat();
         f = Vec2f(camMat(0, 0), camMat(1, 1));
         c = Vec2f(camMat(0, 2), camMat(1, 2));
     }
     else
     {
-        Matx33d camMat = _K.getMat();
+        Matx33d camMat = K.getMat();
         f = Vec2d(camMat(0, 0), camMat(1, 1));
         c = Vec2d(camMat(0, 2), camMat(1, 2));
     }
 
     Vec4d k = Vec4d::all(0);
-    if (!_D.empty())
-        k = _D.depth() == CV_32F ? (Vec4d)*_D.getMat().ptr<Vec4f>(): *_D.getMat().ptr<Vec4d>();
+    if (!D.empty())
+        k = D.depth() == CV_32F ? (Vec4d)*D.getMat().ptr<Vec4f>(): *D.getMat().ptr<Vec4d>();
 
-    cv::Matx33d R  = cv::Matx33d::eye();
-    if (!_R.empty() && _R.total() * _R.channels() == 3)
+    cv::Matx33d RR  = cv::Matx33d::eye();
+    if (!R.empty() && R.total() * R.channels() == 3)
     {
         cv::Vec3d rvec;
-        _R.getMat().convertTo(rvec, CV_64F);
-        R = Affine3d(rvec).rotation();
+        R.getMat().convertTo(rvec, CV_64F);
+        RR = Affine3d(rvec).rotation();
     }
-    else if (!_R.empty() && _R.size() == Size(3, 3))
-        _R.getMat().convertTo(R, CV_64F);
+    else if (!R.empty() && R.size() == Size(3, 3))
+        R.getMat().convertTo(RR, CV_64F);
 
-    cv::Matx33d P = cv::Matx33d::eye();
-    if (!_P.empty())
-        _P.getMat().colRange(0, 3).convertTo(P, CV_64F);
+    cv::Matx33d PP = cv::Matx33d::eye();
+    if (!P.empty())
+        P.getMat().colRange(0, 3).convertTo(PP, CV_64F);
 
-    cv::Matx33d iR = (P * R).inv(cv::DECOMP_SVD);
+    cv::Matx33d iR = (PP * RR).inv(cv::DECOMP_SVD);
 
     for( int i = 0; i < size.height; ++i)
     {
