@@ -61,6 +61,14 @@ protected:
     int minSize; // minimal dimension of an image in the pyramid
     float downscaleFactor; // scaling factor in the pyramid
     int fixedPointIterations; // during each level of the pyramid
+    float alpha; // smoothness assumption weight
+    float delta; // color constancy weight
+    float gamma; // gradient constancy weight
+
+
+    float zeta; // added to the denomimnator of theta_0 (normaliation of the data term)
+    float epsilon; // robust penalizer const
+
 
 private:
     void calcOneLevel( const Mat I0, const Mat I1, Mat W );
@@ -68,7 +76,8 @@ private:
     void dataTerm(const Mat W, const Mat dW, const Mat tempW, const Mat Ix, const Mat Iy,
             const Mat Iz, const Mat Ixx, const Mat Ixy, const Mat Iyy, const Mat Ixz,
             const Mat Iyz, Mat a11, Mat a12, Mat a22, Mat b1, Mat b2);
-    void smoothnessTerm(const Mat W, const Mat tempW, Mat b1, Mat b2);
+    void smoothnessWeights(const Mat W, Mat weightsX, Mat weightsY);
+    void smoothnessTerm(const Mat W, const Mat weightsX, const Mat weightsY, Mat b1, Mat b2);
     void sorSolve(const Mat a11, const Mat a12, const Mat a22,
             const Mat b1, const Mat b2, Mat dW);
     std::vector<Mat> buildPyramid( const Mat& src);
@@ -82,11 +91,16 @@ OpticalFlowDeepFlow::OpticalFlowDeepFlow()
     // parameters
     sigma = 0.5f;
     minSize = 25;
-    downscaleFactor = 0.95;
+    downscaleFactor = 0.95f;
     fixedPointIterations = 20;
+    alpha = 6.0f;
+    delta = 0.5f;
+    gamma = 5.0f;
 
     //consts
     interpolationType = INTER_LINEAR;
+    zeta = 0.1f;
+    epsilon = 0.001f;
 }
 
 std::vector<Mat> OpticalFlowDeepFlow::buildPyramid( const Mat& src )
@@ -96,7 +110,7 @@ std::vector<Mat> OpticalFlowDeepFlow::buildPyramid( const Mat& src )
     Mat prev = pyramid[0];
     while ( prev.cols > minSize && prev.rows > minSize)
     {
-        Mat next;
+        Mat next; //FIXME: filtering at each level?
         resize(prev, next, Size(floor(prev.cols * downscaleFactor), floor(prev.rows * downscaleFactor)), 0, 0,
                 interpolationType);
         pyramid.push_back(next);
@@ -156,6 +170,8 @@ void OpticalFlowDeepFlow::calcOneLevel( const Mat I0, const Mat I1, Mat W )
 
     // linear equation systems
     Mat a11, a12, a22, b1, b2;
+    // diffusivity coeffs
+    Mat weightsX, weightsY;
 
     Mat warpedI1 = remapRelative(I1, W); // warped second image
     Mat averageFrame = 0.5 * (I0 + warpedI1); // mean value of 2 frames - to compute derivatives on
@@ -182,7 +198,8 @@ void OpticalFlowDeepFlow::calcOneLevel( const Mat I0, const Mat I1, Mat W )
     for(int i=0; i < fixedPointIterations; ++i)
     {
         dataTerm(W, dW, tempW, Ix, Iy, Iz, Ixx, Ixy, Iyy, Ixz, Iyz, a11, a12, a22, b1, b2);
-        smoothnessTerm(W, tempW, b1, b2);
+        smoothnessWeights(W, weightsX, weightsY);
+        smoothnessTerm(W, weightsX, weightsY, b1, b2);
         sorSolve(a11, a12, a22, b1, b2, dW);
         tempW = W + dW;
     }
@@ -193,10 +210,186 @@ void OpticalFlowDeepFlow::dataTerm(const Mat W, const Mat dW, const Mat tempW, c
         const Mat Iyz, Mat a11, Mat a12, Mat a22, Mat b1, Mat b2)
 {
     //TODO: data term implementation
+    const float zeta_squared = zeta*zeta; // added in normalization factor to be non-zero
+    const float epsilon_squared = epsilon*epsilon;
+    if(Ix.channels() == 1)
+    {
+        const float *pIx, *pIy, *pIz;
+        const float *pIxx, *pIxy, *pIyy, *pIxz, *pIyz;
+        const float *pdU, *pdV; // accessing 2 layers of dW. Succesive columns interleave u and v
+        float *pa11, *pa12, *pa22, *pb1, *pb2; // linear equation sys. coeffs for each pixel
+
+        float derivNorm; //denominator of the spatial-derivative normalizing factor (theta_0)
+        float derivNorm2;
+        float Ik1z, Ik1zx, Ik1zy; // approximations of I^(k+1) values by Taylor expansions
+        float temp;
+        for(int j=0; j<W.rows; j++)//for each row
+        {
+            pIx = Ix.ptr<float>(j);
+            pIy = Iy.ptr<float>(j);
+            pIz = Iz.ptr<float>(j);
+            pIxx = Ixx.ptr<float>(j);
+            pIxy = Ixy.ptr<float>(j);
+            pIyy = Iyy.ptr<float>(j);
+            pIxz = Ixz.ptr<float>(j);
+            pIyz = Iyz.ptr<float>(j);
+
+            pa11 = a11.ptr<float>(j);
+            pa12 = a12.ptr<float>(j);
+            pa22 = a22.ptr<float>(j);
+            pb1 = b1.ptr<float>(j);
+            pb2 = b2.ptr<float>(j);
+
+            pdU = dW.ptr<float>(j);
+            pdV = pdU + 1;
+            for(int i=0; i<W.cols; i++) //for each pixel in the row
+            {// TODO: implement masking of points warped out of the image
+                //color constancy component
+                derivNorm = (*pIx) * (*pIx) + (*pIy) * (*pIy) + zeta_squared;
+                Ik1z = *pIz + (*pIx * *pdU) + (*pIy * *pdV);
+                temp = delta / (sqrt( Ik1z*Ik1z/derivNorm + epsilon_squared ) * derivNorm);
+                *pa11 = *pIx * *pIx * temp;
+                *pa12 = *pIx * *pIy * temp;
+                *pa22 = *pIy * *pIy * temp;
+                *pb1 = - *pIz * *pIx * temp;
+                *pb2 = - *pIz * *pIy * temp;
+
+                // gradient constancy component
+
+                derivNorm =  *pIxx * *pIxx + *pIxy * *pIxy + zeta_squared;
+                derivNorm2 = *pIyy * *pIyy + *pIxy * *pIxy + zeta_squared;
+                Ik1zx = *pIxz + *pIxx * *pdU + *pIxy * *pdV;
+                Ik1zy = *pIyz + *pIyz * *pdU + *pIyy * *pdV;
+
+                temp = gamma / sqrt(Ik1zx * Ik1zx / derivNorm + Ik1zy * Ik1zy / derivNorm2 + epsilon_squared);
+                *pa11 += temp * ( *pIxx * *pIxx / derivNorm + *pIxy * *pIxy / derivNorm2);
+                *pa12 += temp * ( *pIxx * *pIxy / derivNorm + *pIxy * *pIyy / derivNorm2);
+                *pa22 += temp * ( *pIxy * *pIxy / derivNorm + *pIyy * *pIyy / derivNorm2);
+                *pb1 += -temp * ( *pIxx * *pIxz / derivNorm + *pIxy * *pIyz / derivNorm2);
+                *pb2 += -temp * ( *pIyy * *pIyz / derivNorm + *pIxy * *pIxz / derivNorm2);
+
+                ++pIx; ++pIy; ++pIz;
+                ++pIxx; ++pIxy; ++pIyy; ++pIxz; ++pIyz;
+                pdU +=2; pdV += 2;
+                ++pa11; ++pa12; ++pa22; ++pb1; ++pb2;
+
+            }
+        }
+
+    }else if (Ix.channels() == 3)
+    {
+        //TODO: implement 3-channel version of data-term computation
+        CV_Assert(false);
+    }
+
 }
-void OpticalFlowDeepFlow::smoothnessTerm(const Mat W, const Mat tempW, Mat b1, Mat b2)
+void OpticalFlowDeepFlow::smoothnessWeights(const Mat W, Mat weightsX, Mat weightsY)
+{
+    float k[] = {-0.5, 0, 0.5};
+    const float epsilon_squared = epsilon * epsilon;
+    Mat kernel_h = Mat(1, 3, CV_32FC1, k);
+    Mat kernel_v = Mat(3, 1, CV_32FC1, k);
+    Mat Wx, Wy; // partial derivatives of the flow
+    Mat S = Mat(W.size(), CV_32F); // sum of squared derivatives
+    weightsX=Mat::zeros(W.size(), CV_32F); //output - weights of smoothness terms in x and y directions
+    weightsY=Mat::zeros(W.size(), CV_32F);
+
+    filter2D(W, Wx,-1, kernel_h);
+    filter2D(W, Wy,-1, kernel_v);
+
+    const float * ux, *uy, *vx, *vy;
+    float * pS, *pWeight, *temp;
+
+    for(int j=0; j<S.rows; ++j)
+    {
+        ux = Wx.ptr<float>(j);
+        vx = ux + 1;
+        uy = Wx.ptr<float>(j);
+        vy = uy + 1;
+        pS = S.ptr<float>(j);
+        for(int i = 0; i < S.cols; ++i)
+        {
+            *pS = alpha / sqrt(*ux * *ux + *vx * *vx + *uy * *uy + *vy * *vy + epsilon_squared);
+            ux += 2; vx += 2; uy += 2; vy += 2;
+            ++pS;
+        }
+    }
+    // horizontal weights
+    for ( int j = 0; j < S.rows; ++j )
+    {
+        pWeight = weightsX.ptr<float>(j);
+        pS = S.ptr<float>(j);
+        for ( int i = 0; i < S.cols-1; ++i )
+        {
+            *pWeight = *pS + *(pS+1);
+            ++pS;
+        }
+    }
+    //vertical weights
+    for ( int j = 0; j < S.rows-1; ++j )
+    {
+        pWeight = weightsY.ptr<float>(j);
+        pS = S.ptr<float>(j);
+        temp = S.ptr<float>(j+1); // next row pointer for easy access
+        for ( int i = 0; i < S.cols; ++i )
+        {
+            *pWeight = *(pS++) + *(temp++);
+        }
+    }
+}
+void OpticalFlowDeepFlow::smoothnessTerm(const Mat W, const Mat weightsX, const Mat weightsY, Mat b1, Mat b2)
 {
     //TODO: smoothness term implementation -> b1, b2
+    float *pB1, *pB2;
+    const float *pU, *pV, *pWeight;
+    float iB1, iB2; // increments of b1 and b2
+    //horizontal direction - both U and V (b1 and b2)
+    for(int j=0; j<W.rows; j++)
+    {
+        pB1 = b1.ptr<float>(j);
+        pB2 = b2.ptr<float>(j);
+        pU = W.ptr<float>(j);
+        pV = pU + 1;
+        pWeight = weightsX.ptr<float>(j);
+        for(int i=0; i<W.cols-1; i++)
+        {
+            iB1 = (*(pU + 2) - *pU) * *pWeight;
+            iB2 = (*(pV + 2) - *pV) * *pWeight;
+            *pB1 += iB1;
+            *(pB1+1) -= iB2;
+            *pB2 += iB2;
+            *(pB2+1) -= iB2;
+
+            pB1++; pB2++; pU+=2; pV += 2; pWeight++;
+        }
+    }
+    const float *pUnext, *pVnext; // temp pointers for next row
+    float *pB1next, *pB2next;
+    //vertical direction - both U and V
+    for(int j=0; j<W.rows-1; j++)
+    {
+        pB1 = b1.ptr<float>(j);
+        pB2 = b2.ptr<float>(j);
+        pU = W.ptr<float>(j);
+        pV = pU + 1;
+        pUnext = W.ptr<float>(j + 1);
+        pVnext = pUnext + 1;
+        pB1next = b1.ptr<float>(j+1);
+        pB2next = b2.ptr<float>(j+1);
+        pWeight = weightsX.ptr<float>(j);
+        for ( int i = 0; i < W.cols; i++ )
+        {
+            iB1 = (*pUnext - *pU) * *pWeight;
+            iB2 = (*pVnext - *pV) * *pWeight;
+            *pB1 += iB1;
+            *pB1next -= iB2;
+            *pB2 += iB2;
+            *pB2next -= iB2;
+
+            pB1++; pB2++; pU+=2; pV += 2; pWeight++;
+            pUnext += 2; pVnext += 2; pB1next++; pB2next++;
+        }
+    }
 }
 void OpticalFlowDeepFlow::sorSolve(const Mat a11, const Mat a12, const Mat a22,
         const Mat b1, const Mat b2, Mat dW)
@@ -210,6 +403,9 @@ void OpticalFlowDeepFlow::collectGarbage()
 
 CV_INIT_ALGORITHM(OpticalFlowDeepFlow, "DenseOpticalFlow.DeepFlow",
         obj.info()->addParam(obj, "sigma", obj.sigma, false, 0, 0, "Gaussian blur parameter");
+        obj.info()->addParam(obj, "alpha", obj.alpha, false, 0, 0, "Smoothness assumption weight");
+        obj.info()->addParam(obj, "delta", obj.delta, false, 0, 0, "Color constancy weight");
+        obj.info()->addParam(obj, "gamma", obj.gamma, false, 0, 0, "Gradient constancy weight");
         obj.info()->addParam(obj, "minSize", obj.minSize, false, 0, 0, "Min. image size in the pyramid");
         obj.info()->addParam(obj, "fixedPointIterations", obj.fixedPointIterations, false, 0, 0, "Fixed point iterations");
         obj.info()->addParam(obj, "downscaleFactor", obj.downscaleFactor, false, 0, 0,"Downscale factor"))
