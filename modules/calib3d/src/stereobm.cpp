@@ -556,14 +556,6 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                             uchar* buf, int _dy0, int _dy1 )
 {
 
-#if CV_NEON
-    int32_t d0_4_temp [4];
-    for (int i = 0; i < 4; i ++)
-        d0_4_temp[i] = i;
-    int32x4_t d0_4 = vld1q_s32 (d0_4_temp);
-    int32x4_t dd_4 = vdupq_n_s32 (4);
-#endif
-
     const int ALIGN = 16;
     int x, y, d;
     int wsz = state.SADWindowSize, wsz2 = wsz/2;
@@ -578,6 +570,15 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     int textureThreshold = state.textureThreshold;
     int uniquenessRatio = state.uniquenessRatio;
     short FILTERED = (short)((mindisp - 1) << DISPARITY_SHIFT);
+
+#if CV_NEON
+    CV_Assert (ndisp % 8 == 0);
+    int32_t d0_4_temp [4];
+    for (int i = 0; i < 4; i ++)
+        d0_4_temp[i] = i;
+    int32x4_t d0_4 = vld1q_s32 (d0_4_temp);
+    int32x4_t dd_4 = vdupq_n_s32 (4);
+#endif
 
     int *sad, *hsad0, *hsad, *hsad_sub, *htext;
     uchar *cbuf0, *cbuf;
