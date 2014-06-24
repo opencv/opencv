@@ -23,7 +23,7 @@ public:
     CV_WRAP virtual void train(InputArrayOfArrays src, InputArray labels) = 0;
 
     // Updates a FaceRecognizer.
-    CV_WRAP virtual void update(InputArrayOfArrays src, InputArray labels);
+    CV_WRAP virtual void update(InputArrayOfArrays src, InputArray labels) = 0;
 
     // Gets a prediction from a FaceRecognizer.
     virtual int predict(InputArray src) const = 0;
@@ -32,10 +32,10 @@ public:
     CV_WRAP virtual void predict(InputArray src, CV_OUT int &label, CV_OUT double &confidence) const = 0;
 
     // Serializes this object to a given filename.
-    CV_WRAP virtual void save(const String& filename) const;
+    CV_WRAP virtual void save(const String& filename) const = 0;
 
     // Deserializes this object from a given filename.
-    CV_WRAP virtual void load(const String& filename);
+    CV_WRAP virtual void load(const String& filename) = 0;
 
     // Serializes this object to a given cv::FileStorage.
     virtual void save(FileStorage& fs) const = 0;
@@ -44,17 +44,13 @@ public:
     virtual void load(const FileStorage& fs) = 0;
 
     // Sets additional string info for the label
-    virtual void setLabelInfo(int label, const String& strInfo);
+    virtual void setLabelInfo(int label, const String& strInfo) = 0;
 
     // Gets string info by label
-    virtual String getLabelInfo(int label) const;
+    virtual String getLabelInfo(int label) const = 0;
 
     // Gets labels by string
-    virtual std::vector<int> getLabelsByString(const String& str) const;
-
-protected:
-    // Stored pairs "label id - string info"
-    std::map<int, String> _labelsInfo;
+    virtual std::vector<int> getLabelsByString(const String& str) const = 0;
 };
 
 CV_EXPORTS_W Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);

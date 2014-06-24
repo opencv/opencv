@@ -50,7 +50,6 @@ static void read_csv(const string& filename, vector<Mat>& images, vector<int>& l
     while (getline(file, line)) {
         stringstream liness(line);
         getline(liness, path, separator);
-        getline(liness, classlabel);
         getline(liness, classlabel, separator);
         getline(liness, info, separator);
         if(!path.empty() && !classlabel.empty()) {

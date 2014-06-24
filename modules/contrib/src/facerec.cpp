@@ -100,6 +100,74 @@ inline std::vector<_Tp> remove_dups(const std::vector<_Tp>& src) {
     return elems;
 }
 
+class FaceRecognizerImpl : public FaceRecognizer
+{
+public:
+    using FaceRecognizer::save;
+    using FaceRecognizer::load;
+
+    // Serializes this object to a given filename.
+    virtual void save(const String& filename) const
+    {
+        FileStorage fs(filename, FileStorage::WRITE);
+        if (!fs.isOpened())
+            CV_Error(Error::StsError, "File can't be opened for writing!");
+        this->save(fs);
+        fs.release();
+    }
+
+    // Deserializes this object from a given filename.
+    virtual void load(const String& filename)
+    {
+        FileStorage fs(filename, FileStorage::READ);
+        if (!fs.isOpened())
+            CV_Error(Error::StsError, "File can't be opened for writing!");
+        this->load(fs);
+        fs.release();
+    }
+
+    // Updates a FaceRecognizer.
+    virtual void update(InputArrayOfArrays src, InputArray labels)
+    {
+        (void)src;
+        (void)labels;
+        String error_msg = format("This FaceRecognizer (%s) does not support updating, you have to use FaceRecognizer::train to update it.", this->name().c_str());
+        CV_Error(Error::StsNotImplemented, error_msg);
+    }
+
+
+    // Sets additional string info for the label
+    virtual void setLabelInfo(int label, const String& strInfo)
+    {
+        _labelsInfo[label] = strInfo;
+    }
+
+    // Gets string info by label
+    virtual String getLabelInfo(int label) const
+    {
+        std::map<int, String>::const_iterator iter(_labelsInfo.find(label));
+        return iter != _labelsInfo.end() ? iter->second : "";
+    }
+
+    // Gets labels by string
+    virtual std::vector<int> getLabelsByString(const String& str) const
+    {
+        std::vector<int> labels;
+        for (std::map<int, String>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
+        {
+            size_t found = (it->second).find(str);
+            if (found != String::npos)
+                labels.push_back(it->first);
+        }
+        return labels;
+    }
+
+protected:
+    // Stored pairs "label id - string info"
+    std::map<int, String> _labelsInfo;
+};
+
+
 
 // Utility structure to load/save face label info (a pair of int and string) via FileStorage
 struct LabelInfo
@@ -141,7 +209,7 @@ static void read(const cv::FileNode& node, LabelInfo& x, const LabelInfo& defaul
 
 // Turk, M., and Pentland, A. "Eigenfaces for recognition.". Journal of
 // Cognitive Neuroscience 3 (1991), 71–86.
-class Eigenfaces : public FaceRecognizer
+class Eigenfaces : public FaceRecognizerImpl
 {
 private:
     int _num_components;
@@ -194,7 +262,7 @@ public:
 // faces: Recognition using class specific linear projection.". IEEE
 // Transactions on Pattern Analysis and Machine Intelligence 19, 7 (1997),
 // 711–720.
-class Fisherfaces: public FaceRecognizer
+class Fisherfaces: public FaceRecognizerImpl
 {
 private:
     int _num_components;
@@ -251,7 +319,7 @@ public:
 //  patterns: Application to face recognition." IEEE Transactions on Pattern
 //  Analysis and Machine Intelligence, 28(12):2037-2041.
 //
-class LBPH : public FaceRecognizer
+class LBPH : public FaceRecognizerImpl
 {
 private:
     int _grid_x;
@@ -335,60 +403,6 @@ public:
 
     AlgorithmInfo* info() const;
 };
-
-
-//------------------------------------------------------------------------------
-// FaceRecognizer
-//------------------------------------------------------------------------------
-void FaceRecognizer::update(InputArrayOfArrays src, InputArray labels ) {
-    if( dynamic_cast<LBPH*>(this) != 0 )
-    {
-        dynamic_cast<LBPH*>(this)->update( src, labels );
-        return;
-    }
-
-    String error_msg = format("This FaceRecognizer (%s) does not support updating, you have to use FaceRecognizer::train to update it.", this->name().c_str());
-    CV_Error(Error::StsNotImplemented, error_msg);
-}
-
-void FaceRecognizer::save(const String& filename) const {
-    FileStorage fs(filename, FileStorage::WRITE);
-    if (!fs.isOpened())
-        CV_Error(Error::StsError, "File can't be opened for writing!");
-    this->save(fs);
-    fs.release();
-}
-
-void FaceRecognizer::load(const String& filename) {
-    FileStorage fs(filename, FileStorage::READ);
-    if (!fs.isOpened())
-        CV_Error(Error::StsError, "File can't be opened for writing!");
-    this->load(fs);
-    fs.release();
-}
-
-void FaceRecognizer::setLabelInfo(int label, const String& strInfo)
-{
-    _labelsInfo[label] = strInfo;
-}
-
-String FaceRecognizer::getLabelInfo(int label) const
-{
-    std::map<int, String>::const_iterator iter(_labelsInfo.find(label));
-    return iter != _labelsInfo.end() ? iter->second : "";
-}
-
-std::vector<int> FaceRecognizer::getLabelsByString(const String& str) const
-{
-    std::vector<int> labels;
-    for(std::map<int,String>::const_iterator it = _labelsInfo.begin(); it != _labelsInfo.end(); it++)
-    {
-        size_t found = (it->second).find(str);
-        if(found != String::npos)
-            labels.push_back(it->first);
-    }
-    return labels;
-}
 
 
 //------------------------------------------------------------------------------
