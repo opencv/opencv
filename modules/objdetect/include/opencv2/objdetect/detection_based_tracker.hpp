@@ -215,4 +215,3 @@ class CV_EXPORTS DetectionBasedTracker
 #endif
 
 #endif
-
