@@ -317,5 +317,6 @@ public:
 
 #include "opencv2/objdetect/linemod.hpp"
 #include "opencv2/objdetect/erfilter.hpp"
+#include "opencv2/objdetect/detection_based_tracker.hpp"
 
 #endif
