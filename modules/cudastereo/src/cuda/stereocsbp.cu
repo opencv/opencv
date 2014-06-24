@@ -103,7 +103,7 @@ namespace cv { namespace cuda { namespace device
         {
             static __device__ __forceinline__ float compute(const uchar* left, const uchar* right)
             {
-                return fmin(cdata_weight * ::abs((int)*left - *right), cdata_weight * cmax_data_term);
+                return cdata_weight * fmin( ::abs((int)*left - *right), cmax_data_term);
             }
         };
         template <> struct DataCostPerPixel<3>
@@ -114,7 +114,7 @@ namespace cv { namespace cuda { namespace device
                 float tg = 0.587f * ::abs((int)left[1] - right[1]);
                 float tr = 0.299f * ::abs((int)left[2] - right[2]);
 
-                return fmin(cdata_weight * (tr + tg + tb), cdata_weight * cmax_data_term);
+                return cdata_weight * fmin(tr + tg + tb, cmax_data_term);
             }
         };
         template <> struct DataCostPerPixel<4>
@@ -128,7 +128,7 @@ namespace cv { namespace cuda { namespace device
                 float tg = 0.587f * ::abs((int)l.y - r.y);
                 float tr = 0.299f * ::abs((int)l.z - r.z);
 
-                return fmin(cdata_weight * (tr + tg + tb), cdata_weight * cmax_data_term);
+                return cdata_weight * fmin(tr + tg + tb, cmax_data_term);
             }
         };
 
