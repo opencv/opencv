@@ -45,7 +45,7 @@
 
 #if (defined(__cplusplus) &&  __cplusplus > 199711L) || (defined(_MSC_VER) && _MSC_VER >= 1700)
 #define USE_STD_THREADS
-#endif 
+#endif
 
 #if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(ANDROID) || defined(USE_STD_THREADS)
 
