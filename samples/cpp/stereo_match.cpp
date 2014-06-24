@@ -10,7 +10,6 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include "opencv2/contrib/contrib.hpp"
 #include "opencv2/core/utility.hpp"
 
 #include <stdio.h>
@@ -20,7 +19,7 @@ using namespace cv;
 static void print_help()
 {
     printf("\nDemo stereo matching converting L and R images into disparity and point clouds\n");
-    printf("\nUsage: stereo_match <left_image> <right_image> [--algorithm=bm|sgbm|hh|var] [--blocksize=<block_size>]\n"
+    printf("\nUsage: stereo_match <left_image> <right_image> [--algorithm=bm|sgbm|hh] [--blocksize=<block_size>]\n"
            "[--max-disparity=<max_disparity>] [--scale=scale_factor>] [-i <intrinsic_filename>] [-e <extrinsic_filename>]\n"
            "[--no-display] [-o <disparity_image>] [-p <point_cloud_file>]\n");
 }
@@ -69,7 +68,6 @@ int main(int argc, char** argv)
 
     Ptr<StereoBM> bm = createStereoBM(16,9);
     Ptr<StereoSGBM> sgbm = createStereoSGBM(0,16,3);
-    StereoVar var;
 
     for( int i = 1; i < argc; i++ )
     {
@@ -249,19 +247,6 @@ int main(int argc, char** argv)
     sgbm->setDisp12MaxDiff(1);
     sgbm->setMode(alg == STEREO_HH ? StereoSGBM::MODE_HH : StereoSGBM::MODE_SGBM);
 
-    var.levels = 3;                                 // ignored with USE_AUTO_PARAMS
-    var.pyrScale = 0.5;                             // ignored with USE_AUTO_PARAMS
-    var.nIt = 25;
-    var.minDisp = -numberOfDisparities;
-    var.maxDisp = 0;
-    var.poly_n = 3;
-    var.poly_sigma = 0.0;
-    var.fi = 15.0f;
-    var.lambda = 0.03f;
-    var.penalization = var.PENALIZATION_TICHONOV;   // ignored with USE_AUTO_PARAMS
-    var.cycle = var.CYCLE_V;                        // ignored with USE_AUTO_PARAMS
-    var.flags = var.USE_SMART_ID | var.USE_AUTO_PARAMS | var.USE_INITIAL_DISPARITY | var.USE_MEDIAN_FILTERING ;
-
     Mat disp, disp8;
     //Mat img1p, img2p, dispp;
     //copyMakeBorder(img1, img1p, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);
@@ -270,9 +255,6 @@ int main(int argc, char** argv)
     int64 t = getTickCount();
     if( alg == STEREO_BM )
         bm->compute(img1, img2, disp);
-    else if( alg == STEREO_VAR ) {
-        var(img1, img2, disp);
-    }
     else if( alg == STEREO_SGBM || alg == STEREO_HH )
         sgbm->compute(img1, img2, disp);
     t = getTickCount() - t;
