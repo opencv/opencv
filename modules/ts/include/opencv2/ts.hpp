@@ -2,6 +2,7 @@
 #define __OPENCV_GTESTCV_HPP__
 
 #include "opencv2/core/cvdef.h"
+#include "opencv2/core/cvdef.hpp"
 #include <stdarg.h> // for va_list
 
 #include "cvconfig.h"

@@ -141,7 +141,7 @@ CV_IMPL CvBool cv3dTrackerCalibrateCameras(int num_cameras,
                 CV_CALL(gray_img = cvCreateImage(image_size, IPL_DEPTH_8U, 1));
             }
 
-            CV_CALL(cvCvtColor(samples[c], gray_img, CV_BGR2GRAY));
+            CV_CALL(cv::CvtColor(samples[c], gray_img, CV_BGR2GRAY));
 
             img = gray_img;
         }

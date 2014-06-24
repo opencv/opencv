@@ -30,7 +30,10 @@
 #import <Accelerate/Accelerate.h>
 #import <AVFoundation/AVFoundation.h>
 #import <ImageIO/ImageIO.h>
+
+#ifdef __cplusplus
 #include "opencv2/core.hpp"
+#endif
 
 /////////////////////////////////////// CvAbstractCamera /////////////////////////////////////
 

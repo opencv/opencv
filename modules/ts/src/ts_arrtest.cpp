@@ -125,8 +125,8 @@ void ArrayTest::get_test_array_types_and_sizes( int /*test_case_idx*/, vector<ve
 
 static const unsigned int icvTsTypeToDepth[] =
 {
-    IPL_DEPTH_8U, IPL_DEPTH_8S, IPL_DEPTH_16U, IPL_DEPTH_16S,
-    IPL_DEPTH_32S, IPL_DEPTH_32F, IPL_DEPTH_64F
+    static_cast<unsigned int>(IPL_DEPTH_8U), static_cast<unsigned int>(IPL_DEPTH_8S), static_cast<unsigned int>(IPL_DEPTH_16U), static_cast<unsigned int>(IPL_DEPTH_16S),
+    static_cast<unsigned int>(IPL_DEPTH_32S), static_cast<unsigned int>(IPL_DEPTH_32F), static_cast<unsigned int>(IPL_DEPTH_64F)
 };
 
 

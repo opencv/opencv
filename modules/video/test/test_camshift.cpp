@@ -350,7 +350,7 @@ _exit_:
         IplImage* dst = cvCreateImage( img_size, 8, 3 );
         cvNamedWindow( "test", 1 );
         cvCmpS( img, 0, img, CV_CMP_GT );
-        cvCvtColor( img, dst, CV_GRAY2BGR );
+        cv::CvtColor( img, dst, CV_GRAY2BGR );
         cvRectangle( dst, cvPoint(init_rect.x, init_rect.y),
             cvPoint(init_rect.x + init_rect.width, init_rect.y + init_rect.height),
             CV_RGB(255,0,0), 3, 8, 0 );
@@ -489,7 +489,7 @@ _exit_:
         IplImage* dst = cvCreateImage( img_size, 8, 3 );
         cvNamedWindow( "test", 1 );
         cvCmpS( img, 0, img, CV_CMP_GT );
-        cvCvtColor( img, dst, CV_GRAY2BGR );
+        cv::CvtColor( img, dst, CV_GRAY2BGR );
         cvRectangle( dst, cvPoint(init_rect.x, init_rect.y),
             cvPoint(init_rect.x + init_rect.width, init_rect.y + init_rect.height),
             CV_RGB(255,0,0), 3, 8, 0 );

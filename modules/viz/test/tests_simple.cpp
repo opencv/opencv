@@ -195,7 +195,7 @@ TEST(Viz, show_textured_mesh)
 
     for(int i = 0; i < (int)points.size()/2-1; ++i)
     {
-        int polys[] = {3, 2*i, 2*i+1, 2*i+2, 3, 2*i+1, 2*i+2, 2*i+3};
+        int polys[] = {3, static_cast<int>(2*i), static_cast<int>(2*i+1), static_cast<int>(2*i+2), 3, static_cast<int>(2*i+1), static_cast<int>(2*i+2), static_cast<int>(2*i+3)};
         polygons.insert(polygons.end(), polys, polys + sizeof(polys)/sizeof(polys[0]));
     }
 

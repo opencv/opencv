@@ -224,7 +224,7 @@ static void icvTestSeqCreateMask(IplImage* pImg,IplImage* pImgMask, int threshol
 {
     if(pImg->nChannels > 1)
     {
-        cvCvtColor( pImg,pImgMask,CV_BGR2GRAY);
+        cv::CvtColor( pImg,pImgMask,CV_BGR2GRAY);
         cvThreshold(pImgMask,pImgMask,threshold,255,CV_THRESH_BINARY);
     }
     else
@@ -1010,12 +1010,12 @@ IplImage* cvTestSeqQueryFrame(CvTestSeq* pTestSeq)
             {
                 if(DirectCopy)
                 {
-                    cvCvtColor( p->pImg,pImgAdd,CV_GRAY2BGR);
+                    cv::CvtColor( p->pImg,pImgAdd,CV_GRAY2BGR);
                 }
                 else
                 {
                     cvGetQuadrangleSubPix( p->pImg, pImgAddG, pT);
-                    cvCvtColor( pImgAddG,pImgAdd,CV_GRAY2BGR);
+                    cv::CvtColor( pImgAddG,pImgAdd,CV_GRAY2BGR);
                 }
             }
 

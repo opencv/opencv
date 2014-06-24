@@ -614,7 +614,7 @@ didDropVideoFrameWithSampleBuffer:(QTSampleBuffer *)sampleBuffer
         bgr_image->imageData = bgr_imagedata;
         bgr_image->imageSize = (int)currSize;
 
-        cvCvtColor(image, bgr_image, CV_BGRA2BGR);
+        cv::CvtColor(image, bgr_image, cv::COLOR_BGRA2BGR);
 
     }
 
@@ -797,7 +797,7 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         bgr_image->imageData = bgr_imagedata;
         bgr_image->imageSize = (int)currSize;
 
-        cvCvtColor(image, bgr_image,CV_BGRA2BGR);
+        cv::CvtColor(image, bgr_image,cv::COLOR_BGRA2BGR);
 
     }
 
@@ -1008,7 +1008,7 @@ CvVideoWriter_QT::~CvVideoWriter_QT() {
 bool CvVideoWriter_QT::writeFrame(const IplImage* image) {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
-    cvCvtColor(image, argbimage, CV_BGR2BGRA);
+    cv::CvtColor(image, argbimage, cv::COLOR_BGR2BGRA);
 
 
     unsigned char* imagedata = (unsigned char*)argbimage->imageData;

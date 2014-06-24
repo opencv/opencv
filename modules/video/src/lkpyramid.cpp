@@ -976,7 +976,7 @@ namespace cv
             int ptcount, int level)
         {
             size_t localThreads[3]  = { 8, 8};
-            size_t globalThreads[3] = { 8 * ptcount, 8};
+            size_t globalThreads[3] = { static_cast<size_t>(8 * ptcount), 8};
             char calcErr = (0 == level) ? 1 : 0;
 
             cv::String build_options;

@@ -267,7 +267,7 @@ static bool ocl_MultiBandBlender_feed(InputArray _src, InputArray _weight,
            ocl::KernelArg::ReadWrite(_dst_weight.getUMat())
            );
 
-    size_t globalsize[2] = {src.cols, src.rows };
+    size_t globalsize[2] = {static_cast<size_t>(src.cols), static_cast<size_t>(src.rows) };
     return k.run(2, globalsize, NULL, false);
 }
 #endif
@@ -463,7 +463,7 @@ static bool ocl_normalizeUsingWeightMap(InputArray _weight, InputOutputArray _ma
            ocl::KernelArg::ReadOnly(_weight.getUMat())
            );
 
-    size_t globalsize[2] = {mat.cols, mat.rows };
+    size_t globalsize[2] = {static_cast<size_t>(mat.cols), static_cast<size_t>(mat.rows) };
     return k.run(2, globalsize, NULL, false);
 }
 #endif

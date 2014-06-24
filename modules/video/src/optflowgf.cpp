@@ -841,7 +841,7 @@ private:
 #else
         size_t localsize[2] = { 256, 1};
 #endif
-        size_t globalsize[2] = { src.cols, src.rows};
+        size_t globalsize[2] = { static_cast<size_t>(src.cols), static_cast<size_t>(src.rows)};
         int smem_size = (int)((localsize[0] + 2*ksizeHalf) * sizeof(float));
         ocl::Kernel kernel;
         if (!kernel.create("gaussianBlur", cv::ocl::video::optical_flow_farneback_oclsrc, ""))
@@ -868,7 +868,7 @@ private:
 #else
         size_t localsize[2] = { 256, 1};
 #endif
-        size_t globalsize[2] = { src.cols, height};
+        size_t globalsize[2] = { static_cast<size_t>(src.cols), static_cast<size_t>(height)};
         int smem_size = (int)((localsize[0] + 2*ksizeHalf) * 5 * sizeof(float));
         ocl::Kernel kernel;
         if (!kernel.create("gaussianBlur5", cv::ocl::video::optical_flow_farneback_oclsrc, ""))
@@ -893,7 +893,7 @@ private:
 #else
         size_t localsize[2] = { 256, 1};
 #endif
-        size_t globalsize[2] = { DIVUP(src.cols, localsize[0] - 2*polyN) * localsize[0], src.rows};
+        size_t globalsize[2] = { DIVUP(src.cols, localsize[0] - 2*polyN) * localsize[0], static_cast<size_t>(src.rows)};
 
 #if 0
         const cv::ocl::Device &device = cv::ocl::Device::getDefault();
@@ -930,7 +930,7 @@ private:
 #else
         size_t localsize[2] = { 256, 1};
 #endif
-        size_t globalsize[2] = { src.cols, height};
+        size_t globalsize[2] = { static_cast<size_t>(src.cols), static_cast<size_t>(height)};
 
         ocl::Kernel kernel;
         if (!kernel.create("boxFilter5", cv::ocl::video::optical_flow_farneback_oclsrc, ""))
@@ -957,7 +957,7 @@ private:
 #else
         size_t localsize[2] = { 32, 8};
 #endif
-        size_t globalsize[2] = { flowx.cols, flowx.rows};
+        size_t globalsize[2] = { static_cast<size_t>(flowx.cols), static_cast<size_t>(flowx.rows)};
 
         ocl::Kernel kernel;
         if (!kernel.create("updateFlow", cv::ocl::video::optical_flow_farneback_oclsrc, ""))
@@ -981,7 +981,7 @@ private:
 #else
         size_t localsize[2] = { 32, 8};
 #endif
-        size_t globalsize[2] = { flowx.cols, flowx.rows};
+        size_t globalsize[2] = { static_cast<size_t>(flowx.cols), static_cast<size_t>(flowx.rows)};
 
         ocl::Kernel kernel;
         if (!kernel.create("updateMatrices", cv::ocl::video::optical_flow_farneback_oclsrc, ""))

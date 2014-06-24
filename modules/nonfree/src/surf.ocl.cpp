@@ -202,7 +202,7 @@ bool SURF_OCL::setUpRight(UMat &keypoints)
     if( nFeatures == 0 )
         return true;
 
-    size_t globalThreads[3] = {nFeatures, 1};
+    size_t globalThreads[3] = {static_cast<size_t>(nFeatures), 1};
     ocl::Kernel kerUpRight("SURF_setUpRight", ocl::nonfree::surf_oclsrc, kerOpts);
     return kerUpRight.args(ocl::KernelArg::ReadWrite(keypoints)).run(2, globalThreads, 0, true);
 }
@@ -258,7 +258,7 @@ bool SURF_OCL::computeDescriptors(const UMat &keypoints, OutputArray _descriptor
     if(!kerCalcDesc.run(2, globalThreads, localThreads, true))
         return false;
 
-    size_t localThreads_n[] = {dsize, 1};
+    size_t localThreads_n[] = {static_cast<size_t>(dsize), 1};
     size_t globalThreads_n[] = {nFeatures*localThreads_n[0], localThreads_n[1]};
 
     globalThreads[0] = nFeatures * localThreads[0];

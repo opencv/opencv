@@ -35,6 +35,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/contrib/compat.hpp"
 
@@ -121,11 +122,11 @@ void CvAdaptiveSkinDetector::process(IplImage *inputBGRImage, IplImage *outputHu
     if ((src->width != imgHueFrame->width) || (src->height != imgHueFrame->height))
     {
         cvResize(src, imgShrinked);
-        cvCvtColor(imgShrinked, imgHSVFrame, CV_BGR2HSV);
+        cv::CvtColor(imgShrinked, imgHSVFrame, CV_BGR2HSV);
     }
     else
     {
-        cvCvtColor(src, imgHSVFrame, CV_BGR2HSV);
+        cv::CvtColor(src, imgHSVFrame, CV_BGR2HSV);
     }
 
     cvSplit(imgHSVFrame, imgHueFrame, imgSaturationFrame, imgGrayFrame, 0);

@@ -1082,7 +1082,7 @@ static bool ocl_compute_gradients_8UC1(int height, int width, InputArray _img, f
     UMat img = _img.getUMat();
 
     size_t localThreads[3] = { NTHREADS, 1, 1 };
-    size_t globalThreads[3] = { width, height, 1 };
+    size_t globalThreads[3] = { static_cast<size_t>(width), static_cast<size_t>(height), 1 };
     char correctGamma = (correct_gamma) ? 1 : 0;
     int grad_quadstep = (int)grad.step >> 3;
     int qangle_elem_size = CV_ELEM_SIZE1(qangle.type());
@@ -1142,7 +1142,7 @@ static bool ocl_compute_hists(int nbins, int block_stride_x, int block_stride_y,
     int qangle_step = (int)qangle.step / qangle_elem_size;
 
     int blocks_in_group = 4;
-    size_t localThreads[3] = { blocks_in_group * 24, 2, 1 };
+    size_t localThreads[3] = { static_cast<size_t>(blocks_in_group * 24), 2, 1 };
     size_t globalThreads[3] = {((img_block_width * img_block_height + blocks_in_group - 1)/blocks_in_group) * localThreads[0], 2, 1 };
 
     int hists_size = (nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y * 12) * sizeof(float);
@@ -1261,7 +1261,7 @@ static bool ocl_extract_descrs_by_rows(int win_height, int win_width, int block_
 
     int descriptors_quadstep = (int)descriptors.step >> 2;
 
-    size_t globalThreads[3] = { img_win_width * NTHREADS, img_win_height, 1 };
+    size_t globalThreads[3] = { static_cast<size_t>(img_win_width * NTHREADS), static_cast<size_t>(img_win_height), 1 };
     size_t localThreads[3] = { NTHREADS, 1, 1 };
 
     int idx = 0;
@@ -1295,7 +1295,7 @@ static bool ocl_extract_descrs_by_cols(int win_height, int win_width, int block_
 
     int descriptors_quadstep = (int)descriptors.step >> 2;
 
-    size_t globalThreads[3] = { img_win_width * NTHREADS, img_win_height, 1 };
+    size_t globalThreads[3] = { static_cast<size_t>(img_win_width * NTHREADS), static_cast<size_t>(img_win_height), 1 };
     size_t localThreads[3] = { NTHREADS, 1, 1 };
 
     int idx = 0;
@@ -1693,8 +1693,8 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
     int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) /
         block_stride_x;
 
-    size_t globalThreads[3] = { img_win_width * nthreads, img_win_height, 1 };
-    size_t localThreads[3] = { nthreads, 1, 1 };
+    size_t globalThreads[3] = { static_cast<size_t>(img_win_width * nthreads), static_cast<size_t>(img_win_height), 1 };
+    size_t localThreads[3] = { static_cast<size_t>(nthreads), 1, 1 };
 
     idx = k.set(idx, block_hist_size);
     idx = k.set(idx, img_win_width);

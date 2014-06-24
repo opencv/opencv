@@ -48,6 +48,7 @@
 #endif
 
 #include "opencv2/core/cvdef.h"
+#include "opencv2/core/cvdef.hpp"
 #include "opencv2/core/version.hpp"
 #include "opencv2/core/base.hpp"
 #include "opencv2/core/cvstd.hpp"

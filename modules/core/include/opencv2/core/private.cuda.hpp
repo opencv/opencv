@@ -51,6 +51,7 @@
 #include "cvconfig.h"
 
 #include "opencv2/core/cvdef.h"
+#include "opencv2/core/cvdef.hpp"
 #include "opencv2/core/base.hpp"
 
 #include "opencv2/core/cuda.hpp"

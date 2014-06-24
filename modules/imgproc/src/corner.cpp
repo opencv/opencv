@@ -444,7 +444,7 @@ static bool ocl_preCornerDetect( InputArray _src, OutputArray _dst, int ksize, i
            ocl::KernelArg::ReadOnlyNoSize(D2x), ocl::KernelArg::ReadOnlyNoSize(D2y),
            ocl::KernelArg::ReadOnlyNoSize(Dxy), ocl::KernelArg::WriteOnly(dst), (float)factor);
 
-    size_t globalsize[2] = { dst.cols, dst.rows };
+    size_t globalsize[2] = { static_cast<size_t>(dst.cols), static_cast<size_t>(dst.rows) };
     return k.run(2, globalsize, NULL, false);
 }
 

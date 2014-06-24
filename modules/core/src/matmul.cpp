@@ -2190,7 +2190,7 @@ static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, Outp
     else
         k.args(src1arg, src2arg, dstarg, alpha);
 
-    size_t globalsize[2] = { dst.cols * cn / kercn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { static_cast<size_t>(dst.cols * cn / kercn), static_cast<size_t>((dst.rows + rowsPerWI - 1) / rowsPerWI) };
     return k.run(2, globalsize, NULL, false);
 }
 

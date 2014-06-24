@@ -49,6 +49,7 @@
 #endif
 
 #include "opencv2/core/cvdef.h"
+#include "opencv2/core/cvdef.hpp"
 
 #include <cstddef>
 #include <cstring>

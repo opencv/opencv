@@ -197,7 +197,7 @@ namespace cv_ocl_tvl1flow
 
 bool cv_ocl_tvl1flow::centeredGradient(const UMat &src, UMat &dx, UMat &dy)
 {
-    size_t globalsize[2] = { src.cols, src.rows };
+    size_t globalsize[2] = { static_cast<size_t>(src.cols), static_cast<size_t>(src.rows) };
 
     ocl::Kernel kernel;
     if (!kernel.create("centeredGradientKernel", cv::ocl::video::optical_flow_tvl1_oclsrc, ""))
@@ -218,7 +218,7 @@ bool cv_ocl_tvl1flow::warpBackward(const UMat &I0, const UMat &I1, UMat &I1x, UM
     UMat &u1, UMat &u2, UMat &I1w, UMat &I1wx, UMat &I1wy,
     UMat &grad, UMat &rho)
 {
-    size_t globalsize[2] = { I0.cols, I0.rows };
+    size_t globalsize[2] = { static_cast<size_t>(I0.cols), static_cast<size_t>(I0.rows) };
 
     ocl::Kernel kernel;
     if (!kernel.create("warpBackwardKernel", cv::ocl::video::optical_flow_tvl1_oclsrc, ""))
@@ -262,7 +262,7 @@ bool cv_ocl_tvl1flow::estimateU(UMat &I1wx, UMat &I1wy, UMat &grad,
     UMat &p21, UMat &p22, UMat &u1,
     UMat &u2, UMat &error, float l_t, float theta, char calc_error)
 {
-    size_t globalsize[2] = { I1wx.cols, I1wx.rows };
+    size_t globalsize[2] = { static_cast<size_t>(I1wx.cols), static_cast<size_t>(I1wx.rows) };
 
     ocl::Kernel kernel;
     if (!kernel.create("estimateUKernel", cv::ocl::video::optical_flow_tvl1_oclsrc, ""))
@@ -303,7 +303,7 @@ bool cv_ocl_tvl1flow::estimateU(UMat &I1wx, UMat &I1wy, UMat &grad,
 bool cv_ocl_tvl1flow::estimateDualVariables(UMat &u1, UMat &u2,
     UMat &p11, UMat &p12, UMat &p21, UMat &p22, float taut)
 {
-    size_t globalsize[2] = { u1.cols, u1.rows };
+    size_t globalsize[2] = { static_cast<size_t>(u1.cols), static_cast<size_t>(u1.rows) };
 
     ocl::Kernel kernel;
     if (!kernel.create("estimateDualVariablesKernel", cv::ocl::video::optical_flow_tvl1_oclsrc, ""))

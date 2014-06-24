@@ -411,7 +411,7 @@ bool CvCalibFilter::FindEtalon( CvMat** mats )
                 if( CV_MAT_CN(cvGetElemType(mats[i])) == 1 )
                     cvCopy( mats[i], grayImg );
                 else
-                    cvCvtColor( mats[i], grayImg, CV_BGR2GRAY );
+                    cv::CvtColor( mats[i], grayImg, CV_BGR2GRAY );
                 found = cvFindChessBoardCornerGuesses( grayImg, tempImg, storage,
                                                        cvSize( cvRound(etalonParams[0]),
                                                        cvRound(etalonParams[1])),

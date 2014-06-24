@@ -62,7 +62,7 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindow
     k.args(ocl::KernelArg::PtrWriteOnly(almostDist2Weight), almostMaxDist,
            almostDist2ActualDistMultiplier, fixedPointMult, den, WEIGHT_THRESHOLD);
 
-    size_t globalsize[1] = { almostMaxDist };
+    size_t globalsize[1] = { static_cast<size_t>(almostMaxDist) };
     return k.run(1, globalsize, NULL, false);
 }
 
@@ -120,7 +120,7 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
            ocl::KernelArg::PtrReadOnly(almostDist2Weight),
            ocl::KernelArg::PtrReadOnly(buffer), almostTemplateWindowSizeSqBinShift);
 
-    size_t globalsize[2] = { nblocksx * CTA_SIZE, nblocksy }, localsize[2] = { CTA_SIZE, 1 };
+    size_t globalsize[2] = { static_cast<size_t>(nblocksx * CTA_SIZE), static_cast<size_t>(nblocksy) }, localsize[2] = { CTA_SIZE, 1 };
     return k.run(2, globalsize, localsize, false);
 }
 

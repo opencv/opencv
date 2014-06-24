@@ -109,7 +109,7 @@ CvCamShiftTracker::color_transform( const IplImage* image )
         }
     }
 
-    cvCvtColor( image, m_temp, CV_BGR2HSV );
+    cv::CvtColor( image, m_temp, CV_BGR2HSV );
     cvGetRawData( m_temp, &color_data, &color_step, &size );
     cvGetRawData( m_mask, &mask, &mask_step, &size );
 

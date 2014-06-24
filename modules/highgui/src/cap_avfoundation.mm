@@ -541,11 +541,11 @@ bool CvCaptureCAM::setProperty(int property_id, double value) {
             return true;
 
         case CV_CAP_PROP_IOS_DEVICE_FOCUS:
-            if ([mCaptureDevice isFocusModeSupported:(int)value]){
+            if ([mCaptureDevice isFocusModeSupported:(AVCaptureFocusMode)value]){
                 NSError* error = nil;
                 [mCaptureDevice lockForConfiguration:&error];
                 if (error) return false;
-                [mCaptureDevice setFocusMode:(int)value];
+                [mCaptureDevice setFocusMode:(AVCaptureFocusMode)value];
                 [mCaptureDevice unlockForConfiguration];
                 //NSLog(@"Focus set");
                 return true;
@@ -554,11 +554,11 @@ bool CvCaptureCAM::setProperty(int property_id, double value) {
             }
 
         case CV_CAP_PROP_IOS_DEVICE_EXPOSURE:
-            if ([mCaptureDevice isExposureModeSupported:(int)value]){
+            if ([mCaptureDevice isExposureModeSupported:(AVCaptureExposureMode)value]){
                 NSError* error = nil;
                 [mCaptureDevice lockForConfiguration:&error];
                 if (error) return false;
-                [mCaptureDevice setExposureMode:(int)value];
+                [mCaptureDevice setExposureMode:(AVCaptureExposureMode)value];
                 [mCaptureDevice unlockForConfiguration];
                 //NSLog(@"Exposure set");
                 return true;
@@ -567,11 +567,11 @@ bool CvCaptureCAM::setProperty(int property_id, double value) {
             }
 
         case CV_CAP_PROP_IOS_DEVICE_FLASH:
-            if ( [mCaptureDevice hasFlash] && [mCaptureDevice isFlashModeSupported:(int)value]){
+            if ( [mCaptureDevice hasFlash] && [mCaptureDevice isFlashModeSupported:(AVCaptureFlashMode)value]){
                 NSError* error = nil;
                 [mCaptureDevice lockForConfiguration:&error];
                 if (error) return false;
-                [mCaptureDevice setFlashMode:(int)value];
+                [mCaptureDevice setFlashMode:(AVCaptureFlashMode)value];
                 [mCaptureDevice unlockForConfiguration];
                 //NSLog(@"Flash mode set");
                 return true;
@@ -580,11 +580,11 @@ bool CvCaptureCAM::setProperty(int property_id, double value) {
             }
 
         case CV_CAP_PROP_IOS_DEVICE_WHITEBALANCE:
-            if ([mCaptureDevice isWhiteBalanceModeSupported:(int)value]){
+            if ([mCaptureDevice isWhiteBalanceModeSupported:(AVCaptureWhiteBalanceMode)value]){
                 NSError* error = nil;
                 [mCaptureDevice lockForConfiguration:&error];
                 if (error) return false;
-                [mCaptureDevice setWhiteBalanceMode:(int)value];
+                [mCaptureDevice setWhiteBalanceMode:(AVCaptureWhiteBalanceMode)value];
                 [mCaptureDevice unlockForConfiguration];
                 //NSLog(@"White balance set");
                 return true;
@@ -593,11 +593,11 @@ bool CvCaptureCAM::setProperty(int property_id, double value) {
             }
 
         case CV_CAP_PROP_IOS_DEVICE_TORCH:
-            if ([mCaptureDevice hasFlash] && [mCaptureDevice isTorchModeSupported:(int)value]){
+            if ([mCaptureDevice hasFlash] && [mCaptureDevice isTorchModeSupported:(AVCaptureTorchMode)value]){
                 NSError* error = nil;
                 [mCaptureDevice lockForConfiguration:&error];
                 if (error) return false;
-                [mCaptureDevice setTorchMode:(int)value];
+                [mCaptureDevice setTorchMode:(AVCaptureTorchMode)value];
                 [mCaptureDevice unlockForConfiguration];
                 //NSLog(@"Torch mode set");
                 return true;

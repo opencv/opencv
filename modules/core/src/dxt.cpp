@@ -2512,7 +2512,7 @@ static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
     k.args(ocl::KernelArg::ReadOnlyNoSize(A), ocl::KernelArg::ReadOnlyNoSize(B),
            ocl::KernelArg::WriteOnly(dst), rowsPerWI);
 
-    size_t globalsize[2] = { asize.width, (asize.height + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { static_cast<size_t>(asize.width), static_cast<size_t>((asize.height + rowsPerWI - 1) / rowsPerWI) };
     return k.run(2, globalsize, NULL, false);
 }
 

@@ -654,7 +654,7 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     size_t maxWorkGroupSize = dev.maxWorkGroupSize();
     CV_Assert(maxWorkGroupSize % 4 == 0);
 
-    size_t globalsize[2] = { cols, (rows + pxPerWIy - 1) / pxPerWIy },
+    size_t globalsize[2] = { static_cast<size_t>(cols), static_cast<size_t>((rows + pxPerWIy - 1) / pxPerWIy) },
             localsize[2] = { maxWorkGroupSize / 4, 4 };
     return k.run(2, globalsize, (flipType == FLIP_COLS) && !dev.isIntel() ? localsize : NULL, false);
 }
@@ -786,7 +786,7 @@ static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
     UMat src = _src.getUMat(), dst = _dst.getUMat();
     k.args(ocl::KernelArg::ReadOnly(src, cn, kercn), ocl::KernelArg::WriteOnlyNoSize(dst));
 
-    size_t globalsize[] = { src.cols * cn / kercn, (src.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[] = { static_cast<size_t>(src.cols * cn / kercn), static_cast<size_t>((src.rows + rowsPerWI - 1) / rowsPerWI) };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -1061,7 +1061,7 @@ static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
            top, left, ocl::KernelArg::Constant(Mat(1, 1, sctype, value)));
 
-    size_t globalsize[2] = { dst.cols, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { static_cast<size_t>(dst.cols), static_cast<size_t>((dst.rows + rowsPerWI - 1) / rowsPerWI) };
     return k.run(2, globalsize, NULL, false);
 }
 

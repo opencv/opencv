@@ -165,8 +165,8 @@ OCV_OPTION(WITH_IPP_A          "Include Intel IPP_A support"                 OFF
 OCV_OPTION(BUILD_SHARED_LIBS        "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" NOT (ANDROID OR IOS) )
 OCV_OPTION(BUILD_opencv_apps        "Build utility applications (used for example to train classifiers)" (NOT ANDROID) IF (NOT IOS) )
 OCV_OPTION(BUILD_ANDROID_EXAMPLES   "Build examples for Android platform"         ON  IF ANDROID )
-OCV_OPTION(BUILD_DOCS               "Create build rules for OpenCV Documentation" ON )
-OCV_OPTION(BUILD_EXAMPLES           "Build all examples"                          OFF )
+OCV_OPTION(BUILD_DOCS               "Create build rules for OpenCV Documentation" ON IF (NOT IOS) )
+OCV_OPTION(BUILD_EXAMPLES           "Build all examples"                          ON IF (NOT IOS) )
 OCV_OPTION(BUILD_PACKAGE            "Enables 'make package_source' command"       ON )
 OCV_OPTION(BUILD_PERF_TESTS         "Build performance tests"                     ON  IF (NOT IOS) )
 OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"           ON  IF (NOT IOS) )
@@ -372,8 +372,16 @@ endif()
 # OpenCV compiler and linker options
 # ----------------------------------------------------------------------------
 # In case of Makefiles if the user does not setup CMAKE_BUILD_TYPE, assume it's Release:
-if(CMAKE_GENERATOR MATCHES "Makefiles|Ninja" AND "${CMAKE_BUILD_TYPE}" STREQUAL "")
+if(CMAKE_GENERATOR MATCHES "Makefiles|Ninja|Xcode" AND "${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE Release)
+endif()
+
+if(CMAKE_GENERATOR MATCHES "Xcode")
+  message(STATUS "COMBINE_HIDPI_IMAGES YES")
+  set(COMBINE_HIDPI_IMAGES YES)
+  message("Setting up Xcode for C++11 with libc++.")
+ set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++0x")
+ set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
 endif()
 
 include(cmake/OpenCVCompilerOptions.cmake)

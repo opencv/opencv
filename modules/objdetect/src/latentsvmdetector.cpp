@@ -1,4 +1,5 @@
 #include "precomp.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/objdetect/objdetect_c.h"
 #include "_lsvmparser.h"
@@ -100,7 +101,7 @@ CvSeq* cvLatentSvmDetectObjects(IplImage* image,
     int error = 0;
 
     if(image->nChannels == 3)
-        cvCvtColor(image, image, CV_BGR2RGB);
+        cv::CvtColor(image, image, CV_BGR2RGB);
 
     // Getting maximum filter dimensions
     getMaxFilterDims((const CvLSVMFilterObject**)(detector->filters), detector->num_components,
@@ -138,7 +139,7 @@ CvSeq* cvLatentSvmDetectObjects(IplImage* image,
     }
 
     if(image->nChannels == 3)
-        cvCvtColor(image, image, CV_RGB2BGR);
+        cv::CvtColor(image, image, CV_RGB2BGR);
 
     freeFeaturePyramidObject(&H);
     free(points);

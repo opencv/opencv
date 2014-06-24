@@ -125,7 +125,7 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
 
         gray = cvCreateImage( cvSize( img.width, img.height ), IPL_DEPTH_8U, 1 );
         thresh = cvCreateImage( cvSize( img.width, img.height ), IPL_DEPTH_8U, 1 );
-        cvCvtColor( &img, gray, CV_BGR2GRAY );
+        cv::CvtColor( &img, gray, CV_BGR2GRAY );
 
 
         count0 = pattern_size.width*pattern_size.height;

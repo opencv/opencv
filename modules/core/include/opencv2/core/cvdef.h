@@ -41,6 +41,9 @@
 //
 //M*/
 
+
+#include <float.h>
+
 #ifndef __OPENCV_CORE_CVDEF_H__
 #define __OPENCV_CORE_CVDEF_H__
 

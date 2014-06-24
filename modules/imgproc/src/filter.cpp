@@ -2981,12 +2981,13 @@ cv::Ptr<cv::FilterEngine> cv::createSeparableLinearFilter(
     }
     else
     {
-        if( _rowKernel.type() != bdepth )
-            _rowKernel.convertTo( rowKernel, bdepth );
+        if( _rowKernel.type() != bdepth ){
+        _rowKernel.convertTo( rowKernel, bdepth );
+        }
         else
             rowKernel = _rowKernel;
-        if( _columnKernel.type() != bdepth )
-            _columnKernel.convertTo( columnKernel, bdepth );
+        if( _columnKernel.type() != bdepth ){
+        _columnKernel.convertTo( columnKernel, bdepth );}
         else
             columnKernel = _columnKernel;
     }
@@ -3195,7 +3196,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
 
     cv::Mat kernelMat = _kernel.getMat();
     cv::Size sz = _src.size(), wholeSize;
-    size_t globalsize[2] = { sz.width, sz.height };
+    size_t globalsize[2] = { static_cast<size_t>(sz.width), static_cast<size_t>(sz.height) };
     size_t localsize_general[2] = {0, 1};
     size_t* localsize = NULL;
 

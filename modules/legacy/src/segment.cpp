@@ -508,7 +508,7 @@ cvSegmentImage( const CvArr* srcarr, CvArr* dstarr,
 
     CV_CALL( stack = cvAlloc( size.width * size.height * sizeof(Seg)));
 
-    cvCvtColor( src, gray, CV_BGR2GRAY );
+    cv::CvtColor( src, gray, CV_BGR2GRAY );
     cvCanny( gray, canny, 0/*canny_threshold*0.4*/, canny_threshold, 3 );
     cvThreshold( canny, canny, 1, 1, CV_THRESH_BINARY );
     //cvZero( canny );

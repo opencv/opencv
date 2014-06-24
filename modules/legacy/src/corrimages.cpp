@@ -124,7 +124,7 @@ static int icvCreateFeaturePoints(IplImage *image, CvMat *points, CvMat *status)
     double quality;
     double minDist;
 
-    cvCvtColor(image,grayImage, CV_BGR2GRAY);
+    cv::CvtColor(image,grayImage, CV_BGR2GRAY);
 
     foundNum = needNumPoints;
     quality = 0.01;
@@ -300,8 +300,8 @@ static int icvFindCorrForGivenPoints( IplImage *image1,/* Image 1 */
         if( !pyrImage2. Create(w,h,8)) EXIT;
         */
 
-        cvCvtColor(image1,grayImage1,CV_BGR2GRAY);
-        cvCvtColor(image2,grayImage2,CV_BGR2GRAY);
+        cv::CvtColor(image1,grayImage1,CV_BGR2GRAY);
+        cv::CvtColor(image2,grayImage2,CV_BGR2GRAY);
 
         /*
         grayImage1.CopyOf(image1,0);

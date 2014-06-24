@@ -42,6 +42,7 @@
 /* Haar features calculation */
 
 #include "precomp.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/objdetect/objdetect_c.h"
 #include <stdio.h>
@@ -1550,7 +1551,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
 
     if( CV_MAT_CN(img->type) > 1 )
     {
-        cvCvtColor( img, temp, CV_BGR2GRAY );
+        cv::CvtColor( img, temp, CV_BGR2GRAY );
         img = temp;
     }
 

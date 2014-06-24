@@ -1745,7 +1745,18 @@ using ::std::tuple_size;
 #   undef _TR1_FUNCTIONAL  // Allows the user to #include
                         // <tr1/functional> if he chooses to.
 #  else
-#   include <tr1/tuple>  // NOLINT
+// C++11 puts its tuple into the ::std namespace rather than ::std::tr1.
+// gtest expects tuple to live in ::std::tr1, so put it there.
+#include <tuple>  // NOLINT
+namespace std {
+    namespace tr1 {
+        using ::std::get;
+        using ::std::make_tuple;
+        using ::std::tuple;
+        using ::std::tuple_element;
+        using ::std::tuple_size;
+    }
+}
 #  endif  // !GTEST_HAS_RTTI && GTEST_GCC_VER_ < 40302
 
 # else

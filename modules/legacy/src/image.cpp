@@ -110,7 +110,7 @@ bool CvImage::load( const char* filename, const char* imgname, int color )
         /*{
             IplImage* temp_img = 0;
             temp_img = cvCreateImage( cvGetSize(img), img->depth, color > 0 ? 3 : 1 ));
-            cvCvtColor( img, temp_img, color > 0 ? CV_GRAY2BGR : CV_BGR2GRAY );
+            cv::CvtColor( img, temp_img, color > 0 ? CV_GRAY2BGR : CV_BGR2GRAY );
             cvReleaseImage( &img );
             img = temp_img;
         }*/
@@ -246,7 +246,7 @@ bool CvMatrix::load( const char* filename, const char* matname, int color )
             CvMat* temp_mat;
             temp_mat = cvCreateMat( m->rows, m->cols,
                 CV_MAKETYPE(CV_MAT_DEPTH(m->type), color > 0 ? 3 : 1 )));
-            cvCvtColor( m, temp_mat, color > 0 ? CV_GRAY2BGR : CV_BGR2GRAY );
+            cv::CvtColor( m, temp_mat, color > 0 ? CV_GRAY2BGR : CV_BGR2GRAY );
             cvReleaseMat( &m );
             m = temp_mat;
         }*/

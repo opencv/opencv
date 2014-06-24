@@ -92,7 +92,7 @@ static bool ocl_matchUnrolledCached(InputArray _query, InputArray _train,
     if(k.empty())
         return false;
 
-    size_t globalSize[] = {(_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
+    size_t globalSize[] = {static_cast<size_t>((_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE), BLOCK_SIZE, 1};
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
     const size_t smemSize = (BLOCK_SIZE * (MAX_DESC_LEN >= BLOCK_SIZE ? MAX_DESC_LEN : BLOCK_SIZE) + BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
 
@@ -129,7 +129,7 @@ static bool ocl_match(InputArray _query, InputArray _train,
     if(k.empty())
         return false;
 
-    size_t globalSize[] = {(_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
+    size_t globalSize[] = {static_cast<size_t>((_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE), BLOCK_SIZE, 1};
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
     const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
 
@@ -244,7 +244,7 @@ static bool ocl_knn_matchUnrolledCached(InputArray _query, InputArray _train,
     if(k.empty())
         return false;
 
-    size_t globalSize[] = {(_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
+    size_t globalSize[] = {static_cast<size_t>((_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE), BLOCK_SIZE, 1};
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
     const size_t smemSize = (BLOCK_SIZE * (MAX_DESC_LEN >= BLOCK_SIZE ? MAX_DESC_LEN : BLOCK_SIZE) + BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
 
@@ -281,7 +281,7 @@ static bool ocl_knn_match(InputArray _query, InputArray _train,
     if(k.empty())
         return false;
 
-    size_t globalSize[] = {(_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
+    size_t globalSize[] = {static_cast<size_t>((_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE), BLOCK_SIZE, 1};
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
     const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
 
@@ -419,7 +419,7 @@ static bool ocl_matchUnrolledCached(InputArray _query, InputArray _train, float 
     if(k.empty())
         return false;
 
-    size_t globalSize[] = {(_train.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, (_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, 1};
+    size_t globalSize[] = {static_cast<size_t>((_train.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE), static_cast<size_t>((_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE), 1};
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
     const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
 
@@ -460,7 +460,7 @@ static bool ocl_radius_match(InputArray _query, InputArray _train, float maxDist
     if(k.empty())
         return false;
 
-    size_t globalSize[] = {(_train.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, (_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, 1};
+    size_t globalSize[] = {static_cast<size_t>((_train.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE), static_cast<size_t>((_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE), 1};
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
     const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
 

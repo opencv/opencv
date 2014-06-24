@@ -60,6 +60,7 @@
 \************************************************************************************/
 
 #include "precomp.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/calib3d/calib3d_c.h"
 #include "circlesgrid.hpp"
@@ -288,7 +289,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
 
         if( CV_MAT_CN(img->type) != 1 )
         {
-            cvCvtColor( img, norm_img, CV_BGR2GRAY );
+            cv::CvtColor( img, norm_img, CV_BGR2GRAY );
             img = norm_img;
         }
 
@@ -361,7 +362,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
                 }
 
 #ifdef DEBUG_CHESSBOARD
-                cvCvtColor(thresh_img,dbg_img,CV_GRAY2BGR);
+                cv::CvtColor(thresh_img,dbg_img,CV_GRAY2BGR);
 #endif
 
                 // So we can find rectangles that go to the edge, we draw a white line around the image edge.
@@ -542,7 +543,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
         if( CV_MAT_CN(img->type) != 1 )
         {
             gray.reset(cvCreateMat(img->rows, img->cols, CV_8UC1));
-            cvCvtColor(img, gray, CV_BGR2GRAY);
+            cv::CvtColor(img, gray, CV_BGR2GRAY);
         }
         else
         {

@@ -54,6 +54,7 @@
 
 #include <cuda_runtime.h>
 #include "opencv2/core/cvdef.h"
+#include "opencv2/core/cvdef.hpp"
 
 namespace cv
 {

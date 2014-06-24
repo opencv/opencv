@@ -2739,7 +2739,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     Size sz = src.size(), dstSz = sz;
     int scn = src.channels(), depth = src.depth(), bidx;
     int dims = 2, stripeSize = 1;
-    size_t globalsize[] = { src.cols, src.rows };
+    size_t globalsize[] = { static_cast<size_t>(src.cols), static_cast<size_t>(src.rows) };
     ocl::Kernel k;
 
     if (depth != CV_8U && depth != CV_16U && depth != CV_32F)
@@ -4335,6 +4335,17 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
     }
 }
+
+
+void  cv::CvtColor( const CvArr* srcarr, CvArr* dstarr, int code )
+    {
+        cv::Mat src = cv::cvarrToMat(srcarr), dst0 = cv::cvarrToMat(dstarr), dst = dst0;
+        CV_Assert( src.depth() == dst.depth() );
+
+        cv::cvtColor(src, dst, code, dst.channels());
+        CV_Assert( dst.data == dst0.data );
+    }
+
 
 CV_IMPL void
 cvCvtColor( const CvArr* srcarr, CvArr* dstarr, int code )

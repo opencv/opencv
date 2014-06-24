@@ -341,8 +341,8 @@ FUNCTOR_CLOSURE_2arg(VMax,  float, return _mm_max_ps(a, b));
 FUNCTOR_CLOSURE_2arg(VMax, double, return _mm_max_pd(a, b));
 
 
-static unsigned int CV_DECL_ALIGNED(16) v32f_absmask[] = { 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff };
-static unsigned int CV_DECL_ALIGNED(16) v64f_absmask[] = { 0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff };
+static unsigned int CV_DECL_ALIGNED(16) v32f_absmask[] = { static_cast<unsigned int>(0x7fffffff), static_cast<unsigned int>(0x7fffffff), static_cast<unsigned int>(0x7fffffff), static_cast<unsigned int>(0x7fffffff) };
+static unsigned int CV_DECL_ALIGNED(16) v64f_absmask[] = { static_cast<unsigned int>(0xffffffff), static_cast<unsigned int>(0x7fffffff), static_cast<unsigned int>(0xffffffff), static_cast<unsigned int>(0x7fffffff) };
 
 FUNCTOR_TEMPLATE(VAbsDiff);
 FUNCTOR_CLOSURE_2arg(VAbsDiff,  uchar,
@@ -1070,7 +1070,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             k.args(src1arg, src2arg, maskarg, dstarg);
     }
 
-    size_t globalsize[] = { src1.cols * cn / kercn, (src1.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[] = { static_cast<size_t>(src1.cols * cn / kercn), static_cast<size_t>((src1.rows + rowsPerWI - 1) / rowsPerWI) };
     return k.run(2, globalsize, 0, false);
 }
 
@@ -1481,7 +1481,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             k.args(src1arg, src2arg, maskarg, dstarg);
     }
 
-    size_t globalsize[] = { src1.cols * cn / kercn, (src1.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[] = { static_cast<size_t>(src1.cols * cn / kercn), static_cast<size_t>((src1.rows + rowsPerWI - 1) / rowsPerWI) };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -2842,7 +2842,7 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
                ocl::KernelArg::WriteOnly(dst, cn, kercn));
     }
 
-    size_t globalsize[2] = { dst.cols * cn / kercn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { static_cast<size_t>(dst.cols * cn / kercn), static_cast<size_t>((dst.rows + rowsPerWI - 1) / rowsPerWI) };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -3194,7 +3194,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
         ker.args(srcarg, dstarg, ocl::KernelArg::ReadOnlyNoSize(lscalaru),
                ocl::KernelArg::ReadOnlyNoSize(uscalaru), rowsPerWI);
 
-    size_t globalsize[2] = { ssize.width, (ssize.height + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { static_cast<size_t>(ssize.width), static_cast<size_t>((ssize.height + rowsPerWI - 1) / rowsPerWI) };
     return ker.run(2, globalsize, NULL, false);
 }
 
