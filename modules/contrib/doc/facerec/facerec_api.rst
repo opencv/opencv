@@ -46,6 +46,15 @@ a unified access to all face recongition algorithms in OpenCV. ::
 
       // Deserializes this object from a given cv::FileStorage.
       virtual void load(const FileStorage& fs) = 0;
+
+      // Sets additional string info for the label
+      virtual void setLabelInfo(int label, const String& strInfo);
+
+      // Gets string info by label
+      virtual String getLabelInfo(int label);
+
+      // Gets labels by string info
+      virtual vector<int> getLabelsByString(const String& str);
   };
 
 
@@ -69,6 +78,8 @@ Moreover every :ocv:class:`FaceRecognizer` supports the:
 * **Prediction** of a given sample image, that means a face. The image is given as a :ocv:class:`Mat`.
 
 * **Loading/Saving** the model state from/to a given XML or YAML.
+
+* **Setting/Getting labels info**, that is stored as a string. String labels info is useful for keeping names of the recognized people.
 
 .. note:: When using the FaceRecognizer interface in combination with Python, please stick to Python 2. Some underlying scripts like create_csv will not work in other versions, like Python 3.
 
@@ -293,14 +304,38 @@ to enable loading the model state. ``FaceRecognizer::load(FileStorage& fs)`` in
 turn gets called by ``FaceRecognizer::load(const String& filename)``, to ease
 saving a model.
 
+FaceRecognizer::setLabelInfo
+-----------------------------
+
+Sets string info for the specified model's label.
+.. ocv:function:: void FaceRecognizer::setLabelInfo(int label, const String& strInfo)
+
+The string info is replaced by the provided value if it was set before for the specified label.
+
+FaceRecognizer::getLabelInfo
+----------------------------
+
+Gets string information by label.
+.. ocv:function:: String FaceRecognizer::getLabelInfo(int label)
+
+If an unknown label id is provided or there is no label information associated with the specified label id the method returns an empty string.
+
+FaceRecognizer::getLabelsByString
+---------------------------------
+Gets vector of labels by string.
+
+.. ocv:function:: vector<int> FaceRecognizer::getLabelsByString(const String& str)
+
+The function searches for the labels containing the specified sub-string in the associated string info.
+
 createEigenFaceRecognizer
 -------------------------
 
 .. ocv:function:: Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0, double threshold = DBL_MAX)
 
-    :param num_components: The number of components (read: Eigenfaces) kept for this Prinicpal Component Analysis. As a hint: There's no rule how many components (read: Eigenfaces) should be kept for good reconstruction capabilities. It is based on your input data, so experiment with the number. Keeping 80 components should almost always be sufficient.
+    :param num_components: The number of components (read: Eigenfaces) kept for this Principal Component Analysis. As a hint: There's no rule how many components (read: Eigenfaces) should be kept for good reconstruction capabilities. It is based on your input data, so experiment with the number. Keeping 80 components should almost always be sufficient.
 
-    :param threshold: The threshold applied in the prediciton.
+    :param threshold: The threshold applied in the prediction.
 
 Notes:
 ++++++
