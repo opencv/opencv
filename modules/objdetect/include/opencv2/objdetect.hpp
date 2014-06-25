@@ -46,52 +46,12 @@
 
 #include "opencv2/core.hpp"
 
-typedef struct CvLatentSvmDetector CvLatentSvmDetector;
 typedef struct CvHaarClassifierCascade CvHaarClassifierCascade;
 
 namespace cv
 {
 
 ///////////////////////////// Object Detection ////////////////////////////
-
-/*
- * This is a class wrapping up the structure CvLatentSvmDetector and functions working with it.
- * The class goals are:
- * 1) provide c++ interface;
- * 2) make it possible to load and detect more than one class (model) unlike CvLatentSvmDetector.
- */
-class CV_EXPORTS LatentSvmDetector
-{
-public:
-    struct CV_EXPORTS ObjectDetection
-    {
-        ObjectDetection();
-        ObjectDetection( const Rect& rect, float score, int classID = -1 );
-        Rect rect;
-        float score;
-        int classID;
-    };
-
-    LatentSvmDetector();
-    LatentSvmDetector( const std::vector<String>& filenames, const std::vector<String>& classNames = std::vector<String>() );
-    virtual ~LatentSvmDetector();
-
-    virtual void clear();
-    virtual bool empty() const;
-    bool load( const std::vector<String>& filenames, const std::vector<String>& classNames = std::vector<String>() );
-
-    virtual void detect( const Mat& image,
-                         std::vector<ObjectDetection>& objectDetections,
-                         float overlapThreshold = 0.5f,
-                         int numThreads = -1 );
-
-    const std::vector<String>& getClassNames() const;
-    size_t getClassCount() const;
-
-private:
-    std::vector<CvLatentSvmDetector*> detectors;
-    std::vector<String> classNames;
-};
 
 // class for grouping object candidates, detected by Cascade Classifier, HOG etc.
 // instance of the class is to be passed to cv::partition (see cxoperations.hpp)
@@ -353,18 +313,10 @@ public:
     void groupRectangles(std::vector<cv::Rect>& rectList, std::vector<double>& weights, int groupThreshold, double eps) const;
 };
 
-
-CV_EXPORTS_W void findDataMatrix(InputArray image,
-                                 CV_OUT std::vector<String>& codes,
-                                 OutputArray corners = noArray(),
-                                 OutputArrayOfArrays dmtx = noArray());
-
-CV_EXPORTS_W void drawDataMatrixCodes(InputOutputArray image,
-                                      const std::vector<String>& codes,
-                                      InputArray corners);
 }
 
 #include "opencv2/objdetect/linemod.hpp"
 #include "opencv2/objdetect/erfilter.hpp"
+#include "opencv2/objdetect/detection_based_tracker.hpp"
 
 #endif

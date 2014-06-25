@@ -11,7 +11,7 @@ if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_NUMPY_INCLUDE_DIRS)
 endif()
 
 set(the_description "The python bindings")
-ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect opencv_contrib opencv_legacy opencv_softcascade OPTIONAL opencv_nonfree)
+ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect OPTIONAL opencv_nonfree)
 
 ocv_module_include_directories(
     "${PYTHON_INCLUDE_PATH}"
@@ -36,8 +36,7 @@ set(opencv_hdrs
     "${OPENCV_MODULE_opencv_features2d_LOCATION}/include/opencv2/features2d.hpp"
     "${OPENCV_MODULE_opencv_calib3d_LOCATION}/include/opencv2/calib3d.hpp"
     "${OPENCV_MODULE_opencv_objdetect_LOCATION}/include/opencv2/objdetect.hpp"
-    "${OPENCV_MODULE_opencv_softcascade_LOCATION}/include/opencv2/softcascade.hpp"
-    "${OPENCV_MODULE_opencv_contrib_LOCATION}/include/opencv2/contrib.hpp")
+    )
 
 if(HAVE_opencv_nonfree)
   list(APPEND opencv_hdrs     "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/features2d.hpp"
