@@ -19,6 +19,7 @@ class Intrinsic
         Mat n_idx;
     public:
         void init(Mat &rgbIm);
+        double calc(double val, double temp_val);
         void compute(Mat &rgbIm, Mat &rgbIm2, Mat &weight, Mat &ref, Mat &shade, int iterNum, float rho);
         void decompose(Mat &rgbIm, Mat &ref, Mat &shade, int wd, int iterNum, float rho);
 
@@ -33,6 +34,17 @@ void Intrinsic::init(Mat &rgbIm)
     epsilon = 1/10000;
 }
 
+inline double Intrinsic::calc(double val, double temp_val)
+{
+    if(val < temp_val)
+        val = temp_val;
+    if(val < .000002)
+        val = .000002;
+
+    return val;
+
+}
+
 void Intrinsic::compute(Mat &rgbIm, Mat &rgbIm2, Mat &weight, Mat &ref, Mat &shade, int iterNum, float rho)
 {
     Mat R = Mat::ones(imgsize,3,CV_32FC1)*0.5;
@@ -43,9 +55,9 @@ void Intrinsic::compute(Mat &rgbIm, Mat &rgbIm2, Mat &weight, Mat &ref, Mat &sha
     {
         for(int i = 0;i<n;i++)
         {
-            rgbIm_reshape.at<float>(length,0) = rgbIm.at<float>(i,j*3+0);
-            rgbIm_reshape.at<float>(length,1) = rgbIm.at<float>(i,j*3+1);
-            rgbIm_reshape.at<float>(length,2) = rgbIm.at<float>(i,j*3+2);
+            Vec3f *rgb_temp = rgbIm.ptr<Vec3f>(i);
+            for(int c=0;c<channels;c++)
+                rgbIm_reshape.ptr<float>(length)[c] = rgb_temp[j][c];
             length = length +1;
         }
     }
@@ -53,13 +65,11 @@ void Intrinsic::compute(Mat &rgbIm, Mat &rgbIm2, Mat &weight, Mat &ref, Mat &sha
     length = 0;
     Mat rgbIm2_reshape = Mat(imgsize,1,CV_32FC1);
     for(int j = 0;j<m;j++)
-    {
         for(int i = 0;i<n;i++)
         {
-            rgbIm2_reshape.at<float>(length,0) = rgbIm2.at<float>(i,j);
+            rgbIm2_reshape.ptr<float>(length)[0] = rgbIm2.ptr<float>(i)[j];
             length = length +1;
         }
-    }
 
     for(int k = 0;k<iterNum;k++)
     {
@@ -80,7 +90,7 @@ void Intrinsic::compute(Mat &rgbIm, Mat &rgbIm2, Mat &weight, Mat &ref, Mat &sha
                 {
                     for(int y =0;y<3;y++)
                     {
-                        temp.at<float>(l,y) = R.at<float>(n_idx.at<float>(len-1,l),y);
+                        temp.ptr<float>(l)[y] = R.ptr<float>(n_idx.at<float>(len-1,l))[y];
                     }
                 }
 
@@ -88,17 +98,17 @@ void Intrinsic::compute(Mat &rgbIm, Mat &rgbIm2, Mat &weight, Mat &ref, Mat &sha
                 R(Range(len-1,len), Range::all()) = (1-rho)*R(Range(len-1,len), Range::all()) + 0.5*rho*sumR;
                 for(int y =0;y<R.cols;y++)
                 {
-                    if(R.at<float>(len-1,y) > 1)
-                        R.at<float>(len-1,y) = 1.0;
+                    if(R.ptr<float>(len-1)[y] > 1)
+                        R.ptr<float>(len-1)[y] = 1.0;
                 }
                 for(int y =0;y<R.cols;y++)
                 {
-                    if(R.at<float>(len-1,y) < epsilon)
-                        R.at<float>(len-1,y) = epsilon;
+                    if(R.ptr<float>(len-1)[y] < epsilon)
+                        R.ptr<float>(len-1)[y] = epsilon;
                 }
             }
         }
-        
+
         Mat temp1;
         multiply(rgbIm_reshape,R,temp1);
         reduce(temp1,temp1,1,CV_REDUCE_SUM);
@@ -106,20 +116,22 @@ void Intrinsic::compute(Mat &rgbIm, Mat &rgbIm2, Mat &weight, Mat &ref, Mat &sha
         inv_S_r = (1-rho)*inv_S_r + rho*temp1;
         for(int y = 0;y<inv_S_r.rows;y++)
         {
-            if(inv_S_r.at<float>(y,0) < 1)
-                inv_S_r.at<float>(y,0) = 1;
+            if(inv_S_r.ptr<float>(y)[0] < 1)
+                inv_S_r.ptr<float>(y)[0] = 1;
         }
 
     }
-    
+
     Mat ref32f = Mat(n,m,CV_32FC3);
     length = 0;
     for(int j = 0;j<m;j++)
     {
         for(int i = 0;i<n;i++)
         {
+            Vec3f *ref32f_ptr = ref32f.ptr<Vec3f>(i);
+
             for(int c = 0;c<channels;c++)
-                ref32f.at<float>(i,j*channels+c) = R.at<float>(length,c);
+                ref32f_ptr[j][c] = R.ptr<float>(length)[c];
             length = length +1;
         }
     }
@@ -133,13 +145,12 @@ void Intrinsic::compute(Mat &rgbIm, Mat &rgbIm2, Mat &weight, Mat &ref, Mat &sha
     {
         for(int i = 0;i<n;i++)
         {
-            shade32f.at<float>(i,j) = inv_S_r.at<float>(length,0);
+            shade32f.ptr<float>(i)[j] = inv_S_r.ptr<float>(length)[0];
             length = length +1;
         }
     }
     shade32f.convertTo(shade,CV_8UC1,255);
 }
-
 
 void Intrinsic::decompose(Mat &rgbIm, Mat &ref, Mat &shade, int wd, int iterNum, float rho)
 {
@@ -171,17 +182,21 @@ void Intrinsic::decompose(Mat &rgbIm, Mat &ref, Mat &shade, int wd, int iterNum,
     Mat t_cvals = Mat::zeros(column,3,CV_32FC1);
 
     num_w = column -1;
-    // weighteight Matrix
+    // weight Matrix
     Mat weight = Mat::zeros(imgsize,num_w,CV_32FC1);
     n_idx = Mat::ones(imgsize,num_w,CV_32FC1);
     Mat pixelIdx = Mat(n,m,CV_32FC1);
     for(int j = 0;j < m;j++)
+    {
         for(int i = 0, idx = j*n;i<n;i++,idx++)
-            pixelIdx.at<float>(i,j) = (float)idx;
-
+        {
+            pixelIdx.ptr<float>(i)[j] = (float)idx;
+        }
+    }
 
     int len = 0;
     int tlen = 0;
+    double log_val = log(.01);
     for(int j = 0;j<m;j++)
     {
         for(int i = 0;i<n;i++)
@@ -193,18 +208,20 @@ void Intrinsic::decompose(Mat &rgbIm, Mat &ref, Mat &shade, int wd, int iterNum,
 
                     if(ii!=i || jj!=j)
                     {
-                        gvals.at<float>(0,tlen) = yplane.at<float>(ii,jj*channels+0);
+                        Vec3f *yplane_ptr = yplane.ptr<Vec3f>(ii);
+                        Vec3f *rgbIm_c_ptr = rgbIm_c.ptr<Vec3f>(ii);
+                        gvals.ptr<float>(0)[tlen] = yplane_ptr[jj][0];
                         for(int c=0; c <channels; c++)
-                            t_cvals.at<float>(tlen,c) = rgbIm_c.at<float>(ii,jj*channels+c);
-                        n_idx.at<float>(len,tlen) = pixelIdx.at<float>(ii,jj);
+                            t_cvals.ptr<float>(tlen)[c] = rgbIm_c_ptr[jj][c];
+                        n_idx.ptr<float>(len)[tlen] = pixelIdx.ptr<float>(ii)[jj];
                         tlen = tlen +1;
                     }
                 }
 
             len= len +1;
 
-            float t_val = yplane.at<float>(i,j*channels+0);
-            gvals.at<float>(0,tlen) = t_val;
+            float t_val = yplane.ptr<Vec3f>(i)[j][0];
+            gvals.ptr<float>(0)[tlen] = t_val;
             Scalar mean_gvals = mean(gvals(Range::all(),Range(0,tlen+1)));
             Mat sub_mean = gvals(Range::all(),Range(0,tlen+1)) - mean_gvals;
             pow(sub_mean,2,sub_mean);
@@ -213,17 +230,16 @@ void Intrinsic::decompose(Mat &rgbIm, Mat &ref, Mat &shade, int wd, int iterNum,
 
             Mat subtract = gvals(Range::all(),Range(0,tlen)) - t_val;
             pow(subtract,2,subtract);
+
             double minVal;
             cv::minMaxIdx(subtract, &minVal,NULL);
-            double mgv = minVal;
-            if(csig < (-1*mgv/log(.01)))
-                csig = -1*mgv/log(.01);
-            if(csig < .000002)
-                csig = .000002;
+
+            double temp_val = -1*minVal/log_val;
+            csig = calc(csig,temp_val);
 
             Mat t_cval = Mat(1,3,CV_32FC1);
             for(int c = 0;c<channels;c++)
-                t_cval.at<float>(0,c) = rgbIm_c.at<float>(i,j*channels+c);
+                t_cval.ptr<float>(0)[c] = rgbIm_c.ptr<Vec3f>(i)[j][c];
 
             Mat rep_mat;
             repeat(t_cval,tlen,1,rep_mat);
@@ -234,13 +250,13 @@ void Intrinsic::decompose(Mat &rgbIm, Mat &ref, Mat &shade, int wd, int iterNum,
 
             for(int y = 0;y<cvals.rows;y++)
             {
-                if(cvals.at<float>(0,y) > 1)
+                if(cvals.ptr<float>(0)[y] > 1)
                 {
-                    cvals.at<float>(0,y) = 0;
+                    cvals.ptr<float>(0)[y] = 0;
                 }
                 else
                 {
-                    cvals.at<float>(0,y) = acos(cvals.at<float>(0,y));
+                    cvals.ptr<float>(0)[y] = acos(cvals.ptr<float>(0)[y]);
                 }
             }
 
@@ -251,14 +267,12 @@ void Intrinsic::decompose(Mat &rgbIm, Mat &ref, Mat &shade, int wd, int iterNum,
             double csig_cvals = c_var_cvals[0] * 0.6;
             Mat power_cvals;
             pow(cvals-1,2,power_cvals);
+
             double minVal1;
             cv::minMaxIdx(power_cvals, &minVal1,NULL);
-            double mgv_cvals = minVal1;
-            if(csig_cvals < (-1*mgv_cvals/log(.01)))
-                csig_cvals = -1*mgv_cvals/log(.01);
-            if(csig_cvals < .000002)
-                csig_cvals = .000002;
 
+            double temp_val1 = -1*minVal1/log_val;
+            csig_cvals = calc(csig_cvals,temp_val1);
 
             Mat cvals_t = cvals.t();
             pow(cvals_t,2,cvals_t);
@@ -271,8 +285,7 @@ void Intrinsic::decompose(Mat &rgbIm, Mat &ref, Mat &shade, int wd, int iterNum,
 
             Scalar tmp_sum = sum(gvals(Range::all(),Range(0,tlen)));
             divide(gvals(Range::all(),Range(0,tlen)),tmp_sum,gvals(Range::all(),Range(0,tlen)));
-            for(int y = 0; y < tlen;y++)
-                weight.at<float>(len-1,y) = gvals.at<float>(0,y);
+            weight(Range(len-1,len),Range(0,tlen)) = gvals(Range::all(),Range(0,tlen))*1;
 
         }
     }
