@@ -2565,7 +2565,7 @@ SparseMatConstIterator_<_Tp>::operator ++()
 template<typename _Tp> inline SparseMatConstIterator_<_Tp>
 SparseMatConstIterator_<_Tp>::operator ++(int)
 {
-    SparseMatConstIterator it = *this;
+    SparseMatConstIterator_<_Tp> it = *this;
     SparseMatConstIterator::operator ++();
     return it;
 }
@@ -2609,7 +2609,7 @@ SparseMatIterator_<_Tp>::operator ++()
 template<typename _Tp> inline SparseMatIterator_<_Tp>
 SparseMatIterator_<_Tp>::operator ++(int)
 {
-    SparseMatIterator it = *this;
+    SparseMatIterator_<_Tp> it = *this;
     SparseMatConstIterator::operator ++();
     return it;
 }
