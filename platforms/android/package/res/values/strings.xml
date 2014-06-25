@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-
-    <string name="app_name">OCV @OPENCV_VERSION_MAJOR@.@OPENCV_VERSION_MINOR@ pack @ANDROID_PACKAGE_PLATFORM_NAME@</string>
-
-</resources>

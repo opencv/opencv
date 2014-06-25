@@ -168,13 +168,13 @@ OCV_OPTION(BUILD_ANDROID_EXAMPLES   "Build examples for Android platform"       
 OCV_OPTION(BUILD_DOCS               "Create build rules for OpenCV Documentation" ON )
 OCV_OPTION(BUILD_EXAMPLES           "Build all examples"                          OFF )
 OCV_OPTION(BUILD_PACKAGE            "Enables 'make package_source' command"       ON )
-OCV_OPTION(BUILD_PERF_TESTS         "Build performance tests"                     ON  IF (NOT IOS) )
-OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"           ON  IF (NOT IOS) )
+#OCV_OPTION(BUILD_PERF_TESTS         "Build performance tests"                     ON  IF (NOT IOS) )
+#OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"           ON  IF (NOT IOS) )
 OCV_OPTION(BUILD_WITH_DEBUG_INFO    "Include debug info into debug libs (not MSCV only)" ON )
 OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of staticaly linked CRT for staticaly linked OpenCV" ON IF MSVC )
-OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create fat java wrapper containing the whole OpenCV library" ON IF NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX )
-OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF IF ANDROID AND ANDROID_SOURCE_TREE )
-OCV_OPTION(BUILD_ANDROID_PACKAGE    "Build platform-specific package for Google Play" OFF IF ANDROID )
+#OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create fat java wrapper containing the whole OpenCV library" ON IF NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX )
+#OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF IF ANDROID AND ANDROID_SOURCE_TREE )
+#OCV_OPTION(BUILD_ANDROID_PACKAGE    "Build platform-specific package for Google Play" OFF IF ANDROID )
 OCV_OPTION(BUILD_CUDA_STUBS         "Build CUDA modules stubs when no CUDA SDK" OFF  IF (NOT IOS) )
 
 # 3rd party libs
@@ -190,8 +190,8 @@ OCV_OPTION(BUILD_TBB                "Download and build TBB from source" ANDROID
 # ===================================================
 OCV_OPTION(INSTALL_CREATE_DISTRIB   "Change install rules to build the distribution package" OFF )
 OCV_OPTION(INSTALL_C_EXAMPLES       "Install C examples"        OFF )
-OCV_OPTION(INSTALL_PYTHON_EXAMPLES  "Install Python examples"   OFF )
-OCV_OPTION(INSTALL_ANDROID_EXAMPLES "Install Android examples"  OFF IF ANDROID )
+#OCV_OPTION(INSTALL_PYTHON_EXAMPLES  "Install Python examples"   OFF )
+#OCV_OPTION(INSTALL_ANDROID_EXAMPLES "Install Android examples"  OFF IF ANDROID )
 OCV_OPTION(INSTALL_TO_MANGLED_PATHS "Enables mangled install paths, that help with side by side installs." OFF IF (UNIX AND NOT ANDROID AND NOT IOS AND BUILD_SHARED_LIBS) )
 OCV_OPTION(INSTALL_TESTS            "Install accuracy and performance test binaries and test data" OFF)
 
@@ -445,32 +445,6 @@ include(cmake/OpenCVFindLibsPerf.cmake)
 #  Detect other 3rd-party libraries/tools
 # ----------------------------------------------------------------------------
 
-# --- LATEX for pdf documentation ---
-if(BUILD_DOCS)
-  include(cmake/OpenCVFindLATEX.cmake)
-endif(BUILD_DOCS)
-
-# --- Python Support ---
-include(cmake/OpenCVDetectPython.cmake)
-
-# --- Java Support ---
-include(cmake/OpenCVDetectApacheAnt.cmake)
-if(ANDROID)
-  include(cmake/OpenCVDetectAndroidSDK.cmake)
-
-  if(NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
-    message(WARNING "OpenCV requires Android SDK tools revision 14 or newer. Otherwise tests and samples will no be compiled.")
-  endif()
-else()
-  find_package(JNI)
-endif()
-
-if(ANDROID AND ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GREATER 1.7) AND (ANDROID_TOOLS_Pkg_Revision GREATER 13))
-  SET(CAN_BUILD_ANDROID_PROJECTS TRUE)
-else()
-  SET(CAN_BUILD_ANDROID_PROJECTS FALSE)
-endif()
-
 # --- OpenCL ---
 if(WITH_OPENCL)
   include(cmake/OpenCVDetectOpenCL.cmake)
@@ -480,9 +454,6 @@ endif()
 if(WITH_DIRECTX)
   include(cmake/OpenCVDetectDirectX.cmake)
 endif()
-
-# --- Matlab/Octave ---
-include(cmake/OpenCVFindMatlab.cmake)
 
 include(cmake/OpenCVDetectVTK.cmake)
 
@@ -519,9 +490,6 @@ add_subdirectory(include)
 
 # OpenCV modules
 add_subdirectory(modules)
-
-# Generate targets for documentation
-add_subdirectory(doc)
 
 # various data that is used by cv libraries and/or demo applications.
 add_subdirectory(data)
