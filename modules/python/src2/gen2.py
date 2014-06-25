@@ -776,7 +776,7 @@ class PythonWrapperGenerator(object):
         classname = bareclassname = ""
         name = decl[0]
         dpos = name.rfind(".")
-        if dpos >= 0 and name[:dpos] not in ["cv", "cv.ocl"]:
+        if dpos >= 0 and name[:dpos] not in ["cv", "cv.ocl", "cv.optim"]:
             classname = bareclassname = re.sub(r"^cv\.", "", name[:dpos])
             name = name[dpos+1:]
             dpos = classname.rfind(".")
