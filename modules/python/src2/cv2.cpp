@@ -84,7 +84,6 @@ catch (const cv::Exception &e) \
 using namespace cv;
 using cv::flann::IndexParams;
 using cv::flann::SearchParams;
-using cv::softcascade::ChannelFeatureBuilder;
 
 typedef std::vector<uchar> vector_uchar;
 typedef std::vector<char> vector_char;
@@ -110,8 +109,6 @@ typedef std::vector<std::vector<Point> > vector_vector_Point;
 typedef std::vector<std::vector<Point2f> > vector_vector_Point2f;
 typedef std::vector<std::vector<Point3f> > vector_vector_Point3f;
 typedef std::vector<std::vector<DMatch> > vector_vector_DMatch;
-
-typedef cv::softcascade::ChannelFeatureBuilder softcascade_ChannelFeatureBuilder;
 
 typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
 
