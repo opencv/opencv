@@ -79,10 +79,10 @@
 
 #include <stdio.h>
 
-#define LOGD0(_str, ...) do{printf(_str , ## __VA_ARGS__); printf("\n");fflush(stdout);} while(0)
-#define LOGI0(_str, ...) do{printf(_str , ## __VA_ARGS__); printf("\n");fflush(stdout);} while(0)
-#define LOGW0(_str, ...) do{printf(_str , ## __VA_ARGS__); printf("\n");fflush(stdout);} while(0)
-#define LOGE0(_str, ...) do{printf(_str , ## __VA_ARGS__); printf("\n");fflush(stdout);} while(0)
+#define LOGD0(_str, ...) (printf(_str , ## __VA_ARGS__), printf("\n"), fflush(stdout))
+#define LOGI0(_str, ...) (printf(_str , ## __VA_ARGS__), printf("\n"), fflush(stdout))
+#define LOGW0(_str, ...) (printf(_str , ## __VA_ARGS__), printf("\n"), fflush(stdout))
+#define LOGE0(_str, ...) (printf(_str , ## __VA_ARGS__), printf("\n"), fflush(stdout))
 #endif
 
 #if DEBUGLOGS
@@ -91,10 +91,10 @@
 #define LOGW(_str, ...) LOGW0(_str , ## __VA_ARGS__)
 #define LOGE(_str, ...) LOGE0(_str , ## __VA_ARGS__)
 #else
-#define LOGD(...) do{} while(0)
-#define LOGI(...) do{} while(0)
-#define LOGW(...) do{} while(0)
-#define LOGE(...) do{} while(0)
+#define LOGD(...)
+#define LOGI(...)
+#define LOGW(...)
+#define LOGE(...)
 #endif
 
 
