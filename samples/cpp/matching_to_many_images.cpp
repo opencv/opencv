@@ -1,6 +1,8 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/contrib/contrib.hpp"
+#include "opencv2/nonfree/features2d.hpp"
+#include "opencv2/nonfree/nonfree.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -205,6 +207,7 @@ static void saveResultImages( const Mat& queryImage, const vector<KeyPoint>& que
 
 int main(int argc, char** argv)
 {
+    initModule_nonfree();
     string detectorType = defaultDetectorType;
     string descriptorType = defaultDescriptorType;
     string matcherType = defaultMatcherType;
