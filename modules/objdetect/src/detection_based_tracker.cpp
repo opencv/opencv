@@ -269,19 +269,16 @@ bool cv::DetectionBasedTracker::SeparateDetectionWork::run()
 }
 
 #define CATCH_ALL_AND_LOG(_block)                                                           \
-do {                                                                                        \
     try {                                                                                   \
         _block;                                                                             \
-        break;                                                                              \
     }                                                                                       \
     catch(cv::Exception& e) {                                                               \
-        LOGE0("\n %s: ERROR: OpenCV Exception caught: \n'%s'\n\n", CV_Func, e.what());     \
+        LOGE0("\n %s: ERROR: OpenCV Exception caught: \n'%s'\n\n", CV_Func, e.what());      \
     } catch(std::exception& e) {                                                            \
-        LOGE0("\n %s: ERROR: Exception caught: \n'%s'\n\n", CV_Func, e.what());            \
+        LOGE0("\n %s: ERROR: Exception caught: \n'%s'\n\n", CV_Func, e.what());             \
     } catch(...) {                                                                          \
-        LOGE0("\n %s: ERROR: UNKNOWN Exception caught\n\n", CV_Func);                      \
-    }                                                                                       \
-} while(0)
+        LOGE0("\n %s: ERROR: UNKNOWN Exception caught\n\n", CV_Func);                       \
+    }
 
 void* cv::workcycleObjectDetectorFunction(void* p)
 {
@@ -599,8 +596,8 @@ cv::DetectionBasedTracker::InnerParameters::InnerParameters()
     numStepsToShowWithoutDetecting=3;
 
     coeffTrackingWindowSize=2.0;
-    coeffObjectSizeToTrack=0.85;
-    coeffObjectSpeedUsingInPrediction=0.8;
+    coeffObjectSizeToTrack=0.85f;
+    coeffObjectSpeedUsingInPrediction=0.8f;
 
 }
 
@@ -621,8 +618,8 @@ cv::DetectionBasedTracker::DetectionBasedTracker(cv::Ptr<IDetector> mainDetector
 
     weightsPositionsSmoothing.push_back(1);
     weightsSizesSmoothing.push_back(0.5);
-    weightsSizesSmoothing.push_back(0.3);
-    weightsSizesSmoothing.push_back(0.2);
+    weightsSizesSmoothing.push_back(0.3f);
+    weightsSizesSmoothing.push_back(0.2f);
 }
 
 cv::DetectionBasedTracker::~DetectionBasedTracker()
@@ -660,7 +657,7 @@ void DetectionBasedTracker::process(const Mat& imageGray)
     } else {
         LOGD("DetectionBasedTracker::process: get _rectsWhereRegions from previous positions");
         for(size_t i = 0; i < trackedObjects.size(); i++) {
-            int n = trackedObjects[i].lastPositions.size();
+            size_t n = trackedObjects[i].lastPositions.size();
             CV_Assert(n > 0);
 
             Rect r = trackedObjects[i].lastPositions[n-1];
@@ -703,7 +700,7 @@ void cv::DetectionBasedTracker::getObjects(std::vector<cv::Rect>& result) const
     result.clear();
 
     for(size_t i=0; i < trackedObjects.size(); i++) {
-        Rect r=calcTrackedObjectPositionToShow(i);
+        Rect r=calcTrackedObjectPositionToShow((int)i);
         if (r.area()==0) {
             continue;
         }
@@ -717,7 +714,7 @@ void cv::DetectionBasedTracker::getObjects(std::vector<Object>& result) const
     result.clear();
 
     for(size_t i=0; i < trackedObjects.size(); i++) {
-        Rect r=calcTrackedObjectPositionToShow(i);
+        Rect r=calcTrackedObjectPositionToShow((int)i);
         if (r.area()==0) {
             continue;
         }
@@ -731,7 +728,7 @@ void cv::DetectionBasedTracker::getObjects(std::vector<ExtObject>& result) const
 
     for(size_t i=0; i < trackedObjects.size(); i++) {
         ObjectStatus status;
-        Rect r=calcTrackedObjectPositionToShow(i, status);
+        Rect r=calcTrackedObjectPositionToShow((int)i, status);
         result.push_back(ExtObject(trackedObjects[i].id, r, status));
         LOGD("DetectionBasedTracker::process: found a object with SIZE %d x %d, rect={%d, %d, %d x %d}, status = %d", r.width, r.height, r.x, r.y, r.width, r.height, (int)status);
     }
@@ -767,8 +764,8 @@ void cv::DetectionBasedTracker::updateTrackedObjects(const std::vector<Rect>& de
         INTERSECTED_RECTANGLE=-2
     };
 
-    int N1=trackedObjects.size();
-    int N2=detectedObjects.size();
+    int N1=(int)trackedObjects.size();
+    int N2=(int)detectedObjects.size();
     LOGD("DetectionBasedTracker::updateTrackedObjects: N1=%d, N2=%d", N1, N2);
 
     for(int i=0; i < N1; i++) {
@@ -786,7 +783,7 @@ void cv::DetectionBasedTracker::updateTrackedObjects(const std::vector<Rect>& de
         int bestIndex=-1;
         int bestArea=-1;
 
-        int numpositions=curObject.lastPositions.size();
+        int numpositions=(int)curObject.lastPositions.size();
         CV_Assert(numpositions > 0);
         Rect prevRect=curObject.lastPositions[numpositions-1];
         LOGD("DetectionBasedTracker::updateTrackedObjects: prevRect[%d]={%d, %d, %d x %d}", i, prevRect.x, prevRect.y, prevRect.width, prevRect.height);
@@ -868,7 +865,7 @@ void cv::DetectionBasedTracker::updateTrackedObjects(const std::vector<Rect>& de
                 )
            )
         {
-            int numpos=it->lastPositions.size();
+            int numpos=(int)it->lastPositions.size();
             CV_Assert(numpos > 0);
             Rect r = it->lastPositions[numpos-1];
             (void)(r);
@@ -915,7 +912,7 @@ Rect cv::DetectionBasedTracker::calcTrackedObjectPositionToShow(int i, ObjectSta
 
     const TrackedObject::PositionsVector& lastPositions=trackedObjects[i].lastPositions;
 
-    int N=lastPositions.size();
+    int N=(int)lastPositions.size();
     if (N<=0) {
         LOGE("DetectionBasedTracker::calcTrackedObjectPositionToShow: ERROR: no positions for i=%d", i);
         status = WRONG_OBJECT;
@@ -973,7 +970,7 @@ Rect cv::DetectionBasedTracker::calcTrackedObjectPositionToShow(int i, ObjectSta
 
         center=c1+c2;
     }
-    Point2f tl=center-(Point2f(w,h)*0.5);
+    Point2f tl=center-Point2f((float)w*0.5f,(float)h*0.5f);
     Rect res(cvRound(tl.x), cvRound(tl.y), cvRound(w), cvRound(h));
     LOGD("DetectionBasedTracker::calcTrackedObjectPositionToShow: Result for i=%d: {%d, %d, %d x %d}", i, res.x, res.y, res.width, res.height);
 
