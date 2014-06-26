@@ -3492,7 +3492,7 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
         return false;
 
     size_t lt2[2] = { optimizedSepFilterLocalSize, optimizedSepFilterLocalSize };
-    size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), lt2[1] * (1 + (size.height - 1) / lt2[1]) };
+    size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), optimizedSepFilterLocalSize};
 
     char cvt[2][40];
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
