@@ -63,7 +63,7 @@ PARAM_TEST_CASE(FilterTestBase, MatType,
                 BorderType, // border type
                 double, // optional parameter
                 bool, // roi or not
-                int)  //width multiplier
+                int)  // width multiplier
 {
     int type, borderType, ksize;
     Size size;
@@ -244,8 +244,8 @@ OCL_TEST_P(Erode, Mat)
         random_roi();
         Mat kernel = randomMat(kernelSize, CV_8UC1, 0, 3);
 
-        OCL_OFF(cv::erode(src_roi, dst_roi, kernel, Point(-1,-1), iterations) );
-        OCL_ON(cv::erode(usrc_roi, udst_roi, kernel, Point(-1,-1), iterations) );
+        OCL_OFF(cv::erode(src_roi, dst_roi, kernel, Point(-1, -1), iterations) );
+        OCL_ON(cv::erode(usrc_roi, udst_roi, kernel, Point(-1, -1), iterations) );
 
         Near();
     }
@@ -266,8 +266,8 @@ OCL_TEST_P(Dilate, Mat)
         random_roi();
         Mat kernel = randomMat(kernelSize, CV_8UC1, 0, 3);
 
-        OCL_OFF(cv::dilate(src_roi, dst_roi, kernel, Point(-1,-1), iterations) );
-        OCL_ON(cv::dilate(usrc_roi, udst_roi, kernel, Point(-1,-1), iterations) );
+        OCL_OFF(cv::dilate(src_roi, dst_roi, kernel, Point(-1, -1), iterations) );
+        OCL_ON(cv::dilate(usrc_roi, udst_roi, kernel, Point(-1, -1), iterations) );
 
         Near();
     }
@@ -289,8 +289,8 @@ OCL_TEST_P(MorphologyEx, Mat)
         random_roi();
         Mat kernel = randomMat(kernelSize, CV_8UC1, 0, 3);
 
-        OCL_OFF(cv::morphologyEx(src_roi, dst_roi, op, kernel, Point(-1,-1), iterations) );
-        OCL_ON(cv::morphologyEx(usrc_roi, udst_roi, op, kernel, Point(-1,-1), iterations) );
+        OCL_OFF(cv::morphologyEx(src_roi, dst_roi, op, kernel, Point(-1, -1), iterations) );
+        OCL_ON(cv::morphologyEx(usrc_roi, udst_roi, op, kernel, Point(-1, -1), iterations) );
 
         Near();
     }
@@ -360,8 +360,8 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, GaussianBlurTest, Combine(
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC4),
                             Values(3, 5, 7),
-                            Values(Size(0,0)),//not used
-                            Values((BorderType)BORDER_CONSTANT),//not used
+                            Values(Size(0, 0)), //not used
+                            Values((BorderType)BORDER_CONSTANT),
                             Values(1.0, 2.0, 3.0),
                             Bool(),
                             Values(1))); // not used
@@ -369,20 +369,20 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC4),
                             Values(3, 5, 7),
-                            Values(Size(0,0)),//not used
-                            Values((BorderType)BORDER_CONSTANT),//not used
+                            Values(Size(0, 0)), // not used
+                            Values((BorderType)BORDER_CONSTANT),
                             Values(1.0, 2.0, 3.0),
                             Bool(),
-                            Values(1))); //not used
+                            Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, MorphologyEx, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC4),
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(3, 5, 7),
-                            Values(Size(0, 0), Size(0, 1), Size(0, 2), Size(0, 3), Size(0, 4), Size(0, 5), Size(0, 6)), // used as generator of operations
-                            Values((BorderType)BORDER_CONSTANT),// not used
+                            Values(Size(0, 2), Size(0, 3), Size(0, 4), Size(0, 5), Size(0, 6)), // used as generator of operations
+                            Values((BorderType)BORDER_CONSTANT),
                             Values(1.0, 2.0, 3.0),
                             Bool(),
-                            Values(1))); //not used
+                            Values(1))); // not used
 
 
 } } // namespace cvtest::ocl

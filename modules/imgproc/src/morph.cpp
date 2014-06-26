@@ -1333,10 +1333,7 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
     if( iterations > 1 )
         return false;
 
-    if (IPPMorphReplicate( op, src, dst, kernel, ksize, anchor, rectKernel ))
-        return true;
-
-    return false;
+    return IPPMorphReplicate( op, src, dst, kernel, ksize, anchor, rectKernel );
 }
 #endif
 
@@ -1344,14 +1341,19 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
 
 static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
                         Point anchor, int iterations, int op, int borderType,
-                        const Scalar& borderValue)
+                        const Scalar &, int actual_op = -1, InputArray _extraMat = noArray())
 {
-    if (borderType != BORDER_CONSTANT)
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    bool doubleSupport = dev.doubleFPConfig() > 0;
+
+    if ((depth == CV_64F && !doubleSupport) || borderType != BORDER_CONSTANT)
         return false;
 
     Mat kernel = _kernel.getMat();
-    Size ksize = kernel.data ? kernel.size() : Size(3,3);
-    anchor = normalizeAnchor(anchor, ksize);
+    bool haveExtraMat = !_extraMat.empty();
+    Size ksize = kernel.data ? kernel.size() : Size(3, 3), ssize = _src.size();
+    CV_Assert(actual_op <= 3 || haveExtraMat);
 
     if (iterations == 0 || kernel.rows*kernel.cols == 1)
     {
@@ -1375,21 +1377,12 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
         iterations = 1;
     }
 
-    const ocl::Device & dev = ocl::Device::getDefault();
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    bool doubleSupport = dev.doubleFPConfig() > 0;
-
-    if (depth == CV_64F && !doubleSupport)
-        return false;
-
-    UMat src = _src.getUMat();
-
 #ifdef ANDROID
     size_t localThreads[2] = { 16, 8 };
 #else
     size_t localThreads[2] = { 16, 16 };
 #endif
-    size_t globalThreads[2] = { src.cols, src.rows };
+    size_t globalThreads[2] = { ssize.width, ssize.height };
 
     if (localThreads[0]*localThreads[1] * 2 < (localThreads[0] + ksize.width - 1) * (localThreads[1] + ksize.height - 1))
         return false;
@@ -1403,21 +1396,35 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
             if (kernel8u.at<uchar>(y, x) != 0)
                 processing += format("PROCESS(%d,%d)", y, x);
 
-    static const char * const op2str[] = { "ERODE", "DILATE" };
-    String buildOptions = format("-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D %s%s"
-                                 " -D PROCESS_ELEMS=%s -D T=%s -D DEPTH_%d -D cn=%d -D T1=%s", anchor.x, anchor.y,
-                                 (int)localThreads[0], (int)localThreads[1], op2str[op],
-                                 doubleSupport ? " -D DOUBLE_SUPPORT" : "", processing.c_str(),
-                                 ocl::typeToStr(type), depth, cn, ocl::typeToStr(depth));
+    static const char * const op2str[] = { "OP_ERODE", "OP_DILATE", NULL, NULL, "OP_GRADIENT", "OP_TOPHAT", "OP_BLACKHAT" };
+
+    char cvt[2][50];
+    int wdepth = std::max(depth, CV_32F), scalarcn = cn == 3 ? 4 : cn;
+
+    if (actual_op < 0)
+        actual_op = op;
 
     std::vector<ocl::Kernel> kernels(iterations);
     for (int i = 0; i < iterations; i++)
     {
+        int current_op = iterations == i + 1 ? actual_op : op;
+        String buildOptions = format("-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D %s%s"
+                                     " -D PROCESS_ELEMS=%s -D T=%s -D DEPTH_%d -D cn=%d -D T1=%s"
+                                     " -D convertToWT=%s -D convertToT=%s -D ST=%s%s",
+                                     anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], op2str[op],
+                                     doubleSupport ? " -D DOUBLE_SUPPORT" : "", processing.c_str(),
+                                     ocl::typeToStr(type), depth, cn, ocl::typeToStr(depth),
+                                     ocl::convertTypeStr(depth, wdepth, cn, cvt[0]),
+                                     ocl::convertTypeStr(wdepth, depth, cn, cvt[1]),
+                                     ocl::typeToStr(CV_MAKE_TYPE(depth, scalarcn)),
+                                     current_op == op ? "" : cv::format(" -D %s", op2str[current_op]).c_str());
+
         kernels[i].create("morph", ocl::imgproc::morph_oclsrc, buildOptions);
         if (kernels[i].empty())
             return false;
     }
 
+    UMat src = _src.getUMat(), extraMat = _extraMat.getUMat();
     _dst.create(src.size(), src.type());
     UMat dst = _dst.getUMat();
 
@@ -1428,7 +1435,12 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
         src.locateROI(wholesize, ofs);
         int wholecols = wholesize.width, wholerows = wholesize.height;
 
-        kernels[0].args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnlyNoSize(dst),
+        if (haveExtraMat)
+            kernels[0].args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnlyNoSize(dst),
+                        ofs.x, ofs.y, src.cols, src.rows, wholecols, wholerows,
+                        ocl::KernelArg::ReadOnlyNoSize(extraMat));
+        else
+            kernels[0].args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnlyNoSize(dst),
                         ofs.x, ofs.y, src.cols, src.rows, wholecols, wholerows);
 
         return kernels[0].run(2, globalThreads, localThreads, false);
@@ -1464,8 +1476,13 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
         }
         source.locateROI(wholesize, ofs);
 
-        kernels[i].args(ocl::KernelArg::ReadOnlyNoSize(source), ocl::KernelArg::WriteOnlyNoSize(dst),
-                        ofs.x, ofs.y, source.cols, source.rows, wholesize.width, wholesize.height);
+        if (haveExtraMat && iterations == i + 1)
+            kernels[i].args(ocl::KernelArg::ReadOnlyNoSize(source), ocl::KernelArg::WriteOnlyNoSize(dst),
+                ofs.x, ofs.y, source.cols, source.rows, wholesize.width, wholesize.height,
+                ocl::KernelArg::ReadOnlyNoSize(extraMat));
+        else
+            kernels[i].args(ocl::KernelArg::ReadOnlyNoSize(source), ocl::KernelArg::WriteOnlyNoSize(dst),
+                ofs.x, ofs.y, source.cols, source.rows, wholesize.width, wholesize.height);
 
         if (!kernels[i].run(2, globalThreads, localThreads, false))
             return false;
@@ -1481,14 +1498,15 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
                      Point anchor, int iterations,
                      int borderType, const Scalar& borderValue )
 {
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && _src.channels() <= 4 &&
-               borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue() &&
-               (op == MORPH_ERODE || op == MORPH_DILATE),
-               ocl_morphOp(_src, _dst, _kernel, anchor, iterations, op, borderType, borderValue) )
-
     Mat kernel = _kernel.getMat();
     Size ksize = kernel.data ? kernel.size() : Size(3,3);
     anchor = normalizeAnchor(anchor, ksize);
+
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && _src.channels() <= 4 &&
+               borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue() &&
+               (op == MORPH_ERODE || op == MORPH_DILATE) &&
+               anchor.x == ksize.width >> 1 && anchor.y == ksize.height >> 1,
+               ocl_morphOp(_src, _dst, kernel, anchor, iterations, op, borderType, borderValue) )
 
     if (iterations == 0 || kernel.rows*kernel.cols == 1)
     {
@@ -1559,41 +1577,49 @@ static bool ocl_morphologyEx(InputArray _src, OutputArray _dst, int op,
                              int borderType, const Scalar& borderValue)
 {
     _dst.createSameSize(_src, _src.type());
+    bool submat = _dst.isSubmatrix();
     UMat temp;
+    _OutputArray _temp = submat ? _dst : _OutputArray(temp);
 
     switch( op )
     {
     case MORPH_ERODE:
-        ocl_morphOp( _src, _dst, kernel, anchor, iterations, MORPH_ERODE, borderType, borderValue );
+        if (!ocl_morphOp( _src, _dst, kernel, anchor, iterations, MORPH_ERODE, borderType, borderValue ))
+            return false;
         break;
     case MORPH_DILATE:
-        ocl_morphOp( _src, _dst, kernel, anchor, iterations, MORPH_DILATE, borderType, borderValue );
+        if (!ocl_morphOp( _src, _dst, kernel, anchor, iterations, MORPH_DILATE, borderType, borderValue ))
+            return false;
         break;
     case MORPH_OPEN:
-        ocl_morphOp( _src, temp, kernel, anchor, iterations, MORPH_ERODE, borderType, borderValue );
-        ocl_morphOp( temp, _dst, kernel, anchor, iterations, MORPH_DILATE, borderType, borderValue );
+        if (!ocl_morphOp( _src, _temp, kernel, anchor, iterations, MORPH_ERODE, borderType, borderValue ))
+            return false;
+        if (!ocl_morphOp( _temp, _dst, kernel, anchor, iterations, MORPH_DILATE, borderType, borderValue ))
+            return false;
         break;
     case MORPH_CLOSE:
-        ocl_morphOp( _src, temp, kernel, anchor, iterations, MORPH_DILATE, borderType, borderValue );
-        ocl_morphOp( temp, _dst, kernel, anchor, iterations, MORPH_ERODE, borderType, borderValue );
+        if (!ocl_morphOp( _src, _temp, kernel, anchor, iterations, MORPH_DILATE, borderType, borderValue ))
+            return false;
+        if (!ocl_morphOp( _temp, _dst, kernel, anchor, iterations, MORPH_ERODE, borderType, borderValue ))
+            return false;
         break;
     case MORPH_GRADIENT:
-    // ??
-        ocl_morphOp( _src, temp, kernel, anchor, iterations, MORPH_ERODE, borderType, borderValue );
-        ocl_morphOp( _src, _dst, kernel, anchor, iterations, MORPH_DILATE, borderType, borderValue );
-        subtract(_dst, temp, _dst);
+        if (!ocl_morphOp( _src, temp, kernel, anchor, iterations, MORPH_ERODE, borderType, borderValue ))
+            return false;
+        if (!ocl_morphOp( _src, _dst, kernel, anchor, iterations, MORPH_DILATE, borderType, borderValue, MORPH_GRADIENT, temp ))
+            return false;
         break;
     case MORPH_TOPHAT:
-    // ??
-        ocl_morphOp( _src, temp, kernel, anchor, iterations, MORPH_ERODE, borderType, borderValue );
-        ocl_morphOp( temp, _dst, kernel, anchor, iterations, MORPH_DILATE, borderType, borderValue );
-        subtract(_src, _dst, _dst);
+        if (!ocl_morphOp( _src, _temp, kernel, anchor, iterations, MORPH_ERODE, borderType, borderValue ))
+            return false;
+        if (!ocl_morphOp( _temp, _dst, kernel, anchor, iterations, MORPH_DILATE, borderType, borderValue, MORPH_TOPHAT, _src ))
+            return false;
         break;
     case MORPH_BLACKHAT:
-    // ??
-        ocl_morphOp( _src, temp, kernel, anchor, iterations, MORPH_DILATE, borderType, borderValue );
-        ocl_morphOp( temp, _dst, kernel, anchor, iterations, MORPH_ERODE, borderType, borderValue );
-        subtract(_dst, _src, _dst);
+        if (!ocl_morphOp( _src, _temp, kernel, anchor, iterations, MORPH_DILATE, borderType, borderValue ))
+            return false;
+        if (!ocl_morphOp( _temp, _dst, kernel, anchor, iterations, MORPH_ERODE, borderType, borderValue, MORPH_BLACKHAT, _src ))
+            return false;
         break;
     default:
         CV_Error( CV_StsBadArg, "unknown morphological operation" );
@@ -1612,9 +1638,11 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
 {
 #ifdef HAVE_OPENCL
     Size ksize = kernel.size();
+    anchor = normalizeAnchor(anchor, ksize);
+
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && _src.channels() <= 4 &&
         anchor.x == ksize.width >> 1 && anchor.y == ksize.height >> 1 &&
-        borderType == cv::BORDER_CONSTANT,
+        borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue(),
         ocl_morphologyEx(_src, _dst, op, kernel, anchor, iterations, borderType, borderValue))
 #endif
 

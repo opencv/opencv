@@ -43,6 +43,8 @@
 #endif
 #endif
 
+#define noconvert
+
 #if cn != 3
 #define loadpix(addr) *(__global const T *)(addr)
 #define storepix(val, addr)  *(__global T *)(addr) = val
@@ -107,6 +109,11 @@
 // BORDER_CONSTANT:      iiiiii|abcdefgh|iiiiiii
 #define ELEM(i, l_edge, r_edge, elem1, elem2) (i) < (l_edge) | (i) >= (r_edge) ? (elem1) : (elem2)
 
+#if defined OP_GRADIENT || defined OP_TOPHAT || defined OP_BLACKHAT
+#define EXTRA_PARAMS , __global const uchar * matptr, int mat_step, int mat_offset
+#else
+#define EXTRA_PARAMS
+#endif
 
 __kernel void morph(__global const uchar * srcptr, int src_step, int src_offset,
                     __global uchar * dstptr, int dst_step, int dst_offset,
@@ -155,6 +162,20 @@ __kernel void morph(__global const uchar * srcptr, int src_step, int src_offset,
         PROCESS_ELEMS;
 
         int dst_index = mad24(gidy, dst_step, mad24(gidx, TSIZE, dst_offset));
+
+#if defined OP_GRADIENT || defined OP_TOPHAT || defined OP_BLACKHAT
+        int mat_index =  mad24(gidy, mat_step, mad24(gidx, TSIZE, mat_offset));
+        T value = loadpix(matptr + mat_index);
+
+#ifdef OP_GRADIENT
+        storepix(convertToT(convertToWT(res) - convertToWT(value)), dstptr + dst_index);
+#elif defined OP_TOPHAT
+        storepix(convertToT(convertToWT(value) - convertToWT(res)), dstptr + dst_index);
+#elif defined OP_BLACKHAT
+        storepix(convertToT(convertToWT(res) - convertToWT(value)), dstptr + dst_index);
+#endif
+#else // erode or dilate
         storepix(res, dstptr + dst_index);
+#endif
     }
 }
