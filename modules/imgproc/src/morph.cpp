@@ -1545,93 +1545,44 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
                        InputArray kernel, Point anchor, int iterations,
                        int borderType, const Scalar& borderValue )
 {
-    int src_type = _src.type(), dst_type = _dst.type(),
-        src_cn = CV_MAT_CN(src_type), src_depth = CV_MAT_DEPTH(src_type);
-
-    bool use_opencl = cv::ocl::useOpenCL() && _src.isUMat() && _src.size() == _dst.size() && src_type == dst_type &&
-        _src.dims()<=2 && (src_cn == 1 || src_cn == 4) && (anchor.x == -1) && (anchor.y == -1) &&
-        (src_depth == CV_8U || src_depth == CV_32F || src_depth == CV_64F ) &&
-        (borderType == cv::BORDER_CONSTANT) && (borderValue == morphologyDefaultBorderValue());
-
-    _dst.create(_src.size(), _src.type());
-    Mat src, dst, temp;
-    UMat usrc, udst, utemp;
+    Mat src = _src.getMat(), temp;
+    _dst.create(src.size(), src.type());
+    Mat dst = _dst.getMat();
 
     switch( op )
     {
     case MORPH_ERODE:
-        erode( _src, _dst, kernel, anchor, iterations, borderType, borderValue );
+        erode( src, dst, kernel, anchor, iterations, borderType, borderValue );
         break;
     case MORPH_DILATE:
-        dilate( _src, _dst, kernel, anchor, iterations, borderType, borderValue );
+        dilate( src, dst, kernel, anchor, iterations, borderType, borderValue );
         break;
     case MORPH_OPEN:
-        erode( _src, _dst, kernel, anchor, iterations, borderType, borderValue );
-        dilate( _dst, _dst, kernel, anchor, iterations, borderType, borderValue );
+        erode( src, dst, kernel, anchor, iterations, borderType, borderValue );
+        dilate( dst, dst, kernel, anchor, iterations, borderType, borderValue );
         break;
     case CV_MOP_CLOSE:
-        dilate( _src, _dst, kernel, anchor, iterations, borderType, borderValue );
-        erode( _dst, _dst, kernel, anchor, iterations, borderType, borderValue );
+        dilate( src, dst, kernel, anchor, iterations, borderType, borderValue );
+        erode( dst, dst, kernel, anchor, iterations, borderType, borderValue );
         break;
     case CV_MOP_GRADIENT:
-        erode( _src, use_opencl ? (cv::OutputArray)utemp : (cv::OutputArray)temp, kernel, anchor, iterations, borderType, borderValue );
-        dilate( _src, _dst, kernel, anchor, iterations, borderType, borderValue );
-        if(use_opencl)
-        {
-            udst = _dst.getUMat();
-            subtract(udst, utemp, udst);
-        }
-        else
-        {
-            dst = _dst.getMat();
-            dst -= temp;
-        }
+        erode( src, temp, kernel, anchor, iterations, borderType, borderValue );
+        dilate( src, dst, kernel, anchor, iterations, borderType, borderValue );
+        dst -= temp;
         break;
     case CV_MOP_TOPHAT:
-        if(use_opencl)
-        {
-            usrc = _src.getUMat();
-            udst = _dst.getUMat();
-            if( usrc.u != udst.u )
-                utemp = udst;
-        }
-        else
-        {
-            src = _src.getMat();
-            dst = _dst.getMat();
-            if( src.data != dst.data )
-                temp = dst;
-        }
-        erode( _src, use_opencl ? (cv::OutputArray)utemp : (cv::OutputArray)temp, kernel, anchor, iterations, borderType, borderValue );
-        dilate( use_opencl ? (cv::OutputArray)utemp : (cv::OutputArray)temp, use_opencl ? (cv::OutputArray)utemp : (cv::OutputArray)temp, kernel,
-            anchor, iterations, borderType, borderValue );
-        if(use_opencl)
-            subtract(usrc, utemp, udst);
-        else
-            dst = src - temp;
+        if( src.data != dst.data )
+            temp = dst;
+        erode( src, temp, kernel, anchor, iterations, borderType, borderValue );
+        dilate( temp, temp, kernel, anchor, iterations, borderType, borderValue );
+        dst = src - temp;
         break;
     case CV_MOP_BLACKHAT:
-        if(use_opencl)
-        {
-            usrc = _src.getUMat();
-            udst = _dst.getUMat();
-            if( usrc.u != udst.u )
-                utemp = udst;
-        }
-        else
-        {
-            src = _src.getMat();
-            dst = _dst.getMat();
-            if( src.data != dst.data )
-                temp = dst;
-        }
-        dilate( _src, use_opencl ? (cv::OutputArray)utemp : (cv::OutputArray)temp, kernel, anchor, iterations, borderType, borderValue );
-        erode( use_opencl ? (cv::OutputArray)utemp : (cv::OutputArray)temp, use_opencl ? (cv::OutputArray)utemp : (cv::OutputArray)temp, kernel,
-            anchor, iterations, borderType, borderValue );
-        if(use_opencl)
-            subtract(utemp, usrc, udst);
-        else
-            dst = temp - src;
+        if( src.data != dst.data )
+            temp = dst;
+        dilate( src, temp, kernel, anchor, iterations, borderType, borderValue );
+        erode( temp, temp, kernel, anchor, iterations, borderType, borderValue );
+        dst = temp - src;
         break;
     default:
         CV_Error( CV_StsBadArg, "unknown morphological operation" );
