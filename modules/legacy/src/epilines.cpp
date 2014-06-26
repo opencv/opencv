@@ -377,7 +377,7 @@ int icvComCoeffForLine(   CvPoint2D64d point1,
                             camMatr2,
                             &directS4);
 
-    /* Create convertion for camera 2: two direction and camera point */
+    /* Create conversion for camera 2: two direction and camera point */
 
     double convRotMatr[9];
     double convTransVect[3];
@@ -1928,7 +1928,7 @@ void icvGetCutPiece(   CvVect64d areaLineCoef1,CvVect64d areaLineCoef2,
     if( numPoints < 2 )
     {
         *result = 0;
-        return;/* Error. Not enought points */
+        return;/* Error. Not enough points */
     }
     /* Project all points to middle line and get max and min */
 

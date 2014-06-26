@@ -182,8 +182,8 @@ typedef CvDirection* pCvDirection;
 //      attempt_number: in, number of unsuccessful attemts made by program to compute
 //                          the Voronoi Diagram befor return the error
 //
-//    Returns: 1, if Voronoi Diagram was succesfully computed
-//             0, if some error occures
+//    Returns: 1, if Voronoi Diagram was successfully computed
+//             0, if some error occurs
 //F*/
 static int  _cvLee(CvSeq* ContourSeq,
                       CvVoronoiDiagramInt* pVoronoiDiagramInt,
@@ -207,8 +207,8 @@ static int  _cvLee(CvSeq* ContourSeq,
 //    contour_orientation: in, orientation of polygons.
 //                           = 1, if contour is left - oriented in left coordinat system
 //                           =-1, if contour is left - oriented in right coordinat system
-//     Return: 1, if sites were succesfully constructed
-//             0, if some error occures
+//     Return: 1, if sites were successfully constructed
+//             0, if some error occurs
 //F*/
 static int _cvConstuctSites(CvSeq* ContourSeq,
                             CvVoronoiDiagramInt* pVoronoiDiagram,
@@ -223,8 +223,8 @@ static int _cvConstuctSites(CvSeq* ContourSeq,
 //    Parameters:
 //       pVoronoiDiagram : in, pointer to struct, which contains the
 //                          description of Voronoi Diagram
-//     Return: 1, if chains were succesfully constructed
-//             0, if some error occures
+//     Return: 1, if chains were successfully constructed
+//             0, if some error occurs
 //F*/
 static int _cvConstructChains(CvVoronoiDiagramInt* pVoronoiDiagram);
 
@@ -236,8 +236,8 @@ static int _cvConstructChains(CvVoronoiDiagramInt* pVoronoiDiagram);
 //    Parameters:
 //      VoronoiDiagram : in, pointer to struct, which contains the
 //                       description of Voronoi Diagram.
-//    Returns: 1, if skeleton was succesfully computed
-//             0, if some error occures
+//    Returns: 1, if skeleton was successfully computed
+//             0, if some error occurs
 //F*/
 static int _cvConstructSkeleton(CvVoronoiDiagramInt* pVoronoiDiagram);
 
@@ -280,11 +280,11 @@ static void _cvReleaseVoronoiStorage(CvVoronoiStorageInt* pVoronoiStorage, int g
 //    Parameters:
 //        VoronoiDiagram: in
 //        VoronoiStorage: in
-//        change_orientation: in, if = -1 then the convertion is accompanied with change
+//        change_orientation: in, if = -1 then the conversion is accompanied with change
 //                            of orientation
 //
-//     Return: 1, if convertion was succesfully completed
-//             0, if some error occures
+//     Return: 1, if conversion was successfully completed
+//             0, if some error occurs
 //F*/
 /*
 static int _cvConvert(CvVoronoiDiagram2D* VoronoiDiagram,
@@ -311,8 +311,8 @@ static int _cvConvert(CvVoronoiDiagram2D* VoronoiDiagram,
 //        VoronoiDiagram: in
 //        VoronoiStorage: in
 /
-//     Return: 1, if convertion was succesfully completed
-//             0, if some error occures
+//     Return: 1, if conversion was successfully completed
+//             0, if some error occurs
 //F*/
 /*
 static int _cvConvertSameOrientation(CvVoronoiDiagram2D* VoronoiDiagram,
@@ -337,8 +337,8 @@ static int _cvConvertSameOrientation(CvVoronoiDiagram2D* VoronoiDiagram,
 //        VoronoiDiagram: in
 //        VoronoiStorage: in
 /
-//     Return: 1, if convertion was succesfully completed
-//             0, if some error occures
+//     Return: 1, if conversion was successfully completed
+//             0, if some error occurs
 //F*/
 /*
 static int _cvConvertChangeOrientation(CvVoronoiDiagram2D* VoronoiDiagram,
@@ -362,8 +362,8 @@ static int _cvConvertChangeOrientation(CvVoronoiDiagram2D* VoronoiDiagram,
      orientation: in, orientation of contour ( = 1 or = -1)
      type:        in, type of vertices. The possible values are (int)1,
                    (float)1,(double)1.
-     Return:    1, if sites were succesfully constructed
-                0, if some error occures    :
+     Return:    1, if sites were successfully constructed
+                0, if some error occurs    :
     --------------------------------------------------------------------------*/
 template<class T>
 int _cvConstructExtSites(CvVoronoiDiagramInt* pVoronoiDiagram,
@@ -384,8 +384,8 @@ int _cvConstructExtSites(CvVoronoiDiagramInt* pVoronoiDiagram,
      orientation: in, orientation of contour ( = 1 or = -1)
      type:        in, type of vertices. The possible values are (int)1,
                    (float)1,(double)1.
-     Return:    1, if sites were succesfully constructed
-                0, if some error occures    :
+     Return:    1, if sites were successfully constructed
+                0, if some error occurs    :
     --------------------------------------------------------------------------*/
 template<class T>
 int _cvConstructIntSites(CvVoronoiDiagramInt* pVoronoiDiagram,
@@ -402,8 +402,8 @@ int _cvConstructIntSites(CvVoronoiDiagramInt* pVoronoiDiagram,
      pVoronoiDiagram : in&out, pointer to struct, which contains the
                         description of Voronoi Diagram
 
-    Return: 1, if chains were succesfully constructed
-            0, if some error occures
+    Return: 1, if chains were successfully constructed
+            0, if some error occurs
     --------------------------------------------------------------------------*/
 static int _cvConstructExtChains(CvVoronoiDiagramInt* pVoronoiDiagram);
 
@@ -456,7 +456,7 @@ static void _cvRandomModification(CvVoronoiDiagramInt* pVoronoiDiagram, int begi
     Arguments
      pVoronoiDiagram : in, pointer to struct, which contains the
                         description of Voronoi Diagram
-     Return     : 1, if VD was constructed succesfully
+     Return     : 1, if VD was constructed successfully
                   0, if some error occure
     --------------------------------------------------------------------------*/
 static int _cvConstructExtVD(CvVoronoiDiagramInt* pVoronoiDiagram);
@@ -479,7 +479,7 @@ static void _cvConstructIntVD(CvVoronoiDiagramInt* pVoronoiDiagram);
      pVoronoiDiagram : in, pointer to struct, which contains the
                         description of Voronoi Diagram
      pChain1,pChain1: in, given chains
-     Return     : 1, if joining was succesful
+     Return     : 1, if joining was successful
                   0, if some error occure
     --------------------------------------------------------------------------*/
 static int _cvJoinChains(pCvVoronoiChain pChain1,
@@ -507,7 +507,7 @@ static void _cvFindNearestSite(CvVoronoiDiagramInt* pVoronoiDiagram);
         pVoronoiDiagram : in, pointer to struct, which contains the
                           description of Voronoi Diagram
           pHole : in, given hole
-     Return     : 1, if the search was succesful
+     Return     : 1, if the search was successful
                   0, if some error occure
     --------------------------------------------------------------------------*/
 static int _cvFindOppositSiteCW(pCvVoronoiHole pHole, CvVoronoiDiagramInt* pVoronoiDiagram);
@@ -522,7 +522,7 @@ static int _cvFindOppositSiteCW(pCvVoronoiHole pHole, CvVoronoiDiagramInt* pVoro
         pVoronoiDiagram : in, pointer to struct, which contains the
                         description of Voronoi Diagram
           pHole : in, given hole
-     Return     : 1, if the search was succesful
+     Return     : 1, if the search was successful
                   0, if some error occure
     --------------------------------------------------------------------------*/
 static int _cvFindOppositSiteCCW(pCvVoronoiHole pHole,CvVoronoiDiagramInt* pVoronoiDiagram);
@@ -535,7 +535,7 @@ static int _cvFindOppositSiteCCW(pCvVoronoiHole pHole,CvVoronoiDiagramInt* pVoro
 pVoronoiDiagram : in, pointer to struct, which contains the
                         description of Voronoi Diagram
           pHole : in, given hole
-     Return     : 1, if merging was succesful
+     Return     : 1, if merging was successful
                   0, if some error occure
     --------------------------------------------------------------------------*/
 static int _cvMergeVD(pCvVoronoiHole pHole,CvVoronoiDiagramInt* pVoronoiDiagram);

@@ -1588,7 +1588,7 @@ The distorted point coordinates are [x'; y'] where
     x' = (\theta_d / r) x \\
     y' = (\theta_d / r) y
 
-Finally, convertion into pixel coordinates: The final pixel coordinates vector [u; v] where:
+Finally, conversion into pixel coordinates: The final pixel coordinates vector [u; v] where:
 
 .. class:: center
 .. math::
