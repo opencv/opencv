@@ -540,6 +540,16 @@ Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a specified point set. See the OpenCV sample ``minarea.cpp`` .
 Developer should keep in mind that the returned rotatedRect can contain negative indices when data is close the the containing Mat element boundary.
 
+``RotatedRect``’s angle is in the interval from -90 to 0 degrees, because rotating the rectangle by 90 degrees is the same as swapping its width and height. To obtain angles from -90 to 90 degrees (for instance, to know if an object is leaning to the left or to the right) use ``RotatedRect``’s width and height, e.g.: ::
+
+     RotatedRect rotated_rect = minAreaRect(contour);
+     float contour_angle = rotated_rect.angle;
+     if (rotated_rect.size.width < rotated_rect.size.height) {
+       contour_angle += 90;
+     }
+
+Angles are measured along ``RotatedRect``’s longer side and with respect to the vertical. Positive angles indicate the object is leaning to the right, while negative angles indicate the object is leaning to the left.
+
 
 boxPoints
 -----------
