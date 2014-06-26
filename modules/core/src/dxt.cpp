@@ -1960,7 +1960,7 @@ static void CL_CALLBACK oclCleanupCallback(cl_event e, cl_int, void *p)
 
 }
 
-static bool ocl_dft(InputArray _src, OutputArray _dst, int flags)
+static bool ocl_dft_amdfft(InputArray _src, OutputArray _dst, int flags)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     Size ssize = _src.size();
@@ -2029,12 +2029,257 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags)
 
 #endif // HAVE_CLAMDFFT
 
+namespace cv
+{
+
+#ifdef HAVE_OPENCL
+
+static bool fft_radixN(InputArray _src, OutputArray _dst, int radix, int block_size, int nonzero_rows, int flags)
+{
+    int N = _src.size().width;
+    if (N % radix)
+        return false;
+
+    UMat src = _src.getUMat();
+    UMat dst = _dst.getUMat();
+
+    int thread_count = N / radix;
+    size_t globalsize[2] = { thread_count, nonzero_rows };
+    String kernel_name = format("fft_radix%d", radix);
+    ocl::Kernel k(kernel_name.c_str(), ocl::core::fft_oclsrc, (flags & DFT_INVERSE) != 0 ? "-D INVERSE" : "");
+    if (k.empty())
+        return false;
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnlyNoSize(dst), block_size, thread_count, nonzero_rows);
+    return k.run(2, globalsize, NULL, false);
+}
+
+static bool ocl_packToCCS(InputArray _buffer, OutputArray _dst, int flags)
+{
+    UMat buffer = _buffer.getUMat();
+    UMat dst = _dst.getUMat();
+
+    buffer = buffer.reshape(1);
+    if ((flags & DFT_ROWS) == 0 && buffer.rows > 1)
+    {
+        // pack to CCS by rows
+        if (dst.cols > 2)
+            buffer.colRange(2, dst.cols + (dst.cols % 2)).copyTo(dst.colRange(1, dst.cols-1 + (dst.cols % 2)));
+
+        Mat dst_mat = dst.getMat(ACCESS_WRITE);
+        Mat buffer_mat = buffer.getMat(ACCESS_READ);
+
+        dst_mat.at<float>(0,0) = buffer_mat.at<float>(0,0);
+        dst_mat.at<float>(dst_mat.rows-1,0) = buffer_mat.at<float>(buffer.rows/2,0);
+        for (int i=1; i<dst_mat.rows-1; i+=2)
+        {
+            dst_mat.at<float>(i,0) = buffer_mat.at<float>((i+1)/2,0);
+            dst_mat.at<float>(i+1,0) = buffer_mat.at<float>((i+1)/2,1);
+        }
+
+        if (dst_mat.cols % 2 == 0)
+        {
+            dst_mat.at<float>(0,dst_mat.cols-1) = buffer_mat.at<float>(0,buffer.cols/2);
+            dst_mat.at<float>(dst_mat.rows-1,dst_mat.cols-1) = buffer_mat.at<float>(buffer.rows/2,buffer.cols/2);
+
+            for (int i=1; i<dst_mat.rows-1; i+=2)
+            {
+                dst_mat.at<float>(i,dst_mat.cols-1) = buffer_mat.at<float>((i+1)/2,buffer.cols/2);
+                dst_mat.at<float>(i+1,dst_mat.cols-1) = buffer_mat.at<float>((i+1)/2,buffer.cols/2+1);
+            }
+        }
+    } 
+    else
+    {
+        // pack to CCS each row
+        buffer.colRange(0,1).copyTo(dst.colRange(0,1));
+        buffer.colRange(2, (dst.cols+1)).copyTo(dst.colRange(1, dst.cols));
+    }
+    return true;
+}
+
+static bool ocl_dft_C2C_row(InputArray _src, OutputArray _dst, int nonzero_rows, int flags)
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
+    UMat src = _src.getUMat();
+
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    if (depth == CV_64F && !doubleSupport)
+        return false;
+    
+    int factors[34];
+    int nf = DFTFactorize( src.cols, factors );
+    
+    int n = 1;
+    int factor_index = 0;
+    
+    String radix_processing;
+    int min_radix = INT_MAX;
+    // 1. 2^n transforms
+    if ( (factors[factor_index] & 1) == 0 )
+    {
+        for( ; n < factors[factor_index]; )
+        {
+            int radix = 2;
+            if (8*n <= factors[0])
+                radix = 8;
+            else if (4*n <= factors[0])
+                radix = 4;
+
+            radix_processing += format("fft_radix%d(smem,x,%d,%d);", radix, n,  src.cols/radix);
+            min_radix = min(radix, min_radix);
+            n *= radix;
+        }
+        factor_index++;
+    }
+
+    // 2. all the other transforms
+    for( ; factor_index < nf; factor_index++ )
+    {
+        int radix = factors[factor_index];
+        radix_processing += format("fft_radix%d(smem,x,%d,%d);", radix, n,  src.cols/radix);
+        min_radix = min(radix, min_radix);
+        n *= radix;
+    }
+
+    UMat dst = _dst.getUMat();
+
+    int thread_count = src.cols / min_radix;
+    size_t globalsize[2] = { thread_count, nonzero_rows };
+    size_t localsize[2] = { thread_count, 1 };
+
+    String buildOptions = format("-D LOCAL_SIZE=%d -D kercn=%d -D RADIX_PROCESS=%s",
+                                  src.cols, src.cols/thread_count, radix_processing.c_str());
+    ocl::Kernel k("fft_multi_radix", ocl::core::fft_oclsrc, buildOptions);
+    if (k.empty())
+        return false;
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnlyNoSize(dst), thread_count, nonzero_rows);
+    return k.run(2, globalsize, localsize, false);
+}
+
+static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_rows)
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    Size ssize = _src.size();
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    if ( (!doubleSupport && depth == CV_64F) ||
+         !(type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2))
+        return false;
+
+    // if is not a multiplication of prime numbers { 2, 3, 5 }
+    if (ssize.area() != getOptimalDFTSize(ssize.area()))
+        return false;
+
+    UMat src = _src.getUMat();
+    int complex_input = cn == 2 ? 1 : 0;
+    int complex_output = (flags & DFT_COMPLEX_OUTPUT) != 0;
+    int real_input = cn == 1 ? 1 : 0;
+    int real_output = (flags & DFT_REAL_OUTPUT) != 0;
+    bool inv = (flags & DFT_INVERSE) != 0 ? 1 : 0;
+    bool is1d = (flags & DFT_ROWS) != 0 || src.rows == 1;
+
+    // if output format is not specified
+    if (complex_output + real_output == 0)
+    {
+        if (!inv)
+        {
+            if (real_input)
+                real_output = 1;
+            else
+                complex_output = 1;
+        }
+    }
+
+    if (complex_output)
+    {
+        //if (is1d)
+        //    _dst.create(Size(src.cols/2+1, src.rows), CV_MAKE_TYPE(depth, 2));
+        //else
+            _dst.create(src.size(), CV_MAKE_TYPE(depth, 2));
+    }
+    else
+        _dst.create(src.size(), CV_MAKE_TYPE(depth, 1));
+    UMat dst = _dst.getUMat();
+
+    bool inplace = src.u == dst.u;
+    //UMat buffer;
+
+    //if (complex_input)
+    //{
+    //    if (inplace)
+    //        buffer = src;
+    //    else
+    //        src.copyTo(buffer);
+    //}
+    //else
+    //{
+    //    if (!inv)
+    //    {
+    //        // in case real input convert it to complex
+    //        buffer.create(src.size(), CV_MAKE_TYPE(depth, 2));
+    //        std::vector<UMat> planes;
+    //        planes.push_back(src);
+    //        planes.push_back(UMat::zeros(src.size(), CV_32F));
+    //        merge(planes, buffer);
+    //    } 
+    //    else
+    //    {
+    //        // TODO: unpack from CCS format
+    //    }
+    //}
+
+    if( nonzero_rows <= 0 || nonzero_rows > _src.rows() )
+        nonzero_rows = _src.rows();
+
+
+    if (!ocl_dft_C2C_row(src, dst, nonzero_rows, flags))
+        return false;
+
+    if ((flags & DFT_ROWS) == 0 && nonzero_rows > 1)
+    {
+        transpose(dst, dst);
+        if (!ocl_dft_C2C_row(dst, dst, dst.rows, flags))
+            return false;
+        transpose(dst, dst);
+    }
+
+    //if (complex_output)
+    //{
+    //    if (real_input && is1d)
+    //        _dst.assign(buffer.colRange(0, buffer.cols/2+1));
+    //    else
+    //        _dst.assign(buffer);
+    //}
+    //else
+    //{
+    //    if (!inv)
+    //        ocl_packToCCS(buffer, _dst, flags);
+    //    else
+    //    {
+    //        // copy real part to dst
+    //    }
+    //}
+    return true;
+}
+
+#endif
+
+} // namespace cv;
+
+
+
 void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 {
 #ifdef HAVE_CLAMDFFT
     CV_OCL_RUN(ocl::haveAmdFft() && ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
             _dst.isUMat() && _src0.dims() <= 2 && nonzero_rows == 0,
-               ocl_dft(_src0, _dst, flags))
+               ocl_dft_amdfft(_src0, _dst, flags))
+#endif
+
+#ifdef HAVE_OPENCL
+    CV_OCL_RUN(_dst.isUMat() && _src0.dims() <= 2,
+               ocl_dft(_src0, _dst, flags, nonzero_rows))
 #endif
 
     static DFTFunc dft_tbl[6] =
@@ -2046,10 +2291,8 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
         (DFTFunc)RealDFT_64f,
         (DFTFunc)CCSIDFT_64f
     };
-
     AutoBuffer<uchar> buf;
     void *spec = 0;
-
     Mat src0 = _src0.getMat(), src = src0;
     int prev_len = 0, stage = 0;
     bool inv = (flags & DFT_INVERSE) != 0;
@@ -2058,6 +2301,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
     int elem_size = (int)src.elemSize1(), complex_elem_size = elem_size*2;
     int factors[34];
     bool inplace_transform = false;
+    bool is1d = (flags & DFT_ROWS) != 0 || src.rows == 1;
 #ifdef USE_IPP_DFT
     AutoBuffer<uchar> ippbuf;
     int ipp_norm_flag = !(flags & DFT_SCALE) ? 8 : inv ? 2 : 1;
@@ -2066,7 +2310,10 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
     CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
 
     if( !inv && src.channels() == 1 && (flags & DFT_COMPLEX_OUTPUT) )
-        _dst.create( src.size(), CV_MAKETYPE(depth, 2) );
+        if (!is1d)
+            _dst.create( src.size(), CV_MAKETYPE(depth, 2) );
+        else
+            _dst.create( Size(src.cols/2+1, src.rows), CV_MAKETYPE(depth, 2) );
     else if( inv && src.channels() == 2 && (flags & DFT_REAL_OUTPUT) )
         _dst.create( src.size(), depth );
     else

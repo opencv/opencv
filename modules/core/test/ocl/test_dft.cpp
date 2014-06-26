@@ -48,16 +48,24 @@
 
 #ifdef HAVE_OPENCL
 
+enum OCL_FFT_TYPE
+{
+    R2R = 0, // real to real (CCS)
+    C2R = 1, // complex to real (CCS)
+    R2C = 2, // real (CCS) to complex
+    C2C = 3  // complex to complex
+};
+
 namespace cvtest {
 namespace ocl {
 
 ////////////////////////////////////////////////////////////////////////////
 // Dft
 
-PARAM_TEST_CASE(Dft, cv::Size, MatDepth, bool, bool, bool, bool)
+PARAM_TEST_CASE(Dft, cv::Size, OCL_FFT_TYPE, bool)
 {
     cv::Size dft_size;
-    int	dft_flags, depth;
+    int	dft_flags, depth, cn, dft_type;
     bool inplace;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
@@ -66,19 +74,31 @@ PARAM_TEST_CASE(Dft, cv::Size, MatDepth, bool, bool, bool, bool)
     virtual void SetUp()
     {
         dft_size = GET_PARAM(0);
-        depth = GET_PARAM(1);
-        inplace = GET_PARAM(2);
+        dft_type = GET_PARAM(1);
+        depth = CV_32F;
 
         dft_flags = 0;
-        if (GET_PARAM(3))
-            dft_flags |= cv::DFT_ROWS;
-        if (GET_PARAM(4))
-            dft_flags |= cv::DFT_SCALE;
-        if (GET_PARAM(5))
-            dft_flags |= cv::DFT_INVERSE;
+        switch (dft_type)
+        {
+        case R2R: dft_flags |= cv::DFT_REAL_OUTPUT; cn = 1; break;
+        case C2R: dft_flags |= cv::DFT_REAL_OUTPUT; cn = 2; break;
+        case R2C: dft_flags |= cv::DFT_COMPLEX_OUTPUT; cn = 1; break;
+        case C2C: dft_flags |= cv::DFT_COMPLEX_OUTPUT; cn = 2; break;
+        }
+
+        inplace = false;
+
+
+        if (GET_PARAM(2))
+            dft_flags |= cv::DFT_ROWS; // (DFT_COMPLEX_OUTPUT | DFT_ROWS) works incorrect
+        //if (GET_PARAM(3))
+        //    if (dft_type == C2C) dft_flags |= cv::DFT_INVERSE;
+        //if (GET_PARAM(3))
+        //    dft_flags |= cv::DFT_SCALE;
+
     }
 
-    void generateTestData(int cn = 2)
+    void generateTestData()
     {
         src = randomMat(dft_size, CV_MAKE_TYPE(depth, cn), 0.0, 100.0);
         usrc = src.getUMat(ACCESS_READ);
@@ -88,12 +108,23 @@ PARAM_TEST_CASE(Dft, cv::Size, MatDepth, bool, bool, bool, bool)
     }
 };
 
-OCL_TEST_P(Dft, C2C)
+OCL_TEST_P(Dft, Mat)
 {
     generateTestData();
 
-    OCL_OFF(cv::dft(src, dst, dft_flags | cv::DFT_COMPLEX_OUTPUT));
-    OCL_ON(cv::dft(usrc, udst, dft_flags | cv::DFT_COMPLEX_OUTPUT));
+    OCL_OFF(cv::dft(src, dst, dft_flags));
+    OCL_ON(cv::dft(usrc, udst, dft_flags));
+    
+    Mat gpu = udst.getMat(ACCESS_READ);
+    std::cout << src << std::endl;
+    std::cout << dst << std::endl;
+    std::cout << gpu << std::endl;
+
+    //int cn = udst.channels();
+    
+    //Mat df;
+    //absdiff(dst, gpu, df);
+    //std::cout <<  df << std::endl;
 
     double eps = src.size().area() * 1e-4;
     EXPECT_MAT_NEAR(dst, udst, eps);
@@ -150,13 +181,11 @@ OCL_TEST_P(MulSpectrums, Mat)
 
 OCL_INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MulSpectrums, testing::Combine(Bool(), Bool()));
 
-OCL_INSTANTIATE_TEST_CASE_P(Core, Dft, Combine(Values(cv::Size(2, 3), cv::Size(5, 4), cv::Size(25, 20),
-                                                       cv::Size(512, 1), cv::Size(1024, 768)),
-                                               Values(CV_32F, CV_64F),
-                                               Bool(), // inplace
-                                               Bool(), // DFT_ROWS
-                                               Bool(), // DFT_SCALE
-                                               Bool()) // DFT_INVERSE
+OCL_INSTANTIATE_TEST_CASE_P(Core, Dft, Combine(Values(cv::Size(2, 3), cv::Size(5, 4), cv::Size(30, 20),
+                                                      cv::Size(512, 1), cv::Size(1024, 1024)),
+                                               Values((OCL_FFT_TYPE) C2C/*, (OCL_FFT_TYPE)  R2R, (OCL_FFT_TYPE)  R2C/*, (OCL_FFT_TYPE) C2R*/),
+                                               Bool() // DFT_ROWS
+                                               )
                             );
 
 } } // namespace cvtest::ocl
