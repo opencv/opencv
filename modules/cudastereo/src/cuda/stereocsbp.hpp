@@ -6,11 +6,11 @@ namespace cv { namespace cuda { namespace device
             size_t leftstep);
 
         template<class T>
-        void init_data_cost(uchar *left, uchar *right, uchar *ctemp, int rows, int cols, T* disp_selected_pyr, T* data_cost_selected, size_t msg_step,
+        void init_data_cost(const uchar *left, const uchar *right, uchar *ctemp, int rows, int cols, T* disp_selected_pyr, T* data_cost_selected, size_t msg_step,
                     int h, int w, int level, int nr_plane, int ndisp, int channels, bool use_local_init_data_cost, cudaStream_t stream);
 
         template<class T>
-        void compute_data_cost(uchar *left, uchar *right, const T* disp_selected_pyr, T* data_cost, size_t msg_step,
+        void compute_data_cost(const uchar *left, const uchar *right, const T* disp_selected_pyr, T* data_cost, size_t msg_step,
                                int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, cudaStream_t stream);
 
         template<class T>
