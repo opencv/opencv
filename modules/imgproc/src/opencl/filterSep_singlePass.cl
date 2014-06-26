@@ -127,10 +127,9 @@ __kernel void sep_filter(__global uchar* Src, int src_step, int srcOffsetX, int 
     // and read my own source pixel into local memory
     // with account for extra border pixels, which will be read by starting workitems
     int clocY = liy;
-    int cSrcY = liy + srcOffsetY - RADIUSY;
     do
     {
-        int yb = cSrcY;
+        int yb = clocY + srcOffsetY - RADIUSY;
         EXTRAPOLATE(yb, (height));
 
         int clocX = lix;
@@ -147,7 +146,6 @@ __kernel void sep_filter(__global uchar* Src, int src_step, int srcOffsetX, int 
         while(clocX < BLK_X+(RADIUSX*2));
 
         clocY += BLK_Y;
-        cSrcY += BLK_Y;
     }
     while (clocY < BLK_Y+(RADIUSY*2));
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -206,8 +204,8 @@ __kernel void sep_filter(__global uchar* Src, int src_step, int srcOffsetX, int 
         }
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        int cSrcY = y + BLK_Y + liy + srcOffsetY + RADIUSY;
-        EXTRAPOLATE(cSrcY, (height));
+        int yb = y + liy + BLK_Y + srcOffsetY + RADIUSY;
+        EXTRAPOLATE(yb, (height));
 
         clocX = lix;
         int cSrcX = x + srcOffsetX - RADIUSX;
@@ -215,7 +213,7 @@ __kernel void sep_filter(__global uchar* Src, int src_step, int srcOffsetX, int 
         {
             int xb = cSrcX;
             EXTRAPOLATE(xb,(width));
-            lsmem[liy + 2*RADIUSY][clocX] = ELEM(xb, cSrcY, (width), (height), 0 );
+            lsmem[liy + 2*RADIUSY][clocX] = ELEM(xb, yb, (width), (height), 0 );
 
             clocX += BLK_X;
             cSrcX += BLK_X;
