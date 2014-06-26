@@ -200,8 +200,8 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
         clStridesOut[1] = dst_step / sizeof(float);
         break;
     default:
-        //std::runtime_error("does not support this convertion!");
-        cout << "Does not support this convertion!" << endl;
+        //std::runtime_error("does not support this conversion!");
+        cout << "Does not support this conversion!" << endl;
         throw exception();
         break;
     }
@@ -324,8 +324,8 @@ void cv::ocl::dft(const oclMat &src, oclMat &dst, Size dft_size, int flags)
         dst.create(src.rows, dft_size.width, CV_32FC1);
         break;
     default:
-        //std::runtime_error("does not support this convertion!");
-        cout << "Does not support this convertion!" << endl;
+        //std::runtime_error("does not support this conversion!");
+        cout << "Does not support this conversion!" << endl;
         throw exception();
         break;
     }

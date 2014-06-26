@@ -1632,7 +1632,7 @@ bool CvSVM::train( const CvMat* _train_data, const CvMat* _responses,
     if( !do_train( svm_type, sample_count, var_count, samples, responses, temp_storage, alpha ))
         EXIT;
 
-    ok = true; // model has been trained succesfully
+    ok = true; // model has been trained successfully
 
     __END__;
 

@@ -495,7 +495,7 @@ public:
     //! dot product computed in double-precision arithmetics
     double ddot(const Matx<_Tp, m, n>& v) const;
 
-    //! convertion to another data type
+    //! conversion to another data type
     template<typename T2> operator Matx<T2, m, n>() const;
 
     //! change the matrix shape
@@ -636,7 +636,7 @@ public:
       For other dimensionalities the exception is raised
     */
     Vec cross(const Vec& v) const;
-    //! convertion to another data type
+    //! conversion to another data type
     template<typename T2> operator Vec<T2, cn>() const;
     //! conversion to 4-element CvScalar.
     operator CvScalar() const;
