@@ -1541,10 +1541,68 @@ void cv::dilate( InputArray src, OutputArray dst, InputArray kernel,
     morphOp( MORPH_DILATE, src, dst, kernel, anchor, iterations, borderType, borderValue );
 }
 
+#ifdef HAVE_OPENCL
+
+static void ocl_morphologyEx(InputArray _src, OutputArray _dst, int op,
+                             InputArray kernel, Point anchor, int iterations,
+                             int borderType, const Scalar& borderValue)
+{
+    int type = _src.type(), cn = CV_MAT_CN(type);
+    Size ksize = kernel.size();
+
+    _dst.create(_src.size(), type);
+    UMat temp;
+
+    switch( op )
+    {
+    case MORPH_ERODE:
+        erode( _src, _dst, kernel, anchor, iterations, borderType, borderValue );
+        break;
+    case MORPH_DILATE:
+        dilate( _src, _dst, kernel, anchor, iterations, borderType, borderValue );
+        break;
+    case MORPH_OPEN:
+        erode( _src, temp, kernel, anchor, iterations, borderType, borderValue );
+        dilate( temp, _dst, kernel, anchor, iterations, borderType, borderValue );
+        break;
+    case CV_MOP_CLOSE:
+        dilate( _src, temp, kernel, anchor, iterations, borderType, borderValue );
+        erode( temp, _dst, kernel, anchor, iterations, borderType, borderValue );
+        break;
+    case CV_MOP_GRADIENT:
+    // ??
+        erode( _src, temp, kernel, anchor, iterations, borderType, borderValue );
+        dilate( _src, _dst, kernel, anchor, iterations, borderType, borderValue );
+        subtract(_dst, temp, _dst);
+        break;
+    case CV_MOP_TOPHAT:
+    // ??
+        erode( _src, temp, kernel, anchor, iterations, borderType, borderValue );
+        dilate( temp, _dst, kernel, anchor, iterations, borderType, borderValue );
+        subtract(_src, _dst, _dst);
+        break;
+    case CV_MOP_BLACKHAT:
+    // ??
+        dilate( _src, temp, kernel, anchor, iterations, borderType, borderValue );
+        erode( temp, _dst, kernel, anchor, iterations, borderType, borderValue );
+        subtract(_dst, _src, _dst);
+        break;
+    default:
+        CV_Error( CV_StsBadArg, "unknown morphological operation" );
+    }
+}
+
+#endif
+
 void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
                        InputArray kernel, Point anchor, int iterations,
                        int borderType, const Scalar& borderValue )
 {
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && cn <= 4 &&
+        anchor.x == ksize.width >> 1 && anchor.y == ksize.height >> 1 &&
+        borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue(),
+        ocl_morphologyEx(_src, _dst, op, kernel, anchor, iterations, borderType, borderValue))
+
     Mat src = _src.getMat(), temp;
     _dst.create(src.size(), src.type());
     Mat dst = _dst.getMat();
