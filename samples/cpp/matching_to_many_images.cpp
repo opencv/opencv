@@ -10,14 +10,12 @@
 using namespace cv;
 using namespace std;
 
-const string defaultDetectorType = "SURF";
-const string defaultDescriptorType = "SURF";
 const string defaultMatcherType = "FlannBased";
 const string defaultQueryImageName = "../../opencv/samples/cpp/matching_to_many_images/query.png";
 const string defaultFileWithTrainImages = "../../opencv/samples/cpp/matching_to_many_images/train/trainImages.txt";
 const string defaultDirToSaveResImages = "../../opencv/samples/cpp/matching_to_many_images/results";
 
-static void printPrompt( const string& applName )
+static void printPrompt( const string& applName, const string& detectorType, const string& descriptorType )
 {
     cout << "/*\n"
          << " * This is a sample on matching descriptors detected on one image to descriptors detected in image set.\n"
@@ -34,7 +32,7 @@ static void printPrompt( const string& applName )
     cout << endl;
 
     cout << "\nExample:" << endl
-         << "./" << applName << " " << defaultDetectorType << " " << defaultDescriptorType << " " << defaultMatcherType << " "
+         << "./" << applName << " " << detectorType << " " << descriptorType << " " << defaultMatcherType << " "
          << defaultQueryImageName << " " << defaultFileWithTrainImages << " " << defaultDirToSaveResImages << endl;
 }
 
@@ -207,7 +205,14 @@ static void saveResultImages( const Mat& queryImage, const vector<KeyPoint>& que
 
 int main(int argc, char** argv)
 {
-    initModule_nonfree();
+    string defaultDetectorType = "SURF";
+    string defaultDescriptorType = "SURF";
+    if (!initModule_nonfree())
+    {
+        cout << "Nonfree modules are not available." << endl;
+        defaultDetectorType = "ORB";
+        defaultDescriptorType = "ORB";
+    }
     string detectorType = defaultDetectorType;
     string descriptorType = defaultDescriptorType;
     string matcherType = defaultMatcherType;
@@ -217,7 +222,7 @@ int main(int argc, char** argv)
 
     if( argc != 7 && argc != 1 )
     {
-        printPrompt( argv[0] );
+        printPrompt( argv[0], defaultDetectorType, defaultDescriptorType );
         return -1;
     }
 
@@ -233,7 +238,7 @@ int main(int argc, char** argv)
     Ptr<DescriptorMatcher> descriptorMatcher;
     if( !createDetectorDescriptorMatcher( detectorType, descriptorType, matcherType, featureDetector, descriptorExtractor, descriptorMatcher ) )
     {
-        printPrompt( argv[0] );
+        printPrompt( argv[0], defaultDetectorType, defaultDescriptorType );
         return -1;
     }
 
@@ -242,7 +247,7 @@ int main(int argc, char** argv)
     vector<string> trainImagesNames;
     if( !readImages( queryImageName, fileWithTrainImages, queryImage, trainImages, trainImagesNames ) )
     {
-        printPrompt( argv[0] );
+        printPrompt( argv[0], defaultDetectorType, defaultDescriptorType );
         return -1;
     }
 
