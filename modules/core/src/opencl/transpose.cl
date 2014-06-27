@@ -117,18 +117,24 @@ __kernel void transpose(__global const uchar * srcptr, int src_step, int src_off
 __kernel void transpose_inplace(__global uchar * srcptr, int src_step, int src_offset, int src_rows)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y = get_global_id(1) * rowsPerWI;
 
-    if (y < src_rows && x < y)
+    if (x < y + rowsPerWI)
     {
         int src_index = mad24(y, src_step, mad24(x, TSIZE, src_offset));
         int dst_index = mad24(x, src_step, mad24(y, TSIZE, src_offset));
+        T tmp;
 
-        __global const uchar * src = srcptr + src_index;
-        __global uchar * dst = srcptr + dst_index;
+        #pragma unroll
+        for (int i = 0; i < rowsPerWI; ++i, ++y, src_index += src_step, dst_index += TSIZE)
+            if (y < src_rows && x < y)
+            {
+                __global uchar * src = srcptr + src_index;
+                __global uchar * dst = srcptr + dst_index;
 
-        T tmp = loadpix(dst);
-        storepix(loadpix(src), dst);
-        storepix(tmp, src);
+                tmp = loadpix(dst);
+                storepix(loadpix(src), dst);
+                storepix(tmp, src);
+            }
     }
 }
