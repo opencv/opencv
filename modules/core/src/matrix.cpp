@@ -3002,8 +3002,8 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
         k.args(ocl::KernelArg::ReadOnly(src),
                ocl::KernelArg::WriteOnlyNoSize(dst));
 
-    size_t localsize[3]  = { TILE_DIM, BLOCK_ROWS, 1 };
-    size_t globalsize[3] = { src.cols, inplace ? src.rows : divUp(src.rows, TILE_DIM) * BLOCK_ROWS, 1 };
+    size_t localsize[2]  = { TILE_DIM, BLOCK_ROWS };
+    size_t globalsize[2] = { src.cols, inplace ? src.rows : divUp(src.rows, TILE_DIM) * BLOCK_ROWS };
 
     return k.run(2, globalsize, localsize, false);
 }
