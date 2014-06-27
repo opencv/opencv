@@ -32,7 +32,7 @@ else()
 endif()
 
 # -- Find the modules to build. Split them to Python modules and Python-Extra modules
-
+message("Modules Build : ${OPENCV_MODULES_BUILD}")
 string(REPLACE "opencv_" "" OPENCV_PYTHON_MODULES "${OPENCV_MODULES_BUILD}")
 ocv_list_filterout(OPENCV_PYTHON_MODULES "^cuda.*$")
 foreach(module ${OPENCV_PYTHON_MODULES})
@@ -47,7 +47,7 @@ foreach(module ${OPENCV_PYTHON_MODULES})
         list(APPEND OPENCV_PYTHON_EXTRA_MODULES ${module})
         list(REMOVE_ITEM OPENCV_PYTHON_MODULES ${module})
     # For time-being, disable following modules. (NB:  We will enable it one-by-one)
-    elseif(${module} MATCHES "ts|optim|stitching|superres|videostab")
+    elseif(${module} MATCHES "ts|contrib|legacy|softcascade|optim|stitching|superres|videostab")
         list(REMOVE_ITEM OPENCV_PYTHON_MODULES ${module})
     endif()
 endforeach()
