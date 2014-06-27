@@ -254,7 +254,7 @@ KAZE
 ----
 .. ocv:class:: KAZE : public Feature2D
 
-Class implementing the KAZE keypoint detector and descriptor extractor, described in [ABD12]_.
+Class implementing the KAZE keypoint detector and descriptor extractor, described in [ABD12]_. ::
     class CV_EXPORTS_W KAZE : public Feature2D
     {
     public:
