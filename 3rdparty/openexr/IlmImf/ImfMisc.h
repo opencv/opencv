@@ -39,7 +39,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Miscellaneous helper functions for OpenEXR image file I/O
+//    Miscellaneous helper functions for OpenEXR image file I/O
 //
 //-----------------------------------------------------------------------------
 
@@ -56,7 +56,7 @@ class Header;
 // in the machine's native format.
 //
 
-int	pixelTypeSize (PixelType type);
+int    pixelTypeSize (PixelType type);
 
 
 //
@@ -67,7 +67,7 @@ int	pixelTypeSize (PixelType type);
 // interval [2, 6].
 //
 
-int	numSamples (int s, int a, int b);
+int    numSamples (int s, int a, int b);
 
 
 //
@@ -77,7 +77,7 @@ int	numSamples (int s, int a, int b);
 // the pixel data are tightly packed).
 //
 
-size_t	bytesPerLineTable (const Header &header,
+size_t    bytesPerLineTable (const Header &header,
                    std::vector<size_t> &bytesPerLine);
 
 //
@@ -90,7 +90,7 @@ size_t	bytesPerLineTable (const Header &header,
 // relative to the beginning of the line buffer.
 //
 
-void	offsetInLineBufferTable (const std::vector<size_t> &bytesPerLine,
+void    offsetInLineBufferTable (const std::vector<size_t> &bytesPerLine,
                  int linesInLineBuffer,
                  std::vector<size_t> &offsetInLineBuffer);
 
@@ -100,8 +100,8 @@ void	offsetInLineBufferTable (const std::vector<size_t> &bytesPerLine,
 // (minY is the minimum y coordinate of the file's data window.)
 //
 
-int	lineBufferMinY (int y, int minY, int linesInLineBuffer);
-int	lineBufferMaxY (int y, int minY, int linesInLineBuffer);
+int    lineBufferMinY (int y, int minY, int linesInLineBuffer);
+int    lineBufferMaxY (int y, int minY, int linesInLineBuffer);
 
 
 //
@@ -126,20 +126,20 @@ int     numLinesInBuffer (Compressor *compressor);
 // frame buffer slice.  If necessary, perform on-the-fly data
 // type conversion.
 //
-//    readPtr		initially points to the beginning of the
-//			data in the line or tile buffer. readPtr
-//			is advanced as the pixel data are copied;
-//			when copyIntoFrameBuffer() returns,
-//			readPtr points just past the end of the
-//			copied data.
+//    readPtr        initially points to the beginning of the
+//            data in the line or tile buffer. readPtr
+//            is advanced as the pixel data are copied;
+//            when copyIntoFrameBuffer() returns,
+//            readPtr points just past the end of the
+//            copied data.
 //
-//    writePtr, endPtr	point to the lefmost and rightmost pixels
-//			in the frame buffer slice
+//    writePtr, endPtr    point to the lefmost and rightmost pixels
+//            in the frame buffer slice
 //
-//    xStride		the xStride for the frame buffer slice
+//    xStride        the xStride for the frame buffer slice
 //
-//    format		indicates if the line or tile buffer is
-//			in NATIVE or XDR format.
+//    format        indicates if the line or tile buffer is
+//            in NATIVE or XDR format.
 //
 //    typeInFrameBuffer the pixel data type of the frame buffer slice
 //
@@ -172,19 +172,19 @@ void    skipChannel (const char *&readPtr,
 // Convert an array of pixel data from the machine's native
 // representation to XDR format.
 //
-//    toPtr, fromPtr	initially point to the beginning of the input
-//			and output pixel data arrays; when convertInPlace()
-//			returns, toPtr and fromPtr point just past the
-//			end of the input and output arrays.
-// 			If the native representation of the data has the
-//			same size as the XDR data, then the conversion
-//			can take in place, without an intermediate
-//			temporary buffer (toPtr and fromPtr can point
-//			to the same location).
+//    toPtr, fromPtr    initially point to the beginning of the input
+//            and output pixel data arrays; when convertInPlace()
+//            returns, toPtr and fromPtr point just past the
+//            end of the input and output arrays.
+//             If the native representation of the data has the
+//            same size as the XDR data, then the conversion
+//            can take in place, without an intermediate
+//            temporary buffer (toPtr and fromPtr can point
+//            to the same location).
 //
-//    type		the pixel data type
+//    type        the pixel data type
 //
-//    numPixels		number of pixels in the input and output arrays
+//    numPixels        number of pixels in the input and output arrays
 //
 
 void    convertInPlace (char *&toPtr,
@@ -197,25 +197,25 @@ void    convertInPlace (char *&toPtr,
 // a frame buffer into an output file's internal line buffer or
 // tile buffer.
 //
-//    writePtr		initially points to the beginning of the
-//			data in the line or tile buffer. writePtr
-//			is advanced as the pixel data are copied;
-//			when copyFromFrameBuffer() returns,
-//			writePtr points just past the end of the
-//			copied data.
+//    writePtr        initially points to the beginning of the
+//            data in the line or tile buffer. writePtr
+//            is advanced as the pixel data are copied;
+//            when copyFromFrameBuffer() returns,
+//            writePtr points just past the end of the
+//            copied data.
 //
-//    readPtr, endPtr	point to the lefmost and rightmost pixels
-//			in the frame buffer slice
+//    readPtr, endPtr    point to the lefmost and rightmost pixels
+//            in the frame buffer slice
 //
-//    xStride		the xStride for the frame buffer slice
+//    xStride        the xStride for the frame buffer slice
 //
-//    format		indicates if the line or tile buffer is
-//			in NATIVE or XDR format.
+//    format        indicates if the line or tile buffer is
+//            in NATIVE or XDR format.
 //
 //    type              the pixel data type in the frame buffer
-//			and in the output file's channel (function
-//			copyFromFrameBuffer() doesn't do on-the-fly
-//			data type conversion)
+//            and in the output file's channel (function
+//            copyFromFrameBuffer() doesn't do on-the-fly
+//            data type conversion)
 //
 
 void    copyFromFrameBuffer (char *&writePtr,
@@ -231,14 +231,14 @@ void    copyFromFrameBuffer (char *&writePtr,
 // a channel for which the frame buffer contains no corresponding
 // slice.
 //
-//    writePtr		initially points to the beginning of the
-//			data in the line or tile buffer.  When
-//			fillChannelWithZeroes() returns, writePtr
-//			points just past the end of the zeroed
-//			data.
+//    writePtr        initially points to the beginning of the
+//            data in the line or tile buffer.  When
+//            fillChannelWithZeroes() returns, writePtr
+//            points just past the end of the zeroed
+//            data.
 //
-//    format		indicates if the line or tile buffer is
-//			in NATIVE or XDR format.
+//    format        indicates if the line or tile buffer is
+//            in NATIVE or XDR format.
 //
 //    type              the pixel data type in the line or frame buffer.
 //

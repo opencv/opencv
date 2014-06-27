@@ -35,7 +35,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Optional Standard Attributes
+//    Optional Standard Attributes
 //
 //-----------------------------------------------------------------------------
 
@@ -44,45 +44,45 @@
 
 #define IMF_STRING(name) #name
 
-#define IMF_STD_ATTRIBUTE_IMP(name,suffix,type)				 \
+#define IMF_STD_ATTRIBUTE_IMP(name,suffix,type)                 \
                                      \
-    void								 \
-    add##suffix (Header &header, const type &value)			 \
-    {									 \
+    void                                 \
+    add##suffix (Header &header, const type &value)             \
+    {                                     \
     header.insert (IMF_STRING (name), TypedAttribute<type> (value)); \
-    }									 \
+    }                                     \
                                      \
-    bool								 \
-    has##suffix (const Header &header)					 \
-    {									 \
-    return header.findTypedAttribute <TypedAttribute <type> >	 \
-        (IMF_STRING (name)) != 0;				 \
-    }									 \
+    bool                                 \
+    has##suffix (const Header &header)                     \
+    {                                     \
+    return header.findTypedAttribute <TypedAttribute <type> >     \
+        (IMF_STRING (name)) != 0;                 \
+    }                                     \
                                      \
-    const TypedAttribute<type> &					 \
-    name##Attribute (const Header &header)				 \
-    {									 \
-    return header.typedAttribute <TypedAttribute <type> >		 \
-        (IMF_STRING (name));					 \
-    }									 \
+    const TypedAttribute<type> &                     \
+    name##Attribute (const Header &header)                 \
+    {                                     \
+    return header.typedAttribute <TypedAttribute <type> >         \
+        (IMF_STRING (name));                     \
+    }                                     \
                                      \
-    TypedAttribute<type> &						 \
-    name##Attribute (Header &header)					 \
-    {									 \
-    return header.typedAttribute <TypedAttribute <type> >		 \
-        (IMF_STRING (name));					 \
-    }									 \
+    TypedAttribute<type> &                         \
+    name##Attribute (Header &header)                     \
+    {                                     \
+    return header.typedAttribute <TypedAttribute <type> >         \
+        (IMF_STRING (name));                     \
+    }                                     \
                                      \
-    const type &							 \
-    name (const Header &header)						 \
-    {									 \
-    return name##Attribute(header).value();				 \
-    }									 \
+    const type &                             \
+    name (const Header &header)                         \
+    {                                     \
+    return name##Attribute(header).value();                 \
+    }                                     \
                                      \
-    type &								 \
-    name (Header &header)						 \
-    {									 \
-    return name##Attribute(header).value();				 \
+    type &                                 \
+    name (Header &header)                         \
+    {                                     \
+    return name##Attribute(header).value();                 \
     }
 
 

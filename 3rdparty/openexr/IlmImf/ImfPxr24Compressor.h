@@ -36,7 +36,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class Pxr24Compressor -- Loren Carpenter's 24-bit float compressor
+//    class Pxr24Compressor -- Loren Carpenter's 24-bit float compressor
 //
 //-----------------------------------------------------------------------------
 
@@ -57,49 +57,49 @@ class Pxr24Compressor: public Compressor
 
     virtual ~Pxr24Compressor ();
 
-    virtual int		numScanLines () const;
+    virtual int        numScanLines () const;
 
-    virtual Format	format () const;
+    virtual Format    format () const;
 
-    virtual int		compress (const char *inPtr,
+    virtual int        compress (const char *inPtr,
                   int inSize,
                   int minY,
                   const char *&outPtr);
 
-    virtual int		compressTile (const char *inPtr,
+    virtual int        compressTile (const char *inPtr,
                       int inSize,
                       Imath::Box2i range,
                       const char *&outPtr);
 
-    virtual int		uncompress (const char *inPtr,
+    virtual int        uncompress (const char *inPtr,
                     int inSize,
                     int minY,
                     const char *&outPtr);
 
-    virtual int		uncompressTile (const char *inPtr,
+    virtual int        uncompressTile (const char *inPtr,
                     int inSize,
                     Imath::Box2i range,
                     const char *&outPtr);
   private:
 
-    int			compress (const char *inPtr,
+    int            compress (const char *inPtr,
                   int inSize,
                   Imath::Box2i range,
                   const char *&outPtr);
 
-    int			uncompress (const char *inPtr,
+    int            uncompress (const char *inPtr,
                     int inSize,
                     Imath::Box2i range,
                     const char *&outPtr);
 
-    int			_maxScanLineSize;
-    int			_numScanLines;
-    unsigned char *	_tmpBuffer;
-    char *		_outBuffer;
-    const ChannelList &	_channels;
-    int			_minX;
-    int			_maxX;
-    int			_maxY;
+    int            _maxScanLineSize;
+    int            _numScanLines;
+    unsigned char *    _tmpBuffer;
+    char *        _outBuffer;
+    const ChannelList &    _channels;
+    int            _minX;
+    int            _maxX;
+    int            _maxY;
 };
 
 

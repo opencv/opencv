@@ -39,7 +39,7 @@
 
 //----------------------------------------------------
 //
-//	Shear6 class template.
+//    Shear6 class template.
 //
 //----------------------------------------------------
 
@@ -64,18 +64,18 @@ template <class T> class Shear6
     // Access to elements
     //-------------------
 
-    T			xy, xz, yz, yx, zx, zy;
+    T            xy, xz, yz, yx, zx, zy;
 
-    T &			operator [] (int i);
-    const T &		operator [] (int i) const;
+    T &            operator [] (int i);
+    const T &        operator [] (int i) const;
 
 
     //-------------
     // Constructors
     //-------------
 
-    Shear6 ();			   // (0 0 0 0 0 0)
-    Shear6 (T XY, T XZ, T YZ);	   // (XY XZ YZ 0 0 0)
+    Shear6 ();               // (0 0 0 0 0 0)
+    Shear6 (T XY, T XZ, T YZ);       // (XY XZ YZ 0 0 0)
     Shear6 (const Vec3<T> &v);     // (v.x v.y v.z 0 0 0)
     template <class S>             // (v.x v.y v.z 0 0 0)
     Shear6 (const Vec3<S> &v);
@@ -90,9 +90,9 @@ template <class T> class Shear6
     Shear6 (const Shear6 &h);
     template <class S> Shear6 (const Shear6<S> &h);
 
-    const Shear6 &	operator = (const Shear6 &h);
+    const Shear6 &    operator = (const Shear6 &h);
     template <class S>
-    const Shear6 &	operator = (const Vec3<S> &v);
+    const Shear6 &    operator = (const Vec3<S> &v);
 
 
     //----------------------
@@ -100,20 +100,20 @@ template <class T> class Shear6
     //----------------------
 
     template <class S>
-    void		setValue (S XY, S XZ, S YZ, S YX, S ZX, S ZY);
+    void        setValue (S XY, S XZ, S YZ, S YX, S ZX, S ZY);
 
     template <class S>
-    void		setValue (const Shear6<S> &h);
+    void        setValue (const Shear6<S> &h);
 
     template <class S>
-    void		getValue (S &XY, S &XZ, S &YZ,
+    void        getValue (S &XY, S &XZ, S &YZ,
                   S &YX, S &ZX, S &ZY) const;
 
     template <class S>
-    void		getValue (Shear6<S> &h) const;
+    void        getValue (Shear6<S> &h) const;
 
-    T *			getValue();
-    const T *		getValue() const;
+    T *            getValue();
+    const T *        getValue() const;
 
 
     //---------
@@ -121,92 +121,92 @@ template <class T> class Shear6
     //---------
 
     template <class S>
-    bool		operator == (const Shear6<S> &h) const;
+    bool        operator == (const Shear6<S> &h) const;
 
     template <class S>
-    bool		operator != (const Shear6<S> &h) const;
+    bool        operator != (const Shear6<S> &h) const;
 
     //-----------------------------------------------------------------------
     // Compare two shears and test if they are "approximately equal":
     //
     // equalWithAbsError (h, e)
     //
-    //	    Returns true if the coefficients of this and h are the same with
-    //	    an absolute error of no more than e, i.e., for all i
+    //        Returns true if the coefficients of this and h are the same with
+    //        an absolute error of no more than e, i.e., for all i
     //
     //      abs (this[i] - h[i]) <= e
     //
     // equalWithRelError (h, e)
     //
-    //	    Returns true if the coefficients of this and h are the same with
-    //	    a relative error of no more than e, i.e., for all i
+    //        Returns true if the coefficients of this and h are the same with
+    //        a relative error of no more than e, i.e., for all i
     //
     //      abs (this[i] - h[i]) <= e * abs (this[i])
     //-----------------------------------------------------------------------
 
-    bool		equalWithAbsError (const Shear6<T> &h, T e) const;
-    bool		equalWithRelError (const Shear6<T> &h, T e) const;
+    bool        equalWithAbsError (const Shear6<T> &h, T e) const;
+    bool        equalWithRelError (const Shear6<T> &h, T e) const;
 
 
     //------------------------
     // Component-wise addition
     //------------------------
 
-    const Shear6 &	operator += (const Shear6 &h);
-    Shear6		operator + (const Shear6 &h) const;
+    const Shear6 &    operator += (const Shear6 &h);
+    Shear6        operator + (const Shear6 &h) const;
 
 
     //---------------------------
     // Component-wise subtraction
     //---------------------------
 
-    const Shear6 &	operator -= (const Shear6 &h);
-    Shear6		operator - (const Shear6 &h) const;
+    const Shear6 &    operator -= (const Shear6 &h);
+    Shear6        operator - (const Shear6 &h) const;
 
 
     //------------------------------------
     // Component-wise multiplication by -1
     //------------------------------------
 
-    Shear6		operator - () const;
-    const Shear6 &	negate ();
+    Shear6        operator - () const;
+    const Shear6 &    negate ();
 
 
     //------------------------------
     // Component-wise multiplication
     //------------------------------
 
-    const Shear6 &	operator *= (const Shear6 &h);
-    const Shear6 &	operator *= (T a);
-    Shear6		operator * (const Shear6 &h) const;
-    Shear6		operator * (T a) const;
+    const Shear6 &    operator *= (const Shear6 &h);
+    const Shear6 &    operator *= (T a);
+    Shear6        operator * (const Shear6 &h) const;
+    Shear6        operator * (T a) const;
 
 
     //------------------------
     // Component-wise division
     //------------------------
 
-    const Shear6 &	operator /= (const Shear6 &h);
-    const Shear6 &	operator /= (T a);
-    Shear6		operator / (const Shear6 &h) const;
-    Shear6		operator / (T a) const;
+    const Shear6 &    operator /= (const Shear6 &h);
+    const Shear6 &    operator /= (T a);
+    Shear6        operator / (const Shear6 &h) const;
+    Shear6        operator / (T a) const;
 
 
     //----------------------------------------------------------
     // Number of dimensions, i.e. number of elements in a Shear6
     //----------------------------------------------------------
 
-    static unsigned int	dimensions() {return 6;}
+    static unsigned int    dimensions() {return 6;}
 
 
     //-------------------------------------------------
     // Limitations of type T (see also class limits<T>)
     //-------------------------------------------------
 
-    static T		baseTypeMin()		{return limits<T>::min();}
-    static T		baseTypeMax()		{return limits<T>::max();}
-    static T		baseTypeSmallest()	{return limits<T>::smallest();}
-    static T		baseTypeEpsilon()	{return limits<T>::epsilon();}
+    static T        baseTypeMin()        {return limits<T>::min();}
+    static T        baseTypeMax()        {return limits<T>::max();}
+    static T        baseTypeSmallest()    {return limits<T>::smallest();}
+    static T        baseTypeEpsilon()    {return limits<T>::epsilon();}
 
 
     //--------------------------------------------------------------
@@ -215,7 +215,7 @@ template <class T> class Shear6
     // V::BaseType
     //--------------------------------------------------------------
 
-    typedef T		BaseType;
+    typedef T        BaseType;
 };
 
 
@@ -224,14 +224,14 @@ template <class T> class Shear6
 //--------------
 
 template <class T>
-std::ostream &	operator << (std::ostream &s, const Shear6<T> &h);
+std::ostream &    operator << (std::ostream &s, const Shear6<T> &h);
 
 
 //----------------------------------------------------
 // Reverse multiplication: scalar * Shear6<T>
 //----------------------------------------------------
 
-template <class S, class T> Shear6<T>	operator * (S a, const Shear6<T> &h);
+template <class S, class T> Shear6<T>    operator * (S a, const Shear6<T> &h);
 
 
 //-------------------------

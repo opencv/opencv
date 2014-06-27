@@ -38,7 +38,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class TiledInputFile
+//    class TiledInputFile
 //
 //-----------------------------------------------------------------------------
 
@@ -91,21 +91,21 @@ class TiledInputFile
     // Access to the file name
     //------------------------
 
-    const char *	fileName () const;
+    const char *    fileName () const;
 
 
     //--------------------------
     // Access to the file header
     //--------------------------
 
-    const Header &	header () const;
+    const Header &    header () const;
 
 
     //----------------------------------
     // Access to the file format version
     //----------------------------------
 
-    int			version () const;
+    int            version () const;
 
 
     //-----------------------------------------------------------
@@ -119,14 +119,14 @@ class TiledInputFile
     // to readTile().
     //-----------------------------------------------------------
 
-    void		setFrameBuffer (const FrameBuffer &frameBuffer);
+    void        setFrameBuffer (const FrameBuffer &frameBuffer);
 
 
     //-----------------------------------
     // Access to the current frame buffer
     //-----------------------------------
 
-    const FrameBuffer &	frameBuffer () const;
+    const FrameBuffer &    frameBuffer () const;
 
 
     //------------------------------------------------------------
@@ -139,7 +139,7 @@ class TiledInputFile
     // prematurely.)
     //------------------------------------------------------------
 
-    bool		isComplete () const;
+    bool        isComplete () const;
 
 
     //--------------------------------------------------
@@ -152,10 +152,10 @@ class TiledInputFile
     // fields of the file header's TileDescriptionAttribute.
     //---------------------------------------------------------
 
-    unsigned int	tileXSize () const;
-    unsigned int	tileYSize () const;
-    LevelMode		levelMode () const;
-    LevelRoundingMode	levelRoundingMode () const;
+    unsigned int    tileXSize () const;
+    unsigned int    tileYSize () const;
+    LevelMode        levelMode () const;
+    LevelRoundingMode    levelRoundingMode () const;
 
 
     //--------------------------------------------------------------------
@@ -163,37 +163,37 @@ class TiledInputFile
     //
     // numXLevels() returns the file's number of levels in x direction.
     //
-    //	if levelMode() == ONE_LEVEL:
+    //    if levelMode() == ONE_LEVEL:
     //      return value is: 1
     //
-    //	if levelMode() == MIPMAP_LEVELS:
+    //    if levelMode() == MIPMAP_LEVELS:
     //      return value is: rfunc (log (max (w, h)) / log (2)) + 1
     //
-    //	if levelMode() == RIPMAP_LEVELS:
+    //    if levelMode() == RIPMAP_LEVELS:
     //      return value is: rfunc (log (w) / log (2)) + 1
     //
-    //	where
-    //	    w is the width of the image's data window,  max.x - min.x + 1,
-    //	    y is the height of the image's data window, max.y - min.y + 1,
-    //	    and rfunc(x) is either floor(x), or ceil(x), depending on
-    //	    whether levelRoundingMode() returns ROUND_DOWN or ROUND_UP.
+    //    where
+    //        w is the width of the image's data window,  max.x - min.x + 1,
+    //        y is the height of the image's data window, max.y - min.y + 1,
+    //        and rfunc(x) is either floor(x), or ceil(x), depending on
+    //        whether levelRoundingMode() returns ROUND_DOWN or ROUND_UP.
     //
     // numYLevels() returns the file's number of levels in y direction.
     //
-    //	if levelMode() == ONE_LEVEL or levelMode() == MIPMAP_LEVELS:
+    //    if levelMode() == ONE_LEVEL or levelMode() == MIPMAP_LEVELS:
     //      return value is the same as for numXLevels()
     //
-    //	if levelMode() == RIPMAP_LEVELS:
+    //    if levelMode() == RIPMAP_LEVELS:
     //      return value is: rfunc (log (h) / log (2)) + 1
     //
     //
     // numLevels() is a convenience function for use with
     // MIPMAP_LEVELS files.
     //
-    //	if levelMode() == ONE_LEVEL or levelMode() == MIPMAP_LEVELS:
+    //    if levelMode() == ONE_LEVEL or levelMode() == MIPMAP_LEVELS:
     //      return value is the same as for numXLevels()
     //
-    //	if levelMode() == RIPMAP_LEVELS:
+    //    if levelMode() == RIPMAP_LEVELS:
     //      an Iex::LogicExc exception is thrown
     //
     // isValidLevel(lx, ly) returns true if the file contains
@@ -201,10 +201,10 @@ class TiledInputFile
     //
     //--------------------------------------------------------------------
 
-    int			numLevels () const;
-    int			numXLevels () const;
-    int			numYLevels () const;
-    bool		isValidLevel (int lx, int ly) const;
+    int            numLevels () const;
+    int            numXLevels () const;
+    int            numYLevels () const;
+    bool        isValidLevel (int lx, int ly) const;
 
 
     //----------------------------------------------------------
@@ -213,20 +213,20 @@ class TiledInputFile
     // levelWidth(lx) returns the width of a level with level
     // number (lx, *), where * is any number.
     //
-    //	return value is:
+    //    return value is:
     //      max (1, rfunc (w / pow (2, lx)))
     //
     //
     // levelHeight(ly) returns the height of a level with level
     // number (*, ly), where * is any number.
     //
-    //	return value is:
+    //    return value is:
     //      max (1, rfunc (h / pow (2, ly)))
     //
     //----------------------------------------------------------
 
-    int			levelWidth  (int lx) const;
-    int			levelHeight (int ly) const;
+    int            levelWidth  (int lx) const;
+    int            levelHeight (int ly) const;
 
 
     //--------------------------------------------------------------
@@ -236,7 +236,7 @@ class TiledInputFile
     // that cover a level with level number (lx, *), where * is
     // any number.
     //
-    //	return value is:
+    //    return value is:
     //      (levelWidth(lx) + tileXSize() - 1) / tileXSize()
     //
     //
@@ -244,13 +244,13 @@ class TiledInputFile
     // that cover a level with level number (*, ly), where * is
     // any number.
     //
-    //	return value is:
+    //    return value is:
     //      (levelHeight(ly) + tileXSize() - 1) / tileXSize()
     //
     //--------------------------------------------------------------
 
-    int			numXTiles (int lx = 0) const;
-    int			numYTiles (int ly = 0) const;
+    int            numXTiles (int lx = 0) const;
+    int            numYTiles (int ly = 0) const;
 
 
     //---------------------------------------------------------------
@@ -259,10 +259,10 @@ class TiledInputFile
     // dataWindowForLevel(lx, ly) returns a 2-dimensional region of
     // valid pixel coordinates for a level with level number (lx, ly)
     //
-    //	return value is a Box2i with min value:
+    //    return value is a Box2i with min value:
     //      (dataWindow.min.x, dataWindow.min.y)
     //
-    //	and max value:
+    //    and max value:
     //      (dataWindow.min.x + levelWidth(lx) - 1,
     //       dataWindow.min.y + levelHeight(ly) - 1)
     //
@@ -272,8 +272,8 @@ class TiledInputFile
     //
     //---------------------------------------------------------------
 
-    Imath::Box2i	dataWindowForLevel (int l = 0) const;
-    Imath::Box2i	dataWindowForLevel (int lx, int ly) const;
+    Imath::Box2i    dataWindowForLevel (int l = 0) const;
+    Imath::Box2i    dataWindowForLevel (int lx, int ly) const;
 
 
     //-------------------------------------------------------------------
@@ -283,11 +283,11 @@ class TiledInputFile
     // region of valid pixel coordinates for a tile with tile coordinates
     // (dx,dy) and level number (lx, ly).
     //
-    //	return value is a Box2i with min value:
+    //    return value is a Box2i with min value:
     //      (dataWindow.min.x + dx * tileXSize(),
     //       dataWindow.min.y + dy * tileYSize())
     //
-    //	and max value:
+    //    and max value:
     //      (dataWindow.min.x + (dx + 1) * tileXSize() - 1,
     //       dataWindow.min.y + (dy + 1) * tileYSize() - 1)
     //
@@ -297,9 +297,9 @@ class TiledInputFile
     //
     //-------------------------------------------------------------------
 
-    Imath::Box2i	dataWindowForTile (int dx, int dy, int l = 0) const;
+    Imath::Box2i    dataWindowForTile (int dx, int dy, int l = 0) const;
 
-    Imath::Box2i	dataWindowForTile (int dx, int dy,
+    Imath::Box2i    dataWindowForTile (int dx, int dy,
                                            int lx, int ly) const;
 
     //------------------------------------------------------------
@@ -331,13 +331,13 @@ class TiledInputFile
     //
     //------------------------------------------------------------
 
-    void		readTile  (int dx, int dy, int l = 0);
-    void		readTile  (int dx, int dy, int lx, int ly);
+    void        readTile  (int dx, int dy, int l = 0);
+    void        readTile  (int dx, int dy, int lx, int ly);
 
-    void		readTiles (int dx1, int dx2, int dy1, int dy2,
+    void        readTiles (int dx1, int dx2, int dy1, int dy2,
                                    int lx, int ly);
 
-    void		readTiles (int dx1, int dx2, int dy1, int dy2,
+    void        readTiles (int dx1, int dx2, int dy1, int dy2,
                                    int l = 0);
 
 
@@ -347,7 +347,7 @@ class TiledInputFile
     // used to implement TiledOutputFile::copyPixels()).
     //--------------------------------------------------
 
-    void		rawTileData (int &dx, int &dy,
+    void        rawTileData (int &dx, int &dy,
                      int &lx, int &ly,
                      const char *&pixelData,
                      int &pixelDataSize);
@@ -358,21 +358,21 @@ class TiledInputFile
 
     friend class InputFile;
 
-    TiledInputFile (const TiledInputFile &);		  // not implemented
+    TiledInputFile (const TiledInputFile &);          // not implemented
     TiledInputFile & operator = (const TiledInputFile &); // not implemented
 
     TiledInputFile (const Header &header, IStream *is, int version,
                     int numThreads);
 
-    void		initialize ();
+    void        initialize ();
 
-    bool		isValidTile (int dx, int dy,
+    bool        isValidTile (int dx, int dy,
                      int lx, int ly) const;
 
-    size_t		bytesPerLineForTile (int dx, int dy,
+    size_t        bytesPerLineForTile (int dx, int dy,
                          int lx, int ly) const;
 
-    Data *		_data;
+    Data *        _data;
 };
 
 

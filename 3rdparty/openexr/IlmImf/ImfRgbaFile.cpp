@@ -34,8 +34,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class RgbaOutputFile
-//	class RgbaInputFile
+//    class RgbaOutputFile
+//    class RgbaInputFile
 //
 //-----------------------------------------------------------------------------
 
@@ -194,43 +194,43 @@ class RgbaOutputFile::ToYca: public Mutex
      ToYca (OutputFile &outputFile, RgbaChannels rgbaChannels);
     ~ToYca ();
 
-    void		setYCRounding (unsigned int roundY,
+    void        setYCRounding (unsigned int roundY,
                            unsigned int roundC);
 
-    void		setFrameBuffer (const Rgba *base,
+    void        setFrameBuffer (const Rgba *base,
                     size_t xStride,
                     size_t yStride);
 
-    void		writePixels (int numScanLines);
-    int			currentScanLine () const;
+    void        writePixels (int numScanLines);
+    int            currentScanLine () const;
 
   private:
 
-    void		padTmpBuf ();
-    void		rotateBuffers ();
-    void		duplicateLastBuffer ();
-    void		duplicateSecondToLastBuffer ();
-    void		decimateChromaVertAndWriteScanLine ();
+    void        padTmpBuf ();
+    void        rotateBuffers ();
+    void        duplicateLastBuffer ();
+    void        duplicateSecondToLastBuffer ();
+    void        decimateChromaVertAndWriteScanLine ();
 
-    OutputFile &	_outputFile;
-    bool		_writeY;
-    bool		_writeC;
-    bool		_writeA;
-    int			_xMin;
-    int			_width;
-    int			_height;
-    int			_linesConverted;
-    LineOrder		_lineOrder;
-    int			_currentScanLine;
-    V3f			_yw;
-    Rgba *		_bufBase;
-    Rgba *		_buf[N];
-    Rgba *		_tmpBuf;
-    const Rgba *	_fbBase;
-    size_t		_fbXStride;
-    size_t		_fbYStride;
-    int			_roundY;
-    int			_roundC;
+    OutputFile &    _outputFile;
+    bool        _writeY;
+    bool        _writeC;
+    bool        _writeA;
+    int            _xMin;
+    int            _width;
+    int            _height;
+    int            _linesConverted;
+    LineOrder        _lineOrder;
+    int            _currentScanLine;
+    V3f            _yw;
+    Rgba *        _bufBase;
+    Rgba *        _buf[N];
+    Rgba *        _tmpBuf;
+    const Rgba *    _fbBase;
+    size_t        _fbXStride;
+    size_t        _fbYStride;
+    int            _roundY;
+    int            _roundC;
 };
 
 
@@ -305,42 +305,42 @@ RgbaOutputFile::ToYca::setFrameBuffer (const Rgba *base,
     if (_writeY)
     {
         fb.insert ("Y",
-               Slice (HALF,				// type
-                  (char *) &_tmpBuf[-_xMin].g,	// base
-                  sizeof (Rgba),			// xStride
-                  0,				// yStride
-                  1,				// xSampling
-                  1));				// ySampling
+               Slice (HALF,                // type
+                  (char *) &_tmpBuf[-_xMin].g,    // base
+                  sizeof (Rgba),            // xStride
+                  0,                // yStride
+                  1,                // xSampling
+                  1));                // ySampling
     }
 
     if (_writeC)
     {
         fb.insert ("RY",
-               Slice (HALF,				// type
-                  (char *) &_tmpBuf[-_xMin].r,	// base
-                  sizeof (Rgba) * 2,		// xStride
-                  0,				// yStride
-                  2,				// xSampling
-                  2));				// ySampling
+               Slice (HALF,                // type
+                  (char *) &_tmpBuf[-_xMin].r,    // base
+                  sizeof (Rgba) * 2,        // xStride
+                  0,                // yStride
+                  2,                // xSampling
+                  2));                // ySampling
 
         fb.insert ("BY",
-               Slice (HALF,				// type
-                  (char *) &_tmpBuf[-_xMin].b,	// base
-                  sizeof (Rgba) * 2,		// xStride
-                  0,				// yStride
-                  2,				// xSampling
-                  2));				// ySampling
+               Slice (HALF,                // type
+                  (char *) &_tmpBuf[-_xMin].b,    // base
+                  sizeof (Rgba) * 2,        // xStride
+                  0,                // yStride
+                  2,                // xSampling
+                  2));                // ySampling
     }
 
     if (_writeA)
     {
         fb.insert ("A",
-               Slice (HALF,				// type
-                  (char *) &_tmpBuf[-_xMin].a,	// base
-                  sizeof (Rgba),			// xStride
-                  0,				// yStride
-                  1,				// xSampling
-                  1));				// ySampling
+               Slice (HALF,                // type
+                  (char *) &_tmpBuf[-_xMin].a,    // base
+                  sizeof (Rgba),            // xStride
+                  0,                // yStride
+                  1,                // xSampling
+                  1));                // ySampling
     }
 
     _outputFile.setFrameBuffer (fb);
@@ -810,38 +810,38 @@ class RgbaInputFile::FromYca: public Mutex
      FromYca (InputFile &inputFile, RgbaChannels rgbaChannels);
     ~FromYca ();
 
-    void		setFrameBuffer (Rgba *base,
+    void        setFrameBuffer (Rgba *base,
                     size_t xStride,
                     size_t yStride,
                     const string &channelNamePrefix);
 
-    void		readPixels (int scanLine1, int scanLine2);
+    void        readPixels (int scanLine1, int scanLine2);
 
   private:
 
-    void		readPixels (int scanLine);
-    void		rotateBuf1 (int d);
-    void		rotateBuf2 (int d);
-    void		readYCAScanLine (int y, Rgba buf[]);
-    void		padTmpBuf ();
+    void        readPixels (int scanLine);
+    void        rotateBuf1 (int d);
+    void        rotateBuf2 (int d);
+    void        readYCAScanLine (int y, Rgba buf[]);
+    void        padTmpBuf ();
 
-    InputFile &		_inputFile;
-    bool		_readC;
-    int			_xMin;
-    int			_yMin;
-    int 		_yMax;
-    int			_width;
-    int			_height;
-    int			_currentScanLine;
-    LineOrder		_lineOrder;
-    V3f			_yw;
-    Rgba *		_bufBase;
-    Rgba *		_buf1[N + 2];
-    Rgba *		_buf2[3];
-    Rgba *		_tmpBuf;
-    Rgba *		_fbBase;
-    size_t		_fbXStride;
-    size_t		_fbYStride;
+    InputFile &        _inputFile;
+    bool        _readC;
+    int            _xMin;
+    int            _yMin;
+    int         _yMax;
+    int            _width;
+    int            _height;
+    int            _currentScanLine;
+    LineOrder        _lineOrder;
+    V3f            _yw;
+    Rgba *        _bufBase;
+    Rgba *        _buf1[N + 2];
+    Rgba *        _buf2[3];
+    Rgba *        _tmpBuf;
+    Rgba *        _fbBase;
+    size_t        _fbXStride;
+    size_t        _fbYStride;
 };
 
 
@@ -899,43 +899,43 @@ RgbaInputFile::FromYca::setFrameBuffer (Rgba *base,
     FrameBuffer fb;
 
     fb.insert (channelNamePrefix + "Y",
-           Slice (HALF,					// type
-              (char *) &_tmpBuf[N2 - _xMin].g,	// base
-              sizeof (Rgba),			// xStride
-              0,					// yStride
-              1,					// xSampling
-              1,					// ySampling
-              0.5));				// fillValue
+           Slice (HALF,                    // type
+              (char *) &_tmpBuf[N2 - _xMin].g,    // base
+              sizeof (Rgba),            // xStride
+              0,                    // yStride
+              1,                    // xSampling
+              1,                    // ySampling
+              0.5));                // fillValue
 
     if (_readC)
     {
         fb.insert (channelNamePrefix + "RY",
-               Slice (HALF,				// type
-                  (char *) &_tmpBuf[N2 - _xMin].r,	// base
-                  sizeof (Rgba) * 2,		// xStride
-                  0,				// yStride
-                  2,				// xSampling
-                  2,				// ySampling
-                  0.0));				// fillValue
+               Slice (HALF,                // type
+                  (char *) &_tmpBuf[N2 - _xMin].r,    // base
+                  sizeof (Rgba) * 2,        // xStride
+                  0,                // yStride
+                  2,                // xSampling
+                  2,                // ySampling
+                  0.0));                // fillValue
 
         fb.insert (channelNamePrefix + "BY",
-               Slice (HALF,				// type
-                  (char *) &_tmpBuf[N2 - _xMin].b,	// base
-                  sizeof (Rgba) * 2,		// xStride
-                  0,				// yStride
-                  2,				// xSampling
-                  2,				// ySampling
-                  0.0));				// fillValue
+               Slice (HALF,                // type
+                  (char *) &_tmpBuf[N2 - _xMin].b,    // base
+                  sizeof (Rgba) * 2,        // xStride
+                  0,                // yStride
+                  2,                // xSampling
+                  2,                // ySampling
+                  0.0));                // fillValue
     }
 
     fb.insert (channelNamePrefix + "A",
-           Slice (HALF,					// type
-              (char *) &_tmpBuf[N2 - _xMin].a,	// base
-              sizeof (Rgba),			// xStride
-              0,					// yStride
-              1,					// xSampling
-              1,					// ySampling
-              1.0));				// fillValue
+           Slice (HALF,                    // type
+              (char *) &_tmpBuf[N2 - _xMin].a,    // base
+              sizeof (Rgba),            // xStride
+              0,                    // yStride
+              1,                    // xSampling
+              1,                    // ySampling
+              1.0));                // fillValue
 
     _inputFile.setFrameBuffer (fb);
     }
@@ -984,19 +984,19 @@ RgbaInputFile::FromYca::readPixels (int scanLine)
     // processed luminance/chroma data in order to make reading pixels
     // in increasing y or decreasing y order reasonably efficient:
     //
-    //	_currentScanLine	holds the y coordinate of the scan line
-    //				that was most recently read.
+    //    _currentScanLine    holds the y coordinate of the scan line
+    //                that was most recently read.
     //
-    //	_buf1			contains scan lines _currentScanLine-N2-1
-    //				through _currentScanLine+N2+1 in
-    //				luminance/chroma format.  Odd-numbered
-    //				lines contain no chroma data.  Even-numbered
-    //				lines have valid chroma data for all pixels.
+    //    _buf1            contains scan lines _currentScanLine-N2-1
+    //                through _currentScanLine+N2+1 in
+    //                luminance/chroma format.  Odd-numbered
+    //                lines contain no chroma data.  Even-numbered
+    //                lines have valid chroma data for all pixels.
     //
-    //  _buf2			contains scan lines _currentScanLine-1
-    //  			through _currentScanLine+1, in RGB format.
-    //				Super-saturated pixels (see ImfRgbaYca.h)
-    //				have not yet been eliminated.
+    //  _buf2            contains scan lines _currentScanLine-1
+    //              through _currentScanLine+1, in RGB format.
+    //                Super-saturated pixels (see ImfRgbaYca.h)
+    //                have not yet been eliminated.
     //
     // If the scan line we are trying to read now is close enough to
     // _currentScanLine, we don't have to recompute the contents of _buf1
@@ -1241,29 +1241,29 @@ RgbaInputFile::setFrameBuffer (Rgba *base, size_t xStride, size_t yStride)
            Slice (HALF,
               (char *) &base[0].r,
               xs, ys,
-              1, 1,		// xSampling, ySampling
-              0.0));	// fillValue
+              1, 1,        // xSampling, ySampling
+              0.0));    // fillValue
 
     fb.insert (_channelNamePrefix + "G",
            Slice (HALF,
               (char *) &base[0].g,
               xs, ys,
-              1, 1,		// xSampling, ySampling
-              0.0));	// fillValue
+              1, 1,        // xSampling, ySampling
+              0.0));    // fillValue
 
     fb.insert (_channelNamePrefix + "B",
            Slice (HALF,
               (char *) &base[0].b,
               xs, ys,
-              1, 1,		// xSampling, ySampling
-              0.0));	// fillValue
+              1, 1,        // xSampling, ySampling
+              0.0));    // fillValue
 
     fb.insert (_channelNamePrefix + "A",
            Slice (HALF,
               (char *) &base[0].a,
               xs, ys,
-              1, 1,		// xSampling, ySampling
-              1.0));	// fillValue
+              1, 1,        // xSampling, ySampling
+              1.0));    // fillValue
 
     _inputFile->setFrameBuffer (fb);
     }

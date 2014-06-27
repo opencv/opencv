@@ -39,8 +39,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class Slice
-//	class FrameBuffer
+//    class Slice
+//    class FrameBuffer
 //
 //-----------------------------------------------------------------------------
 
@@ -68,31 +68,31 @@ struct Slice
     // Data type; see ImfPixelType.h
     //------------------------------
 
-    PixelType		type;
+    PixelType        type;
 
 
     //---------------------------------------------------------------------
     // Memory layout:  The address of pixel (x, y) is
     //
-    //	base + (xp / xSampling) * xStride + (yp / ySampling) * yStride
+    //    base + (xp / xSampling) * xStride + (yp / ySampling) * yStride
     //
     // where xp and yp are computed as follows:
     //
-    //	* If we are reading or writing a scanline-based file:
+    //    * If we are reading or writing a scanline-based file:
     //
-    //	    xp = x
-    //	    yp = y
+    //        xp = x
+    //        yp = y
     //
     //  * If we are reading a tile whose upper left coorner is at (xt, yt):
     //
-    //	    if xTileCoords is true then xp = x - xt, else xp = x
-    //	    if yTileCoords is true then yp = y - yt, else yp = y
+    //        if xTileCoords is true then xp = x - xt, else xp = x
+    //        if yTileCoords is true then yp = y - yt, else yp = y
     //
     //---------------------------------------------------------------------
 
-    char *		base;
-    size_t		xStride;
-    size_t		yStride;
+    char *        base;
+    size_t        xStride;
+    size_t        yStride;
 
 
     //--------------------------------------------
@@ -103,8 +103,8 @@ struct Slice
     //
     //--------------------------------------------
 
-    int			xSampling;
-    int			ySampling;
+    int            xSampling;
+    int            ySampling;
 
 
     //----------------------------------------------------------
@@ -112,7 +112,7 @@ struct Slice
     // a channel that corresponds to this slice is read.
     //----------------------------------------------------------
 
-    double		fillValue;
+    double        fillValue;
 
 
     //-------------------------------------------------------
@@ -155,35 +155,35 @@ class FrameBuffer
     // Add a slice
     //------------
 
-    void			insert (const char name[],
+    void            insert (const char name[],
                     const Slice &slice);
 
-    void			insert (const std::string &name,
+    void            insert (const std::string &name,
                     const Slice &slice);
 
     //----------------------------------------------------------------
     // Access to existing slices:
     //
-    // [n]		Returns a reference to the slice with name n.
-    //			If no slice with name n exists, an Iex::ArgExc
-    //			is thrown.
+    // [n]        Returns a reference to the slice with name n.
+    //            If no slice with name n exists, an Iex::ArgExc
+    //            is thrown.
     //
-    // findSlice(n)	Returns a pointer to the slice with name n,
-    //			or 0 if no slice with name n exists.
+    // findSlice(n)    Returns a pointer to the slice with name n,
+    //            or 0 if no slice with name n exists.
     //
     //----------------------------------------------------------------
 
-    Slice &			operator [] (const char name[]);
-    const Slice &		operator [] (const char name[]) const;
+    Slice &            operator [] (const char name[]);
+    const Slice &        operator [] (const char name[]) const;
 
-    Slice &			operator [] (const std::string &name);
-    const Slice &		operator [] (const std::string &name) const;
+    Slice &            operator [] (const std::string &name);
+    const Slice &        operator [] (const std::string &name) const;
 
-    Slice *			findSlice (const char name[]);
-    const Slice *		findSlice (const char name[]) const;
+    Slice *            findSlice (const char name[]);
+    const Slice *        findSlice (const char name[]) const;
 
-    Slice *			findSlice (const std::string &name);
-    const Slice *		findSlice (const std::string &name) const;
+    Slice *            findSlice (const std::string &name);
+    const Slice *        findSlice (const std::string &name) const;
 
 
     //-----------------------------------------
@@ -195,21 +195,21 @@ class FrameBuffer
     class Iterator;
     class ConstIterator;
 
-    Iterator			begin ();
-    ConstIterator		begin () const;
+    Iterator            begin ();
+    ConstIterator        begin () const;
 
-    Iterator			end ();
-    ConstIterator		end () const;
+    Iterator            end ();
+    ConstIterator        end () const;
 
-    Iterator			find (const char name[]);
-    ConstIterator		find (const char name[]) const;
+    Iterator            find (const char name[]);
+    ConstIterator        find (const char name[]) const;
 
-    Iterator			find (const std::string &name);
-    ConstIterator		find (const std::string &name) const;
+    Iterator            find (const std::string &name);
+    ConstIterator        find (const std::string &name) const;
 
   private:
 
-    SliceMap			_map;
+    SliceMap            _map;
 };
 
 
@@ -224,11 +224,11 @@ class FrameBuffer::Iterator
     Iterator ();
     Iterator (const FrameBuffer::SliceMap::iterator &i);
 
-    Iterator &			operator ++ ();
-    Iterator 			operator ++ (int);
+    Iterator &            operator ++ ();
+    Iterator             operator ++ (int);
 
-    const char *		name () const;
-    Slice &			slice () const;
+    const char *        name () const;
+    Slice &            slice () const;
 
   private:
 
@@ -246,11 +246,11 @@ class FrameBuffer::ConstIterator
     ConstIterator (const FrameBuffer::SliceMap::const_iterator &i);
     ConstIterator (const FrameBuffer::Iterator &other);
 
-    ConstIterator &		operator ++ ();
-    ConstIterator 		operator ++ (int);
+    ConstIterator &        operator ++ ();
+    ConstIterator         operator ++ (int);
 
-    const char *		name () const;
-    const Slice &		slice () const;
+    const char *        name () const;
+    const Slice &        slice () const;
 
   private:
 

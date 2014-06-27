@@ -37,11 +37,11 @@
 
 //----------------------------------------------------------------------------
 //
-//	ImathPlatform.h
+//    ImathPlatform.h
 //
-//	This file contains functions and constants which aren't
-//	provided by the system libraries, compilers, or includes on
-//	certain platforms.
+//    This file contains functions and constants which aren't
+//    provided by the system libraries, compilers, or includes on
+//    certain platforms.
 //
 //----------------------------------------------------------------------------
 

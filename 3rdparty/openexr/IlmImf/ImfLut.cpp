@@ -36,9 +36,9 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Lookup tables for efficient application
-//	of half --> half functions to pixel data,
-//	and some commonly applied functions.
+//    Lookup tables for efficient application
+//    of half --> half functions to pixel data,
+//    and some commonly applied functions.
 //
 //-----------------------------------------------------------------------------
 

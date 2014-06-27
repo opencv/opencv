@@ -28,7 +28,7 @@ struct KAZEOptions {
         , dthreshold(0.001f)
         , kcontrast(0.01f)
         , kcontrast_percentille(0.7f)
-				, kcontrast_bins(300)
+                , kcontrast_bins(300)
         , upright(false)
         , extended(false)
     {

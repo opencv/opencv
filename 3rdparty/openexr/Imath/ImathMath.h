@@ -39,44 +39,44 @@
 
 //----------------------------------------------------------------------------
 //
-//	ImathMath.h
+//    ImathMath.h
 //
-//	This file contains template functions which call the double-
-//	precision math functions defined in math.h (sin(), sqrt(),
-//	exp() etc.), with specializations that call the faster
-//	single-precision versions (sinf(), sqrtf(), expf() etc.)
-//	when appropriate.
+//    This file contains template functions which call the double-
+//    precision math functions defined in math.h (sin(), sqrt(),
+//    exp() etc.), with specializations that call the faster
+//    single-precision versions (sinf(), sqrtf(), expf() etc.)
+//    when appropriate.
 //
-//	Example:
+//    Example:
 //
-//	    double x = Math<double>::sqrt (3);	// calls ::sqrt(double);
-//	    float  y = Math<float>::sqrt (3);	// calls ::sqrtf(float);
+//        double x = Math<double>::sqrt (3);    // calls ::sqrt(double);
+//        float  y = Math<float>::sqrt (3);    // calls ::sqrtf(float);
 //
-//	When would I want to use this?
+//    When would I want to use this?
 //
-//	You may be writing a template which needs to call some function
-//	defined in math.h, for example to extract a square root, but you
-//	don't know whether to call the single- or the double-precision
-//	version of this function (sqrt() or sqrtf()):
+//    You may be writing a template which needs to call some function
+//    defined in math.h, for example to extract a square root, but you
+//    don't know whether to call the single- or the double-precision
+//    version of this function (sqrt() or sqrtf()):
 //
-//	    template <class T>
-//	    T
-//	    glorp (T x)
-//	    {
-//		return sqrt (x + 1);		// should call ::sqrtf(float)
-//	    }					// if x is a float, but we
-//						// don't know if it is
+//        template <class T>
+//        T
+//        glorp (T x)
+//        {
+//        return sqrt (x + 1);        // should call ::sqrtf(float)
+//        }                    // if x is a float, but we
+//                        // don't know if it is
 //
-//	Using the templates in this file, you can make sure that
-//	the appropriate version of the math function is called:
+//    Using the templates in this file, you can make sure that
+//    the appropriate version of the math function is called:
 //
-//	    template <class T>
-//	    T
-//	    glorp (T x, T y)
-//	    {
-//		return Math<T>::sqrt (x + 1);	// calls ::sqrtf(float) if x
-//	    }					// is a float, ::sqrt(double)
-//	    					// otherwise
+//        template <class T>
+//        T
+//        glorp (T x, T y)
+//        {
+//        return Math<T>::sqrt (x + 1);    // calls ::sqrtf(float) if x
+//        }                    // is a float, ::sqrt(double)
+//                            // otherwise
 //
 //----------------------------------------------------------------------------
 
@@ -90,63 +90,63 @@ namespace Imath {
 template <class T>
 struct Math
 {
-   static T	acos  (T x)		{return ::acos (double(x));}
-   static T	asin  (T x)		{return ::asin (double(x));}
-   static T	atan  (T x)		{return ::atan (double(x));}
-   static T	atan2 (T x, T y)	{return ::atan2 (double(x), double(y));}
-   static T	cos   (T x)		{return ::cos (double(x));}
-   static T	sin   (T x)		{return ::sin (double(x));}
-   static T	tan   (T x)		{return ::tan (double(x));}
-   static T	cosh  (T x)		{return ::cosh (double(x));}
-   static T	sinh  (T x)		{return ::sinh (double(x));}
-   static T	tanh  (T x)		{return ::tanh (double(x));}
-   static T	exp   (T x)		{return ::exp (double(x));}
-   static T	log   (T x)		{return ::log (double(x));}
-   static T	log10 (T x)		{return ::log10 (double(x));}
-   static T	modf  (T x, T *iptr)
+   static T    acos  (T x)        {return ::acos (double(x));}
+   static T    asin  (T x)        {return ::asin (double(x));}
+   static T    atan  (T x)        {return ::atan (double(x));}
+   static T    atan2 (T x, T y)    {return ::atan2 (double(x), double(y));}
+   static T    cos   (T x)        {return ::cos (double(x));}
+   static T    sin   (T x)        {return ::sin (double(x));}
+   static T    tan   (T x)        {return ::tan (double(x));}
+   static T    cosh  (T x)        {return ::cosh (double(x));}
+   static T    sinh  (T x)        {return ::sinh (double(x));}
+   static T    tanh  (T x)        {return ::tanh (double(x));}
+   static T    exp   (T x)        {return ::exp (double(x));}
+   static T    log   (T x)        {return ::log (double(x));}
+   static T    log10 (T x)        {return ::log10 (double(x));}
+   static T    modf  (T x, T *iptr)
    {
         double ival;
         T rval( ::modf (double(x),&ival));
     *iptr = ival;
     return rval;
    }
-   static T	pow   (T x, T y)	{return ::pow (double(x), double(y));}
-   static T	sqrt  (T x)		{return ::sqrt (double(x));}
-   static T	ceil  (T x)		{return ::ceil (double(x));}
-   static T	fabs  (T x)		{return ::fabs (double(x));}
-   static T	floor (T x)		{return ::floor (double(x));}
-   static T	fmod  (T x, T y)	{return ::fmod (double(x), double(y));}
-   static T	hypot (T x, T y)	{return ::hypot (double(x), double(y));}
+   static T    pow   (T x, T y)    {return ::pow (double(x), double(y));}
+   static T    sqrt  (T x)        {return ::sqrt (double(x));}
+   static T    ceil  (T x)        {return ::ceil (double(x));}
+   static T    fabs  (T x)        {return ::fabs (double(x));}
+   static T    floor (T x)        {return ::floor (double(x));}
+   static T    fmod  (T x, T y)    {return ::fmod (double(x), double(y));}
+   static T    hypot (T x, T y)    {return ::hypot (double(x), double(y));}
 };
 
 
 template <>
 struct Math<float>
 {
-   static float	acos  (float x)			{return ::acosf (x);}
-   static float	asin  (float x)			{return ::asinf (x);}
-   static float	atan  (float x)			{return ::atanf (x);}
-   static float	atan2 (float x, float y)	{return ::atan2f (x, y);}
-   static float	cos   (float x)			{return ::cosf (x);}
-   static float	sin   (float x)			{return ::sinf (x);}
-   static float	tan   (float x)			{return ::tanf (x);}
-   static float	cosh  (float x)			{return ::coshf (x);}
-   static float	sinh  (float x)			{return ::sinhf (x);}
-   static float	tanh  (float x)			{return ::tanhf (x);}
-   static float	exp   (float x)			{return ::expf (x);}
-   static float	log   (float x)			{return ::logf (x);}
-   static float	log10 (float x)			{return ::log10f (x);}
-   static float	modf  (float x, float *y)	{return ::modff (x, y);}
-   static float	pow   (float x, float y)	{return ::powf (x, y);}
-   static float	sqrt  (float x)			{return ::sqrtf (x);}
-   static float	ceil  (float x)			{return ::ceilf (x);}
-   static float	fabs  (float x)			{return ::fabsf (x);}
-   static float	floor (float x)			{return ::floorf (x);}
-   static float	fmod  (float x, float y)	{return ::fmodf (x, y);}
+   static float    acos  (float x)            {return ::acosf (x);}
+   static float    asin  (float x)            {return ::asinf (x);}
+   static float    atan  (float x)            {return ::atanf (x);}
+   static float    atan2 (float x, float y)    {return ::atan2f (x, y);}
+   static float    cos   (float x)            {return ::cosf (x);}
+   static float    sin   (float x)            {return ::sinf (x);}
+   static float    tan   (float x)            {return ::tanf (x);}
+   static float    cosh  (float x)            {return ::coshf (x);}
+   static float    sinh  (float x)            {return ::sinhf (x);}
+   static float    tanh  (float x)            {return ::tanhf (x);}
+   static float    exp   (float x)            {return ::expf (x);}
+   static float    log   (float x)            {return ::logf (x);}
+   static float    log10 (float x)            {return ::log10f (x);}
+   static float    modf  (float x, float *y)    {return ::modff (x, y);}
+   static float    pow   (float x, float y)    {return ::powf (x, y);}
+   static float    sqrt  (float x)            {return ::sqrtf (x);}
+   static float    ceil  (float x)            {return ::ceilf (x);}
+   static float    fabs  (float x)            {return ::fabsf (x);}
+   static float    floor (float x)            {return ::floorf (x);}
+   static float    fmod  (float x, float y)    {return ::fmodf (x, y);}
 #if !defined(_MSC_VER)
-   static float	hypot (float x, float y)	{return ::hypotf (x, y);}
+   static float    hypot (float x, float y)    {return ::hypotf (x, y);}
 #else
-   static float hypot (float x, float y)	{return ::sqrtf(x*x + y*y);}
+   static float hypot (float x, float y)    {return ::sqrtf(x*x + y*y);}
 #endif
 };
 
@@ -172,17 +172,17 @@ sinx_over_x (T x)
 //
 // equalWithAbsError (x1, x2, e)
 //
-//	Returns true if x1 is the same as x2 with an absolute error of
-//	no more than e,
+//    Returns true if x1 is the same as x2 with an absolute error of
+//    no more than e,
 //
-//	abs (x1 - x2) <= e
+//    abs (x1 - x2) <= e
 //
 // equalWithRelError (x1, x2, e)
 //
-//	Returns true if x1 is the same as x2 with an relative error of
-//	no more than e,
+//    Returns true if x1 is the same as x2 with an relative error of
+//    no more than e,
 //
-//	abs (x1 - x2) <= e * x1
+//    abs (x1 - x2) <= e * x1
 //
 //--------------------------------------------------------------------------
 

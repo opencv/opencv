@@ -178,7 +178,7 @@ void AKAZEFeatures::Feature_Detection(std::vector<cv::KeyPoint>& kpts)
 class MultiscaleDerivativesAKAZEInvoker : public cv::ParallelLoopBody
 {
 public:
-	explicit MultiscaleDerivativesAKAZEInvoker(std::vector<TEvolution>& ev, const AKAZEOptions& opt)
+    explicit MultiscaleDerivativesAKAZEInvoker(std::vector<TEvolution>& ev, const AKAZEOptions& opt)
     : evolution_(&ev)
     , options_(opt)
   {
@@ -219,7 +219,7 @@ private:
 void AKAZEFeatures::Compute_Multiscale_Derivatives(void)
 {
   cv::parallel_for_(cv::Range(0, (int)evolution_.size()),
-										MultiscaleDerivativesAKAZEInvoker(evolution_, options_));
+                                        MultiscaleDerivativesAKAZEInvoker(evolution_, options_));
 }
 
 /* ************************************************************************* */
@@ -693,7 +693,7 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
 {
   for(size_t i = 0; i < kpts.size(); i++)
   {
-      CV_Assert(0 <= kpts[i].class_id && kpts[i].class_id < evolution_.size());
+      CV_Assert(0 <= kpts[i].class_id && kpts[i].class_id < static_cast<int>(evolution_.size()));
   }
 
   // Allocate memory for the matrix with the descriptors

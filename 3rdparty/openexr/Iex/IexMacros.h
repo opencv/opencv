@@ -39,7 +39,7 @@
 
 //--------------------------------------------------------------------
 //
-//	Macros which make throwing exceptions more convenient
+//    Macros which make throwing exceptions more convenient
 //
 //--------------------------------------------------------------------
 
@@ -51,17 +51,17 @@
 //
 // Example:
 //
-//	THROW (InputExc, "Syntax error in line " << line ", " << file << ".");
+//    THROW (InputExc, "Syntax error in line " << line ", " << file << ".");
 //
 //----------------------------------------------------------------------------
 
-#define THROW(type, text)	\
-    do				\
-    {				\
-    std::stringstream s;	\
-    s << text;		\
-    throw type (s);		\
-    }				\
+#define THROW(type, text)    \
+    do                \
+    {                \
+    std::stringstream s;    \
+    s << text;        \
+    throw type (s);        \
+    }                \
     while (0)
 
 
@@ -73,37 +73,37 @@
 //
 // Append to end of an exception's text:
 //
-//	catch (BaseExc &e)
-//	{
-//	    APPEND_EXC (e, " Directory " << name << " does not exist.");
-//	    throw;
-//	}
+//    catch (BaseExc &e)
+//    {
+//        APPEND_EXC (e, " Directory " << name << " does not exist.");
+//        throw;
+//    }
 //
 // Replace an exception's text:
 //
-//	catch (BaseExc &e)
-//	{
-//	    REPLACE_EXC (e, "Directory " << name << " does not exist. " << e);
-//	    throw;
-//	}
+//    catch (BaseExc &e)
+//    {
+//        REPLACE_EXC (e, "Directory " << name << " does not exist. " << e);
+//        throw;
+//    }
 //----------------------------------------------------------------------------
 
-#define APPEND_EXC(exc, text)	\
-    do				\
-    {				\
-    std::stringstream s;	\
-    s << text;		\
-    exc.append (s);		\
-    }				\
+#define APPEND_EXC(exc, text)    \
+    do                \
+    {                \
+    std::stringstream s;    \
+    s << text;        \
+    exc.append (s);        \
+    }                \
     while (0)
 
-#define REPLACE_EXC(exc, text)	\
-    do				\
-    {				\
-    std::stringstream s;	\
-    s << text;		\
-    exc.assign (s);		\
-    }				\
+#define REPLACE_EXC(exc, text)    \
+    do                \
+    {                \
+    std::stringstream s;    \
+    s << text;        \
+    exc.assign (s);        \
+    }                \
     while (0)
 
 
@@ -113,17 +113,17 @@
 //
 // Example:
 //
-//	THROW_ERRNO ("Cannot open file " << name << " (%T).");
+//    THROW_ERRNO ("Cannot open file " << name << " (%T).");
 //
 //-------------------------------------------------------------
 
-#define THROW_ERRNO(text)		\
-    do					\
-    {					\
-    std::stringstream s;		\
-    s << text;			\
-    ::Iex::throwErrnoExc (s.str());	\
-    }					\
+#define THROW_ERRNO(text)        \
+    do                    \
+    {                    \
+    std::stringstream s;        \
+    s << text;            \
+    ::Iex::throwErrnoExc (s.str());    \
+    }                    \
     while (0)
 
 
@@ -132,7 +132,7 @@
 //
 // Example:
 //
-//	ASSERT (ptr != NULL, NullExc, "Null pointer" );
+//    ASSERT (ptr != NULL, NullExc, "Null pointer" );
 //
 //-------------------------------------------------------------
 

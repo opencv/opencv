@@ -36,12 +36,12 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class V2iAttribute
-//	class V2fAttribute
-//	class V2dAttribute
-//	class V3iAttribute
-//	class V3fAttribute
-//	class V3dAttribute
+//    class V2iAttribute
+//    class V2fAttribute
+//    class V2dAttribute
+//    class V3iAttribute
+//    class V3fAttribute
+//    class V3dAttribute
 //
 //-----------------------------------------------------------------------------
 

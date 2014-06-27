@@ -40,10 +40,10 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Simplified RGBA image I/O
+//    Simplified RGBA image I/O
 //
-//	class RgbaOutputFile
-//	class RgbaInputFile
+//    class RgbaOutputFile
+//    class RgbaInputFile
 //
 //-----------------------------------------------------------------------------
 
@@ -143,7 +143,7 @@ class RgbaOutputFile
     //
     //------------------------------------------------
 
-    void			setFrameBuffer (const Rgba *base,
+    void            setFrameBuffer (const Rgba *base,
                         size_t xStride,
                         size_t yStride);
 
@@ -152,31 +152,31 @@ class RgbaOutputFile
     // Write pixel data (see class Imf::OutputFile)
     //---------------------------------------------
 
-    void			writePixels (int numScanLines = 1);
-    int				currentScanLine () const;
+    void            writePixels (int numScanLines = 1);
+    int                currentScanLine () const;
 
 
     //--------------------------
     // Access to the file header
     //--------------------------
 
-    const Header &		header () const;
-    const FrameBuffer &		frameBuffer () const;
-    const Imath::Box2i &	displayWindow () const;
-    const Imath::Box2i &	dataWindow () const;
-    float			pixelAspectRatio () const;
-    const Imath::V2f		screenWindowCenter () const;
-    float			screenWindowWidth () const;
-    LineOrder			lineOrder () const;
-    Compression			compression () const;
-    RgbaChannels		channels () const;
+    const Header &        header () const;
+    const FrameBuffer &        frameBuffer () const;
+    const Imath::Box2i &    displayWindow () const;
+    const Imath::Box2i &    dataWindow () const;
+    float            pixelAspectRatio () const;
+    const Imath::V2f        screenWindowCenter () const;
+    float            screenWindowWidth () const;
+    LineOrder            lineOrder () const;
+    Compression            compression () const;
+    RgbaChannels        channels () const;
 
 
     // --------------------------------------------------------------------
     // Update the preview image (see Imf::OutputFile::updatePreviewImage())
     // --------------------------------------------------------------------
 
-    void			updatePreviewImage (const PreviewRgba[]);
+    void            updatePreviewImage (const PreviewRgba[]);
 
 
     //-----------------------------------------------------------------------
@@ -193,7 +193,7 @@ class RgbaOutputFile
     // without chroma, then no rounding is performed.
     //-----------------------------------------------------------------------
 
-    void			setYCRounding (unsigned int roundY,
+    void            setYCRounding (unsigned int roundY,
                            unsigned int roundC);
 
 
@@ -207,19 +207,19 @@ class RgbaOutputFile
     //
     //----------------------------------------------------
 
-    void			breakScanLine  (int y,
+    void            breakScanLine  (int y,
                         int offset,
                         int length,
                         char c);
   private:
 
-    RgbaOutputFile (const RgbaOutputFile &);		  // not implemented
+    RgbaOutputFile (const RgbaOutputFile &);          // not implemented
     RgbaOutputFile & operator = (const RgbaOutputFile &); // not implemented
 
     class ToYca;
 
-    OutputFile *		_outputFile;
-    ToYca *			_toYca;
+    OutputFile *        _outputFile;
+    ToYca *            _toYca;
 };
 
 
@@ -279,7 +279,7 @@ class RgbaInputFile
     //
     //-----------------------------------------------------
 
-    void			setFrameBuffer (Rgba *base,
+    void            setFrameBuffer (Rgba *base,
                         size_t xStride,
                         size_t yStride);
 
@@ -291,51 +291,51 @@ class RgbaInputFile
     // called at least once before the next call to readPixels().
     //----------------------------------------------------------------
 
-    void			setLayerName (const std::string &layerName);
+    void            setLayerName (const std::string &layerName);
 
 
     //-------------------------------------------
     // Read pixel data (see class Imf::InputFile)
     //-------------------------------------------
 
-    void			readPixels (int scanLine1, int scanLine2);
-    void			readPixels (int scanLine);
+    void            readPixels (int scanLine1, int scanLine2);
+    void            readPixels (int scanLine);
 
 
     //--------------------------
     // Access to the file header
     //--------------------------
 
-    const Header &		header () const;
-    const FrameBuffer &		frameBuffer () const;
-    const Imath::Box2i &	displayWindow () const;
-    const Imath::Box2i &	dataWindow () const;
-    float			pixelAspectRatio () const;
-    const Imath::V2f		screenWindowCenter () const;
-    float			screenWindowWidth () const;
-    LineOrder			lineOrder () const;
-    Compression			compression () const;
-    RgbaChannels		channels () const;
+    const Header &        header () const;
+    const FrameBuffer &        frameBuffer () const;
+    const Imath::Box2i &    displayWindow () const;
+    const Imath::Box2i &    dataWindow () const;
+    float            pixelAspectRatio () const;
+    const Imath::V2f        screenWindowCenter () const;
+    float            screenWindowWidth () const;
+    LineOrder            lineOrder () const;
+    Compression            compression () const;
+    RgbaChannels        channels () const;
     const char *                fileName () const;
-    bool			isComplete () const;
+    bool            isComplete () const;
 
 
     //----------------------------------
     // Access to the file format version
     //----------------------------------
 
-    int				version () const;
+    int                version () const;
 
   private:
 
-    RgbaInputFile (const RgbaInputFile &);		  // not implemented
+    RgbaInputFile (const RgbaInputFile &);          // not implemented
     RgbaInputFile & operator = (const RgbaInputFile &);   // not implemented
 
     class FromYca;
 
-    InputFile *			_inputFile;
-    FromYca *			_fromYca;
-    std::string			_channelNamePrefix;
+    InputFile *            _inputFile;
+    FromYca *            _fromYca;
+    std::string            _channelNamePrefix;
 };
 
 

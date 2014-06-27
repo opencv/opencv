@@ -37,26 +37,26 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class Task, class ThreadPool, class TaskGroup
+//    class Task, class ThreadPool, class TaskGroup
 //
-//	Class ThreadPool manages a set of worker threads and accepts
-//	tasks for processing.  Tasks added to the thread pool are
-//	executed concurrently by the worker threads.
+//    Class ThreadPool manages a set of worker threads and accepts
+//    tasks for processing.  Tasks added to the thread pool are
+//    executed concurrently by the worker threads.
 //
-//	Class Thread provides an abstract interface for a task which
-//	a ThreadPool works on.  Derived classes need to implement the
-//	execute() function which performs the actual task.
+//    Class Thread provides an abstract interface for a task which
+//    a ThreadPool works on.  Derived classes need to implement the
+//    execute() function which performs the actual task.
 //
-//	Class TaskTroup allows synchronization on the completion of a set
-//	of tasks.  Every task that is added to a ThreadPool belongs to a
-//	single TaskGroup.  The destructor of the TaskGroup waits for all
-//	tasks in the group to finish.
+//    Class TaskTroup allows synchronization on the completion of a set
+//    of tasks.  Every task that is added to a ThreadPool belongs to a
+//    single TaskGroup.  The destructor of the TaskGroup waits for all
+//    tasks in the group to finish.
 //
-//	Note: if you plan to use the ThreadPool interface in your own
-//	applications note that the implementation of the ThreadPool calls
-//	operator delete on tasks as they complete.  If you define a custom
-//	operator new for your tasks, for instance to use a custom heap,
-//	then you must also write an appropriate operator delete.
+//    Note: if you plan to use the ThreadPool interface in your own
+//    applications note that the implementation of the ThreadPool calls
+//    operator delete on tasks as they complete.  If you define a custom
+//    operator new for your tasks, for instance to use a custom heap,
+//    then you must also write an appropriate operator delete.
 //
 //-----------------------------------------------------------------------------
 
@@ -94,8 +94,8 @@ class ThreadPool
     // or crash.
     //--------------------------------------------------------
 
-    int		numThreads () const;
-    void	setNumThreads (int count);
+    int        numThreads () const;
+    void    setNumThreads (int count);
 
 
     //------------------------------------------------------------
@@ -112,14 +112,14 @@ class ThreadPool
     // Access functions for the global threadpool
     //-------------------------------------------
 
-    static ThreadPool&	globalThreadPool ();
-    static void		addGlobalTask (Task* task);
+    static ThreadPool&    globalThreadPool ();
+    static void        addGlobalTask (Task* task);
 
     struct Data;
 
   protected:
 
-    Data *		_data;
+    Data *        _data;
 };
 
 
@@ -130,12 +130,12 @@ class Task
     Task (TaskGroup* g);
     virtual ~Task ();
 
-    virtual void	execute () = 0;
-    TaskGroup *		group();
+    virtual void    execute () = 0;
+    TaskGroup *        group();
 
   protected:
 
-    TaskGroup *		_group;
+    TaskGroup *        _group;
 };
 
 
@@ -147,7 +147,7 @@ class TaskGroup
     ~TaskGroup();
 
     struct Data;
-    Data* const		_data;
+    Data* const        _data;
 };
 
 

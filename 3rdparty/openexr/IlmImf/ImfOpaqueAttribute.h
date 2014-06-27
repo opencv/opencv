@@ -39,13 +39,13 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class OpaqueAttribute
+//    class OpaqueAttribute
 //
-//	When an image file is read, OpqaqueAttribute objects are used
-//	to hold the values of attributes whose types are not recognized
-//	by the reading program.  OpaqueAttribute objects can be read
-//	from an image file, copied, and written back to to another image
-//	file, but their values are inaccessible.
+//    When an image file is read, OpqaqueAttribute objects are used
+//    to hold the values of attributes whose types are not recognized
+//    by the reading program.  OpaqueAttribute objects can be read
+//    from an image file, copied, and written back to to another image
+//    file, but their values are inaccessible.
 //
 //-----------------------------------------------------------------------------
 
@@ -72,35 +72,35 @@ class OpaqueAttribute: public Attribute
     // Get this attribute's type name
     //-------------------------------
 
-    virtual const char *	typeName () const;
+    virtual const char *    typeName () const;
 
 
     //------------------------------
     // Make a copy of this attribute
     //------------------------------
 
-    virtual Attribute *		copy () const;
+    virtual Attribute *        copy () const;
 
 
     //----------------
     // I/O and copying
     //----------------
 
-    virtual void		writeValueTo (OStream &os,
+    virtual void        writeValueTo (OStream &os,
                           int version) const;
 
-    virtual void		readValueFrom (IStream &is,
+    virtual void        readValueFrom (IStream &is,
                            int size,
                            int version);
 
-    virtual void		copyValueFrom (const Attribute &other);
+    virtual void        copyValueFrom (const Attribute &other);
 
 
   private:
 
-    Array<char>			_typeName;
-    long			_dataSize;
-    Array<char>			_data;
+    Array<char>            _typeName;
+    long            _dataSize;
+    Array<char>            _data;
 };
 
 

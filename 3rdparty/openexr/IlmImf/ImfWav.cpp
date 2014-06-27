@@ -36,11 +36,11 @@
 
 //-----------------------------------------------------------------------------
 //
-//	16-bit Haar Wavelet encoding and decoding
+//    16-bit Haar Wavelet encoding and decoding
 //
-//	The source code in this file is derived from the encoding
-//	and decoding routines written by Christian Rouet for his
-//	PIZ image file format.
+//    The source code in this file is derived from the encoding
+//    and decoding routines written by Christian Rouet for his
+//    PIZ image file format.
 //
 //-----------------------------------------------------------------------------
 
@@ -142,17 +142,17 @@ wdec16 (unsigned short  l, unsigned short  h,
 
 void
 wav2Encode
-    (unsigned short*	in,	// io: values are transformed in place
-     int		nx,	// i : x size
-     int		ox,	// i : x offset
-     int		ny,	// i : y size
-     int		oy,	// i : y offset
-     unsigned short	mx)	// i : maximum in[x][y] value
+    (unsigned short*    in,    // io: values are transformed in place
+     int        nx,    // i : x size
+     int        ox,    // i : x offset
+     int        ny,    // i : y size
+     int        oy,    // i : y offset
+     unsigned short    mx)    // i : maximum in[x][y] value
 {
     bool w14 = (mx < (1 << 14));
-    int	n  = (nx > ny)? ny: nx;
-    int	p  = 1;			// == 1 <<  level
-    int p2 = 2;			// == 1 << (level+1)
+    int    n  = (nx > ny)? ny: nx;
+    int    p  = 1;            // == 1 <<  level
+    int p2 = 2;            // == 1 << (level+1)
 
     //
     // Hierachical loop on smaller dimension n
@@ -262,16 +262,16 @@ wav2Encode
 
 void
 wav2Decode
-    (unsigned short*	in,	// io: values are transformed in place
-     int		nx,	// i : x size
-     int		ox,	// i : x offset
-     int		ny,	// i : y size
-     int		oy,	// i : y offset
-     unsigned short	mx)	// i : maximum in[x][y] value
+    (unsigned short*    in,    // io: values are transformed in place
+     int        nx,    // i : x size
+     int        ox,    // i : x offset
+     int        ny,    // i : y size
+     int        oy,    // i : y offset
+     unsigned short    mx)    // i : maximum in[x][y] value
 {
     bool w14 = (mx < (1 << 14));
-    int	n = (nx > ny)? ny: nx;
-    int	p = 1;
+    int    n = (nx > ny)? ny: nx;
+    int    p = 1;
     int p2;
 
     //

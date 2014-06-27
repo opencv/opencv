@@ -312,4 +312,3 @@ TEST( Features2d_Detector_PyramidFAST, regression )
     CV_FeatureDetectorTest test( "detector-pyramid-fast", FeatureDetector::create("PyramidFAST") );
     test.safe_run();
 }
-

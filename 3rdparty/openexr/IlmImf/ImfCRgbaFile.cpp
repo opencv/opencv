@@ -35,7 +35,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	C interface to C++ classes Imf::RgbaOutputFile and Imf::RgbaInputFile
+//    C interface to C++ classes Imf::RgbaOutputFile and Imf::RgbaInputFile
 //
 //-----------------------------------------------------------------------------
 

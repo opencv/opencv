@@ -39,7 +39,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Miscellaneous utility functions
+//    Miscellaneous utility functions
 //
 //-----------------------------------------------------------------------------
 
@@ -170,8 +170,8 @@ trunc (T x)
 // Integer division and remainder where the
 // remainder of x/y has the same sign as x:
 //
-//	divs(x,y) == (abs(x) / abs(y)) * (sign(x) * sign(y))
-//	mods(x,y) == x - y * divs(x,y)
+//    divs(x,y) == (abs(x) / abs(y)) * (sign(x) * sign(y))
+//    mods(x,y) == x - y * divs(x,y)
 //
 
 inline int
@@ -194,8 +194,8 @@ mods (int x, int y)
 // Integer division and remainder where the
 // remainder of x/y is always positive:
 //
-//	divp(x,y) == floor (double(x) / double (y))
-//	modp(x,y) == x - y * divp(x,y)
+//    divp(x,y) == floor (double(x) / double (y))
+//    modp(x,y) == x - y * divp(x,y)
 //
 
 inline int

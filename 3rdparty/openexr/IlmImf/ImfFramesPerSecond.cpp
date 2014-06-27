@@ -34,7 +34,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Convenience functions related to the framesPerSecond attribute
+//    Convenience functions related to the framesPerSecond attribute
 //
 //-----------------------------------------------------------------------------
 

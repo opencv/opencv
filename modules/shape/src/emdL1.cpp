@@ -112,7 +112,7 @@ bool EmdL1::initBaseTrees(int n1, int n2, int n3)
     binsDim2 = n2;
     binsDim3 = n3;
     if(binsDim1==0 || binsDim2==0) dimension = 0;
-    else dimension	= (binsDim3==0)?2:3;
+    else dimension    = (binsDim3==0)?2:3;
 
     if(dimension==2)
     {
@@ -164,7 +164,7 @@ bool EmdL1::initBaseTrees(int n1, int n2, int n3)
 bool EmdL1::fillBaseTrees(float *H1, float *H2)
 {
     //- Set global counters
-    m_pRoot	= NULL;
+    m_pRoot    = NULL;
     // Graph initialization
     float *p1 = H1;
     float *p2 = H2;
@@ -186,13 +186,13 @@ bool EmdL1::fillBaseTrees(float *H1, float *H2)
                 // to the right
                 m_EdgesRight[r][c].pParent = &(m_Nodes[r][c]);
                 m_EdgesRight[r][c].pChild = &(m_Nodes[r][(c+1)%binsDim2]);
-                m_EdgesRight[r][c].flow	= 0;
-                m_EdgesRight[r][c].iDir	= 1;
-                m_EdgesRight[r][c].pNxt	= NULL;
+                m_EdgesRight[r][c].flow    = 0;
+                m_EdgesRight[r][c].iDir    = 1;
+                m_EdgesRight[r][c].pNxt    = NULL;
 
                 // to the upward
-                m_EdgesUp[r][c].pParent	= &(m_Nodes[r][c]);
-                m_EdgesUp[r][c].pChild	= &(m_Nodes[(r+1)%binsDim1][c]);
+                m_EdgesUp[r][c].pParent    = &(m_Nodes[r][c]);
+                m_EdgesUp[r][c].pChild    = &(m_Nodes[(r+1)%binsDim1][c]);
                 m_EdgesUp[r][c].flow = 0;
                 m_EdgesUp[r][c].iDir = 1;
                 m_EdgesUp[r][c].pNxt = NULL;
@@ -219,21 +219,21 @@ bool EmdL1::fillBaseTrees(float *H1, float *H2)
                     //- initialize edges
                     // to the upward
                     m_3dEdgesUp[r][c][z].pParent= &(m_3dNodes[r][c][z]);
-                    m_3dEdgesUp[r][c][z].pChild	= &(m_3dNodes[(r+1)%binsDim1][c][z]);
+                    m_3dEdgesUp[r][c][z].pChild    = &(m_3dNodes[(r+1)%binsDim1][c][z]);
                     m_3dEdgesUp[r][c][z].flow = 0;
                     m_3dEdgesUp[r][c][z].iDir = 1;
                     m_3dEdgesUp[r][c][z].pNxt = NULL;
 
                     // to the right
-                    m_3dEdgesRight[r][c][z].pParent	= &(m_3dNodes[r][c][z]);
-                    m_3dEdgesRight[r][c][z].pChild	= &(m_3dNodes[r][(c+1)%binsDim2][z]);
-                    m_3dEdgesRight[r][c][z].flow	= 0;
-                    m_3dEdgesRight[r][c][z].iDir	= 1;
-                    m_3dEdgesRight[r][c][z].pNxt	= NULL;
+                    m_3dEdgesRight[r][c][z].pParent    = &(m_3dNodes[r][c][z]);
+                    m_3dEdgesRight[r][c][z].pChild    = &(m_3dNodes[r][(c+1)%binsDim2][z]);
+                    m_3dEdgesRight[r][c][z].flow    = 0;
+                    m_3dEdgesRight[r][c][z].iDir    = 1;
+                    m_3dEdgesRight[r][c][z].pNxt    = NULL;
 
                     // to the deep
-                    m_3dEdgesDeep[r][c][z].pParent	= &(m_3dNodes[r][c][z]);
-                    m_3dEdgesDeep[r][c][z].pChild	= &(m_3dNodes[r][c])[(z+1)%binsDim3];
+                    m_3dEdgesDeep[r][c][z].pParent    = &(m_3dNodes[r][c][z]);
+                    m_3dEdgesDeep[r][c][z].pChild    = &(m_3dNodes[r][c])[(z+1)%binsDim3];
                     m_3dEdgesDeep[r][c][z].flow = 0;
                     m_3dEdgesDeep[r][c][z].iDir = 1;
                     m_3dEdgesDeep[r][c][z].pNxt = NULL;
@@ -252,7 +252,7 @@ bool EmdL1::greedySolution()
 bool EmdL1::greedySolution2()
 {
     //- Prepare auxiliary array, D=H1-H2
-    int	c,r;
+    int    c,r;
     floatArray2D D(binsDim1);
     for(r=0; r<binsDim1; r++)
     {
@@ -286,30 +286,30 @@ bool EmdL1::greedySolution2()
     for(r=0; r<binsDim1; r++)
     {
         dFlow = D[r][c];
-        bUpward = (r<binsDim1-1) && (fabs(dFlow+d2s[c+1]) > fabs(dFlow+d1s[r+1]));	// Move upward or right
+        bUpward = (r<binsDim1-1) && (fabs(dFlow+d2s[c+1]) > fabs(dFlow+d1s[r+1]));    // Move upward or right
 
         // modify basic variables, record BV and related values
         if(bUpward)
         {
             // move to up
-            pBV	= &(m_EdgesUp[r][c]);
-            m_NBVEdges[nNBV++]	= &(m_EdgesRight[r][c]);
-            D[r+1][c] += dFlow;		// auxilary matrix maintanence
-            d1s[r+1] += dFlow;		// auxilary matrix maintanence
+            pBV    = &(m_EdgesUp[r][c]);
+            m_NBVEdges[nNBV++]    = &(m_EdgesRight[r][c]);
+            D[r+1][c] += dFlow;        // auxilary matrix maintanence
+            d1s[r+1] += dFlow;        // auxilary matrix maintanence
         }
         else
         {
             // move to right, no other choice
-            pBV	= &(m_EdgesRight[r][c]);
+            pBV    = &(m_EdgesRight[r][c]);
             if(r<binsDim1-1)
-                m_NBVEdges[nNBV++]	= &(m_EdgesUp[r][c]);
+                m_NBVEdges[nNBV++]    = &(m_EdgesUp[r][c]);
 
-            D[r][c+1] += dFlow;		// auxilary matrix maintanence
-            d2s[c+1] += dFlow;		// auxilary matrix maintanence
+            D[r][c+1] += dFlow;        // auxilary matrix maintanence
+            d2s[c+1] += dFlow;        // auxilary matrix maintanence
         }
         pBV->pParent->pChild = pBV;
         pBV->flow = fabs(dFlow);
-        pBV->iDir = dFlow>0;		// 1:outward, 0:inward
+        pBV->iDir = dFlow>0;        // 1:outward, 0:inward
     }
 
     //- rightmost column, no choice but move upward
@@ -318,10 +318,10 @@ bool EmdL1::greedySolution2()
     {
         dFlow = D[r][c];
         pBV = &(m_EdgesUp[r][c]);
-        D[r+1][c] += dFlow;		// auxilary matrix maintanence
+        D[r+1][c] += dFlow;        // auxilary matrix maintanence
         pBV->pParent->pChild= pBV;
         pBV->flow = fabs(dFlow);
-        pBV->iDir = dFlow>0;		// 1:outward, 0:inward
+        pBV->iDir = dFlow>0;        // 1:outward, 0:inward
     }
     return true;
 }
@@ -371,7 +371,7 @@ bool EmdL1::greedySolution3()
     d3s[0] = 0;
     for(i3=0; i3<binsDim3-1; i3++)
     {
-        d3s[i3+1]	= d3s[i3];
+        d3s[i3+1]    = d3s[i3];
         for(i1=0; i1<binsDim1; i1++)
         {
             for(i2=0; i2<binsDim2; i2++)
@@ -399,26 +399,26 @@ bool EmdL1::greedySolution3()
 
                 if(f1<f2 && f1<f3)
                 {
-                    pBV	= &(m_3dEdgesUp[i1][i2][i3]); // up
-                    if(i2<binsDim2-1) m_NBVEdges[nNBV++] = &(m_3dEdgesRight[i1][i2][i3]);	// right
+                    pBV    = &(m_3dEdgesUp[i1][i2][i3]); // up
+                    if(i2<binsDim2-1) m_NBVEdges[nNBV++] = &(m_3dEdgesRight[i1][i2][i3]);    // right
                     if(i3<binsDim3-1) m_NBVEdges[nNBV++] = &(m_3dEdgesDeep[i1][i2][i3]); // deep
-                    D[i1+1][i2][i3]	+= dFlow; // maintain auxilary matrix
+                    D[i1+1][i2][i3]    += dFlow; // maintain auxilary matrix
                     d1s[i1+1] += dFlow;
                 }
                 else if(f2<f3)
                 {
-                    pBV	= &(m_3dEdgesRight[i1][i2][i3]); // right
+                    pBV    = &(m_3dEdgesRight[i1][i2][i3]); // right
                     if(i1<binsDim1-1) m_NBVEdges[nNBV++] = &(m_3dEdgesUp[i1][i2][i3]); // up
                     if(i3<binsDim3-1) m_NBVEdges[nNBV++] = &(m_3dEdgesDeep[i1][i2][i3]); // deep
-                    D[i1][i2+1][i3]	+= dFlow; // maintain auxilary matrix
+                    D[i1][i2+1][i3]    += dFlow; // maintain auxilary matrix
                     d2s[i2+1] += dFlow;
                 }
                 else
                 {
-                    pBV	= &(m_3dEdgesDeep[i1][i2][i3]); // deep
-                    if(i2<binsDim2-1) m_NBVEdges[nNBV++] = &(m_3dEdgesRight[i1][i2][i3]);	// right
+                    pBV    = &(m_3dEdgesDeep[i1][i2][i3]); // deep
+                    if(i2<binsDim2-1) m_NBVEdges[nNBV++] = &(m_3dEdgesRight[i1][i2][i3]);    // right
                     if(i1<binsDim1-1) m_NBVEdges[nNBV++] = &(m_3dEdgesUp[i1][i2][i3]); // up
-                    D[i1][i2][i3+1]	+= dFlow; // maintain auxilary matrix
+                    D[i1][i2][i3+1]    += dFlow; // maintain auxilary matrix
                     d3s[i3+1] += dFlow;
                 }
 
@@ -438,11 +438,11 @@ void EmdL1::initBVTree()
     int r = (int)(0.5*binsDim1-.5);
     int c = (int)(0.5*binsDim2-.5);
     int z = (int)(0.5*binsDim3-.5);
-    m_pRoot	= dimension==2 ? &(m_Nodes[r][c]) : &(m_3dNodes[r][c][z]);
+    m_pRoot    = dimension==2 ? &(m_Nodes[r][c]) : &(m_3dNodes[r][c][z]);
     m_pRoot->u = 0;
-    m_pRoot->iLevel	= 0;
+    m_pRoot->iLevel    = 0;
     m_pRoot->pParent= NULL;
-    m_pRoot->pPEdge	= NULL;
+    m_pRoot->pPEdge    = NULL;
 
     //- Prepare a queue
     m_auxQueue[0] = m_pRoot;
@@ -452,16 +452,16 @@ void EmdL1::initBVTree()
     //- Recursively build subtrees
     cvPEmdEdge pCurE=NULL, pNxtE=NULL;
     cvPEmdNode pCurN=NULL, pNxtN=NULL;
-    int	nBin = binsDim1*binsDim2*std::max(binsDim3,1);
+    int    nBin = binsDim1*binsDim2*std::max(binsDim3,1);
     while(iQHead<nQueue && nQueue<nBin)
     {
-        pCurN = m_auxQueue[iQHead++];	// pop out from queue
+        pCurN = m_auxQueue[iQHead++];    // pop out from queue
         r = pCurN->pos[0];
         c = pCurN->pos[1];
         z = pCurN->pos[2];
 
         // check connection from itself
-        pCurE = pCurN->pChild;	// the initial child from initial solution
+        pCurE = pCurN->pChild;    // the initial child from initial solution
         if(pCurE)
         {
             pNxtN = pCurE->pChild;
@@ -471,25 +471,25 @@ void EmdL1::initBVTree()
         }
 
         // check four neighbor nodes
-        int	nNB	= dimension==2?4:6;
+        int    nNB    = dimension==2?4:6;
         for(int k=0;k<nNB;k++)
         {
             if(dimension==2)
             {
-                if(k==0 && c>0) pNxtN = &(m_Nodes[r][c-1]);		// left
-                else if(k==1 && r>0) pNxtN	= &(m_Nodes[r-1][c]);		// down
-                else if(k==2 && c<binsDim2-1) pNxtN	= &(m_Nodes[r][c+1]);		// right
-                else if(k==3 && r<binsDim1-1) pNxtN	= &(m_Nodes[r+1][c]);		// up
+                if(k==0 && c>0) pNxtN = &(m_Nodes[r][c-1]);        // left
+                else if(k==1 && r>0) pNxtN    = &(m_Nodes[r-1][c]);        // down
+                else if(k==2 && c<binsDim2-1) pNxtN    = &(m_Nodes[r][c+1]);        // right
+                else if(k==3 && r<binsDim1-1) pNxtN    = &(m_Nodes[r+1][c]);        // up
                 else continue;
             }
             else if(dimension==3)
             {
                 if(k==0 && c>0) pNxtN = &(m_3dNodes[r][c-1][z]); // left
-                else if(k==1 && c<binsDim2-1) pNxtN	= &(m_3dNodes[r][c+1][z]); // right
-                else if(k==2 && r>0) pNxtN	= &(m_3dNodes[r-1][c][z]); // down
-                else if(k==3 && r<binsDim1-1) pNxtN	= &(m_3dNodes[r+1][c][z]); // up
+                else if(k==1 && c<binsDim2-1) pNxtN    = &(m_3dNodes[r][c+1][z]); // right
+                else if(k==2 && r>0) pNxtN    = &(m_3dNodes[r-1][c][z]); // down
+                else if(k==3 && r<binsDim1-1) pNxtN    = &(m_3dNodes[r+1][c][z]); // up
                 else if(k==4 && z>0) pNxtN = &(m_3dNodes[r][c][z-1]); // shallow
-                else if(k==5 && z<binsDim3-1) pNxtN	= &(m_3dNodes[r][c][z+1]); // deep
+                else if(k==5 && z<binsDim3-1) pNxtN    = &(m_3dNodes[r][c][z+1]); // deep
                 else continue;
             }
             if(pNxtN != pCurN->pParent)
@@ -506,7 +506,7 @@ void EmdL1::initBVTree()
                     pNxtE->pChild = pNxtN;
                     pNxtE->iDir = !pNxtE->iDir;
 
-                    if(pCurE) pCurE->pNxt = pNxtE;	// add to edge list
+                    if(pCurE) pCurE->pNxt = pNxtE;    // add to edge list
                     else pCurN->pChild = pNxtE;
                     pCurE = pNxtE;
                 }
@@ -527,7 +527,7 @@ void EmdL1::updateSubtree(cvPEmdNode pRoot)
     cvPEmdEdge pCurE=NULL;
     while(iQHead<nQueue)
     {
-        pCurN = m_auxQueue[iQHead++];	// pop out from queue
+        pCurN = m_auxQueue[iQHead++];    // pop out from queue
         pCurE = pCurN->pChild;
 
         // browsing all children
@@ -562,7 +562,7 @@ bool EmdL1::isOptimal()
         else
         {
             // Try reversing the direction
-            iC	= 1 + pE->pParent->u - pE->pChild->u;
+            iC    = 1 + pE->pParent->u - pE->pChild->u;
             if(iC<iMinC)
             {
                 iMinC = iC;
@@ -574,7 +574,7 @@ bool EmdL1::isOptimal()
     if(m_iEnter>=0)
     {
         m_pEnter = m_NBVEdges[m_iEnter];
-        if(iMinC == (1 - m_pEnter->pChild->u + m_pEnter->pParent->u))	{
+        if(iMinC == (1 - m_pEnter->pChild->u + m_pEnter->pParent->u))    {
             // reverse direction
             cvPEmdNode pN = m_pEnter->pParent;
             m_pEnter->pParent = m_pEnter->pChild;
@@ -592,7 +592,7 @@ void EmdL1::findNewSolution()
     findLoopFromEnterBV();
     // Modify flow values along the loop
     cvPEmdEdge pE = NULL;
-    float	minFlow = m_pLeave->flow;
+    float    minFlow = m_pLeave->flow;
     int k;
     for(k=0; k<m_iFrom; k++)
     {
@@ -618,8 +618,8 @@ void EmdL1::findNewSolution()
     else
     {
         while(pPreE->pNxt != m_pLeave)
-            pPreE	= pPreE->pNxt;
-        pPreE->pNxt	= m_pLeave->pNxt; // remove Leaving-BV from child list
+            pPreE    = pPreE->pNxt;
+        pPreE->pNxt    = m_pLeave->pNxt; // remove Leaving-BV from child list
     }
     pLChildN->pParent = NULL;
     pLChildN->pPEdge = NULL;
@@ -630,8 +630,8 @@ void EmdL1::findNewSolution()
     cvPEmdNode pEParentN = m_pEnter->pParent;
     cvPEmdNode pEChildN = m_pEnter->pChild;
     m_pEnter->flow = minFlow;
-    m_pEnter->pNxt = pEParentN->pChild;		// insert the Enter BV as the first child
-    pEParentN->pChild = m_pEnter;					//		of its parent
+    m_pEnter->pNxt = pEParentN->pChild;        // insert the Enter BV as the first child
+    pEParentN->pChild = m_pEnter;                    //        of its parent
 
     // Recursively update the tree start from pEChildN
     cvPEmdNode pPreN = pEParentN;
@@ -650,14 +650,14 @@ void EmdL1::findNewSolution()
             // remove the edge from pNxtN's child list
             if(pNxtN->pChild==pNxtE)
             {
-                pNxtN->pChild	= pNxtE->pNxt;			// first child
+                pNxtN->pChild    = pNxtE->pNxt;            // first child
             }
             else
             {
-                pPreE0	= pNxtN->pChild;
+                pPreE0    = pNxtN->pChild;
                 while(pPreE0->pNxt != pNxtE)
-                    pPreE0	= pPreE0->pNxt;
-                pPreE0->pNxt	= pNxtE->pNxt;			// remove Leaving-BV from child list
+                    pPreE0    = pPreE0->pNxt;
+                pPreE0->pNxt    = pNxtE->pNxt;            // remove Leaving-BV from child list
             }
             // reverse the parent-child direction
             pNxtE->pParent = pCurN;
@@ -679,14 +679,14 @@ void EmdL1::findNewSolution()
 void EmdL1::findLoopFromEnterBV()
 {
     // Initialize Leaving-BV edge
-    float minFlow	= std::numeric_limits<float>::max();
+    float minFlow    = std::numeric_limits<float>::max();
     cvPEmdEdge pE = NULL;
-    int iLFlag = 0;	// 0: in the FROM list, 1: in the TO list
+    int iLFlag = 0;    // 0: in the FROM list, 1: in the TO list
 
     // Using two loop list to store the loop nodes
     cvPEmdNode pFrom = m_pEnter->pParent;
     cvPEmdNode pTo = m_pEnter->pChild;
-    m_iFrom	= 0;
+    m_iFrom    = 0;
     m_iTo = 0;
     m_pLeave = NULL;
 
@@ -699,7 +699,7 @@ void EmdL1::findLoopFromEnterBV()
         {
             minFlow = pE->flow;
             m_pLeave = pE;
-            iLFlag = 0;	// 0: in the FROM list
+            iLFlag = 0;    // 0: in the FROM list
         }
         pFrom = pFrom->pParent;
     }
@@ -712,9 +712,9 @@ void EmdL1::findLoopFromEnterBV()
         {
             minFlow = pE->flow;
             m_pLeave = pE;
-            iLFlag = 1;	// 1: in the TO list
+            iLFlag = 1;    // 1: in the TO list
         }
-        pTo	= pTo->pParent;
+        pTo    = pTo->pParent;
     }
 
     // Trace pTo and pFrom simultaneously till find their common ancester
@@ -726,7 +726,7 @@ void EmdL1::findLoopFromEnterBV()
         {
             minFlow = pE->flow;
             m_pLeave = pE;
-            iLFlag = 0;	// 0: in the FROM list, 1: in the TO list
+            iLFlag = 0;    // 0: in the FROM list, 1: in the TO list
         }
         pFrom = pFrom->pParent;
 
@@ -736,9 +736,9 @@ void EmdL1::findLoopFromEnterBV()
         {
             minFlow = pE->flow;
             m_pLeave = pE;
-            iLFlag = 1;	// 0: in the FROM list, 1: in the TO list
+            iLFlag = 1;    // 0: in the FROM list, 1: in the TO list
         }
-        pTo	= pTo->pParent;
+        pTo    = pTo->pParent;
     }
 
     // Reverse the direction of the Enter BV edge if necessary
@@ -766,7 +766,7 @@ float EmdL1::compuTotalFlow()
     cvPEmdEdge pCurE=NULL;
     while(iQHead<nQueue)
     {
-        pCurN = m_auxQueue[iQHead++];	// pop out from queue
+        pCurN = m_auxQueue[iQHead++];    // pop out from queue
         pCurE = pCurN->pChild;
 
         // browsing all children

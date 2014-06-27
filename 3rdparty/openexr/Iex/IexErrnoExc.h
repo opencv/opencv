@@ -39,7 +39,7 @@
 
 //----------------------------------------------------------------
 //
-//	Exceptions which correspond to "errno" error codes.
+//    Exceptions which correspond to "errno" error codes.
 //
 //----------------------------------------------------------------
 

@@ -40,38 +40,38 @@
 
 //---------------------------------------------------------------------------
 //
-//	This file contains algorithms applied to or in conjunction
-//	with bounding boxes (Imath::Box). These algorithms require
-//	more headers to compile. The assumption made is that these
-//	functions are called much less often than the basic box
-//	functions or these functions require more support classes.
+//    This file contains algorithms applied to or in conjunction
+//    with bounding boxes (Imath::Box). These algorithms require
+//    more headers to compile. The assumption made is that these
+//    functions are called much less often than the basic box
+//    functions or these functions require more support classes.
 //
-//	Contains:
+//    Contains:
 //
-//	T clip<T>(const T& in, const Box<T>& box)
+//    T clip<T>(const T& in, const Box<T>& box)
 //
-//	Vec3<T> closestPointOnBox(const Vec3<T>&, const Box<Vec3<T>>& )
+//    Vec3<T> closestPointOnBox(const Vec3<T>&, const Box<Vec3<T>>& )
 //
-//	Vec3<T> closestPointInBox(const Vec3<T>&, const Box<Vec3<T>>& )
+//    Vec3<T> closestPointInBox(const Vec3<T>&, const Box<Vec3<T>>& )
 //
-//	Box< Vec3<S> > transform(const Box<Vec3<S>>&, const Matrix44<T>&)
-//	Box< Vec3<S> > affineTransform(const Box<Vec3<S>>&, const Matrix44<T>&)
+//    Box< Vec3<S> > transform(const Box<Vec3<S>>&, const Matrix44<T>&)
+//    Box< Vec3<S> > affineTransform(const Box<Vec3<S>>&, const Matrix44<T>&)
 //
-//	void transform(const Box<Vec3<S>>&, const Matrix44<T>&, Box<V3ec3<S>>&)
-//	void affineTransform(const Box<Vec3<S>>&,
+//    void transform(const Box<Vec3<S>>&, const Matrix44<T>&, Box<V3ec3<S>>&)
+//    void affineTransform(const Box<Vec3<S>>&,
 //                           const Matrix44<T>&,
 //                           Box<V3ec3<S>>&)
 //
-//	bool findEntryAndExitPoints(const Line<T> &line,
-//				    const Box< Vec3<T> > &box,
-//				    Vec3<T> &enterPoint,
-//				    Vec3<T> &exitPoint)
+//    bool findEntryAndExitPoints(const Line<T> &line,
+//                    const Box< Vec3<T> > &box,
+//                    Vec3<T> &enterPoint,
+//                    Vec3<T> &exitPoint)
 //
-//	bool intersects(const Box<Vec3<T>> &box,
-//			const Line3<T> &ray,
-//			Vec3<T> intersectionPoint)
+//    bool intersects(const Box<Vec3<T>> &box,
+//            const Line3<T> &ray,
+//            Vec3<T> intersectionPoint)
 //
-//	bool intersects(const Box<Vec3<T>> &box, const Line3<T> &ray)
+//    bool intersects(const Box<Vec3<T>> &box, const Line3<T> &ray)
 //
 //---------------------------------------------------------------------------
 
@@ -447,7 +447,7 @@ findEntryAndExitPoints (const Line3<T> &r,
     //     - true if the ray starts inside the box or if the
     //       ray starts outside and intersects the box
     //
-    //	   - false otherwise (that is, if the ray does not
+    //       - false otherwise (that is, if the ray does not
     //       intersect the box)
     //
     // The entry and exit points are

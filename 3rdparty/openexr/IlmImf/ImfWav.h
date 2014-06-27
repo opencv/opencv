@@ -39,7 +39,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	16-bit Haar Wavelet encoding and decoding
+//    16-bit Haar Wavelet encoding and decoding
 //
 //-----------------------------------------------------------------------------
 
@@ -49,19 +49,19 @@ namespace Imf {
 void
 wav2Encode
     (unsigned short *in, // io: values in[y][x] are transformed in place
-     int     nx,	 // i : x size
-     int     ox,	 // i : x offset
-     int     ny,	 // i : y size
-     int     oy,	 // i : y offset
+     int     nx,     // i : x size
+     int     ox,     // i : x offset
+     int     ny,     // i : y size
+     int     oy,     // i : y offset
      unsigned short mx); // i : maximum in[x][y] value
 
 void
 wav2Decode
     (unsigned short *in, // io: values in[y][x] are transformed in place
-     int     nx,	 // i : x size
-     int     ox,	 // i : x offset
-     int     ny,	 // i : y size
-     int     oy,	 // i : y offset
+     int     nx,     // i : x size
+     int     ox,     // i : x offset
+     int     ny,     // i : y size
+     int     oy,     // i : y offset
      unsigned short mx); // i : maximum in[x][y] value
 
 

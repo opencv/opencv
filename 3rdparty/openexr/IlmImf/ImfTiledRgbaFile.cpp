@@ -34,8 +34,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class TiledRgbaOutputFile
-//	class TiledRgbaInputFile
+//    class TiledRgbaOutputFile
+//    class TiledRgbaInputFile
 //
 //-----------------------------------------------------------------------------
 
@@ -158,23 +158,23 @@ class TiledRgbaOutputFile::ToYa: public Mutex
 
      ToYa (TiledOutputFile &outputFile, RgbaChannels rgbaChannels);
 
-     void	setFrameBuffer (const Rgba *base,
+     void    setFrameBuffer (const Rgba *base,
                 size_t xStride,
                 size_t yStride);
 
-     void	writeTile (int dx, int dy, int lx, int ly);
+     void    writeTile (int dx, int dy, int lx, int ly);
 
   private:
 
-     TiledOutputFile &	_outputFile;
-     bool		_writeA;
-     unsigned int	_tileXSize;
-     unsigned int	_tileYSize;
-     V3f		_yw;
-     Array2D <Rgba>	_buf;
-     const Rgba *	_fbBase;
-     size_t		_fbXStride;
-     size_t		_fbYStride;
+     TiledOutputFile &    _outputFile;
+     bool        _writeA;
+     unsigned int    _tileXSize;
+     unsigned int    _tileYSize;
+     V3f        _yw;
+     Array2D <Rgba>    _buf;
+     const Rgba *    _fbBase;
+     size_t        _fbXStride;
+     size_t        _fbYStride;
 };
 
 
@@ -240,15 +240,15 @@ TiledRgbaOutputFile::ToYa::writeTile (int dx, int dy, int lx, int ly)
 
     FrameBuffer fb;
 
-    fb.insert ("Y", Slice (HALF,				   // type
+    fb.insert ("Y", Slice (HALF,                   // type
                (char *) &_buf[-dw.min.y][-dw.min.x].g, // base
-               sizeof (Rgba),			   // xStride
-               sizeof (Rgba) * _tileXSize));	   // yStride
+               sizeof (Rgba),               // xStride
+               sizeof (Rgba) * _tileXSize));       // yStride
 
-    fb.insert ("A", Slice (HALF,				   // type
+    fb.insert ("A", Slice (HALF,                   // type
                (char *) &_buf[-dw.min.y][-dw.min.x].a, // base
-               sizeof (Rgba),			   // xStride
-               sizeof (Rgba) * _tileXSize));	   // yStride
+               sizeof (Rgba),               // xStride
+               sizeof (Rgba) * _tileXSize));       // yStride
 
     _outputFile.setFrameBuffer (fb);
     _outputFile.writeTile (dx, dy, lx, ly);
@@ -653,23 +653,23 @@ class TiledRgbaInputFile::FromYa: public Mutex
 
      FromYa (TiledInputFile &inputFile);
 
-     void	setFrameBuffer (Rgba *base,
+     void    setFrameBuffer (Rgba *base,
                 size_t xStride,
                 size_t yStride,
                 const string &channelNamePrefix);
 
-     void	readTile (int dx, int dy, int lx, int ly);
+     void    readTile (int dx, int dy, int lx, int ly);
 
   private:
 
-     TiledInputFile &	_inputFile;
-     unsigned int	_tileXSize;
-     unsigned int	_tileYSize;
-     V3f		_yw;
-     Array2D <Rgba>	_buf;
-     Rgba *		_fbBase;
-     size_t		_fbXStride;
-     size_t		_fbYStride;
+     TiledInputFile &    _inputFile;
+     unsigned int    _tileXSize;
+     unsigned int    _tileYSize;
+     V3f        _yw;
+     Array2D <Rgba>    _buf;
+     Rgba *        _fbBase;
+     size_t        _fbXStride;
+     size_t        _fbYStride;
 };
 
 
@@ -700,22 +700,22 @@ TiledRgbaInputFile::FromYa::setFrameBuffer (Rgba *base,
     FrameBuffer fb;
 
     fb.insert (channelNamePrefix + "Y",
-           Slice (HALF,				// type
-              (char *) &_buf[0][0].g,	// base
-              sizeof (Rgba),		// xStride
-              sizeof (Rgba) * _tileXSize,	// yStride
-              1, 1,				// sampling
-              0.0,				// fillValue
-              true, true));			// tileCoordinates
+           Slice (HALF,                // type
+              (char *) &_buf[0][0].g,    // base
+              sizeof (Rgba),        // xStride
+              sizeof (Rgba) * _tileXSize,    // yStride
+              1, 1,                // sampling
+              0.0,                // fillValue
+              true, true));            // tileCoordinates
 
     fb.insert (channelNamePrefix + "A",
-           Slice (HALF,				// type
-              (char *) &_buf[0][0].a,	// base
-              sizeof (Rgba),		// xStride
-              sizeof (Rgba) * _tileXSize,	// yStride
-              1, 1,				// sampling
-              1.0,				// fillValue
-              true, true));			// tileCoordinates
+           Slice (HALF,                // type
+              (char *) &_buf[0][0].a,    // base
+              sizeof (Rgba),        // xStride
+              sizeof (Rgba) * _tileXSize,    // yStride
+              1, 1,                // sampling
+              1.0,                // fillValue
+              true, true));            // tileCoordinates
 
     _inputFile.setFrameBuffer (fb);
     }
@@ -840,29 +840,29 @@ TiledRgbaInputFile::setFrameBuffer (Rgba *base, size_t xStride, size_t yStride)
            Slice (HALF,
                    (char *) &base[0].r,
                    xs, ys,
-                   1, 1,	// xSampling, ySampling
-                   0.0));	// fillValue
+                   1, 1,    // xSampling, ySampling
+                   0.0));    // fillValue
 
     fb.insert (_channelNamePrefix + "G",
            Slice (HALF,
                    (char *) &base[0].g,
                    xs, ys,
-                   1, 1,	// xSampling, ySampling
-                   0.0));	// fillValue
+                   1, 1,    // xSampling, ySampling
+                   0.0));    // fillValue
 
     fb.insert (_channelNamePrefix + "B",
            Slice (HALF,
                    (char *) &base[0].b,
                    xs, ys,
-                   1, 1,	// xSampling, ySampling
-                   0.0));	// fillValue
+                   1, 1,    // xSampling, ySampling
+                   0.0));    // fillValue
 
     fb.insert (_channelNamePrefix + "A",
            Slice (HALF,
                    (char *) &base[0].a,
                    xs, ys,
-                   1, 1,	// xSampling, ySampling
-                   1.0));	// fillValue
+                   1, 1,    // xSampling, ySampling
+                   1.0));    // fillValue
 
     _inputFile->setFrameBuffer (fb);
     }

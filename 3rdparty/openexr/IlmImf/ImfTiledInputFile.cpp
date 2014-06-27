@@ -34,7 +34,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class TiledInputFile
+//    class TiledInputFile
 //
 //-----------------------------------------------------------------------------
 
@@ -131,23 +131,23 @@ TInSliceInfo::TInSliceInfo (PixelType tifb,
 
 struct TileBuffer
 {
-    const char *	uncompressedData;
-    char *		buffer;
-    int			dataSize;
-    Compressor *	compressor;
-    Compressor::Format	format;
-    int			dx;
-    int			dy;
-    int			lx;
-    int			ly;
-    bool		hasException;
-    string		exception;
+    const char *    uncompressedData;
+    char *        buffer;
+    int            dataSize;
+    Compressor *    compressor;
+    Compressor::Format    format;
+    int            dx;
+    int            dy;
+    int            lx;
+    int            ly;
+    bool        hasException;
+    string        exception;
 
      TileBuffer (Compressor * const comp);
     ~TileBuffer ();
 
-    inline void		wait () {_sem.wait();}
-    inline void		post () {_sem.post();}
+    inline void        wait () {_sem.wait();}
+    inline void        post () {_sem.post();}
 
  protected:
 
@@ -187,46 +187,46 @@ TileBuffer::~TileBuffer ()
 
 struct TiledInputFile::Data: public Mutex
 {
-    Header	    header;		    // the image header
-    TileDescription tileDesc;		    // describes the tile layout
-    int		    version;		    // file's version
-    FrameBuffer	    frameBuffer;	    // framebuffer to write into
-    LineOrder	    lineOrder;		    // the file's lineorder
-    int		    minX;		    // data window's min x coord
-    int		    maxX;		    // data window's max x coord
-    int		    minY;		    // data window's min y coord
-    int		    maxY;		    // data window's max x coord
+    Header        header;            // the image header
+    TileDescription tileDesc;            // describes the tile layout
+    int            version;            // file's version
+    FrameBuffer        frameBuffer;        // framebuffer to write into
+    LineOrder        lineOrder;            // the file's lineorder
+    int            minX;            // data window's min x coord
+    int            maxX;            // data window's max x coord
+    int            minY;            // data window's min y coord
+    int            maxY;            // data window's max x coord
 
-    int		    numXLevels;		    // number of x levels
-    int		    numYLevels;		    // number of y levels
-    int *	    numXTiles;		    // number of x tiles at a level
-    int *	    numYTiles;		    // number of y tiles at a level
+    int            numXLevels;            // number of x levels
+    int            numYLevels;            // number of y levels
+    int *        numXTiles;            // number of x tiles at a level
+    int *        numYTiles;            // number of y tiles at a level
 
-    TileOffsets	    tileOffsets;	    // stores offsets in file for
+    TileOffsets        tileOffsets;        // stores offsets in file for
                         // each tile
 
-    bool	    fileIsComplete;	    // True if no tiles are missing
+    bool        fileIsComplete;        // True if no tiles are missing
                             // in the file
 
-    Int64	    currentPosition;        // file offset for current tile,
+    Int64        currentPosition;        // file offset for current tile,
                         // used to prevent unnecessary
                         // seeking
 
-    vector<TInSliceInfo> slices;	    // info about channels in file
-    IStream *	    is;			    // file stream to read from
+    vector<TInSliceInfo> slices;        // info about channels in file
+    IStream *        is;                // file stream to read from
 
-    bool	    deleteStream;	    // should we delete the stream
+    bool        deleteStream;        // should we delete the stream
                         // ourselves? or does someone
                         // else do it?
 
-    size_t	    bytesPerPixel;          // size of an uncompressed pixel
+    size_t        bytesPerPixel;          // size of an uncompressed pixel
 
-    size_t	    maxBytesPerTileLine;    // combined size of a line
+    size_t        maxBytesPerTileLine;    // combined size of a line
                         // over all channels
 
 
     vector<TileBuffer*> tileBuffers;        // each holds a single tile
-    size_t          tileBufferSize;	    // size of the tile buffers
+    size_t          tileBufferSize;        // size of the tile buffers
 
      Data (bool deleteStream, int numThreads);
     ~Data ();
@@ -407,12 +407,12 @@ class TileBufferTask : public Task
 
     virtual ~TileBufferTask ();
 
-    virtual void		execute ();
+    virtual void        execute ();
 
   private:
 
-    TiledInputFile::Data *	_ifd;
-    TileBuffer *		_tileBuffer;
+    TiledInputFile::Data *    _ifd;
+    TileBuffer *        _tileBuffer;
 };
 
 

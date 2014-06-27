@@ -34,8 +34,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class Thread -- implementation for
-//	platforms that support Posix threads
+//    class Thread -- implementation for
+//    platforms that support Posix threads
 //
 //-----------------------------------------------------------------------------
 

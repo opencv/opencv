@@ -38,7 +38,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Magic and version number.
+//    Magic and version number.
 //
 //-----------------------------------------------------------------------------
 
@@ -66,15 +66,15 @@ const int MAGIC = 20000630;
 // and a 24-bit flags field.
 //
 
-const int VERSION_NUMBER_FIELD	= 0x000000ff;
-const int VERSION_FLAGS_FIELD	= 0xffffff00;
+const int VERSION_NUMBER_FIELD    = 0x000000ff;
+const int VERSION_FLAGS_FIELD    = 0xffffff00;
 
 
 //
 // Value that goes into VERSION_NUMBER_FIELD.
 //
 
-const int EXR_VERSION		= 2;
+const int EXR_VERSION        = 2;
 
 
 //
@@ -82,7 +82,7 @@ const int EXR_VERSION		= 2;
 // Flags can only occupy the 1 bits in VERSION_FLAGS_FIELD.
 //
 
-const int TILED_FLAG		= 0x00000200;   // File is tiled
+const int TILED_FLAG        = 0x00000200;   // File is tiled
 
 const int LONG_NAMES_FLAG       = 0x00000400;   // File contains long
                                                 // attribute or channel
@@ -92,19 +92,19 @@ const int LONG_NAMES_FLAG       = 0x00000400;   // File contains long
 // Bitwise OR of all known flags.
 //
 
-const int ALL_FLAGS		= TILED_FLAG | LONG_NAMES_FLAG;
+const int ALL_FLAGS        = TILED_FLAG | LONG_NAMES_FLAG;
 
 
 //
 // Utility functions
 //
 
-inline bool  isTiled (int version)	{return !!(version & TILED_FLAG);}
-inline int   makeTiled (int version)	{return version | TILED_FLAG;}
+inline bool  isTiled (int version)    {return !!(version & TILED_FLAG);}
+inline int   makeTiled (int version)    {return version | TILED_FLAG;}
 inline int   makeNotTiled (int version) {return version & ~TILED_FLAG;}
-inline int   getVersion (int version)	{return version & VERSION_NUMBER_FIELD;}
-inline int   getFlags (int version)	{return version & VERSION_FLAGS_FIELD;}
-inline bool  supportsFlags (int flags)	{return !(flags & ~ALL_FLAGS);}
+inline int   getVersion (int version)    {return version & VERSION_NUMBER_FIELD;}
+inline int   getFlags (int version)    {return version & VERSION_FLAGS_FIELD;}
+inline bool  supportsFlags (int flags)    {return !(flags & ~ALL_FLAGS);}
 
 
 //
@@ -112,7 +112,7 @@ inline bool  supportsFlags (int flags)	{return !(flags & ~ALL_FLAGS);}
 // file is probably an OpenEXR image file, false if not.
 //
 
-bool	     isImfMagic (const char bytes[4]);
+bool         isImfMagic (const char bytes[4]);
 
 
 } // namespace Imf

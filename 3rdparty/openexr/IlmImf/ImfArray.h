@@ -48,24 +48,24 @@
 //
 // Usage example:
 //
-//	struct C
-//	{
-//	    C ()		{std::cout << "C::C  (" << this << ")\n";};
-//	    virtual ~C ()	{std::cout << "C::~C (" << this << ")\n";};
-//	};
+//    struct C
+//    {
+//        C ()        {std::cout << "C::C  (" << this << ")\n";};
+//        virtual ~C ()    {std::cout << "C::~C (" << this << ")\n";};
+//    };
 //
-//	int
-//	main ()
-//	{
-//	    Array <C> a(3);
+//    int
+//    main ()
+//    {
+//        Array <C> a(3);
 //
-//	    C &b = a[1];
-//	    const C &c = a[1];
-//	    C *d = a + 2;
-//	    const C *e = a;
+//        C &b = a[1];
+//        const C &c = a[1];
+//        C *d = a + 2;
+//        const C *e = a;
 //
-//	    return 0;
-//	}
+//        return 0;
+//    }
 //
 //-------------------------------------------------------------------------
 
@@ -81,17 +81,17 @@ class Array
     // Constructors and destructors
     //-----------------------------
 
-     Array ()				{_data = 0;}
-     Array (long size)			{_data = new T[size];}
-    ~Array ()				{delete [] _data;}
+     Array ()                {_data = 0;}
+     Array (long size)            {_data = new T[size];}
+    ~Array ()                {delete [] _data;}
 
 
     //-----------------------------
     // Access to the array elements
     //-----------------------------
 
-    operator T * ()			{return _data;}
-    operator const T * () const		{return _data;}
+    operator T * ()            {return _data;}
+    operator const T * () const        {return _data;}
 
 
     //------------------------------------------------------
@@ -112,8 +112,8 @@ class Array
 
   private:
 
-    Array (const Array &);		// Copying and assignment
-    Array & operator = (const Array &);	// are not implemented
+    Array (const Array &);        // Copying and assignment
+    Array & operator = (const Array &);    // are not implemented
 
     T * _data;
 };
@@ -128,8 +128,8 @@ class Array2D
     // Constructors and destructors
     //-----------------------------
 
-     Array2D ();			// empty array, 0 by 0 elements
-     Array2D (long sizeX, long sizeY);	// sizeX by sizeY elements
+     Array2D ();            // empty array, 0 by 0 elements
+     Array2D (long sizeX, long sizeY);    // sizeX by sizeY elements
     ~Array2D ();
 
 
@@ -137,8 +137,8 @@ class Array2D
     // Access to the array elements
     //-----------------------------
 
-    T *		operator [] (long x);
-    const T *	operator [] (long x) const;
+    T *        operator [] (long x);
+    const T *    operator [] (long x) const;
 
 
     //------------------------------------------------------
@@ -159,11 +159,11 @@ class Array2D
 
   private:
 
-    Array2D (const Array2D &);			// Copying and assignment
-    Array2D & operator = (const Array2D &);	// are not implemented
+    Array2D (const Array2D &);            // Copying and assignment
+    Array2D & operator = (const Array2D &);    // are not implemented
 
-    long	_sizeY;
-    T *		_data;
+    long    _sizeY;
+    T *        _data;
 };
 
 

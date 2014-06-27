@@ -39,26 +39,26 @@
 
 //------------------------------------------------------------------
 //
-//	This file contains algorithms applied to or in conjunction
-//	with lines (Imath::Line). These algorithms may require
-//	more headers to compile. The assumption made is that these
-//	functions are called much less often than the basic line
-//	functions or these functions require more support classes
+//    This file contains algorithms applied to or in conjunction
+//    with lines (Imath::Line). These algorithms may require
+//    more headers to compile. The assumption made is that these
+//    functions are called much less often than the basic line
+//    functions or these functions require more support classes
 //
-//	Contains:
+//    Contains:
 //
-//	bool closestPoints(const Line<T>& line1,
-//			   const Line<T>& line2,
-//			   Vec3<T>& point1,
-//			   Vec3<T>& point2)
+//    bool closestPoints(const Line<T>& line1,
+//               const Line<T>& line2,
+//               Vec3<T>& point1,
+//               Vec3<T>& point2)
 //
-//	bool intersect( const Line3<T> &line,
-//			const Vec3<T> &v0,
-//			const Vec3<T> &v1,
-//			const Vec3<T> &v2,
-//			Vec3<T> &pt,
-//			Vec3<T> &barycentric,
-//			bool &front)
+//    bool intersect( const Line3<T> &line,
+//            const Vec3<T> &v0,
+//            const Vec3<T> &v1,
+//            const Vec3<T> &v2,
+//            Vec3<T> &pt,
+//            Vec3<T> &barycentric,
+//            bool &front)
 //
 //      V3f
 //      closestVertex(const Vec3<T> &v0,
@@ -66,8 +66,8 @@
 //                    const Vec3<T> &v2,
 //                    const Line3<T> &l)
 //
-//	V3f
-//	rotatePoint(const Vec3<T> p, Line3<T> l, float angle)
+//    V3f
+//    rotatePoint(const Vec3<T> p, Line3<T> l, float angle)
 //
 //------------------------------------------------------------------
 
@@ -162,7 +162,7 @@ intersect
     if (l != 0)
     normal /= l;
     else
-    return false;	// zero-area triangle
+    return false;    // zero-area triangle
 
     //
     // d is the distance of line.pos from the plane that contains the triangle.

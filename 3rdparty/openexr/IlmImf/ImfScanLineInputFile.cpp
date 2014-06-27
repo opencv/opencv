@@ -35,7 +35,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class ScanLineInputFile
+//    class ScanLineInputFile
 //
 //-----------------------------------------------------------------------------
 
@@ -80,16 +80,16 @@ namespace {
 
 struct InSliceInfo
 {
-    PixelType	typeInFrameBuffer;
-    PixelType	typeInFile;
-    char *	base;
-    size_t	xStride;
-    size_t	yStride;
-    int		xSampling;
-    int		ySampling;
-    bool	fill;
-    bool	skip;
-    double	fillValue;
+    PixelType    typeInFrameBuffer;
+    PixelType    typeInFile;
+    char *    base;
+    size_t    xStride;
+    size_t    yStride;
+    int        xSampling;
+    int        ySampling;
+    bool    fill;
+    bool    skip;
+    double    fillValue;
 
     InSliceInfo (PixelType typeInFrameBuffer = HALF,
          PixelType typeInFile = HALF,
@@ -129,26 +129,26 @@ InSliceInfo::InSliceInfo (PixelType tifb,
 
 struct LineBuffer
 {
-    const char *	uncompressedData;
-    char *		buffer;
-    int			dataSize;
-    int			minY;
-    int			maxY;
-    Compressor *	compressor;
-    Compressor::Format	format;
-    int			number;
-    bool		hasException;
-    string		exception;
+    const char *    uncompressedData;
+    char *        buffer;
+    int            dataSize;
+    int            minY;
+    int            maxY;
+    Compressor *    compressor;
+    Compressor::Format    format;
+    int            number;
+    bool        hasException;
+    string        exception;
 
     LineBuffer (Compressor * const comp);
     ~LineBuffer ();
 
-    inline void		wait () {_sem.wait();}
-    inline void		post () {_sem.post();}
+    inline void        wait () {_sem.wait();}
+    inline void        post () {_sem.post();}
 
   private:
 
-    Semaphore		_sem;
+    Semaphore        _sem;
 };
 
 
@@ -177,30 +177,30 @@ LineBuffer::~LineBuffer ()
 
 struct ScanLineInputFile::Data: public Mutex
 {
-    Header		header;		    // the image header
-    int			version;            // file's version
-    FrameBuffer		frameBuffer;	    // framebuffer to write into
-    LineOrder		lineOrder;          // order of the scanlines in file
-    int			minX;		    // data window's min x coord
-    int			maxX;		    // data window's max x coord
-    int			minY;		    // data window's min y coord
-    int			maxY;		    // data window's max x coord
-    vector<Int64>	lineOffsets;	    // stores offsets in file for
+    Header        header;            // the image header
+    int            version;            // file's version
+    FrameBuffer        frameBuffer;        // framebuffer to write into
+    LineOrder        lineOrder;          // order of the scanlines in file
+    int            minX;            // data window's min x coord
+    int            maxX;            // data window's max x coord
+    int            minY;            // data window's min y coord
+    int            maxY;            // data window's max x coord
+    vector<Int64>    lineOffsets;        // stores offsets in file for
                         // each line
-    bool		fileIsComplete;	    // True if no scanlines are missing
+    bool        fileIsComplete;        // True if no scanlines are missing
                             // in the file
-    int			nextLineBufferMinY; // minimum y of the next linebuffer
-    vector<size_t>	bytesPerLine;       // combined size of a line over all
+    int            nextLineBufferMinY; // minimum y of the next linebuffer
+    vector<size_t>    bytesPerLine;       // combined size of a line over all
                                             // channels
-    vector<size_t>	offsetInLineBuffer; // offset for each scanline in its
+    vector<size_t>    offsetInLineBuffer; // offset for each scanline in its
                                             // linebuffer
-    vector<InSliceInfo>	slices;             // info about channels in file
-    IStream *		is;                 // file stream to read from
+    vector<InSliceInfo>    slices;             // info about channels in file
+    IStream *        is;                 // file stream to read from
 
     vector<LineBuffer*> lineBuffers;        // each holds one line buffer
-    int			linesInBuffer;      // number of scanlines each buffer
+    int            linesInBuffer;      // number of scanlines each buffer
                                             // holds
-    size_t		lineBufferSize;     // size of the line buffer
+    size_t        lineBufferSize;     // size of the line buffer
 
      Data (IStream *is, int numThreads);
     ~Data ();
@@ -403,14 +403,14 @@ class LineBufferTask : public Task
 
     virtual ~LineBufferTask ();
 
-    virtual void		execute ();
+    virtual void        execute ();
 
   private:
 
-    ScanLineInputFile::Data *	_ifd;
-    LineBuffer *		_lineBuffer;
-    int				_scanLineMin;
-    int				_scanLineMax;
+    ScanLineInputFile::Data *    _ifd;
+    LineBuffer *        _lineBuffer;
+    int                _scanLineMin;
+    int                _scanLineMax;
 };
 
 

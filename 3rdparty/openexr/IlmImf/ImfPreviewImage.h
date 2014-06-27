@@ -38,10 +38,10 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class PreviewImage -- a usually small, low-dynamic range image,
-//	that is intended to be stored in an image file's header.
+//    class PreviewImage -- a usually small, low-dynamic range image,
+//    that is intended to be stored in an image file's header.
 //
-//	struct PreviewRgba -- holds the value of a PreviewImage pixel.
+//    struct PreviewRgba -- holds the value of a PreviewImage pixel.
 //
 //-----------------------------------------------------------------------------
 
@@ -50,12 +50,12 @@ namespace Imf {
 
 struct PreviewRgba
 {
-    unsigned char	r;	// Red, green and blue components of
-    unsigned char	g;	// the pixel's color; intensity is
-    unsigned char	b;	// proportional to pow (x/255, 2.2),
+    unsigned char    r;    // Red, green and blue components of
+    unsigned char    g;    // the pixel's color; intensity is
+    unsigned char    b;    // proportional to pow (x/255, 2.2),
                     // where x is r, g, or b.
 
-    unsigned char	a;	// The pixel's alpha; 0 == transparent,
+    unsigned char    a;    // The pixel's alpha; 0 == transparent,
                 // 255 == opaque.
 
     PreviewRgba (unsigned char r = 0,
@@ -94,35 +94,35 @@ class PreviewImage
      PreviewImage (const PreviewImage &other);
     ~PreviewImage ();
 
-    PreviewImage &	operator = (const PreviewImage &other);
+    PreviewImage &    operator = (const PreviewImage &other);
 
 
     //-----------------------------------------------
     // Access to width, height and to the pixel array
     //-----------------------------------------------
 
-    unsigned int	width () const	{return _width;}
-    unsigned int	height () const	{return _height;}
+    unsigned int    width () const    {return _width;}
+    unsigned int    height () const    {return _height;}
 
-    PreviewRgba *	pixels ()	{return _pixels;}
-    const PreviewRgba *	pixels () const	{return _pixels;}
+    PreviewRgba *    pixels ()    {return _pixels;}
+    const PreviewRgba *    pixels () const    {return _pixels;}
 
 
     //----------------------------
     // Access to individual pixels
     //----------------------------
 
-    PreviewRgba &	pixel (unsigned int x, unsigned int y)
+    PreviewRgba &    pixel (unsigned int x, unsigned int y)
                         {return _pixels[y * _width + x];}
 
-    const PreviewRgba &	pixel (unsigned int x, unsigned int y) const
+    const PreviewRgba &    pixel (unsigned int x, unsigned int y) const
                         {return _pixels[y * _width + x];}
 
   private:
 
-    unsigned int	_width;
-    unsigned int	_height;
-    PreviewRgba *	_pixels;
+    unsigned int    _width;
+    unsigned int    _height;
+    PreviewRgba *    _pixels;
 };
 
 

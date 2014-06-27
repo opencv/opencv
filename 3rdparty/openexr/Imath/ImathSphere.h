@@ -39,7 +39,7 @@
 
 //-------------------------------------
 //
-//	A 3D sphere class template
+//    A 3D sphere class template
 //
 //-------------------------------------
 
@@ -54,36 +54,36 @@ class Sphere3
 {
   public:
 
-    Vec3<T>	center;
+    Vec3<T>    center;
     T           radius;
 
     //---------------
-    //	Constructors
+    //    Constructors
     //---------------
 
     Sphere3() : center(0,0,0), radius(0) {}
     Sphere3(const Vec3<T> &c, T r) : center(c), radius(r) {}
 
     //-------------------------------------------------------------------
-    //	Utilities:
+    //    Utilities:
     //
-    //	s.circumscribe(b)	sets center and radius of sphere s
-    //				so that the s tightly encloses box b.
+    //    s.circumscribe(b)    sets center and radius of sphere s
+    //                so that the s tightly encloses box b.
     //
-    //	s.intersectT (l, t)	If sphere s and line l intersect, then
-    //				intersectT() computes the smallest t,
-    //				t >= 0, so that l(t) is a point on the
-    //				sphere.  intersectT() then returns true.
+    //    s.intersectT (l, t)    If sphere s and line l intersect, then
+    //                intersectT() computes the smallest t,
+    //                t >= 0, so that l(t) is a point on the
+    //                sphere.  intersectT() then returns true.
     //
-    //				If s and l do not intersect, intersectT()
-    //				returns false.
+    //                If s and l do not intersect, intersectT()
+    //                returns false.
     //
-    //	s.intersect (l, i)	If sphere s and line l intersect, then
-    //				intersect() calls s.intersectT(l,t) and
-    //				computes i = l(t).
+    //    s.intersect (l, i)    If sphere s and line l intersect, then
+    //                intersect() calls s.intersectT(l,t) and
+    //                computes i = l(t).
     //
-    //				If s and l do not intersect, intersect()
-    //				returns false.
+    //                If s and l do not intersect, intersect()
+    //                returns false.
     //
     //-------------------------------------------------------------------
 

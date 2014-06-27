@@ -39,7 +39,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class Attribute
+//    class Attribute
 //
 //-----------------------------------------------------------------------------
 
@@ -67,42 +67,42 @@ class Attribute
     // Get this attribute's type name
     //-------------------------------
 
-    virtual const char *	typeName () const = 0;
+    virtual const char *    typeName () const = 0;
 
 
     //------------------------------
     // Make a copy of this attribute
     //------------------------------
 
-    virtual Attribute *		copy () const = 0;
+    virtual Attribute *        copy () const = 0;
 
 
     //----------------------------------------
     // Type-specific attribute I/O and copying
     //----------------------------------------
 
-    virtual void		writeValueTo (OStream &os,
+    virtual void        writeValueTo (OStream &os,
                           int version) const = 0;
 
-    virtual void		readValueFrom (IStream &is,
+    virtual void        readValueFrom (IStream &is,
                            int size,
                            int version) = 0;
 
-    virtual void		copyValueFrom (const Attribute &other) = 0;
+    virtual void        copyValueFrom (const Attribute &other) = 0;
 
 
     //------------------
     // Attribute factory
     //------------------
 
-    static Attribute *		newAttribute (const char typeName[]);
+    static Attribute *        newAttribute (const char typeName[]);
 
 
     //-----------------------------------------------------------
     // Test if a given attribute type has already been registered
     //-----------------------------------------------------------
 
-    static bool			knownType (const char typeName[]);
+    static bool            knownType (const char typeName[]);
 
 
   protected:
@@ -112,7 +112,7 @@ class Attribute
     // knows how to make objects of this type.
     //--------------------------------------------------
 
-    static void		registerAttributeType (const char typeName[],
+    static void        registerAttributeType (const char typeName[],
                            Attribute *(*newAttribute)());
 
     //------------------------------------------------------
@@ -121,7 +121,7 @@ class Attribute
     // debugging only).
     //------------------------------------------------------
 
-    static void		unRegisterAttributeType (const char typeName[]);
+    static void        unRegisterAttributeType (const char typeName[]);
 };
 
 
@@ -148,15 +148,15 @@ class TypedAttribute: public Attribute
     // Access to the attribute's value
     //--------------------------------
 
-    T &					value ();
-    const T &				value () const;
+    T &                    value ();
+    const T &                value () const;
 
 
     //--------------------------------
     // Get this attribute's type name.
     //--------------------------------
 
-    virtual const char *		typeName () const;
+    virtual const char *        typeName () const;
 
 
     //---------------------------------------------------------
@@ -164,21 +164,21 @@ class TypedAttribute: public Attribute
     // This function must be specialized for each value type T.
     //---------------------------------------------------------
 
-    static const char *			staticTypeName ();
+    static const char *            staticTypeName ();
 
 
     //---------------------
     // Make a new attribute
     //---------------------
 
-    static Attribute *			makeNewAttribute ();
+    static Attribute *            makeNewAttribute ();
 
 
     //------------------------------
     // Make a copy of this attribute
     //------------------------------
 
-    virtual Attribute *			copy () const;
+    virtual Attribute *            copy () const;
 
 
     //-----------------------------------------------------------------
@@ -186,24 +186,24 @@ class TypedAttribute: public Attribute
     // Depending on type T, these functions may have to be specialized.
     //-----------------------------------------------------------------
 
-    virtual void		writeValueTo (OStream &os,
+    virtual void        writeValueTo (OStream &os,
                           int version) const;
 
-    virtual void		readValueFrom (IStream &is,
+    virtual void        readValueFrom (IStream &is,
                            int size,
                            int version);
 
-    virtual void		copyValueFrom (const Attribute &other);
+    virtual void        copyValueFrom (const Attribute &other);
 
 
     //------------------------------------------------------------
     // Dynamic casts that throw exceptions instead of returning 0.
     //------------------------------------------------------------
 
-    static TypedAttribute *		cast (Attribute *attribute);
-    static const TypedAttribute *	cast (const Attribute *attribute);
-    static TypedAttribute &		cast (Attribute &attribute);
-    static const TypedAttribute &	cast (const Attribute &attribute);
+    static TypedAttribute *        cast (Attribute *attribute);
+    static const TypedAttribute *    cast (const Attribute *attribute);
+    static TypedAttribute &        cast (Attribute &attribute);
+    static const TypedAttribute &    cast (const Attribute &attribute);
 
 
     //---------------------------------------------------------------
@@ -218,19 +218,19 @@ class TypedAttribute: public Attribute
     //
     //---------------------------------------------------------------
 
-    static void				registerAttributeType ();
+    static void                registerAttributeType ();
 
 
     //-----------------------------------------------------
     // Un-register this attribute type (for debugging only)
     //-----------------------------------------------------
 
-    static void				 unRegisterAttributeType ();
+    static void                 unRegisterAttributeType ();
 
 
   private:
 
-    T					_value;
+    T                    _value;
 };
 
 

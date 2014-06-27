@@ -36,7 +36,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Miscellaneous helper functions for OpenEXR image file I/O
+//    Miscellaneous helper functions for OpenEXR image file I/O
 //
 //-----------------------------------------------------------------------------
 

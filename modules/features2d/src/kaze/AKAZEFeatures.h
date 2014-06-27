@@ -22,7 +22,7 @@ class AKAZEFeatures {
 private:
 
   AKAZEOptions options_;                ///< Configuration options for AKAZE
-	std::vector<TEvolution> evolution_;		///< Vector of nonlinear diffusion evolution
+    std::vector<TEvolution> evolution_;        ///< Vector of nonlinear diffusion evolution
 
   /// FED parameters
   int ncycles_;                  ///< Number of cycles

@@ -34,8 +34,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class Thread -- dummy implementation for
-//	platforms that do not support threading
+//    class Thread -- dummy implementation for
+//    platforms that do not support threading
 //
 //-----------------------------------------------------------------------------
 

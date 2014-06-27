@@ -21,7 +21,7 @@ struct TEvolution {
   }
 
   cv::Mat Lx, Ly;           ///< First order spatial derivatives
-  cv::Mat Lxx, Lxy, Lyy;	///< Second order spatial derivatives
+  cv::Mat Lxx, Lxy, Lyy;    ///< Second order spatial derivatives
   cv::Mat Lt;               ///< Evolution image
   cv::Mat Lsmooth;          ///< Smoothed image
   cv::Mat Ldet;             ///< Detector response

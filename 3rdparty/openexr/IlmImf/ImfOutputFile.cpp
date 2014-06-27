@@ -35,7 +35,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class OutputFile
+//    class OutputFile
 //
 //-----------------------------------------------------------------------------
 
@@ -83,13 +83,13 @@ namespace {
 
 struct OutSliceInfo
 {
-    PixelType		type;
-    const char *	base;
-    size_t		xStride;
-    size_t		yStride;
-    int			xSampling;
-    int			ySampling;
-    bool		zero;
+    PixelType        type;
+    const char *    base;
+    size_t        xStride;
+    size_t        yStride;
+    int            xSampling;
+    int            ySampling;
+    bool        zero;
 
     OutSliceInfo (PixelType type = HALF,
               const char *base = 0,
@@ -121,28 +121,28 @@ OutSliceInfo::OutSliceInfo (PixelType t,
 
 struct LineBuffer
 {
-    Array<char>		buffer;
-    const char *	dataPtr;
-    int			dataSize;
-    char *		endOfLineBufferData;
-    int			minY;
-    int			maxY;
-    int			scanLineMin;
-    int			scanLineMax;
-    Compressor *	compressor;
-    bool		partiallyFull;        // has incomplete data
-    bool		hasException;
-    string		exception;
+    Array<char>        buffer;
+    const char *    dataPtr;
+    int            dataSize;
+    char *        endOfLineBufferData;
+    int            minY;
+    int            maxY;
+    int            scanLineMin;
+    int            scanLineMax;
+    Compressor *    compressor;
+    bool        partiallyFull;        // has incomplete data
+    bool        hasException;
+    string        exception;
 
     LineBuffer (Compressor *comp);
     ~LineBuffer ();
 
-    void		wait () {_sem.wait();}
-    void		post () {_sem.post();}
+    void        wait () {_sem.wait();}
+    void        post () {_sem.post();}
 
   private:
 
-    Semaphore		_sem;
+    Semaphore        _sem;
 };
 
 
@@ -169,41 +169,41 @@ LineBuffer::~LineBuffer ()
 
 struct OutputFile::Data: public Mutex
 {
-    Header		 header;		// the image header
-    int			 version;		// file format version
-    Int64		 previewPosition;       // file position for preview
-    FrameBuffer		 frameBuffer;           // framebuffer to write into
-    int			 currentScanLine;       // next scanline to be written
-    int			 missingScanLines;      // number of lines to write
-    LineOrder		 lineOrder;		// the file's lineorder
-    int			 minX;			// data window's min x coord
-    int			 maxX;			// data window's max x coord
-    int			 minY;			// data window's min y coord
-    int			 maxY;			// data window's max x coord
-    vector<Int64>	 lineOffsets;		// stores offsets in file for
+    Header         header;        // the image header
+    int             version;        // file format version
+    Int64         previewPosition;       // file position for preview
+    FrameBuffer         frameBuffer;           // framebuffer to write into
+    int             currentScanLine;       // next scanline to be written
+    int             missingScanLines;      // number of lines to write
+    LineOrder         lineOrder;        // the file's lineorder
+    int             minX;            // data window's min x coord
+    int             maxX;            // data window's max x coord
+    int             minY;            // data window's min y coord
+    int             maxY;            // data window's max x coord
+    vector<Int64>     lineOffsets;        // stores offsets in file for
                         // each scanline
-    vector<size_t>	 bytesPerLine;          // combined size of a line over
+    vector<size_t>     bytesPerLine;          // combined size of a line over
                                                 // all channels
-    vector<size_t>	 offsetInLineBuffer;    // offset for each scanline in
+    vector<size_t>     offsetInLineBuffer;    // offset for each scanline in
                                                 // its linebuffer
-    Compressor::Format	 format;                // compressor's data format
-    vector<OutSliceInfo> slices;		// info about channels in file
-    OStream *		 os;			// file stream to write to
-    bool		 deleteStream;
-    Int64		 lineOffsetsPosition;   // file position for line
+    Compressor::Format     format;                // compressor's data format
+    vector<OutSliceInfo> slices;        // info about channels in file
+    OStream *         os;            // file stream to write to
+    bool         deleteStream;
+    Int64         lineOffsetsPosition;   // file position for line
                                                 // offset table
-    Int64		 currentPosition;       // current file position
+    Int64         currentPosition;       // current file position
 
     vector<LineBuffer*>  lineBuffers;           // each holds one line buffer
-    int			 linesInBuffer;         // number of scanlines each
+    int             linesInBuffer;         // number of scanlines each
                                                 // buffer holds
-    size_t		 lineBufferSize;        // size of the line buffer
+    size_t         lineBufferSize;        // size of the line buffer
 
      Data (bool deleteStream, int numThreads);
     ~Data ();
 
 
-    inline LineBuffer *	getLineBuffer (int number); // hash function from line
+    inline LineBuffer *    getLineBuffer (int number); // hash function from line
                                 // buffer indices into our
                             // vector of line buffers
 };
@@ -327,7 +327,7 @@ convertToXdr (OutputFile::Data *ofd,
     // pixel data in place, without an intermediate temporary buffer.
     //
 
-    int startY, endY;		// The first and last scanlines in
+    int startY, endY;        // The first and last scanlines in
                     // the file that are in the lineBuffer.
     int step;
 
@@ -412,12 +412,12 @@ class LineBufferTask: public Task
 
     virtual ~LineBufferTask ();
 
-    virtual void	execute ();
+    virtual void    execute ();
 
   private:
 
-    OutputFile::Data *	_ofd;
-    LineBuffer *	_lineBuffer;
+    OutputFile::Data *    _ofd;
+    LineBuffer *    _lineBuffer;
 };
 
 

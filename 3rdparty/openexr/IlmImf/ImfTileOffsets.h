@@ -38,7 +38,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class TileOffsets
+//    class TileOffsets
 //
 //-----------------------------------------------------------------------------
 
@@ -66,37 +66,37 @@ class TileOffsets
     // File I/O
     // --------
 
-    void		readFrom (IStream &is, bool &complete);
-    Int64		writeTo (OStream &os) const;
+    void        readFrom (IStream &is, bool &complete);
+    Int64        writeTo (OStream &os) const;
 
 
     //-----------------------------------------------------------
     // Test if the tileOffsets array is empty (all entries are 0)
     //-----------------------------------------------------------
 
-    bool		isEmpty () const;
+    bool        isEmpty () const;
 
 
     //-----------------------
     // Access to the elements
     //-----------------------
 
-    Int64 &		operator () (int dx, int dy, int lx, int ly);
-    Int64 &		operator () (int dx, int dy, int l);
-    const Int64 &	operator () (int dx, int dy, int lx, int ly) const;
-    const Int64 &	operator () (int dx, int dy, int l) const;
+    Int64 &        operator () (int dx, int dy, int lx, int ly);
+    Int64 &        operator () (int dx, int dy, int l);
+    const Int64 &    operator () (int dx, int dy, int lx, int ly) const;
+    const Int64 &    operator () (int dx, int dy, int l) const;
 
   private:
 
-    void		findTiles (IStream &is);
-    void		reconstructFromFile (IStream &is);
-    bool		readTile (IStream &is);
-    bool		anyOffsetsAreInvalid () const;
-    bool		isValidTile (int dx, int dy, int lx, int ly) const;
+    void        findTiles (IStream &is);
+    void        reconstructFromFile (IStream &is);
+    bool        readTile (IStream &is);
+    bool        anyOffsetsAreInvalid () const;
+    bool        isValidTile (int dx, int dy, int lx, int ly) const;
 
-    LevelMode		_mode;
-    int			_numXLevels;
-    int			_numYLevels;
+    LevelMode        _mode;
+    int            _numXLevels;
+    int            _numYLevels;
 
     std::vector<std::vector<std::vector <Int64> > > _offsets;
 };

@@ -36,8 +36,8 @@
 
 //----------------------------------------------------------------
 //
-//	Exceptions that correspond to "errno" error codes,
-//	and a function to make throwing those exceptions easy.
+//    Exceptions that correspond to "errno" error codes,
+//    and a function to make throwing those exceptions easy.
 //
 //----------------------------------------------------------------
 

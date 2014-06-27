@@ -38,7 +38,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Low-level file input and output for OpenEXR.
+//    Low-level file input and output for OpenEXR.
 //
 //-----------------------------------------------------------------------------
 
@@ -84,7 +84,7 @@ class IStream
     // the file it returns false, otherwise it returns true.
     //------------------------------------------------------
 
-    virtual bool	read (char c[/*n*/], int n) = 0;
+    virtual bool    read (char c[/*n*/], int n) = 0;
 
 
     //---------------------------------------------------
@@ -98,7 +98,7 @@ class IStream
     // mapped, readMemoryMapped(n) throws an exception.
     //---------------------------------------------------
 
-    virtual char *	readMemoryMapped (int n);
+    virtual char *    readMemoryMapped (int n);
 
 
     //--------------------------------------------------------
@@ -107,7 +107,7 @@ class IStream
     // read the first byte in the file, tellg() returns 0.
     //--------------------------------------------------------
 
-    virtual Int64	tellg () = 0;
+    virtual Int64    tellg () = 0;
 
 
     //-------------------------------------------
@@ -115,21 +115,21 @@ class IStream
     // After calling seekg(i), tellg() returns i.
     //-------------------------------------------
 
-    virtual void	seekg (Int64 pos) = 0;
+    virtual void    seekg (Int64 pos) = 0;
 
 
     //------------------------------------------------------
     // Clear error conditions after an operation has failed.
     //------------------------------------------------------
 
-    virtual void	clear ();
+    virtual void    clear ();
 
 
     //------------------------------------------------------
     // Get the name of the file associated with this stream.
     //------------------------------------------------------
 
-    const char *	fileName () const;
+    const char *    fileName () const;
 
   protected:
 
@@ -137,10 +137,10 @@ class IStream
 
   private:
 
-    IStream (const IStream &);			// not implemented
-    IStream & operator = (const IStream &);	// not implemented
+    IStream (const IStream &);            // not implemented
+    IStream & operator = (const IStream &);    // not implemented
 
-    std::string		_fileName;
+    std::string        _fileName;
 };
 
 
@@ -167,7 +167,7 @@ class OStream
     // an exception.
     //----------------------------------------------------------
 
-    virtual void	write (const char c[/*n*/], int n) = 0;
+    virtual void    write (const char c[/*n*/], int n) = 0;
 
 
     //---------------------------------------------------------
@@ -177,7 +177,7 @@ class OStream
     // returns 0.
     //---------------------------------------------------------
 
-    virtual Int64	tellp () = 0;
+    virtual Int64    tellp () = 0;
 
 
     //-------------------------------------------
@@ -185,14 +185,14 @@ class OStream
     // After calling seekp(i), tellp() returns i.
     //-------------------------------------------
 
-    virtual void	seekp (Int64 pos) = 0;
+    virtual void    seekp (Int64 pos) = 0;
 
 
     //------------------------------------------------------
     // Get the name of the file associated with this stream.
     //------------------------------------------------------
 
-    const char *	fileName () const;
+    const char *    fileName () const;
 
   protected:
 
@@ -200,10 +200,10 @@ class OStream
 
   private:
 
-    OStream (const OStream &);			// not implemented
-    OStream & operator = (const OStream &);	// not implemented
+    OStream (const OStream &);            // not implemented
+    OStream & operator = (const OStream &);    // not implemented
 
-    std::string		_fileName;
+    std::string        _fileName;
 };
 
 

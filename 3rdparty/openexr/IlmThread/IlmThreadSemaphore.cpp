@@ -34,8 +34,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class Semaphore -- dummy implementation for
-//	for platforms that do not support threading
+//    class Semaphore -- dummy implementation for
+//    for platforms that do not support threading
 //
 //-----------------------------------------------------------------------------
 

@@ -38,10 +38,10 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Simplified RGBA image I/O for tiled files
+//    Simplified RGBA image I/O for tiled files
 //
-//	class TiledRgbaOutputFile
-//	class TiledRgbaInputFile
+//    class TiledRgbaOutputFile
+//    class TiledRgbaInputFile
 //
 //-----------------------------------------------------------------------------
 
@@ -164,7 +164,7 @@ class TiledRgbaOutputFile
     //
     //------------------------------------------------
 
-    void		setFrameBuffer (const Rgba *base,
+    void        setFrameBuffer (const Rgba *base,
                     size_t xStride,
                     size_t yStride);
 
@@ -172,45 +172,45 @@ class TiledRgbaOutputFile
     // Access to the file header
     //--------------------------
 
-    const Header &		header () const;
-    const FrameBuffer &		frameBuffer () const;
-    const Imath::Box2i &	displayWindow () const;
-    const Imath::Box2i &	dataWindow () const;
-    float			pixelAspectRatio () const;
-    const Imath::V2f		screenWindowCenter () const;
-    float			screenWindowWidth () const;
-    LineOrder			lineOrder () const;
-    Compression			compression () const;
-    RgbaChannels		channels () const;
+    const Header &        header () const;
+    const FrameBuffer &        frameBuffer () const;
+    const Imath::Box2i &    displayWindow () const;
+    const Imath::Box2i &    dataWindow () const;
+    float            pixelAspectRatio () const;
+    const Imath::V2f        screenWindowCenter () const;
+    float            screenWindowWidth () const;
+    LineOrder            lineOrder () const;
+    Compression            compression () const;
+    RgbaChannels        channels () const;
 
 
     //----------------------------------------------------
     // Utility functions (same as in Imf::TiledOutputFile)
     //----------------------------------------------------
 
-    unsigned int	tileXSize () const;
-    unsigned int	tileYSize () const;
-    LevelMode		levelMode () const;
-    LevelRoundingMode	levelRoundingMode () const;
+    unsigned int    tileXSize () const;
+    unsigned int    tileYSize () const;
+    LevelMode        levelMode () const;
+    LevelRoundingMode    levelRoundingMode () const;
 
-    int			numLevels () const;
-    int			numXLevels () const;
-    int			numYLevels () const;
-    bool		isValidLevel (int lx, int ly) const;
+    int            numLevels () const;
+    int            numXLevels () const;
+    int            numYLevels () const;
+    bool        isValidLevel (int lx, int ly) const;
 
-    int			levelWidth  (int lx) const;
-    int			levelHeight (int ly) const;
+    int            levelWidth  (int lx) const;
+    int            levelHeight (int ly) const;
 
-    int			numXTiles (int lx = 0) const;
-    int			numYTiles (int ly = 0) const;
+    int            numXTiles (int lx = 0) const;
+    int            numYTiles (int ly = 0) const;
 
-    Imath::Box2i	dataWindowForLevel (int l = 0) const;
-    Imath::Box2i	dataWindowForLevel (int lx, int ly) const;
+    Imath::Box2i    dataWindowForLevel (int l = 0) const;
+    Imath::Box2i    dataWindowForLevel (int lx, int ly) const;
 
-    Imath::Box2i	dataWindowForTile (int dx, int dy,
+    Imath::Box2i    dataWindowForTile (int dx, int dy,
                        int l = 0) const;
 
-    Imath::Box2i	dataWindowForTile (int dx, int dy,
+    Imath::Box2i    dataWindowForTile (int dx, int dy,
                        int lx, int ly) const;
 
     //------------------------------------------------------------------
@@ -241,13 +241,13 @@ class TiledRgbaOutputFile
     //
     //------------------------------------------------------------------
 
-    void		writeTile (int dx, int dy, int l = 0);
-    void		writeTile (int dx, int dy, int lx, int ly);
+    void        writeTile (int dx, int dy, int l = 0);
+    void        writeTile (int dx, int dy, int lx, int ly);
 
-    void		writeTiles (int dxMin, int dxMax, int dyMin, int dyMax,
+    void        writeTiles (int dxMin, int dxMax, int dyMin, int dyMax,
                                     int lx, int ly);
 
-    void		writeTiles (int dxMin, int dxMax, int dyMin, int dyMax,
+    void        writeTiles (int dxMin, int dxMax, int dyMin, int dyMax,
                                     int l = 0);
 
 
@@ -255,7 +255,7 @@ class TiledRgbaOutputFile
     // Update the preview image (see Imf::TiledOutputFile::updatePreviewImage())
     // -------------------------------------------------------------------------
 
-    void		updatePreviewImage (const PreviewRgba[]);
+    void        updatePreviewImage (const PreviewRgba[]);
 
 
     //------------------------------------------------
@@ -269,7 +269,7 @@ class TiledRgbaOutputFile
     //
     //------------------------------------------------
 
-    void		breakTile  (int dx, int dy,
+    void        breakTile  (int dx, int dy,
                     int lx, int ly,
                     int offset,
                     int length,
@@ -286,7 +286,7 @@ class TiledRgbaOutputFile
     class ToYa;
 
     TiledOutputFile *            _outputFile;
-    ToYa *			_toYa;
+    ToYa *            _toYa;
 };
 
 
@@ -351,7 +351,7 @@ class TiledRgbaInputFile
     //
     //-----------------------------------------------------
 
-    void			setFrameBuffer (Rgba *base,
+    void            setFrameBuffer (Rgba *base,
                         size_t xStride,
                         size_t yStride);
 
@@ -362,60 +362,60 @@ class TiledRgbaInputFile
     // at least once before the next call to readTile() or readTiles().
     //-------------------------------------------------------------------
 
-    void			setLayerName (const std::string &layerName);
+    void            setLayerName (const std::string &layerName);
 
 
     //--------------------------
     // Access to the file header
     //--------------------------
 
-    const Header &		header () const;
-    const FrameBuffer &		frameBuffer () const;
-    const Imath::Box2i &	displayWindow () const;
-    const Imath::Box2i &	dataWindow () const;
-    float			pixelAspectRatio () const;
-    const Imath::V2f		screenWindowCenter () const;
-    float			screenWindowWidth () const;
-    LineOrder			lineOrder () const;
-    Compression			compression () const;
-    RgbaChannels		channels () const;
+    const Header &        header () const;
+    const FrameBuffer &        frameBuffer () const;
+    const Imath::Box2i &    displayWindow () const;
+    const Imath::Box2i &    dataWindow () const;
+    float            pixelAspectRatio () const;
+    const Imath::V2f        screenWindowCenter () const;
+    float            screenWindowWidth () const;
+    LineOrder            lineOrder () const;
+    Compression            compression () const;
+    RgbaChannels        channels () const;
     const char *                fileName () const;
-    bool			isComplete () const;
+    bool            isComplete () const;
 
     //----------------------------------
     // Access to the file format version
     //----------------------------------
 
-    int				version () const;
+    int                version () const;
 
 
     //---------------------------------------------------
     // Utility functions (same as in Imf::TiledInputFile)
     //---------------------------------------------------
 
-    unsigned int	tileXSize () const;
-    unsigned int	tileYSize () const;
-    LevelMode		levelMode () const;
-    LevelRoundingMode	levelRoundingMode () const;
+    unsigned int    tileXSize () const;
+    unsigned int    tileYSize () const;
+    LevelMode        levelMode () const;
+    LevelRoundingMode    levelRoundingMode () const;
 
-    int			numLevels () const;
-    int			numXLevels () const;
-    int			numYLevels () const;
-    bool		isValidLevel (int lx, int ly) const;
+    int            numLevels () const;
+    int            numXLevels () const;
+    int            numYLevels () const;
+    bool        isValidLevel (int lx, int ly) const;
 
-    int			levelWidth  (int lx) const;
-    int			levelHeight (int ly) const;
+    int            levelWidth  (int lx) const;
+    int            levelHeight (int ly) const;
 
-    int			numXTiles (int lx = 0) const;
-    int			numYTiles (int ly = 0) const;
+    int            numXTiles (int lx = 0) const;
+    int            numYTiles (int ly = 0) const;
 
-    Imath::Box2i	dataWindowForLevel (int l = 0) const;
-    Imath::Box2i	dataWindowForLevel (int lx, int ly) const;
+    Imath::Box2i    dataWindowForLevel (int l = 0) const;
+    Imath::Box2i    dataWindowForLevel (int lx, int ly) const;
 
-    Imath::Box2i	dataWindowForTile (int dx, int dy,
+    Imath::Box2i    dataWindowForTile (int dx, int dy,
                        int l = 0) const;
 
-    Imath::Box2i	dataWindowForTile (int dx, int dy,
+    Imath::Box2i    dataWindowForTile (int dx, int dy,
                        int lx, int ly) const;
 
 
@@ -448,13 +448,13 @@ class TiledRgbaInputFile
     //
     //----------------------------------------------------------------
 
-    void           	readTile (int dx, int dy, int l = 0);
-    void           	readTile (int dx, int dy, int lx, int ly);
+    void               readTile (int dx, int dy, int l = 0);
+    void               readTile (int dx, int dy, int lx, int ly);
 
-    void		readTiles (int dxMin, int dxMax,
+    void        readTiles (int dxMin, int dxMax,
                                    int dyMin, int dyMax, int lx, int ly);
 
-    void		readTiles (int dxMin, int dxMax,
+    void        readTiles (int dxMin, int dxMax,
                                    int dyMin, int dyMax, int l = 0);
 
   private:
@@ -468,9 +468,9 @@ class TiledRgbaInputFile
 
     class FromYa;
 
-    TiledInputFile *	_inputFile;
-    FromYa *		_fromYa;
-    std::string		_channelNamePrefix;
+    TiledInputFile *    _inputFile;
+    FromYa *        _fromYa;
+    std::string        _channelNamePrefix;
 };
 
 

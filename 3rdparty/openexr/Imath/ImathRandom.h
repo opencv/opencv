@@ -38,21 +38,21 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Generators for uniformly distributed pseudo-random numbers and
-//	functions that use those generators to generate numbers with
-//	non-uniform distributions:
+//    Generators for uniformly distributed pseudo-random numbers and
+//    functions that use those generators to generate numbers with
+//    non-uniform distributions:
 //
-//		class Rand32
-//		class Rand48
-//		solidSphereRand()
-//		hollowSphereRand()
-//		gaussRand()
-//		gaussSphereRand()
+//        class Rand32
+//        class Rand48
+//        solidSphereRand()
+//        hollowSphereRand()
+//        gaussRand()
+//        gaussSphereRand()
 //
-//	Note: class Rand48() calls erand48() and nrand48(), which are not
-//	available on all operating systems.  For compatibility we include
-//	our own versions of erand48() and nrand48().  Our functions have
-//	been reverse-engineered from the corresponding Unix/Linux man page.
+//    Note: class Rand48() calls erand48() and nrand48(), which are not
+//    available on all operating systems.  For compatibility we include
+//    our own versions of erand48() and nrand48().  Our functions have
+//    been reverse-engineered from the corresponding Unix/Linux man page.
 //
 //-----------------------------------------------------------------------------
 
@@ -82,42 +82,42 @@ class Rand32
     // Re-initialize with a given seed
     //--------------------------------
 
-    void		init (unsigned long int seed);
+    void        init (unsigned long int seed);
 
 
     //----------------------------------------------------------
     // Get the next value in the sequence (range: [false, true])
     //----------------------------------------------------------
 
-    bool		nextb ();
+    bool        nextb ();
 
 
     //---------------------------------------------------------------
     // Get the next value in the sequence (range: [0 ... 0xffffffff])
     //---------------------------------------------------------------
 
-    unsigned long int	nexti ();
+    unsigned long int    nexti ();
 
 
     //------------------------------------------------------
     // Get the next value in the sequence (range: [0 ... 1[)
     //------------------------------------------------------
 
-    float		nextf ();
+    float        nextf ();
 
 
     //-------------------------------------------------------------------
     // Get the next value in the sequence (range [rangeMin ... rangeMax[)
     //-------------------------------------------------------------------
 
-    float		nextf (float rangeMin, float rangeMax);
+    float        nextf (float rangeMin, float rangeMax);
 
 
   private:
 
-    void		next ();
+    void        next ();
 
-    unsigned long int	_state;
+    unsigned long int    _state;
 };
 
 
@@ -142,40 +142,40 @@ class Rand48
     // Re-initialize with a given seed
     //--------------------------------
 
-    void		init (unsigned long int seed);
+    void        init (unsigned long int seed);
 
 
     //----------------------------------------------------------
     // Get the next value in the sequence (range: [false, true])
     //----------------------------------------------------------
 
-    bool		nextb ();
+    bool        nextb ();
 
 
     //---------------------------------------------------------------
     // Get the next value in the sequence (range: [0 ... 0x7fffffff])
     //---------------------------------------------------------------
 
-    long int		nexti ();
+    long int        nexti ();
 
 
     //------------------------------------------------------
     // Get the next value in the sequence (range: [0 ... 1[)
     //------------------------------------------------------
 
-    double		nextf ();
+    double        nextf ();
 
 
     //-------------------------------------------------------------------
     // Get the next value in the sequence (range [rangeMin ... rangeMax[)
     //-------------------------------------------------------------------
 
-    double		nextf (double rangeMin, double rangeMax);
+    double        nextf (double rangeMin, double rangeMax);
 
 
   private:
 
-    unsigned short int	_state[3];
+    unsigned short int    _state[3];
 };
 
 
@@ -224,11 +224,11 @@ gaussSphereRand (Rand &rand);
 // erand48(), nrand48() and friends
 //---------------------------------
 
-double		erand48 (unsigned short state[3]);
-double		drand48 ();
-long int	nrand48 (unsigned short state[3]);
-long int	lrand48 ();
-void		srand48 (long int seed);
+double        erand48 (unsigned short state[3]);
+double        drand48 ();
+long int    nrand48 (unsigned short state[3]);
+long int    lrand48 ();
+void        srand48 (long int seed);
 
 
 //---------------
@@ -370,9 +370,9 @@ template <class Rand>
 float
 gaussRand (Rand &rand)
 {
-    float x;		// Note: to avoid numerical problems with very small
-    float y;		// numbers, we make these variables singe-precision
-    float length2;	// floats, but later we call the double-precision log()
+    float x;        // Note: to avoid numerical problems with very small
+    float y;        // numbers, we make these variables singe-precision
+    float length2;    // floats, but later we call the double-precision log()
             // and sqrt() functions instead of logf() and sqrtf().
     do
     {

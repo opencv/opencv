@@ -39,9 +39,9 @@
 //-------------------------------------------------------------------------
 //
 //      This file contains algorithms applied to or in conjunction with
-//	Frustum visibility testing (Imath::Frustum).
+//    Frustum visibility testing (Imath::Frustum).
 //
-//	Methods for frustum-based rejection of primitives are contained here.
+//    Methods for frustum-based rejection of primitives are contained here.
 //
 //-------------------------------------------------------------------------
 
@@ -56,7 +56,7 @@ namespace Imath {
 /////////////////////////////////////////////////////////////////
 // FrustumTest
 //
-//	template class FrustumTest<T>
+//    template class FrustumTest<T>
 //
 // This is a helper class, designed to accelerate the case
 // where many tests are made against the same frustum.
@@ -402,7 +402,7 @@ bool FrustumTest<T>::isVisible(const Vec3<T> &vec) const
 }
 
 
-typedef FrustumTest<float>	FrustumTestf;
+typedef FrustumTest<float>    FrustumTestf;
 typedef FrustumTest<double> FrustumTestd;
 
 } //namespace Imath

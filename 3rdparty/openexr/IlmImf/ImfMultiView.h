@@ -40,43 +40,43 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Functions related to accessing channels and views in multi-view
-//	OpenEXR files.
+//    Functions related to accessing channels and views in multi-view
+//    OpenEXR files.
 //
-//	A multi-view image file contains two or more views of the same
-//	scene, as seen from different viewpoints, for example, a left-eye
-//	and a right-eye view for stereo displays.  Each view has its own
-//	set of image channels.  A naming convention identifies the channels
-//	that belong to a given view.
+//    A multi-view image file contains two or more views of the same
+//    scene, as seen from different viewpoints, for example, a left-eye
+//    and a right-eye view for stereo displays.  Each view has its own
+//    set of image channels.  A naming convention identifies the channels
+//    that belong to a given view.
 //
-//	A "multiView" attribute in the file header lists the names of the
-//	views in an image (see ImfStandardAttributes.h), and channel names
-//	of the form
+//    A "multiView" attribute in the file header lists the names of the
+//    views in an image (see ImfStandardAttributes.h), and channel names
+//    of the form
 //
-//		layer.view.channel
+//        layer.view.channel
 //
-//	allow channels to be matched with views.
+//    allow channels to be matched with views.
 //
-//	For compatibility with singe-view images, the first view listed in
-//	the multiView attribute is the "default view", and channels that
-//	have no periods in their names are considered part of the default
-//	view.
+//    For compatibility with singe-view images, the first view listed in
+//    the multiView attribute is the "default view", and channels that
+//    have no periods in their names are considered part of the default
+//    view.
 //
-//	For example, if a file's multiView attribute lists the views
-//	"left" and "right", in that order, then "left" is the default
-//	view.  Channels
+//    For example, if a file's multiView attribute lists the views
+//    "left" and "right", in that order, then "left" is the default
+//    view.  Channels
 //
-//		"R", "left.Z", "diffuse.left.R"
+//        "R", "left.Z", "diffuse.left.R"
 //
-//	are part of the "left" view; channels
+//    are part of the "left" view; channels
 //
-//		"right.R", "right.Z", "diffuse.right.R"
+//        "right.R", "right.Z", "diffuse.right.R"
 //
-//	are part of the "right" view; and channels
+//    are part of the "right" view; and channels
 //
-//		"tmp.R", "right.diffuse.R", "diffuse.tmp.R"
+//        "tmp.R", "right.diffuse.R", "diffuse.tmp.R"
 //
-//	belong to no view at all.
+//    belong to no view at all.
 //
 //-----------------------------------------------------------------------------
 

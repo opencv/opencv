@@ -39,12 +39,12 @@
 //-------------------------------------------------------------------------
 //
 //      This file contains algorithms applied to or in conjunction with
-//	transformation matrices (Imath::Matrix33 and Imath::Matrix44).
-//	The assumption made is that these functions are called much less
-//	often than the basic point functions or these functions require
-//	more support classes.
+//    transformation matrices (Imath::Matrix33 and Imath::Matrix44).
+//    The assumption made is that these functions are called much less
+//    often than the basic point functions or these functions require
+//    more support classes.
 //
-//	This file also defines a few predefined constant matrices.
+//    This file also defines a few predefined constant matrices.
 //
 //-------------------------------------------------------------------------
 
@@ -97,15 +97,15 @@ IMATH_EXPORT_CONST M44d identity44d;
 //   If exc is false:
 //
 //      extractScaling (m, s)            returns false, s is invalid
-//	sansScaling (m)		         returns m
-//	removeScaling (m)	         returns false, m is unchanged
+//    sansScaling (m)                 returns m
+//    removeScaling (m)             returns false, m is unchanged
 //      sansScalingAndShear (m)          returns m
 //      removeScalingAndShear (m)        returns false, m is unchanged
 //      extractAndRemoveScalingAndShear (m, s, h)
 //                                       returns false, m is unchanged,
 //                                                      (sh) are invalid
 //      checkForZeroScaleInRow ()        returns false
-//	extractSHRT (m, s, h, r, t)      returns false, (shrt) are invalid
+//    extractSHRT (m, s, h, r, t)      returns false, (shrt) are invalid
 //
 // - Functions extractEuler(), extractEulerXYZ() and extractEulerZYX()
 //   assume that the matrix does not include shear or non-uniform scaling,
@@ -164,17 +164,17 @@ template <class T>  bool        extractAndRemoveScalingAndShear
                          Vec3<T>     &shr,
                          bool exc = true);
 
-template <class T>  void	extractEulerXYZ
+template <class T>  void    extractEulerXYZ
                                             (const Matrix44<T> &mat,
                          Vec3<T> &rot);
 
-template <class T>  void	extractEulerZYX
+template <class T>  void    extractEulerZYX
                                             (const Matrix44<T> &mat,
                          Vec3<T> &rot);
 
-template <class T>  Quat<T>	extractQuat (const Matrix44<T> &mat);
+template <class T>  Quat<T>    extractQuat (const Matrix44<T> &mat);
 
-template <class T>  bool	extractSHRT
+template <class T>  bool    extractSHRT
                                     (const Matrix44<T> &mat,
                      Vec3<T> &s,
                      Vec3<T> &h,
@@ -183,7 +183,7 @@ template <class T>  bool	extractSHRT
                      bool exc /*= true*/,
                      typename Euler<T>::Order rOrder);
 
-template <class T>  bool	extractSHRT
+template <class T>  bool    extractSHRT
                                     (const Matrix44<T> &mat,
                      Vec3<T> &s,
                      Vec3<T> &h,
@@ -191,7 +191,7 @@ template <class T>  bool	extractSHRT
                      Vec3<T> &t,
                      bool exc = true);
 
-template <class T>  bool	extractSHRT
+template <class T>  bool    extractSHRT
                                     (const Matrix44<T> &mat,
                      Vec3<T> &s,
                      Vec3<T> &h,
@@ -203,7 +203,7 @@ template <class T>  bool	extractSHRT
 // Internal utility function.
 //
 
-template <class T>  bool	checkForZeroScaleInRow
+template <class T>  bool    checkForZeroScaleInRow
                                             (const T       &scl,
                          const Vec3<T> &row,
                          bool exc = true);
@@ -218,7 +218,7 @@ template <class T>  Matrix44<T> outerProduct
 // vector.
 //
 
-template <class T> Matrix44<T>	rotationMatrix (const Vec3<T> &fromDirection,
+template <class T> Matrix44<T>    rotationMatrix (const Vec3<T> &fromDirection,
                         const Vec3<T> &toDirection);
 
 
@@ -230,7 +230,7 @@ template <class T> Matrix44<T>	rotationMatrix (const Vec3<T> &fromDirection,
 // in a certain direction "upDir".
 //
 
-template <class T> Matrix44<T>	rotationMatrixWithUpDir
+template <class T> Matrix44<T>    rotationMatrixWithUpDir
                                             (const Vec3<T> &fromDir,
                          const Vec3<T> &toDir,
                          const Vec3<T> &upDir);
@@ -249,7 +249,7 @@ template <class T> Matrix44<T>	rotationMatrixWithUpDir
 //        (b) when any of the given direction vectors have zero length
 //
 
-template <class T> void	alignZAxisWithTargetDir
+template <class T> void    alignZAxisWithTargetDir
                                             (Matrix44<T> &result,
                                              Vec3<T>      targetDir,
                          Vec3<T>      upDir);
@@ -334,18 +334,18 @@ template <class T>  bool        extractAndRemoveScalingAndShear
                          T           &shr,
                          bool exc = true);
 
-template <class T>  void	extractEuler
+template <class T>  void    extractEuler
                                             (const Matrix33<T> &mat,
                          T       &rot);
 
-template <class T>  bool	extractSHRT (const Matrix33<T> &mat,
+template <class T>  bool    extractSHRT (const Matrix33<T> &mat,
                          Vec2<T> &s,
                          T       &h,
                          T       &r,
                          Vec2<T> &t,
                          bool exc = true);
 
-template <class T>  bool	checkForZeroScaleInRow
+template <class T>  bool    checkForZeroScaleInRow
                                             (const T       &scl,
                          const Vec2<T> &row,
                          bool exc = true);
@@ -1382,7 +1382,7 @@ jacobiSVD (const Imath::Matrix44<T>& A,
 // a real symmetric matrix using Jacobi transformation.
 //
 // Jacobi transformation of a 3x3/4x4 matrix A outputs S and V:
-// 	A = V * S * V^T
+//     A = V * S * V^T
 // where V is orthonormal and S is the diagonal matrix of eigenvalues.
 // Input matrix A must be symmetric. A is also modified during
 // the computation so that upper diagonal entries of A become zero.

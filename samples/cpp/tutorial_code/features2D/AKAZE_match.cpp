@@ -10,7 +10,7 @@ using namespace cv;
 const float inlier_threshold = 2.5f; // Distance threshold to identify inliers
 const float nn_match_ratio = 0.8f;   // Nearest neighbor matching ratio
 
-int main(int argc, char **argv)
+int main(void)
 {
     Mat img1 = imread("graf1.png", IMREAD_GRAYSCALE);
     Mat img2 = imread("graf3.png", IMREAD_GRAYSCALE);
@@ -43,7 +43,7 @@ int main(int argc, char **argv)
         }
     }
 
-    for(int i = 0; i < matched1.size(); i++) {
+    for(unsigned i = 0; i < matched1.size(); i++) {
         Mat col = Mat::ones(3, 1, CV_64F);
         col.at<double>(0) = matched1[i].pt.x;
         col.at<double>(1) = matched1[i].pt.y;

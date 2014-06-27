@@ -38,11 +38,11 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Routines for converting between pixel data types,
-//	with well-defined behavior for exceptional cases,
-//	without depending on how hardware and operating
-//	system handle integer overflows and floating-point
-//	exceptions.
+//    Routines for converting between pixel data types,
+//    with well-defined behavior for exceptional cases,
+//    without depending on how hardware and operating
+//    system handle integer overflows and floating-point
+//    exceptions.
 //
 //-----------------------------------------------------------------------------
 
@@ -54,49 +54,49 @@ namespace Imf {
 //---------------------------------------------------------
 // Conversion from half or float to unsigned int:
 //
-//	input			result
-//	---------------------------------------------------
+//    input            result
+//    ---------------------------------------------------
 //
-//	finite, >= 0		input, cast to unsigned int
-//				(rounds towards zero)
+//    finite, >= 0        input, cast to unsigned int
+//                (rounds towards zero)
 //
-//	finite, < 0		0
+//    finite, < 0        0
 //
-//	NaN			0
+//    NaN            0
 //
-//	+infinity		UINT_MAX
+//    +infinity        UINT_MAX
 //
-//	-infinity		0
+//    -infinity        0
 //
 //---------------------------------------------------------
 
-unsigned int	halfToUint (half h);
-unsigned int	floatToUint (float f);
+unsigned int    halfToUint (half h);
+unsigned int    floatToUint (float f);
 
 
 //---------------------------------------------------------
 // Conversion from unsigned int or float to half:
 //
-// 	input			result
-//	---------------------------------------------------
+//     input            result
+//    ---------------------------------------------------
 //
-// 	finite,			closest possible half
-// 	magnitude <= HALF_MAX
+//     finite,            closest possible half
+//     magnitude <= HALF_MAX
 //
-// 	finite, > HALF_MAX	+infinity
+//     finite, > HALF_MAX    +infinity
 //
-// 	finite, < -HALF_MAX	-infinity
+//     finite, < -HALF_MAX    -infinity
 //
-// 	NaN			NaN
+//     NaN            NaN
 //
-// 	+infinity		+infinity
+//     +infinity        +infinity
 //
-// 	-infinity		-infinity
+//     -infinity        -infinity
 //
 //---------------------------------------------------------
 
-half		uintToHalf (unsigned int ui);
-half		floatToHalf (float f);
+half        uintToHalf (unsigned int ui);
+half        floatToHalf (float f);
 
 
 } // namespace Imf

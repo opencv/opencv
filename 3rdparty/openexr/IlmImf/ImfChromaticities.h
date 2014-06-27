@@ -38,8 +38,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	CIE (x,y) chromaticities, and conversions between
-//	RGB tiples and CIE XYZ tristimulus values.
+//    CIE (x,y) chromaticities, and conversions between
+//    RGB tiples and CIE XYZ tristimulus values.
 //
 //-----------------------------------------------------------------------------
 
@@ -56,10 +56,10 @@ struct Chromaticities
     // (1,0,0), (0,1,0), (0,0,1) and (1,1,1).
     //-----------------------------------------------
 
-    Imath::V2f	red;
-    Imath::V2f	green;
-    Imath::V2f	blue;
-    Imath::V2f	white;
+    Imath::V2f    red;
+    Imath::V2f    green;
+    Imath::V2f    blue;
+    Imath::V2f    white;
 
     //--------------------------------------------
     // Default constructor produces chromaticities
@@ -78,41 +78,41 @@ struct Chromaticities
 //
 // RGB to XYZ:
 //
-// 	Given a set of chromaticities, c, and the luminance, Y, of the RGB
-// 	triple (1,1,1), or "white", RGBtoXYZ(c,Y) computes a matrix, M, so
-// 	that multiplying an RGB value, v, with M produces an equivalent
-// 	XYZ value, w.  (w == v * M)
+//     Given a set of chromaticities, c, and the luminance, Y, of the RGB
+//     triple (1,1,1), or "white", RGBtoXYZ(c,Y) computes a matrix, M, so
+//     that multiplying an RGB value, v, with M produces an equivalent
+//     XYZ value, w.  (w == v * M)
 //
-// 	If we define that
+//     If we define that
 //
-// 	   (Xr, Yr, Zr) == (1, 0, 0) * M
-// 	   (Xg, Yg, Zg) == (0, 1, 0) * M
-// 	   (Xb, Yb, Zb) == (0, 0, 1) * M
-// 	   (Xw, Yw, Zw) == (1, 1, 1) * M,
+//        (Xr, Yr, Zr) == (1, 0, 0) * M
+//        (Xg, Yg, Zg) == (0, 1, 0) * M
+//        (Xb, Yb, Zb) == (0, 0, 1) * M
+//        (Xw, Yw, Zw) == (1, 1, 1) * M,
 //
-// 	then the following statements are true:
+//     then the following statements are true:
 //
-// 	   Xr / (Xr + Yr + Zr) == c.red.x
-// 	   Yr / (Xr + Yr + Zr) == c.red.y
+//        Xr / (Xr + Yr + Zr) == c.red.x
+//        Yr / (Xr + Yr + Zr) == c.red.y
 //
-// 	   Xg / (Xg + Yg + Zg) == c.red.x
-// 	   Yg / (Xg + Yg + Zg) == c.red.y
+//        Xg / (Xg + Yg + Zg) == c.red.x
+//        Yg / (Xg + Yg + Zg) == c.red.y
 //
-// 	   Xb / (Xb + Yb + Zb) == c.red.x
-// 	   Yb / (Xb + Yb + Zb) == c.red.y
+//        Xb / (Xb + Yb + Zb) == c.red.x
+//        Yb / (Xb + Yb + Zb) == c.red.y
 //
-// 	   Xw / (Xw + Yw + Zw) == c.red.x
-// 	   Yw / (Xw + Yw + Zw) == c.red.y
+//        Xw / (Xw + Yw + Zw) == c.red.x
+//        Yw / (Xw + Yw + Zw) == c.red.y
 //
-// 	   Yw == Y.
+//        Yw == Y.
 //
 // XYZ to RGB:
 //
-// 	YYZtoRGB(c,Y) returns RGBtoXYZ(c,Y).inverse().
+//     YYZtoRGB(c,Y) returns RGBtoXYZ(c,Y).inverse().
 //
 
-Imath::M44f	RGBtoXYZ (const Chromaticities chroma, float Y);
-Imath::M44f	XYZtoRGB (const Chromaticities chroma, float Y);
+Imath::M44f    RGBtoXYZ (const Chromaticities chroma, float Y);
+Imath::M44f    XYZtoRGB (const Chromaticities chroma, float Y);
 
 
 } // namespace Imf

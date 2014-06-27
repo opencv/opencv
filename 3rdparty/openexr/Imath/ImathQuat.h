@@ -39,19 +39,19 @@
 
 //----------------------------------------------------------------------
 //
-//	template class Quat<T>
+//    template class Quat<T>
 //
-//	"Quaternions came from Hamilton ... and have been an unmixed
-//	evil to those who have touched them in any way. Vector is a
-//	useless survival ... and has never been of the slightest use
-//	to any creature."
+//    "Quaternions came from Hamilton ... and have been an unmixed
+//    evil to those who have touched them in any way. Vector is a
+//    useless survival ... and has never been of the slightest use
+//    to any creature."
 //
-//	    - Lord Kelvin
+//        - Lord Kelvin
 //
-//	This class implements the quaternion numerical type -- you
+//    This class implements the quaternion numerical type -- you
 //      will probably want to use this class to represent orientations
-//	in R3 and to convert between various euler angle reps. You
-//	should probably use Imath::Euler<> for that.
+//    in R3 and to convert between various euler angle reps. You
+//    should probably use Imath::Euler<> for that.
 //
 //----------------------------------------------------------------------
 
@@ -72,12 +72,12 @@ class Quat
 {
   public:
 
-    T			r;	    // real part
-    Vec3<T>		v;	    // imaginary vector
+    T            r;        // real part
+    Vec3<T>        v;        // imaginary vector
 
 
     //-----------------------------------------------------
-    //	Constructors - default constructor is identity quat
+    //    Constructors - default constructor is identity quat
     //-----------------------------------------------------
 
     Quat ();
@@ -93,7 +93,7 @@ class Quat
 
 
     //-------------------------------------------------
-    //	Basic Algebra - Operators and Methods
+    //    Basic Algebra - Operators and Methods
     //  The operator return values are *NOT* normalized
     //
     //  operator^ and euclideanInnnerProduct() both
@@ -101,124 +101,124 @@ class Quat
     //
     //  operator/ uses the inverse() quaternion
     //
-    //	operator~ is conjugate -- if (S+V) is quat then
-    //		  the conjugate (S+V)* == (S-V)
+    //    operator~ is conjugate -- if (S+V) is quat then
+    //          the conjugate (S+V)* == (S-V)
     //
     //  some operators (*,/,*=,/=) treat the quat as
-    //	a 4D vector when one of the operands is scalar
+    //    a 4D vector when one of the operands is scalar
     //-------------------------------------------------
 
-    const Quat<T> &	operator =	(const Quat<T> &q);
-    const Quat<T> &	operator *=	(const Quat<T> &q);
-    const Quat<T> &	operator *=	(T t);
-    const Quat<T> &	operator /=	(const Quat<T> &q);
-    const Quat<T> &	operator /=	(T t);
-    const Quat<T> &	operator +=	(const Quat<T> &q);
-    const Quat<T> &	operator -=	(const Quat<T> &q);
-    T &			operator []	(int index);	// as 4D vector
-    T			operator []	(int index) const;
+    const Quat<T> &    operator =    (const Quat<T> &q);
+    const Quat<T> &    operator *=    (const Quat<T> &q);
+    const Quat<T> &    operator *=    (T t);
+    const Quat<T> &    operator /=    (const Quat<T> &q);
+    const Quat<T> &    operator /=    (T t);
+    const Quat<T> &    operator +=    (const Quat<T> &q);
+    const Quat<T> &    operator -=    (const Quat<T> &q);
+    T &            operator []    (int index);    // as 4D vector
+    T            operator []    (int index) const;
 
     template <class S> bool operator == (const Quat<S> &q) const;
     template <class S> bool operator != (const Quat<S> &q) const;
 
-    Quat<T> &		invert ();		// this -> 1 / this
-    Quat<T>		inverse () const;
-    Quat<T> &		normalize ();		// returns this
-    Quat<T>		normalized () const;
-    T			length () const;	// in R4
+    Quat<T> &        invert ();        // this -> 1 / this
+    Quat<T>        inverse () const;
+    Quat<T> &        normalize ();        // returns this
+    Quat<T>        normalized () const;
+    T            length () const;    // in R4
     Vec3<T>             rotateVector(const Vec3<T> &original) const;
     T                   euclideanInnerProduct(const Quat<T> &q) const;
 
     //-----------------------
-    //	Rotation conversion
+    //    Rotation conversion
     //-----------------------
 
-    Quat<T> &		setAxisAngle (const Vec3<T> &axis, T radians);
+    Quat<T> &        setAxisAngle (const Vec3<T> &axis, T radians);
 
-    Quat<T> &		setRotation (const Vec3<T> &fromDirection,
+    Quat<T> &        setRotation (const Vec3<T> &fromDirection,
                      const Vec3<T> &toDirection);
 
-    T			angle () const;
-    Vec3<T>		axis () const;
+    T            angle () const;
+    Vec3<T>        axis () const;
 
-    Matrix33<T>		toMatrix33 () const;
-    Matrix44<T>		toMatrix44 () const;
+    Matrix33<T>        toMatrix33 () const;
+    Matrix44<T>        toMatrix44 () const;
 
-    Quat<T>		log () const;
-    Quat<T>		exp () const;
+    Quat<T>        log () const;
+    Quat<T>        exp () const;
 
 
   private:
 
-    void		setRotationInternal (const Vec3<T> &f0,
+    void        setRotationInternal (const Vec3<T> &f0,
                          const Vec3<T> &t0,
                          Quat<T> &q);
 };
 
 
 template<class T>
-Quat<T>			slerp (const Quat<T> &q1, const Quat<T> &q2, T t);
+Quat<T>            slerp (const Quat<T> &q1, const Quat<T> &q2, T t);
 
 template<class T>
-Quat<T>			slerpShortestArc
+Quat<T>            slerpShortestArc
                               (const Quat<T> &q1, const Quat<T> &q2, T t);
 
 
 template<class T>
-Quat<T>			squad (const Quat<T> &q1, const Quat<T> &q2,
+Quat<T>            squad (const Quat<T> &q1, const Quat<T> &q2,
                    const Quat<T> &qa, const Quat<T> &qb, T t);
 
 template<class T>
-void			intermediate (const Quat<T> &q0, const Quat<T> &q1,
+void            intermediate (const Quat<T> &q0, const Quat<T> &q1,
                       const Quat<T> &q2, const Quat<T> &q3,
                       Quat<T> &qa, Quat<T> &qb);
 
 template<class T>
-Matrix33<T>		operator * (const Matrix33<T> &M, const Quat<T> &q);
+Matrix33<T>        operator * (const Matrix33<T> &M, const Quat<T> &q);
 
 template<class T>
-Matrix33<T>		operator * (const Quat<T> &q, const Matrix33<T> &M);
+Matrix33<T>        operator * (const Quat<T> &q, const Matrix33<T> &M);
 
 template<class T>
-std::ostream &		operator << (std::ostream &o, const Quat<T> &q);
+std::ostream &        operator << (std::ostream &o, const Quat<T> &q);
 
 template<class T>
-Quat<T>			operator * (const Quat<T> &q1, const Quat<T> &q2);
+Quat<T>            operator * (const Quat<T> &q1, const Quat<T> &q2);
 
 template<class T>
-Quat<T>			operator / (const Quat<T> &q1, const Quat<T> &q2);
+Quat<T>            operator / (const Quat<T> &q1, const Quat<T> &q2);
 
 template<class T>
-Quat<T>			operator / (const Quat<T> &q, T t);
+Quat<T>            operator / (const Quat<T> &q, T t);
 
 template<class T>
-Quat<T>			operator * (const Quat<T> &q, T t);
+Quat<T>            operator * (const Quat<T> &q, T t);
 
 template<class T>
-Quat<T>			operator * (T t, const Quat<T> &q);
+Quat<T>            operator * (T t, const Quat<T> &q);
 
 template<class T>
-Quat<T>			operator + (const Quat<T> &q1, const Quat<T> &q2);
+Quat<T>            operator + (const Quat<T> &q1, const Quat<T> &q2);
 
 template<class T>
-Quat<T>			operator - (const Quat<T> &q1, const Quat<T> &q2);
+Quat<T>            operator - (const Quat<T> &q1, const Quat<T> &q2);
 
 template<class T>
-Quat<T>			operator ~ (const Quat<T> &q);
+Quat<T>            operator ~ (const Quat<T> &q);
 
 template<class T>
-Quat<T>			operator - (const Quat<T> &q);
+Quat<T>            operator - (const Quat<T> &q);
 
 template<class T>
-Vec3<T>			operator * (const Vec3<T> &v, const Quat<T> &q);
+Vec3<T>            operator * (const Vec3<T> &v, const Quat<T> &q);
 
 
 //--------------------
 // Convenient typedefs
 //--------------------
 
-typedef Quat<float>	Quatf;
-typedef Quat<double>	Quatd;
+typedef Quat<float>    Quatf;
+typedef Quat<double>    Quatd;
 
 
 //---------------
@@ -799,8 +799,8 @@ Quat<T>::setRotationInternal (const Vec3<T> &f0, const Vec3<T> &t0, Quat<T> &q)
     // Store the rotation axis and rotation angle.
     //
 
-    q.r = f0 ^ h0;	//  f0 ^ h0 == cos (phi)
-    q.v = f0 % h0;	// (f0 % h0).length() == sin (phi)
+    q.r = f0 ^ h0;    //  f0 ^ h0 == cos (phi)
+    q.v = f0 % h0;    // (f0 % h0).length() == sin (phi)
 }
 
 

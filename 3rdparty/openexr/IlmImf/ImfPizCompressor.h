@@ -38,7 +38,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class PizCompressor -- uses Wavelet and Huffman encoding.
+//    class PizCompressor -- uses Wavelet and Huffman encoding.
 //
 //-----------------------------------------------------------------------------
 
@@ -59,26 +59,26 @@ class PizCompressor: public Compressor
 
     virtual ~PizCompressor ();
 
-    virtual int		numScanLines () const;
+    virtual int        numScanLines () const;
 
-    virtual Format	format () const;
+    virtual Format    format () const;
 
-    virtual int		compress (const char *inPtr,
+    virtual int        compress (const char *inPtr,
                   int inSize,
                   int minY,
                   const char *&outPtr);
 
-    virtual int		compressTile (const char *inPtr,
+    virtual int        compressTile (const char *inPtr,
                       int inSize,
                       Imath::Box2i range,
                       const char *&outPtr);
 
-    virtual int		uncompress (const char *inPtr,
+    virtual int        uncompress (const char *inPtr,
                     int inSize,
                     int minY,
                     const char *&outPtr);
 
-    virtual int		uncompressTile (const char *inPtr,
+    virtual int        uncompressTile (const char *inPtr,
                     int inSize,
                     Imath::Box2i range,
                     const char *&outPtr);
@@ -86,27 +86,27 @@ class PizCompressor: public Compressor
 
     struct ChannelData;
 
-    int			compress (const char *inPtr,
+    int            compress (const char *inPtr,
                   int inSize,
                   Imath::Box2i range,
                   const char *&outPtr);
 
-    int			uncompress (const char *inPtr,
+    int            uncompress (const char *inPtr,
                     int inSize,
                     Imath::Box2i range,
                     const char *&outPtr);
 
-    int			_maxScanLineSize;
-    Format		_format;
-    int			_numScanLines;
-    unsigned short *	_tmpBuffer;
-    char *		_outBuffer;
-    int			_numChans;
-    const ChannelList &	_channels;
-    ChannelData *	_channelData;
-    int			_minX;
-    int			_maxX;
-    int			_maxY;
+    int            _maxScanLineSize;
+    Format        _format;
+    int            _numScanLines;
+    unsigned short *    _tmpBuffer;
+    char *        _outBuffer;
+    int            _numChans;
+    const ChannelList &    _channels;
+    ChannelData *    _channelData;
+    int            _minX;
+    int            _maxX;
+    int            _maxY;
 };
 
 

@@ -522,7 +522,7 @@ void dumpOpenCLDevice();
 #define TEST_DUMP_OCL_INFO
 #endif
 
-#define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...)	\
+#define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...)    \
     ::perf::Regression::Init(#modulename); \
     ::perf::TestBase::Init(std::vector<std::string>(impls, impls + sizeof impls / sizeof *impls), \
                            argc, argv); \

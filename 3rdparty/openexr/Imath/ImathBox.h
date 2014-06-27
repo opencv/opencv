@@ -38,27 +38,27 @@
 
 //-------------------------------------------------------------------
 //
-//	class Imath::Box<class T>
-//	--------------------------------
+//    class Imath::Box<class T>
+//    --------------------------------
 //
-//	This class imposes the following requirements on its
-//	parameter class:
+//    This class imposes the following requirements on its
+//    parameter class:
 //
-//	1) The class T must implement these operators:
-//			+ - < > <= >= =
-//	   with the signature (T,T) and the expected
-//	   return values for a numeric type.
+//    1) The class T must implement these operators:
+//            + - < > <= >= =
+//       with the signature (T,T) and the expected
+//       return values for a numeric type.
 //
-//	2) The class T must implement operator=
-//	   with the signature (T,float and/or double)
+//    2) The class T must implement operator=
+//       with the signature (T,float and/or double)
 //
-//	3) The class T must have a constructor which takes
-//	   a float (and/or double) for use in initializing the box.
+//    3) The class T must have a constructor which takes
+//       a float (and/or double) for use in initializing the box.
 //
-//	4) The class T must have a function T::dimensions()
-//	   which returns the number of dimensions in the class
-//	   (since its assumed its a vector) -- preferably, this
-//	   returns a constant expression.
+//    4) The class T must have a function T::dimensions()
+//       which returns the number of dimensions in the class
+//       (since its assumed its a vector) -- preferably, this
+//       returns a constant expression.
 //
 //-------------------------------------------------------------------
 
@@ -76,11 +76,11 @@ class Box
     //  Data Members are public
     //-------------------------
 
-    T				min;
-    T				max;
+    T                min;
+    T                max;
 
     //-----------------------------------------------------
-    //	Constructors - an "empty" box is created by default
+    //    Constructors - an "empty" box is created by default
     //-----------------------------------------------------
 
     Box ();
@@ -91,36 +91,36 @@ class Box
     //  Operators:  ==, !=
     //--------------------
 
-    bool		operator == (const Box<T> &src) const;
-    bool		operator != (const Box<T> &src) const;
+    bool        operator == (const Box<T> &src) const;
+    bool        operator != (const Box<T> &src) const;
 
     //------------------
-    //	Box manipulation
+    //    Box manipulation
     //------------------
 
-    void		makeEmpty ();
-    void		extendBy (const T &point);
-    void		extendBy (const Box<T> &box);
-    void		makeInfinite ();
+    void        makeEmpty ();
+    void        extendBy (const T &point);
+    void        extendBy (const Box<T> &box);
+    void        makeInfinite ();
 
     //---------------------------------------------------
-    //	Query functions - these compute results each time
+    //    Query functions - these compute results each time
     //---------------------------------------------------
 
-    T			size () const;
-    T			center () const;
-    bool		intersects (const T &point) const;
-    bool		intersects (const Box<T> &box) const;
+    T            size () const;
+    T            center () const;
+    bool        intersects (const T &point) const;
+    bool        intersects (const Box<T> &box) const;
 
-    unsigned int	majorAxis () const;
+    unsigned int    majorAxis () const;
 
     //----------------
-    //	Classification
+    //    Classification
     //----------------
 
-    bool		isEmpty () const;
-    bool		hasVolume () const;
-    bool		isInfinite () const;
+    bool        isEmpty () const;
+    bool        hasVolume () const;
+    bool        isInfinite () const;
 };
 
 
@@ -347,8 +347,8 @@ class Box<Vec2<T> >
     //  Data Members are public
     //-------------------------
 
-    Vec2<T>		min;
-    Vec2<T>		max;
+    Vec2<T>        min;
+    Vec2<T>        max;
 
     //-----------------------------------------------------
     //  Constructors - an "empty" box is created by default
@@ -362,36 +362,36 @@ class Box<Vec2<T> >
     //  Operators:  ==, !=
     //--------------------
 
-    bool		operator == (const Box<Vec2<T> > &src) const;
-    bool		operator != (const Box<Vec2<T> > &src) const;
+    bool        operator == (const Box<Vec2<T> > &src) const;
+    bool        operator != (const Box<Vec2<T> > &src) const;
 
     //------------------
     //  Box manipulation
     //------------------
 
-    void		makeEmpty();
-    void		extendBy (const Vec2<T> &point);
-    void		extendBy (const Box<Vec2<T> > &box);
-    void		makeInfinite();
+    void        makeEmpty();
+    void        extendBy (const Vec2<T> &point);
+    void        extendBy (const Box<Vec2<T> > &box);
+    void        makeInfinite();
 
     //---------------------------------------------------
     //  Query functions - these compute results each time
     //---------------------------------------------------
 
-    Vec2<T>		size() const;
-    Vec2<T>		center() const;
-    bool		intersects (const Vec2<T> &point) const;
-    bool		intersects (const Box<Vec2<T> > &box) const;
+    Vec2<T>        size() const;
+    Vec2<T>        center() const;
+    bool        intersects (const Vec2<T> &point) const;
+    bool        intersects (const Box<Vec2<T> > &box) const;
 
-    unsigned int	majorAxis() const;
+    unsigned int    majorAxis() const;
 
     //----------------
     //  Classification
     //----------------
 
-    bool		isEmpty() const;
-    bool		hasVolume() const;
-    bool		isInfinite() const;
+    bool        isEmpty() const;
+    bool        hasVolume() const;
+    bool        isInfinite() const;
 };
 
 
@@ -571,7 +571,7 @@ inline unsigned int
 Box<Vec2<T> >::majorAxis() const
 {
     unsigned int major = 0;
-    Vec2<T>	 s     = size();
+    Vec2<T>     s     = size();
 
     if (s[1] > s[major])
         major = 1;
@@ -589,8 +589,8 @@ class Box<Vec3<T> >
     //  Data Members are public
     //-------------------------
 
-    Vec3<T>			min;
-    Vec3<T>			max;
+    Vec3<T>            min;
+    Vec3<T>            max;
 
     //-----------------------------------------------------
     //  Constructors - an "empty" box is created by default
@@ -604,36 +604,36 @@ class Box<Vec3<T> >
     //  Operators:  ==, !=
     //--------------------
 
-    bool		operator == (const Box<Vec3<T> > &src) const;
-    bool		operator != (const Box<Vec3<T> > &src) const;
+    bool        operator == (const Box<Vec3<T> > &src) const;
+    bool        operator != (const Box<Vec3<T> > &src) const;
 
     //------------------
     //  Box manipulation
     //------------------
 
-    void		makeEmpty();
-    void		extendBy (const Vec3<T> &point);
-    void		extendBy (const Box<Vec3<T> > &box);
-    void		makeInfinite ();
+    void        makeEmpty();
+    void        extendBy (const Vec3<T> &point);
+    void        extendBy (const Box<Vec3<T> > &box);
+    void        makeInfinite ();
 
     //---------------------------------------------------
     //  Query functions - these compute results each time
     //---------------------------------------------------
 
-    Vec3<T>		size() const;
-    Vec3<T>		center() const;
-    bool		intersects (const Vec3<T> &point) const;
-    bool		intersects (const Box<Vec3<T> > &box) const;
+    Vec3<T>        size() const;
+    Vec3<T>        center() const;
+    bool        intersects (const Vec3<T> &point) const;
+    bool        intersects (const Box<Vec3<T> > &box) const;
 
-    unsigned int	majorAxis() const;
+    unsigned int    majorAxis() const;
 
     //----------------
     //  Classification
     //----------------
 
-    bool		isEmpty() const;
-    bool		hasVolume() const;
-    bool		isInfinite() const;
+    bool        isEmpty() const;
+    bool        hasVolume() const;
+    bool        isInfinite() const;
 };
 
 
@@ -831,7 +831,7 @@ inline unsigned int
 Box<Vec3<T> >::majorAxis() const
 {
     unsigned int major = 0;
-    Vec3<T>	 s     = size();
+    Vec3<T>     s     = size();
 
     if (s[1] > s[major])
         major = 1;

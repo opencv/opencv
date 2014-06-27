@@ -38,61 +38,61 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class KeyCode
+//    class KeyCode
 //
-// 	A KeyCode object uniquely identifies a motion picture film frame.
-// 	The following fields specifiy film manufacturer, film type, film
-// 	roll and the frame's position within the roll:
+//     A KeyCode object uniquely identifies a motion picture film frame.
+//     The following fields specifiy film manufacturer, film type, film
+//     roll and the frame's position within the roll:
 //
-//	    filmMfcCode		film manufacturer code
-//				range: 0 - 99
+//        filmMfcCode        film manufacturer code
+//                range: 0 - 99
 //
-//	    filmType		film type code
-// 				range: 0 - 99
+//        filmType        film type code
+//                 range: 0 - 99
 //
-//	    prefix		prefix to identify film roll
-// 				range: 0 - 999999
+//        prefix        prefix to identify film roll
+//                 range: 0 - 999999
 //
-//	    count		count, increments once every perfsPerCount
-// 				perforations (see below)
-// 				range: 0 - 9999
+//        count        count, increments once every perfsPerCount
+//                 perforations (see below)
+//                 range: 0 - 9999
 //
-//	    perfOffset		offset of frame, in perforations from
-// 				zero-frame reference mark
-// 				range: 0 - 119
+//        perfOffset        offset of frame, in perforations from
+//                 zero-frame reference mark
+//                 range: 0 - 119
 //
-//	    perfsPerFrame	number of perforations per frame
-// 				range: 1 - 15
+//        perfsPerFrame    number of perforations per frame
+//                 range: 1 - 15
 //
-//				typical values:
+//                typical values:
 //
-//				    1 for 16mm film
-//				    3, 4, or 8 for 35mm film
-//				    5, 8 or 15 for 65mm film
+//                    1 for 16mm film
+//                    3, 4, or 8 for 35mm film
+//                    5, 8 or 15 for 65mm film
 //
-//	    perfsPerCount	number of perforations per count
-// 				range: 20 - 120
+//        perfsPerCount    number of perforations per count
+//                 range: 20 - 120
 //
-//				typical values:
+//                typical values:
 //
-//				    20 for 16mm film
-//				    64 for 35mm film
-//				    80 or 120 for 65mm film
+//                    20 for 16mm film
+//                    64 for 35mm film
+//                    80 or 120 for 65mm film
 //
-// 	For more information about the interpretation of those fields see
-// 	the following standards and recommended practice publications:
+//     For more information about the interpretation of those fields see
+//     the following standards and recommended practice publications:
 //
-// 	    SMPTE 254	Motion-Picture Film (35-mm) - Manufacturer-Printed
-// 			Latent Image Identification Information
+//         SMPTE 254    Motion-Picture Film (35-mm) - Manufacturer-Printed
+//             Latent Image Identification Information
 //
-// 	    SMPTE 268M 	File Format for Digital Moving-Picture Exchange (DPX)
-// 			(section 6.1)
+//         SMPTE 268M     File Format for Digital Moving-Picture Exchange (DPX)
+//             (section 6.1)
 //
-// 	    SMPTE 270	Motion-Picture Film (65-mm) - Manufacturer- Printed
-// 			Latent Image Identification Information
+//         SMPTE 270    Motion-Picture Film (65-mm) - Manufacturer- Printed
+//             Latent Image Identification Information
 //
-// 	    SMPTE 271	Motion-Picture Film (16-mm) - Manufacturer- Printed
-// 			Latent Image Identification Information
+//         SMPTE 271    Motion-Picture Film (16-mm) - Manufacturer- Printed
+//             Latent Image Identification Information
 //
 //-----------------------------------------------------------------------------
 
@@ -123,36 +123,36 @@ class KeyCode
     // Access to individual fields
     //----------------------------
 
-    int		filmMfcCode () const;
-    void	setFilmMfcCode (int filmMfcCode);
+    int        filmMfcCode () const;
+    void    setFilmMfcCode (int filmMfcCode);
 
-    int		filmType () const;
-    void	setFilmType (int filmType);
+    int        filmType () const;
+    void    setFilmType (int filmType);
 
-    int		prefix () const;
-    void	setPrefix (int prefix);
+    int        prefix () const;
+    void    setPrefix (int prefix);
 
-    int		count () const;
-    void	setCount (int count);
+    int        count () const;
+    void    setCount (int count);
 
-    int		perfOffset () const;
-    void	setPerfOffset (int perfOffset);
+    int        perfOffset () const;
+    void    setPerfOffset (int perfOffset);
 
-    int		perfsPerFrame () const;
-    void	setPerfsPerFrame (int perfsPerFrame);
+    int        perfsPerFrame () const;
+    void    setPerfsPerFrame (int perfsPerFrame);
 
-    int		perfsPerCount () const;
-    void	setPerfsPerCount (int perfsPerCount);
+    int        perfsPerCount () const;
+    void    setPerfsPerCount (int perfsPerCount);
 
   private:
 
-    int		_filmMfcCode;
-    int		_filmType;
-    int		_prefix;
-    int		_count;
-    int		_perfOffset;
-    int		_perfsPerFrame;
-    int		_perfsPerCount;
+    int        _filmMfcCode;
+    int        _filmType;
+    int        _prefix;
+    int        _count;
+    int        _perfOffset;
+    int        _perfsPerFrame;
+    int        _perfsPerCount;
 };
 
 

@@ -35,8 +35,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Routines for converting between pixel data types,
-//	with well-defined behavior for exceptional cases.
+//    Routines for converting between pixel data types,
+//    with well-defined behavior for exceptional cases.
 //
 //-----------------------------------------------------------------------------
 

@@ -39,7 +39,7 @@
 
 //-------------------------------------
 //
-//	A 3D line class template
+//    A 3D line class template
 //
 //-------------------------------------
 
@@ -55,37 +55,37 @@ class Line3
 {
   public:
 
-    Vec3<T>			pos;
-    Vec3<T>			dir;
+    Vec3<T>            pos;
+    Vec3<T>            dir;
 
     //-------------------------------------------------------------
-    //	Constructors - default is normalized units along direction
+    //    Constructors - default is normalized units along direction
     //-------------------------------------------------------------
 
     Line3() {}
     Line3(const Vec3<T>& point1, const Vec3<T>& point2);
 
     //------------------
-    //	State Query/Set
+    //    State Query/Set
     //------------------
 
-    void			set(const Vec3<T>& point1,
+    void            set(const Vec3<T>& point1,
                     const Vec3<T>& point2);
 
     //-------
-    //	F(t)
+    //    F(t)
     //-------
 
-    Vec3<T>			operator() (T parameter) const;
+    Vec3<T>            operator() (T parameter) const;
 
     //---------
-    //	Query
+    //    Query
     //---------
 
-    T				distanceTo(const Vec3<T>& point) const;
-    T				distanceTo(const Line3<T>& line) const;
-    Vec3<T>			closestPointTo(const Vec3<T>& point) const;
-    Vec3<T>			closestPointTo(const Line3<T>& line) const;
+    T                distanceTo(const Vec3<T>& point) const;
+    T                distanceTo(const Line3<T>& line) const;
+    Vec3<T>            closestPointTo(const Vec3<T>& point) const;
+    Vec3<T>            closestPointTo(const Line3<T>& line) const;
 };
 
 

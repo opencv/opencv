@@ -38,19 +38,19 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Optional Standard Attributes -- these attributes are "optional"
-//	because not every image file header has them, but they define a
-//	"standard" way to represent commonly used data in the file header.
+//    Optional Standard Attributes -- these attributes are "optional"
+//    because not every image file header has them, but they define a
+//    "standard" way to represent commonly used data in the file header.
 //
-//	For each attribute, with name "foo", and type "T", the following
-//	functions are automatically generated via macros:
+//    For each attribute, with name "foo", and type "T", the following
+//    functions are automatically generated via macros:
 //
-//	void			   addFoo (Header &header, const T &value);
-//	bool			   hasFoo (const Header &header);
-//	const TypedAttribute<T> &  fooAttribute (const Header &header);
-//	TypedAttribute<T> &	   fooAttribute (Header &header);
-//	const T &		   foo (const Header &Header);
-//	T &			   foo (Header &Header);
+//    void               addFoo (Header &header, const T &value);
+//    bool               hasFoo (const Header &header);
+//    const TypedAttribute<T> &  fooAttribute (const Header &header);
+//    TypedAttribute<T> &       fooAttribute (Header &header);
+//    const T &           foo (const Header &Header);
+//    T &               foo (Header &Header);
 //
 //-----------------------------------------------------------------------------
 
@@ -66,14 +66,14 @@
 #include <ImfTimeCodeAttribute.h>
 #include <ImfVecAttribute.h>
 
-#define IMF_STD_ATTRIBUTE_DEF(name,suffix,type)				      \
+#define IMF_STD_ATTRIBUTE_DEF(name,suffix,type)                      \
                                           \
-    void			 add##suffix (Header &header, const type &v); \
-    bool			 has##suffix (const Header &header);	      \
+    void             add##suffix (Header &header, const type &v); \
+    bool             has##suffix (const Header &header);          \
     const TypedAttribute<type> & name##Attribute (const Header &header);      \
-    TypedAttribute<type> &	 name##Attribute (Header &header);	      \
-    const type &		 name (const Header &header);		      \
-    type &			 name (Header &header);
+    TypedAttribute<type> &     name##Attribute (Header &header);          \
+    const type &         name (const Header &header);              \
+    type &             name (Header &header);
 
 
 namespace Imf {
@@ -255,15 +255,15 @@ IMF_STD_ATTRIBUTE_DEF (timeCode, TimeCode, TimeCode)
 // The keywords listed below are predefined; some renderers may support
 // additional extrapolation modes:
 //
-//	black		pixels outside the zero-to-one range are black
+//    black        pixels outside the zero-to-one range are black
 //
-//	clamp		texture coordinates less than 0.0 and greater
-//			than 1.0 are clamped to 0.0 and 1.0 respectively
+//    clamp        texture coordinates less than 0.0 and greater
+//            than 1.0 are clamped to 0.0 and 1.0 respectively
 //
-//	periodic	the texture image repeats periodically
+//    periodic    the texture image repeats periodically
 //
-//	mirror		the texture image repeats periodically, but
-//			every other instance is mirrored
+//    mirror        the texture image repeats periodically, but
+//            every other instance is mirrored
 //
 
 IMF_STD_ATTRIBUTE_DEF (wrapmodes, Wrapmodes, std::string)

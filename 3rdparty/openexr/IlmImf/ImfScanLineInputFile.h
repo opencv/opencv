@@ -38,7 +38,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class ScanLineInputFile
+//    class ScanLineInputFile
 //
 //-----------------------------------------------------------------------------
 
@@ -73,21 +73,21 @@ class ScanLineInputFile
     // Access to the file name
     //------------------------
 
-    const char *	fileName () const;
+    const char *    fileName () const;
 
 
     //--------------------------
     // Access to the file header
     //--------------------------
 
-    const Header &	header () const;
+    const Header &    header () const;
 
 
     //----------------------------------
     // Access to the file format version
     //----------------------------------
 
-    int			version () const;
+    int            version () const;
 
 
     //-----------------------------------------------------------
@@ -101,14 +101,14 @@ class ScanLineInputFile
     // to readPixels().
     //-----------------------------------------------------------
 
-    void		setFrameBuffer (const FrameBuffer &frameBuffer);
+    void        setFrameBuffer (const FrameBuffer &frameBuffer);
 
 
     //-----------------------------------
     // Access to the current frame buffer
     //-----------------------------------
 
-    const FrameBuffer &	frameBuffer () const;
+    const FrameBuffer &    frameBuffer () const;
 
 
     //---------------------------------------------------------------
@@ -120,7 +120,7 @@ class ScanLineInputFile
     // writing may have been aborted prematurely.)
     //---------------------------------------------------------------
 
-    bool		isComplete () const;
+    bool        isComplete () const;
 
 
     //---------------------------------------------------------------
@@ -145,8 +145,8 @@ class ScanLineInputFile
     //
     //---------------------------------------------------------------
 
-    void		readPixels (int scanLine1, int scanLine2);
-    void		readPixels (int scanLine);
+    void        readPixels (int scanLine1, int scanLine2);
+    void        readPixels (int scanLine);
 
 
     //----------------------------------------------
@@ -155,7 +155,7 @@ class ScanLineInputFile
     // used to implement OutputFile::copyPixels()).
     //----------------------------------------------
 
-    void		rawPixelData (int firstScanLine,
+    void        rawPixelData (int firstScanLine,
                       const char *&pixelData,
                       int &pixelDataSize);
 
@@ -163,7 +163,7 @@ class ScanLineInputFile
 
   private:
 
-    Data *		_data;
+    Data *        _data;
 };
 
 

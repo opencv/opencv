@@ -39,8 +39,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class ImfName -- a zero-terminated string
-//	with a fixed, small maximum length
+//    class ImfName -- a zero-terminated string
+//    with a fixed, small maximum length
 //
 //-----------------------------------------------------------------------------
 
@@ -65,26 +65,26 @@ class Name
     // Assignment operator
     //--------------------
 
-    Name &		operator = (const char text[]);
+    Name &        operator = (const char text[]);
 
 
     //---------------------
     // Access to the string
     //---------------------
 
-    const char *	text () const		{return _text;}
-    const char *	operator * () const	{return _text;}
+    const char *    text () const        {return _text;}
+    const char *    operator * () const    {return _text;}
 
     //---------------
     // Maximum length
     //---------------
 
-    static const int	SIZE = 256;
-    static const int	MAX_LENGTH = SIZE - 1;
+    static const int    SIZE = 256;
+    static const int    MAX_LENGTH = SIZE - 1;
 
   private:
 
-    char		_text[SIZE];
+    char        _text[SIZE];
 };
 
 

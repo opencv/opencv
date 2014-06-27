@@ -394,7 +394,7 @@ template <class T> class Matrix33
     // Matrix33 is a square matrix.
     //--------------------------------------------------------
 
-    static unsigned int	dimensions() {return 3;}
+    static unsigned int    dimensions() {return 3;}
 
 
     //-------------------------------------------------
@@ -406,8 +406,8 @@ template <class T> class Matrix33
     static T            baseTypeSmallest()      {return limits<T>::smallest();}
     static T            baseTypeEpsilon()       {return limits<T>::epsilon();}
 
-    typedef T		BaseType;
-    typedef Vec3<T>	BaseVecType;
+    typedef T        BaseType;
+    typedef Vec3<T>    BaseVecType;
 
   private:
 
@@ -778,7 +778,7 @@ template <class T> class Matrix44
     // Matrix44 is a square matrix.
     //--------------------------------------------------------
 
-    static unsigned int	dimensions() {return 4;}
+    static unsigned int    dimensions() {return 4;}
 
 
     //------------------------------------------------------------
@@ -805,8 +805,8 @@ template <class T> class Matrix44
     static T            baseTypeSmallest()      {return limits<T>::smallest();}
     static T            baseTypeEpsilon()       {return limits<T>::epsilon();}
 
-    typedef T		BaseType;
-    typedef Vec4<T>	BaseVecType;
+    typedef T        BaseType;
+    typedef Vec4<T>    BaseVecType;
 
   private:
 

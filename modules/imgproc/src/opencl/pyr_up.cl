@@ -15,7 +15,7 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    Zhang Chunpeng	chunpeng@multicorewareinc.com
+//    Zhang Chunpeng    chunpeng@multicorewareinc.com
 //    Dachuan Zhao, dachuan@multicorewareinc.com
 //    Yao Wang, yao@multicorewareinc.com
 //    Peng Xiao, pengxiao@outlook.com
