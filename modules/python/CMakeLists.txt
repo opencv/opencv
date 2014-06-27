@@ -194,13 +194,17 @@ endif()
 #                   Python bindings for External contrib module --> cv2_contrib
 #-------------------------------------------------------------------------------------------------
 if(BUILD_PYTHON_CONTRIB)
-
+    message("OPENCV EXTRA MODULES : ${OPENCV_PYTHON_EXTRA_MODULES}")
     foreach(module ${OPENCV_PYTHON_EXTRA_MODULES})
         set(extra_module_hdrs "${OPENCV_MODULE_opencv_${module}_HEADERS}")
         ocv_list_filterout(extra_module_hdrs "^.*\${module}/\${module}.hpp$")
         ocv_list_filterout(extra_module_hdrs "^.*cuda.*$")
        list(APPEND opencv_contrib_hdrs ${extra_module_hdrs})
     endforeach()
+
+foreach(i ${opencv_contrib_hdrs})
+message("opencv_contrib_hdrs" : ${i})
+endforeach()
 
     list(LENGTH opencv_contrib_hdrs number)
 
