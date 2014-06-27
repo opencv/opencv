@@ -748,6 +748,7 @@ class PythonWrapperGenerator(object):
         self.code_func_tab = StringIO()
         self.code_type_reg = StringIO()
         self.code_const_reg = StringIO()
+        self.code_typedefs = StringIO()     # for putting all nested namespaces and typedef (abid)
         self.class_idx = 0
 
     def add_class(self, stype, name, decl):
@@ -761,7 +762,8 @@ class PythonWrapperGenerator(object):
             sys.exit(-1)
         self.classes[classinfo.name] = classinfo
         if classinfo.bases and not classinfo.isalgorithm:
-            classinfo.isalgorithm = self.classes[classinfo.bases[0]].isalgorithm
+            temp_base = classinfo.bases[0].replace("::","_") # for handling nested inheritance, eg: optim module
+            classinfo.isalgorithm = self.classes[temp_base].isalgorithm
 
     def add_const(self, name, decl):
         constinfo = ConstInfo(name, decl[1])
@@ -773,11 +775,11 @@ class PythonWrapperGenerator(object):
             return
         self.consts[constinfo.name] = constinfo
 
-    def add_func(self, decl):
+    def add_func(self, decl, namespace_list):
         classname = bareclassname = ""
         name = decl[0]
         dpos = name.rfind(".")
-        if dpos >= 0 and name[:dpos] not in ["cv", "cv.ocl", "cv.optim"]:
+        if dpos >= 0 and name[:dpos] not in namespace_list:
             classname = bareclassname = re.sub(r"^cv\.", "", name[:dpos])
             name = name[dpos+1:]
             dpos = classname.rfind(".")
@@ -845,12 +847,32 @@ class PythonWrapperGenerator(object):
                     stype = name[:p]
                     name = name[p+1:].strip()
                     self.add_class(stype, name, decl)
+                    # EDIT abid: Automating calling namespaces and typedefs
+                    if stype == "class":
+                        temp_namespace = 'cv'
+                        temp_classname = '.'
+                        for ns in parser.namespace_list:
+                            if ns != 'cv' and name.startswith(ns) and len(ns)>len(temp_namespace):
+                                #temp_pos = name.rfind('.')
+                                temp_namespace = ns # cv.optim
+                                temp_classname = name.lstrip(ns+'.') # solver.function
+                                break
+
+                        if temp_namespace.startswith('cv') and temp_namespace != 'cv' and '.' not in temp_classname:
+                            temp_ns = temp_namespace.replace('.', '::')+"::"    # cv.optim --> cv::optim::
+                            temp_var = temp_ns + temp_classname # cv.optim.Solver --> cv::optim::Solver
+                            temp_using = "using " + temp_var + ";" # cv.optim.solver --> using cv::optim::solver;
+                            # below typedef: cv.optim.solver --> typedef cv::optim::solver optim_solver
+                            temp_typedef = "typedef " + temp_var+ " " + temp_var[4:].replace('::','_') + ";"
+                            print(temp_using, temp_typedef)
+                            self.code_typedefs.write(temp_using+"\n"+temp_typedef+"\n")
+                    # ----------- finished abid
                 elif name.startswith("const"):
                     # constant
                     self.add_const(name.replace("const ", "").strip(), decl)
                 else:
                     # function
-                    self.add_func(decl)
+                    self.add_func(decl,parser.namespace_list)
 
         # step 2: generate code for the classes and their methods
         classlist = list(self.classes.items())
@@ -898,6 +920,7 @@ class PythonWrapperGenerator(object):
         self.save(output_path, "pyopencv_generated_const_reg.h", self.code_const_reg)
         self.save(output_path, "pyopencv_generated_types.h", self.code_types)
         self.save(output_path, "pyopencv_generated_type_reg.h", self.code_type_reg)
+        self.save(output_path, "pyopencv_generated_typedefs.h", self.code_typedefs)
 
 if __name__ == "__main__":
     srcfiles = hdr_parser.opencv_hdr_list

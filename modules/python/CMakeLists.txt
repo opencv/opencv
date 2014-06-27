@@ -11,7 +11,7 @@ if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_NUMPY_INCLUDE_DIRS)
 endif()
 
 set(the_description "The python bindings")
-ocv_add_module(python BINDINGS opencv_core opencv_highgui opencv_flann opencv_softcascade OPTIONAL opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_calib3d opencv_photo opencv_objdetect opencv_contrib opencv_legacy opencv_nonfree)
+ocv_add_module(python BINDINGS opencv_core opencv_highgui opencv_flann OPTIONAL opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_calib3d opencv_photo opencv_objdetect opencv_contrib opencv_legacy opencv_softcascade opencv_nonfree opencv_optim opencv_shape)
 
 ocv_module_include_directories(
     "${PYTHON_INCLUDE_PATH}"
@@ -32,6 +32,7 @@ endif()
 # -- Find the modules to build. Separate them to Python modules and Python-Extra modules
 
 string(REPLACE "opencv_" "" OPENCV_PYTHON_MODULES "${OPENCV_MODULES_BUILD}")
+ocv_list_filterout(OPENCV_PYTHON_MODULES "^cuda.*$")
 foreach(module ${OPENCV_PYTHON_MODULES})
     # Check if module location matches with Extra-modules location
     string(FIND ${OPENCV_MODULE_opencv_${module}_LOCATION} ${TEMP_EXTRA_MODULES_PATH} IS_PYTHON_EXTRA)
@@ -44,7 +45,7 @@ foreach(module ${OPENCV_PYTHON_MODULES})
         list(APPEND OPENCV_PYTHON_EXTRA_MODULES ${module})
         list(REMOVE_ITEM OPENCV_PYTHON_MODULES ${module})
     # For time-being, disable following modules. (NB:  We will enable it one-by-one)
-    elseif(${module} MATCHES "ts|optim|stitching|videostab|shape|superres")
+    elseif(${module} MATCHES "ts|stitching|superres|videostab")
         list(REMOVE_ITEM OPENCV_PYTHON_MODULES ${module})
     endif()
 endforeach()
@@ -72,7 +73,9 @@ foreach(module ${OPENCV_PYTHON_MODULES})
     list(APPEND opencv_hdrs ${module_hdrs})
 endforeach()
 
-
+foreach(i ${opencv_hdrs})
+message("opencv_hdrs" : ${i})
+endforeach()
 #set(opencv_hdrs
 #    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core.hpp"
 #    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp"
@@ -112,6 +115,7 @@ add_custom_command(
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/hdr_parser.py
    DEPENDS ${opencv_hdrs})
+
 
 add_library(${the_module} SHARED src2/cv2.cpp ${cv2_generated_hdrs})
 set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)

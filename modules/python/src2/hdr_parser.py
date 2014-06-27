@@ -15,7 +15,6 @@ opencv_hdr_list = [
 "../../video/include/opencv2/video/tracking.hpp",
 "../../video/include/opencv2/video/background_segm.hpp",
 "../../objdetect/include/opencv2/objdetect.hpp",
-"../../contrib/include/opencv2/contrib.hpp",
 "../../highgui/include/opencv2/highgui.hpp"
 ]
 
@@ -36,6 +35,8 @@ class CppHeaderParser(object):
         self.PROCESS_FLAG = 2
         self.PUBLIC_SECTION = 3
         self.CLASS_DECL = 4
+
+        self.namespace_list = []  # To keep all the namespaces encountered, abid, part of automatic
 
     def batch_replace(self, s, pairs):
         for before, after in pairs:
@@ -836,6 +837,14 @@ class CppHeaderParser(object):
                         public_section = True
                     self.block_stack.append([stmt_type, name, parse_flag, public_section, decl])
 
+                    #edit abid begin ... add namespaces to its list automatically
+                    if stmt_type == "namespace":
+                        # take all namespaces in block_stack and join them with '.'
+                        namespace_items = [item[1] for item in self.block_stack if item[0]=="namespace"]
+                        temp_ns = '.'.join(namespace_items)
+                        if temp_ns not in self.namespace_list:
+                            self.namespace_list.append(temp_ns)
+                    # edit abid finished
                 if token == "}":
                     if not self.block_stack:
                         print("Error at %d: the block stack is empty" % (self.lineno,))
