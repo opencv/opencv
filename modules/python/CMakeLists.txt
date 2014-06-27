@@ -199,6 +199,7 @@ if(BUILD_PYTHON_CONTRIB)
         set(extra_module_hdrs "${OPENCV_MODULE_opencv_${module}_HEADERS}")
         ocv_list_filterout(extra_module_hdrs "^.*\${module}/\${module}.hpp$")
         ocv_list_filterout(extra_module_hdrs "^.*cuda.*$")
+        message("${module}  ${extra_module_hdrs}")
        list(APPEND opencv_contrib_hdrs ${extra_module_hdrs})
     endforeach()
 
