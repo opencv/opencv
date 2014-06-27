@@ -11,7 +11,7 @@ if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_NUMPY_INCLUDE_DIRS)
 endif()
 
 set(the_description "The python bindings")
-ocv_add_module(python BINDINGS opencv_core opencv_highgui opencv_flann OPTIONAL opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_calib3d opencv_photo opencv_objdetect opencv_nonfree opencv_shape)
+ocv_add_module(python BINDINGS opencv_core opencv_highgui opencv_flann OPTIONAL opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_calib3d opencv_photo opencv_objdetect opencv_contrib opencv_legacy opencv_softcascade opencv_nonfree opencv_optim opencv_shape)
 
 #ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect OPTIONAL opencv_nonfree)
 
@@ -196,10 +196,11 @@ endif()
 if(BUILD_PYTHON_CONTRIB)
     message("OPENCV EXTRA MODULES : ${OPENCV_PYTHON_EXTRA_MODULES}")
     foreach(module ${OPENCV_PYTHON_EXTRA_MODULES})
+        ocv_include_modules(${module})
         set(extra_module_hdrs "${OPENCV_MODULE_opencv_${module}_HEADERS}")
-        message("${module}  ${extra_module_hdrs}")
         ocv_list_filterout(extra_module_hdrs "^.*\${module}/\${module}.hpp$")
         ocv_list_filterout(extra_module_hdrs "^.*cuda.*$")
+        message("${module}  ${extra_module_hdrs}")
        list(APPEND opencv_contrib_hdrs ${extra_module_hdrs})
     endforeach()
 
