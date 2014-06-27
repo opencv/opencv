@@ -834,7 +834,7 @@ class PythonWrapperGenerator(object):
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
-            print(hdr)
+            print("python : ",hdr)
             decls = parser.parse(hdr)
             if len(decls)>0:
                 self.code_include.write( '#include "{}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )

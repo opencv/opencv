@@ -100,7 +100,8 @@ set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_func_tab.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_types.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_type_reg.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_const_reg.h")
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_const_reg.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_typedefs.h")
 
 add_custom_command(
    OUTPUT ${cv2_generated_hdrs}
@@ -212,7 +213,8 @@ if(BUILD_PYTHON_CONTRIB)
         "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_func_tab.h"
         "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_types.h"
         "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_type_reg.h"
-        "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_const_reg.h")
+        "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_const_reg.h"
+        "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_typedefs.h")
 
     add_custom_command(
        OUTPUT ${cv2_generated_contrib_hdrs}

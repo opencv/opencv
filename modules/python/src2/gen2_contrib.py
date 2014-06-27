@@ -832,6 +832,7 @@ class PythonWrapperGenerator(object):
         for hdr in srcfiles:
             decls = parser.parse(hdr)
             if len(decls)>0:
+                print("python_contrib : ",hdr)
                 self.code_include.write( '#include "{}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )
             for decl in decls:
                 name = decl[0]
