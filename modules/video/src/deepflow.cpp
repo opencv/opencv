@@ -148,17 +148,19 @@ void OpticalFlowDeepFlow::calc( InputArray _I0, InputArray _I1, InputOutputArray
 
     Mat I0temp = _I0.getMat();
     Mat I1temp = _I1.getMat();
-    Mat I0, I1;
-    Mat W = _flow.getMat(); // if any data present - will be discarded
 
     CV_Assert(I0temp.size() == I1temp.size());
     CV_Assert(I0temp.type() == I1temp.type());
-
     CV_Assert(I0temp.channels() == 1); // FIXME: only grayscale - to be generalised
-    I0temp.convertTo(I0, CV_32F, 1 / 255.0f);
-    I1temp.convertTo(I1, CV_32F, 1 / 255.0f);
 
+    Mat I0, I1;
+
+    I0temp.convertTo(I0, CV_32F);
+    I1temp.convertTo(I1, CV_32F);
     // TODO: ensure the right format ( or conversion )
+
+    _flow.create(I0.size(), CV_32FC2);
+    Mat W = _flow.getMat(); // if any data present - will be discarded
 
     // pre-smooth images
     int kernelLen = (floor(3 * sigma) * 2) + 1;
@@ -235,7 +237,7 @@ void OpticalFlowDeepFlow::calcOneLevel( const Mat I0, const Mat I1, Mat W )
         sorSolve(a11, a12, a22, b1, b2, weightsX, weightsY, dW);
         tempW = W + dW;
     }
-    W = tempW;
+    tempW.copyTo(W);
 }
 void OpticalFlowDeepFlow::dataTerm( const Mat W, const Mat dW, const Mat tempW, const Mat Ix,
         const Mat Iy, const Mat Iz, const Mat Ixx, const Mat Ixy, const Mat Iyy, const Mat Ixz,
@@ -475,6 +477,18 @@ void OpticalFlowDeepFlow::sorSolve( const Mat a11, const Mat a12, const Mat a22,
     CV_Assert(du.isContinuous());
     CV_Assert(dv.isContinuous());
 
+    const float *pa11, *pa12, *pa22, *pb1, *pb2, *psmoothX, *psmoothY;
+    float *pdu, *pdv;
+    pa11 = a11.ptr<float>(0);
+    pa12 = a12.ptr<float>(0);
+    pa22 = a22.ptr<float>(0);
+    pb1 = b1.ptr<float>(0);
+    pb2 = b2.ptr<float>(0);
+    psmoothX = smoothX.ptr<float>(0);
+    psmoothY = smoothY.ptr<float>(0);
+    pdu = du.ptr<float>(0);
+    pdv = dv.ptr<float>(0);
+
     float sigma_u, sigma_v, sum_dpsis, A11, A22, A12, B1, B2, det;
 
     int s = dW.cols; // step between rows
@@ -488,88 +502,88 @@ void OpticalFlowDeepFlow::sorSolve( const Mat a11, const Mat a12, const Mat a22,
                 int o = j * s + i;
                 if ( i == 0 && j == 0 )
                 {
-                    sum_dpsis = smoothX.data[o] + smoothY.data[o];
-                    sigma_u = smoothX.data[o] * du.data[o + 1] + smoothY.data[o] * du.data[o + s];
-                    sigma_v = smoothX.data[o] * dv.data[o + 1] + smoothY.data[o] * dv.data[o + s];
+                    sum_dpsis = psmoothX[o] + psmoothY[o];
+                    sigma_u = psmoothX[o] * pdu[o + 1] + psmoothY[o] * pdu[o + s];
+                    sigma_v = psmoothX[o] * pdv[o + 1] + psmoothY[o] * pdv[o + s];
                 } else if ( i == du.cols - 1 && j == 0 )
                 {
-                    sum_dpsis = smoothX.data[o - 1] + smoothY.data[o];
-                    sigma_u = smoothX.data[o - 1] * du.data[o - 1]
-                            + smoothY.data[o] * du.data[o + s];
-                    sigma_v = smoothX.data[o - 1] * dv.data[o - 1]
-                            + smoothY.data[o] * dv.data[o + s];
+                    sum_dpsis = psmoothX[o - 1] + psmoothY[o];
+                    sigma_u = psmoothX[o - 1] * pdu[o - 1]
+                            + psmoothY[o] * pdu[o + s];
+                    sigma_v = psmoothX[o - 1] * pdv[o - 1]
+                            + psmoothY[o] * pdv[o + s];
                 } else if ( j == 0 )
                 {
-                    sum_dpsis = smoothX.data[o - 1] + smoothX.data[o] + smoothY.data[o];
-                    sigma_u = smoothX.data[o - 1] * du.data[o - 1]
-                            + smoothX.data[o] * du.data[o + 1] + smoothY.data[o] * du.data[o + s];
-                    sigma_v = smoothX.data[o - 1] * dv.data[o - 1]
-                            + smoothX.data[o] * dv.data[o + 1] + smoothY.data[o] * dv.data[o + s];
+                    sum_dpsis = psmoothX[o - 1] + psmoothX[o] + psmoothY[o];
+                    sigma_u = psmoothX[o - 1] * pdu[o - 1]
+                            + psmoothX[o] * pdu[o + 1] + psmoothY[o] * pdu[o + s];
+                    sigma_v = psmoothX[o - 1] * pdv[o - 1]
+                            + psmoothX[o] * pdv[o + 1] + psmoothY[o] * pdv[o + s];
                 } else if ( i == 0 && j == du.rows - 1 )
                 {
-                    sum_dpsis = smoothX.data[o] + smoothY.data[o - s];
-                    sigma_u = smoothX.data[o] * du.data[o + 1]
-                            + smoothY.data[o - s] * du.data[o - s];
-                    sigma_v = smoothX.data[o] * dv.data[o + 1]
-                            + smoothY.data[o - s] * dv.data[o - s];
+                    sum_dpsis = psmoothX[o] + psmoothY[o - s];
+                    sigma_u = psmoothX[o] * pdu[o + 1]
+                            + psmoothY[o - s] * pdu[o - s];
+                    sigma_v = psmoothX[o] * pdv[o + 1]
+                            + psmoothY[o - s] * pdv[o - s];
                 } else if ( i == du.cols - 1 && j == du.rows - 1 )
                 {
-                    sum_dpsis = smoothX.data[o - 1] + smoothY.data[o - s];
-                    sigma_u = smoothX.data[o - 1] * du.data[o - 1]
-                            + smoothY.data[o - s] * du.data[o - s];
-                    sigma_v = smoothX.data[o - 1] * dv.data[o - 1]
-                            + smoothY.data[o - s] * dv.data[o - s];
+                    sum_dpsis = psmoothX[o - 1] + psmoothY[o - s];
+                    sigma_u = psmoothX[o - 1] * pdu[o - 1]
+                            + psmoothY[o - s] * pdu[o - s];
+                    sigma_v = psmoothX[o - 1] * pdv[o - 1]
+                            + psmoothY[o - s] * pdv[o - s];
                 } else if ( j == du.rows - 1 )
                 {
-                    sum_dpsis = smoothX.data[o - 1] + smoothX.data[o] + smoothY.data[o - s];
-                    sigma_u = smoothX.data[o - 1] * du.data[o - 1]
-                            + smoothX.data[o] * du.data[o + 1]
-                            + smoothY.data[o - s] * du.data[o - s];
-                    sigma_v = smoothX.data[o - 1] * dv.data[o - 1]
-                            + smoothX.data[o] * dv.data[o + 1]
-                            + smoothY.data[o - s] * dv.data[o - s];
+                    sum_dpsis = psmoothX[o - 1] + psmoothX[o] + psmoothY[o - s];
+                    sigma_u = psmoothX[o - 1] * pdu[o - 1]
+                            + psmoothX[o] * pdu[o + 1]
+                            + psmoothY[o - s] * pdu[o - s];
+                    sigma_v = psmoothX[o - 1] * pdv[o - 1]
+                            + psmoothX[o] * pdv[o + 1]
+                            + psmoothY[o - s] * pdv[o - s];
                 } else if ( i == 0 )
                 {
-                    sum_dpsis = smoothX.data[o] + smoothY.data[o - s] + smoothY.data[o];
-                    sigma_u = smoothX.data[o] * du.data[o + 1]
-                            + smoothY.data[o - s] * du.data[o - s]
-                            + smoothY.data[o] * du.data[o + s];
-                    sigma_v = smoothX.data[o] * dv.data[o + 1]
-                            + smoothY.data[o - s] * dv.data[o - s]
-                            + smoothY.data[o] * dv.data[o + s];
+                    sum_dpsis = psmoothX[o] + psmoothY[o - s] + psmoothY[o];
+                    sigma_u = psmoothX[o] * pdu[o + 1]
+                            + psmoothY[o - s] * pdu[o - s]
+                            + psmoothY[o] * pdu[o + s];
+                    sigma_v = psmoothX[o] * pdv[o + 1]
+                            + psmoothY[o - s] * pdv[o - s]
+                            + psmoothY[o] * pdv[o + s];
                 } else if ( i == du.cols - 1 )
                 {
-                    sum_dpsis = smoothX.data[o - 1] + smoothY.data[o - s] + smoothY.data[o];
-                    sigma_u = smoothX.data[o - 1] * du.data[o - 1]
-                            + smoothY.data[o - s] * du.data[o - s]
-                            + smoothY.data[o] * du.data[o + s];
-                    sigma_v = smoothX.data[o - 1] * dv.data[o - 1]
-                            + smoothY.data[o - s] * dv.data[o - s]
-                            + smoothY.data[o] * dv.data[o + s];
+                    sum_dpsis = psmoothX[o - 1] + psmoothY[o - s] + psmoothY[o];
+                    sigma_u = psmoothX[o - 1] * pdu[o - 1]
+                            + psmoothY[o - s] * pdu[o - s]
+                            + psmoothY[o] * pdu[o + s];
+                    sigma_v = psmoothX[o - 1] * pdv[o - 1]
+                            + psmoothY[o - s] * pdv[o - s]
+                            + psmoothY[o] * pdv[o + s];
                 } else
                 {
-                    sum_dpsis = smoothX.data[o - 1] + smoothX.data[o] + smoothY.data[o - s]
-                            + smoothY.data[o];
-                    sigma_u = smoothX.data[o - 1] * du.data[o - 1]
-                            + smoothX.data[o] * du.data[o + 1]
-                            + smoothY.data[o - s] * du.data[o - s]
-                            + smoothY.data[o] * du.data[o + s];
-                    sigma_v = smoothX.data[o - 1] * dv.data[o - 1]
-                            + smoothX.data[o] * dv.data[o + 1]
-                            + smoothY.data[o - s] * dv.data[o - s]
-                            + smoothY.data[o] * dv.data[o + s];
+                    sum_dpsis = psmoothX[o - 1] + psmoothX[o] + psmoothY[o - s]
+                            + psmoothY[o];
+                    sigma_u = psmoothX[o - 1] * pdu[o - 1]
+                            + psmoothX[o] * pdu[o + 1]
+                            + psmoothY[o - s] * pdu[o - s]
+                            + psmoothY[o] * pdu[o + s];
+                    sigma_v = psmoothX[o - 1] * pdv[o - 1]
+                            + psmoothX[o] * pdv[o + 1]
+                            + psmoothY[o - s] * pdv[o - s]
+                            + psmoothY[o] * pdv[o + s];
                 }
-                A22 = a11.data[o] + sum_dpsis;
-                A11 = a22.data[o] + sum_dpsis;
-                A12 = -a12.data[o];
+                A22 = pa11[o] + sum_dpsis;
+                A11 = pa22[o] + sum_dpsis;
+                A12 = -pa12[o];
                 det = A11 * A22 - A12 * A12;
                 A22 /= det;
                 A11 /= det;
                 A12 /= det;
-                B1 = b1.data[o] + sigma_u;
-                B2 = b2.data[o] + sigma_v;
-                du.data[o] += omega * (A11 * B1 + A12 * B2 - du.data[o]);
-                dv.data[o] += omega * (A12 * B1 + A22 * B2 - dv.data[o]);
+                B1 = pb1[o] + sigma_u;
+                B2 = pb2[o] + sigma_v;
+                pdu[o] += omega * (A11 * B1 + A12 * B2 - pdu[o]);
+                pdv[o] += omega * (A12 * B1 + A22 * B2 - pdv[o]);
 
             }
         }
