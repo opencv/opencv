@@ -1477,42 +1477,44 @@ enum
 
 static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32S)
 {
-    int compunits = ocl::Device::getDefault().maxComputeUnits();
-    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int compunits = dev.maxComputeUnits();
+    size_t wgs = dev.maxWorkGroupSize();
     Size size = _src.size();
     bool use16 = size.width % 16 == 0 && _src.offset() % 16 == 0 && _src.step() % 16 == 0;
+    int kercn = dev.isAMD() && use16 ? 16 : std::min(4, ocl::predictOptimalVectorWidth(_src));
 
     ocl::Kernel k1("calculate_histogram", ocl::imgproc::histogram_oclsrc,
-                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D cn=%d",
-                          BINS, compunits, wgs, use16 ? 16 : 1));
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D kercn=%d -D T=%s%s",
+                          BINS, compunits, wgs, kercn,
+                          kercn == 4 ? "int" : ocl::typeToStr(CV_8UC(kercn)),
+                          _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
     if (k1.empty())
         return false;
 
     _hist.create(BINS, 1, ddepth);
     UMat src = _src.getUMat(), ghist(1, BINS * compunits, CV_32SC1),
-            hist = ddepth == CV_32S ? _hist.getUMat() : UMat(BINS, 1, CV_32SC1);
+            hist = _hist.getUMat();
 
-    k1.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::PtrWriteOnly(ghist), (int)src.total());
+    k1.args(ocl::KernelArg::ReadOnly(src),
+            ocl::KernelArg::PtrWriteOnly(ghist), (int)src.total());
 
     size_t globalsize = compunits * wgs;
     if (!k1.run(1, &globalsize, &wgs, false))
         return false;
 
+    char cvt[40];
     ocl::Kernel k2("merge_histogram", ocl::imgproc::histogram_oclsrc,
-                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d", BINS, compunits, (int)wgs));
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D convertToHT=%s -D HT=%s",
+                          BINS, compunits, (int)wgs, ocl::convertTypeStr(CV_32S, ddepth, 1, cvt),
+                          ocl::typeToStr(ddepth)));
     if (k2.empty())
         return false;
 
-    k2.args(ocl::KernelArg::PtrReadOnly(ghist), ocl::KernelArg::PtrWriteOnly(hist));
-    if (!k2.run(1, &wgs, &wgs, false))
-        return false;
+    k2.args(ocl::KernelArg::PtrReadOnly(ghist),
+            ocl::KernelArg::WriteOnlyNoSize(hist));
 
-    if (hist.depth() != ddepth)
-        hist.convertTo(_hist, ddepth);
-    else
-        _hist.getUMatRef() = hist;
-
-    return true;
+    return k2.run(1, &wgs, &wgs, false);
 }
 
 static bool ocl_calcHist(InputArrayOfArrays images, OutputArray hist)
@@ -3428,24 +3430,40 @@ namespace cv {
 
 static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
 {
-    size_t wgs = std::min<size_t>(ocl::Device::getDefault().maxWorkGroupSize(), BINS);
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int compunits = dev.maxComputeUnits();
+    size_t wgs = dev.maxWorkGroupSize();
+    Size size = _src.size();
+    bool use16 = size.width % 16 == 0 && _src.offset() % 16 == 0 && _src.step() % 16 == 0;
+    int kercn = dev.isAMD() && use16 ? 16 : std::min(4, ocl::predictOptimalVectorWidth(_src));
 
-    // calculation of histogram
-    UMat hist;
-    if (!ocl_calcHist1(_src, hist))
+    ocl::Kernel k1("calculate_histogram", ocl::imgproc::histogram_oclsrc,
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D kercn=%d -D T=%s%s",
+                          BINS, compunits, wgs, kercn,
+                          kercn == 4 ? "int" : ocl::typeToStr(CV_8UC(kercn)),
+                          _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
+    if (k1.empty())
         return false;
 
+    UMat src = _src.getUMat(), ghist(1, BINS * compunits, CV_32SC1);
+
+    k1.args(ocl::KernelArg::ReadOnly(src),
+            ocl::KernelArg::PtrWriteOnly(ghist), (int)src.total());
+
+    size_t globalsize = compunits * wgs;
+    if (!k1.run(1, &globalsize, &wgs, false))
+        return false;
+
+    wgs = std::min<size_t>(ocl::Device::getDefault().maxWorkGroupSize(), BINS);
     UMat lut(1, 256, CV_8UC1);
-    ocl::Kernel k("calcLUT", ocl::imgproc::histogram_oclsrc,
-                  format("-D BINS=%d -D HISTS_COUNT=1 -D WGS=%d", BINS, (int)wgs));
-    if (k.empty())
-        return false;
-
-    k.args(ocl::KernelArg::PtrWriteOnly(lut),
-           ocl::KernelArg::PtrReadOnly(hist), (int)_src.total());
+    ocl::Kernel k2("calcLUT", ocl::imgproc::histogram_oclsrc,
+                  format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d",
+                         BINS, compunits, (int)wgs));
+    k2.args(ocl::KernelArg::PtrWriteOnly(lut),
+           ocl::KernelArg::PtrReadOnly(ghist), (int)_src.total());
 
     // calculation of LUT
-    if (!k.run(1, &wgs, &wgs, false))
+    if (!k2.run(1, &wgs, &wgs, false))
         return false;
 
     // execute LUT transparently

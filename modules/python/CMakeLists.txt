@@ -13,6 +13,8 @@ endif()
 set(the_description "The python bindings")
 ocv_add_module(python BINDINGS opencv_core opencv_highgui opencv_flann OPTIONAL opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_calib3d opencv_photo opencv_objdetect opencv_contrib opencv_legacy opencv_softcascade opencv_nonfree opencv_optim opencv_shape)
 
+#ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect OPTIONAL opencv_nonfree)
+
 ocv_module_include_directories(
     "${PYTHON_INCLUDE_PATH}"
     ${PYTHON_NUMPY_INCLUDE_DIRS}
@@ -29,7 +31,7 @@ else()
     set(TEMP_EXTRA_MODULES_PATH "null") # Assign something to avoid bug in string(FIND)
 endif()
 
-# -- Find the modules to build. Separate them to Python modules and Python-Extra modules
+# -- Find the modules to build. Split them to Python modules and Python-Extra modules
 
 string(REPLACE "opencv_" "" OPENCV_PYTHON_MODULES "${OPENCV_MODULES_BUILD}")
 ocv_list_filterout(OPENCV_PYTHON_MODULES "^cuda.*$")
@@ -50,15 +52,6 @@ foreach(module ${OPENCV_PYTHON_MODULES})
     endif()
 endforeach()
 
-
-#set(opencv_hdrs
-#    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core.hpp"
-#    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp"
-#    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/types.hpp"
-#    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/persistence.hpp"
-#    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/utility.hpp"
-#    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/ocl.hpp"
-#    "${OPENCV_MODULE_opencv_flann_LOCATION}/include/opencv2/flann/miniflann.hpp")
 
 # -- Now collect headers for each module for Python(cv2). Extra-modules later
 

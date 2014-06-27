@@ -68,8 +68,9 @@
 #define PIXSIZE ((int)sizeof(T1)*3)
 #endif
 
-#define noconvert
+#define EXTRAPOLATE(x, maxV) min(maxV - 1, (int) abs(x))
 
+#define noconvert
 
 __kernel void pyrUp(__global const uchar * src, int src_step, int src_offset, int src_rows, int src_cols,
                          __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
@@ -77,28 +78,19 @@ __kernel void pyrUp(__global const uchar * src, int src_step, int src_offset, in
     const int x = get_global_id(0);
     const int y = get_global_id(1);
 
-    const int lsizex = get_local_size(0);
-    const int lsizey = get_local_size(1);
-
     const int tidx = get_local_id(0);
     const int tidy = get_local_id(1);
 
-    __local FT s_srcPatch[10][10];
-    __local FT s_dstPatch[20][16];
+    __local FT s_srcPatch[LOCAL_SIZE/2 + 2][LOCAL_SIZE/2 + 2];
+    __local FT s_dstPatch[LOCAL_SIZE/2 + 2][LOCAL_SIZE];
 
     __global uchar * dstData = dst + dst_offset;
     __global const uchar * srcData = src + src_offset;
 
-    if( tidx < 10 && tidy < 10 )
+    if( tidx < (LOCAL_SIZE/2 + 2) && tidy < LOCAL_SIZE/2 + 2 )
     {
-        int srcx = mad24((int)get_group_id(0), lsizex>>1, tidx) - 1;
-        int srcy = mad24((int)get_group_id(1), lsizey>>1, tidy) - 1;
-
-        srcx = abs(srcx);
-        srcx = min(src_cols - 1, srcx);
-
-        srcy = abs(srcy);
-        srcy = min(src_rows - 1, srcy);
+        int srcx = EXTRAPOLATE(mad24((int)get_group_id(0), LOCAL_SIZE/2, tidx) - 1, src_cols);
+        int srcy = EXTRAPOLATE(mad24((int)get_group_id(1), LOCAL_SIZE/2, tidy) - 1, src_rows);
 
         s_srcPatch[tidy][tidx] = convertToFT(loadpix(srcData + srcy * src_step + srcx * PIXSIZE));
     }
@@ -106,64 +98,137 @@ __kernel void pyrUp(__global const uchar * src, int src_step, int src_offset, in
     barrier(CLK_LOCAL_MEM_FENCE);
 
     FT sum = 0.f;
-    const FT evenFlag = (FT)((tidx & 1) == 0);
-    const FT  oddFlag = (FT)((tidx & 1) != 0);
-    const bool  eveny = ((tidy & 1) == 0);
 
-    const FT co1 = 0.375f;
-    const FT co2 = 0.25f;
-    const FT co3 = 0.0625f;
+    const FT co1 = 0.75f;
+    const FT co2 = 0.5f;
+    const FT co3 = 0.125f;
 
-    if(eveny)
+    const FT coef1 = (tidx & 1) == 0 ? co1 : (FT) 0;
+    const FT coef2 = (tidx & 1) == 0 ? co3 : co2;
+    const FT coefy1 = (tidy & 1) == 0 ? co1 : (FT) 0;
+    const FT coefy2 = (tidy & 1) == 0 ? co3 : co2;
+
+    if(tidy < LOCAL_SIZE/2 + 2)
     {
-        sum =       ( evenFlag* co3 ) * s_srcPatch[1 + (tidy >> 1)][1 + ((tidx - 2) >> 1)];
-        sum = sum + ( oddFlag * co2 ) * s_srcPatch[1 + (tidy >> 1)][1 + ((tidx - 1) >> 1)];
-        sum = sum + ( evenFlag* co1 ) * s_srcPatch[1 + (tidy >> 1)][1 + ((tidx    ) >> 1)];
-        sum = sum + ( oddFlag * co2 ) * s_srcPatch[1 + (tidy >> 1)][1 + ((tidx + 1) >> 1)];
-        sum = sum + ( evenFlag* co3 ) * s_srcPatch[1 + (tidy >> 1)][1 + ((tidx + 2) >> 1)];
-    }
-
-    s_dstPatch[2 + tidy][tidx] = sum;
-
-    if (tidy < 2)
-    {
-        sum = 0;
-
-        if (eveny)
-        {
-            sum =       (evenFlag * co3 ) * s_srcPatch[lsizey-16][1 + ((tidx - 2) >> 1)];
-            sum = sum + ( oddFlag * co2 ) * s_srcPatch[lsizey-16][1 + ((tidx - 1) >> 1)];
-            sum = sum + (evenFlag * co1 ) * s_srcPatch[lsizey-16][1 + ((tidx    ) >> 1)];
-            sum = sum + ( oddFlag * co2 ) * s_srcPatch[lsizey-16][1 + ((tidx + 1) >> 1)];
-            sum = sum + (evenFlag * co3 ) * s_srcPatch[lsizey-16][1 + ((tidx + 2) >> 1)];
-        }
+        sum =     coef2* s_srcPatch[tidy][1 + ((tidx - 1) >> 1)];
+        sum = mad(coef1, s_srcPatch[tidy][1 + ((tidx    ) >> 1)], sum);
+        sum = mad(coef2, s_srcPatch[tidy][1 + ((tidx + 2) >> 1)], sum);
 
         s_dstPatch[tidy][tidx] = sum;
     }
 
-    if (tidy > 13)
-    {
-        sum = 0;
+    barrier(CLK_LOCAL_MEM_FENCE);
 
-        if (eveny)
-        {
-            sum =       (evenFlag * co3) * s_srcPatch[lsizey-7][1 + ((tidx - 2) >> 1)];
-            sum = sum + ( oddFlag * co2) * s_srcPatch[lsizey-7][1 + ((tidx - 1) >> 1)];
-            sum = sum + (evenFlag * co1) * s_srcPatch[lsizey-7][1 + ((tidx    ) >> 1)];
-            sum = sum + ( oddFlag * co2) * s_srcPatch[lsizey-7][1 + ((tidx + 1) >> 1)];
-            sum = sum + (evenFlag * co3) * s_srcPatch[lsizey-7][1 + ((tidx + 2) >> 1)];
-        }
-        s_dstPatch[4 + tidy][tidx] = sum;
+    sum =     coefy2* s_dstPatch[1 + ((tidy - 1) >> 1)][tidx];
+    sum = mad(coefy1, s_dstPatch[1 + ((tidy    ) >> 1)][tidx], sum);
+    sum = mad(coefy2, s_dstPatch[1 + ((tidy + 2) >> 1)][tidx], sum);
+
+    if ((x < dst_cols) && (y < dst_rows))
+        storepix(convertToT(sum), dstData + y * dst_step + x * PIXSIZE);
+}
+
+
+__kernel void pyrUp_unrolled(__global const uchar * src, int src_step, int src_offset, int src_rows, int src_cols,
+                         __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
+{
+    const int lx = 2*get_local_id(0);
+    const int ly = 2*get_local_id(1);
+
+    __local FT s_srcPatch[LOCAL_SIZE+2][LOCAL_SIZE+2];
+    __local FT s_dstPatch[LOCAL_SIZE+2][2*LOCAL_SIZE];
+
+    __global uchar * dstData = dst + dst_offset;
+    __global const uchar * srcData = src + src_offset;
+
+    if( lx < (LOCAL_SIZE+2) && ly < (LOCAL_SIZE+2) )
+    {
+        int srcx = mad24((int)get_group_id(0), LOCAL_SIZE, lx) - 1;
+        int srcy = mad24((int)get_group_id(1), LOCAL_SIZE, ly) - 1;
+
+        int srcx1 = EXTRAPOLATE(srcx, src_cols);
+        int srcx2 = EXTRAPOLATE(srcx+1, src_cols);
+        int srcy1 = EXTRAPOLATE(srcy, src_rows);
+        int srcy2 = EXTRAPOLATE(srcy+1, src_rows);
+        s_srcPatch[ly][lx] = convertToFT(loadpix(srcData + srcy1 * src_step + srcx1 * PIXSIZE));
+        s_srcPatch[ly+1][lx] = convertToFT(loadpix(srcData + srcy2 * src_step + srcx1 * PIXSIZE));
+        s_srcPatch[ly][lx+1] = convertToFT(loadpix(srcData + srcy1 * src_step + srcx2 * PIXSIZE));
+        s_srcPatch[ly+1][lx+1] = convertToFT(loadpix(srcData + srcy2 * src_step + srcx2 * PIXSIZE));
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    sum =       co3 * s_dstPatch[2 + tidy - 2][tidx];
-    sum = sum + co2 * s_dstPatch[2 + tidy - 1][tidx];
-    sum = sum + co1 * s_dstPatch[2 + tidy    ][tidx];
-    sum = sum + co2 * s_dstPatch[2 + tidy + 1][tidx];
-    sum = sum + co3 * s_dstPatch[2 + tidy + 2][tidx];
+    FT sum;
 
-    if ((x < dst_cols) && (y < dst_rows))
-        storepix(convertToT(4.0f * sum), dstData + y * dst_step + x * PIXSIZE);
+    const FT co1 = 0.75f;
+    const FT co2 = 0.5f;
+    const FT co3 = 0.125f;
+
+    // (x,y)
+    sum =       co3 * s_srcPatch[1 + (ly >> 1)][1 + ((lx - 2) >> 1)];
+    sum = sum + co1 * s_srcPatch[1 + (ly >> 1)][1 + ((lx    ) >> 1)];
+    sum = sum + co3 * s_srcPatch[1 + (ly >> 1)][1 + ((lx + 2) >> 1)];
+
+    s_dstPatch[1 + get_local_id(1)][lx] = sum;
+
+    // (x+1,y)
+    sum =       co2 * s_srcPatch[1 + (ly >> 1)][1 + ((lx + 1 - 1) >> 1)];
+    sum = sum + co2 * s_srcPatch[1 + (ly >> 1)][1 + ((lx + 1 + 1) >> 1)];
+    s_dstPatch[1 + get_local_id(1)][lx+1] = sum;
+
+    if (ly < 1)
+    {
+        // (x,y)
+        sum =       co3 * s_srcPatch[0][1 + ((lx - 2) >> 1)];
+        sum = sum + co1 * s_srcPatch[0][1 + ((lx    ) >> 1)];
+        sum = sum + co3 * s_srcPatch[0][1 + ((lx + 2) >> 1)];
+        s_dstPatch[0][lx] = sum;
+
+        // (x+1,y)
+        sum =       co2 * s_srcPatch[0][1 + ((lx + 1 - 1) >> 1)];
+        sum = sum + co2 * s_srcPatch[0][1 + ((lx + 1 + 1) >> 1)];
+        s_dstPatch[0][lx+1] = sum;
+    }
+
+    if (ly > 2*LOCAL_SIZE-3)
+    {
+        // (x,y)
+        sum =       co3 * s_srcPatch[LOCAL_SIZE+1][1 + ((lx - 2) >> 1)];
+        sum = sum + co1 * s_srcPatch[LOCAL_SIZE+1][1 + ((lx    ) >> 1)];
+        sum = sum + co3 * s_srcPatch[LOCAL_SIZE+1][1 + ((lx + 2) >> 1)];
+        s_dstPatch[LOCAL_SIZE+1][lx] = sum;
+
+        // (x+1,y)
+        sum =       co2 * s_srcPatch[LOCAL_SIZE+1][1 + ((lx + 1 - 1) >> 1)];
+        sum = sum + co2 * s_srcPatch[LOCAL_SIZE+1][1 + ((lx + 1 + 1) >> 1)];
+        s_dstPatch[LOCAL_SIZE+1][lx+1] = sum;
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+    int dst_x = 2*get_global_id(0);
+    int dst_y = 2*get_global_id(1);
+
+    if ((dst_x < dst_cols) && (dst_y < dst_rows))
+    {
+        // (x,y)
+        sum =       co3 * s_dstPatch[1 + get_local_id(1) - 1][lx];
+        sum = sum + co1 * s_dstPatch[1 + get_local_id(1)    ][lx];
+        sum = sum + co3 * s_dstPatch[1 + get_local_id(1) + 1][lx];
+        storepix(convertToT(sum), dstData + dst_y * dst_step + dst_x * PIXSIZE);
+
+        // (x+1,y)
+        sum =       co3 * s_dstPatch[1 + get_local_id(1) - 1][lx+1];
+        sum = sum + co1 * s_dstPatch[1 + get_local_id(1)    ][lx+1];
+        sum = sum + co3 * s_dstPatch[1 + get_local_id(1) + 1][lx+1];
+        storepix(convertToT(sum), dstData + dst_y * dst_step + (dst_x+1) * PIXSIZE);
+
+        // (x,y+1)
+        sum =       co2 * s_dstPatch[1 + get_local_id(1)    ][lx];
+        sum = sum + co2 * s_dstPatch[1 + get_local_id(1) + 1][lx];
+        storepix(convertToT(sum), dstData + (dst_y+1) * dst_step + dst_x * PIXSIZE);
+
+        // (x+1,y+1)
+        sum =       co2 * s_dstPatch[1 + get_local_id(1)    ][lx+1];
+        sum = sum + co2 * s_dstPatch[1 + get_local_id(1) + 1][lx+1];
+        storepix(convertToT(sum), dstData + (dst_y+1) * dst_step + (dst_x+1) * PIXSIZE);
+    }
 }

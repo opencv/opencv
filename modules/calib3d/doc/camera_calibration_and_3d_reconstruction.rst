@@ -709,8 +709,8 @@ Calculates an essential matrix from the corresponding points in two images.
 
     :param method: Method for computing a fundamental matrix.
 
-            * **CV_RANSAC** for the RANSAC algorithm.
-            * **CV_LMEDS** for the LMedS algorithm.
+            * **RANSAC** for the RANSAC algorithm.
+            * **MEDS** for the LMedS algorithm.
 
     :param threshold: Parameter used for RANSAC. It is the maximum distance from a point to an epipolar line in pixels, beyond which the point is considered an outlier and is not used for computing the final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the point localization, image resolution, and the image noise.
 
@@ -809,7 +809,7 @@ In this scenario, ``points1`` and ``points2`` are the same input for ``findEssen
     cv::Point2d pp(0.0, 0.0);
     Mat E, R, t, mask;
 
-    E = findEssentialMat(points1, points2, focal, pp, CV_RANSAC, 0.999, 1.0, mask);
+    E = findEssentialMat(points1, points2, focal, pp, RANSAC, 0.999, 1.0, mask);
     recoverPose(E, points1, points2, R, t, focal, pp, mask);
 
 
@@ -832,9 +832,9 @@ Finds a perspective transformation between two planes.
 
             * **0** - a regular method using all the points
 
-            * **CV_RANSAC** - RANSAC-based robust method
+            * **RANSAC** - RANSAC-based robust method
 
-            * **CV_LMEDS** - Least-Median robust method
+            * **LMEDS** - Least-Median robust method
 
     :param ransacReprojThreshold: Maximum allowed reprojection error to treat a point pair as an inlier (used in the RANSAC method only). That is, if
 
@@ -844,7 +844,7 @@ Finds a perspective transformation between two planes.
 
         then the point  :math:`i`  is considered an outlier. If  ``srcPoints``  and  ``dstPoints``  are measured in pixels, it usually makes sense to set this parameter somewhere in the range of 1 to 10.
 
-    :param mask: Optional output mask set by a robust method ( ``CV_RANSAC``  or  ``CV_LMEDS`` ).  Note that the input mask values are ignored.
+    :param mask: Optional output mask set by a robust method ( ``RANSAC``  or  ``LMEDS`` ).  Note that the input mask values are ignored.
 
 The functions find and return the perspective transformation :math:`H` between the source and the destination planes:
 

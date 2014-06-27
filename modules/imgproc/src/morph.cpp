@@ -1272,7 +1272,7 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
 
     if( !( depth == CV_8U || depth == CV_32F ) || !(cn == 1 || cn == 3 || cn == 4) ||
         !( borderType == cv::BORDER_REPLICATE || (borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue()) )
-        || !( op == MORPH_DILATE || op == MORPH_ERODE) )
+        || !( op == MORPH_DILATE || op == MORPH_ERODE) || _src.isSubmatrix() )
         return false;
 
     if( borderType == cv::BORDER_CONSTANT && kernel.data )
@@ -1468,11 +1468,6 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
     Size ksize = kernel.data ? kernel.size() : Size(3,3);
     anchor = normalizeAnchor(anchor, ksize);
 
-#if IPP_VERSION_X100 >= 801
-    if( IPPMorphOp(op, _src, _dst, kernel, anchor, iterations, borderType, borderValue) )
-        return;
-#endif
-
     if (iterations == 0 || kernel.rows*kernel.cols == 1)
     {
         _src.copyTo(_dst);
@@ -1501,8 +1496,12 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
                (op == MORPH_ERODE || op == MORPH_DILATE),
                ocl_morphology_op(_src, _dst, kernel, ksize, anchor, iterations, op) )
 
-    Mat src = _src.getMat();
+#if IPP_VERSION_X100 >= 801
+    if( IPPMorphOp(op, _src, _dst, kernel, anchor, iterations, borderType, borderValue) )
+        return;
+#endif
 
+    Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
 
