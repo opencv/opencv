@@ -108,6 +108,14 @@
 #define dstTSIZE ((int)sizeof(dstT1)*3)
 #endif
 
+#if ddepth <= 4
+#define SUM_ABS(a) convertFromU(abs(a))
+#define SUM_ABS2(a, b) convertFromU(abs_diff(a, b))
+#else
+#define SUM_ABS(a) fabs(a)
+#define SUM_ABS2(a, b) fabs(a - b)
+#endif
+
 #ifdef HAVE_MASK
 #ifdef HAVE_SRC2
 #define EXTRA_PARAMS , __global const uchar * mask, int mask_step, int mask_offset, __global const uchar * src2ptr, int src2_step, int src2_offset
@@ -136,7 +144,7 @@
 #define FUNC(a, b) a += b
 
 #elif defined OP_SUM_ABS
-#define FUNC(a, b) a += b >= (dstT)(0) ? b : -b
+#define FUNC(a, b) a += SUM_ABS(b)
 
 #elif defined OP_SUM_SQR
 #if ddepth <= 4
@@ -163,15 +171,15 @@
 #define PROCESS_ELEMS \
     dstT temp = convertToDT(loadpix(srcptr + src_index)); \
     dstT temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
-    temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
-    temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2; \
+    temp = SUM_ABS2(temp, temp2); \
+    temp2 = SUM_ABS(temp2); \
     FUNC(accumulator2, temp2); \
     FUNC(accumulator, temp)
 #else
 #define PROCESS_ELEMS \
     dstT temp = convertToDT(loadpix(srcptr + src_index)); \
     dstT temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
-    temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
+    temp = SUM_ABS2(temp, temp2); \
     FUNC(accumulator, temp)
 #endif
 #else
@@ -255,16 +263,16 @@
 #define REDUCE_GLOBAL \
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
-    temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
-    temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2; \
+    temp = SUM_ABS2(temp, temp2); \
+    temp2 = SUM_ABS(temp2); \
     FUNC(accumulator, temp); \
     FUNC(accumulator2, temp2)
 #elif kercn == 2
 #define REDUCE_GLOBAL \
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
-    temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
-    temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2; \
+    temp = SUM_ABS2(temp, temp2); \
+    temp2 = SUM_ABS(temp2); \
     FUNC(accumulator, temp.s0); \
     FUNC(accumulator, temp.s1); \
     FUNC(accumulator2, temp2.s0); \
@@ -273,8 +281,8 @@
 #define REDUCE_GLOBAL \
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
-    temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
-    temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2; \
+    temp = SUM_ABS2(temp, temp2); \
+    temp2 = SUM_ABS(temp2); \
     FUNC(accumulator, temp.s0); \
     FUNC(accumulator, temp.s1); \
     FUNC(accumulator, temp.s2); \
@@ -287,8 +295,8 @@
 #define REDUCE_GLOBAL \
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
-    temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
-    temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2; \
+    temp = SUM_ABS2(temp, temp2); \
+    temp2 = SUM_ABS(temp2); \
     FUNC(accumulator, temp.s0); \
     FUNC(accumulator, temp.s1); \
     FUNC(accumulator, temp.s2); \
@@ -309,8 +317,8 @@
 #define REDUCE_GLOBAL \
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
-    temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
-    temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2; \
+    temp = SUM_ABS2(temp, temp2); \
+    temp2 = SUM_ABS(temp2); \
     FUNC(accumulator, temp.s0); \
     FUNC(accumulator, temp.s1); \
     FUNC(accumulator, temp.s2); \
@@ -349,20 +357,20 @@
 #define REDUCE_GLOBAL \
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
-    temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
+    temp = SUM_ABS2(temp, temp2); \
     FUNC(accumulator, temp)
 #elif kercn == 2
 #define REDUCE_GLOBAL \
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
-    temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
+    temp = SUM_ABS2(temp, temp2); \
     FUNC(accumulator, temp.s0); \
     FUNC(accumulator, temp.s1)
 #elif kercn == 4
 #define REDUCE_GLOBAL \
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
-    temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
+    temp = SUM_ABS2(temp, temp2); \
     FUNC(accumulator, temp.s0); \
     FUNC(accumulator, temp.s1); \
     FUNC(accumulator, temp.s2); \
@@ -371,7 +379,7 @@
 #define REDUCE_GLOBAL \
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
-    temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
+    temp = SUM_ABS2(temp, temp2)); \
     FUNC(accumulator, temp.s0); \
     FUNC(accumulator, temp.s1); \
     FUNC(accumulator, temp.s2); \
@@ -384,7 +392,7 @@
 #define REDUCE_GLOBAL \
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
-    temp = temp > temp2 ? temp - temp2 : (temp2 - temp); \
+    temp = SUM_ABS2(temp, temp2); \
     FUNC(accumulator, temp.s0); \
     FUNC(accumulator, temp.s1); \
     FUNC(accumulator, temp.s2); \

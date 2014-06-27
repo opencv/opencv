@@ -39,6 +39,14 @@
 #define noconvert
 #define INDEX_MAX UINT_MAX
 
+#if wdepth <= 4
+#define MIN_ABS(a) convertFromU(abs(a))
+#define MIN_ABS2(a, b) convertFromU(abs_diff(a, b))
+#else
+#define MIN_ABS(a) fabs(a)
+#define MIN_ABS2(a, b) fabs(a - b)
+#endif
+
 #if kercn != 3
 #define loadpix(addr) *(__global const srcT *)(addr)
 #define srcTSIZE (int)sizeof(srcT)
@@ -182,7 +190,7 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 #endif
             temp = convertToDT(loadpix(srcptr + src_index));
 #ifdef OP_ABS
-            temp = temp >= (dstT)(0) ? temp : -temp;
+            temp = MIN_ABS(temp);
 #endif
 
 #ifdef HAVE_SRC2
@@ -192,9 +200,9 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
             src2_index = mad24(id / cols, src2_step, mul24(id % cols, srcTSIZE));
 #endif
             temp2 = convertToDT(loadpix(src2ptr + src2_index));
-            temp = temp > temp2 ? temp - temp2 : (temp2 - temp);
+            temp = MIN_ABS2(temp, temp2);
 #ifdef OP_CALC2
-            temp2 = temp2 >= (dstT)(0) ? temp2 : -temp2;
+            temp2 = MIN_ABS(temp2);
 #endif
 #endif
 

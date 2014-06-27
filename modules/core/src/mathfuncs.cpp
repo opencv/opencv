@@ -2513,7 +2513,7 @@ static bool ocl_patchNaNs( InputOutputArray _a, float value )
 {
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=int -D rowsPerWI=%d",
+                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=float -D rowsPerWI=%d",
                             rowsPerWI));
     if (k.empty())
         return false;
