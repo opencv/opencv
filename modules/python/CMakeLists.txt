@@ -11,7 +11,7 @@ if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_NUMPY_INCLUDE_DIRS)
 endif()
 
 set(the_description "The python bindings")
-ocv_add_module(python BINDINGS opencv_core opencv_highgui opencv_flann OPTIONAL opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_calib3d opencv_photo opencv_objdetect opencv_contrib opencv_legacy opencv_softcascade opencv_nonfree opencv_optim opencv_shape)
+ocv_add_module(python BINDINGS opencv_core opencv_highgui opencv_flann OPTIONAL opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_calib3d opencv_photo opencv_objdetect opencv_nonfree opencv_optim opencv_shape opencv_tracking opencv_rgbd opencv_reg)
 
 #ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect OPTIONAL opencv_nonfree)
 
@@ -194,9 +194,16 @@ endif()
 #                   Python bindings for External contrib module --> cv2_contrib
 #-------------------------------------------------------------------------------------------------
 if(BUILD_PYTHON_CONTRIB)
-    message("OPENCV EXTRA MODULES : ${OPENCV_PYTHON_EXTRA_MODULES}")
+    
+    set(TEMP_OPENCV_PYTHON_EXTRA_DEPS ${OPENCV_PYTHON_EXTRA_MODULES})
+    ocv_list_add_prefix(TEMP_OPENCV_PYTHON_EXTRA_DEPS "opencv_")
+    message("OPENCV EXTRA MODULES : ${TEMP_OPENCV_PYTHON_EXTRA_DEPS}")
+    ocv_include_modules(${TEMP_OPENCV_PYTHON_EXTRA_DEPS})
     foreach(module ${OPENCV_PYTHON_EXTRA_MODULES})
-        ocv_include_modules(${module})
+        ocv_include_modules("opencv_${module}")
+        ocv_include_directories("${OPENCV_MODULE_opencv_${module}_LOCATION}/include")
+        message("module location : ${OPENCV_MODULE_opencv_${module}_LOCATION}")
+        ocv_include_directories("${OPENCV_EXTRA_MODULES_PATH}/${module}/include")
         set(extra_module_hdrs "${OPENCV_MODULE_opencv_${module}_HEADERS}")
         ocv_list_filterout(extra_module_hdrs "^.*\${module}/\${module}.hpp$")
         ocv_list_filterout(extra_module_hdrs "^.*cuda.*$")
@@ -210,8 +217,6 @@ endforeach()
 
     list(LENGTH opencv_contrib_hdrs number)
 
-    set(TEMP_OPENCV_PYTHON_EXTRA_DEPS ${OPENCV_PYTHON_EXTRA_MODULES})
-    ocv_list_add_prefix(TEMP_OPENCV_PYTHON_EXTRA_DEPS "opencv_")
 
     set(cv2_generated_contrib_hdrs
         "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_include.h"
