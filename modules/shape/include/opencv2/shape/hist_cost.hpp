@@ -73,7 +73,7 @@ public:
 };
 
 CV_EXPORTS_W Ptr<HistogramCostExtractor>
-    createNormHistogramCostExtractor(int flag=DIST_L2, int nDummies=25, float defaultCost=0.2);
+    createNormHistogramCostExtractor(int flag=DIST_L2, int nDummies=25, float defaultCost=0.2f);
 
 /*!  */
 class CV_EXPORTS_W EMDHistogramCostExtractor : public HistogramCostExtractor
@@ -84,20 +84,20 @@ public:
 };
 
 CV_EXPORTS_W Ptr<HistogramCostExtractor>
-    createEMDHistogramCostExtractor(int flag=DIST_L2, int nDummies=25, float defaultCost=0.2);
+    createEMDHistogramCostExtractor(int flag=DIST_L2, int nDummies=25, float defaultCost=0.2f);
 
 /*!  */
 class CV_EXPORTS_W ChiHistogramCostExtractor : public HistogramCostExtractor
 {};
 
-CV_EXPORTS_W Ptr<HistogramCostExtractor> createChiHistogramCostExtractor(int nDummies=25, float defaultCost=0.2);
+CV_EXPORTS_W Ptr<HistogramCostExtractor> createChiHistogramCostExtractor(int nDummies=25, float defaultCost=0.2f);
 
 /*!  */
 class CV_EXPORTS_W EMDL1HistogramCostExtractor : public HistogramCostExtractor
 {};
 
 CV_EXPORTS_W Ptr<HistogramCostExtractor>
-    createEMDL1HistogramCostExtractor(int nDummies=25, float defaultCost=0.2);
+    createEMDL1HistogramCostExtractor(int nDummies=25, float defaultCost=0.2f);
 
 } // cv
 #endif
