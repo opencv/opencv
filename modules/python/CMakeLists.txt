@@ -194,7 +194,6 @@ endif()
 #                   Python bindings for External contrib module --> cv2_contrib
 #-------------------------------------------------------------------------------------------------
 if(BUILD_PYTHON_CONTRIB)
-    
     set(TEMP_OPENCV_PYTHON_EXTRA_DEPS ${OPENCV_PYTHON_EXTRA_MODULES})
     ocv_list_add_prefix(TEMP_OPENCV_PYTHON_EXTRA_DEPS "opencv_")
     message("OPENCV EXTRA MODULES : ${TEMP_OPENCV_PYTHON_EXTRA_DEPS}")
