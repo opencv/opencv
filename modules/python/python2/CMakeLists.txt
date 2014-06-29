@@ -1,0 +1,26 @@
+if(NOT PYTHON2LIBS_FOUND OR NOT PYTHON2_NUMPY_INCLUDE_DIRS)
+  ocv_module_disable(python2)
+endif()
+
+set(the_description "The python2 bindings")
+ocv_add_module(python2 BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect OPTIONAL opencv_nonfree)
+
+set(PYTHON_INCLUDE_PATH ${PYTHON2_INCLUDE_PATH})
+set(PYTHON_NUMPY_INCLUDE_PATH ${PYTHON2_NUMPY_INCLUDE_PATH})
+set(PYTHON_EXECUTABLE ${PYTHON2_EXECUTABLE})
+set(PYTHON_DEBUG_LIBRARIES ${PYTHON2_DEBUG_LIBRARIES})
+set(PYTHON_LIBRARIES ${PYTHON2_LIBRARIES})
+set(PYTHON_PACKAGES_PATH ${PYTHON2_PACKAGES_PATH})
+set(PYTHON_VERSION_MAJOR ${PYTHON2_VERSION_MAJOR})
+set(PYTHON_VERSION_MINOR ${PYTHON2_VERSION_MINOR})
+
+include(../common.cmake)
+
+unset(PYTHON_INCLUDE_PATH)
+unset(PYTHON_NUMPY_INCLUDE_PATH)
+unset(PYTHON_EXECUTABLE)
+unset(PYTHON_DEBUG_LIBRARIES)
+unset(PYTHON_LIBRARIES)
+unset(PYTHON_PACKAGES_PATH)
+unset(PYTHON_VERSION_MAJOR)
+unset(PYTHON_VERSION_MINOR)
