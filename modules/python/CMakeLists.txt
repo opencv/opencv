@@ -13,8 +13,6 @@ endif()
 set(the_description "The python bindings")
 ocv_add_module(python BINDINGS opencv_core opencv_highgui opencv_flann OPTIONAL opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_calib3d opencv_photo opencv_objdetect opencv_nonfree opencv_optim opencv_shape opencv_tracking opencv_rgbd opencv_reg)
 
-#ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect OPTIONAL opencv_nonfree)
-
 ocv_module_include_directories(
     "${PYTHON_INCLUDE_PATH}"
     ${PYTHON_NUMPY_INCLUDE_DIRS}
@@ -31,27 +29,33 @@ else()
     set(TEMP_EXTRA_MODULES_PATH "null") # Assign something to avoid bug in string(FIND)
 endif()
 
+# To disable any module from adding to Python bindings, add them to blacklist
+set(PYTHON_BINDINGS_BLACKLIST "^cuda.*$|contrib|legacy|softcascade|optim|stitching|superres|tracking|videostab|ts")
+
 # -- Find the modules to build. Split them to Python modules and Python-Extra modules
-message("Modules Build : ${OPENCV_MODULES_BUILD}")
-string(REPLACE "opencv_" "" OPENCV_PYTHON_MODULES "${OPENCV_MODULES_BUILD}")
-ocv_list_filterout(OPENCV_PYTHON_MODULES "^cuda.*$")
-foreach(module ${OPENCV_PYTHON_MODULES})
+string(REPLACE "opencv_" "" OPENCV_MODULES_NAMES "${OPENCV_MODULES_BUILD}")
+message("Modules Build : ${OPENCV_MODULES_NAMES}")
+
+foreach(module ${OPENCV_MODULES_NAMES})
     # Check if module location matches with Extra-modules location
     string(FIND ${OPENCV_MODULE_opencv_${module}_LOCATION} ${TEMP_EXTRA_MODULES_PATH} IS_PYTHON_EXTRA)
-    if(NOT HAVE_opencv_${module})
-         list(REMOVE_ITEM OPENCV_PYTHON_MODULES ${module})
-    elseif(NOT (${OPENCV_MODULE_opencv_${module}_CLASS} STREQUAL "PUBLIC"))
-         list(REMOVE_ITEM OPENCV_PYTHON_MODULES ${module})
-    # For time-being, disable following modules. (NB:  We will enable it one-by-one)
-    elseif(${module} MATCHES "ts|contrib|legacy|softcascade|optim|stitching|superres|tracking|shape|videostab")
-        list(REMOVE_ITEM OPENCV_PYTHON_MODULES ${module})
-    # If it is an Extra-module, put it in Python-Extra modules group
-    elseif(${IS_PYTHON_EXTRA} GREATER -1)
-        list(APPEND OPENCV_PYTHON_EXTRA_MODULES ${module})
-        list(REMOVE_ITEM OPENCV_PYTHON_MODULES ${module})
+
+    if(HAVE_opencv_${module})
+        if((${OPENCV_MODULE_opencv_${module}_CLASS} STREQUAL "PUBLIC"))
+            if(NOT ${module} MATCHES ${PYTHON_BINDINGS_BLACKLIST})
+                # If it is an Extra-module, put it in Python-Extra modules group
+                if(${IS_PYTHON_EXTRA} GREATER -1)
+                    list(APPEND OPENCV_PYTHON_EXTRA_MODULES ${module})
+                else()
+                    list(APPEND OPENCV_PYTHON_MODULES ${module})
+                endif()
+            endif()
+        endif()
     endif()
+
 endforeach()
 
+message("Modules filtered Build : ${OPENCV_PYTHON_MODULES}")
 
 # -- Now collect headers for each module for Python(cv2). Extra-modules later
 
@@ -62,6 +66,7 @@ foreach(module ${OPENCV_PYTHON_MODULES})
     # Python bindings doesn't seem to process *.h files. So remove them, so with cuda,ios,opencl etc.
     ocv_list_filterout(module_hdrs ".h$")
     ocv_list_filterout(module_hdrs "^.*(cuda|ios|opencl).*$")
+    # detection_based_tracker is a linux only header. Lets put it away for time being
     ocv_list_filterout(module_hdrs "detection_based_tracker.hpp$")
     list(APPEND opencv_hdrs ${module_hdrs})
 endforeach()
@@ -69,30 +74,6 @@ endforeach()
 foreach(i ${opencv_hdrs})
 message("opencv_hdrs" : ${i})
 endforeach()
-#set(opencv_hdrs
-#    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core.hpp"
-#    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp"
-#    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/types.hpp"
-#    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/persistence.hpp"
-#    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/utility.hpp"
-#    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/ocl.hpp"
-#    "${OPENCV_MODULE_opencv_flann_LOCATION}/include/opencv2/flann/miniflann.hpp"
-#    "${OPENCV_MODULE_opencv_imgproc_LOCATION}/include/opencv2/imgproc.hpp"
-#    "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/background_segm.hpp"
-#    "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/tracking.hpp"
-#    "${OPENCV_MODULE_opencv_photo_LOCATION}/include/opencv2/photo.hpp"
-#    "${OPENCV_MODULE_opencv_highgui_LOCATION}/include/opencv2/highgui.hpp"
-#    "${OPENCV_MODULE_opencv_ml_LOCATION}/include/opencv2/ml.hpp"
-#    "${OPENCV_MODULE_opencv_features2d_LOCATION}/include/opencv2/features2d.hpp"
-#    "${OPENCV_MODULE_opencv_calib3d_LOCATION}/include/opencv2/calib3d.hpp"
-#    "${OPENCV_MODULE_opencv_objdetect_LOCATION}/include/opencv2/objdetect.hpp"
-#    "${OPENCV_MODULE_opencv_softcascade_LOCATION}/include/opencv2/softcascade.hpp"
-#    "${OPENCV_MODULE_opencv_contrib_LOCATION}/include/opencv2/contrib.hpp")
-
-#if(HAVE_opencv_nonfree)
-#  list(APPEND opencv_hdrs     "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/features2d.hpp"
-#                              "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree.hpp")
-#endif()
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
@@ -103,9 +84,11 @@ set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_const_reg.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_typedefs.h")
 
+set(prefix "master")  # Used in gen2.py for naming output files.
+
 add_custom_command(
    OUTPUT ${cv2_generated_hdrs}
-   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_hdrs}
+   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" ${prefix} ${CMAKE_CURRENT_BINARY_DIR} ${opencv_hdrs}
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/hdr_parser.py
    DEPENDS ${opencv_hdrs})
@@ -226,10 +209,12 @@ endforeach()
         "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_const_reg.h"
         "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_typedefs.h")
 
+    set(contrib_prefix "contrib") # To specify gen2.py to create output specific to extra modules
+
     add_custom_command(
        OUTPUT ${cv2_generated_contrib_hdrs}
-       COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2_contrib.py" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_contrib_hdrs}
-       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2_contrib.py
+       COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" ${contrib_prefix} ${CMAKE_CURRENT_BINARY_DIR} ${opencv_contrib_hdrs}
+       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py
        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/hdr_parser.py
        DEPENDS ${opencv_contrib_hdrs})
 
