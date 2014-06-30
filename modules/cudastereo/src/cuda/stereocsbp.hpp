@@ -2,15 +2,15 @@ namespace cv { namespace cuda { namespace device
 {
     namespace stereocsbp
     {
-        void load_constants(float max_data_term, float data_weight, float disc_single_jump, int min_disp_th);
+        void load_constants(float disc_single_jump, int min_disp_th);
 
         template<class T>
         void init_data_cost(const uchar *left, const uchar *right, uchar *ctemp, size_t cimg_step, int rows, int cols, T* disp_selected_pyr, T* data_cost_selected, size_t msg_step,
-                    int h, int w, int level, int nr_plane, int ndisp, int channels, bool use_local_init_data_cost, cudaStream_t stream);
+                    int h, int w, int level, int nr_plane, int ndisp, int channels, float data_weight, float max_data_term, bool use_local_init_data_cost, cudaStream_t stream);
 
         template<class T>
         void compute_data_cost(const uchar *left, const uchar *right, size_t cimg_step, const T* disp_selected_pyr, T* data_cost, size_t msg_step,
-                               int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, cudaStream_t stream);
+                               int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, float data_weight, float max_data_term, cudaStream_t stream);
 
         template<class T>
         void init_message(uchar *ctemp, T* u_new, T* d_new, T* l_new, T* r_new,
