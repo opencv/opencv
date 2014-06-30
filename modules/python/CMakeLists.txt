@@ -84,14 +84,15 @@ set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_const_reg.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_typedefs.h")
 
-set(prefix "master")  # Used in gen2.py for naming output files.
-
+# Run header parser to generate above .h files, prefix=""
 add_custom_command(
    OUTPUT ${cv2_generated_hdrs}
-   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" ${prefix} ${CMAKE_CURRENT_BINARY_DIR} ${opencv_hdrs}
+   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" "" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_hdrs}
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/hdr_parser.py
-   DEPENDS ${opencv_hdrs})
+   DEPENDS ${opencv_hdrs}
+   COMMENT "Usage: python gen2.py <prefix> <dstdir> <srcfiles>"
+   VERBATIM)
 
 
 add_library(${the_module} SHARED src2/cv2.cpp ${cv2_generated_hdrs})
@@ -209,14 +210,15 @@ endforeach()
         "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_const_reg.h"
         "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_typedefs.h")
 
-    set(contrib_prefix "contrib") # To specify gen2.py to create output specific to extra modules
-
+    # Run header parser to generate above .h files, prefix="_contrib"
     add_custom_command(
        OUTPUT ${cv2_generated_contrib_hdrs}
-       COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" ${contrib_prefix} ${CMAKE_CURRENT_BINARY_DIR} ${opencv_contrib_hdrs}
+       COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" "_contrib" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_contrib_hdrs}
        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py
        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/hdr_parser.py
-       DEPENDS ${opencv_contrib_hdrs})
+       DEPENDS ${opencv_contrib_hdrs}
+       COMMENT "Usage: python gen2.py <prefix> <dstdir> <srcfiles>"
+       VERBATIM)
 
     add_library(contrib_module SHARED src2/cv2_contrib.cpp ${cv2_generated_contrib_hdrs})
 

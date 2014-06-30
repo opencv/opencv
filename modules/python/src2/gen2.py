@@ -914,10 +914,6 @@ class PythonWrapperGenerator(object):
             self.gen_const_reg(constinfo)
 
         # That's it. Now save all the files
-        if(prefix=="master"):
-            prefix=""
-        elif(prefix=="contrib"):
-            prefix="_contrib"
         self.save(output_path, "pyopencv_generated"+prefix+"_include.h", self.code_include)
         self.save(output_path, "pyopencv_generated"+prefix+"_funcs.h", self.code_funcs)
         self.save(output_path, "pyopencv_generated"+prefix+"_func_tab.h", self.code_func_tab)
@@ -929,7 +925,8 @@ class PythonWrapperGenerator(object):
 if __name__ == "__main__":
     srcfiles = hdr_parser.opencv_hdr_list
     dstdir = "/Users/vp/tmp"
-    prefix = ""         # Prefix for filenames
+    # Prefix decides output for master/contrib modules. See modules/python/CMakeLists.txt
+    prefix = ""
     if len(sys.argv) > 1:
         prefix = sys.argv[1]
     if len(sys.argv) > 2:
