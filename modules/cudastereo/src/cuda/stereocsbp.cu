@@ -60,7 +60,6 @@ namespace cv { namespace cuda { namespace device
 
         __constant__ float cmax_data_term;
         __constant__ float cdata_weight;
-        __constant__ float cmax_disc_term;
         __constant__ float cdisc_single_jump;
 
         __constant__ int cth;
@@ -70,11 +69,10 @@ namespace cv { namespace cuda { namespace device
         __constant__ size_t cdisp_step2;
 
 
-        void load_constants(float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, int min_disp_th)
+        void load_constants(float max_data_term, float data_weight, float disc_single_jump, int min_disp_th)
         {
             cudaSafeCall( cudaMemcpyToSymbol(cmax_data_term,    &max_data_term,    sizeof(float)) );
             cudaSafeCall( cudaMemcpyToSymbol(cdata_weight,      &data_weight,      sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmax_disc_term,    &max_disc_term,    sizeof(float)) );
             cudaSafeCall( cudaMemcpyToSymbol(cdisc_single_jump, &disc_single_jump, sizeof(float)) );
 
             cudaSafeCall( cudaMemcpyToSymbol(cth, &min_disp_th, sizeof(int)) );
@@ -688,7 +686,7 @@ namespace cv { namespace cuda { namespace device
 
         template <typename T>
         __device__ void message_per_pixel(const T* data, T* msg_dst, const T* msg1, const T* msg2, const T* msg3,
-                                          const T* dst_disp, const T* src_disp, int nr_plane, volatile T* temp)
+                                          const T* dst_disp, const T* src_disp, int nr_plane, int max_disc_term, volatile T* temp)
         {
             T minimum = numeric_limits<T>::max();
 
@@ -706,7 +704,7 @@ namespace cv { namespace cuda { namespace device
             float sum = 0;
             for(int d = 0; d < nr_plane; d++)
             {
-                float cost_min = minimum + cmax_disc_term;
+                float cost_min = minimum + max_disc_term;
                 T src_disp_reg = src_disp[d * cdisp_step1];
 
                 for(int d2 = 0; d2 < nr_plane; d2++)
@@ -722,7 +720,7 @@ namespace cv { namespace cuda { namespace device
         }
 
         template <typename T>
-        __global__ void compute_message(uchar *ctemp, T* u_, T* d_, T* l_, T* r_, const T* data_cost_selected, const T* selected_disp_pyr_cur, int h, int w, int nr_plane, int i)
+        __global__ void compute_message(uchar *ctemp, T* u_, T* d_, T* l_, T* r_, const T* data_cost_selected, const T* selected_disp_pyr_cur, int h, int w, int nr_plane, int i, int max_disc_term)
         {
             int y = blockIdx.y * blockDim.y + threadIdx.y;
             int x = ((blockIdx.x * blockDim.x + threadIdx.x) << 1) + ((y + i) & 1);
@@ -740,17 +738,17 @@ namespace cv { namespace cuda { namespace device
 
                 T* temp = (T*)ctemp + y * cmsg_step + x;
 
-                message_per_pixel(data, u, r - 1, u + cmsg_step, l + 1, disp, disp - cmsg_step, nr_plane, temp);
-                message_per_pixel(data, d, d - cmsg_step, r - 1, l + 1, disp, disp + cmsg_step, nr_plane, temp);
-                message_per_pixel(data, l, u + cmsg_step, d - cmsg_step, l + 1, disp, disp - 1, nr_plane, temp);
-                message_per_pixel(data, r, u + cmsg_step, d - cmsg_step, r - 1, disp, disp + 1, nr_plane, temp);
+                message_per_pixel(data, u, r - 1, u + cmsg_step, l + 1, disp, disp - cmsg_step, nr_plane, max_disc_term, temp);
+                message_per_pixel(data, d, d - cmsg_step, r - 1, l + 1, disp, disp + cmsg_step, nr_plane, max_disc_term, temp);
+                message_per_pixel(data, l, u + cmsg_step, d - cmsg_step, l + 1, disp, disp - 1, nr_plane, max_disc_term, temp);
+                message_per_pixel(data, r, u + cmsg_step, d - cmsg_step, r - 1, disp, disp + 1, nr_plane, max_disc_term, temp);
             }
         }
 
 
         template<class T>
         void calc_all_iterations(uchar *ctemp, T* u, T* d, T* l, T* r, const T* data_cost_selected,
-            const T* selected_disp_pyr_cur, size_t msg_step, int h, int w, int nr_plane, int iters, cudaStream_t stream)
+            const T* selected_disp_pyr_cur, size_t msg_step, int h, int w, int nr_plane, int iters, int max_disc_term, cudaStream_t stream)
         {
             size_t disp_step = msg_step * h;
             cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step, sizeof(size_t)) );
@@ -764,7 +762,7 @@ namespace cv { namespace cuda { namespace device
 
             for(int t = 0; t < iters; ++t)
             {
-                compute_message<<<grid, threads, 0, stream>>>(ctemp, u, d, l, r, data_cost_selected, selected_disp_pyr_cur, h, w, nr_plane, t & 1);
+                compute_message<<<grid, threads, 0, stream>>>(ctemp, u, d, l, r, data_cost_selected, selected_disp_pyr_cur, h, w, nr_plane, t & 1, max_disc_term);
                 cudaSafeCall( cudaGetLastError() );
             }
             if (stream == 0)
@@ -772,10 +770,10 @@ namespace cv { namespace cuda { namespace device
         };
 
         template void calc_all_iterations(uchar *ctemp, short* u, short* d, short* l, short* r, const short* data_cost_selected, const short* selected_disp_pyr_cur, size_t msg_step,
-            int h, int w, int nr_plane, int iters, cudaStream_t stream);
+            int h, int w, int nr_plane, int iters, int max_disc_term, cudaStream_t stream);
 
         template void calc_all_iterations(uchar *ctemp, float* u, float* d, float* l, float* r, const float* data_cost_selected, const float* selected_disp_pyr_cur, size_t msg_step,
-            int h, int w, int nr_plane, int iters, cudaStream_t stream);
+            int h, int w, int nr_plane, int iters, int max_disc_term, cudaStream_t stream);
 
 
         ///////////////////////////////////////////////////////////////
