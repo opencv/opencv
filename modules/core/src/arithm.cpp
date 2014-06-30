@@ -3132,9 +3132,16 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
          (!haveScalar && (sdepth != ldepth || sdepth != udepth)) )
         return false;
 
-    ocl::Kernel ker("inrange", ocl::core::inrange_oclsrc,
-                    format("%s-D cn=%d -D T=%s%s", haveScalar ? "-D HAVE_SCALAR " : "",
-                           cn, ocl::typeToStr(sdepth), doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    int kercn = haveScalar ? cn : std::max(std::min(ocl::predictOptimalVectorWidth(_src, _lowerb, _upperb, _dst), 4), cn);
+    if (kercn % cn != 0)
+        kercn = cn;
+    int colsPerWI = kercn / cn;
+    String opts = format("%s-D cn=%d -D srcT=%s -D srcT1=%s -D dstT=%s -D kercn=%d -D depth=%d%s -D colsPerWI=%d",
+                           haveScalar ? "-D HAVE_SCALAR " : "", cn, ocl::typeToStr(CV_MAKE_TYPE(sdepth, kercn)),
+                           ocl::typeToStr(sdepth), ocl::typeToStr(CV_8UC(colsPerWI)), kercn, sdepth,
+                           doubleSupport ? " -D DOUBLE_SUPPORT" : "", colsPerWI);
+
+    ocl::Kernel ker("inrange", ocl::core::inrange_oclsrc, opts);
     if (ker.empty())
         return false;
 
@@ -3182,7 +3189,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
     }
 
     ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
-            dstarg = ocl::KernelArg::WriteOnly(dst);
+            dstarg = ocl::KernelArg::WriteOnly(dst, 1, colsPerWI);
 
     if (haveScalar)
     {
@@ -3196,7 +3203,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
         ker.args(srcarg, dstarg, ocl::KernelArg::ReadOnlyNoSize(lscalaru),
                ocl::KernelArg::ReadOnlyNoSize(uscalaru), rowsPerWI);
 
-    size_t globalsize[2] = { ssize.width, (ssize.height + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { ssize.width / colsPerWI, (ssize.height + rowsPerWI - 1) / rowsPerWI };
     return ker.run(2, globalsize, NULL, false);
 }
 
