@@ -231,7 +231,7 @@ OCL_PERF_TEST_P(IntegralFixture, Integral1, ::testing::Combine(OCL_TEST_SIZES, O
 
     OCL_TEST_CYCLE() cv::integral(src, dst, ddepth);
 
-    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+    SANITY_CHECK(dst, 2e-6, ERROR_RELATIVE);
 }
 
 OCL_PERF_TEST_P(IntegralFixture, Integral2, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32S, CV_32F)))
@@ -243,11 +243,11 @@ OCL_PERF_TEST_P(IntegralFixture, Integral2, ::testing::Combine(OCL_TEST_SIZES, O
     checkDeviceMaxMemoryAllocSize(srcSize, ddepth);
 
     UMat src(srcSize, CV_8UC1), sum(srcSize + Size(1, 1), ddepth), sqsum(srcSize + Size(1, 1), CV_32F);
-    declare.in(src, WARMUP_RNG).out(sum).out(sqsum);
+    declare.in(src, WARMUP_RNG).out(sum, sqsum);
 
     OCL_TEST_CYCLE() cv::integral(src, sum, sqsum, ddepth, CV_32F);
 
-    SANITY_CHECK(sum, 1e-6, ERROR_RELATIVE);
+    SANITY_CHECK(sum, 2e-4, ERROR_RELATIVE);
     SANITY_CHECK(sqsum, 5e-5, ERROR_RELATIVE);
 }
 
