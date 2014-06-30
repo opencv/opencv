@@ -82,39 +82,30 @@ namespace cv { namespace cuda { namespace device
         /////////////////////// init data cost ////////////////////////
         ///////////////////////////////////////////////////////////////
 
-        template <int channels> struct DataCostPerPixel;
-        template <> struct DataCostPerPixel<1>
+        template <int channels> float __device__ pixeldiff(const uchar* left, const uchar* right);
+        template<> float __device__ __forceinline__ pixeldiff<1>(const uchar* left, const uchar* right)
         {
-            static __device__ __forceinline__ float compute(const uchar* left, const uchar* right)
-            {
-                return cdata_weight * fmin( ::abs((int)*left - *right), cmax_data_term);
-            }
-        };
-        template <> struct DataCostPerPixel<3>
+            return cdata_weight * fmin( ::abs((int)*left - *right), cmax_data_term);
+        }
+        template <> float __device__ __forceinline__ pixeldiff<3>(const uchar* left, const uchar* right)
         {
-            static __device__ __forceinline__ float compute(const uchar* left, const uchar* right)
-            {
-                float tb = 0.114f * ::abs((int)left[0] - right[0]);
-                float tg = 0.587f * ::abs((int)left[1] - right[1]);
-                float tr = 0.299f * ::abs((int)left[2] - right[2]);
+            float tb = 0.114f * ::abs((int)left[0] - right[0]);
+            float tg = 0.587f * ::abs((int)left[1] - right[1]);
+            float tr = 0.299f * ::abs((int)left[2] - right[2]);
 
-                return cdata_weight * fmin(tr + tg + tb, cmax_data_term);
-            }
-        };
-        template <> struct DataCostPerPixel<4>
+            return cdata_weight * fmin(tr + tg + tb, cmax_data_term);
+        }
+        template <> float __device__ __forceinline__ pixeldiff<4>(const uchar* left, const uchar* right)
         {
-            static __device__ __forceinline__ float compute(const uchar* left, const uchar* right)
-            {
-                uchar4 l = *((const uchar4*)left);
-                uchar4 r = *((const uchar4*)right);
+            uchar4 l = *((const uchar4*)left);
+            uchar4 r = *((const uchar4*)right);
 
-                float tb = 0.114f * ::abs((int)l.x - r.x);
-                float tg = 0.587f * ::abs((int)l.y - r.y);
-                float tr = 0.299f * ::abs((int)l.z - r.z);
+            float tb = 0.114f * ::abs((int)l.x - r.x);
+            float tg = 0.587f * ::abs((int)l.y - r.y);
+            float tr = 0.299f * ::abs((int)l.z - r.z);
 
-                return cdata_weight * fmin(tr + tg + tb, cmax_data_term);
-            }
-        };
+            return cdata_weight * fmin(tr + tg + tb, cmax_data_term);
+        }
 
         template <typename T>
         __global__ void get_first_k_initial_global(uchar *ctemp, T* data_cost_selected_, T *selected_disp_pyr, int h, int w, int nr_plane, int ndisp)
@@ -237,7 +228,7 @@ namespace cv { namespace cuda { namespace device
                                 const uchar* lle = cleft + yi * cimg_step + xi * channels;
                                 const uchar* lri = cright + yi * cimg_step + xr * channels;
 
-                                val += DataCostPerPixel<channels>::compute(lle, lri);
+                                val += pixeldiff<channels>(lle, lri);
                             }
                         }
                     }
@@ -274,7 +265,7 @@ namespace cv { namespace cuda { namespace device
 
                         for(int y = 0; y < len; ++y)
                         {
-                            val += DataCostPerPixel<channels>::compute(lle, lri);
+                            val += pixeldiff<channels>(lle, lri);
 
                             lle += cimg_step;
                             lri += cimg_step;
@@ -416,7 +407,7 @@ namespace cv { namespace cuda { namespace device
                                 const uchar* left_x = cleft + yi * cimg_step + xi * channels;
                                 const uchar* right_x = cright + yi * cimg_step + xr * channels;
 
-                                val += DataCostPerPixel<channels>::compute(left_x, right_x);
+                                val += pixeldiff<channels>(left_x, right_x);
                             }
                         }
                     }
@@ -458,7 +449,7 @@ namespace cv { namespace cuda { namespace device
 
                         for(int y = 0; y < len; ++y)
                         {
-                            val += DataCostPerPixel<channels>::compute(lle, lri);
+                            val += pixeldiff<channels>(lle, lri);
 
                             lle += cimg_step;
                             lri += cimg_step;
