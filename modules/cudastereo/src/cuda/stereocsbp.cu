@@ -58,8 +58,6 @@ namespace cv { namespace cuda { namespace device
         /////////////////////// load constants ////////////////////////
         ///////////////////////////////////////////////////////////////
 
-        __constant__ int cndisp;
-
         __constant__ float cmax_data_term;
         __constant__ float cdata_weight;
         __constant__ float cmax_disc_term;
@@ -72,10 +70,8 @@ namespace cv { namespace cuda { namespace device
         __constant__ size_t cdisp_step2;
 
 
-        void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, int min_disp_th)
+        void load_constants(float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, int min_disp_th)
         {
-            cudaSafeCall( cudaMemcpyToSymbol(cndisp, &ndisp, sizeof(int)) );
-
             cudaSafeCall( cudaMemcpyToSymbol(cmax_data_term,    &max_data_term,    sizeof(float)) );
             cudaSafeCall( cudaMemcpyToSymbol(cdata_weight,      &data_weight,      sizeof(float)) );
             cudaSafeCall( cudaMemcpyToSymbol(cmax_disc_term,    &max_disc_term,    sizeof(float)) );
@@ -123,7 +119,7 @@ namespace cv { namespace cuda { namespace device
         };
 
         template <typename T>
-        __global__ void get_first_k_initial_global(uchar *ctemp, T* data_cost_selected_, T *selected_disp_pyr, int h, int w, int nr_plane)
+        __global__ void get_first_k_initial_global(uchar *ctemp, T* data_cost_selected_, T *selected_disp_pyr, int h, int w, int nr_plane, int ndisp)
         {
             int x = blockIdx.x * blockDim.x + threadIdx.x;
             int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -138,7 +134,7 @@ namespace cv { namespace cuda { namespace device
                 {
                     T minimum = device::numeric_limits<T>::max();
                     int id = 0;
-                    for(int d = 0; d < cndisp; d++)
+                    for(int d = 0; d < ndisp; d++)
                     {
                         T cur = data_cost[d * cdisp_step1];
                         if(cur < minimum)
@@ -157,7 +153,7 @@ namespace cv { namespace cuda { namespace device
 
 
         template <typename T>
-        __global__ void get_first_k_initial_local(uchar *ctemp, T* data_cost_selected_, T* selected_disp_pyr, int h, int w, int nr_plane)
+        __global__ void get_first_k_initial_local(uchar *ctemp, T* data_cost_selected_, T* selected_disp_pyr, int h, int w, int nr_plane, int ndisp)
         {
             int x = blockIdx.x * blockDim.x + threadIdx.x;
             int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -174,7 +170,7 @@ namespace cv { namespace cuda { namespace device
                 T cur  = data_cost[1 * cdisp_step1];
                 T next = data_cost[2 * cdisp_step1];
 
-                for (int d = 1; d < cndisp - 1 && nr_local_minimum < nr_plane; d++)
+                for (int d = 1; d < ndisp - 1 && nr_local_minimum < nr_plane; d++)
                 {
                     if (cur < prev && cur < next)
                     {
@@ -195,7 +191,7 @@ namespace cv { namespace cuda { namespace device
                     T minimum = numeric_limits<T>::max();
                     int id = 0;
 
-                    for (int d = 0; d < cndisp; d++)
+                    for (int d = 0; d < ndisp; d++)
                     {
                         cur = data_cost[d * cdisp_step1];
                         if (cur < minimum)
@@ -213,7 +209,7 @@ namespace cv { namespace cuda { namespace device
         }
 
         template <typename T, int channels>
-        __global__ void init_data_cost(const uchar *cleft, const uchar *cright, uchar *ctemp, size_t cimg_step, int h, int w, int level)
+        __global__ void init_data_cost(const uchar *cleft, const uchar *cright, uchar *ctemp, size_t cimg_step, int h, int w, int level, int ndisp)
         {
             int x = blockIdx.x * blockDim.x + threadIdx.x;
             int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -228,7 +224,7 @@ namespace cv { namespace cuda { namespace device
 
                 T* data_cost = (T*)ctemp + y * cmsg_step + x;
 
-                for(int d = 0; d < cndisp; ++d)
+                for(int d = 0; d < ndisp; ++d)
                 {
                     float val = 0.0f;
                     for(int yi = y0; yi < yt; yi++)
@@ -253,7 +249,7 @@ namespace cv { namespace cuda { namespace device
         }
 
         template <typename T, int winsz, int channels>
-        __global__ void init_data_cost_reduce(const uchar *cleft, const uchar *cright, uchar *ctemp, size_t cimg_step, int level, int rows, int cols, int h)
+        __global__ void init_data_cost_reduce(const uchar *cleft, const uchar *cright, uchar *ctemp, size_t cimg_step, int level, int rows, int cols, int h, int ndisp)
         {
             int x_out = blockIdx.x;
             int y_out = blockIdx.y % h;
@@ -261,7 +257,7 @@ namespace cv { namespace cuda { namespace device
 
             int tid = threadIdx.x;
 
-            if (d < cndisp)
+            if (d < ndisp)
             {
                 int x0 = x_out << level;
                 int y0 = y_out << level;
@@ -301,7 +297,7 @@ namespace cv { namespace cuda { namespace device
 
 
         template <typename T>
-        void init_data_cost_caller_(const uchar *cleft, const uchar *cright, uchar *ctemp, size_t cimg_step, int /*rows*/, int /*cols*/, int h, int w, int level, int /*ndisp*/, int channels, cudaStream_t stream)
+        void init_data_cost_caller_(const uchar *cleft, const uchar *cright, uchar *ctemp, size_t cimg_step, int /*rows*/, int /*cols*/, int h, int w, int level, int ndisp, int channels, cudaStream_t stream)
         {
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -311,9 +307,9 @@ namespace cv { namespace cuda { namespace device
 
             switch (channels)
             {
-            case 1: init_data_cost<T, 1><<<grid, threads, 0, stream>>>(cleft, cright, ctemp, cimg_step, h, w, level); break;
-            case 3: init_data_cost<T, 3><<<grid, threads, 0, stream>>>(cleft, cright, ctemp, cimg_step, h, w, level); break;
-            case 4: init_data_cost<T, 4><<<grid, threads, 0, stream>>>(cleft, cright, ctemp, cimg_step, h, w, level); break;
+            case 1: init_data_cost<T, 1><<<grid, threads, 0, stream>>>(cleft, cright, ctemp, cimg_step, h, w, level, ndisp); break;
+            case 3: init_data_cost<T, 3><<<grid, threads, 0, stream>>>(cleft, cright, ctemp, cimg_step, h, w, level, ndisp); break;
+            case 4: init_data_cost<T, 4><<<grid, threads, 0, stream>>>(cleft, cright, ctemp, cimg_step, h, w, level, ndisp); break;
             default: CV_Error(cv::Error::BadNumChannels, "Unsupported channels count");
             }
         }
@@ -330,9 +326,9 @@ namespace cv { namespace cuda { namespace device
 
             switch (channels)
             {
-            case 1: init_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(cleft, cright, ctemp, cimg_step, level, rows, cols, h); break;
-            case 3: init_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(cleft, cright, ctemp, cimg_step, level, rows, cols, h); break;
-            case 4: init_data_cost_reduce<T, winsz, 4><<<grid, threads, smem_size, stream>>>(cleft, cright, ctemp, cimg_step, level, rows, cols, h); break;
+            case 1: init_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(cleft, cright, ctemp, cimg_step, level, rows, cols, h, ndisp); break;
+            case 3: init_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(cleft, cright, ctemp, cimg_step, level, rows, cols, h, ndisp); break;
+            case 4: init_data_cost_reduce<T, winsz, 4><<<grid, threads, smem_size, stream>>>(cleft, cright, ctemp, cimg_step, level, rows, cols, h, ndisp); break;
             default: CV_Error(cv::Error::BadNumChannels, "Unsupported channels count");
             }
         }
@@ -368,9 +364,9 @@ namespace cv { namespace cuda { namespace device
             grid.y = divUp(h, threads.y);
 
             if (use_local_init_data_cost == true)
-                get_first_k_initial_local<<<grid, threads, 0, stream>>> (ctemp, data_cost_selected, disp_selected_pyr, h, w, nr_plane);
+                get_first_k_initial_local<<<grid, threads, 0, stream>>> (ctemp, data_cost_selected, disp_selected_pyr, h, w, nr_plane, ndisp);
             else
-                get_first_k_initial_global<<<grid, threads, 0, stream>>>(ctemp, data_cost_selected, disp_selected_pyr, h, w, nr_plane);
+                get_first_k_initial_global<<<grid, threads, 0, stream>>>(ctemp, data_cost_selected, disp_selected_pyr, h, w, nr_plane, ndisp);
 
             cudaSafeCall( cudaGetLastError() );
 

@@ -222,7 +222,7 @@ namespace
         ////////////////////////////////////////////////////////////////////////////
         // Compute
 
-        load_constants(ndisp_, max_data_term_, data_weight_, max_disc_term_, disc_single_jump_, min_disp_th_);
+        load_constants(max_data_term_, data_weight_, max_disc_term_, disc_single_jump_, min_disp_th_);
 
         l[0].setTo(0, _stream);
         d[0].setTo(0, _stream);
