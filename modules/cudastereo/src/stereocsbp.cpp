@@ -222,7 +222,7 @@ namespace
         ////////////////////////////////////////////////////////////////////////////
         // Compute
 
-        load_constants(max_data_term_, data_weight_, disc_single_jump_, min_disp_th_);
+        load_constants(disc_single_jump_, min_disp_th_);
 
         l[0].setTo(0, _stream);
         d[0].setTo(0, _stream);
@@ -246,12 +246,12 @@ namespace
                 if (i == levels_ - 1)
                 {
                     init_data_cost(left.ptr<uchar>(), right.ptr<uchar>(), temp_.ptr<uchar>(), left.step, left.rows, left.cols, disp_selected_pyr[cur_idx].ptr<float>(), data_cost_selected.ptr<float>(),
-                        elem_step, rows_pyr[i], cols_pyr[i], i, nr_plane_pyr[i], ndisp_, left.channels(), use_local_init_data_cost_, stream);
+                        elem_step, rows_pyr[i], cols_pyr[i], i, nr_plane_pyr[i], ndisp_, left.channels(), data_weight_, max_data_term_, use_local_init_data_cost_, stream);
                 }
                 else
                 {
                     compute_data_cost(left.ptr<uchar>(), right.ptr<uchar>(), left.step, disp_selected_pyr[cur_idx].ptr<float>(), data_cost.ptr<float>(), elem_step,
-                        left.rows, left.cols, rows_pyr[i], cols_pyr[i], rows_pyr[i+1], i, nr_plane_pyr[i+1], left.channels(), stream);
+                        left.rows, left.cols, rows_pyr[i], cols_pyr[i], rows_pyr[i+1], i, nr_plane_pyr[i+1], left.channels(), data_weight_, max_data_term_, stream);
 
                     int new_idx = (cur_idx + 1) & 1;
 
@@ -277,12 +277,12 @@ namespace
                 if (i == levels_ - 1)
                 {
                     init_data_cost(left.ptr<uchar>(), right.ptr<uchar>(), temp_.ptr<uchar>(), left.step, left.rows, left.cols, disp_selected_pyr[cur_idx].ptr<short>(), data_cost_selected.ptr<short>(),
-                        elem_step, rows_pyr[i], cols_pyr[i], i, nr_plane_pyr[i], ndisp_, left.channels(), use_local_init_data_cost_, stream);
+                        elem_step, rows_pyr[i], cols_pyr[i], i, nr_plane_pyr[i], ndisp_, left.channels(), data_weight_, max_data_term_, use_local_init_data_cost_, stream);
                 }
                 else
                 {
                     compute_data_cost(left.ptr<uchar>(), right.ptr<uchar>(), left.step, disp_selected_pyr[cur_idx].ptr<short>(), data_cost.ptr<short>(), elem_step,
-                        left.rows, left.cols, rows_pyr[i], cols_pyr[i], rows_pyr[i+1], i, nr_plane_pyr[i+1], left.channels(), stream);
+                        left.rows, left.cols, rows_pyr[i], cols_pyr[i], rows_pyr[i+1], i, nr_plane_pyr[i+1], left.channels(), data_weight_, max_data_term_, stream);
 
                     int new_idx = (cur_idx + 1) & 1;
 
