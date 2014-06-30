@@ -1107,7 +1107,7 @@ CV_INLINE  CvSetElem* cvSetNew( CvSet* set_header )
         set_header->active_count++;
     }
     else
-        cvSetAdd( set_header, NULL, (CvSetElem**)&elem );
+        cvSetAdd( set_header, NULL, &elem );
     return elem;
 }
 
