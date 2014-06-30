@@ -222,7 +222,7 @@ namespace
         ////////////////////////////////////////////////////////////////////////////
         // Compute
 
-        load_constants(max_data_term_, data_weight_, max_disc_term_, disc_single_jump_, min_disp_th_);
+        load_constants(max_data_term_, data_weight_, disc_single_jump_, min_disp_th_);
 
         l[0].setTo(0, _stream);
         d[0].setTo(0, _stream);
@@ -267,7 +267,7 @@ namespace
 
                 calc_all_iterations(temp_.ptr<uchar>(), u[cur_idx].ptr<float>(), d[cur_idx].ptr<float>(), l[cur_idx].ptr<float>(), r[cur_idx].ptr<float>(),
                                     data_cost_selected.ptr<float>(), disp_selected_pyr[cur_idx].ptr<float>(), elem_step,
-                                    rows_pyr[i], cols_pyr[i], nr_plane_pyr[i], iters_, stream);
+                                    rows_pyr[i], cols_pyr[i], nr_plane_pyr[i], iters_, max_disc_term_, stream);
             }
         }
         else
@@ -298,7 +298,7 @@ namespace
 
                 calc_all_iterations(temp_.ptr<uchar>(), u[cur_idx].ptr<short>(), d[cur_idx].ptr<short>(), l[cur_idx].ptr<short>(), r[cur_idx].ptr<short>(),
                                     data_cost_selected.ptr<short>(), disp_selected_pyr[cur_idx].ptr<short>(), elem_step,
-                                    rows_pyr[i], cols_pyr[i], nr_plane_pyr[i], iters_, stream);
+                                    rows_pyr[i], cols_pyr[i], nr_plane_pyr[i], iters_, max_disc_term_, stream);
             }
         }
 

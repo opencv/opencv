@@ -2,7 +2,7 @@ namespace cv { namespace cuda { namespace device
 {
     namespace stereocsbp
     {
-        void load_constants(float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, int min_disp_th);
+        void load_constants(float max_data_term, float data_weight, float disc_single_jump, int min_disp_th);
 
         template<class T>
         void init_data_cost(const uchar *left, const uchar *right, uchar *ctemp, size_t cimg_step, int rows, int cols, T* disp_selected_pyr, T* data_cost_selected, size_t msg_step,
@@ -21,7 +21,7 @@ namespace cv { namespace cuda { namespace device
 
         template<class T>
         void calc_all_iterations(uchar *ctemp, T* u, T* d, T* l, T* r, const T* data_cost_selected,
-            const T* selected_disp_pyr_cur, size_t msg_step, int h, int w, int nr_plane, int iters, cudaStream_t stream);
+            const T* selected_disp_pyr_cur, size_t msg_step, int h, int w, int nr_plane, int iters, int max_disc_term, cudaStream_t stream);
 
         template<class T>
         void compute_disp(const T* u, const T* d, const T* l, const T* r, const T* data_cost_selected, const T* disp_selected, size_t msg_step,
