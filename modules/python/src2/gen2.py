@@ -828,7 +828,7 @@ class PythonWrapperGenerator(object):
         f.write(buf.getvalue())
         f.close()
 
-    def gen(self, srcfiles, output_path):
+    def gen(self, srcfiles, output_path, prefix):
         self.clear()
         parser = hdr_parser.CppHeaderParser()
 
@@ -914,20 +914,28 @@ class PythonWrapperGenerator(object):
             self.gen_const_reg(constinfo)
 
         # That's it. Now save all the files
-        self.save(output_path, "pyopencv_generated_include.h", self.code_include)
-        self.save(output_path, "pyopencv_generated_funcs.h", self.code_funcs)
-        self.save(output_path, "pyopencv_generated_func_tab.h", self.code_func_tab)
-        self.save(output_path, "pyopencv_generated_const_reg.h", self.code_const_reg)
-        self.save(output_path, "pyopencv_generated_types.h", self.code_types)
-        self.save(output_path, "pyopencv_generated_type_reg.h", self.code_type_reg)
-        self.save(output_path, "pyopencv_generated_typedefs.h", self.code_typedefs)
+        if(prefix=="master"):
+            prefix=""
+        elif(prefix=="contrib"):
+            prefix="_contrib"
+        self.save(output_path, "pyopencv_generated"+prefix+"_include.h", self.code_include)
+        self.save(output_path, "pyopencv_generated"+prefix+"_funcs.h", self.code_funcs)
+        self.save(output_path, "pyopencv_generated"+prefix+"_func_tab.h", self.code_func_tab)
+        self.save(output_path, "pyopencv_generated"+prefix+"_const_reg.h", self.code_const_reg)
+        self.save(output_path, "pyopencv_generated"+prefix+"_types.h", self.code_types)
+        self.save(output_path, "pyopencv_generated"+prefix+"_type_reg.h", self.code_type_reg)
+        self.save(output_path, "pyopencv_generated"+prefix+"_typedefs.h", self.code_typedefs)
 
 if __name__ == "__main__":
     srcfiles = hdr_parser.opencv_hdr_list
     dstdir = "/Users/vp/tmp"
+    prefix = ""         # Prefix for filenames
     if len(sys.argv) > 1:
-        dstdir = sys.argv[1]
+        prefix = sys.argv[1]
     if len(sys.argv) > 2:
-        srcfiles = sys.argv[2:]
+        dstdir = sys.argv[2]
+    if len(sys.argv) > 3:
+        srcfiles = sys.argv[3:]
+    print("prefix: {0}\ndstdir: {1}\nsrcfiles: {2}\n".format(prefix, dstdir, srcfiles))
     generator = PythonWrapperGenerator()
-    generator.gen(srcfiles, dstdir)
+    generator.gen(srcfiles, dstdir, prefix)
