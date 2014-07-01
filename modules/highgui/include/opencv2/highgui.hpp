@@ -231,7 +231,8 @@ enum { CAP_ANY          = 0,     // autodetect
        CAP_AVFOUNDATION = 1200,  // AVFoundation framework for iOS (OS X Lion will have the same API)
        CAP_GIGANETIX    = 1300,  // Smartek Giganetix GigEVisionSDK
        CAP_MSMF         = 1400,  // Microsoft Media Foundation (via videoInput)
-       CAP_INTELPERC    = 1500   // Intel Perceptual Computing SDK
+       CAP_INTELPERC    = 1500,  // Intel Perceptual Computing SDK
+       CAP_OPENNI2      = 1600   // OpenNI2 (for Kinect)
      };
 
 // generic properties (based on DC1394 properties)
@@ -293,19 +294,22 @@ enum { CAP_OPENNI_DEPTH_GENERATOR = 1 << 31,
      };
 
 // Properties of cameras available through OpenNI interfaces
-enum { CAP_PROP_OPENNI_OUTPUT_MODE       = 100,
-       CAP_PROP_OPENNI_FRAME_MAX_DEPTH   = 101, // in mm
-       CAP_PROP_OPENNI_BASELINE          = 102, // in mm
-       CAP_PROP_OPENNI_FOCAL_LENGTH      = 103, // in pixels
-       CAP_PROP_OPENNI_REGISTRATION      = 104, // flag that synchronizes the remapping depth map to image map
-                                                // by changing depth generator's view point (if the flag is "on") or
-                                                // sets this view point to its normal one (if the flag is "off").
-       CAP_PROP_OPENNI_REGISTRATION_ON   = CAP_PROP_OPENNI_REGISTRATION,
-       CAP_PROP_OPENNI_APPROX_FRAME_SYNC = 105,
-       CAP_PROP_OPENNI_MAX_BUFFER_SIZE   = 106,
-       CAP_PROP_OPENNI_CIRCLE_BUFFER     = 107,
-       CAP_PROP_OPENNI_MAX_TIME_DURATION = 108,
-       CAP_PROP_OPENNI_GENERATOR_PRESENT = 109
+enum {
+    CAP_PROP_OPENNI_OUTPUT_MODE       = 100,
+    CAP_PROP_OPENNI_FRAME_MAX_DEPTH   = 101, // in mm
+    CAP_PROP_OPENNI_BASELINE          = 102, // in mm
+    CAP_PROP_OPENNI_FOCAL_LENGTH      = 103, // in pixels
+    CAP_PROP_OPENNI_REGISTRATION      = 104, // flag that synchronizes the remapping depth map to image map
+                                             // by changing depth generator's view point (if the flag is "on") or
+                                             // sets this view point to its normal one (if the flag is "off").
+    CAP_PROP_OPENNI_REGISTRATION_ON   = CAP_PROP_OPENNI_REGISTRATION,
+    CAP_PROP_OPENNI_APPROX_FRAME_SYNC = 105,
+    CAP_PROP_OPENNI_MAX_BUFFER_SIZE   = 106,
+    CAP_PROP_OPENNI_CIRCLE_BUFFER     = 107,
+    CAP_PROP_OPENNI_MAX_TIME_DURATION = 108,
+    CAP_PROP_OPENNI_GENERATOR_PRESENT = 109,
+    CAP_PROP_OPENNI2_SYNC             = 110,
+    CAP_PROP_OPENNI2_MIRROR           = 111
      };
 
 // OpenNI shortcats

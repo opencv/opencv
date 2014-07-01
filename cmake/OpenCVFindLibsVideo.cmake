@@ -166,6 +166,11 @@ if(WITH_OPENNI)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindOpenNI.cmake")
 endif(WITH_OPENNI)
 
+ocv_clear_vars(HAVE_OPENNI2)
+if(WITH_OPENNI2)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindOpenNI2.cmake")
+endif(WITH_OPENNI2)
+
 # --- XIMEA ---
 ocv_clear_vars(HAVE_XIMEA)
 if(WITH_XIMEA)

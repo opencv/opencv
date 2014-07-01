@@ -249,6 +249,7 @@ enum
     CV_CAP_PVAPI    =800,   // PvAPI, Prosilica GigE SDK
 
     CV_CAP_OPENNI   =900,   // OpenNI (for Kinect)
+
     CV_CAP_OPENNI_ASUS =910,   // OpenNI (for Asus Xtion)
 
     CV_CAP_ANDROID  =1000,  // Android
@@ -261,7 +262,9 @@ enum
 
     CV_CAP_GIGANETIX = 1300,  // Smartek Giganetix GigEVisionSDK
 
-    CV_CAP_INTELPERC = 1500 // Intel Perceptual Computing SDK
+    CV_CAP_INTELPERC = 1500, // Intel Perceptual Computing SDK
+
+    CV_CAP_OPENNI2 = 1600   // OpenNI2 (for Kinect)
 };
 
 /* start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*) */
@@ -357,6 +360,8 @@ enum
     CV_CAP_PROP_OPENNI_MAX_TIME_DURATION = 108,
 
     CV_CAP_PROP_OPENNI_GENERATOR_PRESENT = 109,
+    CV_CAP_PROP_OPENNI2_SYNC = 110,
+    CV_CAP_PROP_OPENNI2_MIRROR = 111,
 
     CV_CAP_OPENNI_IMAGE_GENERATOR_PRESENT         = CV_CAP_OPENNI_IMAGE_GENERATOR + CV_CAP_PROP_OPENNI_GENERATOR_PRESENT,
     CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE     = CV_CAP_OPENNI_IMAGE_GENERATOR + CV_CAP_PROP_OPENNI_OUTPUT_MODE,

@@ -124,6 +124,12 @@ if(HAVE_OPENNI)
   list(APPEND HIGHGUI_LIBRARIES ${OPENNI_LIBRARY})
 endif(HAVE_OPENNI)
 
+if(HAVE_OPENNI2)
+  list(APPEND highgui_srcs src/cap_openni2.cpp)
+  ocv_include_directories(${OPENNI2_INCLUDE_DIR})
+  list(APPEND HIGHGUI_LIBRARIES ${OPENNI2_LIBRARY})
+endif(HAVE_OPENNI2)
+
 if(HAVE_opencv_androidcamera)
   list(APPEND highgui_srcs src/cap_android.cpp)
   add_definitions(-DHAVE_ANDROID_NATIVE_CAMERA)#TODO: remove this line
