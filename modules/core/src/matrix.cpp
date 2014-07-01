@@ -2973,8 +2973,10 @@ static inline int divUp(int a, int b)
 
 static bool ocl_transpose( InputArray _src, OutputArray _dst )
 {
+    const ocl::Device & dev = ocl::Device::getDefault();
     const int TILE_DIM = 32, BLOCK_ROWS = 8;
-    int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+    int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type),
+        rowsPerWI = dev.isIntel() ? 4 : 1;
 
     UMat src = _src.getUMat();
     _dst.create(src.cols, src.rows, type);
@@ -2990,9 +2992,9 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
     }
 
     ocl::Kernel k(kernelName.c_str(), ocl::core::transpose_oclsrc,
-                  format("-D T=%s -D T1=%s -D cn=%d -D TILE_DIM=%d -D BLOCK_ROWS=%d",
+                  format("-D T=%s -D T1=%s -D cn=%d -D TILE_DIM=%d -D BLOCK_ROWS=%d -D rowsPerWI=%d",
                          ocl::memopTypeToStr(type), ocl::memopTypeToStr(depth),
-                         cn, TILE_DIM, BLOCK_ROWS));
+                         cn, TILE_DIM, BLOCK_ROWS, rowsPerWI));
     if (k.empty())
         return false;
 
@@ -3002,8 +3004,14 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
         k.args(ocl::KernelArg::ReadOnly(src),
                ocl::KernelArg::WriteOnlyNoSize(dst));
 
-    size_t localsize[3]  = { TILE_DIM, BLOCK_ROWS, 1 };
-    size_t globalsize[3] = { src.cols, inplace ? src.rows : divUp(src.rows, TILE_DIM) * BLOCK_ROWS, 1 };
+    size_t localsize[2]  = { TILE_DIM, BLOCK_ROWS };
+    size_t globalsize[2] = { src.cols, inplace ? (src.rows + rowsPerWI - 1) / rowsPerWI : (divUp(src.rows, TILE_DIM) * BLOCK_ROWS) };
+
+    if (inplace && dev.isIntel())
+    {
+        localsize[0] = 16;
+        localsize[1] = dev.maxWorkGroupSize() / localsize[0];
+    }
 
     return k.run(2, globalsize, localsize, false);
 }
