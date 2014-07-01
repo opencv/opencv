@@ -448,13 +448,12 @@ double CvCaptureCAM::getProperty(int property_id){
     QTFormatDescription* format = [[connections objectAtIndex:0] formatDescription];
     NSSize s1 = [[format attributeForKey:QTFormatDescriptionVideoCleanApertureDisplaySizeAttribute] sizeValue];
 
-    int width=s1.width, height=s1.height;
     switch (property_id) {
         case CV_CAP_PROP_FRAME_WIDTH:
-            retval = width;
+            retval = s1.width;
             break;
         case CV_CAP_PROP_FRAME_HEIGHT:
-            retval = height;
+            retval = s1.height;
             break;
         default:
             retval = 0;
@@ -1011,22 +1010,22 @@ bool CvVideoWriter_QT::writeFrame(const IplImage* image) {
     cvCvtColor(image, argbimage, CV_BGR2BGRA);
 
 
-    unsigned char* imagedata = (unsigned char*)argbimage->imageData;
+    unsigned char* imagedata_ = (unsigned char*)argbimage->imageData;
     //BGRA --> ARGB
 
     for (int j = 0; j < argbimage->height; j++) {
         int rowstart = argbimage->widthStep * j;
         for (int i = rowstart; i < rowstart+argbimage->widthStep; i+=4) {
-            unsigned char temp = imagedata[i];
-            imagedata[i] = 255;
-            imagedata[i+3] = temp;
-            temp = imagedata[i+2];
-            imagedata[i+2] = imagedata[i+1];
-            imagedata[i+1] = temp;
+            unsigned char temp = imagedata_[i];
+            imagedata_[i] = 255;
+            imagedata_[i+3] = temp;
+            temp = imagedata_[i+2];
+            imagedata_[i+2] = imagedata_[i+1];
+            imagedata_[i+1] = temp;
         }
     }
 
-    NSBitmapImageRep* imageRep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:&imagedata
+    NSBitmapImageRep* imageRep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:&imagedata_
                                                                          pixelsWide:movieSize.width
                                                                          pixelsHigh:movieSize.height
                                                                       bitsPerSample:8
