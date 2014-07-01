@@ -76,6 +76,9 @@
 /* ffmpeg in Gentoo */
 #cmakedefine HAVE_GENTOO_FFMPEG
 
+/* Geospatial Data Abstraction Library */
+#cmakedefine HAVE_GDAL
+
 /* GStreamer multimedia framework */
 #cmakedefine HAVE_GSTREAMER
 
