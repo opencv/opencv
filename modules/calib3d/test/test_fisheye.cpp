@@ -60,8 +60,6 @@ protected:
 
 protected:
     std::string combine(const std::string& _item1, const std::string& _item2);
-    std::string combine_format(const std::string& item1, const std::string& item2, ...);
-
     cv::Mat mergeRectification(const cv::Mat& l, const cv::Mat& r);
 };
 
@@ -427,10 +425,10 @@ TEST_F(fisheyeTest, rectify)
 
         cv::Mat rectification = mergeRectification(lundist, rundist);
 
-        cv::Mat correct = cv::imread(combine_format(datasets_repository_path, "rectification_AB_%03d.png", i));
+        cv::Mat correct = cv::imread(combine(datasets_repository_path, cv::format("rectification_AB_%03d.png", i)));
 
         if (correct.empty())
-            cv::imwrite(combine_format(datasets_repository_path, "rectification_AB_%03d.png", i), rectification);
+            cv::imwrite(combine(datasets_repository_path, cv::format("rectification_AB_%03d.png", i)), rectification);
          else
              EXPECT_MAT_NEAR(correct, rectification, 1e-10);
      }
@@ -597,17 +595,6 @@ std::string fisheyeTest::combine(const std::string& _item1, const std::string& _
 
     char last = item1[item1.size()-1];
     return item1 + (last != '/' ? "/" : "") + item2;
-}
-
-std::string fisheyeTest::combine_format(const std::string& item1, const std::string& item2, ...)
-{
-    std::string fmt = combine(item1, item2);
-    char buffer[1 << 16];
-    va_list args;
-    va_start( args, item2 );
-    vsprintf( buffer, fmt.c_str(), args );
-    va_end( args );
-    return std::string(buffer);
 }
 
 cv::Mat fisheyeTest::mergeRectification(const cv::Mat& l, const cv::Mat& r)
