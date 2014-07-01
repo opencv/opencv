@@ -31,7 +31,6 @@
 #include <wrl\async.h>
 #include <windows.foundation.h>
 #include <ctxtcall.h>
-#include <comdef.h>
 
 #ifndef _UITHREADCTXT_SUPPORT
 
@@ -1213,21 +1212,20 @@ namespace details
         {
         }
 
-        explicit _ExceptionHolder(const _com_error& _E, void* _SourceAddressHint) :
-            _M_exceptionObserved(0), _M_disassembleMe(_SourceAddressHint)
+        explicit _ExceptionHolder(IRestrictedErrorInfo*& _E, void* _SourceAddressHint) :
+            _M_exceptionObserved(0), _M_disassembleMe(_SourceAddressHint), _M_winRTException(_E)
         {
-            _M_winRTException = std::unique_ptr<_com_error>(new _com_error(_E));
         }
         __declspec(noinline)
             ~_ExceptionHolder()
         {
-                if (_M_exceptionObserved == 0)
-                {
-                    // Disassemble at this->_M_disassembleMe to get to the source location right after either the creation of the task (constructor
-                    // or then method) that encountered this exception, or the set_exception call for a task_completion_event.
-                    Concurrency::details::_ReportUnobservedException();
-                }
+            if (_M_exceptionObserved == 0)
+            {
+                // Disassemble at this->_M_disassembleMe to get to the source location right after either the creation of the task (constructor
+                // or then method) that encountered this exception, or the set_exception call for a task_completion_event.
+                Concurrency::details::_ReportUnobservedException();
             }
+        }
 
         void _RethrowUserException()
         {
@@ -1238,7 +1236,7 @@ namespace details
 
             if (_M_winRTException != nullptr)
             {
-                throw _M_winRTException.get();
+                throw _M_winRTException.Get();
             }
             std::rethrow_exception(_M_stdException);
         }
@@ -1249,7 +1247,7 @@ namespace details
 
         // Either _M_stdException or _M_winRTException is populated based on the type of exception encountered.
         std::exception_ptr _M_stdException;
-        std::unique_ptr<_com_error> _M_winRTException;
+        Microsoft::WRL::ComPtr<IRestrictedErrorInfo> _M_winRTException;
 
         // Disassembling this value will point to a source instruction right after a call instruction. If the call is to create_task,
         // a task constructor or the then method, the task created by that method is the one that encountered this exception. If the call
@@ -1262,6 +1260,7 @@ namespace details
     struct _AsyncInfoCompletionHandler : public Microsoft::WRL::RuntimeClass<
         Microsoft::WRL::RuntimeClassFlags< Microsoft::WRL::RuntimeClassType::ClassicCom>, _CompletionHandlerType>
     {
+        MixInHelper()
     public:
         _AsyncInfoCompletionHandler(_Function func) : _M_function(func) {}
         STDMETHODIMP Invoke(_AsyncOperationType *asyncInfo, ABI::Windows::Foundation::AsyncStatus status)
@@ -1603,7 +1602,7 @@ namespace details
                 _M_pTask->_Cancel(true);
                 throw;
             }
-            catch(const _com_error& _E)
+            catch(IRestrictedErrorInfo*& _E)
             {
                 _M_pTask->_CancelWithException(_E);
                 throw;
@@ -1742,7 +1741,7 @@ namespace details
                         // the exception and canceled the task. Swallow the exception here.
                         _CONCRT_ASSERT(_IsCanceled());
                     }
-                    catch(const _com_error& _E)
+                    catch(IRestrictedErrorInfo*& _E)
                     {
                         // Its possible the task body hasn't seen the exception, if so we need to cancel with exception here.
                         if(!_HasUserException())
@@ -1818,7 +1817,7 @@ namespace details
             return _CancelAndRunContinuations(true, true, _PropagatedFromAncestor, _ExHolder);
         }
 
-        bool _CancelWithException(const _com_error& _Exception)
+        bool _CancelWithException(IRestrictedErrorInfo*& _Exception)
         {
             // This task was canceled because the task body encountered an exception.
             _CONCRT_ASSERT(!_HasUserException());
@@ -1879,7 +1878,7 @@ namespace details
 
         bool _HasUserException()
         {
-            return _M_exceptionHolder;
+            return _M_exceptionHolder != nullptr;
         }
 
         void _SetScheduledEvent()
@@ -2042,7 +2041,7 @@ namespace details
                                 return S_OK;
                             });
                         }
-                        catch(const _com_error& _E)
+                        catch(IRestrictedErrorInfo*& _E)
                         {
                             _TaskImplPtr->_CancelWithException(_E);
                         }
@@ -2489,7 +2488,7 @@ namespace details
 
         bool _HasUserException()
         {
-            return _M_exceptionHolder;
+            return _M_exceptionHolder != nullptr;
         }
 
         ~_Task_completion_event_impl()
@@ -3524,7 +3523,7 @@ private:
         }
 
         //
-        // Overload 1: returns IAsyncOperation<_InternalReturnType>^ (only uder /ZW)
+        // Overload 1: returns IAsyncOperation<_InternalReturnType>^ (only under /ZW)
         //                   or
         //             returns task<_InternalReturnType>
         //
@@ -4485,7 +4484,7 @@ namespace details
     template<typename _Ty>
     _Ty _GetUnwrappedType(task<_Ty>);
 
-    // Unwrap all supportted types
+    // Unwrap all supported types
     template<typename _Ty>
     auto _GetUnwrappedReturnType(_Ty _Arg, int) -> decltype(_GetUnwrappedType(_Arg));
     // fallback
@@ -5627,7 +5626,11 @@ namespace details
             _M_CompleteDelegateAssigned(0),
             _M_CallbackMade(0)
         {
+#if _MSC_VER < 1800
             _M_id = Concurrency::details::_GetNextAsyncId();
+#else
+            _M_id = Concurrency::details::platform::GetNextAsyncId();
+#endif
         }
 
         virtual STDMETHODIMP GetResults(typename _Attributes::_ReturnType* results)
@@ -6113,9 +6116,13 @@ namespace details
                 {
                     _TryTransitionToCancelled();
                 }
-                catch(const _com_error& _Ex)
+                catch(IRestrictedErrorInfo*& _Ex)
                 {
-                    _TryTransitionToError(_Ex->HResult);
+                    HRESULT hr;
+                    HRESULT _hr;
+                    hr = _Ex->GetErrorDetails(NULL, &_hr, NULL, NULL);
+                    if (SUCCEEDED(hr)) hr = _hr;
+                    _TryTransitionToError(hr);
                 }
                 catch (...)
                 {

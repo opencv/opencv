@@ -155,21 +155,31 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
 
     matches_info.matches.clear();
 
-    Ptr<flann::IndexParams> indexParams = makePtr<flann::KDTreeIndexParams>();
-    Ptr<flann::SearchParams> searchParams = makePtr<flann::SearchParams>();
-
-    if (features2.descriptors.depth() == CV_8U)
+    Ptr<DescriptorMatcher> matcher;
+#if 0 // TODO check this
+    if (ocl::useOpenCL())
     {
-        indexParams->setAlgorithm(cvflann::FLANN_INDEX_LSH);
-        searchParams->setAlgorithm(cvflann::FLANN_INDEX_LSH);
+        matcher = makePtr<BFMatcher>((int)NORM_L2);
     }
+    else
+#endif
+    {
+        Ptr<flann::IndexParams> indexParams = makePtr<flann::KDTreeIndexParams>();
+        Ptr<flann::SearchParams> searchParams = makePtr<flann::SearchParams>();
 
-    FlannBasedMatcher matcher(indexParams, searchParams);
+        if (features2.descriptors.depth() == CV_8U)
+        {
+            indexParams->setAlgorithm(cvflann::FLANN_INDEX_LSH);
+            searchParams->setAlgorithm(cvflann::FLANN_INDEX_LSH);
+        }
+
+        matcher = makePtr<FlannBasedMatcher>(indexParams, searchParams);
+    }
     std::vector< std::vector<DMatch> > pair_matches;
     MatchesSet matches;
 
     // Find 1->2 matches
-    matcher.knnMatch(features1.descriptors, features2.descriptors, pair_matches, 2);
+    matcher->knnMatch(features1.descriptors, features2.descriptors, pair_matches, 2);
     for (size_t i = 0; i < pair_matches.size(); ++i)
     {
         if (pair_matches[i].size() < 2)
@@ -186,7 +196,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
 
     // Find 2->1 matches
     pair_matches.clear();
-    matcher.knnMatch(features2.descriptors, features1.descriptors, pair_matches, 2);
+    matcher->knnMatch(features2.descriptors, features1.descriptors, pair_matches, 2);
     for (size_t i = 0; i < pair_matches.size(); ++i)
     {
         if (pair_matches[i].size() < 2)
@@ -264,14 +274,14 @@ void GpuMatcher::collectGarbage()
 namespace cv {
 namespace detail {
 
-void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features)
+void FeaturesFinder::operator ()(InputArray  image, ImageFeatures &features)
 {
     find(image, features);
     features.img_size = image.size();
 }
 
 
-void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features, const std::vector<Rect> &rois)
+void FeaturesFinder::operator ()(InputArray image, ImageFeatures &features, const std::vector<Rect> &rois)
 {
     std::vector<ImageFeatures> roi_features(rois.size());
     size_t total_kps_count = 0;
@@ -279,7 +289,7 @@ void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features, cons
 
     for (size_t i = 0; i < rois.size(); ++i)
     {
-        find(image(rois[i]), roi_features[i]);
+        find(image.getUMat()(rois[i]), roi_features[i]);
         total_kps_count += roi_features[i].keypoints.size();
         total_descriptors_height += roi_features[i].descriptors.rows;
     }
@@ -300,7 +310,7 @@ void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features, cons
             features.keypoints[kp_idx].pt.x += (float)rois[i].x;
             features.keypoints[kp_idx].pt.y += (float)rois[i].y;
         }
-        Mat subdescr = features.descriptors.rowRange(
+        UMat subdescr = features.descriptors.rowRange(
                 descr_offset, descr_offset + roi_features[i].descriptors.rows);
         roi_features[i].descriptors.copyTo(subdescr);
         descr_offset += roi_features[i].descriptors.rows;
@@ -337,9 +347,9 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
     }
 }
 
-void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
+void SurfFeaturesFinder::find(InputArray image, ImageFeatures &features)
 {
-    Mat gray_image;
+    UMat gray_image;
     CV_Assert((image.type() == CV_8UC3) || (image.type() == CV_8UC1));
     if(image.type() == CV_8UC3)
     {
@@ -347,7 +357,7 @@ void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     }
     else
     {
-        gray_image = image;
+        gray_image = image.getUMat();
     }
     if (!surf)
     {
@@ -356,7 +366,7 @@ void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     }
     else
     {
-        Mat descriptors;
+        UMat descriptors;
         (*surf)(gray_image, Mat(), features.keypoints, descriptors);
         features.descriptors = descriptors.reshape(1, (int)features.keypoints.size());
     }
@@ -368,9 +378,9 @@ OrbFeaturesFinder::OrbFeaturesFinder(Size _grid_size, int n_features, float scal
     orb = makePtr<ORB>(n_features * (99 + grid_size.area())/100/grid_size.area(), scaleFactor, nlevels);
 }
 
-void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
+void OrbFeaturesFinder::find(InputArray image, ImageFeatures &features)
 {
-    Mat gray_image;
+    UMat gray_image;
 
     CV_Assert((image.type() == CV_8UC3) || (image.type() == CV_8UC4) || (image.type() == CV_8UC1));
 
@@ -379,7 +389,7 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     } else if (image.type() == CV_8UC4) {
         cvtColor(image, gray_image, COLOR_BGRA2GRAY);
     } else if (image.type() == CV_8UC1) {
-        gray_image=image;
+        gray_image = image.getUMat();
     } else {
         CV_Error(Error::StsUnsupportedFormat, "");
     }
@@ -392,7 +402,8 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
         features.descriptors.release();
 
         std::vector<KeyPoint> points;
-        Mat descriptors;
+        Mat _descriptors;
+        UMat descriptors;
 
         for (int r = 0; r < grid_size.height; ++r)
             for (int c = 0; c < grid_size.width; ++c)
@@ -408,13 +419,13 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
                 //     << " xl=" << xl << ", xr=" << xr << ", gray_image.data=" << ((size_t)gray_image.data) << ", "
                 //     << "gray_image.dims=" << gray_image.dims << "\n");
 
-                Mat gray_image_part=gray_image(Range(yl, yr), Range(xl, xr));
+                UMat gray_image_part=gray_image(Range(yl, yr), Range(xl, xr));
                 // LOGLN("OrbFeaturesFinder::find: gray_image_part.empty=" << (gray_image_part.empty()?"true":"false") << ", "
                 //     << " gray_image_part.size()=(" << gray_image_part.size().width << "x" << gray_image_part.size().height << "), "
                 //     << " gray_image_part.dims=" << gray_image_part.dims << ", "
                 //     << " gray_image_part.data=" << ((size_t)gray_image_part.data) << "\n");
 
-                (*orb)(gray_image_part, Mat(), points, descriptors);
+                (*orb)(gray_image_part, UMat(), points, descriptors);
 
                 features.keypoints.reserve(features.keypoints.size() + points.size());
                 for (std::vector<KeyPoint>::iterator kp = points.begin(); kp != points.end(); ++kp)
@@ -423,8 +434,12 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
                     kp->pt.y += yl;
                     features.keypoints.push_back(*kp);
                 }
-                features.descriptors.push_back(descriptors);
+                _descriptors.push_back(descriptors.getMat(ACCESS_READ));
             }
+
+        // TODO optimize copyTo()
+        //features.descriptors = _descriptors.getUMat(ACCESS_READ);
+        _descriptors.copyTo(features.descriptors);
     }
 }
 
@@ -442,7 +457,7 @@ SurfFeaturesFinderGpu::SurfFeaturesFinderGpu(double hess_thresh, int num_octaves
 }
 
 
-void SurfFeaturesFinderGpu::find(const Mat &image, ImageFeatures &features)
+void SurfFeaturesFinderGpu::find(InputArray image, ImageFeatures &features)
 {
     CV_Assert(image.depth() == CV_8U);
 
@@ -499,12 +514,12 @@ const MatchesInfo& MatchesInfo::operator =(const MatchesInfo &other)
 //////////////////////////////////////////////////////////////////////////////
 
 void FeaturesMatcher::operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
-                                  const Mat &mask)
+                                  const UMat &mask)
 {
     const int num_images = static_cast<int>(features.size());
 
     CV_Assert(mask.empty() || (mask.type() == CV_8U && mask.cols == num_images && mask.rows));
-    Mat_<uchar> mask_(mask);
+    Mat_<uchar> mask_(mask.getMat(ACCESS_READ));
     if (mask_.empty())
         mask_ = Mat::ones(num_images, num_images, CV_8U);
 

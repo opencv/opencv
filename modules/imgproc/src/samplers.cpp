@@ -390,9 +390,13 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
         srctype == CV_8UC1 && ddepth == CV_32F ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_8u32f_C1R :
         srctype == CV_32FC1 && ddepth == CV_32F ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_32f_C1R : 0;
 
-    if( ippfunc && ippfunc(image.data, (int)image.step, src_size, patch.data,
-                           (int)patch.step, win_size, icenter, &minpt, &maxpt) >= 0 )
-        return;
+    if( ippfunc)
+    {
+        if (ippfunc(image.data, (int)image.step, src_size, patch.data,
+                    (int)patch.step, win_size, icenter, &minpt, &maxpt) >= 0 )
+            return;
+        setIppErrorStatus();
+    }
 #endif
 
     if( depth == CV_8U && ddepth == CV_8U )

@@ -1,5 +1,5 @@
 #include "opencv2/highgui.hpp"
-#include "opencv2/legacy.hpp"
+#include "opencv2/ml.hpp"
 
 using namespace cv;
 
@@ -19,8 +19,6 @@ int main( int /*argc*/, char** /*argv*/ )
     Mat labels;
     Mat img = Mat::zeros( Size( 500, 500 ), CV_8UC3 );
     Mat sample( 1, 2, CV_32FC1 );
-    CvEM em_model;
-    CvEMParams params;
 
     samples = samples.reshape(2, 0);
     for( i = 0; i < N; i++ )
@@ -35,37 +33,10 @@ int main( int /*argc*/, char** /*argv*/ )
     }
     samples = samples.reshape(1, 0);
 
-    // initialize model parameters
-    params.covs      = NULL;
-    params.means     = NULL;
-    params.weights   = NULL;
-    params.probs     = NULL;
-    params.nclusters = N;
-    params.cov_mat_type       = CvEM::COV_MAT_SPHERICAL;
-    params.start_step         = CvEM::START_AUTO_STEP;
-    params.term_crit.max_iter = 300;
-    params.term_crit.epsilon  = 0.1;
-    params.term_crit.type     = TermCriteria::COUNT|TermCriteria::EPS;
-
     // cluster the data
-    em_model.train( samples, Mat(), params, &labels );
+    EM em_model(N, EM::COV_MAT_SPHERICAL, TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 300, 0.1));
+    em_model.train( samples, noArray(), labels, noArray() );
 
-#if 0
-    // the piece of code shows how to repeatedly optimize the model
-    // with less-constrained parameters
-    //(COV_MAT_DIAGONAL instead of COV_MAT_SPHERICAL)
-    // when the output of the first stage is used as input for the second one.
-    CvEM em_model2;
-    params.cov_mat_type = CvEM::COV_MAT_DIAGONAL;
-    params.start_step = CvEM::START_E_STEP;
-    params.means = em_model.get_means();
-    params.covs = em_model.get_covs();
-    params.weights = em_model.get_weights();
-
-    em_model2.train( samples, Mat(), params, &labels );
-    // to use em_model2, replace em_model.predict()
-    // with em_model2.predict() below
-#endif
     // classify every image pixel
     for( i = 0; i < img.rows; i++ )
     {
@@ -73,7 +44,7 @@ int main( int /*argc*/, char** /*argv*/ )
         {
             sample.at<float>(0) = (float)j;
             sample.at<float>(1) = (float)i;
-            int response = cvRound(em_model.predict( sample ));
+            int response = cvRound(em_model.predict( sample )[1]);
             Scalar c = colors[response];
 
             circle( img, Point(j, i), 1, c*0.75, FILLED );

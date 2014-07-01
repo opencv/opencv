@@ -115,7 +115,7 @@ If conversion adds the alpha channel, its value will set to the maximum of corre
 The function can do the following transformations:
 
 *
-    RGB :math:`\leftrightarrow` GRAY ( ``CV_BGR2GRAY, CV_RGB2GRAY, CV_GRAY2BGR, CV_GRAY2RGB``     )
+    RGB :math:`\leftrightarrow` GRAY ( ``COLOR_BGR2GRAY, COLOR_RGB2GRAY, COLOR_GRAY2BGR, COLOR_GRAY2RGB``     )
     Transformations within RGB space like adding/removing the alpha channel, reversing the channel order, conversion to/from 16-bit RGB color (R5:G6:B5 or R5:G5:B5), as well as conversion to/from grayscale using:
 
     .. math::
@@ -411,7 +411,7 @@ distanceTransform
 -----------------
 Calculates the distance to the closest zero pixel for each pixel of the source image.
 
-.. ocv:function:: void distanceTransform( InputArray src, OutputArray dst, int distanceType, int maskSize )
+.. ocv:function:: void distanceTransform( InputArray src, OutputArray dst, int distanceType, int maskSize, int dstType=CV_32F )
 
 .. ocv:function:: void distanceTransform( InputArray src, OutputArray dst, OutputArray labels, int distanceType, int maskSize, int labelType=DIST_LABEL_CCOMP )
 
@@ -421,11 +421,13 @@ Calculates the distance to the closest zero pixel for each pixel of the source i
 
     :param src: 8-bit, single-channel (binary) source image.
 
-    :param dst: Output image with calculated distances. It is a 32-bit floating-point, single-channel image of the same size as  ``src`` .
+    :param dst: Output image with calculated distances. It is a 8-bit or 32-bit floating-point, single-channel image of the same size as  ``src`` .
 
     :param distanceType: Type of distance. It can be  ``CV_DIST_L1, CV_DIST_L2`` , or  ``CV_DIST_C`` .
 
     :param maskSize: Size of the distance transform mask. It can be 3, 5, or  ``CV_DIST_MASK_PRECISE``  (the latter option is only supported by the first function). In case of the ``CV_DIST_L1``  or  ``CV_DIST_C``  distance type, the parameter is forced to 3 because a  :math:`3\times 3`  mask gives the same result as  :math:`5\times 5`  or any larger aperture.
+
+    :param dstType: Type of output image. It can be ``CV_8U`` or ``CV_32F``. Type ``CV_8U`` can be used only for the first variant of the function and ``distanceType == CV_DIST_L1``.
 
     :param labels: Optional output 2D array of labels (the discrete Voronoi diagram). It has the type  ``CV_32SC1``  and the same size as  ``src`` . See the details below.
 
@@ -498,7 +500,7 @@ Fills a connected component with the given color.
 
     :param image: Input/output 1- or 3-channel, 8-bit, or floating-point image. It is modified by the function unless the  ``FLOODFILL_MASK_ONLY``  flag is set in the second variant of the function. See the details below.
 
-    :param mask: (For the second function only) Operation mask that should be a single-channel 8-bit image, 2 pixels wider and 2 pixels taller. The function uses and updates the mask, so you take responsibility of initializing the  ``mask``  content. Flood-filling cannot go across non-zero pixels in the mask. For example, an edge detector output can be used as a mask to stop filling at edges. It is possible to use the same mask in multiple calls to the function to make sure the filled area does not overlap.
+    :param mask: Operation mask that should be a single-channel 8-bit image, 2 pixels wider and 2 pixels taller than ``image``. Since this is both an input and output parameter, you must take responsibility of initializing it. Flood-filling cannot go across non-zero pixels in the input mask. For example, an edge detector output can be used as a mask to stop filling at edges. On output, pixels in the mask corresponding to filled pixels in the image are set to 1 or to the a value specified in ``flags`` as described below. It is therefore possible to use the same mask in multiple calls to the function to make sure the filled areas do not overlap.
 
         .. note:: Since the mask is larger than the filled image, a pixel  :math:`(x, y)`  in  ``image``  corresponds to the pixel  :math:`(x+1, y+1)`  in the  ``mask`` .
 
@@ -512,11 +514,11 @@ Fills a connected component with the given color.
 
     :param rect: Optional output parameter set by the function to the minimum bounding rectangle of the repainted domain.
 
-    :param flags: Operation flags. Lower bits contain a connectivity value, 4 (default) or 8, used within the function. Connectivity determines which neighbors of a pixel are considered. Upper bits can be 0 or a combination of the following flags:
+    :param flags: Operation flags. The first 8 bits contain a connectivity value. The default value of 4 means that only the four nearest neighbor pixels (those that share an edge) are considered. A connectivity value of 8 means that the eight nearest neighbor pixels (those that share a corner) will be considered. The next 8 bits (8-16) contain a value between 1 and 255 with which to fill the ``mask`` (the default value is 1). For example, ``4 | ( 255 << 8 )`` will consider 4 nearest neighbours and fill the mask with a value of 255. The following additional options occupy higher bits and therefore may be further combined with the connectivity and mask fill values using bit-wise or (``|``):
 
             * **FLOODFILL_FIXED_RANGE** If set, the difference between the current pixel and seed pixel is considered. Otherwise, the difference between neighbor pixels is considered (that is, the range is floating).
 
-            * **FLOODFILL_MASK_ONLY**  If set, the function does not change the image ( ``newVal``  is ignored), but fills the mask with the value in bits 8-16 of ``flags`` (that is, the fill value is set to newValue by adding (newValue << 8) to the ``flags``).  The flag can be used for the second variant only.
+            * **FLOODFILL_MASK_ONLY**  If set, the function does not change the image ( ``newVal``  is ignored), and only fills the mask with the value specified in bits 8-16 of ``flags`` as described above.  This option only make sense in function variants that have the ``mask`` parameter.
 
 The functions ``floodFill`` fill a connected component starting from the seed point with the specified color. The connectivity is determined by the color/brightness closeness of the neighbor pixels. The pixel at
 :math:`(x,y)` is considered to belong to the repainted domain if:

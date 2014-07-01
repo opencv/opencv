@@ -118,7 +118,7 @@ OCL_TEST_P(MatchTemplate, Mat)
 
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, MatchTemplate, Combine(
                                 Values(CV_8U, CV_32F),
-                                Values(1, 2, 4),
+                                Values(1, 2, 3, 4),
                                 MatchTemplType::all(),
                                 Bool())
                            );

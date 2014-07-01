@@ -65,13 +65,15 @@ static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, in
     int kercn = oclop == OCL_OP_PHASE_DEGREES ||
             oclop == OCL_OP_PHASE_RADIANS ? 1 : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
 
-    bool double_support = ocl::Device::getDefault().doubleFPConfig() > 0;
+    const ocl::Device d = ocl::Device::getDefault();
+    bool double_support = d.doubleFPConfig() > 0;
     if (!double_support && depth == CV_64F)
         return false;
+    int rowsPerWI = d.isIntel() ? 4 : 1;
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D %s -D %s -D dstT=%s%s", _src2.empty() ? "UNARY_OP" : "BINARY_OP",
-                         oclop2str[oclop], ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
+                  format("-D %s -D %s -D dstT=%s -D rowsPerWI=%d%s", _src2.empty() ? "UNARY_OP" : "BINARY_OP",
+                         oclop2str[oclop], ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)), rowsPerWI,
                          double_support ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
@@ -89,7 +91,7 @@ static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, in
     else
         k.args(src1arg, src2arg, dstarg);
 
-    size_t globalsize[] = { src1.cols * cn / kercn, src1.rows };
+    size_t globalsize[] = { src1.cols * cn / kercn, (src1.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, 0, false);
 }
 
@@ -237,10 +239,11 @@ float  cubeRoot( float value )
 
 static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
 {
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined HAVE_IPP && 0
     IppStatus status = ippsMagnitude_32f(x, y, mag, len);
     if (status >= 0)
         return;
+    setIppErrorStatus();
 #endif
 
     int i = 0;
@@ -269,10 +272,11 @@ static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
 
 static void Magnitude_64f(const double* x, const double* y, double* mag, int len)
 {
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
     IppStatus status = ippsMagnitude_64f(x, y, mag, len);
     if (status >= 0)
         return;
+    setIppErrorStatus();
 #endif
 
     int i = 0;
@@ -302,9 +306,10 @@ static void Magnitude_64f(const double* x, const double* y, double* mag, int len
 
 static void InvSqrt_32f(const float* src, float* dst, int len)
 {
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
     if (ippsInvSqrt_32f_A21(src, dst, len) >= 0)
         return;
+    setIppErrorStatus();
 #endif
 
     int i = 0;
@@ -350,9 +355,10 @@ static void InvSqrt_64f(const double* src, double* dst, int len)
 
 static void Sqrt_32f(const float* src, float* dst, int len)
 {
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
     if (ippsSqrt_32f_A21(src, dst, len) >= 0)
         return;
+    setIppErrorStatus();
 #endif
     int i = 0;
 
@@ -383,9 +389,10 @@ static void Sqrt_32f(const float* src, float* dst, int len)
 
 static void Sqrt_64f(const double* src, double* dst, int len)
 {
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
     if (ippsSqrt_64f_A50(src, dst, len) >= 0)
         return;
+    setIppErrorStatus();
 #endif
 
     int i = 0;
@@ -519,8 +526,10 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
 static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
                              OutputArray _dst1, OutputArray _dst2, bool angleInDegrees )
 {
-    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    const ocl::Device & d = ocl::Device::getDefault();
+    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            rowsPerWI = d.isIntel() ? 4 : 1;
+    bool doubleSupport = d.doubleFPConfig() > 0;
 
     if ( !(_src1.dims() <= 2 && _src2.dims() <= 2 &&
            (depth == CV_32F || depth == CV_64F) && type == _src2.type()) ||
@@ -528,9 +537,9 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
         return false;
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D BINARY_OP -D dstT=%s -D depth=%d -D OP_CTP_%s%s",
+                  format("-D BINARY_OP -D dstT=%s -D depth=%d -D rowsPerWI=%d -D OP_CTP_%s%s",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
-                         depth, angleInDegrees ? "AD" : "AR",
+                         depth, rowsPerWI, angleInDegrees ? "AD" : "AR",
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
@@ -548,7 +557,7 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
            ocl::KernelArg::WriteOnly(dst1, cn),
            ocl::KernelArg::WriteOnlyNoSize(dst2));
 
-    size_t globalsize[2] = { dst1.cols * cn, dst1.rows };
+    size_t globalsize[2] = { dst1.cols * cn, (dst1.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -708,16 +717,18 @@ static void SinCos_32f( const float *angle, float *sinval, float* cosval,
 static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
                              OutputArray _dst1, OutputArray _dst2, bool angleInDegrees )
 {
-    int type = _angle.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    const ocl::Device & d = ocl::Device::getDefault();
+    int type = _angle.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            rowsPerWI = d.isIntel() ? 4 : 1;
+    bool doubleSupport = d.doubleFPConfig() > 0;
 
     if ( !doubleSupport && depth == CV_64F )
         return false;
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D dstT=%s -D depth=%d -D BINARY_OP -D OP_PTC_%s%s",
-                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)), depth,
-                         angleInDegrees ? "AD" : "AR",
+                  format("-D dstT=%s -D rowsPerWI=%d -D depth=%d -D BINARY_OP -D OP_PTC_%s%s",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)), rowsPerWI,
+                         depth, angleInDegrees ? "AD" : "AR",
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
@@ -733,7 +744,7 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
     k.args(ocl::KernelArg::ReadOnlyNoSize(mag), ocl::KernelArg::ReadOnlyNoSize(angle),
            ocl::KernelArg::WriteOnly(dst1, cn), ocl::KernelArg::WriteOnlyNoSize(dst2));
 
-    size_t globalsize[2] = { dst1.cols * cn, dst1.rows };
+    size_t globalsize[2] = { dst1.cols * cn, (dst1.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -754,7 +765,7 @@ void polarToCart( InputArray src1, InputArray src2,
     dst2.create( Angle.dims, Angle.size, type );
     Mat X = dst1.getMat(), Y = dst2.getMat();
 
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
     if (Mag.isContinuous() && Angle.isContinuous() && X.isContinuous() && Y.isContinuous() && !angleInDegrees)
     {
         typedef IppStatus (CV_STDCALL * ippsPolarToCart)(const void * pSrcMagn, const void * pSrcPhase,
@@ -767,6 +778,7 @@ void polarToCart( InputArray src1, InputArray src2,
         IppStatus status = ippFunc(Mag.data, Angle.data, X.data, Y.data, static_cast<int>(cn * X.total()));
         if (status >= 0)
             return;
+        setIppErrorStatus();
     }
 #endif
 
@@ -1319,6 +1331,7 @@ static void Exp_32f_ipp(const float *x, float *y, int n)
 {
     if (0 <= ippsExp_32f_A21(x, y, n))
         return;
+    setIppErrorStatus();
     Exp_32f(x, y, n);
 }
 
@@ -1326,6 +1339,7 @@ static void Exp_64f_ipp(const double *x, double *y, int n)
 {
     if (0 <= ippsExp_64f_A50(x, y, n))
         return;
+    setIppErrorStatus();
     Exp_64f(x, y, n);
 }
 
@@ -1977,6 +1991,7 @@ static void Log_32f_ipp(const float *x, float *y, int n)
 {
     if (0 <= ippsLn_32f_A21(x, y, n))
         return;
+    setIppErrorStatus();
     Log_32f(x, y, n);
 }
 
@@ -1984,6 +1999,7 @@ static void Log_64f_ipp(const double *x, double *y, int n)
 {
     if (0 <= ippsLn_64f_A50(x, y, n))
         return;
+    setIppErrorStatus();
     Log_64f(x, y, n);
 }
 
@@ -2093,18 +2109,32 @@ static IPowFunc ipowTab[] =
 static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
                     bool is_ipower, int ipower)
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    const ocl::Device & d = ocl::Device::getDefault();
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            rowsPerWI = d.isIntel() ? 4 : 1;
+    bool doubleSupport = d.doubleFPConfig() > 0;
+
+    _dst.createSameSize(_src, type);
+    if (is_ipower && (ipower == 0 || ipower == 1))
+    {
+        if (ipower == 0)
+            _dst.setTo(Scalar::all(1));
+        else if (ipower == 1)
+            _src.copyTo(_dst);
+
+        return true;
+    }
 
     if (depth == CV_64F && !doubleSupport)
         return false;
 
-    bool issqrt = std::abs(power - 0.5) < DBL_EPSILON;
-    const char * const op = issqrt ? "OP_SQRT" : is_ipower ? "OP_POWN" : "OP_POW";
+    bool issqrt = std::abs(power - 0.5) < DBL_EPSILON, nonnegative = power >= 0;
+    const char * const op = issqrt ? "OP_SQRT" : is_ipower ? nonnegative ? "OP_POWN" : "OP_ROOTN" : nonnegative ? "OP_POWR" : "OP_POW";
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D dstT=%s -D %s -D UNARY_OP%s", ocl::typeToStr(depth),
-                         op, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                  format("-D dstT=%s -D depth=%d -D rowsPerWI=%d -D %s -D UNARY_OP%s",
+                         ocl::typeToStr(depth), depth,  rowsPerWI, op,
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
 
@@ -2127,7 +2157,7 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
             k.args(srcarg, dstarg, power);
     }
 
-    size_t globalsize[2] = { dst.cols *  cn, dst.rows };
+    size_t globalsize[2] = { dst.cols *  cn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -2135,11 +2165,12 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
 
 void pow( InputArray _src, double power, OutputArray _dst )
 {
-    bool is_ipower = false, same = false;
     int type = _src.type(), depth = CV_MAT_DEPTH(type),
             cn = CV_MAT_CN(type), ipower = cvRound(power);
+    bool is_ipower = fabs(ipower - power) < DBL_EPSILON, same = false,
+            useOpenCL = _dst.isUMat() && _src.dims() <= 2;
 
-    if( fabs(ipower - power) < DBL_EPSILON )
+    if( is_ipower && !(ocl::Device::getDefault().isIntel() && useOpenCL && depth != CV_64F))
     {
         if( ipower < 0 )
         {
@@ -2160,8 +2191,9 @@ void pow( InputArray _src, double power, OutputArray _dst )
             _src.copyTo(_dst);
             return;
         case 2:
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
-            if (depth == CV_32F && !same && ( (_src.dims() <= 2 && !ocl::useOpenCL()) || (_src.dims() > 2 && _src.isContinuous() && _dst.isContinuous()) ))
+#if defined(HAVE_IPP)
+            if (depth == CV_32F && !same && ( (_src.dims() <= 2 && !ocl::useOpenCL()) ||
+                                              (_src.dims() > 2 && _src.isContinuous() && _dst.isContinuous()) ))
             {
                 Mat src = _src.getMat();
                 _dst.create( src.dims, src.size, type );
@@ -2181,6 +2213,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
 
                 if (status >= 0)
                     return;
+                setIppErrorStatus();
             }
 #endif
             if (same)
@@ -2188,14 +2221,12 @@ void pow( InputArray _src, double power, OutputArray _dst )
             else
                 multiply(_src, _src, _dst);
             return;
-        default:
-            is_ipower = true;
         }
     }
     else
         CV_Assert( depth == CV_32F || depth == CV_64F );
 
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN(useOpenCL,
                ocl_pow(same ? _dst : _src, power, _dst, is_ipower, ipower))
 
     Mat src, dst;
@@ -2232,7 +2263,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
     }
     else
     {
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
         if (src.isContinuous() && dst.isContinuous())
         {
             IppStatus status = depth == CV_32F ?
@@ -2241,6 +2272,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
 
             if (status >= 0)
                 return;
+            setIppErrorStatus();
         }
 #endif
 
@@ -2479,8 +2511,10 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
 static bool ocl_patchNaNs( InputOutputArray _a, float value )
 {
+    int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=int"));
+                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=float -D rowsPerWI=%d",
+                            rowsPerWI));
     if (k.empty())
         return false;
 
@@ -2490,7 +2524,7 @@ static bool ocl_patchNaNs( InputOutputArray _a, float value )
     k.args(ocl::KernelArg::ReadOnlyNoSize(a),
            ocl::KernelArg::WriteOnly(a, cn), (float)value);
 
-    size_t globalsize[2] = { a.cols * cn, a.rows };
+    size_t globalsize[2] = { a.cols * cn, (a.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 

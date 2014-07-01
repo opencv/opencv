@@ -1175,6 +1175,48 @@ calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
     }
 }
 
+#ifdef HAVE_IPP
+
+class IPPCalcHistInvoker :
+    public ParallelLoopBody
+{
+public:
+    IPPCalcHistInvoker(const Mat & _src, Mat & _hist, AutoBuffer<Ipp32s> & _levels, Ipp32s _histSize, Ipp32s _low, Ipp32s _high, bool * _ok) :
+        ParallelLoopBody(), src(&_src), hist(&_hist), levels(&_levels), histSize(_histSize), low(_low), high(_high), ok(_ok)
+    {
+        *ok = true;
+    }
+
+    virtual void operator() (const Range & range) const
+    {
+        Mat phist(hist->size(), hist->type(), Scalar::all(0));
+
+        IppStatus status = ippiHistogramEven_8u_C1R(
+            src->data + src->step * range.start, (int)src->step, ippiSize(src->cols, range.end - range.start),
+            (Ipp32s *)phist.data, (Ipp32s *)*levels, histSize, low, high);
+
+        if (status < 0)
+        {
+            *ok = false;
+            return;
+        }
+
+        for (int i = 0; i < histSize; ++i)
+            CV_XADD((int *)(hist->data + i * hist->step), *(int *)(phist.data + i * phist.step));
+    }
+
+private:
+    const Mat * src;
+    Mat * hist;
+    AutoBuffer<Ipp32s> * levels;
+    Ipp32s histSize, low, high;
+    bool * ok;
+
+    const IPPCalcHistInvoker & operator = (const IPPCalcHistInvoker & );
+};
+
+#endif
+
 }
 
 void cv::calcHist( const Mat* images, int nimages, const int* channels,
@@ -1189,6 +1231,33 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     _hist.create(dims, histSize, CV_32F);
     Mat hist = _hist.getMat(), ihist = hist;
     ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK)|CV_32S;
+
+#ifdef HAVE_IPP
+    if (nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && channels &&
+            channels[0] == 0 && mask.empty() && images[0].dims <= 2 &&
+            !accumulate && uniform)
+    {
+        ihist.setTo(Scalar::all(0));
+        AutoBuffer<Ipp32s> levels(histSize[0] + 1);
+
+        bool ok = true;
+        const Mat & src = images[0];
+        int nstripes = std::min<int>(8, static_cast<int>(src.total() / (1 << 16)));
+#ifdef HAVE_CONCURRENCY
+        nstripes = 1;
+#endif
+        IPPCalcHistInvoker invoker(src, ihist, levels, histSize[0] + 1, (Ipp32s)ranges[0][0], (Ipp32s)ranges[0][1], &ok);
+        Range range(0, src.rows);
+        parallel_for_(range, invoker, nstripes);
+
+        if (ok)
+        {
+            ihist.convertTo(hist, CV_32F);
+            return;
+        }
+        setIppErrorStatus();
+    }
+#endif
 
     if( !accumulate || histdata != hist.data )
         hist = Scalar(0.);
@@ -1408,42 +1477,44 @@ enum
 
 static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32S)
 {
-    int compunits = ocl::Device::getDefault().maxComputeUnits();
-    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int compunits = dev.maxComputeUnits();
+    size_t wgs = dev.maxWorkGroupSize();
     Size size = _src.size();
     bool use16 = size.width % 16 == 0 && _src.offset() % 16 == 0 && _src.step() % 16 == 0;
+    int kercn = dev.isAMD() && use16 ? 16 : std::min(4, ocl::predictOptimalVectorWidth(_src));
 
     ocl::Kernel k1("calculate_histogram", ocl::imgproc::histogram_oclsrc,
-                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D cn=%d",
-                          BINS, compunits, wgs, use16 ? 16 : 1));
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D kercn=%d -D T=%s%s",
+                          BINS, compunits, wgs, kercn,
+                          kercn == 4 ? "int" : ocl::typeToStr(CV_8UC(kercn)),
+                          _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
     if (k1.empty())
         return false;
 
     _hist.create(BINS, 1, ddepth);
     UMat src = _src.getUMat(), ghist(1, BINS * compunits, CV_32SC1),
-            hist = ddepth == CV_32S ? _hist.getUMat() : UMat(BINS, 1, CV_32SC1);
+            hist = _hist.getUMat();
 
-    k1.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::PtrWriteOnly(ghist), (int)src.total());
+    k1.args(ocl::KernelArg::ReadOnly(src),
+            ocl::KernelArg::PtrWriteOnly(ghist), (int)src.total());
 
     size_t globalsize = compunits * wgs;
     if (!k1.run(1, &globalsize, &wgs, false))
         return false;
 
+    char cvt[40];
     ocl::Kernel k2("merge_histogram", ocl::imgproc::histogram_oclsrc,
-                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d", BINS, compunits, (int)wgs));
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D convertToHT=%s -D HT=%s",
+                          BINS, compunits, (int)wgs, ocl::convertTypeStr(CV_32S, ddepth, 1, cvt),
+                          ocl::typeToStr(ddepth)));
     if (k2.empty())
         return false;
 
-    k2.args(ocl::KernelArg::PtrReadOnly(ghist), ocl::KernelArg::PtrWriteOnly(hist));
-    if (!k2.run(1, &wgs, &wgs, false))
-        return false;
+    k2.args(ocl::KernelArg::PtrReadOnly(ghist),
+            ocl::KernelArg::WriteOnlyNoSize(hist));
 
-    if (hist.depth() != ddepth)
-        hist.convertTo(_hist, ddepth);
-    else
-        _hist.getUMatRef() = hist;
-
-    return true;
+    return k2.run(1, &wgs, &wgs, false);
 }
 
 static bool ocl_calcHist(InputArrayOfArrays images, OutputArray hist)
@@ -1477,7 +1548,7 @@ void cv::calcHist( InputArrayOfArrays images, const std::vector<int>& channels,
     CV_OCL_RUN(images.total() == 1 && channels.size() == 1 && images.channels(0) == 1 &&
                channels[0] == 0 && images.isUMatVector() && mask.empty() && !accumulate &&
                histSize.size() == 1 && histSize[0] == BINS && ranges.size() == 2 &&
-               ranges[0] == 0 && ranges[1] == 256,
+               ranges[0] == 0 && ranges[1] == BINS,
                ocl_calcHist(images, hist))
 
     int i, dims = (int)histSize.size(), rsz = (int)ranges.size(), csz = (int)channels.size();
@@ -2143,8 +2214,8 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
                           const std::vector<float>& ranges,
                           double scale )
 {
-    Size histSize = hist.size();
 #ifdef HAVE_OPENCL
+    Size histSize = hist.size();
     bool _1D = histSize.height == 1 || histSize.width == 1;
     size_t histdims = _1D ? 1 : hist.dims();
 #endif
@@ -3359,19 +3430,40 @@ namespace cv {
 
 static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
 {
-    size_t wgs = std::min<size_t>(ocl::Device::getDefault().maxWorkGroupSize(), BINS);
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int compunits = dev.maxComputeUnits();
+    size_t wgs = dev.maxWorkGroupSize();
+    Size size = _src.size();
+    bool use16 = size.width % 16 == 0 && _src.offset() % 16 == 0 && _src.step() % 16 == 0;
+    int kercn = dev.isAMD() && use16 ? 16 : std::min(4, ocl::predictOptimalVectorWidth(_src));
 
-    // calculation of histogram
-    UMat hist;
-    if (!ocl_calcHist1(_src, hist))
+    ocl::Kernel k1("calculate_histogram", ocl::imgproc::histogram_oclsrc,
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D kercn=%d -D T=%s%s",
+                          BINS, compunits, wgs, kercn,
+                          kercn == 4 ? "int" : ocl::typeToStr(CV_8UC(kercn)),
+                          _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
+    if (k1.empty())
         return false;
 
+    UMat src = _src.getUMat(), ghist(1, BINS * compunits, CV_32SC1);
+
+    k1.args(ocl::KernelArg::ReadOnly(src),
+            ocl::KernelArg::PtrWriteOnly(ghist), (int)src.total());
+
+    size_t globalsize = compunits * wgs;
+    if (!k1.run(1, &globalsize, &wgs, false))
+        return false;
+
+    wgs = std::min<size_t>(ocl::Device::getDefault().maxWorkGroupSize(), BINS);
     UMat lut(1, 256, CV_8UC1);
-    ocl::Kernel k("calcLUT", ocl::imgproc::histogram_oclsrc, format("-D BINS=%d -D HISTS_COUNT=1 -D WGS=%d", BINS, (int)wgs));
-    k.args(ocl::KernelArg::PtrWriteOnly(lut), ocl::KernelArg::PtrReadOnly(hist), (int)_src.total());
+    ocl::Kernel k2("calcLUT", ocl::imgproc::histogram_oclsrc,
+                  format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d",
+                         BINS, compunits, (int)wgs));
+    k2.args(ocl::KernelArg::PtrWriteOnly(lut),
+           ocl::KernelArg::PtrReadOnly(ghist), (int)_src.total());
 
     // calculation of LUT
-    if (!k.run(1, &wgs, &wgs, false))
+    if (!k2.run(1, &wgs, &wgs, false))
         return false;
 
     // execute LUT transparently

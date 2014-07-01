@@ -80,7 +80,7 @@ void cv::updateMotionHistory( InputArray _silhouette, InputOutputArray _mhi,
 
     Mat silh = _silhouette.getMat(), mhi = _mhi.getMat();
     Size size = silh.size();
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
     int silhstep = (int)silh.step, mhistep = (int)mhi.step;
 #endif
 
@@ -88,13 +88,13 @@ void cv::updateMotionHistory( InputArray _silhouette, InputOutputArray _mhi,
     {
         size.width *= size.height;
         size.height = 1;
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
         silhstep = (int)silh.total();
         mhistep = (int)mhi.total() * sizeof(Ipp32f);
 #endif
     }
 
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+#if defined(HAVE_IPP)
     IppStatus status = ippiUpdateMotionHistory_8u32f_C1IR((const Ipp8u *)silh.data, silhstep, (Ipp32f *)mhi.data, mhistep,
                                                           ippiSize(size.width, size.height), (Ipp32f)timestamp, (Ipp32f)duration);
     if (status >= 0)

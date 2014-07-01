@@ -53,29 +53,40 @@
 
 __kernel void threshold(__global const uchar * srcptr, int src_step, int src_offset,
                         __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols,
-                        T1 thresh, T1 max_val)
+                        T1 thresh, T1 max_val, T1 min_val)
 {
     int gx = get_global_id(0);
-    int gy = get_global_id(1);
+    int gy = get_global_id(1) * STRIDE_SIZE;
 
-    if (gx < cols && gy < rows)
+    if (gx < cols)
     {
         int src_index = mad24(gy, src_step, mad24(gx, (int)sizeof(T), src_offset));
         int dst_index = mad24(gy, dst_step, mad24(gx, (int)sizeof(T), dst_offset));
 
-        T sdata = *(__global const T *)(srcptr + src_index);
-        __global T * dst = (__global T *)(dstptr + dst_index);
+        #pragma unroll
+        for (int i = 0; i < STRIDE_SIZE; i++)
+        {
+            if (gy < rows)
+            {
+                T sdata = *(__global const T *)(srcptr + src_index);
+                __global T * dst = (__global T *)(dstptr + dst_index);
 
-#ifdef THRESH_BINARY
-        dst[0] = sdata > (T)(thresh) ? (T)(max_val) : (T)(0);
-#elif defined THRESH_BINARY_INV
-        dst[0] = sdata > (T)(thresh) ? (T)(0) : (T)(max_val);
-#elif defined THRESH_TRUNC
-        dst[0] = sdata > (T)(thresh) ? (T)(thresh) : sdata;
-#elif defined THRESH_TOZERO
-        dst[0] = sdata > (T)(thresh) ? sdata : (T)(0);
-#elif defined THRESH_TOZERO_INV
-        dst[0] = sdata > (T)(thresh) ? (T)(0) : sdata;
-#endif
+                #ifdef THRESH_BINARY
+                        dst[0] = sdata > (thresh) ? (T)(max_val) : (T)(0);
+                #elif defined THRESH_BINARY_INV
+                        dst[0] = sdata > (thresh) ? (T)(0) : (T)(max_val);
+                #elif defined THRESH_TRUNC
+                        dst[0] = clamp(sdata, (T)min_val, (T)(thresh));
+                #elif defined THRESH_TOZERO
+                        dst[0] = sdata > (thresh) ? sdata : (T)(0);
+                #elif defined THRESH_TOZERO_INV
+                        dst[0] = sdata > (thresh) ? (T)(0) : sdata;
+                #endif
+
+                gy++;
+                src_index += src_step;
+                dst_index += dst_step;
+            }
+        }
     }
 }

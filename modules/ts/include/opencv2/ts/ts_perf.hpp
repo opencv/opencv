@@ -3,6 +3,7 @@
 
 #include "opencv2/core.hpp"
 #include "ts_gtest.h"
+#include "ts_ext.hpp"
 
 #include <functional>
 
@@ -512,7 +513,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
 #endif
 #endif
 
-#if defined(HAVE_OPENCL) && !defined(CV_BUILD_OCL_MODULE)
+#ifdef HAVE_OPENCL
 namespace cvtest { namespace ocl {
 void dumpOpenCLDevice();
 }}

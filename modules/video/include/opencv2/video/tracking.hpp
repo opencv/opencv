@@ -177,11 +177,11 @@ public:
 
 
 
-class CV_EXPORTS DenseOpticalFlow : public Algorithm
+class CV_EXPORTS_W DenseOpticalFlow : public Algorithm
 {
 public:
-    virtual void calc( InputArray I0, InputArray I1, InputOutputArray flow ) = 0;
-    virtual void collectGarbage() = 0;
+    CV_WRAP virtual void calc( InputArray I0, InputArray I1, InputOutputArray flow ) = 0;
+    CV_WRAP virtual void collectGarbage() = 0;
 };
 
 // Implementation of the Zach, Pock and Bischof Dual TV-L1 Optical Flow method
@@ -189,7 +189,7 @@ public:
 // see reference:
 //   [1] C. Zach, T. Pock and H. Bischof, "A Duality Based Approach for Realtime TV-L1 Optical Flow".
 //   [2] Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
-CV_EXPORTS Ptr<DenseOpticalFlow> createOptFlow_DualTVL1();
+CV_EXPORTS_W Ptr<DenseOpticalFlow> createOptFlow_DualTVL1();
 
 } // cv
 

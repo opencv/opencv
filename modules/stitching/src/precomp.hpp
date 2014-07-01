@@ -51,6 +51,7 @@
 #include <set>
 #include <functional>
 #include <sstream>
+#include <iostream>
 #include <cmath>
 #include "opencv2/core.hpp"
 #include "opencv2/core/ocl.hpp"

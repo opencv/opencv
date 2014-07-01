@@ -36,6 +36,7 @@ public:
         SIMPLEBLOB    = 9,
         DENSE         = 10,
         BRISK         = 11,
+        AKAZE         = 12,
 
 
         GRIDDETECTOR = 1000,
@@ -51,6 +52,7 @@ public:
         GRID_SIMPLEBLOB    = GRIDDETECTOR + SIMPLEBLOB,
         GRID_DENSE         = GRIDDETECTOR + DENSE,
         GRID_BRISK         = GRIDDETECTOR + BRISK,
+        GRID_AKAZE         = GRIDDETECTOR + AKAZE,
 
 
         PYRAMIDDETECTOR = 2000,
@@ -66,6 +68,7 @@ public:
         PYRAMID_SIMPLEBLOB = PYRAMIDDETECTOR + SIMPLEBLOB,
         PYRAMID_DENSE      = PYRAMIDDETECTOR + DENSE,
         PYRAMID_BRISK      = PYRAMIDDETECTOR + BRISK,
+        PYRAMID_AKAZE      = PYRAMIDDETECTOR + AKAZE,
 
         DYNAMICDETECTOR = 3000,
 
@@ -79,10 +82,11 @@ public:
         DYNAMIC_HARRIS     = DYNAMICDETECTOR + HARRIS,
         DYNAMIC_SIMPLEBLOB = DYNAMICDETECTOR + SIMPLEBLOB,
         DYNAMIC_DENSE      = DYNAMICDETECTOR + DENSE,
-        DYNAMIC_BRISK      = DYNAMICDETECTOR + BRISK
+        DYNAMIC_BRISK      = DYNAMICDETECTOR + BRISK,
+        DYNAMIC_AKAZE      = DYNAMICDETECTOR + AKAZE
     };
 
-    //supported: FAST STAR SIFT SURF ORB MSER GFTT HARRIS BRISK Grid(XXXX) Pyramid(XXXX) Dynamic(XXXX)
+    //supported: FAST STAR SIFT SURF ORB MSER GFTT HARRIS BRISK AKAZE Grid(XXXX) Pyramid(XXXX) Dynamic(XXXX)
     //not supported: SimpleBlob, Dense
     CV_WRAP static javaFeatureDetector* create( int detectorType )
     {
@@ -137,6 +141,9 @@ public:
             break;
         case BRISK:
             name = name + "BRISK";
+            break;
+        case AKAZE:
+            name = name + "AKAZE";
             break;
         default:
             CV_Error( Error::StsBadArg, "Specified feature detector type is not supported." );
@@ -305,6 +312,7 @@ public:
         BRIEF = 4,
         BRISK = 5,
         FREAK = 6,
+        AKAZE = 7,
 
 
         OPPONENTEXTRACTOR = 1000,
@@ -316,10 +324,11 @@ public:
         OPPONENT_ORB   = OPPONENTEXTRACTOR + ORB,
         OPPONENT_BRIEF = OPPONENTEXTRACTOR + BRIEF,
         OPPONENT_BRISK = OPPONENTEXTRACTOR + BRISK,
-        OPPONENT_FREAK = OPPONENTEXTRACTOR + FREAK
+        OPPONENT_FREAK = OPPONENTEXTRACTOR + FREAK,
+        OPPONENT_AKAZE = OPPONENTEXTRACTOR + AKAZE
     };
 
-    //supported SIFT, SURF, ORB, BRIEF, BRISK, FREAK, Opponent(XXXX)
+    //supported SIFT, SURF, ORB, BRIEF, BRISK, FREAK, AKAZE, Opponent(XXXX)
     //not supported: Calonder
     CV_WRAP static javaDescriptorExtractor* create( int extractorType )
     {
@@ -350,6 +359,9 @@ public:
             break;
         case FREAK:
             name = name + "FREAK";
+            break;
+        case AKAZE:
+            name = name + "AKAZE";
             break;
         default:
             CV_Error( Error::StsBadArg, "Specified descriptor extractor type is not supported." );
