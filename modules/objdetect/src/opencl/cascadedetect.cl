@@ -398,7 +398,7 @@ __kernel void runLBPClassifierStumpSimple(
             int iy = ((tileIdx / ntiles.x)*local_size_y + ly)*ystep;
             int ix = ((tileIdx % ntiles.x)*local_size_x + lx)*ystep;
 
-            if( ix < worksize.x && iy < worksize.y )
+            if( ix <= worksize.x && iy <= worksize.y )
             {
                 __global const int* p = sum + mad24(iy, sumstep, ix) + s->layer_ofs;
                 __global const Stump* stump = stumps;

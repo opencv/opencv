@@ -972,9 +972,9 @@ public:
             Size winSize(cvRound(origWinSize.width * scalingFactor),
                          cvRound(origWinSize.height * scalingFactor));
 
-            for( int y = y0; y < y1; y += yStep )
+            for( int y = y0; y <= y1; y += yStep )
             {
-                for( int x = 0; x < szw.width; x += yStep )
+                for( int x = 0; x <= szw.width; x += yStep )
                 {
                     int result = classifier->runAt(evaluator, Point(x, y), scaleIdx, gypWeight);
                     if( rejectLevels )
