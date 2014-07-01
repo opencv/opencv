@@ -385,12 +385,6 @@ IplConvKernelFP;
 *                                  Matrix type (CvMat)                                   *
 \****************************************************************************************/
 
-#define CV_AUTO_STEP  0x7fffffff
-#define CV_WHOLE_ARR  cvSlice( 0, 0x3fffffff )
-
-#define CV_MAGIC_MASK       0xFFFF0000
-#define CV_MAT_MAGIC_VAL    0x42420000
-#define CV_TYPE_NAME_MAT    "opencv-matrix"
 
 typedef struct CvMat
 {
@@ -487,7 +481,7 @@ CV_INLINE CvMat cvMat( int rows, int cols, int type, void* data CV_DEFAULT(NULL)
     m.type = CV_MAT_MAGIC_VAL | CV_MAT_CONT_FLAG | type;
     m.cols = cols;
     m.rows = rows;
-    m.step = m.cols*CV_ELEM_SIZE(type);
+    m.step = m.cols * CV_ELEM_SIZE_BYTES(type);
     m.data.ptr = (uchar*)data;
     m.refcount = NULL;
     m.hdr_refcount = 0;

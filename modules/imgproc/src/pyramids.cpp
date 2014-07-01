@@ -478,8 +478,8 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
             doubleSupport ? " -D DOUBLE_SUPPORT" : "",
             ocl::typeToStr(depth), channels, local_size
     );
-    size_t globalThreads[2] = { dst.cols, dst.rows };
-    size_t localThreads[2] = { local_size, local_size };
+    size_t globalThreads[2] = { static_cast<size_t>(dst.cols), static_cast<size_t>(dst.rows) };
+    size_t localThreads[2] = { static_cast<size_t>(local_size), static_cast<size_t>(local_size) };
     ocl::Kernel k;
     if (ocl::Device::getDefault().isIntel() && channels == 1)
     {

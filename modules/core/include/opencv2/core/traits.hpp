@@ -181,6 +181,23 @@ public:
          };
 };
 
+
+template<> class DataType<unsigned>
+{
+public:
+    typedef unsigned value_type;
+    typedef value_type work_type;
+    typedef value_type channel_type;
+    typedef value_type vec_type;
+    enum { generic_type = 0,
+           depth        = CV_32U,
+           channels     = 1,
+           fmt          = (int)'u',
+           type         = CV_MAKETYPE(depth, channels)
+        };
+};
+
+
 template<> class DataType<float>
 {
 public:
@@ -211,7 +228,6 @@ public:
          };
 };
 
-
 /*!
   A helper class for cv::DataType
 
@@ -227,6 +243,29 @@ public:
         fmt   = DataType<_Tp>::fmt
     };
 };
+    template<typename _Tp> class DataDepth
+    {
+    public:
+        enum
+        {
+            value = DataType<_Tp>::depth,
+            fmt   = DataType<_Tp>::fmt
+        };
+    };
+    template<> class DataDepth<uint8_t>  { public: enum { value = CV_8U,  fmt=(int)'u' }; }; // should be hhu
+    template<> class DataDepth< int8_t>  { public: enum { value = CV_8S,  fmt=(int)'i' }; }; // should be hhi
+    template<> class DataDepth<uint16_t> { public: enum { value = CV_16U, fmt=(int)'u' }; }; // should be hu
+    template<> class DataDepth< int16_t> { public: enum { value = CV_16S, fmt=(int)'i' }; }; // should be hi
+    template<> class DataDepth<uint32_t> { public: enum { value = CV_32U, fmt=(int)'u' }; };
+    template<> class DataDepth< int32_t> { public: enum { value = CV_32S, fmt=(int)'i' }; };
+    template<> class DataDepth<uint64_t> { public: enum { value = CV_64U, fmt=(int)'u' }; }; // should be llu
+    template<> class DataDepth< int64_t> { public: enum { value = CV_64S, fmt=(int)'i' }; }; // should be lli
+
+    template<> class DataDepth<float> { public: enum { value = CV_32F, fmt=(int)'f' }; };
+    template<> class DataDepth<double> { public: enum { value = CV_64F, fmt=(int)'d' }; };
+    template<typename _Tp> class DataDepth<_Tp*> { public: enum { value = CV_USRTYPE1, fmt=(int)'r' }; };
+
+
 
 
 

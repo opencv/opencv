@@ -2320,6 +2320,49 @@ void sqrt(InputArray a, OutputArray b)
 
 template<int cv_mat_type> struct mat_type_assotiations{};
 
+    template<> struct mat_type_assotiations<CV_2U>
+    {
+        typedef CV_2U_TYPE type;
+        static const CV_8U_TYPE min_allowable = CV_2U_MAX;
+        static const CV_8U_TYPE max_allowable = CV_2U_MAX;
+    };
+
+    template<> struct mat_type_assotiations<CV_4U>
+    {
+        typedef CV_4U_TYPE type;
+        static const CV_8U_TYPE min_allowable = CV_8U_TYPE(CV_4U_MIN);
+        static const CV_8U_TYPE max_allowable = CV_8U_TYPE(CV_4U_MAX);
+    };
+
+    template<> struct mat_type_assotiations<CV_32U>
+    {
+        typedef CV_32U_TYPE type;
+        static const type min_allowable = CV_32U_MIN;
+        static const type max_allowable = CV_32U_MAX;
+    };
+
+    template<> struct mat_type_assotiations<CV_32S>
+    {
+        typedef CV_32S_TYPE type;
+        static const type min_allowable = CV_32S_MIN;
+        static const type max_allowable = CV_32S_MAX;
+    };
+
+    template<> struct mat_type_assotiations<CV_64U>
+    {
+        typedef CV_64U_TYPE type;
+        static const type min_allowable = CV_64U_MIN;
+        static const type max_allowable = CV_64U_MAX;
+    };
+
+    template<> struct mat_type_assotiations<CV_64S>
+    {
+        typedef CV_64S_TYPE type;
+        static const type min_allowable = CV_64S_MIN;
+        static const type max_allowable = CV_64S_MAX;
+    };
+
+
 template<> struct mat_type_assotiations<CV_8U>
 {
     typedef unsigned char type;
@@ -2347,12 +2390,6 @@ template<> struct mat_type_assotiations<CV_16S>
     static const type max_allowable = SHRT_MAX;
 };
 
-template<> struct mat_type_assotiations<CV_32S>
-{
-    typedef int type;
-    static const type min_allowable = (-INT_MAX - 1);
-    static const type max_allowable = INT_MAX;
-};
 
 // inclusive maxVal !!!
 template<int depth>

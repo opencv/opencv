@@ -701,6 +701,18 @@ int Mat::depth() const
 }
 
 inline
+int Mat::bytes() const
+{
+    return CV_MAT_DEPTH_BYTES(flags);
+}
+
+inline
+int Mat::bits() const
+{
+    return CV_MAT_DEPTH_BITS(flags);
+}
+
+inline
 int Mat::channels() const
 {
     return CV_MAT_CN(flags);

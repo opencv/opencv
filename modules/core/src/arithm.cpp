@@ -1279,7 +1279,7 @@ static BinaryFunc* getMinTab()
     return minTab;
 }
 
-}
+} // end namespace cv
 
 void cv::bitwise_and(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
@@ -1765,6 +1765,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         }
     }
 }
+
 
 static BinaryFunc* getAddTab()
 {

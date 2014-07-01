@@ -461,7 +461,6 @@ enum { COLOR_BGR2BGRA     = 0,
        COLOR_BayerRG2RGB_EA  = COLOR_BayerBG2BGR_EA,
        COLOR_BayerGR2RGB_EA  = COLOR_BayerGB2BGR_EA,
 
-
        COLOR_COLORCVT_MAX  = 139
 };
 

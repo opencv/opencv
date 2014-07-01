@@ -82,7 +82,6 @@ foreach(m ${OPENCV_MODULE_${the_module}_DEPS})
   endforeach()
 endforeach()
 
-
 macro(ios_include_3party_libs)
   foreach(l ${ARGN})
     add_dependencies(${the_module} ${l})
