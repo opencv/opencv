@@ -379,7 +379,7 @@
     #undef EXTRA_PARAMS
     #define EXTRA_PARAMS , __global uchar* dstptr2, int dststep2, int dstoffset2
     #undef EXTRA_INDEX
-    #define EXTRA_INDEX int dst_index2 = mad24(y0, dststep2, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset2))
+    #define EXTRA_INDEX int dst_index2 = mad24(y, dststep2, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset2))
     #undef EXTRA_INDEX_ADD
     #define EXTRA_INDEX_ADD dst_index2 += dststep2
 #endif
@@ -411,24 +411,31 @@ __kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
                  int rows, int cols EXTRA_PARAMS )
 {
     int x = get_global_id(0);
-    int y0 = get_global_id(1) * rowsPerWI;
+    int y = get_global_id(1) * rowsPerWI;
 
     if (x < cols)
     {
-        int src1_index = mad24(y0, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
+        int src1_index = mad24(y, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
 #if !(defined(OP_RECIP_SCALE) || defined(OP_NOT))
-        int src2_index = mad24(y0, srcstep2, mad24(x, (int)sizeof(srcT2_C1) * cn, srcoffset2));
+        int src2_index = mad24(y, srcstep2, mad24(x, (int)sizeof(srcT2_C1) * cn, srcoffset2));
 #endif
-        int dst_index  = mad24(y0, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
+        int dst_index  = mad24(y, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
         EXTRA_INDEX;
 
-        for (int y = y0, y1 = min(rows, y0 + rowsPerWI); y < y1; ++y, src1_index += srcstep1, dst_index += dststep)
+        #pragma unroll
+        for (int i = 0; i < rowsPerWI; ++i)
         {
-            PROCESS_ELEM;
+            if (y < rows)
+            {
+                PROCESS_ELEM;
 #if !(defined(OP_RECIP_SCALE) || defined(OP_NOT))
-            src2_index += srcstep2;
+                src2_index += srcstep2;
 #endif
-            EXTRA_INDEX_ADD;
+                ++y;
+                src1_index += srcstep1;
+                dst_index += dststep;
+                EXTRA_INDEX_ADD;
+            }
         }
     }
 }
@@ -442,18 +449,19 @@ __kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
                  int rows, int cols EXTRA_PARAMS )
 {
     int x = get_global_id(0);
-    int y0 = get_global_id(1) * rowsPerWI;
+    int y = get_global_id(1) * rowsPerWI;
 
     if (x < cols)
     {
-        int mask_index = mad24(y0, maskstep, x + maskoffset);
-        int src1_index = mad24(y0, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
-        int src2_index = mad24(y0, srcstep2, mad24(x, (int)sizeof(srcT2_C1) * cn, srcoffset2));
-        int dst_index  = mad24(y0, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
+        int mask_index = mad24(y, maskstep, x + maskoffset);
+        int src1_index = mad24(y, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
+        int src2_index = mad24(y, srcstep2, mad24(x, (int)sizeof(srcT2_C1) * cn, srcoffset2));
+        int dst_index  = mad24(y, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
 
-        for (int y = y0, y1 = min(rows, y0 + rowsPerWI); y < y1; ++y, src1_index += srcstep1, src2_index += srcstep2,
-                                                                mask_index += maskstep, dst_index += dststep)
-            if (mask[mask_index])
+        #pragma unroll
+        for (int i = 0; i < rowsPerWI; ++i, ++y, src1_index += srcstep1, src2_index += srcstep2,
+            mask_index += maskstep, dst_index += dststep)
+            if (y < rows && mask[mask_index])
             {
                 PROCESS_ELEM;
             }
@@ -467,17 +475,23 @@ __kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
                  int rows, int cols EXTRA_PARAMS )
 {
     int x = get_global_id(0);
-    int y0 = get_global_id(1) * rowsPerWI;
+    int y = get_global_id(1) * rowsPerWI;
 
     if (x < cols)
     {
-        int src1_index = mad24(y0, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
-        int dst_index  = mad24(y0, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
+        int src1_index = mad24(y, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
+        int dst_index  = mad24(y, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
 
-        for (int y = y0, y1 = min(rows, y0 + rowsPerWI); y < y1; ++y, src1_index += srcstep1, dst_index += dststep)
-        {
-            PROCESS_ELEM;
-        }
+        #pragma unroll
+        for (int i = 0; i < rowsPerWI; ++i)
+            if (y < rows)
+            {
+                PROCESS_ELEM;
+
+                ++y;
+                src1_index += srcstep1;
+                dst_index += dststep;
+            }
     }
 }
 
@@ -489,16 +503,17 @@ __kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
                  int rows, int cols EXTRA_PARAMS )
 {
     int x = get_global_id(0);
-    int y0 = get_global_id(1) * rowsPerWI;
+    int y = get_global_id(1) * rowsPerWI;
 
     if (x < cols)
     {
-        int mask_index = mad24(y0, maskstep, x + maskoffset);
-        int src1_index = mad24(y0, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
-        int dst_index  = mad24(y0, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
+        int mask_index = mad24(y, maskstep, x + maskoffset);
+        int src1_index = mad24(y, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
+        int dst_index  = mad24(y, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
 
-        for (int y = y0, y1 = min(rows, y0 + rowsPerWI); y < y1; ++y, src1_index += srcstep1, mask_index += maskstep, dst_index += dststep)
-            if (mask[mask_index])
+        #pragma unroll
+        for (int i = 0; i < rowsPerWI; ++i, ++y, src1_index += srcstep1, mask_index += maskstep, dst_index += dststep)
+            if (y < rows && mask[mask_index])
             {
                 PROCESS_ELEM;
             }
