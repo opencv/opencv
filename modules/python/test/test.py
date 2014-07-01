@@ -1646,7 +1646,8 @@ class AreaTests(OpenCVTests):
             cv.SetData(imagefiledata, filedata, len(filedata))
             return cv.DecodeImageM(imagefiledata)
 
-        urllib.urlretrieve("http://docs.opencv.org/data/camera_calibration.tar.gz", "camera_calibration.tar.gz")
+        if (not os.path.isfile("camera_calibration.tar.gz")):
+            urllib.urlretrieve("http://docs.opencv.org/data/camera_calibration.tar.gz", "camera_calibration.tar.gz")
         tf = tarfile.open("camera_calibration.tar.gz")
 
         num_x_ints = 8
