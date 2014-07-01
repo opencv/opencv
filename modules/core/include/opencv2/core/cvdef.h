@@ -289,7 +289,7 @@ typedef signed char schar;
 #define CV_16S_MAX   INT16_MAX
 #define CV_16S_MIN   INT16_MIN
 
-#define CV_32U  7
+#define CV_32U  10
 #define CV_32U_DEPTH_BITS_LOG2 5
 #define CV_32U_DEPTH_BYTES_LOG2 2
 #define CV_32U_TYPE  std::uint32_t
@@ -303,14 +303,14 @@ typedef signed char schar;
 #define CV_32S_MAX   INT32_MAX
 #define CV_32S_MIN   INT32_MIN
 
-#define CV_64U  7
+#define CV_64U  11
 #define CV_64U_DEPTH_BITS_LOG2 6
 #define CV_64U_DEPTH_BYTES_LOG2 3
 #define CV_64U_TYPE  std::uint64_t
 #define CV_64U_MAX   UINT64_MAX
 #define CV_64U_MIN   0
 
-#define CV_64S  7
+#define CV_64S  12
 #define CV_64S_DEPTH_BITS_LOG2 6
 #define CV_64S_DEPTH_BYTES_LOG2 3
 #define CV_64S_TYPE  std::int64_t
@@ -332,12 +332,12 @@ typedef signed char schar;
 #define CV_64F_MIN   DBL_MIN
 
 #define CV_USRTYPE1 7
-#define CV_USRTYPE2 7
-#define CV_USRTYPE3 7
-#define CV_USRTYPE4 7
+#define CV_USRTYPE2 13
+#define CV_USRTYPE3 14
+#define CV_USRTYPE4 15
 
 
-#define CV_2U   7
+#define CV_2U   8
 #define CV_2U_DEPTH_BITS_LOG2   1
 #define CV_2U_DEPTH_BYTES_LOG2   0
 #define CV_2U_TYPE cv::cv_2bitType
@@ -345,7 +345,7 @@ typedef signed char schar;
 #define CV_2U_MIN   0x0
 
 
-#define CV_4U   7
+#define CV_4U   9
 #define CV_4U_DEPTH_BITS_LOG2 2
 #define CV_4U_DEPTH_BYTES_LOG2 0
 #define CV_4U_TYPE cv::cv_4bitType
