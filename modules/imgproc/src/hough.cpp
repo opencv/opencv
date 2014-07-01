@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2014, Itseez, Inc, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -96,6 +97,28 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     }
     int numangle = cvRound((max_theta - min_theta) / theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
+
+#if (0 && defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801)
+    IppiSize srcSize = { width, height };
+    IppPointPolar delta = { rho, theta };
+    IppPointPolar dstRoi[2] = {{(Ipp32f) -(width + height), (Ipp32f) min_theta},{(Ipp32f) (width + height), (Ipp32f) max_theta}};
+    int bufferSize;
+    int nz = countNonZero(img);
+    int ipp_linesMax = std::min(linesMax, nz*numangle/threshold);
+    int linesCount = 0;
+    lines.resize(ipp_linesMax);
+    IppStatus ok = ippiHoughLineGetSize_8u_C1R(srcSize, delta, ipp_linesMax, &bufferSize);
+    Ipp8u* buffer = ippsMalloc_8u(bufferSize);
+    if (ok >= 0) ok = ippiHoughLine_Region_8u32f_C1R(image, step, srcSize, (IppPointPolar*) &lines[0], dstRoi, ipp_linesMax, &linesCount, delta, threshold, buffer);
+    ippsFree(buffer);
+    if (ok >= 0)
+    {
+        lines.resize(linesCount);
+        return;
+    }
+    lines.clear();
+    setIppErrorStatus();
+#endif
 
     AutoBuffer<int> _accum((numangle+2) * (numrho+2));
     std::vector<int> _sort_buf;
@@ -403,6 +426,31 @@ HoughLinesProbabilistic( Mat& image,
 
     int numangle = cvRound(CV_PI / theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
+
+#if (0 && defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801)
+    IppiSize srcSize = { width, height };
+    IppPointPolar delta = { rho, theta };
+    IppiHoughProbSpec* pSpec;
+    int bufferSize, specSize;
+    int ipp_linesMax = std::min(linesMax, numangle*numrho);
+    int linesCount = 0;
+    lines.resize(ipp_linesMax);
+    IppStatus ok = ippiHoughProbLineGetSize_8u_C1R(srcSize, delta, &specSize, &bufferSize);
+    Ipp8u* buffer = ippsMalloc_8u(bufferSize);
+    pSpec = (IppiHoughProbSpec*) malloc(specSize);
+    if (ok >= 0) ok = ippiHoughProbLineInit_8u32f_C1R(srcSize, delta, ippAlgHintNone, pSpec);
+    if (ok >= 0) ok = ippiHoughProbLine_8u32f_C1R(image.data, image.step, srcSize, threshold, lineLength, lineGap, (IppiPoint*) &lines[0], ipp_linesMax, &linesCount, buffer, pSpec);
+
+    free(pSpec);
+    ippsFree(buffer);
+    if (ok >= 0)
+    {
+        lines.resize(linesCount);
+        return;
+    }
+    lines.clear();
+    setIppErrorStatus();
+#endif
 
     Mat accum = Mat::zeros( numangle, numrho, CV_32SC1 );
     Mat mask( height, width, CV_8UC1 );

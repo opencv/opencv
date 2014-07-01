@@ -58,18 +58,18 @@ Ptr<ExposureCompensator> ExposureCompensator::createDefault(int type)
 }
 
 
-void ExposureCompensator::feed(const std::vector<Point> &corners, const std::vector<Mat> &images,
-                               const std::vector<Mat> &masks)
+void ExposureCompensator::feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
+                               const std::vector<UMat> &masks)
 {
-    std::vector<std::pair<Mat,uchar> > level_masks;
+    std::vector<std::pair<UMat,uchar> > level_masks;
     for (size_t i = 0; i < masks.size(); ++i)
         level_masks.push_back(std::make_pair(masks[i], 255));
     feed(corners, images, level_masks);
 }
 
 
-void GainCompensator::feed(const std::vector<Point> &corners, const std::vector<Mat> &images,
-                           const std::vector<std::pair<Mat,uchar> > &masks)
+void GainCompensator::feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
+                           const std::vector<std::pair<UMat,uchar> > &masks)
 {
     LOGLN("Exposure compensation...");
 #if ENABLE_LOG
@@ -93,11 +93,11 @@ void GainCompensator::feed(const std::vector<Point> &corners, const std::vector<
             Rect roi;
             if (overlapRoi(corners[i], corners[j], images[i].size(), images[j].size(), roi))
             {
-                subimg1 = images[i](Rect(roi.tl() - corners[i], roi.br() - corners[i]));
-                subimg2 = images[j](Rect(roi.tl() - corners[j], roi.br() - corners[j]));
+                subimg1 = images[i](Rect(roi.tl() - corners[i], roi.br() - corners[i])).getMat(ACCESS_READ);
+                subimg2 = images[j](Rect(roi.tl() - corners[j], roi.br() - corners[j])).getMat(ACCESS_READ);
 
-                submask1 = masks[i].first(Rect(roi.tl() - corners[i], roi.br() - corners[i]));
-                submask2 = masks[j].first(Rect(roi.tl() - corners[j], roi.br() - corners[j]));
+                submask1 = masks[i].first(Rect(roi.tl() - corners[i], roi.br() - corners[i])).getMat(ACCESS_READ);
+                submask2 = masks[j].first(Rect(roi.tl() - corners[j], roi.br() - corners[j])).getMat(ACCESS_READ);
                 intersect = (submask1 == masks[i].second) & (submask2 == masks[j].second);
 
                 N(i, j) = N(j, i) = std::max(1, countNonZero(intersect));
@@ -145,9 +145,9 @@ void GainCompensator::feed(const std::vector<Point> &corners, const std::vector<
 }
 
 
-void GainCompensator::apply(int index, Point /*corner*/, Mat &image, const Mat &/*mask*/)
+void GainCompensator::apply(int index, Point /*corner*/, InputOutputArray image, InputArray /*mask*/)
 {
-    image *= gains_(index, 0);
+    multiply(image, gains_(index, 0), image);
 }
 
 
@@ -160,8 +160,8 @@ std::vector<double> GainCompensator::gains() const
 }
 
 
-void BlocksGainCompensator::feed(const std::vector<Point> &corners, const std::vector<Mat> &images,
-                                     const std::vector<std::pair<Mat,uchar> > &masks)
+void BlocksGainCompensator::feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
+                                     const std::vector<std::pair<UMat,uchar> > &masks)
 {
     CV_Assert(corners.size() == images.size() && images.size() == masks.size());
 
@@ -169,8 +169,8 @@ void BlocksGainCompensator::feed(const std::vector<Point> &corners, const std::v
 
     std::vector<Size> bl_per_imgs(num_images);
     std::vector<Point> block_corners;
-    std::vector<Mat> block_images;
-    std::vector<std::pair<Mat,uchar> > block_masks;
+    std::vector<UMat> block_images;
+    std::vector<std::pair<UMat,uchar> > block_masks;
 
     // Construct blocks for gain compensator
     for (int img_idx = 0; img_idx < num_images; ++img_idx)
@@ -208,11 +208,14 @@ void BlocksGainCompensator::feed(const std::vector<Point> &corners, const std::v
     for (int img_idx = 0; img_idx < num_images; ++img_idx)
     {
         Size bl_per_img = bl_per_imgs[img_idx];
-        gain_maps_[img_idx].create(bl_per_img);
+        gain_maps_[img_idx].create(bl_per_img, CV_32F);
 
-        for (int by = 0; by < bl_per_img.height; ++by)
-            for (int bx = 0; bx < bl_per_img.width; ++bx, ++bl_idx)
-                gain_maps_[img_idx](by, bx) = static_cast<float>(gains[bl_idx]);
+        {
+            Mat_<float> gain_map = gain_maps_[img_idx].getMat(ACCESS_WRITE);
+            for (int by = 0; by < bl_per_img.height; ++by)
+                for (int bx = 0; bx < bl_per_img.width; ++bx, ++bl_idx)
+                    gain_map(by, bx) = static_cast<float>(gains[bl_idx]);
+        }
 
         sepFilter2D(gain_maps_[img_idx], gain_maps_[img_idx], CV_32F, ker, ker);
         sepFilter2D(gain_maps_[img_idx], gain_maps_[img_idx], CV_32F, ker, ker);
@@ -220,16 +223,18 @@ void BlocksGainCompensator::feed(const std::vector<Point> &corners, const std::v
 }
 
 
-void BlocksGainCompensator::apply(int index, Point /*corner*/, Mat &image, const Mat &/*mask*/)
+void BlocksGainCompensator::apply(int index, Point /*corner*/, InputOutputArray _image, InputArray /*mask*/)
 {
-    CV_Assert(image.type() == CV_8UC3);
+    CV_Assert(_image.type() == CV_8UC3);
 
-    Mat_<float> gain_map;
-    if (gain_maps_[index].size() == image.size())
-        gain_map = gain_maps_[index];
+    UMat u_gain_map;
+    if (gain_maps_[index].size() == _image.size())
+        u_gain_map = gain_maps_[index];
     else
-        resize(gain_maps_[index], gain_map, image.size(), 0, 0, INTER_LINEAR);
+        resize(gain_maps_[index], u_gain_map, _image.size(), 0, 0, INTER_LINEAR);
 
+    Mat_<float> gain_map = u_gain_map.getMat(ACCESS_READ);
+    Mat image = _image.getMat();
     for (int y = 0; y < image.rows; ++y)
     {
         const float* gain_row = gain_map.ptr<float>(y);

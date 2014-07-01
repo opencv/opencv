@@ -585,7 +585,7 @@ Draws a text string.
     :param font: ``CvFont`` structure initialized using :ocv:cfunc:`InitFont`.
 
     :param fontFace: Font type. One of  ``FONT_HERSHEY_SIMPLEX``,  ``FONT_HERSHEY_PLAIN``, ``FONT_HERSHEY_DUPLEX``,  ``FONT_HERSHEY_COMPLEX``,  ``FONT_HERSHEY_TRIPLEX``, ``FONT_HERSHEY_COMPLEX_SMALL``,  ``FONT_HERSHEY_SCRIPT_SIMPLEX``, or  ``FONT_HERSHEY_SCRIPT_COMPLEX``,
-           where each of the font ID's can be combined with  ``FONT_HERSHEY_ITALIC``  to get the slanted letters.
+           where each of the font ID's can be combined with  ``FONT_ITALIC``  to get the slanted letters.
 
     :param fontScale: Font scale factor that is multiplied by the font-specific base size.
 

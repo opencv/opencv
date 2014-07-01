@@ -240,7 +240,7 @@ CV_EXPORTS_W void batchDistance(InputArray src1, InputArray src2,
                                 bool crosscheck = false);
 
 //! scales and shifts array elements so that either the specified norm (alpha) or the minimum (alpha) and maximum (beta) array values get the specified values
-CV_EXPORTS_W void normalize( InputArray src, OutputArray dst, double alpha = 1, double beta = 0,
+CV_EXPORTS_W void normalize( InputArray src, InputOutputArray dst, double alpha = 1, double beta = 0,
                              int norm_type = NORM_L2, int dtype = -1, InputArray mask = noArray());
 
 //! scales and shifts array elements so that either the specified norm (alpha) or the minimum (alpha) and maximum (beta) array values get the specified values
@@ -389,7 +389,7 @@ CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
 
 //! implements generalized matrix product algorithm GEMM from BLAS
 CV_EXPORTS_W void gemm(InputArray src1, InputArray src2, double alpha,
-                       InputArray src3, double gamma, OutputArray dst, int flags = 0);
+                       InputArray src3, double beta, OutputArray dst, int flags = 0);
 
 //! multiplies matrix by its transposition from the left or from the right
 CV_EXPORTS_W void mulTransposed( InputArray src, OutputArray dst, bool aTa,
@@ -953,12 +953,12 @@ public:
 class CV_EXPORTS Formatter
 {
 public:
-    enum { FMT_MATLAB  = 0,
-           FMT_CSV     = 1,
-           FMT_PYTHON  = 2,
-           FMT_NUMPY   = 3,
-           FMT_C       = 4,
-           FMT_DEFAULT = FMT_MATLAB
+    enum { FMT_DEFAULT = 0,
+           FMT_MATLAB  = 1,
+           FMT_CSV     = 2,
+           FMT_PYTHON  = 3,
+           FMT_NUMPY   = 4,
+           FMT_C       = 5
          };
 
     virtual ~Formatter();

@@ -55,7 +55,7 @@ Building the OpenCV library from scratch requires a couple of tools installed be
 .. |TortoiseGit| replace:: TortoiseGit
 .. _TortoiseGit: http://code.google.com/p/tortoisegit/wiki/Download
 .. |Python_Libraries| replace:: Python libraries
-.. _Python_Libraries: http://www.python.org/getit/
+.. _Python_Libraries: http://www.python.org/downloads/
 .. |Numpy| replace:: Numpy
 .. _Numpy: http://numpy.scipy.org/
 .. |IntelTBB| replace:: Intel |copy| Threading Building Blocks (*TBB*)

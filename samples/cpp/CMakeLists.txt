@@ -3,9 +3,9 @@
 #
 # ----------------------------------------------------------------------------
 
-SET(OPENCV_CPP_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc
-    opencv_highgui opencv_ml opencv_video opencv_objdetect opencv_photo opencv_nonfree opencv_softcascade
-    opencv_features2d opencv_calib3d opencv_legacy opencv_contrib opencv_stitching opencv_videostab opencv_shape)
+SET(OPENCV_CPP_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_flann
+    opencv_highgui opencv_ml opencv_video opencv_objdetect opencv_photo opencv_nonfree
+    opencv_features2d opencv_calib3d opencv_stitching opencv_videostab opencv_shape)
 
 ocv_check_dependencies(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
@@ -92,6 +92,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   endif()
 
   ocv_list_filterout(cpp_samples "viz")
+
+  if(NOT HAVE_IPP_A)
+    ocv_list_filterout(cpp_samples "/ippasync/")
+  endif()
 
   foreach(sample_filename ${cpp_samples})
     get_filename_component(sample ${sample_filename} NAME_WE)

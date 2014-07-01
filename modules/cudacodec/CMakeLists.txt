@@ -1,4 +1,4 @@
-if(IOS OR APPLE)
+if(IOS OR APPLE OR (NOT HAVE_CUDA AND NOT BUILD_CUDA_STUBS))
   ocv_module_disable(cudacodec)
 endif()
 
