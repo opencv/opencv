@@ -198,3 +198,15 @@ if(WITH_OPENEXR)
 
   set(HAVE_OPENEXR YES)
 endif()
+
+# --- GDAL (optional) ---
+if(WITH_GDAL)
+    find_package(GDAL)
+
+    if(NOT GDAL_FOUND)
+        ocv_clear_vars(GDAL_LIBRARY GDAL_INCLUDE_DIR)
+        set(HAVE_GDAL NO)
+    else()
+        set(HAVE_GDAL YES)
+    endif()
+endif()
