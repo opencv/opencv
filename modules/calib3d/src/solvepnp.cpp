@@ -273,12 +273,72 @@ namespace cv
     }
 }
 
+class PnPRansacCallback : public PointSetRegistrator::Callback
+{
+public:
+    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const
+    {
+		// which kind of checking??
+
+    	return false;
+    }
+
+    /* Pre: True */
+    /* Post: compute _model with given points */
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    {
+        Mat opoints = _m1.getMat(), ipoints = _m2.getMat();
+
+        Mat rvec, tvec; 	// we supose to get it from _model
+		Mat cameraMatrix; 	// we supose to get it from _model
+		Mat distCoeffs; 	// we supose to get it from _model
+
+		bool useExtrinsicGuess = true;
+		int flags = cv::ITERATIVE;
+
+        bool correspondence = cv::solvePnP( opoints, ipoints,
+        									cameraMatrix, distCoeffs, rvec, tvec, useExtrinsicGuess, flags );
+
+        return correspondence;
+    }
+
+    /* Pre: True */
+    /* Post: fill _err with projection errors */
+    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
+    {
+
+        Mat opoints = _m1.getMat(), ipoints = _m2.getMat();
+
+        Mat rvec, tvec; 	// we supose to get it from _model
+        Mat cameraMatrix; 	// we supose to get it from _model
+        Mat distCoeffs; 	// we supose to get it from _model
+
+        int i, count = opoints.cols;
+
+        Mat projpoints(count, 2, CV_64FC1);
+        cv::projectPoints(opoints, rvec, tvec, cameraMatrix, distCoeffs, projpoints);
+
+        const Point2f* ipoints_ptr = ipoints.ptr<Point2f>();
+        const Point2f* projpoints_ptr = projpoints.ptr<Point2f>();
+
+        _err.create(count, 1, CV_64FC1);
+        float* err = _err.getMat().ptr<float>();
+
+        for ( i = 0; i < count; ++i)
+        {
+            err[i] = cv::norm( ipoints_ptr[i] - projpoints_ptr[i] );
+		}
+
+    }
+};
+
 void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                         InputArray _cameraMatrix, InputArray _distCoeffs,
                         OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
                         int iterationsCount, float reprojectionError, int minInliersCount,
                         OutputArray _inliers, int flags)
 {
+	// NO CHANGES
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
 
@@ -305,8 +365,34 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     params.useExtrinsicGuess = useExtrinsicGuess;
     params.camera.init(cameraMatrix, distCoeffs);
     params.flags = flags;
+    // END NO CHANGES
 
-    std::vector<int> localInliers;
+    // I/O containers
+    std::vector<cv::Mat> out_model;
+    out_model.push_back(rvec);
+    out_model.push_back(tvec);
+
+	Ptr<PointSetRegistrator::Callback> cb = makePtr<PnPRansacCallback>();		// pointer to callback
+
+	int model_points = 7; // number of model points. From fundamentalMatrix, must change
+	double param1 = params.iterationsCount ;	// Ransac parameters
+	double param2 = params.reprojectionError;	// Ransac parameters
+	int param3 = params.iterationsCount;		// Ransac parameters
+
+	// call Ransac
+	int result = createRANSACPointSetRegistrator(cb, model_points, param1, param2, param3)->run(objectPoints, imagePoints, out_model, _inliers);
+
+	// NOT COMPILES
+
+	//out_model[0].copyTo(_rvec);	 	 // out Rvec
+	//out_model[1].copyTo(_tvec);	     // out Tvec
+
+
+
+
+	// OLD IMPLEMENTATION
+
+    /*std::vector<int> localInliers;
     Mat localRvec, localTvec;
     rvec.copyTo(localRvec);
     tvec.copyTo(localTvec);
@@ -345,6 +431,6 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
         Rodrigues(R, rvec);
         if( _inliers.needed() )
             _inliers.release();
-    }
+    }*/
     return;
 }
