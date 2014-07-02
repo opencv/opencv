@@ -2228,7 +2228,8 @@ static cl_device_id selectOpenCLDevice()
         if (!isID)
         {
             deviceTypes.push_back("GPU");
-            deviceTypes.push_back("CPU");
+            if (configuration)
+                deviceTypes.push_back("CPU");
         }
         else
             deviceTypes.push_back("ALL");
