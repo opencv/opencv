@@ -348,7 +348,18 @@ static void InvSqrt_32f(const float* src, float* dst, int len)
 
 static void InvSqrt_64f(const double* src, double* dst, int len)
 {
-    for( int i = 0; i < len; i++ )
+    int i = 0;
+
+#if CV_SSE2
+    if (USE_SSE2)
+    {
+        __m128d v_1 = _mm_set1_pd(1.0);
+        for ( ; i <= len - 2; i += 2)
+            _mm_storeu_pd(dst + i, _mm_div_pd(v_1, _mm_sqrt_pd(_mm_loadu_pd(src + i))));
+    }
+#endif
+
+    for( ; i < len; i++ )
         dst[i] = 1/std::sqrt(src[i]);
 }
 
