@@ -153,7 +153,7 @@ public:
      * @param feature_size is the size of the feature (considered as a ElementType[])
      * @param key_size is the number of bits that are turned on in the feature
      */
-    LshTable(unsigned int /*feature_size*/, unsigned int /*key_size*/)
+    LshTable(unsigned int /*feature_size*/, unsigned int /*key_size*/, std::vector<size_t> & /*indices*/)
     {
         std::cerr << "LSH is not implemented for that type" << std::endl;
         assert(0);
@@ -341,20 +341,20 @@ private:
 // Specialization for unsigned char
 
 template<>
-inline LshTable<unsigned char>::LshTable(unsigned int feature_size, unsigned int subsignature_size)
+inline LshTable<unsigned char>::LshTable( unsigned int feature_size,
+                                          unsigned int subsignature_size,
+                                          std::vector<size_t> & indices  )
 {
     initialize(subsignature_size);
     // Allocate the mask
     mask_ = std::vector<size_t>((size_t)ceil((float)(feature_size * sizeof(char)) / (float)sizeof(size_t)), 0);
 
-    // A bit brutal but fast to code
-    std::vector<size_t> indices(feature_size * CHAR_BIT);
-    for (size_t i = 0; i < feature_size * CHAR_BIT; ++i) indices[i] = i;
-    std::random_shuffle(indices.begin(), indices.end());
-
     // Generate a random set of order of subsignature_size_ bits
     for (unsigned int i = 0; i < key_size_; ++i) {
-        size_t index = indices[i];
+        //Ensure the Nth bit will be selected only once among the different LshTables
+        //to avoid having two different tables with signatures sharing many dimensions/many bits
+        size_t index = indices[0];
+        indices.erase( indices.begin() );
 
         // Set that bit in the mask
         size_t divisor = CHAR_BIT * sizeof(size_t);

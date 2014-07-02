@@ -109,10 +109,22 @@ public:
      */
     void buildIndex()
     {
+        std::vector<size_t> indices(feature_size_ * CHAR_BIT);
+
         tables_.resize(table_number_);
         for (unsigned int i = 0; i < table_number_; ++i) {
+
+            //re-initialize the random indices table that the LshTable will use to pick its sub-dimensions
+            if( (indices.size() == feature_size_ * CHAR_BIT) || (indices.size() < key_size_) )
+            {
+              indices.resize( feature_size_ * CHAR_BIT );
+              for (size_t j = 0; j < feature_size_ * CHAR_BIT; ++j)
+                  indices[j] = j;
+              std::random_shuffle(indices.begin(), indices.end());
+            }
+
             lsh::LshTable<ElementType>& table = tables_[i];
-            table = lsh::LshTable<ElementType>(feature_size_, key_size_);
+            table = lsh::LshTable<ElementType>(feature_size_, key_size_, indices);
 
             // Add the features to the table
             table.add(dataset_);
