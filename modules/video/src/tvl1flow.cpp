@@ -351,7 +351,7 @@ OpticalFlowDual_TVL1::OpticalFlowDual_TVL1()
     nscales        = 5;
     warps          = 5;
     epsilon        = 0.01;
-   gamma         = 0.01;
+    gamma         = 0.;
     innerIterations = 30;
     outerIterations = 10;
     useInitialFlow = false;
