@@ -1729,22 +1729,18 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     UMat src = _src.getUMat(), lut = _lut.getUMat();
     _dst.create(src.size(), CV_MAKETYPE(ddepth, dcn));
     UMat dst = _dst.getUMat();
-    bool bAligned = (1 == lcn) && (0 == (src.offset % 4)) && (0 == ((dcn * src.cols) % 4));
-    // dst.cols == src.cols by params of dst.create
+    int kercn = lcn == 1 ? std::min(4, ocl::predictOptimalVectorWidth(_dst)) : dcn;
 
     ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
-                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", bAligned ? 4 : dcn, lcn,
-                         ocl::typeToStr(src.depth()), ocl::memopTypeToStr(ddepth)
-                         ));
+                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", kercn, lcn,
+                         ocl::typeToStr(src.depth()), ocl::memopTypeToStr(ddepth)));
     if (k.empty())
         return false;
 
-    int cols = bAligned ? dcn * dst.cols / 4 : dst.cols;
-
     k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::ReadOnlyNoSize(lut),
-        ocl::KernelArg::WriteOnlyNoSize(dst), dst.rows, cols);
+        ocl::KernelArg::WriteOnly(dst, dcn, kercn));
 
-    size_t globalSize[2] = { cols, (dst.rows + 3) / 4 };
+    size_t globalSize[2] = { dst.cols * dcn / kercn, (dst.rows + 3) / 4 };
     return k.run(2, globalSize, NULL, false);
 }
 
