@@ -259,7 +259,15 @@ typedef signed char schar;
 // CV_DEPTH_MAX is the maximum number of Data types allowed.
 #define CV_DEPTH_MAX  (1 << CV_CN_SHIFT)
 // The order is
+// {CV_2U, CV_4U, CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S, CV_32F, CV_64F, CV_USRTYPE1, CV_USRTYPE2, CV_USRTYPE3, CV_USRTYPE4}
 // {CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_USRTYPE1}
+
+//#define TYPE_TAB_ORDER(cv2U, cv4U, cv8U, cv8S, cv16U, cv16S, cv32U, cv32S, cv64U, cv64S, cv32F, cv64F, cvUSRTYPE1, cvUSRTYPE2, cvUSRTYPE3, cvUSRTYPE4) {cv2U, cv4U, cv8U, cv8S, cv16U, cv16S, cv32U, cv32S, cv64U, cv64S, cv32F, cv64F, cvUSRTYPE1, cvUSRTYPE2, cvUSRTYPE3, cvUSRTYPE4}
+
+//#define TYPE_TAB_ORDER(cv2U, cv4U, cv8U, cv8S, cv16U, cv16S, cv32U, cv32S, cv64U, cv64S, cv32F, cv64F, cvUSRTYPE1, cvUSRTYPE2, cvUSRTYPE3, cvUSRTYPE4) {cv8U, cv8S, cv16U, cv16S, cv32S, cv32F, cv64F, cvUSRTYPE1, cv2U, cv4U, cv32U, cv64U, cv64S, cvUSRTYPE2, cvUSRTYPE3, cvUSRTYPE4}
+
+#define TYPE_TAB_ORDER(cv2U, cv4U, cv8U, cv8S, cv16U, cv16S, cv32U, cv32S, cv64U, cv64S, cv32F, cv64F, cvUSRTYPE1, cvUSRTYPE2, cvUSRTYPE3, cvUSRTYPE4) {cv8U, cv8S, cv16U, cv16S, cv32S, cv32F, cv64F, cvUSRTYPE1}
+
 
 #define CV_8U   0
 #define CV_8U_DEPTH_BITS_LOG2 3

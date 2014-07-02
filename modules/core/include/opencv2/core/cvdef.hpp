@@ -639,8 +639,7 @@ template<> struct cv_Signed_Work_Type<CV_64F,CV_64S> : cv_Data_Type<CV_64F>{};
 template<> struct cv_Signed_Work_Type<CV_64F,CV_32F> : cv_Data_Type<CV_64F>{};
 template<> struct cv_Signed_Work_Type<CV_64F,CV_64F> : cv_Data_Type<CV_64F>{};
 
-//
-
+// Instantiate templates
 
 template struct cv_Signed_Work_Type<CV_2U, CV_2U>;
 template struct cv_Signed_Work_Type<CV_2U, CV_4U>;
@@ -754,9 +753,6 @@ template struct cv_Signed_Work_Type<CV_64F,CV_64S>;
 template struct cv_Signed_Work_Type<CV_64F,CV_32F>;
 template struct cv_Signed_Work_Type<CV_64F,CV_64F>;
 
-
-
-
 template<int cv_data_type> using cv_Type = typename cv_Data_Type<cv_data_type>::type;
 
 // Don't use cv_Data_Type directly; use Data_Type which works for both types and types with channels.
@@ -774,7 +770,6 @@ namespace cv {
 
 
 }
-
 
 ///////////////////////////// Bitwise and discrete math operations ///////////////////////////
 
@@ -804,7 +799,6 @@ template<typename _Tp> _Tp gComDivisor(_Tp a, _Tp* b, unsigned int size_b){
 };
 
 template<typename _Tp> _Tp gComDivisor(_Tp* b, unsigned int size_b){
-    //  std::cout << "b[0] = " << b[0] << " b[size_b-1] = " << b[size_b-1]<< " size_b = " << size_b << "\n";
     switch (size_b) {
         case 0:
             return _Tp();
