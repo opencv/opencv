@@ -15,7 +15,6 @@
 
 using namespace std;
 
-
 /// define the corner points
 ///    Note that GDAL can natively determine this
 cv::Point2d tl( -122.441017, 37.815664 );
@@ -29,6 +28,20 @@ cv::Point2d dem_tr( -123.0, 37);
 
 /// range of the heat map colors
 std::vector<std::pair<cv::Vec3b,double> > color_range;
+
+
+/// List of all function prototypes
+cv::Point2d lerp( const cv::Point2d&, const cv::Point2d&, const double& );
+
+cv::Vec3b get_dem_color( const double& );
+
+cv::Point2d world2dem( const cv::Point2d&, const cv::Size&);
+
+cv::Point2d pixel2world( const int&, const int&, const cv::Size& );
+
+void add_color( cv::Vec3b& pix, const uchar& b, const uchar& g, const uchar& r );
+
+
 
 /**
  * Linear Interpolation
@@ -73,7 +86,7 @@ cv::Vec3b get_dem_color( const double& elevation ){
     // otherwise, find the proper starting index
     int idx=0;
     double t = 0;
-    for( int x=0; x<color_range.size()-1; x++ ){
+    for( int x=0; x<(int)(color_range.size()-1); x++ ){
 
         // if the current elevation is below the next item, then use the current
         // two colors as our range
