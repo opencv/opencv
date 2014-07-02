@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include <fstream>
+#include <queue>
 
 #if defined _MSC_VER && _MSC_VER == 1500
     typedef int int_fast32_t;
@@ -56,6 +57,27 @@ using namespace std;
 
 namespace cv
 {
+
+// Deletes a tree of ERStat regions starting at root. Used only
+// internally to this implementation.
+static void deleteERStatTree(ERStat* root) {
+    queue<ERStat*> to_delete;
+    to_delete.push(root);
+    while (!to_delete.empty()) {
+        ERStat* n = to_delete.front();
+        to_delete.pop();
+        ERStat* c = n->child;
+        if (c != NULL) {
+            to_delete.push(c);
+            ERStat* sibling = c->next;
+            while (sibling != NULL) {
+                to_delete.push(sibling);
+                sibling = sibling->next;
+            }
+        }
+        delete n;
+    }
+}
 
 ERStat::ERStat(int init_level, int init_pixel, int init_x, int init_y) : pixel(init_pixel),
                level(init_level), area(0), perimeter(0), euler(0), probability(1.0),
@@ -497,7 +519,7 @@ void ERFilterNM::er_tree_extract( InputArray image )
                     delete(stat->crossings);
                     stat->crossings = NULL;
                 }
-                delete stat;
+                deleteERStatTree(stat);
             }
             er_stack.clear();
 
