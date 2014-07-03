@@ -1416,7 +1416,16 @@ bool useOpenCL()
 {
     CoreTLSData* data = coreTlsData.get();
     if( data->useOpenCL < 0 )
-        data->useOpenCL = (int)haveOpenCL() && Device::getDefault().ptr() != NULL;
+    {
+        try
+        {
+            data->useOpenCL = (int)haveOpenCL() && Device::getDefault().ptr() != NULL;
+        }
+        catch (...)
+        {
+            data->useOpenCL = 0;
+        }
+    }
     return data->useOpenCL > 0;
 }
 
@@ -2228,7 +2237,8 @@ static cl_device_id selectOpenCLDevice()
         if (!isID)
         {
             deviceTypes.push_back("GPU");
-            deviceTypes.push_back("CPU");
+            if (configuration)
+                deviceTypes.push_back("CPU");
         }
         else
             deviceTypes.push_back("ALL");
@@ -4427,11 +4437,13 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
         d.preferredVectorWidthShort(), d.preferredVectorWidthShort(),
         d.preferredVectorWidthInt(), d.preferredVectorWidthFloat(),
         d.preferredVectorWidthDouble(), -1 }, kercn = vectorWidths[depth];
-    if (d.isIntel())
+
+    // if the device says don't use vectors
+    if (vectorWidths[0] == 1)
     {
         // it's heuristic
-        int vectorWidthsIntel[] = { 16, 16, 8, 8, 1, 1, 1, -1 };
-        kercn = vectorWidthsIntel[depth];
+        int vectorWidthsOthers[] = { 16, 16, 8, 8, 1, 1, 1, -1 };
+        kercn = vectorWidthsOthers[depth];
     }
 
     if (ssize.width * cn < kercn || kercn <= 0)
