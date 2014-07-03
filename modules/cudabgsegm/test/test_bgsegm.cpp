@@ -42,8 +42,8 @@
 
 #include "test_precomp.hpp"
 
-#ifdef HAVE_OPENCV_LEGACY
-#  include "opencv2/legacy.hpp"
+#ifdef HAVE_OPENCV_CUDALEGACY
+#  include "opencv2/cudalegacy.hpp"
 #endif
 
 #ifdef HAVE_CUDA
@@ -66,7 +66,7 @@ using namespace cvtest;
 //////////////////////////////////////////////////////
 // FGDStatModel
 
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT && defined(HAVE_OPENCV_LEGACY)
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT && defined(HAVE_OPENCV_CUDALEGACY)
 
 namespace cv
 {
