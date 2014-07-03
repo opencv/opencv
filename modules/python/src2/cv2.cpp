@@ -10,14 +10,9 @@
 #include <numpy/ndarrayobject.h>
 
 #include "pyopencv_generated_include.h"
-
-#include "opencv2/opencv_modules.hpp"
-
-#include "pycompat.hpp"
-
 #include "pyopencv_generated_typedefs.h"
 
-#include "pyopencv_funcs.h"
+#include "pycv2.hpp"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void OnMouse(int event, int x, int y, int flags, void* param)

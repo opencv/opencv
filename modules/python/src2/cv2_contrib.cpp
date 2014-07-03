@@ -11,14 +11,9 @@
 
 #include "pyopencv_generated_include.h"
 #include "pyopencv_generated_contrib_include.h"
+#include "pyopencv_generated_contrib_typedefs.h"
 
-#include "opencv2/opencv_modules.hpp"
-
-#include "pycompat.hpp"
-#include <iostream>
-using namespace std;
-
-#include "pyopencv_funcs.h"
+#include "pycv2.hpp"
 ///////////////////////////////////////////////////////////////////////////////////////
 
 static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
