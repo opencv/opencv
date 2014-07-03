@@ -4437,11 +4437,13 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
         d.preferredVectorWidthShort(), d.preferredVectorWidthShort(),
         d.preferredVectorWidthInt(), d.preferredVectorWidthFloat(),
         d.preferredVectorWidthDouble(), -1 }, kercn = vectorWidths[depth];
-    if (d.isIntel())
+
+    // if the device says don't use vectors
+    if (vectorWidths[0] == 1)
     {
         // it's heuristic
-        int vectorWidthsIntel[] = { 16, 16, 8, 8, 1, 1, 1, -1 };
-        kercn = vectorWidthsIntel[depth];
+        int vectorWidthsOthers[] = { 16, 16, 8, 8, 1, 1, 1, -1 };
+        kercn = vectorWidthsOthers[depth];
     }
 
     if (ssize.width * cn < kercn || kercn <= 0)
