@@ -2980,8 +2980,187 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
 namespace cv
 {
 
-template<typename T> static void
-inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
+template <typename T>
+struct InRange_SSE
+{
+    int operator () (const T *, const T *, const T *, uchar *, int) const
+    {
+        return 0;
+    }
+};
+
+#if CV_SSE2
+
+template <>
+struct InRange_SSE<uchar>
+{
+    int operator () (const uchar * src1, const uchar * src2, const uchar * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_full = _mm_set1_epi8(-1), v_128 = _mm_set1_epi8(-128);
+
+            for ( ; x <= len - 16; x += 16 )
+            {
+                __m128i v_src = _mm_add_epi8(_mm_loadu_si128((const __m128i *)(src1 + x)), v_128);
+                __m128i v_mask1 = _mm_cmpgt_epi8(_mm_add_epi8(_mm_loadu_si128((const __m128i *)(src2 + x)), v_128), v_src);
+                __m128i v_mask2 = _mm_cmpgt_epi8(v_src, _mm_add_epi8(_mm_loadu_si128((const __m128i *)(src3 + x)), v_128));
+                _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct InRange_SSE<schar>
+{
+    int operator () (const schar * src1, const schar * src2, const schar * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_full = _mm_set1_epi8(-1);
+
+            for ( ; x <= len - 16; x += 16 )
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src1 + x));
+                __m128i v_mask1 = _mm_cmpgt_epi8(_mm_loadu_si128((const __m128i *)(src2 + x)), v_src);
+                __m128i v_mask2 = _mm_cmpgt_epi8(v_src, _mm_loadu_si128((const __m128i *)(src3 + x)));
+                _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct InRange_SSE<ushort>
+{
+    int operator () (const ushort * src1, const ushort * src2, const ushort * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_zero = _mm_setzero_si128(), v_full = _mm_set1_epi16(-1), v_32768 = _mm_set1_epi16(-32768);
+
+            for ( ; x <= len - 8; x += 8 )
+            {
+                __m128i v_src = _mm_add_epi16(_mm_loadu_si128((const __m128i *)(src1 + x)), v_32768);
+                __m128i v_mask1 = _mm_cmpgt_epi16(_mm_add_epi16(_mm_loadu_si128((const __m128i *)(src2 + x)), v_32768), v_src);
+                __m128i v_mask2 = _mm_cmpgt_epi16(v_src, _mm_add_epi16(_mm_loadu_si128((const __m128i *)(src3 + x)), v_32768));
+                __m128i v_res = _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full);
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(_mm_srli_epi16(v_res, 8), v_zero));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct InRange_SSE<short>
+{
+    int operator () (const short * src1, const short * src2, const short * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_zero = _mm_setzero_si128(), v_full = _mm_set1_epi16(-1);
+
+            for ( ; x <= len - 8; x += 8 )
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src1 + x));
+                __m128i v_mask1 = _mm_cmpgt_epi16(_mm_loadu_si128((const __m128i *)(src2 + x)), v_src);
+                __m128i v_mask2 = _mm_cmpgt_epi16(v_src, _mm_loadu_si128((const __m128i *)(src3 + x)));
+                __m128i v_res = _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full);
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(_mm_srli_epi16(v_res, 8), v_zero));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct InRange_SSE<int>
+{
+    int operator () (const int * src1, const int * src2, const int * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_zero = _mm_setzero_si128(), v_full = _mm_set1_epi32(-1);
+
+            for ( ; x <= len - 8; x += 8 )
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src1 + x));
+                __m128i v_res1 = _mm_or_si128(_mm_cmpgt_epi32(_mm_loadu_si128((const __m128i *)(src2 + x)), v_src),
+                    _mm_cmpgt_epi32(v_src, _mm_loadu_si128((const __m128i *)(src3 + x))));
+
+                v_src = _mm_loadu_si128((const __m128i *)(src1 + x + 4));
+                __m128i v_res2 = _mm_or_si128(_mm_cmpgt_epi32(_mm_loadu_si128((const __m128i *)(src2 + x + 4)), v_src),
+                    _mm_cmpgt_epi32(v_src, _mm_loadu_si128((const __m128i *)(src3 + x + 4))));
+
+                __m128i v_res = _mm_packs_epi32(_mm_srli_epi32(_mm_andnot_si128(v_res1, v_full), 16),
+                                                _mm_srli_epi32(_mm_andnot_si128(v_res2, v_full), 16));
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_res, v_zero));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct InRange_SSE<float>
+{
+    int operator () (const float * src1, const float * src2, const float * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_zero = _mm_setzero_si128();
+
+            for ( ; x <= len - 8; x += 8 )
+            {
+                __m128 v_src = _mm_loadu_ps(src1 + x);
+                __m128 v_res1 = _mm_and_ps(_mm_cmple_ps(_mm_loadu_ps(src2 + x), v_src),
+                    _mm_cmple_ps(v_src, _mm_loadu_ps(src3 + x)));
+
+                v_src = _mm_loadu_ps(src1 + x + 4);
+                __m128 v_res2 = _mm_and_ps(_mm_cmple_ps(_mm_loadu_ps(src2 + x + 4), v_src),
+                    _mm_cmple_ps(v_src, _mm_loadu_ps(src3 + x + 4)));
+
+                __m128i v_res1i = _mm_cvtps_epi32(v_res1), v_res2i = _mm_cvtps_epi32(v_res2);
+                __m128i v_res = _mm_packs_epi32(_mm_srli_epi32(v_res1i, 16), _mm_srli_epi32(v_res2i, 16));
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_res, v_zero));
+            }
+        }
+
+        return x;
+    }
+};
+
+#endif
+
+template <typename T>
+static void inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
          const T* src3, size_t step3, uchar* dst, size_t step,
          Size size)
 {
@@ -2989,9 +3168,11 @@ inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
     step2 /= sizeof(src2[0]);
     step3 /= sizeof(src3[0]);
 
+    InRange_SSE<T> vop;
+
     for( ; size.height--; src1 += step1, src2 += step2, src3 += step3, dst += step )
     {
-        int x = 0;
+        int x = vop(src1, src2, src3, dst, size.width);
         #if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
