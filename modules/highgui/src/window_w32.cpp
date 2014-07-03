@@ -1520,9 +1520,9 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 
             //////////////////////////////////////////////////////////////////////////
             // if handle is allocated (i.e. != 0) then clean-up.
-            memBM && ::DeleteObject(memBM);
-            memDC && ::DeleteDC(memDC);
-            hDC   && ::ReleaseDC(hwnd, hDC);
+            if (memBM) ::DeleteObject(memBM);
+            if (memDC) ::DeleteDC(memDC);
+            if (hDC)   ::ReleaseDC(hwnd, hDC);
             ::CloseClipboard();
             break;
         }
