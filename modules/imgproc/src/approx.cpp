@@ -676,7 +676,7 @@ void cv::approxPolyDP( InputArray _curve, OutputArray _approxCurve,
 {
     Mat curve = _curve.getMat();
     int npoints = curve.checkVector(2), depth = curve.depth();
-    CV_Assert( npoints >= 0 && (depth == CV_32S || depth == CV_32F));
+    CV_Assert( npoints >= 0 && (depth == CV_32S || depth == CV_32F || depth == CV_64F));
 
     if( npoints == 0 )
     {
@@ -684,19 +684,28 @@ void cv::approxPolyDP( InputArray _curve, OutputArray _approxCurve,
         return;
     }
 
-    AutoBuffer<Point> _buf(npoints);
-    AutoBuffer<Range> _stack(npoints);
-    Point* buf = _buf;
     int nout = 0;
-
-    if( depth == CV_32S )
-        nout = approxPolyDP_(curve.ptr<Point>(), npoints, buf, closed, epsilon, &_stack);
-    else if( depth == CV_32F )
-        nout = approxPolyDP_(curve.ptr<Point2f>(), npoints, (Point2f*)buf, closed, epsilon, &_stack);
+    AutoBuffer<Range> _stack(npoints);
+    if( depth == CV_32S || depth == CV_32F)
+    {
+        AutoBuffer<Point> _buf(npoints);
+        Point* buf = _buf;
+        if( depth == CV_32S )
+            nout = approxPolyDP_(curve.ptr<Point>(), npoints, buf, closed, epsilon, &_stack);
+        else if( depth == CV_32F )
+            nout = approxPolyDP_(curve.ptr<Point2f>(), npoints, (Point2f*)buf, closed, epsilon, &_stack);
+        Mat(nout, 1, CV_MAKETYPE(depth, 2), buf).copyTo(_approxCurve);
+    }
+    else if( depth == CV_64F )
+    {
+        AutoBuffer<Point2d> _buf(npoints);
+        AutoBuffer<Range> _stack(npoints);
+        Point2d* buf = _buf;
+        nout = approxPolyDP_(curve.ptr<Point2d>(), npoints, (Point2d*)buf, closed, epsilon, &_stack);
+        Mat(nout, 1, CV_MAKETYPE(depth, 2), buf).copyTo(_approxCurve);
+    }
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
-
-    Mat(nout, 1, CV_MAKETYPE(depth, 2), buf).copyTo(_approxCurve);
 }
 
 
