@@ -478,7 +478,7 @@ void Stitcher::estimateCameraParams()
     {
         vector<Mat> rmats;
         for (size_t i = 0; i < cameras_.size(); ++i)
-            rmats.push_back(cameras_[i].R);
+            rmats.push_back(cameras_[i].R.clone());
         detail::waveCorrect(rmats, wave_correct_kind_);
         for (size_t i = 0; i < cameras_.size(); ++i)
             cameras_[i].R = rmats[i];
