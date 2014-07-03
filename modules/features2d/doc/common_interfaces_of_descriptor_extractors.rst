@@ -64,7 +64,7 @@ Computes the descriptors for a set of keypoints detected in an image (first vari
 
     :param images: Image set.
 
-    :param keypoints: Input collection of keypoints. Keypoints for which a descriptor cannot be computed are removed. Sometimes new keypoints can be added, for example: ``SIFT`` duplicates keypoint with several dominant orientations (for each orientation).
+    :param keypoints: Input collection of keypoints. Keypoints for which a descriptor cannot be computed are removed and the remaining ones may be reordered. Sometimes new keypoints can be added, for example: ``SIFT`` duplicates a keypoint with several dominant orientations (for each orientation).
 
     :param descriptors: Computed descriptors. In the second variant of the method ``descriptors[i]`` are descriptors computed for a ``keypoints[i]``. Row ``j`` is the ``keypoints`` (or ``keypoints[i]``) is the descriptor for keypoint ``j``-th keypoint.
 
