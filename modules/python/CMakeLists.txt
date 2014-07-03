@@ -30,7 +30,7 @@ else()
 endif()
 
 # To disable any module from adding to Python bindings, add them to blacklist
-set(PYTHON_BINDINGS_BLACKLIST "^cuda.*$|contrib|legacy|softcascade|optim|stitching|superres|tracking|videostab|ts")
+set(PYTHON_BINDINGS_BLACKLIST "^cuda.*$|contrib|legacy|softcascade|optim|stitching|superres|tracking|videostab|ts|adas|xobjdetect")
 
 # -- Find the modules to build. Split them to Python modules and Python-Extra modules
 string(REPLACE "opencv_" "" OPENCV_MODULES_NAMES "${OPENCV_MODULES_BUILD}")
