@@ -340,14 +340,21 @@
 #elif defined OP_CTP_AR
 #define TO_DEGREE
 #endif
+#if wdepth == 5
+#define m_sqrt native_sqrt
+#else
+#define m_sqrt sqrt
+#endif
 #define PROCESS_ELEM \
     dstT x = srcelem1, y = srcelem2; \
     dstT x2 = x * x, y2 = y * y; \
-    dstT magnitude = sqrt(x2 + y2); \
-    dstT tmp = y >= 0 ? 0 : CV_PI * 2; \
-    tmp = x < 0 ? CV_PI : tmp; \
-    dstT tmp1 = y >= 0 ? CV_PI * 0.5f : CV_PI * 1.5f; \
-    dstT cartToPolar = y2 <= x2 ? x * y / mad((dstT)(0.28f), y2, x2 + CV_EPSILON) + tmp : (tmp1 - x * y / mad((dstT)(0.28f), x2, y2 + CV_EPSILON)); \
+    dstT magnitude = m_sqrt(x2 + y2); \
+    int cmp = isgreaterequal(y, (dstT)(0.0f)); \
+    dstT tmp = select(select((dstT)(CV_PI * 2.0f), (dstT)(0.0f), cmp), CV_PI, islessequal(x, (dstT)(0.0f))); \
+    dstT tmp1 = select((dstT)(CV_PI * 1.5f), (dstT)(CV_PI * 0.5f), cmp); \
+    dstT cartToPolar = select(tmp1 - x * y / fma((dstT)(0.28f), x2, y2 + CV_EPSILON), \
+                              x * y / fma((dstT)(0.28f), y2, x2 + CV_EPSILON) + tmp, \
+                              isgreaterequal(x2, y2)); \
     TO_DEGREE \
     storedst(magnitude); \
     storedst2(cartToPolar)
