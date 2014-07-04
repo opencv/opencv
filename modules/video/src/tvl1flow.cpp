@@ -100,7 +100,7 @@ protected:
     double tau;
     double lambda;
     double theta;
-   double gamma;
+    double gamma;
     int nscales;
     int warps;
     double epsilon;
@@ -1320,7 +1320,7 @@ void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>
         remap(I1, I1w, flowMap1, flowMap2, INTER_CUBIC);
         remap(I1x, I1wx, flowMap1, flowMap2, INTER_CUBIC);
         remap(I1y, I1wy, flowMap1, flowMap2, INTER_CUBIC);
-      //calculate I1(x+u0) and its gradient
+        //calculate I1(x+u0) and its gradient
         calcGradRho(I0, I1w, I1wx, I1wy, u1, u2, grad, rho_c);
 
         float error = std::numeric_limits<float>::max();
@@ -1440,7 +1440,7 @@ CV_INIT_ALGORITHM(OpticalFlowDual_TVL1, "DenseOpticalFlow.DualTVL1",
                   obj.info()->addParam(obj, "outerIterations", obj.outerIterations, false, 0, 0,
                                        "outer iterations (number of inner loops) used in the numerical scheme");
                   obj.info()->addParam(obj, "gamma", obj.gamma, false, 0, 0,
-                                       "coefficient for additional Ali term");
+                                       "coefficient for additional illumination variation term");
                   obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow))
 
 } // namespace
