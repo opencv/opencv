@@ -121,8 +121,8 @@ private:
         std::vector<Mat_<float> > I0s;
         std::vector<Mat_<float> > I1s;
         std::vector<Mat_<float> > u1s;
-      std::vector<Mat_<float> > u2s;
-      std::vector<Mat_<float> > u3s;
+        std::vector<Mat_<float> > u2s;
+        std::vector<Mat_<float> > u3s;
 
         Mat_<float> I1x_buf;
         Mat_<float> I1y_buf;
@@ -138,26 +138,26 @@ private:
         Mat_<float> rho_c_buf;
 
         Mat_<float> v1_buf;
-      Mat_<float> v2_buf;
-      Mat_<float> v3_buf;
+        Mat_<float> v2_buf;
+        Mat_<float> v3_buf;
 
         Mat_<float> p11_buf;
         Mat_<float> p12_buf;
         Mat_<float> p21_buf;
-      Mat_<float> p22_buf;
-      Mat_<float> p31_buf;
-      Mat_<float> p32_buf;
+        Mat_<float> p22_buf;
+        Mat_<float> p31_buf;
+        Mat_<float> p32_buf;
 
         Mat_<float> div_p1_buf;
-      Mat_<float> div_p2_buf;
-      Mat_<float> div_p3_buf;
+        Mat_<float> div_p2_buf;
+        Mat_<float> div_p3_buf;
 
         Mat_<float> u1x_buf;
         Mat_<float> u1y_buf;
         Mat_<float> u2x_buf;
-      Mat_<float> u2y_buf;
-      Mat_<float> u3x_buf;
-      Mat_<float> u3y_buf;
+        Mat_<float> u2y_buf;
+        Mat_<float> u3x_buf;
+        Mat_<float> u3y_buf;
     } dm;
     struct dataUMat
     {
@@ -892,10 +892,6 @@ void CalcGradRhoBody::operator() (const Range& range) const
 
             // compute the constant part of the rho function
             rhoRow[x] = (I1wRow[x] - I1wxRow[x] * u1Row[x] - I1wyRow[x] * u2Row[x] - I0Row[x]);
-         //It = I1wRow[x] - I0Row[x]
-         //(u - u0)*i_X = I1wxRow[x] * u1Row[x]
-         //(v - v0)*i_Y = I1wyRow[x] * u2Row[x]
-         // gamma * w = gamma * u3
         }
     }
 }
@@ -970,7 +966,6 @@ void EstimateVBody::operator() (const Range& range) const
             float d1 = 0.0f;
             float d2 = 0.0f;
             float d3 = 0.0f;
-// add d3 for 3 cases
             if (rho < -l_t * gradRow[x])
             {
                 d1 = l_t * I1wxRow[x];

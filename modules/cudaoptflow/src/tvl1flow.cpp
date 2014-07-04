@@ -235,9 +235,8 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::procOneScale(const GpuMat& I0, const G
         {
             // some tweaks to make sum operation less frequently
             bool calcError = (epsilon > 0) && (n & 0x1) && (prevError < scaledEpsilon);
-
-            estimateU(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, p31, p32, u1, u2, u3, diff, l_t, gamma, static_cast<float>(theta), calcError);
-
+			cv::Mat m1(u3);
+			estimateU(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, p31, p32, u1, u2, u3, diff, l_t, static_cast<float>(theta), gamma, calcError);
             if (calcError)
             {
                 error = cuda::sum(diff, norm_buf)[0];
@@ -259,7 +258,8 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::collectGarbage()
     I0s.clear();
     I1s.clear();
     u1s.clear();
-    u2s.clear();
+	u2s.clear();
+	u3s.clear();
 
     I1x_buf.release();
     I1y_buf.release();
@@ -274,7 +274,9 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::collectGarbage()
     p11_buf.release();
     p12_buf.release();
     p21_buf.release();
-    p22_buf.release();
+	p22_buf.release();
+	p31_buf.release();
+	p32_buf.release();
 
     diff_buf.release();
     norm_buf.release();
