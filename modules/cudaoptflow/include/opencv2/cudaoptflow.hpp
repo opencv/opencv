@@ -213,7 +213,10 @@ public:
 
 	double gamma;
 	/**
-	* parameter for robustness
+	* parameter used for motion estimation. It adds a variable allowing for illumination variations
+	* Set this parameter to 1. if you have varying illumination.
+	* See: Chambolle et al, A First-Order Primal-Dual Algorithm for Convex Problems with Applications to Imaging
+	* Journal of Mathematical imaging and vision, may 2011 Vol 40 issue 1, pp 120-145
 	*/
     double theta;
 
