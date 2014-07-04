@@ -1078,10 +1078,14 @@ createOptFlow_DualTVL1
     .. ocv:member:: int iterations
 
         Stopping criterion iterations number used in the numerical scheme.
+		    
+	.. ocv:member:: double gamma
 
-
-
-
+        parameter used for motion estimation. It adds a variable allowing for illumination variations
+	 	Set this parameter to 1. if you have varying illumination.
+		See: [Chambolle2011]_ 
+	
+	
 DenseOpticalFlow::calc
 --------------------------
 Calculates an optical flow.
@@ -1109,6 +1113,9 @@ Releases all inner buffers.
 .. [Bradski98] Bradski, G.R. "Computer Vision Face Tracking for Use in a Perceptual User Interface", Intel, 1998
 
 .. [Bradski00] Davis, J.W. and Bradski, G.R. "Motion Segmentation and Pose Recognition with Motion History Gradients", WACV00, 2000
+
+.. [Chambolle2011] Chambolle, A. and Pock, T. "A First-Order Primal-Dual Algorithm for Convex Problems with Applications to Imaging"
+		Journal of Mathematical imaging and vision, 2011, Vol 40 issue 1, pp 120-145
 
 .. [Davis97] Davis, J.W. and Bobick, A.F. "The Representation and Recognition of Action Using Temporal Templates", CVPR97, 1997
 
