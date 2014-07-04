@@ -1,5 +1,5 @@
 set(the_description "High-level GUI and Media I/O")
-ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_androidcamera)
+ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_androidcamera)
 
 # ----------------------------------------------------------------------------
 #  CMake file for highgui. See root CMakeLists.txt
@@ -7,61 +7,17 @@ ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_androidcamera)
 #   Jose Luis Blanco, 2008
 # ----------------------------------------------------------------------------
 
-ocv_clear_vars(GRFMT_LIBS)
-
 if(HAVE_WINRT_CX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
 
-if(HAVE_PNG OR HAVE_TIFF OR HAVE_OPENEXR)
+if(APPLE)
   ocv_include_directories(${ZLIB_INCLUDE_DIRS})
-  list(APPEND GRFMT_LIBS ${ZLIB_LIBRARIES})
+  list(APPEND HIGHGUI_LIBRARIES ${ZLIB_LIBRARIES})
 endif()
-
-if(HAVE_JPEG)
-  ocv_include_directories(${JPEG_INCLUDE_DIR})
-  list(APPEND GRFMT_LIBS ${JPEG_LIBRARIES})
-endif()
-
-if(WITH_WEBP)
-  add_definitions(-DHAVE_WEBP)
-  ocv_include_directories(${WEBP_INCLUDE_DIR})
-  list(APPEND GRFMT_LIBS ${WEBP_LIBRARIES})
-endif()
-
-if(HAVE_PNG)
-  add_definitions(${PNG_DEFINITIONS})
-  ocv_include_directories(${PNG_INCLUDE_DIR})
-  list(APPEND GRFMT_LIBS ${PNG_LIBRARIES})
-endif()
-
-if(HAVE_TIFF)
-  ocv_include_directories(${TIFF_INCLUDE_DIR})
-  list(APPEND GRFMT_LIBS ${TIFF_LIBRARIES})
-endif()
-
-if(HAVE_JASPER)
-  ocv_include_directories(${JASPER_INCLUDE_DIR})
-  list(APPEND GRFMT_LIBS ${JASPER_LIBRARIES})
-endif()
-
-if(HAVE_OPENEXR)
-  include_directories(SYSTEM ${OPENEXR_INCLUDE_PATHS})
-  list(APPEND GRFMT_LIBS ${OPENEXR_LIBRARIES})
-endif()
-
-file(GLOB grfmt_hdrs src/grfmt*.hpp)
-file(GLOB grfmt_srcs src/grfmt*.cpp)
-list(APPEND grfmt_hdrs src/bitstrm.hpp)
-list(APPEND grfmt_srcs src/bitstrm.cpp)
-list(APPEND grfmt_hdrs src/rgbe.hpp)
-list(APPEND grfmt_srcs src/rgbe.cpp)
-
-source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 
 set(highgui_hdrs
     src/precomp.hpp
-    src/utils.hpp
     src/cap_ffmpeg_impl.hpp
     )
 
@@ -69,8 +25,6 @@ set(highgui_srcs
     src/cap.cpp
     src/cap_images.cpp
     src/cap_ffmpeg.cpp
-    src/loadsave.cpp
-    src/utils.cpp
     src/window.cpp
     )
 
@@ -257,10 +211,10 @@ endif()
 
 source_group("Src" FILES ${highgui_srcs} ${highgui_hdrs})
 source_group("Include" FILES ${highgui_ext_hdrs})
-ocv_set_module_sources(HEADERS ${highgui_ext_hdrs} SOURCES ${highgui_srcs} ${highgui_hdrs} ${grfmt_srcs} ${grfmt_hdrs})
+ocv_set_module_sources(HEADERS ${highgui_ext_hdrs} SOURCES ${highgui_srcs} ${highgui_hdrs})
 ocv_module_include_directories()
 
-ocv_create_module(${GRFMT_LIBS} ${HIGHGUI_LIBRARIES})
+ocv_create_module(${HIGHGUI_LIBRARIES})
 
 if(APPLE)
   ocv_check_flag_support(OBJCXX "-fobjc-exceptions" HAVE_OBJC_EXCEPTIONS)
