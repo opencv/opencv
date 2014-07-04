@@ -11,5 +11,6 @@
 
 #include "opencv2/ts.hpp"
 #include "opencv2/optim.hpp"
+#include "opencv2/imgcodecs.hpp"
 
 #endif

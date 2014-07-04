@@ -361,16 +361,16 @@ Now here's our recommendation for the structure of the tutorial (although, remem
 
        # ---- External links for tutorials -----------------
        extlinks = {
-           'hgvideo' : ('http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html#%s', None)
+           'rwimg' : ('http://docs.opencv.org/modules/imgcodecs/doc/reading_and_writing_images.html#%s', None)
            }
 
-     In short here we defined a new **hgvideo** directive that refers to an external webpage link. Its usage is:
+     In short here we defined a new **rwimg** directive that refers to an external webpage link. Its usage is:
 
      .. code-block:: rst
 
-       A sample function of the highgui modules image write and read page is the :hgvideo:`imread() function <imread>`.
+       A sample function of the highgui modules image write and read page is the :rwimg:`imread() function <imread>`.
 
-     Which turns to: A sample function of the highgui modules image write and read page is the :hgvideo:`imread() function <imread>`. The argument you give between the <> will be put in place of the ``%s`` in the upper definition, and as the link will anchor to the correct function. To find out the anchor of a given function just open up a web page, search for the function and click on it. In the address bar it should appear like: ``http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html#imread`` .  Look here for the name of the directives for each page of the OpenCV reference manual. If none present for one of them feel free to add one for it.
+     Which turns to: A sample function of the highgui modules image write and read page is the :rwimg:`imread() function <imread>`. The argument you give between the <> will be put in place of the ``%s`` in the upper definition, and as the link will anchor to the correct function. To find out the anchor of a given function just open up a web page, search for the function and click on it. In the address bar it should appear like: ``http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images.html#imread`` .  Look here for the name of the directives for each page of the OpenCV reference manual. If none present for one of them feel free to add one for it.
 
      For formulas you can add LATEX code that will translate in the web pages into images. You do this by using the *math* directive. A usage tip:
 

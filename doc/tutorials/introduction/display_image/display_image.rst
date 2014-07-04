@@ -39,28 +39,28 @@ You'll almost always end up using the:
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
    :tab-width: 4
-   :lines:  1-3
+   :lines:  1-4
 
 We also include the *iostream* to facilitate console line output and input. To avoid data structure and function name conflicts with other libraries, OpenCV has its own namespace: *cv*. To avoid the need appending prior each of these the *cv::* keyword you can import the namespace in the whole file by using the lines:
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
    :tab-width: 4
-   :lines:  5-6
+   :lines:  6-7
 
 This is true for the STL library too (used for console I/O). Now, let's analyze the *main* function. We start up assuring that we acquire a valid image name argument from the command line.
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
    :tab-width: 4
-   :lines: 10-14
+   :lines: 11-15
 
 Then create a *Mat* object that will store the data of the loaded image.
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
    :tab-width: 4
-   :lines: 16
+   :lines: 17
 
 Now we call the :imread:`imread <>` function which loads the image name specified by the first argument (*argv[1]*). The second argument specifies the format in what we want the image. This may be:
 
@@ -73,7 +73,7 @@ Now we call the :imread:`imread <>` function which loads the image name specifie
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
    :tab-width: 4
-   :lines: 17
+   :lines: 18
 
 .. note::
 
@@ -88,21 +88,21 @@ After checking that the image data was loaded correctly, we want to display our 
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
-   :lines: 25
+   :lines: 26
    :tab-width: 4
 
 Finally, to update the content of the OpenCV window with a new image use the :imshow:`imshow <>` function. Specify the OpenCV window name to update and the image to use during this operation:
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
-   :lines: 26
+   :lines: 27
    :tab-width: 4
 
 Because we want our window to be displayed until the user presses a key (otherwise the program would end far too quickly), we use the :wait_key:`waitKey <>` function whose only parameter is just how long should it wait for a user input (measured in milliseconds). Zero means to wait forever.
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
-   :lines: 28
+   :lines: 29
    :tab-width: 4
 
 Result
