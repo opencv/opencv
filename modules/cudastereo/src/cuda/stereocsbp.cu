@@ -534,7 +534,7 @@ namespace cv { namespace cuda { namespace device
                                                      const T* u_cur, const T* d_cur, const T* l_cur, const T* r_cur,
                                                      T* data_cost_selected, T* disparity_selected_new, T* data_cost_new,
                                                      const T* data_cost_cur, const T* disparity_selected_cur,
-                                                     int nr_plane, int nr_plane2)
+                                                     int nr_plane, int nr_plane2, size_t disp_step1, size_t disp_step2)
         {
             for(int i = 0; i < nr_plane; i++)
             {
@@ -550,15 +550,15 @@ namespace cv { namespace cuda { namespace device
                     }
                 }
 
-                data_cost_selected[i * cdisp_step1] = data_cost_cur[id * cdisp_step1];
-                disparity_selected_new[i * cdisp_step1] = disparity_selected_cur[id * cdisp_step2];
+                data_cost_selected[i * disp_step1] = data_cost_cur[id * disp_step1];
+                disparity_selected_new[i * disp_step1] = disparity_selected_cur[id * disp_step2];
 
-                u_new[i * cdisp_step1] = u_cur[id * cdisp_step2];
-                d_new[i * cdisp_step1] = d_cur[id * cdisp_step2];
-                l_new[i * cdisp_step1] = l_cur[id * cdisp_step2];
-                r_new[i * cdisp_step1] = r_cur[id * cdisp_step2];
+                u_new[i * disp_step1] = u_cur[id * disp_step2];
+                d_new[i * disp_step1] = d_cur[id * disp_step2];
+                l_new[i * disp_step1] = l_cur[id * disp_step2];
+                r_new[i * disp_step1] = r_cur[id * disp_step2];
 
-                data_cost_new[id * cdisp_step1] = numeric_limits<T>::max();
+                data_cost_new[id * disp_step1] = numeric_limits<T>::max();
             }
         }
 
@@ -567,47 +567,49 @@ namespace cv { namespace cuda { namespace device
                                      const T* u_cur_, const T* d_cur_, const T* l_cur_, const T* r_cur_,
                                      T* selected_disp_pyr_new, const T* selected_disp_pyr_cur,
                                      T* data_cost_selected_, const T* data_cost_,
-                                     int h, int w, int nr_plane, int h2, int w2, int nr_plane2)
+                                     int h, int w, int nr_plane, int h2, int w2, int nr_plane2,
+                                     size_t msg_step, size_t disp_step1, size_t disp_step2)
         {
             int x = blockIdx.x * blockDim.x + threadIdx.x;
             int y = blockIdx.y * blockDim.y + threadIdx.y;
 
             if (y < h && x < w)
             {
-                const T* u_cur = u_cur_ + ::min(h2-1, y/2 + 1) * cmsg_step + x/2;
-                const T* d_cur = d_cur_ + ::max(0, y/2 - 1)    * cmsg_step + x/2;
-                const T* l_cur = l_cur_ + (y/2)                * cmsg_step + ::min(w2-1, x/2 + 1);
-                const T* r_cur = r_cur_ + (y/2)                * cmsg_step + ::max(0, x/2 - 1);
+                const T* u_cur = u_cur_ + ::min(h2-1, y/2 + 1) * msg_step + x/2;
+                const T* d_cur = d_cur_ + ::max(0, y/2 - 1)    * msg_step + x/2;
+                const T* l_cur = l_cur_ + (y/2)                * msg_step + ::min(w2-1, x/2 + 1);
+                const T* r_cur = r_cur_ + (y/2)                * msg_step + ::max(0, x/2 - 1);
 
-                T* data_cost_new = (T*)ctemp + y * cmsg_step + x;
+                T* data_cost_new = (T*)ctemp + y * msg_step + x;
 
-                const T* disparity_selected_cur = selected_disp_pyr_cur + y/2 * cmsg_step + x/2;
-                const T* data_cost = data_cost_ + y * cmsg_step + x;
+                const T* disparity_selected_cur = selected_disp_pyr_cur + y/2 * msg_step + x/2;
+                const T* data_cost = data_cost_ + y * msg_step + x;
 
                 for(int d = 0; d < nr_plane2; d++)
                 {
-                    int idx2 = d * cdisp_step2;
+                    int idx2 = d * disp_step2;
 
-                    T val  = data_cost[d * cdisp_step1] + u_cur[idx2] + d_cur[idx2] + l_cur[idx2] + r_cur[idx2];
-                    data_cost_new[d * cdisp_step1] = val;
+                    T val  = data_cost[d * disp_step1] + u_cur[idx2] + d_cur[idx2] + l_cur[idx2] + r_cur[idx2];
+                    data_cost_new[d * disp_step1] = val;
                 }
 
-                T* data_cost_selected = data_cost_selected_ + y * cmsg_step + x;
-                T* disparity_selected_new = selected_disp_pyr_new + y * cmsg_step + x;
+                T* data_cost_selected = data_cost_selected_ + y * msg_step + x;
+                T* disparity_selected_new = selected_disp_pyr_new + y * msg_step + x;
 
-                T* u_new = u_new_ + y * cmsg_step + x;
-                T* d_new = d_new_ + y * cmsg_step + x;
-                T* l_new = l_new_ + y * cmsg_step + x;
-                T* r_new = r_new_ + y * cmsg_step + x;
+                T* u_new = u_new_ + y * msg_step + x;
+                T* d_new = d_new_ + y * msg_step + x;
+                T* l_new = l_new_ + y * msg_step + x;
+                T* r_new = r_new_ + y * msg_step + x;
 
-                u_cur = u_cur_ + y/2 * cmsg_step + x/2;
-                d_cur = d_cur_ + y/2 * cmsg_step + x/2;
-                l_cur = l_cur_ + y/2 * cmsg_step + x/2;
-                r_cur = r_cur_ + y/2 * cmsg_step + x/2;
+                u_cur = u_cur_ + y/2 * msg_step + x/2;
+                d_cur = d_cur_ + y/2 * msg_step + x/2;
+                l_cur = l_cur_ + y/2 * msg_step + x/2;
+                r_cur = r_cur_ + y/2 * msg_step + x/2;
 
                 get_first_k_element_increase(u_new, d_new, l_new, r_new, u_cur, d_cur, l_cur, r_cur,
                                              data_cost_selected, disparity_selected_new, data_cost_new,
-                                             data_cost, disparity_selected_cur, nr_plane, nr_plane2);
+                                             data_cost, disparity_selected_cur, nr_plane, nr_plane2,
+                                             disp_step1, disp_step2);
             }
         }
 
@@ -622,9 +624,6 @@ namespace cv { namespace cuda { namespace device
 
             size_t disp_step1 = msg_step * h;
             size_t disp_step2 = msg_step * h2;
-            cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step1, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cdisp_step2, &disp_step2, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step,   &msg_step, sizeof(size_t)) );
 
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -636,7 +635,8 @@ namespace cv { namespace cuda { namespace device
                                                        u_cur, d_cur, l_cur, r_cur,
                                                        selected_disp_pyr_new, selected_disp_pyr_cur,
                                                        data_cost_selected, data_cost,
-                                                       h, w, nr_plane, h2, w2, nr_plane2);
+                                                       h, w, nr_plane, h2, w2, nr_plane2,
+                                                       msg_step, disp_step1, disp_step2);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
