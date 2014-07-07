@@ -64,7 +64,7 @@ cv::cuda::OpticalFlowDual_TVL1_CUDA::OpticalFlowDual_TVL1_CUDA()
     epsilon        = 0.01;
     iterations     = 300;
     scaleStep      = 0.8;
-	gamma		   = 0.0;
+    gamma           = 0.0;
     useInitialFlow = false;
 }
 
@@ -81,7 +81,7 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::operator ()(const GpuMat& I0, const Gp
     I1s.resize(nscales);
     u1s.resize(nscales);
     u2s.resize(nscales);
-	u3s.resize(nscales);
+    u3s.resize(nscales);
 
     I0.convertTo(I0s[0], CV_32F, I0.depth() == CV_8U ? 1.0 : 255.0);
     I1.convertTo(I1s[0], CV_32F, I1.depth() == CV_8U ? 1.0 : 255.0);
@@ -94,7 +94,7 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::operator ()(const GpuMat& I0, const Gp
 
     u1s[0] = flowx;
     u2s[0] = flowy;
-	u3s[0].create(I0.size(), CV_32FC1);
+    u3s[0].create(I0.size(), CV_32FC1);
 
     I1x_buf.create(I0.size(), CV_32FC1);
     I1y_buf.create(I0.size(), CV_32FC1);
@@ -109,9 +109,9 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::operator ()(const GpuMat& I0, const Gp
     p11_buf.create(I0.size(), CV_32FC1);
     p12_buf.create(I0.size(), CV_32FC1);
     p21_buf.create(I0.size(), CV_32FC1);
-	p22_buf.create(I0.size(), CV_32FC1);
-	p31_buf.create(I0.size(), CV_32FC1);
-	p32_buf.create(I0.size(), CV_32FC1);
+    p22_buf.create(I0.size(), CV_32FC1);
+    p31_buf.create(I0.size(), CV_32FC1);
+    p32_buf.create(I0.size(), CV_32FC1);
 
     diff_buf.create(I0.size(), CV_32FC1);
 
@@ -139,8 +139,8 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::operator ()(const GpuMat& I0, const Gp
         {
             u1s[s].create(I0s[s].size(), CV_32FC1);
             u2s[s].create(I0s[s].size(), CV_32FC1);
-		}
-		u3s[s].create(I0s[s].size(), CV_32FC1);
+        }
+        u3s[s].create(I0s[s].size(), CV_32FC1);
     }
 
     if (!useInitialFlow)
@@ -148,7 +148,7 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::operator ()(const GpuMat& I0, const Gp
         u1s[nscales-1].setTo(Scalar::all(0));
         u2s[nscales-1].setTo(Scalar::all(0));
     }
-	u3s[nscales - 1].setTo(Scalar::all(0));
+    u3s[nscales - 1].setTo(Scalar::all(0));
 
     // pyramidal structure for computing the optical flow
     for (int s = nscales - 1; s >= 0; --s)
@@ -164,8 +164,8 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::operator ()(const GpuMat& I0, const Gp
 
         // zoom the optical flow for the next finer scale
         cuda::resize(u1s[s], u1s[s - 1], I0s[s - 1].size());
-		cuda::resize(u2s[s], u2s[s - 1], I0s[s - 1].size());
-		cuda::resize(u3s[s], u3s[s - 1], I0s[s - 1].size());
+        cuda::resize(u2s[s], u2s[s - 1], I0s[s - 1].size());
+        cuda::resize(u3s[s], u3s[s - 1], I0s[s - 1].size());
 
         // scale the optical flow with the appropriate zoom factor
         cuda::multiply(u1s[s - 1], Scalar::all(1/scaleStep), u1s[s - 1]);
@@ -179,10 +179,10 @@ namespace tvl1flow
     void warpBackward(PtrStepSzf I0, PtrStepSzf I1, PtrStepSzf I1x, PtrStepSzf I1y, PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf I1w, PtrStepSzf I1wx, PtrStepSzf I1wy, PtrStepSzf grad, PtrStepSzf rho);
     void estimateU(PtrStepSzf I1wx, PtrStepSzf I1wy,
                    PtrStepSzf grad, PtrStepSzf rho_c,
-				   PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, PtrStepSzf p31, PtrStepSzf p32,
-				   PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf u3, PtrStepSzf error,
+                   PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, PtrStepSzf p31, PtrStepSzf p32,
+                   PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf u3, PtrStepSzf error,
                    float l_t, float theta, float gamma, bool calcError);
-	void estimateDualVariables(PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf u3, PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, PtrStepSzf p31, PtrStepSzf p32, float taut);
+    void estimateDualVariables(PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf u3, PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, PtrStepSzf p31, PtrStepSzf p32, float taut);
 }
 
 void cv::cuda::OpticalFlowDual_TVL1_CUDA::procOneScale(const GpuMat& I0, const GpuMat& I1, GpuMat& u1, GpuMat& u2, GpuMat& u3)
@@ -210,15 +210,15 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::procOneScale(const GpuMat& I0, const G
     GpuMat p11 = p11_buf(Rect(0, 0, I0.cols, I0.rows));
     GpuMat p12 = p12_buf(Rect(0, 0, I0.cols, I0.rows));
     GpuMat p21 = p21_buf(Rect(0, 0, I0.cols, I0.rows));
-	GpuMat p22 = p22_buf(Rect(0, 0, I0.cols, I0.rows));
-	GpuMat p31 = p31_buf(Rect(0, 0, I0.cols, I0.rows));
-	GpuMat p32 = p32_buf(Rect(0, 0, I0.cols, I0.rows));
+    GpuMat p22 = p22_buf(Rect(0, 0, I0.cols, I0.rows));
+    GpuMat p31 = p31_buf(Rect(0, 0, I0.cols, I0.rows));
+    GpuMat p32 = p32_buf(Rect(0, 0, I0.cols, I0.rows));
     p11.setTo(Scalar::all(0));
     p12.setTo(Scalar::all(0));
     p21.setTo(Scalar::all(0));
-	p22.setTo(Scalar::all(0));
-	p31.setTo(Scalar::all(0));
-	p32.setTo(Scalar::all(0));
+    p22.setTo(Scalar::all(0));
+    p31.setTo(Scalar::all(0));
+    p32.setTo(Scalar::all(0));
 
     GpuMat diff = diff_buf(Rect(0, 0, I0.cols, I0.rows));
 
@@ -235,8 +235,8 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::procOneScale(const GpuMat& I0, const G
         {
             // some tweaks to make sum operation less frequently
             bool calcError = (epsilon > 0) && (n & 0x1) && (prevError < scaledEpsilon);
-			cv::Mat m1(u3);
-			estimateU(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, p31, p32, u1, u2, u3, diff, l_t, static_cast<float>(theta), gamma, calcError);
+            cv::Mat m1(u3);
+            estimateU(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, p31, p32, u1, u2, u3, diff, l_t, static_cast<float>(theta), gamma, calcError);
             if (calcError)
             {
                 error = cuda::sum(diff, norm_buf)[0];
@@ -258,8 +258,8 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::collectGarbage()
     I0s.clear();
     I1s.clear();
     u1s.clear();
-	u2s.clear();
-	u3s.clear();
+    u2s.clear();
+    u3s.clear();
 
     I1x_buf.release();
     I1y_buf.release();
@@ -274,9 +274,9 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::collectGarbage()
     p11_buf.release();
     p12_buf.release();
     p21_buf.release();
-	p22_buf.release();
-	p31_buf.release();
-	p32_buf.release();
+    p22_buf.release();
+    p31_buf.release();
+    p32_buf.release();
 
     diff_buf.release();
     norm_buf.release();
