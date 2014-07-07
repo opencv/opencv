@@ -1082,7 +1082,7 @@ createOptFlow_DualTVL1
 	.. ocv:member:: double gamma
 
         parameter used for motion estimation. It adds a variable allowing for illumination variations
-	 	Set this parameter to 1. if you have varying illumination.
+	 	Set this parameter to 1 if you have varying illumination.
 		See: [Chambolle2011]_ 
 	
 	

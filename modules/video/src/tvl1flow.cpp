@@ -951,13 +951,13 @@ void EstimateVBody::operator() (const Range& range) const
         const float* I1wyRow = I1wy[y];
         const float* u1Row = u1[y];
         const float* u2Row = u2[y];
-        const float* u3Row = use_gamma?u3[y]:nullptr;
+        const float* u3Row = use_gamma?u3[y]:NULL;
         const float* gradRow = grad[y];
         const float* rhoRow = rho_c[y];
 
         float* v1Row = v1[y];
         float* v2Row = v2[y];
-		float* v3Row = use_gamma ? v3[y]:nullptr;
+		float* v3Row = use_gamma ? v3[y]:NULL;
  
         for (int x = 0; x < I1wx.cols; ++x)
 		{
@@ -1041,14 +1041,14 @@ float estimateU(const Mat_<float>& v1, const Mat_<float>& v2, const Mat_<float>&
     {
         const float* v1Row = v1[y];
         const float* v2Row = v2[y];
-        const float* v3Row = use_gamma?v3[y]:nullptr;
+        const float* v3Row = use_gamma?v3[y]:NULL;
         const float* divP1Row = div_p1[y];
         const float* divP2Row = div_p2[y];
-        const float* divP3Row = use_gamma?div_p3[y]:nullptr;
+        const float* divP3Row = use_gamma?div_p3[y]:NULL;
 
         float* u1Row = u1[y];
         float* u2Row = u2[y];
-        float* u3Row = use_gamma?u3[y]:nullptr;
+        float* u3Row = use_gamma?u3[y]:NULL;
 
 
         for (int x = 0; x < v1.cols; ++x)
@@ -1333,7 +1333,7 @@ void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>
             for (int n_inner = 0; error > scaledEpsilon && n_inner < innerIterations; ++n_inner)
             {
                 // estimate the values of the variable (v1, v2) (thresholding operator TH)
-                estimateV(I1wx, I1wy, u1, u2, u3, grad, rho_c, v1, v2, v3, l_t, gamma);
+				estimateV(I1wx, I1wy, u1, u2, u3, grad, rho_c, v1, v2, v3, l_t, static_cast<float>(gamma));
 
                 // compute the divergence of the dual variable (p1, p2, p3)
                 divergence(p11, p12, div_p1);
@@ -1341,7 +1341,7 @@ void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>
 				if (use_gamma) divergence(p31, p32, div_p3);
 
                 // estimate the values of the optical flow (u1, u2)
-                error = estimateU(v1, v2, v3, div_p1, div_p2, div_p3, u1, u2, u3, static_cast<float>(theta), gamma);
+				error = estimateU(v1, v2, v3, div_p1, div_p2, div_p3, u1, u2, u3, static_cast<float>(theta), static_cast<float>(gamma));
 
                 // compute the gradient of the optical flow (Du1, Du2)
                 forwardGradient(u1, u1x, u1y);
