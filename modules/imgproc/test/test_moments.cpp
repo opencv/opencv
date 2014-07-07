@@ -150,7 +150,8 @@ void CV_MomentsTest::get_test_array_types_and_sizes( int test_case_idx,
 double CV_MomentsTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
     int depth = test_mat[INPUT][0].depth();
-    return depth != CV_32F ? FLT_EPSILON*10 : FLT_EPSILON*100;
+    return depth != CV_32F ? 1e-3 : 1e-2;
+    //return depth != CV_32F ? FLT_EPSILON*10 : FLT_EPSILON*100;
 }
 
 int CV_MomentsTest::prepare_test_case( int test_case_idx )
