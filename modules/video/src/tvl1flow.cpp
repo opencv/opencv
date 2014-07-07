@@ -460,7 +460,7 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
     {
         dm.u1s[nscales - 1].setTo(Scalar::all(0));
         dm.u2s[nscales - 1].setTo(Scalar::all(0));
-    } 
+    }
     if (use_gamma) dm.u3s[nscales - 1].setTo(Scalar::all(0));
     // pyramidal structure for computing the optical flow
     for (int s = nscales - 1; s >= 0; --s)
@@ -958,7 +958,7 @@ void EstimateVBody::operator() (const Range& range) const
         float* v1Row = v1[y];
         float* v2Row = v2[y];
         float* v3Row = use_gamma ? v3[y]:NULL;
- 
+
         for (int x = 0; x < I1wx.cols; ++x)
         {
             const float rho = use_gamma ? rhoRow[x] + (I1wxRow[x] * u1Row[x] + I1wyRow[x] * u2Row[x]) + gamma * u3Row[x] :
@@ -1024,8 +1024,8 @@ void estimateV(const Mat_<float>& I1wx, const Mat_<float>& I1wy, const Mat_<floa
 ////////////////////////////////////////////////////////////
 // estimateU
 
-float estimateU(const Mat_<float>& v1, const Mat_<float>& v2, const Mat_<float>& v3, 
-            const Mat_<float>& div_p1, const Mat_<float>& div_p2, const Mat_<float>& div_p3, 
+float estimateU(const Mat_<float>& v1, const Mat_<float>& v2, const Mat_<float>& v3,
+            const Mat_<float>& div_p1, const Mat_<float>& div_p2, const Mat_<float>& div_p3,
             Mat_<float>& u1, Mat_<float>& u2, Mat_<float>& u3,
             float theta, float gamma)
 {
@@ -1060,7 +1060,6 @@ float estimateU(const Mat_<float>& v1, const Mat_<float>& v2, const Mat_<float>&
             u1Row[x] = v1Row[x] + theta * divP1Row[x];
             u2Row[x] = v2Row[x] + theta * divP2Row[x];
             if (use_gamma) u3Row[x] = v3Row[x] + theta * divP3Row[x];
-         
             error += use_gamma?(u1Row[x] - u1k) * (u1Row[x] - u1k) + (u2Row[x] - u2k) * (u2Row[x] - u2k) + (u3Row[x] - u3k) * (u3Row[x] - u3k):
                                (u1Row[x] - u1k) * (u1Row[x] - u1k) + (u2Row[x] - u2k) * (u2Row[x] - u2k);
         }
@@ -1130,11 +1129,11 @@ void EstimateDualVariablesBody::operator() (const Range& range) const
     }
 }
 
-void estimateDualVariables(const Mat_<float>& u1x, const Mat_<float>& u1y, 
+void estimateDualVariables(const Mat_<float>& u1x, const Mat_<float>& u1y,
                      const Mat_<float>& u2x, const Mat_<float>& u2y,
                      const Mat_<float>& u3x, const Mat_<float>& u3y,
-                           Mat_<float>& p11, Mat_<float>& p12, 
-                     Mat_<float>& p21, Mat_<float>& p22, 
+                           Mat_<float>& p11, Mat_<float>& p12,
+                     Mat_<float>& p21, Mat_<float>& p22,
                      Mat_<float>& p31, Mat_<float>& p32,
                      float taut, bool use_gamma)
 {
