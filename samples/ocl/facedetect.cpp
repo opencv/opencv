@@ -93,9 +93,10 @@ static int facedetect_one_thread(bool useCPU, double scale )
         if( image.empty() )
         {
             capture = cvCaptureFromAVI( inputName.c_str() );
-            if(!capture)
+            if(!capture){
                 cout << "Capture from AVI didn't work" << endl;
-            return EXIT_FAILURE;
+                return EXIT_FAILURE;
+            }
         }
     }
 
