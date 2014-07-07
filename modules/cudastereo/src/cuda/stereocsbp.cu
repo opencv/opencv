@@ -760,26 +760,26 @@ namespace cv { namespace cuda { namespace device
         template <typename T>
         __global__ void compute_disp(const T* u_, const T* d_, const T* l_, const T* r_,
                                      const T* data_cost_selected, const T* disp_selected_pyr,
-                                     PtrStepSz<short> disp, int nr_plane)
+                                     PtrStepSz<short> disp, int nr_plane, size_t msg_step, size_t disp_step)
         {
             int x = blockIdx.x * blockDim.x + threadIdx.x;
             int y = blockIdx.y * blockDim.y + threadIdx.y;
 
             if (y > 0 && y < disp.rows - 1 && x > 0 && x < disp.cols - 1)
             {
-                const T* data = data_cost_selected + y * cmsg_step + x;
-                const T* disp_selected = disp_selected_pyr + y * cmsg_step + x;
+                const T* data = data_cost_selected + y * msg_step + x;
+                const T* disp_selected = disp_selected_pyr + y * msg_step + x;
 
-                const T* u = u_ + (y+1) * cmsg_step + (x+0);
-                const T* d = d_ + (y-1) * cmsg_step + (x+0);
-                const T* l = l_ + (y+0) * cmsg_step + (x+1);
-                const T* r = r_ + (y+0) * cmsg_step + (x-1);
+                const T* u = u_ + (y+1) * msg_step + (x+0);
+                const T* d = d_ + (y-1) * msg_step + (x+0);
+                const T* l = l_ + (y+0) * msg_step + (x+1);
+                const T* r = r_ + (y+0) * msg_step + (x-1);
 
                 int best = 0;
                 T best_val = numeric_limits<T>::max();
                 for (int i = 0; i < nr_plane; ++i)
                 {
-                    int idx = i * cdisp_step1;
+                    int idx = i * disp_step;
                     T val = data[idx]+ u[idx] + d[idx] + l[idx] + r[idx];
 
                     if (val < best_val)
@@ -797,8 +797,6 @@ namespace cv { namespace cuda { namespace device
             const PtrStepSz<short>& disp, int nr_plane, cudaStream_t stream)
         {
             size_t disp_step = disp.rows * msg_step;
-            cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step,  &msg_step,  sizeof(size_t)) );
 
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -806,7 +804,7 @@ namespace cv { namespace cuda { namespace device
             grid.x = divUp(disp.cols, threads.x);
             grid.y = divUp(disp.rows, threads.y);
 
-            compute_disp<<<grid, threads, 0, stream>>>(u, d, l, r, data_cost_selected, disp_selected, disp, nr_plane);
+            compute_disp<<<grid, threads, 0, stream>>>(u, d, l, r, data_cost_selected, disp_selected, disp, nr_plane, msg_step, disp_step);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
