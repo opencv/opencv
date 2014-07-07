@@ -1083,9 +1083,8 @@ createOptFlow_DualTVL1
 
         Parameter used for motion estimation. It adds a variable allowing for illumination variations
         Set this parameter to 1 if you have varying illumination.
-        See: [Chambolle2011]_ 
-    
-    
+        See: [Chambolle2011]_
+
 DenseOpticalFlow::calc
 --------------------------
 Calculates an optical flow.
