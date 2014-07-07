@@ -209,8 +209,8 @@ namespace tvl1flow
 
     __global__ void estimateUKernel(const PtrStepSzf I1wx, const PtrStepf I1wy,
                               const PtrStepf grad, const PtrStepf rho_c,
-                              const PtrStepf p11, const PtrStepf p12, 
-                              const PtrStepf p21, const PtrStepf p22, 
+                              const PtrStepf p11, const PtrStepf p12,
+                              const PtrStepf p21, const PtrStepf p22,
                               const PtrStepf p31, const PtrStepf p32,
                               PtrStepf u1, PtrStepf u2, PtrStepf u3, PtrStepf error,
                               const float l_t, const float theta, const float gamma, const bool calcError)
