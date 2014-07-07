@@ -1,6 +1,6 @@
-*******
-HighGUI
-*******
+*****************
+Kinect and OpenNI
+*****************
 
 .. highlight:: cpp
 
