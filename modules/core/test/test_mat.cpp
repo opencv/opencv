@@ -918,3 +918,18 @@ TEST(Core_Mat, copyNx1ToVector)
 
     ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst16, cv::Mat_<ushort>(dst16));
 }
+
+TEST(Core_Mat, multiDim)
+{
+    int d[]={3,3,3};
+    Mat m0 = Mat::zeros(3,d,CV_8U);
+    ASSERT_EQ(0,sum(m0)[0]);
+    Mat m = Mat::ones(3,d,CV_8U);
+    ASSERT_EQ(27,sum(m)[0]);
+    m += 2;
+    ASSERT_EQ(81,sum(m)[0]);
+    m *= 3;
+    ASSERT_EQ(243,sum(m)[0]);
+    m += m;
+    ASSERT_EQ(486,sum(m)[0]);
+}
