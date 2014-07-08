@@ -39,7 +39,6 @@ protected:
 
     int m_index, m_width, m_height, m_fourcc;
     int m_widthSet, m_heightSet;
-    IplImage* m_frame;
     static videoInput g_VI;
 };
 

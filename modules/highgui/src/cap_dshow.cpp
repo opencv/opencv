@@ -3106,7 +3106,6 @@ videoInput VideoCapture_DShow::g_VI;
 
 VideoCapture_DShow::VideoCapture_DShow(int index)
     : m_index(-1)
-    , m_frame(0)
     , m_width(-1)
     , m_height(-1)
     , m_fourcc(-1)
@@ -3311,7 +3310,6 @@ void VideoCapture_DShow::close()
     {
         g_VI.stopDevice(m_index);
         m_index = -1;
-        cvReleaseImage(&m_frame);
     }
     m_widthSet = m_heightSet = m_width = m_height = -1;
 }
