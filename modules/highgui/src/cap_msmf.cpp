@@ -389,6 +389,7 @@ public:
     int getCountFormats();
     unsigned int getWidth();
     unsigned int getHeight();
+    unsigned int getFrameRate() const;
     MediaType getFormat(unsigned int id);
     bool setupDevice(unsigned int w, unsigned int h, unsigned int idealFramerate = 0);
     bool setupDevice(unsigned int id);
@@ -410,6 +411,7 @@ private:
     CamParametrs vd_PrevParametrs;
     unsigned int vd_Width;
     unsigned int vd_Height;
+    unsigned int vd_FrameRate;
     unsigned int vd_CurrentNumber;
     bool vd_IsSetuped;
     std::map<UINT64, FrameRateMap> vd_CaptureFormats;
@@ -506,6 +508,8 @@ public:
     unsigned int getWidth(int deviceID);
     // Getting height of image, which is getting from videodevice with deviceID
     unsigned int getHeight(int deviceID);
+    // Getting frame rate, which is getting from videodevice with deviceID
+    unsigned int getFrameRate(int deviceID) const;
     // Getting name of videodevice with deviceID
     wchar_t *getNameVideoDevice(int deviceID);
     // Getting interface MediaSource for Media Foundation from videodevice with deviceID
@@ -1795,7 +1799,7 @@ unsigned char * RawImage::getpPixels()
 }
 
 videoDevice::videoDevice(void): vd_IsSetuped(false), vd_LockOut(OpenLock), vd_pFriendlyName(NULL),
-    vd_Width(0), vd_Height(0), vd_pSource(NULL), vd_pImGrTh(NULL), vd_func(NULL), vd_userData(NULL)
+    vd_Width(0), vd_Height(0), vd_FrameRate(0), vd_pSource(NULL), vd_pImGrTh(NULL), vd_func(NULL), vd_userData(NULL)
 {
 #ifdef HAVE_WINRT
     vd_pMedCap = nullptr;
@@ -2238,6 +2242,15 @@ unsigned int videoDevice::getHeight()
     else
         return 0;
 }
+
+unsigned int videoDevice::getFrameRate() const
+{
+    if(vd_IsSetuped)
+        return vd_FrameRate;
+    else
+        return 0;
+}
+
 IMFMediaSource *videoDevice::getMediaSource()
 {
     IMFMediaSource *out = NULL;
@@ -2485,6 +2498,8 @@ bool videoDevice::setupDevice(unsigned int id)
 #endif
             vd_Width = vd_CurrentFormats[id].width;
             vd_Height = vd_CurrentFormats[id].height;
+            vd_FrameRate = vd_CurrentFormats[id].MF_MT_FRAME_RATE_NUMERATOR /
+                           vd_CurrentFormats[id].MF_MT_FRAME_RATE_DENOMINATOR;
 #ifdef HAVE_WINRT
             if (DEREF_AGILE_WRL_OBJ(vd_pMedCap)) {
                 MAKE_WRL_REF(_AsyncAction) pAction;
@@ -2802,8 +2817,7 @@ IMFMediaSource *videoInput::getMediaSource(int deviceID)
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if(accessToDevices)
     {
-        videoDevices *VDS = &videoDevices::getInstance();
-        videoDevice * VD = VDS->getDevice(deviceID);
+        videoDevice * VD = videoDevices::getInstance().getDevice(deviceID);
         if(VD)
         {
             IMFMediaSource *out = VD->getMediaSource();
@@ -3162,6 +3176,26 @@ unsigned int videoInput::getHeight(int deviceID)
     return 0;
 }
 
+unsigned int videoInput::getFrameRate(int deviceID) const
+{
+    if (deviceID < 0)
+    {
+        DebugPrintOut::getInstance().printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        return 0;
+    }
+    if(accessToDevices)
+    {
+        videoDevice * VD = videoDevices::getInstance().getDevice(deviceID);
+        if(VD)
+            return VD->getFrameRate();
+    }
+    else
+    {
+        DebugPrintOut::getInstance().printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+    }
+    return 0;
+}
+
 wchar_t *videoInput::getNameVideoDevice(int deviceID)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -3475,11 +3509,12 @@ bool CvCaptureCAM_MSMF::grabFrame()
 
 IplImage* CvCaptureCAM_MSMF::retrieveFrame(int)
 {
-    if( !frame || (int)VI.getWidth(index) != frame->width || (int)VI.getHeight(index) != frame->height )
+    const int w = (int)VI.getWidth(index);
+    const int h = (int)VI.getHeight(index);
+    if( !frame || w != frame->width || h != frame->height )
     {
         if (frame)
             cvReleaseImage( &frame );
-        unsigned int w = VI.getWidth(index), h = VI.getHeight(index);
         frame = cvCreateImage( cvSize(w,h), 8, 3 );
     }
     VI.getPixels( index, (uchar*)frame->imageData, false, true );
@@ -3495,33 +3530,47 @@ double CvCaptureCAM_MSMF::getProperty( int property_id )
         return VI.getWidth(index);
     case CV_CAP_PROP_FRAME_HEIGHT:
         return VI.getHeight(index);
+    case CV_CAP_PROP_FPS:
+        return VI.getFrameRate(index);
+    default:
+        break;
     }
-    return -1;
+    return 0;
 }
 bool CvCaptureCAM_MSMF::setProperty( int property_id, double value )
 {
     // image capture properties
+    unsigned int fps = 0;
     bool handled = false;
     switch( property_id )
     {
     case CV_CAP_PROP_FRAME_WIDTH:
         width = cvRound(value);
+        fps = VI.getFrameRate(index);
         handled = true;
         break;
     case CV_CAP_PROP_FRAME_HEIGHT:
         height = cvRound(value);
+        fps = VI.getFrameRate(index);
         handled = true;
+        break;
+    case CV_CAP_PROP_FPS:
+        width = (int)VI.getHeight(index);
+        height = (int)VI.getWidth(index);
+        fps = cvRound(value);
         break;
     }
 
     if ( handled ) {
         if( width > 0 && height > 0 )
         {
-            if( width != (int)VI.getWidth(index) || height != (int)VI.getHeight(index)  && VI.isDeviceSetup(index))//|| fourcc != VI.getFourcc(index) )
+            if( (width != (int)VI.getWidth(index) || height != (int)VI.getHeight(index) || fps != VI.getFrameRate(index))
+                && VI.isDeviceSetup(index))//|| fourcc != VI.getFourcc(index) )
             {
                 VI.closeDevice(index);
-                VI.setupDevice(index, width, height);
+                VI.setupDevice(index, width, height, fps);
             }
+            width = height = -1;
             return VI.isDeviceSetup(index);
         }
         return true;
