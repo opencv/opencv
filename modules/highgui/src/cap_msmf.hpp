@@ -1005,11 +1005,11 @@ public:
 #ifdef HAVE_WINRT
     STDMETHOD(RuntimeClassInitialize)() { return S_OK; }
 #else
-    ULONG AddRef()
+    ULONG STDMETHODCALLTYPE AddRef()
     {
         return InterlockedIncrement(&m_cRef);
     }
-    ULONG Release()
+    ULONG STDMETHODCALLTYPE Release()
     {
         ULONG cRef = InterlockedDecrement(&m_cRef);
         if (cRef == 0)
@@ -2307,11 +2307,11 @@ class MediaSink :
 public:
 #else
 public:
-    ULONG AddRef()
+    ULONG STDMETHODCALLTYPE AddRef()
     {
         return InterlockedIncrement(&m_cRef);
     }
-    ULONG Release()
+    ULONG STDMETHODCALLTYPE Release()
     {
         ULONG cRef = InterlockedDecrement(&m_cRef);
         if (cRef == 0)
