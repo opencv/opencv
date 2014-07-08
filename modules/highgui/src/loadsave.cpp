@@ -138,9 +138,9 @@ static ImageDecoder findDecoder( const Mat& buf )
         maxlen = std::max(maxlen, len);
     }
 
+    String signature(maxlen, ' ');
     size_t bufSize = buf.rows*buf.cols*buf.elemSize();
     maxlen = std::min(maxlen, bufSize);
-    String signature(maxlen, ' ');
     memcpy( (void*)signature.c_str(), buf.data, maxlen );
 
     for( i = 0; i < codecs.decoders.size(); i++ )
