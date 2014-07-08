@@ -2225,7 +2225,7 @@ void videoDevice::closeDevice()
         }
 #endif
 
-        vd_pSource->Stop();
+        vd_pSource->Shutdown();
         SafeRelease(&vd_pSource);
         if(vd_LockOut == RawDataLock)
         {
