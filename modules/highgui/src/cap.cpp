@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include "cap_intelperc.hpp"
+#include "cap_dshow.hpp"
 
 #if defined _M_X64 && defined _MSC_VER && !defined CV_ICC
 #pragma optimize("",off)
@@ -115,9 +116,6 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 {
     int  domains[] =
     {
-#ifdef HAVE_DSHOW
-        CV_CAP_DSHOW,
-#endif
 #ifdef HAVE_MSMF
         CV_CAP_MSMF,
 #endif
@@ -175,8 +173,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
     // try every possibly installed camera API
     for (int i = 0; domains[i] >= 0; i++)
     {
-#if defined(HAVE_DSHOW)        || \
-    defined(HAVE_MSMF)         || \
+#if defined(HAVE_MSMF)         || \
     defined(HAVE_TYZX)         || \
     defined(HAVE_VFW)          || \
     defined(HAVE_LIBV4L)       || \
@@ -205,13 +202,6 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 
         switch (domains[i])
         {
-#ifdef HAVE_DSHOW
-        case CV_CAP_DSHOW:
-             capture = cvCreateCameraCapture_DShow (index);
-             if (capture)
-                 return capture;
-            break;
-#endif
 #ifdef HAVE_MSMF
         case CV_CAP_MSMF:
              capture = cvCreateCameraCapture_MSMF (index);
@@ -589,6 +579,9 @@ Ptr<IVideoCapture> VideoCapture::createCameraCapture(int index)
 {
     int  domains[] =
     {
+#ifdef HAVE_DSHOW
+        CV_CAP_DSHOW,
+#endif
 #ifdef HAVE_INTELPERC
         CV_CAP_INTELPERC,
 #endif
@@ -607,18 +600,26 @@ Ptr<IVideoCapture> VideoCapture::createCameraCapture(int index)
     // try every possibly installed camera API
     for (int i = 0; domains[i] >= 0; i++)
     {
-#if defined(HAVE_INTELPERC)    || \
+#if defined(HAVE_DSHOW)        || \
+    defined(HAVE_INTELPERC)    || \
     (0)
         Ptr<IVideoCapture> capture;
 
         switch (domains[i])
         {
+#ifdef HAVE_DSHOW
+        case CV_CAP_DSHOW:
+            capture = Ptr<IVideoCapture>(new cv::VideoCapture_DShow(index));
+            if (capture)
+                return capture;
+            break; // CV_CAP_DSHOW
+#endif
 #ifdef HAVE_INTELPERC
         case CV_CAP_INTELPERC:
             capture = Ptr<IVideoCapture>(new cv::VideoCapture_IntelPerC());
             if (capture)
                 return capture;
-        break; // CV_CAP_INTEL_PERC
+            break; // CV_CAP_INTEL_PERC
 #endif
         }
 #endif
@@ -627,7 +628,6 @@ Ptr<IVideoCapture> VideoCapture::createCameraCapture(int index)
     // failed open a camera
     return Ptr<IVideoCapture>();
 }
-
 
 VideoWriter::VideoWriter()
 {}
