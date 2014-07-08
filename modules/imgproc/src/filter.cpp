@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#define CV_OPENCL_RUN_ASSERT
 #include "opencl_kernels.hpp"
 
 /****************************************************************************************\
@@ -3219,8 +3220,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
         ((ksize.width < 5 && ksize.height < 5) ||
         (ksize.width == 5 && ksize.height == 5 && cn == 1)))
     {
-        kernelMat = kernelMat.reshape(0, 1);
-        String kerStr = ocl::kernelToStr(kernelMat, CV_32F);
+        kernelMat.reshape(0, 1).convertTo(kernelMat, CV_32F);
         int h = isolated ? sz.height : wholeSize.height;
         int w = isolated ? sz.width : wholeSize.width;
 
@@ -3256,14 +3256,22 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
         const int wgRound = 256;
         globalsize[0] = ROUNDUP(globalsize[0], wgRound);
 
-        char build_options[1024];
-        sprintf(build_options, "-D cn=%d "
+        String processStr;
+        const float * const kerData = (const float *)kernelMat.data;
+        int index = 0;
+        for (int y = 0; y < ksize.height; ++y)
+            for (int x = 0; x < ksize.width; ++x, ++index)
+                if (std::fabs(kerData[index]) >= FLT_EPSILON)
+                    processStr += format("PROCESS_ELEM1(%f,%d,%d)", kerData[index], y, x);
+
+        char opts[2048];
+        sprintf(opts, "-D cn=%d "
                 "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
                 "-D PX_LOAD_VEC_SIZE=%d -D PX_LOAD_NUM_PX=%d "
                 "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "
                 "-D PX_LOAD_X_ITERATIONS=%d -D PX_LOAD_Y_ITERATIONS=%d "
                 "-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D WT=%s -D WT1=%s "
-                "-D convertToWT=%s -D convertToDstT=%s %s",
+                "-D convertToWT=%s -D convertToDstT=%s -D PROCESS_ELEM=%s",
                 cn, anchor.x, anchor.y, ksize.width, ksize.height,
                 pxLoadVecSize, pxLoadNumPixels,
                 pxPerWorkItemX, pxPerWorkItemY, privDataWidth, borderMap[borderType],
@@ -3272,9 +3280,9 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                 ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
                 ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
-                ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), kerStr.c_str());
+                ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), processStr.c_str());
 
-        if (!k.create("filter2DSmall", cv::ocl::imgproc::filter2DSmall_oclsrc, build_options))
+        if (!k.create("filter2DSmall", cv::ocl::imgproc::filter2DSmall_oclsrc, opts))
             return false;
     }
     else
