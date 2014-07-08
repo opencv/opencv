@@ -1782,7 +1782,7 @@ void videoDevice::closeDevice()
     if(vd_IsSetuped)
     {
         vd_IsSetuped = false;
-        vd_pSource->Stop();
+        vd_pSource->Shutdown();
         SafeRelease(&vd_pSource);
         if(vd_LockOut == RawDataLock)
         {
