@@ -341,7 +341,7 @@ public:
 void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                         InputArray _cameraMatrix, InputArray _distCoeffs,
                         OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
-                        int iterationsCount, float reprojectionError, int minInliersCount,
+                        int iterationsCount, float reprojectionError, float confidence,
                         OutputArray _inliers, int flags)
 {
 
@@ -349,23 +349,13 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
 
     CV_Assert(opoints.isContinuous());
-    CV_Assert(opoints.depth() == CV_32F);
+    CV_Assert(opoints.depth() == CV_32F || opoints.depth() == CV_64F);
     CV_Assert((opoints.rows == 1 && opoints.channels() == 3) || opoints.cols*opoints.channels() == 3);
     CV_Assert(ipoints.isContinuous());
-    CV_Assert(ipoints.depth() == CV_32F);
+    CV_Assert(ipoints.depth() == CV_32F || ipoints.depth() == CV_64F);
     CV_Assert((ipoints.rows == 1 && ipoints.channels() == 2) || ipoints.cols*ipoints.channels() == 2);
 
     Mat objectPoints = opoints.reshape(3, 1), imagePoints = ipoints.reshape(2, 1);
-
-    if (minInliersCount <= 0)
-        minInliersCount = objectPoints.cols;
-    cv::pnpransac::Parameters params;
-    params.iterationsCount = iterationsCount;	  // maxIters
-    params.minInliersCount = minInliersCount;
-    params.reprojectionError = reprojectionError; // threshold
-    params.useExtrinsicGuess = useExtrinsicGuess;
-    params.camera.init(cameraMatrix, distCoeffs);
-    params.flags = flags;
 
     Ptr<PointSetRegistrator::Callback> cb; // pointer to callback
 
@@ -379,33 +369,33 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     	rvec = _rvec.getMat();
     	tvec = _tvec.getMat();
 
-    	cb = makePtr<PnPRansacCallback>( params.camera.intrinsics, params.camera.distortion,
-    									 params.flags, params.useExtrinsicGuess, rvec, tvec);
+    	cb = makePtr<PnPRansacCallback>( cameraMatrix, distCoeffs, flags,
+    									 useExtrinsicGuess, rvec, tvec);
     }
     else
     {
     	rvec = Mat(3, 1, CV_64FC1);
     	tvec = Mat(3, 1, CV_64FC1);
 
-    	cb = makePtr<PnPRansacCallback>( params.camera.intrinsics, params.camera.distortion,
-    	    							 params.flags, params.useExtrinsicGuess, rvec, tvec);
+    	cb = makePtr<PnPRansacCallback>( cameraMatrix, distCoeffs, flags,
+				 	 	 	 	 	 	 useExtrinsicGuess, rvec, tvec);
+
     }
 
-	int model_points = 7; 						// number of model points
-	double param1 = params.reprojectionError ;	// reprojection error
-	double param2 = 0.99;						// confidence
-	int param3 = params.iterationsCount;		// number maximum iterations
+	int model_points = 3; 					// minimum of number of model points
+	double param1 = reprojectionError ;		// reprojection error
+	double param2 = confidence;				// confidence
+	int param3 = iterationsCount;			// number maximum iterations
 
     cv::Mat _local_model(3, 2, CV_64FC1);
     cv::Mat _mask_local_inliers(1, opoints.rows, CV_8UC1);
 
 	// call Ransac
-	int result = createRANSACPointSetRegistrator(cb, model_points, param1, param2, param3)->run(_opoints, _ipoints, _local_model, _mask_local_inliers);
+	int result = createRANSACPointSetRegistrator(cb, model_points, param1, param2, param3)
+							  ->run(_opoints, _ipoints, _local_model, _mask_local_inliers);
 
 	_rvec.assign(_local_model.rowRange(0,3));	// output rotation vector
 	_tvec.assign(_local_model.rowRange(3,6));	// output translation vector
-
-	//std::cout << _mask_local_inliers.type() << std::endl;
 
 	Mat _local_inliers;
 	int count = 0;
