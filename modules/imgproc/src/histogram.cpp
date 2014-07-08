@@ -1479,6 +1479,11 @@ static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32
 {
     const ocl::Device & dev = ocl::Device::getDefault();
     int compunits = dev.maxComputeUnits();
+    if (dev.isIntel())
+    {
+        static const int subSliceEUCount = 10;
+        compunits = (compunits / subSliceEUCount) * 2;
+    }
     size_t wgs = dev.maxWorkGroupSize();
     Size size = _src.size();
     bool use16 = size.width % 16 == 0 && _src.offset() % 16 == 0 && _src.step() % 16 == 0;
@@ -3432,6 +3437,11 @@ static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
 {
     const ocl::Device & dev = ocl::Device::getDefault();
     int compunits = dev.maxComputeUnits();
+    if (dev.isIntel())
+    {
+        static const int subSliceEUCount = 10;
+        compunits = (compunits / subSliceEUCount) * 2;
+    }
     size_t wgs = dev.maxWorkGroupSize();
     Size size = _src.size();
     bool use16 = size.width % 16 == 0 && _src.offset() % 16 == 0 && _src.step() % 16 == 0;
