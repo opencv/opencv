@@ -187,7 +187,8 @@ namespace cv
             for (int i = 0; i < objectPoints.cols; i++)
             {
                 //Although p is a 2D point it needs the same type as the object points to enable the norm calculation
-                Point_<OpointType> p(imagePoints.at<Vec<IpointType,2>>(0, i)[0], imagePoints.at<Vec<IpointType,2>>(0, i)[1]);
+                Point_<OpointType> p((OpointType)imagePoints.at<Vec<IpointType,2>>(0, i)[0],
+                                     (OpointType)imagePoints.at<Vec<IpointType,2>>(0, i)[1]);
                 if ((norm(p - projected_points[i]) < params.reprojectionError)
                     && (rotatedPoints.at<Vec<OpointType,3>>(0, i)[2] > 0)) //hack
                 {
@@ -212,9 +213,9 @@ namespace cv
         static void pnpTask(const vector<char>& pointsMask, const Mat& objectPoints, const Mat& imagePoints,
             const Parameters& params, vector<int>& inliers, Mat& rvec, Mat& tvec,
             const Mat& rvecInit, const Mat& tvecInit, Mutex& resultsMutex)
-		{
-			CV_Assert(objectPoints.depth() == CV_64F ||  objectPoints.depth() == CV_32F);
-			CV_Assert(imagePoints.depth() == CV_64F ||  imagePoints.depth() == CV_32F);
+        {
+            CV_Assert(objectPoints.depth() == CV_64F ||  objectPoints.depth() == CV_32F);
+            CV_Assert(imagePoints.depth() == CV_64F ||  imagePoints.depth() == CV_32F);
             const bool objectDoublePrecision = objectPoints.depth() == CV_64F;
             const bool imageDoublePrecision = imagePoints.depth() == CV_64F;
             if(objectDoublePrecision)
