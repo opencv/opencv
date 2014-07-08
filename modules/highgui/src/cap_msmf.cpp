@@ -227,7 +227,9 @@ protected:
     RawImage *ig_RIFirst;
     RawImage *ig_RISecond;
     RawImage *ig_RIOut;
-};
+private:
+    ImageGrabberCallback& operator=(const ImageGrabberCallback&);   // Declared to fix comiplation error.
+ };
 
 #ifdef HAVE_WINRT
 extern const __declspec(selectany) WCHAR RuntimeClass_CV_ImageGrabberWinRT[] = L"cv.ImageGrabberWinRT";
@@ -292,6 +294,8 @@ private:
     HRESULT AddSourceNode(IMFTopology *pTopology, IMFMediaSource *pSource,
         IMFPresentationDescriptor *pPD, IMFStreamDescriptor *pSD, IMFTopologyNode **ppNode);
     HRESULT AddOutputNode(IMFTopology *pTopology, IMFActivate *pActivate, DWORD dwId, IMFTopologyNode **ppNode);
+
+    ImageGrabber& operator=(const ImageGrabber&);   // Declared to fix comiplation error.
 };
 
 /// Class for controlling of thread of the grabbing raw data from video device
@@ -3874,8 +3878,10 @@ const GUID CvVideoWriter_MSMF::FourCC2GUID(int fourcc)
             return MFVideoFormat_DVSD; break;
         case CV_FOURCC_MACRO('d', 'v', 's', 'l'):
                 return MFVideoFormat_DVSL; break;
-        case CV_FOURCC_MACRO('H', '2', '6', '3'):
+#if (WINVER >= _WIN32_WINNT_WIN8)
+        case CV_FOURCC_MACRO('H', '2', '6', '3'):   // Available only for Win 8 target.
                 return MFVideoFormat_H263; break;
+#endif
         case CV_FOURCC_MACRO('H', '2', '6', '4'):
                 return MFVideoFormat_H264; break;
         case CV_FOURCC_MACRO('M', '4', 'S', '2'):
