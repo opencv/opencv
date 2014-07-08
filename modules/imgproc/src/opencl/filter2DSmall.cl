@@ -203,8 +203,7 @@ WT getBorderPixel(const struct RectCoords bounds, int2 coord,
         );
 
     coord = (int2)(selected_col, selected_row);
-    __global const uchar* ptr = srcptr + mul24(coord.y, srcstep) +
-                                coord.x * SRCSIZE;
+    __global const uchar* ptr = srcptr + mad24(coord.y, srcstep, coord.x * SRCSIZE);
     return convertToWT(loadpix(ptr));
 #endif
 }
@@ -214,8 +213,7 @@ inline WT readSrcPixelSingle(int2 pos, __global const uchar* srcptr,
 {
     if (!isBorder(srcCoords, pos, 1))
     {
-        __global const uchar* ptr = srcptr + mul24(pos.y, srcstep) +
-                                    pos.x * SRCSIZE;
+        __global const uchar* ptr = srcptr + mad24(pos.y, srcstep, pos.x * SRCSIZE);
 
         return convertToWT(loadpix(ptr));
     }
@@ -238,9 +236,7 @@ inline WT readSrcPixelSingle(int2 pos, __global const uchar* srcptr,
 inline PX_LOAD_FLOAT_VEC_TYPE readSrcPixelGroup(int2 pos, __global const uchar* srcptr,
                                                 int srcstep, const struct RectCoords srcCoords)
 {
-    __global const srcT1* ptr = (__global const srcT1*)
-                                (srcptr + mul24(pos.y, srcstep) +
-                                 pos.x * SRCSIZE);
+    __global const srcT1* ptr = (__global const srcT1*)(srcptr + mad24(pos.y, srcstep, pos.x * SRCSIZE));
     return PX_LOAD_FLOAT_VEC_CONV(PX_LOAD(0, ptr));
 }
 
@@ -261,8 +257,8 @@ inline PX_LOAD_FLOAT_VEC_TYPE readSrcPixelGroup(int2 pos, __global const uchar* 
 
 #define LOOP(N, VAR, STMT) CAT(LOOP, N)((VAR), (STMT))
 
-#define DIG(a) a,
-__constant WT1 kernelData[] = { COEFF };
+#define PROCESS_ELEM1(val, sy, sx) \
+    total_sum = mad(val, privateData[py + sy][px + sx], total_sum);
 
 __kernel void filter2DSmall(__global const uchar * srcptr, int src_step, int srcOffsetX, int srcOffsetY, int srcEndX, int srcEndY,
                        __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols, float delta)
@@ -301,7 +297,7 @@ __kernel void filter2DSmall(__global const uchar * srcptr, int src_step, int src
                 LOOP(PX_LOAD_NUM_PX, lx,
                 {
                     WT p = readSrcPixelSingle(srcPos, srcptr, src_step, srcCoords);
-                    *((WT*)&privateData[py][px * PX_LOAD_NUM_PX + lx]) = p;
+                    *((WT*)&privateData[py][mad24(px, PX_LOAD_NUM_PX, lx)]) = p;
                     srcPos.x++;
                 });
             }
@@ -317,18 +313,11 @@ __kernel void filter2DSmall(__global const uchar * srcptr, int src_step, int src
         {
             int x = startX + px;
             WT total_sum = 0;
-            int sy = 0;
-            int kernelIndex = 0;
-            LOOP(KERNEL_SIZE_Y, sy,
-            {
-                int sx = 0;
-                LOOP(KERNEL_SIZE_X, sx,
-                {
-                    total_sum = mad(kernelData[kernelIndex++], privateData[py + sy][px + sx], total_sum);
-                });
-            });
 
-            __global dstT* dstPtr = (__global dstT*)(dstptr + y * dst_step + dst_offset + x * DSTSIZE); // Pointer can be out of bounds!
+            // process element
+            PROCESS_ELEM;
+
+            __global dstT* dstPtr = (__global dstT*)(dstptr + mad24(y, dst_step, mad24(x, DSTSIZE, dst_offset))); // Pointer can be out of bounds!
             storepix(convertToDstT(total_sum + (WT)(delta)), dstPtr);
         });
     });
