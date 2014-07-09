@@ -370,16 +370,9 @@ static bool ocl_accumulate( InputArray _src, InputArray _src2, InputOutputArray 
               op_type == ACCUMULATE_PRODUCT || op_type == ACCUMULATE_WEIGHTED);
 
     const ocl::Device & dev = ocl::Device::getDefault();
-    int vectorWidths[] = { 4, 4, 2, 2, 1, 1, 1, -1 };
+    bool haveMask = !_mask.empty(), doubleSupport = dev.doubleFPConfig() > 0;
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype), ddepth = _dst.depth();
-    int pcn = std::max(vectorWidths[sdepth], vectorWidths[ddepth]), sesz = CV_ELEM_SIZE(sdepth) * pcn,
-        desz = CV_ELEM_SIZE(ddepth) * pcn, rowsPerWI = dev.isIntel() ? 4 : 1;
-
-    bool doubleSupport = dev.doubleFPConfig() > 0, haveMask = !_mask.empty(),
-        usepcn = _src.offset() % sesz == 0 && _src.step() % sesz == 0 && (_src.cols() * cn) % pcn == 0 &&
-            _src2.offset() % desz == 0 && _src2.step() % desz == 0 &&
-            _dst.offset() % pcn == 0 && _dst.step() % desz == 0 && !haveMask;
-    int kercn = usepcn ? pcn : haveMask ? cn : 1;
+    int kercn = haveMask ? cn : ocl::predictOptimalVectorWidthMax(_src, _src2, _dst), rowsPerWI = dev.isIntel() ? 4 : 1;
 
     if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
         return false;
