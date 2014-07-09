@@ -284,6 +284,7 @@ CV_EXPORTS_W int64 getCPUTickCount();
   - CV_CPU_SSE4_2 - SSE 4.2
   - CV_CPU_POPCNT - POPCOUNT
   - CV_CPU_AVX - AVX
+  - CV_CPU_AVX2 - AVX2
 
   \note {Note that the function output is not static. Once you called cv::useOptimized(false),
   most of the hardware acceleration is disabled and thus the function will returns false,

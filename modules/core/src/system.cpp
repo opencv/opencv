@@ -253,7 +253,6 @@ struct HWFeatures
             f.have[CV_CPU_AVX]    = (((cpuid_data[2] & (1<<28)) != 0)&&((cpuid_data[2] & (1<<27)) != 0));//OS uses XSAVE_XRSTORE and CPU support AVX
         }
 
-#if CV_AVX2
     #if defined _MSC_VER && (defined _M_IX86 || defined _M_X64)
         __cpuidex(cpuid_data, 7, 0);
     #elif defined __GNUC__ && (defined __i386__ || defined __x86_64__)
@@ -286,7 +285,6 @@ struct HWFeatures
         {
             f.have[CV_CPU_AVX2] = (cpuid_data[1] & (1<<5)) != 0;
         }
-#endif
 
         return f;
     }
