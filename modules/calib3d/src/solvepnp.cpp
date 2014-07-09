@@ -98,7 +98,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     return false;
 }
 
-namespace cv
+/*namespace cv
 {
     namespace pnpransac
     {
@@ -271,7 +271,7 @@ namespace cv
         RNG PnPSolver::generator;
 
     }
-}
+}*/
 
 class PnPRansacCallback : public PointSetRegistrator::Callback
 {
@@ -283,7 +283,7 @@ public:
 		  rvec(_rvec), tvec(_tvec) {}
 
     /* Pre: True */
-    /* Post: compute _model with given points an eturn number of found models */
+    /* Post: compute _model with given points an return number of found models */
     int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
     {
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat();
@@ -291,15 +291,9 @@ public:
         bool correspondence = cv::solvePnP( _m1, _m2, cameraMatrix, distCoeffs,
         		                            rvec, tvec, useExtrinsicGuess, flags );
 
-
-    	if(correspondence)
-    	{
-			Mat _local_model;
-			_local_model.push_back(rvec);
-			_local_model.push_back(tvec);
-
-			_local_model.copyTo(_model);
-    	}
+    	Mat _local_model;
+    	cv::hconcat(rvec, tvec, _local_model);
+		_local_model.copyTo(_model);
 
         return correspondence;
     }
@@ -312,8 +306,8 @@ public:
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat(), model = _model.getMat();
 
         int i, count = opoints.cols;
-        Mat _rvec = model.rowRange(0,3);
-        Mat _tvec = model.rowRange(3, 6);
+        Mat _rvec = model.col(0);
+        Mat _tvec = model.col(1);
 
         Mat projpoints(count, 2, CV_32FC1);
         cv::projectPoints(opoints, _rvec, _tvec, cameraMatrix, distCoeffs, projpoints);
@@ -338,7 +332,7 @@ public:
     Mat tvec;
 };
 
-void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
+bool cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                         InputArray _cameraMatrix, InputArray _distCoeffs,
                         OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
                         int iterationsCount, float reprojectionError, float confidence,
@@ -355,34 +349,16 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     CV_Assert(ipoints.depth() == CV_32F || ipoints.depth() == CV_64F);
     CV_Assert((ipoints.rows == 1 && ipoints.channels() == 2) || ipoints.cols*ipoints.channels() == 2);
 
-    Mat objectPoints = opoints.reshape(3, 1), imagePoints = ipoints.reshape(2, 1);
-
-    Ptr<PointSetRegistrator::Callback> cb; // pointer to callback
-
     _rvec.create(3, 1, CV_64FC1);
     _tvec.create(3, 1, CV_64FC1);
 
-    Mat rvec, tvec;
+    Mat rvec = useExtrinsicGuess ? _rvec.getMat() : Mat(3, 1, CV_64FC1);
+    Mat tvec = useExtrinsicGuess ? _tvec.getMat() : Mat(3, 1, CV_64FC1);
 
-    if (useExtrinsicGuess) // use given rvec & tvec
-    {
-    	rvec = _rvec.getMat();
-    	tvec = _tvec.getMat();
+    Ptr<PointSetRegistrator::Callback> cb; // pointer to callback
+    cb = makePtr<PnPRansacCallback>( cameraMatrix, distCoeffs, flags, useExtrinsicGuess, rvec, tvec);
 
-    	cb = makePtr<PnPRansacCallback>( cameraMatrix, distCoeffs, flags,
-    									 useExtrinsicGuess, rvec, tvec);
-    }
-    else
-    {
-    	rvec = Mat(3, 1, CV_64FC1);
-    	tvec = Mat(3, 1, CV_64FC1);
-
-    	cb = makePtr<PnPRansacCallback>( cameraMatrix, distCoeffs, flags,
-				 	 	 	 	 	 	 useExtrinsicGuess, rvec, tvec);
-
-    }
-
-	int model_points = 3; 					// minimum of number of model points
+	int model_points = 6; 					// minimum of number of model points
 	double param1 = reprojectionError ;		// reprojection error
 	double param2 = confidence;				// confidence
 	int param3 = iterationsCount;			// number maximum iterations
@@ -391,11 +367,20 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     cv::Mat _mask_local_inliers(1, opoints.rows, CV_8UC1);
 
 	// call Ransac
-	int result = createRANSACPointSetRegistrator(cb, model_points, param1, param2, param3)
-							  ->run(_opoints, _ipoints, _local_model, _mask_local_inliers);
+	int result = createRANSACPointSetRegistrator(cb, model_points, param1, param2, param3)->run(_opoints, _ipoints, _local_model, _mask_local_inliers);
 
-	_rvec.assign(_local_model.rowRange(0,3));	// output rotation vector
-	_tvec.assign(_local_model.rowRange(3,6));	// output translation vector
+	if( result <= 0 || _local_model.rows <= 0)
+	{
+		_rvec.assign(rvec);	// output rotation vector
+		_tvec.assign(tvec);	// output translation vector
+
+		return false;
+	}
+	else
+	{
+		_rvec.assign(_local_model.col(0));	// output rotation vector
+		_tvec.assign(_local_model.col(1));	// output translation vector
+	}
 
 	Mat _local_inliers;
 	int count = 0;
@@ -452,5 +437,5 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
         if( _inliers.needed() )
             _inliers.release();
     }*/
-    return;
+    return true;
 }
