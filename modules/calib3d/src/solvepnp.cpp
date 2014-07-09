@@ -340,7 +340,9 @@ bool cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 {
 
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
-    Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
+
+    int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
+    CV_Assert( npoints >= 0 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
 
     CV_Assert(opoints.isContinuous());
     CV_Assert(opoints.depth() == CV_32F || opoints.depth() == CV_64F);
@@ -354,25 +356,29 @@ bool cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     Mat rvec = useExtrinsicGuess ? _rvec.getMat() : Mat(3, 1, CV_64FC1);
     Mat tvec = useExtrinsicGuess ? _tvec.getMat() : Mat(3, 1, CV_64FC1);
+    Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
 
     Ptr<PointSetRegistrator::Callback> cb; // pointer to callback
     cb = makePtr<PnPRansacCallback>( cameraMatrix, distCoeffs, flags, useExtrinsicGuess, rvec, tvec);
 
-	int model_points = 6; 					// minimum of number of model points
-	double param1 = reprojectionError ;		// reprojection error
-	double param2 = confidence;				// confidence
-	int param3 = iterationsCount;			// number maximum iterations
+	int model_points = flags == cv::P3P ? 4 : 6; 	// minimum of number of model points
+	double param1 = reprojectionError;				// reprojection error
+	double param2 = confidence;						// confidence
+	int param3 = iterationsCount;					// number maximum iterations
 
     cv::Mat _local_model(3, 2, CV_64FC1);
     cv::Mat _mask_local_inliers(1, opoints.rows, CV_8UC1);
 
 	// call Ransac
-	int result = createRANSACPointSetRegistrator(cb, model_points, param1, param2, param3)->run(_opoints, _ipoints, _local_model, _mask_local_inliers);
+	int result = createRANSACPointSetRegistrator(cb, model_points, param1, param2, param3)->run(opoints, ipoints, _local_model, _mask_local_inliers);
 
 	if( result <= 0 || _local_model.rows <= 0)
 	{
 		_rvec.assign(rvec);	// output rotation vector
 		_tvec.assign(tvec);	// output translation vector
+
+		if( _inliers.needed() )
+			_inliers.release();
 
 		return false;
 	}
@@ -382,18 +388,20 @@ bool cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 		_tvec.assign(_local_model.col(1));	// output translation vector
 	}
 
-	Mat _local_inliers;
-	int count = 0;
-    for (int i = 0; i < _mask_local_inliers.rows; ++i)
-    {
-		if((int)_mask_local_inliers.at<uchar>(i) == 1) // inliers mask
+	if(_inliers.needed())
+	{
+		Mat _local_inliers;
+		int count = 0;
+		for (int i = 0; i < _mask_local_inliers.rows; ++i)
 		{
-			_local_inliers.push_back(count);	// output inliers vector
-			count++;
+			if((int)_mask_local_inliers.at<uchar>(i) == 1) // inliers mask
+			{
+				_local_inliers.push_back(count);	// output inliers vector
+				count++;
+			}
 		}
+		_local_inliers.copyTo(_inliers);
 	}
-	_local_inliers.copyTo(_inliers);
-
 
 	// OLD IMPLEMENTATION
 
