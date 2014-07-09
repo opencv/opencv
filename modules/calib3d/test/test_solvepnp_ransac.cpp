@@ -135,7 +135,7 @@ protected:
         }
 
         solvePnPRansac(points, projectedPoints, intrinsics, distCoeffs, rvec, tvec,
-            false, 500, 0.5, -1, inliers, method);
+            false, 500, 0.5, 0.99, inliers, method);
 
         bool isTestSuccess = inliers.size() >= points.size()*0.95;
 
@@ -239,7 +239,7 @@ protected:
     }
 };
 
-TEST(DISABLED_Calib3d_SolvePnPRansac, accuracy) { CV_solvePnPRansac_Test test; test.safe_run(); }
+TEST(Calib3d_SolvePnPRansac, accuracy) { CV_solvePnPRansac_Test test; test.safe_run(); }
 TEST(Calib3d_SolvePnP, accuracy) { CV_solvePnP_Test test; test.safe_run(); }
 
 
