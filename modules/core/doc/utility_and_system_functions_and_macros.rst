@@ -317,6 +317,7 @@ Returns true if the specified feature is supported by the host hardware.
                         * ``CV_CPU_SSE4_2`` - SSE 4.2
                         * ``CV_CPU_POPCNT`` - POPCOUNT
                         * ``CV_CPU_AVX`` - AVX
+                        * ``CV_CPU_AVX2`` - AVX2
 
 The function returns true if the host hardware supports the specified feature. When user calls ``setUseOptimized(false)``, the subsequent calls to ``checkHardwareSupport()`` will return false until ``setUseOptimized(true)`` is called. This way user can dynamically switch on and off the optimized code in OpenCV.
 

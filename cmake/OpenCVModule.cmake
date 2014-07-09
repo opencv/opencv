@@ -526,6 +526,20 @@ macro(ocv_glob_module_sources)
     list(APPEND lib_srcs ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp")
   endif()
 
+  if(ENABLE_AVX)
+    file(GLOB avx_srcs "src/avx/*.cpp")
+    foreach(src ${avx_srcs})
+      set_source_files_properties(${src} PROPERTIES COMPILE_FLAGS -mavx)
+    endforeach()
+  endif()
+
+  if(ENABLE_AVX2)
+    file(GLOB avx2_srcs "src/avx2/*.cpp")
+    foreach(src ${avx2_srcs})
+      set_source_files_properties(${src} PROPERTIES COMPILE_FLAGS -mavx2)
+    endforeach()
+  endif()
+
   source_group("Include" FILES ${lib_hdrs})
   source_group("Include\\detail" FILES ${lib_hdrs_detail})
 

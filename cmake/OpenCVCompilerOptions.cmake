@@ -140,15 +140,15 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   # SSE3 and further should be disabled under MingW because it generates compiler errors
   if(NOT MINGW)
     if(ENABLE_AVX)
-      add_extra_compiler_option(-mavx)
+      ocv_check_flag_support(CXX "-mavx" _varname)
     endif()
 
     if(ENABLE_AVX2)
-      add_extra_compiler_option(-mavx2)
+      ocv_check_flag_support(CXX "-mavx2" _varname)
     endif()
 
     # GCC depresses SSEx instructions when -mavx is used. Instead, it generates new AVX instructions or AVX equivalence for all SSEx instructions when needed.
-    if(NOT OPENCV_EXTRA_CXX_FLAGS MATCHES "-m(avx|avx2)")
+    if(NOT OPENCV_EXTRA_CXX_FLAGS MATCHES "-mavx")
       if(ENABLE_SSE3)
         add_extra_compiler_option(-msse3)
       endif()
@@ -169,7 +169,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 
   if(X86 OR X86_64)
     if(NOT APPLE AND CMAKE_SIZEOF_VOID_P EQUAL 4)
-      if(OPENCV_EXTRA_CXX_FLAGS MATCHES "-m(sse2|avx|avx2)")
+      if(OPENCV_EXTRA_CXX_FLAGS MATCHES "-m(sse2|avx)")
         add_extra_compiler_option(-mfpmath=sse)# !! important - be on the same wave with x64 compilers
       else()
         add_extra_compiler_option(-mfpmath=387)
