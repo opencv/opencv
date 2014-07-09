@@ -1213,7 +1213,7 @@ Performs advanced morphological transformations.
 .. ocv:cfunction:: void cvMorphologyEx( const CvArr* src, CvArr* dst, CvArr* temp, IplConvKernel* element, int operation, int iterations=1 )
 .. ocv:pyoldfunction:: cv.MorphologyEx(src, dst, temp, element, operation, iterations=1)-> None
 
-    :param src: Source image. The number of channels can be arbitrary. The depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
+    :param src: Source image. The number of channels can be arbitrary. The depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F`` or ``CV_64F``.
 
     :param dst: Destination image of the same size and type as  ``src`` .
 
