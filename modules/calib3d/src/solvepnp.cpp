@@ -162,7 +162,7 @@ namespace cv
             for (int i = 0; i < MIN_POINTS_COUNT; i++)
                 for (int j = i + 1; j < MIN_POINTS_COUNT; j++)
                 {
-                    if (norm(modelObjectPoints.at<Vec<OpointType,3>>(0, i) - modelObjectPoints.at<Vec<OpointType,3>>(0, j)) < eps)
+                    if (norm(modelObjectPoints.at<Vec<OpointType,3> >(0, i) - modelObjectPoints.at<Vec<OpointType,3> >(0, j)) < eps)
                         num_same_points++;
                 }
             if (num_same_points > 0)
@@ -176,7 +176,7 @@ namespace cv
                      params.useExtrinsicGuess, params.flags);
 
 
-            vector<Point_<OpointType>> projected_points;
+            vector<Point_<OpointType> > projected_points;
             projected_points.resize(objectPoints.cols);
             projectPoints(objectPoints, localRvec, localTvec, params.camera.intrinsics, params.camera.distortion, projected_points);
 
@@ -187,10 +187,10 @@ namespace cv
             for (int i = 0; i < objectPoints.cols; i++)
             {
                 //Although p is a 2D point it needs the same type as the object points to enable the norm calculation
-                Point_<OpointType> p((OpointType)imagePoints.at<Vec<IpointType,2>>(0, i)[0],
-                                     (OpointType)imagePoints.at<Vec<IpointType,2>>(0, i)[1]);
+                Point_<OpointType> p((OpointType)imagePoints.at<Vec<IpointType,2> >(0, i)[0],
+                                     (OpointType)imagePoints.at<Vec<IpointType,2> >(0, i)[1]);
                 if ((norm(p - projected_points[i]) < params.reprojectionError)
-                    && (rotatedPoints.at<Vec<OpointType,3>>(0, i)[2] > 0)) //hack
+                    && (rotatedPoints.at<Vec<OpointType,3> >(0, i)[2] > 0)) //hack
                 {
                     localInliers.push_back(i);
                 }
