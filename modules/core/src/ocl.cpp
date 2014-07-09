@@ -4462,6 +4462,7 @@ String kernelToStr(InputArray _kernel, int ddepth, const char * name)
             offsets.push_back(src.offset()); \
             steps.push_back(src.step()); \
             dividers.push_back(ckercn * CV_ELEM_SIZE1(ctype)); \
+            kercns.push_back(ckercn); \
         } \
     } \
     while ((void)0, 0)
@@ -4483,13 +4484,13 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
     if (vectorWidths[0] == 1)
     {
         // it's heuristic
-        vectorWidths[0] = vectorWidths[1] = 4;
-        vectorWidths[2] = vectorWidths[3] = 2;
-        vectorWidths[4] = vectorWidths[5] = vectorWidths[6] = 4;
+        vectorWidths[CV_8U] = vectorWidths[CV_8S] = 16;
+        vectorWidths[CV_16U] = vectorWidths[CV_16S] = 8;
+        vectorWidths[CV_32S] = vectorWidths[CV_32F] = vectorWidths[CV_64F] = 1;
     }
 
     std::vector<size_t> offsets, steps, cols;
-    std::vector<int> dividers;
+    std::vector<int> dividers, kercns;
     PROCESS_SRC(src1);
     PROCESS_SRC(src2);
     PROCESS_SRC(src3);
@@ -4503,21 +4504,20 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
     size_t size = offsets.size();
 
     for (size_t i = 0; i < size; ++i)
-        while (offsets[i] % dividers[i] != 0 || steps[i] % dividers[i] != 0 || cols[i] % dividers[i] != 0)
-            dividers[i] >>= 1;
+        while (offsets[i] % dividers[i] != 0 || steps[i] % dividers[i] != 0 || cols[i] % kercns[i] != 0)
+            dividers[i] >>= 1, kercns[i] >>= 1;
 
     // default strategy
-    int kercn = *std::min_element(dividers.begin(), dividers.end());
-
-    // another strategy
-    // for (size_t i = 0; i < size; ++i)
-    //     if (dividers[i] != wsz)
-    //     {
-    //         kercn = 1;
-    //         break;
-    //     }
+    int kercn = *std::min_element(kercns.begin(), kercns.end());
 
     return kercn;
+}
+
+int predictOptimalVectorWidthMax(InputArray src1, InputArray src2, InputArray src3,
+                                 InputArray src4, InputArray src5, InputArray src6,
+                                 InputArray src7, InputArray src8, InputArray src9)
+{
+    return predictOptimalVectorWidth(src1, src2, src3, src4, src5, src6, src7, src8, src9, OCL_VECTOR_MAX);
 }
 
 #undef PROCESS_SRC
