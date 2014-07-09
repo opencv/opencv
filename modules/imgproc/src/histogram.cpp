@@ -2325,13 +2325,16 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
         }
         else if( method == CV_COMP_KL_DIV )
         {
-            for( j = 0; j < len; j++ ){
+            for( j = 0; j < len; j++ )
+            {
                 double p = h1[j];
                 double q = h2[j];
-                if( p == 0.0 )
+                if( fabs(p) <= DBL_EPSILON ) {
                     continue;
-                if( q == 0.0 )
-                    q += 1e-10;
+                }
+                if(  fabs(q) <= DBL_EPSILON ) {
+                    q = 1e-10;
+                }
                 result += p * cv::log( p / q );
             }
         }
@@ -2370,7 +2373,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
         CV_Assert( H1.size(i) == H2.size(i) );
 
     const SparseMat *PH1 = &H1, *PH2 = &H2;
-    if( PH1->nzcount() > PH2->nzcount() && method != CV_COMP_CHISQR && method != CV_COMP_CHISQR_ALT)
+    if( PH1->nzcount() > PH2->nzcount() && method != CV_COMP_CHISQR && method != CV_COMP_CHISQR_ALT && method != CV_COMP_KL_DIV )
         std::swap(PH1, PH2);
 
     SparseMatConstIterator it = PH1->begin();
@@ -2449,6 +2452,18 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
         s1 *= s2;
         s1 = fabs(s1) > FLT_EPSILON ? 1./std::sqrt(s1) : 1.;
         result = std::sqrt(std::max(1. - result*s1, 0.));
+    }
+    else if( method == CV_COMP_KL_DIV )
+    {
+        for( i = 0; i < N1; i++, ++it )
+        {
+            float v1 = it.value<float>();
+            const SparseMat::Node* node = it.node();
+            float v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
+            if( !v2 )
+                v2 = 1e-10;
+            result += v1 * cv::log( v1 / v2 );
+        }
     }
     else
         CV_Error( CV_StsBadArg, "Unknown comparison method" );
@@ -2795,7 +2810,7 @@ cvCompareHist( const CvHistogram* hist1,
     CvSparseMatIterator iterator;
     CvSparseNode *node1, *node2;
 
-    if( mat1->heap->active_count > mat2->heap->active_count && method != CV_COMP_CHISQR && method != CV_COMP_CHISQR_ALT)
+    if( mat1->heap->active_count > mat2->heap->active_count && method != CV_COMP_CHISQR && method != CV_COMP_CHISQR_ALT && method != CV_COMP_KL_DIV )
     {
         CvSparseMat* t;
         CV_SWAP( mat1, mat2, t );
@@ -2896,6 +2911,13 @@ cvCompareHist( const CvHistogram* hist1,
         s1 = fabs(s1) > FLT_EPSILON ? 1./sqrt(s1) : 1.;
         result = 1. - result*s1;
         result = sqrt(MAX(result,0.));
+    }
+    else if( method == CV_COMP_KL_DIV )
+    {
+        cv::SparseMat sH1, sH2;
+        ((const CvSparseMat*)hist1->bins)->copyToSparseMat(sH1);
+        ((const CvSparseMat*)hist2->bins)->copyToSparseMat(sH2);
+        result = cv::compareHist( sH1, sH2, CV_COMP_KL_DIV );
     }
     else
         CV_Error( CV_StsBadArg, "Unknown comparison method" );
