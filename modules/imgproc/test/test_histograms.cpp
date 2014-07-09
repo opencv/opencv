@@ -1021,11 +1021,12 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             sq0 += v0*v0;
             sq1 += v1*v1;
             result0[CV_COMP_BHATTACHARYYA] += sqrt(v0*v1);
-            if( fabs(v0) > DBL_EPSILON )
             {
-                if( fabs(v1) < DBL_EPSILON )
-                    v1 += 1e-10;
-                result0[CV_COMP_KL_DIV] += v0 * cv::log( v0 / v1 );
+            if( fabs(v0) <= DBL_EPSILON  )
+                continue;
+            if( fabs(v1) <= DBL_EPSILON )
+                v1 = 1e-10;
+            result0[CV_COMP_KL_DIV] += v0 * std::log( v0 / v1 );
             }
         }
     }
@@ -1052,11 +1053,12 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             s0 += v0;
             sq0 += v0*v0;
             result0[CV_COMP_BHATTACHARYYA] += sqrt(v0*v1);
-            if( fabs(v0) > DBL_EPSILON )
             {
-                if( fabs(v1) < DBL_EPSILON )
-                    v1 += 1e-10;
-                result0[CV_COMP_KL_DIV] += v0 * cv::log( v0 / v1 );
+            if (v0 <= DBL_EPSILON)
+                continue;
+            if (!v1)
+                v1 = 1e-10;
+            result0[CV_COMP_KL_DIV] += v0 * cv::log( v0 / v1 );
             }
         }
 
