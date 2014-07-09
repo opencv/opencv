@@ -1043,14 +1043,14 @@ MatExpr min(const Mat& a, const Mat& b)
 MatExpr min(const Mat& a, double s)
 {
     MatExpr e;
-    MatOp_Bin::makeExpr(e, 'm', a, s);
+    MatOp_Bin::makeExpr(e, 'n', a, s);
     return e;
 }
 
 MatExpr min(double s, const Mat& a)
 {
     MatExpr e;
-    MatOp_Bin::makeExpr(e, 'm', a, s);
+    MatOp_Bin::makeExpr(e, 'n', a, s);
     return e;
 }
 
@@ -1064,14 +1064,14 @@ MatExpr max(const Mat& a, const Mat& b)
 MatExpr max(const Mat& a, double s)
 {
     MatExpr e;
-    MatOp_Bin::makeExpr(e, 'M', a, s);
+    MatOp_Bin::makeExpr(e, 'N', a, s);
     return e;
 }
 
 MatExpr max(double s, const Mat& a)
 {
     MatExpr e;
-    MatOp_Bin::makeExpr(e, 'M', a, s);
+    MatOp_Bin::makeExpr(e, 'N', a, s);
     return e;
 }
 
@@ -1337,13 +1337,13 @@ void MatOp_Bin::assign(const MatExpr& e, Mat& m, int _type) const
         bitwise_xor(e.a, e.s, dst);
     else if( e.flags == '~' && !e.b.data )
         bitwise_not(e.a, dst);
-    else if( e.flags == 'm' && e.b.data )
+    else if( e.flags == 'm' )
         cv::min(e.a, e.b, dst);
-    else if( e.flags == 'm' && !e.b.data )
+    else if( e.flags == 'n' )
         cv::min(e.a, e.s[0], dst);
-    else if( e.flags == 'M' && e.b.data )
+    else if( e.flags == 'M' )
         cv::max(e.a, e.b, dst);
-    else if( e.flags == 'M' && !e.b.data )
+    else if( e.flags == 'N' )
         cv::max(e.a, e.s[0], dst);
     else if( e.flags == 'a' && e.b.data )
         cv::absdiff(e.a, e.b, dst);
