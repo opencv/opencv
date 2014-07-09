@@ -2457,9 +2457,9 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
     {
         for( i = 0; i < N1; i++, ++it )
         {
-            float v1 = it.value<float>();
+            double v1 = it.value<float>();
             const SparseMat::Node* node = it.node();
-            float v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
+            double v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
             if( !v2 )
                 v2 = 1e-10;
             result += v1 * cv::log( v1 / v2 );
