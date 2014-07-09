@@ -228,11 +228,11 @@ The following code is to get the model 3D points and its descriptors and then ca
 
 	if(fast_match)
 	{
-		rmatcher.robustMatch(frame, good_matches, keypoints_scene, descriptors_model);
+		rmatcher.fastRobustMatch(frame, good_matches, keypoints_scene, descriptors_model);
 	}
 	else
 	{
-		rmatcher.fastRobustMatch(frame, good_matches, keypoints_scene, descriptors_model);
+		rmatcher.robustMatch(frame, good_matches, keypoints_scene, descriptors_model);
 	}
 
 The following code corresponds to the *robustMatch()* function which belongs to the *RobustMatcher* class. This function uses the given image to detect the keypoints and extract the descriptors, match using *2 Nearest Neighbour* the extracted descriptors with the given model descriptors and vice versa. Then, is applied a ratio test to the two direction matches in order to remove these matches which its distance ratio between the first and second best match is larger than a given threshold. Finally, a symmetry test is applied in order the remove non symmetrical matches.
@@ -336,7 +336,7 @@ The following code is how the *PnPProblem class* initialises its atributes:
 
 OpenCV provides four PnP methods: ITERATIVE, EPNP, P3P and ? . If we want a real time time application the more suitable methods are EPNP and P3P due to are faster than ITERATIVE finding a solution. Otherwise, EPNP and P3P are not robust especially in front of planar surfaces and sometimes the pose estimation seems to have like a mirror effect. Therefore, in this this tutorial is used ITERATIVE method due to the object to be detected has planar surfaces.
 
-The OpenCV Ransac implementation wants you to provide three parameters: the maximum number of iterations until stop the algorithm, the maximum allowed distance between the observed and computed point projections to consider it an inlier and a threshold of minimum number of inliers found. You can tune these paramaters in order to improve your algorithm performance. Increasing the number of iterations you will have a more accurate solution, but will take more time to find a solution. Increasing the reprojection error will reduce the computation time, but your solution will be unaccurate. Decreasing the minimum number of inliers will reduce the computation time with high probability to obtain a bad solution.
+The OpenCV Ransac implementation wants you to provide three parameters: the maximum number of iterations until stop the algorithm, the maximum allowed distance between the observed and computed point projections to consider it an inlier and the confidence to obtain a result. You can tune these paramaters in order to improve your algorithm performance. Increasing the number of iterations you will have a more accurate solution, but will take more time to find a solution. Increasing the reprojection error will reduce the computation time, but your solution will be unaccurate. Decreasing the confidence your arlgorithm will be faster, but the obtained solution will also be unaccurate.
 
 The following parameters works for this application:
   
@@ -345,8 +345,8 @@ The following parameters works for this application:
 	// RANSAC parameters	
 	
 	int iterationsCount = 500;	// number of Ransac iterations.
-	int reprojectionError = 2.0;	// maximum allowed distance to consider it an inlier.
-	int minInliersCount = 70;	// thresold of found inliers.
+	float reprojectionError = 2.0;	// maximum allowed distance to consider it an inlier.
+	float confidence = 0.95;	// ransac successful confidence.
 
 
 The following code corresponds to the *estimatePoseRANSAC()* function which belongs to the *PnPProblem class*. This function estimates the rotation and translation matrix given a set of 2D/3D correspondences, the desired PnP method to use, the output inliers container and the Ransac parameters:
@@ -358,7 +358,7 @@ The following code corresponds to the *estimatePoseRANSAC()* function which belo
 	void PnPProblem::estimatePoseRANSAC( const std::vector<cv::Point3f> &list_points3d,	// list with model 3D coordinates
 		                             const std::vector<cv::Point2f> &list_points2d,     // list with scene 2D coordinates
 		                             int flags, cv::Mat &inliers, int iterationsCount,  // PnP method; inliers container
-		                             double reprojectionError, int minInliersCount )    // Ransac parameters
+		                             float reprojectionError, float confidence )       // Ransac parameters
 	{
 		cv::Mat distCoeffs = cv::Mat::zeros(4, 1, CV_64FC1);	// vector of distortion coefficients
 		cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);          // output rotation vector
@@ -368,7 +368,7 @@ The following code corresponds to the *estimatePoseRANSAC()* function which belo
 						  // initial approximations of the rotation and translation vectors
 
 		cv::solvePnPRansac( list_points3d, list_points2d, _A_matrix, distCoeffs, rvec, tvec,
-			            useExtrinsicGuess, iterationsCount, reprojectionError, minInliersCount,
+			            useExtrinsicGuess, iterationsCount, reprojectionError, confidence,
 			            inliers, flags );
 
 		Rodrigues(rvec,_R_matrix); 			// converts Rotation Vector to Matrix
@@ -666,7 +666,7 @@ The following videos are the results of pose estimation in real time using the e
 
 	int iterationsCount = 500;    // number of Ransac iterations.
 	int reprojectionError = 2.0;  // maximum allowed distance to consider it an inlier.
-	int minInliersCount = 70;     // thresold of found inliers.
+	float confidence = 0.95;      // ransac successful confidence.
 
 
 	// Kalman Filter parameters
