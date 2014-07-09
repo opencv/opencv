@@ -154,7 +154,7 @@ CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             bool useExtrinsicGuess = false, int flags = ITERATIVE );
 
 //! computes the camera pose from a few 3D points and the corresponding projections. The outliers are possible.
-CV_EXPORTS_W void solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
+CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
                                   InputArray cameraMatrix, InputArray distCoeffs,
                                   OutputArray rvec, OutputArray tvec,
                                   bool useExtrinsicGuess = false, int iterationsCount = 100,
