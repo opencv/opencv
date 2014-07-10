@@ -349,7 +349,7 @@ Now here's our recommendation for the structure of the tutorial (although, remem
            :language: cpp
            :linenos:
            :tab-width: 4
-           :lines: 1-8, 21-22, 24-
+           :lines: 1-8, 21-23, 25-
 
      After the directive you specify a relative path to the file from what to import. It has four options: the language to use, if you add the ``:linenos:`` the line numbers will be shown, you can specify the tab size with the ``:tab-width:`` and you do not need to load the whole file, you can show just the important lines. Use the *lines* option to do not show redundant information (such as the *help* function). Here basically you specify ranges, if the second range line number is missing than that means that until the end of the file. The ranges specified here do no need to be in an ascending order, you may even reorganize the structure of how you want to show your sample inside the tutorial.
 

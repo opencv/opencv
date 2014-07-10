@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui_c.h"
+#include "opencv2/videoio/videoio_c.h"
 
 using namespace cv;
 using namespace std;
@@ -99,7 +99,7 @@ const VideoFormat g_specific_fmt_list[] =
 
 }
 
-class CV_HighGuiTest : public cvtest::BaseTest
+class CV_VideoIOTest : public cvtest::BaseTest
 {
 protected:
     void ImageTest (const string& dir);
@@ -107,12 +107,12 @@ protected:
     void SpecificImageTest (const string& dir);
     void SpecificVideoTest (const string& dir, const cvtest::VideoFormat& fmt);
 
-    CV_HighGuiTest() {}
-    ~CV_HighGuiTest() {}
+    CV_VideoIOTest() {}
+    ~CV_VideoIOTest() {}
     virtual void run(int) = 0;
 };
 
-class CV_ImageTest : public CV_HighGuiTest
+class CV_ImageTest : public CV_VideoIOTest
 {
 public:
     CV_ImageTest() {}
@@ -120,7 +120,7 @@ public:
     void run(int);
 };
 
-class CV_SpecificImageTest : public CV_HighGuiTest
+class CV_SpecificImageTest : public CV_VideoIOTest
 {
 public:
     CV_SpecificImageTest() {}
@@ -128,7 +128,7 @@ public:
     void run(int);
 };
 
-class CV_VideoTest : public CV_HighGuiTest
+class CV_VideoTest : public CV_VideoIOTest
 {
 public:
     CV_VideoTest() {}
@@ -136,7 +136,7 @@ public:
     void run(int);
 };
 
-class CV_SpecificVideoTest : public CV_HighGuiTest
+class CV_SpecificVideoTest : public CV_VideoIOTest
 {
 public:
     CV_SpecificVideoTest() {}
@@ -145,7 +145,7 @@ public:
 };
 
 
-void CV_HighGuiTest::ImageTest(const string& dir)
+void CV_VideoIOTest::ImageTest(const string& dir)
 {
     string _name = dir + string("../cv/shared/baboon.png");
     ts->printf(ts->LOG, "reading image : %s\n", _name.c_str());
@@ -251,7 +251,7 @@ void CV_HighGuiTest::ImageTest(const string& dir)
 }
 
 
-void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt)
+void CV_VideoIOTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt)
 {
     string src_file = dir + "../cv/shared/video_for_test.avi";
     string tmp_name = cv::tempfile((cvtest::fourccToString(fmt.fourcc) + "."  + fmt.ext).c_str());
@@ -337,7 +337,7 @@ void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt
     ts->printf(ts->LOG, "end test function : ImagesVideo \n");
 }
 
-void CV_HighGuiTest::SpecificImageTest(const string& dir)
+void CV_VideoIOTest::SpecificImageTest(const string& dir)
 {
     const size_t IMAGE_COUNT = 10;
 
@@ -423,7 +423,7 @@ void CV_HighGuiTest::SpecificImageTest(const string& dir)
 }
 
 
-void CV_HighGuiTest::SpecificVideoTest(const string& dir, const cvtest::VideoFormat& fmt)
+void CV_VideoIOTest::SpecificVideoTest(const string& dir, const cvtest::VideoFormat& fmt)
 {
     string ext = fmt.ext;
     int fourcc = fmt.fourcc;
@@ -568,12 +568,12 @@ void CV_SpecificVideoTest::run(int)
 }
 
 #ifdef HAVE_JPEG
-TEST(Highgui_Image, regression) { CV_ImageTest test; test.safe_run(); }
+TEST(Videoio_Image, regression) { CV_ImageTest test; test.safe_run(); }
 #endif
 
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT && BUILD_WITH_VIDEO_OUTPUT_SUPPORT && !defined(__APPLE__)
-TEST(Highgui_Video, regression) { CV_VideoTest test; test.safe_run(); }
-TEST(Highgui_Video, write_read) { CV_SpecificVideoTest test; test.safe_run(); }
+TEST(Videoio_Video, regression) { CV_VideoTest test; test.safe_run(); }
+TEST(Videoio_Video, write_read) { CV_SpecificVideoTest test; test.safe_run(); }
 #endif
 
-TEST(Highgui_Image, write_read) { CV_SpecificImageTest test; test.safe_run(); }
+TEST(Videoio_Image, write_read) { CV_SpecificImageTest test; test.safe_run(); }

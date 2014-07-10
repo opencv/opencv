@@ -4,7 +4,8 @@
 
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/videoio.hpp"
+#include "opencv2/highgui.hpp"
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/video/video.hpp"
 

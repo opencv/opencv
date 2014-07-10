@@ -222,12 +222,12 @@ public:
 
 
 #ifdef HAVE_PNG
-TEST(Highgui_Image, write_big) { CV_GrfmtWriteBigImageTest test; test.safe_run(); }
+TEST(Imgcodecs_Image, write_big) { CV_GrfmtWriteBigImageTest test; test.safe_run(); }
 #endif
 
-TEST(Highgui_Image, write_imageseq) { CV_GrfmtWriteSequenceImageTest test; test.safe_run(); }
+TEST(Imgcodecs_Image, write_imageseq) { CV_GrfmtWriteSequenceImageTest test; test.safe_run(); }
 
-TEST(Highgui_Image, read_bmp_rle8) { CV_GrfmtReadBMPRLE8Test test; test.safe_run(); }
+TEST(Imgcodecs_Image, read_bmp_rle8) { CV_GrfmtReadBMPRLE8Test test; test.safe_run(); }
 
 #ifdef HAVE_PNG
 class CV_GrfmtPNGEncodeTest : public cvtest::BaseTest
@@ -256,9 +256,9 @@ public:
     }
 };
 
-TEST(Highgui_Image, encode_png) { CV_GrfmtPNGEncodeTest test; test.safe_run(); }
+TEST(Imgcodecs_Image, encode_png) { CV_GrfmtPNGEncodeTest test; test.safe_run(); }
 
-TEST(Highgui_ImreadVSCvtColor, regression)
+TEST(Imgcodecs_ImreadVSCvtColor, regression)
 {
     cvtest::TS& ts = *cvtest::TS::ptr();
 
@@ -374,11 +374,11 @@ public:
     }
 };
 
-TEST(Highgui_Image, read_png_color_palette_with_alpha) { CV_GrfmtReadPNGColorPaletteWithAlphaTest test; test.safe_run(); }
+TEST(Imgcodecs_Image, read_png_color_palette_with_alpha) { CV_GrfmtReadPNGColorPaletteWithAlphaTest test; test.safe_run(); }
 #endif
 
 #ifdef HAVE_JPEG
-TEST(Highgui_Jpeg, encode_empty)
+TEST(Imgcodecs_Jpeg, encode_empty)
 {
     cv::Mat img;
     std::vector<uchar> jpegImg;
@@ -386,7 +386,7 @@ TEST(Highgui_Jpeg, encode_empty)
     ASSERT_THROW(cv::imencode(".jpg", img, jpegImg), cv::Exception);
 }
 
-TEST(Highgui_Jpeg, encode_decode_progressive_jpeg)
+TEST(Imgcodecs_Jpeg, encode_decode_progressive_jpeg)
 {
     cvtest::TS& ts = *cvtest::TS::ptr();
     string input = string(ts.get_data_path()) + "../cv/shared/lena.png";
@@ -410,7 +410,7 @@ TEST(Highgui_Jpeg, encode_decode_progressive_jpeg)
     remove(output_progressive.c_str());
 }
 
-TEST(Highgui_Jpeg, encode_decode_optimize_jpeg)
+TEST(Imgcodecs_Jpeg, encode_decode_optimize_jpeg)
 {
     cvtest::TS& ts = *cvtest::TS::ptr();
     string input = string(ts.get_data_path()) + "../cv/shared/lena.png";
@@ -446,9 +446,9 @@ TEST(Highgui_Jpeg, encode_decode_optimize_jpeg)
 #ifdef ANDROID
 // Test disabled as it uses a lot of memory.
 // It is killed with SIGKILL by out of memory killer.
-TEST(Highgui_Tiff, DISABLED_decode_tile16384x16384)
+TEST(Imgcodecs_Tiff, DISABLED_decode_tile16384x16384)
 #else
-TEST(Highgui_Tiff, decode_tile16384x16384)
+TEST(Imgcodecs_Tiff, decode_tile16384x16384)
 #endif
 {
     // see issue #2161
@@ -477,7 +477,7 @@ TEST(Highgui_Tiff, decode_tile16384x16384)
     remove(file4.c_str());
 }
 
-TEST(Highgui_Tiff, write_read_16bit_big_little_endian)
+TEST(Imgcodecs_Tiff, write_read_16bit_big_little_endian)
 {
     // see issue #2601 "16-bit Grayscale TIFF Load Failures Due to Buffer Underflow and Endianness"
 
@@ -560,7 +560,7 @@ public:
     }
 };
 
-TEST(Highgui_Tiff, decode_tile_remainder)
+TEST(Imgcodecs_Tiff, decode_tile_remainder)
 {
     CV_GrfmtReadTifTiledWithNotFullTiles test; test.safe_run();
 }
@@ -569,7 +569,7 @@ TEST(Highgui_Tiff, decode_tile_remainder)
 
 #ifdef HAVE_WEBP
 
-TEST(Highgui_WebP, encode_decode_lossless_webp)
+TEST(Imgcodecs_WebP, encode_decode_lossless_webp)
 {
     cvtest::TS& ts = *cvtest::TS::ptr();
     string input = string(ts.get_data_path()) + "../cv/shared/lena.png";
@@ -618,7 +618,7 @@ TEST(Highgui_WebP, encode_decode_lossless_webp)
     EXPECT_TRUE(cvtest::norm(img, img_webp, NORM_INF) == 0);
 }
 
-TEST(Highgui_WebP, encode_decode_lossy_webp)
+TEST(Imgcodecs_WebP, encode_decode_lossy_webp)
 {
     cvtest::TS& ts = *cvtest::TS::ptr();
     std::string input = std::string(ts.get_data_path()) + "../cv/shared/lena.png";
@@ -642,7 +642,7 @@ TEST(Highgui_WebP, encode_decode_lossy_webp)
     }
 }
 
-TEST(Highgui_WebP, encode_decode_with_alpha_webp)
+TEST(Imgcodecs_WebP, encode_decode_with_alpha_webp)
 {
     cvtest::TS& ts = *cvtest::TS::ptr();
     std::string input = std::string(ts.get_data_path()) + "../cv/shared/lena.png";
@@ -668,7 +668,7 @@ TEST(Highgui_WebP, encode_decode_with_alpha_webp)
 
 #endif
 
-TEST(Highgui_Hdr, regression)
+TEST(Imgcodecs_Hdr, regression)
 {
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "/readwrite/";
     string name_rle = folder + "rle.hdr";

@@ -3,6 +3,7 @@
 #include <opencv2/imgproc/imgproc_c.h> // cvFindContours
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect.hpp>
+#include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 #include <iterator>
 #include <set>

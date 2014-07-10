@@ -1,5 +1,5 @@
 /* This is the contributed code:
-Firewire and video4linux camera support for highgui
+Firewire and video4linux camera support for videoio
 
 2003-03-12  Magnus Lundin
 lundin@mlu.mine.nu
@@ -17,21 +17,21 @@ INSTALLATION
 Install OpenCV
 Install v4l
 Install dc1394 raw1394 - coriander should work with your camera
-    Backup highgui folder
+    Backup videoio folder
     Copy new files
-    cd into highgui folder
+    cd into videoio folder
     make clean  (cvcap.cpp must be rebuilt)
     make
     make install
 
 
-The build is controlled by the following entries in the highgui Makefile:
+The build is controlled by the following entries in the videoio Makefile:
 
-libhighgui_la_LIBADD = -L/usr/X11R6/lib -lXm -lMrm -lUil -lpng  -ljpeg -lz -ltiff -lavcodec -lraw1394 -ldc1394_control
+libvideoio_la_LIBADD = -L/usr/X11R6/lib -lXm -lMrm -lUil -lpng  -ljpeg -lz -ltiff -lavcodec -lraw1394 -ldc1394_control
 DEFS = -DHAVE_CONFIG_H -DHAVE_DC1394 HAVE_CAMV4L
 
 
-Now it should be possible to use highgui camera functions, works for me.
+Now it should be possible to use videoio camera functions, works for me.
 
 
 THINGS TO DO

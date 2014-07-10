@@ -428,7 +428,7 @@ void CvCaptureCAM::setWidthHeight() {
     [localpool drain];
 }
 
-//added macros into headers in highgui_c.h
+//added macros into headers in videoio_c.h
 /*
 #define CV_CAP_PROP_IOS_DEVICE_FOCUS 9001
 #define CV_CAP_PROP_IOS_DEVICE_EXPOSURE 9002

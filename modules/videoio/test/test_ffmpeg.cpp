@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/videoio.hpp"
 
 using namespace cv;
 
@@ -145,7 +145,7 @@ public:
     }
 };
 
-TEST(Highgui_Video, ffmpeg_writebig) { CV_FFmpegWriteBigVideoTest test; test.safe_run(); }
+TEST(Videoio_Video, ffmpeg_writebig) { CV_FFmpegWriteBigVideoTest test; test.safe_run(); }
 
 class CV_FFmpegReadImageTest : public cvtest::BaseTest
 {
@@ -174,7 +174,7 @@ public:
     }
 };
 
-TEST(Highgui_Video, ffmpeg_image) { CV_FFmpegReadImageTest test; test.safe_run(); }
+TEST(Videoio_Video, ffmpeg_image) { CV_FFmpegReadImageTest test; test.safe_run(); }
 
 #endif
 
@@ -360,7 +360,7 @@ private:
 
 bool ReadImageAndTest::next;
 
-TEST(Highgui_Video_parallel_writers_and_readers, accuracy)
+TEST(Videoio_Video_parallel_writers_and_readers, accuracy)
 {
     const unsigned int threadsCount = 4;
     cvtest::TS* ts = cvtest::TS::ptr();

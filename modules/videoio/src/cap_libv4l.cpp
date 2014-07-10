@@ -1,7 +1,7 @@
 /* This is the contributed code:
 
 File:             cvcap_v4l.cpp
-Current Location: ../opencv-0.9.6/otherlibs/highgui
+Current Location: ../opencv-0.9.6/otherlibs/videoio
 
 Original Version: 2003-03-12  Magnus Lundin lundin@mlu.mine.nu
 Original Comments:
@@ -71,7 +71,7 @@ For Release:  OpenCV-Linux Beta4 Opencv-0.9.6
 [FD] I modified the following:
  - handle YUV420P, YUV420, and YUV411P palettes (for many webcams) without using floating-point
  - cvGrabFrame should not wait for the end of the first frame, and should return quickly
-   (see highgui doc)
+   (see videoio doc)
  - cvRetrieveFrame should in turn wait for the end of frame capture, and should not
    trigger the capture of the next frame (the user choses when to do it using GrabFrame)
    To get the old behavior, re-call cvRetrieveFrame just after cvGrabFrame.
@@ -179,7 +179,7 @@ make & enjoy!
   Planning for future rewrite of this whole library (July/August 2010)
 
 15th patch: May 12, 2010, Filipe Almeida filipe.almeida@ist.utl.pt
-- Broken compile of library (include "_highgui.h")
+- Broken compile of library (include "_videoio.h")
 */
 
 /*M///////////////////////////////////////////////////////////////////////////////////////
@@ -654,7 +654,7 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
 
    if ((capture->cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0) {
       /* Nope. */
-      fprintf( stderr, "HIGHGUI ERROR: V4L2: device %s is unable to capture video memory.\n",deviceName);
+      fprintf( stderr, "VIDEOIO ERROR: V4L2: device %s is unable to capture video memory.\n",deviceName);
       icvCloseCAM_V4L(capture);
       return -1;
    }
@@ -673,7 +673,7 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
        /* V4L2 have a status field from selected video mode */
        if (-1 == xioctl (capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->inp))
        {
-         fprintf (stderr, "HIGHGUI ERROR: V4L2: Aren't able to set channel number\n");
+         fprintf (stderr, "VIDEOIO ERROR: V4L2: Aren't able to set channel number\n");
          icvCloseCAM_V4L (capture);
          return -1;
        }
@@ -684,7 +684,7 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
    capture->form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
    if (-1 == xioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form)) {
-       fprintf( stderr, "HIGHGUI ERROR: V4L2: Could not obtain specifics of capture window.\n\n");
+       fprintf( stderr, "VIDEOIO ERROR: V4L2: Could not obtain specifics of capture window.\n\n");
        icvCloseCAM_V4L(capture);
        return -1;
    }
@@ -698,12 +698,12 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
   capture->form.fmt.pix.height = capture->height;
 
   if (-1 == xioctl (capture->deviceHandle, VIDIOC_S_FMT, &capture->form)) {
-      fprintf(stderr, "HIGHGUI ERROR: libv4l unable to ioctl S_FMT\n");
+      fprintf(stderr, "VIDEOIO ERROR: libv4l unable to ioctl S_FMT\n");
       return -1;
   }
 
   if (V4L2_PIX_FMT_BGR24 != capture->form.fmt.pix.pixelformat) {
-      fprintf( stderr, "HIGHGUI ERROR: libv4l unable convert to requested pixfmt\n");
+      fprintf( stderr, "VIDEOIO ERROR: libv4l unable convert to requested pixfmt\n");
       return -1;
   }
 
@@ -829,7 +829,7 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
 
    if (detect_v4l == -1)
    {
-     fprintf (stderr, "HIGHGUI ERROR: V4L"
+     fprintf (stderr, "VIDEOIO ERROR: V4L"
               ": device %s: Unable to open for READ ONLY\n", deviceName);
 
      return -1;
@@ -837,7 +837,7 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
 
    if (detect_v4l <= 0)
    {
-     fprintf (stderr, "HIGHGUI ERROR: V4L"
+     fprintf (stderr, "VIDEOIO ERROR: V4L"
               ": device %s: Unable to query number of channels\n", deviceName);
 
      return -1;
@@ -846,7 +846,7 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
    {
      if ((capture->capability.type & VID_TYPE_CAPTURE) == 0) {
        /* Nope. */
-       fprintf( stderr, "HIGHGUI ERROR: V4L: "
+       fprintf( stderr, "VIDEOIO ERROR: V4L: "
                 "device %s is unable to capture video memory.\n",deviceName);
        icvCloseCAM_V4L(capture);
        return -1;
@@ -884,7 +884,7 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
    {
 
      if(v4l1_ioctl(capture->deviceHandle, VIDIOCGWIN, &capture->captureWindow) == -1) {
-       fprintf( stderr, "HIGHGUI ERROR: V4L: "
+       fprintf( stderr, "VIDEOIO ERROR: V4L: "
                 "Could not obtain specifics of capture window.\n\n");
        icvCloseCAM_V4L(capture);
        return -1;
@@ -894,7 +894,7 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
 
    {
       if(v4l1_ioctl(capture->deviceHandle, VIDIOCGPICT, &capture->imageProperties) < 0) {
-         fprintf( stderr, "HIGHGUI ERROR: V4L: Unable to determine size of incoming image\n");
+         fprintf( stderr, "VIDEOIO ERROR: V4L: Unable to determine size of incoming image\n");
          icvCloseCAM_V4L(capture);
          return -1;
       }
@@ -902,17 +902,17 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
       capture->imageProperties.palette = VIDEO_PALETTE_RGB24;
       capture->imageProperties.depth = 24;
       if (v4l1_ioctl(capture->deviceHandle, VIDIOCSPICT, &capture->imageProperties) < 0) {
-        fprintf( stderr, "HIGHGUI ERROR: libv4l unable to ioctl VIDIOCSPICT\n\n");
+        fprintf( stderr, "VIDEOIO ERROR: libv4l unable to ioctl VIDIOCSPICT\n\n");
          icvCloseCAM_V4L(capture);
         return -1;
       }
       if (v4l1_ioctl(capture->deviceHandle, VIDIOCGPICT, &capture->imageProperties) < 0) {
-        fprintf( stderr, "HIGHGUI ERROR: libv4l unable to ioctl VIDIOCGPICT\n\n");
+        fprintf( stderr, "VIDEOIO ERROR: libv4l unable to ioctl VIDIOCGPICT\n\n");
          icvCloseCAM_V4L(capture);
         return -1;
       }
       if (capture->imageProperties.palette != VIDEO_PALETTE_RGB24) {
-        fprintf( stderr, "HIGHGUI ERROR: libv4l unable convert to requested pixfmt\n\n");
+        fprintf( stderr, "VIDEOIO ERROR: libv4l unable convert to requested pixfmt\n\n");
          icvCloseCAM_V4L(capture);
         return -1;
       }
@@ -929,7 +929,7 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
                                    capture->deviceHandle,
                                    0);
      if (capture->memoryMap == MAP_FAILED) {
-        fprintf( stderr, "HIGHGUI ERROR: V4L: Mapping Memmory from video source error: %s\n", strerror(errno));
+        fprintf( stderr, "VIDEOIO ERROR: V4L: Mapping Memmory from video source error: %s\n", strerror(errno));
         icvCloseCAM_V4L(capture);
         return -1;
      }
@@ -939,7 +939,7 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
      capture->mmaps = (struct video_mmap *)
                  (malloc(capture->memoryBuffer.frames * sizeof(struct video_mmap)));
      if (!capture->mmaps) {
-        fprintf( stderr, "HIGHGUI ERROR: V4L: Could not memory map video frames.\n");
+        fprintf( stderr, "VIDEOIO ERROR: V4L: Could not memory map video frames.\n");
         icvCloseCAM_V4L(capture);
         return -1;
      }
@@ -972,14 +972,14 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
    //search index in indexList
    if ( (index>-1) && ! ((1 << index) & indexList) )
    {
-     fprintf( stderr, "HIGHGUI ERROR: V4L: index %d is not correct!\n",index);
+     fprintf( stderr, "VIDEOIO ERROR: V4L: index %d is not correct!\n",index);
      return NULL; /* Did someone ask for not correct video source number? */
    }
    /* Allocate memory for this humongus CvCaptureCAM_V4L structure that contains ALL
       the handles for V4L processing */
    CvCaptureCAM_V4L * capture = (CvCaptureCAM_V4L*)cvAlloc(sizeof(CvCaptureCAM_V4L));
    if (!capture) {
-      fprintf( stderr, "HIGHGUI ERROR: V4L: Could not allocate memory for capture process.\n");
+      fprintf( stderr, "VIDEOIO ERROR: V4L: Could not allocate memory for capture process.\n");
       return NULL;
    }
 
@@ -1161,7 +1161,7 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
           capture->mmaps[capture->bufferIndex].format = capture->imageProperties.palette;
 
           if (v4l1_ioctl(capture->deviceHandle, VIDIOCMCAPTURE, &capture->mmaps[capture->bufferIndex]) == -1) {
-            fprintf( stderr, "HIGHGUI ERROR: V4L: Initial Capture Error: Unable to load initial memory buffers.\n");
+            fprintf( stderr, "VIDEOIO ERROR: V4L: Initial Capture Error: Unable to load initial memory buffers.\n");
             return 0;
           }
         }
@@ -1208,7 +1208,7 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
 
     /* [FD] this really belongs here */
     if (v4l1_ioctl(capture->deviceHandle, VIDIOCSYNC, &capture->mmaps[capture->bufferIndex].frame) == -1) {
-      fprintf( stderr, "HIGHGUI ERROR: V4L: Could not SYNC to video stream. %s\n", strerror(errno));
+      fprintf( stderr, "VIDEOIO ERROR: V4L: Could not SYNC to video stream. %s\n", strerror(errno));
     }
 
   }
@@ -1266,7 +1266,7 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
         break;
       default:
         fprintf( stderr,
-                 "HIGHGUI ERROR: V4L: Cannot convert from palette %d to RGB\n",
+                 "VIDEOIO ERROR: V4L: Cannot convert from palette %d to RGB\n",
                  capture->imageProperties.palette);
         return 0;
     }
@@ -1291,7 +1291,7 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
           /* display an error message, and return an error code */
           perror ("VIDIOC_G_FMT");
         if (v4l1_ioctl (capture->deviceHandle, VIDIOCGWIN, &capture->captureWindow) < 0) {
-          fprintf (stderr, "HIGHGUI ERROR: V4L: Unable to determine size of incoming image\n");
+          fprintf (stderr, " ERROR: V4L: Unable to determine size of incoming image\n");
           icvCloseCAM_V4L(capture);
           return -1;
         } else {
@@ -1333,7 +1333,7 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
     /* all went well */
     is_v4l2_device = 1;
   } else {
-    fprintf(stderr, "HIGHGUI ERROR: V4L2: Unable to get property %s(%u) - %s\n", name, capture->control.id, strerror(errno));
+    fprintf(stderr, "VIDEOIO ERROR: V4L2: Unable to get property %s(%u) - %s\n", name, capture->control.id, strerror(errno));
   }
 
   if (is_v4l2_device == 1) {
@@ -1342,7 +1342,7 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
       int v4l2_max = v4l2_get_ctrl_max(capture, capture->control.id);
 
       if ((v4l2_min == -1) && (v4l2_max == -1)) {
-        fprintf(stderr, "HIGHGUI ERROR: V4L2: Property %s(%u) not supported by device\n", name, property_id);
+        fprintf(stderr, "VIDEOIO ERROR: V4L2: Property %s(%u) not supported by device\n", name, property_id);
         return -1;
       }
 
@@ -1367,11 +1367,11 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
         retval = capture->imageProperties.hue;
         break;
       case CV_CAP_PROP_GAIN:
-        fprintf(stderr, "HIGHGUI ERROR: V4L: Gain control in V4L is not supported\n");
+        fprintf(stderr, "VIDEOIO ERROR: V4L: Gain control in V4L is not supported\n");
         return -1;
         break;
       case CV_CAP_PROP_EXPOSURE:
-        fprintf(stderr, "HIGHGUI ERROR: V4L: Exposure control in V4L is not supported\n");
+        fprintf(stderr, "VIDEOIO ERROR: V4L: Exposure control in V4L is not supported\n");
         return -1;
         break;
     }
@@ -1440,7 +1440,7 @@ static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h) {
     /* Get window info again, to get the real value */
     if (-1 == xioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form))
     {
-      fprintf(stderr, "HIGHGUI ERROR: V4L/V4L2: Could not obtain specifics of capture window.\n\n");
+      fprintf(stderr, "VIDEOIO ERROR: V4L/V4L2: Could not obtain specifics of capture window.\n\n");
 
       icvCloseCAM_V4L(capture);
 
@@ -1530,14 +1530,14 @@ static int icvSetControl (CvCaptureCAM_V4L* capture, int property_id, double val
   v4l2_max = v4l2_get_ctrl_max(capture, capture->control.id);
 
   if ((v4l2_min == -1) && (v4l2_max == -1)) {
-    fprintf(stderr, "HIGHGUI ERROR: V4L: Property %s(%u) not supported by device\n", name, property_id);
+    fprintf(stderr, "VIDEOIO ERROR: V4L: Property %s(%u) not supported by device\n", name, property_id);
     return -1;
   }
 
   if(v4l2_ioctl(capture->deviceHandle, VIDIOC_G_CTRL, &capture->control) == 0) {
     /* all went well */
   } else {
-    fprintf(stderr, "HIGHGUI ERROR: V4L2: Unable to get property %s(%u) - %s\n", name, capture->control.id, strerror(errno));
+    fprintf(stderr, "VIDEOIO ERROR: V4L2: Unable to get property %s(%u) - %s\n", name, capture->control.id, strerror(errno));
   }
 
   if (v4l2_max != 0) {
@@ -1558,7 +1558,7 @@ static int icvSetControl (CvCaptureCAM_V4L* capture, int property_id, double val
   if (v4l2_ioctl(capture->deviceHandle, VIDIOC_S_CTRL, &c) != 0) {
     /* The driver may clamp the value or return ERANGE, ignored here */
     if (errno != ERANGE) {
-      fprintf(stderr, "HIGHGUI ERROR: V4L2: Failed to set control \"%d\": %s (value %d)\n", c.id, strerror(errno), c.value);
+      fprintf(stderr, "VIDEOIO ERROR: V4L2: Failed to set control \"%d\": %s (value %d)\n", c.id, strerror(errno), c.value);
       is_v4l2 = 0;
     } else {
       return 0;
@@ -1568,7 +1568,7 @@ static int icvSetControl (CvCaptureCAM_V4L* capture, int property_id, double val
   }
 
   if (is_v4l2 == 0) { /* use v4l1_ioctl */
-    fprintf(stderr, "HIGHGUI WARNING: Setting property %u through v4l2 failed. Trying with v4l1.\n", c.id);
+    fprintf(stderr, "VIDEOIO WARNING: Setting property %u through v4l2 failed. Trying with v4l1.\n", c.id);
     int v4l_value;
     /* scale the value to the wanted integer one */
     v4l_value = (int)(0xFFFF * value);
@@ -1587,18 +1587,18 @@ static int icvSetControl (CvCaptureCAM_V4L* capture, int property_id, double val
         capture->imageProperties.hue = v4l_value;
         break;
       case CV_CAP_PROP_GAIN:
-          fprintf(stderr, "HIGHGUI ERROR: V4L: Gain control in V4L is not supported\n");
+          fprintf(stderr, "VIDEOIO ERROR: V4L: Gain control in V4L is not supported\n");
         return -1;
     case CV_CAP_PROP_EXPOSURE:
-        fprintf(stderr, "HIGHGUI ERROR: V4L: Exposure control in V4L is not supported\n");
+        fprintf(stderr, "VIDEOIO ERROR: V4L: Exposure control in V4L is not supported\n");
         return -1;
     default:
-        fprintf(stderr, "HIGHGUI ERROR: V4L: property #%d is not supported\n", property_id);
+        fprintf(stderr, "VIDEOIO ERROR: V4L: property #%d is not supported\n", property_id);
         return -1;
     }
 
     if (v4l1_ioctl(capture->deviceHandle, VIDIOCSPICT, &capture->imageProperties) < 0){
-      fprintf(stderr, "HIGHGUI ERROR: V4L: Unable to set video informations\n");
+      fprintf(stderr, "VIDEOIO ERROR: V4L: Unable to set video informations\n");
       icvCloseCAM_V4L(capture);
       return -1;
     }
@@ -1643,7 +1643,7 @@ static int icvSetPropertyCAM_V4L(CvCaptureCAM_V4L* capture, int property_id, dou
         setfps.parm.capture.timeperframe.numerator = 1;
         setfps.parm.capture.timeperframe.denominator = value;
         if (xioctl (capture->deviceHandle, VIDIOC_S_PARM, &setfps) < 0){
-            fprintf(stderr, "HIGHGUI ERROR: V4L: Unable to set camera FPS\n");
+            fprintf(stderr, "VIDEOIO ERROR: V4L: Unable to set camera FPS\n");
             retval=0;
         }
         break;
