@@ -2034,26 +2034,6 @@ namespace cv
 
 #ifdef HAVE_OPENCL
 
-static bool fft_radixN(InputArray _src, OutputArray _dst, int radix, int block_size, int nonzero_rows, int flags)
-{
-    int N = _src.size().width;
-    if (N % radix)
-        return false;
-
-    UMat src = _src.getUMat();
-    UMat dst = _dst.getUMat();
-
-    int thread_count = N / radix;
-    size_t globalsize[2] = { thread_count, nonzero_rows };
-    String kernel_name = format("fft_radix%d", radix);
-    ocl::Kernel k(kernel_name.c_str(), ocl::core::fft_oclsrc, (flags & DFT_INVERSE) != 0 ? "-D INVERSE" : "");
-    if (k.empty())
-        return false;
-
-    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnlyNoSize(dst), block_size, thread_count, nonzero_rows);
-    return k.run(2, globalsize, NULL, false);
-}
-
 static bool ocl_packToCCS(InputArray _buffer, OutputArray _dst, int flags)
 {
     UMat buffer = _buffer.getUMat();
@@ -2098,24 +2078,18 @@ static bool ocl_packToCCS(InputArray _buffer, OutputArray _dst, int flags)
     return true;
 }
 
-static bool ocl_dft_C2C_row(InputArray _src, OutputArray _dst, int nonzero_rows, int flags)
+static std::vector<int> ocl_getRadixes(int cols, int& min_radix)
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
-    UMat src = _src.getUMat();
-
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-    if (depth == CV_64F && !doubleSupport)
-        return false;
-    
     int factors[34];
-    int nf = DFTFactorize( src.cols, factors );
+    int nf = DFTFactorize( cols, factors );
     
     int n = 1;
     int factor_index = 0;
-    
-    String radix_processing;
-    int min_radix = INT_MAX;
-    // 1. 2^n transforms
+
+    // choose radix order
+    std::vector<int> radixes;
+
+    // 2^n transforms
     if ( (factors[factor_index] & 1) == 0 )
     {
         for( ; n < factors[factor_index]; )
@@ -2126,24 +2100,76 @@ static bool ocl_dft_C2C_row(InputArray _src, OutputArray _dst, int nonzero_rows,
             else if (4*n <= factors[0])
                 radix = 4;
 
-            radix_processing += format("fft_radix%d(smem,x,%d,%d);", radix, n,  src.cols/radix);
-            min_radix = min(radix, min_radix);
+            radixes.push_back(radix);
+            min_radix = min(min_radix, radix);
             n *= radix;
         }
         factor_index++;
     }
 
-    // 2. all the other transforms
+    // all the other transforms
     for( ; factor_index < nf; factor_index++ )
     {
-        int radix = factors[factor_index];
-        radix_processing += format("fft_radix%d(smem,x,%d,%d);", radix, n,  src.cols/radix);
-        min_radix = min(radix, min_radix);
+        radixes.push_back(factors[factor_index]);
+        min_radix = min(min_radix, factors[factor_index]);
+    }
+    return radixes;
+}
+
+static bool ocl_dft_C2C_row(InputArray _src, OutputArray _dst, InputOutputArray _twiddles, int nonzero_rows, int flags)
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
+    UMat src = _src.getUMat();
+
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    if (depth == CV_64F && !doubleSupport)
+        return false;
+    
+    int min_radix = INT_MAX;
+    std::vector<int> radixes = ocl_getRadixes(src.cols, min_radix);
+    
+    // generate string with radix calls
+    String radix_processing;
+    int n = 1, twiddle_index = 0;
+    for (size_t i=0; i<radixes.size(); i++)
+    {
+        int radix = radixes[i];
+        radix_processing += format("fft_radix%d(smem,twiddles+%d,x,%d,%d);", radix, twiddle_index, n, src.cols/radix);
+        twiddle_index += (radix-1)*n;
         n *= radix;
     }
 
-    UMat dst = _dst.getUMat();
+    UMat twiddles = _twiddles.getUMat();
+    if (twiddles.cols != twiddle_index)
+    {
+        // need to create/update tweedle table
+        int buffer_size = twiddle_index;
+        twiddles.create(1, buffer_size, CV_32FC2);
+        Mat tw = twiddles.getMat(ACCESS_WRITE);
+        float* ptr = tw.ptr<float>();
+        int ptr_index = 0;
+        
+        int n = 1;
+        for (size_t i=0; i<radixes.size(); i++)
+        {
+            int radix = radixes[i];
+            n *= radix;
 
+            for (int k=0; k<(n/radix); k++)
+            {
+                double theta = -CV_TWO_PI*k/n;
+
+                for (int j=1; j<radix; j++)
+                {
+                    ptr[ptr_index++] = cos(j*theta);
+                    ptr[ptr_index++] = sin(j*theta);
+                }
+            }        
+        }
+    }
+    //Mat buf = twiddles.getMat(ACCESS_READ);
+    UMat dst = _dst.getUMat();
+    
     int thread_count = src.cols / min_radix;
     size_t globalsize[2] = { thread_count, nonzero_rows };
     size_t localsize[2] = { thread_count, 1 };
@@ -2154,7 +2180,7 @@ static bool ocl_dft_C2C_row(InputArray _src, OutputArray _dst, int nonzero_rows,
     if (k.empty())
         return false;
 
-    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnlyNoSize(dst), thread_count, nonzero_rows);
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnlyNoSize(dst), ocl::KernelArg::ReadOnlyNoSize(twiddles), thread_count, nonzero_rows);
     return k.run(2, globalsize, localsize, false);
 }
 
@@ -2232,25 +2258,26 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
     if( nonzero_rows <= 0 || nonzero_rows > _src.rows() )
         nonzero_rows = _src.rows();
 
+    UMat buffer;
 
-    if (!ocl_dft_C2C_row(src, dst, nonzero_rows, flags))
+    if (!ocl_dft_C2C_row(src, dst, buffer, nonzero_rows, flags))
         return false;
 
     if ((flags & DFT_ROWS) == 0 && nonzero_rows > 1)
     {
         transpose(dst, dst);
-        if (!ocl_dft_C2C_row(dst, dst, dst.rows, flags))
+        if (!ocl_dft_C2C_row(dst, dst, buffer, dst.rows, flags))
             return false;
         transpose(dst, dst);
     }
 
-    //if (complex_output)
-    //{
-    //    if (real_input && is1d)
-    //        _dst.assign(buffer.colRange(0, buffer.cols/2+1));
-    //    else
-    //        _dst.assign(buffer);
-    //}
+    if (complex_output)
+    {
+        if (real_input && is1d)
+            _dst.assign(dst.colRange(0, dst.cols/2+1));
+        else
+            _dst.assign(dst);
+    }
     //else
     //{
     //    if (!inv)
