@@ -194,67 +194,6 @@ typedef void (CV_CDECL *CvMouseCallback )(int event, int x, int y, int flags, vo
 CVAPI(void) cvSetMouseCallback( const char* window_name, CvMouseCallback on_mouse,
                                 void* param CV_DEFAULT(NULL));
 
-enum
-{
-/* 8bit, color or not */
-    CV_LOAD_IMAGE_UNCHANGED  =-1,
-/* 8bit, gray */
-    CV_LOAD_IMAGE_GRAYSCALE  =0,
-/* ?, color */
-    CV_LOAD_IMAGE_COLOR      =1,
-/* any depth, ? */
-    CV_LOAD_IMAGE_ANYDEPTH   =2,
-/* ?, any color */
-    CV_LOAD_IMAGE_ANYCOLOR   =4
-};
-
-/* load image from file
-  iscolor can be a combination of above flags where CV_LOAD_IMAGE_UNCHANGED
-  overrides the other flags
-  using CV_LOAD_IMAGE_ANYCOLOR alone is equivalent to CV_LOAD_IMAGE_UNCHANGED
-  unless CV_LOAD_IMAGE_ANYDEPTH is specified images are converted to 8bit
-*/
-CVAPI(IplImage*) cvLoadImage( const char* filename, int iscolor CV_DEFAULT(CV_LOAD_IMAGE_COLOR));
-CVAPI(CvMat*) cvLoadImageM( const char* filename, int iscolor CV_DEFAULT(CV_LOAD_IMAGE_COLOR));
-
-enum
-{
-    CV_IMWRITE_JPEG_QUALITY =1,
-    CV_IMWRITE_JPEG_PROGRESSIVE =2,
-    CV_IMWRITE_JPEG_OPTIMIZE =3,
-    CV_IMWRITE_PNG_COMPRESSION =16,
-    CV_IMWRITE_PNG_STRATEGY =17,
-    CV_IMWRITE_PNG_BILEVEL =18,
-    CV_IMWRITE_PNG_STRATEGY_DEFAULT =0,
-    CV_IMWRITE_PNG_STRATEGY_FILTERED =1,
-    CV_IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY =2,
-    CV_IMWRITE_PNG_STRATEGY_RLE =3,
-    CV_IMWRITE_PNG_STRATEGY_FIXED =4,
-    CV_IMWRITE_PXM_BINARY =32,
-    CV_IMWRITE_WEBP_QUALITY =64
-};
-
-/* save image to file */
-CVAPI(int) cvSaveImage( const char* filename, const CvArr* image,
-                        const int* params CV_DEFAULT(0) );
-
-/* decode image stored in the buffer */
-CVAPI(IplImage*) cvDecodeImage( const CvMat* buf, int iscolor CV_DEFAULT(CV_LOAD_IMAGE_COLOR));
-CVAPI(CvMat*) cvDecodeImageM( const CvMat* buf, int iscolor CV_DEFAULT(CV_LOAD_IMAGE_COLOR));
-
-/* encode image and store the result as a byte vector (single-row 8uC1 matrix) */
-CVAPI(CvMat*) cvEncodeImage( const char* ext, const CvArr* image,
-                             const int* params CV_DEFAULT(0) );
-
-enum
-{
-    CV_CVTIMG_FLIP      =1,
-    CV_CVTIMG_SWAP_RB   =2
-};
-
-/* utility function: convert one image to another with optional vertical flip */
-CVAPI(void) cvConvertImage( const CvArr* src, CvArr* dst, int flags CV_DEFAULT(0));
-
 /* wait for key event infinitely (delay<=0) or for "delay" milliseconds */
 CVAPI(int) cvWaitKey(int delay CV_DEFAULT(0));
 

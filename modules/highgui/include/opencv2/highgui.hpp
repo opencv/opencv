@@ -202,53 +202,6 @@ CV_EXPORTS int createButton( const String& bar_name, ButtonCallback on_change,
 
 } // cv
 
-
-
-//////////////////////////////// image codec ////////////////////////////////
-namespace cv
-{
-
-enum { IMREAD_UNCHANGED  = -1, // 8bit, color or not
-       IMREAD_GRAYSCALE  = 0,  // 8bit, gray
-       IMREAD_COLOR      = 1,  // ?, color
-       IMREAD_ANYDEPTH   = 2,  // any depth, ?
-       IMREAD_ANYCOLOR   = 4   // ?, any color
-     };
-
-enum { IMWRITE_JPEG_QUALITY     = 1,
-       IMWRITE_JPEG_PROGRESSIVE = 2,
-       IMWRITE_JPEG_OPTIMIZE    = 3,
-       IMWRITE_PNG_COMPRESSION  = 16,
-       IMWRITE_PNG_STRATEGY     = 17,
-       IMWRITE_PNG_BILEVEL      = 18,
-       IMWRITE_PXM_BINARY       = 32,
-       IMWRITE_WEBP_QUALITY     = 64
-     };
-
-enum { IMWRITE_PNG_STRATEGY_DEFAULT      = 0,
-       IMWRITE_PNG_STRATEGY_FILTERED     = 1,
-       IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY = 2,
-       IMWRITE_PNG_STRATEGY_RLE          = 3,
-       IMWRITE_PNG_STRATEGY_FIXED        = 4
-     };
-
-CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
-
-CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
-              const std::vector<int>& params = std::vector<int>());
-
-CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
-
-CV_EXPORTS Mat imdecode( InputArray buf, int flags, Mat* dst);
-
-CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
-                            CV_OUT std::vector<uchar>& buf,
-                            const std::vector<int>& params = std::vector<int>());
-
-} // cv
-
-
-
 ////////////////////////////////// video io /////////////////////////////////
 
 typedef struct CvCapture CvCapture;

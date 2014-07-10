@@ -44,7 +44,7 @@
 #define __OPENCV_CUDA_PERF_UTILITY_HPP__
 
 #include "opencv2/core.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/ts/ts_perf.hpp"
 #include "cvconfig.h"
