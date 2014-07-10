@@ -109,6 +109,18 @@ enum
 /* utility function: convert one image to another with optional vertical flip */
 CVAPI(void) cvConvertImage( const CvArr* src, CvArr* dst, int flags CV_DEFAULT(0));
 
+CVAPI(int) cvHaveImageReader(const char* filename);
+CVAPI(int) cvHaveImageWriter(const char* filename);
+
+
+/****************************************************************************************\
+*                              Obsolete functions/synonyms                               *
+\****************************************************************************************/
+
+#define cvvLoadImage(name) cvLoadImage((name),1)
+#define cvvSaveImage cvSaveImage
+#define cvvConvertImage cvConvertImage
+
 
 #ifdef __cplusplus
 }

@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui_c.h"
+#include "opencv2/videoio/videoio_c.h"
 #include <stdio.h>
 
 using namespace cv;
@@ -218,6 +218,6 @@ void CV_VideoRandomPositioningTest::run(int)
 }
 
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT && defined HAVE_FFMPEG
-TEST (Highgui_Video, seek_progressive) { CV_VideoProgressivePositioningTest test; test.safe_run(); }
-TEST (Highgui_Video, seek_random) { CV_VideoRandomPositioningTest test; test.safe_run(); }
+TEST (Videoio_Video, seek_progressive) { CV_VideoProgressivePositioningTest test; test.safe_run(); }
+TEST (Videoio_Video, seek_random) { CV_VideoRandomPositioningTest test; test.safe_run(); }
 #endif

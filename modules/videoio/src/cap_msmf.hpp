@@ -2277,7 +2277,7 @@ protected:
 
 /* Be sure to declare webcam device capability in manifest
   For better media capture support, add the following snippet with correct module name to the project manifest
-    (highgui needs DLL activation class factoryentry points):
+    (videoio needs DLL activation class factoryentry points):
   <Extensions>
     <Extension Category="windows.activatableClass.inProcessServer">
       <InProcessServer>

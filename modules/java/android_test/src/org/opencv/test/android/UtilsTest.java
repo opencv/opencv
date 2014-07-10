@@ -5,7 +5,7 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
-import org.opencv.highgui.Highgui;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
@@ -57,7 +57,7 @@ public class UtilsTest extends OpenCVTestCase {
     }
 
     public void testMatToBitmap() {
-        Mat imgBGR = Highgui.imread( OpenCVTestRunner.LENA_PATH );
+        Mat imgBGR = Imgcodecs.imread( OpenCVTestRunner.LENA_PATH );
         assertTrue(imgBGR != null && !imgBGR.empty() && imgBGR.channels() == 3);
 
         Mat m16 = new Mat(imgBGR.rows(), imgBGR.cols(), CvType.CV_8UC4);
