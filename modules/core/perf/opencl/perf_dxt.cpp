@@ -57,8 +57,8 @@ namespace ocl {
 typedef tuple<Size, int> DftParams;
 typedef TestBaseWithParam<DftParams> DftFixture;
 
-OCL_PERF_TEST_P(DftFixture, Dft, ::testing::Combine(Values(/*OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3, */Size(1024, 1024), Size(1024, 2048), Size(512, 512), Size(2048, 2048)),
-                                                Values((int)DFT_ROWS/*, (int) 0/*, (int)DFT_SCALE, (int)DFT_INVERSE,
+OCL_PERF_TEST_P(DftFixture, Dft, ::testing::Combine(Values(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3, Size(1024, 1024), Size(1024, 2048), Size(512, 512), Size(2048, 2048)),
+                                                Values((int)DFT_ROWS, (int) 0/*, (int)DFT_SCALE, (int)DFT_INVERSE,
                                                        (int)DFT_INVERSE | DFT_SCALE, (int)DFT_ROWS | DFT_INVERSE*/)))
 {
     const DftParams params = GetParam();

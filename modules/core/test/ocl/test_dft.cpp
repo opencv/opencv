@@ -115,10 +115,10 @@ OCL_TEST_P(Dft, Mat)
     OCL_OFF(cv::dft(src, dst, dft_flags));
     OCL_ON(cv::dft(usrc, udst, dft_flags));
     
-    Mat gpu = udst.getMat(ACCESS_READ);
-    std::cout << src << std::endl;
-    std::cout << dst << std::endl;
-    std::cout << gpu << std::endl;
+    //Mat gpu = udst.getMat(ACCESS_READ);
+    //std::cout << src << std::endl;
+    //std::cout << dst << std::endl;
+    //std::cout << gpu << std::endl;
 
     //int cn = udst.channels();
     
