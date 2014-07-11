@@ -3494,9 +3494,8 @@ public:
     OpenCLBufferPoolImpl()
         : currentReservedSize(0), maxReservedSize(0)
     {
-        // Note: Buffer pool is disabled by default,
-        //       because we didn't receive significant performance improvement
-        maxReservedSize = getConfigurationParameterForSize("OPENCV_OPENCL_BUFFERPOOL_LIMIT", 0);
+        int poolSize = ocl::Device::getDefault().isIntel() ? 1 << 27 : 0;
+        maxReservedSize = getConfigurationParameterForSize("OPENCV_OPENCL_BUFFERPOOL_LIMIT", poolSize);
     }
     virtual ~OpenCLBufferPoolImpl()
     {
