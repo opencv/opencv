@@ -181,9 +181,9 @@ OCL_TEST_P(MulSpectrums, Mat)
 
 OCL_INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MulSpectrums, testing::Combine(Bool(), Bool()));
 
-OCL_INSTANTIATE_TEST_CASE_P(Core, Dft, Combine(Values(cv::Size(2, 3), cv::Size(5, 4), cv::Size(30, 20),
+OCL_INSTANTIATE_TEST_CASE_P(Core, Dft, Combine(Values(cv::Size(1920, 1), cv::Size(5, 4), cv::Size(30, 20),
                                                       cv::Size(512, 1), cv::Size(1024, 1024)),
-                                               Values((OCL_FFT_TYPE) C2C/*, (OCL_FFT_TYPE)  R2R, (OCL_FFT_TYPE)  R2C/*, (OCL_FFT_TYPE) C2R*/),
+                                               Values(/*(OCL_FFT_TYPE) C2C, (OCL_FFT_TYPE)  R2C,*/ (OCL_FFT_TYPE)  R2R/*, (OCL_FFT_TYPE) C2R*/),
                                                Bool() // DFT_ROWS
                                                )
                             );
