@@ -2758,21 +2758,30 @@ namespace cv {
 
 static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
 {
-    int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
-            sctype = CV_MAKE_TYPE(depth, cn == 3 ? 4 : cn),
+    int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), kercn = cn;
+    if (cn == 1)
+    {
+        kercn = std::min(ocl::predictOptimalVectorWidth(_m), 4);
+        if (kercn != 4)
+            kercn = 1;
+    }
+    int sctype = CV_MAKE_TYPE(depth, cn == 3 ? 4 : cn),
             rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
     ocl::Kernel k("setIdentity", ocl::core::set_identity_oclsrc,
-                  format("-D T=%s -D T1=%s -D cn=%d -D ST=%s", ocl::memopTypeToStr(type),
-                         ocl::memopTypeToStr(depth), cn, ocl::memopTypeToStr(sctype)));
+                  format("-D T=%s -D T1=%s -D cn=%d -D ST=%s -D kercn=%d -D rowsPerWI=%d",
+                         ocl::memopTypeToStr(CV_MAKE_TYPE(depth, kercn)),
+                         ocl::memopTypeToStr(depth), cn,
+                         ocl::memopTypeToStr(sctype),
+                         kercn, rowsPerWI));
     if (k.empty())
         return false;
 
     UMat m = _m.getUMat();
-    k.args(ocl::KernelArg::WriteOnly(m), ocl::KernelArg::Constant(Mat(1, 1, sctype, s)),
-           rowsPerWI);
+    k.args(ocl::KernelArg::WriteOnly(m, cn, kercn),
+           ocl::KernelArg::Constant(Mat(1, 1, sctype, s)));
 
-    size_t globalsize[2] = { m.cols, (m.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { m.cols * cn / kercn, (m.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
