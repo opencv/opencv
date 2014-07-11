@@ -918,8 +918,14 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
         int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
         bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
                 isContinuous = _src.isContinuous();
-        int groups = ocl::Device::getDefault().maxComputeUnits();
-        size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+        const ocl::Device &defDev = ocl::Device::getDefault();
+        int groups = defDev.maxComputeUnits();
+        if (defDev.isIntel())
+        {
+            static const int subSliceEUCount = 10;
+            groups = (groups / subSliceEUCount) * 2;
+        }
+        size_t wgs = defDev.maxWorkGroupSize();
 
         int ddepth = std::max(CV_32S, depth), sqddepth = std::max(CV_32F, depth),
                 dtype = CV_MAKE_TYPE(ddepth, cn),
