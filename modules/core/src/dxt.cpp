@@ -2034,50 +2034,6 @@ namespace cv
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_packToCCS(InputArray _buffer, OutputArray _dst, int flags)
-{
-    UMat buffer = _buffer.getUMat();
-    UMat dst = _dst.getUMat();
-
-    buffer = buffer.reshape(1);
-    if ((flags & DFT_ROWS) == 0 && buffer.rows > 1)
-    {
-        // pack to CCS by rows
-        if (dst.cols > 2)
-            buffer.colRange(2, dst.cols + (dst.cols % 2)).copyTo(dst.colRange(1, dst.cols-1 + (dst.cols % 2)));
-
-        Mat dst_mat = dst.getMat(ACCESS_WRITE);
-        Mat buffer_mat = buffer.getMat(ACCESS_READ);
-
-        dst_mat.at<float>(0,0) = buffer_mat.at<float>(0,0);
-        dst_mat.at<float>(dst_mat.rows-1,0) = buffer_mat.at<float>(buffer.rows/2,0);
-        for (int i=1; i<dst_mat.rows-1; i+=2)
-        {
-            dst_mat.at<float>(i,0) = buffer_mat.at<float>((i+1)/2,0);
-            dst_mat.at<float>(i+1,0) = buffer_mat.at<float>((i+1)/2,1);
-        }
-
-        if (dst_mat.cols % 2 == 0)
-        {
-            dst_mat.at<float>(0,dst_mat.cols-1) = buffer_mat.at<float>(0,buffer.cols/2);
-            dst_mat.at<float>(dst_mat.rows-1,dst_mat.cols-1) = buffer_mat.at<float>(buffer.rows/2,buffer.cols/2);
-
-            for (int i=1; i<dst_mat.rows-1; i+=2)
-            {
-                dst_mat.at<float>(i,dst_mat.cols-1) = buffer_mat.at<float>((i+1)/2,buffer.cols/2);
-                dst_mat.at<float>(i+1,dst_mat.cols-1) = buffer_mat.at<float>((i+1)/2,buffer.cols/2+1);
-            }
-        }
-    } 
-    else
-    {
-        // pack to CCS each row
-        buffer.colRange(0,1).copyTo(dst.colRange(0,1));
-        buffer.colRange(2, (dst.cols+1)).copyTo(dst.colRange(1, dst.cols));
-    }
-    return true;
-}
-
 static std::vector<int> ocl_getRadixes(int cols, int& min_radix)
 {
     int factors[34];
@@ -2116,72 +2072,175 @@ static std::vector<int> ocl_getRadixes(int cols, int& min_radix)
     return radixes;
 }
 
-static bool ocl_dft_C2C_row(InputArray _src, OutputArray _dst, InputOutputArray _twiddles, int nonzero_rows, int flags)
+struct OCL_FftPlan
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
-    UMat src = _src.getUMat();
+    UMat twiddles;
+    String buildOptions;
+    int thread_count;
 
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-    if (depth == CV_64F && !doubleSupport)
-        return false;
-    
-    int min_radix = INT_MAX;
-    std::vector<int> radixes = ocl_getRadixes(src.cols, min_radix);
-    
-    // generate string with radix calls
-    String radix_processing;
-    int n = 1, twiddle_index = 0;
-    for (size_t i=0; i<radixes.size(); i++)
-    {
-        int radix = radixes[i];
-        radix_processing += format("fft_radix%d(smem,twiddles+%d,x,%d,%d);", radix, twiddle_index, n, src.cols/radix);
-        twiddle_index += (radix-1)*n;
-        n *= radix;
-    }
+    int dft_size;
+    int flags;
 
-    UMat twiddles = _twiddles.getUMat();
-    if (twiddles.cols != twiddle_index)
+    OCL_FftPlan(int _size, int _flags): dft_size(_size), flags(_flags)
     {
-        // need to create/update tweedle table
-        int buffer_size = twiddle_index;
-        twiddles.create(1, buffer_size, CV_32FC2);
+        int min_radix = INT_MAX;
+        std::vector<int> radixes = ocl_getRadixes(dft_size, min_radix);
+        thread_count = dft_size / min_radix;
+
+        // generate string with radix calls
+        String radix_processing;
+        int n = 1, twiddle_size = 0;
+        for (size_t i=0; i<radixes.size(); i++)
+        {
+            int radix = radixes[i];
+            radix_processing += format("fft_radix%d(smem,twiddles+%d,x,%d,%d);", radix, twiddle_size, n, dft_size/radix);
+            twiddle_size += (radix-1)*n;
+            n *= radix;
+        }
+
+        twiddles.create(1, twiddle_size, CV_32FC2);
         Mat tw = twiddles.getMat(ACCESS_WRITE);
         float* ptr = tw.ptr<float>();
         int ptr_index = 0;
         
-        int n = 1;
+        n = 1;
         for (size_t i=0; i<radixes.size(); i++)
         {
             int radix = radixes[i];
             n *= radix;
 
-            for (int k=0; k<(n/radix); k++)
+            
+            for (int j=1; j<radix; j++)
             {
-                double theta = -CV_TWO_PI*k/n;
+                double theta = -CV_TWO_PI*j/n;
 
-                for (int j=1; j<radix; j++)
+                for (int k=0; k<(n/radix); k++)
                 {
-                    ptr[ptr_index++] = cos(j*theta);
-                    ptr[ptr_index++] = sin(j*theta);
+                    ptr[ptr_index++] = cos(k*theta);
+                    ptr[ptr_index++] = sin(k*theta);
                 }
             }        
         }
+
+        buildOptions = format("-D LOCAL_SIZE=%d -D kercn=%d -D RADIX_PROCESS=%s",
+                              dft_size, dft_size/thread_count, radix_processing.c_str());
     }
-    //Mat buf = twiddles.getMat(ACCESS_READ);
-    UMat dst = _dst.getUMat();
+
+    bool enqueueTransform(InputArray _src, OutputArray _dst, int nonzero_rows) const
+    {
+        UMat src = _src.getUMat();
+        _dst.create(src.size(), src.type());
+        UMat dst = _dst.getUMat();
+
+        size_t globalsize[2] = { thread_count, nonzero_rows };
+        size_t localsize[2] = { thread_count, 1 };
+
+        ocl::Kernel k("fft_multi_radix", ocl::core::fft_oclsrc, buildOptions);
+        if (k.empty())
+            return false;
+
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnlyNoSize(dst), ocl::KernelArg::PtrReadOnly(twiddles), thread_count, nonzero_rows);
+        return k.run(2, globalsize, localsize, false);
+    }
+};
+
+class OCL_FftPlanCache
+{
+public:
+    static OCL_FftPlanCache & getInstance()
+    {
+        static OCL_FftPlanCache planCache;
+        return planCache;
+    }
     
-    int thread_count = src.cols / min_radix;
-    size_t globalsize[2] = { thread_count, nonzero_rows };
-    size_t localsize[2] = { thread_count, 1 };
+    OCL_FftPlan* getFftPlan(int dft_size, int flags)
+    {
+        for (size_t i = 0, size = planStorage.size(); i < size; ++i)
+        {
+            OCL_FftPlan * const plan = planStorage[i];
 
-    String buildOptions = format("-D LOCAL_SIZE=%d -D kercn=%d -D RADIX_PROCESS=%s",
-                                  src.cols, src.cols/thread_count, radix_processing.c_str());
-    ocl::Kernel k("fft_multi_radix", ocl::core::fft_oclsrc, buildOptions);
-    if (k.empty())
+            if (plan->dft_size == dft_size)
+            {
+                return plan;
+            }
+        }
+
+        OCL_FftPlan * newPlan = new OCL_FftPlan(dft_size, flags);
+        planStorage.push_back(newPlan);
+        return newPlan;
+    }
+
+    ~OCL_FftPlanCache()
+    {
+        for (std::vector<OCL_FftPlan *>::iterator i = planStorage.begin(), end = planStorage.end(); i != end; ++i)
+            delete (*i);
+        planStorage.clear();
+    }
+
+protected:
+    OCL_FftPlanCache() :
+        planStorage()
+    {
+    }
+
+    std::vector<OCL_FftPlan*> planStorage;
+};
+
+static bool ocl_packToCCS(InputArray _src, OutputArray _dst, int flags)
+{
+    UMat src = _src.getUMat();
+    _dst.create(src.size(), CV_32F);
+    UMat dst = _dst.getUMat();
+
+    src = src.reshape(1);
+    if ((flags & DFT_ROWS) == 0 && src.rows > 1)
+    {
+        // pack to CCS by rows
+        if (dst.cols > 2)
+            src.colRange(2, dst.cols + (dst.cols % 2)).copyTo(dst.colRange(1, dst.cols-1 + (dst.cols % 2)));
+
+        Mat dst_mat = dst.getMat(ACCESS_WRITE);
+        Mat buffer_mat = src.getMat(ACCESS_READ);
+
+        dst_mat.at<float>(0,0) = buffer_mat.at<float>(0,0);
+        dst_mat.at<float>(dst_mat.rows-1,0) = buffer_mat.at<float>(src.rows/2,0);
+        for (int i=1; i<dst_mat.rows-1; i+=2)
+        {
+            dst_mat.at<float>(i,0) = buffer_mat.at<float>((i+1)/2,0);
+            dst_mat.at<float>(i+1,0) = buffer_mat.at<float>((i+1)/2,1);
+        }
+
+        if (dst_mat.cols % 2 == 0)
+        {
+            dst_mat.at<float>(0,dst_mat.cols-1) = buffer_mat.at<float>(0,src.cols/2);
+            dst_mat.at<float>(dst_mat.rows-1,dst_mat.cols-1) = buffer_mat.at<float>(src.rows/2,src.cols/2);
+
+            for (int i=1; i<dst_mat.rows-1; i+=2)
+            {
+                dst_mat.at<float>(i,dst_mat.cols-1) = buffer_mat.at<float>((i+1)/2,src.cols/2);
+                dst_mat.at<float>(i+1,dst_mat.cols-1) = buffer_mat.at<float>((i+1)/2,src.cols/2+1);
+            }
+        }
+    } 
+    else
+    {
+        // pack to CCS each row
+        src.colRange(0,1).copyTo(dst.colRange(0,1));
+        src.colRange(2, (dst.cols+1)).copyTo(dst.colRange(1, dst.cols));
+    }
+    return true;
+}
+
+static bool ocl_dft_C2C_row(InputArray _src, OutputArray _dst, int nonzero_rows, int flags)
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
+
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    if (depth == CV_64F && !doubleSupport)
         return false;
-
-    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnlyNoSize(dst), ocl::KernelArg::ReadOnlyNoSize(twiddles), thread_count, nonzero_rows);
-    return k.run(2, globalsize, localsize, false);
+    
+    const OCL_FftPlan* plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.cols(), flags);
+    return plan->enqueueTransform(_src, _dst, nonzero_rows);
 }
 
 static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_rows)
@@ -2217,76 +2276,71 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
         }
     }
 
-    if (complex_output)
+    UMat input, output;
+    if (complex_input)
     {
-        //if (is1d)
-        //    _dst.create(Size(src.cols/2+1, src.rows), CV_MAKE_TYPE(depth, 2));
-        //else
-            _dst.create(src.size(), CV_MAKE_TYPE(depth, 2));
+        input = src;
     }
     else
-        _dst.create(src.size(), CV_MAKE_TYPE(depth, 1));
+    {
+        if (!inv)
+        {
+            // in case real input convert it to complex
+            input.create(src.size(), CV_MAKE_TYPE(depth, 2));
+            std::vector<UMat> planes;
+            planes.push_back(src);
+            planes.push_back(UMat::zeros(src.size(), CV_32F));
+            merge(planes, input);
+        } 
+        else
+        {
+            // TODO: unpack from CCS format
+        }
+    }
+
+
     UMat dst = _dst.getUMat();
-
-    bool inplace = src.u == dst.u;
-    //UMat buffer;
-
-    //if (complex_input)
-    //{
-    //    if (inplace)
-    //        buffer = src;
-    //    else
-    //        src.copyTo(buffer);
-    //}
-    //else
-    //{
-    //    if (!inv)
-    //    {
-    //        // in case real input convert it to complex
-    //        buffer.create(src.size(), CV_MAKE_TYPE(depth, 2));
-    //        std::vector<UMat> planes;
-    //        planes.push_back(src);
-    //        planes.push_back(UMat::zeros(src.size(), CV_32F));
-    //        merge(planes, buffer);
-    //    } 
-    //    else
-    //    {
-    //        // TODO: unpack from CCS format
-    //    }
-    //}
+    if (complex_output)
+    {
+        if (real_input && is1d && !inv)
+            output.create(src.size(), CV_32FC2);
+        else
+            output = dst;
+    } else
+    {
+        output.create(src.size(), CV_32FC2);
+    }
 
     if( nonzero_rows <= 0 || nonzero_rows > _src.rows() )
         nonzero_rows = _src.rows();
 
-    UMat buffer;
-
-    if (!ocl_dft_C2C_row(src, dst, buffer, nonzero_rows, flags))
+    if (!ocl_dft_C2C_row(input, output, nonzero_rows, flags))
         return false;
 
     if ((flags & DFT_ROWS) == 0 && nonzero_rows > 1)
     {
-        transpose(dst, dst);
-        if (!ocl_dft_C2C_row(dst, dst, buffer, dst.rows, flags))
+        transpose(output, output);
+        if (!ocl_dft_C2C_row(output, output, output.rows, flags))
             return false;
-        transpose(dst, dst);
+        transpose(output, output);
     }
 
     if (complex_output)
     {
-        if (real_input && is1d)
-            _dst.assign(dst.colRange(0, dst.cols/2+1));
+        if (real_input && is1d && !inv)
+            _dst.assign(output.colRange(0, output.cols/2+1));
         else
-            _dst.assign(dst);
+            _dst.assign(output);
     }
-    //else
-    //{
-    //    if (!inv)
-    //        ocl_packToCCS(buffer, _dst, flags);
-    //    else
-    //    {
-    //        // copy real part to dst
-    //    }
-    //}
+    else
+    {
+        if (!inv)
+            ocl_packToCCS(output, _dst, flags);
+        else
+        {
+            // copy real part to dst
+        }
+    }
     return true;
 }
 
