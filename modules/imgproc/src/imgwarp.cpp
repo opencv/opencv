@@ -3582,7 +3582,9 @@ private:
 static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, InputArray _map2,
                       int interpolation, int borderType, const Scalar& borderValue)
 {
-    int cn = _src.channels(), type = _src.type(), depth = _src.depth();
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int cn = _src.channels(), type = _src.type(), depth = _src.depth(),
+            rowsPerWI = dev.isIntel() ? 4 : 1;
 
     if (borderType == BORDER_TRANSPARENT || !(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST)
             || _map1.type() == CV_16SC1 || _map2.type() == CV_16SC1)
@@ -3619,12 +3621,14 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     static const char * const interMap[] = { "INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_LINEAR", "INTER_LANCZOS" };
     static const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
                            "BORDER_REFLECT_101", "BORDER_TRANSPARENT" };
-    String buildOptions = format("-D %s -D %s -D T=%s", interMap[interpolation], borderMap[borderType], ocl::typeToStr(type));
+    String buildOptions = format("-D %s -D %s -D T=%s -D rowsPerWI=%d",
+                                 interMap[interpolation], borderMap[borderType],
+                                 ocl::typeToStr(type), rowsPerWI);
 
     if (interpolation != INTER_NEAREST)
     {
         char cvt[3][40];
-        int wdepth = std::max(CV_32F, dst.depth());
+        int wdepth = std::max(CV_32F, depth);
         buildOptions = buildOptions
                       + format(" -D WT=%s -D convertToT=%s -D convertToWT=%s"
                                " -D convertToWT2=%s -D WT2=%s",
@@ -3636,10 +3640,9 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     }
     int scalarcn = cn == 3 ? 4 : cn;
     int sctype = CV_MAKETYPE(depth, scalarcn);
-    buildOptions += format(" -D T=%s -D T1=%s"
-                           " -D cn=%d -D ST=%s",
+    buildOptions += format(" -D T=%s -D T1=%s -D cn=%d -D ST=%s -D depth=%d",
                            ocl::typeToStr(type), ocl::typeToStr(depth),
-                           cn, ocl::typeToStr(sctype));
+                           cn, ocl::typeToStr(sctype), depth);
 
     ocl::Kernel k(kernelName.c_str(), ocl::imgproc::remap_oclsrc, buildOptions);
 
@@ -3653,7 +3656,7 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     else
         k.args(srcarg, dstarg, map1arg, ocl::KernelArg::ReadOnlyNoSize(map2), scalararg);
 
-    size_t globalThreads[2] = { dst.cols, dst.rows };
+    size_t globalThreads[2] = { dst.cols, (dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalThreads, NULL, false);
 }
 
