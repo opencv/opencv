@@ -64,7 +64,7 @@ cv::Vec<DATATYPE,N> lerp( cv::Vec<DATATYPE,N> const& minColor,
 
     cv::Vec<DATATYPE,N> output;
     for( int i=0; i<N; i++ ){
-        output[i] = ((1-t)*minColor[i]) + (t * maxColor[i]);
+        output[i] = (uchar)(((1-t)*minColor[i]) + (t * maxColor[i]));
     }
     return output;
 }
