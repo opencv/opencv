@@ -212,7 +212,7 @@ void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     descriptors1_.upload(features1.descriptors);
     descriptors2_.upload(features2.descriptors);
 
-    BFMatcher_GPU matcher(NORM_L2);
+    BFMatcher_GPU matcher(NORM_L1);
     MatchesSet matches;
 
     // Find 1->2 matches
