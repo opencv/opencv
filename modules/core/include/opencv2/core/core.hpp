@@ -2590,6 +2590,10 @@ CV_EXPORTS_AS(randShuffle) void randShuffle_(InputOutputArray dst, double iterFa
 CV_EXPORTS_W void line(CV_IN_OUT Mat& img, Point pt1, Point pt2, const Scalar& color,
                      int thickness=1, int lineType=8, int shift=0);
 
+//! draws an arrow from pt1 to pt2 in the image
+CV_EXPORTS_W void arrowedLine(CV_IN_OUT Mat& img, Point pt1, Point pt2, const Scalar& color,
+                     int thickness=1, int line_type=8, int shift=0, double tipLength=0.1);
+
 //! draws the rectangle outline or a solid rectangle with the opposite corners pt1 and pt2 in the image
 CV_EXPORTS_W void rectangle(CV_IN_OUT Mat& img, Point pt1, Point pt2,
                           const Scalar& color, int thickness=1,
