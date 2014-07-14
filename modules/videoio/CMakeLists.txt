@@ -35,6 +35,7 @@ endif()
 
 if (WIN32 AND HAVE_DSHOW)
   list(APPEND videoio_srcs src/cap_dshow.cpp)
+  list(APPEND videoio_hdrs src/cap_dshow.hpp)
 endif()
 
 if (WIN32 AND HAVE_MSMF)
