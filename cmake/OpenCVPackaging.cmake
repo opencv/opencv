@@ -68,7 +68,7 @@ set(CPACK_COMPONENT_tests_DEPENDS libs)
 
 if(HAVE_CUDA)
   string(REPLACE "." "-" cuda_version_suffix ${CUDA_VERSION})
-  if(${CUDA_VERSION} VERSION_LESS "6.5")
+  if(CUDA_VERSION VERSION_LESS "6.5")
     set(CPACK_DEB_libs_PACKAGE_DEPENDS "cuda-core-libs-${cuda_version_suffix}, cuda-extra-libs-${cuda_version_suffix}")
     set(CPACK_DEB_dev_PACKAGE_DEPENDS "cuda-headers-${cuda_version_suffix}")
   else()
@@ -83,8 +83,8 @@ if(HAVE_CUDA)
       set(CPACK_DEB_dev_PACKAGE_DEPENDS "${CPACK_DEB_dev_PACKAGE_DEPENDS}, cuda-cublas-dev-${cuda_version_suffix}")
     endif()
   endif()
-  set(CPACK_COMPONENT_dev_DEPENDS libs)
 
+  set(CPACK_COMPONENT_dev_DEPENDS libs)
 endif()
 
 if(NOT OPENCV_CUSTOM_PACKAGE_INFO)
