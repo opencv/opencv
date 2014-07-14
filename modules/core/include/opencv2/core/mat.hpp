@@ -368,6 +368,7 @@ inline void Mat::release()
     data = datastart = dataend = datalimit = 0;
     for(int i = 0; i < dims; i++)
         size.p[i] = 0;
+    flags = MAGIC_VAL;
     refcount = 0;
 }
 
