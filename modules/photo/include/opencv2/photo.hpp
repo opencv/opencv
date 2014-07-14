@@ -328,8 +328,12 @@ CV_EXPORTS_W void pencilSketch(InputArray src, OutputArray dst1, OutputArray dst
 CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 60,
         float sigma_r = 0.45f);
 
-CV_EXPORTS_W void intrinsic(InputArray src, OutputArray dst, int window = 3, int no_of_iter = 100,
+CV_EXPORTS_W void intrinsicDecompose(InputArray _src, OutputArray _ref, OutputArray _shade, int window = 3, int no_of_iter = 100,
         float rho = 1.9f);
+
+CV_EXPORTS_W void colorTransfer(InputArray _src1, InputArray _src2, OutputArray _dst, int flag = 1);
+
+CV_EXPORTS_W void colorConstancy(InputArray _src, OutputArray _dst, float diff_order = 0, int mink_norm = 1, float sigma = 0);
 } // cv
 
 #endif

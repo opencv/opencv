@@ -10,7 +10,7 @@
 using namespace std;
 using namespace cv;
 
-void cv::intrinsic_decompose(InputArray _src, OutputArray _ref, OutputArray _shade, int window, int no_of_iter, float rho)
+void cv::intrinsicDecompose(InputArray _src, OutputArray _ref, OutputArray _shade, int window, int no_of_iter, float rho)
 {
      Mat I = _src.getMat();
      _ref.create(I.size(), CV_8UC3);
