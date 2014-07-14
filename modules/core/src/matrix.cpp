@@ -3489,13 +3489,24 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
                                             ocl::convertTypeStr(sdepth, ddepth, 1, cvt[1]),
                                             ocl::convertTypeStr(wdepth, ddepth0, 1, cvt[2]),
                                             doubleSupport ? " -D DOUBLE_SUPPORT" : "");
-        ocl::Kernel k("reduce_horz_opt", ocl::core::reduce2_oclsrc, build_opt);
+        cv::String kern_name = "reduce_horz_opt";
+        size_t localSize[2] = { buf_cols, tileHeight}; size_t *lt = localSize;
+        if ((CV_32S == ddepth0) && (op == CV_REDUCE_SUM))
+        {
+            kern_name = "reduce_horz_sum";
+            lt = NULL;
+        }
+        ocl::Kernel k(kern_name.c_str(), ocl::core::reduce2_oclsrc, build_opt);
         if (k.empty())
             return false;
         UMat src = _src.getUMat();
         Size dsize(1, src.rows);
         _dst.create(dsize, dtype);
         UMat dst = _dst.getUMat();
+        if ((CV_32S == ddepth0) && (op == CV_REDUCE_SUM))
+        {
+            dst = cv::Scalar(0);
+        }
 
         if (op0 == CV_REDUCE_AVG)
             k.args(ocl::KernelArg::ReadOnly(src),
@@ -3504,9 +3515,8 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
             k.args(ocl::KernelArg::ReadOnly(src),
                       ocl::KernelArg::WriteOnlyNoSize(dst));
 
-        size_t localSize[2] = { buf_cols, tileHeight};
         size_t globalSize[2] = { buf_cols, src.rows };
-        return k.run(2, globalSize, localSize, false);
+        return k.run(2, globalSize, lt, false);
     }
     else
     {
