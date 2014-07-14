@@ -360,7 +360,7 @@ struct CV_EXPORTS UMatData
 {
     enum { COPY_ON_MAP=1, HOST_COPY_OBSOLETE=2,
         DEVICE_COPY_OBSOLETE=4, TEMP_UMAT=8, TEMP_COPIED_UMAT=24,
-        USER_ALLOCATED=32 };
+        USER_ALLOCATED=32, DEVICE_MEM_MAPPED=64};
     UMatData(const MatAllocator* allocator);
     ~UMatData();
 
@@ -370,11 +370,13 @@ struct CV_EXPORTS UMatData
 
     bool hostCopyObsolete() const;
     bool deviceCopyObsolete() const;
+    bool deviceMemMapped() const;
     bool copyOnMap() const;
     bool tempUMat() const;
     bool tempCopiedUMat() const;
     void markHostCopyObsolete(bool flag);
     void markDeviceCopyObsolete(bool flag);
+    void markDeviceMemMapped(bool flag);
 
     const MatAllocator* prevAllocator;
     const MatAllocator* currAllocator;
