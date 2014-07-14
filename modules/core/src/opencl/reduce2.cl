@@ -162,6 +162,41 @@ __kernel void reduce_horz_opt(__global const uchar * srcptr, int src_step, int s
     }
 }
 
+#if ddepth == 4
+__kernel void reduce_horz_sum(__global const uchar * srcptr, int src_step, int src_offset, int rows, int cols,
+                     __global uchar * dstptr, int dst_step, int dst_offset
+                     )
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    if ((x < BUF_COLS) && (y < rows))
+    {
+        int src_index = mad24(y, src_step, mad24(x, (int)sizeof(srcT) * cn, src_offset));
+
+        __global const srcT * src = (__global const srcT *)(srcptr + src_index);
+        int tmp[cn] = { INIT_VALUE };
+
+        int src_step_mul = BUF_COLS * cn;
+        for (int idx = x; idx < cols; idx += BUF_COLS, src += src_step_mul)
+        {
+            #pragma unroll
+            for (int c = 0; c < cn; ++c)
+            {
+                int value = convertToDT(src[c]);
+                tmp[c] += value;
+            }
+        }
+
+        int dst_index = mad24(y, dst_step, dst_offset);
+        __global int * dst = (__global int *)(dstptr + dst_index);
+
+        #pragma unroll
+        for (int c = 0; c < cn; c++, dst++)
+            atomic_add(dst, tmp[c]);
+    }
+}
+#endif
+
 #else
 
 __kernel void reduce(__global const uchar * srcptr, int src_step, int src_offset, int rows, int cols,
