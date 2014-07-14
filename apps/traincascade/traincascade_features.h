@@ -2,9 +2,9 @@
 #define _OPENCV_FEATURES_H_
 
 #include "imagestorage.h"
-#include "cxcore.h"
-#include "cv.h"
-#include "ml.h"
+#include "opencv/cxcore.h"
+#include "opencv/cv.h"
+#include "opencv/ml.h"
 #include <stdio.h>
 
 #define FEATURES "features"
