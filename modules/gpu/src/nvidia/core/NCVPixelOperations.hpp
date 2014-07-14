@@ -48,24 +48,24 @@
 #include "NCV.hpp"
 
 template<typename TBase> inline __host__ __device__ TBase _pixMaxVal();
-template<> static inline __host__ __device__ Ncv8u  _pixMaxVal<Ncv8u>()  {return UCHAR_MAX;}
-template<> static inline __host__ __device__ Ncv16u _pixMaxVal<Ncv16u>() {return USHRT_MAX;}
-template<> static inline __host__ __device__ Ncv32u _pixMaxVal<Ncv32u>() {return  UINT_MAX;}
-template<> static inline __host__ __device__ Ncv8s  _pixMaxVal<Ncv8s>()  {return  SCHAR_MAX;}
-template<> static inline __host__ __device__ Ncv16s _pixMaxVal<Ncv16s>() {return  SHRT_MAX;}
-template<> static inline __host__ __device__ Ncv32s _pixMaxVal<Ncv32s>() {return   INT_MAX;}
-template<> static inline __host__ __device__ Ncv32f _pixMaxVal<Ncv32f>() {return   FLT_MAX;}
-template<> static inline __host__ __device__ Ncv64f _pixMaxVal<Ncv64f>() {return   DBL_MAX;}
+template<>  inline __host__ __device__ Ncv8u  _pixMaxVal<Ncv8u>()  {return UCHAR_MAX;}
+template<>  inline __host__ __device__ Ncv16u _pixMaxVal<Ncv16u>() {return USHRT_MAX;}
+template<>  inline __host__ __device__ Ncv32u _pixMaxVal<Ncv32u>() {return  UINT_MAX;}
+template<>  inline __host__ __device__ Ncv8s  _pixMaxVal<Ncv8s>()  {return  SCHAR_MAX;}
+template<>  inline __host__ __device__ Ncv16s _pixMaxVal<Ncv16s>() {return  SHRT_MAX;}
+template<>  inline __host__ __device__ Ncv32s _pixMaxVal<Ncv32s>() {return   INT_MAX;}
+template<>  inline __host__ __device__ Ncv32f _pixMaxVal<Ncv32f>() {return   FLT_MAX;}
+template<>  inline __host__ __device__ Ncv64f _pixMaxVal<Ncv64f>() {return   DBL_MAX;}
 
 template<typename TBase> inline __host__ __device__ TBase _pixMinVal();
-template<> static inline __host__ __device__ Ncv8u  _pixMinVal<Ncv8u>()  {return 0;}
-template<> static inline __host__ __device__ Ncv16u _pixMinVal<Ncv16u>() {return 0;}
-template<> static inline __host__ __device__ Ncv32u _pixMinVal<Ncv32u>() {return 0;}
-template<> static inline __host__ __device__ Ncv8s  _pixMinVal<Ncv8s>()  {return SCHAR_MIN;}
-template<> static inline __host__ __device__ Ncv16s _pixMinVal<Ncv16s>() {return SHRT_MIN;}
-template<> static inline __host__ __device__ Ncv32s _pixMinVal<Ncv32s>() {return INT_MIN;}
-template<> static inline __host__ __device__ Ncv32f _pixMinVal<Ncv32f>() {return FLT_MIN;}
-template<> static inline __host__ __device__ Ncv64f _pixMinVal<Ncv64f>() {return DBL_MIN;}
+template<>  inline __host__ __device__ Ncv8u  _pixMinVal<Ncv8u>()  {return 0;}
+template<>  inline __host__ __device__ Ncv16u _pixMinVal<Ncv16u>() {return 0;}
+template<>  inline __host__ __device__ Ncv32u _pixMinVal<Ncv32u>() {return 0;}
+template<>  inline __host__ __device__ Ncv8s  _pixMinVal<Ncv8s>()  {return SCHAR_MIN;}
+template<>  inline __host__ __device__ Ncv16s _pixMinVal<Ncv16s>() {return SHRT_MIN;}
+template<>  inline __host__ __device__ Ncv32s _pixMinVal<Ncv32s>() {return INT_MIN;}
+template<>  inline __host__ __device__ Ncv32f _pixMinVal<Ncv32f>() {return FLT_MIN;}
+template<>  inline __host__ __device__ Ncv64f _pixMinVal<Ncv64f>() {return DBL_MIN;}
 
 template<typename Tvec> struct TConvVec2Base;
 template<> struct TConvVec2Base<uchar1>  {typedef Ncv8u TBase;};
@@ -116,21 +116,21 @@ template<typename Tin> static inline __host__ __device__ void _TDemoteClampNN(Ti
 template<typename Tin> static inline __host__ __device__ void _TDemoteClampNN(Tin &a, Ncv32f &out) {out = (Ncv32f)a;}
 
 template<typename Tout> inline Tout _pixMakeZero();
-template<> static inline __host__ __device__ uchar1 _pixMakeZero<uchar1>() {return make_uchar1(0);}
-template<> static inline __host__ __device__ uchar3 _pixMakeZero<uchar3>() {return make_uchar3(0,0,0);}
-template<> static inline __host__ __device__ uchar4 _pixMakeZero<uchar4>() {return make_uchar4(0,0,0,0);}
-template<> static inline __host__ __device__ ushort1 _pixMakeZero<ushort1>() {return make_ushort1(0);}
-template<> static inline __host__ __device__ ushort3 _pixMakeZero<ushort3>() {return make_ushort3(0,0,0);}
-template<> static inline __host__ __device__ ushort4 _pixMakeZero<ushort4>() {return make_ushort4(0,0,0,0);}
-template<> static inline __host__ __device__ uint1 _pixMakeZero<uint1>() {return make_uint1(0);}
-template<> static inline __host__ __device__ uint3 _pixMakeZero<uint3>() {return make_uint3(0,0,0);}
-template<> static inline __host__ __device__ uint4 _pixMakeZero<uint4>() {return make_uint4(0,0,0,0);}
-template<> static inline __host__ __device__ float1 _pixMakeZero<float1>() {return make_float1(0.f);}
-template<> static inline __host__ __device__ float3 _pixMakeZero<float3>() {return make_float3(0.f,0.f,0.f);}
-template<> static inline __host__ __device__ float4 _pixMakeZero<float4>() {return make_float4(0.f,0.f,0.f,0.f);}
-template<> static inline __host__ __device__ double1 _pixMakeZero<double1>() {return make_double1(0.);}
-template<> static inline __host__ __device__ double3 _pixMakeZero<double3>() {return make_double3(0.,0.,0.);}
-template<> static inline __host__ __device__ double4 _pixMakeZero<double4>() {return make_double4(0.,0.,0.,0.);}
+template<>  inline __host__ __device__ uchar1 _pixMakeZero<uchar1>() {return make_uchar1(0);}
+template<>  inline __host__ __device__ uchar3 _pixMakeZero<uchar3>() {return make_uchar3(0,0,0);}
+template<>  inline __host__ __device__ uchar4 _pixMakeZero<uchar4>() {return make_uchar4(0,0,0,0);}
+template<>  inline __host__ __device__ ushort1 _pixMakeZero<ushort1>() {return make_ushort1(0);}
+template<>  inline __host__ __device__ ushort3 _pixMakeZero<ushort3>() {return make_ushort3(0,0,0);}
+template<>  inline __host__ __device__ ushort4 _pixMakeZero<ushort4>() {return make_ushort4(0,0,0,0);}
+template<>  inline __host__ __device__ uint1 _pixMakeZero<uint1>() {return make_uint1(0);}
+template<>  inline __host__ __device__ uint3 _pixMakeZero<uint3>() {return make_uint3(0,0,0);}
+template<>  inline __host__ __device__ uint4 _pixMakeZero<uint4>() {return make_uint4(0,0,0,0);}
+template<>  inline __host__ __device__ float1 _pixMakeZero<float1>() {return make_float1(0.f);}
+template<>  inline __host__ __device__ float3 _pixMakeZero<float3>() {return make_float3(0.f,0.f,0.f);}
+template<>  inline __host__ __device__ float4 _pixMakeZero<float4>() {return make_float4(0.f,0.f,0.f,0.f);}
+template<>  inline __host__ __device__ double1 _pixMakeZero<double1>() {return make_double1(0.);}
+template<>  inline __host__ __device__ double3 _pixMakeZero<double3>() {return make_double3(0.,0.,0.);}
+template<>  inline __host__ __device__ double4 _pixMakeZero<double4>() {return make_double4(0.,0.,0.,0.);}
 
 static inline __host__ __device__ uchar1 _pixMake(Ncv8u x) {return make_uchar1(x);}
 static inline __host__ __device__ uchar3 _pixMake(Ncv8u x, Ncv8u y, Ncv8u z) {return make_uchar3(x,y,z);}
