@@ -42,6 +42,7 @@
 #include "precomp.hpp"
 
 #if (defined WIN32 || defined _WIN32) && defined HAVE_DSHOW
+#include "cap_dshow.hpp"
 
 /*
    DirectShow-based Video Capturing module is based on
@@ -455,13 +456,7 @@ class videoDevice{
 
 };
 
-
-
-
 //////////////////////////////////////   VIDEO INPUT   /////////////////////////////////////
-
-
-
 class videoInput{
 
     public:
@@ -3098,131 +3093,52 @@ HRESULT videoInput::routeCrossbar(ICaptureGraphBuilder2 **ppBuild, IBaseFilter *
     return hr;
 }
 
-
-/********************* Capturing video from camera via DirectShow *********************/
-
-class CvCaptureCAM_DShow : public CvCapture
-{
-public:
-    CvCaptureCAM_DShow();
-    virtual ~CvCaptureCAM_DShow();
-
-    virtual bool open( int index );
-    virtual void close();
-    virtual double getProperty(int);
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
-    virtual int getCaptureDomain() { return CV_CAP_DSHOW; } // Return the type of the capture object: CV_CAP_VFW, etc...
-
-protected:
-    void init();
-
-    int index, width, height,fourcc;
-    int widthSet, heightSet;
-    IplImage* frame;
-    static videoInput VI;
-};
-
-
 struct SuppressVideoInputMessages
 {
     SuppressVideoInputMessages() { videoInput::setVerbose(false); }
 };
 
 static SuppressVideoInputMessages do_it;
-videoInput CvCaptureCAM_DShow::VI;
 
-CvCaptureCAM_DShow::CvCaptureCAM_DShow()
+namespace cv
 {
-    index = -1;
-    frame = 0;
-    width = height = fourcc = -1;
-    widthSet = heightSet = -1;
-    CoInitialize(0);
-}
+videoInput VideoCapture_DShow::g_VI;
 
-CvCaptureCAM_DShow::~CvCaptureCAM_DShow()
+VideoCapture_DShow::VideoCapture_DShow(int index)
+    : m_index(-1)
+    , m_width(-1)
+    , m_height(-1)
+    , m_fourcc(-1)
+    , m_widthSet(-1)
+    , m_heightSet(-1)
+{
+    CoInitialize(0);
+    open(index);
+}
+VideoCapture_DShow::~VideoCapture_DShow()
 {
     close();
     CoUninitialize();
 }
 
-void CvCaptureCAM_DShow::close()
+double VideoCapture_DShow::getProperty(int propIdx)
 {
-    if( index >= 0 )
+
+    long min_value, max_value, stepping_delta, current_value, flags, defaultValue;
+
+    switch (propIdx)
     {
-        VI.stopDevice(index);
-        index = -1;
-        cvReleaseImage(&frame);
-    }
-    widthSet = heightSet = width = height = -1;
-}
-
-// Initialize camera input
-bool CvCaptureCAM_DShow::open( int _index )
-{
-    int devices = 0;
-
-    close();
-    devices = VI.listDevices(true);
-    if (devices == 0)
-        return false;
-    if (_index < 0 || _index > devices-1)
-        return false;
-    VI.setupDevice(_index);
-    if( !VI.isDeviceSetup(_index) )
-        return false;
-    index = _index;
-    return true;
-}
-
-bool CvCaptureCAM_DShow::grabFrame()
-{
-    return true;
-}
-
-
-IplImage* CvCaptureCAM_DShow::retrieveFrame(int)
-{
-    if( !frame || VI.getWidth(index) != frame->width || VI.getHeight(index) != frame->height )
-    {
-        if (frame)
-            cvReleaseImage( &frame );
-        int w = VI.getWidth(index), h = VI.getHeight(index);
-        frame = cvCreateImage( cvSize(w,h), 8, 3 );
-    }
-
-    if (VI.getPixels( index, (uchar*)frame->imageData, false, true ))
-        return frame;
-    else
-        return NULL;
-}
-
-double CvCaptureCAM_DShow::getProperty( int property_id )
-{
-
-    long min_value,max_value,stepping_delta,current_value,flags,defaultValue;
-
-    // image format proprrties
-    switch( property_id )
-    {
+    // image format properties
     case CV_CAP_PROP_FRAME_WIDTH:
-        return VI.getWidth(index);
-
+        return g_VI.getWidth(m_index);
     case CV_CAP_PROP_FRAME_HEIGHT:
-        return VI.getHeight(index);
-
+        return g_VI.getHeight(m_index);
     case CV_CAP_PROP_FOURCC:
-        return VI.getFourcc(index);
-
+        return g_VI.getFourcc(m_index);
     case CV_CAP_PROP_FPS:
-        return VI.getFPS(index);
-    }
+        return g_VI.getFPS(m_index);
 
     // video filter properties
-    switch( property_id )
-    {
     case CV_CAP_PROP_BRIGHTNESS:
     case CV_CAP_PROP_CONTRAST:
     case CV_CAP_PROP_HUE:
@@ -3233,12 +3149,10 @@ double CvCaptureCAM_DShow::getProperty( int property_id )
     case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
     case CV_CAP_PROP_BACKLIGHT:
     case CV_CAP_PROP_GAIN:
-        if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(property_id),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-    }
+        if (g_VI.getVideoSettingFilter(m_index, g_VI.getVideoPropertyFromCV(propIdx), min_value, max_value, stepping_delta, current_value, flags, defaultValue))
+            return (double)current_value;
 
     // camera properties
-    switch( property_id )
-    {
     case CV_CAP_PROP_PAN:
     case CV_CAP_PROP_TILT:
     case CV_CAP_PROP_ROLL:
@@ -3246,33 +3160,33 @@ double CvCaptureCAM_DShow::getProperty( int property_id )
     case CV_CAP_PROP_EXPOSURE:
     case CV_CAP_PROP_IRIS:
     case CV_CAP_PROP_FOCUS:
-        if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(property_id),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
+        if (g_VI.getVideoSettingCamera(m_index, g_VI.getCameraPropertyFromCV(propIdx), min_value, max_value, stepping_delta, current_value, flags, defaultValue))
+            return (double)current_value;
     }
 
     // unknown parameter or value not available
     return -1;
 }
-
-bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
+bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
 {
     // image capture properties
     bool handled = false;
-    switch( property_id )
+    switch (propIdx)
     {
     case CV_CAP_PROP_FRAME_WIDTH:
-        width = cvRound(value);
+        m_width = cvRound(propVal);
         handled = true;
         break;
 
     case CV_CAP_PROP_FRAME_HEIGHT:
-        height = cvRound(value);
+        m_height = cvRound(propVal);
         handled = true;
         break;
 
     case CV_CAP_PROP_FOURCC:
-        fourcc = (int)(unsigned long)(value);
-        if ( fourcc == -1 ) {
+        m_fourcc = (int)(unsigned long)(propVal);
+        if (-1 == m_fourcc)
+        {
             // following cvCreateVideo usage will pop up caprturepindialog here if fourcc=-1
             // TODO - how to create a capture pin dialog
         }
@@ -3280,38 +3194,38 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
         break;
 
     case CV_CAP_PROP_FPS:
-        int fps = cvRound(value);
-        if (fps != VI.getFPS(index))
+        int fps = cvRound(propVal);
+        if (fps != g_VI.getFPS(m_index))
         {
-            VI.stopDevice(index);
-            VI.setIdealFramerate(index,fps);
-            if (widthSet > 0 && heightSet > 0)
-                VI.setupDevice(index, widthSet, heightSet);
+            g_VI.stopDevice(m_index);
+            g_VI.setIdealFramerate(m_index, fps);
+            if (m_widthSet > 0 && m_heightSet > 0)
+                g_VI.setupDevice(m_index, m_widthSet, m_heightSet);
             else
-                VI.setupDevice(index);
+                g_VI.setupDevice(m_index);
         }
-        return VI.isDeviceSetup(index);
-
+        return g_VI.isDeviceSetup(m_index);
     }
 
-    if ( handled ) {
+    if (handled)
+    {
         // a stream setting
-        if( width > 0 && height > 0 )
+        if (m_width > 0 && m_height > 0)
         {
-            if( width != VI.getWidth(index) || height != VI.getHeight(index) )//|| fourcc != VI.getFourcc(index) )
+            if (m_width != g_VI.getWidth(m_index) || m_height != g_VI.getHeight(m_index) )//|| fourcc != VI.getFourcc(index) )
             {
-                int fps = static_cast<int>(VI.getFPS(index));
-                VI.stopDevice(index);
-                VI.setIdealFramerate(index, fps);
-                VI.setupDeviceFourcc(index, width, height, fourcc);
+                int fps = static_cast<int>(g_VI.getFPS(m_index));
+                g_VI.stopDevice(m_index);
+                g_VI.setIdealFramerate(m_index, fps);
+                g_VI.setupDeviceFourcc(m_index, m_width, m_height, m_fourcc);
             }
 
-            bool success = VI.isDeviceSetup(index);
+            bool success = g_VI.isDeviceSetup(m_index);
             if (success)
             {
-                widthSet = width;
-                heightSet = height;
-                width = height = fourcc = -1;
+                m_widthSet = m_width;
+                m_heightSet = m_height;
+                m_width = m_height = m_fourcc = -1;
             }
             return success;
         }
@@ -3319,13 +3233,14 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
     }
 
     // show video/camera filter dialog
-    if ( property_id == CV_CAP_PROP_SETTINGS ) {
-        VI.showSettingsWindow(index);
+    if (propIdx == CV_CAP_PROP_SETTINGS )
+    {
+        g_VI.showSettingsWindow(m_index);
         return true;
     }
 
     //video Filter properties
-    switch( property_id )
+    switch (propIdx)
     {
     case CV_CAP_PROP_BRIGHTNESS:
     case CV_CAP_PROP_CONTRAST:
@@ -3337,11 +3252,11 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
     case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
     case CV_CAP_PROP_BACKLIGHT:
     case CV_CAP_PROP_GAIN:
-        return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(property_id),(long)value);
+        return g_VI.setVideoSettingFilter(m_index, g_VI.getVideoPropertyFromCV(propIdx), (long)propVal);
     }
 
     //camera properties
-    switch( property_id )
+    switch (propIdx)
     {
     case CV_CAP_PROP_PAN:
     case CV_CAP_PROP_TILT:
@@ -3350,30 +3265,55 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
     case CV_CAP_PROP_EXPOSURE:
     case CV_CAP_PROP_IRIS:
     case CV_CAP_PROP_FOCUS:
-        return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(property_id),(long)value);
+        return g_VI.setVideoSettingCamera(m_index, g_VI.getCameraPropertyFromCV(propIdx), (long)propVal);
     }
 
     return false;
 }
 
-
-CvCapture* cvCreateCameraCapture_DShow( int index )
+bool VideoCapture_DShow::grabFrame()
 {
-    CvCaptureCAM_DShow* capture = new CvCaptureCAM_DShow;
+    return true;
+}
+bool VideoCapture_DShow::retrieveFrame(int, OutputArray frame)
+{
+    frame.create(Size(g_VI.getWidth(m_index), g_VI.getHeight(m_index)), CV_8UC3);
+    cv::Mat mat = frame.getMat();
+    return g_VI.getPixels(m_index, mat.ptr(), false, true );
+}
+int VideoCapture_DShow::getCaptureDomain()
+{
+    return CV_CAP_DSHOW;
+}
+bool VideoCapture_DShow::isOpened() const
+{
+    return (-1 != m_index);
+}
 
-    try
-    {
-        if( capture->open( index ))
-            return capture;
-    }
-    catch(...)
-    {
-        delete capture;
-        throw;
-    }
+void VideoCapture_DShow::open(int index)
+{
+    close();
+    int devices = g_VI.listDevices(true);
+    if (0 == devices)
+        return;
+    if (index < 0 || index > devices-1)
+        return;
+    g_VI.setupDevice(index);
+    if (!g_VI.isDeviceSetup(index))
+        return;
+    m_index = index;
+}
 
-    delete capture;
-    return 0;
+void VideoCapture_DShow::close()
+{
+    if (m_index >= 0)
+    {
+        g_VI.stopDevice(m_index);
+        m_index = -1;
+    }
+    m_widthSet = m_heightSet = m_width = m_height = -1;
+}
+
 }
 
 #endif
