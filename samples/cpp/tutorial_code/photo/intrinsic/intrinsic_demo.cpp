@@ -14,12 +14,10 @@ int main(int argc, char *argv[])
 
     I = imread(argv[1]);
 
-    intrinsic_decompose(I,ref,shade);
-    
+    intrinsicDecompose(I,ref,shade);
+
     imshow("reflectance",ref);
     imshow("shading",shade);
-    imwrite("ref.jpg",ref);
-    imwrite("shade.jpg",shade);
     waitKey(0);
 }
 
