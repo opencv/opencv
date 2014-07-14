@@ -506,6 +506,8 @@ void CvCascadeClassifier::save( const string filename, bool baseFormat )
 
 bool CvCascadeClassifier::load( const string cascadeDirName )
 {
+    cout << "Training parameters are loaded from the parameter file in data folder!" << endl;
+    cout << "Please empty the data folder if you want to use your own set of parameters." << endl;
     FileStorage fs( cascadeDirName + CC_PARAMS_FILENAME, FileStorage::READ );
     if ( !fs.isOpened() )
         return false;
