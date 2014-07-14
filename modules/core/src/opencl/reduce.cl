@@ -493,53 +493,66 @@
 #define DECLARE_LOCAL_MEM \
     __local dstT localmem[WGS2_ALIGNED]
 #define DEFINE_ACCUMULATOR \
-    dstT accumulator = (dstT)(0); \
+    dstT accumulator = 0; \
     srcT1 zero = (srcT1)(0), one = (srcT1)(1)
+#if sdepth <= 4
+    #define loadpix_nz(addr) min((srcT)loadpix(addr), (srcT1)1)
+#elif sdepth == 1
+    #define loadpix_nz(addr) min(abs((srcT)loadpix(addr)), (srcT1)1)
+#elif sdepth == 2
+    #define loadpix_nz(addr) min((srcT)loadpix(addr), (srcT1)1)
+#elif sdepth == 3
+    #define loadpix_nz(addr) min(abs((srcT)loadpix(addr)), (srcT1)1)
+#elif sdepth == 4
+    #define loadpix_nz(addr) min(abs((srcT)loadpix(addr)), (srcT1)1)
+#else
+    #define loadpix_nz(addr) sign(fabs((srcT)loadpix(addr)))
+#endif
 #if kercn == 1
 #define REDUCE_GLOBAL \
-    accumulator += loadpix(srcptr + src_index) == zero ? zero : one
+    accumulator += loadpix_nz(srcptr + src_index);
 #elif kercn == 2
 #define REDUCE_GLOBAL \
-    srcT value = loadpix(srcptr + src_index); \
-    accumulator += value.s0 == zero ? zero : one; \
-    accumulator += value.s1 == zero ? zero : one
+    srcT value = loadpix_nz(srcptr + src_index); \
+    accumulator += value.s0;\
+    accumulator += value.s1;
 #elif kercn == 4
 #define REDUCE_GLOBAL \
-    srcT value = loadpix(srcptr + src_index); \
-    accumulator += value.s0 == zero ? zero : one; \
-    accumulator += value.s1 == zero ? zero : one; \
-    accumulator += value.s2 == zero ? zero : one; \
-    accumulator += value.s3 == zero ? zero : one
+    srcT value = loadpix_nz(srcptr + src_index); \
+    accumulator += value.s0;\
+    accumulator += value.s1;\
+    accumulator += value.s2;\
+    accumulator += value.s3;
 #elif kercn == 8
 #define REDUCE_GLOBAL \
-    srcT value = loadpix(srcptr + src_index); \
-    accumulator += value.s0 == zero ? zero : one; \
-    accumulator += value.s1 == zero ? zero : one; \
-    accumulator += value.s2 == zero ? zero : one; \
-    accumulator += value.s3 == zero ? zero : one; \
-    accumulator += value.s4 == zero ? zero : one; \
-    accumulator += value.s5 == zero ? zero : one; \
-    accumulator += value.s6 == zero ? zero : one; \
-    accumulator += value.s7 == zero ? zero : one
+    srcT value = loadpix_nz(srcptr + src_index); \
+    accumulator += value.s0;\
+    accumulator += value.s1;\
+    accumulator += value.s2;\
+    accumulator += value.s3;\
+    accumulator += value.s4;\
+    accumulator += value.s5;\
+    accumulator += value.s6;\
+    accumulator += value.s7;
 #elif kercn == 16
 #define REDUCE_GLOBAL \
-    srcT value = loadpix(srcptr + src_index); \
-    accumulator += value.s0 == zero ? zero : one; \
-    accumulator += value.s1 == zero ? zero : one; \
-    accumulator += value.s2 == zero ? zero : one; \
-    accumulator += value.s3 == zero ? zero : one; \
-    accumulator += value.s4 == zero ? zero : one; \
-    accumulator += value.s5 == zero ? zero : one; \
-    accumulator += value.s6 == zero ? zero : one; \
-    accumulator += value.s7 == zero ? zero : one; \
-    accumulator += value.s8 == zero ? zero : one; \
-    accumulator += value.s9 == zero ? zero : one; \
-    accumulator += value.sA == zero ? zero : one; \
-    accumulator += value.sB == zero ? zero : one; \
-    accumulator += value.sC == zero ? zero : one; \
-    accumulator += value.sD == zero ? zero : one; \
-    accumulator += value.sE == zero ? zero : one; \
-    accumulator += value.sF == zero ? zero : one
+    srcT value = loadpix_nz(srcptr + src_index); \
+    accumulator += value.s0;\
+    accumulator += value.s1;\
+    accumulator += value.s2;\
+    accumulator += value.s3;\
+    accumulator += value.s4;\
+    accumulator += value.s5;\
+    accumulator += value.s6;\
+    accumulator += value.s7;\
+    accumulator += value.s8;\
+    accumulator += value.s9;\
+    accumulator += value.sA;\
+    accumulator += value.sB;\
+    accumulator += value.sC;\
+    accumulator += value.sD;\
+    accumulator += value.sE;\
+    accumulator += value.sF;
 #endif
 
 #define SET_LOCAL_1 \

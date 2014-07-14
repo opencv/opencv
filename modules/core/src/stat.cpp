@@ -688,9 +688,9 @@ static bool ocl_countNonZero( InputArray _src, int & res )
     wgs2_aligned >>= 1;
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
-                  format("-D srcT=%s -D srcT1=%s -D cn=1 -D OP_COUNT_NON_ZERO"
+                  format("-D sdepth=%d -D srcT=%s -D srcT1=%s -D cn=1 -D OP_COUNT_NON_ZERO"
                          " -D WGS=%d -D kercn=%d -D WGS2_ALIGNED=%d%s%s",
-                         ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
+                         depth, ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
                          ocl::typeToStr(depth), (int)wgs, kercn,
                          wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                          _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
