@@ -1058,7 +1058,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
                 continue;
             if (!v1)
                 v1 = 1e-10;
-            result0[CV_COMP_KL_DIV] += v0 * cv::log( v0 / v1 );
+            result0[CV_COMP_KL_DIV] += v0 * std::log( v0 / v1 );
             }
         }
 
