@@ -41,10 +41,10 @@
  //M*/
 
 #include "precomp.hpp"
+#include "dls.h"
 #include "epnp.h"
 #include "p3p.h"
 #include "opencv2/calib3d/calib3d_c.h"
-#include "dls.h"
 
 #include <iostream>
 using namespace cv;
@@ -100,12 +100,13 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     	cv::Mat undistortedPoints;
     	cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
 
-    	//dls PnP;
+
+    	dls PnP(opoints, undistortedPoints);
     	//  DO SOMETHING
 
     	cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
 
-
+    	return true;
     }
     else
         CV_Error(CV_StsBadArg, "The flags argument must be one of CV_ITERATIVE, CV_P3P or CV_EPNP");
