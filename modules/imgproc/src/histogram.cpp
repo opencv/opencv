@@ -2335,7 +2335,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
                 if(  fabs(q) <= DBL_EPSILON ) {
                     q = 1e-10;
                 }
-                result += p * cv::log( p / q );
+                result += p * std::log( p / q );
             }
         }
         else
@@ -2462,7 +2462,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
             double v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
             if( !v2 )
                 v2 = 1e-10;
-            result += v1 * cv::log( v1 / v2 );
+            result += v1 * std::log( v1 / v2 );
         }
     }
     else
