@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <!--
     This is 12x80 detector of the silverware (forks, spoons, knives) using LBP features.
     It was created by Attila Novak during GSoC 2012.
@@ -6,7 +7,6 @@
     (probably should run detector several times).
     It also assumes the "top view" when the camera optical axis is orthogonal to the table plane.
 -->
-<?xml version="1.0"?>
 <opencv_storage>
 <cascade>
   <stageType>BOOST</stageType>

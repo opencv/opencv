@@ -1,11 +1,11 @@
-<!--
-    This is 20x34 detector of profile faces using LBP features.
-    It was created by Attila Novak during GSoC 2012.
-    Note that the detector only detects faces rotated to the right,
-    so you may want to run it on the original and on
-    the flipped image to detect different profile faces.
--->
 <?xml version="1.0"?>
+<!--
+This is 20x34 detector of profile faces using LBP features.
+It was created by Attila Novak during GSoC 2012.
+Note that the detector only detects faces rotated to the right,
+so you may want to run it on the original and on
+the flipped image to detect different profile faces.
+-->
 <opencv_storage>
 <cascade>
   <stageType>BOOST</stageType>
