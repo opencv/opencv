@@ -44,6 +44,7 @@
 #include "epnp.h"
 #include "p3p.h"
 #include "opencv2/calib3d/calib3d_c.h"
+#include "dls.h"
 
 #include <iostream>
 using namespace cv;
@@ -92,6 +93,19 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
                                      c_distCoeffs.rows*c_distCoeffs.cols ? &c_distCoeffs : 0,
                                      &c_rvec, &c_tvec, useExtrinsicGuess );
         return true;
+    }
+    else if (flags == DLS)
+    {
+    	std::cout << "DLS" << std::endl;
+    	cv::Mat undistortedPoints;
+    	cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+
+    	//dls PnP;
+    	//  DO SOMETHING
+
+    	cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
+
+
     }
     else
         CV_Error(CV_StsBadArg, "The flags argument must be one of CV_ITERATIVE, CV_P3P or CV_EPNP");
