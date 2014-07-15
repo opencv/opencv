@@ -38,7 +38,7 @@ Class for computing stereo correspondence using the variational matching algorit
         ...
     };
 
-The class implements the modified S. G. Kosov algorithm [Publication] that differs from the original one as follows:
+The class implements the modified S. G. Kosov algorithm [KTS09]_ that differs from the original one as follows:
 
  * The automatic initialization of method's parameters is added.
 
@@ -47,6 +47,9 @@ The class implements the modified S. G. Kosov algorithm [Publication] that diffe
  * The support of Multi-Level Adaptation Technique (MLAT) is not included.
 
  * The method of dynamic adaptation of method's parameters is not included.
+
+.. [KTS09] Sergey Kosov, Thorsten Thormählen and Hans-Peter Seidel: Accurate real-time disparity estimation with variational methods. In: Advances in Visual Computing. Springer Berlin Heidelberg, 2009. 796-807.
+
 
 StereoVar::StereoVar
 --------------------------
