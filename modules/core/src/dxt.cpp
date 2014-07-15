@@ -2034,16 +2034,13 @@ namespace cv
 
 #ifdef HAVE_OPENCL
 
-static std::vector<int> ocl_getRadixes(int cols, int& min_radix)
+static std::vector<int> ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<int>& blocks, int& min_radix)
 {
     int factors[34];
     int nf = DFTFactorize( cols, factors );
     
     int n = 1;
     int factor_index = 0;
-
-    // choose radix order
-    std::vector<int> radixes;
 
     // 2^n transforms
     if ( (factors[factor_index] & 1) == 0 )
@@ -2057,7 +2054,10 @@ static std::vector<int> ocl_getRadixes(int cols, int& min_radix)
                 radix = 4;
 
             radixes.push_back(radix);
-            min_radix = min(min_radix, radix);
+            if (radix == 2 && cols % 4 == 0)
+                min_radix = min(min_radix, 2*radix);
+            else
+                min_radix = min(min_radix, radix);
             n *= radix;
         }
         factor_index++;
@@ -2067,7 +2067,10 @@ static std::vector<int> ocl_getRadixes(int cols, int& min_radix)
     for( ; factor_index < nf; factor_index++ )
     {
         radixes.push_back(factors[factor_index]);
-        min_radix = min(min_radix, factors[factor_index]);
+        if (factors[factor_index] == 3 && cols % 6 == 0)
+            min_radix = min(min_radix, 2*factors[factor_index]);
+        else
+            min_radix = min(min_radix, factors[factor_index]);
     }
     return radixes;
 }
@@ -2084,8 +2087,16 @@ struct OCL_FftPlan
     OCL_FftPlan(int _size, int _flags): dft_size(_size), flags(_flags)
     {
         int min_radix = INT_MAX;
-        std::vector<int> radixes = ocl_getRadixes(dft_size, min_radix);
-        thread_count = dft_size / min_radix;
+        std::vector<int> radixes, blocks;
+        ocl_getRadixes(dft_size, radixes, blocks, min_radix);
+        thread_count = (dft_size + min_radix-1) / min_radix;
+
+        printf("cols: %d - ", dft_size);
+        for (int i=0; i<radixes.size(); i++)
+        {
+            printf("%d ", radixes[i]);
+        }
+        printf("min radix - %d\n", min_radix);
 
         // generate string with radix calls
         String radix_processing;
@@ -2093,7 +2104,10 @@ struct OCL_FftPlan
         for (size_t i=0; i<radixes.size(); i++)
         {
             int radix = radixes[i];
-            radix_processing += format("fft_radix%d(smem,twiddles+%d,x,%d,%d);", radix, twiddle_size, n, dft_size/radix);
+            if ((radix == 2 && dft_size % 4 == 0) || (radix == 3 && dft_size % 6 == 0))
+                radix_processing += format("fft_radix%d_B2(smem,twiddles+%d,ind,%d,%d);", radix, twiddle_size, n, dft_size/radix);
+            else
+                radix_processing += format("fft_radix%d(smem,twiddles+%d,ind,%d,%d);", radix, twiddle_size, n, dft_size/radix);
             twiddle_size += (radix-1)*n;
             n *= radix;
         }
@@ -2126,20 +2140,39 @@ struct OCL_FftPlan
                               dft_size, dft_size/thread_count, radix_processing.c_str());
     }
 
-    bool enqueueTransform(InputArray _src, OutputArray _dst, int nonzero_rows) const
+    bool enqueueTransform(InputArray _src, OutputArray _dst, int dft_size, int flags, bool rows = true) const
     {
         UMat src = _src.getUMat();
-        _dst.create(src.size(), src.type());
         UMat dst = _dst.getUMat();
 
-        size_t globalsize[2] = { thread_count, nonzero_rows };
-        size_t localsize[2] = { thread_count, 1 };
+        size_t globalsize[2];
+        size_t localsize[2];
+        String kernel_name;
 
-        ocl::Kernel k("fft_multi_radix", ocl::core::fft_oclsrc, buildOptions);
+        if (rows)
+        {
+            globalsize[0] = thread_count; globalsize[1] = dft_size;
+            localsize[0] = thread_count; localsize[1] = 1;
+            kernel_name = "fft_multi_radix_rows";
+        }
+        else
+        {
+            globalsize[0] = dft_size; globalsize[1] = thread_count;
+            localsize[0] = 1; localsize[1] = thread_count;
+            kernel_name = "fft_multi_radix_cols";
+        }
+        
+        String options = buildOptions;
+        if (src.channels() == 1)
+            options += " -D REAL_INPUT";
+        if (dst.channels() == 1)
+            options += " -D CCS_OUTPUT";
+
+        ocl::Kernel k(kernel_name.c_str(), ocl::core::fft_oclsrc, options);
         if (k.empty())
             return false;
 
-        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnlyNoSize(dst), ocl::KernelArg::PtrReadOnly(twiddles), thread_count, nonzero_rows);
+        k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(twiddles), thread_count, dft_size);
         return k.run(2, globalsize, localsize, false);
     }
 };
@@ -2231,16 +2264,16 @@ static bool ocl_packToCCS(InputArray _src, OutputArray _dst, int flags)
     return true;
 }
 
-static bool ocl_dft_C2C_row(InputArray _src, OutputArray _dst, int nonzero_rows, int flags)
+static bool ocl_dft_C2C_rows(InputArray _src, OutputArray _dst, int nonzero_rows, int flags)
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
-
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-    if (depth == CV_64F && !doubleSupport)
-        return false;
-    
     const OCL_FftPlan* plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.cols(), flags);
-    return plan->enqueueTransform(_src, _dst, nonzero_rows);
+    return plan->enqueueTransform(_src, _dst, nonzero_rows, flags, true);
+}
+
+static bool ocl_dft_C2C_cols(InputArray _src, OutputArray _dst, int flags)
+{
+    const OCL_FftPlan* plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.rows(), flags);
+    return plan->enqueueTransform(_src, _dst, _src.cols(), flags, false);
 }
 
 static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_rows)
@@ -2262,7 +2295,10 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
     int real_input = cn == 1 ? 1 : 0;
     int real_output = (flags & DFT_REAL_OUTPUT) != 0;
     bool inv = (flags & DFT_INVERSE) != 0 ? 1 : 0;
-    bool is1d = (flags & DFT_ROWS) != 0 || src.rows == 1;
+
+    if( nonzero_rows <= 0 || nonzero_rows > _src.rows() )
+        nonzero_rows = _src.rows();
+    bool is1d = (flags & DFT_ROWS) != 0 || nonzero_rows == 1;
 
     // if output format is not specified
     if (complex_output + real_output == 0)
@@ -2276,6 +2312,19 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
         }
     }
 
+    // Forward Complex to CCS not supported
+    if (complex_input && real_output && !inv)
+    {
+        real_output = 0; 
+        complex_output = 1;
+    }
+    // Inverse CCS to Complex not supported
+    if (real_input && complex_output && inv)
+    {
+        complex_output = 0;
+        real_output = 1;
+    }
+
     UMat input, output;
     if (complex_input)
     {
@@ -2285,12 +2334,7 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
     {
         if (!inv)
         {
-            // in case real input convert it to complex
-            input.create(src.size(), CV_MAKE_TYPE(depth, 2));
-            std::vector<UMat> planes;
-            planes.push_back(src);
-            planes.push_back(UMat::zeros(src.size(), CV_32F));
-            merge(planes, input);
+            input = src;
         } 
         else
         {
@@ -2298,31 +2342,34 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
         }
     }
 
-
-    UMat dst = _dst.getUMat();
     if (complex_output)
     {
         if (real_input && is1d && !inv)
             output.create(src.size(), CV_32FC2);
         else
-            output = dst;
+        {
+            _dst.create(src.size(), CV_32FC2); 
+            output = _dst.getUMat();
+        }
     } else
     {
-        output.create(src.size(), CV_32FC2);
+        // CCS
+        if (is1d)
+        {
+            _dst.create(src.size(), CV_32FC1);
+            output = _dst.getUMat();
+        }
+        else
+            output.create(src.size(), CV_32FC2);
     }
 
-    if( nonzero_rows <= 0 || nonzero_rows > _src.rows() )
-        nonzero_rows = _src.rows();
-
-    if (!ocl_dft_C2C_row(input, output, nonzero_rows, flags))
+    if (!ocl_dft_C2C_rows(input, output, nonzero_rows, flags))
         return false;
 
-    if ((flags & DFT_ROWS) == 0 && nonzero_rows > 1)
+    if (!is1d)
     {
-        transpose(output, output);
-        if (!ocl_dft_C2C_row(output, output, output.rows, flags))
+        if (!ocl_dft_C2C_cols(output, output, flags))
             return false;
-        transpose(output, output);
     }
 
     if (complex_output)
@@ -2335,12 +2382,18 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
     else
     {
         if (!inv)
-            ocl_packToCCS(output, _dst, flags);
+        {
+            if (!is1d)
+                ocl_packToCCS(output, _dst, flags);
+            else
+                _dst.assign(output);
+        }
         else
         {
             // copy real part to dst
         }
     }
+    //printf("OCL!\n");
     return true;
 }
 
