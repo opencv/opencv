@@ -1,4 +1,3 @@
-
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
@@ -13,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -41,9 +41,8 @@
 //
 //M*/
 
-#include "opencv2/core/core.hpp"
-#import "opencv2/highgui/cap_ios.h"
+#ifdef __OPENCV_BUILD
+#error this is a compatibility header which should not be used inside the OpenCV library
+#endif
 
-UIImage* MatToUIImage(const cv::Mat& image);
-void UIImageToMat(const UIImage* image,
-                         cv::Mat& m, bool alphaExist = false);
+#include "opencv2/videoio.hpp"

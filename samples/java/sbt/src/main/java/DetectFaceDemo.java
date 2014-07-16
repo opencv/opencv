@@ -4,7 +4,7 @@ import org.opencv.core.MatOfRect;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
-import org.opencv.highgui.Highgui;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.objdetect.CascadeClassifier;
 
 /*
@@ -19,7 +19,7 @@ public class DetectFaceDemo {
         // directory.
         CascadeClassifier faceDetector = new CascadeClassifier(getClass()
                 .getResource("/lbpcascade_frontalface.xml").getPath());
-        Mat image = Highgui.imread(getClass().getResource(
+        Mat image = Imgcodecs.imread(getClass().getResource(
                 "/AverageMaleFace.jpg").getPath());
 
         // Detect faces in the image.
@@ -39,6 +39,6 @@ public class DetectFaceDemo {
         // Save the visualized detection.
         String filename = "faceDetection.png";
         System.out.println(String.format("Writing %s", filename));
-        Highgui.imwrite(filename, image);
+        Imgcodecs.imwrite(filename, image);
     }
 }

@@ -81,7 +81,4 @@
 #define __END__  __CV_END__
 #define EXIT __CV_EXIT__
 
-CVAPI(int) cvHaveImageReader(const char* filename);
-CVAPI(int) cvHaveImageWriter(const char* filename);
-
-#endif /* __HIGHGUI_H_ */
+#endif /* __IMGCODECS_H_ */

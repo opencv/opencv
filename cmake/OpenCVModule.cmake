@@ -758,7 +758,7 @@ function(ocv_add_accuracy_tests)
     __ocv_parse_test_sources(TEST ${ARGN})
 
     # opencv_imgcodecs is required for imread/imwrite
-    set(test_deps ${the_module} opencv_ts opencv_imgcodecs opencv_highgui ${OPENCV_TEST_${the_module}_DEPS} ${OPENCV_MODULE_opencv_ts_DEPS})
+    set(test_deps ${the_module} opencv_ts opencv_imgcodecs opencv_videoio ${OPENCV_TEST_${the_module}_DEPS} ${OPENCV_MODULE_opencv_ts_DEPS})
     ocv_check_dependencies(${test_deps})
 
     if(OCV_DEPENDENCIES_FOUND)
@@ -811,7 +811,7 @@ function(ocv_add_samples)
   string(REGEX REPLACE "^opencv_" "" module_id ${the_module})
 
   if(BUILD_EXAMPLES AND EXISTS "${samples_path}")
-    set(samples_deps ${the_module} ${OPENCV_MODULE_${the_module}_DEPS} opencv_imgcodecs opencv_highgui ${ARGN})
+    set(samples_deps ${the_module} ${OPENCV_MODULE_${the_module}_DEPS} opencv_imgcodecs opencv_videoio opencv_highgui ${ARGN})
     ocv_check_dependencies(${samples_deps})
 
     if(OCV_DEPENDENCIES_FOUND)

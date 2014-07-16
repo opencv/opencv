@@ -41,7 +41,7 @@
  //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/videoio.hpp"
 
 using namespace cv;
 using namespace std;
@@ -114,7 +114,7 @@ public:
             cap.set(CAP_PROP_POS_FRAMES, 0);
             int N = (int)cap.get(CAP_PROP_FRAME_COUNT);
 
-            // See the same hack in CV_HighGuiTest::SpecificVideoTest for explanation.
+            // See the same hack in CV_VideoIOTest::SpecificVideoTest for explanation.
             int allowed_extra_frames = 0;
             if (fmt.fourcc == VideoWriter::fourcc('M', 'P', 'E', 'G') && fmt.ext == "mkv")
                 allowed_extra_frames = 1;
@@ -148,8 +148,6 @@ public:
                                idx1, idx);
                     ts->printf(ts->LOG, "Saving both frames ...\n");
                     ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
-                    // imwrite("opencv_test_highgui_postest_actual.png", img);
-                    // imwrite("opencv_test_highgui_postest_expected.png", img0);
                     return;
                 }
 
@@ -167,8 +165,6 @@ public:
                     ts->printf(ts->LOG, "The frame read after positioning to %d is incorrect (PSNR=%g)\n", idx, err);
                     ts->printf(ts->LOG, "Saving both frames ...\n");
                     ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
-                    // imwrite("opencv_test_highgui_postest_actual.png", img);
-                    // imwrite("opencv_test_highgui_postest_expected.png", img0);
                     return;
                 }
             }
@@ -179,5 +175,5 @@ public:
 };
 
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT && BUILD_WITH_VIDEO_OUTPUT_SUPPORT && defined HAVE_FFMPEG
-TEST(Highgui_Video, seek_random_synthetic) { CV_PositioningTest test; test.safe_run(); }
+TEST(Videoio_Video, seek_random_synthetic) { CV_PositioningTest test; test.safe_run(); }
 #endif
