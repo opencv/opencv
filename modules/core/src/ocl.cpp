@@ -2375,7 +2375,7 @@ struct Context::Impl
         AutoBuffer<void*> dlistbuf(nd0*2+1);
         cl_device_id* dlist = (cl_device_id*)(void**)dlistbuf;
         cl_device_id* dlist_new = dlist + nd0;
-        CV_OclDbgAssert(clGetDeviceIDs(	pl, dtype, nd0, dlist, &nd0 ) == CL_SUCCESS);
+        CV_OclDbgAssert(clGetDeviceIDs(    pl, dtype, nd0, dlist, &nd0 ) == CL_SUCCESS);
         String name0;
 
         for(i = 0; i < nd0; i++)

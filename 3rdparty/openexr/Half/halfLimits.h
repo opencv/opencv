@@ -44,7 +44,7 @@
 
 //------------------------------------------------------------------------
 //
-//	C++ standard library-style numeric_limits for class half
+//    C++ standard library-style numeric_limits for class half
 //
 //------------------------------------------------------------------------
 

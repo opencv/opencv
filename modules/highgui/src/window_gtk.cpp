@@ -557,10 +557,10 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
 #ifdef HAVE_GTHREAD
 int thread_started=0;
 static gpointer icvWindowThreadLoop();
-GMutex*				   last_key_mutex;
-GCond*				   cond_have_key;
-GMutex*				   window_mutex;
-GThread*			   window_thread;
+GMutex*                   last_key_mutex;
+GCond*                   cond_have_key;
+GMutex*                   window_mutex;
+GThread*               window_thread;
 GtkWidget*             cvTopLevelWidget = 0;
 #endif
 

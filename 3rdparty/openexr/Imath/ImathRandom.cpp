@@ -35,8 +35,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Routines that generate pseudo-random numbers compatible
-//	with the standard erand48(), nrand48(), etc. functions.
+//    Routines that generate pseudo-random numbers compatible
+//    with the standard erand48(), nrand48(), etc. functions.
 //
 //-----------------------------------------------------------------------------
 
@@ -121,8 +121,8 @@ erand48 (unsigned short state[3])
 
     union {double d; Int64 i;} u;
 
-    u.i = (Int64 (0x3ff)    << 52) |	// sign and exponent
-      (Int64 (state[2]) << 36) |	// significand
+    u.i = (Int64 (0x3ff)    << 52) |    // sign and exponent
+      (Int64 (state[2]) << 36) |    // significand
       (Int64 (state[1]) << 20) |
       (Int64 (state[0]) <<  4) |
       (Int64 (state[2]) >> 12);

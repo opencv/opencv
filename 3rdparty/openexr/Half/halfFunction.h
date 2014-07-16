@@ -39,44 +39,44 @@
 
 //---------------------------------------------------------------------------
 //
-//	halfFunction<T> -- a class for fast evaluation
-//			   of half --> T functions
+//    halfFunction<T> -- a class for fast evaluation
+//               of half --> T functions
 //
-//	The constructor for a halfFunction object,
+//    The constructor for a halfFunction object,
 //
-//	    halfFunction (function,
-//			  domainMin, domainMax,
-//			  defaultValue,
-//			  posInfValue, negInfValue,
-//			  nanValue);
+//        halfFunction (function,
+//              domainMin, domainMax,
+//              defaultValue,
+//              posInfValue, negInfValue,
+//              nanValue);
 //
-//	evaluates the function for all finite half values in the interval
-//	[domainMin, domainMax], and stores the results in a lookup table.
-//	For finite half values that are not in [domainMin, domainMax], the
-//	constructor stores defaultValue in the table.  For positive infinity,
-//	negative infinity and NANs, posInfValue, negInfValue and nanValue
-//	are stored in the table.
+//    evaluates the function for all finite half values in the interval
+//    [domainMin, domainMax], and stores the results in a lookup table.
+//    For finite half values that are not in [domainMin, domainMax], the
+//    constructor stores defaultValue in the table.  For positive infinity,
+//    negative infinity and NANs, posInfValue, negInfValue and nanValue
+//    are stored in the table.
 //
-//	The tabulated function can then be evaluated quickly for arbitrary
-//	half values by calling the the halfFunction object's operator()
-//	method.
+//    The tabulated function can then be evaluated quickly for arbitrary
+//    half values by calling the the halfFunction object's operator()
+//    method.
 //
-//	Example:
+//    Example:
 //
-//	    #include <math.h>
-//	    #include <halfFunction.h>
+//        #include <math.h>
+//        #include <halfFunction.h>
 //
-//	    halfFunction<half> hsin (sin);
+//        halfFunction<half> hsin (sin);
 //
-//	    halfFunction<half> hsqrt (sqrt,		// function
-//				      0, HALF_MAX,	// domain
-//				      half::qNan(),	// sqrt(x) for x < 0
-//				      half::posInf(),	// sqrt(+inf)
-//				      half::qNan(),	// sqrt(-inf)
-//				      half::qNan());	// sqrt(nan)
+//        halfFunction<half> hsqrt (sqrt,        // function
+//                      0, HALF_MAX,    // domain
+//                      half::qNan(),    // sqrt(x) for x < 0
+//                      half::posInf(),    // sqrt(+inf)
+//                      half::qNan(),    // sqrt(-inf)
+//                      half::qNan());    // sqrt(nan)
 //
-//	    half x = hsin (1);
-//	    half y = hsqrt (3.5);
+//        half x = hsin (1);
+//        half y = hsqrt (3.5);
 //
 //---------------------------------------------------------------------------
 
@@ -120,11 +120,11 @@ class halfFunction
     // Evaluation
     //-----------
 
-    T		operator () (half x) const;
+    T        operator () (half x) const;
 
   private:
 #ifdef ILMBASE_HAVE_LARGE_STACK
-    T		_lut[1 << 16];
+    T        _lut[1 << 16];
 #else
     T *         _lut;
 #endif

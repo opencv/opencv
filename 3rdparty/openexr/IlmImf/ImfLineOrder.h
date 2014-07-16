@@ -39,7 +39,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	enum LineOrder
+//    enum LineOrder
 //
 //-----------------------------------------------------------------------------
 
@@ -48,14 +48,14 @@ namespace Imf {
 
 enum LineOrder
 {
-    INCREASING_Y = 0,	// first scan line has lowest y coordinate
+    INCREASING_Y = 0,    // first scan line has lowest y coordinate
 
-    DECREASING_Y = 1,	// first scan line has highest y coordinate
+    DECREASING_Y = 1,    // first scan line has highest y coordinate
 
     RANDOM_Y = 2,       // only for tiled files; tiles are written
                 // in random order
 
-    NUM_LINEORDERS	// number of different line orders
+    NUM_LINEORDERS    // number of different line orders
 };
 
 

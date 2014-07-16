@@ -39,16 +39,16 @@
 
 //----------------------------------------------------------------------
 //
-//	template class Plane3
+//    template class Plane3
 //
-//	The Imath::Plane3<> class represents a half space, so the
-//	normal may point either towards or away from origin.  The
-//	plane P can be represented by Imath::Plane3 as either p or -p
-//	corresponding to the two half-spaces on either side of the
-//	plane. Any function which computes a distance will return
-//	either negative or positive values for the distance indicating
-//	which half-space the point is in. Note that reflection, and
-//	intersection functions will operate as expected.
+//    The Imath::Plane3<> class represents a half space, so the
+//    normal may point either towards or away from origin.  The
+//    plane P can be represented by Imath::Plane3 as either p or -p
+//    corresponding to the two half-spaces on either side of the
+//    plane. Any function which computes a distance will return
+//    either negative or positive values for the distance indicating
+//    which half-space the point is in. Note that reflection, and
+//    intersection functions will operate as expected.
 //
 //----------------------------------------------------------------------
 
@@ -63,8 +63,8 @@ class Plane3
 {
   public:
 
-    Vec3<T>			normal;
-    T				distance;
+    Vec3<T>            normal;
+    T                distance;
 
     Plane3() {}
     Plane3(const Vec3<T> &normal, T distance);
@@ -74,7 +74,7 @@ class Plane3
        const Vec3<T> &point3);
 
     //----------------------
-    //	Various set methods
+    //    Various set methods
     //----------------------
 
     void                        set(const Vec3<T> &normal,
@@ -88,7 +88,7 @@ class Plane3
                     const Vec3<T> &point3 );
 
     //----------------------
-    //	Utilities
+    //    Utilities
     //----------------------
 
     bool                        intersect(const Line3<T> &line,
@@ -97,7 +97,7 @@ class Plane3
     bool                        intersectT(const Line3<T> &line,
                        T &parameter) const;
 
-    T				distanceTo(const Vec3<T> &) const;
+    T                distanceTo(const Vec3<T> &) const;
 
     Vec3<T>                     reflectPoint(const Vec3<T> &) const;
     Vec3<T>                     reflectVector(const Vec3<T> &) const;
@@ -212,8 +212,8 @@ template<class T>
 Plane3<T> operator* (const Plane3<T> &plane, const Matrix44<T> &M)
 {
     //                        T
-    //	                    -1
-    //	Could also compute M    but that would suck.
+    //                        -1
+    //    Could also compute M    but that would suck.
     //
 
     Vec3<T> dir1   = Vec3<T> (1, 0, 0) % plane.normal;

@@ -38,7 +38,7 @@
 
 //----------------------------------------------------------------------------
 //
-//	Implementation of non-template items declared in ImathMatrixAlgo.h
+//    Implementation of non-template items declared in ImathMatrixAlgo.h
 //
 //----------------------------------------------------------------------------
 

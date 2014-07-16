@@ -35,7 +35,7 @@
 
 //----------------------------------------------------------------------------
 //
-//	Implementation of non-template items declared in ImathColorAlgo.h
+//    Implementation of non-template items declared in ImathColorAlgo.h
 //
 //----------------------------------------------------------------------------
 
@@ -116,10 +116,10 @@ rgb2hsv_d(const Vec3<double> &c)
     const double &y = c.y;
     const double &z = c.z;
 
-    double max	 = (x > y) ? ((x > z) ? x : z) : ((y > z) ? y : z);
-    double min	 = (x < y) ? ((x < z) ? x : z) : ((y < z) ? y : z);
+    double max     = (x > y) ? ((x > z) ? x : z) : ((y > z) ? y : z);
+    double min     = (x < y) ? ((x < z) ? x : z) : ((y < z) ? y : z);
     double range = max - min;
-    double val	 = max;
+    double val     = max;
     double sat   = 0;
     double hue   = 0;
 
@@ -129,9 +129,9 @@ rgb2hsv_d(const Vec3<double> &c)
     {
     double h;
 
-    if      (x == max)	h =     (y - z) / range;
-    else if (y == max)	h = 2 + (z - x) / range;
-    else		h = 4 + (x - y) / range;
+    if      (x == max)    h =     (y - z) / range;
+    else if (y == max)    h = 2 + (z - x) / range;
+    else        h = 4 + (x - y) / range;
 
     hue = h/6.;
 
@@ -149,10 +149,10 @@ rgb2hsv_d(const Color4<double> &c)
     const double &g = c.g;
     const double &b = c.b;
 
-    double max	 = (r > g) ? ((r > b) ? r : b) : ((g > b) ? g : b);
-    double min	 = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
+    double max     = (r > g) ? ((r > b) ? r : b) : ((g > b) ? g : b);
+    double min     = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
     double range = max - min;
-    double val	 = max;
+    double val     = max;
     double sat   = 0;
     double hue   = 0;
 
@@ -162,9 +162,9 @@ rgb2hsv_d(const Color4<double> &c)
     {
     double h;
 
-    if      (r == max)	h =     (g - b) / range;
-    else if (g == max)	h = 2 + (b - r) / range;
-    else		h = 4 + (r - g) / range;
+    if      (r == max)    h =     (g - b) / range;
+    else if (g == max)    h = 2 + (b - r) / range;
+    else        h = 4 + (r - g) / range;
 
     hue = h/6.;
 

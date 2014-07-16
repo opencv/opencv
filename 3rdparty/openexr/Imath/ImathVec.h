@@ -39,7 +39,7 @@
 
 //----------------------------------------------------
 //
-//	2D, 3D and 4D point/vector class templates
+//    2D, 3D and 4D point/vector class templates
 //
 //----------------------------------------------------
 
@@ -73,10 +73,10 @@ template <class T> class Vec2
     // Access to elements
     //-------------------
 
-    T			x, y;
+    T            x, y;
 
-    T &			operator [] (int i);
-    const T &		operator [] (int i) const;
+    T &            operator [] (int i);
+    const T &        operator [] (int i) const;
 
 
     //-------------
@@ -95,7 +95,7 @@ template <class T> class Vec2
     Vec2 (const Vec2 &v);
     template <class S> Vec2 (const Vec2<S> &v);
 
-    const Vec2 &	operator = (const Vec2 &v);
+    const Vec2 &    operator = (const Vec2 &v);
 
 
     //----------------------
@@ -103,19 +103,19 @@ template <class T> class Vec2
     //----------------------
 
     template <class S>
-    void		setValue (S a, S b);
+    void        setValue (S a, S b);
 
     template <class S>
-    void		setValue (const Vec2<S> &v);
+    void        setValue (const Vec2<S> &v);
 
     template <class S>
-    void		getValue (S &a, S &b) const;
+    void        getValue (S &a, S &b) const;
 
     template <class S>
-    void		getValue (Vec2<S> &v) const;
+    void        getValue (Vec2<S> &v) const;
 
-    T *			getValue ();
-    const T *		getValue () const;
+    T *            getValue ();
+    const T *        getValue () const;
 
 
     //---------
@@ -123,10 +123,10 @@ template <class T> class Vec2
     //---------
 
     template <class S>
-    bool		operator == (const Vec2<S> &v) const;
+    bool        operator == (const Vec2<S> &v) const;
 
     template <class S>
-    bool		operator != (const Vec2<S> &v) const;
+    bool        operator != (const Vec2<S> &v) const;
 
 
     //-----------------------------------------------------------------------
@@ -134,28 +134,28 @@ template <class T> class Vec2
     //
     // equalWithAbsError (v, e)
     //
-    //	    Returns true if the coefficients of this and v are the same with
-    //	    an absolute error of no more than e, i.e., for all i
+    //        Returns true if the coefficients of this and v are the same with
+    //        an absolute error of no more than e, i.e., for all i
     //
     //      abs (this[i] - v[i]) <= e
     //
     // equalWithRelError (v, e)
     //
-    //	    Returns true if the coefficients of this and v are the same with
-    //	    a relative error of no more than e, i.e., for all i
+    //        Returns true if the coefficients of this and v are the same with
+    //        a relative error of no more than e, i.e., for all i
     //
     //      abs (this[i] - v[i]) <= e * abs (this[i])
     //-----------------------------------------------------------------------
 
-    bool		equalWithAbsError (const Vec2<T> &v, T e) const;
-    bool		equalWithRelError (const Vec2<T> &v, T e) const;
+    bool        equalWithAbsError (const Vec2<T> &v, T e) const;
+    bool        equalWithRelError (const Vec2<T> &v, T e) const;
 
     //------------
     // Dot product
     //------------
 
-    T			dot (const Vec2 &v) const;
-    T			operator ^ (const Vec2 &v) const;
+    T            dot (const Vec2 &v) const;
+    T            operator ^ (const Vec2 &v) const;
 
 
     //------------------------------------------------
@@ -163,52 +163,52 @@ template <class T> class Vec2
     // Vec3 (this->x, this->y, 0) % Vec3 (v.x, v.y, 0)
     //------------------------------------------------
 
-    T			cross (const Vec2 &v) const;
-    T			operator % (const Vec2 &v) const;
+    T            cross (const Vec2 &v) const;
+    T            operator % (const Vec2 &v) const;
 
 
     //------------------------
     // Component-wise addition
     //------------------------
 
-    const Vec2 &	operator += (const Vec2 &v);
-    Vec2		operator + (const Vec2 &v) const;
+    const Vec2 &    operator += (const Vec2 &v);
+    Vec2        operator + (const Vec2 &v) const;
 
 
     //---------------------------
     // Component-wise subtraction
     //---------------------------
 
-    const Vec2 &	operator -= (const Vec2 &v);
-    Vec2		operator - (const Vec2 &v) const;
+    const Vec2 &    operator -= (const Vec2 &v);
+    Vec2        operator - (const Vec2 &v) const;
 
 
     //------------------------------------
     // Component-wise multiplication by -1
     //------------------------------------
 
-    Vec2		operator - () const;
-    const Vec2 &	negate ();
+    Vec2        operator - () const;
+    const Vec2 &    negate ();
 
 
     //------------------------------
     // Component-wise multiplication
     //------------------------------
 
-    const Vec2 &	operator *= (const Vec2 &v);
-    const Vec2 &	operator *= (T a);
-    Vec2		operator * (const Vec2 &v) const;
-    Vec2		operator * (T a) const;
+    const Vec2 &    operator *= (const Vec2 &v);
+    const Vec2 &    operator *= (T a);
+    Vec2        operator * (const Vec2 &v) const;
+    Vec2        operator * (T a) const;
 
 
     //------------------------
     // Component-wise division
     //------------------------
 
-    const Vec2 &	operator /= (const Vec2 &v);
-    const Vec2 &	operator /= (T a);
-    Vec2		operator / (const Vec2 &v) const;
-    Vec2		operator / (T a) const;
+    const Vec2 &    operator /= (const Vec2 &v);
+    const Vec2 &    operator /= (T a);
+    Vec2        operator / (const Vec2 &v) const;
+    Vec2        operator / (T a) const;
 
 
     //----------------------------------------------------------------
@@ -220,33 +220,33 @@ template <class T> class Vec2
     // is 0.0, the result is undefined.
     //----------------------------------------------------------------
 
-    T			length () const;
-    T			length2 () const;
+    T            length () const;
+    T            length2 () const;
 
-    const Vec2 &	normalize ();           // modifies *this
-    const Vec2 &	normalizeExc () throw (Iex::MathExc);
-    const Vec2 &	normalizeNonNull ();
+    const Vec2 &    normalize ();           // modifies *this
+    const Vec2 &    normalizeExc () throw (Iex::MathExc);
+    const Vec2 &    normalizeNonNull ();
 
-    Vec2<T>		normalized () const;	// does not modify *this
-    Vec2<T>		normalizedExc () const throw (Iex::MathExc);
-    Vec2<T>		normalizedNonNull () const;
+    Vec2<T>        normalized () const;    // does not modify *this
+    Vec2<T>        normalizedExc () const throw (Iex::MathExc);
+    Vec2<T>        normalizedNonNull () const;
 
 
     //--------------------------------------------------------
     // Number of dimensions, i.e. number of elements in a Vec2
     //--------------------------------------------------------
 
-    static unsigned int	dimensions() {return 2;}
+    static unsigned int    dimensions() {return 2;}
 
 
     //-------------------------------------------------
     // Limitations of type T (see also class limits<T>)
     //-------------------------------------------------
 
-    static T		baseTypeMin()		{return limits<T>::min();}
-    static T		baseTypeMax()		{return limits<T>::max();}
-    static T		baseTypeSmallest()	{return limits<T>::smallest();}
-    static T		baseTypeEpsilon()	{return limits<T>::epsilon();}
+    static T        baseTypeMin()        {return limits<T>::min();}
+    static T        baseTypeMax()        {return limits<T>::max();}
+    static T        baseTypeSmallest()    {return limits<T>::smallest();}
+    static T        baseTypeEpsilon()    {return limits<T>::epsilon();}
 
 
     //--------------------------------------------------------------
@@ -255,11 +255,11 @@ template <class T> class Vec2
     // refer to T as V::BaseType
     //--------------------------------------------------------------
 
-    typedef T		BaseType;
+    typedef T        BaseType;
 
   private:
 
-    T			lengthTiny () const;
+    T            lengthTiny () const;
 };
 
 
@@ -271,19 +271,19 @@ template <class T> class Vec3
     // Access to elements
     //-------------------
 
-    T			x, y, z;
+    T            x, y, z;
 
-    T &			operator [] (int i);
-    const T &		operator [] (int i) const;
+    T &            operator [] (int i);
+    const T &        operator [] (int i) const;
 
 
     //-------------
     // Constructors
     //-------------
 
-    Vec3 ();			   // no initialization
+    Vec3 ();               // no initialization
     explicit Vec3 (T a);           // (a a a)
-    Vec3 (T a, T b, T c);	   // (a b c)
+    Vec3 (T a, T b, T c);       // (a b c)
 
 
     //---------------------------------
@@ -293,7 +293,7 @@ template <class T> class Vec3
     Vec3 (const Vec3 &v);
     template <class S> Vec3 (const Vec3<S> &v);
 
-    const Vec3 &	operator = (const Vec3 &v);
+    const Vec3 &    operator = (const Vec3 &v);
 
 
     //---------------------------------------------------------
@@ -316,19 +316,19 @@ template <class T> class Vec3
     //----------------------
 
     template <class S>
-    void		setValue (S a, S b, S c);
+    void        setValue (S a, S b, S c);
 
     template <class S>
-    void		setValue (const Vec3<S> &v);
+    void        setValue (const Vec3<S> &v);
 
     template <class S>
-    void		getValue (S &a, S &b, S &c) const;
+    void        getValue (S &a, S &b, S &c) const;
 
     template <class S>
-    void		getValue (Vec3<S> &v) const;
+    void        getValue (Vec3<S> &v) const;
 
-    T *			getValue();
-    const T *		getValue() const;
+    T *            getValue();
+    const T *        getValue() const;
 
 
     //---------
@@ -336,91 +336,91 @@ template <class T> class Vec3
     //---------
 
     template <class S>
-    bool		operator == (const Vec3<S> &v) const;
+    bool        operator == (const Vec3<S> &v) const;
 
     template <class S>
-    bool		operator != (const Vec3<S> &v) const;
+    bool        operator != (const Vec3<S> &v) const;
 
     //-----------------------------------------------------------------------
     // Compare two vectors and test if they are "approximately equal":
     //
     // equalWithAbsError (v, e)
     //
-    //	    Returns true if the coefficients of this and v are the same with
-    //	    an absolute error of no more than e, i.e., for all i
+    //        Returns true if the coefficients of this and v are the same with
+    //        an absolute error of no more than e, i.e., for all i
     //
     //      abs (this[i] - v[i]) <= e
     //
     // equalWithRelError (v, e)
     //
-    //	    Returns true if the coefficients of this and v are the same with
-    //	    a relative error of no more than e, i.e., for all i
+    //        Returns true if the coefficients of this and v are the same with
+    //        a relative error of no more than e, i.e., for all i
     //
     //      abs (this[i] - v[i]) <= e * abs (this[i])
     //-----------------------------------------------------------------------
 
-    bool		equalWithAbsError (const Vec3<T> &v, T e) const;
-    bool		equalWithRelError (const Vec3<T> &v, T e) const;
+    bool        equalWithAbsError (const Vec3<T> &v, T e) const;
+    bool        equalWithRelError (const Vec3<T> &v, T e) const;
 
     //------------
     // Dot product
     //------------
 
-    T			dot (const Vec3 &v) const;
-    T			operator ^ (const Vec3 &v) const;
+    T            dot (const Vec3 &v) const;
+    T            operator ^ (const Vec3 &v) const;
 
 
     //---------------------------
     // Right-handed cross product
     //---------------------------
 
-    Vec3		cross (const Vec3 &v) const;
-    const Vec3 &	operator %= (const Vec3 &v);
-    Vec3		operator % (const Vec3 &v) const;
+    Vec3        cross (const Vec3 &v) const;
+    const Vec3 &    operator %= (const Vec3 &v);
+    Vec3        operator % (const Vec3 &v) const;
 
 
     //------------------------
     // Component-wise addition
     //------------------------
 
-    const Vec3 &	operator += (const Vec3 &v);
-    Vec3		operator + (const Vec3 &v) const;
+    const Vec3 &    operator += (const Vec3 &v);
+    Vec3        operator + (const Vec3 &v) const;
 
 
     //---------------------------
     // Component-wise subtraction
     //---------------------------
 
-    const Vec3 &	operator -= (const Vec3 &v);
-    Vec3		operator - (const Vec3 &v) const;
+    const Vec3 &    operator -= (const Vec3 &v);
+    Vec3        operator - (const Vec3 &v) const;
 
 
     //------------------------------------
     // Component-wise multiplication by -1
     //------------------------------------
 
-    Vec3		operator - () const;
-    const Vec3 &	negate ();
+    Vec3        operator - () const;
+    const Vec3 &    negate ();
 
 
     //------------------------------
     // Component-wise multiplication
     //------------------------------
 
-    const Vec3 &	operator *= (const Vec3 &v);
-    const Vec3 &	operator *= (T a);
-    Vec3		operator * (const Vec3 &v) const;
-    Vec3		operator * (T a) const;
+    const Vec3 &    operator *= (const Vec3 &v);
+    const Vec3 &    operator *= (T a);
+    Vec3        operator * (const Vec3 &v) const;
+    Vec3        operator * (T a) const;
 
 
     //------------------------
     // Component-wise division
     //------------------------
 
-    const Vec3 &	operator /= (const Vec3 &v);
-    const Vec3 &	operator /= (T a);
-    Vec3		operator / (const Vec3 &v) const;
-    Vec3		operator / (T a) const;
+    const Vec3 &    operator /= (const Vec3 &v);
+    const Vec3 &    operator /= (T a);
+    Vec3        operator / (const Vec3 &v) const;
+    Vec3        operator / (T a) const;
 
 
     //----------------------------------------------------------------
@@ -432,33 +432,33 @@ template <class T> class Vec3
     // is 0.0, the result is undefined.
     //----------------------------------------------------------------
 
-    T			length () const;
-    T			length2 () const;
+    T            length () const;
+    T            length2 () const;
 
-    const Vec3 &	normalize ();           // modifies *this
-    const Vec3 &	normalizeExc () throw (Iex::MathExc);
-    const Vec3 &	normalizeNonNull ();
+    const Vec3 &    normalize ();           // modifies *this
+    const Vec3 &    normalizeExc () throw (Iex::MathExc);
+    const Vec3 &    normalizeNonNull ();
 
-    Vec3<T>		normalized () const;	// does not modify *this
-    Vec3<T>		normalizedExc () const throw (Iex::MathExc);
-    Vec3<T>		normalizedNonNull () const;
+    Vec3<T>        normalized () const;    // does not modify *this
+    Vec3<T>        normalizedExc () const throw (Iex::MathExc);
+    Vec3<T>        normalizedNonNull () const;
 
 
     //--------------------------------------------------------
     // Number of dimensions, i.e. number of elements in a Vec3
     //--------------------------------------------------------
 
-    static unsigned int	dimensions() {return 3;}
+    static unsigned int    dimensions() {return 3;}
 
 
     //-------------------------------------------------
     // Limitations of type T (see also class limits<T>)
     //-------------------------------------------------
 
-    static T		baseTypeMin()		{return limits<T>::min();}
-    static T		baseTypeMax()		{return limits<T>::max();}
-    static T		baseTypeSmallest()	{return limits<T>::smallest();}
-    static T		baseTypeEpsilon()	{return limits<T>::epsilon();}
+    static T        baseTypeMin()        {return limits<T>::min();}
+    static T        baseTypeMax()        {return limits<T>::max();}
+    static T        baseTypeSmallest()    {return limits<T>::smallest();}
+    static T        baseTypeEpsilon()    {return limits<T>::epsilon();}
 
 
     //--------------------------------------------------------------
@@ -467,11 +467,11 @@ template <class T> class Vec3
     // refer to T as V::BaseType
     //--------------------------------------------------------------
 
-    typedef T		BaseType;
+    typedef T        BaseType;
 
   private:
 
-    T			lengthTiny () const;
+    T            lengthTiny () const;
 };
 
 
@@ -494,9 +494,9 @@ template <class T> class Vec4
     // Constructors
     //-------------
 
-    Vec4 ();			   // no initialization
+    Vec4 ();               // no initialization
     explicit Vec4 (T a);           // (a a a a)
-    Vec4 (T a, T b, T c, T d);	   // (a b c d)
+    Vec4 (T a, T b, T c, T d);       // (a b c d)
 
 
     //---------------------------------
@@ -532,29 +532,29 @@ template <class T> class Vec4
     //
     // equalWithAbsError (v, e)
     //
-    //	    Returns true if the coefficients of this and v are the same with
-    //	    an absolute error of no more than e, i.e., for all i
+    //        Returns true if the coefficients of this and v are the same with
+    //        an absolute error of no more than e, i.e., for all i
     //
     //      abs (this[i] - v[i]) <= e
     //
     // equalWithRelError (v, e)
     //
-    //	    Returns true if the coefficients of this and v are the same with
-    //	    a relative error of no more than e, i.e., for all i
+    //        Returns true if the coefficients of this and v are the same with
+    //        a relative error of no more than e, i.e., for all i
     //
     //      abs (this[i] - v[i]) <= e * abs (this[i])
     //-----------------------------------------------------------------------
 
-    bool		equalWithAbsError (const Vec4<T> &v, T e) const;
-    bool		equalWithRelError (const Vec4<T> &v, T e) const;
+    bool        equalWithAbsError (const Vec4<T> &v, T e) const;
+    bool        equalWithRelError (const Vec4<T> &v, T e) const;
 
 
     //------------
     // Dot product
     //------------
 
-    T			dot (const Vec4 &v) const;
-    T			operator ^ (const Vec4 &v) const;
+    T            dot (const Vec4 &v) const;
+    T            operator ^ (const Vec4 &v) const;
 
 
     //-----------------------------------
@@ -621,7 +621,7 @@ template <class T> class Vec4
     const Vec4 &    normalizeExc () throw (Iex::MathExc);
     const Vec4 &    normalizeNonNull ();
 
-    Vec4<T>         normalized () const;	// does not modify *this
+    Vec4<T>         normalized () const;    // does not modify *this
     Vec4<T>         normalizedExc () const throw (Iex::MathExc);
     Vec4<T>         normalizedNonNull () const;
 
@@ -630,17 +630,17 @@ template <class T> class Vec4
     // Number of dimensions, i.e. number of elements in a Vec4
     //--------------------------------------------------------
 
-    static unsigned int	dimensions() {return 4;}
+    static unsigned int    dimensions() {return 4;}
 
 
     //-------------------------------------------------
     // Limitations of type T (see also class limits<T>)
     //-------------------------------------------------
 
-    static T		baseTypeMin()		{return limits<T>::min();}
-    static T		baseTypeMax()		{return limits<T>::max();}
-    static T		baseTypeSmallest()	{return limits<T>::smallest();}
-    static T		baseTypeEpsilon()	{return limits<T>::epsilon();}
+    static T        baseTypeMin()        {return limits<T>::min();}
+    static T        baseTypeMax()        {return limits<T>::max();}
+    static T        baseTypeSmallest()    {return limits<T>::smallest();}
+    static T        baseTypeEpsilon()    {return limits<T>::epsilon();}
 
 
     //--------------------------------------------------------------
@@ -649,11 +649,11 @@ template <class T> class Vec4
     // refer to T as V::BaseType
     //--------------------------------------------------------------
 
-    typedef T		BaseType;
+    typedef T        BaseType;
 
   private:
 
-    T			lengthTiny () const;
+    T            lengthTiny () const;
 };
 
 
@@ -662,21 +662,21 @@ template <class T> class Vec4
 //--------------
 
 template <class T>
-std::ostream &	operator << (std::ostream &s, const Vec2<T> &v);
+std::ostream &    operator << (std::ostream &s, const Vec2<T> &v);
 
 template <class T>
-std::ostream &	operator << (std::ostream &s, const Vec3<T> &v);
+std::ostream &    operator << (std::ostream &s, const Vec3<T> &v);
 
 template <class T>
-std::ostream &	operator << (std::ostream &s, const Vec4<T> &v);
+std::ostream &    operator << (std::ostream &s, const Vec4<T> &v);
 
 //----------------------------------------------------
 // Reverse multiplication: S * Vec2<T> and S * Vec3<T>
 //----------------------------------------------------
 
-template <class T> Vec2<T>	operator * (T a, const Vec2<T> &v);
-template <class T> Vec3<T>	operator * (T a, const Vec3<T> &v);
-template <class T> Vec4<T>	operator * (T a, const Vec4<T> &v);
+template <class T> Vec2<T>    operator * (T a, const Vec2<T> &v);
+template <class T> Vec3<T>    operator * (T a, const Vec3<T> &v);
+template <class T> Vec4<T>    operator * (T a, const Vec4<T> &v);
 
 
 //-------------------------

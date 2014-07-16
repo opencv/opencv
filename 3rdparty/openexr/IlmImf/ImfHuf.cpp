@@ -37,11 +37,11 @@
 
 //-----------------------------------------------------------------------------
 //
-//	16-bit Huffman compression and decompression.
+//    16-bit Huffman compression and decompression.
 //
-//	The source code in this file is derived from the 8-bit
-//	Huffman compression and decompression routines written
-//	by Christian Rouet for his PIZ image file format.
+//    The source code in this file is derived from the 8-bit
+//    Huffman compression and decompression routines written
+//    by Christian Rouet for his PIZ image file format.
 //
 //-----------------------------------------------------------------------------
 
@@ -61,20 +61,20 @@ namespace Imf {
 namespace {
 
 
-const int HUF_ENCBITS = 16;			// literal (value) bit length
-const int HUF_DECBITS = 14;			// decoding bit size (>= 8)
+const int HUF_ENCBITS = 16;            // literal (value) bit length
+const int HUF_DECBITS = 14;            // decoding bit size (>= 8)
 
-const int HUF_ENCSIZE = (1 << HUF_ENCBITS) + 1;	// encoding table size
-const int HUF_DECSIZE =  1 << HUF_DECBITS;	// decoding table size
+const int HUF_ENCSIZE = (1 << HUF_ENCBITS) + 1;    // encoding table size
+const int HUF_DECSIZE =  1 << HUF_DECBITS;    // decoding table size
 const int HUF_DECMASK = HUF_DECSIZE - 1;
 
 
 struct HufDec
-{				// short code		long code
+{                // short code        long code
                 //-------------------------------
-    int		len:8;		// code length		0
-    int		lit:24;		// lit			p size
-    int	*	p;		// 0			lits
+    int        len:8;        // code length        0
+    int        lit:24;        // lit            p size
+    int    *    p;        // 0            lits
 };
 
 
@@ -189,18 +189,18 @@ getBits (int nBits, Int64 &c, int &lc, const char *&in)
 
 //
 // Build a "canonical" Huffman code table:
-//	- for each (uncompressed) symbol, hcode contains the length
-//	  of the corresponding code (in the compressed data)
-//	- canonical codes are computed and stored in hcode
-//	- the rules for constructing canonical codes are as follows:
-//	  * shorter codes (if filled with zeroes to the right)
-//	    have a numerically higher value than longer codes
-//	  * for codes with the same length, numerical values
-//	    increase with numerical symbol values
-//	- because the canonical code table can be constructed from
-//	  symbol lengths alone, the code table can be transmitted
-//	  without sending the actual code values
-//	- see http://www.compressconsult.com/huffman/
+//    - for each (uncompressed) symbol, hcode contains the length
+//      of the corresponding code (in the compressed data)
+//    - canonical codes are computed and stored in hcode
+//    - the rules for constructing canonical codes are as follows:
+//      * shorter codes (if filled with zeroes to the right)
+//        have a numerically higher value than longer codes
+//      * for codes with the same length, numerical values
+//        increase with numerical symbol values
+//    - because the canonical code table can be constructed from
+//      symbol lengths alone, the code table can be transmitted
+//      without sending the actual code values
+//    - see http://www.compressconsult.com/huffman/
 //
 
 void
@@ -254,11 +254,11 @@ hufCanonicalCodeTable (Int64 hcode[HUF_ENCSIZE])
 
 //
 // Compute Huffman codes (based on frq input) and store them in frq:
-//	- code structure is : [63:lsb - 6:msb] | [5-0: bit length];
-//	- max code length is 58 bits;
-//	- codes outside the range [im-iM] have a null length (unused values);
-//	- original frequencies are destroyed;
-//	- encoding tables are used by hufEncode() and hufBuildDecTable();
+//    - code structure is : [63:lsb - 6:msb] | [5-0: bit length];
+//    - max code length is 58 bits;
+//    - codes outside the range [im-iM] have a null length (unused values);
+//    - original frequencies are destroyed;
+//    - encoding tables are used by hufEncode() and hufBuildDecTable();
 //
 
 
@@ -270,9 +270,9 @@ struct FHeapCompare
 
 void
 hufBuildEncTable
-    (Int64*	frq,	// io: input frequencies [HUF_ENCSIZE], output table
-     int*	im,	//  o: min frq index
-     int*	iM)	//  o: max frq index
+    (Int64*    frq,    // io: input frequencies [HUF_ENCSIZE], output table
+     int*    im,    //  o: min frq index
+     int*    iM)    //  o: max frq index
 {
     //
     // This function assumes that when it is called, array frq
@@ -443,17 +443,17 @@ hufBuildEncTable
 
 //
 // Pack an encoding table:
-//	- only code lengths, not actual codes, are stored
-//	- runs of zeroes are compressed as follows:
+//    - only code lengths, not actual codes, are stored
+//    - runs of zeroes are compressed as follows:
 //
-//	  unpacked		packed
-//	  --------------------------------
-//	  1 zero		0	(6 bits)
-//	  2 zeroes		59
-//	  3 zeroes		60
-//	  4 zeroes		61
-//	  5 zeroes		62
-//	  n zeroes (6 or more)	63 n-6	(6 + 8 bits)
+//      unpacked        packed
+//      --------------------------------
+//      1 zero        0    (6 bits)
+//      2 zeroes        59
+//      3 zeroes        60
+//      4 zeroes        61
+//      5 zeroes        62
+//      n zeroes (6 or more)    63 n-6    (6 + 8 bits)
 //
 
 const int SHORT_ZEROCODE_RUN = 59;
@@ -464,10 +464,10 @@ const int LONGEST_LONG_RUN   = 255 + SHORTEST_LONG_RUN;
 
 void
 hufPackEncTable
-    (const Int64*	hcode,		// i : encoding table [HUF_ENCSIZE]
-     int		im,		// i : min hcode index
-     int		iM,		// i : max hcode index
-     char**		pcode)		//  o: ptr to packed table (updated)
+    (const Int64*    hcode,        // i : encoding table [HUF_ENCSIZE]
+     int        im,        // i : min hcode index
+     int        iM,        // i : max hcode index
+     char**        pcode)        //  o: ptr to packed table (updated)
 {
     char *p = *pcode;
     Int64 c = 0;
@@ -520,11 +520,11 @@ hufPackEncTable
 
 void
 hufUnpackEncTable
-    (const char**	pcode,		// io: ptr to packed table (updated)
-     int		ni,		// i : input size (in bytes)
-     int		im,		// i : min hcode index
-     int		iM,		// i : max hcode index
-     Int64*		hcode)		//  o: encoding table [HUF_ENCSIZE]
+    (const char**    pcode,        // io: ptr to packed table (updated)
+     int        ni,        // i : input size (in bytes)
+     int        im,        // i : min hcode index
+     int        iM,        // i : max hcode index
+     Int64*        hcode)        //  o: encoding table [HUF_ENCSIZE]
 {
     memset (hcode, 0, sizeof (Int64) * HUF_ENCSIZE);
 
@@ -584,7 +584,7 @@ hufUnpackEncTable
 
 void
 hufClearDecTable
-    (HufDec *		hdecod)		// io: (allocated by caller)
+    (HufDec *        hdecod)        // io: (allocated by caller)
                         //     decoding table [HUF_DECSIZE]
 {
     memset (hdecod, 0, sizeof (HufDec) * HUF_DECSIZE);
@@ -593,18 +593,18 @@ hufClearDecTable
 
 //
 // Build a decoding hash table based on the encoding table hcode:
-//	- short codes (<= HUF_DECBITS) are resolved with a single table access;
-//	- long code entry allocations are not optimized, because long codes are
-//	  unfrequent;
-//	- decoding tables are used by hufDecode();
+//    - short codes (<= HUF_DECBITS) are resolved with a single table access;
+//    - long code entry allocations are not optimized, because long codes are
+//      unfrequent;
+//    - decoding tables are used by hufDecode();
 //
 
 void
 hufBuildDecTable
-    (const Int64*	hcode,		// i : encoding table
-     int		im,		// i : min index in hcode
-     int		iM,		// i : max index in hcode
-     HufDec *		hdecod)		//  o: (allocated by caller)
+    (const Int64*    hcode,        // i : encoding table
+     int        im,        // i : min index in hcode
+     int        iM,        // i : max index in hcode
+     HufDec *        hdecod)        //  o: (allocated by caller)
                         //     decoding table [HUF_DECSIZE]
 {
     //
@@ -698,7 +698,7 @@ hufBuildDecTable
 //
 
 void
-hufFreeDecTable (HufDec *hdecod)	// io: Decoding table
+hufFreeDecTable (HufDec *hdecod)    // io: Decoding table
 {
     for (int i = 0; i < HUF_DECSIZE; i++)
     {
@@ -747,16 +747,16 @@ sendCode (Int64 sCode, int runCount, Int64 runCode,
 //
 
 int
-hufEncode				// return: output size (in bits)
-    (const Int64*  	    hcode,	// i : encoding table
-     const unsigned short*  in,		// i : uncompressed input buffer
-     const int     	    ni,		// i : input buffer size (in bytes)
-     int           	    rlc,	// i : rl code
-     char*         	    out)	//  o: compressed output buffer
+hufEncode                // return: output size (in bits)
+    (const Int64*          hcode,    // i : encoding table
+     const unsigned short*  in,        // i : uncompressed input buffer
+     const int             ni,        // i : input buffer size (in bytes)
+     int                   rlc,    // i : rl code
+     char*                 out)    //  o: compressed output buffer
 {
     char *outStart = out;
-    Int64 c = 0;	// bits not yet written to out
-    int lc = 0;		// number of valid bits in c (LSB)
+    Int64 c = 0;    // bits not yet written to out
+    int lc = 0;        // number of valid bits in c (LSB)
     int s = in[0];
     int cs = 0;
 
@@ -806,40 +806,40 @@ hufEncode				// return: output size (in bits)
 // instead of "inline" functions.
 //
 
-#define getChar(c, lc, in)			\
-{						\
-    c = (c << 8) | *(unsigned char *)(in++);	\
-    lc += 8;					\
+#define getChar(c, lc, in)            \
+{                        \
+    c = (c << 8) | *(unsigned char *)(in++);    \
+    lc += 8;                    \
 }
 
 
-#define getCode(po, rlc, c, lc, in, out, oe)	\
-{						\
-    if (po == rlc)				\
-    {						\
-    if (lc < 8)				\
-        getChar(c, lc, in);			\
+#define getCode(po, rlc, c, lc, in, out, oe)    \
+{                        \
+    if (po == rlc)                \
+    {                        \
+    if (lc < 8)                \
+        getChar(c, lc, in);            \
                         \
-    lc -= 8;				\
+    lc -= 8;                \
                         \
-    unsigned char cs = (c >> lc);		\
+    unsigned char cs = (c >> lc);        \
                         \
-    if (out + cs > oe)			\
-        tooMuchData();			\
+    if (out + cs > oe)            \
+        tooMuchData();            \
                         \
-    unsigned short s = out[-1];		\
+    unsigned short s = out[-1];        \
                         \
-    while (cs-- > 0)			\
-        *out++ = s;				\
-    }						\
-    else if (out < oe)				\
-    {						\
-    *out++ = po;				\
-    }						\
-    else					\
-    {						\
-    tooMuchData();				\
-    }						\
+    while (cs-- > 0)            \
+        *out++ = s;                \
+    }                        \
+    else if (out < oe)                \
+    {                        \
+    *out++ = po;                \
+    }                        \
+    else                    \
+    {                        \
+    tooMuchData();                \
+    }                        \
 }
 
 
@@ -849,13 +849,13 @@ hufEncode				// return: output size (in bits)
 
 void
 hufDecode
-    (const Int64 * 	hcode,	// i : encoding table
-     const HufDec * 	hdecod,	// i : decoding table
-     const char* 	in,	// i : compressed input buffer
-     int		ni,	// i : input size (in bits)
-     int		rlc,	// i : run-length code
-     int		no,	// i : expected output size (in bytes)
-     unsigned short*	out)	//  o: uncompressed output buffer
+    (const Int64 *     hcode,    // i : encoding table
+     const HufDec *     hdecod,    // i : decoding table
+     const char*     in,    // i : compressed input buffer
+     int        ni,    // i : input size (in bits)
+     int        rlc,    // i : run-length code
+     int        no,    // i : expected output size (in bytes)
+     unsigned short*    out)    //  o: uncompressed output buffer
 {
     Int64 c = 0;
     int lc = 0;
@@ -901,9 +901,9 @@ hufDecode
 
         for (j = 0; j < pl.lit; j++)
         {
-            int	l = hufLength (hcode[pl.p[j]]);
+            int    l = hufLength (hcode[pl.p[j]]);
 
-            while (lc < l && in < ie)	// get more bits
+            while (lc < l && in < ie)    // get more bits
             getChar (c, lc, in);
 
             if (lc >= l)
@@ -1028,7 +1028,7 @@ hufCompress (const unsigned short raw[],
     writeUInt (compressed +  4, iM);
     writeUInt (compressed +  8, tableLength);
     writeUInt (compressed + 12, nBits);
-    writeUInt (compressed + 16, 0);	// room for future extensions
+    writeUInt (compressed + 16, 0);    // room for future extensions
 
     return dataStart + dataLength - compressed;
 }

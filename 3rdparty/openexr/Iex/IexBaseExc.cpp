@@ -36,7 +36,7 @@
 
 //---------------------------------------------------------------------
 //
-//	Constructors and destructors for our exception base class.
+//    Constructors and destructors for our exception base class.
 //
 //---------------------------------------------------------------------
 

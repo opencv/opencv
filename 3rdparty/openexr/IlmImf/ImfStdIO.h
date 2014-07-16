@@ -38,8 +38,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Low-level file input and output for OpenEXR
-//	based on C++ standard iostreams.
+//    Low-level file input and output for OpenEXR
+//    based on C++ standard iostreams.
 //
 //-----------------------------------------------------------------------------
 
@@ -77,15 +77,15 @@ class StdIFStream: public IStream
 
     virtual ~StdIFStream ();
 
-    virtual bool	read (char c[/*n*/], int n);
-    virtual Int64	tellg ();
-    virtual void	seekg (Int64 pos);
-    virtual void	clear ();
+    virtual bool    read (char c[/*n*/], int n);
+    virtual Int64    tellg ();
+    virtual void    seekg (Int64 pos);
+    virtual void    clear ();
 
   private:
 
-    std::ifstream *	_is;
-    bool		_deleteStream;
+    std::ifstream *    _is;
+    bool        _deleteStream;
 };
 
 
@@ -117,14 +117,14 @@ class StdOFStream: public OStream
 
     virtual ~StdOFStream ();
 
-    virtual void	write (const char c[/*n*/], int n);
-    virtual Int64	tellp ();
-    virtual void	seekp (Int64 pos);
+    virtual void    write (const char c[/*n*/], int n);
+    virtual Int64    tellp ();
+    virtual void    seekp (Int64 pos);
 
   private:
 
-    std::ofstream *	_os;
-    bool		_deleteStream;
+    std::ofstream *    _os;
+    bool        _deleteStream;
 };
 
 
@@ -139,15 +139,15 @@ class StdOSStream: public OStream
 
     StdOSStream ();
 
-    virtual void	write (const char c[/*n*/], int n);
-    virtual Int64	tellp ();
-    virtual void	seekp (Int64 pos);
+    virtual void    write (const char c[/*n*/], int n);
+    virtual Int64    tellp ();
+    virtual void    seekp (Int64 pos);
 
-    std::string		str () const {return _os.str();}
+    std::string        str () const {return _os.str();}
 
   private:
 
-    std::ostringstream 	_os;
+    std::ostringstream     _os;
 };
 
 

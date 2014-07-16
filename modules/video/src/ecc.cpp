@@ -392,8 +392,8 @@ double cv::findTransformECC(InputArray templateImage,
     Mat templateFloat = Mat(hs, ws, CV_32F);// to store the (smoothed) template
     Mat imageFloat    = Mat(hd, wd, CV_32F);// to store the (smoothed) input image
     Mat imageWarped   = Mat(hs, ws, CV_32F);// to store the warped zero-mean input image
-    Mat allOnes		= Mat::ones(hd, wd, CV_8U); //to use it for mask warping
-    Mat imageMask		= Mat(hs, ws, CV_8U); //to store the final mask
+    Mat allOnes        = Mat::ones(hd, wd, CV_8U); //to use it for mask warping
+    Mat imageMask        = Mat(hs, ws, CV_8U); //to store the final mask
 
     //gaussian filtering is optional
     src.convertTo(templateFloat, templateFloat.type());

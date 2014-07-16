@@ -34,10 +34,10 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Rational numbers
+//    Rational numbers
 //
-//	The double-to-Rational conversion code below
-//	was contributed to OpenEXR by Greg Ward.
+//    The double-to-Rational conversion code below
+//    was contributed to OpenEXR by Greg Ward.
 //
 //-----------------------------------------------------------------------------
 
@@ -95,23 +95,23 @@ Rational::Rational (double x)
 
     if (x >= 0)
     {
-    sign = 1;	// positive
+    sign = 1;    // positive
     }
     else if (x < 0)
     {
-    sign = -1;	// negative
+    sign = -1;    // negative
     x = -x;
     }
     else
     {
-    n = 0;		// NaN
+    n = 0;        // NaN
     d = 0;
     return;
     }
 
     if (x >= (1U << 31) - 0.5)
     {
-    n = sign;	// infinity
+    n = sign;    // infinity
     d = 0;
     return;
     }

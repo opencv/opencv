@@ -131,8 +131,8 @@ template<class T> Matrix44<T> nextFrame
     Vec3<T>&            ti,             // Previous tangent vector
     Vec3<T>&            tj )            // Current tangent vector
 {
-    Vec3<T> a(0.0, 0.0, 0.0);		// Rotation axis.
-    T r = 0.0;				// Rotation angle.
+    Vec3<T> a(0.0, 0.0, 0.0);        // Rotation axis.
+    T r = 0.0;                // Rotation angle.
 
     if( ti.length() != 0.0 && tj.length() != 0.0 )
     {

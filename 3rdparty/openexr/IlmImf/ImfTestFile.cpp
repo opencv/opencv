@@ -34,9 +34,9 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Utility routines to test quickly if a given
-//	file is an OpenEXR file, and whether the
-//	file is scanline-based or tiled.
+//    Utility routines to test quickly if a given
+//    file is an OpenEXR file, and whether the
+//    file is scanline-based or tiled.
 //
 //-----------------------------------------------------------------------------
 

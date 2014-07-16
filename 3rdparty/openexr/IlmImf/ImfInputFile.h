@@ -38,8 +38,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class InputFile -- a scanline-based interface that can be used
-//	to read both scanline-based and tiled OpenEXR image files.
+//    class InputFile -- a scanline-based interface that can be used
+//    to read both scanline-based and tiled OpenEXR image files.
 //
 //-----------------------------------------------------------------------------
 
@@ -94,21 +94,21 @@ class InputFile
     // Access to the file name
     //------------------------
 
-    const char *	fileName () const;
+    const char *    fileName () const;
 
 
     //--------------------------
     // Access to the file header
     //--------------------------
 
-    const Header &	header () const;
+    const Header &    header () const;
 
 
     //----------------------------------
     // Access to the file format version
     //----------------------------------
 
-    int			version () const;
+    int            version () const;
 
 
     //-----------------------------------------------------------
@@ -122,14 +122,14 @@ class InputFile
     // to readPixels().
     //-----------------------------------------------------------
 
-    void		setFrameBuffer (const FrameBuffer &frameBuffer);
+    void        setFrameBuffer (const FrameBuffer &frameBuffer);
 
 
     //-----------------------------------
     // Access to the current frame buffer
     //-----------------------------------
 
-    const FrameBuffer &	frameBuffer () const;
+    const FrameBuffer &    frameBuffer () const;
 
 
     //---------------------------------------------------------------
@@ -141,7 +141,7 @@ class InputFile
     // writing may have been aborted prematurely.)
     //---------------------------------------------------------------
 
-    bool		isComplete () const;
+    bool        isComplete () const;
 
 
     //---------------------------------------------------------------
@@ -163,8 +163,8 @@ class InputFile
     //
     //---------------------------------------------------------------
 
-    void		readPixels (int scanLine1, int scanLine2);
-    void		readPixels (int scanLine);
+    void        readPixels (int scanLine1, int scanLine2);
+    void        readPixels (int scanLine);
 
 
     //----------------------------------------------
@@ -173,7 +173,7 @@ class InputFile
     // used to implement OutputFile::copyPixels()).
     //----------------------------------------------
 
-    void		rawPixelData (int firstScanLine,
+    void        rawPixelData (int firstScanLine,
                       const char *&pixelData,
                       int &pixelDataSize);
 
@@ -183,7 +183,7 @@ class InputFile
     // used to implement TiledOutputFile::copyPixels()).
     //--------------------------------------------------
 
-    void		rawTileData (int &dx, int &dy,
+    void        rawTileData (int &dx, int &dy,
                      int &lx, int &ly,
                      const char *&pixelData,
                      int &pixelDataSize);
@@ -192,15 +192,15 @@ class InputFile
 
   private:
 
-    InputFile (const InputFile &);			// not implemented
-    InputFile & operator = (const InputFile &);		// not implemented
+    InputFile (const InputFile &);            // not implemented
+    InputFile & operator = (const InputFile &);        // not implemented
 
-    void		initialize ();
-    TiledInputFile *	tFile ();
+    void        initialize ();
+    TiledInputFile *    tFile ();
 
     friend void TiledOutputFile::copyPixels (InputFile &);
 
-    Data *		_data;
+    Data *        _data;
 };
 
 

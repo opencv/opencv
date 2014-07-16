@@ -39,8 +39,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class Channel
-//	class ChannelList
+//    class Channel
+//    class ChannelList
 //
 //-----------------------------------------------------------------------------
 
@@ -60,7 +60,7 @@ struct Channel
     // Data type; see ImfPixelType.h
     //------------------------------
 
-    PixelType		type;
+    PixelType        type;
 
 
     //--------------------------------------------
@@ -71,8 +71,8 @@ struct Channel
     //
     //--------------------------------------------
 
-    int			xSampling;
-    int			ySampling;
+    int            xSampling;
+    int            ySampling;
 
 
     //--------------------------------------------------------------
@@ -90,7 +90,7 @@ struct Channel
     // between 1.0 and 1.1.
     //--------------------------------------------------------------
 
-    bool		pLinear;
+    bool        pLinear;
 
 
     //------------
@@ -107,7 +107,7 @@ struct Channel
     // Operator ==
     //------------
 
-    bool		operator == (const Channel &other) const;
+    bool        operator == (const Channel &other) const;
 };
 
 
@@ -119,35 +119,35 @@ class ChannelList
     // Add a channel
     //--------------
 
-    void			insert (const char name[],
+    void            insert (const char name[],
                     const Channel &channel);
 
-    void			insert (const std::string &name,
+    void            insert (const std::string &name,
                     const Channel &channel);
 
     //------------------------------------------------------------------
     // Access to existing channels:
     //
-    // [n]		Returns a reference to the channel with name n.
-    //			If no channel with name n exists, an Iex::ArgExc
-    //			is thrown.
+    // [n]        Returns a reference to the channel with name n.
+    //            If no channel with name n exists, an Iex::ArgExc
+    //            is thrown.
     //
-    // findChannel(n)	Returns a pointer to the channel with name n,
-    //			or 0 if no channel with name n exists.
+    // findChannel(n)    Returns a pointer to the channel with name n,
+    //            or 0 if no channel with name n exists.
     //
     //------------------------------------------------------------------
 
-    Channel &			operator [] (const char name[]);
-    const Channel &		operator [] (const char name[]) const;
+    Channel &            operator [] (const char name[]);
+    const Channel &        operator [] (const char name[]) const;
 
-    Channel &			operator [] (const std::string &name);
-    const Channel &		operator [] (const std::string &name) const;
+    Channel &            operator [] (const std::string &name);
+    const Channel &        operator [] (const std::string &name) const;
 
-    Channel *			findChannel (const char name[]);
-    const Channel *		findChannel (const char name[]) const;
+    Channel *            findChannel (const char name[]);
+    const Channel *        findChannel (const char name[]) const;
 
-    Channel *			findChannel (const std::string &name);
-    const Channel *		findChannel (const std::string &name) const;
+    Channel *            findChannel (const std::string &name);
+    const Channel *        findChannel (const std::string &name) const;
 
 
     //-------------------------------------------
@@ -159,17 +159,17 @@ class ChannelList
     class Iterator;
     class ConstIterator;
 
-    Iterator			begin ();
-    ConstIterator		begin () const;
+    Iterator            begin ();
+    ConstIterator        begin () const;
 
-    Iterator			end ();
-    ConstIterator		end () const;
+    Iterator            end ();
+    ConstIterator        end () const;
 
-    Iterator			find (const char name[]);
-    ConstIterator		find (const char name[]) const;
+    Iterator            find (const char name[]);
+    ConstIterator        find (const char name[]) const;
 
-    Iterator			find (const std::string &name);
-    ConstIterator		find (const std::string &name) const;
+    Iterator            find (const std::string &name);
+    ConstIterator        find (const std::string &name) const;
 
 
     //-----------------------------------------------------------------
@@ -195,30 +195,30 @@ class ChannelList
     // "." only at the beginning or at the end are not considered
     // to be part of any layer.
     //
-    // layers(lns)		sorts the channels in this ChannelList
-    //				into layers and stores the names of
-    //				all layers, sorted alphabetically,
-    //				into string set lns.
+    // layers(lns)        sorts the channels in this ChannelList
+    //                into layers and stores the names of
+    //                all layers, sorted alphabetically,
+    //                into string set lns.
     //
-    // channelsInLayer(ln,f,l)	stores a pair of iterators in f and l
-    // 				such that the loop
+    // channelsInLayer(ln,f,l)    stores a pair of iterators in f and l
+    //                 such that the loop
     //
-    // 				for (ConstIterator i = f; i != l; ++i)
-    // 				   ...
+    //                 for (ConstIterator i = f; i != l; ++i)
+    //                    ...
     //
-    //				iterates over all channels in layer ln.
-    //				channelsInLayer (ln, l, p) calls
-    //				channelsWithPrefix (ln + ".", l, p).
+    //                iterates over all channels in layer ln.
+    //                channelsInLayer (ln, l, p) calls
+    //                channelsWithPrefix (ln + ".", l, p).
     //
     //-----------------------------------------------------------------
 
-    void		layers (std::set <std::string> &layerNames) const;
+    void        layers (std::set <std::string> &layerNames) const;
 
-    void		channelsInLayer (const std::string &layerName,
+    void        channelsInLayer (const std::string &layerName,
                          Iterator &first,
                      Iterator &last);
 
-    void		channelsInLayer (const std::string &layerName,
+    void        channelsInLayer (const std::string &layerName,
                          ConstIterator &first,
                      ConstIterator &last) const;
 
@@ -230,24 +230,24 @@ class ChannelList
     // such that the following loop iterates over all channels whose name
     // begins with string p:
     //
-    //		for (ConstIterator i = f; i != l; ++i)
-    //		    ...
+    //        for (ConstIterator i = f; i != l; ++i)
+    //            ...
     //
     //-------------------------------------------------------------------
 
-    void			channelsWithPrefix (const char prefix[],
+    void            channelsWithPrefix (const char prefix[],
                             Iterator &first,
                             Iterator &last);
 
-    void			channelsWithPrefix (const char prefix[],
+    void            channelsWithPrefix (const char prefix[],
                             ConstIterator &first,
                             ConstIterator &last) const;
 
-    void			channelsWithPrefix (const std::string &prefix,
+    void            channelsWithPrefix (const std::string &prefix,
                             Iterator &first,
                             Iterator &last);
 
-    void			channelsWithPrefix (const std::string &prefix,
+    void            channelsWithPrefix (const std::string &prefix,
                             ConstIterator &first,
                             ConstIterator &last) const;
 
@@ -255,11 +255,11 @@ class ChannelList
     // Operator ==
     //------------
 
-    bool			operator == (const ChannelList &other) const;
+    bool            operator == (const ChannelList &other) const;
 
   private:
 
-    ChannelMap			_map;
+    ChannelMap            _map;
 };
 
 
@@ -274,11 +274,11 @@ class ChannelList::Iterator
     Iterator ();
     Iterator (const ChannelList::ChannelMap::iterator &i);
 
-    Iterator &			operator ++ ();
-    Iterator 			operator ++ (int);
+    Iterator &            operator ++ ();
+    Iterator             operator ++ (int);
 
-    const char *		name () const;
-    Channel &			channel () const;
+    const char *        name () const;
+    Channel &            channel () const;
 
   private:
 
@@ -296,11 +296,11 @@ class ChannelList::ConstIterator
     ConstIterator (const ChannelList::ChannelMap::const_iterator &i);
     ConstIterator (const ChannelList::Iterator &other);
 
-    ConstIterator &		operator ++ ();
-    ConstIterator 		operator ++ (int);
+    ConstIterator &        operator ++ ();
+    ConstIterator         operator ++ (int);
 
-    const char *		name () const;
-    const Channel &		channel () const;
+    const char *        name () const;
+    const Channel &        channel () const;
 
   private:
 

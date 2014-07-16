@@ -38,7 +38,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class TileDescription and enum LevelMode
+//    class TileDescription and enum LevelMode
 //
 //-----------------------------------------------------------------------------
 
@@ -51,7 +51,7 @@ enum LevelMode
     MIPMAP_LEVELS = 1,
     RIPMAP_LEVELS = 2,
 
-    NUM_LEVELMODES	// number of different level modes
+    NUM_LEVELMODES    // number of different level modes
 };
 
 
@@ -60,7 +60,7 @@ enum LevelRoundingMode
     ROUND_DOWN = 0,
     ROUND_UP = 1,
 
-    NUM_ROUNDINGMODES	// number of different rounding modes
+    NUM_ROUNDINGMODES    // number of different rounding modes
 };
 
 
@@ -68,10 +68,10 @@ class TileDescription
 {
   public:
 
-    unsigned int	xSize;		// size of a tile in the x dimension
-    unsigned int	ySize;		// size of a tile in the y dimension
-    LevelMode		mode;
-    LevelRoundingMode	roundingMode;
+    unsigned int    xSize;        // size of a tile in the x dimension
+    unsigned int    ySize;        // size of a tile in the y dimension
+    LevelMode        mode;
+    LevelRoundingMode    roundingMode;
 
     TileDescription (unsigned int xs = 32,
              unsigned int ys = 32,

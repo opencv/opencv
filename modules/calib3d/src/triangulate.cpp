@@ -184,18 +184,18 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
 
 
 /*
- *	The Optimal Triangulation Method (see HZ for details)
- *		For each given point correspondence points1[i] <-> points2[i], and a fundamental matrix F,
- *		computes the corrected correspondences new_points1[i] <-> new_points2[i] that minimize the
- *		geometric error d(points1[i],new_points1[i])^2 + d(points2[i],new_points2[i])^2 (where d(a,b)
- *		is the geometric distance between points a and b) subject to the epipolar constraint
- *		new_points2' * F * new_points1 = 0.
+ *    The Optimal Triangulation Method (see HZ for details)
+ *        For each given point correspondence points1[i] <-> points2[i], and a fundamental matrix F,
+ *        computes the corrected correspondences new_points1[i] <-> new_points2[i] that minimize the
+ *        geometric error d(points1[i],new_points1[i])^2 + d(points2[i],new_points2[i])^2 (where d(a,b)
+ *        is the geometric distance between points a and b) subject to the epipolar constraint
+ *        new_points2' * F * new_points1 = 0.
  *
- *		F_			:	3x3 fundamental matrix
- *		points1_	:	1xN matrix containing the first set of points
- *		points2_	:	1xN matrix containing the second set of points
- *		new_points1	:	the optimized points1_. if this is NULL, the corrected points are placed back in points1_
- *		new_points2	:	the optimized points2_. if this is NULL, the corrected points are placed back in points2_
+ *        F_            :    3x3 fundamental matrix
+ *        points1_    :    1xN matrix containing the first set of points
+ *        points2_    :    1xN matrix containing the second set of points
+ *        new_points1    :    the optimized points1_. if this is NULL, the corrected points are placed back in points1_
+ *        new_points2    :    the optimized points2_. if this is NULL, the corrected points are placed back in points2_
  */
 CV_IMPL void
 cvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1, CvMat *new_points2)

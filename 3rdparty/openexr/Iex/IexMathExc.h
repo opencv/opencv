@@ -46,11 +46,11 @@ namespace Iex {
 // point exceptions.
 //---------------------------------------------------------
 
-DEFINE_EXC (OverflowExc,    MathExc)	// Overflow
-DEFINE_EXC (UnderflowExc,   MathExc)	// Underflow
-DEFINE_EXC (DivzeroExc,     MathExc)	// Division by zero
-DEFINE_EXC (InexactExc,     MathExc)	// Inexact result
-DEFINE_EXC (InvalidFpOpExc, MathExc)	// Invalid operation
+DEFINE_EXC (OverflowExc,    MathExc)    // Overflow
+DEFINE_EXC (UnderflowExc,   MathExc)    // Underflow
+DEFINE_EXC (DivzeroExc,     MathExc)    // Division by zero
+DEFINE_EXC (InexactExc,     MathExc)    // Inexact result
+DEFINE_EXC (InvalidFpOpExc, MathExc)    // Invalid operation
 
 
 } // namespace Iex

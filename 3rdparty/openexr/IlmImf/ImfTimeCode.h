@@ -38,75 +38,75 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class TimeCode
+//    class TimeCode
 //
-// 	A TimeCode object stores time and control codes as described
-// 	in SMPTE standard 12M-1999.  A TimeCode object contains the
-// 	following fields:
+//     A TimeCode object stores time and control codes as described
+//     in SMPTE standard 12M-1999.  A TimeCode object contains the
+//     following fields:
 //
-// 	    Time Address:
+//         Time Address:
 //
-//		hours			integer, range 0 - 23
-//		minutes			integer, range 0 - 59
-//		seconds			integer, range 0 - 59
-//		frame 			integer, range 0 - 29
+//        hours            integer, range 0 - 23
+//        minutes            integer, range 0 - 59
+//        seconds            integer, range 0 - 59
+//        frame             integer, range 0 - 29
 //
-// 	    Flags:
+//         Flags:
 //
-// 		drop frame flag		boolean
-//		color frame flag	boolean
-//		field/phase flag	boolean
-//		bgf0			boolean
-//		bgf1			boolean
-//		bgf2			boolean
+//         drop frame flag        boolean
+//        color frame flag    boolean
+//        field/phase flag    boolean
+//        bgf0            boolean
+//        bgf1            boolean
+//        bgf2            boolean
 //
-// 	    Binary groups for user-defined data and control codes:
+//         Binary groups for user-defined data and control codes:
 //
-//		binary group 1		integer, range 0 - 15
-//		binary group 2		integer, range 0 - 15
-//		...
-//		binary group 8		integer, range 0 - 15
+//        binary group 1        integer, range 0 - 15
+//        binary group 2        integer, range 0 - 15
+//        ...
+//        binary group 8        integer, range 0 - 15
 //
-//	Class TimeCode contains methods to convert between the fields
-//	listed above and a more compact representation where the fields
-//	are packed into two unsigned 32-bit integers.  In the packed
-//	integer representations, bit 0 is the least significant bit,
-//	and bit 31 is the most significant bit of the integer value.
+//    Class TimeCode contains methods to convert between the fields
+//    listed above and a more compact representation where the fields
+//    are packed into two unsigned 32-bit integers.  In the packed
+//    integer representations, bit 0 is the least significant bit,
+//    and bit 31 is the most significant bit of the integer value.
 //
-//	The time address and flags fields can be packed in three
-//	different ways:
+//    The time address and flags fields can be packed in three
+//    different ways:
 //
-//	      bits	packing for	  packing for	    packing for
-//	    		24-frame 	  60-field 	    50-field
-//	    		film		  television	    television
+//          bits    packing for      packing for        packing for
+//                24-frame       60-field         50-field
+//                film          television        television
 //
-//	     0 -  3	frame units	  frame units	    frame units
-//	     4 -  5	frame tens	  frame tens	    frame tens
-//	     6		unused, set to 0  drop frame flag   unused, set to 0
-//	     7		unused, set to 0  color frame flag  color frame flag
-//	     8 - 11	seconds units	  seconds units	    seconds units
-//	    12 - 14	seconds tens	  seconds tens	    seconds tens
-//	    15		phase flag	  field/phase flag  bgf0
-//	    16 - 19	minutes units	  minutes units	    minutes units
-//	    20 - 22	minutes tens	  minutes tens	    minutes tens
-//	    23		bgf0		  bgf0		    bgf2
-//	    24 - 27	hours units	  hours units	    hours units
-//	    28 - 29	hours tens	  hours tens	    hours tens
-//	    30		bgf1		  bgf1		    bgf1
-//	    31		bgf2		  bgf2		    field/phase flag
+//         0 -  3    frame units      frame units        frame units
+//         4 -  5    frame tens      frame tens        frame tens
+//         6        unused, set to 0  drop frame flag   unused, set to 0
+//         7        unused, set to 0  color frame flag  color frame flag
+//         8 - 11    seconds units      seconds units        seconds units
+//        12 - 14    seconds tens      seconds tens        seconds tens
+//        15        phase flag      field/phase flag  bgf0
+//        16 - 19    minutes units      minutes units        minutes units
+//        20 - 22    minutes tens      minutes tens        minutes tens
+//        23        bgf0          bgf0            bgf2
+//        24 - 27    hours units      hours units        hours units
+//        28 - 29    hours tens      hours tens        hours tens
+//        30        bgf1          bgf1            bgf1
+//        31        bgf2          bgf2            field/phase flag
 //
-//	User-defined data and control codes are packed as follows:
+//    User-defined data and control codes are packed as follows:
 //
-//	      bits	field
+//          bits    field
 //
-//	     0 -  3	binary group 1
-//	     4 -  7	binary group 2
-//	     8 - 11	binary group 3
-//	    12 - 15	binary group 4
-//	    16 - 19	binary group 5
-//	    20 - 23	binary group 6
-//	    24 - 27	binary group 7
-//	    28 - 31	binary group 8
+//         0 -  3    binary group 1
+//         4 -  7    binary group 2
+//         8 - 11    binary group 3
+//        12 - 15    binary group 4
+//        16 - 19    binary group 5
+//        20 - 23    binary group 6
+//        24 - 27    binary group 7
+//        28 - 31    binary group 8
 //
 //-----------------------------------------------------------------------------
 
@@ -123,9 +123,9 @@ class TimeCode
 
     enum Packing
     {
-    TV60_PACKING,		// packing for 60-field television
-    TV50_PACKING,		// packing for 50-field television
-    FILM24_PACKING		// packing for 24-frame film
+    TV60_PACKING,        // packing for 60-field television
+    TV50_PACKING,        // packing for 50-field television
+    FILM24_PACKING        // packing for 24-frame film
     };
 
 
@@ -167,57 +167,57 @@ class TimeCode
     // Access to individual fields
     //----------------------------
 
-    int		hours () const;
-    void	setHours (int value);
+    int        hours () const;
+    void    setHours (int value);
 
-    int		minutes () const;
-    void	setMinutes (int value);
+    int        minutes () const;
+    void    setMinutes (int value);
 
-    int		seconds () const;
-    void	setSeconds (int value);
+    int        seconds () const;
+    void    setSeconds (int value);
 
-    int		frame () const;
-    void	setFrame (int value);
+    int        frame () const;
+    void    setFrame (int value);
 
-    bool	dropFrame () const;
-    void	setDropFrame (bool value);
+    bool    dropFrame () const;
+    void    setDropFrame (bool value);
 
-    bool	colorFrame () const;
-    void	setColorFrame (bool value);
+    bool    colorFrame () const;
+    void    setColorFrame (bool value);
 
-    bool	fieldPhase () const;
-    void	setFieldPhase (bool value);
+    bool    fieldPhase () const;
+    void    setFieldPhase (bool value);
 
-    bool	bgf0 () const;
-    void	setBgf0 (bool value);
+    bool    bgf0 () const;
+    void    setBgf0 (bool value);
 
-    bool	bgf1 () const;
-    void	setBgf1 (bool value);
+    bool    bgf1 () const;
+    void    setBgf1 (bool value);
 
-    bool	bgf2 () const;
-    void	setBgf2 (bool value);
+    bool    bgf2 () const;
+    void    setBgf2 (bool value);
 
-    int		binaryGroup (int group) const; // group must be between 1 and 8
-    void	setBinaryGroup (int group, int value);
+    int        binaryGroup (int group) const; // group must be between 1 and 8
+    void    setBinaryGroup (int group, int value);
 
 
     //---------------------------------
     // Access to packed representations
     //---------------------------------
 
-    unsigned int	timeAndFlags (Packing packing = TV60_PACKING) const;
+    unsigned int    timeAndFlags (Packing packing = TV60_PACKING) const;
 
-    void		setTimeAndFlags (unsigned int value,
+    void        setTimeAndFlags (unsigned int value,
                      Packing packing = TV60_PACKING);
 
-    unsigned int	userData () const;
+    unsigned int    userData () const;
 
-    void		setUserData (unsigned int value);
+    void        setUserData (unsigned int value);
 
   private:
 
-    unsigned int	_time;
-    unsigned int	_user;
+    unsigned int    _time;
+    unsigned int    _user;
 };
 
 

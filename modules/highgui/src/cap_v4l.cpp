@@ -1204,7 +1204,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
       capture->buffers[MAX_V4L_BUFFERS].length );
    capture->bufferIndex = MAX_V4L_BUFFERS;
    //printf("got data in buff %d, len=%d, flags=0x%X, seq=%d, used=%d)\n",
-   //	  buf.index, buf.length, buf.flags, buf.sequence, buf.bytesused);
+   //      buf.index, buf.length, buf.flags, buf.sequence, buf.bytesused);
 
    if (-1 == ioctl (capture->deviceHandle, VIDIOC_QBUF, &buf))
        perror ("VIDIOC_QBUF");

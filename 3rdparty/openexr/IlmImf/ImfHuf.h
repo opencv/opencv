@@ -40,21 +40,21 @@
 
 //-----------------------------------------------------------------------------
 //
-//	16-bit Huffman compression and decompression:
+//    16-bit Huffman compression and decompression:
 //
-//	hufCompress (r, nr, c)
+//    hufCompress (r, nr, c)
 //
-//		Compresses the contents of array r (of length nr),
-//		stores the compressed data in array c, and returns
-//		the size of the compressed data (in bytes).
+//        Compresses the contents of array r (of length nr),
+//        stores the compressed data in array c, and returns
+//        the size of the compressed data (in bytes).
 //
-//		To avoid buffer overflows, the size of array c should
-//		be at least 2 * nr + 65536.
+//        To avoid buffer overflows, the size of array c should
+//        be at least 2 * nr + 65536.
 //
-//	hufUncompress (c, nc, r, nr)
+//    hufUncompress (c, nc, r, nr)
 //
-//		Uncompresses the data in array c (with length nc),
-//		and stores the results in array r (with length nr).
+//        Uncompresses the data in array c (with length nc),
+//        and stores the results in array r (with length nr).
 //
 //-----------------------------------------------------------------------------
 

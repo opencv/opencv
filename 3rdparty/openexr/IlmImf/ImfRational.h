@@ -38,15 +38,15 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Rational numbers
+//    Rational numbers
 //
-//	A rational number is represented as pair of integers, n and d.
-//	The value of of the rational number is
+//    A rational number is represented as pair of integers, n and d.
+//    The value of of the rational number is
 //
-//		n/d			for d > 0
-//		positive infinity	for n > 0, d == 0
-//		negative infinity	for n < 0, d == 0
-//		not a number (NaN)	for n == 0, d == 0
+//        n/d            for d > 0
+//        positive infinity    for n > 0, d == 0
+//        negative infinity    for n < 0, d == 0
+//        not a number (NaN)    for n == 0, d == 0
 //
 //-----------------------------------------------------------------------------
 
@@ -56,8 +56,8 @@ class Rational
 {
   public:
 
-    int			n;		// numerator
-    unsigned int	d;		// denominator
+    int            n;        // numerator
+    unsigned int    d;        // denominator
 
 
     //----------------------------------------

@@ -33,8 +33,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Functions related to accessing channels
-//	and views in multi-view OpenEXR files.
+//    Functions related to accessing channels
+//    and views in multi-view OpenEXR files.
 //
 //-----------------------------------------------------------------------------
 
@@ -228,7 +228,7 @@ areCounterparts (const string &channel1,
     //
 
     StringVector chan1 = parseString (channel1);
-    unsigned int size1 = chan1.size();	// number of SECTIONS in string
+    unsigned int size1 = chan1.size();    // number of SECTIONS in string
                         // name (not string length)
 
     StringVector chan2 = parseString (channel2);

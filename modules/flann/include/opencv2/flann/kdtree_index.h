@@ -418,7 +418,7 @@ private:
      */
     void getExactNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, float epsError)
     {
-        //		checkID -= 1;  /* Set a different unique ID for each search. */
+        //        checkID -= 1;  /* Set a different unique ID for each search. */
 
         if (trees_ > 1) {
             fprintf(stderr,"It doesn't make any sense to use more than one tree for exact search");
@@ -468,7 +468,7 @@ private:
                      float epsError, Heap<BranchSt>* heap, DynamicBitset& checked)
     {
         if (result_set.worstDist()<mindist) {
-            //			printf("Ignoring branch, too far\n");
+            //            printf("Ignoring branch, too far\n");
             return;
         }
 
@@ -504,7 +504,7 @@ private:
          */
 
         DistanceType new_distsq = mindist + distance_.accum_dist(val, node->divval, node->divfeat);
-        //		if (2 * checkCount < maxCheck  ||  !result.full()) {
+        //        if (2 * checkCount < maxCheck  ||  !result.full()) {
         if ((new_distsq*epsError < result_set.worstDist())||  !result_set.full()) {
             heap->insert( BranchSt(otherChild, new_distsq) );
         }

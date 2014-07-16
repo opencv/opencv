@@ -84,7 +84,7 @@ class EmdL1
 public:
     EmdL1()
     {
-        m_pRoot	= NULL;
+        m_pRoot    = NULL;
         binsDim1 = 0;
         binsDim2 = 0;
         binsDim3 = 0;
@@ -121,10 +121,10 @@ private:
     cvEMDNodeArray2D m_Nodes; // all nodes
     cvEMDEdgeArray2D m_EdgesRight; // all edges to right
     cvEMDEdgeArray2D m_EdgesUp; // all edges to upward
-    std::vector<cvEMDNodeArray2D>	m_3dNodes; // all nodes for 3D
-    std::vector<cvEMDEdgeArray2D>	m_3dEdgesRight; // all edges to right, 3D
-    std::vector<cvEMDEdgeArray2D>	m_3dEdgesUp; // all edges to upward, 3D
-    std::vector<cvEMDEdgeArray2D>	m_3dEdgesDeep; // all edges to deep, 3D
+    std::vector<cvEMDNodeArray2D>    m_3dNodes; // all nodes for 3D
+    std::vector<cvEMDEdgeArray2D>    m_3dEdgesRight; // all edges to right, 3D
+    std::vector<cvEMDEdgeArray2D>    m_3dEdgesUp; // all edges to upward, 3D
+    std::vector<cvEMDEdgeArray2D>    m_3dEdgesDeep; // all edges to deep, 3D
     std::vector<cvPEmdEdge> m_NBVEdges; // pointers to all NON-BV edges
     std::vector<cvPEmdNode> m_auxQueue; // auxiliary node queue
     cvPEmdNode m_pRoot; // root of the BV Tree
@@ -135,6 +135,6 @@ private:
     // auxiliary variables for searching a new loop
     std::vector<cvPEmdEdge> m_fromLoop;
     std::vector<cvPEmdEdge> m_toLoop;
-    int	m_iFrom;
+    int    m_iFrom;
     int m_iTo;
 };

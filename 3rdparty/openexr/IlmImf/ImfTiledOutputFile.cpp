@@ -34,7 +34,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class TiledOutputFile
+//    class TiledOutputFile
 //
 //-----------------------------------------------------------------------------
 
@@ -88,11 +88,11 @@ namespace {
 
 struct TOutSliceInfo
 {
-    PixelType		type;
-    const char *	base;
-    size_t		xStride;
-    size_t		yStride;
-    bool		zero;
+    PixelType        type;
+    const char *    base;
+    size_t        xStride;
+    size_t        yStride;
+    bool        zero;
     int                 xTileCoords;
     int                 yTileCoords;
 
@@ -127,10 +127,10 @@ TOutSliceInfo::TOutSliceInfo (PixelType t,
 
 struct TileCoord
 {
-    int		dx;
-    int		dy;
-    int		lx;
-    int		ly;
+    int        dx;
+    int        dy;
+    int        lx;
+    int        ly;
 
 
     TileCoord (int xTile = 0, int yTile = 0,
@@ -166,8 +166,8 @@ struct TileCoord
 
 struct BufferedTile
 {
-    char *	pixelData;
-    int		pixelDataSize;
+    char *    pixelData;
+    int        pixelDataSize;
 
     BufferedTile (const char *data, int size):
     pixelData (0),
@@ -189,23 +189,23 @@ typedef map <TileCoord, BufferedTile *> TileMap;
 
 struct TileBuffer
 {
-    Array<char>		buffer;
-    const char *	dataPtr;
-    int			dataSize;
-    Compressor *	compressor;
-    TileCoord		tileCoord;
-    bool		hasException;
-    string		exception;
+    Array<char>        buffer;
+    const char *    dataPtr;
+    int            dataSize;
+    Compressor *    compressor;
+    TileCoord        tileCoord;
+    bool        hasException;
+    string        exception;
 
      TileBuffer (Compressor *comp);
     ~TileBuffer ();
 
-    inline void		wait () {_sem.wait();}
-    inline void		post () {_sem.post();}
+    inline void        wait () {_sem.wait();}
+    inline void        post () {_sem.post();}
 
   protected:
 
-    Semaphore		_sem;
+    Semaphore        _sem;
 };
 
 
@@ -232,52 +232,52 @@ TileBuffer::~TileBuffer ()
 
 struct TiledOutputFile::Data: public Mutex
 {
-    Header		header;			// the image header
-    int			version;		// file format version
-    TileDescription	tileDesc;		// describes the tile layout
-    FrameBuffer		frameBuffer;		// framebuffer to write into
-    Int64		previewPosition;
-    LineOrder		lineOrder;		// the file's lineorder
-    int			minX;			// data window's min x coord
-    int			maxX;			// data window's max x coord
-    int			minY;			// data window's min y coord
-    int			maxY;			// data window's max x coord
+    Header        header;            // the image header
+    int            version;        // file format version
+    TileDescription    tileDesc;        // describes the tile layout
+    FrameBuffer        frameBuffer;        // framebuffer to write into
+    Int64        previewPosition;
+    LineOrder        lineOrder;        // the file's lineorder
+    int            minX;            // data window's min x coord
+    int            maxX;            // data window's max x coord
+    int            minY;            // data window's min y coord
+    int            maxY;            // data window's max x coord
 
-    int			numXLevels;		// number of x levels
-    int			numYLevels;		// number of y levels
-    int *		numXTiles;		// number of x tiles at a level
-    int *		numYTiles;		// number of y tiles at a level
+    int            numXLevels;        // number of x levels
+    int            numYLevels;        // number of y levels
+    int *        numXTiles;        // number of x tiles at a level
+    int *        numYTiles;        // number of y tiles at a level
 
-    TileOffsets		tileOffsets;		// stores offsets in file for
+    TileOffsets        tileOffsets;        // stores offsets in file for
                         // each tile
 
-    Compressor::Format	format;			// compressor's data format
-    vector<TOutSliceInfo> slices;		// info about channels in file
-    OStream *		os;			// file stream to write to
-    bool		deleteStream;
+    Compressor::Format    format;            // compressor's data format
+    vector<TOutSliceInfo> slices;        // info about channels in file
+    OStream *        os;            // file stream to write to
+    bool        deleteStream;
 
-    size_t		maxBytesPerTileLine;	// combined size of a tile line
+    size_t        maxBytesPerTileLine;    // combined size of a tile line
                         // over all channels
 
 
     vector<TileBuffer*> tileBuffers;
-    size_t		tileBufferSize;         // size of a tile buffer
+    size_t        tileBufferSize;         // size of a tile buffer
 
-    Int64		tileOffsetsPosition;	// position of the tile index
-    Int64		currentPosition;	// current position in the file
+    Int64        tileOffsetsPosition;    // position of the tile index
+    Int64        currentPosition;    // current position in the file
 
-    TileMap		tileMap;
-    TileCoord		nextTileToWrite;
+    TileMap        tileMap;
+    TileCoord        nextTileToWrite;
 
      Data (bool del, int numThreads);
     ~Data ();
 
-    inline TileBuffer *	getTileBuffer (int number);
+    inline TileBuffer *    getTileBuffer (int number);
                             // hash function from tile
                         // buffer coords into our
                         // vector of tile buffers
 
-    TileCoord		nextTileCoord (const TileCoord &a);
+    TileCoord        nextTileCoord (const TileCoord &a);
 };
 
 
@@ -650,12 +650,12 @@ class TileBufferTask: public Task
 
     virtual ~TileBufferTask ();
 
-    virtual void		execute ();
+    virtual void        execute ();
 
   private:
 
-    TiledOutputFile::Data *	_ofd;
-    TileBuffer *		_tileBuffer;
+    TiledOutputFile::Data *    _ofd;
+    TileBuffer *        _tileBuffer;
 };
 
 

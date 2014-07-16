@@ -34,7 +34,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	ACES image file I/O.
+//    ACES image file I/O.
 //
 //-----------------------------------------------------------------------------
 
@@ -55,10 +55,10 @@ const Chromaticities &
 acesChromaticities ()
 {
     static const Chromaticities acesChr
-        (V2f (0.73470,  0.26530),	// red
-         V2f (0.00000,  1.00000),	// green
-         V2f (0.00010, -0.07700),	// blue
-         V2f (0.32168,  0.33767));	// white
+        (V2f (0.73470,  0.26530),    // red
+         V2f (0.00000,  1.00000),    // green
+         V2f (0.00010, -0.07700),    // blue
+         V2f (0.32168,  0.33767));    // white
 
     return acesChr;
 }
@@ -71,7 +71,7 @@ class AcesOutputFile::Data
      Data();
     ~Data();
 
-    RgbaOutputFile *	rgbaFile;
+    RgbaOutputFile *    rgbaFile;
 };
 
 
@@ -337,18 +337,18 @@ class AcesInputFile::Data
      Data();
     ~Data();
 
-    void		initColorConversion ();
+    void        initColorConversion ();
 
-    RgbaInputFile *	rgbaFile;
+    RgbaInputFile *    rgbaFile;
 
-    Rgba *		fbBase;
-    size_t		fbXStride;
-    size_t		fbYStride;
-    int			minX;
-    int			maxX;
+    Rgba *        fbBase;
+    size_t        fbXStride;
+    size_t        fbYStride;
+    int            minX;
+    int            maxX;
 
-    bool		mustConvertColor;
-    M44f		fileToAces;
+    bool        mustConvertColor;
+    M44f        fileToAces;
 };
 
 

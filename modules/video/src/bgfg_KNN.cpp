@@ -256,7 +256,7 @@ protected:
 //{ to do - paralelization ...
 //struct KNNInvoker....
 CV_INLINE void
-        _cvUpdatePixelBackgroundNP(	long pixel,const uchar* data, int nchannels, int m_nN,
+        _cvUpdatePixelBackgroundNP(    long pixel,const uchar* data, int nchannels, int m_nN,
         uchar* m_aModel,
         uchar* m_nNextLongUpdate,
         uchar* m_nNextMidUpdate,
@@ -342,7 +342,7 @@ CV_INLINE int
 
     int ndata=nchannels+1;
     long posPixel = pixel * ndata * m_nN * 3;
-//	float k;
+//    float k;
     // now increase the probability for each pixel
     for (int n = 0; n < m_nN*3; n++)
     {
@@ -490,11 +490,11 @@ CV_INLINE void
     Klong=(int)(log(0.1)/log(1-m_fAlphaT))-Kshort-Kmid+1;//Klong
 
     //refresh rates
-    int	m_nShortUpdate = (Kshort/m_nN)+1;
+    int    m_nShortUpdate = (Kshort/m_nN)+1;
     int m_nMidUpdate = (Kmid/m_nN)+1;
     int m_nLongUpdate = (Klong/m_nN)+1;
 
-    //int	m_nShortUpdate = MAX((Kshort/m_nN),m_nN);
+    //int    m_nShortUpdate = MAX((Kshort/m_nN),m_nN);
     //int m_nMidUpdate = MAX((Kmid/m_nN),m_nN);
     //int m_nLongUpdate = MAX((Klong/m_nN),m_nN);
 

@@ -34,7 +34,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class InputFile
+//    class InputFile
 //
 //-----------------------------------------------------------------------------
 
@@ -72,20 +72,20 @@ struct InputFile::Data: public Mutex
 {
     Header              header;
     int                 version;
-    IStream *		is;
-    bool		deleteStream;
+    IStream *        is;
+    bool        deleteStream;
 
-    TiledInputFile *	tFile;
-    ScanLineInputFile *	sFile;
+    TiledInputFile *    tFile;
+    ScanLineInputFile *    sFile;
 
-    LineOrder		lineOrder;      // the file's lineorder
-    int			minY;           // data window's min y coord
-    int			maxY;           // data window's max x coord
+    LineOrder        lineOrder;      // the file's lineorder
+    int            minY;           // data window's min y coord
+    int            maxY;           // data window's max x coord
 
-    FrameBuffer		tFileBuffer;
-    FrameBuffer *	cachedBuffer;
+    FrameBuffer        tFileBuffer;
+    FrameBuffer *    cachedBuffer;
 
-    int			cachedTileY;
+    int            cachedTileY;
     int                 offset;
 
     int                 numThreads;
@@ -93,7 +93,7 @@ struct InputFile::Data: public Mutex
      Data (bool del, int numThreads);
     ~Data ();
 
-    void		deleteCachedBuffer();
+    void        deleteCachedBuffer();
 };
 
 
@@ -253,8 +253,8 @@ bufferedReadPixels (InputFile::Data* ifd, int scanLine1, int scanLine2)
              k != ifd->cachedBuffer->end();
              ++k)
         {
-            Slice fromSlice = k.slice();		// slice to write from
-            Slice toSlice = ifd->tFileBuffer[k.name()];	// slice to write to
+            Slice fromSlice = k.slice();        // slice to write from
+            Slice toSlice = ifd->tFileBuffer[k.name()];    // slice to write to
 
             char *fromPtr, *toPtr;
             int size = pixelTypeSize (toSlice.type);

@@ -34,7 +34,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class Task, class ThreadPool, class TaskGroup
+//    class Task, class ThreadPool, class TaskGroup
 //
 //-----------------------------------------------------------------------------
 
@@ -56,11 +56,11 @@ class WorkerThread: public Thread
 
     WorkerThread (ThreadPool::Data* data);
 
-    virtual void	run ();
+    virtual void    run ();
 
   private:
 
-    ThreadPool::Data *	_data;
+    ThreadPool::Data *    _data;
 };
 
 } //namespace
@@ -71,11 +71,11 @@ struct TaskGroup::Data
      Data ();
     ~Data ();
 
-    void	addTask () ;
-    void	removeTask ();
+    void    addTask () ;
+    void    removeTask ();
 
-    Semaphore	isEmpty;	// used to signal that the taskgroup is empty
-    int		numPending;	// number of pending tasks to still execute
+    Semaphore    isEmpty;    // used to signal that the taskgroup is empty
+    int        numPending;    // number of pending tasks to still execute
 };
 
 
@@ -84,9 +84,9 @@ struct ThreadPool::Data
      Data ();
     ~Data();
 
-    void	finish ();
-    bool	stopped () const;
-    void	stop ();
+    void    finish ();
+    bool    stopped () const;
+    void    stop ();
 
     Semaphore taskSemaphore;        // threads wait on this for ready tasks
     Mutex taskMutex;                // mutual exclusion for the tasks list

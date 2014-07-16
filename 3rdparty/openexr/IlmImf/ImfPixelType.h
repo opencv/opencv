@@ -39,7 +39,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	enum PixelType
+//    enum PixelType
 //
 //-----------------------------------------------------------------------------
 
@@ -48,11 +48,11 @@ namespace Imf {
 
 enum PixelType
 {
-    UINT  = 0,		// unsigned int (32 bit)
-    HALF  = 1,		// half (16 bit floating point)
-    FLOAT = 2,		// float (32 bit floating point)
+    UINT  = 0,        // unsigned int (32 bit)
+    HALF  = 1,        // half (16 bit floating point)
+    FLOAT = 2,        // float (32 bit floating point)
 
-    NUM_PIXELTYPES	// number of different pixel types
+    NUM_PIXELTYPES    // number of different pixel types
 };
 
 

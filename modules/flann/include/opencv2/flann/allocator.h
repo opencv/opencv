@@ -76,7 +76,7 @@ class PooledAllocator
     /* We maintain memory alignment to word boundaries by requiring that all
         allocations be in multiples of the machine wordsize.  */
     /* Size of machine word in bytes.  Must be power of 2. */
-    /* Minimum number of bytes requested at a time from	the system.  Must be multiple of WORDSIZE. */
+    /* Minimum number of bytes requested at a time from    the system.  Must be multiple of WORDSIZE. */
 
 
     int     remaining;  /* Number of bytes left in current block of storage. */

@@ -40,40 +40,40 @@
 
 //-----------------------------------------------------------------------------
 //
-//	ACES image file I/O.
+//    ACES image file I/O.
 //
-//	This header file declares two classes that directly support
-//	image file input and output according to the Academy Image
-//	Interchange Framework.
+//    This header file declares two classes that directly support
+//    image file input and output according to the Academy Image
+//    Interchange Framework.
 //
-//	The Academy Image Interchange file format is a subset of OpenEXR:
+//    The Academy Image Interchange file format is a subset of OpenEXR:
 //
-//	    - Images are stored as scanlines.  Tiles are not allowed.
+//        - Images are stored as scanlines.  Tiles are not allowed.
 //
-//	    - Images contain three color channels, either
-//		    R, G, B (red, green, blue) or
-//		    Y, RY, BY (luminance, sub-sampled chroma)
+//        - Images contain three color channels, either
+//            R, G, B (red, green, blue) or
+//            Y, RY, BY (luminance, sub-sampled chroma)
 //
-//	    - Images may optionally contain an alpha channel.
+//        - Images may optionally contain an alpha channel.
 //
-//	    - Only three compression types are allowed:
-//		    - NO_COMPRESSION (file is not compressed)
-//		    - PIZ_COMPRESSION (lossless)
-//		    - B44A_COMPRESSION (lossy)
+//        - Only three compression types are allowed:
+//            - NO_COMPRESSION (file is not compressed)
+//            - PIZ_COMPRESSION (lossless)
+//            - B44A_COMPRESSION (lossy)
 //
-//	    - The "chromaticities" header attribute must specify
-//	      the ACES RGB primaries and white point.
+//        - The "chromaticities" header attribute must specify
+//          the ACES RGB primaries and white point.
 //
-//	class AcesOutputFile writes an OpenEXR file, enforcing the
-//	restrictions listed above.  Pixel data supplied by application
-//	software must already be in the ACES RGB space.
+//    class AcesOutputFile writes an OpenEXR file, enforcing the
+//    restrictions listed above.  Pixel data supplied by application
+//    software must already be in the ACES RGB space.
 //
-//	class AcesInputFile reads an OpenEXR file.  Pixel data delivered
-//	to application software is guaranteed to be in the ACES RGB space.
-//	If the RGB space of the file is not the same as the ACES space,
-//	then the pixels are automatically converted: the pixels are
-//	converted to CIE XYZ, a color adaptation transform shifts the
-//	white point, and the result is converted to ACES RGB.
+//    class AcesInputFile reads an OpenEXR file.  Pixel data delivered
+//    to application software is guaranteed to be in the ACES RGB space.
+//    If the RGB space of the file is not the same as the ACES space,
+//    then the pixels are automatically converted: the pixels are
+//    converted to CIE XYZ, a color adaptation transform shifts the
+//    white point, and the result is converted to ACES RGB.
 //
 //-----------------------------------------------------------------------------
 
@@ -96,7 +96,7 @@ struct Chromaticities;
 // ACES red, green, blue and white-point chromaticities.
 //
 
-const Chromaticities &	acesChromaticities ();
+const Chromaticities &    acesChromaticities ();
 
 
 //
@@ -179,7 +179,7 @@ class AcesOutputFile
     //
     //------------------------------------------------
 
-    void			setFrameBuffer (const Rgba *base,
+    void            setFrameBuffer (const Rgba *base,
                         size_t xStride,
                         size_t yStride);
 
@@ -189,40 +189,40 @@ class AcesOutputFile
     // The pixels are assumed to contain ACES RGB data.
     //-------------------------------------------------
 
-    void			writePixels (int numScanLines = 1);
-    int				currentScanLine () const;
+    void            writePixels (int numScanLines = 1);
+    int                currentScanLine () const;
 
 
     //--------------------------
     // Access to the file header
     //--------------------------
 
-    const Header &		header () const;
-    const Imath::Box2i &	displayWindow () const;
-    const Imath::Box2i &	dataWindow () const;
-    float			pixelAspectRatio () const;
-    const Imath::V2f		screenWindowCenter () const;
-    float			screenWindowWidth () const;
-    LineOrder			lineOrder () const;
-    Compression			compression () const;
-    RgbaChannels		channels () const;
+    const Header &        header () const;
+    const Imath::Box2i &    displayWindow () const;
+    const Imath::Box2i &    dataWindow () const;
+    float            pixelAspectRatio () const;
+    const Imath::V2f        screenWindowCenter () const;
+    float            screenWindowWidth () const;
+    LineOrder            lineOrder () const;
+    Compression            compression () const;
+    RgbaChannels        channels () const;
 
 
     // --------------------------------------------------------------------
     // Update the preview image (see Imf::OutputFile::updatePreviewImage())
     // --------------------------------------------------------------------
 
-    void			updatePreviewImage (const PreviewRgba[]);
+    void            updatePreviewImage (const PreviewRgba[]);
 
 
   private:
 
-    AcesOutputFile (const AcesOutputFile &);		  // not implemented
+    AcesOutputFile (const AcesOutputFile &);          // not implemented
     AcesOutputFile & operator = (const AcesOutputFile &); // not implemented
 
     class Data;
 
-    Data *			_data;
+    Data *            _data;
 };
 
 
@@ -269,7 +269,7 @@ class AcesInputFile
     //
     //-----------------------------------------------------
 
-    void			setFrameBuffer (Rgba *base,
+    void            setFrameBuffer (Rgba *base,
                         size_t xStride,
                         size_t yStride);
 
@@ -279,41 +279,41 @@ class AcesInputFile
     // Pixels returned will contain ACES RGB data.
     //--------------------------------------------
 
-    void			readPixels (int scanLine1, int scanLine2);
-    void			readPixels (int scanLine);
+    void            readPixels (int scanLine1, int scanLine2);
+    void            readPixels (int scanLine);
 
 
     //--------------------------
     // Access to the file header
     //--------------------------
 
-    const Header &		header () const;
-    const Imath::Box2i &	displayWindow () const;
-    const Imath::Box2i &	dataWindow () const;
-    float			pixelAspectRatio () const;
-    const Imath::V2f		screenWindowCenter () const;
-    float			screenWindowWidth () const;
-    LineOrder			lineOrder () const;
-    Compression			compression () const;
-    RgbaChannels		channels () const;
+    const Header &        header () const;
+    const Imath::Box2i &    displayWindow () const;
+    const Imath::Box2i &    dataWindow () const;
+    float            pixelAspectRatio () const;
+    const Imath::V2f        screenWindowCenter () const;
+    float            screenWindowWidth () const;
+    LineOrder            lineOrder () const;
+    Compression            compression () const;
+    RgbaChannels        channels () const;
     const char *                fileName () const;
-    bool			isComplete () const;
+    bool            isComplete () const;
 
 
     //----------------------------------
     // Access to the file format version
     //----------------------------------
 
-    int				version () const;
+    int                version () const;
 
   private:
 
-    AcesInputFile (const AcesInputFile &);		  // not implemented
+    AcesInputFile (const AcesInputFile &);          // not implemented
     AcesInputFile & operator = (const AcesInputFile &);   // not implemented
 
     class Data;
 
-    Data *			_data;
+    Data *            _data;
 };
 
 

@@ -37,7 +37,7 @@
 
 //----------------------------------------------------------------------------
 //
-//	Int64 -- unsigned 64-bit integers, imported from namespace Imath
+//    Int64 -- unsigned 64-bit integers, imported from namespace Imath
 //
 //----------------------------------------------------------------------------
 

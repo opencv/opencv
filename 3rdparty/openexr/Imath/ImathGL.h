@@ -136,22 +136,22 @@ namespace Imath {
 class GLPushMatrix {
   public:
 
-    GLPushMatrix ()			{ glPushMatrix(); }
-    ~GLPushMatrix()			{ glPopMatrix(); }
+    GLPushMatrix ()            { glPushMatrix(); }
+    ~GLPushMatrix()            { glPopMatrix(); }
 };
 
 class GLPushAttrib {
   public:
 
-    GLPushAttrib (GLbitfield mask)	{ glPushAttrib (mask); }
-    ~GLPushAttrib()			{ glPopAttrib(); }
+    GLPushAttrib (GLbitfield mask)    { glPushAttrib (mask); }
+    ~GLPushAttrib()            { glPopAttrib(); }
 };
 
 class GLBegin {
   public:
 
-    GLBegin (GLenum mode)		{ glBegin (mode); }
-    ~GLBegin()				{ glEnd(); }
+    GLBegin (GLenum mode)        { glBegin (mode); }
+    ~GLBegin()                { glEnd(); }
 };
 
 } // namespace Imath

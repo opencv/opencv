@@ -39,8 +39,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class AutoArray -- a workaround for systems with
-//	insufficient stack space for large auto arrays.
+//    class AutoArray -- a workaround for systems with
+//    insufficient stack space for large auto arrays.
 //
 //-----------------------------------------------------------------------------
 
@@ -64,8 +64,8 @@ namespace Imf {
      AutoArray (): _data (new T [size]) { memset(_data, 0, size*sizeof(T)); }
     ~AutoArray () {delete [] _data;}
 
-    operator T * ()			{return _data;}
-    operator const T * () const	{return _data;}
+    operator T * ()            {return _data;}
+    operator const T * () const    {return _data;}
 
       private:
 
@@ -81,8 +81,8 @@ namespace Imf {
     {
       public:
 
-    operator T * ()			{return _data;}
-    operator const T * () const	{return _data;}
+    operator T * ()            {return _data;}
+    operator const T * () const    {return _data;}
 
       private:
 

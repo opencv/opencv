@@ -40,8 +40,8 @@
 
 //----------------------------------------------------------
 //
-//	A general exception base class, and a few
-//	useful exceptions derived from the base class.
+//    A general exception base class, and a few
+//    useful exceptions derived from the base class.
 //
 //----------------------------------------------------------
 
@@ -68,9 +68,9 @@ class BaseExc: public std::string, public std::exception
     // Constructors and destructor
     //----------------------------
 
-    BaseExc (const char *s = 0) throw();	// std::string (s)
-    BaseExc (const std::string &s) throw();	// std::string (s)
-    BaseExc (std::stringstream &s) throw();	// std::string (s.str())
+    BaseExc (const char *s = 0) throw();    // std::string (s)
+    BaseExc (const std::string &s) throw();    // std::string (s)
+    BaseExc (std::stringstream &s) throw();    // std::string (s.str())
 
     BaseExc (const BaseExc &be) throw();
     virtual ~BaseExc () throw ();
@@ -86,11 +86,11 @@ class BaseExc: public std::string, public std::exception
     // Convenient methods to change the exception's text
     //--------------------------------------------------
 
-    BaseExc &		assign (std::stringstream &s);	// assign (s.str())
-    BaseExc &		operator = (std::stringstream &s);
+    BaseExc &        assign (std::stringstream &s);    // assign (s.str())
+    BaseExc &        operator = (std::stringstream &s);
 
-    BaseExc &		append (std::stringstream &s);	// append (s.str())
-    BaseExc &		operator += (std::stringstream &s);
+    BaseExc &        append (std::stringstream &s);    // append (s.str())
+    BaseExc &        operator += (std::stringstream &s);
 
 
     //--------------------------------------------------
@@ -98,11 +98,11 @@ class BaseExc: public std::string, public std::exception
     // the definitions above.
     //--------------------------------------------------
 
-    BaseExc &		assign (const char *s);
-    BaseExc &		operator = (const char *s);
+    BaseExc &        assign (const char *s);
+    BaseExc &        operator = (const char *s);
 
-    BaseExc &		append (const char *s);
-    BaseExc &		operator += (const char *s);
+    BaseExc &        append (const char *s);
+    BaseExc &        operator += (const char *s);
 
 
     //--------------------------------------------------
@@ -112,11 +112,11 @@ class BaseExc: public std::string, public std::exception
     // has been installed (see below, setStackTracer()).
     //--------------------------------------------------
 
-    const std::string &	stackTrace () const;
+    const std::string &    stackTrace () const;
 
   private:
 
-    std::string		_stackTrace;
+    std::string        _stackTrace;
 };
 
 
@@ -125,13 +125,13 @@ class BaseExc: public std::string, public std::exception
 // class derived directly or indirectly from BaseExc:
 //-----------------------------------------------------
 
-#define DEFINE_EXC(name, base)				        \
-    class name: public base				        \
-    {							        \
+#define DEFINE_EXC(name, base)                        \
+    class name: public base                        \
+    {                                    \
       public:                                                   \
-    name (const char* text=0)      throw(): base (text) {}	\
-    name (const std::string &text) throw(): base (text) {}	\
-    name (std::stringstream &text) throw(): base (text) {}	\
+    name (const char* text=0)      throw(): base (text) {}    \
+    name (const std::string &text) throw(): base (text) {}    \
+    name (std::stringstream &text) throw(): base (text) {}    \
     };
 
 
@@ -139,22 +139,22 @@ class BaseExc: public std::string, public std::exception
 // Some exceptions which should be useful in most programs
 //--------------------------------------------------------
 
-DEFINE_EXC (ArgExc,   BaseExc) 	 // Invalid arguments to a function call
+DEFINE_EXC (ArgExc,   BaseExc)      // Invalid arguments to a function call
 
-DEFINE_EXC (LogicExc, BaseExc) 	 // General error in a program's logic,
+DEFINE_EXC (LogicExc, BaseExc)      // General error in a program's logic,
                  // for example, a function was called
                  // in a context where the call does
                  // not make sense.
 
-DEFINE_EXC (InputExc, BaseExc) 	 // Invalid input data, e.g. from a file
+DEFINE_EXC (InputExc, BaseExc)      // Invalid input data, e.g. from a file
 
-DEFINE_EXC (IoExc, BaseExc) 	 // Input or output operation failed
+DEFINE_EXC (IoExc, BaseExc)      // Input or output operation failed
 
-DEFINE_EXC (MathExc,  BaseExc) 	 // Arithmetic exception; more specific
+DEFINE_EXC (MathExc,  BaseExc)      // Arithmetic exception; more specific
                  // exceptions derived from this class
                  // are defined in ExcMath.h
 
-DEFINE_EXC (ErrnoExc, BaseExc) 	 // Base class for exceptions corresponding
+DEFINE_EXC (ErrnoExc, BaseExc)      // Base class for exceptions corresponding
                  // to errno values (see errno.h); more
                  // specific exceptions derived from this
                  // class are defined in ExcErrno.h
@@ -165,9 +165,9 @@ DEFINE_EXC (NoImplExc, BaseExc)  // Missing method exception e.g. from a
                  // to lazy software people to get back
                  // to work.
 
-DEFINE_EXC (NullExc, BaseExc) 	 // A pointer is inappropriately null.
+DEFINE_EXC (NullExc, BaseExc)      // A pointer is inappropriately null.
 
-DEFINE_EXC (TypeExc, BaseExc) 	 // An object is an inappropriate type,
+DEFINE_EXC (TypeExc, BaseExc)      // An object is an inappropriate type,
                  // i.e. a dynamnic_cast failed.
 
 
@@ -176,31 +176,31 @@ DEFINE_EXC (TypeExc, BaseExc) 	 // An object is an inappropriate type,
 //
 // setStackTracer(st)
 //
-//	installs a stack-tracing routine, st, which will be called from
-//	class BaseExc's constructor every time an exception derived from
-//	BaseExc is thrown.  The stack-tracing routine should return a
-//	string that contains a printable representation of the program's
-//	current call stack.  This string will be stored in the BaseExc
-//	object; the string is accesible via the BaseExc::stackTrace()
-//	method.
+//    installs a stack-tracing routine, st, which will be called from
+//    class BaseExc's constructor every time an exception derived from
+//    BaseExc is thrown.  The stack-tracing routine should return a
+//    string that contains a printable representation of the program's
+//    current call stack.  This string will be stored in the BaseExc
+//    object; the string is accesible via the BaseExc::stackTrace()
+//    method.
 //
 // setStackTracer(0)
 //
-//	removes the current stack tracing routine.  When an exception
-//	derived from BaseExc is thrown, the stack trace string stored
-//	in the BaseExc object will be empty.
+//    removes the current stack tracing routine.  When an exception
+//    derived from BaseExc is thrown, the stack trace string stored
+//    in the BaseExc object will be empty.
 //
 // stackTracer()
 //
-//	returns a pointer to the current stack-tracing routine, or 0
-//	if there is no current stack stack-tracing routine.
+//    returns a pointer to the current stack-tracing routine, or 0
+//    if there is no current stack stack-tracing routine.
 //
 //----------------------------------------------------------------------
 
 typedef std::string (* StackTracer) ();
 
-void		setStackTracer (StackTracer stackTracer);
-StackTracer	stackTracer ();
+void        setStackTracer (StackTracer stackTracer);
+StackTracer    stackTracer ();
 
 
 //-----------------

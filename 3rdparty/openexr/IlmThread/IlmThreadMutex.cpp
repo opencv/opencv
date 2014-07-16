@@ -34,8 +34,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class Mutex, class Lock -- dummy implementation
-//	for platforms that do not support threading
+//    class Mutex, class Lock -- dummy implementation
+//    for platforms that do not support threading
 //
 //-----------------------------------------------------------------------------
 

@@ -39,7 +39,7 @@
 
 //---------------------------------------------------------------------
 //
-//	Functions to solve linear, quadratic or cubic equations
+//    Functions to solve linear, quadratic or cubic equations
 //
 //---------------------------------------------------------------------
 
@@ -51,40 +51,40 @@ namespace Imath {
 //--------------------------------------------------------------------------
 // Find the real solutions of a linear, quadratic or cubic equation:
 //
-//   	function				   equation solved
+//       function                   equation solved
 //
-//   solveLinear (a, b, x)		                      a * x + b == 0
-//   solveQuadratic (a, b, c, x)	            a * x*x + b * x + c == 0
-//   solveNormalizedCubic (r, s, t, x)	    x*x*x + r * x*x + s * x + t == 0
-//   solveCubic (a, b, c, d, x)		a * x*x*x + b * x*x + c * x + d == 0
+//   solveLinear (a, b, x)                              a * x + b == 0
+//   solveQuadratic (a, b, c, x)                a * x*x + b * x + c == 0
+//   solveNormalizedCubic (r, s, t, x)        x*x*x + r * x*x + s * x + t == 0
+//   solveCubic (a, b, c, d, x)        a * x*x*x + b * x*x + c * x + d == 0
 //
 // Return value:
 //
-//	 3	three real solutions, stored in x[0], x[1] and x[2]
-//	 2	two real solutions, stored in x[0] and x[1]
-//	 1	one real solution, stored in x[1]
-//	 0	no real solutions
-//	-1	all real numbers are solutions
+//     3    three real solutions, stored in x[0], x[1] and x[2]
+//     2    two real solutions, stored in x[0] and x[1]
+//     1    one real solution, stored in x[1]
+//     0    no real solutions
+//    -1    all real numbers are solutions
 //
 // Notes:
 //
 //    * It is possible that an equation has real solutions, but that the
-//	solutions (or some intermediate result) are not representable.
-//	In this case, either some of the solutions returned are invalid
-//	(nan or infinity), or, if floating-point exceptions have been
-//	enabled with Iex::mathExcOn(), an Iex::MathExc exception is
-//	thrown.
+//    solutions (or some intermediate result) are not representable.
+//    In this case, either some of the solutions returned are invalid
+//    (nan or infinity), or, if floating-point exceptions have been
+//    enabled with Iex::mathExcOn(), an Iex::MathExc exception is
+//    thrown.
 //
 //    * Cubic equations are solved using Cardano's Formula; even though
-//	only real solutions are produced, some intermediate results are
-//	complex (std::complex<T>).
+//    only real solutions are produced, some intermediate results are
+//    complex (std::complex<T>).
 //
 //--------------------------------------------------------------------------
 
-template <class T> int	solveLinear (T a, T b, T &x);
-template <class T> int	solveQuadratic (T a, T b, T c, T x[2]);
-template <class T> int	solveNormalizedCubic (T r, T s, T t, T x[3]);
-template <class T> int	solveCubic (T a, T b, T c, T d, T x[3]);
+template <class T> int    solveLinear (T a, T b, T &x);
+template <class T> int    solveQuadratic (T a, T b, T c, T x[2]);
+template <class T> int    solveNormalizedCubic (T r, T s, T t, T x[3]);
+template <class T> int    solveCubic (T a, T b, T c, T d, T x[3]);
 
 
 //---------------

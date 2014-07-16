@@ -38,67 +38,67 @@
 
 //----------------------------------------------------------------------------
 //
-//	Xdr -- routines to convert data between the machine's native
-//	format and a machine-independent external data representation:
+//    Xdr -- routines to convert data between the machine's native
+//    format and a machine-independent external data representation:
 //
-//	    write<R> (T &o, S v);	converts a value, v, of type S
-//					into a machine-independent
-//					representation and stores the
-//					result in an output buffer, o.
+//        write<R> (T &o, S v);    converts a value, v, of type S
+//                    into a machine-independent
+//                    representation and stores the
+//                    result in an output buffer, o.
 //
-//	    read<R> (T &i, S &v);	reads the machine-independent
-//					representation of a value of type
-//					S from input buffer i, converts
-//					the value into the machine's native
-//					representation, and stores the result
-//					in v.
+//        read<R> (T &i, S &v);    reads the machine-independent
+//                    representation of a value of type
+//                    S from input buffer i, converts
+//                    the value into the machine's native
+//                    representation, and stores the result
+//                    in v.
 //
-//	    size<S>();			returns the size, in bytes, of the
-//					machine-independent representation
-//					of an object of type S.
+//        size<S>();            returns the size, in bytes, of the
+//                    machine-independent representation
+//                    of an object of type S.
 //
-//	The write() and read() routines are templates; data can be written
-//	to and read from any output or input buffer type T for which a helper
-//	class, R, exits.  Class R must define a method to store a char array
-//	in a T, and a method to read a char array from a T:
+//    The write() and read() routines are templates; data can be written
+//    to and read from any output or input buffer type T for which a helper
+//    class, R, exits.  Class R must define a method to store a char array
+//    in a T, and a method to read a char array from a T:
 //
-//	    struct R
-//	    {
-//	        static void
-//	        writeChars (T &o, const char c[/*n*/], int n)
-//	        {
-//	            ... // Write c[0], c[1] ... c[n-1] to output buffer o.
-//	        }
+//        struct R
+//        {
+//            static void
+//            writeChars (T &o, const char c[/*n*/], int n)
+//            {
+//                ... // Write c[0], c[1] ... c[n-1] to output buffer o.
+//            }
 //
-//	        static void
-//	        readChars (T &i, char c[/*n*/], int n)
-//	        {
-//	            ... // Read n characters from input buffer i
-//		        // and copy them to c[0], c[1] ... c[n-1].
-//	        }
-//	    };
+//            static void
+//            readChars (T &i, char c[/*n*/], int n)
+//            {
+//                ... // Read n characters from input buffer i
+//                // and copy them to c[0], c[1] ... c[n-1].
+//            }
+//        };
 //
-//	Example - writing to and reading from iostreams:
+//    Example - writing to and reading from iostreams:
 //
-//	    struct CharStreamIO
-//	    {
-//	        static void
-//	        writeChars (ostream &os, const char c[], int n)
-//	        {
-//	            os.write (c, n);
-//	        }
+//        struct CharStreamIO
+//        {
+//            static void
+//            writeChars (ostream &os, const char c[], int n)
+//            {
+//                os.write (c, n);
+//            }
 //
-//	        static void
-//	        readChars (istream &is, char c[], int n)
-//	        {
-//	            is.read (c, n);
-//	        }
-//	    };
+//            static void
+//            readChars (istream &is, char c[], int n)
+//            {
+//                is.read (c, n);
+//            }
+//        };
 //
 //          ...
 //
-//	    Xdr::write<CharStreamIO> (os, 3);
-//	    Xdr::write<CharStreamIO> (os, 5.0);
+//        Xdr::write<CharStreamIO> (os, 3);
+//        Xdr::write<CharStreamIO> (os, 5.0);
 //
 //----------------------------------------------------------------------------
 
@@ -177,11 +177,11 @@ write (T &out, half v);
 
 template <class S, class T>
 void
-write (T &out, const char v[/*n*/], int n);	// fixed-size char array
+write (T &out, const char v[/*n*/], int n);    // fixed-size char array
 
 template <class S, class T>
 void
-write (T &out, const char v[]);			// zero-terminated string
+write (T &out, const char v[]);            // zero-terminated string
 
 
 //-----------------------------------------
@@ -190,7 +190,7 @@ write (T &out, const char v[]);			// zero-terminated string
 
 template <class S, class T>
 void
-pad (T &out, int n);				// write n padding bytes
+pad (T &out, int n);                // write n padding bytes
 
 
 
@@ -260,11 +260,11 @@ read (T &in, half &v);
 
 template <class S, class T>
 void
-read (T &in, char v[/*n*/], int n);		// fixed-size char array
+read (T &in, char v[/*n*/], int n);        // fixed-size char array
 
 template <class S, class T>
 void
-read (T &in, int n, char v[/*n*/]);		// zero-terminated string
+read (T &in, int n, char v[/*n*/]);        // zero-terminated string
 
 
 //-------------------------------------------
@@ -273,7 +273,7 @@ read (T &in, int n, char v[/*n*/]);		// zero-terminated string
 
 template <class S, class T>
 void
-skip (T &in, int n);				// skip n padding bytes
+skip (T &in, int n);                // skip n padding bytes
 
 
 
@@ -570,7 +570,7 @@ write (T &out, half v)
 
 template <class S, class T>
 inline void
-write (T &out, const char v[], int n)	// fixed-size char array
+write (T &out, const char v[], int n)    // fixed-size char array
 {
     S::writeChars (out, v, n);
 }
@@ -578,7 +578,7 @@ write (T &out, const char v[], int n)	// fixed-size char array
 
 template <class S, class T>
 void
-write (T &out, const char v[])		// zero-terminated string
+write (T &out, const char v[])        // zero-terminated string
 {
     while (*v)
     {
@@ -592,7 +592,7 @@ write (T &out, const char v[])		// zero-terminated string
 
 template <class S, class T>
 void
-pad (T &out, int n)			// add n padding bytes
+pad (T &out, int n)            // add n padding bytes
 {
     for (int i = 0; i < n; i++)
     {
@@ -853,7 +853,7 @@ read (T &in, half &v)
 
 template <class S, class T>
 inline void
-read (T &in, char v[], int n)		// fixed-size char array
+read (T &in, char v[], int n)        // fixed-size char array
 {
     S::readChars (in, v, n);
 }
@@ -861,7 +861,7 @@ read (T &in, char v[], int n)		// fixed-size char array
 
 template <class S, class T>
 void
-read (T &in, int n, char v[])		// zero-terminated string
+read (T &in, int n, char v[])        // zero-terminated string
 {
     while (n >= 0)
     {
@@ -878,7 +878,7 @@ read (T &in, int n, char v[])		// zero-terminated string
 
 template <class S, class T>
 void
-skip (T &in, int n)			// skip n padding bytes
+skip (T &in, int n)            // skip n padding bytes
 {
     char c[1024];
 
@@ -895,19 +895,19 @@ skip (T &in, int n)			// skip n padding bytes
 }
 
 
-template <> inline int size <bool> ()			{return 1;}
-template <> inline int size <char> ()			{return 1;}
-template <> inline int size <signed char> ()		{return 1;}
-template <> inline int size <unsigned char> ()		{return 1;}
-template <> inline int size <signed short> ()		{return 2;}
-template <> inline int size <unsigned short> ()		{return 2;}
-template <> inline int size <signed int> ()		{return 4;}
-template <> inline int size <unsigned int> ()		{return 4;}
-template <> inline int size <signed long> ()		{return 8;}
-template <> inline int size <unsigned long> ()		{return 8;}
-template <> inline int size <float> ()			{return 4;}
-template <> inline int size <double> ()			{return 8;}
-template <> inline int size <half> ()			{return 2;}
+template <> inline int size <bool> ()            {return 1;}
+template <> inline int size <char> ()            {return 1;}
+template <> inline int size <signed char> ()        {return 1;}
+template <> inline int size <unsigned char> ()        {return 1;}
+template <> inline int size <signed short> ()        {return 2;}
+template <> inline int size <unsigned short> ()        {return 2;}
+template <> inline int size <signed int> ()        {return 4;}
+template <> inline int size <unsigned int> ()        {return 4;}
+template <> inline int size <signed long> ()        {return 8;}
+template <> inline int size <unsigned long> ()        {return 8;}
+template <> inline int size <float> ()            {return 4;}
+template <> inline int size <double> ()            {return 8;}
+template <> inline int size <half> ()            {return 2;}
 
 
 } // namespace Xdr

@@ -255,7 +255,7 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
     endif()
 
     #MESSAGE("_compile_FLAGS: ${_compile_FLAGS}")
-    #message("COMMAND ${CMAKE_CXX_COMPILER}	${_compile_FLAGS} -x c++-header -o ${_output} ${_input}")
+    #message("COMMAND ${CMAKE_CXX_COMPILER}    ${_compile_FLAGS} -x c++-header -o ${_output} ${_input}")
 
     ADD_CUSTOM_COMMAND(
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${_name}"

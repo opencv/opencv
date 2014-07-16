@@ -62,9 +62,9 @@
 // thus sobel 2D operator can be calculated as:
 // h'(x, y) = h'(x)h(y) for x direction
 //
-// src		input 8bit single channel image data
-// dx_buf	output dx buffer
-// dy_buf	output dy buffer
+// src        input 8bit single channel image data
+// dx_buf    output dx buffer
+// dy_buf    output dy buffer
 
 __kernel void calcSobelRowPass(__global const uchar * src, int src_step, int src_offset, int rows, int cols,
                                __global uchar * dx_buf, int dx_buf_step, int dx_buf_offset,
@@ -112,11 +112,11 @@ inline intT calc(shortT x, shortT y)
 // calculate the magnitude of the filter pass combining both x and y directions
 // This is the non-buffered version(non-3x3 sobel)
 //
-// dx_buf		dx buffer, calculated from calcSobelRowPass
-// dy_buf		dy buffer, calculated from calcSobelRowPass
-// dx			direvitive in x direction output
-// dy			direvitive in y direction output
-// mag			magnitude direvitive of xy output
+// dx_buf        dx buffer, calculated from calcSobelRowPass
+// dy_buf        dy buffer, calculated from calcSobelRowPass
+// dx            direvitive in x direction output
+// dy            direvitive in y direction output
+// mag            magnitude direvitive of xy output
 
 __kernel void calcMagnitude(__global const uchar * dxptr, int dx_step, int dx_offset,
                             __global const uchar * dyptr, int dy_step, int dy_offset,
@@ -167,11 +167,11 @@ __kernel void calcMagnitude(__global const uchar * dxptr, int dx_step, int dx_of
 // calculate the magnitude of the filter pass combining both x and y directions
 // This is the buffered version(3x3 sobel)
 //
-// dx_buf		dx buffer, calculated from calcSobelRowPass
-// dy_buf		dy buffer, calculated from calcSobelRowPass
-// dx			direvitive in x direction output
-// dy			direvitive in y direction output
-// mag			magnitude direvitive of xy output
+// dx_buf        dx buffer, calculated from calcSobelRowPass
+// dy_buf        dy buffer, calculated from calcSobelRowPass
+// dx            direvitive in x direction output
+// dy            direvitive in y direction output
+// mag            magnitude direvitive of xy output
 __kernel void calcMagnitude_buf(__global const uchar * dx_buf, int dx_buf_step, int dx_buf_offset,
                                 __global const uchar * dy_buf, int dy_buf_step, int dy_buf_offset,
                                 __global uchar * dx, int dx_step, int dx_offset,
@@ -249,9 +249,9 @@ __kernel void calcMagnitude_buf(__global const uchar * dx_buf, int dx_buf_step, 
 //     if the rounded gradient angle is 135 degrees (i.e. the edge is in the north east-south west direction) the point will be considered to be on the edge if its gradient magnitude is greater than the magnitudes in the north west and south east directions,
 //     if the rounded gradient angle is 45 degrees (i.e. the edge is in the north west-south east direction)the point will be considered to be on the edge if its gradient magnitude is greater than the magnitudes in the north east and south west directions.
 //
-// dx, dy		direvitives of x and y direction
-// mag			magnitudes calculated from calcMagnitude function
-// map			output containing raw edge types
+// dx, dy        direvitives of x and y direction
+// mag            magnitudes calculated from calcMagnitude function
+// map            output containing raw edge types
 
 __kernel void calcMap(__global const uchar * dx, int dx_step, int dx_offset,
                       __global const uchar * dy, int dy_step, int dy_offset,
@@ -353,9 +353,9 @@ inline void set(struct PtrStepSz data, int y, int x, int value)
 // Candidate pixel being identified as edge will then be tested if there is nearby potiential edge points. If there is, counter will
 // be incremented by 1 and the point location is stored. These potiential candidates will be processed further in next kernel.
 //
-// map		raw edge type results calculated from calcMap.
-// stack	the potiential edge points found in this kernel call
-// counter	the number of potiential edge points
+// map        raw edge type results calculated from calcMap.
+// stack    the potiential edge points found in this kernel call
+// counter    the number of potiential edge points
 
 __kernel void edgesHysteresisLocal(__global uchar * map_ptr, int map_step, int map_offset,
                                    __global ushort2 * st, __global unsigned int * counter,
@@ -539,8 +539,8 @@ __kernel void edgesHysteresisGlobal(__global uchar * map, int map_step, int map_
 #elif defined OP_EDGES
 
 // Get the edge result. egde type of value 2 will be marked as an edge point and set to 255. Otherwise 0.
-// map		edge type mappings
-// dst		edge output
+// map        edge type mappings
+// dst        edge output
 
 __kernel void getEdges(__global const uchar * mapptr, int map_step, int map_offset,
                        __global uchar * dst, int dst_step, int dst_offset, int rows, int cols)

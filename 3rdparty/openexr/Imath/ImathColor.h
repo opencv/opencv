@@ -39,7 +39,7 @@
 
 //----------------------------------------------------
 //
-//	A three and four component color class template.
+//    A three and four component color class template.
 //
 //----------------------------------------------------
 
@@ -58,9 +58,9 @@ class Color3: public Vec3 <T>
     // Constructors
     //-------------
 
-    Color3 ();			// no initialization
-    explicit Color3 (T a);	// (a a a)
-    Color3 (T a, T b, T c);	// (a b c)
+    Color3 ();            // no initialization
+    explicit Color3 (T a);    // (a a a)
+    Color3 (T a, T b, T c);    // (a b c)
 
 
     //---------------------------------
@@ -70,51 +70,51 @@ class Color3: public Vec3 <T>
     Color3 (const Color3 &c);
     template <class S> Color3 (const Vec3<S> &v);
 
-    const Color3 &	operator = (const Color3 &c);
+    const Color3 &    operator = (const Color3 &c);
 
 
     //------------------------
     // Component-wise addition
     //------------------------
 
-    const Color3 &	operator += (const Color3 &c);
-    Color3		operator + (const Color3 &c) const;
+    const Color3 &    operator += (const Color3 &c);
+    Color3        operator + (const Color3 &c) const;
 
 
     //---------------------------
     // Component-wise subtraction
     //---------------------------
 
-    const Color3 &	operator -= (const Color3 &c);
-    Color3		operator - (const Color3 &c) const;
+    const Color3 &    operator -= (const Color3 &c);
+    Color3        operator - (const Color3 &c) const;
 
 
     //------------------------------------
     // Component-wise multiplication by -1
     //------------------------------------
 
-    Color3		operator - () const;
-    const Color3 &	negate ();
+    Color3        operator - () const;
+    const Color3 &    negate ();
 
 
     //------------------------------
     // Component-wise multiplication
     //------------------------------
 
-    const Color3 &	operator *= (const Color3 &c);
-    const Color3 &	operator *= (T a);
-    Color3		operator * (const Color3 &c) const;
-    Color3		operator * (T a) const;
+    const Color3 &    operator *= (const Color3 &c);
+    const Color3 &    operator *= (T a);
+    Color3        operator * (const Color3 &c) const;
+    Color3        operator * (T a) const;
 
 
     //------------------------
     // Component-wise division
     //------------------------
 
-    const Color3 &	operator /= (const Color3 &c);
-    const Color3 &	operator /= (T a);
-    Color3		operator / (const Color3 &c) const;
-    Color3		operator / (T a) const;
+    const Color3 &    operator /= (const Color3 &c);
+    const Color3 &    operator /= (T a);
+    Color3        operator / (const Color3 &c) const;
+    Color3        operator / (T a) const;
 };
 
 template <class T> class Color4
@@ -125,19 +125,19 @@ template <class T> class Color4
     // Access to elements
     //-------------------
 
-    T			r, g, b, a;
+    T            r, g, b, a;
 
-    T &			operator [] (int i);
-    const T &		operator [] (int i) const;
+    T &            operator [] (int i);
+    const T &        operator [] (int i) const;
 
 
     //-------------
     // Constructors
     //-------------
 
-    Color4 ();			    	// no initialization
-    explicit Color4 (T a);		// (a a a a)
-    Color4 (T a, T b, T c, T d);	// (a b c d)
+    Color4 ();                    // no initialization
+    explicit Color4 (T a);        // (a a a a)
+    Color4 (T a, T b, T c, T d);    // (a b c d)
 
 
     //---------------------------------
@@ -147,7 +147,7 @@ template <class T> class Color4
     Color4 (const Color4 &v);
     template <class S> Color4 (const Color4<S> &v);
 
-    const Color4 &	operator = (const Color4 &v);
+    const Color4 &    operator = (const Color4 &v);
 
 
     //----------------------
@@ -155,19 +155,19 @@ template <class T> class Color4
     //----------------------
 
     template <class S>
-    void		setValue (S a, S b, S c, S d);
+    void        setValue (S a, S b, S c, S d);
 
     template <class S>
-    void		setValue (const Color4<S> &v);
+    void        setValue (const Color4<S> &v);
 
     template <class S>
-    void		getValue (S &a, S &b, S &c, S &d) const;
+    void        getValue (S &a, S &b, S &c, S &d) const;
 
     template <class S>
-    void		getValue (Color4<S> &v) const;
+    void        getValue (Color4<S> &v) const;
 
-    T *			getValue();
-    const T *		getValue() const;
+    T *            getValue();
+    const T *        getValue() const;
 
 
     //---------
@@ -175,71 +175,71 @@ template <class T> class Color4
     //---------
 
     template <class S>
-    bool		operator == (const Color4<S> &v) const;
+    bool        operator == (const Color4<S> &v) const;
 
     template <class S>
-    bool		operator != (const Color4<S> &v) const;
+    bool        operator != (const Color4<S> &v) const;
 
 
     //------------------------
     // Component-wise addition
     //------------------------
 
-    const Color4 &	operator += (const Color4 &v);
-    Color4		operator + (const Color4 &v) const;
+    const Color4 &    operator += (const Color4 &v);
+    Color4        operator + (const Color4 &v) const;
 
 
     //---------------------------
     // Component-wise subtraction
     //---------------------------
 
-    const Color4 &	operator -= (const Color4 &v);
-    Color4		operator - (const Color4 &v) const;
+    const Color4 &    operator -= (const Color4 &v);
+    Color4        operator - (const Color4 &v) const;
 
 
     //------------------------------------
     // Component-wise multiplication by -1
     //------------------------------------
 
-    Color4		operator - () const;
-    const Color4 &	negate ();
+    Color4        operator - () const;
+    const Color4 &    negate ();
 
 
     //------------------------------
     // Component-wise multiplication
     //------------------------------
 
-    const Color4 &	operator *= (const Color4 &v);
-    const Color4 &	operator *= (T a);
-    Color4		operator * (const Color4 &v) const;
-    Color4		operator * (T a) const;
+    const Color4 &    operator *= (const Color4 &v);
+    const Color4 &    operator *= (T a);
+    Color4        operator * (const Color4 &v) const;
+    Color4        operator * (T a) const;
 
 
     //------------------------
     // Component-wise division
     //------------------------
 
-    const Color4 &	operator /= (const Color4 &v);
-    const Color4 &	operator /= (T a);
-    Color4		operator / (const Color4 &v) const;
-    Color4		operator / (T a) const;
+    const Color4 &    operator /= (const Color4 &v);
+    const Color4 &    operator /= (T a);
+    Color4        operator / (const Color4 &v) const;
+    Color4        operator / (T a) const;
 
 
     //----------------------------------------------------------
     // Number of dimensions, i.e. number of elements in a Color4
     //----------------------------------------------------------
 
-    static unsigned int	dimensions() {return 4;}
+    static unsigned int    dimensions() {return 4;}
 
 
     //-------------------------------------------------
     // Limitations of type T (see also class limits<T>)
     //-------------------------------------------------
 
-    static T		baseTypeMin()		{return limits<T>::min();}
-    static T		baseTypeMax()		{return limits<T>::max();}
-    static T		baseTypeSmallest()	{return limits<T>::smallest();}
-    static T		baseTypeEpsilon()	{return limits<T>::epsilon();}
+    static T        baseTypeMin()        {return limits<T>::min();}
+    static T        baseTypeMax()        {return limits<T>::max();}
+    static T        baseTypeSmallest()    {return limits<T>::smallest();}
+    static T        baseTypeEpsilon()    {return limits<T>::epsilon();}
 
 
     //--------------------------------------------------------------
@@ -248,7 +248,7 @@ template <class T> class Color4
     // V::BaseType
     //--------------------------------------------------------------
 
-    typedef T		BaseType;
+    typedef T        BaseType;
 };
 
 //--------------
@@ -256,31 +256,31 @@ template <class T> class Color4
 //--------------
 
 template <class T>
-std::ostream &	operator << (std::ostream &s, const Color4<T> &v);
+std::ostream &    operator << (std::ostream &s, const Color4<T> &v);
 
 //----------------------------------------------------
 // Reverse multiplication: S * Color4<T>
 //----------------------------------------------------
 
-template <class S, class T> Color4<T>	operator * (S a, const Color4<T> &v);
+template <class S, class T> Color4<T>    operator * (S a, const Color4<T> &v);
 
 //-------------------------
 // Typedefs for convenience
 //-------------------------
 
-typedef Color3<float>		Color3f;
-typedef Color3<half>		Color3h;
-typedef Color3<unsigned char>	Color3c;
-typedef Color3<half>		C3h;
-typedef Color3<float>		C3f;
-typedef Color3<unsigned char>	C3c;
-typedef Color4<float>		Color4f;
-typedef Color4<half>		Color4h;
-typedef Color4<unsigned char>	Color4c;
-typedef Color4<float>		C4f;
-typedef Color4<half>		C4h;
-typedef Color4<unsigned char>	C4c;
-typedef unsigned int		PackedColor;
+typedef Color3<float>        Color3f;
+typedef Color3<half>        Color3h;
+typedef Color3<unsigned char>    Color3c;
+typedef Color3<half>        C3h;
+typedef Color3<float>        C3f;
+typedef Color3<unsigned char>    C3c;
+typedef Color4<float>        Color4f;
+typedef Color4<half>        Color4h;
+typedef Color4<unsigned char>    Color4c;
+typedef Color4<float>        C4f;
+typedef Color4<half>        C4h;
+typedef Color4<unsigned char>    C4c;
+typedef unsigned int        PackedColor;
 
 
 //-------------------------

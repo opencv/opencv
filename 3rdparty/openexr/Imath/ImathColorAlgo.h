@@ -46,25 +46,25 @@ namespace Imath {
 
 
 //
-//	Non-templated helper routines for color conversion.
-//	These routines eliminate type warnings under g++.
+//    Non-templated helper routines for color conversion.
+//    These routines eliminate type warnings under g++.
 //
 
-Vec3<double>	hsv2rgb_d(const Vec3<double> &hsv);
+Vec3<double>    hsv2rgb_d(const Vec3<double> &hsv);
 
-Color4<double>	hsv2rgb_d(const Color4<double> &hsv);
+Color4<double>    hsv2rgb_d(const Color4<double> &hsv);
 
 
-Vec3<double>	rgb2hsv_d(const Vec3<double> &rgb);
+Vec3<double>    rgb2hsv_d(const Vec3<double> &rgb);
 
-Color4<double>	rgb2hsv_d(const Color4<double> &rgb);
+Color4<double>    rgb2hsv_d(const Color4<double> &rgb);
 
 
 //
-//	Color conversion functions and general color algorithms
+//    Color conversion functions and general color algorithms
 //
-//	hsv2rgb(), rgb2hsv(), rgb2packed(), packed2rgb()
-//	see each funtion definition for details.
+//    hsv2rgb(), rgb2hsv(), rgb2packed(), packed2rgb()
+//    see each funtion definition for details.
 //
 
 template<class T>
@@ -175,9 +175,9 @@ rgb2packed(const Vec3<T> &c)
     }
     else
     {
-    return (  (PackedColor) (c.x * 255)		|
-        (((PackedColor) (c.y * 255)) << 8)	|
-        (((PackedColor) (c.z * 255)) << 16)	| 0xFF000000 );
+    return (  (PackedColor) (c.x * 255)        |
+        (((PackedColor) (c.y * 255)) << 8)    |
+        (((PackedColor) (c.z * 255)) << 16)    | 0xFF000000 );
     }
 }
 
@@ -195,17 +195,17 @@ rgb2packed(const Color4<T> &c)
     }
     else
     {
-    return (  (PackedColor) (c.r * 255)		|
-        (((PackedColor) (c.g * 255)) << 8)	|
-        (((PackedColor) (c.b * 255)) << 16)	|
+    return (  (PackedColor) (c.r * 255)        |
+        (((PackedColor) (c.g * 255)) << 8)    |
+        (((PackedColor) (c.b * 255)) << 16)    |
         (((PackedColor) (c.a * 255)) << 24));
     }
 }
 
 //
-//	This guy can't return the result because the template
-//	parameter would not be in the function signiture. So instead,
-//	its passed in as an argument.
+//    This guy can't return the result because the template
+//    parameter would not be in the function signiture. So instead,
+//    its passed in as an argument.
 //
 
 template <class T>

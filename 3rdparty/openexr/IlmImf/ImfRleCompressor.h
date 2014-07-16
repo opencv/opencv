@@ -39,7 +39,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class RleCompressor -- performs run-length encoding
+//    class RleCompressor -- performs run-length encoding
 //
 //-----------------------------------------------------------------------------
 
@@ -57,20 +57,20 @@ class RleCompressor: public Compressor
 
     virtual int numScanLines () const;
 
-    virtual int	compress (const char *inPtr,
+    virtual int    compress (const char *inPtr,
               int inSize,
               int minY,
               const char *&outPtr);
 
-    virtual int	uncompress (const char *inPtr,
+    virtual int    uncompress (const char *inPtr,
                 int inSize,
                 int minY,
                 const char *&outPtr);
   private:
 
-    int		_maxScanLineSize;
-    char *	_tmpBuffer;
-    char *	_outBuffer;
+    int        _maxScanLineSize;
+    char *    _tmpBuffer;
+    char *    _outBuffer;
 };
 
 

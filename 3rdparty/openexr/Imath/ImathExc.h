@@ -40,7 +40,7 @@
 
 //-----------------------------------------------
 //
-//	Imath library-specific exceptions
+//    Imath library-specific exceptions
 //
 //-----------------------------------------------
 
@@ -49,22 +49,22 @@
 namespace Imath {
 
 
-DEFINE_EXC (NullVecExc, ::Iex::MathExc)		// Attempt to normalize
+DEFINE_EXC (NullVecExc, ::Iex::MathExc)        // Attempt to normalize
                         // null vector
 
-DEFINE_EXC (InfPointExc, ::Iex::MathExc)	// Attempt to normalize
+DEFINE_EXC (InfPointExc, ::Iex::MathExc)    // Attempt to normalize
                                                 // a point at infinity
 
-DEFINE_EXC (NullQuatExc, ::Iex::MathExc) 	// Attempt to normalize
+DEFINE_EXC (NullQuatExc, ::Iex::MathExc)     // Attempt to normalize
                         // null quaternion
 
-DEFINE_EXC (SingMatrixExc, ::Iex::MathExc)	// Attempt to invert
+DEFINE_EXC (SingMatrixExc, ::Iex::MathExc)    // Attempt to invert
                         // singular matrix
 
-DEFINE_EXC (ZeroScaleExc, ::Iex::MathExc)	// Attempt to remove zero
+DEFINE_EXC (ZeroScaleExc, ::Iex::MathExc)    // Attempt to remove zero
                         // scaling from matrix
 
-DEFINE_EXC (IntVecNormalizeExc, ::Iex::MathExc)	// Attempt to normalize
+DEFINE_EXC (IntVecNormalizeExc, ::Iex::MathExc)    // Attempt to normalize
                         // a vector of whose elements
                                                 // are an integer type
 

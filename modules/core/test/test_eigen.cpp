@@ -75,9 +75,9 @@ public:
 
 protected:
 
-    bool test_values(const cv::Mat& src);												// complex test for eigen without vectors
-    bool check_full(int type);													// compex test for symmetric matrix
-    virtual void run (int) = 0;													// main testing method
+    bool test_values(const cv::Mat& src);                                                // complex test for eigen without vectors
+    bool check_full(int type);                                                    // compex test for symmetric matrix
+    virtual void run (int) = 0;                                                    // main testing method
 
 protected:
 
@@ -87,9 +87,9 @@ protected:
 
     bool check_pair_count(const cv::Mat& src, const cv::Mat& evalues, int low_index = -1, int high_index = -1);
     bool check_pair_count(const cv::Mat& src, const cv::Mat& evalues, const cv::Mat& evectors, int low_index = -1, int high_index = -1);
-    bool check_pairs_order(const cv::Mat& eigen_values);											// checking order of eigen values & vectors (it should be none up)
-    bool check_orthogonality(const cv::Mat& U);												// checking is matrix of eigen vectors orthogonal
-    bool test_pairs(const cv::Mat& src);													// complex test for eigen with vectors
+    bool check_pairs_order(const cv::Mat& eigen_values);                                            // checking order of eigen values & vectors (it should be none up)
+    bool check_orthogonality(const cv::Mat& U);                                                // checking is matrix of eigen vectors orthogonal
+    bool test_pairs(const cv::Mat& src);                                                    // complex test for eigen with vectors
 
     void print_information(const size_t norm_idx, const cv::Mat& src, double diff, double max_diff);
 };
@@ -400,7 +400,7 @@ bool Core_EigenTest::check_full(int type)
         for (int j = 0; j < src.rows; ++j)
             for (int k = j; k < src.cols; ++k)
                 if (type == CV_32FC1)  src.at<float>(k, j) = src.at<float>(j, k) = cv::randu<float>();
-        else	src.at<double>(k, j) = src.at<double>(j, k) = cv::randu<double>();
+        else    src.at<double>(k, j) = src.at<double>(j, k) = cv::randu<double>();
 
         if (!test_values(src)) return false;
     }

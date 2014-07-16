@@ -38,37 +38,37 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Environment maps
+//    Environment maps
 //
-//	Environment maps define a mapping from 3D directions to 2D
-//	pixel space locations.  Environment maps are typically used
-//	in 3D rendering, for effects such as quickly approximating
-//	how shiny surfaces reflect their environment.
+//    Environment maps define a mapping from 3D directions to 2D
+//    pixel space locations.  Environment maps are typically used
+//    in 3D rendering, for effects such as quickly approximating
+//    how shiny surfaces reflect their environment.
 //
-//	Environment maps can be stored in scanline-based or in tiled
-//	OpenEXR files.  The fact that an image is an environment map
-//	is indicated by the presence of an EnvmapAttribute whose name
-//	is "envmap". (Convenience functions to access this attribute
-//	are defined in header file ImfStandardAttributes.h.)
-//	The attribute's value defines the mapping from 3D directions
-//	to 2D pixel space locations.
+//    Environment maps can be stored in scanline-based or in tiled
+//    OpenEXR files.  The fact that an image is an environment map
+//    is indicated by the presence of an EnvmapAttribute whose name
+//    is "envmap". (Convenience functions to access this attribute
+//    are defined in header file ImfStandardAttributes.h.)
+//    The attribute's value defines the mapping from 3D directions
+//    to 2D pixel space locations.
 //
-//	This header file defines the set of possible EnvmapAttribute
-//	values.
+//    This header file defines the set of possible EnvmapAttribute
+//    values.
 //
-//	For each possible EnvmapAttribute value, this header file also
-//	defines a set of convienience functions to convert between 3D
-//	directions and 2D pixel locations.
+//    For each possible EnvmapAttribute value, this header file also
+//    defines a set of convienience functions to convert between 3D
+//    directions and 2D pixel locations.
 //
-//	Most of the convenience functions defined below require a
-//	dataWindow parameter.  For scanline-based images, and for
-//	tiled images with level mode ONE_LEVEL, the dataWindow
-//	parameter should be set to the image's data window, as
-//	defined in the image header.  For tiled images with level
-//	mode MIPMAP_LEVELS or RIPMAP_LEVELS, the data window of the
-//	image level that is being accessed should be used instead.
-//	(See the dataWindowForLevel() methods in ImfTiledInputFile.h
-//	and ImfTiledOutputFile.h.)
+//    Most of the convenience functions defined below require a
+//    dataWindow parameter.  For scanline-based images, and for
+//    tiled images with level mode ONE_LEVEL, the dataWindow
+//    parameter should be set to the image's data window, as
+//    defined in the image header.  For tiled images with level
+//    mode MIPMAP_LEVELS or RIPMAP_LEVELS, the data window of the
+//    image level that is being accessed should be used instead.
+//    (See the dataWindowForLevel() methods in ImfTiledInputFile.h
+//    and ImfTiledOutputFile.h.)
 //
 //-----------------------------------------------------------------------------
 
@@ -82,10 +82,10 @@ namespace Imf {
 
 enum Envmap
 {
-    ENVMAP_LATLONG = 0,		// Latitude-longitude environment map
-    ENVMAP_CUBE = 1,		// Cube map
+    ENVMAP_LATLONG = 0,        // Latitude-longitude environment map
+    ENVMAP_CUBE = 1,        // Cube map
 
-    NUM_ENVMAPTYPES		// Number of different environment map types
+    NUM_ENVMAPTYPES        // Number of different environment map types
 };
 
 
@@ -116,7 +116,7 @@ namespace LatLongMap
     // and longitude.
     //----------------------------------------------------
 
-    Imath::V2f		latLong (const Imath::V3f &direction);
+    Imath::V2f        latLong (const Imath::V3f &direction);
 
 
     //--------------------------------------------------------
@@ -125,7 +125,7 @@ namespace LatLongMap
     // and longitude.
     //--------------------------------------------------------
 
-    Imath::V2f		latLong (const Imath::Box2i &dataWindow,
+    Imath::V2f        latLong (const Imath::Box2i &dataWindow,
                  const Imath::V2f &pixelPosition);
 
 
@@ -134,7 +134,7 @@ namespace LatLongMap
     // longitude and latitude, into a corresponding pixel position.
     //-------------------------------------------------------------
 
-    Imath::V2f		pixelPosition (const Imath::Box2i &dataWindow,
+    Imath::V2f        pixelPosition (const Imath::Box2i &dataWindow,
                        const Imath::V2f &latLong);
 
 
@@ -144,7 +144,7 @@ namespace LatLongMap
     // to pixelPosition(dw,latLong(dw,dir)).
     //-----------------------------------------------------
 
-    Imath::V2f		pixelPosition (const Imath::Box2i &dataWindow,
+    Imath::V2f        pixelPosition (const Imath::Box2i &dataWindow,
                        const Imath::V3f &direction);
 
 
@@ -153,7 +153,7 @@ namespace LatLongMap
     // map into a corresponding 3D direction.
     //--------------------------------------------------------
 
-    Imath::V3f		direction (const Imath::Box2i &dataWindow,
+    Imath::V3f        direction (const Imath::Box2i &dataWindow,
                    const Imath::V2f &pixelPosition);
 }
 
@@ -246,12 +246,12 @@ namespace LatLongMap
 
 enum CubeMapFace
 {
-    CUBEFACE_POS_X,	// +X face
-    CUBEFACE_NEG_X,	// -X face
-    CUBEFACE_POS_Y,	// +Y face
-    CUBEFACE_NEG_Y,	// -Y face
-    CUBEFACE_POS_Z,	// +Z face
-    CUBEFACE_NEG_Z 	// -Z face
+    CUBEFACE_POS_X,    // +X face
+    CUBEFACE_NEG_X,    // -X face
+    CUBEFACE_POS_Y,    // +Y face
+    CUBEFACE_NEG_Y,    // -Y face
+    CUBEFACE_POS_Z,    // +Z face
+    CUBEFACE_NEG_Z     // -Z face
 };
 
 namespace CubeMap
@@ -260,7 +260,7 @@ namespace CubeMap
     // Width and height of a cube's face, in pixels
     //---------------------------------------------
 
-    int			sizeOfFace (const Imath::Box2i &dataWindow);
+    int            sizeOfFace (const Imath::Box2i &dataWindow);
 
 
     //------------------------------------------
@@ -268,7 +268,7 @@ namespace CubeMap
     // that is covered by the specified face.
     //------------------------------------------
 
-    Imath::Box2i	dataWindowForFace (CubeMapFace face,
+    Imath::Box2i    dataWindowForFace (CubeMapFace face,
                        const Imath::Box2i &dataWindow);
 
 
@@ -279,7 +279,7 @@ namespace CubeMap
     // in the environment map.
     //----------------------------------------------------
 
-    Imath::V2f		pixelPosition (CubeMapFace face,
+    Imath::V2f        pixelPosition (CubeMapFace face,
                        const Imath::Box2i &dataWindow,
                        Imath::V2f positionInFace);
 
@@ -300,7 +300,7 @@ namespace CubeMap
     //
     //--------------------------------------------------------------
 
-    void		faceAndPixelPosition (const Imath::V3f &direction,
+    void        faceAndPixelPosition (const Imath::V3f &direction,
                           const Imath::Box2i &dataWindow,
                           CubeMapFace &face,
                           Imath::V2f &positionInFace);
@@ -311,7 +311,7 @@ namespace CubeMap
     // compute the corresponding 3D direction.
     // --------------------------------------------------------
 
-    Imath::V3f		direction (CubeMapFace face,
+    Imath::V3f        direction (CubeMapFace face,
                    const Imath::Box2i &dataWindow,
                    const Imath::V2f &positionInFace);
 }

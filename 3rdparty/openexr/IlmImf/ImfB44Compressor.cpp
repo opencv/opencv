@@ -35,65 +35,65 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class B44Compressor
+//    class B44Compressor
 //
-//	This compressor is lossy for HALF channels; the compression rate
-//	is fixed at 32/14 (approximately 2.28).  FLOAT and UINT channels
-//	are not compressed; their data are preserved exactly.
+//    This compressor is lossy for HALF channels; the compression rate
+//    is fixed at 32/14 (approximately 2.28).  FLOAT and UINT channels
+//    are not compressed; their data are preserved exactly.
 //
-//	Each HALF channel is split into blocks of 4 by 4 pixels.  An
-//	uncompressed block occupies 32 bytes, which are re-interpreted
-//	as sixteen 16-bit unsigned integers, t[0] ... t[15].  Compression
-//	shrinks the block to 14 bytes.  The compressed 14-byte block
-//	contains
+//    Each HALF channel is split into blocks of 4 by 4 pixels.  An
+//    uncompressed block occupies 32 bytes, which are re-interpreted
+//    as sixteen 16-bit unsigned integers, t[0] ... t[15].  Compression
+//    shrinks the block to 14 bytes.  The compressed 14-byte block
+//    contains
 //
-//	 - t[0]
+//     - t[0]
 //
-//	 - a 6-bit shift value
+//     - a 6-bit shift value
 //
-//	 - 15 densely packed 6-bit values, r[0] ... r[14], which are
+//     - 15 densely packed 6-bit values, r[0] ... r[14], which are
 //         computed by subtracting adjacent pixel values and right-
-//	   shifting the differences according to the stored shift value.
+//       shifting the differences according to the stored shift value.
 //
-//	   Differences between adjacent pixels are computed according
-//	   to the following diagram:
+//       Differences between adjacent pixels are computed according
+//       to the following diagram:
 //
-//		 0 -------->  1 -------->  2 -------->  3
+//         0 -------->  1 -------->  2 -------->  3
 //               |     3            7           11
 //               |
 //               | 0
 //               |
 //               v
-//		 4 -------->  5 -------->  6 -------->  7
+//         4 -------->  5 -------->  6 -------->  7
 //               |     4            8           12
 //               |
 //               | 1
 //               |
 //               v
-//		 8 -------->  9 --------> 10 --------> 11
+//         8 -------->  9 --------> 10 --------> 11
 //               |     5            9           13
 //               |
 //               | 2
 //               |
 //               v
-//		12 --------> 13 --------> 14 --------> 15
+//        12 --------> 13 --------> 14 --------> 15
 //                     6           10           14
 //
-//	    Here
+//        Here
 //
 //               5 ---------> 6
 //                     8
 //
-//	    means that r[8] is the difference between t[5] and t[6].
+//        means that r[8] is the difference between t[5] and t[6].
 //
-//	 - optionally, a 4-by-4 pixel block where all pixels have the
-//	   same value can be treated as a special case, where the
-//	   compressed block contains only 3 instead of 14 bytes:
-//	   t[0], followed by an "impossible" 6-bit shift value and
-//	   two padding bits.
+//     - optionally, a 4-by-4 pixel block where all pixels have the
+//       same value can be treated as a special case, where the
+//       compressed block contains only 3 instead of 14 bytes:
+//       t[0], followed by an "impossible" 6-bit shift value and
+//       two padding bits.
 //
-//	This compressor can handle positive and negative pixel values.
-//	NaNs and infinities are replaced with zeroes before compression.
+//    This compressor can handle positive and negative pixel values.
+//    NaNs and infinities are replaced with zeroes before compression.
 //
 //-----------------------------------------------------------------------------
 
@@ -123,9 +123,9 @@ namespace {
 
 //
 // Lookup tables for
-//	y = exp (x / 8)
+//    y = exp (x / 8)
 // and
-//	x = 8 * log (y)
+//    x = 8 * log (y)
 //
 
 #include "b44ExpLogTable.h"
@@ -192,33 +192,33 @@ pack (const unsigned short s[16],
     // infinities with bit patterns that represent floating-point
     // zeroes.
     //
-    //	bit pattern	floating-point		bit pattern
-    //	in s[i]		value			in t[i]
+    //    bit pattern    floating-point        bit pattern
+    //    in s[i]        value            in t[i]
     //
-    //  0x7fff		NAN			0x8000
-    //  0x7ffe		NAN			0x8000
-    //	  ...					  ...
-    //  0x7c01		NAN			0x8000
-    //  0x7c00		+infinity		0x8000
-    //  0x7bff		+HALF_MAX		0xfbff
-    //  0x7bfe					0xfbfe
-    //  0x7bfd					0xfbfd
-    //	  ...					  ...
-    //  0x0002		+2 * HALF_MIN		0x8002
-    //  0x0001		+HALF_MIN		0x8001
-    //  0x0000		+0.0			0x8000
-    //  0x8000		-0.0			0x7fff
-    //  0x8001		-HALF_MIN		0x7ffe
-    //  0x8002		-2 * HALF_MIN		0x7ffd
-    //	  ...					  ...
-    //  0xfbfd					0x0f02
-    //  0xfbfe					0x0401
-    //  0xfbff		-HALF_MAX		0x0400
-    //  0xfc00		-infinity		0x8000
-    //  0xfc01		NAN			0x8000
-    //	  ...					  ...
-    //  0xfffe		NAN			0x8000
-    //  0xffff		NAN			0x8000
+    //  0x7fff        NAN            0x8000
+    //  0x7ffe        NAN            0x8000
+    //      ...                      ...
+    //  0x7c01        NAN            0x8000
+    //  0x7c00        +infinity        0x8000
+    //  0x7bff        +HALF_MAX        0xfbff
+    //  0x7bfe                    0xfbfe
+    //  0x7bfd                    0xfbfd
+    //      ...                      ...
+    //  0x0002        +2 * HALF_MIN        0x8002
+    //  0x0001        +HALF_MIN        0x8001
+    //  0x0000        +0.0            0x8000
+    //  0x8000        -0.0            0x7fff
+    //  0x8001        -HALF_MIN        0x7ffe
+    //  0x8002        -2 * HALF_MIN        0x7ffd
+    //      ...                      ...
+    //  0xfbfd                    0x0f02
+    //  0xfbfe                    0x0401
+    //  0xfbff        -HALF_MAX        0x0400
+    //  0xfc00        -infinity        0x8000
+    //  0xfc01        NAN            0x8000
+    //      ...                      ...
+    //  0xfffe        NAN            0x8000
+    //  0xffff        NAN            0x8000
     //
 
     unsigned short t[16];
@@ -453,14 +453,14 @@ tooMuchData ()
 
 struct B44Compressor::ChannelData
 {
-    unsigned short *	start;
-    unsigned short *	end;
-    int			nx;
-    int			ny;
-    int			ys;
-    PixelType		type;
-    bool		pLinear;
-    int			size;
+    unsigned short *    start;
+    unsigned short *    end;
+    int            nx;
+    int            ny;
+    int            ys;
+    PixelType        type;
+    bool        pLinear;
+    int            size;
 };
 
 

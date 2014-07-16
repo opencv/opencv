@@ -381,7 +381,7 @@ randn_0_1_32f( float* arr, int len, uint64* state )
                     temp = RNG_NEXT(temp);
                     x = (float)(-std::log(x+FLT_MIN)*0.2904764);
                     y = (float)-std::log(y+FLT_MIN);
-                }	// .2904764 is 1/r
+                }    // .2904764 is 1/r
                 while( y + y < x*x );
                 x = hz > 0 ? r + x : -r - x;
                 break;

@@ -35,8 +35,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Low-level file input and output for OpenEXR
-//	based on C++ standard iostreams.
+//    Low-level file input and output for OpenEXR
+//    based on C++ standard iostreams.
 //
 //-----------------------------------------------------------------------------
 

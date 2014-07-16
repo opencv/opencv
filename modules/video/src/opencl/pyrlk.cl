@@ -221,7 +221,7 @@ inline void reduce1(float val1, __local volatile float* smem1, int tid)
 #endif
 
 #define SCALE (1.0f / (1 << 20))
-#define	THRESHOLD	0.01f
+#define    THRESHOLD    0.01f
 
 // Image read mode
 __constant sampler_t sampler    = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;

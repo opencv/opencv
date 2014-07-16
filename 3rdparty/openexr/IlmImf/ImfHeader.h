@@ -39,7 +39,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class Header
+//    class Header
 //
 //-----------------------------------------------------------------------------
 
@@ -130,70 +130,70 @@ class Header
     // Assignment
     //-----------
 
-    Header &			operator = (const Header &other);
+    Header &            operator = (const Header &other);
 
 
     //---------------------------------------------------------------
     // Add an attribute:
     //
-    // insert(n,attr)	If no attribute with name n exists, a new
-    //			attribute with name n, and the same type as
-    //			attr, is added, and the value of attr is
-    //			copied into the new attribute.
+    // insert(n,attr)    If no attribute with name n exists, a new
+    //            attribute with name n, and the same type as
+    //            attr, is added, and the value of attr is
+    //            copied into the new attribute.
     //
-    //			If an attribute with name n exists, and its
-    //			type is the same as attr, the value of attr
-    //			is copied into this attribute.
+    //            If an attribute with name n exists, and its
+    //            type is the same as attr, the value of attr
+    //            is copied into this attribute.
     //
-    //			If an attribute with name n exists, and its
-    //			type is different from attr, an Iex::TypeExc
-    //			is thrown.
+    //            If an attribute with name n exists, and its
+    //            type is different from attr, an Iex::TypeExc
+    //            is thrown.
     //
     //---------------------------------------------------------------
 
-    void			insert (const char name[],
+    void            insert (const char name[],
                         const Attribute &attribute);
 
-    void			insert (const std::string &name,
+    void            insert (const std::string &name,
                         const Attribute &attribute);
 
     //------------------------------------------------------------------
     // Access to existing attributes:
     //
-    // [n]			Returns a reference to the attribute
-    //				with name n.  If no attribute with
-    //				name n exists, an Iex::ArgExc is thrown.
+    // [n]            Returns a reference to the attribute
+    //                with name n.  If no attribute with
+    //                name n exists, an Iex::ArgExc is thrown.
     //
-    // typedAttribute<T>(n)	Returns a reference to the attribute
-    //				with name n and type T.  If no attribute
-    //				with name n exists, an Iex::ArgExc is
-    //				thrown.  If an attribute with name n
-    //				exists, but its type is not T, an
-    //				Iex::TypeExc is thrown.
+    // typedAttribute<T>(n)    Returns a reference to the attribute
+    //                with name n and type T.  If no attribute
+    //                with name n exists, an Iex::ArgExc is
+    //                thrown.  If an attribute with name n
+    //                exists, but its type is not T, an
+    //                Iex::TypeExc is thrown.
     //
-    // findTypedAttribute<T>(n)	Returns a pointer to the attribute with
-    //				name n and type T, or 0 if no attribute
-    //				with name n and type T exists.
+    // findTypedAttribute<T>(n)    Returns a pointer to the attribute with
+    //                name n and type T, or 0 if no attribute
+    //                with name n and type T exists.
     //
     //------------------------------------------------------------------
 
-    Attribute &			operator [] (const char name[]);
-    const Attribute &		operator [] (const char name[]) const;
+    Attribute &            operator [] (const char name[]);
+    const Attribute &        operator [] (const char name[]) const;
 
-    Attribute &			operator [] (const std::string &name);
-    const Attribute &		operator [] (const std::string &name) const;
+    Attribute &            operator [] (const std::string &name);
+    const Attribute &        operator [] (const std::string &name) const;
 
-    template <class T> T&	typedAttribute (const char name[]);
-    template <class T> const T&	typedAttribute (const char name[]) const;
+    template <class T> T&    typedAttribute (const char name[]);
+    template <class T> const T&    typedAttribute (const char name[]) const;
 
-    template <class T> T&	typedAttribute (const std::string &name);
-    template <class T> const T&	typedAttribute (const std::string &name) const;
+    template <class T> T&    typedAttribute (const std::string &name);
+    template <class T> const T&    typedAttribute (const std::string &name) const;
 
-    template <class T> T*	findTypedAttribute (const char name[]);
-    template <class T> const T*	findTypedAttribute (const char name[]) const;
+    template <class T> T*    findTypedAttribute (const char name[]);
+    template <class T> const T*    findTypedAttribute (const char name[]) const;
 
-    template <class T> T*	findTypedAttribute (const std::string &name);
-    template <class T> const T*	findTypedAttribute (const std::string &name)
+    template <class T> T*    findTypedAttribute (const std::string &name);
+    template <class T> const T*    findTypedAttribute (const std::string &name)
                                        const;
 
     //---------------------------------------------
@@ -205,46 +205,46 @@ class Header
     class Iterator;
     class ConstIterator;
 
-    Iterator			begin ();
-    ConstIterator		begin () const;
+    Iterator            begin ();
+    ConstIterator        begin () const;
 
-    Iterator			end ();
-    ConstIterator		end () const;
+    Iterator            end ();
+    ConstIterator        end () const;
 
-    Iterator			find (const char name[]);
-    ConstIterator		find (const char name[]) const;
+    Iterator            find (const char name[]);
+    ConstIterator        find (const char name[]) const;
 
-    Iterator			find (const std::string &name);
-    ConstIterator		find (const std::string &name) const;
+    Iterator            find (const std::string &name);
+    ConstIterator        find (const std::string &name) const;
 
 
     //--------------------------------
     // Access to predefined attributes
     //--------------------------------
 
-    Imath::Box2i &		displayWindow ();
-    const Imath::Box2i &	displayWindow () const;
+    Imath::Box2i &        displayWindow ();
+    const Imath::Box2i &    displayWindow () const;
 
-    Imath::Box2i &		dataWindow ();
-    const Imath::Box2i &	dataWindow () const;
+    Imath::Box2i &        dataWindow ();
+    const Imath::Box2i &    dataWindow () const;
 
-    float &			pixelAspectRatio ();
-    const float &		pixelAspectRatio () const;
+    float &            pixelAspectRatio ();
+    const float &        pixelAspectRatio () const;
 
-    Imath::V2f &		screenWindowCenter ();
-    const Imath::V2f &		screenWindowCenter () const;
+    Imath::V2f &        screenWindowCenter ();
+    const Imath::V2f &        screenWindowCenter () const;
 
-    float &			screenWindowWidth ();
-    const float &		screenWindowWidth () const;
+    float &            screenWindowWidth ();
+    const float &        screenWindowWidth () const;
 
-    ChannelList &		channels ();
-    const ChannelList &		channels () const;
+    ChannelList &        channels ();
+    const ChannelList &        channels () const;
 
-    LineOrder &			lineOrder ();
-    const LineOrder &		lineOrder () const;
+    LineOrder &            lineOrder ();
+    const LineOrder &        lineOrder () const;
 
-    Compression &		compression ();
-    const Compression &		compression () const;
+    Compression &        compression ();
+    const Compression &        compression () const;
 
 
     //----------------------------------------------------------------------
@@ -268,12 +268,12 @@ class Header
     //
     //----------------------------------------------------------------------
 
-    void			setTileDescription (const TileDescription & td);
+    void            setTileDescription (const TileDescription & td);
 
-    TileDescription &		tileDescription ();
-    const TileDescription &	tileDescription () const;
+    TileDescription &        tileDescription ();
+    const TileDescription &    tileDescription () const;
 
-    bool			hasTileDescription() const;
+    bool            hasTileDescription() const;
 
 
     //----------------------------------------------------------------------
@@ -297,12 +297,12 @@ class Header
     //
     //----------------------------------------------------------------------
 
-    void			setPreviewImage (const PreviewImage &p);
+    void            setPreviewImage (const PreviewImage &p);
 
-    PreviewImage &		previewImage ();
-    const PreviewImage &	previewImage () const;
+    PreviewImage &        previewImage ();
+    const PreviewImage &    previewImage () const;
 
-    bool			hasPreviewImage () const;
+    bool            hasPreviewImage () const;
 
 
     //-------------------------------------------------------------
@@ -314,7 +314,7 @@ class Header
     // header
     //-------------------------------------------------------------
 
-    void			sanityCheck (bool isTiled = false) const;
+    void            sanityCheck (bool isTiled = false) const;
 
 
     //----------------------------------------------------------------
@@ -333,8 +333,8 @@ class Header
     // a damaged image file.
     //----------------------------------------------------------------
 
-    static void			setMaxImageSize (int maxWidth, int maxHeight);
-    static void			setMaxTileSize (int maxWidth, int maxHeight);
+    static void            setMaxImageSize (int maxWidth, int maxHeight);
+    static void            setMaxTileSize (int maxWidth, int maxHeight);
 
 
     //------------------------------------------------------------------
@@ -348,14 +348,14 @@ class Header
     //------------------------------------------------------------------
 
 
-    Int64			writeTo (OStream &os,
+    Int64            writeTo (OStream &os,
                      bool isTiled = false) const;
 
-    void			readFrom (IStream &is, int &version);
+    void            readFrom (IStream &is, int &version);
 
   private:
 
-    AttributeMap		_map;
+    AttributeMap        _map;
 };
 
 
@@ -370,11 +370,11 @@ class Header::Iterator
     Iterator ();
     Iterator (const Header::AttributeMap::iterator &i);
 
-    Iterator &			operator ++ ();
-    Iterator 			operator ++ (int);
+    Iterator &            operator ++ ();
+    Iterator             operator ++ (int);
 
-    const char *		name () const;
-    Attribute &			attribute () const;
+    const char *        name () const;
+    Attribute &            attribute () const;
 
   private:
 
@@ -392,11 +392,11 @@ class Header::ConstIterator
     ConstIterator (const Header::AttributeMap::const_iterator &i);
     ConstIterator (const Header::Iterator &other);
 
-    ConstIterator &		operator ++ ();
-    ConstIterator 		operator ++ (int);
+    ConstIterator &        operator ++ ();
+    ConstIterator         operator ++ (int);
 
-    const char *		name () const;
-    const Attribute &		attribute () const;
+    const char *        name () const;
+    const Attribute &        attribute () const;
 
   private:
 

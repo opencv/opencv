@@ -575,12 +575,12 @@ void SURF_interpolateKeypoint(
 ////////////////////////////////////////////////////////////////////////
 // Orientation
 
-#define ORI_WIN			 60
-#define ORI_SAMPLES		 113
+#define ORI_WIN             60
+#define ORI_SAMPLES         113
 
 // The distance between samples in the beginning of the the reduction
-#define ORI_RESPONSE_REDUCTION_WIDTH		 48
-#define ORI_RESPONSE_ARRAY_SIZE			     (ORI_RESPONSE_REDUCTION_WIDTH * 2)
+#define ORI_RESPONSE_REDUCTION_WIDTH         48
+#define ORI_RESPONSE_ARRAY_SIZE                 (ORI_RESPONSE_REDUCTION_WIDTH * 2)
 
 __constant float c_aptX[ORI_SAMPLES] = {-6, -5, -5, -5, -5, -5, -5, -5, -4, -4, -4, -4, -4, -4, -4, -4, -4, -3, -3, -3, -3, -3, -3, -3, -3, -3, -3, -3, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6};
 __constant float c_aptY[ORI_SAMPLES] = {0, -3, -2, -1, 0, 1, 2, 3, -4, -3, -2, -1, 0, 1, 2, 3, 4, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -4, -3, -2, -1, 0, 1, 2, 3, 4, -3, -2, -1, 0, 1, 2, 3, 0};

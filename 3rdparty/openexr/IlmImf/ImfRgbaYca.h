@@ -41,76 +41,76 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Conversion between RGBA (red, green, blue alpha)
-//	and YCA (luminance, subsampled chroma, alpha) data:
+//    Conversion between RGBA (red, green, blue alpha)
+//    and YCA (luminance, subsampled chroma, alpha) data:
 //
-//	Luminance, Y, is computed as a weighted sum of R, G, and B:
+//    Luminance, Y, is computed as a weighted sum of R, G, and B:
 //
-//		Y = yw.x * R + yw.y * G + yw.z * B
+//        Y = yw.x * R + yw.y * G + yw.z * B
 //
-//	Function computeYw() computes a set of RGB-to-Y weights, yw,
-//	from a set of primary and white point chromaticities.
+//    Function computeYw() computes a set of RGB-to-Y weights, yw,
+//    from a set of primary and white point chromaticities.
 //
-//	Chroma, C, consists of two components, RY and BY:
+//    Chroma, C, consists of two components, RY and BY:
 //
-//		RY = (R - Y) / Y
-//		BY = (B - Y) / Y
+//        RY = (R - Y) / Y
+//        BY = (B - Y) / Y
 //
-//	For efficiency, the x and y subsampling rates for chroma are
-//	hardwired to 2, and the chroma subsampling and reconstruction
-//	filters are fixed 27-pixel wide windowed sinc functions.
+//    For efficiency, the x and y subsampling rates for chroma are
+//    hardwired to 2, and the chroma subsampling and reconstruction
+//    filters are fixed 27-pixel wide windowed sinc functions.
 //
-//	Starting with an image that has RGBA data for all pixels,
+//    Starting with an image that has RGBA data for all pixels,
 //
-//		RGBA RGBA RGBA RGBA ... RGBA RGBA
-//		RGBA RGBA RGBA RGBA ... RGBA RGBA
-//		RGBA RGBA RGBA RGBA ... RGBA RGBA
-//		RGBA RGBA RGBA RGBA ... RGBA RGBA
-//		...
-//		RGBA RGBA RGBA RGBA ... RGBA RGBA
-//		RGBA RGBA RGBA RGBA ... RGBA RGBA
+//        RGBA RGBA RGBA RGBA ... RGBA RGBA
+//        RGBA RGBA RGBA RGBA ... RGBA RGBA
+//        RGBA RGBA RGBA RGBA ... RGBA RGBA
+//        RGBA RGBA RGBA RGBA ... RGBA RGBA
+//        ...
+//        RGBA RGBA RGBA RGBA ... RGBA RGBA
+//        RGBA RGBA RGBA RGBA ... RGBA RGBA
 //
-//	function RGBAtoYCA() converts the pixels to YCA format:
+//    function RGBAtoYCA() converts the pixels to YCA format:
 //
-//		YCA  YCA  YCA  YCA  ... YCA  YCA
-//		YCA  YCA  YCA  YCA  ... YCA  YCA
-//		YCA  YCA  YCA  YCA  ... YCA  YCA
-//		YCA  YCA  YCA  YCA  ... YCA  YCA
-//		...
-//		YCA  YCA  YCA  YCA  ... YCA  YCA
-//		YCA  YCA  YCA  YCA  ... YCA  YCA
+//        YCA  YCA  YCA  YCA  ... YCA  YCA
+//        YCA  YCA  YCA  YCA  ... YCA  YCA
+//        YCA  YCA  YCA  YCA  ... YCA  YCA
+//        YCA  YCA  YCA  YCA  ... YCA  YCA
+//        ...
+//        YCA  YCA  YCA  YCA  ... YCA  YCA
+//        YCA  YCA  YCA  YCA  ... YCA  YCA
 //
-//	Next, decimateChomaHoriz() eliminates the chroma values from
-//	the odd-numbered pixels in every scan line:
+//    Next, decimateChomaHoriz() eliminates the chroma values from
+//    the odd-numbered pixels in every scan line:
 //
-//		YCA  YA   YCA  YA   ... YCA  YA
-//		YCA  YA   YCA  YA   ... YCA  YA
-//		YCA  YA   YCA  YA   ... YCA  YA
-//		YCA  YA   YCA  YA   ... YCA  YA
-//		...
-//		YCA  YA   YCA  YA   ... YCA  YA
-//		YCA  YA   YCA  YA   ... YCA  YA
+//        YCA  YA   YCA  YA   ... YCA  YA
+//        YCA  YA   YCA  YA   ... YCA  YA
+//        YCA  YA   YCA  YA   ... YCA  YA
+//        YCA  YA   YCA  YA   ... YCA  YA
+//        ...
+//        YCA  YA   YCA  YA   ... YCA  YA
+//        YCA  YA   YCA  YA   ... YCA  YA
 //
-//	decimateChromaVert() eliminates all chroma values from the
-//	odd-numbered scan lines:
+//    decimateChromaVert() eliminates all chroma values from the
+//    odd-numbered scan lines:
 //
-//		YCA  YA   YCA  YA   ... YCA  YA
-//		YA   YA   YA   YA   ... YA   YA
-//		YCA  YA   YCA  YA   ... YCA  YA
-//		YA   YA   YA   YA   ... YA   YA
-//		...
-//		YCA  YA   YCA  YA   ... YCA  YA
-//		YA   YA   YA   YA   ... YA   YA
+//        YCA  YA   YCA  YA   ... YCA  YA
+//        YA   YA   YA   YA   ... YA   YA
+//        YCA  YA   YCA  YA   ... YCA  YA
+//        YA   YA   YA   YA   ... YA   YA
+//        ...
+//        YCA  YA   YCA  YA   ... YCA  YA
+//        YA   YA   YA   YA   ... YA   YA
 //
-//	Finally, roundYCA() reduces the precision of the luminance
-//	and chroma values so that the pixel data shrink more when
-//	they are saved in a compressed file.
+//    Finally, roundYCA() reduces the precision of the luminance
+//    and chroma values so that the pixel data shrink more when
+//    they are saved in a compressed file.
 //
-//	The output of roundYCA() can be converted back to a set
-//	of RGBA pixel data that is visually very similar to the
-//	original RGBA image, by calling reconstructChromaHoriz(),
-//	reconstructChromaVert(), YCAtoRGBA(), and finally
-//	fixSaturation().
+//    The output of roundYCA() can be converted back to a set
+//    of RGBA pixel data that is visually very similar to the
+//    original RGBA image, by calling reconstructChromaHoriz(),
+//    reconstructChromaVert(), YCAtoRGBA(), and finally
+//    fixSaturation().
 //
 //-----------------------------------------------------------------------------
 
@@ -140,10 +140,10 @@ Imath::V3f computeYw (const Chromaticities &cr);
 //
 // Convert an array of n RGBA pixels, rgbaIn, to YCA (luminance/chroma/alpha):
 //
-//	ycaOut[i].g = Y (rgbaIn[i]);
-//	ycaOut[i].r = RY (rgbaIn[i]);
-//	ycaOut[i].b = BY (rgbaIn[i]);
-//	ycaOut[i].a = aIsValid? rgbaIn[i].a: 1
+//    ycaOut[i].g = Y (rgbaIn[i]);
+//    ycaOut[i].r = RY (rgbaIn[i]);
+//    ycaOut[i].b = BY (rgbaIn[i]);
+//    ycaOut[i].a = aIsValid? rgbaIn[i].a: 1
 //
 // yw is a set of RGB-to-Y weighting factors, as computed by computeYw().
 //

@@ -37,7 +37,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	Integer arithmetic operations that throw exceptions
+//    Integer arithmetic operations that throw exceptions
 //      on overflow, underflow or division by zero.
 //
 //-----------------------------------------------------------------------------

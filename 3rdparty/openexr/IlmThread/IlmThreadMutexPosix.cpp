@@ -34,8 +34,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class Mutex -- implementation for
-//	platforms that support Posix threads
+//    class Mutex -- implementation for
+//    platforms that support Posix threads
 //
 //-----------------------------------------------------------------------------
 

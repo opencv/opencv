@@ -49,15 +49,15 @@
 namespace Imath {
 
 //
-//	template class Frustum<T>
+//    template class Frustum<T>
 //
-//	The frustum is always located with the eye point at the
-//	origin facing down -Z. This makes the Frustum class
-//	compatable with OpenGL (or anything that assumes a camera
-//	looks down -Z, hence with a right-handed coordinate system)
-//	but not with RenderMan which assumes the camera looks down
-//	+Z. Additional functions are provided for conversion from
-//	and from various camera coordinate spaces.
+//    The frustum is always located with the eye point at the
+//    origin facing down -Z. This makes the Frustum class
+//    compatable with OpenGL (or anything that assumes a camera
+//    looks down -Z, hence with a right-handed coordinate system)
+//    but not with RenderMan which assumes the camera looks down
+//    +Z. Additional functions are provided for conversion from
+//    and from various camera coordinate spaces.
 //
 //      nearPlane/farPlane: near/far are keywords used by Microsoft's
 //      compiler, so we use nearPlane/farPlane instead to avoid
@@ -78,7 +78,7 @@ class Frustum
     // Assignment operator
     //--------------------
 
-    const Frustum &operator	= (const Frustum &);
+    const Frustum &operator    = (const Frustum &);
 
     //--------------------
     //  Operators:  ==, !=
@@ -91,33 +91,33 @@ class Frustum
     //  Set functions change the entire state of the Frustum
     //--------------------------------------------------------
 
-    void		set(T nearPlane, T farPlane,
+    void        set(T nearPlane, T farPlane,
                 T left, T right,
                 T top, T bottom,
                 bool ortho=false);
 
-    void		set(T nearPlane, T farPlane, T fovx, T fovy, T aspect);
+    void        set(T nearPlane, T farPlane, T fovx, T fovy, T aspect);
 
     //------------------------------------------------------
-    //	These functions modify an already valid frustum state
+    //    These functions modify an already valid frustum state
     //------------------------------------------------------
 
-    void		modifyNearAndFar(T nearPlane, T farPlane);
-    void		setOrthographic(bool);
+    void        modifyNearAndFar(T nearPlane, T farPlane);
+    void        setOrthographic(bool);
 
     //--------------
     //  Access
     //--------------
 
-    bool		orthographic() const	{ return _orthographic; }
-    T			nearPlane() const	{ return _nearPlane;	}
-    T			hither() const		{ return _nearPlane;	}
-    T			farPlane() const	{ return _farPlane;	}
-    T			yon() const		{ return _farPlane;	}
-    T			left() const		{ return _left;		}
-    T			right() const		{ return _right;	}
-    T			bottom() const		{ return _bottom;	}
-    T			top() const		{ return _top;		}
+    bool        orthographic() const    { return _orthographic; }
+    T            nearPlane() const    { return _nearPlane;    }
+    T            hither() const        { return _nearPlane;    }
+    T            farPlane() const    { return _farPlane;    }
+    T            yon() const        { return _farPlane;    }
+    T            left() const        { return _left;        }
+    T            right() const        { return _right;    }
+    T            bottom() const        { return _bottom;    }
+    T            top() const        { return _top;        }
 
     //-----------------------------------------------------------------------
     //  Sets the planes in p to be the six bounding planes of the frustum, in
@@ -127,8 +127,8 @@ class Frustum
     //  to transform the frustum before setting the planes.
     //-----------------------------------------------------------------------
 
-    void		planes(Plane3<T> p[6]);
-    void		planes(Plane3<T> p[6], const Matrix44<T> &M);
+    void        planes(Plane3<T> p[6]);
+    void        planes(Plane3<T> p[6], const Matrix44<T> &M);
 
     //----------------------
     //  Derived Quantities
@@ -147,36 +147,36 @@ class Frustum
     //  space.
     //-----------------------------------------------------------------------
 
-    Frustum<T>		window(T left, T right, T top, T bottom) const;
+    Frustum<T>        window(T left, T right, T top, T bottom) const;
 
     //----------------------------------------------------------
     // Projection is in screen space / Conversion from Z-Buffer
     //----------------------------------------------------------
 
-    Line3<T>		projectScreenToRay( const Vec2<T> & ) const;
-    Vec2<T>		projectPointToScreen( const Vec3<T> & ) const;
+    Line3<T>        projectScreenToRay( const Vec2<T> & ) const;
+    Vec2<T>        projectPointToScreen( const Vec3<T> & ) const;
 
-    T			ZToDepth(long zval, long min, long max) const;
-    T			normalizedZToDepth(T zval) const;
-    long		DepthToZ(T depth, long zmin, long zmax) const;
+    T            ZToDepth(long zval, long min, long max) const;
+    T            normalizedZToDepth(T zval) const;
+    long        DepthToZ(T depth, long zmin, long zmax) const;
 
-    T			worldRadius(const Vec3<T> &p, T radius) const;
-    T			screenRadius(const Vec3<T> &p, T radius) const;
+    T            worldRadius(const Vec3<T> &p, T radius) const;
+    T            screenRadius(const Vec3<T> &p, T radius) const;
 
-
-  protected:
-
-    Vec2<T>		screenToLocal( const Vec2<T> & ) const;
-    Vec2<T>		localToScreen( const Vec2<T> & ) const;
 
   protected:
-    T			_nearPlane;
-    T			_farPlane;
-    T			_left;
-    T			_right;
-    T			_top;
-    T			_bottom;
-    bool		_orthographic;
+
+    Vec2<T>        screenToLocal( const Vec2<T> & ) const;
+    Vec2<T>        localToScreen( const Vec2<T> & ) const;
+
+  protected:
+    T            _nearPlane;
+    T            _farPlane;
+    T            _left;
+    T            _right;
+    T            _top;
+    T            _bottom;
+    bool        _orthographic;
 };
 
 
@@ -255,11 +255,11 @@ template<class T>
 void Frustum<T>::set(T n, T f, T l, T r, T t, T b, bool o)
 {
     _nearPlane      = n;
-    _farPlane	    = f;
-    _left	    = l;
-    _right	    = r;
-    _bottom	    = b;
-    _top	    = t;
+    _farPlane        = f;
+    _left        = l;
+    _right        = r;
+    _bottom        = b;
+    _top        = t;
     _orthographic   = o;
 }
 
@@ -307,20 +307,20 @@ void Frustum<T>::set(T nearPlane, T farPlane, T fovx, T fovy, T aspect)
 
     if (fovx != 0)
     {
-    _right	    = nearPlane * Math<T>::tan(fovx / two);
-    _left	    = -_right;
-    _top	    = ((_right - _left) / aspect) / two;
-    _bottom	    = -_top;
+    _right        = nearPlane * Math<T>::tan(fovx / two);
+    _left        = -_right;
+    _top        = ((_right - _left) / aspect) / two;
+    _bottom        = -_top;
     }
     else
     {
-    _top	    = nearPlane * Math<T>::tan(fovy / two);
-    _bottom	    = -_top;
-    _right	    = (_top - _bottom) * aspect / two;
-    _left	    = -_right;
+    _top        = nearPlane * Math<T>::tan(fovy / two);
+    _bottom        = -_top;
+    _right        = (_top - _bottom) * aspect / two;
+    _left        = -_right;
     }
-    _nearPlane	    = nearPlane;
-    _farPlane	    = farPlane;
+    _nearPlane        = nearPlane;
+    _farPlane        = farPlane;
     _orthographic   = false;
 }
 
@@ -646,7 +646,7 @@ template<class T>
 void Frustum<T>::planes(Plane3<T> p[6])
 {
     //
-    //	Plane order: Top, Right, Bottom, Left, Near, Far.
+    //    Plane order: Top, Right, Bottom, Left, Near, Far.
     //  Normals point outwards.
     //
 
@@ -679,7 +679,7 @@ template<class T>
 void Frustum<T>::planes(Plane3<T> p[6], const Matrix44<T> &M)
 {
     //
-    //	Plane order: Top, Right, Bottom, Left, Near, Far.
+    //    Plane order: Top, Right, Bottom, Left, Near, Far.
     //  Normals point outwards.
     //
 
@@ -720,7 +720,7 @@ void Frustum<T>::planes(Plane3<T> p[6], const Matrix44<T> &M)
     }
 }
 
-typedef Frustum<float>	Frustumf;
+typedef Frustum<float>    Frustumf;
 typedef Frustum<double> Frustumd;
 
 

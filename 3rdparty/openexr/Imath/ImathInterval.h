@@ -40,12 +40,12 @@
 
 //-------------------------------------------------------------------
 //
-//	class Imath::Interval<class T>
-//	--------------------------------
+//    class Imath::Interval<class T>
+//    --------------------------------
 //
-//	An Interval has a min and a max and some miscellaneous
-//	functions. It is basically a Box<T> that allows T to be
-//	a scalar.
+//    An Interval has a min and a max and some miscellaneous
+//    functions. It is basically a Box<T> that allows T to be
+//    a scalar.
 //
 //-------------------------------------------------------------------
 
@@ -63,11 +63,11 @@ class Interval
     //  Data Members are public
     //-------------------------
 
-    T				min;
-    T				max;
+    T                min;
+    T                max;
 
     //-----------------------------------------------------
-    //	Constructors - an "empty" Interval is created by default
+    //    Constructors - an "empty" Interval is created by default
     //-----------------------------------------------------
 
     Interval();
@@ -81,28 +81,28 @@ class Interval
     bool                        operator == (const Interval<T> &src) const;
 
     //------------------
-    //	Interval manipulation
+    //    Interval manipulation
     //------------------
 
-    void			makeEmpty();
-    void			extendBy(const T& point);
-    void			extendBy(const Interval<T>& interval);
+    void            makeEmpty();
+    void            extendBy(const T& point);
+    void            extendBy(const Interval<T>& interval);
 
     //---------------------------------------------------
-    //	Query functions - these compute results each time
+    //    Query functions - these compute results each time
     //---------------------------------------------------
 
-    T				size() const;
-    T				center() const;
-    bool			intersects(const T &point) const;
-    bool			intersects(const Interval<T> &interval) const;
+    T                size() const;
+    T                center() const;
+    bool            intersects(const T &point) const;
+    bool            intersects(const Interval<T> &interval) const;
 
     //----------------
-    //	Classification
+    //    Classification
     //----------------
 
-    bool			hasVolume() const;
-    bool			isEmpty() const;
+    bool            hasVolume() const;
+    bool            isEmpty() const;
 };
 
 

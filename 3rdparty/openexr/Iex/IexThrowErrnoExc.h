@@ -39,7 +39,7 @@
 
 //----------------------------------------------------------
 //
-//	A function which throws ExcErrno exceptions
+//    A function which throws ExcErrno exceptions
 //
 //----------------------------------------------------------
 
@@ -60,30 +60,30 @@ namespace Iex {
 // If opening file /tmp/output failed with an ENOENT error code,
 // calling
 //
-//	throwErrnoExc ();
+//    throwErrnoExc ();
 //
 // or
 //
-//	throwErrnoExc ("%T.");
+//    throwErrnoExc ("%T.");
 //
 // will throw an EnoentExc whose text reads
 //
-//	No such file or directory.
+//    No such file or directory.
 //
 // More detailed messages can be assembled using stringstreams:
 //
-//	std::stringstream s;
-//	s << "Cannot open file " << name << " (%T).";
-//	throwErrnoExc (s);
+//    std::stringstream s;
+//    s << "Cannot open file " << name << " (%T).";
+//    throwErrnoExc (s);
 //
 // The resulting exception contains the following text:
 //
-//	Cannot open file /tmp/output (No such file or directory).
+//    Cannot open file /tmp/output (No such file or directory).
 //
 // Alternatively, you may want to use the THROW_ERRNO macro defined
 // in IexMacros.h:
 //
-//	THROW_ERRNO ("Cannot open file " << name << " (%T).")
+//    THROW_ERRNO ("Cannot open file " << name << " (%T).")
 //
 //--------------------------------------------------------------------------
 

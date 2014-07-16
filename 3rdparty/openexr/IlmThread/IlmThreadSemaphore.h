@@ -37,8 +37,8 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class Semaphore -- a wrapper class for
-//	system-dependent counting semaphores
+//    class Semaphore -- a wrapper class for
+//    system-dependent counting semaphores
 //
 //-----------------------------------------------------------------------------
 
@@ -66,10 +66,10 @@ class Semaphore
     Semaphore (unsigned int value = 0);
     virtual ~Semaphore();
 
-    void	wait();
-    bool	tryWait();
-    void	post();
-    int		value() const;
+    void    wait();
+    bool    tryWait();
+    void    post();
+    int        value() const;
 
   private:
 
@@ -100,8 +100,8 @@ class Semaphore
 
     #endif
 
-    void operator = (const Semaphore& s);	// not implemented
-    Semaphore (const Semaphore& s);		// not implemented
+    void operator = (const Semaphore& s);    // not implemented
+    Semaphore (const Semaphore& s);        // not implemented
 };
 
 

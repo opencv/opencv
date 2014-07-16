@@ -39,7 +39,7 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class OutputFile
+//    class OutputFile
 //
 //-----------------------------------------------------------------------------
 
@@ -103,14 +103,14 @@ class OutputFile
     // Access to the file name
     //------------------------
 
-    const char *	fileName () const;
+    const char *    fileName () const;
 
 
     //--------------------------
     // Access to the file header
     //--------------------------
 
-    const Header &	header () const;
+    const Header &    header () const;
 
 
     //-------------------------------------------------------
@@ -124,14 +124,14 @@ class OutputFile
     // after each call to writePixels.
     //-------------------------------------------------------
 
-    void		setFrameBuffer (const FrameBuffer &frameBuffer);
+    void        setFrameBuffer (const FrameBuffer &frameBuffer);
 
 
     //-----------------------------------
     // Access to the current frame buffer
     //-----------------------------------
 
-    const FrameBuffer &	frameBuffer () const;
+    const FrameBuffer &    frameBuffer () const;
 
 
     //-------------------------------------------------------------------
@@ -147,7 +147,7 @@ class OutputFile
     // header().dataWindow().max.y - header().dataWindow().min.y + 1.
     //-------------------------------------------------------------------
 
-    void		writePixels (int numScanLines = 1);
+    void        writePixels (int numScanLines = 1);
 
 
     //------------------------------------------------------------------
@@ -159,19 +159,19 @@ class OutputFile
     //
     // If header.lineOrder() == INCREASING_Y:
     //
-    //	The current scan line before the first call to writePixels()
+    //    The current scan line before the first call to writePixels()
     //  is header().dataWindow().min.y.  After writing each scan line,
     //  the current scan line is incremented by 1.
     //
     // If header.lineOrder() == DECREASING_Y:
     //
-    //	The current scan line before the first call to writePixels()
+    //    The current scan line before the first call to writePixels()
     //  is header().dataWindow().max.y.  After writing each scan line,
     //  the current scan line is decremented by 1.
     //
     //------------------------------------------------------------------
 
-    int			currentScanLine () const;
+    int            currentScanLine () const;
 
 
     //--------------------------------------------------------------
@@ -182,7 +182,7 @@ class OutputFile
     // "lineOrder" and "channels" attributes must be the same.
     //--------------------------------------------------------------
 
-    void		copyPixels (InputFile &in);
+    void        copyPixels (InputFile &in);
 
 
     //--------------------------------------------------------------
@@ -203,7 +203,7 @@ class OutputFile
     //
     //--------------------------------------------------------------
 
-    void		updatePreviewImage (const PreviewRgba newPixels[]);
+    void        updatePreviewImage (const PreviewRgba newPixels[]);
 
 
     //---------------------------------------------------------
@@ -220,19 +220,19 @@ class OutputFile
     //
     //---------------------------------------------------------
 
-    void		breakScanLine  (int y, int offset, int length, char c);
+    void        breakScanLine  (int y, int offset, int length, char c);
 
 
     struct Data;
 
   private:
 
-    OutputFile (const OutputFile &);			// not implemented
-    OutputFile & operator = (const OutputFile &);	// not implemented
+    OutputFile (const OutputFile &);            // not implemented
+    OutputFile & operator = (const OutputFile &);    // not implemented
 
-    void		initialize (const Header &header);
+    void        initialize (const Header &header);
 
-    Data *		_data;
+    Data *        _data;
 };
 
 
