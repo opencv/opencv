@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui_c.h"
+#include "opencv2/videoio/videoio_c.h"
 #include <stdio.h>
 
 using namespace cv;
@@ -110,5 +110,5 @@ void CV_FramecountTest::run(int)
     }
 }
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT && defined HAVE_FFMPEG
-TEST(Highgui_Video, framecount) {CV_FramecountTest test; test.safe_run();}
+TEST(Videoio_Video, framecount) {CV_FramecountTest test; test.safe_run();}
 #endif

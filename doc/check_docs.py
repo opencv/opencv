@@ -15,6 +15,7 @@ opencv_hdr_list = [
 "../modules/video/include/opencv2/video/background_segm.hpp",
 "../modules/objdetect/include/opencv2/objdetect.hpp",
 "../modules/imgcodecs/include/opencv2/imgcodecs.hpp",
+"../modules/videoio/include/opencv2/videoio.hpp",
 "../modules/highgui/include/opencv2/highgui.hpp",
 ]
 
@@ -26,6 +27,7 @@ opencv_module_list = [
 "video",
 "objdetect",
 "imgcodecs",
+"videoio",
 "highgui",
 "ml"
 ]

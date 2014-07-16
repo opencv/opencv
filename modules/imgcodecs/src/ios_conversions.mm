@@ -40,7 +40,11 @@
 //
 //M*/
 
-#import "opencv2/highgui/cap_ios.h"
+#import <UIKit/UIKit.h>
+#import <Accelerate/Accelerate.h>
+#import <AVFoundation/AVFoundation.h>
+#import <ImageIO/ImageIO.h>
+#include "opencv2/core.hpp"
 #include "precomp.hpp"
 
 UIImage* MatToUIImage(const cv::Mat& image) {

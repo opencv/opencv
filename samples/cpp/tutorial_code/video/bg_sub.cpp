@@ -6,6 +6,7 @@
 
 //opencv
 #include "opencv2/imgcodecs.hpp"
+#include "opencv2/videoio.hpp"
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/video/background_segm.hpp>
 //C

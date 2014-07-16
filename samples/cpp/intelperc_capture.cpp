@@ -1,6 +1,7 @@
 // testOpenCVCam.cpp : Defines the entry point for the console application.
 //
 
+#include "opencv2/videoio/videoio.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 #include <iostream>

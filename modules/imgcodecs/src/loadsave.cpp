@@ -454,7 +454,7 @@ bool imencode( const String& ext, InputArray _image,
 }
 
 /****************************************************************************************\
-*                         HighGUI loading & saving function implementation               *
+*                         Imgcodecs loading & saving function implementation            *
 \****************************************************************************************/
 
 CV_IMPL int
