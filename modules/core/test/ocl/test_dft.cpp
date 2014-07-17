@@ -62,7 +62,7 @@ namespace ocl {
 ////////////////////////////////////////////////////////////////////////////
 // Dft
 
-PARAM_TEST_CASE(Dft, cv::Size, OCL_FFT_TYPE, bool, bool)
+PARAM_TEST_CASE(Dft, cv::Size, OCL_FFT_TYPE, bool, bool, bool)
 {
     cv::Size dft_size;
     int	dft_flags, depth, cn, dft_type;
@@ -88,15 +88,14 @@ PARAM_TEST_CASE(Dft, cv::Size, OCL_FFT_TYPE, bool, bool)
         }
 
         if (GET_PARAM(2))
-            dft_flags |= cv::DFT_ROWS; 
-        //if (GET_PARAM(3))
-        //    if (dft_type == C2C) dft_flags |= cv::DFT_INVERSE;
-        //if (GET_PARAM(3))
-        //    dft_flags |= cv::DFT_SCALE;
+            dft_flags |= cv::DFT_ROWS;
+        if (GET_PARAM(3))
+            dft_flags |= cv::DFT_SCALE;
+        //if (GET_PARAM(4))
+        //    dft_flags |= cv::DFT_INVERSE;
+        inplace = GET_PARAM(4);
 
-        inplace = GET_PARAM(3);
-        if (inplace && dft_type == 0)
-            inplace = 0;
+
         is1d = (dft_flags & DFT_ROWS) != 0 || dft_size.height == 1;
     }
 
@@ -123,7 +122,7 @@ OCL_TEST_P(Dft, Mat)
         udst = udst(cv::Range(0, udst.rows), cv::Range(0, udst.cols/2 + 1));
     }
     
-    Mat gpu = udst.getMat(ACCESS_READ);
+    //Mat gpu = udst.getMat(ACCESS_READ);
     //std::cout << src << std::endl;
     //std::cout << dst << std::endl;
     //std::cout << gpu << std::endl;
@@ -193,6 +192,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Core, Dft, Combine(Values(cv::Size(6, 4), cv::Size(5
                                                       cv::Size(512, 1), cv::Size(1280, 768)),
                                                Values((OCL_FFT_TYPE)  R2C, (OCL_FFT_TYPE) C2C, (OCL_FFT_TYPE)  R2R, (OCL_FFT_TYPE) C2R),
                                                Bool(), // DFT_ROWS
+                                               Bool(), // DFT_SCALE
                                                Bool()  // inplace
                                                )
                             );

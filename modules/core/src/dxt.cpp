@@ -2151,27 +2151,34 @@ struct OCL_FftPlan
         size_t localsize[2];
         String kernel_name;
 
+        bool is1d = (flags & DFT_ROWS) != 0 || dft_size == 1;
+        String options = buildOptions;
+
         if (rows)
         {
             globalsize[0] = thread_count; globalsize[1] = dft_size;
             localsize[0] = thread_count; localsize[1] = 1;
             kernel_name = "fft_multi_radix_rows";
+            if (is1d && (flags & DFT_SCALE))
+                options += " -D DFT_SCALE";
         }
         else
         {
             globalsize[0] = dft_size; globalsize[1] = thread_count;
             localsize[0] = 1; localsize[1] = thread_count;
             kernel_name = "fft_multi_radix_cols";
+            if (flags & DFT_SCALE)
+                options += " -D DFT_SCALE";
         }
-        
-        bool is1d = (flags & DFT_ROWS) != 0 || dft_size == 1;
-        String options = buildOptions;
+
         if (src.channels() == 1)
             options += " -D REAL_INPUT";
         if (dst.channels() == 1)
             options += " -D CCS_OUTPUT";
         if ((is1d && src.channels() == 1) || (rows && (flags & DFT_REAL_OUTPUT)))
             options += " -D NO_CONJUGATE";
+        if (is1d)
+            options += " -D IS_1D";
 
         ocl::Kernel k(kernel_name.c_str(), ocl::core::fft_oclsrc, options);
         if (k.empty())
