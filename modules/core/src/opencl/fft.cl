@@ -301,6 +301,12 @@ void fft_radix5(__local float2* smem, __constant const float2* twiddles, const i
     barrier(CLK_LOCAL_MEM_FENCE);
 }
 
+#ifdef DFT_SCALE
+#define VAL(x, scale) x*scale
+#else
+#define VAL(x, scale) x
+#endif
+
 __kernel void fft_multi_radix_rows(__global const uchar* src_ptr, int src_step, int src_offset, int src_rows, int src_cols,
                                    __global uchar* dst_ptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                                    __constant float2 * twiddles_ptr, const int t, const int nz)
@@ -314,6 +320,11 @@ __kernel void fft_multi_radix_rows(__global const uchar* src_ptr, int src_step, 
         __constant const float2* twiddles = (__constant float2*) twiddles_ptr;
         const int ind = x;
         const int block_size = LOCAL_SIZE/kercn;
+#ifdef IS_1D
+        float scale = 1.f/dst_cols;
+#else
+        float scale = 1.f/(dst_cols*dst_rows);
+#endif
 
 #ifndef REAL_INPUT
         __global const float2* src = (__global const float2*)(src_ptr + mad24(y, src_step, mad24(x, (int)(sizeof(float)*2), src_offset)));
@@ -341,15 +352,15 @@ __kernel void fft_multi_radix_rows(__global const uchar* src_ptr, int src_step, 
         __global float2* dst = (__global float2*)(dst_ptr + mad24(y, dst_step, dst_offset));
         #pragma unroll
         for (int i=x; i<cols; i+=block_size)
-            dst[i] = smem[i];
+            dst[i] = VAL(smem[i], scale);
 #else
         // pack row to CCS
         __local float* smem_1cn = (__local float*) smem;
         __global float* dst = (__global float*)(dst_ptr + mad24(y, dst_step, dst_offset));
         for (int i=x; i<dst_cols-1; i+=block_size)
-            dst[i+1] = smem_1cn[i+2];
+            dst[i+1] = VAL(smem_1cn[i+2], scale);
         if (x == 0)
-            dst[0] = smem_1cn[0];
+            dst[0] = VAL(smem_1cn[0], scale);
 #endif
     }
 }
@@ -368,6 +379,8 @@ __kernel void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, 
         __constant const float2* twiddles = (__constant float2*) twiddles_ptr;
         const int ind = y;
         const int block_size = LOCAL_SIZE/kercn;
+        float scale = 1.f/(dst_rows*dst_cols);
+
         #pragma unroll
         for (int i=0; i<kercn; i++)
             smem[y+i*block_size] = *((__global const float2*)(src + i*block_size*src_step));
@@ -380,7 +393,7 @@ __kernel void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, 
         __global uchar* dst = dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(float)*2), dst_offset));
         #pragma unroll
         for (int i=0; i<kercn; i++)
-            *((__global float2*)(dst + i*block_size*dst_step)) = smem[y + i*block_size];
+            *((__global float2*)(dst + i*block_size*dst_step)) = VAL(smem[y + i*block_size], scale);
 #else
         if (x == 0)
         {
@@ -388,9 +401,9 @@ __kernel void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, 
             __local float* smem_1cn = (__local float*) smem;
             __global uchar* dst = dst_ptr + mad24(y+1, dst_step, dst_offset);
             for (int i=y; i<dst_rows-1; i+=block_size, dst+=dst_step*block_size)
-                *((__global float*) dst) = smem_1cn[i+2];
+                *((__global float*) dst) = VAL(smem_1cn[i+2], scale);
             if (y == 0)
-                *((__global float*) (dst_ptr + dst_offset)) = smem_1cn[0];
+                *((__global float*) (dst_ptr + dst_offset)) = VAL(smem_1cn[0], scale);
         }
         else if (x == (dst_cols+1)/2)
         {
@@ -398,16 +411,16 @@ __kernel void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, 
             __local float* smem_1cn = (__local float*) smem;
             __global uchar* dst = dst_ptr + mad24(dst_cols-1, (int)sizeof(float), mad24(y+1, dst_step, dst_offset));
             for (int i=y; i<dst_rows-1; i+=block_size, dst+=dst_step*block_size)
-                *((__global float*) dst) = smem_1cn[i+2];
+                *((__global float*) dst) = VAL(smem_1cn[i+2], scale);
             if (y == 0)
-                *((__global float*) (dst_ptr + mad24(dst_cols-1, (int)sizeof(float), dst_offset))) = smem_1cn[0];
+                *((__global float*) (dst_ptr + mad24(dst_cols-1, (int)sizeof(float), dst_offset))) = VAL(smem_1cn[0], scale);
         }
         else
         {
             __global uchar* dst = dst_ptr + mad24(x, (int)sizeof(float)*2, mad24(y, dst_step, dst_offset - (int)sizeof(float)));
             #pragma unroll
             for (int i=y; i<dst_rows; i+=block_size, dst+=block_size*dst_step)
-                vstore2(smem[i], 0, (__global float*) dst);
+                vstore2(VAL(smem[i], scale), 0, (__global float*) dst);
         }
 #endif
     }
