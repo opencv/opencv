@@ -67,6 +67,7 @@ PARAM_TEST_CASE(Dft, cv::Size, OCL_FFT_TYPE, bool, bool)
     cv::Size dft_size;
     int	dft_flags, depth, cn, dft_type;
     bool inplace;
+    bool is1d;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
     TEST_DECLARE_OUTPUT_PARAMETER(dst);
@@ -96,6 +97,7 @@ PARAM_TEST_CASE(Dft, cv::Size, OCL_FFT_TYPE, bool, bool)
         inplace = GET_PARAM(3);
         if (inplace && dft_type == 0)
             inplace = 0;
+        is1d = (dft_flags & DFT_ROWS) != 0 || dft_size.height == 1;
     }
 
     void generateTestData()
@@ -114,17 +116,23 @@ OCL_TEST_P(Dft, Mat)
 
     OCL_OFF(cv::dft(src, dst, dft_flags));
     OCL_ON(cv::dft(usrc, udst, dft_flags));
+
+    if (dft_type == R2C && is1d)
+    {
+        dst = dst(cv::Range(0, dst.rows), cv::Range(0, dst.cols/2 + 1));
+        udst = udst(cv::Range(0, udst.rows), cv::Range(0, udst.cols/2 + 1));
+    }
     
-    //Mat gpu = udst.getMat(ACCESS_READ);
+    Mat gpu = udst.getMat(ACCESS_READ);
     //std::cout << src << std::endl;
     //std::cout << dst << std::endl;
     //std::cout << gpu << std::endl;
 
     //int cn = udst.channels();
-    
+    //
     //Mat df;
     //absdiff(dst, gpu, df);
-    //std::cout << df << std::endl;
+    //std::cout << Mat_<int>(df) << std::endl;
 
     double eps = src.size().area() * 1e-4;
     EXPECT_MAT_NEAR(dst, udst, eps);
@@ -181,9 +189,9 @@ OCL_TEST_P(MulSpectrums, Mat)
 
 OCL_INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MulSpectrums, testing::Combine(Bool(), Bool()));
 
-OCL_INSTANTIATE_TEST_CASE_P(Core, Dft, Combine(Values(cv::Size(6, 1), cv::Size(5, 8), cv::Size(30, 20),
+OCL_INSTANTIATE_TEST_CASE_P(Core, Dft, Combine(Values(cv::Size(6, 4), cv::Size(5, 8), cv::Size(6, 6),
                                                       cv::Size(512, 1), cv::Size(1280, 768)),
-                                               Values((OCL_FFT_TYPE)  R2C, (OCL_FFT_TYPE) C2C, (OCL_FFT_TYPE)  R2R/*, (OCL_FFT_TYPE) C2R*/),
+                                               Values((OCL_FFT_TYPE)  R2C, (OCL_FFT_TYPE) C2C, (OCL_FFT_TYPE)  R2R, (OCL_FFT_TYPE) C2R),
                                                Bool(), // DFT_ROWS
                                                Bool()  // inplace
                                                )
