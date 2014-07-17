@@ -684,7 +684,7 @@ template<typename _Tp> inline void Mat::push_back(const _Tp& elem)
 {
     if( !data )
     {
-    	CV_Assert((type()==0) || (DataType<_Tp>::type == type()));
+        CV_Assert((type()==0) || (DataType<_Tp>::type == type()));
 
         *this = Mat(1, 1, DataType<_Tp>::type, (void*)&elem).clone();
         return;
