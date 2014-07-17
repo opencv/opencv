@@ -2083,20 +2083,19 @@ struct OCL_FftPlan
 
     int dft_size;
     int flags;
-
-    OCL_FftPlan(int _size, int _flags): dft_size(_size), flags(_flags)
+    bool status;
+    OCL_FftPlan(int _size, int _flags): dft_size(_size), flags(_flags), status(true)
     {
         int min_radix = INT_MAX;
         std::vector<int> radixes, blocks;
         ocl_getRadixes(dft_size, radixes, blocks, min_radix);
         thread_count = (dft_size + min_radix-1) / min_radix;
 
-        printf("cols: %d - ", dft_size);
-        for (int i=0; i<radixes.size(); i++)
+        if (thread_count > ocl::Device::getDefault().maxWorkGroupSize())
         {
-            printf("%d ", radixes[i]);
+            status = false;
+            return;
         }
-        printf("min radix - %d\n", min_radix);
 
         // generate string with radix calls
         String radix_processing;
@@ -2142,6 +2141,9 @@ struct OCL_FftPlan
 
     bool enqueueTransform(InputArray _src, OutputArray _dst, int dft_size, int flags, bool rows = true) const
     {
+        if (!status)
+            return false;
+
         UMat src = _src.getUMat();
         UMat dst = _dst.getUMat();
 
@@ -2162,11 +2164,14 @@ struct OCL_FftPlan
             kernel_name = "fft_multi_radix_cols";
         }
         
+        bool is1d = (flags & DFT_ROWS) != 0 || dft_size == 1;
         String options = buildOptions;
         if (src.channels() == 1)
             options += " -D REAL_INPUT";
         if (dst.channels() == 1)
             options += " -D CCS_OUTPUT";
+        if ((is1d && src.channels() == 1) || (rows && (flags & DFT_REAL_OUTPUT)))
+            options += " -D NO_CONJUGATE";
 
         ocl::Kernel k(kernel_name.c_str(), ocl::core::fft_oclsrc, options);
         if (k.empty())
@@ -2219,61 +2224,16 @@ protected:
     std::vector<OCL_FftPlan*> planStorage;
 };
 
-static bool ocl_packToCCS(InputArray _src, OutputArray _dst, int flags)
-{
-    UMat src = _src.getUMat();
-    _dst.create(src.size(), CV_32F);
-    UMat dst = _dst.getUMat();
-
-    src = src.reshape(1);
-    if ((flags & DFT_ROWS) == 0 && src.rows > 1)
-    {
-        // pack to CCS by rows
-        if (dst.cols > 2)
-            src.colRange(2, dst.cols + (dst.cols % 2)).copyTo(dst.colRange(1, dst.cols-1 + (dst.cols % 2)));
-
-        Mat dst_mat = dst.getMat(ACCESS_WRITE);
-        Mat buffer_mat = src.getMat(ACCESS_READ);
-
-        dst_mat.at<float>(0,0) = buffer_mat.at<float>(0,0);
-        dst_mat.at<float>(dst_mat.rows-1,0) = buffer_mat.at<float>(src.rows/2,0);
-        for (int i=1; i<dst_mat.rows-1; i+=2)
-        {
-            dst_mat.at<float>(i,0) = buffer_mat.at<float>((i+1)/2,0);
-            dst_mat.at<float>(i+1,0) = buffer_mat.at<float>((i+1)/2,1);
-        }
-
-        if (dst_mat.cols % 2 == 0)
-        {
-            dst_mat.at<float>(0,dst_mat.cols-1) = buffer_mat.at<float>(0,src.cols/2);
-            dst_mat.at<float>(dst_mat.rows-1,dst_mat.cols-1) = buffer_mat.at<float>(src.rows/2,src.cols/2);
-
-            for (int i=1; i<dst_mat.rows-1; i+=2)
-            {
-                dst_mat.at<float>(i,dst_mat.cols-1) = buffer_mat.at<float>((i+1)/2,src.cols/2);
-                dst_mat.at<float>(i+1,dst_mat.cols-1) = buffer_mat.at<float>((i+1)/2,src.cols/2+1);
-            }
-        }
-    } 
-    else
-    {
-        // pack to CCS each row
-        src.colRange(0,1).copyTo(dst.colRange(0,1));
-        src.colRange(2, (dst.cols+1)).copyTo(dst.colRange(1, dst.cols));
-    }
-    return true;
-}
-
 static bool ocl_dft_C2C_rows(InputArray _src, OutputArray _dst, int nonzero_rows, int flags)
 {
     const OCL_FftPlan* plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.cols(), flags);
     return plan->enqueueTransform(_src, _dst, nonzero_rows, flags, true);
 }
 
-static bool ocl_dft_C2C_cols(InputArray _src, OutputArray _dst, int flags)
+static bool ocl_dft_C2C_cols(InputArray _src, OutputArray _dst, int nonzero_cols, int flags)
 {
     const OCL_FftPlan* plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.rows(), flags);
-    return plan->enqueueTransform(_src, _dst, _src.cols(), flags, false);
+    return plan->enqueueTransform(_src, _dst, nonzero_cols, flags, false);
 }
 
 static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_rows)
@@ -2315,6 +2275,8 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
     // Forward Complex to CCS not supported
     if (complex_input && real_output && !inv)
     {
+        flags ^= DFT_REAL_OUTPUT;
+        flags |= DFT_COMPLEX_OUTPUT;
         real_output = 0; 
         complex_output = 1;
     }
@@ -2344,23 +2306,21 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
 
     if (complex_output)
     {
-        if (real_input && is1d && !inv)
-            output.create(src.size(), CV_32FC2);
-        else
-        {
-            _dst.create(src.size(), CV_32FC2); 
-            output = _dst.getUMat();
-        }
-    } else
+        _dst.create(src.size(), CV_32FC2); 
+        output = _dst.getUMat();
+    } 
+    else
     {
-        // CCS
         if (is1d)
         {
             _dst.create(src.size(), CV_32FC1);
             output = _dst.getUMat();
         }
         else
+        {
+            _dst.create(src.size(), CV_32FC1);
             output.create(src.size(), CV_32FC2);
+        }
     }
 
     if (!ocl_dft_C2C_rows(input, output, nonzero_rows, flags))
@@ -2368,32 +2328,13 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
 
     if (!is1d)
     {
-        if (!ocl_dft_C2C_cols(output, output, flags))
+        int nonzero_cols = real_input && real_output ? output.cols/2 + 1 : output.cols;
+        if (!ocl_dft_C2C_cols(output, _dst, nonzero_cols, flags))
             return false;
-    }
-
-    if (complex_output)
+    } else
     {
-        if (real_input && is1d && !inv)
-            _dst.assign(output.colRange(0, output.cols/2+1));
-        else
-            _dst.assign(output);
+        _dst.assign(output);
     }
-    else
-    {
-        if (!inv)
-        {
-            if (!is1d)
-                ocl_packToCCS(output, _dst, flags);
-            else
-                _dst.assign(output);
-        }
-        else
-        {
-            // copy real part to dst
-        }
-    }
-    //printf("OCL!\n");
     return true;
 }
 
@@ -2435,7 +2376,6 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
     int elem_size = (int)src.elemSize1(), complex_elem_size = elem_size*2;
     int factors[34];
     bool inplace_transform = false;
-    bool is1d = (flags & DFT_ROWS) != 0 || src.rows == 1;
 #ifdef USE_IPP_DFT
     AutoBuffer<uchar> ippbuf;
     int ipp_norm_flag = !(flags & DFT_SCALE) ? 8 : inv ? 2 : 1;
@@ -2444,10 +2384,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
     CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
 
     if( !inv && src.channels() == 1 && (flags & DFT_COMPLEX_OUTPUT) )
-        if (!is1d)
-            _dst.create( src.size(), CV_MAKETYPE(depth, 2) );
-        else
-            _dst.create( Size(src.cols/2+1, src.rows), CV_MAKETYPE(depth, 2) );
+        _dst.create( src.size(), CV_MAKETYPE(depth, 2) );
     else if( inv && src.channels() == 2 && (flags & DFT_REAL_OUTPUT) )
         _dst.create( src.size(), depth );
     else

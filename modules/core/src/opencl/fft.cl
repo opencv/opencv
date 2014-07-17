@@ -331,10 +331,17 @@ __kernel void fft_multi_radix_rows(__global const uchar* src_ptr, int src_step, 
         RADIX_PROCESS;
 
 #ifndef CCS_OUTPUT
-        __global float2* dst = (__global float2*)(dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(float)*2), dst_offset)));
+#ifdef NO_CONJUGATE
+        // copy result without complex conjugate
+        const int cols = dst_cols/2 + 1;
+#else
+        const int cols = dst_cols;
+#endif
+
+        __global float2* dst = (__global float2*)(dst_ptr + mad24(y, dst_step, dst_offset));
         #pragma unroll
-        for (int i=0; i<kercn; i++)
-            dst[i*block_size] = smem[x + i*block_size];
+        for (int i=x; i<cols; i+=block_size)
+            dst[i] = smem[i];
 #else
         // pack row to CCS
         __local float* smem_1cn = (__local float*) smem;
@@ -358,7 +365,6 @@ __kernel void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, 
     {
         __local float2 smem[LOCAL_SIZE];
         __global const uchar* src = src_ptr + mad24(y, src_step, mad24(x, (int)(sizeof(float)*2), src_offset));
-        __global uchar* dst = dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(float)*2), dst_offset));
         __constant const float2* twiddles = (__constant float2*) twiddles_ptr;
         const int ind = y;
         const int block_size = LOCAL_SIZE/kercn;
@@ -370,9 +376,39 @@ __kernel void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, 
 
         RADIX_PROCESS;
 
-        // copy data to dst
+#ifndef CCS_OUTPUT
+        __global uchar* dst = dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(float)*2), dst_offset));
         #pragma unroll
         for (int i=0; i<kercn; i++)
-            *((__global float2*)(dst + i*block_size*src_step)) = smem[y + i*block_size];
+            *((__global float2*)(dst + i*block_size*dst_step)) = smem[y + i*block_size];
+#else
+        if (x == 0)
+        {
+            // pack first column to CCS
+            __local float* smem_1cn = (__local float*) smem;
+            __global uchar* dst = dst_ptr + mad24(y+1, dst_step, dst_offset);
+            for (int i=y; i<dst_rows-1; i+=block_size, dst+=dst_step*block_size)
+                *((__global float*) dst) = smem_1cn[i+2];
+            if (y == 0)
+                *((__global float*) (dst_ptr + dst_offset)) = smem_1cn[0];
+        }
+        else if (x == (dst_cols+1)/2)
+        {
+            // pack last column to CCS (if needed)
+            __local float* smem_1cn = (__local float*) smem;
+            __global uchar* dst = dst_ptr + mad24(dst_cols-1, (int)sizeof(float), mad24(y+1, dst_step, dst_offset));
+            for (int i=y; i<dst_rows-1; i+=block_size, dst+=dst_step*block_size)
+                *((__global float*) dst) = smem_1cn[i+2];
+            if (y == 0)
+                *((__global float*) (dst_ptr + mad24(dst_cols-1, (int)sizeof(float), dst_offset))) = smem_1cn[0];
+        }
+        else
+        {
+            __global uchar* dst = dst_ptr + mad24(x, (int)sizeof(float)*2, mad24(y, dst_step, dst_offset - (int)sizeof(float)));
+            #pragma unroll
+            for (int i=y; i<dst_rows; i+=block_size, dst+=block_size*dst_step)
+                vstore2(smem[i], 0, (__global float*) dst);
+        }
+#endif
     }
 }
