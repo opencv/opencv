@@ -1496,7 +1496,6 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
     int elem_size = (int)src.elemSize1(), complex_elem_size = elem_size*2;
     int factors[34];
     bool inplace_transform = false;
-    bool is1d = (flags & DFT_ROWS) != 0 || src.rows == 1;
 #ifdef USE_IPP_DFT
     AutoBuffer<uchar> ippbuf;
     int ipp_norm_flag = !(flags & DFT_SCALE) ? 8 : inv ? 2 : 1;
@@ -1505,10 +1504,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
     CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
 
     if( !inv && src.channels() == 1 && (flags & DFT_COMPLEX_OUTPUT) )
-        if (!is1d)
-            _dst.create( src.size(), CV_MAKETYPE(depth, 2) );
-        else
-            _dst.create( Size(src.cols/2+1, src.rows), CV_MAKETYPE(depth, 2) );
+        _dst.create( src.size(), CV_MAKETYPE(depth, 2) );
     else if( inv && src.channels() == 2 && (flags & DFT_REAL_OUTPUT) )
         _dst.create( src.size(), depth );
     else
