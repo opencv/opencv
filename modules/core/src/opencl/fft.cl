@@ -425,3 +425,116 @@ __kernel void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, 
 #endif
     }
 }
+
+__kernel void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step, int src_offset, int src_rows, int src_cols,
+                                    __global uchar* dst_ptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                    __constant float2 * twiddles_ptr, const int t, const int nz)
+{
+    const int x = get_global_id(0);
+    const int y = get_group_id(1);
+
+    if (y < nz)
+    {
+        __local float2 smem[LOCAL_SIZE];
+        __constant const float2* twiddles = (__constant float2*) twiddles_ptr;
+        const int ind = x;
+        const int block_size = LOCAL_SIZE/kercn;
+#ifdef IS_1D
+        float scale = 1.f/dst_cols;
+#else
+        float scale = 1.f/(dst_cols*dst_rows);
+#endif
+
+#ifndef REAL_INPUT
+        __global const float2* src = (__global const float2*)(src_ptr + mad24(y, src_step, mad24(x, (int)(sizeof(float)*2), src_offset)));
+        #pragma unroll
+        for (int i=0; i<kercn; i++)
+        {
+            smem[x+i*block_size].x =  src[i*block_size].x;
+            smem[x+i*block_size].y = -src[i*block_size].y;
+        }
+#else    
+        __global const float2* src = (__global const float2*)(src_ptr + mad24(y, src_step, mad24(1, (int)sizeof(float), src_offset)));
+        #pragma unroll
+        for (int i=x; i<(LOCAL_SIZE-1)/2; i+=block_size)
+        {
+            smem[i+1].x = src[i].x;
+            smem[i+1].y = -src[i].y;
+            smem[LOCAL_SIZE-i-1] = src[i];
+        }
+        if (x==0)
+        {
+            smem[0].x = *(__global const float*)(src_ptr + mad24(y, src_step, src_offset));
+            smem[0].y = 0.f;
+
+            if(LOCAL_SIZE % 2 ==0)
+            {
+                smem[LOCAL_SIZE/2].x = src[LOCAL_SIZE/2-1].x;
+                smem[LOCAL_SIZE/2].y = 0.f;
+            }
+        }
+#endif
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        RADIX_PROCESS;
+
+        // copy data to dst
+#ifndef REAL_INPUT
+        __global float2* dst = (__global float*)(dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(float)*2), dst_offset)));
+        #pragma unroll
+        for (int i=0; i<kercn; i++)
+        {
+            dst[i*block_size].x = VAL(smem[x + i*block_size].x, scale);
+            dst[i*block_size].y = VAL(-smem[x + i*block_size].y, scale);
+        }
+#else
+        __global float* dst = (__global float*)(dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(float)), dst_offset)));
+        #pragma unroll
+        for (int i=0; i<kercn; i++)
+        {
+            dst[i*block_size] = smem[x + i*block_size].x;
+        }
+#endif
+    }
+}
+
+__kernel void ifft_multi_radix_cols(__global const uchar* src_ptr, int src_step, int src_offset, int src_rows, int src_cols,
+                              __global uchar* dst_ptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                              __constant float2 * twiddles_ptr, const int t, const int nz)
+{
+    const int x = get_group_id(0);
+    const int y = get_global_id(1);
+
+    if (x < nz)
+    {
+        __local float2 smem[LOCAL_SIZE];
+        __global const uchar* src = src_ptr + mad24(y, src_step, mad24(x, (int)(sizeof(float)*2), src_offset));
+        __global uchar* dst = dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(float)*2), dst_offset));
+        __constant const float2* twiddles = (__constant float2*) twiddles_ptr;
+        const int ind = y;
+        const int block_size = LOCAL_SIZE/kercn;
+        float scale = 1.f/(dst_rows*dst_cols);
+
+        #pragma unroll
+        for (int i=0; i<kercn; i++)
+        {
+            float2 temp = *((__global const float2*)(src + i*block_size*src_step));
+            smem[y+i*block_size].x =  temp.x;
+            smem[y+i*block_size].y =  -temp.y;
+        }
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        RADIX_PROCESS;
+
+        // copy data to dst
+        #pragma unroll
+        for (int i=0; i<kercn; i++)
+        {
+            __global float2* rez = (__global float2*)(dst + i*block_size*src_step);
+            rez[0].x = VAL(smem[y + i*block_size].x, scale);
+            rez[0].y = VAL(-smem[y + i*block_size].y, scale);
+        }
+    }
+}

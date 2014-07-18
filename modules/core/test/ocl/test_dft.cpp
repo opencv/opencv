@@ -62,7 +62,7 @@ namespace ocl {
 ////////////////////////////////////////////////////////////////////////////
 // Dft
 
-PARAM_TEST_CASE(Dft, cv::Size, OCL_FFT_TYPE, bool, bool, bool)
+PARAM_TEST_CASE(Dft, cv::Size, OCL_FFT_TYPE, bool, bool, bool, bool)
 {
     cv::Size dft_size;
     int	dft_flags, depth, cn, dft_type;
@@ -91,9 +91,9 @@ PARAM_TEST_CASE(Dft, cv::Size, OCL_FFT_TYPE, bool, bool, bool)
             dft_flags |= cv::DFT_ROWS;
         if (GET_PARAM(3))
             dft_flags |= cv::DFT_SCALE;
-        //if (GET_PARAM(4))
-        //    dft_flags |= cv::DFT_INVERSE;
-        inplace = GET_PARAM(4);
+        if (GET_PARAM(4))
+            dft_flags |= cv::DFT_INVERSE;
+        inplace = GET_PARAM(5);
 
 
         is1d = (dft_flags & DFT_ROWS) != 0 || dft_size.height == 1;
@@ -190,9 +190,10 @@ OCL_INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MulSpectrums, testing::Combine(Bool(), 
 
 OCL_INSTANTIATE_TEST_CASE_P(Core, Dft, Combine(Values(cv::Size(6, 4), cv::Size(5, 8), cv::Size(6, 6),
                                                       cv::Size(512, 1), cv::Size(1280, 768)),
-                                               Values((OCL_FFT_TYPE)  R2C, (OCL_FFT_TYPE) C2C, (OCL_FFT_TYPE)  R2R, (OCL_FFT_TYPE) C2R),
+                                               Values(/*(OCL_FFT_TYPE)  R2C, */(OCL_FFT_TYPE) C2C/*, (OCL_FFT_TYPE)  R2R, (OCL_FFT_TYPE) C2R*/),
                                                Bool(), // DFT_ROWS
                                                Bool(), // DFT_SCALE
+                                               Bool(), // DFT_INVERSE
                                                Bool()  // inplace
                                                )
                             );
