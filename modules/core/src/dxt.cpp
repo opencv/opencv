@@ -2129,8 +2129,8 @@ struct OCL_FftPlan
 
                 for (int k=0; k<(n/radix); k++)
                 {
-                    ptr[ptr_index++] = cos(k*theta);
-                    ptr[ptr_index++] = sin(k*theta);
+                    ptr[ptr_index++] = (float) cos(k*theta);
+                    ptr[ptr_index++] = (float) sin(k*theta);
                 }
             }        
         }
@@ -2152,13 +2152,14 @@ struct OCL_FftPlan
         String kernel_name;
 
         bool is1d = (flags & DFT_ROWS) != 0 || dft_size == 1;
+        bool inv = (flags & DFT_INVERSE) != 0;
         String options = buildOptions;
 
         if (rows)
         {
             globalsize[0] = thread_count; globalsize[1] = dft_size;
             localsize[0] = thread_count; localsize[1] = 1;
-            kernel_name = "fft_multi_radix_rows";
+            kernel_name = !inv ? "fft_multi_radix_rows" : "ifft_multi_radix_rows";
             if (is1d && (flags & DFT_SCALE))
                 options += " -D DFT_SCALE";
         }
@@ -2166,7 +2167,7 @@ struct OCL_FftPlan
         {
             globalsize[0] = dft_size; globalsize[1] = thread_count;
             localsize[0] = 1; localsize[1] = thread_count;
-            kernel_name = "fft_multi_radix_cols";
+            kernel_name = !inv ? "fft_multi_radix_cols" : "ifft_multi_radix_cols";
             if (flags & DFT_SCALE)
                 options += " -D DFT_SCALE";
         }
@@ -2270,13 +2271,10 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
     // if output format is not specified
     if (complex_output + real_output == 0)
     {
-        if (!inv)
-        {
-            if (real_input)
-                real_output = 1;
-            else
-                complex_output = 1;
-        }
+        if (real_input)
+            real_output = 1;
+        else
+            complex_output = 1;
     }
 
     // Forward Complex to CCS not supported
@@ -2294,23 +2292,7 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
         real_output = 1;
     }
 
-    UMat input, output;
-    if (complex_input)
-    {
-        input = src;
-    }
-    else
-    {
-        if (!inv)
-        {
-            input = src;
-        } 
-        else
-        {
-            // TODO: unpack from CCS format
-        }
-    }
-
+    UMat output;
     if (complex_output)
     {
         _dst.create(src.size(), CV_32FC2); 
@@ -2330,7 +2312,7 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
         }
     }
 
-    if (!ocl_dft_C2C_rows(input, output, nonzero_rows, flags))
+    if (!ocl_dft_C2C_rows(src, output, nonzero_rows, flags))
         return false;
 
     if (!is1d)
