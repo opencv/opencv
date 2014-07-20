@@ -208,10 +208,6 @@ CVAPI(void) cvUpdateWindow(const char* window_name);
 
 /****************************************************************************************\
 
-
-    CV_CAP_OPENNI2 = 1600   // OpenNI2 (for Kinect)
-    CV_CAP_PROP_OPENNI2_SYNC = 110,
-    CV_CAP_PROP_OPENNI2_MIRROR = 111,
 *                              Obsolete functions/synonyms                               *
 \****************************************************************************************/
 

@@ -481,7 +481,7 @@ bool CvCapture_OpenNI2::setCommonProperty( int propIdx, double propValue )
     {
     case CV_CAP_PROP_OPENNI2_MIRROR:
     {
-        bool mirror = propValue > 0 ? true : false;
+        bool mirror = propValue > 0.0 ? true : false;
         isSet = color.setMirroringEnabled(mirror) == openni::STATUS_OK;
         isSet = depth.setMirroringEnabled(mirror) == openni::STATUS_OK;
     }
@@ -492,7 +492,7 @@ bool CvCapture_OpenNI2::setCommonProperty( int propIdx, double propValue )
         isSet = setDepthGeneratorProperty( propIdx, propValue );
         break;
     case CV_CAP_PROP_OPENNI2_SYNC:
-        isSet = device.setDepthColorSyncEnabled(propValue) == openni::STATUS_OK;
+        isSet = device.setDepthColorSyncEnabled(propValue > 0.0) == openni::STATUS_OK;
         break;
     default:
         CV_Error( CV_StsBadArg, cv::format("Such parameter (propIdx=%d) isn't supported for setting.\n", propIdx) );
