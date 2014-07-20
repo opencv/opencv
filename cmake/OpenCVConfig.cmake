@@ -11,7 +11,7 @@
 #
 #    Or you can search for specific OpenCV modules:
 #
-#    FIND_PACKAGE(OpenCV REQUIRED core highgui)
+#    FIND_PACKAGE(OpenCV REQUIRED core imgcodecs)
 #
 #    If the module is found then OPENCV_<MODULE>_FOUND is set to TRUE.
 #
