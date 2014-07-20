@@ -72,12 +72,6 @@ elseif(HAVE_COCOA)
   list(APPEND HIGHGUI_LIBRARIES "-framework Cocoa")
 endif()
 
-if(HAVE_OPENNI2)
-  list(APPEND highgui_srcs src/cap_openni2.cpp)
-  ocv_include_directories(${OPENNI2_INCLUDE_DIR})
-  list(APPEND HIGHGUI_LIBRARIES ${OPENNI2_LIBRARY})
-endif(HAVE_OPENNI2)
-
 if(UNIX)
   #these variables are set by CHECK_MODULE macro
   foreach(P ${HIGHGUI_INCLUDE_DIRS})

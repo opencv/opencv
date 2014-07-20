@@ -201,9 +201,4 @@ CV_EXPORTS int createButton( const String& bar_name, ButtonCallback on_change,
                              bool initial_button_state = false);
 
 } // cv
-
-       CAP_OPENNI2      = 1600   // OpenNI2 (for Kinect)
-    CAP_PROP_OPENNI_OUTPUT_MODE       = 100,
-    CAP_PROP_OPENNI2_SYNC             = 110,
-    CAP_PROP_OPENNI2_MIRROR           = 111
 #endif
