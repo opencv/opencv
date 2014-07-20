@@ -80,7 +80,7 @@ We add a camera controller to the view controller and initialize it when the vie
 .. code-block:: objc
     :linenos:
 
-    #import <opencv2/highgui/cap_ios.h>
+    #import <opencv2/videoio/cap_ios.h>
     using namespace cv;
 
 

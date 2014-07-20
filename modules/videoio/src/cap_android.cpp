@@ -57,7 +57,7 @@
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__))
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
 
-class HighguiAndroidCameraActivity;
+class VideoIOAndroidCameraActivity;
 
 class CvCapture_Android : public CvCapture
 {
@@ -133,14 +133,14 @@ private:
     bool convertYUV2Grey(int width, int height, const unsigned char* yuv, cv::Mat& resmat);
     bool convertYUV2BGR(int width, int height, const unsigned char* yuv, cv::Mat& resmat, bool inRGBorder, bool withAlpha);
 
-    friend class HighguiAndroidCameraActivity;
+    friend class VideoIOAndroidCameraActivity;
 };
 
 
-class HighguiAndroidCameraActivity : public CameraActivity
+class VideoIOAndroidCameraActivity : public CameraActivity
 {
 public:
-    HighguiAndroidCameraActivity(CvCapture_Android* capture)
+    VideoIOAndroidCameraActivity(CvCapture_Android* capture)
     {
         m_capture = capture;
         m_framesReceived = 0;
@@ -204,7 +204,7 @@ CvCapture_Android::CvCapture_Android(int cameraId)
 
     //try connect to camera
     LOGD("CvCapture_Android::CvCapture_Android(%i)", cameraId);
-    m_activity = new HighguiAndroidCameraActivity(this);
+    m_activity = new VideoIOAndroidCameraActivity(this);
 
     if (m_activity == 0) return;
 
@@ -232,7 +232,7 @@ CvCapture_Android::~CvCapture_Android()
 {
     if (m_activity)
     {
-        ((HighguiAndroidCameraActivity*)m_activity)->LogFramesRate();
+        ((VideoIOAndroidCameraActivity*)m_activity)->LogFramesRate();
 
         pthread_mutex_lock(&m_nextFrameMutex);
 
@@ -344,7 +344,7 @@ bool CvCapture_Android::setProperty( int propIdx, double propValue )
 
         // Only changes in frame size require camera restart
         if ((propIdx == CV_CAP_PROP_FRAME_WIDTH) || (propIdx == CV_CAP_PROP_FRAME_HEIGHT))
-        {   // property for highgui class CvCapture_Android only
+        {   // property for videoio class CvCapture_Android only
             m_CameraParamsChanged = true;
         }
 
@@ -475,7 +475,7 @@ void CvCapture_Android::setFrame(const void* buffer, int bufferSize)
     cv::Mat m_frameYUV420next_ref = m_frameYUV420next;
     memcpy(m_frameYUV420next_ref.ptr(), buffer, bufferSize);
     // LOGD("CvCapture_Android::setFrame -- memcpy is done");
-    // ((HighguiAndroidCameraActivity*)m_activity)->LogFramesRate();
+    // ((VideoIOAndroidCameraActivity*)m_activity)->LogFramesRate();
 
     m_dataState = CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED;
     m_waitingNextFrame = false;//set flag that no more frames required at this moment

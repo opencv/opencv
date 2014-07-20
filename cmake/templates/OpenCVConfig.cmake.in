@@ -12,7 +12,7 @@
 #
 #    Or you can search for specific OpenCV modules:
 #
-#    find_package(OpenCV REQUIRED core highgui)
+#    find_package(OpenCV REQUIRED core videoio)
 #
 #    If the module is found then OPENCV_<MODULE>_FOUND is set to TRUE.
 #

@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/videoio.hpp"
 
 #undef DEFINE_GUID
 #define DEFINE_GUID(n, fourcc, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10) fourcc,
@@ -101,7 +101,7 @@ DEFINE_GUID(PIN_CATEGORY_PREVIEW,0xfb6c4282,0x0353,0x11d1,0x90,0x5f,0x00,0x00,0x
 0};
 
 
-TEST(Highgui_dshow, fourcc_conversion)
+TEST(Videoio_dshow, fourcc_conversion)
 {
     for(int i = 0; allfourcc[i]; ++i)
     {
