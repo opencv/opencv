@@ -2,6 +2,10 @@
 #include "dls.h"
 
 #include <iostream>
+
+#include <Eigen/Eigenvalues>
+#include <Eigen/Core>
+
 using namespace std;
 
 void printSize(const cv::Mat& mat)
@@ -201,13 +205,36 @@ void dls::build_coeff_matrix()
 
 	// construct the multiplication matrix via schur compliment of the Macaulay
 	// matrix
-	cv::Mat Mtilde = M2_1 - M2_5.t()*M2_4; // OK
+	cv::Mat Mtilde = M2_1 - M2_5.t()*M2_4; // 27x27 non-symmetric // OK
 
-	cv::Mat eigenvalues, eigenvectors;
-	cv::eigen(Mtilde, eigenvalues, eigenvectors);
 
-	cv::Mat V = eigenvectors;
+	// EIGENVALUES AND EIGENVECTORS
 
+	Eigen::MatrixXd Mtilde_eig, zeros_eig;
+	cv::cv2eigen(Mtilde, Mtilde_eig);
+	cv::cv2eigen(cv::Mat::zeros(27, 27, CV_64F), zeros_eig);
+
+	Eigen::MatrixXcd Mtilde_eig_cmplx(27, 27);
+	Mtilde_eig_cmplx.real() = Mtilde_eig;
+	Mtilde_eig_cmplx.imag() = zeros_eig;
+
+	Eigen::ComplexEigenSolver<Eigen::MatrixXcd> ces(Mtilde_eig_cmplx);
+
+	Eigen::MatrixXd eigval_real = ces.eigenvalues().real();
+	Eigen::MatrixXd eigval_cmplx = ces.eigenvalues().imag();
+	Eigen::MatrixXd eigvec_real = ces.eigenvectors().real();
+	Eigen::MatrixXd eigvec_cmplx = ces.eigenvectors().imag();
+
+	cv::Mat eigenvalues_real, eigenvalues_complex;
+	cv::Mat eigenvectors_real, eigenvectors_complex;
+
+	cv::eigen2cv(eigval_real, eigenvalues_real);
+	cv::eigen2cv(eigval_cmplx, eigenvalues_complex);
+	cv::eigen2cv(eigvec_real, eigenvectors_real);
+	cv::eigen2cv(eigvec_cmplx, eigenvectors_complex);
+
+	cv::Mat V = eigenvectors_real;
+	cv::Mat v = eigenvalues_real;
 
 	/*
 	 *  Now check the solutions
@@ -227,10 +254,12 @@ void dls::build_coeff_matrix()
 		cv::Mat V_k; cv::solve(V_kB.t(), V_kA.t(), V_k); // A/B = B'\A'
 		cv::Mat(V_k.t()).col(0).copyTo( V.col(0) );
 
+		cout << eigenvectors_complex.at<double>(1,k) << endl;
 
-		if(1) //if (imag(V(2,k)) == 0)
+		if(eigenvectors_complex.at<double>(1,k) == 0) //if (imag(V(2,k)) == 0)
 		{
 			//TODO: check for pure real part
+			cout << eigenvectors_complex.at<double>(1,k) << endl;
 		}
 
 	}
