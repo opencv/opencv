@@ -455,7 +455,7 @@ TEST(Imgcodecs_Jpeg, encode_decode_rst_jpeg)
 
     EXPECT_EQ(0, cvtest::norm(img_jpg_rst, img_jpg_normal, NORM_INF));
 
-    remove(output_optimized.c_str());
+    remove(output_rst.c_str());
 }
 
 #endif
