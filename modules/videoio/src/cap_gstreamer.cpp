@@ -160,13 +160,17 @@ protected:
 void CvCapture_GStreamer::init()
 {
     pipeline = NULL;
-    frame = NULL;
-    buffer = NULL;
-    buffer_caps = NULL;
+    uridecodebin = NULL;
+    color = NULL;
+    sink = NULL;
 #if GST_VERSION_MAJOR > 0
     sample = NULL;
     info = new GstMapInfo;
 #endif
+    buffer = NULL;
+    caps = NULL;
+    buffer_caps = NULL;
+    frame = NULL;
 }
 
 /*!
