@@ -78,18 +78,24 @@ inline void reduce3(float val1, float val2, float val3,  __local float* smem1,  
     }
 }
 
-inline void reduce2(float val1, float val2, volatile __local float* smem1, volatile __local float* smem2, int tid)
+inline void reduce2(float val1, float val2, volatile __local float* smem1, volatile __local float* smem2, int tid, bool skipping)
 {
-    smem1[tid] = val1;
-    smem2[tid] = val2;
+    if (!skipping)
+    {
+        smem1[tid] = val1;
+        smem2[tid] = val2;
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     for(int i = BUFFER2; i > 0; i >>= 1)
     {
         if(tid < i)
         {
-            smem1[tid] += smem1[tid + i];
-            smem2[tid] += smem2[tid + i];
+            if (!skipping)
+            {
+                smem1[tid] += smem1[tid + i];
+                smem2[tid] += smem2[tid + i];
+            }
         }
         barrier(CLK_LOCAL_MEM_FENCE);
     }
@@ -154,20 +160,23 @@ inline void reduce3(float val1, float val2, float val3,
     barrier(CLK_LOCAL_MEM_FENCE);
 }
 
-inline void reduce2(float val1, float val2, __local volatile float* smem1, __local volatile float* smem2, int tid)
+inline void reduce2(float val1, float val2, __local volatile float* smem1, __local volatile float* smem2, int tid, bool skipping)
 {
-    smem1[tid] = val1;
-    smem2[tid] = val2;
+    if (!skipping)
+    {
+        smem1[tid] = val1;
+        smem2[tid] = val2;
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (tid < 32)
+    if (tid < 32 && !skipping)
     {
         smem1[tid] += smem1[tid + 32];
         smem2[tid] += smem2[tid + 32];
 #if WAVE_SIZE < 32
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 16)
+    if (tid < 16 && !skipping)
     {
 #endif
         smem1[tid] += smem1[tid + 16];
@@ -175,7 +184,7 @@ inline void reduce2(float val1, float val2, __local volatile float* smem1, __loc
 #if WAVE_SIZE <16
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid<1)
+    if (tid<1 && !skipping)
     {
 #endif
         local float8* m1 = (local float8*)smem1;
@@ -415,86 +424,96 @@ __kernel void lkSparse(image2d_t I, image2d_t J,
 
     prevPt = nextPts[gid] * 2.0f - c_halfWin;
 
+
+    bool skipping = 0;
     for (k = 0; k < c_iters; ++k)
     {
-        if (prevPt.x < -c_halfWin.x || prevPt.x >= cols || prevPt.y < -c_halfWin.y || prevPt.y >= rows)
+        if (!skipping && (prevPt.x < -c_halfWin.x || prevPt.x >= cols || prevPt.y < -c_halfWin.y || prevPt.y >= rows))
         {
             if (tid == 0 && level == 0)
                 status[gid] = 0;
-            break;
+            skipping = true;
         }
+
         float b1 = 0;
         float b2 = 0;
+        if (!skipping) {
 
-        yBase=yid;
-        {
-            xBase=xid;
-            GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
-                     &I_patch[0][0], &dIdx_patch[0][0], &dIdy_patch[0][0],
-                     &b1, &b2);
+            yBase=yid;
+            {
+                xBase=xid;
+                GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
+                         &I_patch[0][0], &dIdx_patch[0][0], &dIdy_patch[0][0],
+                         &b1, &b2);
 
 
-            xBase+=xsize;
-            GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
-                     &I_patch[0][1], &dIdx_patch[0][1], &dIdy_patch[0][1],
-                     &b1, &b2);
+                xBase+=xsize;
+                GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
+                         &I_patch[0][1], &dIdx_patch[0][1], &dIdy_patch[0][1],
+                         &b1, &b2);
 
-            xBase+=xsize;
-            GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
-                        &I_patch[0][2], &dIdx_patch[0][2], &dIdy_patch[0][2],
-                        &b1, &b2);
+                xBase+=xsize;
+                GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
+                         &I_patch[0][2], &dIdx_patch[0][2], &dIdy_patch[0][2],
+                         &b1, &b2);
+            }
+            yBase+=ysize;
+            {
+                xBase=xid;
+                GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
+                         &I_patch[1][0], &dIdx_patch[1][0], &dIdy_patch[1][0],
+                         &b1, &b2);
+
+
+                xBase+=xsize;
+                GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
+                         &I_patch[1][1], &dIdx_patch[1][1], &dIdy_patch[1][1],
+                         &b1, &b2);
+
+                xBase+=xsize;
+                GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
+                         &I_patch[1][2], &dIdx_patch[1][2], &dIdy_patch[1][2],
+                         &b1, &b2);
+            }
+            yBase+=ysize;
+            {
+                xBase=xid;
+                GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
+                         &I_patch[2][0], &dIdx_patch[2][0], &dIdy_patch[2][0],
+                         &b1, &b2);
+
+
+                xBase+=xsize;
+                GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
+                         &I_patch[2][1], &dIdx_patch[2][1], &dIdy_patch[2][1],
+                         &b1, &b2);
+
+                xBase+=xsize;
+                GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
+                         &I_patch[2][2], &dIdx_patch[2][2], &dIdy_patch[2][2],
+                         &b1, &b2);
+            }
         }
-        yBase+=ysize;
+
+        reduce2(b1, b2, smem1, smem2, tid, skipping);
+
+        if (!skipping)
         {
-            xBase=xid;
-            GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
-                     &I_patch[1][0], &dIdx_patch[1][0], &dIdy_patch[1][0],
-                     &b1, &b2);
-
-
-            xBase+=xsize;
-            GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
-                     &I_patch[1][1], &dIdx_patch[1][1], &dIdy_patch[1][1],
-                     &b1, &b2);
-
-            xBase+=xsize;
-            GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
-                        &I_patch[1][2], &dIdx_patch[1][2], &dIdy_patch[1][2],
-                        &b1, &b2);
+            b1 = smem1[0];
+            b2 = smem2[0];
         }
-        yBase+=ysize;
-        {
-            xBase=xid;
-            GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
-                     &I_patch[2][0], &dIdx_patch[2][0], &dIdy_patch[2][0],
-                     &b1, &b2);
-
-
-            xBase+=xsize;
-            GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
-                     &I_patch[2][1], &dIdx_patch[2][1], &dIdy_patch[2][1],
-                     &b1, &b2);
-
-            xBase+=xsize;
-            GetPatch(J, prevPt.x + xBase + 0.5f, prevPt.y + yBase + 0.5f,
-                        &I_patch[2][2], &dIdx_patch[2][2], &dIdy_patch[2][2],
-                        &b1, &b2);
-        }
-
-        reduce2(b1, b2, smem1, smem2, tid);
-
-        b1 = smem1[0];
-        b2 = smem2[0];
         barrier(CLK_LOCAL_MEM_FENCE);
+        if (!skipping) {
 
-        float2 delta;
-        delta.x = A12 * b2 - A22 * b1;
-        delta.y = A12 * b1 - A11 * b2;
+            float2 delta;
+            delta.x = A12 * b2 - A22 * b1;
+            delta.y = A12 * b1 - A11 * b2;
 
-        prevPt += delta;
+            prevPt += delta;
 
-        if (fabs(delta.x) < THRESHOLD && fabs(delta.y) < THRESHOLD)
-            break;
+            if (fabs(delta.x) < THRESHOLD && fabs(delta.y) < THRESHOLD)
+                skipping = 1;
+        }
     }
 
     D = 0.0f;
