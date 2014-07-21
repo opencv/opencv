@@ -100,11 +100,10 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     	cv::Mat undistortedPoints;
     	cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
 
+    	//dls PnP(opoints, undistortedPoints);
+    	dls PnP(opoints, ipoints); // FOR TESTING
 
-    	dls PnP(opoints, undistortedPoints);
-    	//  DO SOMETHING
-
-    	cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
+    	//TODO: DO SOMETHING WITH R and t
 
     	return true;
     }
