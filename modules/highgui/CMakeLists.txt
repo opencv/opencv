@@ -1,5 +1,5 @@
 set(the_description "High-level GUI and Media I/O")
-ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_androidcamera)
+ocv_add_module(highgui opencv_imgproc opencv_imgcodecs opencv_videoio OPTIONAL opencv_androidcamera)
 
 # ----------------------------------------------------------------------------
 #  CMake file for highgui. See root CMakeLists.txt
