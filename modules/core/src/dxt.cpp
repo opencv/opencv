@@ -2041,23 +2041,33 @@ static std::vector<int> ocl_getRadixes(int cols, std::vector<int>& radixes, std:
     
     int n = 1;
     int factor_index = 0;
+    min_radix = INT_MAX;
 
     // 2^n transforms
     if ( (factors[factor_index] & 1) == 0 )
     {
         for( ; n < factors[factor_index]; )
         {
-            int radix = 2;
+            int radix = 2, block = 1;
             if (8*n <= factors[0])
                 radix = 8;
             else if (4*n <= factors[0])
+            {
                 radix = 4;
+                if (cols % 8 == 0)
+                    block = 2;
+            }
+            else
+            {
+                if (cols % 8 == 0)
+                    block = 4;
+                else if (cols % 4 == 0)
+                    block = 2;
+            }
 
             radixes.push_back(radix);
-            if (radix == 2 && cols % 4 == 0)
-                min_radix = min(min_radix, 2*radix);
-            else
-                min_radix = min(min_radix, radix);
+            blocks.push_back(block);
+            min_radix = min(min_radix, block*radix);
             n *= radix;
         }
         factor_index++;
@@ -2066,11 +2076,22 @@ static std::vector<int> ocl_getRadixes(int cols, std::vector<int>& radixes, std:
     // all the other transforms
     for( ; factor_index < nf; factor_index++ )
     {
-        radixes.push_back(factors[factor_index]);
-        if (factors[factor_index] == 3 && cols % 6 == 0)
-            min_radix = min(min_radix, 2*factors[factor_index]);
-        else
-            min_radix = min(min_radix, factors[factor_index]);
+        int radix = factors[factor_index], block = 1;
+        if (radix == 3)
+        {
+            if (cols % 12 == 0)
+                block = 4;
+            else if (cols % 6 == 0)
+                block = 2;
+        }
+        else if (radix == 5)
+        {
+            if (cols % 10 == 0)
+                block = 2;
+        }
+        radixes.push_back(radix);
+        blocks.push_back(block);
+        min_radix = min(min_radix, block*radix);
     }
     return radixes;
 }
@@ -2086,7 +2107,7 @@ struct OCL_FftPlan
     bool status;
     OCL_FftPlan(int _size, int _flags): dft_size(_size), flags(_flags), status(true)
     {
-        int min_radix = INT_MAX;
+        int min_radix;
         std::vector<int> radixes, blocks;
         ocl_getRadixes(dft_size, radixes, blocks, min_radix);
         thread_count = (dft_size + min_radix-1) / min_radix;
@@ -2102,9 +2123,9 @@ struct OCL_FftPlan
         int n = 1, twiddle_size = 0;
         for (size_t i=0; i<radixes.size(); i++)
         {
-            int radix = radixes[i];
-            if ((radix == 2 && dft_size % 4 == 0) || (radix == 3 && dft_size % 6 == 0))
-                radix_processing += format("fft_radix%d_B2(smem,twiddles+%d,ind,%d,%d);", radix, twiddle_size, n, dft_size/radix);
+            int radix = radixes[i], block = blocks[i];
+            if (block > 1)
+                radix_processing += format("fft_radix%d_B%d(smem,twiddles+%d,ind,%d,%d);", radix, block, twiddle_size, n, dft_size/radix);
             else
                 radix_processing += format("fft_radix%d(smem,twiddles+%d,ind,%d,%d);", radix, twiddle_size, n, dft_size/radix);
             twiddle_size += (radix-1)*n;
