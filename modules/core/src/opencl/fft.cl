@@ -44,11 +44,11 @@ __attribute__((always_inline))
 void fft_radix2_B2(__local float2* smem, __constant const float2* twiddles, const int x, const int block_size, const int t)     
 {
     const int k1 = x & (block_size - 1);
-    const int x2 = x + (t+1)/2;
+    const int x2 = x + t/2;
     const int k2 = x2 & (block_size - 1);
     float2 a0, a1, a2, a3;
 
-    if (x < (t+1)/2)
+    if (x < t/2)
     {
         a0 = smem[x];
         a1 = mul_float2(twiddles[k1],smem[x+t]);
@@ -58,7 +58,7 @@ void fft_radix2_B2(__local float2* smem, __constant const float2* twiddles, cons
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (x < (t+1)/2)
+    if (x < t/2)
     {
         int dst_ind = (x << 1) - k1;
         smem[dst_ind] = a0 + a1;
@@ -67,6 +67,55 @@ void fft_radix2_B2(__local float2* smem, __constant const float2* twiddles, cons
         dst_ind = (x2 << 1) - k2;
         smem[dst_ind] = a2 + a3;
         smem[dst_ind+block_size] = a2 - a3;
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+}
+
+__attribute__((always_inline))
+void fft_radix2_B4(__local float2* smem, __constant const float2* twiddles, const int x, const int block_size, const int t)     
+{
+    const int thread_block = t/4;
+    const int k1 = x & (block_size - 1);
+    const int x2 = x + thread_block;
+    const int k2 = x2 & (block_size - 1);
+    const int x3 = x + 2*thread_block;
+    const int k3 = x3 & (block_size - 1);
+    const int x4 = x + 3*thread_block;
+    const int k4 = x4 & (block_size - 1);
+    float2 a0, a1, a2, a3, a4, a5, a6, a7;
+
+    if (x < t/4)
+    {
+        a0 = smem[x];
+        a1 = mul_float2(twiddles[k1],smem[x+t]);
+        a2 = smem[x2];
+        a3 = mul_float2(twiddles[k2],smem[x2+t]);
+        a4 = smem[x3];
+        a5 = mul_float2(twiddles[k3],smem[x3+t]);
+        a6 = smem[x4];
+        a7 = mul_float2(twiddles[k4],smem[x4+t]);
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (x < t/4)
+    {
+        int dst_ind = (x << 1) - k1;
+        smem[dst_ind] = a0 + a1;
+        smem[dst_ind+block_size] = a0 - a1;
+
+        dst_ind = (x2 << 1) - k2;
+        smem[dst_ind] = a2 + a3;
+        smem[dst_ind+block_size] = a2 - a3;
+
+        dst_ind = (x3 << 1) - k3;
+        smem[dst_ind] = a4 + a5;
+        smem[dst_ind+block_size] = a4 - a5;
+
+        dst_ind = (x4 << 1) - k4;
+        smem[dst_ind] = a6 + a7;
+        smem[dst_ind+block_size] = a6 - a7;
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -102,6 +151,58 @@ void fft_radix4(__local float2* smem, __constant const float2* twiddles, const i
         smem[dst_ind + block_size]   = a2 + a3;
         smem[dst_ind + 2*block_size] = b0 - b1;
         smem[dst_ind + 3*block_size] = a2 - a3;
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+}
+
+__attribute__((always_inline))
+void fft_radix4_B2(__local float2* smem, __constant const float2* twiddles, const int x, const int block_size, const int t)
+{
+    const int k = x & (block_size - 1);
+    const int x2 = x + t/2;
+    const int k2 = x2 & (block_size - 1);
+    float2 a0, a1, a2, a3, a4, a5, a6, a7;
+
+    if (x < t/2)
+    {
+        a0 = smem[x];
+        a1 = mul_float2(twiddles[k], smem[x+t]);
+        a2 = mul_float2(twiddles[k + block_size],smem[x+2*t]);
+        a3 = mul_float2(twiddles[k + 2*block_size],smem[x+3*t]);
+
+        a4 = smem[x2];
+        a5 = mul_float2(twiddles[k2], smem[x2+t]);
+        a6 = mul_float2(twiddles[k2 + block_size],smem[x2+2*t]);
+        a7 = mul_float2(twiddles[k2 + 2*block_size],smem[x2+3*t]);
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (x < t/2)
+    {
+        int dst_ind = ((x - k) << 2) + k;
+
+        float2 b0 = a0 + a2;
+        a2 = a0 - a2;
+        float2 b1 = a1 + a3;
+        a3 = twiddle(a1 - a3);
+
+        smem[dst_ind]                = b0 + b1;
+        smem[dst_ind + block_size]   = a2 + a3;
+        smem[dst_ind + 2*block_size] = b0 - b1;
+        smem[dst_ind + 3*block_size] = a2 - a3;
+
+        dst_ind = ((x2 - k2) << 2) + k2;
+        b0 = a4 + a6;
+        a6 = a4 - a6;
+        b1 = a5 + a7;
+        a7 = twiddle(a5 - a7);
+
+        smem[dst_ind]                = b0 + b1;
+        smem[dst_ind + block_size]   = a6 + a7;
+        smem[dst_ind + 2*block_size] = b0 - b1;
+        smem[dst_ind + 3*block_size] = a6 - a7;
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -205,11 +306,11 @@ __attribute__((always_inline))
 void fft_radix3_B2(__local float2* smem, __constant const float2* twiddles, const int x, const int block_size, const int t)
 {
     const int k = x % block_size;
-    const int x2 = x + (t+1)/2;
+    const int x2 = x + t/2;
     const int k2 = x2 % block_size;
     float2 a0, a1, a2, a3, a4, a5;
 
-    if (x < (t+1)/2)
+    if (x < t/2)
     {
         a0 = smem[x];
         a1 = mul_float2(twiddles[k], smem[x+t]);
@@ -222,7 +323,7 @@ void fft_radix3_B2(__local float2* smem, __constant const float2* twiddles, cons
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (x < (t+1)/2)
+    if (x < t/2)
     {
         int dst_ind = ((x - k) * 3) + k;
 
@@ -243,6 +344,86 @@ void fft_radix3_B2(__local float2* smem, __constant const float2* twiddles, cons
         smem[dst_ind] = a3 + b1;
         smem[dst_ind + block_size] = b0 + a5;
         smem[dst_ind + 2*block_size] = b0 - a5;
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+}
+
+__attribute__((always_inline))
+void fft_radix3_B4(__local float2* smem, __constant const float2* twiddles, const int x, const int block_size, const int t)
+{
+    const int thread_block = t/4;
+    const int k = x % block_size;
+    const int x2 = x + thread_block;
+    const int k2 = x2 % block_size;
+    const int x3 = x + 2*thread_block;
+    const int k3 = x3 % block_size;
+    const int x4 = x + 3*thread_block;
+    const int k4 = x4 % block_size;
+    float2 a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11;
+
+    if (x < t/4)
+    {
+        a0 = smem[x];
+        a1 = mul_float2(twiddles[k], smem[x+t]);
+        a2 = mul_float2(twiddles[k+block_size], smem[x+2*t]);
+
+        a3 = smem[x2];
+        a4 = mul_float2(twiddles[k2], smem[x2+t]);
+        a5 = mul_float2(twiddles[k2+block_size], smem[x2+2*t]);
+
+        a6 = smem[x3];
+        a7 = mul_float2(twiddles[k3], smem[x3+t]);
+        a8 = mul_float2(twiddles[k3+block_size], smem[x3+2*t]);
+
+        a9 = smem[x4];
+        a10 = mul_float2(twiddles[k4], smem[x4+t]);
+        a11 = mul_float2(twiddles[k4+block_size], smem[x4+2*t]);
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (x < t/4)
+    {
+        int dst_ind = ((x - k) * 3) + k;
+
+        float2 b1 = a1 + a2;
+        a2 = twiddle(sin_120*(a1 - a2));
+        float2 b0 = a0 - (float2)(0.5f)*b1;
+
+        smem[dst_ind] = a0 + b1;
+        smem[dst_ind + block_size] = b0 + a2;
+        smem[dst_ind + 2*block_size] = b0 - a2;
+
+        dst_ind = ((x2 - k2) * 3) + k2;
+
+        b1 = a4 + a5;
+        a5 = twiddle(sin_120*(a4 - a5));
+        b0 = a3 - (float2)(0.5f)*b1;
+
+        smem[dst_ind] = a3 + b1;
+        smem[dst_ind + block_size] = b0 + a5;
+        smem[dst_ind + 2*block_size] = b0 - a5;
+
+        dst_ind = ((x3 - k3) * 3) + k3;
+
+        b1 = a7 + a8;
+        a8 = twiddle(sin_120*(a7 - a8));
+        b0 = a6 - (float2)(0.5f)*b1;
+
+        smem[dst_ind] = a6 + b1;
+        smem[dst_ind + block_size] = b0 + a8;
+        smem[dst_ind + 2*block_size] = b0 - a8;
+
+        dst_ind = ((x4 - k4) * 3) + k4;
+
+        b1 = a10 + a11;
+        a11 = twiddle(sin_120*(a10 - a11));
+        b0 = a9 - (float2)(0.5f)*b1;
+
+        smem[dst_ind] = a9 + b1;
+        smem[dst_ind + block_size] = b0 + a11;
+        smem[dst_ind + 2*block_size] = b0 - a11;
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -296,6 +477,95 @@ void fft_radix5(__local float2* smem, __constant const float2* twiddles, const i
         dst[2 * block_size] = b0 + b5;
         dst[3 * block_size] = b0 - b5;
         dst[4 * block_size] = a1 - a4;
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+}
+
+__attribute__((always_inline))
+void fft_radix5_B2(__local float2* smem, __constant const float2* twiddles, const int x, const int block_size, const int t)
+{
+    const int k = x % block_size;
+    const int x2 = x+t/2;
+    const int k2 = x2 % block_size;
+    float2 a0, a1, a2, a3, a4, a5, a6, a7, a8, a9;
+
+    if (x < t/2)
+    {
+        a0 = smem[x];
+        a1 = mul_float2(twiddles[k], smem[x + t]);
+        a2 = mul_float2(twiddles[k + block_size],smem[x+2*t]);
+        a3 = mul_float2(twiddles[k+2*block_size],smem[x+3*t]);
+        a4 = mul_float2(twiddles[k+3*block_size],smem[x+4*t]);
+
+        a5 = smem[x2];
+        a6 = mul_float2(twiddles[k2], smem[x2 + t]);
+        a7 = mul_float2(twiddles[k2 + block_size],smem[x2+2*t]);
+        a8 = mul_float2(twiddles[k2+2*block_size],smem[x2+3*t]);
+        a9 = mul_float2(twiddles[k2+3*block_size],smem[x2+4*t]);
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (x < t/2)
+    {
+        int dst_ind = ((x - k) * 5) + k;
+        __local float2* dst = smem + dst_ind;
+
+        float2 b0, b1, b5;
+
+        b1 = a1 + a4;
+        a1 -= a4;
+
+        a4 = a3 + a2;
+        a3 -= a2;
+
+        a2 = b1 + a4;
+        b0 = a0 - (float2)0.25f * a2;
+
+        b1 = fft5_2 * (b1 - a4);
+        a4 = fft5_3 * (float2)(-a1.y - a3.y, a1.x + a3.x);
+        b5 = (float2)(a4.x - fft5_5 * a1.y, a4.y + fft5_5 * a1.x);
+
+        a4.x += fft5_4 * a3.y; 
+        a4.y -= fft5_4 * a3.x;
+
+        a1 = b0 + b1;
+        b0 -= b1;
+
+        dst[0] = a0 + a2;
+        dst[block_size] = a1 + a4;
+        dst[2 * block_size] = b0 + b5;
+        dst[3 * block_size] = b0 - b5;
+        dst[4 * block_size] = a1 - a4;
+
+        dst_ind = ((x2 - k2) * 5) + k2;
+        dst = smem + dst_ind;
+        
+        b1 = a6 + a9;
+        a6 -= a9;
+
+        a9 = a8 + a7;
+        a8 -= a7;
+
+        a7 = b1 + a9;
+        b0 = a5 - (float2)0.25f * a7;
+
+        b1 = fft5_2 * (b1 - a9);
+        a9 = fft5_3 * (float2)(-a6.y - a8.y, a6.x + a8.x);
+        b5 = (float2)(a9.x - fft5_5 * a6.y, a9.y + fft5_5 * a6.x);
+
+        a9.x += fft5_4 * a8.y; 
+        a9.y -= fft5_4 * a8.x;
+
+        a6 = b0 + b1;
+        b0 -= b1;
+
+        dst[0] = a5 + a7;
+        dst[block_size] = a6 + a9;
+        dst[2 * block_size] = b0 + b5;
+        dst[3 * block_size] = b0 - b5;
+        dst[4 * block_size] = a6 - a9;
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
