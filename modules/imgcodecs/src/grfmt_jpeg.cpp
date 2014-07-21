@@ -600,6 +600,9 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
         int quality = 95;
         int progressive = 0;
         int optimize = 0;
+        int rst_interval = 0;
+        int lum_quality = 100;
+        int chrom_quality = 100;
 
         for( size_t i = 0; i < params.size(); i += 2 )
         {
@@ -618,15 +621,49 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
             {
                 optimize = params[i+1];
             }
+
+            if( params[i] == CV_IMWRITE_JPEG_LUM_QUALITY )
+            {
+                lum_quality = params[i+1];
+                lum_quality = MIN(MAX(lum_quality, 0), 100);
+            }
+
+            if( params[i] == CV_IMWRITE_JPEG_CHROM_QUALITY )
+            {
+                chrom_quality = params[i+1];
+                chrom_quality = MIN(MAX(chrom_quality, 0), 100);
+            }
+
+            if( params[i] == CV_IMWRITE_JPEG_RST_INTERVAL )
+            {
+                rst_interval = params[i+1];
+                rst_interval = MIN(MAX(rst_interval, 0), 65535L);
+            }
         }
 
         jpeg_set_defaults( &cinfo );
+        cinfo.restart_interval = rst_interval;
         jpeg_set_quality( &cinfo, quality,
                           TRUE /* limit to baseline-JPEG values */ );
         if( progressive )
             jpeg_simple_progression( &cinfo );
         if( optimize )
             cinfo.optimize_coding = TRUE;
+
+#if JPEG_LIB_VERSION >= 70
+        cinfo.q_scale_factor[0] = jpeg_quality_scaling(lum_quality);
+        cinfo.q_scale_factor[1] = jpeg_quality_scaling(chrom_quality);
+        if ( lum_quality != chrom_quality )
+        {
+            /* disable subsampling - ref. Libjpeg.txt */
+            cinfo.comp_info[0].v_samp_factor = 1;
+            cinfo.comp_info[0].h_samp_factor = 1;
+            cinfo.comp_info[1].v_samp_factor = 1;
+            cinfo.comp_info[1].h_samp_factor = 1;
+        }
+        jpeg_default_qtables( &cinfo, TRUE );
+#endif // #if JPEG_LIB_VERSION >= 70
+
         jpeg_start_compress( &cinfo, TRUE );
 
         if( channels > 1 )
