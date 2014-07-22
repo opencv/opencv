@@ -11,7 +11,26 @@ if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_NUMPY_INCLUDE_DIRS)
 endif()
 
 set(the_description "The python bindings")
-ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_imgcodecs opencv_videoio opencv_highgui opencv_calib3d opencv_photo opencv_objdetect OPTIONAL opencv_nonfree)
+
+set(candidate_deps_raw)
+foreach(mp ${OPENCV_MODULES_PATH} ${OPENCV_EXTRA_MODULES_PATH})
+    file(GLOB names "${mp}/*")
+    list(APPEND candidate_deps_raw ${names})
+endforeach(mp)
+
+set(candidate_deps)
+foreach(m IN LISTS candidate_deps_raw)
+    if(IS_DIRECTORY ${m})
+        get_filename_component(m ${m} NAME)
+        if (NOT ${m} MATCHES "^cud(a|ev)")
+        if (NOT ${m} MATCHES "optim")  # unless we handle namespaces
+            list(APPEND candidate_deps "opencv_${m}")
+        endif()
+        endif()
+    endif()
+endforeach(m)
+
+ocv_add_module(python BINDINGS OPTIONAL ${candidate_deps})
 
 ocv_module_include_directories(
     "${PYTHON_INCLUDE_PATH}"
@@ -21,9 +40,9 @@ ocv_module_include_directories(
 
 
 set(opencv_hdrs_raw)
-foreach(mod_name IN LISTS OPENCV_MODULE_opencv_python_DEPS)
-    list(APPEND opencv_hdrs_raw "${OPENCV_MODULE_${mod_name}_HEADERS}")
-endforeach(mod_name)
+foreach(m IN LISTS OPENCV_MODULE_opencv_python_DEPS)
+    list(APPEND opencv_hdrs_raw "${OPENCV_MODULE_${m}_HEADERS}")
+endforeach(m)
 
 # remove problematic headers
 set(opencv_hdrs)
