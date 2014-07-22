@@ -10,7 +10,11 @@ class dls
 {
 public:
 	dls(const cv::Mat& opoints, const cv::Mat& ipoints);
-	virtual ~dls();
+	~dls();
+
+	void compute_pose(cv::Mat& R, cv::Mat& t);
+
+private:
 
 	template <typename OpointType, typename O, typename IpointType, typename I>
 	void init_points(const cv::Mat& opoints, const cv::Mat& ipoints)
@@ -29,15 +33,20 @@ public:
 
 	void norm_z_vector();
 	void build_coeff_matrix();
+	void fill_coeff(const cv::Mat * D);
 	cv::Mat LeftMultVec(const cv::Mat& v);
 	cv::Mat cayley_LS_M(const std::vector<double>& a, const std::vector<double>& b,
 			            const std::vector<double>& c, const std::vector<double>& u);
+	bool positive_eigenvalues(const cv::Mat& eigenvalues);
+	cv::Mat Hessian(const double s[]);
+	cv::Mat cayley2rotbar(const double s[]);
+	cv::Mat skewsymm(const double X1[]);
 
-private:
-	cv::Mat H, A, D_mat;	// coeff matrix
-	cv::Mat p;				// object points
-	cv::Mat z;				// image points
-	int N;					// number of input points
+	cv::Mat Mtilde;		// coeff matrix
+	cv::Mat V_r, V_c;	// eigen
+	cv::Mat p;			// object points
+	cv::Mat z;			// image points
+	int N;				// number of input points
 	std::vector<double> f1coeff, f2coeff, f3coeff;
 };
 

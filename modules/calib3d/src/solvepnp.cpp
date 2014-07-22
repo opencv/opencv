@@ -100,10 +100,17 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     	cv::Mat undistortedPoints;
     	cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
 
+    	cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
+
     	//dls PnP(opoints, undistortedPoints);
     	dls PnP(opoints, ipoints); // FOR TESTING
 
+    	PnP.compute_pose(R, tvec);
+
+    	cout << "after dls compute pose" << endl;
+
     	//TODO: DO SOMETHING WITH R and t
+        //cv::Rodrigues(R, rvec);
 
     	return true;
     }
