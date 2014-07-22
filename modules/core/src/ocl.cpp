@@ -3002,7 +3002,8 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
                                            sync ? 0 : &p->e);
     if( sync || retval != CL_SUCCESS )
     {
-        CV_OclDbgAssert(clFinish(qq) == CL_SUCCESS);
+        int a = clFinish(qq);
+        CV_OclDbgAssert(a == CL_SUCCESS);
         p->cleanupUMats();
     }
     else
@@ -3898,8 +3899,9 @@ public:
         if( (accessFlags & ACCESS_READ) != 0 && u->hostCopyObsolete() )
         {
             AlignedDataPtr<false, true> alignedPtr(u->data, u->size, CV_OPENCL_DATA_PTR_ALIGNMENT);
-            CV_Assert( clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
-                                           u->size, alignedPtr.getAlignedPtr(), 0, 0, 0) == CL_SUCCESS );
+            int a = clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
+                                           u->size, alignedPtr.getAlignedPtr(), 0, 0, 0);
+            CV_Assert( a == CL_SUCCESS );
             u->markHostCopyObsolete(false);
         }
     }

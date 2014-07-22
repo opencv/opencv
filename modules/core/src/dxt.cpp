@@ -2034,19 +2034,19 @@ enum FftType
     C2C = 3
 };
 
-static std::vector<int> ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<int>& blocks, int& min_radix)
+static void ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<int>& blocks, int& min_radix)
 {
     int factors[34];
-    int nf = DFTFactorize( cols, factors );
+    int nf = DFTFactorize(cols, factors);
     
     int n = 1;
     int factor_index = 0;
     min_radix = INT_MAX;
 
     // 2^n transforms
-    if ( (factors[factor_index] & 1) == 0 )
+    if ((factors[factor_index] & 1) == 0)
     {
-        for( ; n < factors[factor_index]; )
+        for( ; n < factors[factor_index];)
         {
             int radix = 2, block = 1;
             if (8*n <= factors[0])
@@ -2080,7 +2080,7 @@ static std::vector<int> ocl_getRadixes(int cols, std::vector<int>& radixes, std:
     }
 
     // all the other transforms
-    for( ; factor_index < nf; factor_index++ )
+    for( ; factor_index < nf; factor_index++)
     {
         int radix = factors[factor_index], block = 1;
         if (radix == 3)
@@ -2101,7 +2101,6 @@ static std::vector<int> ocl_getRadixes(int cols, std::vector<int>& radixes, std:
         blocks.push_back(block);
         min_radix = min(min_radix, block*radix);
     }
-    return radixes;
 }
 
 struct OCL_FftPlan
@@ -2111,14 +2110,13 @@ struct OCL_FftPlan
     int thread_count;
 
     int dft_size;
-    int flags;
     bool status;
-    OCL_FftPlan(int _size, int _flags): dft_size(_size), flags(_flags), status(true)
+    OCL_FftPlan(int _size): dft_size(_size), status(true)
     {
         int min_radix;
         std::vector<int> radixes, blocks;
         ocl_getRadixes(dft_size, radixes, blocks, min_radix);
-        thread_count = (dft_size + min_radix-1) / min_radix;
+        thread_count = dft_size / min_radix;
 
         if (thread_count > ocl::Device::getDefault().maxWorkGroupSize())
         {
@@ -2140,8 +2138,7 @@ struct OCL_FftPlan
             n *= radix;
         }
 
-        twiddles.create(1, twiddle_size, CV_32FC2);
-        Mat tw = twiddles.getMat(ACCESS_WRITE);
+        Mat tw(1, twiddle_size, CV_32FC2);
         float* ptr = tw.ptr<float>();
         int ptr_index = 0;
         
@@ -2162,6 +2159,7 @@ struct OCL_FftPlan
                 }
             }        
         }
+        twiddles = tw.getUMat(ACCESS_READ);
 
         buildOptions = format("-D LOCAL_SIZE=%d -D kercn=%d -D RADIX_PROCESS=%s",
                               dft_size, dft_size/thread_count, radix_processing.c_str());
@@ -2185,10 +2183,10 @@ struct OCL_FftPlan
 
         if (rows)
         {
-            globalsize[0] = thread_count; globalsize[1] = dft_size;
+            globalsize[0] = thread_count; globalsize[1] = src.rows;
             localsize[0] = thread_count; localsize[1] = 1;
             kernel_name = !inv ? "fft_multi_radix_rows" : "ifft_multi_radix_rows";
-            if (is1d && (flags & DFT_SCALE))
+            if ((is1d || inv) && (flags & DFT_SCALE))
                 options += " -D DFT_SCALE";
         }
         else
@@ -2200,14 +2198,9 @@ struct OCL_FftPlan
                 options += " -D DFT_SCALE";
         }
 
-        if (src.channels() == 1)
-            options += " -D REAL_INPUT";
-        else
-            options += " -D COMPLEX_INPUT";
-        if (dst.channels() == 1)
-            options += " -D REAL_OUTPUT";
-        if (is1d)
-            options += " -D IS_1D";
+        options += src.channels() == 1 ? " -D REAL_INPUT" : " -D COMPLEX_INPUT";
+        options += dst.channels() == 1 ? " -D REAL_OUTPUT" : " -D COMPLEX_OUTPUT";
+        options += is1d ? " -D IS_1D" : "";
         
         if (!inv)
         {
@@ -2216,10 +2209,10 @@ struct OCL_FftPlan
         }
         else
         {
-            if (is1d && fftType == C2R || (rows && fftType == R2R))
+            if (rows && (fftType == C2R || fftType == R2R))
                 options += " -D NO_CONJUGATE";
             if (dst.cols % 2 == 0)
-                    options += " -D EVEN";
+                options += " -D EVEN";
         }
 
         ocl::Kernel k(kernel_name.c_str(), ocl::core::fft_oclsrc, options);
@@ -2240,7 +2233,7 @@ public:
         return planCache;
     }
     
-    OCL_FftPlan* getFftPlan(int dft_size, int flags)
+    OCL_FftPlan* getFftPlan(int dft_size)
     {
         for (size_t i = 0, size = planStorage.size(); i < size; ++i)
         {
@@ -2252,7 +2245,7 @@ public:
             }
         }
 
-        OCL_FftPlan * newPlan = new OCL_FftPlan(dft_size, flags);
+        OCL_FftPlan * newPlan = new OCL_FftPlan(dft_size);
         planStorage.push_back(newPlan);
         return newPlan;
     }
@@ -2275,13 +2268,13 @@ protected:
 
 static bool ocl_dft_C2C_rows(InputArray _src, OutputArray _dst, int nonzero_rows, int flags, int fftType)
 {
-    const OCL_FftPlan* plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.cols(), flags);
+    const OCL_FftPlan* plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.cols());
     return plan->enqueueTransform(_src, _dst, nonzero_rows, flags, fftType, true);
 }
 
 static bool ocl_dft_C2C_cols(InputArray _src, OutputArray _dst, int nonzero_cols, int flags, int fftType)
 {
-    const OCL_FftPlan* plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.rows(), flags);
+    const OCL_FftPlan* plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.rows());
     return plan->enqueueTransform(_src, _dst, nonzero_cols, flags, fftType, false);
 }
 
@@ -2385,7 +2378,7 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
             }
             else
             {
-                int nonzero_cols = src.cols/2 + 1;// : src.cols;
+                int nonzero_cols = src.cols/2 + 1;
                 if (!ocl_dft_C2C_cols(src, output, nonzero_cols, flags, fftType))
                     return false;
            
