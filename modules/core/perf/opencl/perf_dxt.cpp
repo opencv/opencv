@@ -65,10 +65,10 @@ enum OCL_FFT_TYPE
 typedef tuple<OCL_FFT_TYPE, Size, int> DftParams;
 typedef TestBaseWithParam<DftParams> DftFixture;
 
-OCL_PERF_TEST_P(DftFixture, Dft, ::testing::Combine(Values(C2C/*, R2R, C2R, R2C*/),
+OCL_PERF_TEST_P(DftFixture, Dft, ::testing::Combine(Values(C2C, R2R, C2R, R2C),
                                                 Values(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3, Size(1024, 1024), Size(512, 512), Size(2048, 2048)),
-                                                Values((int) 0, (int)DFT_ROWS, (int)DFT_SCALE, (int)DFT_INVERSE,
-                                                       /*(int)DFT_INVERSE | DFT_SCALE,*/ (int)DFT_ROWS | DFT_INVERSE)))
+                                                Values((int) 0, (int)DFT_ROWS, (int)DFT_SCALE/*, (int)DFT_INVERSE,
+                                                       (int)DFT_INVERSE | DFT_SCALE, (int)DFT_ROWS | DFT_INVERSE*/)))
 {
     const DftParams params = GetParam();
     const int dft_type = get<0>(params);

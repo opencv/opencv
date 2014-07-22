@@ -1791,14 +1791,6 @@ namespace cv {
         CV_Assert(s == CLFFT_SUCCESS); \
     }
 
-enum FftType
-{
-    R2R = 0, // real to real
-    C2R = 1, // opencl HERMITIAN_INTERLEAVED to real
-    R2C = 2, // real to opencl HERMITIAN_INTERLEAVED
-    C2C = 3  // complex to complex
-};
-
 class PlanCache
 {
     struct FftPlan
@@ -2034,6 +2026,14 @@ namespace cv
 
 #ifdef HAVE_OPENCL
 
+enum FftType
+{
+    R2R = 0,
+    C2R = 1,
+    R2C = 2,
+    C2C = 3
+};
+
 static std::vector<int> ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<int>& blocks, int& min_radix)
 {
     int factors[34];
@@ -2054,13 +2054,19 @@ static std::vector<int> ocl_getRadixes(int cols, std::vector<int>& radixes, std:
             else if (4*n <= factors[0])
             {
                 radix = 4;
-                if (cols % 8 == 0)
+                if (cols % 12 == 0)
+                    block = 3;
+                else if (cols % 8 == 0)
                     block = 2;
             }
             else
             {
-                if (cols % 8 == 0)
+                if (cols % 10 == 0)
+                    block = 5;
+                else if (cols % 8 == 0)
                     block = 4;
+                else if (cols % 6 == 0)
+                    block = 3;
                 else if (cols % 4 == 0)
                     block = 2;
             }
@@ -2081,6 +2087,8 @@ static std::vector<int> ocl_getRadixes(int cols, std::vector<int>& radixes, std:
         {
             if (cols % 12 == 0)
                 block = 4;
+            else if (cols % 9 == 0)
+                block = 3;
             else if (cols % 6 == 0)
                 block = 2;
         }
@@ -2142,7 +2150,6 @@ struct OCL_FftPlan
         {
             int radix = radixes[i];
             n *= radix;
-
             
             for (int j=1; j<radix; j++)
             {
@@ -2160,7 +2167,7 @@ struct OCL_FftPlan
                               dft_size, dft_size/thread_count, radix_processing.c_str());
     }
 
-    bool enqueueTransform(InputArray _src, OutputArray _dst, int dft_size, int flags, bool rows = true) const
+    bool enqueueTransform(InputArray _src, OutputArray _dst, int dft_size, int flags, int fftType, bool rows = true) const
     {
         if (!status)
             return false;
@@ -2195,12 +2202,25 @@ struct OCL_FftPlan
 
         if (src.channels() == 1)
             options += " -D REAL_INPUT";
+        else
+            options += " -D COMPLEX_INPUT";
         if (dst.channels() == 1)
-            options += " -D CCS_OUTPUT";
-        if ((is1d && src.channels() == 1) || (rows && (flags & DFT_REAL_OUTPUT)))
-            options += " -D NO_CONJUGATE";
+            options += " -D REAL_OUTPUT";
         if (is1d)
             options += " -D IS_1D";
+        
+        if (!inv)
+        {
+            if ((is1d && src.channels() == 1) || (rows && (fftType == R2R)))
+                options += " -D NO_CONJUGATE";
+        }
+        else
+        {
+            if (is1d && fftType == C2R || (rows && fftType == R2R))
+                options += " -D NO_CONJUGATE";
+            if (dst.cols % 2 == 0)
+                    options += " -D EVEN";
+        }
 
         ocl::Kernel k(kernel_name.c_str(), ocl::core::fft_oclsrc, options);
         if (k.empty())
@@ -2253,16 +2273,16 @@ protected:
     std::vector<OCL_FftPlan*> planStorage;
 };
 
-static bool ocl_dft_C2C_rows(InputArray _src, OutputArray _dst, int nonzero_rows, int flags)
+static bool ocl_dft_C2C_rows(InputArray _src, OutputArray _dst, int nonzero_rows, int flags, int fftType)
 {
     const OCL_FftPlan* plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.cols(), flags);
-    return plan->enqueueTransform(_src, _dst, nonzero_rows, flags, true);
+    return plan->enqueueTransform(_src, _dst, nonzero_rows, flags, fftType, true);
 }
 
-static bool ocl_dft_C2C_cols(InputArray _src, OutputArray _dst, int nonzero_cols, int flags)
+static bool ocl_dft_C2C_cols(InputArray _src, OutputArray _dst, int nonzero_cols, int flags, int fftType)
 {
     const OCL_FftPlan* plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.rows(), flags);
-    return plan->enqueueTransform(_src, _dst, nonzero_cols, flags, false);
+    return plan->enqueueTransform(_src, _dst, nonzero_cols, flags, fftType, false);
 }
 
 static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_rows)
@@ -2298,29 +2318,26 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
             complex_output = 1;
     }
 
+    FftType fftType = (FftType)(complex_input << 0 | complex_output << 1);
+
     // Forward Complex to CCS not supported
-    if (complex_input && real_output && !inv)
-    {
-        flags ^= DFT_REAL_OUTPUT;
-        flags |= DFT_COMPLEX_OUTPUT;
-        real_output = 0; 
-        complex_output = 1;
-    }
+    if (fftType == C2R && !inv)
+        fftType = C2C;
+
     // Inverse CCS to Complex not supported
-    if (real_input && complex_output && inv)
-    {
-        complex_output = 0;
-        real_output = 1;
-    }
+    if (fftType == R2C && inv)
+        fftType = R2R;
 
     UMat output;
-    if (complex_output)
+    if (fftType == C2C || fftType == R2C)
     {
+        // complex output
         _dst.create(src.size(), CV_32FC2); 
         output = _dst.getUMat();
-    } 
+    }
     else
     {
+        // real output
         if (is1d)
         {
             _dst.create(src.size(), CV_32FC1);
@@ -2333,17 +2350,49 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
         }
     }
 
-    if (!ocl_dft_C2C_rows(src, output, nonzero_rows, flags))
-        return false;
-
-    if (!is1d)
+    if (!inv)
     {
-        int nonzero_cols = real_input && real_output ? output.cols/2 + 1 : output.cols;
-        if (!ocl_dft_C2C_cols(output, _dst, nonzero_cols, flags))
+        if (!ocl_dft_C2C_rows(src, output, nonzero_rows, flags, fftType))
             return false;
-    } else
+
+        if (!is1d)
+        {
+            int nonzero_cols = fftType == R2R ? output.cols/2 + 1 : output.cols;
+            if (!ocl_dft_C2C_cols(output, _dst, nonzero_cols, flags, fftType))
+                return false;
+        }
+    }
+    else
     {
-        _dst.assign(output);
+        if (fftType == C2C)
+        {
+            // complex output
+            if (!ocl_dft_C2C_rows(src, output, nonzero_rows, flags, fftType))
+                return false;
+
+            if (!is1d)
+            {
+                if (!ocl_dft_C2C_cols(output, output, output.cols, flags, fftType))
+                    return false;
+            }
+        }
+        else
+        {
+            if (is1d)
+            {
+                if (!ocl_dft_C2C_rows(src, output, nonzero_rows, flags, fftType))
+                    return false;
+            }
+            else
+            {
+                int nonzero_cols = src.cols/2 + 1;// : src.cols;
+                if (!ocl_dft_C2C_cols(src, output, nonzero_cols, flags, fftType))
+                    return false;
+           
+                if (!ocl_dft_C2C_rows(output, _dst, nonzero_rows, flags, fftType))
+                    return false;
+            }
+        }
     }
     return true;
 }
