@@ -831,8 +831,10 @@ class PythonWrapperGenerator(object):
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
-            self.code_include.write( '#include "{}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )
             decls = parser.parse(hdr)
+            if len(decls) == 0:
+                continue
+            self.code_include.write( '#include "{}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )
             for decl in decls:
                 name = decl[0]
                 if name.startswith("struct") or name.startswith("class"):

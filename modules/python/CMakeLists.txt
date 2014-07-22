@@ -19,31 +19,24 @@ ocv_module_include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/src2"
     )
 
-set(opencv_hdrs
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core.hpp"
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp"
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/types.hpp"
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/persistence.hpp"
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/utility.hpp"
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/ocl.hpp"
-    "${OPENCV_MODULE_opencv_flann_LOCATION}/include/opencv2/flann/miniflann.hpp"
-    "${OPENCV_MODULE_opencv_imgproc_LOCATION}/include/opencv2/imgproc.hpp"
-    "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/background_segm.hpp"
-    "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/tracking.hpp"
-    "${OPENCV_MODULE_opencv_photo_LOCATION}/include/opencv2/photo.hpp"
-    "${OPENCV_MODULE_opencv_imgcodecs_LOCATION}/include/opencv2/imgcodecs.hpp"
-    "${OPENCV_MODULE_opencv_videoio_LOCATION}/include/opencv2/videoio.hpp"
-    "${OPENCV_MODULE_opencv_highgui_LOCATION}/include/opencv2/highgui.hpp"
-    "${OPENCV_MODULE_opencv_ml_LOCATION}/include/opencv2/ml.hpp"
-    "${OPENCV_MODULE_opencv_features2d_LOCATION}/include/opencv2/features2d.hpp"
-    "${OPENCV_MODULE_opencv_calib3d_LOCATION}/include/opencv2/calib3d.hpp"
-    "${OPENCV_MODULE_opencv_objdetect_LOCATION}/include/opencv2/objdetect.hpp"
-    )
 
-if(HAVE_opencv_nonfree)
-  list(APPEND opencv_hdrs     "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/features2d.hpp"
-                              "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree.hpp")
-endif()
+set(opencv_hdrs_raw)
+foreach(mod_name IN LISTS OPENCV_MODULE_opencv_python_DEPS)
+    list(APPEND opencv_hdrs_raw "${OPENCV_MODULE_${mod_name}_HEADERS}")
+endforeach(mod_name)
+
+# remove problematic headers
+set(opencv_hdrs)
+foreach(hdr IN LISTS opencv_hdrs_raw)
+    if(NOT ${hdr} MATCHES ".h$")
+    if(NOT ${hdr} MATCHES "opencv2/core/cuda")
+    if(NOT ${hdr} MATCHES "opencv2/objdetect/detection_based_tracker.hpp")
+        list(APPEND opencv_hdrs ${hdr})
+    endif()
+    endif()
+    endif()
+endforeach(hdr)
+
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
