@@ -201,5 +201,4 @@ CV_EXPORTS int createButton( const String& bar_name, ButtonCallback on_change,
                              bool initial_button_state = false);
 
 } // cv
-
 #endif

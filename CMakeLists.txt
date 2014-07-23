@@ -6,6 +6,8 @@
 #
 # ----------------------------------------------------------------------------
 
+
+
 include(cmake/OpenCVMinDepVersions.cmake)
 
 if(CMAKE_GENERATOR MATCHES Xcode AND XCODE_VERSION VERSION_GREATER 4.3)
@@ -135,6 +137,7 @@ OCV_OPTION(WITH_WEBP           "Include WebP support"                        ON 
 OCV_OPTION(WITH_OPENEXR        "Include ILM support via OpenEXR"             ON   IF (NOT IOS) )
 OCV_OPTION(WITH_OPENGL         "Include OpenGL support"                      OFF  IF (NOT ANDROID) )
 OCV_OPTION(WITH_OPENNI         "Include OpenNI support"                      OFF  IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_OPENNI2        "Include OpenNI2 support"                     OFF  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_PNG            "Include PNG support"                         ON)
 OCV_OPTION(WITH_PVAPI          "Include Prosilica GigE support"              ON   IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_GIGEAPI        "Include Smartek GigE support"                ON   IF (NOT ANDROID AND NOT IOS) )
@@ -864,6 +867,11 @@ if(DEFINED WITH_OPENNI)
   status("    OpenNI PrimeSensor Modules:" HAVE_OPENNI_PRIME_SENSOR_MODULE
                                                    THEN "YES (${OPENNI_PRIME_SENSOR_MODULE})"      ELSE NO)
 endif(DEFINED WITH_OPENNI)
+
+if(DEFINED WITH_OPENNI2)
+  status("    OpenNI2:"		   HAVE_OPENNI2	   THEN "YES (ver ${OPENNI2_VERSION_STRING}, build ${OPENNI2_VERSION_BUILD})"
+																								   ELSE NO)
+endif(DEFINED WITH_OPENNI2)
 
 if(DEFINED WITH_PVAPI)
   status("    PvAPI:"          HAVE_PVAPI          THEN YES                                        ELSE NO)
