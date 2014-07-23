@@ -11,7 +11,7 @@ except:
 class_ignore_list = (
     #core
     "FileNode", "FileStorage", "KDTree", "KeyPoint", "DMatch",
-    #highgui
+    #videoio
     "VideoWriter",
 )
 
@@ -536,13 +536,13 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
 """\n    private static native String getSupportedPreviewSizes_0(long nativeObj);\n""",
             'cpp_code' :
 """
-JNIEXPORT jstring JNICALL Java_org_opencv_highgui_VideoCapture_getSupportedPreviewSizes_10
+JNIEXPORT jstring JNICALL Java_org_opencv_videoio_VideoCapture_getSupportedPreviewSizes_10
   (JNIEnv *env, jclass, jlong self);
 
-JNIEXPORT jstring JNICALL Java_org_opencv_highgui_VideoCapture_getSupportedPreviewSizes_10
+JNIEXPORT jstring JNICALL Java_org_opencv_videoio_VideoCapture_getSupportedPreviewSizes_10
   (JNIEnv *env, jclass, jlong self)
 {
-    static const char method_name[] = "highgui::VideoCapture_getSupportedPreviewSizes_10()";
+    static const char method_name[] = "videoio::VideoCapture_getSupportedPreviewSizes_10()";
     try {
         LOGD("%s", method_name);
         VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL

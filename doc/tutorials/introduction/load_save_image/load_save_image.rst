@@ -5,7 +5,7 @@ Load, Modify, and Save an Image
 
 .. note::
 
-   We assume that by now you know how to load an image using :readwriteimagevideo:`imread <imread>` and to display it in a window (using :user_interface:`imshow <imshow>`). Read the :ref:`Display_Image` tutorial otherwise.
+   We assume that by now you know how to load an image using :readwriteimage:`imread <imread>` and to display it in a window (using :user_interface:`imshow <imshow>`). Read the :ref:`Display_Image` tutorial otherwise.
 
 Goals
 ======
@@ -14,9 +14,9 @@ In this tutorial you will learn how to:
 
 .. container:: enumeratevisibleitemswithsquare
 
-   * Load an image using :readwriteimagevideo:`imread <imread>`
+   * Load an image using :readwriteimage:`imread <imread>`
    * Transform an image from BGR to Grayscale format by using :miscellaneous_transformations:`cvtColor <cvtcolor>`
-   * Save your transformed image in a file on disk (using :readwriteimagevideo:`imwrite <imwrite>`)
+   * Save your transformed image in a file on disk (using :readwriteimage:`imwrite <imwrite>`)
 
 Code
 ======
@@ -62,7 +62,7 @@ Here it is:
 Explanation
 ============
 
-#. We begin by loading an image using :readwriteimagevideo:`imread <imread>`, located in the path given by *imageName*. For this example, assume you are loading a RGB image.
+#. We begin by loading an image using :readwriteimage:`imread <imread>`, located in the path given by *imageName*. For this example, assume you are loading a RGB image.
 
 #. Now we are going to convert our image from BGR to Grayscale format. OpenCV has a really nice function to do this kind of transformations:
 
@@ -76,9 +76,9 @@ Explanation
 
       * a source image (*image*)
       * a destination image (*gray_image*), in which we will save the converted image.
-      * an additional parameter that indicates what kind of transformation will be performed. In this case we use **CV_BGR2GRAY** (because of :readwriteimagevideo:`imread <imread>` has BGR default channel order in case of color images).
+      * an additional parameter that indicates what kind of transformation will be performed. In this case we use **CV_BGR2GRAY** (because of :readwriteimage:`imread <imread>` has BGR default channel order in case of color images).
 
-#. So now we have our new *gray_image* and want to save it on disk (otherwise it will get lost after the program ends). To save it, we will use a function analagous to :readwriteimagevideo:`imread <imread>`: :readwriteimagevideo:`imwrite <imwrite>`
+#. So now we have our new *gray_image* and want to save it on disk (otherwise it will get lost after the program ends). To save it, we will use a function analagous to :readwriteimage:`imread <imread>`: :readwriteimage:`imwrite <imwrite>`
 
    .. code-block:: cpp
 

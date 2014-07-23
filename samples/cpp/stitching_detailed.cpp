@@ -46,6 +46,7 @@
 #include <string>
 #include "opencv2/opencv_modules.hpp"
 #include <opencv2/core/utility.hpp>
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
@@ -527,7 +528,7 @@ int main(int argc, char* argv[])
     {
         vector<Mat> rmats;
         for (size_t i = 0; i < cameras.size(); ++i)
-            rmats.push_back(cameras[i].R);
+            rmats.push_back(cameras[i].R.clone());
         waveCorrect(rmats, wave_correct);
         for (size_t i = 0; i < cameras.size(); ++i)
             cameras[i].R = rmats[i];

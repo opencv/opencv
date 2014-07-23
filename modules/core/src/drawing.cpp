@@ -1584,6 +1584,24 @@ void line( InputOutputArray _img, Point pt1, Point pt2, const Scalar& color,
     ThickLine( img, pt1, pt2, buf, thickness, line_type, 3, shift );
 }
 
+void arrowedLine(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
+           int thickness, int line_type, int shift, double tipLength)
+{
+    const double tipSize = norm(pt1-pt2)*tipLength; // Factor to normalize the size of the tip depending on the length of the arrow
+
+    line(img, pt1, pt2, color, thickness, line_type, shift);
+
+    const double angle = atan2( (double) pt1.y - pt2.y, (double) pt1.x - pt2.x );
+
+    Point p(cvRound(pt2.x + tipSize * cos(angle + CV_PI / 4)),
+        cvRound(pt2.y + tipSize * sin(angle + CV_PI / 4)));
+    line(img, p, pt2, color, thickness, line_type, shift);
+
+    p.x = cvRound(pt2.x + tipSize * cos(angle - CV_PI / 4));
+    p.y = cvRound(pt2.y + tipSize * sin(angle - CV_PI / 4));
+    line(img, p, pt2, color, thickness, line_type, shift);
+}
+
 void rectangle( InputOutputArray _img, Point pt1, Point pt2,
                 const Scalar& color, int thickness,
                 int lineType, int shift )

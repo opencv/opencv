@@ -73,7 +73,7 @@ You may also find the source code and these video file in the :file:`samples/cpp
    :language: cpp
    :linenos:
    :tab-width: 4
-   :lines: 1-11, 22-23, 26-
+   :lines: 1-12, 23-24, 27-
 
 Explanation
 ===========
