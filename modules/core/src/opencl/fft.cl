@@ -6,36 +6,36 @@
 #define fft5_5  0.363271264002f
 
 __attribute__((always_inline))
-float2 mul_float2(float2 a, float2 b) { 
-    return (float2)(fma(a.x, b.x, -a.y * b.y), fma(a.x, b.y, a.y * b.x)); 
+float2 mul_float2(float2 a, float2 b) {
+    return (float2)(fma(a.x, b.x, -a.y * b.y), fma(a.x, b.y, a.y * b.x));
 }
 
 __attribute__((always_inline))
-float2 twiddle(float2 a) { 
-    return (float2)(a.y, -a.x); 
+float2 twiddle(float2 a) {
+    return (float2)(a.y, -a.x);
 }
 
 __attribute__((always_inline))
-void butterfly2(float2 a0, float2 a1, __local float2* smem, __global const float2* twiddles, 
-                const int x, const int block_size) 
-{ 
+void butterfly2(float2 a0, float2 a1, __local float2* smem, __global const float2* twiddles,
+                const int x, const int block_size)
+{
     const int k = x & (block_size - 1);
     a1 = mul_float2(twiddles[k], a1);
     const int dst_ind = (x << 1) - k;
-    
+
     smem[dst_ind] = a0 + a1;
     smem[dst_ind+block_size] = a0 - a1;
 }
 
 __attribute__((always_inline))
-void butterfly4(float2 a0, float2 a1, float2 a2, float2 a3, __local float2* smem, __global const float2* twiddles, 
-                const int x, const int block_size) 
+void butterfly4(float2 a0, float2 a1, float2 a2, float2 a3, __local float2* smem, __global const float2* twiddles,
+                const int x, const int block_size)
 {
     const int k = x & (block_size - 1);
     a1 = mul_float2(twiddles[k], a1);
     a2 = mul_float2(twiddles[k + block_size], a2);
     a3 = mul_float2(twiddles[k + 2*block_size], a3);
-    
+
     const int dst_ind = ((x - k) << 2) + k;
 
     float2 b0 = a0 + a2;
@@ -50,9 +50,9 @@ void butterfly4(float2 a0, float2 a1, float2 a2, float2 a3, __local float2* smem
 }
 
 __attribute__((always_inline))
-void butterfly3(float2 a0, float2 a1, float2 a2, __local float2* smem, __global const float2* twiddles, 
-                const int x, const int block_size) 
-{ 
+void butterfly3(float2 a0, float2 a1, float2 a2, __local float2* smem, __global const float2* twiddles,
+                const int x, const int block_size)
+{
     const int k = x % block_size;
     a1 = mul_float2(twiddles[k], a1);
     a2 = mul_float2(twiddles[k+block_size], a2);
@@ -69,8 +69,8 @@ void butterfly3(float2 a0, float2 a1, float2 a2, __local float2* smem, __global 
 
 __attribute__((always_inline))
 void butterfly5(float2 a0, float2 a1, float2 a2, float2 a3, float2 a4, __local float2* smem, __global const float2* twiddles,
-                const int x, const int block_size) 
-{ 
+                const int x, const int block_size)
+{
     const int k = x % block_size;
     a1 = mul_float2(twiddles[k], a1);
     a2 = mul_float2(twiddles[k + block_size], a2);
@@ -95,7 +95,7 @@ void butterfly5(float2 a0, float2 a1, float2 a2, float2 a3, float2 a4, __local f
     a4 = fft5_3 * (float2)(-a1.y - a3.y, a1.x + a3.x);
     b5 = (float2)(a4.x - fft5_5 * a1.y, a4.y + fft5_5 * a1.x);
 
-    a4.x += fft5_4 * a3.y; 
+    a4.x += fft5_4 * a3.y;
     a4.y -= fft5_4 * a3.x;
 
     a1 = b0 + b1;
@@ -109,7 +109,7 @@ void butterfly5(float2 a0, float2 a1, float2 a2, float2 a3, float2 a4, __local f
 }
 
 __attribute__((always_inline))
-void fft_radix2(__local float2* smem, __global const float2* twiddles, const int x, const int block_size, const int t)     
+void fft_radix2(__local float2* smem, __global const float2* twiddles, const int x, const int block_size, const int t)
 {
     float2 a0, a1;
 
@@ -122,13 +122,13 @@ void fft_radix2(__local float2* smem, __global const float2* twiddles, const int
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (x < t)
-        butterfly2(a0, a1, smem, twiddles, x, block_size); 
+        butterfly2(a0, a1, smem, twiddles, x, block_size);
 
     barrier(CLK_LOCAL_MEM_FENCE);
 }
 
 __attribute__((always_inline))
-void fft_radix2_B2(__local float2* smem, __global const float2* twiddles, const int x1, const int block_size, const int t)     
+void fft_radix2_B2(__local float2* smem, __global const float2* twiddles, const int x1, const int block_size, const int t)
 {
     const int x2 = x1 + t/2;
     float2 a0, a1, a2, a3;
@@ -151,7 +151,7 @@ void fft_radix2_B2(__local float2* smem, __global const float2* twiddles, const 
 }
 
 __attribute__((always_inline))
-void fft_radix2_B3(__local float2* smem, __global const float2* twiddles, const int x1, const int block_size, const int t)     
+void fft_radix2_B3(__local float2* smem, __global const float2* twiddles, const int x1, const int block_size, const int t)
 {
     const int x2 = x1 + t/3;
     const int x3 = x1 + 2*t/3;
@@ -177,7 +177,7 @@ void fft_radix2_B3(__local float2* smem, __global const float2* twiddles, const 
 }
 
 __attribute__((always_inline))
-void fft_radix2_B4(__local float2* smem, __global const float2* twiddles, const int x1, const int block_size, const int t)     
+void fft_radix2_B4(__local float2* smem, __global const float2* twiddles, const int x1, const int block_size, const int t)
 {
     const int thread_block = t/4;
     const int x2 = x1 + thread_block;
@@ -207,7 +207,7 @@ void fft_radix2_B4(__local float2* smem, __global const float2* twiddles, const 
 }
 
 __attribute__((always_inline))
-void fft_radix2_B5(__local float2* smem, __global const float2* twiddles, const int x1, const int block_size, const int t)     
+void fft_radix2_B5(__local float2* smem, __global const float2* twiddles, const int x1, const int block_size, const int t)
 {
     const int thread_block = t/5;
     const int x2 = x1 + thread_block;
@@ -326,7 +326,7 @@ void fft_radix8(__local float2* smem, __global const float2* twiddles, const int
         a7 = mul_float2(twiddles[k+6*block_size],smem[x+7*t]);
 
         float2 b0, b1, b6, b7;
-        
+
         b0 = a0 + a4;
         a4 = a0 - a4;
         b1 = a1 + a5;
@@ -335,7 +335,7 @@ void fft_radix8(__local float2* smem, __global const float2* twiddles, const int
         b6 = twiddle(a2 - a6);
         a2 = a2 + a6;
         b7 = a3 - a7;
-        b7 = (float2)(SQRT_2) * (float2)(-b7.x + b7.y, -b7.x - b7.y); 
+        b7 = (float2)(SQRT_2) * (float2)(-b7.x + b7.y, -b7.x - b7.y);
         a3 = a3 + a7;
 
         a0 = b0 + a2;
@@ -571,10 +571,15 @@ __kernel void fft_multi_radix_rows(__global const uchar* src_ptr, int src_step, 
     }
     else
     {
+        // fill with zero other rows
+#ifdef COMPLEX_OUTPUT
         __global float2* dst = (__global float2*)(dst_ptr + mad24(y, dst_step, dst_offset));
+#else
+        __global float* dst = (__global float*)(dst_ptr + mad24(y, dst_step, dst_offset));
+#endif
         #pragma unroll
         for (int i=x; i<dst_cols; i+=block_size)
-            dst[i] = (float2) 0.f;
+            dst[i] = 0.f;
     }
 }
 
@@ -658,7 +663,7 @@ __kernel void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step,
         __global const float2* twiddles = (__global float2*) twiddles_ptr;
         const int ind = x;
 
-#if defined(COMPLEX_INPUT) && !defined(NO_CONJUGATE) 
+#if defined(COMPLEX_INPUT) && !defined(NO_CONJUGATE)
         __global const float2* src = (__global const float2*)(src_ptr + mad24(y, src_step, mad24(x, (int)(sizeof(float)*2), src_offset)));
         #pragma unroll
         for (int i=0; i<kercn; i++)
@@ -667,12 +672,9 @@ __kernel void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step,
             smem[x+i*block_size].y = -src[i*block_size].y;
         }
 #else
-    __global const float2* src;
+
     #if !defined(REAL_INPUT) && defined(NO_CONJUGATE)
-        src = (__global const float2*)(src_ptr + mad24(y, src_step, mad24(2, (int)sizeof(float), src_offset)));
-    #else
-        src = (__global const float2*)(src_ptr + mad24(y, src_step, mad24(1, (int)sizeof(float), src_offset)));
-    #endif
+        __global const float2* src = (__global const float2*)(src_ptr + mad24(y, src_step, mad24(2, (int)sizeof(float), src_offset)));
 
         #pragma unroll
         for (int i=x; i<(LOCAL_SIZE-1)/2; i+=block_size)
@@ -681,6 +683,20 @@ __kernel void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step,
             smem[i+1].y = -src[i].y;
             smem[LOCAL_SIZE-i-1] = src[i];
         }
+    #else
+
+        #pragma unroll
+        for (int i=x; i<(LOCAL_SIZE-1)/2; i+=block_size)
+        {
+            float2 src = vload2(0, (__global const float*)(src_ptr + mad24(y, src_step, mad24(2*i+1, (int)sizeof(float), src_offset))));
+
+            smem[i+1].x = src.x;
+            smem[i+1].y = -src.y;
+            smem[LOCAL_SIZE-i-1] = src;
+        }
+
+    #endif
+
         if (x==0)
         {
             smem[0].x = *(__global const float*)(src_ptr + mad24(y, src_step, src_offset));
@@ -688,7 +704,11 @@ __kernel void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step,
 
             if(LOCAL_SIZE % 2 ==0)
             {
+                #if !defined(REAL_INPUT) && defined(NO_CONJUGATE)
                 smem[LOCAL_SIZE/2].x = src[LOCAL_SIZE/2-1].x;
+                #else
+                smem[LOCAL_SIZE/2].x = *(__global const float*)(src_ptr + mad24(y, src_step, mad24(LOCAL_SIZE-1, (int)sizeof(float), src_offset)));
+                #endif
                 smem[LOCAL_SIZE/2].y = 0.f;
             }
         }
@@ -718,10 +738,15 @@ __kernel void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step,
     }
     else
     {
-        __global float2* dst = (__global float*)(dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(float)*2), dst_offset)));
+        // fill with zero other rows
+#ifdef COMPLEX_OUTPUT
+        __global float2* dst = (__global float2*)(dst_ptr + mad24(y, dst_step, dst_offset));
+#else
+        __global float* dst = (__global float*)(dst_ptr + mad24(y, dst_step, dst_offset));
+#endif
         #pragma unroll
-        for (int i=0; i<kercn; i++)
-            dst[i*block_size] = (float2) 0.f;
+        for (int i=x; i<dst_cols; i+=block_size)
+            dst[i] = 0.f;
     }
 }
 
@@ -763,13 +788,13 @@ __kernel void ifft_multi_radix_cols(__global const uchar* src_ptr, int src_step,
             rez[0].y = -smem[y + i*block_size].y;
         }
     }
-#else   
+#else
     if (x < nz)
     {
         __global const float2* twiddles = (__global float2*) twiddles_ptr;
         const int ind = y;
         const int block_size = LOCAL_SIZE/kercn;
-        
+
         __local float2 smem[LOCAL_SIZE];
 #ifdef EVEN
         if (x!=0 && (x!=(nz-1)))
@@ -781,7 +806,7 @@ __kernel void ifft_multi_radix_cols(__global const uchar* src_ptr, int src_step,
             #pragma unroll
             for (int i=0; i<kercn; i++)
             {
-                float2 temp = *((__global const float2*)(src + i*block_size*src_step));
+                float2 temp = vload2(0, (__global const float*)(src + i*block_size*src_step));
                 smem[y+i*block_size].x = temp.x;
                 smem[y+i*block_size].y = -temp.y;
             }
@@ -819,7 +844,7 @@ __kernel void ifft_multi_radix_cols(__global const uchar* src_ptr, int src_step,
 
         // copy data to dst
         __global uchar* dst = dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(float2)), dst_offset));
-                
+
         #pragma unroll
         for (int i=0; i<kercn; i++)
         {
@@ -827,6 +852,6 @@ __kernel void ifft_multi_radix_cols(__global const uchar* src_ptr, int src_step,
             rez[0].x =  smem[y + i*block_size].x;
             rez[0].y = -smem[y + i*block_size].y;
         }
-    }    
+    }
 #endif
 }
