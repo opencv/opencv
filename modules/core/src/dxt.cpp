@@ -2080,32 +2080,32 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
     {
         if ((flags & DFT_ROWS) == 0)
         {
-            if (!real_transform)
+            if (src.channels() == 2 && !(inv && (flags & DFT_REAL_OUTPUT)))
             {
-                if (ippi_DFT_C_32F(src,dst, inv, ipp_norm_flag))
+                if (ippi_DFT_C_32F(src, dst, inv, ipp_norm_flag))
                     return;
                 setIppErrorStatus();
             }
-            else if (inv || !(flags & DFT_COMPLEX_OUTPUT))
+            if (src.channels() == 1 && (inv || !(flags & DFT_COMPLEX_OUTPUT)))
             {
-                if (ippi_DFT_R_32F(src,dst, inv, ipp_norm_flag))
+                if (ippi_DFT_R_32F(src, dst, inv, ipp_norm_flag))
                     return;
                 setIppErrorStatus();
             }
         }
         else
         {
-            if (!real_transform)
+            if (src.channels() == 2 && !(inv && (flags & DFT_REAL_OUTPUT)))
             {
                 ippiDFT_C_Func ippiFunc = inv ? (ippiDFT_C_Func)ippiDFTInv_CToC_32fc_C1R : (ippiDFT_C_Func)ippiDFTFwd_CToC_32fc_C1R;
-                if (Dft_C_IPPLoop(src,dst, IPPDFT_C_Functor(ippiFunc),ipp_norm_flag))
+                if (Dft_C_IPPLoop(src, dst, IPPDFT_C_Functor(ippiFunc),ipp_norm_flag))
                     return;
                 setIppErrorStatus();
             }
-            else if (inv || !(flags & DFT_COMPLEX_OUTPUT))
+            if (src.channels() == 1 && (inv || !(flags & DFT_COMPLEX_OUTPUT)))
             {
                 ippiDFT_R_Func ippiFunc = inv ? (ippiDFT_R_Func)ippiDFTInv_PackToR_32f_C1R : (ippiDFT_R_Func)ippiDFTFwd_RToPack_32f_C1R;
-                if (Dft_R_IPPLoop(src,dst, IPPDFT_R_Functor(ippiFunc),ipp_norm_flag))
+                if (Dft_R_IPPLoop(src, dst, IPPDFT_R_Functor(ippiFunc),ipp_norm_flag))
                     return;
                 setIppErrorStatus();
             }
