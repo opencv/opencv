@@ -292,7 +292,7 @@ OCL_PERF_TEST_P(MagnitudeFixture, Magnitude, ::testing::Combine(
 typedef Size_MatType TransposeFixture;
 
 OCL_PERF_TEST_P(TransposeFixture, Transpose, ::testing::Combine(
-                OCL_TEST_SIZES, Values(CV_8UC1, CV_32FC1, CV_8UC2, CV_32FC2, CV_8UC4, CV_32FC4)))
+                OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
