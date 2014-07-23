@@ -5,6 +5,7 @@
 
 #include <opencv2/core/core.hpp>        // Basic OpenCV structures (cv::Mat, Scalar)
 #include <opencv2/imgproc/imgproc.hpp>  // Gaussian Blur
+#include <opencv2/videoio/videoio.hpp>
 #include <opencv2/highgui/highgui.hpp>  // OpenCV window I/O
 
 using namespace std;

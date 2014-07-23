@@ -47,7 +47,10 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.hpp"
 
+#include "opencv2/imgcodecs.hpp"
+
 #include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/imgcodecs/imgcodecs_c.h"
 #include "opencv2/highgui/highgui_c.h"
 
 #include <stdlib.h>
@@ -92,90 +95,6 @@
 #define CV_WINDOW_MAGIC_VAL     0x00420042
 #define CV_TRACKBAR_MAGIC_VAL   0x00420043
 
-/***************************** CvCapture structure ******************************/
-
-struct CvCapture
-{
-    virtual ~CvCapture() {}
-    virtual double getProperty(int) { return 0; }
-    virtual bool setProperty(int, double) { return 0; }
-    virtual bool grabFrame() { return true; }
-    virtual IplImage* retrieveFrame(int) { return 0; }
-    virtual int getCaptureDomain() { return CV_CAP_ANY; } // Return the type of the capture object: CV_CAP_VFW, etc...
-};
-
-/*************************** CvVideoWriter structure ****************************/
-
-struct CvVideoWriter
-{
-    virtual ~CvVideoWriter() {}
-    virtual bool writeFrame(const IplImage*) { return false; }
-};
-
-CvCapture * cvCreateCameraCapture_V4L( int index );
-CvCapture * cvCreateCameraCapture_DC1394( int index );
-CvCapture * cvCreateCameraCapture_DC1394_2( int index );
-CvCapture* cvCreateCameraCapture_MIL( int index );
-CvCapture* cvCreateCameraCapture_Giganetix( int index );
-CvCapture * cvCreateCameraCapture_CMU( int index );
-CV_IMPL CvCapture * cvCreateCameraCapture_TYZX( int index );
-CvCapture* cvCreateFileCapture_Win32( const char* filename );
-CvCapture* cvCreateCameraCapture_VFW( int index );
-CvCapture* cvCreateFileCapture_VFW( const char* filename );
-CvVideoWriter* cvCreateVideoWriter_Win32( const char* filename, int fourcc,
-                                          double fps, CvSize frameSize, int is_color );
-CvVideoWriter* cvCreateVideoWriter_VFW( const char* filename, int fourcc,
-                                        double fps, CvSize frameSize, int is_color );
-CvCapture* cvCreateCameraCapture_DShow( int index );
-CvCapture* cvCreateCameraCapture_MSMF( int index );
-CvCapture* cvCreateFileCapture_MSMF (const char* filename);
-CvVideoWriter* cvCreateVideoWriter_MSMF( const char* filename, int fourcc,
-                                        double fps, CvSize frameSize, int is_color );
-CvCapture* cvCreateCameraCapture_OpenNI( int index );
-CvCapture* cvCreateFileCapture_OpenNI( const char* filename );
-CvCapture* cvCreateCameraCapture_Android( int index );
-CvCapture* cvCreateCameraCapture_XIMEA( int index );
-CvCapture* cvCreateCameraCapture_AVFoundation(int index);
-
-CVAPI(int) cvHaveImageReader(const char* filename);
-CVAPI(int) cvHaveImageWriter(const char* filename);
-
-CvCapture* cvCreateFileCapture_Images(const char* filename);
-CvVideoWriter* cvCreateVideoWriter_Images(const char* filename);
-
-CvCapture* cvCreateFileCapture_XINE (const char* filename);
-
-
-
-
-#define CV_CAP_GSTREAMER_1394		0
-#define CV_CAP_GSTREAMER_V4L		1
-#define CV_CAP_GSTREAMER_V4L2		2
-#define CV_CAP_GSTREAMER_FILE		3
-
-CvCapture* cvCreateCapture_GStreamer(int type, const char *filename);
-CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char* filename);
-
-
-CvVideoWriter* cvCreateVideoWriter_FFMPEG_proxy( const char* filename, int fourcc,
-                                            double fps, CvSize frameSize, int is_color );
-
-CvCapture * cvCreateFileCapture_QT (const char  * filename);
-CvCapture * cvCreateCameraCapture_QT  (const int     index);
-
-CvVideoWriter* cvCreateVideoWriter_QT ( const char* filename, int fourcc,
-                                        double fps, CvSize frameSize, int is_color );
-
-CvCapture* cvCreateFileCapture_AVFoundation (const char * filename);
-CvVideoWriter* cvCreateVideoWriter_AVFoundation( const char* filename, int fourcc,
-                                                double fps, CvSize frameSize, int is_color );
-
-
-CvCapture * cvCreateCameraCapture_Unicap  (const int     index);
-CvCapture * cvCreateCameraCapture_PvAPI  (const int     index);
-CvVideoWriter* cvCreateVideoWriter_GStreamer( const char* filename, int fourcc,
-                                            double fps, CvSize frameSize, int is_color );
-
 //Yannick Verdie 2010
 void cvSetModeWindow_W32(const char* name, double prop_value);
 void cvSetModeWindow_GTK(const char* name, double prop_value);
@@ -195,20 +114,6 @@ double cvGetRatioWindow_GTK(const char* name);
 
 double cvGetOpenGlProp_W32(const char* name);
 double cvGetOpenGlProp_GTK(const char* name);
-
-namespace cv
-{
-    class IVideoCapture
-    {
-    public:
-        virtual ~IVideoCapture() {}
-        virtual double getProperty(int) { return 0; }
-        virtual bool setProperty(int, double) { return 0; }
-        virtual bool grabFrame() = 0;
-        virtual bool retrieveFrame(int, cv::OutputArray) = 0;
-        virtual int getCaptureDomain() { return CAP_ANY; } // Return the type of the capture object: CAP_VFW, etc...
-    };
-};
 
 //for QT
 #if defined (HAVE_QT)

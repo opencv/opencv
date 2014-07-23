@@ -1,4 +1,4 @@
-SET(OPENCV_DIRECTX_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_highgui)
+SET(OPENCV_DIRECTX_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_imgcodecs opencv_videoio opencv_highgui)
 
 ocv_check_dependencies(${OPENCV_DIRECTX_SAMPLES_REQUIRED_DEPS})
 

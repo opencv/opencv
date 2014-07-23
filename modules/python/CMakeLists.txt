@@ -11,7 +11,7 @@ if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_NUMPY_INCLUDE_DIRS)
 endif()
 
 set(the_description "The python bindings")
-ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect OPTIONAL opencv_nonfree)
+ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_imgcodecs opencv_videoio opencv_highgui opencv_calib3d opencv_photo opencv_objdetect OPTIONAL opencv_nonfree)
 
 ocv_module_include_directories(
     "${PYTHON_INCLUDE_PATH}"
@@ -31,6 +31,8 @@ set(opencv_hdrs
     "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/background_segm.hpp"
     "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/tracking.hpp"
     "${OPENCV_MODULE_opencv_photo_LOCATION}/include/opencv2/photo.hpp"
+    "${OPENCV_MODULE_opencv_imgcodecs_LOCATION}/include/opencv2/imgcodecs.hpp"
+    "${OPENCV_MODULE_opencv_videoio_LOCATION}/include/opencv2/videoio.hpp"
     "${OPENCV_MODULE_opencv_highgui_LOCATION}/include/opencv2/highgui.hpp"
     "${OPENCV_MODULE_opencv_ml_LOCATION}/include/opencv2/ml.hpp"
     "${OPENCV_MODULE_opencv_features2d_LOCATION}/include/opencv2/features2d.hpp"
