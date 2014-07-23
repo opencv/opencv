@@ -12,23 +12,18 @@ endif()
 
 set(the_description "The python bindings")
 
-set(candidate_deps_raw)
+set(candidate_deps)
 foreach(mp ${OPENCV_MODULES_PATH} ${OPENCV_EXTRA_MODULES_PATH})
     file(GLOB names "${mp}/*")
-    list(APPEND candidate_deps_raw ${names})
+    foreach(m IN LISTS names)
+        if(IS_DIRECTORY ${m})
+            get_filename_component(m ${m} NAME)
+            if (NOT ${m} MATCHES "^cud(a|ev)")
+                list(APPEND candidate_deps "opencv_${m}")
+            endif()
+        endif()
+    endforeach(m)
 endforeach(mp)
-
-set(candidate_deps)
-foreach(m IN LISTS candidate_deps_raw)
-    if(IS_DIRECTORY ${m})
-        get_filename_component(m ${m} NAME)
-        if (NOT ${m} MATCHES "^cud(a|ev)")
-        if (NOT ${m} MATCHES "optim")  # unless we handle namespaces
-            list(APPEND candidate_deps "opencv_${m}")
-        endif()
-        endif()
-    endif()
-endforeach(m)
 
 ocv_add_module(python BINDINGS OPTIONAL ${candidate_deps})
 
@@ -39,23 +34,26 @@ ocv_module_include_directories(
     )
 
 
-set(opencv_hdrs_raw)
-foreach(m IN LISTS OPENCV_MODULE_opencv_python_DEPS)
-    list(APPEND opencv_hdrs_raw "${OPENCV_MODULE_${m}_HEADERS}")
-endforeach(m)
+set(opencv_hdrs_blacklist
+    ".h$"
+    "opencv2/core/cuda"
+    "opencv2/objdetect/detection_based_tracker.hpp"
+    "opencv2/optim.hpp")
 
-# remove problematic headers
 set(opencv_hdrs)
-foreach(hdr IN LISTS opencv_hdrs_raw)
-    if(NOT ${hdr} MATCHES ".h$")
-    if(NOT ${hdr} MATCHES "opencv2/core/cuda")
-    if(NOT ${hdr} MATCHES "opencv2/objdetect/detection_based_tracker.hpp")
-        list(APPEND opencv_hdrs ${hdr})
-    endif()
-    endif()
-    endif()
-endforeach(hdr)
-
+foreach(m IN LISTS OPENCV_MODULE_opencv_python_DEPS)
+    foreach(hdr IN LISTS OPENCV_MODULE_${m}_HEADERS)
+        set(good TRUE)
+        foreach(s IN LISTS opencv_hdrs_blacklist)
+            if (${hdr} MATCHES ${s})
+                set(good FALSE)
+            endif()
+        endforeach(s)
+        if(${good})
+            list(APPEND opencv_hdrs ${hdr})
+        endif()
+    endforeach(hdr)
+endforeach(m)
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
