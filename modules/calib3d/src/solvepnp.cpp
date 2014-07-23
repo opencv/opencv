@@ -98,7 +98,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     {
     	std::cout << "DLS" << std::endl;
     	cv::Mat undistortedPoints;
-    	cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+    	//cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
 
     	cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
 
