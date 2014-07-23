@@ -32,7 +32,14 @@ private:
 	}
 
 	void norm_z_vector();
-	void build_coeff_matrix();
+	void build_coeff_matrix(const cv::Mat& pp, cv::Mat& Mtilde, cv::Mat& D);
+	void compute_eigenvec(const cv::Mat& Mtilde, cv::Mat& eigenval_real, cv::Mat& eigenval_imag,
+			                                     cv::Mat& eigenvec_real, cv::Mat& eigenvec_imag);
+	double min_val(const std::vector<double>& values);
+	cv::Mat rotx(const double t);
+	cv::Mat roty(const double t);
+	cv::Mat rotz(const double t);
+	cv::Mat mean(const cv::Mat& M);
 	void fill_coeff(const cv::Mat * D);
 	cv::Mat LeftMultVec(const cv::Mat& v);
 	cv::Mat cayley_LS_M(const std::vector<double>& a, const std::vector<double>& b,
@@ -41,14 +48,16 @@ private:
 	cv::Mat Hessian(const double s[]);
 	cv::Mat cayley2rotbar(const double s[]);
 	cv::Mat skewsymm(const double X1[]);
+	bool is_empty(const cv::Mat * v);
+	void run_kernel(const cv::Mat& pp);
 
-	cv::Mat Mtilde;		// coeff matrix
-	cv::Mat V_r, V_c;	// eigen
-	cv::Mat p;			// object points
-	cv::Mat z;			// image points
+	cv::Mat p, z;		// object-image points
 	int N;				// number of input points
-	std::vector<double> f1coeff, f2coeff, f3coeff;
-};
+	std::vector<double> f1coeff, f2coeff, f3coeff, cost_;
+	std::vector<cv::Mat> C_est_, t_est_;	// vector to store candidate
+	cv::Mat C_est__, t_est__;	// best found solution
+	double cost__;
 
+};
 
 #endif // DLS_H
