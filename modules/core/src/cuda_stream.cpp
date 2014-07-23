@@ -190,7 +190,7 @@ void cv::cuda::Stream::enqueueHostCallback(StreamCallback callback, void* userDa
 #endif
 }
 
-namespace 
+namespace
 {
     bool default_stream_is_initialized;
     Mutex mtx;
