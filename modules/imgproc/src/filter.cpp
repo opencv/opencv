@@ -3214,6 +3214,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
 
     // For smaller filter kernels, there is a special kernel that is more
     // efficient than the general one.
+    UMat kernalDataUMat;
     if (device.isIntel() && (device.type() & ocl::Device::TYPE_GPU) &&
         ((ksize.width < 5 && ksize.height < 5) ||
         (ksize.width == 5 && ksize.height == 5 && cn == 1)))
@@ -3262,7 +3263,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                 "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "
                 "-D PX_LOAD_X_ITERATIONS=%d -D PX_LOAD_Y_ITERATIONS=%d "
                 "-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D WT=%s -D WT1=%s "
-                "-D convertToWT=%s -D convertToDstT=%s %s -D OP_FILTER2D",
+                "-D convertToWT=%s -D convertToDstT=%s %s",
                 cn, anchor.x, anchor.y, ksize.width, ksize.height,
                 pxLoadVecSize, pxLoadNumPixels,
                 pxPerWorkItemX, pxPerWorkItemY, privDataWidth, borderMap[borderType],
@@ -3273,7 +3274,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), kerStr.c_str());
 
-        if (!k.create("filter2DSmall", cv::ocl::imgproc::filterSmall_oclsrc, build_options))
+        if (!k.create("filter2DSmall", cv::ocl::imgproc::filter2DSmall_oclsrc, build_options))
             return false;
     }
     else
