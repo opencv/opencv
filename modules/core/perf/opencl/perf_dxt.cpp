@@ -54,23 +54,42 @@ namespace ocl {
 
 ///////////// dft ////////////////////////
 
-typedef tuple<Size, int> DftParams;
+enum OCL_FFT_TYPE
+{
+    R2R = 0,
+    C2R = 1,
+    R2C = 2,
+    C2C = 3
+};
+
+typedef tuple<OCL_FFT_TYPE, Size, int> DftParams;
 typedef TestBaseWithParam<DftParams> DftFixture;
 
-OCL_PERF_TEST_P(DftFixture, Dft, ::testing::Combine(Values(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
-                                                Values((int)DFT_ROWS, (int)DFT_SCALE, (int)DFT_INVERSE,
-                                                       (int)DFT_INVERSE | DFT_SCALE, (int)DFT_ROWS | DFT_INVERSE)))
+OCL_PERF_TEST_P(DftFixture, Dft, ::testing::Combine(Values(C2C, R2R, C2R, R2C),
+                                                    Values(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3, Size(512, 512), Size(1024, 1024), Size(2048, 2048)),
+                                                    Values((int) 0, (int)DFT_ROWS, (int)DFT_SCALE, (int)DFT_INVERSE,
+                                                           (int)DFT_INVERSE | DFT_SCALE, (int)DFT_ROWS | DFT_INVERSE)))
 {
     const DftParams params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int flags = get<1>(params);
+    const int dft_type = get<0>(params);
+    const Size srcSize = get<1>(params);
+    int flags = get<2>(params);
 
-    UMat src(srcSize, CV_32FC2), dst(srcSize, CV_32FC2);
+    int in_cn, out_cn;
+    switch (dft_type)
+    {
+    case R2R: flags |= cv::DFT_REAL_OUTPUT; in_cn = 1; out_cn = 1; break;
+    case C2R: flags |= cv::DFT_REAL_OUTPUT; in_cn = 2; out_cn = 2; break;
+    case R2C: flags |= cv::DFT_COMPLEX_OUTPUT; in_cn = 1; out_cn = 2; break;
+    case C2C: flags |= cv::DFT_COMPLEX_OUTPUT; in_cn = 2; out_cn = 2; break;
+    }
+
+    UMat src(srcSize, CV_MAKE_TYPE(CV_32F, in_cn)), dst(srcSize, CV_MAKE_TYPE(CV_32F, out_cn));
     declare.in(src, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::dft(src, dst, flags | DFT_COMPLEX_OUTPUT);
+    OCL_TEST_CYCLE() cv::dft(src, dst, flags);
 
-    SANITY_CHECK(dst, 1e-3);
+    SANITY_CHECK(dst, 1e-5, ERROR_RELATIVE);
 }
 
 ///////////// MulSpectrums ////////////////////////
