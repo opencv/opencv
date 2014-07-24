@@ -1361,11 +1361,16 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
     Size size = _src.size(), wholeSize;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     borderType &= ~BORDER_ISOLATED;
-    //int wdepth = depth, wtype = type, dtype = type;
+    int wdepth = depth, wtype = type;
+    if (depth == CV_8U)
+    {
+        wdepth = CV_32S;
+        wtype = CV_MAKETYPE(wdepth, cn);
+    }
+    char cvt[2][40];
 
     bool haveExtraMat = !_extraMat.empty();
     CV_Assert(actual_op <= 3 || haveExtraMat);
-
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE",
                                        "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
@@ -1423,20 +1428,27 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
             if (kernel8u.at<uchar>(y, x) != 0)
                 processing += format("PROCESS(%d,%d)", y, x);
 
+
     static const char * const op2str[] = { "OP_ERODE", "OP_DILATE", NULL, NULL, "OP_GRADIENT", "OP_TOPHAT", "OP_BLACKHAT" };
     String opts = format("-D cn=%d "
             "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
             "-D PX_LOAD_VEC_SIZE=%d -D PX_LOAD_NUM_PX=%d -D DEPTH_%d "
             "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "
             "-D PX_LOAD_X_ITERATIONS=%d -D PX_LOAD_Y_ITERATIONS=%d "
-            "-D srcT=%s -D srcT1=%s -D dstT=srcT -D dstT1=srcT1 -D WT=srcT -D WT1=srcT1 "
-            "-D convertToWT=noconvert -D convertToDstT=noconvert -D PROCESS_ELEM_=%s -D %s%s",
+            //"-D srcT=%s -D srcT1=%s -D dstT=srcT -D dstT1=srcT1 -D WT=srcT -D WT1=srcT1 "
+            "-D srcT=%s -D srcT1=%s -D dstT=srcT -D dstT1=srcT1 -D WT=%s -D WT1=%s "
+            "-D convertToWT=%s -D convertToDstT=%s -D PROCESS_ELEM_=%s -D %s%s",
             cn, anchor.x, anchor.y, ksize.width, ksize.height,
             pxLoadVecSize, pxLoadNumPixels, depth,
             pxPerWorkItemX, pxPerWorkItemY, privDataWidth, borderMap[borderType],
             isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
             privDataWidth / pxLoadNumPixels, pxPerWorkItemY + ksize.height - 1,
-            ocl::typeToStr(type), ocl::typeToStr(depth), processing.c_str(), op2str[op],
+            ocl::typeToStr(type), ocl::typeToStr(depth),
+            haveExtraMat ? ocl::typeToStr(wtype):"srcT",//to prevent overflow - WT
+            haveExtraMat ? ocl::typeToStr(wdepth):"srcT1",//to prevent overflow - WT1
+            haveExtraMat ? ocl::convertTypeStr(depth, wdepth, cn, cvt[0]) : "noconvert",//to prevent overflow - src to WT
+            haveExtraMat ? ocl::convertTypeStr(wdepth, depth, cn, cvt[1]) : "noconvert",//to prevent overflow - WT to dst
+            processing.c_str(), op2str[op],
             actual_op == op ? "" : cv::format(" -D %s", op2str[actual_op]).c_str());
 
     ocl::Kernel kernel("filterSmall", cv::ocl::imgproc::filterSmall_oclsrc, opts);

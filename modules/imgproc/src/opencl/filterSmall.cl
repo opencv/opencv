@@ -250,9 +250,9 @@ __constant WT1 kernelData[] = { COEFF };
 #endif
 
 #ifdef OP_ERODE
-#define VAL MAX_VAL
+#define VAL (WT)MAX_VAL
 #elif defined OP_DILATE
-#define VAL MIN_VAL
+#define VAL (WT)MIN_VAL
 #else
 #error "Unknown operation"
 #endif
@@ -277,10 +277,10 @@ __constant WT1 kernelData[] = { COEFF };
 #endif
 
 #define PROCESS(_y, _x) \
-    total_sum = MORPH_OP(total_sum, privateData[py + _y][px + _x]);
+    total_sum = convertToWT(MORPH_OP(convertToWT(total_sum), convertToWT(privateData[py + _y][px + _x])));
 
 #define PROCESS_ELEM \
-    WT total_sum = VAL; \
+    WT total_sum = convertToWT(VAL); \
     PROCESS_ELEM_
 
 #else
@@ -404,7 +404,7 @@ __kernel void filterSmall(__global const uchar * srcptr, int src_step, int srcOf
 #if defined OP_GRADIENT || defined OP_TOPHAT || defined OP_BLACKHAT
             //for this type of operations SRCSIZE == DSTSIZE
             int mat_index = mad24(y, mat_step, mad24(x, SRCSIZE, mat_offset));
-            WT value = loadpix(matptr + mat_index);
+            WT value = convertToWT(loadpix(matptr + mat_index));
 
 #ifdef OP_GRADIENT
             storepix(convertToDstT(convertToWT(total_sum) - convertToWT(value)), dstPtr );
