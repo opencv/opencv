@@ -379,7 +379,7 @@
 #define REDUCE_GLOBAL \
     dstTK temp = convertToDT(loadpix(srcptr + src_index)); \
     dstTK temp2 = convertToDT(loadpix(src2ptr + src2_index)); \
-    temp = SUM_ABS2(temp, temp2)); \
+    temp = SUM_ABS2(temp, temp2); \
     FUNC(accumulator, temp.s0); \
     FUNC(accumulator, temp.s1); \
     FUNC(accumulator, temp.s2); \

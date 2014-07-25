@@ -482,6 +482,7 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
             kercn = cn == 1 && !haveMask ? ocl::predictOptimalVectorWidth(_src) : 1,
             mcn = std::max(cn, kercn);
     CV_Assert(!haveSrc2 || _src2.type() == type);
+    int convert_cn = haveSrc2 ? mcn : cn;
 
     if ( (!doubleSupport && depth == CV_64F) || cn > 4 )
         return false;
@@ -513,7 +514,7 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
                          haveMask && _mask.isContinuous() ? " -D HAVE_MASK_CONT" : "", kercn,
                          haveSrc2 ? " -D HAVE_SRC2" : "", calc2 ? " -D OP_CALC2" : "",
                          haveSrc2 && _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "",
-                         depth <= CV_32S && ddepth == CV_32S ? ocl::convertTypeStr(CV_8U, ddepth, mcn, cvt[1]) : "noconvert");
+                         depth <= CV_32S && ddepth == CV_32S ? ocl::convertTypeStr(CV_8U, ddepth, convert_cn, cvt[1]) : "noconvert");
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc, opts);
     if (k.empty())
