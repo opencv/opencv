@@ -1788,89 +1788,23 @@ namespace cv
 
 enum FftType
 {
-    R2R = 0,
-    C2R = 1,
-    R2C = 2,
-    C2C = 3
+    R2R = 0, // real to CCS in case forward transform, CCS to real otherwise
+    C2R = 1, // complex to real in case inverse transform
+    R2C = 2, // real to complex in case forward transform
+    C2C = 3  // complex to complex
 };
-
-static void ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<int>& blocks, int& min_radix)
-{
-    int factors[34];
-    int nf = DFTFactorize(cols, factors);
-
-    int n = 1;
-    int factor_index = 0;
-    min_radix = INT_MAX;
-
-    // 2^n transforms
-    if ((factors[factor_index] & 1) == 0)
-    {
-        for( ; n < factors[factor_index];)
-        {
-            int radix = 2, block = 1;
-            if (8*n <= factors[0])
-                radix = 8;
-            else if (4*n <= factors[0])
-            {
-                radix = 4;
-                if (cols % 12 == 0)
-                    block = 3;
-                else if (cols % 8 == 0)
-                    block = 2;
-            }
-            else
-            {
-                if (cols % 10 == 0)
-                    block = 5;
-                else if (cols % 8 == 0)
-                    block = 4;
-                else if (cols % 6 == 0)
-                    block = 3;
-                else if (cols % 4 == 0)
-                    block = 2;
-            }
-
-            radixes.push_back(radix);
-            blocks.push_back(block);
-            min_radix = min(min_radix, block*radix);
-            n *= radix;
-        }
-        factor_index++;
-    }
-
-    // all the other transforms
-    for( ; factor_index < nf; factor_index++)
-    {
-        int radix = factors[factor_index], block = 1;
-        if (radix == 3)
-        {
-            if (cols % 12 == 0)
-                block = 4;
-            else if (cols % 9 == 0)
-                block = 3;
-            else if (cols % 6 == 0)
-                block = 2;
-        }
-        else if (radix == 5)
-        {
-            if (cols % 10 == 0)
-                block = 2;
-        }
-        radixes.push_back(radix);
-        blocks.push_back(block);
-        min_radix = min(min_radix, block*radix);
-    }
-}
 
 struct OCL_FftPlan
 {
+private:
     UMat twiddles;
     String buildOptions;
     int thread_count;
-
-    int dft_size;
     bool status;
+
+public:
+    int dft_size;
+
     OCL_FftPlan(int _size): dft_size(_size), status(true)
     {
         int min_radix;
@@ -1910,7 +1844,7 @@ struct OCL_FftPlan
 
             for (int j=1; j<radix; j++)
             {
-                double theta = -CV_TWO_PI*j/n;
+                double theta = -CV_2PI*j/n;
 
                 for (int k=0; k<(n/radix); k++)
                 {
@@ -1922,7 +1856,7 @@ struct OCL_FftPlan
         twiddles = tw.getUMat(ACCESS_READ);
 
         buildOptions = format("-D LOCAL_SIZE=%d -D kercn=%d -D RADIX_PROCESS=%s",
-                              dft_size, dft_size/thread_count, radix_processing.c_str());
+                              dft_size, min_radix, radix_processing.c_str());
     }
 
     bool enqueueTransform(InputArray _src, OutputArray _dst, int num_dfts, int flags, int fftType, bool rows = true) const
@@ -1982,6 +1916,76 @@ struct OCL_FftPlan
         k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(twiddles), thread_count, num_dfts);
         return k.run(2, globalsize, localsize, false);
     }
+
+private:
+    static void ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<int>& blocks, int& min_radix)
+    {
+        int factors[34];
+        int nf = DFTFactorize(cols, factors);
+
+        int n = 1;
+        int factor_index = 0;
+        min_radix = INT_MAX;
+
+        // 2^n transforms
+        if ((factors[factor_index] & 1) == 0)
+        {
+            for( ; n < factors[factor_index];)
+            {
+                int radix = 2, block = 1;
+                if (8*n <= factors[0])
+                    radix = 8;
+                else if (4*n <= factors[0])
+                {
+                    radix = 4;
+                    if (cols % 12 == 0)
+                        block = 3;
+                    else if (cols % 8 == 0)
+                        block = 2;
+                }
+                else
+                {
+                    if (cols % 10 == 0)
+                        block = 5;
+                    else if (cols % 8 == 0)
+                        block = 4;
+                    else if (cols % 6 == 0)
+                        block = 3;
+                    else if (cols % 4 == 0)
+                        block = 2;
+                }
+
+                radixes.push_back(radix);
+                blocks.push_back(block);
+                min_radix = min(min_radix, block*radix);
+                n *= radix;
+            }
+            factor_index++;
+        }
+
+        // all the other transforms
+        for( ; factor_index < nf; factor_index++)
+        {
+            int radix = factors[factor_index], block = 1;
+            if (radix == 3)
+            {
+                if (cols % 12 == 0)
+                    block = 4;
+                else if (cols % 9 == 0)
+                    block = 3;
+                else if (cols % 6 == 0)
+                    block = 2;
+            }
+            else if (radix == 5)
+            {
+                if (cols % 10 == 0)
+                    block = 2;
+            }
+            radixes.push_back(radix);
+            blocks.push_back(block);
+            min_radix = min(min_radix, block*radix);
+        }
+    }
 };
 
 class OCL_FftPlanCache
@@ -1993,27 +1997,24 @@ public:
         return planCache;
     }
 
-    OCL_FftPlan* getFftPlan(int dft_size)
+    Ptr<OCL_FftPlan> getFftPlan(int dft_size)
     {
         for (size_t i = 0, size = planStorage.size(); i < size; ++i)
         {
-            OCL_FftPlan * const plan = planStorage[i];
-
+            Ptr<OCL_FftPlan> plan = planStorage[i];
             if (plan->dft_size == dft_size)
             {
                 return plan;
             }
         }
 
-        OCL_FftPlan * newPlan = new OCL_FftPlan(dft_size);
+        Ptr<OCL_FftPlan> newPlan = Ptr<OCL_FftPlan>(new OCL_FftPlan(dft_size));
         planStorage.push_back(newPlan);
         return newPlan;
     }
 
     ~OCL_FftPlanCache()
     {
-        for (std::vector<OCL_FftPlan *>::iterator i = planStorage.begin(), end = planStorage.end(); i != end; ++i)
-            delete (*i);
         planStorage.clear();
     }
 
@@ -2023,18 +2024,18 @@ protected:
     {
     }
 
-    std::vector<OCL_FftPlan*> planStorage;
+    std::vector<Ptr<OCL_FftPlan> > planStorage;
 };
 
-static bool ocl_dft_C2C_rows(InputArray _src, OutputArray _dst, int nonzero_rows, int flags, int fftType)
+static bool ocl_dft_rows(InputArray _src, OutputArray _dst, int nonzero_rows, int flags, int fftType)
 {
-    const OCL_FftPlan* plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.cols());
+    Ptr<OCL_FftPlan> plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.cols());
     return plan->enqueueTransform(_src, _dst, nonzero_rows, flags, fftType, true);
 }
 
-static bool ocl_dft_C2C_cols(InputArray _src, OutputArray _dst, int nonzero_cols, int flags, int fftType)
+static bool ocl_dft_cols(InputArray _src, OutputArray _dst, int nonzero_cols, int flags, int fftType)
 {
-    const OCL_FftPlan* plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.rows());
+    Ptr<OCL_FftPlan> plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.rows());
     return plan->enqueueTransform(_src, _dst, nonzero_cols, flags, fftType, false);
 }
 
@@ -2103,13 +2104,13 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
 
     if (!inv)
     {
-        if (!ocl_dft_C2C_rows(src, output, nonzero_rows, flags, fftType))
+        if (!ocl_dft_rows(src, output, nonzero_rows, flags, fftType))
             return false;
 
         if (!is1d)
         {
             int nonzero_cols = fftType == R2R ? output.cols/2 + 1 : output.cols;
-            if (!ocl_dft_C2C_cols(output, _dst, nonzero_cols, flags, fftType))
+            if (!ocl_dft_cols(output, _dst, nonzero_cols, flags, fftType))
                 return false;
         }
     }
@@ -2118,12 +2119,12 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
         if (fftType == C2C)
         {
             // complex output
-            if (!ocl_dft_C2C_rows(src, output, nonzero_rows, flags, fftType))
+            if (!ocl_dft_rows(src, output, nonzero_rows, flags, fftType))
                 return false;
 
             if (!is1d)
             {
-                if (!ocl_dft_C2C_cols(output, output, output.cols, flags, fftType))
+                if (!ocl_dft_cols(output, output, output.cols, flags, fftType))
                     return false;
             }
         }
@@ -2131,16 +2132,16 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
         {
             if (is1d)
             {
-                if (!ocl_dft_C2C_rows(src, output, nonzero_rows, flags, fftType))
+                if (!ocl_dft_rows(src, output, nonzero_rows, flags, fftType))
                     return false;
             }
             else
             {
                 int nonzero_cols = src.cols/2 + 1;
-                if (!ocl_dft_C2C_cols(src, output, nonzero_cols, flags, fftType))
+                if (!ocl_dft_cols(src, output, nonzero_cols, flags, fftType))
                     return false;
 
-                if (!ocl_dft_C2C_rows(output, _dst, nonzero_rows, flags, fftType))
+                if (!ocl_dft_rows(output, _dst, nonzero_rows, flags, fftType))
                     return false;
             }
         }
@@ -2286,7 +2287,7 @@ public:
         }
 
         // no baked plan is found, so let's create a new one
-        FftPlan * newPlan = new FftPlan(dft_size, src_step, dst_step, doubleFP, inplace, flags, fftType);
+        Ptr<FftPlan> newPlan = Ptr<FftPlan>(new FftPlan(dft_size, src_step, dst_step, doubleFP, inplace, flags, fftType));
         planStorage.push_back(newPlan);
 
         return newPlan->plHandle;
@@ -2294,8 +2295,6 @@ public:
 
     ~PlanCache()
     {
-        for (std::vector<FftPlan *>::iterator i = planStorage.begin(), end = planStorage.end(); i != end; ++i)
-            delete (*i);
         planStorage.clear();
     }
 
@@ -2305,7 +2304,7 @@ protected:
     {
     }
 
-    std::vector<FftPlan *> planStorage;
+    std::vector<Ptr<FftPlan> > planStorage;
 };
 
 extern "C" {
