@@ -720,6 +720,17 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
                       OutputArray _descriptors,
                       bool useProvidedKeypoints) const
 {
+    std::vector<Mat> gpyr;
+    (*this)(_image, _mask, keypoints, _descriptors,
+        useProvidedKeypoints, gpyr);
+}
+
+void SIFT::operator()(InputArray _image, InputArray _mask,
+                      std::vector<KeyPoint>& keypoints,
+                      OutputArray _descriptors,
+                      bool useProvidedKeypoints,
+                      std::vector<Mat>& gpyr) const
+{
     int firstOctave = -1, actualNOctaves = 0, actualNLayers = 0;
     Mat image = _image.getMat(), mask = _mask.getMat();
 
@@ -729,7 +740,7 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
     if( !mask.empty() && mask.type() != CV_8UC1 )
         CV_Error( Error::StsBadArg, "mask has incorrect type (!=CV_8UC1)" );
 
-    if( useProvidedKeypoints )
+    if( useProvidedKeypoints && gpyr.size() == 0)
     {
         firstOctave = 0;
         int maxOctave = INT_MIN;
@@ -748,20 +759,26 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
         actualNOctaves = maxOctave - firstOctave + 1;
     }
 
-    Mat base = createInitialImage(image, firstOctave < 0, (float)sigma);
-    std::vector<Mat> gpyr, dogpyr;
-    int nOctaves = actualNOctaves > 0 ? actualNOctaves : cvRound(std::log( (double)std::min( base.cols, base.rows ) ) / std::log(2.) - 2) - firstOctave;
-
     //double t, tf = getTickFrequency();
-    //t = (double)getTickCount();
-    buildGaussianPyramid(base, gpyr, nOctaves);
-    buildDoGPyramid(gpyr, dogpyr);
 
-    //t = (double)getTickCount() - t;
-    //printf("pyramid construction time: %g\n", t*1000./tf);
+    if(gpyr.size() == 0) {
+        Mat base = createInitialImage(image, firstOctave < 0, (float)sigma);
+        int nOctaves = actualNOctaves > 0 ? actualNOctaves : cvRound(std::log( (double)std::min( base.cols, base.rows ) ) / std::log(2.) - 2) - firstOctave;
+
+        //t = (double)getTickCount();
+        buildGaussianPyramid(base, gpyr, nOctaves);
+        //t = (double)getTickCount() - t;
+        //printf("Gaussian pyramid construction time: %g\n", t*1000./tf);
+    }
 
     if( !useProvidedKeypoints )
     {
+        //t = (double)getTickCount();
+        std::vector<Mat> dogpyr;
+        buildDoGPyramid(gpyr, dogpyr);
+        //t = (double)getTickCount() - t;
+        //printf("DoG pyramid construction time: %g\n", t*1000./tf);
+
         //t = (double)getTickCount();
         findScaleSpaceExtrema(gpyr, dogpyr, keypoints);
         KeyPointsFilter::removeDuplicated( keypoints );
@@ -801,6 +818,8 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
         //t = (double)getTickCount() - t;
         //printf("descriptor extraction time: %g\n", t*1000./tf);
     }
+
+    if( firstOctave != -1) gpyr.clear();
 }
 
 void SIFT::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const

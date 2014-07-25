@@ -79,6 +79,13 @@ public:
                     OutputArray descriptors,
                     bool useProvidedKeypoints = false) const;
 
+    //! Compute descriptors with the image pyramid already precomputed.
+    void operator()(InputArray img, InputArray mask,
+                    std::vector<KeyPoint>& keypoints,
+                    OutputArray descriptors,
+                    bool useProvidedKeypoints,
+                    std::vector<Mat>& gpyr) const;
+
     AlgorithmInfo* info() const;
 
     void buildGaussianPyramid( const Mat& base, std::vector<Mat>& pyr, int nOctaves ) const;
