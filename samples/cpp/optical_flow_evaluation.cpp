@@ -6,53 +6,7 @@
 using namespace std;
 using namespace cv;
 
-static void farneback( InputArray i1, InputArray i2, InputOutputArray flow )
-{
-    calcOpticalFlowFarneback(i1, i2, flow, 0.5, 3, 15, 3, 5, 1.2, 0);
-}
-static void simpleflow( InputArray i1, InputArray i2, InputOutputArray flow )
-{
-    calcOpticalFlowSF(i1, i2, flow, 3, 2, 4, 4.1, 25.5, 18, 55.0, 25.5, 0.35, 18, 55.0, 25.5, 10);
-}
-static void tvl1( InputArray i1, InputArray i2, InputOutputArray flow )
-{
-    Ptr<DenseOpticalFlow> tvl1 = createOptFlow_DualTVL1();
-    tvl1->calc(i1, i2, flow);
-}
 
-// binary file format for flow data specified here:
-// http://vision.middlebury.edu/flow/data/
-// code duplicate from /modules/video/test/test_tvl1optflow.cpp
-// TODO: Middlebury methods in one place
-static void readOpticalFlowFromFile( Mat_<Point2f>& flow, const string& fileName )
-{
-    const float FLO_TAG_FLOAT = 202021.25f;
-    ifstream file(fileName.c_str(), ios_base::binary);
-
-    float tag;
-    file.read((char*) &tag, sizeof(float));
-    CV_Assert(tag == FLO_TAG_FLOAT);
-
-    Size size;
-
-    file.read((char*) &size.width, sizeof(int));
-    file.read((char*) &size.height, sizeof(int));
-
-    flow.create(size);
-
-    for ( int i = 0; i < flow.rows; ++i )
-    {
-        for ( int j = 0; j < flow.cols; ++j )
-        {
-            Point2f u;
-
-            file.read((char*) &u.x, sizeof(float));
-            file.read((char*) &u.y, sizeof(float));
-
-            flow(i, j) = u;
-        }
-    }
-}
 inline bool isFlowCorrect( const Point2f u )
 {
     return !cvIsNaN(u.x) && !cvIsNaN(u.y) && (fabs(u.x) < 1e9) && (fabs(u.y) < 1e9);
@@ -120,7 +74,7 @@ int main( int argc, char** argv )
     if ( argc < 4 )
     {
         printf("Not enough input arguments. Please specify 2 input images, "
-                "the method [farneback, simpleflow, tvl1], and optionally "
+                "the method [farneback, simpleflow, tvl1, deepflow], and optionally "
                 "ground-truth flow (middlebury format)");
         return -1;
     }
@@ -136,33 +90,50 @@ int main( int argc, char** argv )
         printf("No image data \n");
         return -1;
     }
-
-    if ( method == "farneback" || method == "tvl1" )
+    if ( i1.size() != i2.size() || i1.channels() != i2.channels())
     {
+        printf("Dimension mismatch between input images\n");
+        return -1;
+    }
+    // 8-bit images expected by all algorithms
+    if ( i1.depth() != CV_8U) i1.convertTo(i1, CV_8U);
+    if ( i2.depth() != CV_8U) i2.convertTo(i2, CV_8U);
+
+    if ( ( method == "farneback" || method == "tvl1" || method =="deepflow") && i1.channels() == 3 )
+    {   // 1-channel images are expected
         cvtColor(i1, i1, COLOR_BGR2GRAY);
         cvtColor(i2, i2, COLOR_BGR2GRAY);
+    }else if (method == "simpleflow" && i1.channels() == 1)
+    {   // 3-channel images expected
+        cvtColor(i1, i1, COLOR_GRAY2BGR);
+        cvtColor(i2, i2, COLOR_GRAY2BGR);
     }
 
     flow = Mat(i1.size[0], i1.size[1], CV_32FC2);
-
-    double startTick, time;
-    startTick = (double) getTickCount();
+    Ptr<DenseOpticalFlow> algorithm;
 
     if ( method == "farneback" )
-        farneback(i1, i2, flow);
+        algorithm = createOptFlow_Farnebacks();
     else if ( method == "simpleflow" )
-        simpleflow(i1, i2, flow);
+        algorithm = createOptFlow_SimpleFlow();
     else if ( method == "tvl1" )
-        tvl1(i1, i2, flow);
+        algorithm = createOptFlow_DualTVL1();
+    else if ( method == "deepflow" )
+        algorithm = createOptFlow_DeepFlow();
     else
         printf("Wrong method!\n");
+
+
+    double startTick, time;
+    startTick = (double) getTickCount(); // measure time
+    algorithm->calc(i1, i2, flow);
     time = ((double) getTickCount() - startTick) / getTickFrequency();
     printf("\nTime: %f.3\n", time);
 
     if ( argc == 5 )
     { // compare to ground truth
-        string flow_file(argv[4]);
-        readOpticalFlowFromFile(ground_truth, flow_file);
+        string groundtruth_path(argv[4]);
+        ground_truth = readOpticalFlow(groundtruth_path);
         double endpointError = averageEndpointError(flow, ground_truth);
         printf("Average endpoint error: %.2f\n", endpointError);
         double angularError = averageAngularError(flow, ground_truth);
