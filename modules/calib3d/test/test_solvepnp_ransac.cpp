@@ -57,6 +57,7 @@ public:
         eps[ITERATIVE] = 1.0e-2;
         eps[EPNP] = 1.0e-2;
         eps[P3P] = 1.0e-2;
+        eps[DLS] = 1.0e-2;
         totalTestsCount = 10;
     }
     ~CV_solvePnPRansac_Test() {}
@@ -184,7 +185,7 @@ protected:
             }
         }
     }
-    double eps[3];
+    double eps[4];
     int totalTestsCount;
 };
 
@@ -196,6 +197,7 @@ public:
         eps[ITERATIVE] = 1.0e-6;
         eps[EPNP] = 1.0e-6;
         eps[P3P] = 1.0e-4;
+        eps[DLS] = 1.0e-6;
         totalTestsCount = 1000;
     }
 
