@@ -19,34 +19,6 @@
 
 using namespace std;
 
-void pause__(){ cin.get(); }
-
-void printSize(const cv::Mat& mat)
-{
-	cout << mat.rows << "x" << mat.cols << endl;
-}
-void printMat(const cv::Mat& mat)
-{
-	ofstream outFile;
-	outFile.open("test.txt");
-
-	printSize(mat);
-	for (int i = 0; i < mat.rows; ++i) {
-		cout << "[";
-		outFile << "[";
-		for (int j = 0; j < mat.cols; ++j) {
-			cout << " " << mat.at<double>(i,j);
-			outFile << " " << mat.at<double>(i,j);
-		}
-		cout << ";]" << endl;
-		outFile << ";]" << endl;
-	}
-
-	outFile.close();
-}
-template<typename T>
-void print(T var) { cout << var << endl; }
-
 dls::dls(const cv::Mat& opoints, const cv::Mat& ipoints)
 {
 	N =  std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
