@@ -6,6 +6,12 @@
 using namespace std;
 using namespace cv;
 
+const String keys = "{help h usage ? |      | print this message   }"
+        "{@image1        |      | image1               }"
+        "{@image2        |      | image2               }"
+        "{@algorithm     |      | [farneback, simpleflow, tvl1 or deepflow] }"
+        "{@groundtruth   |      | path to the .flo file  (optional) }"
+        "{m measure      |endpoint| error measure - [endpoint or angular] }";
 
 inline bool isFlowCorrect( const Point2f u )
 {
@@ -17,14 +23,9 @@ inline bool isFlowCorrect( const Point3f u )
             && (fabs(u.z) < 1e9);
 }
 ///based on TV-L1 test, needs improvement
-static double averageEndpointError( const Mat_<Point2f>& flow1, const Mat_<Point2f>& flow2 )
+static Mat endpointError( const Mat_<Point2f>& flow1, const Mat_<Point2f>& flow2 )
 {
-    CV_Assert(flow1.rows == flow2.rows);
-    CV_Assert(flow1.cols == flow2.cols);
-    CV_Assert(flow1.channels() == 2 && flow2.channels() == 2);
-    double sum = 0.0;
-    int counter = 0;
-
+    Mat result(flow1.size(), CV_32FC1);
     for ( int i = 0; i < flow1.rows; ++i )
     {
         for ( int j = 0; j < flow1.cols; ++j )
@@ -35,20 +36,16 @@ static double averageEndpointError( const Mat_<Point2f>& flow1, const Mat_<Point
             if ( isFlowCorrect(u1) && isFlowCorrect(u2) )
             {
                 const Point2f diff = u1 - u2;
-                sum += sqrt(diff.ddot(diff)); //distance
-                ++counter;
-            }
+                result.at<float>(i, j) = sqrt(diff.ddot(diff)); //distance
+            } else
+                result.at<float>(i, j) = NAN;
         }
     }
-    return sum / (1e-9 + counter);
+    return result;
 }
-static double averageAngularError( const Mat_<Point2f>& flow1, const Mat_<Point2f>& flow2 )
+static Mat angularError( const Mat_<Point2f>& flow1, const Mat_<Point2f>& flow2 )
 {
-    CV_Assert(flow1.rows == flow2.rows);
-    CV_Assert(flow1.cols == flow2.cols);
-    CV_Assert(flow1.channels() == 2 && flow2.channels() == 2);
-    double sum = 0.0;
-    int counter = 0;
+    Mat result(flow1.size(), CV_32FC1);
 
     for ( int i = 0; i < flow1.rows; ++i )
     {
@@ -60,50 +57,116 @@ static double averageAngularError( const Mat_<Point2f>& flow1, const Mat_<Point2
             const Point3f u2(u2_2d.x, u2_2d.y, 1);
 
             if ( isFlowCorrect(u1) && isFlowCorrect(u2) )
+                result.at<float>(i, j) = acos((u1.ddot(u2)) / (norm(u1) * norm(u2)));
+            else
+                result.at<float>(i, j) = NAN;
+        }
+    }
+    return result;
+}
+// what fraction of pixels have errors higher than given threshold?
+static float stat_RX( Mat errors, float threshold, Mat mask )
+{
+    CV_Assert(errors.size() == mask.size());
+    CV_Assert(mask.depth() == CV_8U);
+
+    int count = 0, all = 0;
+    for ( int i = 0; i < errors.rows; ++i )
+    {
+        for ( int j = 0; j < errors.cols; ++j )
+        {
+            if ( mask.at<char>(i, j) > 0 )
             {
-                sum += acos((u1.ddot(u2)) / (norm(u1) * norm(u2)));
-                ++counter;
+                ++all;
+                if ( errors.at<float>(i, j) > threshold )
+                    ++count;
             }
         }
     }
-    return sum / (1e-9 + counter);
+    return 1.0 * count / all;
 }
+static void calculateStats( Mat errors, Mat mask = Mat() )
+{
+    float R_thresholds[] = { 0.5, 1, 2, 5, 10 };
+    if ( mask.empty() )
+        mask = Mat::ones(errors.size(), CV_8U);
+    CV_Assert(errors.size() == mask.size());
+    CV_Assert(mask.depth() == CV_8U);
 
+    //masking out NaNs - if not done before
+    Mat nan_mask = Mat(errors != errors);
+    bitwise_not(nan_mask, nan_mask);
+    bitwise_and(nan_mask, mask, mask);
+
+    //mean and std computation
+    Scalar s_mean, s_std;
+    float mean, std;
+    meanStdDev(errors, s_mean, s_std, mask);
+    mean = s_mean[0];
+    std = s_std[0];
+    printf("Average: %.2f\nStandard deviation: %.2f\n", mean, std);
+
+    //RX stats - displayed in percent
+    float R;
+    int R_thresholds_count = sizeof(R_thresholds) / sizeof(float);
+    for ( int i = 0; i < R_thresholds_count; ++i )
+    {
+        R = stat_RX(errors, R_thresholds[i], mask);
+        printf("R%.1f: %.2f%%\n", R_thresholds[i], R * 100);
+    }
+
+
+
+
+
+}
 int main( int argc, char** argv )
 {
-    if ( argc < 4 )
+    CommandLineParser parser(argc, argv, keys);
+    parser.about("OpenCV optical flow evaluation");
+    if ( parser.has("help") )
     {
-        printf("Not enough input arguments. Please specify 2 input images, "
-                "the method [farneback, simpleflow, tvl1, deepflow], and optionally "
-                "ground-truth flow (middlebury format)");
-        return -1;
+        parser.printMessage();
+        return 0;
     }
+    String i1_path = parser.get<String>(0);
+    String i2_path = parser.get<String>(1);
+    String method = parser.get<String>(2);
+    String groundtruth_path = parser.get<String>(3);
+    String error_measure = parser.get<String>("measure");
+    if ( !parser.check() )
+    {
+        parser.printErrors();
+        return 0;
+    }
+
     Mat i1, i2;
     Mat_<Point2f> flow, ground_truth;
-    std::string method;
-    i1 = imread(argv[1], 1);
-    i2 = imread(argv[2], 1);
-    method = argv[3];
+    Mat computed_errors;
+    i1 = imread(i1_path, 1);
+    i2 = imread(i2_path, 1);
 
     if ( !i1.data || !i2.data )
     {
         printf("No image data \n");
         return -1;
     }
-    if ( i1.size() != i2.size() || i1.channels() != i2.channels())
+    if ( i1.size() != i2.size() || i1.channels() != i2.channels() )
     {
         printf("Dimension mismatch between input images\n");
         return -1;
     }
     // 8-bit images expected by all algorithms
-    if ( i1.depth() != CV_8U) i1.convertTo(i1, CV_8U);
-    if ( i2.depth() != CV_8U) i2.convertTo(i2, CV_8U);
+    if ( i1.depth() != CV_8U )
+        i1.convertTo(i1, CV_8U);
+    if ( i2.depth() != CV_8U )
+        i2.convertTo(i2, CV_8U);
 
-    if ( ( method == "farneback" || method == "tvl1" || method =="deepflow") && i1.channels() == 3 )
+    if ( (method == "farneback" || method == "tvl1" || method == "deepflow") && i1.channels() == 3 )
     {   // 1-channel images are expected
         cvtColor(i1, i1, COLOR_BGR2GRAY);
         cvtColor(i2, i2, COLOR_BGR2GRAY);
-    }else if (method == "simpleflow" && i1.channels() == 1)
+    } else if ( method == "simpleflow" && i1.channels() == 1 )
     {   // 3-channel images expected
         cvtColor(i1, i1, COLOR_GRAY2BGR);
         cvtColor(i2, i2, COLOR_GRAY2BGR);
@@ -123,21 +186,33 @@ int main( int argc, char** argv )
     else
         printf("Wrong method!\n");
 
-
     double startTick, time;
     startTick = (double) getTickCount(); // measure time
     algorithm->calc(i1, i2, flow);
     time = ((double) getTickCount() - startTick) / getTickFrequency();
-    printf("\nTime: %f.3\n", time);
+    printf("\nTime: %.3f\n", time);
 
-    if ( argc == 5 )
+    if ( !groundtruth_path.empty() )
     { // compare to ground truth
-        string groundtruth_path(argv[4]);
         ground_truth = readOpticalFlow(groundtruth_path);
-        double endpointError = averageEndpointError(flow, ground_truth);
-        printf("Average endpoint error: %.2f\n", endpointError);
-        double angularError = averageAngularError(flow, ground_truth);
-        printf("Average angular error: %.2f\n", angularError);
+        if ( flow.size() != ground_truth.size() || flow.channels() != 2
+                || ground_truth.channels() != 2 )
+        {
+            printf("Dimension mismatch between the computed flow and the provided ground truth\n");
+            return -1;
+        }
+        if ( error_measure == "endpoint" )
+            computed_errors = endpointError(flow, ground_truth);
+        else if ( error_measure == "angular" )
+            computed_errors = angularError(flow, ground_truth);
+        else
+        {
+            printf("Invalid error measure! Available options: endpoint, angular\n");
+            return -1;
+        }
+        printf("Using %s error measure\n", error_measure.c_str());
+        calculateStats(computed_errors);
+
     }
     return 0;
 }
