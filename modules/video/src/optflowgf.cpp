@@ -1156,3 +1156,60 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
         prevFlow = flow;
     }
 }
+
+namespace cv {
+class OpticalFlowFarneback : public DenseOpticalFlow
+{
+public:
+    OpticalFlowFarneback();
+    void calc(InputArray I0, InputArray I1, InputOutputArray flow);
+    void collectGarbage();
+    AlgorithmInfo* info() const;
+protected:
+    int numLevels;
+    double pyrScale;
+    bool fastPyramids;
+    int winSize;
+    int numIters;
+    int polyN;
+    double polySigma;
+    int flags;
+};
+
+OpticalFlowFarneback::OpticalFlowFarneback()
+{
+    // values copied from the FarnebackOpticalFlow class
+    numLevels = 5;
+    pyrScale = 0.5;
+    fastPyramids = false;
+    winSize = 13;
+    numIters = 10;
+    polyN = 5;
+    polySigma = 1.1;
+    flags = 0;
+}
+
+void OpticalFlowFarneback::calc(InputArray I0, InputArray I1, InputOutputArray flow)
+{
+    calcOpticalFlowFarneback(I0, I1, flow, pyrScale, numLevels, winSize, numIters, polyN, polySigma, flags);
+}
+void OpticalFlowFarneback::collectGarbage()
+{
+}
+
+CV_INIT_ALGORITHM(OpticalFlowFarneback, "DenseOpticalFlow.Farneback",
+        obj.info()->addParam(obj, "numLevels", obj.numLevels);
+        obj.info()->addParam(obj, "pyrScale", obj.pyrScale);
+        obj.info()->addParam(obj, "fastPyramids", obj.fastPyramids);
+        obj.info()->addParam(obj, "winSize", obj.winSize);
+        obj.info()->addParam(obj, "numIters", obj.numIters);
+        obj.info()->addParam(obj, "polyN", obj.polyN);
+        obj.info()->addParam(obj, "polySigma", obj.polySigma);
+        obj.info()->addParam(obj, "flags", obj.flags))
+
+Ptr<DenseOpticalFlow> createOptFlow_Farnebacks()
+{
+    return makePtr<OpticalFlowFarneback>();
+}
+
+} //cv

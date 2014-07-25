@@ -200,6 +200,12 @@ CV_EXPORTS_W Ptr<DenseOpticalFlow> createOptFlow_DualTVL1();
 // DeepFlow implementation, based on:
 //   P. Weinzaepfel, J. Revaud, Z. Harchaoui, and C. Schmid, “DeepFlow: Large Displacement Optical Flow with Deep Matching,”
 CV_EXPORTS_W Ptr<DenseOpticalFlow> createOptFlow_DeepFlow();
+
+// Additional interface to the SimpleFlow algorithm - calcOpticalFlowSF()
+CV_EXPORTS_W Ptr<DenseOpticalFlow> createOptFlow_SimpleFlow();
+
+// Additional interface to the Farneback's algorithm - calcOpticalFlowFarneback()
+CV_EXPORTS_W Ptr<DenseOpticalFlow> createOptFlow_Farnebacks();
 } // cv
 
 #endif

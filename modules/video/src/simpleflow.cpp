@@ -670,4 +670,77 @@ CV_EXPORTS_W void calcOpticalFlowSF(InputArray from,
                     4.1, 25.5, 18, 55.0, 25.5, 0.35, 18, 55.0, 25.5, 10);
 }
 
+class OpticalFlowSimpleFlow : public DenseOpticalFlow
+{
+public:
+    OpticalFlowSimpleFlow();
+    void calc(InputArray I0, InputArray I1, InputOutputArray flow);
+    void collectGarbage();
+    AlgorithmInfo* info() const;
+
+protected:
+    int layers;
+    int averaging_radius;
+    int max_flow;
+    double sigma_dist;
+    double sigma_color;
+    int postprocess_window;
+    double sigma_dist_fix;
+    double sigma_color_fix;
+    double occ_thr;
+    int upscale_averaging_radius;
+    double upscale_sigma_dist;
+    double upscale_sigma_color;
+    double speed_up_thr;
+};
+
+OpticalFlowSimpleFlow::OpticalFlowSimpleFlow()
+{
+    // values from the example app
+    // TODO: verify the default values
+    layers = 3;
+    averaging_radius = 2;
+    max_flow = 4;
+    // values from the default function parameters
+    sigma_dist = 4.1;
+    sigma_color = 25.5;
+    postprocess_window = 18;
+    sigma_dist_fix = 55.0;
+    sigma_color_fix = 25.5;
+    occ_thr = 0.35;
+    upscale_averaging_radius = 18;
+    upscale_sigma_dist = 55.0;
+    upscale_sigma_color = 25.5;
+    speed_up_thr = 10;
 }
+
+void OpticalFlowSimpleFlow::calc(InputArray I0, InputArray I1, InputOutputArray flow)
+{
+    calcOpticalFlowSF(I0, I1, flow, layers, averaging_radius, max_flow, sigma_dist, sigma_color,
+                      postprocess_window, sigma_dist_fix, sigma_color_fix, occ_thr,
+                      upscale_averaging_radius, upscale_sigma_dist, upscale_sigma_color, speed_up_thr);
+}
+void OpticalFlowSimpleFlow::collectGarbage()
+{
+
+}
+CV_INIT_ALGORITHM(OpticalFlowSimpleFlow, "DenseOpticalFlow.SimpleFlow",
+        obj.info()->addParam(obj, "layers", obj.layers);
+        obj.info()->addParam(obj, "averaging_radius", obj.averaging_radius);
+        obj.info()->addParam(obj, "max_flow", obj.max_flow);
+        obj.info()->addParam(obj, "sigma_dist", obj.sigma_dist);
+        obj.info()->addParam(obj, "sigma_color", obj.sigma_color);
+        obj.info()->addParam(obj, "postprocess_window", obj.postprocess_window);
+        obj.info()->addParam(obj, "sigma_dist_fix", obj.sigma_dist_fix);
+        obj.info()->addParam(obj, "sigma_color_fix", obj.sigma_color_fix);
+        obj.info()->addParam(obj, "occ_thr", obj.occ_thr);
+        obj.info()->addParam(obj, "upscale_averaging_radius", obj.upscale_averaging_radius);
+        obj.info()->addParam(obj, "upscale_sigma_dist", obj.upscale_sigma_dist);
+        obj.info()->addParam(obj, "upscale_sigma_color", obj.upscale_sigma_color);
+        obj.info()->addParam(obj, "speed_up_thr", obj.speed_up_thr))
+
+Ptr<DenseOpticalFlow> createOptFlow_SimpleFlow()
+{
+    return makePtr<OpticalFlowSimpleFlow>();
+}
+} //cv
