@@ -49,6 +49,11 @@
 #include <iostream>
 using namespace cv;
 
+void MatrixSize(const cv::Mat& mat)
+{
+	cout << mat.rows << "x" << mat.cols << endl;
+}
+
 bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
                   InputArray _cameraMatrix, InputArray _distCoeffs,
                   OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess, int flags )
@@ -96,23 +101,16 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     }
     else if (flags == DLS)
     {
-    	std::cout << "DLS" << std::endl;
     	cv::Mat undistortedPoints;
-    	//cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+    	cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+
+    	dls PnP(opoints, undistortedPoints);
 
     	cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
-
-    	//dls PnP(opoints, undistortedPoints);
-    	dls PnP(opoints, ipoints); // FOR TESTING
-
-    	PnP.compute_pose(R, tvec);
-
-    	cout << "after dls compute pose" << endl;
-
-    	//TODO: DO SOMETHING WITH R and t
-        //cv::Rodrigues(R, rvec);
-
-    	return true;
+    	bool result = PnP.compute_pose(R, tvec);
+        if (result)
+        	cv::Rodrigues(R, rvec);
+        return result;
     }
     else
         CV_Error(CV_StsBadArg, "The flags argument must be one of CV_ITERATIVE, CV_P3P or CV_EPNP");
