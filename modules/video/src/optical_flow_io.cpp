@@ -49,7 +49,6 @@ const char *FLOW_TAG_STRING = "PIEH";
 CV_EXPORTS_W Mat readOpticalFlow( const String& path )
 {
     CV_Assert(sizeof(float) == 4);
-    CV_Assert(sizeof(int) == 4);
 
     Mat_<Point2f> flow;
     std::ifstream file(path.c_str(), std::ios_base::binary);
@@ -61,12 +60,12 @@ CV_EXPORTS_W Mat readOpticalFlow( const String& path )
     if ( tag != FLOW_TAG_FLOAT )
         return flow;
 
-    Size size;
+    int32_t width, height;
 
-    file.read((char*) &size.width, sizeof(int));
-    file.read((char*) &size.height, sizeof(int));
+    file.read((char*) &width, sizeof(int32_t));
+    file.read((char*) &height, sizeof(int32_t));
 
-    flow.create(size);
+    flow.create(height, width);
 
     for ( int i = 0; i < flow.rows; ++i )
     {
@@ -90,7 +89,6 @@ CV_EXPORTS_W Mat readOpticalFlow( const String& path )
 CV_EXPORTS_W bool writeOpticalFlow( const String& path, InputArray flow )
 {
     CV_Assert(sizeof(float) == 4);
-    CV_Assert(sizeof(int) == 4);
 
     const int nChannels = 2;
 
@@ -102,10 +100,10 @@ CV_EXPORTS_W bool writeOpticalFlow( const String& path, InputArray flow )
     if ( !file.good() )
         return false;
 
-    int nRows, nCols;
+    int32_t nRows, nCols;
 
-    nRows = input.size().height;
-    nCols = input.size().width;
+    nRows = (int32_t) input.size().height;
+    nCols = (int32_t) input.size().width;
 
     const int headerSize = 12;
     char header[headerSize];
