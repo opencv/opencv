@@ -245,13 +245,13 @@ void dls::run_kernel(const cv::Mat& pp)
 	// check that the points are infront of the center of perspectivity
 	for (int k = 0; k < sols.cols; ++k)
 	{
-		cv::Mat cam_points = C_est[k] * pp + cv::repeat(t_est[k], 1, pp.cols); // OK
+		cv::Mat cam_points = C_est[k] * pp + cv::repeat(t_est[k], 1, pp.cols);
 		cv::Mat cam_points_k = cam_points.row(2);
 
-		if(is_empty(&cam_points_k))  // OK
+		if(is_empty(&cam_points_k))
 		{
-			cv::Mat C_valid = C_est[k], t_valid = t_est[k]; // OK
-			double cost_valid = cost[k];// OK
+			cv::Mat C_valid = C_est[k], t_valid = t_est[k];
+			double cost_valid = cost[k];
 
 			C_est_.push_back(C_valid);
 			t_est_.push_back(t_valid);
