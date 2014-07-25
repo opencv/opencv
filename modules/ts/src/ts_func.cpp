@@ -3002,9 +3002,8 @@ void printVersionInfo(bool useStdOut)
 #if CV_SSE4_2
     if (checkHardwareSupport(CV_CPU_SSE4_2)) cpu_features += " sse4.2";
 #endif
-#if CV_AVX
     if (checkHardwareSupport(CV_CPU_AVX)) cpu_features += " avx";
-#endif
+    if (checkHardwareSupport(CV_CPU_AVX2)) cpu_features += " avx2";
 #if CV_NEON
     cpu_features += " neon"; // NEON is currently not checked at runtime
 #endif

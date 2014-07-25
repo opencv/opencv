@@ -253,6 +253,39 @@ struct HWFeatures
             f.have[CV_CPU_AVX]    = (((cpuid_data[2] & (1<<28)) != 0)&&((cpuid_data[2] & (1<<27)) != 0));//OS uses XSAVE_XRSTORE and CPU support AVX
         }
 
+    #if defined _MSC_VER && (defined _M_IX86 || defined _M_X64)
+        __cpuidex(cpuid_data, 7, 0);
+    #elif defined __GNUC__ && (defined __i386__ || defined __x86_64__)
+        #ifdef __x86_64__
+        asm __volatile__
+        (
+         "movl $7, %%eax\n\t"
+         "movl $0, %%ecx\n\t"
+         "cpuid\n\t"
+         :[eax]"=a"(cpuid_data[0]),[ebx]"=b"(cpuid_data[1]),[ecx]"=c"(cpuid_data[2]),[edx]"=d"(cpuid_data[3])
+         :
+         : "cc"
+        );
+        #else
+        asm volatile
+        (
+         "pushl %%ebx\n\t"
+         "movl $7,%%eax\n\t"
+         "movl $0,%%ecx\n\t"
+         "cpuid\n\t"
+         "popl %%ebx\n\t"
+         : "=a"(cpuid_data[0]), "=b"(cpuid_data[1]), "=c"(cpuid_data[2]), "=d"(cpuid_data[3])
+         :
+         : "cc"
+        );
+        #endif
+    #endif
+
+        if( f.x86_family >= 6 )
+        {
+            f.have[CV_CPU_AVX2] = (cpuid_data[1] & (1<<5)) != 0;
+        }
+
         return f;
     }
 
