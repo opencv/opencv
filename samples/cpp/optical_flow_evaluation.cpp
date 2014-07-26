@@ -85,9 +85,22 @@ static float stat_RX( Mat errors, float threshold, Mat mask )
     }
     return 1.0 * count / all;
 }
+static float stat_AX( Mat hist, double cutoff_count, double max_value )
+{
+    double counter = 0;
+    int bin = 0;
+    int bin_count = hist.rows;
+    while ( bin < bin_count && counter < cutoff_count )
+    {
+        counter += hist.at<float>(bin, 0);
+        ++bin;
+    }
+    return (1. * bin / bin_count) * max_value;
+}
 static void calculateStats( Mat errors, Mat mask = Mat() )
 {
     float R_thresholds[] = { 0.5, 1, 2, 5, 10 };
+    float A_thresholds[] = { 0.5, 0.75, 0.95 };
     if ( mask.empty() )
         mask = Mat::ones(errors.size(), CV_8U);
     CV_Assert(errors.size() == mask.size());
@@ -115,10 +128,31 @@ static void calculateStats( Mat errors, Mat mask = Mat() )
         printf("R%.1f: %.2f%%\n", R_thresholds[i], R * 100);
     }
 
+    //AX stats
+    double max_value;
+    minMaxLoc(errors, NULL, &max_value, NULL, NULL, mask);
 
-
-
-
+    Mat hist;
+    const int n_images = 1;
+    const int channels[] = { 0 };
+    const int n_dimensions = 1;
+    const int hist_bins[] = { 1024 };
+    const float iranges[] = { 0, (float) max_value };
+    const float* ranges[] = { iranges };
+    const bool uniform = true;
+    const bool accumulate = false;
+    calcHist(&errors, n_images, channels, mask, hist, n_dimensions, hist_bins, ranges, uniform,
+            accumulate);
+    int all_pixels = countNonZero(mask);
+    int cutoff_count;
+    float A;
+    int A_thresholds_count = sizeof(A_thresholds) / sizeof(float);
+    for ( int i = 0; i < A_thresholds_count; ++i )
+    {
+        cutoff_count = round(A_thresholds[i] * all_pixels);
+        A = stat_AX(hist, cutoff_count, max_value);
+        printf("A%.2f: %.2f\n", A_thresholds[i], A);
+    }
 }
 int main( int argc, char** argv )
 {
