@@ -23,6 +23,8 @@ foreach(mp ${OPENCV_MODULES_PATH} ${OPENCV_EXTRA_MODULES_PATH})
     endforeach(m)
 endforeach(mp)
 ocv_list_filterout(candidate_deps "^opencv_cud(a|ev)")
+ocv_list_filterout(candidate_deps "^opencv_adas$")
+
 
 ocv_add_module(python BINDINGS OPTIONAL ${candidate_deps})
 
