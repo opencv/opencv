@@ -43,6 +43,7 @@
 #include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #include "opencl_kernels.hpp"
+#include <map>
 
 namespace cv
 {
@@ -1801,10 +1802,9 @@ private:
     String buildOptions;
     int thread_count;
     bool status;
-
-public:
     int dft_size;
 
+public:
     OCL_FftPlan(int _size): dft_size(_size), status(true)
     {
         int min_radix;
@@ -1999,18 +1999,17 @@ public:
 
     Ptr<OCL_FftPlan> getFftPlan(int dft_size)
     {
-        for (size_t i = 0, size = planStorage.size(); i < size; ++i)
+        std::map<int, Ptr<OCL_FftPlan> >::iterator f = planStorage.find(dft_size);
+        if (f != planStorage.end())
         {
-            Ptr<OCL_FftPlan> plan = planStorage[i];
-            if (plan->dft_size == dft_size)
-            {
-                return plan;
-            }
+            return f->second;
         }
-
-        Ptr<OCL_FftPlan> newPlan = Ptr<OCL_FftPlan>(new OCL_FftPlan(dft_size));
-        planStorage.push_back(newPlan);
-        return newPlan;
+        else
+        {
+            Ptr<OCL_FftPlan> newPlan = Ptr<OCL_FftPlan>(new OCL_FftPlan(dft_size));
+            planStorage[dft_size] = newPlan;
+            return newPlan;
+        }
     }
 
     ~OCL_FftPlanCache()
@@ -2023,8 +2022,7 @@ protected:
         planStorage()
     {
     }
-
-    std::vector<Ptr<OCL_FftPlan> > planStorage;
+    std::map<int, Ptr<OCL_FftPlan> > planStorage;
 };
 
 static bool ocl_dft_rows(InputArray _src, OutputArray _dst, int nonzero_rows, int flags, int fftType)
