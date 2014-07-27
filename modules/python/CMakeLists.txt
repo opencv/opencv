@@ -22,8 +22,11 @@ foreach(mp ${OPENCV_MODULES_PATH} ${OPENCV_EXTRA_MODULES_PATH})
         endif()
     endforeach(m)
 endforeach(mp)
+
+# module blacklist
 ocv_list_filterout(candidate_deps "^opencv_cud(a|ev)")
 ocv_list_filterout(candidate_deps "^opencv_adas$")
+ocv_list_filterout(candidate_deps "^opencv_tracking$")
 
 
 ocv_add_module(python BINDINGS OPTIONAL ${candidate_deps})
@@ -40,6 +43,7 @@ foreach(m IN LISTS OPENCV_MODULE_opencv_python_DEPS)
     list(APPEND opencv_hdrs ${OPENCV_MODULE_${m}_HEADERS})
 endforeach(m)
 
+# header blacklist
 ocv_list_filterout(opencv_hdrs ".h$")
 ocv_list_filterout(opencv_hdrs "opencv2/core/cuda")
 ocv_list_filterout(opencv_hdrs "opencv2/objdetect/detection_based_tracker.hpp")
