@@ -12,18 +12,17 @@ endif()
 
 set(the_description "The python bindings")
 
-set(candidate_deps)
+set(candidate_deps "")
 foreach(mp ${OPENCV_MODULES_PATH} ${OPENCV_EXTRA_MODULES_PATH})
     file(GLOB names "${mp}/*")
     foreach(m IN LISTS names)
         if(IS_DIRECTORY ${m})
             get_filename_component(m ${m} NAME)
-            if (NOT ${m} MATCHES "^cud(a|ev)")
-                list(APPEND candidate_deps "opencv_${m}")
-            endif()
+            list(APPEND candidate_deps "opencv_${m}")
         endif()
     endforeach(m)
 endforeach(mp)
+ocv_list_filterout(candidate_deps "^opencv_cud(a|ev)")
 
 ocv_add_module(python BINDINGS OPTIONAL ${candidate_deps})
 
@@ -34,26 +33,15 @@ ocv_module_include_directories(
     )
 
 
-set(opencv_hdrs_blacklist
-    ".h$"
-    "opencv2/core/cuda"
-    "opencv2/objdetect/detection_based_tracker.hpp"
-    "opencv2/optim.hpp")
-
-set(opencv_hdrs)
+set(opencv_hdrs "")
 foreach(m IN LISTS OPENCV_MODULE_opencv_python_DEPS)
-    foreach(hdr IN LISTS OPENCV_MODULE_${m}_HEADERS)
-        set(good TRUE)
-        foreach(s IN LISTS opencv_hdrs_blacklist)
-            if (${hdr} MATCHES ${s})
-                set(good FALSE)
-            endif()
-        endforeach(s)
-        if(${good})
-            list(APPEND opencv_hdrs ${hdr})
-        endif()
-    endforeach(hdr)
+    list(APPEND opencv_hdrs ${OPENCV_MODULE_${m}_HEADERS})
 endforeach(m)
+
+ocv_list_filterout(opencv_hdrs ".h$")
+ocv_list_filterout(opencv_hdrs "opencv2/core/cuda")
+ocv_list_filterout(opencv_hdrs "opencv2/objdetect/detection_based_tracker.hpp")
+ocv_list_filterout(opencv_hdrs "opencv2/optim.hpp")
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
@@ -63,11 +51,13 @@ set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_type_reg.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_const_reg.h")
 
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs}")
 add_custom_command(
    OUTPUT ${cv2_generated_hdrs}
-   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_hdrs}
+   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/headers.txt"
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/hdr_parser.py
+   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
    DEPENDS ${opencv_hdrs})
 
 add_library(${the_module} SHARED src2/cv2.cpp ${cv2_generated_hdrs})
