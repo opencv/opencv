@@ -2540,7 +2540,7 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArr
     normType &= ~NORM_RELATIVE;
     bool normsum = normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR;
 
-    if ( !(normType == NORM_INF || normsum) )
+    if ( !(normType == NORM_INF || normsum) || !_mask.empty() )
         return false;
 
     if (normsum)
