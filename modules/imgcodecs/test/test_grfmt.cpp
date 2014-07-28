@@ -139,9 +139,6 @@ public:
 
                     string filename = cv::tempfile(".jpg");
                     imwrite(filename, img);
-                    img = imread(filename, IMREAD_UNCHANGED);
-
-                    filename = string(ts->get_data_path() + "readwrite/test_" + char(k + 48) + "_c" + char(num_channels + 48) + ".jpg");
                     ts->printf(ts->LOG, "reading test image : %s\n", filename.c_str());
                     Mat img_test = imread(filename, IMREAD_UNCHANGED);
 
@@ -160,8 +157,9 @@ public:
 #endif
 
 #ifdef HAVE_TIFF
-                for (int num_channels = 1; num_channels <= 3; num_channels+=2)
+                for (int num_channels = 1; num_channels <= 4; num_channels++)
                 {
+                    if (num_channels == 2) continue;
                     // tiff
                     ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_16U, num_channels, ".tiff");
                     Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_16U, num_channels), Scalar::all(0));
