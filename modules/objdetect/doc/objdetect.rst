@@ -8,4 +8,3 @@ objdetect. Object Detection
     :maxdepth: 2
 
     cascade_classification
-    erfilter
