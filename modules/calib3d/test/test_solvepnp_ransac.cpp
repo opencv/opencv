@@ -160,7 +160,7 @@ protected:
         generate3DPointCloud(points);
 
 
-        const int methodsCount = 3;
+        const int methodsCount = 4;
         RNG rng = ts->get_rng();
 
 
