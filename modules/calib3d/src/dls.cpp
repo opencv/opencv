@@ -149,8 +149,8 @@ void dls::run_kernel(const cv::Mat& pp)
 		// TODO: check imaginari part to filter solutions
 
 		//if (imag(V(2,k)) == 0)
-		//const double epsilon = 1e-4;
-	    //if( eigenvec_i.at<double>(1,k) >= -epsilon && eigenvec_i.at<double>(1,k) <= epsilon )
+		const double epsilon = 1e-4;
+	    if( eigenval_i.at<double>(k,0) >= -epsilon && eigenval_i.at<double>(k,0) <= epsilon )
 		{ // it should work without checking imaginari part
 
 			double stmp[3];
