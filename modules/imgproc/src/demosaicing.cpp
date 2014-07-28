@@ -350,7 +350,7 @@ public:
          B G B G | B G B G | B G B G | B G B G
          */
 
-        uint16x8_t masklo = vdupq_n_s16(255);
+        uint16x8_t masklo = vdupq_n_u16(255);
         const uchar* bayer_end = bayer + width;
 
         for( ; bayer <= bayer_end - 18; bayer += 14, dst += 14 )
