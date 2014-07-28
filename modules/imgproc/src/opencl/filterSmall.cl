@@ -153,35 +153,10 @@ inline bool isBorder(const struct RectCoords bounds, int2 coord, int numPixels)
 }
 #endif
 
-inline WT getBorderPixel(const struct RectCoords bounds, int2 coord,
-                  __global const uchar * srcptr, int srcstep)
-{
-#ifdef BORDER_CONSTANT
-    return (WT)(0);
-#else
-    int selected_col = coord.x;
-    int selected_row = coord.y;
-
-    EXTRAPOLATE(selected_col, selected_row,
-            bounds.x1, bounds.y1,
-            bounds.x2, bounds.y2);
-
-    __global const uchar* ptr = srcptr + mad24(selected_row, srcstep, selected_col * SRCSIZE);
-    return convertToWT(loadpix(ptr));
-#endif
-}
-
-inline WT readSrcPixelSingle(int2 pos, __global const uchar * srcptr,
-                             int srcstep, const struct RectCoords srcCoords)
-{
-    if (!isBorder(srcCoords, pos, 1))
-    {
-        __global const uchar * ptr = srcptr + mad24(pos.y, srcstep, pos.x * SRCSIZE);
-        return convertToWT(loadpix(ptr));
-    }
-    else
-        return getBorderPixel(srcCoords, pos, srcptr, srcstep);
-}
+#define float1 float
+#define uchar1 uchar
+#define int1 int
+#define uint1 unit
 
 #define __CAT(x, y) x##y
 #define CAT(x, y) __CAT(x, y)
@@ -191,7 +166,7 @@ inline WT readSrcPixelSingle(int2 pos, __global const uchar * srcptr,
 #define PX_LOAD_FLOAT_VEC_TYPE CAT(WT1, PX_LOAD_VEC_SIZE)
 #define PX_LOAD_FLOAT_VEC_CONV CAT(convert_, PX_LOAD_FLOAT_VEC_TYPE)
 #define PX_LOAD CAT(vload, PX_LOAD_VEC_SIZE)
-#define float1 float
+
 
 inline PX_LOAD_FLOAT_VEC_TYPE readSrcPixelGroup(int2 pos, __global const uchar * srcptr,
                                                 int srcstep, const struct RectCoords srcCoords)
@@ -218,12 +193,150 @@ inline PX_LOAD_FLOAT_VEC_TYPE readSrcPixelGroup(int2 pos, __global const uchar *
 
 #define LOOP(N, VAR, STMT) CAT(LOOP, N)((VAR), (STMT))
 
-__kernel void boxFilterSmall(__global const uchar * srcptr, int src_step, int srcOffsetX, int srcOffsetY, int srcEndX, int srcEndY,
-                             __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols
-#ifdef NORMALIZE
-                             , float alpha
+#ifdef OP_BOX_FILTER
+#define PROCESS_ELEM \
+    WT total_sum = (WT)(0); \
+    int sy = 0; \
+    LOOP(KERNEL_SIZE_Y, sy, \
+    { \
+        int sx = 0; \
+        LOOP(KERNEL_SIZE_X, sx, \
+        { \
+            total_sum += privateData[py + sy][px + sx]; \
+        }); \
+    })
+
+#elif defined OP_FILTER2D
+
+#define DIG(a) a,
+__constant WT1 kernelData[] = { COEFF };
+
+#define PROCESS_ELEM \
+    WT total_sum = 0; \
+    int sy = 0; \
+    int kernelIndex = 0; \
+    LOOP(KERNEL_SIZE_Y, sy, \
+    { \
+        int sx = 0; \
+        LOOP(KERNEL_SIZE_X, sx, \
+        { \
+            total_sum = fma(kernelData[kernelIndex++], privateData[py + sy][px + sx], total_sum); \
+        }); \
+    })
+
+#elif defined OP_ERODE || defined OP_DILATE
+
+#ifdef DEPTH_0
+#define MIN_VAL 0
+#define MAX_VAL UCHAR_MAX
+#elif defined DEPTH_1
+#define MIN_VAL SCHAR_MIN
+#define MAX_VAL SCHAR_MAX
+#elif defined DEPTH_2
+#define MIN_VAL 0
+#define MAX_VAL USHRT_MAX
+#elif defined DEPTH_3
+#define MIN_VAL SHRT_MIN
+#define MAX_VAL SHRT_MAX
+#elif defined DEPTH_4
+#define MIN_VAL INT_MIN
+#define MAX_VAL INT_MAX
+#elif defined DEPTH_5
+#define MIN_VAL (-FLT_MAX)
+#define MAX_VAL FLT_MAX
+#elif defined DEPTH_6
+#define MIN_VAL (-DBL_MAX)
+#define MAX_VAL DBL_MAX
 #endif
-                             )
+
+#ifdef OP_ERODE
+#define VAL (WT)MAX_VAL
+#elif defined OP_DILATE
+#define VAL (WT)MIN_VAL
+#else
+#error "Unknown operation"
+#endif
+
+#define convert_float1 convert_float
+#define convert_uchar1 convert_uchar
+#define convert_int1 convert_int
+#define convert_uint1 convert_uint
+
+#ifdef OP_ERODE
+#if defined INTEL_DEVICE && defined DEPTH_0
+// workaround for bug in Intel HD graphics drivers (10.18.10.3496 or older)
+#define WA_CONVERT_1 CAT(convert_uint, cn)
+#define WA_CONVERT_2 CAT(convert_, srcT)
+#define MORPH_OP(A, B) WA_CONVERT_2(min(WA_CONVERT_1(A), WA_CONVERT_1(B)))
+#else
+#define MORPH_OP(A, B) min((A), (B))
+#endif
+#endif
+#ifdef OP_DILATE
+#define MORPH_OP(A, B) max((A), (B))
+#endif
+
+#define PROCESS(_y, _x) \
+    total_sum = convertToWT(MORPH_OP(convertToWT(total_sum), convertToWT(privateData[py + _y][px + _x])));
+
+#define PROCESS_ELEM \
+    WT total_sum = convertToWT(VAL); \
+    PROCESS_ELEM_
+
+#else
+#error "No processing is specified"
+#endif
+
+#if defined OP_GRADIENT || defined OP_TOPHAT || defined OP_BLACKHAT
+#define EXTRA_PARAMS , __global const uchar * matptr, int mat_step, int mat_offset
+#else
+#define EXTRA_PARAMS
+#endif
+
+inline WT getBorderPixel(const struct RectCoords bounds, int2 coord,
+    __global const uchar * srcptr, int srcstep)
+{
+#ifdef BORDER_CONSTANT
+#ifdef OP_ERODE
+    return (WT)(MAX_VAL);
+#elif defined OP_DILATE
+    return (WT)(MIN_VAL);
+#else
+    return (WT)(0);
+#endif
+#else
+
+    int selected_col = coord.x;
+    int selected_row = coord.y;
+
+    EXTRAPOLATE(selected_col, selected_row,
+        bounds.x1, bounds.y1,
+        bounds.x2, bounds.y2);
+
+    __global const uchar* ptr = srcptr + mad24(selected_row, srcstep, selected_col * SRCSIZE);
+    return convertToWT(loadpix(ptr));
+#endif
+}
+
+inline WT readSrcPixelSingle(int2 pos, __global const uchar * srcptr,
+    int srcstep, const struct RectCoords srcCoords)
+{
+    if (!isBorder(srcCoords, pos, 1))
+    {
+        __global const uchar * ptr = srcptr + mad24(pos.y, srcstep, pos.x * SRCSIZE);
+        return convertToWT(loadpix(ptr));
+    }
+    else
+        return getBorderPixel(srcCoords, pos, srcptr, srcstep);
+}
+
+
+__kernel void filterSmall(__global const uchar * srcptr, int src_step, int srcOffsetX, int srcOffsetY, int srcEndX, int srcEndY,
+                          __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols
+#ifdef NORMALIZE
+                          , float alpha
+#endif
+                          EXTRA_PARAMS )
 {
     // for non-isolated border: offsetX, offsetY, wholeX, wholeY
     const struct RectCoords srcCoords = { srcOffsetX, srcOffsetY, srcEndX, srcEndY };
@@ -282,24 +395,27 @@ __kernel void boxFilterSmall(__global const uchar * srcptr, int src_step, int sr
         LOOP(PX_PER_WI_X, px,
         {
             int x = startX + px;
-            int sy = 0;
-            int kernelIndex = 0;
-            WT total_sum = (WT)(0);
-
-            LOOP(KERNEL_SIZE_Y, sy,
-            {
-                int sx = 0;
-                LOOP(KERNEL_SIZE_X, sx,
-                {
-                    total_sum += privateData[py + sy][px + sx];
-                });
-            });
-
-            __global dstT * dstPtr = (__global dstT *)(dstptr + mad24(y, dst_step, mad24(x, DSTSIZE, dst_offset)));
+            PROCESS_ELEM;
+            int dst_index = mad24(y, dst_step, mad24(x, DSTSIZE, dst_offset));
+            __global dstT * dstPtr = (__global dstT *)(dstptr + dst_index);
 #ifdef NORMALIZE
             total_sum *= (WT)(alpha);
 #endif
+#if defined OP_GRADIENT || defined OP_TOPHAT || defined OP_BLACKHAT
+            //for this type of operations SRCSIZE == DSTSIZE
+            int mat_index = mad24(y, mat_step, mad24(x, SRCSIZE, mat_offset));
+            WT value = convertToWT(loadpix(matptr + mat_index));
+
+#ifdef OP_GRADIENT
+            storepix(convertToDstT(convertToWT(total_sum) - convertToWT(value)), dstPtr );
+#elif defined OP_TOPHAT
+            storepix(convertToDstT(convertToWT(value) - convertToWT(total_sum)), dstPtr );
+#elif defined OP_BLACKHAT
+            storepix(convertToDstT(convertToWT(total_sum) - convertToWT(value)), dstPtr );
+#endif
+#else // erode or dilate, or open-close
             storepix(convertToDstT(total_sum), dstPtr);
+#endif
         });
     });
 }
