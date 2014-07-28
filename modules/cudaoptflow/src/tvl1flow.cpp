@@ -94,7 +94,8 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::operator ()(const GpuMat& I0, const Gp
 
     u1s[0] = flowx;
     u2s[0] = flowy;
-    u3s[0].create(I0.size(), CV_32FC1);
+    if (gamma)
+        u3s[0].create(I0.size(), CV_32FC1);
 
     I1x_buf.create(I0.size(), CV_32FC1);
     I1y_buf.create(I0.size(), CV_32FC1);
@@ -110,9 +111,11 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::operator ()(const GpuMat& I0, const Gp
     p12_buf.create(I0.size(), CV_32FC1);
     p21_buf.create(I0.size(), CV_32FC1);
     p22_buf.create(I0.size(), CV_32FC1);
-    p31_buf.create(I0.size(), CV_32FC1);
-    p32_buf.create(I0.size(), CV_32FC1);
-
+    if (gamma)
+    {
+        p31_buf.create(I0.size(), CV_32FC1);
+        p32_buf.create(I0.size(), CV_32FC1);
+    }
     diff_buf.create(I0.size(), CV_32FC1);
 
     // create the scales
@@ -140,7 +143,8 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::operator ()(const GpuMat& I0, const Gp
             u1s[s].create(I0s[s].size(), CV_32FC1);
             u2s[s].create(I0s[s].size(), CV_32FC1);
         }
-        u3s[s].create(I0s[s].size(), CV_32FC1);
+        if (gamma)
+            u3s[s].create(I0s[s].size(), CV_32FC1);
     }
 
     if (!useInitialFlow)
@@ -148,7 +152,8 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::operator ()(const GpuMat& I0, const Gp
         u1s[nscales-1].setTo(Scalar::all(0));
         u2s[nscales-1].setTo(Scalar::all(0));
     }
-    u3s[nscales - 1].setTo(Scalar::all(0));
+    if (gamma)
+        u3s[nscales - 1].setTo(Scalar::all(0));
 
     // pyramidal structure for computing the optical flow
     for (int s = nscales - 1; s >= 0; --s)
@@ -165,7 +170,8 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::operator ()(const GpuMat& I0, const Gp
         // zoom the optical flow for the next finer scale
         cuda::resize(u1s[s], u1s[s - 1], I0s[s - 1].size());
         cuda::resize(u2s[s], u2s[s - 1], I0s[s - 1].size());
-        cuda::resize(u3s[s], u3s[s - 1], I0s[s - 1].size());
+        if (gamma)
+            cuda::resize(u3s[s], u3s[s - 1], I0s[s - 1].size());
 
         // scale the optical flow with the appropriate zoom factor
         cuda::multiply(u1s[s - 1], Scalar::all(1/scaleStep), u1s[s - 1]);
@@ -182,7 +188,7 @@ namespace tvl1flow
                    PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, PtrStepSzf p31, PtrStepSzf p32,
                    PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf u3, PtrStepSzf error,
                    float l_t, float theta, float gamma, bool calcError);
-    void estimateDualVariables(PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf u3, PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, PtrStepSzf p31, PtrStepSzf p32, float taut);
+    void estimateDualVariables(PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf u3, PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, PtrStepSzf p31, PtrStepSzf p32, float taut, const float gamma);
 }
 
 void cv::cuda::OpticalFlowDual_TVL1_CUDA::procOneScale(const GpuMat& I0, const GpuMat& I1, GpuMat& u1, GpuMat& u2, GpuMat& u3)
@@ -211,14 +217,21 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::procOneScale(const GpuMat& I0, const G
     GpuMat p12 = p12_buf(Rect(0, 0, I0.cols, I0.rows));
     GpuMat p21 = p21_buf(Rect(0, 0, I0.cols, I0.rows));
     GpuMat p22 = p22_buf(Rect(0, 0, I0.cols, I0.rows));
-    GpuMat p31 = p31_buf(Rect(0, 0, I0.cols, I0.rows));
-    GpuMat p32 = p32_buf(Rect(0, 0, I0.cols, I0.rows));
+    GpuMat p31, p32;
+    if (gamma)
+    {
+        p31 = p31_buf(Rect(0, 0, I0.cols, I0.rows));
+        p32 = p32_buf(Rect(0, 0, I0.cols, I0.rows));
+    }
     p11.setTo(Scalar::all(0));
     p12.setTo(Scalar::all(0));
     p21.setTo(Scalar::all(0));
     p22.setTo(Scalar::all(0));
-    p31.setTo(Scalar::all(0));
-    p32.setTo(Scalar::all(0));
+    if (gamma)
+    {
+        p31.setTo(Scalar::all(0));
+        p32.setTo(Scalar::all(0));
+    }
 
     GpuMat diff = diff_buf(Rect(0, 0, I0.cols, I0.rows));
 
@@ -248,7 +261,7 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::procOneScale(const GpuMat& I0, const G
                 prevError -= scaledEpsilon;
             }
 
-            estimateDualVariables(u1, u2, u3, p11, p12, p21, p22, p31, p32, taut);
+            estimateDualVariables(u1, u2, u3, p11, p12, p21, p22, p31, p32, taut, gamma);
         }
     }
 }
@@ -275,9 +288,11 @@ void cv::cuda::OpticalFlowDual_TVL1_CUDA::collectGarbage()
     p12_buf.release();
     p21_buf.release();
     p22_buf.release();
-    p31_buf.release();
-    p32_buf.release();
-
+    if (gamma)
+    {
+        p31_buf.release();
+        p32_buf.release();
+    }
     diff_buf.release();
     norm_buf.release();
 }
