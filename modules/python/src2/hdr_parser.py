@@ -206,6 +206,8 @@ class CppHeaderParser(object):
     def parse_enum(self, decl_str):
         l = decl_str
         ll = l.split(",")
+        if ll[-1].strip() == "":
+            ll = ll[:-1]
         prev_val = ""
         prev_val_delta = -1
         decl = []
