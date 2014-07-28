@@ -65,7 +65,7 @@ public:
     {
         return 0;
     }
-    
+
     int bayer2RGBA(const T*, int, T*, int, int) const
     {
         return 0;
@@ -223,7 +223,7 @@ public:
         return (int)(bayer - (bayer_end - width));
     }
 
-    int bayer2RGBA(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
+    int bayer2RGBA(const uchar*, int, uchar*, int, int) const
     {
         return 0;
     }
@@ -395,7 +395,7 @@ public:
             vst1_u8(dst, p.val[0]);
             vst1_u8(dst + 8, p.val[1]);
         }
-        
+
         return (int)(bayer - (bayer_end - width));
     }
 
@@ -446,7 +446,7 @@ public:
 
         return (int)(bayer - (bayer_end - width));
     }
-    
+
     int bayer2RGBA(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
     {
         /*
@@ -492,11 +492,11 @@ public:
 
             vst4q_u8(dst-1, pix);
         }
-        
+
         return (int)(bayer - (bayer_end - width));
     }
 
-    int bayer2RGB_EA(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
+    int bayer2RGB_EA(const uchar*, int, uchar*, int, int) const
     {
         return 0;
     }
@@ -737,7 +737,7 @@ public:
             }
 
             // simd optimization only for dcn == 3
-            int delta = dcn == 4 ? 
+            int delta = dcn == 4 ?
                 vecOp.bayer2RGBA(bayer, bayer_step, dst, size.width, blue) :
                 vecOp.bayer2RGB(bayer, bayer_step, dst, size.width, blue);
             bayer += delta;
