@@ -310,7 +310,7 @@ OCL_TEST_P(MorphologyEx, Mat)
             (int)BORDER_REFLECT|BORDER_ISOLATED, (int)BORDER_WRAP|BORDER_ISOLATED, \
             (int)BORDER_REFLECT_101|BORDER_ISOLATED*/) // WRAP and ISOLATED are not supported by cv:: version
 
-#define FILTER_TYPES Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4)
+#define FILTER_TYPES Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4)
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Bilateral, Combine(
                             Values(CV_8UC1, CV_8UC3),
@@ -358,7 +358,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, GaussianBlurTest, Combine(
                             Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC4),
+                            Values(CV_8UC3, CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(3, 5, 7),
                             Values(Size(0, 0)), //not used
                             Values((BorderType)BORDER_CONSTANT),
@@ -367,7 +367,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(
                             Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC4),
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(3, 5, 7),
                             Values(Size(0, 0)), // not used
                             Values((BorderType)BORDER_CONSTANT),
