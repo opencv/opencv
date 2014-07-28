@@ -1452,6 +1452,9 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
 
     CV_Assert(!haveSrc2 || _src2.type() == type);
 
+    if (depth == CV_32F)
+        return false;
+
     if ((depth == CV_64F || ddepth == CV_64F) && !doubleSupport)
         return false;
 
@@ -2185,7 +2188,7 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
          (!doubleSupport && depth == CV_64F))
         return false;
 
-    if( depth == CV_32F && !_mask.empty() )
+    if( depth == CV_32F && (!_mask.empty() || normType == NORM_INF) )
         return false;
 
     UMat src = _src.getUMat();
@@ -2543,7 +2546,7 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArr
     normType &= ~NORM_RELATIVE;
     bool normsum = normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR;
 
-    if ( !(normType == NORM_INF || normsum) || !_mask.empty() )
+    if ( !normsum || !_mask.empty() )
         return false;
 
     if (normsum)
