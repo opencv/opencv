@@ -46,7 +46,9 @@
 #include <list>
 #include "opencv2/core.hpp"
 
+#ifndef ENABLE_LOG
 #define ENABLE_LOG 0
+#endif
 
 // TODO remove LOG macros, add logging class
 #if ENABLE_LOG
