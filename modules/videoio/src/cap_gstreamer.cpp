@@ -160,13 +160,17 @@ protected:
 void CvCapture_GStreamer::init()
 {
     pipeline = NULL;
-    frame = NULL;
-    buffer = NULL;
-    buffer_caps = NULL;
+    uridecodebin = NULL;
+    color = NULL;
+    sink = NULL;
 #if GST_VERSION_MAJOR > 0
     sample = NULL;
     info = new GstMapInfo;
 #endif
+    buffer = NULL;
+    caps = NULL;
+    buffer_caps = NULL;
+    frame = NULL;
 }
 
 /*!
@@ -181,31 +185,41 @@ void CvCapture_GStreamer::close()
     if(pipeline) {
         gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
         gst_object_unref(GST_OBJECT(pipeline));
+        pipeline = NULL;
     }
     if(uridecodebin){
         gst_object_unref(GST_OBJECT(uridecodebin));
+        uridecodebin = NULL;
     }
     if(color){
         gst_object_unref(GST_OBJECT(color));
+        color = NULL;
     }
     if(sink){
         gst_object_unref(GST_OBJECT(sink));
+        sink = NULL;
     }
-    if(buffer)
+    if(buffer) {
         gst_buffer_unref(buffer);
+        buffer = NULL;
+    }
     if(frame) {
         frame->imageData = 0;
         cvReleaseImage(&frame);
+        frame = NULL;
     }
     if(caps){
         gst_caps_unref(caps);
+        caps = NULL;
     }
     if(buffer_caps){
         gst_caps_unref(buffer_caps);
+        buffer_caps = NULL;
     }
 #if GST_VERSION_MAJOR > 0
     if(sample){
         gst_sample_unref(sample);
+        sample = NULL;
     }
 #endif
 
