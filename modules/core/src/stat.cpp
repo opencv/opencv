@@ -479,7 +479,7 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
         haveMask = _mask.kind() != _InputArray::NONE,
         haveSrc2 = _src2.kind() != _InputArray::NONE;
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
-            kercn = cn == 1 && !haveMask ? ocl::predictOptimalVectorWidth(_src) : 1,
+            kercn = cn == 1 && !haveMask ? ocl::predictOptimalVectorWidth(_src, _src2) : 1,
             mcn = std::max(cn, kercn);
     CV_Assert(!haveSrc2 || _src2.type() == type);
     int convert_cn = haveSrc2 ? mcn : cn;
