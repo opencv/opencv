@@ -2185,6 +2185,9 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
          (!doubleSupport && depth == CV_64F))
         return false;
 
+    if( depth == CV_32F && !_mask.empty() )
+        return false;
+
     UMat src = _src.getUMat();
 
     if (normType == NORM_INF)
