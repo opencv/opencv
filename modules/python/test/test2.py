@@ -21,7 +21,7 @@ class NewOpenCVTests(unittest.TestCase):
 
     def get_sample(self, filename, iscolor = cv.CV_LOAD_IMAGE_COLOR):
         if not filename in self.image_cache:
-            filedata = urllib.urlopen("https://raw.github.com/Itseez/opencv/master/" + filename).read()
+            filedata = urllib.urlopen("https://raw.github.com/Itseez/opencv/2.4/" + filename).read()
             self.image_cache[filename] = cv2.imdecode(np.fromstring(filedata, dtype=np.uint8), iscolor)
         return self.image_cache[filename]
 
