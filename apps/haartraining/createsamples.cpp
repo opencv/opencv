@@ -54,6 +54,7 @@
 using namespace std;
 
 #include "cvhaartraining.h"
+#include "ioutput.h"
 
 int main( int argc, char* argv[] )
 {
@@ -76,6 +77,7 @@ int main( int argc, char* argv[] )
     double scale = 4.0;
     int width  = 24;
     int height = 24;
+    bool pngoutput = false; /* whether to make the samples in png or in jpg*/
 
     srand((unsigned int)time(0));
 
@@ -92,7 +94,8 @@ int main( int argc, char* argv[] )
                 "  [-maxyangle <max_y_rotation_angle = %f>]\n"
                 "  [-maxzangle <max_z_rotation_angle = %f>]\n"
                 "  [-show [<scale = %f>]]\n"
-                "  [-w <sample_width = %d>]\n  [-h <sample_height = %d>]\n",
+                "  [-w <sample_width = %d>]\n  [-h <sample_height = %d>]\n"
+                "  [-pngoutput]",
                 argv[0], num, bgcolor, bgthreshold, maxintensitydev,
                 maxxangle, maxyangle, maxzangle, scale, width, height );
 
@@ -172,6 +175,10 @@ int main( int argc, char* argv[] )
         {
             height = atoi( argv[++i] );
         }
+        else if( !strcmp( argv[i], "-pngoutput" ) )
+        {
+            pngoutput = true;
+        }
     }
 
     printf( "Info file name: %s\n", ((infoname == NULL) ?   nullname : infoname ) );
@@ -190,10 +197,14 @@ int main( int argc, char* argv[] )
     printf( "Show samples: %s\n", (showsamples) ? "TRUE" : "FALSE" );
     if( showsamples )
     {
-        printf( "Scale: %g\n", scale );
+        printf( "Scale applied to display : %g\n", scale );
     }
-    printf( "Width: %d\n", width );
-    printf( "Height: %d\n", height );
+    if( !pngoutput)
+    {
+        printf( "Original image whill be scaled to:\n");
+        printf( "\tWidth: $backgroundWidth / %d\n", width );
+        printf( "\tHeight: $backgroundHeight / %d\n", height );
+    }
 
     /* determine action */
     if( imagename && vecname )
@@ -207,13 +218,30 @@ int main( int argc, char* argv[] )
 
         printf( "Done\n" );
     }
+    else if( imagename && bgfilename && infoname && pngoutput)
+    {
+        printf( "Create training set from a single image and a collection of backgrounds.\n"
+                "Output format: %s\n"
+                "Annotations are in a separate directory\n",
+                (( pngoutput ) ? "JPG" : "PNG") );
+
+        PngTrainingSetGenerator creator( infoname );
+        creator.create( imagename, bgcolor, bgthreshold, bgfilename, num,
+                        invert, maxintensitydev, maxxangle, maxyangle, maxzangle,
+                        showsamples, width, height );
+
+        printf( "Done\n" );
+    }
     else if( imagename && bgfilename && infoname )
     {
-        printf( "Create test samples from single image applying distortions...\n" );
+        printf( "Create test samples from single image applying distortions...\n"
+                "Output format: %s\n",
+                (( pngoutput ) ? "JPG" : "PNG") );
 
-        cvCreateTestSamples( infoname, imagename, bgcolor, bgthreshold, bgfilename, num,
-            invert, maxintensitydev,
-            maxxangle, maxyangle, maxzangle, showsamples, width, height );
+        TestSamplesGenerator creator( infoname );
+        creator.create( imagename, bgcolor, bgthreshold, bgfilename, num,
+                        invert, maxintensitydev, maxxangle, maxyangle, maxzangle,
+                        showsamples, width, height );
 
         printf( "Done\n" );
     }
