@@ -11,7 +11,8 @@ const String keys = "{help h usage ? |      | print this message   }"
         "{@image2        |      | image2               }"
         "{@algorithm     |      | [farneback, simpleflow, tvl1 or deepflow] }"
         "{@groundtruth   |      | path to the .flo file  (optional) }"
-        "{m measure      |endpoint| error measure - [endpoint or angular] }";
+        "{m measure      |endpoint| error measure - [endpoint or angular] }"
+        "{r region       |all   | region to compute stats about [all, discontinuities, textureless] }";
 
 inline bool isFlowCorrect( const Point2f u )
 {
@@ -75,7 +76,7 @@ static float stat_RX( Mat errors, float threshold, Mat mask )
     {
         for ( int j = 0; j < errors.cols; ++j )
         {
-            if ( mask.at<char>(i, j) > 0 )
+            if ( mask.at<char>(i, j) != 0 )
             {
                 ++all;
                 if ( errors.at<float>(i, j) > threshold )
@@ -168,6 +169,7 @@ int main( int argc, char** argv )
     String method = parser.get<String>(2);
     String groundtruth_path = parser.get<String>(3);
     String error_measure = parser.get<String>("measure");
+    String region = parser.get<String>("region");
     if ( !parser.check() )
     {
         parser.printErrors();
@@ -235,6 +237,7 @@ int main( int argc, char** argv )
             printf("Dimension mismatch between the computed flow and the provided ground truth\n");
             return -1;
         }
+
         if ( error_measure == "endpoint" )
             computed_errors = endpointError(flow, ground_truth);
         else if ( error_measure == "angular" )
@@ -244,8 +247,41 @@ int main( int argc, char** argv )
             printf("Invalid error measure! Available options: endpoint, angular\n");
             return -1;
         }
+
+        Mat mask;
+        if( region == "all" )
+            mask.ones(ground_truth.size(), CV_8U);
+        else if ( region == "discontinuities" )
+        {
+            Mat truth_merged, grad_x, grad_y, gradient;
+            vector<Mat> truth_split;
+            split(ground_truth, truth_split);
+            truth_merged = truth_split[0] + truth_split[1];
+
+            Sobel( truth_merged, grad_x, CV_8U, 1, 0, 3 );
+            grad_x = abs(grad_x);
+            Sobel( truth_merged, grad_y, CV_8U, 0, 1, 3 );
+            grad_y = abs(grad_y);
+            addWeighted(grad_x, 0.5, grad_y, 0.5, 0, gradient); //approximation!
+
+            Scalar s_mean;
+            s_mean = mean(gradient);
+            double threshold = s_mean[0]; // threshold value arbitrary
+            mask = gradient > threshold;
+            dilate(mask, mask, Mat::ones(9, 9, CV_8U));
+//            namedWindow( "Display window", WINDOW_AUTOSIZE );
+//            imshow( "Display window", mask );
+//            waitKey(0);
+
+        }
+        else
+        {
+            printf("Invalid region selected! Available options: all, discontinuities, untextured");
+            return -1;
+        }
+
         printf("Using %s error measure\n", error_measure.c_str());
-        calculateStats(computed_errors);
+        calculateStats(computed_errors, mask);
 
     }
     return 0;
