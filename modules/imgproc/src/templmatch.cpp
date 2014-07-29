@@ -129,7 +129,6 @@ struct ConvolveBuf
     UMat image_block, templ_block, result_data;
 
     void create(Size image_size, Size templ_size);
-    static Size estimateBlockSize(Size result_size);
 };
 
 void ConvolveBuf::create(Size image_size, Size templ_size)
@@ -137,19 +136,26 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
     result_size = Size(image_size.width - templ_size.width + 1,
                        image_size.height - templ_size.height + 1);
 
-    block_size = user_block_size;
-    if (user_block_size.width == 0 || user_block_size.height == 0)
-        block_size = estimateBlockSize(result_size);
+    const double blockScale = 4.5;
+    const int minBlockSize = 256;
+    
+    block_size.width = cvRound(result_size.width*blockScale);
+    block_size.width = MAX( block_size.width, minBlockSize - templ_size.width + 1 );
+    block_size.width = std::min( block_size.width, result_size.width );
+    block_size.height = cvRound(templ_size.height*blockScale);
+    block_size.height = std::max( block_size.height, minBlockSize - templ_size.height + 1 );
+    block_size.height = std::min( block_size.height, result_size.height );
 
-    dft_size.width  = 1 << int(ceil(std::log(block_size.width + templ_size.width - 1.) / std::log(2.)));
-    dft_size.height = 1 << int(ceil(std::log(block_size.height + templ_size.height - 1.) / std::log(2.)));
-
-    dft_size.width = getOptimalDFTSize(block_size.width + templ_size.width - 1);
+    dft_size.width = MAX(getOptimalDFTSize(block_size.width + templ_size.width - 1), 2);
     dft_size.height = getOptimalDFTSize(block_size.height + templ_size.height - 1);
+    if( dft_size.width <= 0 || dft_size.height <= 0 )
+        CV_Error( CV_StsOutOfRange, "the input arrays are too big" );
 
-    // To avoid wasting time doing small DFTs
-    dft_size.width = std::max(dft_size.width, 512);
-    dft_size.height = std::max(dft_size.height, 512);
+    // recompute block size
+    block_size.width = dft_size.width - templ_size.width + 1;
+    block_size.width = MIN( block_size.width, result_size.width);
+    block_size.height = dft_size.height - templ_size.height + 1;
+    block_size.height = MIN( block_size.height, result_size.height );
 
     image_block.create(dft_size, CV_32F);
     templ_block.create(dft_size, CV_32F);
@@ -164,21 +170,12 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
     block_size.height = std::min(dft_size.height - templ_size.height + 1, result_size.height);
 }
 
-Size ConvolveBuf::estimateBlockSize(Size result_size)
-{
-    int width = (result_size.width + 2) / 3;
-    int height = (result_size.height + 2) / 3;
-    width = std::min(width, result_size.width);
-    height = std::min(height, result_size.height);
-    return Size(width, height);
-}
-
 static bool convolve_dft(InputArray _image, InputArray _templ, OutputArray _result)
 {
     ConvolveBuf buf;
     CV_Assert(_image.type() == CV_32F);
     CV_Assert(_templ.type() == CV_32F);
-
+ 
     buf.create(_image.size(), _templ.size());
     _result.create(buf.result_size, CV_32F);
 
@@ -202,7 +199,7 @@ static bool convolve_dft(InputArray _image, InputArray _templ, OutputArray _resu
     copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0,
                    templ_block.cols - templ_roi.cols, BORDER_ISOLATED);
 
-    dft(templ_block, templ_spect, 0);
+    dft(templ_block, templ_spect, 0, templ.rows);
 
     // Process all blocks of the result matrix
     for (int y = 0; y < result.rows; y += block_size.height)
