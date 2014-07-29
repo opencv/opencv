@@ -76,6 +76,7 @@ int main( int argc, char* argv[] )
     double scale = 4.0;
     int width  = 24;
     int height = 24;
+    int pngoutput = 0; /* whether to make the samples in png format and description files */
 
     srand((unsigned int)time(0));
 
@@ -92,7 +93,8 @@ int main( int argc, char* argv[] )
                 "  [-maxyangle <max_y_rotation_angle = %f>]\n"
                 "  [-maxzangle <max_z_rotation_angle = %f>]\n"
                 "  [-show [<scale = %f>]]\n"
-                "  [-w <sample_width = %d>]\n  [-h <sample_height = %d>]\n",
+                "  [-w <sample_width = %d>]\n  [-h <sample_height = %d>]\n"
+                "  [-pngoutput]",
                 argv[0], num, bgcolor, bgthreshold, maxintensitydev,
                 maxxangle, maxyangle, maxzangle, scale, width, height );
 
@@ -172,6 +174,10 @@ int main( int argc, char* argv[] )
         {
             height = atoi( argv[++i] );
         }
+        else if( !strcmp( argv[i], "-pngoutput" ) )
+        {
+            pngoutput = 1;
+        }
     }
 
     printf( "Info file name: %s\n", ((infoname == NULL) ?   nullname : infoname ) );
@@ -194,6 +200,7 @@ int main( int argc, char* argv[] )
     }
     printf( "Width: %d\n", width );
     printf( "Height: %d\n", height );
+    printf( "Output format: %s\n", ((pngoutput == 0) ? "JPG" : "PNG") );
 
     /* determine action */
     if( imagename && vecname )
@@ -204,6 +211,16 @@ int main( int argc, char* argv[] )
                                  num, invert, maxintensitydev,
                                  maxxangle, maxyangle, maxzangle,
                                  showsamples, width, height );
+
+        printf( "Done\n" );
+    }
+    else if( imagename && bgfilename && infoname && pngoutput)
+    {
+        printf( "Create test samples from single image applying distortions...\n" );
+
+        cvCreatePngTrainingSet(infoname, imagename, bgcolor, bgthreshold, bgfilename, num,
+                             invert, maxintensitydev,
+                             maxxangle, maxyangle, maxzangle);
 
         printf( "Done\n" );
     }

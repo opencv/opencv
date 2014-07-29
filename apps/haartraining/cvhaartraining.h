@@ -84,6 +84,13 @@ void cvCreateTrainingSamples( const char* filename,
                               int showsamples = 0,
                               int winwidth = 24, int winheight = 24 );
 
+void cvCreatePngTrainingSet(const char* infoname,
+                            const char* imgfilename, int bgcolor, int bgthreshold,
+                            const char* bgfilename, int count,
+                            int invert, int maxintensitydev,
+                            double maxxangle, double maxyangle, double maxzangle,
+                            int winwidth = 640, int winheight = 480);
+
 void cvCreateTestSamples( const char* infoname,
                           const char* imgfilename, int bgcolor, int bgthreshold,
                           const char* bgfilename, int count,
