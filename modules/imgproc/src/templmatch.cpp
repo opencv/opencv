@@ -79,7 +79,7 @@ static bool extractFirstChannel_32F(InputArray _image, OutputArray _result, int 
 static bool sumTemplate(InputArray _src, UMat & result)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    int wdepth = std::max(CV_32S, depth), wtype = CV_MAKE_TYPE(wdepth, cn);
+    int wdepth = CV_32F, wtype = CV_MAKE_TYPE(wdepth, cn);
     size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
 
     int wgs2_aligned = 1;
@@ -89,10 +89,10 @@ static bool sumTemplate(InputArray _src, UMat & result)
 
     char cvt[40];
     ocl::Kernel k("calcSum", ocl::imgproc::match_template_oclsrc,
-                  format("-D CALC_SUM -D T=%s -D T1=%s -D WT=%s -D cn=%d -D convertToWT=%s -D WGS=%d -D WGS2_ALIGNED=%d -D wdepth=%d",
+                  format("-D CALC_SUM -D T=%s -D T1=%s -D WT=%s -D cn=%d -D convertToWT=%s -D WGS=%d -D WGS2_ALIGNED=%d",
                          ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype), cn,
                          ocl::convertTypeStr(depth, wdepth, cn, cvt),
-                         (int)wgs, wgs2_aligned, wdepth));
+                         (int)wgs, wgs2_aligned));
     if (k.empty())
         return false;
 
@@ -281,8 +281,8 @@ static bool matchTemplateNaive_CCORR(InputArray _image, InputArray _templ, Outpu
     const char* convertToWT = ocl::convertTypeStr(depth, wdepth, rated_cn, cvt1);
 
     ocl::Kernel k("matchTemplate_Naive_CCORR", ocl::imgproc::match_template_oclsrc,
-                  format("-D CCORR -D T=%s -D T1=%s -D WT=%s -D WT1=%s -D convertToWT=%s -D convertToWT1=%s -D cn=%d -D wdepth=%d -D PIX_PER_WI_X=%d", ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype1), ocl::typeToStr(wtype),
-                         convertToWT, convertToWT1, cn, wdepth, pxPerWIx));
+                  format("-D CCORR -D T=%s -D T1=%s -D WT=%s -D WT1=%s -D convertToWT=%s -D convertToWT1=%s -D cn=%d -D PIX_PER_WI_X=%d", ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype1), ocl::typeToStr(wtype),
+                         convertToWT, convertToWT1, cn, pxPerWIx));
     if (k.empty())
         return false;
 
@@ -358,8 +358,8 @@ static bool matchTemplateNaive_SQDIFF(InputArray _image, InputArray _templ, Outp
 
     char cvt[40];
     ocl::Kernel k("matchTemplate_Naive_SQDIFF", ocl::imgproc::match_template_oclsrc,
-                  format("-D SQDIFF -D T=%s -D T1=%s -D WT=%s -D convertToWT=%s -D cn=%d -D wdepth=%d", ocl::typeToStr(type), ocl::typeToStr(depth),
-                         ocl::typeToStr(wtype), ocl::convertTypeStr(depth, wdepth, cn, cvt), cn, wdepth));
+                  format("-D SQDIFF -D T=%s -D T1=%s -D WT=%s -D convertToWT=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth),
+                         ocl::typeToStr(wtype), ocl::convertTypeStr(depth, wdepth, cn, cvt), cn));
     if (k.empty())
         return false;
 
