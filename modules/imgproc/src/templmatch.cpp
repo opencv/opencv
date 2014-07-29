@@ -110,12 +110,8 @@ static bool sumTemplate(InputArray _src, UMat & result)
 
 static bool useNaive(Size size)
 {
-    if (!ocl::Device::getDefault().isIntel())
-        return true;
-
     int dft_size = 18;
     return size.height < dft_size && size.width < dft_size;
-
 }
 
 struct ConvolveBuf
@@ -138,7 +134,7 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
 
     const double blockScale = 4.5;
     const int minBlockSize = 256;
-    
+
     block_size.width = cvRound(result_size.width*blockScale);
     block_size.width = MAX( block_size.width, minBlockSize - templ_size.width + 1 );
     block_size.width = std::min( block_size.width, result_size.width );
@@ -175,7 +171,7 @@ static bool convolve_dft(InputArray _image, InputArray _templ, OutputArray _resu
     ConvolveBuf buf;
     CV_Assert(_image.type() == CV_32F);
     CV_Assert(_templ.type() == CV_32F);
- 
+
     buf.create(_image.size(), _templ.size());
     _result.create(buf.result_size, CV_32F);
 
