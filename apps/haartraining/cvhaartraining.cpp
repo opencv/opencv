@@ -2945,13 +2945,31 @@ void cvCreateTrainingSamples( const char* filename,
 #define CV_INFO_FILENAME "info.dat"
 
 
+void icvFindFilePathPart(char** partofpath, char* fullpath)
+{
+    *partofpath = strrchr( fullpath, '\\' );
+    if( *partofpath == NULL )
+    {
+        *partofpath = strrchr( fullpath, '/' );
+    }
+    if( *partofpath == NULL )
+    {
+        *partofpath = fullpath;
+    }
+    else
+    {
+        *partofpath += 1;
+    }
+}
+
 void cvCreateTestSamples( const char* infoname,
                           const char* imgfilename, int bgcolor, int bgthreshold,
                           const char* bgfilename, int count,
                           int invert, int maxintensitydev,
                           double maxxangle, double maxyangle, double maxzangle,
                           int showsamples,
-                          int winwidth, int winheight )
+                          int winwidth, int winheight,
+                          int pngoutput)
 {
     CvSampleDistortionData data;
 
@@ -2972,8 +2990,14 @@ void cvCreateTestSamples( const char* infoname,
     {
         char fullname[PATH_MAX];
         char* filename;
+        char imgdescrfullname[PATH_MAX];
+        char outputdirname[PATH_MAX];
+        char* imgdescrfilename;
         CvMat win;
         FILE* info;
+        FILE* imgdescr;
+        const char* annotationsdirname = "annotations";
+        const char* extension = (pngoutput == 0)? "jpg" : "png";
 
         if( icvInitBackgroundReaders( bgfilename, cvSize( 10, 10 ) ) )
         {
@@ -2990,18 +3014,44 @@ void cvCreateTestSamples( const char* infoname,
 
             info = fopen( infoname, "w" );
             strcpy( fullname, infoname );
-            filename = strrchr( fullname, '\\' );
-            if( filename == NULL )
+
+            icvFindFilePathPart(&filename, fullname);
+
+            if( pngoutput )
             {
-                filename = strrchr( fullname, '/' );
-            }
-            if( filename == NULL )
-            {
-                filename = fullname;
-            }
-            else
-            {
-                filename++;
+                char* outputdirnameptr = NULL;
+                size_t fulldirnamelen = ( filename - fullname - 1);
+
+                strncpy(imgdescrfullname, fullname, fulldirnamelen * sizeof(char) );
+                imgdescrfullname[fulldirnamelen] = '\0';
+
+                icvFindFilePathPart(&outputdirnameptr, imgdescrfullname);
+                strcpy(outputdirname, outputdirnameptr);
+
+                int topleveldirnamelen = strlen(imgdescrfullname) - (outputdirnameptr - imgdescrfullname);
+                outputdirname[topleveldirnamelen] = '\0';
+
+                sprintf(filename, "pos/");
+                filename += strlen("pos/");
+
+                sprintf(imgdescrfullname + fulldirnamelen, "/%s/", annotationsdirname);
+                imgdescrfilename = imgdescrfullname + fulldirnamelen + strlen(annotationsdirname) + 2;
+
+                if( !icvMkDir( imgdescrfullname ) )
+                {
+                    #if CV_VERBOSE
+                            fprintf( stderr, "Unable to create directory hierarchy: %s\n", imgdescrfullname );
+                    #endif /* CV_VERBOSE */
+                    return;
+                }
+                if( !icvMkDir( fullname ) )
+                {
+                    #if CV_VERBOSE
+                            fprintf( stderr, "Unable to create directory hierarchy: %s\n", fullname );
+                    #endif /* CV_VERBOSE */
+                    return;
+                }
+
             }
 
             count = MIN( count, cvbgdata->count );
@@ -3030,11 +3080,29 @@ void cvCreateTestSamples( const char* infoname,
                                          1, 0.0, 0.0, &data );
 
 
-                sprintf( filename, "%04d_%04d_%04d_%04d_%04d.jpg",
-                         (i + 1), x, y, width, height );
-
-                if( info )
+                if( pngoutput )
                 {
+                    sprintf( filename, "%04d_%04d_%04d_%04d_%04d",
+                             (i + 1), x, y, width, height);
+
+                    sprintf( imgdescrfilename,"%s.txt",
+                                              filename );
+                    fprintf( info, "%s\n",
+                             imgdescrfullname );
+                    imgdescr = fopen(imgdescrfullname,"w");
+
+                    sprintf( filename + strlen(filename) , ".%s",
+                             extension);
+
+                    fprintf( imgdescr, "Image filename : \"%s\"\n"
+                                        "Bounding box for object 1 \"PASperson\" (Xmin, Ymin) - (Xmax, Ymax) : (%d, %d) - (%d, %d)",
+                             fullname, x, y, x + width, y + height );
+                    fclose( imgdescr );
+                }
+                else if( info )
+                {
+                    sprintf( filename, "%04d_%04d_%04d_%04d_%04d.%s",
+                             (i + 1), x, y, width, height, extension);
                     fprintf( info, "%s %d %d %d %d %d\n",
                         filename, 1, x, y, width, height );
                 }
