@@ -117,8 +117,26 @@ Command line arguments:
 
     Height (in pixels) of the output samples.
 
-For following procedure is used to create a sample object instance:
+* ``-pngoutput``
+
+    With this option switched on ``opencv_createsamples`` tool generates a collection of PNG samples and a number of associated annotation files, instead of a single ``vec`` file.
+
+The ``opencv_createsamples`` utility may work in a number of modes, namely:
+
+* Creating training set from a single image and a collection of backgrounds with a single ``vec`` file as an output;
+* Converting the marked-up collection of samples into a ``vec`` format;
+* Creating training set from a single image, as specified above, but with a collection of PNG images and associated annotation files as a result;
+* Creating test set that consists of JPG samples collection and a signle file with annotations;
+* Showing the content of the ``vec`` file.
+
+Creating training set from a single image and a collection of backgrounds with a single ``vec`` file as an output
+-----------------------------------------------------------------------------------------------------------------
+
+The following procedure is used to create a sample object instance:
 The source image is rotated randomly around all three axes. The chosen angle is limited my ``-max?angle``. Then pixels having the intensity from [``bg_color-bg_color_threshold``; ``bg_color+bg_color_threshold``] range are interpreted as transparent. White noise is added to the intensities of the foreground. If the ``-inv`` key is specified then foreground pixel intensities are inverted. If ``-randinv`` key is specified then algorithm randomly selects whether inversion should be applied to this sample. Finally, the obtained image is placed onto an arbitrary background from the background description file, resized to the desired size specified by ``-w`` and ``-h`` and stored to the vec-file, specified by the ``-vec`` command line option.
+
+Converting the marked-up collection of samples into a ``vec`` format
+--------------------------------------------------------------------
 
 Positive samples also may be obtained from a collection of previously marked up images. This collection is described by a text file similar to background description file. Each line of this file corresponds to an image. The first element of the line is the filename. It is followed by the number of object instances. The following numbers are the coordinates of objects bounding rectangles (x, y, width, height).
 
@@ -149,6 +167,70 @@ In order to create positive samples from such collection, ``-info`` argument sho
     Description file of marked up images collection.
 
 The scheme of samples creation in this case is as follows. The object instances are taken from images. Then they are resized to target samples size and stored in output vec-file. No distortion is applied, so the only affecting arguments are ``-w``, ``-h``, ``-show`` and ``-num``.
+
+Creating training set from a single image, but with a collection of PNG images and associated annotation files as a result
+--------------------------------------------------------------------------------------------------------------------------
+
+To obtain such behaviour the ``-img``, ``-bg`` and ``-info`` keys should be specified. The file name specified with ``-info`` key should include at least one level of directory hierarchy, that directory
+will be used as the top-level dir for the training set.
+For example, with the ``opencv_createsamples`` called as following:
+
+    opencv_createsamples -img /home/user/logo.png -bg /home/user/bg.txt -info /home/user/annotations.lst -pngoutput -maxxangle 0.1 -maxyangle 0.1 -maxzangle 0.1
+
+The output will have the following structure:
+
+    .. code-block:: text
+
+        /home/user/
+            annotations/
+                0001_0107_0099_0195_0139.txt
+                0002_0107_0115_0195_0139.txt
+                ...
+            neg/
+                <background files here>
+            pos/
+                0001_0107_0099_0195_0139.png
+                0002_0107_0115_0195_0139.png
+                ...
+            annotations.lst
+
+With ``*.txt`` files in ``annotations`` directory containing information about object bounding box on the sample in a next format:
+
+    .. code-block:: text
+
+        Image filename : "createsamples/pos/0002_0107_0115_0195_0139.png"
+        Bounding box for object 1 "PASperson" (Xmin, Ymin) - (Xmax, Ymax) : (107, 115) - (302, 254)
+
+And ``annotations.lst`` file containing the list of all annotations file:
+
+    .. code-block:: text
+
+        createsamples/annotations/0001_0109_0209_0195_0139.txt
+        createsamples/annotations/0002_0241_0245_0139_0100.txt
+
+
+Creating test set that consists of JPG samples collection and a signle file with annotations
+--------------------------------------------------------------------------------------------
+
+This variant of ``opencv_createsamples`` usage is very similar to the previous one, but generates the output in a different format;
+
+Directory structure:
+
+    .. code-block:: text
+
+        info.dat
+        img1.jpg
+        img2.jpg
+
+File info.dat:
+
+    .. code-block:: text
+
+        img1.jpg  1  140 100 45 45
+        img2.jpg  2  100 200 50 50   50 30 25 25
+
+Showing the content of the ``vec`` file
+---------------------------------------
 
 ``opencv_createsamples`` utility may be used for examining samples stored in positive samples file. In order to do this only ``-vec``, ``-w`` and ``-h`` parameters should be specified.
 
