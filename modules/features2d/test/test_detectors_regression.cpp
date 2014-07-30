@@ -289,6 +289,18 @@ TEST( Features2d_Detector_ORB, regression )
     test.safe_run();
 }
 
+TEST( Features2d_Detector_KAZE, regression )
+{
+    CV_FeatureDetectorTest test( "detector-kaze", FeatureDetector::create("KAZE") );
+    test.safe_run();
+}
+
+TEST( Features2d_Detector_AKAZE, regression )
+{
+    CV_FeatureDetectorTest test( "detector-akaze", FeatureDetector::create("AKAZE") );
+    test.safe_run();
+}
+
 TEST( Features2d_Detector_GridFAST, regression )
 {
     CV_FeatureDetectorTest test( "detector-grid-fast", FeatureDetector::create("GridFAST") );
