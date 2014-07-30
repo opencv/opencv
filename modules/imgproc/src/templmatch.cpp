@@ -136,22 +136,22 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
     const int minBlockSize = 256;
 
     block_size.width = cvRound(result_size.width*blockScale);
-    block_size.width = MAX( block_size.width, minBlockSize - templ_size.width + 1 );
+    block_size.width = std::max( block_size.width, minBlockSize - templ_size.width + 1 );
     block_size.width = std::min( block_size.width, result_size.width );
     block_size.height = cvRound(templ_size.height*blockScale);
     block_size.height = std::max( block_size.height, minBlockSize - templ_size.height + 1 );
     block_size.height = std::min( block_size.height, result_size.height );
 
-    dft_size.width = MAX(getOptimalDFTSize(block_size.width + templ_size.width - 1), 2);
+    dft_size.width = std::max(getOptimalDFTSize(block_size.width + templ_size.width - 1), 2);
     dft_size.height = getOptimalDFTSize(block_size.height + templ_size.height - 1);
     if( dft_size.width <= 0 || dft_size.height <= 0 )
         CV_Error( CV_StsOutOfRange, "the input arrays are too big" );
 
     // recompute block size
     block_size.width = dft_size.width - templ_size.width + 1;
-    block_size.width = MIN( block_size.width, result_size.width);
+    block_size.width = std::min( block_size.width, result_size.width);
     block_size.height = dft_size.height - templ_size.height + 1;
-    block_size.height = MIN( block_size.height, result_size.height );
+    block_size.height = std::min( block_size.height, result_size.height );
 
     image_block.create(dft_size, CV_32F);
     templ_block.create(dft_size, CV_32F);
