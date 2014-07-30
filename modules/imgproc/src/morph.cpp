@@ -1352,6 +1352,9 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
         _src.offset() % esz != 0 || _src.step() % esz != 0)
         return false;
 
+    bool haveExtraMat = !_extraMat.empty();
+    CV_Assert(actual_op <= 3 || haveExtraMat);
+
     Size ksize = _kernel.size();
     if (anchor.x < 0)
         anchor.x = ksize.width / 2;
@@ -1368,9 +1371,6 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
         wtype = CV_MAKETYPE(wdepth, cn);
     }
     char cvt[2][40];
-
-    bool haveExtraMat = !_extraMat.empty();
-    CV_Assert(actual_op <= 3 || haveExtraMat);
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE",
                                        "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
@@ -1506,6 +1506,13 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
     Mat kernel = _kernel.getMat();
     Size ksize = kernel.data ? kernel.size() : Size(3, 3), ssize = _src.size();
 
+    bool doubleSupport = dev.doubleFPConfig() > 0;
+    if ((depth == CV_64F && !doubleSupport) || borderType != BORDER_CONSTANT)
+        return false;
+
+    bool haveExtraMat = !_extraMat.empty();
+    CV_Assert(actual_op <= 3 || haveExtraMat);
+
     // try to use OpenCL kernel adopted for small morph kernel
     if (dev.isIntel() && !(dev.type() & ocl::Device::TYPE_CPU) &&
         ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
@@ -1515,13 +1522,6 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
         if (ocl_morphSmall(_src, _dst, _kernel, anchor, borderType, op, actual_op, _extraMat))
             return true;
     }
-
-    bool doubleSupport = dev.doubleFPConfig() > 0;
-    if ((depth == CV_64F && !doubleSupport) || borderType != BORDER_CONSTANT)
-        return false;
-
-    bool haveExtraMat = !_extraMat.empty();
-    CV_Assert(actual_op <= 3 || haveExtraMat);
 
     if (iterations == 0 || kernel.rows*kernel.cols == 1)
     {
