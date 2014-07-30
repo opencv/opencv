@@ -24,6 +24,19 @@ std::string yml_read_path = "../Data/cookies_ORB.yml"; // 3dpts + descriptors
 // COOKIES BOX MESH
 std::string ply_read_path = "../Data/box.ply";   // mesh
 
+void help()
+{
+std::cout
+<< "--------------------------------------------------------------------------"   << std::endl
+<< "This program shows how to detect an object given its 3D textured model. You can choose to "
+<< "use a recorded video or the webcam." << std::endl
+<< "Usage:"                                                                       << std::endl
+<< "./pnp_detection ~/path_to_video/box.mp4"                                      << std::endl
+<< "./pnp_detection "                                                             << std::endl
+<< "--------------------------------------------------------------------------"   << std::endl
+<< std::endl;
+}
+
 
 /*
  * Set up the intrinsic camera parameters: UVC WEBCAM
@@ -37,7 +50,6 @@ double params_WEBCAM[] = { width*f/sx,   // fx
                            height*f/sy,  // fy
                            width/2,      // cx
                            height/2};    // cy
-
 
 
 /*
@@ -92,7 +104,7 @@ void fillMeasurements( cv::Mat &measurements,
 int main(int argc, char *argv[])
 {
 
-  std::cout << "!!!Hello Detection!!!" << std::endl;
+  help();
 
   PnPProblem pnp_detection(params_WEBCAM);
   PnPProblem pnp_detection_est(params_WEBCAM);
