@@ -2,30 +2,30 @@
 #include "dls.h"
 
 #include <iostream>
-#include <fstream>
 
-/*
 #ifdef HAVE_EIGEN
 #  if defined __GNUC__ && defined __APPLE__
 #    pragma GCC diagnostic ignored "-Wshadow"
 #  endif
 #  include <Eigen/Core>
+#  include <Eigen/Eigenvalues>
 #  include "opencv2/core/eigen.hpp"
 #endif
-*/
 
-#include <Eigen/Eigenvalues>
-#include <Eigen/Core>
+
+//#include <Eigen/Eigenvalues>
+//#include <Eigen/Core>
 
 using namespace std;
 
 dls::dls(const cv::Mat& opoints, const cv::Mat& ipoints)
 {
+
 	N =  std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
 	p = cv::Mat(3, N, CV_64F);
 	z = cv::Mat(3, N, CV_64F);
 
-	cost__ = std::numeric_limits<double>::infinity();
+	cost__ = 9999;
 
 	f1coeff.resize(21);
 	f2coeff.resize(21);
@@ -117,14 +117,12 @@ bool dls::compute_pose(cv::Mat& R, cv::Mat& t)
 
 void dls::run_kernel(const cv::Mat& pp)
 {
-
 	cv::Mat Mtilde(27, 27, CV_64F);
 	cv::Mat D = cv::Mat::zeros(9, 9, CV_64F);
 	build_coeff_matrix(pp, Mtilde, D);
 
 	cv::Mat eigenval_r, eigenval_i, eigenvec_r, eigenvec_i;
 	compute_eigenvec(Mtilde, eigenval_r, eigenval_i, eigenvec_r, eigenvec_i);
-
 
 	/*
 	 *  Now check the solutions
@@ -145,8 +143,6 @@ void dls::run_kernel(const cv::Mat& pp)
 		cv::Mat V_kB = cv::Mat(1, 1, z.depth(), V_kA.at<double>(0)); // 1x1
 		cv::Mat V_k; cv::solve(V_kB.t(), V_kA.t(), V_k); // A/B = B'\A'
 		cv::Mat( V_k.t()).copyTo( eigenvec_r.col(k) );
-
-		// TODO: check imaginari part to filter solutions
 
 		//if (imag(V(2,k)) == 0)
 		const double epsilon = 1e-4;
@@ -230,6 +226,7 @@ void dls::run_kernel(const cv::Mat& pp)
 			cost_.push_back(cost_valid);
 		}
 	}
+
 }
 
 void dls::build_coeff_matrix(const cv::Mat& pp, cv::Mat& Mtilde, cv::Mat& D)
@@ -287,6 +284,7 @@ void dls::compute_eigenvec(const cv::Mat& Mtilde, cv::Mat& eigenval_real, cv::Ma
 {
 	// EIGENVALUES AND EIGENVECTORS
 
+#ifdef HAVE_EIGEN
 	Eigen::MatrixXd Mtilde_eig, zeros_eig;
 	cv::cv2eigen(Mtilde, Mtilde_eig);
 	cv::cv2eigen(cv::Mat::zeros(27, 27, CV_64F), zeros_eig);
@@ -307,6 +305,7 @@ void dls::compute_eigenvec(const cv::Mat& Mtilde, cv::Mat& eigenval_real, cv::Ma
 	cv::eigen2cv(eigval_imag, eigenval_imag);
 	cv::eigen2cv(eigvec_real, eigenvec_real);
 	cv::eigen2cv(eigvec_imag, eigenvec_imag);
+#endif
 
 }
 

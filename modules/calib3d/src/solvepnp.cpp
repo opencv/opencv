@@ -49,11 +49,6 @@
 #include <iostream>
 using namespace cv;
 
-void MatrixSize(const cv::Mat& mat)
-{
-	cout << mat.rows << "x" << mat.cols << endl;
-}
-
 bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
                   InputArray _cameraMatrix, InputArray _distCoeffs,
                   OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess, int flags )
@@ -101,19 +96,25 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     }
     else if (flags == DLS)
     {
+    	bool result = false;
+#ifdef HAVE_EIGEN
+
     	cv::Mat undistortedPoints;
     	cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
 
     	dls PnP(opoints, undistortedPoints);
 
     	cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
-    	bool result = PnP.compute_pose(R, tvec);
+    	result = PnP.compute_pose(R, tvec);
         if (result)
         	cv::Rodrigues(R, rvec);
+#else
+        std::cout << "EIGEN library needed for DLS" << std::endl;
+#endif
         return result;
     }
     else
-        CV_Error(CV_StsBadArg, "The flags argument must be one of CV_ITERATIVE, CV_P3P or CV_EPNP");
+        CV_Error(CV_StsBadArg, "The flags argument must be one of CV_ITERATIVE, CV_P3P, CV_EPNP or CV_DLS");
     return false;
 }
 
