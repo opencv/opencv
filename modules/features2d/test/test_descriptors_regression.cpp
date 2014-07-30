@@ -101,8 +101,14 @@ public:
     typedef typename Distance::ResultType DistanceType;
 
     CV_DescriptorExtractorTest( const string _name, DistanceType _maxDist, const Ptr<DescriptorExtractor>& _dextractor,
-                                Distance d = Distance() ):
-            name(_name), maxDist(_maxDist), dextractor(_dextractor), distance(d) {}
+                                Distance d = Distance(), Ptr<FeatureDetector> _detector = Ptr<FeatureDetector>()):
+        name(_name), maxDist(_maxDist), dextractor(_dextractor), distance(d) , detector(_detector) {}
+
+    ~CV_DescriptorExtractorTest()
+    {
+        if(!detector.empty())
+            detector.release();
+    }
 protected:
     virtual void createDescriptorExtractor() {}
 
@@ -189,7 +195,6 @@ protected:
 
         // Read the test image.
         string imgFilename =  string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
-
         Mat img = imread( imgFilename );
         if( img.empty() )
         {
@@ -197,13 +202,15 @@ protected:
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
             return;
         }
-
         vector<KeyPoint> keypoints;
         FileStorage fs( string(ts->get_data_path()) + FEATURES2D_DIR + "/keypoints.xml.gz", FileStorage::READ );
-        if( fs.isOpened() )
-        {
+        if(!detector.empty()) {
+            detector->detect(img, keypoints);
+        } else {
             read( fs.getFirstTopLevelNode(), keypoints );
-
+        }
+        if(!keypoints.empty())
+        {
             Mat calcDescriptors;
             double t = (double)getTickCount();
             dextractor->compute( img, keypoints, calcDescriptors );
@@ -244,7 +251,7 @@ protected:
                 }
             }
         }
-        else
+        if(!fs.isOpened())
         {
             ts->printf( cvtest::TS::LOG, "Compute and write keypoints.\n" );
             fs.open( string(ts->get_data_path()) + FEATURES2D_DIR + "/keypoints.xml.gz", FileStorage::WRITE );
@@ -295,6 +302,7 @@ protected:
     const DistanceType maxDist;
     Ptr<DescriptorExtractor> dextractor;
     Distance distance;
+    Ptr<FeatureDetector> detector;
 
 private:
     CV_DescriptorExtractorTest& operator=(const CV_DescriptorExtractorTest&) { return *this; }
@@ -338,5 +346,21 @@ TEST( Features2d_DescriptorExtractor_OpponentBRIEF, regression )
 {
     CV_DescriptorExtractorTest<Hamming> test( "descriptor-opponent-brief",  1,
                                                DescriptorExtractor::create("OpponentBRIEF") );
+    test.safe_run();
+}
+
+TEST( Features2d_DescriptorExtractor_KAZE, regression )
+{
+    CV_DescriptorExtractorTest< L2<float> > test( "descriptor-kaze",  0.03f,
+                                                 DescriptorExtractor::create("KAZE"),
+                                                 L2<float>(), FeatureDetector::create("KAZE"));
+    test.safe_run();
+}
+
+TEST( Features2d_DescriptorExtractor_AKAZE, regression )
+{
+    CV_DescriptorExtractorTest<Hamming> test( "descriptor-akaze",  (CV_DescriptorExtractorTest<Hamming>::DistanceType)12.f,
+                                              DescriptorExtractor::create("AKAZE"),
+                                              Hamming(), FeatureDetector::create("AKAZE"));
     test.safe_run();
 }
