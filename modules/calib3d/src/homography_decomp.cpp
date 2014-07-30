@@ -431,6 +431,7 @@ void HomographyDecompInria::decompose(std::vector<CameraMotion>& camMotions)
 
 } //namespace HomographyDecomposition
 
+// function decomposes image-to-image homography to rotation and translation matrices
 int decomposeHomographyMat(InputArray _H,
                        InputArray _K,
                        OutputArrayOfArrays _rotations,
