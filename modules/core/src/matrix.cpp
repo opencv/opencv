@@ -3331,12 +3331,12 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
             stype == CV_16SC1 ? (ippiSum)ippiSum_16s_C1R :
             stype == CV_16SC3 ? (ippiSum)ippiSum_16s_C3R :
             stype == CV_16SC4 ? (ippiSum)ippiSum_16s_C4R : 0;
-        ippFuncHint =
+        ippFuncHint = 0;
             stype == CV_32FC1 ? (ippiSumHint)ippiSum_32f_C1R :
             stype == CV_32FC3 ? (ippiSumHint)ippiSum_32f_C3R :
             stype == CV_32FC4 ? (ippiSumHint)ippiSum_32f_C4R : 0;
         func =
-        sdepth == CV_8U ? (cv::ReduceFunc)cv::reduceC_<uchar, double,   cv::OpAdd<double> > :
+            sdepth == CV_8U ? (cv::ReduceFunc)cv::reduceC_<uchar, double,   cv::OpAdd<double> > :
             sdepth == CV_16U ? (cv::ReduceFunc)cv::reduceC_<ushort, double,   cv::OpAdd<double> > :
             sdepth == CV_16S ? (cv::ReduceFunc)cv::reduceC_<short, double,   cv::OpAdd<double> > :
             sdepth == CV_32F ? (cv::ReduceFunc)cv::reduceC_<float, double,   cv::OpAdd<double> > : 0;
@@ -3457,6 +3457,9 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
     bool useOptimized = 1 == dim && _src.cols() > min_opt_cols && (wgs >= buf_cols);
 
     if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
+        return false;
+
+    if ((op == CV_REDUCE_SUM && sdepth == CV_32F) || op == CV_REDUCE_MIN || op == CV_REDUCE_MAX)
         return false;
 
     if (op == CV_REDUCE_AVG)
