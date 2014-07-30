@@ -38,7 +38,7 @@ The most common simplification is to assume known calibration parameters which i
 
 **Problem Formulation:** Given a set of correspondences between 3D points :math:`p_i` expressed in a world reference frame, and their 2D projections :math:`u_i` onto the image, we seek to retrieve the pose (:math:`R` and :math:`t`) of the camera w.r.t. the world and the focal length :math:`f`.
 
-OpenCV provides three different approaches to solve the Perspective-*n*-Point problem which return :math:`R` and :math:`t`. Then, using the following formula it's possible to project 3D points into the image plane:
+OpenCV provides four different approaches to solve the Perspective-*n*-Point problem which return :math:`R` and :math:`t`. Then, using the following formula it's possible to project 3D points into the image plane:
 
 .. math::
 
