@@ -764,7 +764,7 @@ Decompose a homography matrix to rotation(s), translation(s) and plane normal(s)
 
 .. ocv:function:: int decomposeHomographyMat( InputArray H,  InputArray K, OutputArrayOfArrays rotations, OutputArrayOfArrays translations, OutputArrayOfArrays normals)
 
-    :param H: The input homography matrix.
+    :param H: The input homography matrix between two images.
 
     :param K: The input intrinsic camera calibration matrix.
 
