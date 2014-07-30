@@ -20,12 +20,23 @@
 
   // COOKIES BOX [718x480]
   std::string img_path = "../Data/resized_IMG_3875.JPG"; // f 55
- 
+
   // COOKIES BOX MESH
   std::string ply_read_path = "../Data/box.ply";
 
   // YAML writting path
   std::string write_path = "../Data/cookies_ORB.yml";
+
+  void help()
+  {
+  std::cout
+  << "--------------------------------------------------------------------------"   << std::endl
+  << "This program shows how to create your 3D textured model. "                    << std::endl
+  << "Usage:"                                                                       << std::endl
+  << "./pnp_registration "                                                          << std::endl
+  << "--------------------------------------------------------------------------"   << std::endl
+  << std::endl;
+  }
 
   // Boolean the know if the registration it's done
   bool end_registration = false;
@@ -95,7 +106,7 @@ static void onMouseModelRegistration( int event, int x, int y, int, void* )
 int main(int argc, char *argv[])
 {
 
-  std::cout << "!!!Hello Registration!!!" << std::endl;
+  help();
 
   // load a mesh given the *.ply file path
   mesh.load(ply_read_path);
@@ -106,7 +117,7 @@ int main(int argc, char *argv[])
   //Instantiate robust matcher: detector, extractor, matcher
   RobustMatcher rmatcher;
   cv::FeatureDetector * detector = new cv::OrbFeatureDetector(numKeyPoints);
-  //rmatcher.setFeatureDetector(detector);
+  rmatcher.setFeatureDetector(detector);
 
   /*
    * GROUND TRUTH OF THE FIRST IMAGE
