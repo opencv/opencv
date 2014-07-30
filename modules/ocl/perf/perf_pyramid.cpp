@@ -111,15 +111,15 @@ OCL_PERF_TEST_P(PyrUpFixture, PyrUp,
     {
         ocl::oclMat oclSrc(src), oclDst(dstSize, type);
 
-        OCL_TEST_CYCLE() ocl::pyrDown(oclSrc, oclDst);
+        OCL_TEST_CYCLE() ocl::pyrUp(oclSrc, oclDst);
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst, 5e-4);
+        SANITY_CHECK(dst, 1);
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() pyrDown(src, dst);
+        TEST_CYCLE() pyrUp(src, dst);
 
         SANITY_CHECK(dst);
     }
