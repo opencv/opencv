@@ -3331,7 +3331,7 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
             stype == CV_16SC1 ? (ippiSum)ippiSum_16s_C1R :
             stype == CV_16SC3 ? (ippiSum)ippiSum_16s_C3R :
             stype == CV_16SC4 ? (ippiSum)ippiSum_16s_C4R : 0;
-        ippFuncHint = 0;
+        ippFuncHint =
             stype == CV_32FC1 ? (ippiSumHint)ippiSum_32f_C1R :
             stype == CV_32FC3 ? (ippiSumHint)ippiSum_32f_C3R :
             stype == CV_32FC4 ? (ippiSumHint)ippiSum_32f_C4R : 0;
