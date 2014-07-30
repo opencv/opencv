@@ -53,37 +53,7 @@ Ptr<cuda::StereoConstantSpaceBP> cv::cuda::createStereoConstantSpaceBP(int, int,
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace cuda { namespace device
-{
-    namespace stereocsbp
-    {
-        void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, int min_disp_th,
-            const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& temp);
-
-        template<class T>
-        void init_data_cost(int rows, int cols, T* disp_selected_pyr, T* data_cost_selected, size_t msg_step,
-                    int h, int w, int level, int nr_plane, int ndisp, int channels, bool use_local_init_data_cost, cudaStream_t stream);
-
-        template<class T>
-        void compute_data_cost(const T* disp_selected_pyr, T* data_cost, size_t msg_step,
-                               int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, cudaStream_t stream);
-
-        template<class T>
-        void init_message(T* u_new, T* d_new, T* l_new, T* r_new,
-                          const T* u_cur, const T* d_cur, const T* l_cur, const T* r_cur,
-                          T* selected_disp_pyr_new, const T* selected_disp_pyr_cur,
-                          T* data_cost_selected, const T* data_cost, size_t msg_step,
-                          int h, int w, int nr_plane, int h2, int w2, int nr_plane2, cudaStream_t stream);
-
-        template<class T>
-        void calc_all_iterations(T* u, T* d, T* l, T* r, const T* data_cost_selected,
-            const T* selected_disp_pyr_cur, size_t msg_step, int h, int w, int nr_plane, int iters, cudaStream_t stream);
-
-        template<class T>
-        void compute_disp(const T* u, const T* d, const T* l, const T* r, const T* data_cost_selected, const T* disp_selected, size_t msg_step,
-            const PtrStepSz<short>& disp, int nr_plane, cudaStream_t stream);
-    }
-}}}
+#include "cuda/stereocsbp.hpp"
 
 namespace
 {
@@ -252,8 +222,6 @@ namespace
         ////////////////////////////////////////////////////////////////////////////
         // Compute
 
-        load_constants(ndisp_, max_data_term_, data_weight_, max_disc_term_, disc_single_jump_, min_disp_th_, left, right, temp_);
-
         l[0].setTo(0, _stream);
         d[0].setTo(0, _stream);
         r[0].setTo(0, _stream);
@@ -275,17 +243,18 @@ namespace
             {
                 if (i == levels_ - 1)
                 {
-                    init_data_cost(left.rows, left.cols, disp_selected_pyr[cur_idx].ptr<float>(), data_cost_selected.ptr<float>(),
-                        elem_step, rows_pyr[i], cols_pyr[i], i, nr_plane_pyr[i], ndisp_, left.channels(), use_local_init_data_cost_, stream);
+                    init_data_cost(left.ptr<uchar>(), right.ptr<uchar>(), temp_.ptr<uchar>(), left.step, left.rows, left.cols, disp_selected_pyr[cur_idx].ptr<float>(), data_cost_selected.ptr<float>(),
+                        elem_step, rows_pyr[i], cols_pyr[i], i, nr_plane_pyr[i], ndisp_, left.channels(), data_weight_, max_data_term_, min_disp_th_, use_local_init_data_cost_, stream);
                 }
                 else
                 {
-                    compute_data_cost(disp_selected_pyr[cur_idx].ptr<float>(), data_cost.ptr<float>(), elem_step,
-                        left.rows, left.cols, rows_pyr[i], cols_pyr[i], rows_pyr[i+1], i, nr_plane_pyr[i+1], left.channels(), stream);
+                    compute_data_cost(left.ptr<uchar>(), right.ptr<uchar>(), left.step, disp_selected_pyr[cur_idx].ptr<float>(), data_cost.ptr<float>(), elem_step,
+                        left.rows, left.cols, rows_pyr[i], cols_pyr[i], rows_pyr[i+1], i, nr_plane_pyr[i+1], left.channels(), data_weight_, max_data_term_, min_disp_th_, stream);
 
                     int new_idx = (cur_idx + 1) & 1;
 
-                    init_message(u[new_idx].ptr<float>(), d[new_idx].ptr<float>(), l[new_idx].ptr<float>(), r[new_idx].ptr<float>(),
+                    init_message(temp_.ptr<uchar>(),
+                                 u[new_idx].ptr<float>(), d[new_idx].ptr<float>(), l[new_idx].ptr<float>(), r[new_idx].ptr<float>(),
                                  u[cur_idx].ptr<float>(), d[cur_idx].ptr<float>(), l[cur_idx].ptr<float>(), r[cur_idx].ptr<float>(),
                                  disp_selected_pyr[new_idx].ptr<float>(), disp_selected_pyr[cur_idx].ptr<float>(),
                                  data_cost_selected.ptr<float>(), data_cost.ptr<float>(), elem_step, rows_pyr[i],
@@ -294,9 +263,9 @@ namespace
                     cur_idx = new_idx;
                 }
 
-                calc_all_iterations(u[cur_idx].ptr<float>(), d[cur_idx].ptr<float>(), l[cur_idx].ptr<float>(), r[cur_idx].ptr<float>(),
+                calc_all_iterations(temp_.ptr<uchar>(), u[cur_idx].ptr<float>(), d[cur_idx].ptr<float>(), l[cur_idx].ptr<float>(), r[cur_idx].ptr<float>(),
                                     data_cost_selected.ptr<float>(), disp_selected_pyr[cur_idx].ptr<float>(), elem_step,
-                                    rows_pyr[i], cols_pyr[i], nr_plane_pyr[i], iters_, stream);
+                                    rows_pyr[i], cols_pyr[i], nr_plane_pyr[i], iters_, max_disc_term_, disc_single_jump_, stream);
             }
         }
         else
@@ -305,17 +274,18 @@ namespace
             {
                 if (i == levels_ - 1)
                 {
-                    init_data_cost(left.rows, left.cols, disp_selected_pyr[cur_idx].ptr<short>(), data_cost_selected.ptr<short>(),
-                        elem_step, rows_pyr[i], cols_pyr[i], i, nr_plane_pyr[i], ndisp_, left.channels(), use_local_init_data_cost_, stream);
+                    init_data_cost(left.ptr<uchar>(), right.ptr<uchar>(), temp_.ptr<uchar>(), left.step, left.rows, left.cols, disp_selected_pyr[cur_idx].ptr<short>(), data_cost_selected.ptr<short>(),
+                        elem_step, rows_pyr[i], cols_pyr[i], i, nr_plane_pyr[i], ndisp_, left.channels(), data_weight_, max_data_term_, min_disp_th_, use_local_init_data_cost_, stream);
                 }
                 else
                 {
-                    compute_data_cost(disp_selected_pyr[cur_idx].ptr<short>(), data_cost.ptr<short>(), elem_step,
-                        left.rows, left.cols, rows_pyr[i], cols_pyr[i], rows_pyr[i+1], i, nr_plane_pyr[i+1], left.channels(), stream);
+                    compute_data_cost(left.ptr<uchar>(), right.ptr<uchar>(), left.step, disp_selected_pyr[cur_idx].ptr<short>(), data_cost.ptr<short>(), elem_step,
+                        left.rows, left.cols, rows_pyr[i], cols_pyr[i], rows_pyr[i+1], i, nr_plane_pyr[i+1], left.channels(), data_weight_, max_data_term_, min_disp_th_, stream);
 
                     int new_idx = (cur_idx + 1) & 1;
 
-                    init_message(u[new_idx].ptr<short>(), d[new_idx].ptr<short>(), l[new_idx].ptr<short>(), r[new_idx].ptr<short>(),
+                    init_message(temp_.ptr<uchar>(),
+                                 u[new_idx].ptr<short>(), d[new_idx].ptr<short>(), l[new_idx].ptr<short>(), r[new_idx].ptr<short>(),
                                  u[cur_idx].ptr<short>(), d[cur_idx].ptr<short>(), l[cur_idx].ptr<short>(), r[cur_idx].ptr<short>(),
                                  disp_selected_pyr[new_idx].ptr<short>(), disp_selected_pyr[cur_idx].ptr<short>(),
                                  data_cost_selected.ptr<short>(), data_cost.ptr<short>(), elem_step, rows_pyr[i],
@@ -324,9 +294,9 @@ namespace
                     cur_idx = new_idx;
                 }
 
-                calc_all_iterations(u[cur_idx].ptr<short>(), d[cur_idx].ptr<short>(), l[cur_idx].ptr<short>(), r[cur_idx].ptr<short>(),
+                calc_all_iterations(temp_.ptr<uchar>(), u[cur_idx].ptr<short>(), d[cur_idx].ptr<short>(), l[cur_idx].ptr<short>(), r[cur_idx].ptr<short>(),
                                     data_cost_selected.ptr<short>(), disp_selected_pyr[cur_idx].ptr<short>(), elem_step,
-                                    rows_pyr[i], cols_pyr[i], nr_plane_pyr[i], iters_, stream);
+                                    rows_pyr[i], cols_pyr[i], nr_plane_pyr[i], iters_, max_disc_term_, disc_single_jump_, stream);
             }
         }
 
