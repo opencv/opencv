@@ -262,9 +262,9 @@ public:
                 int cols = layer_sizes[j];
 
                 layer_out = Mat(dn, cols, CV_64F, data);
-                Mat w = weights[i].rowRange(0, layer_in.cols);
+                Mat w = weights[j].rowRange(0, layer_in.cols);
                 gemm(layer_in, w, 1, noArray(), 0, layer_out);
-                calc_activ_func( layer_out, weights[i] );
+                calc_activ_func( layer_out, weights[j] );
 
                 layer_in = layer_out;
             }
@@ -681,6 +681,8 @@ public:
         int iter = params.trainMethod == Params::BACKPROP ?
             train_backprop( inputs, outputs, sw, termcrit ) :
             train_rprop( inputs, outputs, sw, termcrit );
+
+        trained = true;
 
         return iter;
     }
