@@ -49,7 +49,10 @@ http://www.robesafe.com/personal/pablo.alcantarilla/papers/Alcantarilla13bmvc.pd
 */
 
 #include "precomp.hpp"
-#include "akaze/AKAZEFeatures.h"
+#include "kaze/AKAZEFeatures.h"
+
+#include <iostream>
+using namespace std;
 
 namespace cv
 {
@@ -57,13 +60,22 @@ namespace cv
         : descriptor(DESCRIPTOR_MLDB)
         , descriptor_channels(3)
         , descriptor_size(0)
+        , threshold(0.001f)
+        , octaves(4)
+        , sublevels(4)
+        , diffusivity(DIFF_PM_G2)
     {
     }
 
-    AKAZE::AKAZE(DESCRIPTOR_TYPE _descriptor_type, int _descriptor_size, int _descriptor_channels)
+    AKAZE::AKAZE(int _descriptor_type, int _descriptor_size, int _descriptor_channels,
+                 float _threshold, int _octaves, int _sublevels, int _diffusivity)
         : descriptor(_descriptor_type)
         , descriptor_channels(_descriptor_channels)
         , descriptor_size(_descriptor_size)
+        , threshold(_threshold)
+        , octaves(_octaves)
+        , sublevels(_sublevels)
+        , diffusivity(_diffusivity)
     {
 
     }
@@ -78,12 +90,12 @@ namespace cv
     {
         switch (descriptor)
         {
-        case cv::AKAZE::DESCRIPTOR_KAZE:
-        case cv::AKAZE::DESCRIPTOR_KAZE_UPRIGHT:
+        case cv::DESCRIPTOR_KAZE:
+        case cv::DESCRIPTOR_KAZE_UPRIGHT:
             return 64;
 
-        case cv::AKAZE::DESCRIPTOR_MLDB:
-        case cv::AKAZE::DESCRIPTOR_MLDB_UPRIGHT:
+        case cv::DESCRIPTOR_MLDB:
+        case cv::DESCRIPTOR_MLDB_UPRIGHT:
             // We use the full length binary descriptor -> 486 bits
             if (descriptor_size == 0)
             {
@@ -106,12 +118,12 @@ namespace cv
     {
         switch (descriptor)
         {
-        case cv::AKAZE::DESCRIPTOR_KAZE:
-        case cv::AKAZE::DESCRIPTOR_KAZE_UPRIGHT:
+        case cv::DESCRIPTOR_KAZE:
+        case cv::DESCRIPTOR_KAZE_UPRIGHT:
                 return CV_32F;
 
-        case cv::AKAZE::DESCRIPTOR_MLDB:
-        case cv::AKAZE::DESCRIPTOR_MLDB_UPRIGHT:
+        case cv::DESCRIPTOR_MLDB:
+        case cv::DESCRIPTOR_MLDB_UPRIGHT:
                 return CV_8U;
 
             default:
@@ -124,12 +136,12 @@ namespace cv
     {
         switch (descriptor)
         {
-        case cv::AKAZE::DESCRIPTOR_KAZE:
-        case cv::AKAZE::DESCRIPTOR_KAZE_UPRIGHT:
+        case cv::DESCRIPTOR_KAZE:
+        case cv::DESCRIPTOR_KAZE_UPRIGHT:
             return cv::NORM_L2;
 
-        case cv::AKAZE::DESCRIPTOR_MLDB:
-        case cv::AKAZE::DESCRIPTOR_MLDB_UPRIGHT:
+        case cv::DESCRIPTOR_MLDB:
+        case cv::DESCRIPTOR_MLDB_UPRIGHT:
             return cv::NORM_HAMMING;
 
         default:
@@ -153,11 +165,15 @@ namespace cv
         cv::Mat& desc = descriptors.getMatRef();
 
         AKAZEOptions options;
-        options.descriptor = static_cast<DESCRIPTOR_TYPE>(descriptor);
+        options.descriptor = descriptor;
         options.descriptor_channels = descriptor_channels;
         options.descriptor_size = descriptor_size;
         options.img_width = img.cols;
         options.img_height = img.rows;
+        options.dthreshold = threshold;
+        options.omax = octaves;
+        options.nsublevels = sublevels;
+        options.diffusivity = diffusivity;
 
         AKAZEFeatures impl(options);
         impl.Create_Nonlinear_Scale_Space(img1_32);
@@ -188,7 +204,7 @@ namespace cv
         img.convertTo(img1_32, CV_32F, 1.0 / 255.0, 0);
 
         AKAZEOptions options;
-        options.descriptor = static_cast<DESCRIPTOR_TYPE>(descriptor);
+        options.descriptor = descriptor;
         options.descriptor_channels = descriptor_channels;
         options.descriptor_size = descriptor_size;
         options.img_width = img.cols;
@@ -216,7 +232,7 @@ namespace cv
         cv::Mat& desc = descriptors.getMatRef();
 
         AKAZEOptions options;
-        options.descriptor = static_cast<DESCRIPTOR_TYPE>(descriptor);
+        options.descriptor = descriptor;
         options.descriptor_channels = descriptor_channels;
         options.descriptor_size = descriptor_size;
         options.img_width = img.cols;

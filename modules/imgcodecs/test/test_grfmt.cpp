@@ -139,9 +139,6 @@ public:
 
                     string filename = cv::tempfile(".jpg");
                     imwrite(filename, img);
-                    img = imread(filename, IMREAD_UNCHANGED);
-
-                    filename = string(ts->get_data_path() + "readwrite/test_" + char(k + 48) + "_c" + char(num_channels + 48) + ".jpg");
                     ts->printf(ts->LOG, "reading test image : %s\n", filename.c_str());
                     Mat img_test = imread(filename, IMREAD_UNCHANGED);
 
@@ -160,8 +157,9 @@ public:
 #endif
 
 #ifdef HAVE_TIFF
-                for (int num_channels = 1; num_channels <= 3; num_channels+=2)
+                for (int num_channels = 1; num_channels <= 4; num_channels++)
                 {
+                    if (num_channels == 2) continue;
                     // tiff
                     ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_16U, num_channels, ".tiff");
                     Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_16U, num_channels), Scalar::all(0));
@@ -433,6 +431,31 @@ TEST(Imgcodecs_Jpeg, encode_decode_optimize_jpeg)
 
     remove(output_optimized.c_str());
 }
+
+TEST(Imgcodecs_Jpeg, encode_decode_rst_jpeg)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    string input = string(ts.get_data_path()) + "../cv/shared/lena.png";
+    cv::Mat img = cv::imread(input);
+    ASSERT_FALSE(img.empty());
+
+    std::vector<int> params;
+    params.push_back(IMWRITE_JPEG_RST_INTERVAL);
+    params.push_back(1);
+
+    string output_rst = cv::tempfile(".jpg");
+    EXPECT_NO_THROW(cv::imwrite(output_rst, img, params));
+    cv::Mat img_jpg_rst = cv::imread(output_rst);
+
+    string output_normal = cv::tempfile(".jpg");
+    EXPECT_NO_THROW(cv::imwrite(output_normal, img));
+    cv::Mat img_jpg_normal = cv::imread(output_normal);
+
+    EXPECT_EQ(0, cvtest::norm(img_jpg_rst, img_jpg_normal, NORM_INF));
+
+    remove(output_rst.c_str());
+}
+
 #endif
 
 

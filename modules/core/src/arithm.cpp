@@ -54,21 +54,23 @@ namespace cv
 
 struct NOP {};
 
-#if CV_SSE2
+#if CV_SSE2 || CV_NEON
 
 #define FUNCTOR_TEMPLATE(name)          \
     template<typename T> struct name {}
 
 FUNCTOR_TEMPLATE(VLoadStore128);
+#if CV_SSE2
 FUNCTOR_TEMPLATE(VLoadStore64);
 FUNCTOR_TEMPLATE(VLoadStore128Aligned);
+#endif
 
 #endif
 
 template<typename T, class Op, class VOp>
 void vBinOp(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, size_t step, Size sz)
 {
-#if CV_SSE2
+#if CV_SSE2 || CV_NEON
     VOp vop;
 #endif
     Op op;
@@ -79,9 +81,11 @@ void vBinOp(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, si
     {
         int x = 0;
 
+#if CV_NEON || CV_SSE2
 #if CV_SSE2
         if( USE_SSE2 )
         {
+#endif
             for( ; x <= sz.width - 32/(int)sizeof(T); x += 32/sizeof(T) )
             {
                 typename VLoadStore128<T>::reg_type r0 = VLoadStore128<T>::load(src1 + x               );
@@ -91,7 +95,9 @@ void vBinOp(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, si
                 VLoadStore128<T>::store(dst + x               , r0);
                 VLoadStore128<T>::store(dst + x + 16/sizeof(T), r1);
             }
+#if CV_SSE2
         }
+#endif
 #endif
 #if CV_SSE2
         if( USE_SSE2 )
@@ -125,7 +131,7 @@ template<typename T, class Op, class Op32>
 void vBinOp32(const T* src1, size_t step1, const T* src2, size_t step2,
               T* dst, size_t step, Size sz)
 {
-#if CV_SSE2
+#if CV_SSE2 || CV_NEON
     Op32 op32;
 #endif
     Op op;
@@ -153,9 +159,11 @@ void vBinOp32(const T* src1, size_t step1, const T* src2, size_t step2,
             }
         }
 #endif
+#if CV_NEON || CV_SSE2
 #if CV_SSE2
         if( USE_SSE2 )
         {
+#endif
             for( ; x <= sz.width - 8; x += 8 )
             {
                 typename VLoadStore128<T>::reg_type r0 = VLoadStore128<T>::load(src1 + x    );
@@ -165,7 +173,9 @@ void vBinOp32(const T* src1, size_t step1, const T* src2, size_t step2,
                 VLoadStore128<T>::store(dst + x    , r0);
                 VLoadStore128<T>::store(dst + x + 4, r1);
             }
+#if CV_SSE2
         }
+#endif
 #endif
 #if CV_ENABLE_UNROLLED
         for( ; x <= sz.width - 4; x += 4 )
@@ -383,7 +393,98 @@ FUNCTOR_TEMPLATE(VNot);
 FUNCTOR_CLOSURE_1arg(VNot, uchar, return _mm_xor_si128(_mm_set1_epi32(-1), a));
 #endif
 
-#if CV_SSE2
+#if CV_NEON
+
+#define FUNCTOR_LOADSTORE(name, template_arg, register_type, load_body, store_body)\
+    template <>                                                                \
+    struct name<template_arg>{                                                 \
+        typedef register_type reg_type;                                        \
+        static reg_type load(const template_arg * p) { return load_body (p);}; \
+        static void store(template_arg * p, reg_type v) { store_body (p, v);}; \
+    }
+
+#define FUNCTOR_CLOSURE_2arg(name, template_arg, body)\
+    template<>                                                         \
+    struct name<template_arg>                                          \
+    {                                                                  \
+        VLoadStore128<template_arg>::reg_type operator()(              \
+                        VLoadStore128<template_arg>::reg_type a,       \
+                        VLoadStore128<template_arg>::reg_type b) const \
+        {                                                              \
+            return body;                                               \
+        };                                                             \
+    }
+
+#define FUNCTOR_CLOSURE_1arg(name, template_arg, body)\
+    template<>                                                         \
+    struct name<template_arg>                                          \
+    {                                                                  \
+        VLoadStore128<template_arg>::reg_type operator()(              \
+                        VLoadStore128<template_arg>::reg_type a,       \
+                        VLoadStore128<template_arg>::reg_type  ) const \
+        {                                                              \
+            return body;                                               \
+        };                                                             \
+    }
+
+FUNCTOR_LOADSTORE(VLoadStore128,  uchar,  uint8x16_t, vld1q_u8 , vst1q_u8 );
+FUNCTOR_LOADSTORE(VLoadStore128,  schar,   int8x16_t, vld1q_s8 , vst1q_s8 );
+FUNCTOR_LOADSTORE(VLoadStore128, ushort,  uint16x8_t, vld1q_u16, vst1q_u16);
+FUNCTOR_LOADSTORE(VLoadStore128,  short,   int16x8_t, vld1q_s16, vst1q_s16);
+FUNCTOR_LOADSTORE(VLoadStore128,    int,   int32x4_t, vld1q_s32, vst1q_s32);
+FUNCTOR_LOADSTORE(VLoadStore128,  float, float32x4_t, vld1q_f32, vst1q_f32);
+
+FUNCTOR_TEMPLATE(VAdd);
+FUNCTOR_CLOSURE_2arg(VAdd,  uchar, vqaddq_u8 (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,  schar, vqaddq_s8 (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd, ushort, vqaddq_u16(a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,  short, vqaddq_s16(a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,    int, vaddq_s32 (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,  float, vaddq_f32 (a, b));
+
+FUNCTOR_TEMPLATE(VSub);
+FUNCTOR_CLOSURE_2arg(VSub,  uchar, vqsubq_u8 (a, b));
+FUNCTOR_CLOSURE_2arg(VSub,  schar, vqsubq_s8 (a, b));
+FUNCTOR_CLOSURE_2arg(VSub, ushort, vqsubq_u16(a, b));
+FUNCTOR_CLOSURE_2arg(VSub,  short, vqsubq_s16(a, b));
+FUNCTOR_CLOSURE_2arg(VSub,    int, vsubq_s32 (a, b));
+FUNCTOR_CLOSURE_2arg(VSub,  float, vsubq_f32 (a, b));
+
+FUNCTOR_TEMPLATE(VMin);
+FUNCTOR_CLOSURE_2arg(VMin,  uchar, vminq_u8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMin,  schar, vminq_s8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMin, ushort, vminq_u16(a, b));
+FUNCTOR_CLOSURE_2arg(VMin,  short, vminq_s16(a, b));
+FUNCTOR_CLOSURE_2arg(VMin,    int, vminq_s32(a, b));
+FUNCTOR_CLOSURE_2arg(VMin,  float, vminq_f32(a, b));
+
+FUNCTOR_TEMPLATE(VMax);
+FUNCTOR_CLOSURE_2arg(VMax,  uchar, vmaxq_u8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMax,  schar, vmaxq_s8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMax, ushort, vmaxq_u16(a, b));
+FUNCTOR_CLOSURE_2arg(VMax,  short, vmaxq_s16(a, b));
+FUNCTOR_CLOSURE_2arg(VMax,    int, vmaxq_s32(a, b));
+FUNCTOR_CLOSURE_2arg(VMax,  float, vmaxq_f32(a, b));
+
+FUNCTOR_TEMPLATE(VAbsDiff);
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  uchar, vabdq_u8  (a, b));
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  schar, vqabsq_s8 (vqsubq_s8(a, b)));
+FUNCTOR_CLOSURE_2arg(VAbsDiff, ushort, vabdq_u16 (a, b));
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  short, vqabsq_s16(vqsubq_s16(a, b)));
+FUNCTOR_CLOSURE_2arg(VAbsDiff,    int, vabdq_s32 (a, b));
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  float, vabdq_f32 (a, b));
+
+FUNCTOR_TEMPLATE(VAnd);
+FUNCTOR_CLOSURE_2arg(VAnd, uchar, vandq_u8(a, b));
+FUNCTOR_TEMPLATE(VOr);
+FUNCTOR_CLOSURE_2arg(VOr , uchar, vorrq_u8(a, b));
+FUNCTOR_TEMPLATE(VXor);
+FUNCTOR_CLOSURE_2arg(VXor, uchar, veorq_u8(a, b));
+FUNCTOR_TEMPLATE(VNot);
+FUNCTOR_CLOSURE_1arg(VNot, uchar, vmvnq_u8(a   ));
+#endif
+
+#if CV_SSE2 || CV_NEON
 #define IF_SIMD(op) op
 #else
 #define IF_SIMD(op) NOP
