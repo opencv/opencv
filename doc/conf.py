@@ -302,14 +302,16 @@ man_pages = [
 extlinks = {
             'basicstructures' : ('http://docs.opencv.org/modules/core/doc/basic_structures.html#%s', None),
             'oldbasicstructures' : ('http://docs.opencv.org/modules/core/doc/old_basic_structures.html#%s', None),
-            'readwriteimagevideo' : ('http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html#%s', None),
+            'readwriteimage' : ('http://docs.opencv.org/modules/imgcodecs/doc/reading_and_writing_images.html#%s', None),
+            'readwritevideo' : ('http://docs.opencv.org/modules/videoio/doc/reading_and_writing_video.html#%s', None),
             'operationsonarrays' : ('http://docs.opencv.org/modules/core/doc/operations_on_arrays.html#%s', None),
             'utilitysystemfunctions' : ('http://docs.opencv.org/modules/core/doc/utility_and_system_functions_and_macros.html#%s', None),
             'imgprocfilter' : ('http://docs.opencv.org/modules/imgproc/doc/filtering.html#%s', None),
             'svms' : ('http://docs.opencv.org/modules/ml/doc/support_vector_machines.html#%s', None),
             'drawingfunc' : ('http://docs.opencv.org/modules/core/doc/drawing_functions.html#%s', None),
             'xmlymlpers' : ('http://docs.opencv.org/modules/core/doc/xml_yaml_persistence.html#%s', None),
-            'hgvideo' : ('http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html#%s', None),
+            'rwimg' : ('http://docs.opencv.org/modules/imgcodecs/doc/reading_and_writing_images.html#%s', None),
+            'hgvideo' : ('http://docs.opencv.org/modules/videoio/doc/reading_and_writing_video.html#%s', None),
             'gpuinit' : ('http://docs.opencv.org/modules/gpu/doc/initalization_and_information.html#%s', None),
             'gpudatastructure' : ('http://docs.opencv.org/modules/gpu/doc/data_structures.html#%s', None),
             'gpuopmatrices' : ('http://docs.opencv.org/modules/gpu/doc/operations_on_matrices.html#%s', None),
@@ -329,8 +331,8 @@ extlinks = {
             'how_to_contribute' : ('http://code.opencv.org/projects/opencv/wiki/How_to_contribute/%s', None),
 
             'cvt_color' : ('http://docs.opencv.org/modules/imgproc/doc/miscellaneous_transformations.html?highlight=cvtcolor#cvtcolor%s', None),
-            'imread' : ('http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html?highlight=imread#imread%s', None),
-            'imwrite' : ('http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html?highlight=imwrite#imwrite%s', None),
+            'imread' : ('http://docs.opencv.org/modules/imgcodecs/doc/reading_and_writing_images.html?highlight=imread#imread%s', None),
+            'imwrite' : ('http://docs.opencv.org/modules/imgcodecs/doc/reading_and_writing_images.html?highlight=imwrite#imwrite%s', None),
             'imshow' : ('http://docs.opencv.org/modules/highgui/doc/user_interface.html?highlight=imshow#imshow%s', None),
             'named_window' : ('http://docs.opencv.org/modules/highgui/doc/user_interface.html?highlight=namedwindow#namedwindow%s', None),
             'wait_key' : ('http://docs.opencv.org/modules/highgui/doc/user_interface.html?highlight=waitkey#waitkey%s', None),
@@ -418,7 +420,7 @@ extlinks = {
             'background_subtractor' : ('http://docs.opencv.org/modules/video/doc/motion_analysis_and_object_tracking.html?highlight=backgroundsubtractor#backgroundsubtractor%s', None),
             'background_subtractor_mog' : ('http://docs.opencv.org/modules/video/doc/motion_analysis_and_object_tracking.html?highlight=backgroundsubtractorMOG#backgroundsubtractormog%s', None),
             'background_subtractor_mog_two' : ('http://docs.opencv.org/modules/video/doc/motion_analysis_and_object_tracking.html?highlight=backgroundsubtractorMOG2#backgroundsubtractormog2%s', None),
-            'video_capture' : ('http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html?highlight=videocapture#videocapture%s', None),
+            'video_capture' : ('http://docs.opencv.org/modules/videoio/doc/reading_and_writing_video.html?highlight=videocapture#videocapture%s', None),
             'ippa_convert': ('http://docs.opencv.org/modules/core/doc/ipp_async_converters.html#%s', None),
             'ptr':('http://docs.opencv.org/modules/core/doc/basic_structures.html?highlight=Ptr#Ptr%s', None)
            }

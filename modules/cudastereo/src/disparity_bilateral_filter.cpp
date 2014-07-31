@@ -51,16 +51,7 @@ Ptr<cuda::DisparityBilateralFilter> cv::cuda::createDisparityBilateralFilter(int
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace cuda { namespace device
-{
-    namespace disp_bilateral_filter
-    {
-        void disp_load_constants(float* table_color, PtrStepSzf table_space, int ndisp, int radius, short edge_disc, short max_disc);
-
-        template<typename T>
-        void disp_bilateral_filter(PtrStepSz<T> disp, PtrStepSzb img, int channels, int iters, cudaStream_t stream);
-    }
-}}}
+#include "cuda/disparity_bilateral_filter.hpp"
 
 namespace
 {
@@ -165,7 +156,7 @@ namespace
         const short edge_disc = std::max<short>(short(1), short(ndisp * edge_threshold + 0.5));
         const short max_disc = short(ndisp * max_disc_threshold + 0.5);
 
-        disp_load_constants(table_color.ptr<float>(), table_space, ndisp, radius, edge_disc, max_disc);
+        size_t table_space_step = table_space.step / sizeof(float);
 
         _dst.create(disp.size(), disp.type());
         GpuMat dst = _dst.getGpuMat();
@@ -173,7 +164,7 @@ namespace
         if (dst.data != disp.data)
             disp.copyTo(dst, stream);
 
-        disp_bilateral_filter<T>(dst, img, img.channels(), iters, StreamAccessor::getStream(stream));
+        disp_bilateral_filter<T>(dst, img, img.channels(), iters, table_color.ptr<float>(), (float *)table_space.data, table_space_step, radius, edge_disc, max_disc, StreamAccessor::getStream(stream));
     }
 
     void DispBilateralFilterImpl::apply(InputArray _disp, InputArray _image, OutputArray dst, Stream& stream)

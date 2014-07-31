@@ -31,7 +31,7 @@ Detects corners using the FAST algorithm
 
 Detects corners using the FAST algorithm by [Rosten06]_.
 
-..note:: In Python API, types are given as ``cv2.FAST_FEATURE_DETECTOR_TYPE_5_8``, ``cv2.FAST_FEATURE_DETECTOR_TYPE_7_12`` and  ``cv2.FAST_FEATURE_DETECTOR_TYPE_9_16``. For corner detection, use ``cv2.FAST.detect()`` method.
+.. note:: In Python API, types are given as ``cv2.FAST_FEATURE_DETECTOR_TYPE_5_8``, ``cv2.FAST_FEATURE_DETECTOR_TYPE_7_12`` and  ``cv2.FAST_FEATURE_DETECTOR_TYPE_9_16``. For corner detection, use ``cv2.FAST.detect()`` method.
 
 
 .. [Rosten06] E. Rosten. Machine Learning for High-speed Corner Detection, 2006.
@@ -254,7 +254,17 @@ KAZE
 ----
 .. ocv:class:: KAZE : public Feature2D
 
-Class implementing the KAZE keypoint detector and descriptor extractor, described in [ABD12]_.
+Class implementing the KAZE keypoint detector and descriptor extractor, described in [ABD12]_. ::
+
+    class CV_EXPORTS_W KAZE : public Feature2D
+    {
+    public:
+        CV_WRAP KAZE();
+        CV_WRAP explicit KAZE(bool extended, bool upright, float threshold = 0.001f,
+                              int octaves = 4, int sublevels = 4, int diffusivity = DIFF_PM_G2);
+    };
+
+.. note:: AKAZE descriptor can only be used with KAZE or AKAZE keypoints
 
 .. [ABD12] KAZE Features. Pablo F. Alcantarilla, Adrien Bartoli and Andrew J. Davison. In European Conference on Computer Vision (ECCV), Fiorenze, Italy, October 2012.
 
@@ -262,12 +272,14 @@ KAZE::KAZE
 ----------
 The KAZE constructor
 
-.. ocv:function:: KAZE::KAZE(bool extended, bool upright)
+.. ocv:function:: KAZE::KAZE(bool extended, bool upright, float threshold, int octaves, int sublevels, int diffusivity)
 
     :param extended: Set to enable extraction of extended (128-byte) descriptor.
     :param upright: Set to enable use of upright descriptors (non rotation-invariant).
-
-
+    :param threshold: Detector response threshold to accept point
+    :param octaves: Maximum octave evolution of the image
+    :param sublevels: Default number of sublevels per scale level
+    :param diffusivity: Diffusivity type. DIFF_PM_G1, DIFF_PM_G2, DIFF_WEICKERT or DIFF_CHARBONNIER
 
 AKAZE
 -----
@@ -278,16 +290,12 @@ Class implementing the AKAZE keypoint detector and descriptor extractor, describ
     class CV_EXPORTS_W AKAZE : public Feature2D
     {
     public:
-        /// AKAZE Descriptor Type
-        enum DESCRIPTOR_TYPE {
-            DESCRIPTOR_KAZE_UPRIGHT = 2, ///< Upright descriptors, not invariant to rotation
-            DESCRIPTOR_KAZE = 3,
-            DESCRIPTOR_MLDB_UPRIGHT = 4, ///< Upright descriptors, not invariant to rotation
-            DESCRIPTOR_MLDB = 5
-        };
         CV_WRAP AKAZE();
-        explicit AKAZE(DESCRIPTOR_TYPE descriptor_type, int descriptor_size = 0, int descriptor_channels = 3);
+        CV_WRAP explicit AKAZE(int descriptor_type, int descriptor_size = 0, int descriptor_channels = 3,
+                               float threshold = 0.001f, int octaves = 4, int sublevels = 4, int diffusivity = DIFF_PM_G2);
     };
+
+.. note:: AKAZE descriptor can only be used with KAZE or AKAZE keypoints
 
 .. [ANB13] Fast Explicit Diffusion for Accelerated Features in Nonlinear Scale Spaces. Pablo F. Alcantarilla, Jesús Nuevo and Adrien Bartoli. In British Machine Vision Conference (BMVC), Bristol, UK, September 2013.
 
@@ -295,8 +303,12 @@ AKAZE::AKAZE
 ------------
 The AKAZE constructor
 
-.. ocv:function:: AKAZE::AKAZE(DESCRIPTOR_TYPE descriptor_type, int descriptor_size = 0, int descriptor_channels = 3)
+.. ocv:function:: AKAZE::AKAZE(int descriptor_type, int descriptor_size, int descriptor_channels, float threshold, int octaves, int sublevels, int diffusivity)
 
-    :param descriptor_type: Type of the extracted descriptor.
+    :param descriptor_type: Type of the extracted descriptor: DESCRIPTOR_KAZE, DESCRIPTOR_KAZE_UPRIGHT, DESCRIPTOR_MLDB or DESCRIPTOR_MLDB_UPRIGHT.
     :param descriptor_size: Size of the descriptor in bits. 0 -> Full size
-    :param descriptor_channels: Number of channels in the descriptor (1, 2, 3).
+    :param descriptor_channels: Number of channels in the descriptor (1, 2, 3)
+    :param threshold: Detector response threshold to accept point
+    :param octaves: Maximum octave evolution of the image
+    :param sublevels: Default number of sublevels per scale level
+    :param diffusivity: Diffusivity type. DIFF_PM_G1, DIFF_PM_G2, DIFF_WEICKERT or DIFF_CHARBONNIER

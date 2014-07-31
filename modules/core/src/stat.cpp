@@ -479,9 +479,10 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
         haveMask = _mask.kind() != _InputArray::NONE,
         haveSrc2 = _src2.kind() != _InputArray::NONE;
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
-            kercn = cn == 1 && !haveMask ? ocl::predictOptimalVectorWidth(_src) : 1,
+            kercn = cn == 1 && !haveMask ? ocl::predictOptimalVectorWidth(_src, _src2) : 1,
             mcn = std::max(cn, kercn);
     CV_Assert(!haveSrc2 || _src2.type() == type);
+    int convert_cn = haveSrc2 ? mcn : cn;
 
     if ( (!doubleSupport && depth == CV_64F) || cn > 4 )
         return false;
@@ -513,7 +514,7 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
                          haveMask && _mask.isContinuous() ? " -D HAVE_MASK_CONT" : "", kercn,
                          haveSrc2 ? " -D HAVE_SRC2" : "", calc2 ? " -D OP_CALC2" : "",
                          haveSrc2 && _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "",
-                         depth <= CV_32S && ddepth == CV_32S ? ocl::convertTypeStr(CV_8U, ddepth, mcn, cvt[1]) : "noconvert");
+                         depth <= CV_32S && ddepth == CV_32S ? ocl::convertTypeStr(CV_8U, ddepth, convert_cn, cvt[1]) : "noconvert");
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc, opts);
     if (k.empty())
@@ -918,8 +919,14 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
         int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
         bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
                 isContinuous = _src.isContinuous();
-        int groups = ocl::Device::getDefault().maxComputeUnits();
-        size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+        const ocl::Device &defDev = ocl::Device::getDefault();
+        int groups = defDev.maxComputeUnits();
+        if (defDev.isIntel())
+        {
+            static const int subSliceEUCount = 10;
+            groups = (groups / subSliceEUCount) * 2;
+        }
+        size_t wgs = defDev.maxWorkGroupSize();
 
         int ddepth = std::max(CV_32S, depth), sqddepth = std::max(CV_32F, depth),
                 dtype = CV_MAKE_TYPE(ddepth, cn),
@@ -1444,6 +1451,9 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
         ddepth = depth;
 
     CV_Assert(!haveSrc2 || _src2.type() == type);
+
+    if (depth == CV_32S || depth == CV_32F)
+        return false;
 
     if ((depth == CV_64F || ddepth == CV_64F) && !doubleSupport)
         return false;
@@ -2178,6 +2188,9 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
          (!doubleSupport && depth == CV_64F))
         return false;
 
+    if( depth == CV_32F && (!_mask.empty() || normType == NORM_INF) )
+        return false;
+
     UMat src = _src.getUMat();
 
     if (normType == NORM_INF)
@@ -2533,7 +2546,7 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArr
     normType &= ~NORM_RELATIVE;
     bool normsum = normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR;
 
-    if ( !(normType == NORM_INF || normsum) )
+    if ( !normsum || !_mask.empty() )
         return false;
 
     if (normsum)

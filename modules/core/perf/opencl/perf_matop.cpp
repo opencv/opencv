@@ -139,6 +139,7 @@ OCL_PERF_TEST_P(CopyToFixture, CopyToWithMaskUninit,
         dst.release();
         startTimer();
         src.copyTo(dst, mask);
+        cv::ocl::finish();
         stopTimer();
     }
 

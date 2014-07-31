@@ -348,7 +348,18 @@ static void InvSqrt_32f(const float* src, float* dst, int len)
 
 static void InvSqrt_64f(const double* src, double* dst, int len)
 {
-    for( int i = 0; i < len; i++ )
+    int i = 0;
+
+#if CV_SSE2
+    if (USE_SSE2)
+    {
+        __m128d v_1 = _mm_set1_pd(1.0);
+        for ( ; i <= len - 2; i += 2)
+            _mm_storeu_pd(dst + i, _mm_div_pd(v_1, _mm_sqrt_pd(_mm_loadu_pd(src + i))));
+    }
+#endif
+
+    for( ; i < len; i++ )
         dst[i] = 1/std::sqrt(src[i]);
 }
 
@@ -2543,12 +2554,33 @@ void patchNaNs( InputOutputArray _a, double _val )
     NAryMatIterator it(arrays, (uchar**)ptrs);
     size_t len = it.size*a.channels();
     Cv32suf val;
-    val.f = (float)_val;
+    float fval = (float)_val;
+    val.f = fval;
+
+#if CV_SSE2
+    __m128i v_mask1 = _mm_set1_epi32(0x7fffffff), v_mask2 = _mm_set1_epi32(0x7f800000);
+    __m128i v_val = _mm_set1_epi32(val.i);
+#endif
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         int* tptr = ptrs[0];
-        for( size_t j = 0; j < len; j++ )
+        size_t j = 0;
+
+#if CV_SSE2
+        if (USE_SSE2)
+        {
+            for ( ; j < len; j += 4)
+            {
+                __m128i v_src = _mm_loadu_si128((__m128i const *)(tptr + j));
+                __m128i v_cmp_mask = _mm_cmplt_epi32(v_mask2, _mm_and_si128(v_src, v_mask1));
+                __m128i v_res = _mm_or_si128(_mm_andnot_si128(v_cmp_mask, v_src), _mm_and_si128(v_cmp_mask, v_val));
+                _mm_storeu_si128((__m128i *)(tptr + j), v_res);
+            }
+        }
+#endif
+
+        for( ; j < len; j++ )
             if( (tptr[j] & 0x7fffffff) > 0x7f800000 )
                 tptr[j] = val.i;
     }

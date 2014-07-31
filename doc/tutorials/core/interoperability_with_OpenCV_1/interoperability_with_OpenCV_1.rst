@@ -77,7 +77,7 @@ Now that you have the basics done :download:`here's <../../../../samples/cpp/tut
    :language: cpp
    :linenos:
    :tab-width: 4
-   :lines: 1-9, 22-25, 27-44
+   :lines: 1-10, 23-26, 29-46
 
 Here you can observe that with the new structure we have no pointer problems, although it is possible to use the old functions and in the end just transform the result to a *Mat* object.
 
@@ -85,7 +85,7 @@ Here you can observe that with the new structure we have no pointer problems, al
    :language: cpp
    :linenos:
    :tab-width: 4
-   :lines: 46-51
+   :lines: 48-53
 
 Because, we want to mess around with the images luma component we first convert from the default RGB to the YUV color space and then split the result up into separate planes. Here the program splits: in the first example it processes each plane using one of the three major image scanning algorithms in OpenCV (C [] operator, iterator, individual element access). In a second variant we add to the image some Gaussian noise and then mix together the channels according to some formula.
 
@@ -95,7 +95,7 @@ The scanning version looks like:
    :language: cpp
    :linenos:
    :tab-width: 4
-   :lines: 55-75
+   :lines: 57-77
 
 Here you can observe that we may go through all the pixels of an image in three fashions: an iterator, a C pointer and an individual element access style. You can read a more in-depth description of these in the :ref:`howToScanImagesOpenCV` tutorial. Converting from the old function names is easy. Just remove the cv prefix and use the new *Mat* data structure. Here's an example of this by using the weighted addition function:
 
@@ -103,7 +103,7 @@ Here you can observe that we may go through all the pixels of an image in three 
    :language: cpp
    :linenos:
    :tab-width: 4
-   :lines: 79-112
+   :lines: 81-113
 
 As you may observe the *planes* variable is of type *Mat*. However, converting from *Mat* to *IplImage* is easy and made automatically with a simple assignment operator.
 
@@ -111,7 +111,7 @@ As you may observe the *planes* variable is of type *Mat*. However, converting f
    :language: cpp
    :linenos:
    :tab-width: 4
-   :lines: 115-127
+   :lines: 117-129
 
 The new *imshow* highgui function accepts both the *Mat* and *IplImage* data structures. Compile and run the program and if the first image below is your input you may get either the first or second as output:
 

@@ -646,5 +646,39 @@ void BestOf2NearestMatcher::collectGarbage()
     impl_->collectGarbage();
 }
 
+
+BestOf2NearestRangeMatcher::BestOf2NearestRangeMatcher(int range_width, bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2): BestOf2NearestMatcher(try_use_gpu, match_conf, num_matches_thresh1, num_matches_thresh2)
+{
+    range_width_ = range_width;
+}
+
+
+void BestOf2NearestRangeMatcher::operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
+                                  const UMat &mask)
+{
+    const int num_images = static_cast<int>(features.size());
+
+    CV_Assert(mask.empty() || (mask.type() == CV_8U && mask.cols == num_images && mask.rows));
+    Mat_<uchar> mask_(mask.getMat(ACCESS_READ));
+    if (mask_.empty())
+        mask_ = Mat::ones(num_images, num_images, CV_8U);
+
+    std::vector<std::pair<int,int> > near_pairs;
+    for (int i = 0; i < num_images - 1; ++i)
+        for (int j = i + 1; j < std::min(num_images, i + range_width_); ++j)
+            if (features[i].keypoints.size() > 0 && features[j].keypoints.size() > 0 && mask_(i, j))
+                near_pairs.push_back(std::make_pair(i, j));
+
+    pairwise_matches.resize(num_images * num_images);
+    MatchPairsBody body(*this, features, pairwise_matches, near_pairs);
+
+    if (is_thread_safe_)
+        parallel_for_(Range(0, static_cast<int>(near_pairs.size())), body);
+    else
+        body(Range(0, static_cast<int>(near_pairs.size())));
+    LOGLN_CHAT("");
+}
+
+
 } // namespace detail
 } // namespace cv

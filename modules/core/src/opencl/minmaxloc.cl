@@ -42,9 +42,13 @@
 #if wdepth <= 4
 #define MIN_ABS(a) convertFromU(abs(a))
 #define MIN_ABS2(a, b) convertFromU(abs_diff(a, b))
+#define MIN(a, b) min(a, b)
+#define MAX(a, b) max(a, b)
 #else
 #define MIN_ABS(a) fabs(a)
 #define MIN_ABS2(a, b) fabs(a - b)
+#define MIN(a, b) fmin(a, b)
+#define MAX(a, b) fmax(a, b)
 #endif
 
 #if kercn != 3
@@ -60,44 +64,41 @@
 #define srcTSIZE (int)sizeof(srcT1)
 #endif
 
-#ifdef NEED_MINLOC
-#define CALC_MINLOC(inc) minloc = id + inc
-#else
-#define CALC_MINLOC(inc)
-#endif
-
-#ifdef NEED_MAXLOC
-#define CALC_MAXLOC(inc) maxloc = id + inc
-#else
-#define CALC_MAXLOC(inc)
-#endif
-
 #ifdef NEED_MINVAL
+#ifdef NEED_MINLOC
 #define CALC_MIN(p, inc) \
     if (minval > temp.p) \
     { \
         minval = temp.p; \
-        CALC_MINLOC(inc); \
+        minloc = id + inc; \
     }
+#else
+#define CALC_MIN(p, inc) \
+    minval = MIN(minval, temp.p);
+#endif
 #else
 #define CALC_MIN(p, inc)
 #endif
 
 #ifdef NEED_MAXVAL
+#ifdef NEED_MAXLOC
 #define CALC_MAX(p, inc) \
     if (maxval < temp.p) \
     { \
         maxval = temp.p; \
-        CALC_MAXLOC(inc); \
+        maxloc = id + inc; \
     }
+#else
+#define CALC_MAX(p, inc) \
+    maxval = MAX(maxval, temp.p);
+#endif
 #else
 #define CALC_MAX(p, inc)
 #endif
 
 #ifdef OP_CALC2
 #define CALC_MAX2(p) \
-    if (maxval2 < temp.p) \
-        maxval2 = temp.p;
+    maxval2 = MAX(maxval2, temp.p);
 #else
 #define CALC_MAX2(p)
 #endif
@@ -208,25 +209,28 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 
 #if kercn == 1
 #ifdef NEED_MINVAL
+#if NEED_MINLOC
             if (minval > temp)
             {
                 minval = temp;
-#ifdef NEED_MINLOC
                 minloc = id;
-#endif
             }
+#else
+            minval = MIN(minval, temp);
+#endif
 #endif
 #ifdef NEED_MAXVAL
+#ifdef NEED_MAXLOC
             if (maxval < temp)
             {
                 maxval = temp;
-#ifdef NEED_MAXLOC
                 maxloc = id;
-#endif
             }
+#else
+            maxval = MAX(maxval, temp);
+#endif
 #ifdef OP_CALC2
-            if (maxval2 < temp2)
-                maxval2 = temp2;
+            maxval2 = MAX(maxval2, temp2);
 #endif
 #endif
 #elif kercn >= 2
@@ -282,32 +286,35 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
     {
         int lid3 = lid - WGS2_ALIGNED;
 #ifdef NEED_MINVAL
+#ifdef NEED_MINLOC
         if (localmem_min[lid3] >= minval)
         {
-#ifdef NEED_MINLOC
             if (localmem_min[lid3] == minval)
                 localmem_minloc[lid3] = min(localmem_minloc[lid3], minloc);
             else
                 localmem_minloc[lid3] = minloc,
-#endif
-                localmem_min[lid3] = minval;
+            localmem_min[lid3] = minval;
         }
+#else
+        localmem_min[lid3] = MIN(localmem_min[lid3], minval);
+#endif
 #endif
 #ifdef NEED_MAXVAL
+#ifdef NEED_MAXLOC
         if (localmem_max[lid3] <= maxval)
         {
-#ifdef NEED_MAXLOC
             if (localmem_max[lid3] == maxval)
                 localmem_maxloc[lid3] = min(localmem_maxloc[lid3], maxloc);
             else
                 localmem_maxloc[lid3] = maxloc,
-#endif
-                localmem_max[lid3] = maxval;
+            localmem_max[lid3] = maxval;
         }
+#else
+        localmem_max[lid3] = MAX(localmem_max[lid3], maxval);
+#endif
 #endif
 #ifdef OP_CALC2
-        if (localmem_max2[lid3] < maxval2)
-            localmem_max2[lid3] = maxval2;
+        localmem_max2[lid3] = MAX(localmem_max2[lid3], maxval2);
 #endif
     }
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -319,32 +326,35 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
             int lid2 = lsize + lid;
 
 #ifdef NEED_MINVAL
+#ifdef NEED_MAXLOC
             if (localmem_min[lid] >= localmem_min[lid2])
             {
-#ifdef NEED_MINLOC
                 if (localmem_min[lid] == localmem_min[lid2])
                     localmem_minloc[lid] = min(localmem_minloc[lid2], localmem_minloc[lid]);
                 else
                     localmem_minloc[lid] = localmem_minloc[lid2],
-#endif
-                    localmem_min[lid] = localmem_min[lid2];
+                localmem_min[lid] = localmem_min[lid2];
             }
+#else
+            localmem_min[lid] = MIN(localmem_min[lid], localmem_min[lid2]);
+#endif
 #endif
 #ifdef NEED_MAXVAL
+#ifdef NEED_MAXLOC
             if (localmem_max[lid] <= localmem_max[lid2])
             {
-#ifdef NEED_MAXLOC
                 if (localmem_max[lid] == localmem_max[lid2])
                     localmem_maxloc[lid] = min(localmem_maxloc[lid2], localmem_maxloc[lid]);
                 else
                     localmem_maxloc[lid] = localmem_maxloc[lid2],
-#endif
-                    localmem_max[lid] = localmem_max[lid2];
+                localmem_max[lid] = localmem_max[lid2];
             }
+#else
+            localmem_max[lid] = MAX(localmem_max[lid], localmem_max[lid2]);
+#endif
 #endif
 #ifdef OP_CALC2
-            if (localmem_max2[lid] < localmem_max2[lid2])
-                localmem_max2[lid] = localmem_max2[lid2];
+            localmem_max2[lid] = MAX(localmem_max2[lid], localmem_max2[lid2]);
 #endif
         }
         barrier(CLK_LOCAL_MEM_FENCE);
