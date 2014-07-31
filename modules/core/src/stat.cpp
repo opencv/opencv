@@ -2614,6 +2614,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
             && (normType == NORM_INF || normType == NORM_L1 ||
                 normType == NORM_L2 || normType == NORM_L2SQR) )
         {
+printf("norm2 IPP rel\n");
             IppiSize sz = { cols, rows };
             int type = src1.type();
             if( !mask.empty() )
@@ -2691,6 +2692,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
             }
         }
 #endif
+printf("norm2 rel fallback\n");
         return norm(_src1, _src2, normType & ~CV_RELATIVE, _mask)/(norm(_src2, normType, _mask) + DBL_EPSILON);
     }
 
@@ -2715,6 +2717,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 #endif
     )
     {
+printf("norm2 IPP non-rel\n");
         IppiSize sz = { cols, rows };
         if( !mask.empty() )
         {
@@ -2862,6 +2865,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     }
 #endif
 
+printf("norm2 plain\n");
     if( src1.isContinuous() && src2.isContinuous() && mask.empty() )
     {
         size_t len = src1.total()*src1.channels();
