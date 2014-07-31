@@ -1491,6 +1491,9 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     if (!doubleSupport && (depth2 == CV_64F || depth1 == CV_64F))
         return false;
 
+    if( (oclop == OCL_OP_MUL_SCALE || oclop == OCL_OP_DIV_SCALE) && (depth1 >= CV_32F || depth2 >= CV_32F || ddepth >= CV_32F) )
+        return false;
+
     int kercn = haveMask || haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
     int scalarcn = kercn == 3 ? 4 : kercn, rowsPerWI = d.isIntel() ? 4 : 1;
 
