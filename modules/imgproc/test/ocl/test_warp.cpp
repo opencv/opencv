@@ -267,7 +267,7 @@ PARAM_TEST_CASE(Remap, MatDepth, Channels, std::pair<MatType, MatType>, BorderTy
         Border map1Border = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(map1, map1_roi, dstROISize, map1Border, map1Type, -mapMaxValue, mapMaxValue);
 
-        Border map2Border = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        Border map2Border = randomBorder(0, useRoi ? MAX_VALUE + 1 : 0);
         if (map2Type != noType)
         {
             int mapMinValue = -mapMaxValue;

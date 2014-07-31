@@ -3,7 +3,7 @@ if(NOT PYTHON2LIBS_FOUND OR NOT PYTHON2_NUMPY_INCLUDE_DIRS)
 endif()
 
 set(the_description "The python2 bindings")
-ocv_add_module(python2 BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect OPTIONAL opencv_nonfree)
+set(MODULE_NAME python2)
 
 set(PYTHON_INCLUDE_PATH ${PYTHON2_INCLUDE_PATH})
 set(PYTHON_NUMPY_INCLUDE_PATH ${PYTHON2_NUMPY_INCLUDE_PATH})
@@ -16,6 +16,7 @@ set(PYTHON_VERSION_MINOR ${PYTHON2_VERSION_MINOR})
 
 include(../common.cmake)
 
+unset(MODULE_NAME)
 unset(PYTHON_INCLUDE_PATH)
 unset(PYTHON_NUMPY_INCLUDE_PATH)
 unset(PYTHON_EXECUTABLE)

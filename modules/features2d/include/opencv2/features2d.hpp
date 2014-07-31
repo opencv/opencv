@@ -895,6 +895,22 @@ protected:
     PixelTestFn test_fn_;
 };
 
+// KAZE/AKAZE diffusivity
+enum {
+    DIFF_PM_G1 = 0,
+    DIFF_PM_G2 = 1,
+    DIFF_WEICKERT = 2,
+    DIFF_CHARBONNIER = 3
+};
+
+// AKAZE descriptor type
+enum {
+    DESCRIPTOR_KAZE_UPRIGHT = 2, ///< Upright descriptors, not invariant to rotation
+    DESCRIPTOR_KAZE = 3,
+    DESCRIPTOR_MLDB_UPRIGHT = 4, ///< Upright descriptors, not invariant to rotation
+    DESCRIPTOR_MLDB = 5
+};
+
 /*!
 KAZE implementation
 */
@@ -902,7 +918,8 @@ class CV_EXPORTS_W KAZE : public Feature2D
 {
 public:
     CV_WRAP KAZE();
-    CV_WRAP explicit KAZE(bool extended, bool upright);
+    CV_WRAP explicit KAZE(bool extended, bool upright, float threshold = 0.001f,
+                          int octaves = 4, int sublevels = 4, int diffusivity = DIFF_PM_G2);
 
     virtual ~KAZE();
 
@@ -928,6 +945,10 @@ protected:
 
     CV_PROP bool extended;
     CV_PROP bool upright;
+    CV_PROP float threshold;
+    CV_PROP int octaves;
+    CV_PROP int sublevels;
+    CV_PROP int diffusivity;
 };
 
 /*!
@@ -936,16 +957,9 @@ AKAZE implementation
 class CV_EXPORTS_W AKAZE : public Feature2D
 {
 public:
-    /// AKAZE Descriptor Type
-    enum DESCRIPTOR_TYPE {
-        DESCRIPTOR_KAZE_UPRIGHT = 2, ///< Upright descriptors, not invariant to rotation
-        DESCRIPTOR_KAZE = 3,
-        DESCRIPTOR_MLDB_UPRIGHT = 4, ///< Upright descriptors, not invariant to rotation
-        DESCRIPTOR_MLDB = 5
-    };
-
     CV_WRAP AKAZE();
-    explicit AKAZE(DESCRIPTOR_TYPE descriptor_type, int descriptor_size = 0, int descriptor_channels = 3);
+    CV_WRAP explicit AKAZE(int descriptor_type, int descriptor_size = 0, int descriptor_channels = 3,
+                   float threshold = 0.001f, int octaves = 4, int sublevels = 4, int diffusivity = DIFF_PM_G2);
 
     virtual ~AKAZE();
 
@@ -973,7 +987,10 @@ protected:
     CV_PROP int descriptor;
     CV_PROP int descriptor_channels;
     CV_PROP int descriptor_size;
-
+    CV_PROP float threshold;
+    CV_PROP int octaves;
+    CV_PROP int sublevels;
+    CV_PROP int diffusivity;
 };
 /****************************************************************************************\
 *                                      Distance                                          *

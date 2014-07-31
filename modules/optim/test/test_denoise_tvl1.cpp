@@ -39,7 +39,6 @@
 //
 //M*/
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
 
 void make_noisy(const cv::Mat& img, cv::Mat& noisy, double sigma, double pepper_salt_ratio,cv::RNG& rng)
 {

@@ -207,7 +207,6 @@ namespace
     MemoryStack* MemoryPool::getFreeMemStack()
     {
         AutoLock lock(mtx_);
-
         if (!initialized_)
             initilizeImpl();
 
@@ -256,22 +255,31 @@ namespace
 
 namespace
 {
+    Mutex mtx_;
+    bool memory_pool_manager_initialized;
+
     class MemoryPoolManager
     {
     public:
         MemoryPoolManager();
         ~MemoryPoolManager();
+        void Init();
 
         MemoryPool* getPool(int deviceId);
 
     private:
         std::vector<MemoryPool> pools_;
-    };
+    } manager;
+
+    //MemoryPoolManager ;
 
     MemoryPoolManager::MemoryPoolManager()
     {
-        int deviceCount = getCudaEnabledDeviceCount();
+    }
 
+    void MemoryPoolManager::Init()
+    {
+        int deviceCount = getCudaEnabledDeviceCount();
         if (deviceCount > 0)
             pools_.resize(deviceCount);
     }
@@ -280,7 +288,7 @@ namespace
     {
         for (size_t i = 0; i < pools_.size(); ++i)
         {
-            cudaSetDevice(i);
+            cudaSetDevice(static_cast<int>(i));
             pools_[i].release();
         }
     }
@@ -293,7 +301,14 @@ namespace
 
     MemoryPool* memPool(int deviceId)
     {
-        static MemoryPoolManager manager;
+        {
+            AutoLock lock(mtx_);
+            if (!memory_pool_manager_initialized)
+            {
+                memory_pool_manager_initialized = true;
+                manager.Init();
+            }
+        }
         return manager.getPool(deviceId);
     }
 }
@@ -311,8 +326,10 @@ cv::cuda::StackAllocator::StackAllocator(cudaStream_t stream) : stream_(stream),
     if (enableMemoryPool)
     {
         const int deviceId = getDevice();
-        memStack_ = memPool(deviceId)->getFreeMemStack();
-
+        {
+            AutoLock lock(mtx_);
+            memStack_ = memPool(deviceId)->getFreeMemStack();
+        }
         DeviceInfo devInfo(deviceId);
         alignment_ = devInfo.textureAlignment();
     }

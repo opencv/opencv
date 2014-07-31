@@ -85,7 +85,8 @@ endif()
 set(the_description "The Matlab/Octave bindings")
 ocv_add_module(matlab   BINDINGS
                         OPTIONAL opencv_core
-                                 opencv_imgproc opencv_ml opencv_highgui
+                                 opencv_imgproc opencv_ml
+                                 opencv_imgcodecs opencv_videoio opencv_highgui
                                  opencv_objdetect opencv_flann opencv_features2d
                                  opencv_photo opencv_video opencv_videostab
                                  opencv_calib opencv_calib3d
