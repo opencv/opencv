@@ -209,7 +209,7 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 
 #if kercn == 1
 #ifdef NEED_MINVAL
-#if NEED_MINLOC
+#ifdef NEED_MINLOC
             if (minval > temp)
             {
                 minval = temp;
@@ -326,7 +326,7 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
             int lid2 = lsize + lid;
 
 #ifdef NEED_MINVAL
-#ifdef NEED_MAXLOC
+#ifdef NEED_MINLOC
             if (localmem_min[lid] >= localmem_min[lid2])
             {
                 if (localmem_min[lid] == localmem_min[lid2])
