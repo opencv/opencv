@@ -1452,7 +1452,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
 
     CV_Assert(!haveSrc2 || _src2.type() == type);
 
-    if (depth == CV_32S || depth == CV_32F)
+    if (depth == CV_32S || depth == CV_32F || !_mask.empty())
         return false;
 
     if ((depth == CV_64F || ddepth == CV_64F) && !doubleSupport)
@@ -2283,7 +2283,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 
                 setIppErrorStatus();
             }
-            typedef IppStatus (CV_STDCALL* ippiMaskNormFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
+            /*typedef IppStatus (CV_STDCALL* ippiMaskNormFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
             ippiMaskNormFuncC3 ippFuncC3 =
                 normType == NORM_INF ?
                 (type == CV_8UC3 ? (ippiMaskNormFuncC3)ippiNorm_Inf_8u_C3CMR :
@@ -2318,7 +2318,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
                     return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
                 }
                 setIppErrorStatus();
-            }
+            }*/
         }
         else
         {
@@ -2724,7 +2724,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 0) :
                 normType == NORM_L1 ?
                 (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8u_C1MR :
-                type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8s_C1MR :
+                //type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8s_C1MR :
                 type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_32f_C1MR :
                 0) :
@@ -2741,7 +2741,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                     return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
                 setIppErrorStatus();
             }
-            typedef IppStatus (CV_STDCALL* ippiMaskNormDiffFuncC3)(const void *, int, const void *, int, const void *, int, IppiSize, int, Ipp64f *);
+            /*typedef IppStatus (CV_STDCALL* ippiMaskNormDiffFuncC3)(const void *, int, const void *, int, const void *, int, IppiSize, int, Ipp64f *);
             ippiMaskNormDiffFuncC3 ippFuncC3 =
                 normType == NORM_INF ?
                 (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_8u_C3CMR :
@@ -2776,7 +2776,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                     return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
                 }
                 setIppErrorStatus();
-            }
+            }*/
         }
         else
         {
