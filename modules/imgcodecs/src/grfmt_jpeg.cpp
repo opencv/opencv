@@ -600,6 +600,9 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
         int quality = 95;
         int progressive = 0;
         int optimize = 0;
+        int rst_interval = 0;
+        int luma_quality = -1;
+        int chroma_quality = -1;
 
         for( size_t i = 0; i < params.size(); i += 2 )
         {
@@ -618,15 +621,64 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
             {
                 optimize = params[i+1];
             }
+
+            if( params[i] == CV_IMWRITE_JPEG_LUMA_QUALITY )
+            {
+                if (params[i+1] >= 0)
+                {
+                    luma_quality = MIN(MAX(params[i+1], 0), 100);
+
+                    quality = luma_quality;
+
+                    if (chroma_quality < 0)
+                    {
+                        chroma_quality = luma_quality;
+                    }
+                }
+            }
+
+            if( params[i] == CV_IMWRITE_JPEG_CHROMA_QUALITY )
+            {
+                if (params[i+1] >= 0)
+                {
+                    chroma_quality = MIN(MAX(params[i+1], 0), 100);
+                }
+            }
+
+            if( params[i] == CV_IMWRITE_JPEG_RST_INTERVAL )
+            {
+                rst_interval = params[i+1];
+                rst_interval = MIN(MAX(rst_interval, 0), 65535L);
+            }
         }
 
         jpeg_set_defaults( &cinfo );
+        cinfo.restart_interval = rst_interval;
+
         jpeg_set_quality( &cinfo, quality,
                           TRUE /* limit to baseline-JPEG values */ );
         if( progressive )
             jpeg_simple_progression( &cinfo );
         if( optimize )
             cinfo.optimize_coding = TRUE;
+
+#if JPEG_LIB_VERSION >= 70
+        if (luma_quality >= 0 && chroma_quality >= 0)
+        {
+            cinfo.q_scale_factor[0] = jpeg_quality_scaling(luma_quality);
+            cinfo.q_scale_factor[1] = jpeg_quality_scaling(chroma_quality);
+            if ( luma_quality != chroma_quality )
+            {
+                /* disable subsampling - ref. Libjpeg.txt */
+                cinfo.comp_info[0].v_samp_factor = 1;
+                cinfo.comp_info[0].h_samp_factor = 1;
+                cinfo.comp_info[1].v_samp_factor = 1;
+                cinfo.comp_info[1].h_samp_factor = 1;
+            }
+            jpeg_default_qtables( &cinfo, TRUE );
+        }
+#endif // #if JPEG_LIB_VERSION >= 70
+
         jpeg_start_compress( &cinfo, TRUE );
 
         if( channels > 1 )

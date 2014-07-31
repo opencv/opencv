@@ -116,7 +116,7 @@ public:
 /* Complete constructor */
 CV_EXPORTS_W Ptr<ShapeContextDistanceExtractor>
     createShapeContextDistanceExtractor(int nAngularBins=12, int nRadialBins=4,
-                                        float innerRadius=0.2, float outerRadius=2, int iterations=3,
+                                        float innerRadius=0.2f, float outerRadius=2, int iterations=3,
                                         const Ptr<HistogramCostExtractor> &comparer = createChiHistogramCostExtractor(),
                                         const Ptr<ShapeTransformer> &transformer = createThinPlateSplineShapeTransformer());
 
@@ -137,7 +137,7 @@ public:
 };
 
 /* Constructor */
-CV_EXPORTS_W Ptr<HausdorffDistanceExtractor> createHausdorffDistanceExtractor(int distanceFlag=cv::NORM_L2, float rankProp=0.6);
+CV_EXPORTS_W Ptr<HausdorffDistanceExtractor> createHausdorffDistanceExtractor(int distanceFlag=cv::NORM_L2, float rankProp=0.6f);
 
 } // cv
 #endif

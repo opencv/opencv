@@ -183,6 +183,20 @@ protected:
     Ptr<FeaturesMatcher> impl_;
 };
 
+class CV_EXPORTS BestOf2NearestRangeMatcher : public BestOf2NearestMatcher
+{
+public:
+    BestOf2NearestRangeMatcher(int range_width = 5, bool try_use_gpu = false, float match_conf = 0.3f,
+                            int num_matches_thresh1 = 6, int num_matches_thresh2 = 6);
+
+    void operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
+                     const cv::UMat &mask = cv::UMat());
+
+
+protected:
+    int range_width_;
+};
+
 } // namespace detail
 } // namespace cv
 

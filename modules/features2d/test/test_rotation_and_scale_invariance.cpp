@@ -652,8 +652,7 @@ TEST(Features2d_ScaleInvariance_Detector_BRISK, regression)
     test.safe_run();
 }
 
-// FIXIT #2807 Crash on Windows 7 x64 MSVS 2012, Linux Fedora 19 x64 with GCC 4.8.2, Linux Ubuntu 14.04 LTS x64 with GCC 4.8.2
-TEST(Features2d_ScaleInvariance_Detector_KAZE, DISABLED_regression)
+TEST(Features2d_ScaleInvariance_Detector_KAZE, regression)
 {
     DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.KAZE"),
         0.08f,
@@ -661,8 +660,7 @@ TEST(Features2d_ScaleInvariance_Detector_KAZE, DISABLED_regression)
     test.safe_run();
 }
 
-// FIXIT #2807 Crash on Windows 7 x64 MSVS 2012, Linux Fedora 19 x64 with GCC 4.8.2, Linux Ubuntu 14.04 LTS x64 with GCC 4.8.2
-TEST(Features2d_ScaleInvariance_Detector_AKAZE, DISABLED_regression)
+TEST(Features2d_ScaleInvariance_Detector_AKAZE, regression)
 {
     DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.AKAZE"),
         0.08f,

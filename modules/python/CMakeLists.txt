@@ -11,7 +11,25 @@ if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_NUMPY_INCLUDE_DIRS)
 endif()
 
 set(the_description "The python bindings")
-ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_imgcodecs opencv_videoio opencv_highgui opencv_calib3d opencv_photo opencv_objdetect OPTIONAL opencv_nonfree)
+
+set(candidate_deps "")
+foreach(mp ${OPENCV_MODULES_PATH} ${OPENCV_EXTRA_MODULES_PATH})
+    file(GLOB names "${mp}/*")
+    foreach(m IN LISTS names)
+        if(IS_DIRECTORY ${m})
+            get_filename_component(m ${m} NAME)
+            list(APPEND candidate_deps "opencv_${m}")
+        endif()
+    endforeach(m)
+endforeach(mp)
+
+# module blacklist
+ocv_list_filterout(candidate_deps "^opencv_cud(a|ev)")
+ocv_list_filterout(candidate_deps "^opencv_adas$")
+ocv_list_filterout(candidate_deps "^opencv_tracking$")
+
+
+ocv_add_module(python BINDINGS OPTIONAL ${candidate_deps})
 
 ocv_module_include_directories(
     "${PYTHON_INCLUDE_PATH}"
@@ -19,31 +37,17 @@ ocv_module_include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/src2"
     )
 
-set(opencv_hdrs
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core.hpp"
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp"
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/types.hpp"
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/persistence.hpp"
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/utility.hpp"
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/ocl.hpp"
-    "${OPENCV_MODULE_opencv_flann_LOCATION}/include/opencv2/flann/miniflann.hpp"
-    "${OPENCV_MODULE_opencv_imgproc_LOCATION}/include/opencv2/imgproc.hpp"
-    "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/background_segm.hpp"
-    "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/tracking.hpp"
-    "${OPENCV_MODULE_opencv_photo_LOCATION}/include/opencv2/photo.hpp"
-    "${OPENCV_MODULE_opencv_imgcodecs_LOCATION}/include/opencv2/imgcodecs.hpp"
-    "${OPENCV_MODULE_opencv_videoio_LOCATION}/include/opencv2/videoio.hpp"
-    "${OPENCV_MODULE_opencv_highgui_LOCATION}/include/opencv2/highgui.hpp"
-    "${OPENCV_MODULE_opencv_ml_LOCATION}/include/opencv2/ml.hpp"
-    "${OPENCV_MODULE_opencv_features2d_LOCATION}/include/opencv2/features2d.hpp"
-    "${OPENCV_MODULE_opencv_calib3d_LOCATION}/include/opencv2/calib3d.hpp"
-    "${OPENCV_MODULE_opencv_objdetect_LOCATION}/include/opencv2/objdetect.hpp"
-    )
 
-if(HAVE_opencv_nonfree)
-  list(APPEND opencv_hdrs     "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/features2d.hpp"
-                              "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree.hpp")
-endif()
+set(opencv_hdrs "")
+foreach(m IN LISTS OPENCV_MODULE_opencv_python_DEPS)
+    list(APPEND opencv_hdrs ${OPENCV_MODULE_${m}_HEADERS})
+endforeach(m)
+
+# header blacklist
+ocv_list_filterout(opencv_hdrs ".h$")
+ocv_list_filterout(opencv_hdrs "opencv2/core/cuda")
+ocv_list_filterout(opencv_hdrs "opencv2/objdetect/detection_based_tracker.hpp")
+ocv_list_filterout(opencv_hdrs "opencv2/optim.hpp")
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
@@ -53,11 +57,13 @@ set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_type_reg.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_const_reg.h")
 
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs}")
 add_custom_command(
    OUTPUT ${cv2_generated_hdrs}
-   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_hdrs}
+   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/headers.txt"
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/hdr_parser.py
+   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
    DEPENDS ${opencv_hdrs})
 
 add_library(${the_module} SHARED src2/cv2.cpp ${cv2_generated_hdrs})

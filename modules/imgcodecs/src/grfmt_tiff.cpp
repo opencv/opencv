@@ -158,7 +158,7 @@ bool TiffDecoder::readHeader()
                     m_type = CV_MAKETYPE(CV_8U, photometric > 1 ? wanted_channels : 1);
                     break;
                 case 16:
-                    m_type = CV_MAKETYPE(CV_16U, photometric > 1 ? 3 : 1);
+                    m_type = CV_MAKETYPE(CV_16U, photometric > 1 ? wanted_channels : 1);
                     break;
 
                 case 32:
@@ -325,6 +325,21 @@ bool  TiffDecoder::readData( Mat& img )
                                         icvCvt_RGB2BGR_16u_C3R(buffer16 + i*tile_width0*ncn, 0,
                                                                (ushort*)(data + img.step*i) + x*3, 0,
                                                                cvSize(tile_width,1) );
+                                    }
+                                    else if (ncn == 4)
+                                    {
+                                        if (wanted_channels == 4)
+                                        {
+                                            icvCvt_BGRA2RGBA_16u_C4R(buffer16 + i*tile_width0*ncn, 0,
+                                                (ushort*)(data + img.step*i) + x * 4, 0,
+                                                cvSize(tile_width, 1));
+                                        }
+                                        else
+                                        {
+                                            icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width0*ncn, 0,
+                                                (ushort*)(data + img.step*i) + x * 3, 0,
+                                                cvSize(tile_width, 1), 2);
+                                        }
                                     }
                                     else
                                     {
