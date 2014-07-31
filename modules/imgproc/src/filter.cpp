@@ -3471,7 +3471,8 @@ static bool ocl_sepColFilter2D(const UMat & buf, UMat & dst, const Mat & kernelY
     return k.run(2, globalsize, localsize, false);
 }
 
-const int optimizedSepFilterLocalSize = 16;
+const int optimizedSepFilterLocalWidth  = 16;
+const int optimizedSepFilterLocalHeight = 8;
 
 static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
                                        Mat row_kernel, Mat col_kernel,
@@ -3491,8 +3492,8 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
               borderType == BORDER_REFLECT_101))
         return false;
 
-    size_t lt2[2] = { optimizedSepFilterLocalSize, optimizedSepFilterLocalSize };
-    size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), lt2[1] * (1 + (size.height - 1) / lt2[1]) };
+    size_t lt2[2] = { optimizedSepFilterLocalWidth, optimizedSepFilterLocalHeight };
+    size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), lt2[1]};
 
     char cvt[2][40];
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
@@ -3584,8 +3585,8 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
     }
 
     CV_OCL_RUN_(kernelY.cols <= 21 && kernelX.cols <= 21 &&
-                imgSize.width > optimizedSepFilterLocalSize + anchor.x &&
-                imgSize.height > optimizedSepFilterLocalSize + anchor.y &&
+                imgSize.width > optimizedSepFilterLocalWidth + anchor.x &&
+                imgSize.height > optimizedSepFilterLocalHeight + anchor.y &&
                 (!(borderType & BORDER_ISOLATED) || _src.offset() == 0) &&
                 anchor == Point(kernelX.cols >> 1, kernelY.cols >> 1) &&
                 (d.isIntel() || (d.isAMD() && !d.hostUnifiedMemory())),

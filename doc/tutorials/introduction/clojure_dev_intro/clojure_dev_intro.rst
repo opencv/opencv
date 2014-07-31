@@ -656,7 +656,7 @@ classes we're going to use:
      Results: Stored in vars *1, *2, *3, an exception in *e
 
     user=> (import '[org.opencv.core Mat Size CvType]
-                   '[org.opencv.highgui Highgui]
+                   '[org.opencv.imgcodecs Imgcodecs]
                    '[org.opencv.imgproc Imgproc])
     org.opencv.imgproc.Imgproc
 

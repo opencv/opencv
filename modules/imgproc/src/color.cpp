@@ -2730,8 +2730,6 @@ struct mRGBA2RGBA
 
 #ifdef HAVE_OPENCL
 
-#define DIVUP(total, grain) (((total) + (grain) - 1) / (grain))
-
 static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 {
     bool ok = false;
@@ -2739,23 +2737,17 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     Size sz = src.size(), dstSz = sz;
     int scn = src.channels(), depth = src.depth(), bidx;
     int dims = 2, stripeSize = 1;
-    size_t globalsize[] = { src.cols, src.rows };
     ocl::Kernel k;
 
     if (depth != CV_8U && depth != CV_16U && depth != CV_32F)
         return false;
 
-    cv::String opts = format("-D depth=%d -D scn=%d ", depth, scn);
-
     ocl::Device dev = ocl::Device::getDefault();
-    int pxPerWIy = 1;
-    if (dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) &&
-            !(code == CV_BGR2Luv || code == CV_RGB2Luv || code == CV_LBGR2Luv || code == CV_LRGB2Luv ||
-              code == CV_Luv2BGR || code == CV_Luv2RGB || code == CV_Luv2LBGR || code == CV_Luv2LRGB))
-        pxPerWIy = 4;
+    int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
 
-    globalsize[1] = DIVUP(globalsize[1], pxPerWIy);
-    opts += format("-D PIX_PER_WI_Y=%d ", pxPerWIy);
+    size_t globalsize[] = { src.cols, (src.rows + pxPerWIy - 1) / pxPerWIy };
+    cv::String opts = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
+                             depth, scn, pxPerWIy);
 
     switch (code)
     {

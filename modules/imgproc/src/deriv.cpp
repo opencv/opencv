@@ -702,7 +702,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
 
 #ifdef HAVE_IPP
     if ((ksize == 3 || ksize == 5) && ((borderType & BORDER_ISOLATED) != 0 || !_src.isSubmatrix()) &&
-        ((stype == CV_8UC1 && ddepth == CV_16S) || (ddepth == CV_32F && stype == CV_32FC1)))
+        ((stype == CV_8UC1 && ddepth == CV_16S) || (ddepth == CV_32F && stype == CV_32FC1)) && !ocl::useOpenCL())
     {
         int iscale = saturate_cast<int>(scale), idelta = saturate_cast<int>(delta);
         bool floatScale = std::fabs(scale - iscale) > DBL_EPSILON, needScale = iscale != 1;

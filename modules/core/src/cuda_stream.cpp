@@ -190,10 +190,22 @@ void cv::cuda::Stream::enqueueHostCallback(StreamCallback callback, void* userDa
 #endif
 }
 
+namespace
+{
+    bool default_stream_is_initialized;
+    Mutex mtx;
+    Ptr<Stream> default_stream;
+}
+
 Stream& cv::cuda::Stream::Null()
 {
-    static Stream s(Ptr<Impl>(new Impl(0)));
-    return s;
+    AutoLock lock(mtx);
+    if (!default_stream_is_initialized)
+    {
+        default_stream = Ptr<Stream>(new Stream(Ptr<Impl>(new Impl(0))));
+        default_stream_is_initialized = true;
+    }
+    return *default_stream;
 }
 
 cv::cuda::Stream::operator bool_type() const

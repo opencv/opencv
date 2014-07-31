@@ -3,7 +3,7 @@ if(NOT PYTHON3LIBS_FOUND OR NOT PYTHON3_NUMPY_INCLUDE_DIRS)
 endif()
 
 set(the_description "The python3 bindings")
-ocv_add_module(python3 BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect OPTIONAL opencv_nonfree)
+set(MODULE_NAME python3)
 
 set(PYTHON_INCLUDE_PATH ${PYTHON3_INCLUDE_PATH})
 set(PYTHON_NUMPY_INCLUDE_PATH ${PYTHON3_NUMPY_INCLUDE_PATH})
@@ -16,6 +16,7 @@ set(PYTHON_VERSION_MINOR ${PYTHON3_VERSION_MINOR})
 
 include(../common.cmake)
 
+unset(MODULE_NAME)
 unset(PYTHON_INCLUDE_PATH)
 unset(PYTHON_NUMPY_INCLUDE_PATH)
 unset(PYTHON_EXECUTABLE)
