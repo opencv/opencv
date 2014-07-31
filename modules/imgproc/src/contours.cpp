@@ -1704,8 +1704,10 @@ void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
                    OutputArray _hierarchy, int mode, int method, Point offset )
 {
     // Sanity check: output must be of type vector<vector<Point>>
-    CV_Assert( _contours.kind() == _InputArray::STD_VECTOR_VECTOR &&
-               _contours.channels() == 2 && _contours.depth() == CV_32S );
+    CV_Assert((_contours.kind() == _InputArray::STD_VECTOR_VECTOR || _contours.kind() == _InputArray::STD_VECTOR_MAT ||
+                _contours.kind() == _InputArray::STD_VECTOR_UMAT));
+
+    CV_Assert(_contours.empty() || (_contours.channels() == 2 && _contours.depth() == CV_32S));
 
     Mat image = _image.getMat();
     MemStorage storage(cvCreateMemStorage());

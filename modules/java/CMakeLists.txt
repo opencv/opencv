@@ -6,7 +6,7 @@ if(IOS OR NOT PYTHON_EXECUTABLE OR NOT ANT_EXECUTABLE OR NOT (JNI_FOUND OR (ANDR
 endif()
 
 set(the_description "The java bindings")
-ocv_add_module(java BINDINGS opencv_core opencv_imgproc OPTIONAL opencv_objdetect opencv_features2d opencv_video opencv_highgui opencv_ml opencv_calib3d opencv_photo opencv_nonfree opencv_contrib)
+ocv_add_module(java BINDINGS opencv_core opencv_imgproc OPTIONAL opencv_objdetect opencv_features2d opencv_video opencv_imgcodecs opencv_videoio opencv_ml opencv_calib3d opencv_photo opencv_nonfree opencv_contrib)
 ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp")
 
 if(NOT ANDROID)

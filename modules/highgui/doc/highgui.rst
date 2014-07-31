@@ -9,12 +9,9 @@ It provides easy interface to:
 
 * Create and manipulate windows that can display images and "remember" their content (no need to handle repaint events from OS).
 * Add trackbars to the windows, handle simple mouse events as well as keyboard commands.
-* Read and write images to/from disk or memory.
-* Read video from camera or file and write video to a file.
 
 .. toctree::
     :maxdepth: 2
 
     user_interface
-    reading_and_writing_images_and_video
     qt_new_functions

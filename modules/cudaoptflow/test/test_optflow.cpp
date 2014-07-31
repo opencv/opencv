@@ -381,7 +381,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, OpticalFlowDual_TVL1, testing::Combine(
     ALL_DEVICES,
     WHOLE_SUBMAT));
 
-
 //////////////////////////////////////////////////////
 // FastOpticalFlowBM
 
