@@ -2724,7 +2724,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 0) :
                 normType == NORM_L1 ?
                 (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8u_C1MR :
-                type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8s_C1MR :
+                //type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8s_C1MR :
                 type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_32f_C1MR :
                 0) :
