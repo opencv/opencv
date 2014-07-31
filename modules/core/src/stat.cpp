@@ -2463,7 +2463,7 @@ struct BatchDistInvoker : public ParallelLoopBody
 }
 
 void cv::batchDistance( InputArray _src1, InputArray _src2,
-                        OutputArray _dist, int dtype, OutputArray _nidx,
+                        InputOutputArray _dist, int dtype, InputOutputArray _nidx,
                         int normType, int K, InputArray _mask,
                         int update, bool crosscheck )
 {
@@ -2478,8 +2478,6 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
         dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ? CV_32S : CV_32F;
     }
     CV_Assert( (type == CV_8U && dtype == CV_32S) || dtype == CV_32F);
-
-    K = std::min(K, src2.rows);
 
     _dist.create(src1.rows, (K > 0 ? K : src2.rows), dtype);
     Mat dist = _dist.getMat(), nidx;
