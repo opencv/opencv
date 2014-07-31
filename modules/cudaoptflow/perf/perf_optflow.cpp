@@ -41,7 +41,6 @@
 //M*/
 
 #include "perf_precomp.hpp"
-#include "opencv2/legacy.hpp"
 
 using namespace std;
 using namespace testing;
@@ -55,7 +54,7 @@ typedef pair<string, string> pair_string;
 DEF_PARAM_TEST_1(ImagePair, pair_string);
 
 PERF_TEST_P(ImagePair, InterpolateFrames,
-            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -74,7 +73,7 @@ PERF_TEST_P(ImagePair, InterpolateFrames,
         cv::cuda::GpuMat d_bu, d_bv;
 
         cv::cuda::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                        10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
+            10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
         d_flow(d_frame0, d_frame1, d_fu, d_fv);
         d_flow(d_frame1, d_frame0, d_bu, d_bv);
@@ -96,7 +95,7 @@ PERF_TEST_P(ImagePair, InterpolateFrames,
 // CreateOpticalFlowNeedleMap
 
 PERF_TEST_P(ImagePair, CreateOpticalFlowNeedleMap,
-            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -115,7 +114,7 @@ PERF_TEST_P(ImagePair, CreateOpticalFlowNeedleMap,
         cv::cuda::GpuMat v;
 
         cv::cuda::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                        10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
+            10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
         d_flow(d_frame0, d_frame1, u, v);
 
@@ -136,7 +135,7 @@ PERF_TEST_P(ImagePair, CreateOpticalFlowNeedleMap,
 // BroxOpticalFlow
 
 PERF_TEST_P(ImagePair, BroxOpticalFlow,
-            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     declare.time(300);
 
@@ -157,7 +156,7 @@ PERF_TEST_P(ImagePair, BroxOpticalFlow,
         cv::cuda::GpuMat v;
 
         cv::cuda::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                        10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
+            10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
         TEST_CYCLE() d_flow(d_frame0, d_frame1, u, v);
 
@@ -176,12 +175,12 @@ PERF_TEST_P(ImagePair, BroxOpticalFlow,
 DEF_PARAM_TEST(ImagePair_Gray_NPts_WinSz_Levels_Iters, pair_string, bool, int, int, int, int);
 
 PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, PyrLKOpticalFlowSparse,
-            Combine(Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")),
-                    Bool(),
-                    Values(8000),
-                    Values(21),
-                    Values(1, 3),
-                    Values(1, 30)))
+    Combine(Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")),
+    Bool(),
+    Values(8000),
+    Values(21),
+    Values(1, 3),
+    Values(1, 30)))
 {
     declare.time(20.0);
 
@@ -234,8 +233,8 @@ PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, PyrLKOpticalFlowSparse,
         TEST_CYCLE()
         {
             cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, cv::noArray(),
-                                     cv::Size(winSize, winSize), levels - 1,
-                                     cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, iters, 0.01));
+                cv::Size(winSize, winSize), levels - 1,
+                cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, iters, 0.01));
         }
 
         CPU_SANITY_CHECK(nextPts);
@@ -249,10 +248,10 @@ PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, PyrLKOpticalFlowSparse,
 DEF_PARAM_TEST(ImagePair_WinSz_Levels_Iters, pair_string, int, int, int);
 
 PERF_TEST_P(ImagePair_WinSz_Levels_Iters, PyrLKOpticalFlowDense,
-            Combine(Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")),
-                    Values(3, 5, 7, 9, 13, 17, 21),
-                    Values(1, 3),
-                    Values(1, 10)))
+    Combine(Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")),
+    Values(3, 5, 7, 9, 13, 17, 21),
+    Values(1, 3),
+    Values(1, 10)))
 {
     declare.time(30);
 
@@ -294,7 +293,7 @@ PERF_TEST_P(ImagePair_WinSz_Levels_Iters, PyrLKOpticalFlowDense,
 // FarnebackOpticalFlow
 
 PERF_TEST_P(ImagePair, FarnebackOpticalFlow,
-            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     declare.time(10);
 
@@ -347,7 +346,7 @@ PERF_TEST_P(ImagePair, FarnebackOpticalFlow,
 // OpticalFlowDual_TVL1
 
 PERF_TEST_P(ImagePair, OpticalFlowDual_TVL1,
-            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     declare.time(20);
 
@@ -389,26 +388,8 @@ PERF_TEST_P(ImagePair, OpticalFlowDual_TVL1,
 //////////////////////////////////////////////////////
 // OpticalFlowBM
 
-void calcOpticalFlowBM(const cv::Mat& prev, const cv::Mat& curr,
-                       cv::Size bSize, cv::Size shiftSize, cv::Size maxRange, int usePrevious,
-                       cv::Mat& velx, cv::Mat& vely)
-{
-    cv::Size sz((curr.cols - bSize.width + shiftSize.width)/shiftSize.width, (curr.rows - bSize.height + shiftSize.height)/shiftSize.height);
-
-    velx.create(sz, CV_32FC1);
-    vely.create(sz, CV_32FC1);
-
-    CvMat cvprev = prev;
-    CvMat cvcurr = curr;
-
-    CvMat cvvelx = velx;
-    CvMat cvvely = vely;
-
-    cvCalcOpticalFlowBM(&cvprev, &cvcurr, bSize, shiftSize, maxRange, usePrevious, &cvvelx, &cvvely);
-}
-
 PERF_TEST_P(ImagePair, OpticalFlowBM,
-            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     declare.time(400);
 
@@ -435,17 +416,12 @@ PERF_TEST_P(ImagePair, OpticalFlowBM,
     }
     else
     {
-        cv::Mat u, v;
-
-        TEST_CYCLE() calcOpticalFlowBM(frame0, frame1, block_size, shift_size, max_range, false, u, v);
-
-        CPU_SANITY_CHECK(u);
-        CPU_SANITY_CHECK(v);
+        FAIL_NO_CPU();
     }
 }
 
 PERF_TEST_P(ImagePair, DISABLED_FastOpticalFlowBM,
-            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     declare.time(400);
 
