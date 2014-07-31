@@ -70,7 +70,7 @@ The application starts up extracting the ORB features and descriptors from the i
 
 The aim of this application is estimate in real time the object pose given its 3D textured model. 
 
-The application starts up loading the 3D textured model in YAML file format with the same structure explained in the model registration program. From the scene the ORB features and descriptors are detected and extracted. Then, is used :features2d:`FlannBasedMatcher <flannbasedmatcher>` with :flann:`LshIndexParams <flann-index-t-index>` to do the matching between the scene descriptors and the model descriptors. Using the found matches along with :calib3d:`solvePnPRansac() <solvepnpransac>` function the :math:`R` and :math:`t` of the camera are computed. Finally, a :video:`Linear Kalman Filter <kalmanfilter>` is applied in order to reject bad poses.
+The application starts up loading the 3D textured model in YAML file format with the same structure explained in the model registration program. From the scene the ORB features and descriptors are detected and extracted. Then, is used :flann_based_matcher:`FlannBasedMatcher<>` with :flann:`LshIndexParams <flann-index-t-index>` to do the matching between the scene descriptors and the model descriptors. Using the found matches along with :calib3d:`solvePnPRansac <solvepnpransac>` function the :math:`R` and :math:`t` of the camera are computed. Finally, a :video:`KalmanFilter<kalmanfilter>` is applied in order to reject bad poses.
 
 
 Explanation
@@ -174,7 +174,7 @@ Then the algorithm is computed frame per frame:
 
 **3. Extract ORB features and descriptors from the scene**
 
-The next step is to detect the scene features and extract it descriptors. For this task I implemented a *class* **RobustMatcher** which has a function for keypoints detection and features extraction. You can find it in :file:`samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/src/RobusMatcher.cpp`. In your *RobusMatch* object you can use any of the 2D features detectors of OpenCV. In this case I used ORB features because is based on FAST to detect the keypoints and BRIEF to extract the descriptors which means that is fast and robust to rotations. You can find more detailed information about ORB :features2d:`here <orb>` in the documentation. 
+The next step is to detect the scene features and extract it descriptors. For this task I implemented a *class* **RobustMatcher** which has a function for keypoints detection and features extraction. You can find it in :file:`samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/src/RobusMatcher.cpp`. In your *RobusMatch* object you can use any of the 2D features detectors of OpenCV. In this case I used :feature_detection_and_description:`ORB<orb>` features because is based on :feature_detection_and_description:`FAST<fast>` to detect the keypoints and :descriptor_extractor:`BRIEF<briefdescriptorextractor>` to extract the descriptors which means that is fast and robust to rotations. You can find more detailed information about *ORB* in the documentation. 
 
 The following code is how to instantiate and set the features detector and the descriptors extractor:
 
@@ -195,7 +195,7 @@ The features and descriptors will be computed by the *RobustMatcher* inside the 
 
 It is the first step in our detection algorithm. The main idea is to match the scene descriptors with our model descriptors in order to know the 3D coordinates of the found features into the current scene.
 
-Firstly, we have to set which matcher we want to use. In this case is used *FlannBased* matcher which in terms of computational cost is faster than the *BruteForce* matcher as we increase the trained collectction of features. Then, for FlannBased matcher the index created is *Multi-Probe LSH: Efficient Indexing for High-Dimensional Similarity Search* due to *ORB* descriptors are binary. 
+Firstly, we have to set which matcher we want to use. In this case is used :flann_based_matcher:`FlannBasedMatcher<>` matcher which in terms of computational cost is faster than the :brute_force_matcher:`BruteForceMatcher<bfmatcher>` matcher as we increase the trained collectction of features. Then, for FlannBased matcher the index created is *Multi-Probe LSH: Efficient Indexing for High-Dimensional Similarity Search* due to *ORB* descriptors are binary. 
 
 You can tune the *LSH* and search parameters to improve the matching efficiency:
 
@@ -271,7 +271,7 @@ The following code corresponds to the *robustMatch()* function which belongs to 
 
 	}
 
-After the matches filtering we have to subtract the 2D and 3D correspondences from the found scene keypoints and our 3D model using the obtained *DMatches* vector. For more information about :core:`DMatch <dmatch>` check the documentation.
+After the matches filtering we have to subtract the 2D and 3D correspondences from the found scene keypoints and our 3D model using the obtained *DMatches* vector. For more information about :basicstructures:`DMatch <dmatch>` check the documentation.
 
    .. code-block:: cpp
 
@@ -291,7 +291,7 @@ After the matches filtering we have to subtract the 2D and 3D correspondences fr
 
 **5. Pose estimation using PnP + Ransac**
 
-Once with the 2D and 3D correspondences we have to apply the PnP algorithm using :calib3d:`solvePnPRansac <solvepnpransac>` function in order to estimate the camera pose. The reason why we have to use :calib3d:`solvePnPRansac <solvepnpransac>` instead of :calib3d:`solvePnP <solvepnp>` is due to the fact that after the matching not all the found correspondences are correct and, as like as not, there are false correspondences or also called *outliers*. The `Random Sample Consensus <http://en.wikipedia.org/wiki/RANSAC>`_ or *Ransac* is a non-deterministic iterative method which estimate parameters of a mathematical model from observed data producing an aproximate result as the number of iterations increase. After appyling *Ransac* all the *outliers* will be eliminated to then estimate the camera pose with a certain probability to obtain a good solution.
+Once with the 2D and 3D correspondences we have to apply a PnP algorithm in order to estimate the camera pose. The reason why we have to use :calib3d:`solvePnPRansac <solvepnpransac>` instead of :calib3d:`solvePnP <solvepnp>` is due to the fact that after the matching not all the found correspondences are correct and, as like as not, there are false correspondences or also called *outliers*. The `Random Sample Consensus <http://en.wikipedia.org/wiki/RANSAC>`_ or *Ransac* is a non-deterministic iterative method which estimate parameters of a mathematical model from observed data producing an aproximate result as the number of iterations increase. After appyling *Ransac* all the *outliers* will be eliminated to then estimate the camera pose with a certain probability to obtain a good solution.
 
 For the camera pose estimation I have implemented a *class* **PnPProblem**. This *class* has 4 atributes: a given calibration matrix, the rotation matrix, the translation matrix and the rotation-translation matrix. The intrinsic calibration parameters of the camera which you are using to estimate the pose are necessary. In order to obtain the parameters you can check :ref:`CameraCalibrationSquareChessBoardTutorial` and :ref:`cameraCalibrationOpenCV` tutorials. 
 
@@ -334,9 +334,9 @@ The following code is how the *PnPProblem class* initialises its atributes:
 
 	}
 
-OpenCV provides four PnP methods: ITERATIVE, EPNP, P3P and DLS. Depending on the application that we want, the estimation method will be different. In the case that we want a real time time application the more suitable methods are EPNP and P3P due to that are faster than ITERATIVE and DLS at finding an optimal solution. Otherwise, EPNP and P3P are not especially robust in front of planar surfaces and sometimes the pose estimation seems to have like a mirror effect. Therefore, in this this tutorial is used ITERATIVE method due to the object to be detected has planar surfaces.
+OpenCV provides four PnP methods: ITERATIVE, EPNP, P3P and DLS. Depending on the application type, the estimation method will be different. In the case that we want to make a real time application, the more suitable methods are EPNP and P3P due to that are faster than ITERATIVE and DLS at finding an optimal solution. However, EPNP and P3P are not especially robust in front of planar surfaces and sometimes the pose estimation seems to have a mirror effect. Therefore, in this this tutorial is used ITERATIVE method due to the object to be detected has planar surfaces.
 
-The OpenCV Ransac implementation wants you to provide three parameters: the maximum number of iterations until stop the algorithm, the maximum allowed distance between the observed and computed point projections to consider it an inlier and the confidence to obtain a result. You can tune these paramaters in order to improve your algorithm performance. Increasing the number of iterations you will have a more accurate solution, but will take more time to find a solution. Increasing the reprojection error will reduce the computation time, but your solution will be unaccurate. Decreasing the confidence your arlgorithm will be faster, but the obtained solution will also be unaccurate.
+The OpenCV Ransac implementation wants you to provide three parameters: the maximum number of iterations until stop the algorithm, the maximum allowed distance between the observed and computed point projections to consider it an inlier and the confidence to obtain a good result. You can tune these paramaters in order to improve your algorithm performance. Increasing the number of iterations you will have a more accurate solution, but will take more time to find a solution. Increasing the reprojection error will reduce the computation time, but your solution will be unaccurate. Decreasing the confidence your arlgorithm will be faster, but the obtained solution will be unaccurate.
 
 The following parameters work for this application:
   
@@ -459,9 +459,9 @@ Secondly, we have to define the number of measuremnts which will be 6: from :mat
 	initKalmanFilter(KF, nStates, nMeasurements, nInputs, dt);    // init function
 
 
-The following code corresponds to the Kalman Filter initialisation. Firstly, is set the process noise, the measurement noise and the error covariance matrix. Secondly, are set the transition matrix which is the dynamic model and finally the measurement matrix, which is the measurement model. 
+The following code corresponds to the *Kalman Filter* initialisation. Firstly, is set the process noise, the measurement noise and the error covariance matrix. Secondly, are set the transition matrix which is the dynamic model and finally the measurement matrix, which is the measurement model. 
 
-You can tune the process and measurement noise to improve the Kalman Filter performance. As the measurement noise is reduced the faster will converge doing the algorithm sensitive in front of bad measurements.
+You can tune the process and measurement noise to improve the *Kalman Filter* performance. As the measurement noise is reduced the faster will converge doing the algorithm sensitive in front of bad measurements.
 
    .. code-block:: cpp
 
@@ -540,7 +540,7 @@ You can tune the process and measurement noise to improve the Kalman Filter perf
 
 	}
 
-In the following code is the 5th step of the main algorithm. When the obtained number of inliers after *Ransac* is over the threshold, the measurements matrix is filled and then the Kalman Filter is updated:
+In the following code is the 5th step of the main algorithm. When the obtained number of inliers after *Ransac* is over the threshold, the measurements matrix is filled and then the *Kalman Filter* is updated:
 
    .. code-block:: cpp
 
@@ -676,13 +676,10 @@ The following videos are the results of pose estimation in real time using the e
 
 You can watch the real time pose estimation on the `YouTube here <https://www.youtube.com/watch?v=msFFuHsiUns>`_.
 
-
 .. raw:: html
-
-   <div align="center">
-   <iframe></iframe>
-   </div>
 
    <div align="center">
    <iframe title=" Pose estimation for the Google Summer Code 2014 using OpenCV libraries." width="560" height="349" src="http://www.youtube.com/embed/msFFuHsiUns?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
    </div>
+
+
