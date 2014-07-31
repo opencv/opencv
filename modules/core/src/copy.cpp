@@ -616,9 +616,9 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 {
     CV_Assert(flipCode >= -1 && flipCode <= 1);
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
-            flipType, kercn = std::min(ocl::predictOptimalVectorWidth(_src, _dst), 4);;
+            flipType, kercn = std::min(ocl::predictOptimalVectorWidth(_src, _dst), 4);
 
-    if (cn > 4 || cn == 3)
+    if (cn > 4)
         return false;
 
     const char * kernelName;
@@ -631,7 +631,7 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 
     ocl::Device dev = ocl::Device::getDefault();
     int pxPerWIy = (dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU)) ? 4 : 1;
-    kercn = std::max(kercn, cn);
+    kercn = (cn!=3 || flipType == FLIP_ROWS) ? std::max(kercn, cn) : cn;
 
     ocl::Kernel k(kernelName, ocl::core::flip_oclsrc,
         format( "-D T=%s -D T1=%s -D cn=%d -D PIX_PER_WI_Y=%d -D kercn=%d",
