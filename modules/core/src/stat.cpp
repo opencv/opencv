@@ -2703,15 +2703,19 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
               ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+    int type = src1.type();
     size_t total_size = src1.total();
     int rows = src1.size[0], cols = (int)(total_size/rows);
     if( (src1.dims == 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous()))
         && cols > 0 && (size_t)rows*cols == total_size
         && (normType == NORM_INF || normType == NORM_L1 ||
-            normType == NORM_L2 || normType == NORM_L2SQR) )
+            normType == NORM_L2 || normType == NORM_L2SQR)
+#ifdef __APPLE__
+        && (_mask.empty() || type != CV_16SC3)
+#endif
+    )
     {
         IppiSize sz = { cols, rows };
-        int type = src1.type();
         if( !mask.empty() )
         {
             typedef IppStatus (CV_STDCALL* ippiMaskNormDiffFuncC1)(const void *, int, const void *, int, const void *, int, IppiSize, Ipp64f *);
