@@ -103,13 +103,14 @@ macro(ios_include_3party_libs)
       list(APPEND objlist "\"${objpath3}\"")
     endforeach() # (srcname ${sources})
   endforeach()
+  ocv_list_filterout(objlist jmemansi) # <<= dirty fix
 endmacro()
 
-if(IOS AND WITH_PNG)
+if( (IOS OR APPLE) AND WITH_PNG)
   ios_include_3party_libs(zlib libpng)
 endif()
 
-if(IOS AND WITH_JPEG)
+if( (IOS OR APPLE) AND WITH_JPEG)
   ios_include_3party_libs(libjpeg)
 endif()
 

@@ -86,9 +86,11 @@ Detects objects of different sizes in the input image. The detected objects are 
 
 .. ocv:function:: void CascadeClassifier::detectMultiScale( InputArray image, vector<Rect>& objects, double scaleFactor=1.1, int minNeighbors=3, int flags=0, Size minSize=Size(), Size maxSize=Size())
 .. ocv:function:: void CascadeClassifier::detectMultiScale( InputArray image, vector<Rect>& objects, vector<int>& numDetections, double scaleFactor=1.1, int minNeighbors=3, int flags=0, Size minSize=Size(), Size maxSize=Size())
+.. ocv:function:: void CascadeClassifier::detectMultiScale( InputArray image, std::vector<Rect>& objects, std::vector<int>& rejectLevels, std::vector<double>& levelWeights, double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0, Size minSize = Size(), Size maxSize = Size(), bool outputRejectLevels = false )
 
 .. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale(image[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize]]]]]) -> objects
-.. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale(image[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize[, outputRejectLevels]]]]]]) -> objects, rejectLevels, levelWeights
+.. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale2(image[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize]]]]]) -> objects, numDetections
+.. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale3(image[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize[, outputRejectLevels]]]]]]) -> objects, rejectLevels, levelWeights
 
 .. ocv:cfunction:: CvSeq* cvHaarDetectObjects( const CvArr* image, CvHaarClassifierCascade* cascade, CvMemStorage* storage, double scale_factor=1.1, int min_neighbors=3, int flags=0, CvSize min_size=cvSize(0,0), CvSize max_size=cvSize(0,0) )
 
@@ -109,6 +111,8 @@ Detects objects of different sizes in the input image. The detected objects are 
     :param minSize: Minimum possible object size. Objects smaller than that are ignored.
 
     :param maxSize: Maximum possible object size. Objects larger than that are ignored.
+
+    :param outputRejectLevels: Boolean. If ``True``, it returns the rejectLevels and levelWeights. Default value is ``False``.
 
 The function is parallelized with the TBB library.
 

@@ -861,54 +861,48 @@ void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImag
     }
 
     int nchannels = CV_MAT_CN(frameType);
-    CV_Assert( nchannels == 3 );
-    Mat meanBackground(frameSize, CV_8UC3, Scalar::all(0));
-
+    CV_Assert(nchannels == 1 || nchannels == 3);
+    Mat meanBackground(frameSize, CV_MAKETYPE(CV_8U, nchannels), Scalar::all(0));
     int firstGaussianIdx = 0;
     const GMM* gmm = (GMM*)bgmodel.data;
-    const Vec3f* mean = reinterpret_cast<const Vec3f*>(gmm + frameSize.width*frameSize.height*nmixtures);
+    const float* mean = reinterpret_cast<const float*>(gmm + frameSize.width*frameSize.height*nmixtures);
+    std::vector<float> meanVal(nchannels, 0.f);
     for(int row=0; row<meanBackground.rows; row++)
     {
         for(int col=0; col<meanBackground.cols; col++)
         {
             int nmodes = bgmodelUsedModes.at<uchar>(row, col);
-            Vec3f meanVal;
             float totalWeight = 0.f;
             for(int gaussianIdx = firstGaussianIdx; gaussianIdx < firstGaussianIdx + nmodes; gaussianIdx++)
             {
                 GMM gaussian = gmm[gaussianIdx];
-                meanVal += gaussian.weight * mean[gaussianIdx];
+                size_t meanPosition = gaussianIdx*nchannels;
+                for(int chn = 0; chn < nchannels; chn++)
+                {
+                    meanVal[chn] += gaussian.weight * mean[meanPosition + chn];
+                }
                 totalWeight += gaussian.weight;
 
                 if(totalWeight > backgroundRatio)
                     break;
             }
-
-            meanVal *= (1.f / totalWeight);
-            meanBackground.at<Vec3b>(row, col) = Vec3b(meanVal);
+            float invWeight = 1.f/totalWeight;
+            switch(nchannels)
+            {
+            case 1:
+                meanBackground.at<uchar>(row, col) = (uchar)(meanVal[0] * invWeight);
+                meanVal[0] = 0.f;
+                break;
+            case 3:
+                Vec3f& meanVec = *reinterpret_cast<Vec3f*>(&meanVal[0]);
+                meanBackground.at<Vec3b>(row, col) = Vec3b(meanVec * invWeight);
+                meanVec = 0.f;
+                break;
+            }
             firstGaussianIdx += nmixtures;
         }
     }
-
-    switch(CV_MAT_CN(frameType))
-    {
-    case 1:
-    {
-        std::vector<Mat> channels;
-        split(meanBackground, channels);
-        channels[0].copyTo(backgroundImage);
-        break;
-    }
-
-    case 3:
-    {
-        meanBackground.copyTo(backgroundImage);
-        break;
-    }
-
-    default:
-        CV_Error(Error::StsUnsupportedFormat, "");
-    }
+    meanBackground.copyTo(backgroundImage);
 }
 
 Ptr<BackgroundSubtractorMOG2> createBackgroundSubtractorMOG2(int _history, double _varThreshold,

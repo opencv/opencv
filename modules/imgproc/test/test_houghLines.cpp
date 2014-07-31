@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2014, Itseez, Inc, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -45,107 +46,176 @@
 using namespace cv;
 using namespace std;
 
-class CV_HoughLinesTest : public cvtest::BaseTest
+template<typename T>
+struct SimilarWith
+{
+    T value;
+    float theta_eps;
+    float rho_eps;
+    SimilarWith<T>(T val, float e, float r_e): value(val), theta_eps(e), rho_eps(r_e) { };
+    bool operator()(T other);
+};
+
+template<>
+bool SimilarWith<Vec2f>::operator()(Vec2f other)
+{
+    return abs(other[0] - value[0]) < rho_eps && abs(other[1] - value[1]) < theta_eps;
+}
+
+template<>
+bool SimilarWith<Vec4i>::operator()(Vec4i other)
+{
+    return norm(value, other) < theta_eps;
+}
+
+template <typename T>
+int countMatIntersection(Mat expect, Mat actual, float eps, float rho_eps)
+{
+    int count = 0;
+    if (!expect.empty() && !actual.empty())
+    {
+        for (MatIterator_<T> it=expect.begin<T>(); it!=expect.end<T>(); it++)
+        {
+            MatIterator_<T> f = std::find_if(actual.begin<T>(), actual.end<T>(), SimilarWith<T>(*it, eps, rho_eps));
+            if (f != actual.end<T>())
+                count++;
+        }
+    }
+    return count;
+}
+
+String getTestCaseName(String filename)
+{
+    string temp(filename);
+    size_t pos = temp.find_first_of("\\/.");
+    while ( pos != string::npos ) {
+       temp.replace( pos, 1, "_" );
+       pos = temp.find_first_of("\\/.");
+    }
+    return String(temp);
+}
+
+class BaseHoughLineTest
 {
 public:
     enum {STANDART = 0, PROBABILISTIC};
-    CV_HoughLinesTest() {}
-    ~CV_HoughLinesTest() {}
 protected:
     void run_test(int type);
+
+    string picture_name;
+    double rhoStep;
+    double thetaStep;
+    int threshold;
+    int minLineLength;
+    int maxGap;
 };
 
-class CV_StandartHoughLinesTest : public CV_HoughLinesTest
+typedef std::tr1::tuple<string, double, double, int> Image_RhoStep_ThetaStep_Threshold_t;
+class StandartHoughLinesTest : public BaseHoughLineTest, public testing::TestWithParam<Image_RhoStep_ThetaStep_Threshold_t>
 {
 public:
-    CV_StandartHoughLinesTest() {}
-    ~CV_StandartHoughLinesTest() {}
-    virtual void run(int);
+    StandartHoughLinesTest()
+    {
+        picture_name = std::tr1::get<0>(GetParam());
+        rhoStep = std::tr1::get<1>(GetParam());
+        thetaStep = std::tr1::get<2>(GetParam());
+        threshold = std::tr1::get<3>(GetParam());
+        minLineLength = 0;
+        maxGap = 0;
+    }
 };
 
-class CV_ProbabilisticHoughLinesTest : public CV_HoughLinesTest
+typedef std::tr1::tuple<string, double, double, int, int, int> Image_RhoStep_ThetaStep_Threshold_MinLine_MaxGap_t;
+class ProbabilisticHoughLinesTest : public BaseHoughLineTest, public testing::TestWithParam<Image_RhoStep_ThetaStep_Threshold_MinLine_MaxGap_t>
 {
 public:
-    CV_ProbabilisticHoughLinesTest() {}
-    ~CV_ProbabilisticHoughLinesTest() {}
-    virtual void run(int);
+    ProbabilisticHoughLinesTest()
+    {
+        picture_name = std::tr1::get<0>(GetParam());
+        rhoStep = std::tr1::get<1>(GetParam());
+        thetaStep = std::tr1::get<2>(GetParam());
+        threshold = std::tr1::get<3>(GetParam());
+        minLineLength = std::tr1::get<4>(GetParam());
+        maxGap = std::tr1::get<5>(GetParam());
+    }
 };
 
-void CV_StandartHoughLinesTest::run(int)
+void BaseHoughLineTest::run_test(int type)
+{
+    string filename = cvtest::TS::ptr()->get_data_path() + picture_name;
+    Mat src = imread(filename, IMREAD_GRAYSCALE);
+    EXPECT_FALSE(src.empty()) << "Invalid test image: " << filename;
+
+    string xml;
+    if (type == STANDART)
+        xml = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/HoughLines.xml";
+    else if (type == PROBABILISTIC)
+        xml = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/HoughLinesP.xml";
+
+    Mat dst;
+    Canny(src, dst, 100, 150, 3);
+    EXPECT_FALSE(dst.empty()) << "Failed Canny edge detector";
+
+    Mat lines;
+    if (type == STANDART)
+        HoughLines(dst, lines, rhoStep, thetaStep, threshold, 0, 0);
+    else if (type == PROBABILISTIC)
+        HoughLinesP(dst, lines, rhoStep, thetaStep, threshold, minLineLength, maxGap);
+
+    String test_case_name = format("lines_%s_%.0f_%.2f_%d_%d_%d", picture_name.c_str(), rhoStep, thetaStep,
+                                    threshold, minLineLength, maxGap);
+    test_case_name = getTestCaseName(test_case_name);
+
+    FileStorage fs(xml, FileStorage::READ);
+    FileNode node = fs[test_case_name];
+    if (node.empty())
+    {
+        fs.release();
+        fs.open(xml, FileStorage::APPEND);
+        EXPECT_TRUE(fs.isOpened()) << "Cannot open sanity data file: " << xml;
+        fs << test_case_name << lines;
+        fs.release();
+        fs.open(xml, FileStorage::READ);
+        EXPECT_TRUE(fs.isOpened()) << "Cannot open sanity data file: " << xml;
+    }
+
+    Mat exp_lines;
+    read( fs[test_case_name], exp_lines, Mat() );
+    fs.release();
+
+    int count = -1;
+    if (type == STANDART)
+        count = countMatIntersection<Vec2f>(exp_lines, lines, (float) thetaStep + FLT_EPSILON, (float) rhoStep + FLT_EPSILON);
+    else if (type == PROBABILISTIC)
+        count = countMatIntersection<Vec4i>(exp_lines, lines, 1e-4f, 0.f);
+
+#if (0 && defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801)
+    EXPECT_GE( count, (int) (exp_lines.total() * 0.8) );
+#else
+    EXPECT_EQ( count, (int) exp_lines.total());
+#endif
+}
+
+TEST_P(StandartHoughLinesTest, regression)
 {
     run_test(STANDART);
 }
 
-void CV_ProbabilisticHoughLinesTest::run(int)
+TEST_P(ProbabilisticHoughLinesTest, regression)
 {
     run_test(PROBABILISTIC);
 }
 
-void CV_HoughLinesTest::run_test(int type)
-{
-    Mat src = imread(string(ts->get_data_path()) + "shared/pic1.png");
-    if (src.empty())
-    {
-        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
-        return;
-    }
+INSTANTIATE_TEST_CASE_P( ImgProc, StandartHoughLinesTest, testing::Combine(testing::Values( "shared/pic5.png", "../stitching/a1.png" ),
+                                                                           testing::Values( 1, 10 ),
+                                                                           testing::Values( 0.05, 0.1 ),
+                                                                           testing::Values( 80, 150 )
+                                                                           ));
 
-    string xml;
-    if (type == STANDART)
-        xml = string(ts->get_data_path()) + "imgproc/HoughLines.xml";
-    else if (type == PROBABILISTIC)
-        xml = string(ts->get_data_path()) + "imgproc/HoughLinesP.xml";
-    else
-    {
-        ts->printf(cvtest::TS::LOG, "Error: unknown HoughLines algorithm type.\n");
-        ts->set_failed_test_info(cvtest::TS::FAIL_GENERIC);
-        return;
-    }
-
-    Mat dst;
-    Canny(src, dst, 50, 200, 3);
-
-    Mat lines;
-    if (type == STANDART)
-        HoughLines(dst, lines, 1, CV_PI/180, 100, 0, 0);
-    else if (type == PROBABILISTIC)
-        HoughLinesP(dst, lines, 1, CV_PI/180, 100, 0, 0);
-
-    FileStorage fs(xml, FileStorage::READ);
-    if (!fs.isOpened())
-    {
-        fs.open(xml, FileStorage::WRITE);
-        if (!fs.isOpened())
-        {
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
-            return;
-        }
-        fs << "exp_lines" << lines;
-        fs.release();
-        fs.open(xml, FileStorage::READ);
-        if (!fs.isOpened())
-        {
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
-            return;
-        }
-    }
-
-    Mat exp_lines;
-    read( fs["exp_lines"], exp_lines, Mat() );
-    fs.release();
-
-    if( exp_lines.size != lines.size )
-        transpose(lines, lines);
-
-    if ( exp_lines.size != lines.size || cvtest::norm(exp_lines, lines, NORM_INF) > 1e-4 )
-    {
-        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        return;
-    }
-
-    ts->set_failed_test_info(cvtest::TS::OK);
-}
-
-TEST(Imgproc_HoughLines, regression) { CV_StandartHoughLinesTest test; test.safe_run(); }
-
-TEST(Imgproc_HoughLinesP, regression) { CV_ProbabilisticHoughLinesTest test; test.safe_run(); }
+INSTANTIATE_TEST_CASE_P( ImgProc, ProbabilisticHoughLinesTest, testing::Combine(testing::Values( "shared/pic5.png", "shared/pic1.png" ),
+                                                                                testing::Values( 5, 10 ),
+                                                                                testing::Values( 0.05, 0.1 ),
+                                                                                testing::Values( 75, 150 ),
+                                                                                testing::Values( 0, 10 ),
+                                                                                testing::Values( 0, 4 )
+                                                                                ));

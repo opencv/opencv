@@ -85,7 +85,8 @@ endif()
 set(the_description "The Matlab/Octave bindings")
 ocv_add_module(matlab   BINDINGS
                         OPTIONAL opencv_core
-                                 opencv_imgproc opencv_ml opencv_highgui
+                                 opencv_imgproc opencv_ml
+                                 opencv_imgcodecs opencv_videoio opencv_highgui
                                  opencv_objdetect opencv_flann opencv_features2d
                                  opencv_photo opencv_video opencv_videostab
                                  opencv_calib opencv_calib3d
@@ -104,7 +105,11 @@ set(RST_PARSER_PATH ${CMAKE_SOURCE_DIR}/modules/java/generator)
 
 # set mex compiler options
 prepend("-I" MEX_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
-prepend("-L" MEX_LIB_DIR  ${LIBRARY_OUTPUT_PATH}/${CMAKE_CFG_INTDIR} )
+if (MSVC)
+    prepend("-L" MEX_LIB_DIR  ${LIBRARY_OUTPUT_PATH}/${CMAKE_CFG_INTDIR})
+else()
+    prepend("-L" MEX_LIB_DIR  ${LIBRARY_OUTPUT_PATH})
+endif()
 set(MEX_OPTS "-largeArrayDims")
 
 if (BUILD_TESTS)

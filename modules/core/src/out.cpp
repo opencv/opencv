@@ -47,7 +47,8 @@ namespace
 {
     class FormattedImpl : public cv::Formatted
     {
-        enum { STATE_PROLOGUE, STATE_EPILOGUE, STATE_ROW_OPEN, STATE_ROW_CLOSE, STATE_CN_OPEN, STATE_CN_CLOSE, STATE_VALUE, STATE_FINISHED,
+        enum { STATE_PROLOGUE, STATE_EPILOGUE, STATE_INTERLUDE,
+               STATE_ROW_OPEN, STATE_ROW_CLOSE, STATE_CN_OPEN, STATE_CN_CLOSE, STATE_VALUE, STATE_FINISHED,
                STATE_LINE_SEPARATOR, STATE_CN_SEPARATOR, STATE_VALUE_SEPARATOR };
         enum {BRACE_ROW_OPEN = 0, BRACE_ROW_CLOSE = 1, BRACE_ROW_SEP=2, BRACE_CN_OPEN=3, BRACE_CN_CLOSE=4 };
 
@@ -57,6 +58,7 @@ namespace
         cv::Mat mtx;
         int mcn; // == mtx.channels()
         bool singleLine;
+        bool alignOrder;    // true when cn first order
 
         int state;
         int row;
@@ -79,8 +81,10 @@ namespace
 
     public:
 
-        FormattedImpl(cv::String pl, cv::String el, cv::Mat m, char br[5], bool sLine, int precision)
+        FormattedImpl(cv::String pl, cv::String el, cv::Mat m, char br[5], bool sLine, bool aOrder, int precision)
         {
+            CV_Assert(m.dims <= 2);
+
             prologue = pl;
             epilogue = el;
             mtx = m;
@@ -88,6 +92,8 @@ namespace
             memcpy(braces, br, 5);
             state = STATE_PROLOGUE;
             singleLine = sLine;
+            alignOrder = aOrder;
+            row = col = cn =0;
 
             if (precision < 0)
             {
@@ -126,9 +132,28 @@ namespace
                     row = 0;
                     if (mtx.empty())
                         state = STATE_EPILOGUE;
+                    else if (alignOrder)
+                        state = STATE_INTERLUDE;
                     else
                         state = STATE_ROW_OPEN;
                     return prologue.c_str();
+                case STATE_INTERLUDE:
+                    state = STATE_ROW_OPEN;
+                    if (row >= mtx.rows)
+                    {
+                        if (++cn >= mcn)
+                        {
+                            state = STATE_EPILOGUE;
+                            buf[0] = 0;
+                            return buf;
+                        }
+                        else
+                            row = 0;
+                        sprintf(buf, "\n(:, :, %d) = \n", cn+1);
+                        return buf;
+                    }
+                    sprintf(buf, "(:, :, %d) = \n", cn+1);
+                    return buf;
                 case STATE_EPILOGUE:
                     state = STATE_FINISHED;
                     return epilogue.c_str();
@@ -165,8 +190,9 @@ namespace
                     }
                     return next();
                 case STATE_CN_OPEN:
-                    cn = 0;
                     state = STATE_VALUE;
+                    if (!alignOrder)
+                        cn = 0;
                     if (mcn > 1 && braces[BRACE_CN_OPEN])
                     {
                         buf[0] = braces[BRACE_CN_OPEN];
@@ -189,9 +215,10 @@ namespace
                     return next();
                 case STATE_VALUE:
                     (this->*valueToStr)();
-                    if (++cn >= mcn)
-                        state = STATE_CN_CLOSE;
-                    else
+                    state = STATE_CN_CLOSE;
+                    if (alignOrder)
+                        return buf;
+                    if (++cn < mcn)
                         state = STATE_VALUE_SEPARATOR;
                     return buf;
                 case STATE_FINISHED:
@@ -199,7 +226,10 @@ namespace
                 case STATE_LINE_SEPARATOR:
                     if (row >= mtx.rows)
                     {
-                        state = STATE_EPILOGUE;
+                        if (alignOrder)
+                            state = STATE_INTERLUDE;
+                        else
+                            state = STATE_EPILOGUE;
                         return next();
                     }
                     state = STATE_ROW_OPEN;
@@ -248,6 +278,17 @@ namespace
         int prec64f;
         int multiline;
     };
+    class DefaultFormatter : public FormatterBase
+    {
+    public:
+
+        cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
+        {
+            char braces[5] = {'\0', '\0', ';', '\0', '\0'};
+            return cv::makePtr<FormattedImpl>("[", "]", mtx, &*braces,
+                mtx.rows == 1 || !multiline, false, mtx.depth() == CV_64F ? prec64f : prec32f );
+        }
+    };
 
     class MatlabFormatter : public FormatterBase
     {
@@ -256,8 +297,8 @@ namespace
         cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
         {
             char braces[5] = {'\0', '\0', ';', '\0', '\0'};
-            return cv::makePtr<FormattedImpl>("[", "]", mtx, &*braces,
-                mtx.rows == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
+            return cv::makePtr<FormattedImpl>("", "", mtx, &*braces,
+                mtx.rows == 1 || !multiline, true, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
@@ -271,7 +312,7 @@ namespace
             if (mtx.cols == 1)
                 braces[0] = braces[1] = '\0';
             return cv::makePtr<FormattedImpl>("[", "]", mtx, &*braces,
-                mtx.rows*mtx.channels() == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
+                mtx.rows == 1 || !multiline, false, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
@@ -290,7 +331,7 @@ namespace
                 braces[0] = braces[1] = '\0';
             return cv::makePtr<FormattedImpl>("array([",
                 cv::format("], type='%s')", numpyTypes[mtx.depth()]), mtx, &*braces,
-                mtx.rows*mtx.channels() == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
+                mtx.rows == 1 || !multiline, false, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
@@ -303,7 +344,7 @@ namespace
             char braces[5] = {'\0', '\0', '\0', '\0', '\0'};
             return cv::makePtr<FormattedImpl>(cv::String(),
                 mtx.rows > 1 ? cv::String("\n") : cv::String(), mtx, &*braces,
-                mtx.rows*mtx.channels() == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
+                mtx.rows == 1 || !multiline, false, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
@@ -315,7 +356,7 @@ namespace
         {
             char braces[5] = {'\0', '\0', ',', '\0', '\0'};
             return cv::makePtr<FormattedImpl>("{", "}", mtx, &*braces,
-                mtx.rows == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
+                mtx.rows == 1 || !multiline, false, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
@@ -331,6 +372,8 @@ namespace cv
     {
         switch(fmt)
         {
+            case FMT_DEFAULT:
+                return makePtr<DefaultFormatter>();
             case FMT_MATLAB:
                 return makePtr<MatlabFormatter>();
             case FMT_CSV:
@@ -342,6 +385,6 @@ namespace cv
             case FMT_C:
                 return makePtr<CFormatter>();
         }
-        return makePtr<MatlabFormatter>();
+        return makePtr<DefaultFormatter>();
     }
 } // cv

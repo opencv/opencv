@@ -1,4 +1,4 @@
-set(test_deps opencv_cudev opencv_core opencv_imgproc opencv_highgui opencv_ts ${OPENCV_MODULE_opencv_ts_DEPS})
+set(test_deps opencv_cudev opencv_core opencv_imgproc opencv_imgcodecs opencv_videoio opencv_highgui opencv_ts ${OPENCV_MODULE_opencv_ts_DEPS})
 
 ocv_check_dependencies(${test_deps})
 

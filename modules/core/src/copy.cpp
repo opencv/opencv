@@ -81,7 +81,7 @@ copyMask_(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, ucha
 template<> void
 copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
     if (ippiCopy_8u_C1MR(_src, (int)sstep, _dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
         return;
     setIppErrorStatus();
@@ -117,7 +117,7 @@ copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
 template<> void
 copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
     if (ippiCopy_16u_C1MR((const Ipp16u *)_src, (int)sstep, (Ipp16u *)_dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
         return;
     setIppErrorStatus();
@@ -177,7 +177,7 @@ static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, 
     copyMask_<type>(src, sstep, mask, mstep, dst, dstep, size); \
 }
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
 #define DEF_COPY_MASK_F(suffix, type, ippfavor, ipptype) \
 static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, size_t mstep, \
                              uchar* dst, size_t dstep, Size size, void*) \
@@ -281,7 +281,7 @@ void Mat::copyTo( OutputArray _dst ) const
             Size sz = getContinuousSize(*this, dst);
             size_t len = sz.width*elemSize();
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
             if (ippiCopy_8u_C1R(sptr, (int)step, dptr, (int)dst.step, ippiSize((int)len, sz.height)) >= 0)
                 return;
             setIppErrorStatus();
@@ -419,11 +419,11 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::MAT ));
     CV_Assert( mask.empty() || (mask.type() == CV_8U && size == mask.size) );
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
     int cn = channels(), depth0 = depth();
 
     if (!mask.empty() && (dims <= 2 || (isContinuous() && mask.isContinuous())) &&
-            (depth0 == CV_8U || depth0 == CV_16U || depth0 == CV_16S || depth0 == CV_32S || depth0 == CV_32F) &&
+            (/*depth0 == CV_8U ||*/ depth0 == CV_16U || depth0 == CV_16S || depth0 == CV_32S || depth0 == CV_32F) &&
             (cn == 1 || cn == 3 || cn == 4))
     {
         uchar _buf[32];
@@ -442,9 +442,9 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
 
         if (cn == 1)
         {
-            if (depth0 == CV_8U)
+            /*if (depth0 == CV_8U)
                 status = ippiSet_8u_C1MR(*(Ipp8u *)buf, (Ipp8u *)data, dstep, roisize, mask.data, mstep);
-            else if (depth0 == CV_16U)
+            else*/ if (depth0 == CV_16U)
                 status = ippiSet_16u_C1MR(*(Ipp16u *)buf, (Ipp16u *)data, dstep, roisize, mask.data, mstep);
             else if (depth0 == CV_16S)
                 status = ippiSet_16s_C1MR(*(Ipp16s *)buf, (Ipp16s *)data, dstep, roisize, mask.data, mstep);
@@ -468,9 +468,9 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     { \
         if (cn == ippcn) \
         { \
-            if (depth0 == CV_8U) \
+            /*if (depth0 == CV_8U) \
                 IPP_SET(8u, ippcn); \
-            else if (depth0 == CV_16U) \
+            else*/ if (depth0 == CV_16U) \
                 IPP_SET(16u, ippcn); \
             else if (depth0 == CV_16S) \
                 IPP_SET(16s, ippcn); \
@@ -614,8 +614,9 @@ enum { FLIP_COLS = 1 << 0, FLIP_ROWS = 1 << 1, FLIP_BOTH = FLIP_ROWS | FLIP_COLS
 
 static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 {
-    CV_Assert(flipCode >= - 1 && flipCode <= 1);
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), flipType;
+    CV_Assert(flipCode >= -1 && flipCode <= 1);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            flipType, kercn = std::min(ocl::predictOptimalVectorWidth(_src, _dst), 4);;
 
     if (cn > 4)
         return false;
@@ -628,9 +629,14 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     else
         kernelName = "arithm_flip_rows_cols", flipType = FLIP_BOTH;
 
+    ocl::Device dev = ocl::Device::getDefault();
+    int pxPerWIy = (dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU)) ? 4 : 1;
+    kercn = std::max(kercn, cn);
+
     ocl::Kernel k(kernelName, ocl::core::flip_oclsrc,
-        format( "-D T=%s -D T1=%s -D cn=%d", ocl::memopTypeToStr(type),
-                ocl::memopTypeToStr(depth), cn));
+        format( "-D T=%s -D T1=%s -D cn=%d -D PIX_PER_WI_Y=%d -D kercn=%d",
+                ocl::memopTypeToStr(CV_MAKE_TYPE(depth, kercn)),
+                ocl::memopTypeToStr(depth), cn, pxPerWIy, kercn));
     if (k.empty())
         return false;
 
@@ -638,17 +644,19 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     _dst.create(size, type);
     UMat src = _src.getUMat(), dst = _dst.getUMat();
 
-    int cols = size.width, rows = size.height;
+    int cols = size.width * cn / kercn, rows = size.height;
     cols = flipType == FLIP_COLS ? (cols + 1) >> 1 : cols;
     rows = flipType & FLIP_ROWS ? (rows + 1) >> 1 : rows;
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(src),
-           ocl::KernelArg::WriteOnly(dst), rows, cols);
+           ocl::KernelArg::WriteOnly(dst, cn, kercn), rows, cols);
 
-    size_t maxWorkGroupSize = ocl::Device::getDefault().maxWorkGroupSize();
+    size_t maxWorkGroupSize = dev.maxWorkGroupSize();
     CV_Assert(maxWorkGroupSize % 4 == 0);
-    size_t globalsize[2] = { cols, rows }, localsize[2] = { maxWorkGroupSize / 4, 4 };
-    return k.run(2, globalsize, flipType == FLIP_COLS ? localsize : NULL, false);
+
+    size_t globalsize[2] = { cols, (rows + pxPerWIy - 1) / pxPerWIy },
+            localsize[2] = { maxWorkGroupSize / 4, 4 };
+    return k.run(2, globalsize, (flipType == FLIP_COLS) && !dev.isIntel() ? localsize : NULL, false);
 }
 
 #endif
@@ -681,7 +689,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
     Mat dst = _dst.getMat();
     size_t esz = CV_ELEM_SIZE(type);
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if defined HAVE_IPP
     typedef IppStatus (CV_STDCALL * ippiMirror)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize, IppiAxis flip);
     typedef IppStatus (CV_STDCALL * ippiMirrorI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize, IppiAxis flip);
     ippiMirror ippFunc = 0;
@@ -758,16 +766,28 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
 
 static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
-    UMat src = _src.getUMat(), dst = _dst.getUMat();
+    if (ny == 1 && nx == 1)
+    {
+        _src.copyTo(_dst);
+        return true;
+    }
 
-    for (int y = 0; y < ny; ++y)
-        for (int x = 0; x < nx; ++x)
-        {
-            Rect roi(x * src.cols, y * src.rows, src.cols, src.rows);
-            UMat hdr(dst, roi);
-            src.copyTo(hdr);
-        }
-    return true;
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1,
+            kercn = std::min(ocl::predictOptimalVectorWidth(_src, _dst), 4);
+
+    ocl::Kernel k("repeat", ocl::core::repeat_oclsrc,
+                  format("-D T=%s -D nx=%d -D ny=%d -D rowsPerWI=%d -D cn=%d",
+                         ocl::memopTypeToStr(CV_MAKE_TYPE(depth, kercn)),
+                         nx, ny, rowsPerWI, kercn));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat(), dst = _dst.getUMat();
+    k.args(ocl::KernelArg::ReadOnly(src, cn, kercn), ocl::KernelArg::WriteOnlyNoSize(dst));
+
+    size_t globalsize[] = { src.cols * cn / kercn, (src.rows + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, NULL, false);
 }
 
 #endif
@@ -989,7 +1009,8 @@ namespace cv {
 static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
                                 int left, int right, int borderType, const Scalar& value )
 {
-    int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+    int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     borderType &= ~cv::BORDER_ISOLATED;
 
@@ -1001,12 +1022,10 @@ static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101" };
     int scalarcn = cn == 3 ? 4 : cn;
     int sctype = CV_MAKETYPE(depth, scalarcn);
-    String buildOptions = format(
-            "-D T=%s -D %s "
-            "-D T1=%s -D cn=%d -D ST=%s",
-            ocl::memopTypeToStr(type), borderMap[borderType],
-            ocl::memopTypeToStr(depth), cn, ocl::memopTypeToStr(sctype)
-    );
+    String buildOptions = format("-D T=%s -D %s -D T1=%s -D cn=%d -D ST=%s -D rowsPerWI=%d",
+                                 ocl::memopTypeToStr(type), borderMap[borderType],
+                                 ocl::memopTypeToStr(depth), cn,
+                                 ocl::memopTypeToStr(sctype), rowsPerWI);
 
     ocl::Kernel k("copyMakeBorder", ocl::core::copymakeborder_oclsrc, buildOptions);
     if (k.empty())
@@ -1042,7 +1061,7 @@ static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
            top, left, ocl::KernelArg::Constant(Mat(1, 1, sctype, value)));
 
-    size_t globalsize[2] = { dst.cols, dst.rows };
+    size_t globalsize[2] = { dst.cols, (dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 

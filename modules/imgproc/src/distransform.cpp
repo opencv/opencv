@@ -577,7 +577,7 @@ trueDistTrans( const Mat& src, Mat& dst )
     for( ; i <= m*3; i++ )
         sat_tab[i] = i - shift;
 
-    cv::parallel_for_(cv::Range(0, n), cv::DTColumnInvoker(&src, &dst, sat_tab, sqr_tab));
+    cv::parallel_for_(cv::Range(0, n), cv::DTColumnInvoker(&src, &dst, sat_tab, sqr_tab), src.total()/(double)(1<<16));
 
     // stage 2: compute modified distance transform for each row
     float* inv_tab = sqr_tab + n;
@@ -688,7 +688,7 @@ static void distanceTransform_L1_8U(InputArray _src, OutputArray _dst)
     _dst.create( src.size(), CV_8UC1);
     Mat dst = _dst.getMat();
 
-    #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7) && !defined HAVE_IPP_ICV_ONLY
+    #ifdef HAVE_IPP
         IppiSize roi = { src.cols, src.rows };
         Ipp32s pMetrics[2] = { 1, 2 }; //L1, 3x3 mask
         if (ippiDistanceTransform_3x3_8u_C1R(src.ptr<uchar>(), (int)src.step, dst.ptr<uchar>(), (int)dst.step, roi, pMetrics)>=0)
@@ -734,7 +734,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
     if( maskSize == CV_DIST_MASK_PRECISE )
     {
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#ifdef HAVE_IPP
         if ((currentParallelFramework()==NULL) || (src.total()<(int)(1<<14)))
         {
             IppStatus status;
@@ -773,7 +773,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
     {
         if( maskSize == CV_DIST_MASK_3 )
         {
-            #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7) && !defined HAVE_IPP_ICV_ONLY
+            #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
                 IppiSize roi = { src.cols, src.rows };
                 if (ippiDistanceTransform_3x3_8u32f_C1R(src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask)>=0)
                     return;
