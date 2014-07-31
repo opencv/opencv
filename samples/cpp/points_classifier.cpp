@@ -229,22 +229,7 @@ static void find_decision_boundary_ANN( const Mat&  layer_sizes )
     Ptr<TrainData> tdata = TrainData::create(samples, ROW_SAMPLE, trainClasses);
 
     ann->train(tdata);
-
-    Mat testSample( 1, 2, CV_32FC1 );
-    Mat outputs;
-    for( int y = 0; y < img.rows; y += testStep )
-    {
-        for( int x = 0; x < img.cols; x += testStep )
-        {
-            testSample.at<float>(0) = (float)x;
-            testSample.at<float>(1) = (float)y;
-
-            ann->predict( testSample, outputs );
-            Point maxLoc;
-            minMaxLoc( outputs, 0, 0, 0, &maxLoc );
-            imgDst.at<Vec3b>(y, x) = classColors[maxLoc.x];
-        }
-    }
+    predict_and_paint(ann, imgDst);
 }
 #endif
 

@@ -228,9 +228,8 @@ public:
         int n = inputs.rows, dn0 = n;
 
         CV_Assert( (type == CV_32F || type == CV_64F) && inputs.cols == layer_sizes[0] );
-        _outputs.create(n, layer_sizes[l_count-1], type);
-
-        Mat outputs = _outputs.getMat();
+        int noutputs = layer_sizes[l_count-1];
+        Mat outputs;
 
         int min_buf_sz = 2*max_lsize;
         int buf_sz = n*min_buf_sz;
@@ -242,8 +241,19 @@ public:
             buf_sz = dn0*min_buf_sz;
         }
 
-        cv::AutoBuffer<double> _buf(buf_sz);
+        cv::AutoBuffer<double> _buf(buf_sz+noutputs);
         double* buf = _buf;
+
+        if( !_outputs.needed() )
+        {
+            CV_Assert( n == 1 );
+            outputs = Mat(n, noutputs, type, buf + buf_sz);
+        }
+        else
+        {
+            _outputs.create(n, noutputs, type);
+            outputs = _outputs.getMat();
+        }
 
         int dn = 0;
         for( int i = 0; i < n; i += dn )
@@ -271,6 +281,13 @@ public:
 
             layer_out = outputs.rowRange(i, i + dn);
             scale_output( layer_in, layer_out );
+        }
+
+        if( n == 1 )
+        {
+            int maxIdx[] = {0, 0};
+            minMaxIdx(outputs, 0, 0, 0, maxIdx);
+            return maxIdx[0] + maxIdx[1];
         }
 
         return 0.f;
