@@ -224,9 +224,9 @@ Computes useful camera characteristics from the camera matrix.
 
     :param imageSize: Input image size in pixels.
 
-    :param apertureWidth: Physical width of the sensor.
+    :param apertureWidth: Physical width in mm of the sensor.
 
-    :param apertureHeight: Physical height of the sensor.
+    :param apertureHeight: Physical height in mm of the sensor.
 
     :param fovx: Output field of view in degrees along the horizontal sensor axis.
 
@@ -234,13 +234,15 @@ Computes useful camera characteristics from the camera matrix.
 
     :param focalLength: Focal length of the lens in mm.
 
-    :param principalPoint: Principal point in pixels.
+    :param principalPoint: Principal point in mm.
 
     :param aspectRatio: :math:`f_y/f_x`
 
 The function computes various useful camera characteristics from the previously estimated camera matrix.
 
+.. note::
 
+    Do keep in mind that the unity measure 'mm' stands for whatever unit of measure one chooses for the chessboard pitch (it can thus be any value).
 
 composeRT
 -------------
@@ -582,15 +584,15 @@ Finds an object pose from 3D-2D point correspondences.
 
     :param flags: Method for solving a PnP problem:
 
-            *  **CV_ITERATIVE** Iterative method is based on Levenberg-Marquardt optimization. In this case the function finds such a pose that minimizes reprojection error, that is the sum of squared distances between the observed projections ``imagePoints`` and the projected (using :ocv:func:`projectPoints` ) ``objectPoints`` .
-            *  **CV_P3P**  Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang "Complete Solution Classification for the Perspective-Three-Point Problem". In this case the function requires exactly four object and image points.
-            *  **CV_EPNP** Method has been introduced by F.Moreno-Noguer, V.Lepetit and P.Fua in the paper "EPnP: Efficient Perspective-n-Point Camera Pose Estimation".
+            *  **ITERATIVE** Iterative method is based on Levenberg-Marquardt optimization. In this case the function finds such a pose that minimizes reprojection error, that is the sum of squared distances between the observed projections ``imagePoints`` and the projected (using :ocv:func:`projectPoints` ) ``objectPoints`` .
+            *  **P3P**  Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang "Complete Solution Classification for the Perspective-Three-Point Problem". In this case the function requires exactly four object and image points.
+            *  **EPNP** Method has been introduced by F.Moreno-Noguer, V.Lepetit and P.Fua in the paper "EPnP: Efficient Perspective-n-Point Camera Pose Estimation".
 
 The function estimates the object pose given a set of object points, their corresponding image projections, as well as the camera matrix and the distortion coefficients.
 
 .. note::
 
-   * An example of how to use solvePNP for planar augmented reality can be found at opencv_source_code/samples/python2/plane_ar.py
+   * An example of how to use solvePnP for planar augmented reality can be found at opencv_source_code/samples/python2/plane_ar.py
 
 solvePnPRansac
 ------------------
@@ -707,8 +709,8 @@ Calculates an essential matrix from the corresponding points in two images.
 
     :param method: Method for computing a fundamental matrix.
 
-            * **CV_RANSAC** for the RANSAC algorithm.
-            * **CV_LMEDS** for the LMedS algorithm.
+            * **RANSAC** for the RANSAC algorithm.
+            * **MEDS** for the LMedS algorithm.
 
     :param threshold: Parameter used for RANSAC. It is the maximum distance from a point to an epipolar line in pixels, beyond which the point is considered an outlier and is not used for computing the final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the point localization, image resolution, and the image noise.
 
@@ -828,7 +830,7 @@ In this scenario, ``points1`` and ``points2`` are the same input for ``findEssen
     cv::Point2d pp(0.0, 0.0);
     Mat E, R, t, mask;
 
-    E = findEssentialMat(points1, points2, focal, pp, CV_RANSAC, 0.999, 1.0, mask);
+    E = findEssentialMat(points1, points2, focal, pp, RANSAC, 0.999, 1.0, mask);
     recoverPose(E, points1, points2, R, t, focal, pp, mask);
 
 
@@ -851,9 +853,9 @@ Finds a perspective transformation between two planes.
 
             * **0** - a regular method using all the points
 
-            * **CV_RANSAC** - RANSAC-based robust method
+            * **RANSAC** - RANSAC-based robust method
 
-            * **CV_LMEDS** - Least-Median robust method
+            * **LMEDS** - Least-Median robust method
 
     :param ransacReprojThreshold: Maximum allowed reprojection error to treat a point pair as an inlier (used in the RANSAC method only). That is, if
 
@@ -863,7 +865,7 @@ Finds a perspective transformation between two planes.
 
         then the point  :math:`i`  is considered an outlier. If  ``srcPoints``  and  ``dstPoints``  are measured in pixels, it usually makes sense to set this parameter somewhere in the range of 1 to 10.
 
-    :param mask: Optional output mask set by a robust method ( ``CV_RANSAC``  or  ``CV_LMEDS`` ).  Note that the input mask values are ignored.
+    :param mask: Optional output mask set by a robust method ( ``RANSAC``  or  ``LMEDS`` ).  Note that the input mask values are ignored.
 
 The functions find and return the perspective transformation :math:`H` between the source and the destination planes:
 
@@ -1510,6 +1512,10 @@ Reconstructs points by triangulation.
     :param points4D: 4xN array of reconstructed points in homogeneous coordinates.
 
 The function reconstructs 3-dimensional points (in homogeneous coordinates) by using their observations with a stereo camera. Projections matrices can be obtained from :ocv:func:`stereoRectify`.
+
+.. note::
+
+    Keep in mind that all input data should be of float type in order for this function to work.
 
 .. seealso::
 

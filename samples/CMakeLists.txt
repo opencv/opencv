@@ -10,7 +10,6 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_LIST_DIR)
 #
 # ----------------------------------------------------------------------------
 
-add_subdirectory(c)
 add_subdirectory(cpp)
 add_subdirectory(gpu)
 add_subdirectory(tapi)
@@ -60,7 +59,6 @@ if(MSVC)
   endif()
 endif()
 
-add_subdirectory(c)
 add_subdirectory(cpp)
 # FIXIT: can't use cvconfig.h in samples: add_subdirectory(gpu)
 

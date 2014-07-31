@@ -1029,18 +1029,6 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
                         T dp = *dpp;
                         int* lpp = labels + width*p.y + p.x;
 
-                        if( p.x < width-1 && !lpp[+1] && dpp[+1] != newVal && std::abs(dp - dpp[+1]) <= maxDiff )
-                        {
-                            lpp[+1] = curlabel;
-                            *ws++ = Point2s(p.x+1, p.y);
-                        }
-
-                        if( p.x > 0 && !lpp[-1] && dpp[-1] != newVal && std::abs(dp - dpp[-1]) <= maxDiff )
-                        {
-                            lpp[-1] = curlabel;
-                            *ws++ = Point2s(p.x-1, p.y);
-                        }
-
                         if( p.y < height-1 && !lpp[+width] && dpp[+dstep] != newVal && std::abs(dp - dpp[+dstep]) <= maxDiff )
                         {
                             lpp[+width] = curlabel;
@@ -1051,6 +1039,18 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
                         {
                             lpp[-width] = curlabel;
                             *ws++ = Point2s(p.x, p.y-1);
+                        }
+
+                        if( p.x < width-1 && !lpp[+1] && dpp[+1] != newVal && std::abs(dp - dpp[+1]) <= maxDiff )
+                        {
+                            lpp[+1] = curlabel;
+                            *ws++ = Point2s(p.x+1, p.y);
+                        }
+
+                        if( p.x > 0 && !lpp[-1] && dpp[-1] != newVal && std::abs(dp - dpp[-1]) <= maxDiff )
+                        {
+                            lpp[-1] = curlabel;
+                            *ws++ = Point2s(p.x-1, p.y);
                         }
 
                         // pop most recent and propagate
@@ -1084,7 +1084,7 @@ void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSi
 
     int newVal = cvRound(_newval), maxDiff = cvRound(_maxDiff);
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY
+#if IPP_VERSION_X100 >= 801
     Ipp32s bufsize = 0;
     IppiSize roisize = { img.cols, img.rows };
     IppDataType datatype = type == CV_8UC1 ? ipp8u : ipp16s;

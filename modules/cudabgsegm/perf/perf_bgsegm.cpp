@@ -42,8 +42,8 @@
 
 #include "perf_precomp.hpp"
 
-#ifdef HAVE_OPENCV_LEGACY
-#  include "opencv2/legacy.hpp"
+#ifdef HAVE_OPENCV_CUDALEGACY
+#  include "opencv2/cudalegacy.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_CUDAIMGPROC
@@ -72,7 +72,7 @@ using namespace perf;
 
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
-#ifdef HAVE_OPENCV_LEGACY
+#ifdef HAVE_OPENCV_CUDALEGACY
 
 namespace cv
 {
@@ -150,7 +150,7 @@ PERF_TEST_P(Video, FGDStatModel,
     }
     else
     {
-#ifdef HAVE_OPENCV_LEGACY
+#ifdef HAVE_OPENCV_CUDALEGACY
         IplImage ipl_frame = frame;
         cv::Ptr<CvBGStatModel> model(cvCreateFGDStatModel(&ipl_frame));
 

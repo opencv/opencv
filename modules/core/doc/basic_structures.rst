@@ -2981,7 +2981,7 @@ The class provides the following features for all derived classes:
 
     * so called "virtual constructor". That is, each Algorithm derivative is registered at program start and you can get the list of registered algorithms and create instance of a particular algorithm by its name (see ``Algorithm::create``). If you plan to add your own algorithms, it is good practice to add a unique prefix to your algorithms to distinguish them from other algorithms.
 
-    * setting/retrieving algorithm parameters by name. If you used video capturing functionality from OpenCV highgui module, you are probably familar with ``cvSetCaptureProperty()``, ``cvGetCaptureProperty()``, ``VideoCapture::set()`` and ``VideoCapture::get()``. ``Algorithm`` provides similar method where instead of integer id's you specify the parameter names as text strings. See ``Algorithm::set`` and ``Algorithm::get`` for details.
+    * setting/retrieving algorithm parameters by name. If you used video capturing functionality from OpenCV videoio module, you are probably familar with ``cvSetCaptureProperty()``, ``cvGetCaptureProperty()``, ``VideoCapture::set()`` and ``VideoCapture::get()``. ``Algorithm`` provides similar method where instead of integer id's you specify the parameter names as text strings. See ``Algorithm::set`` and ``Algorithm::get`` for details.
 
     * reading and writing parameters from/to XML or YAML files. Every Algorithm derivative can store all its parameters and then read them back. There is no need to re-implement it each time.
 

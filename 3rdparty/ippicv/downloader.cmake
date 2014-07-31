@@ -8,22 +8,29 @@
 function(_icv_downloader)
   # Define actual ICV versions
   if(APPLE)
-    set(OPENCV_ICV_PACKAGE_NAME "ippicv_macosx.tar.gz")
-    set(OPENCV_ICV_PACKAGE_HASH "d489e447906de7808a9a9d7e3f225f7a")
+    set(OPENCV_ICV_PACKAGE_NAME "ippicv_macosx_20140429.tgz")
+    set(OPENCV_ICV_PACKAGE_HASH "f2195a60829899983acd4a45794e1717")
     set(OPENCV_ICV_PLATFORM "macosx")
-  elseif(UNIX AND NOT ANDROID)
-    set(OPENCV_ICV_PACKAGE_NAME "ippicv_linux.tar.gz")
-    set(OPENCV_ICV_PACKAGE_HASH "42798c6cd6348bd40e74c425dc23338a")
+    set(OPENCV_ICV_PACKAGE_SUBDIR "/ippicv_osx")
+  elseif(UNIX)
+    if(ANDROID AND (NOT ANDROID_ABI STREQUAL x86))
+      return()
+    endif()
+    set(OPENCV_ICV_PACKAGE_NAME "ippicv_linux_20140513.tgz")
+    set(OPENCV_ICV_PACKAGE_HASH "d80cb24f3a565113a9d6dc56344142f6")
     set(OPENCV_ICV_PLATFORM "linux")
+    set(OPENCV_ICV_PACKAGE_SUBDIR "/ippicv_lnx")
   elseif(WIN32 AND NOT ARM)
-    set(OPENCV_ICV_PACKAGE_NAME "ippicv_windows.zip")
-    set(OPENCV_ICV_PACKAGE_HASH "2715f39ae65dc09bae3648bffe538706")
+    set(OPENCV_ICV_PACKAGE_NAME "ippicv_windows_20140429.zip")
+    set(OPENCV_ICV_PACKAGE_HASH "b5028a92224ec1fbc554010c52eb3ec8")
     set(OPENCV_ICV_PLATFORM "windows")
+    set(OPENCV_ICV_PACKAGE_SUBDIR "/ippicv_win")
   else()
     return() # Not supported
   endif()
 
-  set(OPENCV_ICV_PATH "${CMAKE_CURRENT_LIST_DIR}/${OPENCV_ICV_PLATFORM}")
+  set(OPENCV_ICV_UNPACK_PATH "${CMAKE_CURRENT_LIST_DIR}/unpack")
+  set(OPENCV_ICV_PATH "${OPENCV_ICV_UNPACK_PATH}${OPENCV_ICV_PACKAGE_SUBDIR}")
 
   if(DEFINED OPENCV_ICV_PACKAGE_DOWNLOADED
        AND OPENCV_ICV_PACKAGE_DOWNLOADED STREQUAL OPENCV_ICV_PACKAGE_HASH
@@ -32,9 +39,9 @@ function(_icv_downloader)
     set(OPENCV_ICV_PATH "${OPENCV_ICV_PATH}" PARENT_SCOPE)
     return()
   else()
-    if(EXISTS ${OPENCV_ICV_PATH})
-      message(STATUS "ICV: Removing previous unpacked package: ${OPENCV_ICV_PATH}")
-      file(REMOVE_RECURSE ${OPENCV_ICV_PATH})
+    if(EXISTS ${OPENCV_ICV_UNPACK_PATH})
+      message(STATUS "ICV: Removing previous unpacked package: ${OPENCV_ICV_UNPACK_PATH}")
+      file(REMOVE_RECURSE ${OPENCV_ICV_UNPACK_PATH})
     endif()
   endif()
   unset(OPENCV_ICV_PACKAGE_DOWNLOADED CACHE)
@@ -52,12 +59,11 @@ function(_icv_downloader)
   
   if(NOT EXISTS "${OPENCV_ICV_PACKAGE_ARCHIVE}")
     if(NOT DEFINED OPENCV_ICV_URL)
-      if(NOT DEFINED ENV{OPENCV_ICV_URL})
-        # TODO Specify default URL after ICV publishing
-        message(STATUS "ICV: downloading URL is not specified, skip downloading")
-        return()
+      if(DEFINED ENV{OPENCV_ICV_URL})
+        set(OPENCV_ICV_URL $ENV{OPENCV_ICV_URL})
+      else()
+        set(OPENCV_ICV_URL "http://sourceforge.net/projects/opencvlibrary/files/3rdparty/ippicv")
       endif()
-      set(OPENCV_ICV_URL $ENV{OPENCV_ICV_URL})
     endif()
   
     file(MAKE_DIRECTORY ${OPENCV_ICV_PACKAGE_ARCHIVE_DIR})
@@ -78,18 +84,20 @@ function(_icv_downloader)
   endif()
   
   ocv_assert(EXISTS "${OPENCV_ICV_PACKAGE_ARCHIVE}")
-  ocv_assert(NOT EXISTS "${OPENCV_ICV_PATH}")
-  file(MAKE_DIRECTORY ${OPENCV_ICV_PATH})
-  ocv_assert(EXISTS "${OPENCV_ICV_PATH}")
+  ocv_assert(NOT EXISTS "${OPENCV_ICV_UNPACK_PATH}")
+  file(MAKE_DIRECTORY ${OPENCV_ICV_UNPACK_PATH})
+  ocv_assert(EXISTS "${OPENCV_ICV_UNPACK_PATH}")
   
-  message(STATUS "ICV: Unpacking ${OPENCV_ICV_PACKAGE_NAME} to ${OPENCV_ICV_PATH}...")
+  message(STATUS "ICV: Unpacking ${OPENCV_ICV_PACKAGE_NAME} to ${OPENCV_ICV_UNPACK_PATH}...")
   execute_process(COMMAND ${CMAKE_COMMAND} -E tar xz "${OPENCV_ICV_PACKAGE_ARCHIVE}"
-                  WORKING_DIRECTORY "${OPENCV_ICV_PATH}"
+                  WORKING_DIRECTORY "${OPENCV_ICV_UNPACK_PATH}"
                   RESULT_VARIABLE __result)
 
   if(NOT __result EQUAL 0)
-    message(FATAL_ERROR "ICV: Failed to unpack ICV package from ${OPENCV_ICV_PACKAGE_ARCHIVE} to ${OPENCV_ICV_PATH} with error ${__result}")
+    message(FATAL_ERROR "ICV: Failed to unpack ICV package from ${OPENCV_ICV_PACKAGE_ARCHIVE} to ${OPENCV_ICV_UNPACK_PATH} with error ${__result}")
   endif()
+
+  ocv_assert(EXISTS "${OPENCV_ICV_PATH}")
 
   set(OPENCV_ICV_PACKAGE_DOWNLOADED "${OPENCV_ICV_PACKAGE_HASH}" CACHE INTERNAL "ICV package hash")
   

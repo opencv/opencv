@@ -135,7 +135,7 @@ Vec2d EM::predict(InputArray _sample, OutputArray _probs) const
         sample.convertTo(tmp, CV_64FC1);
         sample = tmp;
     }
-    sample.reshape(1, 1);
+    sample = sample.reshape(1, 1);
 
     Mat probs;
     if( _probs.needed() )
@@ -266,7 +266,7 @@ void EM::setTrainData(int startStep, const Mat& samples,
     if(weights0 && (startStep == EM::START_E_STEP && covs0))
     {
         weights0->convertTo(weights, CV_64FC1);
-        weights.reshape(1,1);
+        weights = weights.reshape(1,1);
         preprocessProbability(weights);
     }
 

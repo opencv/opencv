@@ -13,6 +13,7 @@ int main( int argc, char* argv[] )
     int numPos    = 2000;
     int numNeg    = 1000;
     int numStages = 20;
+    int numThreads = getNumThreads();
     int precalcValBufSize = 256,
         precalcIdxBufSize = 256;
     bool baseFormatSave = false;
@@ -36,6 +37,7 @@ int main( int argc, char* argv[] )
         cout << "  [-precalcValBufSize <precalculated_vals_buffer_size_in_Mb = " << precalcValBufSize << ">]" << endl;
         cout << "  [-precalcIdxBufSize <precalculated_idxs_buffer_size_in_Mb = " << precalcIdxBufSize << ">]" << endl;
         cout << "  [-baseFormatSave]" << endl;
+        cout << "  [-numThreads <max_number_of_threads = " << numThreads << ">]" << endl;
         cascadeParams.printDefaults();
         stageParams.printDefaults();
         for( int fi = 0; fi < fc; fi++ )
@@ -82,6 +84,10 @@ int main( int argc, char* argv[] )
         {
             baseFormatSave = true;
         }
+        else if( !strcmp( argv[i], "-numThreads" ) )
+        {
+          numThreads = atoi(argv[++i]);
+        }
         else if ( cascadeParams.scanAttr( argv[i], argv[i+1] ) ) { i++; }
         else if ( stageParams.scanAttr( argv[i], argv[i+1] ) ) { i++; }
         else if ( !set )
@@ -98,6 +104,7 @@ int main( int argc, char* argv[] )
         }
     }
 
+    setNumThreads( numThreads );
     classifier.train( cascadeDirName,
                       vecName,
                       bgName,
