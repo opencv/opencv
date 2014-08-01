@@ -1361,7 +1361,7 @@ OCL_TEST_P(Norm, NORM_L1_2args_mask)
 
             OCL_OFF(const double cpuRes = cv::norm(src1_roi, src2_roi, type, mask_roi));
             OCL_ON(const double gpuRes = cv::norm(usrc1_roi, usrc2_roi, type, umask_roi));
-
+printf("plain=%g ocl=%g\n", cpuRes, gpuRes);
             EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
         }
 }
