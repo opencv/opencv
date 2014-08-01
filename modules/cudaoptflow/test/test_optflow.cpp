@@ -370,38 +370,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, OpticalFlowDual_TVL1, testing::Combine(
     WHOLE_SUBMAT));
 
 //////////////////////////////////////////////////////
-// OpticalFlowBM
-
-struct OpticalFlowBM : testing::TestWithParam<cv::cuda::DeviceInfo>
-{
-};
-
-CUDA_TEST_P(OpticalFlowBM, BlockMatching)
-{
-    cv::cuda::DeviceInfo devInfo = GetParam();
-    cv::cuda::setDevice(devInfo.deviceID());
-
-    cv::Mat frame0 = readImage("opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame0.empty());
-    cv::resize(frame0, frame0, cv::Size(), 0.5, 0.5);
-
-    cv::Mat frame1 = readImage("opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame1.empty());
-    cv::resize(frame1, frame1, cv::Size(), 0.5, 0.5);
-
-    cv::Size block_size(8, 8);
-    cv::Size shift_size(1, 1);
-    cv::Size max_range(8, 8);
-
-    cv::cuda::GpuMat d_velx, d_vely, buf;
-    cv::cuda::calcOpticalFlowBM(loadMat(frame0), loadMat(frame1),
-                               block_size, shift_size, max_range, false,
-                               d_velx, d_vely, buf);
-}
-
-INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, OpticalFlowBM, ALL_DEVICES);
-
-//////////////////////////////////////////////////////
 // FastOpticalFlowBM
 
 namespace
