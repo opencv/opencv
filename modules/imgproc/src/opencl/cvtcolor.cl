@@ -1796,9 +1796,9 @@ __kernel void Luv2BGR(__global const uchar * srcptr, int src_step, int src_offse
                 float G = fma(X, coeffs[3], fma(Y, coeffs[4], Z * coeffs[5]));
                 float B = fma(X, coeffs[6], fma(Y, coeffs[7], Z * coeffs[8]));
 
-                R = min(max(R, 0.f), 1.f);
-                G = min(max(G, 0.f), 1.f);
-                B = min(max(B, 0.f), 1.f);
+                R = clamp(R, 0.f, 1.f);
+                G = clamp(G, 0.f, 1.f);
+                B = clamp(B, 0.f, 1.f);
 
 #ifdef SRGB
                 R = splineInterpolate(R*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
@@ -1857,9 +1857,9 @@ __kernel void Luv2BGR(__global const uchar * src, int src_step, int src_offset,
                 float G = fma(X, coeffs[3], fma(Y, coeffs[4], Z * coeffs[5]));
                 float B = fma(X, coeffs[6], fma(Y, coeffs[7], Z * coeffs[8]));
 
-                R = min(max(R, 0.f), 1.f);
-                G = min(max(G, 0.f), 1.f);
-                B = min(max(B, 0.f), 1.f);
+                R = clamp(R, 0.f, 1.f);
+                G = clamp(G, 0.f, 1.f);
+                B = clamp(B, 0.f, 1.f);
 
 #ifdef SRGB
                 R = splineInterpolate(R*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
