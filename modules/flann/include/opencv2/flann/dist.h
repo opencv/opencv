@@ -595,7 +595,7 @@ struct HellingerDistance
     typedef typename Accumulator<T>::Type ResultType;
 
     /**
-     *  Compute the histogram intersection distance
+     *  Compute the Hellinger distance
      */
     template <typename Iterator1, typename Iterator2>
     ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
@@ -628,7 +628,8 @@ struct HellingerDistance
     template <typename U, typename V>
     inline ResultType accum_dist(const U& a, const V& b, int) const
     {
-        return sqrt(static_cast<ResultType>(a)) - sqrt(static_cast<ResultType>(b));
+        ResultType diff = sqrt(static_cast<ResultType>(a)) - sqrt(static_cast<ResultType>(b));
+        return diff * diff;
     }
 };
 
@@ -729,9 +730,11 @@ struct KL_Divergence
     inline ResultType accum_dist(const U& a, const V& b, int) const
     {
         ResultType result = ResultType();
-        ResultType ratio = (ResultType)(a / b);
-        if (ratio>0) {
-            result = a * log(ratio);
+        if( *b != 0 ) {
+            ResultType ratio = (ResultType)(a / b);
+            if (ratio>0) {
+                result = a * log(ratio);
+            }
         }
         return result;
     }

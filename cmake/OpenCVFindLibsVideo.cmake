@@ -131,7 +131,7 @@ if(WITH_1394)
       if(HAVE_DC1394_2)
         ocv_parse_pkg("libdc1394-2" "${DC1394_2_LIB_DIR}/pkgconfig" "")
         ocv_include_directories(${DC1394_2_INCLUDE_PATH})
-        set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES}
+        set(VIDEOIO_LIBRARIES ${VIDEOIO_LIBRARIES}
             "${DC1394_2_LIB_DIR}/libdc1394.a"
             "${CMU1394_LIB_DIR}/lib1394camera.a")
       endif(HAVE_DC1394_2)
@@ -165,6 +165,11 @@ ocv_clear_vars(HAVE_OPENNI HAVE_OPENNI_PRIME_SENSOR_MODULE)
 if(WITH_OPENNI)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindOpenNI.cmake")
 endif(WITH_OPENNI)
+
+ocv_clear_vars(HAVE_OPENNI2)
+if(WITH_OPENNI2)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindOpenNI2.cmake")
+endif(WITH_OPENNI2)
 
 # --- XIMEA ---
 ocv_clear_vars(HAVE_XIMEA)
@@ -234,7 +239,7 @@ if(WITH_FFMPEG)
       endif()
     endif(FFMPEG_INCLUDE_DIR)
     if(HAVE_FFMPEG)
-      set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} "${FFMPEG_LIB_DIR}/libavcodec.a"
+      set(VIDEOIO_LIBRARIES ${VIDEOIO_LIBRARIES} "${FFMPEG_LIB_DIR}/libavcodec.a"
           "${FFMPEG_LIB_DIR}/libavformat.a" "${FFMPEG_LIB_DIR}/libavutil.a"
           "${FFMPEG_LIB_DIR}/libswscale.a")
       ocv_include_directories(${FFMPEG_INCLUDE_DIR})
@@ -253,14 +258,15 @@ if(WITH_MSMF)
   check_include_file(Mfapi.h HAVE_MSMF)
 endif(WITH_MSMF)
 
-# --- Extra HighGUI libs on Windows ---
+# --- Extra HighGUI and VideoIO libs on Windows ---
 if(WIN32)
-  list(APPEND HIGHGUI_LIBRARIES comctl32 gdi32 ole32 setupapi ws2_32 vfw32)
+  list(APPEND HIGHGUI_LIBRARIES comctl32 gdi32 ole32 setupapi ws2_32)
+  list(APPEND VIDEOIO_LIBRARIES vfw32)
   if(MINGW64)
-    list(APPEND HIGHGUI_LIBRARIES avifil32 avicap32 winmm msvfw32)
-    list(REMOVE_ITEM HIGHGUI_LIBRARIES vfw32)
+    list(APPEND VIDEOIO_LIBRARIES avifil32 avicap32 winmm msvfw32)
+    list(REMOVE_ITEM VIDEOIO_LIBRARIES vfw32)
   elseif(MINGW)
-    list(APPEND HIGHGUI_LIBRARIES winmm)
+    list(APPEND VIDEOIO_LIBRARIES winmm)
   endif()
 endif(WIN32)
 
