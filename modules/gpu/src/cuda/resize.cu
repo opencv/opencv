@@ -77,8 +77,8 @@ namespace cv { namespace gpu { namespace device
 
         if (dst_x < dst.cols && dst_y < dst.rows)
         {
-            const float src_x = dst_x * fx;
-            const float src_y = dst_y * fy;
+            const float src_x = (dst_x + 0.5f) * fx - 0.5f;
+            const float src_y = (dst_y + 0.5f) * fy - 0.5f;
 
             work_type out = VecTraits<work_type>::all(0);
 
@@ -86,16 +86,18 @@ namespace cv { namespace gpu { namespace device
             const int y1 = __float2int_rd(src_y);
             const int x2 = x1 + 1;
             const int y2 = y1 + 1;
-            const int x2_read = ::min(x2, src.cols - 1);
-            const int y2_read = ::min(y2, src.rows - 1);
+            const int x1_read = ::max(::min(x1, src.cols - 1), 0);
+            const int y1_read = ::max(::min(y1, src.rows - 1), 0);
+            const int x2_read = ::max(::min(x2, src.cols - 1), 0);
+            const int y2_read = ::max(::min(y2, src.rows - 1), 0);
 
-            T src_reg = src(y1, x1);
+            T src_reg = src(y1_read, x1_read);
             out = out + src_reg * ((x2 - src_x) * (y2 - src_y));
 
-            src_reg = src(y1, x2_read);
+            src_reg = src(y1_read, x2_read);
             out = out + src_reg * ((src_x - x1) * (y2 - src_y));
 
-            src_reg = src(y2_read, x1);
+            src_reg = src(y2_read, x1_read);
             out = out + src_reg * ((x2 - src_x) * (src_y - y1));
 
             src_reg = src(y2_read, x2_read);
@@ -114,6 +116,20 @@ namespace cv { namespace gpu { namespace device
         {
             const float src_x = dst_x * fx;
             const float src_y = dst_y * fy;
+
+            dst(dst_y, dst_x) = src(src_y, src_x);
+        }
+    }
+
+    template <class Ptr2D, typename T> __global__ void resize_linear(const Ptr2D src, PtrStepSz<T> dst, const float fy, const float fx)
+    {
+        const int dst_x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int dst_y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (dst_x < dst.cols && dst_y < dst.rows)
+        {
+            const float src_x = (dst_x + 0.5f) * fx - 0.5f;
+            const float src_y = (dst_y + 0.5f) * fy - 0.5f;
 
             dst(dst_y, dst_x) = src(src_y, src_x);
         }
@@ -231,7 +247,7 @@ namespace cv { namespace gpu { namespace device
             TextureAccessor<T> texSrc = texAccessor(src, 0, 0);
             LinearFilter< TextureAccessor<T> > filteredSrc(texSrc);
 
-            resize<<<grid, block>>>(filteredSrc, dst, fy, fx);
+            resize_linear<<<grid, block>>>(filteredSrc, dst, fy, fx);
         }
         else
         {
@@ -241,7 +257,7 @@ namespace cv { namespace gpu { namespace device
             BorderReader<TextureAccessor<T>, BrdReplicate<T> > brdSrc(texSrc, brd);
             LinearFilter< BorderReader<TextureAccessor<T>, BrdReplicate<T> > > filteredSrc(brdSrc);
 
-            resize<<<grid, block>>>(filteredSrc, dst, fy, fx);
+            resize_linear<<<grid, block>>>(filteredSrc, dst, fy, fx);
         }
 
         cudaSafeCall( cudaGetLastError() );
