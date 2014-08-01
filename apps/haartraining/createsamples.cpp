@@ -214,14 +214,23 @@ int main( int argc, char* argv[] )
 
         printf( "Done\n" );
     }
+    else if( imagename && bgfilename && infoname && pngoutput)
+    {
+        printf( "Create test samples from single image applying distortions...\n" );
+
+        cvCreatePngTrainingSet(infoname, imagename, bgcolor, bgthreshold, bgfilename, num,
+                             invert, maxintensitydev,
+                             maxxangle, maxyangle, maxzangle, width, height);
+
+        printf( "Done\n" );
+    }
     else if( imagename && bgfilename && infoname )
     {
         printf( "Create test samples from single image applying distortions...\n" );
 
         cvCreateTestSamples( infoname, imagename, bgcolor, bgthreshold, bgfilename, num,
                              invert, maxintensitydev,
-                             maxxangle, maxyangle, maxzangle, showsamples, width, height,
-                             pngoutput);
+                             maxxangle, maxyangle, maxzangle, showsamples, width, height);
 
         printf( "Done\n" );
     }

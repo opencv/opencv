@@ -68,6 +68,8 @@ CV_DECLARE_QSORT( icvSort_32s, int, less_than )
 
 int icvMkDir( const char* filename );
 
+void icvFindFilePathPart(char** partofpath, char* fullpath);
+
 /* returns index at specified position from index matrix of any type.
    if matrix is NULL, then specified position is returned */
 CV_INLINE

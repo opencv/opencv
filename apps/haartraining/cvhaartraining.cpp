@@ -2942,9 +2942,6 @@ void cvCreateTrainingSamples( const char* filename,
 
 }
 
-#define CV_INFO_FILENAME "info.dat"
-
-
 void icvFindFilePathPart(char** partofpath, char* fullpath)
 {
     *partofpath = strrchr( fullpath, '\\' );
@@ -2962,14 +2959,14 @@ void icvFindFilePathPart(char** partofpath, char* fullpath)
     }
 }
 
-void cvCreateTestSamples( const char* infoname,
+#define CV_INFO_FILENAME "info.dat"
+
+void cvCreatePngTrainingSet(const char* infoname,
                           const char* imgfilename, int bgcolor, int bgthreshold,
                           const char* bgfilename, int count,
                           int invert, int maxintensitydev,
                           double maxxangle, double maxyangle, double maxzangle,
-                          int showsamples,
-                          int winwidth, int winheight,
-                          int pngoutput)
+                          int winwidth, int winheight)
 {
     CvSampleDistortionData data;
 
@@ -2997,7 +2994,138 @@ void cvCreateTestSamples( const char* infoname,
         FILE* info;
         FILE* imgdescr;
         const char* annotationsdirname = "annotations";
-        const char* extension = (pngoutput == 0)? "jpg" : "png";
+        const char* extension = "png";
+
+        if( icvInitBackgroundReaders( bgfilename, cvSize( winwidth, winheight ) ) )
+        {
+            int i;
+            int x, y, width, height;
+            float scale;
+            int inverse;
+
+            info = fopen( infoname, "w" );
+            strcpy( fullname, infoname );
+
+            icvFindFilePathPart(&filename, fullname);
+
+            char* outputdirnameptr = NULL;
+            size_t fulldirnamelen = ( filename - fullname - 1);
+
+            strncpy(imgdescrfullname, fullname, fulldirnamelen * sizeof(char) );
+            imgdescrfullname[fulldirnamelen] = '\0';
+
+            icvFindFilePathPart(&outputdirnameptr, imgdescrfullname);
+            strcpy(outputdirname, outputdirnameptr);
+
+            int topleveldirnamelen = strlen(imgdescrfullname) - (outputdirnameptr - imgdescrfullname);
+            outputdirname[topleveldirnamelen] = '\0';
+
+            sprintf(filename, "pos/");
+            filename += strlen("pos/");
+
+            sprintf(imgdescrfullname + fulldirnamelen, "/%s/", annotationsdirname);
+            imgdescrfilename = imgdescrfullname + fulldirnamelen + strlen(annotationsdirname) + 2;
+
+            if( !icvMkDir( imgdescrfullname ) )
+            {
+                #if CV_VERBOSE
+                        fprintf( stderr, "Unable to create directory hierarchy: %s\n", imgdescrfullname );
+                #endif /* CV_VERBOSE */
+                return;
+            }
+            if( !icvMkDir( fullname ) )
+            {
+                #if CV_VERBOSE
+                        fprintf( stderr, "Unable to create directory hierarchy: %s\n", fullname );
+                #endif /* CV_VERBOSE */
+                return;
+            }
+
+            count = MIN( count, cvbgdata->count );
+            inverse = invert;
+            for( i = 0; i < count; i++ )
+            {
+                icvGetNextFromBackgroundData( cvbgdata, cvbgreader );
+
+                scale = MAX( 0.3F * cvbgreader->src.cols / winwidth,
+                             0.3F * cvbgreader->src.rows / winheight );
+                width = (int) (scale * winwidth);
+                height = (int) (scale * winheight);
+                x = (int) ((0.1+0.8 * rand()/RAND_MAX) * (cvbgreader->src.cols - width));
+                y = (int) ((0.1+0.8 * rand()/RAND_MAX) * (cvbgreader->src.rows - height));
+
+                cvGetSubArr( &cvbgreader->src, &win, cvRect( x, y ,width, height ) );
+
+
+                if( invert == CV_RANDOM_INVERT )
+                {
+                    inverse = (rand() > (RAND_MAX/2));
+                }
+
+
+                icvPlaceDistortedSample( &win, inverse, maxintensitydev,
+                                         maxxangle, maxyangle, maxzangle,
+                                         0   /* nonzero means placing image without cut offs */,
+                                         0.0 /* nonzero adds random shifting                  */,
+                                         0.0 /* nonzero adds random scaling                   */,
+                                         &data);
+
+                sprintf( filename, "%04d_%04d_%04d_%04d_%04d",
+                         (i + 1), x, y, width, height);
+
+                sprintf( imgdescrfilename,"%s.txt",
+                                          filename );
+                fprintf( info, "%s\n",
+                         imgdescrfullname );
+                imgdescr = fopen(imgdescrfullname,"w");
+
+                sprintf( filename + strlen(filename) , ".%s",
+                         extension);
+
+                fprintf( imgdescr, "Image filename : \"%s\"\n"
+                                    "Bounding box for object 1 \"PASperson\" (Xmin, Ymin) - (Xmax, Ymax) : (%d, %d) - (%d, %d)",
+                         fullname, x, y, x + width, y + height );
+                fclose( imgdescr );
+
+
+                cvSaveImage( fullname, &cvbgreader->src  );
+            }
+            if( info ) fclose( info );
+            icvDestroyBackgroundReaders();
+        }
+        icvEndSampleDistortion( &data );
+    }
+}
+
+void cvCreateTestSamples( const char* infoname,
+                          const char* imgfilename, int bgcolor, int bgthreshold,
+                          const char* bgfilename, int count,
+                          int invert, int maxintensitydev,
+                          double maxxangle, double maxyangle, double maxzangle,
+                          int showsamples,
+                          int winwidth, int winheight)
+{
+    CvSampleDistortionData data;
+
+    assert( infoname != NULL );
+    assert( imgfilename != NULL );
+    assert( bgfilename != NULL );
+
+    if( !icvMkDir( infoname ) )
+    {
+
+#if CV_VERBOSE
+        fprintf( stderr, "Unable to create directory hierarchy: %s\n", infoname );
+#endif /* CV_VERBOSE */
+
+        return;
+    }
+    if( icvStartSampleDistortion( imgfilename, bgcolor, bgthreshold, &data ) )
+    {
+        char fullname[PATH_MAX];
+        char* filename;
+        CvMat win;
+        FILE* info;
 
         if( icvInitBackgroundReaders( bgfilename, cvSize( 10, 10 ) ) )
         {
@@ -3017,42 +3145,6 @@ void cvCreateTestSamples( const char* infoname,
 
             icvFindFilePathPart(&filename, fullname);
 
-            if( pngoutput )
-            {
-                char* outputdirnameptr = NULL;
-                size_t fulldirnamelen = ( filename - fullname - 1);
-
-                strncpy(imgdescrfullname, fullname, fulldirnamelen * sizeof(char) );
-                imgdescrfullname[fulldirnamelen] = '\0';
-
-                icvFindFilePathPart(&outputdirnameptr, imgdescrfullname);
-                strcpy(outputdirname, outputdirnameptr);
-
-                int topleveldirnamelen = strlen(imgdescrfullname) - (outputdirnameptr - imgdescrfullname);
-                outputdirname[topleveldirnamelen] = '\0';
-
-                sprintf(filename, "pos/");
-                filename += strlen("pos/");
-
-                sprintf(imgdescrfullname + fulldirnamelen, "/%s/", annotationsdirname);
-                imgdescrfilename = imgdescrfullname + fulldirnamelen + strlen(annotationsdirname) + 2;
-
-                if( !icvMkDir( imgdescrfullname ) )
-                {
-                    #if CV_VERBOSE
-                            fprintf( stderr, "Unable to create directory hierarchy: %s\n", imgdescrfullname );
-                    #endif /* CV_VERBOSE */
-                    return;
-                }
-                if( !icvMkDir( fullname ) )
-                {
-                    #if CV_VERBOSE
-                            fprintf( stderr, "Unable to create directory hierarchy: %s\n", fullname );
-                    #endif /* CV_VERBOSE */
-                    return;
-                }
-
-            }
 
             count = MIN( count, cvbgdata->count );
             inverse = invert;
@@ -3062,47 +3154,32 @@ void cvCreateTestSamples( const char* infoname,
 
                 maxscale = MIN( 0.7F * cvbgreader->src.cols / winwidth,
                                    0.7F * cvbgreader->src.rows / winheight );
-                if( maxscale < 1.0F ) continue;
 
+                if( maxscale < 1.0F ) continue;
                 scale = (maxscale - 1.0F) * rand() / RAND_MAX + 1.0F;
                 width = (int) (scale * winwidth);
                 height = (int) (scale * winheight);
                 x = (int) ((0.1+0.8 * rand()/RAND_MAX) * (cvbgreader->src.cols - width));
                 y = (int) ((0.1+0.8 * rand()/RAND_MAX) * (cvbgreader->src.rows - height));
 
+
                 cvGetSubArr( &cvbgreader->src, &win, cvRect( x, y ,width, height ) );
                 if( invert == CV_RANDOM_INVERT )
                 {
                     inverse = (rand() > (RAND_MAX/2));
                 }
-                icvPlaceDistortedSample( &win, inverse, maxintensitydev,
-                                         maxxangle, maxyangle, maxzangle,
-                                         1, 0.0, 0.0, &data );
 
-
-                if( pngoutput )
+                if( info )
                 {
-                    sprintf( filename, "%04d_%04d_%04d_%04d_%04d",
+                    icvPlaceDistortedSample( &win, inverse, maxintensitydev,
+                                             maxxangle, maxyangle, maxzangle,
+                                             1   /* nonzero means placing image without cut offs */,
+                                             0.0 /* nonzero adds random shifting                  */,
+                                             0.0 /* nonzero adds random scaling                   */,
+                                             &data );
+
+                    sprintf( filename, "%04d_%04d_%04d_%04d_%04d.jpg",
                              (i + 1), x, y, width, height);
-
-                    sprintf( imgdescrfilename,"%s.txt",
-                                              filename );
-                    fprintf( info, "%s\n",
-                             imgdescrfullname );
-                    imgdescr = fopen(imgdescrfullname,"w");
-
-                    sprintf( filename + strlen(filename) , ".%s",
-                             extension);
-
-                    fprintf( imgdescr, "Image filename : \"%s\"\n"
-                                        "Bounding box for object 1 \"PASperson\" (Xmin, Ymin) - (Xmax, Ymax) : (%d, %d) - (%d, %d)",
-                             fullname, x, y, x + width, y + height );
-                    fclose( imgdescr );
-                }
-                else if( info )
-                {
-                    sprintf( filename, "%04d_%04d_%04d_%04d_%04d.%s",
-                             (i + 1), x, y, width, height, extension);
                     fprintf( info, "%s %d %d %d %d %d\n",
                         filename, 1, x, y, width, height );
                 }
