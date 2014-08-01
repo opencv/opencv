@@ -13,7 +13,7 @@
 
 #include "opencv2/ts.hpp"
 #include "opencv2/nonfree.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/imgcodecs.hpp"
 
 #include "opencv2/opencv_modules.hpp"
 

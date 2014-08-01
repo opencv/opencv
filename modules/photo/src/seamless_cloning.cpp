@@ -108,6 +108,7 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
 
     Cloning obj;
     obj.normal_clone(dest,cd_mask,dst_mask,blend,flags);
+
 }
 
 void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float r, float g, float b)
@@ -135,7 +136,6 @@ void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float 
     Cloning obj;
     obj.local_color_change(src,cs_mask,gray,blend,red,green,blue);
 }
-
 
 void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst, float a, float b)
 {

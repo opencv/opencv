@@ -1,5 +1,5 @@
 This folder contains libraries and headers of a few very popular still image codecs
-used by highgui module.
+used by imgcodecs module.
 The libraries and headers are preferably to build Win32 and Win64 versions of OpenCV.
 On UNIX systems all the libraries are automatically detected by configure script.
 In order to use these versions of libraries instead of system ones on UNIX systems you
@@ -11,7 +11,7 @@ libjpeg 8d (8.4)  -   The Independent JPEG Group's JPEG software.
                       See IGJ home page http://www.ijg.org
                       for details and links to the source code
 
-                      HAVE_JPEG preprocessor flag must be set to make highgui use libjpeg.
+                      HAVE_JPEG preprocessor flag must be set to make imgcodecs use libjpeg.
                       On UNIX systems configure script takes care of it.
 ------------------------------------------------------------------------------------
 libpng 1.5.12     -   Portable Network Graphics library.
@@ -19,7 +19,7 @@ libpng 1.5.12     -   Portable Network Graphics library.
                       See libpng home page http://www.libpng.org
                       for details and links to the source code
 
-                      HAVE_PNG preprocessor flag must be set to make highgui use libpng.
+                      HAVE_PNG preprocessor flag must be set to make imgcodecs use libpng.
                       On UNIX systems configure script takes care of it.
 ------------------------------------------------------------------------------------
 libtiff 4.0.2     -   Tag Image File Format (TIFF) Software
@@ -28,7 +28,7 @@ libtiff 4.0.2     -   Tag Image File Format (TIFF) Software
                       See libtiff home page http://www.remotesensing.org/libtiff/
                       for details and links to the source code
 
-                      HAVE_TIFF preprocessor flag must be set to make highgui use libtiff.
+                      HAVE_TIFF preprocessor flag must be set to make imgcodecs use libtiff.
                       On UNIX systems configure script takes care of it.
                       In this build support for ZIP (LZ77 compression) is turned on.
 ------------------------------------------------------------------------------------
@@ -37,7 +37,7 @@ zlib 1.2.7        -   General purpose LZ77 compression library
                       See zlib home page http://www.zlib.net
                       for details and links to the source code
 
-                      No preprocessor definition is needed to make highgui use this library -
+                      No preprocessor definition is needed to make imgcodecs use this library -
                       it is included automatically if either libpng or libtiff are used.
 ------------------------------------------------------------------------------------
 jasper-1.900.1    -   JasPer is a collection of software

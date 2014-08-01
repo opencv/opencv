@@ -86,7 +86,7 @@ Each of the building components has their own valid domains. This leads to the d
 Creating a *Mat* object explicitly
 ==================================
 
-In the :ref:`Load_Save_Image` tutorial you have already learned how to write a matrix to an image file by using the :readwriteimagevideo:`imwrite() <imwrite>` function. However, for debugging purposes it's much more convenient to see the actual values. You can do this using the << operator of *Mat*. Be aware that this only works for two dimensional matrices.
+In the :ref:`Load_Save_Image` tutorial you have already learned how to write a matrix to an image file by using the :readwriteimage:`imwrite() <imwrite>` function. However, for debugging purposes it's much more convenient to see the actual values. You can do this using the << operator of *Mat*. Be aware that this only works for two dimensional matrices.
 
 Although *Mat* works really well as an image container, it is also a general matrix class. Therefore, it is possible to create and manipulate multidimensional matrices. You can create a Mat object in multiple ways:
 
