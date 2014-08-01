@@ -2991,6 +2991,7 @@ void cvCreatePngTrainingSet(const char* infoname,
         char outputdirname[PATH_MAX];
         char* imgdescrfilename;
         CvMat win;
+        CvMat result;
         FILE* info;
         FILE* imgdescr;
         const char* annotationsdirname = "annotations";
@@ -3043,6 +3044,9 @@ void cvCreatePngTrainingSet(const char* infoname,
 
             count = MIN( count, cvbgdata->count );
             inverse = invert;
+
+            result = cvMat( winheight, winwidth, CV_8UC1, cvAlloc( sizeof( uchar ) *
+                                                                   winheight * winwidth ) );
             for( i = 0; i < count; i++ )
             {
                 icvGetNextFromBackgroundData( cvbgdata, cvbgreader );
@@ -3070,6 +3074,8 @@ void cvCreatePngTrainingSet(const char* infoname,
                                          0.0 /* nonzero adds random scaling                   */,
                                          &data);
 
+                cvResize(&cvbgreader->src, &result);
+
                 sprintf( filename, "%04d_%04d_%04d_%04d_%04d",
                          (i + 1), x, y, width, height);
 
@@ -3088,10 +3094,11 @@ void cvCreatePngTrainingSet(const char* infoname,
                 fclose( imgdescr );
 
 
-                cvSaveImage( fullname, &cvbgreader->src  );
+                cvSaveImage( fullname, &result );
             }
             if( info ) fclose( info );
             icvDestroyBackgroundReaders();
+            cvFree( &(result.data.ptr) );
         }
         icvEndSampleDistortion( &data );
     }
