@@ -6,18 +6,18 @@ if(NOT OCV_DEPENDENCIES_FOUND)
 endif()
 
 project(traincascade)
+set(the_target opencv_traincascade)
 
-ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${OpenCV_SOURCE_DIR}/include/opencv")
-ocv_include_modules(${OPENCV_TRAINCASCADE_DEPS})
+ocv_target_include_directories(${the_target} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${OpenCV_SOURCE_DIR}/include/opencv")
+ocv_target_include_modules(${the_target} ${OPENCV_TRAINCASCADE_DEPS})
 
 file(GLOB SRCS *.cpp)
 file(GLOB HDRS *.h*)
 
 set(traincascade_files ${SRCS} ${HDRS})
 
-set(the_target opencv_traincascade)
-add_executable(${the_target} ${traincascade_files})
-target_link_libraries(${the_target} ${OPENCV_TRAINCASCADE_DEPS})
+ocv_add_executable(${the_target} ${traincascade_files})
+ocv_target_link_libraries(${the_target} ${OPENCV_TRAINCASCADE_DEPS})
 
 set_target_properties(${the_target} PROPERTIES
                       DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"

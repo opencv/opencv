@@ -47,7 +47,7 @@
 
 #include <cstdio>
 #include <sstream>
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_nonfree.hpp"
 
 namespace cv
 {
