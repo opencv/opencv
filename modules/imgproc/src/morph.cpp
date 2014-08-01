@@ -1339,21 +1339,189 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
 
 #ifdef HAVE_OPENCL
 
+#define ROUNDUP(sz, n)      ((sz) + (n) - 1 - (((sz) + (n) - 1) % (n)))
+
+static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kernel, Point anchor, int borderType,
+                            int op, int actual_op = -1, InputArray _extraMat = noArray())
+{
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(type);
+    bool doubleSupport = dev.doubleFPConfig() > 0;
+
+    if (cn > 4 || (!doubleSupport && depth == CV_64F) ||
+        _src.offset() % esz != 0 || _src.step() % esz != 0)
+        return false;
+
+    bool haveExtraMat = !_extraMat.empty();
+    CV_Assert(actual_op <= 3 || haveExtraMat);
+
+    Size ksize = _kernel.size();
+    if (anchor.x < 0)
+        anchor.x = ksize.width / 2;
+    if (anchor.y < 0)
+        anchor.y = ksize.height / 2;
+
+    Size size = _src.size(), wholeSize;
+    bool isolated = (borderType & BORDER_ISOLATED) != 0;
+    borderType &= ~BORDER_ISOLATED;
+    int wdepth = depth, wtype = type;
+    if (depth == CV_8U)
+    {
+        wdepth = CV_32S;
+        wtype = CV_MAKETYPE(wdepth, cn);
+    }
+    char cvt[2][40];
+
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE",
+                                       "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
+    size_t globalsize[2] = { size.width, size.height };
+
+    UMat src = _src.getUMat();
+    if (!isolated)
+    {
+        Point ofs;
+        src.locateROI(wholeSize, ofs);
+    }
+
+    int h = isolated ? size.height : wholeSize.height;
+    int w = isolated ? size.width : wholeSize.width;
+    if (w < ksize.width || h < ksize.height)
+        return false;
+
+    // Figure out what vector size to use for loading the pixels.
+    int pxLoadNumPixels = cn != 1 || size.width % 4 ? 1 : 4;
+    int pxLoadVecSize = cn * pxLoadNumPixels;
+
+    // Figure out how many pixels per work item to compute in X and Y
+    // directions.  Too many and we run out of registers.
+    int pxPerWorkItemX = 1, pxPerWorkItemY = 1;
+    if (cn <= 2 && ksize.width <= 4 && ksize.height <= 4)
+    {
+        pxPerWorkItemX = size.width % 8 ? size.width % 4 ? size.width % 2 ? 1 : 2 : 4 : 8;
+        pxPerWorkItemY = size.height % 2 ? 1 : 2;
+    }
+    else if (cn < 4 || (ksize.width <= 4 && ksize.height <= 4))
+    {
+        pxPerWorkItemX = size.width % 2 ? 1 : 2;
+        pxPerWorkItemY = size.height % 2 ? 1 : 2;
+    }
+    globalsize[0] = size.width / pxPerWorkItemX;
+    globalsize[1] = size.height / pxPerWorkItemY;
+
+    // Need some padding in the private array for pixels
+    int privDataWidth = ROUNDUP(pxPerWorkItemX + ksize.width - 1, pxLoadNumPixels);
+
+    // Make the global size a nice round number so the runtime can pick
+    // from reasonable choices for the workgroup size
+    const int wgRound = 256;
+    globalsize[0] = ROUNDUP(globalsize[0], wgRound);
+
+    if (actual_op < 0)
+        actual_op = op;
+
+    // build processing
+    String processing;
+    Mat kernel8u;
+    _kernel.getMat().convertTo(kernel8u, CV_8U);
+    for (int y = 0; y < kernel8u.rows; ++y)
+        for (int x = 0; x < kernel8u.cols; ++x)
+            if (kernel8u.at<uchar>(y, x) != 0)
+                processing += format("PROCESS(%d,%d)", y, x);
+
+
+    static const char * const op2str[] = { "OP_ERODE", "OP_DILATE", NULL, NULL, "OP_GRADIENT", "OP_TOPHAT", "OP_BLACKHAT" };
+    String opts = format("-D cn=%d "
+            "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
+            "-D PX_LOAD_VEC_SIZE=%d -D PX_LOAD_NUM_PX=%d -D DEPTH_%d "
+            "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "
+            "-D PX_LOAD_X_ITERATIONS=%d -D PX_LOAD_Y_ITERATIONS=%d "
+            "-D srcT=%s -D srcT1=%s -D dstT=srcT -D dstT1=srcT1 -D WT=%s -D WT1=%s "
+            "-D convertToWT=%s -D convertToDstT=%s -D PROCESS_ELEM_=%s -D %s%s",
+            cn, anchor.x, anchor.y, ksize.width, ksize.height,
+            pxLoadVecSize, pxLoadNumPixels, depth,
+            pxPerWorkItemX, pxPerWorkItemY, privDataWidth, borderMap[borderType],
+            isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
+            privDataWidth / pxLoadNumPixels, pxPerWorkItemY + ksize.height - 1,
+            ocl::typeToStr(type), ocl::typeToStr(depth),
+            haveExtraMat ? ocl::typeToStr(wtype):"srcT",//to prevent overflow - WT
+            haveExtraMat ? ocl::typeToStr(wdepth):"srcT1",//to prevent overflow - WT1
+            haveExtraMat ? ocl::convertTypeStr(depth, wdepth, cn, cvt[0]) : "noconvert",//to prevent overflow - src to WT
+            haveExtraMat ? ocl::convertTypeStr(wdepth, depth, cn, cvt[1]) : "noconvert",//to prevent overflow - WT to dst
+            processing.c_str(), op2str[op],
+            actual_op == op ? "" : cv::format(" -D %s", op2str[actual_op]).c_str());
+
+    ocl::Kernel kernel("filterSmall", cv::ocl::imgproc::filterSmall_oclsrc, opts);
+    if (kernel.empty())
+        return false;
+
+    _dst.create(size, type);
+    UMat dst = _dst.getUMat();
+
+    UMat source;
+    if(src.u != dst.u)
+        source = src;
+    else
+    {
+        Point ofs;
+        int cols =  src.cols, rows = src.rows;
+        src.locateROI(wholeSize, ofs);
+        src.adjustROI(ofs.y, wholeSize.height - rows - ofs.y, ofs.x, wholeSize.width - cols - ofs.x);
+        src.copyTo(source);
+
+        src.adjustROI(-ofs.y, -wholeSize.height + rows + ofs.y, -ofs.x, -wholeSize.width + cols + ofs.x);
+        source.adjustROI(-ofs.y, -wholeSize.height + rows + ofs.y, -ofs.x, -wholeSize.width + cols + ofs.x);
+        source.locateROI(wholeSize, ofs);
+    }
+
+    UMat extraMat = _extraMat.getUMat();
+
+    int idxArg = kernel.set(0, ocl::KernelArg::PtrReadOnly(source));
+    idxArg = kernel.set(idxArg, (int)source.step);
+    int srcOffsetX = (int)((source.offset % source.step) / source.elemSize());
+    int srcOffsetY = (int)(source.offset / source.step);
+    int srcEndX = isolated ? srcOffsetX + size.width : wholeSize.width;
+    int srcEndY = isolated ? srcOffsetY + size.height : wholeSize.height;
+    idxArg = kernel.set(idxArg, srcOffsetX);
+    idxArg = kernel.set(idxArg, srcOffsetY);
+    idxArg = kernel.set(idxArg, srcEndX);
+    idxArg = kernel.set(idxArg, srcEndY);
+    idxArg = kernel.set(idxArg, ocl::KernelArg::WriteOnly(dst));
+
+    if (haveExtraMat)
+    {
+        idxArg = kernel.set(idxArg, ocl::KernelArg::ReadOnlyNoSize(extraMat));
+    }
+
+    return kernel.run(2, globalsize, NULL, false);
+
+}
+
 static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
                         Point anchor, int iterations, int op, int borderType,
                         const Scalar &, int actual_op = -1, InputArray _extraMat = noArray())
 {
     const ocl::Device & dev = ocl::Device::getDefault();
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    bool doubleSupport = dev.doubleFPConfig() > 0;
+    int type = _src.type(), depth = CV_MAT_DEPTH(type),
+            cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(type);
+    Mat kernel = _kernel.getMat();
+    Size ksize = kernel.data ? kernel.size() : Size(3, 3), ssize = _src.size();
 
+    bool doubleSupport = dev.doubleFPConfig() > 0;
     if ((depth == CV_64F && !doubleSupport) || borderType != BORDER_CONSTANT)
         return false;
 
-    Mat kernel = _kernel.getMat();
     bool haveExtraMat = !_extraMat.empty();
-    Size ksize = kernel.data ? kernel.size() : Size(3, 3), ssize = _src.size();
     CV_Assert(actual_op <= 3 || haveExtraMat);
+
+    // try to use OpenCL kernel adopted for small morph kernel
+    if (dev.isIntel() && !(dev.type() & ocl::Device::TYPE_CPU) &&
+        ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
+         (ksize.width == 5 && ksize.height == 5 && cn == 1)) &&
+         (iterations == 1))
+    {
+        if (ocl_morphSmall(_src, _dst, _kernel, anchor, borderType, op, actual_op, _extraMat))
+            return true;
+    }
 
     if (iterations == 0 || kernel.rows*kernel.cols == 1)
     {
