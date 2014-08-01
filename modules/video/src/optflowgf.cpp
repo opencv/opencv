@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_video.hpp"
 
 //
 // 2D dense optical flow algorithm from the following paper:

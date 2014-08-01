@@ -2,7 +2,9 @@
 #  CMake file for python support
 # ----------------------------------------------------------------------------
 
-if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+if((WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+    OR BUILD_opencv_world
+    )
   ocv_module_disable(python)
 endif()
 
@@ -67,15 +69,15 @@ add_custom_command(
    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
    DEPENDS ${opencv_hdrs})
 
-add_library(${the_module} SHARED src2/cv2.cpp ${cv2_generated_hdrs})
+ocv_add_library(${the_module} SHARED src2/cv2.cpp ${cv2_generated_hdrs})
 set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
 
 if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")
-  target_link_libraries(${the_module} debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
+  ocv_target_link_libraries(${the_module} debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
 else()
-  target_link_libraries(${the_module} ${PYTHON_LIBRARIES})
+  ocv_target_link_libraries(${the_module} ${PYTHON_LIBRARIES})
 endif()
-target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS})
+ocv_target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS})
 
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import distutils.sysconfig; print(distutils.sysconfig.get_config_var('SO'))"
                 RESULT_VARIABLE PYTHON_CVPY_PROCESS
@@ -92,7 +94,7 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(MSVC)
-    add_definitions(-DCVAPI_EXPORTS)
+  add_definitions(-DCVAPI_EXPORTS)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)

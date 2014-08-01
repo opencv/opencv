@@ -48,7 +48,7 @@
 #include "precomp.hpp"
 #include <stdio.h>
 #include <limits>
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_calib3d.hpp"
 
 namespace cv
 {
