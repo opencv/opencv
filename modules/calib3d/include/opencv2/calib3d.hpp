@@ -314,6 +314,11 @@ CV_EXPORTS_W  int estimateAffine3D(InputArray src, InputArray dst,
                                    double ransacThreshold = 3, double confidence = 0.99);
 
 
+CV_EXPORTS_W int decomposeHomographyMat(InputArray H,
+                                        InputArray K,
+                                        OutputArrayOfArrays rotations,
+                                        OutputArrayOfArrays translations,
+                                        OutputArrayOfArrays normals);
 
 class CV_EXPORTS_W StereoMatcher : public Algorithm
 {
