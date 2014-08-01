@@ -42,10 +42,6 @@
 
 #include "perf_precomp.hpp"
 
-#ifdef HAVE_OPENCV_CUDALEGACY
-#  include "opencv2/cudalegacy.hpp"
-#endif
-
 #ifdef HAVE_OPENCV_CUDAIMGPROC
 #  include "opencv2/cudaimgproc.hpp"
 #endif
@@ -71,18 +67,6 @@ using namespace perf;
 // FGDStatModel
 
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT
-
-#ifdef HAVE_OPENCV_CUDALEGACY
-
-namespace cv
-{
-    template<> void DefaultDeleter<CvBGStatModel>::operator ()(CvBGStatModel* obj) const
-    {
-        cvReleaseBGStatModel(&obj);
-    }
-}
-
-#endif
 
 DEF_PARAM_TEST_1(Video, string);
 
@@ -150,48 +134,7 @@ PERF_TEST_P(Video, FGDStatModel,
     }
     else
     {
-#ifdef HAVE_OPENCV_CUDALEGACY
-        IplImage ipl_frame = frame;
-        cv::Ptr<CvBGStatModel> model(cvCreateFGDStatModel(&ipl_frame));
-
-        int i = 0;
-
-        // collect performance data
-        for (; i < numIters; ++i)
-        {
-            cap >> frame;
-            ASSERT_FALSE(frame.empty());
-
-            ipl_frame = frame;
-
-            startTimer();
-            if(!next())
-                break;
-
-            cvUpdateBGStatModel(&ipl_frame, model);
-
-            stopTimer();
-        }
-
-        // process last frame in sequence to get data for sanity test
-        for (; i < numIters; ++i)
-        {
-            cap >> frame;
-            ASSERT_FALSE(frame.empty());
-
-            ipl_frame = frame;
-
-            cvUpdateBGStatModel(&ipl_frame, model);
-        }
-
-        const cv::Mat background = cv::cvarrToMat(model->background);
-        const cv::Mat foreground = cv::cvarrToMat(model->foreground);
-
-        CPU_SANITY_CHECK(background);
-        CPU_SANITY_CHECK(foreground);
-#else
         FAIL_NO_CPU();
-#endif
     }
 }
 
