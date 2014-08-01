@@ -1541,7 +1541,7 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
         kercn = ocl::predictOptimalVectorWidth(_src, _dst), rowsPerWI = d.isIntel() ? 4 : 1;
     bool doubleSupport = d.doubleFPConfig() > 0;
 
-    if (!doubleSupport && depth == CV_64F)
+    if (depth == CV_32F || depth == CV_64F)
         return false;
 
     char cvt[2][50];

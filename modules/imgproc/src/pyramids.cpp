@@ -445,7 +445,7 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst));
 
     size_t localThreads[2]  = { local_size/kercn, 1 };
-    size_t globalThreads[2] = { (src.cols + (kercn-1))/kercn, dst.rows };
+    size_t globalThreads[2] = { (src.cols + (kercn-1))/kercn, (dst.rows + 1) / 2 };
     return k.run(2, globalThreads, localThreads, false);
 }
 

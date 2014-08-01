@@ -6,7 +6,7 @@ Non-Photorealistic Rendering
 edgePreservingFilter
 --------------------
 
-Filtering is the fundamental operation in image and video processing. Edge-preserving smoothing filters are used in many different applications.
+Filtering is the fundamental operation in image and video processing. Edge-preserving smoothing filters are used in many different applications [EM11]_.
 
 .. ocv:function:: void edgePreservingFilter(InputArray src, OutputArray dst, int flags = 1, float sigma_s = 60, float sigma_r = 0.4f)
 
@@ -16,9 +16,9 @@ Filtering is the fundamental operation in image and video processing. Edge-prese
 
     :param flags: Edge preserving filters:
 
-            * **RECURS_FILTER**
+            * **RECURS_FILTER** = 1
 
-            * **NORMCONV_FILTER**
+            * **NORMCONV_FILTER** = 2
 
     :param sigma_s: Range between 0 to 200.
 
@@ -72,3 +72,5 @@ Stylization aims to produce digital imagery with a wide variety of effects not f
     :param sigma_s: Range between 0 to 200.
 
     :param sigma_r: Range between 0 to 1.
+
+.. [EM11] Eduardo S. L. Gastal, Manuel M. Oliveira, "Domain transform for edge-aware image and video processing", ACM Trans. Graph. 30(4): 69, 2011.

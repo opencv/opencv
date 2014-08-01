@@ -432,7 +432,7 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
 
         IppStatus status = (IppStatus)-1;
         IppiSize roisize = { cols, rows };
-        int mstep = (int)mask.step, dstep = (int)step;
+        int mstep = (int)mask.step[0], dstep = (int)step[0];
 
         if (isContinuous() && mask.isContinuous())
         {
@@ -616,7 +616,7 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 {
     CV_Assert(flipCode >= -1 && flipCode <= 1);
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
-            flipType, kercn = std::min(ocl::predictOptimalVectorWidth(_src, _dst), 4);;
+            flipType, kercn = std::min(ocl::predictOptimalVectorWidth(_src, _dst), 4);
 
     if (cn > 4)
         return false;
@@ -631,7 +631,7 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 
     ocl::Device dev = ocl::Device::getDefault();
     int pxPerWIy = (dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU)) ? 4 : 1;
-    kercn = std::max(kercn, cn);
+    kercn = (cn!=3 || flipType == FLIP_ROWS) ? std::max(kercn, cn) : cn;
 
     ocl::Kernel k(kernelName, ocl::core::flip_oclsrc,
         format( "-D T=%s -D T1=%s -D cn=%d -D PIX_PER_WI_Y=%d -D kercn=%d",
@@ -762,7 +762,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
         flipHoriz( dst.data, dst.step, dst.data, dst.step, dst.size(), esz );
 }
 
-#ifdef HAVE_OPENCL
+/*#ifdef HAVE_OPENCL
 
 static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
@@ -790,7 +790,7 @@ static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
     return k.run(2, globalsize, NULL, false);
 }
 
-#endif
+#endif*/
 
 void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
@@ -800,8 +800,8 @@ void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
     Size ssize = _src.size();
     _dst.create(ssize.height*ny, ssize.width*nx, _src.type());
 
-    CV_OCL_RUN(_dst.isUMat(),
-               ocl_repeat(_src, ny, nx, _dst))
+    /*CV_OCL_RUN(_dst.isUMat(),
+               ocl_repeat(_src, ny, nx, _dst))*/
 
     Mat src = _src.getMat(), dst = _dst.getMat();
     Size dsize = dst.size();
