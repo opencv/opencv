@@ -42,10 +42,6 @@
 
 #include "test_precomp.hpp"
 
-#ifdef HAVE_OPENCV_CUDALEGACY
-#  include "opencv2/cudalegacy.hpp"
-#endif
-
 #ifdef HAVE_CUDA
 
 using namespace cvtest;
@@ -61,80 +57,6 @@ using namespace cvtest;
 #  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
 #else
 #  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
-#endif
-
-//////////////////////////////////////////////////////
-// FGDStatModel
-
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT && defined(HAVE_OPENCV_CUDALEGACY)
-
-namespace cv
-{
-    template<> void DefaultDeleter<CvBGStatModel>::operator ()(CvBGStatModel* obj) const
-    {
-        cvReleaseBGStatModel(&obj);
-    }
-}
-
-PARAM_TEST_CASE(FGDStatModel, cv::cuda::DeviceInfo, std::string)
-{
-    cv::cuda::DeviceInfo devInfo;
-    std::string inputFile;
-
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        cv::cuda::setDevice(devInfo.deviceID());
-
-        inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
-    }
-};
-
-CUDA_TEST_P(FGDStatModel, Update)
-{
-    cv::VideoCapture cap(inputFile);
-    ASSERT_TRUE(cap.isOpened());
-
-    cv::Mat frame;
-    cap >> frame;
-    ASSERT_FALSE(frame.empty());
-
-    IplImage ipl_frame = frame;
-    cv::Ptr<CvBGStatModel> model(cvCreateFGDStatModel(&ipl_frame));
-
-    cv::cuda::GpuMat d_frame(frame);
-    cv::Ptr<cv::cuda::BackgroundSubtractorFGD> d_fgd = cv::cuda::createBackgroundSubtractorFGD();
-    cv::cuda::GpuMat d_foreground, d_background;
-    std::vector< std::vector<cv::Point> > foreground_regions;
-    d_fgd->apply(d_frame, d_foreground);
-
-    for (int i = 0; i < 5; ++i)
-    {
-        cap >> frame;
-        ASSERT_FALSE(frame.empty());
-
-        ipl_frame = frame;
-        int gold_count = cvUpdateBGStatModel(&ipl_frame, model);
-
-        d_frame.upload(frame);
-        d_fgd->apply(d_frame, d_foreground);
-        d_fgd->getBackgroundImage(d_background);
-        d_fgd->getForegroundRegions(foreground_regions);
-        int count = (int) foreground_regions.size();
-
-        cv::Mat gold_background = cv::cvarrToMat(model->background);
-        cv::Mat gold_foreground = cv::cvarrToMat(model->foreground);
-
-        ASSERT_MAT_NEAR(gold_background, d_background, 1.0);
-        ASSERT_MAT_NEAR(gold_foreground, d_foreground, 0.0);
-        ASSERT_EQ(gold_count, count);
-    }
-}
-
-INSTANTIATE_TEST_CASE_P(CUDA_BgSegm, FGDStatModel, testing::Combine(
-    ALL_DEVICES,
-    testing::Values(std::string("768x576.avi"))));
-
 #endif
 
 //////////////////////////////////////////////////////
