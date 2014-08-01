@@ -2038,6 +2038,10 @@ struct Luv2RGB_f
             float G = X*C3 + Y*C4 + Z*C5;
             float B = X*C6 + Y*C7 + Z*C8;
 
+            R = std::min(std::max(R, 0.f), 1.f);
+            G = std::min(std::max(G, 0.f), 1.f);
+            B = std::min(std::max(B, 0.f), 1.f);
+
             if( gammaTab )
             {
                 R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
