@@ -12,14 +12,11 @@
 #  include "opencv2/core/eigen.hpp"
 #endif
 
-
-//#include <Eigen/Eigenvalues>
-//#include <Eigen/Core>
-
 using namespace std;
 
 dls::dls(const cv::Mat& opoints, const cv::Mat& ipoints)
 {
+
 
 	N =  std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
 	p = cv::Mat(3, N, CV_64F);
@@ -136,8 +133,6 @@ void dls::run_kernel(const cv::Mat& pp)
 	int count = 0;
 	for (int k = 0; k < 27; ++k)
 	{
-		// TODO: solve implementation for complex numbers
-
 		//  V(:,k) = V(:,k)/V(1,k);
 		cv::Mat V_kA = eigenvec_r.col(k); // 27x1
 		cv::Mat V_kB = cv::Mat(1, 1, z.depth(), V_kA.at<double>(0)); // 1x1
@@ -145,9 +140,11 @@ void dls::run_kernel(const cv::Mat& pp)
 		cv::Mat( V_k.t()).copyTo( eigenvec_r.col(k) );
 
 		//if (imag(V(2,k)) == 0)
+#ifdef HAVE_EIGEN
 		const double epsilon = 1e-4;
 	    if( eigenval_i.at<double>(k,0) >= -epsilon && eigenval_i.at<double>(k,0) <= epsilon )
-		{ // it should work without checking imaginari part
+#endif
+		{
 
 			double stmp[3];
 			stmp[0] = eigenvec_r.at<double>(9, k);
@@ -282,8 +279,6 @@ void dls::build_coeff_matrix(const cv::Mat& pp, cv::Mat& Mtilde, cv::Mat& D)
 void dls::compute_eigenvec(const cv::Mat& Mtilde, cv::Mat& eigenval_real, cv::Mat& eigenval_imag,
         										  cv::Mat& eigenvec_real, cv::Mat& eigenvec_imag)
 {
-	// EIGENVALUES AND EIGENVECTORS
-
 #ifdef HAVE_EIGEN
 	Eigen::MatrixXd Mtilde_eig, zeros_eig;
 	cv::cv2eigen(Mtilde, Mtilde_eig);
@@ -305,6 +300,10 @@ void dls::compute_eigenvec(const cv::Mat& Mtilde, cv::Mat& eigenval_real, cv::Ma
 	cv::eigen2cv(eigval_imag, eigenval_imag);
 	cv::eigen2cv(eigvec_real, eigenvec_real);
 	cv::eigen2cv(eigvec_imag, eigenvec_imag);
+#else
+	EigenvalueDecomposition es(Mtilde);
+	eigenval_real = es.eigenvalues();
+	eigenvec_real = es.eigenvectors();
 #endif
 
 }

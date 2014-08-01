@@ -96,21 +96,15 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     }
     else if (flags == DLS)
     {
-    	bool result = false;
-#ifdef HAVE_EIGEN
-
     	cv::Mat undistortedPoints;
     	cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
 
     	dls PnP(opoints, undistortedPoints);
 
     	cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
-    	result = PnP.compute_pose(R, tvec);
+    	bool result = PnP.compute_pose(R, tvec);
         if (result)
         	cv::Rodrigues(R, rvec);
-#else
-        std::cout << "EIGEN library needed for DLS" << std::endl;
-#endif
         return result;
     }
     else
