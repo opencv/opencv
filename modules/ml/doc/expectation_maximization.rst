@@ -128,7 +128,7 @@ Creates empty EM model
 
     :param params: EM parameters
 
-The model should be trained then using ``StatModel::train(traindata, flags)`` method. Alternatively, you can use one of the ``EM::train*`` methods or load it from file using ``StatModel::load<EM>(filename)``.     
+The model should be trained then using ``StatModel::train(traindata, flags)`` method. Alternatively, you can use one of the ``EM::train*`` methods or load it from file using ``StatModel::load<EM>(filename)``.
 
 EM::train
 ---------
@@ -155,7 +155,7 @@ Static methods that estimate the Gaussian mixture parameters from a samples set
     :param labels: The optional output "class label" for each sample: :math:`\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N` (indices of the most probable mixture component for each sample). It has :math:`nsamples \times 1` size and ``CV_32SC1`` type.
 
     :param probs: The optional output matrix that contains posterior probabilities of each Gaussian mixture component given the each sample. It has :math:`nsamples \times nclusters` size and ``CV_64FC1`` type.
-    
+
     :param params: The Gaussian mixture params, see ``EM::Params`` description above.
 
 Three versions of training method differ in the initialization of Gaussian mixture model parameters and start step:

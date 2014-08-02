@@ -248,9 +248,9 @@ namespace ml
         virtual const std::vector<Node>& getNodes() const { return nodes; }
         virtual const std::vector<Split>& getSplits() const { return splits; }
         virtual const std::vector<int>& getSubsets() const { return subsets; }
-        
+
         Params params0, params;
-        
+
         vector<int> varIdx;
         vector<int> compVarIdx;
         vector<uchar> varType;
@@ -263,7 +263,7 @@ namespace ml
         vector<int> classLabels;
         vector<float> missingSubst;
         bool _isClassifier;
-        
+
         Ptr<WorkData> w;
     };
 

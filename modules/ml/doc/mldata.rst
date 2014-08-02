@@ -36,18 +36,18 @@ Reads the dataset from a .csv file and returns the ready-to-use training data.
     :param filename: The input file name
 
     :param headerLineCount: The number of lines in the beginning to skip; besides the header, the function also skips empty lines and lines staring with '#'
-    
+
     :param responseStartIdx: Index of the first output variable. If -1, the function considers the last variable as the response
-    
+
     :param responseEndIdx: Index of the last output variable + 1. If -1, then there is single response variable at ``responseStartIdx``.
-    
+
     :param varTypeSpec: The optional text string that specifies the variables' types. It has the format ``ord[n1-n2,n3,n4-n5,...]cat[n6,n7-n8,...]``. That is, variables from n1 to n2 (inclusive range), n3, n4 to n5 ... are considered ordered and n6, n7 to n8 ... are considered as categorical. The range [n1..n2] + [n3] + [n4..n5] + ... + [n6] + [n7..n8] should cover all the variables. If varTypeSpec is not specified, then algorithm uses the following rules:
         1. all input variables are considered ordered by default. If some column contains has non-numerical values, e.g. 'apple', 'pear', 'apple', 'apple', 'mango', the corresponding variable is considered categorical.
         2. if there are several output variables, they are all considered as ordered. Error is reported when non-numerical values are used.
         3. if there is a single output variable, then if its values are non-numerical or are all integers, then it's considered categorical. Otherwise, it's considered ordered.
-    
+
     :param delimiter: The character used to separate values in each line.
-    
+
     :param missch: The character used to specify missing measurements. It should not be a digit. Although it's a non-numerical value, it surely does not affect the decision of whether the variable ordered or categorical.
 
 TrainData::create
@@ -57,17 +57,17 @@ Creates training data from in-memory arrays.
 .. ocv:function:: Ptr<TrainData> create(InputArray samples, int layout, InputArray responses, InputArray varIdx=noArray(), InputArray sampleIdx=noArray(), InputArray sampleWeights=noArray(), InputArray varType=noArray())
 
     :param samples: matrix of samples. It should have ``CV_32F`` type.
-    
+
     :param layout: it's either ``ROW_SAMPLE``, which means that each training sample is a row of ``samples``, or ``COL_SAMPLE``, which means that each training sample occupies a column of ``samples``.
-    
+
     :param responses: matrix of responses. If the responses are scalar, they should be stored as a single row or as a single column. The matrix should have type ``CV_32F`` or ``CV_32S`` (in the former case the responses are considered as ordered by default; in the latter case - as categorical)
-    
+
     :param varIdx: vector specifying which variables to use for training. It can be an integer vector (``CV_32S``) containing 0-based variable indices or byte vector (``CV_8U``) containing a mask of active variables.
-    
+
     :param sampleIdx: vector specifying which samples to use for training. It can be an integer vector (``CV_32S``) containing 0-based sample indices or byte vector (``CV_8U``) containing a mask of training samples.
-    
+
     :param sampleWeights: optional vector with weights for each sample. It should have ``CV_32F`` type.
-    
+
     :param varType: optional vector of type ``CV_8U`` and size <number_of_variables_in_samples> + <number_of_variables_in_responses>, containing types of each input and output variable. The ordered variables are denoted by value ``VAR_ORDERED``, and categorical - by ``VAR_CATEGORICAL``.
 
 
@@ -78,11 +78,11 @@ Returns matrix of train samples
 .. ocv:function:: Mat TrainData::getTrainSamples(int layout=ROW_SAMPLE, bool compressSamples=true, bool compressVars=true) const
 
     :param layout: The requested layout. If it's different from the initial one, the matrix is transposed.
-    
+
     :param compressSamples: if true, the function returns only the training samples (specified by sampleIdx)
-    
+
     :param compressVars: if true, the function returns the shorter training samples, containing only the active variables.
-    
+
 In current implementation the function tries to avoid physical data copying and returns the matrix stored inside TrainData (unless the transposition or compression is needed).
 
 

@@ -1137,7 +1137,7 @@ public:
             fs << "iterations" << params.termCrit.maxCount;
         fs << "}" << "}";
     }
-    
+
     void write( FileStorage& fs ) const
     {
         if( layer_sizes.empty() )
@@ -1145,7 +1145,7 @@ public:
         int i, l_count = layer_count();
 
         fs << "layer_sizes" << layer_sizes;
-        
+
         write_params( fs );
 
         size_t esz = weights[0].elemSize();
@@ -1168,7 +1168,7 @@ public:
         }
         fs << "]";
     }
-    
+
     void read_params( const FileNode& fn )
     {
         String activ_func_name = (String)fn["activation_function"];
@@ -1186,7 +1186,7 @@ public:
         f_param2 = (double)fn["f_param2"];
 
         set_activ_func( activ_func, f_param1, f_param2 );
-        
+
         min_val = (double)fn["min_val"];
         max_val = (double)fn["max_val"];
         min_val1 = (double)fn["min_val1"];
@@ -1194,11 +1194,11 @@ public:
 
         FileNode tpn = fn["training_params"];
         params = Params();
-        
+
         if( !tpn.empty() )
         {
             String tmethod_name = (String)tpn["train_method"];
-            
+
             if( tmethod_name == "BACKPROP" )
             {
                 params.trainMethod = Params::BACKPROP;
@@ -1216,7 +1216,7 @@ public:
             }
             else
                 CV_Error(CV_StsParseError, "Unknown training method (should be BACKPROP or RPROP)");
-            
+
             FileNode tcn = tpn["term_criteria"];
             if( !tcn.empty() )
             {
@@ -1236,7 +1236,7 @@ public:
             }
         }
     }
-    
+
     void read( const FileNode& fn )
     {
         clear();

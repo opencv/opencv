@@ -101,4 +101,3 @@ Returns the variable importance array.
 .. ocv:function:: Mat RTrees::getVarImportance() const
 
 The method returns the variable importance vector, computed at the training stage when ``RTParams::calcVarImportance`` is set to true. If this flag was set to false, the empty matrix is returned.
-

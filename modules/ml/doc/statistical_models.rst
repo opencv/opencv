@@ -25,15 +25,15 @@ Trains the statistical model
 .. ocv:function:: Ptr<_Tp> StatModel::train(InputArray samples, int layout, InputArray responses, const _Tp::Params& p, int flags=0 )
 
     :param trainData: training data that can be loaded from file using ``TrainData::loadFromCSV`` or created with ``TrainData::create``.
-    
+
     :param samples: training samples
-    
+
     :param layout: ``ROW_SAMPLE`` (training samples are the matrix rows) or ``COL_SAMPLE`` (training samples are the matrix columns)
-    
+
     :param responses: vector of responses associated with the training samples.
-    
+
     :param p: the stat model parameters.
-    
+
     :param flags: optional flags, depending on the model. Some of the models can be updated with the new training samples, not completely overwritten (such as ``NormalBayesClassifier`` or ``ANN_MLP``).
 
 There are 2 instance methods and 2 static (class) template methods. The first two train the already created model (the very first method must be overwritten in the derived classes). And the latter two variants are convenience methods that construct empty model and then call its train method.
@@ -70,11 +70,11 @@ Predicts response(s) for the provided sample(s)
 .. ocv:function:: float StatModel::predict( InputArray samples, OutputArray results=noArray(), int flags=0 ) const
 
     :param samples: The input samples, floating-point matrix
-    
+
     :param results: The optional output matrix of results.
-    
+
     :param flags: The optional flags, model-dependent. Some models, such as ``Boost``, ``SVM`` recognize ``StatModel::RAW_OUTPUT`` flag, which makes the method return the raw results (the sum), not the class label.
-    
+
 
 StatModel::calcError
 -------------------------
@@ -83,11 +83,11 @@ Computes error on the training or test dataset
 .. ocv:function:: float StatModel::calcError( const Ptr<TrainData>& data, bool test, OutputArray resp ) const
 
     :param data: the training data
-    
+
     :param test: if true, the error is computed over the test subset of the data, otherwise it's computed over the training subset of the data. Please note that if you loaded a completely different dataset to evaluate already trained classifier, you will probably want not to set the test subset at all with ``TrainData::setTrainTestSplitRatio`` and specify ``test=false``, so that the error is computed for the whole new set. Yes, this sounds a bit confusing.
 
     :param resp: the optional output responses.
-    
+
 The method uses ``StatModel::predict`` to compute the error. For regression models the error is computed as RMS, for classifiers - as a percent of missclassified samples (0%-100%).
 
 
