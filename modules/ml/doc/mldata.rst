@@ -22,7 +22,7 @@ In machine learning algorithms there is notion of training data. Training data i
 As you can see, training data can have rather complex structure; besides, it may be very big and/or not entirely available, so there is need to make abstraction for this concept. In OpenCV ml there is ``cv::ml::TrainData`` class for that.
 
 TrainData
---------
+---------
 .. ocv:class:: TrainData
 
 Class encapsulating training data. Please note that the class only specifies the interface of training data, but not implementation. All the statistical model classes in ml take Ptr<TrainData>. In other words, you can create your own class derived from ``TrainData`` and supply smart pointer to the instance of this class into ``StatModel::train``.
@@ -31,7 +31,7 @@ TrainData::loadFromCSV
 ----------------------
 Reads the dataset from a .csv file and returns the ready-to-use training data.
 
-.. ocv:function:: Ptr<TrainData> loadFromCSV(const String& filename, int headerLineCount, int responseStartIdx=-1, int responseEndIdx=-1, const String& varTypeSpec=String(), char delimiter=',', char missch='?');
+.. ocv:function:: Ptr<TrainData> loadFromCSV(const String& filename, int headerLineCount, int responseStartIdx=-1, int responseEndIdx=-1, const String& varTypeSpec=String(), char delimiter=',', char missch='?')
 
     :param filename: The input file name
 

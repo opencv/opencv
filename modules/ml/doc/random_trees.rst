@@ -69,7 +69,7 @@ The constructors
 
     :param termCrit: The termination criteria that specifies when the training algorithm stops - either when the specified number of trees is trained and added to the ensemble or when sufficient accuracy (measured as OOB error) is achieved. Typically the more trees you have the better the accuracy. However, the improvement in accuracy generally diminishes and asymptotes pass a certain number of trees. Also to keep in mind, the number of tree increases the prediction time linearly.
 
-The default constructor sets all parameters to default values which are different from default values of :ocv:class:`CvDTreeParams`:
+The default constructor sets all parameters to default values which are different from default values of ``DTrees::Params``:
 
 ::
 

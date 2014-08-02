@@ -53,7 +53,7 @@ Importance of each variable is computed over all the splits on this variable in 
 
 
 DTrees::Split
-------------
+-------------
 .. ocv:class:: DTrees::Split
 
   The class represents split in a decision tree. It has public members:
@@ -91,7 +91,7 @@ DTrees::Split
           else next_node <- right
 
 DTrees::Node
------------
+------------
 .. ocv:class:: DTrees::Node
 
   The class represents a decision tree node. It has public members:
