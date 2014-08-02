@@ -66,7 +66,7 @@ Alternatively, the algorithm may start with the M-step when the initial values f
 :math:`p_{i,k}` can be provided. Another alternative when
 :math:`p_{i,k}` are unknown is to use a simpler clustering algorithm to pre-cluster the input samples and thus obtain initial
 :math:`p_{i,k}` . Often (including machine learning) the
-:ocv:func:`kmeans` algorithm is used for that purpose.
+``k-means`` algorithm is used for that purpose.
 
 One of the main problems of the EM algorithm is a large number
 of parameters to estimate. The majority of the parameters reside in
@@ -99,15 +99,17 @@ EM::Params
 ----------
 .. ocv:class:: EM::Params
 
-The class describes EM training parameters. It includes:
+The class describes EM training parameters.
 
-  .. ocv:member:: int clusters
-  
-    The number of mixture components in the Gaussian mixture model. Default value of the parameter is ``EM::DEFAULT_NCLUSTERS=5``. Some of EM implementation could determine the optimal number of mixtures within a specified value range, but that is not the case in ML yet.
+EM::Params::Params
+------------------
+The constructor
 
-  .. ocv:member:: int covMatType
+.. ocv:function:: EM::Params::Params( int nclusters=DEFAULT_NCLUSTERS, int covMatType=EM::COV_MAT_DIAGONAL,const TermCriteria& termCrit=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, EM::DEFAULT_MAX_ITERS, 1e-6))
 
-    Constraint on covariance matrices which defines type of matrices. Possible values are:
+    :param nclusters: The number of mixture components in the Gaussian mixture model. Default value of the parameter is ``EM::DEFAULT_NCLUSTERS=5``. Some of EM implementation could determine the optimal number of mixtures within a specified value range, but that is not the case in ML yet.
+
+    :param covMatType: Constraint on covariance matrices which defines type of matrices. Possible values are:
 
         * **EM::COV_MAT_SPHERICAL** A scaled identity matrix :math:`\mu_k * I`. There is the only parameter :math:`\mu_k` to be estimated for each matrix. The option may be used in special cases, when the constraint is relevant, or as a first step in the optimization (for example in case when the data is preprocessed with PCA). The results of such preliminary estimation may be passed again to the optimization procedure, this time with ``covMatType=EM::COV_MAT_DIAGONAL``.
 
@@ -115,9 +117,7 @@ The class describes EM training parameters. It includes:
 
         * **EM::COV_MAT_GENERIC** A symmetric positively defined matrix. The number of free parameters in each matrix is about :math:`d^2/2`. It is not recommended to use this option, unless there is pretty accurate initial estimation of the parameters and/or a huge number of training samples.
 
-  .. ocv:member:: TermCriteria termCrit
-  
-    The termination criteria of the EM algorithm. The EM algorithm can be terminated by the number of iterations ``termCrit.maxCount`` (number of M-steps) or when relative change of likelihood logarithm is less than ``termCrit.epsilon``. Default maximum number of iterations is ``EM::DEFAULT_MAX_ITERS=100``.
+    :param termCrit: The termination criteria of the EM algorithm. The EM algorithm can be terminated by the number of iterations ``termCrit.maxCount`` (number of M-steps) or when relative change of likelihood logarithm is less than ``termCrit.epsilon``. Default maximum number of iterations is ``EM::DEFAULT_MAX_ITERS=100``.
 
 
 EM::create

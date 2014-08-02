@@ -79,7 +79,7 @@ The constructors.
 
 .. ocv:function:: Boost::Params::Params()
 
-.. ocv:function:: Boost::Params::Params( int boost_type, int weak_count, double weight_trim_rate, int max_depth, bool use_surrogates, const float* priors )
+.. ocv:function:: Boost::Params::Params( int boostType, int weakCount, double weightTrimRate, int maxDepth, bool useSurrogates, const Mat& priors )
 
     :param boost_type: Type of the boosting algorithm. Possible values are:
 

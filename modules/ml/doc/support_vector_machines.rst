@@ -181,7 +181,7 @@ Trains an SVM with optimal parameters.
 
 The method trains the SVM model automatically by choosing the optimal
 parameters ``C``, ``gamma``, ``p``, ``nu``, ``coef0``, ``degree`` from
-:ocv:class:`SVMParams`. Parameters are considered optimal
+``SVM::Params``. Parameters are considered optimal
 when the cross-validation estimate of the test set error
 is minimal.
 
@@ -226,7 +226,7 @@ Returns the current SVM parameters.
 
 .. ocv:function:: SVM::Params SVM::getParams() const
 
-This function may be used to get the optimal parameters obtained while automatically training :ocv:func:`SVM::train_auto`.
+This function may be used to get the optimal parameters obtained while automatically training ``SVM::trainAuto``.
 
 SVM::getSupportVectors
 --------------------------
