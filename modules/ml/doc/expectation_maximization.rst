@@ -91,22 +91,23 @@ already a good enough approximation).
 
 EM
 --
-.. ocv:class:: EM : public Algorithm
+.. ocv:class:: EM : public StatModel
 
-The class implements the EM algorithm as described in the beginning of this section. It is inherited from :ocv:class:`Algorithm`.
+The class implements the EM algorithm as described in the beginning of this section.
 
+EM::Params
+----------
+.. ocv:class:: EM::Params
 
-EM::EM
-------
-The constructor of the class
+The class describes EM training parameters. It includes:
 
-.. ocv:function:: EM::EM(int nclusters=EM::DEFAULT_NCLUSTERS, int covMatType=EM::COV_MAT_DIAGONAL, const TermCriteria& termCrit=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, EM::DEFAULT_MAX_ITERS, FLT_EPSILON) )
+  .. ocv:member:: int clusters
+  
+    The number of mixture components in the Gaussian mixture model. Default value of the parameter is ``EM::DEFAULT_NCLUSTERS=5``. Some of EM implementation could determine the optimal number of mixtures within a specified value range, but that is not the case in ML yet.
 
-.. ocv:pyfunction:: cv2.EM([nclusters[, covMatType[, termCrit]]]) -> <EM object>
+  .. ocv:member:: int covMatType
 
-    :param nclusters: The number of mixture components in the Gaussian mixture model. Default value of the parameter is ``EM::DEFAULT_NCLUSTERS=5``. Some of EM implementation could determine the optimal number of mixtures within a specified value range, but that is not the case in ML yet.
-
-    :param covMatType: Constraint on covariance matrices which defines type of matrices. Possible values are:
+    Constraint on covariance matrices which defines type of matrices. Possible values are:
 
         * **EM::COV_MAT_SPHERICAL** A scaled identity matrix :math:`\mu_k * I`. There is the only parameter :math:`\mu_k` to be estimated for each matrix. The option may be used in special cases, when the constraint is relevant, or as a first step in the optimization (for example in case when the data is preprocessed with PCA). The results of such preliminary estimation may be passed again to the optimization procedure, this time with ``covMatType=EM::COV_MAT_DIAGONAL``.
 
@@ -114,23 +115,30 @@ The constructor of the class
 
         * **EM::COV_MAT_GENERIC** A symmetric positively defined matrix. The number of free parameters in each matrix is about :math:`d^2/2`. It is not recommended to use this option, unless there is pretty accurate initial estimation of the parameters and/or a huge number of training samples.
 
-    :param termCrit: The termination criteria of the EM algorithm. The EM algorithm can be terminated by the number of iterations ``termCrit.maxCount`` (number of M-steps) or when relative change of likelihood logarithm is less than ``termCrit.epsilon``. Default maximum number of iterations is ``EM::DEFAULT_MAX_ITERS=100``.
+  .. ocv:member:: TermCriteria termCrit
+  
+    The termination criteria of the EM algorithm. The EM algorithm can be terminated by the number of iterations ``termCrit.maxCount`` (number of M-steps) or when relative change of likelihood logarithm is less than ``termCrit.epsilon``. Default maximum number of iterations is ``EM::DEFAULT_MAX_ITERS=100``.
+
+
+EM::create
+----------
+Creates empty EM model
+
+.. ocv:function:: Ptr<EM> EM::create(const Params& params=Params())
+
+    :param params: EM parameters
+
+The model should be trained then using ``StatModel::train(traindata, flags)`` method. Alternatively, you can use one of the ``EM::train*`` methods or load it from file using ``StatModel::load<EM>(filename)``.     
 
 EM::train
 ---------
-Estimates the Gaussian mixture parameters from a samples set.
+Static methods that estimate the Gaussian mixture parameters from a samples set
 
-.. ocv:function:: bool EM::train(InputArray samples, OutputArray logLikelihoods=noArray(), OutputArray labels=noArray(), OutputArray probs=noArray())
+.. ocv:function:: Ptr<EM> EM::train(InputArray samples, OutputArray logLikelihoods=noArray(), OutputArray labels=noArray(), OutputArray probs=noArray(), const Params& params=Params())
 
-.. ocv:function:: bool EM::trainE(InputArray samples, InputArray means0, InputArray covs0=noArray(), InputArray weights0=noArray(), OutputArray logLikelihoods=noArray(), OutputArray labels=noArray(), OutputArray probs=noArray())
+.. ocv:function:: bool EM::train_startWithE(InputArray samples, InputArray means0, InputArray covs0=noArray(), InputArray weights0=noArray(), OutputArray logLikelihoods=noArray(), OutputArray labels=noArray(), OutputArray probs=noArray(), const Params& params=Params())
 
-.. ocv:function:: bool EM::trainM(InputArray samples, InputArray probs0, OutputArray logLikelihoods=noArray(), OutputArray labels=noArray(), OutputArray probs=noArray())
-
-.. ocv:pyfunction:: cv2.EM.train(samples[, logLikelihoods[, labels[, probs]]]) -> retval, logLikelihoods, labels, probs
-
-.. ocv:pyfunction:: cv2.EM.trainE(samples, means0[, covs0[, weights0[, logLikelihoods[, labels[, probs]]]]]) -> retval, logLikelihoods, labels, probs
-
-.. ocv:pyfunction:: cv2.EM.trainM(samples, probs0[, logLikelihoods[, labels[, probs]]]) -> retval, logLikelihoods, labels, probs
+.. ocv:function:: bool EM::train_startWithM(InputArray samples, InputArray probs0, OutputArray logLikelihoods=noArray(), OutputArray labels=noArray(), OutputArray probs=noArray(), const Params& params=Params())
 
     :param samples: Samples from which the Gaussian mixture model will be estimated. It should be a one-channel matrix, each row of which is a sample. If the matrix does not have ``CV_64F`` type it will be converted to the inner matrix of such type for the further computing.
 
@@ -147,6 +155,8 @@ Estimates the Gaussian mixture parameters from a samples set.
     :param labels: The optional output "class label" for each sample: :math:`\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N` (indices of the most probable mixture component for each sample). It has :math:`nsamples \times 1` size and ``CV_32SC1`` type.
 
     :param probs: The optional output matrix that contains posterior probabilities of each Gaussian mixture component given the each sample. It has :math:`nsamples \times nclusters` size and ``CV_64FC1`` type.
+    
+    :param params: The Gaussian mixture params, see ``EM::Params`` description above.
 
 Three versions of training method differ in the initialization of Gaussian mixture model parameters and start step:
 
@@ -167,15 +177,13 @@ Unlike many of the ML models, EM is an unsupervised learning algorithm and it do
 :math:`\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N` (indices of the most probable mixture component for each sample).
 
 The trained model can be used further for prediction, just like any other classifier. The trained model is similar to the
-:ocv:class:`CvNormalBayesClassifier`.
+``NormalBayesClassifier``.
 
-EM::predict
------------
+EM::predict2
+------------
 Returns a likelihood logarithm value and an index of the most probable mixture component for the given sample.
 
-.. ocv:function:: Vec2d EM::predict(InputArray sample, OutputArray probs=noArray()) const
-
-.. ocv:pyfunction:: cv2.EM.predict(sample[, probs]) -> retval, probs
+.. ocv:function:: Vec2d EM::predict2(InputArray sample, OutputArray probs=noArray()) const
 
     :param sample: A sample for classification. It should be a one-channel matrix of :math:`1 \times dims` or :math:`dims \times 1` size.
 
@@ -183,28 +191,29 @@ Returns a likelihood logarithm value and an index of the most probable mixture c
 
 The method returns a two-element ``double`` vector. Zero element is a likelihood logarithm value for the sample. First element is an index of the most probable mixture component for the given sample.
 
-CvEM::isTrained
----------------
-Returns ``true`` if the Gaussian mixture model was trained.
 
-.. ocv:function:: bool EM::isTrained() const
+EM::getMeans
+------------
+Returns the cluster centers (means of the Gaussian mixture)
 
-.. ocv:pyfunction:: cv2.EM.isTrained() -> retval
+.. ocv:function:: Mat EM::getMeans() const
 
-EM::read, EM::write
--------------------
-See :ocv:func:`Algorithm::read` and :ocv:func:`Algorithm::write`.
+Returns matrix with the number of rows equal to the number of mixtures and number of columns equal to the space dimensionality.
 
-EM::get, EM::set
-----------------
-See :ocv:func:`Algorithm::get` and :ocv:func:`Algorithm::set`. The following parameters are available:
 
-* ``"nclusters"``
-* ``"covMatType"``
-* ``"maxIters"``
-* ``"epsilon"``
-* ``"weights"`` *(read-only)*
-* ``"means"`` *(read-only)*
-* ``"covs"`` *(read-only)*
+EM::getWeights
+--------------
+Returns weights of the mixtures
 
-..
+.. ocv:function:: Mat EM::getWeights() const
+
+Returns vector with the number of elements equal to the number of mixtures.
+
+
+EM::getCovs
+--------------
+Returns covariation matrices
+
+.. ocv:function:: void EM::getCovs(std::vector<Mat>& covs) const
+
+Returns vector of covariation matrices. Number of matrices is the number of gaussian mixtures, each matrix is a square floating-point matrix NxN, where N is the space dimensionality.
