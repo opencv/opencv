@@ -50,7 +50,6 @@ ParamGrid::ParamGrid(double _minVal, double _maxVal, double _logStep)
     logStep = std::max(_logStep, 1.);
 }
 
-StatModel::~StatModel() {}
 void StatModel::clear() {}
 
 int StatModel::getVarCount() const { return 0; }
@@ -59,6 +58,11 @@ bool StatModel::train( const Ptr<TrainData>&, int )
 {
     CV_Error(CV_StsNotImplemented, "");
     return false;
+}
+
+bool StatModel::train( InputArray samples, int layout, InputArray responses )
+{
+    return train(TrainData::create(samples, layout, responses));
 }
 
 float StatModel::calcError( const Ptr<TrainData>& data, bool testerr, OutputArray _resp ) const

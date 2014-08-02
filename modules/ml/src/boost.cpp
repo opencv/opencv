@@ -54,8 +54,6 @@ log_ratio( double val )
 }
 
 
-Boost::~Boost() {}
-
 Boost::Params::Params()
 {
     boostType = Boost::REAL;
@@ -106,6 +104,7 @@ public:
     void startTraining( const Ptr<TrainData>& trainData, int flags )
     {
         DTreesImpl::startTraining(trainData, flags);
+        sumResult.assign(w->sidx.size(), 0.);
 
         if( bparams.boostType != Boost::DISCRETE )
         {
@@ -114,14 +113,10 @@ public:
             w->ord_responses.resize(n);
 
             double a = -1, b = 1;
-            if( bparams.boostType == Boost::REAL )
-                a = 0;
-            else if( bparams.boostType == Boost::LOGIT )
+            if( bparams.boostType == Boost::LOGIT )
             {
-                sumResult.assign(w->sidx.size(), 0.);
                 a = -2, b = 2;
             }
-
             for( i = 0; i < n; i++ )
                 w->ord_responses[i] = w->cat_responses[i] > 0 ? b : a;
         }
@@ -197,7 +192,7 @@ public:
         }
         else if( bparams.boostType == Boost::REAL )
         {
-            double p = node->value;
+            double p = (node->value+1)*0.5;
             node->value = 0.5*log_ratio(p);
         }
     }
@@ -227,7 +222,7 @@ public:
     {
         int i, n = (int)w->sidx.size();
         int nvars = (int)varIdx.size();
-        double sumw = 0.;
+        double sumw = 0., C = 1.;
         cv::AutoBuffer<double> buf(n*3 + nvars);
         double* result = buf;
         float* sbuf = (float*)(result + n*3);
@@ -261,7 +256,7 @@ public:
 
             if( sumw != 0 )
                 err /= sumw;
-            double C = -log_ratio( err );
+            C = -log_ratio( err );
             double scale = std::exp(C);
 
             sumw = 0;
@@ -289,6 +284,7 @@ public:
             for( i = 0; i < n; i++ )
             {
                 int si = w->sidx[i];
+                CV_Assert( std::abs(w->ord_responses[si]) == 1 );
                 double wval = w->sample_weights[si]*std::exp(-result[i]*w->ord_responses[si]);
                 sumw += wval;
                 w->sample_weights[si] = wval;
@@ -330,6 +326,20 @@ public:
         }
         else
             CV_Error(CV_StsNotImplemented, "Unknown boosting type");
+
+        /*if( bparams.boostType != Boost::LOGIT )
+        {
+            double err = 0;
+            for( i = 0; i < n; i++ )
+            {
+                sumResult[i] += result[i]*C;
+                if( bparams.boostType != Boost::DISCRETE )
+                    err += sumResult[i]*w->ord_responses[w->sidx[i]] < 0;
+                else
+                    err += sumResult[i]*w->cat_responses[w->sidx[i]] < 0;
+            }
+            printf("%d trees. C=%.2f, training error=%.1f%%, working set size=%d (out of %d)\n", (int)roots.size(), C, err*100./n, (int)sidx.size(), n);
+        }*/
         
         // renormalize weights
         if( sumw > FLT_EPSILON )

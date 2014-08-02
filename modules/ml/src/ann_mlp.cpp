@@ -42,10 +42,11 @@
 
 namespace cv { namespace ml {
 
-ANN_MLP::~ANN_MLP() {}
-
 ANN_MLP::Params::Params()
 {
+    layerSizes = Mat();
+    activateFunc = SIGMOID_SYM;
+    fparam1 = fparam2 = 0;
     termCrit = TermCriteria( TermCriteria::COUNT + TermCriteria::EPS, 1000, 0.01 );
     trainMethod = RPROP;
     bpDWScale = bpMomentScale = 0.1;
@@ -54,8 +55,13 @@ ANN_MLP::Params::Params()
 }
 
 
-ANN_MLP::Params::Params( TermCriteria _termCrit, int _trainMethod, double _param1, double _param2 )
+ANN_MLP::Params::Params( const Mat& _layerSizes, int _activateFunc, double _fparam1, double _fparam2,
+                         TermCriteria _termCrit, int _trainMethod, double _param1, double _param2 )
 {
+    layerSizes = _layerSizes;
+    activateFunc = _activateFunc;
+    fparam1 = _fparam1;
+    fparam2 = _fparam2;
     termCrit = _termCrit;
     trainMethod = _trainMethod;
     bpDWScale = bpMomentScale = 0.1;
@@ -95,14 +101,24 @@ public:
         clear();
     }
 
-    ANN_MLPImpl( const Mat& _layer_sizes, int _activ_func,
-                 double _f_param1, double _f_param2 )
+    ANN_MLPImpl( const Params& p )
     {
-        clear();
-        create( _layer_sizes, _activ_func, _f_param1, _f_param2 );
+        setParams(p);
     }
 
     virtual ~ANN_MLPImpl() {}
+
+    void setParams(const Params& p)
+    {
+        params = p;
+        create( params.layerSizes );
+        set_activ_func( params.activateFunc, params.fparam1, params.fparam2 );
+    }
+
+    Params getParams() const
+    {
+        return params;
+    }
 
     void clear()
     {
@@ -183,15 +199,12 @@ public:
         }
     }
 
-    void create( InputArray _layer_sizes, int _activ_func,
-                 double _f_param1, double _f_param2 )
+    void create( InputArray _layer_sizes )
     {
         clear();
 
         _layer_sizes.copyTo(layer_sizes);
         int l_count = layer_count();
-
-        set_activ_func( _activ_func, _f_param1, _f_param2 );
 
         weights.resize(l_count + 2);
         max_lsize = 0;
@@ -663,16 +676,6 @@ public:
 
         calc_input_scale( inputs, flags );
         calc_output_scale( outputs, flags );
-    }
-
-    void setParams( const Params& _params )
-    {
-        params = _params;
-    }
-
-    Params getParams() const
-    {
-        return params;
     }
 
     bool train( const Ptr<TrainData>& trainData, int flags )
@@ -1240,7 +1243,7 @@ public:
 
         vector<int> _layer_sizes;
         fn["layer_sizes"] >> _layer_sizes;
-        create( _layer_sizes, SIGMOID_SYM, 0, 0 );
+        create( _layer_sizes );
 
         int i, l_count = layer_count();
         read_params(fn);
@@ -1307,15 +1310,9 @@ public:
 };
 
 
-Ptr<ANN_MLP> ANN_MLP::create(InputArray _layerSizes,
-                             const ANN_MLP::Params& params,
-                             int activateFunc,
-                             double fparam1, double fparam2)
+Ptr<ANN_MLP> ANN_MLP::create(const ANN_MLP::Params& params)
 {
-    Mat layerSizes = _layerSizes.getMat();
-    Ptr<ANN_MLPImpl> ann = makePtr<ANN_MLPImpl>(layerSizes, activateFunc, fparam1, fparam2);
-    ann->setParams(params);
-
+    Ptr<ANN_MLPImpl> ann = makePtr<ANN_MLPImpl>(params);
     return ann;
 }
 

@@ -102,8 +102,7 @@ static void predict_and_paint(const Ptr<StatModel>& model, Mat& dst)
 static void find_decision_boundary_NBC()
 {
     // learn classifier
-    Ptr<NormalBayesClassifier> normalBayesClassifier = NormalBayesClassifier::create();
-    normalBayesClassifier->train(prepare_train_data());
+    Ptr<NormalBayesClassifier> normalBayesClassifier = StatModel::train<NormalBayesClassifier>(prepare_train_data(), NormalBayesClassifier::Params());
 
     predict_and_paint(normalBayesClassifier, imgDst);
 }
@@ -113,10 +112,7 @@ static void find_decision_boundary_NBC()
 #if _KNN_
 static void find_decision_boundary_KNN( int K )
 {
-    Ptr<KNearest> knn = KNearest::create(true);
-    knn->setDefaultK(K);
-    knn->train(prepare_train_data());
-
+    Ptr<KNearest> knn = StatModel::train<KNearest>(prepare_train_data(), KNearest::Params(K, true));
     predict_and_paint(knn, imgDst);
 }
 #endif
@@ -124,9 +120,7 @@ static void find_decision_boundary_KNN( int K )
 #if _SVM_
 static void find_decision_boundary_SVM( SVM::Params params )
 {
-    Ptr<SVM> svm = SVM::create(params);
-    svm->train(prepare_train_data());
-
+    Ptr<SVM> svm = StatModel::train<SVM>(prepare_train_data(), params);
     predict_and_paint(svm, imgDst);
 
     Mat sv = svm->getSupportVectors();
@@ -149,8 +143,7 @@ static void find_decision_boundary_DT()
     params.use1SERule = false;
     params.truncatePrunedTree = false;
 
-    Ptr<DTrees> dtree = DTrees::create(params);
-    dtree->train(prepare_train_data());
+    Ptr<DTrees> dtree = StatModel::train<DTrees>(prepare_train_data(), params);
 
     predict_and_paint(dtree, imgDst);
 }
@@ -167,8 +160,7 @@ static void find_decision_boundary_BT()
                           Mat() // priors
                           );
 
-    Ptr<Boost> boost = Boost::create(params);
-    boost->train(prepare_train_data());
+    Ptr<Boost> boost = StatModel::train<Boost>(prepare_train_data(), params);
     predict_and_paint(boost, imgDst);
 }
 
@@ -185,8 +177,7 @@ static void find_decision_boundary_GBT()
                          false // use_surrogates )
                          );
 
-    Ptr<GBTrees> gbtrees = GBTrees::create(params);
-    gbtrees->train(prepare_train_data());
+    Ptr<GBTrees> gbtrees = StatModel::train<GBTrees>(prepare_train_data(), params);
     predict_and_paint(gbtrees, imgDst);
 }
 #endif
@@ -205,8 +196,7 @@ static void find_decision_boundary_RF()
                         TermCriteria(TermCriteria::MAX_ITER, 5, 0) // max_num_of_trees_in_the_forest,
                        );
 
-    Ptr<RTrees> rtrees = RTrees::create(params);
-    rtrees->train(prepare_train_data());
+    Ptr<RTrees> rtrees = StatModel::train<RTrees>(prepare_train_data(), params);
     predict_and_paint(rtrees, imgDst);
 }
 
@@ -215,9 +205,8 @@ static void find_decision_boundary_RF()
 #if _ANN_
 static void find_decision_boundary_ANN( const Mat&  layer_sizes )
 {
-    ANN_MLP::Params params(TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 300, FLT_EPSILON),
+    ANN_MLP::Params params(layer_sizes, ANN_MLP::SIGMOID_SYM, 1, 1, TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 300, FLT_EPSILON),
                            ANN_MLP::Params::BACKPROP, 0.001);
-    Ptr<ANN_MLP> ann = ANN_MLP::create(layer_sizes, params, ANN_MLP::SIGMOID_SYM, 1, 1 );
 
     Mat trainClasses = Mat::zeros( trainedPoints.size(), classColors.size(), CV_32FC1 );
     for( int i = 0; i < trainClasses.rows; i++ )
@@ -228,7 +217,7 @@ static void find_decision_boundary_ANN( const Mat&  layer_sizes )
     Mat samples = prepare_train_samples(trainedPoints);
     Ptr<TrainData> tdata = TrainData::create(samples, ROW_SAMPLE, trainClasses);
 
-    ann->train(tdata);
+    Ptr<ANN_MLP> ann = StatModel::train<ANN_MLP>(tdata, params);
     predict_and_paint(ann, imgDst);
 }
 #endif
@@ -340,18 +329,15 @@ int main()
             img.copyTo( imgDst );
 #if _NBC_
             find_decision_boundary_NBC();
-            namedWindow( "NormalBayesClassifier", WINDOW_AUTOSIZE );
             imshow( "NormalBayesClassifier", imgDst );
 #endif
 #if _KNN_
             int K = 3;
             find_decision_boundary_KNN( K );
-            namedWindow( "kNN", WINDOW_AUTOSIZE );
             imshow( "kNN", imgDst );
 
             K = 15;
             find_decision_boundary_KNN( K );
-            namedWindow( "kNN2", WINDOW_AUTOSIZE );
             imshow( "kNN2", imgDst );
 #endif
 
@@ -369,36 +355,30 @@ int main()
             params.termCrit = TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 1000, 0.01);
 
             find_decision_boundary_SVM( params );
-            namedWindow( "classificationSVM1", WINDOW_AUTOSIZE );
             imshow( "classificationSVM1", imgDst );
 
             params.C = 10;
             find_decision_boundary_SVM( params );
-            namedWindow( "classificationSVM2", WINDOW_AUTOSIZE );
             imshow( "classificationSVM2", imgDst );
 #endif
 
 #if _DT_
             find_decision_boundary_DT();
-            namedWindow( "DT", WINDOW_AUTOSIZE );
             imshow( "DT", imgDst );
 #endif
 
 #if _BT_
             find_decision_boundary_BT();
-            namedWindow( "BT", WINDOW_AUTOSIZE );
             imshow( "BT", imgDst);
 #endif
 
 #if _GBT_
             find_decision_boundary_GBT();
-            namedWindow( "GBT", WINDOW_AUTOSIZE );
             imshow( "GBT", imgDst);
 #endif
 
 #if _RF_
             find_decision_boundary_RF();
-            namedWindow( "RF", WINDOW_AUTOSIZE );
             imshow( "RF", imgDst);
 #endif
 
@@ -408,13 +388,11 @@ int main()
             layer_sizes1.at<int>(1) = 5;
             layer_sizes1.at<int>(2) = classColors.size();
             find_decision_boundary_ANN( layer_sizes1 );
-            namedWindow( "ANN", WINDOW_AUTOSIZE );
             imshow( "ANN", imgDst );
 #endif
 
 #if _EM_
             find_decision_boundary_EM();
-            namedWindow( "EM", WINDOW_AUTOSIZE );
             imshow( "EM", imgDst );
 #endif
         }

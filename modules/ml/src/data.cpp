@@ -379,7 +379,7 @@ public:
                 tempCatOfs.push_back(ofs);
                 std::copy(labels.begin(), labels.end(), std::back_inserter(tempCatMap));
             }
-            else if( haveMissing )
+            else
             {
                 tempCatOfs.push_back(Vec2i(0, 0));
                 /*Mat missing_i = layout == ROW_SAMPLE ? missing.col(i) : missing.row(i);
@@ -741,9 +741,9 @@ public:
             CV_Error( CV_StsBadArg, "type of some variables is not specified" );
     }
 
-    void setTrainTestSplitRatio(float ratio, bool shuffle)
+    void setTrainTestSplitRatio(double ratio, bool shuffle)
     {
-        CV_Assert( 0 <= ratio && ratio <= 1 );
+        CV_Assert( 0. <= ratio && ratio <= 1. );
         setTrainTestSplit(cvRound(getNSamples()*ratio), shuffle);
     }
 
