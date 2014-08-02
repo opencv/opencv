@@ -393,7 +393,7 @@ public:
     {
         impl.write(fs);
     }
-    
+
     void read( const FileNode& fn )
     {
         impl.read(fn);

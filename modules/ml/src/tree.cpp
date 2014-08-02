@@ -372,7 +372,7 @@ void DTreesImpl::setDParams(const Params& _params)
 
     if( params.CVFolds == 1 )
         params.CVFolds = 0;
-    
+
     if( params.regressionAccuracy < 0 )
         CV_Error( CV_StsOutOfRange, "params.regression_accuracy should be >= 0" );
 }
@@ -637,7 +637,7 @@ void DTreesImpl::calcValue( int nidx, const vector<int>& _sidx )
                 cv_sum2[j] += t*t*wval;
                 cv_count[j] += wval;
             }
-            
+
             for( j = 0; j < cv_n; j++ )
             {
                 sum += cv_sum[j];
@@ -656,7 +656,7 @@ void DTreesImpl::calcValue( int nidx, const vector<int>& _sidx )
                 w->cv_Tn[nidx*cv_n + j] = INT_MAX;
             }
         }
-        
+
         node->node_risk = sum2 - (sum/sumw)*sum;
         node->value = sum/sumw;
     }
@@ -822,7 +822,7 @@ void DTreesImpl::clusterCategories( const double* vectors, int n, int m, double*
                     min_idx = idx;
                 }
             }
-            
+
             if( min_idx != labels[i] )
                 modified = true;
             labels[i] = min_idx;
@@ -1116,18 +1116,18 @@ DTreesImpl::WSplit DTreesImpl::findSplitCatReg( int vi, const vector<int>& _sidx
     // (there should be a very little loss in accuracy)
     for( i = 0; i < mi; i++ )
         sum[i] *= counts[i];
-    
+
     for( subset_i = 0; subset_i < mi-1; subset_i++ )
     {
         int idx = (int)(sum_ptr[subset_i] - sum);
         double ni = counts[idx];
-        
+
         if( ni > FLT_EPSILON )
         {
             double s = sum[idx];
             lsum += s; L += ni;
             rsum -= s; R -= ni;
-            
+
             if( L > FLT_EPSILON && R > FLT_EPSILON )
             {
                 double val = (lsum*lsum*R + rsum*rsum*L)/(L*R);
@@ -1139,7 +1139,7 @@ DTreesImpl::WSplit DTreesImpl::findSplitCatReg( int vi, const vector<int>& _sidx
             }
         }
     }
-    
+
     WSplit split;
     if( best_subset >= 0 )
     {
@@ -1372,17 +1372,17 @@ bool DTreesImpl::cutTree( int root, double T, int fold, double min_alpha )
             }
             nidx = node->left;
         }
-        
+
         for( pidx = node->parent; pidx >= 0 && w->wnodes[pidx].right == nidx;
              nidx = pidx, pidx = w->wnodes[pidx].parent )
             ;
-        
+
         if( pidx < 0 )
             break;
-        
+
         nidx = w->wnodes[pidx].right;
     }
-    
+
     return false;
 }
 
@@ -1807,7 +1807,7 @@ int DTreesImpl::readSplit( const FileNode& fn )
         }
         split.c = (float)cmpNode;
     }
-    
+
     split.quality = (float)fn["quality"];
     splits.push_back(split);
 
@@ -1894,7 +1894,7 @@ Ptr<DTrees> DTrees::create(const DTrees::Params& params)
     p->setDParams(params);
     return p;
 }
-    
+
 }
 }
 

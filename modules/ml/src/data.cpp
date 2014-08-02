@@ -750,7 +750,7 @@ public:
     void setTrainTestSplit(int count, bool shuffle)
     {
         int i, nsamples = getNSamples();
-        CV_Assert( 0 <= count < nsamples );
+        CV_Assert( 0 <= count && count < nsamples );
 
         trainSampleIdx.release();
         testSampleIdx.release();

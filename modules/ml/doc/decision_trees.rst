@@ -97,7 +97,7 @@ DTrees::Node
   The class represents a decision tree node. It has public members:
 
   .. ocv:member:: double value
-  
+
     Value at the node: a class label in case of classification or estimated function value in case of regression.
 
   .. ocv:member:: int classIdx

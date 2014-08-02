@@ -102,26 +102,26 @@ ANN_MLP::Params
   Parameters of the MLP and of the training algorithm. You can initialize the structure by a constructor or the individual parameters can be adjusted after the structure is created.
 
   The network structure:
-  
+
   .. ocv:member:: Mat layerSizes
-  
+
      The number of elements in each layer of network. The very first element specifies the number of elements in the input layer. The last element - number of elements in the output layer.
-     
+
   .. ocv:member:: int activateFunc
-  
+
      The activation function. Currently the only fully supported activation function is ``ANN_MLP::SIGMOID_SYM``.
-     
+
   .. ocv:member:: double fparam1
-  
+
      The first parameter of activation function, 0 by default.
-     
+
   .. ocv:member:: double fparam2
-  
+
      The second parameter of the activation function, 0 by default.
-     
+
      .. note::
-     
-         If you are using the default ``ANN_MLP::SIGMOID_SYM`` activation function with the default parameter values fparam1=0 and fparam2=0 then the function used is y = 1.7159*tanh(2/3 * x), so the output will range from [-1.7159, 1.7159], instead of [0,1].    
+
+         If you are using the default ``ANN_MLP::SIGMOID_SYM`` activation function with the default parameter values fparam1=0 and fparam2=0 then the function used is y = 1.7159*tanh(2/3 * x), so the output will range from [-1.7159, 1.7159], instead of [0,1].
 
   The back-propagation algorithm parameters:
 

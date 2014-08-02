@@ -243,13 +243,13 @@ Retrieves the decision function
 .. ocv:function:: double SVM::getDecisionFunction(int i, OutputArray alpha, OutputArray svidx) const
 
     :param i: the index of the decision function. If the problem solved is regression, 1-class or 2-class classification, then there will be just one decision function and the index should always be 0. Otherwise, in the case of N-class classification, there will be N*(N-1)/2 decision functions.
-    
+
     :param alpha: the optional output vector for weights, corresponding to different support vectors. In the case of linear SVM all the alpha's will be 1's.
-    
+
     :param svidx: the optional output vector of indices of support vectors within the matrix of support vectors (which can be retrieved by ``SVM::getSupportVectors``). In the case of linear SVM each decision function consists of a single "compressed" support vector.
-    
+
 The method returns ``rho`` parameter of the decision function, a scalar subtracted from the weighted sum of kernel responses.
-    
+
 Prediction with SVM
 --------------------
 

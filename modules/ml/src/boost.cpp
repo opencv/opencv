@@ -174,10 +174,10 @@ public:
             for( pidx = node->parent; pidx >= 0 && nodes[pidx].right == nidx;
                  nidx = pidx, pidx = nodes[pidx].parent )
                 ;
-            
+
             if( pidx < 0 )
                 break;
-            
+
             nidx = nodes[pidx].right;
         }
     }
@@ -340,7 +340,7 @@ public:
             }
             printf("%d trees. C=%.2f, training error=%.1f%%, working set size=%d (out of %d)\n", (int)roots.size(), C, err*100./n, (int)sidx.size(), n);
         }*/
-        
+
         // renormalize weights
         if( sumw > FLT_EPSILON )
             normalizeWeights();
@@ -453,14 +453,14 @@ public:
         FileNode trees_node = fn["trees"];
         FileNodeIterator it = trees_node.begin();
         CV_Assert( ntrees == (int)trees_node.size() );
-        
+
         for( int treeidx = 0; treeidx < ntrees; treeidx++, ++it )
         {
             FileNode nfn = (*it)["nodes"];
             readTree(nfn);
         }
     }
-    
+
     Boost::Params bparams;
     vector<double> sumResult;
 };

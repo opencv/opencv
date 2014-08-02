@@ -133,7 +133,7 @@ public:
 
     virtual Mat getCatOfs() const = 0;
     virtual Mat getCatMap() const = 0;
-    
+
     virtual void setTrainTestSplit(int count, bool shuffle=true) = 0;
     virtual void setTrainTestSplitRatio(double ratio, bool shuffle=true) = 0;
     virtual void shuffleTrainTest() = 0;

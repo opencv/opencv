@@ -338,7 +338,7 @@ public:
         cv::parallel_for_(cv::Range(0, nsamples),
                           NBPredictBody(c, cov_rotate_mats, inv_eigen_values, avg, samples,
                                        var_idx, cls_labels, results, resultsProb, rawOutput));
-        
+
         return (float)value;
     }
 

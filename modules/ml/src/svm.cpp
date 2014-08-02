@@ -292,7 +292,7 @@ public:
         if( vcount > 0 )
             exp( R, R );
     }
-    
+
     void calc( int vcount, int var_count, const float* vecs,
                const float* another, Qfloat* results )
     {
@@ -353,7 +353,7 @@ static void sortSamplesByClasses( const Mat& _samples, const Mat& _responses,
             class_ranges.push_back(i+1);
     }
 }
-    
+
 //////////////////////// SVM implementation //////////////////////////////
 
 ParamGrid SVM::getDefaultGrid( int param_id )
@@ -1205,7 +1205,7 @@ public:
         int max_iter;
         double C[2];  // C[0] == Cn, C[1] == Cp
         Ptr<SVM::Kernel> kernel;
-        
+
         SelectWorkingSet select_working_set_func;
         CalcRho calc_rho_func;
         GetRow get_row_func;

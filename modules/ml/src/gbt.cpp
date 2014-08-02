@@ -1363,4 +1363,3 @@ float CvGBTrees::predict( const cv::Mat& sample, const cv::Mat& _missing,
 }
 
 #endif
-
