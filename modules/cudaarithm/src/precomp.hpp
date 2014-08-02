@@ -52,13 +52,6 @@
 
 #include "opencv2/core/private.cuda.hpp"
 
-#include "opencv2/opencv_modules.hpp"
-
-#ifdef HAVE_OPENCV_CUDALEGACY
-#  include "opencv2/cudalegacy.hpp"
-#  include "opencv2/cudalegacy/private.hpp"
-#endif
-
 #ifdef HAVE_CUBLAS
 #  include <cublas.h>
 #endif

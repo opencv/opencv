@@ -6,6 +6,7 @@
 */
 
 #include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/videoio/videoio.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/features2d/features2d.hpp"
@@ -140,7 +141,7 @@ int main(int ac, char ** av)
 
     vector<DMatch> matches;
 
-    BFMatcher desc_matcher(NORM_HAMMING);
+    BFMatcher desc_matcher(brief.defaultNorm());
 
     vector<Point2f> train_pts, query_pts;
     vector<KeyPoint> train_kpts, query_kpts;

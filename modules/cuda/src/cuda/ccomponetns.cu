@@ -133,7 +133,7 @@ namespace cv { namespace cuda { namespace device
         template<typename T> struct InInterval<T, 1>
         {
             typedef typename VecTraits<T>::elem_type E;
-            __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi) : lo((E)(-_lo.x)), hi((E)_hi.x) {};
+            __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi) : lo((E)(-_lo.x)), hi((E)_hi.x) { }
             T lo, hi;
 
             template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
@@ -148,7 +148,7 @@ namespace cv { namespace cuda { namespace device
         {
             typedef typename VecTraits<T>::elem_type E;
             __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi)
-            : lo (VecTraits<T>::make((E)(-_lo.x), (E)(-_lo.y), (E)(-_lo.z))), hi (VecTraits<T>::make((E)_hi.x, (E)_hi.y, (E)_hi.z)){};
+            : lo (VecTraits<T>::make((E)(-_lo.x), (E)(-_lo.y), (E)(-_lo.z))), hi (VecTraits<T>::make((E)_hi.x, (E)_hi.y, (E)_hi.z)) { }
             T lo, hi;
 
             template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
@@ -164,7 +164,7 @@ namespace cv { namespace cuda { namespace device
         {
             typedef typename VecTraits<T>::elem_type E;
             __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi)
-            : lo (VecTraits<T>::make((E)(-_lo.x), (E)(-_lo.y), (E)(-_lo.z), (E)(-_lo.w))), hi (VecTraits<T>::make((E)_hi.x, (E)_hi.y, (E)_hi.z, (E)_hi.w)){};
+            : lo (VecTraits<T>::make((E)(-_lo.x), (E)(-_lo.y), (E)(-_lo.z), (E)(-_lo.w))), hi (VecTraits<T>::make((E)_hi.x, (E)_hi.y, (E)_hi.z, (E)_hi.w)) { }
             T lo, hi;
 
             template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const

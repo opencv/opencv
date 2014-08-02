@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -400,21 +401,160 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
 
 typedef void (*PyrFunc)(const Mat&, Mat&, int);
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType)
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    if (cn > 4 || (depth == CV_64F && !doubleSupport))
+        return false;
+
+    Size ssize = _src.size();
+    Size dsize = _dsz.area() == 0 ? Size((ssize.width + 1) / 2, (ssize.height + 1) / 2) : _dsz;
+    CV_Assert( ssize.width > 0 && ssize.height > 0 &&
+            std::abs(dsize.width*2 - ssize.width) <= 2 &&
+            std::abs(dsize.height*2 - ssize.height) <= 2 );
+
+    UMat src = _src.getUMat();
+    _dst.create( dsize, src.type() );
+    UMat dst = _dst.getUMat();
+
+    int float_depth = depth == CV_64F ? CV_64F : CV_32F;
+    const int local_size = 256;
+    int kercn = 1;
+    if (depth == CV_8U && float_depth == CV_32F && cn == 1 && ocl::Device::getDefault().isIntel())
+        kercn = 4;
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
+                                       "BORDER_REFLECT_101" };
+    char cvt[2][50];
+    String buildOptions = format(
+            "-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s "
+            "-D T1=%s -D cn=%d -D kercn=%d -D fdepth=%d -D %s -D LOCAL_SIZE=%d",
+            ocl::typeToStr(type), ocl::typeToStr(CV_MAKETYPE(float_depth, cn)),
+            ocl::convertTypeStr(float_depth, depth, cn, cvt[0]),
+            ocl::convertTypeStr(depth, float_depth, cn, cvt[1]),
+            doubleSupport ? " -D DOUBLE_SUPPORT" : "", ocl::typeToStr(depth),
+            cn, kercn, float_depth, borderMap[borderType], local_size
+    );
+    ocl::Kernel k("pyrDown", ocl::imgproc::pyr_down_oclsrc, buildOptions);
+    if (k.empty())
+        return false;
+
+    k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst));
+
+    size_t localThreads[2]  = { local_size/kercn, 1 };
+    size_t globalThreads[2] = { (src.cols + (kercn-1))/kercn, (dst.rows + 1) / 2 };
+    return k.run(2, globalThreads, localThreads, false);
+}
+
+static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType)
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
+
+    if (channels > 4 || borderType != BORDER_DEFAULT)
+        return false;
+
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    if (depth == CV_64F && !doubleSupport)
+        return false;
+
+    Size ssize = _src.size();
+    if ((_dsz.area() != 0) && (_dsz != Size(ssize.width * 2, ssize.height * 2)))
+        return false;
+
+    UMat src = _src.getUMat();
+    Size dsize = Size(ssize.width * 2, ssize.height * 2);
+    _dst.create( dsize, src.type() );
+    UMat dst = _dst.getUMat();
+
+    int float_depth = depth == CV_64F ? CV_64F : CV_32F;
+    const int local_size = 16;
+    char cvt[2][50];
+    String buildOptions = format(
+            "-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s "
+            "-D T1=%s -D cn=%d -D LOCAL_SIZE=%d",
+            ocl::typeToStr(type), ocl::typeToStr(CV_MAKETYPE(float_depth, channels)),
+            ocl::convertTypeStr(float_depth, depth, channels, cvt[0]),
+            ocl::convertTypeStr(depth, float_depth, channels, cvt[1]),
+            doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+            ocl::typeToStr(depth), channels, local_size
+    );
+    size_t globalThreads[2] = { dst.cols, dst.rows };
+    size_t localThreads[2] = { local_size, local_size };
+    ocl::Kernel k;
+    if (ocl::Device::getDefault().isIntel() && channels == 1)
+    {
+        k.create("pyrUp_unrolled", ocl::imgproc::pyr_up_oclsrc, buildOptions);
+        globalThreads[0] = dst.cols/2; globalThreads[1] = dst.rows/2;
+    }
+    else
+        k.create("pyrUp", ocl::imgproc::pyr_up_oclsrc, buildOptions);
+
+    if (k.empty())
+        return false;
+
+    k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst));
+    return k.run(2, globalThreads, localThreads, false);
+}
+
+#endif
+
 }
 
 void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_pyrDown(_src, _dst, _dsz, borderType))
+
     Mat src = _src.getMat();
-    Size dsz = _dsz == Size() ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
+    Size dsz = _dsz.area() == 0 ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
+    int depth = src.depth();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if(borderType == BORDER_DEFAULT && tegra::pyrDown(src, dst))
         return;
 #endif
 
-    int depth = src.depth();
+#if IPP_VERSION_X100 >= 801 && 0
+    bool isolated = (borderType & BORDER_ISOLATED) != 0;
+    int borderTypeNI = borderType & ~BORDER_ISOLATED;
+    if (borderTypeNI == BORDER_DEFAULT && (!src.isSubmatrix() || isolated) && dsz == Size((src.cols + 1)/2, (src.rows + 1)/2))
+    {
+        typedef IppStatus (CV_STDCALL * ippiPyrDown)(const void* pSrc, int srcStep, void* pDst, int dstStep, IppiSize srcRoi, Ipp8u* buffer);
+        int type = src.type();
+        CV_SUPPRESS_DEPRECATED_START
+        ippiPyrDown pyrDownFunc = type == CV_8UC1 ? (ippiPyrDown) ippiPyrDown_Gauss5x5_8u_C1R :
+                                  type == CV_8UC3 ? (ippiPyrDown) ippiPyrDown_Gauss5x5_8u_C3R :
+                                  type == CV_32FC1 ? (ippiPyrDown) ippiPyrDown_Gauss5x5_32f_C1R :
+                                  type == CV_32FC3 ? (ippiPyrDown) ippiPyrDown_Gauss5x5_32f_C3R : 0;
+        CV_SUPPRESS_DEPRECATED_END
+
+        if (pyrDownFunc)
+        {
+            int bufferSize;
+            IppiSize srcRoi = { src.cols, src.rows };
+            IppDataType dataType = depth == CV_8U ? ipp8u : ipp32f;
+            CV_SUPPRESS_DEPRECATED_START
+            IppStatus ok = ippiPyrDownGetBufSize_Gauss5x5(srcRoi.width, dataType, src.channels(), &bufferSize);
+            CV_SUPPRESS_DEPRECATED_END
+            if (ok >= 0)
+            {
+                Ipp8u* buffer = ippsMalloc_8u(bufferSize);
+                ok = pyrDownFunc(src.data, (int) src.step, dst.data, (int) dst.step, srcRoi, buffer);
+                ippsFree(buffer);
+
+                if (ok >= 0)
+                    return;
+                setIppErrorStatus();
+            }
+        }
+    }
+#endif
+
     PyrFunc func = 0;
     if( depth == CV_8U )
         func = pyrDown_<FixPtCast<uchar, 8>, PyrDownVec_32s8u>;
@@ -434,17 +574,56 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
 
 void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_pyrUp(_src, _dst, _dsz, borderType))
+
     Mat src = _src.getMat();
-    Size dsz = _dsz == Size() ? Size(src.cols*2, src.rows*2) : _dsz;
+    Size dsz = _dsz.area() == 0 ? Size(src.cols*2, src.rows*2) : _dsz;
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
+    int depth = src.depth();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if(borderType == BORDER_DEFAULT && tegra::pyrUp(src, dst))
         return;
 #endif
 
-    int depth = src.depth();
+#if IPP_VERSION_X100 >= 801 && 0
+    bool isolated = (borderType & BORDER_ISOLATED) != 0;
+    int borderTypeNI = borderType & ~BORDER_ISOLATED;
+    if (borderTypeNI == BORDER_DEFAULT && (!src.isSubmatrix() || isolated) && dsz == Size(src.cols*2, src.rows*2))
+    {
+        typedef IppStatus (CV_STDCALL * ippiPyrUp)(const void* pSrc, int srcStep, void* pDst, int dstStep, IppiSize srcRoi, Ipp8u* buffer);
+        int type = src.type();
+        CV_SUPPRESS_DEPRECATED_START
+        ippiPyrUp pyrUpFunc = type == CV_8UC1 ? (ippiPyrUp) ippiPyrUp_Gauss5x5_8u_C1R :
+                              type == CV_8UC3 ? (ippiPyrUp) ippiPyrUp_Gauss5x5_8u_C3R :
+                              type == CV_32FC1 ? (ippiPyrUp) ippiPyrUp_Gauss5x5_32f_C1R :
+                              type == CV_32FC3 ? (ippiPyrUp) ippiPyrUp_Gauss5x5_32f_C3R : 0;
+        CV_SUPPRESS_DEPRECATED_END
+
+        if (pyrUpFunc)
+        {
+            int bufferSize;
+            IppiSize srcRoi = { src.cols, src.rows };
+            IppDataType dataType = depth == CV_8U ? ipp8u : ipp32f;
+            CV_SUPPRESS_DEPRECATED_START
+            IppStatus ok = ippiPyrUpGetBufSize_Gauss5x5(srcRoi.width, dataType, src.channels(), &bufferSize);
+            CV_SUPPRESS_DEPRECATED_END
+            if (ok >= 0)
+            {
+                Ipp8u* buffer = ippsMalloc_8u(bufferSize);
+                ok = pyrUpFunc(src.data, (int) src.step, dst.data, (int) dst.step, srcRoi, buffer);
+                ippsFree(buffer);
+
+                if (ok >= 0)
+                    return;
+                setIppErrorStatus();
+            }
+        }
+    }
+#endif
+
     PyrFunc func = 0;
     if( depth == CV_8U )
         func = pyrUp_<FixPtCast<uchar, 6>, NoVec<int, uchar> >;
@@ -464,10 +643,108 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
 
 void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
+    if (_src.dims() <= 2 && _dst.isUMatVector())
+    {
+        UMat src = _src.getUMat();
+        _dst.create( maxlevel + 1, 1, 0 );
+        _dst.getUMatRef(0) = src;
+        for( int i = 1; i <= maxlevel; i++ )
+            pyrDown( _dst.getUMatRef(i-1), _dst.getUMatRef(i), Size(), borderType );
+        return;
+    }
+
     Mat src = _src.getMat();
     _dst.create( maxlevel + 1, 1, 0 );
     _dst.getMatRef(0) = src;
-    for( int i = 1; i <= maxlevel; i++ )
+
+    int i=1;
+
+#if IPP_VERSION_X100 >= 801 && 0
+    bool isolated = (borderType & BORDER_ISOLATED) != 0;
+    int borderTypeNI = borderType & ~BORDER_ISOLATED;
+    if (borderTypeNI == BORDER_DEFAULT && (!src.isSubmatrix() || isolated))
+    {
+        typedef IppStatus (CV_STDCALL * ippiPyramidLayerDownInitAlloc)(void** ppState, IppiSize srcRoi, Ipp32f rate, void* pKernel, int kerSize, int mode);
+        typedef IppStatus (CV_STDCALL * ippiPyramidLayerDown)(void* pSrc, int srcStep, IppiSize srcRoiSize, void* pDst, int dstStep, IppiSize dstRoiSize, void* pState);
+        typedef IppStatus (CV_STDCALL * ippiPyramidLayerDownFree)(void* pState);
+
+        int type = src.type();
+        int depth = src.depth();
+        ippiPyramidLayerDownInitAlloc pyrInitAllocFunc = 0;
+        ippiPyramidLayerDown pyrDownFunc = 0;
+        ippiPyramidLayerDownFree pyrFreeFunc = 0;
+
+        if (type == CV_8UC1)
+        {
+            pyrInitAllocFunc = (ippiPyramidLayerDownInitAlloc) ippiPyramidLayerDownInitAlloc_8u_C1R;
+            pyrDownFunc = (ippiPyramidLayerDown) ippiPyramidLayerDown_8u_C1R;
+            pyrFreeFunc = (ippiPyramidLayerDownFree) ippiPyramidLayerDownFree_8u_C1R;
+        }
+        else if (type == CV_8UC3)
+        {
+            pyrInitAllocFunc = (ippiPyramidLayerDownInitAlloc) ippiPyramidLayerDownInitAlloc_8u_C3R;
+            pyrDownFunc = (ippiPyramidLayerDown) ippiPyramidLayerDown_8u_C3R;
+            pyrFreeFunc = (ippiPyramidLayerDownFree) ippiPyramidLayerDownFree_8u_C3R;
+        }
+        else if (type == CV_32FC1)
+        {
+            pyrInitAllocFunc = (ippiPyramidLayerDownInitAlloc) ippiPyramidLayerDownInitAlloc_32f_C1R;
+            pyrDownFunc = (ippiPyramidLayerDown) ippiPyramidLayerDown_32f_C1R;
+            pyrFreeFunc = (ippiPyramidLayerDownFree) ippiPyramidLayerDownFree_32f_C1R;
+        }
+        else if (type == CV_32FC3)
+        {
+            pyrInitAllocFunc = (ippiPyramidLayerDownInitAlloc) ippiPyramidLayerDownInitAlloc_32f_C3R;
+            pyrDownFunc = (ippiPyramidLayerDown) ippiPyramidLayerDown_32f_C3R;
+            pyrFreeFunc = (ippiPyramidLayerDownFree) ippiPyramidLayerDownFree_32f_C3R;
+        }
+
+        if (pyrInitAllocFunc && pyrDownFunc && pyrFreeFunc)
+        {
+            float rate = 2.f;
+            IppiSize srcRoi = { src.cols, src.rows };
+            IppiPyramid *gPyr;
+            IppStatus ok = ippiPyramidInitAlloc(&gPyr, maxlevel + 1, srcRoi, rate);
+
+            Ipp16s iKernel[5] = { 1, 4, 6, 4, 1 };
+            Ipp32f fKernel[5] = { 1.f, 4.f, 6.f, 4.f, 1.f };
+            void* kernel = depth >= CV_32F ? (void*) fKernel : (void*) iKernel;
+
+            if (ok >= 0) ok = pyrInitAllocFunc((void**) &(gPyr->pState), srcRoi, rate, kernel, 5, IPPI_INTER_LINEAR);
+            if (ok >= 0)
+            {
+                gPyr->pImage[0] = src.data;
+                gPyr->pStep[0] = (int) src.step;
+                gPyr->pRoi[0] = srcRoi;
+                for( ; i <= maxlevel; i++ )
+                {
+                    IppiSize dstRoi;
+                    ok = ippiGetPyramidDownROI(gPyr->pRoi[i-1], &dstRoi, rate);
+                    Mat& dst = _dst.getMatRef(i);
+                    dst.create(Size(dstRoi.width, dstRoi.height), type);
+                    gPyr->pImage[i] = dst.data;
+                    gPyr->pStep[i] = (int) dst.step;
+                    gPyr->pRoi[i] = dstRoi;
+
+                    if (ok >= 0) ok = pyrDownFunc(gPyr->pImage[i-1], gPyr->pStep[i-1], gPyr->pRoi[i-1],
+                                                  gPyr->pImage[i], gPyr->pStep[i], gPyr->pRoi[i], gPyr->pState);
+
+                    if (ok < 0)
+                    {
+                        setIppErrorStatus();
+                        break;
+                    }
+                }
+                pyrFreeFunc(gPyr->pState);
+            }
+            else
+                setIppErrorStatus();
+
+            ippiPyramidFree(gPyr);
+        }
+    }
+#endif
+    for( ; i <= maxlevel; i++ )
         pyrDown( _dst.getMatRef(i-1), _dst.getMatRef(i), Size(), borderType );
 }
 

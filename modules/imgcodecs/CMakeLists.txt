@@ -1,0 +1,131 @@
+set(the_description "Image codecs")
+ocv_add_module(imgcodecs opencv_imgproc)
+
+# ----------------------------------------------------------------------------
+#  CMake file for imgcodecs. See root CMakeLists.txt
+#   Some parts taken from version of Hartmut Seichter, HIT Lab NZ.
+#   Jose Luis Blanco, 2008
+# ----------------------------------------------------------------------------
+
+ocv_clear_vars(GRFMT_LIBS)
+
+if(HAVE_WINRT_CX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
+endif()
+
+if(HAVE_PNG OR HAVE_TIFF OR HAVE_OPENEXR)
+  ocv_include_directories(${ZLIB_INCLUDE_DIRS})
+  list(APPEND GRFMT_LIBS ${ZLIB_LIBRARIES})
+endif()
+
+if(HAVE_JPEG)
+  ocv_include_directories(${JPEG_INCLUDE_DIR})
+  list(APPEND GRFMT_LIBS ${JPEG_LIBRARIES})
+endif()
+
+if(WITH_WEBP)
+  add_definitions(-DHAVE_WEBP)
+  ocv_include_directories(${WEBP_INCLUDE_DIR})
+  list(APPEND GRFMT_LIBS ${WEBP_LIBRARIES})
+endif()
+
+if(HAVE_PNG)
+  add_definitions(${PNG_DEFINITIONS})
+  ocv_include_directories(${PNG_INCLUDE_DIR})
+  list(APPEND GRFMT_LIBS ${PNG_LIBRARIES})
+endif()
+
+if(HAVE_TIFF)
+  ocv_include_directories(${TIFF_INCLUDE_DIR})
+  list(APPEND GRFMT_LIBS ${TIFF_LIBRARIES})
+endif()
+
+if(HAVE_JASPER)
+  ocv_include_directories(${JASPER_INCLUDE_DIR})
+  list(APPEND GRFMT_LIBS ${JASPER_LIBRARIES})
+endif()
+
+if(HAVE_OPENEXR)
+  include_directories(SYSTEM ${OPENEXR_INCLUDE_PATHS})
+  list(APPEND GRFMT_LIBS ${OPENEXR_LIBRARIES})
+endif()
+
+file(GLOB grfmt_hdrs src/grfmt*.hpp)
+file(GLOB grfmt_srcs src/grfmt*.cpp)
+list(APPEND grfmt_hdrs src/bitstrm.hpp)
+list(APPEND grfmt_srcs src/bitstrm.cpp)
+list(APPEND grfmt_hdrs src/rgbe.hpp)
+list(APPEND grfmt_srcs src/rgbe.cpp)
+
+source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
+
+set(imgcodecs_hdrs
+    src/precomp.hpp
+    src/utils.hpp
+    )
+
+set(imgcodecs_srcs
+    src/loadsave.cpp
+    src/utils.cpp
+    )
+
+file(GLOB imgcodecs_ext_hdrs "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
+
+if(IOS)
+  add_definitions(-DHAVE_IOS=1)
+  list(APPEND imgcodecs_srcs src/ios_conversions.mm)
+  list(APPEND IMGCODECS_LIBRARIES "-framework Accelerate" "-framework CoreGraphics" "-framework CoreImage" "-framework QuartzCore" "-framework AssetsLibrary")
+endif()
+
+if(UNIX)
+  #these variables are set by CHECK_MODULE macro
+  foreach(P ${IMGCODECS_INCLUDE_DIRS})
+    ocv_include_directories(${P})
+  endforeach()
+
+  foreach(P ${IMGCODECS_LIBRARY_DIRS})
+    link_directories(${P})
+  endforeach()
+endif()
+
+source_group("Src" FILES ${imgcodecs_srcs} ${imgcodecs_hdrs})
+source_group("Include" FILES ${imgcodecs_ext_hdrs})
+ocv_set_module_sources(HEADERS ${imgcodecs_ext_hdrs} SOURCES ${imgcodecs_srcs} ${imgcodecs_hdrs} ${grfmt_srcs} ${grfmt_hdrs})
+ocv_module_include_directories()
+
+ocv_create_module(${GRFMT_LIBS} ${IMGCODECS_LIBRARIES})
+
+if(APPLE)
+  ocv_check_flag_support(OBJCXX "-fobjc-exceptions" HAVE_OBJC_EXCEPTIONS)
+  if(HAVE_OBJC_EXCEPTIONS)
+    foreach(source ${OPENCV_MODULE_${the_module}_SOURCES})
+      if("${source}" MATCHES "\\.mm$")
+        get_source_file_property(flags "${source}" COMPILE_FLAGS)
+        if(flags)
+          set(flags "${_flags} -fobjc-exceptions")
+        else()
+          set(flags "-fobjc-exceptions")
+        endif()
+
+        set_source_files_properties("${source}" PROPERTIES COMPILE_FLAGS "${flags}")
+      endif()
+    endforeach()
+  endif()
+endif()
+
+if(BUILD_SHARED_LIBS)
+  add_definitions(-DIMGCODECS_EXPORTS)
+endif()
+
+if(MSVC)
+  set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
+endif()
+
+#stop automatic dependencies propagation for this module
+set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
+
+ocv_add_precompiled_headers(${the_module})
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
+
+ocv_add_accuracy_tests()
+ocv_add_perf_tests()

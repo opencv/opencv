@@ -51,12 +51,15 @@
 #include <set>
 #include <functional>
 #include <sstream>
+#include <iostream>
 #include <cmath>
 #include "opencv2/core.hpp"
+#include "opencv2/core/ocl.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/stitching.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
+#include "opencv2/stitching/detail/timelapsers.hpp"
 #include "opencv2/stitching/detail/camera.hpp"
 #include "opencv2/stitching/detail/exposure_compensate.hpp"
 #include "opencv2/stitching/detail/matchers.hpp"

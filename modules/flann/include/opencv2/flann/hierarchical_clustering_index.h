@@ -209,8 +209,11 @@ private:
         assert(index >=0 && index < n);
         centers[0] = dsindices[index];
 
+        // Computing distance^2 will have the advantage of even higher probability further to pick new centers
+        // far from previous centers (and this complies to "k-means++: the advantages of careful seeding" article)
         for (int i = 0; i < n; i++) {
             closestDistSq[i] = distance(dataset[dsindices[i]], dataset[dsindices[index]], dataset.cols);
+            closestDistSq[i] = ensureSquareDistance<Distance>( closestDistSq[i] );
             currentPot += closestDistSq[i];
         }
 
@@ -236,7 +239,10 @@ private:
 
                 // Compute the new potential
                 double newPot = 0;
-                for (int i = 0; i < n; i++) newPot += std::min( distance(dataset[dsindices[i]], dataset[dsindices[index]], dataset.cols), closestDistSq[i] );
+                for (int i = 0; i < n; i++) {
+                    DistanceType dist = distance(dataset[dsindices[i]], dataset[dsindices[index]], dataset.cols);
+                    newPot += std::min( ensureSquareDistance<Distance>(dist), closestDistSq[i] );
+                }
 
                 // Store the best result
                 if ((bestNewPot < 0)||(newPot < bestNewPot)) {
@@ -248,7 +254,88 @@ private:
             // Add the appropriate center
             centers[centerCount] = dsindices[bestNewIndex];
             currentPot = bestNewPot;
-            for (int i = 0; i < n; i++) closestDistSq[i] = std::min( distance(dataset[dsindices[i]], dataset[dsindices[bestNewIndex]], dataset.cols), closestDistSq[i] );
+            for (int i = 0; i < n; i++) {
+                DistanceType dist = distance(dataset[dsindices[i]], dataset[dsindices[bestNewIndex]], dataset.cols);
+                closestDistSq[i] = std::min( ensureSquareDistance<Distance>(dist), closestDistSq[i] );
+            }
+        }
+
+        centers_length = centerCount;
+
+        delete[] closestDistSq;
+    }
+
+
+    /**
+     * Chooses the initial centers in a way inspired by Gonzales (by Pierre-Emmanuel Viel):
+     * select the first point of the list as a candidate, then parse the points list. If another
+     * point is further than current candidate from the other centers, test if it is a good center
+     * of a local aggregation. If it is, replace current candidate by this point. And so on...
+     *
+     * Used with KMeansIndex that computes centers coordinates by averaging positions of clusters points,
+     * this doesn't make a real difference with previous methods. But used with HierarchicalClusteringIndex
+     * class that pick centers among existing points instead of computing the barycenters, there is a real
+     * improvement.
+     *
+     * Params:
+     *     k = number of centers
+     *     vecs = the dataset of points
+     *     indices = indices in the dataset
+     * Returns:
+     */
+    void GroupWiseCenterChooser(int k, int* dsindices, int indices_length, int* centers, int& centers_length)
+    {
+        const float kSpeedUpFactor = 1.3f;
+
+        int n = indices_length;
+
+        DistanceType* closestDistSq = new DistanceType[n];
+
+        // Choose one random center and set the closestDistSq values
+        int index = rand_int(n);
+        assert(index >=0 && index < n);
+        centers[0] = dsindices[index];
+
+        for (int i = 0; i < n; i++) {
+            closestDistSq[i] = distance(dataset[dsindices[i]], dataset[dsindices[index]], dataset.cols);
+        }
+
+
+        // Choose each center
+        int centerCount;
+        for (centerCount = 1; centerCount < k; centerCount++) {
+
+            // Repeat several trials
+            double bestNewPot = -1;
+            int bestNewIndex = 0;
+            DistanceType furthest = 0;
+            for (index = 0; index < n; index++) {
+
+                // We will test only the potential of the points further than current candidate
+                if( closestDistSq[index] > kSpeedUpFactor * (float)furthest ) {
+
+                    // Compute the new potential
+                    double newPot = 0;
+                    for (int i = 0; i < n; i++) {
+                        newPot += std::min( distance(dataset[dsindices[i]], dataset[dsindices[index]], dataset.cols)
+                                            , closestDistSq[i] );
+                    }
+
+                    // Store the best result
+                    if ((bestNewPot < 0)||(newPot <= bestNewPot)) {
+                        bestNewPot = newPot;
+                        bestNewIndex = index;
+                        furthest = closestDistSq[index];
+                    }
+                }
+            }
+
+            // Add the appropriate center
+            centers[centerCount] = dsindices[bestNewIndex];
+            for (int i = 0; i < n; i++) {
+                closestDistSq[i] = std::min( distance(dataset[dsindices[i]], dataset[dsindices[bestNewIndex]], dataset.cols)
+                                             , closestDistSq[i] );
+            }
         }
 
         centers_length = centerCount;
@@ -290,6 +377,9 @@ public:
         else if (centers_init_==FLANN_CENTERS_KMEANSPP) {
             chooseCenters = &HierarchicalClusteringIndex::chooseCentersKMeanspp;
         }
+        else if (centers_init_==FLANN_CENTERS_GROUPWISE) {
+            chooseCenters = &HierarchicalClusteringIndex::GroupWiseCenterChooser;
+        }
         else {
             throw FLANNException("Unknown algorithm for choosing initial centers.");
         }
@@ -297,6 +387,11 @@ public:
         trees_ = get_param(params,"trees",4);
         root = new NodePtr[trees_];
         indices = new int*[trees_];
+
+        for (int i=0; i<trees_; ++i) {
+            root[i] = NULL;
+            indices[i] = NULL;
+        }
     }
 
     HierarchicalClusteringIndex(const HierarchicalClusteringIndex&);
@@ -309,10 +404,33 @@ public:
      */
     virtual ~HierarchicalClusteringIndex()
     {
+        free_elements();
+
+        if (root!=NULL) {
+            delete[] root;
+        }
+
         if (indices!=NULL) {
             delete[] indices;
         }
     }
+
+
+    /**
+     * Release the inner elements of indices[]
+     */
+    void free_elements()
+    {
+        if (indices!=NULL) {
+            for(int i=0; i<trees_; ++i) {
+                if (indices[i]!=NULL) {
+                    delete[] indices[i];
+                    indices[i] = NULL;
+                }
+            }
+        }
+    }
+
 
     /**
      *  Returns size of index.
@@ -348,6 +466,9 @@ public:
         if (branching_<2) {
             throw FLANNException("Branching factor must be at least 2");
         }
+
+        free_elements();
+
         for (int i=0; i<trees_; ++i) {
             indices[i] = new int[size_];
             for (size_t j=0; j<size_; ++j) {
@@ -382,11 +503,22 @@ public:
 
     void loadIndex(FILE* stream)
     {
+        free_elements();
+
+        if (root!=NULL) {
+            delete[] root;
+        }
+
+        if (indices!=NULL) {
+            delete[] indices;
+        }
+
         load_value(stream, branching_);
         load_value(stream, trees_);
         load_value(stream, centers_init_);
         load_value(stream, leaf_size_);
         load_value(stream, memoryCounter);
+
         indices = new int*[trees_];
         root = new NodePtr[trees_];
         for (int i=0; i<trees_; ++i) {

@@ -467,7 +467,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1dims
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
         return me->dims;
-    } catch(cv::Exception e) {
+    } catch(const cv::Exception& e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
         throwJavaException(env, 0, method_name);

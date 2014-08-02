@@ -111,21 +111,6 @@ namespace cv
 
 /******************************* Defs and macros *****************************/
 
-// default number of sampled intervals per octave
-static const int SIFT_INTVLS = 3;
-
-// default sigma for initial gaussian smoothing
-static const float SIFT_SIGMA = 1.6f;
-
-// default threshold on keypoint contrast |D(x)|
-static const float SIFT_CONTR_THR = 0.04f;
-
-// default threshold on keypoint ratio of principle curvatures
-static const float SIFT_CURV_THR = 10.f;
-
-// double image size before pyramid construction?
-static const bool SIFT_IMG_DBL = true;
-
 // default width of descriptor histogram array
 static const int SIFT_DESCR_WIDTH = 4;
 
@@ -543,6 +528,8 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
     float exp_scale = -1.f/(d * d * 0.5f);
     float hist_width = SIFT_DESCR_SCL_FCTR * scl;
     int radius = cvRound(hist_width * 1.4142135623730951f * (d + 1) * 0.5f);
+    // Clip the radius to the diagonal of the image to avoid autobuffer too large exception
+    radius = std::min(radius, (int) sqrt((double) img.cols*img.cols + img.rows*img.rows));
     cos_t /= hist_width;
     sin_t /= hist_width;
 
@@ -715,6 +702,11 @@ int SIFT::descriptorType() const
     return CV_32F;
 }
 
+int SIFT::defaultNorm() const
+{
+    return NORM_L2;
+}
+
 
 void SIFT::operator()(InputArray _image, InputArray _mask,
                       std::vector<KeyPoint>& keypoints) const
@@ -811,12 +803,12 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
     }
 }
 
-void SIFT::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
+void SIFT::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
 {
-    (*this)(image, mask, keypoints, noArray());
+    (*this)(image.getMat(), mask.getMat(), keypoints, noArray());
 }
 
-void SIFT::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
+void SIFT::computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
 {
     (*this)(image, Mat(), keypoints, descriptors, true);
 }

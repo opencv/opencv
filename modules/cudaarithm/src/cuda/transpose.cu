@@ -40,83 +40,53 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#error "opencv_cudev is required"
 
-namespace arithm
+#else
+
+#include "opencv2/cudaarithm.hpp"
+#include "opencv2/cudev.hpp"
+#include "opencv2/core/private.cuda.hpp"
+
+using namespace cv::cudev;
+
+void cv::cuda::transpose(InputArray _src, OutputArray _dst, Stream& stream)
 {
-    const int TRANSPOSE_TILE_DIM   = 16;
-    const int TRANSPOSE_BLOCK_ROWS = 16;
+    GpuMat src = _src.getGpuMat();
 
-    template <typename T>
-    __global__ void transposeKernel(const PtrStepSz<T> src, PtrStep<T> dst)
+    const size_t elemSize = src.elemSize();
+
+    CV_Assert( elemSize == 1 || elemSize == 4 || elemSize == 8 );
+
+    _dst.create( src.cols, src.rows, src.type() );
+    GpuMat dst = _dst.getGpuMat();
+
+    if (elemSize == 1)
     {
-        __shared__ T tile[TRANSPOSE_TILE_DIM][TRANSPOSE_TILE_DIM + 1];
+        NppStreamHandler h(StreamAccessor::getStream(stream));
 
-        int blockIdx_x, blockIdx_y;
+        NppiSize sz;
+        sz.width  = src.cols;
+        sz.height = src.rows;
 
-        // do diagonal reordering
-        if (gridDim.x == gridDim.y)
-        {
-            blockIdx_y = blockIdx.x;
-            blockIdx_x = (blockIdx.x + blockIdx.y) % gridDim.x;
-        }
-        else
-        {
-            int bid = blockIdx.x + gridDim.x * blockIdx.y;
-            blockIdx_y = bid % gridDim.y;
-            blockIdx_x = ((bid / gridDim.y) + blockIdx_y) % gridDim.x;
-        }
+        nppSafeCall( nppiTranspose_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz) );
 
-        int xIndex = blockIdx_x * TRANSPOSE_TILE_DIM + threadIdx.x;
-        int yIndex = blockIdx_y * TRANSPOSE_TILE_DIM + threadIdx.y;
-
-        if (xIndex < src.cols)
-        {
-            for (int i = 0; i < TRANSPOSE_TILE_DIM; i += TRANSPOSE_BLOCK_ROWS)
-            {
-                if (yIndex + i < src.rows)
-                {
-                    tile[threadIdx.y + i][threadIdx.x] = src(yIndex + i, xIndex);
-                }
-            }
-        }
-
-        __syncthreads();
-
-        xIndex = blockIdx_y * TRANSPOSE_TILE_DIM + threadIdx.x;
-        yIndex = blockIdx_x * TRANSPOSE_TILE_DIM + threadIdx.y;
-
-        if (xIndex < src.rows)
-        {
-            for (int i = 0; i < TRANSPOSE_TILE_DIM; i += TRANSPOSE_BLOCK_ROWS)
-            {
-                if (yIndex + i < src.cols)
-                {
-                    dst(yIndex + i, xIndex) = tile[threadIdx.x][threadIdx.y + i];
-                }
-            }
-        }
+        if (!stream)
+            CV_CUDEV_SAFE_CALL( cudaDeviceSynchronize() );
     }
-
-    template <typename T> void transpose(PtrStepSz<T> src, PtrStepSz<T> dst, cudaStream_t stream)
+    else if (elemSize == 4)
     {
-        const dim3 block(TRANSPOSE_TILE_DIM, TRANSPOSE_TILE_DIM);
-        const dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
-
-        transposeKernel<<<grid, block, 0, stream>>>(src, dst);
-        cudaSafeCall( cudaGetLastError() );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+        gridTranspose(globPtr<int>(src), globPtr<int>(dst), stream);
     }
-
-    template void transpose<int>(PtrStepSz<int> src, PtrStepSz<int> dst, cudaStream_t stream);
-    template void transpose<double>(PtrStepSz<double> src, PtrStepSz<double> dst, cudaStream_t stream);
+    else // if (elemSize == 8)
+    {
+        gridTranspose(globPtr<double>(src), globPtr<double>(dst), stream);
+    }
 }
 
-#endif // CUDA_DISABLER
+#endif

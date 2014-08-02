@@ -62,10 +62,7 @@ Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const Ptr<EncoderCallBack>&, S
 
 #else // !defined HAVE_CUDA || !defined WIN32
 
-namespace cv { namespace cuda { namespace device
-{
-    void RGB_to_YV12(const PtrStepSzb src, int cn, PtrStepSzb dst, cudaStream_t stream = 0);
-}}}
+void RGB_to_YV12(const GpuMat& src, GpuMat& dst);
 
 ///////////////////////////////////////////////////////////////////////////
 // VideoWriterImpl
@@ -642,7 +639,7 @@ namespace
 
         if (inputFormat_ == SF_BGR)
         {
-            device::RGB_to_YV12(frame, frame.channels(), videoFrame_);
+            RGB_to_YV12(frame, videoFrame_);
         }
         else
         {
@@ -736,7 +733,7 @@ namespace
         {
             #if defined(WIN32) || defined(_WIN32)
                 const char* module_name = "opencv_ffmpeg"
-                    CVAUX_STR(CV_VERSION_EPOCH) CVAUX_STR(CV_VERSION_MAJOR) CVAUX_STR(CV_VERSION_MINOR)
+                    CVAUX_STR(CV_VERSION_MAJOR) CVAUX_STR(CV_VERSION_MINOR) CVAUX_STR(CV_VERSION_REVISION)
                 #if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__)
                     "_64"
                 #endif

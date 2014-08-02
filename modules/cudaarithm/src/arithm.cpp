@@ -113,11 +113,7 @@ namespace
         }
     }
 
-    #if defined(__GNUC__)
-        #define cublasSafeCall(expr)  ___cublasSafeCall(expr, __FILE__, __LINE__, __func__)
-    #else /* defined(__CUDACC__) || defined(__MSVC__) */
-        #define cublasSafeCall(expr)  ___cublasSafeCall(expr, __FILE__, __LINE__, "")
-    #endif
+    #define cublasSafeCall(expr)  ___cublasSafeCall(expr, __FILE__, __LINE__, CV_Func)
 #endif // HAVE_CUBLAS
 
 #ifdef HAVE_CUFFT
@@ -151,11 +147,7 @@ namespace
         }
     }
 
-    #if defined(__GNUC__)
-        #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__, __func__)
-    #else /* defined(__CUDACC__) || defined(__MSVC__) */
-        #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__, "")
-    #endif
+    #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__, CV_Func)
 
 #endif
 
@@ -289,95 +281,6 @@ void cv::cuda::gemm(InputArray _src1, InputArray _src2, double alpha, InputArray
     }
 
     cublasSafeCall( cublasDestroy_v2(handle) );
-#endif
-}
-
-//////////////////////////////////////////////////////////////////////////////
-// mulSpectrums
-
-#ifdef HAVE_CUFFT
-
-namespace cv { namespace cuda { namespace device
-{
-    void mulSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c, cudaStream_t stream);
-
-    void mulSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c, cudaStream_t stream);
-}}}
-
-#endif
-
-void cv::cuda::mulSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst, int flags, bool conjB, Stream& stream)
-{
-#ifndef HAVE_CUFFT
-    (void) _src1;
-    (void) _src2;
-    (void) _dst;
-    (void) flags;
-    (void) conjB;
-    (void) stream;
-    throw_no_cuda();
-#else
-    (void) flags;
-
-    typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, PtrStepSz<cufftComplex>, cudaStream_t stream);
-    static Caller callers[] = { device::mulSpectrums, device::mulSpectrums_CONJ };
-
-    GpuMat src1 = _src1.getGpuMat();
-    GpuMat src2 = _src2.getGpuMat();
-
-    CV_Assert( src1.type() == src2.type() && src1.type() == CV_32FC2 );
-    CV_Assert( src1.size() == src2.size() );
-
-    _dst.create(src1.size(), CV_32FC2);
-    GpuMat dst = _dst.getGpuMat();
-
-    Caller caller = callers[(int)conjB];
-    caller(src1, src2, dst, StreamAccessor::getStream(stream));
-#endif
-}
-
-//////////////////////////////////////////////////////////////////////////////
-// mulAndScaleSpectrums
-
-#ifdef HAVE_CUFFT
-
-namespace cv { namespace cuda { namespace device
-{
-    void mulAndScaleSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c, cudaStream_t stream);
-
-    void mulAndScaleSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c, cudaStream_t stream);
-}}}
-
-#endif
-
-void cv::cuda::mulAndScaleSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst, int flags, float scale, bool conjB, Stream& stream)
-{
-#ifndef HAVE_CUFFT
-    (void) _src1;
-    (void) _src2;
-    (void) _dst;
-    (void) flags;
-    (void) scale;
-    (void) conjB;
-    (void) stream;
-    throw_no_cuda();
-#else
-    (void)flags;
-
-    typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, float scale, PtrStepSz<cufftComplex>, cudaStream_t stream);
-    static Caller callers[] = { device::mulAndScaleSpectrums, device::mulAndScaleSpectrums_CONJ };
-
-    GpuMat src1 = _src1.getGpuMat();
-    GpuMat src2 = _src2.getGpuMat();
-
-    CV_Assert( src1.type() == src2.type() && src1.type() == CV_32FC2);
-    CV_Assert( src1.size() == src2.size() );
-
-    _dst.create(src1.size(), CV_32FC2);
-    GpuMat dst = _dst.getGpuMat();
-
-    Caller caller = callers[(int)conjB];
-    caller(src1, src2, scale, dst, StreamAccessor::getStream(stream));
 #endif
 }
 

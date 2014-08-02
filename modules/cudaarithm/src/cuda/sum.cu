@@ -40,342 +40,155 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/vec_traits.hpp"
-#include "opencv2/core/cuda/vec_math.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/reduce.hpp"
-#include "opencv2/core/cuda/emulation.hpp"
-#include "opencv2/core/cuda/utility.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-#include "unroll_detail.hpp"
+#error "opencv_cudev is required"
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#else
 
-namespace sum
+#include "opencv2/cudaarithm.hpp"
+#include "opencv2/cudev.hpp"
+
+using namespace cv::cudev;
+
+namespace
 {
-    __device__ unsigned int blocks_finished = 0;
-
-    template <typename R, int cn> struct AtomicAdd;
-    template <typename R> struct AtomicAdd<R, 1>
+    template <typename T, typename R, int cn>
+    cv::Scalar sumImpl(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf)
     {
-        static __device__ void run(R* ptr, R val)
-        {
-            Emulation::glob::atomicAdd(ptr, val);
-        }
-    };
-    template <typename R> struct AtomicAdd<R, 2>
-    {
-        typedef typename TypeVec<R, 2>::vec_type val_type;
+        typedef typename MakeVec<T, cn>::type src_type;
+        typedef typename MakeVec<R, cn>::type res_type;
 
-        static __device__ void run(R* ptr, val_type val)
-        {
-            Emulation::glob::atomicAdd(ptr, val.x);
-            Emulation::glob::atomicAdd(ptr + 1, val.y);
-        }
-    };
-    template <typename R> struct AtomicAdd<R, 3>
-    {
-        typedef typename TypeVec<R, 3>::vec_type val_type;
+        const GpuMat_<src_type>& src = (const GpuMat_<src_type>&) _src;
+        GpuMat_<res_type>& buf = (GpuMat_<res_type>&) _buf;
 
-        static __device__ void run(R* ptr, val_type val)
-        {
-            Emulation::glob::atomicAdd(ptr, val.x);
-            Emulation::glob::atomicAdd(ptr + 1, val.y);
-            Emulation::glob::atomicAdd(ptr + 2, val.z);
-        }
-    };
-    template <typename R> struct AtomicAdd<R, 4>
-    {
-        typedef typename TypeVec<R, 4>::vec_type val_type;
-
-        static __device__ void run(R* ptr, val_type val)
-        {
-            Emulation::glob::atomicAdd(ptr, val.x);
-            Emulation::glob::atomicAdd(ptr + 1, val.y);
-            Emulation::glob::atomicAdd(ptr + 2, val.z);
-            Emulation::glob::atomicAdd(ptr + 3, val.w);
-        }
-    };
-
-    template <int BLOCK_SIZE, typename R, int cn>
-    struct GlobalReduce
-    {
-        typedef typename TypeVec<R, cn>::vec_type result_type;
-
-        static __device__ void run(result_type& sum, result_type* result, int tid, int bid, R* smem)
-        {
-        #if __CUDA_ARCH__ >= 200
-            if (tid == 0)
-                AtomicAdd<R, cn>::run((R*) result, sum);
-        #else
-            __shared__ bool is_last;
-
-            if (tid == 0)
-            {
-                result[bid] = sum;
-
-                __threadfence();
-
-                unsigned int ticket = ::atomicAdd(&blocks_finished, 1);
-                is_last = (ticket == gridDim.x * gridDim.y - 1);
-            }
-
-            __syncthreads();
-
-            if (is_last)
-            {
-                sum = tid < gridDim.x * gridDim.y ? result[tid] : VecTraits<result_type>::all(0);
-
-                device::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(sum), tid, detail::Unroll<cn>::op(plus<R>()));
-
-                if (tid == 0)
-                {
-                    result[0] = sum;
-                    blocks_finished = 0;
-                }
-            }
-        #endif
-        }
-    };
-
-    template <int BLOCK_SIZE, typename src_type, typename result_type, class Mask, class Op>
-    __global__ void kernel(const PtrStepSz<src_type> src, result_type* result, const Mask mask, const Op op, const int twidth, const int theight)
-    {
-        typedef typename VecTraits<src_type>::elem_type T;
-        typedef typename VecTraits<result_type>::elem_type R;
-        const int cn = VecTraits<src_type>::cn;
-
-        __shared__ R smem[BLOCK_SIZE * cn];
-
-        const int x0 = blockIdx.x * blockDim.x * twidth + threadIdx.x;
-        const int y0 = blockIdx.y * blockDim.y * theight + threadIdx.y;
-
-        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
-        const int bid = blockIdx.y * gridDim.x + blockIdx.x;
-
-        result_type sum = VecTraits<result_type>::all(0);
-
-        for (int i = 0, y = y0; i < theight && y < src.rows; ++i, y += blockDim.y)
-        {
-            const src_type* ptr = src.ptr(y);
-
-            for (int j = 0, x = x0; j < twidth && x < src.cols; ++j, x += blockDim.x)
-            {
-                if (mask(y, x))
-                {
-                    const src_type srcVal = ptr[x];
-                    sum = sum + op(saturate_cast<result_type>(srcVal));
-                }
-            }
-        }
-
-        device::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(sum), tid, detail::Unroll<cn>::op(plus<R>()));
-
-        GlobalReduce<BLOCK_SIZE, R, cn>::run(sum, result, tid, bid, smem);
-    }
-
-    const int threads_x = 32;
-    const int threads_y = 8;
-
-    void getLaunchCfg(int cols, int rows, dim3& block, dim3& grid)
-    {
-        block = dim3(threads_x, threads_y);
-
-        grid = dim3(divUp(cols, block.x * block.y),
-                    divUp(rows, block.y * block.x));
-
-        grid.x = ::min(grid.x, block.x);
-        grid.y = ::min(grid.y, block.y);
-    }
-
-    void getBufSize(int cols, int rows, int cn, int& bufcols, int& bufrows)
-    {
-        dim3 block, grid;
-        getLaunchCfg(cols, rows, block, grid);
-
-        bufcols = grid.x * grid.y * sizeof(double) * cn;
-        bufrows = 1;
-    }
-
-    template <typename T, typename R, int cn, template <typename> class Op>
-    void caller(PtrStepSzb src_, void* buf_, double* out, PtrStepSzb mask)
-    {
-        typedef typename TypeVec<T, cn>::vec_type src_type;
-        typedef typename TypeVec<R, cn>::vec_type result_type;
-
-        PtrStepSz<src_type> src(src_);
-        result_type* buf = (result_type*) buf_;
-
-        dim3 block, grid;
-        getLaunchCfg(src.cols, src.rows, block, grid);
-
-        const int twidth = divUp(divUp(src.cols, grid.x), block.x);
-        const int theight = divUp(divUp(src.rows, grid.y), block.y);
-
-        Op<result_type> op;
-
-        if (mask.data)
-            kernel<threads_x * threads_y><<<grid, block>>>(src, buf, SingleMask(mask), op, twidth, theight);
+        if (mask.empty())
+            gridCalcSum(src, buf);
         else
-            kernel<threads_x * threads_y><<<grid, block>>>(src, buf, WithOutMask(), op, twidth, theight);
-        cudaSafeCall( cudaGetLastError() );
+            gridCalcSum(src, buf, globPtr<uchar>(mask));
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cv::Scalar_<R> res;
+        cv::Mat res_mat(buf.size(), buf.type(), res.val);
+        buf.download(res_mat);
 
-        R result[4] = {0, 0, 0, 0};
-        cudaSafeCall( cudaMemcpy(&result, buf, sizeof(result_type), cudaMemcpyDeviceToHost) );
-
-        out[0] = result[0];
-        out[1] = result[1];
-        out[2] = result[2];
-        out[3] = result[3];
+        return res;
     }
 
-    template <typename T> struct SumType;
-    template <> struct SumType<uchar> { typedef unsigned int R; };
-    template <> struct SumType<schar> { typedef int R; };
-    template <> struct SumType<ushort> { typedef unsigned int R; };
-    template <> struct SumType<short> { typedef int R; };
-    template <> struct SumType<int> { typedef int R; };
-    template <> struct SumType<float> { typedef float R; };
-    template <> struct SumType<double> { typedef double R; };
-
-    template <typename T, int cn>
-    void run(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask)
+    template <typename T, typename R, int cn>
+    cv::Scalar sumAbsImpl(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf)
     {
-        typedef typename SumType<T>::R R;
-        caller<T, R, cn, identity>(src, buf, out, mask);
+        typedef typename MakeVec<T, cn>::type src_type;
+        typedef typename MakeVec<R, cn>::type res_type;
+
+        const GpuMat_<src_type>& src = (const GpuMat_<src_type>&) _src;
+        GpuMat_<res_type>& buf = (GpuMat_<res_type>&) _buf;
+
+        if (mask.empty())
+            gridCalcSum(abs_(cvt_<res_type>(src)), buf);
+        else
+            gridCalcSum(abs_(cvt_<res_type>(src)), buf, globPtr<uchar>(mask));
+
+        cv::Scalar_<R> res;
+        cv::Mat res_mat(buf.size(), buf.type(), res.val);
+        buf.download(res_mat);
+
+        return res;
     }
 
-    template void run<uchar, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<uchar, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<uchar, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<uchar, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void run<schar, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<schar, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<schar, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<schar, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void run<ushort, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<ushort, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<ushort, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<ushort, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void run<short, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<short, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<short, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<short, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void run<int, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<int, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<int, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<int, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void run<float, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<float, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<float, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<float, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void run<double, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<double, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<double, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void run<double, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template <typename T, int cn>
-    void runAbs(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask)
+    template <typename T, typename R, int cn>
+    cv::Scalar sumSqrImpl(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf)
     {
-        typedef typename SumType<T>::R R;
-        caller<T, R, cn, abs_func>(src, buf, out, mask);
+        typedef typename MakeVec<T, cn>::type src_type;
+        typedef typename MakeVec<R, cn>::type res_type;
+
+        const GpuMat_<src_type>& src = (const GpuMat_<src_type>&) _src;
+        GpuMat_<res_type>& buf = (GpuMat_<res_type>&) _buf;
+
+        if (mask.empty())
+            gridCalcSum(sqr_(cvt_<res_type>(src)), buf);
+        else
+            gridCalcSum(sqr_(cvt_<res_type>(src)), buf, globPtr<uchar>(mask));
+
+        cv::Scalar_<R> res;
+        cv::Mat res_mat(buf.size(), buf.type(), res.val);
+        buf.download(res_mat);
+
+        return res;
     }
-
-    template void runAbs<uchar, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<uchar, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<uchar, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<uchar, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void runAbs<schar, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<schar, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<schar, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<schar, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void runAbs<ushort, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<ushort, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<ushort, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<ushort, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void runAbs<short, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<short, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<short, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<short, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void runAbs<int, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<int, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<int, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<int, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void runAbs<float, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<float, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<float, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<float, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void runAbs<double, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<double, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<double, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runAbs<double, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template <typename T> struct Sqr : unary_function<T, T>
-    {
-        __device__ __forceinline__ T operator ()(T x) const
-        {
-            return x * x;
-        }
-    };
-
-    template <typename T, int cn>
-    void runSqr(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask)
-    {
-        caller<T, double, cn, Sqr>(src, buf, out, mask);
-    }
-
-    template void runSqr<uchar, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<uchar, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<uchar, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<uchar, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void runSqr<schar, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<schar, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<schar, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<schar, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void runSqr<ushort, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<ushort, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<ushort, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<ushort, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void runSqr<short, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<short, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<short, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<short, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void runSqr<int, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<int, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<int, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<int, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void runSqr<float, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<float, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<float, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<float, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-
-    template void runSqr<double, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<double, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<double, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
-    template void runSqr<double, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 }
 
-#endif // CUDA_DISABLER
+cv::Scalar cv::cuda::sum(InputArray _src, InputArray _mask, GpuMat& buf)
+{
+    typedef cv::Scalar (*func_t)(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf);
+    static const func_t funcs[7][4] =
+    {
+        {sumImpl<uchar , uint  , 1>, sumImpl<uchar , uint  , 2>, sumImpl<uchar , uint  , 3>, sumImpl<uchar , uint  , 4>},
+        {sumImpl<schar , int   , 1>, sumImpl<schar , int   , 2>, sumImpl<schar , int   , 3>, sumImpl<schar , int   , 4>},
+        {sumImpl<ushort, uint  , 1>, sumImpl<ushort, uint  , 2>, sumImpl<ushort, uint  , 3>, sumImpl<ushort, uint  , 4>},
+        {sumImpl<short , int   , 1>, sumImpl<short , int   , 2>, sumImpl<short , int   , 3>, sumImpl<short , int   , 4>},
+        {sumImpl<int   , int   , 1>, sumImpl<int   , int   , 2>, sumImpl<int   , int   , 3>, sumImpl<int   , int   , 4>},
+        {sumImpl<float , float , 1>, sumImpl<float , float , 2>, sumImpl<float , float , 3>, sumImpl<float , float , 4>},
+        {sumImpl<double, double, 1>, sumImpl<double, double, 2>, sumImpl<double, double, 3>, sumImpl<double, double, 4>}
+    };
+
+    GpuMat src = _src.getGpuMat();
+    GpuMat mask = _mask.getGpuMat();
+
+    CV_DbgAssert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
+
+    const func_t func = funcs[src.depth()][src.channels() - 1];
+
+    return func(src, mask, buf);
+}
+
+cv::Scalar cv::cuda::absSum(InputArray _src, InputArray _mask, GpuMat& buf)
+{
+    typedef cv::Scalar (*func_t)(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf);
+    static const func_t funcs[7][4] =
+    {
+        {sumAbsImpl<uchar , uint  , 1>, sumAbsImpl<uchar , uint  , 2>, sumAbsImpl<uchar , uint  , 3>, sumAbsImpl<uchar , uint  , 4>},
+        {sumAbsImpl<schar , int   , 1>, sumAbsImpl<schar , int   , 2>, sumAbsImpl<schar , int   , 3>, sumAbsImpl<schar , int   , 4>},
+        {sumAbsImpl<ushort, uint  , 1>, sumAbsImpl<ushort, uint  , 2>, sumAbsImpl<ushort, uint  , 3>, sumAbsImpl<ushort, uint  , 4>},
+        {sumAbsImpl<short , int   , 1>, sumAbsImpl<short , int   , 2>, sumAbsImpl<short , int   , 3>, sumAbsImpl<short , int   , 4>},
+        {sumAbsImpl<int   , int   , 1>, sumAbsImpl<int   , int   , 2>, sumAbsImpl<int   , int   , 3>, sumAbsImpl<int   , int   , 4>},
+        {sumAbsImpl<float , float , 1>, sumAbsImpl<float , float , 2>, sumAbsImpl<float , float , 3>, sumAbsImpl<float , float , 4>},
+        {sumAbsImpl<double, double, 1>, sumAbsImpl<double, double, 2>, sumAbsImpl<double, double, 3>, sumAbsImpl<double, double, 4>}
+    };
+
+    GpuMat src = _src.getGpuMat();
+    GpuMat mask = _mask.getGpuMat();
+
+    CV_DbgAssert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
+
+    const func_t func = funcs[src.depth()][src.channels() - 1];
+
+    return func(src, mask, buf);
+}
+
+cv::Scalar cv::cuda::sqrSum(InputArray _src, InputArray _mask, GpuMat& buf)
+{
+    typedef cv::Scalar (*func_t)(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf);
+    static const func_t funcs[7][4] =
+    {
+        {sumSqrImpl<uchar , double, 1>, sumSqrImpl<uchar , double, 2>, sumSqrImpl<uchar , double, 3>, sumSqrImpl<uchar , double, 4>},
+        {sumSqrImpl<schar , double, 1>, sumSqrImpl<schar , double, 2>, sumSqrImpl<schar , double, 3>, sumSqrImpl<schar , double, 4>},
+        {sumSqrImpl<ushort, double, 1>, sumSqrImpl<ushort, double, 2>, sumSqrImpl<ushort, double, 3>, sumSqrImpl<ushort, double, 4>},
+        {sumSqrImpl<short , double, 1>, sumSqrImpl<short , double, 2>, sumSqrImpl<short , double, 3>, sumSqrImpl<short , double, 4>},
+        {sumSqrImpl<int   , double, 1>, sumSqrImpl<int   , double, 2>, sumSqrImpl<int   , double, 3>, sumSqrImpl<int   , double, 4>},
+        {sumSqrImpl<float , double, 1>, sumSqrImpl<float , double, 2>, sumSqrImpl<float , double, 3>, sumSqrImpl<float , double, 4>},
+        {sumSqrImpl<double, double, 1>, sumSqrImpl<double, double, 2>, sumSqrImpl<double, double, 3>, sumSqrImpl<double, double, 4>}
+    };
+
+    GpuMat src = _src.getGpuMat();
+    GpuMat mask = _mask.getGpuMat();
+
+    CV_DbgAssert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
+
+    const func_t func = funcs[src.depth()][src.channels() - 1];
+
+    return func(src, mask, buf);
+}
+
+#endif

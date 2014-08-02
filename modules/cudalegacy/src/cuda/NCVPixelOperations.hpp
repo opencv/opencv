@@ -104,7 +104,7 @@ template<> struct TConvBase2Vec<Ncv64f, 3> {typedef double3 TVec;};
 template<> struct TConvBase2Vec<Ncv64f, 4> {typedef double4 TVec;};
 
 //TODO: consider using CUDA intrinsics to avoid branching
-template<typename Tin> static inline __host__ __device__ void _TDemoteClampZ(Tin &a, Ncv8u &out) {out = (Ncv8u)CLAMP_0_255(a);};
+template<typename Tin> static inline __host__ __device__ void _TDemoteClampZ(Tin &a, Ncv8u &out) {out = (Ncv8u)CLAMP_0_255(a);}
 template<typename Tin> static inline __host__ __device__ void _TDemoteClampZ(Tin &a, Ncv16u &out) {out = (Ncv16u)CLAMP(a, 0, USHRT_MAX);}
 template<typename Tin> static inline __host__ __device__ void _TDemoteClampZ(Tin &a, Ncv32u &out) {out = (Ncv32u)CLAMP(a, 0, UINT_MAX);}
 template<typename Tin> static inline __host__ __device__ void _TDemoteClampZ(Tin &a, Ncv32f &out) {out = (Ncv32f)a;}

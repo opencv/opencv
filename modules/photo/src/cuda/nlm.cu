@@ -264,7 +264,7 @@ namespace cv { namespace cuda { namespace device
         __device__ __forceinline__ int calcDist(const uchar2& a, const uchar2& b) { return (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y); }
         __device__ __forceinline__ int calcDist(const uchar3& a, const uchar3& b) { return (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y) + (a.z-b.z)*(a.z-b.z); }
 
-        template <class T> struct FastNonLocalMenas
+        template <class T> struct FastNonLocalMeans
         {
             enum
             {
@@ -288,7 +288,7 @@ namespace cv { namespace cuda { namespace device
             int block_window;
             float minus_h2_inv;
 
-            FastNonLocalMenas(int search_window_, int block_window_, float h) : search_radius(search_window_/2), block_radius(block_window_/2),
+            FastNonLocalMeans(int search_window_, int block_window_, float h) : search_radius(search_window_/2), block_radius(block_window_/2),
                 search_window(search_window_), block_window(block_window_), minus_h2_inv(-1.f/(h * h * VecTraits<T>::cn)) {}
 
             PtrStep<T> src;
@@ -392,7 +392,7 @@ namespace cv { namespace cuda { namespace device
                 }
             }
 
-            __device__ __forceinline__ void convolve_window(int i, int j, const int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums, T& dst) const
+            __device__ __forceinline__ void convolve_window(int i, int j, const int* dist_sums, T& dst) const
             {
                 typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_type;
 
@@ -469,18 +469,18 @@ namespace cv { namespace cuda { namespace device
 
                         __syncthreads();
 
-                        convolve_window(i, j, dist_sums, col_sums, up_col_sums, dst(i, j));
+                        convolve_window(i, j, dist_sums, dst(i, j));
                     }
             }
 
         };
 
         template<typename T>
-        __global__ void fast_nlm_kernel(const FastNonLocalMenas<T> fnlm, PtrStepSz<T> dst) { fnlm(dst); }
+        __global__ void fast_nlm_kernel(const FastNonLocalMeans<T> fnlm, PtrStepSz<T> dst) { fnlm(dst); }
 
         void nln_fast_get_buffer_size(const PtrStepSzb& src, int search_window, int block_window, int& buffer_cols, int& buffer_rows)
         {
-            typedef FastNonLocalMenas<uchar> FNLM;
+            typedef FastNonLocalMeans<uchar> FNLM;
             dim3 grid(divUp(src.cols, FNLM::TILE_COLS), divUp(src.rows, FNLM::TILE_ROWS));
 
             buffer_cols = search_window * search_window * grid.y;
@@ -491,7 +491,7 @@ namespace cv { namespace cuda { namespace device
         void nlm_fast_gpu(const PtrStepSzb& src, PtrStepSzb dst, PtrStepi buffer,
                           int search_window, int block_window, float h, cudaStream_t stream)
         {
-            typedef FastNonLocalMenas<T> FNLM;
+            typedef FastNonLocalMeans<T> FNLM;
             FNLM fnlm(search_window, block_window, h);
 
             fnlm.src = (PtrStepSz<T>)src;

@@ -159,7 +159,7 @@ Finds contours in a binary image.
 
 .. ocv:cfunction:: int cvFindContours( CvArr* image, CvMemStorage* storage, CvSeq** first_contour, int header_size=sizeof(CvContour), int mode=CV_RETR_LIST, int method=CV_CHAIN_APPROX_SIMPLE, CvPoint offset=cvPoint(0,0) )
 
-    :param image: Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero pixels remain 0's, so the image is treated as  ``binary`` . You can use  :ocv:func:`compare` ,  :ocv:func:`inRange` ,  :ocv:func:`threshold` ,  :ocv:func:`adaptiveThreshold` ,  :ocv:func:`Canny` , and others to create a binary image out of a grayscale or color one. The function modifies the  ``image``  while extracting the contours.
+    :param image: Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero pixels remain 0's, so the image is treated as  ``binary`` . You can use  :ocv:func:`compare` ,  :ocv:func:`inRange` ,  :ocv:func:`threshold` ,  :ocv:func:`adaptiveThreshold` ,  :ocv:func:`Canny` , and others to create a binary image out of a grayscale or color one. The function modifies the  ``image``  while extracting the contours. If mode equals to ``CV_RETR_CCOMP`` or ``CV_RETR_FLOODFILL``, the input can also be a 32-bit integer image of labels (``CV_32SC1``).
 
     :param contours: Detected contours. Each contour is stored as a vector of points.
 
@@ -236,7 +236,7 @@ Approximates a polygonal curve(s) with the specified precision.
 The functions ``approxPolyDP`` approximate a curve or a polygon with another curve/polygon with less vertices so that the distance between them is less or equal to the specified precision. It uses the Douglas-Peucker algorithm
 http://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm
 
-See http://code.opencv.org/projects/opencv/repository/revisions/master/entry/samples/cpp/contours.cpp for the function usage model.
+See https://github.com/Itseez/opencv/tree/master/samples/cpp/contours2.cpp for the function usage model.
 
 
 ApproxChains
@@ -291,8 +291,6 @@ Calculates the up-right bounding rectangle of a point set.
     :param points: Input 2D point set, stored in ``std::vector`` or ``Mat``.
 
 The function calculates and returns the minimal up-right bounding rectangle for the specified point set.
-
-
 
 
 contourArea
@@ -417,6 +415,7 @@ Fits an ellipse around a set of 2D points.
         * Nx2 numpy array (Python interface)
 
 The function calculates the ellipse that fits (in a least-squares sense) a set of 2D points best of all. It returns the rotated rectangle in which the ellipse is inscribed. The algorithm [Fitzgibbon95]_ is used.
+Developer should keep in mind that it is possible that the returned ellipse/rotatedRect data contains negative indices, due to the data points being close to the border of the containing Mat element.
 
 .. note::
 
@@ -539,7 +538,7 @@ Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
         * Nx2 numpy array (Python interface)
 
 The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a specified point set. See the OpenCV sample ``minarea.cpp`` .
-
+Developer should keep in mind that the returned rotatedRect can contain negative indices when data is close the the containing Mat element boundary.
 
 
 boxPoints
@@ -716,3 +715,32 @@ See below a sample output of the function where each image pixel is tested again
 .. [Suzuki85] Suzuki, S. and Abe, K., *Topological Structural Analysis of Digitized Binary Images by Border Following*. CVGIP 30 1, pp 32-46 (1985)
 
 .. [TehChin89] Teh, C.H. and Chin, R.T., *On the Detection of Dominant Points on Digital Curve*. PAMI 11 8, pp 859-872 (1989)
+
+
+
+rotatedRectangleIntersection
+-------------------------------
+Finds out if there is any intersection between two rotated rectangles. If there is then the vertices of the interesecting region are returned as well.
+
+.. ocv:function:: int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, OutputArray intersectingRegion  )
+.. ocv:pyfunction:: cv2.rotatedRectangleIntersection( rect1, rect2 ) -> retval, intersectingRegion
+
+    :param rect1: First rectangle
+
+    :param rect2: Second rectangle
+
+    :param intersectingRegion: The output array of the verticies of the intersecting region. It returns at most 8 vertices. Stored as ``std::vector<cv::Point2f>`` or ``cv::Mat`` as Mx1 of type CV_32FC2.
+
+    :param pointCount: The number of vertices.
+
+The following values are returned by the function:
+
+    * INTERSECT_NONE=0 - No intersection
+
+    * INTERSECT_PARTIAL=1 - There is a partial intersection
+
+    * INTERSECT_FULL=2 - One of the rectangle is fully enclosed in the other
+
+Below are some examples of intersection configurations. The hatched pattern indicates the intersecting region and the red vertices are returned by the function.
+
+.. image:: pics/intersection.png

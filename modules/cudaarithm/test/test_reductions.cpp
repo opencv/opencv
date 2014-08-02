@@ -734,7 +734,7 @@ CUDA_TEST_P(Normalize, WithOutMask)
     cv::Mat dst_gold;
     cv::normalize(src, dst_gold, alpha, beta, norm_type, type);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 1e-6);
+    EXPECT_MAT_NEAR(dst_gold, dst, type < CV_32F ? 1.0 : 1e-4);
 }
 
 CUDA_TEST_P(Normalize, WithMask)
@@ -812,6 +812,80 @@ CUDA_TEST_P(MeanStdDev, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_Arithm, MeanStdDev, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    WHOLE_SUBMAT));
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// Integral
+
+PARAM_TEST_CASE(Integral, cv::cuda::DeviceInfo, cv::Size, UseRoi)
+{
+    cv::cuda::DeviceInfo devInfo;
+    cv::Size size;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
+
+        cv::cuda::setDevice(devInfo.deviceID());
+    }
+};
+
+CUDA_TEST_P(Integral, Accuracy)
+{
+    cv::Mat src = randomMat(size, CV_8UC1);
+
+    cv::cuda::GpuMat dst = createMat(cv::Size(src.cols + 1, src.rows + 1), CV_32SC1, useRoi);
+    cv::cuda::integral(loadMat(src, useRoi), dst);
+
+    cv::Mat dst_gold;
+    cv::integral(src, dst_gold, CV_32S);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Integral, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(cv::Size(128, 128), cv::Size(113, 113), cv::Size(768, 1066)),
+    WHOLE_SUBMAT));
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// IntegralSqr
+
+PARAM_TEST_CASE(IntegralSqr, cv::cuda::DeviceInfo, cv::Size, UseRoi)
+{
+    cv::cuda::DeviceInfo devInfo;
+    cv::Size size;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
+
+        cv::cuda::setDevice(devInfo.deviceID());
+    }
+};
+
+CUDA_TEST_P(IntegralSqr, Accuracy)
+{
+    cv::Mat src = randomMat(size, CV_8UC1);
+
+    cv::cuda::GpuMat dst = createMat(cv::Size(src.cols + 1, src.rows + 1), CV_64FC1, useRoi);
+    cv::cuda::sqrIntegral(loadMat(src, useRoi), dst);
+
+    cv::Mat dst_gold, temp;
+    cv::integral(src, temp, dst_gold);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, IntegralSqr, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     WHOLE_SUBMAT));

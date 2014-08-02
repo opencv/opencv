@@ -40,92 +40,116 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/border_interpolate.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-namespace cv { namespace cuda { namespace device
+#error "opencv_cudev is required"
+
+#else
+
+#include "opencv2/cudaarithm.hpp"
+#include "opencv2/cudev.hpp"
+
+using namespace cv::cudev;
+
+namespace
 {
-    namespace imgproc
+    struct ShiftMap
     {
-        template <typename Ptr2D, typename T> __global__ void copyMakeBorder(const Ptr2D src, PtrStepSz<T> dst, int top, int left)
-        {
-            const int x = blockDim.x * blockIdx.x + threadIdx.x;
-            const int y = blockDim.y * blockIdx.y + threadIdx.y;
+        typedef int2 value_type;
+        typedef int index_type;
 
-            if (x < dst.cols && y < dst.rows)
-                dst.ptr(y)[x] = src(y - top, x - left);
+        int top;
+        int left;
+
+        __device__ __forceinline__ int2 operator ()(int y, int x) const
+        {
+            return make_int2(x - left, y - top);
         }
+    };
 
-        template <template <typename> class B, typename T> struct CopyMakeBorderDispatcher
+    struct ShiftMapSz : ShiftMap
+    {
+        int rows, cols;
+    };
+}
+
+namespace cv { namespace cudev {
+
+template <> struct PtrTraits<ShiftMapSz> : PtrTraitsBase<ShiftMapSz, ShiftMap>
+{
+};
+
+}}
+
+namespace
+{
+    template <typename T, int cn>
+    void copyMakeBorderImpl(const GpuMat& src, GpuMat& dst, int top, int left, int borderMode, cv::Scalar borderValue, Stream& stream)
+    {
+        typedef typename MakeVec<T, cn>::type src_type;
+
+        cv::Scalar_<T> borderValue_ = borderValue;
+        const src_type brdVal = VecTraits<src_type>::make(borderValue_.val);
+
+        ShiftMapSz map;
+        map.top = top;
+        map.left = left;
+        map.rows = dst.rows;
+        map.cols = dst.cols;
+
+        switch (borderMode)
         {
-            static void call(const PtrStepSz<T>& src, const PtrStepSz<T>& dst, int top, int left,
-                const typename VecTraits<T>::elem_type* borderValue, cudaStream_t stream)
-            {
-                dim3 block(32, 8);
-                dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
-
-                B<T> brd(src.rows, src.cols, VecTraits<T>::make(borderValue));
-                BorderReader< PtrStep<T>, B<T> > brdSrc(src, brd);
-
-                copyMakeBorder<<<grid, block, 0, stream>>>(brdSrc, dst, top, left);
-                cudaSafeCall( cudaGetLastError() );
-
-                if (stream == 0)
-                    cudaSafeCall( cudaDeviceSynchronize() );
-            }
+        case cv::BORDER_CONSTANT:
+            gridCopy(remapPtr(brdConstant(globPtr<src_type>(src), brdVal), map), globPtr<src_type>(dst), stream);
+            break;
+        case cv::BORDER_REPLICATE:
+            gridCopy(remapPtr(brdReplicate(globPtr<src_type>(src)), map), globPtr<src_type>(dst), stream);
+            break;
+        case cv::BORDER_REFLECT:
+            gridCopy(remapPtr(brdReflect(globPtr<src_type>(src)), map), globPtr<src_type>(dst), stream);
+            break;
+        case cv::BORDER_WRAP:
+            gridCopy(remapPtr(brdWrap(globPtr<src_type>(src)), map), globPtr<src_type>(dst), stream);
+            break;
+        case cv::BORDER_REFLECT_101:
+            gridCopy(remapPtr(brdReflect101(globPtr<src_type>(src)), map), globPtr<src_type>(dst), stream);
+            break;
         };
+    }
+}
 
-        template <typename T, int cn> void copyMakeBorder_gpu(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode,
-            const T* borderValue, cudaStream_t stream)
-        {
-            typedef typename TypeVec<T, cn>::vec_type vec_type;
+void cv::cuda::copyMakeBorder(InputArray _src, OutputArray _dst, int top, int bottom, int left, int right, int borderType, Scalar value, Stream& stream)
+{
+    typedef void (*func_t)(const GpuMat& src, GpuMat& dst, int top, int left, int borderMode, cv::Scalar borderValue, Stream& stream);
+    static const func_t funcs[6][4] =
+    {
+        {    copyMakeBorderImpl<uchar , 1>  ,     copyMakeBorderImpl<uchar , 2>  ,     copyMakeBorderImpl<uchar , 3>  ,     copyMakeBorderImpl<uchar , 4>  },
+        {0 /*copyMakeBorderImpl<schar , 1>*/, 0 /*copyMakeBorderImpl<schar , 2>*/, 0 /*copyMakeBorderImpl<schar , 3>*/, 0 /*copyMakeBorderImpl<schar , 4>*/},
+        {    copyMakeBorderImpl<ushort, 1>  , 0 /*copyMakeBorderImpl<ushort, 2>*/,     copyMakeBorderImpl<ushort, 3>  ,     copyMakeBorderImpl<ushort, 4>  },
+        {    copyMakeBorderImpl<short , 1>  , 0 /*copyMakeBorderImpl<short , 2>*/,     copyMakeBorderImpl<short , 3>  ,     copyMakeBorderImpl<short , 4>  },
+        {0 /*copyMakeBorderImpl<int   , 1>*/, 0 /*copyMakeBorderImpl<int   , 2>*/, 0 /*copyMakeBorderImpl<int   , 3>*/, 0 /*copyMakeBorderImpl<int   , 4>*/},
+        {    copyMakeBorderImpl<float , 1>  , 0 /*copyMakeBorderImpl<float , 2>*/,     copyMakeBorderImpl<float , 3>  ,     copyMakeBorderImpl<float  ,4>  }
+    };
 
-            typedef void (*caller_t)(const PtrStepSz<vec_type>& src, const PtrStepSz<vec_type>& dst, int top, int left, const T* borderValue, cudaStream_t stream);
+    GpuMat src = _src.getGpuMat();
 
-            static const caller_t callers[5] =
-            {
-                CopyMakeBorderDispatcher<BrdConstant, vec_type>::call,
-                CopyMakeBorderDispatcher<BrdReplicate, vec_type>::call,
-                CopyMakeBorderDispatcher<BrdReflect, vec_type>::call,
-                CopyMakeBorderDispatcher<BrdWrap, vec_type>::call,
-                CopyMakeBorderDispatcher<BrdReflect101, vec_type>::call
-            };
+    const int depth = src.depth();
+    const int cn = src.channels();
 
-            callers[borderMode](PtrStepSz<vec_type>(src), PtrStepSz<vec_type>(dst), top, left, borderValue, stream);
-        }
+    CV_Assert( depth <= CV_32F && cn <= 4 );
+    CV_Assert( borderType == BORDER_REFLECT_101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP );
 
-        template void copyMakeBorder_gpu<uchar, 1>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
-        template void copyMakeBorder_gpu<uchar, 2>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
-        template void copyMakeBorder_gpu<uchar, 3>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
-        template void copyMakeBorder_gpu<uchar, 4>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
+    _dst.create(src.rows + top + bottom, src.cols + left + right, src.type());
+    GpuMat dst = _dst.getGpuMat();
 
-        //template void copyMakeBorder_gpu<schar, 1>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const schar* borderValue, cudaStream_t stream);
-        //template void copyMakeBorder_gpu<schar, 2>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const schar* borderValue, cudaStream_t stream);
-        //template void copyMakeBorder_gpu<schar, 3>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const schar* borderValue, cudaStream_t stream);
-        //template void copyMakeBorder_gpu<schar, 4>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const schar* borderValue, cudaStream_t stream);
+    const func_t func = funcs[depth][cn - 1];
 
-        template void copyMakeBorder_gpu<ushort, 1>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const ushort* borderValue, cudaStream_t stream);
-        //template void copyMakeBorder_gpu<ushort, 2>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const ushort* borderValue, cudaStream_t stream);
-        template void copyMakeBorder_gpu<ushort, 3>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const ushort* borderValue, cudaStream_t stream);
-        template void copyMakeBorder_gpu<ushort, 4>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const ushort* borderValue, cudaStream_t stream);
+    if (!func)
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
 
-        template void copyMakeBorder_gpu<short, 1>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const short* borderValue, cudaStream_t stream);
-        //template void copyMakeBorder_gpu<short, 2>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const short* borderValue, cudaStream_t stream);
-        template void copyMakeBorder_gpu<short, 3>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const short* borderValue, cudaStream_t stream);
-        template void copyMakeBorder_gpu<short, 4>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const short* borderValue, cudaStream_t stream);
+    func(src, dst, top, left, borderType, value, stream);
+}
 
-        //template void copyMakeBorder_gpu<int, 1>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const int* borderValue, cudaStream_t stream);
-        //template void copyMakeBorder_gpu<int, 2>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const int* borderValue, cudaStream_t stream);
-        //template void copyMakeBorder_gpu<int, 3>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const int* borderValue, cudaStream_t stream);
-        //template void copyMakeBorder_gpu<int, 4>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const int* borderValue, cudaStream_t stream);
-
-        template void copyMakeBorder_gpu<float, 1>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
-        //template void copyMakeBorder_gpu<float, 2>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
-        template void copyMakeBorder_gpu<float, 3>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
-        template void copyMakeBorder_gpu<float, 4>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
-    } // namespace imgproc
-}}} // namespace cv { namespace cuda { namespace cudev
-
-#endif /* CUDA_DISABLER */
+#endif

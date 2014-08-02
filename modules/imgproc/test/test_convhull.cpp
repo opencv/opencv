@@ -566,6 +566,8 @@ int CV_ConvHullTest::validate_test_results( int test_case_idx )
     hull = cvCreateMat( 1, hull_count, CV_32FC2 );
     mask = cvCreateMat( 1, hull_count, CV_8UC1 );
     cvZero( mask );
+    Mat _mask = cvarrToMat(mask);
+
     h = (CvPoint2D32f*)(hull->data.ptr);
 
     // extract convex hull points
@@ -643,7 +645,7 @@ int CV_ConvHullTest::validate_test_results( int test_case_idx )
             mask->data.ptr[idx] = (uchar)1;
     }
 
-    if( cvNorm( mask, 0, CV_L1 ) != hull_count )
+    if( cvtest::norm( _mask, Mat::zeros(_mask.dims, _mask.size, _mask.type()), NORM_L1 ) != hull_count )
     {
         ts->printf( cvtest::TS::LOG, "Not every convex hull vertex coincides with some input point\n" );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
@@ -1380,6 +1382,10 @@ CV_FitLineTest::CV_FitLineTest()
     max_noise = 0.05;
 }
 
+#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
 
 void CV_FitLineTest::generate_point_set( void* pointsSet )
 {
@@ -1441,17 +1447,20 @@ void CV_FitLineTest::generate_point_set( void* pointsSet )
         t = (float)((cvtest::randReal(rng)-0.5)*low_high_range*2);
 
         for( k = 0; k < n; k++ )
+        {
             p[k] = (float)((cvtest::randReal(rng)-0.5)*max_noise*2 + t*line0[k] + line0[k+n]);
 
-        if( point_type == CV_32S )
-            for( k = 0; k < n; k++ )
+            if( point_type == CV_32S )
                 pi[k] = cvRound(p[k]);
-        else
-            for( k = 0; k < n; k++ )
+            else
                 pf[k] = p[k];
+        }
     }
 }
 
+#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+# pragma GCC diagnostic pop
+#endif
 
 int CV_FitLineTest::prepare_test_case( int test_case_idx )
 {
@@ -1477,6 +1486,10 @@ void CV_FitLineTest::run_func()
         cv::fitLine(cv::cvarrToMat(points), (cv::Vec6f&)line[0], dist_type, 0, reps, aeps);
 }
 
+#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
 
 int CV_FitLineTest::validate_test_results( int test_case_idx )
 {
@@ -1556,6 +1569,9 @@ _exit_:
     return code;
 }
 
+#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+# pragma GCC diagnostic pop
+#endif
 
 /****************************************************************************************\
 *                                   ContourMoments Test                                  *

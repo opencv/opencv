@@ -64,7 +64,7 @@ adjustRect( const uchar* src, size_t src_step, int pix_size,
             rect.x = win_size.width;
     }
 
-    if( ip.x + win_size.width < src_size.width )
+    if( ip.x < src_size.width - win_size.width )
         rect.width = win_size.width;
     else
     {
@@ -85,7 +85,7 @@ adjustRect( const uchar* src, size_t src_step, int pix_size,
     else
         rect.y = -ip.y;
 
-    if( ip.y + win_size.height < src_size.height )
+    if( ip.y < src_size.height - win_size.height )
         rect.height = win_size.height;
     else
     {
@@ -155,8 +155,8 @@ void getRectSubPix_Cn_(const _Tp* src, size_t src_step, Size src_size,
     src_step /= sizeof(src[0]);
     dst_step /= sizeof(dst[0]);
 
-    if( 0 <= ip.x && ip.x + win_size.width < src_size.width &&
-       0 <= ip.y && ip.y + win_size.height < src_size.height )
+    if( 0 <= ip.x && ip.x < src_size.width - win_size.width &&
+       0 <= ip.y && ip.y < src_size.height - win_size.height)
     {
         // extracted rectangle is totally inside the image
         src += ip.y * src_step + ip.x*cn;
@@ -172,7 +172,7 @@ void getRectSubPix_Cn_(const _Tp* src, size_t src_step, Size src_size,
                 dst[j+1] = cast_op(s1);
             }
 
-            for( j = 0; j < win_size.width; j++ )
+            for( ; j < win_size.width; j++ )
             {
                 _WTp s0 = src[j]*a11 + src[j+cn]*a12 + src[j+src_step]*a21 + src[j+src_step+cn]*a22;
                 dst[j] = cast_op(s0);
@@ -390,9 +390,13 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
         srctype == CV_8UC1 && ddepth == CV_32F ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_8u32f_C1R :
         srctype == CV_32FC1 && ddepth == CV_32F ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_32f_C1R : 0;
 
-    if( ippfunc && ippfunc(image.data, (int)image.step, src_size, patch.data,
-                           (int)patch.step, win_size, icenter, &minpt, &maxpt) >= 0 )
-        return;
+    if( ippfunc)
+    {
+        if (ippfunc(image.data, (int)image.step, src_size, patch.data,
+                    (int)patch.step, win_size, icenter, &minpt, &maxpt) >= 0 )
+            return;
+        setIppErrorStatus();
+    }
 #endif
 
     if( depth == CV_8U && ddepth == CV_8U )

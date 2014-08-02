@@ -41,18 +41,61 @@
 //M*/
 
 #include "precomp.hpp"
-
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
 
-static const int MAX_BLOCK_SIZE = 1024;
 typedef void (*MathFunc)(const void* src, void* dst, int len);
 
 static const float atan2_p1 = 0.9997878412794807f*(float)(180/CV_PI);
 static const float atan2_p3 = -0.3258083974640975f*(float)(180/CV_PI);
 static const float atan2_p5 = 0.1555786518463281f*(float)(180/CV_PI);
 static const float atan2_p7 = -0.04432655554792128f*(float)(180/CV_PI);
+
+#ifdef HAVE_OPENCL
+
+enum { OCL_OP_LOG=0, OCL_OP_EXP=1, OCL_OP_MAG=2, OCL_OP_PHASE_DEGREES=3, OCL_OP_PHASE_RADIANS=4 };
+
+static const char* oclop2str[] = { "OP_LOG", "OP_EXP", "OP_MAG", "OP_PHASE_DEGREES", "OP_PHASE_RADIANS", 0 };
+
+static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, int oclop)
+{
+    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int kercn = oclop == OCL_OP_PHASE_DEGREES ||
+            oclop == OCL_OP_PHASE_RADIANS ? 1 : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
+
+    const ocl::Device d = ocl::Device::getDefault();
+    bool double_support = d.doubleFPConfig() > 0;
+    if (!double_support && depth == CV_64F)
+        return false;
+    int rowsPerWI = d.isIntel() ? 4 : 1;
+
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                  format("-D %s -D %s -D dstT=%s -D rowsPerWI=%d%s", _src2.empty() ? "UNARY_OP" : "BINARY_OP",
+                         oclop2str[oclop], ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)), rowsPerWI,
+                         double_support ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
+    _dst.create(src1.size(), type);
+    UMat dst = _dst.getUMat();
+
+    ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1),
+            src2arg = ocl::KernelArg::ReadOnlyNoSize(src2),
+            dstarg = ocl::KernelArg::WriteOnly(dst, cn, kercn);
+
+    if (src2.empty())
+        k.args(src1arg, dstarg);
+    else
+        k.args(src1arg, src2arg, dstarg);
+
+    size_t globalsize[] = { src1.cols * cn / kercn, (src1.rows + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, 0, false);
+}
+
+#endif
 
 float fastAtan2( float y, float x )
 {
@@ -196,6 +239,13 @@ float  cubeRoot( float value )
 
 static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
 {
+#if defined HAVE_IPP && 0
+    IppStatus status = ippsMagnitude_32f(x, y, mag, len);
+    if (status >= 0)
+        return;
+    setIppErrorStatus();
+#endif
+
     int i = 0;
 
 #if CV_SSE
@@ -222,6 +272,13 @@ static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
 
 static void Magnitude_64f(const double* x, const double* y, double* mag, int len)
 {
+#if defined(HAVE_IPP)
+    IppStatus status = ippsMagnitude_64f(x, y, mag, len);
+    if (status >= 0)
+        return;
+    setIppErrorStatus();
+#endif
+
     int i = 0;
 
 #if CV_SSE2
@@ -249,6 +306,12 @@ static void Magnitude_64f(const double* x, const double* y, double* mag, int len
 
 static void InvSqrt_32f(const float* src, float* dst, int len)
 {
+#if defined(HAVE_IPP)
+    if (ippsInvSqrt_32f_A21(src, dst, len) >= 0)
+        return;
+    setIppErrorStatus();
+#endif
+
     int i = 0;
 
 #if CV_SSE
@@ -285,13 +348,29 @@ static void InvSqrt_32f(const float* src, float* dst, int len)
 
 static void InvSqrt_64f(const double* src, double* dst, int len)
 {
-    for( int i = 0; i < len; i++ )
+    int i = 0;
+
+#if CV_SSE2
+    if (USE_SSE2)
+    {
+        __m128d v_1 = _mm_set1_pd(1.0);
+        for ( ; i <= len - 2; i += 2)
+            _mm_storeu_pd(dst + i, _mm_div_pd(v_1, _mm_sqrt_pd(_mm_loadu_pd(src + i))));
+    }
+#endif
+
+    for( ; i < len; i++ )
         dst[i] = 1/std::sqrt(src[i]);
 }
 
 
 static void Sqrt_32f(const float* src, float* dst, int len)
 {
+#if defined(HAVE_IPP)
+    if (ippsSqrt_32f_A21(src, dst, len) >= 0)
+        return;
+    setIppErrorStatus();
+#endif
     int i = 0;
 
 #if CV_SSE
@@ -321,6 +400,12 @@ static void Sqrt_32f(const float* src, float* dst, int len)
 
 static void Sqrt_64f(const double* src, double* dst, int len)
 {
+#if defined(HAVE_IPP)
+    if (ippsSqrt_64f_A50(src, dst, len) >= 0)
+        return;
+    setIppErrorStatus();
+#endif
+
     int i = 0;
 
 #if CV_SSE2
@@ -354,9 +439,13 @@ static void Sqrt_64f(const double* src, double* dst, int len)
 
 void magnitude( InputArray src1, InputArray src2, OutputArray dst )
 {
+    int type = src1.type(), depth = src1.depth(), cn = src1.channels();
+    CV_Assert( src1.size() == src2.size() && type == src2.type() && (depth == CV_32F || depth == CV_64F));
+
+    CV_OCL_RUN(dst.isUMat() && src1.dims() <= 2 && src2.dims() <= 2,
+               ocl_math_op(src1, src2, dst, OCL_OP_MAG))
+
     Mat X = src1.getMat(), Y = src2.getMat();
-    int type = X.type(), depth = X.depth(), cn = X.channels();
-    CV_Assert( X.size == Y.size && type == Y.type() && (depth == CV_32F || depth == CV_64F));
     dst.create(X.dims, X.size, X.type());
     Mat Mag = dst.getMat();
 
@@ -385,9 +474,13 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
 
 void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegrees )
 {
+    int type = src1.type(), depth = src1.depth(), cn = src1.channels();
+    CV_Assert( src1.size() == src2.size() && type == src2.type() && (depth == CV_32F || depth == CV_64F));
+
+    CV_OCL_RUN(dst.isUMat() && src1.dims() <= 2 && src2.dims() <= 2,
+               ocl_math_op(src1, src2, dst, angleInDegrees ? OCL_OP_PHASE_DEGREES : OCL_OP_PHASE_RADIANS))
+
     Mat X = src1.getMat(), Y = src2.getMat();
-    int type = X.type(), depth = X.depth(), cn = X.channels();
-    CV_Assert( X.size == Y.size && type == Y.type() && (depth == CV_32F || depth == CV_64F));
     dst.create( X.dims, X.size, type );
     Mat Angle = dst.getMat();
 
@@ -439,10 +532,54 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
     }
 }
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
+                             OutputArray _dst1, OutputArray _dst2, bool angleInDegrees )
+{
+    const ocl::Device & d = ocl::Device::getDefault();
+    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            rowsPerWI = d.isIntel() ? 4 : 1;
+    bool doubleSupport = d.doubleFPConfig() > 0;
+
+    if ( !(_src1.dims() <= 2 && _src2.dims() <= 2 &&
+           (depth == CV_32F || depth == CV_64F) && type == _src2.type()) ||
+         (depth == CV_64F && !doubleSupport) )
+        return false;
+
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                  format("-D BINARY_OP -D dstT=%s -D depth=%d -D rowsPerWI=%d -D OP_CTP_%s%s",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+                         depth, rowsPerWI, angleInDegrees ? "AD" : "AR",
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
+    Size size = src1.size();
+    CV_Assert( size == src2.size() );
+
+    _dst1.create(size, type);
+    _dst2.create(size, type);
+    UMat dst1 = _dst1.getUMat(), dst2 = _dst2.getUMat();
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src1),
+           ocl::KernelArg::ReadOnlyNoSize(src2),
+           ocl::KernelArg::WriteOnly(dst1, cn),
+           ocl::KernelArg::WriteOnlyNoSize(dst2));
+
+    size_t globalsize[2] = { dst1.cols * cn, (dst1.rows + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, NULL, false);
+}
+
+#endif
 
 void cartToPolar( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
+    CV_OCL_RUN(dst1.isUMat() && dst2.isUMat(),
+            ocl_cartToPolar(src1, src2, dst1, dst2, angleInDegrees))
+
     Mat X = src1.getMat(), Y = src2.getMat();
     int type = X.type(), depth = X.depth(), cn = X.channels();
     CV_Assert( X.size == Y.size && type == Y.type() && (depth == CV_32F || depth == CV_64F));
@@ -586,15 +723,75 @@ static void SinCos_32f( const float *angle, float *sinval, float* cosval,
 }
 
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
+                             OutputArray _dst1, OutputArray _dst2, bool angleInDegrees )
+{
+    const ocl::Device & d = ocl::Device::getDefault();
+    int type = _angle.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            rowsPerWI = d.isIntel() ? 4 : 1;
+    bool doubleSupport = d.doubleFPConfig() > 0;
+
+    if ( !doubleSupport && depth == CV_64F )
+        return false;
+
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                  format("-D dstT=%s -D rowsPerWI=%d -D depth=%d -D BINARY_OP -D OP_PTC_%s%s",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)), rowsPerWI,
+                         depth, angleInDegrees ? "AD" : "AR",
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat mag = _mag.getUMat(), angle = _angle.getUMat();
+    Size size = angle.size();
+    CV_Assert(mag.size() == size);
+
+    _dst1.create(size, type);
+    _dst2.create(size, type);
+    UMat dst1 = _dst1.getUMat(), dst2 = _dst2.getUMat();
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(mag), ocl::KernelArg::ReadOnlyNoSize(angle),
+           ocl::KernelArg::WriteOnly(dst1, cn), ocl::KernelArg::WriteOnlyNoSize(dst2));
+
+    size_t globalsize[2] = { dst1.cols * cn, (dst1.rows + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, NULL, false);
+}
+
+#endif
+
 void polarToCart( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
+    int type = src2.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert((depth == CV_32F || depth == CV_64F) && (src1.empty() || src1.type() == type));
+
+    CV_OCL_RUN(!src1.empty() && src2.dims() <= 2 && dst1.isUMat() && dst2.isUMat(),
+               ocl_polarToCart(src1, src2, dst1, dst2, angleInDegrees))
+
     Mat Mag = src1.getMat(), Angle = src2.getMat();
-    int type = Angle.type(), depth = Angle.depth(), cn = Angle.channels();
-    CV_Assert( Mag.empty() || (Angle.size == Mag.size && type == Mag.type() && (depth == CV_32F || depth == CV_64F)));
+    CV_Assert( Mag.empty() || Angle.size == Mag.size);
     dst1.create( Angle.dims, Angle.size, type );
     dst2.create( Angle.dims, Angle.size, type );
     Mat X = dst1.getMat(), Y = dst2.getMat();
+
+#if defined(HAVE_IPP)
+    if (Mag.isContinuous() && Angle.isContinuous() && X.isContinuous() && Y.isContinuous() && !angleInDegrees)
+    {
+        typedef IppStatus (CV_STDCALL * ippsPolarToCart)(const void * pSrcMagn, const void * pSrcPhase,
+                                                         void * pDstRe, void * pDstIm, int len);
+        ippsPolarToCart ippFunc =
+        depth == CV_32F ? (ippsPolarToCart)ippsPolarToCart_32f :
+        depth == CV_64F ? (ippsPolarToCart)ippsPolarToCart_64f : 0;
+        CV_Assert(ippFunc != 0);
+
+        IppStatus status = ippFunc(Mag.data, Angle.data, X.data, Y.data, static_cast<int>(cn * X.total()));
+        if (status >= 0)
+            return;
+        setIppErrorStatus();
+    }
+#endif
 
     const Mat* arrays[] = {&Mag, &Angle, &X, &Y, 0};
     uchar* ptrs[4];
@@ -678,8 +875,6 @@ typedef union
     double d;
 }
 DBLINT;
-
-#ifndef HAVE_IPP
 
 #define EXPTAB_SCALE 6
 #define EXPTAB_MASK  ((1 << EXPTAB_SCALE) - 1)
@@ -1142,22 +1337,39 @@ static void Exp_64f( const double *_x, double *y, int n )
 #undef EXPTAB_MASK
 #undef EXPPOLY_32F_A0
 
-#else
+#ifdef HAVE_IPP
+static void Exp_32f_ipp(const float *x, float *y, int n)
+{
+    if (0 <= ippsExp_32f_A21(x, y, n))
+        return;
+    setIppErrorStatus();
+    Exp_32f(x, y, n);
+}
 
-#define Exp_32f ippsExp_32f_A21
-#define Exp_64f ippsExp_64f_A50
+static void Exp_64f_ipp(const double *x, double *y, int n)
+{
+    if (0 <= ippsExp_64f_A50(x, y, n))
+        return;
+    setIppErrorStatus();
+    Exp_64f(x, y, n);
+}
 
+#define Exp_32f Exp_32f_ipp
+#define Exp_64f Exp_64f_ipp
 #endif
+
 
 void exp( InputArray _src, OutputArray _dst )
 {
-    Mat src = _src.getMat();
-    int type = src.type(), depth = src.depth(), cn = src.channels();
+    int type = _src.type(), depth = _src.depth(), cn = _src.channels();
+    CV_Assert( depth == CV_32F || depth == CV_64F );
 
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+               ocl_math_op(_src, noArray(), _dst, OCL_OP_EXP))
+
+    Mat src = _src.getMat();
     _dst.create( src.dims, src.size, type );
     Mat dst = _dst.getMat();
-
-    CV_Assert( depth == CV_32F || depth == CV_64F );
 
     const Mat* arrays[] = {&src, &dst, 0};
     uchar* ptrs[2];
@@ -1167,9 +1379,9 @@ void exp( InputArray _src, OutputArray _dst )
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         if( depth == CV_32F )
-            Exp_32f( (const float*)ptrs[0], (float*)ptrs[1], len );
+            Exp_32f((const float*)ptrs[0], (float*)ptrs[1], len);
         else
-            Exp_64f( (const double*)ptrs[0], (double*)ptrs[1], len );
+            Exp_64f((const double*)ptrs[0], (double*)ptrs[1], len);
     }
 }
 
@@ -1177,8 +1389,6 @@ void exp( InputArray _src, OutputArray _dst )
 /****************************************************************************************\
 *                                          L O G                                         *
 \****************************************************************************************/
-
-#ifndef HAVE_IPP
 
 #define LOGTAB_SCALE    8
 #define LOGTAB_MASK         ((1 << LOGTAB_SCALE) - 1)
@@ -1787,22 +1997,38 @@ static void Log_64f( const double *x, double *y, int n )
     }
 }
 
-#else
+#ifdef HAVE_IPP
+static void Log_32f_ipp(const float *x, float *y, int n)
+{
+    if (0 <= ippsLn_32f_A21(x, y, n))
+        return;
+    setIppErrorStatus();
+    Log_32f(x, y, n);
+}
 
-#define Log_32f ippsLn_32f_A21
-#define Log_64f ippsLn_64f_A50
+static void Log_64f_ipp(const double *x, double *y, int n)
+{
+    if (0 <= ippsLn_64f_A50(x, y, n))
+        return;
+    setIppErrorStatus();
+    Log_64f(x, y, n);
+}
 
+#define Log_32f Log_32f_ipp
+#define Log_64f Log_64f_ipp
 #endif
 
 void log( InputArray _src, OutputArray _dst )
 {
-    Mat src = _src.getMat();
-    int type = src.type(), depth = src.depth(), cn = src.channels();
+    int type = _src.type(), depth = _src.depth(), cn = _src.channels();
+    CV_Assert( depth == CV_32F || depth == CV_64F );
 
+    CV_OCL_RUN( _dst.isUMat() && _src.dims() <= 2,
+                ocl_math_op(_src, noArray(), _dst, OCL_OP_LOG))
+
+    Mat src = _src.getMat();
     _dst.create( src.dims, src.size, type );
     Mat dst = _dst.getMat();
-
-    CV_Assert( depth == CV_32F || depth == CV_64F );
 
     const Mat* arrays[] = {&src, &dst, 0};
     uchar* ptrs[2];
@@ -1889,46 +2115,140 @@ static IPowFunc ipowTab[] =
     (IPowFunc)iPow32s, (IPowFunc)iPow32f, (IPowFunc)iPow64f, 0
 };
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
+                    bool is_ipower, int ipower)
+{
+    const ocl::Device & d = ocl::Device::getDefault();
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            rowsPerWI = d.isIntel() ? 4 : 1;
+    bool doubleSupport = d.doubleFPConfig() > 0;
+
+    _dst.createSameSize(_src, type);
+    if (is_ipower && (ipower == 0 || ipower == 1))
+    {
+        if (ipower == 0)
+            _dst.setTo(Scalar::all(1));
+        else if (ipower == 1)
+            _src.copyTo(_dst);
+
+        return true;
+    }
+
+    if (depth == CV_64F && !doubleSupport)
+        return false;
+
+    bool issqrt = std::abs(power - 0.5) < DBL_EPSILON, nonnegative = power >= 0;
+    const char * const op = issqrt ? "OP_SQRT" : is_ipower ? nonnegative ? "OP_POWN" : "OP_ROOTN" : nonnegative ? "OP_POWR" : "OP_POW";
+
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                  format("-D dstT=%s -D depth=%d -D rowsPerWI=%d -D %s -D UNARY_OP%s",
+                         ocl::typeToStr(depth), depth,  rowsPerWI, op,
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(src.size(), type);
+    UMat dst = _dst.getUMat();
+
+    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+            dstarg = ocl::KernelArg::WriteOnly(dst, cn);
+
+    if (issqrt)
+        k.args(srcarg, dstarg);
+    else if (is_ipower)
+        k.args(srcarg, dstarg, ipower);
+    else
+    {
+        if (depth == CV_32F)
+            k.args(srcarg, dstarg, (float)power);
+        else
+            k.args(srcarg, dstarg, power);
+    }
+
+    size_t globalsize[2] = { dst.cols *  cn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, NULL, false);
+}
+
+#endif
 
 void pow( InputArray _src, double power, OutputArray _dst )
 {
-    Mat src = _src.getMat();
-    int type = src.type(), depth = src.depth(), cn = src.channels();
+    int type = _src.type(), depth = CV_MAT_DEPTH(type),
+            cn = CV_MAT_CN(type), ipower = cvRound(power);
+    bool is_ipower = fabs(ipower - power) < DBL_EPSILON, same = false,
+            useOpenCL = _dst.isUMat() && _src.dims() <= 2;
 
-    _dst.create( src.dims, src.size, type );
-    Mat dst = _dst.getMat();
-
-    int ipower = cvRound(power);
-    bool is_ipower = false;
-
-    if( fabs(ipower - power) < DBL_EPSILON )
+    if( is_ipower && !(ocl::Device::getDefault().isIntel() && useOpenCL && depth != CV_64F))
     {
         if( ipower < 0 )
         {
-            divide( 1., src, dst );
+            divide( Scalar::all(1), _src, _dst );
             if( ipower == -1 )
                 return;
             ipower = -ipower;
-            src = dst;
+            same = true;
         }
 
         switch( ipower )
         {
         case 0:
-            dst = Scalar::all(1);
+            _dst.createSameSize(_src, type);
+            _dst.setTo(Scalar::all(1));
             return;
         case 1:
-            src.copyTo(dst);
+            _src.copyTo(_dst);
             return;
         case 2:
-            multiply(src, src, dst);
+#if defined(HAVE_IPP)
+            if (depth == CV_32F && !same && ( (_src.dims() <= 2 && !ocl::useOpenCL()) ||
+                                              (_src.dims() > 2 && _src.isContinuous() && _dst.isContinuous()) ))
+            {
+                Mat src = _src.getMat();
+                _dst.create( src.dims, src.size, type );
+                Mat dst = _dst.getMat();
+
+                Size size = src.size();
+                int srcstep = (int)src.step, dststep = (int)dst.step, esz = CV_ELEM_SIZE(type);
+                if (src.isContinuous() && dst.isContinuous())
+                {
+                    size.width = (int)src.total();
+                    size.height = 1;
+                    srcstep = dststep = (int)src.total() * esz;
+                }
+                size.width *= cn;
+
+                IppStatus status = ippiSqr_32f_C1R((const Ipp32f *)src.data, srcstep, (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
+
+                if (status >= 0)
+                    return;
+                setIppErrorStatus();
+            }
+#endif
+            if (same)
+                multiply(_dst, _dst, _dst);
+            else
+                multiply(_src, _src, _dst);
             return;
-        default:
-            is_ipower = true;
         }
     }
     else
         CV_Assert( depth == CV_32F || depth == CV_64F );
+
+    CV_OCL_RUN(useOpenCL,
+               ocl_pow(same ? _dst : _src, power, _dst, is_ipower, ipower))
+
+    Mat src, dst;
+    if (same)
+        src = dst = _dst.getMat();
+    else
+    {
+        src = _src.getMat();
+        _dst.create( src.dims, src.size, type );
+        dst = _dst.getMat();
+    }
 
     const Mat* arrays[] = {&src, &dst, 0};
     uchar* ptrs[2];
@@ -1954,6 +2274,19 @@ void pow( InputArray _src, double power, OutputArray _dst )
     }
     else
     {
+#if defined(HAVE_IPP)
+        if (src.isContinuous() && dst.isContinuous())
+        {
+            IppStatus status = depth == CV_32F ?
+                        ippsPowx_32f_A21((const Ipp32f *)src.data, (Ipp32f)power, (Ipp32f*)dst.data, (Ipp32s)(src.total() * cn)) :
+                        ippsPowx_64f_A50((const Ipp64f *)src.data, power, (Ipp64f*)dst.data, (Ipp32s)(src.total() * cn));
+
+            if (status >= 0)
+                return;
+            setIppErrorStatus();
+        }
+#endif
+
         int j, k, blockSize = std::min(len, ((BLOCK_SIZE + cn-1)/cn)*cn);
         size_t esz1 = src.elemSize1();
 
@@ -2185,23 +2518,69 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
     return badPt.x < 0;
 }
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_patchNaNs( InputOutputArray _a, float value )
+{
+    int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=float -D rowsPerWI=%d",
+                            rowsPerWI));
+    if (k.empty())
+        return false;
+
+    UMat a = _a.getUMat();
+    int cn = a.channels();
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(a),
+           ocl::KernelArg::WriteOnly(a, cn), (float)value);
+
+    size_t globalsize[2] = { a.cols * cn, (a.rows + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, NULL, false);
+}
+
+#endif
 
 void patchNaNs( InputOutputArray _a, double _val )
 {
-    Mat a = _a.getMat();
-    CV_Assert( a.depth() == CV_32F );
+    CV_Assert( _a.depth() == CV_32F );
 
+    CV_OCL_RUN(_a.isUMat() && _a.dims() <= 2,
+               ocl_patchNaNs(_a, (float)_val))
+
+    Mat a = _a.getMat();
     const Mat* arrays[] = {&a, 0};
     int* ptrs[1];
     NAryMatIterator it(arrays, (uchar**)ptrs);
     size_t len = it.size*a.channels();
     Cv32suf val;
-    val.f = (float)_val;
+    float fval = (float)_val;
+    val.f = fval;
+
+#if CV_SSE2
+    __m128i v_mask1 = _mm_set1_epi32(0x7fffffff), v_mask2 = _mm_set1_epi32(0x7f800000);
+    __m128i v_val = _mm_set1_epi32(val.i);
+#endif
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         int* tptr = ptrs[0];
-        for( size_t j = 0; j < len; j++ )
+        size_t j = 0;
+
+#if CV_SSE2
+        if (USE_SSE2)
+        {
+            for ( ; j < len; j += 4)
+            {
+                __m128i v_src = _mm_loadu_si128((__m128i const *)(tptr + j));
+                __m128i v_cmp_mask = _mm_cmplt_epi32(v_mask2, _mm_and_si128(v_src, v_mask1));
+                __m128i v_res = _mm_or_si128(_mm_andnot_si128(v_cmp_mask, v_src), _mm_and_si128(v_cmp_mask, v_val));
+                _mm_storeu_si128((__m128i *)(tptr + j), v_res);
+            }
+        }
+#endif
+
+        for( ; j < len; j++ )
             if( (tptr[j] & 0x7fffffff) > 0x7f800000 )
                 tptr[j] = val.i;
     }

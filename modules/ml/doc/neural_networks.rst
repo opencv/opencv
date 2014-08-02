@@ -240,6 +240,7 @@ This method applies the specified training algorithm to computing/adjusting the 
 
 The RPROP training algorithm is parallelized with the TBB library.
 
+If you are using the default ``cvANN_MLP::SIGMOID_SYM`` activation function then the output should be in the range [-1,1], instead of [0,1], for optimal results.
 
 CvANN_MLP::predict
 ------------------
@@ -256,6 +257,8 @@ Predicts responses for input samples.
     :param outputs: Predicted responses for corresponding samples.
 
 The method returns a dummy value which should be ignored.
+
+If you are using the default ``cvANN_MLP::SIGMOID_SYM`` activation function with the default parameter values fparam1=0 and fparam2=0 then the function used is y = 1.7159*tanh(2/3 * x), so the output will range from [-1.7159, 1.7159], instead of [0,1].
 
 CvANN_MLP::get_layer_count
 --------------------------

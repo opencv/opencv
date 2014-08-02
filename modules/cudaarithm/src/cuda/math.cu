@@ -40,195 +40,247 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/transform.hpp"
-#include "opencv2/core/cuda/saturate_cast.hpp"
-#include "opencv2/core/cuda/simd_functions.hpp"
-#include "opencv2/core/cuda/limits.hpp"
-#include "opencv2/core/cuda/type_traits.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-#include "arithm_func_traits.hpp"
+#error "opencv_cudev is required"
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#else
 
-//////////////////////////////////////////////////////////////////////////
-// absMat
+#include "opencv2/cudaarithm.hpp"
+#include "opencv2/cudev.hpp"
 
-namespace cv { namespace cuda { namespace device
+using namespace cv::cudev;
+
+namespace
 {
-    template <typename T> struct TransformFunctorTraits< abs_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename ScalarDepth> struct TransformPolicy : DefaultTransformPolicy
     {
     };
-}}}
-
-namespace arithm
-{
-    template <typename T>
-    void absMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
+    template <> struct TransformPolicy<double> : DefaultTransformPolicy
     {
-        device::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, abs_func<T>(), WithOutMask(), stream);
-    }
-
-    template void absMat<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void absMat<schar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void absMat<ushort>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void absMat<short>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void absMat<int>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void absMat<float>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void absMat<double>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        enum {
+            shift = 1
+        };
+    };
 }
 
-//////////////////////////////////////////////////////////////////////////
-// sqrMat
+//////////////////////////////////////////////////////////////////////////////
+/// abs
 
-namespace arithm
+namespace
 {
-    template <typename T> struct Sqr : unary_function<T, T>
+    template <typename T>
+    void absMat(const GpuMat& src, const GpuMat& dst, Stream& stream)
+    {
+        gridTransformUnary_< TransformPolicy<T> >(globPtr<T>(src), globPtr<T>(dst), abs_func<T>(), stream);
+    }
+}
+
+void cv::cuda::abs(InputArray _src, OutputArray _dst, Stream& stream)
+{
+    typedef void (*func_t)(const GpuMat& src, const GpuMat& dst, Stream& stream);
+    static const func_t funcs[] =
+    {
+        absMat<uchar>,
+        absMat<schar>,
+        absMat<ushort>,
+        absMat<short>,
+        absMat<int>,
+        absMat<float>,
+        absMat<double>
+    };
+
+    GpuMat src = _src.getGpuMat();
+
+    const int depth = src.depth();
+
+    CV_DbgAssert( depth <= CV_64F );
+
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
+
+    funcs[depth](src.reshape(1), dst.reshape(1), stream);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+/// sqr
+
+namespace
+{
+    template <typename T> struct SqrOp : unary_function<T, T>
     {
         __device__ __forceinline__ T operator ()(T x) const
         {
             return saturate_cast<T>(x * x);
         }
-
-        __host__ __device__ __forceinline__ Sqr() {}
-        __host__ __device__ __forceinline__ Sqr(const Sqr&) {}
     };
+
+    template <typename T>
+    void sqrMat(const GpuMat& src, const GpuMat& dst, Stream& stream)
+    {
+        gridTransformUnary_< TransformPolicy<T> >(globPtr<T>(src), globPtr<T>(dst), SqrOp<T>(), stream);
+    }
 }
 
-namespace cv { namespace cuda { namespace device
+void cv::cuda::sqr(InputArray _src, OutputArray _dst, Stream& stream)
 {
-    template <typename T> struct TransformFunctorTraits< arithm::Sqr<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
+    typedef void (*func_t)(const GpuMat& src, const GpuMat& dst, Stream& stream);
+    static const func_t funcs[] =
     {
+        sqrMat<uchar>,
+        sqrMat<schar>,
+        sqrMat<ushort>,
+        sqrMat<short>,
+        sqrMat<int>,
+        sqrMat<float>,
+        sqrMat<double>
     };
-}}}
 
-namespace arithm
+    GpuMat src = _src.getGpuMat();
+
+    const int depth = src.depth();
+
+    CV_DbgAssert( depth <= CV_64F );
+
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
+
+    funcs[depth](src.reshape(1), dst.reshape(1), stream);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+/// sqrt
+
+namespace
 {
     template <typename T>
-    void sqrMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
+    void sqrtMat(const GpuMat& src, const GpuMat& dst, Stream& stream)
     {
-        device::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, Sqr<T>(), WithOutMask(), stream);
+        gridTransformUnary_< TransformPolicy<T> >(globPtr<T>(src), globPtr<T>(dst), sqrt_func<T>(), stream);
     }
-
-    template void sqrMat<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void sqrMat<schar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void sqrMat<ushort>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void sqrMat<short>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void sqrMat<int>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void sqrMat<float>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void sqrMat<double>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 }
 
-//////////////////////////////////////////////////////////////////////////
-// sqrtMat
-
-namespace cv { namespace cuda { namespace device
+void cv::cuda::sqrt(InputArray _src, OutputArray _dst, Stream& stream)
 {
-    template <typename T> struct TransformFunctorTraits< sqrt_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
+    typedef void (*func_t)(const GpuMat& src, const GpuMat& dst, Stream& stream);
+    static const func_t funcs[] =
     {
+        sqrtMat<uchar>,
+        sqrtMat<schar>,
+        sqrtMat<ushort>,
+        sqrtMat<short>,
+        sqrtMat<int>,
+        sqrtMat<float>,
+        sqrtMat<double>
     };
-}}}
 
-namespace arithm
-{
-    template <typename T>
-    void sqrtMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
-    {
-        device::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, sqrt_func<T>(), WithOutMask(), stream);
-    }
+    GpuMat src = _src.getGpuMat();
 
-    template void sqrtMat<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void sqrtMat<schar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void sqrtMat<ushort>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void sqrtMat<short>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void sqrtMat<int>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void sqrtMat<float>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void sqrtMat<double>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+    const int depth = src.depth();
+
+    CV_DbgAssert( depth <= CV_64F );
+
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
+
+    funcs[depth](src.reshape(1), dst.reshape(1), stream);
 }
 
-//////////////////////////////////////////////////////////////////////////
-// logMat
+////////////////////////////////////////////////////////////////////////
+/// exp
 
-namespace cv { namespace cuda { namespace device
+namespace
 {
-    template <typename T> struct TransformFunctorTraits< log_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
-    {
-    };
-}}}
-
-namespace arithm
-{
-    template <typename T>
-    void logMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
-    {
-        device::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, log_func<T>(), WithOutMask(), stream);
-    }
-
-    template void logMat<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void logMat<schar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void logMat<ushort>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void logMat<short>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void logMat<int>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void logMat<float>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void logMat<double>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-}
-
-//////////////////////////////////////////////////////////////////////////
-// expMat
-
-namespace arithm
-{
-    template <typename T> struct Exp : unary_function<T, T>
+    template <typename T> struct ExpOp : unary_function<T, T>
     {
         __device__ __forceinline__ T operator ()(T x) const
         {
             exp_func<T> f;
             return saturate_cast<T>(f(x));
         }
-
-        __host__ __device__ __forceinline__ Exp() {}
-        __host__ __device__ __forceinline__ Exp(const Exp&) {}
     };
+
+    template <typename T>
+    void expMat(const GpuMat& src, const GpuMat& dst, Stream& stream)
+    {
+        gridTransformUnary_< TransformPolicy<T> >(globPtr<T>(src), globPtr<T>(dst), ExpOp<T>(), stream);
+    }
 }
 
-namespace cv { namespace cuda { namespace device
+void cv::cuda::exp(InputArray _src, OutputArray _dst, Stream& stream)
 {
-    template <typename T> struct TransformFunctorTraits< arithm::Exp<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
+    typedef void (*func_t)(const GpuMat& src, const GpuMat& dst, Stream& stream);
+    static const func_t funcs[] =
     {
+        expMat<uchar>,
+        expMat<schar>,
+        expMat<ushort>,
+        expMat<short>,
+        expMat<int>,
+        expMat<float>,
+        expMat<double>
     };
-}}}
 
-namespace arithm
+    GpuMat src = _src.getGpuMat();
+
+    const int depth = src.depth();
+
+    CV_DbgAssert( depth <= CV_64F );
+
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
+
+    funcs[depth](src.reshape(1), dst.reshape(1), stream);
+}
+
+////////////////////////////////////////////////////////////////////////
+// log
+
+namespace
 {
     template <typename T>
-    void expMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
+    void logMat(const GpuMat& src, const GpuMat& dst, Stream& stream)
     {
-        device::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, Exp<T>(), WithOutMask(), stream);
+        gridTransformUnary_< TransformPolicy<T> >(globPtr<T>(src), globPtr<T>(dst), log_func<T>(), stream);
     }
-
-    template void expMat<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void expMat<schar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void expMat<ushort>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void expMat<short>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void expMat<int>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void expMat<float>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    template void expMat<double>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 }
 
-//////////////////////////////////////////////////////////////////////////
+void cv::cuda::log(InputArray _src, OutputArray _dst, Stream& stream)
+{
+    typedef void (*func_t)(const GpuMat& src, const GpuMat& dst, Stream& stream);
+    static const func_t funcs[] =
+    {
+        logMat<uchar>,
+        logMat<schar>,
+        logMat<ushort>,
+        logMat<short>,
+        logMat<int>,
+        logMat<float>,
+        logMat<double>
+    };
+
+    GpuMat src = _src.getGpuMat();
+
+    const int depth = src.depth();
+
+    CV_DbgAssert( depth <= CV_64F );
+
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
+
+    funcs[depth](src.reshape(1), dst.reshape(1), stream);
+}
+
+////////////////////////////////////////////////////////////////////////
 // pow
 
-namespace arithm
+namespace
 {
     template<typename T, bool Signed = numeric_limits<T>::is_signed> struct PowOp : unary_function<T, T>
     {
         float power;
-
-        __host__ explicit PowOp(double power_) : power(static_cast<float>(power_)) {}
 
         __device__ __forceinline__ T operator()(T e) const
         {
@@ -238,8 +290,6 @@ namespace arithm
     template<typename T> struct PowOp<T, true> : unary_function<T, T>
     {
         float power;
-
-        __host__ explicit PowOp(double power_) : power(static_cast<float>(power_)) {}
 
         __device__ __forceinline__ T operator()(T e) const
         {
@@ -255,8 +305,6 @@ namespace arithm
     {
         float power;
 
-        __host__ explicit PowOp(double power_) : power(static_cast<float>(power_)) {}
-
         __device__ __forceinline__ float operator()(float e) const
         {
             return __powf(::fabs(e), power);
@@ -266,37 +314,46 @@ namespace arithm
     {
         double power;
 
-        __host__ explicit PowOp(double power_) : power(power_) {}
-
         __device__ __forceinline__ double operator()(double e) const
         {
             return ::pow(::fabs(e), power);
         }
     };
-}
 
-namespace cv { namespace cuda { namespace device
-{
-    template <typename T> struct TransformFunctorTraits< arithm::PowOp<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
-    {
-    };
-}}}
-
-namespace arithm
-{
     template<typename T>
-    void pow(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream)
+    void powMat(const GpuMat& src, double power, const GpuMat& dst, Stream& stream)
     {
-        device::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, PowOp<T>(power), WithOutMask(), stream);
-    }
+        PowOp<T> op;
+        op.power = static_cast<typename LargerType<T, float>::type>(power);
 
-    template void pow<uchar>(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream);
-    template void pow<schar>(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream);
-    template void pow<short>(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream);
-    template void pow<ushort>(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream);
-    template void pow<int>(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream);
-    template void pow<float>(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream);
-    template void pow<double>(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream);
+        gridTransformUnary_< TransformPolicy<T> >(globPtr<T>(src), globPtr<T>(dst), op, stream);
+    }
 }
 
-#endif // CUDA_DISABLER
+void cv::cuda::pow(InputArray _src, double power, OutputArray _dst, Stream& stream)
+{
+    typedef void (*func_t)(const GpuMat& src, double power, const GpuMat& dst, Stream& stream);
+    static const func_t funcs[] =
+    {
+        powMat<uchar>,
+        powMat<schar>,
+        powMat<ushort>,
+        powMat<short>,
+        powMat<int>,
+        powMat<float>,
+        powMat<double>
+    };
+
+    GpuMat src = _src.getGpuMat();
+
+    const int depth = src.depth();
+
+    CV_DbgAssert(depth <= CV_64F);
+
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
+
+    funcs[depth](src.reshape(1), power, dst.reshape(1), stream);
+}
+
+#endif

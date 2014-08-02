@@ -40,24 +40,23 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/transform.hpp"
-#include "opencv2/core/cuda/saturate_cast.hpp"
-#include "opencv2/core/cuda/simd_functions.hpp"
-#include "opencv2/core/cuda/vec_math.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-#include "arithm_func_traits.hpp"
+#error "opencv_cudev is required"
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#else
 
-namespace arithm
+#include "opencv2/cudev.hpp"
+
+using namespace cv::cudev;
+
+void cmpScalar(const GpuMat& src, cv::Scalar val, bool inv, GpuMat& dst, const GpuMat&, double, Stream& stream, int cmpop);
+
+namespace
 {
-    template <class Op, typename T>
-    struct Cmp : binary_function<T, T, uchar>
+    template <class Op, typename T> struct CmpOp : binary_function<T, T, uchar>
     {
         __device__ __forceinline__ uchar operator()(T a, T b) const
         {
@@ -66,219 +65,161 @@ namespace arithm
         }
     };
 
-#define TYPE_VEC(type, cn) typename TypeVec<type, cn>::vec_type
+#define MAKE_VEC(_type, _cn) typename MakeVec<_type, _cn>::type
 
-    template <class Op, typename T, int cn> struct CmpScalar;
+    template <class Op, typename T, int cn> struct CmpScalarOp;
+
     template <class Op, typename T>
-    struct CmpScalar<Op, T, 1> : unary_function<T, uchar>
+    struct CmpScalarOp<Op, T, 1> : unary_function<T, uchar>
     {
         T val;
 
-        __host__ explicit CmpScalar(T val_) : val(val_) {}
-
         __device__ __forceinline__ uchar operator()(T src) const
         {
-            Cmp<Op, T> op;
+            CmpOp<Op, T> op;
             return op(src, val);
         }
     };
+
     template <class Op, typename T>
-    struct CmpScalar<Op, T, 2> : unary_function<TYPE_VEC(T, 2), TYPE_VEC(uchar, 2)>
+    struct CmpScalarOp<Op, T, 2> : unary_function<MAKE_VEC(T, 2), MAKE_VEC(uchar, 2)>
     {
-        TYPE_VEC(T, 2) val;
+        MAKE_VEC(T, 2) val;
 
-        __host__ explicit CmpScalar(TYPE_VEC(T, 2) val_) : val(val_) {}
-
-        __device__ __forceinline__ TYPE_VEC(uchar, 2) operator()(const TYPE_VEC(T, 2) & src) const
+        __device__ __forceinline__ MAKE_VEC(uchar, 2) operator()(const MAKE_VEC(T, 2) & src) const
         {
-            Cmp<Op, T> op;
-            return VecTraits<TYPE_VEC(uchar, 2)>::make(op(src.x, val.x), op(src.y, val.y));
+            CmpOp<Op, T> op;
+            return VecTraits<MAKE_VEC(uchar, 2)>::make(op(src.x, val.x), op(src.y, val.y));
         }
     };
+
     template <class Op, typename T>
-    struct CmpScalar<Op, T, 3> : unary_function<TYPE_VEC(T, 3), TYPE_VEC(uchar, 3)>
+    struct CmpScalarOp<Op, T, 3> : unary_function<MAKE_VEC(T, 3), MAKE_VEC(uchar, 3)>
     {
-        TYPE_VEC(T, 3) val;
+        MAKE_VEC(T, 3) val;
 
-        __host__ explicit CmpScalar(TYPE_VEC(T, 3) val_) : val(val_) {}
-
-        __device__ __forceinline__ TYPE_VEC(uchar, 3) operator()(const TYPE_VEC(T, 3) & src) const
+        __device__ __forceinline__ MAKE_VEC(uchar, 3) operator()(const MAKE_VEC(T, 3) & src) const
         {
-            Cmp<Op, T> op;
-            return VecTraits<TYPE_VEC(uchar, 3)>::make(op(src.x, val.x), op(src.y, val.y), op(src.z, val.z));
+            CmpOp<Op, T> op;
+            return VecTraits<MAKE_VEC(uchar, 3)>::make(op(src.x, val.x), op(src.y, val.y), op(src.z, val.z));
         }
     };
+
     template <class Op, typename T>
-    struct CmpScalar<Op, T, 4> : unary_function<TYPE_VEC(T, 4), TYPE_VEC(uchar, 4)>
+    struct CmpScalarOp<Op, T, 4> : unary_function<MAKE_VEC(T, 4), MAKE_VEC(uchar, 4)>
     {
-        TYPE_VEC(T, 4) val;
+        MAKE_VEC(T, 4) val;
 
-        __host__ explicit CmpScalar(TYPE_VEC(T, 4) val_) : val(val_) {}
-
-        __device__ __forceinline__ TYPE_VEC(uchar, 4) operator()(const TYPE_VEC(T, 4) & src) const
+        __device__ __forceinline__ MAKE_VEC(uchar, 4) operator()(const MAKE_VEC(T, 4) & src) const
         {
-            Cmp<Op, T> op;
-            return VecTraits<TYPE_VEC(uchar, 4)>::make(op(src.x, val.x), op(src.y, val.y), op(src.z, val.z), op(src.w, val.w));
+            CmpOp<Op, T> op;
+            return VecTraits<MAKE_VEC(uchar, 4)>::make(op(src.x, val.x), op(src.y, val.y), op(src.z, val.z), op(src.w, val.w));
         }
     };
 
 #undef TYPE_VEC
-}
 
-namespace cv { namespace cuda { namespace device
-{
-    template <class Op, typename T> struct TransformFunctorTraits< arithm::CmpScalar<Op, T, 1> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(uchar)>
+    template <typename ScalarDepth> struct TransformPolicy : DefaultTransformPolicy
     {
     };
-}}}
+    template <> struct TransformPolicy<double> : DefaultTransformPolicy
+    {
+        enum {
+            shift = 1
+        };
+    };
 
-namespace arithm
-{
     template <template <typename> class Op, typename T, int cn>
-    void cmpScalar(PtrStepSzb src, double val[4], PtrStepSzb dst, cudaStream_t stream)
+    void cmpScalarImpl(const GpuMat& src, cv::Scalar value, GpuMat& dst, Stream& stream)
     {
-        typedef typename TypeVec<T, cn>::vec_type src_t;
-        typedef typename TypeVec<uchar, cn>::vec_type dst_t;
+        typedef typename MakeVec<T, cn>::type src_type;
+        typedef typename MakeVec<uchar, cn>::type dst_type;
 
-        T sval[] = {static_cast<T>(val[0]), static_cast<T>(val[1]), static_cast<T>(val[2]), static_cast<T>(val[3])};
-        src_t val1 = VecTraits<src_t>::make(sval);
+        cv::Scalar_<T> value_ = value;
 
-        CmpScalar<Op<T>, T, cn> op(val1);
-        device::transform((PtrStepSz<src_t>) src, (PtrStepSz<dst_t>) dst, op, WithOutMask(), stream);
+        CmpScalarOp<Op<T>, T, cn> op;
+        op.val = VecTraits<src_type>::make(value_.val);
+
+        gridTransformUnary_< TransformPolicy<T> >(globPtr<src_type>(src), globPtr<dst_type>(dst), op, stream);
     }
-
-    template <typename T> void cmpScalarEq(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream)
-    {
-        typedef void (*func_t)(PtrStepSzb src, double val[4], PtrStepSzb dst, cudaStream_t stream);
-        static const func_t funcs[] =
-        {
-            0,
-            cmpScalar<equal_to, T, 1>,
-            cmpScalar<equal_to, T, 2>,
-            cmpScalar<equal_to, T, 3>,
-            cmpScalar<equal_to, T, 4>
-        };
-
-        funcs[cn](src, val, dst, stream);
-    }
-    template <typename T> void cmpScalarNe(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream)
-    {
-        typedef void (*func_t)(PtrStepSzb src, double val[4], PtrStepSzb dst, cudaStream_t stream);
-        static const func_t funcs[] =
-        {
-            0,
-            cmpScalar<not_equal_to, T, 1>,
-            cmpScalar<not_equal_to, T, 2>,
-            cmpScalar<not_equal_to, T, 3>,
-            cmpScalar<not_equal_to, T, 4>
-        };
-
-        funcs[cn](src, val, dst, stream);
-    }
-    template <typename T> void cmpScalarLt(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream)
-    {
-        typedef void (*func_t)(PtrStepSzb src, double val[4], PtrStepSzb dst, cudaStream_t stream);
-        static const func_t funcs[] =
-        {
-            0,
-            cmpScalar<less, T, 1>,
-            cmpScalar<less, T, 2>,
-            cmpScalar<less, T, 3>,
-            cmpScalar<less, T, 4>
-        };
-
-        funcs[cn](src, val, dst, stream);
-    }
-    template <typename T> void cmpScalarLe(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream)
-    {
-        typedef void (*func_t)(PtrStepSzb src, double val[4], PtrStepSzb dst, cudaStream_t stream);
-        static const func_t funcs[] =
-        {
-            0,
-            cmpScalar<less_equal, T, 1>,
-            cmpScalar<less_equal, T, 2>,
-            cmpScalar<less_equal, T, 3>,
-            cmpScalar<less_equal, T, 4>
-        };
-
-        funcs[cn](src, val, dst, stream);
-    }
-    template <typename T> void cmpScalarGt(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream)
-    {
-        typedef void (*func_t)(PtrStepSzb src, double val[4], PtrStepSzb dst, cudaStream_t stream);
-        static const func_t funcs[] =
-        {
-            0,
-            cmpScalar<greater, T, 1>,
-            cmpScalar<greater, T, 2>,
-            cmpScalar<greater, T, 3>,
-            cmpScalar<greater, T, 4>
-        };
-
-        funcs[cn](src, val, dst, stream);
-    }
-    template <typename T> void cmpScalarGe(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream)
-    {
-        typedef void (*func_t)(PtrStepSzb src, double val[4], PtrStepSzb dst, cudaStream_t stream);
-        static const func_t funcs[] =
-        {
-            0,
-            cmpScalar<greater_equal, T, 1>,
-            cmpScalar<greater_equal, T, 2>,
-            cmpScalar<greater_equal, T, 3>,
-            cmpScalar<greater_equal, T, 4>
-        };
-
-        funcs[cn](src, val, dst, stream);
-    }
-
-    template void cmpScalarEq<uchar >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarEq<schar >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarEq<ushort>(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarEq<short >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarEq<int   >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarEq<float >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarEq<double>(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-
-    template void cmpScalarNe<uchar >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarNe<schar >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarNe<ushort>(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarNe<short >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarNe<int   >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarNe<float >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarNe<double>(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-
-    template void cmpScalarLt<uchar >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarLt<schar >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarLt<ushort>(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarLt<short >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarLt<int   >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarLt<float >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarLt<double>(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-
-    template void cmpScalarLe<uchar >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarLe<schar >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarLe<ushort>(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarLe<short >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarLe<int   >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarLe<float >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarLe<double>(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-
-    template void cmpScalarGt<uchar >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarGt<schar >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarGt<ushort>(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarGt<short >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarGt<int   >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarGt<float >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarGt<double>(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-
-    template void cmpScalarGe<uchar >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarGe<schar >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarGe<ushort>(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarGe<short >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarGe<int   >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarGe<float >(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
-    template void cmpScalarGe<double>(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
 }
 
-#endif // CUDA_DISABLER
+void cmpScalar(const GpuMat& src, cv::Scalar val, bool inv, GpuMat& dst, const GpuMat&, double, Stream& stream, int cmpop)
+{
+    typedef void (*func_t)(const GpuMat& src, cv::Scalar value, GpuMat& dst, Stream& stream);
+    static const func_t funcs[7][6][4] =
+    {
+        {
+            {cmpScalarImpl<equal_to,      uchar, 1>, cmpScalarImpl<equal_to,      uchar, 2>, cmpScalarImpl<equal_to,      uchar, 3>, cmpScalarImpl<equal_to,      uchar, 4>},
+            {cmpScalarImpl<greater,       uchar, 1>, cmpScalarImpl<greater,       uchar, 2>, cmpScalarImpl<greater,       uchar, 3>, cmpScalarImpl<greater,       uchar, 4>},
+            {cmpScalarImpl<greater_equal, uchar, 1>, cmpScalarImpl<greater_equal, uchar, 2>, cmpScalarImpl<greater_equal, uchar, 3>, cmpScalarImpl<greater_equal, uchar, 4>},
+            {cmpScalarImpl<less,          uchar, 1>, cmpScalarImpl<less,          uchar, 2>, cmpScalarImpl<less,          uchar, 3>, cmpScalarImpl<less,          uchar, 4>},
+            {cmpScalarImpl<less_equal,    uchar, 1>, cmpScalarImpl<less_equal,    uchar, 2>, cmpScalarImpl<less_equal,    uchar, 3>, cmpScalarImpl<less_equal,    uchar, 4>},
+            {cmpScalarImpl<not_equal_to,  uchar, 1>, cmpScalarImpl<not_equal_to,  uchar, 2>, cmpScalarImpl<not_equal_to,  uchar, 3>, cmpScalarImpl<not_equal_to,  uchar, 4>}
+        },
+        {
+            {cmpScalarImpl<equal_to,      schar, 1>, cmpScalarImpl<equal_to,      schar, 2>, cmpScalarImpl<equal_to,      schar, 3>, cmpScalarImpl<equal_to,      schar, 4>},
+            {cmpScalarImpl<greater,       schar, 1>, cmpScalarImpl<greater,       schar, 2>, cmpScalarImpl<greater,       schar, 3>, cmpScalarImpl<greater,       schar, 4>},
+            {cmpScalarImpl<greater_equal, schar, 1>, cmpScalarImpl<greater_equal, schar, 2>, cmpScalarImpl<greater_equal, schar, 3>, cmpScalarImpl<greater_equal, schar, 4>},
+            {cmpScalarImpl<less,          schar, 1>, cmpScalarImpl<less,          schar, 2>, cmpScalarImpl<less,          schar, 3>, cmpScalarImpl<less,          schar, 4>},
+            {cmpScalarImpl<less_equal,    schar, 1>, cmpScalarImpl<less_equal,    schar, 2>, cmpScalarImpl<less_equal,    schar, 3>, cmpScalarImpl<less_equal,    schar, 4>},
+            {cmpScalarImpl<not_equal_to,  schar, 1>, cmpScalarImpl<not_equal_to,  schar, 2>, cmpScalarImpl<not_equal_to,  schar, 3>, cmpScalarImpl<not_equal_to,  schar, 4>}
+        },
+        {
+            {cmpScalarImpl<equal_to,      ushort, 1>, cmpScalarImpl<equal_to,      ushort, 2>, cmpScalarImpl<equal_to,      ushort, 3>, cmpScalarImpl<equal_to,      ushort, 4>},
+            {cmpScalarImpl<greater,       ushort, 1>, cmpScalarImpl<greater,       ushort, 2>, cmpScalarImpl<greater,       ushort, 3>, cmpScalarImpl<greater,       ushort, 4>},
+            {cmpScalarImpl<greater_equal, ushort, 1>, cmpScalarImpl<greater_equal, ushort, 2>, cmpScalarImpl<greater_equal, ushort, 3>, cmpScalarImpl<greater_equal, ushort, 4>},
+            {cmpScalarImpl<less,          ushort, 1>, cmpScalarImpl<less,          ushort, 2>, cmpScalarImpl<less,          ushort, 3>, cmpScalarImpl<less,          ushort, 4>},
+            {cmpScalarImpl<less_equal,    ushort, 1>, cmpScalarImpl<less_equal,    ushort, 2>, cmpScalarImpl<less_equal,    ushort, 3>, cmpScalarImpl<less_equal,    ushort, 4>},
+            {cmpScalarImpl<not_equal_to,  ushort, 1>, cmpScalarImpl<not_equal_to,  ushort, 2>, cmpScalarImpl<not_equal_to,  ushort, 3>, cmpScalarImpl<not_equal_to,  ushort, 4>}
+        },
+        {
+            {cmpScalarImpl<equal_to,      short, 1>, cmpScalarImpl<equal_to,      short, 2>, cmpScalarImpl<equal_to,      short, 3>, cmpScalarImpl<equal_to,      short, 4>},
+            {cmpScalarImpl<greater,       short, 1>, cmpScalarImpl<greater,       short, 2>, cmpScalarImpl<greater,       short, 3>, cmpScalarImpl<greater,       short, 4>},
+            {cmpScalarImpl<greater_equal, short, 1>, cmpScalarImpl<greater_equal, short, 2>, cmpScalarImpl<greater_equal, short, 3>, cmpScalarImpl<greater_equal, short, 4>},
+            {cmpScalarImpl<less,          short, 1>, cmpScalarImpl<less,          short, 2>, cmpScalarImpl<less,          short, 3>, cmpScalarImpl<less,          short, 4>},
+            {cmpScalarImpl<less_equal,    short, 1>, cmpScalarImpl<less_equal,    short, 2>, cmpScalarImpl<less_equal,    short, 3>, cmpScalarImpl<less_equal,    short, 4>},
+            {cmpScalarImpl<not_equal_to,  short, 1>, cmpScalarImpl<not_equal_to,  short, 2>, cmpScalarImpl<not_equal_to,  short, 3>, cmpScalarImpl<not_equal_to,  short, 4>}
+        },
+        {
+            {cmpScalarImpl<equal_to,      int, 1>, cmpScalarImpl<equal_to,      int, 2>, cmpScalarImpl<equal_to,      int, 3>, cmpScalarImpl<equal_to,      int, 4>},
+            {cmpScalarImpl<greater,       int, 1>, cmpScalarImpl<greater,       int, 2>, cmpScalarImpl<greater,       int, 3>, cmpScalarImpl<greater,       int, 4>},
+            {cmpScalarImpl<greater_equal, int, 1>, cmpScalarImpl<greater_equal, int, 2>, cmpScalarImpl<greater_equal, int, 3>, cmpScalarImpl<greater_equal, int, 4>},
+            {cmpScalarImpl<less,          int, 1>, cmpScalarImpl<less,          int, 2>, cmpScalarImpl<less,          int, 3>, cmpScalarImpl<less,          int, 4>},
+            {cmpScalarImpl<less_equal,    int, 1>, cmpScalarImpl<less_equal,    int, 2>, cmpScalarImpl<less_equal,    int, 3>, cmpScalarImpl<less_equal,    int, 4>},
+            {cmpScalarImpl<not_equal_to,  int, 1>, cmpScalarImpl<not_equal_to,  int, 2>, cmpScalarImpl<not_equal_to,  int, 3>, cmpScalarImpl<not_equal_to,  int, 4>}
+        },
+        {
+            {cmpScalarImpl<equal_to,      float, 1>, cmpScalarImpl<equal_to,      float, 2>, cmpScalarImpl<equal_to,      float, 3>, cmpScalarImpl<equal_to,      float, 4>},
+            {cmpScalarImpl<greater,       float, 1>, cmpScalarImpl<greater,       float, 2>, cmpScalarImpl<greater,       float, 3>, cmpScalarImpl<greater,       float, 4>},
+            {cmpScalarImpl<greater_equal, float, 1>, cmpScalarImpl<greater_equal, float, 2>, cmpScalarImpl<greater_equal, float, 3>, cmpScalarImpl<greater_equal, float, 4>},
+            {cmpScalarImpl<less,          float, 1>, cmpScalarImpl<less,          float, 2>, cmpScalarImpl<less,          float, 3>, cmpScalarImpl<less,          float, 4>},
+            {cmpScalarImpl<less_equal,    float, 1>, cmpScalarImpl<less_equal,    float, 2>, cmpScalarImpl<less_equal,    float, 3>, cmpScalarImpl<less_equal,    float, 4>},
+            {cmpScalarImpl<not_equal_to,  float, 1>, cmpScalarImpl<not_equal_to,  float, 2>, cmpScalarImpl<not_equal_to,  float, 3>, cmpScalarImpl<not_equal_to,  float, 4>}
+        },
+        {
+            {cmpScalarImpl<equal_to,      double, 1>, cmpScalarImpl<equal_to,      double, 2>, cmpScalarImpl<equal_to,      double, 3>, cmpScalarImpl<equal_to,      double, 4>},
+            {cmpScalarImpl<greater,       double, 1>, cmpScalarImpl<greater,       double, 2>, cmpScalarImpl<greater,       double, 3>, cmpScalarImpl<greater,       double, 4>},
+            {cmpScalarImpl<greater_equal, double, 1>, cmpScalarImpl<greater_equal, double, 2>, cmpScalarImpl<greater_equal, double, 3>, cmpScalarImpl<greater_equal, double, 4>},
+            {cmpScalarImpl<less,          double, 1>, cmpScalarImpl<less,          double, 2>, cmpScalarImpl<less,          double, 3>, cmpScalarImpl<less,          double, 4>},
+            {cmpScalarImpl<less_equal,    double, 1>, cmpScalarImpl<less_equal,    double, 2>, cmpScalarImpl<less_equal,    double, 3>, cmpScalarImpl<less_equal,    double, 4>},
+            {cmpScalarImpl<not_equal_to,  double, 1>, cmpScalarImpl<not_equal_to,  double, 2>, cmpScalarImpl<not_equal_to,  double, 3>, cmpScalarImpl<not_equal_to,  double, 4>}
+        }
+    };
+
+    if (inv)
+    {
+        // src1 is a scalar; swap it with src2
+        cmpop = cmpop == cv::CMP_LT ? cv::CMP_GT : cmpop == cv::CMP_LE ? cv::CMP_GE :
+            cmpop == cv::CMP_GE ? cv::CMP_LE : cmpop == cv::CMP_GT ? cv::CMP_LT : cmpop;
+    }
+
+    const int depth = src.depth();
+    const int cn = src.channels();
+
+    CV_DbgAssert( depth <= CV_64F && cn <= 4 );
+
+    funcs[depth][cmpop][cn - 1](src, val, dst, stream);
+}
+
+#endif

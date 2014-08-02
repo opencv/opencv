@@ -41,10 +41,8 @@
 //M*/
 
 #include "precomp.hpp"
-
-#ifdef HAVE_IPP
-#include "ippversion.h"
-#endif
+#include "opencl_kernels.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
 
 namespace cv
 {
@@ -693,11 +691,100 @@ static void GEMMStore_64fc( const Complexd* c_data, size_t c_step,
     GEMMStore(c_data, c_step, d_buf, d_buf_step, d_data, d_step, d_size, alpha, beta, flags);
 }
 
+#ifdef HAVE_CLAMDBLAS
+
+static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
+                      InputArray matC, double beta, OutputArray matD, int flags )
+{
+    int type = matA.type(), esz = CV_ELEM_SIZE(type);
+    bool haveC = matC.kind() != cv::_InputArray::NONE;
+    Size sizeA = matA.size(), sizeB = matB.size(), sizeC = haveC ? matC.size() : Size(0, 0);
+    bool atrans = (flags & GEMM_1_T) != 0, btrans = (flags & GEMM_2_T) != 0, ctrans = (flags & GEMM_3_T) != 0;
+
+    if (atrans)
+        sizeA = Size(sizeA.height, sizeA.width);
+    if (btrans)
+        sizeB = Size(sizeB.height, sizeB.width);
+    if (haveC && ctrans)
+        sizeC = Size(sizeC.height, sizeC.width);
+
+    Size sizeD(sizeB.width, sizeA.height);
+
+    CV_Assert( matB.type() == type && (!haveC || matC.type() == type) );
+    CV_Assert( sizeA.width == sizeB.height && (!haveC || sizeC == sizeD) );
+
+    matD.create(sizeD, type);
+    if ( matA.offset() % esz != 0 || matA.step() % esz != 0 ||
+         matB.offset() % esz != 0 || matB.step() % esz != 0 ||
+         (haveC && (matC.offset() % esz != 0 || matC.step() % esz != 0)) )
+        return false;
+
+    UMat A = matA.getUMat(), B = matB.getUMat(), D = matD.getUMat();
+    if (haveC)
+        ctrans ? transpose(matC, D) : matC.copyTo(D);
+    else
+        D.setTo(Scalar::all(0));
+
+    int M = sizeD.height, N = sizeD.width, K = sizeA.width;
+    int lda = (int)A.step / esz, ldb = (int)B.step / esz, ldc = (int)D.step / esz;
+    int offa = (int)A.offset / esz, offb = (int)B.offset / esz, offc = (int)D.offset / esz;
+
+    cl_command_queue clq = (cl_command_queue)ocl::Queue::getDefault().ptr();
+    clAmdBlasTranspose transA = atrans ? clAmdBlasTrans : clAmdBlasNoTrans;
+    clAmdBlasTranspose transB = btrans ? clAmdBlasTrans : clAmdBlasNoTrans;
+    clAmdBlasOrder order = clAmdBlasRowMajor;
+    clAmdBlasStatus status = clAmdBlasSuccess;
+
+    if (type == CV_32FC1)
+        status = clAmdBlasSgemmEx(order, transA, transB, M, N, K,
+                                  (cl_float)alpha, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
+                                  (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
+                                  (cl_float)beta, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
+                                  1, &clq, 0, NULL, NULL);
+    else if (type == CV_64FC1)
+        status = clAmdBlasDgemmEx(order, transA, transB, M, N, K,
+                                  alpha, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
+                                  (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
+                                  beta, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
+                                  1, &clq, 0, NULL, NULL);
+    else if (type == CV_32FC2)
+    {
+         cl_float2 alpha_2 = { { (cl_float)alpha, 0 } };
+         cl_float2 beta_2  = { { (cl_float)beta, 0 } };
+         status = clAmdBlasCgemmEx(order, transA, transB, M, N, K,
+                                   alpha_2, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
+                                   (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
+                                   beta_2, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
+                                   1, &clq, 0, NULL, NULL);
+    }
+    else if (type == CV_64FC2)
+    {
+        cl_double2 alpha_2 = { { alpha, 0 } };
+        cl_double2 beta_2  = { { beta, 0 } };
+        status = clAmdBlasZgemmEx(order, transA, transB, M, N, K,
+                                  alpha_2, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
+                                  (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
+                                  beta_2, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
+                                  1, &clq, 0, NULL, NULL);
+    }
+    else
+        CV_Error(Error::StsUnsupportedFormat, "");
+
+    return status == clAmdBlasSuccess;
+}
+
+#endif
+
 }
 
 void cv::gemm( InputArray matA, InputArray matB, double alpha,
            InputArray matC, double beta, OutputArray _matD, int flags )
 {
+#ifdef HAVE_CLAMDBLAS
+    CV_OCL_RUN(ocl::haveAmdBlas() && matA.dims() <= 2 && matB.dims() <= 2 && matC.dims() <= 2 && _matD.isUMat(),
+            ocl_gemm(matA, matB, alpha, matC, beta, _matD, flags))
+#endif
+
     const int block_lin_size = 128;
     const int block_size = block_lin_size * block_lin_size;
 
@@ -1933,7 +2020,8 @@ void cv::perspectiveTransform( InputArray _src, OutputArray _dst, InputArray _mt
 {
     Mat src = _src.getMat(), m = _mtx.getMat();
     int depth = src.depth(), scn = src.channels(), dcn = m.rows-1;
-    CV_Assert( scn + 1 == m.cols && (depth == CV_32F || depth == CV_64F));
+    CV_Assert( scn + 1 == m.cols );
+    CV_Assert( depth == CV_32F || depth == CV_64F );
 
     _dst.create( src.size(), CV_MAKETYPE(depth, dcn) );
     Mat dst = _dst.getMat();
@@ -2062,21 +2150,72 @@ static void scaleAdd_64f(const double* src1, const double* src2, double* dst,
 
 typedef void (*ScaleAddFunc)(const uchar* src1, const uchar* src2, uchar* dst, int len, const void* alpha);
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray _dst, int type )
+{
+    const ocl::Device & d = ocl::Device::getDefault();
+    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), wdepth = std::max(depth, CV_32F),
+            kercn = ocl::predictOptimalVectorWidth(_src1, _src2, _dst), rowsPerWI = d.isIntel() ? 4 : 1;
+    bool doubleSupport = d.doubleFPConfig() > 0;
+    Size size = _src1.size();
+
+    if ( (!doubleSupport && depth == CV_64F) || size != _src2.size() )
+        return false;
+
+    char cvt[2][50];
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                  format("-D OP_SCALE_ADD -D BINARY_OP -D dstT=%s -D workT=%s -D convertToWT1=%s"
+                         " -D srcT1=dstT -D srcT2=dstT -D convertToDT=%s -D workT1=%s"
+                         " -D wdepth=%d%s -D rowsPerWI=%d",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
+                         ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)),
+                         ocl::convertTypeStr(depth, wdepth, kercn, cvt[0]),
+                         ocl::convertTypeStr(wdepth, depth, kercn, cvt[1]),
+                         ocl::typeToStr(wdepth), wdepth,
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : "", rowsPerWI));
+    if (k.empty())
+        return false;
+
+    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
+    _dst.create(size, type);
+    UMat dst = _dst.getUMat();
+
+    ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1),
+            src2arg = ocl::KernelArg::ReadOnlyNoSize(src2),
+            dstarg = ocl::KernelArg::WriteOnly(dst, cn, kercn);
+
+    if (wdepth == CV_32F)
+        k.args(src1arg, src2arg, dstarg, (float)alpha);
+    else
+        k.args(src1arg, src2arg, dstarg, alpha);
+
+    size_t globalsize[2] = { dst.cols * cn / kercn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, NULL, false);
+}
+
+#endif
+
 }
 
 void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray _dst )
 {
-    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
-    int depth = src1.depth(), cn = src1.channels();
+    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert( type == _src2.type() );
 
-    CV_Assert( src1.type() == src2.type() );
+    CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && _dst.isUMat(),
+            ocl_scaleAdd(_src1, alpha, _src2, _dst, type))
+
     if( depth < CV_32F )
     {
         addWeighted(_src1, alpha, _src2, 1, 0, _dst, depth);
         return;
     }
 
-    _dst.create(src1.dims, src1.size, src1.type());
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
+    CV_Assert(src1.size == src2.size);
+
+    _dst.create(src1.dims, src1.size, type);
     Mat dst = _dst.getMat();
 
     float falpha = (float)alpha;
@@ -2084,7 +2223,7 @@ void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray
 
     ScaleAddFunc func = depth == CV_32F ? (ScaleAddFunc)scaleAdd_32f : (ScaleAddFunc)scaleAdd_64f;
 
-    if( src1.isContinuous() && src2.isContinuous() && dst.isContinuous() )
+    if (src1.isContinuous() && src2.isContinuous() && dst.isContinuous())
     {
         size_t len = src1.total()*cn;
         func(src1.data, src2.data, dst.data, (int)len, palpha);
@@ -2662,12 +2801,13 @@ dotProd_(const T* src1, const T* src2, int len)
 static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
 {
     double r = 0;
-#if ARITHM_USE_IPP
-    ippiDotProd_8u64f_C1R(src1, (int)(len*sizeof(src1[0])),
-                          src2, (int)(len*sizeof(src2[0])),
-                          ippiSize(len, 1), &r);
-    return r;
-#else
+#if ARITHM_USE_IPP && 0
+    if (0 <= ippiDotProd_8u64f_C1R(src1, (int)(len*sizeof(src1[0])),
+                                   src2, (int)(len*sizeof(src2[0])),
+                                   ippiSize(len, 1), &r))
+        return r;
+    setIppErrorStatus();
+#endif
     int i = 0;
 
 #if CV_SSE2
@@ -2713,7 +2853,6 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
     }
 #endif
     return r + dotProd_(src1, src2, len - i);
-#endif
 }
 
 
@@ -2724,48 +2863,57 @@ static double dotProd_8s(const schar* src1, const schar* src2, int len)
 
 static double dotProd_16u(const ushort* src1, const ushort* src2, int len)
 {
+#if (ARITHM_USE_IPP == 1)
     double r = 0;
-    IF_IPP(ippiDotProd_16u64f_C1R(src1, (int)(len*sizeof(src1[0])),
-                                  src2, (int)(len*sizeof(src2[0])),
-                                  ippiSize(len, 1), &r),
-           r = dotProd_(src1, src2, len));
-    return r;
+    if (0 <= ippiDotProd_16u64f_C1R(src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
+        return r;
+    setIppErrorStatus();
+#endif
+    return dotProd_(src1, src2, len);
 }
 
 static double dotProd_16s(const short* src1, const short* src2, int len)
 {
+#if (ARITHM_USE_IPP == 1)
     double r = 0;
-    IF_IPP(ippiDotProd_16s64f_C1R(src1, (int)(len*sizeof(src1[0])),
-                                  src2, (int)(len*sizeof(src2[0])),
-                                  ippiSize(len, 1), &r),
-           r = dotProd_(src1, src2, len));
-    return r;
+    if (0 <= ippiDotProd_16s64f_C1R(src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
+        return r;
+    setIppErrorStatus();
+#endif
+    return dotProd_(src1, src2, len);
 }
 
 static double dotProd_32s(const int* src1, const int* src2, int len)
 {
+#if (ARITHM_USE_IPP == 1)
     double r = 0;
-    IF_IPP(ippiDotProd_32s64f_C1R(src1, (int)(len*sizeof(src1[0])),
-                                  src2, (int)(len*sizeof(src2[0])),
-                                  ippiSize(len, 1), &r),
-           r = dotProd_(src1, src2, len));
-    return r;
+    if (0 <= ippiDotProd_32s64f_C1R(src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
+        return r;
+    setIppErrorStatus();
+#endif
+    return dotProd_(src1, src2, len);
 }
 
 static double dotProd_32f(const float* src1, const float* src2, int len)
 {
+#if (ARITHM_USE_IPP == 1)
     double r = 0;
-    IF_IPP(ippsDotProd_32f64f(src1, src2, len, &r),
-           r = dotProd_(src1, src2, len));
-    return r;
+    if (0 <= ippsDotProd_32f64f(src1, src2, len, &r))
+        return r;
+    setIppErrorStatus();
+#endif
+    return dotProd_(src1, src2, len);
 }
 
 static double dotProd_64f(const double* src1, const double* src2, int len)
 {
+#if (ARITHM_USE_IPP == 1)
     double r = 0;
-    IF_IPP(ippsDotProd_64f(src1, src2, len, &r),
-           r = dotProd_(src1, src2, len));
-    return r;
+    if (0 <= ippsDotProd_64f(src1, src2, len, &r))
+        return r;
+    setIppErrorStatus();
+#endif
+    return dotProd_(src1, src2, len);
 }
 
 

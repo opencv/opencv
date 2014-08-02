@@ -10,8 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2008-2012, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -30,7 +29,7 @@
 // This software is provided by the copyright holders and contributors "as is" and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
+// In no event shall the OpenCV Foundation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
 // (including, but not limited to, procurement of substitute goods or services;
 // loss of use, data, or profits; or business interruption) however caused
@@ -54,8 +53,8 @@ public:
     {
     public:
        virtual ~Function() {}
-       //! ndim - dimensionality
        virtual double calc(const double* x) const = 0;
+       virtual void getGradient(const double* /*x*/,double* /*grad*/) {}
     };
 
     virtual Ptr<Function> getFunction() const = 0;
@@ -84,6 +83,13 @@ public:
 // both minRange & minError are specified by termcrit.epsilon; In addition, user may specify the number of iterations that the algorithm does.
 CV_EXPORTS_W Ptr<DownhillSolver> createDownhillSolver(const Ptr<Solver::Function>& f=Ptr<Solver::Function>(),
         InputArray initStep=Mat_<double>(1,1,0.0),
+        TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5000,0.000001));
+
+//! conjugate gradient method
+class CV_EXPORTS ConjGradSolver : public Solver{
+};
+
+CV_EXPORTS_W Ptr<ConjGradSolver> createConjGradSolver(const Ptr<Solver::Function>& f=Ptr<ConjGradSolver::Function>(),
         TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5000,0.000001));
 
 //!the return codes for solveLP() function

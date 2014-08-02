@@ -232,7 +232,7 @@ Ptr<ImagePyramid> cv::cuda::createImagePyramid(InputArray img, int nLayers, Stre
 {
 #ifndef HAVE_OPENCV_CUDALEGACY
     (void) img;
-    (void) numLayers;
+    (void) nLayers;
     (void) stream;
     throw_no_cuda();
     return Ptr<ImagePyramid>();

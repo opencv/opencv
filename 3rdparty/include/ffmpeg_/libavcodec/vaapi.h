@@ -24,11 +24,17 @@
 #ifndef AVCODEC_VAAPI_H
 #define AVCODEC_VAAPI_H
 
+/**
+ * @file
+ * @ingroup lavc_codec_hwaccel_vaapi
+ * Public libavcodec VA API header.
+ */
+
 #include <stdint.h>
 
 /**
- * @defgroup VAAPI_Decoding VA API Decoding
- * @ingroup Decoder
+ * @defgroup lavc_codec_hwaccel_vaapi VA API Decoding
+ * @ingroup lavc_codec_hwaccel
  * @{
  */
 

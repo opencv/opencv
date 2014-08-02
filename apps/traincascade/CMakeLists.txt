@@ -1,4 +1,4 @@
-set(OPENCV_TRAINCASCADE_DEPS opencv_core opencv_ml opencv_imgproc opencv_photo opencv_objdetect opencv_highgui opencv_calib3d opencv_video opencv_features2d opencv_flann opencv_legacy)
+set(OPENCV_TRAINCASCADE_DEPS opencv_core opencv_ml opencv_imgproc opencv_photo opencv_objdetect opencv_imgcodecs opencv_videoio opencv_highgui opencv_calib3d opencv_video opencv_features2d)
 ocv_check_dependencies(${OPENCV_TRAINCASCADE_DEPS})
 
 if(NOT OCV_DEPENDENCIES_FOUND)
@@ -20,7 +20,7 @@ set(traincascade_files traincascade.cpp
 
 set(the_target opencv_traincascade)
 add_executable(${the_target} ${traincascade_files})
-target_link_libraries(${the_target} ${OPENCV_TRAINCASCADE_DEPS} opencv_haartraining_engine)
+target_link_libraries(${the_target} ${OPENCV_TRAINCASCADE_DEPS})
 
 set_target_properties(${the_target} PROPERTIES
                       DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
@@ -33,4 +33,10 @@ if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${the_target} PROPERTIES FOLDER "applications")
 endif()
 
-install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)
+if(INSTALL_CREATE_DISTRIB)
+  if(BUILD_SHARED_LIBS)
+    install(TARGETS ${the_target} RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} CONFIGURATIONS Release COMPONENT dev)
+  endif()
+else()
+  install(TARGETS ${the_target} RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT dev)
+endif()

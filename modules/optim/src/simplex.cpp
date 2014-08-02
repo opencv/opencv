@@ -1,6 +1,139 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the OpenCV Foundation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
 #include "precomp.hpp"
 #include "debug.hpp"
 #include "opencv2/core/core_c.h"
+
+/*
+
+****Error Message********************************************************************************************************************
+
+Downhill Simplex method in OpenCV dev 3.0.0 getting this error:
+
+OpenCV Error: Assertion failed (dims <= 2 && data && (unsigned)i0 < (unsigned)(s ize.p[0] * size.p[1])
+&& elemSize() == (((((DataType<_Tp>::type) & ((512 - 1) << 3)) >> 3) + 1) << ((((sizeof(size_t)/4+1)16384|0x3a50)
+>> ((DataType<_Tp>::typ e) & ((1 << 3) - 1))2) & 3))) in cv::Mat::at,
+file C:\builds\master_PackSlave-w in32-vc12-shared\opencv\modules\core\include\opencv2/core/mat.inl.hpp, line 893
+
+****Problem and Possible Fix*********************************************************************************************************
+
+DownhillSolverImpl::innerDownhillSimplex something looks broken here:
+Mat_<double> coord_sum(1,ndim,0.0),buf(1,ndim,0.0),y(1,ndim,0.0);
+nfunk = 0;
+for(i=0;i<ndim+1;++i)
+{
+y(i) = f->calc(p[i]);
+}
+
+y has only ndim elements, while the loop goes over ndim+1
+
+Edited the following for possible fix:
+
+Replaced y(1,ndim,0.0) ------> y(1,ndim+1,0.0)
+
+***********************************************************************************************************************************
+
+The code below was used in tesing the source code.
+Created by @SareeAlnaghy
+
+#include <iostream>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
+#include <opencv2\optim\optim.hpp>
+
+using namespace std;
+using namespace cv;
+
+void test(Ptr<optim::DownhillSolver> solver, Ptr<optim::Solver::Function> ptr_F, Mat &P, Mat &step)
+{
+try{
+
+solver->setFunction(ptr_F);
+solver->setInitStep(step);
+double res = solver->minimize(P);
+
+cout << "res " << res << endl;
+}
+catch (exception e)
+{
+cerr << "Error:: " << e.what() << endl;
+}
+}
+
+int main()
+{
+
+class DistanceToLines :public optim::Solver::Function {
+public:
+double calc(const double* x)const{
+
+return x[0] * x[0] + x[1] * x[1];
+
+}
+};
+
+Mat P = (Mat_<double>(1, 2) << 1.0, 1.0);
+Mat step = (Mat_<double>(2, 1) << -0.5, 0.5);
+
+Ptr<optim::Solver::Function> ptr_F(new DistanceToLines());
+Ptr<optim::DownhillSolver> solver = optim::createDownhillSolver();
+
+test(solver, ptr_F, P, step);
+
+system("pause");
+return 0;
+}
+
+****Suggesttion for imporving Simplex implentation***************************************************************************************
+
+Currently the downhilll simplex method outputs the function value that is minimized. It should also return the coordinate points where the
+function is minimized. This is very useful in many applications such as using back projection methods to find a point of intersection of
+multiple lines in three dimensions as not all lines intersect in three dimensions.
+
+*/
+
+
+
+
 
 namespace cv{namespace optim{
 
@@ -19,6 +152,8 @@ namespace cv{namespace optim{
         Ptr<Solver::Function> _Function;
         TermCriteria _termcrit;
         Mat _step;
+        Mat_<double> buf_x;
+
     private:
         inline void createInitialSimplex(Mat_<double>& simplex,Mat& step);
         inline double innerDownhillSimplex(cv::Mat_<double>& p,double MinRange,double MinError,int& nfunk,
@@ -81,7 +216,7 @@ namespace cv{namespace optim{
         double res;
         int i,ihi,ilo,inhi,j,mpts=ndim+1;
         double error, range,ysave,ytry;
-        Mat_<double> coord_sum(1,ndim,0.0),buf(1,ndim,0.0),y(1,ndim,0.0);
+        Mat_<double> coord_sum(1,ndim,0.0),buf(1,ndim,0.0),y(1,ndim+1,0.0);
 
         nfunk = 0;
 
@@ -209,7 +344,10 @@ namespace cv{namespace optim{
         Mat_<double> proxy_x;
 
         if(x_mat.rows>1){
-            proxy_x=x_mat.t();
+            buf_x.create(1,_step.cols);
+            Mat_<double> proxy(_step.cols,1,(double*)buf_x.data);
+            x_mat.copyTo(proxy);
+            proxy_x=buf_x;
         }else{
             proxy_x=x_mat;
         }

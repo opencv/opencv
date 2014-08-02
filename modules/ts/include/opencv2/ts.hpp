@@ -4,6 +4,8 @@
 #include "opencv2/core/cvdef.h"
 #include <stdarg.h> // for va_list
 
+#include "cvconfig.h"
+
 #ifdef HAVE_WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif
@@ -23,6 +25,7 @@
 #define GTEST_DONT_DEFINE_TEST      0
 
 #include "opencv2/ts/ts_gtest.h"
+#include "opencv2/ts/ts_ext.hpp"
 
 #ifndef GTEST_USES_SIMPLE_RE
 #  define GTEST_USES_SIMPLE_RE 0
@@ -45,6 +48,8 @@ using cv::Scalar;
 using cv::Size;
 using cv::Point;
 using cv::Rect;
+using cv::InputArray;
+using cv::noArray;
 
 class CV_EXPORTS TS;
 
@@ -122,9 +127,10 @@ CV_EXPORTS void initUndistortMap( const Mat& a, const Mat& k, Size sz, Mat& mapx
 
 CV_EXPORTS void minMaxLoc(const Mat& src, double* minval, double* maxval,
                           vector<int>* minloc, vector<int>* maxloc, const Mat& mask=Mat());
-CV_EXPORTS double norm(const Mat& src, int normType, const Mat& mask=Mat());
-CV_EXPORTS double norm(const Mat& src1, const Mat& src2, int normType, const Mat& mask=Mat());
+CV_EXPORTS double norm(InputArray src, int normType, InputArray mask=noArray());
+CV_EXPORTS double norm(InputArray src1, InputArray src2, int normType, InputArray mask=noArray());
 CV_EXPORTS Scalar mean(const Mat& src, const Mat& mask=Mat());
+CV_EXPORTS double PSNR(InputArray src1, InputArray src2);
 
 CV_EXPORTS bool cmpUlps(const Mat& data, const Mat& refdata, int expMaxDiff, double* realMaxDiff, vector<int>* idx);
 
@@ -250,7 +256,7 @@ struct TestInfo
     // pointer to the test
     BaseTest* test;
 
-    // failure code (CV_FAIL*)
+    // failure code (TS::FAIL_*)
     int code;
 
     // seed value right before the data for the failed test case is prepared.
@@ -324,7 +330,7 @@ public:
     virtual void set_gtest_status();
 
     // test error codes
-    enum
+    enum FailureCode
     {
         // everything is Ok
         OK=0,
@@ -374,7 +380,7 @@ public:
         // processing time (in this case there should be possibility to interrupt such a function
         FAIL_HANG=-13,
 
-        // unexpected responce on passing bad arguments to the tested function
+        // unexpected response on passing bad arguments to the tested function
         // (the function crashed, proceed succesfully (while it should not), or returned
         // error code that is different from what is expected)
         FAIL_BAD_ARG_CHECK=-14,
@@ -397,7 +403,7 @@ public:
     RNG& get_rng() { return rng; }
 
     // returns the current error code
-    int get_err_code() { return current_test_info.code; }
+    TS::FailureCode get_err_code() { return TS::FailureCode(current_test_info.code); }
 
     // returns the test extensivity scale
     double get_test_case_count_scale() { return params.test_case_count_scale; }
@@ -405,7 +411,7 @@ public:
     const string& get_data_path() const { return data_path; }
 
     // returns textual description of failure code
-    static string str_from_code( int code );
+    static string str_from_code( const TS::FailureCode code );
 
 protected:
 
@@ -538,12 +544,36 @@ CV_EXPORTS void smoothBorder(Mat& img, const Scalar& color, int delta = 3);
 CV_EXPORTS void printVersionInfo(bool useStdOut = true);
 } //namespace cvtest
 
-#define CV_TEST_MAIN(resourcesubdir) \
+#ifndef __CV_TEST_EXEC_ARGS
+#if defined(_MSC_VER) && (_MSC_VER <= 1400)
+#define __CV_TEST_EXEC_ARGS(...)    \
+    while (++argc >= (--argc,-1)) {__VA_ARGS__; break;} /*this ugly construction is needed for VS 2005*/
+#else
+#define __CV_TEST_EXEC_ARGS(...)    \
+    __VA_ARGS__;
+#endif
+#endif
+
+#ifdef HAVE_OPENCL
+namespace cvtest { namespace ocl {
+void dumpOpenCLDevice();
+} }
+#define TEST_DUMP_OCL_INFO cvtest::ocl::dumpOpenCLDevice();
+#else
+#define TEST_DUMP_OCL_INFO
+#endif
+
+void parseCustomOptions(int argc, char **argv);
+
+#define CV_TEST_MAIN(resourcesubdir, ...) \
 int main(int argc, char **argv) \
 { \
     cvtest::TS::ptr()->init(resourcesubdir); \
     ::testing::InitGoogleTest(&argc, argv); \
-    cvtest::printVersionInfo();\
+    cvtest::printVersionInfo(); \
+    __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
+    TEST_DUMP_OCL_INFO \
+    parseCustomOptions(argc, argv); \
     return RUN_ALL_TESTS(); \
 }
 

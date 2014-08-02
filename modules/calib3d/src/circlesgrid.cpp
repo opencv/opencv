@@ -218,6 +218,7 @@ void CirclesGridClusterFinder::findCorners(const std::vector<cv::Point2f> &hull2
 
 void CirclesGridClusterFinder::findOutsideCorners(const std::vector<cv::Point2f> &corners, std::vector<cv::Point2f> &outsideCorners)
 {
+  CV_Assert(!corners.empty());
   outsideCorners.clear();
   //find two pairs of the most nearest corners
   int i, j, n = (int)corners.size();

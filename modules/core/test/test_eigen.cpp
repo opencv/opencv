@@ -175,7 +175,7 @@ bool Core_EigenTest::check_pair_count(const cv::Mat& src, const cv::Mat& evalues
     {
         std::cout << endl; std::cout << "Checking sizes of eigen values matrix " << evalues << "..." << endl;
         std::cout << "Number of rows: " << evalues.rows << "   Number of cols: " << evalues.cols << endl;
-        std:: cout << "Size of src symmetric matrix: " << src.rows << " * " << src.cols << endl; std::cout << endl;
+        std::cout << "Size of src symmetric matrix: " << src.rows << " * " << src.cols << endl; std::cout << endl;
         CV_Error(CORE_EIGEN_ERROR_COUNT, MESSAGE_ERROR_COUNT);
         return false;
     }
@@ -187,7 +187,7 @@ bool Core_EigenTest::check_pair_count(const cv::Mat& src, const cv::Mat& evalues
     int n = src.rows, s = sign(high_index);
     int right_eigen_pair_count = n - max<int>(0, low_index) - ((int)((n/2.0)*(s*s-s)) + (1+s-s*s)*(n - (high_index+1)));
 
-    if (!((evectors.rows == right_eigen_pair_count) && (evectors.cols == right_eigen_pair_count)))
+    if (!(evectors.rows == right_eigen_pair_count && evectors.cols == right_eigen_pair_count))
     {
         std::cout << endl; std::cout << "Checking sizes of eigen vectors matrix " << evectors << "..." << endl;
         std::cout << "Number of rows: " << evectors.rows << "   Number of cols: " << evectors.cols << endl;
@@ -196,7 +196,7 @@ bool Core_EigenTest::check_pair_count(const cv::Mat& src, const cv::Mat& evalues
         return false;
     }
 
-    if (!((evalues.rows == right_eigen_pair_count) && (evalues.cols == 1)))
+    if (!(evalues.rows == right_eigen_pair_count && evalues.cols == 1))
     {
         std::cout << endl; std::cout << "Checking sizes of eigen values matrix " << evalues << "..." << endl;
         std::cout << "Number of rows: " << evalues.rows << "   Number of cols: " << evalues.cols << endl;
@@ -212,9 +212,9 @@ void Core_EigenTest::print_information(const size_t norm_idx, const cv::Mat& src
 {
     switch (NORM_TYPE[norm_idx])
     {
-    case cv::NORM_L1: {std::cout << "L1"; break;}
-    case cv::NORM_L2: {std::cout << "L2"; break;}
-    case cv::NORM_INF: {std::cout << "INF"; break;}
+    case cv::NORM_L1: std::cout << "L1"; break;
+    case cv::NORM_L2: std::cout << "L2"; break;
+    case cv::NORM_INF: std::cout << "INF"; break;
     default: break;
     }
 
@@ -234,7 +234,7 @@ bool Core_EigenTest::check_orthogonality(const cv::Mat& U)
 
     for (int i = 0; i < COUNT_NORM_TYPES; ++i)
     {
-        double diff = cv::norm(UUt, E, NORM_TYPE[i]);
+        double diff = cvtest::norm(UUt, E, NORM_TYPE[i]);
         if (diff > eps_vec)
         {
             std::cout << endl; std::cout << "Checking orthogonality of matrix " << U << ": ";
@@ -271,12 +271,12 @@ bool Core_EigenTest::check_pairs_order(const cv::Mat& eigen_values)
             for (int i = 0; i < (int)(eigen_values.total() - 1); ++i)
                 if (!(eigen_values.at<double>(i, 0) > eigen_values.at<double>(i+1, 0)))
                 {
-                std::cout << endl; std::cout << "Checking order of eigen values vector " << eigen_values << "..." << endl;
-                std::cout << "Pair of indexes with non ascending of eigen values: (" << i << ", " << i+1 << ")." << endl;
-                std::cout << endl;
-                CV_Error(CORE_EIGEN_ERROR_ORDER, "Eigen values are not sorted in ascending order.");
-                return false;
-            }
+                    std::cout << endl; std::cout << "Checking order of eigen values vector " << eigen_values << "..." << endl;
+                    std::cout << "Pair of indexes with non ascending of eigen values: (" << i << ", " << i+1 << ")." << endl;
+                    std::cout << endl;
+                    CV_Error(CORE_EIGEN_ERROR_ORDER, "Eigen values are not sorted in ascending order.");
+                    return false;
+                }
 
             break;
         }
@@ -296,11 +296,14 @@ bool Core_EigenTest::test_pairs(const cv::Mat& src)
 
     cv::eigen(src, eigen_values, eigen_vectors);
 
-    if (!check_pair_count(src, eigen_values, eigen_vectors)) return false;
+    if (!check_pair_count(src, eigen_values, eigen_vectors))
+        return false;
 
-    if (!check_orthogonality (eigen_vectors)) return false;
+    if (!check_orthogonality (eigen_vectors))
+        return false;
 
-    if (!check_pairs_order(eigen_values)) return false;
+    if (!check_pairs_order(eigen_values))
+        return false;
 
     cv::Mat eigen_vectors_t; cv::transpose(eigen_vectors, eigen_vectors_t);
 
@@ -340,7 +343,7 @@ bool Core_EigenTest::test_pairs(const cv::Mat& src)
 
     for (int i = 0; i < COUNT_NORM_TYPES; ++i)
     {
-        double diff = cv::norm(disparity, NORM_TYPE[i]);
+        double diff = cvtest::norm(disparity, NORM_TYPE[i]);
         if (diff > eps_vec)
         {
             std::cout << endl; std::cout << "Checking accuracy of eigen vectors computing for matrix " << src << ": ";
@@ -369,7 +372,7 @@ bool Core_EigenTest::test_values(const cv::Mat& src)
 
     for (int i = 0; i < COUNT_NORM_TYPES; ++i)
     {
-        double diff = cv::norm(eigen_values_1, eigen_values_2, NORM_TYPE[i]);
+        double diff = cvtest::norm(eigen_values_1, eigen_values_2, NORM_TYPE[i]);
         if (diff > eps_val)
         {
             std::cout << endl; std::cout << "Checking accuracy of eigen values computing for matrix " << src << ": ";

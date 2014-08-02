@@ -5,6 +5,7 @@
  * @author OpenCV team
  */
 
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 using namespace cv;
@@ -24,17 +25,14 @@ Mat image;
  */
 static void on_trackbar( int, void* )
 {
-   Mat new_image = Mat::zeros( image.size(), image.type() );
+    Mat new_image = Mat::zeros( image.size(), image.type() );
 
-   for( int y = 0; y < image.rows; y++ )
-      { for( int x = 0; x < image.cols; x++ )
-           { for( int c = 0; c < 3; c++ )
-                {
-          new_image.at<Vec3b>(y,x)[c] = saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta );
-                }
-       }
-      }
-   imshow("New Image", new_image);
+    for( int y = 0; y < image.rows; y++ )
+        for( int x = 0; x < image.cols; x++ )
+            for( int c = 0; c < 3; c++ )
+                new_image.at<Vec3b>(y,x)[c] = saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta );
+
+    imshow("New Image", new_image);
 }
 
 

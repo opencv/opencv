@@ -66,6 +66,7 @@ class cv::cuda::Stream::Impl
 {
 public:
     cudaStream_t stream;
+    Ptr<StackAllocator> stackAllocator_;
 
     Impl();
     Impl(cudaStream_t stream);
@@ -73,17 +74,26 @@ public:
     ~Impl();
 };
 
+cv::cuda::BufferPool::BufferPool(Stream& stream) : allocator_(stream.impl_->stackAllocator_.get())
+{
+}
+
 cv::cuda::Stream::Impl::Impl() : stream(0)
 {
     cudaSafeCall( cudaStreamCreate(&stream) );
+
+    stackAllocator_ = makePtr<StackAllocator>(stream);
 }
 
 cv::cuda::Stream::Impl::Impl(cudaStream_t stream_) : stream(stream_)
 {
+    stackAllocator_ = makePtr<StackAllocator>(stream);
 }
 
 cv::cuda::Stream::Impl::~Impl()
 {
+    stackAllocator_.release();
+
     if (stream)
         cudaStreamDestroy(stream);
 }
@@ -180,10 +190,22 @@ void cv::cuda::Stream::enqueueHostCallback(StreamCallback callback, void* userDa
 #endif
 }
 
+namespace
+{
+    bool default_stream_is_initialized;
+    Mutex mtx;
+    Ptr<Stream> default_stream;
+}
+
 Stream& cv::cuda::Stream::Null()
 {
-    static Stream s(Ptr<Impl>(new Impl(0)));
-    return s;
+    AutoLock lock(mtx);
+    if (!default_stream_is_initialized)
+    {
+        default_stream = Ptr<Stream>(new Stream(Ptr<Impl>(new Impl(0))));
+        default_stream_is_initialized = true;
+    }
+    return *default_stream;
 }
 
 cv::cuda::Stream::operator bool_type() const
@@ -197,7 +219,7 @@ cv::cuda::Stream::operator bool_type() const
 
 
 ////////////////////////////////////////////////////////////////
-// Stream
+// Event
 
 #ifndef HAVE_CUDA
 

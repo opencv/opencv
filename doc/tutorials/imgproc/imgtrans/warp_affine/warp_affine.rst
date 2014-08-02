@@ -71,7 +71,7 @@ How do we get an Affine Transformation?
 
    a. We know both :math:`X` and `T` and we also know that they are related. Then our job is to find :math:`M`
 
-   b. We know :math:`M` and :math:'X`. To obtain :math:`T` we only need to apply :math:`T = M \cdot X`. Our information for :math:`M` may be explicit (i.e. have the 2-by-3 matrix) or it can come as a geometric relation between points.
+   b. We know :math:`M` and :math:`X`. To obtain :math:`T` we only need to apply :math:`T = M \cdot X`. Our information for :math:`M` may be explicit (i.e. have the 2-by-3 matrix) or it can come as a geometric relation between points.
 
 2. Let's explain a little bit better (b). Since :math:`M` relates 02 images, we can analyze the simplest case in which it relates three points in both images. Look at the figure below:
 
@@ -93,7 +93,7 @@ Code
    * Applies a Rotation to the image after being transformed. This rotation is with respect to the image center
    * Waits until the user exits the program
 
-#. The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp>`_
+#. The tutorial code's is shown lines below. You can also download it from `here <https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp>`_
 
 .. code-block:: cpp
 

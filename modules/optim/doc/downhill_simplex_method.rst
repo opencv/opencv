@@ -8,14 +8,15 @@ optim::DownhillSolver
 
 .. ocv:class:: optim::DownhillSolver
 
-This class is used to perform the non-linear non-constrained *minimization* of a function, given on an *n*-dimensional Euclidean space,
+This class is used to perform the non-linear non-constrained *minimization* of a function, defined on an *n*-dimensional Euclidean space,
 using the **Nelder-Mead method**, also known as **downhill simplex method**. The basic idea about the method can be obtained from
 (`http://en.wikipedia.org/wiki/Nelder-Mead\_method <http://en.wikipedia.org/wiki/Nelder-Mead_method>`_). It should be noted, that
 this method, although deterministic, is rather a heuristic and therefore may converge to a local minima, not necessary a global one.
 It is iterative optimization technique, which at each step uses an information about the values of a function evaluated only at
 *n+1* points, arranged as a *simplex* in *n*-dimensional space (hence the second name of the method). At each step new point is
 chosen to evaluate function at, obtained value is compared with previous ones and based on this information simplex changes it's shape
-, slowly moving to the local minimum.
+, slowly moving to the local minimum. Thus this method is using *only* function values to make decision, on contrary to, say, Nonlinear
+Conjugate Gradient method (which is also implemented in ``optim``).
 
 Algorithm stops when the number of function evaluations done exceeds ``termcrit.maxCount``, when the function values at the
 vertices of simplex are within ``termcrit.epsilon`` range or simplex becomes so small that it
@@ -30,9 +31,9 @@ positive integer ``termcrit.maxCount`` and positive non-integer ``termcrit.epsil
         class CV_EXPORTS Function
         {
         public:
-           virtual ~Function() {}
-           //! ndim - dimensionality
-           virtual double calc(const double* x) const = 0;
+            virtual ~Function() {}
+            virtual double calc(const double* x) const = 0;
+            virtual void getGradient(const double* /*x*/,double* /*grad*/) {}
         };
 
         virtual Ptr<Function> getFunction() const = 0;
@@ -150,7 +151,7 @@ optim::createDownhillSolver
 This function returns the reference to the ready-to-use ``DownhillSolver`` object. All the parameters are optional, so this procedure can be called
 even without parameters at all. In this case, the default values will be used. As default value for terminal criteria are the only sensible ones,
 ``DownhillSolver::setFunction()`` and ``DownhillSolver::setInitStep()`` should be called upon the obtained object, if the respective parameters
-were not given to ``createDownhillSolver()``. Otherwise, the two ways (give parameters to ``createDownhillSolver()`` or miss the out and call the
+were not given to ``createDownhillSolver()``. Otherwise, the two ways (give parameters to ``createDownhillSolver()`` or miss them out and call the
 ``DownhillSolver::setFunction()`` and ``DownhillSolver::setInitStep()``) are absolutely equivalent (and will drop the same errors in the same way,
 should invalid input be detected).
 

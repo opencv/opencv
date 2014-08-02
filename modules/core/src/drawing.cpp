@@ -1568,9 +1568,11 @@ PolyLine( Mat& img, const Point* v, int count, bool is_closed,
 *                              External functions                                        *
 \****************************************************************************************/
 
-void line( Mat& img, Point pt1, Point pt2, const Scalar& color,
+void line( InputOutputArray _img, Point pt1, Point pt2, const Scalar& color,
            int thickness, int line_type, int shift )
 {
+    Mat img = _img.getMat();
+
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
 
@@ -1582,10 +1584,30 @@ void line( Mat& img, Point pt1, Point pt2, const Scalar& color,
     ThickLine( img, pt1, pt2, buf, thickness, line_type, 3, shift );
 }
 
-void rectangle( Mat& img, Point pt1, Point pt2,
+void arrowedLine(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
+           int thickness, int line_type, int shift, double tipLength)
+{
+    const double tipSize = norm(pt1-pt2)*tipLength; // Factor to normalize the size of the tip depending on the length of the arrow
+
+    line(img, pt1, pt2, color, thickness, line_type, shift);
+
+    const double angle = atan2( (double) pt1.y - pt2.y, (double) pt1.x - pt2.x );
+
+    Point p(cvRound(pt2.x + tipSize * cos(angle + CV_PI / 4)),
+        cvRound(pt2.y + tipSize * sin(angle + CV_PI / 4)));
+    line(img, p, pt2, color, thickness, line_type, shift);
+
+    p.x = cvRound(pt2.x + tipSize * cos(angle - CV_PI / 4));
+    p.y = cvRound(pt2.y + tipSize * sin(angle - CV_PI / 4));
+    line(img, p, pt2, color, thickness, line_type, shift);
+}
+
+void rectangle( InputOutputArray _img, Point pt1, Point pt2,
                 const Scalar& color, int thickness,
                 int lineType, int shift )
 {
+    Mat img = _img.getMat();
+
     if( lineType == CV_AA && img.depth() != CV_8U )
         lineType = 8;
 
@@ -1622,9 +1644,11 @@ void rectangle( Mat& img, Rect rec,
 }
 
 
-void circle( Mat& img, Point center, int radius,
+void circle( InputOutputArray _img, Point center, int radius,
              const Scalar& color, int thickness, int line_type, int shift )
 {
+    Mat img = _img.getMat();
+
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
 
@@ -1647,10 +1671,12 @@ void circle( Mat& img, Point center, int radius,
 }
 
 
-void ellipse( Mat& img, Point center, Size axes,
+void ellipse( InputOutputArray _img, Point center, Size axes,
               double angle, double start_angle, double end_angle,
               const Scalar& color, int thickness, int line_type, int shift )
 {
+    Mat img = _img.getMat();
+
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
 
@@ -1672,9 +1698,11 @@ void ellipse( Mat& img, Point center, Size axes,
                _end_angle, buf, thickness, line_type );
 }
 
-void ellipse(Mat& img, const RotatedRect& box, const Scalar& color,
+void ellipse(InputOutputArray _img, const RotatedRect& box, const Scalar& color,
              int thickness, int lineType)
 {
+    Mat img = _img.getMat();
+
     if( lineType == CV_AA && img.depth() != CV_8U )
         lineType = 8;
 
@@ -1918,11 +1946,12 @@ static const int* getFontData(int fontFace)
 }
 
 
-void putText( Mat& img, const String& text, Point org,
+void putText( InputOutputArray _img, const String& text, Point org,
               int fontFace, double fontScale, Scalar color,
               int thickness, int line_type, bool bottomLeftOrigin )
 
 {
+    Mat img = _img.getMat();
     const int* ascii = getFontData(fontFace);
 
     double buf[4];

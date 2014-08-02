@@ -1,4 +1,4 @@
-SET(OPENCV_CUDA_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc opencv_highgui
+SET(OPENCV_CUDA_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc opencv_imgcodecs opencv_videoio opencv_highgui
                                      opencv_ml opencv_video opencv_objdetect opencv_features2d
                                      opencv_calib3d opencv_legacy opencv_contrib opencv_cuda
                                      opencv_nonfree opencv_softcascade opencv_superres
@@ -49,8 +49,8 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
 
-    if(HAVE_CUDA)
-        target_link_libraries(${the_target} ${CUDA_CUDA_LIBRARY})
+    if(HAVE_CUDA AND NOT ANDROID)
+      target_link_libraries(${the_target} ${CUDA_CUDA_LIBRARY})
     endif()
 
     if(HAVE_opencv_nonfree)
@@ -60,7 +60,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
       target_link_libraries(${the_target} opencv_cudacodec)
     endif()
 
-    if(HAVE_OPENCL)
+    if(HAVE_opencv_ocl)
       target_link_libraries(${the_target} opencv_ocl)
     endif()
 
@@ -76,7 +76,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
       if(MSVC AND NOT BUILD_SHARED_LIBS)
         set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
       endif()
-      install(TARGETS ${the_target} RUNTIME DESTINATION "samples/${project}" COMPONENT main)
+      install(TARGETS ${the_target} RUNTIME DESTINATION "${OPENCV_SAMPLES_BIN_INSTALL_PATH}/${project}" COMPONENT samples)
     endif()
   ENDMACRO()
 
@@ -91,9 +91,9 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   include("performance/CMakeLists.txt")
 endif()
 
-if (INSTALL_C_EXAMPLES AND NOT WIN32)
+if(INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB install_list *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
   install(FILES ${install_list}
-          DESTINATION share/OpenCV/samples/${project}
-          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
+          DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/gpu
+          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
 endif()

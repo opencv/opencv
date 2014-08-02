@@ -25,11 +25,13 @@ IF(CMAKE_COMPILER_IS_GNUCXX)
 
     SET(_PCH_include_prefix "-I")
     SET(_PCH_isystem_prefix "-isystem")
+    SET(_PCH_define_prefix "-D")
 
 ELSEIF(CMAKE_GENERATOR MATCHES "^Visual.*$")
     SET(PCHSupport_FOUND TRUE)
     SET(_PCH_include_prefix "/I")
     SET(_PCH_isystem_prefix "/I")
+    SET(_PCH_define_prefix "/D")
 ELSE()
     SET(PCHSupport_FOUND FALSE)
 ENDIF()
@@ -243,6 +245,14 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
       )
 
     _PCH_GET_COMPILE_FLAGS(_compile_FLAGS)
+
+    get_target_property(type ${_targetName} TYPE)
+    if(type STREQUAL "SHARED_LIBRARY")
+        get_target_property(__DEFINES ${_targetName} DEFINE_SYMBOL)
+        if(NOT __DEFINES MATCHES __DEFINES-NOTFOUND)
+            list(APPEND _compile_FLAGS "${_PCH_define_prefix}${__DEFINES}")
+        endif()
+    endif()
 
     #MESSAGE("_compile_FLAGS: ${_compile_FLAGS}")
     #message("COMMAND ${CMAKE_CXX_COMPILER}	${_compile_FLAGS} -x c++-header -o ${_output} ${_input}")

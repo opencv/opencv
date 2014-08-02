@@ -303,7 +303,7 @@ CVAPI(int)  cvFindContours( CvArr* image, CvMemStorage* storage, CvSeq** first_c
                             int method CV_DEFAULT(CV_CHAIN_APPROX_SIMPLE),
                             CvPoint offset CV_DEFAULT(cvPoint(0,0)));
 
-/* Initalizes contour retrieving process.
+/* Initializes contour retrieving process.
    Calls cvStartFindContours.
    Calls cvFindNextContour until null pointer is returned
    or some other condition becomes true.
@@ -333,7 +333,7 @@ CVAPI(CvSeq*) cvApproxChains( CvSeq* src_seq, CvMemStorage* storage,
                             int  minimal_perimeter CV_DEFAULT(0),
                             int  recursive CV_DEFAULT(0));
 
-/* Initalizes Freeman chain reader.
+/* Initializes Freeman chain reader.
    The reader is used to iteratively get coordinates of all the chain points.
    If the Freeman codes should be read as is, a simple sequence reader should be used */
 CVAPI(void) cvStartReadChainPoints( CvChain* chain, CvChainPtReader* reader );
@@ -364,7 +364,7 @@ CV_INLINE double cvContourPerimeter( const void* contour )
 }
 
 
-/* Calculates contour boundning rectangle (update=1) or
+/* Calculates contour bounding rectangle (update=1) or
    just retrieves pre-calculated rectangle (update=0) */
 CVAPI(CvRect)  cvBoundingRect( CvArr* points, int update CV_DEFAULT(0) );
 
@@ -572,7 +572,7 @@ CVAPI(void)  cvCornerMinEigenVal( const CvArr* image, CvArr* eigenval,
 
 /* Harris corner detector:
    Calculates det(M) - k*(trace(M)^2), where M is 2x2 gradient covariation matrix for each pixel */
-CVAPI(void)  cvCornerHarris( const CvArr* image, CvArr* harris_responce,
+CVAPI(void)  cvCornerHarris( const CvArr* image, CvArr* harris_response,
                              int block_size, int aperture_size CV_DEFAULT(3),
                              double k CV_DEFAULT(0.04) );
 
@@ -601,7 +601,8 @@ CVAPI(void)  cvGoodFeaturesToTrack( const CvArr* image, CvArr* eig_image,
    param1 ~ srn, param2 ~ stn - for multi-scale */
 CVAPI(CvSeq*)  cvHoughLines2( CvArr* image, void* line_storage, int method,
                               double rho, double theta, int threshold,
-                              double param1 CV_DEFAULT(0), double param2 CV_DEFAULT(0));
+                              double param1 CV_DEFAULT(0), double param2 CV_DEFAULT(0),
+                              double min_theta CV_DEFAULT(0), double max_theta CV_DEFAULT(CV_PI));
 
 /* Finds circles in the image */
 CVAPI(CvSeq*) cvHoughCircles( CvArr* image, void* circle_storage,

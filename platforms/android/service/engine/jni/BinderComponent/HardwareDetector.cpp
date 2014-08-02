@@ -91,6 +91,10 @@ int GetCpuID()
         {
             result |= FEATURES_HAS_NEON2;
         }
+        if (features.end() != features.find(CPU_INFO_VFPV4_STR))
+        {
+            result |= FEATURES_HAS_VFPv4;
+        }
         if (features.end() != features.find(CPU_INFO_VFPV3_STR))
         {
             if (features.end () != features.find(CPU_INFO_VFPV3D16_STR))

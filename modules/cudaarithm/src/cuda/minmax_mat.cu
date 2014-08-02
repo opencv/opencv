@@ -40,189 +40,204 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/transform.hpp"
-#include "opencv2/core/cuda/saturate_cast.hpp"
-#include "opencv2/core/cuda/simd_functions.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-#include "arithm_func_traits.hpp"
+#error "opencv_cudev is required"
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#else
 
-//////////////////////////////////////////////////////////////////////////
-// min
+#include "opencv2/cudev.hpp"
 
-namespace arithm
+using namespace cv::cudev;
+
+void minMaxMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double, Stream& stream, int op);
+
+void minMaxScalar(const GpuMat& src, cv::Scalar value, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int op);
+
+///////////////////////////////////////////////////////////////////////
+/// minMaxMat
+
+namespace
 {
-    struct VMin4 : binary_function<uint, uint, uint>
+    template <template <typename> class Op, typename T>
+    void minMaxMat_v1(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
     {
-        __device__ __forceinline__ uint operator ()(uint a, uint b) const
-        {
-            return vmin4(a, b);
-        }
+        gridTransformBinary(globPtr<T>(src1), globPtr<T>(src2), globPtr<T>(dst), Op<T>(), stream);
+    }
 
-        __host__ __device__ __forceinline__ VMin4() {}
-        __host__ __device__ __forceinline__ VMin4(const VMin4&) {}
-    };
-
-    struct VMin2 : binary_function<uint, uint, uint>
+    struct MinOp2 : binary_function<uint, uint, uint>
     {
         __device__ __forceinline__ uint operator ()(uint a, uint b) const
         {
             return vmin2(a, b);
         }
-
-        __host__ __device__ __forceinline__ VMin2() {}
-        __host__ __device__ __forceinline__ VMin2(const VMin2&) {}
-    };
-}
-
-namespace cv { namespace cuda { namespace device
-{
-    template <> struct TransformFunctorTraits< arithm::VMin4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
-    {
     };
 
-    template <> struct TransformFunctorTraits< arithm::VMin2 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
-    {
-    };
-
-    template <typename T> struct TransformFunctorTraits< minimum<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
-    {
-    };
-
-    template <typename T> struct TransformFunctorTraits< binder2nd< minimum<T> > > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
-    {
-    };
-}}}
-
-namespace arithm
-{
-    void minMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
-    {
-        device::transform(src1, src2, dst, VMin4(), WithOutMask(), stream);
-    }
-
-    void minMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
-    {
-        device::transform(src1, src2, dst, VMin2(), WithOutMask(), stream);
-    }
-
-    template <typename T> void minMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
-    {
-        device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, minimum<T>(), WithOutMask(), stream);
-    }
-
-    template void minMat<uchar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void minMat<schar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void minMat<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void minMat<short >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void minMat<int   >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void minMat<float >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void minMat<double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-
-    template <typename T> void minScalar(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream)
-    {
-        device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::cuda::device::bind2nd(minimum<T>(), src2), WithOutMask(), stream);
-    }
-
-    template void minScalar<uchar >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void minScalar<schar >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void minScalar<ushort>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void minScalar<short >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void minScalar<int   >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void minScalar<float >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void minScalar<double>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-}
-
-//////////////////////////////////////////////////////////////////////////
-// max
-
-namespace arithm
-{
-    struct VMax4 : binary_function<uint, uint, uint>
-    {
-        __device__ __forceinline__ uint operator ()(uint a, uint b) const
-        {
-            return vmax4(a, b);
-        }
-
-        __host__ __device__ __forceinline__ VMax4() {}
-        __host__ __device__ __forceinline__ VMax4(const VMax4&) {}
-    };
-
-    struct VMax2 : binary_function<uint, uint, uint>
+    struct MaxOp2 : binary_function<uint, uint, uint>
     {
         __device__ __forceinline__ uint operator ()(uint a, uint b) const
         {
             return vmax2(a, b);
         }
-
-        __host__ __device__ __forceinline__ VMax2() {}
-        __host__ __device__ __forceinline__ VMax2(const VMax2&) {}
     };
+
+    template <class Op2>
+    void minMaxMat_v2(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
+    {
+        const int vcols = src1.cols >> 1;
+
+        GlobPtrSz<uint> src1_ = globPtr((uint*) src1.data, src1.step, src1.rows, vcols);
+        GlobPtrSz<uint> src2_ = globPtr((uint*) src2.data, src2.step, src1.rows, vcols);
+        GlobPtrSz<uint> dst_ = globPtr((uint*) dst.data, dst.step, src1.rows, vcols);
+
+        gridTransformBinary(src1_, src2_, dst_, Op2(), stream);
+    }
+
+    struct MinOp4 : binary_function<uint, uint, uint>
+    {
+        __device__ __forceinline__ uint operator ()(uint a, uint b) const
+        {
+            return vmin4(a, b);
+        }
+    };
+
+    struct MaxOp4 : binary_function<uint, uint, uint>
+    {
+        __device__ __forceinline__ uint operator ()(uint a, uint b) const
+        {
+            return vmax4(a, b);
+        }
+    };
+
+    template <class Op4>
+    void minMaxMat_v4(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
+    {
+        const int vcols = src1.cols >> 2;
+
+        GlobPtrSz<uint> src1_ = globPtr((uint*) src1.data, src1.step, src1.rows, vcols);
+        GlobPtrSz<uint> src2_ = globPtr((uint*) src2.data, src2.step, src1.rows, vcols);
+        GlobPtrSz<uint> dst_ = globPtr((uint*) dst.data, dst.step, src1.rows, vcols);
+
+        gridTransformBinary(src1_, src2_, dst_, Op4(), stream);
+    }
 }
 
-namespace cv { namespace cuda { namespace device
+void minMaxMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double, Stream& stream, int op)
 {
-    template <> struct TransformFunctorTraits< arithm::VMax4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
+    typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream);
+    static const func_t funcs_v1[2][7] =
     {
+        {
+            minMaxMat_v1<minimum, uchar>,
+            minMaxMat_v1<minimum, schar>,
+            minMaxMat_v1<minimum, ushort>,
+            minMaxMat_v1<minimum, short>,
+            minMaxMat_v1<minimum, int>,
+            minMaxMat_v1<minimum, float>,
+            minMaxMat_v1<minimum, double>
+        },
+        {
+            minMaxMat_v1<maximum, uchar>,
+            minMaxMat_v1<maximum, schar>,
+            minMaxMat_v1<maximum, ushort>,
+            minMaxMat_v1<maximum, short>,
+            minMaxMat_v1<maximum, int>,
+            minMaxMat_v1<maximum, float>,
+            minMaxMat_v1<maximum, double>
+        }
     };
 
-    template <> struct TransformFunctorTraits< arithm::VMax2 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
+    static const func_t funcs_v2[2] =
     {
+        minMaxMat_v2<MinOp2>, minMaxMat_v2<MaxOp2>
     };
 
-    template <typename T> struct TransformFunctorTraits< maximum<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
+    static const func_t funcs_v4[2] =
     {
+        minMaxMat_v4<MinOp4>, minMaxMat_v4<MaxOp4>
     };
 
-    template <typename T> struct TransformFunctorTraits< binder2nd< maximum<T> > > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
-    {
-    };
-}}}
+    const int depth = src1.depth();
 
-namespace arithm
-{
-    void maxMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
+    CV_DbgAssert( depth <= CV_64F );
+
+    GpuMat src1_ = src1.reshape(1);
+    GpuMat src2_ = src2.reshape(1);
+    GpuMat dst_ = dst.reshape(1);
+
+    if (depth == CV_8U || depth == CV_16U)
     {
-        device::transform(src1, src2, dst, VMax4(), WithOutMask(), stream);
+        const intptr_t src1ptr = reinterpret_cast<intptr_t>(src1_.data);
+        const intptr_t src2ptr = reinterpret_cast<intptr_t>(src2_.data);
+        const intptr_t dstptr = reinterpret_cast<intptr_t>(dst_.data);
+
+        const bool isAllAligned = (src1ptr & 31) == 0 && (src2ptr & 31) == 0 && (dstptr & 31) == 0;
+
+        if (isAllAligned)
+        {
+            if (depth == CV_8U && (src1_.cols & 3) == 0)
+            {
+                funcs_v4[op](src1_, src2_, dst_, stream);
+                return;
+            }
+            else if (depth == CV_16U && (src1_.cols & 1) == 0)
+            {
+                funcs_v2[op](src1_, src2_, dst_, stream);
+                return;
+            }
+        }
     }
 
-    void maxMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
-    {
-        device::transform(src1, src2, dst, VMax2(), WithOutMask(), stream);
-    }
+    const func_t func = funcs_v1[op][depth];
 
-    template <typename T> void maxMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
-    {
-        device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, maximum<T>(), WithOutMask(), stream);
-    }
-
-    template void maxMat<uchar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void maxMat<schar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void maxMat<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void maxMat<short >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void maxMat<int   >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void maxMat<float >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void maxMat<double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-
-    template <typename T> void maxScalar(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream)
-    {
-        device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::cuda::device::bind2nd(maximum<T>(), src2), WithOutMask(), stream);
-    }
-
-    template void maxScalar<uchar >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void maxScalar<schar >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void maxScalar<ushort>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void maxScalar<short >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void maxScalar<int   >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void maxScalar<float >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void maxScalar<double>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
+    func(src1_, src2_, dst_, stream);
 }
 
-#endif // CUDA_DISABLER
+///////////////////////////////////////////////////////////////////////
+/// minMaxScalar
+
+namespace
+{
+    template <template <typename> class Op, typename T>
+    void minMaxScalar(const GpuMat& src, double value, GpuMat& dst, Stream& stream)
+    {
+        gridTransformUnary(globPtr<T>(src), globPtr<T>(dst), bind2nd(Op<T>(), cv::saturate_cast<T>(value)), stream);
+    }
+}
+
+void minMaxScalar(const GpuMat& src, cv::Scalar value, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int op)
+{
+    typedef void (*func_t)(const GpuMat& src, double value, GpuMat& dst, Stream& stream);
+    static const func_t funcs[2][7] =
+    {
+        {
+            minMaxScalar<minimum, uchar>,
+            minMaxScalar<minimum, schar>,
+            minMaxScalar<minimum, ushort>,
+            minMaxScalar<minimum, short>,
+            minMaxScalar<minimum, int>,
+            minMaxScalar<minimum, float>,
+            minMaxScalar<minimum, double>
+        },
+        {
+            minMaxScalar<maximum, uchar>,
+            minMaxScalar<maximum, schar>,
+            minMaxScalar<maximum, ushort>,
+            minMaxScalar<maximum, short>,
+            minMaxScalar<maximum, int>,
+            minMaxScalar<maximum, float>,
+            minMaxScalar<maximum, double>
+        }
+    };
+
+    const int depth = src.depth();
+
+    CV_DbgAssert( depth <= CV_64F );
+    CV_DbgAssert( src.channels() == 1 );
+
+    funcs[op][depth](src, value[0], dst, stream);
+}
+
+#endif

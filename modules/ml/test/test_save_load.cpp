@@ -155,6 +155,14 @@ TEST(ML_RTrees, save_load) { CV_SLMLTest test( CV_RTREES ); test.safe_run(); }
 TEST(ML_ERTrees, save_load) { CV_SLMLTest test( CV_ERTREES ); test.safe_run(); }
 
 
+TEST(ML_SVM, throw_exception_when_save_untrained_model)
+{
+    SVM svm;
+    string filename = tempfile("svm.xml");
+    ASSERT_THROW(svm.save(filename.c_str()), Exception);
+    remove(filename.c_str());
+}
+
 TEST(DISABLED_ML_SVM, linear_save_load)
 {
     CvSVM svm1, svm2, svm3;
@@ -176,8 +184,8 @@ TEST(DISABLED_ML_SVM, linear_save_load)
     svm3.predict(samples, r3);
 
     double eps = 1e-4;
-    EXPECT_LE(norm(r1, r2, NORM_INF), eps);
-    EXPECT_LE(norm(r1, r3, NORM_INF), eps);
+    EXPECT_LE(cvtest::norm(r1, r2, NORM_INF), eps);
+    EXPECT_LE(cvtest::norm(r1, r3, NORM_INF), eps);
 
     remove(tname.c_str());
 }

@@ -1,5 +1,6 @@
 #include <opencv2/core/utility.hpp>
 #include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 
 #include <stdio.h>
@@ -130,7 +131,7 @@ int main( int argc, const char** argv )
         // Call to update the view
         onTrackbar(0, 0);
 
-        int c = waitKey() & 255;
+        int c = waitKey(0) & 255;
 
         if( c == 27 )
             break;

@@ -66,6 +66,11 @@ public:
         return 0;
     }
 
+    int bayer2RGBA(const T*, int, T*, int, int) const
+    {
+        return 0;
+    }
+
     int bayer2RGB_EA(const T*, int, T*, int, int) const
     {
         return 0;
@@ -218,6 +223,11 @@ public:
         return (int)(bayer - (bayer_end - width));
     }
 
+    int bayer2RGBA(const uchar*, int, uchar*, int, int) const
+    {
+        return 0;
+    }
+
     int bayer2RGB_EA(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
     {
         if (!use_simd)
@@ -322,6 +332,165 @@ public:
     }
 
     bool use_simd;
+};
+#elif CV_NEON
+class SIMDBayerInterpolator_8u
+{
+public:
+    SIMDBayerInterpolator_8u()
+    {
+    }
+
+    int bayer2Gray(const uchar* bayer, int bayer_step, uchar* dst,
+                   int width, int bcoeff, int gcoeff, int rcoeff) const
+    {
+        /*
+         B G B G | B G B G | B G B G | B G B G
+         G R G R | G R G R | G R G R | G R G R
+         B G B G | B G B G | B G B G | B G B G
+         */
+
+        uint16x8_t masklo = vdupq_n_u16(255);
+        const uchar* bayer_end = bayer + width;
+
+        for( ; bayer <= bayer_end - 18; bayer += 14, dst += 14 )
+        {
+            uint16x8_t r0 = vld1q_u16((const ushort*)bayer);
+            uint16x8_t r1 = vld1q_u16((const ushort*)(bayer + bayer_step));
+            uint16x8_t r2 = vld1q_u16((const ushort*)(bayer + bayer_step*2));
+
+            uint16x8_t b1_ = vaddq_u16(vandq_u16(r0, masklo), vandq_u16(r2, masklo));
+            uint16x8_t b1 = vextq_u16(b1_, b1_, 1);
+            uint16x8_t b0 = vaddq_u16(b1_, b1);
+            // b0 = b0 b2 b4 ...
+            // b1 = b1 b3 b5 ...
+
+            uint16x8_t g0 = vaddq_u16(vshrq_n_u16(r0, 8), vshrq_n_u16(r2, 8));
+            uint16x8_t g1 = vandq_u16(r1, masklo);
+            g0 = vaddq_u16(g0, vaddq_u16(g1, vextq_u16(g1, g1, 1)));
+            g1 = vshlq_n_u16(vextq_u16(g1, g1, 1), 2);
+            // g0 = b0 b2 b4 ...
+            // g1 = b1 b3 b5 ...
+
+            r0 = vshrq_n_u16(r1, 8);
+            r1 = vaddq_u16(r0, vextq_u16(r0, r0, 1));
+            r0 = vshlq_n_u16(r0, 2);
+            // r0 = r0 r2 r4 ...
+            // r1 = r1 r3 r5 ...
+
+            b0 = vreinterpretq_u16_s16(vqdmulhq_n_s16(vreinterpretq_s16_u16(b0), (short)(rcoeff*2)));
+            b1 = vreinterpretq_u16_s16(vqdmulhq_n_s16(vreinterpretq_s16_u16(b1), (short)(rcoeff*4)));
+
+            g0 = vreinterpretq_u16_s16(vqdmulhq_n_s16(vreinterpretq_s16_u16(g0), (short)(gcoeff*2)));
+            g1 = vreinterpretq_u16_s16(vqdmulhq_n_s16(vreinterpretq_s16_u16(g1), (short)(gcoeff*2)));
+
+            r0 = vreinterpretq_u16_s16(vqdmulhq_n_s16(vreinterpretq_s16_u16(r0), (short)(bcoeff*2)));
+            r1 = vreinterpretq_u16_s16(vqdmulhq_n_s16(vreinterpretq_s16_u16(r1), (short)(bcoeff*4)));
+
+            g0 = vaddq_u16(vaddq_u16(g0, b0), r0);
+            g1 = vaddq_u16(vaddq_u16(g1, b1), r1);
+
+            uint8x8x2_t p = vzip_u8(vrshrn_n_u16(g0, 2), vrshrn_n_u16(g1, 2));
+            vst1_u8(dst, p.val[0]);
+            vst1_u8(dst + 8, p.val[1]);
+        }
+
+        return (int)(bayer - (bayer_end - width));
+    }
+
+    int bayer2RGB(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
+    {
+        /*
+         B G B G | B G B G | B G B G | B G B G
+         G R G R | G R G R | G R G R | G R G R
+         B G B G | B G B G | B G B G | B G B G
+         */
+        uint16x8_t masklo = vdupq_n_u16(255);
+        uint8x16x3_t pix;
+        const uchar* bayer_end = bayer + width;
+
+        for( ; bayer <= bayer_end - 18; bayer += 14, dst += 42 )
+        {
+            uint16x8_t r0 = vld1q_u16((const ushort*)bayer);
+            uint16x8_t r1 = vld1q_u16((const ushort*)(bayer + bayer_step));
+            uint16x8_t r2 = vld1q_u16((const ushort*)(bayer + bayer_step*2));
+
+            uint16x8_t b1 = vaddq_u16(vandq_u16(r0, masklo), vandq_u16(r2, masklo));
+            uint16x8_t nextb1 = vextq_u16(b1, b1, 1);
+            uint16x8_t b0 = vaddq_u16(b1, nextb1);
+            // b0 b1 b2 ...
+            uint8x8x2_t bb = vzip_u8(vrshrn_n_u16(b0, 2), vrshrn_n_u16(nextb1, 1));
+            pix.val[1-blue] = vcombine_u8(bb.val[0], bb.val[1]);
+
+            uint16x8_t g0 = vaddq_u16(vshrq_n_u16(r0, 8), vshrq_n_u16(r2, 8));
+            uint16x8_t g1 = vandq_u16(r1, masklo);
+            g0 = vaddq_u16(g0, vaddq_u16(g1, vextq_u16(g1, g1, 1)));
+            g1 = vextq_u16(g1, g1, 1);
+            // g0 g1 g2 ...
+            uint8x8x2_t gg = vzip_u8(vrshrn_n_u16(g0, 2), vmovn_u16(g1));
+            pix.val[1] = vcombine_u8(gg.val[0], gg.val[1]);
+
+            r0 = vshrq_n_u16(r1, 8);
+            r1 = vaddq_u16(r0, vextq_u16(r0, r0, 1));
+            // r0 r1 r2 ...
+            uint8x8x2_t rr = vzip_u8(vmovn_u16(r0), vrshrn_n_u16(r1, 1));
+            pix.val[1+blue] = vcombine_u8(rr.val[0], rr.val[1]);
+
+            vst3q_u8(dst-1, pix);
+        }
+
+        return (int)(bayer - (bayer_end - width));
+    }
+
+    int bayer2RGBA(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
+    {
+        /*
+         B G B G | B G B G | B G B G | B G B G
+         G R G R | G R G R | G R G R | G R G R
+         B G B G | B G B G | B G B G | B G B G
+         */
+        uint16x8_t masklo = vdupq_n_u16(255);
+        uint8x16x4_t pix;
+        const uchar* bayer_end = bayer + width;
+        pix.val[3] = vdupq_n_u8(255);
+
+        for( ; bayer <= bayer_end - 18; bayer += 14, dst += 56 )
+        {
+            uint16x8_t r0 = vld1q_u16((const ushort*)bayer);
+            uint16x8_t r1 = vld1q_u16((const ushort*)(bayer + bayer_step));
+            uint16x8_t r2 = vld1q_u16((const ushort*)(bayer + bayer_step*2));
+
+            uint16x8_t b1 = vaddq_u16(vandq_u16(r0, masklo), vandq_u16(r2, masklo));
+            uint16x8_t nextb1 = vextq_u16(b1, b1, 1);
+            uint16x8_t b0 = vaddq_u16(b1, nextb1);
+            // b0 b1 b2 ...
+            uint8x8x2_t bb = vzip_u8(vrshrn_n_u16(b0, 2), vrshrn_n_u16(nextb1, 1));
+            pix.val[1-blue] = vcombine_u8(bb.val[0], bb.val[1]);
+
+            uint16x8_t g0 = vaddq_u16(vshrq_n_u16(r0, 8), vshrq_n_u16(r2, 8));
+            uint16x8_t g1 = vandq_u16(r1, masklo);
+            g0 = vaddq_u16(g0, vaddq_u16(g1, vextq_u16(g1, g1, 1)));
+            g1 = vextq_u16(g1, g1, 1);
+            // g0 g1 g2 ...
+            uint8x8x2_t gg = vzip_u8(vrshrn_n_u16(g0, 2), vmovn_u16(g1));
+            pix.val[1] = vcombine_u8(gg.val[0], gg.val[1]);
+
+            r0 = vshrq_n_u16(r1, 8);
+            r1 = vaddq_u16(r0, vextq_u16(r0, r0, 1));
+            // r0 r1 r2 ...
+            uint8x8x2_t rr = vzip_u8(vmovn_u16(r0), vrshrn_n_u16(r1, 1));
+            pix.val[1+blue] = vcombine_u8(rr.val[0], rr.val[1]);
+
+            vst4q_u8(dst-1, pix);
+        }
+
+        return (int)(bayer - (bayer_end - width));
+    }
+
+    int bayer2RGB_EA(const uchar*, int, uchar*, int, int) const
+    {
+        return 0;
+    }
 };
 #else
 typedef SIMDBayerStubInterpolator_<uchar> SIMDBayerInterpolator_8u;
@@ -559,7 +728,9 @@ public:
             }
 
             // simd optimization only for dcn == 3
-            int delta = dcn == 4 ? 0 : vecOp.bayer2RGB(bayer, bayer_step, dst, size.width, blue);
+            int delta = dcn == 4 ?
+                vecOp.bayer2RGBA(bayer, bayer_step, dst, size.width, blue) :
+                vecOp.bayer2RGB(bayer, bayer_step, dst, size.width, blue);
             bayer += delta;
             dst += delta*dcn;
 

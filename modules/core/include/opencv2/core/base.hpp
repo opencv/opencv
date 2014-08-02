@@ -110,7 +110,10 @@ enum {
     GpuApiCallError=           -217,
     OpenGlNotSupported=        -218,
     OpenGlApiCallError=        -219,
-    OpenCLApiCallError=        -220
+    OpenCLApiCallError=        -220,
+    OpenCLDoubleNotSupported=  -221,
+    OpenCLInitError=           -222,
+    OpenCLNoAMDBlasFft=        -223
 };
 } //Error
 
@@ -207,7 +210,30 @@ enum {
 #  endif
 #endif
 
+//! Suppress warning "-Wdeprecated-declarations" / C4996
 
+#if defined(_MSC_VER)
+    #define CV_DO_PRAGMA(x) __pragma(x)
+#elif defined(__GNUC__)
+    #define CV_DO_PRAGMA(x) _Pragma (#x)
+#else
+    #define CV_DO_PRAGMA(x)
+#endif
+
+#ifdef _MSC_VER
+#define CV_SUPPRESS_DEPRECATED_START \
+    CV_DO_PRAGMA(warning(push)) \
+    CV_DO_PRAGMA(warning(disable: 4996))
+#define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(warning(pop))
+#elif defined __GNUC__
+#define CV_SUPPRESS_DEPRECATED_START \
+    CV_DO_PRAGMA(GCC diagnostic push) \
+    CV_DO_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
+#define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(GCC diagnostic pop)
+#else
+#define CV_SUPPRESS_DEPRECATED_START
+#define CV_SUPPRESS_DEPRECATED_END
+#endif
 
 //! Signals an error and raises the exception.
 /*!
@@ -220,14 +246,43 @@ enum {
 CV_EXPORTS void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
 
 #ifdef __GNUC__
-#  define CV_Error( code, msg ) cv::error( code, msg, __func__, __FILE__, __LINE__ )
-#  define CV_Error_( code, args ) cv::error( code, cv::format args, __func__, __FILE__, __LINE__ )
-#  define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, __func__, __FILE__, __LINE__ )
-#else
-#  define CV_Error( code, msg ) cv::error( code, msg, "", __FILE__, __LINE__ )
-#  define CV_Error_( code, args ) cv::error( code, cv::format args, "", __FILE__, __LINE__ )
-#  define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, "", __FILE__, __LINE__ )
+# if defined __clang__ || defined __APPLE__
+#   pragma GCC diagnostic push
+#   pragma GCC diagnostic ignored "-Winvalid-noreturn"
+# endif
 #endif
+CV_INLINE CV_NORETURN void errorNoReturn(int _code, const String& _err, const char* _func, const char* _file, int _line)
+{
+    error(_code, _err, _func, _file, _line);
+#ifdef __GNUC__
+# if !defined __clang__ && !defined __APPLE__
+    // this suppresses this warning: "noreturn" function does return [enabled by default]
+    __builtin_trap();
+    // or use infinite loop: for (;;) {}
+# endif
+#endif
+}
+#ifdef __GNUC__
+# if defined __clang__ || defined __APPLE__
+#   pragma GCC diagnostic pop
+# endif
+#endif
+
+
+#if defined __GNUC__
+#define CV_Func __func__
+#elif defined _MSC_VER
+#define CV_Func __FUNCTION__
+#else
+#define CV_Func ""
+#endif
+
+#define CV_Error( code, msg ) cv::error( code, msg, CV_Func, __FILE__, __LINE__ )
+#define CV_Error_( code, args ) cv::error( code, cv::format args, CV_Func, __FILE__, __LINE__ )
+#define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ )
+
+#define CV_ErrorNoReturn( code, msg ) cv::errorNoReturn( code, msg, CV_Func, __FILE__, __LINE__ )
+#define CV_ErrorNoReturn_( code, args ) cv::errorNoReturn( code, cv::format args, CV_Func, __FILE__, __LINE__ )
 
 #ifdef _DEBUG
 #  define CV_DbgAssert(expr) CV_Assert(expr)
@@ -469,6 +524,8 @@ class CV_EXPORTS RNG;
 class CV_EXPORTS Mat;
 class CV_EXPORTS MatExpr;
 
+class CV_EXPORTS UMat;
+
 class CV_EXPORTS SparseMat;
 typedef Mat MatND;
 
@@ -503,6 +560,14 @@ namespace cudev
     template <typename _Tp> class GpuMat_;
 }
 
+namespace ipp
+{
+CV_EXPORTS void setIppStatus(int status, const char * const funcname = NULL, const char * const filename = NULL,
+                             int line = 0);
+CV_EXPORTS int getIppStatus();
+CV_EXPORTS String getIppErrorLocation();
+
+} // ipp
 } // cv
 
 #endif //__OPENCV_CORE_BASE_HPP__

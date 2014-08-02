@@ -212,11 +212,46 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 #ifdef HAVE_IPP
 #  include "ipp.h"
 
+#  define IPP_VERSION_X100 (IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR)
+
+#define IPP_ALIGN 32 // required for AVX optimization
+
+#define setIppErrorStatus() cv::ipp::setIppStatus(-1, CV_Func, __FILE__, __LINE__)
+
 static inline IppiSize ippiSize(int width, int height)
 {
     IppiSize size = { width, height };
     return size;
 }
+
+static inline IppiSize ippiSize(const cv::Size & _size)
+{
+    IppiSize size = { _size.width, _size.height };
+    return size;
+}
+
+static inline IppiBorderType ippiGetBorderType(int borderTypeNI)
+{
+    return borderTypeNI == cv::BORDER_CONSTANT ? ippBorderConst :
+        borderTypeNI == cv::BORDER_WRAP ? ippBorderWrap :
+        borderTypeNI == cv::BORDER_REPLICATE ? ippBorderRepl :
+        borderTypeNI == cv::BORDER_REFLECT_101 ? ippBorderMirror :
+        borderTypeNI == cv::BORDER_REFLECT ? ippBorderMirrorR : (IppiBorderType)-1;
+}
+
+static inline IppDataType ippiGetDataType(int depth)
+{
+    return depth == CV_8U ? ipp8u :
+        depth == CV_8S ? ipp8s :
+        depth == CV_16U ? ipp16u :
+        depth == CV_16S ? ipp16s :
+        depth == CV_32S ? ipp32s :
+        depth == CV_32F ? ipp32f :
+        depth == CV_64F ? ipp64f : (IppDataType)-1;
+}
+
+#else
+#  define IPP_VERSION_X100 0
 #endif
 
 #ifndef IPPI_CALL

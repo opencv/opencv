@@ -4,6 +4,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 using namespace std;
@@ -30,9 +31,9 @@ int main(int argc, char** argv)
 
     // Create and LSD detector with standard or no refinement.
 #if 1
-    Ptr<LineSegmentDetector> ls = createLineSegmentDetectorPtr(LSD_REFINE_STD);
+    Ptr<LineSegmentDetector> ls = createLineSegmentDetector(LSD_REFINE_STD);
 #else
-    Ptr<LineSegmentDetector> ls = createLineSegmentDetectorPtr(LSD_REFINE_NONE);
+    Ptr<LineSegmentDetector> ls = createLineSegmentDetector(LSD_REFINE_NONE);
 #endif
 
     double start = double(getTickCount());

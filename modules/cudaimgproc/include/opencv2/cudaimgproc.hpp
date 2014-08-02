@@ -224,7 +224,7 @@ CV_EXPORTS Ptr<HoughLinesDetector> createHoughLinesDetector(float rho, float the
 //////////////////////////////////////
 // HoughLinesP
 
-//! finds line segments in the black-n-white image using probabalistic Hough transform
+//! finds line segments in the black-n-white image using probabilistic Hough transform
 class CV_EXPORTS HoughSegmentDetector : public Algorithm
 {
 public:

@@ -90,7 +90,7 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, MatchTemplate8U,
 
         CPU_SANITY_CHECK(dst);
     }
-};
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // MatchTemplate32F

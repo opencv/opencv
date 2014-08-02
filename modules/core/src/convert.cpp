@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -263,18 +264,76 @@ void cv::split(const Mat& src, Mat* mv)
     }
 }
 
+#ifdef HAVE_OPENCL
+
+namespace cv {
+
+static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
+{
+    int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
+
+    String dstargs, processelem, indexdecl;
+    for (int i = 0; i < cn; ++i)
+    {
+        dstargs += format("DECLARE_DST_PARAM(%d)", i);
+        indexdecl += format("DECLARE_INDEX(%d)", i);
+        processelem += format("PROCESS_ELEM(%d)", i);
+    }
+
+    ocl::Kernel k("split", ocl::core::split_merge_oclsrc,
+                  format("-D T=%s -D OP_SPLIT -D cn=%d -D DECLARE_DST_PARAMS=%s"
+                         " -D PROCESS_ELEMS_N=%s -D DECLARE_INDEX_N=%s",
+                         ocl::memopTypeToStr(depth), cn, dstargs.c_str(),
+                         processelem.c_str(), indexdecl.c_str()));
+    if (k.empty())
+        return false;
+
+    Size size = _m.size();
+    _mv.create(cn, 1, depth);
+    for (int i = 0; i < cn; ++i)
+        _mv.create(size, depth, i);
+
+    std::vector<UMat> dst;
+    _mv.getUMatVector(dst);
+
+    int argidx = k.set(0, ocl::KernelArg::ReadOnly(_m.getUMat()));
+    for (int i = 0; i < cn; ++i)
+        argidx = k.set(argidx, ocl::KernelArg::WriteOnlyNoSize(dst[i]));
+    k.set(argidx, rowsPerWI);
+
+    size_t globalsize[2] = { size.width, (size.height + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, NULL, false);
+}
+
+}
+
+#endif
+
 void cv::split(InputArray _m, OutputArrayOfArrays _mv)
 {
+    CV_OCL_RUN(_m.dims() <= 2 && _mv.isUMatVector(),
+               ocl_split(_m, _mv))
+
     Mat m = _m.getMat();
     if( m.empty() )
     {
         _mv.release();
         return;
     }
-    CV_Assert( !_mv.fixedType() || CV_MAT_TYPE(_mv.flags) == m.depth() );
-    _mv.create(m.channels(), 1, m.depth());
-    Mat* dst = &_mv.getMatRef(0);
-    split(m, dst);
+
+    CV_Assert( !_mv.fixedType() || _mv.empty() || _mv.type() == m.depth() );
+
+    Size size = m.size();
+    int depth = m.depth(), cn = m.channels();
+    _mv.create(cn, 1, depth);
+    for (int i = 0; i < cn; ++i)
+        _mv.create(size, depth, i);
+
+    std::vector<Mat> dst;
+    _mv.getMatVector(dst);
+
+    split(m, &dst[0]);
 }
 
 void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
@@ -352,8 +411,77 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
     }
 }
 
+#ifdef HAVE_OPENCL
+
+namespace cv {
+
+static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
+{
+    std::vector<UMat> src, ksrc;
+    _mv.getUMatVector(src);
+    CV_Assert(!src.empty());
+
+    int type = src[0].type(), depth = CV_MAT_DEPTH(type),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
+    Size size = src[0].size();
+
+    for (size_t i = 0, srcsize = src.size(); i < srcsize; ++i)
+    {
+        int itype = src[i].type(), icn = CV_MAT_CN(itype), idepth = CV_MAT_DEPTH(itype),
+                esz1 = CV_ELEM_SIZE1(idepth);
+        if (src[i].dims > 2)
+            return false;
+
+        CV_Assert(size == src[i].size() && depth == idepth);
+
+        for (int cn = 0; cn < icn; ++cn)
+        {
+            UMat tsrc = src[i];
+            tsrc.offset += cn * esz1;
+            ksrc.push_back(tsrc);
+        }
+    }
+    int dcn = (int)ksrc.size();
+
+    String srcargs, processelem, cndecl, indexdecl;
+    for (int i = 0; i < dcn; ++i)
+    {
+        srcargs += format("DECLARE_SRC_PARAM(%d)", i);
+        processelem += format("PROCESS_ELEM(%d)", i);
+        indexdecl += format("DECLARE_INDEX(%d)", i);
+        cndecl += format(" -D scn%d=%d", i, ksrc[i].channels());
+    }
+
+    ocl::Kernel k("merge", ocl::core::split_merge_oclsrc,
+                  format("-D OP_MERGE -D cn=%d -D T=%s -D DECLARE_SRC_PARAMS_N=%s"
+                         " -D DECLARE_INDEX_N=%s -D PROCESS_ELEMS_N=%s%s",
+                         dcn, ocl::memopTypeToStr(depth), srcargs.c_str(),
+                         indexdecl.c_str(), processelem.c_str(), cndecl.c_str()));
+    if (k.empty())
+        return false;
+
+    _dst.create(size, CV_MAKE_TYPE(depth, dcn));
+    UMat dst = _dst.getUMat();
+
+    int argidx = 0;
+    for (int i = 0; i < dcn; ++i)
+        argidx = k.set(argidx, ocl::KernelArg::ReadOnlyNoSize(ksrc[i]));
+    argidx = k.set(argidx, ocl::KernelArg::WriteOnly(dst));
+    k.set(argidx, rowsPerWI);
+
+    size_t globalsize[2] = { dst.cols, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, NULL, false);
+}
+
+}
+
+#endif
+
 void cv::merge(InputArrayOfArrays _mv, OutputArray _dst)
 {
+    CV_OCL_RUN(_mv.isUMatVector() && _dst.isUMat(),
+               ocl_merge(_mv, _dst))
+
     std::vector<Mat> mv;
     _mv.getMatVector(mv);
     merge(!mv.empty() ? &mv[0] : 0, mv.size(), _dst);
@@ -519,16 +647,120 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
     }
 }
 
+#ifdef HAVE_OPENCL
+
+namespace cv {
+
+static void getUMatIndex(const std::vector<UMat> & um, int cn, int & idx, int & cnidx)
+{
+    int totalChannels = 0;
+    for (size_t i = 0, size = um.size(); i < size; ++i)
+    {
+        int ccn = um[i].channels();
+        totalChannels += ccn;
+
+        if (totalChannels == cn)
+        {
+            idx = (int)(i + 1);
+            cnidx = 0;
+            return;
+        }
+        else if (totalChannels > cn)
+        {
+            idx = (int)i;
+            cnidx = i == 0 ? cn : (cn - totalChannels + ccn);
+            return;
+        }
+    }
+
+    idx = cnidx = -1;
+}
+
+static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _dst,
+                            const int* fromTo, size_t npairs)
+{
+    std::vector<UMat> src, dst;
+    _src.getUMatVector(src);
+    _dst.getUMatVector(dst);
+
+    size_t nsrc = src.size(), ndst = dst.size();
+    CV_Assert(nsrc > 0 && ndst > 0);
+
+    Size size = src[0].size();
+    int depth = src[0].depth(), esz = CV_ELEM_SIZE(depth),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
+
+    for (size_t i = 1, ssize = src.size(); i < ssize; ++i)
+        CV_Assert(src[i].size() == size && src[i].depth() == depth);
+    for (size_t i = 0, dsize = dst.size(); i < dsize; ++i)
+        CV_Assert(dst[i].size() == size && dst[i].depth() == depth);
+
+    String declsrc, decldst, declproc, declcn, indexdecl;
+    std::vector<UMat> srcargs(npairs), dstargs(npairs);
+
+    for (size_t i = 0; i < npairs; ++i)
+    {
+        int scn = fromTo[i<<1], dcn = fromTo[(i<<1) + 1];
+        int src_idx, src_cnidx, dst_idx, dst_cnidx;
+
+        getUMatIndex(src, scn, src_idx, src_cnidx);
+        getUMatIndex(dst, dcn, dst_idx, dst_cnidx);
+
+        CV_Assert(dst_idx >= 0 && src_idx >= 0);
+
+        srcargs[i] = src[src_idx];
+        srcargs[i].offset += src_cnidx * esz;
+
+        dstargs[i] = dst[dst_idx];
+        dstargs[i].offset += dst_cnidx * esz;
+
+        declsrc += format("DECLARE_INPUT_MAT(%d)", i);
+        decldst += format("DECLARE_OUTPUT_MAT(%d)", i);
+        indexdecl += format("DECLARE_INDEX(%d)", i);
+        declproc += format("PROCESS_ELEM(%d)", i);
+        declcn += format(" -D scn%d=%d -D dcn%d=%d", i, src[src_idx].channels(), i, dst[dst_idx].channels());
+    }
+
+    ocl::Kernel k("mixChannels", ocl::core::mixchannels_oclsrc,
+                  format("-D T=%s -D DECLARE_INPUT_MAT_N=%s -D DECLARE_OUTPUT_MAT_N=%s"
+                         " -D PROCESS_ELEM_N=%s -D DECLARE_INDEX_N=%s%s",
+                         ocl::memopTypeToStr(depth), declsrc.c_str(), decldst.c_str(),
+                         declproc.c_str(), indexdecl.c_str(), declcn.c_str()));
+    if (k.empty())
+        return false;
+
+    int argindex = 0;
+    for (size_t i = 0; i < npairs; ++i)
+        argindex = k.set(argindex, ocl::KernelArg::ReadOnlyNoSize(srcargs[i]));
+    for (size_t i = 0; i < npairs; ++i)
+        argindex = k.set(argindex, ocl::KernelArg::WriteOnlyNoSize(dstargs[i]));
+    argindex = k.set(argindex, size.height);
+    argindex = k.set(argindex, size.width);
+    k.set(argindex, rowsPerWI);
+
+    size_t globalsize[2] = { size.width, (size.height + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, NULL, false);
+}
+
+}
+
+#endif
 
 void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                  const int* fromTo, size_t npairs)
 {
-    if(npairs == 0)
+    if (npairs == 0 || fromTo == NULL)
         return;
+
+    CV_OCL_RUN(dst.isUMatVector(),
+               ocl_mixChannels(src, dst, fromTo, npairs))
+
     bool src_is_mat = src.kind() != _InputArray::STD_VECTOR_MAT &&
-                      src.kind() != _InputArray::STD_VECTOR_VECTOR;
+            src.kind() != _InputArray::STD_VECTOR_VECTOR &&
+            src.kind() != _InputArray::STD_VECTOR_UMAT;
     bool dst_is_mat = dst.kind() != _InputArray::STD_VECTOR_MAT &&
-                      dst.kind() != _InputArray::STD_VECTOR_VECTOR;
+            dst.kind() != _InputArray::STD_VECTOR_VECTOR &&
+            dst.kind() != _InputArray::STD_VECTOR_UMAT;
     int i;
     int nsrc = src_is_mat ? 1 : (int)src.total();
     int ndst = dst_is_mat ? 1 : (int)dst.total();
@@ -546,12 +778,18 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                      const std::vector<int>& fromTo)
 {
-    if(fromTo.empty())
+    if (fromTo.empty())
         return;
+
+    CV_OCL_RUN(dst.isUMatVector(),
+               ocl_mixChannels(src, dst, &fromTo[0], fromTo.size()>>1))
+
     bool src_is_mat = src.kind() != _InputArray::STD_VECTOR_MAT &&
-                      src.kind() != _InputArray::STD_VECTOR_VECTOR;
+            src.kind() != _InputArray::STD_VECTOR_VECTOR &&
+            src.kind() != _InputArray::STD_VECTOR_UMAT;
     bool dst_is_mat = dst.kind() != _InputArray::STD_VECTOR_MAT &&
-                      dst.kind() != _InputArray::STD_VECTOR_VECTOR;
+            dst.kind() != _InputArray::STD_VECTOR_VECTOR &&
+            dst.kind() != _InputArray::STD_VECTOR_UMAT;
     int i;
     int nsrc = src_is_mat ? 1 : (int)src.total();
     int ndst = dst_is_mat ? 1 : (int)dst.total();
@@ -568,20 +806,41 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 
 void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 {
-    Mat src = _src.getMat();
-    CV_Assert( 0 <= coi && coi < src.channels() );
-    _dst.create(src.dims, &src.size[0], src.depth());
-    Mat dst = _dst.getMat();
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert( 0 <= coi && coi < cn );
     int ch[] = { coi, 0 };
+
+    if (ocl::useOpenCL() && _src.dims() <= 2 && _dst.isUMat())
+    {
+        UMat src = _src.getUMat();
+        _dst.create(src.dims, &src.size[0], depth);
+        UMat dst = _dst.getUMat();
+        mixChannels(std::vector<UMat>(1, src), std::vector<UMat>(1, dst), ch, 1);
+        return;
+    }
+
+    Mat src = _src.getMat();
+    _dst.create(src.dims, &src.size[0], depth);
+    Mat dst = _dst.getMat();
     mixChannels(&src, 1, &dst, 1, ch, 1);
 }
 
 void cv::insertChannel(InputArray _src, InputOutputArray _dst, int coi)
 {
-    Mat src = _src.getMat(), dst = _dst.getMat();
-    CV_Assert( src.size == dst.size && src.depth() == dst.depth() );
-    CV_Assert( 0 <= coi && coi < dst.channels() && src.channels() == 1 );
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
+    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
+    CV_Assert( _src.sameSize(_dst) && sdepth == ddepth );
+    CV_Assert( 0 <= coi && coi < dcn && scn == 1 );
+
     int ch[] = { 0, coi };
+    if (ocl::useOpenCL() && _src.dims() <= 2 && _dst.isUMat())
+    {
+        UMat src = _src.getUMat(), dst = _dst.getUMat();
+        mixChannels(std::vector<UMat>(1, src), std::vector<UMat>(1, dst), ch, 1);
+        return;
+    }
+
+    Mat src = _src.getMat(), dst = _dst.getMat();
     mixChannels(&src, 1, &dst, 1, ch, 1);
 }
 
@@ -592,6 +851,175 @@ void cv::insertChannel(InputArray _src, InputOutputArray _dst, int coi)
 namespace cv
 {
 
+template<typename T, typename DT, typename WT>
+struct cvtScaleAbs_SSE2
+{
+    int operator () (const T *, DT *, int, WT, WT) const
+    {
+        return 0;
+    }
+};
+
+#if CV_SSE2
+
+template <>
+struct cvtScaleAbs_SSE2<uchar, uchar, float>
+{
+    int operator () (const uchar * src, uchar * dst, int width,
+                     float scale, float shift) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift),
+                v_zero_f = _mm_setzero_ps();
+            __m128i v_zero_i = _mm_setzero_si128();
+
+            for ( ; x <= width - 16; x += 16)
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src + x));
+                __m128i v_src12 = _mm_unpacklo_epi8(v_src, v_zero_i), v_src_34 = _mm_unpackhi_epi8(v_src, v_zero_i);
+                __m128 v_dst1 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src12, v_zero_i)), v_scale), v_shift);
+                v_dst1 = _mm_max_ps(_mm_sub_ps(v_zero_f, v_dst1), v_dst1);
+                __m128 v_dst2 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src12, v_zero_i)), v_scale), v_shift);
+                v_dst2 = _mm_max_ps(_mm_sub_ps(v_zero_f, v_dst2), v_dst2);
+                __m128 v_dst3 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src_34, v_zero_i)), v_scale), v_shift);
+                v_dst3 = _mm_max_ps(_mm_sub_ps(v_zero_f, v_dst3), v_dst3);
+                __m128 v_dst4 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src_34, v_zero_i)), v_scale), v_shift);
+                v_dst4 = _mm_max_ps(_mm_sub_ps(v_zero_f, v_dst4), v_dst4);
+
+                __m128i v_dst_i = _mm_packus_epi16(_mm_packs_epi32(_mm_cvtps_epi32(v_dst1), _mm_cvtps_epi32(v_dst2)),
+                                                   _mm_packs_epi32(_mm_cvtps_epi32(v_dst3), _mm_cvtps_epi32(v_dst4)));
+                _mm_storeu_si128((__m128i *)(dst + x), v_dst_i);
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScaleAbs_SSE2<ushort, uchar, float>
+{
+    int operator () (const ushort * src, uchar * dst, int width,
+                     float scale, float shift) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift),
+                v_zero_f = _mm_setzero_ps();
+            __m128i v_zero_i = _mm_setzero_si128();
+
+            for ( ; x <= width - 8; x += 8)
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src + x));
+                __m128 v_dst1 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src, v_zero_i)), v_scale), v_shift);
+                v_dst1 = _mm_max_ps(_mm_sub_ps(v_zero_f, v_dst1), v_dst1);
+                __m128 v_dst2 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src, v_zero_i)), v_scale), v_shift);
+                v_dst2 = _mm_max_ps(_mm_sub_ps(v_zero_f, v_dst2), v_dst2);
+
+                __m128i v_dst_i = _mm_packus_epi16(_mm_packs_epi32(_mm_cvtps_epi32(v_dst1), _mm_cvtps_epi32(v_dst2)), v_zero_i);
+                _mm_storel_epi64((__m128i *)(dst + x), v_dst_i);
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScaleAbs_SSE2<short, uchar, float>
+{
+    int operator () (const short * src, uchar * dst, int width,
+                     float scale, float shift) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift),
+                v_zero_f = _mm_setzero_ps();
+            __m128i v_zero_i = _mm_setzero_si128();
+
+            for ( ; x <= width - 8; x += 8)
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src + x));
+                __m128 v_dst1 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_src, v_src), 16)), v_scale), v_shift);
+                v_dst1 = _mm_max_ps(_mm_sub_ps(v_zero_f, v_dst1), v_dst1);
+                __m128 v_dst2 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_src, v_src), 16)), v_scale), v_shift);
+                v_dst2 = _mm_max_ps(_mm_sub_ps(v_zero_f, v_dst2), v_dst2);
+
+                __m128i v_dst_i = _mm_packus_epi16(_mm_packs_epi32(_mm_cvtps_epi32(v_dst1), _mm_cvtps_epi32(v_dst2)), v_zero_i);
+                _mm_storel_epi64((__m128i *)(dst + x), v_dst_i);
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScaleAbs_SSE2<int, uchar, float>
+{
+    int operator () (const int * src, uchar * dst, int width,
+                     float scale, float shift) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift),
+                v_zero_f = _mm_setzero_ps();
+            __m128i v_zero_i = _mm_setzero_si128();
+
+            for ( ; x <= width - 8; x += 4)
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src + x));
+                __m128 v_dst1 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
+                v_dst1 = _mm_max_ps(_mm_sub_ps(v_zero_f, v_dst1), v_dst1);
+
+                __m128i v_dst_i = _mm_packus_epi16(_mm_packs_epi32(_mm_cvtps_epi32(v_dst1), v_zero_i), v_zero_i);
+                _mm_storel_epi64((__m128i *)(dst + x), v_dst_i);
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScaleAbs_SSE2<float, uchar, float>
+{
+    int operator () (const float * src, uchar * dst, int width,
+                     float scale, float shift) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift),
+                v_zero_f = _mm_setzero_ps();
+            __m128i v_zero_i = _mm_setzero_si128();
+
+            for ( ; x <= width - 8; x += 4)
+            {
+                __m128 v_dst = _mm_add_ps(_mm_mul_ps(_mm_loadu_ps(src + x), v_scale), v_shift);
+                v_dst = _mm_max_ps(_mm_sub_ps(v_zero_f, v_dst), v_dst);
+
+                __m128i v_dst_i = _mm_packs_epi32(_mm_cvtps_epi32(v_dst), v_zero_i);
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_dst_i, v_zero_i));
+            }
+        }
+
+        return x;
+    }
+};
+
+#endif
+
 template<typename T, typename DT, typename WT> static void
 cvtScaleAbs_( const T* src, size_t sstep,
               DT* dst, size_t dstep, Size size,
@@ -599,10 +1027,12 @@ cvtScaleAbs_( const T* src, size_t sstep,
 {
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
+    cvtScaleAbs_SSE2<T, DT, WT> vop;
 
     for( ; size.height--; src += sstep, dst += dstep )
     {
-        int x = 0;
+        int x = vop(src, dst, size.width, scale, shift);
+
         #if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
@@ -619,7 +1049,6 @@ cvtScaleAbs_( const T* src, size_t sstep,
             dst[x] = saturate_cast<DT>(std::abs(src[x]*scale + shift));
     }
 }
-
 
 template<typename T, typename DT, typename WT> static void
 cvtScale_( const T* src, size_t sstep,
@@ -829,6 +1258,41 @@ dtype* dst, size_t dstep, Size size, double* scale) \
     cvtScale_(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
 }
 
+#if defined(HAVE_IPP)
+#define DEF_CVT_FUNC_F(suffix, stype, dtype, ippFavor) \
+static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
+                         dtype* dst, size_t dstep, Size size, double*) \
+{ \
+    if (src && dst)\
+    {\
+        if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height)) >= 0) \
+            return; \
+        setIppErrorStatus(); \
+    }\
+    cvt_(src, sstep, dst, dstep, size); \
+}
+
+#define DEF_CVT_FUNC_F2(suffix, stype, dtype, ippFavor) \
+static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
+                         dtype* dst, size_t dstep, Size size, double*) \
+{ \
+    if (src && dst)\
+    {\
+        if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height), ippRndFinancial, 0) >= 0) \
+            return; \
+        setIppErrorStatus(); \
+    }\
+    cvt_(src, sstep, dst, dstep, size); \
+}
+#else
+#define DEF_CVT_FUNC_F(suffix, stype, dtype, ippFavor) \
+static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
+                         dtype* dst, size_t dstep, Size size, double*) \
+{ \
+    cvt_(src, sstep, dst, dstep, size); \
+}
+#define DEF_CVT_FUNC_F2 DEF_CVT_FUNC_F
+#endif
 
 #define DEF_CVT_FUNC(suffix, stype, dtype) \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
@@ -839,128 +1303,128 @@ static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
 
 #define DEF_CPY_FUNC(suffix, stype) \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
-stype* dst, size_t dstep, Size size, double*) \
+                         stype* dst, size_t dstep, Size size, double*) \
 { \
     cpy_(src, sstep, dst, dstep, size); \
 }
 
 
-DEF_CVT_SCALE_ABS_FUNC(8u, cvtScaleAbs_, uchar, uchar, float);
-DEF_CVT_SCALE_ABS_FUNC(8s8u, cvtScaleAbs_, schar, uchar, float);
-DEF_CVT_SCALE_ABS_FUNC(16u8u, cvtScaleAbs_, ushort, uchar, float);
-DEF_CVT_SCALE_ABS_FUNC(16s8u, cvtScaleAbs_, short, uchar, float);
-DEF_CVT_SCALE_ABS_FUNC(32s8u, cvtScaleAbs_, int, uchar, float);
-DEF_CVT_SCALE_ABS_FUNC(32f8u, cvtScaleAbs_, float, uchar, float);
-DEF_CVT_SCALE_ABS_FUNC(64f8u, cvtScaleAbs_, double, uchar, float);
+DEF_CVT_SCALE_ABS_FUNC(8u, cvtScaleAbs_, uchar, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(8s8u, cvtScaleAbs_, schar, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(16u8u, cvtScaleAbs_, ushort, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(16s8u, cvtScaleAbs_, short, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(32s8u, cvtScaleAbs_, int, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(32f8u, cvtScaleAbs_, float, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(64f8u, cvtScaleAbs_, double, uchar, float)
 
-DEF_CVT_SCALE_FUNC(8u,     uchar, uchar, float);
-DEF_CVT_SCALE_FUNC(8s8u,   schar, uchar, float);
-DEF_CVT_SCALE_FUNC(16u8u,  ushort, uchar, float);
-DEF_CVT_SCALE_FUNC(16s8u,  short, uchar, float);
-DEF_CVT_SCALE_FUNC(32s8u,  int, uchar, float);
-DEF_CVT_SCALE_FUNC(32f8u,  float, uchar, float);
-DEF_CVT_SCALE_FUNC(64f8u,  double, uchar, float);
+DEF_CVT_SCALE_FUNC(8u,     uchar, uchar, float)
+DEF_CVT_SCALE_FUNC(8s8u,   schar, uchar, float)
+DEF_CVT_SCALE_FUNC(16u8u,  ushort, uchar, float)
+DEF_CVT_SCALE_FUNC(16s8u,  short, uchar, float)
+DEF_CVT_SCALE_FUNC(32s8u,  int, uchar, float)
+DEF_CVT_SCALE_FUNC(32f8u,  float, uchar, float)
+DEF_CVT_SCALE_FUNC(64f8u,  double, uchar, float)
 
-DEF_CVT_SCALE_FUNC(8u8s,   uchar, schar, float);
-DEF_CVT_SCALE_FUNC(8s,     schar, schar, float);
-DEF_CVT_SCALE_FUNC(16u8s,  ushort, schar, float);
-DEF_CVT_SCALE_FUNC(16s8s,  short, schar, float);
-DEF_CVT_SCALE_FUNC(32s8s,  int, schar, float);
-DEF_CVT_SCALE_FUNC(32f8s,  float, schar, float);
-DEF_CVT_SCALE_FUNC(64f8s,  double, schar, float);
+DEF_CVT_SCALE_FUNC(8u8s,   uchar, schar, float)
+DEF_CVT_SCALE_FUNC(8s,     schar, schar, float)
+DEF_CVT_SCALE_FUNC(16u8s,  ushort, schar, float)
+DEF_CVT_SCALE_FUNC(16s8s,  short, schar, float)
+DEF_CVT_SCALE_FUNC(32s8s,  int, schar, float)
+DEF_CVT_SCALE_FUNC(32f8s,  float, schar, float)
+DEF_CVT_SCALE_FUNC(64f8s,  double, schar, float)
 
-DEF_CVT_SCALE_FUNC(8u16u,  uchar, ushort, float);
-DEF_CVT_SCALE_FUNC(8s16u,  schar, ushort, float);
-DEF_CVT_SCALE_FUNC(16u,    ushort, ushort, float);
-DEF_CVT_SCALE_FUNC(16s16u, short, ushort, float);
-DEF_CVT_SCALE_FUNC(32s16u, int, ushort, float);
-DEF_CVT_SCALE_FUNC(32f16u, float, ushort, float);
-DEF_CVT_SCALE_FUNC(64f16u, double, ushort, float);
+DEF_CVT_SCALE_FUNC(8u16u,  uchar, ushort, float)
+DEF_CVT_SCALE_FUNC(8s16u,  schar, ushort, float)
+DEF_CVT_SCALE_FUNC(16u,    ushort, ushort, float)
+DEF_CVT_SCALE_FUNC(16s16u, short, ushort, float)
+DEF_CVT_SCALE_FUNC(32s16u, int, ushort, float)
+DEF_CVT_SCALE_FUNC(32f16u, float, ushort, float)
+DEF_CVT_SCALE_FUNC(64f16u, double, ushort, float)
 
-DEF_CVT_SCALE_FUNC(8u16s,  uchar, short, float);
-DEF_CVT_SCALE_FUNC(8s16s,  schar, short, float);
-DEF_CVT_SCALE_FUNC(16u16s, ushort, short, float);
-DEF_CVT_SCALE_FUNC(16s,    short, short, float);
-DEF_CVT_SCALE_FUNC(32s16s, int, short, float);
-DEF_CVT_SCALE_FUNC(32f16s, float, short, float);
-DEF_CVT_SCALE_FUNC(64f16s, double, short, float);
+DEF_CVT_SCALE_FUNC(8u16s,  uchar, short, float)
+DEF_CVT_SCALE_FUNC(8s16s,  schar, short, float)
+DEF_CVT_SCALE_FUNC(16u16s, ushort, short, float)
+DEF_CVT_SCALE_FUNC(16s,    short, short, float)
+DEF_CVT_SCALE_FUNC(32s16s, int, short, float)
+DEF_CVT_SCALE_FUNC(32f16s, float, short, float)
+DEF_CVT_SCALE_FUNC(64f16s, double, short, float)
 
-DEF_CVT_SCALE_FUNC(8u32s,  uchar, int, float);
-DEF_CVT_SCALE_FUNC(8s32s,  schar, int, float);
-DEF_CVT_SCALE_FUNC(16u32s, ushort, int, float);
-DEF_CVT_SCALE_FUNC(16s32s, short, int, float);
-DEF_CVT_SCALE_FUNC(32s,    int, int, double);
-DEF_CVT_SCALE_FUNC(32f32s, float, int, float);
-DEF_CVT_SCALE_FUNC(64f32s, double, int, double);
+DEF_CVT_SCALE_FUNC(8u32s,  uchar, int, float)
+DEF_CVT_SCALE_FUNC(8s32s,  schar, int, float)
+DEF_CVT_SCALE_FUNC(16u32s, ushort, int, float)
+DEF_CVT_SCALE_FUNC(16s32s, short, int, float)
+DEF_CVT_SCALE_FUNC(32s,    int, int, double)
+DEF_CVT_SCALE_FUNC(32f32s, float, int, float)
+DEF_CVT_SCALE_FUNC(64f32s, double, int, double)
 
-DEF_CVT_SCALE_FUNC(8u32f,  uchar, float, float);
-DEF_CVT_SCALE_FUNC(8s32f,  schar, float, float);
-DEF_CVT_SCALE_FUNC(16u32f, ushort, float, float);
-DEF_CVT_SCALE_FUNC(16s32f, short, float, float);
-DEF_CVT_SCALE_FUNC(32s32f, int, float, double);
-DEF_CVT_SCALE_FUNC(32f,    float, float, float);
-DEF_CVT_SCALE_FUNC(64f32f, double, float, double);
+DEF_CVT_SCALE_FUNC(8u32f,  uchar, float, float)
+DEF_CVT_SCALE_FUNC(8s32f,  schar, float, float)
+DEF_CVT_SCALE_FUNC(16u32f, ushort, float, float)
+DEF_CVT_SCALE_FUNC(16s32f, short, float, float)
+DEF_CVT_SCALE_FUNC(32s32f, int, float, double)
+DEF_CVT_SCALE_FUNC(32f,    float, float, float)
+DEF_CVT_SCALE_FUNC(64f32f, double, float, double)
 
-DEF_CVT_SCALE_FUNC(8u64f,  uchar, double, double);
-DEF_CVT_SCALE_FUNC(8s64f,  schar, double, double);
-DEF_CVT_SCALE_FUNC(16u64f, ushort, double, double);
-DEF_CVT_SCALE_FUNC(16s64f, short, double, double);
-DEF_CVT_SCALE_FUNC(32s64f, int, double, double);
-DEF_CVT_SCALE_FUNC(32f64f, float, double, double);
-DEF_CVT_SCALE_FUNC(64f,    double, double, double);
+DEF_CVT_SCALE_FUNC(8u64f,  uchar, double, double)
+DEF_CVT_SCALE_FUNC(8s64f,  schar, double, double)
+DEF_CVT_SCALE_FUNC(16u64f, ushort, double, double)
+DEF_CVT_SCALE_FUNC(16s64f, short, double, double)
+DEF_CVT_SCALE_FUNC(32s64f, int, double, double)
+DEF_CVT_SCALE_FUNC(32f64f, float, double, double)
+DEF_CVT_SCALE_FUNC(64f,    double, double, double)
 
-DEF_CPY_FUNC(8u,     uchar);
-DEF_CVT_FUNC(8s8u,   schar, uchar);
-DEF_CVT_FUNC(16u8u,  ushort, uchar);
-DEF_CVT_FUNC(16s8u,  short, uchar);
-DEF_CVT_FUNC(32s8u,  int, uchar);
-DEF_CVT_FUNC(32f8u,  float, uchar);
-DEF_CVT_FUNC(64f8u,  double, uchar);
+DEF_CPY_FUNC(8u,     uchar)
+DEF_CVT_FUNC_F(8s8u,   schar, uchar, 8s8u_C1Rs)
+DEF_CVT_FUNC_F(16u8u,  ushort, uchar, 16u8u_C1R)
+DEF_CVT_FUNC_F(16s8u,  short, uchar, 16s8u_C1R)
+DEF_CVT_FUNC_F(32s8u,  int, uchar, 32s8u_C1R)
+DEF_CVT_FUNC_F2(32f8u,  float, uchar, 32f8u_C1RSfs)
+DEF_CVT_FUNC(64f8u,  double, uchar)
 
-DEF_CVT_FUNC(8u8s,   uchar, schar);
-DEF_CVT_FUNC(16u8s,  ushort, schar);
-DEF_CVT_FUNC(16s8s,  short, schar);
-DEF_CVT_FUNC(32s8s,  int, schar);
-DEF_CVT_FUNC(32f8s,  float, schar);
-DEF_CVT_FUNC(64f8s,  double, schar);
+DEF_CVT_FUNC_F2(8u8s,   uchar, schar, 8u8s_C1RSfs)
+DEF_CVT_FUNC_F2(16u8s,  ushort, schar, 16u8s_C1RSfs)
+DEF_CVT_FUNC_F2(16s8s,  short, schar, 16s8s_C1RSfs)
+DEF_CVT_FUNC_F(32s8s,  int, schar, 32s8s_C1R)
+DEF_CVT_FUNC_F2(32f8s,  float, schar, 32f8s_C1RSfs)
+DEF_CVT_FUNC(64f8s,  double, schar)
 
-DEF_CVT_FUNC(8u16u,  uchar, ushort);
-DEF_CVT_FUNC(8s16u,  schar, ushort);
-DEF_CPY_FUNC(16u,    ushort);
-DEF_CVT_FUNC(16s16u, short, ushort);
-DEF_CVT_FUNC(32s16u, int, ushort);
-DEF_CVT_FUNC(32f16u, float, ushort);
-DEF_CVT_FUNC(64f16u, double, ushort);
+DEF_CVT_FUNC_F(8u16u,  uchar, ushort, 8u16u_C1R)
+DEF_CVT_FUNC_F(8s16u,  schar, ushort, 8s16u_C1Rs)
+DEF_CPY_FUNC(16u,    ushort)
+DEF_CVT_FUNC_F(16s16u, short, ushort, 16s16u_C1Rs)
+DEF_CVT_FUNC_F2(32s16u, int, ushort, 32s16u_C1RSfs)
+DEF_CVT_FUNC_F2(32f16u, float, ushort, 32f16u_C1RSfs)
+DEF_CVT_FUNC(64f16u, double, ushort)
 
-DEF_CVT_FUNC(8u16s,  uchar, short);
-DEF_CVT_FUNC(8s16s,  schar, short);
-DEF_CVT_FUNC(16u16s, ushort, short);
-DEF_CVT_FUNC(32s16s, int, short);
-DEF_CVT_FUNC(32f16s, float, short);
-DEF_CVT_FUNC(64f16s, double, short);
+DEF_CVT_FUNC_F(8u16s,  uchar, short, 8u16s_C1R)
+DEF_CVT_FUNC_F(8s16s,  schar, short, 8s16s_C1R)
+DEF_CVT_FUNC_F2(16u16s, ushort, short, 16u16s_C1RSfs)
+DEF_CVT_FUNC_F2(32s16s, int, short, 32s16s_C1RSfs)
+DEF_CVT_FUNC_F2(32f16s, float, short, 32f16s_C1RSfs)
+DEF_CVT_FUNC(64f16s, double, short)
 
-DEF_CVT_FUNC(8u32s,  uchar, int);
-DEF_CVT_FUNC(8s32s,  schar, int);
-DEF_CVT_FUNC(16u32s, ushort, int);
-DEF_CVT_FUNC(16s32s, short, int);
-DEF_CPY_FUNC(32s,    int);
-DEF_CVT_FUNC(32f32s, float, int);
-DEF_CVT_FUNC(64f32s, double, int);
+DEF_CVT_FUNC_F(8u32s,  uchar, int, 8u32s_C1R)
+DEF_CVT_FUNC_F(8s32s,  schar, int, 8s32s_C1R)
+DEF_CVT_FUNC_F(16u32s, ushort, int, 16u32s_C1R)
+DEF_CVT_FUNC_F(16s32s, short, int, 16s32s_C1R)
+DEF_CPY_FUNC(32s,    int)
+DEF_CVT_FUNC_F2(32f32s, float, int, 32f32s_C1RSfs)
+DEF_CVT_FUNC(64f32s, double, int)
 
-DEF_CVT_FUNC(8u32f,  uchar, float);
-DEF_CVT_FUNC(8s32f,  schar, float);
-DEF_CVT_FUNC(16u32f, ushort, float);
-DEF_CVT_FUNC(16s32f, short, float);
-DEF_CVT_FUNC(32s32f, int, float);
-DEF_CVT_FUNC(64f32f, double, float);
+DEF_CVT_FUNC_F(8u32f,  uchar, float, 8u32f_C1R)
+DEF_CVT_FUNC_F(8s32f,  schar, float, 8s32f_C1R)
+DEF_CVT_FUNC_F(16u32f, ushort, float, 16u32f_C1R)
+DEF_CVT_FUNC_F(16s32f, short, float, 16s32f_C1R)
+DEF_CVT_FUNC_F(32s32f, int, float, 32s32f_C1R)
+DEF_CVT_FUNC(64f32f, double, float)
 
-DEF_CVT_FUNC(8u64f,  uchar, double);
-DEF_CVT_FUNC(8s64f,  schar, double);
-DEF_CVT_FUNC(16u64f, ushort, double);
-DEF_CVT_FUNC(16s64f, short, double);
-DEF_CVT_FUNC(32s64f, int, double);
-DEF_CVT_FUNC(32f64f, float, double);
-DEF_CPY_FUNC(64s,    int64);
+DEF_CVT_FUNC(8u64f,  uchar, double)
+DEF_CVT_FUNC(8s64f,  schar, double)
+DEF_CVT_FUNC(16u64f, ushort, double)
+DEF_CVT_FUNC(16s64f, short, double)
+DEF_CVT_FUNC(32s64f, int, double)
+DEF_CVT_FUNC(32f64f, float, double)
+DEF_CPY_FUNC(64s,    int64)
 
 static BinaryFunc getCvtScaleAbsFunc(int depth)
 {
@@ -1068,10 +1532,59 @@ static BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
     return cvtScaleTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
 }
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
+{
+    const ocl::Device & d = ocl::Device::getDefault();
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+        kercn = ocl::predictOptimalVectorWidth(_src, _dst), rowsPerWI = d.isIntel() ? 4 : 1;
+    bool doubleSupport = d.doubleFPConfig() > 0;
+
+    if (depth == CV_32F || depth == CV_64F)
+        return false;
+
+    char cvt[2][50];
+    int wdepth = std::max(depth, CV_32F);
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                  format("-D OP_CONVERT_SCALE_ABS -D UNARY_OP -D dstT=%s -D srcT1=%s"
+                         " -D workT=%s -D wdepth=%d -D convertToWT1=%s -D convertToDT=%s"
+                         " -D workT1=%s -D rowsPerWI=%d%s",
+                         ocl::typeToStr(CV_8UC(kercn)),
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
+                         ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)), wdepth,
+                         ocl::convertTypeStr(depth, wdepth, kercn, cvt[0]),
+                         ocl::convertTypeStr(wdepth, CV_8U, kercn, cvt[1]),
+                         ocl::typeToStr(wdepth), rowsPerWI,
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(src.size(), CV_8UC(cn));
+    UMat dst = _dst.getUMat();
+
+    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+            dstarg = ocl::KernelArg::WriteOnly(dst, cn, kercn);
+
+    if (wdepth == CV_32F)
+        k.args(srcarg, dstarg, (float)alpha, (float)beta);
+    else if (wdepth == CV_64F)
+        k.args(srcarg, dstarg, alpha, beta);
+
+    size_t globalsize[2] = { src.cols * cn / kercn, (src.rows + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, NULL, false);
+}
+
+#endif
+
 }
 
 void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
 {
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_convertScaleAbs(_src, _dst, alpha, beta))
+
     Mat src = _src.getMat();
     int cn = src.channels();
     double scale[] = {alpha, beta};
@@ -1137,7 +1650,7 @@ void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) 
         Size sz((int)(it.size*cn), 1);
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
-            func(ptrs[0], 0, 0, 0, ptrs[1], 0, sz, scale);
+            func(ptrs[0], 1, 0, 0, ptrs[1], 1, sz, scale);
     }
 }
 
@@ -1207,19 +1720,282 @@ static LUTFunc lutTab[] =
     (LUTFunc)LUT8u_32s, (LUTFunc)LUT8u_32f, (LUTFunc)LUT8u_64f, 0
 };
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
+{
+    int lcn = _lut.channels(), dcn = _src.channels(), ddepth = _lut.depth();
+
+    UMat src = _src.getUMat(), lut = _lut.getUMat();
+    _dst.create(src.size(), CV_MAKETYPE(ddepth, dcn));
+    UMat dst = _dst.getUMat();
+    int kercn = lcn == 1 ? std::min(4, ocl::predictOptimalVectorWidth(_dst)) : dcn;
+
+    ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
+                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", kercn, lcn,
+                         ocl::typeToStr(src.depth()), ocl::memopTypeToStr(ddepth)));
+    if (k.empty())
+        return false;
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::ReadOnlyNoSize(lut),
+        ocl::KernelArg::WriteOnly(dst, dcn, kercn));
+
+    size_t globalSize[2] = { dst.cols * dcn / kercn, (dst.rows + 3) / 4 };
+    return k.run(2, globalSize, NULL, false);
+}
+
+#endif
+
+#if defined(HAVE_IPP)
+namespace ipp {
+
+#if 0 // there are no performance benefits (PR #2653)
+class IppLUTParallelBody_LUTC1 : public ParallelLoopBody
+{
+public:
+    bool* ok;
+    const Mat& src_;
+    const Mat& lut_;
+    Mat& dst_;
+
+    typedef IppStatus (*IppFn)(const Ipp8u* pSrc, int srcStep, void* pDst, int dstStep,
+                          IppiSize roiSize, const void* pTable, int nBitSize);
+    IppFn fn;
+
+    int width;
+
+    IppLUTParallelBody_LUTC1(const Mat& src, const Mat& lut, Mat& dst, bool* _ok)
+        : ok(_ok), src_(src), lut_(lut), dst_(dst)
+    {
+        width = dst.cols * dst.channels();
+
+        size_t elemSize1 = CV_ELEM_SIZE1(dst.depth());
+
+        fn =
+                elemSize1 == 1 ? (IppFn)ippiLUTPalette_8u_C1R :
+                elemSize1 == 4 ? (IppFn)ippiLUTPalette_8u32u_C1R :
+                NULL;
+
+        *ok = (fn != NULL);
+    }
+
+    void operator()( const cv::Range& range ) const
+    {
+        if (!*ok)
+            return;
+
+        const int row0 = range.start;
+        const int row1 = range.end;
+
+        Mat src = src_.rowRange(row0, row1);
+        Mat dst = dst_.rowRange(row0, row1);
+
+        IppiSize sz = { width, dst.rows };
+
+        CV_DbgAssert(fn != NULL);
+        if (fn(src.data, (int)src.step[0], dst.data, (int)dst.step[0], sz, lut_.data, 8) < 0)
+        {
+            setIppErrorStatus();
+            *ok = false;
+        }
+    }
+private:
+    IppLUTParallelBody_LUTC1(const IppLUTParallelBody_LUTC1&);
+    IppLUTParallelBody_LUTC1& operator=(const IppLUTParallelBody_LUTC1&);
+};
+#endif
+
+class IppLUTParallelBody_LUTCN : public ParallelLoopBody
+{
+public:
+    bool *ok;
+    const Mat& src_;
+    const Mat& lut_;
+    Mat& dst_;
+
+    int lutcn;
+
+    uchar* lutBuffer;
+    uchar* lutTable[4];
+
+    IppLUTParallelBody_LUTCN(const Mat& src, const Mat& lut, Mat& dst, bool* _ok)
+        : ok(_ok), src_(src), lut_(lut), dst_(dst), lutBuffer(NULL)
+    {
+        lutcn = lut.channels();
+        IppiSize sz256 = {256, 1};
+
+        size_t elemSize1 = dst.elemSize1();
+        CV_DbgAssert(elemSize1 == 1);
+        lutBuffer = (uchar*)ippMalloc(256 * (int)elemSize1 * 4);
+        lutTable[0] = lutBuffer + 0;
+        lutTable[1] = lutBuffer + 1 * 256 * elemSize1;
+        lutTable[2] = lutBuffer + 2 * 256 * elemSize1;
+        lutTable[3] = lutBuffer + 3 * 256 * elemSize1;
+
+        CV_DbgAssert(lutcn == 3 || lutcn == 4);
+        if (lutcn == 3)
+        {
+            IppStatus status = ippiCopy_8u_C3P3R(lut.data, (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
+            if (status < 0)
+            {
+                setIppErrorStatus();
+                return;
+            }
+        }
+        else if (lutcn == 4)
+        {
+            IppStatus status = ippiCopy_8u_C4P4R(lut.data, (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
+            if (status < 0)
+            {
+                setIppErrorStatus();
+                return;
+            }
+        }
+
+        *ok = true;
+    }
+
+    ~IppLUTParallelBody_LUTCN()
+    {
+        if (lutBuffer != NULL)
+            ippFree(lutBuffer);
+        lutBuffer = NULL;
+        lutTable[0] = NULL;
+    }
+
+    void operator()( const cv::Range& range ) const
+    {
+        if (!*ok)
+            return;
+
+        const int row0 = range.start;
+        const int row1 = range.end;
+
+        Mat src = src_.rowRange(row0, row1);
+        Mat dst = dst_.rowRange(row0, row1);
+
+        if (lutcn == 3)
+        {
+            if (ippiLUTPalette_8u_C3R(
+                    src.data, (int)src.step[0], dst.data, (int)dst.step[0],
+                    ippiSize(dst.size()), lutTable, 8) >= 0)
+                return;
+        }
+        else if (lutcn == 4)
+        {
+            if (ippiLUTPalette_8u_C4R(
+                    src.data, (int)src.step[0], dst.data, (int)dst.step[0],
+                    ippiSize(dst.size()), lutTable, 8) >= 0)
+                return;
+        }
+        setIppErrorStatus();
+        *ok = false;
+    }
+private:
+    IppLUTParallelBody_LUTCN(const IppLUTParallelBody_LUTCN&);
+    IppLUTParallelBody_LUTCN& operator=(const IppLUTParallelBody_LUTCN&);
+};
+} // namespace ipp
+#endif // IPP
+
+class LUTParallelBody : public ParallelLoopBody
+{
+public:
+    bool* ok;
+    const Mat& src_;
+    const Mat& lut_;
+    Mat& dst_;
+
+    LUTFunc func;
+
+    LUTParallelBody(const Mat& src, const Mat& lut, Mat& dst, bool* _ok)
+        : ok(_ok), src_(src), lut_(lut), dst_(dst)
+    {
+        func = lutTab[lut.depth()];
+        *ok = (func != NULL);
+    }
+
+    void operator()( const cv::Range& range ) const
+    {
+        CV_DbgAssert(*ok);
+
+        const int row0 = range.start;
+        const int row1 = range.end;
+
+        Mat src = src_.rowRange(row0, row1);
+        Mat dst = dst_.rowRange(row0, row1);
+
+        int cn = src.channels();
+        int lutcn = lut_.channels();
+
+        const Mat* arrays[] = {&src, &dst, 0};
+        uchar* ptrs[2];
+        NAryMatIterator it(arrays, ptrs);
+        int len = (int)it.size;
+
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+            func(ptrs[0], lut_.data, ptrs[1], len, cn, lutcn);
+    }
+private:
+    LUTParallelBody(const LUTParallelBody&);
+    LUTParallelBody& operator=(const LUTParallelBody&);
+};
+
 }
 
 void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 {
-    Mat src = _src.getMat(), lut = _lut.getMat();
-    int cn = src.channels();
-    int lutcn = lut.channels();
+    int cn = _src.channels(), depth = _src.depth();
+    int lutcn = _lut.channels();
 
     CV_Assert( (lutcn == cn || lutcn == 1) &&
-        lut.total() == 256 && lut.isContinuous() &&
-        (src.depth() == CV_8U || src.depth() == CV_8S) );
-    _dst.create( src.dims, src.size, CV_MAKETYPE(lut.depth(), cn));
+        _lut.total() == 256 && _lut.isContinuous() &&
+        (depth == CV_8U || depth == CV_8S) );
+
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+               ocl_LUT(_src, _lut, _dst))
+
+    Mat src = _src.getMat(), lut = _lut.getMat();
+    _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
+
+    if (_src.dims() <= 2)
+    {
+        bool ok = false;
+        Ptr<ParallelLoopBody> body;
+#if defined(HAVE_IPP)
+        size_t elemSize1 = CV_ELEM_SIZE1(dst.depth());
+#if 0 // there are no performance benefits (PR #2653)
+        if (lutcn == 1)
+        {
+            ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTC1(src, lut, dst, &ok);
+            body.reset(p);
+        }
+        else
+#endif
+        if ((lutcn == 3 || lutcn == 4) && elemSize1 == 1)
+        {
+            ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTCN(src, lut, dst, &ok);
+            body.reset(p);
+        }
+#endif
+        if (body == NULL || ok == false)
+        {
+            ok = false;
+            ParallelLoopBody* p = new LUTParallelBody(src, lut, dst, &ok);
+            body.reset(p);
+        }
+        if (body != NULL && ok)
+        {
+            Range all(0, dst.rows);
+            if (dst.total()>>18)
+                parallel_for_(all, *body, (double)std::max((size_t)1, dst.total()>>16));
+            else
+                (*body)(all);
+            if (ok)
+                return;
+        }
+    }
 
     LUTFunc func = lutTab[lut.depth()];
     CV_Assert( func != 0 );
@@ -1233,43 +2009,136 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
         func(ptrs[0], lut.data, ptrs[1], len, cn, lutcn);
 }
 
+namespace cv {
 
-void cv::normalize( InputArray _src, OutputArray _dst, double a, double b,
+#ifdef HAVE_OPENCL
+
+static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _mask, int dtype,
+                           double scale, double delta )
+{
+    UMat src = _src.getUMat();
+
+    if( _mask.empty() )
+        src.convertTo( _dst, dtype, scale, delta );
+    else if (src.channels() <= 4)
+    {
+        const ocl::Device & dev = ocl::Device::getDefault();
+
+        int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
+                ddepth = CV_MAT_DEPTH(dtype), wdepth = std::max(CV_32F, std::max(sdepth, ddepth)),
+                rowsPerWI = dev.isIntel() ? 4 : 1;
+
+        float fscale = static_cast<float>(scale), fdelta = static_cast<float>(delta);
+        bool haveScale = std::fabs(scale - 1) > DBL_EPSILON,
+                haveZeroScale = !(std::fabs(scale) > DBL_EPSILON),
+                haveDelta = std::fabs(delta) > DBL_EPSILON,
+                doubleSupport = dev.doubleFPConfig() > 0;
+
+        if (!haveScale && !haveDelta && stype == dtype)
+        {
+            _src.copyTo(_dst, _mask);
+            return true;
+        }
+        if (haveZeroScale)
+        {
+            _dst.setTo(Scalar(delta), _mask);
+            return true;
+        }
+
+        if ((sdepth == CV_64F || ddepth == CV_64F) && !doubleSupport)
+            return false;
+
+        char cvt[2][40];
+        String opts = format("-D srcT=%s -D dstT=%s -D convertToWT=%s -D cn=%d -D rowsPerWI=%d"
+                             " -D convertToDT=%s -D workT=%s%s%s%s -D srcT1=%s -D dstT1=%s",
+                             ocl::typeToStr(stype), ocl::typeToStr(dtype),
+                             ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]), cn,
+                             rowsPerWI, ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
+                             ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
+                             doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                             haveScale ? " -D HAVE_SCALE" : "",
+                             haveDelta ? " -D HAVE_DELTA" : "",
+                             ocl::typeToStr(sdepth), ocl::typeToStr(ddepth));
+
+        ocl::Kernel k("normalizek", ocl::core::normalize_oclsrc, opts);
+        if (k.empty())
+            return false;
+
+        UMat mask = _mask.getUMat(), dst = _dst.getUMat();
+
+        ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+                maskarg = ocl::KernelArg::ReadOnlyNoSize(mask),
+                dstarg = ocl::KernelArg::ReadWrite(dst);
+
+        if (haveScale)
+        {
+            if (haveDelta)
+                k.args(srcarg, maskarg, dstarg, fscale, fdelta);
+            else
+                k.args(srcarg, maskarg, dstarg, fscale);
+        }
+        else
+        {
+            if (haveDelta)
+                k.args(srcarg, maskarg, dstarg, fdelta);
+            else
+                k.args(srcarg, maskarg, dstarg);
+        }
+
+        size_t globalsize[2] = { src.cols, (src.rows + rowsPerWI - 1) / rowsPerWI };
+        return k.run(2, globalsize, NULL, false);
+    }
+    else
+    {
+        UMat temp;
+        src.convertTo( temp, dtype, scale, delta );
+        temp.copyTo( _dst, _mask );
+    }
+
+    return true;
+}
+
+#endif
+
+}
+
+void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
                     int norm_type, int rtype, InputArray _mask )
 {
-    Mat src = _src.getMat(), mask = _mask.getMat();
-
     double scale = 1, shift = 0;
     if( norm_type == CV_MINMAX )
     {
         double smin = 0, smax = 0;
         double dmin = MIN( a, b ), dmax = MAX( a, b );
-        minMaxLoc( _src, &smin, &smax, 0, 0, mask );
+        minMaxLoc( _src, &smin, &smax, 0, 0, _mask );
         scale = (dmax - dmin)*(smax - smin > DBL_EPSILON ? 1./(smax - smin) : 0);
         shift = dmin - smin*scale;
     }
     else if( norm_type == CV_L2 || norm_type == CV_L1 || norm_type == CV_C )
     {
-        scale = norm( src, norm_type, mask );
+        scale = norm( _src, norm_type, _mask );
         scale = scale > DBL_EPSILON ? a/scale : 0.;
         shift = 0;
     }
     else
         CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
 
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if( rtype < 0 )
-        rtype = _dst.fixedType() ? _dst.depth() : src.depth();
+        rtype = _dst.fixedType() ? _dst.depth() : depth;
+    _dst.createSameSize(_src, CV_MAKETYPE(rtype, cn));
 
-    _dst.create(src.dims, src.size, CV_MAKETYPE(rtype, src.channels()));
-    Mat dst = _dst.getMat();
+    CV_OCL_RUN(_dst.isUMat(),
+               ocl_normalize(_src, _dst, _mask, rtype, scale, shift))
 
-    if( !mask.data )
+    Mat src = _src.getMat(), dst = _dst.getMat();
+    if( _mask.empty() )
         src.convertTo( dst, rtype, scale, shift );
     else
     {
         Mat temp;
         src.convertTo( temp, rtype, scale, shift );
-        temp.copyTo( dst, mask );
+        temp.copyTo( dst, _mask );
     }
 }
 

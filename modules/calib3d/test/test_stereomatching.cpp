@@ -279,7 +279,7 @@ float dispRMS( const Mat& computedDisp, const Mat& groundTruthDisp, const Mat& m
         checkTypeAndSizeOfMask( mask, sz );
         pointsCount = countNonZero(mask);
     }
-    return 1.f/sqrt((float)pointsCount) * (float)norm(computedDisp, groundTruthDisp, NORM_L2, mask);
+    return 1.f/sqrt((float)pointsCount) * (float)cvtest::norm(computedDisp, groundTruthDisp, NORM_L2, mask);
 }
 
 /*
@@ -398,7 +398,7 @@ protected:
 
 void CV_StereoMatchingTest::run(int)
 {
-    string dataPath = ts->get_data_path();
+    string dataPath = ts->get_data_path() + "cv/";
     string algorithmName = name;
     assert( !algorithmName.empty() );
     if( dataPath.empty() )

@@ -216,6 +216,11 @@ void cv::setMouseCallback( const String& windowName, MouseCallback onMouse, void
     cvSetMouseCallback(windowName.c_str(), onMouse, param);
 }
 
+int cv::getMouseWheelDelta( int flags )
+{
+    return CV_GET_WHEEL_DELTA(flags);
+}
+
 int cv::startWindowThread()
 {
     return cvStartWindowThread();

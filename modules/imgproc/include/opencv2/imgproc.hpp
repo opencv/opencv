@@ -76,14 +76,15 @@ enum { MORPH_RECT    = 0,
      };
 
 //! interpolation algorithm
-enum { INTER_NEAREST    = 0, //!< nearest neighbor interpolation
-       INTER_LINEAR     = 1, //!< bilinear interpolation
-       INTER_CUBIC      = 2, //!< bicubic interpolation
-       INTER_AREA       = 3, //!< area-based (or super) interpolation
-       INTER_LANCZOS4   = 4, //!< Lanczos interpolation over 8x8 neighborhood
+enum { INTER_NEAREST        = 0, //!< nearest neighbor interpolation
+       INTER_LINEAR         = 1, //!< bilinear interpolation
+       INTER_CUBIC          = 2, //!< bicubic interpolation
+       INTER_AREA           = 3, //!< area-based (or super) interpolation
+       INTER_LANCZOS4       = 4, //!< Lanczos interpolation over 8x8 neighborhood
 
-       INTER_MAX        = 7, //!< mask for interpolation codes
-       WARP_INVERSE_MAP = 16
+       INTER_MAX            = 7, //!< mask for interpolation codes
+       WARP_FILL_OUTLIERS   = 8,
+       WARP_INVERSE_MAP     = 16
      };
 
 enum { INTER_BITS      = 5,
@@ -202,7 +203,9 @@ enum { HISTCMP_CORREL        = 0,
        HISTCMP_CHISQR        = 1,
        HISTCMP_INTERSECT     = 2,
        HISTCMP_BHATTACHARYYA = 3,
-       HISTCMP_HELLINGER     = HISTCMP_BHATTACHARYYA
+       HISTCMP_HELLINGER     = HISTCMP_BHATTACHARYYA,
+       HISTCMP_CHISQR_ALT    = 4,
+       HISTCMP_KL_DIV        = 5
      };
 
 //! the color conversion code
@@ -462,7 +465,11 @@ enum { COLOR_BGR2BGRA     = 0,
        COLOR_COLORCVT_MAX  = 139
 };
 
-
+//! types of intersection between rectangles
+enum { INTERSECT_NONE = 0,
+       INTERSECT_PARTIAL  = 1,
+       INTERSECT_FULL  = 2
+     };
 
 /*!
  The Base Class for 1D or Row-wise Filters
@@ -900,7 +907,7 @@ protected:
     Point2f bottomRight;
 };
 
-class LineSegmentDetector : public Algorithm
+class CV_EXPORTS_W LineSegmentDetector : public Algorithm
 {
 public:
 /**
@@ -922,7 +929,7 @@ public:
  *                              * 1 corresponds to 0.1 mean false alarms
  *                          This vector will be calculated _only_ when the objects type is REFINE_ADV
  */
-    virtual void detect(InputArray _image, OutputArray _lines,
+    CV_WRAP virtual void detect(InputArray _image, OutputArray _lines,
                         OutputArray width = noArray(), OutputArray prec = noArray(),
                         OutputArray nfa = noArray()) = 0;
 
@@ -933,7 +940,7 @@ public:
  *                  Should have the size of the image, where the lines were found
  * @param lines     The lines that need to be drawn
  */
-    virtual void drawSegments(InputOutputArray _image, InputArray lines) = 0;
+    CV_WRAP virtual void drawSegments(InputOutputArray _image, InputArray lines) = 0;
 
 /**
  * Draw both vectors on the image canvas. Uses blue for lines 1 and red for lines 2.
@@ -945,13 +952,13 @@ public:
  *                  Should have the size of the image, where the lines were found
  * @return          The number of mismatching pixels between lines1 and lines2.
  */
-    virtual int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray()) = 0;
+    CV_WRAP virtual int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray()) = 0;
 
-    virtual ~LineSegmentDetector() {};
+    virtual ~LineSegmentDetector() { }
 };
 
 //! Returns a pointer to a LineSegmentDetector class.
-CV_EXPORTS Ptr<LineSegmentDetector> createLineSegmentDetectorPtr(
+CV_EXPORTS_W Ptr<LineSegmentDetector> createLineSegmentDetector(
     int _refine = LSD_REFINE_STD, double _scale = 0.8,
     double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5,
     double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024);
@@ -1060,16 +1067,16 @@ CV_EXPORTS_W void bilateralFilter( InputArray src, OutputArray dst, int d,
                                    double sigmaColor, double sigmaSpace,
                                    int borderType = BORDER_DEFAULT );
 
-//! smooths the image using adaptive bilateral filter
-CV_EXPORTS_W void adaptiveBilateralFilter( InputArray src, OutputArray dst, Size ksize,
-                                           double sigmaSpace, Point anchor=Point(-1, -1),
-                                           int borderType=BORDER_DEFAULT );
-
 //! smooths the image using the box filter. Each pixel is processed in O(1) time
 CV_EXPORTS_W void boxFilter( InputArray src, OutputArray dst, int ddepth,
                              Size ksize, Point anchor = Point(-1,-1),
                              bool normalize = true,
                              int borderType = BORDER_DEFAULT );
+
+CV_EXPORTS_W void sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
+                                Size ksize, Point anchor = Point(-1, -1),
+                                bool normalize = true,
+                                int borderType = BORDER_DEFAULT );
 
 //! a synonym for normalized box filter
 CV_EXPORTS_W void blur( InputArray src, OutputArray dst,
@@ -1141,9 +1148,10 @@ CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
 //! finds lines in the black-n-white image using the standard or pyramid Hough transform
 CV_EXPORTS_W void HoughLines( InputArray image, OutputArray lines,
                               double rho, double theta, int threshold,
-                              double srn = 0, double stn = 0 );
+                              double srn = 0, double stn = 0,
+                              double min_theta = 0, double max_theta = CV_PI );
 
-//! finds line segments in the black-n-white image using probabalistic Hough transform
+//! finds line segments in the black-n-white image using probabilistic Hough transform
 CV_EXPORTS_W void HoughLinesP( InputArray image, OutputArray lines,
                                double rho, double theta, int threshold,
                                double minLineLength = 0, double maxLineGap = 0 );
@@ -1223,17 +1231,25 @@ CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
 CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
                                  Point2f center, OutputArray patch, int patchType = -1 );
 
+//! computes the log polar transform
+CV_EXPORTS_W void logPolar( InputArray src, OutputArray dst,
+                            Point2f center, double M, int flags );
+
+//! computes the linear polar transform
+CV_EXPORTS_W void linearPolar( InputArray src, OutputArray dst,
+                               Point2f center, double maxRadius, int flags );
+
 //! computes the integral image
 CV_EXPORTS_W void integral( InputArray src, OutputArray sum, int sdepth = -1 );
 
 //! computes the integral image and integral for the squared image
 CV_EXPORTS_AS(integral2) void integral( InputArray src, OutputArray sum,
-                                        OutputArray sqsum, int sdepth = -1 );
+                                        OutputArray sqsum, int sdepth = -1, int sqdepth = -1 );
 
 //! computes the integral image, integral for the squared image and the tilted integral image
 CV_EXPORTS_AS(integral3) void integral( InputArray src, OutputArray sum,
                                         OutputArray sqsum, OutputArray tilted,
-                                        int sdepth = -1 );
+                                        int sdepth = -1, int sqdepth = -1 );
 
 //! adds image to the accumulator (dst += src). Unlike cv::add, dst and src can have different types.
 CV_EXPORTS_W void accumulate( InputArray src, InputOutputArray dst,
@@ -1374,7 +1390,7 @@ CV_EXPORTS_AS(distanceTransformWithLabels) void distanceTransform( InputArray sr
 
 //! computes the distance transform map
 CV_EXPORTS_W void distanceTransform( InputArray src, OutputArray dst,
-                                     int distanceType, int maskSize );
+                                     int distanceType, int maskSize, int dstType=CV_32F);
 
 
 //! fills the semi-uniform image region starting from the specified seed point
@@ -1486,6 +1502,9 @@ CV_EXPORTS_W void fitLine( InputArray points, OutputArray line, int distType,
 //! checks if the point is inside the contour. Optionally computes the signed distance from the point to the contour boundary
 CV_EXPORTS_W double pointPolygonTest( InputArray contour, Point2f pt, bool measureDist );
 
+//! computes whether two rotated rectangles intersect and returns the vertices of the intersecting region
+CV_EXPORTS_W int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, OutputArray intersectingRegion  );
+
 CV_EXPORTS_W Ptr<CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
 
 //! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
@@ -1495,6 +1514,9 @@ CV_EXPORTS Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
 //! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
 //! Detects position, traslation and rotation
 CV_EXPORTS Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
+
+//! Performs linear blending of two images
+CV_EXPORTS void blendLinear(InputArray src1, InputArray src2, InputArray weights1, InputArray weights2, OutputArray dst);
 
 } // cv
 

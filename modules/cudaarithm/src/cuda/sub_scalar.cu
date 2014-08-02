@@ -40,110 +40,164 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/transform.hpp"
-#include "opencv2/core/cuda/saturate_cast.hpp"
-#include "opencv2/core/cuda/simd_functions.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-#include "arithm_func_traits.hpp"
+#error "opencv_cudev is required"
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#else
 
-namespace arithm
+#include "opencv2/cudev.hpp"
+
+using namespace cv::cudev;
+
+void subScalar(const GpuMat& src, cv::Scalar val, bool inv, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int);
+
+namespace
 {
-    template <typename T, typename S, typename D> struct SubScalar : unary_function<T, D>
+    template <typename SrcType, typename ScalarType, typename DstType> struct SubScalarOp : unary_function<SrcType, DstType>
     {
-        S val;
-        int scale;
+        ScalarType val;
 
-        __host__ SubScalar(S val_, int scale_) : val(val_), scale(scale_) {}
-
-        __device__ __forceinline__ D operator ()(T a) const
+        __device__ __forceinline__ DstType operator ()(SrcType a) const
         {
-            return saturate_cast<D>(scale * (a - val));
+            return saturate_cast<DstType>(saturate_cast<ScalarType>(a) - val);
         }
     };
-}
 
-namespace cv { namespace cuda { namespace device
-{
-    template <typename T, typename S, typename D> struct TransformFunctorTraits< arithm::SubScalar<T, S, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename SrcType, typename ScalarType, typename DstType> struct SubScalarOpInv : unary_function<SrcType, DstType>
+    {
+        ScalarType val;
+
+        __device__ __forceinline__ DstType operator ()(SrcType a) const
+        {
+            return saturate_cast<DstType>(val - saturate_cast<ScalarType>(a));
+        }
+    };
+
+    template <typename ScalarDepth> struct TransformPolicy : DefaultTransformPolicy
     {
     };
-}}}
-
-namespace arithm
-{
-    template <typename T, typename S, typename D>
-    void subScalar(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
+    template <> struct TransformPolicy<double> : DefaultTransformPolicy
     {
-        SubScalar<T, S, D> op(static_cast<S>(val), inv ? -1 : 1);
+        enum {
+            shift = 1
+        };
+    };
 
-        if (mask.data)
-            device::transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, mask, stream);
+    template <typename SrcType, typename ScalarDepth, typename DstType>
+    void subScalarImpl(const GpuMat& src, cv::Scalar value, bool inv, GpuMat& dst, const GpuMat& mask, Stream& stream)
+    {
+        typedef typename MakeVec<ScalarDepth, VecTraits<SrcType>::cn>::type ScalarType;
+
+        cv::Scalar_<ScalarDepth> value_ = value;
+
+        if (inv)
+        {
+            SubScalarOpInv<SrcType, ScalarType, DstType> op;
+            op.val = VecTraits<ScalarType>::make(value_.val);
+
+            if (mask.data)
+                gridTransformUnary_< TransformPolicy<ScalarDepth> >(globPtr<SrcType>(src), globPtr<DstType>(dst), op, globPtr<uchar>(mask), stream);
+            else
+                gridTransformUnary_< TransformPolicy<ScalarDepth> >(globPtr<SrcType>(src), globPtr<DstType>(dst), op, stream);
+        }
         else
-            device::transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+        {
+            SubScalarOp<SrcType, ScalarType, DstType> op;
+            op.val = VecTraits<ScalarType>::make(value_.val);
+
+            if (mask.data)
+                gridTransformUnary_< TransformPolicy<ScalarDepth> >(globPtr<SrcType>(src), globPtr<DstType>(dst), op, globPtr<uchar>(mask), stream);
+            else
+                gridTransformUnary_< TransformPolicy<ScalarDepth> >(globPtr<SrcType>(src), globPtr<DstType>(dst), op, stream);
+        }
     }
-
-    template void subScalar<uchar, float, uchar>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<uchar, float, schar>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<uchar, float, ushort>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<uchar, float, short>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<uchar, float, int>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<uchar, float, float>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<uchar, double, double>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-
-    template void subScalar<schar, float, uchar>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<schar, float, schar>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<schar, float, ushort>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<schar, float, short>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<schar, float, int>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<schar, float, float>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<schar, double, double>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-
-    //template void subScalar<ushort, float, uchar>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subScalar<ushort, float, schar>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<ushort, float, ushort>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<ushort, float, short>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<ushort, float, int>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<ushort, float, float>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<ushort, double, double>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-
-    //template void subScalar<short, float, uchar>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subScalar<short, float, schar>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<short, float, ushort>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<short, float, short>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<short, float, int>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<short, float, float>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<short, double, double>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-
-    //template void subScalar<int, float, uchar>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subScalar<int, float, schar>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subScalar<int, float, ushort>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subScalar<int, float, short>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<int, float, int>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<int, float, float>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<int, double, double>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-
-    //template void subScalar<float, float, uchar>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subScalar<float, float, schar>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subScalar<float, float, ushort>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subScalar<float, float, short>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subScalar<float, float, int>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<float, float, float>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<float, double, double>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-
-    //template void subScalar<double, double, uchar>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subScalar<double, double, schar>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subScalar<double, double, ushort>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subScalar<double, double, short>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subScalar<double, double, int>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subScalar<double, double, float>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subScalar<double, double, double>(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
 }
 
-#endif // CUDA_DISABLER
+void subScalar(const GpuMat& src, cv::Scalar val, bool inv, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int)
+{
+    typedef void (*func_t)(const GpuMat& src, cv::Scalar val, bool inv, GpuMat& dst, const GpuMat& mask, Stream& stream);
+    static const func_t funcs[7][7][4] =
+    {
+        {
+            {subScalarImpl<uchar, float, uchar>, subScalarImpl<uchar2, float, uchar2>, subScalarImpl<uchar3, float, uchar3>, subScalarImpl<uchar4, float, uchar4>},
+            {subScalarImpl<uchar, float, schar>, subScalarImpl<uchar2, float, char2>, subScalarImpl<uchar3, float, char3>, subScalarImpl<uchar4, float, char4>},
+            {subScalarImpl<uchar, float, ushort>, subScalarImpl<uchar2, float, ushort2>, subScalarImpl<uchar3, float, ushort3>, subScalarImpl<uchar4, float, ushort4>},
+            {subScalarImpl<uchar, float, short>, subScalarImpl<uchar2, float, short2>, subScalarImpl<uchar3, float, short3>, subScalarImpl<uchar4, float, short4>},
+            {subScalarImpl<uchar, float, int>, subScalarImpl<uchar2, float, int2>, subScalarImpl<uchar3, float, int3>, subScalarImpl<uchar4, float, int4>},
+            {subScalarImpl<uchar, float, float>, subScalarImpl<uchar2, float, float2>, subScalarImpl<uchar3, float, float3>, subScalarImpl<uchar4, float, float4>},
+            {subScalarImpl<uchar, double, double>, subScalarImpl<uchar2, double, double2>, subScalarImpl<uchar3, double, double3>, subScalarImpl<uchar4, double, double4>}
+        },
+        {
+            {subScalarImpl<schar, float, uchar>, subScalarImpl<char2, float, uchar2>, subScalarImpl<char3, float, uchar3>, subScalarImpl<char4, float, uchar4>},
+            {subScalarImpl<schar, float, schar>, subScalarImpl<char2, float, char2>, subScalarImpl<char3, float, char3>, subScalarImpl<char4, float, char4>},
+            {subScalarImpl<schar, float, ushort>, subScalarImpl<char2, float, ushort2>, subScalarImpl<char3, float, ushort3>, subScalarImpl<char4, float, ushort4>},
+            {subScalarImpl<schar, float, short>, subScalarImpl<char2, float, short2>, subScalarImpl<char3, float, short3>, subScalarImpl<char4, float, short4>},
+            {subScalarImpl<schar, float, int>, subScalarImpl<char2, float, int2>, subScalarImpl<char3, float, int3>, subScalarImpl<char4, float, int4>},
+            {subScalarImpl<schar, float, float>, subScalarImpl<char2, float, float2>, subScalarImpl<char3, float, float3>, subScalarImpl<char4, float, float4>},
+            {subScalarImpl<schar, double, double>, subScalarImpl<char2, double, double2>, subScalarImpl<char3, double, double3>, subScalarImpl<char4, double, double4>}
+        },
+        {
+            {0 /*subScalarImpl<ushort, float, uchar>*/, 0 /*subScalarImpl<ushort2, float, uchar2>*/, 0 /*subScalarImpl<ushort3, float, uchar3>*/, 0 /*subScalarImpl<ushort4, float, uchar4>*/},
+            {0 /*subScalarImpl<ushort, float, schar>*/, 0 /*subScalarImpl<ushort2, float, char2>*/, 0 /*subScalarImpl<ushort3, float, char3>*/, 0 /*subScalarImpl<ushort4, float, char4>*/},
+            {subScalarImpl<ushort, float, ushort>, subScalarImpl<ushort2, float, ushort2>, subScalarImpl<ushort3, float, ushort3>, subScalarImpl<ushort4, float, ushort4>},
+            {subScalarImpl<ushort, float, short>, subScalarImpl<ushort2, float, short2>, subScalarImpl<ushort3, float, short3>, subScalarImpl<ushort4, float, short4>},
+            {subScalarImpl<ushort, float, int>, subScalarImpl<ushort2, float, int2>, subScalarImpl<ushort3, float, int3>, subScalarImpl<ushort4, float, int4>},
+            {subScalarImpl<ushort, float, float>, subScalarImpl<ushort2, float, float2>, subScalarImpl<ushort3, float, float3>, subScalarImpl<ushort4, float, float4>},
+            {subScalarImpl<ushort, double, double>, subScalarImpl<ushort2, double, double2>, subScalarImpl<ushort3, double, double3>, subScalarImpl<ushort4, double, double4>}
+        },
+        {
+            {0 /*subScalarImpl<short, float, uchar>*/, 0 /*subScalarImpl<short2, float, uchar2>*/, 0 /*subScalarImpl<short3, float, uchar3>*/, 0 /*subScalarImpl<short4, float, uchar4>*/},
+            {0 /*subScalarImpl<short, float, schar>*/, 0 /*subScalarImpl<short2, float, char2>*/, 0 /*subScalarImpl<short3, float, char3>*/, 0 /*subScalarImpl<short4, float, char4>*/},
+            {subScalarImpl<short, float, ushort>, subScalarImpl<short2, float, ushort2>, subScalarImpl<short3, float, ushort3>, subScalarImpl<short4, float, ushort4>},
+            {subScalarImpl<short, float, short>, subScalarImpl<short2, float, short2>, subScalarImpl<short3, float, short3>, subScalarImpl<short4, float, short4>},
+            {subScalarImpl<short, float, int>, subScalarImpl<short2, float, int2>, subScalarImpl<short3, float, int3>, subScalarImpl<short4, float, int4>},
+            {subScalarImpl<short, float, float>, subScalarImpl<short2, float, float2>, subScalarImpl<short3, float, float3>, subScalarImpl<short4, float, float4>},
+            {subScalarImpl<short, double, double>, subScalarImpl<short2, double, double2>, subScalarImpl<short3, double, double3>, subScalarImpl<short4, double, double4>}
+        },
+        {
+            {0 /*subScalarImpl<int, float, uchar>*/, 0 /*subScalarImpl<int2, float, uchar2>*/, 0 /*subScalarImpl<int3, float, uchar3>*/, 0 /*subScalarImpl<int4, float, uchar4>*/},
+            {0 /*subScalarImpl<int, float, schar>*/, 0 /*subScalarImpl<int2, float, char2>*/, 0 /*subScalarImpl<int3, float, char3>*/, 0 /*subScalarImpl<int4, float, char4>*/},
+            {0 /*subScalarImpl<int, float, ushort>*/, 0 /*subScalarImpl<int2, float, ushort2>*/, 0 /*subScalarImpl<int3, float, ushort3>*/, 0 /*subScalarImpl<int4, float, ushort4>*/},
+            {0 /*subScalarImpl<int, float, short>*/, 0 /*subScalarImpl<int2, float, short2>*/, 0 /*subScalarImpl<int3, float, short3>*/, 0 /*subScalarImpl<int4, float, short4>*/},
+            {subScalarImpl<int, float, int>, subScalarImpl<int2, float, int2>, subScalarImpl<int3, float, int3>, subScalarImpl<int4, float, int4>},
+            {subScalarImpl<int, float, float>, subScalarImpl<int2, float, float2>, subScalarImpl<int3, float, float3>, subScalarImpl<int4, float, float4>},
+            {subScalarImpl<int, double, double>, subScalarImpl<int2, double, double2>, subScalarImpl<int3, double, double3>, subScalarImpl<int4, double, double4>}
+        },
+        {
+            {0 /*subScalarImpl<float, float, uchar>*/, 0 /*subScalarImpl<float2, float, uchar2>*/, 0 /*subScalarImpl<float3, float, uchar3>*/, 0 /*subScalarImpl<float4, float, uchar4>*/},
+            {0 /*subScalarImpl<float, float, schar>*/, 0 /*subScalarImpl<float2, float, char2>*/, 0 /*subScalarImpl<float3, float, char3>*/, 0 /*subScalarImpl<float4, float, char4>*/},
+            {0 /*subScalarImpl<float, float, ushort>*/, 0 /*subScalarImpl<float2, float, ushort2>*/, 0 /*subScalarImpl<float3, float, ushort3>*/, 0 /*subScalarImpl<float4, float, ushort4>*/},
+            {0 /*subScalarImpl<float, float, short>*/, 0 /*subScalarImpl<float2, float, short2>*/, 0 /*subScalarImpl<float3, float, short3>*/, 0 /*subScalarImpl<float4, float, short4>*/},
+            {0 /*subScalarImpl<float, float, int>*/, 0 /*subScalarImpl<float2, float, int2>*/, 0 /*subScalarImpl<float3, float, int3>*/, 0 /*subScalarImpl<float4, float, int4>*/},
+            {subScalarImpl<float, float, float>, subScalarImpl<float2, float, float2>, subScalarImpl<float3, float, float3>, subScalarImpl<float4, float, float4>},
+            {subScalarImpl<float, double, double>, subScalarImpl<float2, double, double2>, subScalarImpl<float3, double, double3>, subScalarImpl<float4, double, double4>}
+        },
+        {
+            {0 /*subScalarImpl<double, double, uchar>*/, 0 /*subScalarImpl<double2, double, uchar2>*/, 0 /*subScalarImpl<double3, double, uchar3>*/, 0 /*subScalarImpl<double4, double, uchar4>*/},
+            {0 /*subScalarImpl<double, double, schar>*/, 0 /*subScalarImpl<double2, double, char2>*/, 0 /*subScalarImpl<double3, double, char3>*/, 0 /*subScalarImpl<double4, double, char4>*/},
+            {0 /*subScalarImpl<double, double, ushort>*/, 0 /*subScalarImpl<double2, double, ushort2>*/, 0 /*subScalarImpl<double3, double, ushort3>*/, 0 /*subScalarImpl<double4, double, ushort4>*/},
+            {0 /*subScalarImpl<double, double, short>*/, 0 /*subScalarImpl<double2, double, short2>*/, 0 /*subScalarImpl<double3, double, short3>*/, 0 /*subScalarImpl<double4, double, short4>*/},
+            {0 /*subScalarImpl<double, double, int>*/, 0 /*subScalarImpl<double2, double, int2>*/, 0 /*subScalarImpl<double3, double, int3>*/, 0 /*subScalarImpl<double4, double, int4>*/},
+            {0 /*subScalarImpl<double, double, float>*/, 0 /*subScalarImpl<double2, double, float2>*/, 0 /*subScalarImpl<double3, double, float3>*/, 0 /*subScalarImpl<double4, double, float4>*/},
+            {subScalarImpl<double, double, double>, subScalarImpl<double2, double, double2>, subScalarImpl<double3, double, double3>, subScalarImpl<double4, double, double4>}
+        }
+    };
+
+    const int sdepth = src.depth();
+    const int ddepth = dst.depth();
+    const int cn = src.channels();
+
+    CV_DbgAssert( sdepth <= CV_64F && ddepth <= CV_64F && cn <= 4 );
+
+    const func_t func = funcs[sdepth][ddepth][cn - 1];
+
+    if (!func)
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
+
+    func(src, val, inv, dst, mask, stream);
+}
+
+#endif

@@ -9,6 +9,7 @@ Demonstrate using a mouse to interact with an image:
  ESC to exit
 '''
 import numpy as np
+import cv2
 
 # built-in modules
 import os

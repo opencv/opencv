@@ -66,6 +66,9 @@ public:
     //! returns the descriptor type
     CV_WRAP int descriptorType() const;
 
+    //! returns the default norm type
+    CV_WRAP int defaultNorm() const;
+
     //! finds the keypoints using SIFT algorithm
     void operator()(InputArray img, InputArray mask,
                     std::vector<KeyPoint>& keypoints) const;
@@ -84,8 +87,8 @@ public:
                                 std::vector<KeyPoint>& keypoints ) const;
 
 protected:
-    void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask = Mat() ) const;
-    void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask = noArray() ) const;
+    void computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors ) const;
 
     CV_PROP_RW int nfeatures;
     CV_PROP_RW int nOctaveLayers;
@@ -118,6 +121,9 @@ public:
     //! returns the descriptor type
     CV_WRAP int descriptorType() const;
 
+    //! returns the descriptor type
+    CV_WRAP int defaultNorm() const;
+
     //! finds the keypoints using fast hessian detector used in SURF
     void operator()(InputArray img, InputArray mask,
                     CV_OUT std::vector<KeyPoint>& keypoints) const;
@@ -136,9 +142,8 @@ public:
     CV_PROP_RW bool upright;
 
 protected:
-
-    void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask = Mat() ) const;
-    void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask = noArray() ) const;
+    void computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors ) const;
 };
 
 typedef SURF SurfFeatureDetector;

@@ -183,6 +183,25 @@ Learn about how to use the feature points  detectors, descriptors and matching f
                      :height: 90pt
                      :width:  90pt
 
++
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  ===================== ==============================================
+   |AkazeMatch|         **Title:** :ref:`akazeMatching`
+
+                        *Compatibility:* > OpenCV 3.0
+
+                        *Author:* Fedor Morozov
+
+                        Use *AKAZE* local features to find correspondence between two images.
+
+  ===================== ==============================================
+
+  .. |AkazeMatch| image:: images/AKAZE_Match_Tutorial_Cover.png
+                     :height: 90pt
+                     :width:  90pt
+
 .. raw:: latex
 
    \pagebreak
@@ -201,3 +220,4 @@ Learn about how to use the feature points  detectors, descriptors and matching f
    ../feature_flann_matcher/feature_flann_matcher
    ../feature_homography/feature_homography
    ../detection_of_planar_objects/detection_of_planar_objects
+   ../akaze_matching/akaze_matching

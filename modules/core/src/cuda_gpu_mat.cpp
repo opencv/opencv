@@ -49,7 +49,8 @@ using namespace cv::cuda;
 cv::cuda::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t step_) :
     flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(rows_), cols(cols_),
     step(step_), data((uchar*)data_), refcount(0),
-    datastart((uchar*)data_), dataend((uchar*)data_)
+    datastart((uchar*)data_), dataend((uchar*)data_),
+    allocator(defaultAllocator())
 {
     size_t minstep = cols * elemSize();
 
@@ -74,7 +75,8 @@ cv::cuda::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t st
 cv::cuda::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
     flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(size_.height), cols(size_.width),
     step(step_), data((uchar*)data_), refcount(0),
-    datastart((uchar*)data_), dataend((uchar*)data_)
+    datastart((uchar*)data_), dataend((uchar*)data_),
+    allocator(defaultAllocator())
 {
     size_t minstep = cols * elemSize();
 
@@ -92,6 +94,7 @@ cv::cuda::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
 
         flags |= step == minstep ? Mat::CONTINUOUS_FLAG : 0;
     }
+
     dataend += step * (rows - 1) + minstep;
 }
 
@@ -100,6 +103,7 @@ cv::cuda::GpuMat::GpuMat(const GpuMat& m, Range rowRange_, Range colRange_)
     flags = m.flags;
     step = m.step; refcount = m.refcount;
     data = m.data; datastart = m.datastart; dataend = m.dataend;
+    allocator = m.allocator;
 
     if (rowRange_ == Range::all())
     {
@@ -139,7 +143,8 @@ cv::cuda::GpuMat::GpuMat(const GpuMat& m, Range rowRange_, Range colRange_)
 cv::cuda::GpuMat::GpuMat(const GpuMat& m, Rect roi) :
     flags(m.flags), rows(roi.height), cols(roi.width),
     step(m.step), data(m.data + roi.y*step), refcount(m.refcount),
-    datastart(m.datastart), dataend(m.dataend)
+    datastart(m.datastart), dataend(m.dataend),
+    allocator(m.allocator)
 {
     flags &= roi.width < m.cols ? ~Mat::CONTINUOUS_FLAG : -1;
     data += roi.x * elemSize();
@@ -346,6 +351,17 @@ GpuMat cv::cuda::allocMatFromBuf(int rows, int cols, int type, GpuMat& mat)
 }
 
 #ifndef HAVE_CUDA
+
+GpuMat::Allocator* cv::cuda::GpuMat::defaultAllocator()
+{
+    return 0;
+}
+
+void cv::cuda::GpuMat::setDefaultAllocator(Allocator* allocator)
+{
+    (void) allocator;
+    throw_no_cuda();
+}
 
 void cv::cuda::GpuMat::create(int _rows, int _cols, int _type)
 {

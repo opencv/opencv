@@ -129,7 +129,7 @@ PERF_TEST_P(PointsNum, DISABLED_SolvePnPRansac, testing::Values(4, 3*9, 7*13))
     Mat tvec;
 
 #ifdef HAVE_TBB
-    // limit concurrency to get determenistic result
+    // limit concurrency to get deterministic result
     tbb::task_scheduler_init one_thread(1);
 #endif
 

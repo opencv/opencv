@@ -55,13 +55,15 @@ Building the OpenCV library from scratch requires a couple of tools installed be
 .. |TortoiseGit| replace:: TortoiseGit
 .. _TortoiseGit: http://code.google.com/p/tortoisegit/wiki/Download
 .. |Python_Libraries| replace:: Python libraries
-.. _Python_Libraries: http://www.python.org/getit/
+.. _Python_Libraries: http://www.python.org/downloads/
 .. |Numpy| replace:: Numpy
 .. _Numpy: http://numpy.scipy.org/
 .. |IntelTBB| replace:: Intel |copy| Threading Building Blocks (*TBB*)
 .. _IntelTBB: http://threadingbuildingblocks.org/file.php?fid=77
 .. |IntelIIP| replace:: Intel |copy| Integrated Performance Primitives (*IPP*)
 .. _IntelIIP: http://software.intel.com/en-us/articles/intel-ipp/
+.. |IntelIIPA| replace:: Intel |copy| IPP Asynchronous C/C++
+.. _IntelIIPA: http://software.intel.com/en-us/intel-ipp-preview
 .. |qtframework| replace:: Qt framework
 .. _qtframework: http://qt.nokia.com/downloads
 .. |Eigen| replace:: Eigen
@@ -81,7 +83,7 @@ Building the OpenCV library from scratch requires a couple of tools installed be
 
    + An IDE of choice (preferably), or just a C\C++ compiler that will actually make the binary files. Here we will use the `Microsoft Visual Studio <https://www.microsoft.com/visualstudio/en-us>`_. However, you can use any other IDE that has a valid C\C++ compiler.
 
-   + |CMake|_, which is a neat tool to make the project files (for your choosen IDE) from the OpenCV source files. It will also allow an easy configuration of the OpenCV build files, in order to make binary files that fits exactly to your needs.
+   + |CMake|_, which is a neat tool to make the project files (for your chosen IDE) from the OpenCV source files. It will also allow an easy configuration of the OpenCV build files, in order to make binary files that fits exactly to your needs.
 
    + Git to acquire the OpenCV source files. A good tool for this is |TortoiseGit|_. Alternatively, you can just download an archived version of the source files from our `page on Sourceforge <http://sourceforge.net/projects/opencvlibrary/files/opencv-win/>`_
 
@@ -96,6 +98,8 @@ OpenCV may come in multiple flavors. There is a "core" section that will work on
    + |IntelTBB|_ is used inside OpenCV for parallel code snippets. Using this will make sure that the OpenCV library will take advantage of all the cores you have in your systems CPU.
 
    + |IntelIIP|_ may be used to improve the performance of color conversion, Haar training and DFT functions of the OpenCV library. Watch out, since this isn't a free service.
+
+   + |IntelIIPA|_ is currently focused delivering Intel |copy| Graphics support for advanced image processing and computer vision functions.
 
    + OpenCV offers a somewhat fancier and more useful graphical user interface, than the default one by using the |qtframework|_. For a quick overview of what this has to offer look into the documentations *highgui* module, under the *Qt New Functions* section. Version 4.6 or later of the framework is required.
 
@@ -167,6 +171,8 @@ Building the library
       .. image:: images/IntelTBB.png
          :alt: The Miktex Install Screen
          :align: center
+
+   #) For the |IntelIIPA|_ download the source files and set environment variable **IPP_ASYNC_ROOT**. It should point to :file:`<your Program Files(x86) directory>/Intel/IPP Preview */ipp directory`. Here ``*`` denotes the particular preview name.
 
    #) In case of the |Eigen|_ library it is again a case of download and extract to the :file:`D:/OpenCV/dep` directory.
 
@@ -320,7 +326,7 @@ First we set an enviroment variable to make easier our work. This will hold the 
 
 Here the directory is where you have your OpenCV binaries (*extracted* or *built*). You can have different platform (e.g. x64 instead of x86) or compiler type, so substitute appropriate value. Inside this you should have two folders called *lib* and *bin*. The -m should be added if you wish to make the settings computer wise, instead of user wise.
 
-If you built static libraries then you are done. Otherwise, you need to add the *bin* folders path to the systems path. This is cause you will use the OpenCV library in form of *\"Dynamic-link libraries\"* (also known as **DLL**). Inside these are stored all the algorithms and information the OpenCV library contains. The operating system will load them only on demand, during runtime. However, to do this he needs to know where they are. The systems **PATH** contains a list of folders where DLLs can be found. Add the OpenCV library path to this and the OS will know where to look if he ever needs the OpenCV binaries. Otherwise, you will need to copy the used DLLs right beside the applications executable file (*exe*) for the OS to find it, which is highly unpleasent if you work on many projects. To do this start up again the |PathEditor|_ and add the following new entry (right click in the application to bring up the menu):
+If you built static libraries then you are done. Otherwise, you need to add the *bin* folders path to the systems path. This is because you will use the OpenCV library in form of *\"Dynamic-link libraries\"* (also known as **DLL**). Inside these are stored all the algorithms and information the OpenCV library contains. The operating system will load them only on demand, during runtime. However, to do this the operating system needs to know where they are. The systems **PATH** contains a list of folders where DLLs can be found. Add the OpenCV library path to this and the OS will know where to look if he ever needs the OpenCV binaries. Otherwise, you will need to copy the used DLLs right beside the applications executable file (*exe*) for the OS to find it, which is highly unpleasent if you work on many projects. To do this start up again the |PathEditor|_ and add the following new entry (right click in the application to bring up the menu):
 
 ::
 

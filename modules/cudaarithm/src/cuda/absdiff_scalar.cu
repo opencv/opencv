@@ -40,26 +40,25 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/transform.hpp"
-#include "opencv2/core/cuda/saturate_cast.hpp"
-#include "opencv2/core/cuda/simd_functions.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-#include "arithm_func_traits.hpp"
+#error "opencv_cudev is required"
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#else
 
-namespace arithm
+#include "opencv2/cudev.hpp"
+
+using namespace cv::cudev;
+
+void absDiffScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int);
+
+namespace
 {
-    template <typename T, typename S> struct AbsDiffScalar : unary_function<T, T>
+    template <typename T, typename S> struct AbsDiffScalarOp : unary_function<T, T>
     {
         S val;
-
-        __host__ explicit AbsDiffScalar(S val_) : val(val_) {}
 
         __device__ __forceinline__ T operator ()(T a) const
         {
@@ -67,32 +66,45 @@ namespace arithm
             return saturate_cast<T>(f(a - val));
         }
     };
-}
 
-namespace cv { namespace cuda { namespace device
-{
-    template <typename T, typename S> struct TransformFunctorTraits< arithm::AbsDiffScalar<T, S> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename ScalarDepth> struct TransformPolicy : DefaultTransformPolicy
     {
     };
-}}}
-
-namespace arithm
-{
-    template <typename T, typename S>
-    void absDiffScalar(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream)
+    template <> struct TransformPolicy<double> : DefaultTransformPolicy
     {
-        AbsDiffScalar<T, S> op(static_cast<S>(val));
+        enum {
+            shift = 1
+        };
+    };
 
-        device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, op, WithOutMask(), stream);
+    template <typename SrcType, typename ScalarDepth>
+    void absDiffScalarImpl(const GpuMat& src, double value, GpuMat& dst, Stream& stream)
+    {
+        AbsDiffScalarOp<SrcType, ScalarDepth> op;
+        op.val = static_cast<ScalarDepth>(value);
+        gridTransformUnary_< TransformPolicy<ScalarDepth> >(globPtr<SrcType>(src), globPtr<SrcType>(dst), op, stream);
     }
-
-    template void absDiffScalar<uchar, float>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void absDiffScalar<schar, float>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void absDiffScalar<ushort, float>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void absDiffScalar<short, float>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void absDiffScalar<int, float>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void absDiffScalar<float, float>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    template void absDiffScalar<double, double>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
 }
 
-#endif // CUDA_DISABLER
+void absDiffScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int)
+{
+    typedef void (*func_t)(const GpuMat& src, double val, GpuMat& dst, Stream& stream);
+    static const func_t funcs[] =
+    {
+        absDiffScalarImpl<uchar, float>,
+        absDiffScalarImpl<schar, float>,
+        absDiffScalarImpl<ushort, float>,
+        absDiffScalarImpl<short, float>,
+        absDiffScalarImpl<int, float>,
+        absDiffScalarImpl<float, float>,
+        absDiffScalarImpl<double, double>
+    };
+
+    const int depth = src.depth();
+
+    CV_DbgAssert( depth <= CV_64F );
+
+    funcs[depth](src, val[0], dst, stream);
+}
+
+#endif

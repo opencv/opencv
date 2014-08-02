@@ -80,7 +80,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Empty()
 //////////////////////////////////////////////////////
 // VideoFrameSource & CameraFrameSource
 
-#ifndef HAVE_OPENCV_HIGHGUI
+#ifndef HAVE_OPENCV_VIDEOIO
 
 Ptr<FrameSource> cv::superres::createFrameSource_Video(const String& fileName)
 {
@@ -96,7 +96,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
     return Ptr<FrameSource>();
 }
 
-#else // HAVE_OPENCV_HIGHGUI
+#else // HAVE_OPENCV_VIDEOIO
 
 namespace
 {
@@ -115,25 +115,18 @@ namespace
     void CaptureFrameSource::nextFrame(OutputArray _frame)
     {
         if (_frame.kind() == _InputArray::MAT)
-        {
             vc_ >> _frame.getMatRef();
-        }
         else if(_frame.kind() == _InputArray::GPU_MAT)
         {
             vc_ >> frame_;
             arrCopy(frame_, _frame);
         }
-        else if(_frame.kind() == _InputArray::OCL_MAT)
-        {
-            vc_ >> frame_;
-            if(!frame_.empty())
-            {
-                arrCopy(frame_, _frame);
-            }
-        }
+        else if (_frame.isUMat())
+            vc_ >> *(UMat *)_frame.getObj();
         else
         {
-            //should never get here
+            // should never get here
+            CV_Assert(0);
         }
     }
 
@@ -194,7 +187,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
     return makePtr<CameraFrameSource>(deviceId);
 }
 
-#endif // HAVE_OPENCV_HIGHGUI
+#endif // HAVE_OPENCV_VIDEOIO
 
 //////////////////////////////////////////////////////
 // VideoFrameSource_CUDA

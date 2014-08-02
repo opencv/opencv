@@ -378,7 +378,7 @@ Calculates the covariance matrix of a set of vectors.
 
 .. ocv:function:: void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, Mat& mean, int flags, int ctype=CV_64F)
 
-.. ocv:function:: void calcCovarMatrix( InputArray samples, OutputArray covar, OutputArray mean, int flags, int ctype=CV_64F)
+.. ocv:function:: void calcCovarMatrix( InputArray samples, OutputArray covar, InputOutputArray mean, int flags, int ctype=CV_64F)
 
 .. ocv:pyfunction:: cv2.calcCovarMatrix(samples, flags[, covar[, mean[, ctype]]]) -> covar, mean
 
@@ -903,7 +903,7 @@ So, the function chooses an operation mode depending on the flags and size of th
 
     * When ``DFT_COMPLEX_OUTPUT`` is set, the output is a complex matrix of the same size as input.
 
-    * When ``DFT_COMPLEX_OUTPUT`` is not set, the output is a real matrix of the same size as input. In case of 2D transform, it uses the packed format as shown above. In case of a single 1D transform, it looks like the first row of the matrix above. In case of multiple 1D transforms (when using the ``DCT_ROWS``         flag), each row of the output matrix looks like the first row of the matrix above.
+    * When ``DFT_COMPLEX_OUTPUT`` is not set, the output is a real matrix of the same size as input. In case of 2D transform, it uses the packed format as shown above. In case of a single 1D transform, it looks like the first row of the matrix above. In case of multiple 1D transforms (when using the ``DFT_ROWS``         flag), each row of the output matrix looks like the first row of the matrix above.
 
  * If the input array is complex and either ``DFT_INVERSE``     or ``DFT_REAL_OUTPUT``     are not set, the output is a complex array of the same size as input. The function performs a forward or inverse 1D or 2D transform of the whole input array or each row of the input array independently, depending on the flags ``DFT_INVERSE`` and ``DFT_ROWS``.
 
@@ -1216,9 +1216,9 @@ gemm
 ----
 Performs generalized matrix multiplication.
 
-.. ocv:function:: void gemm( InputArray src1, InputArray src2, double alpha, InputArray src3, double gamma, OutputArray dst, int flags=0 )
+.. ocv:function:: void gemm( InputArray src1, InputArray src2, double alpha, InputArray src3, double beta, OutputArray dst, int flags=0 )
 
-.. ocv:pyfunction:: cv2.gemm(src1, src2, alpha, src3, gamma[, dst[, flags]]) -> dst
+.. ocv:pyfunction:: cv2.gemm(src1, src2, alpha, src3, beta[, dst[, flags]]) -> dst
 
 .. ocv:cfunction:: void cvGEMM( const CvArr* src1, const CvArr* src2, double alpha, const CvArr* src3, double beta, CvArr* dst, int tABC=0)
 
@@ -2065,7 +2065,7 @@ normalize
 ---------
 Normalizes the norm or value range of an array.
 
-.. ocv:function:: void normalize( InputArray src, OutputArray dst, double alpha=1, double beta=0, int norm_type=NORM_L2, int dtype=-1, InputArray mask=noArray() )
+.. ocv:function:: void normalize( InputArray src, InputOutputArray dst, double alpha=1, double beta=0, int norm_type=NORM_L2, int dtype=-1, InputArray mask=noArray() )
 
 .. ocv:function:: void normalize(const SparseMat& src, SparseMat& dst, double alpha, int normType)
 

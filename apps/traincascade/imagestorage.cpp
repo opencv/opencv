@@ -1,6 +1,7 @@
 #include "opencv2/core.hpp"
+#include "opencv2/core/core_c.h"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/imgcodecs.hpp"
 
 #include "imagestorage.h"
 #include <stdio.h>
@@ -8,6 +9,7 @@
 #include <fstream>
 
 using namespace std;
+using namespace cv;
 
 bool CvCascadeImageReader::create( const string _posFilename, const string _negFilename, Size _winSize )
 {
@@ -69,7 +71,7 @@ bool CvCascadeImageReader::NegReader::nextImg()
         _offset.x = std::min( (int)round % winSize.width, src.cols - winSize.width );
         _offset.y = std::min( (int)round / winSize.width, src.rows - winSize.height );
         if( !src.empty() && src.type() == CV_8UC1
-                && offset.x >= 0 && offset.y >= 0 )
+                && _offset.x >= 0 && _offset.y >= 0 )
             break;
     }
 

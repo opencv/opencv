@@ -43,6 +43,13 @@
 using namespace cv;
 using namespace std;
 
+#define OCL_TUNING_MODE 0
+#if OCL_TUNING_MODE
+#define OCL_TUNING_MODE_ONLY(code) code
+#else
+#define OCL_TUNING_MODE_ONLY(code)
+#endif
+
 // image moments
 class CV_MomentsTest : public cvtest::ArrayTest
 {
@@ -60,6 +67,7 @@ protected:
     void run_func();
     int coi;
     bool is_binary;
+    bool try_umat;
 };
 
 
@@ -70,6 +78,7 @@ CV_MomentsTest::CV_MomentsTest()
     test_array[REF_OUTPUT].push_back(NULL);
     coi = -1;
     is_binary = false;
+    OCL_TUNING_MODE_ONLY(test_case_count = 10);
     //element_wise_relative_error = false;
 }
 
@@ -96,17 +105,31 @@ void CV_MomentsTest::get_minmax_bounds( int i, int j, int type, Scalar& low, Sca
     }
 }
 
-
 void CV_MomentsTest::get_test_array_types_and_sizes( int test_case_idx,
                                                 vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
     RNG& rng = ts->get_rng();
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    int cn = cvtest::randInt(rng) % 4 + 1;
+    int cn = (cvtest::randInt(rng) % 4) + 1;
     int depth = cvtest::randInt(rng) % 4;
     depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : depth == 2 ? CV_16S : CV_32F;
-    if( cn == 2 )
+
+    is_binary = cvtest::randInt(rng) % 2 != 0;
+    if( depth == 0 && !is_binary )
+        try_umat = cvtest::randInt(rng) % 5 != 0;
+    else
+        try_umat = cvtest::randInt(rng) % 2 != 0;
+
+    if( cn == 2 || try_umat )
         cn = 1;
+
+    OCL_TUNING_MODE_ONLY(
+    cn = 1;
+    depth = CV_8U;
+    try_umat = true;
+    is_binary = false;
+    sizes[INPUT][0] = Size(1024,768)
+    );
 
     types[INPUT][0] = CV_MAKETYPE(depth, cn);
     types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_64FC1;
@@ -114,7 +137,6 @@ void CV_MomentsTest::get_test_array_types_and_sizes( int test_case_idx,
     if(CV_MAT_DEPTH(types[INPUT][0])>=CV_32S)
         sizes[INPUT][0].width = MAX(sizes[INPUT][0].width, 3);
 
-    is_binary = cvtest::randInt(rng) % 2 != 0;
     coi = 0;
     cvmat_allowed = true;
     if( cn > 1 )
@@ -149,7 +171,25 @@ void CV_MomentsTest::run_func()
 {
     CvMoments* m = (CvMoments*)test_mat[OUTPUT][0].ptr<double>();
     double* others = (double*)(m + 1);
-    cvMoments( test_array[INPUT][0], m, is_binary );
+    if( try_umat )
+    {
+        UMat u;
+        test_mat[INPUT][0].clone().copyTo(u);
+        OCL_TUNING_MODE_ONLY(
+            static double ttime = 0;
+            static int ncalls = 0;
+            moments(u, is_binary != 0);
+            double t = (double)getTickCount());
+        Moments new_m = moments(u, is_binary != 0);
+        OCL_TUNING_MODE_ONLY(
+            ttime += (double)getTickCount() - t;
+            ncalls++;
+            printf("%g\n", ttime/ncalls/u.total()));
+        *m = new_m;
+    }
+    else
+        cvMoments( test_array[INPUT][0], m, is_binary );
+
     others[0] = cvGetNormalizedCentralMoment( m, 2, 0 );
     others[1] = cvGetNormalizedCentralMoment( m, 1, 1 );
     others[2] = cvGetNormalizedCentralMoment( m, 0, 2 );

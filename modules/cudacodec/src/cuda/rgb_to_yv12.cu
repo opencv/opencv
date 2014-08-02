@@ -40,10 +40,21 @@
 //
 //M*/
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/vec_traits.hpp"
+#include "opencv2/opencv_modules.hpp"
 
-namespace cv { namespace cuda { namespace device
+#ifndef HAVE_OPENCV_CUDEV
+
+#error "opencv_cudev is required"
+
+#else
+
+#include "opencv2/cudev/ptr2d/glob.hpp"
+
+using namespace cv::cudev;
+
+void RGB_to_YV12(const GpuMat& src, GpuMat& dst);
+
+namespace
 {
     __device__ __forceinline__ void rgb_to_y(const uchar b, const uchar g, const uchar r, uchar& y)
     {
@@ -57,7 +68,7 @@ namespace cv { namespace cuda { namespace device
         v = static_cast<uchar>(((int)(50 * r) - (int)(42 * g) - (int)(8 * b) + 12800) / 100);
     }
 
-    __global__ void Gray_to_YV12(const PtrStepSzb src, PtrStepb dst)
+    __global__ void Gray_to_YV12(const GlobPtrSz<uchar> src, GlobPtr<uchar> dst)
     {
         const int x = (blockIdx.x * blockDim.x + threadIdx.x) * 2;
         const int y = (blockIdx.y * blockDim.y + threadIdx.y) * 2;
@@ -67,9 +78,9 @@ namespace cv { namespace cuda { namespace device
 
         // get pointers to the data
         const size_t planeSize = src.rows * dst.step;
-        PtrStepb y_plane(dst.data, dst.step);
-        PtrStepb u_plane(y_plane.data + planeSize, dst.step / 2);
-        PtrStepb v_plane(u_plane.data + (planeSize / 4), dst.step / 2);
+        GlobPtr<uchar> y_plane = globPtr(dst.data, dst.step);
+        GlobPtr<uchar> u_plane = globPtr(y_plane.data + planeSize, dst.step / 2);
+        GlobPtr<uchar> v_plane = globPtr(u_plane.data + (planeSize / 4), dst.step / 2);
 
         uchar pix;
         uchar y_val, u_val, v_val;
@@ -94,7 +105,7 @@ namespace cv { namespace cuda { namespace device
     }
 
     template <typename T>
-    __global__ void RGB_to_YV12(const PtrStepSz<T> src, PtrStepb dst)
+    __global__ void RGB_to_YV12(const GlobPtrSz<T> src, GlobPtr<uchar> dst)
     {
         const int x = (blockIdx.x * blockDim.x + threadIdx.x) * 2;
         const int y = (blockIdx.y * blockDim.y + threadIdx.y) * 2;
@@ -104,9 +115,9 @@ namespace cv { namespace cuda { namespace device
 
         // get pointers to the data
         const size_t planeSize = src.rows * dst.step;
-        PtrStepb y_plane(dst.data, dst.step);
-        PtrStepb u_plane(y_plane.data + planeSize, dst.step / 2);
-        PtrStepb v_plane(u_plane.data + (planeSize / 4), dst.step / 2);
+        GlobPtr<uchar> y_plane = globPtr(dst.data, dst.step);
+        GlobPtr<uchar> u_plane = globPtr(y_plane.data + planeSize, dst.step / 2);
+        GlobPtr<uchar> v_plane = globPtr(u_plane.data + (planeSize / 4), dst.step / 2);
 
         T pix;
         uchar y_val, u_val, v_val;
@@ -129,42 +140,28 @@ namespace cv { namespace cuda { namespace device
         u_plane(y / 2, x / 2) = u_val;
         v_plane(y / 2, x / 2) = v_val;
     }
+}
 
-    void Gray_to_YV12_caller(const PtrStepSzb src, PtrStepb dst, cudaStream_t stream)
+void RGB_to_YV12(const GpuMat& src, GpuMat& dst)
+{
+    const dim3 block(32, 8);
+    const dim3 grid(divUp(src.cols, block.x * 2), divUp(src.rows, block.y * 2));
+
+    switch (src.channels())
     {
-        dim3 block(32, 8);
-        dim3 grid(divUp(src.cols, block.x * 2), divUp(src.rows, block.y * 2));
-
-        Gray_to_YV12<<<grid, block, 0, stream>>>(src, dst);
-        cudaSafeCall( cudaGetLastError() );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
-    }
-    template <int cn>
-    void RGB_to_YV12_caller(const PtrStepSzb src, PtrStepb dst, cudaStream_t stream)
-    {
-        typedef typename TypeVec<uchar, cn>::vec_type src_t;
-
-        dim3 block(32, 8);
-        dim3 grid(divUp(src.cols, block.x * 2), divUp(src.rows, block.y * 2));
-
-        RGB_to_YV12<<<grid, block, 0, stream>>>(static_cast< PtrStepSz<src_t> >(src), dst);
-        cudaSafeCall( cudaGetLastError() );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+    case 1:
+        Gray_to_YV12<<<grid, block>>>(globPtr<uchar>(src), globPtr<uchar>(dst));
+        break;
+    case 3:
+        RGB_to_YV12<<<grid, block>>>(globPtr<uchar3>(src), globPtr<uchar>(dst));
+        break;
+    case 4:
+        RGB_to_YV12<<<grid, block>>>(globPtr<uchar4>(src), globPtr<uchar>(dst));
+        break;
     }
 
-    void RGB_to_YV12(const PtrStepSzb src, int cn, PtrStepSzb dst, cudaStream_t stream)
-    {
-        typedef void (*func_t)(const PtrStepSzb src, PtrStepb dst, cudaStream_t stream);
+    CV_CUDEV_SAFE_CALL( cudaGetLastError() );
+    CV_CUDEV_SAFE_CALL( cudaDeviceSynchronize() );
+}
 
-        static const func_t funcs[] =
-        {
-            0, Gray_to_YV12_caller, 0, RGB_to_YV12_caller<3>, RGB_to_YV12_caller<4>
-        };
-
-        funcs[cn](src, dst, stream);
-    }
-}}}
+#endif

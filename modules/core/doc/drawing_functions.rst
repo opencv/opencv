@@ -34,7 +34,7 @@ circle
 ----------
 Draws a circle.
 
-.. ocv:function:: void circle( Mat& img, Point center, int radius, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
+.. ocv:function:: void circle( InputOutputArray img, Point center, int radius, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
 .. ocv:pyfunction:: cv2.circle(img, center, radius, color[, thickness[, lineType[, shift]]]) -> img
 
@@ -83,9 +83,9 @@ ellipse
 -----------
 Draws a simple or thick elliptic arc or fills an ellipse sector.
 
-.. ocv:function:: void ellipse( Mat& img, Point center, Size axes, double angle, double startAngle, double endAngle, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
+.. ocv:function:: void ellipse( InputOutputArray img, Point center, Size axes, double angle, double startAngle, double endAngle, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
-.. ocv:function:: void ellipse( Mat& img, const RotatedRect& box, const Scalar& color, int thickness=1, int lineType=LINE_8 )
+.. ocv:function:: void ellipse( InputOutputArray img, const RotatedRect& box, const Scalar& color, int thickness=1, int lineType=LINE_8 )
 
 .. ocv:pyfunction:: cv2.ellipse(img, center, axes, angle, startAngle, endAngle, color[, thickness[, lineType[, shift]]]) -> img
 
@@ -99,7 +99,7 @@ Draws a simple or thick elliptic arc or fills an ellipse sector.
 
     :param center: Center of the ellipse.
 
-    :param axes: Length of the ellipse axes.
+    :param axes: Half of the size of the ellipse main axes.
 
     :param angle: Ellipse rotation angle in degrees.
 
@@ -137,7 +137,7 @@ Approximates an elliptic arc with a polyline.
 
     :param center: Center of the arc.
 
-    :param axes: Half-sizes of the arc. See the  :ocv:func:`ellipse`  for details.
+    :param axes: Half of the size of the ellipse main axes. See the  :ocv:func:`ellipse`  for details.
 
     :param angle: Rotation angle of the ellipse in degrees. See the  :ocv:func:`ellipse`  for details.
 
@@ -151,7 +151,6 @@ Approximates an elliptic arc with a polyline.
 
 The function ``ellipse2Poly`` computes the vertices of a polyline that approximates the specified elliptic arc. It is used by
 :ocv:func:`ellipse` .
-
 
 
 fillConvexPoly
@@ -332,7 +331,7 @@ line
 --------
 Draws a line segment connecting two points.
 
-.. ocv:function:: void line( Mat& img, Point pt1, Point pt2, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
+.. ocv:function:: void line( InputOutputArray img, Point pt1, Point pt2, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
 .. ocv:pyfunction:: cv2.line(img, pt1, pt2, color[, thickness[, lineType[, shift]]]) -> img
 
@@ -360,6 +359,37 @@ Draws a line segment connecting two points.
 
 The function ``line`` draws the line segment between ``pt1`` and ``pt2`` points in the image. The line is clipped by the image boundaries. For non-antialiased lines with integer coordinates, the 8-connected or 4-connected Bresenham algorithm is used. Thick lines are drawn with rounding endings.
 Antialiased lines are drawn using Gaussian filtering.
+
+
+arrowedLine
+----------------
+Draws a arrow segment pointing from the first point to the second one.
+
+.. ocv:function:: void arrowedLine(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,          int thickness=1, int lineType=8, int shift=0, double tipLength=0.1)
+
+    :param img: Image.
+
+    :param pt1: The point the arrow starts from.
+
+    :param pt2: The point the arrow points to.
+
+    :param color: Line color.
+
+    :param thickness: Line thickness.
+
+    :param lineType: Type of the line:
+
+            * **8** (or omitted) - 8-connected line.
+
+            * **4** - 4-connected line.
+
+            * **CV_AA** - antialiased line.
+
+    :param shift: Number of fractional bits in the point coordinates.
+
+    :param tipLength: The length of the arrow tip in relation to the arrow length
+
+The function ``arrowedLine`` draws an arrow between ``pt1`` and ``pt2`` points in the image. See also :ocv:func:`line`.
 
 
 LineIterator
@@ -418,7 +448,7 @@ rectangle
 -------------
 Draws a simple, thick, or filled up-right rectangle.
 
-.. ocv:function:: void rectangle( Mat& img, Point pt1, Point pt2, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
+.. ocv:function:: void rectangle( InputOutputArray img, Point pt1, Point pt2, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
 .. ocv:function:: void rectangle( Mat& img, Rect rec, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
@@ -571,7 +601,7 @@ putText
 -----------
 Draws a text string.
 
-.. ocv:function:: void putText( Mat& img, const String& text, Point org, int fontFace, double fontScale, Scalar color, int thickness=1, int lineType=LINE_8, bool bottomLeftOrigin=false )
+.. ocv:function:: void putText( InputOutputArray img, const String& text, Point org, int fontFace, double fontScale, Scalar color, int thickness=1, int lineType=LINE_8, bool bottomLeftOrigin=false )
 
 .. ocv:pyfunction:: cv2.putText(img, text, org, fontFace, fontScale, color[, thickness[, lineType[, bottomLeftOrigin]]]) -> None
 
@@ -586,7 +616,7 @@ Draws a text string.
     :param font: ``CvFont`` structure initialized using :ocv:cfunc:`InitFont`.
 
     :param fontFace: Font type. One of  ``FONT_HERSHEY_SIMPLEX``,  ``FONT_HERSHEY_PLAIN``, ``FONT_HERSHEY_DUPLEX``,  ``FONT_HERSHEY_COMPLEX``,  ``FONT_HERSHEY_TRIPLEX``, ``FONT_HERSHEY_COMPLEX_SMALL``,  ``FONT_HERSHEY_SCRIPT_SIMPLEX``, or  ``FONT_HERSHEY_SCRIPT_COMPLEX``,
-           where each of the font ID's can be combined with  ``FONT_HERSHEY_ITALIC``  to get the slanted letters.
+           where each of the font ID's can be combined with  ``FONT_ITALIC``  to get the slanted letters.
 
     :param fontScale: Font scale factor that is multiplied by the font-specific base size.
 

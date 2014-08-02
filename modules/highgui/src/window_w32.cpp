@@ -40,31 +40,15 @@
 //M*/
 
 #include "precomp.hpp"
+#include <windowsx.h> // required for GET_X_LPARAM() and GET_Y_LPARAM() macros
 
 #if defined WIN32 || defined _WIN32
-
-#define COMPILE_MULTIMON_STUBS // Required for multi-monitor support
-#ifndef _MULTIMON_USE_SECURE_CRT
-#  define _MULTIMON_USE_SECURE_CRT 0 // some MinGW platforms have no strncpy_s
-#endif
-
-#if defined SM_CMONITORS && !defined MONITOR_DEFAULTTONEAREST
-#  define MONITOR_DEFAULTTONULL       0x00000000
-#  define MONITOR_DEFAULTTOPRIMARY    0x00000001
-#  define MONITOR_DEFAULTTONEAREST    0x00000002
-#  define MONITORINFOF_PRIMARY        0x00000001
-#endif
-#ifndef __inout
-#  define __inout
-#endif
 
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wmissing-declarations"
 #endif
-#include <MultiMon.h>
 
 #include <commctrl.h>
-#include <winuser.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -104,6 +88,10 @@ static const char* trackbar_text =
 #define CV_HCURSOR GCL_HCURSOR
 #define CV_HBRBACKGROUND GCL_HBRBACKGROUND
 
+#endif
+
+#ifndef WM_MOUSEHWHEEL
+    #define WM_MOUSEHWHEEL 0x020E
 #endif
 
 static void FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin )
@@ -1087,12 +1075,7 @@ cvShowImage( const char* name, const CvArr* arr )
     window = icvFindWindowByName(name);
     if(!window)
     {
-        #ifndef HAVE_OPENGL
-            cvNamedWindow(name, CV_WINDOW_AUTOSIZE);
-        #else
-            cvNamedWindow(name, CV_WINDOW_AUTOSIZE | CV_WINDOW_OPENGL);
-        #endif
-
+        cvNamedWindow(name, CV_WINDOW_AUTOSIZE);
         window = icvFindWindowByName(name);
     }
 
@@ -1303,6 +1286,10 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 
     switch(uMsg)
     {
+    case WM_COPY:
+        ::WindowProc(hwnd, uMsg, wParam, lParam); // call highgui proc. There may be a better way to do this.
+        break;
+
     case WM_DESTROY:
 
         icvRemoveWindow(window);
@@ -1383,6 +1370,39 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
             SetFocus(window->hwnd);
         break;
 
+    case WM_MOUSEWHEEL:
+    case WM_MOUSEHWHEEL:
+       if( window->on_mouse )
+       {
+          int flags = (wParam & MK_LBUTTON      ? CV_EVENT_FLAG_LBUTTON  : 0)|
+                      (wParam & MK_RBUTTON      ? CV_EVENT_FLAG_RBUTTON  : 0)|
+                      (wParam & MK_MBUTTON      ? CV_EVENT_FLAG_MBUTTON  : 0)|
+                      (wParam & MK_CONTROL      ? CV_EVENT_FLAG_CTRLKEY  : 0)|
+                      (wParam & MK_SHIFT        ? CV_EVENT_FLAG_SHIFTKEY : 0)|
+                      (GetKeyState(VK_MENU) < 0 ? CV_EVENT_FLAG_ALTKEY   : 0);
+          int event = (uMsg == WM_MOUSEWHEEL    ? CV_EVENT_MOUSEWHEEL    : CV_EVENT_MOUSEHWHEEL);
+
+          // Set the wheel delta of mouse wheel to be in the upper word of 'event'
+          int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+          flags |= (delta << 16);
+
+          POINT pt;
+          pt.x = GET_X_LPARAM( lParam );
+          pt.y = GET_Y_LPARAM( lParam );
+          ::ScreenToClient(hwnd, &pt); // Convert screen coordinates to client coordinates.
+
+          RECT rect;
+          GetClientRect( window->hwnd, &rect );
+
+          SIZE size = {0,0};
+          icvGetBitmapData( window, &size, 0, 0 );
+
+          window->on_mouse( event, pt.x*size.cx/MAX(rect.right - rect.left,1),
+                                   pt.y*size.cy/MAX(rect.bottom - rect.top,1), flags,
+                                   window->on_mouse_param );
+       }
+       break;
+
     case WM_ERASEBKGND:
         {
             RECT cr, tr, wrc;
@@ -1432,6 +1452,81 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
     // Process the message
     switch(uMsg)
     {
+    case WM_COPY:
+        {
+            if (!::OpenClipboard(hwnd) )
+                break;
+
+            HDC hDC       = 0;
+            HDC memDC     = 0;
+            HBITMAP memBM = 0;
+
+            // We'll use a do-while(0){} scope as a single-run breakable scope
+            // Upon any error we can jump out of the single-time while scope to clean up the resources.
+            do
+            {
+                if (!::EmptyClipboard())
+                    break;
+
+                if(!window->image)
+                    break;
+
+                // Get window device context
+                if (0 == (hDC = ::GetDC(hwnd)))
+                    break;
+
+                // Create another DC compatible with hDC
+                if (0 == (memDC = ::CreateCompatibleDC( hDC )))
+                    break;
+
+                // Determine the bitmap's dimensions
+                int nchannels = 3;
+                SIZE size = {0,0};
+                icvGetBitmapData( window, &size, &nchannels, 0 );
+
+                // Create bitmap to draw on and it in the new DC
+                if (0 == (memBM = ::CreateCompatibleBitmap ( hDC, size.cx, size.cy)))
+                    break;
+
+                if (!::SelectObject( memDC, memBM ))
+                    break;
+
+                // Begin drawing to DC
+                if (!::SetStretchBltMode(memDC, COLORONCOLOR))
+                    break;
+
+                RGBQUAD table[256];
+                if( 1 == nchannels )
+                {
+                    for(int i = 0; i < 256; ++i)
+                    {
+                        table[i].rgbBlue = (unsigned char)i;
+                        table[i].rgbGreen = (unsigned char)i;
+                        table[i].rgbRed = (unsigned char)i;
+                    }
+                    if (!::SetDIBColorTable(window->dc, 0, 255, table))
+                        break;
+                }
+
+                // The image copied to the clipboard will be in its original size, regardless if the window itself was resized.
+
+                // Render the image to the dc/bitmap (at original size).
+                if (!::BitBlt( memDC, 0, 0, size.cx, size.cy, window->dc, 0, 0, SRCCOPY ))
+                    break;
+
+                // Finally, set bitmap to clipboard
+                ::SetClipboardData(CF_BITMAP, memBM);
+            } while (0,0); // (0,0) instead of (0) to avoid MSVC compiler warning C4127: "conditional expression is constant"
+
+            //////////////////////////////////////////////////////////////////////////
+            // if handle is allocated (i.e. != 0) then clean-up.
+            if (memBM) ::DeleteObject(memBM);
+            if (memDC) ::DeleteDC(memDC);
+            if (hDC)   ::ReleaseDC(hwnd, hDC);
+            ::CloseClipboard();
+            break;
+        }
+
     case WM_WINDOWPOSCHANGING:
         {
             LPWINDOWPOS pos = (LPWINDOWPOS)lParam;
@@ -1456,8 +1551,6 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         if( window->on_mouse )
         {
             POINT pt;
-            RECT rect;
-            SIZE size = {0,0};
 
             int flags = (wParam & MK_LBUTTON ? CV_EVENT_FLAG_LBUTTON : 0)|
                         (wParam & MK_RBUTTON ? CV_EVENT_FLAG_RBUTTON : 0)|
@@ -1480,15 +1573,26 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             if( uMsg == WM_LBUTTONUP || uMsg == WM_RBUTTONUP || uMsg == WM_MBUTTONUP )
                 ReleaseCapture();
 
-            pt.x = LOWORD( lParam );
-            pt.y = HIWORD( lParam );
+            pt.x = GET_X_LPARAM( lParam );
+            pt.y = GET_Y_LPARAM( lParam );
 
-            GetClientRect( window->hwnd, &rect );
-            icvGetBitmapData( window, &size, 0, 0 );
+            if (window->flags & CV_WINDOW_AUTOSIZE)
+            {
+                // As user can't change window size, do not scale window coordinates. Underlying windowing system
+                // may prevent full window from being displayed and in this case coordinates should not be scaled.
+                window->on_mouse( event, pt.x, pt.y, flags, window->on_mouse_param );
+            } else {
+                // Full window is displayed using different size. Scale coordinates to match underlying positions.
+                RECT rect;
+                SIZE size = {0, 0};
 
-            window->on_mouse( event, pt.x*size.cx/MAX(rect.right - rect.left,1),
-                                     pt.y*size.cy/MAX(rect.bottom - rect.top,1), flags,
-                                     window->on_mouse_param );
+                GetClientRect( window->hwnd, &rect );
+                icvGetBitmapData( window, &size, 0, 0 );
+
+                window->on_mouse( event, pt.x*size.cx/MAX(rect.right - rect.left,1),
+                                         pt.y*size.cy/MAX(rect.bottom - rect.top,1), flags,
+                                         window->on_mouse_param );
+            }
         }
         break;
 
@@ -1773,6 +1877,11 @@ cvWaitKey( int delay )
                         is_processed = 1;
                         return (int)(message.wParam << 16);
                     }
+
+                    // Intercept Ctrl+C for copy to clipboard
+                    if ('C' == message.wParam && (::GetKeyState(VK_CONTROL)>>15))
+                        ::PostMessage(message.hwnd, WM_COPY, 0, 0);
+
                 default:
                     DispatchMessage(&message);
                     is_processed = 1;

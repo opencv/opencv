@@ -203,8 +203,8 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
                                      InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
                                      Size imageSize, OutputArray R,OutputArray T, OutputArray E, OutputArray F,
-                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6),
-                                     int flags = CALIB_FIX_INTRINSIC );
+                                     int flags = CALIB_FIX_INTRINSIC,
+                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
 
 
 //! computes the rectification transformation for a stereo camera from its intrinsic and extrinsic parameters
@@ -314,6 +314,11 @@ CV_EXPORTS_W  int estimateAffine3D(InputArray src, InputArray dst,
                                    double ransacThreshold = 3, double confidence = 0.99);
 
 
+CV_EXPORTS_W int decomposeHomographyMat(InputArray H,
+                                        InputArray K,
+                                        OutputArrayOfArrays rotations,
+                                        OutputArrayOfArrays translations,
+                                        OutputArrayOfArrays normals);
 
 class CV_EXPORTS_W StereoMatcher : public Algorithm
 {

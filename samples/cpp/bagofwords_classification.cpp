@@ -1,3 +1,5 @@
+#include "opencv2/opencv_modules.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/features2d/features2d.hpp"
@@ -53,10 +55,6 @@ static void help(char** argv)
     << "                         Currently 12/2010, this is BruteForce, BruteForce-L1, FlannBased, BruteForce-Hamming, BruteForce-HammingLUT \n"
     << "\n";
 }
-
-
-
-
 
 static void makeDir( const string& dir )
 {
@@ -2145,12 +2143,12 @@ static Mat trainVocabulary( const string& filename, VocData& vocData, const Voca
 
         while( images.size() > 0 )
         {
-            if( bowTrainer.descripotorsCount() > maxDescCount )
+            if( bowTrainer.descriptorsCount() > maxDescCount )
             {
 #ifdef DEBUG_DESC_PROGRESS
-                cout << "Breaking due to full memory ( descriptors count = " << bowTrainer.descripotorsCount()
+                cout << "Breaking due to full memory ( descriptors count = " << bowTrainer.descriptorsCount()
                         << "; descriptor size in bytes = " << descByteSize << "; all used memory = "
-                        << bowTrainer.descripotorsCount()*descByteSize << endl;
+                        << bowTrainer.descriptorsCount()*descByteSize << endl;
 #endif
                 break;
             }
@@ -2181,7 +2179,7 @@ static Mat trainVocabulary( const string& filename, VocData& vocData, const Voca
 
                 for( int i = 0; i < descCount; i++ )
                 {
-                    if( usedMask[i] && bowTrainer.descripotorsCount() < maxDescCount )
+                    if( usedMask[i] && bowTrainer.descriptorsCount() < maxDescCount )
                         bowTrainer.add( imageDescriptors.row(i) );
                 }
             }
@@ -2189,7 +2187,7 @@ static Mat trainVocabulary( const string& filename, VocData& vocData, const Voca
 #ifdef DEBUG_DESC_PROGRESS
             cout << images.size() << " images left, " << images[randImgIdx].id << " processed - "
                     <</* descs_extracted << "/" << image_descriptors.rows << " extracted - " << */
-                    cvRound((static_cast<double>(bowTrainer.descripotorsCount())/static_cast<double>(maxDescCount))*100.0)
+                    cvRound((static_cast<double>(bowTrainer.descriptorsCount())/static_cast<double>(maxDescCount))*100.0)
                     << " % memory used" << ( imageDescriptors.empty() ? " -> no descriptors extracted, skipping" : "") << endl;
 #endif
 
@@ -2197,7 +2195,7 @@ static Mat trainVocabulary( const string& filename, VocData& vocData, const Voca
             images.erase( images.begin() + randImgIdx );
         }
 
-        cout << "Maximum allowed descriptor count: " << maxDescCount << ", Actual descriptor count: " << bowTrainer.descripotorsCount() << endl;
+        cout << "Maximum allowed descriptor count: " << maxDescCount << ", Actual descriptor count: " << bowTrainer.descriptorsCount() << endl;
 
         cout << "Training vocabulary..." << endl;
         vocabulary = bowTrainer.cluster();

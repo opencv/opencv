@@ -7,6 +7,8 @@ from subprocess import Popen, PIPE
 hostos = os.name # 'nt', 'posix'
 hostmachine = platform.machine() # 'x86', 'AMD64', 'x86_64'
 
+errorCode = 0
+
 SIMD_DETECTION_PROGRAM="""
 #if __SSE5__
 # error SSE5
@@ -560,7 +562,10 @@ class TestSuite(object):
             else:
                 hw = ""
             tstamp = timestamp.strftime("%Y%m%d-%H%M%S")
-            return "%s_%s_%s_%s%s%s.xml" % (app, self.targetos, self.targetarch, hw, rev, tstamp)
+            lname = "%s_%s_%s_%s%s%s.xml" % (app, self.targetos, self.targetarch, hw, rev, tstamp)
+            lname = str.replace(lname, '(', '_')
+            lname = str.replace(lname, ')', '_')
+            return lname
 
     def getTest(self, name):
         # full path
@@ -641,6 +646,8 @@ class TestSuite(object):
         return True
 
     def runTest(self, path, workingDir, _stdout, _stderr, args = []):
+        global errorCode
+
         if self.error:
             return
         args = args[:]
@@ -733,7 +740,15 @@ class TestSuite(object):
                 print >> _stderr, "Run command:", command
                 if self.setUp:
                     self.setUp()
-                Popen(self.adb + ["shell", "export OPENCV_TEST_DATA_PATH=" + self.options.test_data_path + "&& cd " + andoidcwd + "&& ./" + command], stdout=_stdout, stderr=_stderr).wait()
+                env = self.options.android_env.copy()
+                env['OPENCV_TEST_DATA_PATH'] = self.options.test_data_path
+                if self.options.android_propagate_opencv_env:
+                    for k, v in os.environ.items():
+                        if k.startswith('OPENCV') and not k in env:
+                            env[k] = v
+                print >> _stderr, "Android environment variables: \n", '\n'.join(['    %s=%s' % (k, v) for k, v in env.items()])
+                commandPrefix = ''.join(['export %s=%s && ' % (k, v) for k, v in env.items()])
+                Popen(self.adb + ["shell", commandPrefix + "cd " + andoidcwd + "&& ./" + command], stdout=_stdout, stderr=_stderr).wait()
                 if self.tearDown:
                     self.tearDown()
                 # try get log
@@ -755,13 +770,16 @@ class TestSuite(object):
                 return hostlogpath
             return None
         elif path == "java":
-            cmd = [self.ant_executable, "-DjavaLibraryPath=" + self.tests_dir, "buildAndTest"]
+            cmd = [self.ant_executable,
+                   "-Dopencv.build.type="
+                     + (self.options.configuration if self.options.configuration else self.build_type),
+                   "buildAndTest"]
 
             print >> _stderr, "Run command:", " ".join(cmd)
             try:
-                Popen(cmd, stdout=_stdout, stderr=_stderr, cwd = self.java_test_binary_dir + "/.build").wait()
-            except OSError:
-                pass
+                errorCode = Popen(cmd, stdout=_stdout, stderr=_stderr, cwd = self.java_test_binary_dir + "/.build").wait()
+            except:
+                print "Unexpected error:", sys.exc_info()[0]
 
             return None
         else:
@@ -777,9 +795,9 @@ class TestSuite(object):
 
             print >> _stderr, "Run command:", " ".join(cmd)
             try:
-                Popen(cmd, stdout=_stdout, stderr=_stderr, cwd = workingDir).wait()
-            except OSError:
-                pass
+                errorCode = Popen(cmd, stdout=_stdout, stderr=_stderr, cwd = workingDir).wait()
+            except:
+                print "Unexpected error:", sys.exc_info()[0]
 
             # clean temporary files
             if orig_temp_path:
@@ -842,6 +860,8 @@ if __name__ == "__main__":
     parser.add_option("-a", "--accuracy", dest="accuracy", help="look for accuracy tests instead of performance tests", action="store_true", default=False)
     parser.add_option("-l", "--longname", dest="useLongNames", action="store_true", help="generate log files with long names", default=False)
     parser.add_option("", "--android_test_data_path", dest="test_data_path", help="OPENCV_TEST_DATA_PATH for Android run", metavar="PATH", default="/sdcard/opencv_testdata/")
+    parser.add_option("", "--android_env", dest="android_env_array", help="Environment variable for Android run (NAME=VALUE)", action='append')
+    parser.add_option("", "--android_propagate_opencv_env", dest="android_propagate_opencv_env", help="Propagate OPENCV* environment variables for Android run", action="store_true", default=False)
     parser.add_option("", "--configuration", dest="configuration", help="force Debug or Release configuration", metavar="CFG", default="")
     parser.add_option("", "--serial", dest="adb_serial", help="Android: directs command to the USB device or emulator with the given serial number", metavar="serial number", default="")
     parser.add_option("", "--package", dest="junit_package", help="Android: run jUnit tests for specified package", metavar="package", default="")
@@ -861,6 +881,12 @@ if __name__ == "__main__":
     if len(run_args) == 0:
         print >> sys.stderr, "Usage:", os.path.basename(sys.argv[0]), "[options] [build_path]"
         exit(1)
+
+    options.android_env = {}
+    if options.android_env_array:
+        for entry in options.android_env_array:
+            k, v = entry.split("=", 1)
+            options.android_env[k] = v
 
     tests = [s.strip() for s in options.tests.split(",") if s]
 
@@ -891,3 +917,7 @@ if __name__ == "__main__":
 
     if logs:
         print >> sys.stderr, "Collected:  ", " ".join(logs)
+
+    if errorCode != 0:
+        print "Error code: ", errorCode, (" (0x%x)" % (errorCode & 0xffffffff))
+    exit(errorCode)

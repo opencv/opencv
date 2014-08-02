@@ -373,7 +373,7 @@ PERF_TEST_P(Sz_Depth_Cn_Code_Dim, Reduce,
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::cuda::reduce(d_src, dst, dim, reduceOp);
+        TEST_CYCLE() cv::cuda::reduce(d_src, dst, dim, reduceOp, CV_32F);
 
         CUDA_SANITY_CHECK(dst);
     }
@@ -381,7 +381,7 @@ PERF_TEST_P(Sz_Depth_Cn_Code_Dim, Reduce,
     {
         cv::Mat dst;
 
-        TEST_CYCLE() cv::reduce(src, dst, dim, reduceOp);
+        TEST_CYCLE() cv::reduce(src, dst, dim, reduceOp, CV_32F);
 
         CPU_SANITY_CHECK(dst);
     }
@@ -463,5 +463,62 @@ PERF_TEST_P(Sz, MeanStdDev,
 
         SANITY_CHECK(cpu_mean);
         SANITY_CHECK(cpu_stddev);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+// Integral
+
+PERF_TEST_P(Sz, Integral,
+            CUDA_TYPICAL_MAT_SIZES)
+{
+    const cv::Size size = GetParam();
+
+    cv::Mat src(size, CV_8UC1);
+    declare.in(src, WARMUP_RNG);
+
+    if (PERF_RUN_CUDA())
+    {
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
+        cv::cuda::GpuMat d_buf;
+
+        TEST_CYCLE() cv::cuda::integral(d_src, dst, d_buf);
+
+        CUDA_SANITY_CHECK(dst);
+    }
+    else
+    {
+        cv::Mat dst;
+
+        TEST_CYCLE() cv::integral(src, dst);
+
+        CPU_SANITY_CHECK(dst);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+// IntegralSqr
+
+PERF_TEST_P(Sz, IntegralSqr,
+            CUDA_TYPICAL_MAT_SIZES)
+{
+    const cv::Size size = GetParam();
+
+    cv::Mat src(size, CV_8UC1);
+    declare.in(src, WARMUP_RNG);
+
+    if (PERF_RUN_CUDA())
+    {
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst, buf;
+
+        TEST_CYCLE() cv::cuda::sqrIntegral(d_src, dst, buf);
+
+        CUDA_SANITY_CHECK(dst);
+    }
+    else
+    {
+        FAIL_NO_CPU();
     }
 }

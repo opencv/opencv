@@ -4,6 +4,7 @@
  * @author OpenCV team
  */
 
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include <iostream>
@@ -62,7 +63,7 @@ void thresh_callback(int, void* )
   findContours( threshold_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
   /// Find the convex hull object for each contour
- vector<vector<Point> >hull( contours.size() );
+  vector<vector<Point> >hull( contours.size() );
   for( size_t i = 0; i < contours.size(); i++ )
      {   convexHull( Mat(contours[i]), hull[i], false ); }
 

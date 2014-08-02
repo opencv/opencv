@@ -11,8 +11,8 @@ FAST
 ----
 Detects corners using the FAST algorithm
 
-.. ocv:function:: void FAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSupression=true )
-.. ocv:function:: void FAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSupression, int type )
+.. ocv:function:: void FAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSuppression=true )
+.. ocv:function:: void FAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSuppression, int type )
 
 .. ocv:pyfunction:: cv2.FastFeatureDetector([, threshold[, nonmaxSuppression]]) -> <FastFeatureDetector object>
 .. ocv:pyfunction:: cv2.FastFeatureDetector(threshold, nonmaxSuppression, type) -> <FastFeatureDetector object>
@@ -25,16 +25,47 @@ Detects corners using the FAST algorithm
 
     :param threshold: threshold on difference between intensity of the central pixel and pixels of a circle around this pixel.
 
-    :param nonmaxSupression: if true, non-maximum suppression is applied to detected corners (keypoints).
+    :param nonmaxSuppression: if true, non-maximum suppression is applied to detected corners (keypoints).
 
     :param type: one of the three neighborhoods as defined in the paper: ``FastFeatureDetector::TYPE_9_16``, ``FastFeatureDetector::TYPE_7_12``, ``FastFeatureDetector::TYPE_5_8``
 
 Detects corners using the FAST algorithm by [Rosten06]_.
 
-..note:: In Python API, types are given as ``cv2.FAST_FEATURE_DETECTOR_TYPE_5_8``, ``cv2.FAST_FEATURE_DETECTOR_TYPE_7_12`` and  ``cv2.FAST_FEATURE_DETECTOR_TYPE_9_16``. For corner detection, use ``cv2.FAST.detect()`` method.
+.. note:: In Python API, types are given as ``cv2.FAST_FEATURE_DETECTOR_TYPE_5_8``, ``cv2.FAST_FEATURE_DETECTOR_TYPE_7_12`` and  ``cv2.FAST_FEATURE_DETECTOR_TYPE_9_16``. For corner detection, use ``cv2.FAST.detect()`` method.
 
 
 .. [Rosten06] E. Rosten. Machine Learning for High-speed Corner Detection, 2006.
+
+
+BriefDescriptorExtractor
+------------------------
+.. ocv:class:: BriefDescriptorExtractor : public DescriptorExtractor
+
+Class for computing BRIEF descriptors described in a paper of Calonder M., Lepetit V.,
+Strecha C., Fua P. *BRIEF: Binary Robust Independent Elementary Features* ,
+11th European Conference on Computer Vision (ECCV), Heraklion, Crete. LNCS Springer, September 2010. ::
+
+    class BriefDescriptorExtractor : public DescriptorExtractor
+    {
+    public:
+        static const int PATCH_SIZE = 48;
+        static const int KERNEL_SIZE = 9;
+
+        // bytes is a length of descriptor in bytes. It can be equal 16, 32 or 64 bytes.
+        BriefDescriptorExtractor( int bytes = 32 );
+
+        virtual void read( const FileNode& );
+        virtual void write( FileStorage& ) const;
+        virtual int descriptorSize() const;
+        virtual int descriptorType() const;
+        virtual int defaultNorm() const;
+    protected:
+        ...
+    };
+
+.. note::
+
+   * A complete BRIEF extractor sample can be found at opencv_source_code/samples/cpp/brief_match_test.cpp
 
 
 MSER
@@ -218,3 +249,66 @@ We notice that for keypoint matching applications, image content has little effe
     :param keypoints: Set of detected keypoints
     :param corrThresh: Correlation threshold.
     :param verbose: Prints pair selection informations.
+
+KAZE
+----
+.. ocv:class:: KAZE : public Feature2D
+
+Class implementing the KAZE keypoint detector and descriptor extractor, described in [ABD12]_. ::
+
+    class CV_EXPORTS_W KAZE : public Feature2D
+    {
+    public:
+        CV_WRAP KAZE();
+        CV_WRAP explicit KAZE(bool extended, bool upright, float threshold = 0.001f,
+                              int octaves = 4, int sublevels = 4, int diffusivity = DIFF_PM_G2);
+    };
+
+.. note:: AKAZE descriptor can only be used with KAZE or AKAZE keypoints
+
+.. [ABD12] KAZE Features. Pablo F. Alcantarilla, Adrien Bartoli and Andrew J. Davison. In European Conference on Computer Vision (ECCV), Fiorenze, Italy, October 2012.
+
+KAZE::KAZE
+----------
+The KAZE constructor
+
+.. ocv:function:: KAZE::KAZE(bool extended, bool upright, float threshold, int octaves, int sublevels, int diffusivity)
+
+    :param extended: Set to enable extraction of extended (128-byte) descriptor.
+    :param upright: Set to enable use of upright descriptors (non rotation-invariant).
+    :param threshold: Detector response threshold to accept point
+    :param octaves: Maximum octave evolution of the image
+    :param sublevels: Default number of sublevels per scale level
+    :param diffusivity: Diffusivity type. DIFF_PM_G1, DIFF_PM_G2, DIFF_WEICKERT or DIFF_CHARBONNIER
+
+AKAZE
+-----
+.. ocv:class:: AKAZE : public Feature2D
+
+Class implementing the AKAZE keypoint detector and descriptor extractor, described in [ANB13]_. ::
+
+    class CV_EXPORTS_W AKAZE : public Feature2D
+    {
+    public:
+        CV_WRAP AKAZE();
+        CV_WRAP explicit AKAZE(int descriptor_type, int descriptor_size = 0, int descriptor_channels = 3,
+                               float threshold = 0.001f, int octaves = 4, int sublevels = 4, int diffusivity = DIFF_PM_G2);
+    };
+
+.. note:: AKAZE descriptor can only be used with KAZE or AKAZE keypoints
+
+.. [ANB13] Fast Explicit Diffusion for Accelerated Features in Nonlinear Scale Spaces. Pablo F. Alcantarilla, Jesús Nuevo and Adrien Bartoli. In British Machine Vision Conference (BMVC), Bristol, UK, September 2013.
+
+AKAZE::AKAZE
+------------
+The AKAZE constructor
+
+.. ocv:function:: AKAZE::AKAZE(int descriptor_type, int descriptor_size, int descriptor_channels, float threshold, int octaves, int sublevels, int diffusivity)
+
+    :param descriptor_type: Type of the extracted descriptor: DESCRIPTOR_KAZE, DESCRIPTOR_KAZE_UPRIGHT, DESCRIPTOR_MLDB or DESCRIPTOR_MLDB_UPRIGHT.
+    :param descriptor_size: Size of the descriptor in bits. 0 -> Full size
+    :param descriptor_channels: Number of channels in the descriptor (1, 2, 3)
+    :param threshold: Detector response threshold to accept point
+    :param octaves: Maximum octave evolution of the image
+    :param sublevels: Default number of sublevels per scale level
+    :param diffusivity: Diffusivity type. DIFF_PM_G1, DIFF_PM_G2, DIFF_WEICKERT or DIFF_CHARBONNIER

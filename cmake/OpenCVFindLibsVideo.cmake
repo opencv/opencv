@@ -12,28 +12,8 @@ endif(WITH_VFW)
 
 # --- GStreamer ---
 ocv_clear_vars(HAVE_GSTREAMER)
-# try to find gstreamer 0.10 first
-if(WITH_GSTREAMER AND NOT WITH_GSTREAMER_1_X)
-  CHECK_MODULE(gstreamer-base-0.10 HAVE_GSTREAMER_BASE)
-  CHECK_MODULE(gstreamer-video-0.10 HAVE_GSTREAMER_VIDEO)
-  CHECK_MODULE(gstreamer-app-0.10 HAVE_GSTREAMER_APP)
-  CHECK_MODULE(gstreamer-riff-0.10 HAVE_GSTREAMER_RIFF)
-  CHECK_MODULE(gstreamer-pbutils-0.10 HAVE_GSTREAMER_PBUTILS)
-
-  if(HAVE_GSTREAMER_BASE AND HAVE_GSTREAMER_VIDEO AND HAVE_GSTREAMER_APP AND HAVE_GSTREAMER_RIFF AND HAVE_GSTREAMER_PBUTILS)
-      set(HAVE_GSTREAMER TRUE)
-      set(GSTREAMER_BASE_VERSION ${ALIASOF_gstreamer-base-0.10_VERSION})
-      set(GSTREAMER_VIDEO_VERSION ${ALIASOF_gstreamer-video-0.10_VERSION})
-      set(GSTREAMER_APP_VERSION ${ALIASOF_gstreamer-app-0.10_VERSION})
-      set(GSTREAMER_RIFF_VERSION ${ALIASOF_gstreamer-riff-0.10_VERSION})
-      set(GSTREAMER_PBUTILS_VERSION ${ALIASOF_gstreamer-pbutils-0.10_VERSION})
-  endif()
-
-endif(WITH_GSTREAMER AND NOT WITH_GSTREAMER_1_X)
-
-# if gstreamer 0.10 was not found, or we specified we wanted 1.x, try to find it
-if(WITH_GSTREAMER_1_X OR NOT HAVE_GSTREAMER)
-  #check for 1.x
+# try to find gstreamer 1.x first
+if(WITH_GSTREAMER AND NOT WITH_GSTREAMER_0_10)
   CHECK_MODULE(gstreamer-base-1.0 HAVE_GSTREAMER_BASE)
   CHECK_MODULE(gstreamer-video-1.0 HAVE_GSTREAMER_VIDEO)
   CHECK_MODULE(gstreamer-app-1.0 HAVE_GSTREAMER_APP)
@@ -49,7 +29,25 @@ if(WITH_GSTREAMER_1_X OR NOT HAVE_GSTREAMER)
       set(GSTREAMER_PBUTILS_VERSION ${ALIASOF_gstreamer-pbutils-1.0_VERSION})
   endif()
 
-endif(WITH_GSTREAMER_1_X OR NOT HAVE_GSTREAMER)
+endif(WITH_GSTREAMER AND NOT WITH_GSTREAMER_0_10)
+
+# if gstreamer 1.x was not found, or we specified we wanted 0.10, try to find it
+if(WITH_GSTREAMER_0_10 OR NOT HAVE_GSTREAMER)
+  CHECK_MODULE(gstreamer-base-0.10 HAVE_GSTREAMER_BASE)
+  CHECK_MODULE(gstreamer-video-0.10 HAVE_GSTREAMER_VIDEO)
+  CHECK_MODULE(gstreamer-app-0.10 HAVE_GSTREAMER_APP)
+  CHECK_MODULE(gstreamer-riff-0.10 HAVE_GSTREAMER_RIFF)
+  CHECK_MODULE(gstreamer-pbutils-0.10 HAVE_GSTREAMER_PBUTILS)
+
+  if(HAVE_GSTREAMER_BASE AND HAVE_GSTREAMER_VIDEO AND HAVE_GSTREAMER_APP AND HAVE_GSTREAMER_RIFF AND HAVE_GSTREAMER_PBUTILS)
+      set(HAVE_GSTREAMER TRUE)
+      set(GSTREAMER_BASE_VERSION ${ALIASOF_gstreamer-base-0.10_VERSION})
+      set(GSTREAMER_VIDEO_VERSION ${ALIASOF_gstreamer-video-0.10_VERSION})
+      set(GSTREAMER_APP_VERSION ${ALIASOF_gstreamer-app-0.10_VERSION})
+      set(GSTREAMER_RIFF_VERSION ${ALIASOF_gstreamer-riff-0.10_VERSION})
+      set(GSTREAMER_PBUTILS_VERSION ${ALIASOF_gstreamer-pbutils-0.10_VERSION})
+  endif()
+endif(WITH_GSTREAMER_0_10 OR NOT HAVE_GSTREAMER)
 
 # --- unicap ---
 ocv_clear_vars(HAVE_UNICAP)
@@ -133,7 +131,7 @@ if(WITH_1394)
       if(HAVE_DC1394_2)
         ocv_parse_pkg("libdc1394-2" "${DC1394_2_LIB_DIR}/pkgconfig" "")
         ocv_include_directories(${DC1394_2_INCLUDE_PATH})
-        set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES}
+        set(VIDEOIO_LIBRARIES ${VIDEOIO_LIBRARIES}
             "${DC1394_2_LIB_DIR}/libdc1394.a"
             "${CMU1394_LIB_DIR}/lib1394camera.a")
       endif(HAVE_DC1394_2)
@@ -154,7 +152,9 @@ endif(WITH_XINE)
 # --- V4L ---
 ocv_clear_vars(HAVE_LIBV4L HAVE_CAMV4L HAVE_CAMV4L2 HAVE_VIDEOIO)
 if(WITH_V4L)
-  CHECK_MODULE(libv4l1 HAVE_LIBV4L)
+  if(WITH_LIBV4L)
+    CHECK_MODULE(libv4l1 HAVE_LIBV4L)
+  endif()
   CHECK_INCLUDE_FILE(linux/videodev.h HAVE_CAMV4L)
   CHECK_INCLUDE_FILE(linux/videodev2.h HAVE_CAMV4L2)
   CHECK_INCLUDE_FILE(sys/videoio.h HAVE_VIDEOIO)
@@ -165,6 +165,11 @@ ocv_clear_vars(HAVE_OPENNI HAVE_OPENNI_PRIME_SENSOR_MODULE)
 if(WITH_OPENNI)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindOpenNI.cmake")
 endif(WITH_OPENNI)
+
+ocv_clear_vars(HAVE_OPENNI2)
+if(WITH_OPENNI2)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindOpenNI2.cmake")
+endif(WITH_OPENNI2)
 
 # --- XIMEA ---
 ocv_clear_vars(HAVE_XIMEA)
@@ -234,7 +239,7 @@ if(WITH_FFMPEG)
       endif()
     endif(FFMPEG_INCLUDE_DIR)
     if(HAVE_FFMPEG)
-      set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} "${FFMPEG_LIB_DIR}/libavcodec.a"
+      set(VIDEOIO_LIBRARIES ${VIDEOIO_LIBRARIES} "${FFMPEG_LIB_DIR}/libavcodec.a"
           "${FFMPEG_LIB_DIR}/libavformat.a" "${FFMPEG_LIB_DIR}/libavutil.a"
           "${FFMPEG_LIB_DIR}/libswscale.a")
       ocv_include_directories(${FFMPEG_INCLUDE_DIR})
@@ -253,14 +258,15 @@ if(WITH_MSMF)
   check_include_file(Mfapi.h HAVE_MSMF)
 endif(WITH_MSMF)
 
-# --- Extra HighGUI libs on Windows ---
+# --- Extra HighGUI and VideoIO libs on Windows ---
 if(WIN32)
-  list(APPEND HIGHGUI_LIBRARIES comctl32 gdi32 ole32 setupapi ws2_32 vfw32)
+  list(APPEND HIGHGUI_LIBRARIES comctl32 gdi32 ole32 setupapi ws2_32)
+  list(APPEND VIDEOIO_LIBRARIES vfw32)
   if(MINGW64)
-    list(APPEND HIGHGUI_LIBRARIES avifil32 avicap32 winmm msvfw32)
-    list(REMOVE_ITEM HIGHGUI_LIBRARIES vfw32)
+    list(APPEND VIDEOIO_LIBRARIES avifil32 avicap32 winmm msvfw32)
+    list(REMOVE_ITEM VIDEOIO_LIBRARIES vfw32)
   elseif(MINGW)
-    list(APPEND HIGHGUI_LIBRARIES winmm)
+    list(APPEND VIDEOIO_LIBRARIES winmm)
   endif()
 endif(WIN32)
 
@@ -273,7 +279,12 @@ endif()
 if (NOT IOS)
   if(WITH_QUICKTIME)
     set(HAVE_QUICKTIME YES)
-  elseif(APPLE)
+  elseif(APPLE AND CMAKE_COMPILER_IS_CLANGCXX)
     set(HAVE_QTKIT YES)
   endif()
 endif()
+
+# --- Intel Perceptual Computing SDK ---
+if(WITH_INTELPERC)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIntelPerCSDK.cmake")
+endif(WITH_INTELPERC)

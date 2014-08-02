@@ -1,4 +1,5 @@
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/videoio/videoio.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/video/background_segm.hpp"
 #include <stdio.h>
@@ -96,8 +97,6 @@ int main(int argc, char** argv)
         if( !tmp_frame.data )
             break;
         bgsubtractor->apply(tmp_frame, bgmask, update_bg_model ? -1 : 0);
-        //CvMat _bgmask = bgmask;
-        //cvSegmentFGMask(&_bgmask);
         refineSegments(tmp_frame, bgmask, out_frame);
         imshow("video", tmp_frame);
         imshow("segmented", out_frame);

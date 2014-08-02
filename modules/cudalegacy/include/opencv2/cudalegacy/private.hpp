@@ -87,10 +87,6 @@ namespace cv { namespace cuda
     }
 }}
 
-#if defined(__GNUC__)
-    #define ncvSafeCall(expr)  cv::cuda::checkNcvError(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define ncvSafeCall(expr)  cv::cuda::checkNcvError(expr, __FILE__, __LINE__, "")
-#endif
+#define ncvSafeCall(expr)  cv::cuda::checkNcvError(expr, __FILE__, __LINE__, CV_Func)
 
 #endif // __OPENCV_CORE_CUDALEGACY_PRIVATE_HPP__

@@ -628,7 +628,7 @@ void AlgorithmInfo::set(Algorithm* algo, const char* parameter, int argType, con
             || argType == Param::FLOAT || argType == Param::UNSIGNED_INT || argType == Param::UINT64 || argType == Param::UCHAR)
     {
         if ( !( p->type == Param::INT || p->type == Param::REAL || p->type == Param::BOOLEAN
-                || p->type == Param::UNSIGNED_INT || p->type == Param::UINT64 || p->type == Param::FLOAT || argType == Param::UCHAR) )
+                || p->type == Param::UNSIGNED_INT || p->type == Param::UINT64 || p->type == Param::FLOAT || p->type == Param::UCHAR) )
         {
             String message = getErrorMessageForWrongArgumentInSetter(algo->name(), parameter, p->type, argType);
             CV_Error(CV_StsBadArg, message);

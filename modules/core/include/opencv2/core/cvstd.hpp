@@ -364,6 +364,10 @@ public:
     String& operator=(const char* s);
     String& operator=(char c);
 
+    String& operator+=(const String& str);
+    String& operator+=(const char* s);
+    String& operator+=(char c);
+
     size_t size() const;
     size_t length() const;
 
@@ -416,6 +420,7 @@ public:
     String(const std::string& str);
     String(const std::string& str, size_t pos, size_t len = npos);
     String& operator=(const std::string& str);
+    String& operator+=(const std::string& str);
     operator std::string() const;
 
     friend String operator+ (const String& lhs, const std::string& rhs);
@@ -541,6 +546,27 @@ String& String::operator=(char c)
 {
     deallocate();
     allocate(1)[0] = c;
+    return *this;
+}
+
+inline
+String& String::operator+=(const String& str)
+{
+    *this = *this + str;
+    return *this;
+}
+
+inline
+String& String::operator+=(const char* s)
+{
+    *this = *this + s;
+    return *this;
+}
+
+inline
+String& String::operator+=(char c)
+{
+    *this = *this + c;
     return *this;
 }
 

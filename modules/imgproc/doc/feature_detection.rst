@@ -1,4 +1,4 @@
-Feature Detection
+﻿Feature Detection
 =================
 
 .. highlight:: cpp
@@ -15,9 +15,9 @@ Finds edges in an image using the [Canny86]_ algorithm.
 
 .. ocv:cfunction:: void cvCanny( const CvArr* image, CvArr* edges, double threshold1, double threshold2, int aperture_size=3 )
 
-    :param image: single-channel 8-bit input image.
+    :param image: 8-bit input image.
 
-    :param edges: output edge map; it has the same size and type as  ``image`` .
+    :param edges: output edge map; single channels 8-bit image, which has the same size as  ``image`` .
 
     :param threshold1: first threshold for the hysteresis procedure.
 
@@ -34,7 +34,7 @@ http://en.wikipedia.org/wiki/Canny_edge_detector
 
    * An example on using the canny edge detector can be found at opencv_source_code/samples/cpp/edge.cpp
 
-   * (Python) An example on using the canny edge detector can be found at opencv_source_code/samples/cpp/edge.py
+   * (Python) An example on using the canny edge detector can be found at opencv_source_code/samples/python/edge.py
 
 cornerEigenValsAndVecs
 ----------------------
@@ -97,7 +97,7 @@ Harris corner detector.
 
 .. ocv:pyfunction:: cv2.cornerHarris(src, blockSize, ksize, k[, dst[, borderType]]) -> dst
 
-.. ocv:cfunction:: void cvCornerHarris( const CvArr* image, CvArr* harris_responce, int block_size, int aperture_size=3, double k=0.04 )
+.. ocv:cfunction:: void cvCornerHarris( const CvArr* image, CvArr* harris_response, int block_size, int aperture_size=3, double k=0.04 )
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -358,11 +358,11 @@ HoughLines
 ----------
 Finds lines in a binary image using the standard Hough transform.
 
-.. ocv:function:: void HoughLines( InputArray image, OutputArray lines, double rho, double theta, int threshold, double srn=0, double stn=0 )
+.. ocv:function:: void HoughLines( InputArray image, OutputArray lines, double rho, double theta, int threshold, double srn=0, double stn=0, double min_theta=0, double max_theta=CV_PI )
 
-.. ocv:pyfunction:: cv2.HoughLines(image, rho, theta, threshold[, lines[, srn[, stn]]]) -> lines
+.. ocv:pyfunction:: cv2.HoughLines(image, rho, theta, threshold[, lines[, srn[, stn[, min_theta[, max_theta]]]]]) -> lines
 
-.. ocv:cfunction:: CvSeq* cvHoughLines2( CvArr* image, void* line_storage, int method, double rho, double theta, int threshold, double param1=0, double param2=0 )
+.. ocv:cfunction:: CvSeq* cvHoughLines2( CvArr* image, void* line_storage, int method, double rho, double theta, int threshold, double param1=0, double param2=0, double min_theta=0, double max_theta=CV_PI )
 
     :param image: 8-bit, single-channel binary source image. The image may be modified by the function.
 
@@ -377,6 +377,10 @@ Finds lines in a binary image using the standard Hough transform.
     :param srn: For the multi-scale Hough transform, it is a divisor for the distance resolution  ``rho`` . The coarse accumulator distance resolution is  ``rho``  and the accurate accumulator resolution is  ``rho/srn`` . If both  ``srn=0``  and  ``stn=0`` , the classical Hough transform is used. Otherwise, both these parameters should be positive.
 
     :param stn: For the multi-scale Hough transform, it is a divisor for the distance resolution  ``theta``.
+
+    :param min_theta: For standard and multi-scale Hough transform, minimum angle to check for lines. Must fall between 0 and max_theta.
+
+    :param max_theta: For standard and multi-scale Hough transform, maximum angle to check for lines. Must fall between min_theta and CV_PI.
 
     :param method: One of the following Hough transform variants:
 
@@ -509,11 +513,13 @@ Line segment detector class, following the algorithm described at [Rafael12]_.
 .. ocv:class:: LineSegmentDetector : public Algorithm
 
 
-createLineSegmentDetectorPtr
-----------------------------
+createLineSegmentDetector
+-------------------------
 Creates a smart pointer to a LineSegmentDetector object and initializes it.
 
-.. ocv:function:: Ptr<LineSegmentDetector> createLineSegmentDetectorPtr(int _refine = LSD_REFINE_STD, double _scale = 0.8, double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5, double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024)
+.. ocv:function:: Ptr<LineSegmentDetector> createLineSegmentDetector(int _refine = LSD_REFINE_STD, double _scale = 0.8, double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5, double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024)
+
+.. ocv:pyfunction:: cv2.createLineSegmentDetector([, _refine[, _scale[, _sigma_scale[, _quant[, _ang_th[, _log_eps[, _density_th[, _n_bins]]]]]]]]) -> retval
 
     :param _refine: The way found lines will be refined:
 
@@ -545,6 +551,8 @@ LineSegmentDetector::detect
 Finds lines in the input image. See the lsd_lines.cpp sample for possible usage.
 
 .. ocv:function:: void LineSegmentDetector::detect(const InputArray _image, OutputArray _lines, OutputArray width = noArray(), OutputArray prec = noArray(), OutputArray nfa = noArray())
+
+.. ocv:pyfunction:: cv2.createLineSegmentDetector.detect(_image[, _lines[, width[, prec[, nfa]]]]) -> _lines, width, prec, nfa
 
     :param _image A grayscale (CV_8UC1) input image.
         If only a roi needs to be selected, use ::
@@ -581,6 +589,8 @@ Draws the line segments on a given image.
 
 .. ocv:function:: void LineSegmentDetector::drawSegments(InputOutputArray _image, InputArray lines)
 
+.. ocv:pyfunction:: cv2.createLineSegmentDetector.drawSegments(_image, lines) -> _image
+
     :param image: The image, where the liens will be drawn. Should be bigger or equal to the image, where the lines were found.
 
     :param lines: A vector of the lines that needed to be drawn.
@@ -592,13 +602,15 @@ Draws two groups of lines in blue and red, counting the non overlapping (mismatc
 
 .. ocv:function:: int LineSegmentDetector::compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray())
 
+.. ocv:pyfunction:: cv2.createLineSegmentDetector.compareSegments(size, lines1, lines2[, _image]) -> retval, _image
+
     :param size: The size of the image, where lines1 and lines2 were found.
 
     :param lines1: The first group of lines that needs to be drawn. It is visualized in blue color.
 
     :param lines2: The second group of lines. They visualized in red color.
 
-    :param image: Optional image, where the lines will be drawn. The image should be color in order for lines1 and lines2 to be drawn in the above mentioned colors.
+    :param image: Optional image, where the lines will be drawn. The image should be color(3-channel) in order for lines1 and lines2 to be drawn in the above mentioned colors.
 
 
 

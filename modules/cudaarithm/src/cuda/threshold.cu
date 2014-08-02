@@ -40,75 +40,109 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/transform.hpp"
-#include "opencv2/core/cuda/saturate_cast.hpp"
-#include "opencv2/core/cuda/simd_functions.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-#include "arithm_func_traits.hpp"
+#error "opencv_cudev is required"
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#else
 
-namespace cv { namespace cuda { namespace device
+#include "opencv2/cudaarithm.hpp"
+#include "opencv2/cudev.hpp"
+#include "opencv2/core/private.cuda.hpp"
+
+using namespace cv::cudev;
+
+namespace
 {
-    template <typename T> struct TransformFunctorTraits< thresh_binary_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename ScalarDepth> struct TransformPolicy : DefaultTransformPolicy
     {
     };
-
-    template <typename T> struct TransformFunctorTraits< thresh_binary_inv_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <> struct TransformPolicy<double> : DefaultTransformPolicy
     {
+        enum {
+            shift = 1
+        };
     };
-
-    template <typename T> struct TransformFunctorTraits< thresh_trunc_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
-    {
-    };
-
-    template <typename T> struct TransformFunctorTraits< thresh_to_zero_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
-    {
-    };
-
-    template <typename T> struct TransformFunctorTraits< thresh_to_zero_inv_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
-    {
-    };
-}}}
-
-namespace arithm
-{
-    template <template <typename> class Op, typename T>
-    void threshold_caller(PtrStepSz<T> src, PtrStepSz<T> dst, T thresh, T maxVal, cudaStream_t stream)
-    {
-        Op<T> op(thresh, maxVal);
-        device::transform(src, dst, op, WithOutMask(), stream);
-    }
 
     template <typename T>
-    void threshold(PtrStepSzb src, PtrStepSzb dst, double thresh, double maxVal, int type, cudaStream_t stream)
+    void thresholdImpl(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int type, Stream& stream)
     {
-        typedef void (*caller_t)(PtrStepSz<T> src, PtrStepSz<T> dst, T thresh, T maxVal, cudaStream_t stream);
+        const T thresh_ = static_cast<T>(thresh);
+        const T maxVal_ = static_cast<T>(maxVal);
 
-        static const caller_t callers[] =
+        switch (type)
         {
-            threshold_caller<thresh_binary_func, T>,
-            threshold_caller<thresh_binary_inv_func, T>,
-            threshold_caller<thresh_trunc_func, T>,
-            threshold_caller<thresh_to_zero_func, T>,
-            threshold_caller<thresh_to_zero_inv_func, T>
+        case 0:
+            gridTransformUnary_< TransformPolicy<T> >(globPtr<T>(src), globPtr<T>(dst), thresh_binary_func(thresh_, maxVal_), stream);
+            break;
+        case 1:
+            gridTransformUnary_< TransformPolicy<T> >(globPtr<T>(src), globPtr<T>(dst), thresh_binary_inv_func(thresh_, maxVal_), stream);
+            break;
+        case 2:
+            gridTransformUnary_< TransformPolicy<T> >(globPtr<T>(src), globPtr<T>(dst), thresh_trunc_func(thresh_), stream);
+            break;
+        case 3:
+            gridTransformUnary_< TransformPolicy<T> >(globPtr<T>(src), globPtr<T>(dst), thresh_to_zero_func(thresh_), stream);
+            break;
+        case 4:
+            gridTransformUnary_< TransformPolicy<T> >(globPtr<T>(src), globPtr<T>(dst), thresh_to_zero_inv_func(thresh_), stream);
+            break;
         };
-
-        callers[type]((PtrStepSz<T>) src, (PtrStepSz<T>) dst, static_cast<T>(thresh), static_cast<T>(maxVal), stream);
     }
-
-    template void threshold<uchar>(PtrStepSzb src, PtrStepSzb dst, double thresh, double maxVal, int type, cudaStream_t stream);
-    template void threshold<schar>(PtrStepSzb src, PtrStepSzb dst, double thresh, double maxVal, int type, cudaStream_t stream);
-    template void threshold<ushort>(PtrStepSzb src, PtrStepSzb dst, double thresh, double maxVal, int type, cudaStream_t stream);
-    template void threshold<short>(PtrStepSzb src, PtrStepSzb dst, double thresh, double maxVal, int type, cudaStream_t stream);
-    template void threshold<int>(PtrStepSzb src, PtrStepSzb dst, double thresh, double maxVal, int type, cudaStream_t stream);
-    template void threshold<float>(PtrStepSzb src, PtrStepSzb dst, double thresh, double maxVal, int type, cudaStream_t stream);
-    template void threshold<double>(PtrStepSzb src, PtrStepSzb dst, double thresh, double maxVal, int type, cudaStream_t stream);
 }
 
-#endif // CUDA_DISABLER
+double cv::cuda::threshold(InputArray _src, OutputArray _dst, double thresh, double maxVal, int type, Stream& stream)
+{
+    GpuMat src = _src.getGpuMat();
+
+    const int depth = src.depth();
+
+    CV_DbgAssert( src.channels() == 1 && depth <= CV_64F );
+    CV_DbgAssert( type <= 4 /*THRESH_TOZERO_INV*/ );
+
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
+
+    if (depth == CV_32F && type == 2 /*THRESH_TRUNC*/)
+    {
+        NppStreamHandler h(StreamAccessor::getStream(stream));
+
+        NppiSize sz;
+        sz.width  = src.cols;
+        sz.height = src.rows;
+
+        nppSafeCall( nppiThreshold_32f_C1R(src.ptr<Npp32f>(), static_cast<int>(src.step),
+            dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, static_cast<Npp32f>(thresh), NPP_CMP_GREATER) );
+
+        if (!stream)
+            CV_CUDEV_SAFE_CALL( cudaDeviceSynchronize() );
+    }
+    else
+    {
+        typedef void (*func_t)(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int type, Stream& stream);
+        static const func_t funcs[] =
+        {
+            thresholdImpl<uchar>,
+            thresholdImpl<schar>,
+            thresholdImpl<ushort>,
+            thresholdImpl<short>,
+            thresholdImpl<int>,
+            thresholdImpl<float>,
+            thresholdImpl<double>
+        };
+
+        if (depth != CV_32F && depth != CV_64F)
+        {
+            thresh = cvFloor(thresh);
+            maxVal = cvRound(maxVal);
+        }
+
+        funcs[depth](src, dst, thresh, maxVal, type, stream);
+    }
+
+    return thresh;
+}
+
+#endif

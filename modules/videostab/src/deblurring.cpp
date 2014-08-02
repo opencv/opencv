@@ -56,7 +56,7 @@ float calcBlurriness(const Mat &frame)
     Sobel(frame, Gx, CV_32F, 1, 0);
     Sobel(frame, Gy, CV_32F, 0, 1);
     double normGx = norm(Gx);
-    double normGy = norm(Gx);
+    double normGy = norm(Gy);
     double sumSq = normGx*normGx + normGy*normGy;
     return static_cast<float>(1. / (sumSq / frame.size().area() + 1e-6));
 }

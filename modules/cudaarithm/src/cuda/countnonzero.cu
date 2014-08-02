@@ -40,137 +40,57 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/vec_traits.hpp"
-#include "opencv2/core/cuda/vec_math.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/reduce.hpp"
-#include "opencv2/core/cuda/emulation.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#error "opencv_cudev is required"
 
-namespace countNonZero
+#else
+
+#include "opencv2/cudaarithm.hpp"
+#include "opencv2/cudev.hpp"
+
+using namespace cv::cudev;
+
+namespace
 {
-    __device__ unsigned int blocks_finished = 0;
-
-    template <int BLOCK_SIZE, typename T>
-    __global__ void kernel(const PtrStepSz<T> src, unsigned int* count, const int twidth, const int theight)
-    {
-        __shared__ unsigned int scount[BLOCK_SIZE];
-
-        const int x0 = blockIdx.x * blockDim.x * twidth + threadIdx.x;
-        const int y0 = blockIdx.y * blockDim.y * theight + threadIdx.y;
-
-        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
-
-        unsigned int mycount = 0;
-
-        for (int i = 0, y = y0; i < theight && y < src.rows; ++i, y += blockDim.y)
-        {
-            const T* ptr = src.ptr(y);
-
-            for (int j = 0, x = x0; j < twidth && x < src.cols; ++j, x += blockDim.x)
-            {
-                const T srcVal = ptr[x];
-
-                mycount += (srcVal != 0);
-            }
-        }
-
-        device::reduce<BLOCK_SIZE>(scount, mycount, tid, plus<unsigned int>());
-
-    #if __CUDA_ARCH__ >= 200
-        if (tid == 0)
-            ::atomicAdd(count, mycount);
-    #else
-        __shared__ bool is_last;
-        const int bid = blockIdx.y * gridDim.x + blockIdx.x;
-
-        if (tid == 0)
-        {
-            count[bid] = mycount;
-
-            __threadfence();
-
-            unsigned int ticket = ::atomicInc(&blocks_finished, gridDim.x * gridDim.y);
-            is_last = (ticket == gridDim.x * gridDim.y - 1);
-        }
-
-        __syncthreads();
-
-        if (is_last)
-        {
-            mycount = tid < gridDim.x * gridDim.y ? count[tid] : 0;
-
-            device::reduce<BLOCK_SIZE>(scount, mycount, tid, plus<unsigned int>());
-
-            if (tid == 0)
-            {
-                count[0] = mycount;
-
-                blocks_finished = 0;
-            }
-        }
-    #endif
-    }
-
-    const int threads_x = 32;
-    const int threads_y = 8;
-
-    void getLaunchCfg(int cols, int rows, dim3& block, dim3& grid)
-    {
-        block = dim3(threads_x, threads_y);
-
-        grid = dim3(divUp(cols, block.x * block.y),
-                    divUp(rows, block.y * block.x));
-
-        grid.x = ::min(grid.x, block.x);
-        grid.y = ::min(grid.y, block.y);
-    }
-
-    void getBufSize(int cols, int rows, int& bufcols, int& bufrows)
-    {
-        dim3 block, grid;
-        getLaunchCfg(cols, rows, block, grid);
-
-        bufcols = grid.x * grid.y * sizeof(int);
-        bufrows = 1;
-    }
-
     template <typename T>
-    int run(const PtrStepSzb src, PtrStep<unsigned int> buf)
+    int countNonZeroImpl(const GpuMat& _src, GpuMat& _buf)
     {
-        dim3 block, grid;
-        getLaunchCfg(src.cols, src.rows, block, grid);
+        const GpuMat_<T>& src = (const GpuMat_<T>&) _src;
+        GpuMat_<int>& buf = (GpuMat_<int>&) _buf;
 
-        const int twidth = divUp(divUp(src.cols, grid.x), block.x);
-        const int theight = divUp(divUp(src.rows, grid.y), block.y);
+        gridCountNonZero(src, buf);
 
-        unsigned int* count_buf = buf.ptr(0);
+        int data;
+        buf.download(cv::Mat(1, 1, buf.type(), &data));
 
-        cudaSafeCall( cudaMemset(count_buf, 0, sizeof(unsigned int)) );
-
-        kernel<threads_x * threads_y><<<grid, block>>>((PtrStepSz<T>) src, count_buf, twidth, theight);
-        cudaSafeCall( cudaGetLastError() );
-
-        cudaSafeCall( cudaDeviceSynchronize() );
-
-        unsigned int count;
-        cudaSafeCall(cudaMemcpy(&count, count_buf, sizeof(unsigned int), cudaMemcpyDeviceToHost));
-
-        return count;
+        return data;
     }
-
-    template int run<uchar >(const PtrStepSzb src, PtrStep<unsigned int> buf);
-    template int run<schar >(const PtrStepSzb src, PtrStep<unsigned int> buf);
-    template int run<ushort>(const PtrStepSzb src, PtrStep<unsigned int> buf);
-    template int run<short >(const PtrStepSzb src, PtrStep<unsigned int> buf);
-    template int run<int   >(const PtrStepSzb src, PtrStep<unsigned int> buf);
-    template int run<float >(const PtrStepSzb src, PtrStep<unsigned int> buf);
-    template int run<double>(const PtrStepSzb src, PtrStep<unsigned int> buf);
 }
 
-#endif // CUDA_DISABLER
+int cv::cuda::countNonZero(InputArray _src, GpuMat& buf)
+{
+    typedef int (*func_t)(const GpuMat& _src, GpuMat& _buf);
+    static const func_t funcs[] =
+    {
+        countNonZeroImpl<uchar>,
+        countNonZeroImpl<schar>,
+        countNonZeroImpl<ushort>,
+        countNonZeroImpl<short>,
+        countNonZeroImpl<int>,
+        countNonZeroImpl<float>,
+        countNonZeroImpl<double>
+    };
+
+    GpuMat src = _src.getGpuMat();
+
+    CV_Assert( src.channels() == 1 );
+
+    const func_t func = funcs[src.depth()];
+
+    return func(src, buf);
+}
+
+#endif
