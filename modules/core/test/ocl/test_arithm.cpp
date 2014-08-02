@@ -1419,7 +1419,7 @@ OCL_TEST_P(UMatDot, Mat)
         OCL_OFF(const double cpuRes = src1_roi.dot(src2_roi));
         OCL_ON(const double gpuRes = usrc1_roi.dot(usrc2_roi));
 
-        EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
+        EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-5);
     }
 }
 
@@ -1749,7 +1749,7 @@ OCL_TEST_P(ReduceAvg, Mat)
         OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_AVG, dtype));
         OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_AVG, dtype));
 
-        double eps = ddepth <= CV_32S ? 1 : 5e-6;
+        double eps = ddepth <= CV_32S ? 1 : 6e-6;
         OCL_EXPECT_MATS_NEAR(dst, eps);
     }
 }
