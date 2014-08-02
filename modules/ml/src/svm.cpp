@@ -134,8 +134,6 @@ SVM::Params::Params( int _svmType, int _kernelType,
     termCrit = _termCrit;
 }
 
-SVM::Kernel::~Kernel() {}
-
 /////////////////////////////////////// SVM kernel ///////////////////////////////////////
 class SVMKernelImpl : public SVM::Kernel
 {
@@ -358,7 +356,51 @@ static void sortSamplesByClasses( const Mat& _samples, const Mat& _responses,
     
 //////////////////////// SVM implementation //////////////////////////////
 
-SVM::~SVM() {}
+ParamGrid SVM::getDefaultGrid( int param_id )
+{
+    ParamGrid grid;
+    if( param_id == SVM::C )
+    {
+        grid.minVal = 0.1;
+        grid.maxVal = 500;
+        grid.logStep = 5; // total iterations = 5
+    }
+    else if( param_id == SVM::GAMMA )
+    {
+        grid.minVal = 1e-5;
+        grid.maxVal = 0.6;
+        grid.logStep = 15; // total iterations = 4
+    }
+    else if( param_id == SVM::P )
+    {
+        grid.minVal = 0.01;
+        grid.maxVal = 100;
+        grid.logStep = 7; // total iterations = 4
+    }
+    else if( param_id == SVM::NU )
+    {
+        grid.minVal = 0.01;
+        grid.maxVal = 0.2;
+        grid.logStep = 3; // total iterations = 3
+    }
+    else if( param_id == SVM::COEF )
+    {
+        grid.minVal = 0.1;
+        grid.maxVal = 300;
+        grid.logStep = 14; // total iterations = 3
+    }
+    else if( param_id == SVM::DEGREE )
+    {
+        grid.minVal = 0.01;
+        grid.maxVal = 4;
+        grid.logStep = 7; // total iterations = 3
+    }
+    else
+        cvError( CV_StsBadArg, "SVM::getDefaultGrid", "Invalid type of parameter "
+                "(use one of SVM::C, SVM::GAMMA et al.)", __FILE__, __LINE__ );
+    return grid;
+}
+
 
 class SVMImpl : public SVM
 {
@@ -370,52 +412,6 @@ public:
         double rho;
         int ofs;
     };
-
-    virtual ParamGrid getDefaultGrid( int param_id ) const
-    {
-        ParamGrid grid;
-        if( param_id == SVM::C )
-        {
-            grid.minVal = 0.1;
-            grid.maxVal = 500;
-            grid.logStep = 5; // total iterations = 5
-        }
-        else if( param_id == SVM::GAMMA )
-        {
-            grid.minVal = 1e-5;
-            grid.maxVal = 0.6;
-            grid.logStep = 15; // total iterations = 4
-        }
-        else if( param_id == SVM::P )
-        {
-            grid.minVal = 0.01;
-            grid.maxVal = 100;
-            grid.logStep = 7; // total iterations = 4
-        }
-        else if( param_id == SVM::NU )
-        {
-            grid.minVal = 0.01;
-            grid.maxVal = 0.2;
-            grid.logStep = 3; // total iterations = 3
-        }
-        else if( param_id == SVM::COEF )
-        {
-            grid.minVal = 0.1;
-            grid.maxVal = 300;
-            grid.logStep = 14; // total iterations = 3
-        }
-        else if( param_id == SVM::DEGREE )
-        {
-            grid.minVal = 0.01;
-            grid.maxVal = 4;
-            grid.logStep = 7; // total iterations = 3
-        }
-        else
-            cvError( CV_StsBadArg, "SVM::getDefaultGrid", "Invalid type of parameter "
-                     "(use one of SVM::C, SVM::GAMMA et al.)", __FILE__, __LINE__ );
-        return grid;
-    }
-
 
     // Generalized SMO+SVMlight algorithm
     // Solves:
@@ -1568,6 +1564,9 @@ public:
         if( svmType == C_SVC || svmType == NU_SVC )
         {
             responses = data->getTrainNormCatResponses();
+            if( responses.empty() )
+                CV_Error(CV_StsBadArg, "in the case of classification problem the responses must be categorical; "
+                                       "either specify varType when creating TrainData, or pass integer responses");
             class_labels = data->getClassLabels();
         }
         else
@@ -1793,7 +1792,7 @@ public:
         {
             int svmType = svm->params.svmType;
             int sv_total = svm->sv.rows;
-            int class_count = !svm->class_labels.empty() ? svm->class_labels.cols : svmType == ONE_CLASS ? 1 : 0;
+            int class_count = !svm->class_labels.empty() ? (int)svm->class_labels.total() : svmType == ONE_CLASS ? 1 : 0;
 
             AutoBuffer<float> _buffer(sv_total + (class_count+1)*2);
             float* buffer = _buffer;

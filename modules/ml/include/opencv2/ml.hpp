@@ -135,7 +135,7 @@ public:
     virtual Mat getCatMap() const = 0;
     
     virtual void setTrainTestSplit(int count, bool shuffle=true) = 0;
-    virtual void setTrainTestSplitRatio(float ratio, bool shuffle=true) = 0;
+    virtual void setTrainTestSplitRatio(double ratio, bool shuffle=true) = 0;
     virtual void shuffleTrainTest() = 0;
 
     static Mat getSubVector(const Mat& vec, const Mat& idx);
@@ -156,7 +156,6 @@ class CV_EXPORTS_W StatModel : public Algorithm
 {
 public:
     enum { UPDATE_MODEL = 1, RAW_OUTPUT=1, COMPRESSED_INPUT=2, PREPROCESSED_INPUT=4 };
-    virtual ~StatModel();
     virtual void clear();
 
     virtual int getVarCount() const = 0;
@@ -164,16 +163,30 @@ public:
     virtual bool isTrained() const = 0;
     virtual bool isClassifier() const = 0;
 
-    virtual bool train( const Ptr<TrainData>& trainData, int flags=0 ) = 0;
+    virtual bool train( const Ptr<TrainData>& trainData, int flags=0 );
+    virtual bool train( InputArray samples, int layout, InputArray responses );
     virtual float calcError( const Ptr<TrainData>& data, bool test, OutputArray resp ) const;
     virtual float predict( InputArray samples, OutputArray results=noArray(), int flags=0 ) const = 0;
 
     template<typename _Tp> static Ptr<_Tp> load(const String& filename)
     {
         FileStorage fs(filename, FileStorage::READ);
-        Ptr<_Tp> p = _Tp::create();
-        p->read(fs.getFirstTopLevelNode());
-        return p->isTrained() ? p : Ptr<_Tp>();
+        Ptr<_Tp> model = _Tp::create();
+        model->read(fs.getFirstTopLevelNode());
+        return model->isTrained() ? model : Ptr<_Tp>();
+    }
+
+    template<typename _Tp> static Ptr<_Tp> train(const Ptr<TrainData>& data, const typename _Tp::Params& p, int flags=0)
+    {
+        Ptr<_Tp> model = _Tp::create(p);
+        return !model.empty() && model->train(data, flags) ? model : Ptr<_Tp>();
+    }
+
+    template<typename _Tp> static Ptr<_Tp> train(InputArray samples, int layout, InputArray responses,
+                                                 const typename _Tp::Params& p, int flags=0)
+    {
+        Ptr<_Tp> model = _Tp::create(p);
+        return !model.empty() && model->train(TrainData::create(samples, layout, responses), flags) ? model : Ptr<_Tp>();
     }
 
     virtual void save(const String& filename) const;
@@ -192,11 +205,17 @@ public:
 class CV_EXPORTS_W NormalBayesClassifier : public StatModel
 {
 public:
-    virtual ~NormalBayesClassifier();
+    class CV_EXPORTS_W_MAP Params
+    {
+    public:
+        Params();
+    };
     virtual float predictProb( InputArray inputs, OutputArray outputs,
                                OutputArray outputProbs, int flags=0 ) const = 0;
+    virtual void setParams(const Params& params) = 0;
+    virtual Params getParams() const = 0;
 
-    static Ptr<NormalBayesClassifier> create();
+    static Ptr<NormalBayesClassifier> create(const Params& params=Params());
 };
 
 /****************************************************************************************\
@@ -207,13 +226,21 @@ public:
 class CV_EXPORTS_W KNearest : public StatModel
 {
 public:
-    virtual void setDefaultK(int k) = 0;
-    virtual int getDefaultK() const = 0;
+    class CV_EXPORTS_W_MAP Params
+    {
+    public:
+        Params(int defaultK=10, bool isclassifier=true);
+
+        int defaultK;
+        bool isclassifier;
+    };
+    virtual void setParams(const Params& p) = 0;
+    virtual Params getParams() const = 0;
     virtual float findNearest( InputArray samples, int k,
                                OutputArray results,
                                OutputArray neighborResponses=noArray(),
                                OutputArray dist=noArray() ) const = 0;
-    static Ptr<KNearest> create(bool isclassifier=true);
+    static Ptr<KNearest> create(const Params& params=Params());
 };
 
 /****************************************************************************************\
@@ -247,7 +274,6 @@ public:
     class CV_EXPORTS Kernel : public Algorithm
     {
     public:
-        virtual ~Kernel();
         virtual int getType() const = 0;
         virtual void calc( int vcount, int n, const float* vecs, const float* another, float* results ) = 0;
     };
@@ -260,8 +286,6 @@ public:
 
     // SVM params type
     enum { C=0, GAMMA=1, P=2, NU=3, COEF=4, DEGREE=5 };
-
-    virtual ~SVM();
 
     virtual bool trainAuto( const Ptr<TrainData>& data, int kFold = 10,
                     ParamGrid Cgrid = SVM::getDefaultGrid(SVM::C),
@@ -399,8 +423,6 @@ public:
         int subsetOfs;
     };
 
-    virtual ~DTrees();
-
     virtual void setDParams(const Params& p);
     virtual Params getDParams() const;
 
@@ -464,7 +486,6 @@ public:
     // Boosting type
     enum { DISCRETE=0, REAL=1, LOGIT=2, GENTLE=3 };
 
-    virtual ~Boost();
     virtual Params getBParams() const = 0;
     virtual void setBParams(const Params& p) = 0;
 
@@ -491,7 +512,6 @@ public:
     };
 
     enum {SQUARED_LOSS=0, ABSOLUTE_LOSS, HUBER_LOSS=3, DEVIANCE_LOSS};
-    virtual ~GBTrees();
 
     virtual void setK(int k) = 0;
 
@@ -513,9 +533,15 @@ public:
     struct CV_EXPORTS_W_MAP Params
     {
         Params();
-        Params( TermCriteria termCrit, int trainMethod, double param1, double param2=0 );
+        Params( const Mat& layerSizes, int activateFunc, double fparam1, double fparam2,
+                TermCriteria termCrit, int trainMethod, double param1, double param2=0 );
 
         enum { BACKPROP=0, RPROP=1 };
+
+        CV_PROP_RW Mat layerSizes;
+        CV_PROP_RW int activateFunc;
+        CV_PROP_RW double fparam1;
+        CV_PROP_RW double fparam2;
 
         CV_PROP_RW TermCriteria termCrit;
         CV_PROP_RW int trainMethod;
@@ -527,23 +553,17 @@ public:
         CV_PROP_RW double rpDW0, rpDWPlus, rpDWMinus, rpDWMin, rpDWMax;
     };
 
-    virtual ~ANN_MLP();
-
     // possible activation functions
     enum { IDENTITY = 0, SIGMOID_SYM = 1, GAUSSIAN = 2 };
 
     // available training flags
     enum { UPDATE_WEIGHTS = 1, NO_INPUT_SCALE = 2, NO_OUTPUT_SCALE = 4 };
 
-    virtual Mat getLayerSizes() const = 0;
     virtual Mat getWeights(int layerIdx) const = 0;
     virtual void setParams(const Params& p) = 0;
     virtual Params getParams() const = 0;
 
-    static Ptr<ANN_MLP> create(InputArray layerSizes=noArray(),
-                               const Params& params=Params(),
-                               int activateFunc=ANN_MLP::SIGMOID_SYM,
-                               double fparam1=0, double fparam2=0);
+    static Ptr<ANN_MLP> create(const Params& params=Params());
 };
 
 /****************************************************************************************\

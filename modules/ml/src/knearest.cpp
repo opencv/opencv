@@ -49,18 +49,27 @@
 namespace cv {
 namespace ml {
 
+KNearest::Params::Params(int k, bool isclassifier_)
+{
+    defaultK = k;
+    isclassifier = isclassifier_;
+}
+
+
 class KNearestImpl : public KNearest
 {
 public:
-    KNearestImpl(bool __isClassifier=true)
+    KNearestImpl(const Params& p)
     {
-        defaultK = 3;
-        _isClassifier = __isClassifier;
+        params = p;
     }
 
     virtual ~KNearestImpl() {}
 
-    bool isClassifier() const { return _isClassifier; }
+    Params getParams() const { return params; }
+    void setParams(const Params& p) { params = p; }
+
+    bool isClassifier() const { return params.isclassifier; }
     bool isTrained() const { return !samples.empty(); }
 
     String getDefaultModelName() const { return "opencv_ml_knn"; }
@@ -188,7 +197,7 @@ public:
 
             if( results || testidx+range.start == 0 )
             {
-                if( !_isClassifier || k == 1 )
+                if( !params.isclassifier || k == 1 )
                 {
                     float s = 0.f;
                     for( j = 0; j < k; j++ )
@@ -316,12 +325,13 @@ public:
 
     float predict(InputArray inputs, OutputArray outputs, int) const
     {
-        return findNearest( inputs, defaultK, outputs, noArray(), noArray() );
+        return findNearest( inputs, params.defaultK, outputs, noArray(), noArray() );
     }
 
     void write( FileStorage& fs ) const
     {
-        fs << "is_classifier" << (int)_isClassifier;
+        fs << "is_classifier" << (int)params.isclassifier;
+        fs << "default_k" << params.defaultK;
 
         fs << "samples" << samples;
         fs << "responses" << responses;
@@ -330,24 +340,21 @@ public:
     void read( const FileNode& fn )
     {
         clear();
-        _isClassifier = (int)fn["is_classifier"] != 0;
+        params.isclassifier = (int)fn["is_classifier"] != 0;
+        params.defaultK = (int)fn["default_k"];
 
         fn["samples"] >> samples;
         fn["responses"] >> responses;
     }
 
-    void setDefaultK(int _k) { defaultK = _k; }
-    int getDefaultK() const { return defaultK; }
-
     Mat samples;
     Mat responses;
-    bool _isClassifier;
-    int defaultK;
+    Params params;
 };
 
-Ptr<KNearest> KNearest::create(bool isClassifier)
+Ptr<KNearest> KNearest::create(const Params& p)
 {
-    return makePtr<KNearestImpl>(isClassifier);
+    return makePtr<KNearestImpl>(p);
 }
 
 }

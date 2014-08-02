@@ -43,7 +43,7 @@
 namespace cv {
 namespace ml {
 
-NormalBayesClassifier::~NormalBayesClassifier() {}
+NormalBayesClassifier::Params::Params() {}
 
 class NormalBayesClassifierImpl : public NormalBayesClassifier
 {
@@ -52,6 +52,9 @@ public:
     {
         nallvars = 0;
     }
+
+    void setParams(const Params&) {}
+    Params getParams() const { return Params(); }
 
     bool train( const Ptr<TrainData>& trainData, int flags )
     {
@@ -452,7 +455,7 @@ public:
 };
 
 
-Ptr<NormalBayesClassifier> NormalBayesClassifier::create()
+Ptr<NormalBayesClassifier> NormalBayesClassifier::create(const Params&)
 {
     Ptr<NormalBayesClassifierImpl> p = makePtr<NormalBayesClassifierImpl>();
     return p;

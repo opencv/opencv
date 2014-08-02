@@ -48,8 +48,6 @@ namespace ml {
 
 using std::vector;
 
-DTrees::~DTrees() {}
-
 void DTrees::setDParams(const DTrees::Params&)
 {
     CV_Error(CV_StsNotImplemented, "");

@@ -371,8 +371,9 @@ int CV_MLBaseTest::train( int testCaseIdx )
                                  data->getVarIdx(), data->getTrainSampleIdx());
         int layer_sz[] = { data->getNAllVars(), 100, 100, (int)cls_map.size() };
         Mat layer_sizes( 1, (int)(sizeof(layer_sz)/sizeof(layer_sz[0])), CV_32S, layer_sz );
-        model = ANN_MLP::create(layer_sizes, ANN_MLP::Params(TermCriteria(TermCriteria::COUNT,300,0.01),
-                                                        str_to_ann_train_method(train_method_str), param1, param2));
+        model = ANN_MLP::create(ANN_MLP::Params(layer_sizes, ANN_MLP::SIGMOID_SYM, 0, 0,
+                                                TermCriteria(TermCriteria::COUNT,300,0.01),
+                                                str_to_ann_train_method(train_method_str), param1, param2));
     }
     else if( modelName == CV_DTREE )
     {

@@ -179,10 +179,7 @@ build_rtrees_classifier( const string& data_filename,
         // create classifier by using <data> and <responses>
         cout << "Training the classifier ...\n";
         Ptr<TrainData> tdata = prepare_train_data(data, responses, ntrain_samples);
-
-        // 3. train classifier
-        model = RTrees::create(RTrees::Params(10,10,0,false,15,Mat(),true,4,TC(100,0.01f)));
-        model->train( tdata );
+        model = StatModel::train<RTrees>(tdata, RTrees::Params(10,10,0,false,15,Mat(),true,4,TC(100,0.01f)));
         cout << endl;
     }
 
@@ -267,10 +264,12 @@ build_boost_classifier( const string& data_filename,
 
         Ptr<TrainData> tdata = TrainData::create(new_data, ROW_SAMPLE, new_responses,
                                                  noArray(), noArray(), noArray(), var_type);
-        model = Boost::create(Boost::Params(Boost::REAL, 100, 0.95, 5, false, Mat() ));
+        vector<double> priors(2);
+        priors[0] = 1;
+        priors[1] = 26;
 
         cout << "Training the classifier (may take a few minutes)...\n";
-        model->train(tdata);
+        model = StatModel::train<Boost>(tdata, Boost::Params(Boost::GENTLE, 100, 0.95, 5, false, Mat(priors) ));
         cout << endl;
     }
 
@@ -333,7 +332,6 @@ build_mlp_classifier( const string& data_filename,
     if( !ok )
         return ok;
 
-    int i, j;
     Ptr<ANN_MLP> model;
 
     int nsamples_all = data.rows;
@@ -360,14 +358,14 @@ build_mlp_classifier( const string& data_filename,
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         Mat train_data = data.rowRange(0, ntrain_samples);
-        Mat new_responses = Mat::zeros( ntrain_samples, class_count, CV_32F );
+        Mat train_responses = Mat::zeros( ntrain_samples, class_count, CV_32F );
 
         // 1. unroll the responses
         cout << "Unrolling the responses...\n";
-        for( i = 0; i < ntrain_samples; i++ )
+        for( int i = 0; i < ntrain_samples; i++ )
         {
-            int cls_label = responses.at<int>(i) - 'A'
-            new_responses.at<float>(i, cls_label) = 1.f;
+            int cls_label = responses.at<int>(i) - 'A';
+            train_responses.at<float>(i, cls_label) = 1.f;
         }
 
         // 2. train classifier
@@ -385,180 +383,63 @@ build_mlp_classifier( const string& data_filename,
         int max_iter = 1000;
 #endif
 
-        mlp.train( &train_data, new_responses, 0, 0,
-                  ANN_MLP::Params(TC(max_iter,0), method, method_param));
+        Ptr<TrainData> tdata = TrainData::create(train_data, ROW_SAMPLE, train_responses);
 
-
-        model = ANN_MLP::create() mlp.create( &layer_sizes );
-        printf( "Training the classifier (may take a few minutes)...\n");
-
-        cvReleaseMat( &new_responses );
-        printf("\n");
+        cout << "Training the classifier (may take a few minutes)...\n";
+        model = StatModel::train<ANN_MLP>(tdata, ANN_MLP::Params(layer_sizes, ANN_MLP::SIGMOID_SYM, 0, 0, TC(max_iter,0), method, method_param));
+        cout << endl;
     }
 
-    Mat mlp_response;
-
-    // compute prediction error on train and test data
-    for( i = 0; i < nsamples_all; i++ )
-    {
-        int best_class;
-        CvMat sample;
-        cvGetRow( data, &sample, i );
-        CvPoint max_loc;
-        mlp.predict( &sample, mlp_response );
-        cvMinMaxLoc( mlp_response, 0, 0, 0, &max_loc, 0 );
-        best_class = max_loc.x + 'A';
-
-        int r = fabs((double)best_class - responses->data.fl[i]) < FLT_EPSILON ? 1 : 0;
-
-        if( i < ntrain_samples )
-            train_hr += r;
-        else
-            test_hr += r;
-    }
-
-    test_hr /= (double)(nsamples_all-ntrain_samples);
-    train_hr /= (double)ntrain_samples;
-    printf( "Recognition rate: train = %.1f%%, test = %.1f%%\n",
-            train_hr*100., test_hr*100. );
-
-    if( !filename_to_save.empty() )
-        model->save( filename_to_save );
-
+    test_and_save_classifier(model, data, responses, ntrain_samples, 'A', filename_to_save);
     return true;
 }
 
 static bool
 build_knearest_classifier( const string& data_filename, int K )
 {
-    const int var_count = 16;
     Mat data;
-    CvMat train_data;
     Mat responses;
-
     bool ok = read_num_class_data( data_filename, 16, &data, &responses );
     if( !ok )
         return ok;
 
-    int nsamples_all = 0, ntrain_samples = 0;
+    Ptr<KNearest> model;
 
-    nsamples_all = data->rows;
-    ntrain_samples = (int)(nsamples_all*0.8);
+    int nsamples_all = data.rows;
+    int ntrain_samples = (int)(nsamples_all*0.8);
 
-    // 1. unroll the responses
-    printf( "Unrolling the responses...\n");
-    cvGetRows( data, &train_data, 0, ntrain_samples );
+    // create classifier by using <data> and <responses>
+    cout << "Training the classifier ...\n";
+    Ptr<TrainData> tdata = prepare_train_data(data, responses, ntrain_samples);
+    model = StatModel::train<KNearest>(tdata, KNearest::Params(K, true));
+    cout << endl;
 
-    // 2. train classifier
-    Mat train_resp = cvCreateMat( ntrain_samples, 1, CV_32FC1);
-    for (int i = 0; i < ntrain_samples; i++)
-        train_resp->data.fl[i] = responses->data.fl[i];
-    Ptr<KNearest> model = KNearest::create(true);
-    model->train(train_data, train_resp);
-
-    Mat nearests = cvCreateMat( (nsamples_all - ntrain_samples), K, CV_32FC1);
-    float* _sample = new float[var_count * (nsamples_all - ntrain_samples)];
-    CvMat sample = cvMat( nsamples_all - ntrain_samples, 16, CV_32FC1, _sample );
-    float* true_results = new float[nsamples_all - ntrain_samples];
-    for (int j = ntrain_samples; j < nsamples_all; j++)
-    {
-        float *s = data->data.fl + j * var_count;
-
-        for (int i = 0; i < var_count; i++)
-        {
-            sample.data.fl[(j - ntrain_samples) * var_count + i] = s[i];
-        }
-        true_results[j - ntrain_samples] = responses->data.fl[j];
-    }
-    CvMat *result = cvCreateMat(1, nsamples_all - ntrain_samples, CV_32FC1);
-    knearest.find_nearest(&sample, K, result, 0, nearests, 0);
-    int true_resp = 0;
-    int accuracy = 0;
-    for (int i = 0; i < nsamples_all - ntrain_samples; i++)
-    {
-        if (result->data.fl[i] == true_results[i])
-            true_resp++;
-        for(int k = 0; k < K; k++ )
-        {
-            if( nearests->data.fl[i * K + k] == true_results[i])
-            accuracy++;
-        }
-    }
-
-    printf("true_resp = %f%%\tavg accuracy = %f%%\n", (float)true_resp / (nsamples_all - ntrain_samples) * 100,
-                                                      (float)accuracy / (nsamples_all - ntrain_samples) / K * 100);
-
-    delete[] true_results;
-    delete[] _sample;
-    cvReleaseMat( &train_resp );
-    cvReleaseMat( &nearests );
-    cvReleaseMat( &result );
-    cvReleaseMat( &data );
-    cvReleaseMat( &responses );
-
-    return 0;
+    test_and_save_classifier(model, data, responses, ntrain_samples, 0, string());
+    return true;
 }
 
 static bool
 build_nbayes_classifier( const string& data_filename )
 {
-    const int var_count = 16;
     Mat data;
-    CvMat train_data;
     Mat responses;
-
     bool ok = read_num_class_data( data_filename, 16, &data, &responses );
     if( !ok )
         return ok;
 
-    int nsamples_all = 0, ntrain_samples = 0;
+    Ptr<NormalBayesClassifier> model;
 
-    nsamples_all = data->rows;
-    ntrain_samples = (int)(nsamples_all*0.5);
+    int nsamples_all = data.rows;
+    int ntrain_samples = (int)(nsamples_all*0.8);
 
-    // 1. unroll the responses
-    printf( "Unrolling the responses...\n");
-    cvGetRows( data, &train_data, 0, ntrain_samples );
+    // create classifier by using <data> and <responses>
+    cout << "Training the classifier ...\n";
+    Ptr<TrainData> tdata = prepare_train_data(data, responses, ntrain_samples);
+    model = StatModel::train<NormalBayesClassifier>(tdata, NormalBayesClassifier::Params());
+    cout << endl;
 
-    // 2. train classifier
-    Mat train_resp = cvCreateMat( ntrain_samples, 1, CV_32FC1);
-    for (int i = 0; i < ntrain_samples; i++)
-        train_resp->data.fl[i] = responses->data.fl[i];
-    CvNormalBayesClassifier nbayes(&train_data, train_resp);
-
-    float* _sample = new float[var_count * (nsamples_all - ntrain_samples)];
-    CvMat sample = cvMat( nsamples_all - ntrain_samples, 16, CV_32FC1, _sample );
-    float* true_results = new float[nsamples_all - ntrain_samples];
-    for (int j = ntrain_samples; j < nsamples_all; j++)
-    {
-        float *s = data->data.fl + j * var_count;
-
-        for (int i = 0; i < var_count; i++)
-        {
-            sample.data.fl[(j - ntrain_samples) * var_count + i] = s[i];
-        }
-        true_results[j - ntrain_samples] = responses->data.fl[j];
-    }
-    CvMat *result = cvCreateMat(1, nsamples_all - ntrain_samples, CV_32FC1);
-    nbayes.predict(&sample, result);
-    int true_resp = 0;
-    //int accuracy = 0;
-    for (int i = 0; i < nsamples_all - ntrain_samples; i++)
-    {
-        if (result->data.fl[i] == true_results[i])
-            true_resp++;
-    }
-
-    printf("true_resp = %f%%\n", (float)true_resp / (nsamples_all - ntrain_samples) * 100);
-
-    delete[] true_results;
-    delete[] _sample;
-    cvReleaseMat( &train_resp );
-    cvReleaseMat( &result );
-    cvReleaseMat( &data );
-    cvReleaseMat( &responses );
-
-    return 0;
+    test_and_save_classifier(model, data, responses, ntrain_samples, 0, string());
+    return true;
 }
 
 static bool
@@ -568,95 +449,47 @@ build_svm_classifier( const string& data_filename,
 {
     Mat data;
     Mat responses;
-    Mat train_resp;
-    CvMat train_data;
-    int nsamples_all = 0, ntrain_samples = 0;
-    int var_count;
-    Ptr<SVM> model;
-
     bool ok = read_num_class_data( data_filename, 16, &data, &responses );
     if( !ok )
         return ok;
 
-    ////////// SVM parameters ///////////////////////////////
-    CvSVMParams param;
-    param.kernel_type=CvSVM::LINEAR;
-    param.svm_type=CvSVM::C_SVC;
-    param.C=1;
-    ///////////////////////////////////////////////////////////
+    Ptr<SVM> model;
 
-    printf( "The database %s is loaded.\n", data_filename );
-    nsamples_all = data->rows;
-    ntrain_samples = (int)(nsamples_all*0.1);
-    var_count = data->cols;
+    int nsamples_all = data.rows;
+    int ntrain_samples = (int)(nsamples_all*0.8);
 
     // Create or load Random Trees classifier
-    if( filename_to_load )
+    if( !filename_to_load.empty() )
     {
-        // load classifier from the specified file
-        svm.load( filename_to_load );
+        model = load_classifier<SVM>(filename_to_load);
+        if( model.empty() )
+            return false;
         ntrain_samples = 0;
-        if( svm.get_var_count() == 0 )
-        {
-            printf( "Could not read the classifier %s\n", filename_to_load );
-            return -1;
-        }
-        printf( "The classifier %s is loaded.\n", filename_to_load );
     }
     else
     {
-        // train classifier
-        printf( "Training the classifier (may take a few minutes)...\n");
-        cvGetRows( data, &train_data, 0, ntrain_samples );
-        train_resp = cvCreateMat( ntrain_samples, 1, CV_32FC1);
-        for (int i = 0; i < ntrain_samples; i++)
-            train_resp->data.fl[i] = responses->data.fl[i];
-        svm.train(&train_data, train_resp, 0, 0, param);
+        // create classifier by using <data> and <responses>
+        cout << "Training the classifier ...\n";
+        Ptr<TrainData> tdata = prepare_train_data(data, responses, ntrain_samples);
+
+        SVM::Params params;
+        params.svmType = SVM::C_SVC;
+        params.kernelType = SVM::LINEAR;
+        params.C = 1;
+
+        model = StatModel::train<SVM>(tdata, params);
+        cout << endl;
     }
 
-    // classification
-    std::vector<float> _sample(var_count * (nsamples_all - ntrain_samples));
-    CvMat sample = cvMat( nsamples_all - ntrain_samples, 16, CV_32FC1, &_sample[0] );
-    std::vector<float> true_results(nsamples_all - ntrain_samples);
-    for (int j = ntrain_samples; j < nsamples_all; j++)
-    {
-        float *s = data->data.fl + j * var_count;
-
-        for (int i = 0; i < var_count; i++)
-        {
-            sample.data.fl[(j - ntrain_samples) * var_count + i] = s[i];
-        }
-        true_results[j - ntrain_samples] = responses->data.fl[j];
-    }
-    CvMat *result = cvCreateMat(1, nsamples_all - ntrain_samples, CV_32FC1);
-
-    printf("Classification (may take a few minutes)...\n");
-    double t = (double)cvGetTickCount();
-    svm.predict(&sample, result);
-    t = (double)cvGetTickCount() - t;
-    printf("Prediction type: %gms\n", t/(cvGetTickFrequency()*1000.));
-
-    int true_resp = 0;
-    for (int i = 0; i < nsamples_all - ntrain_samples; i++)
-    {
-        if (result->data.fl[i] == true_results[i])
-            true_resp++;
-    }
-
-    printf("true_resp = %f%%\n", (float)true_resp / (nsamples_all - ntrain_samples) * 100);
-
-    if( !filename_to_save.empty() )
-        model->save( filename_to_save );
-
+    test_and_save_classifier(model, data, responses, ntrain_samples, 0, filename_to_save);
     return true;
 }
 
 int main( int argc, char *argv[] )
 {
-    char* filename_to_save = 0;
-    char* filename_to_load = 0;
-    char default_data_filename[] = "./letter-recognition.data";
-    char* data_filename = default_data_filename;
+    string filename_to_save = "";
+    string filename_to_load = "";
+    string data_filename = "./letter-recognition.data";
     int method = 0;
 
     int i;
@@ -685,15 +518,15 @@ int main( int argc, char *argv[] )
         {
             method = 2;
         }
-        else if ( strcmp(argv[i], "-knearest") == 0)
+        else if( strcmp(argv[i], "-knearest") == 0 || strcmp(argv[i], "-knn") == 0 )
         {
             method = 3;
         }
-        else if ( strcmp(argv[i], "-nbayes") == 0)
+        else if( strcmp(argv[i], "-nbayes") == 0)
         {
             method = 4;
         }
-        else if ( strcmp(argv[i], "-svm") == 0)
+        else if( strcmp(argv[i], "-svm") == 0)
         {
             method = 5;
         }

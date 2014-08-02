@@ -2326,14 +2326,14 @@ static void removeBowImageDescriptorsByCount( vector<ObdImage>& images, vector<M
     CV_Assert( bowImageDescriptors.size() == objectPresent.size() );
 }
 
-static void setSVMParams( const SVM::Params& svmParams, Mat& class_wts_cv, const Mat& responses, bool balanceClasses )
+static void setSVMParams( SVM::Params& svmParams, Mat& class_wts_cv, const Mat& responses, bool balanceClasses )
 {
     int pos_ex = countNonZero(responses == 1);
     int neg_ex = countNonZero(responses == -1);
     cout << pos_ex << " positive training samples; " << neg_ex << " negative training samples" << endl;
 
-    svmParams.svm_type = CvSVM::C_SVC;
-    svmParams.kernel_type = CvSVM::RBF;
+    svmParams.svmType = SVM::C_SVC;
+    svmParams.kernelType = SVM::RBF;
     if( balanceClasses )
     {
         Mat class_wts( 2, 1, CV_32FC1 );
@@ -2351,43 +2351,44 @@ static void setSVMParams( const SVM::Params& svmParams, Mat& class_wts_cv, const
             class_wts.at<float>(1) = static_cast<float>(pos_ex)/static_cast<float>(pos_ex+neg_ex);
         }
         class_wts_cv = class_wts;
-        svmParams.class_weights = &class_wts_cv;
+        svmParams.classWeights = class_wts_cv;
     }
 }
 
-static void setSVMTrainAutoParams( CvParamGrid& c_grid, CvParamGrid& gamma_grid,
-                            CvParamGrid& p_grid, CvParamGrid& nu_grid,
-                            CvParamGrid& coef_grid, CvParamGrid& degree_grid )
+static void setSVMTrainAutoParams( ParamGrid& c_grid, ParamGrid& gamma_grid,
+                            ParamGrid& p_grid, ParamGrid& nu_grid,
+                            ParamGrid& coef_grid, ParamGrid& degree_grid )
 {
-    c_grid = CvSVM::get_default_grid(CvSVM::C);
+    c_grid = SVM::getDefaultGrid(SVM::C);
 
-    gamma_grid = CvSVM::get_default_grid(CvSVM::GAMMA);
+    gamma_grid = SVM::getDefaultGrid(SVM::GAMMA);
 
-    p_grid = CvSVM::get_default_grid(CvSVM::P);
-    p_grid.step = 0;
+    p_grid = SVM::getDefaultGrid(SVM::P);
+    p_grid.logStep = 0;
 
-    nu_grid = CvSVM::get_default_grid(CvSVM::NU);
-    nu_grid.step = 0;
+    nu_grid = SVM::getDefaultGrid(SVM::NU);
+    nu_grid.logStep = 0;
 
-    coef_grid = CvSVM::get_default_grid(CvSVM::COEF);
-    coef_grid.step = 0;
+    coef_grid = SVM::getDefaultGrid(SVM::COEF);
+    coef_grid.logStep = 0;
 
-    degree_grid = CvSVM::get_default_grid(CvSVM::DEGREE);
-    degree_grid.step = 0;
+    degree_grid = SVM::getDefaultGrid(SVM::DEGREE);
+    degree_grid.logStep = 0;
 }
 
-static void trainSVMClassifier( CvSVM& svm, const SVMTrainParamsExt& svmParamsExt, const string& objClassName, VocData& vocData,
+static Ptr<SVM> trainSVMClassifier( const SVMTrainParamsExt& svmParamsExt, const string& objClassName, VocData& vocData,
                          Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
                          const string& resPath )
 {
     /* first check if a previously trained svm for the current class has been saved to file */
     string svmFilename = resPath + svmsDir + "/" + objClassName + ".xml.gz";
+    Ptr<SVM> svm;
 
     FileStorage fs( svmFilename, FileStorage::READ);
     if( fs.isOpened() )
     {
         cout << "*** LOADING SVM CLASSIFIER FOR CLASS " << objClassName << " ***" << endl;
-        svm.load( svmFilename.c_str() );
+        svm = StatModel::load<SVM>( svmFilename );
     }
     else
     {
@@ -2438,20 +2439,24 @@ static void trainSVMClassifier( CvSVM& svm, const SVMTrainParamsExt& svmParamsEx
         }
 
         cout << "TRAINING SVM FOR CLASS ..." << objClassName << "..." << endl;
-        CvSVMParams svmParams;
-        CvMat class_wts_cv;
+        SVM::Params svmParams;
+        Mat class_wts_cv;
         setSVMParams( svmParams, class_wts_cv, responses, svmParamsExt.balanceClasses );
-        CvParamGrid c_grid, gamma_grid, p_grid, nu_grid, coef_grid, degree_grid;
+        svm = SVM::create(svmParams);
+        ParamGrid c_grid, gamma_grid, p_grid, nu_grid, coef_grid, degree_grid;
         setSVMTrainAutoParams( c_grid, gamma_grid,  p_grid, nu_grid, coef_grid, degree_grid );
-        svm.train_auto( trainData, responses, Mat(), Mat(), svmParams, 10, c_grid, gamma_grid, p_grid, nu_grid, coef_grid, degree_grid );
+
+        svm->trainAuto(TrainData::create(trainData, ROW_SAMPLE, responses), 10,
+                       c_grid, gamma_grid, p_grid, nu_grid, coef_grid, degree_grid);
         cout << "SVM TRAINING FOR CLASS " << objClassName << " COMPLETED" << endl;
 
-        svm.save( svmFilename.c_str() );
+        svm->save( svmFilename );
         cout << "SAVED CLASSIFIER TO FILE" << endl;
     }
+    return svm;
 }
 
-static void computeConfidences( CvSVM& svm, const string& objClassName, VocData& vocData,
+static void computeConfidences( const Ptr<SVM>& svm, const string& objClassName, VocData& vocData,
                          Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
                          const string& resPath )
 {
@@ -2477,12 +2482,12 @@ static void computeConfidences( CvSVM& svm, const string& objClassName, VocData&
         if( imageIdx == 0 )
         {
             // In the first iteration, determine the sign of the positive class
-            float classVal = confidences[imageIdx] = svm.predict( bowImageDescriptors[imageIdx], false );
-            float scoreVal = confidences[imageIdx] = svm.predict( bowImageDescriptors[imageIdx], true );
+            float classVal = confidences[imageIdx] = svm->predict( bowImageDescriptors[imageIdx], noArray(), 0 );
+            float scoreVal = confidences[imageIdx] = svm->predict( bowImageDescriptors[imageIdx], noArray(), StatModel::RAW_OUTPUT );
             signMul = (classVal < 0) == (scoreVal < 0) ? 1.f : -1.f;
         }
         // svm output of decision function
-        confidences[imageIdx] = signMul * svm.predict( bowImageDescriptors[imageIdx], true );
+        confidences[imageIdx] = signMul * svm->predict( bowImageDescriptors[imageIdx], noArray(), StatModel::RAW_OUTPUT );
     }
 
     cout << "WRITING QUERY RESULTS TO VOC RESULTS FILE FOR CLASS " << objClassName << "..." << endl;
@@ -2592,9 +2597,8 @@ int main(int argc, char** argv)
     for( size_t classIdx = 0; classIdx < objClasses.size(); ++classIdx )
     {
         // Train a classifier on train dataset
-        CvSVM svm;
-        trainSVMClassifier( svm, svmTrainParamsExt, objClasses[classIdx], vocData,
-                            bowExtractor, featureDetector, resPath );
+        Ptr<SVM> svm = trainSVMClassifier( svmTrainParamsExt, objClasses[classIdx], vocData,
+                                           bowExtractor, featureDetector, resPath );
 
         // Now use the classifier over all images on the test dataset and rank according to score order
         // also calculating precision-recall etc.
