@@ -310,7 +310,7 @@ public:
             varType.create(1, nvars, CV_8U);
             varType = Scalar::all(VAR_ORDERED);
             if( noutputvars == 1 )
-                varType.at<uchar>(ninputvars) = responses.type() < CV_32F ? VAR_CATEGORICAL : VAR_ORDERED;
+                varType.at<uchar>(ninputvars) = (uchar)(responses.type() < CV_32F ? VAR_CATEGORICAL : VAR_ORDERED);
         }
 
         if( noutputvars > 1 )
@@ -558,7 +558,7 @@ public:
                 if( tp == VAR_MISSED )
                     haveMissed = true;
                 rowvals.push_back(val);
-                rowtypes.push_back(tp);
+                rowtypes.push_back((uchar)tp);
                 token = strtok(NULL, delimiters);
                 if (!token)
                     break;
@@ -880,7 +880,7 @@ public:
             if( s )
             {
                 j = s[i];
-                CV_DbgAssert( 0 <= j && j < nsamples );
+                CV_Assert( 0 <= j && j < nsamples );
             }
             values[i] = src[j*sstep];
             if( values[i] == MISSED_VAL )
@@ -955,7 +955,7 @@ public:
             if( vptr )
             {
                 j = vptr[i];
-                CV_DbgAssert( 0 <= j && j < nvars );
+                CV_Assert( 0 <= j && j < nvars );
             }
             buf[i] = src[j*vstep];
         }

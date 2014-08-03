@@ -111,7 +111,7 @@ namespace ml
             termCrit.type |= TermCriteria::EPS;
             termCrit.epsilon = epsilon;
         }
-        int iters = (double)fn["iterations"];
+        int iters = (int)fn["iterations"];
         if( iters > 0 )
         {
             termCrit.type |= TermCriteria::COUNT;
@@ -134,7 +134,7 @@ namespace ml
             }
 
             int class_idx;
-            int Tn;
+            double Tn;
             double value;
 
             int parent;
@@ -164,7 +164,7 @@ namespace ml
             }
 
             int varIdx;
-            int inversed;
+            bool inversed;
             float quality;
             int next;
             float c;
@@ -179,7 +179,7 @@ namespace ml
             vector<WNode> wnodes;
             vector<WSplit> wsplits;
             vector<int> wsubsets;
-            vector<int> cv_Tn;
+            vector<double> cv_Tn;
             vector<double> cv_node_risk;
             vector<double> cv_node_error;
             vector<int> cv_labels;

@@ -90,7 +90,7 @@ public:
     {
         DTreesImpl::clear();
         oobError = 0.;
-        rng = RNG(-1);
+        rng = RNG((uint64)-1);
     }
 
     const vector<int>& getActiveVars()
@@ -177,7 +177,6 @@ public:
 
         for( treeidx = 0; treeidx < ntrees; treeidx++ )
         {
-            putchar('.'); fflush(stdout);
             for( i = 0; i < n; i++ )
                 oobmask[i] = (uchar)1;
 

@@ -173,7 +173,7 @@ public:
         }
 
         float result = 0.f;
-        float inv_scale = 1./k;
+        float inv_scale = 1.f/k;
 
         for( testidx = 0; testidx < testcount; testidx++ )
         {
