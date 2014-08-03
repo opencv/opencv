@@ -205,7 +205,7 @@ public:
 class CV_EXPORTS_W NormalBayesClassifier : public StatModel
 {
 public:
-    class CV_EXPORTS_W_MAP Params
+    class CV_EXPORTS_W Params
     {
     public:
         Params();
@@ -231,8 +231,8 @@ public:
     public:
         Params(int defaultK=10, bool isclassifier=true);
 
-        int defaultK;
-        bool isclassifier;
+        CV_PROP_RW int defaultK;
+        CV_PROP_RW bool isclassifier;
     };
     virtual void setParams(const Params& p) = 0;
     virtual Params getParams() const = 0;
@@ -328,9 +328,9 @@ public:
         explicit Params(int nclusters=DEFAULT_NCLUSTERS, int covMatType=EM::COV_MAT_DIAGONAL,
                         const TermCriteria& termCrit=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS,
                                                                   EM::DEFAULT_MAX_ITERS, 1e-6));
-        int nclusters;
-        int covMatType;
-        TermCriteria termCrit;
+        CV_PROP_RW int nclusters;
+        CV_PROP_RW int covMatType;
+        CV_PROP_RW TermCriteria termCrit;
     };
 
     virtual void setParams(const Params& p) = 0;

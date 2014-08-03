@@ -123,7 +123,7 @@ public:
     void clear()
     {
         min_val = max_val = min_val1 = max_val1 = 0.;
-        rng = RNG(-1);
+        rng = RNG((uint64)-1);
         weights.clear();
         trained = false;
     }
@@ -300,7 +300,7 @@ public:
         {
             int maxIdx[] = {0, 0};
             minMaxIdx(outputs, 0, 0, 0, maxIdx);
-            return maxIdx[0] + maxIdx[1];
+            return (float)(maxIdx[0] + maxIdx[1]);
         }
 
         return 0.f;
@@ -702,9 +702,8 @@ public:
             train_backprop( inputs, outputs, sw, termcrit ) :
             train_rprop( inputs, outputs, sw, termcrit );
 
-        trained = true;
-
-        return iter;
+        trained = iter > 0;
+        return trained;
     }
 
     int train_backprop( const Mat& inputs, const Mat& outputs, const Mat& _sw, TermCriteria termCrit )

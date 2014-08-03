@@ -730,7 +730,7 @@ DTreesImpl::WSplit DTreesImpl::findSplitOrdClass( int vi, const vector<int>& _si
     {
         split.varIdx = vi;
         split.c = (values[sorted_idx[best_i]] + values[sorted_idx[best_i+1]])*0.5f;
-        split.inversed = 0;
+        split.inversed = false;
         split.quality = (float)best_val;
     }
     return split;
@@ -744,12 +744,12 @@ void DTreesImpl::clusterCategories( const double* vectors, int n, int m, double*
     cv::AutoBuffer<double> buf(n + k);
     double *v_weights = buf, *c_weights = buf + n;
     bool modified = true;
-    RNG r(-1);
+    RNG r((uint64)-1);
 
     // assign labels randomly
     for( i = 0; i < n; i++ )
     {
-        int sum = 0;
+        double sum = 0;
         const double* v = vectors + i*m;
         labels[i] = i < k ? i : r.uniform(0, k);
 
@@ -1063,7 +1063,7 @@ DTreesImpl::WSplit DTreesImpl::findSplitOrdReg( int vi, const vector<int>& _sidx
     {
         split.varIdx = vi;
         split.c = (values[sorted_idx[best_i]] + values[sorted_idx[best_i+1]])*0.5f;
-        split.inversed = 0;
+        split.inversed = false;
         split.quality = (float)best_val;
     }
     return split;

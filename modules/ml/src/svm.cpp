@@ -1587,7 +1587,7 @@ public:
                     bool balanced )
     {
         int svmType = params.svmType;
-        RNG rng(-1);
+        RNG rng((uint64)-1);
 
         if( svmType == ONE_CLASS )
             // current implementation of "auto" svm does not support the 1-class case.

@@ -108,7 +108,7 @@ float StatModel::calcError( const Ptr<TrainData>& data, bool testerr, OutputArra
     if( _resp.needed() )
         resp.copyTo(_resp);
 
-    return err / n * (isclassifier ? 100 : 1);
+    return (float)(err / n * (isclassifier ? 100 : 1));
 }
 
 void StatModel::save(const String& filename) const
