@@ -220,7 +220,6 @@ public:
 
     void updateWeightsAndTrim( int treeidx, vector<int>& sidx )
     {
-        putchar('<');
         int i, n = (int)w->sidx.size();
         int nvars = (int)varIdx.size();
         double sumw = 0., C = 1.;
@@ -374,7 +373,6 @@ public:
             if( w->sample_weights[si] >= threshold )
                 sidx.push_back(si);
         }
-        putchar('>'); fflush(stdout);
     }
 
     float predictTrees( const Range& range, const Mat& sample, int flags0 ) const
