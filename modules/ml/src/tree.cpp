@@ -359,9 +359,8 @@ int DTreesImpl::addTree(const vector<int>& sidx )
                 }
                 printf("\n");
             }
-#else
-            CV_Assert( w_nidx >= 0 );
 #endif
+            CV_Assert( w_nidx >= 0 );
         }
     }
     roots.push_back(root);
