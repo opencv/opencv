@@ -452,6 +452,7 @@ int DTreesImpl::addNodeAndTrySplit( int parent, const vector<int>& sidx )
 
         w->wnodes[nidx].left = addNodeAndTrySplit( nidx, sleft );
         w->wnodes[nidx].right = addNodeAndTrySplit( nidx, sright );
+        CV_Assert( w->wnodes[nidx].left > 0 && w->wnodes[nidx].right > 0 );
     }
 
     return nidx;

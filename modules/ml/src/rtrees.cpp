@@ -280,7 +280,6 @@ public:
             if( calcOOBError && oobError < eps )
                 break;
         }
-        printf("done!\n");
 
         if( rparams.calcVarImportance )
         {
