@@ -496,7 +496,7 @@ public:
 *                                   Gradient Boosted Trees                               *
 \****************************************************************************************/
 
-class CV_EXPORTS_W GBTrees : public DTrees
+/*class CV_EXPORTS_W GBTrees : public DTrees
 {
 public:
     struct CV_EXPORTS_W_MAP Params : public DTrees::Params
@@ -516,10 +516,10 @@ public:
     virtual void setK(int k) = 0;
 
     virtual float predictSerial( InputArray samples,
-                                 OutputArray weakResponses, int flags) const;
+                                 OutputArray weakResponses, int flags) const = 0;
 
     static Ptr<GBTrees> create(const Params& p);
-};
+};*/
 
 /****************************************************************************************\
 *                              Artificial Neural Networks (ANN)                          *
