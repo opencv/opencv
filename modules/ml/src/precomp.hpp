@@ -158,7 +158,8 @@ namespace ml
         {
             WSplit()
             {
-                varIdx = inversed = next = 0;
+                varIdx = next = 0;
+                inversed = false;
                 quality = c = 0.f;
                 subsetOfs = -1;
             }

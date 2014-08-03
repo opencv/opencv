@@ -340,7 +340,28 @@ int DTreesImpl::addTree(const vector<int>& sidx )
                 break;
 
             w_nidx = w->wnodes[w_pidx].right;
+#if 1
+            if( w_nidx < 0 )
+            {
+                size_t i, nnodes = w->wnodes.size();
+                printf("w_pidx = %d\nwnodes (%d): ", w_pidx, (int)n);
+                for( i = 0; i < nnodes; i++ )
+                {
+                    printf("[%d. depth=%d parent=%d, left=%d, right=%d] ",
+                           (int)i, w->wnodes[i].depth, w->wnodes[i].parent, w->wnodes[i].left, w->wnodes[i].right);
+                }
+
+                nnodes = nodes.size();
+                printf("\nnodes (%d): ", (int)nnodes);
+                for( i = 0; i < nnodes; i++ )
+                {
+                    printf("[%d. parent=%d, left=%d, right=%d] ", (int)i, nodes[i].parent, nodes[i].left, nodes[i].right);
+                }
+                printf("\n");
+            }
+#else
             CV_Assert( w_nidx >= 0 );
+#endif
         }
     }
     roots.push_back(root);
