@@ -170,7 +170,7 @@ TEST(DISABLED_ML_ERTrees, save_load) { CV_SLMLTest test( CV_ERTREES ); test.safe
 TEST(DISABLED_ML_SVM, linear_save_load)
 {
     Ptr<cv::ml::SVM> svm1, svm2, svm3;
-    
+
     svm1 = StatModel::load<SVM>("SVM45_X_38-1.xml");
     svm2 = StatModel::load<SVM>("SVM45_X_38-2.xml");
     string tname = tempfile("a.xml");
