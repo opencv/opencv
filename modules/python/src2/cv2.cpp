@@ -377,6 +377,12 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
 }
 
 template<>
+bool pyopencv_to(PyObject* o, Mat& m, const char* name)
+{
+    return pyopencv_to(o, m, ArgInfo(name, 0));
+}
+
+template<>
 PyObject* pyopencv_from(const Mat& m)
 {
     if( !m.data )
