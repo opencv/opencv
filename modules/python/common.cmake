@@ -49,6 +49,8 @@ add_custom_command(
 add_library(${the_module} SHARED ${PYTHON_SOURCE_DIR}/src2/cv2.cpp ${cv2_generated_hdrs})
 set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
 
+message(STATUS "target: ${the_module} python libs: ${PYTHON_LIBRARIES}, debug: ${PYTHON_DEBUG_LIBRARIES}")
+
 if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")
   target_link_libraries(${the_module} debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
 else()
