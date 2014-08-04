@@ -208,7 +208,7 @@ static void find_decision_boundary_ANN( const Mat&  layer_sizes )
     ANN_MLP::Params params(layer_sizes, ANN_MLP::SIGMOID_SYM, 1, 1, TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 300, FLT_EPSILON),
                            ANN_MLP::Params::BACKPROP, 0.001);
 
-    Mat trainClasses = Mat::zeros( trainedPoints.size(), classColors.size(), CV_32FC1 );
+    Mat trainClasses = Mat::zeros( (int)trainedPoints.size(), (int)classColors.size(), CV_32FC1 );
     for( int i = 0; i < trainClasses.rows; i++ )
     {
         trainClasses.at<float>(i, trainedPointsMarkers[i]) = 1.f;
@@ -386,7 +386,7 @@ int main()
             Mat layer_sizes1( 1, 3, CV_32SC1 );
             layer_sizes1.at<int>(0) = 2;
             layer_sizes1.at<int>(1) = 5;
-            layer_sizes1.at<int>(2) = classColors.size();
+            layer_sizes1.at<int>(2) = (int)classColors.size();
             find_decision_boundary_ANN( layer_sizes1 );
             imshow( "ANN", imgDst );
 #endif

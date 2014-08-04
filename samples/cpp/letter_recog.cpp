@@ -129,7 +129,7 @@ static void test_and_save_classifier(const Ptr<StatModel>& model,
         Mat sample = data.row(i);
 
         float r = model->predict( sample );
-        r = std::abs(r + rdelta - responses.at<int>(i)) <= FLT_EPSILON ? 1 : 0;
+        r = std::abs(r + rdelta - responses.at<int>(i)) <= FLT_EPSILON ? 1.f : 0.f;
 
         if( i < ntrain_samples )
             train_hr += r;
