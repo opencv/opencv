@@ -568,7 +568,7 @@ cv::Scalar cv::sum( InputArray _src )
 {
 #ifdef HAVE_OPENCL
     Scalar _res;
-    CV_OCL_RUN_(_src.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN_(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                 ocl_sum(_src, _res, OCL_OP_SUM),
                 _res)
 #endif
@@ -719,7 +719,7 @@ int cv::countNonZero( InputArray _src )
 
 #ifdef HAVE_OPENCL
     int res = -1;
-    CV_OCL_RUN_(_src.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN_(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                 ocl_countNonZero(_src, res),
                 res)
 #endif
@@ -1025,7 +1025,7 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 
 void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
-    CV_OCL_RUN(_src.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                ocl_meanStdDev(_src, _mean, _sdv, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
@@ -1571,7 +1571,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
         (cn > 1 && _mask.empty() && !minIdx && !maxIdx) );
 
-    CV_OCL_RUN(_src.isUMat() && _src.dims() <= 2  && (_mask.empty() || _src.size() == _mask.size()),
+    CV_OCL_RUN(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2  && (_mask.empty() || _src.size() == _mask.size()),
                ocl_minMaxIdx(_src, minVal, maxVal, minIdx, maxIdx, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
@@ -2234,7 +2234,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 
 #ifdef HAVE_OPENCL
     double _result = 0;
-    CV_OCL_RUN_(_src.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN_(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                 ocl_norm(_src, normType, _mask, _result),
                 _result)
 #endif
@@ -2594,7 +2594,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 
 #ifdef HAVE_OPENCL
     double _result = 0;
-    CV_OCL_RUN_(_src1.isUMat(),
+    CV_OCL_RUN_(OCL_PERFORMANCE_CHECK(_src1.isUMat()),
                 ocl_norm(_src1, _src2, normType, _mask, _result),
                 _result)
 #endif
