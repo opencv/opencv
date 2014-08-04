@@ -1,6 +1,5 @@
 # This file is included from a subdirectory
-set(the_description "The python bindings")
-set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
+set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../")
 
 set(candidate_deps "")
 foreach(mp ${OPENCV_MODULES_PATH} ${OPENCV_EXTRA_MODULES_PATH})
@@ -15,29 +14,26 @@ endforeach(mp)
 
 # module blacklist
 ocv_list_filterout(candidate_deps "^opencv_cud(a|ev)")
+ocv_list_filterout(candidate_deps "^opencv_matlab")
 ocv_list_filterout(candidate_deps "^opencv_adas$")
 ocv_list_filterout(candidate_deps "^opencv_tracking$")
 
 ocv_add_module(${MODULE_NAME} BINDINGS OPTIONAL ${candidate_deps})
 
-message(STATUS "module: ${MODULE_NAME}, binary dir: ${CMAKE_CURRENT_BINARY_DIR}")
-
 ocv_module_include_directories(
     "${PYTHON_INCLUDE_PATH}"
     ${PYTHON_NUMPY_INCLUDE_DIRS}
     "${PYTHON_SOURCE_DIR}/src2"
-    ${CMAKE_CURRENT_BINARY_DIR}
     )
 
 set(opencv_hdrs "")
-foreach(m IN LISTS OPENCV_MODULE_opencv_python_DEPS)
+foreach(m IN LISTS OPENCV_MODULE_opencv_${MODULE_NAME}_DEPS)
     list(APPEND opencv_hdrs ${OPENCV_MODULE_${m}_HEADERS})
 endforeach(m)
 
 # header blacklist
 ocv_list_filterout(opencv_hdrs ".h$")
-ocv_list_filterout(opencv_hdrs "cuda")
-ocv_list_filterout(opencv_hdrs "cudev")
+ocv_list_filterout(opencv_hdrs "opencv2/core/cuda")
 ocv_list_filterout(opencv_hdrs "opencv2/objdetect/detection_based_tracker.hpp")
 ocv_list_filterout(opencv_hdrs "opencv2/optim.hpp")
 
@@ -58,7 +54,7 @@ add_custom_command(
    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
    DEPENDS ${opencv_hdrs})
 
-add_library(${the_module} SHARED ../src2/cv2.cpp ${cv2_generated_hdrs})
+add_library(${the_module} SHARED ${PYTHON_SOURCE_DIR}/src2/cv2.cpp ${cv2_generated_hdrs})
 set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
 
 if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")
@@ -68,14 +64,14 @@ else()
 endif()
 target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS})
 
-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import distutils.sysconfig; print(distutils.sysconfig.get_config_var('SO'))"
+execute_process(COMMAND ${PYTHON_DEFAULT_EXECUTABLE} -c "import distutils.sysconfig; print(distutils.sysconfig.get_config_var('SO'))"
                 RESULT_VARIABLE PYTHON_CVPY_PROCESS
                 OUTPUT_VARIABLE CVPY_SUFFIX
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 set_target_properties(${the_module} PROPERTIES
                       PREFIX ""
-                      OUTPUT_NAME cv2
+                      OUTPUT_NAME ${MODULE_OUTPUT_NAME}
                       SUFFIX ${CVPY_SUFFIX})
 
 if(ENABLE_SOLUTION_FOLDERS)
@@ -132,3 +128,8 @@ else()
           LIBRARY DESTINATION python/${__ver}/${OpenCV_ARCH} COMPONENT python
           )
 endif()
+
+unset(PYTHON_SRC_DIR)
+unset(PYTHON_CVPY_PROCESS)
+unset(PYTHON_INSTALL_CONFIGURATIONS)
+unset(PYTHON_INSTALL_ARCHIVE)
