@@ -130,6 +130,8 @@ CV_INLINE CvParamLattice cvDefaultParamLattice( void )
 #define CV_TYPE_NAME_ML_RTREES      "opencv-ml-random-trees"
 #define CV_TYPE_NAME_ML_ERTREES     "opencv-ml-extremely-randomized-trees"
 #define CV_TYPE_NAME_ML_GBT         "opencv-ml-gradient-boosting-trees"
+#define CV_TYPE_NAME_ML_LR          "opencv-ml-lr"
+
 
 #define CV_TRAIN_ERROR  0
 #define CV_TEST_ERROR   1
@@ -1989,6 +1991,64 @@ protected:
     CvANN_MLP_TrainParams params;
     cv::RNG* rng;
 };
+
+/****************************************************************************************\
+*                           Logistic Regression                                          *
+\****************************************************************************************/
+namespace cv
+{
+struct CV_EXPORTS LogisticRegressionParams
+{
+    double alpha;
+    int num_iters;
+    int norm;
+    int regularized;
+    int train_method;
+    int mini_batch_size;
+    cv::TermCriteria term_crit;
+
+    LogisticRegressionParams();
+    LogisticRegressionParams(double learning_rate, int iters, int train_method, int normlization, int reg, int mini_batch_size);
+};
+
+class CV_EXPORTS LogisticRegression
+{
+public:
+    LogisticRegression( const LogisticRegressionParams& params = LogisticRegressionParams());
+    LogisticRegression(cv::InputArray data_ip, cv::InputArray labels_ip, const LogisticRegressionParams& params);
+    virtual ~LogisticRegression();
+
+    enum { REG_L1 = 0, REG_L2 = 1};
+    enum { BATCH = 0, MINI_BATCH = 1};
+
+    virtual bool train(cv::InputArray data_ip, cv::InputArray label_ip);
+    virtual void predict( cv::InputArray data, cv::OutputArray predicted_labels ) const;
+
+    virtual void write(FileStorage& fs) const;
+    virtual void read(const FileNode& fn);
+
+    const cv::Mat get_learnt_thetas() const;
+    virtual void clear();
+
+protected:
+
+    LogisticRegressionParams params;
+    cv::Mat learnt_thetas;
+    std::string default_model_name;
+    std::map<int, int> forward_mapper;
+    std::map<int, int> reverse_mapper;
+
+    cv::Mat labels_o;
+    cv::Mat labels_n;
+
+    static cv::Mat calc_sigmoid(const cv::Mat& data);
+    virtual double compute_cost(const cv::Mat& data, const cv::Mat& labels, const cv::Mat& init_theta);
+    virtual cv::Mat compute_batch_gradient(const cv::Mat& data, const cv::Mat& labels, const cv::Mat& init_theta);
+    virtual cv::Mat compute_mini_batch_gradient(const cv::Mat& data, const cv::Mat& labels, const cv::Mat& init_theta);
+    virtual bool set_label_map(const cv::Mat& labels);
+    static cv::Mat remap_labels(const cv::Mat& labels, const std::map<int, int>& lmap);
+};
+}// namespace cv
 
 /****************************************************************************************\
 *                           Auxilary functions declarations                              *
