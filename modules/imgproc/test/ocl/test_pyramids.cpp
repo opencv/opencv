@@ -94,7 +94,8 @@ OCL_TEST_P(PyrDown, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
-        Size src_roiSize = randomSize(1, MAX_VALUE);
+        // minimal src size is set to 4 since size<4 doesn't make sense
+        Size src_roiSize = randomSize(4, MAX_VALUE);
         Size dst_roiSize = Size(randomInt((src_roiSize.width - 1) / 2, (src_roiSize.width + 3) / 2),
                                 randomInt((src_roiSize.height - 1) / 2, (src_roiSize.height + 3) / 2));
         dst_roiSize = dst_roiSize.area() == 0 ? Size((src_roiSize.width + 1) / 2, (src_roiSize.height + 1) / 2) : dst_roiSize;
