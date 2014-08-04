@@ -1,35 +1,45 @@
 # This file is included from a subdirectory
-set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../")
+set(the_description "The python bindings")
+set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
+
+set(candidate_deps "")
+foreach(mp ${OPENCV_MODULES_PATH} ${OPENCV_EXTRA_MODULES_PATH})
+    file(GLOB names "${mp}/*")
+    foreach(m IN LISTS names)
+        if(IS_DIRECTORY ${m})
+            get_filename_component(m ${m} NAME)
+            list(APPEND candidate_deps "opencv_${m}")
+        endif()
+    endforeach(m)
+endforeach(mp)
+
+# module blacklist
+ocv_list_filterout(candidate_deps "^opencv_cud(a|ev)")
+ocv_list_filterout(candidate_deps "^opencv_adas$")
+ocv_list_filterout(candidate_deps "^opencv_tracking$")
+
+ocv_add_module(${MODULE_NAME} BINDINGS OPTIONAL ${candidate_deps})
+
+message(STATUS "module: ${MODULE_NAME}, binary dir: ${CMAKE_CURRENT_BINARY_DIR}")
 
 ocv_module_include_directories(
     "${PYTHON_INCLUDE_PATH}"
     ${PYTHON_NUMPY_INCLUDE_DIRS}
     "${PYTHON_SOURCE_DIR}/src2"
+    ${CMAKE_CURRENT_BINARY_DIR}
     )
 
-set(opencv_hdrs
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core.hpp"
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp"
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/types.hpp"
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/persistence.hpp"
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/utility.hpp"
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/ocl.hpp"
-    "${OPENCV_MODULE_opencv_flann_LOCATION}/include/opencv2/flann/miniflann.hpp"
-    "${OPENCV_MODULE_opencv_imgproc_LOCATION}/include/opencv2/imgproc.hpp"
-    "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/background_segm.hpp"
-    "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/tracking.hpp"
-    "${OPENCV_MODULE_opencv_photo_LOCATION}/include/opencv2/photo.hpp"
-    "${OPENCV_MODULE_opencv_highgui_LOCATION}/include/opencv2/highgui.hpp"
-    "${OPENCV_MODULE_opencv_ml_LOCATION}/include/opencv2/ml.hpp"
-    "${OPENCV_MODULE_opencv_features2d_LOCATION}/include/opencv2/features2d.hpp"
-    "${OPENCV_MODULE_opencv_calib3d_LOCATION}/include/opencv2/calib3d.hpp"
-    "${OPENCV_MODULE_opencv_objdetect_LOCATION}/include/opencv2/objdetect.hpp"
-    )
+set(opencv_hdrs "")
+foreach(m IN LISTS OPENCV_MODULE_opencv_python_DEPS)
+    list(APPEND opencv_hdrs ${OPENCV_MODULE_${m}_HEADERS})
+endforeach(m)
 
-if(HAVE_opencv_nonfree)
-  list(APPEND opencv_hdrs     "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/features2d.hpp"
-                              "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree.hpp")
-endif()
+# header blacklist
+ocv_list_filterout(opencv_hdrs ".h$")
+ocv_list_filterout(opencv_hdrs "cuda")
+ocv_list_filterout(opencv_hdrs "cudev")
+ocv_list_filterout(opencv_hdrs "opencv2/objdetect/detection_based_tracker.hpp")
+ocv_list_filterout(opencv_hdrs "opencv2/optim.hpp")
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
@@ -39,17 +49,17 @@ set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_type_reg.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_const_reg.h")
 
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs}")
 add_custom_command(
    OUTPUT ${cv2_generated_hdrs}
-   COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_hdrs}
+   COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/headers.txt"
    DEPENDS ${PYTHON_SOURCE_DIR}/src2/gen2.py
    DEPENDS ${PYTHON_SOURCE_DIR}/src2/hdr_parser.py
+   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
    DEPENDS ${opencv_hdrs})
 
-add_library(${the_module} SHARED ${PYTHON_SOURCE_DIR}/src2/cv2.cpp ${cv2_generated_hdrs})
+add_library(${the_module} SHARED ../src2/cv2.cpp ${cv2_generated_hdrs})
 set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
-
-message(STATUS "target: ${the_module} python libs: ${PYTHON_LIBRARIES}, debug: ${PYTHON_DEBUG_LIBRARIES}")
 
 if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")
   target_link_libraries(${the_module} debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
@@ -122,9 +132,3 @@ else()
           LIBRARY DESTINATION python/${__ver}/${OpenCV_ARCH} COMPONENT python
           )
 endif()
-
-unset(PYTHON_SRC_DIR)
-unset(PYTHON_CVPY_PROCESS)
-unset(CVPY_SUFFIX)
-unset(PYTHON_INSTALL_CONFIGURATIONS)
-unset(PYTHON_INSTALL_ARCHIVE)
