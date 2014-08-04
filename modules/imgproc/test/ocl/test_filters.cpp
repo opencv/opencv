@@ -432,7 +432,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(
 OCL_INSTANTIATE_TEST_CASE_P(Filter, MorphologyEx, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(3, 5, 7), // kernel size
-                            Values(MORPH_OPEN, MORPH_CLOSE, MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT), // used as generator of operations
+                            Values((MorphOp)MORPH_OPEN, (MorphOp)MORPH_CLOSE, (MorphOp)MORPH_GRADIENT, (MorphOp)MORPH_TOPHAT, (MorphOp)MORPH_BLACKHAT), // used as generator of operations
                             Values(1, 2, 3),
                             Bool()));
 
