@@ -347,7 +347,7 @@ OCL_TEST_P(Integral, Mat2)
         OCL_ON(cv::integral(usrc_roi, udst_roi, udst2_roi, sdepth, sqdepth));
 
         Near();
-        sqdepth == CV_32F ? Near2(1e-6, true) : Near2();
+        sqdepth == CV_32F ? Near2(2e-4, true) : Near2();
     }
 }
 
