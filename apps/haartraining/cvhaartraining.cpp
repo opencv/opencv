@@ -3003,6 +3003,7 @@ void cvCreatePngTrainingSet(const char* infoname,
             int x, y, width, height;
             float scale;
             int inverse;
+            int border = 5;
 
             info = fopen( infoname, "w" );
             strcpy( fullname, infoname );
@@ -3073,6 +3074,13 @@ void cvCreatePngTrainingSet(const char* infoname,
                                          0.0 /* nonzero adds random shifting                  */,
                                          0.0 /* nonzero adds random scaling                   */,
                                          &data);
+
+                scale = MAX( cvbgreader->src.cols / winwidth,
+                             cvbgreader->src.rows / winheight );
+                x = x * scale - border;
+                y = y * scale - border;
+                width = width * scale + 2*border;
+                height = height * scale + 2*border;
 
                 cvResize(&cvbgreader->src, &result);
 
