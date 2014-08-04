@@ -45,7 +45,8 @@ endforeach(m)
 
 # header blacklist
 ocv_list_filterout(opencv_hdrs ".h$")
-ocv_list_filterout(opencv_hdrs "opencv2/core/cuda")
+ocv_list_filterout(opencv_hdrs "cuda")
+ocv_list_filterout(opencv_hdrs "cudev")
 ocv_list_filterout(opencv_hdrs "opencv2/objdetect/detection_based_tracker.hpp")
 ocv_list_filterout(opencv_hdrs "opencv2/optim.hpp")
 
