@@ -1221,7 +1221,7 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
         IPP_MORPH_CASE(CV_32FC3, 32f_C3R, 32f);
         IPP_MORPH_CASE(CV_32FC4, 32f_C4R, 32f);
         default:
-            return false;
+            ;
         }
 
         #undef IPP_MORPH_CASE
@@ -1253,14 +1253,11 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
         IPP_MORPH_CASE(CV_32FC3, 32f_C3R, 32f);
         IPP_MORPH_CASE(CV_32FC4, 32f_C4R, 32f);
         default:
-            return false;
+            ;
         }
         #undef IPP_MORPH_CASE
-
-#if defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ >= 8
-        return false; /// It disables false positive warning in GCC 4.8 and further
-#endif
     }
+    return false;
 }
 
 static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
