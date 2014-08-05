@@ -1,4 +1,4 @@
-#include <boost/lexical_cast.hpp>
+#include <string>
 #include "CsvReader.h"
 
 /** The default constructor of the CSV reader Class */
@@ -28,8 +28,8 @@ std::string line, tmp_str, n;
       {
           getline(liness, tmp_str, _separator);
           getline(liness, n);
-          if(tmp_str == "vertex") num_vertex = boost::lexical_cast< int >(n);
-          if(tmp_str == "face") num_triangles = boost::lexical_cast< int >(n);
+          if(tmp_str == "vertex") num_vertex = std::stoi(n);
+          if(tmp_str == "face") num_triangles = std::stoi(n);
       }
       if(tmp_str == "end_header") end_header = true;
     }
@@ -46,9 +46,9 @@ std::string line, tmp_str, n;
         getline(liness, z);
 
         cv::Point3f tmp_p;
-        tmp_p.x = boost::lexical_cast< float >(x);
-        tmp_p.y = boost::lexical_cast< float >(y);
-        tmp_p.z = boost::lexical_cast< float >(z);
+        tmp_p.x = std::stof(x);
+        tmp_p.y = std::stof(y);
+        tmp_p.z = std::stof(z);
         list_vertex.push_back(tmp_p);
 
         count++;
@@ -68,9 +68,9 @@ std::string line, tmp_str, n;
         getline(liness, id2);
 
         std::vector<int> tmp_triangle(3);
-        tmp_triangle[0] = boost::lexical_cast< int >(id0);
-        tmp_triangle[1] = boost::lexical_cast< int >(id1);
-        tmp_triangle[2] = boost::lexical_cast< int >(id2);
+        tmp_triangle[0] = std::stoi(id0);
+        tmp_triangle[1] = std::stoi(id1);
+        tmp_triangle[2] = std::stoi(id2);
         list_triangles.push_back(tmp_triangle);
 
         count++;
