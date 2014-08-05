@@ -3,14 +3,12 @@ project( PNP_DEMO )
 
 ADD_DEFINITIONS(
     -std=c++11 
-    -std=c++0x
     # Other flags
 )
 
 find_package( OpenCV REQUIRED )
 
 include_directories( 
-	$(PNP_DEMO_SOURCE_DIR)/include 
 	${OpenCV_INCLUDE_DIRS} 
 )
 
