@@ -111,7 +111,7 @@ In order to read the model mesh I implemented a *class* **Mesh** which has a fun
    .. code-block:: cpp
 
     /** Load a CSV with *.ply format **/
-    void Mesh::load(const std::string path) 
+    void Mesh::load(const std::string path)
     {
 
         // Create the reader
@@ -220,7 +220,7 @@ The following code is to get the model 3D points and its descriptors and then ca
    .. code-block:: cpp
 
     // -- Step 1: Robust matching between model descriptors and scene descriptors
- 
+
     std::vector<cv::DMatch> good_matches;       // to obtain the model 3D points  in the scene
     std::vector<cv::KeyPoint> keypoints_scene;  // to obtain the 2D points of the scene
 
@@ -634,9 +634,9 @@ The last and optional step is draw the found pose. To do it I implemented a func
 
     // -- Step X: Draw pose
 
-    drawObjectMesh(frame_vis, &mesh, &pnp_detection, green);                // draw current pose 
+    drawObjectMesh(frame_vis, &mesh, &pnp_detection, green);                // draw current pose
     drawObjectMesh(frame_vis, &mesh, &pnp_detection_est, yellow);                // draw estimated pose
-    
+
     double l = 5;
     std::vector<cv::Point2f> pose_points2d;
     pose_points2d.push_back(pnp_detection_est.backproject3DPoint(cv::Point3f(0,0,0)));    // axis center
