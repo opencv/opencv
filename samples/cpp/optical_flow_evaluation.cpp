@@ -108,11 +108,6 @@ static void calculateStats( Mat errors, Mat mask = Mat(), bool display_images = 
     CV_Assert(errors.size() == mask.size());
     CV_Assert(mask.depth() == CV_8U);
 
-    //masking out NaNs - if not done before
-    Mat nan_mask = Mat(errors != errors);
-    bitwise_not(nan_mask, nan_mask);
-    bitwise_and(nan_mask, mask, mask);
-
     //displaying the mask
     if(display_images)
     {
@@ -167,6 +162,23 @@ static void calculateStats( Mat errors, Mat mask = Mat(), bool display_images = 
     if(display_images) // wait for the user to see all the images
         waitKey(0);
 }
+
+static Mat flowToDisplay(const Mat flow)
+{
+    Mat flow_split[2];
+    Mat magnitude, angle;
+    Mat hsv_split[3], hsv, rgb;
+    split(flow, flow_split);
+    cartToPolar(flow_split[0], flow_split[1], magnitude, angle, true);
+    normalize(magnitude, magnitude, 0, 1, NORM_MINMAX);
+    hsv_split[0] = angle; // already in degrees - no normalization needed
+    hsv_split[1] = Mat::ones(angle.size(), angle.type());
+    hsv_split[2] = magnitude;
+    merge(hsv_split, 3, hsv);
+    cvtColor(hsv, rgb, COLOR_HSV2BGR);
+    return rgb;
+}
+
 int main( int argc, char** argv )
 {
     CommandLineParser parser(argc, argv, keys);
@@ -241,6 +253,12 @@ int main( int argc, char** argv )
     algorithm->calc(i1, i2, flow);
     time = ((double) getTickCount() - startTick) / getTickFrequency();
     printf("\nTime [s]: %.3f\n", time);
+    if(display_images)
+    {
+        Mat flow_image = flowToDisplay(flow);
+        namedWindow( "Computed flow", WINDOW_AUTOSIZE );
+        imshow( "Computed flow", flow_image );
+    }
 
     if ( !groundtruth_path.empty() )
     { // compare to ground truth
@@ -251,7 +269,6 @@ int main( int argc, char** argv )
             printf("Dimension mismatch between the computed flow and the provided ground truth\n");
             return -1;
         }
-
         if ( error_measure == "endpoint" )
             computed_errors = endpointError(flow, ground_truth);
         else if ( error_measure == "angular" )
@@ -310,6 +327,25 @@ int main( int argc, char** argv )
         {
             printf("Invalid region selected! Available options: all, discontinuities, untextured");
             return -1;
+        }
+
+        //masking out NaNs and incorrect GT values
+        Mat truth_split[2];
+        split(ground_truth, truth_split);
+        Mat abs_mask = Mat((abs(truth_split[0]) < 1e9) & (abs(truth_split[1]) < 1e9));
+        Mat nan_mask = Mat((truth_split[0]==truth_split[0]) & (truth_split[1] == truth_split[1]));
+        bitwise_and(abs_mask, nan_mask, nan_mask);
+
+        bitwise_and(nan_mask, mask, mask); //including the selected region
+
+        if(display_images) // display difference between computed and GT flow
+        {
+            Mat difference = ground_truth - flow;
+            Mat masked_difference;
+            difference.copyTo(masked_difference, mask);
+            Mat flow_image = flowToDisplay(masked_difference);
+            namedWindow( "Error map", WINDOW_AUTOSIZE );
+            imshow( "Error map", flow_image );
         }
 
         printf("Using %s error measure\n", error_measure.c_str());
