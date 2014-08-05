@@ -1,6 +1,5 @@
 #include <iostream>
 #include <time.h>
-#include <boost/lexical_cast.hpp>
 
 #include "cv.h"
 #include "highgui.h"
@@ -238,7 +237,7 @@ int main(int argc, char *argv[])
 
       // -- Step 3: Estimate the pose using RANSAC approach
       pnp_detection.estimatePoseRANSAC( list_points3d_model_match, list_points2d_scene_match,
-                                        cv::DLS, inliers_idx,
+                                        cv::ITERATIVE, inliers_idx,
                                         iterationsCount, reprojectionError, confidence );
 
       // -- Step 4: Catch the inliers keypoints to draw
@@ -330,9 +329,9 @@ int main(int argc, char *argv[])
     // Draw some debug text
     int inliers_int = inliers_idx.rows;
     int outliers_int = good_matches.size() - inliers_int;
-    std::string inliers_str = boost::lexical_cast< std::string >(inliers_int);
-    std::string outliers_str = boost::lexical_cast< std::string >(outliers_int);
-    std::string n = boost::lexical_cast< std::string >(good_matches.size());
+    std::string inliers_str = IntToString(inliers_int);
+    std::string outliers_str = IntToString(outliers_int);
+    std::string n = IntToString(good_matches.size());
     std::string text = "Found " + inliers_str + " of " + n + " matches";
     std::string text2 = "Inliers: " + inliers_str + " - Outliers: " + outliers_str;
 

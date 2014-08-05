@@ -1,4 +1,5 @@
 #include "CsvReader.h"
+#include "Utils.h"
 
 /** The default constructor of the CSV reader Class */
 CsvReader::CsvReader(const std::string &path, const char &separator){
@@ -27,8 +28,8 @@ void CsvReader::readPLY(std::vector<cv::Point3f> &list_vertex, std::vector<std::
         {
             getline(liness, tmp_str, _separator);
             getline(liness, n);
-            if(tmp_str == "vertex") num_vertex = StringToNumber(n);
-            if(tmp_str == "face") num_triangles = StringToNumber(n);
+            if(tmp_str == "vertex") num_vertex = StringToInt(n);
+            if(tmp_str == "face") num_triangles = StringToInt(n);
         }
         if(tmp_str == "end_header") end_header = true;
     }
@@ -45,9 +46,9 @@ void CsvReader::readPLY(std::vector<cv::Point3f> &list_vertex, std::vector<std::
              getline(liness, z);
 
              cv::Point3f tmp_p;
-             tmp_p.x = StringToNumber(x);
-             tmp_p.y = StringToNumber(y);
-             tmp_p.z = StringToNumber(z);
+             tmp_p.x = StringToInt(x);
+             tmp_p.y = StringToInt(y);
+             tmp_p.z = StringToInt(z);
              list_vertex.push_back(tmp_p);
 
              count++;
@@ -67,9 +68,9 @@ void CsvReader::readPLY(std::vector<cv::Point3f> &list_vertex, std::vector<std::
              getline(liness, id2);
 
              std::vector<int> tmp_triangle(3);
-             tmp_triangle[0] = StringToNumber(id0);
-             tmp_triangle[1] = StringToNumber(id1);
-             tmp_triangle[2] = StringToNumber(id2);
+             tmp_triangle[0] = StringToInt(id0);
+             tmp_triangle[1] = StringToInt(id1);
+             tmp_triangle[2] = StringToInt(id2);
              list_triangles.push_back(tmp_triangle);
 
              count++;

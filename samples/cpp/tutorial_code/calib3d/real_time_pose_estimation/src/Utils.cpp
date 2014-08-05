@@ -6,7 +6,6 @@
  */
 
 #include <iostream>
-#include <boost/lexical_cast.hpp>
 
 #include "PnPProblem.h"
 #include "ModelRegistration.h"
@@ -30,9 +29,9 @@ double thickness_circ = -1;
 // Draw a text with the question point
 void drawQuestion(cv::Mat image, cv::Point3f point, cv::Scalar color)
 {
-  std::string x = boost::lexical_cast< std::string >((int)point.x);
-  std::string y = boost::lexical_cast< std::string >((int)point.y);
-  std::string z = boost::lexical_cast< std::string >((int)point.z);
+  std::string x = IntToString((int)point.x);
+  std::string y = IntToString((int)point.y);
+  std::string z = IntToString((int)point.z);
 
   std::string text = " Where is point (" + x + ","  + y + "," + z + ") ?";
   cv::putText(image, text, cv::Point(25,50), fontFace, fontScale, color, thickness_font, 8);
@@ -53,7 +52,7 @@ void drawText2(cv::Mat image, std::string text, cv::Scalar color)
 // Draw a text with the frame ratio
 void drawFPS(cv::Mat image, double fps, cv::Scalar color)
 {
-  std::string fps_str = boost::lexical_cast< std::string >((int)fps);
+  std::string fps_str = IntToString((int)fps);
   std::string text = fps_str + " FPS";
   cv::putText(image, text, cv::Point(500,50), fontFace, fontScale, color, thickness_font, 8);
 }
@@ -61,7 +60,7 @@ void drawFPS(cv::Mat image, double fps, cv::Scalar color)
 // Draw a text with the frame ratio
 void drawConfidence(cv::Mat image, double confidence, cv::Scalar color)
 {
-  std::string conf_str = boost::lexical_cast< std::string >((int)confidence);
+  std::string conf_str = IntToString((int)confidence);
   std::string text = conf_str + " %";
   cv::putText(image, text, cv::Point(500,75), fontFace, fontScale, color, thickness_font, 8);
 }
@@ -69,8 +68,8 @@ void drawConfidence(cv::Mat image, double confidence, cv::Scalar color)
 // Draw a text with the number of entered points
 void drawCounter(cv::Mat image, int n, int n_max, cv::Scalar color)
 {
-  std::string n_str = boost::lexical_cast< std::string >(n);
-  std::string n_max_str = boost::lexical_cast< std::string >(n_max);
+  std::string n_str = IntToString(n);
+  std::string n_max_str = IntToString(n_max);
   std::string text = n_str + " of " + n_max_str + " points";
   cv::putText(image, text, cv::Point(500,50), fontFace, fontScale, color, thickness_font, 8);
 }
@@ -86,10 +85,10 @@ void drawPoints(cv::Mat image, std::vector<cv::Point2f> &list_points_2d, std::ve
     // Draw Selected points
     cv::circle(image, point_2d, radius, color, -1, lineType );
 
-    std::string idx = boost::lexical_cast< std::string >(i+1);
-    std::string x = boost::lexical_cast< std::string >((int)point_3d.x);
-    std::string y = boost::lexical_cast< std::string >((int)point_3d.y);
-    std::string z = boost::lexical_cast< std::string >((int)point_3d.z);
+    std::string idx = IntToString(i+1);
+    std::string x = IntToString((int)point_3d.x);
+    std::string y = IntToString((int)point_3d.y);
+    std::string z = IntToString((int)point_3d.z);
     std::string text = "P" + idx + " (" + x + "," + y + "," + z +")";
 
     point_2d.x = point_2d.x + 10;
@@ -272,4 +271,25 @@ cv::Mat euler2rot(const cv::Mat & euler)
   rotationMatrix.at<double>(2,2) = m22;
 
   return rotationMatrix;
+}
+
+int StringToInt ( const std::string &Text )
+{
+   std::istringstream ss(Text);
+   int result;
+   return ss >> result ? result : 0;
+}
+
+std::string FloatToString ( float Number )
+{
+  std::ostringstream ss;
+  ss << Number;
+  return ss.str();
+}
+
+std::string IntToString ( int Number )
+{
+  std::ostringstream ss;
+  ss << Number;
+  return ss.str();
 }
