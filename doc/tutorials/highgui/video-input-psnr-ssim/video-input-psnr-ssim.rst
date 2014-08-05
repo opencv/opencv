@@ -22,7 +22,7 @@ As a test case where to show off these using OpenCV I've created a small program
    :language: cpp
    :linenos:
    :tab-width: 4
-   :lines: 1-14, 28-29, 31-205
+   :lines: 1-15, 29-31, 33-208
 
 How to read a video stream (online-camera or offline-file)?
 ===========================================================

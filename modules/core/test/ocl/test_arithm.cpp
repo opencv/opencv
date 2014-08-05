@@ -157,6 +157,7 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
         Border maskBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(mask, mask_roi, roiSize, maskBorder, CV_8UC1, 0, 2);
         cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
+        *mask.ptr(0) = 255; // prevent test case with mask filled 0 only
 
         val = cv::Scalar(rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0),
                          rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
@@ -829,7 +830,7 @@ OCL_TEST_P(Pow, Mat)
 {
     static const double pows[] = { -4, -1, -2.5, 0, 1, 2, 3.7, 4 };
 
-    for (int j = 0; j < test_loop_times; j++)
+    for (int j = 0; j < 1/*test_loop_times*/; j++)
         for (int k = 0, size = sizeof(pows) / sizeof(double); k < size; ++k)
         {
             SCOPED_TRACE(pows[k]);
@@ -1203,7 +1204,7 @@ OCL_TEST_P(MinMaxIdx_Mask, Mat)
 
 static bool relativeError(double actual, double expected, double eps)
 {
-    return std::abs(actual - expected) / actual < eps;
+    return std::abs(actual - expected) < eps*(1 + std::abs(actual));
 }
 
 typedef ArithmTestBase Norm;
@@ -1230,7 +1231,7 @@ OCL_TEST_P(Norm, NORM_INF_1arg_mask)
         OCL_OFF(const double cpuRes = cv::norm(src1_roi, NORM_INF, mask_roi));
         OCL_ON(const double gpuRes = cv::norm(usrc1_roi, NORM_INF, umask_roi));
 
-        EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+        EXPECT_NEAR(cpuRes, gpuRes, 0.2);
     }
 }
 
@@ -1293,6 +1294,8 @@ OCL_TEST_P(Norm, NORM_INF_2args)
         {
             generateTestData();
 
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
+
             int type = NORM_INF;
             if (relative == 1)
                 type |= NORM_RELATIVE;
@@ -1300,7 +1303,7 @@ OCL_TEST_P(Norm, NORM_INF_2args)
             OCL_OFF(const double cpuRes = cv::norm(src1_roi, src2_roi, type));
             OCL_ON(const double gpuRes = cv::norm(usrc1_roi, usrc2_roi, type));
 
-            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+            EXPECT_NEAR(cpuRes, gpuRes, 0.2);
         }
 }
 
@@ -1310,6 +1313,8 @@ OCL_TEST_P(Norm, NORM_INF_2args_mask)
         for (int j = 0; j < test_loop_times; j++)
         {
             generateTestData();
+
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
 
             int type = NORM_INF;
             if (relative == 1)
@@ -1329,6 +1334,8 @@ OCL_TEST_P(Norm, NORM_L1_2args)
         {
             generateTestData();
 
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
+
             int type = NORM_L1;
             if (relative == 1)
                 type |= NORM_RELATIVE;
@@ -1346,6 +1353,8 @@ OCL_TEST_P(Norm, NORM_L1_2args_mask)
         for (int j = 0; j < test_loop_times; j++)
         {
             generateTestData();
+
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
 
             int type = NORM_L1;
             if (relative == 1)
@@ -1365,6 +1374,8 @@ OCL_TEST_P(Norm, NORM_L2_2args)
         {
             generateTestData();
 
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
+
             int type = NORM_L2;
             if (relative == 1)
                 type |= NORM_RELATIVE;
@@ -1382,6 +1393,8 @@ OCL_TEST_P(Norm, NORM_L2_2args_mask)
         for (int j = 0; j < test_loop_times; j++)
         {
             generateTestData();
+
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
 
             int type = NORM_L2;
             if (relative == 1)
@@ -1407,7 +1420,7 @@ OCL_TEST_P(UMatDot, Mat)
         OCL_OFF(const double cpuRes = src1_roi.dot(src2_roi));
         OCL_ON(const double gpuRes = usrc1_roi.dot(usrc2_roi));
 
-        EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
+        EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-5);
     }
 }
 
@@ -1737,7 +1750,7 @@ OCL_TEST_P(ReduceAvg, Mat)
         OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_AVG, dtype));
         OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_AVG, dtype));
 
-        double eps = ddepth <= CV_32S ? 1 : 5e-6;
+        double eps = ddepth <= CV_32S ? 1 : 6e-6;
         OCL_EXPECT_MATS_NEAR(dst, eps);
     }
 }

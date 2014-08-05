@@ -895,7 +895,103 @@ protected:
     PixelTestFn test_fn_;
 };
 
+// KAZE/AKAZE diffusivity
+enum {
+    DIFF_PM_G1 = 0,
+    DIFF_PM_G2 = 1,
+    DIFF_WEICKERT = 2,
+    DIFF_CHARBONNIER = 3
+};
 
+// AKAZE descriptor type
+enum {
+    DESCRIPTOR_KAZE_UPRIGHT = 2, ///< Upright descriptors, not invariant to rotation
+    DESCRIPTOR_KAZE = 3,
+    DESCRIPTOR_MLDB_UPRIGHT = 4, ///< Upright descriptors, not invariant to rotation
+    DESCRIPTOR_MLDB = 5
+};
+
+/*!
+KAZE implementation
+*/
+class CV_EXPORTS_W KAZE : public Feature2D
+{
+public:
+    CV_WRAP KAZE();
+    CV_WRAP explicit KAZE(bool extended, bool upright, float threshold = 0.001f,
+                          int octaves = 4, int sublevels = 4, int diffusivity = DIFF_PM_G2);
+
+    virtual ~KAZE();
+
+    // returns the descriptor size in bytes
+    int descriptorSize() const;
+    // returns the descriptor type
+    int descriptorType() const;
+    // returns the default norm type
+    int defaultNorm() const;
+
+    AlgorithmInfo* info() const;
+
+    // Compute the KAZE features on an image
+    void operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const;
+
+    // Compute the KAZE features and descriptors on an image
+    void operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
+        OutputArray descriptors, bool useProvidedKeypoints = false) const;
+
+protected:
+    void detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const;
+    void computeImpl(InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const;
+
+    CV_PROP bool extended;
+    CV_PROP bool upright;
+    CV_PROP float threshold;
+    CV_PROP int octaves;
+    CV_PROP int sublevels;
+    CV_PROP int diffusivity;
+};
+
+/*!
+AKAZE implementation
+*/
+class CV_EXPORTS_W AKAZE : public Feature2D
+{
+public:
+    CV_WRAP AKAZE();
+    CV_WRAP explicit AKAZE(int descriptor_type, int descriptor_size = 0, int descriptor_channels = 3,
+                   float threshold = 0.001f, int octaves = 4, int sublevels = 4, int diffusivity = DIFF_PM_G2);
+
+    virtual ~AKAZE();
+
+    // returns the descriptor size in bytes
+    int descriptorSize() const;
+    // returns the descriptor type
+    int descriptorType() const;
+    // returns the default norm type
+    int defaultNorm() const;
+
+    // Compute the AKAZE features on an image
+    void operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const;
+
+    // Compute the AKAZE features and descriptors on an image
+    void operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
+        OutputArray descriptors, bool useProvidedKeypoints = false) const;
+
+    AlgorithmInfo* info() const;
+
+protected:
+
+    void computeImpl(InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const;
+    void detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask = noArray()) const;
+
+    CV_PROP int descriptor;
+    CV_PROP int descriptor_channels;
+    CV_PROP int descriptor_size;
+    CV_PROP float threshold;
+    CV_PROP int octaves;
+    CV_PROP int sublevels;
+    CV_PROP int diffusivity;
+};
 /****************************************************************************************\
 *                                      Distance                                          *
 \****************************************************************************************/

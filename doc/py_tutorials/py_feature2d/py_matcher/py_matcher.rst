@@ -16,7 +16,7 @@ Basics of Brute-Force Matcher
 
 Brute-Force matcher is simple. It takes the descriptor of one feature in first set and is matched with all other features in second set using some distance calculation. And the closest one is returned.
 
-For BF matcher, first we have to create the BFMatcher object using **cv2.BFMatcher()**. It takes two optional params. First one is ``normType``. It specifies the distance measurement to be used. By default, it is ``cv2.NORM_L2``. It is good for SIFT, SURF etc (``cv2.NORM_L1`` is also there). For binary string based descriptors like ORB, BRIEF, BRISK etc, ``cv2.NORM_HAMMING`` should be used, which used Hamming distance as measurement. If ORB is using ``VTA_K == 3 or 4``, ``cv2.NORM_HAMMING2`` should be used.
+For BF matcher, first we have to create the BFMatcher object using **cv2.BFMatcher()**. It takes two optional params. First one is ``normType``. It specifies the distance measurement to be used. By default, it is ``cv2.NORM_L2``. It is good for SIFT, SURF etc (``cv2.NORM_L1`` is also there). For binary string based descriptors like ORB, BRIEF, BRISK etc, ``cv2.NORM_HAMMING`` should be used, which used Hamming distance as measurement. If ORB is using ``WTA_K == 3 or 4``, ``cv2.NORM_HAMMING2`` should be used.
 
 Second param is boolean variable, ``crossCheck`` which is false by default. If it is true, Matcher returns only those matches with value (i,j) such that i-th descriptor in set A has j-th descriptor in set B as the best match and vice-versa. That is, the two features in both sets should match each other. It provides consistant result, and is a good alternative to ratio test proposed by D.Lowe in SIFT paper.
 

@@ -54,21 +54,23 @@ namespace cv
 
 struct NOP {};
 
-#if CV_SSE2
+#if CV_SSE2 || CV_NEON
 
 #define FUNCTOR_TEMPLATE(name)          \
     template<typename T> struct name {}
 
 FUNCTOR_TEMPLATE(VLoadStore128);
+#if CV_SSE2
 FUNCTOR_TEMPLATE(VLoadStore64);
 FUNCTOR_TEMPLATE(VLoadStore128Aligned);
+#endif
 
 #endif
 
 template<typename T, class Op, class VOp>
 void vBinOp(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, size_t step, Size sz)
 {
-#if CV_SSE2
+#if CV_SSE2 || CV_NEON
     VOp vop;
 #endif
     Op op;
@@ -79,9 +81,11 @@ void vBinOp(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, si
     {
         int x = 0;
 
+#if CV_NEON || CV_SSE2
 #if CV_SSE2
         if( USE_SSE2 )
         {
+#endif
             for( ; x <= sz.width - 32/(int)sizeof(T); x += 32/sizeof(T) )
             {
                 typename VLoadStore128<T>::reg_type r0 = VLoadStore128<T>::load(src1 + x               );
@@ -91,7 +95,9 @@ void vBinOp(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, si
                 VLoadStore128<T>::store(dst + x               , r0);
                 VLoadStore128<T>::store(dst + x + 16/sizeof(T), r1);
             }
+#if CV_SSE2
         }
+#endif
 #endif
 #if CV_SSE2
         if( USE_SSE2 )
@@ -125,7 +131,7 @@ template<typename T, class Op, class Op32>
 void vBinOp32(const T* src1, size_t step1, const T* src2, size_t step2,
               T* dst, size_t step, Size sz)
 {
-#if CV_SSE2
+#if CV_SSE2 || CV_NEON
     Op32 op32;
 #endif
     Op op;
@@ -153,9 +159,11 @@ void vBinOp32(const T* src1, size_t step1, const T* src2, size_t step2,
             }
         }
 #endif
+#if CV_NEON || CV_SSE2
 #if CV_SSE2
         if( USE_SSE2 )
         {
+#endif
             for( ; x <= sz.width - 8; x += 8 )
             {
                 typename VLoadStore128<T>::reg_type r0 = VLoadStore128<T>::load(src1 + x    );
@@ -165,7 +173,9 @@ void vBinOp32(const T* src1, size_t step1, const T* src2, size_t step2,
                 VLoadStore128<T>::store(dst + x    , r0);
                 VLoadStore128<T>::store(dst + x + 4, r1);
             }
+#if CV_SSE2
         }
+#endif
 #endif
 #if CV_ENABLE_UNROLLED
         for( ; x <= sz.width - 4; x += 4 )
@@ -341,8 +351,8 @@ FUNCTOR_CLOSURE_2arg(VMax,  float, return _mm_max_ps(a, b));
 FUNCTOR_CLOSURE_2arg(VMax, double, return _mm_max_pd(a, b));
 
 
-static int CV_DECL_ALIGNED(16) v32f_absmask[] = { 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff };
-static int CV_DECL_ALIGNED(16) v64f_absmask[] = { 0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff };
+static unsigned int CV_DECL_ALIGNED(16) v32f_absmask[] = { 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff };
+static unsigned int CV_DECL_ALIGNED(16) v64f_absmask[] = { 0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff };
 
 FUNCTOR_TEMPLATE(VAbsDiff);
 FUNCTOR_CLOSURE_2arg(VAbsDiff,  uchar,
@@ -383,7 +393,98 @@ FUNCTOR_TEMPLATE(VNot);
 FUNCTOR_CLOSURE_1arg(VNot, uchar, return _mm_xor_si128(_mm_set1_epi32(-1), a));
 #endif
 
-#if CV_SSE2
+#if CV_NEON
+
+#define FUNCTOR_LOADSTORE(name, template_arg, register_type, load_body, store_body)\
+    template <>                                                                \
+    struct name<template_arg>{                                                 \
+        typedef register_type reg_type;                                        \
+        static reg_type load(const template_arg * p) { return load_body (p);}; \
+        static void store(template_arg * p, reg_type v) { store_body (p, v);}; \
+    }
+
+#define FUNCTOR_CLOSURE_2arg(name, template_arg, body)\
+    template<>                                                         \
+    struct name<template_arg>                                          \
+    {                                                                  \
+        VLoadStore128<template_arg>::reg_type operator()(              \
+                        VLoadStore128<template_arg>::reg_type a,       \
+                        VLoadStore128<template_arg>::reg_type b) const \
+        {                                                              \
+            return body;                                               \
+        };                                                             \
+    }
+
+#define FUNCTOR_CLOSURE_1arg(name, template_arg, body)\
+    template<>                                                         \
+    struct name<template_arg>                                          \
+    {                                                                  \
+        VLoadStore128<template_arg>::reg_type operator()(              \
+                        VLoadStore128<template_arg>::reg_type a,       \
+                        VLoadStore128<template_arg>::reg_type  ) const \
+        {                                                              \
+            return body;                                               \
+        };                                                             \
+    }
+
+FUNCTOR_LOADSTORE(VLoadStore128,  uchar,  uint8x16_t, vld1q_u8 , vst1q_u8 );
+FUNCTOR_LOADSTORE(VLoadStore128,  schar,   int8x16_t, vld1q_s8 , vst1q_s8 );
+FUNCTOR_LOADSTORE(VLoadStore128, ushort,  uint16x8_t, vld1q_u16, vst1q_u16);
+FUNCTOR_LOADSTORE(VLoadStore128,  short,   int16x8_t, vld1q_s16, vst1q_s16);
+FUNCTOR_LOADSTORE(VLoadStore128,    int,   int32x4_t, vld1q_s32, vst1q_s32);
+FUNCTOR_LOADSTORE(VLoadStore128,  float, float32x4_t, vld1q_f32, vst1q_f32);
+
+FUNCTOR_TEMPLATE(VAdd);
+FUNCTOR_CLOSURE_2arg(VAdd,  uchar, vqaddq_u8 (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,  schar, vqaddq_s8 (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd, ushort, vqaddq_u16(a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,  short, vqaddq_s16(a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,    int, vaddq_s32 (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,  float, vaddq_f32 (a, b));
+
+FUNCTOR_TEMPLATE(VSub);
+FUNCTOR_CLOSURE_2arg(VSub,  uchar, vqsubq_u8 (a, b));
+FUNCTOR_CLOSURE_2arg(VSub,  schar, vqsubq_s8 (a, b));
+FUNCTOR_CLOSURE_2arg(VSub, ushort, vqsubq_u16(a, b));
+FUNCTOR_CLOSURE_2arg(VSub,  short, vqsubq_s16(a, b));
+FUNCTOR_CLOSURE_2arg(VSub,    int, vsubq_s32 (a, b));
+FUNCTOR_CLOSURE_2arg(VSub,  float, vsubq_f32 (a, b));
+
+FUNCTOR_TEMPLATE(VMin);
+FUNCTOR_CLOSURE_2arg(VMin,  uchar, vminq_u8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMin,  schar, vminq_s8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMin, ushort, vminq_u16(a, b));
+FUNCTOR_CLOSURE_2arg(VMin,  short, vminq_s16(a, b));
+FUNCTOR_CLOSURE_2arg(VMin,    int, vminq_s32(a, b));
+FUNCTOR_CLOSURE_2arg(VMin,  float, vminq_f32(a, b));
+
+FUNCTOR_TEMPLATE(VMax);
+FUNCTOR_CLOSURE_2arg(VMax,  uchar, vmaxq_u8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMax,  schar, vmaxq_s8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMax, ushort, vmaxq_u16(a, b));
+FUNCTOR_CLOSURE_2arg(VMax,  short, vmaxq_s16(a, b));
+FUNCTOR_CLOSURE_2arg(VMax,    int, vmaxq_s32(a, b));
+FUNCTOR_CLOSURE_2arg(VMax,  float, vmaxq_f32(a, b));
+
+FUNCTOR_TEMPLATE(VAbsDiff);
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  uchar, vabdq_u8  (a, b));
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  schar, vqabsq_s8 (vqsubq_s8(a, b)));
+FUNCTOR_CLOSURE_2arg(VAbsDiff, ushort, vabdq_u16 (a, b));
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  short, vqabsq_s16(vqsubq_s16(a, b)));
+FUNCTOR_CLOSURE_2arg(VAbsDiff,    int, vabdq_s32 (a, b));
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  float, vabdq_f32 (a, b));
+
+FUNCTOR_TEMPLATE(VAnd);
+FUNCTOR_CLOSURE_2arg(VAnd, uchar, vandq_u8(a, b));
+FUNCTOR_TEMPLATE(VOr);
+FUNCTOR_CLOSURE_2arg(VOr , uchar, vorrq_u8(a, b));
+FUNCTOR_TEMPLATE(VXor);
+FUNCTOR_CLOSURE_2arg(VXor, uchar, veorq_u8(a, b));
+FUNCTOR_TEMPLATE(VNot);
+FUNCTOR_CLOSURE_1arg(VNot, uchar, vmvnq_u8(a   ));
+#endif
+
+#if CV_SSE2 || CV_NEON
 #define IF_SIMD(op) op
 #else
 #define IF_SIMD(op) NOP
@@ -1008,7 +1109,8 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int srcdepth = CV_MAT_DEPTH(srctype);
     int cn = CV_MAT_CN(srctype);
 
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    const ocl::Device d = ocl::Device::getDefault();
+    bool doubleSupport = d.doubleFPConfig() > 0;
     if( oclop < 0 || ((haveMask || haveScalar) && cn > 4) ||
             (!doubleSupport && srcdepth == CV_64F && !bitwise))
         return false;
@@ -1016,8 +1118,9 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     char opts[1024];
     int kercn = haveMask || haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
     int scalarcn = kercn == 3 ? 4 : kercn;
+    int rowsPerWI = d.isIntel() ? 4 : 1;
 
-    sprintf(opts, "-D %s%s -D %s -D dstT=%s%s -D dstT_C1=%s -D workST=%s -D cn=%d",
+    sprintf(opts, "-D %s%s -D %s -D dstT=%s%s -D dstT_C1=%s -D workST=%s -D cn=%d -D rowsPerWI=%d",
             haveMask ? "MASK_" : "", haveScalar ? "UNARY_OP" : "BINARY_OP", oclop2str[oclop],
             bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, kercn)) :
                 ocl::typeToStr(CV_MAKETYPE(srcdepth, kercn)), doubleSupport ? " -D DOUBLE_SUPPORT" : "",
@@ -1025,7 +1128,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 ocl::typeToStr(CV_MAKETYPE(srcdepth, 1)),
             bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, scalarcn)) :
                 ocl::typeToStr(CV_MAKETYPE(srcdepth, scalarcn)),
-            kercn);
+            kercn, rowsPerWI);
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
     if (k.empty())
@@ -1068,7 +1171,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             k.args(src1arg, src2arg, maskarg, dstarg);
     }
 
-    size_t globalsize[] = { src1.cols * cn / kercn, src1.rows };
+    size_t globalsize[] = { src1.cols * cn / kercn, (src1.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, 0, false);
 }
 
@@ -1371,7 +1474,8 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                           void* usrdata, int oclop,
                           bool haveScalar )
 {
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    const ocl::Device d = ocl::Device::getDefault();
+    bool doubleSupport = d.doubleFPConfig() > 0;
     int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
     bool haveMask = !_mask.empty();
 
@@ -1387,13 +1491,16 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     if (!doubleSupport && (depth2 == CV_64F || depth1 == CV_64F))
         return false;
 
+    if( (oclop == OCL_OP_MUL_SCALE || oclop == OCL_OP_DIV_SCALE) && (depth1 >= CV_32F || depth2 >= CV_32F || ddepth >= CV_32F) )
+        return false;
+
     int kercn = haveMask || haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
-    int scalarcn = kercn == 3 ? 4 : kercn;
+    int scalarcn = kercn == 3 ? 4 : kercn, rowsPerWI = d.isIntel() ? 4 : 1;
 
     char cvtstr[4][32], opts[1024];
     sprintf(opts, "-D %s%s -D %s -D srcT1=%s -D srcT1_C1=%s -D srcT2=%s -D srcT2_C1=%s "
             "-D dstT=%s -D dstT_C1=%s -D workT=%s -D workST=%s -D scaleT=%s -D wdepth=%d -D convertToWT1=%s "
-            "-D convertToWT2=%s -D convertToDT=%s%s -D cn=%d",
+            "-D convertToWT2=%s -D convertToDT=%s%s -D cn=%d -D rowsPerWI=%d -D convertFromU=%s",
             (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"),
             oclop2str[oclop], ocl::typeToStr(CV_MAKETYPE(depth1, kercn)),
             ocl::typeToStr(depth1), ocl::typeToStr(CV_MAKETYPE(depth2, kercn)),
@@ -1404,7 +1511,9 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             ocl::convertTypeStr(depth1, wdepth, kercn, cvtstr[0]),
             ocl::convertTypeStr(depth2, wdepth, kercn, cvtstr[1]),
             ocl::convertTypeStr(wdepth, ddepth, kercn, cvtstr[2]),
-            doubleSupport ? " -D DOUBLE_SUPPORT" : "", kercn);
+            doubleSupport ? " -D DOUBLE_SUPPORT" : "", kercn, rowsPerWI,
+            oclop == OCL_OP_ABSDIFF && wdepth == CV_32S && ddepth == wdepth ?
+            ocl::convertTypeStr(CV_8U, ddepth, kercn, cvtstr[3]) : "noconvert");
 
     size_t usrdata_esz = CV_ELEM_SIZE(wdepth);
     const uchar* usrdata_p = (const uchar*)usrdata;
@@ -1478,7 +1587,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             k.args(src1arg, src2arg, maskarg, dstarg);
     }
 
-    size_t globalsize[] = { src1.cols * cn / kercn, src1.rows };
+    size_t globalsize[] = { src1.cols * cn / kercn, (src1.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -1498,7 +1607,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     Size sz1 = dims1 <= 2 ? psrc1->size() : Size();
     Size sz2 = dims2 <= 2 ? psrc2->size() : Size();
 #ifdef HAVE_OPENCL
-    bool use_opencl = _dst.isUMat() && dims1 <= 2 && dims2 <= 2;
+    bool use_opencl = OCL_PERFORMANCE_CHECK(_dst.isUMat()) && dims1 <= 2 && dims2 <= 2;
 #endif
     bool src1Scalar = checkScalar(*psrc1, type2, kind1, kind2);
     bool src2Scalar = checkScalar(*psrc2, type1, kind2, kind1);
@@ -2764,7 +2873,7 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
     if (!haveScalar && (!_src1.sameSize(_src2) || type1 != type2))
             return false;
 
-    int kercn = haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
+    int kercn = haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst), rowsPerWI = dev.isIntel() ? 4 : 1;
     // Workaround for bug with "?:" operator in AMD OpenCL compiler
     if (depth1 >= CV_16U)
         kercn = 1;
@@ -2775,14 +2884,14 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
 
     String opts = format("-D %s -D srcT1=%s -D dstT=%s -D workT=srcT1 -D cn=%d"
                          " -D convertToDT=%s -D OP_CMP -D CMP_OPERATOR=%s -D srcT1_C1=%s"
-                         " -D srcT2_C1=%s -D dstT_C1=%s -D workST=%s%s",
+                         " -D srcT2_C1=%s -D dstT_C1=%s -D workST=%s -D rowsPerWI=%d%s",
                          haveScalar ? "UNARY_OP" : "BINARY_OP",
                          ocl::typeToStr(CV_MAKE_TYPE(depth1, kercn)),
                          ocl::typeToStr(CV_8UC(kercn)), kercn,
                          ocl::convertTypeStr(depth1, CV_8U, kercn, cvt),
                          operationMap[op], ocl::typeToStr(depth1),
                          ocl::typeToStr(depth1), ocl::typeToStr(CV_8U),
-                         ocl::typeToStr(CV_MAKE_TYPE(depth1, scalarcn)),
+                         ocl::typeToStr(CV_MAKE_TYPE(depth1, scalarcn)), rowsPerWI,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
@@ -2839,7 +2948,7 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
                ocl::KernelArg::WriteOnly(dst, cn, kercn));
     }
 
-    size_t globalsize[2] = { dst.cols * cn / kercn, dst.rows };
+    size_t globalsize[2] = { dst.cols * cn / kercn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -2873,7 +2982,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         haveScalar = true;
     }
 
-    CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && _dst.isUMat(),
+    CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
                ocl_compare(_src1, _src2, _dst, op, haveScalar))
 
     int kind1 = _src1.kind(), kind2 = _src2.kind();
@@ -2975,8 +3084,187 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
 namespace cv
 {
 
-template<typename T> static void
-inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
+template <typename T>
+struct InRange_SSE
+{
+    int operator () (const T *, const T *, const T *, uchar *, int) const
+    {
+        return 0;
+    }
+};
+
+#if CV_SSE2
+
+template <>
+struct InRange_SSE<uchar>
+{
+    int operator () (const uchar * src1, const uchar * src2, const uchar * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_full = _mm_set1_epi8(-1), v_128 = _mm_set1_epi8(-128);
+
+            for ( ; x <= len - 16; x += 16 )
+            {
+                __m128i v_src = _mm_add_epi8(_mm_loadu_si128((const __m128i *)(src1 + x)), v_128);
+                __m128i v_mask1 = _mm_cmpgt_epi8(_mm_add_epi8(_mm_loadu_si128((const __m128i *)(src2 + x)), v_128), v_src);
+                __m128i v_mask2 = _mm_cmpgt_epi8(v_src, _mm_add_epi8(_mm_loadu_si128((const __m128i *)(src3 + x)), v_128));
+                _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct InRange_SSE<schar>
+{
+    int operator () (const schar * src1, const schar * src2, const schar * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_full = _mm_set1_epi8(-1);
+
+            for ( ; x <= len - 16; x += 16 )
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src1 + x));
+                __m128i v_mask1 = _mm_cmpgt_epi8(_mm_loadu_si128((const __m128i *)(src2 + x)), v_src);
+                __m128i v_mask2 = _mm_cmpgt_epi8(v_src, _mm_loadu_si128((const __m128i *)(src3 + x)));
+                _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct InRange_SSE<ushort>
+{
+    int operator () (const ushort * src1, const ushort * src2, const ushort * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_zero = _mm_setzero_si128(), v_full = _mm_set1_epi16(-1), v_32768 = _mm_set1_epi16(-32768);
+
+            for ( ; x <= len - 8; x += 8 )
+            {
+                __m128i v_src = _mm_add_epi16(_mm_loadu_si128((const __m128i *)(src1 + x)), v_32768);
+                __m128i v_mask1 = _mm_cmpgt_epi16(_mm_add_epi16(_mm_loadu_si128((const __m128i *)(src2 + x)), v_32768), v_src);
+                __m128i v_mask2 = _mm_cmpgt_epi16(v_src, _mm_add_epi16(_mm_loadu_si128((const __m128i *)(src3 + x)), v_32768));
+                __m128i v_res = _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full);
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(_mm_srli_epi16(v_res, 8), v_zero));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct InRange_SSE<short>
+{
+    int operator () (const short * src1, const short * src2, const short * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_zero = _mm_setzero_si128(), v_full = _mm_set1_epi16(-1);
+
+            for ( ; x <= len - 8; x += 8 )
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src1 + x));
+                __m128i v_mask1 = _mm_cmpgt_epi16(_mm_loadu_si128((const __m128i *)(src2 + x)), v_src);
+                __m128i v_mask2 = _mm_cmpgt_epi16(v_src, _mm_loadu_si128((const __m128i *)(src3 + x)));
+                __m128i v_res = _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full);
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(_mm_srli_epi16(v_res, 8), v_zero));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct InRange_SSE<int>
+{
+    int operator () (const int * src1, const int * src2, const int * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_zero = _mm_setzero_si128(), v_full = _mm_set1_epi32(-1);
+
+            for ( ; x <= len - 8; x += 8 )
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src1 + x));
+                __m128i v_res1 = _mm_or_si128(_mm_cmpgt_epi32(_mm_loadu_si128((const __m128i *)(src2 + x)), v_src),
+                    _mm_cmpgt_epi32(v_src, _mm_loadu_si128((const __m128i *)(src3 + x))));
+
+                v_src = _mm_loadu_si128((const __m128i *)(src1 + x + 4));
+                __m128i v_res2 = _mm_or_si128(_mm_cmpgt_epi32(_mm_loadu_si128((const __m128i *)(src2 + x + 4)), v_src),
+                    _mm_cmpgt_epi32(v_src, _mm_loadu_si128((const __m128i *)(src3 + x + 4))));
+
+                __m128i v_res = _mm_packs_epi32(_mm_srli_epi32(_mm_andnot_si128(v_res1, v_full), 16),
+                                                _mm_srli_epi32(_mm_andnot_si128(v_res2, v_full), 16));
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_res, v_zero));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct InRange_SSE<float>
+{
+    int operator () (const float * src1, const float * src2, const float * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_zero = _mm_setzero_si128();
+
+            for ( ; x <= len - 8; x += 8 )
+            {
+                __m128 v_src = _mm_loadu_ps(src1 + x);
+                __m128 v_res1 = _mm_and_ps(_mm_cmple_ps(_mm_loadu_ps(src2 + x), v_src),
+                    _mm_cmple_ps(v_src, _mm_loadu_ps(src3 + x)));
+
+                v_src = _mm_loadu_ps(src1 + x + 4);
+                __m128 v_res2 = _mm_and_ps(_mm_cmple_ps(_mm_loadu_ps(src2 + x + 4), v_src),
+                    _mm_cmple_ps(v_src, _mm_loadu_ps(src3 + x + 4)));
+
+                __m128i v_res1i = _mm_cvtps_epi32(v_res1), v_res2i = _mm_cvtps_epi32(v_res2);
+                __m128i v_res = _mm_packs_epi32(_mm_srli_epi32(v_res1i, 16), _mm_srli_epi32(v_res2i, 16));
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_res, v_zero));
+            }
+        }
+
+        return x;
+    }
+};
+
+#endif
+
+template <typename T>
+static void inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
          const T* src3, size_t step3, uchar* dst, size_t step,
          Size size)
 {
@@ -2984,9 +3272,11 @@ inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
     step2 /= sizeof(src2[0]);
     step3 /= sizeof(src3[0]);
 
+    InRange_SSE<T> vop;
+
     for( ; size.height--; src1 += step1, src2 += step2, src3 += step3, dst += step )
     {
-        int x = 0;
+        int x = vop(src1, src2, src3, dst, size.width);
         #if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
@@ -3091,11 +3381,12 @@ static InRangeFunc getInRangeFunc(int depth)
 static bool ocl_inRange( InputArray _src, InputArray _lowerb,
                          InputArray _upperb, OutputArray _dst )
 {
+    const ocl::Device & d = ocl::Device::getDefault();
     int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Size ssize = _src.size(), lsize = _lowerb.size(), usize = _upperb.size();
     int stype = _src.type(), ltype = _lowerb.type(), utype = _upperb.type();
     int sdepth = CV_MAT_DEPTH(stype), ldepth = CV_MAT_DEPTH(ltype), udepth = CV_MAT_DEPTH(utype);
-    int cn = CV_MAT_CN(stype);
+    int cn = CV_MAT_CN(stype), rowsPerWI = d.isIntel() ? 4 : 1;
     bool lbScalar = false, ubScalar = false;
 
     if( (lkind == _InputArray::MATX && skind != _InputArray::MATX) ||
@@ -3119,16 +3410,23 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
     if (lbScalar != ubScalar)
         return false;
 
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
+    bool doubleSupport = d.doubleFPConfig() > 0,
             haveScalar = lbScalar && ubScalar;
 
     if ( (!doubleSupport && sdepth == CV_64F) ||
          (!haveScalar && (sdepth != ldepth || sdepth != udepth)) )
         return false;
 
-    ocl::Kernel ker("inrange", ocl::core::inrange_oclsrc,
-                    format("%s-D cn=%d -D T=%s%s", haveScalar ? "-D HAVE_SCALAR " : "",
-                           cn, ocl::typeToStr(sdepth), doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    int kercn = haveScalar ? cn : std::max(std::min(ocl::predictOptimalVectorWidth(_src, _lowerb, _upperb, _dst), 4), cn);
+    if (kercn % cn != 0)
+        kercn = cn;
+    int colsPerWI = kercn / cn;
+    String opts = format("%s-D cn=%d -D srcT=%s -D srcT1=%s -D dstT=%s -D kercn=%d -D depth=%d%s -D colsPerWI=%d",
+                           haveScalar ? "-D HAVE_SCALAR " : "", cn, ocl::typeToStr(CV_MAKE_TYPE(sdepth, kercn)),
+                           ocl::typeToStr(sdepth), ocl::typeToStr(CV_8UC(colsPerWI)), kercn, sdepth,
+                           doubleSupport ? " -D DOUBLE_SUPPORT" : "", colsPerWI);
+
+    ocl::Kernel ker("inrange", ocl::core::inrange_oclsrc, opts);
     if (ker.empty())
         return false;
 
@@ -3176,7 +3474,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
     }
 
     ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
-            dstarg = ocl::KernelArg::WriteOnly(dst);
+            dstarg = ocl::KernelArg::WriteOnly(dst, 1, colsPerWI);
 
     if (haveScalar)
     {
@@ -3184,13 +3482,13 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
         uscalar.copyTo(uscalaru);
 
         ker.args(srcarg, dstarg, ocl::KernelArg::PtrReadOnly(lscalaru),
-               ocl::KernelArg::PtrReadOnly(uscalaru));
+               ocl::KernelArg::PtrReadOnly(uscalaru), rowsPerWI);
     }
     else
         ker.args(srcarg, dstarg, ocl::KernelArg::ReadOnlyNoSize(lscalaru),
-               ocl::KernelArg::ReadOnlyNoSize(uscalaru));
+               ocl::KernelArg::ReadOnlyNoSize(uscalaru), rowsPerWI);
 
-    size_t globalsize[2] = { ssize.width, ssize.height };
+    size_t globalsize[2] = { ssize.width / colsPerWI, (ssize.height + rowsPerWI - 1) / rowsPerWI };
     return ker.run(2, globalsize, NULL, false);
 }
 
@@ -3202,7 +3500,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
                  InputArray _upperb, OutputArray _dst)
 {
     CV_OCL_RUN(_src.dims() <= 2 && _lowerb.dims() <= 2 &&
-               _upperb.dims() <= 2 && _dst.isUMat(),
+               _upperb.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
                ocl_inRange(_src, _lowerb, _upperb, _dst))
 
     int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();

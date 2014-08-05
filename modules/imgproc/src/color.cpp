@@ -2038,6 +2038,10 @@ struct Luv2RGB_f
             float G = X*C3 + Y*C4 + Z*C5;
             float B = X*C6 + Y*C7 + Z*C8;
 
+            R = std::min(std::max(R, 0.f), 1.f);
+            G = std::min(std::max(G, 0.f), 1.f);
+            B = std::min(std::max(B, 0.f), 1.f);
+
             if( gammaTab )
             {
                 R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
@@ -2730,8 +2734,6 @@ struct mRGBA2RGBA
 
 #ifdef HAVE_OPENCL
 
-#define DIVUP(total, grain) (((total) + (grain) - 1) / (grain))
-
 static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 {
     bool ok = false;
@@ -2739,23 +2741,17 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     Size sz = src.size(), dstSz = sz;
     int scn = src.channels(), depth = src.depth(), bidx;
     int dims = 2, stripeSize = 1;
-    size_t globalsize[] = { src.cols, src.rows };
     ocl::Kernel k;
 
     if (depth != CV_8U && depth != CV_16U && depth != CV_32F)
         return false;
 
-    cv::String opts = format("-D depth=%d -D scn=%d ", depth, scn);
-
     ocl::Device dev = ocl::Device::getDefault();
-    int pxPerWIy = 1;
-    if (dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) &&
-            !(code == CV_BGR2Luv || code == CV_RGB2Luv || code == CV_LBGR2Luv || code == CV_LRGB2Luv ||
-              code == CV_Luv2BGR || code == CV_Luv2RGB || code == CV_Luv2LBGR || code == CV_Luv2LRGB))
-        pxPerWIy = 4;
+    int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
 
-    globalsize[1] = DIVUP(globalsize[1], pxPerWIy);
-    opts += format("-D PIX_PER_WI_Y=%d ", pxPerWIy);
+    size_t globalsize[] = { src.cols, (src.rows + pxPerWIy - 1) / pxPerWIy };
+    cv::String opts = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
+                             depth, scn, pxPerWIy);
 
     switch (code)
     {
@@ -3326,7 +3322,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-            if( code == CV_BGR2BGRA || code == CV_RGB2RGBA)
+            if( code == CV_BGR2BGRA)
             {
                 if ( CvtColorIPPLoop(src, dst, IPPReorderFunctor(ippiSwapChannelsC3C4RTab[depth], 0, 1, 2)) )
                     return;

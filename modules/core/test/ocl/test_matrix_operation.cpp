@@ -96,7 +96,7 @@ OCL_TEST_P(ConvertTo, Accuracy)
         OCL_OFF(src_roi.convertTo(dst_roi, dstType, alpha, beta));
         OCL_ON(usrc_roi.convertTo(udst_roi, dstType, alpha, beta));
 
-        double eps = src_depth >= CV_32F || CV_MAT_DEPTH(dstType) >= CV_32F ? 1e-4 : 1;
+        double eps = src_depth >= CV_32F || CV_MAT_DEPTH(dstType) >= CV_32F ? 2e-4 : 1;
         OCL_EXPECT_MATS_NEAR(dst, eps);
     }
 }
@@ -121,7 +121,7 @@ PARAM_TEST_CASE(CopyTo, MatDepth, Channels, bool, bool)
         use_mask = GET_PARAM(3);
     }
 
-    void generateTestData()
+    void generateTestData(bool one_cn_mask = false)
     {
         const int type = CV_MAKE_TYPE(depth, cn);
 
@@ -132,9 +132,11 @@ PARAM_TEST_CASE(CopyTo, MatDepth, Channels, bool, bool)
         if (use_mask)
         {
             Border maskBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
-            int mask_cn = randomDouble(0.0, 2.0) > 1.0 ? cn : 1;
+            int mask_cn = 1;
+            if (!one_cn_mask && randomDouble(0.0, 2.0) > 1.0)
+                mask_cn = cn;
             randomSubMat(mask, mask_roi, roiSize, maskBorder, CV_8UC(mask_cn), 0, 2);
-            cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
+            cv::threshold(mask, mask, 0.5, 255., THRESH_BINARY);
         }
 
         Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
@@ -177,7 +179,7 @@ OCL_TEST_P(SetTo, Accuracy)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
-        generateTestData();
+        generateTestData(true); // see modules/core/src/umatrix.cpp Ln:791 => CV_Assert( mask.size() == size() && mask.type() == CV_8UC1 );
 
         if (use_mask)
         {

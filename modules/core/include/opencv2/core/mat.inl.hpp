@@ -3350,9 +3350,18 @@ size_t UMat::total() const
 
 inline bool UMatData::hostCopyObsolete() const { return (flags & HOST_COPY_OBSOLETE) != 0; }
 inline bool UMatData::deviceCopyObsolete() const { return (flags & DEVICE_COPY_OBSOLETE) != 0; }
+inline bool UMatData::deviceMemMapped() const { return (flags & DEVICE_MEM_MAPPED) != 0; }
 inline bool UMatData::copyOnMap() const { return (flags & COPY_ON_MAP) != 0; }
 inline bool UMatData::tempUMat() const { return (flags & TEMP_UMAT) != 0; }
 inline bool UMatData::tempCopiedUMat() const { return (flags & TEMP_COPIED_UMAT) == TEMP_COPIED_UMAT; }
+
+inline void UMatData::markDeviceMemMapped(bool flag)
+{
+  if(flag)
+    flags |= DEVICE_MEM_MAPPED;
+  else
+    flags &= ~DEVICE_MEM_MAPPED;
+}
 
 inline void UMatData::markHostCopyObsolete(bool flag)
 {

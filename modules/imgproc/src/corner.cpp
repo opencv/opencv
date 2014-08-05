@@ -460,7 +460,7 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
-#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && (IPP_VERSION_MAJOR >= 8)
+#if defined(HAVE_IPP) && (IPP_VERSION_MAJOR >= 8)
     typedef IppStatus (CV_STDCALL * ippiMinEigenValGetBufferSize)(IppiSize, int, int, int*);
     typedef IppStatus (CV_STDCALL * ippiMinEigenVal)(const void*, int, Ipp32f*, int, IppiSize, IppiKernelType, int, int, Ipp8u*);
     IppiKernelType kerType;
@@ -544,7 +544,7 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
             scale *= 2.0;
         if (depth == CV_8U)
             scale *= 255.0;
-        scale = std::pow(scale, -4.0f);
+        scale = std::pow(scale, -4.0);
 
         if (ippiHarrisCornerGetBufferSize(roisize, masksize, blockSize, datatype, cn, &bufsize) >= 0)
         {
@@ -608,6 +608,11 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
         factor *= 255;
     factor = 1./(factor * factor * factor);
 
+#if CV_SSE2
+    volatile bool haveSSE2 = cv::checkHardwareSupport(CV_CPU_SSE2);
+    __m128 v_factor = _mm_set1_ps((float)factor), v_m2 = _mm_set1_ps(-2.0f);
+#endif
+
     Size size = src.size();
     int i, j;
     for( i = 0; i < size.height; i++ )
@@ -619,7 +624,26 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
         const float* d2ydata = (const float*)(D2y.data + i*D2y.step);
         const float* dxydata = (const float*)(Dxy.data + i*Dxy.step);
 
-        for( j = 0; j < size.width; j++ )
+        j = 0;
+
+#if CV_SSE2
+        if (haveSSE2)
+        {
+            for( ; j <= size.width - 4; j += 4 )
+            {
+                __m128 v_dx = _mm_loadu_ps((const float *)(dxdata + j));
+                __m128 v_dy = _mm_loadu_ps((const float *)(dydata + j));
+
+                __m128 v_s1 = _mm_mul_ps(_mm_mul_ps(v_dx, v_dx), _mm_loadu_ps((const float *)(d2ydata + j)));
+                __m128 v_s2 = _mm_mul_ps(_mm_mul_ps(v_dy, v_dy), _mm_loadu_ps((const float *)(d2xdata + j)));
+                __m128 v_s3 = _mm_mul_ps(_mm_mul_ps(v_dx, v_dy), _mm_loadu_ps((const float *)(dxydata + j)));
+                v_s1 = _mm_mul_ps(v_factor, _mm_add_ps(v_s1, _mm_add_ps(v_s2, _mm_mul_ps(v_s3, v_m2))));
+                _mm_storeu_ps(dstdata + j, v_s1);
+            }
+        }
+#endif
+
+        for( ; j < size.width; j++ )
         {
             float dx = dxdata[j];
             float dy = dydata[j];

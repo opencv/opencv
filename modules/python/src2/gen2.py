@@ -267,7 +267,7 @@ class ClassInfo(object):
                 #return sys.exit(-1)
             if self.bases and self.bases[0].startswith("cv::"):
                 self.bases[0] = self.bases[0][4:]
-            if self.bases and self.bases[0] == "Algorithm":
+            if self.bases and self.bases[0] == "cv::Algorithm":
                 self.isalgorithm = True
             for m in decl[2]:
                 if m.startswith("="):
@@ -286,7 +286,7 @@ class ClassInfo(object):
         code = "static bool pyopencv_to(PyObject* src, %s& dst, const char* name)\n{\n    PyObject* tmp;\n    bool ok;\n" % (self.cname)
         code += "".join([gen_template_set_prop_from_map.substitute(propname=p.name,proptype=p.tp) for p in self.props])
         if self.bases:
-            code += "\n    return pyopencv_to(src, (%s&)dst, name);\n}\n" % all_classes[self.bases[0]].cname
+            code += "\n    return pyopencv_to(src, (%s&)dst, name);\n}\n" % all_classes[self.bases[0].replace("::", "_")].cname
         else:
             code += "\n    return true;\n}\n"
         return code
@@ -761,7 +761,7 @@ class PythonWrapperGenerator(object):
             sys.exit(-1)
         self.classes[classinfo.name] = classinfo
         if classinfo.bases and not classinfo.isalgorithm:
-            classinfo.isalgorithm = self.classes[classinfo.bases[0]].isalgorithm
+            classinfo.isalgorithm = self.classes[classinfo.bases[0].replace("::", "_")].isalgorithm
 
     def add_const(self, name, decl):
         constinfo = ConstInfo(name, decl[1])
@@ -776,7 +776,7 @@ class PythonWrapperGenerator(object):
         classname = bareclassname = ""
         name = decl[0]
         dpos = name.rfind(".")
-        if dpos >= 0 and name[:dpos] != "cv":
+        if dpos >= 0 and name[:dpos] not in ["cv", "cv.ocl"]:
             classname = bareclassname = re.sub(r"^cv\.", "", name[:dpos])
             name = name[dpos+1:]
             dpos = classname.rfind(".")
@@ -785,6 +785,7 @@ class PythonWrapperGenerator(object):
                 classname = classname.replace(".", "_")
         cname = name
         name = re.sub(r"^cv\.", "", name)
+        name = name.replace(".", "_")
         isconstructor = cname == bareclassname
         cname = cname.replace(".", "::")
         isclassmethod = False
@@ -830,8 +831,10 @@ class PythonWrapperGenerator(object):
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
-            self.code_include.write( '#include "{}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )
             decls = parser.parse(hdr)
+            if len(decls) == 0:
+                continue
+            self.code_include.write( '#include "{}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )
             for decl in decls:
                 name = decl[0]
                 if name.startswith("struct") or name.startswith("class"):
@@ -900,6 +903,6 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         dstdir = sys.argv[1]
     if len(sys.argv) > 2:
-        srcfiles = sys.argv[2:]
+        srcfiles = open(sys.argv[2], 'r').read().split(';')
     generator = PythonWrapperGenerator()
     generator.gen(srcfiles, dstdir)

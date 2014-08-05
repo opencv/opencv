@@ -348,6 +348,10 @@ void cv::Canny( InputArray _src, OutputArray _dst,
     #define CANNY_PUSH(d)    *(d) = uchar(2), *stack_top++ = (d)
     #define CANNY_POP(d)     (d) = *--stack_top
 
+#if CV_SSE2
+    bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+#endif
+
     // calculate magnitude and angle of gradient, perform non-maxima suppression.
     // fill the map with one of the following values:
     //   0 - the pixel might belong to an edge
@@ -363,12 +367,52 @@ void cv::Canny( InputArray _src, OutputArray _dst,
 
             if (!L2gradient)
             {
-                for (int j = 0; j < src.cols*cn; j++)
+                int j = 0, width = src.cols * cn;
+#if CV_SSE2
+                if (haveSSE2)
+                {
+                    __m128i v_zero = _mm_setzero_si128();
+                    for ( ; j <= width - 8; j += 8)
+                    {
+                        __m128i v_dx = _mm_loadu_si128((const __m128i *)(_dx + j));
+                        __m128i v_dy = _mm_loadu_si128((const __m128i *)(_dy + j));
+                        v_dx = _mm_max_epi16(v_dx, _mm_sub_epi16(v_zero, v_dx));
+                        v_dy = _mm_max_epi16(v_dy, _mm_sub_epi16(v_zero, v_dy));
+
+                        __m128i v_norm = _mm_add_epi32(_mm_unpacklo_epi16(v_dx, v_zero), _mm_unpacklo_epi16(v_dy, v_zero));
+                        _mm_storeu_si128((__m128i *)(_norm + j), v_norm);
+
+                        v_norm = _mm_add_epi32(_mm_unpackhi_epi16(v_dx, v_zero), _mm_unpackhi_epi16(v_dy, v_zero));
+                        _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm);
+                    }
+                }
+#endif
+                for ( ; j < width; ++j)
                     _norm[j] = std::abs(int(_dx[j])) + std::abs(int(_dy[j]));
             }
             else
             {
-                for (int j = 0; j < src.cols*cn; j++)
+                int j = 0, width = src.cols * cn;
+#if CV_SSE2
+                if (haveSSE2)
+                {
+                    for ( ; j <= width - 8; j += 8)
+                    {
+                        __m128i v_dx = _mm_loadu_si128((const __m128i *)(_dx + j));
+                        __m128i v_dy = _mm_loadu_si128((const __m128i *)(_dy + j));
+
+                        __m128i v_dx_ml = _mm_mullo_epi16(v_dx, v_dx), v_dx_mh = _mm_mulhi_epi16(v_dx, v_dx);
+                        __m128i v_dy_ml = _mm_mullo_epi16(v_dy, v_dy), v_dy_mh = _mm_mulhi_epi16(v_dy, v_dy);
+
+                        __m128i v_norm = _mm_add_epi32(_mm_unpacklo_epi16(v_dx_ml, v_dx_mh), _mm_unpacklo_epi16(v_dy_ml, v_dy_mh));
+                        _mm_storeu_si128((__m128i *)(_norm + j), v_norm);
+
+                        v_norm = _mm_add_epi32(_mm_unpackhi_epi16(v_dx_ml, v_dx_mh), _mm_unpackhi_epi16(v_dy_ml, v_dy_mh));
+                        _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm);
+                    }
+                }
+#endif
+                for ( ; j < width; ++j)
                     _norm[j] = int(_dx[j])*_dx[j] + int(_dy[j])*_dy[j];
             }
 

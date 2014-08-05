@@ -25,7 +25,7 @@ Here's a sample usage of :operationsonarrays:`dft() <dft>` :
    :language: cpp
    :linenos:
    :tab-width: 4
-   :lines: 1-3, 5, 19-20, 23-78
+   :lines: 1-4, 6, 20-21, 24-79
 
 Explanation
 ===========

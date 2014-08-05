@@ -1557,13 +1557,17 @@ static void _SVDcompute( InputArray _aarr, OutputArray _w,
     {
         if( !at )
         {
-            transpose(temp_u, _u);
-            temp_v.copyTo(_vt);
+            if( _u.needed() )
+                transpose(temp_u, _u);
+            if( _vt.needed() )
+                temp_v.copyTo(_vt);
         }
         else
         {
-            transpose(temp_v, _u);
-            temp_u.copyTo(_vt);
+            if( _u.needed() )
+                transpose(temp_v, _u);
+            if( _vt.needed() )
+                temp_u.copyTo(_vt);
         }
     }
 }
