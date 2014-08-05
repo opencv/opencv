@@ -273,4 +273,3 @@ cv::Mat euler2rot(const cv::Mat & euler)
 
   return rotationMatrix;
 }
-

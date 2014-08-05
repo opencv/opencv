@@ -71,5 +71,3 @@ void Model::load(const std::string path)
   storage.release();
 
 }
-
-

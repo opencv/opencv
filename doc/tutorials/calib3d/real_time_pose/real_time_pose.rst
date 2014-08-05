@@ -341,7 +341,7 @@ The following parameters work for this application:
    .. code-block:: cpp
 
     // RANSAC parameters
-    
+
     int iterationsCount = 500;    // number of Ransac iterations.
     float reprojectionError = 2.0;    // maximum allowed distance to consider it an inlier.
     float confidence = 0.95;    // ransac successful confidence.

@@ -8,8 +8,8 @@ ADD_DEFINITIONS(
 
 find_package( OpenCV REQUIRED )
 
-include_directories( 
-    ${OpenCV_INCLUDE_DIRS} 
+include_directories(
+    ${OpenCV_INCLUDE_DIRS}
 )
 
 add_executable(
@@ -39,9 +39,9 @@ pnp_verification
 )
 
 add_executable(
-pnp_detection 
+pnp_detection
     src/main_detection.cpp
-    src/CsvReader.cpp 
+    src/CsvReader.cpp
     src/CsvWriter.cpp
     src/ModelRegistration.cpp
     src/Mesh.cpp
