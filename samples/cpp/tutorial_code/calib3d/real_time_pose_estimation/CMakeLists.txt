@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 2.8)
 project( PNP_DEMO )
 
-find_package( OpenCV REQUIRED )
+find_package( Boost OpenCV REQUIRED )
 
 include_directories( 
 	$(PNP_DEMO_SOURCE_DIR)/include 
+	${Boost_INCLUDE_DIR}
 	${OpenCV_INCLUDE_DIRS} 
 )
 
@@ -34,5 +35,5 @@ pnp_detection
 	src/RobustMatcher.cpp
 )
 
-target_link_libraries( pnp_registration ${OpenCV_LIBS} )
-target_link_libraries( pnp_detection ${OpenCV_LIBS} )
+target_link_libraries( pnp_registration ${Boost_LIBRARIES} ${OpenCV_LIBS} )
+target_link_libraries( pnp_detection ${Boost_LIBRARIES} ${OpenCV_LIBS} )
