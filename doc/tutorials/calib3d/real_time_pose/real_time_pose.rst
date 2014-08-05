@@ -26,9 +26,7 @@ The application will have the followings parts:
 Theory
 ======
 
-In computer vision estimate the camera pose from *n* 3D-to-2D point correspondences is a fundamental and well understood problem. The most general version of the problem requires estimating the six degrees of freedom of the pose and five calibration parameters: focal length,
-principal point, aspect ratio and skew. It could be established with a minimum of 6 correspondences, using the well known Direct Linear Transform (DLT) algorithm. There are, though, several simplifications to the problem which turn into an extensive list of
-different algorithms that improve the accuracy of the DLT. 
+In computer vision estimate the camera pose from *n* 3D-to-2D point correspondences is a fundamental and well understood problem. The most general version of the problem requires estimating the six degrees of freedom of the pose and five calibration parameters: focal length, principal point, aspect ratio and skew. It could be established with a minimum of 6 correspondences, using the well known Direct Linear Transform (DLT) algorithm. There are, though, several simplifications to the problem which turn into an extensive list of different algorithms that improve the accuracy of the DLT. 
 
 The most common simplification is to assume known calibration parameters which is the so-called Perspective-*n*-Point problem:
 
@@ -681,5 +679,3 @@ You can watch the real time pose estimation on the `YouTube here <https://www.yo
    <div align="center">
    <iframe title=" Pose estimation for the Google Summer Code 2014 using OpenCV libraries." width="560" height="349" src="http://www.youtube.com/embed/msFFuHsiUns?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
    </div>
-
-
