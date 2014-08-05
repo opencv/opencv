@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
 
 
   cv::VideoCapture cap;                           // instantiate VideoCapture
-  (argc < 2) ? cap.open(0) : cap.open(argv[1]);   // open the default camera device
+  (argc < 2) ? cap.open(1) : cap.open(argv[1]);   // open the default camera device
                                                   // or a recorder video
 
   if(!cap.isOpened())   // check if we succeeded
@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
 
       // -- Step 3: Estimate the pose using RANSAC approach
       pnp_detection.estimatePoseRANSAC( list_points3d_model_match, list_points2d_scene_match,
-                                        cv::ITERATIVE, inliers_idx,
+                                        cv::DLS, inliers_idx,
                                         iterationsCount, reprojectionError, confidence );
 
       // -- Step 4: Catch the inliers keypoints to draw
