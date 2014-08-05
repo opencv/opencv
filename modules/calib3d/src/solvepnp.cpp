@@ -96,15 +96,15 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     }
     else if (flags == DLS)
     {
-    	cv::Mat undistortedPoints;
-    	cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+        cv::Mat undistortedPoints;
+        cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
 
-    	dls PnP(opoints, undistortedPoints);
+        dls PnP(opoints, undistortedPoints);
 
-    	cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
-    	bool result = PnP.compute_pose(R, tvec);
+        cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
+        bool result = PnP.compute_pose(R, tvec);
         if (result)
-        	cv::Rodrigues(R, rvec);
+            cv::Rodrigues(R, rvec);
         return result;
     }
     else
@@ -112,189 +112,14 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     return false;
 }
 
-/*namespace cv
-{
-    namespace pnpransac
-    {
-        const int MIN_POINTS_COUNT = 4;
-
-        static void project3dPoints(const Mat& points, const Mat& rvec, const Mat& tvec, Mat& modif_points)
-        {
-            modif_points.create(1, points.cols, CV_32FC3);
-            Mat R(3, 3, CV_64FC1);
-            Rodrigues(rvec, R);
-            Mat transformation(3, 4, CV_64F);
-            Mat r = transformation.colRange(0, 3);
-            R.copyTo(r);
-            Mat t = transformation.colRange(3, 4);
-            tvec.copyTo(t);
-            transform(points, modif_points, transformation);
-        }
-
-        struct CameraParameters
-        {
-            void init(Mat _intrinsics, Mat _distCoeffs)
-            {
-                _intrinsics.copyTo(intrinsics);
-                _distCoeffs.copyTo(distortion);
-            }
-
-            Mat intrinsics;
-            Mat distortion;
-        };
-
-        struct Parameters
-        {
-            int iterationsCount;
-            float reprojectionError;
-            int minInliersCount;
-            bool useExtrinsicGuess;
-            int flags;
-            CameraParameters camera;
-        };
-
-        static void pnpTask(const std::vector<char>& pointsMask, const Mat& objectPoints, const Mat& imagePoints,
-                     const Parameters& params, std::vector<int>& inliers, Mat& rvec, Mat& tvec,
-                     const Mat& rvecInit, const Mat& tvecInit, Mutex& resultsMutex)
-        {
-            Mat modelObjectPoints(1, MIN_POINTS_COUNT, CV_32FC3), modelImagePoints(1, MIN_POINTS_COUNT, CV_32FC2);
-            for (int i = 0, colIndex = 0; i < (int)pointsMask.size(); i++)
-            {
-                if (pointsMask[i])
-                {
-                    Mat colModelImagePoints = modelImagePoints(Rect(colIndex, 0, 1, 1));
-                    imagePoints.col(i).copyTo(colModelImagePoints);
-                    Mat colModelObjectPoints = modelObjectPoints(Rect(colIndex, 0, 1, 1));
-                    objectPoints.col(i).copyTo(colModelObjectPoints);
-                    colIndex = colIndex+1;
-                }
-            }
-
-            //filter same 3d points, hang in solvePnP
-            double eps = 1e-10;
-            int num_same_points = 0;
-            for (int i = 0; i < MIN_POINTS_COUNT; i++)
-                for (int j = i + 1; j < MIN_POINTS_COUNT; j++)
-                {
-                    if (norm(modelObjectPoints.at<Vec3f>(0, i) - modelObjectPoints.at<Vec3f>(0, j)) < eps)
-                        num_same_points++;
-                }
-            if (num_same_points > 0)
-                return;
-
-            Mat localRvec, localTvec;
-            rvecInit.copyTo(localRvec);
-            tvecInit.copyTo(localTvec);
-
-            solvePnP(modelObjectPoints, modelImagePoints, params.camera.intrinsics, params.camera.distortion, localRvec, localTvec,
-                     params.useExtrinsicGuess, params.flags);
-
-
-            std::vector<Point2f> projected_points;
-            projected_points.resize(objectPoints.cols);
-            projectPoints(objectPoints, localRvec, localTvec, params.camera.intrinsics, params.camera.distortion, projected_points);
-
-            Mat rotatedPoints;
-            project3dPoints(objectPoints, localRvec, localTvec, rotatedPoints);
-
-            std::vector<int> localInliers;
-            for (int i = 0; i < objectPoints.cols; i++)
-            {
-                Point2f p(imagePoints.at<Vec2f>(0, i)[0], imagePoints.at<Vec2f>(0, i)[1]);
-                if ((norm(p - projected_points[i]) < params.reprojectionError)
-                    && (rotatedPoints.at<Vec3f>(0, i)[2] > 0)) //hack
-                {
-                    localInliers.push_back(i);
-                }
-            }
-
-            if (localInliers.size() > inliers.size())
-            {
-                resultsMutex.lock();
-
-                inliers.clear();
-                inliers.resize(localInliers.size());
-                memcpy(&inliers[0], &localInliers[0], sizeof(int) * localInliers.size());
-                localRvec.copyTo(rvec);
-                localTvec.copyTo(tvec);
-
-                resultsMutex.unlock();
-            }
-        }
-
-        class PnPSolver
-        {
-        public:
-            void operator()( const BlockedRange& r ) const
-            {
-                std::vector<char> pointsMask(objectPoints.cols, 0);
-                memset(&pointsMask[0], 1, MIN_POINTS_COUNT );
-                for( int i=r.begin(); i!=r.end(); ++i )
-                {
-                    generateVar(pointsMask);
-                    pnpTask(pointsMask, objectPoints, imagePoints, parameters,
-                            inliers, rvec, tvec, initRvec, initTvec, syncMutex);
-                    if ((int)inliers.size() >= parameters.minInliersCount)
-                    {
-#ifdef HAVE_TBB
-                        tbb::task::self().cancel_group_execution();
-#else
-                        break;
-#endif
-                    }
-                }
-            }
-            PnPSolver(const Mat& _objectPoints, const Mat& _imagePoints, const Parameters& _parameters,
-                      Mat& _rvec, Mat& _tvec, std::vector<int>& _inliers):
-            objectPoints(_objectPoints), imagePoints(_imagePoints), parameters(_parameters),
-            rvec(_rvec), tvec(_tvec), inliers(_inliers)
-            {
-                rvec.copyTo(initRvec);
-                tvec.copyTo(initTvec);
-
-                generator.state = theRNG().state; //to control it somehow...
-            }
-        private:
-            PnPSolver& operator=(const PnPSolver&);
-
-            const Mat& objectPoints;
-            const Mat& imagePoints;
-            const Parameters& parameters;
-            Mat &rvec, &tvec;
-            std::vector<int>& inliers;
-            Mat initRvec, initTvec;
-
-            static RNG generator;
-            static Mutex syncMutex;
-
-            void generateVar(std::vector<char>& mask) const
-            {
-                int size = (int)mask.size();
-                for (int i = 0; i < size; i++)
-                {
-                    int i1 = generator.uniform(0, size);
-                    int i2 = generator.uniform(0, size);
-                    char curr = mask[i1];
-                    mask[i1] = mask[i2];
-                    mask[i2] = curr;
-                }
-            }
-        };
-
-        Mutex PnPSolver::syncMutex;
-        RNG PnPSolver::generator;
-
-    }
-}*/
-
 class PnPRansacCallback : public PointSetRegistrator::Callback
 {
 public:
 
-	PnPRansacCallback(Mat _cameraMatrix=Mat(3,3,CV_64F), Mat _distCoeffs=Mat(4,1,CV_64F), int _flags=cv::ITERATIVE,
-			bool _useExtrinsicGuess=false, Mat _rvec=Mat(), Mat _tvec=Mat() )
-		: cameraMatrix(_cameraMatrix), distCoeffs(_distCoeffs), flags(_flags), useExtrinsicGuess(_useExtrinsicGuess),
-		  rvec(_rvec), tvec(_tvec) {}
+    PnPRansacCallback(Mat _cameraMatrix=Mat(3,3,CV_64F), Mat _distCoeffs=Mat(4,1,CV_64F), int _flags=cv::ITERATIVE,
+            bool _useExtrinsicGuess=false, Mat _rvec=Mat(), Mat _tvec=Mat() )
+        : cameraMatrix(_cameraMatrix), distCoeffs(_distCoeffs), flags(_flags), useExtrinsicGuess(_useExtrinsicGuess),
+          rvec(_rvec), tvec(_tvec) {}
 
     /* Pre: True */
     /* Post: compute _model with given points an return number of found models */
@@ -303,11 +128,11 @@ public:
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat();
 
         bool correspondence = cv::solvePnP( _m1, _m2, cameraMatrix, distCoeffs,
-        		                            rvec, tvec, useExtrinsicGuess, flags );
+                                            rvec, tvec, useExtrinsicGuess, flags );
 
-    	Mat _local_model;
-    	cv::hconcat(rvec, tvec, _local_model);
-		_local_model.copyTo(_model);
+        Mat _local_model;
+        cv::hconcat(rvec, tvec, _local_model);
+        _local_model.copyTo(_model);
 
         return correspondence;
     }
@@ -333,7 +158,7 @@ public:
         float* err = _err.getMat().ptr<float>();
 
         for ( i = 0; i < count; ++i)
-        	err[i] = cv::norm( ipoints_ptr[i] - projpoints_ptr[i] );
+            err[i] = cv::norm( ipoints_ptr[i] - projpoints_ptr[i] );
 
     }
 
@@ -375,89 +200,46 @@ bool cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     Ptr<PointSetRegistrator::Callback> cb; // pointer to callback
     cb = makePtr<PnPRansacCallback>( cameraMatrix, distCoeffs, flags, useExtrinsicGuess, rvec, tvec);
 
-	int model_points = flags == cv::P3P ? 4 : 6; 	// minimum of number of model points
-	double param1 = reprojectionError;				// reprojection error
-	double param2 = confidence;						// confidence
-	int param3 = iterationsCount;					// number maximum iterations
+    int model_points = flags == cv::P3P ? 4 : 6;     // minimum of number of model points
+    double param1 = reprojectionError;                // reprojection error
+    double param2 = confidence;                        // confidence
+    int param3 = iterationsCount;                    // number maximum iterations
 
     cv::Mat _local_model(3, 2, CV_64FC1);
     cv::Mat _mask_local_inliers(1, opoints.rows, CV_8UC1);
 
-	// call Ransac
-	int result = createRANSACPointSetRegistrator(cb, model_points, param1, param2, param3)->run(opoints, ipoints, _local_model, _mask_local_inliers);
+    // call Ransac
+    int result = createRANSACPointSetRegistrator(cb, model_points, param1, param2, param3)->run(opoints, ipoints, _local_model, _mask_local_inliers);
 
-	if( result <= 0 || _local_model.rows <= 0)
-	{
-		_rvec.assign(rvec);	// output rotation vector
-		_tvec.assign(tvec);	// output translation vector
-
-		if( _inliers.needed() )
-			_inliers.release();
-
-		return false;
-	}
-	else
-	{
-		_rvec.assign(_local_model.col(0));	// output rotation vector
-		_tvec.assign(_local_model.col(1));	// output translation vector
-	}
-
-	if(_inliers.needed())
-	{
-		Mat _local_inliers;
-		int count = 0;
-		for (int i = 0; i < _mask_local_inliers.rows; ++i)
-		{
-			if((int)_mask_local_inliers.at<uchar>(i) == 1) // inliers mask
-			{
-				_local_inliers.push_back(count);	// output inliers vector
-				count++;
-			}
-		}
-		_local_inliers.copyTo(_inliers);
-	}
-
-	// OLD IMPLEMENTATION
-
-    /*std::vector<int> localInliers;
-    Mat localRvec, localTvec;
-    rvec.copyTo(localRvec);
-    tvec.copyTo(localTvec);
-
-    if (objectPoints.cols >= pnpransac::MIN_POINTS_COUNT)
+    if( result <= 0 || _local_model.rows <= 0)
     {
-        parallel_for(BlockedRange(0,iterationsCount), cv::pnpransac::PnPSolver(objectPoints, imagePoints, params,
-                                                                               localRvec, localTvec, localInliers));
-    }
+        _rvec.assign(rvec);    // output rotation vector
+        _tvec.assign(tvec);    // output translation vector
 
-    if (localInliers.size() >= (size_t)pnpransac::MIN_POINTS_COUNT)
-    {
-        if (flags != P3P)
-        {
-            int i, pointsCount = (int)localInliers.size();
-            Mat inlierObjectPoints(1, pointsCount, CV_32FC3), inlierImagePoints(1, pointsCount, CV_32FC2);
-            for (i = 0; i < pointsCount; i++)
-            {
-                int index = localInliers[i];
-                Mat colInlierImagePoints = inlierImagePoints(Rect(i, 0, 1, 1));
-                imagePoints.col(index).copyTo(colInlierImagePoints);
-                Mat colInlierObjectPoints = inlierObjectPoints(Rect(i, 0, 1, 1));
-                objectPoints.col(index).copyTo(colInlierObjectPoints);
-            }
-            solvePnP(inlierObjectPoints, inlierImagePoints, params.camera.intrinsics, params.camera.distortion, localRvec, localTvec, true, flags);
-        }
-        localRvec.copyTo(rvec);
-        localTvec.copyTo(tvec);
-        if (_inliers.needed())
-            Mat(localInliers).copyTo(_inliers);
+        if( _inliers.needed() )
+            _inliers.release();
+
+        return false;
     }
     else
     {
-        tvec.setTo(Scalar(0));
-        Mat R = Mat::eye(3, 3, CV_64F);
-        Rodrigues(R, rvec);
-        if( _inliers.needed() )
-            _inliers.release();
-    }*/
+        _rvec.assign(_local_model.col(0));    // output rotation vector
+        _tvec.assign(_local_model.col(1));    // output translation vector
+    }
+
+    if(_inliers.needed())
+    {
+        Mat _local_inliers;
+        int count = 0;
+        for (int i = 0; i < _mask_local_inliers.rows; ++i)
+        {
+            if((int)_mask_local_inliers.at<uchar>(i) == 1) // inliers mask
+            {
+                _local_inliers.push_back(count);    // output inliers vector
+                count++;
+            }
+        }
+        _local_inliers.copyTo(_inliers);
+    }
     return true;
 }
