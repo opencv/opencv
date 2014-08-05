@@ -417,7 +417,7 @@ cv::Mat dls::cayley_LS_M(const std::vector<double>& a, const std::vector<double>
 {
     // TODO: input matrix pointer
     // TODO: shift coefficients one position to left
-    
+
     cv::Mat M = cv::Mat::zeros(120, 120, CV_64F);
 
     M.at<double>(0,0)=u[1]; M.at<double>(0,35)=a[1]; M.at<double>(0,83)=b[1]; M.at<double>(0,118)=c[1];
@@ -662,11 +662,3 @@ bool dls::positive_eigenvalues(const cv::Mat * eigenvalues)
     cv::MatConstIterator_<double> it = eigenvalues->begin<double>();
     return *(it) > 0 && *(it+1) > 0 && *(it+2) > 0;
 }
-
-
-
-
-
-
-
-

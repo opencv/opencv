@@ -141,4 +141,3 @@ int main(int argc, char *argv[])
   data2file("computation_time.txt", comp_time);
 
 }
-

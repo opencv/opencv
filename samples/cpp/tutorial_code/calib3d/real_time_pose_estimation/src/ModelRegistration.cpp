@@ -33,6 +33,3 @@ void ModelRegistration::reset()
   list_points2d_.clear();
   list_points3d_.clear();
 }
-
-
-

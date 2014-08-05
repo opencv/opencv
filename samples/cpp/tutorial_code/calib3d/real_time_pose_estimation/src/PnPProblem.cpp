@@ -310,6 +310,3 @@ bool PnPProblem::intersect_MollerTrumbore(Ray &Ray, Triangle &Triangle, double *
   // No hit, no win
   return false;
 }
-
-
-
