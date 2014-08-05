@@ -1,11 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 project( PNP_DEMO )
 
-ADD_DEFINITIONS(
-    -std=c++11
-    # Other flags
-)
-
 find_package( OpenCV REQUIRED )
 
 include_directories(

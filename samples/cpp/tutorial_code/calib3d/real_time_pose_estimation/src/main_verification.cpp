@@ -1,5 +1,4 @@
 #include <iostream>
-#include <boost/lexical_cast.hpp>
 
 #include "cv.h"
 #include "highgui.h"

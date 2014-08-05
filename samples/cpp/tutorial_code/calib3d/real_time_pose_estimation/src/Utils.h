@@ -9,9 +9,9 @@
 #define UTILS_H_
 
 #include <iostream>
-#include <time.h>
 #include <cv.h>
 
+#include "PnPProblem.h"
 
 // Draw a text with the question point
 void drawQuestion(cv::Mat image, cv::Point3f point, cv::Scalar color);
@@ -53,6 +53,9 @@ cv::Mat quat2rot(cv::Mat &q);
 cv::Mat euler2rot(const cv::Mat & euler);
 cv::Mat rot2euler(const cv::Mat & rotationMatrix);
 cv::Mat quat2euler(const cv::Mat & q);
+int StringToInt ( const std::string &Text );
+std::string FloatToString ( float Number );
+std::string IntToString ( int Number );
 
 class Timer
 {
@@ -68,8 +71,5 @@ public:
 private:
     double tstart, tstop, ttime;
 };
-
-
-
 
 #endif /* UTILS_H_ */

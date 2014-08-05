@@ -1,5 +1,4 @@
 #include <iostream>
-#include <boost/lexical_cast.hpp>
 
 #include "Mesh.h"
 #include "Model.h"
@@ -261,12 +260,12 @@ int main(int argc, char *argv[])
   std::vector<cv::Point2f> list_points_out = model.get_points2d_out();
 
   // Draw some debug text
-  std::string num = boost::lexical_cast< std::string >(list_points_in.size());
+  std::string num = IntToString(list_points_in.size());
   std::string text = "There are " + num + " inliers";
   drawText(img_vis, text, green);
 
   // Draw some debug text
-  num = boost::lexical_cast< std::string >(list_points_out.size());
+  num = IntToString(list_points_out.size());
   text = "There are " + num + " outliers";
   drawText2(img_vis, text, red);
 
