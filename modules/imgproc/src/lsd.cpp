@@ -422,10 +422,10 @@ void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
     std::vector<double> w, p, n;
     w_needed = _width.needed();
     p_needed = _prec.needed();
-    n_needed = _nfa.needed();
-
-    CV_Assert((!_nfa.needed()) ||                              // NFA InputArray will be filled _only_ when
-              (_nfa.needed() && doRefine >= LSD_REFINE_ADV));  // REFINE_ADV type LineSegmentDetectorImpl object is created.
+    if (doRefine < LSD_REFINE_ADV)
+        n_needed = false;
+    else
+        n_needed = _nfa.needed();
 
     flsd(lines, w, p, n);
 
@@ -1067,13 +1067,17 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
     double left_x = min_y->p.x, right_x = min_y->p.x;
 
     // Loop around all points in the region and count those that are aligned.
-    int min_iter = std::max(min_y->p.y, 0);
-    int max_iter = std::min(max_y->p.y, img_height - 1);
+    int min_iter = min_y->p.y;
+    int max_iter = max_y->p.y;
     for(int y = min_iter; y <= max_iter; ++y)
     {
+        if (y < 0 || y >= img_height) continue;
+
         int adx = y * img_width + int(left_x);
         for(int x = int(left_x); x <= int(right_x); ++x, ++adx)
         {
+            if (x < 0 || x >= img_width) continue;
+
             ++total_pts;
             if(isAligned(adx, rec.theta, rec.prec))
             {
@@ -1172,9 +1176,10 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray l
 
     Mat _lines;
     _lines = lines.getMat();
+    int N = _lines.checkVector(4);
 
     // Draw segments
-    for(int i = 0; i < _lines.size().width; ++i)
+    for(int i = 0; i < N; ++i)
     {
         const Vec4i& v = _lines.at<Vec4i>(i);
         Point b(v[0], v[1]);
@@ -1197,14 +1202,17 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1
     Mat _lines2;
     _lines1 = lines1.getMat();
     _lines2 = lines2.getMat();
+    int N1 = _lines1.checkVector(4);
+    int N2 = _lines2.checkVector(4);
+
     // Draw segments
-    for(int i = 0; i < _lines1.size().width; ++i)
+    for(int i = 0; i < N1; ++i)
     {
         Point b(_lines1.at<Vec4i>(i)[0], _lines1.at<Vec4i>(i)[1]);
         Point e(_lines1.at<Vec4i>(i)[2], _lines1.at<Vec4i>(i)[3]);
         line(I1, b, e, Scalar::all(255), 1);
     }
-    for(int i = 0; i < _lines2.size().width; ++i)
+    for(int i = 0; i < N2; ++i)
     {
         Point b(_lines2.at<Vec4i>(i)[0], _lines2.at<Vec4i>(i)[1]);
         Point e(_lines2.at<Vec4i>(i)[2], _lines2.at<Vec4i>(i)[3]);

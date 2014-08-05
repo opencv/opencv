@@ -93,6 +93,8 @@ using namespace ::cv::cuda::device::surf;
 
 namespace
 {
+    Mutex mtx;
+
     int calcSize(int octave, int layer)
     {
         /* Wavelet size at first layer of first octave. */
@@ -166,7 +168,6 @@ namespace
             {
                 const int layer_rows = img_rows >> octave;
                 const int layer_cols = img_cols >> octave;
-
                 loadOctaveConstants(octave, layer_rows, layer_cols);
 
                 icvCalcLayerDetAndTrace_gpu(surf_.det, surf_.trace, img_rows, img_cols, octave, surf_.nOctaveLayers);
@@ -354,6 +355,7 @@ void cv::cuda::SURF_CUDA::downloadDescriptors(const GpuMat& descriptorsGPU, std:
 
 void cv::cuda::SURF_CUDA::operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints)
 {
+    AutoLock lock(mtx);
     if (!img.empty())
     {
         SURF_CUDA_Invoker surf(*this, img, mask);
@@ -365,6 +367,7 @@ void cv::cuda::SURF_CUDA::operator()(const GpuMat& img, const GpuMat& mask, GpuM
 void cv::cuda::SURF_CUDA::operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors,
                                    bool useProvidedKeypoints)
 {
+    AutoLock lock(mtx);
     if (!img.empty())
     {
         SURF_CUDA_Invoker surf(*this, img, mask);
@@ -382,6 +385,7 @@ void cv::cuda::SURF_CUDA::operator()(const GpuMat& img, const GpuMat& mask, GpuM
 
 void cv::cuda::SURF_CUDA::operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints)
 {
+    AutoLock lock(mtx);
     GpuMat keypointsGPU;
 
     (*this)(img, mask, keypointsGPU);
@@ -392,6 +396,7 @@ void cv::cuda::SURF_CUDA::operator()(const GpuMat& img, const GpuMat& mask, std:
 void cv::cuda::SURF_CUDA::operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints,
     GpuMat& descriptors, bool useProvidedKeypoints)
 {
+    AutoLock lock(mtx);
     GpuMat keypointsGPU;
 
     if (useProvidedKeypoints)
@@ -405,6 +410,7 @@ void cv::cuda::SURF_CUDA::operator()(const GpuMat& img, const GpuMat& mask, std:
 void cv::cuda::SURF_CUDA::operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints,
     std::vector<float>& descriptors, bool useProvidedKeypoints)
 {
+    AutoLock lock(mtx);
     GpuMat descriptorsGPU;
 
     (*this)(img, mask, keypoints, descriptorsGPU, useProvidedKeypoints);

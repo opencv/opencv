@@ -678,16 +678,21 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
 
         UMat dst = _dst.getUMat();
 
+        bool haveDstUninit = false;
         if( prevu != dst.u ) // do not leave dst uninitialized
-            dst = Scalar(0);
+            haveDstUninit = true;
 
-        ocl::Kernel k("copyToMask", ocl::core::copyset_oclsrc,
-                      format("-D COPY_TO_MASK -D T=%s -D scn=%d -D mcn=%d",
-                             ocl::memopTypeToStr(depth()), cn, mcn));
+        String opts = format("-D COPY_TO_MASK -D T1=%s -D scn=%d -D mcn=%d%s",
+                             ocl::memopTypeToStr(depth()), cn, mcn,
+                             haveDstUninit ? " -D HAVE_DST_UNINIT" : "");
+
+        ocl::Kernel k("copyToMask", ocl::core::copyset_oclsrc, opts);
         if (!k.empty())
         {
-            k.args(ocl::KernelArg::ReadOnlyNoSize(*this), ocl::KernelArg::ReadOnlyNoSize(_mask.getUMat()),
-                   ocl::KernelArg::WriteOnly(dst));
+            k.args(ocl::KernelArg::ReadOnlyNoSize(*this),
+                   ocl::KernelArg::ReadOnlyNoSize(_mask.getUMat()),
+                   haveDstUninit ? ocl::KernelArg::WriteOnly(dst) :
+                                   ocl::KernelArg::ReadWrite(dst));
 
             size_t globalsize[2] = { cols, rows };
             if (k.run(2, globalsize, NULL, false))
@@ -721,7 +726,7 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
     if( dims <= 2 && cn && _dst.isUMat() && ocl::useOpenCL() &&
             ((needDouble && doubleSupport) || !needDouble) )
     {
-        int wdepth = std::max(CV_32F, sdepth);
+        int wdepth = std::max(CV_32F, sdepth), rowsPerWI = 4;
 
         char cvt[2][40];
         ocl::Kernel k("convertTo", ocl::core::convert_oclsrc,
@@ -741,11 +746,11 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
                     dstarg = ocl::KernelArg::WriteOnly(dst, cn);
 
             if (wdepth == CV_32F)
-                k.args(srcarg, dstarg, alphaf, betaf);
+                k.args(srcarg, dstarg, alphaf, betaf, rowsPerWI);
             else
-                k.args(srcarg, dstarg, alpha, beta);
+                k.args(srcarg, dstarg, alpha, beta, rowsPerWI);
 
-            size_t globalsize[2] = { dst.cols * cn, dst.rows };
+            size_t globalsize[2] = { dst.cols * cn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
             if (k.run(2, globalsize, NULL, false))
                 return;
         }
@@ -765,27 +770,27 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
     {
         Mat value = _value.getMat();
         CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::UMAT) );
-        double buf[4]={0,0,0,0};
-        convertAndUnrollScalar(value, tp, (uchar*)buf, 1);
+        double buf[4] = { 0, 0, 0, 0 };
+        convertAndUnrollScalar(value, tp, (uchar *)buf, 1);
 
-        int scalarcn = cn == 3 ? 4 : cn;
-        char opts[1024];
-        sprintf(opts, "-D dstT=%s -D dstST=%s -D dstT1=%s -D cn=%d", ocl::memopTypeToStr(tp),
-                ocl::memopTypeToStr(CV_MAKETYPE(tp,scalarcn)),
-                ocl::memopTypeToStr(CV_MAT_DEPTH(tp)), cn);
+        int scalarcn = cn == 3 ? 4 : cn, rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
+        String opts = format("-D dstT=%s -D rowsPerWI=%d -D dstST=%s -D dstT1=%s -D cn=%d",
+                             ocl::memopTypeToStr(tp), rowsPerWI,
+                             ocl::memopTypeToStr(CV_MAKETYPE(tp, scalarcn)),
+                             ocl::memopTypeToStr(CV_MAT_DEPTH(tp)), cn);
 
         ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::core::copyset_oclsrc, opts);
         if( !setK.empty() )
         {
-            ocl::KernelArg scalararg(0, 0, 0, 0, buf, CV_ELEM_SIZE1(tp)*scalarcn);
+            ocl::KernelArg scalararg(0, 0, 0, 0, buf, CV_ELEM_SIZE1(tp) * scalarcn);
             UMat mask;
 
             if( haveMask )
             {
                 mask = _mask.getUMat();
-                CV_Assert( mask.size() == size() && mask.type() == CV_8U );
-                ocl::KernelArg maskarg = ocl::KernelArg::ReadOnlyNoSize(mask);
-                ocl::KernelArg dstarg = ocl::KernelArg::ReadWrite(*this);
+                CV_Assert( mask.size() == size() && mask.type() == CV_8UC1 );
+                ocl::KernelArg maskarg = ocl::KernelArg::ReadOnlyNoSize(mask),
+                        dstarg = ocl::KernelArg::ReadWrite(*this);
                 setK.args(maskarg, dstarg, scalararg);
             }
             else
@@ -794,8 +799,8 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
                 setK.args(dstarg, scalararg);
             }
 
-            size_t globalsize[] = { cols, rows };
-            if( setK.run(2, globalsize, 0, false) )
+            size_t globalsize[] = { cols, (rows + rowsPerWI - 1) / rowsPerWI };
+            if( setK.run(2, globalsize, NULL, false) )
                 return *this;
         }
     }
@@ -836,7 +841,10 @@ UMat UMat::mul(InputArray m, double scale) const
 
 static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
 {
-    int type = _src1.type(), depth = CV_MAT_DEPTH(type);
+    UMat src1 = _src1.getUMat().reshape(1), src2 = _src2.getUMat().reshape(1);
+
+    int type = src1.type(), depth = CV_MAT_DEPTH(type),
+            kercn = ocl::predictOptimalVectorWidth(src1, src2);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if ( !doubleSupport && depth == CV_64F )
@@ -853,13 +861,18 @@ static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
 
     char cvt[40];
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
-                  format("-D srcT=%s -D dstT=%s -D ddepth=%d -D convertToDT=%s -D OP_DOT -D WGS=%d -D WGS2_ALIGNED=%d%s",
-                         ocl::typeToStr(depth), ocl::typeToStr(ddepth), ddepth, ocl::convertTypeStr(depth, ddepth, 1, cvt),
-                         (int)wgs, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                  format("-D srcT=%s -D srcT1=%s -D dstT=%s -D dstTK=%s -D ddepth=%d -D convertToDT=%s -D OP_DOT "
+                         "-D WGS=%d -D WGS2_ALIGNED=%d%s%s%s -D kercn=%d",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)), ocl::typeToStr(depth),
+                         ocl::typeToStr(ddepth), ocl::typeToStr(CV_MAKE_TYPE(ddepth, kercn)),
+                         ddepth, ocl::convertTypeStr(depth, ddepth, kercn, cvt),
+                         (int)wgs, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                         _src1.isContinuous() ? " -D HAVE_SRC_CONT" : "",
+                         _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "", kercn));
     if (k.empty())
         return false;
 
-    UMat src1 = _src1.getUMat().reshape(1), src2 = _src2.getUMat().reshape(1), db(1, dbsize, ddepth);
+    UMat db(1, dbsize, ddepth);
 
     ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1),
             src2arg = ocl::KernelArg::ReadOnlyNoSize(src2),

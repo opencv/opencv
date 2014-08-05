@@ -200,7 +200,6 @@ Here you will learn the about the basic building blocks of the library. A must r
                    :height: 90pt
                    :width:  90pt
 
-  =============== ======================================================
 +
   .. tabularcolumns:: m{100pt} m{300pt}
   .. cssclass:: toctableopencv
@@ -220,8 +219,6 @@ Here you will learn the about the basic building blocks of the library. A must r
                    :height: 90pt
                    :width:  90pt
   .. |Author_ElenaG| unicode:: Elena U+0020 Gvozdeva
-
-  =============== ======================================================
 
 .. raw:: latex
 

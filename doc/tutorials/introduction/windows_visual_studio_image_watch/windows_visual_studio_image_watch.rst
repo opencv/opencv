@@ -32,7 +32,7 @@ Image Watch works with any existing project that uses OpenCV image objects (for 
 
     #include <iostream>                        // std::cout
     #include <opencv2/core/core.hpp>           // cv::Mat
-    #include <opencv2/highgui/highgui.hpp>     // cv::imread()
+    #include <opencv2/imgcodecs/imgcodecs.hpp>     // cv::imread()
     #include <opencv2/imgproc/imgproc.hpp>     // cv::Canny()
 
     using namespace std;
@@ -77,6 +77,8 @@ Image Watch works with any existing project that uses OpenCV image objects (for 
 Make sure your active solution configuration (:menuselection:`Build --> Configuration Manager`) is set to a debug build (usually called "Debug"). This should disable compiler optimizations so that viewing variables in the debugger can work reliably.
 
 Build your solution (:menuselection:`Build --> Build Solution`, or press *F7*).
+
+Before continuing, do not forget to add the command line argument of your input image to your project (:menuselection:`Right click on project --> Properties --> Configuration Properties --> Debugging` and then set the field ``Command Arguments`` with the location of the image).
 
 Now set a breakpoint on the source line that says
 

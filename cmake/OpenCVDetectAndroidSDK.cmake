@@ -335,6 +335,16 @@ macro(add_android_project target path)
       add_dependencies(${target} ${android_proj_native_deps})
     endif()
 
+    if(ANDROID_EXAMPLES_WITH_LIBS)
+      add_custom_target(
+        ${target}_copy_libs
+        COMMAND ${CMAKE_COMMAND} -DSRC_DIR=${OpenCV_BINARY_DIR}/lib -DDST_DIR=${android_proj_bin_dir}/libs -P ${OpenCV_SOURCE_DIR}/cmake/copyAndroidLibs.cmake
+        WORKING_DIRECTORY ${OpenCV_BINARY_DIR}/lib
+        DEPENDS "${OpenCV_BINARY_DIR}/bin/classes.jar.dephelper" opencv_java
+      )
+      add_dependencies(${target} ${target}_copy_libs)
+    endif()
+
     if(__android_project_chain)
       add_dependencies(${target} ${__android_project_chain})
     endif()

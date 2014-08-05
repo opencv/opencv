@@ -356,7 +356,7 @@ Creates MergeRobertson object
 .. ocv:function:: Ptr<MergeRobertson> createMergeRobertson()
 
 References
-==========
+---------------------------
 
 .. [DM03] F. Drago, K. Myszkowski, T. Annen, N. Chiba, "Adaptive Logarithmic Mapping For Displaying High Contrast Scenes", Computer Graphics Forum, 2003, 22, 419 - 426.
 

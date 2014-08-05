@@ -2,6 +2,8 @@
 #include "precomp.hpp"
 #include <time.h>
 
+#if 0
+
 #define pCvSeq CvSeq*
 #define pCvDTreeNode CvDTreeNode*
 
@@ -1359,3 +1361,5 @@ float CvGBTrees::predict( const cv::Mat& sample, const cv::Mat& _missing,
     return predict(&_sample, _missing.empty() ? 0 : &miss, 0,
                    slice==cv::Range::all() ? CV_WHOLE_SEQ : cvSlice(slice.start, slice.end), k);
 }
+
+#endif

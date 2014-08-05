@@ -2,7 +2,7 @@
 #include <string>   // for strings
 
 #include <opencv2/core/core.hpp>        // Basic OpenCV structures (cv::Mat)
-#include <opencv2/highgui/highgui.hpp>  // Video write
+#include <opencv2/videoio/videoio.hpp>  // Video write
 
 using namespace std;
 using namespace cv;

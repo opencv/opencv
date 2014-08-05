@@ -129,6 +129,9 @@
 /* OpenNI library */
 #cmakedefine HAVE_OPENNI
 
+/* OpenNI library */
+#cmakedefine HAVE_OPENNI2
+
 /* PNG codec */
 #cmakedefine HAVE_PNG
 
