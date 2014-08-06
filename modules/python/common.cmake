@@ -71,6 +71,7 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import distutils.sysconfig; pri
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 set_target_properties(${the_module} PROPERTIES
+                      LIBRARY_OUTPUT_DIRECTORY  "${LIBRARY_OUTPUT_PATH}/${MODULE_NAME}"
                       PREFIX ""
                       OUTPUT_NAME cv2
                       SUFFIX ${CVPY_SUFFIX})
