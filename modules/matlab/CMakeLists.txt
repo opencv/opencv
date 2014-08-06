@@ -51,7 +51,7 @@ endmacro()
 if (IOS OR ANDROID OR NOT MATLAB_FOUND)
     ocv_module_disable(matlab)
     return()
-elseif (NOT PYTHONLIBS_FOUND)
+elseif (NOT PYTHON_DEFAULT_AVAILABLE)
     message(WARNING "A required dependency of the matlab module (PythonLibs) was not found. Disabling Matlab bindings...")
     ocv_module_disable(matlab)
     return()
@@ -153,7 +153,7 @@ if (NOT MEX_WORKS)
     # attempt to generate a gateway for a function
     message(STATUS "Trying to generate Matlab code")
     execute_process(
-        COMMAND ${PYTHON_EXECUTABLE}
+        COMMAND ${PYTHON_DEFAULT_EXECUTABLE}
                 ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py
                 --jinja2    ${JINJA2_PATH}
                 --hdrparser ${HDR_PARSER_PATH}
@@ -213,7 +213,7 @@ file(REMOVE ${GENERATE_PROXY} ${COMPILE_PROXY})
 # call the python executable to generate the Matlab gateways
 add_custom_command(
     OUTPUT ${GENERATE_PROXY}
-    COMMAND ${PYTHON_EXECUTABLE}
+    COMMAND ${PYTHON_DEFAULT_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py
             --jinja2     ${JINJA2_PATH}
             --hdrparser  ${HDR_PARSER_PATH}
@@ -222,7 +222,7 @@ add_custom_command(
             --modules    ${opencv_modules}
             --extra      ${opencv_extra_hdrs}
             --outdir     ${CMAKE_CURRENT_BINARY_DIR}
-    COMMAND ${PYTHON_EXECUTABLE}
+    COMMAND ${PYTHON_DEFAULT_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/generator/build_info.py
             --jinja2         ${JINJA2_PATH}
             --os             ${CMAKE_SYSTEM}
@@ -236,7 +236,7 @@ add_custom_command(
             --modules        ${opencv_modules}
             --configuration  $<CONFIGURATION>
             --outdir         ${CMAKE_CURRENT_BINARY_DIR}
-    COMMAND ${PYTHON_EXECUTABLE}
+    COMMAND ${PYTHON_DEFAULT_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/generator/cvmex.py
             --jinja2 ${JINJA2_PATH}
             --opts="${MEX_OPTS}"
@@ -299,7 +299,7 @@ string(REPLACE " " "\\ " MEX_CXXFLAGS ${MEX_CXXFLAGS})
 string(REPLACE ";" "\\ " MEX_INCLUDE_DIRS "${MEX_INCLUDE_DIRS}")
 install(CODE
     "execute_process(
-    COMMAND ${PYTHON_EXECUTABLE}
+    COMMAND ${PYTHON_DEFAULT_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/generator/cvmex.py
             --jinja2 ${JINJA2_PATH}
             --opts=${MEX_OPTS}
