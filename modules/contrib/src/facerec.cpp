@@ -98,6 +98,41 @@ inline vector<_Tp> remove_dups(const vector<_Tp>& src) {
     return elems;
 }
 
+struct predData
+{
+    int m_label;
+    double m_score;
+    predData() { }
+    predData(const int & label, const double & score)
+    {
+        m_label = label;
+        m_score = score;
+    }
+};
+
+struct dataSorter {
+    bool operator ()(const predData & d1, const predData & d2) const
+    {
+        return d1.m_score < d2.m_score;
+    }
+};
+
+bool foundLabel(const vector<predData> & predictions, const int & label, int & idx)
+{
+    int sz = (int)predictions.size();
+    if (sz)
+    {
+        for (int i=0; i<sz; i++)
+        {
+            if (predictions[i].m_label == label)
+            {
+                idx = i;
+                return true;
+            }
+        }
+    }
+    return false;
+}
 
 // Turk, M., and Pentland, A. "Eigenfaces for recognition.". Journal of
 // Cognitive Neuroscience 3 (1991), 71–86.
@@ -140,6 +175,9 @@ public:
 
     // Predicts the label and confidence for a given sample.
     void predict(InputArray _src, int &label, double &dist) const;
+
+    // Predicts the N best labels and confidences for a given sample
+    void predict( InputArray src, vector<int> & labels, vector<double> & confidence ) const;
 
     // See FaceRecognizer::load.
     void load(const FileStorage& fs);
@@ -195,6 +233,9 @@ public:
 
     // Predicts the label and confidence for a given sample.
     void predict(InputArray _src, int &label, double &dist) const;
+
+    // Predicts the N best labels and confidences for a given sample
+    void predict( InputArray src, vector<int> & labels, vector<double> & confidence ) const;
 
     // See FaceRecognizer::load.
     void load(const FileStorage& fs);
@@ -280,6 +321,9 @@ public:
 
     // Predicts the label and confidence for a given sample.
     void predict(InputArray _src, int &label, double &dist) const;
+
+    // Predict the N best labels and confidences for a given sample.
+    void predict( InputArray src, vector<int> & labels, vector<double> & confidence ) const;
 
     // See FaceRecognizer::load.
     void load(const FileStorage& fs);
@@ -407,6 +451,52 @@ void Eigenfaces::predict(InputArray _src, int &minClass, double &minDist) const 
     }
 }
 
+void Eigenfaces::predict(InputArray _src, vector<int> & labels, vector<double> & confidence) const {
+    // get data
+    Mat src = _src.getMat();
+    // make sure the user is passing correct data
+    if(_projections.empty()) {
+        // throw error if no data (or simply return -1?)
+        string error_message = "This Eigenfaces model is not computed yet. Did you call Eigenfaces::train?";
+        CV_Error(CV_StsError, error_message);
+    } else if(_eigenvectors.rows != static_cast<int>(src.total())) {
+        // check data alignment just for clearer exception messages
+        string error_message = format("Wrong input image size. Reason: Training and Test images must be of equal size! Expected an image with %d elements, but got %d.", _eigenvectors.rows, src.total());
+        CV_Error(CV_StsBadArg, error_message);
+    }
+    // project into PCA subspace
+    Mat q = subspaceProject(_eigenvectors, _mean, src.reshape(1,1));
+
+    // find N-nearest neighbor
+    vector<predData> predictions;
+    int max = __min((int)_projections.size(), _labels.rows);
+    for (int sampleIdx = 0; sampleIdx < max; sampleIdx++)
+    {
+        double dist = norm(_projections[sampleIdx], q, NORM_L2);
+        int label = _labels.at<int>(sampleIdx);
+        int idx = -1;
+        if (foundLabel(predictions, label, idx))
+        {
+            //keep better score (lower)
+            predictions[idx].m_score = __min(dist, predictions[idx].m_score);
+        }
+        else
+        {
+            predictions.push_back(predData(label, dist));
+        }
+    }
+
+    //sort data by score
+    sort(predictions.begin(), predictions.end(), dataSorter());
+    int sz = (int)predictions.size();
+
+    for (int i=0; i < sz; i++)
+    {
+        labels.push_back(predictions[i].m_label);
+        confidence.push_back(predictions[i].m_score);
+    }
+}
+
 int Eigenfaces::predict(InputArray _src) const {
     int label;
     double dummy;
@@ -524,6 +614,50 @@ void Fisherfaces::predict(InputArray _src, int &minClass, double &minDist) const
             minDist = dist;
             minClass = _labels.at<int>((int)sampleIdx);
         }
+    }
+}
+
+void Fisherfaces::predict(InputArray _src, vector<int> & labels, vector<double> & confidence) const {
+    Mat src = _src.getMat();
+    // check data alignment just for clearer exception messages
+    if(_projections.empty()) {
+        // throw error if no data (or simply return -1?)
+        string error_message = "This Fisherfaces model is not computed yet. Did you call Fisherfaces::train?";
+        CV_Error(CV_StsBadArg, error_message);
+    } else if(src.total() != (size_t) _eigenvectors.rows) {
+        string error_message = format("Wrong input image size. Reason: Training and Test images must be of equal size! Expected an image with %d elements, but got %d.", _eigenvectors.rows, src.total());
+        CV_Error(CV_StsBadArg, error_message);
+    }
+    // project into LDA subspace
+    Mat q = subspaceProject(_eigenvectors, _mean, src.reshape(1,1));
+
+    // find N-nearest neighbor
+    vector<predData> predictions;
+    int max = __min((int)_projections.size(), _labels.rows);
+    for (int sampleIdx = 0; sampleIdx < max; sampleIdx++)
+    {
+        double dist = norm(_projections[sampleIdx], q, NORM_L2);
+        int label = _labels.at<int>(sampleIdx);
+        int idx = -1;
+        if (foundLabel(predictions, label, idx))
+        {
+            //keep better score (lower)
+            predictions[idx].m_score = __min(dist, predictions[idx].m_score);
+        }
+        else
+        {
+            predictions.push_back(predData(label, dist));
+        }
+    }
+
+    //sort data by score
+    sort(predictions.begin(), predictions.end(), dataSorter());
+    int sz = (int)predictions.size();
+
+    for (int i=0; i < sz; i++)
+    {
+        labels.push_back(predictions[i].m_label);
+        confidence.push_back(predictions[i].m_score);
     }
 }
 
@@ -839,6 +973,50 @@ void LBPH::predict(InputArray _src, int &minClass, double &minDist) const {
             minDist = dist;
             minClass = _labels.at<int>((int) sampleIdx);
         }
+    }
+}
+
+void LBPH::predict( InputArray _src, vector<int> & labels, vector<double> & confidence ) const {
+    if(_histograms.empty()) {
+        // throw error if no data (or simply return -1?)
+        string error_message = "This LBPH model is not computed yet. Did you call the train method?";
+        CV_Error(CV_StsBadArg, error_message);
+    }
+    Mat src = _src.getMat();
+    // get the spatial histogram from input image
+    Mat lbp_image = elbp(src, _radius, _neighbors);
+    Mat query = spatial_histogram(
+        lbp_image, /* lbp_image */
+        static_cast<int>(std::pow(2.0, static_cast<double>(_neighbors))), /* number of possible patterns */
+        _grid_x, /* grid size x */
+        _grid_y, /* grid size y */
+        true /* normed histograms */);
+    // find N-nearest neighbor
+    vector<predData> predictions;
+    int max = __min((int)_histograms.size(), _labels.rows);
+    for (int sampleIdx = 0; sampleIdx < max; sampleIdx++)
+    {
+        double dist = compareHist(_histograms[sampleIdx], query, CV_COMP_CHISQR);
+        int label = _labels.at<int>(sampleIdx);
+        int idx = -1;
+        if (foundLabel(predictions, label, idx))
+        {
+            //keep better score (lower)
+            predictions[idx].m_score = __min(dist, predictions[idx].m_score);
+        }
+        else
+        {
+            predictions.push_back(predData(label, dist));
+        }
+    }
+
+    //sort data by score
+    sort(predictions.begin(), predictions.end(), dataSorter());
+    int sz = (int)predictions.size();
+    for (int i=0; i < sz; i++)
+    {
+        labels.push_back(predictions[i].m_label);
+        confidence.push_back(predictions[i].m_score);
     }
 }
 
