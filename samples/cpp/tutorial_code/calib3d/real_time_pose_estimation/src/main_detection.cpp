@@ -1,9 +1,6 @@
 #include <iostream>
 #include <time.h>
 
-#include "cv.h"
-#include "highgui.h"
-
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -155,7 +152,7 @@ int main(int argc, char *argv[])
 
 
   // Create & Open Window
-  cv::namedWindow("REAL TIME DEMO", CV_WINDOW_KEEPRATIO);
+  cv::namedWindow("REAL TIME DEMO", cv::WINDOW_KEEPRATIO);
 
 
   cv::VideoCapture cap;                           // instantiate VideoCapture
