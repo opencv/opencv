@@ -11,7 +11,7 @@ CsvReader::CsvReader(const std::string &path, const char &separator){
 void CsvReader::readPLY(std::vector<cv::Point3f> &list_vertex, std::vector<std::vector<int> > &list_triangles)
 {
     std::string line, tmp_str, n;
-    int num_vertex, num_triangles;
+    int num_vertex = 0, num_triangles = 0;
     int count = 0;
     bool end_header = false;
     bool end_vertex = false;
