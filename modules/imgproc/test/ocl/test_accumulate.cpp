@@ -73,8 +73,12 @@ PARAM_TEST_CASE(AccumulateBase, std::pair<MatDepth, MatDepth>, Channels, bool)
 
     void random_roi()
     {
+        // workaround for discrete GPU
+        dst_roi.release(); udst_roi.release();
+        dst.release(); udst.release();
+
         const int stype = CV_MAKE_TYPE(sdepth, channels),
-                dtype = CV_MAKE_TYPE(ddepth, channels);
+                  dtype = CV_MAKE_TYPE(ddepth, channels);
 
         Size roiSize = randomSize(1, 10);
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
