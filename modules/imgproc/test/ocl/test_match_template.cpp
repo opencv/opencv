@@ -116,9 +116,9 @@ OCL_TEST_P(MatchTemplate, Mat)
         method == TM_CCORR_NORMED ||
         method == TM_SQDIFF_NORMED ||
         method == TM_CCOEFF_NORMED;
-        
+
         double eps = isNormed ? 3e-2 : 255.0 * 255.0 * templ.total() * 2e-5;
-        
+
         Near(eps);
     }
 }
