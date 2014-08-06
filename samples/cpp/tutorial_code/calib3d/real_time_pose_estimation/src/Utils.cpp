@@ -97,7 +97,7 @@ void drawPoints(cv::Mat image, std::vector<cv::Point2f> &list_points_2d, std::ve
   }
 }
 
-// Draw only the points
+// Draw only the 2D points
 void draw2DPoints(cv::Mat image, std::vector<cv::Point2f> &list_points, cv::Scalar color)
 {
   for( size_t i = 0; i < list_points.size(); i++)
@@ -109,6 +109,7 @@ void draw2DPoints(cv::Mat image, std::vector<cv::Point2f> &list_points, cv::Scal
   }
 }
 
+// Draw an arrow into the image
 void drawArrow(cv::Mat image, cv::Point2i p, cv::Point2i q, cv::Scalar color, int arrowMagnitude, int thickness, int line_type, int shift)
 {
   //Draw the principle line
@@ -128,6 +129,7 @@ void drawArrow(cv::Mat image, cv::Point2i p, cv::Point2i q, cv::Scalar color, in
   cv::line(image, p, q, color, thickness, line_type, shift);
 }
 
+// Draw the 3D coordinate axes
 void draw3DCoordinateAxes(cv::Mat image, const std::vector<cv::Point2f> &list_points2d)
 {
   cv::Scalar red(0, 0, 255);
@@ -172,16 +174,13 @@ void drawObjectMesh(cv::Mat image, const Mesh *mesh, PnPProblem *pnpProblem, cv:
   }
 }
 
-bool equal_point(const cv::Point2f &p1, const cv::Point2f &p2)
-{
-  return ( (p1.x == p2.x) && (p1.y == p2.y) );
-}
-
+// Computes the norm of the translation error
 double get_translation_error(const cv::Mat &t_true, const cv::Mat &t)
 {
   return cv::norm( t_true - t );
 }
 
+// Computes the norm of the rotation error
 double get_rotation_error(const cv::Mat &R_true, const cv::Mat &R)
 {
   cv::Mat error_vec, error_mat;
@@ -191,6 +190,7 @@ double get_rotation_error(const cv::Mat &R_true, const cv::Mat &R)
   return cv::norm(error_vec);
 }
 
+// Converts a given Rotation Matrix to Euler angles
 cv::Mat rot2euler(const cv::Mat & rotationMatrix)
 {
   cv::Mat euler(3,1,CV_64F);
@@ -232,6 +232,7 @@ cv::Mat rot2euler(const cv::Mat & rotationMatrix)
   return euler;
 }
 
+// Converts a given Euler angles to Rotation Matrix
 cv::Mat euler2rot(const cv::Mat & euler)
 {
   cv::Mat rotationMatrix(3,3,CV_64F);
@@ -273,6 +274,7 @@ cv::Mat euler2rot(const cv::Mat & euler)
   return rotationMatrix;
 }
 
+// Converts a given string to an integer
 int StringToInt ( const std::string &Text )
 {
    std::istringstream ss(Text);
@@ -280,6 +282,7 @@ int StringToInt ( const std::string &Text )
    return ss >> result ? result : 0;
 }
 
+// Converts a given float to a string
 std::string FloatToString ( float Number )
 {
   std::ostringstream ss;
@@ -287,6 +290,7 @@ std::string FloatToString ( float Number )
   return ss.str();
 }
 
+// Converts a given integer to a string
 std::string IntToString ( int Number )
 {
   std::ostringstream ss;
