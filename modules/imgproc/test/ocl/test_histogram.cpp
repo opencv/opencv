@@ -206,9 +206,9 @@ OCL_TEST_P(CalcBackProject, Mat)
         OCL_ON(cv::calcBackProject(uimages_roi, channels, uhist_roi, udst_roi, ranges, scale));
 
         Size dstSize = dst_roi.size();
-        int nDiffs = (int)(0.06f*dstSize.area()+1);
+        int nDiffs = std::max((int)(0.07f*dstSize.area()), 1);
 
-        //check if the dst mats are the same except 6% difference
+        //check if the dst mats are the same except 7% difference
         EXPECT_MAT_N_DIFF(dst_roi, udst_roi, nDiffs);
     }
 }
