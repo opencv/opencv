@@ -9,7 +9,6 @@
 #define UTILS_H_
 
 #include <iostream>
-#include <cv.h>
 
 #include "PnPProblem.h"
 

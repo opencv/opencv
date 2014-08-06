@@ -1,8 +1,5 @@
 #include <iostream>
 
-#include "cv.h"
-#include "highgui.h"
-
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/nonfree/features2d.hpp>
@@ -132,7 +129,7 @@ int main(int, char**)
   registration.setNumMax(n);
 
   // Create & Open Window
-  cv::namedWindow("MODEL GROUND TRUTH", CV_WINDOW_KEEPRATIO);
+  cv::namedWindow("MODEL GROUND TRUTH", cv::WINDOW_KEEPRATIO);
 
   // Set up the mouse events
   cv::setMouseCallback("MODEL GROUND TRUTH", onMouseModelVerification, 0 );
