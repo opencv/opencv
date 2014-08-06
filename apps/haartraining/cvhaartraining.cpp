@@ -3005,6 +3005,8 @@ void cvCreatePngTrainingSet(const char* infoname,
             int inverse;
             int border = 5;
 
+            CvSize origsize;
+
             info = fopen( infoname, "w" );
             strcpy( fullname, infoname );
 
@@ -3082,7 +3084,11 @@ void cvCreatePngTrainingSet(const char* infoname,
                 width = width * scale + 2*border;
                 height = height * scale + 2*border;
 
-                cvResize(&cvbgreader->src, &result);
+                origsize = cvGetSize(&cvbgreader->src);
+                if( origsize.height > winheight || origsize.width > winwidth )
+                {
+                    cvResize(&cvbgreader->src, &result);
+                }
 
                 sprintf( filename, "%04d_%04d_%04d_%04d_%04d",
                          (i + 1), x, y, width, height);
