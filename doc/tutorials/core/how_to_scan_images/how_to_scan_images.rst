@@ -45,7 +45,7 @@ The final argument is optional. If given the image will be loaded in gray scale 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
    :language: cpp
    :tab-width: 4
-   :lines: 48-60
+   :lines: 49-61
 
 Here we first use the C++ *stringstream* class to convert the third command line argument from text to an integer format. Then we use a simple look and the upper formula to calculate the lookup table. No OpenCV specific stuff here.
 
@@ -99,7 +99,7 @@ When it comes to performance you cannot beat the classic C style operator[] (poi
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
    :language: cpp
    :tab-width: 4
-   :lines: 125-152
+   :lines: 126-153
 
 Here we basically just acquire a pointer to the start of each row and go through it until it ends. In the special case that the matrix is stored in a continues manner we only need to request the pointer a single time and go all the way to the end. We need to look out for color images: we have three channels so we need to pass through three times more items in each row.
 
@@ -122,7 +122,7 @@ In case of the efficient way making sure that you pass through the right amount 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
    :language: cpp
    :tab-width: 4
-   :lines: 154-182
+   :lines: 155-183
 
 In case of color images we have three uchar items per column. This may be considered a short vector of uchar items, that has been baptized in OpenCV with the *Vec3b* name. To access the n-th sub column we use simple operator[] access. It's important to remember that OpenCV iterators go through the columns and automatically skip to the next row. Therefore in case of color images if you use a simple *uchar* iterator you'll be able to access only the blue channel values.
 
@@ -134,7 +134,7 @@ The final method isn't recommended for scanning. It was made to acquire or modif
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
    :language: cpp
    :tab-width: 4
-   :lines: 184-216
+   :lines: 185-217
 
 The functions takes your input type and coordinates and calculates on the fly the address of the queried item. Then returns a reference to that. This may be a constant when you *get* the value and non-constant when you *set* the value. As a safety step in **debug mode only*** there is performed a check that your input coordinates are valid and does exist. If this isn't the case you'll get a nice output message of this on the standard error output stream. Compared to the efficient way in release mode the only difference in using this is that for every element of the image you'll get a new row pointer for what we use the C operator[] to acquire the column element.
 
@@ -148,14 +148,14 @@ This is a bonus method of achieving lookup table modification in an image. Becau
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
    :language: cpp
    :tab-width: 4
-   :lines: 107-110
+   :lines: 108-111
 
 Finally call the function (I is our input image and J the output one):
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
    :language: cpp
    :tab-width: 4
-   :lines: 115
+   :lines: 116
 
 Performance Difference
 ======================

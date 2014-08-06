@@ -15,6 +15,8 @@ opencv_hdr_list = [
 "../../video/include/opencv2/video/tracking.hpp",
 "../../video/include/opencv2/video/background_segm.hpp",
 "../../objdetect/include/opencv2/objdetect.hpp",
+"../../imgcodecs/include/opencv2/imgcodecs.hpp",
+"../../videoio/include/opencv2/videoio.hpp",
 "../../highgui/include/opencv2/highgui.hpp"
 ]
 
@@ -206,6 +208,8 @@ class CppHeaderParser(object):
     def parse_enum(self, decl_str):
         l = decl_str
         ll = l.split(",")
+        if ll[-1].strip() == "":
+            ll = ll[:-1]
         prev_val = ""
         prev_val_delta = -1
         decl = []

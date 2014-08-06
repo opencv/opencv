@@ -200,6 +200,12 @@ Command line arguments of ``opencv_traincascade`` application grouped by purpose
 
         This argument is actual in case of Haar-like features. If it is specified, the cascade will be saved in the old format.
 
+    * ``-numThreads <max_number_of_threads>``
+
+        Maximum number of threads to use during training. Notice that
+        the actual number of used threads may be lower, depending on
+        your machine and compilation options.
+
 #.
 
     Cascade parameters:

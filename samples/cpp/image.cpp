@@ -22,6 +22,7 @@ static void help()
 
 #ifdef DEMO_MIXED_API_USE
 #  include <opencv2/highgui/highgui_c.h>
+#  include <opencv2/imgcodecs/imgcodecs_c.h>
 #endif
 
 int main( int argc, char** argv )

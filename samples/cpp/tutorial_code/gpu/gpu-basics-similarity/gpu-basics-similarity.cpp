@@ -4,7 +4,7 @@
 #include <opencv2/core.hpp>      // Basic OpenCV structures
 #include <opencv2/core/utility.hpp>
 #include <opencv2/imgproc.hpp>// Image processing methods for the CPU
-#include <opencv2/highgui.hpp>// Read images
+#include <opencv2/imgcodecs.hpp>// Read images
 
 // CUDA structures and methods
 #include <opencv2/cudaarithm.hpp>

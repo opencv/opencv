@@ -203,6 +203,128 @@ static Moments contourMoments( const Mat& contour )
 \****************************************************************************************/
 
 template<typename T, typename WT, typename MT>
+struct MomentsInTile_SSE
+{
+    int operator() (const T *, int, WT &, WT &, WT &, MT &)
+    {
+        return 0;
+    }
+};
+
+#if CV_SSE2
+
+template <>
+struct MomentsInTile_SSE<uchar, int, int>
+{
+    MomentsInTile_SSE()
+    {
+        useSIMD = checkHardwareSupport(CV_CPU_SSE2);
+    }
+
+    int operator() (const uchar * ptr, int len, int & x0, int & x1, int & x2, int & x3)
+    {
+        int x = 0;
+
+        if( useSIMD )
+        {
+            __m128i qx_init = _mm_setr_epi16(0, 1, 2, 3, 4, 5, 6, 7);
+            __m128i dx = _mm_set1_epi16(8);
+            __m128i z = _mm_setzero_si128(), qx0 = z, qx1 = z, qx2 = z, qx3 = z, qx = qx_init;
+
+            for( ; x <= len - 8; x += 8 )
+            {
+                __m128i p = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(ptr + x)), z);
+                qx0 = _mm_add_epi32(qx0, _mm_sad_epu8(p, z));
+                __m128i px = _mm_mullo_epi16(p, qx);
+                __m128i sx = _mm_mullo_epi16(qx, qx);
+                qx1 = _mm_add_epi32(qx1, _mm_madd_epi16(p, qx));
+                qx2 = _mm_add_epi32(qx2, _mm_madd_epi16(p, sx));
+                qx3 = _mm_add_epi32(qx3, _mm_madd_epi16(px, sx));
+
+                qx = _mm_add_epi16(qx, dx);
+            }
+
+            int CV_DECL_ALIGNED(16) buf[4];
+            _mm_store_si128((__m128i*)buf, qx0);
+            x0 = buf[0] + buf[1] + buf[2] + buf[3];
+            _mm_store_si128((__m128i*)buf, qx1);
+            x1 = buf[0] + buf[1] + buf[2] + buf[3];
+            _mm_store_si128((__m128i*)buf, qx2);
+            x2 = buf[0] + buf[1] + buf[2] + buf[3];
+            _mm_store_si128((__m128i*)buf, qx3);
+            x3 = buf[0] + buf[1] + buf[2] + buf[3];
+        }
+
+        return x;
+    }
+
+    bool useSIMD;
+};
+
+#endif
+
+#if CV_SSE4_1
+
+template <>
+struct MomentsInTile_SSE<ushort, int, int64>
+{
+    MomentsInTile_SSE()
+    {
+        useSIMD = checkHardwareSupport(CV_CPU_SSE4_1);
+    }
+
+    int operator() (const ushort * ptr, int len, int & x0, int & x1, int & x2, int64 & x3)
+    {
+        int x = 0;
+
+        if (useSIMD)
+        {
+            __m128i vx_init0 = _mm_setr_epi32(0, 1, 2, 3), vx_init1 = _mm_setr_epi32(4, 5, 6, 7),
+                v_delta = _mm_set1_epi32(8), v_zero = _mm_setzero_si128(), v_x0 = v_zero,
+                v_x1 = v_zero, v_x2 = v_zero, v_x3 = v_zero, v_ix0 = vx_init0, v_ix1 = vx_init1;
+
+            for( ; x <= len - 8; x += 8 )
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(ptr + x));
+                __m128i v_src0 = _mm_unpacklo_epi16(v_src, v_zero), v_src1 = _mm_unpackhi_epi16(v_src, v_zero);
+
+                v_x0 = _mm_add_epi32(v_x0, _mm_add_epi32(v_src0, v_src1));
+                __m128i v_x1_0 = _mm_mullo_epi32(v_src0, v_ix0), v_x1_1 = _mm_mullo_epi32(v_src1, v_ix1);
+                v_x1 = _mm_add_epi32(v_x1, _mm_add_epi32(v_x1_0, v_x1_1));
+
+                __m128i v_2ix0 = _mm_mullo_epi32(v_ix0, v_ix0), v_2ix1 = _mm_mullo_epi32(v_ix1, v_ix1);
+                v_x2 = _mm_add_epi32(v_x2, _mm_add_epi32(_mm_mullo_epi32(v_2ix0, v_src0), _mm_mullo_epi32(v_2ix1, v_src1)));
+
+                __m128i t = _mm_add_epi32(_mm_mullo_epi32(v_2ix0, v_x1_0), _mm_mullo_epi32(v_2ix1, v_x1_1));
+                v_x3 = _mm_add_epi64(v_x3, _mm_add_epi64(_mm_unpacklo_epi32(t, v_zero), _mm_unpackhi_epi32(t, v_zero)));
+
+                v_ix0 = _mm_add_epi32(v_ix0, v_delta);
+                v_ix1 = _mm_add_epi32(v_ix1, v_delta);
+            }
+
+            int CV_DECL_ALIGNED(16) buf[4];
+            int64 CV_DECL_ALIGNED(16) buf64[2];
+
+            _mm_store_si128((__m128i*)buf, v_x0);
+            x0 = buf[0] + buf[1] + buf[2] + buf[3];
+            _mm_store_si128((__m128i*)buf, v_x1);
+            x1 = buf[0] + buf[1] + buf[2] + buf[3];
+            _mm_store_si128((__m128i*)buf, v_x2);
+            x2 = buf[0] + buf[1] + buf[2] + buf[3];
+
+            _mm_store_si128((__m128i*)buf64, v_x3);
+            x3 = buf64[0] + buf64[1];
+        }
+
+        return x;
+    }
+
+    bool useSIMD;
+};
+
+#endif
+
+template<typename T, typename WT, typename MT>
 #if defined __GNUC__ && __GNUC__ == 4 && __GNUC_MINOR__ >= 5 && __GNUC_MINOR__ < 9
 // Workaround for http://gcc.gnu.org/bugzilla/show_bug.cgi?id=60196
 __attribute__((optimize("no-tree-vectorize")))
@@ -212,14 +334,16 @@ static void momentsInTile( const Mat& img, double* moments )
     Size size = img.size();
     int x, y;
     MT mom[10] = {0,0,0,0,0,0,0,0,0,0};
+    MomentsInTile_SSE<T, WT, MT> vop;
 
     for( y = 0; y < size.height; y++ )
     {
         const T* ptr = (const T*)(img.data + y*img.step);
         WT x0 = 0, x1 = 0, x2 = 0;
         MT x3 = 0;
+        x = vop(ptr, size.width, x0, x1, x2, x3);
 
-        for( x = 0; x < size.width; x++ )
+        for( ; x < size.width; x++ )
         {
             WT p = ptr[x];
             WT xp = x * p, xxp;
@@ -248,85 +372,6 @@ static void momentsInTile( const Mat& img, double* moments )
     for( x = 0; x < 10; x++ )
         moments[x] = (double)mom[x];
 }
-
-
-#if CV_SSE2
-
-template<> void momentsInTile<uchar, int, int>( const cv::Mat& img, double* moments )
-{
-    typedef uchar T;
-    typedef int WT;
-    typedef int MT;
-    Size size = img.size();
-    int y;
-    MT mom[10] = {0,0,0,0,0,0,0,0,0,0};
-    bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const T* ptr = img.ptr<T>(y);
-        int x0 = 0, x1 = 0, x2 = 0, x3 = 0, x = 0;
-
-        if( useSIMD )
-        {
-            __m128i qx_init = _mm_setr_epi16(0, 1, 2, 3, 4, 5, 6, 7);
-            __m128i dx = _mm_set1_epi16(8);
-            __m128i z = _mm_setzero_si128(), qx0 = z, qx1 = z, qx2 = z, qx3 = z, qx = qx_init;
-
-            for( ; x <= size.width - 8; x += 8 )
-            {
-                __m128i p = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(ptr + x)), z);
-                qx0 = _mm_add_epi32(qx0, _mm_sad_epu8(p, z));
-                __m128i px = _mm_mullo_epi16(p, qx);
-                __m128i sx = _mm_mullo_epi16(qx, qx);
-                qx1 = _mm_add_epi32(qx1, _mm_madd_epi16(p, qx));
-                qx2 = _mm_add_epi32(qx2, _mm_madd_epi16(p, sx));
-                qx3 = _mm_add_epi32(qx3, _mm_madd_epi16(px, sx));
-
-                qx = _mm_add_epi16(qx, dx);
-            }
-            int CV_DECL_ALIGNED(16) buf[4];
-            _mm_store_si128((__m128i*)buf, qx0);
-            x0 = buf[0] + buf[1] + buf[2] + buf[3];
-            _mm_store_si128((__m128i*)buf, qx1);
-            x1 = buf[0] + buf[1] + buf[2] + buf[3];
-            _mm_store_si128((__m128i*)buf, qx2);
-            x2 = buf[0] + buf[1] + buf[2] + buf[3];
-            _mm_store_si128((__m128i*)buf, qx3);
-            x3 = buf[0] + buf[1] + buf[2] + buf[3];
-        }
-
-        for( ; x < size.width; x++ )
-        {
-            WT p = ptr[x];
-            WT xp = x * p, xxp;
-
-            x0 += p;
-            x1 += xp;
-            xxp = xp * x;
-            x2 += xxp;
-            x3 += xxp * x;
-        }
-
-        WT py = y * x0, sy = y*y;
-
-        mom[9] += ((MT)py) * sy;  // m03
-        mom[8] += ((MT)x1) * sy;  // m12
-        mom[7] += ((MT)x2) * y;  // m21
-        mom[6] += x3;             // m30
-        mom[5] += x0 * sy;        // m02
-        mom[4] += x1 * y;         // m11
-        mom[3] += x2;             // m20
-        mom[2] += py;             // m01
-        mom[1] += x1;             // m10
-        mom[0] += x0;             // m00
-    }
-
-    for(int x = 0; x < 10; x++ )
-        moments[x] = (double)mom[x];
-}
-
-#endif
 
 typedef void (*MomentsInTileFunc)(const Mat& img, double* moments);
 
