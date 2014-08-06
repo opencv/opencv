@@ -222,11 +222,6 @@ public:
     void save(FileStorage& fs) const;
 
     AlgorithmInfo* info() const;
-    
-    /*
-    Mat getLabels() const;
-    vector<Mat> getImages() const;
-    */
 };
 
 // Belhumeur, P. N., Hespanha, J., and Kriegman, D. "Eigenfaces vs. Fisher-
@@ -282,11 +277,6 @@ public:
     void save(FileStorage& fs) const;
 
     AlgorithmInfo* info() const;
-    
-    /*
-    Mat getLabels() const;
-    vector<Mat> getImages() const;
-    */
 };
 
 // Face Recognition based on Local Binary Patterns.
@@ -381,11 +371,6 @@ public:
     int grid_y() const { return _grid_y; }
 
     AlgorithmInfo* info() const;
-    
-    /*
-    Mat getLabels() const;
-    vector<Mat> getImages() const;
-    */
 };
 
 
@@ -574,14 +559,7 @@ void Eigenfaces::save(FileStorage& fs) const {
         fs << LabelInfo(it->first, it->second);
     fs << "]";
 }
-/*
-Mat Eigenfaces::getLabels() const {
-    return _labels;
-}
-
-vector<Mat> Eigenfaces::getImages() const {
-    return _projections;
-}
+    
 */
 //------------------------------------------------------------------------------
 // Fisherfaces
@@ -719,15 +697,7 @@ void Fisherfaces::save(FileStorage& fs) const {
         fs << LabelInfo(it->first, it->second);
     fs << "]";
 }
-/*
-Mat Fisherfaces::getLabels() const {
-    return _labels;
-}
 
-vector<Mat> Fisherfaces::getImages() const {
-    return _projections;
-}
-*/
 //------------------------------------------------------------------------------
 // LBPH
 //------------------------------------------------------------------------------
@@ -954,7 +924,6 @@ void LBPH::update(InputArrayOfArrays _in_src, InputArray _in_labels) {
 }
     
 void LBPH::forget(InputArray _in_labels) {
-    //printf("Forgetting %i labels\n", _in_labels.total());
     // got no data, just return
     if(_in_labels.total() == 0)
         return;
@@ -968,14 +937,11 @@ void LBPH::forget(InputArray _in_labels) {
     Mat labels = _in_labels.getMat();
     // store the forgotten labels
     cv::Mat indexes;
-    //printf("Checking %i forgotten labels against %i existing labels\n", labels.total(), _labels.rows);
     for (int i = 0; i < _labels.rows; i++) {
         int _label = _labels.at<int>(i);
         for (size_t j = 0; j < labels.total(); j++) {
             int label = labels.at<int>((int)j);
-            //printf("Checking forgotten label %i against existing label %i\n", label, _label);
             if (_label == label) {
-                //printf("Adding index %i to list of forgotten labels\n", i);
                 indexes.push_back(i);
                 break;
             }
@@ -985,9 +951,7 @@ void LBPH::forget(InputArray _in_labels) {
     cv::Mat good_labels;
     vector<cv::Mat> good_histograms;
     
-    //printf("Checking %i found labels against %i existing labels\n", indexes.rows, _labels.rows);
     for (int i = 0; i < _labels.rows; i++) {
-        //int _label = _labels.at<int>(i);
         bool found = false;
         for (int j = 0; j < indexes.rows; j++) {
             int index = indexes.at<int>(j);
@@ -997,7 +961,6 @@ void LBPH::forget(InputArray _in_labels) {
             }
         }
         if (found) {
-            //printf("LBPH FaceRecognizer forgetting label %i\n", _labels.at<int>(i));
             continue;
         }
         good_labels.push_back(_labels.at<int>(i));
@@ -1088,15 +1051,7 @@ int LBPH::predict(InputArray _src) const {
     predict(_src, label, dummy);
     return label;
 }
-/*
-Mat LBPH::getLabels() const {
-    return _labels;
-}
-    
-vector<Mat> LBPH::getImages() const {
-    return _histograms;
-}
-*/
+
 Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components, double threshold)
 {
     return new Eigenfaces(num_components, threshold);
