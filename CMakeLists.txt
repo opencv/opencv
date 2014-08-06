@@ -337,6 +337,9 @@ if(DEFINED CMAKE_DEBUG_POSTFIX)
   set(OPENCV_DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}")
 endif()
 
+if(INSTALL_CREATE_DISTRIB AND BUILD_SHARED_LIBS AND NOT DEFINED BUILD_opencv_world)
+  set(BUILD_opencv_world ON CACHE INTERNAL "")
+endif()
 
 # ----------------------------------------------------------------------------
 #  Path for build/platform -specific headers
@@ -554,7 +557,6 @@ endif()
 # ----------------------------------------------------------------------------
 # Finalization: generate configuration-based files
 # ----------------------------------------------------------------------------
-ocv_track_build_dependencies()
 
 # Generate platform-dependent and configuration-dependent headers
 include(cmake/OpenCVGenHeaders.cmake)

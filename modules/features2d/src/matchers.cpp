@@ -41,7 +41,7 @@
 
 #include "precomp.hpp"
 #include <limits>
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_features2d.hpp"
 
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 2
 #include <Eigen/Array>
