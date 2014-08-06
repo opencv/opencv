@@ -222,6 +222,11 @@ public:
     void save(FileStorage& fs) const;
 
     AlgorithmInfo* info() const;
+    
+    /*
+    Mat getLabels() const;
+    vector<Mat> getImages() const;
+    */
 };
 
 // Belhumeur, P. N., Hespanha, J., and Kriegman, D. "Eigenfaces vs. Fisher-
@@ -277,6 +282,11 @@ public:
     void save(FileStorage& fs) const;
 
     AlgorithmInfo* info() const;
+    
+    /*
+    Mat getLabels() const;
+    vector<Mat> getImages() const;
+    */
 };
 
 // Face Recognition based on Local Binary Patterns.
@@ -348,6 +358,10 @@ public:
     // corresponding labels in labels.
     void update(InputArrayOfArrays src, InputArray labels);
 
+    // Removes the images with the given corresponding labels
+    // from the LBPH model.
+    void forget(InputArray labels);
+
     // Predicts the label of a query image in src.
     int predict(InputArray src) const;
 
@@ -367,6 +381,11 @@ public:
     int grid_y() const { return _grid_y; }
 
     AlgorithmInfo* info() const;
+    
+    /*
+    Mat getLabels() const;
+    vector<Mat> getImages() const;
+    */
 };
 
 
@@ -381,6 +400,17 @@ void FaceRecognizer::update(InputArrayOfArrays src, InputArray labels ) {
     }
 
     string error_msg = format("This FaceRecognizer (%s) does not support updating, you have to use FaceRecognizer::train to update it.", this->name().c_str());
+    CV_Error(CV_StsNotImplemented, error_msg);
+}
+    
+void FaceRecognizer::forget(InputArray labels) {
+    if( dynamic_cast<LBPH*>(this) != 0 )
+    {
+        dynamic_cast<LBPH*>(this)->forget(labels);
+        return;
+    }
+
+    string error_msg = format("This FaceRecognizer (%s) does not support forgetting, you have to use FaceRecognizer::train to retrain it.", this->name().c_str());
     CV_Error(CV_StsNotImplemented, error_msg);
 }
 
@@ -544,7 +574,15 @@ void Eigenfaces::save(FileStorage& fs) const {
         fs << LabelInfo(it->first, it->second);
     fs << "]";
 }
+/*
+Mat Eigenfaces::getLabels() const {
+    return _labels;
+}
 
+vector<Mat> Eigenfaces::getImages() const {
+    return _projections;
+}
+*/
 //------------------------------------------------------------------------------
 // Fisherfaces
 //------------------------------------------------------------------------------
@@ -681,7 +719,15 @@ void Fisherfaces::save(FileStorage& fs) const {
         fs << LabelInfo(it->first, it->second);
     fs << "]";
 }
+/*
+Mat Fisherfaces::getLabels() const {
+    return _labels;
+}
 
+vector<Mat> Fisherfaces::getImages() const {
+    return _projections;
+}
+*/
 //------------------------------------------------------------------------------
 // LBPH
 //------------------------------------------------------------------------------
@@ -906,6 +952,61 @@ void LBPH::update(InputArrayOfArrays _in_src, InputArray _in_labels) {
 
     this->train(_in_src, _in_labels, true);
 }
+    
+void LBPH::forget(InputArray _in_labels) {
+    //printf("Forgetting %i labels\n", _in_labels.total());
+    // got no data, just return
+    if(_in_labels.total() == 0)
+        return;
+    
+    if(_in_labels.getMat().type() != CV_32SC1) {
+        string error_message = format("Labels must be given as integer (CV_32SC1). Expected %d, but was %d.", CV_32SC1, _in_labels.type());
+        CV_Error(CV_StsUnsupportedFormat, error_message);
+    }
+    
+    // get the label matrix
+    Mat labels = _in_labels.getMat();
+    // store the forgotten labels
+    cv::Mat indexes;
+    //printf("Checking %i forgotten labels against %i existing labels\n", labels.total(), _labels.rows);
+    for (int i = 0; i < _labels.rows; i++) {
+        int _label = _labels.at<int>(i);
+        for (size_t j = 0; j < labels.total(); j++) {
+            int label = labels.at<int>((int)j);
+            //printf("Checking forgotten label %i against existing label %i\n", label, _label);
+            if (_label == label) {
+                //printf("Adding index %i to list of forgotten labels\n", i);
+                indexes.push_back(i);
+                break;
+            }
+        }
+    }
+    // remove the forgotten labels and histograms
+    cv::Mat good_labels;
+    vector<cv::Mat> good_histograms;
+    
+    //printf("Checking %i found labels against %i existing labels\n", indexes.rows, _labels.rows);
+    for (int i = 0; i < _labels.rows; i++) {
+        //int _label = _labels.at<int>(i);
+        bool found = false;
+        for (int j = 0; j < indexes.rows; j++) {
+            int index = indexes.at<int>(j);
+            if (i == index) {
+                found = true;
+                break;
+            }
+        }
+        if (found) {
+            //printf("LBPH FaceRecognizer forgetting label %i\n", _labels.at<int>(i));
+            continue;
+        }
+        good_labels.push_back(_labels.at<int>(i));
+        good_histograms.push_back(_histograms[i]);
+    }
+    
+    _labels = good_labels;
+    _histograms = good_histograms;
+}
 
 void LBPH::train(InputArrayOfArrays _in_src, InputArray _in_labels, bool preserveData) {
     if(_in_src.kind() != _InputArray::STD_VECTOR_MAT && _in_src.kind() != _InputArray::STD_VECTOR_VECTOR) {
@@ -987,7 +1088,15 @@ int LBPH::predict(InputArray _src) const {
     predict(_src, label, dummy);
     return label;
 }
-
+/*
+Mat LBPH::getLabels() const {
+    return _labels;
+}
+    
+vector<Mat> LBPH::getImages() const {
+    return _histograms;
+}
+*/
 Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components, double threshold)
 {
     return new Eigenfaces(num_components, threshold);

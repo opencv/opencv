@@ -929,6 +929,9 @@ namespace cv
 
         // Updates a FaceRecognizer.
         CV_WRAP void update(InputArrayOfArrays src, InputArray labels);
+        
+        // Untrains a FaceRecognizer.
+        CV_WRAP void forget(InputArray labels);
 
         // Gets a prediction from a FaceRecognizer.
         virtual int predict(InputArray src) const = 0;
@@ -956,6 +959,12 @@ namespace cv
 
         // Gets labels by string
         vector<int> getLabelsByString(const string& str);
+        
+        // Gets all labels
+        /*
+        virtual Mat getLabels() const = 0;
+        virtual vector<Mat> getImages() const = 0;
+        */
     };
 
     CV_EXPORTS_W Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
