@@ -83,7 +83,7 @@
 ///////////*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_video.hpp"
 
 namespace cv
 {

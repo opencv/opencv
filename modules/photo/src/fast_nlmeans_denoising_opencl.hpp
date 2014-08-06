@@ -5,11 +5,11 @@
 // Copyright (C) 2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 
+#include "precomp.hpp"
 #ifndef __OPENCV_FAST_NLMEANS_DENOISING_OPENCL_HPP__
 #define __OPENCV_FAST_NLMEANS_DENOISING_OPENCL_HPP__
 
-#include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_photo.hpp"
 
 #ifdef HAVE_OPENCL
 
