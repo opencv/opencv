@@ -936,6 +936,9 @@ namespace cv
         // Predicts the label and confidence for a given sample.
         CV_WRAP virtual void predict(InputArray src, CV_OUT int &label, CV_OUT double &confidence) const = 0;
 
+		// Predict the N labels and confidence from a given sample
+		virtual void predict(InputArray src, vector<int> & labels, vector<double> & confidence) const = 0;
+
         // Serializes this object to a given filename.
         CV_WRAP virtual void save(const string& filename) const;
 
