@@ -760,6 +760,27 @@ They are
 :math:`[R_2, -t]`.
 By decomposing ``E``, you can only get the direction of the translation, so the function returns unit ``t``.
 
+decomposeHomographyMat
+--------------------------
+Decompose a homography matrix to rotation(s), translation(s) and plane normal(s).
+
+.. ocv:function:: int decomposeHomographyMat( InputArray H,  InputArray K, OutputArrayOfArrays rotations, OutputArrayOfArrays translations, OutputArrayOfArrays normals)
+
+    :param H: The input homography matrix between two images.
+
+    :param K: The input intrinsic camera calibration matrix.
+
+    :param rotations: Array of rotation matrices.
+
+    :param translations: Array of translation matrices.
+
+    :param normals: Array of plane normal matrices.
+
+This function extracts relative camera motion between two views observing a planar object from the homography ``H`` induced by the plane.
+The intrinsic camera matrix ``K`` must also be provided. The function may return up to four mathematical solution sets. At least two of the
+solutions may further be invalidated if point correspondences are available by applying positive depth constraint (all points must be in front of the camera).
+The decomposition method is described in detail in [Malis]_.
+
 
 recoverPose
 ---------------
@@ -1518,3 +1539,5 @@ The function reconstructs 3-dimensional points (in homogeneous coordinates) by u
 .. [Slabaugh] Slabaugh, G.G. Computing Euler angles from a rotation matrix. http://www.soi.city.ac.uk/~sbbh653/publications/euler.pdf (verified: 2013-04-15)
 
 .. [Zhang2000] Z. Zhang. A Flexible New Technique for Camera Calibration. IEEE Transactions on Pattern Analysis and Machine Intelligence, 22(11):1330-1334, 2000.
+
+.. [Malis] Malis, E. and Vargas, M. Deeper understanding of the homography decomposition for vision-based control, Research Report 6303, INRIA (2007)

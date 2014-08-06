@@ -89,19 +89,56 @@
 #define MAD(x,y,z) mad((x),(y),(z))
 #endif
 
+#define LOAD_LOCAL(col_gl, col_lcl) \
+    sum0 =     co3* SRC(col_gl, EXTRAPOLATE_(src_y - 2, src_rows));         \
+    sum0 = MAD(co2, SRC(col_gl, EXTRAPOLATE_(src_y - 1, src_rows)), sum0);  \
+    temp = SRC(col_gl, EXTRAPOLATE_(src_y, src_rows));                      \
+    sum0 = MAD(co1, temp, sum0);                                            \
+    sum1 = co3 * temp;                                                      \
+    temp = SRC(col_gl, EXTRAPOLATE_(src_y + 1, src_rows));                  \
+    sum0 = MAD(co2, temp, sum0);                                            \
+    sum1 = MAD(co2, temp, sum1);                                            \
+    temp = SRC(col_gl, EXTRAPOLATE_(src_y + 2, src_rows));                  \
+    sum0 = MAD(co3, temp, sum0);                                            \
+    sum1 = MAD(co1, temp, sum1);                                            \
+    smem[0][col_lcl] = sum0;                                                \
+    sum1 = MAD(co2, SRC(col_gl, EXTRAPOLATE_(src_y + 3, src_rows)), sum1);  \
+    sum1 = MAD(co3, SRC(col_gl, EXTRAPOLATE_(src_y + 4, src_rows)), sum1);  \
+    smem[1][col_lcl] = sum1;
+
+
+#if kercn == 4
+#define LOAD_LOCAL4(col_gl, col_lcl) \
+    sum40 =     co3* SRC4(col_gl, EXTRAPOLATE_(src_y - 2, src_rows));           \
+    sum40 = MAD(co2, SRC4(col_gl, EXTRAPOLATE_(src_y - 1, src_rows)), sum40);   \
+    temp4 = SRC4(col_gl,  EXTRAPOLATE_(src_y, src_rows));                       \
+    sum40 = MAD(co1, temp4, sum40);                                             \
+    sum41 = co3 * temp4;                                                        \
+    temp4 = SRC4(col_gl,  EXTRAPOLATE_(src_y + 1, src_rows));                   \
+    sum40 = MAD(co2, temp4, sum40);                                             \
+    sum41 = MAD(co2, temp4, sum41);                                             \
+    temp4 = SRC4(col_gl,  EXTRAPOLATE_(src_y + 2, src_rows));                   \
+    sum40 = MAD(co3, temp4, sum40);                                             \
+    sum41 = MAD(co1, temp4, sum41);                                             \
+    vstore4(sum40, col_lcl, (__local float*) &smem[0][2]);                      \
+    sum41 = MAD(co2, SRC4(col_gl,  EXTRAPOLATE_(src_y + 3, src_rows)), sum41);  \
+    sum41 = MAD(co3, SRC4(col_gl,  EXTRAPOLATE_(src_y + 4, src_rows)), sum41);  \
+    vstore4(sum41, col_lcl, (__local float*) &smem[1][2]);
+#endif
+
 #define noconvert
 
 __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, int src_rows, int src_cols,
                          __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
 {
     const int x = get_global_id(0)*kercn;
-    const int y = get_group_id(1);
+    const int y = 2*get_global_id(1);
 
-    __local FT smem[LOCAL_SIZE + 4];
+    __local FT smem[2][LOCAL_SIZE + 4];
     __global uchar * dstData = dst + dst_offset;
     __global const uchar * srcData = src + src_offset;
 
-    FT sum;
+    FT sum0, sum1, temp;
     FT co1 = 0.375f;
     FT co2 = 0.25f;
     FT co3 = 0.0625f;
@@ -109,134 +146,68 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
     const int src_y = 2*y;
     int col;
 
-    if (src_y >= 2 && src_y < src_rows - 2)
+    if (src_y >= 2 && src_y < src_rows - 4)
     {
+#define EXTRAPOLATE_(val, maxVal)   val
 #if kercn == 1
         col = EXTRAPOLATE(x, src_cols);
-
-        sum =     co3* SRC(col, src_y - 2);
-        sum = MAD(co2, SRC(col, src_y - 1), sum);
-        sum = MAD(co1, SRC(col, src_y    ), sum);
-        sum = MAD(co2, SRC(col, src_y + 1), sum);
-        sum = MAD(co3, SRC(col, src_y + 2), sum);
-
-        smem[2 + get_local_id(0)] = sum;
+        LOAD_LOCAL(col, 2 + get_local_id(0))
 #else
         if (x < src_cols-4)
         {
-            float4 sum4;
-            sum4 =     co3* SRC4(x, src_y - 2);
-            sum4 = MAD(co2, SRC4(x, src_y - 1), sum4);
-            sum4 = MAD(co1, SRC4(x, src_y    ), sum4);
-            sum4 = MAD(co2, SRC4(x, src_y + 1), sum4);
-            sum4 = MAD(co3, SRC4(x, src_y + 2), sum4);
-
-            vstore4(sum4, get_local_id(0), (__local float*) &smem[2]);
+            float4 sum40, sum41, temp4;
+            LOAD_LOCAL4(x, get_local_id(0))
         }
         else
         {
             for (int i=0; i<4; i++)
             {
                 col = EXTRAPOLATE(x+i, src_cols);
-                sum =     co3* SRC(col, src_y - 2);
-                sum = MAD(co2, SRC(col, src_y - 1), sum);
-                sum = MAD(co1, SRC(col, src_y    ), sum);
-                sum = MAD(co2, SRC(col, src_y + 1), sum);
-                sum = MAD(co3, SRC(col, src_y + 2), sum);
-
-                smem[2 + 4*get_local_id(0)+i] = sum;
+                LOAD_LOCAL(col, 2 + 4 * get_local_id(0) + i)
             }
         }
 #endif
         if (get_local_id(0) < 2)
         {
             col = EXTRAPOLATE((int)(get_group_id(0)*LOCAL_SIZE + get_local_id(0) - 2), src_cols);
-
-            sum =     co3* SRC(col, src_y - 2);
-            sum = MAD(co2, SRC(col, src_y - 1), sum);
-            sum = MAD(co1, SRC(col, src_y    ), sum);
-            sum = MAD(co2, SRC(col, src_y + 1), sum);
-            sum = MAD(co3, SRC(col, src_y + 2), sum);
-
-            smem[get_local_id(0)] = sum;
+            LOAD_LOCAL(col, get_local_id(0))
         }
-
-        if (get_local_id(0) > 1 && get_local_id(0) < 4)
+        else if (get_local_id(0) < 4)
         {
             col = EXTRAPOLATE((int)((get_group_id(0)+1)*LOCAL_SIZE + get_local_id(0) - 2), src_cols);
-
-            sum =     co3* SRC(col, src_y - 2);
-            sum = MAD(co2, SRC(col, src_y - 1), sum);
-            sum = MAD(co1, SRC(col, src_y    ), sum);
-            sum = MAD(co2, SRC(col, src_y + 1), sum);
-            sum = MAD(co3, SRC(col, src_y + 2), sum);
-
-            smem[LOCAL_SIZE + get_local_id(0)] = sum;
+            LOAD_LOCAL(col, LOCAL_SIZE + get_local_id(0))
         }
     }
     else // need extrapolate y
     {
+#define EXTRAPOLATE_(val, maxVal)   EXTRAPOLATE(val, maxVal)
 #if kercn == 1
         col = EXTRAPOLATE(x, src_cols);
-
-        sum =     co3* SRC(col, EXTRAPOLATE(src_y - 2, src_rows));
-        sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y - 1, src_rows)), sum);
-        sum = MAD(co1, SRC(col, EXTRAPOLATE(src_y    , src_rows)), sum);
-        sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y + 1, src_rows)), sum);
-        sum = MAD(co3, SRC(col, EXTRAPOLATE(src_y + 2, src_rows)), sum);
-
-        smem[2 + get_local_id(0)] = sum;
+        LOAD_LOCAL(col, 2 + get_local_id(0))
 #else
         if (x < src_cols-4)
         {
-            float4 sum4;
-            sum4 =     co3* SRC4(x, EXTRAPOLATE(src_y - 2, src_rows));
-            sum4 = MAD(co2, SRC4(x, EXTRAPOLATE(src_y - 1, src_rows)), sum4);
-            sum4 = MAD(co1, SRC4(x, EXTRAPOLATE(src_y    , src_rows)), sum4);
-            sum4 = MAD(co2, SRC4(x, EXTRAPOLATE(src_y + 1, src_rows)), sum4);
-            sum4 = MAD(co3, SRC4(x, EXTRAPOLATE(src_y + 2, src_rows)), sum4);
-
-            vstore4(sum4, get_local_id(0), (__local float*) &smem[2]);
+            float4 sum40, sum41, temp4;
+            LOAD_LOCAL4(x, get_local_id(0))
         }
         else
         {
             for (int i=0; i<4; i++)
             {
                 col = EXTRAPOLATE(x+i, src_cols);
-                sum =     co3* SRC(col, EXTRAPOLATE(src_y - 2, src_rows));
-                sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y - 1, src_rows)), sum);
-                sum = MAD(co1, SRC(col, EXTRAPOLATE(src_y    , src_rows)), sum);
-                sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y + 1, src_rows)), sum);
-                sum = MAD(co3, SRC(col, EXTRAPOLATE(src_y + 2, src_rows)), sum);
-
-                smem[2 + 4*get_local_id(0)+i] = sum;
+                LOAD_LOCAL(col, 2 + 4*get_local_id(0) + i)
             }
         }
 #endif
         if (get_local_id(0) < 2)
         {
             col = EXTRAPOLATE((int)(get_group_id(0)*LOCAL_SIZE + get_local_id(0) - 2), src_cols);
-
-            sum =     co3* SRC(col, EXTRAPOLATE(src_y - 2, src_rows));
-            sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y - 1, src_rows)), sum);
-            sum = MAD(co1, SRC(col, EXTRAPOLATE(src_y    , src_rows)), sum);
-            sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y + 1, src_rows)), sum);
-            sum = MAD(co3, SRC(col, EXTRAPOLATE(src_y + 2, src_rows)), sum);
-
-            smem[get_local_id(0)] = sum;
+            LOAD_LOCAL(col, get_local_id(0))
         }
-
-        if (get_local_id(0) > 1 && get_local_id(0) < 4)
+        else if (get_local_id(0) < 4)
         {
             col = EXTRAPOLATE((int)((get_group_id(0)+1)*LOCAL_SIZE + get_local_id(0) - 2), src_cols);
-
-            sum =     co3* SRC(col, EXTRAPOLATE(src_y - 2, src_rows));
-            sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y - 1, src_rows)), sum);
-            sum = MAD(co1, SRC(col, EXTRAPOLATE(src_y    , src_rows)), sum);
-            sum = MAD(co2, SRC(col, EXTRAPOLATE(src_y + 1, src_rows)), sum);
-            sum = MAD(co3, SRC(col, EXTRAPOLATE(src_y + 2, src_rows)), sum);
-
-            smem[LOCAL_SIZE + get_local_id(0)] = sum;
+            LOAD_LOCAL(col, LOCAL_SIZE + get_local_id(0))
         }
     }
 
@@ -247,50 +218,68 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
     {
         const int tid2 = get_local_id(0) * 2;
 
-        sum = 0.f;
-#if cn == 1
-#if fdepth <= 5
-        sum = sum + dot(vload4(0, (__local float*) (&smem)+tid2), (float4)(co3, co2, co1, co2));
-#else
-        sum = sum + dot(vload4(0, (__local double*) (&smem)+tid2), (double4)(co3, co2, co1, co2));
-#endif
-#else
-        sum = MAD(co3, smem[2 + tid2 - 2], sum);
-        sum = MAD(co2, smem[2 + tid2 - 1], sum);
-        sum = MAD(co1, smem[2 + tid2    ], sum);
-        sum = MAD(co2, smem[2 + tid2 + 1], sum);
-#endif
-        sum = MAD(co3, smem[2 + tid2 + 2], sum);
-
         const int dst_x = (get_group_id(0) * get_local_size(0) + tid2) / 2;
 
         if (dst_x < dst_cols)
-            storepix(convertToT(sum), dstData + y * dst_step + dst_x * PIXSIZE);
+        {
+            for (int yin = y, y1 = min(dst_rows, y + 2); yin < y1; yin++)
+            {
+#if cn == 1
+#if fdepth <= 5
+                FT sum = dot(vload4(0, (__local float*) (&smem) + tid2 + (yin - y) * (LOCAL_SIZE + 4)), (float4)(co3, co2, co1, co2));
+#else
+                FT sum = dot(vload4(0, (__local double*) (&smem) + tid2 + (yin - y) * (LOCAL_SIZE + 4)), (double4)(co3, co2, co1, co2));
+#endif
+#else
+                FT sum = co3 * smem[yin - y][2 + tid2 - 2];
+                sum = MAD(co2, smem[yin - y][2 + tid2 - 1], sum);
+                sum = MAD(co1, smem[yin - y][2 + tid2    ], sum);
+                sum = MAD(co2, smem[yin - y][2 + tid2 + 1], sum);
+#endif
+                sum = MAD(co3, smem[yin - y][2 + tid2 + 2], sum);
+                storepix(convertToT(sum), dstData + yin * dst_step + dst_x * PIXSIZE);
+            }
+        }
     }
 #else
     int tid4 = get_local_id(0) * 4;
-
-    sum =     co3* smem[2 + tid4 + 2];
-    sum = MAD(co3, smem[2 + tid4 - 2], sum);
-    sum = MAD(co2, smem[2 + tid4 - 1], sum);
-    sum = MAD(co1, smem[2 + tid4    ], sum);
-    sum = MAD(co2, smem[2 + tid4 + 1], sum);
-
     int dst_x = (get_group_id(0) * LOCAL_SIZE + tid4) / 2;
+    if (dst_x < dst_cols - 1)
+    {
+        for (int yin = y, y1 = min(dst_rows, y + 2); yin < y1; yin++)
+        {
 
-    if (dst_x < dst_cols)
-        storepix(convertToT(sum), dstData + mad24(y, dst_step, dst_x * PIXSIZE));
+            FT sum =  co3* smem[yin - y][2 + tid4 + 2];
+            sum = MAD(co3, smem[yin - y][2 + tid4 - 2], sum);
+            sum = MAD(co2, smem[yin - y][2 + tid4 - 1], sum);
+            sum = MAD(co1, smem[yin - y][2 + tid4    ], sum);
+            sum = MAD(co2, smem[yin - y][2 + tid4 + 1], sum);
+            storepix(convertToT(sum), dstData + mad24(yin, dst_step, dst_x * PIXSIZE));
 
-    tid4 += 2;
-    dst_x += 1;
+            dst_x ++;
+            sum =     co3* smem[yin - y][2 + tid4 + 4];
+            sum = MAD(co3, smem[yin - y][2 + tid4    ], sum);
+            sum = MAD(co2, smem[yin - y][2 + tid4 + 1], sum);
+            sum = MAD(co1, smem[yin - y][2 + tid4 + 2], sum);
+            sum = MAD(co2, smem[yin - y][2 + tid4 + 3], sum);
+            storepix(convertToT(sum), dstData + mad24(yin, dst_step, dst_x * PIXSIZE));
+            dst_x --;
+        }
 
-    sum =     co3* smem[2 + tid4 + 2];
-    sum = MAD(co3, smem[2 + tid4 - 2], sum);
-    sum = MAD(co2, smem[2 + tid4 - 1], sum);
-    sum = MAD(co1, smem[2 + tid4    ], sum);
-    sum = MAD(co2, smem[2 + tid4 + 1], sum);
+    }
+    else if (dst_x < dst_cols)
+    {
+        for (int yin = y, y1 = min(dst_rows, y + 2); yin < y1; yin++)
+        {
+            FT sum =  co3* smem[yin - y][2 + tid4 + 2];
+            sum = MAD(co3, smem[yin - y][2 + tid4 - 2], sum);
+            sum = MAD(co2, smem[yin - y][2 + tid4 - 1], sum);
+            sum = MAD(co1, smem[yin - y][2 + tid4    ], sum);
+            sum = MAD(co2, smem[yin - y][2 + tid4 + 1], sum);
 
-    if (dst_x < dst_cols)
-        storepix(convertToT(sum), dstData + mad24(y, dst_step, dst_x * PIXSIZE));
+            storepix(convertToT(sum), dstData + mad24(yin, dst_step, dst_x * PIXSIZE));
+        }
+    }
 #endif
+
 }

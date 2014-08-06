@@ -57,6 +57,28 @@
 # endif
 #endif
 
+
+// TODO Move to some common place
+static bool getBoolParameter(const char* name, bool defaultValue)
+{
+    const char* envValue = getenv(name);
+    if (envValue == NULL)
+    {
+        return defaultValue;
+    }
+    cv::String value = envValue;
+    if (value == "1" || value == "True" || value == "true" || value == "TRUE")
+    {
+        return true;
+    }
+    if (value == "0" || value == "False" || value == "false" || value == "FALSE")
+    {
+        return false;
+    }
+    CV_ErrorNoReturn(cv::Error::StsBadArg, cv::format("Invalid value for %s parameter: %s", name, value.c_str()));
+}
+
+
 // TODO Move to some common place
 static size_t getConfigurationParameterForSize(const char* name, size_t defaultValue)
 {
@@ -1302,10 +1324,22 @@ OCL_FUNC(cl_int, clReleaseEvent, (cl_event event), (event))
 
 #endif
 
+static bool isRaiseError()
+{
+    static bool initialized = false;
+    static bool value = false;
+    if (!initialized)
+    {
+        value = getBoolParameter("OPENCV_OPENCL_RAISE_ERROR", false);
+        initialized = true;
+    }
+    return value;
+}
+
 #ifdef _DEBUG
 #define CV_OclDbgAssert CV_DbgAssert
 #else
-#define CV_OclDbgAssert(expr) (void)(expr)
+#define CV_OclDbgAssert(expr) do { if (isRaiseError()) { CV_Assert(expr); } else { (void)(expr); } } while ((void)0, 0)
 #endif
 
 namespace cv { namespace ocl {
@@ -4709,6 +4743,18 @@ Image2D::~Image2D()
 void* Image2D::ptr() const
 {
     return p ? p->handle : 0;
+}
+
+bool isPerformanceCheckBypassed()
+{
+    static bool initialized = false;
+    static bool value = false;
+    if (!initialized)
+    {
+        value = getBoolParameter("OPENCV_OPENCL_PERF_CHECK_BYPASS", false);
+        initialized = true;
+    }
+    return value;
 }
 
 }}
