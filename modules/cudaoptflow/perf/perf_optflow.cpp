@@ -41,7 +41,6 @@
 //M*/
 
 #include "perf_precomp.hpp"
-#include "opencv2/legacy.hpp"
 
 using namespace std;
 using namespace testing;
@@ -389,24 +388,6 @@ PERF_TEST_P(ImagePair, OpticalFlowDual_TVL1,
 //////////////////////////////////////////////////////
 // OpticalFlowBM
 
-void calcOpticalFlowBM(const cv::Mat& prev, const cv::Mat& curr,
-                       cv::Size bSize, cv::Size shiftSize, cv::Size maxRange, int usePrevious,
-                       cv::Mat& velx, cv::Mat& vely)
-{
-    cv::Size sz((curr.cols - bSize.width + shiftSize.width)/shiftSize.width, (curr.rows - bSize.height + shiftSize.height)/shiftSize.height);
-
-    velx.create(sz, CV_32FC1);
-    vely.create(sz, CV_32FC1);
-
-    CvMat cvprev = prev;
-    CvMat cvcurr = curr;
-
-    CvMat cvvelx = velx;
-    CvMat cvvely = vely;
-
-    cvCalcOpticalFlowBM(&cvprev, &cvcurr, bSize, shiftSize, maxRange, usePrevious, &cvvelx, &cvvely);
-}
-
 PERF_TEST_P(ImagePair, OpticalFlowBM,
             Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
@@ -435,12 +416,7 @@ PERF_TEST_P(ImagePair, OpticalFlowBM,
     }
     else
     {
-        cv::Mat u, v;
-
-        TEST_CYCLE() calcOpticalFlowBM(frame0, frame1, block_size, shift_size, max_range, false, u, v);
-
-        CPU_SANITY_CHECK(u);
-        CPU_SANITY_CHECK(v);
+        FAIL_NO_CPU();
     }
 }
 

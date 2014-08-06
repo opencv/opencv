@@ -845,7 +845,6 @@ For convenience, the following types from the OpenCV C API already have such a s
 that calls the appropriate release function:
 
 * ``CvCapture``
-* :ocv:struct:`CvDTreeSplit`
 * :ocv:struct:`CvFileStorage`
 * ``CvHaarClassifierCascade``
 * :ocv:struct:`CvMat`

@@ -105,6 +105,7 @@ PARAM_TEST_CASE(Merge, MatDepth, int, bool)
         UMAT_UPLOAD_INPUT_PARAMETER(src3);
         UMAT_UPLOAD_INPUT_PARAMETER(src4);
 
+        src_roi.clear(); usrc_roi.clear(); // for test_loop_times > 1
         src_roi.push_back(src1_roi), usrc_roi.push_back(usrc1_roi);
         if (nsrc >= 2)
             src_roi.push_back(src2_roi), usrc_roi.push_back(usrc2_roi);
