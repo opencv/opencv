@@ -2,13 +2,13 @@
 #include "Utils.h"
 
 /** The default constructor of the CSV reader Class */
-CsvReader::CsvReader(const std::string &path, const char &separator){
+CsvReader::CsvReader(const string &path, const char &separator){
     _file.open(path.c_str(), ifstream::in);
     _separator = separator;
 }
 
 /* Read a plane text file with .ply format */
-void CsvReader::readPLY(std::vector<cv::Point3f> &list_vertex, std::vector<std::vector<int> > &list_triangles)
+void CsvReader::readPLY(vector<Point3f> &list_vertex, vector<vector<int> > &list_triangles)
 {
     std::string line, tmp_str, n;
     int num_vertex = 0, num_triangles = 0;
@@ -61,7 +61,7 @@ void CsvReader::readPLY(std::vector<cv::Point3f> &list_vertex, std::vector<std::
          // read faces and add into 'list_triangles'
          else if(end_vertex  && count < num_triangles)
          {
-             std::string num_pts_per_face, id0, id1, id2;
+             string num_pts_per_face, id0, id1, id2;
              getline(liness, num_pts_per_face, _separator);
              getline(liness, id0, _separator);
              getline(liness, id1, _separator);

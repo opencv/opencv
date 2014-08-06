@@ -1,8 +1,8 @@
 #include "CsvWriter.h"
 #include "Utils.h"
 
-CsvWriter::CsvWriter(const std::string &path, const std::string &separator){
-  _file.open(path.c_str(), std::ofstream::out);
+CsvWriter::CsvWriter(const string &path, const string &separator){
+  _file.open(path.c_str(), ofstream::out);
   _isFirstTerm = true;
   _separator = separator;
 }
@@ -12,9 +12,9 @@ CsvWriter::~CsvWriter() {
   _file.close();
 }
 
-void CsvWriter::writeXYZ(const std::vector<cv::Point3f> &list_points3d)
+void CsvWriter::writeXYZ(const vector<Point3f> &list_points3d)
 {
-  std::string x, y, z;
+  string x, y, z;
   for(unsigned int i = 0; i < list_points3d.size(); ++i)
   {
     x = FloatToString(list_points3d[i].x);
@@ -26,9 +26,9 @@ void CsvWriter::writeXYZ(const std::vector<cv::Point3f> &list_points3d)
 
 }
 
-void CsvWriter::writeUVXYZ(const std::vector<cv::Point3f> &list_points3d, const std::vector<cv::Point2f> &list_points2d, const cv::Mat &descriptors)
+void CsvWriter::writeUVXYZ(const vector<Point3f> &list_points3d, const vector<Point2f> &list_points2d, const Mat &descriptors)
 {
-  std::string u, v, x, y, z, descriptor_str;
+  string u, v, x, y, z, descriptor_str;
   for(unsigned int i = 0; i < list_points3d.size(); ++i)
   {
     u = FloatToString(list_points2d[i].x);
@@ -41,7 +41,7 @@ void CsvWriter::writeUVXYZ(const std::vector<cv::Point3f> &list_points3d, const 
 
     for(int j = 0; j < 32; ++j)
     {
-      descriptor_str = FloatToString((float)descriptors.at<float>(i,j));
+      descriptor_str = FloatToString(descriptors.at<float>(i,j));
       _file << _separator << descriptor_str;
     }
     _file << std::endl;

@@ -1,21 +1,23 @@
 #ifndef CSVWRITER_H
 #define	CSVWRITER_H
 
-#include <fstream>
 #include <iostream>
-
+#include <fstream>
 #include <opencv2/core/core.hpp>
+
+using namespace std;
+using namespace cv;
 
 class CsvWriter {
 public:
-  CsvWriter(const std::string &path, const std::string &separator = " ");
+  CsvWriter(const string &path, const string &separator = " ");
   ~CsvWriter();
-  void writeXYZ(const std::vector<cv::Point3f> &list_points3d);
-  void writeUVXYZ(const std::vector<cv::Point3f> &list_points3d, const std::vector<cv::Point2f> &list_points2d, const cv::Mat &descriptors);
+  void writeXYZ(const vector<Point3f> &list_points3d);
+  void writeUVXYZ(const vector<Point3f> &list_points3d, const vector<Point2f> &list_points2d, const Mat &descriptors);
 
 private:
-  std::ofstream _file;
-  std::string _separator;
+  ofstream _file;
+  string _separator;
   bool _isFirstTerm;
 };
 

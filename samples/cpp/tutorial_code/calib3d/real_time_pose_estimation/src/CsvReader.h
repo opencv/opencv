@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <fstream>
-
 #include <opencv2/core/core.hpp>
 
 using namespace std;
@@ -19,7 +18,7 @@ public:
   * @param separator - The separator character between words per line
   * @return
   */
-  CsvReader(const std::string &path, const char &separator = ' ');
+  CsvReader(const string &path, const char &separator = ' ');
 
   /**
   * Read a plane text file with .ply format
@@ -28,7 +27,7 @@ public:
   * @param list_triangle - The container of the triangles list of the mesh
   * @return
   */
-  void readPLY(std::vector<cv::Point3f> &list_vertex, std::vector<std::vector<int> > &list_triangles);
+  void readPLY(vector<Point3f> &list_vertex, vector<vector<int> > &list_triangles);
 
 private:
   /** The current stream file for the reader */
