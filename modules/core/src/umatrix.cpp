@@ -582,7 +582,7 @@ Mat UMat::getMat(int accessFlags) const
     hdr.flags = flags;
     hdr.u = u;
     hdr.datastart = u->data;
-    hdr.data = hdr.datastart + offset;
+    hdr.data = u->data + offset;
     hdr.datalimit = hdr.dataend = u->data + u->size;
     CV_XADD(&hdr.u->refcount, 1);
     return hdr;
