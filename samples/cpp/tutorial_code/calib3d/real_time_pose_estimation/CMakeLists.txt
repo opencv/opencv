@@ -15,7 +15,8 @@ add_library(pnp_lib
     src/Model.cpp
     src/PnPProblem.cpp
     src/Utils.cpp
-    src/RobustMatcher.cpp)
+    src/RobustMatcher.cpp
+)
 
 add_executable( pnp_registration src/main_registration.cpp )
 add_executable( pnp_verification src/main_verification.cpp )
