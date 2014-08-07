@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import unittest
 import random
 import time
 import math
 import sys
 import array
-import urllib
 import tarfile
 import hashlib
 import os
@@ -16,11 +16,17 @@ import functools
 import numpy as np
 import cv2
 
+# Python 3 moved urlopen to urllib.requests
+try:
+    from urllib.request import urlopen
+except ImportError:
+    from urllib import urlopen
+
 class NewOpenCVTests(unittest.TestCase):
 
     def get_sample(self, filename, iscolor = cv2.IMREAD_COLOR):
         if not filename in self.image_cache:
-            filedata = urllib.urlopen("https://raw.github.com/Itseez/opencv/master/" + filename).read()
+            filedata = urlopen("https://raw.github.com/Itseez/opencv/master/" + filename).read()
             self.image_cache[filename] = cv2.imdecode(np.fromstring(filedata, dtype=np.uint8), iscolor)
         return self.image_cache[filename]
 
@@ -51,7 +57,7 @@ class Hackathon244Tests(NewOpenCVTests):
     def test_int_array(self):
         a = np.array([-1, 2, -3, 4, -5])
         absa0 = np.abs(a)
-        self.assert_(cv2.norm(a, cv2.NORM_L1) == 15)
+        self.assertTrue(cv2.norm(a, cv2.NORM_L1) == 15)
         absa1 = cv2.absdiff(a, 0)
         self.assertEqual(cv2.norm(absa1, absa0, cv2.NORM_INF), 0)
 
@@ -90,13 +96,13 @@ class Hackathon244Tests(NewOpenCVTests):
         img = cv2.medianBlur(img, 3)
         imgc = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         keypoints = fd.detect(img)
-        self.assert_(600 <= len(keypoints) <= 700)
+        self.assertTrue(600 <= len(keypoints) <= 700)
         for kpt in keypoints:
             self.assertNotEqual(kpt.response, 0)
 
     def check_close_angles(self, a, b, angle_delta):
-        self.assert_(abs(a - b) <= angle_delta or
-                     abs(360 - abs(a - b)) <= angle_delta)
+        self.assertTrue(abs(a - b) <= angle_delta or
+                        abs(360 - abs(a - b)) <= angle_delta)
 
     def check_close_pairs(self, a, b, delta):
         self.assertLessEqual(abs(a[0] - b[0]), delta)
@@ -127,6 +133,6 @@ class Hackathon244Tests(NewOpenCVTests):
         self.assertLessEqual(abs(mr - mr0), 5)
 
 if __name__ == '__main__':
-    print "Testing OpenCV", cv2.__version__
+    print("Testing OpenCV", cv2.__version__)
     random.seed(0)
     unittest.main()
