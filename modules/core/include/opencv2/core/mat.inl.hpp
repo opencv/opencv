@@ -504,7 +504,7 @@ Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
     if( !copyData )
     {
         step[0] = step[1] = sizeof(_Tp);
-        data = datastart = (uchar*)&pt.x;
+        datastart = data = (uchar*)&pt.x;
         datalimit = dataend = datastart + rows * step[0];
     }
     else
@@ -1044,7 +1044,7 @@ void Mat::push_back(const _Tp& elem)
     }
     CV_Assert(DataType<_Tp>::type == type() && cols == 1
               /* && dims == 2 (cols == 1 implies dims == 2) */);
-    uchar* tmp = dataend + step[0];
+    const uchar* tmp = dataend + step[0];
     if( !isSubmatrix() && isContinuous() && tmp <= datalimit )
     {
         *(_Tp*)(data + (size.p[0]++) * step.p[0]) = elem;
