@@ -44,7 +44,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
@@ -96,7 +96,7 @@ OCL_TEST_P(ConvertTo, Accuracy)
         OCL_OFF(src_roi.convertTo(dst_roi, dstType, alpha, beta));
         OCL_ON(usrc_roi.convertTo(udst_roi, dstType, alpha, beta));
 
-        double eps = src_depth >= CV_32F || CV_MAT_DEPTH(dstType) >= CV_32F ? 2e-4 : 1;
+        double eps = CV_MAT_DEPTH(dstType) >= CV_32F ? 2e-4 : 1;
         OCL_EXPECT_MATS_NEAR(dst, eps);
     }
 }

@@ -114,6 +114,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
 
 class PnPRansacCallback : public PointSetRegistrator::Callback
 {
+
 public:
 
     PnPRansacCallback(Mat _cameraMatrix=Mat(3,3,CV_64F), Mat _distCoeffs=Mat(4,1,CV_64F), int _flags=cv::ITERATIVE,
@@ -126,6 +127,7 @@ public:
     int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
     {
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat();
+
 
         bool correspondence = cv::solvePnP( _m1, _m2, cameraMatrix, distCoeffs,
                                             rvec, tvec, useExtrinsicGuess, flags );
@@ -147,6 +149,7 @@ public:
         int i, count = opoints.cols;
         Mat _rvec = model.col(0);
         Mat _tvec = model.col(1);
+
 
         Mat projpoints(count, 2, CV_32FC1);
         cv::projectPoints(opoints, _rvec, _tvec, cameraMatrix, distCoeffs, projpoints);

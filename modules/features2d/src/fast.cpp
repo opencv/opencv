@@ -43,7 +43,7 @@ The references are:
 
 #include "precomp.hpp"
 #include "fast_score.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_features2d.hpp"
 
 #if defined _MSC_VER
 # pragma warning( disable : 4127)

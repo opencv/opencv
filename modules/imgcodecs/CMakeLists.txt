@@ -50,30 +50,34 @@ if(HAVE_OPENEXR)
   list(APPEND GRFMT_LIBS ${OPENEXR_LIBRARIES})
 endif()
 
-file(GLOB grfmt_hdrs src/grfmt*.hpp)
-file(GLOB grfmt_srcs src/grfmt*.cpp)
-list(APPEND grfmt_hdrs src/bitstrm.hpp)
-list(APPEND grfmt_srcs src/bitstrm.cpp)
-list(APPEND grfmt_hdrs src/rgbe.hpp)
-list(APPEND grfmt_srcs src/rgbe.cpp)
+file(GLOB grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/grfmt*.hpp)
+file(GLOB grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/grfmt*.cpp)
+list(APPEND grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/bitstrm.hpp)
+list(APPEND grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/bitstrm.cpp)
+list(APPEND grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/rgbe.hpp)
+list(APPEND grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/rgbe.cpp)
 
 source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 
 set(imgcodecs_hdrs
-    src/precomp.hpp
-    src/utils.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/utils.hpp
     )
 
 set(imgcodecs_srcs
-    src/loadsave.cpp
-    src/utils.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/loadsave.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/utils.cpp
     )
 
-file(GLOB imgcodecs_ext_hdrs "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
+file(GLOB imgcodecs_ext_hdrs
+     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
+     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
+     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
+     )
 
 if(IOS)
   add_definitions(-DHAVE_IOS=1)
-  list(APPEND imgcodecs_srcs src/ios_conversions.mm)
+  list(APPEND imgcodecs_srcs ${CMAKE_CURRENT_LIST_DIR}/src/ios_conversions.mm)
   list(APPEND IMGCODECS_LIBRARIES "-framework Accelerate" "-framework CoreGraphics" "-framework CoreImage" "-framework QuartzCore" "-framework AssetsLibrary")
 endif()
 
@@ -95,6 +99,7 @@ ocv_module_include_directories()
 
 ocv_create_module(${GRFMT_LIBS} ${IMGCODECS_LIBRARIES})
 
+macro(ocv_imgcodecs_configure_target)
 if(APPLE)
   ocv_check_flag_support(OBJCXX "-fobjc-exceptions" HAVE_OBJC_EXCEPTIONS)
   if(HAVE_OBJC_EXCEPTIONS)
@@ -124,8 +129,12 @@ endif()
 #stop automatic dependencies propagation for this module
 set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
 
-ocv_add_precompiled_headers(${the_module})
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
+endmacro()
+
+if(NOT BUILD_opencv_world)
+  ocv_imgcodecs_configure_target()
+endif()
 
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()

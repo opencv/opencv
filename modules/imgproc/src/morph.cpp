@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 #include <limits.h>
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_imgproc.hpp"
 
 /****************************************************************************************\
                      Basic Morphological Operations: Erosion & Dilation
