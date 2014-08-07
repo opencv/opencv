@@ -5597,7 +5597,7 @@ void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _mi
         double minval = DBL_MAX, maxval = -DBL_MAX;
         for( i = 0; i < N; i++, ++it )
         {
-            double v = it.value<float>();
+            double v = it.value<double>();
             if( v < minval )
             {
                 minval = v;
