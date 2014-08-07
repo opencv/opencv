@@ -2,7 +2,9 @@
 #  CMake file for python support
 # ----------------------------------------------------------------------------
 
-if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+if((WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+    OR BUILD_opencv_world
+    )
   ocv_module_disable(python2)
   ocv_module_disable(python3)
 endif()

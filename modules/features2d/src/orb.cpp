@@ -35,7 +35,7 @@
 /** Authors: Ethan Rublee, Vincent Rabaud, Gary Bradski */
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_features2d.hpp"
 #include <iterator>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

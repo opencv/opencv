@@ -17,7 +17,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     set(the_target "example_${project}_${name}")
     add_executable(${the_target} ${srcs})
 
-    target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_TAPI_SAMPLES_REQUIRED_DEPS})
+    ocv_target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_TAPI_SAMPLES_REQUIRED_DEPS})
 
     set_target_properties(${the_target} PROPERTIES
       OUTPUT_NAME "${project}-example-${name}"

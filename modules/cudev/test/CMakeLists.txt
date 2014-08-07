@@ -29,7 +29,7 @@ if(OCV_DEPENDENCIES_FOUND)
   endforeach()
 
   CUDA_ADD_EXECUTABLE(${the_target} ${OPENCV_TEST_${the_module}_SOURCES})
-  target_link_libraries(${the_target} ${test_deps} ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES})
+  ocv_target_link_libraries(${the_target} ${test_deps} ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES})
   add_dependencies(opencv_tests ${the_target})
 
   # Additional target properties
