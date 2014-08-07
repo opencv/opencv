@@ -53,16 +53,16 @@
 
 #if defined BORDER_REPLICATE
 // aaaaaa|abcdefgh|hhhhhhh
-#define EXTRAPOLATE(x, maxV) clamp(x, 0, maxV-1)
+#define EXTRAPOLATE(x, maxV) clamp((x), 0, (maxV)-1)
 #elif defined BORDER_WRAP
 // cdefgh|abcdefgh|abcdefg
 #define EXTRAPOLATE(x, maxV) ( (x) + (maxV) ) % (maxV)
 #elif defined BORDER_REFLECT
 // fedcba|abcdefgh|hgfedcb
-#define EXTRAPOLATE(x, maxV) min(((maxV)-1)*2-(x)+1, max((x),-(x)-1) )
+#define EXTRAPOLATE(x, maxV) clamp(min(((maxV)-1)*2-(x)+1, max((x),-(x)-1) ), 0, (maxV)-1)
 #elif defined BORDER_REFLECT_101 || defined BORDER_REFLECT101
 // gfedcb|abcdefgh|gfedcba
-#define EXTRAPOLATE(x, maxV) min(((maxV)-1)*2-(x), max((x),-(x)) )
+#define EXTRAPOLATE(x, maxV) clamp(min(((maxV)-1)*2-(x), max((x),-(x)) ), 0, (maxV)-1)
 #else
 #error No extrapolation method
 #endif
