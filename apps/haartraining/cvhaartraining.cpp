@@ -2990,6 +2990,7 @@ void cvCreatePngTrainingSet(const char* infoname,
         char imgdescrfullname[PATH_MAX];
         char outputdirname[PATH_MAX];
         char* imgdescrfilename;
+        char* annotationrelativepath;
         CvMat win;
         CvMat result;
         FILE* info;
@@ -3013,10 +3014,10 @@ void cvCreatePngTrainingSet(const char* infoname,
             icvFindFilePathPart(&filename, fullname);
 
             char* outputdirnameptr = NULL;
-            size_t fulldirnamelen = ( filename - fullname - 1);
+            size_t parentdirnamelen = ( filename - fullname - 1);
 
-            strncpy(imgdescrfullname, fullname, fulldirnamelen * sizeof(char) );
-            imgdescrfullname[fulldirnamelen] = '\0';
+            strncpy(imgdescrfullname, fullname, parentdirnamelen * sizeof(char) );
+            imgdescrfullname[parentdirnamelen] = '\0';
 
             icvFindFilePathPart(&outputdirnameptr, imgdescrfullname);
             strcpy(outputdirname, outputdirnameptr);
@@ -3027,8 +3028,10 @@ void cvCreatePngTrainingSet(const char* infoname,
             sprintf(filename, "pos/");
             filename += strlen("pos/");
 
-            sprintf(imgdescrfullname + fulldirnamelen, "/%s/", annotationsdirname);
-            imgdescrfilename = imgdescrfullname + fulldirnamelen + strlen(annotationsdirname) + 2;
+            sprintf(imgdescrfullname + parentdirnamelen, "/%s/", annotationsdirname);
+            imgdescrfilename = imgdescrfullname + parentdirnamelen + strlen(annotationsdirname) + 2;
+
+            annotationrelativepath = imgdescrfullname + parentdirnamelen + 1;
 
             if( !icvMkDir( imgdescrfullname ) )
             {
@@ -3096,7 +3099,7 @@ void cvCreatePngTrainingSet(const char* infoname,
                 sprintf( imgdescrfilename,"%s.txt",
                                           filename );
                 fprintf( info, "%s\n",
-                         imgdescrfullname );
+                         annotationrelativepath);
                 imgdescr = fopen(imgdescrfullname,"w");
 
                 sprintf( filename + strlen(filename) , ".%s",
