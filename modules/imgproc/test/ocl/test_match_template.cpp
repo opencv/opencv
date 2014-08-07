@@ -97,9 +97,17 @@ PARAM_TEST_CASE(MatchTemplate, MatDepth, Channels, MatchTemplType, bool)
         UMAT_UPLOAD_OUTPUT_PARAMETER(result);
     }
 
-    void Near(double threshold = 0.0)
+    void Near()
     {
-        OCL_EXPECT_MATS_NEAR(result, threshold);
+        bool isNormed =
+        method == TM_CCORR_NORMED ||
+        method == TM_SQDIFF_NORMED ||
+        method == TM_CCOEFF_NORMED;
+
+        if (isNormed)
+            OCL_EXPECT_MATS_NEAR(result, 3e-2);
+        else
+            OCL_EXPECT_MATS_NEAR_RELATIVE_SPARSE(result, 1.5e-2);
     }
 };
 
@@ -112,14 +120,7 @@ OCL_TEST_P(MatchTemplate, Mat)
         OCL_OFF(cv::matchTemplate(image_roi, templ_roi, result_roi, method));
         OCL_ON(cv::matchTemplate(uimage_roi, utempl_roi, uresult_roi, method));
 
-        bool isNormed =
-        method == TM_CCORR_NORMED ||
-        method == TM_SQDIFF_NORMED ||
-        method == TM_CCOEFF_NORMED;
-
-        double eps = isNormed ? 3e-2 : 255.0 * 255.0 * templ.total() * 2e-5;
-
-        Near(eps);
+        Near();
     }
 }
 
