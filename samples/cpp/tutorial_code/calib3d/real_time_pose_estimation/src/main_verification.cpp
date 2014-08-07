@@ -256,7 +256,7 @@ int main(int, char**)
   pnp_verification_epnp.estimatePose( list_points3d_model_match, list_points2d_scene_match, cv::EPNP);
   pnp_verification_iter.estimatePose( list_points3d_model_match, list_points2d_scene_match, cv::ITERATIVE);
   //pnp_verification_p3p.estimatePose( list_points3d_model_match, list_points2d_scene_match, cv::P3P);
-  pnp_verification_dls.estimatePose( list_points3d_model_match, list_points2d_scene_match, cv::DLS);
+  //pnp_verification_dls.estimatePose( list_points3d_model_match, list_points2d_scene_match, cv::DLS);
 
   // Draw mesh
   drawObjectMesh(img_vis, &mesh, &pnp_verification_dls, green);
