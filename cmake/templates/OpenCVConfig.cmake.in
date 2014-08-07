@@ -141,6 +141,7 @@ SET(OpenCV_VERSION_STATUS "@OPENCV_VERSION_STATUS@")
 # ====================================================================
 
 SET(OpenCV_LIB_COMPONENTS @OPENCV_MODULES_CONFIGCMAKE@)
+SET(OpenCV_WORLD_COMPONENTS @OPENCV_WORLD_MODULES@)
 
 # ==============================================================
 #  Extra include directories, needed by OpenCV 2 new structure
@@ -200,8 +201,8 @@ foreach(__cvcomponent ${OpenCV_FIND_COMPONENTS})
       message(WARNING "${__cvcomponent} is required but was not found")
     endif()
     #indicate that module is NOT found
-    string(TOUPPER "${__cvcomponent}" __cvcomponent)
-    set(${__cvcomponent}_FOUND "${__cvcomponent}_FOUND-NOTFOUND")
+    string(TOUPPER "${__cvcomponent}" __cvcomponentUP)
+    set(${__cvcomponentUP}_FOUND "${__cvcomponentUP}_FOUND-NOTFOUND")
   else()
     list(APPEND OpenCV_FIND_COMPONENTS_ ${__cvcomponent})
     # Not using list(APPEND) here, because OpenCV_LIBS may not exist yet.
@@ -209,8 +210,31 @@ foreach(__cvcomponent ${OpenCV_FIND_COMPONENTS})
     # to find_package(OpenCV) with different component lists add up.
     set(OpenCV_LIBS ${OpenCV_LIBS} "${__cvcomponent}")
     #indicate that module is found
-    string(TOUPPER "${__cvcomponent}" __cvcomponent)
-    set(${__cvcomponent}_FOUND 1)
+    string(TOUPPER "${__cvcomponent}" __cvcomponentUP)
+    set(${__cvcomponentUP}_FOUND 1)
+  endif()
+  if(OpenCV_SHARED AND ";${OpenCV_WORLD_COMPONENTS};" MATCHES ";${__cvcomponent};" AND NOT TARGET ${__cvcomponent})
+    get_target_property(__implib_dbg opencv_world IMPORTED_IMPLIB_DEBUG)
+    get_target_property(__implib_release opencv_world  IMPORTED_IMPLIB_RELEASE)
+    get_target_property(__location_dbg opencv_world IMPORTED_LOCATION_DEBUG)
+    get_target_property(__location_release opencv_world  IMPORTED_LOCATION_RELEASE)
+    add_library(${__cvcomponent} SHARED IMPORTED)
+    if(__location_dbg)
+      set_property(TARGET ${__cvcomponent} APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
+      set_target_properties(${__cvcomponent} PROPERTIES
+        IMPORTED_IMPLIB_DEBUG "${__implib_dbg}"
+        IMPORTED_LINK_INTERFACE_LIBRARIES_DEBUG ""
+        IMPORTED_LOCATION_DEBUG "${__location_dbg}"
+      )
+    endif()
+    if(__location_release)
+      set_property(TARGET ${__cvcomponent} APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
+      set_target_properties(${__cvcomponent} PROPERTIES
+        IMPORTED_IMPLIB_RELEASE "${__implib_release}"
+        IMPORTED_LINK_INTERFACE_LIBRARIES_RELEASE ""
+        IMPORTED_LOCATION_RELEASE "${__location_release}"
+      )
+    endif()
   endif()
 endforeach()
 set(OpenCV_FIND_COMPONENTS ${OpenCV_FIND_COMPONENTS_})
@@ -321,6 +345,7 @@ macro(ocv_check_dependencies)
   set(OCV_DEPENDENCIES_FOUND TRUE)
   foreach(d ${ARGN})
     if(NOT TARGET ${d})
+      message(WARNING "OpenCV: Can't resolve dependency: ${d}")
       set(OCV_DEPENDENCIES_FOUND FALSE)
       break()
     endif()
@@ -344,6 +369,10 @@ endfunction()
 
 macro(ocv_include_modules)
   include_directories(BEFORE "${OpenCV_INCLUDE_DIRS}")
+endmacro()
+
+macro(ocv_target_link_libraries)
+  target_link_libraries(${ARGN})
 endmacro()
 
 # remove all matching elements from the list

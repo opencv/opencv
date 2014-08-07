@@ -44,7 +44,7 @@
 #include <climits>
 #include <limits>
 
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_core.hpp"
 
 namespace cv
 {

@@ -139,11 +139,13 @@ namespace cv
             CameraParameters camera;
         };
 
+        template <typename OpointType, typename IpointType>
         static void pnpTask(const std::vector<char>& pointsMask, const Mat& objectPoints, const Mat& imagePoints,
                      const Parameters& params, std::vector<int>& inliers, Mat& rvec, Mat& tvec,
                      const Mat& rvecInit, const Mat& tvecInit, Mutex& resultsMutex)
         {
-            Mat modelObjectPoints(1, MIN_POINTS_COUNT, CV_32FC3), modelImagePoints(1, MIN_POINTS_COUNT, CV_32FC2);
+            Mat modelObjectPoints(1, MIN_POINTS_COUNT, CV_MAKETYPE(DataDepth<OpointType>::value, 3));
+            Mat modelImagePoints(1, MIN_POINTS_COUNT, CV_MAKETYPE(DataDepth<IpointType>::value, 2));
             for (int i = 0, colIndex = 0; i < (int)pointsMask.size(); i++)
             {
                 if (pointsMask[i])
@@ -162,7 +164,7 @@ namespace cv
             for (int i = 0; i < MIN_POINTS_COUNT; i++)
                 for (int j = i + 1; j < MIN_POINTS_COUNT; j++)
                 {
-                    if (norm(modelObjectPoints.at<Vec3f>(0, i) - modelObjectPoints.at<Vec3f>(0, j)) < eps)
+                    if (norm(modelObjectPoints.at<Vec<OpointType,3> >(0, i) - modelObjectPoints.at<Vec<OpointType,3> >(0, j)) < eps)
                         num_same_points++;
                 }
             if (num_same_points > 0)
@@ -176,7 +178,7 @@ namespace cv
                      params.useExtrinsicGuess, params.flags);
 
 
-            std::vector<Point2f> projected_points;
+            std::vector<Point_<OpointType> > projected_points;
             projected_points.resize(objectPoints.cols);
             projectPoints(objectPoints, localRvec, localTvec, params.camera.intrinsics, params.camera.distortion, projected_points);
 
@@ -186,9 +188,11 @@ namespace cv
             std::vector<int> localInliers;
             for (int i = 0; i < objectPoints.cols; i++)
             {
-                Point2f p(imagePoints.at<Vec2f>(0, i)[0], imagePoints.at<Vec2f>(0, i)[1]);
+                //Although p is a 2D point it needs the same type as the object points to enable the norm calculation
+                Point_<OpointType> p((OpointType)imagePoints.at<Vec<IpointType,2> >(0, i)[0],
+                                     (OpointType)imagePoints.at<Vec<IpointType,2> >(0, i)[1]);
                 if ((norm(p - projected_points[i]) < params.reprojectionError)
-                    && (rotatedPoints.at<Vec3f>(0, i)[2] > 0)) //hack
+                    && (rotatedPoints.at<Vec<OpointType,3> >(0, i)[2] > 0)) //hack
                 {
                     localInliers.push_back(i);
                 }
@@ -205,6 +209,30 @@ namespace cv
                 localTvec.copyTo(tvec);
 
                 resultsMutex.unlock();
+            }
+        }
+
+        static void pnpTask(const std::vector<char>& pointsMask, const Mat& objectPoints, const Mat& imagePoints,
+            const Parameters& params, std::vector<int>& inliers, Mat& rvec, Mat& tvec,
+            const Mat& rvecInit, const Mat& tvecInit, Mutex& resultsMutex)
+        {
+            CV_Assert(objectPoints.depth() == CV_64F ||  objectPoints.depth() == CV_32F);
+            CV_Assert(imagePoints.depth() == CV_64F ||  imagePoints.depth() == CV_32F);
+            const bool objectDoublePrecision = objectPoints.depth() == CV_64F;
+            const bool imageDoublePrecision = imagePoints.depth() == CV_64F;
+            if(objectDoublePrecision)
+            {
+                if(imageDoublePrecision)
+                    pnpTask<double, double>(pointsMask, objectPoints, imagePoints, params, inliers, rvec, tvec, rvecInit, tvecInit, resultsMutex);
+                else
+                    pnpTask<double, float>(pointsMask, objectPoints, imagePoints, params, inliers, rvec, tvec, rvecInit, tvecInit, resultsMutex);
+            }
+            else
+            {
+                if(imageDoublePrecision)
+                    pnpTask<float, double>(pointsMask, objectPoints, imagePoints, params, inliers, rvec, tvec, rvecInit, tvecInit, resultsMutex);
+                else
+                    pnpTask<float, float>(pointsMask, objectPoints, imagePoints, params, inliers, rvec, tvec, rvecInit, tvecInit, resultsMutex);
             }
         }
 
@@ -283,10 +311,10 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
 
     CV_Assert(opoints.isContinuous());
-    CV_Assert(opoints.depth() == CV_32F);
+    CV_Assert(opoints.depth() == CV_32F || opoints.depth() == CV_64F);
     CV_Assert((opoints.rows == 1 && opoints.channels() == 3) || opoints.cols*opoints.channels() == 3);
     CV_Assert(ipoints.isContinuous());
-    CV_Assert(ipoints.depth() == CV_32F);
+    CV_Assert(ipoints.depth() == CV_32F || ipoints.depth() == CV_64F);
     CV_Assert((ipoints.rows == 1 && ipoints.channels() == 2) || ipoints.cols*ipoints.channels() == 2);
 
     _rvec.create(3, 1, CV_64FC1);
@@ -322,7 +350,7 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
         if (flags != P3P)
         {
             int i, pointsCount = (int)localInliers.size();
-            Mat inlierObjectPoints(1, pointsCount, CV_32FC3), inlierImagePoints(1, pointsCount, CV_32FC2);
+            Mat inlierObjectPoints(1, pointsCount, CV_MAKE_TYPE(opoints.depth(), 3)), inlierImagePoints(1, pointsCount, CV_MAKE_TYPE(ipoints.depth(), 2));
             for (i = 0; i < pointsCount; i++)
             {
                 int index = localInliers[i];
