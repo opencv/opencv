@@ -1,5 +1,4 @@
 #include "CsvWriter.h"
-#include "Utils.h"
 
 CsvWriter::CsvWriter(const string &path, const string &separator){
   _file.open(path.c_str(), ofstream::out);
