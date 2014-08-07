@@ -8,10 +8,10 @@ if(HAVE_opencv_nonfree)
 endif()
 
 add_executable(${the_target} ${sources} ${headers})
-target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
+ocv_target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
 
 if(HAVE_opencv_nonfree)
-  target_link_libraries(${the_target} opencv_nonfree)
+  ocv_target_link_libraries(${the_target} opencv_nonfree)
 endif()
 
 set_target_properties(${the_target} PROPERTIES

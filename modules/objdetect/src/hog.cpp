@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/core/core_c.h"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_objdetect.hpp"
 
 #include <cstdio>
 #include <iterator>

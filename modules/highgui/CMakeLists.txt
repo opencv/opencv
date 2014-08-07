@@ -17,21 +17,27 @@ if(APPLE)
 endif()
 
 set(highgui_hdrs
-    src/precomp.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp
     )
 
 set(highgui_srcs
-    src/window.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/window.cpp
     )
 
-file(GLOB highgui_ext_hdrs "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
+file(GLOB highgui_ext_hdrs
+     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
+     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
+     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h")
 
 if(HAVE_QT5)
   set(CMAKE_AUTOMOC ON)
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-  QT5_ADD_RESOURCES(_RCC_OUTFILES src/window_QT.qrc)
-  list(APPEND highgui_srcs src/window_QT.cpp src/window_QT.h ${_RCC_OUTFILES})
+  QT5_ADD_RESOURCES(_RCC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.qrc)
+  list(APPEND highgui_srcs
+       ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.cpp
+       ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h
+       ${_RCC_OUTFILES})
 
   foreach(dt5_dep Core Gui Widgets Test Concurrent)
     add_definitions(${Qt5${dt5_dep}_DEFINITIONS})
@@ -51,24 +57,24 @@ elseif(HAVE_QT)
   endif()
   include(${QT_USE_FILE})
 
-  QT4_ADD_RESOURCES(_RCC_OUTFILES src/window_QT.qrc)
-  QT4_WRAP_CPP(_MOC_OUTFILES src/window_QT.h)
+  QT4_ADD_RESOURCES(_RCC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.qrc)
+  QT4_WRAP_CPP(_MOC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h)
 
   list(APPEND HIGHGUI_LIBRARIES ${QT_LIBRARIES})
-  list(APPEND highgui_srcs src/window_QT.cpp ${_MOC_OUTFILES} ${_RCC_OUTFILES})
+  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.cpp ${_MOC_OUTFILES} ${_RCC_OUTFILES})
   ocv_check_flag_support(CXX -Wno-missing-declarations _have_flag)
   if(${_have_flag})
     set_source_files_properties(${_RCC_OUTFILES} PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
   endif()
 elseif(HAVE_WIN32UI)
-  list(APPEND highgui_srcs src/window_w32.cpp)
+  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_w32.cpp)
 elseif(HAVE_GTK OR HAVE_GTK3)
-  list(APPEND highgui_srcs src/window_gtk.cpp)
+  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_gtk.cpp)
 elseif(HAVE_CARBON)
-  list(APPEND highgui_srcs src/window_carbon.cpp)
+  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_carbon.cpp)
   list(APPEND HIGHGUI_LIBRARIES "-framework Carbon" "-framework QuickTime")
 elseif(HAVE_COCOA)
-  list(APPEND highgui_srcs src/window_cocoa.mm)
+  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_cocoa.mm)
   list(APPEND HIGHGUI_LIBRARIES "-framework Cocoa")
 endif()
 
@@ -90,6 +96,7 @@ ocv_module_include_directories()
 
 ocv_create_module(${HIGHGUI_LIBRARIES})
 
+macro(ocv_highgui_configure_target)
 if(APPLE)
   ocv_check_flag_support(OBJCXX "-fobjc-exceptions" HAVE_OBJC_EXCEPTIONS)
   if(HAVE_OBJC_EXCEPTIONS)
@@ -116,11 +123,17 @@ if(MSVC)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
 endif()
 
-#stop automatic dependencies propagation for this module
-set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
+if(NOT BUILD_opencv_world)
+  #stop automatic dependencies propagation for this module
+  set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
+endif()
 
-ocv_add_precompiled_headers(${the_module})
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
+endmacro()
+
+if(NOT BUILD_opencv_world)
+  ocv_highgui_configure_target()
+endif()
 
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
