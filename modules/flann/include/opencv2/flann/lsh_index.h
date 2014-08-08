@@ -118,8 +118,8 @@ public:
             if( (indices.size() == feature_size_ * CHAR_BIT) || (indices.size() < key_size_) )
             {
               indices.resize( feature_size_ * CHAR_BIT );
-              for (size_t j = 0; j < feature_size_ * CHAR_BIT; ++j)
-                  indices[j] = j;
+              for (size_t i = 0; i < feature_size_ * CHAR_BIT; ++i)
+                  indices[i] = i;
               std::random_shuffle(indices.begin(), indices.end());
             }
 
