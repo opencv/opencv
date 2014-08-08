@@ -17,14 +17,16 @@
    * Set up the images paths
    */
 
+  std::string tutorial_path = "../../samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/";
+
   // COOKIES BOX [718x480]
-  std::string img_path = "../Data/resized_IMG_3875.JPG"; // f 55
+  std::string img_path = tutorial_path + "Data/resized_IMG_3875.JPG"; // f 55
 
   // COOKIES BOX MESH
-  std::string ply_read_path = "../Data/box.ply";
+  std::string ply_read_path = tutorial_path + "Data/box.ply";
 
   // YAML writting path
-  std::string write_path = "../Data/cookies_ORB.yml";
+  std::string write_path = tutorial_path + "Data/cookies_ORB.yml";
 
   void help()
   {
