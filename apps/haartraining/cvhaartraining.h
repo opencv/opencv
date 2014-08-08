@@ -89,7 +89,7 @@ void cvCreatePngTrainingSet(const char* infoname,
                             const char* bgfilename, int count,
                             int invert, int maxintensitydev,
                             double maxxangle, double maxyangle, double maxzangle,
-                            int winwidth, int winheight);
+                            int winwidth = 640, int winheight = 480);
 
 void cvCreateTestSamples(const char* infoname,
                           const char* imgfilename, int bgcolor, int bgthreshold,

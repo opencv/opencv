@@ -220,7 +220,7 @@ int main( int argc, char* argv[] )
 
         cvCreatePngTrainingSet(infoname, imagename, bgcolor, bgthreshold, bgfilename, num,
                              invert, maxintensitydev,
-                             maxxangle, maxyangle, maxzangle, width, height);
+                             maxxangle, maxyangle, maxzangle);
 
         printf( "Done\n" );
     }

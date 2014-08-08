@@ -2961,8 +2961,23 @@ void icvFindFilePathPart(char** partofpath, char* fullpath)
 
 #define CV_INFO_FILENAME "info.dat"
 
+bool isCurrentOrParentDir(const char* path)
+{
+    unsigned int numdots = 0;
+    const char* currentpath = path;
+    for(;*currentpath != '\0' && *currentpath != '/' && *currentpath != '\\'; ++currentpath)
+    {
+        if(*currentpath == '.')
+            ++numdots;
+    }
+    if(numdots == strlen(path) && numdots <= 2 && numdots > 0)
+        return true;
+    else
+        return false;
+}
+
 void cvCreatePngTrainingSet(const char* infoname,
-                          const char* imgfilename, int bgcolor, int bgthreshold,
+                          const char* inputimgname, int bgcolor, int bgthreshold,
                           const char* bgfilename, int count,
                           int invert, int maxintensitydev,
                           double maxxangle, double maxyangle, double maxzangle,
@@ -2971,7 +2986,7 @@ void cvCreatePngTrainingSet(const char* infoname,
     CvSampleDistortionData data;
 
     assert( infoname != NULL );
-    assert( imgfilename != NULL );
+    assert( inputimgname != NULL );
     assert( bgfilename != NULL );
 
     if( !icvMkDir( infoname ) )
@@ -2983,19 +2998,21 @@ void cvCreatePngTrainingSet(const char* infoname,
 
         return;
     }
-    if( icvStartSampleDistortion( imgfilename, bgcolor, bgthreshold, &data ) )
+    if( icvStartSampleDistortion( inputimgname, bgcolor, bgthreshold, &data ) )
     {
-        char fullname[PATH_MAX];
+        char imagefullname[PATH_MAX];
+        char annotationfullname[PATH_MAX];
+//        char annotationsdir[PATH_MAX];
         char* filename;
-        char imgdescrfullname[PATH_MAX];
-        char outputdirname[PATH_MAX];
-        char* imgdescrfilename;
+        char* annotationname;
         char* annotationrelativepath;
+        char* imgrelativepath;
         CvMat win;
         CvMat result;
         FILE* info;
         FILE* imgdescr;
-        const char* annotationsdirname = "annotations";
+        const char* annotationsdirname = "/annotations/";
+        const char* positivesdirname = "/pos/";
         const char* extension = "png";
 
         if( icvInitBackgroundReaders( bgfilename, cvSize( winwidth, winheight ) ) )
@@ -3009,41 +3026,53 @@ void cvCreatePngTrainingSet(const char* infoname,
             CvSize origsize;
 
             info = fopen( infoname, "w" );
-            strcpy( fullname, infoname );
+            strcpy( imagefullname, infoname );
 
-            icvFindFilePathPart(&filename, fullname);
-
-            char* outputdirnameptr = NULL;
-            size_t parentdirnamelen = ( filename - fullname - 1);
-
-            strncpy(imgdescrfullname, fullname, parentdirnamelen * sizeof(char) );
-            imgdescrfullname[parentdirnamelen] = '\0';
-
-            icvFindFilePathPart(&outputdirnameptr, imgdescrfullname);
-            strcpy(outputdirname, outputdirnameptr);
-
-            int topleveldirnamelen = strlen(imgdescrfullname) - (outputdirnameptr - imgdescrfullname);
-            outputdirname[topleveldirnamelen] = '\0';
-
-            sprintf(filename, "pos/");
-            filename += strlen("pos/");
-
-            sprintf(imgdescrfullname + parentdirnamelen, "/%s/", annotationsdirname);
-            imgdescrfilename = imgdescrfullname + parentdirnamelen + strlen(annotationsdirname) + 2;
-
-            annotationrelativepath = imgdescrfullname + parentdirnamelen + 1;
-
-            if( !icvMkDir( imgdescrfullname ) )
+            icvFindFilePathPart(&filename, imagefullname);
+            if(filename == imagefullname)
             {
                 #if CV_VERBOSE
-                        fprintf( stderr, "Unable to create directory hierarchy: %s\n", imgdescrfullname );
+                        fprintf( stderr, "Invalid path to annotations file: %s\n"
+                                         "It should contain a parent directory name\n", imagefullname );
                 #endif /* CV_VERBOSE */
                 return;
             }
-            if( !icvMkDir( fullname ) )
+
+            filename[-1] = '\0'; //erase slash at the end of the path
+            filename -= 1;
+
+            //copy path to dataset top-level dir
+            strcpy(annotationfullname, imagefullname);
+            //find the name of annotation starting from the top-level dataset dir
+            icvFindFilePathPart(&annotationrelativepath, annotationfullname);
+            if( isCurrentOrParentDir(annotationrelativepath) )
             {
                 #if CV_VERBOSE
-                        fprintf( stderr, "Unable to create directory hierarchy: %s\n", fullname );
+                        fprintf( stderr, "Invalid path to annotations file: %s\n"
+                                         "It should contain a parent directory name\n", imagefullname );
+                #endif /* CV_VERBOSE */
+                return;
+            }
+            //find the name of output image starting from the top-level dataset dir
+            icvFindFilePathPart(&imgrelativepath, imagefullname);
+            annotationname = annotationfullname + strlen(annotationfullname);
+
+            sprintf(annotationname, "%s", annotationsdirname);
+            annotationname += strlen(annotationname);
+            sprintf(filename, "%s", positivesdirname);
+            filename += strlen(filename);
+
+            if( !icvMkDir( annotationfullname ) )
+            {
+                #if CV_VERBOSE
+                        fprintf( stderr, "Unable to create directory hierarchy: %s\n", annotationfullname );
+                #endif /* CV_VERBOSE */
+                return;
+            }
+            if( !icvMkDir( imagefullname ) )
+            {
+                #if CV_VERBOSE
+                        fprintf( stderr, "Unable to create directory hierarchy: %s\n", imagefullname );
                 #endif /* CV_VERBOSE */
                 return;
             }
@@ -3087,31 +3116,35 @@ void cvCreatePngTrainingSet(const char* infoname,
                 width = width * scale + 2*border;
                 height = height * scale + 2*border;
 
-                origsize = cvGetSize(&cvbgreader->src);
-                if( origsize.height > winheight || origsize.width > winwidth )
-                {
-                    cvResize(&cvbgreader->src, &result);
-                }
-
                 sprintf( filename, "%04d_%04d_%04d_%04d_%04d",
                          (i + 1), x, y, width, height);
 
-                sprintf( imgdescrfilename,"%s.txt",
+                sprintf( annotationname,"%s.txt",
                                           filename );
                 fprintf( info, "%s\n",
                          annotationrelativepath);
-                imgdescr = fopen(imgdescrfullname,"w");
 
-                sprintf( filename + strlen(filename) , ".%s",
+                imgdescr = fopen(annotationfullname,"w");
+
+                sprintf( filename + strlen(filename), ".%s",
                          extension);
 
                 fprintf( imgdescr, "Image filename : \"%s\"\n"
                                     "Bounding box for object 1 \"PASperson\" (Xmin, Ymin) - (Xmax, Ymax) : (%d, %d) - (%d, %d)",
-                         fullname, x, y, x + width, y + height );
+                         imgrelativepath, x, y, x + width, y + height );
                 fclose( imgdescr );
 
+                origsize = cvGetSize(&cvbgreader->src);
+                if( origsize.height > winheight || origsize.width > winwidth )
+                {
+                    cvResize(&cvbgreader->src, &result);
+                    cvSaveImage( imagefullname, &result );
+                }
+                else
+                {
+                    cvSaveImage( imagefullname, &cvbgreader->src );
+                }
 
-                cvSaveImage( fullname, &result );
             }
             if( info ) fclose( info );
             icvDestroyBackgroundReaders();
