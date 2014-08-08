@@ -27,7 +27,10 @@ set(videoio_srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg.cpp
     )
 
-file(GLOB videoio_ext_hdrs "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
+file(GLOB videoio_ext_hdrs
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h")
 
 if(WIN32 AND NOT ARM)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_cmu.cpp)
