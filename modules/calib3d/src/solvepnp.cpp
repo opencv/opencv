@@ -203,7 +203,7 @@ bool cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     Ptr<PointSetRegistrator::Callback> cb; // pointer to callback
     cb = makePtr<PnPRansacCallback>( cameraMatrix, distCoeffs, flags, useExtrinsicGuess, rvec, tvec);
 
-    int model_points = 4;                             // minimum of number of model points
+    int model_points = flags == P3P ? 4 : 6;          // minimum of number of model points
     double param1 = reprojectionError;                // reprojection error
     double param2 = confidence;                       // confidence
     int param3 = iterationsCount;                     // number maximum iterations
