@@ -43,6 +43,10 @@
 #include "precomp.hpp"
 #include "opencl_kernels_video.hpp"
 
+#if defined __APPLE__ || defined ANDROID
+#define SMALL_LOCALSIZE
+#endif
+
 //
 // 2D dense optical flow algorithm from the following paper:
 // Gunnar Farneback. "Two-Frame Motion Estimation Based on Polynomial Expansion".
@@ -836,7 +840,7 @@ private:
 
     bool gaussianBlurOcl(const UMat &src, int ksizeHalf, UMat &dst)
     {
-#ifdef ANDROID
+#ifdef SMALL_LOCALSIZE
         size_t localsize[2] = { 128, 1};
 #else
         size_t localsize[2] = { 256, 1};
@@ -863,7 +867,7 @@ private:
     bool gaussianBlur5Ocl(const UMat &src, int ksizeHalf, UMat &dst)
     {
         int height = src.rows / 5;
-#ifdef ANDROID
+#ifdef SMALL_LOCALSIZE
         size_t localsize[2] = { 128, 1};
 #else
         size_t localsize[2] = { 256, 1};
@@ -888,7 +892,7 @@ private:
     }
     bool polynomialExpansionOcl(const UMat &src, UMat &dst)
     {
-#ifdef ANDROID
+#ifdef SMALL_LOCALSIZE
         size_t localsize[2] = { 128, 1};
 #else
         size_t localsize[2] = { 256, 1};
@@ -925,7 +929,7 @@ private:
     bool boxFilter5Ocl(const UMat &src, int ksizeHalf, UMat &dst)
     {
         int height = src.rows / 5;
-#ifdef ANDROID
+#ifdef SMALL_LOCALSIZE
         size_t localsize[2] = { 128, 1};
 #else
         size_t localsize[2] = { 256, 1};
@@ -952,7 +956,7 @@ private:
 
     bool updateFlowOcl(const UMat &M, UMat &flowx, UMat &flowy)
     {
-#ifdef ANDROID
+#ifdef SMALL_LOCALSIZE
         size_t localsize[2] = { 32, 4};
 #else
         size_t localsize[2] = { 32, 8};
@@ -976,7 +980,7 @@ private:
     }
     bool updateMatricesOcl(const UMat &flowx, const UMat &flowy, const UMat &R0, const UMat &R1, UMat &M)
     {
-#ifdef ANDROID
+#ifdef SMALL_LOCALSIZE
         size_t localsize[2] = { 32, 4};
 #else
         size_t localsize[2] = { 32, 8};
