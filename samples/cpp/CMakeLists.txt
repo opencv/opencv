@@ -99,9 +99,13 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   endif()
 
   foreach(sample_filename ${cpp_samples})
-    get_filename_component(sample ${sample_filename} NAME_WE)
-    OPENCV_DEFINE_CPP_EXAMPLE(${sample}  ${sample_filename})
+    if(NOT "${sample_filename}" MATCHES "real_time_pose_estimation/")
+        get_filename_component(sample ${sample_filename} NAME_WE)
+        OPENCV_DEFINE_CPP_EXAMPLE(${sample}  ${sample_filename})
+    endif()
   endforeach()
+
+  include("tutorial_code/calib3d/real_time_pose_estimation/CMakeLists.txt")
 endif()
 
 if(INSTALL_C_EXAMPLES AND NOT WIN32)

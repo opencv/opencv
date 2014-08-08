@@ -1,29 +1,27 @@
-cmake_minimum_required(VERSION 2.8)
-project( PNP_DEMO )
+set(sample_dir ${CMAKE_CURRENT_SOURCE_DIR}/tutorial_code/calib3d/real_time_pose_estimation/src/)
 
-find_package( OpenCV REQUIRED )
+if(HAVE_opencv_nonfree)
+  ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/nonfree/include")
+endif()
 
-include_directories(
-    ${OpenCV_INCLUDE_DIRS}
+set(sample_pnplib
+        ${sample_dir}main_registration.cpp
+        ${sample_dir}CsvReader.cpp
+        ${sample_dir}CsvWriter.cpp
+        ${sample_dir}ModelRegistration.cpp
+        ${sample_dir}Mesh.cpp
+        ${sample_dir}Model.cpp
+        ${sample_dir}PnPProblem.cpp
+        ${sample_dir}Utils.cpp
+        ${sample_dir}RobustMatcher.cpp
 )
 
-add_library(pnp_lib
-    src/CsvReader.cpp
-    src/CsvWriter.cpp
-    src/ModelRegistration.cpp
-    src/Mesh.cpp
-    src/Model.cpp
-    src/PnPProblem.cpp
-    src/Utils.cpp
-    src/RobustMatcher.cpp
-)
+add_executable( pnp_registration ${sample_pnplib} )
+add_executable( pnp_verification ${sample_pnplib} )
+add_executable( pnp_detection ${sample_pnplib} )
+add_executable( pnp_test ${sample_pnplib} )
 
-add_executable( pnp_registration src/main_registration.cpp )
-add_executable( pnp_verification src/main_verification.cpp )
-add_executable( pnp_detection src/main_detection.cpp )
-add_executable( pnp_test src/test_pnp.cpp )
-
-target_link_libraries( pnp_registration pnp_lib ${OpenCV_LIBS} )
-target_link_libraries( pnp_verification pnp_lib ${OpenCV_LIBS} )
-target_link_libraries( pnp_detection pnp_lib ${OpenCV_LIBS} )
-target_link_libraries( pnp_test pnp_lib ${OpenCV_LIBS} )
+ocv_target_link_libraries(pnp_registration ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
+ocv_target_link_libraries(pnp_verification ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
+ocv_target_link_libraries(pnp_detection ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
+ocv_target_link_libraries(pnp_test ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
