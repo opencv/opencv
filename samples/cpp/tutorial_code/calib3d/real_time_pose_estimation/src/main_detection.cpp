@@ -14,11 +14,16 @@
 #include "ModelRegistration.h"
 #include "Utils.h"
 
+std::string tutorial_path = "../../samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/";
+
+// COOKIES VIDEO
+std::string video_read_path = tutorial_path + "Data/box.mp4";   // mesh
+
 //  COOKIES BOX - ORB
-std::string yml_read_path = "../Data/cookies_ORB.yml"; // 3dpts + descriptors
+std::string yml_read_path = tutorial_path + "Data/cookies_ORB.yml"; // 3dpts + descriptors
 
 // COOKIES BOX MESH
-std::string ply_read_path = "../Data/box.ply";   // mesh
+std::string ply_read_path = tutorial_path + "Data/box.ply";   // mesh
 
 void help()
 {
@@ -156,7 +161,7 @@ int main(int argc, char *argv[])
 
 
   cv::VideoCapture cap;                           // instantiate VideoCapture
-  (argc < 2) ? cap.open(1) : cap.open(argv[1]);   // open the default camera device
+  (argc < 2) ? cap.open(video_read_path) : cap.open(argv[1]);   // open the default camera device
                                                   // or a recorder video
 
   if(!cap.isOpened())   // check if we succeeded
