@@ -782,7 +782,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
         int type = src.type();
         if( !mask.empty() )
         {
-            typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC1)(const void *, int, void *, int, IppiSize, Ipp64f *);
+            typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC1)(const void *, int, const void *, int, IppiSize, Ipp64f *);
             ippiMaskMeanFuncC1 ippFuncC1 =
             type == CV_8UC1 ? (ippiMaskMeanFuncC1)ippiMean_8u_C1MR :
             type == CV_16UC1 ? (ippiMaskMeanFuncC1)ippiMean_16u_C1MR :
@@ -795,7 +795,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
                     return Scalar(res);
                 setIppErrorStatus();
             }
-            typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC3)(const void *, int, void *, int, IppiSize, int, Ipp64f *);
+            typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
             ippiMaskMeanFuncC3 ippFuncC3 =
             type == CV_8UC3 ? (ippiMaskMeanFuncC3)ippiMean_8u_C3CMR :
             type == CV_16UC3 ? (ippiMaskMeanFuncC3)ippiMean_16u_C3CMR :
@@ -1071,7 +1071,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
         int type = src.type();
         if( !mask.empty() )
         {
-            typedef IppStatus (CV_STDCALL* ippiMaskMeanStdDevFuncC1)(const void *, int, void *, int, IppiSize, Ipp64f *, Ipp64f *);
+            typedef IppStatus (CV_STDCALL* ippiMaskMeanStdDevFuncC1)(const void *, int, const void *, int, IppiSize, Ipp64f *, Ipp64f *);
             ippiMaskMeanStdDevFuncC1 ippFuncC1 =
             type == CV_8UC1 ? (ippiMaskMeanStdDevFuncC1)ippiMean_StdDev_8u_C1MR :
             type == CV_16UC1 ? (ippiMaskMeanStdDevFuncC1)ippiMean_StdDev_16u_C1MR :
@@ -1083,7 +1083,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
                     return;
                 setIppErrorStatus();
             }
-            typedef IppStatus (CV_STDCALL* ippiMaskMeanStdDevFuncC3)(const void *, int, void *, int, IppiSize, int, Ipp64f *, Ipp64f *);
+            typedef IppStatus (CV_STDCALL* ippiMaskMeanStdDevFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *, Ipp64f *);
             ippiMaskMeanStdDevFuncC3 ippFuncC3 =
             type == CV_8UC3 ? (ippiMaskMeanStdDevFuncC3)ippiMean_StdDev_8u_C3CMR :
             type == CV_16UC3 ? (ippiMaskMeanStdDevFuncC3)ippiMean_StdDev_16u_C3CMR :
