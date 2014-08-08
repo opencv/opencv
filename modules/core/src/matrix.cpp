@@ -2758,15 +2758,18 @@ namespace cv {
 
 static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
 {
-    int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), kercn = cn;
-    if (cn == 1)
+    int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), kercn = cn, rowsPerWI = 1;
+    int sctype = CV_MAKE_TYPE(depth, cn == 3 ? 4 : cn);
+    if (ocl::Device::getDefault().isIntel())
     {
-        kercn = std::min(ocl::predictOptimalVectorWidth(_m), 4);
-        if (kercn != 4)
-            kercn = 1;
+        rowsPerWI = 4;
+        if (cn == 1)
+        {
+            kercn = std::min(ocl::predictOptimalVectorWidth(_m), 4);
+            if (kercn != 4)
+                kercn = 1;
+        }
     }
-    int sctype = CV_MAKE_TYPE(depth, cn == 3 ? 4 : cn),
-            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
     ocl::Kernel k("setIdentity", ocl::core::set_identity_oclsrc,
                   format("-D T=%s -D T1=%s -D cn=%d -D ST=%s -D kercn=%d -D rowsPerWI=%d",
