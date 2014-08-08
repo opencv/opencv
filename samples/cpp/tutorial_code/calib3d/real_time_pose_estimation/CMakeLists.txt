@@ -17,11 +17,7 @@ set(sample_pnplib
 )
 
 add_executable( ${target}pnp_registration ${sample_dir}main_registration.cpp ${sample_pnplib} )
-add_executable( ${target}pnp_verification ${sample_dir}main_verification.cpp ${sample_pnplib} )
 add_executable( ${target}pnp_detection ${sample_dir}main_detection.cpp ${sample_pnplib} )
-add_executable( ${target}pnp_test ${sample_dir}test_pnp.cpp )
 
 ocv_target_link_libraries( ${target}pnp_registration ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS} )
-ocv_target_link_libraries( ${target}pnp_verification ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS} )
 ocv_target_link_libraries( ${target}pnp_detection ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS} )
-ocv_target_link_libraries(${target}pnp_test ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS} )
