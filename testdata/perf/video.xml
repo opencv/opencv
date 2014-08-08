@@ -12278,4 +12278,48 @@
       <x>128</x>
       <y>43</y>
       <val>3.2507807016372681e-001</val></rng2></uFlow></OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1----3--0-5---true->
+ <!-- resumed -->
+<TransformationType_findTransformECC--findTransformECC---MOTION_TRANSLATION->
+  <warpMat>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        1. 0. 5.66389656e+00 0. 1. 7.19798422e+00</data></val></warpMat></TransformationType_findTransformECC--findTransformECC---MOTION_TRANSLATION->
+<TransformationType_findTransformECC--findTransformECC---MOTION_EUCLIDEAN->
+  <warpMat>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        9.99972403e-01 7.42940698e-03 -1.48095989e+00 -7.42940698e-03
+        9.99972403e-01 5.33262348e+00</data></val></warpMat></TransformationType_findTransformECC--findTransformECC---MOTION_EUCLIDEAN->
+<TransformationType_findTransformECC--findTransformECC---MOTION_AFFINE->
+  <warpMat>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        1.02630472e+00 1.80504676e-02 6.01319695e+00 6.76517095e-03
+        9.77224469e-01 2.78590012e+00</data></val></warpMat></TransformationType_findTransformECC--findTransformECC---MOTION_AFFINE->
+<TransformationType_findTransformECC--findTransformECC---MOTION_HOMOGRAPHY->
+  <warpMat>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        1.14262593e+00 -9.49451886e-03 3.55638933e+00 1.69192515e-02
+        9.79395449e-01 5.60504436e+00 7.35168287e-04 1.47735554e-05 1.</data></val></warpMat></TransformationType_findTransformECC--findTransformECC---MOTION_HOMOGRAPHY->
 </opencv_storage>
