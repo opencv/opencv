@@ -15,9 +15,9 @@ endforeach(mp)
 # module blacklist
 ocv_list_filterout(candidate_deps "^opencv_cud(a|ev)")
 ocv_list_filterout(candidate_deps "^opencv_adas$")
+ocv_list_filterout(candidate_deps "^opencv_face$")
 ocv_list_filterout(candidate_deps "^opencv_matlab$")
 ocv_list_filterout(candidate_deps "^opencv_tracking$")
-
 
 ocv_add_module(${MODULE_NAME} BINDINGS OPTIONAL ${candidate_deps})
 
