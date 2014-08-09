@@ -155,7 +155,7 @@ protected:
         ts->set_failed_test_info(cvtest::TS::OK);
 
         vector<Point3f> points, points_dls;
-        const int pointsCount = 500, pointsCount2 = 300;
+        const int pointsCount = 500, pointsCount2 = 100;
         points.resize(pointsCount);
         points_dls.resize(pointsCount2);
         generate3DPointCloud(points);
