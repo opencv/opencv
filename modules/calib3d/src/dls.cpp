@@ -303,6 +303,7 @@ void dls::compute_eigenvec(const cv::Mat& Mtilde, cv::Mat& eigenval_real, cv::Ma
     EigenvalueDecomposition es(Mtilde);
     eigenval_real = es.eigenvalues();
     eigenvec_real = es.eigenvectors();
+    eigenval_imag = eigenvec_imag = cv::Mat();
 #endif
 
 }
