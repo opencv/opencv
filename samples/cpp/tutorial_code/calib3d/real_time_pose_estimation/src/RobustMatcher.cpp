@@ -113,9 +113,9 @@ void RobustMatcher::robustMatch( const cv::Mat& frame, std::vector<cv::DMatch>& 
 
   // 3. Remove matches for which NN ratio is > than threshold
   // clean image 1 -> image 2 matches
-  int removed1 = ratioTest(matches12);
+  ratioTest(matches12);
   // clean image 2 -> image 1 matches
-  int removed2 = ratioTest(matches21);
+  ratioTest(matches21);
 
   // 4. Remove non-symmetrical matches
   symmetryTest(matches12, matches21, good_matches);
@@ -140,7 +140,7 @@ void RobustMatcher::fastRobustMatch( const cv::Mat& frame, std::vector<cv::DMatc
   matcher_->knnMatch(descriptors_frame, descriptors_model, matches, 2);
 
   // 3. Remove matches for which NN ratio is > than threshold
-  int removed = ratioTest(matches);
+  ratioTest(matches);
 
   // 4. Fill good matches container
   for ( std::vector<std::vector<cv::DMatch> >::iterator

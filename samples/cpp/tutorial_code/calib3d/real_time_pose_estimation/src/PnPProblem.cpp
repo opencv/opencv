@@ -13,9 +13,15 @@
 
 #include <opencv2/calib3d/calib3d.hpp>
 
+/* Functions headers */
+cv::Point3f CROSS(cv::Point3f v1, cv::Point3f v2);
+double DOT(cv::Point3f v1, cv::Point3f v2);
+cv::Point3f SUB(cv::Point3f v1, cv::Point3f v2);
+cv::Point3f get_nearest_3D_point(std::vector<cv::Point3f> &points_list, cv::Point3f origin);
 
-/* Functions for Möller–Trumbore intersection algorithm
- * */
+
+/* Functions for Möller–Trumbore intersection algorithm */
+
 cv::Point3f CROSS(cv::Point3f v1, cv::Point3f v2)
 {
   cv::Point3f tmp_p;
