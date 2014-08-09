@@ -346,11 +346,11 @@ void help()
 std::cout
 << "--------------------------------------------------------------------------"   << std::endl
 << "This program shows how to detect an object given its 3D textured model. You can choose to "
-<< "use a recorded video or the webcam." << std::endl
+<< "use a recorded video or the webcam."                                          << std::endl
 << "Usage:"                                                                       << std::endl
-<< "./cpp-tutorial-pnp_detection [<pnpMethod>]"                                   << std::endl
+<< "./cpp-tutorial-pnp_detection -help"                                           << std::endl
 << "Keys:"                                                                        << std::endl
-<< "(0) ITERATIVE - (1) EPNP - (2) P3P - (3) DLS"                                 << std::endl
+<< "'esc' - to quit."                                                             << std::endl
 << "--------------------------------------------------------------------------"   << std::endl
 << std::endl;
 }
