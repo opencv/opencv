@@ -75,7 +75,6 @@ int main(int argc, char *argv[])
 
   const cv::String keys =
       "{help h        |      | print this message                   }"
-      "{camera c      |      | use real time camera                 }"
       "{video v       |      | path to recorded video               }"
       "{model         |      | path to yml model                    }"
       "{mesh          |      | path to ply mesh                     }"
@@ -97,9 +96,9 @@ int main(int argc, char *argv[])
   }
   else
   {
-    video_read_path = parser.has("video") ? parser.get<std::string>(0) : video_read_path;
-    yml_read_path = parser.has("model") ? parser.get<std::string>(1) : yml_read_path;
-    ply_read_path = parser.has("mesh") ? parser.get<std::string>(2) : ply_read_path;
+    video_read_path = parser.get<std::string>("video").size() > 0 ? parser.get<std::string>("video") : video_read_path;
+    yml_read_path = parser.get<std::string>("model").size() > 0 ? parser.get<std::string>("model") : yml_read_path;
+    ply_read_path = parser.get<std::string>("mesh").size() > 0 ? parser.get<std::string>("mesh") : ply_read_path;
     numKeyPoints = !parser.has("keypoints") ? parser.get<int>("keypoints") : numKeyPoints;
     ratio = !parser.has("ratio") ? parser.get<float>("ratio") : ratio;
     fast_match = !parser.has("fast") ? parser.get<bool>("fast") : fast_match;

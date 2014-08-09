@@ -80,7 +80,7 @@ static void onMouseModelRegistration( int event, int x, int y, int, void* )
 }
 
 /**  Main program  **/
-int main(int argc, char *argv[])
+int main()
 {
 
   help();
