@@ -53,22 +53,66 @@ The tutorial consists of two main programs:
 
 1. **Model registration**
 
-This applicaton is exclusive to whom don't have a 3D textured model of the object to be detected. You can use this program to create your own textured 3D model. This program only works for planar objects, then if you want to model an object with complex shape you should use a sophisticated software to create it.
+  This applicaton is exclusive to whom don't have a 3D textured model of the object to be detected. You can use this program to create your own textured 3D model. This program only works for planar objects, then if you want to model an object with complex shape you should use a sophisticated software to create it.
 
-The application needs an input image of the object to be registered and its 3D mesh. We have also to provide the intrinsic parameters of the camera with which the input image was taken. All the files need to be specified using the absolute path or the relative one from your application’s working directory. If none files are specified the program will try to open the provided default parameters.
+  The application needs an input image of the object to be registered and its 3D mesh. We have also to provide the intrinsic parameters of the camera with which the input image was taken. All the files need to be specified using the absolute path or the relative one from your application’s working directory. If none files are specified the program will try to open the provided default parameters.
 
-The application starts up extracting the ORB features and descriptors from the input image and then uses the mesh along with the `Möller–Trumbore intersection algorithm <http://http://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm/>`_ to compute the 3D coordinates of the found features. Finally, the 3D points and the descriptors are stored in different lists in a file with YAML format which each row is a different point. The technical background on how to store the files can be found in the :ref:`fileInputOutputXMLYAML` tutorial.
+  The application starts up extracting the ORB features and descriptors from the input image and then uses the mesh along with the `Möller–Trumbore intersection algorithm <http://http://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm/>`_ to compute the 3D coordinates of the found features. Finally, the 3D points and the descriptors are stored in different lists in a file with YAML format which each row is a different point. The technical background on how to store the files can be found in the :ref:`fileInputOutputXMLYAML` tutorial.
 
 .. image:: images/registration.png
    :alt: Model registration
    :align: center
 
 
-#. **Model detection**
+2. **Model detection**
 
-The aim of this application is estimate in real time the object pose given its 3D textured model.
+  The aim of this application is estimate in real time the object pose given its 3D textured model.
 
-The application starts up loading the 3D textured model in YAML file format with the same structure explained in the model registration program. From the scene the ORB features and descriptors are detected and extracted. Then, is used :flann_based_matcher:`FlannBasedMatcher<>` with :flann:`LshIndexParams <flann-index-t-index>` to do the matching between the scene descriptors and the model descriptors. Using the found matches along with :calib3d:`solvePnPRansac <solvepnpransac>` function the :math:`R` and :math:`t` of the camera are computed. Finally, a :video:`KalmanFilter<kalmanfilter>` is applied in order to reject bad poses.
+  The application starts up loading the 3D textured model in YAML file format with the same structure explained in the model registration program. From the scene, the ORB features and descriptors are detected and extracted. Then, is used :flann_based_matcher:`FlannBasedMatcher<>` with :flann:`LshIndexParams <flann-index-t-index>` to do the matching between the scene descriptors and the model descriptors. Using the found matches along with :calib3d:`solvePnPRansac <solvepnpransac>` function the :math:`R` and :math:`t` of the camera are computed. Finally, a :video:`KalmanFilter<kalmanfilter>` is applied in order to reject bad poses.
+
+  In the case that you compiled OpenCV with the samples, you can find it in :file:`opencv/build/bin/cpp-tutorial-pnp_detection`. Then you can run the application and change some parameters:
+
+  .. code-block:: cpp
+
+    This program shows how to detect an object given its 3D textured model. You can choose to use a recorded video or the webcam.
+    Usage:
+      ./cpp-tutorial-pnp_detection -help
+    Keys:
+      'esc' - to quit.
+    --------------------------------------------------------------------------
+
+    Usage: cpp-tutorial-pnp_detection [params] 
+
+      -c, --confidence (value:0.95)
+          RANSAC confidence
+      -e, --error (value:2.0)
+          RANSAC reprojection errror
+      -f, --fast (value:true)
+          use of robust fast match
+      -h, --help (value:true)
+          print this message
+      --in, --inliers (value:30)
+          minimum inliers for Kalman update
+      --it, --iterations (value:500)
+          RANSAC maximum iterations count
+      -k, --keypoints (value:2000)
+          number of keypoints to detect
+      --mesh
+          path to ply mesh
+      --method, --pnp (value:0)
+          PnP method: (0) ITERATIVE - (1) EPNP - (2) P3P - (3) DLS
+      --model
+          path to yml model
+      -r, --ratio (value:0.7)
+          threshold for ratio test
+      -v, --video
+          path to recorded video
+
+  For example, you can run the application changing the pnp method:
+
+  .. code-block:: cpp
+
+    ./cpp-tutorial-pnp_detection --method=2
 
 
 Explanation
@@ -78,7 +122,7 @@ Here is explained in detail the code for the real time application:
 
 1. **Read 3D textured object model and object mesh.**
 
-In order to load the textured model I implemented the *class* **Model** which has the function *load()* that opens a YAML file and take the stored 3D points with its corresponding descriptors. You can find an example of a 3D textured model in :file:`samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/cookies_ORB.yml`.
+  In order to load the textured model I implemented the *class* **Model** which has the function *load()* that opens a YAML file and take the stored 3D points with its corresponding descriptors. You can find an example of a 3D textured model in :file:`samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/cookies_ORB.yml`.
 
    .. code-block:: cpp
 
@@ -97,16 +141,14 @@ In order to load the textured model I implemented the *class* **Model** which ha
 
     }
 
-In the main program the model is loaded as follows:
+  In the main program the model is loaded as follows:
 
   .. code-block:: cpp
 
     Model model;               // instantiate Model object
     model.load(yml_read_path); // load a 3D textured object model
 
-
-
-In order to read the model mesh I implemented a *class* **Mesh** which has a function *load()* that opens a :math:`*`.ply file and store the 3D points of the object and also the composed triangles. You can find an example of a model mesh in :file:`samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/box.ply`.
+  In order to read the model mesh I implemented a *class* **Mesh** which has a function *load()* that opens a :math:`*`.ply file and store the 3D points of the object and also the composed triangles. You can find an example of a model mesh in :file:`samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/box.ply`.
 
    .. code-block:: cpp
 
@@ -130,51 +172,62 @@ In order to read the model mesh I implemented a *class* **Mesh** which has a fun
 
     }
 
-In the main program the mesh is loaded as follows:
+  In the main program the mesh is loaded as follows:
 
   .. code-block:: cpp
 
     Mesh mesh;                // instantiate Mesh object
     mesh.load(ply_read_path); // load an object mesh
 
-
-#. **Take input from Camera or Video**
-
-To detect is necessary capture video. It's done loading a recorded video by passing the absolute path where it is located in your machine or using the default camera device. In order to test the application you can find a recorded video in :file:`samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/box.mp4`.
+  You can also load different model and mesh:
 
   .. code-block:: cpp
 
-    cv::VideoCapture cap;                           // instantiate VideoCapture
-    (argc < 2) ? cap.open(0) : cap.open(argv[1]);   // open the default camera device
-                            // or a recorder video
+   ./cpp-tutorial-pnp_detection --mesh=/absolute_path_to_your_mesh.ply --model=/absolute_path_to_your_model.yml
 
-    if(!cap.isOpened())                             // check if we succeeded
+
+2. **Take input from Camera or Video**
+
+  To detect is necessary capture video. It's done loading a recorded video by passing the absolute path where it is located in your machine. In order to test the application you can find a recorded video in :file:`samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/box.mp4`.
+
+  .. code-block:: cpp
+
+    cv::VideoCapture cap;                // instantiate VideoCapture
+    cap.open(video_read_path);           // open a recorded video
+
+    if(!cap.isOpened())                  // check if we succeeded
     {
-        std::cout << "Could not open the camera device" << std::endl;
-        return -1;
+       std::cout << "Could not open the camera device" << std::endl;
+       return -1;
     }
 
-Then the algorithm is computed frame per frame:
+  Then the algorithm is computed frame per frame:
 
   .. code-block:: cpp
 
     cv::Mat frame, frame_vis;
 
-    while(cap.read(frame) && cv::waitKey(30) != 27) // capture frame until ESC is pressed
+    while(cap.read(frame) && cv::waitKey(30) != 27)    // capture frame until ESC is pressed
     {
 
-        frame_vis = frame.clone();      // refresh visualisation frame
+        frame_vis = frame.clone();                     // refresh visualisation frame
 
         // MAIN ALGORITHM
 
     }
 
+  You can also load different recorded video:
 
-#. **Extract ORB features and descriptors from the scene**
+  .. code-block:: cpp
 
-The next step is to detect the scene features and extract it descriptors. For this task I implemented a *class* **RobustMatcher** which has a function for keypoints detection and features extraction. You can find it in :file:`samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/src/RobusMatcher.cpp`. In your *RobusMatch* object you can use any of the 2D features detectors of OpenCV. In this case I used :feature_detection_and_description:`ORB<orb>` features because is based on :feature_detection_and_description:`FAST<fast>` to detect the keypoints and :descriptor_extractor:`BRIEF<briefdescriptorextractor>` to extract the descriptors which means that is fast and robust to rotations. You can find more detailed information about *ORB* in the documentation.
+   ./cpp-tutorial-pnp_detection --video=/absolute_path_to_your_video.mp4
 
-The following code is how to instantiate and set the features detector and the descriptors extractor:
+
+3. **Extract ORB features and descriptors from the scene**
+
+  The next step is to detect the scene features and extract it descriptors. For this task I implemented a *class* **RobustMatcher** which has a function for keypoints detection and features extraction. You can find it in :file:`samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/src/RobusMatcher.cpp`. In your *RobusMatch* object you can use any of the 2D features detectors of OpenCV. In this case I used :feature_detection_and_description:`ORB<orb>` features because is based on :feature_detection_and_description:`FAST<fast>` to detect the keypoints and :descriptor_extractor:`BRIEF<briefdescriptorextractor>` to extract the descriptors which means that is fast and robust to rotations. You can find more detailed information about *ORB* in the documentation.
+
+  The following code is how to instantiate and set the features detector and the descriptors extractor:
 
   .. code-block:: cpp
 
@@ -186,18 +239,18 @@ The following code is how to instantiate and set the features detector and the d
     rmatcher.setFeatureDetector(detector);                                           // set feature detector
     rmatcher.setDescriptorExtractor(extractor);                                      // set descriptor extractor
 
-The features and descriptors will be computed by the *RobustMatcher* inside the matching function.
+  The features and descriptors will be computed by the *RobustMatcher* inside the matching function.
 
 
-#. **Match scene descriptors with model descriptors using Flann matcher**
+4. **Match scene descriptors with model descriptors using Flann matcher**
 
-It is the first step in our detection algorithm. The main idea is to match the scene descriptors with our model descriptors in order to know the 3D coordinates of the found features into the current scene.
+  It is the first step in our detection algorithm. The main idea is to match the scene descriptors with our model descriptors in order to know the 3D coordinates of the found features into the current scene.
 
-Firstly, we have to set which matcher we want to use. In this case is used :flann_based_matcher:`FlannBasedMatcher<>` matcher which in terms of computational cost is faster than the :brute_force_matcher:`BruteForceMatcher<bfmatcher>` matcher as we increase the trained collectction of features. Then, for FlannBased matcher the index created is *Multi-Probe LSH: Efficient Indexing for High-Dimensional Similarity Search* due to *ORB* descriptors are binary.
+  Firstly, we have to set which matcher we want to use. In this case is used :flann_based_matcher:`FlannBasedMatcher<>` matcher which in terms of computational cost is faster than the :brute_force_matcher:`BruteForceMatcher<bfmatcher>` matcher as we increase the trained collectction of features. Then, for FlannBased matcher the index created is *Multi-Probe LSH: Efficient Indexing for High-Dimensional Similarity Search* due to *ORB* descriptors are binary.
 
-You can tune the *LSH* and search parameters to improve the matching efficiency:
+  You can tune the *LSH* and search parameters to improve the matching efficiency:
 
- .. code-block:: cpp
+  .. code-block:: cpp
 
     cv::Ptr<cv::flann::IndexParams> indexParams = cv::makePtr<cv::flann::LshIndexParams>(6, 12, 1); // instantiate LSH index parameters
     cv::Ptr<cv::flann::SearchParams> searchParams = cv::makePtr<cv::flann::SearchParams>(50);       // instantiate flann search parameters
@@ -206,18 +259,18 @@ You can tune the *LSH* and search parameters to improve the matching efficiency:
     rmatcher.setDescriptorMatcher(matcher);                                                         // set matcher
 
 
-Secondly, we have to call the matcher by using *robustMatch()* or *fastRobustMatch()* function. The difference of using this two functions is its computational cost. The first method is slower but more robust at filtering good matches because uses two ratio test and a symmetry test. In contrast, the second method is faster but less robust because only applies a single ratio test to the matches.
+  Secondly, we have to call the matcher by using *robustMatch()* or *fastRobustMatch()* function. The difference of using this two functions is its computational cost. The first method is slower but more robust at filtering good matches because uses two ratio test and a symmetry test. In contrast, the second method is faster but less robust because only applies a single ratio test to the matches.
 
-The following code is to get the model 3D points and its descriptors and then call the matcher in the main program:
+  The following code is to get the model 3D points and its descriptors and then call the matcher in the main program:
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     // Get the MODEL INFO
 
     std::vector<cv::Point3f> list_points3d_model = model.get_points3d();  // list with model 3D coordinates
     cv::Mat descriptors_model = model.get_descriptors();                  // list with descriptors of each 3D coordinate
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     // -- Step 1: Robust matching between model descriptors and scene descriptors
 
@@ -233,13 +286,13 @@ The following code is to get the model 3D points and its descriptors and then ca
         rmatcher.robustMatch(frame, good_matches, keypoints_scene, descriptors_model);
     }
 
-The following code corresponds to the *robustMatch()* function which belongs to the *RobustMatcher* class. This function uses the given image to detect the keypoints and extract the descriptors, match using *two Nearest Neighbour* the extracted descriptors with the given model descriptors and vice versa. Then, a ratio test is applied to the two direction matches in order to remove these matches which its distance ratio between the first and second best match is larger than a given threshold. Finally, a symmetry test is applied in order the remove non symmetrical matches.
+  The following code corresponds to the *robustMatch()* function which belongs to the *RobustMatcher* class. This function uses the given image to detect the keypoints and extract the descriptors, match using *two Nearest Neighbour* the extracted descriptors with the given model descriptors and vice versa. Then, a ratio test is applied to the two direction matches in order to remove these matches which its distance ratio between the first and second best match is larger than a given threshold. Finally, a symmetry test is applied in order the remove non symmetrical matches.
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     void RobustMatcher::robustMatch( const cv::Mat& frame, std::vector<cv::DMatch>& good_matches,
-                                 std::vector<cv::KeyPoint>& keypoints_frame,
-                                         const std::vector<cv::KeyPoint>& keypoints_model, const cv::Mat& descriptors_model )
+                                     std::vector<cv::KeyPoint>& keypoints_frame,
+                                     const std::vector<cv::KeyPoint>& keypoints_model, const cv::Mat& descriptors_model )
     {
 
         // 1a. Detection of the ORB features
@@ -269,9 +322,9 @@ The following code corresponds to the *robustMatch()* function which belongs to 
 
     }
 
-After the matches filtering we have to subtract the 2D and 3D correspondences from the found scene keypoints and our 3D model using the obtained *DMatches* vector. For more information about :basicstructures:`DMatch <dmatch>` check the documentation.
+  After the matches filtering we have to subtract the 2D and 3D correspondences from the found scene keypoints and our 3D model using the obtained *DMatches* vector. For more information about :basicstructures:`DMatch <dmatch>` check the documentation.
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     // -- Step 2: Find out the 2D/3D correspondences
 
@@ -280,41 +333,45 @@ After the matches filtering we have to subtract the 2D and 3D correspondences fr
 
     for(unsigned int match_index = 0; match_index < good_matches.size(); ++match_index)
     {
-        cv::Point3f point3d_model = list_points3d_model[ good_matches[match_index].trainIdx ];    // 3D point from model
+        cv::Point3f point3d_model = list_points3d_model[ good_matches[match_index].trainIdx ];   // 3D point from model
         cv::Point2f point2d_scene = keypoints_scene[ good_matches[match_index].queryIdx ].pt;    // 2D point from the scene
-        list_points3d_model_match.push_back(point3d_model);                    // add 3D point
-        list_points2d_scene_match.push_back(point2d_scene);                    // add 2D point
+        list_points3d_model_match.push_back(point3d_model);                                      // add 3D point
+        list_points2d_scene_match.push_back(point2d_scene);                                      // add 2D point
     }
 
+  You can also change the ratio test threshold, the number of keypoints to detect as well as use or not the robust matcher:
 
-#. **Pose estimation using PnP + Ransac**
+  .. code-block:: cpp
 
-Once with the 2D and 3D correspondences we have to apply a PnP algorithm in order to estimate the camera pose. The reason why we have to use :calib3d:`solvePnPRansac <solvepnpransac>` instead of :calib3d:`solvePnP <solvepnp>` is due to the fact that after the matching not all the found correspondences are correct and, as like as not, there are false correspondences or also called *outliers*. The `Random Sample Consensus <http://en.wikipedia.org/wiki/RANSAC>`_ or *Ransac* is a non-deterministic iterative method which estimate parameters of a mathematical model from observed data producing an aproximate result as the number of iterations increase. After appyling *Ransac* all the *outliers* will be eliminated to then estimate the camera pose with a certain probability to obtain a good solution.
+   ./cpp-tutorial-pnp_detection --ratio=0.8 --keypoints=1000 --fast=false
 
-For the camera pose estimation I have implemented a *class* **PnPProblem**. This *class* has 4 atributes: a given calibration matrix, the rotation matrix, the translation matrix and the rotation-translation matrix. The intrinsic calibration parameters of the camera which you are using to estimate the pose are necessary. In order to obtain the parameters you can check :ref:`CameraCalibrationSquareChessBoardTutorial` and :ref:`cameraCalibrationOpenCV` tutorials.
 
-The following code is how to declare the *PnPProblem class* in the main program:
+5. **Pose estimation using PnP + Ransac**
 
-   .. code-block:: cpp
+  Once with the 2D and 3D correspondences we have to apply a PnP algorithm in order to estimate the camera pose. The reason why we have to use :calib3d:`solvePnPRansac <solvepnpransac>` instead of :calib3d:`solvePnP <solvepnp>` is due to the fact that after the matching not all the found correspondences are correct and, as like as not, there are false correspondences or also called *outliers*. The `Random Sample Consensus <http://en.wikipedia.org/wiki/RANSAC>`_ or *Ransac* is a non-deterministic iterative method which estimate parameters of a mathematical model from observed data producing an aproximate result as the number of iterations increase. After appyling *Ransac* all the *outliers* will be eliminated to then estimate the camera pose with a certain probability to obtain a good solution.
 
-    /*
-     * Set up the intrinsic camera parameters: UVC WEBCAM
-     */
+  For the camera pose estimation I have implemented a *class* **PnPProblem**. This *class* has 4 atributes: a given calibration matrix, the rotation matrix, the translation matrix and the rotation-translation matrix. The intrinsic calibration parameters of the camera which you are using to estimate the pose are necessary. In order to obtain the parameters you can check :ref:`CameraCalibrationSquareChessBoardTutorial` and :ref:`cameraCalibrationOpenCV` tutorials.
+
+  The following code is how to declare the *PnPProblem class* in the main program:
+
+  .. code-block:: cpp
+
+    // Intrinsic camera parameters: UVC WEBCAM
 
     double f = 55;                           // focal length in mm
     double sx = 22.3, sy = 14.9;             // sensor size
     double width = 640, height = 480;        // image size
 
     double params_WEBCAM[] = { width*f/sx,   // fx
-                           height*f/sy,  // fy
-                           width/2,      // cx
-                           height/2};    // cy
+                               height*f/sy,  // fy
+                               width/2,      // cx
+                               height/2};    // cy
 
     PnPProblem pnp_detection(params_WEBCAM); // instantiate PnPProblem class
 
-The following code is how the *PnPProblem class* initialises its atributes:
+  The following code is how the *PnPProblem class* initialises its atributes:
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     // Custom constructor given the intrinsic camera parameters
 
@@ -332,61 +389,60 @@ The following code is how the *PnPProblem class* initialises its atributes:
 
     }
 
-OpenCV provides four PnP methods: ITERATIVE, EPNP, P3P and DLS. Depending on the application type, the estimation method will be different. In the case that we want to make a real time application, the more suitable methods are EPNP and P3P due to that are faster than ITERATIVE and DLS at finding an optimal solution. However, EPNP and P3P are not especially robust in front of planar surfaces and sometimes the pose estimation seems to have a mirror effect. Therefore, in this this tutorial is used ITERATIVE method due to the object to be detected has planar surfaces.
+  OpenCV provides four PnP methods: ITERATIVE, EPNP, P3P and DLS. Depending on the application type, the estimation method will be different. In the case that we want to make a real time application, the more suitable methods are EPNP and P3P due to that are faster than ITERATIVE and DLS at finding an optimal solution. However, EPNP and P3P are not especially robust in front of planar surfaces and sometimes the pose estimation seems to have a mirror effect. Therefore, in this this tutorial is used ITERATIVE method due to the object to be detected has planar surfaces.
 
-The OpenCV Ransac implementation wants you to provide three parameters: the maximum number of iterations until stop the algorithm, the maximum allowed distance between the observed and computed point projections to consider it an inlier and the confidence to obtain a good result. You can tune these paramaters in order to improve your algorithm performance. Increasing the number of iterations you will have a more accurate solution, but will take more time to find a solution. Increasing the reprojection error will reduce the computation time, but your solution will be unaccurate. Decreasing the confidence your arlgorithm will be faster, but the obtained solution will be unaccurate.
+  The OpenCV Ransac implementation wants you to provide three parameters: the maximum number of iterations until stop the algorithm, the maximum allowed distance between the observed and computed point projections to consider it an inlier and the confidence to obtain a good result. You can tune these paramaters in order to improve your algorithm performance. Increasing the number of iterations you will have a more accurate solution, but will take more time to find a solution. Increasing the reprojection error will reduce the computation time, but your solution will be unaccurate. Decreasing the confidence your arlgorithm will be faster, but the obtained solution will be unaccurate.
 
-The following parameters work for this application:
+  The following parameters work for this application:
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     // RANSAC parameters
 
-    int iterationsCount = 500;    // number of Ransac iterations.
+    int iterationsCount = 500;        // number of Ransac iterations.
     float reprojectionError = 2.0;    // maximum allowed distance to consider it an inlier.
-    float confidence = 0.95;    // ransac successful confidence.
+    float confidence = 0.95;          // ransac successful confidence.
 
 
-The following code corresponds to the *estimatePoseRANSAC()* function which belongs to the *PnPProblem class*. This function estimates the rotation and translation matrix given a set of 2D/3D correspondences, the desired PnP method to use, the output inliers container and the Ransac parameters:
+  The following code corresponds to the *estimatePoseRANSAC()* function which belongs to the *PnPProblem class*. This function estimates the rotation and translation matrix given a set of 2D/3D correspondences, the desired PnP method to use, the output inliers container and the Ransac parameters:
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     // Estimate the pose given a list of 2D/3D correspondences with RANSAC and the method to use
 
-    void PnPProblem::estimatePoseRANSAC( const std::vector<cv::Point3f> &list_points3d,    // list with model 3D coordinates
-                                     const std::vector<cv::Point2f> &list_points2d,     // list with scene 2D coordinates
-                                     int flags, cv::Mat &inliers, int iterationsCount,  // PnP method; inliers container
-                                     float reprojectionError, float confidence )       // Ransac parameters
+    void PnPProblem::estimatePoseRANSAC( const std::vector<cv::Point3f> &list_points3d,        // list with model 3D coordinates
+                                         const std::vector<cv::Point2f> &list_points2d,        // list with scene 2D coordinates
+                                         int flags, cv::Mat &inliers, int iterationsCount,     // PnP method; inliers container
+                                         float reprojectionError, float confidence )           // Ransac parameters
     {
         cv::Mat distCoeffs = cv::Mat::zeros(4, 1, CV_64FC1);    // vector of distortion coefficients
         cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);          // output rotation vector
-        cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);        // output translation vector
+        cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);          // output translation vector
 
         bool useExtrinsicGuess = false;   // if true the function uses the provided rvec and tvec values as
-                          // initial approximations of the rotation and translation vectors
+                                          // initial approximations of the rotation and translation vectors
 
         cv::solvePnPRansac( list_points3d, list_points2d, _A_matrix, distCoeffs, rvec, tvec,
-                        useExtrinsicGuess, iterationsCount, reprojectionError, confidence,
-                        inliers, flags );
+                            useExtrinsicGuess, iterationsCount, reprojectionError, confidence,
+                            inliers, flags );
 
-        Rodrigues(rvec,_R_matrix);             // converts Rotation Vector to Matrix
-        _t_matrix = tvec;                // set translation matrix
+        Rodrigues(rvec,_R_matrix);                   // converts Rotation Vector to Matrix
+        _t_matrix = tvec;                            // set translation matrix
 
         this->set_P_matrix(_R_matrix, _t_matrix);    // set rotation-translation matrix
 
     }
 
-In the following code are the 3th and 4th steps of the main algorithm. The first, calling the above function and the second taking the output inliers vector from Ransac to get the 2D scene points for drawing purpose. As seen in the code we must be sure to apply Ransac if we have matches, in the other case, the function :calib3d:`solvePnPRansac <solvepnpransac>` crashes due to any OpenCV *bug*.
+  In the following code are the 3th and 4th steps of the main algorithm. The first, calling the above function and the second taking the output inliers vector from Ransac to get the 2D scene points for drawing purpose. As seen in the code we must be sure to apply Ransac if we have matches, in the other case, the function :calib3d:`solvePnPRansac <solvepnpransac>` crashes due to any OpenCV *bug*.
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     if(good_matches.size() > 0) // None matches, then RANSAC crashes
     {
 
         // -- Step 3: Estimate the pose using RANSAC approach
         pnp_detection.estimatePoseRANSAC( list_points3d_model_match, list_points2d_scene_match,
-                                  cv::ITERATIVE, inliers_idx,
-                                  iterationsCount, reprojectionError, minInliersCount );
+                                          pnpMethod, inliers_idx, iterationsCount, reprojectionError, confidence );
 
 
         // -- Step 4: Catch the inliers keypoints to draw
@@ -398,11 +454,11 @@ In the following code are the 3th and 4th steps of the main algorithm. The first
     }
 
 
-Finally, once the camera pose has been estimated we can use the :math:`R` and :math:`t` in order to compute the 2D projection onto the image of a given 3D point expressed in a world reference frame using the showed formula on *Theory*.
+  Finally, once the camera pose has been estimated we can use the :math:`R` and :math:`t` in order to compute the 2D projection onto the image of a given 3D point expressed in a world reference frame using the showed formula on *Theory*.
 
-The following code corresponds to the *backproject3DPoint()* function which belongs to the *PnPProblem class*. The function backproject a given 3D point expressed in a world reference frame onto a 2D image:
+  The following code corresponds to the *backproject3DPoint()* function which belongs to the *PnPProblem class*. The function backproject a given 3D point expressed in a world reference frame onto a 2D image:
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     // Backproject a 3D point to 2D using the estimated pose parameters
 
@@ -427,24 +483,30 @@ The following code corresponds to the *backproject3DPoint()* function which belo
         return point2d;
     }
 
-The above function is used to compute all the 3D points of the object *Mesh* to show the pose of the object.
+  The above function is used to compute all the 3D points of the object *Mesh* to show the pose of the object.
+  
+  You can also change RANSAC parameters and PnP method:
+
+  .. code-block:: cpp
+
+   ./cpp-tutorial-pnp_detection --error=0.25 --confidence=0.90 --iterations=250 --method=3
 
 
-#. **Linear Kalman Filter for bad poses rejection**
+6. **Linear Kalman Filter for bad poses rejection**
 
-Is it common in computer vision or robotics fields that after applying detection or tracking techniques, bad results are obtained due to some sensor errors. In order to avoid these bad detections in this tutorial is explained how to implement a Linear Kalman Filter. The Kalman Filter will be applied after detected a given number of inliers.
+  Is it common in computer vision or robotics fields that after applying detection or tracking techniques, bad results are obtained due to some sensor errors. In order to avoid these bad detections in this tutorial is explained how to implement a Linear Kalman Filter. The Kalman Filter will be applied after detected a given number of inliers.
 
-You can find more information about what `Kalman Filter <http://en.wikipedia.org/wiki/Kalman_filter>`_ is. In this tutorial it's used the OpenCV implementation of the :video:`Kalman Filter <kalmanfilter>` based on `Linear Kalman Filter for position and orientation tracking <http://campar.in.tum.de/Chair/KalmanFilter>`_ to set the dynamics and measurement models.
+  You can find more information about what `Kalman Filter <http://en.wikipedia.org/wiki/Kalman_filter>`_ is. In this tutorial it's used the OpenCV implementation of the :video:`Kalman Filter <kalmanfilter>` based on `Linear Kalman Filter for position and orientation tracking <http://campar.in.tum.de/Chair/KalmanFilter>`_ to set the dynamics and measurement models.
 
-Firstly, we have to define our state vector which will have 18 states: the positional data (x,y,z) with its first and second derivatives (velocity and acceleration), then rotation is added in form of three euler angles (roll, pitch, jaw) together with their first and second derivatives (angular velocity and acceleration)
+  Firstly, we have to define our state vector which will have 18 states: the positional data (x,y,z) with its first and second derivatives (velocity and acceleration), then rotation is added in form of three euler angles (roll, pitch, jaw) together with their first and second derivatives (angular velocity and acceleration)
 
    .. math::
 
     X = (x,y,z,\dot x,\dot y,\dot z,\ddot x,\ddot y,\ddot z,\psi,\theta,\phi,\dot \psi,\dot \theta,\dot \phi,\ddot \psi,\ddot \theta,\ddot \phi)^T
 
-Secondly, we have to define the number of measuremnts which will be 6: from :math:`R` and :math:`t` we can extract :math:`(x,y,z)` and :math:`(\psi,\theta,\phi)`. In addition, we have to define the number of control actions to apply to the system which in this case will be *zero*. Finally, we have to define the differential time between measurements which in this case is :math:`1/T`, where *T* is the frame rate of the video.
+  Secondly, we have to define the number of measuremnts which will be 6: from :math:`R` and :math:`t` we can extract :math:`(x,y,z)` and :math:`(\psi,\theta,\phi)`. In addition, we have to define the number of control actions to apply to the system which in this case will be *zero*. Finally, we have to define the differential time between measurements which in this case is :math:`1/T`, where *T* is the frame rate of the video.
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     cv::KalmanFilter KF;         // instantiate Kalman Filter
 
@@ -457,11 +519,11 @@ Secondly, we have to define the number of measuremnts which will be 6: from :mat
     initKalmanFilter(KF, nStates, nMeasurements, nInputs, dt);    // init function
 
 
-The following code corresponds to the *Kalman Filter* initialisation. Firstly, is set the process noise, the measurement noise and the error covariance matrix. Secondly, are set the transition matrix which is the dynamic model and finally the measurement matrix, which is the measurement model.
+  The following code corresponds to the *Kalman Filter* initialisation. Firstly, is set the process noise, the measurement noise and the error covariance matrix. Secondly, are set the transition matrix which is the dynamic model and finally the measurement matrix, which is the measurement model.
 
-You can tune the process and measurement noise to improve the *Kalman Filter* performance. As the measurement noise is reduced the faster will converge doing the algorithm sensitive in front of bad measurements.
+  You can tune the process and measurement noise to improve the *Kalman Filter* performance. As the measurement noise is reduced the faster will converge doing the algorithm sensitive in front of bad measurements.
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     void initKalmanFilter(cv::KalmanFilter &KF, int nStates, int nMeasurements, int nInputs, double dt)
     {
@@ -533,14 +595,11 @@ You can tune the process and measurement noise to improve the *Kalman Filter* pe
       KF.measurementMatrix.at<double>(4,10) = 1; // pitch
       KF.measurementMatrix.at<double>(5,11) = 1; // yaw
 
-      std::cout << "A " << std::endl << KF.transitionMatrix << std::endl;
-      std::cout << "C " << std::endl << KF.measurementMatrix << std::endl;
-
     }
 
-In the following code is the 5th step of the main algorithm. When the obtained number of inliers after *Ransac* is over the threshold, the measurements matrix is filled and then the *Kalman Filter* is updated:
+  In the following code is the 5th step of the main algorithm. When the obtained number of inliers after *Ransac* is over the threshold, the measurements matrix is filled and then the *Kalman Filter* is updated:
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     // -- Step 5: Kalman Filter
 
@@ -569,9 +628,9 @@ In the following code is the 5th step of the main algorithm. When the obtained n
     updateKalmanFilter( KF, measurements,
                   translation_estimated, rotation_estimated);
 
-The following code corresponds to the *fillMeasurements()* function which converts the measured `Rotation Matrix to Eulers angles <http://euclideanspace.com/maths/geometry/rotations/conversions/matrixToEuler/index.htm>`_ and fill the measurements matrix along with the measured  translation vector:
+  The following code corresponds to the *fillMeasurements()* function which converts the measured `Rotation Matrix to Eulers angles <http://euclideanspace.com/maths/geometry/rotations/conversions/matrixToEuler/index.htm>`_ and fill the measurements matrix along with the measured  translation vector:
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     void fillMeasurements( cv::Mat &measurements,
                        const cv::Mat &translation_measured, const cv::Mat &rotation_measured)
@@ -590,9 +649,9 @@ The following code corresponds to the *fillMeasurements()* function which conver
     }
 
 
-The following code corresponds to the *updateKalmanFilter()* function which update the Kalman Filter and set the estimated Rotation Matrix and translation vector. The estimated Rotation Matrix comes from the estimated `Euler angles to Rotation Matrix <http://euclideanspace.com/maths/geometry/rotations/conversions/eulerToMatrix/index.htm>`_.
+  The following code corresponds to the *updateKalmanFilter()* function which update the Kalman Filter and set the estimated Rotation Matrix and translation vector. The estimated Rotation Matrix comes from the estimated `Euler angles to Rotation Matrix <http://euclideanspace.com/maths/geometry/rotations/conversions/eulerToMatrix/index.htm>`_.
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     void updateKalmanFilter( cv::KalmanFilter &KF, cv::Mat &measurement,
                          cv::Mat &translation_estimated, cv::Mat &rotation_estimated )
@@ -620,22 +679,22 @@ The following code corresponds to the *updateKalmanFilter()* function which upda
 
     }
 
-The 6th step is set the estimated rotation-translation matrix:
+  The 6th step is set the estimated rotation-translation matrix:
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     // -- Step 6: Set estimated projection matrix
     pnp_detection_est.set_P_matrix(rotation_estimated, translation_estimated);
 
 
-The last and optional step is draw the found pose. To do it I implemented a function to draw all the mesh 3D points and an extra reference axis:
+  The last and optional step is draw the found pose. To do it I implemented a function to draw all the mesh 3D points and an extra reference axis:
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     // -- Step X: Draw pose
 
     drawObjectMesh(frame_vis, &mesh, &pnp_detection, green);                // draw current pose
-    drawObjectMesh(frame_vis, &mesh, &pnp_detection_est, yellow);                // draw estimated pose
+    drawObjectMesh(frame_vis, &mesh, &pnp_detection_est, yellow);           // draw estimated pose
 
     double l = 5;
     std::vector<cv::Point2f> pose_points2d;
@@ -643,7 +702,13 @@ The last and optional step is draw the found pose. To do it I implemented a func
     pose_points2d.push_back(pnp_detection_est.backproject3DPoint(cv::Point3f(l,0,0)));    // axis x
     pose_points2d.push_back(pnp_detection_est.backproject3DPoint(cv::Point3f(0,l,0)));    // axis y
     pose_points2d.push_back(pnp_detection_est.backproject3DPoint(cv::Point3f(0,0,l)));    // axis z
-    draw3DCoordinateAxes(frame_vis, pose_points2d);                        // draw axes
+    draw3DCoordinateAxes(frame_vis, pose_points2d);                                       // draw axes
+
+  You can also modify the minimum inliers to update Kalman Filter:
+
+  .. code-block:: cpp
+
+   ./cpp-tutorial-pnp_detection --inliers=20
 
 
 Results
@@ -651,7 +716,7 @@ Results
 
 The following videos are the results of pose estimation in real time using the explained detection algorithm using the following parameters:
 
-   .. code-block:: cpp
+  .. code-block:: cpp
 
     // Robust Matcher parameters
 
@@ -678,4 +743,8 @@ You can watch the real time pose estimation on the `YouTube here <https://www.yo
 
    <div align="center">
    <iframe title=" Pose estimation for the Google Summer Code 2014 using OpenCV libraries." width="560" height="349" src="http://www.youtube.com/embed/msFFuHsiUns?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
+   </div>
+   
+   <div align="center">
+   <iframe title=" Pose estimation for the Google Summer Code 2014 using OpenCV libraries." width="560" height="349" src="http://www.youtube.com/embed/_E4vhmBJYLU?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
    </div>
