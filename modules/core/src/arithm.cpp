@@ -2460,8 +2460,8 @@ addWeighted8u( const uchar* src1, size_t step1,
             out_f_l = vaddq_f32(out_f_l, g);
             out_f_h = vaddq_f32(out_f_h, g);
 
-            uint16x4_t out_16_l = vqmovn_u32(vcvtq_u32_f32(out_f_l));
-            uint16x4_t out_16_h = vqmovn_u32(vcvtq_u32_f32(out_f_h));
+            uint16x4_t out_16_l = vqmovun_s32(vcvtq_s32_f32(out_f_l));
+            uint16x4_t out_16_h = vqmovun_s32(vcvtq_s32_f32(out_f_h));
 
             uint16x8_t out_16 = vcombine_u16(out_16_l, out_16_h);
             uint8x8_t out = vqmovn_u16(out_16);
