@@ -861,9 +861,9 @@ public:
     void getValues( int vi, InputArray _sidx, float* values ) const
     {
         Mat sidx = _sidx.getMat();
-        int i, n, nsamples = getNSamples();
+        int i, n = sidx.checkVector(1, CV_32S), nsamples = getNSamples();
         CV_Assert( 0 <= vi && vi < getNAllVars() );
-        CV_Assert( (n = sidx.checkVector(1, CV_32S)) >= 0 );
+        CV_Assert( n >= 0 );
         const int* s = n > 0 ? sidx.ptr<int>() : 0;
         if( n == 0 )
             n = nsamples;
@@ -938,8 +938,8 @@ public:
     {
         CV_Assert(buf != 0 && 0 <= sidx && sidx < getNSamples());
         Mat vidx = _vidx.getMat();
-        int i, n, nvars = getNAllVars();
-        CV_Assert( (n = vidx.checkVector(1, CV_32S)) >= 0 );
+        int i, n = vidx.checkVector(1, CV_32S), nvars = getNAllVars();
+        CV_Assert( n >= 0 );
         const int* vptr = n > 0 ? vidx.ptr<int>() : 0;
         if( n == 0 )
             n = nvars;
