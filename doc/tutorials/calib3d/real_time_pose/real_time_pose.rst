@@ -744,7 +744,7 @@ You can watch the real time pose estimation on the `YouTube here <https://www.yo
    <div align="center">
    <iframe title=" Pose estimation for the Google Summer Code 2014 using OpenCV libraries." width="560" height="349" src="http://www.youtube.com/embed/msFFuHsiUns?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
    </div>
- 
+
    <div align="center">
    <iframe title=" Pose estimation for the Google Summer Code 2014 using OpenCV libraries." width="560" height="349" src="http://www.youtube.com/embed/_E4vhmBJYLU?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
    </div>
