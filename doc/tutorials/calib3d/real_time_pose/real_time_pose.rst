@@ -81,7 +81,7 @@ The tutorial consists of two main programs:
       'esc' - to quit.
     --------------------------------------------------------------------------
 
-    Usage: cpp-tutorial-pnp_detection [params] 
+    Usage: cpp-tutorial-pnp_detection [params]
 
       -c, --confidence (value:0.95)
           RANSAC confidence
@@ -484,7 +484,7 @@ Here is explained in detail the code for the real time application:
     }
 
   The above function is used to compute all the 3D points of the object *Mesh* to show the pose of the object.
-  
+
   You can also change RANSAC parameters and PnP method:
 
   .. code-block:: cpp
@@ -744,7 +744,7 @@ You can watch the real time pose estimation on the `YouTube here <https://www.yo
    <div align="center">
    <iframe title=" Pose estimation for the Google Summer Code 2014 using OpenCV libraries." width="560" height="349" src="http://www.youtube.com/embed/msFFuHsiUns?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
    </div>
-   
+ 
    <div align="center">
    <iframe title=" Pose estimation for the Google Summer Code 2014 using OpenCV libraries." width="560" height="349" src="http://www.youtube.com/embed/_E4vhmBJYLU?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
    </div>
