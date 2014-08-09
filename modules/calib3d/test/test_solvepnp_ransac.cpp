@@ -154,11 +154,12 @@ protected:
     {
         ts->set_failed_test_info(cvtest::TS::OK);
 
-        vector<Point3f> points;
-        const int pointsCount = 400;
+        vector<Point3f> points, points_dls;
+        const int pointsCount = 500, pointsCount2 = 300;
         points.resize(pointsCount);
+        points_dls.resize(pointsCount2);
         generate3DPointCloud(points);
-
+        generate3DPointCloud(points_dls);
 
         const int methodsCount = 4;
         RNG rng = ts->get_rng();
@@ -172,7 +173,8 @@ protected:
                 int successfulTestsCount = 0;
                 for (int testIndex = 0; testIndex < totalTestsCount; testIndex++)
                 {
-                    if (runTest(rng, mode, method, points, eps, maxError))
+                    vector<Point3f> points_ = method != 3 ? points : points_dls;
+                    if (runTest(rng, mode, method, points_, eps, maxError))
                         successfulTestsCount++;
                 }
                 //cout <<  maxError << " " << successfulTestsCount << endl;
