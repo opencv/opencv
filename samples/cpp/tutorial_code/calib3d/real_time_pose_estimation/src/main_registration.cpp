@@ -1,5 +1,12 @@
+// C++
 #include <iostream>
-
+// OpenCV
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/nonfree/features2d.hpp>
+// PnP Tutorial
 #include "Mesh.h"
 #include "Model.h"
 #include "PnPProblem.h"
@@ -7,75 +14,50 @@
 #include "ModelRegistration.h"
 #include "Utils.h"
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/calib3d/calib3d.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/nonfree/features2d.hpp>
+/**  GLOBAL VARIABLES  **/
 
-  /*
-   * Set up the images paths
-   */
+std::string tutorial_path = "../../samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/"; // path to tutorial
 
-  // COOKIES BOX [718x480]
-  std::string img_path = "../Data/resized_IMG_3875.JPG"; // f 55
+std::string img_path = tutorial_path + "Data/resized_IMG_3875.JPG";  // image to register
+std::string ply_read_path = tutorial_path + "Data/box.ply";          // object mesh
+std::string write_path = tutorial_path + "Data/cookies_ORB.yml";     // output file
 
-  // COOKIES BOX MESH
-  std::string ply_read_path = "../Data/box.ply";
+// Boolean the know if the registration it's done
+bool end_registration = false;
 
-  // YAML writting path
-  std::string write_path = "../Data/cookies_ORB.yml";
+// Intrinsic camera parameters: UVC WEBCAM
+double f = 45; // focal length in mm
+double sx = 22.3, sy = 14.9;
+double width = 2592, height = 1944;
+double params_CANON[] = { width*f/sx,   // fx
+                          height*f/sy,  // fy
+                          width/2,      // cx
+                          height/2};    // cy
 
-  void help()
-  {
-  std::cout
-  << "--------------------------------------------------------------------------"   << std::endl
-  << "This program shows how to create your 3D textured model. "                    << std::endl
-  << "Usage:"                                                                       << std::endl
-  << "./pnp_registration "                                                          << std::endl
-  << "--------------------------------------------------------------------------"   << std::endl
-  << std::endl;
-  }
+// Setup the points to register in the image
+// In the order of the *.ply file and starting at 1
+int n = 8;
+int pts[] = {1, 2, 3, 4, 5, 6, 7, 8}; // 3 -> 4
 
-  // Boolean the know if the registration it's done
-  bool end_registration = false;
+// Some basic colors
+cv::Scalar red(0, 0, 255);
+cv::Scalar green(0,255,0);
+cv::Scalar blue(255,0,0);
+cv::Scalar yellow(0,255,255);
 
-  /*
-   * Set up the intrinsic camera parameters: CANON
-   */
-  double f = 45; // focal length in mm
-  double sx = 22.3, sy = 14.9;
-  double width = 2592, height = 1944;
-  double params_CANON[] = { width*f/sx,   // fx
-                            height*f/sy,  // fy
-                            width/2,      // cx
-                            height/2};    // cy
+/*
+ * CREATE MODEL REGISTRATION OBJECT
+ * CREATE OBJECT MESH
+ * CREATE OBJECT MODEL
+ * CREATE PNP OBJECT
+ */
+ModelRegistration registration;
+Model model;
+Mesh mesh;
+PnPProblem pnp_registration(params_CANON);
 
-
-  // Setup the points to register in the image
-  // In the order of the *.ply file and starting at 1
-  int n = 8;
-  int pts[] = {1, 2, 3, 4, 5, 6, 7, 8}; // 3 -> 4
-
-  /*
-   * Set up some basic colors
-   */
-  cv::Scalar red(0, 0, 255);
-  cv::Scalar green(0,255,0);
-  cv::Scalar blue(255,0,0);
-  cv::Scalar yellow(0,255,255);
-
-  /*
-   * CREATE MODEL REGISTRATION OBJECT
-   * CREATE OBJECT MESH
-   * CREATE OBJECT MODEL
-   * CREATE PNP OBJECT
-   */
-  ModelRegistration registration;
-  Model model;
-  Mesh mesh;
-  PnPProblem pnp_registration(params_CANON);
-
+/**  Functions headers  **/
+void help();
 
 // Mouse events for model registration
 static void onMouseModelRegistration( int event, int x, int y, int, void* )
@@ -97,11 +79,7 @@ static void onMouseModelRegistration( int event, int x, int y, int, void* )
   }
 }
 
-/*
- *   MAIN PROGRAM
- *
- */
-
+/**  Main program  **/
 int main(int argc, char *argv[])
 {
 
@@ -118,11 +96,7 @@ int main(int argc, char *argv[])
   cv::FeatureDetector * detector = new cv::OrbFeatureDetector(numKeyPoints);
   rmatcher.setFeatureDetector(detector);
 
-  /*
-   * GROUND TRUTH OF THE FIRST IMAGE
-   *
-   * by the moment it is the reference image
-   */
+  /**  GROUND TRUTH OF THE FIRST IMAGE  **/
 
   // Create & Open Window
   cv::namedWindow("MODEL REGISTRATION", cv::WINDOW_KEEPRATIO);
@@ -183,12 +157,7 @@ int main(int argc, char *argv[])
     cv::imshow("MODEL REGISTRATION", img_vis);
   }
 
-
-  /*
-   *
-   * COMPUTE CAMERA POSE
-   *
-   */
+  /** COMPUTE CAMERA POSE **/
 
   std::cout << "COMPUTING POSE ..." << std::endl;
 
@@ -217,12 +186,7 @@ int main(int argc, char *argv[])
   cv::waitKey(0);
 
 
-   /*
-    *
-    * COMPUTE 3D of the image Keypoints
-    *
-    */
-
+   /** COMPUTE 3D of the image Keypoints **/
 
   // Containers for keypoints and descriptors of the model
   std::vector<cv::KeyPoint> keypoints_model;
@@ -287,4 +251,16 @@ int main(int argc, char *argv[])
 
   std::cout << "GOODBYE" << std::endl;
 
+}
+
+/**********************************************************************************************************/
+void help()
+{
+  std::cout
+  << "--------------------------------------------------------------------------"   << std::endl
+  << "This program shows how to create your 3D textured model. "                    << std::endl
+  << "Usage:"                                                                       << std::endl
+  << "./cpp-tutorial-pnp_registration"                                              << std::endl
+  << "--------------------------------------------------------------------------"   << std::endl
+  << std::endl;
 }
