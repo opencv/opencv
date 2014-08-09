@@ -162,10 +162,6 @@ int main(int argc, char *argv[])
     return -1;
   }
 
-  // Input parameters
-  if(argc > 2) pnpMethod = 0;
-
-
   // start and end times
   time_t start, end;
 
