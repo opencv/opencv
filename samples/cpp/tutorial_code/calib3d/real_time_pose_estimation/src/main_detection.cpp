@@ -1,12 +1,14 @@
+// C++
 #include <iostream>
 #include <time.h>
-
+// OpenCV
 #include <opencv2/core/core.hpp>
+#include <opencv2/core/utility.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/video/tracking.hpp>
-
+// PnP Tutorial
 #include "Mesh.h"
 #include "Model.h"
 #include "PnPProblem.h"
@@ -14,35 +16,15 @@
 #include "ModelRegistration.h"
 #include "Utils.h"
 
-std::string tutorial_path = "../../samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/";
+/**  GLOBAL VARIABLES  **/
 
-// COOKIES VIDEO
-std::string video_read_path = tutorial_path + "Data/box.mp4";   // mesh
+std::string tutorial_path = "../../samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/"; // path to tutorial
 
-//  COOKIES BOX - ORB
+std::string video_read_path = tutorial_path + "Data/box.mp4";       // recorded video
 std::string yml_read_path = tutorial_path + "Data/cookies_ORB.yml"; // 3dpts + descriptors
+std::string ply_read_path = tutorial_path + "Data/box.ply";         // mesh
 
-// COOKIES BOX MESH
-std::string ply_read_path = tutorial_path + "Data/box.ply";   // mesh
-
-void help()
-{
-std::cout
-<< "--------------------------------------------------------------------------"   << std::endl
-<< "This program shows how to detect an object given its 3D textured model. You can choose to "
-<< "use a recorded video or the webcam." << std::endl
-<< "Usage:"                                                                       << std::endl
-<< "./pnp_detection ~/path_to_video/box.mp4"                                      << std::endl
-<< "./pnp_detection "                                                             << std::endl
-<< "--------------------------------------------------------------------------"   << std::endl
-<< std::endl;
-}
-
-
-/*
- * Set up the intrinsic camera parameters: UVC WEBCAM
- */
-
+// Intrinsic camera parameters: UVC WEBCAM
 double f = 55;                           // focal length in mm
 double sx = 22.3, sy = 14.9;             // sensor size
 double width = 640, height = 480;        // image size
@@ -52,10 +34,7 @@ double params_WEBCAM[] = { width*f/sx,   // fx
                            width/2,      // cx
                            height/2};    // cy
 
-
-/*
- * Set up some basic colors
- */
+// Some basic colors
 cv::Scalar red(0, 0, 255);
 cv::Scalar green(0,255,0);
 cv::Scalar blue(255,0,0);
@@ -63,49 +42,73 @@ cv::Scalar yellow(0,255,255);
 
 
 // Robust Matcher parameters
-
 int numKeyPoints = 2000;      // number of detected keypoints
 float ratio = 0.70f;          // ratio test
 bool fast_match = true;       // fastRobustMatch() or robustMatch()
 
-
 // RANSAC parameters
-
 int iterationsCount = 500;      // number of Ransac iterations.
 float reprojectionError = 2.0;  // maximum allowed distance to consider it an inlier.
 float confidence = 0.95;        // ransac successful confidence.
 
-
 // Kalman Filter parameters
-
 int minInliersKalman = 30;    // Kalman threshold updating
 
+// PnP parameters
+int pnpMethod = cv::ITERATIVE;
 
-/**********************************************************************************************************/
 
+/**  Functions headers  **/
+void help();
 void initKalmanFilter( cv::KalmanFilter &KF, int nStates, int nMeasurements, int nInputs, double dt);
-
-
-/**********************************************************************************************************/
-
-
 void updateKalmanFilter( cv::KalmanFilter &KF, cv::Mat &measurements,
                          cv::Mat &translation_estimated, cv::Mat &rotation_estimated );
-
-/**********************************************************************************************************/
-
-
 void fillMeasurements( cv::Mat &measurements,
                        const cv::Mat &translation_measured, const cv::Mat &rotation_measured);
 
 
-/**********************************************************************************************************/
-
-
+/**  Main program  **/
 int main(int argc, char *argv[])
 {
 
   help();
+
+  const cv::String keys =
+      "{help h        |      | print this message                   }"
+      "{camera c      |      | use real time camera                 }"
+      "{video v       |      | path to recorded video               }"
+      "{model         |      | path to yml model                    }"
+      "{mesh          |      | path to ply mesh                     }"
+      "{keypoints k   |2000  | number of keypoints to detect        }"
+      "{ratio r       |0.7   | threshold for ratio test             }"
+      "{iterations it |500   | RANSAC maximum iterations count      }"
+      "{error e       |2.0   | RANSAC reprojection errror           }"
+      "{confidence c  |0.95  | RANSAC confidence                    }"
+      "{inliers in    |30    | minimum inliers for Kalman update    }"
+      "{method  pnp   |0     | PnP method: (0) ITERATIVE - (1) EPNP - (2) P3P - (3) DLS}"
+      "{fast f        |true  | use of robust fast match             }"
+      ;
+  cv::CommandLineParser parser(argc, argv, keys);
+
+  if (parser.has("help"))
+  {
+      parser.printMessage();
+      return 0;
+  }
+  else
+  {
+    video_read_path = parser.has("video") ? parser.get<std::string>(0) : video_read_path;
+    yml_read_path = parser.has("model") ? parser.get<std::string>(1) : yml_read_path;
+    ply_read_path = parser.has("mesh") ? parser.get<std::string>(2) : ply_read_path;
+    numKeyPoints = !parser.has("keypoints") ? parser.get<int>("keypoints") : numKeyPoints;
+    ratio = !parser.has("ratio") ? parser.get<float>("ratio") : ratio;
+    fast_match = !parser.has("fast") ? parser.get<bool>("fast") : fast_match;
+    iterationsCount = !parser.has("iterations") ? parser.get<int>("iterations") : iterationsCount;
+    reprojectionError = !parser.has("error") ? parser.get<float>("error") : reprojectionError;
+    confidence = !parser.has("confidence") ? parser.get<float>("confidence") : confidence;
+    minInliersKalman = !parser.has("inliers") ? parser.get<int>("inliers") : minInliersKalman;
+    pnpMethod = !parser.has("method") ? parser.get<int>("method") : pnpMethod;
+  }
 
   PnPProblem pnp_detection(params_WEBCAM);
   PnPProblem pnp_detection_est(params_WEBCAM);
@@ -113,9 +116,8 @@ int main(int argc, char *argv[])
   Model model;               // instantiate Model object
   model.load(yml_read_path); // load a 3D textured object model
 
-  Mesh mesh;                // instantiate Mesh object
-  mesh.load(ply_read_path); // load an object mesh
-
+  Mesh mesh;                 // instantiate Mesh object
+  mesh.load(ply_read_path);  // load an object mesh
 
   RobustMatcher rmatcher;                                                     // instantiate RobustMatcher
 
@@ -125,33 +127,25 @@ int main(int argc, char *argv[])
   rmatcher.setFeatureDetector(detector);                                      // set feature detector
   rmatcher.setDescriptorExtractor(extractor);                                 // set descriptor extractor
 
-
   cv::Ptr<cv::flann::IndexParams> indexParams = cv::makePtr<cv::flann::LshIndexParams>(6, 12, 1); // instantiate LSH index parameters
   cv::Ptr<cv::flann::SearchParams> searchParams = cv::makePtr<cv::flann::SearchParams>(50);       // instantiate flann search parameters
 
   cv::DescriptorMatcher * matcher = new cv::FlannBasedMatcher(indexParams, searchParams);         // instantiate FlannBased matcher
   rmatcher.setDescriptorMatcher(matcher);                                                         // set matcher
-
-
   rmatcher.setRatio(ratio); // set ratio test parameter
 
-
   cv::KalmanFilter KF;         // instantiate Kalman Filter
-
   int nStates = 18;            // the number of states
   int nMeasurements = 6;       // the number of measured states
-  int nInputs = 0;             // the number of action control
-
+  int nInputs = 0;             // the number of control actions
   double dt = 0.125;           // time between measurements (1/FPS)
 
   initKalmanFilter(KF, nStates, nMeasurements, nInputs, dt);    // init function
-
   cv::Mat measurements(nMeasurements, 1, CV_64F); measurements.setTo(cv::Scalar(0));
   bool good_measurement = false;
 
 
   // Get the MODEL INFO
-
   std::vector<cv::Point3f> list_points3d_model = model.get_points3d();  // list with model 3D coordinates
   cv::Mat descriptors_model = model.get_descriptors();                  // list with descriptors of each 3D coordinate
 
@@ -161,8 +155,7 @@ int main(int argc, char *argv[])
 
 
   cv::VideoCapture cap;                           // instantiate VideoCapture
-  (argc < 2) ? cap.open(video_read_path) : cap.open(argv[1]);   // open the default camera device
-                                                  // or a recorder video
+  cap.open(video_read_path);                      // open a recorded video
 
   if(!cap.isOpened())   // check if we succeeded
   {
@@ -170,24 +163,22 @@ int main(int argc, char *argv[])
     return -1;
   }
 
+  // Input parameters
+  if(argc > 2) pnpMethod = 0;
+
 
   // start and end times
   time_t start, end;
 
   // fps calculated using number of frames / seconds
-  double fps;
+  // floating point seconds elapsed since start
+  double fps, sec;
 
   // frame counter
   int counter = 0;
 
-  // floating point seconds elapsed since start
-  double sec;
-
   // start the clock
   time(&start);
-
-  double tstart2, tstop2, ttime2; // algorithm metrics
-  double tstart, tstop, ttime; // algorithm metrics
 
   cv::Mat frame, frame_vis;
 
@@ -236,10 +227,9 @@ int main(int argc, char *argv[])
     if(good_matches.size() > 0) // None matches, then RANSAC crashes
     {
 
-
       // -- Step 3: Estimate the pose using RANSAC approach
       pnp_detection.estimatePoseRANSAC( list_points3d_model_match, list_points2d_scene_match,
-                                        cv::ITERATIVE, inliers_idx,
+                                        pnpMethod, inliers_idx,
                                         iterationsCount, reprojectionError, confidence );
 
       // -- Step 4: Catch the inliers keypoints to draw
@@ -322,8 +312,8 @@ int main(int argc, char *argv[])
     fps = counter / sec;
 
     drawFPS(frame_vis, fps, yellow); // frame ratio
-    double ratio = ((double)inliers_idx.rows/(double)good_matches.size())*100;
-    drawConfidence(frame_vis, ratio, yellow);
+    double detection_ratio = ((double)inliers_idx.rows/(double)good_matches.size())*100;
+    drawConfidence(frame_vis, detection_ratio, yellow);
 
 
     // -- Step X: Draw some debugging text
@@ -341,9 +331,6 @@ int main(int argc, char *argv[])
     drawText2(frame_vis, text2, red);
 
     cv::imshow("REAL TIME DEMO", frame_vis);
-
-    //cv::waitKey(0);
-
   }
 
   // Close and Destroy Window
@@ -351,6 +338,21 @@ int main(int argc, char *argv[])
 
   std::cout << "GOODBYE ..." << std::endl;
 
+}
+
+/**********************************************************************************************************/
+void help()
+{
+std::cout
+<< "--------------------------------------------------------------------------"   << std::endl
+<< "This program shows how to detect an object given its 3D textured model. You can choose to "
+<< "use a recorded video or the webcam." << std::endl
+<< "Usage:"                                                                       << std::endl
+<< "./cpp-tutorial-pnp_detection [<pnpMethod>]"                                   << std::endl
+<< "Keys:"                                                                        << std::endl
+<< "(0) ITERATIVE - (1) EPNP - (2) P3P - (3) DLS"                                 << std::endl
+<< "--------------------------------------------------------------------------"   << std::endl
+<< std::endl;
 }
 
 /**********************************************************************************************************/
@@ -423,9 +425,6 @@ void initKalmanFilter(cv::KalmanFilter &KF, int nStates, int nMeasurements, int 
   KF.measurementMatrix.at<double>(3,9) = 1;  // roll
   KF.measurementMatrix.at<double>(4,10) = 1; // pitch
   KF.measurementMatrix.at<double>(5,11) = 1; // yaw
-
-  //std::cout << "A " << std::endl << KF.transitionMatrix << std::endl;
-  //std::cout << "C " << std::endl << KF.measurementMatrix << std::endl;
 
 }
 

@@ -114,7 +114,7 @@ void drawArrow(cv::Mat image, cv::Point2i p, cv::Point2i q, cv::Scalar color, in
 {
   //Draw the principle line
   cv::line(image, p, q, color, thickness, line_type, shift);
-  const double PI = 3.141592653;
+  const double PI = CV_PI;
   //compute the angle alpha
   double angle = atan2((double)p.y-q.y, (double)p.x-q.x);
   //compute the coordinates of the first segment
@@ -136,9 +136,6 @@ void draw3DCoordinateAxes(cv::Mat image, const std::vector<cv::Point2f> &list_po
   cv::Scalar green(0,255,0);
   cv::Scalar blue(255,0,0);
   cv::Scalar black(0,0,0);
-
-  const double PI = 3.141592653;
-  int length = 50;
 
   cv::Point2i origin = list_points2d[0];
   cv::Point2i pointX = list_points2d[1];
@@ -196,13 +193,11 @@ cv::Mat rot2euler(const cv::Mat & rotationMatrix)
   cv::Mat euler(3,1,CV_64F);
 
   double m00 = rotationMatrix.at<double>(0,0);
-  double m01 = rotationMatrix.at<double>(0,1);
   double m02 = rotationMatrix.at<double>(0,2);
   double m10 = rotationMatrix.at<double>(1,0);
   double m11 = rotationMatrix.at<double>(1,1);
   double m12 = rotationMatrix.at<double>(1,2);
   double m20 = rotationMatrix.at<double>(2,0);
-  double m21 = rotationMatrix.at<double>(2,1);
   double m22 = rotationMatrix.at<double>(2,2);
 
   double x, y, z;
