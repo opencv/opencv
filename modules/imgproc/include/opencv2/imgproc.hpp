@@ -1518,6 +1518,24 @@ CV_EXPORTS Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
 //! Performs linear blending of two images
 CV_EXPORTS void blendLinear(InputArray src1, InputArray src2, InputArray weights1, InputArray weights2, OutputArray dst);
 
+enum
+{
+    COLORMAP_AUTUMN = 0,
+    COLORMAP_BONE = 1,
+    COLORMAP_JET = 2,
+    COLORMAP_WINTER = 3,
+    COLORMAP_RAINBOW = 4,
+    COLORMAP_OCEAN = 5,
+    COLORMAP_SUMMER = 6,
+    COLORMAP_SPRING = 7,
+    COLORMAP_COOL = 8,
+    COLORMAP_HSV = 9,
+    COLORMAP_PINK = 10,
+    COLORMAP_HOT = 11
+};
+
+CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, int colormap);
+
 } // cv
 
 #endif
