@@ -199,7 +199,6 @@ public:
 private:
     IplImage* argbimage;
     QTMovie* mMovie;
-    unsigned char* imagedata;
 
     NSString* path;
     NSString* codec;

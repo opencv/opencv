@@ -431,7 +431,7 @@ public:
                 break;
 
             case GAUSSIAN:
-                for( i = 0; i < n; j++ )
+                for( i = 0; i < n; i++ )
                 {
                     double* data = sums.ptr<double>(i);
                     for( j = 0; j < cols; j++ )
