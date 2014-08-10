@@ -1801,11 +1801,11 @@ private:
     UMat twiddles;
     String buildOptions;
     int thread_count;
-    bool status;
     int dft_size;
+    bool status;
 
 public:
-    OCL_FftPlan(int _size): dft_size(_size), status(true)
+    OCL_FftPlan(int _size) : dft_size(_size), status(true)
     {
         int min_radix;
         std::vector<int> radixes, blocks;

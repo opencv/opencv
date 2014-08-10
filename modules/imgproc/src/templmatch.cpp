@@ -450,7 +450,6 @@ static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArr
 
     UMat templ  = _templ.getUMat();
     UMat result = _result.getUMat();
-    Size tsize = templ.size();
 
     if (cn==1)
     {

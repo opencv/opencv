@@ -1324,6 +1324,9 @@ OCL_FUNC(cl_int, clReleaseEvent, (cl_event event), (event))
 
 #endif
 
+#ifdef _DEBUG
+#define CV_OclDbgAssert CV_DbgAssert
+#else
 static bool isRaiseError()
 {
     static bool initialized = false;
@@ -1335,10 +1338,6 @@ static bool isRaiseError()
     }
     return value;
 }
-
-#ifdef _DEBUG
-#define CV_OclDbgAssert CV_DbgAssert
-#else
 #define CV_OclDbgAssert(expr) do { if (isRaiseError()) { CV_Assert(expr); } else { (void)(expr); } } while ((void)0, 0)
 #endif
 

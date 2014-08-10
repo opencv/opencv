@@ -1335,9 +1335,9 @@ public:
                 _responses.convertTo(_yf, CV_32F);
 
             bool ok =
-            (svmType == ONE_CLASS ? Solver::solve_one_class( _samples, params.nu, kernel, _alpha, sinfo, termCrit ) :
+            svmType == ONE_CLASS ? Solver::solve_one_class( _samples, params.nu, kernel, _alpha, sinfo, termCrit ) :
             svmType == EPS_SVR ? Solver::solve_eps_svr( _samples, _yf, params.p, params.C, kernel, _alpha, sinfo, termCrit ) :
-            svmType == NU_SVR ? Solver::solve_nu_svr( _samples, _yf, params.nu, params.C, kernel, _alpha, sinfo, termCrit ) : false);
+            svmType == NU_SVR ? Solver::solve_nu_svr( _samples, _yf, params.nu, params.C, kernel, _alpha, sinfo, termCrit ) : false;
 
             if( !ok )
                 return false;
