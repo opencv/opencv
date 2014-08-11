@@ -9,13 +9,16 @@ using namespace cv;
 
 int main(int argc, char *argv[])
 {
-    Mat src,dst;
+    Mat src,dst1,dst2;
 
     src = imread(argv[1]);
 
-    colorConstancy(src,dst);
+    greyEdge(src,dst1);
+    weightedGreyEdge(src,dst2);
+
     imshow("src",src);
-    imshow("Grey-world",dst);
+    imshow("Grey-Edge",dst1);
+    imshow("Weighted Grey-Edge",dst2);
     waitKey(0);
 }
 

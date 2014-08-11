@@ -333,7 +333,10 @@ CV_EXPORTS_W void intrinsicDecompose(InputArray _src, OutputArray _ref, OutputAr
 
 CV_EXPORTS_W void colorTransfer(InputArray _src1, InputArray _src2, OutputArray _dst, int flag = 1);
 
-CV_EXPORTS_W void colorConstancy(InputArray _src, OutputArray _dst, float diff_order = 0, int mink_norm = 1, float sigma = 0);
+CV_EXPORTS_W void greyEdge(InputArray _src, OutputArray _dst, float diff_order = 1, int mink_norm = 5, float sigma = 2);
+
+CV_EXPORTS_W void weightedGreyEdge(InputArray _src, OutputArray _dst, float kappa = 10, int mink_norm = 5, float sigma = 2);
+
 } // cv
 
 #endif

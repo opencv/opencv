@@ -1,5 +1,4 @@
 #include <iostream>
-#include <stdio.h>
 #include <stdlib.h>
 #include "math.h"
 #include <vector>
@@ -18,7 +17,9 @@ class Constancy
         void fill_border(Mat &in, int bw, Mat &out);
         void gDer(Mat &f, int sigma, int iorder, int jorder, Mat &H);
         void normDerivative(Mat &in, int sigma, int order, Mat &Rw, Mat &Gw, Mat &Bw);
+        void compute_spvar(Mat &im, int sigma, Mat &Rw, Mat &Gw, Mat &Bw, Mat &sp_var);
         void general_cc(Mat &I, int njet, int mink_norm, int sigma, float &white_R, float &white_G, float &white_B, Mat &output);
+        void weightedGE(Mat &input_im, int kappa, int mink_norm, int sigma, float &white_R, float &white_G, float &white_B, Mat &output);
 };
 
 void Constancy::set_border(Mat &in,int width, int method, Mat &out)
@@ -97,9 +98,9 @@ void Constancy::dilation33(Mat &in, Mat &out)
     out_planes[1] = in;
     out_planes[0](Range(0,1),Range::all()) = in(Range(0,1),Range::all())*1; 
     out_planes[0](Range(1,hh),Range::all()) = in(Range(0,hh-1),Range::all())*1;
-    
+
     Mat out2 = max(out_planes[0],max(out_planes[1],out_planes[2]));
-    
+
     out_planes[2](Range::all(),Range(0,ll-1)) = out2(Range::all(),Range(2-1,ll))*1; 
     out_planes[2](Range::all(),Range(ll-1,ll)) = out2(Range::all(),Range(ll-1,ll))*1; 
     out_planes[1] = out2;
@@ -291,6 +292,191 @@ void Constancy::normDerivative(Mat &in, int sigma, int order, Mat &Rw, Mat &Gw, 
     }
 }
 
+void Constancy::compute_spvar(Mat &im, int sigma, Mat &Rw, Mat &Gw, Mat &Bw, Mat &sp_var)
+{
+    vector <Mat> channels;
+    split(im,channels);
+
+    Mat Rx = Mat(im.size(),CV_32FC1);
+    Mat Ry = Mat(im.size(),CV_32FC1);
+    Mat Gx = Mat(im.size(),CV_32FC1);
+    Mat Gy = Mat(im.size(),CV_32FC1);
+    Mat Bx = Mat(im.size(),CV_32FC1);
+    Mat By = Mat(im.size(),CV_32FC1);
+    Mat temp_x,temp_y;
+
+    gDer(channels[2],sigma,1,0,Rx);
+    gDer(channels[2],sigma,0,1,Ry);
+    pow(Rx,2,temp_x);
+    pow(Ry,2,temp_y);
+    sqrt(temp_x + temp_y,Rw);
+
+    gDer(channels[1],sigma,1,0,Gx);
+    gDer(channels[1],sigma,0,1,Gy);
+    pow(Gx,2,temp_x);
+    pow(Gy,2,temp_y);
+    sqrt(temp_x + temp_y,Gw);
+
+    gDer(channels[0],sigma,1,0,Bx);
+    gDer(channels[0],sigma,0,1,By);
+    pow(Bx,2,temp_x);
+    pow(By,2,temp_y);
+    sqrt(temp_x + temp_y,Bw);
+
+    Mat o3_x = (Rx+Gx+Bx)/sqrt(3);
+    Mat o3_y = (Ry+Gy+By)/sqrt(3);
+
+    pow(o3_x,2,temp_x);
+    pow(o3_y,2,temp_y);
+    sqrt(temp_x + temp_y,sp_var);
+}
+
+void Constancy::weightedGE(Mat &input_im, int kappa, int mink_norm, int sigma, float &white_R, float &white_G, float &white_B, Mat &output)
+{
+    int rows = input_im.rows;
+    int cols = input_im.cols;
+    int iter = 10;
+    Mat mask_cal = Mat::zeros(rows,cols,CV_32FC1);
+    double eps = std::numeric_limits<double>::epsilon();
+    Mat tmp_ill = Mat::ones(1,3,CV_32FC1)*(1/sqrt(3));
+
+    Mat final_ill = tmp_ill.clone();
+
+    Mat tmp_image = input_im.clone();
+
+    int flag = 1;
+    vector <Mat> tmp_channels;
+
+    while(iter && flag)
+    {
+
+        iter = iter - 1;
+        split(tmp_image,tmp_channels);
+
+        tmp_channels[2] = tmp_channels[2]/(sqrt(3)*tmp_ill.ptr<float>(0)[0]);
+        tmp_channels[1] = tmp_channels[1]/(sqrt(3)*tmp_ill.ptr<float>(0)[1]);
+        tmp_channels[0] = tmp_channels[0]/(sqrt(3)*tmp_ill.ptr<float>(0)[2]);
+
+        merge(tmp_channels,tmp_image);
+
+        Mat Rw = Mat::zeros(tmp_image.size(),CV_32FC1);
+        Mat Gw = Mat::zeros(tmp_image.size(),CV_32FC1);
+        Mat Bw = Mat::zeros(tmp_image.size(),CV_32FC1);
+        Mat sp_var = Mat::zeros(tmp_image.size(),CV_32FC1);
+
+        compute_spvar(tmp_image,sigma,Rw,Gw,Bw,sp_var);
+
+        Mat out = max(Rw,max(Gw,Bw));
+        Mat mask_zeros = Mat::zeros(rows,cols,CV_32FC1);
+        Mat temp_zero_mask  = (out < eps)/255;
+        temp_zero_mask.convertTo(mask_zeros,CV_32FC1,1);
+
+        Mat mask_pixels = Mat::zeros(rows,cols,CV_32FC3);
+        Mat max_output = max(tmp_channels[0],max(tmp_channels[1],tmp_channels[2]));
+        Mat temp_out = (max_output == 255)/255;
+        temp_out.convertTo(max_output,CV_32FC1,1);
+
+        dilation33(max_output,mask_pixels);
+
+        Mat temp = Mat(rows,cols,CV_32FC1);
+        Mat mask = Mat::zeros(rows,cols,CV_32FC1);
+
+        Mat temp_or = Mat::zeros(rows,cols,CV_32FC1);
+        bitwise_or(mask_cal,mask_pixels,temp_or);
+        bitwise_or(temp_or,mask_zeros,temp_or);
+
+        Mat temp_or_output = (temp_or == 0)/255;
+        temp_or_output.convertTo(temp,CV_32FC1,1);
+
+        set_border(temp,sigma+1,0,mask);
+
+        Mat grad_im = Mat(rows,cols,CV_32FC1);
+        sqrt(Rw.mul(Rw) + Gw.mul(Gw) + Bw.mul(Bw),grad_im);
+
+        Mat weight_map;
+        pow(sp_var.mul(1/grad_im),kappa,weight_map);
+
+        threshold(weight_map, weight_map, 1, 1, 2);
+
+        Mat data_Rx = Mat(rows,cols,CV_32FC1);
+        Mat data_Gx = Mat(rows,cols,CV_32FC1);
+        Mat data_Bx = Mat(rows,cols,CV_32FC1);
+
+        pow(Rw.mul(weight_map),mink_norm,data_Rx);
+        pow(Gw.mul(weight_map),mink_norm,data_Gx);
+        pow(Bw.mul(weight_map),mink_norm,data_Bx);
+
+        Mat mask_tmp = Mat(1,rows*cols,CV_32FC1);
+        Mat dataR_tmp = Mat(1,rows*cols,CV_32FC1);
+        Mat dataG_tmp = Mat(1,rows*cols,CV_32FC1);
+        Mat dataB_tmp = Mat(1,rows*cols,CV_32FC1);
+
+        float sumR = 0.0, sumG = 0.0,sumB = 0.0;
+        int k =0;
+        for(int j = 0;j<cols;j++)
+        {
+            for(int i=0;i<rows;i++)
+            {
+                dataR_tmp.ptr<float>(0)[k] = data_Rx.ptr<float>(i)[j]; 
+                dataG_tmp.ptr<float>(0)[k] = data_Gx.ptr<float>(i)[j]; 
+                dataB_tmp.ptr<float>(0)[k] = data_Bx.ptr<float>(i)[j]; 
+                mask_tmp.ptr<float>(0)[k] = mask.ptr<float>(i)[j]; 
+                k = k+1;
+            }
+        }
+
+        for(k = 0;k<rows*cols;k++)
+        {
+            if(mask_tmp.ptr<float>(0)[k] == 1)
+            {
+                sumR = sumR + dataR_tmp.ptr<float>(0)[k];
+                sumG = sumG + dataG_tmp.ptr<float>(0)[k];
+                sumB = sumB + dataB_tmp.ptr<float>(0)[k];
+            }
+        }
+
+        float t1 = (float)1/mink_norm;
+
+        tmp_ill.ptr<float>(0)[0] = pow(sumR,t1);
+        tmp_ill.ptr<float>(0)[1] = pow(sumG,t1);
+        tmp_ill.ptr<float>(0)[2] = pow(sumB,t1);
+
+        Mat norm1;
+        pow(tmp_ill,2,norm1);
+        float sum_norm1 = sum(norm1)[0];
+        tmp_ill = tmp_ill/sqrt(sum_norm1);
+        final_ill = final_ill.mul(tmp_ill);
+        Mat norm;
+        pow(final_ill,2,norm);
+        float sum_norm = sum(norm)[0];
+
+        final_ill = final_ill/sqrt(sum_norm);
+
+        Mat break_cond = (tmp_ill*( 1/sqrt(3)*(Mat::ones(3,1,CV_32FC1))));
+        if ( ( acos(break_cond.ptr<float>(0)[0])/CV_PI*180 ) < 0.05 )
+        {
+            flag = 0;
+        }
+    }
+
+    white_R = final_ill.ptr<float>(0)[0];
+    white_G = final_ill.ptr<float>(0)[1];
+    white_B = final_ill.ptr<float>(0)[2];
+
+    vector <Mat> out_planes;
+    split(output,out_planes);
+
+    vector <Mat> rgb_planes;
+    split(input_im,rgb_planes);
+
+    out_planes[2] = rgb_planes[2]/(sqrt(3)*(final_ill.ptr<float>(0)[0]));
+    out_planes[1] = rgb_planes[1]/(sqrt(3)*(final_ill.ptr<float>(0)[1]));
+    out_planes[0] = rgb_planes[0]/(sqrt(3)*(final_ill.ptr<float>(0)[2]));
+
+    merge(out_planes,output);
+    output.convertTo(output,CV_8UC3,1);
+}
+
 void Constancy::general_cc(Mat &I, int njet, int mink_norm, int sigma, float &white_R, float &white_G, float &white_B, Mat &output)
 {
     int rows = I.rows;
@@ -298,7 +484,7 @@ void Constancy::general_cc(Mat &I, int njet, int mink_norm, int sigma, float &wh
 
     Mat mask_im = Mat::zeros(rows,cols,CV_32FC1);
     int saturation_threshold = 255;
-    
+
     vector <Mat> planes;
     vector <Mat> channels;
 
@@ -375,7 +561,7 @@ void Constancy::general_cc(Mat &I, int njet, int mink_norm, int sigma, float &wh
         vector <Mat> RGB_channels;
         split(I,RGB_channels);
 
-        double maxVal; 
+        double maxVal;
         minMaxLoc(RGB_channels[2].mul(mask_im2), NULL, &maxVal);
         white_R = maxVal;
         minMaxLoc(RGB_channels[1].mul(mask_im2), NULL, &maxVal);
