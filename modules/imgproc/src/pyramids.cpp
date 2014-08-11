@@ -508,6 +508,8 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
 
 void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
+    CV_Assert(borderType != BORDER_CONSTANT);
+
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_pyrDown(_src, _dst, _dsz, borderType))
 
@@ -577,6 +579,8 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
 
 void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
+    CV_Assert(borderType == BORDER_DEFAULT);
+
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_pyrUp(_src, _dst, _dsz, borderType))
 
@@ -646,6 +650,8 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
 
 void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
+    CV_Assert(borderType != BORDER_CONSTANT);
+
     if (_src.dims() <= 2 && _dst.isUMatVector())
     {
         UMat src = _src.getUMat();
