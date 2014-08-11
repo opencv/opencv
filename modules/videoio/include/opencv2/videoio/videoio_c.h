@@ -218,6 +218,10 @@ enum
     // PVAPI
     CV_CAP_PROP_PVAPI_MULTICASTIP           = 300, // ip for anable multicast master mode. 0 for disable multicast
     CV_CAP_PROP_PVAPI_FRAMESTARTTRIGGERMODE = 301, // FrameStartTriggerMode: Determines how a frame is initiated
+    CV_CAP_PROP_PVAPI_DECIMATIONHORIZONTAL  = 302, // Horizontal sub-sampling of the image
+    CV_CAP_PROP_PVAPI_DECIMATIONVERTICAL    = 303, // Vertical sub-sampling of the image
+    CV_CAP_PROP_PVAPI_BINNINGX              = 304, // Horizontal binning factor
+    CV_CAP_PROP_PVAPI_BINNINGY              = 305, // Vertical binning factor
 
     // Properties of cameras available through XIMEA SDK interface
     CV_CAP_PROP_XI_DOWNSAMPLING  = 400,      // Change image resolution by binning or skipping.
