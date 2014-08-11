@@ -11,15 +11,15 @@
 using namespace std;
 using namespace cv;
 
-#define M_MOG  1
 #define M_MOG2 2
+#define M_KNN  3
 
 int main(int argc, const char** argv)
 {
     CommandLineParser cmd(argc, argv,
         "{ c camera   | false       | use camera }"
         "{ f file     | 768x576.avi | input video file }"
-        "{ t type     | mog         | method's type (mog, mog2) }"
+        "{ t type     | mog2        | method's type (knn, mog2) }"
         "{ h help     | false       | print help message }"
         "{ m cpu_mode | false       | press 'm' to switch OpenCL<->CPU}");
 
@@ -41,7 +41,7 @@ int main(int argc, const char** argv)
         return EXIT_FAILURE;
     }
 
-    int m = method == "mog" ? M_MOG : M_MOG2;
+    int m = method == "mog2" ? M_MOG2 : M_KNN;
 
     VideoCapture cap;
     if (useCamera)
@@ -59,13 +59,13 @@ int main(int argc, const char** argv)
     cap >> frame;
     fgimg.create(frame.size(), frame.type());
 
-    Ptr<BackgroundSubtractorMOG> mog = createBackgroundSubtractorMOG();
+    Ptr<BackgroundSubtractorKNN> knn = createBackgroundSubtractorKNN();
     Ptr<BackgroundSubtractorMOG2> mog2 = createBackgroundSubtractorMOG2();
 
     switch (m)
     {
-    case M_MOG:
-        mog->apply(frame, fgmask, 0.01f);
+    case M_KNN:
+        knn->apply(frame, fgmask);
         break;
 
     case M_MOG2:
@@ -86,8 +86,8 @@ int main(int argc, const char** argv)
         //update the model
         switch (m)
         {
-        case M_MOG:
-            mog->apply(frame, fgmask, 0.01f);
+        case M_KNN:
+            knn->apply(frame, fgmask);
             break;
 
         case M_MOG2:

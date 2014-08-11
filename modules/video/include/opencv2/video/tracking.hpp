@@ -55,28 +55,6 @@ enum { OPTFLOW_USE_INITIAL_FLOW     = 4,
        OPTFLOW_FARNEBACK_GAUSSIAN   = 256
      };
 
-enum { MOTION_TRANSLATION = 0,
-       MOTION_EUCLIDEAN   = 1,
-       MOTION_AFFINE      = 2,
-       MOTION_HOMOGRAPHY  = 3
-     };
-
-//! updates motion history image using the current silhouette
-CV_EXPORTS_W void updateMotionHistory( InputArray silhouette, InputOutputArray mhi,
-                                       double timestamp, double duration );
-
-//! computes the motion gradient orientation image from the motion history image
-CV_EXPORTS_W void calcMotionGradient( InputArray mhi, OutputArray mask, OutputArray orientation,
-                                      double delta1, double delta2, int apertureSize = 3 );
-
-//! computes the global orientation of the selected motion history image part
-CV_EXPORTS_W double calcGlobalOrientation( InputArray orientation, InputArray mask, InputArray mhi,
-                                           double timestamp, double duration );
-
-CV_EXPORTS_W void segmentMotion( InputArray mhi, OutputArray segmask,
-                                 CV_OUT std::vector<Rect>& boundingRects,
-                                 double timestamp, double segThresh );
-
 //! updates the object tracking window using CAMSHIFT algorithm
 CV_EXPORTS_W RotatedRect CamShift( InputArray probImage, CV_IN_OUT Rect& window,
                                    TermCriteria criteria );
@@ -109,6 +87,15 @@ CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next, In
 // that maps one 2D point set to another or one image to another.
 CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
 
+
+enum
+{
+    MOTION_TRANSLATION = 0,
+    MOTION_EUCLIDEAN   = 1,
+    MOTION_AFFINE      = 2,
+    MOTION_HOMOGRAPHY  = 3
+};
+
 //! estimates the best-fit Translation, Euclidean, Affine or Perspective Transformation
 // with respect to Enhanced Correlation Coefficient criterion that maps one image to
 // another (area-based alignment)
@@ -119,20 +106,6 @@ CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fu
 CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray inputImage,
                                       InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
                                       TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001));
-
-
-//! computes dense optical flow using Simple Flow algorithm
-CV_EXPORTS_W void calcOpticalFlowSF( InputArray from, InputArray to, OutputArray flow,
-                                     int layers, int averaging_block_size, int max_flow);
-
-CV_EXPORTS_W void calcOpticalFlowSF( InputArray from, InputArray to, OutputArray flow, int layers,
-                                     int averaging_block_size, int max_flow,
-                                     double sigma_dist, double sigma_color, int postprocess_window,
-                                     double sigma_dist_fix, double sigma_color_fix, double occ_thr,
-                                     int upscale_averaging_radius, double upscale_sigma_dist,
-                                     double upscale_sigma_color, double speed_up_thr );
-
-
 
 /*!
  Kalman filter.
