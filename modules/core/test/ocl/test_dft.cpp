@@ -43,7 +43,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
@@ -108,7 +108,7 @@ OCL_TEST_P(Dft, Mat)
 {
     generateTestData();
 
-    int nonzero_rows = hint ? src.cols - randomInt(1, src.rows-1) : 0;
+    int nonzero_rows = hint ? src.rows - randomInt(1, src.rows-1) : 0;
     OCL_OFF(cv::dft(src, dst, dft_flags, nonzero_rows));
     OCL_ON(cv::dft(usrc, udst, dft_flags, nonzero_rows));
 
@@ -175,7 +175,7 @@ OCL_TEST_P(MulSpectrums, Mat)
 
 OCL_INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MulSpectrums, testing::Combine(Bool(), Bool()));
 
-OCL_INSTANTIATE_TEST_CASE_P(Core, Dft, Combine(Values(cv::Size(10, 10), cv::Size(36, 36), cv::Size(512, 1), cv::Size(1280, 768)),
+OCL_INSTANTIATE_TEST_CASE_P(Core, Dft, Combine(Values(cv::Size(45, 72), cv::Size(36, 36), cv::Size(512, 1), cv::Size(1280, 768)),
                                                Values((OCL_FFT_TYPE) R2C, (OCL_FFT_TYPE) C2C, (OCL_FFT_TYPE) R2R, (OCL_FFT_TYPE) C2R),
                                                Bool(), // DFT_INVERSE
                                                Bool(), // DFT_ROWS

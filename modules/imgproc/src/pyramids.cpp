@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_imgproc.hpp"
 
 namespace cv
 {
@@ -413,6 +413,9 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
 
     Size ssize = _src.size();
     Size dsize = _dsz.area() == 0 ? Size((ssize.width + 1) / 2, (ssize.height + 1) / 2) : _dsz;
+    if (dsize.height < 2 || dsize.width < 2)
+        return false;
+
     CV_Assert( ssize.width > 0 && ssize.height > 0 &&
             std::abs(dsize.width*2 - ssize.width) <= 2 &&
             std::abs(dsize.height*2 - ssize.height) <= 2 );

@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_core.hpp"
 
 #include "bufferpool.impl.hpp"
 
@@ -346,7 +346,7 @@ static void finalizeHdr(Mat& m)
     if( d > 2 )
         m.rows = m.cols = -1;
     if(m.u)
-        m.data = m.datastart = m.u->data;
+        m.datastart = m.data = m.u->data;
     if( m.data )
     {
         m.datalimit = m.datastart + m.size[0]*m.step[0];
@@ -510,7 +510,7 @@ Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _st
       datalimit(0), allocator(0), u(0), size(&rows)
 {
     flags |= CV_MAT_TYPE(_type);
-    data = datastart = (uchar*)_data;
+    datastart = data = (uchar*)_data;
     setSize(*this, _dims, _sizes, _steps, true);
     finalizeHdr(*this);
 }
@@ -549,7 +549,7 @@ static Mat cvMatNDToMat(const CvMatND* m, bool copyData)
 
     if( !m )
         return thiz;
-    thiz.data = thiz.datastart = m->data.ptr;
+    thiz.datastart = thiz.data = m->data.ptr;
     thiz.flags |= CV_MAT_TYPE(m->type);
     int _sizes[CV_MAX_DIM];
     size_t _steps[CV_MAX_DIM];
@@ -587,7 +587,7 @@ static Mat cvMatToMat(const CvMat* m, bool copyData)
         thiz.dims = 2;
         thiz.rows = m->rows;
         thiz.cols = m->cols;
-        thiz.data = thiz.datastart = m->data.ptr;
+        thiz.datastart = thiz.data = m->data.ptr;
         size_t esz = CV_ELEM_SIZE(m->type), minstep = thiz.cols*esz, _step = m->step;
         if( _step == 0 )
             _step = minstep;
@@ -597,7 +597,7 @@ static Mat cvMatToMat(const CvMat* m, bool copyData)
     }
     else
     {
-        thiz.data = thiz.datastart = thiz.dataend = 0;
+        thiz.datastart = thiz.dataend = thiz.data = 0;
         Mat(m->rows, m->cols, m->type, m->data.ptr, m->step).copyTo(thiz);
     }
 
@@ -636,7 +636,7 @@ static Mat iplImageToMat(const IplImage* img, bool copyData)
         m.rows = img->roi->height;
         m.cols = img->roi->width;
         esz = CV_ELEM_SIZE(m.flags);
-        m.data = m.datastart = (uchar*)img->imageData +
+        m.datastart = m.data = (uchar*)img->imageData +
             (selectedPlane ? (img->roi->coi - 1)*m.step*img->height : 0) +
             img->roi->yOffset*m.step[0] + img->roi->xOffset*esz;
     }
@@ -2758,15 +2758,18 @@ namespace cv {
 
 static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
 {
-    int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), kercn = cn;
-    if (cn == 1)
+    int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), kercn = cn, rowsPerWI = 1;
+    int sctype = CV_MAKE_TYPE(depth, cn == 3 ? 4 : cn);
+    if (ocl::Device::getDefault().isIntel())
     {
-        kercn = std::min(ocl::predictOptimalVectorWidth(_m), 4);
-        if (kercn != 4)
-            kercn = 1;
+        rowsPerWI = 4;
+        if (cn == 1)
+        {
+            kercn = std::min(ocl::predictOptimalVectorWidth(_m), 4);
+            if (kercn != 4)
+                kercn = 1;
+        }
     }
-    int sctype = CV_MAKE_TYPE(depth, cn == 3 ? 4 : cn),
-            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
     ocl::Kernel k("setIdentity", ocl::core::set_identity_oclsrc,
                   format("-D T=%s -D T1=%s -D cn=%d -D ST=%s -D kercn=%d -D rowsPerWI=%d",
@@ -5529,14 +5532,14 @@ double norm( const SparseMat& src, int normType )
     {
         if( normType == NORM_INF )
             for( i = 0; i < N; i++, ++it )
-                result = std::max(result, std::abs((double)*(const float*)it.ptr));
+                result = std::max(result, std::abs((double)it.value<float>()));
         else if( normType == NORM_L1 )
             for( i = 0; i < N; i++, ++it )
-                result += std::abs(*(const float*)it.ptr);
+                result += std::abs(it.value<float>());
         else
             for( i = 0; i < N; i++, ++it )
             {
-                double v = *(const float*)it.ptr;
+                double v = it.value<float>();
                 result += v*v;
             }
     }
@@ -5544,14 +5547,14 @@ double norm( const SparseMat& src, int normType )
     {
         if( normType == NORM_INF )
             for( i = 0; i < N; i++, ++it )
-                result = std::max(result, std::abs(*(const double*)it.ptr));
+                result = std::max(result, std::abs(it.value<double>()));
         else if( normType == NORM_L1 )
             for( i = 0; i < N; i++, ++it )
-                result += std::abs(*(const double*)it.ptr);
+                result += std::abs(it.value<double>());
         else
             for( i = 0; i < N; i++, ++it )
             {
-                double v = *(const double*)it.ptr;
+                double v = it.value<double>();
                 result += v*v;
             }
     }
@@ -5575,7 +5578,7 @@ void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _mi
         float minval = FLT_MAX, maxval = -FLT_MAX;
         for( i = 0; i < N; i++, ++it )
         {
-            float v = *(const float*)it.ptr;
+            float v = it.value<float>();
             if( v < minval )
             {
                 minval = v;
@@ -5597,7 +5600,7 @@ void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _mi
         double minval = DBL_MAX, maxval = -DBL_MAX;
         for( i = 0; i < N; i++, ++it )
         {
-            double v = *(const double*)it.ptr;
+            double v = it.value<double>();
             if( v < minval )
             {
                 minval = v;

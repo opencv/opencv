@@ -23,6 +23,7 @@
 #define DEBUG_DESC_PROGRESS
 
 using namespace cv;
+using namespace cv::ml;
 using namespace std;
 
 const string paramsFile = "params.xml";
@@ -677,7 +678,7 @@ void VocData::writeClassifierResultsFile( const string& out_dir, const string& o
         result_file.close();
     } else {
         string err_msg = "could not open classifier results file '" + output_file + "' for writing. Before running for the first time, a 'results' subdirectory should be created within the VOC dataset base directory. e.g. if the VOC data is stored in /VOC/VOC2010 then the path /VOC/results must be created.";
-        CV_Error(CV_StsError,err_msg.c_str());
+        CV_Error(Error::StsError,err_msg.c_str());
     }
 }
 
@@ -701,9 +702,9 @@ void VocData::writeClassifierResultsFile( const string& out_dir, const string& o
 string VocData::getResultsFilename(const string& obj_class, const VocTask task, const ObdDatasetType dataset, const int competition, const int number)
 {
     if ((competition < 1) && (competition != -1))
-        CV_Error(CV_StsBadArg,"competition argument should be a positive non-zero number or -1 to accept the default");
+        CV_Error(Error::StsBadArg,"competition argument should be a positive non-zero number or -1 to accept the default");
     if ((number < 1) && (number != -1))
-        CV_Error(CV_StsBadArg,"number argument should be a positive non-zero number or -1 to accept the default");
+        CV_Error(Error::StsBadArg,"number argument should be a positive non-zero number or -1 to accept the default");
 
     string dset, task_type;
 
@@ -815,7 +816,7 @@ void VocData::calcClassifierPrecRecall(const string& input_file, vector<float>& 
             scoregt_file.close();
         } else {
             string err_msg = "could not open scoregt file '" + scoregt_file_str + "' for writing.";
-            CV_Error(CV_StsError,err_msg.c_str());
+            CV_Error(Error::StsError,err_msg.c_str());
         }
     }
 
@@ -974,7 +975,7 @@ void VocData::calcClassifierConfMatRow(const string& obj_class, const vector<Obd
         if (target_idx_it == output_headers.end())
         {
             string err_msg = "could not find the target object class '" + obj_class + "' in list of valid classes.";
-            CV_Error(CV_StsError,err_msg.c_str());
+            CV_Error(Error::StsError,err_msg.c_str());
         }
         /* convert iterator to index */
         target_idx = (int)std::distance(output_headers.begin(),target_idx_it);
@@ -1037,7 +1038,7 @@ void VocData::calcClassifierConfMatRow(const string& obj_class, const vector<Obd
                 if (class_idx_it == output_headers.end())
                 {
                     string err_msg = "could not find object class '" + img_objects[obj_idx].object_class + "' specified in the ground truth file of '" + images[ranking[image_idx]].id +"'in list of valid classes.";
-                    CV_Error(CV_StsError,err_msg.c_str());
+                    CV_Error(Error::StsError,err_msg.c_str());
                 }
                 /* convert iterator to index */
                 int class_idx = (int)std::distance(output_headers.begin(),class_idx_it);
@@ -1189,7 +1190,7 @@ void VocData::calcDetectorConfMatRow(const string& obj_class, const ObdDatasetTy
             if (class_idx_it == output_headers.end())
             {
                 string err_msg = "could not find object class '" + img_objects[max_gt_obj_idx].object_class + "' specified in the ground truth file of '" + images[ranking[image_idx]].id +"'in list of valid classes.";
-                CV_Error(CV_StsError,err_msg.c_str());
+                CV_Error(Error::StsError,err_msg.c_str());
             }
             /* convert iterator to index */
             int class_idx = (int)std::distance(output_headers.begin(),class_idx_it);
@@ -1282,7 +1283,7 @@ void VocData::savePrecRecallToGnuplot(const string& output_file, const vector<fl
         plot_file.close();
     } else {
         string err_msg = "could not open plot file '" + output_file_std + "' for writing.";
-        CV_Error(CV_StsError,err_msg.c_str());
+        CV_Error(Error::StsError,err_msg.c_str());
     }
 }
 
@@ -1446,7 +1447,7 @@ void VocData::readClassifierGroundTruth(const string& filename, vector<string>& 
     if (!gtfile.is_open())
     {
         string err_msg = "could not open VOC ground truth textfile '" + filename + "'.";
-        CV_Error(CV_StsError,err_msg.c_str());
+        CV_Error(Error::StsError,err_msg.c_str());
     }
 
     string line;
@@ -1462,7 +1463,7 @@ void VocData::readClassifierGroundTruth(const string& filename, vector<string>& 
             image_codes.push_back(image);
             object_present.push_back(obj_present == 1);
         } else {
-            if (!gtfile.eof()) CV_Error(CV_StsParseError,"error parsing VOC ground truth textfile.");
+            if (!gtfile.eof()) CV_Error(Error::StsParseError,"error parsing VOC ground truth textfile.");
         }
     }
     gtfile.close();
@@ -1488,13 +1489,13 @@ void VocData::readClassifierResultsFile(const string& input_file, vector<string>
                 image_codes.push_back(image);
                 scores.push_back(score);
             } else {
-                if(!result_file.eof()) CV_Error(CV_StsParseError,"error parsing VOC classifier results file.");
+                if(!result_file.eof()) CV_Error(Error::StsParseError,"error parsing VOC classifier results file.");
             }
         }
         result_file.close();
     } else {
         string err_msg = "could not open classifier results file '" + input_file + "' for reading.";
-        CV_Error(CV_StsError,err_msg.c_str());
+        CV_Error(Error::StsError,err_msg.c_str());
     }
 }
 
@@ -1545,13 +1546,13 @@ void VocData::readDetectorResultsFile(const string& input_file, vector<string>& 
                     bounding_boxes[image_idx].push_back(bounding_box);
                 }
             } else {
-                if(!result_file.eof()) CV_Error(CV_StsParseError,"error parsing VOC detector results file.");
+                if(!result_file.eof()) CV_Error(Error::StsParseError,"error parsing VOC detector results file.");
             }
         }
         result_file.close();
     } else {
         string err_msg = "could not open detector results file '" + input_file + "' for reading.";
-        CV_Error(CV_StsError,err_msg.c_str());
+        CV_Error(Error::StsError,err_msg.c_str());
     }
 }
 
@@ -1595,23 +1596,23 @@ void VocData::extractVocObjects(const string filename, vector<ObdObject>& object
 
             //object class -------------
 
-            if (extractXMLBlock(object_contents, "name", 0, tag_contents) == -1) CV_Error(CV_StsError,"missing <name> tag in object definition of '" + filename + "'");
+            if (extractXMLBlock(object_contents, "name", 0, tag_contents) == -1) CV_Error(Error::StsError,"missing <name> tag in object definition of '" + filename + "'");
             object.object_class.swap(tag_contents);
 
             //object bounding box -------------
 
             int xmax, xmin, ymax, ymin;
 
-            if (extractXMLBlock(object_contents, "xmax", 0, tag_contents) == -1) CV_Error(CV_StsError,"missing <xmax> tag in object definition of '" + filename + "'");
+            if (extractXMLBlock(object_contents, "xmax", 0, tag_contents) == -1) CV_Error(Error::StsError,"missing <xmax> tag in object definition of '" + filename + "'");
             xmax = stringToInteger(tag_contents);
 
-            if (extractXMLBlock(object_contents, "xmin", 0, tag_contents) == -1) CV_Error(CV_StsError,"missing <xmin> tag in object definition of '" + filename + "'");
+            if (extractXMLBlock(object_contents, "xmin", 0, tag_contents) == -1) CV_Error(Error::StsError,"missing <xmin> tag in object definition of '" + filename + "'");
             xmin = stringToInteger(tag_contents);
 
-            if (extractXMLBlock(object_contents, "ymax", 0, tag_contents) == -1) CV_Error(CV_StsError,"missing <ymax> tag in object definition of '" + filename + "'");
+            if (extractXMLBlock(object_contents, "ymax", 0, tag_contents) == -1) CV_Error(Error::StsError,"missing <ymax> tag in object definition of '" + filename + "'");
             ymax = stringToInteger(tag_contents);
 
-            if (extractXMLBlock(object_contents, "ymin", 0, tag_contents) == -1) CV_Error(CV_StsError,"missing <ymin> tag in object definition of '" + filename + "'");
+            if (extractXMLBlock(object_contents, "ymin", 0, tag_contents) == -1) CV_Error(Error::StsError,"missing <ymin> tag in object definition of '" + filename + "'");
             ymin = stringToInteger(tag_contents);
 
             object.boundingBox.x = xmin-1;      //convert to 0-based indexing
@@ -1714,11 +1715,11 @@ void VocData::extractDataFromResultsFilename(const string& input_file, string& c
     size_t fnameend = input_file_std.rfind(".txt");
 
     if ((fnamestart == input_file_std.npos) || (fnameend == input_file_std.npos))
-        CV_Error(CV_StsError,"Could not extract filename of results file.");
+        CV_Error(Error::StsError,"Could not extract filename of results file.");
 
     ++fnamestart;
     if (fnamestart >= fnameend)
-        CV_Error(CV_StsError,"Could not extract filename of results file.");
+        CV_Error(Error::StsError,"Could not extract filename of results file.");
 
     //extract dataset and class names, triggering exception if the filename format is not correct
     string filename = input_file_std.substr(fnamestart, fnameend-fnamestart);
@@ -1729,11 +1730,11 @@ void VocData::extractDataFromResultsFilename(const string& input_file, string& c
     size_t classend = filename.find("_",classstart+1);
     if (classend == filename.npos) classend = filename.size();
     if ((datasetstart == filename.npos) || (classstart == filename.npos))
-        CV_Error(CV_StsError,"Error parsing results filename. Is it in standard format of 'comp<n>_{cls/det}_<dataset>_<objclass>.txt'?");
+        CV_Error(Error::StsError,"Error parsing results filename. Is it in standard format of 'comp<n>_{cls/det}_<dataset>_<objclass>.txt'?");
     ++datasetstart;
     ++classstart;
     if (((datasetstart-classstart) < 1) || ((classend-datasetstart) < 1))
-        CV_Error(CV_StsError,"Error parsing results filename. Is it in standard format of 'comp<n>_{cls/det}_<dataset>_<objclass>.txt'?");
+        CV_Error(Error::StsError,"Error parsing results filename. Is it in standard format of 'comp<n>_{cls/det}_<dataset>_<objclass>.txt'?");
 
     dataset_name = filename.substr(datasetstart,classstart-datasetstart-1);
     class_name = filename.substr(classstart,classend-classstart);
@@ -1781,7 +1782,7 @@ bool VocData::getClassifierGroundTruthImage(const string& obj_class, const strin
         return m_classifier_gt_all_present[std::distance(m_classifier_gt_all_ids.begin(),it)] != 0;
     } else {
         string err_msg = "could not find classifier ground truth for image '" + id + "' and class '" + obj_class + "'";
-        CV_Error(CV_StsError,err_msg.c_str());
+        CV_Error(Error::StsError,err_msg.c_str());
     }
 
     return true;
@@ -1814,7 +1815,7 @@ void VocData::getSortOrder(const vector<float>& values, vector<size_t>& order, b
 void VocData::readFileToString(const string filename, string& file_contents)
 {
     std::ifstream ifs(filename.c_str());
-    if (!ifs.is_open()) CV_Error(CV_StsError,"could not open text file");
+    if (!ifs.is_open()) CV_Error(Error::StsError,"could not open text file");
 
     stringstream oss;
     oss << ifs.rdbuf();
@@ -1829,7 +1830,7 @@ int VocData::stringToInteger(const string input_str)
     stringstream ss(input_str);
     if ((ss >> result).fail())
     {
-        CV_Error(CV_StsBadArg,"could not perform string to integer conversion");
+        CV_Error(Error::StsBadArg,"could not perform string to integer conversion");
     }
     return result;
 }
@@ -1841,7 +1842,7 @@ string VocData::integerToString(const int input_int)
     stringstream ss;
     if ((ss << input_int).fail())
     {
-        CV_Error(CV_StsBadArg,"could not perform integer to string conversion");
+        CV_Error(Error::StsBadArg,"could not perform integer to string conversion");
     }
     result = ss.str();
     return result;
@@ -2325,14 +2326,14 @@ static void removeBowImageDescriptorsByCount( vector<ObdImage>& images, vector<M
     CV_Assert( bowImageDescriptors.size() == objectPresent.size() );
 }
 
-static void setSVMParams( CvSVMParams& svmParams, CvMat& class_wts_cv, const Mat& responses, bool balanceClasses )
+static void setSVMParams( SVM::Params& svmParams, Mat& class_wts_cv, const Mat& responses, bool balanceClasses )
 {
     int pos_ex = countNonZero(responses == 1);
     int neg_ex = countNonZero(responses == -1);
     cout << pos_ex << " positive training samples; " << neg_ex << " negative training samples" << endl;
 
-    svmParams.svm_type = CvSVM::C_SVC;
-    svmParams.kernel_type = CvSVM::RBF;
+    svmParams.svmType = SVM::C_SVC;
+    svmParams.kernelType = SVM::RBF;
     if( balanceClasses )
     {
         Mat class_wts( 2, 1, CV_32FC1 );
@@ -2350,43 +2351,44 @@ static void setSVMParams( CvSVMParams& svmParams, CvMat& class_wts_cv, const Mat
             class_wts.at<float>(1) = static_cast<float>(pos_ex)/static_cast<float>(pos_ex+neg_ex);
         }
         class_wts_cv = class_wts;
-        svmParams.class_weights = &class_wts_cv;
+        svmParams.classWeights = class_wts_cv;
     }
 }
 
-static void setSVMTrainAutoParams( CvParamGrid& c_grid, CvParamGrid& gamma_grid,
-                            CvParamGrid& p_grid, CvParamGrid& nu_grid,
-                            CvParamGrid& coef_grid, CvParamGrid& degree_grid )
+static void setSVMTrainAutoParams( ParamGrid& c_grid, ParamGrid& gamma_grid,
+                            ParamGrid& p_grid, ParamGrid& nu_grid,
+                            ParamGrid& coef_grid, ParamGrid& degree_grid )
 {
-    c_grid = CvSVM::get_default_grid(CvSVM::C);
+    c_grid = SVM::getDefaultGrid(SVM::C);
 
-    gamma_grid = CvSVM::get_default_grid(CvSVM::GAMMA);
+    gamma_grid = SVM::getDefaultGrid(SVM::GAMMA);
 
-    p_grid = CvSVM::get_default_grid(CvSVM::P);
-    p_grid.step = 0;
+    p_grid = SVM::getDefaultGrid(SVM::P);
+    p_grid.logStep = 0;
 
-    nu_grid = CvSVM::get_default_grid(CvSVM::NU);
-    nu_grid.step = 0;
+    nu_grid = SVM::getDefaultGrid(SVM::NU);
+    nu_grid.logStep = 0;
 
-    coef_grid = CvSVM::get_default_grid(CvSVM::COEF);
-    coef_grid.step = 0;
+    coef_grid = SVM::getDefaultGrid(SVM::COEF);
+    coef_grid.logStep = 0;
 
-    degree_grid = CvSVM::get_default_grid(CvSVM::DEGREE);
-    degree_grid.step = 0;
+    degree_grid = SVM::getDefaultGrid(SVM::DEGREE);
+    degree_grid.logStep = 0;
 }
 
-static void trainSVMClassifier( CvSVM& svm, const SVMTrainParamsExt& svmParamsExt, const string& objClassName, VocData& vocData,
+static Ptr<SVM> trainSVMClassifier( const SVMTrainParamsExt& svmParamsExt, const string& objClassName, VocData& vocData,
                          Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
                          const string& resPath )
 {
     /* first check if a previously trained svm for the current class has been saved to file */
     string svmFilename = resPath + svmsDir + "/" + objClassName + ".xml.gz";
+    Ptr<SVM> svm;
 
     FileStorage fs( svmFilename, FileStorage::READ);
     if( fs.isOpened() )
     {
         cout << "*** LOADING SVM CLASSIFIER FOR CLASS " << objClassName << " ***" << endl;
-        svm.load( svmFilename.c_str() );
+        svm = StatModel::load<SVM>( svmFilename );
     }
     else
     {
@@ -2437,20 +2439,24 @@ static void trainSVMClassifier( CvSVM& svm, const SVMTrainParamsExt& svmParamsEx
         }
 
         cout << "TRAINING SVM FOR CLASS ..." << objClassName << "..." << endl;
-        CvSVMParams svmParams;
-        CvMat class_wts_cv;
+        SVM::Params svmParams;
+        Mat class_wts_cv;
         setSVMParams( svmParams, class_wts_cv, responses, svmParamsExt.balanceClasses );
-        CvParamGrid c_grid, gamma_grid, p_grid, nu_grid, coef_grid, degree_grid;
+        svm = SVM::create(svmParams);
+        ParamGrid c_grid, gamma_grid, p_grid, nu_grid, coef_grid, degree_grid;
         setSVMTrainAutoParams( c_grid, gamma_grid,  p_grid, nu_grid, coef_grid, degree_grid );
-        svm.train_auto( trainData, responses, Mat(), Mat(), svmParams, 10, c_grid, gamma_grid, p_grid, nu_grid, coef_grid, degree_grid );
+
+        svm->trainAuto(TrainData::create(trainData, ROW_SAMPLE, responses), 10,
+                       c_grid, gamma_grid, p_grid, nu_grid, coef_grid, degree_grid);
         cout << "SVM TRAINING FOR CLASS " << objClassName << " COMPLETED" << endl;
 
-        svm.save( svmFilename.c_str() );
+        svm->save( svmFilename );
         cout << "SAVED CLASSIFIER TO FILE" << endl;
     }
+    return svm;
 }
 
-static void computeConfidences( CvSVM& svm, const string& objClassName, VocData& vocData,
+static void computeConfidences( const Ptr<SVM>& svm, const string& objClassName, VocData& vocData,
                          Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
                          const string& resPath )
 {
@@ -2476,12 +2482,12 @@ static void computeConfidences( CvSVM& svm, const string& objClassName, VocData&
         if( imageIdx == 0 )
         {
             // In the first iteration, determine the sign of the positive class
-            float classVal = confidences[imageIdx] = svm.predict( bowImageDescriptors[imageIdx], false );
-            float scoreVal = confidences[imageIdx] = svm.predict( bowImageDescriptors[imageIdx], true );
+            float classVal = confidences[imageIdx] = svm->predict( bowImageDescriptors[imageIdx], noArray(), 0 );
+            float scoreVal = confidences[imageIdx] = svm->predict( bowImageDescriptors[imageIdx], noArray(), StatModel::RAW_OUTPUT );
             signMul = (classVal < 0) == (scoreVal < 0) ? 1.f : -1.f;
         }
         // svm output of decision function
-        confidences[imageIdx] = signMul * svm.predict( bowImageDescriptors[imageIdx], true );
+        confidences[imageIdx] = signMul * svm->predict( bowImageDescriptors[imageIdx], noArray(), StatModel::RAW_OUTPUT );
     }
 
     cout << "WRITING QUERY RESULTS TO VOC RESULTS FILE FOR CLASS " << objClassName << "..." << endl;
@@ -2591,9 +2597,8 @@ int main(int argc, char** argv)
     for( size_t classIdx = 0; classIdx < objClasses.size(); ++classIdx )
     {
         // Train a classifier on train dataset
-        CvSVM svm;
-        trainSVMClassifier( svm, svmTrainParamsExt, objClasses[classIdx], vocData,
-                            bowExtractor, featureDetector, resPath );
+        Ptr<SVM> svm = trainSVMClassifier( svmTrainParamsExt, objClasses[classIdx], vocData,
+                                           bowExtractor, featureDetector, resPath );
 
         // Now use the classifier over all images on the test dataset and rank according to score order
         // also calculating precision-recall etc.

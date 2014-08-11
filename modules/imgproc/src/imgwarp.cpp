@@ -47,7 +47,7 @@
 // */
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_imgproc.hpp"
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
 static IppStatus sts = ippInit();
@@ -2074,7 +2074,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     // datatypes because the observed error is low.
     bool useSampler = (interpolation == INTER_LINEAR && ocl::Device::getDefault().imageSupport() &&
                        ocl::Image2D::canCreateAlias(src) && depth <= 4 &&
-                       ocl::Image2D::isFormatSupported(depth, cn, true));
+                       ocl::Image2D::isFormatSupported(depth, cn, true) &&
+                       src.offset==0);
     if (useSampler)
     {
         int wdepth = std::max(depth, CV_32S);
@@ -2380,7 +2381,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         inv_scale_y = (double)dsize.height/ssize.height;
     }
 
-    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
                ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
 
     Mat src = _src.getMat();

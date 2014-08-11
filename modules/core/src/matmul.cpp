@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_core.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
 
 namespace cv
@@ -3294,7 +3294,6 @@ void cv::PCABackProject(InputArray data, InputArray mean,
     pca.eigenvectors = eigenvectors.getMat();
     pca.backProject(data, result);
 }
-
 
 /****************************************************************************************\
 *                                    Earlier API                                         *

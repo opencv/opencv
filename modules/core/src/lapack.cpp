@@ -955,10 +955,10 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
         SVD::compute(src, w, u, vt);
         SVD::backSubst(w, u, vt, Mat(), _dst);
         return type == CV_32F ?
-            (((float*)w.data)[0] >= FLT_EPSILON ?
-             ((float*)w.data)[n-1]/((float*)w.data)[0] : 0) :
-            (((double*)w.data)[0] >= DBL_EPSILON ?
-             ((double*)w.data)[n-1]/((double*)w.data)[0] : 0);
+            (w.ptr<float>()[0] >= FLT_EPSILON ?
+             w.ptr<float>()[n-1]/w.ptr<float>()[0] : 0) :
+            (w.ptr<double>()[0] >= DBL_EPSILON ?
+             w.ptr<double>()[n-1]/w.ptr<double>()[0] : 0);
     }
 
     CV_Assert( m == n );
@@ -975,10 +975,10 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
         transpose(vt, u);
         SVD::backSubst(w, u, vt, Mat(), _dst);
         return type == CV_32F ?
-        (((float*)w.data)[0] >= FLT_EPSILON ?
-         ((float*)w.data)[n-1]/((float*)w.data)[0] : 0) :
-        (((double*)w.data)[0] >= DBL_EPSILON ?
-         ((double*)w.data)[n-1]/((double*)w.data)[0] : 0);
+        (w.ptr<float>()[0] >= FLT_EPSILON ?
+         w.ptr<float>()[n-1]/w.ptr<float>()[0] : 0) :
+        (w.ptr<double>()[0] >= DBL_EPSILON ?
+         w.ptr<double>()[n-1]/w.ptr<double>()[0] : 0);
     }
 
     CV_Assert( method == DECOMP_LU || method == DECOMP_CHOLESKY );
@@ -988,7 +988,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
 
     if( n <= 3 )
     {
-        uchar* srcdata = src.data;
+        const uchar* srcdata = src.data;
         uchar* dstdata = dst.data;
         size_t srcstep = src.step;
         size_t dststep = dst.step;
@@ -1212,8 +1212,8 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
         #define bf(y) ((float*)(bdata + y*src2step))[0]
         #define bd(y) ((double*)(bdata + y*src2step))[0]
 
-        uchar* srcdata = src.data;
-        uchar* bdata = _src2.data;
+        const uchar* srcdata = src.data;
+        const uchar* bdata = _src2.data;
         uchar* dstdata = dst.data;
         size_t srcstep = src.step;
         size_t src2step = _src2.step;
@@ -1557,13 +1557,17 @@ static void _SVDcompute( InputArray _aarr, OutputArray _w,
     {
         if( !at )
         {
-            transpose(temp_u, _u);
-            temp_v.copyTo(_vt);
+            if( _u.needed() )
+                transpose(temp_u, _u);
+            if( _vt.needed() )
+                temp_v.copyTo(_vt);
         }
         else
         {
-            transpose(temp_v, _u);
-            temp_u.copyTo(_vt);
+            if( _u.needed() )
+                transpose(temp_v, _u);
+            if( _vt.needed() )
+                temp_u.copyTo(_vt);
         }
     }
 }
@@ -1705,7 +1709,7 @@ cvEigenVV( CvArr* srcarr, CvArr* evectsarr, CvArr* evalsarr, double,
         eigen(src, evals, evects);
         if( evects0.data != evects.data )
         {
-            uchar* p = evects0.data;
+            const uchar* p = evects0.data;
             evects.convertTo(evects0, evects0.type());
             CV_Assert( p == evects0.data );
         }
@@ -1714,7 +1718,7 @@ cvEigenVV( CvArr* srcarr, CvArr* evectsarr, CvArr* evalsarr, double,
         eigen(src, evals);
     if( evals0.data != evals.data )
     {
-        uchar* p = evals0.data;
+        const uchar* p = evals0.data;
         if( evals0.size() == evals.size() )
             evals.convertTo(evals0, evals0.type());
         else if( evals0.type() == evals.type() )

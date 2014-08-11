@@ -132,8 +132,11 @@ kernel void integral_sum_rows(__global const uchar *buf_ptr, int buf_step, int b
     }
     dst_sq_offset += dst_sq_step;
 
-    dst_sq = (__global sumSQT *)(dst_sq_ptr + mad24(x, dst_sq_step, dst_sq_offset));
-    dst_sq[0] = 0;
+    if (x < rows - 1)
+    {
+        dst_sq = (__global sumSQT *)(dst_sq_ptr + mad24(x, dst_sq_step, dst_sq_offset));
+        dst_sq[0] = 0;
+    }
 
     int buf_sq_index = mad24((int)sizeof(sumSQT), x, buf_sq_offset);
     sumSQT accum_sq = 0;
