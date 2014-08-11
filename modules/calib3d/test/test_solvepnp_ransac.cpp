@@ -221,7 +221,7 @@ protected:
         }
         else if(method == 3)
         {
-            opoints = std::vector<Point3f>(points.begin(), points.begin()+10);
+            opoints = std::vector<Point3f>(points.begin(), points.begin()+50);
         }
         else
             opoints = points;
