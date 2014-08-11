@@ -3051,12 +3051,10 @@ Here is example of SIFT use in your application via Algorithm interface: ::
 
     #include "opencv2/opencv.hpp"
     #include "opencv2/xfeatures2d.hpp"
-    
+
     using namespace cv::xfeatures2d;
 
     ...
-
-    initModule_nonfree(); // to load SURF/SIFT etc.
 
     Ptr<Feature2D> sift = SIFT::create();
 
@@ -3068,7 +3066,7 @@ Here is example of SIFT use in your application via Algorithm interface: ::
     }
     else // else modify the parameters and store them; user can later edit the file to use different parameters
     {
-        sift->set("contrastThreshold", 0.01f); // lower the contrast threshold, compared to the default value
+        sift->setContrastThreshold(0.01f); // lower the contrast threshold, compared to the default value
 
         {
         WriteStructContext ws(fs, "sift_params", CV_NODE_MAP);
@@ -3078,7 +3076,7 @@ Here is example of SIFT use in your application via Algorithm interface: ::
 
     Mat image = imread("myimage.png", 0), descriptors;
     vector<KeyPoint> keypoints;
-    (*sift)(image, noArray(), keypoints, descriptors);
+    sift->detectAndCompute(image, noArray(), keypoints, descriptors);
 
 Algorithm::name
 ---------------

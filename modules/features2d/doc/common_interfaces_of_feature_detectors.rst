@@ -72,19 +72,12 @@ Creates a feature detector by its name.
 The following detector types are supported:
 
 * ``"FAST"`` -- :ocv:class:`FastFeatureDetector`
-* ``"STAR"`` -- :ocv:class:`StarFeatureDetector`
 * ``"ORB"`` -- :ocv:class:`ORB`
 * ``"BRISK"`` -- :ocv:class:`BRISK`
 * ``"MSER"`` -- :ocv:class:`MSER`
 * ``"GFTT"`` -- :ocv:class:`GoodFeaturesToTrackDetector`
 * ``"HARRIS"`` -- :ocv:class:`GoodFeaturesToTrackDetector` with Harris detector enabled
-* ``"Dense"`` -- :ocv:class:`DenseFeatureDetector`
 * ``"SimpleBlob"`` -- :ocv:class:`SimpleBlobDetector`
-
-Also a combined format is supported: feature detector adapter name ( ``"Grid"`` --
-:ocv:class:`GridAdaptedFeatureDetector`, ``"Pyramid"`` --
-:ocv:class:`PyramidAdaptedFeatureDetector` ) + feature detector name (see above),
-for example: ``"GridFAST"``, ``"PyramidSTAR"`` .
 
 FastFeatureDetector
 -------------------
