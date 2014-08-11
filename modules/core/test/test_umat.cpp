@@ -745,6 +745,24 @@ TEST(UMat, Sync)
     EXPECT_EQ(0, cvtest::norm(um.getMat(ACCESS_READ), cv::Mat(um.size(), um.type(), 19), NORM_INF));
 }
 
+TEST(UMat, CopyToIfDeviceCopyIsObsolete)
+{
+    UMat um(7, 2, CV_8UC1);
+    Mat m(um.size(), um.type());
+    m.setTo(Scalar::all(0));
+
+    {
+        // make obsolete device copy of UMat
+        Mat temp = um.getMat(ACCESS_WRITE);
+        temp.setTo(Scalar::all(10));
+    }
+
+    m.copyTo(um);
+    um.setTo(Scalar::all(17));
+
+    EXPECT_EQ(0, cvtest::norm(um.getMat(ACCESS_READ), Mat(um.size(), um.type(), 17), NORM_INF));
+}
+
 TEST(UMat, setOpenCL)
 {
     // save the current state

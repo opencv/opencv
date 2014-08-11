@@ -88,8 +88,8 @@ int main(int argc, char** argv)
     namedWindow("video", 1);
     namedWindow("segmented", 1);
 
-    Ptr<BackgroundSubtractorMOG> bgsubtractor=createBackgroundSubtractorMOG();
-    bgsubtractor->setNoiseSigma(10);
+    Ptr<BackgroundSubtractorMOG2> bgsubtractor=createBackgroundSubtractorMOG2();
+    bgsubtractor->setVarThreshold(10);
 
     for(;;)
     {

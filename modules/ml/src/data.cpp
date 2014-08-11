@@ -40,753 +40,958 @@
 
 #include "precomp.hpp"
 #include <ctype.h>
+#include <algorithm>
+#include <iterator>
 
-#define MISS_VAL    FLT_MAX
-#define CV_VAR_MISS    0
+namespace cv { namespace ml {
 
-CvTrainTestSplit::CvTrainTestSplit()
+static const float MISSED_VAL = TrainData::missingValue();
+static const int VAR_MISSED = VAR_ORDERED;
+
+TrainData::~TrainData() {}
+
+Mat TrainData::getSubVector(const Mat& vec, const Mat& idx)
 {
-    train_sample_part_mode = CV_COUNT;
-    train_sample_part.count = -1;
-    mix = false;
-}
+    if( idx.empty() )
+        return vec;
+    int i, j, n = idx.checkVector(1, CV_32S);
+    int type = vec.type();
+    CV_Assert( type == CV_32S || type == CV_32F || type == CV_64F );
+    int dims = 1, m;
 
-CvTrainTestSplit::CvTrainTestSplit( int _train_sample_count, bool _mix )
-{
-    train_sample_part_mode = CV_COUNT;
-    train_sample_part.count = _train_sample_count;
-    mix = _mix;
-}
-
-CvTrainTestSplit::CvTrainTestSplit( float _train_sample_portion, bool _mix )
-{
-    train_sample_part_mode = CV_PORTION;
-    train_sample_part.portion = _train_sample_portion;
-    mix = _mix;
-}
-
-////////////////
-
-CvMLData::CvMLData()
-{
-    values = missing = var_types = var_idx_mask = response_out = var_idx_out = var_types_out = 0;
-    train_sample_idx = test_sample_idx = 0;
-    header_lines_number = 0;
-    sample_idx = 0;
-    response_idx = -1;
-
-    train_sample_count = -1;
-
-    delimiter = ',';
-    miss_ch = '?';
-    //flt_separator = '.';
-
-    rng = &cv::theRNG();
-}
-
-CvMLData::~CvMLData()
-{
-    clear();
-}
-
-void CvMLData::free_train_test_idx()
-{
-    cvReleaseMat( &train_sample_idx );
-    cvReleaseMat( &test_sample_idx );
-    sample_idx = 0;
-}
-
-void CvMLData::clear()
-{
-    class_map.clear();
-
-    cvReleaseMat( &values );
-    cvReleaseMat( &missing );
-    cvReleaseMat( &var_types );
-    cvReleaseMat( &var_idx_mask );
-
-    cvReleaseMat( &response_out );
-    cvReleaseMat( &var_idx_out );
-    cvReleaseMat( &var_types_out );
-
-    free_train_test_idx();
-
-    total_class_count = 0;
-
-    response_idx = -1;
-
-    train_sample_count = -1;
-}
-
-
-void CvMLData::set_header_lines_number( int idx )
-{
-    header_lines_number = std::max(0, idx);
-}
-
-int CvMLData::get_header_lines_number() const
-{
-    return header_lines_number;
-}
-
-static char *fgets_chomp(char *str, int n, FILE *stream)
-{
-    char *head = fgets(str, n, stream);
-    if( head )
+    if( vec.cols == 1 || vec.rows == 1 )
     {
-        for(char *tail = head + strlen(head) - 1; tail >= head; --tail)
+        dims = 1;
+        m = vec.cols + vec.rows - 1;
+    }
+    else
+    {
+        dims = vec.cols;
+        m = vec.rows;
+    }
+
+    Mat subvec;
+
+    if( vec.cols == m )
+        subvec.create(dims, n, type);
+    else
+        subvec.create(n, dims, type);
+    if( type == CV_32S )
+        for( i = 0; i < n; i++ )
         {
-            if( *tail != '\r'  && *tail != '\n' )
-                break;
-            *tail = '\0';
+            int k = idx.at<int>(i);
+            CV_Assert( 0 <= k && k < m );
+            if( dims == 1 )
+                subvec.at<int>(i) = vec.at<int>(k);
+            else
+                for( j = 0; j < dims; j++ )
+                    subvec.at<int>(i, j) = vec.at<int>(k, j);
         }
-    }
-    return head;
+    else if( type == CV_32F )
+        for( i = 0; i < n; i++ )
+        {
+            int k = idx.at<int>(i);
+            CV_Assert( 0 <= k && k < m );
+            if( dims == 1 )
+                subvec.at<float>(i) = vec.at<float>(k);
+            else
+                for( j = 0; j < dims; j++ )
+                    subvec.at<float>(i, j) = vec.at<float>(k, j);
+        }
+    else
+        for( i = 0; i < n; i++ )
+        {
+            int k = idx.at<int>(i);
+            CV_Assert( 0 <= k && k < m );
+            if( dims == 1 )
+                subvec.at<double>(i) = vec.at<double>(k);
+            else
+                for( j = 0; j < dims; j++ )
+                    subvec.at<double>(i, j) = vec.at<double>(k, j);
+        }
+    return subvec;
 }
 
-
-int CvMLData::read_csv(const char* filename)
+class TrainDataImpl : public TrainData
 {
-    const int M = 1000000;
-    const char str_delimiter[3] = { ' ', delimiter, '\0' };
-    FILE* file = 0;
-    CvMemStorage* storage;
-    CvSeq* seq;
-    char *ptr;
-    float* el_ptr;
-    CvSeqReader reader;
-    int cols_count = 0;
-    uchar *var_types_ptr = 0;
+public:
+    typedef std::map<String, int> MapType;
 
-    clear();
-
-    file = fopen( filename, "rt" );
-
-    if( !file )
-        return -1;
-
-    std::vector<char> _buf(M);
-    char* buf = &_buf[0];
-
-    // skip header lines
-    for( int i = 0; i < header_lines_number; i++ )
+    TrainDataImpl()
     {
-        if( fgets( buf, M, file ) == 0 )
+        file = 0;
+        clear();
+    }
+
+    virtual ~TrainDataImpl() { closeFile(); }
+
+    int getLayout() const { return layout; }
+    int getNSamples() const
+    {
+        return !sampleIdx.empty() ? (int)sampleIdx.total() :
+               layout == ROW_SAMPLE ? samples.rows : samples.cols;
+    }
+    int getNTrainSamples() const
+    {
+        return !trainSampleIdx.empty() ? (int)trainSampleIdx.total() : getNSamples();
+    }
+    int getNTestSamples() const
+    {
+        return !testSampleIdx.empty() ? (int)testSampleIdx.total() : 0;
+    }
+    int getNVars() const
+    {
+        return !varIdx.empty() ? (int)varIdx.total() : getNAllVars();
+    }
+    int getNAllVars() const
+    {
+        return layout == ROW_SAMPLE ? samples.cols : samples.rows;
+    }
+
+    Mat getSamples() const { return samples; }
+    Mat getResponses() const { return responses; }
+    Mat getMissing() const { return missing; }
+    Mat getVarIdx() const { return varIdx; }
+    Mat getVarType() const { return varType; }
+    int getResponseType() const
+    {
+        return classLabels.empty() ? VAR_ORDERED : VAR_CATEGORICAL;
+    }
+    Mat getTrainSampleIdx() const { return !trainSampleIdx.empty() ? trainSampleIdx : sampleIdx; }
+    Mat getTestSampleIdx() const { return testSampleIdx; }
+    Mat getSampleWeights() const
+    {
+        return sampleWeights;
+    }
+    Mat getTrainSampleWeights() const
+    {
+        return getSubVector(sampleWeights, getTrainSampleIdx());
+    }
+    Mat getTestSampleWeights() const
+    {
+        Mat idx = getTestSampleIdx();
+        return idx.empty() ? Mat() : getSubVector(sampleWeights, idx);
+    }
+    Mat getTrainResponses() const
+    {
+        return getSubVector(responses, getTrainSampleIdx());
+    }
+    Mat getTrainNormCatResponses() const
+    {
+        return getSubVector(normCatResponses, getTrainSampleIdx());
+    }
+    Mat getTestResponses() const
+    {
+        Mat idx = getTestSampleIdx();
+        return idx.empty() ? Mat() : getSubVector(responses, idx);
+    }
+    Mat getTestNormCatResponses() const
+    {
+        Mat idx = getTestSampleIdx();
+        return idx.empty() ? Mat() : getSubVector(normCatResponses, idx);
+    }
+    Mat getNormCatResponses() const { return normCatResponses; }
+    Mat getClassLabels() const { return classLabels; }
+    Mat getClassCounters() const { return classCounters; }
+    int getCatCount(int vi) const
+    {
+        int n = (int)catOfs.total();
+        CV_Assert( 0 <= vi && vi < n );
+        Vec2i ofs = catOfs.at<Vec2i>(vi);
+        return ofs[1] - ofs[0];
+    }
+
+    Mat getCatOfs() const { return catOfs; }
+    Mat getCatMap() const { return catMap; }
+
+    Mat getDefaultSubstValues() const { return missingSubst; }
+
+    void closeFile() { if(file) fclose(file); file=0; }
+    void clear()
+    {
+        closeFile();
+        samples.release();
+        missing.release();
+        varType.release();
+        responses.release();
+        sampleIdx.release();
+        trainSampleIdx.release();
+        testSampleIdx.release();
+        normCatResponses.release();
+        classLabels.release();
+        classCounters.release();
+        catMap.release();
+        catOfs.release();
+        nameMap = MapType();
+        layout = ROW_SAMPLE;
+    }
+
+    typedef std::map<int, int> CatMapHash;
+
+    void setData(InputArray _samples, int _layout, InputArray _responses,
+                 InputArray _varIdx, InputArray _sampleIdx, InputArray _sampleWeights,
+                 InputArray _varType, InputArray _missing)
+    {
+        clear();
+
+        CV_Assert(_layout == ROW_SAMPLE || _layout == COL_SAMPLE );
+        samples = _samples.getMat();
+        layout = _layout;
+        responses = _responses.getMat();
+        varIdx = _varIdx.getMat();
+        sampleIdx = _sampleIdx.getMat();
+        sampleWeights = _sampleWeights.getMat();
+        varType = _varType.getMat();
+        missing = _missing.getMat();
+
+        int nsamples = layout == ROW_SAMPLE ? samples.rows : samples.cols;
+        int ninputvars = layout == ROW_SAMPLE ? samples.cols : samples.rows;
+        int i, noutputvars = 0;
+
+        CV_Assert( samples.type() == CV_32F || samples.type() == CV_32S );
+
+        if( !sampleIdx.empty() )
         {
-            fclose(file);
-            return -1;
+            CV_Assert( (sampleIdx.checkVector(1, CV_32S, true) > 0 &&
+                       checkRange(sampleIdx, true, 0, 0, nsamples-1)) ||
+                       sampleIdx.checkVector(1, CV_8U, true) == nsamples );
+            if( sampleIdx.type() == CV_8U )
+                sampleIdx = convertMaskToIdx(sampleIdx);
         }
-    }
 
-    // read the first data line and determine the number of variables
-    if( !fgets_chomp( buf, M, file ))
-    {
-        fclose(file);
-        return -1;
-    }
-
-    ptr = buf;
-    while( *ptr == ' ' )
-        ptr++;
-    for( ; *ptr != '\0'; )
-    {
-        if(*ptr == delimiter || *ptr == ' ')
+        if( !sampleWeights.empty() )
         {
-            cols_count++;
-            ptr++;
-            while( *ptr == ' ' ) ptr++;
+            CV_Assert( sampleWeights.checkVector(1, CV_32F, true) == nsamples );
         }
         else
-            ptr++;
-    }
-
-    cols_count++;
-
-    if ( cols_count == 0)
-    {
-        fclose(file);
-        return -1;
-    }
-
-    // create temporary memory storage to store the whole database
-    el_ptr = new float[cols_count];
-    storage = cvCreateMemStorage();
-    seq = cvCreateSeq( 0, sizeof(*seq), cols_count*sizeof(float), storage );
-
-    var_types = cvCreateMat( 1, cols_count, CV_8U );
-    cvZero( var_types );
-    var_types_ptr = var_types->data.ptr;
-
-    for(;;)
-    {
-        char *token = NULL;
-        int type;
-        token = strtok(buf, str_delimiter);
-        if (!token)
-            break;
-        for (int i = 0; i < cols_count-1; i++)
         {
-            str_to_flt_elem( token, el_ptr[i], type);
-            var_types_ptr[i] |= type;
-            token = strtok(NULL, str_delimiter);
-            if (!token)
-            {
-                fclose(file);
-                delete [] el_ptr;
-                return -1;
-            }
+            sampleWeights = Mat::ones(nsamples, 1, CV_32F);
         }
-        str_to_flt_elem( token, el_ptr[cols_count-1], type);
-        var_types_ptr[cols_count-1] |= type;
-        cvSeqPush( seq, el_ptr );
-        if( !fgets_chomp( buf, M, file ) )
-            break;
-    }
-    fclose(file);
 
-    values = cvCreateMat( seq->total, cols_count, CV_32FC1 );
-    missing = cvCreateMat( seq->total, cols_count, CV_8U );
-    var_idx_mask = cvCreateMat( 1, values->cols, CV_8UC1 );
-    cvSet( var_idx_mask, cvRealScalar(1) );
-    train_sample_count = seq->total;
-
-    cvStartReadSeq( seq, &reader );
-    for(int i = 0; i < seq->total; i++ )
-    {
-        const float* sdata = (float*)reader.ptr;
-        float* ddata = values->data.fl + cols_count*i;
-        uchar* dm = missing->data.ptr + cols_count*i;
-
-        for( int j = 0; j < cols_count; j++ )
+        if( !varIdx.empty() )
         {
-            ddata[j] = sdata[j];
-            dm[j] = ( fabs( MISS_VAL - sdata[j] ) <= FLT_EPSILON );
+            CV_Assert( (varIdx.checkVector(1, CV_32S, true) > 0 &&
+                       checkRange(varIdx, true, 0, 0, ninputvars)) ||
+                       varIdx.checkVector(1, CV_8U, true) == ninputvars );
+            if( varIdx.type() == CV_8U )
+                varIdx = convertMaskToIdx(varIdx);
+            varIdx = varIdx.clone();
+            std::sort(varIdx.ptr<int>(), varIdx.ptr<int>() + varIdx.total());
         }
-        CV_NEXT_SEQ_ELEM( seq->elem_size, reader );
-    }
 
-    if ( cvNorm( missing, 0, CV_L1 ) <= FLT_EPSILON )
-        cvReleaseMat( &missing );
-
-    cvReleaseMemStorage( &storage );
-    delete []el_ptr;
-    return 0;
-}
-
-const CvMat* CvMLData::get_values() const
-{
-    return values;
-}
-
-const CvMat* CvMLData::get_missing() const
-{
-    CV_FUNCNAME( "CvMLData::get_missing" );
-    __BEGIN__;
-
-    if ( !values )
-        CV_ERROR( CV_StsInternal, "data is empty" );
-
-    __END__;
-
-    return missing;
-}
-
-const std::map<cv::String, int>& CvMLData::get_class_labels_map() const
-{
-    return class_map;
-}
-
-void CvMLData::str_to_flt_elem( const char* token, float& flt_elem, int& type)
-{
-
-    char* stopstring = NULL;
-    flt_elem = (float)strtod( token, &stopstring );
-    assert( stopstring );
-    type = CV_VAR_ORDERED;
-    if ( *stopstring == miss_ch && strlen(stopstring) == 1 ) // missed value
-    {
-        flt_elem = MISS_VAL;
-        type = CV_VAR_MISS;
-    }
-    else
-    {
-        if ( (*stopstring != 0) && (*stopstring != '\n') && (strcmp(stopstring, "\r\n") != 0) ) // class label
+        if( !responses.empty() )
         {
-            int idx = class_map[token];
-            if ( idx == 0)
-            {
-                total_class_count++;
-                idx = total_class_count;
-                class_map[token] = idx;
-            }
-            flt_elem = (float)idx;
-            type = CV_VAR_CATEGORICAL;
-        }
-    }
-}
-
-void CvMLData::set_delimiter(char ch)
-{
-    CV_FUNCNAME( "CvMLData::set_delimited" );
-    __BEGIN__;
-
-    if (ch == miss_ch /*|| ch == flt_separator*/)
-        CV_ERROR(CV_StsBadArg, "delimited, miss_character and flt_separator must be different");
-
-    delimiter = ch;
-
-    __END__;
-}
-
-char CvMLData::get_delimiter() const
-{
-    return delimiter;
-}
-
-void CvMLData::set_miss_ch(char ch)
-{
-    CV_FUNCNAME( "CvMLData::set_miss_ch" );
-    __BEGIN__;
-
-    if (ch == delimiter/* || ch == flt_separator*/)
-        CV_ERROR(CV_StsBadArg, "delimited, miss_character and flt_separator must be different");
-
-    miss_ch = ch;
-
-    __END__;
-}
-
-char CvMLData::get_miss_ch() const
-{
-    return miss_ch;
-}
-
-void CvMLData::set_response_idx( int idx )
-{
-    CV_FUNCNAME( "CvMLData::set_response_idx" );
-    __BEGIN__;
-
-    if ( !values )
-        CV_ERROR( CV_StsInternal, "data is empty" );
-
-    if ( idx >= values->cols)
-        CV_ERROR( CV_StsBadArg, "idx value is not correct" );
-
-    if ( response_idx >= 0 )
-        chahge_var_idx( response_idx, true );
-    if ( idx >= 0 )
-        chahge_var_idx( idx, false );
-    response_idx = idx;
-
-    __END__;
-}
-
-int CvMLData::get_response_idx() const
-{
-    CV_FUNCNAME( "CvMLData::get_response_idx" );
-    __BEGIN__;
-
-    if ( !values )
-        CV_ERROR( CV_StsInternal, "data is empty" );
-     __END__;
-    return response_idx;
-}
-
-void CvMLData::change_var_type( int var_idx, int type )
-{
-    CV_FUNCNAME( "CvMLData::change_var_type" );
-    __BEGIN__;
-
-    int var_count = 0;
-
-    if ( !values )
-        CV_ERROR( CV_StsInternal, "data is empty" );
-
-     var_count = values->cols;
-
-    if ( var_idx < 0 || var_idx >= var_count)
-        CV_ERROR( CV_StsBadArg, "var_idx is not correct" );
-
-    if ( type != CV_VAR_ORDERED && type != CV_VAR_CATEGORICAL)
-         CV_ERROR( CV_StsBadArg, "type is not correct" );
-
-    assert( var_types );
-    if ( var_types->data.ptr[var_idx] == CV_VAR_CATEGORICAL && type == CV_VAR_ORDERED)
-        CV_ERROR( CV_StsBadArg, "it`s impossible to assign CV_VAR_ORDERED type to categorical variable" );
-    var_types->data.ptr[var_idx] = (uchar)type;
-
-    __END__;
-
-    return;
-}
-
-void CvMLData::set_var_types( const char* str )
-{
-    CV_FUNCNAME( "CvMLData::set_var_types" );
-    __BEGIN__;
-
-    const char* ord = 0, *cat = 0;
-    int var_count = 0, set_var_type_count = 0;
-    if ( !values )
-        CV_ERROR( CV_StsInternal, "data is empty" );
-
-    var_count = values->cols;
-
-    assert( var_types );
-
-    ord = strstr( str, "ord" );
-    cat = strstr( str, "cat" );
-    if ( !ord && !cat )
-        CV_ERROR( CV_StsBadArg, "types string is not correct" );
-
-    if ( !ord && strlen(cat) == 3 ) // str == "cat"
-    {
-        cvSet( var_types, cvScalarAll(CV_VAR_CATEGORICAL) );
-        return;
-    }
-
-    if ( !cat && strlen(ord) == 3 ) // str == "ord"
-    {
-        cvSet( var_types, cvScalarAll(CV_VAR_ORDERED) );
-        return;
-    }
-
-    if ( ord ) // parse ord str
-    {
-        char* stopstring = NULL;
-        if ( ord[3] != '[')
-            CV_ERROR( CV_StsBadArg, "types string is not correct" );
-
-        ord += 4; // pass "ord["
-        do
-        {
-            int b1 = (int)strtod( ord, &stopstring );
-            if ( *stopstring == 0 || (*stopstring != ',' && *stopstring != ']' && *stopstring != '-') )
-                CV_ERROR( CV_StsBadArg, "types string is not correct" );
-            ord = stopstring + 1;
-            if ( (stopstring[0] == ',') || (stopstring[0] == ']'))
-            {
-                if ( var_types->data.ptr[b1] == CV_VAR_CATEGORICAL)
-                    CV_ERROR( CV_StsBadArg, "it`s impossible to assign CV_VAR_ORDERED type to categorical variable" );
-                var_types->data.ptr[b1] = CV_VAR_ORDERED;
-                set_var_type_count++;
-            }
+            CV_Assert( responses.type() == CV_32F || responses.type() == CV_32S );
+            if( (responses.cols == 1 || responses.rows == 1) && (int)responses.total() == nsamples )
+                noutputvars = 1;
             else
             {
-                if ( stopstring[0] == '-')
+                CV_Assert( (layout == ROW_SAMPLE && responses.rows == nsamples) ||
+                           (layout == COL_SAMPLE && responses.cols == nsamples) );
+                noutputvars = layout == ROW_SAMPLE ? responses.cols : responses.rows;
+            }
+            if( !responses.isContinuous() || (layout == COL_SAMPLE && noutputvars > 1) )
+            {
+                Mat temp;
+                transpose(responses, temp);
+                responses = temp;
+            }
+        }
+
+        int nvars = ninputvars + noutputvars;
+
+        if( !varType.empty() )
+        {
+            CV_Assert( varType.checkVector(1, CV_8U, true) == nvars &&
+                       checkRange(varType, true, 0, VAR_ORDERED, VAR_CATEGORICAL+1) );
+        }
+        else
+        {
+            varType.create(1, nvars, CV_8U);
+            varType = Scalar::all(VAR_ORDERED);
+            if( noutputvars == 1 )
+                varType.at<uchar>(ninputvars) = (uchar)(responses.type() < CV_32F ? VAR_CATEGORICAL : VAR_ORDERED);
+        }
+
+        if( noutputvars > 1 )
+        {
+            for( i = 0; i < noutputvars; i++ )
+                CV_Assert( varType.at<uchar>(ninputvars + i) == VAR_ORDERED );
+        }
+
+        catOfs = Mat::zeros(1, nvars, CV_32SC2);
+        missingSubst = Mat::zeros(1, nvars, CV_32F);
+
+        vector<int> labels, counters, sortbuf, tempCatMap;
+        vector<Vec2i> tempCatOfs;
+        CatMapHash ofshash;
+
+        AutoBuffer<uchar> buf(nsamples);
+        Mat non_missing(layout == ROW_SAMPLE ? Size(1, nsamples) : Size(nsamples, 1), CV_8U, (uchar*)buf);
+        bool haveMissing = !missing.empty();
+        if( haveMissing )
+        {
+            CV_Assert( missing.size() == samples.size() && missing.type() == CV_8U );
+        }
+
+        // we iterate through all the variables. For each categorical variable we build a map
+        // in order to convert input values of the variable into normalized values (0..catcount_vi-1)
+        // often many categorical variables are similar, so we compress the map - try to re-use
+        // maps for different variables if they are identical
+        for( i = 0; i < ninputvars; i++ )
+        {
+            Mat values_i = layout == ROW_SAMPLE ? samples.col(i) : samples.row(i);
+
+            if( varType.at<uchar>(i) == VAR_CATEGORICAL )
+            {
+                preprocessCategorical(values_i, 0, labels, 0, sortbuf);
+                missingSubst.at<float>(i) = -1.f;
+                int j, m = (int)labels.size();
+                CV_Assert( m > 0 );
+                int a = labels.front(), b = labels.back();
+                const int* currmap = &labels[0];
+                int hashval = ((unsigned)a*127 + (unsigned)b)*127 + m;
+                CatMapHash::iterator it = ofshash.find(hashval);
+                if( it != ofshash.end() )
                 {
-                    int b2 = (int)strtod( ord, &stopstring);
-                    if ( (*stopstring == 0) || (*stopstring != ',' && *stopstring != ']') )
-                        CV_ERROR( CV_StsBadArg, "types string is not correct" );
-                    ord = stopstring + 1;
-                    for (int i = b1; i <= b2; i++)
+                    int vi = it->second;
+                    Vec2i ofs0 = tempCatOfs[vi];
+                    int m0 = ofs0[1] - ofs0[0];
+                    const int* map0 = &tempCatMap[ofs0[0]];
+                    if( m0 == m && map0[0] == a && map0[m0-1] == b )
                     {
-                        if ( var_types->data.ptr[i] == CV_VAR_CATEGORICAL)
-                            CV_ERROR( CV_StsBadArg, "it`s impossible to assign CV_VAR_ORDERED type to categorical variable" );
-                        var_types->data.ptr[i] = CV_VAR_ORDERED;
+                        for( j = 0; j < m; j++ )
+                            if( map0[j] != currmap[j] )
+                                break;
+                        if( j == m )
+                        {
+                            // re-use the map
+                            tempCatOfs.push_back(ofs0);
+                            continue;
+                        }
                     }
-                    set_var_type_count += b2 - b1 + 1;
                 }
                 else
-                    CV_ERROR( CV_StsBadArg, "types string is not correct" );
-
-            }
-        }
-        while (*stopstring != ']');
-
-        if ( stopstring[1] != '\0' && stopstring[1] != ',')
-            CV_ERROR( CV_StsBadArg, "types string is not correct" );
-    }
-
-    if ( cat ) // parse cat str
-    {
-        char* stopstring = NULL;
-        if ( cat[3] != '[')
-            CV_ERROR( CV_StsBadArg, "types string is not correct" );
-
-        cat += 4; // pass "cat["
-        do
-        {
-            int b1 = (int)strtod( cat, &stopstring );
-            if ( *stopstring == 0 || (*stopstring != ',' && *stopstring != ']' && *stopstring != '-') )
-                CV_ERROR( CV_StsBadArg, "types string is not correct" );
-            cat = stopstring + 1;
-            if ( (stopstring[0] == ',') || (stopstring[0] == ']'))
-            {
-                var_types->data.ptr[b1] = CV_VAR_CATEGORICAL;
-                set_var_type_count++;
+                    ofshash[hashval] = i;
+                Vec2i ofs;
+                ofs[0] = (int)tempCatMap.size();
+                ofs[1] = ofs[0] + m;
+                tempCatOfs.push_back(ofs);
+                std::copy(labels.begin(), labels.end(), std::back_inserter(tempCatMap));
             }
             else
             {
-                if ( stopstring[0] == '-')
-                {
-                    int b2 = (int)strtod( cat, &stopstring);
-                    if ( (*stopstring == 0) || (*stopstring != ',' && *stopstring != ']') )
-                        CV_ERROR( CV_StsBadArg, "types string is not correct" );
-                    cat = stopstring + 1;
-                    for (int i = b1; i <= b2; i++)
-                        var_types->data.ptr[i] = CV_VAR_CATEGORICAL;
-                    set_var_type_count += b2 - b1 + 1;
-                }
-                else
-                    CV_ERROR( CV_StsBadArg, "types string is not correct" );
-
+                tempCatOfs.push_back(Vec2i(0, 0));
+                /*Mat missing_i = layout == ROW_SAMPLE ? missing.col(i) : missing.row(i);
+                compare(missing_i, Scalar::all(0), non_missing, CMP_EQ);
+                missingSubst.at<float>(i) = (float)(mean(values_i, non_missing)[0]);*/
+                missingSubst.at<float>(i) = 0.f;
             }
         }
-        while (*stopstring != ']');
 
-        if ( stopstring[1] != '\0' && stopstring[1] != ',')
-            CV_ERROR( CV_StsBadArg, "types string is not correct" );
-    }
-
-    if (set_var_type_count != var_count)
-        CV_ERROR( CV_StsBadArg, "types string is not correct" );
-
-     __END__;
-}
-
-const CvMat* CvMLData::get_var_types()
-{
-    CV_FUNCNAME( "CvMLData::get_var_types" );
-    __BEGIN__;
-
-    uchar *var_types_out_ptr = 0;
-    int avcount, vt_size;
-    if ( !values )
-        CV_ERROR( CV_StsInternal, "data is empty" );
-
-    assert( var_idx_mask );
-
-    avcount = cvFloor( cvNorm( var_idx_mask, 0, CV_L1 ) );
-    vt_size = avcount + (response_idx >= 0);
-
-    if ( avcount == values->cols || (avcount == values->cols-1 && response_idx == values->cols-1) )
-        return var_types;
-
-    if ( !var_types_out || ( var_types_out && var_types_out->cols != vt_size ) )
-    {
-        cvReleaseMat( &var_types_out );
-        var_types_out = cvCreateMat( 1, vt_size, CV_8UC1 );
-    }
-
-    var_types_out_ptr = var_types_out->data.ptr;
-    for( int i = 0; i < var_types->cols; i++)
-    {
-        if (i == response_idx || !var_idx_mask->data.ptr[i]) continue;
-        *var_types_out_ptr = var_types->data.ptr[i];
-        var_types_out_ptr++;
-    }
-    if ( response_idx >= 0 )
-        *var_types_out_ptr = var_types->data.ptr[response_idx];
-
-    __END__;
-
-    return var_types_out;
-}
-
-int CvMLData::get_var_type( int var_idx ) const
-{
-    return var_types->data.ptr[var_idx];
-}
-
-const CvMat* CvMLData::get_responses()
-{
-    CV_FUNCNAME( "CvMLData::get_responses_ptr" );
-    __BEGIN__;
-
-    int var_count = 0;
-
-    if ( !values )
-        CV_ERROR( CV_StsInternal, "data is empty" );
-    var_count = values->cols;
-
-    if ( response_idx < 0 || response_idx >= var_count )
-       return 0;
-    if ( !response_out )
-        response_out = cvCreateMatHeader( values->rows, 1, CV_32FC1 );
-    else
-        cvInitMatHeader( response_out, values->rows, 1, CV_32FC1);
-    cvGetCol( values, response_out, response_idx );
-
-    __END__;
-
-    return response_out;
-}
-
-void CvMLData::set_train_test_split( const CvTrainTestSplit * spl)
-{
-    CV_FUNCNAME( "CvMLData::set_division" );
-    __BEGIN__;
-
-    int sample_count = 0;
-
-    if ( !values )
-        CV_ERROR( CV_StsInternal, "data is empty" );
-
-    sample_count = values->rows;
-
-    float train_sample_portion;
-
-    if (spl->train_sample_part_mode == CV_COUNT)
-    {
-        train_sample_count = spl->train_sample_part.count;
-        if (train_sample_count > sample_count)
-            CV_ERROR( CV_StsBadArg, "train samples count is not correct" );
-        train_sample_count = train_sample_count<=0 ? sample_count : train_sample_count;
-    }
-    else // dtype.train_sample_part_mode == CV_PORTION
-    {
-        train_sample_portion = spl->train_sample_part.portion;
-        if ( train_sample_portion > 1)
-            CV_ERROR( CV_StsBadArg, "train samples count is not correct" );
-        train_sample_portion = train_sample_portion <= FLT_EPSILON ||
-            1 - train_sample_portion <= FLT_EPSILON ? 1 : train_sample_portion;
-        train_sample_count = std::max(1, cvFloor( train_sample_portion * sample_count ));
-    }
-
-    if ( train_sample_count == sample_count )
-    {
-        free_train_test_idx();
-        return;
-    }
-
-    if ( train_sample_idx && train_sample_idx->cols != train_sample_count )
-        free_train_test_idx();
-
-    if ( !sample_idx)
-    {
-        int test_sample_count = sample_count- train_sample_count;
-        sample_idx = (int*)cvAlloc( sample_count * sizeof(sample_idx[0]) );
-        for (int i = 0; i < sample_count; i++ )
-            sample_idx[i] = i;
-        train_sample_idx = cvCreateMatHeader( 1, train_sample_count, CV_32SC1 );
-        *train_sample_idx = cvMat( 1, train_sample_count, CV_32SC1, &sample_idx[0] );
-
-        CV_Assert(test_sample_count > 0);
-        test_sample_idx = cvCreateMatHeader( 1, test_sample_count, CV_32SC1 );
-        *test_sample_idx = cvMat( 1, test_sample_count, CV_32SC1, &sample_idx[train_sample_count] );
-    }
-
-    mix = spl->mix;
-    if ( mix )
-        mix_train_and_test_idx();
-
-    __END__;
-}
-
-const CvMat* CvMLData::get_train_sample_idx() const
-{
-    CV_FUNCNAME( "CvMLData::get_train_sample_idx" );
-    __BEGIN__;
-
-    if ( !values )
-        CV_ERROR( CV_StsInternal, "data is empty" );
-    __END__;
-
-    return train_sample_idx;
-}
-
-const CvMat* CvMLData::get_test_sample_idx() const
-{
-    CV_FUNCNAME( "CvMLData::get_test_sample_idx" );
-    __BEGIN__;
-
-    if ( !values )
-        CV_ERROR( CV_StsInternal, "data is empty" );
-    __END__;
-
-    return test_sample_idx;
-}
-
-void CvMLData::mix_train_and_test_idx()
-{
-    CV_FUNCNAME( "CvMLData::mix_train_and_test_idx" );
-    __BEGIN__;
-
-    if ( !values )
-        CV_ERROR( CV_StsInternal, "data is empty" );
-    __END__;
-
-    if ( !sample_idx)
-        return;
-
-    if ( train_sample_count > 0 && train_sample_count < values->rows )
-    {
-        int n = values->rows;
-        for (int i = 0; i < n; i++)
+        if( !tempCatOfs.empty() )
         {
-            int a = (*rng)(n);
-            int b = (*rng)(n);
-            int t;
-            CV_SWAP( sample_idx[a], sample_idx[b], t );
-        }
-    }
-}
-
-const CvMat* CvMLData::get_var_idx()
-{
-     CV_FUNCNAME( "CvMLData::get_var_idx" );
-    __BEGIN__;
-
-    int avcount = 0;
-
-    if ( !values )
-        CV_ERROR( CV_StsInternal, "data is empty" );
-
-    assert( var_idx_mask );
-
-    avcount = cvFloor( cvNorm( var_idx_mask, 0, CV_L1 ) );
-    int* vidx;
-
-    if ( avcount == values->cols )
-        return 0;
-
-    if ( !var_idx_out || ( var_idx_out && var_idx_out->cols != avcount ) )
-    {
-        cvReleaseMat( &var_idx_out );
-        var_idx_out = cvCreateMat( 1, avcount, CV_32SC1);
-        if ( response_idx >=0 )
-            var_idx_mask->data.ptr[response_idx] = 0;
-    }
-
-    vidx = var_idx_out->data.i;
-
-    for(int i = 0; i < var_idx_mask->cols; i++)
-        if ( var_idx_mask->data.ptr[i] )
-        {
-            *vidx = i;
-            vidx++;
+            Mat(tempCatOfs).copyTo(catOfs);
+            Mat(tempCatMap).copyTo(catMap);
         }
 
-    __END__;
+        if( varType.at<uchar>(ninputvars) == VAR_CATEGORICAL )
+        {
+            preprocessCategorical(responses, &normCatResponses, labels, &counters, sortbuf);
+            Mat(labels).copyTo(classLabels);
+            Mat(counters).copyTo(classCounters);
+        }
+    }
 
-    return var_idx_out;
-}
+    Mat convertMaskToIdx(const Mat& mask)
+    {
+        int i, j, nz = countNonZero(mask), n = mask.cols + mask.rows - 1;
+        Mat idx(1, nz, CV_32S);
+        for( i = j = 0; i < n; i++ )
+            if( mask.at<uchar>(i) )
+                idx.at<int>(j++) = i;
+        return idx;
+    }
 
-void CvMLData::chahge_var_idx( int vi, bool state )
+    struct CmpByIdx
+    {
+        CmpByIdx(const int* _data, int _step) : data(_data), step(_step) {}
+        bool operator ()(int i, int j) const { return data[i*step] < data[j*step]; }
+        const int* data;
+        int step;
+    };
+
+    void preprocessCategorical(const Mat& data, Mat* normdata, vector<int>& labels,
+                               vector<int>* counters, vector<int>& sortbuf)
+    {
+        CV_Assert((data.cols == 1 || data.rows == 1) && (data.type() == CV_32S || data.type() == CV_32F));
+        int* odata = 0;
+        int ostep = 0;
+
+        if(normdata)
+        {
+            normdata->create(data.size(), CV_32S);
+            odata = normdata->ptr<int>();
+            ostep = normdata->isContinuous() ? 1 : (int)normdata->step1();
+        }
+
+        int i, n = data.cols + data.rows - 1;
+        sortbuf.resize(n*2);
+        int* idx = &sortbuf[0];
+        int* idata = (int*)data.ptr<int>();
+        int istep = data.isContinuous() ? 1 : (int)data.step1();
+
+        if( data.type() == CV_32F )
+        {
+            idata = idx + n;
+            const float* fdata = data.ptr<float>();
+            for( i = 0; i < n; i++ )
+            {
+                if( fdata[i*istep] == MISSED_VAL )
+                    idata[i] = -1;
+                else
+                {
+                    idata[i] = cvRound(fdata[i*istep]);
+                    CV_Assert( (float)idata[i] == fdata[i*istep] );
+                }
+            }
+            istep = 1;
+        }
+
+        for( i = 0; i < n; i++ )
+            idx[i] = i;
+
+        std::sort(idx, idx + n, CmpByIdx(idata, istep));
+
+        int clscount = 1;
+        for( i = 1; i < n; i++ )
+            clscount += idata[idx[i]*istep] != idata[idx[i-1]*istep];
+
+        int clslabel = -1;
+        int prev = ~idata[idx[0]*istep];
+        int previdx = 0;
+
+        labels.resize(clscount);
+        if(counters)
+            counters->resize(clscount);
+
+        for( i = 0; i < n; i++ )
+        {
+            int l = idata[idx[i]*istep];
+            if( l != prev )
+            {
+                clslabel++;
+                labels[clslabel] = l;
+                int k = i - previdx;
+                if( clslabel > 0 && counters )
+                    counters->at(clslabel-1) = k;
+                prev = l;
+                previdx = i;
+            }
+            if(odata)
+                odata[idx[i]*ostep] = clslabel;
+        }
+        if(counters)
+            counters->at(clslabel) = i - previdx;
+    }
+
+    bool loadCSV(const String& filename, int headerLines,
+                 int responseStartIdx, int responseEndIdx,
+                 const String& varTypeSpec, char delimiter, char missch)
+    {
+        const int M = 1000000;
+        const char delimiters[3] = { ' ', delimiter, '\0' };
+        int nvars = 0;
+        bool varTypesSet = false;
+
+        clear();
+
+        file = fopen( filename.c_str(), "rt" );
+
+        if( !file )
+            return false;
+
+        std::vector<char> _buf(M);
+        std::vector<float> allresponses;
+        std::vector<float> rowvals;
+        std::vector<uchar> vtypes, rowtypes;
+        bool haveMissed = false;
+        char* buf = &_buf[0];
+
+        int i, ridx0 = responseStartIdx, ridx1 = responseEndIdx;
+        int ninputvars = 0, noutputvars = 0;
+
+        Mat tempSamples, tempMissing, tempResponses;
+        MapType tempNameMap;
+        int catCounter = 1;
+
+        // skip header lines
+        int lineno = 0;
+        for(;;lineno++)
+        {
+            if( !fgets(buf, M, file) )
+                break;
+            if(lineno < headerLines )
+                continue;
+            // trim trailing spaces
+            int idx = (int)strlen(buf)-1;
+            while( idx >= 0 && isspace(buf[idx]) )
+                buf[idx--] = '\0';
+            // skip spaces in the beginning
+            char* ptr = buf;
+            while( *ptr != '\0' && isspace(*ptr) )
+                ptr++;
+            // skip commented off lines
+            if(*ptr == '#')
+                continue;
+            rowvals.clear();
+            rowtypes.clear();
+
+            char* token = strtok(buf, delimiters);
+            if (!token)
+                break;
+
+            for(;;)
+            {
+                float val=0.f; int tp = 0;
+                decodeElem( token, val, tp, missch, tempNameMap, catCounter );
+                if( tp == VAR_MISSED )
+                    haveMissed = true;
+                rowvals.push_back(val);
+                rowtypes.push_back((uchar)tp);
+                token = strtok(NULL, delimiters);
+                if (!token)
+                    break;
+            }
+
+            if( nvars == 0 )
+            {
+                if( rowvals.empty() )
+                    CV_Error(CV_StsBadArg, "invalid CSV format; no data found");
+                nvars = (int)rowvals.size();
+                if( !varTypeSpec.empty() && varTypeSpec.size() > 0 )
+                {
+                    setVarTypes(varTypeSpec, nvars, vtypes);
+                    varTypesSet = true;
+                }
+                else
+                    vtypes = rowtypes;
+
+                ridx0 = ridx0 >= 0 ? ridx0 : ridx0 == -1 ? nvars - 1 : -1;
+                ridx1 = ridx1 >= 0 ? ridx1 : ridx0 >= 0 ? ridx0+1 : -1;
+                CV_Assert(ridx1 > ridx0);
+                noutputvars = ridx0 >= 0 ? ridx1 - ridx0 : 0;
+                ninputvars = nvars - noutputvars;
+            }
+            else
+                CV_Assert( nvars == (int)rowvals.size() );
+
+            // check var types
+            for( i = 0; i < nvars; i++ )
+            {
+                CV_Assert( (!varTypesSet && vtypes[i] == rowtypes[i]) ||
+                           (varTypesSet && (vtypes[i] == rowtypes[i] || rowtypes[i] == VAR_ORDERED)) );
+            }
+
+            if( ridx0 >= 0 )
+            {
+                for( i = ridx1; i < nvars; i++ )
+                    std::swap(rowvals[i], rowvals[i-noutputvars]);
+                for( i = ninputvars; i < nvars; i++ )
+                    allresponses.push_back(rowvals[i]);
+                rowvals.pop_back();
+            }
+            Mat rmat(1, ninputvars, CV_32F, &rowvals[0]);
+            tempSamples.push_back(rmat);
+        }
+
+        closeFile();
+
+        int nsamples = tempSamples.rows;
+        if( nsamples == 0 )
+            return false;
+
+        if( haveMissed )
+            compare(tempSamples, MISSED_VAL, tempMissing, CMP_EQ);
+
+        if( ridx0 >= 0 )
+        {
+            for( i = ridx1; i < nvars; i++ )
+                std::swap(vtypes[i], vtypes[i-noutputvars]);
+            if( noutputvars > 1 )
+            {
+                for( i = ninputvars; i < nvars; i++ )
+                    if( vtypes[i] == VAR_CATEGORICAL )
+                        CV_Error(CV_StsBadArg,
+                                 "If responses are vector values, not scalars, they must be marked as ordered responses");
+            }
+        }
+
+        if( !varTypesSet && noutputvars == 1 && vtypes[ninputvars] == VAR_ORDERED )
+        {
+            for( i = 0; i < nsamples; i++ )
+                if( allresponses[i] != cvRound(allresponses[i]) )
+                    break;
+            if( i == nsamples )
+                vtypes[ninputvars] = VAR_CATEGORICAL;
+        }
+
+        Mat(nsamples, noutputvars, CV_32F, &allresponses[0]).copyTo(tempResponses);
+        setData(tempSamples, ROW_SAMPLE, tempResponses, noArray(), noArray(),
+                noArray(), Mat(vtypes).clone(), tempMissing);
+        bool ok = !samples.empty();
+        if(ok)
+            std::swap(tempNameMap, nameMap);
+        return ok;
+    }
+
+    void decodeElem( const char* token, float& elem, int& type,
+                     char missch, MapType& namemap, int& counter ) const
+    {
+        char* stopstring = NULL;
+        elem = (float)strtod( token, &stopstring );
+        if( *stopstring == missch && strlen(stopstring) == 1 ) // missed value
+        {
+            elem = MISSED_VAL;
+            type = VAR_MISSED;
+        }
+        else if( *stopstring != '\0' )
+        {
+            MapType::iterator it = namemap.find(token);
+            if( it == namemap.end() )
+            {
+                elem = (float)counter;
+                namemap[token] = counter++;
+            }
+            else
+                elem = (float)it->second;
+            type = VAR_CATEGORICAL;
+        }
+        else
+            type = VAR_ORDERED;
+    }
+
+    void setVarTypes( const String& s, int nvars, std::vector<uchar>& vtypes ) const
+    {
+        const char* errmsg = "type spec is not correct; it should have format \"cat\", \"ord\" or "
+          "\"ord[n1,n2-n3,n4-n5,...]cat[m1-m2,m3,m4-m5,...]\", where n's and m's are 0-based variable indices";
+        const char* str = s.c_str();
+        int specCounter = 0;
+
+        vtypes.resize(nvars);
+
+        for( int k = 0; k < 2; k++ )
+        {
+            const char* ptr = strstr(str, k == 0 ? "ord" : "cat");
+            int tp = k == 0 ? VAR_ORDERED : VAR_CATEGORICAL;
+            if( ptr ) // parse ord/cat str
+            {
+                char* stopstring = NULL;
+
+                if( ptr[3] == '\0' )
+                {
+                    for( int i = 0; i < nvars; i++ )
+                        vtypes[i] = (uchar)tp;
+                    specCounter = nvars;
+                    break;
+                }
+
+                if ( ptr[3] != '[')
+                    CV_Error( CV_StsBadArg, errmsg );
+
+                ptr += 4; // pass "ord["
+                do
+                {
+                    int b1 = (int)strtod( ptr, &stopstring );
+                    if( *stopstring == 0 || (*stopstring != ',' && *stopstring != ']' && *stopstring != '-') )
+                        CV_Error( CV_StsBadArg, errmsg );
+                    ptr = stopstring + 1;
+                    if( (stopstring[0] == ',') || (stopstring[0] == ']'))
+                    {
+                        CV_Assert( 0 <= b1 && b1 < nvars );
+                        vtypes[b1] = (uchar)tp;
+                        specCounter++;
+                    }
+                    else
+                    {
+                        if( stopstring[0] == '-')
+                        {
+                            int b2 = (int)strtod( ptr, &stopstring);
+                            if ( (*stopstring == 0) || (*stopstring != ',' && *stopstring != ']') )
+                                CV_Error( CV_StsBadArg, errmsg );
+                            ptr = stopstring + 1;
+                            CV_Assert( 0 <= b1 && b1 <= b2 && b2 < nvars );
+                            for (int i = b1; i <= b2; i++)
+                                vtypes[i] = (uchar)tp;
+                            specCounter += b2 - b1 + 1;
+                        }
+                        else
+                            CV_Error( CV_StsBadArg, errmsg );
+
+                    }
+                }
+                while(*stopstring != ']');
+
+                if( stopstring[1] != '\0' && stopstring[1] != ',')
+                    CV_Error( CV_StsBadArg, errmsg );
+            }
+        }
+
+        if( specCounter != nvars )
+            CV_Error( CV_StsBadArg, "type of some variables is not specified" );
+    }
+
+    void setTrainTestSplitRatio(double ratio, bool shuffle)
+    {
+        CV_Assert( 0. <= ratio && ratio <= 1. );
+        setTrainTestSplit(cvRound(getNSamples()*ratio), shuffle);
+    }
+
+    void setTrainTestSplit(int count, bool shuffle)
+    {
+        int i, nsamples = getNSamples();
+        CV_Assert( 0 <= count && count < nsamples );
+
+        trainSampleIdx.release();
+        testSampleIdx.release();
+
+        if( count == 0 )
+            trainSampleIdx = sampleIdx;
+        else if( count == nsamples )
+            testSampleIdx = sampleIdx;
+        else
+        {
+            Mat mask(1, nsamples, CV_8U);
+            uchar* mptr = mask.data;
+            for( i = 0; i < nsamples; i++ )
+                mptr[i] = (uchar)(i < count);
+            trainSampleIdx.create(1, count, CV_32S);
+            testSampleIdx.create(1, nsamples - count, CV_32S);
+            int j0 = 0, j1 = 0;
+            const int* sptr = !sampleIdx.empty() ? sampleIdx.ptr<int>() : 0;
+            int* trainptr = trainSampleIdx.ptr<int>();
+            int* testptr = testSampleIdx.ptr<int>();
+            for( i = 0; i < nsamples; i++ )
+            {
+                int idx = sptr ? sptr[i] : i;
+                if( mptr[i] )
+                    trainptr[j0++] = idx;
+                else
+                    testptr[j1++] = idx;
+            }
+            if( shuffle )
+                shuffleTrainTest();
+        }
+    }
+
+    void shuffleTrainTest()
+    {
+        if( !trainSampleIdx.empty() && !testSampleIdx.empty() )
+        {
+            int i, nsamples = getNSamples(), ntrain = getNTrainSamples(), ntest = getNTestSamples();
+            int* trainIdx = trainSampleIdx.ptr<int>();
+            int* testIdx = testSampleIdx.ptr<int>();
+            RNG& rng = theRNG();
+
+            for( i = 0; i < nsamples; i++)
+            {
+                int a = rng.uniform(0, nsamples);
+                int b = rng.uniform(0, nsamples);
+                int* ptra = trainIdx;
+                int* ptrb = trainIdx;
+                if( a >= ntrain )
+                {
+                    ptra = testIdx;
+                    a -= ntrain;
+                    CV_Assert( a < ntest );
+                }
+                if( b >= ntrain )
+                {
+                    ptrb = testIdx;
+                    b -= ntrain;
+                    CV_Assert( b < ntest );
+                }
+                std::swap(ptra[a], ptrb[b]);
+            }
+        }
+    }
+
+    Mat getTrainSamples(int _layout,
+                        bool compressSamples,
+                        bool compressVars) const
+    {
+        if( samples.empty() )
+            return samples;
+
+        if( (!compressSamples || (trainSampleIdx.empty() && sampleIdx.empty())) &&
+            (!compressVars || varIdx.empty()) &&
+            layout == _layout )
+            return samples;
+
+        int drows = getNTrainSamples(), dcols = getNVars();
+        Mat sidx = getTrainSampleIdx(), vidx = getVarIdx();
+        const float* src0 = samples.ptr<float>();
+        const int* sptr = !sidx.empty() ? sidx.ptr<int>() : 0;
+        const int* vptr = !vidx.empty() ? vidx.ptr<int>() : 0;
+        size_t sstep0 = samples.step/samples.elemSize();
+        size_t sstep = layout == ROW_SAMPLE ? sstep0 : 1;
+        size_t vstep = layout == ROW_SAMPLE ? 1 : sstep0;
+
+        if( _layout == COL_SAMPLE )
+        {
+            std::swap(drows, dcols);
+            std::swap(sptr, vptr);
+            std::swap(sstep, vstep);
+        }
+
+        Mat dsamples(drows, dcols, CV_32F);
+
+        for( int i = 0; i < drows; i++ )
+        {
+            const float* src = src0 + (sptr ? sptr[i] : i)*sstep;
+            float* dst = dsamples.ptr<float>(i);
+
+            for( int j = 0; j < dcols; j++ )
+                dst[j] = src[(vptr ? vptr[j] : j)*vstep];
+        }
+
+        return dsamples;
+    }
+
+    void getValues( int vi, InputArray _sidx, float* values ) const
+    {
+        Mat sidx = _sidx.getMat();
+        int i, n = sidx.checkVector(1, CV_32S), nsamples = getNSamples();
+        CV_Assert( 0 <= vi && vi < getNAllVars() );
+        CV_Assert( n >= 0 );
+        const int* s = n > 0 ? sidx.ptr<int>() : 0;
+        if( n == 0 )
+            n = nsamples;
+
+        size_t step = samples.step/samples.elemSize();
+        size_t sstep = layout == ROW_SAMPLE ? step : 1;
+        size_t vstep = layout == ROW_SAMPLE ? 1 : step;
+
+        const float* src = samples.ptr<float>() + vi*vstep;
+        float subst = missingSubst.at<float>(vi);
+        for( i = 0; i < n; i++ )
+        {
+            int j = i;
+            if( s )
+            {
+                j = s[i];
+                CV_Assert( 0 <= j && j < nsamples );
+            }
+            values[i] = src[j*sstep];
+            if( values[i] == MISSED_VAL )
+                values[i] = subst;
+        }
+    }
+
+    void getNormCatValues( int vi, InputArray _sidx, int* values ) const
+    {
+        float* fvalues = (float*)values;
+        getValues(vi, _sidx, fvalues);
+        int i, n = (int)_sidx.total();
+        Vec2i ofs = catOfs.at<Vec2i>(vi);
+        int m = ofs[1] - ofs[0];
+
+        CV_Assert( m > 0 ); // if m==0, vi is an ordered variable
+        const int* cmap = &catMap.at<int>(ofs[0]);
+        bool fastMap = (m == cmap[m] - cmap[0]);
+
+        if( fastMap )
+        {
+            for( i = 0; i < n; i++ )
+            {
+                int val = cvRound(fvalues[i]);
+                int idx = val - cmap[0];
+                CV_Assert(cmap[idx] == val);
+                values[i] = idx;
+            }
+        }
+        else
+        {
+            for( i = 0; i < n; i++ )
+            {
+                int val = cvRound(fvalues[i]);
+                int a = 0, b = m, c = -1;
+
+                while( a < b )
+                {
+                    c = (a + b) >> 1;
+                    if( val < cmap[c] )
+                        b = c;
+                    else if( val > cmap[c] )
+                        a = c+1;
+                    else
+                        break;
+                }
+
+                CV_DbgAssert( c >= 0 && val == cmap[c] );
+                values[i] = c;
+            }
+        }
+    }
+
+    void getSample(InputArray _vidx, int sidx, float* buf) const
+    {
+        CV_Assert(buf != 0 && 0 <= sidx && sidx < getNSamples());
+        Mat vidx = _vidx.getMat();
+        int i, n = vidx.checkVector(1, CV_32S), nvars = getNAllVars();
+        CV_Assert( n >= 0 );
+        const int* vptr = n > 0 ? vidx.ptr<int>() : 0;
+        if( n == 0 )
+            n = nvars;
+
+        size_t step = samples.step/samples.elemSize();
+        size_t sstep = layout == ROW_SAMPLE ? step : 1;
+        size_t vstep = layout == ROW_SAMPLE ? 1 : step;
+
+        const float* src = samples.ptr<float>() + sidx*sstep;
+        for( i = 0; i < n; i++ )
+        {
+            int j = i;
+            if( vptr )
+            {
+                j = vptr[i];
+                CV_Assert( 0 <= j && j < nvars );
+            }
+            buf[i] = src[j*vstep];
+        }
+    }
+
+    FILE* file;
+    int layout;
+    Mat samples, missing, varType, varIdx, responses, missingSubst;
+    Mat sampleIdx, trainSampleIdx, testSampleIdx;
+    Mat sampleWeights, catMap, catOfs;
+    Mat normCatResponses, classLabels, classCounters;
+    MapType nameMap;
+};
+
+Ptr<TrainData> TrainData::loadFromCSV(const String& filename,
+                                      int headerLines,
+                                      int responseStartIdx,
+                                      int responseEndIdx,
+                                      const String& varTypeSpec,
+                                      char delimiter, char missch)
 {
-    change_var_idx( vi, state );
+    Ptr<TrainDataImpl> td = makePtr<TrainDataImpl>();
+    if(!td->loadCSV(filename, headerLines, responseStartIdx, responseEndIdx, varTypeSpec, delimiter, missch))
+        td.release();
+    return td;
 }
 
-void CvMLData::change_var_idx( int vi, bool state )
+Ptr<TrainData> TrainData::create(InputArray samples, int layout, InputArray responses,
+                                 InputArray varIdx, InputArray sampleIdx, InputArray sampleWeights,
+                                 InputArray varType)
 {
-     CV_FUNCNAME( "CvMLData::change_var_idx" );
-    __BEGIN__;
-
-    int var_count = 0;
-
-    if ( !values )
-        CV_ERROR( CV_StsInternal, "data is empty" );
-
-    var_count = values->cols;
-
-    if ( vi < 0 || vi >= var_count)
-        CV_ERROR( CV_StsBadArg, "variable index is not correct" );
-
-    assert( var_idx_mask );
-    var_idx_mask->data.ptr[vi] = state;
-
-    __END__;
+    Ptr<TrainDataImpl> td = makePtr<TrainDataImpl>();
+    td->setData(samples, layout, responses, varIdx, sampleIdx, sampleWeights, varType, noArray());
+    return td;
 }
+
+}}
 
 /* End of file. */

@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_imgproc.hpp"
 
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)

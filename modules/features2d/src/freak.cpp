@@ -45,7 +45,6 @@ namespace cv
 {
 
 static const double FREAK_SQRT2 = 1.4142135623731;
-static const double FREAK_INV_SQRT2 = 1.0 / FREAK_SQRT2;
 static const double FREAK_LOG2 = 0.693147180559945;
 static const int FREAK_NB_ORIENTATION = 256;
 static const int FREAK_NB_POINTS = 43;

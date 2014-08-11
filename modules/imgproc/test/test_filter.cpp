@@ -228,7 +228,7 @@ int CV_MorphologyBaseTest::prepare_test_case( int test_case_idx )
     if( shape == CV_SHAPE_CUSTOM )
     {
         eldata.resize(aperture_size.width*aperture_size.height);
-        uchar* src = test_mat[INPUT][1].data;
+        const uchar* src = test_mat[INPUT][1].data;
         int srcstep = (int)test_mat[INPUT][1].step;
         int i, j, nonzero = 0;
 

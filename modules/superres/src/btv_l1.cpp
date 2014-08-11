@@ -44,7 +44,7 @@
 // Dennis Mitzel, Thomas Pock, Thomas Schoenemann, Daniel Cremers. Video Super Resolution using Duality Based TV-L1 Optical Flow.
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_superres.hpp"
 
 using namespace cv;
 using namespace cv::superres;

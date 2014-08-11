@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_imgproc.hpp"
 
 /*
  * This file includes the code, contributed by Simon Perreault
@@ -720,7 +720,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "
                 "-D PX_LOAD_X_ITERATIONS=%d -D PX_LOAD_Y_ITERATIONS=%d "
                 "-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D WT=%s -D WT1=%s "
-                "-D convertToWT=%s -D convertToDstT=%s%s%s",
+                "-D convertToWT=%s -D convertToDstT=%s%s%s -D OP_BOX_FILTER",
                 cn, anchor.x, anchor.y, ksize.width, ksize.height,
                 pxLoadVecSize, pxLoadNumPixels,
                 pxPerWorkItemX, pxPerWorkItemY, privDataWidth, borderMap[borderType],
@@ -734,7 +734,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
 
 
-        if (!kernel.create("boxFilterSmall", cv::ocl::imgproc::boxFilterSmall_oclsrc, build_options))
+        if (!kernel.create("filterSmall", cv::ocl::imgproc::filterSmall_oclsrc, build_options))
             return false;
     }
     else
@@ -2172,18 +2172,21 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     } \
     while ((void)0, 0)
 
-    Ipp32s bufSize;
-    IppiSize dstRoiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize, ksize);
+    if( ksize <= 5 )
+    {
+        Ipp32s bufSize;
+        IppiSize dstRoiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize, ksize);
 
-    int type = src0.type();
-    if (type == CV_8UC1)
-        IPP_FILTER_MEDIAN_BORDER(Ipp8u, ipp8u, 8u_C1R);
-    else if (type == CV_16UC1)
-        IPP_FILTER_MEDIAN_BORDER(Ipp16u, ipp16u, 16u_C1R);
-    else if (type == CV_16SC1)
-        IPP_FILTER_MEDIAN_BORDER(Ipp16s, ipp16s, 16s_C1R);
-    else if (type == CV_32FC1)
-        IPP_FILTER_MEDIAN_BORDER(Ipp32f, ipp32f, 32f_C1R);
+        int type = src0.type();
+        if (type == CV_8UC1)
+            IPP_FILTER_MEDIAN_BORDER(Ipp8u, ipp8u, 8u_C1R);
+        else if (type == CV_16UC1)
+            IPP_FILTER_MEDIAN_BORDER(Ipp16u, ipp16u, 16u_C1R);
+        else if (type == CV_16SC1)
+            IPP_FILTER_MEDIAN_BORDER(Ipp16s, ipp16s, 16s_C1R);
+        else if (type == CV_32FC1)
+            IPP_FILTER_MEDIAN_BORDER(Ipp32f, ipp32f, 32f_C1R);
+    }
 #undef IPP_FILTER_MEDIAN_BORDER
 #endif
 

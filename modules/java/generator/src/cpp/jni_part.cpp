@@ -14,10 +14,6 @@
 #  include "opencv2/video.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_ML
-#  include "opencv2/ml.hpp"
-#endif
-
 #ifdef HAVE_OPENCV_CONTRIB
 #  include "opencv2/contrib.hpp"
 #endif
@@ -41,10 +37,7 @@ JNI_OnLoad(JavaVM* vm, void* )
 #ifdef HAVE_OPENCV_VIDEO
     init &= cv::initModule_video();
 #endif
-#ifdef HAVE_OPENCV_ML
-    init &= cv::initModule_ml();
-#endif
-    #ifdef HAVE_OPENCV_CONTRIB
+#ifdef HAVE_OPENCV_CONTRIB
     init &= cv::initModule_contrib();
 #endif
 

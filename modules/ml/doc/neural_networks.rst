@@ -29,17 +29,17 @@ In other words, given the outputs
 Different activation functions may be used. ML implements three standard functions:
 
 *
-    Identity function ( ``CvANN_MLP::IDENTITY``     ):
+    Identity function ( ``ANN_MLP::IDENTITY``     ):
     :math:`f(x)=x`
 *
-    Symmetrical sigmoid ( ``CvANN_MLP::SIGMOID_SYM``     ):
+    Symmetrical sigmoid ( ``ANN_MLP::SIGMOID_SYM``     ):
     :math:`f(x)=\beta*(1-e^{-\alpha x})/(1+e^{-\alpha x}`     ), which is the default choice for MLP. The standard sigmoid with
     :math:`\beta =1, \alpha =1`     is shown below:
 
     .. image:: pics/sigmoid_bipolar.png
 
 *
-    Gaussian function ( ``CvANN_MLP::GAUSSIAN``     ):
+    Gaussian function ( ``ANN_MLP::GAUSSIAN``     ):
     :math:`f(x)=\beta e^{-\alpha x*x}`     , which is not completely supported at the moment.
 
 In ML, all the neurons have the same activation functions, with the same free parameters (
@@ -95,60 +95,90 @@ The second (default) one is a batch RPROP algorithm.
 .. [RPROP93] M. Riedmiller and H. Braun, *A Direct Adaptive Method for Faster Backpropagation Learning: The RPROP Algorithm*, Proc. ICNN, San Francisco (1993).
 
 
-CvANN_MLP_TrainParams
+ANN_MLP::Params
 ---------------------
-.. ocv:struct:: CvANN_MLP_TrainParams
+.. ocv:class:: ANN_MLP::Params
 
-  Parameters of the MLP training algorithm. You can initialize the structure by a constructor or the individual parameters can be adjusted after the structure is created.
+  Parameters of the MLP and of the training algorithm. You can initialize the structure by a constructor or the individual parameters can be adjusted after the structure is created.
+
+  The network structure:
+
+  .. ocv:member:: Mat layerSizes
+
+     The number of elements in each layer of network. The very first element specifies the number of elements in the input layer. The last element - number of elements in the output layer.
+
+  .. ocv:member:: int activateFunc
+
+     The activation function. Currently the only fully supported activation function is ``ANN_MLP::SIGMOID_SYM``.
+
+  .. ocv:member:: double fparam1
+
+     The first parameter of activation function, 0 by default.
+
+  .. ocv:member:: double fparam2
+
+     The second parameter of the activation function, 0 by default.
+
+     .. note::
+
+         If you are using the default ``ANN_MLP::SIGMOID_SYM`` activation function with the default parameter values fparam1=0 and fparam2=0 then the function used is y = 1.7159*tanh(2/3 * x), so the output will range from [-1.7159, 1.7159], instead of [0,1].
 
   The back-propagation algorithm parameters:
 
-  .. ocv:member:: double bp_dw_scale
+  .. ocv:member:: double bpDWScale
 
      Strength of the weight gradient term. The recommended value is about 0.1.
 
-  .. ocv:member:: double bp_moment_scale
+  .. ocv:member:: double bpMomentScale
 
      Strength of the momentum term (the difference between weights on the 2 previous iterations). This parameter provides some inertia to smooth the random fluctuations of the weights. It can vary from 0 (the feature is disabled) to 1 and beyond. The value 0.1 or so is good enough
 
   The RPROP algorithm parameters (see [RPROP93]_ for details):
 
-  .. ocv:member:: double rp_dw0
+  .. ocv:member:: double prDW0
 
      Initial value :math:`\Delta_0` of update-values :math:`\Delta_{ij}`.
 
-  .. ocv:member:: double rp_dw_plus
+  .. ocv:member:: double rpDWPlus
 
      Increase factor :math:`\eta^+`. It must be >1.
 
-  .. ocv:member:: double rp_dw_minus
+  .. ocv:member:: double rpDWMinus
 
      Decrease factor :math:`\eta^-`. It must be <1.
 
-  .. ocv:member:: double rp_dw_min
+  .. ocv:member:: double rpDWMin
 
      Update-values lower limit :math:`\Delta_{min}`. It must be positive.
 
-  .. ocv:member:: double rp_dw_max
+  .. ocv:member:: double rpDWMax
 
      Update-values upper limit :math:`\Delta_{max}`. It must be >1.
 
 
-CvANN_MLP_TrainParams::CvANN_MLP_TrainParams
+ANN_MLP::Params::Params
 --------------------------------------------
-The constructors.
+Construct the parameter structure
 
-.. ocv:function:: CvANN_MLP_TrainParams::CvANN_MLP_TrainParams()
+.. ocv:function:: ANN_MLP::Params()
 
-.. ocv:function:: CvANN_MLP_TrainParams::CvANN_MLP_TrainParams( CvTermCriteria term_crit, int train_method, double param1, double param2=0 )
+.. ocv:function:: ANN_MLP::Params::Params( const Mat& layerSizes, int activateFunc, double fparam1, double fparam2, TermCriteria termCrit, int trainMethod, double param1, double param2=0 )
 
-    :param term_crit: Termination criteria of the training algorithm. You can specify the maximum number of iterations (``max_iter``) and/or how much the error could change between the iterations to make the algorithm continue (``epsilon``).
+    :param layerSizes: Integer vector specifying the number of neurons in each layer including the input and output layers.
+
+    :param activateFunc: Parameter specifying the activation function for each neuron: one of  ``ANN_MLP::IDENTITY``, ``ANN_MLP::SIGMOID_SYM``, and ``ANN_MLP::GAUSSIAN``.
+
+    :param fparam1: The first parameter of the activation function, :math:`\alpha`. See the formulas in the introduction section.
+
+    :param fparam2: The second parameter of the activation function, :math:`\beta`. See the formulas in the introduction section.
+
+    :param termCrit: Termination criteria of the training algorithm. You can specify the maximum number of iterations (``maxCount``) and/or how much the error could change between the iterations to make the algorithm continue (``epsilon``).
 
     :param train_method: Training method of the MLP. Possible values are:
 
-        * **CvANN_MLP_TrainParams::BACKPROP** The back-propagation algorithm.
+        * **ANN_MLP_TrainParams::BACKPROP** The back-propagation algorithm.
 
-        * **CvANN_MLP_TrainParams::RPROP** The RPROP algorithm.
+        * **ANN_MLP_TrainParams::RPROP** The RPROP algorithm.
 
     :param param1: Parameter of the training method. It is ``rp_dw0`` for ``RPROP`` and ``bp_dw_scale`` for ``BACKPROP``.
 
@@ -158,126 +188,54 @@ By default the RPROP algorithm is used:
 
 ::
 
-    CvANN_MLP_TrainParams::CvANN_MLP_TrainParams()
+    ANN_MLP_TrainParams::ANN_MLP_TrainParams()
     {
-        term_crit = cvTermCriteria( CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 1000, 0.01 );
+        layerSizes = Mat();
+        activateFun = SIGMOID_SYM;
+        fparam1 = fparam2 = 0;
+        term_crit = TermCriteria( TermCriteria::MAX_ITER + TermCriteria::EPS, 1000, 0.01 );
         train_method = RPROP;
-        bp_dw_scale = bp_moment_scale = 0.1;
-        rp_dw0 = 0.1; rp_dw_plus = 1.2; rp_dw_minus = 0.5;
-        rp_dw_min = FLT_EPSILON; rp_dw_max = 50.;
+        bpDWScale = bpMomentScale = 0.1;
+        rpDW0 = 0.1; rpDWPlus = 1.2; rpDWMinus = 0.5;
+        rpDWMin = FLT_EPSILON; rpDWMax = 50.;
     }
 
-CvANN_MLP
+ANN_MLP
 ---------
-.. ocv:class:: CvANN_MLP : public CvStatModel
+.. ocv:class:: ANN_MLP : public StatModel
 
 MLP model.
 
-Unlike many other models in ML that are constructed and trained at once, in the MLP model these steps are separated. First, a network with the specified topology is created using the non-default constructor or the method :ocv:func:`CvANN_MLP::create`. All the weights are set to zeros. Then, the network is trained using a set of input and output vectors. The training procedure can be repeated more than once, that is, the weights can be adjusted based on the new training data.
+Unlike many other models in ML that are constructed and trained at once, in the MLP model these steps are separated. First, a network with the specified topology is created using the non-default constructor or the method :ocv:func:`ANN_MLP::create`. All the weights are set to zeros. Then, the network is trained using a set of input and output vectors. The training procedure can be repeated more than once, that is, the weights can be adjusted based on the new training data.
 
 
-CvANN_MLP::CvANN_MLP
+ANN_MLP::create
 --------------------
-The constructors.
+Creates empty model
 
-.. ocv:function:: CvANN_MLP::CvANN_MLP()
+.. ocv:function:: Ptr<ANN_MLP> ANN_MLP::create(const Params& params=Params())
 
-.. ocv:function:: CvANN_MLP::CvANN_MLP( const CvMat* layerSizes, int activateFunc=CvANN_MLP::SIGMOID_SYM, double fparam1=0, double fparam2=0 )
+Use ``StatModel::train`` to train the model, ``StatModel::train<ANN_MLP>(traindata, params)`` to create and train the model, ``StatModel::load<ANN_MLP>(filename)`` to load the pre-trained model. Note that the train method has optional flags, and the following flags are handled by ``ANN_MLP``:
 
-.. ocv:pyfunction::  cv2.ANN_MLP([layerSizes[, activateFunc[, fparam1[, fparam2]]]]) -> <ANN_MLP object>
+        * **UPDATE_WEIGHTS** Algorithm updates the network weights, rather than computes them from scratch. In the latter case the weights are initialized using the Nguyen-Widrow algorithm.
 
-The advanced constructor allows to create MLP with the specified topology. See :ocv:func:`CvANN_MLP::create` for details.
+        * **NO_INPUT_SCALE** Algorithm does not normalize the input vectors. If this flag is not set, the training algorithm normalizes each input feature independently, shifting its mean value to 0 and making the standard deviation equal to 1. If the network is assumed to be updated frequently, the new training data could be much different from original one. In this case, you should take care of proper normalization.
 
-CvANN_MLP::create
------------------
-Constructs MLP with the specified topology.
+        * **NO_OUTPUT_SCALE** Algorithm does not normalize the output vectors. If the flag is not set, the training algorithm normalizes each output feature independently, by transforming it to the certain range depending on the used activation function.
 
-.. ocv:function:: void CvANN_MLP::create( const Mat& layerSizes, int activateFunc=CvANN_MLP::SIGMOID_SYM, double fparam1=0, double fparam2=0 )
 
-.. ocv:function:: void CvANN_MLP::create( const CvMat* layerSizes, int activateFunc=CvANN_MLP::SIGMOID_SYM, double fparam1=0, double fparam2=0 )
+ANN_MLP::setParams
+-------------------
+Sets the new network parameters
 
-.. ocv:pyfunction:: cv2.ANN_MLP.create(layerSizes[, activateFunc[, fparam1[, fparam2]]]) -> None
+.. ocv:function:: void ANN_MLP::setParams(const Params& params)
 
-    :param layerSizes: Integer vector specifying the number of neurons in each layer including the input and output layers.
+    :param params: The new parameters
 
-    :param activateFunc: Parameter specifying the activation function for each neuron: one of  ``CvANN_MLP::IDENTITY``, ``CvANN_MLP::SIGMOID_SYM``, and ``CvANN_MLP::GAUSSIAN``.
+The existing network, if any, will be destroyed and new empty one will be created. It should be re-trained after that.
 
-    :param fparam1: Free parameter of the activation function, :math:`\alpha`. See the formulas in the introduction section.
+ANN_MLP::getParams
+-------------------
+Retrieves the current network parameters
 
-    :param fparam2: Free parameter of the activation function, :math:`\beta`. See the formulas in the introduction section.
-
-The method creates an MLP network with the specified topology and assigns the same activation function to all the neurons.
-
-CvANN_MLP::train
-----------------
-Trains/updates MLP.
-
-.. ocv:function:: int CvANN_MLP::train( const Mat& inputs, const Mat& outputs, const Mat& sampleWeights, const Mat& sampleIdx=Mat(), CvANN_MLP_TrainParams params = CvANN_MLP_TrainParams(), int flags=0 )
-
-.. ocv:function:: int CvANN_MLP::train( const CvMat* inputs, const CvMat* outputs, const CvMat* sampleWeights, const CvMat* sampleIdx=0, CvANN_MLP_TrainParams params = CvANN_MLP_TrainParams(), int flags=0 )
-
-.. ocv:pyfunction:: cv2.ANN_MLP.train(inputs, outputs, sampleWeights[, sampleIdx[, params[, flags]]]) -> retval
-
-    :param inputs: Floating-point matrix of input vectors, one vector per row.
-
-    :param outputs: Floating-point matrix of the corresponding output vectors, one vector per row.
-
-    :param sampleWeights: (RPROP only) Optional floating-point vector of weights for each sample. Some samples may be more important than others for training. You may want to raise the weight of certain classes to find the right balance between hit-rate and false-alarm rate, and so on.
-
-    :param sampleIdx: Optional integer vector indicating the samples (rows of ``inputs`` and ``outputs``) that are taken into account.
-
-    :param params: Training parameters. See the :ocv:class:`CvANN_MLP_TrainParams` description.
-
-    :param flags: Various parameters to control the training algorithm. A combination of the following parameters is possible:
-
-            * **UPDATE_WEIGHTS** Algorithm updates the network weights, rather than computes them from scratch. In the latter case the weights are initialized using the Nguyen-Widrow algorithm.
-
-            * **NO_INPUT_SCALE** Algorithm does not normalize the input vectors. If this flag is not set, the training algorithm normalizes each input feature independently, shifting its mean value to 0 and making the standard deviation equal to 1. If the network is assumed to be updated frequently, the new training data could be much different from original one. In this case, you should take care of proper normalization.
-
-            * **NO_OUTPUT_SCALE** Algorithm does not normalize the output vectors. If the flag is not set, the training algorithm normalizes each output feature independently, by transforming it to the certain range depending on the used activation function.
-
-This method applies the specified training algorithm to computing/adjusting the network weights. It returns the number of done iterations.
-
-The RPROP training algorithm is parallelized with the TBB library.
-
-If you are using the default ``cvANN_MLP::SIGMOID_SYM`` activation function then the output should be in the range [-1,1], instead of [0,1], for optimal results.
-
-CvANN_MLP::predict
-------------------
-Predicts responses for input samples.
-
-.. ocv:function:: float CvANN_MLP::predict( const Mat& inputs, Mat& outputs ) const
-
-.. ocv:function:: float CvANN_MLP::predict( const CvMat* inputs, CvMat* outputs ) const
-
-.. ocv:pyfunction:: cv2.ANN_MLP.predict(inputs[, outputs]) -> retval, outputs
-
-    :param inputs: Input samples.
-
-    :param outputs: Predicted responses for corresponding samples.
-
-The method returns a dummy value which should be ignored.
-
-If you are using the default ``cvANN_MLP::SIGMOID_SYM`` activation function with the default parameter values fparam1=0 and fparam2=0 then the function used is y = 1.7159*tanh(2/3 * x), so the output will range from [-1.7159, 1.7159], instead of [0,1].
-
-CvANN_MLP::get_layer_count
---------------------------
-Returns the number of layers in the MLP.
-
-.. ocv:function:: int CvANN_MLP::get_layer_count()
-
-CvANN_MLP::get_layer_sizes
---------------------------
-Returns numbers of neurons in each layer of the MLP.
-
-.. ocv:function:: const CvMat* CvANN_MLP::get_layer_sizes()
-
-The method returns the integer vector specifying the number of neurons in each layer including the input and output layers of the MLP.
-
-CvANN_MLP::get_weights
-----------------------
-Returns neurons weights of the particular layer.
-
-.. ocv:function:: double* CvANN_MLP::get_weights(int layer)
-
-    :param layer: Index of the particular layer.
+.. ocv:function:: Params ANN_MLP::getParams() const

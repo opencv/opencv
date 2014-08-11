@@ -845,7 +845,6 @@ For convenience, the following types from the OpenCV C API already have such a s
 that calls the appropriate release function:
 
 * ``CvCapture``
-* :ocv:struct:`CvDTreeSplit`
 * :ocv:struct:`CvFileStorage`
 * ``CvHaarClassifierCascade``
 * :ocv:struct:`CvMat`
@@ -2325,6 +2324,69 @@ Returns the matrix iterator and sets it to the after-last matrix element.
 .. ocv:function:: template<typename _Tp> MatConstIterator_<_Tp> Mat::end() const
 
 The methods return the matrix read-only or read-write iterators, set to the point following the last matrix element.
+
+
+Mat::forEach
+------------
+Invoke with arguments functor, and runs the functor over all matrix element.
+
+.. ocv:function:: template<typename _Tp, typename Functor> void Mat::forEach(Functor operation)
+
+.. ocv:function:: template<typename _Tp, typename Functor> void Mat::forEach(Functor operation) const
+
+The methos runs operation in parallel. Operation is passed by arguments. Operation have to be a function pointer, a function object or a lambda(C++11).
+
+All of below operation is equal. Put 0xFF to first channel of all matrix elements. ::
+
+    Mat image(1920, 1080, CV_8UC3);
+    typedef cv::Point3_<uint8_t> Pixel;
+
+    // first. raw pointer access.
+    for (int r = 0; r < image.rows; ++r) {
+        Pixel* ptr = image.ptr<Pixel>(0, r);
+        const Pixel* ptr_end = ptr + image.cols;
+        for (; ptr != ptr_end; ++ptr) {
+            ptr->x = 255;
+        }
+    }
+
+
+    // Using MatIterator. (Simple but there are a Iterator's overhead)
+    for (Pixel &p : cv::Mat_<Pixel>(image)) {
+        p.x = 255;
+    }
+
+
+    // Parallel execution with function object.
+    struct Operator {
+        void operator ()(Pixel &pixel, const int * position) {
+            pixel.x = 255;
+        }
+    };
+    image.forEach<Pixel>(Operator());
+
+
+    // Parallel execution using C++11 lambda.
+    image.forEach<Pixel>([](Pixel &p, const int * position) -> void {
+        p.x = 255;
+    });
+
+position parameter is index of current pixel. ::
+
+    // Creating 3D matrix (255 x 255 x 255) typed uint8_t,
+    //  and initialize all elements by the value which equals elements position.
+    //  i.e. pixels (x,y,z) = (1,2,3) is (b,g,r) = (1,2,3).
+
+    int sizes[] = { 255, 255, 255 };
+    typedef cv::Point3_<uint8_t> Pixel;
+
+    Mat_<Pixel> image = Mat::zeros(3, sizes, CV_8UC3);
+
+    image.forEachWithPosition([&](Pixel& pixel, const int position[]) -> void{
+        pixel.x = position[0];
+        pixel.y = position[1];
+        pixel.z = position[2];
+    });
 
 Mat\_
 -----

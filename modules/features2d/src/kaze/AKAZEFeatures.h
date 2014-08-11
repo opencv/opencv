@@ -11,7 +11,7 @@
 
 /* ************************************************************************* */
 // Includes
-#include "precomp.hpp"
+#include "../precomp.hpp"
 #include "AKAZEConfig.h"
 #include "TEvolution.h"
 
