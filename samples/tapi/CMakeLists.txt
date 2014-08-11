@@ -1,4 +1,4 @@
-SET(OPENCV_TAPI_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_video opencv_imgcodecs opencv_videoio opencv_highgui opencv_objdetect opencv_features2d opencv_calib3d opencv_nonfree opencv_flann)
+SET(OPENCV_TAPI_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_video opencv_imgcodecs opencv_videoio opencv_highgui opencv_objdetect opencv_features2d opencv_calib3d opencv_flann)
 
 ocv_check_dependencies(${OPENCV_TAPI_SAMPLES_REQUIRED_DEPS})
 

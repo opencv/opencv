@@ -3050,13 +3050,15 @@ The class provides the following features for all derived classes:
 Here is example of SIFT use in your application via Algorithm interface: ::
 
     #include "opencv2/opencv.hpp"
-    #include "opencv2/nonfree.hpp"
+    #include "opencv2/xfeatures2d.hpp"
+    
+    using namespace cv::xfeatures2d;
 
     ...
 
     initModule_nonfree(); // to load SURF/SIFT etc.
 
-    Ptr<Feature2D> sift = Algorithm::create<Feature2D>("Feature2D.SIFT");
+    Ptr<Feature2D> sift = SIFT::create();
 
     FileStorage fs("sift_params.xml", FileStorage::READ);
     if( fs.isOpened() ) // if we have file with parameters, read them
