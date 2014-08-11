@@ -161,7 +161,7 @@ public:
         float* err = _err.getMat().ptr<float>();
 
         for ( i = 0; i < count; ++i)
-            err[i] = cv::norm( ipoints_ptr[i] - projpoints_ptr[i] );
+            err[i] = (float)cv::norm( ipoints_ptr[i] - projpoints_ptr[i] );
 
     }
 
