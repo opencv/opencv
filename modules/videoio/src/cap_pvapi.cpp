@@ -389,7 +389,7 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
         }
         else
         {
-            cv::String ip=cv::format("%d.%d.%d.%d", ((int)value>>24)&255, ((int)value>>16)&255, ((int)value>>8)&255, (int)value&255);
+            cv::String ip=cv::format("%d.%d.%d.%d", ((unsigned int)value>>24)&255, ((unsigned int)value>>16)&255, ((unsigned int)value>>8)&255, (unsigned int)value&255);
             if ((PvAttrEnumSet(Camera.Handle,"MulticastEnable", "On")==ePvErrSuccess) &&
                 (PvAttrStringSet(Camera.Handle, "MulticastIPAddress", ip.c_str())==ePvErrSuccess))
                 break;
