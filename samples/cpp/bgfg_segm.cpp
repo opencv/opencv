@@ -21,6 +21,8 @@ static void help()
 const char* keys =
 {
     "{c  camera   |         | use camera or not}"
+    "{m  method   |mog2     | method (knn or mog2) }"
+    "{s  smooth   |         | smooth the mask }"
     "{fn file_name|tree.avi | movie file        }"
 };
 
@@ -31,7 +33,9 @@ int main(int argc, const char** argv)
 
     CommandLineParser parser(argc, argv, keys);
     bool useCamera = parser.has("camera");
+    bool smoothMask = parser.has("smooth");
     string file = parser.get<string>("file_name");
+    string method = parser.get<string>("method");
     VideoCapture cap;
     bool update_bg_model = true;
 
@@ -53,24 +57,31 @@ int main(int argc, const char** argv)
     namedWindow("foreground image", WINDOW_NORMAL);
     namedWindow("mean background image", WINDOW_NORMAL);
 
-    Ptr<BackgroundSubtractor> bg_model = createBackgroundSubtractorMOG2();
+    Ptr<BackgroundSubtractor> bg_model = method == "knn" ?
+            createBackgroundSubtractorKNN().dynamicCast<BackgroundSubtractor>() :
+            createBackgroundSubtractorMOG2().dynamicCast<BackgroundSubtractor>();
 
-    Mat img, fgmask, fgimg;
+    Mat img0, img, fgmask, fgimg;
 
     for(;;)
     {
-        cap >> img;
+        cap >> img0;
 
-        if( img.empty() )
+        if( img0.empty() )
             break;
 
-        //cvtColor(_img, img, COLOR_BGR2GRAY);
+        resize(img0, img, Size(640, 640*img0.rows/img0.cols), INTER_LINEAR);
 
         if( fgimg.empty() )
           fgimg.create(img.size(), img.type());
 
         //update the model
         bg_model->apply(img, fgmask, update_bg_model ? -1 : 0);
+        if( smoothMask )
+        {
+            GaussianBlur(fgmask, fgmask, Size(11, 11), 3.5, 3.5);
+            threshold(fgmask, fgmask, 10, 255, THRESH_BINARY);
+        }
 
         fgimg = Scalar::all(0);
         img.copyTo(fgimg, fgmask);
