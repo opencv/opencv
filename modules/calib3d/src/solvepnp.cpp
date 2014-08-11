@@ -60,7 +60,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     _tvec.create(3, 1, CV_64F);
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
 
-    if (flags == EPNP)
+    if (flags == SOLVEPNP_EPNP)
     {
         cv::Mat undistortedPoints;
         cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
@@ -71,7 +71,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
         cv::Rodrigues(R, rvec);
         return true;
     }
-    else if (flags == P3P)
+    else if (flags == SOLVEPNP_P3P)
     {
         CV_Assert( npoints == 4);
         cv::Mat undistortedPoints;
@@ -84,7 +84,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
             cv::Rodrigues(R, rvec);
         return result;
     }
-    else if (flags == ITERATIVE)
+    else if (flags == SOLVEPNP_ITERATIVE)
     {
         CvMat c_objectPoints = opoints, c_imagePoints = ipoints;
         CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
@@ -94,7 +94,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
                                      &c_rvec, &c_tvec, useExtrinsicGuess );
         return true;
     }
-    else if (flags == DLS)
+    else if (flags == SOLVEPNP_DLS)
     {
         cv::Mat undistortedPoints;
         cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
@@ -117,7 +117,7 @@ class PnPRansacCallback : public PointSetRegistrator::Callback
 
 public:
 
-    PnPRansacCallback(Mat _cameraMatrix=Mat(3,3,CV_64F), Mat _distCoeffs=Mat(4,1,CV_64F), int _flags=cv::ITERATIVE,
+    PnPRansacCallback(Mat _cameraMatrix=Mat(3,3,CV_64F), Mat _distCoeffs=Mat(4,1,CV_64F), int _flags=cv::SOLVEPNP_ITERATIVE,
             bool _useExtrinsicGuess=false, Mat _rvec=Mat(), Mat _tvec=Mat() )
         : cameraMatrix(_cameraMatrix), distCoeffs(_distCoeffs), flags(_flags), useExtrinsicGuess(_useExtrinsicGuess),
           rvec(_rvec), tvec(_tvec) {}
@@ -203,7 +203,7 @@ bool cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     Ptr<PointSetRegistrator::Callback> cb; // pointer to callback
     cb = makePtr<PnPRansacCallback>( cameraMatrix, distCoeffs, flags, useExtrinsicGuess, rvec, tvec);
 
-    int model_points = flags == P3P ? 4 : 6;          // minimum of number of model points
+    int model_points = flags == SOLVEPNP_P3P ? 4 : 6;          // minimum of number of model points
     double param1 = reprojectionError;                // reprojection error
     double param2 = confidence;                       // confidence
     int param3 = iterationsCount;                     // number maximum iterations

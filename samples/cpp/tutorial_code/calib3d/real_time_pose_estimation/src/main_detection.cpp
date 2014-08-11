@@ -55,7 +55,7 @@ double confidence = 0.95;        // ransac successful confidence.
 int minInliersKalman = 30;    // Kalman threshold updating
 
 // PnP parameters
-int pnpMethod = cv::ITERATIVE;
+int pnpMethod = cv::SOLVEPNP_ITERATIVE;
 
 
 /**  Functions headers  **/
