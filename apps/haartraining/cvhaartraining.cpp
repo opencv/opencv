@@ -2961,21 +2961,6 @@ void icvFindFilePathPart(char** partofpath, char* fullpath)
 
 #define CV_INFO_FILENAME "info.dat"
 
-bool isCurrentOrParentDir(const char* path)
-{
-    unsigned int numdots = 0;
-    const char* currentpath = path;
-    for(;*currentpath != '\0' && *currentpath != '/' && *currentpath != '\\'; ++currentpath)
-    {
-        if(*currentpath == '.')
-            ++numdots;
-    }
-    if(numdots == strlen(path) && numdots <= 2 && numdots > 0)
-        return true;
-    else
-        return false;
-}
-
 void cvCreatePngTrainingSet(const char* infoname,
                           const char* inputimgname, int bgcolor, int bgthreshold,
                           const char* bgfilename, int count,
@@ -3045,7 +3030,7 @@ void cvCreatePngTrainingSet(const char* infoname,
             strcpy(annotationfullname, imagefullname);
             //find the name of annotation starting from the top-level dataset dir
             icvFindFilePathPart(&annotationrelativepath, annotationfullname);
-            if( isCurrentOrParentDir(annotationrelativepath) )
+            if( !strcmp( annotationrelativepath, ".." ) || !strcmp( annotationrelativepath, "." ) )
             {
                 #if CV_VERBOSE
                         fprintf( stderr, "Invalid path to annotations file: %s\n"
