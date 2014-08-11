@@ -88,7 +88,7 @@ SURF features finder. ::
         /* hidden */
     };
 
-.. seealso:: :ocv:class:`detail::FeaturesFinder`, :ocv:class:`SURF`
+.. seealso:: :ocv:class:`detail::FeaturesFinder`, ``SURF``
 
 detail::OrbFeaturesFinder
 -------------------------

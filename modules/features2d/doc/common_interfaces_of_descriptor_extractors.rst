@@ -84,13 +84,6 @@ Creates a descriptor extractor by name.
 
 The current implementation supports the following types of a descriptor extractor:
 
- * ``"SIFT"`` -- :ocv:class:`SIFT`
- * ``"SURF"`` -- :ocv:class:`SURF`
- * ``"BRIEF"`` -- :ocv:class:`BriefDescriptorExtractor`
  * ``"BRISK"`` -- :ocv:class:`BRISK`
  * ``"ORB"`` -- :ocv:class:`ORB`
- * ``"FREAK"`` -- :ocv:class:`FREAK`
 
-A combined format is also supported: descriptor extractor adapter name ( ``"Opponent"`` --
-:ocv:class:`OpponentColorDescriptorExtractor` ) + descriptor extractor name (see above),
-for example: ``"OpponentSIFT"`` .
