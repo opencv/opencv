@@ -19,7 +19,7 @@ typedef perf::TestBaseWithParam<int> PointsNum;
 
 PERF_TEST_P(PointsNum_Algo, solvePnP,
             testing::Combine(
-                testing::Values(/*4,*/ 3*9, 7*13), //TODO: find why results on 4 points are too unstable
+                testing::Values(4, 3*9, 7*13), //TODO: find why results on 4 points are too unstable
                 testing::Values((int)SOLVEPNP_ITERATIVE, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_DLS)
                 )
             )
