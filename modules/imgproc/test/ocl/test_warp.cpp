@@ -182,7 +182,7 @@ PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool, int)
     {
         CV_Assert(fx > 0 && fy > 0);
 
-        Size srcRoiSize = randomSize(1, MAX_VALUE), dstRoiSize;
+        Size srcRoiSize = randomSize(10, MAX_VALUE), dstRoiSize;
         // Make sure the width is a multiple of the requested value, and no more
         srcRoiSize.width += widthMultiple - 1 - (srcRoiSize.width - 1) % widthMultiple;
         dstRoiSize.width = cvRound(srcRoiSize.width * fx);
@@ -215,7 +215,7 @@ OCL_TEST_P(Resize, Mat)
     for (int j = 0; j < test_loop_times; j++)
     {
         int depth = CV_MAT_DEPTH(type);
-        double eps = depth <= CV_32S ? 1 : 1e-2;
+        double eps = depth <= CV_32S ? 1 : 5e-2;
 
         random_roi();
 
