@@ -49,7 +49,7 @@ bool fast_match = true;       // fastRobustMatch() or robustMatch()
 // RANSAC parameters
 int iterationsCount = 500;      // number of Ransac iterations.
 float reprojectionError = 2.0;  // maximum allowed distance to consider it an inlier.
-float confidence = 0.95;        // ransac successful confidence.
+double confidence = 0.95;        // ransac successful confidence.
 
 // Kalman Filter parameters
 int minInliersKalman = 30;    // Kalman threshold updating
@@ -287,7 +287,7 @@ int main(int argc, char *argv[])
       drawObjectMesh(frame_vis, &mesh, &pnp_detection_est, yellow); // draw estimated pose
     }
 
-    double l = 5;
+    float l = 5;
     std::vector<cv::Point2f> pose_points2d;
     pose_points2d.push_back(pnp_detection_est.backproject3DPoint(cv::Point3f(0,0,0)));  // axis center
     pose_points2d.push_back(pnp_detection_est.backproject3DPoint(cv::Point3f(l,0,0)));  // axis x
@@ -315,10 +315,10 @@ int main(int argc, char *argv[])
 
     // Draw some debug text
     int inliers_int = inliers_idx.rows;
-    int outliers_int = good_matches.size() - inliers_int;
+    int outliers_int = (int)good_matches.size() - inliers_int;
     std::string inliers_str = IntToString(inliers_int);
     std::string outliers_str = IntToString(outliers_int);
-    std::string n = IntToString(good_matches.size());
+    std::string n = IntToString((int)good_matches.size());
     std::string text = "Found " + inliers_str + " of " + n + " matches";
     std::string text2 = "Inliers: " + inliers_str + " - Outliers: " + outliers_str;
 

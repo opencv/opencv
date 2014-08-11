@@ -76,7 +76,7 @@ void Mesh::load(const std::string path)
   csvReader.readPLY(list_vertex_, list_triangles_);
 
   // Update mesh attributes
-  num_vertexs_ = list_vertex_.size();
-  num_triangles_ = list_triangles_.size();
+  num_vertexs_ = (int)list_vertex_.size();
+  num_triangles_ = (int)list_triangles_.size();
 
 }

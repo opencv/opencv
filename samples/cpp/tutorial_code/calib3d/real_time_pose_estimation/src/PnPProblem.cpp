@@ -133,9 +133,9 @@ bool PnPProblem::estimatePose( const std::vector<cv::Point3f> &list_points3d,
 // Estimate the pose given a list of 2D/3D correspondences with RANSAC and the method to use
 
 void PnPProblem::estimatePoseRANSAC( const std::vector<cv::Point3f> &list_points3d, // list with model 3D coordinates
-                               const std::vector<cv::Point2f> &list_points2d,     // list with scene 2D coordinates
-                               int flags, cv::Mat &inliers, int iterationsCount,  // PnP method; inliers container
-                               float reprojectionError, float confidence )    // Ransac parameters
+                                     const std::vector<cv::Point2f> &list_points2d,     // list with scene 2D coordinates
+                                     int flags, cv::Mat &inliers, int iterationsCount,  // PnP method; inliers container
+                                     float reprojectionError, double confidence )    // Ransac parameters
 {
   cv::Mat distCoeffs = cv::Mat::zeros(4, 1, CV_64FC1);  // vector of distortion coefficients
   cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);          // output rotation vector
@@ -187,8 +187,8 @@ cv::Point2f PnPProblem::backproject3DPoint(const cv::Point3f &point3d)
 
   // Normalization of [u v]'
   cv::Point2f point2d;
-  point2d.x = point2d_vec.at<double>(0) / point2d_vec.at<double>(2);
-  point2d.y = point2d_vec.at<double>(1) / point2d_vec.at<double>(2);
+  point2d.x = (float)(point2d_vec.at<double>(0) / point2d_vec.at<double>(2));
+  point2d.y = (float)(point2d_vec.at<double>(1) / point2d_vec.at<double>(2));
 
   return point2d;
 }

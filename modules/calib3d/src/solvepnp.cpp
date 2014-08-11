@@ -177,7 +177,7 @@ public:
 bool cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                         InputArray _cameraMatrix, InputArray _distCoeffs,
                         OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
-                        int iterationsCount, float reprojectionError, float confidence,
+                        int iterationsCount, float reprojectionError, double confidence,
                         OutputArray _inliers, int flags)
 {
 

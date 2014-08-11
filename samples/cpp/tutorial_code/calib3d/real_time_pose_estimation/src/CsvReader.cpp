@@ -45,9 +45,9 @@ void CsvReader::readPLY(vector<Point3f> &list_vertex, vector<vector<int> > &list
              getline(liness, z);
 
              cv::Point3f tmp_p;
-             tmp_p.x = StringToInt(x);
-             tmp_p.y = StringToInt(y);
-             tmp_p.z = StringToInt(z);
+             tmp_p.x = (float)StringToInt(x);
+             tmp_p.y = (float)StringToInt(y);
+             tmp_p.z = (float)StringToInt(z);
              list_vertex.push_back(tmp_p);
 
              count++;

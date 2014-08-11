@@ -19,7 +19,7 @@
 // For text
 int fontFace = cv::FONT_ITALIC;
 double fontScale = 0.75;
-double thickness_font = 2;
+int thickness_font = 2;
 
 // For circles
 int lineType = 8;
