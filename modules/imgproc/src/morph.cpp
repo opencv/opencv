@@ -1268,10 +1268,11 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
     int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
     if( !( depth == CV_8U || depth == CV_32F ) || !(cn == 1 || cn == 3 || cn == 4) ||
-        !( borderType == cv::BORDER_REPLICATE || (borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue()) )
-        || !( op == MORPH_DILATE || op == MORPH_ERODE) || _src.isSubmatrix() )
+        !( borderType == cv::BORDER_REPLICATE || (borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue() &&
+        kernel.size() == Size(3,3)) ) || !( op == MORPH_DILATE || op == MORPH_ERODE) || _src.isSubmatrix() )
         return false;
 
+    // In case BORDER_CONSTANT, IPPMorphReplicate works correct with kernels of size 3*3 only
     if( borderType == cv::BORDER_CONSTANT && kernel.data )
     {
         int x, y;
