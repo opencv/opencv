@@ -136,7 +136,7 @@ protected:
         }
 
         solvePnPRansac(points, projectedPoints, intrinsics, distCoeffs, rvec, tvec,
-            false, 500, 0.5, 0.9, inliers, method);
+            false, 500, 0.5, 0.99, inliers, method);
 
         bool isTestSuccess = inliers.size() >= points.size()*0.95;
 
