@@ -1948,7 +1948,7 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     UMat src = _src.getUMat(), lut = _lut.getUMat();
     _dst.create(src.size(), CV_MAKETYPE(ddepth, dcn));
     UMat dst = _dst.getUMat();
-    int kercn = lcn == 1 ? std::min(4, ocl::predictOptimalVectorWidth(_dst)) : dcn;
+    int kercn = lcn == 1 ? std::min(4, ocl::predictOptimalVectorWidth(_src, _dst)) : dcn;
 
     ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
                   format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", kercn, lcn,
