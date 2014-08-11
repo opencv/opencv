@@ -62,24 +62,11 @@ CV_INIT_ALGORITHM(BRISK, "Feature2D.BRISK",
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-CV_INIT_ALGORITHM(BriefDescriptorExtractor, "Feature2D.BRIEF",
-                  obj.info()->addParam(obj, "bytes", obj.bytes_))
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 CV_INIT_ALGORITHM(FastFeatureDetector, "Feature2D.FAST",
                   obj.info()->addParam(obj, "threshold", obj.threshold);
                   obj.info()->addParam(obj, "nonmaxSuppression", obj.nonmaxSuppression);
                   obj.info()->addParam(obj, "type", obj.type))
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-CV_INIT_ALGORITHM(StarDetector, "Feature2D.STAR",
-                  obj.info()->addParam(obj, "maxSize", obj.maxSize);
-                  obj.info()->addParam(obj, "responseThreshold", obj.responseThreshold);
-                  obj.info()->addParam(obj, "lineThresholdProjected", obj.lineThresholdProjected);
-                  obj.info()->addParam(obj, "lineThresholdBinarized", obj.lineThresholdBinarized);
-                  obj.info()->addParam(obj, "suppressNonmaxSize", obj.suppressNonmaxSize))
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -105,14 +92,6 @@ CV_INIT_ALGORITHM(ORB, "Feature2D.ORB",
                   obj.info()->addParam(obj, "patchSize", obj.patchSize);
                   obj.info()->addParam(obj, "WTA_K", obj.WTA_K);
                   obj.info()->addParam(obj, "scoreType", obj.scoreType))
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-CV_INIT_ALGORITHM(FREAK, "Feature2D.FREAK",
-                  obj.info()->addParam(obj, "orientationNormalized", obj.orientationNormalized);
-                  obj.info()->addParam(obj, "scaleNormalized", obj.scaleNormalized);
-                  obj.info()->addParam(obj, "patternScale", obj.patternScale);
-                  obj.info()->addParam(obj, "nbOctave", obj.nOctaves))
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -181,23 +160,6 @@ CV_INIT_ALGORITHM(HarrisDetector, "Feature2D.HARRIS",
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-CV_INIT_ALGORITHM(DenseFeatureDetector, "Feature2D.Dense",
-                  obj.info()->addParam(obj, "initFeatureScale", obj.initFeatureScale);
-                  obj.info()->addParam(obj, "featureScaleLevels", obj.featureScaleLevels);
-                  obj.info()->addParam(obj, "featureScaleMul", obj.featureScaleMul);
-                  obj.info()->addParam(obj, "initXyStep", obj.initXyStep);
-                  obj.info()->addParam(obj, "initImgBound", obj.initImgBound);
-                  obj.info()->addParam(obj, "varyXyStepWithScale", obj.varyXyStepWithScale);
-                  obj.info()->addParam(obj, "varyImgBoundWithScale", obj.varyImgBoundWithScale))
-
-CV_INIT_ALGORITHM(GridAdaptedFeatureDetector, "Feature2D.Grid",
-                  obj.info()->addParam<FeatureDetector>(obj, "detector", obj.detector, false, 0, 0); // Extra params added to avoid VS2013 fatal error in opencv2/core.hpp (decl. of addParam)
-                  obj.info()->addParam(obj, "maxTotalKeypoints", obj.maxTotalKeypoints);
-                  obj.info()->addParam(obj, "gridRows", obj.gridRows);
-                  obj.info()->addParam(obj, "gridCols", obj.gridCols))
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 CV_INIT_ALGORITHM(BFMatcher, "DescriptorMatcher.BFMatcher",
                   obj.info()->addParam(obj, "normType", obj.normType);
                   obj.info()->addParam(obj, "crossCheck", obj.crossCheck))
@@ -209,19 +171,14 @@ CV_INIT_ALGORITHM(FlannBasedMatcher, "DescriptorMatcher.FlannBasedMatcher",)
 bool cv::initModule_features2d(void)
 {
     bool all = true;
-    all &= !BriefDescriptorExtractor_info_auto.name().empty();
     all &= !BRISK_info_auto.name().empty();
     all &= !FastFeatureDetector_info_auto.name().empty();
-    all &= !StarDetector_info_auto.name().empty();
     all &= !MSER_info_auto.name().empty();
-    all &= !FREAK_info_auto.name().empty();
     all &= !ORB_info_auto.name().empty();
     all &= !GFTTDetector_info_auto.name().empty();
     all &= !KAZE_info_auto.name().empty();
     all &= !AKAZE_info_auto.name().empty();
-        all &= !HarrisDetector_info_auto.name().empty();
-    all &= !DenseFeatureDetector_info_auto.name().empty();
-    all &= !GridAdaptedFeatureDetector_info_auto.name().empty();
+    all &= !HarrisDetector_info_auto.name().empty();
     all &= !BFMatcher_info_auto.name().empty();
     all &= !FlannBasedMatcher_info_auto.name().empty();
 

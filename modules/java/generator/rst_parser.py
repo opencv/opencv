@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 import os, sys, re, string, fnmatch
-allmodules = ["core", "flann", "imgproc", "imgcodecs", "videoio", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "cuda", "androidcamera", "java", "python", "stitching", "ts", "photo", "nonfree", "videostab", "softcascade", "superres"]
+allmodules = ["core", "flann", "imgproc", "imgcodecs", "videoio", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "cuda", "androidcamera", "java", "python", "stitching", "ts", "photo", "videostab", "softcascade", "superres"]
 verbose = False
 show_warnings = True
 show_errors = True
@@ -12,7 +12,6 @@ params_blacklist = {
     "fromarray" : ("object", "allowND"), # python only function
     "reprojectImageTo3D" : ("ddepth"),   # python only argument
     "composeRT" : ("d*d*"),              # wildchards in parameter names are not supported by this parser
-    "CvSVM::train_auto" : ("\\*Grid"),   # wildchards in parameter names are not supported by this parser
     "error" : "args", # parameter of supporting macro
     "getConvertElem" : ("from", "cn", "to", "beta", "alpha"), # arguments of returned functions
     "gpu::swapChannels" : ("dstOrder") # parameter is not parsed correctly by the hdr_parser
