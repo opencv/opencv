@@ -2987,7 +2987,6 @@ void cvCreatePngTrainingSet(const char* infoname,
     {
         char imagefullname[PATH_MAX];
         char annotationfullname[PATH_MAX];
-//        char annotationsdir[PATH_MAX];
         char* filename;
         char* annotationname;
         char* annotationrelativepath;
