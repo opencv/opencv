@@ -66,19 +66,4 @@ std::string FloatToString ( float Number );
 // Converts a given integer to a string
 std::string IntToString ( int Number );
 
-class Timer
-{
-public:
-  Timer();
-    void start() { tstart = (double)clock()/CLOCKS_PER_SEC; }
-    void stop()  { tstop = (double)clock()/CLOCKS_PER_SEC; }
-    void reset()  { tstart = 0;  tstop = 0;}
-
-    double getTimeMilli() const { return (tstop-tstart)*1000; }
-    double getTimeSec()   const {  return tstop-tstart; }
-
-private:
-    double tstart, tstop, ttime;
-};
-
 #endif /* UTILS_H_ */
