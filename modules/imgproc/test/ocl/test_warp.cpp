@@ -72,6 +72,7 @@ PARAM_TEST_CASE(WarpTestBase, MatType, Interpolation, bool, bool)
     int type, interpolation;
     Size dsize;
     bool useRoi, mapInverse;
+    int depth;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
     TEST_DECLARE_OUTPUT_PARAMETER(dst);
@@ -82,6 +83,7 @@ PARAM_TEST_CASE(WarpTestBase, MatType, Interpolation, bool, bool)
         interpolation = GET_PARAM(1);
         mapInverse = GET_PARAM(2);
         useRoi = GET_PARAM(3);
+        depth = CV_MAT_DEPTH(type);
 
         if (mapInverse)
             interpolation |= WARP_INVERSE_MAP;
@@ -104,7 +106,10 @@ PARAM_TEST_CASE(WarpTestBase, MatType, Interpolation, bool, bool)
 
     void Near(double threshold = 0.0)
     {
-        OCL_EXPECT_MATS_NEAR(dst, threshold);
+        if (depth < CV_32F)
+            EXPECT_MAT_N_DIFF(dst_roi, udst_roi, cvRound(dst_roi.total()*threshold));
+        else
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst, threshold);
     }
 };
 
@@ -116,6 +121,7 @@ OCL_TEST_P(WarpAffine, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
+        double eps = depth < CV_32F ? 0.03 : 0.06;
         random_roi();
 
         Mat M = getRotationMatrix2D(Point2f(src_roi.cols / 2.0f, src_roi.rows / 2.0f),
@@ -124,7 +130,7 @@ OCL_TEST_P(WarpAffine, Mat)
         OCL_OFF(cv::warpAffine(src_roi, dst_roi, M, dsize, interpolation));
         OCL_ON(cv::warpAffine(usrc_roi, udst_roi, M, dsize, interpolation));
 
-        Near(1.0);
+        Near(eps);
     }
 }
 
@@ -136,6 +142,7 @@ OCL_TEST_P(WarpPerspective, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
+        double eps = depth < CV_32F ? 0.03 : 0.06;
         random_roi();
 
         float cols = static_cast<float>(src_roi.cols), rows = static_cast<float>(src_roi.rows);
@@ -150,7 +157,7 @@ OCL_TEST_P(WarpPerspective, Mat)
         OCL_OFF(cv::warpPerspective(src_roi, dst_roi, M, dsize, interpolation));
         OCL_ON(cv::warpPerspective(usrc_roi, udst_roi, M, dsize, interpolation));
 
-        Near(1.0);
+        Near(eps);
     }
 }
 
