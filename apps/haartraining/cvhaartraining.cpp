@@ -3145,7 +3145,7 @@ void cvCreateTestSamples( const char* infoname,
                           int invert, int maxintensitydev,
                           double maxxangle, double maxyangle, double maxzangle,
                           int showsamples,
-                          int winwidth, int winheight)
+                          int winwidth, int winheight )
 {
     CvSampleDistortionData data;
 
@@ -3185,7 +3185,7 @@ void cvCreateTestSamples( const char* infoname,
             info = fopen( infoname, "w" );
             strcpy( fullname, infoname );
 
-            icvFindFilePathPart(&filename, fullname);
+            icvFindFilePathPart( &filename, fullname );
 
 
             count = MIN( count, cvbgdata->count );
@@ -3196,32 +3196,29 @@ void cvCreateTestSamples( const char* infoname,
 
                 maxscale = MIN( 0.7F * cvbgreader->src.cols / winwidth,
                                    0.7F * cvbgreader->src.rows / winheight );
-
                 if( maxscale < 1.0F ) continue;
+
                 scale = (maxscale - 1.0F) * rand() / RAND_MAX + 1.0F;
                 width = (int) (scale * winwidth);
                 height = (int) (scale * winheight);
                 x = (int) ((0.1+0.8 * rand()/RAND_MAX) * (cvbgreader->src.cols - width));
                 y = (int) ((0.1+0.8 * rand()/RAND_MAX) * (cvbgreader->src.rows - height));
 
-
                 cvGetSubArr( &cvbgreader->src, &win, cvRect( x, y ,width, height ) );
                 if( invert == CV_RANDOM_INVERT )
                 {
                     inverse = (rand() > (RAND_MAX/2));
                 }
+                icvPlaceDistortedSample( &win, inverse, maxintensitydev,
+                                         maxxangle, maxyangle, maxzangle,
+                                         1, 0.0, 0.0, &data );
+
+
+                sprintf( filename, "%04d_%04d_%04d_%04d_%04d.jpg",
+                         (i + 1), x, y, width, height );
 
                 if( info )
                 {
-                    icvPlaceDistortedSample( &win, inverse, maxintensitydev,
-                                             maxxangle, maxyangle, maxzangle,
-                                             1   /* nonzero means placing image without cut offs */,
-                                             0.0 /* nonzero adds random shifting                  */,
-                                             0.0 /* nonzero adds random scaling                   */,
-                                             &data );
-
-                    sprintf( filename, "%04d_%04d_%04d_%04d_%04d.jpg",
-                             (i + 1), x, y, width, height);
                     fprintf( info, "%s %d %d %d %d %d\n",
                         filename, 1, x, y, width, height );
                 }

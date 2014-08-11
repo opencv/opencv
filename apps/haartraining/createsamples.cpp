@@ -229,8 +229,8 @@ int main( int argc, char* argv[] )
         printf( "Create test samples from single image applying distortions...\n" );
 
         cvCreateTestSamples( infoname, imagename, bgcolor, bgthreshold, bgfilename, num,
-                             invert, maxintensitydev,
-                             maxxangle, maxyangle, maxzangle, showsamples, width, height);
+            invert, maxintensitydev,
+            maxxangle, maxyangle, maxzangle, showsamples, width, height );
 
         printf( "Done\n" );
     }
