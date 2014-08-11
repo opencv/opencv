@@ -1619,7 +1619,7 @@ DEF_CVT_FUNC_F(8u16s,  uchar, short, 8u16s_C1R)
 DEF_CVT_FUNC_F(8s16s,  schar, short, 8s16s_C1R)
 DEF_CVT_FUNC_F2(16u16s, ushort, short, 16u16s_C1RSfs)
 DEF_CVT_FUNC_F2(32s16s, int, short, 32s16s_C1RSfs)
-DEF_CVT_FUNC_F2(32f16s, float, short, 32f16s_C1RSfs)
+DEF_CVT_FUNC(32f16s, float, short)
 DEF_CVT_FUNC(64f16s, double, short)
 
 DEF_CVT_FUNC_F(8u32s,  uchar, int, 8u32s_C1R)
