@@ -599,7 +599,7 @@ solvePnPRansac
 ------------------
 Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
 
-.. ocv:function:: bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false, int iterationsCount = 100, float reprojectionError = 8.0, float confidence = 0.99, OutputArray inliers = noArray(), int flags = ITERATIVE )
+.. ocv:function:: bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false, int iterationsCount = 100, float reprojectionError = 8.0, double confidence = 0.99, OutputArray inliers = noArray(), int flags = ITERATIVE )
 
 .. ocv:pyfunction:: cv2.solvePnPRansac(objectPoints, imagePoints, cameraMatrix, distCoeffs[, rvec[, tvec[, useExtrinsicGuess[, iterationsCount[, reprojectionError[, minInliersCount[, inliers[, flags]]]]]]]]) -> rvec, tvec, inliers
 

@@ -67,7 +67,7 @@ static void onMouseModelRegistration( int event, int x, int y, int, void* )
       int n_regist = registration.getNumRegist();
       int n_vertex = pts[n_regist];
 
-      cv::Point2f point_2d = cv::Point2f(x,y);
+      cv::Point2f point_2d = cv::Point2f((float)x,(float)y);
       cv::Point3f point_3d = mesh.getVertex(n_vertex-1);
 
       bool is_registrable = registration.is_registrable();
@@ -224,12 +224,12 @@ int main()
   std::vector<cv::Point2f> list_points_out = model.get_points2d_out();
 
   // Draw some debug text
-  std::string num = IntToString(list_points_in.size());
+  std::string num = IntToString((int)list_points_in.size());
   std::string text = "There are " + num + " inliers";
   drawText(img_vis, text, green);
 
   // Draw some debug text
-  num = IntToString(list_points_out.size());
+  num = IntToString((int)list_points_out.size());
   text = "There are " + num + " outliers";
   drawText2(img_vis, text, red);
 
