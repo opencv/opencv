@@ -166,7 +166,7 @@ int main()
   std::vector<cv::Point3f> list_points3d = registration.get_points3d();
 
   // Estimate pose given the registered points
-  bool is_correspondence = pnp_registration.estimatePose(list_points3d, list_points2d, cv::ITERATIVE);
+  bool is_correspondence = pnp_registration.estimatePose(list_points3d, list_points2d, cv::SOLVEPNP_ITERATIVE);
   if ( is_correspondence )
   {
     std::cout << "Correspondence found" << std::endl;
