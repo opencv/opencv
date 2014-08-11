@@ -2625,12 +2625,15 @@ template<typename _Tp> inline Ptr<_Tp>::Ptr(const Ptr<_Tp>& _ptr)
 
 template<typename _Tp> inline Ptr<_Tp>& Ptr<_Tp>::operator = (const Ptr<_Tp>& _ptr)
 {
-    int* _refcount = _ptr.refcount;
-    if( _refcount )
-        CV_XADD(_refcount, 1);
-    release();
-    obj = _ptr.obj;
-    refcount = _refcount;
+    if (this != &_ptr)
+    {
+      int* _refcount = _ptr.refcount;
+      if( _refcount )
+          CV_XADD(_refcount, 1);
+      release();
+      obj = _ptr.obj;
+      refcount = _refcount;
+    }
     return *this;
 }
 
