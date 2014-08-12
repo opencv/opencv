@@ -126,10 +126,11 @@ namespace clahe
 
 namespace
 {
+    template <class T, int histSize, int shift>
     class CLAHE_CalcLut_Body : public cv::ParallelLoopBody
     {
     public:
-        CLAHE_CalcLut_Body(const cv::Mat& src, cv::Mat& lut, cv::Size tileSize, int tilesX, int clipLimit, float lutScale) :
+        CLAHE_CalcLut_Body(const cv::Mat& src, const cv::Mat& lut, const cv::Size& tileSize, const int& tilesX, const int& clipLimit, const float& lutScale) :
             src_(src), lut_(lut), tileSize_(tileSize), tilesX_(tilesX), clipLimit_(clipLimit), lutScale_(lutScale)
         {
         }
@@ -146,12 +147,11 @@ namespace
         float lutScale_;
     };
 
-    void CLAHE_CalcLut_Body::operator ()(const cv::Range& range) const
+    template <class T, int histSize, int shift>
+    void CLAHE_CalcLut_Body<T,histSize,shift>::operator ()(const cv::Range& range) const
     {
-        const int histSize = 256;
-
-        uchar* tileLut = lut_.ptr(range.start);
-        const size_t lut_step = lut_.step;
+        T* tileLut = lut_.ptr<T>(range.start);
+        const size_t lut_step = lut_.step / sizeof(T);
 
         for (int k = range.start; k < range.end; ++k, tileLut += lut_step)
         {
@@ -173,20 +173,20 @@ namespace
             int tileHist[histSize] = {0, };
 
             int height = tileROI.height;
-            const size_t sstep = tile.step;
-            for (const uchar* ptr = tile.ptr<uchar>(0); height--; ptr += sstep)
+            const size_t sstep = src_.step / sizeof(T);
+            for (const T* ptr = tile.ptr<T>(0); height--; ptr += sstep)
             {
                 int x = 0;
                 for (; x <= tileROI.width - 4; x += 4)
                 {
                     int t0 = ptr[x], t1 = ptr[x+1];
-                    tileHist[t0]++; tileHist[t1]++;
+                    tileHist[t0 >> shift]++; tileHist[t1 >> shift]++;
                     t0 = ptr[x+2]; t1 = ptr[x+3];
-                    tileHist[t0]++; tileHist[t1]++;
+                    tileHist[t0 >> shift]++; tileHist[t1 >> shift]++;
                 }
 
                 for (; x < tileROI.width; ++x)
-                    tileHist[ptr[x]]++;
+                    tileHist[ptr[x] >> shift]++;
             }
 
             // clip histogram
@@ -221,15 +221,16 @@ namespace
             for (int i = 0; i < histSize; ++i)
             {
                 sum += tileHist[i];
-                tileLut[i] = cv::saturate_cast<uchar>(sum * lutScale_);
+                tileLut[i] = cv::saturate_cast<T>(sum * lutScale_);
             }
         }
     }
 
+    template <class T>
     class CLAHE_Interpolation_Body : public cv::ParallelLoopBody
     {
     public:
-        CLAHE_Interpolation_Body(const cv::Mat& src, cv::Mat& dst, const cv::Mat& lut, cv::Size tileSize, int tilesX, int tilesY) :
+        CLAHE_Interpolation_Body(const cv::Mat& src, const cv::Mat& dst, const cv::Mat& lut, const cv::Size& tileSize, const int& tilesX, const int& tilesY) :
             src_(src), dst_(dst), lut_(lut), tileSize_(tileSize), tilesX_(tilesX), tilesY_(tilesY)
         {
         }
@@ -246,14 +247,15 @@ namespace
         int tilesY_;
     };
 
-    void CLAHE_Interpolation_Body::operator ()(const cv::Range& range) const
+    template <class T>
+    void CLAHE_Interpolation_Body<T>::operator ()(const cv::Range& range) const
     {
-        const size_t lut_step = lut_.step;
+        const size_t lut_step = lut_.step / sizeof(T);
 
         for (int y = range.start; y < range.end; ++y)
         {
-            const uchar* srcRow = src_.ptr<uchar>(y);
-            uchar* dstRow = dst_.ptr<uchar>(y);
+            const T* srcRow = src_.ptr<T>(y);
+            T* dstRow = dst_.ptr<T>(y);
 
             const float tyf = (static_cast<float>(y) / tileSize_.height) - 0.5f;
 
@@ -265,8 +267,8 @@ namespace
             ty1 = std::max(ty1, 0);
             ty2 = std::min(ty2, tilesY_ - 1);
 
-            const uchar* lutPlane1 = lut_.ptr(ty1 * tilesX_);
-            const uchar* lutPlane2 = lut_.ptr(ty2 * tilesX_);
+            const T* lutPlane1 = lut_.ptr<T>(ty1 * tilesX_);
+            const T* lutPlane2 = lut_.ptr<T>(ty2 * tilesX_);
 
             for (int x = 0; x < src_.cols; ++x)
             {
@@ -292,7 +294,7 @@ namespace
                 res += lutPlane2[ind1] * ((1.0f - xa) * (ya));
                 res += lutPlane2[ind2] * ((xa) * (ya));
 
-                dstRow[x] = cv::saturate_cast<uchar>(res);
+                dstRow[x] = cv::saturate_cast<T>(res);
             }
         }
     }
@@ -340,13 +342,13 @@ namespace
 
     void CLAHE_Impl::apply(cv::InputArray _src, cv::OutputArray _dst)
     {
-        CV_Assert( _src.type() == CV_8UC1 );
+        CV_Assert( _src.type() == CV_8UC1 || _src.type() == CV_16UC1 );
 
 #ifdef HAVE_OPENCL
-        bool useOpenCL = cv::ocl::useOpenCL() && _src.isUMat() && _src.dims()<=2;
+        bool useOpenCL = cv::ocl::useOpenCL() && _src.isUMat() && _src.dims()<=2 && _src.type() == CV_8UC1;
 #endif
 
-        const int histSize = 256;
+        int histSize = _src.type() == CV_8UC1 ? 256 : 4096;
 
         cv::Size tileSize;
         cv::_InputArray _srcForLut;
@@ -394,13 +396,23 @@ namespace
         _dst.create( src.size(), src.type() );
         cv::Mat dst = _dst.getMat();
         cv::Mat srcForLut = _srcForLut.getMat();
-        lut_.create(tilesX_ * tilesY_, histSize, CV_8UC1);
+        lut_.create(tilesX_ * tilesY_, histSize, _src.type());
 
-        CLAHE_CalcLut_Body calcLutBody(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
-        cv::parallel_for_(cv::Range(0, tilesX_ * tilesY_), calcLutBody);
+        cv::Ptr<cv::ParallelLoopBody> calcLutBody;
+        if (_src.type() == CV_8UC1)
+            calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<uchar, 256, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+        else if (_src.type() == CV_16UC1)
+            calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 4096, 4> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+        CV_Assert(!calcLutBody.empty());
+        cv::parallel_for_(cv::Range(0, tilesX_ * tilesY_), *calcLutBody);
 
-        CLAHE_Interpolation_Body interpolationBody(src, dst, lut_, tileSize, tilesX_, tilesY_);
-        cv::parallel_for_(cv::Range(0, src.rows), interpolationBody);
+        cv::Ptr<cv::ParallelLoopBody> interpolationBody;
+        if (_src.type() == CV_8UC1)
+            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+        else if (_src.type() == CV_16UC1)
+            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+        CV_Assert(!interpolationBody.empty());
+        cv::parallel_for_(cv::Range(0, src.rows), *interpolationBody);
     }
 
     void CLAHE_Impl::setClipLimit(double clipLimit)
