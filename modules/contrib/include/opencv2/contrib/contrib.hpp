@@ -936,8 +936,8 @@ namespace cv
         // Predicts the label and confidence for a given sample.
         CV_WRAP virtual void predict(InputArray src, CV_OUT int &label, CV_OUT double &confidence) const = 0;
 
-		// Predict the N labels and confidence from a given sample
-		virtual void predict(InputArray src, vector<int> & labels, vector<double> & confidence) const = 0;
+        // Predict the N labels and confidence from a given sample
+        virtual void predict(InputArray src, vector<int> & labels, vector<double> & confidence) const = 0;
 
         // Serializes this object to a given filename.
         CV_WRAP virtual void save(const string& filename) const;
@@ -950,42 +950,42 @@ namespace cv
 
         // Deserializes this object from a given cv::FileStorage.
         virtual void load(const FileStorage& fs) = 0;
-	protected:
-		struct predData
-		{
-			int m_label;
-			double m_score;
-			predData() { }
-			predData(const int & label, const double & score)
-			{
-				m_label = label;
-				m_score = score;
-			}
-		};
+    protected:
+        struct predData
+        {
+            int m_label;
+            double m_score;
+            predData() { }
+            predData(const int & label, const double & score)
+            {
+                m_label = label;
+                m_score = score;
+            }
+        };
 
-		struct dataSorter {
-			bool operator ()(const predData & d1, const predData & d2) const
-			{
-				return d1.m_score < d2.m_score;
-			}
-		};
+        struct dataSorter {
+            bool operator ()(const predData & d1, const predData & d2) const
+            {
+                return d1.m_score < d2.m_score;
+            }
+        };
 
-		friend bool foundLabel(const vector<predData> & predictions, const int & label, int & idx)
-		{
-			int sz = (int)predictions.size();
-			if (sz)
-			{
-				for (int i=0; i<sz; i++)
-				{
-					if (predictions[i].m_label == label)
-					{
-						idx = i;
-						return true;
-					}
-				}
-			}
-			return false;
-		}
+        friend bool foundLabel(const vector<predData> & predictions, const int & label, int & idx)
+        {
+            int sz = (int)predictions.size();
+            if (sz)
+            {
+                for (int i=0; i<sz; i++)
+                {
+                    if (predictions[i].m_label == label)
+                    {
+                        idx = i;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
     };
 
     CV_EXPORTS_W Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
