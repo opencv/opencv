@@ -20,6 +20,7 @@ dls::dls(const cv::Mat& opoints, const cv::Mat& ipoints)
     N =  std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
     p = cv::Mat(3, N, CV_64F);
     z = cv::Mat(3, N, CV_64F);
+    mn = cv::Mat::zeros(3, 1, CV_64F);
 
     cost__ = 9999;
 
@@ -39,7 +40,7 @@ dls::dls(const cv::Mat& opoints, const cv::Mat& ipoints)
     else
         init_points<cv::Point3d, cv::Point2f>(opoints, ipoints);
 
-    norm_z_vector();
+    //norm_z_vector();
 
 }
 
@@ -48,7 +49,7 @@ dls::~dls()
   // TODO Auto-generated destructor stub
 }
 
-void dls::norm_z_vector()
+/*void dls::norm_z_vector()
 {
     // make z into unit vectors from normalized pixel coords
     for (int i = 0; i < N; ++i)
@@ -63,7 +64,7 @@ void dls::norm_z_vector()
         z.at<double>(1, i) /= sr;
         z.at<double>(2, i) /= sr;
     }
-}
+}*/
 
 bool dls::compute_pose(cv::Mat& R, cv::Mat& t)
 {
@@ -73,13 +74,14 @@ bool dls::compute_pose(cv::Mat& R, cv::Mat& t)
     R_.push_back(roty(CV_PI/2));
     R_.push_back(rotz(CV_PI/2));
 
-    cv::Mat t_mean = this->mean(p);
+    //cv::Mat t_mean = this->mean(p);
 
     // version that calls dls 3 times, to avoid Cayley singularity
     for (int i = 0; i < 3; ++i)
     {
         // Make a random rotation
-        cv::Mat pp = R_[i] * ( p - cv::repeat(t_mean, 1, p.cols) );
+        //cv::Mat pp = R_[i] * ( p - cv::repeat(t_mean, 1, p.cols) );
+        cv::Mat pp = R_[i] * ( p - cv::repeat(mn, 1, p.cols) );
 
         // clear for new data
         C_est_.clear();
@@ -93,7 +95,8 @@ bool dls::compute_pose(cv::Mat& R, cv::Mat& t)
         {
             if( cost_[j] < cost__ )
             {
-                t_est__ = t_est_[j] - C_est_[j] * R_[i] * t_mean;
+                //t_est__ = t_est_[j] - C_est_[j] * R_[i] * t_mean;
+                t_est__ = t_est_[j] - C_est_[j] * R_[i] * mn;
                 C_est__ = C_est_[j] * R_[i];
                 cost__ = cost_[j];
             }
@@ -236,21 +239,28 @@ void dls::build_coeff_matrix(const cv::Mat& pp, cv::Mat& Mtilde, cv::Mat& D)
     cv::Mat H = cv::Mat::zeros(3, 3, CV_64F);
     cv::Mat A = cv::Mat::zeros(3, 9, CV_64F);
 
+    cv::Mat z_i(3, 1, CV_64F);
     for (int i = 0; i < N; ++i)
     {
-        cv::Mat z_dot = z.col(i)*z.col(i).t();
-        H += eye - z_dot;
-        A += ( z_dot - eye ) * LeftMultVec(pp.col(i));
+        z.col(i).copyTo(z_i);
+        A += ( z_i*z_i.t() - eye ) * LeftMultVec(pp.col(i));
     }
+
+    H = eye.mul(N) - z * z.t();
 
     // A\B
-    cv::solve(H, A, A);
+    cv::solve(H, A, A, cv::DECOMP_NORMAL);
+    H.release();
 
+    cv::Mat ppi_A(3, 1, CV_64F);
     for (int i = 0; i < N; ++i)
     {
-        cv::Mat z_dot = z.col(i)*z.col(i).t();
-        D += cv::Mat( LeftMultVec(pp.col(i)) + A ).t() * (eye-z_dot) * ( LeftMultVec(pp.col(i)) + A );
+        //z_i = z.col(i);
+        z.col(i).copyTo(z_i);
+        ppi_A = LeftMultVec(pp.col(i)) + A;
+        D += ppi_A.t() * ( eye - z_i*z_i.t() ) * ppi_A;
     }
+    A.release();
 
     // fill the coefficients
     fill_coeff(&D);
@@ -265,9 +275,11 @@ void dls::build_coeff_matrix(const cv::Mat& pp, cv::Mat& Mtilde, cv::Mat& D)
     cv::Mat M2_2 = M2(cv::Range(0,27), cv::Range(27,120));
     cv::Mat M2_3 = M2(cv::Range(27,120), cv::Range(27,120));
     cv::Mat M2_4 = M2(cv::Range(27,120), cv::Range(0,27));
+    M2.release();
 
     // A/B = B'\A'
     cv::Mat M2_5; cv::solve(M2_3.t(), M2_2.t(), M2_5);
+    M2_2.release(); M2_3.release();
 
     // construct the multiplication matrix via schur compliment of the Macaulay
     // matrix
@@ -398,20 +410,28 @@ void dls::fill_coeff(const cv::Mat * D_mat)
 
 cv::Mat dls::LeftMultVec(const cv::Mat& v)
 {
-    cv::Mat mat, row1, row2, row3;
-    cv::Mat zeros16 = cv::Mat::zeros(1, 6, CV_64F);
-    cv::Mat zeros13 = cv::Mat::zeros(1, 3, CV_64F);
+    //cv::Mat mat, row1, row2, row3;
+    //cv::Mat zeros16 = cv::Mat::zeros(1, 6, CV_64F);
+    //cv::Mat zeros13 = cv::Mat::zeros(1, 3, CV_64F);
+    cv::Mat mat_ = cv::Mat::zeros(3, 9, CV_64F);
 
-    cv::hconcat(v.clone().t(), zeros16, row1);    // first row
+    for (int i = 0; i < 3; ++i)
+    {
+		mat_.at<double>(i, 3*i + 0) = v.at<double>(0);
+		mat_.at<double>(i, 3*i + 1) = v.at<double>(1);
+		mat_.at<double>(i, 3*i + 2) = v.at<double>(2);
+	}
+
+    /*cv::hconcat(v.clone().t(), zeros16, row1);    // first row
     cv::hconcat(zeros13, v.clone().t(), row2);    // second row
     cv::hconcat(row2, zeros13, row2);            // second row
     cv::hconcat(zeros16, v.clone().t(), row3);    // third row
 
     mat.push_back(row1);
     mat.push_back(row2);
-    mat.push_back(row3);
+    mat.push_back(row3);*/
 
-    return mat;
+    return mat_;
 }
 
 cv::Mat dls::cayley_LS_M(const std::vector<double>& a, const std::vector<double>& b, const std::vector<double>& c, const std::vector<double>& u)
