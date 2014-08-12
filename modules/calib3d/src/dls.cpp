@@ -49,23 +49,6 @@ dls::~dls()
   // TODO Auto-generated destructor stub
 }
 
-/*void dls::norm_z_vector()
-{
-    // make z into unit vectors from normalized pixel coords
-    for (int i = 0; i < N; ++i)
-    {
-        cv::Mat col_i = z.col(i);
-        double sr = std::pow(col_i.at<double>(0), 2) +
-                    std::pow(col_i.at<double>(1), 2) +
-                    std::pow(col_i.at<double>(2), 2);
-        sr = std::sqrt(sr);
-
-        z.at<double>(0, i) /= sr;
-        z.at<double>(1, i) /= sr;
-        z.at<double>(2, i) /= sr;
-    }
-}*/
-
 bool dls::compute_pose(cv::Mat& R, cv::Mat& t)
 {
 
