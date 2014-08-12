@@ -1511,22 +1511,6 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
     bool haveExtraMat = !_extraMat.empty();
     CV_Assert(actual_op <= 3 || haveExtraMat);
 
-    // try to use OpenCL kernel adopted for small morph kernel
-    if (dev.isIntel() && !(dev.type() & ocl::Device::TYPE_CPU) &&
-        ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
-         (ksize.width == 5 && ksize.height == 5 && cn == 1)) &&
-         (iterations == 1))
-    {
-        if (ocl_morphSmall(_src, _dst, _kernel, anchor, borderType, op, actual_op, _extraMat))
-            return true;
-    }
-
-    if (iterations == 0 || kernel.rows*kernel.cols == 1)
-    {
-        _src.copyTo(_dst);
-        return true;
-    }
-
     if (!kernel.data)
     {
         kernel = getStructuringElement(MORPH_RECT, Size(1+iterations*2,1+iterations*2));
@@ -1541,6 +1525,22 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
                                             ksize.height + (iterations-1)*(ksize.height-1)),
                                        anchor);
         iterations = 1;
+    }
+
+    // try to use OpenCL kernel adopted for small morph kernel
+    if (dev.isIntel() && !(dev.type() & ocl::Device::TYPE_CPU) &&
+        ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
+         (ksize.width == 5 && ksize.height == 5 && cn == 1)) &&
+         (iterations == 1))
+    {
+        if (ocl_morphSmall(_src, _dst, kernel, anchor, borderType, op, actual_op, _extraMat))
+            return true;
+    }
+
+    if (iterations == 0 || kernel.rows*kernel.cols == 1)
+    {
+        _src.copyTo(_dst);
+        return true;
     }
 
 #ifdef ANDROID
