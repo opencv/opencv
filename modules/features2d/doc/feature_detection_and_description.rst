@@ -243,7 +243,7 @@ The AKAZE constructor
     :param octaves: Maximum octave evolution of the image
     :param sublevels: Default number of sublevels per scale level
     :param diffusivity: Diffusivity type. DIFF_PM_G1, DIFF_PM_G2, DIFF_WEICKERT or DIFF_CHARBONNIER
-    
+
 SIFT
 ----
 
