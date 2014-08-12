@@ -424,7 +424,7 @@ void fft_radix3_B3(__local float2* smem, __global const float2* twiddles, const 
     const int x3 = x2 + t/3;
     float2 a0, a1, a2, a3, a4, a5, a6, a7, a8;
 
-    if (x1 < t/2)
+    if (x1 < t/3)
     {
         a0 = smem[x1]; a1 = smem[x1+t]; a2 = smem[x1+2*t];
         a3 = smem[x2]; a4 = smem[x2+t]; a5 = smem[x2+2*t];
@@ -433,7 +433,7 @@ void fft_radix3_B3(__local float2* smem, __global const float2* twiddles, const 
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (x1 < t/2)
+    if (x1 < t/3)
     {
         butterfly3(a0, a1, a2, smem, twiddles, x1, block_size);
         butterfly3(a3, a4, a5, smem, twiddles, x2, block_size);

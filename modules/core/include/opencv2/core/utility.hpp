@@ -274,6 +274,102 @@ public:
 
 CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes=-1.);
 
+/////////////////////////////// forEach method of cv::Mat ////////////////////////////
+template<typename _Tp, typename Functor> inline
+void Mat::forEach_impl(const Functor& operation) {
+    if (false) {
+        operation(*reinterpret_cast<_Tp*>(0), reinterpret_cast<int*>(NULL));
+        // If your compiler fail in this line.
+        // Please check that your functor signature is
+        //     (_Tp&, const int*)   <- multidimential
+        //  or (_Tp&, void*)        <- in case of you don't need current idx.
+    }
+
+    CV_Assert(this->total() / this->size[this->dims - 1] <= INT_MAX);
+    const int LINES = static_cast<int>(this->total() / this->size[this->dims - 1]);
+
+    class PixelOperationWrapper :public ParallelLoopBody
+    {
+    public:
+        PixelOperationWrapper(Mat_<_Tp>* const frame, const Functor& _operation)
+            : mat(frame), op(_operation) {};
+        virtual ~PixelOperationWrapper(){};
+        // ! Overloaded virtual operator
+        // convert range call to row call.
+        virtual void operator()(const Range &range) const {
+            const int DIMS = mat->dims;
+            const int COLS = mat->size[DIMS - 1];
+            if (DIMS <= 2) {
+                for (int row = range.start; row < range.end; ++row) {
+                    this->rowCall2(row, COLS);
+                }
+            } else {
+                std::vector<int> idx(COLS); /// idx is modified in this->rowCall
+                idx[DIMS - 2] = range.start - 1;
+
+                for (int line_num = range.start; line_num < range.end; ++line_num) {
+                    idx[DIMS - 2]++;
+                    for (int i = DIMS - 2; i >= 0; --i) {
+                        if (idx[i] >= mat->size[i]) {
+                            idx[i - 1] += idx[i] / mat->size[i];
+                            idx[i] %= mat->size[i];
+                            continue; // carry-over;
+                        }
+                        else {
+                            break;
+                        }
+                    }
+                    this->rowCall(&idx[0], COLS, DIMS);
+                }
+            }
+        };
+    private:
+        Mat_<_Tp>* const mat;
+        const Functor op;
+        // ! Call operator for each elements in this row.
+        inline void rowCall(int* const idx, const int COLS, const int DIMS) const {
+            int &col = idx[DIMS - 1];
+            col = 0;
+            _Tp* pixel = &(mat->template at<_Tp>(idx));
+
+            while (col < COLS) {
+                op(*pixel, const_cast<const int*>(idx));
+                pixel++; col++;
+            }
+            col = 0;
+        }
+        // ! Call operator for each elements in this row. 2d mat special version.
+        inline void rowCall2(const int row, const int COLS) const {
+            union Index{
+                int body[2];
+                operator const int*() const {
+                    return reinterpret_cast<const int*>(this);
+                }
+                int& operator[](const int i) {
+                    return body[i];
+                }
+            } idx = {{row, 0}};
+            // Special union is needed to avoid
+            // "error: array subscript is above array bounds [-Werror=array-bounds]"
+            // when call the functor `op` such that access idx[3].
+
+            _Tp* pixel = &(mat->template at<_Tp>(idx));
+            const _Tp* const pixel_end = pixel + COLS;
+            while(pixel < pixel_end) {
+                op(*pixel++, static_cast<const int*>(idx));
+                idx[1]++;
+            }
+        };
+        PixelOperationWrapper& operator=(const PixelOperationWrapper &) {
+            CV_Assert(false);
+            // We can not remove this implementation because Visual Studio warning C4822.
+            return *this;
+        };
+    };
+
+    parallel_for_(cv::Range(0, LINES), PixelOperationWrapper(reinterpret_cast<Mat_<_Tp>*>(this), operation));
+};
+
 /////////////////////////// Synchronization Primitives ///////////////////////////////
 
 class CV_EXPORTS Mutex

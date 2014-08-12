@@ -158,12 +158,12 @@ the symptoms were damaged image and 'Corrupt JPEG data: premature end of data se
 
 11th patch: Apr 13, 2010, Filipe Almeida filipe.almeida@ist.utl.pt
 - Tries to setup all properties first through v4l2_ioctl call.
-- Allows seting up all Video4Linux properties through cvSetCaptureProperty instead of only CV_CAP_PROP_BRIGHTNESS, CV_CAP_PROP_CONTRAST, CV_CAP_PROP_SATURATION, CV_CAP_PROP_HUE, CV_CAP_PROP_GAIN and CV_CAP_PROP_EXPOSURE.
+- Allows setting up all Video4Linux properties through cvSetCaptureProperty instead of only CV_CAP_PROP_BRIGHTNESS, CV_CAP_PROP_CONTRAST, CV_CAP_PROP_SATURATION, CV_CAP_PROP_HUE, CV_CAP_PROP_GAIN and CV_CAP_PROP_EXPOSURE.
 
 12th patch: Apr 16, 2010, Filipe Almeida filipe.almeida@ist.utl.pt
 - CvCaptureCAM_V4L structure cleanup (no longer needs <PROPERTY>_{min,max,} variables)
 - Introduction of v4l2_ctrl_range - minimum and maximum allowed values for v4l controls
-- Allows seting up all Video4Linux properties through cvSetCaptureProperty using input values between 0.0 and 1.0
+- Allows setting up all Video4Linux properties through cvSetCaptureProperty using input values between 0.0 and 1.0
 - Gets v4l properties first through v4l2_ioctl call (ignores capture->is_v4l2_device)
 - cvGetCaptureProperty adjusted to support the changes
 - Returns device properties to initial values after device closes

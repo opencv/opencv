@@ -2172,18 +2172,21 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     } \
     while ((void)0, 0)
 
-    Ipp32s bufSize;
-    IppiSize dstRoiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize, ksize);
+    if( ksize <= 5 )
+    {
+        Ipp32s bufSize;
+        IppiSize dstRoiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize, ksize);
 
-    int type = src0.type();
-    if (type == CV_8UC1)
-        IPP_FILTER_MEDIAN_BORDER(Ipp8u, ipp8u, 8u_C1R);
-    else if (type == CV_16UC1)
-        IPP_FILTER_MEDIAN_BORDER(Ipp16u, ipp16u, 16u_C1R);
-    else if (type == CV_16SC1)
-        IPP_FILTER_MEDIAN_BORDER(Ipp16s, ipp16s, 16s_C1R);
-    else if (type == CV_32FC1)
-        IPP_FILTER_MEDIAN_BORDER(Ipp32f, ipp32f, 32f_C1R);
+        int type = src0.type();
+        if (type == CV_8UC1)
+            IPP_FILTER_MEDIAN_BORDER(Ipp8u, ipp8u, 8u_C1R);
+        else if (type == CV_16UC1)
+            IPP_FILTER_MEDIAN_BORDER(Ipp16u, ipp16u, 16u_C1R);
+        else if (type == CV_16SC1)
+            IPP_FILTER_MEDIAN_BORDER(Ipp16s, ipp16s, 16s_C1R);
+        else if (type == CV_32FC1)
+            IPP_FILTER_MEDIAN_BORDER(Ipp32f, ipp32f, 32f_C1R);
+    }
 #undef IPP_FILTER_MEDIAN_BORDER
 #endif
 

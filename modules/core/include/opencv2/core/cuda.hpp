@@ -261,8 +261,8 @@ public:
     int* refcount;
 
     //! helper fields used in locateROI and adjustROI
-    uchar* datastart;
-    uchar* dataend;
+    const uchar* datastart;
+    const uchar* dataend;
 
     //! allocator
     Allocator* allocator;
@@ -349,8 +349,8 @@ public:
     uchar* data;
     int* refcount;
 
-    uchar* datastart;
-    uchar* dataend;
+    const uchar* datastart;
+    const uchar* dataend;
 
     AllocType alloc_type;
 };

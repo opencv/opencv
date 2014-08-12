@@ -413,9 +413,9 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                 __global T * dst = (__global T *)(dstptr + dst_index);
 
 #if defined BORDER_CONSTANT
-
                 float xf = map1[0], yf = map2[0];
-                int sx = convert_int_sat_rtn(xf), sy = convert_int_sat_rtn(yf);
+                int sx = convert_int_sat_rtz(mad(xf, INTER_TAB_SIZE, 0.5f)) >> INTER_BITS;
+                int sy = convert_int_sat_rtz(mad(yf, INTER_TAB_SIZE, 0.5f)) >> INTER_BITS;
 
                 __constant float * coeffs_x = coeffs + ((convert_int_rte(xf * INTER_TAB_SIZE) & (INTER_TAB_SIZE - 1)) << 1);
                 __constant float * coeffs_y = coeffs + ((convert_int_rte(yf * INTER_TAB_SIZE) & (INTER_TAB_SIZE - 1)) << 1);

@@ -427,7 +427,7 @@ BRISK::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const fl
   if (dx + dy > 2)
   {
     // now the calculation:
-    uchar* ptr = image.data + x_left + imagecols * y_top;
+    const uchar* ptr = image.data + x_left + imagecols * y_top;
     // first the corners:
     ret_val = A * int(*ptr);
     ptr += dx + 1;
@@ -475,7 +475,7 @@ BRISK::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const fl
   }
 
   // now the calculation:
-  uchar* ptr = image.data + x_left + imagecols * y_top;
+  const uchar* ptr = image.data + x_left + imagecols * y_top;
   // first row:
   ret_val = A * int(*ptr);
   ptr++;
@@ -487,7 +487,7 @@ BRISK::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const fl
   ret_val += B * int(*ptr);
   // middle ones:
   ptr += imagecols - dx - 1;
-  uchar* end_j = ptr + dy * imagecols;
+  const uchar* end_j = ptr + dy * imagecols;
   for (; ptr < end_j; ptr += imagecols - dx - 1)
   {
     ret_val += r_x_1_i * int(*ptr);
@@ -607,7 +607,7 @@ BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, s
   int t2;
 
   // the feature orientation
-  uchar* ptr = descriptors.data;
+  const uchar* ptr = descriptors.data;
   for (size_t k = 0; k < ksize; k++)
   {
     cv::KeyPoint& kp = keypoints[k];
@@ -1070,7 +1070,7 @@ BriskScaleSpace::isMax2D(const int layer, const int x_layer, const int y_layer)
 {
   const cv::Mat& scores = pyramid_[layer].scores();
   const int scorescols = scores.cols;
-  uchar* data = scores.data + y_layer * scorescols + x_layer;
+  const uchar* data = scores.data + y_layer * scorescols + x_layer;
   // decision tree:
   const uchar center = (*data);
   data--;
@@ -2140,7 +2140,7 @@ BriskLayer::value(const cv::Mat& mat, float xf, float yf, float scale_in) const
     const int r_y = (int)((yf - y) * 1024);
     const int r_x_1 = (1024 - r_x);
     const int r_y_1 = (1024 - r_y);
-    uchar* ptr = image.data + x + y * imagecols;
+    const uchar* ptr = image.data + x + y * imagecols;
     // just interpolate:
     ret_val = (r_x_1 * r_y_1 * int(*ptr));
     ptr++;
@@ -2186,7 +2186,7 @@ BriskLayer::value(const cv::Mat& mat, float xf, float yf, float scale_in) const
   const int r_y1_i = (int)(r_y1 * scaling);
 
   // now the calculation:
-  uchar* ptr = image.data + x_left + imagecols * y_top;
+  const uchar* ptr = image.data + x_left + imagecols * y_top;
   // first row:
   ret_val = A * int(*ptr);
   ptr++;
@@ -2198,7 +2198,7 @@ BriskLayer::value(const cv::Mat& mat, float xf, float yf, float scale_in) const
   ret_val += B * int(*ptr);
   // middle ones:
   ptr += imagecols - dx - 1;
-  uchar* end_j = ptr + dy * imagecols;
+  const uchar* end_j = ptr + dy * imagecols;
   for (; ptr < end_j; ptr += imagecols - dx - 1)
   {
     ret_val += r_x_1_i * int(*ptr);

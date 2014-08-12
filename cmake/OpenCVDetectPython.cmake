@@ -26,6 +26,12 @@ function(find_python preferred_version min_version library_env include_dir_env
          libs_found libs_version_string libraries library debug_libraries
          debug_library include_path include_dir include_dir2 packages_path
          numpy_include_dirs numpy_version)
+
+  ocv_check_environment_variables(${executable})
+  if(${executable})
+    set(PYTHON_EXECUTABLE "${${executable}}")
+  endif()
+
   if(WIN32 AND NOT ${executable})
     # search for executable with the same bitness as resulting binaries
     # standard FindPythonInterp always prefers executable from system path

@@ -327,28 +327,6 @@ TEST( Features2d_DescriptorExtractor_ORB, regression )
     test.safe_run();
 }
 
-TEST( Features2d_DescriptorExtractor_FREAK, regression )
-{
-    // TODO adjust the parameters below
-    CV_DescriptorExtractorTest<Hamming> test( "descriptor-freak",  (CV_DescriptorExtractorTest<Hamming>::DistanceType)12.f,
-                                                 DescriptorExtractor::create("FREAK") );
-    test.safe_run();
-}
-
-TEST( Features2d_DescriptorExtractor_BRIEF, regression )
-{
-    CV_DescriptorExtractorTest<Hamming> test( "descriptor-brief",  1,
-                                               DescriptorExtractor::create("BRIEF") );
-    test.safe_run();
-}
-
-TEST( Features2d_DescriptorExtractor_OpponentBRIEF, regression )
-{
-    CV_DescriptorExtractorTest<Hamming> test( "descriptor-opponent-brief",  1,
-                                               DescriptorExtractor::create("OpponentBRIEF") );
-    test.safe_run();
-}
-
 TEST( Features2d_DescriptorExtractor_KAZE, regression )
 {
     CV_DescriptorExtractorTest< L2<float> > test( "descriptor-kaze",  0.03f,

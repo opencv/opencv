@@ -98,15 +98,15 @@ __kernel void warpAffine(__global const uchar * srcptr, int src_step, int src_of
     {
         int round_delta = (AB_SCALE >> 1);
 
-        int X0 = rint(fma(M[0], dx, fma(M[1], dy0, M[2])) * AB_SCALE) + round_delta;
-        int Y0 = rint(fma(M[3], dx, fma(M[4], dy0, M[5])) * AB_SCALE) + round_delta;
-
-        int XSTEP = (int)(M[1] * AB_SCALE);
-        int YSTEP = (int)(M[4] * AB_SCALE);
+        int X0_ = rint(M[0] * dx * AB_SCALE);
+        int Y0_ = rint(M[3] * dx * AB_SCALE);
         int dst_index = mad24(dy0, dst_step, mad24(dx, pixsize, dst_offset));
 
         for (int dy = dy0, dy1 = min(dst_rows, dy0 + rowsPerWI); dy < dy1; ++dy, dst_index += dst_step)
         {
+            int X0 = X0_ + rint(fma(M[1], dy, M[2]) * AB_SCALE) + round_delta;
+            int Y0 = Y0_ + rint(fma(M[4], dy, M[5]) * AB_SCALE) + round_delta;
+
             short sx = convert_short_sat(X0 >> AB_BITS);
             short sy = convert_short_sat(Y0 >> AB_BITS);
 
@@ -117,9 +117,6 @@ __kernel void warpAffine(__global const uchar * srcptr, int src_step, int src_of
             }
             else
                 storepix(scalar, dstptr + dst_index);
-
-            X0 += XSTEP;
-            Y0 += YSTEP;
         }
     }
 }

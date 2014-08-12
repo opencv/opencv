@@ -450,18 +450,18 @@ static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArr
 
     UMat templ  = _templ.getUMat();
     UMat result = _result.getUMat();
-    Size tsize = templ.size();
 
     if (cn==1)
     {
-        float templ_sum = static_cast<float>(sum(_templ)[0]) / tsize.area();
+        Scalar templMean = mean(templ);
+        float templ_sum = (float)templMean[0];
 
         k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, templ_sum);
     }
     else
     {
         Vec4f templ_sum = Vec4f::all(0);
-        templ_sum = sum(templ) / tsize.area();
+        templ_sum = (Vec4f)mean(templ);
 
        k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, templ_sum);    }
 
