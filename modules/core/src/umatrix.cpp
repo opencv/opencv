@@ -582,7 +582,7 @@ Mat UMat::getMat(int accessFlags) const
     hdr.flags = flags;
     hdr.u = u;
     hdr.datastart = u->data;
-    hdr.data = hdr.datastart + offset;
+    hdr.data = u->data + offset;
     hdr.datalimit = hdr.dataend = u->data + u->size;
     CV_XADD(&hdr.u->refcount, 1);
     return hdr;
@@ -593,15 +593,16 @@ void* UMat::handle(int accessFlags) const
     if( !u )
         return 0;
 
-    if ((accessFlags & ACCESS_WRITE) != 0)
-        u->markHostCopyObsolete(true);
-
     // check flags: if CPU copy is newer, copy it back to GPU.
     if( u->deviceCopyObsolete() )
     {
         CV_Assert(u->refcount == 0);
         u->currAllocator->unmap(u);
     }
+
+    if ((accessFlags & ACCESS_WRITE) != 0)
+        u->markHostCopyObsolete(true);
+
     return u->handle;
 }
 

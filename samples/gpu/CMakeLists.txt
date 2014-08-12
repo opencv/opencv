@@ -1,7 +1,6 @@
 SET(OPENCV_CUDA_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc opencv_imgcodecs opencv_videoio opencv_highgui
                                      opencv_ml opencv_video opencv_objdetect opencv_features2d
-                                     opencv_calib3d opencv_legacy opencv_contrib opencv_cuda
-                                     opencv_nonfree opencv_softcascade opencv_superres
+                                     opencv_calib3d opencv_cuda opencv_superres
                                      opencv_cudaarithm opencv_cudafilters opencv_cudawarping opencv_cudaimgproc
                                      opencv_cudafeatures2d opencv_cudaoptflow opencv_cudabgsegm
                                      opencv_cudastereo opencv_cudalegacy)

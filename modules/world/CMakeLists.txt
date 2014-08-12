@@ -53,3 +53,26 @@ endif()
 if(BUILD_opencv_highgui)
   ocv_highgui_configure_target()
 endif()
+
+if(IOS OR APPLE)
+  set(merge_libs "")
+  macro(ios_include_3party_libs)
+    foreach(l ${ARGN})
+      add_dependencies(${the_module} ${l})
+      list(APPEND merge_libs "$<TARGET_LINKER_FILE:${l}>")
+    endforeach()
+  endmacro()
+
+  if(WITH_PNG)
+    ios_include_3party_libs(zlib libpng)
+  endif()
+
+  if(WITH_JPEG)
+    ios_include_3party_libs(libjpeg)
+  endif()
+
+  add_custom_command(TARGET ${the_module} POST_BUILD
+    COMMAND /usr/bin/libtool -static -o ${CMAKE_CURRENT_BINARY_DIR}/${the_module}_fat.a $<TARGET_LINKER_FILE:${the_module}> ${merge_libs}
+    COMMAND mv ${CMAKE_CURRENT_BINARY_DIR}/${the_module}_fat.a $<TARGET_LINKER_FILE:${the_module}>
+  )
+endif()

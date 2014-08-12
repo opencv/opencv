@@ -1619,7 +1619,7 @@ DEF_CVT_FUNC_F(8u16s,  uchar, short, 8u16s_C1R)
 DEF_CVT_FUNC_F(8s16s,  schar, short, 8s16s_C1R)
 DEF_CVT_FUNC_F2(16u16s, ushort, short, 16u16s_C1RSfs)
 DEF_CVT_FUNC_F2(32s16s, int, short, 32s16s_C1RSfs)
-DEF_CVT_FUNC_F2(32f16s, float, short, 32f16s_C1RSfs)
+DEF_CVT_FUNC(32f16s, float, short)
 DEF_CVT_FUNC(64f16s, double, short)
 
 DEF_CVT_FUNC_F(8u32s,  uchar, int, 8u32s_C1R)
@@ -1948,7 +1948,7 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     UMat src = _src.getUMat(), lut = _lut.getUMat();
     _dst.create(src.size(), CV_MAKETYPE(ddepth, dcn));
     UMat dst = _dst.getUMat();
-    int kercn = lcn == 1 ? std::min(4, ocl::predictOptimalVectorWidth(_dst)) : dcn;
+    int kercn = lcn == 1 ? std::min(4, ocl::predictOptimalVectorWidth(_src, _dst)) : dcn;
 
     ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
                   format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", kercn, lcn,
