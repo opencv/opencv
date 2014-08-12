@@ -155,18 +155,6 @@ TEST(Features2d_Detector_Keypoints_ORB, validation)
     test.safe_run();
 }
 
-TEST(Features2d_Detector_Keypoints_Star, validation)
-{
-    CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.STAR"));
-    test.safe_run();
-}
-
-TEST(Features2d_Detector_Keypoints_Dense, validation)
-{
-    CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.Dense"));
-    test.safe_run();
-}
-
 TEST(Features2d_Detector_Keypoints_KAZE, validation)
 {
     CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.KAZE"));

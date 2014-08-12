@@ -2,10 +2,6 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree.hpp"
-#endif
-
 #ifdef HAVE_OPENCV_FEATURES2D
 #  include "opencv2/features2d.hpp"
 #endif
@@ -28,9 +24,6 @@ JNI_OnLoad(JavaVM* vm, void* )
         return -1;
 
     bool init = true;
-#ifdef HAVE_OPENCV_NONFREE
-    init &= cv::initModule_nonfree();
-#endif
 #ifdef HAVE_OPENCV_FEATURES2D
     init &= cv::initModule_features2d();
 #endif
