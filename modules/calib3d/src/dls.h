@@ -26,15 +26,30 @@ private:
             p.at<double>(1,i) = opoints.at<OpointType>(0,i).y;
             p.at<double>(2,i) = opoints.at<OpointType>(0,i).z;
 
-            z.at<double>(0,i) = ipoints.at<IpointType>(0,i).x;
-            z.at<double>(1,i) = ipoints.at<IpointType>(0,i).y;
-            z.at<double>(2,i) = (double)1;
+            // compute mean of object points
+            mn.at<double>(0) += p.at<double>(0,i);
+            mn.at<double>(1) += p.at<double>(1,i);
+            mn.at<double>(2) += p.at<double>(2,i);
+
+            // make z into unit vectors from normalized pixel coords
+            double sr = std::pow(ipoints.at<IpointType>(0,i).x, 2) +
+                        std::pow(ipoints.at<IpointType>(0,i).y, 2) + (double)1;
+                   sr = std::sqrt(sr);
+
+            z.at<double>(0,i) = ipoints.at<IpointType>(0,i).x / sr;
+            z.at<double>(1,i) = ipoints.at<IpointType>(0,i).y / sr;
+            z.at<double>(2,i) = (double)1 / sr;
         }
+
+        mn.at<double>(0) /= (double)N;
+        mn.at<double>(1) /= (double)N;
+        mn.at<double>(2) /= (double)N;
     }
 
-    void norm_z_vector();
+    //void norm_z_vector();
 
     // main algorithm
+    cv::Mat LeftMultVec(const cv::Mat& v);
     void run_kernel(const cv::Mat& pp);
     void build_coeff_matrix(const cv::Mat& pp, cv::Mat& Mtilde, cv::Mat& D);
     void compute_eigenvec(const cv::Mat& Mtilde, cv::Mat& eigenval_real, cv::Mat& eigenval_imag,
@@ -42,7 +57,6 @@ private:
     void fill_coeff(const cv::Mat * D);
 
     // useful functions
-    cv::Mat LeftMultVec(const cv::Mat& v);
     cv::Mat cayley_LS_M(const std::vector<double>& a, const std::vector<double>& b,
                         const std::vector<double>& c, const std::vector<double>& u);
     cv::Mat Hessian(const double s[]);
@@ -57,8 +71,7 @@ private:
     bool is_empty(const cv::Mat * v);
     bool positive_eigenvalues(const cv::Mat * eigenvalues);
 
-
-    cv::Mat p, z;        // object-image points
+    cv::Mat p, z, mn;        // object-image points
     int N;                // number of input points
     std::vector<double> f1coeff, f2coeff, f3coeff, cost_; // coefficient for coefficients matrix
     std::vector<cv::Mat> C_est_, t_est_;    // optimal candidates

@@ -196,7 +196,7 @@ public:
         eps[SOLVEPNP_ITERATIVE] = 1.0e-6;
         eps[SOLVEPNP_EPNP] = 1.0e-6;
         eps[SOLVEPNP_P3P] = 1.0e-4;
-        eps[SOLVEPNP_DLS] = 1.0e-6;
+        eps[SOLVEPNP_DLS] = 1.0e-4;
         totalTestsCount = 1000;
     }
 

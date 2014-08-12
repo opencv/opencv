@@ -108,7 +108,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
         return result;
     }
     else
-        CV_Error(CV_StsBadArg, "The flags argument must be one of CV_ITERATIVE, CV_P3P, CV_EPNP or CV_DLS");
+        CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, SOLVEPNP_EPNP or SOLVEPNP_DLS");
     return false;
 }
 
