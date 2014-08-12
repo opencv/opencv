@@ -185,7 +185,7 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 #endif
         {
 #ifdef HAVE_SRC_CONT
-            src_index = mul24(id, srcTSIZE);
+            src_index = id * srcTSIZE;//mul24(id, srcTSIZE);
 #else
             src_index = mad24(id / cols, src_step, mul24(id % cols, srcTSIZE));
 #endif
