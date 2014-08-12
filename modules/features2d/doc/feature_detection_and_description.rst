@@ -250,5 +250,3 @@ SIFT
 .. ocv:class:: SIFT : public Feature2D
 
 The SIFT algorithm has been moved to opencv_contrib/xfeatures2d module.
-
-
