@@ -157,9 +157,9 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
     templ_block.create(dft_size, CV_32F);
     result_data.create(dft_size, CV_32F);
 
-    image_spect.create(dft_size.height, dft_size.width / 2 + 1, CV_32FC2);
-    templ_spect.create(dft_size.height, dft_size.width / 2 + 1, CV_32FC2);
-    result_spect.create(dft_size.height, dft_size.width / 2 + 1, CV_32FC2);
+    image_spect.create(dft_size, CV_32FC2);
+    templ_spect.create(dft_size, CV_32FC2);
+    result_spect.create(dft_size, CV_32FC2);
 
     // Use maximum result matrix block size for the estimated DFT block size
     block_size.width = std::min(dft_size.width - templ_size.width + 1, result_size.width);
@@ -195,7 +195,7 @@ static bool convolve_dft(InputArray _image, InputArray _templ, OutputArray _resu
     copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0,
                    templ_block.cols - templ_roi.cols, BORDER_ISOLATED);
 
-    dft(templ_block, templ_spect, 0, templ.rows);
+    dft(templ_block, templ_spect, DFT_COMPLEX_OUTPUT, templ.rows);
 
     // Process all blocks of the result matrix
     for (int y = 0; y < result.rows; y += block_size.height)
@@ -211,7 +211,7 @@ static bool convolve_dft(InputArray _image, InputArray _templ, OutputArray _resu
             copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows,
                            0, image_block.cols - image_roi.cols, BORDER_ISOLATED);
 
-            dft(image_block, image_spect, 0);
+            dft(image_block, image_spect, DFT_COMPLEX_OUTPUT);
 
             mulSpectrums(image_spect, templ_spect, result_spect, 0, true);
 
