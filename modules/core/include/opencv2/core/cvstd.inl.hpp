@@ -49,6 +49,10 @@
 #  include <ostream>
 #endif
 
+#ifdef _MSC_VER
+#pragma warning( disable: 4127 )
+#endif
+
 namespace cv
 {
 #ifndef OPENCV_NOSTL
