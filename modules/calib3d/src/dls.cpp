@@ -417,19 +417,10 @@ cv::Mat dls::LeftMultVec(const cv::Mat& v)
 
     for (int i = 0; i < 3; ++i)
     {
-		mat_.at<double>(i, 3*i + 0) = v.at<double>(0);
-		mat_.at<double>(i, 3*i + 1) = v.at<double>(1);
-		mat_.at<double>(i, 3*i + 2) = v.at<double>(2);
-	}
-
-    /*cv::hconcat(v.clone().t(), zeros16, row1);    // first row
-    cv::hconcat(zeros13, v.clone().t(), row2);    // second row
-    cv::hconcat(row2, zeros13, row2);            // second row
-    cv::hconcat(zeros16, v.clone().t(), row3);    // third row
-
-    mat.push_back(row1);
-    mat.push_back(row2);
-    mat.push_back(row3);*/
+        mat_.at<double>(i, 3*i + 0) = v.at<double>(0);
+        mat_.at<double>(i, 3*i + 1) = v.at<double>(1);
+        mat_.at<double>(i, 3*i + 2) = v.at<double>(2);
+    }
 
     return mat_;
 }
