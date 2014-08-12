@@ -51,6 +51,7 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
     add(points2d, noise, points2d);
 
     declare.in(points3d, points2d);
+    declare.time(100);
 
     TEST_CYCLE_N(1000)
     {
@@ -58,7 +59,7 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
     }
 
     SANITY_CHECK(rvec, 1e-6);
-    SANITY_CHECK(tvec, 1e-3);
+    SANITY_CHECK(tvec, 1e-6);
 }
 
 PERF_TEST(PointsNum_Algo, solveP3P)
