@@ -46,8 +46,6 @@ private:
         mn.at<double>(2) /= (double)N;
     }
 
-    //void norm_z_vector();
-
     // main algorithm
     cv::Mat LeftMultVec(const cv::Mat& v);
     void run_kernel(const cv::Mat& pp);
