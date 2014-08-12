@@ -86,4 +86,3 @@ The current implementation supports the following types of a descriptor extracto
 
  * ``"BRISK"`` -- :ocv:class:`BRISK`
  * ``"ORB"`` -- :ocv:class:`ORB`
- 
