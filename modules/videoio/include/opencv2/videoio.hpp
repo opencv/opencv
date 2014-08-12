@@ -210,8 +210,8 @@ enum { CAP_PVAPI_FSTRIGMODE_FREERUN     = 0,    // Freerun
 // PVAPI: DecimationHorizontal, DecimationVertical
 enum { CAP_PVAPI_DECIMATION_OFF       = 1,    // Off
        CAP_PVAPI_DECIMATION_2OUTOF4   = 2,    // 2 out of 4 decimation
-       CAP_PVAPI_DECIMATION_2OUTOF8   = 3,    // 2 out of 8 decimation
-       CAP_PVAPI_DECIMATION_2OUTOF16  = 5     // 2 out of 16 decimation
+       CAP_PVAPI_DECIMATION_2OUTOF8   = 4,    // 2 out of 8 decimation
+       CAP_PVAPI_DECIMATION_2OUTOF16  = 8     // 2 out of 16 decimation
      };
 
 // Properties of cameras available through XIMEA SDK interface

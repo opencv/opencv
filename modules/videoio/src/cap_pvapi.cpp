@@ -349,7 +349,7 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
         stopCapture();
 
         // Reallocate Frames
-        if (!resizeCaptureFrame(value, currWidth))
+        if (!resizeCaptureFrame(currWidth, value))
         {
             startCapture();
             return false;
