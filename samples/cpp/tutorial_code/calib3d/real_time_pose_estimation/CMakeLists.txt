@@ -1,10 +1,6 @@
 set(sample_dir ${CMAKE_CURRENT_SOURCE_DIR}/tutorial_code/calib3d/real_time_pose_estimation/src/)
 set(target cpp-tutorial-)
 
-if(HAVE_opencv_nonfree)
-  ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/nonfree/include")
-endif()
-
 set(sample_pnplib
         ${sample_dir}CsvReader.cpp
         ${sample_dir}CsvWriter.cpp
