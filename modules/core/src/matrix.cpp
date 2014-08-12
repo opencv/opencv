@@ -3002,6 +3002,13 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
         CV_Assert(dst.cols == dst.rows);
         kernelName += "_inplace";
     }
+    else
+    {
+        // check required local memory size
+        size_t required_local_memory = (size_t) TILE_DIM*(TILE_DIM+1)*CV_ELEM_SIZE(type);
+        if (required_local_memory > ocl::Device::getDefault().localMemSize())
+            return false;
+    }
 
     ocl::Kernel k(kernelName.c_str(), ocl::core::transpose_oclsrc,
                   format("-D T=%s -D T1=%s -D cn=%d -D TILE_DIM=%d -D BLOCK_ROWS=%d -D rowsPerWI=%d",
