@@ -188,6 +188,8 @@ if(CUDA_FOUND)
       # we remove -frtti because it's used for C++ compiler
       # but NVCC uses C compiler by default
       string(REPLACE "-frtti" "" ${var} "${${var}}")
+
+      string(REPLACE "-fvisibility-inlines-hidden" "" ${var} "${${var}}")
     endforeach()
 
     if(BUILD_SHARED_LIBS)
