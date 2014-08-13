@@ -44,7 +44,7 @@
 #include <climits>
 #include <limits>
 
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_core.hpp"
 
 namespace cv
 {
@@ -479,9 +479,10 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
         haveMask = _mask.kind() != _InputArray::NONE,
         haveSrc2 = _src2.kind() != _InputArray::NONE;
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
-            kercn = cn == 1 && !haveMask ? ocl::predictOptimalVectorWidth(_src) : 1,
+            kercn = cn == 1 && !haveMask ? ocl::predictOptimalVectorWidth(_src, _src2) : 1,
             mcn = std::max(cn, kercn);
     CV_Assert(!haveSrc2 || _src2.type() == type);
+    int convert_cn = haveSrc2 ? mcn : cn;
 
     if ( (!doubleSupport && depth == CV_64F) || cn > 4 )
         return false;
@@ -513,7 +514,7 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
                          haveMask && _mask.isContinuous() ? " -D HAVE_MASK_CONT" : "", kercn,
                          haveSrc2 ? " -D HAVE_SRC2" : "", calc2 ? " -D OP_CALC2" : "",
                          haveSrc2 && _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "",
-                         depth <= CV_32S && ddepth == CV_32S ? ocl::convertTypeStr(CV_8U, ddepth, mcn, cvt[1]) : "noconvert");
+                         depth <= CV_32S && ddepth == CV_32S ? ocl::convertTypeStr(CV_8U, ddepth, convert_cn, cvt[1]) : "noconvert");
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc, opts);
     if (k.empty())
@@ -567,7 +568,7 @@ cv::Scalar cv::sum( InputArray _src )
 {
 #ifdef HAVE_OPENCL
     Scalar _res;
-    CV_OCL_RUN_(_src.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN_(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                 ocl_sum(_src, _res, OCL_OP_SUM),
                 _res)
 #endif
@@ -718,7 +719,7 @@ int cv::countNonZero( InputArray _src )
 
 #ifdef HAVE_OPENCL
     int res = -1;
-    CV_OCL_RUN_(_src.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN_(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                 ocl_countNonZero(_src, res),
                 res)
 #endif
@@ -781,7 +782,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
         int type = src.type();
         if( !mask.empty() )
         {
-            typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC1)(const void *, int, void *, int, IppiSize, Ipp64f *);
+            typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC1)(const void *, int, const void *, int, IppiSize, Ipp64f *);
             ippiMaskMeanFuncC1 ippFuncC1 =
             type == CV_8UC1 ? (ippiMaskMeanFuncC1)ippiMean_8u_C1MR :
             type == CV_16UC1 ? (ippiMaskMeanFuncC1)ippiMean_16u_C1MR :
@@ -794,7 +795,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
                     return Scalar(res);
                 setIppErrorStatus();
             }
-            typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC3)(const void *, int, void *, int, IppiSize, int, Ipp64f *);
+            typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
             ippiMaskMeanFuncC3 ippFuncC3 =
             type == CV_8UC3 ? (ippiMaskMeanFuncC3)ippiMean_8u_C3CMR :
             type == CV_16UC3 ? (ippiMaskMeanFuncC3)ippiMean_16u_C3CMR :
@@ -917,9 +918,16 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
     {
         int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
         bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
-                isContinuous = _src.isContinuous();
-        int groups = ocl::Device::getDefault().maxComputeUnits();
-        size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+                isContinuous = _src.isContinuous(),
+                isMaskContinuous = _mask.isContinuous();
+        const ocl::Device &defDev = ocl::Device::getDefault();
+        int groups = defDev.maxComputeUnits();
+        if (defDev.isIntel())
+        {
+            static const int subSliceEUCount = 10;
+            groups = (groups / subSliceEUCount) * 2;
+        }
+        size_t wgs = defDev.maxWorkGroupSize();
 
         int ddepth = std::max(CV_32S, depth), sqddepth = std::max(CV_32F, depth),
                 dtype = CV_MAKE_TYPE(ddepth, cn),
@@ -936,13 +944,14 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 
         char cvt[2][40];
         String opts = format("-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D sqddepth=%d"
-                             " -D sqdstT=%s -D sqdstT1=%s -D convertToSDT=%s -D cn=%d%s"
+                             " -D sqdstT=%s -D sqdstT1=%s -D convertToSDT=%s -D cn=%d%s%s"
                              " -D convertToDT=%s -D WGS=%d -D WGS2_ALIGNED=%d%s%s",
                              ocl::typeToStr(type), ocl::typeToStr(depth),
                              ocl::typeToStr(dtype), ocl::typeToStr(ddepth), sqddepth,
                              ocl::typeToStr(sqdtype), ocl::typeToStr(sqddepth),
                              ocl::convertTypeStr(depth, sqddepth, cn, cvt[0]),
                              cn, isContinuous ? " -D HAVE_SRC_CONT" : "",
+                             isMaskContinuous ? " -D HAVE_MASK_CONT" : "",
                              ocl::convertTypeStr(depth, ddepth, cn, cvt[1]),
                              (int)wgs, wgs2_aligned, haveMask ? " -D HAVE_MASK" : "",
                              doubleSupport ? " -D DOUBLE_SUPPORT" : "");
@@ -1018,7 +1027,7 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 
 void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
-    CV_OCL_RUN(_src.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                ocl_meanStdDev(_src, _mean, _sdv, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
@@ -1062,7 +1071,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
         int type = src.type();
         if( !mask.empty() )
         {
-            typedef IppStatus (CV_STDCALL* ippiMaskMeanStdDevFuncC1)(const void *, int, void *, int, IppiSize, Ipp64f *, Ipp64f *);
+            typedef IppStatus (CV_STDCALL* ippiMaskMeanStdDevFuncC1)(const void *, int, const void *, int, IppiSize, Ipp64f *, Ipp64f *);
             ippiMaskMeanStdDevFuncC1 ippFuncC1 =
             type == CV_8UC1 ? (ippiMaskMeanStdDevFuncC1)ippiMean_StdDev_8u_C1MR :
             type == CV_16UC1 ? (ippiMaskMeanStdDevFuncC1)ippiMean_StdDev_16u_C1MR :
@@ -1074,7 +1083,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
                     return;
                 setIppErrorStatus();
             }
-            typedef IppStatus (CV_STDCALL* ippiMaskMeanStdDevFuncC3)(const void *, int, void *, int, IppiSize, int, Ipp64f *, Ipp64f *);
+            typedef IppStatus (CV_STDCALL* ippiMaskMeanStdDevFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *, Ipp64f *);
             ippiMaskMeanStdDevFuncC3 ippFuncC3 =
             type == CV_8UC3 ? (ippiMaskMeanStdDevFuncC3)ippiMean_StdDev_8u_C3CMR :
             type == CV_16UC3 ? (ippiMaskMeanStdDevFuncC3)ippiMean_StdDev_16u_C3CMR :
@@ -1445,6 +1454,9 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
 
     CV_Assert(!haveSrc2 || _src2.type() == type);
 
+    if (depth == CV_32S)
+        return false;
+
     if ((depth == CV_64F || ddepth == CV_64F) && !doubleSupport)
         return false;
 
@@ -1561,7 +1573,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
         (cn > 1 && _mask.empty() && !minIdx && !maxIdx) );
 
-    CV_OCL_RUN(_src.isUMat() && _src.dims() <= 2  && (_mask.empty() || _src.size() == _mask.size()),
+    CV_OCL_RUN(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2  && (_mask.empty() || _src.size() == _mask.size()),
                ocl_minMaxIdx(_src, minVal, maxVal, minIdx, maxIdx, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
@@ -2178,6 +2190,9 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
          (!doubleSupport && depth == CV_64F))
         return false;
 
+    if( depth == CV_32F && (!_mask.empty() || normType == NORM_INF) )
+        return false;
+
     UMat src = _src.getUMat();
 
     if (normType == NORM_INF)
@@ -2221,7 +2236,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 
 #ifdef HAVE_OPENCL
     double _result = 0;
-    CV_OCL_RUN_(_src.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN_(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                 ocl_norm(_src, normType, _mask, _result),
                 _result)
 #endif
@@ -2270,7 +2285,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 
                 setIppErrorStatus();
             }
-            typedef IppStatus (CV_STDCALL* ippiMaskNormFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
+            /*typedef IppStatus (CV_STDCALL* ippiMaskNormFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
             ippiMaskNormFuncC3 ippFuncC3 =
                 normType == NORM_INF ?
                 (type == CV_8UC3 ? (ippiMaskNormFuncC3)ippiNorm_Inf_8u_C3CMR :
@@ -2305,7 +2320,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
                     return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
                 }
                 setIppErrorStatus();
-            }
+            }*/
         }
         else
         {
@@ -2533,7 +2548,7 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArr
     normType &= ~NORM_RELATIVE;
     bool normsum = normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR;
 
-    if ( !(normType == NORM_INF || normsum) )
+    if ( !normsum || !_mask.empty() )
         return false;
 
     if (normsum)
@@ -2581,7 +2596,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 
 #ifdef HAVE_OPENCL
     double _result = 0;
-    CV_OCL_RUN_(_src1.isUMat(),
+    CV_OCL_RUN_(OCL_PERFORMANCE_CHECK(_src1.isUMat()),
                 ocl_norm(_src1, _src2, normType, _mask, _result),
                 _result)
 #endif
@@ -2711,7 +2726,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 0) :
                 normType == NORM_L1 ?
                 (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8u_C1MR :
-                type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8s_C1MR :
+                //type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8s_C1MR :
                 type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_32f_C1MR :
                 0) :
@@ -2728,7 +2743,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                     return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
                 setIppErrorStatus();
             }
-            typedef IppStatus (CV_STDCALL* ippiMaskNormDiffFuncC3)(const void *, int, const void *, int, const void *, int, IppiSize, int, Ipp64f *);
+            /*typedef IppStatus (CV_STDCALL* ippiMaskNormDiffFuncC3)(const void *, int, const void *, int, const void *, int, IppiSize, int, Ipp64f *);
             ippiMaskNormDiffFuncC3 ippFuncC3 =
                 normType == NORM_INF ?
                 (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_8u_C3CMR :
@@ -2763,7 +2778,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                     return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
                 }
                 setIppErrorStatus();
-            }
+            }*/
         }
         else
         {

@@ -20,7 +20,7 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/features2D/SURF_Homography.cpp>`_
+This tutorial code's is shown lines below.
 
 .. code-block:: cpp
 
@@ -30,9 +30,10 @@ This tutorial code's is shown lines below. You can also download it from `here <
    #include "opencv2/features2d.hpp"
    #include "opencv2/highgui.hpp"
    #include "opencv2/calib3d.hpp"
-   #include "opencv2/nonfree.hpp"
+   #include "opencv2/xfeatures2d.hpp"
 
    using namespace cv;
+   using namespace cv::xfeatures2d;
 
    void readme();
 

@@ -81,29 +81,34 @@
 #define PROCESS_ELEM(acc, value) acc += value
 #elif defined OCL_CV_REDUCE_MAX
 #define INIT_VALUE MIN_VAL
-#define PROCESS_ELEM(acc, value) acc = value > acc ? value : acc
+#define PROCESS_ELEM(acc, value) acc = max(value, acc)
 #elif defined OCL_CV_REDUCE_MIN
 #define INIT_VALUE MAX_VAL
-#define PROCESS_ELEM(acc, value) acc = value < acc ? value : acc
+#define PROCESS_ELEM(acc, value) acc = min(value, acc)
 #else
 #error "No operation is specified"
 #endif
 
 #ifdef OP_REDUCE_PRE
 
-__kernel void reduce_horz_pre(__global const uchar * srcptr, int src_step, int src_offset, int rows, int cols,
-                     __global uchar * bufptr, int buf_step, int buf_offset)
+__kernel void reduce_horz_opt(__global const uchar * srcptr, int src_step, int src_offset, int rows, int cols,
+                     __global uchar * dstptr, int dst_step, int dst_offset
+#ifdef OCL_CV_REDUCE_AVG
+                     , float fscale
+#endif
+                     )
 {
+    __local bufT lsmem[TILE_HEIGHT][BUF_COLS][cn];
+
     int x = get_global_id(0);
     int y = get_global_id(1);
-    if (x < BUF_COLS)
+    int liy = get_local_id(1);
+    if ((x < BUF_COLS) && (y < rows))
     {
         int src_index = mad24(y, src_step, mad24(x, (int)sizeof(srcT) * cn, src_offset));
-        int buf_index = mad24(y, buf_step, mad24(x, (int)sizeof(dstT) * cn, buf_offset));
 
         __global const srcT * src = (__global const srcT *)(srcptr + src_index);
-        __global dstT * buf = (__global dstT *)(bufptr + buf_index);
-        dstT tmp[cn] = { INIT_VALUE };
+        bufT tmp[cn] = { INIT_VALUE };
 
         int src_step_mul = BUF_COLS * cn;
         for (int idx = x; idx < cols; idx += BUF_COLS, src += src_step_mul)
@@ -111,14 +116,49 @@ __kernel void reduce_horz_pre(__global const uchar * srcptr, int src_step, int s
             #pragma unroll
             for (int c = 0; c < cn; ++c)
             {
-                dstT value = convertToDT(src[c]);
+                bufT value = convertToBufT(src[c]);
                 PROCESS_ELEM(tmp[c], value);
             }
         }
 
         #pragma unroll
         for (int c = 0; c < cn; ++c)
-            buf[c] = tmp[c];
+            lsmem[liy][x][c] = tmp[c];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if ((x < BUF_COLS / 2) && (y < rows))
+    {
+        #pragma unroll
+        for (int c = 0; c < cn; ++c)
+        {
+            PROCESS_ELEM(lsmem[liy][x][c], lsmem[liy][x +  BUF_COLS / 2][c]);
+        }
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if ((x == 0) && (y < rows))
+    {
+        int dst_index = mad24(y, dst_step, dst_offset);
+
+        __global dstT * dst = (__global dstT *)(dstptr + dst_index);
+        bufT tmp[cn] = { INIT_VALUE };
+
+        #pragma unroll
+        for (int xin = 0; xin < BUF_COLS / 2; xin ++)
+        {
+            #pragma unroll
+            for (int c = 0; c < cn; ++c)
+            {
+                PROCESS_ELEM(tmp[c], lsmem[liy][xin][c]);
+            }
+        }
+
+        #pragma unroll
+        for (int c = 0; c < cn; ++c)
+#ifdef OCL_CV_REDUCE_AVG
+            dst[c] = convertToDT(convertToWT(tmp[c]) * fscale);
+#else
+            dst[c] = convertToDT(tmp[c]);
+#endif
     }
 }
 

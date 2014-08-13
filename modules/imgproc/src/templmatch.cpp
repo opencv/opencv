@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_imgproc.hpp"
 
 ////////////////////////////////////////////////// matchTemplate //////////////////////////////////////////////////////////
 
@@ -79,7 +79,7 @@ static bool extractFirstChannel_32F(InputArray _image, OutputArray _result, int 
 static bool sumTemplate(InputArray _src, UMat & result)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    int wdepth = std::max(CV_32S, depth), wtype = CV_MAKE_TYPE(wdepth, cn);
+    int wdepth = CV_32F, wtype = CV_MAKE_TYPE(wdepth, cn);
     size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
 
     int wgs2_aligned = 1;
@@ -89,10 +89,10 @@ static bool sumTemplate(InputArray _src, UMat & result)
 
     char cvt[40];
     ocl::Kernel k("calcSum", ocl::imgproc::match_template_oclsrc,
-                  format("-D CALC_SUM -D T=%s -D T1=%s -D WT=%s -D cn=%d -D convertToWT=%s -D WGS=%d -D WGS2_ALIGNED=%d -D wdepth=%d",
+                  format("-D CALC_SUM -D T=%s -D T1=%s -D WT=%s -D cn=%d -D convertToWT=%s -D WGS=%d -D WGS2_ALIGNED=%d",
                          ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype), cn,
                          ocl::convertTypeStr(depth, wdepth, cn, cvt),
-                         (int)wgs, wgs2_aligned, wdepth));
+                         (int)wgs, wgs2_aligned));
     if (k.empty())
         return false;
 
@@ -110,12 +110,8 @@ static bool sumTemplate(InputArray _src, UMat & result)
 
 static bool useNaive(Size size)
 {
-    if (!ocl::Device::getDefault().isIntel())
-        return true;
-
     int dft_size = 18;
     return size.height < dft_size && size.width < dft_size;
-
 }
 
 struct ConvolveBuf
@@ -129,7 +125,6 @@ struct ConvolveBuf
     UMat image_block, templ_block, result_data;
 
     void create(Size image_size, Size templ_size);
-    static Size estimateBlockSize(Size result_size);
 };
 
 void ConvolveBuf::create(Size image_size, Size templ_size)
@@ -137,19 +132,26 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
     result_size = Size(image_size.width - templ_size.width + 1,
                        image_size.height - templ_size.height + 1);
 
-    block_size = user_block_size;
-    if (user_block_size.width == 0 || user_block_size.height == 0)
-        block_size = estimateBlockSize(result_size);
+    const double blockScale = 4.5;
+    const int minBlockSize = 256;
 
-    dft_size.width  = 1 << int(ceil(std::log(block_size.width + templ_size.width - 1.) / std::log(2.)));
-    dft_size.height = 1 << int(ceil(std::log(block_size.height + templ_size.height - 1.) / std::log(2.)));
+    block_size.width = cvRound(result_size.width*blockScale);
+    block_size.width = std::max( block_size.width, minBlockSize - templ_size.width + 1 );
+    block_size.width = std::min( block_size.width, result_size.width );
+    block_size.height = cvRound(templ_size.height*blockScale);
+    block_size.height = std::max( block_size.height, minBlockSize - templ_size.height + 1 );
+    block_size.height = std::min( block_size.height, result_size.height );
 
-    dft_size.width = getOptimalDFTSize(block_size.width + templ_size.width - 1);
+    dft_size.width = std::max(getOptimalDFTSize(block_size.width + templ_size.width - 1), 2);
     dft_size.height = getOptimalDFTSize(block_size.height + templ_size.height - 1);
+    if( dft_size.width <= 0 || dft_size.height <= 0 )
+        CV_Error( CV_StsOutOfRange, "the input arrays are too big" );
 
-    // To avoid wasting time doing small DFTs
-    dft_size.width = std::max(dft_size.width, 512);
-    dft_size.height = std::max(dft_size.height, 512);
+    // recompute block size
+    block_size.width = dft_size.width - templ_size.width + 1;
+    block_size.width = std::min( block_size.width, result_size.width);
+    block_size.height = dft_size.height - templ_size.height + 1;
+    block_size.height = std::min( block_size.height, result_size.height );
 
     image_block.create(dft_size, CV_32F);
     templ_block.create(dft_size, CV_32F);
@@ -162,15 +164,6 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
     // Use maximum result matrix block size for the estimated DFT block size
     block_size.width = std::min(dft_size.width - templ_size.width + 1, result_size.width);
     block_size.height = std::min(dft_size.height - templ_size.height + 1, result_size.height);
-}
-
-Size ConvolveBuf::estimateBlockSize(Size result_size)
-{
-    int width = (result_size.width + 2) / 3;
-    int height = (result_size.height + 2) / 3;
-    width = std::min(width, result_size.width);
-    height = std::min(height, result_size.height);
-    return Size(width, height);
 }
 
 static bool convolve_dft(InputArray _image, InputArray _templ, OutputArray _result)
@@ -202,7 +195,7 @@ static bool convolve_dft(InputArray _image, InputArray _templ, OutputArray _resu
     copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0,
                    templ_block.cols - templ_roi.cols, BORDER_ISOLATED);
 
-    dft(templ_block, templ_spect, 0);
+    dft(templ_block, templ_spect, 0, templ.rows);
 
     // Process all blocks of the result matrix
     for (int y = 0; y < result.rows; y += block_size.height)
@@ -281,8 +274,8 @@ static bool matchTemplateNaive_CCORR(InputArray _image, InputArray _templ, Outpu
     const char* convertToWT = ocl::convertTypeStr(depth, wdepth, rated_cn, cvt1);
 
     ocl::Kernel k("matchTemplate_Naive_CCORR", ocl::imgproc::match_template_oclsrc,
-                  format("-D CCORR -D T=%s -D T1=%s -D WT=%s -D WT1=%s -D convertToWT=%s -D convertToWT1=%s -D cn=%d -D wdepth=%d -D PIX_PER_WI_X=%d", ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype1), ocl::typeToStr(wtype),
-                         convertToWT, convertToWT1, cn, wdepth, pxPerWIx));
+                  format("-D CCORR -D T=%s -D T1=%s -D WT=%s -D WT1=%s -D convertToWT=%s -D convertToWT1=%s -D cn=%d -D PIX_PER_WI_X=%d", ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype1), ocl::typeToStr(wtype),
+                         convertToWT, convertToWT1, cn, pxPerWIx));
     if (k.empty())
         return false;
 
@@ -358,8 +351,8 @@ static bool matchTemplateNaive_SQDIFF(InputArray _image, InputArray _templ, Outp
 
     char cvt[40];
     ocl::Kernel k("matchTemplate_Naive_SQDIFF", ocl::imgproc::match_template_oclsrc,
-                  format("-D SQDIFF -D T=%s -D T1=%s -D WT=%s -D convertToWT=%s -D cn=%d -D wdepth=%d", ocl::typeToStr(type), ocl::typeToStr(depth),
-                         ocl::typeToStr(wtype), ocl::convertTypeStr(depth, wdepth, cn, cvt), cn, wdepth));
+                  format("-D SQDIFF -D T=%s -D T1=%s -D WT=%s -D convertToWT=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth),
+                         ocl::typeToStr(wtype), ocl::convertTypeStr(depth, wdepth, cn, cvt), cn));
     if (k.empty())
         return false;
 
@@ -457,18 +450,18 @@ static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArr
 
     UMat templ  = _templ.getUMat();
     UMat result = _result.getUMat();
-    Size tsize = templ.size();
 
     if (cn==1)
     {
-        float templ_sum = static_cast<float>(sum(_templ)[0]) / tsize.area();
+        Scalar templMean = mean(templ);
+        float templ_sum = (float)templMean[0];
 
         k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, templ_sum);
     }
     else
     {
         Vec4f templ_sum = Vec4f::all(0);
-        templ_sum = sum(templ) / tsize.area();
+        templ_sum = (Vec4f)mean(templ);
 
        k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, templ_sum);    }
 

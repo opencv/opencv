@@ -47,28 +47,30 @@
 // */
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_core.hpp"
 
 namespace cv
 {
 
 struct NOP {};
 
-#if CV_SSE2
+#if CV_SSE2 || CV_NEON
 
 #define FUNCTOR_TEMPLATE(name)          \
     template<typename T> struct name {}
 
 FUNCTOR_TEMPLATE(VLoadStore128);
+#if CV_SSE2
 FUNCTOR_TEMPLATE(VLoadStore64);
 FUNCTOR_TEMPLATE(VLoadStore128Aligned);
+#endif
 
 #endif
 
 template<typename T, class Op, class VOp>
 void vBinOp(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, size_t step, Size sz)
 {
-#if CV_SSE2
+#if CV_SSE2 || CV_NEON
     VOp vop;
 #endif
     Op op;
@@ -79,9 +81,11 @@ void vBinOp(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, si
     {
         int x = 0;
 
+#if CV_NEON || CV_SSE2
 #if CV_SSE2
         if( USE_SSE2 )
         {
+#endif
             for( ; x <= sz.width - 32/(int)sizeof(T); x += 32/sizeof(T) )
             {
                 typename VLoadStore128<T>::reg_type r0 = VLoadStore128<T>::load(src1 + x               );
@@ -91,7 +95,9 @@ void vBinOp(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, si
                 VLoadStore128<T>::store(dst + x               , r0);
                 VLoadStore128<T>::store(dst + x + 16/sizeof(T), r1);
             }
+#if CV_SSE2
         }
+#endif
 #endif
 #if CV_SSE2
         if( USE_SSE2 )
@@ -125,7 +131,7 @@ template<typename T, class Op, class Op32>
 void vBinOp32(const T* src1, size_t step1, const T* src2, size_t step2,
               T* dst, size_t step, Size sz)
 {
-#if CV_SSE2
+#if CV_SSE2 || CV_NEON
     Op32 op32;
 #endif
     Op op;
@@ -153,9 +159,11 @@ void vBinOp32(const T* src1, size_t step1, const T* src2, size_t step2,
             }
         }
 #endif
+#if CV_NEON || CV_SSE2
 #if CV_SSE2
         if( USE_SSE2 )
         {
+#endif
             for( ; x <= sz.width - 8; x += 8 )
             {
                 typename VLoadStore128<T>::reg_type r0 = VLoadStore128<T>::load(src1 + x    );
@@ -165,7 +173,9 @@ void vBinOp32(const T* src1, size_t step1, const T* src2, size_t step2,
                 VLoadStore128<T>::store(dst + x    , r0);
                 VLoadStore128<T>::store(dst + x + 4, r1);
             }
+#if CV_SSE2
         }
+#endif
 #endif
 #if CV_ENABLE_UNROLLED
         for( ; x <= sz.width - 4; x += 4 )
@@ -383,7 +393,98 @@ FUNCTOR_TEMPLATE(VNot);
 FUNCTOR_CLOSURE_1arg(VNot, uchar, return _mm_xor_si128(_mm_set1_epi32(-1), a));
 #endif
 
-#if CV_SSE2
+#if CV_NEON
+
+#define FUNCTOR_LOADSTORE(name, template_arg, register_type, load_body, store_body)\
+    template <>                                                                \
+    struct name<template_arg>{                                                 \
+        typedef register_type reg_type;                                        \
+        static reg_type load(const template_arg * p) { return load_body (p);}; \
+        static void store(template_arg * p, reg_type v) { store_body (p, v);}; \
+    }
+
+#define FUNCTOR_CLOSURE_2arg(name, template_arg, body)\
+    template<>                                                         \
+    struct name<template_arg>                                          \
+    {                                                                  \
+        VLoadStore128<template_arg>::reg_type operator()(              \
+                        VLoadStore128<template_arg>::reg_type a,       \
+                        VLoadStore128<template_arg>::reg_type b) const \
+        {                                                              \
+            return body;                                               \
+        };                                                             \
+    }
+
+#define FUNCTOR_CLOSURE_1arg(name, template_arg, body)\
+    template<>                                                         \
+    struct name<template_arg>                                          \
+    {                                                                  \
+        VLoadStore128<template_arg>::reg_type operator()(              \
+                        VLoadStore128<template_arg>::reg_type a,       \
+                        VLoadStore128<template_arg>::reg_type  ) const \
+        {                                                              \
+            return body;                                               \
+        };                                                             \
+    }
+
+FUNCTOR_LOADSTORE(VLoadStore128,  uchar,  uint8x16_t, vld1q_u8 , vst1q_u8 );
+FUNCTOR_LOADSTORE(VLoadStore128,  schar,   int8x16_t, vld1q_s8 , vst1q_s8 );
+FUNCTOR_LOADSTORE(VLoadStore128, ushort,  uint16x8_t, vld1q_u16, vst1q_u16);
+FUNCTOR_LOADSTORE(VLoadStore128,  short,   int16x8_t, vld1q_s16, vst1q_s16);
+FUNCTOR_LOADSTORE(VLoadStore128,    int,   int32x4_t, vld1q_s32, vst1q_s32);
+FUNCTOR_LOADSTORE(VLoadStore128,  float, float32x4_t, vld1q_f32, vst1q_f32);
+
+FUNCTOR_TEMPLATE(VAdd);
+FUNCTOR_CLOSURE_2arg(VAdd,  uchar, vqaddq_u8 (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,  schar, vqaddq_s8 (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd, ushort, vqaddq_u16(a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,  short, vqaddq_s16(a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,    int, vaddq_s32 (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,  float, vaddq_f32 (a, b));
+
+FUNCTOR_TEMPLATE(VSub);
+FUNCTOR_CLOSURE_2arg(VSub,  uchar, vqsubq_u8 (a, b));
+FUNCTOR_CLOSURE_2arg(VSub,  schar, vqsubq_s8 (a, b));
+FUNCTOR_CLOSURE_2arg(VSub, ushort, vqsubq_u16(a, b));
+FUNCTOR_CLOSURE_2arg(VSub,  short, vqsubq_s16(a, b));
+FUNCTOR_CLOSURE_2arg(VSub,    int, vsubq_s32 (a, b));
+FUNCTOR_CLOSURE_2arg(VSub,  float, vsubq_f32 (a, b));
+
+FUNCTOR_TEMPLATE(VMin);
+FUNCTOR_CLOSURE_2arg(VMin,  uchar, vminq_u8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMin,  schar, vminq_s8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMin, ushort, vminq_u16(a, b));
+FUNCTOR_CLOSURE_2arg(VMin,  short, vminq_s16(a, b));
+FUNCTOR_CLOSURE_2arg(VMin,    int, vminq_s32(a, b));
+FUNCTOR_CLOSURE_2arg(VMin,  float, vminq_f32(a, b));
+
+FUNCTOR_TEMPLATE(VMax);
+FUNCTOR_CLOSURE_2arg(VMax,  uchar, vmaxq_u8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMax,  schar, vmaxq_s8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMax, ushort, vmaxq_u16(a, b));
+FUNCTOR_CLOSURE_2arg(VMax,  short, vmaxq_s16(a, b));
+FUNCTOR_CLOSURE_2arg(VMax,    int, vmaxq_s32(a, b));
+FUNCTOR_CLOSURE_2arg(VMax,  float, vmaxq_f32(a, b));
+
+FUNCTOR_TEMPLATE(VAbsDiff);
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  uchar, vabdq_u8  (a, b));
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  schar, vqabsq_s8 (vqsubq_s8(a, b)));
+FUNCTOR_CLOSURE_2arg(VAbsDiff, ushort, vabdq_u16 (a, b));
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  short, vqabsq_s16(vqsubq_s16(a, b)));
+FUNCTOR_CLOSURE_2arg(VAbsDiff,    int, vabdq_s32 (a, b));
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  float, vabdq_f32 (a, b));
+
+FUNCTOR_TEMPLATE(VAnd);
+FUNCTOR_CLOSURE_2arg(VAnd, uchar, vandq_u8(a, b));
+FUNCTOR_TEMPLATE(VOr);
+FUNCTOR_CLOSURE_2arg(VOr , uchar, vorrq_u8(a, b));
+FUNCTOR_TEMPLATE(VXor);
+FUNCTOR_CLOSURE_2arg(VXor, uchar, veorq_u8(a, b));
+FUNCTOR_TEMPLATE(VNot);
+FUNCTOR_CLOSURE_1arg(VNot, uchar, vmvnq_u8(a   ));
+#endif
+
+#if CV_SSE2 || CV_NEON
 #define IF_SIMD(op) op
 #else
 #define IF_SIMD(op) NOP
@@ -1503,7 +1604,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     Size sz1 = dims1 <= 2 ? psrc1->size() : Size();
     Size sz2 = dims2 <= 2 ? psrc2->size() : Size();
 #ifdef HAVE_OPENCL
-    bool use_opencl = _dst.isUMat() && dims1 <= 2 && dims2 <= 2;
+    bool use_opencl = OCL_PERFORMANCE_CHECK(_dst.isUMat()) && dims1 <= 2 && dims2 <= 2;
 #endif
     bool src1Scalar = checkScalar(*psrc1, type2, kind1, kind2);
     bool src2Scalar = checkScalar(*psrc2, type1, kind2, kind1);
@@ -2336,6 +2437,34 @@ addWeighted8u( const uchar* src1, size_t step1,
                 _mm_storel_epi64((__m128i*)(dst + x), u);
             }
         }
+#elif CV_NEON
+        float32x4_t g = vdupq_n_f32 (gamma);
+
+        for( ; x <= size.width - 8; x += 8 )
+        {
+            uint8x8_t in1 = vld1_u8(src1+x);
+            uint16x8_t in1_16 = vmovl_u8(in1);
+            float32x4_t in1_f_l = vcvtq_f32_u32(vmovl_u16(vget_low_u16(in1_16)));
+            float32x4_t in1_f_h = vcvtq_f32_u32(vmovl_u16(vget_high_u16(in1_16)));
+
+            uint8x8_t in2 = vld1_u8(src2+x);
+            uint16x8_t in2_16 = vmovl_u8(in2);
+            float32x4_t in2_f_l = vcvtq_f32_u32(vmovl_u16(vget_low_u16(in2_16)));
+            float32x4_t in2_f_h = vcvtq_f32_u32(vmovl_u16(vget_high_u16(in2_16)));
+
+            float32x4_t out_f_l = vaddq_f32(vmulq_n_f32(in1_f_l, alpha), vmulq_n_f32(in2_f_l, beta));
+            float32x4_t out_f_h = vaddq_f32(vmulq_n_f32(in1_f_h, alpha), vmulq_n_f32(in2_f_h, beta));
+            out_f_l = vaddq_f32(out_f_l, g);
+            out_f_h = vaddq_f32(out_f_h, g);
+
+            uint16x4_t out_16_l = vqmovun_s32(vcvtq_s32_f32(out_f_l));
+            uint16x4_t out_16_h = vqmovun_s32(vcvtq_s32_f32(out_f_h));
+
+            uint16x8_t out_16 = vcombine_u16(out_16_l, out_16_h);
+            uint8x8_t out = vqmovn_u16(out_16);
+
+            vst1_u8(dst+x, out);
+        }
 #endif
         #if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
@@ -2546,6 +2675,14 @@ static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t ste
 
                 }
             }
+           #elif CV_NEON
+            uint8x16_t mask = code == CMP_GT ? vdupq_n_u8(0) : vdupq_n_u8(255);
+
+            for( ; x <= size.width - 16; x += 16 )
+            {
+                vst1q_u8(dst+x, veorq_u8(vcgtq_u8(vld1q_u8(src1+x), vld1q_u8(src2+x)), mask));
+            }
+
            #endif
 
             for( ; x < size.width; x++ ){
@@ -2569,6 +2706,13 @@ static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t ste
                     r00 = _mm_xor_si128 ( _mm_cmpeq_epi8 (r00, r10), m128);
                     _mm_storeu_si128((__m128i*)(dst + x), r00);
                 }
+            }
+           #elif CV_NEON
+            uint8x16_t mask = code == CMP_EQ ? vdupq_n_u8(0) : vdupq_n_u8(255);
+
+            for( ; x <= size.width - 16; x += 16 )
+            {
+                vst1q_u8(dst+x, veorq_u8(vceqq_u8(vld1q_u8(src1+x), vld1q_u8(src2+x)), mask));
             }
            #endif
            for( ; x < size.width; x++ )
@@ -2655,6 +2799,22 @@ static void cmp16s(const short* src1, size_t step1, const short* src2, size_t st
                     x += 8;
                 }
             }
+           #elif CV_NEON
+            uint8x16_t mask = code == CMP_GT ? vdupq_n_u8(0) : vdupq_n_u8(255);
+
+            for( ; x <= size.width - 16; x += 16 )
+            {
+                int16x8_t in1 = vld1q_s16(src1 + x);
+                int16x8_t in2 = vld1q_s16(src2 + x);
+                uint8x8_t t1 = vmovn_u16(vcgtq_s16(in1, in2));
+
+                in1 = vld1q_s16(src1 + x + 8);
+                in2 = vld1q_s16(src2 + x + 8);
+                uint8x8_t t2 = vmovn_u16(vcgtq_s16(in1, in2));
+
+                vst1q_u8(dst+x, veorq_u8(vcombine_u8(t1, t2), mask));
+            }
+
            #endif
 
             for( ; x < size.width; x++ ){
@@ -2692,6 +2852,21 @@ static void cmp16s(const short* src1, size_t step1, const short* src2, size_t st
 
                     x += 8;
                 }
+            }
+           #elif CV_NEON
+            uint8x16_t mask = code == CMP_EQ ? vdupq_n_u8(0) : vdupq_n_u8(255);
+
+            for( ; x <= size.width - 16; x += 16 )
+            {
+                int16x8_t in1 = vld1q_s16(src1 + x);
+                int16x8_t in2 = vld1q_s16(src2 + x);
+                uint8x8_t t1 = vmovn_u16(vceqq_s16(in1, in2));
+
+                in1 = vld1q_s16(src1 + x + 8);
+                in2 = vld1q_s16(src2 + x + 8);
+                uint8x8_t t2 = vmovn_u16(vceqq_s16(in1, in2));
+
+                vst1q_u8(dst+x, veorq_u8(vcombine_u8(t1, t2), mask));
             }
            #endif
            for( ; x < size.width; x++ )
@@ -2878,7 +3053,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         haveScalar = true;
     }
 
-    CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && _dst.isUMat(),
+    CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
                ocl_compare(_src1, _src2, _dst, op, haveScalar))
 
     int kind1 = _src1.kind(), kind2 = _src2.kind();
@@ -2980,8 +3155,341 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
 namespace cv
 {
 
-template<typename T> static void
-inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
+template <typename T>
+struct InRange_SIMD
+{
+    int operator () (const T *, const T *, const T *, uchar *, int) const
+    {
+        return 0;
+    }
+};
+
+#if CV_SSE2
+
+template <>
+struct InRange_SIMD<uchar>
+{
+    int operator () (const uchar * src1, const uchar * src2, const uchar * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_full = _mm_set1_epi8(-1), v_128 = _mm_set1_epi8(-128);
+
+            for ( ; x <= len - 16; x += 16 )
+            {
+                __m128i v_src = _mm_add_epi8(_mm_loadu_si128((const __m128i *)(src1 + x)), v_128);
+                __m128i v_mask1 = _mm_cmpgt_epi8(_mm_add_epi8(_mm_loadu_si128((const __m128i *)(src2 + x)), v_128), v_src);
+                __m128i v_mask2 = _mm_cmpgt_epi8(v_src, _mm_add_epi8(_mm_loadu_si128((const __m128i *)(src3 + x)), v_128));
+                _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct InRange_SIMD<schar>
+{
+    int operator () (const schar * src1, const schar * src2, const schar * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_full = _mm_set1_epi8(-1);
+
+            for ( ; x <= len - 16; x += 16 )
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src1 + x));
+                __m128i v_mask1 = _mm_cmpgt_epi8(_mm_loadu_si128((const __m128i *)(src2 + x)), v_src);
+                __m128i v_mask2 = _mm_cmpgt_epi8(v_src, _mm_loadu_si128((const __m128i *)(src3 + x)));
+                _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct InRange_SIMD<ushort>
+{
+    int operator () (const ushort * src1, const ushort * src2, const ushort * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_zero = _mm_setzero_si128(), v_full = _mm_set1_epi16(-1), v_32768 = _mm_set1_epi16(-32768);
+
+            for ( ; x <= len - 8; x += 8 )
+            {
+                __m128i v_src = _mm_add_epi16(_mm_loadu_si128((const __m128i *)(src1 + x)), v_32768);
+                __m128i v_mask1 = _mm_cmpgt_epi16(_mm_add_epi16(_mm_loadu_si128((const __m128i *)(src2 + x)), v_32768), v_src);
+                __m128i v_mask2 = _mm_cmpgt_epi16(v_src, _mm_add_epi16(_mm_loadu_si128((const __m128i *)(src3 + x)), v_32768));
+                __m128i v_res = _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full);
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(_mm_srli_epi16(v_res, 8), v_zero));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct InRange_SIMD<short>
+{
+    int operator () (const short * src1, const short * src2, const short * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_zero = _mm_setzero_si128(), v_full = _mm_set1_epi16(-1);
+
+            for ( ; x <= len - 8; x += 8 )
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src1 + x));
+                __m128i v_mask1 = _mm_cmpgt_epi16(_mm_loadu_si128((const __m128i *)(src2 + x)), v_src);
+                __m128i v_mask2 = _mm_cmpgt_epi16(v_src, _mm_loadu_si128((const __m128i *)(src3 + x)));
+                __m128i v_res = _mm_andnot_si128(_mm_or_si128(v_mask1, v_mask2), v_full);
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(_mm_srli_epi16(v_res, 8), v_zero));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct InRange_SIMD<int>
+{
+    int operator () (const int * src1, const int * src2, const int * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_zero = _mm_setzero_si128(), v_full = _mm_set1_epi32(-1);
+
+            for ( ; x <= len - 8; x += 8 )
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src1 + x));
+                __m128i v_res1 = _mm_or_si128(_mm_cmpgt_epi32(_mm_loadu_si128((const __m128i *)(src2 + x)), v_src),
+                    _mm_cmpgt_epi32(v_src, _mm_loadu_si128((const __m128i *)(src3 + x))));
+
+                v_src = _mm_loadu_si128((const __m128i *)(src1 + x + 4));
+                __m128i v_res2 = _mm_or_si128(_mm_cmpgt_epi32(_mm_loadu_si128((const __m128i *)(src2 + x + 4)), v_src),
+                    _mm_cmpgt_epi32(v_src, _mm_loadu_si128((const __m128i *)(src3 + x + 4))));
+
+                __m128i v_res = _mm_packs_epi32(_mm_srli_epi32(_mm_andnot_si128(v_res1, v_full), 16),
+                                                _mm_srli_epi32(_mm_andnot_si128(v_res2, v_full), 16));
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_res, v_zero));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct InRange_SIMD<float>
+{
+    int operator () (const float * src1, const float * src2, const float * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        if (USE_SSE2)
+        {
+            __m128i v_zero = _mm_setzero_si128();
+
+            for ( ; x <= len - 8; x += 8 )
+            {
+                __m128 v_src = _mm_loadu_ps(src1 + x);
+                __m128 v_res1 = _mm_and_ps(_mm_cmple_ps(_mm_loadu_ps(src2 + x), v_src),
+                    _mm_cmple_ps(v_src, _mm_loadu_ps(src3 + x)));
+
+                v_src = _mm_loadu_ps(src1 + x + 4);
+                __m128 v_res2 = _mm_and_ps(_mm_cmple_ps(_mm_loadu_ps(src2 + x + 4), v_src),
+                    _mm_cmple_ps(v_src, _mm_loadu_ps(src3 + x + 4)));
+
+                __m128i v_res1i = _mm_cvtps_epi32(v_res1), v_res2i = _mm_cvtps_epi32(v_res2);
+                __m128i v_res = _mm_packs_epi32(_mm_srli_epi32(v_res1i, 16), _mm_srli_epi32(v_res2i, 16));
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_res, v_zero));
+            }
+        }
+
+        return x;
+    }
+};
+
+#elif CV_NEON
+
+template <>
+struct InRange_SIMD<uchar>
+{
+    int operator () (const uchar * src1, const uchar * src2, const uchar * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        for ( ; x <= len - 16; x += 16 )
+        {
+            uint8x16_t values = vld1q_u8(src1 + x);
+            uint8x16_t low = vld1q_u8(src2 + x);
+            uint8x16_t high = vld1q_u8(src3 + x);
+
+            vst1q_u8(dst + x, vandq_u8(vcgeq_u8(values, low), vcgeq_u8(high, values)));
+        }
+        return x;
+    }
+};
+
+template <>
+struct InRange_SIMD<schar>
+{
+    int operator () (const schar * src1, const schar * src2, const schar * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        for ( ; x <= len - 16; x += 16 )
+        {
+            int8x16_t values = vld1q_s8(src1 + x);
+            int8x16_t low = vld1q_s8(src2 + x);
+            int8x16_t high = vld1q_s8(src3 + x);
+
+            vst1q_u8(dst + x, vandq_u8(vcgeq_s8(values, low), vcgeq_s8(high, values)));
+        }
+        return x;
+    }
+};
+
+template <>
+struct InRange_SIMD<ushort>
+{
+    int operator () (const ushort * src1, const ushort * src2, const ushort * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        for ( ; x <= len - 16; x += 16 )
+        {
+            uint16x8_t values = vld1q_u16((const uint16_t*)(src1 + x));
+            uint16x8_t low = vld1q_u16((const uint16_t*)(src2 + x));
+            uint16x8_t high = vld1q_u16((const uint16_t*)(src3 + x));
+            uint8x8_t  r1 = vmovn_u16(vandq_u16(vcgeq_u16(values, low), vcgeq_u16(high, values)));
+
+            values = vld1q_u16((const uint16_t*)(src1 + x + 8));
+            low = vld1q_u16((const uint16_t*)(src2 + x + 8));
+            high = vld1q_u16((const uint16_t*)(src3 + x + 8));
+            uint8x8_t  r2 = vmovn_u16(vandq_u16(vcgeq_u16(values, low), vcgeq_u16(high, values)));
+
+            vst1q_u8(dst + x, vcombine_u8(r1, r2));
+        }
+        return x;
+    }
+};
+
+template <>
+struct InRange_SIMD<short>
+{
+    int operator () (const short * src1, const short * src2, const short * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        for ( ; x <= len - 16; x += 16 )
+        {
+            int16x8_t values = vld1q_s16((const int16_t*)(src1 + x));
+            int16x8_t low = vld1q_s16((const int16_t*)(src2 + x));
+            int16x8_t high = vld1q_s16((const int16_t*)(src3 + x));
+            uint8x8_t r1 = vmovn_u16(vandq_u16(vcgeq_s16(values, low), vcgeq_s16(high, values)));
+
+            values = vld1q_s16((const int16_t*)(src1 + x + 8));
+            low = vld1q_s16((const int16_t*)(src2 + x + 8));
+            high = vld1q_s16((const int16_t*)(src3 + x + 8));
+            uint8x8_t r2 = vmovn_u16(vandq_u16(vcgeq_s16(values, low), vcgeq_s16(high, values)));
+
+            vst1q_u8(dst + x, vcombine_u8(r1, r2));
+        }
+        return x;
+    }
+};
+
+template <>
+struct InRange_SIMD<int>
+{
+    int operator () (const int * src1, const int * src2, const int * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        for ( ; x <= len - 8; x += 8 )
+        {
+            int32x4_t values = vld1q_s32((const int32_t*)(src1 + x));
+            int32x4_t low = vld1q_s32((const int32_t*)(src2 + x));
+            int32x4_t high = vld1q_s32((const int32_t*)(src3 + x));
+
+            uint16x4_t r1 = vmovn_u32(vandq_u32(vcgeq_s32(values, low), vcgeq_s32(high, values)));
+
+            values = vld1q_s32((const int32_t*)(src1 + x + 4));
+            low = vld1q_s32((const int32_t*)(src2 + x + 4));
+            high = vld1q_s32((const int32_t*)(src3 + x + 4));
+
+            uint16x4_t r2 = vmovn_u32(vandq_u32(vcgeq_s32(values, low), vcgeq_s32(high, values)));
+
+            uint16x8_t res_16 = vcombine_u16(r1, r2);
+
+            vst1_u8(dst + x, vmovn_u16(res_16));
+        }
+        return x;
+    }
+};
+
+template <>
+struct InRange_SIMD<float>
+{
+    int operator () (const float * src1, const float * src2, const float * src3,
+                     uchar * dst, int len) const
+    {
+        int x = 0;
+
+        for ( ; x <= len - 8; x += 8 )
+        {
+            float32x4_t values = vld1q_f32((const float32_t*)(src1 + x));
+            float32x4_t low = vld1q_f32((const float32_t*)(src2 + x));
+            float32x4_t high = vld1q_f32((const float32_t*)(src3 + x));
+
+            uint16x4_t r1 = vmovn_u32(vandq_u32(vcgeq_f32(values, low), vcgeq_f32(high, values)));
+
+            values = vld1q_f32((const float32_t*)(src1 + x + 4));
+            low = vld1q_f32((const float32_t*)(src2 + x + 4));
+            high = vld1q_f32((const float32_t*)(src3 + x + 4));
+
+            uint16x4_t r2 = vmovn_u32(vandq_u32(vcgeq_f32(values, low), vcgeq_f32(high, values)));
+
+            uint16x8_t res_16 = vcombine_u16(r1, r2);
+
+            vst1_u8(dst + x, vmovn_u16(res_16));
+        }
+        return x;
+    }
+};
+
+#endif
+
+template <typename T>
+static void inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
          const T* src3, size_t step3, uchar* dst, size_t step,
          Size size)
 {
@@ -2989,9 +3497,11 @@ inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
     step2 /= sizeof(src2[0]);
     step3 /= sizeof(src3[0]);
 
+    InRange_SIMD<T> vop;
+
     for( ; size.height--; src1 += step1, src2 += step2, src3 += step3, dst += step )
     {
-        int x = 0;
+        int x = vop(src1, src2, src3, dst, size.width);
         #if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
@@ -3215,7 +3725,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
                  InputArray _upperb, OutputArray _dst)
 {
     CV_OCL_RUN(_src.dims() <= 2 && _lowerb.dims() <= 2 &&
-               _upperb.dims() <= 2 && _dst.isUMat(),
+               _upperb.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
                ocl_inRange(_src, _lowerb, _upperb, _dst))
 
     int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();

@@ -2,8 +2,8 @@ package org.opencv.android;
 
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
-import org.opencv.highgui.Highgui;
-import org.opencv.highgui.VideoCapture;
+import org.opencv.videoio.Videoio;
+import org.opencv.videoio.VideoCapture;
 
 import android.content.Context;
 import android.util.AttributeSet;
@@ -88,9 +88,9 @@ public class NativeCameraView extends CameraBridgeViewBase {
         synchronized (this) {
 
             if (mCameraIndex == -1)
-                mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
+                mCamera = new VideoCapture(Videoio.CV_CAP_ANDROID);
             else
-                mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID + mCameraIndex);
+                mCamera = new VideoCapture(Videoio.CV_CAP_ANDROID + mCameraIndex);
 
             if (mCamera == null)
                 return false;
@@ -119,8 +119,8 @@ public class NativeCameraView extends CameraBridgeViewBase {
 
             AllocateCache();
 
-            mCamera.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, frameSize.width);
-            mCamera.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, frameSize.height);
+            mCamera.set(Videoio.CV_CAP_PROP_FRAME_WIDTH, frameSize.width);
+            mCamera.set(Videoio.CV_CAP_PROP_FRAME_HEIGHT, frameSize.height);
         }
 
         Log.i(TAG, "Selected camera frame size = (" + mFrameWidth + ", " + mFrameHeight + ")");
@@ -139,13 +139,13 @@ public class NativeCameraView extends CameraBridgeViewBase {
 
         @Override
         public Mat rgba() {
-            mCapture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+            mCapture.retrieve(mRgba, Videoio.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
             return mRgba;
         }
 
         @Override
         public Mat gray() {
-            mCapture.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
+            mCapture.retrieve(mGray, Videoio.CV_CAP_ANDROID_GREY_FRAME);
             return mGray;
         }
 

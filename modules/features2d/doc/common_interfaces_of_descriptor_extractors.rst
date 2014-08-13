@@ -84,38 +84,5 @@ Creates a descriptor extractor by name.
 
 The current implementation supports the following types of a descriptor extractor:
 
- * ``"SIFT"`` -- :ocv:class:`SIFT`
- * ``"SURF"`` -- :ocv:class:`SURF`
- * ``"BRIEF"`` -- :ocv:class:`BriefDescriptorExtractor`
  * ``"BRISK"`` -- :ocv:class:`BRISK`
  * ``"ORB"`` -- :ocv:class:`ORB`
- * ``"FREAK"`` -- :ocv:class:`FREAK`
-
-A combined format is also supported: descriptor extractor adapter name ( ``"Opponent"`` --
-:ocv:class:`OpponentColorDescriptorExtractor` ) + descriptor extractor name (see above),
-for example: ``"OpponentSIFT"`` .
-
-
-OpponentColorDescriptorExtractor
---------------------------------
-.. ocv:class:: OpponentColorDescriptorExtractor : public DescriptorExtractor
-
-Class adapting a descriptor extractor to compute descriptors in the Opponent Color Space
-(refer to Van de Sande et al., CGIV 2008 *Color Descriptors for Object Category Recognition*).
-Input RGB image is transformed in the Opponent Color Space. Then, an unadapted descriptor extractor
-(set in the constructor) computes descriptors on each of three channels and concatenates
-them into a single color descriptor. ::
-
-    class OpponentColorDescriptorExtractor : public DescriptorExtractor
-    {
-    public:
-        OpponentColorDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor );
-
-        virtual void read( const FileNode& );
-        virtual void write( FileStorage& ) const;
-        virtual int descriptorSize() const;
-        virtual int descriptorType() const;
-        virtual int defaultNorm() const;
-    protected:
-        ...
-    };
