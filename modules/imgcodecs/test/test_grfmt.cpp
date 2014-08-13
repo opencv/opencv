@@ -42,6 +42,8 @@
 
 #include "test_precomp.hpp"
 
+#include <fstream>
+
 using namespace cv;
 using namespace std;
 
