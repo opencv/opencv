@@ -48,6 +48,8 @@
 #include "cvhaartraining.h"
 #include "_cvhaartraining.h"
 
+#include "cvsamplesoutput.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
@@ -2841,8 +2843,6 @@ void cvCreateTreeCascadeClassifier( const char* dirname,
     cvReleaseMat( &features_idx );
 }
 
-
-
 void cvCreateTrainingSamples( const char* filename,
                               const char* imgfilename, int bgcolor, int bgthreshold,
                               const char* bgfilename, int count,
@@ -2942,7 +2942,9 @@ void cvCreateTrainingSamples( const char* filename,
 
 }
 
-void icvFindFilePathPart(char** partofpath, char* fullpath)
+
+/* finds the beginning of the last token in the path */
+static void icvFindFilePathPart(char** partofpath, char* fullpath)
 {
     *partofpath = strrchr( fullpath, '\\' );
     if( *partofpath == NULL )
@@ -2962,42 +2964,28 @@ void icvFindFilePathPart(char** partofpath, char* fullpath)
 #define CV_INFO_FILENAME "info.dat"
 
 void cvCreatePngTrainingSet(const char* infoname,
-                          const char* inputimgname, int bgcolor, int bgthreshold,
-                          const char* bgfilename, int count,
-                          int invert, int maxintensitydev,
-                          double maxxangle, double maxyangle, double maxzangle,
-                          int winwidth, int winheight)
+                            const char* inputimgname,
+                            int bgcolor,
+                            int bgthreshold,
+                            const char* bgfilename,
+                            int count,
+                            int invert,
+                            int maxintensitydev,
+                            double maxxangle,
+                            double maxyangle,
+                            double maxzangle,
+                            IOutput* writer)
 {
     CvSampleDistortionData data;
 
-    assert( infoname != NULL );
     assert( inputimgname != NULL );
     assert( bgfilename != NULL );
 
-    if( !icvMkDir( infoname ) )
-    {
-
-#if CV_VERBOSE
-        fprintf( stderr, "Unable to create directory hierarchy: %s\n", infoname );
-#endif /* CV_VERBOSE */
-
-        return;
-    }
     if( icvStartSampleDistortion( inputimgname, bgcolor, bgthreshold, &data ) )
     {
-        char imagefullname[PATH_MAX];
-        char annotationfullname[PATH_MAX];
-        char* filename;
-        char* annotationname;
-        char* annotationrelativepath;
-        char* imgrelativepath;
         CvMat win;
         CvMat result;
-        FILE* info;
-        FILE* imgdescr;
-        const char* annotationsdirname = "/annotations/";
-        const char* positivesdirname = "/pos/";
-        const char* extension = "png";
+
 
         if( icvInitBackgroundReaders( bgfilename, cvSize( winwidth, winheight ) ) )
         {
@@ -3008,58 +2996,6 @@ void cvCreatePngTrainingSet(const char* infoname,
             int border = 5;
 
             CvSize origsize;
-
-            info = fopen( infoname, "w" );
-            strcpy( imagefullname, infoname );
-
-            icvFindFilePathPart(&filename, imagefullname);
-            if(filename == imagefullname)
-            {
-                #if CV_VERBOSE
-                        fprintf( stderr, "Invalid path to annotations file: %s\n"
-                                         "It should contain a parent directory name\n", imagefullname );
-                #endif /* CV_VERBOSE */
-                return;
-            }
-
-            filename[-1] = '\0'; //erase slash at the end of the path
-            filename -= 1;
-
-            //copy path to dataset top-level dir
-            strcpy(annotationfullname, imagefullname);
-            //find the name of annotation starting from the top-level dataset dir
-            icvFindFilePathPart(&annotationrelativepath, annotationfullname);
-            if( !strcmp( annotationrelativepath, ".." ) || !strcmp( annotationrelativepath, "." ) )
-            {
-                #if CV_VERBOSE
-                        fprintf( stderr, "Invalid path to annotations file: %s\n"
-                                         "It should contain a parent directory name\n", imagefullname );
-                #endif /* CV_VERBOSE */
-                return;
-            }
-            //find the name of output image starting from the top-level dataset dir
-            icvFindFilePathPart(&imgrelativepath, imagefullname);
-            annotationname = annotationfullname + strlen(annotationfullname);
-
-            sprintf(annotationname, "%s", annotationsdirname);
-            annotationname += strlen(annotationname);
-            sprintf(filename, "%s", positivesdirname);
-            filename += strlen(filename);
-
-            if( !icvMkDir( annotationfullname ) )
-            {
-                #if CV_VERBOSE
-                        fprintf( stderr, "Unable to create directory hierarchy: %s\n", annotationfullname );
-                #endif /* CV_VERBOSE */
-                return;
-            }
-            if( !icvMkDir( imagefullname ) )
-            {
-                #if CV_VERBOSE
-                        fprintf( stderr, "Unable to create directory hierarchy: %s\n", imagefullname );
-                #endif /* CV_VERBOSE */
-                return;
-            }
 
             count = MIN( count, cvbgdata->count );
             inverse = invert;
@@ -3077,7 +3013,8 @@ void cvCreatePngTrainingSet(const char* infoname,
                 x = (int) ((0.1+0.8 * rand()/RAND_MAX) * (cvbgreader->src.cols - width));
                 y = (int) ((0.1+0.8 * rand()/RAND_MAX) * (cvbgreader->src.rows - height));
 
-                cvGetSubArr( &cvbgreader->src, &win, cvRect( x, y ,width, height ) );
+                CvRect boundingBox = cvRect( x, y ,width, height );
+                cvGetSubArr( &cvbgreader->src, &win, boundingBox );
 
 
                 if( invert == CV_RANDOM_INVERT )
@@ -3093,41 +3030,7 @@ void cvCreatePngTrainingSet(const char* infoname,
                                          0.0 /* nonzero adds random scaling                   */,
                                          &data);
 
-                scale = MAX( cvbgreader->src.cols / winwidth,
-                             cvbgreader->src.rows / winheight );
-                x = x * scale - border;
-                y = y * scale - border;
-                width = width * scale + 2*border;
-                height = height * scale + 2*border;
-
-                sprintf( filename, "%04d_%04d_%04d_%04d_%04d",
-                         (i + 1), x, y, width, height);
-
-                sprintf( annotationname,"%s.txt",
-                                          filename );
-                fprintf( info, "%s\n",
-                         annotationrelativepath);
-
-                imgdescr = fopen(annotationfullname,"w");
-
-                sprintf( filename + strlen(filename), ".%s",
-                         extension);
-
-                fprintf( imgdescr, "Image filename : \"%s\"\n"
-                                    "Bounding box for object 1 \"PASperson\" (Xmin, Ymin) - (Xmax, Ymax) : (%d, %d) - (%d, %d)",
-                         imgrelativepath, x, y, x + width, y + height );
-                fclose( imgdescr );
-
-                origsize = cvGetSize(&cvbgreader->src);
-                if( origsize.height > winheight || origsize.width > winwidth )
-                {
-                    cvResize(&cvbgreader->src, &result);
-                    cvSaveImage( imagefullname, &result );
-                }
-                else
-                {
-                    cvSaveImage( imagefullname, &cvbgreader->src );
-                }
+                writer->write(cvbgreader->src, boundingBox);
 
             }
             if( info ) fclose( info );
@@ -3138,29 +3041,19 @@ void cvCreatePngTrainingSet(const char* infoname,
     }
 }
 
-void cvCreateTestSamples( const char* infoname,
+void cvCreateTestSamples(const char* infoname,
                           const char* imgfilename, int bgcolor, int bgthreshold,
                           const char* bgfilename, int count,
                           int invert, int maxintensitydev,
                           double maxxangle, double maxyangle, double maxzangle,
                           int showsamples,
-                          int winwidth, int winheight )
+                          int winwidth, int winheight , IOutput *writer)
 {
     CvSampleDistortionData data;
 
-    assert( infoname != NULL );
     assert( imgfilename != NULL );
     assert( bgfilename != NULL );
 
-    if( !icvMkDir( infoname ) )
-    {
-
-#if CV_VERBOSE
-        fprintf( stderr, "Unable to create directory hierarchy: %s\n", infoname );
-#endif /* CV_VERBOSE */
-
-        return;
-    }
     if( icvStartSampleDistortion( imgfilename, bgcolor, bgthreshold, &data ) )
     {
         char fullname[PATH_MAX];
@@ -3181,12 +3074,6 @@ void cvCreateTestSamples( const char* infoname,
                 cvNamedWindow( "Image", CV_WINDOW_AUTOSIZE );
             }
 
-            info = fopen( infoname, "w" );
-            strcpy( fullname, infoname );
-
-            icvFindFilePathPart( &filename, fullname );
-
-
             count = MIN( count, cvbgdata->count );
             inverse = invert;
             for( i = 0; i < count; i++ )
@@ -3203,7 +3090,9 @@ void cvCreateTestSamples( const char* infoname,
                 x = (int) ((0.1+0.8 * rand()/RAND_MAX) * (cvbgreader->src.cols - width));
                 y = (int) ((0.1+0.8 * rand()/RAND_MAX) * (cvbgreader->src.rows - height));
 
-                cvGetSubArr( &cvbgreader->src, &win, cvRect( x, y ,width, height ) );
+
+                CvRect boundingBox = cvRect( x, y ,width, height );
+                cvGetSubArr( &cvbgreader->src, &win, boundingBox );
                 if( invert == CV_RANDOM_INVERT )
                 {
                     inverse = (rand() > (RAND_MAX/2));
@@ -3213,16 +3102,8 @@ void cvCreateTestSamples( const char* infoname,
                                          1, 0.0, 0.0, &data );
 
 
-                sprintf( filename, "%04d_%04d_%04d_%04d_%04d.jpg",
-                         (i + 1), x, y, width, height );
+                writer->write( cvbgreader->src, boundingBox );
 
-                if( info )
-                {
-                    fprintf( info, "%s %d %d %d %d %d\n",
-                        filename, 1, x, y, width, height );
-                }
-
-                cvSaveImage( fullname, &cvbgreader->src );
                 if( showsamples )
                 {
                     cvShowImage( "Image", &cvbgreader->src );

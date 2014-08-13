@@ -29,6 +29,8 @@ set(cvhaartraining_lib_src
   cvhaarclassifier.cpp
   cvhaartraining.cpp
   cvsamples.cpp
+  cvsamplesoutput.cpp
+  cvsamplesoutput.h
   )
 
 add_library(opencv_haartraining_engine STATIC ${cvhaartraining_lib_src})

@@ -54,6 +54,7 @@
 using namespace std;
 
 #include "cvhaartraining.h"
+#include "cvsamplesoutput.h"
 
 int main( int argc, char* argv[] )
 {
@@ -76,7 +77,7 @@ int main( int argc, char* argv[] )
     double scale = 4.0;
     int width  = 24;
     int height = 24;
-    int pngoutput = 0; /* whether to make the samples in png format and description files */
+    bool pngoutput = false; /* whether to make the samples in png or in jpg*/
 
     srand((unsigned int)time(0));
 
@@ -216,7 +217,9 @@ int main( int argc, char* argv[] )
     }
     else if( imagename && bgfilename && infoname && pngoutput)
     {
-        printf( "Create test samples from single image applying distortions...\n" );
+        printf( "Create training set from a single image and a collection of backgrounds.\n"
+                "Output is in PNG format.\n"
+                "Annotations are in a separate directory\n" );
 
         cvCreatePngTrainingSet(infoname, imagename, bgcolor, bgthreshold, bgfilename, num,
                              invert, maxintensitydev,
