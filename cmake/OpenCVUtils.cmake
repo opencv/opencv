@@ -748,6 +748,22 @@ function(ocv_add_executable target)
 endfunction()
 
 function(ocv_add_library target)
-  add_library(${target} ${ARGN})
+  set(cuda_objs "")
+  if(HAVE_CUDA)
+    set(cuda_srcs "")
+
+    foreach(var ${ARGN})
+      if(var MATCHES ".cu")
+        list(APPEND cuda_srcs ${var})
+      endif()
+    endforeach()
+
+    if(cuda_srcs)
+      ocv_include_directories(${CUDA_INCLUDE_DIRS})
+      ocv_cuda_compile(cuda_objs ${lib_cuda_srcs} ${lib_cuda_hdrs})
+    endif()
+  endif()
+
+  add_library(${target} ${ARGN} ${cuda_objs})
   _ocv_append_target_includes(${target})
 endfunction()
