@@ -1303,7 +1303,7 @@ OCL_TEST_P(Norm, NORM_INF_2args)
             OCL_OFF(const double cpuRes = cv::norm(src1_roi, src2_roi, type));
             OCL_ON(const double gpuRes = cv::norm(usrc1_roi, usrc2_roi, type));
 
-            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 2e-2);
+            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
         }
 }
 
@@ -1323,7 +1323,7 @@ OCL_TEST_P(Norm, NORM_INF_2args_mask)
             OCL_OFF(const double cpuRes = cv::norm(src1_roi, src2_roi, type, mask_roi));
             OCL_ON(const double gpuRes = cv::norm(usrc1_roi, usrc2_roi, type, umask_roi));
 
-            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 2e-2);
+            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
         }
 }
 
