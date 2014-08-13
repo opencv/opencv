@@ -786,7 +786,7 @@ void polarToCart( InputArray src1, InputArray src2,
         depth == CV_64F ? (ippsPolarToCart)ippsPolarToCart_64f : 0;
         CV_Assert(ippFunc != 0);
 
-        IppStatus status = ippFunc(Mag.data, Angle.data, X.data, Y.data, static_cast<int>(cn * X.total()));
+        IppStatus status = ippFunc(Mag.ptr(), Angle.ptr(), X.ptr(), Y.ptr(), static_cast<int>(cn * X.total()));
         if (status >= 0)
             return;
         setIppErrorStatus();
@@ -2220,7 +2220,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
                 }
                 size.width *= cn;
 
-                IppStatus status = ippiSqr_32f_C1R((const Ipp32f *)src.data, srcstep, (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
+                IppStatus status = ippiSqr_32f_C1R(src.ptr<Ipp32f>(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
 
                 if (status >= 0)
                     return;
@@ -2278,8 +2278,8 @@ void pow( InputArray _src, double power, OutputArray _dst )
         if (src.isContinuous() && dst.isContinuous())
         {
             IppStatus status = depth == CV_32F ?
-                        ippsPowx_32f_A21((const Ipp32f *)src.data, (Ipp32f)power, (Ipp32f*)dst.data, (Ipp32s)(src.total() * cn)) :
-                        ippsPowx_64f_A50((const Ipp64f *)src.data, power, (Ipp64f*)dst.data, (Ipp32s)(src.total() * cn));
+                        ippsPowx_32f_A21(src.ptr<Ipp32f>(), (Ipp32f)power, dst.ptr<Ipp32f>(), (Ipp32s)(src.total() * cn)) :
+                        ippsPowx_64f_A50(src.ptr<Ipp64f>(), power, dst.ptr<Ipp64f>(), (Ipp32s)(src.total() * cn));
 
             if (status >= 0)
                 return;
@@ -2451,7 +2451,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         {
             Cv32suf a, b;
             int ia, ib;
-            const int* isrc = (const int*)src.data;
+            const int* isrc = src.ptr<int>();
             size_t step = src.step/sizeof(isrc[0]);
 
             a.f = (float)std::max(minVal, (double)-FLT_MAX);
@@ -2480,7 +2480,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         {
             Cv64suf a, b;
             int64 ia, ib;
-            const int64* isrc = (const int64*)src.data;
+            const int64* isrc = src.ptr<int64>();
             size_t step = src.step/sizeof(isrc[0]);
 
             a.f = minVal;

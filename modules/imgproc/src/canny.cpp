@@ -73,20 +73,20 @@ static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
     uchar* buffer = alignPtr((uchar*)buf, 32);
 
     Mat _dx(_src.rows, _src.cols, CV_16S);
-    if( ippiFilterSobelNegVertBorder_8u16s_C1R(_src.data, (int)_src.step,
+    if( ippiFilterSobelNegVertBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
                     _dx.ptr<short>(), (int)_dx.step, roi,
                     ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
         return false;
 
     Mat _dy(_src.rows, _src.cols, CV_16S);
-    if( ippiFilterSobelHorizBorder_8u16s_C1R(_src.data, (int)_src.step,
+    if( ippiFilterSobelHorizBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
                     _dy.ptr<short>(), (int)_dy.step, roi,
                     ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
         return false;
 
     if( ippiCanny_16s8u_C1R(_dx.ptr<short>(), (int)_dx.step,
                                _dy.ptr<short>(), (int)_dy.step,
-                              _dst.data, (int)_dst.step, roi, low, high, buffer) < 0 )
+                              _dst.ptr(), (int)_dst.step, roi, low, high, buffer) < 0 )
         return false;
     return true;
 }

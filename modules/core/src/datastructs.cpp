@@ -3672,7 +3672,7 @@ void KDTree::build(InputArray __points, InputArray __labels, bool _copyData)
     {
         int nlabels = _labels.checkVector(1, CV_32S, true);
         CV_Assert(nlabels == n);
-        _labels_data = (const int*)_labels.data;
+        _labels_data = _labels.ptr<int>();
     }
 
     Mat sumstack(MAX_TREE_DEPTH*2, ptdims*2, CV_64F);
@@ -3992,7 +3992,7 @@ void KDTree::getPoints(InputArray _idx, OutputArray _pts, OutputArray _labels) c
         int k = idx[i];
         CV_Assert( (unsigned)k < (unsigned)points.rows );
         const float* src = points.ptr<float>(k);
-        if( pts.data )
+        if( !pts.empty() )
             std::copy(src, src + ptdims, pts.ptr<float>(i));
         if( dstlabels )
             dstlabels[i] = srclabels ? srclabels[k] : k;

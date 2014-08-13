@@ -427,7 +427,7 @@ BRISK::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const fl
   if (dx + dy > 2)
   {
     // now the calculation:
-    const uchar* ptr = image.data + x_left + imagecols * y_top;
+    const uchar* ptr = image.ptr() + x_left + imagecols * y_top;
     // first the corners:
     ret_val = A * int(*ptr);
     ptr += dx + 1;
@@ -438,7 +438,7 @@ BRISK::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const fl
     ret_val += D * int(*ptr);
 
     // next the edges:
-    int* ptr_integral = (int*) integral.data + x_left + integralcols * y_top + 1;
+    const int* ptr_integral = integral.ptr<int>() + x_left + integralcols * y_top + 1;
     // find a simple path through the different surface corners
     const int tmp1 = (*ptr_integral);
     ptr_integral += dx;
@@ -475,7 +475,7 @@ BRISK::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const fl
   }
 
   // now the calculation:
-  const uchar* ptr = image.data + x_left + imagecols * y_top;
+  const uchar* ptr = image.ptr() + x_left + imagecols * y_top;
   // first row:
   ret_val = A * int(*ptr);
   ptr++;
@@ -607,7 +607,7 @@ BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, s
   int t2;
 
   // the feature orientation
-  const uchar* ptr = descriptors.data;
+  const uchar* ptr = descriptors.ptr();
   for (size_t k = 0; k < ksize; k++)
   {
     cv::KeyPoint& kp = keypoints[k];
@@ -1070,7 +1070,7 @@ BriskScaleSpace::isMax2D(const int layer, const int x_layer, const int y_layer)
 {
   const cv::Mat& scores = pyramid_[layer].scores();
   const int scorescols = scores.cols;
-  const uchar* data = scores.data + y_layer * scorescols + x_layer;
+  const uchar* data = scores.ptr() + y_layer * scorescols + x_layer;
   // decision tree:
   const uchar center = (*data);
   data--;
@@ -1154,11 +1154,11 @@ BriskScaleSpace::isMax2D(const int layer, const int x_layer, const int y_layer)
   {
     // in this case, we have to analyze the situation more carefully:
     // the values are gaussian blurred and then we really decide
-    data = scores.data + y_layer * scorescols + x_layer;
+    data = scores.ptr() + y_layer * scorescols + x_layer;
     int smoothedcenter = 4 * center + 2 * (s_10 + s10 + s0_1 + s01) + s_1_1 + s1_1 + s_11 + s11;
     for (unsigned int i = 0; i < deltasize; i += 2)
     {
-      data = scores.data + (y_layer - 1 + delta[i + 1]) * scorescols + x_layer + delta[i] - 1;
+      data = scores.ptr() + (y_layer - 1 + delta[i + 1]) * scorescols + x_layer + delta[i] - 1;
       int othercenter = *data;
       data++;
       othercenter += 2 * (*data);
@@ -2140,7 +2140,7 @@ BriskLayer::value(const cv::Mat& mat, float xf, float yf, float scale_in) const
     const int r_y = (int)((yf - y) * 1024);
     const int r_x_1 = (1024 - r_x);
     const int r_y_1 = (1024 - r_y);
-    const uchar* ptr = image.data + x + y * imagecols;
+    const uchar* ptr = image.ptr() + x + y * imagecols;
     // just interpolate:
     ret_val = (r_x_1 * r_y_1 * int(*ptr));
     ptr++;
@@ -2186,7 +2186,7 @@ BriskLayer::value(const cv::Mat& mat, float xf, float yf, float scale_in) const
   const int r_y1_i = (int)(r_y1 * scaling);
 
   // now the calculation:
-  const uchar* ptr = image.data + x_left + imagecols * y_top;
+  const uchar* ptr = image.ptr() + x_left + imagecols * y_top;
   // first row:
   ret_val = A * int(*ptr);
   ptr++;

@@ -107,7 +107,7 @@ double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
     if( total == 0 )
         return measureDist ? -DBL_MAX : -1;
 
-    const Point* cnt = (const Point*)contour.data;
+    const Point* cnt = contour.ptr<Point>();
     const Point2f* cntf = (const Point2f*)cnt;
 
     if( !is_float && !measureDist && ip.x == pt.x && ip.y == pt.y )

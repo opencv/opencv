@@ -67,7 +67,7 @@ void focalsFromHomography(const Mat& H, double &f0, double &f1, bool &f0_ok, boo
 {
     CV_Assert(H.type() == CV_64F && H.size() == Size(3, 3));
 
-    const double* h = reinterpret_cast<const double*>(H.data);
+    const double* h = H.ptr<double>();
 
     double d1, d2; // Denominators
     double v1, v2; // Focal squares value candidates

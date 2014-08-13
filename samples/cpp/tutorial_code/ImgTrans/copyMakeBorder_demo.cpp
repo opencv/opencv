@@ -30,7 +30,7 @@ int main( int, char** argv )
   /// Load an image
   src = imread( argv[1] );
 
-  if( !src.data )
+  if( src.empty() )
     {
       printf(" No data entered, please enter the path to an image file \n");
       return -1;

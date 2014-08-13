@@ -773,10 +773,10 @@ void CV_CameraCalibrationTest_CPP::calibrate( int imageCount, int* pointCounts,
                      flags );
 
     assert( cameraMatrix.type() == CV_64FC1 );
-    memcpy( _cameraMatrix, cameraMatrix.data, 9*sizeof(double) );
+    memcpy( _cameraMatrix, cameraMatrix.ptr(), 9*sizeof(double) );
 
     assert( cameraMatrix.type() == CV_64FC1 );
-    memcpy( _distortionCoeffs, distCoeffs.data, 4*sizeof(double) );
+    memcpy( _distortionCoeffs, distCoeffs.ptr(), 4*sizeof(double) );
 
     vector<Mat>::iterator rvecsIt = rvecs.begin();
     vector<Mat>::iterator tvecsIt = tvecs.begin();
@@ -788,8 +788,8 @@ void CV_CameraCalibrationTest_CPP::calibrate( int imageCount, int* pointCounts,
     {
         Mat r9( 3, 3, CV_64FC1 );
         Rodrigues( *rvecsIt, r9 );
-        memcpy( rm, r9.data, 9*sizeof(double) );
-        memcpy( tm, tvecsIt->data, 3*sizeof(double) );
+        memcpy( rm, r9.ptr(), 9*sizeof(double) );
+        memcpy( tm, tvecsIt->ptr(), 3*sizeof(double) );
     }
 }
 
@@ -1430,7 +1430,7 @@ void CV_StereoCalibrationTest::run( int )
         {
             Mat left = imread(imglist[i*2]);
             Mat right = imread(imglist[i*2+1]);
-            if(!left.data || !right.data)
+            if(left.empty() || right.empty())
             {
                 ts->printf( cvtest::TS::LOG, "Can not load images %s and %s, testcase %d\n",
                     imglist[i*2].c_str(), imglist[i*2+1].c_str(), testcase );
@@ -1722,7 +1722,7 @@ double CV_StereoCalibrationTest_C::calibrateStereoCamera( const vector<vector<Po
     for( int i = 0, ni = 0, j = 0; i < nimages; i++, j += ni )
     {
         ni = (int)objectPoints[i].size();
-        ((int*)npoints.data)[i] = ni;
+        npoints.ptr<int>()[i] = ni;
         std::copy(objectPoints[i].begin(), objectPoints[i].end(), objPtData + j);
         std::copy(imagePoints1[i].begin(), imagePoints1[i].end(), imgPtData + j);
         std::copy(imagePoints2[i].begin(), imagePoints2[i].end(), imgPtData2 + j);

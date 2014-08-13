@@ -410,10 +410,10 @@ void FilterEngine::apply(const Mat& src, Mat& dst,
         dstOfs.y + srcRoi.height <= dst.rows );
 
     int y = start(src, srcRoi, isolated);
-    proceed( src.data + y*src.step
+    proceed( src.ptr(y)
              + srcRoi.x*src.elemSize(),
              (int)src.step, endY - startY,
-             dst.data + dstOfs.y*dst.step +
+             dst.ptr(dstOfs.y) +
              dstOfs.x*dst.elemSize(), (int)dst.step );
 }
 
@@ -432,7 +432,7 @@ int cv::getKernelType(InputArray filter_kernel, Point anchor)
     Mat kernel;
     _kernel.convertTo(kernel, CV_64F);
 
-    const double* coeffs = (double*)kernel.data;
+    const double* coeffs = kernel.ptr<double>();
     double sum = 0;
     int type = KERNEL_SMOOTH + KERNEL_INTEGER;
     if( (_kernel.rows == 1 || _kernel.cols == 1) &&
@@ -513,7 +513,7 @@ struct RowVec_8u32s
         int k, ksize = kernel.rows + kernel.cols - 1;
         for( k = 0; k < ksize; k++ )
         {
-            int v = ((const int*)kernel.data)[k];
+            int v = kernel.ptr<int>()[k];
             if( v < SHRT_MIN || v > SHRT_MAX )
             {
                 smallValues = false;
@@ -529,7 +529,7 @@ struct RowVec_8u32s
 
         int i = 0, k, _ksize = kernel.rows + kernel.cols - 1;
         int* dst = (int*)_dst;
-        const int* _kx = (const int*)kernel.data;
+        const int* _kx = kernel.ptr<int>();
         width *= cn;
 
         if( smallValues )
@@ -605,7 +605,7 @@ struct SymmRowSmallVec_8u32s
         int k, ksize = kernel.rows + kernel.cols - 1;
         for( k = 0; k < ksize; k++ )
         {
-            int v = ((const int*)kernel.data)[k];
+            int v = kernel.ptr<int>()[k];
             if( v < SHRT_MIN || v > SHRT_MAX )
             {
                 smallValues = false;
@@ -622,7 +622,7 @@ struct SymmRowSmallVec_8u32s
         int i = 0, j, k, _ksize = kernel.rows + kernel.cols - 1;
         int* dst = (int*)_dst;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
-        const int* kx = (const int*)kernel.data + _ksize/2;
+        const int* kx = kernel.ptr<int>() + _ksize/2;
         if( !smallValues )
             return 0;
 
@@ -941,7 +941,7 @@ struct SymmColumnVec_32s8u
             return 0;
 
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
-        const float* ky = (const float*)kernel.data + ksize2;
+        const float* ky = kernel.ptr<float>() + ksize2;
         int i = 0, k;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
         const int** src = (const int**)_src;
@@ -1089,7 +1089,7 @@ struct SymmColumnSmallVec_32s16s
             return 0;
 
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
-        const float* ky = (const float*)kernel.data + ksize2;
+        const float* ky = kernel.ptr<float>() + ksize2;
         int i = 0;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
         const int** src = (const int**)_src;
@@ -1222,7 +1222,7 @@ struct RowVec_16s32f
 
         int i = 0, k, _ksize = kernel.rows + kernel.cols - 1;
         float* dst = (float*)_dst;
-        const float* _kx = (const float*)kernel.data;
+        const float* _kx = kernel.ptr<float>();
         width *= cn;
 
         for( ; i <= width - 8; i += 8 )
@@ -1271,7 +1271,7 @@ struct SymmColumnVec_32f16s
             return 0;
 
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
-        const float* ky = (const float*)kernel.data + ksize2;
+        const float* ky = kernel.ptr<float>() + ksize2;
         int i = 0, k;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
         const float** src = (const float**)_src;
@@ -1431,7 +1431,7 @@ struct RowVec_32f
         int _ksize = kernel.rows + kernel.cols - 1;
         const float* src0 = (const float*)_src;
         float* dst = (float*)_dst;
-        const float* _kx = (const float*)kernel.data;
+        const float* _kx = kernel.ptr<float>();
 
         if( !haveSSE )
             return 0;
@@ -1519,7 +1519,7 @@ struct SymmRowSmallVec_32f
         float* dst = (float*)_dst;
         const float* src = (const float*)_src + (_ksize/2)*cn;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
-        const float* kx = (const float*)kernel.data + _ksize/2;
+        const float* kx = kernel.ptr<float>() + _ksize/2;
         width *= cn;
 
         if( symmetrical )
@@ -1711,7 +1711,7 @@ struct SymmColumnVec_32f
             return 0;
 
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
-        const float* ky = (const float*)kernel.data + ksize2;
+        const float* ky = kernel.ptr<float>() + ksize2;
         int i = 0, k;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
         const float** src = (const float**)_src;
@@ -1851,7 +1851,7 @@ struct SymmColumnSmallVec_32f
             return 0;
 
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
-        const float* ky = (const float*)kernel.data + ksize2;
+        const float* ky = kernel.ptr<float>() + ksize2;
         int i = 0;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
         const float** src = (const float**)_src;
@@ -2241,7 +2241,7 @@ template<typename ST, typename DT, class VecOp> struct RowFilter : public BaseRo
     void operator()(const uchar* src, uchar* dst, int width, int cn)
     {
         int _ksize = ksize;
-        const DT* kx = (const DT*)kernel.data;
+        const DT* kx = kernel.ptr<DT>();
         const ST* S;
         DT* D = (DT*)dst;
         int i, k;
@@ -2299,7 +2299,7 @@ template<typename ST, typename DT, class VecOp> struct SymmRowSmallFilter :
     void operator()(const uchar* src, uchar* dst, int width, int cn)
     {
         int ksize2 = this->ksize/2, ksize2n = ksize2*cn;
-        const DT* kx = (const DT*)this->kernel.data + ksize2;
+        const DT* kx = this->kernel.template ptr<DT>() + ksize2;
         bool symmetrical = (this->symmetryType & KERNEL_SYMMETRICAL) != 0;
         DT* D = (DT*)dst;
         int i = this->vecOp(src, dst, width, cn), j, k;
@@ -2437,7 +2437,7 @@ template<class CastOp, class VecOp> struct ColumnFilter : public BaseColumnFilte
 
     void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
-        const ST* ky = (const ST*)kernel.data;
+        const ST* ky = kernel.template ptr<ST>();
         ST _delta = delta;
         int _ksize = ksize;
         int i, k;
@@ -2501,7 +2501,7 @@ template<class CastOp, class VecOp> struct SymmColumnFilter : public ColumnFilte
     void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
         int ksize2 = this->ksize/2;
-        const ST* ky = (const ST*)this->kernel.data + ksize2;
+        const ST* ky = this->kernel.template ptr<ST>() + ksize2;
         int i, k;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
         ST _delta = this->delta;
@@ -2607,7 +2607,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
     void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
         int ksize2 = this->ksize/2;
-        const ST* ky = (const ST*)this->kernel.data + ksize2;
+        const ST* ky = this->kernel.template ptr<ST>() + ksize2;
         int i;
         bool symmetrical = (this->symmetryType & KERNEL_SYMMETRICAL) != 0;
         bool is_1_2_1 = ky[0] == 1 && ky[1] == 2;
@@ -3021,7 +3021,7 @@ void preprocess2DKernel( const Mat& kernel, std::vector<Point>& coords, std::vec
 
     for( i = k = 0; i < kernel.rows; i++ )
     {
-        const uchar* krow = kernel.data + kernel.step*i;
+        const uchar* krow = kernel.ptr(i);
         for( j = 0; j < kernel.cols; j++ )
         {
             if( ktype == CV_8U )

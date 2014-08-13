@@ -79,7 +79,7 @@ int main(int argc, char** argv)
     Mat tmp_frame, bgmask, out_frame;
 
     cap >> tmp_frame;
-    if(!tmp_frame.data)
+    if(tmp_frame.empty())
     {
         printf("can not read data from the video source\n");
         return -1;
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
     for(;;)
     {
         cap >> tmp_frame;
-        if( !tmp_frame.data )
+        if( tmp_frame.empty() )
             break;
         bgsubtractor->apply(tmp_frame, bgmask, update_bg_model ? -1 : 0);
         refineSegments(tmp_frame, bgmask, out_frame);

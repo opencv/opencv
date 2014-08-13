@@ -605,8 +605,8 @@ cv::Scalar cv::sum( InputArray _src )
         if( ippFuncHint || ippFuncNoHint )
         {
             Ipp64f res[4];
-            IppStatus ret = ippFuncHint ? ippFuncHint(src.data, (int)src.step[0], sz, res, ippAlgHintAccurate) :
-                            ippFuncNoHint(src.data, (int)src.step[0], sz, res);
+            IppStatus ret = ippFuncHint ? ippFuncHint(src.ptr(), (int)src.step[0], sz, res, ippAlgHintAccurate) :
+                            ippFuncNoHint(src.ptr(), (int)src.step[0], sz, res);
             if( ret >= 0 )
             {
                 Scalar sc;
@@ -791,7 +791,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
             if( ippFuncC1 )
             {
                 Ipp64f res;
-                if( ippFuncC1(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, &res) >= 0 )
+                if( ippFuncC1(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, &res) >= 0 )
                     return Scalar(res);
                 setIppErrorStatus();
             }
@@ -804,9 +804,9 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
             if( ippFuncC3 )
             {
                 Ipp64f res1, res2, res3;
-                if( ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 1, &res1) >= 0 &&
-                    ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 2, &res2) >= 0 &&
-                    ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 3, &res3) >= 0 )
+                if( ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 1, &res1) >= 0 &&
+                    ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 2, &res2) >= 0 &&
+                    ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 3, &res3) >= 0 )
                 {
                     return Scalar(res1, res2, res3);
                 }
@@ -838,8 +838,8 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
             if( ippFuncHint || ippFuncNoHint )
             {
                 Ipp64f res[4];
-                IppStatus ret = ippFuncHint ? ippFuncHint(src.data, (int)src.step[0], sz, res, ippAlgHintAccurate) :
-                                ippFuncNoHint(src.data, (int)src.step[0], sz, res);
+                IppStatus ret = ippFuncHint ? ippFuncHint(src.ptr(), (int)src.step[0], sz, res, ippAlgHintAccurate) :
+                                ippFuncNoHint(src.ptr(), (int)src.step[0], sz, res);
                 if( ret >= 0 )
                 {
                     Scalar sc;
@@ -981,11 +981,11 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
         part_sum funcs[3] = { ocl_part_sum<int>, ocl_part_sum<float>, ocl_part_sum<double> };
         Mat dbm = db.getMat(ACCESS_READ);
 
-        mean = funcs[ddepth - CV_32S](Mat(1, groups, dtype, dbm.data));
-        stddev = funcs[sqddepth - CV_32S](Mat(1, groups, sqdtype, dbm.data + groups * CV_ELEM_SIZE(dtype)));
+        mean = funcs[ddepth - CV_32S](Mat(1, groups, dtype, dbm.ptr()));
+        stddev = funcs[sqddepth - CV_32S](Mat(1, groups, sqdtype, dbm.ptr() + groups * CV_ELEM_SIZE(dtype)));
 
         if (haveMask)
-            nz = saturate_cast<int>(funcs[0](Mat(1, groups, CV_32SC1, dbm.data +
+            nz = saturate_cast<int>(funcs[0](Mat(1, groups, CV_32SC1, dbm.ptr() +
                                                  groups * (CV_ELEM_SIZE(dtype) +
                                                            CV_ELEM_SIZE(sqdtype))))[0]);
     }
@@ -1052,7 +1052,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
                 _mean.create(cn, 1, CV_64F, -1, true);
             mean = _mean.getMat();
             dcn_mean = (int)mean.total();
-            pmean = (Ipp64f *)mean.data;
+            pmean = mean.ptr<Ipp64f>();
         }
         int dcn_stddev = -1;
         if( _sdv.needed() )
@@ -1061,7 +1061,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
                 _sdv.create(cn, 1, CV_64F, -1, true);
             stddev = _sdv.getMat();
             dcn_stddev = (int)stddev.total();
-            pstddev = (Ipp64f *)stddev.data;
+            pstddev = stddev.ptr<Ipp64f>();
         }
         for( int c = cn; c < dcn_mean; c++ )
             pmean[c] = 0;
@@ -1079,7 +1079,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
             0;
             if( ippFuncC1 )
             {
-                if( ippFuncC1(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, pmean, pstddev) >= 0 )
+                if( ippFuncC1(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, pmean, pstddev) >= 0 )
                     return;
                 setIppErrorStatus();
             }
@@ -1091,9 +1091,9 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
             0;
             if( ippFuncC3 )
             {
-                if( ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 1, &pmean[0], &pstddev[0]) >= 0 &&
-                    ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 2, &pmean[1], &pstddev[1]) >= 0 &&
-                    ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 3, &pmean[2], &pstddev[2]) >= 0 )
+                if( ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 1, &pmean[0], &pstddev[0]) >= 0 &&
+                    ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 2, &pmean[1], &pstddev[1]) >= 0 &&
+                    ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 3, &pmean[2], &pstddev[2]) >= 0 )
                     return;
                 setIppErrorStatus();
             }
@@ -1110,7 +1110,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
             0;
             if( ippFuncC1 )
             {
-                if( ippFuncC1(src.data, (int)src.step[0], sz, pmean, pstddev) >= 0 )
+                if( ippFuncC1(src.ptr(), (int)src.step[0], sz, pmean, pstddev) >= 0 )
                     return;
                 setIppErrorStatus();
             }
@@ -1122,9 +1122,9 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
             0;
             if( ippFuncC3 )
             {
-                if( ippFuncC3(src.data, (int)src.step[0], sz, 1, &pmean[0], &pstddev[0]) >= 0 &&
-                    ippFuncC3(src.data, (int)src.step[0], sz, 2, &pmean[1], &pstddev[1]) >= 0 &&
-                    ippFuncC3(src.data, (int)src.step[0], sz, 3, &pmean[2], &pstddev[2]) >= 0 )
+                if( ippFuncC3(src.ptr(), (int)src.step[0], sz, 1, &pmean[0], &pstddev[0]) >= 0 &&
+                    ippFuncC3(src.ptr(), (int)src.step[0], sz, 2, &pmean[1], &pstddev[1]) >= 0 &&
+                    ippFuncC3(src.ptr(), (int)src.step[0], sz, 3, &pmean[2], &pstddev[2]) >= 0 )
                     return;
                 setIppErrorStatus();
             }
@@ -1358,26 +1358,26 @@ void getMinMaxRes(const Mat & db, double * minVal, double * maxVal,
     const uint * minlocptr = NULL, * maxlocptr = NULL;
     if (minVal || minLoc)
     {
-        minptr = (const T *)db.data;
+        minptr = db.ptr<T>();
         index += sizeof(T) * groupnum;
     }
     if (maxVal || maxLoc)
     {
-        maxptr = (const T *)(db.data + index);
+        maxptr = (const T *)(db.ptr() + index);
         index += sizeof(T) * groupnum;
     }
     if (minLoc)
     {
-        minlocptr = (uint *)(db.data + index);
+        minlocptr = (const uint *)(db.ptr() + index);
         index += sizeof(uint) * groupnum;
     }
     if (maxLoc)
     {
-        maxlocptr = (uint *)(db.data + index);
+        maxlocptr = (const uint *)(db.ptr() + index);
         index += sizeof(uint) * groupnum;
     }
     if (maxVal2)
-        maxptr2 = (const T *)(db.data + index);
+        maxptr2 = (const T *)(db.ptr() + index);
 
     for (int i = 0; i < groupnum; i++)
     {
@@ -1602,13 +1602,13 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
             {
                 Ipp32f min, max;
                 IppiPoint minp, maxp;
-                if( ippFuncC1(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, &min, &max, &minp, &maxp) >= 0 )
+                if( ippFuncC1(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, &min, &max, &minp, &maxp) >= 0 )
                 {
                     if( minVal )
                         *minVal = (double)min;
                     if( maxVal )
                         *maxVal = (double)max;
-                    if( !minp.x && !minp.y && !maxp.x && !maxp.y && !mask.data[0] )
+                    if( !minp.x && !minp.y && !maxp.x && !maxp.y && !mask.ptr()[0] )
                         minp.x = maxp.x = -1;
                     if( minIdx )
                     {
@@ -1641,7 +1641,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
             {
                 Ipp32f min, max;
                 IppiPoint minp, maxp;
-                if( ippFuncC1(src.data, (int)src.step[0], sz, &min, &max, &minp, &maxp) >= 0 )
+                if( ippFuncC1(src.ptr(), (int)src.step[0], sz, &min, &max, &minp, &maxp) >= 0 )
                 {
                     if( minVal )
                         *minVal = (double)min;
@@ -2280,7 +2280,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
             if( ippFuncC1 )
             {
                 Ipp64f norm;
-                if( ippFuncC1(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, &norm) >= 0 )
+                if( ippFuncC1(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, &norm) >= 0 )
                     return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
 
                 setIppErrorStatus();
@@ -2381,8 +2381,8 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
             if( ippFuncHint || ippFuncNoHint )
             {
                 Ipp64f norm_array[4];
-                IppStatus ret = ippFuncHint ? ippFuncHint(src.data, (int)src.step[0], sz, norm_array, ippAlgHintAccurate) :
-                                ippFuncNoHint(src.data, (int)src.step[0], sz, norm_array);
+                IppStatus ret = ippFuncHint ? ippFuncHint(src.ptr(), (int)src.step[0], sz, norm_array, ippAlgHintAccurate) :
+                                ippFuncNoHint(src.ptr(), (int)src.step[0], sz, norm_array);
                 if( ret >= 0 )
                 {
                     Ipp64f norm = (normType == NORM_L2 || normType == NORM_L2SQR) ? norm_array[0] * norm_array[0] : norm_array[0];
@@ -2643,7 +2643,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 if( ippFuncC1 )
                 {
                     Ipp64f norm;
-                    if( ippFuncC1(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, &norm) >= 0 )
+                    if( ippFuncC1(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], mask.ptr(), (int)mask.step[0], sz, &norm) >= 0 )
                         return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
                     setIppErrorStatus();
                 }
@@ -2679,14 +2679,14 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 if (ippFuncNoHint)
                 {
                     Ipp64f norm;
-                    if( ippFuncNoHint(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], sz, &norm) >= 0 )
+                    if( ippFuncNoHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, &norm) >= 0 )
                         return (double)norm;
                     setIppErrorStatus();
                 }
                 if (ippFuncHint)
                 {
                     Ipp64f norm;
-                    if( ippFuncHint(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], sz, &norm, ippAlgHintAccurate) >= 0 )
+                    if( ippFuncHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, &norm, ippAlgHintAccurate) >= 0 )
                         return (double)norm;
                     setIppErrorStatus();
                 }
@@ -2739,7 +2739,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
             if( ippFuncC1 )
             {
                 Ipp64f norm;
-                if( ippFuncC1(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, &norm) >= 0 )
+                if( ippFuncC1(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], mask.ptr(), (int)mask.step[0], sz, &norm) >= 0 )
                     return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
                 setIppErrorStatus();
             }
@@ -2839,8 +2839,8 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
             if( ippFuncHint || ippFuncNoHint )
             {
                 Ipp64f norm_array[4];
-                IppStatus ret = ippFuncHint ? ippFuncHint(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], sz, norm_array, ippAlgHintAccurate) :
-                                ippFuncNoHint(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], sz, norm_array);
+                IppStatus ret = ippFuncHint ? ippFuncHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, norm_array, ippAlgHintAccurate) :
+                                ippFuncNoHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, norm_array);
                 if( ret >= 0 )
                 {
                     Ipp64f norm = (normType == NORM_L2 || normType == NORM_L2SQR) ? norm_array[0] * norm_array[0] : norm_array[0];
@@ -3322,7 +3322,7 @@ void cv::findNonZero( InputArray _src, OutputArray _idx )
     _idx.create(n, 1, CV_32SC2);
     Mat idx = _idx.getMat();
     CV_Assert(idx.isContinuous());
-    Point* idx_ptr = (Point*)idx.data;
+    Point* idx_ptr = idx.ptr<Point>();
 
     for( int i = 0; i < src.rows; i++ )
     {

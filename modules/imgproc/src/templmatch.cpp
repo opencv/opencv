@@ -591,7 +591,7 @@ static bool ipp_crossCorr(const Mat& src, const Mat& tpl, Mat& dst)
 
     pBuffer = ippsMalloc_8u( bufSize );
 
-    status = ippFunc(src.data, (int)src.step, srcRoiSize, tpl.data, (int)tpl.step, tplRoiSize, (Ipp32f*)dst.data, (int)dst.step, funCfg, pBuffer);
+    status = ippFunc(src.ptr(), (int)src.step, srcRoiSize, tpl.ptr(), (int)tpl.step, tplRoiSize, dst.ptr<Ipp32f>(), (int)dst.step, funCfg, pBuffer);
 
     ippsFree( pBuffer );
     return status >= 0;
@@ -624,7 +624,7 @@ static bool ipp_sqrDistance(const Mat& src, const Mat& tpl, Mat& dst)
 
     pBuffer = ippsMalloc_8u( bufSize );
 
-    status = ippFunc(src.data, (int)src.step, srcRoiSize, tpl.data, (int)tpl.step, tplRoiSize, (Ipp32f*)dst.data, (int)dst.step, funCfg, pBuffer);
+    status = ippFunc(src.ptr(), (int)src.step, srcRoiSize, tpl.ptr(), (int)tpl.step, tplRoiSize, dst.ptr<Ipp32f>(), (int)dst.step, funCfg, pBuffer);
 
     ippsFree( pBuffer );
     return status >= 0;
@@ -934,7 +934,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
 
     for( i = 0; i < result.rows; i++ )
     {
-        float* rrow = (float*)(result.data + i*result.step);
+        float* rrow = result.ptr<float>(i);
         int idx = i * sumstep;
         int idx2 = i * sqstep;
 

@@ -118,7 +118,7 @@ bool WebPDecoder::readHeader()
 
         data.create(1, wfile_size, CV_8U);
 
-        size_t data_size = fread(data.data, 1, wfile_size, wfile);
+        size_t data_size = fread(data.ptr(), 1, wfile_size, wfile);
 
         if(wfile)
         {
@@ -136,7 +136,7 @@ bool WebPDecoder::readHeader()
     }
 
     WebPBitstreamFeatures features;
-    if(VP8_STATUS_OK == WebPGetFeatures(data.data, WEBP_HEADER_SIZE, &features))
+    if(VP8_STATUS_OK == WebPGetFeatures(data.ptr(), WEBP_HEADER_SIZE, &features))
     {
         m_width  = features.width;
         m_height = features.height;
@@ -167,18 +167,18 @@ bool WebPDecoder::readData(Mat &img)
             img.create(m_height, m_width, m_type);
         }
 
-        uchar* out_data = img.data;
+        uchar* out_data = img.ptr();
         size_t out_data_size = img.cols * img.rows * img.elemSize();
 
         uchar *res_ptr = 0;
         if (channels == 3)
         {
-            res_ptr = WebPDecodeBGRInto(data.data, data.total(), out_data,
+            res_ptr = WebPDecodeBGRInto(data.ptr(), data.total(), out_data,
                                         (int)out_data_size, (int)img.step);
         }
         else if (channels == 4)
         {
-            res_ptr = WebPDecodeBGRAInto(data.data, data.total(), out_data,
+            res_ptr = WebPDecodeBGRAInto(data.ptr(), data.total(), out_data,
                                          (int)out_data_size, (int)img.step);
         }
 
@@ -255,22 +255,22 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     {
         if(channels == 3)
         {
-            size = WebPEncodeLosslessBGR(image->data, width, height, (int)image->step, &out);
+            size = WebPEncodeLosslessBGR(image->ptr(), width, height, (int)image->step, &out);
         }
         else if(channels == 4)
         {
-            size = WebPEncodeLosslessBGRA(image->data, width, height, (int)image->step, &out);
+            size = WebPEncodeLosslessBGRA(image->ptr(), width, height, (int)image->step, &out);
         }
     }
     else
     {
         if(channels == 3)
         {
-            size = WebPEncodeBGR(image->data, width, height, (int)image->step, quality, &out);
+            size = WebPEncodeBGR(image->ptr(), width, height, (int)image->step, quality, &out);
         }
         else if(channels == 4)
         {
-            size = WebPEncodeBGRA(image->data, width, height, (int)image->step, quality, &out);
+            size = WebPEncodeBGRA(image->ptr(), width, height, (int)image->step, quality, &out);
         }
     }
 
