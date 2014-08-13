@@ -1547,7 +1547,7 @@ public:
         }
 
         for( int i = range.start; i < range.end; ++i)
-            if(!ippidft((Ipp32fc*)(src.data+i*src.step), (int)src.step,(Ipp32fc*)(dst.data+i*dst.step), (int)dst.step, pDFTSpec, (Ipp8u*)pBuffer))
+            if(!ippidft(src.ptr<Ipp32fc>(i), (int)src.step,dst.ptr<Ipp32fc>(i), (int)dst.step, pDFTSpec, (Ipp8u*)pBuffer))
             {
                 *ok = false;
             }
@@ -1718,9 +1718,9 @@ static bool ippi_DFT_C_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
     }
 
     if (!inv)
-        status = ippiDFTFwd_CToC_32fc_C1R( (Ipp32fc*)src.data, (int)src.step, (Ipp32fc*)dst.data, (int)dst.step, pDFTSpec, pBuffer );
+        status = ippiDFTFwd_CToC_32fc_C1R( src.ptr<Ipp32fc>(), (int)src.step, dst.ptr<Ipp32fc>(), (int)dst.step, pDFTSpec, pBuffer );
     else
-        status = ippiDFTInv_CToC_32fc_C1R( (Ipp32fc*)src.data, (int)src.step, (Ipp32fc*)dst.data, (int)dst.step, pDFTSpec, pBuffer );
+        status = ippiDFTInv_CToC_32fc_C1R( src.ptr<Ipp32fc>(), (int)src.step, dst.ptr<Ipp32fc>(), (int)dst.step, pDFTSpec, pBuffer );
 
     if ( sizeBuffer > 0 )
         ippFree( pBuffer );
@@ -2661,8 +2661,8 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
         {
             int a = 0, b = count;
             uchar *buf0, *buf1, *dbuf0, *dbuf1;
-            const uchar* sptr0 = src.data;
-            uchar* dptr0 = dst.data;
+            const uchar* sptr0 = src.ptr();
+            uchar* dptr0 = dst.ptr();
             buf0 = ptr;
             ptr += len*complex_elem_size;
             buf1 = ptr;
@@ -2911,9 +2911,9 @@ void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
 
     if( depth == CV_32F )
     {
-        const float* dataA = (const float*)srcA.data;
-        const float* dataB = (const float*)srcB.data;
-        float* dataC = (float*)dst.data;
+        const float* dataA = srcA.ptr<float>();
+        const float* dataB = srcB.ptr<float>();
+        float* dataC = dst.ptr<float>();
 
         size_t stepA = srcA.step/sizeof(dataA[0]);
         size_t stepB = srcB.step/sizeof(dataB[0]);
@@ -2978,9 +2978,9 @@ void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
     }
     else
     {
-        const double* dataA = (const double*)srcA.data;
-        const double* dataB = (const double*)srcB.data;
-        double* dataC = (double*)dst.data;
+        const double* dataA = srcA.ptr<double>();
+        const double* dataB = srcB.ptr<double>();
+        double* dataC = dst.ptr<double>();
 
         size_t stepA = srcA.step/sizeof(dataA[0]);
         size_t stepB = srcB.step/sizeof(dataB[0]);
@@ -3299,7 +3299,7 @@ public:
             pBuffer = (uchar*)buf;
 
             for( int i = range.start; i < range.end; ++i)
-                if(!(*ippidct)((float*)(src->data+i*src->step), (int)src->step,(float*)(dst->data+i*dst->step), (int)dst->step, pDCTSpec, (Ipp8u*)pBuffer))
+                if(!(*ippidct)(src->ptr<float>(i), (int)src->step,dst->ptr<float>(i), (int)dst->step, pDCTSpec, (Ipp8u*)pBuffer))
                     *ok = false;
         }
         else
@@ -3368,7 +3368,7 @@ static bool ippi_DCT_32f(const Mat& src, Mat& dst, bool inv, bool row)
             buf.allocate( bufSize );
             pBuffer = (uchar*)buf;
 
-            status = ippFunc((float*)src.data, (int)src.step, (float*)dst.data, (int)dst.step, pDCTSpec, (Ipp8u*)pBuffer);
+            status = ippFunc(src.ptr<float>(), (int)src.step, dst.ptr<float>(), (int)dst.step, pDCTSpec, (Ipp8u*)pBuffer);
         }
 
         if (pDCTSpec)
@@ -3438,7 +3438,8 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 
     for( ; stage <= end_stage; stage++ )
     {
-        uchar *sptr = src.data, *dptr = dst.data;
+        const uchar* sptr = src.ptr();
+        uchar* dptr = dst.ptr();
         size_t sstep0, sstep1, dstep0, dstep1;
 
         if( stage == 0 )

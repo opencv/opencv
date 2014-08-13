@@ -182,7 +182,7 @@ namespace cv{namespace optim{
         {
             ptry(j)=coord_sum(j)*fac1-p(ihi,j)*fac2;
         }
-        ytry=f->calc((double*)ptry.data);
+        ytry=f->calc(ptry.ptr<double>());
         if (ytry < y(ihi))
         {
             y(ihi)=ytry;
@@ -302,7 +302,7 @@ namespace cv{namespace optim{
                             {
                                 p(i,j) = coord_sum(j) = 0.5*(p(i,j)+p(ilo,j));
                             }
-                            y(i)=f->calc((double*)coord_sum.data);
+                            y(i)=f->calc(coord_sum.ptr<double>());
                         }
                     }
                     nfunk += ndim;
@@ -345,7 +345,7 @@ namespace cv{namespace optim{
 
         if(x_mat.rows>1){
             buf_x.create(1,_step.cols);
-            Mat_<double> proxy(_step.cols,1,(double*)buf_x.data);
+            Mat_<double> proxy(_step.cols,1,buf_x.ptr<double>());
             x_mat.copyTo(proxy);
             proxy_x=buf_x;
         }else{
@@ -365,7 +365,7 @@ namespace cv{namespace optim{
         dprintf(("%d iterations done\n",count));
 
         if(x_mat.rows>1){
-            Mat(x_mat.rows, 1, CV_64F, (double*)proxy_x.data).copyTo(x);
+            Mat(x_mat.rows, 1, CV_64F, proxy_x.ptr<double>()).copyTo(x);
         }
         return res;
     }

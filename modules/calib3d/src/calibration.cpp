@@ -2998,15 +2998,15 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
         int ni1 = imgpt1.checkVector(2, CV_32F);
         CV_Assert( ni > 0 && ni == ni1 );
         npoints.at<int>(i) = ni;
-        memcpy( objPtData + j, objpt.data, ni*sizeof(objPtData[0]) );
-        memcpy( imgPtData1 + j, imgpt1.data, ni*sizeof(imgPtData1[0]) );
+        memcpy( objPtData + j, objpt.ptr(), ni*sizeof(objPtData[0]) );
+        memcpy( imgPtData1 + j, imgpt1.ptr(), ni*sizeof(imgPtData1[0]) );
 
         if( imgPtData2 )
         {
             Mat imgpt2 = imagePoints2.getMat(i);
             int ni2 = imgpt2.checkVector(2, CV_32F);
             CV_Assert( ni == ni2 );
-            memcpy( imgPtData2 + j, imgpt2.data, ni*sizeof(imgPtData2[0]) );
+            memcpy( imgPtData2 + j, imgpt2.ptr(), ni*sizeof(imgPtData2[0]) );
         }
     }
 }
@@ -3245,13 +3245,13 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
         {
             _rvecs.create(3, 1, CV_64F, i, true);
             Mat rv = _rvecs.getMat(i);
-            memcpy(rv.data, rvecM.ptr<double>(i), 3*sizeof(double));
+            memcpy(rv.ptr(), rvecM.ptr<double>(i), 3*sizeof(double));
         }
         if( tvecs_needed )
         {
             _tvecs.create(3, 1, CV_64F, i, true);
             Mat tv = _tvecs.getMat(i);
-            memcpy(tv.data, tvecM.ptr<double>(i), 3*sizeof(double));
+            memcpy(tv.ptr(), tvecM.ptr<double>(i), 3*sizeof(double));
         }
     }
     cameraMatrix.copyTo(_cameraMatrix);
@@ -3472,7 +3472,7 @@ void cv::decomposeProjectionMatrix( InputArray _projMatrix, OutputArray _cameraM
     if( _eulerAngles.needed() )
     {
         _eulerAngles.create(3, 1, CV_64F, -1, true);
-        p_eulerAngles = (CvPoint3D64f*)_eulerAngles.getMat().data;
+        p_eulerAngles = _eulerAngles.getMat().ptr<CvPoint3D64f>();
     }
 
     cvDecomposeProjectionMatrix(&c_projMatrix, &c_cameraMatrix, &c_rotMatrix,

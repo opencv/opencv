@@ -119,13 +119,13 @@ namespace cv{namespace optim{
         Mat_<double> proxy_x;
         if(x_mat.rows>1){
             buf_x.create(1,ndim);
-            Mat_<double> proxy(ndim,1,(double*)buf_x.data);
+            Mat_<double> proxy(ndim,1,buf_x.ptr<double>());
             x_mat.copyTo(proxy);
             proxy_x=buf_x;
         }else{
             proxy_x=x_mat;
         }
-        _Function->getGradient((double*)proxy_x.data,(double*)d.data);
+        _Function->getGradient(proxy_x.ptr<double>(),d.ptr<double>());
         d*=-1.0;
         d.copyTo(r);
 
@@ -138,7 +138,7 @@ namespace cv{namespace optim{
         for(int count=0;count<_termcrit.maxCount;count++){
             minimizeOnTheLine(_Function,proxy_x,d,minimizeOnTheLine_buf1,minimizeOnTheLine_buf2);
             r.copyTo(r_old);
-            _Function->getGradient((double*)proxy_x.data,(double*)r.data);
+            _Function->getGradient(proxy_x.ptr<double>(),r.ptr<double>());
             r*=-1.0;
             double r_norm_sq=norm(r);
             if(_termcrit.type==(TermCriteria::MAX_ITER+TermCriteria::EPS) && r_norm_sq<_termcrit.epsilon){
@@ -152,9 +152,9 @@ namespace cv{namespace optim{
 
 
         if(x_mat.rows>1){
-            Mat(ndim, 1, CV_64F, (double*)proxy_x.data).copyTo(x);
+            Mat(ndim, 1, CV_64F, proxy_x.ptr<double>()).copyTo(x);
         }
-        return _Function->calc((double*)proxy_x.data);
+        return _Function->calc(proxy_x.ptr<double>());
     }
 
     ConjGradSolverImpl::ConjGradSolverImpl(){

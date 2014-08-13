@@ -146,7 +146,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     AutoBuffer<int> _stack(total + 2), _hullbuf(total);
     Point** pointer = _pointer;
     Point2f** pointerf = (Point2f**)pointer;
-    Point* data0 = (Point*)points.data;
+    Point* data0 = points.ptr<Point>();
     int* stack = _stack;
     int* hullbuf = _hullbuf;
 
@@ -257,7 +257,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         Mat hull = _hull.getMat();
         size_t step = !hull.isContinuous() ? hull.step[0] : sizeof(Point);
         for( i = 0; i < nout; i++ )
-            *(Point*)(hull.data + i*step) = data0[hullbuf[i]];
+            *(Point*)(hull.ptr() + i*step) = data0[hullbuf[i]];
     }
 }
 
@@ -278,7 +278,7 @@ void convexityDefects( InputArray _points, InputArray _hull, OutputArray _defect
     int hpoints = hull.checkVector(1, CV_32S);
     CV_Assert( hpoints > 2 );
 
-    const Point* ptr = (const Point*)points.data;
+    const Point* ptr = points.ptr<Point>();
     const int* hptr = hull.ptr<int>();
     std::vector<Vec4i> defects;
 
@@ -385,8 +385,8 @@ bool isContourConvex( InputArray _contour )
         return false;
 
     return depth == CV_32S ?
-    isContourConvex_((const Point*)contour.data, total ) :
-    isContourConvex_((const Point2f*)contour.data, total );
+    isContourConvex_(contour.ptr<Point>(), total ) :
+    isContourConvex_(contour.ptr<Point2f>(), total );
 }
 
 }
@@ -487,7 +487,7 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
         }
     }
     else
-        cvSeqPushMulti(hullseq, h0.data, (int)h0.total());
+        cvSeqPushMulti(hullseq, h0.ptr(), (int)h0.total());
 
     if( mat )
     {

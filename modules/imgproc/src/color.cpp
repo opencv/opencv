@@ -468,10 +468,10 @@ struct IPPGray2BGRAFunctor
 
         const void* srcarray[3] = { src, src, src };
         Mat temp(rows, cols, CV_MAKETYPE(depth, 3));
-        if(func1(srcarray, srcStep, temp.data, (int)temp.step[0], ippiSize(cols, rows)) < 0)
+        if(func1(srcarray, srcStep, temp.ptr(), (int)temp.step[0], ippiSize(cols, rows)) < 0)
             return false;
         int order[4] = {0, 1, 2, 3};
-        return func2(temp.data, (int)temp.step[0], dst, dstStep, ippiSize(cols, rows), order) >= 0;
+        return func2(temp.ptr(), (int)temp.step[0], dst, dstStep, ippiSize(cols, rows), order) >= 0;
     }
 private:
     ippiGeneralFunc func1;
@@ -496,9 +496,9 @@ struct IPPReorderGeneralFunctor
 
         Mat temp;
         temp.create(rows, cols, CV_MAKETYPE(depth, 3));
-        if(func1(src, srcStep, temp.data, (int)temp.step[0], ippiSize(cols, rows), order) < 0)
+        if(func1(src, srcStep, temp.ptr(), (int)temp.step[0], ippiSize(cols, rows), order) < 0)
             return false;
-        return func2(temp.data, (int)temp.step[0], dst, dstStep, ippiSize(cols, rows)) >= 0;
+        return func2(temp.ptr(), (int)temp.step[0], dst, dstStep, ippiSize(cols, rows)) >= 0;
     }
 private:
     ippiReorderFunc func1;
@@ -524,9 +524,9 @@ struct IPPGeneralReorderFunctor
 
         Mat temp;
         temp.create(rows, cols, CV_MAKETYPE(depth, 3));
-        if(func1(src, srcStep, temp.data, (int)temp.step[0], ippiSize(cols, rows)) < 0)
+        if(func1(src, srcStep, temp.ptr(), (int)temp.step[0], ippiSize(cols, rows)) < 0)
             return false;
-        return func2(temp.data, (int)temp.step[0], dst, dstStep, ippiSize(cols, rows), order) >= 0;
+        return func2(temp.ptr(), (int)temp.step[0], dst, dstStep, ippiSize(cols, rows), order) >= 0;
     }
 private:
     ippiGeneralFunc func1;

@@ -762,7 +762,7 @@ public:
         else
         {
             Mat mask(1, nsamples, CV_8U);
-            uchar* mptr = mask.data;
+            uchar* mptr = mask.ptr();
             for( i = 0; i < nsamples; i++ )
                 mptr[i] = (uchar)(i < count);
             trainSampleIdx.create(1, count, CV_32S);

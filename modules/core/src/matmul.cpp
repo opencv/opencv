@@ -822,7 +822,7 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
         break;
     }
 
-    if( C.data )
+    if( !C.empty() )
     {
         CV_Assert( C.type() == type &&
             (((flags&GEMM_3_T) == 0 && C.rows == d_size.height && C.cols == d_size.width) ||
@@ -841,9 +841,9 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
     {
         if( type == CV_32F )
         {
-            float* d = (float*)D.data;
-            const float *a = (const float*)A.data,
-                        *b = (const float*)B.data,
+            float* d = D.ptr<float>();
+            const float *a = A.ptr<float>(),
+                        *b = B.ptr<float>(),
                         *c = (const float*)C.data;
             size_t d_step = D.step/sizeof(d[0]),
                 a_step = A.step/sizeof(a[0]),
@@ -969,9 +969,9 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
 
         if( type == CV_64F )
         {
-            double* d = (double*)D.data;
-            const double *a = (const double*)A.data,
-                         *b = (const double*)B.data,
+            double* d = D.ptr<double>();
+            const double *a = A.ptr<double>(),
+                         *b = B.ptr<double>(),
                          *c = (const double*)C.data;
             size_t d_step = D.step/sizeof(d[0]),
                 a_step = A.step/sizeof(a[0]),
@@ -1211,8 +1211,8 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
         (d_size.width <= block_lin_size &&
         d_size.height <= block_lin_size && len <= block_lin_size) )
     {
-        singleMulFunc( A.data, A.step, B.data, b_step, Cdata, Cstep,
-                       matD->data, matD->step, a_size, d_size, alpha, beta, flags );
+        singleMulFunc( A.ptr(), A.step, B.ptr(), b_step, Cdata, Cstep,
+                       matD->ptr(), matD->step, a_size, d_size, alpha, beta, flags );
     }
     else
     {
@@ -1239,7 +1239,7 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
         else
             b_step0 = elem_size, b_step1 = b_step;
 
-        if( !C.data )
+        if( C.empty() )
         {
             c_step0 = c_step1 = 0;
             flags &= ~GEMM_3_T;
@@ -1285,7 +1285,7 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
 
             for( j = 0; j < d_size.width; j += dj )
             {
-                uchar* _d = matD->data + i*matD->step + j*elem_size;
+                uchar* _d = matD->ptr() + i*matD->step + j*elem_size;
                 const uchar* _c = Cdata + i*c_step0 + j*c_step1;
                 size_t _d_step = matD->step;
                 dj = dn0;
@@ -1302,9 +1302,9 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
 
                 for( k = 0; k < len; k += dk )
                 {
-                    const uchar* _a = A.data + i*a_step0 + k*a_step1;
+                    const uchar* _a = A.ptr() + i*a_step0 + k*a_step1;
                     size_t _a_step = A.step;
-                    const uchar* _b = B.data + k*b_step0 + j*b_step1;
+                    const uchar* _b = B.ptr() + k*b_step0 + j*b_step1;
                     size_t _b_step = b_step;
                     Size a_bl_size;
 
@@ -1349,7 +1349,7 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
 
                 if( dk0 < len )
                     storeFunc( _c, Cstep, _d, _d_step,
-                               matD->data + i*matD->step + j*elem_size,
+                               matD->ptr(i) + j*elem_size,
                                matD->step, Size(dj,di), alpha, beta, flags );
             }
         }
@@ -1858,7 +1858,7 @@ void cv::transform( InputArray _src, OutputArray _dst, InputArray _mtx )
         _mbuf.allocate(dcn*(scn+1));
         mbuf = (double*)_mbuf;
         Mat tmp(dcn, scn+1, mtype, mbuf);
-        memset(tmp.data, 0, tmp.total()*tmp.elemSize());
+        memset(tmp.ptr(), 0, tmp.total()*tmp.elemSize());
         if( m.cols == scn+1 )
             m.convertTo(tmp, mtype);
         else
@@ -1869,7 +1869,7 @@ void cv::transform( InputArray _src, OutputArray _dst, InputArray _mtx )
         m = tmp;
     }
     else
-        mbuf = (double*)m.data;
+        mbuf = m.ptr<double>();
 
     if( scn == dcn )
     {
@@ -2039,7 +2039,7 @@ void cv::perspectiveTransform( InputArray _src, OutputArray _dst, InputArray _mt
         m = tmp;
     }
     else
-        mbuf = (double*)m.data;
+        mbuf = m.ptr<double>();
 
     TransformFunc func = depth == CV_32F ?
         (TransformFunc)perspectiveTransform_32f :
@@ -2227,7 +2227,7 @@ void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray
     if (src1.isContinuous() && src2.isContinuous() && dst.isContinuous())
     {
         size_t len = src1.total()*cn;
-        func(src1.data, src2.data, dst.data, (int)len, palpha);
+        func(src1.ptr(), src2.ptr(), dst.ptr(), (int)len, palpha);
         return;
     }
 
@@ -2271,7 +2271,7 @@ void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean,
     {
         CV_Assert( data[i].size() == size && data[i].type() == type );
         if( data[i].isContinuous() )
-            memcpy( _data.ptr(i), data[i].data, sz*esz );
+            memcpy( _data.ptr(i), data[i].ptr(), sz*esz );
         else
         {
             Mat dataRow(size.height, size.width, type, _data.ptr(i));
@@ -2392,12 +2392,12 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
 
     if( depth == CV_32F )
     {
-        const float* src1 = (const float*)v1.data;
-        const float* src2 = (const float*)v2.data;
+        const float* src1 = v1.ptr<float>();
+        const float* src2 = v2.ptr<float>();
         size_t step1 = v1.step/sizeof(src1[0]);
         size_t step2 = v2.step/sizeof(src2[0]);
         double* diff = buf;
-        const float* mat = (const float*)icovar.data;
+        const float* mat = icovar.ptr<float>();
         size_t matstep = icovar.step/sizeof(mat[0]);
 
         for( ; sz.height--; src1 += step1, src2 += step2, diff += sz.width )
@@ -2423,12 +2423,12 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
     }
     else if( depth == CV_64F )
     {
-        const double* src1 = (const double*)v1.data;
-        const double* src2 = (const double*)v2.data;
+        const double* src1 = v1.ptr<double>();
+        const double* src2 = v2.ptr<double>();
         size_t step1 = v1.step/sizeof(src1[0]);
         size_t step2 = v2.step/sizeof(src2[0]);
         double* diff = buf;
-        const double* mat = (const double*)icovar.data;
+        const double* mat = icovar.ptr<double>();
         size_t matstep = icovar.step/sizeof(mat[0]);
 
         for( ; sz.height--; src1 += step1, src2 += step2, diff += sz.width )
@@ -2469,9 +2469,9 @@ template<typename sT, typename dT> static void
 MulTransposedR( const Mat& srcmat, Mat& dstmat, const Mat& deltamat, double scale )
 {
     int i, j, k;
-    const sT* src = (const sT*)srcmat.data;
-    dT* dst = (dT*)dstmat.data;
-    const dT* delta = (const dT*)deltamat.data;
+    const sT* src = srcmat.ptr<sT>();
+    dT* dst = dstmat.ptr<dT>();
+    const dT* delta = deltamat.ptr<dT>();
     size_t srcstep = srcmat.step/sizeof(src[0]);
     size_t dststep = dstmat.step/sizeof(dst[0]);
     size_t deltastep = deltamat.rows > 1 ? deltamat.step/sizeof(delta[0]) : 0;
@@ -2588,9 +2588,9 @@ template<typename sT, typename dT> static void
 MulTransposedL( const Mat& srcmat, Mat& dstmat, const Mat& deltamat, double scale )
 {
     int i, j, k;
-    const sT* src = (const sT*)srcmat.data;
-    dT* dst = (dT*)dstmat.data;
-    const dT* delta = (const dT*)deltamat.data;
+    const sT* src = srcmat.ptr<sT>();
+    dT* dst = dstmat.ptr<dT>();
+    const dT* delta = deltamat.ptr<dT>();
     size_t srcstep = srcmat.step/sizeof(src[0]);
     size_t dststep = dstmat.step/sizeof(dst[0]);
     size_t deltastep = deltamat.rows > 1 ? deltamat.step/sizeof(delta[0]) : 0;
@@ -2669,7 +2669,7 @@ void cv::mulTransposed( InputArray _src, OutputArray _dst, bool ata,
     dtype = std::max(std::max(CV_MAT_DEPTH(dtype >= 0 ? dtype : stype), delta.depth()), CV_32F);
     CV_Assert( src.channels() == 1 );
 
-    if( delta.data )
+    if( !delta.empty() )
     {
         CV_Assert( delta.channels() == 1 &&
             (delta.rows == src.rows || delta.rows == 1) &&
@@ -2688,7 +2688,7 @@ void cv::mulTransposed( InputArray _src, OutputArray _dst, bool ata,
     {
         Mat src2;
         const Mat* tsrc = &src;
-        if( delta.data )
+        if( !delta.empty() )
         {
             if( delta.size() == src.size() )
                 subtract( src, delta, src2 );
@@ -3012,7 +3012,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
 
     Mat covar( count, count, ctype );
 
-    if( _mean.data )
+    if( !_mean.empty() )
     {
         CV_Assert( _mean.size() == mean_sz );
         _mean.convertTo(mean, ctype);
@@ -3148,7 +3148,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
 
     Mat covar( count, count, ctype );
 
-    if( _mean.data )
+    if( !_mean.empty() )
     {
         CV_Assert( _mean.size() == mean_sz );
         _mean.convertTo(mean, ctype);
@@ -3203,7 +3203,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
 void PCA::project(InputArray _data, OutputArray result) const
 {
     Mat data = _data.getMat();
-    CV_Assert( mean.data && eigenvectors.data &&
+    CV_Assert( !mean.empty() && !eigenvectors.empty() &&
         ((mean.rows == 1 && mean.cols == data.cols) || (mean.cols == 1 && mean.rows == data.rows)));
     Mat tmp_data, tmp_mean = repeat(mean, data.rows/mean.rows, data.cols/mean.cols);
     int ctype = mean.type();
@@ -3233,7 +3233,7 @@ Mat PCA::project(InputArray data) const
 void PCA::backProject(InputArray _data, OutputArray result) const
 {
     Mat data = _data.getMat();
-    CV_Assert( mean.data && eigenvectors.data &&
+    CV_Assert( !mean.empty() && !eigenvectors.empty() &&
         ((mean.rows == 1 && eigenvectors.rows == data.cols) ||
          (mean.cols == 1 && eigenvectors.rows == data.rows)));
 
@@ -3427,7 +3427,7 @@ cvCalcPCA( const CvArr* data_arr, CvArr* avg_arr, CvArr* eigenvals, CvArr* eigen
     pca.eigenvectors = evects;
 
     pca(data, (flags & CV_PCA_USE_AVG) ? mean : cv::Mat(),
-        flags, evals.data ? evals.rows + evals.cols - 1 : 0);
+        flags, !evals.empty() ? evals.rows + evals.cols - 1 : 0);
 
     if( pca.mean.size() == mean.size() )
         pca.mean.convertTo( mean, mean.type() );

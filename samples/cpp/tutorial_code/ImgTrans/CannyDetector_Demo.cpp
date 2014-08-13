@@ -52,7 +52,7 @@ int main( int, char** argv )
   /// Load an image
   src = imread( argv[1] );
 
-  if( !src.data )
+  if( src.empty() )
     { return -1; }
 
   /// Create a matrix of the same type and size as src (for dst)

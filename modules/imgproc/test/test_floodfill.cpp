@@ -213,7 +213,7 @@ void CV_FloodFillTest::run_func()
             mask = test_array[INPUT_OUTPUT][1] ? cv::cvarrToMat(test_array[INPUT_OUTPUT][1]) : cv::Mat();
         cv::Rect rect;
         int area;
-        if( !mask.data )
+        if( mask.empty() )
             area = cv::floodFill( img, seed_pt, new_val, &rect, l_diff, u_diff, flags );
         else
             area = cv::floodFill( img, mask, seed_pt, new_val, &rect, l_diff, u_diff, flags );

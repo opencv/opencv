@@ -62,8 +62,8 @@ static void calcMinEigenVal( const Mat& _cov, Mat& _dst )
 
     for( i = 0; i < size.height; i++ )
     {
-        const float* cov = (const float*)(_cov.data + _cov.step*i);
-        float* dst = (float*)(_dst.data + _dst.step*i);
+        const float* cov = _cov.ptr<float>(i);
+        float* dst = _dst.ptr<float>(i);
         j = 0;
     #if CV_SSE
         if( simd )
@@ -118,8 +118,8 @@ static void calcHarris( const Mat& _cov, Mat& _dst, double k )
 
     for( i = 0; i < size.height; i++ )
     {
-        const float* cov = (const float*)(_cov.data + _cov.step*i);
-        float* dst = (float*)(_dst.data + _dst.step*i);
+        const float* cov = _cov.ptr<float>(i);
+        float* dst = _dst.ptr<float>(i);
         j = 0;
 
     #if CV_SSE
@@ -227,8 +227,8 @@ static void calcEigenValsVecs( const Mat& _cov, Mat& _dst )
 
     for( int i = 0; i < size.height; i++ )
     {
-        const float* cov = (const float*)(_cov.data + _cov.step*i);
-        float* dst = (float*)(_dst.data + _dst.step*i);
+        const float* cov = _cov.ptr<float>(i);
+        float* dst = _dst.ptr<float>(i);
 
         eigen2x2(cov, dst, size.width);
     }
@@ -276,9 +276,9 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 
     for( i = 0; i < size.height; i++ )
     {
-        float* cov_data = (float*)(cov.data + i*cov.step);
-        const float* dxdata = (const float*)(Dx.data + i*Dx.step);
-        const float* dydata = (const float*)(Dy.data + i*Dy.step);
+        float* cov_data = cov.ptr<float>(i);
+        const float* dxdata = Dx.ptr<float>(i);
+        const float* dydata = Dy.ptr<float>(i);
 
         for( j = 0; j < size.width; j++ )
         {
@@ -503,9 +503,9 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
             if (ok >= 0)
             {
                 AutoBuffer<uchar> buffer(bufferSize);
-                ok = minEigenValFunc(src.data, (int) src.step, (Ipp32f*) dst.data, (int) dst.step, srcRoi, kerType, kerSize, blockSize, buffer);
+                ok = minEigenValFunc(src.ptr(), (int) src.step, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi, kerType, kerSize, blockSize, buffer);
                 CV_SUPPRESS_DEPRECATED_START
-                if (ok >= 0) ok = ippiMulC_32f_C1IR(norm_coef, (Ipp32f*) dst.data, (int) dst.step, srcRoi);
+                if (ok >= 0) ok = ippiMulC_32f_C1IR(norm_coef, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi);
                 CV_SUPPRESS_DEPRECATED_END
                 if (ok >= 0)
                     return;
@@ -617,12 +617,12 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
     int i, j;
     for( i = 0; i < size.height; i++ )
     {
-        float* dstdata = (float*)(dst.data + i*dst.step);
-        const float* dxdata = (const float*)(Dx.data + i*Dx.step);
-        const float* dydata = (const float*)(Dy.data + i*Dy.step);
-        const float* d2xdata = (const float*)(D2x.data + i*D2x.step);
-        const float* d2ydata = (const float*)(D2y.data + i*D2y.step);
-        const float* dxydata = (const float*)(Dxy.data + i*Dxy.step);
+        float* dstdata = dst.ptr<float>(i);
+        const float* dxdata = Dx.ptr<float>(i);
+        const float* dydata = Dy.ptr<float>(i);
+        const float* d2xdata = D2x.ptr<float>(i);
+        const float* d2ydata = D2y.ptr<float>(i);
+        const float* dxydata = Dxy.ptr<float>(i);
 
         j = 0;
 

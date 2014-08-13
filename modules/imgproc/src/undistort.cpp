@@ -53,8 +53,8 @@ cv::Mat cv::getDefaultNewCameraMatrix( InputArray _cameraMatrix, Size imgsize,
     cameraMatrix.convertTo(newCameraMatrix, CV_64F);
     if( centerPrincipalPoint )
     {
-        ((double*)newCameraMatrix.data)[2] = (imgsize.width-1)*0.5;
-        ((double*)newCameraMatrix.data)[5] = (imgsize.height-1)*0.5;
+        newCameraMatrix.ptr<double>()[2] = (imgsize.width-1)*0.5;
+        newCameraMatrix.ptr<double>()[5] = (imgsize.height-1)*0.5;
     }
     return newCameraMatrix;
 }
@@ -82,15 +82,15 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
     Mat_<double> R = Mat_<double>::eye(3, 3);
     Mat_<double> A = Mat_<double>(cameraMatrix), Ar;
 
-    if( newCameraMatrix.data )
+    if( !newCameraMatrix.empty() )
         Ar = Mat_<double>(newCameraMatrix);
     else
         Ar = getDefaultNewCameraMatrix( A, size, true );
 
-    if( matR.data )
+    if( !matR.empty() )
         R = Mat_<double>(matR);
 
-    if( distCoeffs.data )
+    if( !distCoeffs.empty() )
         distCoeffs = Mat_<double>(distCoeffs);
     else
     {
@@ -114,23 +114,24 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
     if( distCoeffs.rows != 1 && !distCoeffs.isContinuous() )
         distCoeffs = distCoeffs.t();
 
-    double k1 = ((double*)distCoeffs.data)[0];
-    double k2 = ((double*)distCoeffs.data)[1];
-    double p1 = ((double*)distCoeffs.data)[2];
-    double p2 = ((double*)distCoeffs.data)[3];
-    double k3 = distCoeffs.cols + distCoeffs.rows - 1 >= 5 ? ((double*)distCoeffs.data)[4] : 0.;
-    double k4 = distCoeffs.cols + distCoeffs.rows - 1 >= 8 ? ((double*)distCoeffs.data)[5] : 0.;
-    double k5 = distCoeffs.cols + distCoeffs.rows - 1 >= 8 ? ((double*)distCoeffs.data)[6] : 0.;
-    double k6 = distCoeffs.cols + distCoeffs.rows - 1 >= 8 ? ((double*)distCoeffs.data)[7] : 0.;
-    double s1 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? ((double*)distCoeffs.data)[8] : 0.;
-    double s2 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? ((double*)distCoeffs.data)[9] : 0.;
-    double s3 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? ((double*)distCoeffs.data)[10] : 0.;
-    double s4 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? ((double*)distCoeffs.data)[11] : 0.;
+    const double* const distPtr = distCoeffs.ptr<double>();
+    double k1 = distPtr[0];
+    double k2 = distPtr[1];
+    double p1 = distPtr[2];
+    double p2 = distPtr[3];
+    double k3 = distCoeffs.cols + distCoeffs.rows - 1 >= 5 ? distPtr[4] : 0.;
+    double k4 = distCoeffs.cols + distCoeffs.rows - 1 >= 8 ? distPtr[5] : 0.;
+    double k5 = distCoeffs.cols + distCoeffs.rows - 1 >= 8 ? distPtr[6] : 0.;
+    double k6 = distCoeffs.cols + distCoeffs.rows - 1 >= 8 ? distPtr[7] : 0.;
+    double s1 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? distPtr[8] : 0.;
+    double s2 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? distPtr[9] : 0.;
+    double s3 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? distPtr[10] : 0.;
+    double s4 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? distPtr[11] : 0.;
 
     for( int i = 0; i < size.height; i++ )
     {
-        float* m1f = (float*)(map1.data + map1.step*i);
-        float* m2f = (float*)(map2.data + map2.step*i);
+        float* m1f = map1.ptr<float>(i);
+        float* m2f = map2.ptr<float>(i);
         short* m1 = (short*)m1f;
         ushort* m2 = (ushort*)m2f;
         double _x = i*ir[1] + ir[2], _y = i*ir[4] + ir[5], _w = i*ir[7] + ir[8];
@@ -183,7 +184,7 @@ void cv::undistort( InputArray _src, OutputArray _dst, InputArray _cameraMatrix,
     Mat_<double> A, Ar, I = Mat_<double>::eye(3,3);
 
     cameraMatrix.convertTo(A, CV_64F);
-    if( distCoeffs.data )
+    if( !distCoeffs.empty() )
         distCoeffs = Mat_<double>(distCoeffs);
     else
     {
@@ -191,7 +192,7 @@ void cv::undistort( InputArray _src, OutputArray _dst, InputArray _cameraMatrix,
         distCoeffs = 0.;
     }
 
-    if( newCameraMatrix.data )
+    if( !newCameraMatrix.empty() )
         newCameraMatrix.convertTo(Ar, CV_64F);
     else
         A.copyTo(Ar);
@@ -404,11 +405,11 @@ void cv::undistortPoints( InputArray _src, OutputArray _dst,
 
     CvMat _csrc = src, _cdst = dst, _ccameraMatrix = cameraMatrix;
     CvMat matR, matP, _cdistCoeffs, *pR=0, *pP=0, *pD=0;
-    if( R.data )
+    if( !R.empty() )
         pR = &(matR = R);
-    if( P.data )
+    if( !P.empty() )
         pP = &(matP = P);
-    if( distCoeffs.data )
+    if( !distCoeffs.empty() )
         pD = &(_cdistCoeffs = distCoeffs);
     cvUndistortPoints(&_csrc, &_cdst, &_ccameraMatrix, pD, pR, pP);
 }
