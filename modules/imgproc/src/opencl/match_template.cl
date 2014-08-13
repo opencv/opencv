@@ -245,20 +245,24 @@ __kernel void matchTemplate_CCORR_NORMED(__global const uchar * src_sqsums, int 
                                          int template_rows, int template_cols, __global const float * template_sqsum)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y0 = get_global_id(1) * rowsPerWI;
 
-    if (x < dst_cols && y < dst_rows)
+    if (x < dst_cols )
     {
-        __global const float * sqsum = (__global const float *)(src_sqsums);
-
         src_sqsums_step /= sizeof(float);
         src_sqsums_offset /= sizeof(float);
-        float image_sqsum_ = (float)(sqsum[SQSUMS_PTR(template_cols, template_rows)] - sqsum[SQSUMS_PTR(template_cols, 0)] -
-                                     sqsum[SQSUMS_PTR(0, template_rows)] + sqsum[SQSUMS_PTR(0, 0)]);
 
-        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
-        __global float * dstult = (__global float *)(dst + dst_idx);
-        *dstult = normAcc(*dstult, sqrt(image_sqsum_ * template_sqsum[0]));
+        __global const float * sqsum = (__global const float *)(src_sqsums);
+        int dst_idx = mad24(y0, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+
+        for (int y = y0, y1 = min(dst_rows, y0 + rowsPerWI); y < y1; ++y, dst_idx += dst_step)
+        {
+            float image_sqsum_ = (float)(sqsum[SQSUMS_PTR(template_cols, template_rows)] - sqsum[SQSUMS_PTR(template_cols, 0)] -
+                                         sqsum[SQSUMS_PTR(0, template_rows)] + sqsum[SQSUMS_PTR(0, 0)]);
+
+            __global float * dstult = (__global float *)(dst + dst_idx);
+            *dstult = normAcc(*dstult, sqrt(image_sqsum_ * template_sqsum[0]));
+        }
     }
 }
 
@@ -326,22 +330,26 @@ __kernel void matchTemplate_SQDIFF_NORMED(__global const uchar * src_sqsums, int
                                           int template_rows, int template_cols, __global const float * template_sqsum)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y0 = get_global_id(1) * rowsPerWI;
 
-    if (x < dst_cols && y < dst_rows)
+    if (x < dst_cols )
     {
         src_sqsums_step /= sizeof(float);
         src_sqsums_offset /= sizeof(float);
 
         __global const float * sqsum = (__global const float *)(src_sqsums);
-        float image_sqsum_ = (float)(
-                                 (sqsum[SQSUMS_PTR(template_cols, template_rows)] - sqsum[SQSUMS_PTR(template_cols, 0)]) -
-                                 (sqsum[SQSUMS_PTR(0, template_rows)] - sqsum[SQSUMS_PTR(0, 0)]));
-        float template_sqsum_value = template_sqsum[0];
+        int dst_idx = mad24(y0, dst_step, mad24(x, (int)sizeof(float), dst_offset));
 
-        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
-        __global float * dstult = (__global float *)(dst + dst_idx);
-        *dstult = normAcc_SQDIFF(image_sqsum_ - 2.0f * dstult[0] + template_sqsum_value, sqrt(image_sqsum_ * template_sqsum_value));
+        for (int y = y0, y1 = min(dst_rows, y0 + rowsPerWI); y < y1; ++y, dst_idx += dst_step)
+        {
+            float image_sqsum_ = (float)((sqsum[SQSUMS_PTR(template_cols, template_rows)] - sqsum[SQSUMS_PTR(template_cols, 0)]) -
+                                         (sqsum[SQSUMS_PTR(0, template_rows)] - sqsum[SQSUMS_PTR(0, 0)]));
+            
+            float template_sqsum_value = template_sqsum[0];
+
+            __global float * dstult = (__global float *)(dst + dst_idx);
+            *dstult = normAcc_SQDIFF(image_sqsum_ - 2.0f * dstult[0] + template_sqsum_value, sqrt(image_sqsum_ * template_sqsum_value));
+        }
     }
 }
 

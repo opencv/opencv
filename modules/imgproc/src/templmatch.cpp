@@ -318,9 +318,10 @@ static bool matchTemplate_CCORR_NORMED(InputArray _image, InputArray _templ, Out
     matchTemplate(_image, _templ, _result, CV_TM_CCORR);
 
     int type = _image.type(), cn = CV_MAT_CN(type);
+    int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
     ocl::Kernel k("matchTemplate_CCORR_NORMED", ocl::imgproc::match_template_oclsrc,
-                  format("-D CCORR_NORMED -D T=%s -D cn=%d", ocl::typeToStr(type), cn));
+                  format("-D CCORR_NORMED -D T=%s -D cn=%d -D rowsPerWI=%d", ocl::typeToStr(type), cn, rowsPerWI));
     if (k.empty())
         return false;
 
@@ -338,7 +339,7 @@ static bool matchTemplate_CCORR_NORMED(InputArray _image, InputArray _templ, Out
     k.args(ocl::KernelArg::ReadOnlyNoSize(image_sqsums), ocl::KernelArg::ReadWrite(result),
            templ.rows, templ.cols, ocl::KernelArg::PtrReadOnly(templ_sqsum));
 
-    size_t globalsize[2] = { result.cols, result.rows };
+    size_t globalsize[2] = { result.cols, (result.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -407,9 +408,10 @@ static bool matchTemplate_SQDIFF_NORMED(InputArray _image, InputArray _templ, Ou
     matchTemplate(_image, _templ, _result, CV_TM_CCORR);
 
     int type = _image.type(), cn = CV_MAT_CN(type);
+    int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
     ocl::Kernel k("matchTemplate_SQDIFF_NORMED", ocl::imgproc::match_template_oclsrc,
-                  format("-D SQDIFF_NORMED -D T=%s -D cn=%d", ocl::typeToStr(type),  cn));
+                  format("-D SQDIFF_NORMED -D T=%s -D cn=%d -D rowsPerWI=%d", ocl::typeToStr(type), cn, rowsPerWI));
     if (k.empty())
         return false;
 
@@ -427,7 +429,7 @@ static bool matchTemplate_SQDIFF_NORMED(InputArray _image, InputArray _templ, Ou
     k.args(ocl::KernelArg::ReadOnlyNoSize(image_sqsums), ocl::KernelArg::ReadWrite(result),
            templ.rows, templ.cols, ocl::KernelArg::PtrReadOnly(templ_sqsum));
 
-    size_t globalsize[2] = { result.cols, result.rows };
+    size_t globalsize[2] = { result.cols, (result.rows + rowsPerWI - 1) / rowsPerWI };
 
     return k.run(2, globalsize, NULL, false);
 }
