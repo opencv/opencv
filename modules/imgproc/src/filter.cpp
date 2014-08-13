@@ -2299,7 +2299,7 @@ template<typename ST, typename DT, class VecOp> struct SymmRowSmallFilter :
     void operator()(const uchar* src, uchar* dst, int width, int cn)
     {
         int ksize2 = this->ksize/2, ksize2n = ksize2*cn;
-        const DT* kx = this->kernel.ptr<DT>() + ksize2;
+        const DT* kx = this->kernel.template ptr<DT>() + ksize2;
         bool symmetrical = (this->symmetryType & KERNEL_SYMMETRICAL) != 0;
         DT* D = (DT*)dst;
         int i = this->vecOp(src, dst, width, cn), j, k;
@@ -2437,7 +2437,7 @@ template<class CastOp, class VecOp> struct ColumnFilter : public BaseColumnFilte
 
     void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
-        const ST* ky = kernel.ptr<ST>();
+        const ST* ky = kernel.template ptr<ST>();
         ST _delta = delta;
         int _ksize = ksize;
         int i, k;
@@ -2501,7 +2501,7 @@ template<class CastOp, class VecOp> struct SymmColumnFilter : public ColumnFilte
     void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
         int ksize2 = this->ksize/2;
-        const ST* ky = this->kernel.ptr<ST>() + ksize2;
+        const ST* ky = this->kernel.template ptr<ST>() + ksize2;
         int i, k;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
         ST _delta = this->delta;
@@ -2607,7 +2607,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
     void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
         int ksize2 = this->ksize/2;
-        const ST* ky = this->kernel.ptr<ST>() + ksize2;
+        const ST* ky = this->kernel.template ptr<ST>() + ksize2;
         int i;
         bool symmetrical = (this->symmetryType & KERNEL_SYMMETRICAL) != 0;
         bool is_1_2_1 = ky[0] == 1 && ky[1] == 2;

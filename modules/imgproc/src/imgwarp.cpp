@@ -1265,7 +1265,7 @@ public:
                 }
                 if( k1 == ksize )
                     k0 = std::min(k0, k); // remember the first row that needs to be computed
-                srows[k] = src.ptr<T>(sy);
+                srows[k] = src.template ptr<T>(sy);
                 prev_sy[k] = sy;
             }
 
@@ -1608,10 +1608,10 @@ public:
                 continue;
             }
 
-            dx = vop(src.ptr<T>(sy0), D, w);
+            dx = vop(src.template ptr<T>(sy0), D, w);
             for( ; dx < w; dx++ )
             {
-                const T* S = src.ptr<T>(sy0) + xofs[dx];
+                const T* S = src.template ptr<T>(sy0) + xofs[dx];
                 WT sum = 0;
                 k = 0;
                 #if CV_ENABLE_UNROLLED
@@ -1635,7 +1635,7 @@ public:
                 {
                     if( sy0 + sy >= ssize.height )
                         break;
-                    const T* S = src.ptr<T>(sy0 + sy) + sx0;
+                    const T* S = src.template ptr<T>(sy0 + sy) + sx0;
                     for( int sx = 0; sx < scale_x*cn; sx += cn )
                     {
                         if( sx0 + sx >= ssize.width )
@@ -1713,7 +1713,7 @@ public:
             int sy = ytab[j].si;
 
             {
-                const T* S = src->ptr<T>(sy);
+                const T* S = src->template ptr<T>(sy);
                 for( dx = 0; dx < dsize.width; dx++ )
                     buf[dx] = (WT)0;
 
@@ -1775,7 +1775,7 @@ public:
 
             if( dy != prev_dy )
             {
-                T* D = dst->ptr<T>(prev_dy);
+                T* D = dst->template ptr<T>(prev_dy);
 
                 for( dx = 0; dx < dsize.width; dx++ )
                 {
@@ -1792,7 +1792,7 @@ public:
         }
 
         {
-        T* D = dst->ptr<T>(prev_dy);
+        T* D = dst->template ptr<T>(prev_dy);
         for( dx = 0; dx < dsize.width; dx++ )
             D[dx] = saturate_cast<T>(sum[dx]);
         }
