@@ -911,7 +911,7 @@ typedef RepeatTestCase Repeat;
 
 OCL_TEST_P(Repeat, Mat)
 {
-    for (int i = 0; i < test_loop_times; ++i)
+    for (int i = 0; i < 30; ++i)
     {
         generateTestData();
 
