@@ -762,7 +762,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
         flipHoriz( dst.data, dst.step, dst.data, dst.step, dst.size(), esz );
 }
 
-/*#ifdef HAVE_OPENCL
+#if defined HAVE_OPENCL && !defined __APPLE__
 
 static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
@@ -790,7 +790,7 @@ static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
     return k.run(2, globalsize, NULL, false);
 }
 
-#endif*/
+#endif
 
 void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
@@ -800,8 +800,10 @@ void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
     Size ssize = _src.size();
     _dst.create(ssize.height*ny, ssize.width*nx, _src.type());
 
-    /*CV_OCL_RUN(_dst.isUMat(),
-               ocl_repeat(_src, ny, nx, _dst))*/
+#if !defined __APPLE__
+    CV_OCL_RUN(_dst.isUMat(),
+               ocl_repeat(_src, ny, nx, _dst))
+#endif
 
     Mat src = _src.getMat(), dst = _dst.getMat();
     Size dsize = dst.size();
