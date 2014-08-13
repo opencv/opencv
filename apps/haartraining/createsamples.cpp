@@ -222,8 +222,9 @@ int main( int argc, char* argv[] )
                 "Annotations are in a separate directory\n" );
 
         cvCreatePngTrainingSet(infoname, imagename, bgcolor, bgthreshold, bgfilename, num,
-                             invert, maxintensitydev,
-                             maxxangle, maxyangle, maxzangle);
+                               invert, maxintensitydev,
+                               maxxangle, maxyangle, maxzangle,
+                               createOutput( infoname, IOutput::PNG_TRAINING_SET) );
 
         printf( "Done\n" );
     }
@@ -233,7 +234,8 @@ int main( int argc, char* argv[] )
 
         cvCreateTestSamples( infoname, imagename, bgcolor, bgthreshold, bgfilename, num,
             invert, maxintensitydev,
-            maxxangle, maxyangle, maxzangle, showsamples, width, height );
+            maxxangle, maxyangle, maxzangle, showsamples, width, height,
+            createOutput( infoname, IOutput::JPG_TEST_SET ) );
 
         printf( "Done\n" );
     }
