@@ -2750,7 +2750,7 @@ KernelArg::KernelArg(int _flags, UMat* _m, int _wscale, int _iwscale, const void
 KernelArg KernelArg::Constant(const Mat& m)
 {
     CV_Assert(m.isContinuous());
-    return KernelArg(CONSTANT, 0, 0, 0, m.data, m.total()*m.elemSize());
+    return KernelArg(CONSTANT, 0, 0, 0, m.ptr(), m.total()*m.elemSize());
 }
 
 /////////////////////////////////////////// Kernel /////////////////////////////////////////////
@@ -4397,7 +4397,7 @@ template <typename T>
 static std::string kerToStr(const Mat & k)
 {
     int width = k.cols - 1, depth = k.depth();
-    const T * const data = reinterpret_cast<const T *>(k.data);
+    const T * const data = k.ptr<T>();
 
     std::ostringstream stream;
     stream.precision(10);

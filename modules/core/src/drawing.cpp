@@ -228,7 +228,7 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
         count = dx + dy + 1;
     }
 
-    this->ptr0 = img.data;
+    this->ptr0 = img.ptr();
     this->step = (int)img.step;
     this->elemSize = bt_pix0;
 }
@@ -291,7 +291,7 @@ LineAA( Mat& img, Point pt1, Point pt2, const void* color )
     int cb = ((uchar*)color)[0], cg = ((uchar*)color)[1], cr = ((uchar*)color)[2];
     int _cb, _cg, _cr;
     int nch = img.channels();
-    uchar* ptr = img.data;
+    uchar* ptr = img.ptr();
     size_t step = img.step;
     Size size = img.size();
 
@@ -558,7 +558,7 @@ Line2( Mat& img, Point pt1, Point pt2, const void* color )
     int cg = ((uchar*)color)[1];
     int cr = ((uchar*)color)[2];
     int pix_size = (int)img.elemSize();
-    uchar *ptr = img.data, *tptr;
+    uchar *ptr = img.ptr(), *tptr;
     size_t step = img.step;
     Size size = img.size(), sizeScaled(size.width*XY_ONE, size.height*XY_ONE);
 
@@ -961,7 +961,7 @@ FillConvexPoly( Mat& img, const Point* v, int npts, const void* color, int line_
     int i, y, imin = 0, left = 0, right = 1, x1, x2;
     int edges = npts;
     int xmin, xmax, ymin, ymax;
-    uchar* ptr = img.data;
+    uchar* ptr = img.ptr();
     Size size = img.size();
     int pix_size = (int)img.elemSize();
     Point p0;
@@ -1251,7 +1251,7 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
                 if( !clipline )
                 {
                     // convert x's from fixed-point to image coordinates
-                    uchar *timg = img.data + y * img.step;
+                    uchar *timg = img.ptr(y);
                     int x1 = keep_prelast->x;
                     int x2 = prelast->x;
 
@@ -1323,7 +1323,7 @@ Circle( Mat& img, Point center, int radius, const void* color, int fill )
     Size size = img.size();
     size_t step = img.step;
     int pix_size = (int)img.elemSize();
-    uchar* ptr = img.data;
+    uchar* ptr = img.ptr();
     int err = 0, dx = radius, dy = 0, plus = 1, minus = (radius << 1) - 1;
     int inside = center.x >= radius && center.x < size.width - radius &&
         center.y >= radius && center.y < size.height - radius;
@@ -2048,7 +2048,7 @@ void cv::fillConvexPoly(InputOutputArray _img, InputArray _points,
 {
     Mat img = _img.getMat(), points = _points.getMat();
     CV_Assert(points.checkVector(2, CV_32S) >= 0);
-    fillConvexPoly(img, (const Point*)points.data, points.rows*points.cols*points.channels()/2, color, lineType, shift);
+    fillConvexPoly(img, points.ptr<Point>(), points.rows*points.cols*points.channels()/2, color, lineType, shift);
 }
 
 
@@ -2068,7 +2068,7 @@ void cv::fillPoly(InputOutputArray _img, InputArrayOfArrays pts,
     {
         Mat p = pts.getMat(i);
         CV_Assert(p.checkVector(2, CV_32S) >= 0);
-        ptsptr[i] = (Point*)p.data;
+        ptsptr[i] = p.ptr<Point>();
         npts[i] = p.rows*p.cols*p.channels()/2;
     }
     fillPoly(img, (const Point**)ptsptr, npts, (int)ncontours, color, lineType, shift, offset);
@@ -2096,7 +2096,7 @@ void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
         if( p.total() == 0 )
             continue;
         CV_Assert(p.checkVector(2, CV_32S) >= 0);
-        ptsptr[i] = (Point*)p.data;
+        ptsptr[i] = p.ptr<Point>();
         npts[i] = p.rows*p.cols*p.channels()/2;
     }
     polylines(img, (const Point**)ptsptr, npts, (int)ncontours, isClosed, color, thickness, lineType, shift);
@@ -2116,7 +2116,7 @@ static void addChildContour(InputArrayOfArrays contours,
     {
         Mat ci = contours.getMat(i);
         cvMakeSeqHeaderForArray(CV_SEQ_POLYGON, sizeof(CvSeq), sizeof(Point),
-                                !ci.empty() ? (void*)ci.data : 0, (int)ci.total(),
+                                !ci.empty() ? (void*)ci.ptr() : 0, (int)ci.total(),
                                 &seq[i], &block[i] );
 
         int h_next = hierarchy[i][0], h_prev = hierarchy[i][1],
@@ -2169,7 +2169,7 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
         int npoints = ci.checkVector(2, CV_32S);
         CV_Assert( npoints > 0 );
         cvMakeSeqHeaderForArray( CV_SEQ_POLYGON, sizeof(CvSeq), sizeof(Point),
-                                 ci.data, npoints, &seq[i], &block[i] );
+                                 ci.ptr(), npoints, &seq[i], &block[i] );
     }
 
     if( hierarchy.empty() || maxLevel == 0 )

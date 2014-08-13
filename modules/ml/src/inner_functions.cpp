@@ -97,7 +97,7 @@ float StatModel::calcError( const Ptr<TrainData>& data, bool testerr, OutputArra
             err += fabs(val - val0) > FLT_EPSILON;
         else
             err += (val - val0)*(val - val0);
-        if( resp.data )
+        if( !resp.empty() )
             resp.at<float>(i) = val;
         /*if( i < 100 )
         {

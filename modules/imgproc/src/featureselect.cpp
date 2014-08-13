@@ -329,7 +329,7 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
 
         for( i = 0; i < total; i++ )
         {
-            int ofs = (int)((const uchar*)tmpCorners[i] - eig.data);
+            int ofs = (int)((const uchar*)tmpCorners[i] - eig.ptr());
             int y = (int)(ofs / eig.step);
             int x = (int)((ofs - y*eig.step)/sizeof(float));
 
@@ -388,7 +388,7 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     {
         for( i = 0; i < total; i++ )
         {
-            int ofs = (int)((const uchar*)tmpCorners[i] - eig.data);
+            int ofs = (int)((const uchar*)tmpCorners[i] - eig.ptr());
             int y = (int)(ofs / eig.step);
             int x = (int)((ofs - y*eig.step)/sizeof(float));
 

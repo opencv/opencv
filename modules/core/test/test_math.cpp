@@ -458,7 +458,7 @@ void Core_TraceTest::prepare_to_validation( int )
 {
     Mat& mat = test_mat[INPUT][0];
     int count = MIN( mat.rows, mat.cols );
-    Mat diag(count, 1, mat.type(), mat.data, mat.step + mat.elemSize());
+    Mat diag(count, 1, mat.type(), mat.ptr(), mat.step + mat.elemSize());
     Scalar r = cvtest::mean(diag);
     r *= (double)count;
 
@@ -2698,7 +2698,7 @@ protected:
                     case MAT_1_N_CDIM:
                         data.create(1, N, CV_32FC(dims));
                         for( i = 0; i < N; i++ )
-                            memcpy(data.data + i * dims * sizeof(float), data0.ptr(rng.uniform(0, N0)), dims * sizeof(float));
+                            memcpy(data.ptr() + i * dims * sizeof(float), data0.ptr(rng.uniform(0, N0)), dims * sizeof(float));
                         break;
 
                     case MAT_N_DIM_C1_NONCONT:
