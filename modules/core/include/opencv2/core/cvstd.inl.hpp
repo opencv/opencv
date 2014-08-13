@@ -49,10 +49,6 @@
 #  include <ostream>
 #endif
 
-#ifdef _MSC_VER
-#pragma warning( disable: 4127 )
-#endif
-
 namespace cv
 {
 #ifndef OPENCV_NOSTL
@@ -224,7 +220,10 @@ std::ostream& operator << (std::ostream& out, const Vec<_Tp, n>& vec)
 {
     out << "[";
 
+#pragma warning( push )
+#pragma warning( disable: 4127 )
     if(Vec<_Tp, n>::depth < CV_32F)
+#pragma warning( pop )
     {
         for (int i = 0; i < n - 1; ++i) {
             out << (int)vec[i] << ", ";
