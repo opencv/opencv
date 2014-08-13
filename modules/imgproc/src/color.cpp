@@ -492,6 +492,19 @@ private:
     int order[4];
     int depth;
 };
+
+struct IPPGeneralROIFunctor
+{
+    IPPGeneralROIFunctor(ippiGeneralFunc _func, IppiSize _roi_image) : func(_func), roi_image(_roi_image){}
+    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
+    {
+        return func ? func(src, srcStep, dst, dstStep, roi_image) >= 0 : false;
+    }
+private:
+    ippiGeneralFunc func;
+    IppiSize roi_image;
+};
+
 #endif
 
 ////////////////// Various 3/4-channel to 3/4-channel RGB transformations /////////////////
@@ -4297,6 +4310,16 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 Size dstSz(sz.width, sz.height * 2 / 3);
                 _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
                 dst = _dst.getMat();
+#if defined HAVE_IPP
+/*Intel Summer School - 2014. Test func*/
+    {
+        if (CvtColorIPPLoop(src, dst,
+            IPPGeneralROIFunctor((ippiGeneralFunc)ippiCopy_8u_C1R, ippiSize(dstSz.width, dstSz.height))))
+                    return;
+        setIppErrorStatus();
+        break;
+    }
+#endif
 
                 src(Range(0, dstSz.height), Range::all()).copyTo(dst);
             }
