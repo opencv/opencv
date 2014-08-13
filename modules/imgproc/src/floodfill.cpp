@@ -470,6 +470,12 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
     depth = CV_MAT_DEPTH(type);
     cn = CV_MAT_CN(type);
 
+    if ( (cn != 1) && (cn != 3) )
+    {
+        CV_Error( CV_StsBadArg, "Number of channels in input image must be 1 or 3" );
+        return;
+    }
+
     if( connectivity == 0 )
         connectivity = 4;
     else if( connectivity != 4 && connectivity != 8 )
