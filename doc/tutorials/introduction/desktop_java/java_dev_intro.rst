@@ -373,7 +373,7 @@ Now modify src/main/java/HelloOpenCV.java so it contains the following Java code
    import org.opencv.core.Point;
    import org.opencv.core.Rect;
    import org.opencv.core.Scalar;
-   import org.opencv.highgui.Highgui;
+   import org.opencv.imgcodecs.Imgcodecs;
    import org.opencv.objdetect.CascadeClassifier;
 
    //
@@ -387,7 +387,7 @@ Now modify src/main/java/HelloOpenCV.java so it contains the following Java code
        // Create a face detector from the cascade file in the resources
        // directory.
        CascadeClassifier faceDetector = new CascadeClassifier(getClass().getResource("/lbpcascade_frontalface.xml").getPath());
-       Mat image = Highgui.imread(getClass().getResource("/lena.png").getPath());
+       Mat image = Imgcodecs.imread(getClass().getResource("/lena.png").getPath());
 
        // Detect faces in the image.
        // MatOfRect is a special container class for Rect.
@@ -404,7 +404,7 @@ Now modify src/main/java/HelloOpenCV.java so it contains the following Java code
        // Save the visualized detection.
        String filename = "faceDetection.png";
        System.out.println(String.format("Writing %s", filename));
-       Highgui.imwrite(filename, image);
+       Imgcodecs.imwrite(filename, image);
      }
    }
 

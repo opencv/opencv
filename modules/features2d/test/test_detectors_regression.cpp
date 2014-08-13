@@ -277,26 +277,20 @@ TEST( Features2d_Detector_MSER, DISABLED_regression )
     test.safe_run();
 }
 
-TEST( Features2d_Detector_STAR, regression )
-{
-    CV_FeatureDetectorTest test( "detector-star", FeatureDetector::create("STAR") );
-    test.safe_run();
-}
-
 TEST( Features2d_Detector_ORB, regression )
 {
     CV_FeatureDetectorTest test( "detector-orb", FeatureDetector::create("ORB") );
     test.safe_run();
 }
 
-TEST( Features2d_Detector_GridFAST, regression )
+TEST( Features2d_Detector_KAZE, regression )
 {
-    CV_FeatureDetectorTest test( "detector-grid-fast", FeatureDetector::create("GridFAST") );
+    CV_FeatureDetectorTest test( "detector-kaze", FeatureDetector::create("KAZE") );
     test.safe_run();
 }
 
-TEST( Features2d_Detector_PyramidFAST, regression )
+TEST( Features2d_Detector_AKAZE, regression )
 {
-    CV_FeatureDetectorTest test( "detector-pyramid-fast", FeatureDetector::create("PyramidFAST") );
+    CV_FeatureDetectorTest test( "detector-akaze", FeatureDetector::create("AKAZE") );
     test.safe_run();
 }

@@ -1,4 +1,5 @@
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/videoio/videoio.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/video/background_segm.hpp"
 #include <stdio.h>
@@ -87,8 +88,8 @@ int main(int argc, char** argv)
     namedWindow("video", 1);
     namedWindow("segmented", 1);
 
-    Ptr<BackgroundSubtractorMOG> bgsubtractor=createBackgroundSubtractorMOG();
-    bgsubtractor->setNoiseSigma(10);
+    Ptr<BackgroundSubtractorMOG2> bgsubtractor=createBackgroundSubtractorMOG2();
+    bgsubtractor->setVarThreshold(10);
 
     for(;;)
     {

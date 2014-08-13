@@ -8,9 +8,10 @@
 #include <time.h>
 
 using namespace cv;
+using namespace cv::ml;
 using namespace std;
 
-void get_svm_detector(const SVM& svm, vector< float > & hog_detector );
+void get_svm_detector(const Ptr<SVM>& svm, vector< float > & hog_detector );
 void convert_to_ml(const std::vector< cv::Mat > & train_samples, cv::Mat& trainData );
 void load_images( const string & prefix, const string & filename, vector< Mat > & img_lst );
 void sample_neg( const vector< Mat > & full_neg_lst, vector< Mat > & neg_lst, const Size & size );
@@ -20,49 +21,24 @@ void train_svm( const vector< Mat > & gradient_lst, const vector< int > & labels
 void draw_locations( Mat & img, const vector< Rect > & locations, const Scalar & color );
 void test_it( const Size & size );
 
-void get_svm_detector(const SVM& svm, vector< float > & hog_detector )
+void get_svm_detector(const Ptr<SVM>& svm, vector< float > & hog_detector )
 {
-    // get the number of variables
-    const int var_all = svm.get_var_count();
-    // get the number of support vectors
-    const int sv_total = svm.get_support_vector_count();
-    // get the decision function
-    const CvSVMDecisionFunc* decision_func = svm.get_decision_function();
     // get the support vectors
-    const float** sv = new const float*[ sv_total ];
-    for( int i = 0 ; i < sv_total ; ++i )
-        sv[ i ] = svm.get_support_vector(i);
+    Mat sv = svm->getSupportVectors();
+    const int sv_total = sv.rows;
+    // get the decision function
+    Mat alpha, svidx;
+    double rho = svm->getDecisionFunction(0, alpha, svidx);
 
-    CV_Assert( var_all > 0 &&
-        sv_total > 0 &&
-        decision_func != 0 &&
-        decision_func->alpha != 0 &&
-        decision_func->sv_count == sv_total );
+    CV_Assert( alpha.total() == 1 && svidx.total() == 1 && sv_total == 1 );
+    CV_Assert( (alpha.type() == CV_64F && alpha.at<double>(0) == 1.) ||
+               (alpha.type() == CV_32F && alpha.at<float>(0) == 1.f) );
+    CV_Assert( sv.type() == CV_32F );
+    hog_detector.clear();
 
-    float svi = 0.f;
-
-    hog_detector.clear(); //clear stuff in vector.
-    hog_detector.reserve( var_all + 1 ); //reserve place for memory efficiency.
-
-     /**
-    * hog_detector^i = \sum_j support_vector_j^i * \alpha_j
-    * hog_detector^dim = -\rho
-    */
-   for( int i = 0 ; i < var_all ; ++i )
-    {
-        svi = 0.f;
-        for( int j = 0 ; j < sv_total ; ++j )
-        {
-            if( decision_func->sv_index != NULL ) // sometime the sv_index isn't store on YML/XML.
-                svi += (float)( sv[decision_func->sv_index[j]][i] * decision_func->alpha[ j ] );
-            else
-                svi += (float)( sv[j][i] * decision_func->alpha[ j ] );
-        }
-        hog_detector.push_back( svi );
-    }
-    hog_detector.push_back( (float)-decision_func->rho );
-
-    delete[] sv;
+    hog_detector.resize(sv.cols + 1);
+    memcpy(&hog_detector[0], sv.data, sv.cols*sizeof(hog_detector[0]));
+    hog_detector[sv.cols] = (float)-rho;
 }
 
 
@@ -263,7 +239,7 @@ Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorVa
             int mx = drawX + cellSize/2;
             int my = drawY + cellSize/2;
 
-            rectangle(visu, Point((int)(drawX*zoomFac), (int)(drawY*zoomFac)), Point((int)((drawX+cellSize)*zoomFac), (int)((drawY+cellSize)*zoomFac)), CV_RGB(100,100,100), 1);
+            rectangle(visu, Point((int)(drawX*zoomFac), (int)(drawY*zoomFac)), Point((int)((drawX+cellSize)*zoomFac), (int)((drawY+cellSize)*zoomFac)), Scalar(100,100,100), 1);
 
             // draw in each cell all 9 gradient strengths
             for (int bin=0; bin<gradientBinSize; bin++)
@@ -288,7 +264,7 @@ Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorVa
                 float y2 = my + dirVecY * currentGradStrength * maxVecLen * scale;
 
                 // draw gradient visualization
-                line(visu, Point((int)(x1*zoomFac),(int)(y1*zoomFac)), Point((int)(x2*zoomFac),(int)(y2*zoomFac)), CV_RGB(0,255,0), 1);
+                line(visu, Point((int)(x1*zoomFac),(int)(y1*zoomFac)), Point((int)(x2*zoomFac),(int)(y2*zoomFac)), Scalar(0,255,0), 1);
 
             } // for (all bins)
 
@@ -337,28 +313,26 @@ void compute_hog( const vector< Mat > & img_lst, vector< Mat > & gradient_lst, c
 
 void train_svm( const vector< Mat > & gradient_lst, const vector< int > & labels )
 {
-    SVM svm;
-
     /* Default values to train SVM */
-    SVMParams params;
+    SVM::Params params;
     params.coef0 = 0.0;
     params.degree = 3;
-    params.term_crit.epsilon = 1e-3;
+    params.termCrit.epsilon = 1e-3;
     params.gamma = 0;
-    params.kernel_type = SVM::LINEAR;
+    params.kernelType = SVM::LINEAR;
     params.nu = 0.5;
     params.p = 0.1; // for EPSILON_SVR, epsilon in loss function?
     params.C = 0.01; // From paper, soft classifier
-    params.svm_type = SVM::EPS_SVR; // C_SVC; // EPSILON_SVR; // may be also NU_SVR; // do regression task
+    params.svmType = SVM::EPS_SVR; // C_SVC; // EPSILON_SVR; // may be also NU_SVR; // do regression task
 
     Mat train_data;
     convert_to_ml( gradient_lst, train_data );
 
     clog << "Start training...";
-    svm.train( train_data, Mat( labels ), Mat(), Mat(), params );
+    Ptr<SVM> svm = StatModel::train<SVM>(train_data, ROW_SAMPLE, Mat(labels), params);
     clog << "...[done]" << endl;
 
-    svm.save( "my_people_detector.yml" );
+    svm->save( "my_people_detector.yml" );
 }
 
 void draw_locations( Mat & img, const vector< Rect > & locations, const Scalar & color )
@@ -380,7 +354,7 @@ void test_it( const Size & size )
     Scalar reference( 0, 255, 0 );
     Scalar trained( 0, 0, 255 );
     Mat img, draw;
-    SVM svm;
+    Ptr<SVM> svm;
     HOGDescriptor hog;
     HOGDescriptor my_hog;
     my_hog.winSize = size;
@@ -388,7 +362,7 @@ void test_it( const Size & size )
     vector< Rect > locations;
 
     // Load the trained SVM.
-    svm.load( "my_people_detector.yml" );
+    svm = StatModel::load<SVM>( "my_people_detector.yml" );
     // Set the trained svm to my_hog
     vector< float > hog_detector;
     get_svm_detector( svm, hog_detector );

@@ -2,6 +2,7 @@
 #include "opencv2/ml.hpp"
 
 using namespace cv;
+using namespace cv::ml;
 
 int main( int /*argc*/, char** /*argv*/ )
 {
@@ -34,8 +35,9 @@ int main( int /*argc*/, char** /*argv*/ )
     samples = samples.reshape(1, 0);
 
     // cluster the data
-    EM em_model(N, EM::COV_MAT_SPHERICAL, TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 300, 0.1));
-    em_model.train( samples, noArray(), labels, noArray() );
+    Ptr<EM> em_model = EM::train( samples, noArray(), labels, noArray(),
+            EM::Params(N, EM::COV_MAT_SPHERICAL,
+                       TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 300, 0.1)));
 
     // classify every image pixel
     for( i = 0; i < img.rows; i++ )
@@ -44,7 +46,7 @@ int main( int /*argc*/, char** /*argv*/ )
         {
             sample.at<float>(0) = (float)j;
             sample.at<float>(1) = (float)i;
-            int response = cvRound(em_model.predict( sample )[1]);
+            int response = cvRound(em_model->predict2( sample, noArray() )[1]);
             Scalar c = colors[response];
 
             circle( img, Point(j, i), 1, c*0.75, FILLED );

@@ -344,7 +344,7 @@ static void test_remap( const Mat& src, Mat& dst, const Mat& mapx, const Mat& ma
     int x, y, k;
     int drows = dst.rows, dcols = dst.cols;
     int srows = src.rows, scols = src.cols;
-    uchar* sptr0 = src.data;
+    const uchar* sptr0 = src.data;
     int depth = src.depth(), cn = src.channels();
     int elem_size = (int)src.elemSize();
     int step = (int)(src.step / CV_ELEM_SIZE(depth));

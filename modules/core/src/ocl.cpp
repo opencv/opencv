@@ -57,6 +57,28 @@
 # endif
 #endif
 
+
+// TODO Move to some common place
+static bool getBoolParameter(const char* name, bool defaultValue)
+{
+    const char* envValue = getenv(name);
+    if (envValue == NULL)
+    {
+        return defaultValue;
+    }
+    cv::String value = envValue;
+    if (value == "1" || value == "True" || value == "true" || value == "TRUE")
+    {
+        return true;
+    }
+    if (value == "0" || value == "False" || value == "false" || value == "FALSE")
+    {
+        return false;
+    }
+    CV_ErrorNoReturn(cv::Error::StsBadArg, cv::format("Invalid value for %s parameter: %s", name, value.c_str()));
+}
+
+
 // TODO Move to some common place
 static size_t getConfigurationParameterForSize(const char* name, size_t defaultValue)
 {
@@ -1305,7 +1327,18 @@ OCL_FUNC(cl_int, clReleaseEvent, (cl_event event), (event))
 #ifdef _DEBUG
 #define CV_OclDbgAssert CV_DbgAssert
 #else
-#define CV_OclDbgAssert(expr) (void)(expr)
+static bool isRaiseError()
+{
+    static bool initialized = false;
+    static bool value = false;
+    if (!initialized)
+    {
+        value = getBoolParameter("OPENCV_OPENCL_RAISE_ERROR", false);
+        initialized = true;
+    }
+    return value;
+}
+#define CV_OclDbgAssert(expr) do { if (isRaiseError()) { CV_Assert(expr); } else { (void)(expr); } } while ((void)0, 0)
 #endif
 
 namespace cv { namespace ocl {
@@ -1416,7 +1449,16 @@ bool useOpenCL()
 {
     CoreTLSData* data = coreTlsData.get();
     if( data->useOpenCL < 0 )
-        data->useOpenCL = (int)haveOpenCL() && Device::getDefault().ptr() != NULL;
+    {
+        try
+        {
+            data->useOpenCL = (int)haveOpenCL() && Device::getDefault().ptr() != NULL;
+        }
+        catch (...)
+        {
+            data->useOpenCL = 0;
+        }
+    }
     return data->useOpenCL > 0;
 }
 
@@ -2228,7 +2270,8 @@ static cl_device_id selectOpenCLDevice()
         if (!isID)
         {
             deviceTypes.push_back("GPU");
-            deviceTypes.push_back("CPU");
+            if (configuration)
+                deviceTypes.push_back("CPU");
         }
         else
             deviceTypes.push_back("ALL");
@@ -3484,9 +3527,8 @@ public:
     OpenCLBufferPoolImpl()
         : currentReservedSize(0), maxReservedSize(0)
     {
-        // Note: Buffer pool is disabled by default,
-        //       because we didn't receive significant performance improvement
-        maxReservedSize = getConfigurationParameterForSize("OPENCV_OPENCL_BUFFERPOOL_LIMIT", 0);
+        int poolSize = ocl::Device::getDefault().isIntel() ? 1 << 27 : 0;
+        maxReservedSize = getConfigurationParameterForSize("OPENCV_OPENCL_BUFFERPOOL_LIMIT", poolSize);
     }
     virtual ~OpenCLBufferPoolImpl()
     {
@@ -3729,6 +3771,7 @@ public:
                 u->handle = clCreateBuffer(ctx_handle, CL_MEM_COPY_HOST_PTR|CL_MEM_READ_WRITE|createFlags,
                                            u->size, u->origdata, &retval);
                 tempUMatFlags = UMatData::TEMP_COPIED_UMAT;
+
             }
             if(!u->handle || retval != CL_SUCCESS)
                 return false;
@@ -3870,6 +3913,7 @@ public:
                 if(u->data && retval == CL_SUCCESS)
                 {
                     u->markHostCopyObsolete(false);
+                    u->markDeviceMemMapped(true);
                     return;
                 }
 
@@ -3898,6 +3942,7 @@ public:
         if(!u)
             return;
 
+
         CV_Assert(u->handle != 0);
 
         UMatDataAutoLock autolock(u);
@@ -3908,8 +3953,10 @@ public:
 
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
         cl_int retval = 0;
-        if( !u->copyOnMap() && u->data )
+        if( !u->copyOnMap() && u->deviceMemMapped() )
         {
+            CV_Assert(u->data != NULL);
+            u->markDeviceMemMapped(false);
             CV_Assert( (retval = clEnqueueUnmapMemObject(q,
                                 (cl_mem)u->handle, u->data, 0, 0, 0)) == CL_SUCCESS );
             CV_OclDbgAssert(clFinish(q) == CL_SUCCESS);
@@ -4427,11 +4474,13 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
         d.preferredVectorWidthShort(), d.preferredVectorWidthShort(),
         d.preferredVectorWidthInt(), d.preferredVectorWidthFloat(),
         d.preferredVectorWidthDouble(), -1 }, kercn = vectorWidths[depth];
-    if (d.isIntel())
+
+    // if the device says don't use vectors
+    if (vectorWidths[0] == 1)
     {
         // it's heuristic
-        int vectorWidthsIntel[] = { 16, 16, 8, 8, 1, 1, 1, -1 };
-        kercn = vectorWidthsIntel[depth];
+        int vectorWidthsOthers[] = { 16, 16, 8, 8, 1, 1, 1, -1 };
+        kercn = vectorWidthsOthers[depth];
     }
 
     if (ssize.width * cn < kercn || kercn <= 0)
@@ -4693,6 +4742,18 @@ Image2D::~Image2D()
 void* Image2D::ptr() const
 {
     return p ? p->handle : 0;
+}
+
+bool isPerformanceCheckBypassed()
+{
+    static bool initialized = false;
+    static bool value = false;
+    if (!initialized)
+    {
+        value = getBoolParameter("OPENCV_OPENCL_PERF_CHECK_BYPASS", false);
+        initialized = true;
+    }
+    return value;
 }
 
 }}

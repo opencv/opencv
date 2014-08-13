@@ -360,7 +360,7 @@ struct CV_EXPORTS UMatData
 {
     enum { COPY_ON_MAP=1, HOST_COPY_OBSOLETE=2,
         DEVICE_COPY_OBSOLETE=4, TEMP_UMAT=8, TEMP_COPIED_UMAT=24,
-        USER_ALLOCATED=32 };
+        USER_ALLOCATED=32, DEVICE_MEM_MAPPED=64};
     UMatData(const MatAllocator* allocator);
     ~UMatData();
 
@@ -370,11 +370,13 @@ struct CV_EXPORTS UMatData
 
     bool hostCopyObsolete() const;
     bool deviceCopyObsolete() const;
+    bool deviceMemMapped() const;
     bool copyOnMap() const;
     bool tempUMat() const;
     bool tempCopiedUMat() const;
     void markHostCopyObsolete(bool flag);
     void markDeviceCopyObsolete(bool flag);
+    void markDeviceMemMapped(bool flag);
 
     const MatAllocator* prevAllocator;
     const MatAllocator* currAllocator;
@@ -393,7 +395,7 @@ struct CV_EXPORTS UMatData
 
 struct CV_EXPORTS UMatDataAutoLock
 {
-    UMatDataAutoLock(UMatData* u);
+    explicit UMatDataAutoLock(UMatData* u);
     ~UMatDataAutoLock();
     UMatData* u;
 };
@@ -401,7 +403,7 @@ struct CV_EXPORTS UMatDataAutoLock
 
 struct CV_EXPORTS MatSize
 {
-    MatSize(int* _p);
+    explicit MatSize(int* _p);
     Size operator()() const;
     const int& operator[](int i) const;
     int& operator[](int i);
@@ -415,7 +417,7 @@ struct CV_EXPORTS MatSize
 struct CV_EXPORTS MatStep
 {
     MatStep();
-    MatStep(size_t s);
+    explicit MatStep(size_t s);
     const size_t& operator[](int i) const;
     size_t& operator[](int i);
     operator size_t() const;
@@ -898,6 +900,11 @@ public:
     template<typename _Tp> MatConstIterator_<_Tp> begin() const;
     template<typename _Tp> MatConstIterator_<_Tp> end() const;
 
+    //! template methods for for operation over all matrix elements.
+    // the operations take care of skipping gaps in the end of rows (if any)
+    template<typename _Tp, typename Functor> void forEach(const Functor& operation);
+    template<typename _Tp, typename Functor> void forEach(const Functor& operation) const;
+
     enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
     enum { MAGIC_MASK = 0xFFFF0000, TYPE_MASK = 0x00000FFF, DEPTH_MASK = 7 };
 
@@ -916,9 +923,9 @@ public:
     uchar* data;
 
     //! helper fields used in locateROI and adjustROI
-    uchar* datastart;
-    uchar* dataend;
-    uchar* datalimit;
+    const uchar* datastart;
+    const uchar* dataend;
+    const uchar* datalimit;
 
     //! custom allocator
     MatAllocator* allocator;
@@ -932,6 +939,7 @@ public:
     MatStep step;
 
 protected:
+    template<typename _Tp, typename Functor> void forEach_impl(const Functor& operation);
 };
 
 
@@ -1040,6 +1048,11 @@ public:
     iterator end();
     const_iterator begin() const;
     const_iterator end() const;
+
+    //! template methods for for operation over all matrix elements.
+    // the operations take care of skipping gaps in the end of rows (if any)
+    template<typename Functor> void forEach(const Functor& operation);
+    template<typename Functor> void forEach(const Functor& operation) const;
 
     //! equivalent to Mat::create(_rows, _cols, DataType<_Tp>::type)
     void create(int _rows, int _cols);
@@ -1802,9 +1815,9 @@ public:
     //! copy operator
     MatConstIterator& operator = (const MatConstIterator& it);
     //! returns the current matrix element
-    uchar* operator *() const;
+    const uchar* operator *() const;
     //! returns the i-th matrix element, relative to the current
-    uchar* operator [](ptrdiff_t i) const;
+    const uchar* operator [](ptrdiff_t i) const;
 
     //! shifts the iterator forward by the specified number of elements
     MatConstIterator& operator += (ptrdiff_t ofs);
@@ -1829,9 +1842,9 @@ public:
 
     const Mat* m;
     size_t elemSize;
-    uchar* ptr;
-    uchar* sliceStart;
-    uchar* sliceEnd;
+    const uchar* ptr;
+    const uchar* sliceStart;
+    const uchar* sliceEnd;
 };
 
 
@@ -1915,9 +1928,9 @@ public:
     //! constructor that sets the iterator to the specified element of the matrix
     MatIterator_(Mat_<_Tp>* _m, int _row, int _col=0);
     //! constructor that sets the iterator to the specified element of the matrix
-    MatIterator_(const Mat_<_Tp>* _m, Point _pt);
+    MatIterator_(Mat_<_Tp>* _m, Point _pt);
     //! constructor that sets the iterator to the specified element of the matrix
-    MatIterator_(const Mat_<_Tp>* _m, const int* _idx);
+    MatIterator_(Mat_<_Tp>* _m, const int* _idx);
     //! copy constructor
     MatIterator_(const MatIterator_& it);
     //! copy operator

@@ -361,6 +361,37 @@ The function ``line`` draws the line segment between ``pt1`` and ``pt2`` points 
 Antialiased lines are drawn using Gaussian filtering.
 
 
+arrowedLine
+----------------
+Draws a arrow segment pointing from the first point to the second one.
+
+.. ocv:function:: void arrowedLine(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,          int thickness=1, int lineType=8, int shift=0, double tipLength=0.1)
+
+    :param img: Image.
+
+    :param pt1: The point the arrow starts from.
+
+    :param pt2: The point the arrow points to.
+
+    :param color: Line color.
+
+    :param thickness: Line thickness.
+
+    :param lineType: Type of the line:
+
+            * **8** (or omitted) - 8-connected line.
+
+            * **4** - 4-connected line.
+
+            * **CV_AA** - antialiased line.
+
+    :param shift: Number of fractional bits in the point coordinates.
+
+    :param tipLength: The length of the arrow tip in relation to the arrow length
+
+The function ``arrowedLine`` draws an arrow between ``pt1`` and ``pt2`` points in the image. See also :ocv:func:`line`.
+
+
 LineIterator
 ------------
 .. ocv:class:: LineIterator

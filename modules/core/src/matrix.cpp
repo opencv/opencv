@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_core.hpp"
 
 #include "bufferpool.impl.hpp"
 
@@ -346,7 +346,7 @@ static void finalizeHdr(Mat& m)
     if( d > 2 )
         m.rows = m.cols = -1;
     if(m.u)
-        m.data = m.datastart = m.u->data;
+        m.datastart = m.data = m.u->data;
     if( m.data )
     {
         m.datalimit = m.datastart + m.size[0]*m.step[0];
@@ -510,7 +510,7 @@ Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _st
       datalimit(0), allocator(0), u(0), size(&rows)
 {
     flags |= CV_MAT_TYPE(_type);
-    data = datastart = (uchar*)_data;
+    datastart = data = (uchar*)_data;
     setSize(*this, _dims, _sizes, _steps, true);
     finalizeHdr(*this);
 }
@@ -549,7 +549,7 @@ static Mat cvMatNDToMat(const CvMatND* m, bool copyData)
 
     if( !m )
         return thiz;
-    thiz.data = thiz.datastart = m->data.ptr;
+    thiz.datastart = thiz.data = m->data.ptr;
     thiz.flags |= CV_MAT_TYPE(m->type);
     int _sizes[CV_MAX_DIM];
     size_t _steps[CV_MAX_DIM];
@@ -587,7 +587,7 @@ static Mat cvMatToMat(const CvMat* m, bool copyData)
         thiz.dims = 2;
         thiz.rows = m->rows;
         thiz.cols = m->cols;
-        thiz.data = thiz.datastart = m->data.ptr;
+        thiz.datastart = thiz.data = m->data.ptr;
         size_t esz = CV_ELEM_SIZE(m->type), minstep = thiz.cols*esz, _step = m->step;
         if( _step == 0 )
             _step = minstep;
@@ -597,7 +597,7 @@ static Mat cvMatToMat(const CvMat* m, bool copyData)
     }
     else
     {
-        thiz.data = thiz.datastart = thiz.dataend = 0;
+        thiz.datastart = thiz.dataend = thiz.data = 0;
         Mat(m->rows, m->cols, m->type, m->data.ptr, m->step).copyTo(thiz);
     }
 
@@ -636,7 +636,7 @@ static Mat iplImageToMat(const IplImage* img, bool copyData)
         m.rows = img->roi->height;
         m.cols = img->roi->width;
         esz = CV_ELEM_SIZE(m.flags);
-        m.data = m.datastart = (uchar*)img->imageData +
+        m.datastart = m.data = (uchar*)img->imageData +
             (selectedPlane ? (img->roi->coi - 1)*m.step*img->height : 0) +
             img->roi->yOffset*m.step[0] + img->roi->xOffset*esz;
     }
@@ -2758,21 +2758,33 @@ namespace cv {
 
 static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
 {
-    int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
-            sctype = CV_MAKE_TYPE(depth, cn == 3 ? 4 : cn),
-            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
+    int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), kercn = cn, rowsPerWI = 1;
+    int sctype = CV_MAKE_TYPE(depth, cn == 3 ? 4 : cn);
+    if (ocl::Device::getDefault().isIntel())
+    {
+        rowsPerWI = 4;
+        if (cn == 1)
+        {
+            kercn = std::min(ocl::predictOptimalVectorWidth(_m), 4);
+            if (kercn != 4)
+                kercn = 1;
+        }
+    }
 
     ocl::Kernel k("setIdentity", ocl::core::set_identity_oclsrc,
-                  format("-D T=%s -D T1=%s -D cn=%d -D ST=%s", ocl::memopTypeToStr(type),
-                         ocl::memopTypeToStr(depth), cn, ocl::memopTypeToStr(sctype)));
+                  format("-D T=%s -D T1=%s -D cn=%d -D ST=%s -D kercn=%d -D rowsPerWI=%d",
+                         ocl::memopTypeToStr(CV_MAKE_TYPE(depth, kercn)),
+                         ocl::memopTypeToStr(depth), cn,
+                         ocl::memopTypeToStr(sctype),
+                         kercn, rowsPerWI));
     if (k.empty())
         return false;
 
     UMat m = _m.getUMat();
-    k.args(ocl::KernelArg::WriteOnly(m), ocl::KernelArg::Constant(Mat(1, 1, sctype, s)),
-           rowsPerWI);
+    k.args(ocl::KernelArg::WriteOnly(m, cn, kercn),
+           ocl::KernelArg::Constant(Mat(1, 1, sctype, s)));
 
-    size_t globalsize[2] = { m.cols, (m.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { m.cols * cn / kercn, (m.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -2989,6 +3001,13 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
     {
         CV_Assert(dst.cols == dst.rows);
         kernelName += "_inplace";
+    }
+    else
+    {
+        // check required local memory size
+        size_t required_local_memory = (size_t) TILE_DIM*(TILE_DIM+1)*CV_ELEM_SIZE(type);
+        if (required_local_memory > ocl::Device::getDefault().localMemSize())
+            return false;
     }
 
     ocl::Kernel k(kernelName.c_str(), ocl::core::transpose_oclsrc,
@@ -3327,7 +3346,7 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
             stype == CV_32FC3 ? (ippiSumHint)ippiSum_32f_C3R :
             stype == CV_32FC4 ? (ippiSumHint)ippiSum_32f_C4R : 0;
         func =
-        sdepth == CV_8U ? (cv::ReduceFunc)cv::reduceC_<uchar, double,   cv::OpAdd<double> > :
+            sdepth == CV_8U ? (cv::ReduceFunc)cv::reduceC_<uchar, double,   cv::OpAdd<double> > :
             sdepth == CV_16U ? (cv::ReduceFunc)cv::reduceC_<ushort, double,   cv::OpAdd<double> > :
             sdepth == CV_16S ? (cv::ReduceFunc)cv::reduceC_<short, double,   cv::OpAdd<double> > :
             sdepth == CV_32F ? (cv::ReduceFunc)cv::reduceC_<float, double,   cv::OpAdd<double> > : 0;
@@ -3441,10 +3460,16 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
     const int min_opt_cols = 128, buf_cols = 32;
     int sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
             ddepth = CV_MAT_DEPTH(dtype), ddepth0 = ddepth;
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
-            useOptimized = 1 == dim && _src.cols() > min_opt_cols;
+    const ocl::Device &defDev = ocl::Device::getDefault();
+    bool doubleSupport = defDev.doubleFPConfig() > 0;
+
+    size_t wgs = defDev.maxWorkGroupSize();
+    bool useOptimized = 1 == dim && _src.cols() > min_opt_cols && (wgs >= buf_cols);
 
     if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
+        return false;
+
+    if ((op == CV_REDUCE_SUM && sdepth == CV_32F) || op == CV_REDUCE_MIN || op == CV_REDUCE_MAX)
         return false;
 
     if (op == CV_REDUCE_AVG)
@@ -3455,78 +3480,80 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
 
     const char * const ops[4] = { "OCL_CV_REDUCE_SUM", "OCL_CV_REDUCE_AVG",
                                   "OCL_CV_REDUCE_MAX", "OCL_CV_REDUCE_MIN" };
-    char cvt[2][40];
-
     int wdepth = std::max(ddepth, CV_32F);
-    cv::String build_opt = format("-D %s -D dim=%d -D cn=%d -D ddepth=%d"
-                                  " -D srcT=%s -D dstT=%s -D dstT0=%s -D convertToWT=%s"
-                                  " -D convertToDT=%s -D convertToDT0=%s%s",
-                                  ops[op], dim, cn, ddepth, ocl::typeToStr(useOptimized ? ddepth : sdepth),
-                                  ocl::typeToStr(ddepth), ocl::typeToStr(ddepth0),
-                                  ocl::convertTypeStr(ddepth, wdepth, 1, cvt[0]),
-                                  ocl::convertTypeStr(sdepth, ddepth, 1, cvt[0]),
-                                  ocl::convertTypeStr(wdepth, ddepth0, 1, cvt[1]),
-                                  doubleSupport ? " -D DOUBLE_SUPPORT" : "");
-
     if (useOptimized)
     {
-        cv::String build_opt_pre = format("-D OP_REDUCE_PRE -D BUF_COLS=%d -D %s -D dim=1"
-                                          "  -D cn=%d -D ddepth=%d -D srcT=%s -D dstT=%s -D convertToDT=%s%s",
-                                          buf_cols, ops[op], cn, ddepth, ocl::typeToStr(sdepth), ocl::typeToStr(ddepth),
-                                          ocl::convertTypeStr(sdepth, ddepth, 1, cvt[0]),
-                                          doubleSupport ? " -D DOUBLE_SUPPORT" : "");
-        ocl::Kernel kpre("reduce_horz_pre", ocl::core::reduce2_oclsrc, build_opt_pre);
-        if (kpre.empty())
+        size_t tileHeight = (size_t)(wgs / buf_cols);
+        if (defDev.isIntel())
+        {
+            static const size_t maxItemInGroupCount = 16;
+            tileHeight = min(tileHeight, defDev.localMemSize() / buf_cols / CV_ELEM_SIZE(CV_MAKETYPE(wdepth, cn)) / maxItemInGroupCount);
+        }
+        char cvt[3][40];
+        cv::String build_opt = format("-D OP_REDUCE_PRE -D BUF_COLS=%d -D TILE_HEIGHT=%d -D %s -D dim=1"
+                                            " -D cn=%d -D ddepth=%d"
+                                            " -D srcT=%s -D bufT=%s -D dstT=%s"
+                                            " -D convertToWT=%s -D convertToBufT=%s -D convertToDT=%s%s",
+                                            buf_cols, tileHeight, ops[op], cn, ddepth,
+                                            ocl::typeToStr(sdepth),
+                                            ocl::typeToStr(ddepth),
+                                            ocl::typeToStr(ddepth0),
+                                            ocl::convertTypeStr(ddepth, wdepth, 1, cvt[0]),
+                                            ocl::convertTypeStr(sdepth, ddepth, 1, cvt[1]),
+                                            ocl::convertTypeStr(wdepth, ddepth0, 1, cvt[2]),
+                                            doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+        ocl::Kernel k("reduce_horz_opt", ocl::core::reduce2_oclsrc, build_opt);
+        if (k.empty())
             return false;
-
-        ocl::Kernel kmain("reduce", ocl::core::reduce2_oclsrc, build_opt);
-        if (kmain.empty())
-            return false;
-
         UMat src = _src.getUMat();
         Size dsize(1, src.rows);
         _dst.create(dsize, dtype);
         UMat dst = _dst.getUMat();
 
-        UMat buf(src.rows, buf_cols, dst.type());
+        if (op0 == CV_REDUCE_AVG)
+            k.args(ocl::KernelArg::ReadOnly(src),
+                      ocl::KernelArg::WriteOnlyNoSize(dst), 1.0f / src.cols);
+        else
+            k.args(ocl::KernelArg::ReadOnly(src),
+                      ocl::KernelArg::WriteOnlyNoSize(dst));
 
-        kpre.args(ocl::KernelArg::ReadOnly(src),
-                  ocl::KernelArg::WriteOnlyNoSize(buf));
-
+        size_t localSize[2] = { buf_cols, tileHeight};
         size_t globalSize[2] = { buf_cols, src.rows };
-        if (!kpre.run(2, globalSize, NULL, false))
+        return k.run(2, globalSize, localSize, false);
+    }
+    else
+    {
+        char cvt[2][40];
+        cv::String build_opt = format("-D %s -D dim=%d -D cn=%d -D ddepth=%d"
+                                      " -D srcT=%s -D dstT=%s -D dstT0=%s -D convertToWT=%s"
+                                      " -D convertToDT=%s -D convertToDT0=%s%s",
+                                      ops[op], dim, cn, ddepth, ocl::typeToStr(useOptimized ? ddepth : sdepth),
+                                      ocl::typeToStr(ddepth), ocl::typeToStr(ddepth0),
+                                      ocl::convertTypeStr(ddepth, wdepth, 1, cvt[0]),
+                                      ocl::convertTypeStr(sdepth, ddepth, 1, cvt[0]),
+                                      ocl::convertTypeStr(wdepth, ddepth0, 1, cvt[1]),
+                                      doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+
+        ocl::Kernel k("reduce", ocl::core::reduce2_oclsrc, build_opt);
+        if (k.empty())
             return false;
 
+        UMat src = _src.getUMat();
+        Size dsize(dim == 0 ? src.cols : 1, dim == 0 ? 1 : src.rows);
+        _dst.create(dsize, dtype);
+        UMat dst = _dst.getUMat();
+
+        ocl::KernelArg srcarg = ocl::KernelArg::ReadOnly(src),
+                temparg = ocl::KernelArg::WriteOnlyNoSize(dst);
+
         if (op0 == CV_REDUCE_AVG)
-            kmain.args(ocl::KernelArg::ReadOnly(buf),
-                       ocl::KernelArg::WriteOnlyNoSize(dst), 1.0f / src.cols);
+            k.args(srcarg, temparg, 1.0f / (dim == 0 ? src.rows : src.cols));
         else
-            kmain.args(ocl::KernelArg::ReadOnly(buf),
-                       ocl::KernelArg::WriteOnlyNoSize(dst));
+            k.args(srcarg, temparg);
 
-        globalSize[0] = src.rows;
-        return kmain.run(1, globalSize, NULL, false);
+        size_t globalsize = std::max(dsize.width, dsize.height);
+        return k.run(1, &globalsize, NULL, false);
     }
-
-    ocl::Kernel k("reduce", ocl::core::reduce2_oclsrc, build_opt);
-    if (k.empty())
-        return false;
-
-    UMat src = _src.getUMat();
-    Size dsize(dim == 0 ? src.cols : 1, dim == 0 ? 1 : src.rows);
-    _dst.create(dsize, dtype);
-    UMat dst = _dst.getUMat();
-
-    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnly(src),
-            temparg = ocl::KernelArg::WriteOnlyNoSize(dst);
-
-    if (op0 == CV_REDUCE_AVG)
-        k.args(srcarg, temparg, 1.0f / (dim == 0 ? src.rows : src.cols));
-    else
-        k.args(srcarg, temparg);
-
-    size_t globalsize = std::max(dsize.width, dsize.height);
-    return k.run(1, &globalsize, NULL, false);
 }
 
 }
@@ -5512,14 +5539,14 @@ double norm( const SparseMat& src, int normType )
     {
         if( normType == NORM_INF )
             for( i = 0; i < N; i++, ++it )
-                result = std::max(result, std::abs((double)*(const float*)it.ptr));
+                result = std::max(result, std::abs((double)it.value<float>()));
         else if( normType == NORM_L1 )
             for( i = 0; i < N; i++, ++it )
-                result += std::abs(*(const float*)it.ptr);
+                result += std::abs(it.value<float>());
         else
             for( i = 0; i < N; i++, ++it )
             {
-                double v = *(const float*)it.ptr;
+                double v = it.value<float>();
                 result += v*v;
             }
     }
@@ -5527,14 +5554,14 @@ double norm( const SparseMat& src, int normType )
     {
         if( normType == NORM_INF )
             for( i = 0; i < N; i++, ++it )
-                result = std::max(result, std::abs(*(const double*)it.ptr));
+                result = std::max(result, std::abs(it.value<double>()));
         else if( normType == NORM_L1 )
             for( i = 0; i < N; i++, ++it )
-                result += std::abs(*(const double*)it.ptr);
+                result += std::abs(it.value<double>());
         else
             for( i = 0; i < N; i++, ++it )
             {
-                double v = *(const double*)it.ptr;
+                double v = it.value<double>();
                 result += v*v;
             }
     }
@@ -5558,7 +5585,7 @@ void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _mi
         float minval = FLT_MAX, maxval = -FLT_MAX;
         for( i = 0; i < N; i++, ++it )
         {
-            float v = *(const float*)it.ptr;
+            float v = it.value<float>();
             if( v < minval )
             {
                 minval = v;
@@ -5580,7 +5607,7 @@ void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _mi
         double minval = DBL_MAX, maxval = -DBL_MAX;
         for( i = 0; i < N; i++, ++it )
         {
-            double v = *(const double*)it.ptr;
+            double v = it.value<double>();
             if( v < minval )
             {
                 minval = v;
