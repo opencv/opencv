@@ -162,6 +162,7 @@ OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     ON 
 OCV_OPTION(WITH_DIRECTX        "Include DirectX support"                     ON   IF WIN32 )
 OCV_OPTION(WITH_INTELPERC      "Include Intel Perceptual Computing support"  OFF  IF WIN32 )
 OCV_OPTION(WITH_IPP_A          "Include Intel IPP_A support"                 OFF  IF (MSVC OR X86 OR X86_64) )
+OCV_OPTION(WITH_GDAL           "Include GDAL Support"                        OFF  IF (NOT ANDROID AND NOT IOS) )
 
 # OpenCV build components
 # ===================================================
@@ -811,6 +812,12 @@ if(WITH_OPENEXR)
   status("    OpenEXR:"  OPENEXR_FOUND  THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})" ELSE "build (ver ${OPENEXR_VERSION})")
 else()
   status("    OpenEXR:"  "NO")
+endif()
+
+if( WITH_GDAL )
+  status("    GDAL:"   GDAL_FOUND THEN "${GDAL_LIBRARY}")
+else()
+  status("    GDAL:"     "NO")
 endif()
 
 # ========================== VIDEO IO ==========================
