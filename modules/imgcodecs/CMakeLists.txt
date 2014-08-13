@@ -50,6 +50,11 @@ if(HAVE_OPENEXR)
   list(APPEND GRFMT_LIBS ${OPENEXR_LIBRARIES})
 endif()
 
+if(HAVE_GDAL)
+  include_directories(SYSTEM ${GDAL_INCLUDE_DIR})
+  list(APPEND GRFMT_LIBS ${GDAL_LIBRARY})
+endif()
+
 file(GLOB grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/grfmt*.hpp)
 file(GLOB grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/grfmt*.cpp)
 list(APPEND grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/bitstrm.hpp)
