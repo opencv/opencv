@@ -939,7 +939,8 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     if (normalize && !src.isSubmatrix() && ddepth == sdepth &&
         (/*ippBorderType == BORDER_REPLICATE ||*/ /* returns ippStsStepErr: Step value is not valid */
-         ippBorderType == BORDER_CONSTANT) && ocvAnchor == ippAnchor )
+         ippBorderType == BORDER_CONSTANT) && ocvAnchor == ippAnchor &&
+         dst.cols != ksize.width && dst.rows != ksize.height) // returns ippStsMaskSizeErr: mask has an illegal value
     {
         Ipp32s bufSize = 0;
         IppiSize roiSize = { dst.cols, dst.rows }, maskSize = { ksize.width, ksize.height };

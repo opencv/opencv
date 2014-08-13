@@ -164,7 +164,7 @@ void Core_EigenTest_32::run(int) { check_full(CV_32FC1); }
 void Core_EigenTest_64::run(int) { check_full(CV_64FC1); }
 
 Core_EigenTest::Core_EigenTest()
-: eps_val_32(1e-3f), eps_vec_32(1e-2f),
+: eps_val_32(1e-3f), eps_vec_32(12e-3f),
   eps_val_64(1e-4f), eps_vec_64(1e-3f), ntests(100) {}
 Core_EigenTest::~Core_EigenTest() {}
 
