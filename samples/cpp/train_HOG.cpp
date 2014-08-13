@@ -37,7 +37,7 @@ void get_svm_detector(const Ptr<SVM>& svm, vector< float > & hog_detector )
     hog_detector.clear();
 
     hog_detector.resize(sv.cols + 1);
-    memcpy(&hog_detector[0], sv.data, sv.cols*sizeof(hog_detector[0]));
+    memcpy(&hog_detector[0], sv.ptr(), sv.cols*sizeof(hog_detector[0]));
     hog_detector[sv.cols] = (float)-rho;
 }
 
@@ -94,7 +94,7 @@ void load_images( const string & prefix, const string & filename, vector< Mat > 
             break;
         }
         Mat img = imread( (prefix+line).c_str() ); // load the image
-        if( !img.data ) // invalid image, just skip it.
+        if( img.empty() ) // invalid image, just skip it.
             continue;
 #ifdef _DEBUG
         imshow( "image", img );
@@ -381,7 +381,7 @@ void test_it( const Size & size )
     while( !end_of_process )
     {
         video >> img;
-        if( !img.data )
+        if( img.empty() )
             break;
 
         draw = img.clone();

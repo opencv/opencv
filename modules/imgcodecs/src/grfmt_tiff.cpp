@@ -190,7 +190,7 @@ bool  TiffDecoder::readData( Mat& img )
     }
     bool result = false;
     bool color = img.channels() > 1;
-    uchar* data = img.data;
+    uchar* data = img.ptr();
 
     if( img.depth() != CV_8U && img.depth() != CV_16U && img.depth() != CV_32F && img.depth() != CV_64F )
         return false;
@@ -587,25 +587,25 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
         {
             case 1:
             {
-                memcpy(buffer, img.data + img.step * y, scanlineSize);
+                memcpy(buffer, img.ptr(y), scanlineSize);
                 break;
             }
 
             case 3:
             {
                 if (depth == CV_8U)
-                    icvCvt_BGR2RGB_8u_C3R( img.data + img.step*y, 0, buffer, 0, cvSize(width,1) );
+                    icvCvt_BGR2RGB_8u_C3R( img.ptr(y), 0, buffer, 0, cvSize(width,1) );
                 else
-                    icvCvt_BGR2RGB_16u_C3R( (const ushort*)(img.data + img.step*y), 0, (ushort*)buffer, 0, cvSize(width,1) );
+                    icvCvt_BGR2RGB_16u_C3R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, cvSize(width,1) );
                 break;
             }
 
             case 4:
             {
                 if (depth == CV_8U)
-                    icvCvt_BGRA2RGBA_8u_C4R( img.data + img.step*y, 0, buffer, 0, cvSize(width,1) );
+                    icvCvt_BGRA2RGBA_8u_C4R( img.ptr(y), 0, buffer, 0, cvSize(width,1) );
                 else
-                    icvCvt_BGRA2RGBA_16u_C4R( (const ushort*)(img.data + img.step*y), 0, (ushort*)buffer, 0, cvSize(width,1) );
+                    icvCvt_BGRA2RGBA_16u_C4R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, cvSize(width,1) );
                 break;
             }
 
@@ -742,22 +742,22 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& /*params*/)
             if( channels == 3 )
             {
                 if (depth == CV_8U)
-                    icvCvt_BGR2RGB_8u_C3R( img.data + img.step*y, 0, buffer, 0, cvSize(width,1) );
+                    icvCvt_BGR2RGB_8u_C3R( img.ptr(y), 0, buffer, 0, cvSize(width,1) );
                 else
-                    icvCvt_BGR2RGB_16u_C3R( (const ushort*)(img.data + img.step*y), 0, (ushort*)buffer, 0, cvSize(width,1) );
+                    icvCvt_BGR2RGB_16u_C3R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, cvSize(width,1) );
             }
             else
             {
               if( channels == 4 )
               {
                 if (depth == CV_8U)
-                    icvCvt_BGRA2RGBA_8u_C4R( img.data + img.step*y, 0, buffer, 0, cvSize(width,1) );
+                    icvCvt_BGRA2RGBA_8u_C4R( img.ptr(y), 0, buffer, 0, cvSize(width,1) );
                 else
-                    icvCvt_BGRA2RGBA_16u_C4R( (const ushort*)(img.data + img.step*y), 0, (ushort*)buffer, 0, cvSize(width,1) );
+                    icvCvt_BGRA2RGBA_16u_C4R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, cvSize(width,1) );
               }
             }
 
-            strm.putBytes( channels > 1 ? buffer : img.data + img.step*y, fileStep );
+            strm.putBytes( channels > 1 ? buffer : img.ptr(y), fileStep );
         }
 
         stripCounts[i] = (short)(strm.getPos() - stripOffsets[i]);

@@ -62,7 +62,7 @@ static void writeMatInBin( const Mat& mat, const string& filename )
         fwrite( (void*)&type, sizeof(int), 1, f );
         int dataSize = (int)(mat.step * mat.rows * mat.channels());
         fwrite( (void*)&dataSize, sizeof(int), 1, f );
-        fwrite( (void*)mat.data, 1, dataSize, f );
+        fwrite( (void*)mat.ptr(), 1, dataSize, f );
         fclose(f);
     }
 }

@@ -228,7 +228,7 @@ bool  JpegDecoder::readHeader()
         if( !m_buf.empty() )
         {
             jpeg_buffer_src(&state->cinfo, &state->source);
-            state->source.pub.next_input_byte = m_buf.data;
+            state->source.pub.next_input_byte = m_buf.ptr();
             state->source.pub.bytes_in_buffer = m_buf.cols*m_buf.rows*m_buf.elemSize();
         }
         else
@@ -449,7 +449,7 @@ bool  JpegDecoder::readData( Mat& img )
             buffer = (*cinfo->mem->alloc_sarray)((j_common_ptr)cinfo,
                                               JPOOL_IMAGE, m_width*4, 1 );
 
-            uchar* data = img.data;
+            uchar* data = img.ptr();
             for( ; m_height--; data += step )
             {
                 jpeg_read_scanlines( cinfo, buffer, 1 );

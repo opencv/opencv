@@ -1021,12 +1021,12 @@ void CV_FundamentalMatTest::prepare_to_validation( int test_case_idx )
     cv::gemm( T, invA2, 1, Mat(), 0, F0 );
     F0 *= 1./f0[8];
 
-    uchar* status = test_mat[TEMP][1].data;
+    uchar* status = test_mat[TEMP][1].ptr();
     double err_level = method <= CV_FM_8POINT ? 1 : get_success_error_level( test_case_idx, OUTPUT, 1 );
-    uchar* mtfm1 = test_mat[REF_OUTPUT][1].data;
-    uchar* mtfm2 = test_mat[OUTPUT][1].data;
-    double* f_prop1 = (double*)test_mat[REF_OUTPUT][0].data;
-    double* f_prop2 = (double*)test_mat[OUTPUT][0].data;
+    uchar* mtfm1 = test_mat[REF_OUTPUT][1].ptr();
+    uchar* mtfm2 = test_mat[OUTPUT][1].ptr();
+    double* f_prop1 = test_mat[REF_OUTPUT][0].ptr<double>();
+    double* f_prop2 = test_mat[OUTPUT][0].ptr<double>();
 
     int i, pt_count = test_mat[INPUT][2].cols;
     Mat p1( 1, pt_count, CV_64FC2 );
@@ -1357,12 +1357,12 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
     cv::gemm( T1, T2, 1, Mat(), 0, F0 );
     F0 *= 1./f0[8];
 
-    uchar* status = test_mat[TEMP][1].data;
+    uchar* status = test_mat[TEMP][1].ptr();
     double err_level = get_success_error_level( test_case_idx, OUTPUT, 1 );
-    uchar* mtfm1 = test_mat[REF_OUTPUT][1].data;
-    uchar* mtfm2 = test_mat[OUTPUT][1].data;
-    double* e_prop1 = (double*)test_mat[REF_OUTPUT][0].data;
-    double* e_prop2 = (double*)test_mat[OUTPUT][0].data;
+    uchar* mtfm1 = test_mat[REF_OUTPUT][1].ptr();
+    uchar* mtfm2 = test_mat[OUTPUT][1].ptr();
+    double* e_prop1 = test_mat[REF_OUTPUT][0].ptr<double>();
+    double* e_prop2 = test_mat[OUTPUT][0].ptr<double>();
     Mat E_prop2 = Mat(3, 1, CV_64F, e_prop2);
 
     int i, pt_count = test_mat[INPUT][2].cols;
@@ -1407,8 +1407,8 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
 
 
 
-    double* pose_prop1 = (double*)test_mat[REF_OUTPUT][2].data;
-    double* pose_prop2 = (double*)test_mat[OUTPUT][2].data;
+    double* pose_prop1 = test_mat[REF_OUTPUT][2].ptr<double>();
+    double* pose_prop2 = test_mat[OUTPUT][2].ptr<double>();
     double terr1 = cvtest::norm(Rt0.col(3) / norm(Rt0.col(3)) + test_mat[TEMP][3], NORM_L2);
     double terr2 = cvtest::norm(Rt0.col(3) / norm(Rt0.col(3)) - test_mat[TEMP][3], NORM_L2);
     Mat rvec;

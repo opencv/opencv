@@ -1150,19 +1150,19 @@ public:
         size_t esz = weights[0].elemSize();
 
         fs << "input_scale" << "[";
-        fs.writeRaw("d", weights[0].data, weights[0].total()*esz);
+        fs.writeRaw("d", weights[0].ptr(), weights[0].total()*esz);
 
         fs << "]" << "output_scale" << "[";
-        fs.writeRaw("d", weights[l_count].data, weights[l_count].total()*esz);
+        fs.writeRaw("d", weights[l_count].ptr(), weights[l_count].total()*esz);
 
         fs << "]" << "inv_output_scale" << "[";
-        fs.writeRaw("d", weights[l_count+1].data, weights[l_count+1].total()*esz);
+        fs.writeRaw("d", weights[l_count+1].ptr(), weights[l_count+1].total()*esz);
 
         fs << "]" << "weights" << "[";
         for( i = 1; i < l_count; i++ )
         {
             fs << "[";
-            fs.writeRaw("d", weights[i].data, weights[i].total()*esz);
+            fs.writeRaw("d", weights[i].ptr(), weights[i].total()*esz);
             fs << "]";
         }
         fs << "]";
@@ -1250,18 +1250,18 @@ public:
         size_t esz = weights[0].elemSize();
 
         FileNode w = fn["input_scale"];
-        w.readRaw("d", weights[0].data, weights[0].total()*esz);
+        w.readRaw("d", weights[0].ptr(), weights[0].total()*esz);
 
         w = fn["output_scale"];
-        w.readRaw("d", weights[l_count].data, weights[l_count].total()*esz);
+        w.readRaw("d", weights[l_count].ptr(), weights[l_count].total()*esz);
 
         w = fn["inv_output_scale"];
-        w.readRaw("d", weights[l_count+1].data, weights[l_count+1].total()*esz);
+        w.readRaw("d", weights[l_count+1].ptr(), weights[l_count+1].total()*esz);
 
         FileNodeIterator w_it = fn["weights"].begin();
 
         for( i = 1; i < l_count; i++, ++w_it )
-            (*w_it).readRaw("d", weights[i].data, weights[i].total()*esz);
+            (*w_it).readRaw("d", weights[i].ptr(), weights[i].total()*esz);
         trained = true;
     }
 

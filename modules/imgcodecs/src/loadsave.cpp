@@ -303,7 +303,7 @@ bool imwrite( const String& filename, InputArray _img,
 static void*
 imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
 {
-    CV_Assert(buf.data && buf.isContinuous());
+    CV_Assert(!buf.empty() && buf.isContinuous());
     IplImage* image = 0;
     CvMat *matrix = 0;
     Mat temp, *data = &temp;
@@ -320,7 +320,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
         if( !f )
             return 0;
         size_t bufSize = buf.cols*buf.rows*buf.elemSize();
-        fwrite( &buf.data[0], 1, bufSize, f );
+        fwrite( buf.ptr(), 1, bufSize, f );
         fclose(f);
         decoder->setSource(filename);
     }

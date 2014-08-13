@@ -1815,7 +1815,7 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
     if( src.dims <= 2 )
     {
         Size sz = getContinuousSize(src, dst, cn);
-        func( src.data, src.step, 0, 0, dst.data, dst.step, sz, scale );
+        func( src.ptr(), src.step, 0, 0, dst.ptr(), dst.step, sz, scale );
     }
     else
     {
@@ -2054,7 +2054,7 @@ public:
         CV_DbgAssert(lutcn == 3 || lutcn == 4);
         if (lutcn == 3)
         {
-            IppStatus status = ippiCopy_8u_C3P3R(lut.data, (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
+            IppStatus status = ippiCopy_8u_C3P3R(lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
             if (status < 0)
             {
                 setIppErrorStatus();
@@ -2063,7 +2063,7 @@ public:
         }
         else if (lutcn == 4)
         {
-            IppStatus status = ippiCopy_8u_C4P4R(lut.data, (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
+            IppStatus status = ippiCopy_8u_C4P4R(lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
             if (status < 0)
             {
                 setIppErrorStatus();
@@ -2096,14 +2096,14 @@ public:
         if (lutcn == 3)
         {
             if (ippiLUTPalette_8u_C3R(
-                    src.data, (int)src.step[0], dst.data, (int)dst.step[0],
+                    src.ptr(), (int)src.step[0], dst.ptr(), (int)dst.step[0],
                     ippiSize(dst.size()), lutTable, 8) >= 0)
                 return;
         }
         else if (lutcn == 4)
         {
             if (ippiLUTPalette_8u_C4R(
-                    src.data, (int)src.step[0], dst.data, (int)dst.step[0],
+                    src.ptr(), (int)src.step[0], dst.ptr(), (int)dst.step[0],
                     ippiSize(dst.size()), lutTable, 8) >= 0)
                 return;
         }
@@ -2153,7 +2153,7 @@ public:
         int len = (int)it.size;
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
-            func(ptrs[0], lut_.data, ptrs[1], len, cn, lutcn);
+            func(ptrs[0], lut_.ptr(), ptrs[1], len, cn, lutcn);
     }
 private:
     LUTParallelBody(const LUTParallelBody&);
@@ -2225,7 +2225,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     int len = (int)it.size;
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
-        func(ptrs[0], lut.data, ptrs[1], len, cn, lutcn);
+        func(ptrs[0], lut.ptr(), ptrs[1], len, cn, lutcn);
 }
 
 namespace cv {

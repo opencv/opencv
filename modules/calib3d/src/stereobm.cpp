@@ -114,7 +114,7 @@ static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uc
     int scale_g = winsize*winsize/8, scale_s = (1024 + scale_g)/(scale_g*2);
     const int OFS = 256*5, TABSZ = OFS*2 + 256;
     uchar tab[TABSZ];
-    const uchar* sptr = src.data;
+    const uchar* sptr = src.ptr();
     int srcstep = (int)src.step;
     Size size = src.size();
 
@@ -294,10 +294,10 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
     ushort *sad, *hsad0, *hsad, *hsad_sub;
     int *htext;
     uchar *cbuf0, *cbuf;
-    const uchar* lptr0 = left.data + lofs;
-    const uchar* rptr0 = right.data + rofs;
+    const uchar* lptr0 = left.ptr() + lofs;
+    const uchar* rptr0 = right.ptr() + rofs;
     const uchar *lptr, *lptr_sub, *rptr;
-    short* dptr = (short*)disp.data;
+    short* dptr = disp.ptr<short>();
     int sstep = (int)left.step;
     int dstep = (int)(disp.step/sizeof(dptr[0]));
     int cstep = (height + dy0 + dy1)*ndisp;
@@ -357,7 +357,7 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
 
     for( x = 0; x < width1; x++, dptr++ )
     {
-        short* costptr = cost.data ? (short*)cost.data + lofs + x : &costbuf;
+        short* costptr = cost.data ? cost.ptr<short>() + lofs + x : &costbuf;
         int x0 = x - wsz2 - 1, x1 = x + wsz2;
         const uchar* cbuf_sub = cbuf0 + ((x0 + wsz2 + 1) % (wsz + 1))*cstep - dy0*ndisp;
         cbuf = cbuf0 + ((x1 + wsz2 + 1) % (wsz + 1))*cstep - dy0*ndisp;
@@ -542,10 +542,10 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
 
     int *sad, *hsad0, *hsad, *hsad_sub, *htext;
     uchar *cbuf0, *cbuf;
-    const uchar* lptr0 = left.data + lofs;
-    const uchar* rptr0 = right.data + rofs;
+    const uchar* lptr0 = left.ptr() + lofs;
+    const uchar* rptr0 = right.ptr() + rofs;
     const uchar *lptr, *lptr_sub, *rptr;
-    short* dptr = (short*)disp.data;
+    short* dptr = disp.ptr<short>();
     int sstep = (int)left.step;
     int dstep = (int)(disp.step/sizeof(dptr[0]));
     int cstep = (height+dy0+dy1)*ndisp;
@@ -596,7 +596,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
 
     for( x = 0; x < width1; x++, dptr++ )
     {
-        int* costptr = cost.data ? (int*)cost.data + lofs + x : &costbuf;
+        int* costptr = cost.data ? cost.ptr<int>() + lofs + x : &costbuf;
         int x0 = x - wsz2 - 1, x1 = x + wsz2;
         const uchar* cbuf_sub = cbuf0 + ((x0 + wsz2 + 1) % (wsz + 1))*cstep - dy0*ndisp;
         cbuf = cbuf0 + ((x1 + wsz2 + 1) % (wsz + 1))*cstep - dy0*ndisp;
@@ -803,7 +803,7 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
         int cols = left->cols, rows = left->rows;
         int _row0 = std::min(cvRound(range.start * rows / nstripes), rows);
         int _row1 = std::min(cvRound(range.end * rows / nstripes), rows);
-        uchar *ptr = slidingSumBuf->data + range.start * stripeBufSize;
+        uchar *ptr = slidingSumBuf->ptr() + range.start * stripeBufSize;
         int FILTERED = (state->minDisparity - 1)*16;
 
         Rect roi = validDisparityRect & Rect(0, _row0, cols, _row1 - _row0);
@@ -988,7 +988,7 @@ public:
         if( slidingSumBuf.cols < bufSize )
             slidingSumBuf.create( 1, bufSize, CV_8U );
 
-        uchar *_buf = slidingSumBuf.data;
+        uchar *_buf = slidingSumBuf.ptr();
 
         parallel_for_(Range(0, 2), PrefilterInvoker(left0, right0, left, right, _buf, _buf + bufSize1, &params), 1);
 

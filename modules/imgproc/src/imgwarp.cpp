@@ -341,7 +341,7 @@ public:
         {
             uchar* D = dst.data + dst.step*y;
             int sy = std::min(cvFloor(y*ify), ssize.height-1);
-            const uchar* S = src.data + src.step*sy;
+            const uchar* S = src.ptr(sy);
 
             switch( pix_size )
             {
@@ -1265,7 +1265,7 @@ public:
                 }
                 if( k1 == ksize )
                     k0 = std::min(k0, k); // remember the first row that needs to be computed
-                srows[k] = (T*)(src.data + src.step*sy);
+                srows[k] = src.ptr<T>(sy);
                 prev_sy[k] = sy;
             }
 
@@ -1608,10 +1608,10 @@ public:
                 continue;
             }
 
-            dx = vop((const T*)(src.data + src.step * sy0), D, w);
+            dx = vop(src.ptr<T>(sy0), D, w);
             for( ; dx < w; dx++ )
             {
-                const T* S = (const T*)(src.data + src.step * sy0) + xofs[dx];
+                const T* S = src.ptr<T>(sy0) + xofs[dx];
                 WT sum = 0;
                 k = 0;
                 #if CV_ENABLE_UNROLLED
@@ -1635,7 +1635,7 @@ public:
                 {
                     if( sy0 + sy >= ssize.height )
                         break;
-                    const T* S = (const T*)(src.data + src.step*(sy0 + sy)) + sx0;
+                    const T* S = src.ptr<T>(sy0 + sy) + sx0;
                     for( int sx = 0; sx < scale_x*cn; sx += cn )
                     {
                         if( sx0 + sx >= ssize.width )
@@ -1713,7 +1713,7 @@ public:
             int sy = ytab[j].si;
 
             {
-                const T* S = (const T*)(src->data + src->step*sy);
+                const T* S = src->ptr<T>(sy);
                 for( dx = 0; dx < dsize.width; dx++ )
                     buf[dx] = (WT)0;
 
@@ -1775,7 +1775,7 @@ public:
 
             if( dy != prev_dy )
             {
-                T* D = (T*)(dst->data + dst->step*prev_dy);
+                T* D = dst->ptr<T>(prev_dy);
 
                 for( dx = 0; dx < dsize.width; dx++ )
                 {
@@ -1792,7 +1792,7 @@ public:
         }
 
         {
-        T* D = (T*)(dst->data + dst->step*prev_dy);
+        T* D = dst->ptr<T>(prev_dy);
         for( dx = 0; dx < dsize.width; dx++ )
             D[dx] = saturate_cast<T>(sum[dx]);
         }
@@ -1973,8 +1973,8 @@ public:
         CHECK_IPP_STATUS(getBufferSizeFunc(pSpec, dstSize, cn, &bufsize));
         CHECK_IPP_STATUS(getSrcOffsetFunc(pSpec, dstOffset, &srcOffset));
 
-        const Ipp8u* pSrc = (const Ipp8u*)src.data + (int)src.step[0] * srcOffset.y + srcOffset.x * cn * itemSize;
-        Ipp8u* pDst = (Ipp8u*)dst.data + (int)dst.step[0] * dstOffset.y + dstOffset.x * cn * itemSize;
+        const Ipp8u* pSrc = src.ptr<Ipp8u>(srcOffset.y) + srcOffset.x * cn * itemSize;
+        Ipp8u* pDst = dst.ptr<Ipp8u>(dstOffset.y) + dstOffset.x * cn * itemSize;
 
         AutoBuffer<uchar> buf(bufsize + 64);
         uchar* bufptr = alignPtr((uchar*)buf, 32);
@@ -2643,7 +2643,7 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
 {
     Size ssize = _src.size(), dsize = _dst.size();
     int cn = _src.channels();
-    const T* S0 = (const T*)_src.data;
+    const T* S0 = _src.ptr<T>();
     size_t sstep = _src.step/sizeof(S0[0]);
     Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
         saturate_cast<T>(_borderValue[1]),
@@ -2661,8 +2661,8 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
 
     for( dy = 0; dy < dsize.height; dy++ )
     {
-        T* D = (T*)(_dst.data + _dst.step*dy);
-        const short* XY = (const short*)(_xy.data + _xy.step*dy);
+        T* D = _dst.ptr<T>(dy);
+        const short* XY = _xy.ptr<short>(dy);
 
         if( cn == 1 )
         {
@@ -2759,7 +2759,7 @@ struct RemapVec_8u
             sstep > 0x8000 )
             return 0;
 
-        const uchar *S0 = _src.data, *S1 = _src.data + _src.step;
+        const uchar *S0 = _src.ptr(), *S1 = _src.ptr(1);
         const short* wtab = cn == 1 ? (const short*)_wtab : &BilinearTab_iC4[0][0][0];
         uchar* D = (uchar*)_dst;
         __m128i delta = _mm_set1_epi32(INTER_REMAP_COEF_SCALE/2);
@@ -2963,7 +2963,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
     Size ssize = _src.size(), dsize = _dst.size();
     int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
-    const T* S0 = (const T*)_src.data;
+    const T* S0 = _src.ptr<T>();
     size_t sstep = _src.step/sizeof(S0[0]);
     Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
         saturate_cast<T>(_borderValue[1]),
@@ -2982,9 +2982,9 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
 
     for( dy = 0; dy < dsize.height; dy++ )
     {
-        T* D = (T*)(_dst.data + _dst.step*dy);
-        const short* XY = (const short*)(_xy.data + _xy.step*dy);
-        const ushort* FXY = (const ushort*)(_fxy.data + _fxy.step*dy);
+        T* D = _dst.ptr<T>(dy);
+        const short* XY = _xy.ptr<short>(dy);
+        const ushort* FXY = _fxy.ptr<ushort>(dy);
         int X0 = 0;
         bool prevInlier = false;
 
@@ -3163,7 +3163,7 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
     Size ssize = _src.size(), dsize = _dst.size();
     int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
-    const T* S0 = (const T*)_src.data;
+    const T* S0 = _src.ptr<T>();
     size_t sstep = _src.step/sizeof(S0[0]);
     Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
         saturate_cast<T>(_borderValue[1]),
@@ -3183,9 +3183,9 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
 
     for( dy = 0; dy < dsize.height; dy++ )
     {
-        T* D = (T*)(_dst.data + _dst.step*dy);
-        const short* XY = (const short*)(_xy.data + _xy.step*dy);
-        const ushort* FXY = (const ushort*)(_fxy.data + _fxy.step*dy);
+        T* D = _dst.ptr<T>(dy);
+        const short* XY = _xy.ptr<short>(dy);
+        const ushort* FXY = _fxy.ptr<ushort>(dy);
 
         for( dx = 0; dx < dsize.width; dx++, D += cn )
         {
@@ -3268,7 +3268,7 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
     Size ssize = _src.size(), dsize = _dst.size();
     int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
-    const T* S0 = (const T*)_src.data;
+    const T* S0 = _src.ptr<T>();
     size_t sstep = _src.step/sizeof(S0[0]);
     Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
         saturate_cast<T>(_borderValue[1]),
@@ -3288,9 +3288,9 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
 
     for( dy = 0; dy < dsize.height; dy++ )
     {
-        T* D = (T*)(_dst.data + _dst.step*dy);
-        const short* XY = (const short*)(_xy.data + _xy.step*dy);
-        const ushort* FXY = (const ushort*)(_fxy.data + _fxy.step*dy);
+        T* D = _dst.ptr<T>(dy);
+        const short* XY = _xy.ptr<short>(dy);
+        const ushort* FXY = _fxy.ptr<ushort>(dy);
 
         for( dx = 0; dx < dsize.width; dx++, D += cn )
         {
@@ -3415,15 +3415,15 @@ public:
 
                 if( nnfunc )
                 {
-                    if( m1->type() == CV_16SC2 && !m2->data ) // the data is already in the right format
+                    if( m1->type() == CV_16SC2 && m2->empty() ) // the data is already in the right format
                         bufxy = (*m1)(Rect(x, y, bcols, brows));
                     else if( map_depth != CV_32F )
                     {
                         for( y1 = 0; y1 < brows; y1++ )
                         {
-                            short* XY = (short*)(bufxy.data + bufxy.step*y1);
-                            const short* sXY = (const short*)(m1->data + m1->step*(y+y1)) + x*2;
-                            const ushort* sA = (const ushort*)(m2->data + m2->step*(y+y1)) + x;
+                            short* XY = bufxy.ptr<short>(y1);
+                            const short* sXY = m1->ptr<short>(y+y1) + x*2;
+                            const ushort* sA = m2->ptr<ushort>(y+y1) + x;
 
                             for( x1 = 0; x1 < bcols; x1++ )
                             {
@@ -3439,9 +3439,9 @@ public:
                     {
                         for( y1 = 0; y1 < brows; y1++ )
                         {
-                            short* XY = (short*)(bufxy.data + bufxy.step*y1);
-                            const float* sX = (const float*)(m1->data + m1->step*(y+y1)) + x;
-                            const float* sY = (const float*)(m2->data + m2->step*(y+y1)) + x;
+                            short* XY = bufxy.ptr<short>(y1);
+                            const float* sX = m1->ptr<float>(y+y1) + x;
+                            const float* sY = m2->ptr<float>(y+y1) + x;
                             x1 = 0;
 
                         #if CV_SSE2
@@ -3481,21 +3481,21 @@ public:
                 Mat bufa(_bufa, Rect(0, 0, bcols, brows));
                 for( y1 = 0; y1 < brows; y1++ )
                 {
-                    short* XY = (short*)(bufxy.data + bufxy.step*y1);
-                    ushort* A = (ushort*)(bufa.data + bufa.step*y1);
+                    short* XY = bufxy.ptr<short>(y1);
+                    ushort* A = bufa.ptr<ushort>(y1);
 
                     if( m1->type() == CV_16SC2 && (m2->type() == CV_16UC1 || m2->type() == CV_16SC1) )
                     {
                         bufxy = (*m1)(Rect(x, y, bcols, brows));
 
-                        const ushort* sA = (const ushort*)(m2->data + m2->step*(y+y1)) + x;
+                        const ushort* sA = m2->ptr<ushort>(y+y1) + x;
                         for( x1 = 0; x1 < bcols; x1++ )
                             A[x1] = (ushort)(sA[x1] & (INTER_TAB_SIZE2-1));
                     }
                     else if( planar_input )
                     {
-                        const float* sX = (const float*)(m1->data + m1->step*(y+y1)) + x;
-                        const float* sY = (const float*)(m2->data + m2->step*(y+y1)) + x;
+                        const float* sX = m1->ptr<float>(y+y1) + x;
+                        const float* sY = m2->ptr<float>(y+y1) + x;
 
                         x1 = 0;
                     #if CV_SSE2
@@ -3548,7 +3548,7 @@ public:
                     }
                     else
                     {
-                        const float* sXY = (const float*)(m1->data + m1->step*(y+y1)) + x*2;
+                        const float* sXY = m1->ptr<float>(y+y1) + x*2;
 
                         for( x1 = 0; x1 < bcols; x1++ )
                         {
@@ -3650,7 +3650,7 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     Mat scalar(1, 1, sctype, borderValue);
     ocl::KernelArg srcarg = ocl::KernelArg::ReadOnly(src), dstarg = ocl::KernelArg::WriteOnly(dst),
             map1arg = ocl::KernelArg::ReadOnlyNoSize(map1),
-            scalararg = ocl::KernelArg::Constant((void*)scalar.data, scalar.elemSize());
+            scalararg = ocl::KernelArg::Constant((void*)scalar.ptr(), scalar.elemSize());
 
     if (map2.empty())
         k.args(srcarg, dstarg, map1arg, scalararg);
@@ -3689,15 +3689,15 @@ public:
         int type = dst.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
         if (borderType == BORDER_CONSTANT &&
-                !IPPSet(borderValue, dstRoi.data, (int)dstRoi.step, dstRoiSize, cn, depth))
+                !IPPSet(borderValue, dstRoi.ptr(), (int)dstRoi.step, dstRoiSize, cn, depth))
         {
             *ok = false;
             return;
         }
 
-        if (ippFunc(src.data, ippiSize(src.size()), (int)src.step, srcRoiRect,
-                    (const Ipp32f *)map1.data, (int)map1.step, (const Ipp32f *)map2.data, (int)map2.step,
-                    dstRoi.data, (int)dstRoi.step, dstRoiSize, ippInterpolation) < 0)
+        if (ippFunc(src.ptr(), ippiSize(src.size()), (int)src.step, srcRoiRect,
+                    map1.ptr<Ipp32f>(), (int)map1.step, map2.ptr<Ipp32f>(), (int)map2.step,
+                    dstRoi.ptr(), (int)dstRoi.step, dstRoiSize, ippInterpolation) < 0)
             *ok = false;
     }
 
@@ -3829,15 +3829,15 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
     const Mat *m1 = &map1, *m2 = &map2;
 
-    if( (map1.type() == CV_16SC2 && (map2.type() == CV_16UC1 || map2.type() == CV_16SC1 || !map2.data)) ||
-        (map2.type() == CV_16SC2 && (map1.type() == CV_16UC1 || map1.type() == CV_16SC1 || !map1.data)) )
+    if( (map1.type() == CV_16SC2 && (map2.type() == CV_16UC1 || map2.type() == CV_16SC1 || map2.empty())) ||
+        (map2.type() == CV_16SC2 && (map1.type() == CV_16UC1 || map1.type() == CV_16SC1 || map1.empty())) )
     {
         if( map1.type() != CV_16SC2 )
             std::swap(m1, m2);
     }
     else
     {
-        CV_Assert( ((map1.type() == CV_32FC2 || map1.type() == CV_16SC2) && !map2.data) ||
+        CV_Assert( ((map1.type() == CV_32FC2 || map1.type() == CV_16SC2) && map2.empty()) ||
             (map1.type() == CV_32FC1 && map2.type() == CV_32FC1) );
         planar_input = map1.channels() == 1;
     }
@@ -3861,7 +3861,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     CV_Assert( (m1type == CV_16SC2 && (nninterpolate || m2type == CV_16UC1 || m2type == CV_16SC1)) ||
                (m2type == CV_16SC2 && (nninterpolate || m1type == CV_16UC1 || m1type == CV_16SC1)) ||
                (m1type == CV_32FC1 && m2type == CV_32FC1) ||
-               (m1type == CV_32FC2 && !m2->data) );
+               (m1type == CV_32FC2 && m2->empty()) );
 
     if( m2type == CV_16SC2 )
     {
@@ -3888,7 +3888,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         (m1type == CV_32FC2 && dstm1type == CV_16SC2))) )
     {
         m1->convertTo( dstmap1, dstmap1.type() );
-        if( dstmap2.data && dstmap2.type() == m2->type() )
+        if( !dstmap2.empty() && dstmap2.type() == m2->type() )
             m2->copyTo( dstmap2 );
         return;
     }
@@ -3907,8 +3907,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         return;
     }
 
-    if( m1->isContinuous() && (!m2->data || m2->isContinuous()) &&
-        dstmap1.isContinuous() && (!dstmap2.data || dstmap2.isContinuous()) )
+    if( m1->isContinuous() && (m2->empty() || m2->isContinuous()) &&
+        dstmap1.isContinuous() && (dstmap2.empty() || dstmap2.isContinuous()) )
     {
         size.width *= size.height;
         size.height = 1;
@@ -3918,13 +3918,13 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     int x, y;
     for( y = 0; y < size.height; y++ )
     {
-        const float* src1f = (const float*)(m1->data + m1->step*y);
-        const float* src2f = (const float*)(m2->data + m2->step*y);
+        const float* src1f = m1->ptr<float>(y);
+        const float* src2f = m2->ptr<float>(y);
         const short* src1 = (const short*)src1f;
         const ushort* src2 = (const ushort*)src2f;
 
-        float* dst1f = (float*)(dstmap1.data + dstmap1.step*y);
-        float* dst2f = (float*)(dstmap2.data + dstmap2.step*y);
+        float* dst1f = dstmap1.ptr<float>(y);
+        float* dst2f = dstmap2.ptr<float>(y);
         short* dst1 = (short*)dst1f;
         ushort* dst2 = (ushort*)dst2f;
 
@@ -4135,7 +4135,7 @@ public:
         if( borderType == BORDER_CONSTANT )
         {
             IppiSize setSize = { dst.cols, range.end - range.start };
-            void *dataPointer = dst.data + dst.step[0] * range.start;
+            void *dataPointer = dst.ptr(range.start);
             if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
             {
                 *ok = false;
@@ -4144,7 +4144,7 @@ public:
         }
 
         // Aug 2013: problem in IPP 7.1, 8.0 : sometimes function return ippStsCoeffErr
-        IppStatus status = func( src.data, srcsize, (int)src.step[0], srcroi, dst.data,
+        IppStatus status = func( src.ptr(), srcsize, (int)src.step[0], srcroi, dst.ptr(),
                                 (int)dst.step[0], dstroi, coeffs, mode );
         if( status < 0)
             *ok = false;
@@ -4502,7 +4502,7 @@ public:
         if( borderType == BORDER_CONSTANT )
         {
             IppiSize setSize = {dst.cols, range.end - range.start};
-            void *dataPointer = dst.data + dst.step[0] * range.start;
+            void *dataPointer = dst.ptr(range.start);
             if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
             {
                 *ok = false;
@@ -4510,7 +4510,7 @@ public:
             }
         }
 
-        IppStatus status = func(src.data, srcsize, (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, coeffs, mode);
+        IppStatus status = func(src.ptr(), srcsize, (int)src.step[0], srcroi, dst.ptr(), (int)dst.step[0], dstroi, coeffs, mode);
         if (status != ippStsNoErr)
             *ok = false;
     }
@@ -4629,7 +4629,7 @@ cv::Mat cv::getRotationMatrix2D( Point2f center, double angle, double scale )
     double beta = sin(angle)*scale;
 
     Mat M(2, 3, CV_64F);
-    double* m = (double*)M.data;
+    double* m = M.ptr<double>();
 
     m[0] = alpha;
     m[1] = beta;
@@ -4667,7 +4667,7 @@ cv::Mat cv::getRotationMatrix2D( Point2f center, double angle, double scale )
  */
 cv::Mat cv::getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
 {
-    Mat M(3, 3, CV_64F), X(8, 1, CV_64F, M.data);
+    Mat M(3, 3, CV_64F), X(8, 1, CV_64F, M.ptr());
     double a[8][8], b[8];
     Mat A(8, 8, CV_64F, a), B(8, 1, CV_64F, b);
 
@@ -4687,7 +4687,7 @@ cv::Mat cv::getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
     }
 
     solve( A, B, X, DECOMP_SVD );
-    ((double*)M.data)[8] = 1.;
+    M.ptr<double>()[8] = 1.;
 
     return M;
 }
@@ -4713,7 +4713,7 @@ cv::Mat cv::getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
 
 cv::Mat cv::getAffineTransform( const Point2f src[], const Point2f dst[] )
 {
-    Mat M(2, 3, CV_64F), X(6, 1, CV_64F, M.data);
+    Mat M(2, 3, CV_64F), X(6, 1, CV_64F, M.ptr());
     double a[6*6], b[6];
     Mat A(6, 6, CV_64F, a), B(6, 1, CV_64F, b);
 
@@ -4743,8 +4743,8 @@ void cv::invertAffineTransform(InputArray _matM, OutputArray __iM)
 
     if( matM.type() == CV_32F )
     {
-        const float* M = (const float*)matM.data;
-        float* iM = (float*)_iM.data;
+        const float* M = matM.ptr<float>();
+        float* iM = _iM.ptr<float>();
         int step = (int)(matM.step/sizeof(M[0])), istep = (int)(_iM.step/sizeof(iM[0]));
 
         double D = M[0]*M[step+1] - M[1]*M[step];
@@ -4758,8 +4758,8 @@ void cv::invertAffineTransform(InputArray _matM, OutputArray __iM)
     }
     else if( matM.type() == CV_64F )
     {
-        const double* M = (const double*)matM.data;
-        double* iM = (double*)_iM.data;
+        const double* M = matM.ptr<double>();
+        double* iM = _iM.ptr<double>();
         int step = (int)(matM.step/sizeof(M[0])), istep = (int)(_iM.step/sizeof(iM[0]));
 
         double D = M[0]*M[step+1] - M[1]*M[step];
@@ -4887,7 +4887,7 @@ cvConvertMaps( const CvArr* arr1, const CvArr* arr2, CvArr* dstarr1, CvArr* dsta
     {
         dstmap2 = cv::cvarrToMat(dstarr2);
         if( dstmap2.type() == CV_16SC1 )
-            dstmap2 = cv::Mat(dstmap2.size(), CV_16UC1, dstmap2.data, dstmap2.step);
+            dstmap2 = cv::Mat(dstmap2.size(), CV_16UC1, dstmap2.ptr(), dstmap2.step);
     }
 
     cv::convertMaps( map1, map2, dstmap1, dstmap2, dstmap1.type(), false );
