@@ -341,7 +341,7 @@ OCL_TEST_P(Mul, Mat_Scalar_Scale)
         OCL_OFF(cv::multiply(src1_roi, val, dst1_roi, val[0]));
         OCL_ON(cv::multiply(usrc1_roi, val, udst1_roi, val[0]));
 
-        Near(udst1_roi.depth() >= CV_32F ? 1e-2 : 1);
+        Near(udst1_roi.depth() >= CV_32F ? 2e-2 : 1);
     }
 }
 
@@ -397,7 +397,7 @@ OCL_TEST_P(Div, Mat_Scale)
         OCL_OFF(cv::divide(src1_roi, src2_roi, dst1_roi, val[0]));
         OCL_ON(cv::divide(usrc1_roi, usrc2_roi, udst1_roi, val[0]));
 
-        Near(udst1_roi.depth() >= CV_32F ? 4e-3 : 1);
+        Near(udst1_roi.depth() >= CV_32F ? 2e-2 : 1);
     }
 }
 
