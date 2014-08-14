@@ -45,7 +45,7 @@
 
 #define TG22 0.4142135623730950488016887242097f
 #define TG67 2.4142135623730950488016887242097f
-    
+
 #ifdef WITH_SOBEL
 
 #if cn == 1
@@ -74,16 +74,16 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
 
     int start_x = GRP_SIZEX * get_group_id(0);
     int start_y = GRP_SIZEY * get_group_id(1);
- 
+
     for (int i = lidx + lidy * GRP_SIZEX; i < (GRP_SIZEX + 4) * (GRP_SIZEY + 4); i += GRP_SIZEX * GRP_SIZEY)
     {
         int x = clamp(start_x - 2 + (i % (GRP_SIZEX + 4)), 0, cols - 1);
         int y = clamp(start_y - 2 + (i / (GRP_SIZEX + 4)), 0, rows - 1);
         smem[i] = loadpix(src + mad24(y, src_step, mad24(x, cn * sizeof(TYPE), src_offset)));
-    } 
-    
+    }
+
     barrier(CLK_LOCAL_MEM_FENCE);
-    
+
     //// Sobel, Magnitude
     //
 
@@ -96,7 +96,7 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
 
         intN dx = smem[idx + 2] - smem[idx]
                 + 2 * (smem[idx + GRP_SIZEX + 6] - smem[idx + GRP_SIZEX + 4])
-                + smem[idx + 2 * GRP_SIZEX + 10] - smem[idx + 2 * GRP_SIZEX + 8]; 
+                + smem[idx + 2 * GRP_SIZEX + 10] - smem[idx + 2 * GRP_SIZEX + 8];
 
         intN dy = smem[idx] - smem[idx + 2 * GRP_SIZEX + 8]
                 + 2 * (smem[idx + 1] - smem[idx + 2 * GRP_SIZEX + 9])
@@ -127,7 +127,7 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
         sigma[i].y = dy.x;
 #endif
     }
-   
+
     barrier(CLK_LOCAL_MEM_FENCE);
 
     //// Threshold + Non maxima suppression
@@ -148,12 +148,12 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
         Therefore if abs(dy / dx) belongs to the interval
         [0, tg(22.5)]           -> 0 direction
         [tg(22.5), tg(67.5)]    -> 1 or 3
-        [tg(67,5), +oo)         -> 2 
-        
+        [tg(67,5), +oo)         -> 2
+
         Since tg(67.5) = 1 / tg(22.5), if we take
         a = abs(dy / dx) * tg(22.5) and b = abs(dy / dx) * tg(67.5)
         we can get another intervals
-        
+
         in case a:
         [0, tg(22.5)^2]     -> 0
         [tg(22.5)^2, 1]     -> 1, 3
@@ -164,7 +164,7 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
         [1, tg(67.5)^2]     -> 1,3
         [tg(67.5)^2, +oo)   -> 2
 
-        that can help to find direction without conditions. 
+        that can help to find direction without conditions.
 
         0 - might belong to an edge
         1 - pixel doesn't belong to an edge
@@ -181,8 +181,8 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
     __constant int next[4][2] = {
         { 0, 1 },
         { 1, -1 },
-        { 1, 0 },         
-        { 1, 1 }      
+        { 1, 0 },
+        { 1, 1 }
     };
 
     lidx++;
@@ -197,7 +197,7 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
     int x = (sigma[lidx + lidy * (GRP_SIZEX + 2)]).x;
     int y = (sigma[lidx + lidy * (GRP_SIZEX + 2)]).y;
     int mag0 = mag[lidx + lidy * (GRP_SIZEX + 2)];
-    
+
     int value = 1;
     if (mag0 > low_thr)
     {
@@ -213,15 +213,15 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
 
         int dir3 = (a * b) & (((x ^ y) & 0x80000000) >> 31); // if a = 1, b = 1, dy ^ dx < 0
         int dir = a * b + 2 * dir3;
-        int prev_mag = mag[(lidy + prev[dir][0]) * (GRP_SIZEX + 2) + lidx + prev[dir][1]]; 
+        int prev_mag = mag[(lidy + prev[dir][0]) * (GRP_SIZEX + 2) + lidx + prev[dir][1]];
         int next_mag = mag[(lidy + next[dir][0]) * (GRP_SIZEX + 2) + lidx + next[dir][1]] + (dir & 1);
-        
+
         if (mag0 > prev_mag && mag0 >= next_mag)
         {
             value = (mag0 > high_thr) ? 2 : 0;
         }
     }
-    
+
     storepix(value, map + mad24(gidy, map_step, mad24(gidx, sizeof(int), map_offset)));
 }
 
@@ -240,11 +240,11 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
 #ifdef L2GRAD
 #define dist(x, y) ((int)(x) * (x) + (int)(y) * (y))
 #else
-#define dist(x, y) (abs(x) + abs(y))             
+#define dist(x, y) (abs(x) + abs(y))
 #endif
 
 
-__kernel void stage1_without_sobel(__global const uchar *dxptr, int dx_step, int dx_offset, 
+__kernel void stage1_without_sobel(__global const uchar *dxptr, int dx_step, int dx_offset,
                                    __global const uchar *dyptr, int dy_step, int dy_offset,
                                    __global uchar *map, int map_step, int map_offset, int rows, int cols,
                                    int low_thr, int high_thr)
@@ -276,21 +276,21 @@ __kernel void stage1_without_sobel(__global const uchar *dxptr, int dx_step, int
         #pragma unroll
         for (int j = 1; j < cn; ++j)
         {
-            int mag1 = dist(dx[j], dy[j]); 
+            int mag1 = dist(dx[j], dy[j]);
             if (mag1 > mag0)
             {
                 mag0 = mag1;
                 cdx = dx[j];
-                cdy = dy[j]; 
+                cdy = dy[j];
             }
         }
         dx[0] = cdx;
         dy[0] = cdy;
-#endif 
+#endif
         mag[i] = mag0;
         sigma[i] = (short2)(dx[0], dy[0]);
     }
-    
+
     barrier(CLK_LOCAL_MEM_FENCE);
 
     int gidx = get_global_id(0);
@@ -315,8 +315,8 @@ __kernel void stage1_without_sobel(__global const uchar *dxptr, int dx_step, int
     __constant int next[4][2] = {
         { 0, 1 },
         { 1, 1 },
-        { 1, 0 },         
-        { 1, -1 }     
+        { 1, 0 },
+        { 1, -1 }
     };
 
     lidx++;
@@ -341,7 +341,7 @@ __kernel void stage1_without_sobel(__global const uchar *dxptr, int dx_step, int
 
         int dir3 = (a * b) & (((x ^ y) & 0x80000000) >> 31); // if a = 1, b = 1, dy ^ dx < 0
         int dir = a * b + 2 * dir3;
-        int prev_mag = mag[(lidy + prev[dir][0]) * (GRP_SIZEX + 2) + lidx + prev[dir][1]]; 
+        int prev_mag = mag[(lidy + prev[dir][0]) * (GRP_SIZEX + 2) + lidx + prev[dir][1]];
         int next_mag = mag[(lidy + next[dir][0]) * (GRP_SIZEX + 2) + lidx + next[dir][1]] + (dir & 1);
 
         if (mag0 > prev_mag && mag0 >= next_mag)
@@ -395,17 +395,17 @@ __kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offse
         if (type == 2)
         {
             l_stack[atomic_inc(&l_counter)] = (ushort2)(x, y);
-        }        
+        }
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-    
+
     ushort2 p_stack[p_stack_size];
     int p_counter = 0;
-    
+
     while(l_counter != 0)
     {
         int mod = l_counter % 64;
-        int pix_per_thr = l_counter / 64 + (lid < mod) ? 1 : 0;  
+        int pix_per_thr = l_counter / 64 + (lid < mod) ? 1 : 0;
 
         #pragma unroll
         for (int i = 0; i < pix_per_thr; ++i)
@@ -432,7 +432,7 @@ __kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offse
 
         while (p_counter > 0)
         {
-            l_stack[ atomic_inc(&l_counter) ] = p_stack[--p_counter];            
+            l_stack[ atomic_inc(&l_counter) ] = p_stack[--p_counter];
         }
         barrier(CLK_LOCAL_MEM_FENCE);
     }

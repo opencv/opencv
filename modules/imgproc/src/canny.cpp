@@ -126,7 +126,7 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
         */
         char cvt[40];
         ocl::Kernel with_sobel("stage1_with_sobel", ocl::imgproc::canny_oclsrc,
-                               format("-D WITH_SOBEL -D cn=%d -D TYPE=%s -D convert_intN=%s -D intN=%s -D GRP_SIZEX=%d -D GRP_SIZEY=%d%s", 
+                               format("-D WITH_SOBEL -D cn=%d -D TYPE=%s -D convert_intN=%s -D intN=%s -D GRP_SIZEX=%d -D GRP_SIZEY=%d%s",
                                       cn, ocl::memopTypeToStr(_src.depth()),
                                       ocl::convertTypeStr(_src.type(), CV_32SC(cn), cn, cvt),
                                       ocl::memopTypeToStr(CV_32SC(cn)),
@@ -146,7 +146,7 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
         if (!with_sobel.run(2, globalsize, localsize, false))
             return false;
     }
-    else 
+    else
     {
         /*
             stage1_without_sobel:
@@ -179,8 +179,8 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
         stage2:
             hysteresis (add weak edges if they are connected with strong edges)
     */
-    
-    ocl::Kernel edgesHysteresis("stage2_hysteresis", ocl::imgproc::canny_oclsrc, 
+
+    ocl::Kernel edgesHysteresis("stage2_hysteresis", ocl::imgproc::canny_oclsrc,
                                 format("-D STAGE2 -D PIX_PER_WI=%d", PIX_PER_WI));
 
     if (edgesHysteresis.empty())
@@ -192,14 +192,14 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
 
     if (!edgesHysteresis.run(2, globalsize, localsize, false))
         return false;
-    
+
     // get edges
-    
-    ocl::Kernel getEdgesKernel("getEdges", ocl::imgproc::canny_oclsrc, 
+
+    ocl::Kernel getEdgesKernel("getEdges", ocl::imgproc::canny_oclsrc,
                                 format("-D GET_EDGES -D PIX_PER_WI=%d", PIX_PER_WI));
     if (getEdgesKernel.empty())
         return false;
-        
+
     _dst.create(size, CV_8UC1);
     UMat dst = _dst.getUMat();
 
@@ -412,7 +412,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
             stack_bottom = &stack[0];
             stack_top = stack_bottom + sz;
         }
-        
+
         int prev_flag = 0;
         for (int j = 0; j < src.cols; j++)
         {
@@ -467,7 +467,7 @@ __ocv_canny_push:
         mag_buf[1] = mag_buf[2];
         mag_buf[2] = _mag;
     }
-    
+
     // now track the edges (hysteresis thresholding)
     while (stack_top > stack_bottom)
     {
@@ -492,7 +492,7 @@ __ocv_canny_push:
         if (!m[mapstep])    CANNY_PUSH(m + mapstep);
         if (!m[mapstep+1])  CANNY_PUSH(m + mapstep + 1);
     }
-    
+
     // the final pass, form the final image
     const uchar* pmap = map + mapstep + 1;
     uchar* pdst = dst.ptr();
