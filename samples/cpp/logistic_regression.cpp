@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////////////
+/*//////////////////////////////////////////////////////////////////////////////////////
 // IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 
 //  By downloading, copying, installing or using the software you agree to this license.
@@ -11,7 +11,8 @@
 // Rahul Kavi rahulkavi[at]live[at]com
 //
 
-// contains a subset of data from the popular Iris Dataset (taken from "http://archive.ics.uci.edu/ml/datasets/Iris")
+// contains a subset of data from the popular Iris Dataset (taken from
+// "http://archive.ics.uci.edu/ml/datasets/Iris")
 
 // # You are free to use, change, or redistribute the code in any way you wish for
 // # non-commercial purposes, but please maintain the name of the original author.
@@ -23,7 +24,6 @@
 // # This code comes with no warranty of any kind.
 
 // # Logistic Regression ALGORITHM
-
 
 //                           License Agreement
 //                For Open Source Computer Vision Library
@@ -54,7 +54,7 @@
 // loss of use, data, or profits; or business interruption) however caused
 // and on any theory of liability, whether in contract, strict liability,
 // or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
+// the use of this software, even if advised of the possibility of such damage.*/
 
 #include <iostream>
 
@@ -62,42 +62,45 @@
 #include <opencv2/ml/ml.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-
 using namespace std;
 using namespace cv;
 using namespace cv::ml;
 
 int main()
 {
-    Mat data_temp, labels_temp;
+    const String filename = "data01.xml";
+    cout << "**********************************************************************" << endl;
+    cout << filename
+         << " contains digits 0 and 1 of 20 samples each, collected on an Android device" << endl;
+    cout << "Each of the collected images are of size 28 x 28 re-arranged to 1 x 784 matrix"
+         << endl;
+    cout << "**********************************************************************" << endl;
+
     Mat data, labels;
+    {
+        cout << "loading the dataset" << endl;
+        FileStorage f;
+        if(f.open(filename, FileStorage::READ))
+        {
+            f["datamat"] >> data;
+            f["labelsmat"] >> labels;
+            f.release();
+        }
+        else
+        {
+            cerr << "File can not be opened: " << filename << endl;
+            return 1;
+        }
+        data.convertTo(data, CV_32F);
+        labels.convertTo(labels, CV_32F);
+        cout << "read " << data.rows << " rows of data" << endl;
+    }
 
     Mat data_train, data_test;
     Mat labels_train, labels_test;
-
-    Mat responses, result;
-    FileStorage fs1, fs2;
-
-    FileStorage f;
-
-    cout<<"*****************************************************************************************"<<endl;
-    cout<<"\"data01.xml\" contains digits 0 and 1 of 20 samples each, collected on an Android device"<<endl;
-    cout<<"Each of the collected images are of size 28 x 28 re-arranged to 1 x 784 matrix"<<endl;
-    cout<<"*****************************************************************************************\n\n"<<endl;
-
-    cout<<"loading the dataset\n"<<endl;
-
-    f.open("data01.xml", FileStorage::READ);
-
-    f["datamat"] >> data_temp;
-    f["labelsmat"] >> labels_temp;
-
-    data_temp.convertTo(data, CV_32F);
-    labels_temp.convertTo(labels, CV_32F);
-
-    for(int i =0;i<data.rows;i++)
+    for(int i = 0; i < data.rows; i++)
     {
-        if(i%2 ==0)
+        if(i % 2 == 0)
         {
             data_train.push_back(data.row(i));
             labels_train.push_back(labels.row(i));
@@ -108,66 +111,66 @@ int main()
             labels_test.push_back(labels.row(i));
         }
     }
-
-    cout<<"training samples per class: "<<data_train.rows/2<<endl;
-    cout<<"testing samples per class: "<<data_test.rows/2<<endl;
+    cout << "training/testing samples count: " << data_train.rows << "/" << data_test.rows << endl;
 
     // display sample image
-    Mat img_disp1 = data_train.row(2).reshape(0,28).t();
-    Mat img_disp2 = data_train.row(18).reshape(0,28).t();
+//    Mat bigImage;
+//    for(int i = 0; i < data_train.rows; ++i)
+//    {
+//        bigImage.push_back(data_train.row(i).reshape(0, 28));
+//    }
+//    imshow("digits", bigImage.t());
 
-    imshow("digit 0", img_disp1);
-    imshow("digit 1", img_disp2);
+    Mat responses, result;
 
-    cout<<"initializing Logisitc Regression Parameters\n"<<endl;
+//    LogisticRegression::Params params = LogisticRegression::Params(
+//        0.001, 10, LogisticRegression::BATCH, LogisticRegression::REG_L2, 1, 1);
+    // params1 (above) with batch gradient performs better than mini batch
+    // gradient below with same parameters
+    LogisticRegression::Params params = LogisticRegression::Params(
+        0.001, 10, LogisticRegression::MINI_BATCH, LogisticRegression::REG_L2, 1, 1);
 
-    // LogisticRegressionParams params1 = LogisticRegressionParams(0.001, 10, LogisticRegression::BATCH, LogisticRegression::REG_L2, 1, 1);
-    // params1 (above) with batch gradient performs better than mini batch gradient below with same parameters
-    LogisticRegressionParams params1 = LogisticRegressionParams(0.001, 10, LogisticRegression::MINI_BATCH, LogisticRegression::REG_L2, 1, 1);
+    // however mini batch gradient descent parameters with slower learning
+    // rate(below) can be used to get higher accuracy than with parameters
+    // mentioned above
+//    LogisticRegression::Params params = LogisticRegression::Params(
+//        0.000001, 10, LogisticRegression::MINI_BATCH, LogisticRegression::REG_L2, 1, 1);
 
-    // however mini batch gradient descent parameters with slower learning rate(below) can be used to get higher accuracy than with parameters mentioned above
-    // LogisticRegressionParams params1 = LogisticRegressionParams(0.000001, 10, LogisticRegression::MINI_BATCH, LogisticRegression::REG_L2, 1, 1);
+    cout << "training...";
+    Ptr<StatModel> lr1 = LogisticRegression::create(params);
+    lr1->train(data_train, ROW_SAMPLE, labels_train);
+    cout << "done!" << endl;
 
-    cout<<"training Logisitc Regression classifier\n"<<endl;
+    cout << "predicting...";
+    lr1->predict(data_test, responses);
+    cout << "done!" << endl;
 
-    LogisticRegression lr1(data_train, labels_train, params1);
-    lr1.predict(data_test, responses);
+    // show prediction report
+    cout << "original vs predicted:" << endl;
     labels_test.convertTo(labels_test, CV_32S);
-
-    cout<<"Original Label ::  Predicted Label"<<endl;
-    result = (labels_test == responses)/255;
-
-    for(int i=0;i<labels_test.rows;i++)
-    {
-        cout<<labels_test.at<int>(i,0)<<" :: "<< responses.at<int>(i,0)<<endl;
-    }
-
-    // calculate accuracy
-    cout<<"accuracy: "<<((double)cv::sum(result)[0]/result.rows)*100<<"%\n";
-    cout<<"saving the classifier"<<endl;
+    cout << labels_test.t() << endl;
+    cout << responses.t() << endl;
+    result = (labels_test == responses) / 255;
+    cout << "accuracy: " << ((double)cv::sum(result)[0] / result.rows) * 100 << "%\n";
 
     // save the classfier
-    fs1.open("NewLR_Trained.xml",FileStorage::WRITE);
-    lr1.write(fs1);
-    fs1.release();
+    cout << "saving the classifier" << endl;
+    const String saveFilename = "NewLR_Trained.xml";
+    lr1->save(saveFilename);
 
     // load the classifier onto new object
-    LogisticRegressionParams params2 = LogisticRegressionParams();
-    LogisticRegression lr2(params2);
-    cout<<"loading a new classifier"<<endl;
-    fs2.open("NewLR_Trained.xml",FileStorage::READ);
-    FileNode fn2 = fs2.root();
-    lr2.read(fn2);
-    fs2.release();
-
-    Mat responses2;
+    cout << "loading a new classifier" << endl;
+    Ptr<LogisticRegression> lr2 = StatModel::load<LogisticRegression>(saveFilename);
 
     // predict using loaded classifier
-    cout<<"predicting the dataset using the loaded classfier\n"<<endl;
-    lr2.predict(data_test, responses2);
+    cout << "predicting the dataset using the loaded classfier" << endl;
+    Mat responses2;
+    lr2->predict(data_test, responses2);
     // calculate accuracy
-    cout<<"accuracy using loaded classifier: "<<100 * (float)cv::countNonZero(labels_test == responses2)/responses2.rows<<"%"<<endl;
-    waitKey(0);
+    cout << "accuracy using loaded classifier: "
+         << 100 * (float)cv::countNonZero(labels_test == responses2) / responses2.rows << "%"
+         << endl;
 
+    waitKey(0);
     return 0;
 }

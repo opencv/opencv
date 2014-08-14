@@ -55,55 +55,72 @@
 
 #include "precomp.hpp"
 
-
-using namespace cv;
-using namespace cv::ml;
 using namespace std;
 
-LogisticRegressionParams::LogisticRegressionParams()
+namespace cv {
+namespace ml {
+
+LogisticRegression::Params::Params(double learning_rate,
+                                   int iters,
+                                   int method,
+                                   int normlization,
+                                   int reg,
+                                   int batch_size)
 {
-    term_crit = cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 1000, 0.001);
-    alpha = 0.001;
-    num_iters = 1000;
-    norm = LogisticRegression::REG_L2;
-    regularized = 1;
-    train_method = LogisticRegression::BATCH;
-    mini_batch_size = 1;
-}
-LogisticRegressionParams::LogisticRegressionParams( double learning_rate, int iters, int train_algo = LogisticRegression::BATCH, int normlization = LogisticRegression::REG_L2, int reg = 1, int mb_size = 5)
-{
-    term_crit = cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, iters, learning_rate);
     alpha = learning_rate;
     num_iters = iters;
     norm = normlization;
     regularized = reg;
-    train_method = train_algo;
-    mini_batch_size = mb_size;
+    train_method = method;
+    mini_batch_size = batch_size;
+    term_crit = cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, num_iters, alpha);
 }
 
-LogisticRegression::LogisticRegression(const LogisticRegressionParams& pms)
+class LogisticRegressionImpl : public LogisticRegression
 {
-    default_model_name = "my_lr";
-    this->params = pms;
-}
+public:
+    LogisticRegressionImpl(const Params& pms)
+        : params(pms)
+    {
+    }
+    virtual ~LogisticRegressionImpl() {}
 
-LogisticRegression::LogisticRegression(cv::InputArray data, cv::InputArray labels, const LogisticRegressionParams& pms)
+    virtual bool train( const Ptr<TrainData>& trainData, int=0 );
+    virtual float predict(InputArray samples, OutputArray results, int) const;
+    virtual void clear();
+    virtual void write(FileStorage& fs) const;
+    virtual void read(const FileNode& fn);
+    virtual cv::Mat get_learnt_thetas() const;
+    virtual int getVarCount() const { return learnt_thetas.cols; }
+    virtual bool isTrained() const { return !learnt_thetas.empty(); }
+    virtual bool isClassifier() const { return true; }
+    virtual String getDefaultModelName() const { return "opencv_ml_lr"; }
+protected:
+    cv::Mat calc_sigmoid(const cv::Mat& data) const;
+    double compute_cost(const cv::Mat& _data, const cv::Mat& _labels, const cv::Mat& _init_theta);
+    cv::Mat compute_batch_gradient(const cv::Mat& _data, const cv::Mat& _labels, const cv::Mat& _init_theta);
+    cv::Mat compute_mini_batch_gradient(const cv::Mat& _data, const cv::Mat& _labels, const cv::Mat& _init_theta);
+    bool set_label_map(const cv::Mat& _labels_i);
+    cv::Mat remap_labels(const cv::Mat& _labels_i, const map<int, int>& lmap) const;
+protected:
+    Params params;
+    cv::Mat learnt_thetas;
+    map<int, int> forward_mapper;
+    map<int, int> reverse_mapper;
+    cv::Mat labels_o;
+    cv::Mat labels_n;
+};
+
+Ptr<LogisticRegression> LogisticRegression::create(const Params& params)
 {
-    default_model_name = "my_lr";
-    this->params = pms;
-    train(data, labels);
+    return makePtr<LogisticRegressionImpl>(params);
 }
 
-LogisticRegression::~LogisticRegression()
+bool LogisticRegressionImpl::train(const Ptr<TrainData>& trainData, int)
 {
     clear();
-}
-
-bool LogisticRegression::train(cv::InputArray data_ip, cv::InputArray labels_ip)
-{
-    clear();
-    cv::Mat _data_i = data_ip.getMat();
-    cv::Mat _labels_i = labels_ip.getMat();
+    cv::Mat _data_i = trainData->getSamples();
+    cv::Mat _labels_i = trainData->getResponses();
 
     CV_Assert( !_labels_i.empty() && !_data_i.empty());
 
@@ -194,13 +211,12 @@ bool LogisticRegression::train(cv::InputArray data_ip, cv::InputArray labels_ip)
     return ok;
 }
 
-
-void LogisticRegression::predict( cv::InputArray _ip_data, cv::OutputArray _output_predicted_labels ) const
+float LogisticRegressionImpl::predict(InputArray samples, OutputArray results, int) const
 {
     /* returns a class of the predicted class
     class names can be 1,2,3,4, .... etc */
     cv::Mat thetas, data, pred_labs;
-    data = _ip_data.getMat();
+    data = samples.getMat();
 
     // check if learnt_mats array is populated
     if(this->learnt_thetas.total()<=0)
@@ -266,19 +282,20 @@ void LogisticRegression::predict( cv::InputArray _ip_data, cv::OutputArray _outp
     pred_labs = remap_labels(labels_c, this->reverse_mapper);
     // convert pred_labs to integer type
     pred_labs.convertTo(pred_labs, CV_32S);
-    pred_labs.copyTo(_output_predicted_labels);
+    pred_labs.copyTo(results);
+    // TODO: determine
+    return 0;
 }
 
-cv::Mat LogisticRegression::calc_sigmoid(const Mat& data)
+cv::Mat LogisticRegressionImpl::calc_sigmoid(const cv::Mat& data) const
 {
     cv::Mat dest;
     cv::exp(-data, dest);
     return 1.0/(1.0+dest);
 }
 
-double LogisticRegression::compute_cost(const cv::Mat& _data, const cv::Mat& _labels, const cv::Mat& _init_theta)
+double LogisticRegressionImpl::compute_cost(const cv::Mat& _data, const cv::Mat& _labels, const cv::Mat& _init_theta)
 {
-
     int llambda = 0;
     int m;
     int n;
@@ -328,7 +345,7 @@ double LogisticRegression::compute_cost(const cv::Mat& _data, const cv::Mat& _la
     return cost;
 }
 
-cv::Mat LogisticRegression::compute_batch_gradient(const cv::Mat& _data, const cv::Mat& _labels, const cv::Mat& _init_theta)
+cv::Mat LogisticRegressionImpl::compute_batch_gradient(const cv::Mat& _data, const cv::Mat& _labels, const cv::Mat& _init_theta)
 {
     // implements batch gradient descent
     if(this->params.alpha<=0)
@@ -397,7 +414,7 @@ cv::Mat LogisticRegression::compute_batch_gradient(const cv::Mat& _data, const c
     return theta_p;
 }
 
-cv::Mat LogisticRegression::compute_mini_batch_gradient(const cv::Mat& _data, const cv::Mat& _labels, const cv::Mat& _init_theta)
+cv::Mat LogisticRegressionImpl::compute_mini_batch_gradient(const cv::Mat& _data, const cv::Mat& _labels, const cv::Mat& _init_theta)
 {
     // implements batch gradient descent
     int lambda_l = 0;
@@ -488,7 +505,7 @@ cv::Mat LogisticRegression::compute_mini_batch_gradient(const cv::Mat& _data, co
     return theta_p;
 }
 
-bool LogisticRegression::set_label_map(const cv::Mat& _labels_i)
+bool LogisticRegressionImpl::set_label_map(const cv::Mat &_labels_i)
 {
     // this function creates two maps to map user defined labels to program friendly labels two ways.
     int ii = 0;
@@ -522,7 +539,7 @@ bool LogisticRegression::set_label_map(const cv::Mat& _labels_i)
     return ok;
 }
 
-cv::Mat LogisticRegression::remap_labels(const Mat& _labels_i, const std::map<int, int>& lmap)
+cv::Mat LogisticRegressionImpl::remap_labels(const cv::Mat& _labels_i, const map<int, int>& lmap) const
 {
     cv::Mat labels;
     _labels_i.convertTo(labels, CV_32S);
@@ -538,14 +555,14 @@ cv::Mat LogisticRegression::remap_labels(const Mat& _labels_i, const std::map<in
     return new_labels;
 }
 
-void LogisticRegression::clear()
+void LogisticRegressionImpl::clear()
 {
     this->learnt_thetas.release();
     this->labels_o.release();
     this->labels_n.release();
 }
 
-void LogisticRegression::write(FileStorage& fs) const
+void LogisticRegressionImpl::write(FileStorage& fs) const
 {
     // check if open
     if(fs.isOpened() == 0)
@@ -568,7 +585,7 @@ void LogisticRegression::write(FileStorage& fs) const
     fs<<"o_labels"<<this->labels_o;
 }
 
-void LogisticRegression::read(const FileNode& fn )
+void LogisticRegressionImpl::read(const FileNode& fn)
 {
     // check if empty
     if(fn.empty())
@@ -598,8 +615,12 @@ void LogisticRegression::read(const FileNode& fn )
     }
 }
 
-const cv::Mat LogisticRegression::get_learnt_thetas() const
+cv::Mat LogisticRegressionImpl::get_learnt_thetas() const
 {
     return this->learnt_thetas;
 }
+
+}
+}
+
 /* End of file. */
