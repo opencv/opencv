@@ -1101,6 +1101,7 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
     GEMMBlockMulFunc blockMulFunc;
     GEMMStoreFunc storeFunc;
     Mat *matD = &D, tmat;
+    int tmat_size = 0;
     const uchar* Cdata = C.data;
     size_t Cstep = C.data ? (size_t)C.step : 0;
     AutoBuffer<uchar> buf;
@@ -1133,8 +1134,8 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
 
     if( D.data == A.data || D.data == B.data )
     {
-        buf.allocate(d_size.width*d_size.height*CV_ELEM_SIZE(type));
-        tmat = Mat(d_size.height, d_size.width, type, (uchar*)buf );
+        tmat_size = d_size.width*d_size.height*CV_ELEM_SIZE(type);
+        // Allocate tmat later, once the size of buf is known
         matD = &tmat;
     }
 
@@ -1211,6 +1212,10 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
         (d_size.width <= block_lin_size &&
         d_size.height <= block_lin_size && len <= block_lin_size) )
     {
+        if( tmat_size > 0 ) {
+            buf.allocate(tmat_size);
+            tmat = Mat(d_size.height, d_size.width, type, (uchar*)buf );
+        }
         singleMulFunc( A.ptr(), A.step, B.ptr(), b_step, Cdata, Cstep,
                        matD->ptr(), matD->step, a_size, d_size, alpha, beta, flags );
     }
@@ -1270,12 +1275,14 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
             flags &= ~GEMM_1_T;
         }
 
-        buf.allocate(a_buf_size + b_buf_size + d_buf_size);
+        buf.allocate(d_buf_size + b_buf_size + a_buf_size + tmat_size);
         d_buf = (uchar*)buf;
         b_buf = d_buf + d_buf_size;
 
         if( is_a_t )
             a_buf = b_buf + b_buf_size;
+        if( tmat_size > 0 )
+            tmat = Mat(d_size.height, d_size.width, type, b_buf + b_buf_size + a_buf_size );
 
         for( i = 0; i < d_size.height; i += di )
         {
