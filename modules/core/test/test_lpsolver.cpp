@@ -41,7 +41,7 @@
 #include "test_precomp.hpp"
 #include <iostream>
 
-TEST(Optim_LpSolver, regression_basic){
+TEST(Core_LPSolver, regression_basic){
     cv::Mat A,B,z,etalon_z;
 
 #if 1
@@ -78,7 +78,7 @@ TEST(Optim_LpSolver, regression_basic){
 #endif
 }
 
-TEST(Optim_LpSolver, regression_init_unfeasible){
+TEST(Core_LPSolver, regression_init_unfeasible){
     cv::Mat A,B,z,etalon_z;
 
 #if 1
@@ -93,7 +93,7 @@ TEST(Optim_LpSolver, regression_init_unfeasible){
 #endif
 }
 
-TEST(Optim_LpSolver, regression_absolutely_unfeasible){
+TEST(DISABLED_Core_LPSolver, regression_absolutely_unfeasible){
     cv::Mat A,B,z,etalon_z;
 
 #if 1
@@ -106,7 +106,7 @@ TEST(Optim_LpSolver, regression_absolutely_unfeasible){
 #endif
 }
 
-TEST(Optim_LpSolver, regression_multiple_solutions){
+TEST(Core_LPSolver, regression_multiple_solutions){
     cv::Mat A,B,z,etalon_z;
 
 #if 1
@@ -123,7 +123,7 @@ TEST(Optim_LpSolver, regression_multiple_solutions){
 #endif
 }
 
-TEST(Optim_LpSolver, regression_cycling){
+TEST(Core_LPSolver, regression_cycling){
     cv::Mat A,B,z,etalon_z;
 
 #if 1

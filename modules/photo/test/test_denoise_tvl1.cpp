@@ -69,8 +69,9 @@ void make_spotty(cv::Mat& img,cv::RNG& rng, int r=3,int n=1000)
 
 bool validate_pixel(const cv::Mat& image,int x,int y,uchar val)
 {
-    printf("test: image(%d,%d)=%d vs %d - %s\n",x,y,(int)image.at<uchar>(x,y),val,(val==image.at<uchar>(x,y))?"true":"false");
-    return std::abs(image.at<uchar>(x,y) - val) < 10;
+    bool ok = std::abs(image.at<uchar>(x,y) - val) < 10;
+    printf("test: image(%d,%d)=%d vs %d - %s\n",x,y,(int)image.at<uchar>(x,y),val,ok?"ok":"bad");
+    return ok;
 }
 
 TEST(Optim_denoise_tvl1, regression_basic)
