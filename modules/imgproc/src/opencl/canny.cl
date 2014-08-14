@@ -43,201 +43,399 @@
 //
 //M*/
 
+#define TG22 0.4142135623730950488016887242097f
+#define TG67 2.4142135623730950488016887242097f
+    
 #ifdef WITH_SOBEL
 
-#define loadpix(addr) vload3(0, (__global uchar *)(addr))
-#define storepix(value, addr) *(__global uchar *)(addr) = (uchar)value 
+#if cn == 1
+#define loadpix(addr) convert_intN(*(__global const TYPE *)(addr))
+#else
+#define loadpix(addr) convert_intN(vload3(0, (__global const TYPE *)(addr)))
+#endif
+#define storepix(value, addr) *(__global int *)(addr) = (int)(value)
 
-#define CANNY_SHIFT 15
-#define TG22        (int)(0.4142135623730950488016887242097f * (1 << CANNY_SHIFT) + 0.5f)
 /*
-    stage1:
-        Sobel operator,
+    stage1_with_sobel:
+        Sobel operator
+        Calc magnitudes
         Non maxima suppression
         Double thresholding
 */
 
-
-__kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src_offset, int rows, int cols
+__kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src_offset, int rows, int cols,
                                 __global uchar *map, int map_step, int map_offset,
                                 int low_thr, int high_thr)
 {
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
+    __local intN smem[(GRP_SIZEX + 4) * (GRP_SIZEY + 4)];
 
     int lidx = get_local_id(0);
     int lidy = get_local_id(1);
 
-#define ptr(x, y) \
-    (src + mad24(src_step, clamp(gidy + y, 0, rows - 1), clamp(gidx + x, 0, cols - 1)) * cn + src_offset)) 
-    //// SOBEL
-    // 
+    int start_x = GRP_SIZEX * get_group_id(0);
+    int start_y = GRP_SIZEY * get_group_id(1);
+ 
+    for (int i = lidx + lidy * GRP_SIZEX; i < (GRP_SIZEX + 4) * (GRP_SIZEY + 4); i += GRP_SIZEX * GRP_SIZEY)
+    {
+        int x = clamp(start_x - 2 + (i % (GRP_SIZEX + 4)), 0, cols - 1);
+        int y = clamp(start_y - 2 + (i / (GRP_SIZEX + 4)), 0, rows - 1);
+        smem[i] = loadpix(src + mad24(y, src_step, mad24(x, cn * sizeof(TYPE), src_offset)));
+    } 
+    
+    barrier(CLK_LOCAL_MEM_FENCE);
+    
+    //// Sobel, Magnitude
+    //
 
-    uchar3 dx = loadpix(ptr(1, -1)) - loadpix(ptr(-1, -1)) 
-                + (uchar)2 * (loadpix(ptr(1, 0)) - loadpix(ptr(-1, 0)))
-                + loadpix(ptr(1, 1)) - loadpix(ptr(-1, 1));
+    __local int mag[(GRP_SIZEX + 2) * (GRP_SIZEY + 2)];
+    __local int2 sigma[(GRP_SIZEX + 2) * (GRP_SIZEY + 2)];
 
-    uchar3 dy = loadpix(ptr(-1, 1)) - loadpix(ptr(-1, -1))
-                + (uchar)2 * (loadpix(ptr(0, 1)) - loadpix(ptr(0, -1)))
-                + loadpix(ptr(1, 1)) - loadpix(ptr(1, -1));
+    for (int i = lidx + lidy * GRP_SIZEX; i < (GRP_SIZEX + 2) * (GRP_SIZEY + 2); i += GRP_SIZEX * GRP_SIZEY)
+    {
+        int idx = i % (GRP_SIZEX + 2) + (i / (GRP_SIZEX + 2)) * (GRP_SIZEX + 4);
 
-    __local int mag[16][16]; // PROBLEM with alignment (bank conflict) what to do?
+        intN dx = smem[idx + 2] - smem[idx]
+                + 2 * (smem[idx + GRP_SIZEX + 6] - smem[idx + GRP_SIZEX + 4])
+                + smem[idx + 2 * GRP_SIZEX + 10] - smem[idx + 2 * GRP_SIZEX + 8]; 
 
-#ifdef L2_GRAD
-    int3 mag3 = convert_int3(dx * dx + dy * dy);
+        intN dy = smem[idx] - smem[idx + 2 * GRP_SIZEX + 8]
+                + 2 * (smem[idx + 1] - smem[idx + 2 * GRP_SIZEX + 9])
+                + smem[idx + 2] - smem[idx + 2 * GRP_SIZEX + 10];
+
+#ifdef L2GRAD
+        intN magN = dx * dx + dy * dy;
 #else
-    int3 mag3 = convert_int3(dx + dy);
+        intN magN = convert_intN(abs(dx) + abs(dy));
 #endif
-    mag[lidy][lidx] = max(max(mag3.x, mag3.y), mag3.z);
-
+#if cn == 1
+        mag[i] = magN;
+        sigma[i].x = dx;
+        sigma[i].y = dy;
+#else
+        mag[i] = max(magN.x, max(magN.y, magN.z));
+        if (mag[i] == magN.y)
+        {
+            dx.x = dx.y;
+            dy.x = dy.y;
+        }
+        else if (mag[i] == magN.z)
+        {
+            dx.x = dx.z;
+            dy.x = dy.z;
+        }
+        sigma[i].x = dx.x;
+        sigma[i].y = dy.x;
+#endif
+    }
+   
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    lidy = clamp(lidy, 1, 14);
-    lidx = clamp(lidx, 1, 14);
-    int mag0 = mag[lidy][lidx];
+    //// Threshold + Non maxima suppression
+    //
+
     /*
-        0 - pixel doesn't belong to an edge
-        1 - might belong to an edge
+        Sector numbers
+
+        3   2   1
+         *  *  *
+          * * *
+        0*******0
+          * * *
+         *  *  *
+        1   2   3
+
+        We need to determine arctg(dy / dx) to one of the four directions: 0, 45, 90 or 135 degrees.
+        Therefore if abs(dy / dx) belongs to the interval
+        [0, tg(22.5)]           -> 0 direction
+        [tg(22.5), tg(67.5)]    -> 1 or 3
+        [tg(67,5), +oo)         -> 2 
+        
+        Since tg(67.5) = 1 / tg(22.5), if we take
+        a = abs(dy / dx) * tg(22.5) and b = abs(dy / dx) * tg(67.5)
+        we can get another intervals
+        
+        in case a:
+        [0, tg(22.5)^2]     -> 0
+        [tg(22.5)^2, 1]     -> 1, 3
+        [1, +oo)            -> 2
+
+        in case b:
+        [0, 1]              -> 0
+        [1, tg(67.5)^2]     -> 1,3
+        [tg(67.5)^2, +oo)   -> 2
+
+        that can help to find direction without conditions. 
+
+        0 - might belong to an edge
+        1 - pixel doesn't belong to an edge
         2 - belong to an edge
     */
-    uchar value = 0;
+
+    __constant int prev[4][2] = {
+        { 0, -1 },
+        { -1, 1 },
+        { -1, 0 },
+        { -1, -1 }
+    };
+
+    __constant int next[4][2] = {
+        { 0, 1 },
+        { 1, -1 },
+        { 1, 0 },         
+        { 1, 1 }      
+    };
+
+    lidx++;
+    lidy++;
+
+    int gidx = get_global_id(0);
+    int gidy = get_global_id(1);
+
+    if (gidx >= cols || gidy >= rows)
+        return;
+
+    int x = (sigma[lidx + lidy * (GRP_SIZEX + 2)]).x;
+    int y = (sigma[lidx + lidy * (GRP_SIZEX + 2)]).y;
+    int mag0 = mag[lidx + lidy * (GRP_SIZEX + 2)];
+    
+    int value = 1;
     if (mag0 > low_thr)
     {
-        value = 1;
-        int tg22x = dx * TG22;
-        dy <<= CANNY_SHIFT;
-        int tg67x = tg22x + (dx << (1 + CANNY_SHIFT));
+        int a = (y / (float)x) * TG22;
+        int b = (y / (float)x) * TG67;
+
+        a = min((int)abs(a), 1) + 1;
+        b = min((int)abs(b), 1);
+
+        //  a = { 1, 2 }
+        //  b = { 0, 1 }
+        //  a * b = { 0, 1, 2 } - directions that we need ( + 3 if x ^ y < 0)
+
+        int dir3 = (a * b) & (((x ^ y) & 0x80000000) >> 31); // if a = 1, b = 1, dy ^ dx < 0
+        int dir = a * b + 2 * dir3;
+        int prev_mag = mag[(lidy + prev[dir][0]) * (GRP_SIZEX + 2) + lidx + prev[dir][1]]; 
+        int next_mag = mag[(lidy + next[dir][0]) * (GRP_SIZEX + 2) + lidx + next[dir][1]] + (dir & 1);
         
-        if (dy < tg22x)
+        if (mag0 > prev_mag && mag0 >= next_mag)
         {
-            if (mag0 > mag[lidy, lidx - 1] && mag0 > mag[lidy, lidx + 1])
-                value = 2;
+            value = (mag0 > high_thr) ? 2 : 0;
         }
-        else if(dy < tg67x)
-        {
-            int delta = (dx ^ dy < 0) ? -1 : 1;
-            if (mag0 > mag[lidy + delta][lidx - 1] && mag0 > mag[lidy - delta][lidx + 1])
-                value = 2;
-        }
-        else
-        {
-            if (mag0 > mag[lidy - 1, lidx] && mag0 > mag[lidy + 1, lidx])
-                value = 2;
-        }
-    }          
-    storepix(value, map + mad24(gidy, map_step, gidx) + map_offset); // sizeof(map[i]) ???
+    }
+    
+    storepix(value, map + mad24(gidy, map_step, mad24(gidx, sizeof(int), map_offset)));
 }
 
 #elif defined WITHOUT_SOBEL
 
-#define loadpix(addr) (__global uchar *)(addr)
-#define storepix(val, addr) *(__global uchar *)(addr) = uchar(val)
+/*
+    stage1_without_sobel:
+        Calc magnitudes
+        Non maxima suppression
+        Double thresholding
+*/
 
-#define CANNY_SHIFT 15
-#define TG22        (int)(0.4142135623730950488016887242097f * (1 << CANNY_SHIFT) + 0.5f)
+#define loadpix(addr) (__global short *)(addr)
+#define storepix(val, addr) *(__global int *)(addr) = (int)(val)
 
-
-inline int dist(short x, short y)
-{
-#ifdef L2_GRAD
-    return (x * x + y * y);
+#ifdef L2GRAD
+#define dist(x, y) ((int)(x) * (x) + (int)(y) * (y))
 #else
-    return (abs(x) + abs(y));
-#endif    
-}
+#define dist(x, y) (abs(x) + abs(y))             
+#endif
 
-__kernel void stage1_without_sobel(__global const uchar *dxptr, int dx_step, int dx_offset, /* int rows, int cols  <- where it can be used */
+
+__kernel void stage1_without_sobel(__global const uchar *dxptr, int dx_step, int dx_offset, 
                                    __global const uchar *dyptr, int dy_step, int dy_offset,
-                                   __global uchar *map, int map_step, int map_offset,
-                                    low_thr, int high_thr)
+                                   __global uchar *map, int map_step, int map_offset, int rows, int cols,
+                                   int low_thr, int high_thr)
 {
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
+    int start_x = get_group_id(0) * GRP_SIZEX;
+    int start_y = get_group_id(1) * GRP_SIZEY;
 
     int lidx = get_local_id(0);
     int lidy = get_local_id(1);
 
-    __local int mag[16][16];
+    __local int mag[(GRP_SIZEX + 2) * (GRP_SIZEY + 2)];
+    __local short2 sigma[(GRP_SIZEX + 2) * (GRP_SIZEY + 2)];
 
-    int dx_index = mad24(gidy, dx_step, mad24(gidx, (int)sizeof(short) * cn, dx_offset));
-    int dy_index = mad24(gidy, dy_step, mad24(gidx, (int)sizeof(short) * cn, dy_offset));
-
-    __global short *dx = (__global short *)loadpix(dxptr + dx_index);
-    __global short *dy = (__global short *)loadpix(dyptr + dy_index);
-
-    int mag0 = dist(dx[0], dy[0]);
-#if cn > 1
     #pragma unroll
-    for (int i = 1; i < cn; i++)
+    for (int i = lidx + lidy * GRP_SIZEX; i < (GRP_SIZEX + 2) * (GRP_SIZEY + 2); i += GRP_SIZEX * GRP_SIZEY)
     {
-        mag1 = dist(dx[i], dy[i]); 
-        if (mag1 > mag0)
-        {
-            mag0 = mag1;
-            cdx = dx[i];
-            cdy = dy[i]; 
-        }
-    }
-    dx[0] = cdx;
-    dy[0] = cdy;
-#endif 
-    mag[lidy][lidx] = mag0;
+        int x = clamp(start_x - 1 + i % (GRP_SIZEX + 2), 0, cols - 1);
+        int y = clamp(start_y - 1 + i / (GRP_SIZEX + 2), 0, rows - 1);
 
+        int dx_index = mad24(y, dx_step, mad24(x, cn * sizeof(short), dx_offset));
+        int dy_index = mad24(y, dy_step, mad24(x, cn * sizeof(short), dy_offset));
+
+        __global short *dx = loadpix(dxptr + dx_index);
+        __global short *dy = loadpix(dyptr + dy_index);
+
+        int mag0 = dist(dx[0], dy[0]);
+#if cn > 1
+        short cdx = dx[0], cdy = dy[0];
+        #pragma unroll
+        for (int j = 1; j < cn; ++j)
+        {
+            int mag1 = dist(dx[j], dy[j]); 
+            if (mag1 > mag0)
+            {
+                mag0 = mag1;
+                cdx = dx[j];
+                cdy = dy[j]; 
+            }
+        }
+        dx[0] = cdx;
+        dy[0] = cdy;
+#endif 
+        mag[i] = mag0;
+        sigma[i] = (short2)(dx[0], dy[0]);
+    }
+    
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    lidy = clamp(lidy, 1, 14);
-    lidx = clamp(lidx, 1, 14);
-    int mag0 = mag[lidy][lidx];
+    int gidx = get_global_id(0);
+    int gidy = get_global_id(1);
+
+    if (gidx >= cols || gidy >= rows)
+        return;
+
     /*
-        0 - pixel doesn't belong to an edge
-        1 - might belong to an edge
+        0 - might belong to an edge
+        1 - pixel doesn't belong to an edge
         2 - belong to an edge
     */
-    uchar value = 0;
+
+    __constant int prev[4][2] = {
+        { 0, -1 },
+        { -1, -1 },
+        { -1, 0 },
+        { -1, 1 }
+    };
+
+    __constant int next[4][2] = {
+        { 0, 1 },
+        { 1, 1 },
+        { 1, 0 },         
+        { 1, -1 }     
+    };
+
+    lidx++;
+    lidy++;
+
+    int mag0 = mag[lidx + lidy * (GRP_SIZEX + 2)];
+    short x = (sigma[lidx + lidy * (GRP_SIZEX + 2)]).x;
+    short y = (sigma[lidx + lidy * (GRP_SIZEX + 2)]).y;
+
+    int value = 1;
     if (mag0 > low_thr)
     {
-        value = 1;
-        int tg22x = dx[0] * TG22;
-        y = dy[0] << CANNY_SHIFT;
-        int tg67x = tg22x + (dx << (1 + CANNY_SHIFT));
-        
-        if (y < tg22x)
+        int a = (y / (float)x) * TG22;
+        int b = (y / (float)x) * TG67;
+
+        a = min((int)abs(a), 1) + 1;
+        b = min((int)abs(b), 1);
+
+        //  a = { 1, 2 }
+        //  b = { 0, 1 }
+        //  a * b = { 0, 1, 2 } - directions that we need ( + 3 if x ^ y < 0)
+
+        int dir3 = (a * b) & (((x ^ y) & 0x80000000) >> 31); // if a = 1, b = 1, dy ^ dx < 0
+        int dir = a * b + 2 * dir3;
+        int prev_mag = mag[(lidy + prev[dir][0]) * (GRP_SIZEX + 2) + lidx + prev[dir][1]]; 
+        int next_mag = mag[(lidy + next[dir][0]) * (GRP_SIZEX + 2) + lidx + next[dir][1]] + (dir & 1);
+
+        if (mag0 > prev_mag && mag0 >= next_mag)
         {
-            if (mag0 > mag[lidy, lidx - 1] && mag0 > mag[lidy, lidx + 1])
-                value = 2;
-        }
-        else if(y < tg67x)
-        {
-            int delta = (dx[0] ^ dy[0] < 0) ? -1 : 1;
-            if (mag0 > mag[lidy + delta][lidx - 1] && mag0 > mag[lidy - delta][lidx + 1])
-                value = 2;
-        }
-        else
-        {
-            if (mag0 > mag[lidy - 1, lidx] && mag0 > mag[lidy + 1, lidx])
-                value = 2;
+            value = (mag0 > high_thr) ? 2 : 0;
         }
     }
-    storepix(value, map + mad24(gidy, map_step, gidx) + map_offset); // sizeof(map[i]) ???
+
+    storepix(value, map + mad24(gidy, map_step, mad24(gidx, sizeof(int), map_offset)));
 }
 
-#elif defined STAGE2
+#undef TG22
+#undef CANNY_SHIFT
 
-#define STACK_SIZE 512
+#elif defined STAGE2
 /*
     stage2:
-        hysteresis (add edges labeled 1 if they are connected with an edge labeled 2)
+        hysteresis (add edges labeled 0 if they are connected with an edge labeled 2)
 */
-int move_dir[2][8] = {
-    { -1, -1 }, { -1, 0 }, { -1, 1 }, { 0, -1 }, { 0, 1 }, { 1, -1 }, { 1, 0 }, { 1, 1 }
-};
-__kernel void stage2(__global uchar *map, int map_step, int map_offset
-                     __global const ushort2 *common_stack, int c_stack_offset) // what about size of common_stack?
-{
-    __local ushort2 stack[STACK_SIZE];
-    int counter = 0;
 
-    while ()
+#define loadpix(addr) *(__global int *)(addr)
+#define storepix(val, addr) *(__global int *)(addr) = (int)(val)
+#define l_stack_size 256
+#define p_stack_size 8
+
+__constant short move_dir[2][8] = {
+    { -1, -1, -1, 0, 0, 1, 1, 1 },
+    { -1, 0, 1, -1, 1, -1, 0, 1 }
+};
+
+__kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offset, int rows, int cols)
+{
+    map += map_offset;
+
+    int x = get_global_id(0);
+    int y0 = get_global_id(1) * PIX_PER_WI;
+
+    int lid = get_local_id(0) + get_local_id(1) * 32;
+
+    __local ushort2 l_stack[l_stack_size];
+    __local int l_counter;
+
+    if (lid == 0)
+        l_counter = 0;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    #pragma unroll
+    for (int y = y0; y < min(y0 + PIX_PER_WI, rows); ++y)
+    {
+        int type = loadpix(map + mad24(y, map_step, x * sizeof(int)));
+        if (type == 2)
+        {
+            l_stack[atomic_inc(&l_counter)] = (ushort2)(x, y);
+        }        
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    
+    ushort2 p_stack[p_stack_size];
+    int p_counter = 0;
+    
+    while(l_counter != 0)
+    {
+        int mod = l_counter % 64;
+        int pix_per_thr = l_counter / 64 + (lid < mod) ? 1 : 0;  
+
+        #pragma unroll
+        for (int i = 0; i < pix_per_thr; ++i)
+        {
+            ushort2 pos = l_stack[ atomic_dec(&l_counter) - 1 ];
+
+            #pragma unroll
+            for (int j = 0; j < 8; ++j)
+            {
+                ushort posx = pos.x + move_dir[0][j];
+                ushort posy = pos.y + move_dir[1][j];
+                if (posx < 0 || posy < 0 || posx >= cols || posy >= rows)
+                    continue;
+                __global uchar *addr = map + mad24(posy, map_step, posx * sizeof(int));
+                int type = loadpix(addr);
+                if (type == 0)
+                {
+                    p_stack[p_counter++] = (ushort2)(posx, posy);
+                    storepix(2, addr);
+                }
+            }
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        while (p_counter > 0)
+        {
+            l_stack[ atomic_inc(&l_counter) ] = p_stack[--p_counter];            
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
 }
 
 #elif defined GET_EDGES
@@ -246,19 +444,19 @@ __kernel void stage2(__global uchar *map, int map_step, int map_offset
 // map      edge type mappings
 // dst      edge output
 
-__kernel void getEdges(__global const uchar * mapptr, int map_step, int map_offset,
-                       __global uchar * dst, int dst_step, int dst_offset, int rows, int cols)
+__kernel void getEdges(__global const uchar *mapptr, int map_step, int map_offset, int rows, int cols,
+                       __global uchar *dst, int dst_step, int dst_offset)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y0 = get_global_id(1) * PIX_PER_WI;
 
-    if (y < rows && x < cols)
+    #pragma unroll
+    for (int y = y0; y < min(y0 + PIX_PER_WI, rows); ++y)
     {
-        int map_index = mad24(map_step, y + 1, mad24(x + 1, (int)sizeof(int), map_offset)); // sizeof(map[i]) ???
-        int dst_index = mad24(dst_step, y, x + dst_offset);
+        int map_index = mad24(map_step, y, mad24(x, sizeof(int), map_offset));
+        int dst_index = mad24(dst_step, y, x) + dst_offset;
 
         __global const int * map = (__global const int *)(mapptr + map_index);
-
         dst[dst_index] = (uchar)(-(map[0] >> 1));
     }
 }
