@@ -3405,12 +3405,11 @@ and want to compute value of the "virtual" pixel ``Point(-5, 100)`` in a floatin
                               borderInterpolate(-5, img.cols, BORDER_WRAP));
 
 
-Normally, the function is not called directly. It is used inside :ocv:class:`FilterEngine`
-and :ocv:func:`copyMakeBorder` to compute tables for quick extrapolation.
+Normally, the function is not called directly. It is used inside filtering functions
+and also in :ocv:func:`copyMakeBorder`.
 
 .. seealso::
 
-    :ocv:class:`FilterEngine`,
     :ocv:func:`copyMakeBorder`
 
 
@@ -3443,7 +3442,7 @@ Forms a border around an image.
 
 The function copies the source image into the middle of the destination image. The areas to the
 left, to the right, above and below the copied source image will be filled with extrapolated pixels.
-This is not what :ocv:class:`FilterEngine` or filtering functions based on it do (they extrapolate
+This is not what filtering functions based on it do (they extrapolate
 pixels on-fly), but what other more complex functions, including your own, may do to simplify image
 boundary handling.
 

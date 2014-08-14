@@ -46,8 +46,9 @@
 #define dprintf(x)
 #define print_matrix(x)
 
-namespace cv{
-    
+namespace cv
+{
+
 using std::vector;
 
 #ifdef ALEX_DEBUG
