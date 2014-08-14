@@ -10,6 +10,7 @@ imgproc. Image Processing
     filtering
     geometric_transformations
     miscellaneous_transformations
+    drawing_functions
     colormaps
     histograms
     structural_analysis_and_shape_descriptors

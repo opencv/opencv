@@ -17,3 +17,4 @@ core. The Core Functionality
     utility_and_system_functions_and_macros
     opengl_interop
     ipp_async_converters
+    optim

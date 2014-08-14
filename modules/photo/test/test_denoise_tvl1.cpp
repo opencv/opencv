@@ -70,7 +70,7 @@ void make_spotty(cv::Mat& img,cv::RNG& rng, int r=3,int n=1000)
 bool validate_pixel(const cv::Mat& image,int x,int y,uchar val)
 {
     printf("test: image(%d,%d)=%d vs %d - %s\n",x,y,(int)image.at<uchar>(x,y),val,(val==image.at<uchar>(x,y))?"true":"false");
-    return (image.at<uchar>(x,y)==val);
+    return std::abs(image.at<uchar>(x,y) - val) < 10;
 }
 
 TEST(Optim_denoise_tvl1, regression_basic)
@@ -89,7 +89,7 @@ TEST(Optim_denoise_tvl1, regression_basic)
     }
 
     //cv::imshow("test", images[0]);
-    cv::optim::denoise_TVL1(images, res);
+    cv::denoise_TVL1(images, res);
     //cv::imshow("denoised", res);
     //cv::waitKey();
 

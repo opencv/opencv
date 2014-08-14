@@ -44,9 +44,10 @@
 
 #include "opencv2/core.hpp"
 
-namespace cv{namespace optim
+namespace cv
 {
-class CV_EXPORTS Solver : public Algorithm
+
+class CV_EXPORTS MinProblemSolver : public Algorithm
 {
 public:
     class CV_EXPORTS Function
@@ -70,7 +71,7 @@ public:
 };
 
 //! downhill simplex class
-class CV_EXPORTS DownhillSolver : public Solver
+class CV_EXPORTS DownhillSolver : public MinProblemSolver
 {
 public:
     //! returns row-vector, even if the column-vector was given
@@ -78,19 +79,21 @@ public:
     //!This should be called at least once before the first call to minimize() and step is assumed to be (something that
     //! after getMat() will return) row-vector or column-vector. *It's dimensionality determines the dimensionality of a problem.*
     virtual void setInitStep(InputArray step)=0;
-};
 
-// both minRange & minError are specified by termcrit.epsilon; In addition, user may specify the number of iterations that the algorithm does.
-CV_EXPORTS_W Ptr<DownhillSolver> createDownhillSolver(const Ptr<Solver::Function>& f=Ptr<Solver::Function>(),
-        InputArray initStep=Mat_<double>(1,1,0.0),
-        TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5000,0.000001));
+    // both minRange & minError are specified by termcrit.epsilon;
+    // In addition, user may specify the number of iterations that the algorithm does.
+    static Ptr<DownhillSolver> create(const Ptr<MinProblemSolver::Function>& f=Ptr<MinProblemSolver::Function>(),
+                                      InputArray initStep=Mat_<double>(1,1,0.0),
+                                      TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5000,0.000001));
+};
 
 //! conjugate gradient method
-class CV_EXPORTS ConjGradSolver : public Solver{
+class CV_EXPORTS ConjGradSolver : public MinProblemSolver
+{
+public:
+    static Ptr<ConjGradSolver> create(const Ptr<MinProblemSolver::Function>& f=Ptr<ConjGradSolver::Function>(),
+                                      TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5000,0.000001));
 };
-
-CV_EXPORTS_W Ptr<ConjGradSolver> createConjGradSolver(const Ptr<Solver::Function>& f=Ptr<ConjGradSolver::Function>(),
-        TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5000,0.000001));
 
 //!the return codes for solveLP() function
 enum
@@ -102,7 +105,7 @@ enum
 };
 
 CV_EXPORTS_W int solveLP(const Mat& Func, const Mat& Constr, Mat& z);
-CV_EXPORTS_W void denoise_TVL1(const std::vector<Mat>& observations,Mat& result, double lambda=1.0, int niters=30);
-}}// cv
+
+}// cv
 
 #endif

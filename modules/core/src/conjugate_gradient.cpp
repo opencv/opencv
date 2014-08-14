@@ -40,10 +40,12 @@
 //M*/
 
 #include "precomp.hpp"
-#undef ALEX_DEBUG
-#include "debug.hpp"
 
-namespace cv{namespace optim{
+#define dprintf(x)
+#define print_matrix(x)
+
+namespace cv
+{
 
 #define SEC_METHOD_ITERATIONS 4
 #define INITIAL_SEC_METHOD_SIGMA 0.1
@@ -57,15 +59,15 @@ namespace cv{namespace optim{
         void setTermCriteria(const TermCriteria& termcrit);
         double minimize(InputOutputArray x);
     protected:
-        Ptr<Solver::Function> _Function;
+        Ptr<MinProblemSolver::Function> _Function;
         TermCriteria _termcrit;
         Mat_<double> d,r,buf_x,r_old;
         Mat_<double> minimizeOnTheLine_buf1,minimizeOnTheLine_buf2;
     private:
-        static void minimizeOnTheLine(Ptr<Solver::Function> _f,Mat_<double>& x,const Mat_<double>& d,Mat_<double>& buf1,Mat_<double>& buf2);
+        static void minimizeOnTheLine(Ptr<MinProblemSolver::Function> _f,Mat_<double>& x,const Mat_<double>& d,Mat_<double>& buf1,Mat_<double>& buf2);
     };
 
-    void ConjGradSolverImpl::minimizeOnTheLine(Ptr<Solver::Function> _f,Mat_<double>& x,const Mat_<double>& d,Mat_<double>& buf1,
+    void ConjGradSolverImpl::minimizeOnTheLine(Ptr<MinProblemSolver::Function> _f,Mat_<double>& x,const Mat_<double>& d,Mat_<double>& buf1,
             Mat_<double>& buf2){
         double sigma=INITIAL_SEC_METHOD_SIGMA;
         buf1=0.0;
@@ -160,7 +162,7 @@ namespace cv{namespace optim{
     ConjGradSolverImpl::ConjGradSolverImpl(){
         _Function=Ptr<Function>();
     }
-    Ptr<Solver::Function> ConjGradSolverImpl::getFunction()const{
+    Ptr<MinProblemSolver::Function> ConjGradSolverImpl::getFunction()const{
         return _Function;
     }
     void ConjGradSolverImpl::setFunction(const Ptr<Function>& f){
@@ -175,10 +177,10 @@ namespace cv{namespace optim{
         _termcrit=termcrit;
     }
     // both minRange & minError are specified by termcrit.epsilon; In addition, user may specify the number of iterations that the algorithm does.
-    Ptr<ConjGradSolver> createConjGradSolver(const Ptr<Solver::Function>& f, TermCriteria termcrit){
-        ConjGradSolver *CG=new ConjGradSolverImpl();
+    Ptr<ConjGradSolver> ConjGradSolver::create(const Ptr<MinProblemSolver::Function>& f, TermCriteria termcrit){
+        Ptr<ConjGradSolver> CG = makePtr<ConjGradSolverImpl>();
         CG->setFunction(f);
         CG->setTermCriteria(termcrit);
-        return Ptr<ConjGradSolver>(CG);
+        return CG;
     }
-}}
+}
