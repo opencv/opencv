@@ -4208,7 +4208,12 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 Size dstSz(sz.width, sz.height * 2 / 3);
                 _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
                 dst = _dst.getMat();
-
+#if defined HAVE_IPP
+                if (ippStsNoErr == ippiCopy_8u_C1R(src.data, (int)src.step, dst.data, (int)dst.step,
+                        ippiSize(dstSz.width, dstSz.height)))
+                    return;
+                setIppErrorStatus();
+#endif
                 src(Range(0, dstSz.height), Range::all()).copyTo(dst);
             }
             break;
