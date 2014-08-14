@@ -196,7 +196,7 @@ The function converts image to CIELAB colorspace and then separately denoise L a
 
     :ocv:func:`fastNlMeansDenoisingColored`
 
-    
+
 denoise_TVL1
 ---------------------------------
 
@@ -240,4 +240,3 @@ into play.
 .. [ChambolleEtAl] A. Chambolle, V. Caselles, M. Novaga, D. Cremers and T. Pock, An Introduction to Total Variation for Image Analysis, http://hal.archives-ouvertes.fr/docs/00/43/75/81/PDF/preprint.pdf (pdf)
 
 .. [Mordvintsev] Alexander Mordvintsev, ROF and TV-L1 denoising with Primal-Dual algorithm, http://znah.net/rof-and-tv-l1-denoising-with-primal-dual-algorithm.html (blog entry)
-

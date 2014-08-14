@@ -48,8 +48,8 @@ enum
     KERNEL_ASYMMETRICAL = 2, // kernel[i] == -kernel[ksize-i-1] , and the anchor is at the center
     KERNEL_SMOOTH       = 4, // all the kernel elements are non-negative and summed to 1
     KERNEL_INTEGER      = 8  // all the kernel coefficients are integer numbers
-};   
-    
+};
+
 /*!
  The Base Class for 1D or Row-wise Filters
 
