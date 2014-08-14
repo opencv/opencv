@@ -92,78 +92,29 @@ protected:
 void CV_LRTest::run( int /*start_from*/ )
 {
     // initialize varibles from the popular Iris Dataset
-    Mat data = (Mat_<double>(150, 4)<<
-        5.1,3.5,1.4,0.2, 4.9,3.0,1.4,0.2, 4.7,3.2,1.3,0.2, 4.6,3.1,1.5,0.2,
-        5.0,3.6,1.4,0.2, 5.4,3.9,1.7,0.4, 4.6,3.4,1.4,0.3, 5.0,3.4,1.5,0.2,
-        4.4,2.9,1.4,0.2, 4.9,3.1,1.5,0.1, 5.4,3.7,1.5,0.2, 4.8,3.4,1.6,0.2,
-        4.8,3.0,1.4,0.1, 4.3,3.0,1.1,0.1, 5.8,4.0,1.2,0.2, 5.7,4.4,1.5,0.4,
-        5.4,3.9,1.3,0.4, 5.1,3.5,1.4,0.3, 5.7,3.8,1.7,0.3, 5.1,3.8,1.5,0.3,
-        5.4,3.4,1.7,0.2, 5.1,3.7,1.5,0.4, 4.6,3.6,1.0,0.2, 5.1,3.3,1.7,0.5,
-        4.8,3.4,1.9,0.2, 5.0,3.0,1.6,0.2, 5.0,3.4,1.6,0.4, 5.2,3.5,1.5,0.2,
-        5.2,3.4,1.4,0.2, 4.7,3.2,1.6,0.2, 4.8,3.1,1.6,0.2, 5.4,3.4,1.5,0.4,
-        5.2,4.1,1.5,0.1, 5.5,4.2,1.4,0.2, 4.9,3.1,1.5,0.1, 5.0,3.2,1.2,0.2,
-        5.5,3.5,1.3,0.2, 4.9,3.1,1.5,0.1, 4.4,3.0,1.3,0.2, 5.1,3.4,1.5,0.2,
-        5.0,3.5,1.3,0.3, 4.5,2.3,1.3,0.3, 4.4,3.2,1.3,0.2, 5.0,3.5,1.6,0.6,
-        5.1,3.8,1.9,0.4, 4.8,3.0,1.4,0.3, 5.1,3.8,1.6,0.2, 4.6,3.2,1.4,0.2,
-        5.3,3.7,1.5,0.2, 5.0,3.3,1.4,0.2, 7.0,3.2,4.7,1.4, 6.4,3.2,4.5,1.5,
-        6.9,3.1,4.9,1.5, 5.5,2.3,4.0,1.3, 6.5,2.8,4.6,1.5, 5.7,2.8,4.5,1.3,
-        6.3,3.3,4.7,1.6, 4.9,2.4,3.3,1.0, 6.6,2.9,4.6,1.3, 5.2,2.7,3.9,1.4,
-        5.0,2.0,3.5,1.0, 5.9,3.0,4.2,1.5, 6.0,2.2,4.0,1.0, 6.1,2.9,4.7,1.4,
-        5.6,2.9,3.6,1.3, 6.7,3.1,4.4,1.4, 5.6,3.0,4.5,1.5, 5.8,2.7,4.1,1.0,
-        6.2,2.2,4.5,1.5, 5.6,2.5,3.9,1.1, 5.9,3.2,4.8,1.8, 6.1,2.8,4.0,1.3,
-        6.3,2.5,4.9,1.5, 6.1,2.8,4.7,1.2, 6.4,2.9,4.3,1.3, 6.6,3.0,4.4,1.4,
-        6.8,2.8,4.8,1.4, 6.7,3.0,5.0,1.7, 6.0,2.9,4.5,1.5, 5.7,2.6,3.5,1.0,
-        5.5,2.4,3.8,1.1, 5.5,2.4,3.7,1.0, 5.8,2.7,3.9,1.2, 6.0,2.7,5.1,1.6,
-        5.4,3.0,4.5,1.5, 6.0,3.4,4.5,1.6, 6.7,3.1,4.7,1.5, 6.3,2.3,4.4,1.3,
-        5.6,3.0,4.1,1.3, 5.5,2.5,4.0,1.3, 5.5,2.6,4.4,1.2, 6.1,3.0,4.6,1.4,
-        5.8,2.6,4.0,1.2, 5.0,2.3,3.3,1.0, 5.6,2.7,4.2,1.3, 5.7,3.0,4.2,1.2,
-        5.7,2.9,4.2,1.3, 6.2,2.9,4.3,1.3, 5.1,2.5,3.0,1.1, 5.7,2.8,4.1,1.3,
-        6.3,3.3,6.0,2.5, 5.8,2.7,5.1,1.9, 7.1,3.0,5.9,2.1, 6.3,2.9,5.6,1.8,
-        6.5,3.0,5.8,2.2, 7.6,3.0,6.6,2.1, 4.9,2.5,4.5,1.7, 7.3,2.9,6.3,1.8,
-        6.7,2.5,5.8,1.8, 7.2,3.6,6.1,2.5, 6.5,3.2,5.1,2.0, 6.4,2.7,5.3,1.9,
-        6.8,3.0,5.5,2.1, 5.7,2.5,5.0,2.0, 5.8,2.8,5.1,2.4, 6.4,3.2,5.3,2.3,
-        6.5,3.0,5.5,1.8, 7.7,3.8,6.7,2.2, 7.7,2.6,6.9,2.3, 6.0,2.2,5.0,1.5,
-        6.9,3.2,5.7,2.3, 5.6,2.8,4.9,2.0, 7.7,2.8,6.7,2.0, 6.3,2.7,4.9,1.8,
-        6.7,3.3,5.7,2.1, 7.2,3.2,6.0,1.8, 6.2,2.8,4.8,1.8, 6.1,3.0,4.9,1.8,
-        6.4,2.8,5.6,2.1, 7.2,3.0,5.8,1.6, 7.4,2.8,6.1,1.9, 7.9,3.8,6.4,2.0,
-        6.4,2.8,5.6,2.2, 6.3,2.8,5.1,1.5, 6.1,2.6,5.6,1.4, 7.7,3.0,6.1,2.3,
-        6.3,3.4,5.6,2.4, 6.4,3.1,5.5,1.8, 6.0,3.0,4.8,1.8, 6.9,3.1,5.4,2.1,
-        6.7,3.1,5.6,2.4, 6.9,3.1,5.1,2.3, 5.8,2.7,5.1,1.9, 6.8,3.2,5.9,2.3,
-        6.7,3.3,5.7,2.5, 6.7,3.0,5.2,2.3, 6.3,2.5,5.0,1.9, 6.5,3.0,5.2,2.0,
-        6.2,3.4,5.4,2.3, 5.9,3.0,5.1,1.8);
+    string dataFileName = ts->get_data_path() + "iris.data";
+    Ptr<TrainData> tdata = TrainData::loadFromCSV(dataFileName, 0);
 
-    Mat labels = (Mat_<int>(150, 1)<< 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-      1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-       2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-        2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-         3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-          3, 3, 3, 3, 3);
-
-    Mat responses1, responses2;
-    float error = 0.0f;
-
-    LogisticRegressionParams params1 = LogisticRegressionParams();
-
-    params1.alpha = 1.0;
-    params1.num_iters = 10001;
-    params1.norm = LogisticRegression::REG_L2;
-    params1.regularized = 1;
-    params1.train_method = LogisticRegression::BATCH;
-    params1.mini_batch_size = 10;
+    LogisticRegression::Params params = LogisticRegression::Params();
+    params.alpha = 1.0;
+    params.num_iters = 10001;
+    params.norm = LogisticRegression::REG_L2;
+    params.regularized = 1;
+    params.train_method = LogisticRegression::BATCH;
+    params.mini_batch_size = 10;
 
     // run LR classifier train classifier
-    data.convertTo(data, CV_32FC1);
-    labels.convertTo(labels, CV_32FC1);
-    LogisticRegression lr1(data, labels, params1);
+    Ptr<LogisticRegression> p = LogisticRegression::create(params);
+    p->train(tdata);
 
     // predict using the same data
-    lr1.predict(data, responses1);
-
-    int test_code = cvtest::TS::OK;
+    Mat responses;
+    p->predict(tdata->getSamples(), responses);
 
     // calculate error
-    if(!calculateError(responses1, labels, error))
+    int test_code = cvtest::TS::OK;
+    float error = 0.0f;
+    if(!calculateError(responses, tdata->getResponses(), error))
     {
         ts->printf(cvtest::TS::LOG, "Bad prediction labels\n" );
         test_code = cvtest::TS::FAIL_INVALID_OUTPUT;
@@ -174,6 +125,14 @@ void CV_LRTest::run( int /*start_from*/ )
         test_code = cvtest::TS::FAIL_BAD_ACCURACY;
     }
 
+    {
+        FileStorage s("debug.xml", FileStorage::WRITE);
+        s << "original" << tdata->getResponses();
+        s << "predicted1" << responses;
+        s << "learnt" << p->get_learnt_thetas();
+        s << "error" << error;
+        s.release();
+    }
     ts->set_failed_test_info(test_code);
 }
 
@@ -189,69 +148,16 @@ protected:
 
 void CV_LRTest_SaveLoad::run( int /*start_from*/ )
 {
-
     int code = cvtest::TS::OK;
 
     // initialize varibles from the popular Iris Dataset
-    Mat data = (Mat_<double>(150, 4)<<
-        5.1,3.5,1.4,0.2, 4.9,3.0,1.4,0.2, 4.7,3.2,1.3,0.2, 4.6,3.1,1.5,0.2,
-        5.0,3.6,1.4,0.2, 5.4,3.9,1.7,0.4, 4.6,3.4,1.4,0.3, 5.0,3.4,1.5,0.2,
-        4.4,2.9,1.4,0.2, 4.9,3.1,1.5,0.1, 5.4,3.7,1.5,0.2, 4.8,3.4,1.6,0.2,
-        4.8,3.0,1.4,0.1, 4.3,3.0,1.1,0.1, 5.8,4.0,1.2,0.2, 5.7,4.4,1.5,0.4,
-        5.4,3.9,1.3,0.4, 5.1,3.5,1.4,0.3, 5.7,3.8,1.7,0.3, 5.1,3.8,1.5,0.3,
-        5.4,3.4,1.7,0.2, 5.1,3.7,1.5,0.4, 4.6,3.6,1.0,0.2, 5.1,3.3,1.7,0.5,
-        4.8,3.4,1.9,0.2, 5.0,3.0,1.6,0.2, 5.0,3.4,1.6,0.4, 5.2,3.5,1.5,0.2,
-        5.2,3.4,1.4,0.2, 4.7,3.2,1.6,0.2, 4.8,3.1,1.6,0.2, 5.4,3.4,1.5,0.4,
-        5.2,4.1,1.5,0.1, 5.5,4.2,1.4,0.2, 4.9,3.1,1.5,0.1, 5.0,3.2,1.2,0.2,
-        5.5,3.5,1.3,0.2, 4.9,3.1,1.5,0.1, 4.4,3.0,1.3,0.2, 5.1,3.4,1.5,0.2,
-        5.0,3.5,1.3,0.3, 4.5,2.3,1.3,0.3, 4.4,3.2,1.3,0.2, 5.0,3.5,1.6,0.6,
-        5.1,3.8,1.9,0.4, 4.8,3.0,1.4,0.3, 5.1,3.8,1.6,0.2, 4.6,3.2,1.4,0.2,
-        5.3,3.7,1.5,0.2, 5.0,3.3,1.4,0.2, 7.0,3.2,4.7,1.4, 6.4,3.2,4.5,1.5,
-        6.9,3.1,4.9,1.5, 5.5,2.3,4.0,1.3, 6.5,2.8,4.6,1.5, 5.7,2.8,4.5,1.3,
-        6.3,3.3,4.7,1.6, 4.9,2.4,3.3,1.0, 6.6,2.9,4.6,1.3, 5.2,2.7,3.9,1.4,
-        5.0,2.0,3.5,1.0, 5.9,3.0,4.2,1.5, 6.0,2.2,4.0,1.0, 6.1,2.9,4.7,1.4,
-        5.6,2.9,3.6,1.3, 6.7,3.1,4.4,1.4, 5.6,3.0,4.5,1.5, 5.8,2.7,4.1,1.0,
-        6.2,2.2,4.5,1.5, 5.6,2.5,3.9,1.1, 5.9,3.2,4.8,1.8, 6.1,2.8,4.0,1.3,
-        6.3,2.5,4.9,1.5, 6.1,2.8,4.7,1.2, 6.4,2.9,4.3,1.3, 6.6,3.0,4.4,1.4,
-        6.8,2.8,4.8,1.4, 6.7,3.0,5.0,1.7, 6.0,2.9,4.5,1.5, 5.7,2.6,3.5,1.0,
-        5.5,2.4,3.8,1.1, 5.5,2.4,3.7,1.0, 5.8,2.7,3.9,1.2, 6.0,2.7,5.1,1.6,
-        5.4,3.0,4.5,1.5, 6.0,3.4,4.5,1.6, 6.7,3.1,4.7,1.5, 6.3,2.3,4.4,1.3,
-        5.6,3.0,4.1,1.3, 5.5,2.5,4.0,1.3, 5.5,2.6,4.4,1.2, 6.1,3.0,4.6,1.4,
-        5.8,2.6,4.0,1.2, 5.0,2.3,3.3,1.0, 5.6,2.7,4.2,1.3, 5.7,3.0,4.2,1.2,
-        5.7,2.9,4.2,1.3, 6.2,2.9,4.3,1.3, 5.1,2.5,3.0,1.1, 5.7,2.8,4.1,1.3,
-        6.3,3.3,6.0,2.5, 5.8,2.7,5.1,1.9, 7.1,3.0,5.9,2.1, 6.3,2.9,5.6,1.8,
-        6.5,3.0,5.8,2.2, 7.6,3.0,6.6,2.1, 4.9,2.5,4.5,1.7, 7.3,2.9,6.3,1.8,
-        6.7,2.5,5.8,1.8, 7.2,3.6,6.1,2.5, 6.5,3.2,5.1,2.0, 6.4,2.7,5.3,1.9,
-        6.8,3.0,5.5,2.1, 5.7,2.5,5.0,2.0, 5.8,2.8,5.1,2.4, 6.4,3.2,5.3,2.3,
-        6.5,3.0,5.5,1.8, 7.7,3.8,6.7,2.2, 7.7,2.6,6.9,2.3, 6.0,2.2,5.0,1.5,
-        6.9,3.2,5.7,2.3, 5.6,2.8,4.9,2.0, 7.7,2.8,6.7,2.0, 6.3,2.7,4.9,1.8,
-        6.7,3.3,5.7,2.1, 7.2,3.2,6.0,1.8, 6.2,2.8,4.8,1.8, 6.1,3.0,4.9,1.8,
-        6.4,2.8,5.6,2.1, 7.2,3.0,5.8,1.6, 7.4,2.8,6.1,1.9, 7.9,3.8,6.4,2.0,
-        6.4,2.8,5.6,2.2, 6.3,2.8,5.1,1.5, 6.1,2.6,5.6,1.4, 7.7,3.0,6.1,2.3,
-        6.3,3.4,5.6,2.4, 6.4,3.1,5.5,1.8, 6.0,3.0,4.8,1.8, 6.9,3.1,5.4,2.1,
-        6.7,3.1,5.6,2.4, 6.9,3.1,5.1,2.3, 5.8,2.7,5.1,1.9, 6.8,3.2,5.9,2.3,
-        6.7,3.3,5.7,2.5, 6.7,3.0,5.2,2.3, 6.3,2.5,5.0,1.9, 6.5,3.0,5.2,2.0,
-        6.2,3.4,5.4,2.3, 5.9,3.0,5.1,1.8);
-
-    Mat labels = (Mat_<int>(150, 1)<< 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-      1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-       2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-        2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-         3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-          3, 3, 3, 3, 3);
-
-    // LogisticRegressionParams params = LogisticRegressionParams();
+    string dataFileName = ts->get_data_path() + "iris.data";
+    Ptr<TrainData> tdata = TrainData::loadFromCSV(dataFileName, 0);
 
     Mat responses1, responses2;
     Mat learnt_mat1, learnt_mat2;
-    Mat pred_result1, comp_learnt_mats;
 
-    float errorCount = 0.0;
-
-    LogisticRegressionParams params1 = LogisticRegressionParams();
-    LogisticRegressionParams params2 = LogisticRegressionParams();
-
+    LogisticRegression::Params params1 = LogisticRegression::Params();
     params1.alpha = 1.0;
     params1.num_iters = 10001;
     params1.norm = LogisticRegression::REG_L2;
@@ -259,56 +165,40 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
     params1.train_method = LogisticRegression::BATCH;
     params1.mini_batch_size = 10;
 
-    data.convertTo(data, CV_32FC1);
-    labels.convertTo(labels, CV_32FC1);
-
-    // run LR classifier train classifier
-    LogisticRegression lr1(data, labels, params1);
-    LogisticRegression lr2(params2);
-    learnt_mat1 = lr1.get_learnt_thetas();
-
-    lr1.predict(data, responses1);
-    // now save the classifier
-
-    string filename = cv::tempfile(".xml");
+    // train and save the classifier
+    String filename = cv::tempfile(".xml");
     try
     {
-      //lr1.save(filename.c_str());
-      FileStorage fs;
-      fs.open(filename.c_str(),FileStorage::WRITE);
-      lr1.write(fs);
-      fs.release();
+        // run LR classifier train classifier
+        Ptr<LogisticRegression> lr1 = LogisticRegression::create(params1);
+        lr1->train(tdata);
+        lr1->predict(tdata->getSamples(), responses1);
+        learnt_mat1 = lr1->get_learnt_thetas();
+        lr1->save(filename);
     }
-
     catch(...)
     {
         ts->printf(cvtest::TS::LOG, "Crash in write method.\n" );
         ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
     }
 
+    // and load to another
     try
     {
-      //lr2.load(filename.c_str());
-      FileStorage fs;
-      fs.open(filename.c_str(),FileStorage::READ);
-      FileNode fn = fs.root();
-      lr2.read(fn);
-      fs.release();
+        Ptr<LogisticRegression> lr2 = StatModel::load<LogisticRegression>(filename);
+        lr2->predict(tdata->getSamples(), responses2);
+        learnt_mat2 = lr2->get_learnt_thetas();
     }
-
     catch(...)
     {
-        ts->printf(cvtest::TS::LOG, "Crash in read method.\n");
+        ts->printf(cvtest::TS::LOG, "Crash in write method.\n" );
         ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
     }
-
-    lr2.predict(data, responses2);
-
-    learnt_mat2 = lr2.get_learnt_thetas();
 
     CV_Assert(responses1.rows == responses2.rows);
 
     // compare difference in learnt matrices before and after loading from disk
+    Mat comp_learnt_mats;
     comp_learnt_mats = (learnt_mat1 == learnt_mat2);
     comp_learnt_mats = comp_learnt_mats.reshape(1, comp_learnt_mats.rows*comp_learnt_mats.cols);
     comp_learnt_mats.convertTo(comp_learnt_mats, CV_32S);
@@ -317,6 +207,7 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
     // compare difference in prediction outputs and stored inputs
     // check if there is any difference between computed learnt mat and retreived mat
 
+    float errorCount = 0.0;
     errorCount += 1 - (float)cv::countNonZero(responses1 == responses2)/responses1.rows;
     errorCount += 1 - (float)cv::sum(comp_learnt_mats)[0]/comp_learnt_mats.rows;
 
