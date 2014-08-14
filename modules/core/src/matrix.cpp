@@ -3469,9 +3469,6 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
     if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
         return false;
 
-    if ((op == CV_REDUCE_SUM && sdepth == CV_32F) || op == CV_REDUCE_MIN || op == CV_REDUCE_MAX)
-        return false;
-
     if (op == CV_REDUCE_AVG)
     {
         if (sdepth < CV_32S && ddepth < CV_32S)
