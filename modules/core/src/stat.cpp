@@ -1536,7 +1536,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     }
 
     size_t globalsize = groupnum * wgs;
-    if (!k.run(1, &globalsize, &wgs, false))
+    if (!k.run(1, &globalsize, &wgs, true))
         return false;
 
     static const getMinMaxResFunc functab[7] =
