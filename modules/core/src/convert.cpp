@@ -1765,13 +1765,12 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
         kercn = ocl::predictOptimalVectorWidth(_src, _dst), rowsPerWI = d.isIntel() ? 4 : 1;
     bool doubleSupport = d.doubleFPConfig() > 0;
 
-    if (depth == CV_32F || depth == CV_64F)
+    if (!doubleSupport && depth == CV_64F)
         return false;
 
     char cvt[2][50];
     int wdepth = std::max(depth, CV_32F);
-    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D OP_CONVERT_SCALE_ABS -D UNARY_OP -D dstT=%s -D srcT1=%s"
+    String build_opt = format("-D OP_CONVERT_SCALE_ABS -D UNARY_OP -D dstT=%s -D srcT1=%s"
                          " -D workT=%s -D wdepth=%d -D convertToWT1=%s -D convertToDT=%s"
                          " -D workT1=%s -D rowsPerWI=%d%s",
                          ocl::typeToStr(CV_8UC(kercn)),
@@ -1780,7 +1779,8 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
                          ocl::convertTypeStr(depth, wdepth, kercn, cvt[0]),
                          ocl::convertTypeStr(wdepth, CV_8U, kercn, cvt[1]),
                          ocl::typeToStr(wdepth), rowsPerWI,
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc, build_opt);
     if (k.empty())
         return false;
 
