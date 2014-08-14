@@ -1945,6 +1945,7 @@ static const int* getFontData(int fontFace)
     return ascii;
 }
 
+extern const char* g_HersheyGlyphs[];
 
 void putText( InputOutputArray _img, const String& text, Point org,
               int fontFace, double fontScale, Scalar color,

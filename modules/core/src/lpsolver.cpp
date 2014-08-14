@@ -42,9 +42,13 @@
 #include <climits>
 #include <algorithm>
 #include <cstdarg>
-#include <debug.hpp>
 
-namespace cv{namespace optim{
+#define dprintf(x)
+#define print_matrix(x)
+
+namespace cv
+{
+
 using std::vector;
 
 #ifdef ALEX_DEBUG
@@ -355,4 +359,4 @@ static inline void swap_columns(Mat_<double>& A,int col1,int col2){
         A(i,col2)=tmp;
     }
 }
-}}
+}
