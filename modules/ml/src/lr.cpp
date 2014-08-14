@@ -57,6 +57,7 @@
 
 
 using namespace cv;
+using namespace cv::ml;
 using namespace std;
 
 LogisticRegressionParams::LogisticRegressionParams()

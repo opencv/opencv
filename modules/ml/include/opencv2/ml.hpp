@@ -571,8 +571,6 @@ public:
 /****************************************************************************************\
 *                           Logistic Regression                                          *
 \****************************************************************************************/
-namespace cv
-{
 struct CV_EXPORTS LogisticRegressionParams
 {
     double alpha;
@@ -624,7 +622,6 @@ protected:
     virtual bool set_label_map(const cv::Mat& labels);
     static cv::Mat remap_labels(const cv::Mat& labels, const std::map<int, int>& lmap);
 };
-}// namespace cv
 
 /****************************************************************************************\
 *                           Auxilary functions declarations                              *
