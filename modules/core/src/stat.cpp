@@ -1444,7 +1444,10 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     bool doubleSupport = dev.doubleFPConfig() > 0, haveMask = !_mask.empty(),
         haveSrc2 = _src2.kind() != _InputArray::NONE;
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
-            kercn = haveMask ? cn : std::min(4, ocl::predictOptimalVectorWidth(_src));
+            kercn = haveMask ? cn : std::min(4, ocl::predictOptimalVectorWidth(_src, _src2));
+
+    if (haveMask && dev.isAMD())
+        return false;
 
     CV_Assert( (cn == 1 && (!haveMask || _mask.type() == CV_8U)) ||
               (cn >= 1 && !minLoc && !maxLoc) );
@@ -1536,7 +1539,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     }
 
     size_t globalsize = groupnum * wgs;
-    if (!k.run(1, &globalsize, &wgs, false))
+    if (!k.run(1, &globalsize, &wgs, true))
         return false;
 
     static const getMinMaxResFunc functab[7] =
@@ -2190,9 +2193,6 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
          (!doubleSupport && depth == CV_64F))
         return false;
 
-    if( depth == CV_32F && (!_mask.empty() || normType == NORM_INF) )
-        return false;
-
     UMat src = _src.getUMat();
 
     if (normType == NORM_INF)
@@ -2547,9 +2547,6 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArr
     bool relative = (normType & NORM_RELATIVE) != 0;
     normType &= ~NORM_RELATIVE;
     bool normsum = normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR;
-
-    if ( !normsum || !_mask.empty() )
-        return false;
 
     if (normsum)
     {
