@@ -75,7 +75,7 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     {
     case THRESH_TRUNC:
 #ifndef HAVE_IPP_ICV_ONLY
-        if (_src.data == _dst.data && ippiThreshold_GT_8u_C1IR(_src.ptr(), (int)src_step, sz, thresh) >= 0)
+        if (_src.data == _dst.data && ippiThreshold_GT_8u_C1IR(_dst.ptr(), (int)dst_step, sz, thresh) >= 0)
             return;
 #endif
         if (ippiThreshold_GT_8u_C1R(_src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh) >= 0)
@@ -84,7 +84,7 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         break;
     case THRESH_TOZERO:
 #ifndef HAVE_IPP_ICV_ONLY
-        if (_src.data == _dst.data && ippiThreshold_LTVal_8u_C1IR(_src.ptr(), (int)src_step, sz, thresh+1, 0) >= 0)
+        if (_src.data == _dst.data && ippiThreshold_LTVal_8u_C1IR(_dst.ptr(), (int)dst_step, sz, thresh+1, 0) >= 0)
             return;
 #endif
         if (ippiThreshold_LTVal_8u_C1R(_src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh+1, 0) >= 0)
@@ -93,7 +93,7 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         break;
     case THRESH_TOZERO_INV:
 #ifndef HAVE_IPP_ICV_ONLY
-        if (_src.data == _dst.data && ippiThreshold_GTVal_8u_C1IR(_src.ptr(), (int)src_step, sz, thresh, 0) >= 0)
+        if (_src.data == _dst.data && ippiThreshold_GTVal_8u_C1IR(_dst.ptr(), (int)dst_step, sz, thresh, 0) >= 0)
             return;
 #endif
         if (ippiThreshold_GTVal_8u_C1R(_src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh, 0) >= 0)
