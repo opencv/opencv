@@ -479,9 +479,10 @@ static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, Ou
     integral(_image, image_sums, image_sqsums, CV_32F, CV_32F);
 
     int type = image_sums.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
     ocl::Kernel k("matchTemplate_CCOEFF_NORMED", ocl::imgproc::match_template_oclsrc,
-        format("-D CCOEFF_NORMED -D T=%s -D T1=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn));
+        format("-D CCOEFF_NORMED -D T=%s -D T1=%s -D cn=%d -D rowsPerWI=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn, rowsPerWI));
     if (k.empty())
         return false;
 
@@ -535,7 +536,7 @@ static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, Ou
                    ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, scale,
                    templ_sum, templ_sqsum_sum);    }
 
-    size_t globalsize[2] = { result.cols, result.rows };
+    size_t globalsize[2] = { result.cols, (result.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 

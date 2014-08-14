@@ -344,7 +344,7 @@ __kernel void matchTemplate_SQDIFF_NORMED(__global const uchar * src_sqsums, int
         {
             float image_sqsum_ = (float)((sqsum[SQSUMS_PTR(template_cols, template_rows)] - sqsum[SQSUMS_PTR(template_cols, 0)]) -
                                          (sqsum[SQSUMS_PTR(0, template_rows)] - sqsum[SQSUMS_PTR(0, 0)]));
-            
+
             float template_sqsum_value = template_sqsum[0];
 
             __global float * dstult = (__global float *)(dst + dst_idx);
@@ -457,30 +457,30 @@ __kernel void matchTemplate_CCOEFF_NORMED(__global const uchar * src_sums, int s
                                           int t_rows, int t_cols, float weight, float template_sum, float template_sqsum)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y0 = get_global_id(1) * rowsPerWI;
 
-    float sum_[2];
-    float sqsum_[2];
-
-
-    if (x < dst_cols && y < dst_rows)
+    if (x < dst_cols )
     {
         int step = src_sums_step/(int)sizeof(T);
 
-        __global const T* sum   = (__global const T*)(src_sums + mad24(y, src_sums_step,     mad24(x, (int)sizeof(T), src_sums_offset)));
-        __global const T* sqsum = (__global const T*)(src_sqsums + mad24(y, src_sqsums_step, mad24(x, (int)sizeof(T), src_sqsums_offset)));
+        __global const T* sum   = (__global const T*)(src_sums + mad24(y0, src_sums_step,     mad24(x, (int)sizeof(T), src_sums_offset)));
+        __global const T* sqsum = (__global const T*)(src_sqsums + mad24(y0, src_sqsums_step, mad24(x, (int)sizeof(T), src_sqsums_offset)));
 
-        T value_sum   = sum[mad24(t_rows, step, t_cols)] - sum[mad24(t_rows, step, 0)] - sum[t_cols] + sum[0];
-        T value_sqsum = sqsum[mad24(t_rows, step, t_cols)] - sqsum[mad24(t_rows, step, 0)] - sqsum[t_cols] + sqsum[0];
+        int dst_idx =   mad24(y0, dst_step, mad24(x, (int)sizeof(float), dst_offset));
 
-        float num = convertToDT(mad(value_sum, template_sum, 0));
+        for (int y = y0, y1 = min(dst_rows, y0 + rowsPerWI); y < y1; ++y, sum += step, sqsum += step, dst_idx += dst_step)
+        {
+            T value_sum   = sum[mad24(t_rows, step, t_cols)] - sum[mad24(t_rows, step, 0)] - sum[t_cols] + sum[0];
+            T value_sqsum = sqsum[mad24(t_rows, step, t_cols)] - sqsum[mad24(t_rows, step, 0)] - sqsum[t_cols] + sqsum[0];
 
-        value_sqsum -= weight * value_sum * value_sum;
-        float denum = sqrt(mad(template_sqsum, convertToDT(value_sqsum), 0));
+            float num = convertToDT(mad(value_sum, template_sum, 0));
 
-        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
-        __global float * dstult = (__global float *)(dst+dst_idx);
-        *dstult = normAcc((*dstult) - num, denum);
+            value_sqsum -= weight * value_sum * value_sum;
+            float denum = sqrt(mad(template_sqsum, convertToDT(value_sqsum), 0));
+
+            __global float * dstult = (__global float *)(dst+dst_idx);
+            *dstult = normAcc((*dstult) - num, denum);
+        }
     }
 }
 
@@ -492,9 +492,9 @@ __kernel void matchTemplate_CCOEFF_NORMED(__global const uchar * src_sums, int s
                                           int t_rows, int t_cols, float weight, float4 template_sum, float template_sqsum)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y0 = get_global_id(1) * rowsPerWI;
 
-    if (x < dst_cols && y < dst_rows)
+    if (x < dst_cols)
     {
         int step = src_sums_step/(int)sizeof(T);
 
@@ -504,24 +504,28 @@ __kernel void matchTemplate_CCOEFF_NORMED(__global const uchar * src_sums, int s
         temp_sum.y = template_sum.y;
         temp_sum.z = template_sum.z;
 
-        value_sum  = vload3(0, (__global const T1 *)(src_sums + SUMS(t_cols, t_rows)));
-        value_sum -= vload3(0, (__global const T1 *)(src_sums + SUMS(0, t_rows)));
-        value_sum -= vload3(0, (__global const T1 *)(src_sums + SUMS(t_cols, 0)));
-        value_sum += vload3(0, (__global const T1 *)(src_sums + SUMS(0, 0)));
+        int dst_idx = mad24(y0, dst_step, mad24(x, (int)sizeof(float), dst_offset));
 
-        value_sqsum  = vload3(0, (__global const T1 *)(src_sqsums + SQ_SUMS(t_cols, t_rows)));
-        value_sqsum -= vload3(0, (__global const T1 *)(src_sqsums + SQ_SUMS(0, t_rows)));
-        value_sqsum -= vload3(0, (__global const T1 *)(src_sqsums + SQ_SUMS(t_cols, 0)));
-        value_sqsum += vload3(0, (__global const T1 *)(src_sqsums + SQ_SUMS(0, 0)));
+        for (int y = y0, y1 = min(dst_rows, y0 + rowsPerWI); y < y1; ++y, dst_idx += dst_step)
+        {
+            value_sum  = vload3(0, (__global const T1 *)(src_sums + SUMS(t_cols, t_rows)));
+            value_sum -= vload3(0, (__global const T1 *)(src_sums + SUMS(0, t_rows)));
+            value_sum -= vload3(0, (__global const T1 *)(src_sums + SUMS(t_cols, 0)));
+            value_sum += vload3(0, (__global const T1 *)(src_sums + SUMS(0, 0)));
 
-        float num = convertToDT(mad(value_sum, temp_sum, 0));
+            value_sqsum  = vload3(0, (__global const T1 *)(src_sqsums + SQ_SUMS(t_cols, t_rows)));
+            value_sqsum -= vload3(0, (__global const T1 *)(src_sqsums + SQ_SUMS(0, t_rows)));
+            value_sqsum -= vload3(0, (__global const T1 *)(src_sqsums + SQ_SUMS(t_cols, 0)));
+            value_sqsum += vload3(0, (__global const T1 *)(src_sqsums + SQ_SUMS(0, 0)));
 
-        value_sqsum -= weight * value_sum * value_sum;
-        float denum = sqrt(mad(template_sqsum, convertToDT(value_sqsum), 0));
+            float num = convertToDT(mad(value_sum, temp_sum, 0));
 
-        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
-        __global float * dstult = (__global float *)(dst+dst_idx);
-        *dstult = normAcc((*dstult) - num, denum);
+            value_sqsum -= weight * value_sum * value_sum;
+            float denum = sqrt(mad(template_sqsum, convertToDT(value_sqsum), 0));
+
+            __global float * dstult = (__global float *)(dst+dst_idx);
+            *dstult = normAcc((*dstult) - num, denum);
+        }
     }
 }
 
@@ -533,35 +537,39 @@ __kernel void matchTemplate_CCOEFF_NORMED(__global const uchar * src_sums, int s
                                           int t_rows, int t_cols, float weight, float4 template_sum, float template_sqsum)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y0 = get_global_id(1) * rowsPerWI;
 
-    if (x < dst_cols && y < dst_rows)
+    if (x < dst_cols)
     {
         int step = src_sums_step/(int)sizeof(T);
 
         T temp_sum;
 
-        __global const T* sum   = (__global const T*)(src_sums + mad24(y, src_sums_step,     mad24(x, (int)sizeof(T), src_sums_offset)));
-        __global const T* sqsum = (__global const T*)(src_sqsums + mad24(y, src_sqsums_step, mad24(x, (int)sizeof(T), src_sqsums_offset)));
+        __global const T* sum   = (__global const T*)(src_sums + mad24(y0, src_sums_step,     mad24(x, (int)sizeof(T), src_sums_offset)));
+        __global const T* sqsum = (__global const T*)(src_sqsums + mad24(y0, src_sqsums_step, mad24(x, (int)sizeof(T), src_sqsums_offset)));
 
-        T value_sum   = sum[mad24(t_rows, step, t_cols)] - sum[mad24(t_rows, step, 0)] - sum[t_cols] + sum[0];
-        T value_sqsum = sqsum[mad24(t_rows, step, t_cols)] - sqsum[mad24(t_rows, step, 0)] - sqsum[t_cols] + sqsum[0];
+        int dst_idx = mad24(y0, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+
+        for (int y = y0, y1 = min(dst_rows, y0 + rowsPerWI); y < y1; ++y, sum += step, sqsum += step, dst_idx += dst_step)
+        {
+            T value_sum   = sum[mad24(t_rows, step, t_cols)] - sum[mad24(t_rows, step, 0)] - sum[t_cols] + sum[0];
+            T value_sqsum = sqsum[mad24(t_rows, step, t_cols)] - sqsum[mad24(t_rows, step, 0)] - sqsum[t_cols] + sqsum[0];
 
 #if cn==2
-        temp_sum.x = template_sum.x;
-        temp_sum.y = template_sum.y;
+            temp_sum.x = template_sum.x;
+            temp_sum.y = template_sum.y;
 #else
-        temp_sum = template_sum;
+            temp_sum = template_sum;
 #endif
 
-        float num = convertToDT(mad(value_sum, temp_sum, 0));
+            float num = convertToDT(mad(value_sum, temp_sum, 0));
 
-        value_sqsum -= weight * value_sum * value_sum;
-        float denum = sqrt(mad(template_sqsum, convertToDT(value_sqsum), 0));
+            value_sqsum -= weight * value_sum * value_sum;
+            float denum = sqrt(mad(template_sqsum, convertToDT(value_sqsum), 0));
 
-        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
-        __global float * dstult = (__global float *)(dst+dst_idx);
-        *dstult = normAcc((*dstult) - num, denum);
+            __global float * dstult = (__global float *)(dst+dst_idx);
+            *dstult = normAcc((*dstult) - num, denum);
+        }
     }
 }
 
