@@ -43,6 +43,11 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 
+#ifdef __APPLE__
+#undef CV_NEON
+#define CV_NEON 0
+#endif
+
 namespace cv
 {
 
