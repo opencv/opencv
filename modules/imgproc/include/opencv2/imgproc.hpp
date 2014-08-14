@@ -51,14 +51,6 @@
 namespace cv
 {
 
-//! type of the kernel
-enum { KERNEL_GENERAL      = 0, // the kernel is generic. No any type of symmetry or other properties.
-       KERNEL_SYMMETRICAL  = 1, // kernel[i] == kernel[ksize-i-1] , and the anchor is at the center
-       KERNEL_ASYMMETRICAL = 2, // kernel[i] == -kernel[ksize-i-1] , and the anchor is at the center
-       KERNEL_SMOOTH       = 4, // all the kernel elements are non-negative and summed to 1
-       KERNEL_INTEGER      = 8  // all the kernel coefficients are integer numbers
-     };
-
 //! type of morphological operation
 enum { MORPH_ERODE    = 0,
        MORPH_DILATE   = 1,
@@ -471,235 +463,6 @@ enum { INTERSECT_NONE = 0,
        INTERSECT_FULL  = 2
      };
 
-/*!
- The Base Class for 1D or Row-wise Filters
-
- This is the base class for linear or non-linear filters that process 1D data.
- In particular, such filters are used for the "horizontal" filtering parts in separable filters.
-
- Several functions in OpenCV return Ptr<BaseRowFilter> for the specific types of filters,
- and those pointers can be used directly or within cv::FilterEngine.
-*/
-class CV_EXPORTS BaseRowFilter
-{
-public:
-    //! the default constructor
-    BaseRowFilter();
-    //! the destructor
-    virtual ~BaseRowFilter();
-    //! the filtering operator. Must be overrided in the derived classes. The horizontal border interpolation is done outside of the class.
-    virtual void operator()(const uchar* src, uchar* dst, int width, int cn) = 0;
-
-    int ksize;
-    int anchor;
-};
-
-
-/*!
- The Base Class for Column-wise Filters
-
- This is the base class for linear or non-linear filters that process columns of 2D arrays.
- Such filters are used for the "vertical" filtering parts in separable filters.
-
- Several functions in OpenCV return Ptr<BaseColumnFilter> for the specific types of filters,
- and those pointers can be used directly or within cv::FilterEngine.
-
- Unlike cv::BaseRowFilter, cv::BaseColumnFilter may have some context information,
- i.e. box filter keeps the sliding sum of elements. To reset the state BaseColumnFilter::reset()
- must be called (e.g. the method is called by cv::FilterEngine)
- */
-class CV_EXPORTS BaseColumnFilter
-{
-public:
-    //! the default constructor
-    BaseColumnFilter();
-    //! the destructor
-    virtual ~BaseColumnFilter();
-    //! the filtering operator. Must be overrided in the derived classes. The vertical border interpolation is done outside of the class.
-    virtual void operator()(const uchar** src, uchar* dst, int dststep, int dstcount, int width) = 0;
-    //! resets the internal buffers, if any
-    virtual void reset();
-
-    int ksize;
-    int anchor;
-};
-
-
-/*!
- The Base Class for Non-Separable 2D Filters.
-
- This is the base class for linear or non-linear 2D filters.
-
- Several functions in OpenCV return Ptr<BaseFilter> for the specific types of filters,
- and those pointers can be used directly or within cv::FilterEngine.
-
- Similar to cv::BaseColumnFilter, the class may have some context information,
- that should be reset using BaseFilter::reset() method before processing the new array.
-*/
-class CV_EXPORTS BaseFilter
-{
-public:
-    //! the default constructor
-    BaseFilter();
-    //! the destructor
-    virtual ~BaseFilter();
-    //! the filtering operator. The horizontal and the vertical border interpolation is done outside of the class.
-    virtual void operator()(const uchar** src, uchar* dst, int dststep, int dstcount, int width, int cn) = 0;
-    //! resets the internal buffers, if any
-    virtual void reset();
-
-    Size ksize;
-    Point anchor;
-};
-
-
-/*!
- The Main Class for Image Filtering.
-
- The class can be used to apply an arbitrary filtering operation to an image.
- It contains all the necessary intermediate buffers, it computes extrapolated values
- of the "virtual" pixels outside of the image etc.
- Pointers to the initialized cv::FilterEngine instances
- are returned by various OpenCV functions, such as cv::createSeparableLinearFilter(),
- cv::createLinearFilter(), cv::createGaussianFilter(), cv::createDerivFilter(),
- cv::createBoxFilter() and cv::createMorphologyFilter().
-
- Using the class you can process large images by parts and build complex pipelines
- that include filtering as some of the stages. If all you need is to apply some pre-defined
- filtering operation, you may use cv::filter2D(), cv::erode(), cv::dilate() etc.
- functions that create FilterEngine internally.
-
- Here is the example on how to use the class to implement Laplacian operator, which is the sum of
- second-order derivatives. More complex variant for different types is implemented in cv::Laplacian().
-
- \code
- void laplace_f(const Mat& src, Mat& dst)
- {
-     CV_Assert( src.type() == CV_32F );
-     // make sure the destination array has the proper size and type
-     dst.create(src.size(), src.type());
-
-     // get the derivative and smooth kernels for d2I/dx2.
-     // for d2I/dy2 we could use the same kernels, just swapped
-     Mat kd, ks;
-     getSobelKernels( kd, ks, 2, 0, ksize, false, ktype );
-
-     // let's process 10 source rows at once
-     int DELTA = std::min(10, src.rows);
-     Ptr<FilterEngine> Fxx = createSeparableLinearFilter(src.type(),
-     dst.type(), kd, ks, Point(-1,-1), 0, borderType, borderType, Scalar() );
-     Ptr<FilterEngine> Fyy = createSeparableLinearFilter(src.type(),
-     dst.type(), ks, kd, Point(-1,-1), 0, borderType, borderType, Scalar() );
-
-     int y = Fxx->start(src), dsty = 0, dy = 0;
-     Fyy->start(src);
-     const uchar* sptr = src.data + y*src.step;
-
-     // allocate the buffers for the spatial image derivatives;
-     // the buffers need to have more than DELTA rows, because at the
-     // last iteration the output may take max(kd.rows-1,ks.rows-1)
-     // rows more than the input.
-     Mat Ixx( DELTA + kd.rows - 1, src.cols, dst.type() );
-     Mat Iyy( DELTA + kd.rows - 1, src.cols, dst.type() );
-
-     // inside the loop we always pass DELTA rows to the filter
-     // (note that the "proceed" method takes care of possibe overflow, since
-     // it was given the actual image height in the "start" method)
-     // on output we can get:
-     //  * < DELTA rows (the initial buffer accumulation stage)
-     //  * = DELTA rows (settled state in the middle)
-     //  * > DELTA rows (then the input image is over, but we generate
-     //                  "virtual" rows using the border mode and filter them)
-     // this variable number of output rows is dy.
-     // dsty is the current output row.
-     // sptr is the pointer to the first input row in the portion to process
-     for( ; dsty < dst.rows; sptr += DELTA*src.step, dsty += dy )
-     {
-         Fxx->proceed( sptr, (int)src.step, DELTA, Ixx.data, (int)Ixx.step );
-         dy = Fyy->proceed( sptr, (int)src.step, DELTA, d2y.data, (int)Iyy.step );
-         if( dy > 0 )
-         {
-             Mat dstripe = dst.rowRange(dsty, dsty + dy);
-             add(Ixx.rowRange(0, dy), Iyy.rowRange(0, dy), dstripe);
-         }
-     }
- }
- \endcode
-*/
-class CV_EXPORTS FilterEngine
-{
-public:
-    //! the default constructor
-    FilterEngine();
-    //! the full constructor. Either _filter2D or both _rowFilter and _columnFilter must be non-empty.
-    FilterEngine(const Ptr<BaseFilter>& _filter2D,
-                 const Ptr<BaseRowFilter>& _rowFilter,
-                 const Ptr<BaseColumnFilter>& _columnFilter,
-                 int srcType, int dstType, int bufType,
-                 int _rowBorderType = BORDER_REPLICATE,
-                 int _columnBorderType = -1,
-                 const Scalar& _borderValue = Scalar());
-    //! the destructor
-    virtual ~FilterEngine();
-    //! reinitializes the engine. The previously assigned filters are released.
-    void init(const Ptr<BaseFilter>& _filter2D,
-              const Ptr<BaseRowFilter>& _rowFilter,
-              const Ptr<BaseColumnFilter>& _columnFilter,
-              int srcType, int dstType, int bufType,
-              int _rowBorderType = BORDER_REPLICATE,
-              int _columnBorderType = -1,
-              const Scalar& _borderValue = Scalar());
-    //! starts filtering of the specified ROI of an image of size wholeSize.
-    virtual int start(Size wholeSize, Rect roi, int maxBufRows = -1);
-    //! starts filtering of the specified ROI of the specified image.
-    virtual int start(const Mat& src, const Rect& srcRoi = Rect(0,0,-1,-1),
-                      bool isolated = false, int maxBufRows = -1);
-    //! processes the next srcCount rows of the image.
-    virtual int proceed(const uchar* src, int srcStep, int srcCount,
-                        uchar* dst, int dstStep);
-    //! applies filter to the specified ROI of the image. if srcRoi=(0,0,-1,-1), the whole image is filtered.
-    virtual void apply( const Mat& src, Mat& dst,
-                        const Rect& srcRoi = Rect(0,0,-1,-1),
-                        Point dstOfs = Point(0,0),
-                        bool isolated = false);
-    //! returns true if the filter is separable
-    bool isSeparable() const { return !filter2D; }
-    //! returns the number
-    int remainingInputRows() const;
-    int remainingOutputRows() const;
-
-    int srcType;
-    int dstType;
-    int bufType;
-    Size ksize;
-    Point anchor;
-    int maxWidth;
-    Size wholeSize;
-    Rect roi;
-    int dx1;
-    int dx2;
-    int rowBorderType;
-    int columnBorderType;
-    std::vector<int> borderTab;
-    int borderElemSize;
-    std::vector<uchar> ringBuf;
-    std::vector<uchar> srcRow;
-    std::vector<uchar> constBorderValue;
-    std::vector<uchar> constBorderRow;
-    int bufStep;
-    int startY;
-    int startY0;
-    int endY;
-    int rowCount;
-    int dstY;
-    std::vector<uchar*> rows;
-
-    Ptr<BaseFilter> filter2D;
-    Ptr<BaseRowFilter> rowFilter;
-    Ptr<BaseColumnFilter> columnFilter;
-};
-
-
 //! finds arbitrary template in the grayscale image using Generalized Hough Transform
 class CV_EXPORTS GeneralizedHough : public Algorithm
 {
@@ -963,93 +726,20 @@ CV_EXPORTS_W Ptr<LineSegmentDetector> createLineSegmentDetector(
     double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5,
     double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024);
 
-//! returns type (one of KERNEL_*) of 1D or 2D kernel specified by its coefficients.
-CV_EXPORTS int getKernelType(InputArray kernel, Point anchor);
-
-//! returns the primitive row filter with the specified kernel
-CV_EXPORTS Ptr<BaseRowFilter> getLinearRowFilter(int srcType, int bufType,
-                                            InputArray kernel, int anchor,
-                                            int symmetryType);
-
-//! returns the primitive column filter with the specified kernel
-CV_EXPORTS Ptr<BaseColumnFilter> getLinearColumnFilter(int bufType, int dstType,
-                                            InputArray kernel, int anchor,
-                                            int symmetryType, double delta = 0,
-                                            int bits = 0);
-
-//! returns 2D filter with the specified kernel
-CV_EXPORTS Ptr<BaseFilter> getLinearFilter(int srcType, int dstType,
-                                           InputArray kernel,
-                                           Point anchor = Point(-1,-1),
-                                           double delta = 0, int bits = 0);
-
-//! returns the separable linear filter engine
-CV_EXPORTS Ptr<FilterEngine> createSeparableLinearFilter(int srcType, int dstType,
-                          InputArray rowKernel, InputArray columnKernel,
-                          Point anchor = Point(-1,-1), double delta = 0,
-                          int rowBorderType = BORDER_DEFAULT,
-                          int columnBorderType = -1,
-                          const Scalar& borderValue = Scalar());
-
-//! returns the non-separable linear filter engine
-CV_EXPORTS Ptr<FilterEngine> createLinearFilter(int srcType, int dstType,
-                 InputArray kernel, Point _anchor = Point(-1,-1),
-                 double delta = 0, int rowBorderType = BORDER_DEFAULT,
-                 int columnBorderType = -1, const Scalar& borderValue = Scalar());
-
 //! returns the Gaussian kernel with the specified parameters
 CV_EXPORTS_W Mat getGaussianKernel( int ksize, double sigma, int ktype = CV_64F );
-
-//! returns the Gaussian filter engine
-CV_EXPORTS Ptr<FilterEngine> createGaussianFilter( int type, Size ksize,
-                                    double sigma1, double sigma2 = 0,
-                                    int borderType = BORDER_DEFAULT);
 
 //! initializes kernels of the generalized Sobel operator
 CV_EXPORTS_W void getDerivKernels( OutputArray kx, OutputArray ky,
                                    int dx, int dy, int ksize,
                                    bool normalize = false, int ktype = CV_32F );
 
-//! returns filter engine for the generalized Sobel operator
-CV_EXPORTS Ptr<FilterEngine> createDerivFilter( int srcType, int dstType,
-                                        int dx, int dy, int ksize,
-                                        int borderType = BORDER_DEFAULT );
-
-//! returns horizontal 1D box filter
-CV_EXPORTS Ptr<BaseRowFilter> getRowSumFilter(int srcType, int sumType,
-                                              int ksize, int anchor = -1);
-
-//! returns vertical 1D box filter
-CV_EXPORTS Ptr<BaseColumnFilter> getColumnSumFilter( int sumType, int dstType,
-                                                     int ksize, int anchor = -1,
-                                                     double scale = 1);
-//! returns box filter engine
-CV_EXPORTS Ptr<FilterEngine> createBoxFilter( int srcType, int dstType, Size ksize,
-                                              Point anchor = Point(-1,-1),
-                                              bool normalize = true,
-                                              int borderType = BORDER_DEFAULT);
-
 //! returns the Gabor kernel with the specified parameters
 CV_EXPORTS_W Mat getGaborKernel( Size ksize, double sigma, double theta, double lambd,
                                  double gamma, double psi = CV_PI*0.5, int ktype = CV_64F );
 
-//! returns horizontal 1D morphological filter
-CV_EXPORTS Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type, int ksize, int anchor = -1);
-
-//! returns vertical 1D morphological filter
-CV_EXPORTS Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type, int ksize, int anchor = -1);
-
-//! returns 2D morphological filter
-CV_EXPORTS Ptr<BaseFilter> getMorphologyFilter(int op, int type, InputArray kernel,
-                                               Point anchor = Point(-1,-1));
-
 //! returns "magic" border value for erosion and dilation. It is automatically transformed to Scalar::all(-DBL_MAX) for dilation.
 static inline Scalar morphologyDefaultBorderValue() { return Scalar::all(DBL_MAX); }
-
-//! returns morphological filter engine. Only MORPH_ERODE and MORPH_DILATE are supported.
-CV_EXPORTS Ptr<FilterEngine> createMorphologyFilter(int op, int type, InputArray kernel,
-                    Point anchor = Point(-1,-1), int rowBorderType = BORDER_CONSTANT,
-                    int columnBorderType = -1, const Scalar& borderValue = morphologyDefaultBorderValue());
 
 //! returns structuring element of the specified shape and size
 CV_EXPORTS_W Mat getStructuringElement(int shape, Size ksize, Point anchor = Point(-1,-1));
@@ -1535,6 +1225,97 @@ enum
 };
 
 CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, int colormap);
+
+
+//! draws the line segment (pt1, pt2) in the image
+CV_EXPORTS_W void line(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
+                     int thickness = 1, int lineType = LINE_8, int shift = 0);
+
+//! draws an arrow from pt1 to pt2 in the image
+CV_EXPORTS_W void arrowedLine(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
+                     int thickness=1, int line_type=8, int shift=0, double tipLength=0.1);
+
+//! draws the rectangle outline or a solid rectangle with the opposite corners pt1 and pt2 in the image
+CV_EXPORTS_W void rectangle(InputOutputArray img, Point pt1, Point pt2,
+                          const Scalar& color, int thickness = 1,
+                          int lineType = LINE_8, int shift = 0);
+
+//! draws the rectangle outline or a solid rectangle covering rec in the image
+CV_EXPORTS void rectangle(CV_IN_OUT Mat& img, Rect rec,
+                          const Scalar& color, int thickness = 1,
+                          int lineType = LINE_8, int shift = 0);
+
+//! draws the circle outline or a solid circle in the image
+CV_EXPORTS_W void circle(InputOutputArray img, Point center, int radius,
+                       const Scalar& color, int thickness = 1,
+                       int lineType = LINE_8, int shift = 0);
+
+//! draws an elliptic arc, ellipse sector or a rotated ellipse in the image
+CV_EXPORTS_W void ellipse(InputOutputArray img, Point center, Size axes,
+                        double angle, double startAngle, double endAngle,
+                        const Scalar& color, int thickness = 1,
+                        int lineType = LINE_8, int shift = 0);
+
+//! draws a rotated ellipse in the image
+CV_EXPORTS_W void ellipse(InputOutputArray img, const RotatedRect& box, const Scalar& color,
+                        int thickness = 1, int lineType = LINE_8);
+
+//! draws a filled convex polygon in the image
+CV_EXPORTS void fillConvexPoly(Mat& img, const Point* pts, int npts,
+                               const Scalar& color, int lineType = LINE_8,
+                               int shift = 0);
+
+CV_EXPORTS_W void fillConvexPoly(InputOutputArray img, InputArray points,
+                                 const Scalar& color, int lineType = LINE_8,
+                                 int shift = 0);
+
+//! fills an area bounded by one or more polygons
+CV_EXPORTS void fillPoly(Mat& img, const Point** pts,
+                         const int* npts, int ncontours,
+                         const Scalar& color, int lineType = LINE_8, int shift = 0,
+                         Point offset = Point() );
+
+CV_EXPORTS_W void fillPoly(InputOutputArray img, InputArrayOfArrays pts,
+                           const Scalar& color, int lineType = LINE_8, int shift = 0,
+                           Point offset = Point() );
+
+//! draws one or more polygonal curves
+CV_EXPORTS void polylines(Mat& img, const Point* const* pts, const int* npts,
+                          int ncontours, bool isClosed, const Scalar& color,
+                          int thickness = 1, int lineType = LINE_8, int shift = 0 );
+
+CV_EXPORTS_W void polylines(InputOutputArray img, InputArrayOfArrays pts,
+                            bool isClosed, const Scalar& color,
+                            int thickness = 1, int lineType = LINE_8, int shift = 0 );
+
+//! draws contours in the image
+CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays contours,
+                              int contourIdx, const Scalar& color,
+                              int thickness = 1, int lineType = LINE_8,
+                              InputArray hierarchy = noArray(),
+                              int maxLevel = INT_MAX, Point offset = Point() );
+
+//! clips the line segment by the rectangle Rect(0, 0, imgSize.width, imgSize.height)
+CV_EXPORTS bool clipLine(Size imgSize, CV_IN_OUT Point& pt1, CV_IN_OUT Point& pt2);
+
+//! clips the line segment by the rectangle imgRect
+CV_EXPORTS_W bool clipLine(Rect imgRect, CV_OUT CV_IN_OUT Point& pt1, CV_OUT CV_IN_OUT Point& pt2);
+
+//! converts elliptic arc to a polygonal curve
+CV_EXPORTS_W void ellipse2Poly( Point center, Size axes, int angle,
+                                int arcStart, int arcEnd, int delta,
+                                CV_OUT std::vector<Point>& pts );
+
+//! renders text string in the image
+CV_EXPORTS_W void putText( InputOutputArray img, const String& text, Point org,
+                         int fontFace, double fontScale, Scalar color,
+                         int thickness = 1, int lineType = LINE_8,
+                         bool bottomLeftOrigin = false );
+
+//! returns bounding box of the text string
+CV_EXPORTS_W Size getTextSize(const String& text, int fontFace,
+                            double fontScale, int thickness,
+                            CV_OUT int* baseLine);
 
 } // cv
 

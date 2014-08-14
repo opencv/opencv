@@ -39,14 +39,12 @@
 //
 //M*/
 #include "precomp.hpp"
-#undef ALEX_DEBUG
-#include "debug.hpp"
 #include <vector>
 #include <algorithm>
 
 #define ABSCLIP(val,threshold) MIN(MAX((val),-(threshold)),(threshold))
 
-namespace cv{namespace optim{
+namespace cv{
 
     class AddFloatToCharScaled{
         public:
@@ -165,4 +163,4 @@ namespace cv{namespace optim{
         result.create(X.rows,X.cols,CV_8U);
         X.convertTo(result, CV_8U, 255);
     }
-}}
+}
