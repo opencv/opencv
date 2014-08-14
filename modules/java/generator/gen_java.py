@@ -415,7 +415,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
 """,
         }, # minMaxLoc
 
-        
+
 ##        "checkRange"           : #TBD
 ##            {'j_code' : '/* TBD: checkRange() */', 'jn_code' : '', 'cpp_code' : '' },
 
@@ -424,7 +424,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
         "useOptimized"         : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
 
     }, # Core
-    
+
     'Imgproc' :
     {
         'getTextSize' :
@@ -497,8 +497,8 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
     }
     }
     """,
-        }, # getTextSize    
-    
+        }, # getTextSize
+
     }, # Imgproc
 
     'Highgui' :

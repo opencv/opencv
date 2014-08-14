@@ -1931,7 +1931,7 @@ public class ImgprocTest extends OpenCVTestCase {
         };
         assertMatEqual(truth, markers);
     }
-    
+
     public void testGetTextSize() {
         String text = "Android all the way";
         double fontScale = 2;
@@ -1945,7 +1945,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(44.0, res.height);
         assertEquals(20, baseLine[0]);
     }
-    
+
     public void testCircleMatPointIntScalar() {
         Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
         int radius = Math.min(gray0.cols() / 4, gray0.rows() / 4);
@@ -2008,7 +2008,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(pt1Clipped, pt1);
         assertEquals(pt2Clipped, pt2);
     }
-    
+
     public void testEllipse2Poly() {
         Point center = new Point(4, 4);
         Size axes = new Size(2, 2);
@@ -2112,7 +2112,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         assertTrue(0 < Core.countNonZero(gray0));
     }
-    
+
     public void testPolylinesMatListOfListOfPointBooleanScalar() {
         Mat img = gray0;
         List<MatOfPoint> polyline = new ArrayList<MatOfPoint>();
@@ -2152,7 +2152,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         assertEquals(0, Core.countNonZero(img));
     }
-    
+
     public void testPutTextMatStringPointIntDoubleScalar() {
         String text = "Hello World";
         Size labelSize = new Size(175, 22);
