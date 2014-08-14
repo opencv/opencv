@@ -60,7 +60,7 @@
 
 using namespace std;
 using namespace cv;
-
+using namespace cv::ml;
 
 static bool calculateError( const Mat& _p_labels, const Mat& _o_labels, float& error)
 {

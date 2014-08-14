@@ -65,7 +65,7 @@
 
 using namespace std;
 using namespace cv;
-
+using namespace cv::ml;
 
 int main()
 {
