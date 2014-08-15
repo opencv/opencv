@@ -180,12 +180,13 @@ floodFill_CnIR( Mat& image, Point seed,
         for( k = 0; k < 3; k++ )
         {
             dir = data[k][0];
-            img = image.ptr<_Tp>(YC + dir);
-            int left = data[k][1];
-            int right = data[k][2];
 
             if( (unsigned)(YC + dir) >= (unsigned)roi.height )
                 continue;
+
+            img = image.ptr<_Tp>(YC + dir);
+            int left = data[k][1];
+            int right = data[k][2];
 
             for( i = left; i <= right; i++ )
             {
