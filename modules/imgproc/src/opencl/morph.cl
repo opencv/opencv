@@ -88,13 +88,7 @@
 
 #ifdef OP_ERODE
 #if defined INTEL_DEVICE && defined DEPTH_0
-// workaround for bug in Intel HD graphics drivers (10.18.10.3496 or older)
-#define __CAT(x, y) x##y
-#define CAT(x, y) __CAT(x, y)
-#define WA_CONVERT_1 CAT(convert_uint, cn)
-#define WA_CONVERT_2 CAT(convert_, T)
-#define convert_uint1 convert_uint
-#define MORPH_OP(A, B) WA_CONVERT_2(min(WA_CONVERT_1(A), WA_CONVERT_1(B)))
+#define MORPH_OP(A, B) ((A) < (B) ? (A) : (B))
 #else
 #define MORPH_OP(A, B) min((A), (B))
 #endif
@@ -104,7 +98,8 @@
 #endif
 
 #define PROCESS(y, x) \
-    res = MORPH_OP(res, LDS_DAT[mad24(l_y + y, width, l_x + x)]);
+    temp = LDS_DAT[mad24(l_y + y, width, l_x + x)]; \
+    res = MORPH_OP(res, temp);
 
 // BORDER_CONSTANT:      iiiiii|abcdefgh|iiiiiii
 #define ELEM(i, l_edge, r_edge, elem1, elem2) (i) < (l_edge) | (i) >= (r_edge) ? (elem1) : (elem2)
@@ -158,7 +153,7 @@ __kernel void morph(__global const uchar * srcptr, int src_step, int src_offset,
 
     if (gidx < cols && gidy < rows)
     {
-        T res = (T)(VAL);
+        T res = (T)(VAL), temp;
         PROCESS_ELEMS;
 
         int dst_index = mad24(gidy, dst_step, mad24(gidx, TSIZE, dst_offset));

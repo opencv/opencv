@@ -131,7 +131,7 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
     for( int i = 0; i < size.height; i++ )
     {
         float* m1f = map1.ptr<float>(i);
-        float* m2f = map2.ptr<float>(i);
+        float* m2f = map2.empty() ? 0 : map2.ptr<float>(i);
         short* m1 = (short*)m1f;
         ushort* m2 = (ushort*)m2f;
         double _x = i*ir[1] + ir[2], _y = i*ir[4] + ir[5], _w = i*ir[7] + ir[8];
