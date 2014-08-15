@@ -410,7 +410,7 @@ void FilterEngine::apply(const Mat& src, Mat& dst,
         dstOfs.y + srcRoi.height <= dst.rows );
 
     int y = start(src, srcRoi, isolated);
-    proceed( src.ptr(y)
+    proceed( src.data + y*src.step // Can't use Mat::ptr because may be outside ROI
              + srcRoi.x*src.elemSize(),
              (int)src.step, endY - startY,
              dst.ptr(dstOfs.y) +
