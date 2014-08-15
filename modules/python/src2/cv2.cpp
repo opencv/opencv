@@ -1205,6 +1205,40 @@ static PyMethodDef methods[] = {
 /************************************************************************/
 /* Module init */
 
+static void init_submodule(PyObject * root, const char * name, PyMethodDef * methods)
+{
+  std::string s = name;
+  size_t i = s.find('.')+1; //  assume, that name is cv2.<name>...
+  while (i < s.length())
+  {
+    size_t j = s.find('.', i);
+    if (j == std::string::npos)
+        j = s.length();
+    std::string short_name = s.substr(i, j-i);
+    std::string full_name = s.substr(0, j);
+    i = j+1;
+
+    PyObject * d = PyModule_GetDict(root);
+    PyObject * submod = PyDict_GetItemString(d, short_name.c_str());
+    if (submod == NULL)
+    {
+        submod = PyImport_AddModule(full_name.c_str());
+        PyDict_SetItemString(d, short_name.c_str(), submod);
+    }
+    root = submod;
+  }
+
+  PyObject * d = PyModule_GetDict(root);
+  for (PyMethodDef * m = methods; m->ml_name != NULL; ++m)
+  {
+    PyObject * method_obj = PyCFunction_NewEx(m, NULL, NULL);
+    PyDict_SetItemString(d, m->ml_name, method_obj);
+    Py_DECREF(method_obj);
+  }
+}
+
+#include "pyopencv_generated_ns_reg.h"
+
 static int to_ok(PyTypeObject *to)
 {
   to->tp_alloc = PyType_GenericAlloc;
@@ -1242,6 +1276,8 @@ void initcv2()
 #else
   PyObject* m = Py_InitModule(MODULESTR, methods);
 #endif
+  init_submodules(m); // from "pyopencv_generated_ns_reg.h"
+
   PyObject* d = PyModule_GetDict(m);
 
   PyDict_SetItemString(d, "__version__", PyString_FromString(CV_VERSION));
