@@ -46,7 +46,7 @@ Source Code
 Explanation
 ===========
 
-1. **Load images and homography**
+#. **Load images and homography**
 
   .. code-block:: cpp
 
@@ -59,7 +59,7 @@ Explanation
 
   We are loading grayscale images here. Homography is stored in the xml created with FileStorage.
 
-2. **Detect keypoints and compute descriptors using AKAZE**
+#. **Detect keypoints and compute descriptors using AKAZE**
 
   .. code-block:: cpp
 
@@ -72,7 +72,7 @@ Explanation
 
   We create AKAZE object and use it's *operator()* functionality. Since we don't need the *mask* parameter, *noArray()* is used.
 
-3. **Use brute-force matcher to find 2-nn matches**
+#. **Use brute-force matcher to find 2-nn matches**
 
   .. code-block:: cpp
 
@@ -82,7 +82,7 @@ Explanation
 
   We use Hamming distance, because AKAZE uses binary descriptor by default.
 
-4. **Use 2-nn matches to find correct keypoint matches**
+#. **Use 2-nn matches to find correct keypoint matches**
 
   .. code-block:: cpp
 
@@ -99,7 +99,7 @@ Explanation
 
   If the closest match is *ratio* closer than the second closest one, then the match is correct.
 
-5. **Check if our matches fit in the homography model**
+#. **Check if our matches fit in the homography model**
 
   .. code-block:: cpp
 
@@ -125,7 +125,7 @@ Explanation
 
   We create a new set of matches for the inliers, because it is required by the drawing function.
 
-6. **Output results**
+#. **Output results**
 
   .. code-block:: cpp
 
@@ -150,12 +150,10 @@ Found matches
 
 A-KAZE Matching Results
 --------------------------
-Keypoints 1:                        	2943
 
-Keypoints 2:                        	3511
-
-Matches:                            	447
-
-Inliers:                            	308
-
-Inliers Ratio:                      	0.689038
+  ::code-block:: none
+    Keypoints 1:   2943
+    Keypoints 2:   3511
+    Matches:       447
+    Inliers:       308
+    Inlier Ratio: 0.689038
