@@ -311,6 +311,7 @@ public:
     explicit Vec(const _Tp* values);
 
     Vec(const Vec<_Tp, cn>& v);
+    Vec(const Matx<_Tp, cn, 1>& m);
 
     static Vec all(_Tp alpha);
 
@@ -918,6 +919,10 @@ Vec<_Tp, cn>::Vec(const _Tp* values)
 template<typename _Tp, int cn> inline
 Vec<_Tp, cn>::Vec(const Vec<_Tp, cn>& m)
     : Matx<_Tp, cn, 1>(m.val) {}
+
+template<typename _Tp, int cn> inline
+Vec<_Tp, cn>::Vec(const Matx<_Tp, cn, 1>& m)
+    : Matx<_Tp, cn, 1>(m) {}
 
 template<typename _Tp, int cn> inline
 Vec<_Tp, cn>::Vec(const Matx<_Tp, cn, 1>& a, const Matx<_Tp, cn, 1>& b, Matx_AddOp op)
