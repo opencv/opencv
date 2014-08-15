@@ -160,16 +160,12 @@ namespace cv { namespace gpu { namespace device
         template <int green_bits, int bidx> struct RGB2RGB5x5Converter;
         template<int bidx> struct RGB2RGB5x5Converter<6, bidx>
         {
-            static __device__ __forceinline__ ushort cvt(const uchar3& src)
+            template <typename T>
+            static __device__ __forceinline__ ushort cvt(const T& src)
             {
-                return (ushort)(((&src.x)[bidx] >> 3) | ((src.y & ~3) << 3) | (((&src.x)[bidx^2] & ~7) << 8));
-            }
-
-            static __device__ __forceinline__ ushort cvt(uint src)
-            {
-                uint b = 0xffu & (src >> (bidx * 8));
-                uint g = 0xffu & (src >> 8);
-                uint r = 0xffu & (src >> ((bidx ^ 2) * 8));
+                uint b = bidx == 0 ? src.x : src.z;
+                uint g = src.y;
+                uint r = bidx == 0 ? src.z : src.x;
                 return (ushort)((b >> 3) | ((g & ~3) << 3) | ((r & ~7) << 8));
             }
         };
@@ -178,22 +174,25 @@ namespace cv { namespace gpu { namespace device
         {
             static __device__ __forceinline__ ushort cvt(const uchar3& src)
             {
-                return (ushort)(((&src.x)[bidx] >> 3) | ((src.y & ~7) << 2) | (((&src.x)[bidx^2] & ~7) << 7));
+                uint b = bidx == 0 ? src.x : src.z;
+                uint g = src.y;
+                uint r = bidx == 0 ? src.z : src.x;
+                return (ushort)((b >> 3) | ((g & ~7) << 2) | ((r & ~7) << 7));
             }
 
-            static __device__ __forceinline__ ushort cvt(uint src)
+            static __device__ __forceinline__ ushort cvt(const uchar4& src)
             {
-                uint b = 0xffu & (src >> (bidx * 8));
-                uint g = 0xffu & (src >> 8);
-                uint r = 0xffu & (src >> ((bidx ^ 2) * 8));
-                uint a = 0xffu & (src >> 24);
+                uint b = bidx == 0 ? src.x : src.z;
+                uint g = src.y;
+                uint r = bidx == 0 ? src.z : src.x;
+                uint a = src.w;
                 return (ushort)((b >> 3) | ((g & ~7) << 2) | ((r & ~7) << 7) | (a * 0x8000));
             }
         };
 
         template<int scn, int bidx, int green_bits> struct RGB2RGB5x5;
 
-        template<int bidx, int green_bits> struct RGB2RGB5x5<3, bidx,green_bits> : unary_function<uchar3, ushort>
+        template<int bidx, int green_bits> struct RGB2RGB5x5<3, bidx, green_bits> : unary_function<uchar3, ushort>
         {
             __device__ __forceinline__ ushort operator()(const uchar3& src) const
             {
@@ -204,9 +203,9 @@ namespace cv { namespace gpu { namespace device
             __host__ __device__ __forceinline__ RGB2RGB5x5(const RGB2RGB5x5&) {}
         };
 
-        template<int bidx, int green_bits> struct RGB2RGB5x5<4, bidx,green_bits> : unary_function<uint, ushort>
+        template<int bidx, int green_bits> struct RGB2RGB5x5<4, bidx, green_bits> : unary_function<uchar4, ushort>
         {
-            __device__ __forceinline__ ushort operator()(uint src) const
+            __device__ __forceinline__ ushort operator()(const uchar4& src) const
             {
                 return RGB2RGB5x5Converter<green_bits, bidx>::cvt(src);
             }
