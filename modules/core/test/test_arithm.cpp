@@ -562,10 +562,10 @@ static void inRange(const Mat& src, const Mat& lb, const Mat& rb, Mat& dst)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        const uchar* aptr = planes[1].data;
-        const uchar* bptr = planes[2].data;
-        uchar* dptr = planes[3].data;
+        const uchar* sptr = planes[0].ptr();
+        const uchar* aptr = planes[1].ptr();
+        const uchar* bptr = planes[2].ptr();
+        uchar* dptr = planes[3].ptr();
 
         switch( depth )
         {
@@ -614,8 +614,8 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         switch( depth )
         {
@@ -905,8 +905,8 @@ static void exp(const Mat& src, Mat& dst)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         if( depth == CV_32F )
         {
@@ -934,8 +934,8 @@ static void log(const Mat& src, Mat& dst)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         if( depth == CV_32F )
         {
@@ -1027,10 +1027,10 @@ static void cartToPolar(const Mat& mx, const Mat& my, Mat& mmag, Mat& mangle, bo
     {
         if( depth == CV_32F )
         {
-            const float* xptr = (const float*)planes[0].data;
-            const float* yptr = (const float*)planes[1].data;
-            float* mptr = (float*)planes[2].data;
-            float* aptr = (float*)planes[3].data;
+            const float* xptr = planes[0].ptr<float>();
+            const float* yptr = planes[1].ptr<float>();
+            float* mptr = planes[2].ptr<float>();
+            float* aptr = planes[3].ptr<float>();
 
             for( j = 0; j < total; j++ )
             {
@@ -1042,10 +1042,10 @@ static void cartToPolar(const Mat& mx, const Mat& my, Mat& mmag, Mat& mangle, bo
         }
         else
         {
-            const double* xptr = (const double*)planes[0].data;
-            const double* yptr = (const double*)planes[1].data;
-            double* mptr = (double*)planes[2].data;
-            double* aptr = (double*)planes[3].data;
+            const double* xptr = planes[0].ptr<double>();
+            const double* yptr = planes[1].ptr<double>();
+            double* mptr = planes[2].ptr<double>();
+            double* aptr = planes[3].ptr<double>();
 
             for( j = 0; j < total; j++ )
             {

@@ -131,7 +131,7 @@ floodFill_CnIR( Mat& image, Point seed,
                _Tp newVal, ConnectedComp* region, int flags,
                std::vector<FFillSegment>* buffer )
 {
-    _Tp* img = (_Tp*)(image.data + image.step * seed.y);
+    _Tp* img = image.ptr<_Tp>(seed.y);
     Size roi = image.size();
     int i, L, R;
     int area = 0;
@@ -180,7 +180,7 @@ floodFill_CnIR( Mat& image, Point seed,
         for( k = 0; k < 3; k++ )
         {
             dir = data[k][0];
-            img = (_Tp*)(image.data + (YC + dir) * image.step);
+            img = image.ptr<_Tp>(YC + dir);
             int left = data[k][1];
             int right = data[k][2];
 
@@ -283,9 +283,9 @@ floodFillGrad_CnIR( Mat& image, Mat& msk,
                    std::vector<FFillSegment>* buffer )
 {
     int step = (int)image.step, maskStep = (int)msk.step;
-    uchar* pImage = image.data;
+    uchar* pImage = image.ptr();
     _Tp* img = (_Tp*)(pImage + step*seed.y);
-    uchar* pMask = msk.data + maskStep + sizeof(_MTp);
+    uchar* pMask = msk.ptr() + maskStep + sizeof(_MTp);
     _MTp* mask = (_MTp*)(pMask + maskStep*seed.y);
     int i, L, R;
     int area = 0;
@@ -508,7 +508,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     if( is_simple )
     {
         size_t elem_size = img.elemSize();
-        const uchar* seed_ptr = img.data + img.step*seedPoint.y + elem_size*seedPoint.x;
+        const uchar* seed_ptr = img.ptr(seedPoint.y) + elem_size*seedPoint.x;
 
         size_t k = 0;
         for(; k < elem_size; k++)
@@ -549,8 +549,8 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
         CV_Assert( mask.type() == CV_8U );
     }
 
-    memset( mask.data, 1, mask.cols );
-    memset( mask.data + mask.step*(mask.rows-1), 1, mask.cols );
+    memset( mask.ptr(), 1, mask.cols );
+    memset( mask.ptr(mask.rows-1), 1, mask.cols );
 
     for( i = 1; i <= size.height; i++ )
     {

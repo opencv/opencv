@@ -147,7 +147,7 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
     CV_Assert( src.type() == CV_8UC3 && dst.type() == CV_32SC1 );
     CV_Assert( src.size() == dst.size() );
 
-    const uchar* img = src.data;
+    const uchar* img = src.ptr();
     int istep = int(src.step/sizeof(img[0]));
     int* mask = dst.ptr<int>();
     int mstep = int(dst.step / sizeof(mask[0]));
@@ -210,7 +210,7 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
         return;
 
     active_queue = i;
-    img = src.data;
+    img = src.ptr();
     mask = dst.ptr<int>();
 
     // recursively fill the basins
@@ -370,7 +370,7 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
     {
         cv::Mat src = src_pyramid[level];
         cv::Size size = src.size();
-        uchar* sptr = src.data;
+        const uchar* sptr = src.ptr();
         int sstep = (int)src.step;
         uchar* mask = 0;
         int mstep = 0;
@@ -382,11 +382,11 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
         if( level < max_level )
         {
             cv::Size size1 = dst_pyramid[level+1].size();
-            cv::Mat m( size.height, size.width, CV_8UC1, mask0.data );
+            cv::Mat m( size.height, size.width, CV_8UC1, mask0.ptr() );
             dstep = (int)dst_pyramid[level+1].step;
-            dptr = dst_pyramid[level+1].data + dstep + cn;
+            dptr = dst_pyramid[level+1].ptr() + dstep + cn;
             mstep = (int)m.step;
-            mask = m.data + mstep;
+            mask = m.ptr() + mstep;
             //cvResize( dst_pyramid[level+1], dst_pyramid[level], CV_INTER_CUBIC );
             cv::pyrUp( dst_pyramid[level+1], dst_pyramid[level], dst_pyramid[level].size() );
             m.setTo(cv::Scalar::all(0));
@@ -402,10 +402,10 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
             }
 
             cv::dilate( m, m, cv::Mat() );
-            mask = m.data;
+            mask = m.ptr();
         }
 
-        dptr = dst_pyramid[level].data;
+        dptr = dst_pyramid[level].ptr();
         dstep = (int)dst_pyramid[level].step;
 
         for( i = 0; i < size.height; i++, sptr += sstep - size.width*3,
@@ -425,7 +425,7 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
                 // iterate meanshift procedure
                 for( iter = 0; iter < termcrit.maxCount; iter++ )
                 {
-                    uchar* ptr;
+                    const uchar* ptr;
                     int x, y, count = 0;
                     int minx, miny, maxx, maxy;
                     int s0 = 0, s1 = 0, s2 = 0, sx = 0, sy = 0;

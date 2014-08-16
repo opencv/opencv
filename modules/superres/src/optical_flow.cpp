@@ -229,6 +229,7 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Farneback()
 ///////////////////////////////////////////////////////////////////
 // Simple
 
+/*
 namespace
 {
     class Simple : public CpuOpticalFlow
@@ -311,7 +312,7 @@ namespace
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Simple()
 {
     return makePtr<Simple>();
-}
+}*/
 
 ///////////////////////////////////////////////////////////////////
 // DualTVL1

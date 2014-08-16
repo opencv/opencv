@@ -22,22 +22,21 @@
  */
 
 #include "KAZEFeatures.h"
+#include "utils.h"
 
 // Namespaces
 using namespace std;
 using namespace cv;
 using namespace cv::details::kaze;
 
-//*******************************************************************************
-//*******************************************************************************
-
+/* ************************************************************************* */
 /**
  * @brief KAZE constructor with input options
  * @param options KAZE configuration options
  * @note The constructor allocates memory for the nonlinear scale space
  */
-KAZEFeatures::KAZEFeatures(KAZEOptions& _options)
-    : options(_options)
+KAZEFeatures::KAZEFeatures(KAZEOptions& options)
+        : options_(options)
 {
     ncycles_ = 0;
     reordering_ = true;
@@ -46,70 +45,48 @@ KAZEFeatures::KAZEFeatures(KAZEOptions& _options)
     Allocate_Memory_Evolution();
 }
 
-//*******************************************************************************
-//*******************************************************************************
-
+/* ************************************************************************* */
 /**
  * @brief This method allocates the memory for the nonlinear diffusion evolution
  */
 void KAZEFeatures::Allocate_Memory_Evolution(void) {
 
     // Allocate the dimension of the matrices for the evolution
-    for (int i = 0; i <= options.omax - 1; i++) {
-        for (int j = 0; j <= options.nsublevels - 1; j++) {
+        for (int i = 0; i <= options_.omax - 1; i++) {
+                for (int j = 0; j <= options_.nsublevels - 1; j++) {
 
             TEvolution aux;
-            aux.Lx = cv::Mat::zeros(options.img_height, options.img_width, CV_32F);
-            aux.Ly = cv::Mat::zeros(options.img_height, options.img_width, CV_32F);
-            aux.Lxx = cv::Mat::zeros(options.img_height, options.img_width, CV_32F);
-            aux.Lxy = cv::Mat::zeros(options.img_height, options.img_width, CV_32F);
-            aux.Lyy = cv::Mat::zeros(options.img_height, options.img_width, CV_32F);
-            aux.Lflow = cv::Mat::zeros(options.img_height, options.img_width, CV_32F);
-            aux.Lt = cv::Mat::zeros(options.img_height, options.img_width, CV_32F);
-            aux.Lsmooth = cv::Mat::zeros(options.img_height, options.img_width, CV_32F);
-            aux.Lstep = cv::Mat::zeros(options.img_height, options.img_width, CV_32F);
-            aux.Ldet = cv::Mat::zeros(options.img_height, options.img_width, CV_32F);
-            aux.esigma = options.soffset*pow((float)2.0f, (float)(j) / (float)(options.nsublevels)+i);
+                        aux.Lx = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+                        aux.Ly = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+                        aux.Lxx = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+                        aux.Lxy = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+                        aux.Lyy = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+                        aux.Lt = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+                        aux.Lsmooth = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+                        aux.Ldet = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+                        aux.esigma = options_.soffset*pow((float)2.0f, (float)(j) / (float)(options_.nsublevels)+i);
             aux.etime = 0.5f*(aux.esigma*aux.esigma);
             aux.sigma_size = fRound(aux.esigma);
-            aux.octave = (float)i;
-            aux.sublevel = (float)j;
+            aux.octave = i;
+            aux.sublevel = j;
             evolution_.push_back(aux);
         }
     }
 
     // Allocate memory for the FED number of cycles and time steps
-    if (options.use_fed) {
-        for (size_t i = 1; i < evolution_.size(); i++) {
-            int naux = 0;
-            vector<float> tau;
-            float ttime = 0.0;
-            ttime = evolution_[i].etime - evolution_[i - 1].etime;
-            naux = fed_tau_by_process_time(ttime, 1, 0.25f, reordering_, tau);
-            nsteps_.push_back(naux);
-            tsteps_.push_back(tau);
-            ncycles_++;
-        }
+    for (size_t i = 1; i < evolution_.size(); i++) {
+        int naux = 0;
+        vector<float> tau;
+        float ttime = 0.0;
+        ttime = evolution_[i].etime - evolution_[i - 1].etime;
+        naux = fed_tau_by_process_time(ttime, 1, 0.25f, reordering_, tau);
+        nsteps_.push_back(naux);
+        tsteps_.push_back(tau);
+        ncycles_++;
     }
-    else {
-        // Allocate memory for the auxiliary variables that are used in the AOS scheme
-        Ltx_ = Mat::zeros(options.img_width, options.img_height, CV_32F); // TODO? IS IT A BUG???
-        Lty_ = Mat::zeros(options.img_height, options.img_width, CV_32F);
-        px_ = Mat::zeros(options.img_height, options.img_width, CV_32F);
-        py_ = Mat::zeros(options.img_height, options.img_width, CV_32F);
-        ax_ = Mat::zeros(options.img_height, options.img_width, CV_32F);
-        ay_ = Mat::zeros(options.img_height, options.img_width, CV_32F);
-        bx_ = Mat::zeros(options.img_height - 1, options.img_width, CV_32F);
-        by_ = Mat::zeros(options.img_height - 1, options.img_width, CV_32F);
-        qr_ = Mat::zeros(options.img_height - 1, options.img_width, CV_32F);
-        qc_ = Mat::zeros(options.img_height, options.img_width - 1, CV_32F);
-    }
-
 }
 
-//*******************************************************************************
-//*******************************************************************************
-
+/* ************************************************************************* */
 /**
  * @brief This method creates the nonlinear scale space for a given image
  * @param img Input image for which the nonlinear scale space needs to be created
@@ -121,52 +98,47 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img)
 
     // Copy the original image to the first level of the evolution
     img.copyTo(evolution_[0].Lt);
-    gaussian_2D_convolution(evolution_[0].Lt, evolution_[0].Lt, 0, 0, options.soffset);
-    gaussian_2D_convolution(evolution_[0].Lt, evolution_[0].Lsmooth, 0, 0, options.sderivatives);
+        gaussian_2D_convolution(evolution_[0].Lt, evolution_[0].Lt, 0, 0, options_.soffset);
+        gaussian_2D_convolution(evolution_[0].Lt, evolution_[0].Lsmooth, 0, 0, options_.sderivatives);
 
     // Firstly compute the kcontrast factor
-    Compute_KContrast(evolution_[0].Lt, options.kcontrast_percentille);
+        Compute_KContrast(evolution_[0].Lt, options_.kcontrast_percentille);
+
+    // Allocate memory for the flow and step images
+    cv::Mat Lflow = cv::Mat::zeros(evolution_[0].Lt.rows, evolution_[0].Lt.cols, CV_32F);
+    cv::Mat Lstep = cv::Mat::zeros(evolution_[0].Lt.rows, evolution_[0].Lt.cols, CV_32F);
 
     // Now generate the rest of evolution levels
     for (size_t i = 1; i < evolution_.size(); i++) {
 
         evolution_[i - 1].Lt.copyTo(evolution_[i].Lt);
-        gaussian_2D_convolution(evolution_[i - 1].Lt, evolution_[i].Lsmooth, 0, 0, options.sderivatives);
+                gaussian_2D_convolution(evolution_[i - 1].Lt, evolution_[i].Lsmooth, 0, 0, options_.sderivatives);
 
         // Compute the Gaussian derivatives Lx and Ly
         Scharr(evolution_[i].Lsmooth, evolution_[i].Lx, CV_32F, 1, 0, 1, 0, BORDER_DEFAULT);
         Scharr(evolution_[i].Lsmooth, evolution_[i].Ly, CV_32F, 0, 1, 1, 0, BORDER_DEFAULT);
 
         // Compute the conductivity equation
-        if (options.diffusivity == KAZEOptions::PM_G1) {
-            pm_g1(evolution_[i].Lx, evolution_[i].Ly, evolution_[i].Lflow, options.kcontrast);
+                if (options_.diffusivity == cv::DIFF_PM_G1) {
+                        pm_g1(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
         }
-        else if (options.diffusivity == KAZEOptions::PM_G2) {
-            pm_g2(evolution_[i].Lx, evolution_[i].Ly, evolution_[i].Lflow, options.kcontrast);
+                else if (options_.diffusivity == cv::DIFF_PM_G2) {
+                        pm_g2(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
         }
-        else if (options.diffusivity == KAZEOptions::WEICKERT) {
-            weickert_diffusivity(evolution_[i].Lx, evolution_[i].Ly, evolution_[i].Lflow, options.kcontrast);
+                else if (options_.diffusivity == cv::DIFF_WEICKERT) {
+                        weickert_diffusivity(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
         }
 
         // Perform FED n inner steps
-        if (options.use_fed) {
-            for (int j = 0; j < nsteps_[i - 1]; j++) {
-                nld_step_scalar(evolution_[i].Lt, evolution_[i].Lflow, evolution_[i].Lstep, tsteps_[i - 1][j]);
-            }
-        }
-        else {
-            // Perform the evolution step with AOS
-            AOS_Step_Scalar(evolution_[i].Lt, evolution_[i - 1].Lt, evolution_[i].Lflow,
-                evolution_[i].etime - evolution_[i - 1].etime);
+        for (int j = 0; j < nsteps_[i - 1]; j++) {
+            nld_step_scalar(evolution_[i].Lt, Lflow, Lstep, tsteps_[i - 1][j]);
         }
     }
 
     return 0;
 }
 
-//*************************************************************************************
-//*************************************************************************************
-
+/* ************************************************************************* */
 /**
  * @brief This method computes the k contrast factor
  * @param img Input image
@@ -174,38 +146,10 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img)
  */
 void KAZEFeatures::Compute_KContrast(const cv::Mat &img, const float &kpercentile)
 {
-    options.kcontrast = compute_k_percentile(img, kpercentile, options.sderivatives, options.kcontrast_bins, 0, 0);
+        options_.kcontrast = compute_k_percentile(img, kpercentile, options_.sderivatives, options_.kcontrast_bins, 0, 0);
 }
 
-//*************************************************************************************
-//*************************************************************************************
-
-/**
- * @brief This method computes the multiscale derivatives for the nonlinear scale space
- */
-void KAZEFeatures::Compute_Multiscale_Derivatives(void)
-{
-    // TODO: use cv::parallel_for_
-    for (size_t i = 0; i < evolution_.size(); i++)
-    {
-        // Compute multiscale derivatives for the detector
-        compute_scharr_derivatives(evolution_[i].Lsmooth, evolution_[i].Lx, 1, 0, evolution_[i].sigma_size);
-        compute_scharr_derivatives(evolution_[i].Lsmooth, evolution_[i].Ly, 0, 1, evolution_[i].sigma_size);
-        compute_scharr_derivatives(evolution_[i].Lx, evolution_[i].Lxx, 1, 0, evolution_[i].sigma_size);
-        compute_scharr_derivatives(evolution_[i].Ly, evolution_[i].Lyy, 0, 1, evolution_[i].sigma_size);
-        compute_scharr_derivatives(evolution_[i].Lx, evolution_[i].Lxy, 0, 1, evolution_[i].sigma_size);
-
-        evolution_[i].Lx = evolution_[i].Lx*((evolution_[i].sigma_size));
-        evolution_[i].Ly = evolution_[i].Ly*((evolution_[i].sigma_size));
-        evolution_[i].Lxx = evolution_[i].Lxx*((evolution_[i].sigma_size)*(evolution_[i].sigma_size));
-        evolution_[i].Lxy = evolution_[i].Lxy*((evolution_[i].sigma_size)*(evolution_[i].sigma_size));
-        evolution_[i].Lyy = evolution_[i].Lyy*((evolution_[i].sigma_size)*(evolution_[i].sigma_size));
-    }
-}
-
-//*************************************************************************************
-//*************************************************************************************
-
+/* ************************************************************************* */
 /**
  * @brief This method computes the feature detector response for the nonlinear scale space
  * @note We use the Hessian determinant as feature detector
@@ -219,9 +163,9 @@ void KAZEFeatures::Compute_Detector_Response(void)
 
     for (size_t i = 0; i < evolution_.size(); i++)
     {
-        for (int ix = 0; ix < options.img_height; ix++)
+                for (int ix = 0; ix < options_.img_height; ix++)
         {
-            for (int jx = 0; jx < options.img_width; jx++)
+                        for (int jx = 0; jx < options_.img_width; jx++)
             {
                 lxx = *(evolution_[i].Lxx.ptr<float>(ix)+jx);
                 lxy = *(evolution_[i].Lxy.ptr<float>(ix)+jx);
@@ -232,9 +176,7 @@ void KAZEFeatures::Compute_Detector_Response(void)
     }
 }
 
-//*************************************************************************************
-//*************************************************************************************
-
+/* ************************************************************************* */
 /**
  * @brief This method selects interesting keypoints through the nonlinear scale space
  * @param kpts Vector of keypoints
@@ -242,27 +184,127 @@ void KAZEFeatures::Compute_Detector_Response(void)
 void KAZEFeatures::Feature_Detection(std::vector<cv::KeyPoint>& kpts)
 {
     kpts.clear();
-
-    // Firstly compute the detector response for each pixel and scale level
-    Compute_Detector_Response();
-
-    // Find scale space extrema
-    Determinant_Hessian_Parallel(kpts);
-
-    // Perform some subpixel refinement
+        Compute_Detector_Response();
+        Determinant_Hessian(kpts);
     Do_Subpixel_Refinement(kpts);
 }
 
-//*************************************************************************************
-//*************************************************************************************
+/* ************************************************************************* */
+class MultiscaleDerivativesKAZEInvoker : public cv::ParallelLoopBody
+{
+public:
+    explicit MultiscaleDerivativesKAZEInvoker(std::vector<TEvolution>& ev) : evolution_(&ev)
+    {
+    }
 
+    void operator()(const cv::Range& range) const
+    {
+        std::vector<TEvolution>& evolution = *evolution_;
+        for (int i = range.start; i < range.end; i++)
+        {
+            compute_scharr_derivatives(evolution[i].Lsmooth, evolution[i].Lx, 1, 0, evolution[i].sigma_size);
+            compute_scharr_derivatives(evolution[i].Lsmooth, evolution[i].Ly, 0, 1, evolution[i].sigma_size);
+            compute_scharr_derivatives(evolution[i].Lx, evolution[i].Lxx, 1, 0, evolution[i].sigma_size);
+            compute_scharr_derivatives(evolution[i].Ly, evolution[i].Lyy, 0, 1, evolution[i].sigma_size);
+            compute_scharr_derivatives(evolution[i].Lx, evolution[i].Lxy, 0, 1, evolution[i].sigma_size);
+
+            evolution[i].Lx = evolution[i].Lx*((evolution[i].sigma_size));
+            evolution[i].Ly = evolution[i].Ly*((evolution[i].sigma_size));
+            evolution[i].Lxx = evolution[i].Lxx*((evolution[i].sigma_size)*(evolution[i].sigma_size));
+            evolution[i].Lxy = evolution[i].Lxy*((evolution[i].sigma_size)*(evolution[i].sigma_size));
+            evolution[i].Lyy = evolution[i].Lyy*((evolution[i].sigma_size)*(evolution[i].sigma_size));
+        }
+    }
+
+private:
+    std::vector<TEvolution>*  evolution_;
+};
+
+/* ************************************************************************* */
+/**
+ * @brief This method computes the multiscale derivatives for the nonlinear scale space
+ */
+void KAZEFeatures::Compute_Multiscale_Derivatives(void)
+{
+    cv::parallel_for_(cv::Range(0, (int)evolution_.size()),
+                                        MultiscaleDerivativesKAZEInvoker(evolution_));
+}
+
+
+/* ************************************************************************* */
+class FindExtremumKAZEInvoker : public cv::ParallelLoopBody
+{
+public:
+    explicit FindExtremumKAZEInvoker(std::vector<TEvolution>& ev, std::vector<std::vector<cv::KeyPoint> >& kpts_par,
+                                                                     const KAZEOptions& options) : evolution_(&ev), kpts_par_(&kpts_par), options_(options)
+    {
+    }
+
+    void operator()(const cv::Range& range) const
+    {
+        std::vector<TEvolution>& evolution = *evolution_;
+        std::vector<std::vector<cv::KeyPoint> >& kpts_par = *kpts_par_;
+        for (int i = range.start; i < range.end; i++)
+        {
+            float value = 0.0;
+            bool is_extremum = false;
+
+            for (int ix = 1; ix < options_.img_height - 1; ix++) {
+                    for (int jx = 1; jx < options_.img_width - 1; jx++) {
+
+                            is_extremum = false;
+                            value = *(evolution[i].Ldet.ptr<float>(ix)+jx);
+
+                            // Filter the points with the detector threshold
+                            if (value > options_.dthreshold) {
+                                    if (value >= *(evolution[i].Ldet.ptr<float>(ix)+jx - 1)) {
+                                            // First check on the same scale
+                                            if (check_maximum_neighbourhood(evolution[i].Ldet, 1, value, ix, jx, 1)) {
+                                                    // Now check on the lower scale
+                                                    if (check_maximum_neighbourhood(evolution[i - 1].Ldet, 1, value, ix, jx, 0)) {
+                                                            // Now check on the upper scale
+                                                            if (check_maximum_neighbourhood(evolution[i + 1].Ldet, 1, value, ix, jx, 0)) {
+                                                                    is_extremum = true;
+                                                            }
+                                                    }
+                                            }
+                                    }
+                            }
+
+                            // Add the point of interest!!
+                            if (is_extremum == true) {
+                                    cv::KeyPoint point;
+                                    point.pt.x = (float)jx;
+                                    point.pt.y = (float)ix;
+                                    point.response = fabs(value);
+                                    point.size = evolution[i].esigma;
+                                    point.octave = (int)evolution[i].octave;
+                                    point.class_id = i;
+
+                                    // We use the angle field for the sublevel value
+                                    // Then, we will replace this angle field with the main orientation
+                                    point.angle = static_cast<float>(evolution[i].sublevel);
+                                    kpts_par[i - 1].push_back(point);
+                            }
+                    }
+            }
+        }
+    }
+
+private:
+    std::vector<TEvolution>*  evolution_;
+    std::vector<std::vector<cv::KeyPoint> >* kpts_par_;
+    KAZEOptions options_;
+};
+
+/* ************************************************************************* */
 /**
  * @brief This method performs the detection of keypoints by using the normalized
  * score of the Hessian determinant through the nonlinear scale space
  * @param kpts Vector of keypoints
  * @note We compute features for each of the nonlinear scale space level in a different processing thread
  */
-void KAZEFeatures::Determinant_Hessian_Parallel(std::vector<cv::KeyPoint>& kpts)
+void KAZEFeatures::Determinant_Hessian(std::vector<cv::KeyPoint>& kpts)
 {
     int level = 0;
     float dist = 0.0, smax = 3.0;
@@ -283,10 +325,8 @@ void KAZEFeatures::Determinant_Hessian_Parallel(std::vector<cv::KeyPoint>& kpts)
         kpts_par_.push_back(aux);
     }
 
-    // TODO: Use cv::parallel_for_
-    for (int i = 1; i < (int)evolution_.size() - 1; i++) {
-        Find_Extremum_Threading(i);
-    }
+        cv::parallel_for_(cv::Range(1, (int)evolution_.size()-1),
+                                            FindExtremumKAZEInvoker(evolution_, kpts_par_, options_));
 
     // Now fill the vector of keypoints!!!
     for (int i = 0; i < (int)kpts_par_.size(); i++) {
@@ -343,63 +383,7 @@ void KAZEFeatures::Determinant_Hessian_Parallel(std::vector<cv::KeyPoint>& kpts)
     }
 }
 
-//*************************************************************************************
-//*************************************************************************************
-
-/**
- * @brief This method is called by the thread which is responsible of finding extrema
- * at a given nonlinear scale level
- * @param level Index in the nonlinear scale space evolution
- */
-void KAZEFeatures::Find_Extremum_Threading(const int& level) {
-
-    float value = 0.0;
-    bool is_extremum = false;
-
-    for (int ix = 1; ix < options.img_height - 1; ix++) {
-        for (int jx = 1; jx < options.img_width - 1; jx++) {
-
-            is_extremum = false;
-            value = *(evolution_[level].Ldet.ptr<float>(ix)+jx);
-
-            // Filter the points with the detector threshold
-            if (value > options.dthreshold) {
-                if (value >= *(evolution_[level].Ldet.ptr<float>(ix)+jx - 1)) {
-                    // First check on the same scale
-                    if (check_maximum_neighbourhood(evolution_[level].Ldet, 1, value, ix, jx, 1)) {
-                        // Now check on the lower scale
-                        if (check_maximum_neighbourhood(evolution_[level - 1].Ldet, 1, value, ix, jx, 0)) {
-                            // Now check on the upper scale
-                            if (check_maximum_neighbourhood(evolution_[level + 1].Ldet, 1, value, ix, jx, 0)) {
-                                is_extremum = true;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Add the point of interest!!
-            if (is_extremum == true) {
-                KeyPoint point;
-                point.pt.x = (float)jx;
-                point.pt.y = (float)ix;
-                point.response = fabs(value);
-                point.size = evolution_[level].esigma;
-                point.octave = (int)evolution_[level].octave;
-                point.class_id = level;
-
-                // We use the angle field for the sublevel value
-                // Then, we will replace this angle field with the main orientation
-                point.angle = evolution_[level].sublevel;
-                kpts_par_[level - 1].push_back(point);
-            }
-        }
-    }
-}
-
-//*************************************************************************************
-//*************************************************************************************
-
+/* ************************************************************************* */
 /**
  * @brief This method performs subpixel refinement of the detected keypoints
  * @param kpts Vector of detected keypoints
@@ -475,10 +459,10 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
         if (fabs(*(dst.ptr<float>(0))) <= 1.0f && fabs(*(dst.ptr<float>(1))) <= 1.0f && fabs(*(dst.ptr<float>(2))) <= 1.0f) {
             kpts_[i].pt.x += *(dst.ptr<float>(0));
             kpts_[i].pt.y += *(dst.ptr<float>(1));
-            dsc = kpts_[i].octave + (kpts_[i].angle + *(dst.ptr<float>(2))) / ((float)(options.nsublevels));
+                        dsc = kpts_[i].octave + (kpts_[i].angle + *(dst.ptr<float>(2))) / ((float)(options_.nsublevels));
 
             // In OpenCV the size of a keypoint is the diameter!!
-            kpts_[i].size = 2.0f*options.soffset*pow((float)2.0f, dsc);
+                        kpts_[i].size = 2.0f*options_.soffset*pow((float)2.0f, dsc);
             kpts_[i].angle = 0.0;
         }
         // Set the points to be deleted after the for loop
@@ -497,17 +481,15 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
     }
 }
 
-//*************************************************************************************
-//*************************************************************************************
-
+/* ************************************************************************* */
 class KAZE_Descriptor_Invoker : public cv::ParallelLoopBody
 {
 public:
-    KAZE_Descriptor_Invoker(std::vector<cv::KeyPoint> &kpts, cv::Mat &desc, std::vector<TEvolution>& evolution, const KAZEOptions& _options)
-        : _kpts(&kpts)
-        , _desc(&desc)
-        , _evolution(&evolution)
-        , options(_options)
+        KAZE_Descriptor_Invoker(std::vector<cv::KeyPoint> &kpts, cv::Mat &desc, std::vector<TEvolution>& evolution, const KAZEOptions& options)
+                : kpts_(&kpts)
+                , desc_(&desc)
+                , evolution_(&evolution)
+                , options_(options)
     {
     }
 
@@ -517,26 +499,26 @@ public:
 
     void operator() (const cv::Range& range) const
     {
-        std::vector<cv::KeyPoint> &kpts      = *_kpts;
-        cv::Mat                   &desc      = *_desc;
-        std::vector<TEvolution>   &evolution = *_evolution;
+                std::vector<cv::KeyPoint> &kpts      = *kpts_;
+                cv::Mat                   &desc      = *desc_;
+                std::vector<TEvolution>   &evolution = *evolution_;
 
         for (int i = range.start; i < range.end; i++)
         {
             kpts[i].angle = 0.0;
-            if (options.upright)
+                        if (options_.upright)
             {
                 kpts[i].angle = 0.0;
-                if (options.extended)
+                                if (options_.extended)
                     Get_KAZE_Upright_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
                 else
                     Get_KAZE_Upright_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
             }
             else
             {
-                KAZEFeatures::Compute_Main_Orientation(kpts[i], evolution, options);
+                                KAZEFeatures::Compute_Main_Orientation(kpts[i], evolution, options_);
 
-                if (options.extended)
+                                if (options_.extended)
                     Get_KAZE_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
                 else
                     Get_KAZE_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
@@ -549,12 +531,13 @@ private:
     void Get_KAZE_Upright_Descriptor_128(const cv::KeyPoint& kpt, float* desc) const;
     void Get_KAZE_Descriptor_128(const cv::KeyPoint& kpt, float *desc) const;
 
-    std::vector<cv::KeyPoint> * _kpts;
-    cv::Mat                   * _desc;
-    std::vector<TEvolution>   * _evolution;
-    KAZEOptions                 options;
+        std::vector<cv::KeyPoint> * kpts_;
+        cv::Mat                   * desc_;
+        std::vector<TEvolution>   * evolution_;
+        KAZEOptions                 options_;
 };
 
+/* ************************************************************************* */
 /**
  * @brief This method  computes the set of descriptors through the nonlinear scale space
  * @param kpts Vector of keypoints
@@ -562,20 +545,23 @@ private:
  */
 void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat &desc)
 {
+    for(size_t i = 0; i < kpts.size(); i++)
+    {
+        CV_Assert(0 <= kpts[i].class_id && kpts[i].class_id < static_cast<int>(evolution_.size()));
+    }
+
     // Allocate memory for the matrix of descriptors
-    if (options.extended == true) {
+        if (options_.extended == true) {
         desc = Mat::zeros((int)kpts.size(), 128, CV_32FC1);
     }
     else {
         desc = Mat::zeros((int)kpts.size(), 64, CV_32FC1);
     }
 
-    cv::parallel_for_(cv::Range(0, (int)kpts.size()), KAZE_Descriptor_Invoker(kpts, desc, evolution_, options));
+        cv::parallel_for_(cv::Range(0, (int)kpts.size()), KAZE_Descriptor_Invoker(kpts, desc, evolution_, options_));
 }
 
-//*************************************************************************************
-//*************************************************************************************
-
+/* ************************************************************************* */
 /**
  * @brief This method computes the main orientation for a given keypoint
  * @param kpt Input keypoint
@@ -651,9 +637,7 @@ void KAZEFeatures::Compute_Main_Orientation(cv::KeyPoint &kpt, const std::vector
     }
 }
 
-//*************************************************************************************
-//*************************************************************************************
-
+/* ************************************************************************* */
 /**
  * @brief This method computes the upright descriptor (not rotation invariant) of
  * the provided keypoint
@@ -673,7 +657,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_64(const cv::KeyPoint 
     float fx = 0.0, fy = 0.0, res1 = 0.0, res2 = 0.0, res3 = 0.0, res4 = 0.0;
     int dsize = 0, scale = 0, level = 0;
 
-    std::vector<TEvolution>& evolution_ = *_evolution;
+        std::vector<TEvolution>& evolution = *evolution_;
 
     // Subregion centers for the 4x4 gaussian weighting
     float cx = -0.5f, cy = 0.5f;
@@ -724,26 +708,26 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_64(const cv::KeyPoint 
                     y1 = (int)(sample_y - 0.5f);
                     x1 = (int)(sample_x - 0.5f);
 
-                    checkDescriptorLimits(x1, y1, options.img_width, options.img_height);
+                                        checkDescriptorLimits(x1, y1, options_.img_width, options_.img_height);
 
                     y2 = (int)(sample_y + 0.5f);
                     x2 = (int)(sample_x + 0.5f);
 
-                    checkDescriptorLimits(x2, y2, options.img_width, options.img_height);
+                                        checkDescriptorLimits(x2, y2, options_.img_width, options_.img_height);
 
                     fx = sample_x - x1;
                     fy = sample_y - y1;
 
-                    res1 = *(evolution_[level].Lx.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
+                                        res1 = *(evolution[level].Lx.ptr<float>(y1)+x1);
+                                        res2 = *(evolution[level].Lx.ptr<float>(y1)+x2);
+                                        res3 = *(evolution[level].Lx.ptr<float>(y2)+x1);
+                                        res4 = *(evolution[level].Lx.ptr<float>(y2)+x2);
                     rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
-                    res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
+                                        res1 = *(evolution[level].Ly.ptr<float>(y1)+x1);
+                                        res2 = *(evolution[level].Ly.ptr<float>(y1)+x2);
+                                        res3 = *(evolution[level].Ly.ptr<float>(y2)+x1);
+                                        res4 = *(evolution[level].Ly.ptr<float>(y2)+x2);
                     ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     rx = gauss_s1*rx;
@@ -779,15 +763,9 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_64(const cv::KeyPoint 
     for (i = 0; i < dsize; i++) {
         desc[i] /= len;
     }
-
-    if (options.use_clipping_normalilzation) {
-        clippingDescriptor(desc, dsize, options.clipping_normalization_niter, options.clipping_normalization_ratio);
-    }
 }
 
-//*************************************************************************************
-//*************************************************************************************
-
+/* ************************************************************************* */
 /**
  * @brief This method computes the descriptor of the provided keypoint given the
  * main orientation of the keypoint
@@ -807,7 +785,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_64(const cv::KeyPoint &kpt, fl
     int kx = 0, ky = 0, i = 0, j = 0, dcount = 0;
     int dsize = 0, scale = 0, level = 0;
 
-    std::vector<TEvolution>& evolution_ = *_evolution;
+        std::vector<TEvolution>& evolution = *evolution_;
 
     // Subregion centers for the 4x4 gaussian weighting
     float cx = -0.5f, cy = 0.5f;
@@ -862,26 +840,26 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_64(const cv::KeyPoint &kpt, fl
                     y1 = fRound(sample_y - 0.5f);
                     x1 = fRound(sample_x - 0.5f);
 
-                    checkDescriptorLimits(x1, y1, options.img_width, options.img_height);
+                                        checkDescriptorLimits(x1, y1, options_.img_width, options_.img_height);
 
                     y2 = (int)(sample_y + 0.5f);
                     x2 = (int)(sample_x + 0.5f);
 
-                    checkDescriptorLimits(x2, y2, options.img_width, options.img_height);
+                                        checkDescriptorLimits(x2, y2, options_.img_width, options_.img_height);
 
                     fx = sample_x - x1;
                     fy = sample_y - y1;
 
-                    res1 = *(evolution_[level].Lx.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
+                                        res1 = *(evolution[level].Lx.ptr<float>(y1)+x1);
+                                        res2 = *(evolution[level].Lx.ptr<float>(y1)+x2);
+                                        res3 = *(evolution[level].Lx.ptr<float>(y2)+x1);
+                                        res4 = *(evolution[level].Lx.ptr<float>(y2)+x2);
                     rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
-                    res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
+                                        res1 = *(evolution[level].Ly.ptr<float>(y1)+x1);
+                                        res2 = *(evolution[level].Ly.ptr<float>(y1)+x2);
+                                        res3 = *(evolution[level].Ly.ptr<float>(y2)+x1);
+                                        res4 = *(evolution[level].Ly.ptr<float>(y2)+x2);
                     ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     // Get the x and y derivatives on the rotated axis
@@ -914,15 +892,9 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_64(const cv::KeyPoint &kpt, fl
     for (i = 0; i < dsize; i++) {
         desc[i] /= len;
     }
-
-    if (options.use_clipping_normalilzation) {
-        clippingDescriptor(desc, dsize, options.clipping_normalization_niter, options.clipping_normalization_ratio);
-    }
 }
 
-//*************************************************************************************
-//*************************************************************************************
-
+/* ************************************************************************* */
 /**
  * @brief This method computes the extended upright descriptor (not rotation invariant) of
  * the provided keypoint
@@ -947,7 +919,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_128(const cv::KeyPoint
     // Subregion centers for the 4x4 gaussian weighting
     float cx = -0.5f, cy = 0.5f;
 
-    std::vector<TEvolution>& evolution_ = *_evolution;
+        std::vector<TEvolution>& evolution = *evolution_;
 
     // Set the descriptor size and the sample and pattern sizes
     dsize = 128;
@@ -998,26 +970,26 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_128(const cv::KeyPoint
                     y1 = (int)(sample_y - 0.5f);
                     x1 = (int)(sample_x - 0.5f);
 
-                    checkDescriptorLimits(x1, y1, options.img_width, options.img_height);
+                                        checkDescriptorLimits(x1, y1, options_.img_width, options_.img_height);
 
                     y2 = (int)(sample_y + 0.5f);
                     x2 = (int)(sample_x + 0.5f);
 
-                    checkDescriptorLimits(x2, y2, options.img_width, options.img_height);
+                                        checkDescriptorLimits(x2, y2, options_.img_width, options_.img_height);
 
                     fx = sample_x - x1;
                     fy = sample_y - y1;
 
-                    res1 = *(evolution_[level].Lx.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
+                                        res1 = *(evolution[level].Lx.ptr<float>(y1)+x1);
+                                        res2 = *(evolution[level].Lx.ptr<float>(y1)+x2);
+                                        res3 = *(evolution[level].Lx.ptr<float>(y2)+x1);
+                                        res4 = *(evolution[level].Lx.ptr<float>(y2)+x2);
                     rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
-                    res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
+                                        res1 = *(evolution[level].Ly.ptr<float>(y1)+x1);
+                                        res2 = *(evolution[level].Ly.ptr<float>(y1)+x2);
+                                        res3 = *(evolution[level].Ly.ptr<float>(y2)+x1);
+                                        res4 = *(evolution[level].Ly.ptr<float>(y2)+x2);
                     ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     rx = gauss_s1*rx;
@@ -1072,15 +1044,9 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_128(const cv::KeyPoint
     for (i = 0; i < dsize; i++) {
         desc[i] /= len;
     }
-
-    if (options.use_clipping_normalilzation) {
-        clippingDescriptor(desc, dsize, options.clipping_normalization_niter, options.clipping_normalization_ratio);
-    }
 }
 
-//*************************************************************************************
-//*************************************************************************************
-
+/* ************************************************************************* */
 /**
  * @brief This method computes the extended G-SURF descriptor of the provided keypoint
  * given the main orientation of the keypoint
@@ -1102,7 +1068,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const cv::KeyPoint &kpt, f
     int kx = 0, ky = 0, i = 0, j = 0, dcount = 0;
     int dsize = 0, scale = 0, level = 0;
 
-    std::vector<TEvolution>& evolution_ = *_evolution;
+        std::vector<TEvolution>& evolution = *evolution_;
 
     // Subregion centers for the 4x4 gaussian weighting
     float cx = -0.5f, cy = 0.5f;
@@ -1160,26 +1126,26 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const cv::KeyPoint &kpt, f
                     y1 = fRound(sample_y - 0.5f);
                     x1 = fRound(sample_x - 0.5f);
 
-                    checkDescriptorLimits(x1, y1, options.img_width, options.img_height);
+                                        checkDescriptorLimits(x1, y1, options_.img_width, options_.img_height);
 
                     y2 = (int)(sample_y + 0.5f);
                     x2 = (int)(sample_x + 0.5f);
 
-                    checkDescriptorLimits(x2, y2, options.img_width, options.img_height);
+                                        checkDescriptorLimits(x2, y2, options_.img_width, options_.img_height);
 
                     fx = sample_x - x1;
                     fy = sample_y - y1;
 
-                    res1 = *(evolution_[level].Lx.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Lx.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Lx.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Lx.ptr<float>(y2)+x2);
+                                        res1 = *(evolution[level].Lx.ptr<float>(y1)+x1);
+                                        res2 = *(evolution[level].Lx.ptr<float>(y1)+x2);
+                                        res3 = *(evolution[level].Lx.ptr<float>(y2)+x1);
+                                        res4 = *(evolution[level].Lx.ptr<float>(y2)+x2);
                     rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
-                    res1 = *(evolution_[level].Ly.ptr<float>(y1)+x1);
-                    res2 = *(evolution_[level].Ly.ptr<float>(y1)+x2);
-                    res3 = *(evolution_[level].Ly.ptr<float>(y2)+x1);
-                    res4 = *(evolution_[level].Ly.ptr<float>(y2)+x2);
+                                        res1 = *(evolution[level].Ly.ptr<float>(y1)+x1);
+                                        res2 = *(evolution[level].Ly.ptr<float>(y1)+x2);
+                                        res3 = *(evolution[level].Ly.ptr<float>(y2)+x1);
+                                        res4 = *(evolution[level].Ly.ptr<float>(y2)+x2);
                     ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     // Get the x and y derivatives on the rotated axis
@@ -1235,298 +1201,4 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const cv::KeyPoint &kpt, f
     for (i = 0; i < dsize; i++) {
         desc[i] /= len;
     }
-
-    if (options.use_clipping_normalilzation) {
-        clippingDescriptor(desc, dsize, options.clipping_normalization_niter, options.clipping_normalization_ratio);
-    }
-}
-
-//*************************************************************************************
-//*************************************************************************************
-
-/**
- * @brief This method performs a scalar non-linear diffusion step using AOS schemes
- * @param Ld Image at a given evolution step
- * @param Ldprev Image at a previous evolution step
- * @param c Conductivity image
- * @param stepsize Stepsize for the nonlinear diffusion evolution
- * @note If c is constant, the diffusion will be linear
- * If c is a matrix of the same size as Ld, the diffusion will be nonlinear
- * The stepsize can be arbitrarily large
- */
-void KAZEFeatures::AOS_Step_Scalar(cv::Mat &Ld, const cv::Mat &Ldprev, const cv::Mat &c, const float& stepsize) {
-
-    AOS_Rows(Ldprev, c, stepsize);
-    AOS_Columns(Ldprev, c, stepsize);
-
-    Ld = 0.5f*(Lty_ + Ltx_.t());
-}
-
-//*************************************************************************************
-//*************************************************************************************
-
-/**
- * @brief This method performs performs 1D-AOS for the image rows
- * @param Ldprev Image at a previous evolution step
- * @param c Conductivity image
- * @param stepsize Stepsize for the nonlinear diffusion evolution
- */
-void KAZEFeatures::AOS_Rows(const cv::Mat &Ldprev, const cv::Mat &c, const float& stepsize) {
-
-    // Operate on rows
-    for (int i = 0; i < qr_.rows; i++) {
-        for (int j = 0; j < qr_.cols; j++) {
-            *(qr_.ptr<float>(i)+j) = *(c.ptr<float>(i)+j) + *(c.ptr<float>(i + 1) + j);
-        }
-    }
-
-    for (int j = 0; j < py_.cols; j++) {
-        *(py_.ptr<float>(0) + j) = *(qr_.ptr<float>(0) + j);
-    }
-
-    for (int j = 0; j < py_.cols; j++) {
-        *(py_.ptr<float>(py_.rows - 1) + j) = *(qr_.ptr<float>(qr_.rows - 1) + j);
-    }
-
-    for (int i = 1; i < py_.rows - 1; i++) {
-        for (int j = 0; j < py_.cols; j++) {
-            *(py_.ptr<float>(i)+j) = *(qr_.ptr<float>(i - 1) + j) + *(qr_.ptr<float>(i)+j);
-        }
-    }
-
-    // a = 1 + t.*p; (p is -1*p)
-    // b = -t.*q;
-    ay_ = 1.0f + stepsize*py_; // p is -1*p
-    by_ = -stepsize*qr_;
-
-    // Do Thomas algorithm to solve the linear system of equations
-    Thomas(ay_, by_, Ldprev, Lty_);
-}
-
-//*************************************************************************************
-//*************************************************************************************
-
-/**
- * @brief This method performs performs 1D-AOS for the image columns
- * @param Ldprev Image at a previous evolution step
- * @param c Conductivity image
- * @param stepsize Stepsize for the nonlinear diffusion evolution
- */
-void KAZEFeatures::AOS_Columns(const cv::Mat &Ldprev, const cv::Mat &c, const float& stepsize) {
-
-    // Operate on columns
-    for (int j = 0; j < qc_.cols; j++) {
-        for (int i = 0; i < qc_.rows; i++) {
-            *(qc_.ptr<float>(i)+j) = *(c.ptr<float>(i)+j) + *(c.ptr<float>(i)+j + 1);
-        }
-    }
-
-    for (int i = 0; i < px_.rows; i++) {
-        *(px_.ptr<float>(i)) = *(qc_.ptr<float>(i));
-    }
-
-    for (int i = 0; i < px_.rows; i++) {
-        *(px_.ptr<float>(i)+px_.cols - 1) = *(qc_.ptr<float>(i)+qc_.cols - 1);
-    }
-
-    for (int j = 1; j < px_.cols - 1; j++) {
-        for (int i = 0; i < px_.rows; i++) {
-            *(px_.ptr<float>(i)+j) = *(qc_.ptr<float>(i)+j - 1) + *(qc_.ptr<float>(i)+j);
-        }
-    }
-
-    // a = 1 + t.*p';
-    ax_ = 1.0f + stepsize*px_.t();
-
-    // b = -t.*q';
-    bx_ = -stepsize*qc_.t();
-
-    // But take care since we need to transpose the solution!!
-    Mat Ldprevt = Ldprev.t();
-
-    // Do Thomas algorithm to solve the linear system of equations
-    Thomas(ax_, bx_, Ldprevt, Ltx_);
-}
-
-//*************************************************************************************
-//*************************************************************************************
-
-/**
- * @brief This method does the Thomas algorithm for solving a tridiagonal linear system
- * @note The matrix A must be strictly diagonally dominant for a stable solution
- */
-void KAZEFeatures::Thomas(const cv::Mat &a, const cv::Mat &b, const cv::Mat &Ld, cv::Mat &x) {
-
-    // Auxiliary variables
-    int n = a.rows;
-    Mat m = cv::Mat::zeros(a.rows, a.cols, CV_32F);
-    Mat l = cv::Mat::zeros(b.rows, b.cols, CV_32F);
-    Mat y = cv::Mat::zeros(Ld.rows, Ld.cols, CV_32F);
-
-    /** A*x = d;																		   	   */
-    /**	/ a1 b1  0  0 0  ...    0 \  / x1 \ = / d1 \										   */
-    /**	| c1 a2 b2  0 0  ...    0 |  | x2 | = | d2 |										   */
-    /**	|  0 c2 a3 b3 0  ...    0 |  | x3 | = | d3 |										   */
-    /**	|  :  :  :  : 0  ...    0 |  |  : | = |  : |										   */
-    /**	|  :  :  :  : 0  cn-1  an |  | xn | = | dn |										   */
-
-    /** 1. LU decomposition
-     / L = / 1				 \		U = / m1 r1			   \
-     /     | l1 1 			 |	        |    m2 r2		   |
-     /     |    l2 1          |			|		m3 r3	   |
-     /	  |     : : :        |			|       :  :  :	   |
-     /	  \           ln-1 1 /			\				mn /	*/
-
-    for (int j = 0; j < m.cols; j++) {
-        *(m.ptr<float>(0) + j) = *(a.ptr<float>(0) + j);
-    }
-
-    for (int j = 0; j < y.cols; j++) {
-        *(y.ptr<float>(0) + j) = *(Ld.ptr<float>(0) + j);
-    }
-
-    // 1. Forward substitution L*y = d for y
-    for (int k = 1; k < n; k++) {
-        for (int j = 0; j < l.cols; j++) {
-            *(l.ptr<float>(k - 1) + j) = *(b.ptr<float>(k - 1) + j) / *(m.ptr<float>(k - 1) + j);
-        }
-
-        for (int j = 0; j < m.cols; j++) {
-            *(m.ptr<float>(k)+j) = *(a.ptr<float>(k)+j) - *(l.ptr<float>(k - 1) + j)*(*(b.ptr<float>(k - 1) + j));
-        }
-
-        for (int j = 0; j < y.cols; j++) {
-            *(y.ptr<float>(k)+j) = *(Ld.ptr<float>(k)+j) - *(l.ptr<float>(k - 1) + j)*(*(y.ptr<float>(k - 1) + j));
-        }
-    }
-
-    // 2. Backward substitution U*x = y
-    for (int j = 0; j < y.cols; j++) {
-        *(x.ptr<float>(n - 1) + j) = (*(y.ptr<float>(n - 1) + j)) / (*(m.ptr<float>(n - 1) + j));
-    }
-
-    for (int i = n - 2; i >= 0; i--) {
-        for (int j = 0; j < x.cols; j++) {
-            *(x.ptr<float>(i)+j) = (*(y.ptr<float>(i)+j) - (*(b.ptr<float>(i)+j))*(*(x.ptr<float>(i + 1) + j))) / (*(m.ptr<float>(i)+j));
-        }
-    }
-}
-
-//*************************************************************************************
-//*************************************************************************************
-
-/**
- * @brief This function computes the angle from the vector given by (X Y). From 0 to 2*Pi
- */
-inline float getAngle(const float& x, const float& y) {
-
-    if (x >= 0 && y >= 0)
-    {
-        return atan(y / x);
-    }
-
-    if (x < 0 && y >= 0) {
-        return (float)CV_PI - atan(-y / x);
-    }
-
-    if (x < 0 && y < 0) {
-        return (float)CV_PI + atan(y / x);
-    }
-
-    if (x >= 0 && y < 0) {
-        return 2.0f * (float)CV_PI - atan(-y / x);
-    }
-
-    return 0;
-}
-
-//*************************************************************************************
-//*************************************************************************************
-
-/**
- * @brief This function performs descriptor clipping
- * @param desc_ Pointer to the descriptor vector
- * @param dsize Size of the descriptor vector
- * @param iter Number of iterations
- * @param ratio Clipping ratio
- */
-inline void clippingDescriptor(float *desc, const int& dsize, const int& niter, const float& ratio) {
-
-    float cratio = ratio / sqrtf(static_cast<float>(dsize));
-    float len = 0.0;
-
-    for (int i = 0; i < niter; i++) {
-        len = 0.0;
-        for (int j = 0; j < dsize; j++) {
-            if (desc[j] > cratio) {
-                desc[j] = cratio;
-            }
-            else if (desc[j] < -cratio) {
-                desc[j] = -cratio;
-            }
-            len += desc[j] * desc[j];
-        }
-
-        // Normalize again
-        len = sqrt(len);
-
-        for (int j = 0; j < dsize; j++) {
-            desc[j] = desc[j] / len;
-        }
-    }
-}
-
-//**************************************************************************************
-//**************************************************************************************
-
-/**
- * @brief This function computes the value of a 2D Gaussian function
- * @param x X Position
- * @param y Y Position
- * @param sig Standard Deviation
- */
-inline float gaussian(const float& x, const float& y, const float& sig) {
-    return exp(-(x*x + y*y) / (2.0f*sig*sig));
-}
-
-//**************************************************************************************
-//**************************************************************************************
-
-/**
- * @brief This function checks descriptor limits
- * @param x X Position
- * @param y Y Position
- * @param width Image width
- * @param height Image height
- */
-inline void checkDescriptorLimits(int &x, int &y, const int& width, const int& height) {
-
-    if (x < 0) {
-        x = 0;
-    }
-
-    if (y < 0) {
-        y = 0;
-    }
-
-    if (x > width - 1) {
-        x = width - 1;
-    }
-
-    if (y > height - 1) {
-        y = height - 1;
-    }
-}
-
-//*************************************************************************************
-//*************************************************************************************
-
-/**
- * @brief This funtion rounds float to nearest integer
- * @param flt Input float
- * @return dst Nearest integer
- */
-inline int fRound(const float& flt)
-{
-    return (int)(flt + 0.5f);
 }

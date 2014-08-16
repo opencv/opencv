@@ -78,38 +78,6 @@ extern const float icv8x32fTab_cv[];
 extern const float icv8x32fSqrTab[];
 #define CV_8TO32F_SQR(x)  icv8x32fSqrTab[(x)+128]
 
-namespace cv
-{
-
-static inline Point normalizeAnchor( Point anchor, Size ksize )
-{
-    if( anchor.x == -1 )
-        anchor.x = ksize.width/2;
-    if( anchor.y == -1 )
-        anchor.y = ksize.height/2;
-    CV_Assert( anchor.inside(Rect(0, 0, ksize.width, ksize.height)) );
-    return anchor;
-}
-
-void preprocess2DKernel( const Mat& kernel, std::vector<Point>& coords, std::vector<uchar>& coeffs );
-void crossCorr( const Mat& src, const Mat& templ, Mat& dst,
-                Size corrsize, int ctype,
-                Point anchor=Point(0,0), double delta=0,
-                int borderType=BORDER_REFLECT_101 );
-
-}
-
-typedef struct CvPyramid
-{
-    uchar **ptr;
-    CvSize *sz;
-    double *rate;
-    int *step;
-    uchar *state;
-    int level;
-}
-CvPyramid;
-
 #define  CV_COPY( dst, src, len, idx ) \
     for( (idx) = 0; (idx) < (len); (idx)++) (dst)[idx] = (src)[idx]
 
@@ -123,5 +91,6 @@ CvPyramid;
 #define  CV_CALC_MAX(a, b) if((a) < (b)) (a) = (b)
 
 #include "_geom.h"
+#include "filterengine.hpp"
 
 #endif /*__OPENCV_CV_INTERNAL_H_*/

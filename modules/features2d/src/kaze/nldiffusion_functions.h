@@ -8,12 +8,12 @@
  * @author Pablo F. Alcantarilla
  */
 
-#ifndef KAZE_NLDIFFUSION_FUNCTIONS_H
-#define KAZE_NLDIFFUSION_FUNCTIONS_H
+#ifndef __OPENCV_FEATURES_2D_NLDIFFUSION_FUNCTIONS_H__
+#define __OPENCV_FEATURES_2D_NLDIFFUSION_FUNCTIONS_H__
 
 /* ************************************************************************* */
 // Includes
-#include "precomp.hpp"
+#include "../precomp.hpp"
 
 /* ************************************************************************* */
 // Declaration of functions

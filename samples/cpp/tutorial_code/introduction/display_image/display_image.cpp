@@ -17,7 +17,7 @@ int main( int argc, char** argv )
     Mat image;
     image = imread(argv[1], IMREAD_COLOR); // Read the file
 
-    if(! image.data )                      // Check for invalid input
+    if( image.empty() )                      // Check for invalid input
     {
         cout <<  "Could not open or find the image" << std::endl ;
         return -1;

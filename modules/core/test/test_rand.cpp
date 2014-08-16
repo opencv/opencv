@@ -37,8 +37,8 @@ bool Core_RandTest::check_pdf(const Mat& hist, double scale,
                             int dist_type, double& refval, double& realval)
 {
     Mat hist0(hist.size(), CV_32F);
-    const int* H = (const int*)hist.data;
-    float* H0 = ((float*)hist0.data);
+    const int* H = hist.ptr<int>();
+    float* H0 = hist0.ptr<float>();
     int i, hsz = hist.cols;
 
     double sum = 0;
@@ -183,7 +183,7 @@ void Core_RandTest::run( int )
 
         for( c = 0; c < cn; c++ )
         {
-            const uchar* data = arr[0].data;
+            const uchar* data = arr[0].ptr();
             int* H = hist[c].ptr<int>();
             int HSZ = hist[c].cols;
             double minVal = dist_type == CV_RAND_UNI ? A[c] : A[c] - B[c]*4;
@@ -255,7 +255,7 @@ void Core_RandTest::run( int )
             int SDIM = cvtest::randInt(rng) % (MAX_SDIM-1) + 2;
             int N0 = (SZ*cn/SDIM), n = 0;
             double r2 = 0;
-            const uchar* data = arr[0].data;
+            const uchar* data = arr[0].ptr();
             double scale[4], delta[4];
             for( c = 0; c < cn; c++ )
             {

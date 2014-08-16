@@ -90,11 +90,8 @@ __kernel void calcSum(__global const uchar * srcptr, int src_step, int src_offse
         T src = loadpix(srcptr + src_index);
 
         tmp = convertToWT(src);
-#if wdepth == 4
-        accumulator = mad24(tmp, tmp, accumulator);
-#else
+
         accumulator = mad(tmp, tmp, accumulator);
-#endif
     }
 
     if (lid < WGS2_ALIGNED)
@@ -165,11 +162,9 @@ __kernel void matchTemplate_Naive_CCORR(__global const uchar * srcptr, int src_s
                 {
                     T temp = (T)(template[j]);
                     T src = *(__global const T*)(srcptr + ind + j*(int)sizeof(T1));
-#if wdepth == 4
-                        sum = mad24(convertToWT(src), convertToWT(temp), sum);
-#else
-                        sum = mad(convertToWT(src), convertToWT(temp), sum);
-#endif
+
+                    sum = mad(convertToWT(src), convertToWT(temp), sum);
+
                 }
             ind += src_step;
             template = (__global const T1 *)((__global const uchar *)template + template_step);
@@ -195,12 +190,7 @@ __kernel void matchTemplate_Naive_CCORR(__global const uchar * srcptr, int src_s
                     #pragma unroll
                     for (int cx=0, x = x0; cx < PIX_PER_WI_X && x < dst_cols; ++cx, ++x)
                     {
-
-#if wdepth == 4
-                        sum[cx] = mad24(convertToWT1(src[j+cx]), convertToWT1(template[j]), sum[cx]);
-#else
                         sum[cx] = mad(convertToWT1(src[j+cx]), convertToWT1(template[j]), sum[cx]);
-#endif
                     }
                 }
 
@@ -237,11 +227,8 @@ __kernel void matchTemplate_Naive_CCORR(__global const uchar * srcptr, int src_s
             {
                 T src      = loadpix(srcptr      + mad24(y+i, src_step,    mad24(x+j, TSIZE, src_offset)));
                 T template = loadpix(templateptr + mad24(i, template_step, mad24(j, TSIZE, template_offset)));
-#if wdepth == 4
-                sum = mad24(convertToWT(src), convertToWT(template), sum);
-#else
+
                 sum = mad(convertToWT(src), convertToWT(template), sum);
-#endif
             }
         }
 
@@ -296,11 +283,8 @@ __kernel void matchTemplate_Naive_SQDIFF(__global const uchar * srcptr, int src_
                 T template = loadpix(templateptr + mad24(i, template_step, mad24(j, TSIZE, template_offset)));
 
                 value = convertToWT(src) - convertToWT(template);
-#if wdepth == 4
-                sum = mad24(value, value, sum);
-#else
+
                 sum = mad(value, value, sum);
-#endif
             }
         }
 

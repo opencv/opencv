@@ -44,7 +44,7 @@
 
 #include "cascadedetect.hpp"
 #include "opencv2/objdetect/objdetect_c.h"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_objdetect.hpp"
 
 namespace cv
 {
@@ -503,7 +503,7 @@ bool FeatureEvaluator::setImage( InputArray _image, const std::vector<float>& _s
         for (i = 0; i < nscales; i++)
         {
             const ScaleData& s = scaleData->at(i);
-            Mat dst(s.szi.height - 1, s.szi.width - 1, CV_8U, rbuf.data);
+            Mat dst(s.szi.height - 1, s.szi.width - 1, CV_8U, rbuf.ptr());
             resize(image, dst, dst.size(), 1. / s.scale, 1. / s.scale, INTER_LINEAR);
             computeChannels((int)i, dst);
         }

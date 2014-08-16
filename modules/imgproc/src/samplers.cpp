@@ -392,7 +392,7 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
 
     if( ippfunc)
     {
-        if (ippfunc(image.data, (int)image.step, src_size, patch.data,
+        if (ippfunc(image.ptr(), (int)image.step, src_size, patch.ptr(),
                     (int)patch.step, win_size, icenter, &minpt, &maxpt) >= 0 )
             return;
         setIppErrorStatus();
@@ -401,13 +401,13 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
 
     if( depth == CV_8U && ddepth == CV_8U )
         getRectSubPix_Cn_<uchar, uchar, int, scale_fixpt, cast_8u>
-        (image.data, image.step, image.size(), patch.data, patch.step, patch.size(), center, cn);
+        (image.ptr(), image.step, image.size(), patch.ptr(), patch.step, patch.size(), center, cn);
     else if( depth == CV_8U && ddepth == CV_32F )
         getRectSubPix_8u32f
-        (image.data, image.step, image.size(), (float*)patch.data, patch.step, patch.size(), center, cn);
+        (image.ptr(), image.step, image.size(), patch.ptr<float>(), patch.step, patch.size(), center, cn);
     else if( depth == CV_32F && ddepth == CV_32F )
         getRectSubPix_Cn_<float, float, float, nop<float>, nop<float> >
-        ((const float*)image.data, image.step, image.size(), (float*)patch.data, patch.step, patch.size(), center, cn);
+        (image.ptr<float>(), image.step, image.size(), patch.ptr<float>(), patch.step, patch.size(), center, cn);
     else
         CV_Error( CV_StsUnsupportedFormat, "Unsupported combination of input and output formats");
 }
@@ -427,8 +427,8 @@ cvGetRectSubPix( const void* srcarr, void* dstarr, CvPoint2D32f center )
 CV_IMPL void
 cvGetQuadrangleSubPix( const void* srcarr, void* dstarr, const CvMat* mat )
 {
-    cv::Mat src = cv::cvarrToMat(srcarr), m = cv::cvarrToMat(mat);
-    const cv::Mat dst = cv::cvarrToMat(dstarr);
+    const cv::Mat src = cv::cvarrToMat(srcarr), m = cv::cvarrToMat(mat);
+    cv::Mat dst = cv::cvarrToMat(dstarr);
 
     CV_Assert( src.channels() == dst.channels() );
 
@@ -442,8 +442,8 @@ cvGetQuadrangleSubPix( const void* srcarr, void* dstarr, const CvMat* mat )
     matrix[5] -= matrix[3]*dx + matrix[4]*dy;
 
     if( src.depth() == CV_8U && dst.depth() == CV_32F )
-        cv::getQuadrangleSubPix_8u32f_CnR( src.data, src.step, src.size(),
-                                           (float*)dst.data, dst.step, dst.size(),
+        cv::getQuadrangleSubPix_8u32f_CnR( src.ptr(), src.step, src.size(),
+                                           dst.ptr<float>(), dst.step, dst.size(),
                                            matrix, src.channels());
     else
     {

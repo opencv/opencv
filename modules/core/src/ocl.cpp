@@ -57,6 +57,28 @@
 # endif
 #endif
 
+
+// TODO Move to some common place
+static bool getBoolParameter(const char* name, bool defaultValue)
+{
+    const char* envValue = getenv(name);
+    if (envValue == NULL)
+    {
+        return defaultValue;
+    }
+    cv::String value = envValue;
+    if (value == "1" || value == "True" || value == "true" || value == "TRUE")
+    {
+        return true;
+    }
+    if (value == "0" || value == "False" || value == "false" || value == "FALSE")
+    {
+        return false;
+    }
+    CV_ErrorNoReturn(cv::Error::StsBadArg, cv::format("Invalid value for %s parameter: %s", name, value.c_str()));
+}
+
+
 // TODO Move to some common place
 static size_t getConfigurationParameterForSize(const char* name, size_t defaultValue)
 {
@@ -1305,7 +1327,18 @@ OCL_FUNC(cl_int, clReleaseEvent, (cl_event event), (event))
 #ifdef _DEBUG
 #define CV_OclDbgAssert CV_DbgAssert
 #else
-#define CV_OclDbgAssert(expr) (void)(expr)
+static bool isRaiseError()
+{
+    static bool initialized = false;
+    static bool value = false;
+    if (!initialized)
+    {
+        value = getBoolParameter("OPENCV_OPENCL_RAISE_ERROR", false);
+        initialized = true;
+    }
+    return value;
+}
+#define CV_OclDbgAssert(expr) do { if (isRaiseError()) { CV_Assert(expr); } else { (void)(expr); } } while ((void)0, 0)
 #endif
 
 namespace cv { namespace ocl {
@@ -2717,7 +2750,7 @@ KernelArg::KernelArg(int _flags, UMat* _m, int _wscale, int _iwscale, const void
 KernelArg KernelArg::Constant(const Mat& m)
 {
     CV_Assert(m.isContinuous());
-    return KernelArg(CONSTANT, 0, 0, 0, m.data, m.total()*m.elemSize());
+    return KernelArg(CONSTANT, 0, 0, 0, m.ptr(), m.total()*m.elemSize());
 }
 
 /////////////////////////////////////////// Kernel /////////////////////////////////////////////
@@ -4364,7 +4397,7 @@ template <typename T>
 static std::string kerToStr(const Mat & k)
 {
     int width = k.cols - 1, depth = k.depth();
-    const T * const data = reinterpret_cast<const T *>(k.data);
+    const T * const data = k.ptr<T>();
 
     std::ostringstream stream;
     stream.precision(10);
@@ -4709,6 +4742,18 @@ Image2D::~Image2D()
 void* Image2D::ptr() const
 {
     return p ? p->handle : 0;
+}
+
+bool isPerformanceCheckBypassed()
+{
+    static bool initialized = false;
+    static bool value = false;
+    if (!initialized)
+    {
+        value = getBoolParameter("OPENCV_OPENCL_PERF_CHECK_BYPASS", false);
+        initialized = true;
+    }
+    return value;
 }
 
 }}
