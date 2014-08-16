@@ -86,10 +86,10 @@ CV_EXPORTS double getMinVal(int depth);
 CV_EXPORTS double getMaxVal(int depth);
 
 CV_EXPORTS Size randomSize(RNG& rng, double maxSizeLog);
-CV_EXPORTS void randomSize(RNG& rng, int minDims, int maxDims, double maxSizeLog, vector<int>& sz);
+CV_EXPORTS void randomSize(RNG& rng, int minDims, int maxDims, double maxSizeLog, std::vector<int>& sz);
 CV_EXPORTS int randomType(RNG& rng, int typeMask, int minChannels, int maxChannels);
 CV_EXPORTS Mat randomMat(RNG& rng, Size size, int type, double minVal, double maxVal, bool useRoi);
-CV_EXPORTS Mat randomMat(RNG& rng, const vector<int>& size, int type, double minVal, double maxVal, bool useRoi);
+CV_EXPORTS Mat randomMat(RNG& rng, const std::vector<int>& size, int type, double minVal, double maxVal, bool useRoi);
 CV_EXPORTS void add(const Mat& a, double alpha, const Mat& b, double beta,
                       Scalar gamma, Mat& c, int ctype, bool calcAbs=false);
 CV_EXPORTS void multiply(const Mat& a, const Mat& b, Mat& c, double alpha=1);
@@ -105,7 +105,7 @@ CV_EXPORTS void insert( const Mat& plane, Mat& a, int coi );
 
 // checks that the array does not have NaNs and/or Infs and all the elements are
 // within [min_val,max_val). idx is the index of the first "bad" element.
-CV_EXPORTS int check( const Mat& data, double min_val, double max_val, vector<int>* idx );
+CV_EXPORTS int check( const Mat& data, double min_val, double max_val, std::vector<int>* idx );
 
 // modifies values that are close to zero
 CV_EXPORTS void  patchZeros( Mat& mat, double level );
@@ -126,20 +126,20 @@ CV_EXPORTS Mat calcLaplaceKernel2D( int aperture_size );
 CV_EXPORTS void initUndistortMap( const Mat& a, const Mat& k, Size sz, Mat& mapx, Mat& mapy );
 
 CV_EXPORTS void minMaxLoc(const Mat& src, double* minval, double* maxval,
-                          vector<int>* minloc, vector<int>* maxloc, const Mat& mask=Mat());
+                          std::vector<int>* minloc, std::vector<int>* maxloc, const Mat& mask=Mat());
 CV_EXPORTS double norm(InputArray src, int normType, InputArray mask=noArray());
 CV_EXPORTS double norm(InputArray src1, InputArray src2, int normType, InputArray mask=noArray());
 CV_EXPORTS Scalar mean(const Mat& src, const Mat& mask=Mat());
 CV_EXPORTS double PSNR(InputArray src1, InputArray src2);
 
-CV_EXPORTS bool cmpUlps(const Mat& data, const Mat& refdata, int expMaxDiff, double* realMaxDiff, vector<int>* idx);
+CV_EXPORTS bool cmpUlps(const Mat& data, const Mat& refdata, int expMaxDiff, double* realMaxDiff, std::vector<int>* idx);
 
 // compares two arrays. max_diff is the maximum actual difference,
 // success_err_level is maximum allowed difference, idx is the index of the first
 // element for which difference is >success_err_level
 // (or index of element with the maximum difference)
 CV_EXPORTS int cmpEps( const Mat& data, const Mat& refdata, double* max_diff,
-                       double success_err_level, vector<int>* idx,
+                       double success_err_level, std::vector<int>* idx,
                        bool element_wise_relative_error );
 
 // a wrapper for the previous function. in case of error prints the message to log file.
@@ -181,7 +181,7 @@ public:
 
     double maxdiff;
     double realmaxdiff;
-    vector<int> loc0;
+    std::vector<int> loc0;
     int context;
 };
 
@@ -449,7 +449,7 @@ protected:
     virtual int validate_test_results( int test_case_idx );
 
     virtual void prepare_to_validation( int test_case_idx );
-    virtual void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
+    virtual void get_test_array_types_and_sizes( int test_case_idx, std::vector<std::vector<Size> >& sizes, std::vector<std::vector<int> >& types );
     virtual void fill_array( int test_case_idx, int i, int j, Mat& arr );
     virtual void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
     virtual double get_success_error_level( int test_case_idx, int i, int j );
@@ -464,8 +464,8 @@ protected:
 
     enum { INPUT, INPUT_OUTPUT, OUTPUT, REF_INPUT_OUTPUT, REF_OUTPUT, TEMP, MASK, MAX_ARR };
 
-    vector<vector<void*> > test_array;
-    vector<vector<Mat> > test_mat;
+    std::vector<std::vector<void*> > test_array;
+    std::vector<std::vector<Mat> > test_mat;
     float buf[4];
 };
 

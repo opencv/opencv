@@ -64,7 +64,7 @@ class CV_EXPORTS _OutputArray;
 //////////////////////// Input/Output Array Arguments /////////////////////////////////
 
 /*!
- Proxy datatype for passing Mat's and vector<>'s as input parameters
+ Proxy datatype for passing Mat's and std::vector<>'s as input parameters
  */
 class CV_EXPORTS _InputArray
 {
@@ -153,7 +153,7 @@ protected:
 
 
 /*!
- Proxy datatype for passing Mat's and vector<>'s as input parameters
+ Proxy datatype for passing Mat's and std::vector<>'s as input parameters
  */
 class CV_EXPORTS _OutputArray : public _InputArray
 {

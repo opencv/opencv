@@ -70,7 +70,7 @@
 // Example usage:
 // WImageBuffer3_b  im(5,7);  // Make a 5X7 3 channel image of type uchar
 // WImageView3_b  sub_im(im, 2,2, 3,3); // 3X3 submatrix
-// vector<float> vec(10, 3.0f);
+// std::vector<float> vec(10, 3.0f);
 // WImageView1_f user_im(&vec[0], 2, 5);  // 2X5 image w/ supplied data
 //
 // im.SetZero();  // same as cvSetZero(im.Ipl())

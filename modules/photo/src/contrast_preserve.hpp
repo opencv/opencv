@@ -58,7 +58,7 @@ class Decolor
     public:
         float sigma;
         void init();
-        vector<double> product(vector < vector<int> > &comb, vector <double> &initRGB);
+        std::vector<double> product(vector < std::vector<int> > &comb, vector <double> &initRGB);
         double energyCalcu(vector <double> &Cg, vector < vector <double> > &polyGrad, vector <double> &wei);
         void singleChannelGradx(const Mat &img, Mat& dest);
         void singleChannelGrady(const Mat &img, Mat& dest);
@@ -120,7 +120,7 @@ void Decolor::init()
     sigma = 0.02f;
 }
 
-vector<double> Decolor::product(vector < vector<int> > &comb, vector <double> &initRGB)
+vector<double> Decolor::product(vector < std::vector<int> > &comb, vector <double> &initRGB)
 {
     vector <double> res;
     double dp;

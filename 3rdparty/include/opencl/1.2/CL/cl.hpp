@@ -743,7 +743,7 @@ public:
      *
      *  \param vec the vector to copy.
      */
-    vector(const vector<T, N>& vec) : 
+    vector(const std::vector<T, N>& vec) : 
         size_(vec.size_)
     {
         if (size_ != 0) {	
@@ -772,7 +772,7 @@ public:
      *
      *  \returns a reference to this.
      */
-    vector<T, N>& operator=(const vector<T, N>& rhs)
+    std::vector<T, N>& operator=(const std::vector<T, N>& rhs)
     {
         if (this == &rhs) {
             return *this;
@@ -876,7 +876,7 @@ public:
     class iterator
     {
     private:
-        const vector<T,N> *vec_;
+        const std::vector<T,N> *vec_;
         int index_;
 
         /**
@@ -884,7 +884,7 @@ public:
          * to the vector it iterates over rather than taking 
          * the vector by copy.
          */
-        iterator (const vector<T,N> &vec, int index) :
+        iterator (const std::vector<T,N> &vec, int index) :
             vec_(&vec)
         {            
             if( !vec.empty() ) {
@@ -3185,7 +3185,7 @@ public:
         static PFN_clCreateFromD3D10BufferKHR pfn_clCreateFromD3D10BufferKHR = NULL;
 
 #if defined(CL_VERSION_1_2)
-        vector<cl_context_properties> props = context.getInfo<CL_CONTEXT_PROPERTIES>();
+        std::vector<cl_context_properties> props = context.getInfo<CL_CONTEXT_PROPERTIES>();
         cl_platform platform = -1;
         for( int i = 0; i < props.size(); ++i ) {
             if( props[i] == CL_CONTEXT_PLATFORM ) {

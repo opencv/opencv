@@ -177,17 +177,17 @@ namespace ml
             WorkData(const Ptr<TrainData>& _data);
 
             Ptr<TrainData> data;
-            vector<WNode> wnodes;
-            vector<WSplit> wsplits;
-            vector<int> wsubsets;
-            vector<double> cv_Tn;
-            vector<double> cv_node_risk;
-            vector<double> cv_node_error;
-            vector<int> cv_labels;
-            vector<double> sample_weights;
-            vector<int> cat_responses;
-            vector<double> ord_responses;
-            vector<int> sidx;
+            std::vector<WNode> wnodes;
+            std::vector<WSplit> wsplits;
+            std::vector<int> wsubsets;
+            std::vector<double> cv_Tn;
+            std::vector<double> cv_node_risk;
+            std::vector<double> cv_node_error;
+            std::vector<int> cv_labels;
+            std::vector<double> sample_weights;
+            std::vector<int> cat_responses;
+            std::vector<double> ord_responses;
+            std::vector<int> sidx;
             int maxSubsetSize;
         };
 
@@ -209,22 +209,22 @@ namespace ml
         virtual void initCompVarIdx();
         virtual bool train( const Ptr<TrainData>& trainData, int flags );
 
-        virtual int addTree( const vector<int>& sidx );
-        virtual int addNodeAndTrySplit( int parent, const vector<int>& sidx );
-        virtual const vector<int>& getActiveVars();
-        virtual int findBestSplit( const vector<int>& _sidx );
-        virtual void calcValue( int nidx, const vector<int>& _sidx );
+        virtual int addTree( const std::vector<int>& sidx );
+        virtual int addNodeAndTrySplit( int parent, const std::vector<int>& sidx );
+        virtual const std::vector<int>& getActiveVars();
+        virtual int findBestSplit( const std::vector<int>& _sidx );
+        virtual void calcValue( int nidx, const std::vector<int>& _sidx );
 
-        virtual WSplit findSplitOrdClass( int vi, const vector<int>& _sidx, double initQuality );
+        virtual WSplit findSplitOrdClass( int vi, const std::vector<int>& _sidx, double initQuality );
 
         // simple k-means, slightly modified to take into account the "weight" (L1-norm) of each vector.
         virtual void clusterCategories( const double* vectors, int n, int m, double* csums, int k, int* labels );
-        virtual WSplit findSplitCatClass( int vi, const vector<int>& _sidx, double initQuality, int* subset );
+        virtual WSplit findSplitCatClass( int vi, const std::vector<int>& _sidx, double initQuality, int* subset );
 
-        virtual WSplit findSplitOrdReg( int vi, const vector<int>& _sidx, double initQuality );
-        virtual WSplit findSplitCatReg( int vi, const vector<int>& _sidx, double initQuality, int* subset );
+        virtual WSplit findSplitOrdReg( int vi, const std::vector<int>& _sidx, double initQuality );
+        virtual WSplit findSplitCatReg( int vi, const std::vector<int>& _sidx, double initQuality, int* subset );
 
-        virtual int calcDir( int splitidx, const vector<int>& _sidx, vector<int>& _sleft, vector<int>& _sright );
+        virtual int calcDir( int splitidx, const std::vector<int>& _sidx, std::vector<int>& _sleft, std::vector<int>& _sright );
         virtual int pruneCV( int root );
 
         virtual double updateTreeRNC( int root, double T, int fold );
@@ -252,17 +252,17 @@ namespace ml
 
         Params params0, params;
 
-        vector<int> varIdx;
-        vector<int> compVarIdx;
-        vector<uchar> varType;
-        vector<Vec2i> catOfs;
-        vector<int> catMap;
-        vector<int> roots;
-        vector<Node> nodes;
-        vector<Split> splits;
-        vector<int> subsets;
-        vector<int> classLabels;
-        vector<float> missingSubst;
+        std::vector<int> varIdx;
+        std::vector<int> compVarIdx;
+        std::vector<uchar> varType;
+        std::vector<Vec2i> catOfs;
+        std::vector<int> catMap;
+        std::vector<int> roots;
+        std::vector<Node> nodes;
+        std::vector<Split> splits;
+        std::vector<int> subsets;
+        std::vector<int> classLabels;
+        std::vector<float> missingSubst;
         bool _isClassifier;
 
         Ptr<WorkData> w;
