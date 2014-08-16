@@ -41,7 +41,7 @@
  //M*/
 
 #include "precomp.hpp"
-
+#include <opencv2/highgui.hpp>
 using namespace cv;
 
 namespace {
@@ -126,7 +126,7 @@ Mat OpticalFlowDeepFlow::remapRelative( const Mat input, const Mat flow )
     Mat output;
     Mat mapX = Mat(flow.size(), CV_32FC1);
     Mat mapY = Mat(flow.size(), CV_32FC1);
-
+    //imshow("input", input);
     const float *pFlow;
     float *pMapX, *pMapY;
     for ( int j = 0; j < flow.rows; ++j )
@@ -136,16 +136,19 @@ Mat OpticalFlowDeepFlow::remapRelative( const Mat input, const Mat flow )
         pMapY = mapY.ptr<float>(j);
         for ( int i = 0; i < flow.cols; ++i )
         {
-            pMapX[i] = i + pFlow[2 * i];
-            pMapY[i] = j + pFlow[2 * i + 1];
+            pMapX[i] = i - pFlow[2 * i];
+            pMapY[i] = j - pFlow[2 * i + 1];
         }
     }
-    remap(input, output, mapX, mapY, interpolationType);
+    remap(input, output, mapX, mapY, interpolationType, BORDER_TRANSPARENT);
+    //imshow("output", output);
+    //waitKey(0);
     return output;
 }
 void OpticalFlowDeepFlow::calc( InputArray _I0, InputArray _I1, InputOutputArray _flow )
 {
-
+    //namedWindow("input");
+    //namedWindow("output");
     Mat I0temp = _I0.getMat();
     Mat I1temp = _I1.getMat();
 
@@ -185,8 +188,11 @@ void OpticalFlowDeepFlow::calc( InputArray _I0, InputArray _I1, InputOutputArray
             Size newSize = pyramid_I0[level - 1].size();
             resize(W, temp, newSize, 0, 0, interpolationType); //resize calculated flow
             W = temp * (1.0f / downscaleFactor); //scale values
+            true;
         }
+        true;
     }
+    W.copyTo(_flow);
 }
 
 void OpticalFlowDeepFlow::calcOneLevel( const Mat I0, const Mat I1, Mat W )
@@ -213,18 +219,19 @@ void OpticalFlowDeepFlow::calcOneLevel( const Mat I0, const Mat I1, Mat W )
     //computing derivatives, notation as in Brox's paper
     Mat Ix, Iy, Iz, Ixx, Ixy, Iyy, Ixz, Iyz;
     int ddepth = -1; //as source image
-    int kernel_size = 1; //
-    //FIXME: if source image is has 8-bit depth output may be truncated
-    Sobel(averageFrame, Ix, ddepth, 1, 0, kernel_size);
-    Sobel(averageFrame, Iy, ddepth, 0, 1, kernel_size);
-    Iz.create(I1.size(), I1.type());
-    Iz = I1 - I0; // FIXME: should the warped I1 be used?
-    Sobel(Ix, Ixx, ddepth, 1, 0, kernel_size);
-    Sobel(Ix, Ixy, ddepth, 0, 1, kernel_size);
-    Sobel(Iy, Iyy, ddepth, 0, 1, kernel_size);
-    Sobel(Iz, Ixz, ddepth, 1, 0, kernel_size); // should a difference of derivatives be used instead?
-    Sobel(Iz, Iyz, ddepth, 0, 1, kernel_size);
+    int kernel_size = 1;
 
+    //FIXME: if source image is has 8-bit depth output may be truncated
+    Sobel(averageFrame, Ix, ddepth, 1, 0, kernel_size, 1, 0.00, BORDER_REPLICATE);
+    Sobel(averageFrame, Iy, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
+    Iz.create(I1.size(), I1.type());
+    Iz = warpedI1 - I0;
+    Sobel(Ix, Ixx, ddepth, 1, 0, kernel_size, 1, 0.00, BORDER_REPLICATE);
+    Sobel(Ix, Ixy, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
+    Sobel(Iy, Iyy, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
+    Sobel(Iz, Ixz, ddepth, 1, 0, kernel_size, 1, 0.00, BORDER_REPLICATE); // should a difference of derivatives be used instead?
+    Sobel(Iz, Iyz, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
+    Ix.at<float>(0, 0);
     Mat tempW = W.clone(); // flow version to be modified in each iteration
     Mat dW = Mat::zeros(W.size(), W.type()); // flow increment
 
@@ -232,7 +239,7 @@ void OpticalFlowDeepFlow::calcOneLevel( const Mat I0, const Mat I1, Mat W )
     for ( int i = 0; i < fixedPointIterations; ++i )
     {
         dataTerm(W, dW, tempW, Ix, Iy, Iz, Ixx, Ixy, Iyy, Ixz, Iyz, a11, a12, a22, b1, b2);
-        smoothnessWeights(W, weightsX, weightsY);
+        smoothnessWeights(tempW, weightsX, weightsY);
         smoothnessTerm(W, weightsX, weightsY, b1, b2);
         sorSolve(a11, a12, a22, b1, b2, weightsX, weightsY, dW);
         tempW = W + dW;
@@ -282,18 +289,18 @@ void OpticalFlowDeepFlow::dataTerm( const Mat W, const Mat dW, const Mat tempW, 
                 derivNorm = (*pIx) * (*pIx) + (*pIy) * (*pIy) + zeta_squared;
                 Ik1z = *pIz + (*pIx * *pdU) + (*pIy * *pdV);
                 temp = delta / (sqrt(Ik1z * Ik1z / derivNorm + epsilon_squared) * derivNorm);
-                *pa11 = *pIx * *pIx * temp;
-                *pa12 = *pIx * *pIy * temp;
-                *pa22 = *pIy * *pIy * temp;
-                *pb1 = -*pIz * *pIx * temp;
-                *pb2 = -*pIz * *pIy * temp;
+                *pa11 = *pIx * *pIx * temp / derivNorm;
+                *pa12 = *pIx * *pIy * temp / derivNorm;
+                *pa22 = *pIy * *pIy * temp / derivNorm;
+                *pb1 = -*pIz * *pIx * temp / derivNorm;
+                *pb2 = -*pIz * *pIy * temp / derivNorm;
 
                 // gradient constancy component
 
                 derivNorm = *pIxx * *pIxx + *pIxy * *pIxy + zeta_squared;
                 derivNorm2 = *pIyy * *pIyy + *pIxy * *pIxy + zeta_squared;
                 Ik1zx = *pIxz + *pIxx * *pdU + *pIxy * *pdV;
-                Ik1zy = *pIyz + *pIyz * *pdU + *pIyy * *pdV;
+                Ik1zy = *pIyz + *pIxy * *pdU + *pIyy * *pdV;
 
                 temp = gamma
                         / sqrt(
@@ -352,7 +359,7 @@ void OpticalFlowDeepFlow::smoothnessWeights( const Mat W, Mat weightsX, Mat weig
     {
         ux = Wx.ptr<float>(j);
         vx = ux + 1;
-        uy = Wx.ptr<float>(j);
+        uy = Wy.ptr<float>(j);
         vy = uy + 1;
         pS = S.ptr<float>(j);
         for ( int i = 0; i < S.cols; ++i )
@@ -374,6 +381,7 @@ void OpticalFlowDeepFlow::smoothnessWeights( const Mat W, Mat weightsX, Mat weig
         {
             *pWeight = *pS + *(pS + 1);
             ++pS;
+            ++pWeight;
         }
     }
     //vertical weights
@@ -385,6 +393,7 @@ void OpticalFlowDeepFlow::smoothnessWeights( const Mat W, Mat weightsX, Mat weig
         for ( int i = 0; i < S.cols; ++i )
         {
             *pWeight = *(pS++) + *(temp++);
+            ++pWeight;
         }
     }
 }
@@ -490,6 +499,7 @@ void OpticalFlowDeepFlow::sorSolve( const Mat a11, const Mat a12, const Mat a22,
     pdv = dv.ptr<float>(0);
 
     float sigma_u, sigma_v, sum_dpsis, A11, A22, A12, B1, B2, det;
+    float du_inc, dv_inc;
 
     int s = dW.cols; // step between rows
 
@@ -584,7 +594,6 @@ void OpticalFlowDeepFlow::sorSolve( const Mat a11, const Mat a12, const Mat a22,
                 B2 = pb2[o] + sigma_v;
                 pdu[o] += omega * (A11 * B1 + A12 * B2 - pdu[o]);
                 pdv[o] += omega * (A12 * B1 + A22 * B2 - pdv[o]);
-
             }
         }
     }
