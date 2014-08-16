@@ -1,5 +1,5 @@
 # This file is included from a subdirectory
-set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../")
+set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
 set(the_description "The python bindings")
 ocv_add_module(${MODULE_NAME} BINDINGS opencv_core opencv_highgui opencv_videoio opencv_flann OPTIONAL opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_calib3d opencv_photo opencv_objdetect opencv_nonfree opencv_optim opencv_shape opencv_tracking opencv_rgbd opencv_reg)
@@ -180,14 +180,14 @@ if(BUILD_PYTHON_CONTRIB)
     message("OPENCV EXTRA MODULES : ${TEMP_OPENCV_PYTHON_EXTRA_DEPS}")
     ocv_include_modules(${TEMP_OPENCV_PYTHON_EXTRA_DEPS})
     foreach(module ${OPENCV_PYTHON_EXTRA_MODULES})
-        ocv_include_modules("opencv_${module}")
-        ocv_include_directories("${OPENCV_MODULE_opencv_${module}_LOCATION}/include")
-        message("module location : ${OPENCV_MODULE_opencv_${module}_LOCATION}")
-        ocv_include_directories("${OPENCV_EXTRA_MODULES_PATH}/${module}/include")
+       # ocv_include_modules("opencv_${module}")
+       # ocv_include_directories("${OPENCV_MODULE_opencv_${module}_LOCATION}/include")
+       # message("module location : ${OPENCV_MODULE_opencv_${module}_LOCATION}")
+       # ocv_include_directories("${OPENCV_EXTRA_MODULES_PATH}/${module}/include")
         set(extra_module_hdrs "${OPENCV_MODULE_opencv_${module}_HEADERS}")
         ocv_list_filterout(extra_module_hdrs "^.*\${module}/\${module}.hpp$")
         ocv_list_filterout(extra_module_hdrs "^.*cuda.*$")
-        message("${module}  ${extra_module_hdrs}")
+       # message("${module}  ${extra_module_hdrs}")
        list(APPEND opencv_contrib_hdrs ${extra_module_hdrs})
     endforeach()
 
@@ -210,14 +210,14 @@ endforeach()
     # Run header parser to generate above .h files, prefix="_contrib"
     add_custom_command(
        OUTPUT ${cv2_generated_contrib_hdrs}
-       COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" "_contrib" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_contrib_hdrs}
-       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py
-       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/hdr_parser.py
+       COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_SOURCE_DIR}/src2/gen2.py" "_contrib" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_contrib_hdrs}
+       DEPENDS ${PYTHON_SOURCE_DIR}/src2/gen2.py
+       DEPENDS ${PYTHON_SOURCE_DIR}/src2/hdr_parser.py
        DEPENDS ${opencv_contrib_hdrs}
        COMMENT "Usage: python gen2.py <prefix> <dstdir> <srcfiles>"
        VERBATIM)
 
-    add_library(contrib_module SHARED src2/cv2_contrib.cpp ${cv2_generated_contrib_hdrs})
+    ocv_add_library(contrib_module SHARED ${PYTHON_SOURCE_DIR}/src2/cv2_contrib.cpp ${cv2_generated_contrib_hdrs})
 
     if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")
       target_link_libraries(contrib_module debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
@@ -231,6 +231,7 @@ endforeach()
     target_link_libraries(contrib_module ${the_module} ${TEMP_OPENCV_PYTHON_EXTRA_DEPS})
 
     set_target_properties(contrib_module PROPERTIES
+                      LIBRARY_OUTPUT_DIRECTORY  "${LIBRARY_OUTPUT_PATH}/${MODULE_INSTALL_SUBDIR}"
                           PREFIX ""
                           OUTPUT_NAME cv2_contrib
                           SUFFIX ${CVPY_SUFFIX})
