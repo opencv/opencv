@@ -49,6 +49,9 @@ endforeach()
 message("Modules filtered Build : ${OPENCV_PYTHON_MODULES}")
 message("Modules extra Build : ${OPENCV_PYTHON_EXTRA_MODULES}")
 message("Python include Path : ${PYTHON_INCLUDE_PATH}")
+message("Python source dir : ${PYTHON_SOURCE_DIR}")
+message("CMake curret bin dir: ${CMAKE_CURRENT_BINARY_DIR}")
+message("CMake curret source dir: ${CMAKE_CURRENT_SOURCE_DIR}")
 
 # -- Now collect headers for each module for Python(cv2). Extra-modules later
 
@@ -64,9 +67,9 @@ foreach(module ${OPENCV_PYTHON_MODULES})
     list(APPEND opencv_hdrs ${module_hdrs})
 endforeach()
 
-foreach(i ${opencv_hdrs})
-message("opencv_hdrs" : ${i})
-endforeach()
+#foreach(i ${opencv_hdrs})
+#message("opencv_hdrs" : ${i})
+#endforeach()
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
@@ -88,7 +91,7 @@ add_custom_command(
    VERBATIM)
 
 
-add_library(${the_module} SHARED ${PYTHON_SOURCE_DIR}/src2/cv2.cpp ${cv2_generated_hdrs})
+ocv_add_library(${the_module} SHARED ${PYTHON_SOURCE_DIR}/src2/cv2.cpp ${cv2_generated_hdrs})
 set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
 
 if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")
@@ -108,6 +111,7 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import distutils.sysconfig; pri
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 set_target_properties(${the_module} PROPERTIES
+                      LIBRARY_OUTPUT_DIRECTORY  "${LIBRARY_OUTPUT_PATH}/${MODULE_INSTALL_SUBDIR}"
                       PREFIX ""
                       OUTPUT_NAME cv2
                       SUFFIX ${CVPY_SUFFIX})

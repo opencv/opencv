@@ -748,7 +748,7 @@ class PythonWrapperGenerator(object):
         self.code_func_tab = StringIO()
         self.code_type_reg = StringIO()
         self.code_const_reg = StringIO()
-        self.code_typedefs = StringIO()     # for putting all nested namespaces and typedef (abid)
+        self.code_typedefs = StringIO()     # for putting all nested namespaces and typedef
         self.class_idx = 0
 
     def add_class(self, stype, name, decl):
