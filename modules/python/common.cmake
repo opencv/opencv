@@ -2,7 +2,7 @@
 set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../")
 
 set(the_description "The python bindings")
-ocv_add_module(python BINDINGS opencv_core opencv_highgui opencv_videoio opencv_flann OPTIONAL opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_calib3d opencv_photo opencv_objdetect opencv_nonfree opencv_optim opencv_shape opencv_tracking opencv_rgbd opencv_reg)
+ocv_add_module(${MODULE_NAME} BINDINGS opencv_core opencv_highgui opencv_videoio opencv_flann OPTIONAL opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_calib3d opencv_photo opencv_objdetect opencv_nonfree opencv_optim opencv_shape opencv_tracking opencv_rgbd opencv_reg)
 
 ocv_module_include_directories(
     "${PYTHON_INCLUDE_PATH}"
@@ -17,7 +17,7 @@ if(NOT OPENCV_EXTRA_MODULES_PATH STREQUAL "")
     set(TEMP_EXTRA_MODULES_PATH ${OPENCV_EXTRA_MODULES_PATH})
 else()
     set(BUILD_PYTHON_CONTRIB OFF)
-    set(TEMP_EXTRA_MODULES_PATH "\0") # Assign something to avoid bug in string(FIND)
+    set(TEMP_EXTRA_MODULES_PATH " ") # Assign something to avoid bug in string(FIND)
 endif()
 
 # To disable any module from adding to Python bindings, add them to blacklist
@@ -47,6 +47,8 @@ foreach(module ${OPENCV_MODULES_NAMES})
 endforeach()
 
 message("Modules filtered Build : ${OPENCV_PYTHON_MODULES}")
+message("Modules extra Build : ${OPENCV_PYTHON_EXTRA_MODULES}")
+message("Python include Path : ${PYTHON_INCLUDE_PATH}")
 
 # -- Now collect headers for each module for Python(cv2). Extra-modules later
 
