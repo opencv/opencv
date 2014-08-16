@@ -174,6 +174,37 @@ CV_EXPORTS Ptr<cuda::DisparityBilateralFilter>
     createDisparityBilateralFilter(int ndisp = 64, int radius = 3, int iters = 1);
 
 /////////////////////////////////////////
+// DepthMapDenoiseWeightedHuber
+
+//! OpenDTAM Variant of Chambolle & Pock denoising
+//!
+//! The complicated half of the DTAM algorithm's mapping core,
+//! but can be used independently to refine depthmaps.
+//!
+//! Contributed by Paul Foster for GSoC 2014 OpenDTAM project.
+//! High level algorithm described by Richard Newcombe, Steven J. Lovegrove, and Andrew J. Davison. 
+//! "DTAM: Dense tracking and mapping in real-time."
+//! Which was in turn based on Chambolle & Pock's
+//! "A first-order primal-dual algorithm for convex problems with applications to imaging."
+
+class CV_EXPORTS DepthmapDenoiseWeightedHuber : public cv::Algorithm
+{
+public:
+    //! This may be called repeatedly to iteratively refine the internal depthmap
+    virtual cv::cuda::GpuMat operator()(InputArray input,
+                                        float epsilon,
+                                        float theta) = 0;
+
+    //! In case you want to do these explicitly
+    virtual void allocate(int rows, int cols, InputArray gx=GpuMat(),InputArray gy=GpuMat()) = 0;
+    virtual void cacheGValues() = 0;
+};
+
+//! The visibleLightImage is a CV_32FC1 grayscale image of the scene, which can be used as a hint for edge placement.
+CV_EXPORTS Ptr<DepthmapDenoiseWeightedHuber>
+    createDepthmapDenoiseWeightedHuber(InputArray visibleLightImage=GpuMat(), Stream cvStream=Stream::Null());
+
+/////////////////////////////////////////
 // Utility
 
 //! Reprojects disparity image to 3D space.
