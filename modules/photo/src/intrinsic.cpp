@@ -1,13 +1,6 @@
 #include <iostream>
-//#include <stdio.h>
-//#include <stdlib.h>
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-
 #include "intrinsic.hpp"
 
-//using namespace std;
 using namespace cv;
 
 void cv::intrinsicDecompose(InputArray _src, OutputArray _ref, OutputArray _shade, int window, int no_of_iter, float rho)
