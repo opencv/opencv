@@ -314,7 +314,7 @@ void OpticalFlowDeepFlow::dataTerm( const Mat W, const Mat dW, const Mat tempW, 
               //color constancy component
                 derivNorm = (*pIx) * (*pIx) + (*pIy) * (*pIy) + zeta_squared;
                 Ik1z = *pIz + (*pIx * *pdU) + (*pIy * *pdV);
-                temp = (0.5*delta/3) / sqrt(Ik1z * Ik1z / derivNorm + epsilon_squared) * derivNorm;
+                temp = (0.5*delta/3) / sqrt(Ik1z * Ik1z / derivNorm + epsilon_squared);
                 *pa11 = *pIx * *pIx * temp / derivNorm;
                 *pa12 = *pIx * *pIy * temp / derivNorm;
                 *pa22 = *pIy * *pIy * temp / derivNorm;
@@ -336,7 +336,7 @@ void OpticalFlowDeepFlow::dataTerm( const Mat W, const Mat dW, const Mat tempW, 
                 *pa12 += temp * (*pIxx * *pIxy / derivNorm + *pIxy * *pIyy / derivNorm2);
                 *pa22 += temp * (*pIxy * *pIxy / derivNorm + *pIyy * *pIyy / derivNorm2);
                 *pb1 += -temp * (*pIxx * *pIxz / derivNorm + *pIxy * *pIyz / derivNorm2);
-                *pb2 += -temp * (*pIyy * *pIyz / derivNorm + *pIxy * *pIxz / derivNorm2);
+                *pb2 += -temp * (*pIxy * *pIxz / derivNorm + *pIyy * *pIyz / derivNorm2);
 
                 ++pIx;
                 ++pIy;
