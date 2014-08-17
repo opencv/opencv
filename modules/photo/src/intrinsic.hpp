@@ -1,6 +1,7 @@
 #include <iostream>
 #include "math.h"
 #include <vector>
+#include "opencv2/photo.hpp"
 #include <opencv2/core/core_c.h>
 
 using namespace std;

@@ -1,5 +1,6 @@
 #include <iostream>
 #include "intrinsic.hpp"
+#include "opencv2/photo.hpp"
 
 using namespace cv;
 

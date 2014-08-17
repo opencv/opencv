@@ -1,5 +1,5 @@
 #include <iostream>
-
+#include "opencv2/photo.hpp"
 #include "color_constancy.hpp"
 
 using namespace std;
