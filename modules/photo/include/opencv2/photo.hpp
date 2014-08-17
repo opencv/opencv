@@ -331,11 +331,11 @@ CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 6
 CV_EXPORTS_W void intrinsicDecompose(InputArray _src, OutputArray _ref, OutputArray _shade, int window = 3, int no_of_iter = 100,
         float rho = 1.9f);
 
-CV_EXPORTS_W void colorTransfer(InputArray _src1, InputArray _src2, OutputArray _dst, int flag = 1);
+CV_EXPORTS_W void colorTransfer(InputArray _src, InputArray _dst, OutputArray _color_transfer, int flag = 0);
 
-CV_EXPORTS_W void greyEdge(InputArray _src, OutputArray _dst, float diff_order = 1, int mink_norm = 5, float sigma = 2);
+CV_EXPORTS_W void greyEdge(InputArray _src, OutputArray _dst, int diff_order = 1, int mink_norm = 5, int sigma = 2);
 
-CV_EXPORTS_W void weightedGreyEdge(InputArray _src, OutputArray _dst, float kappa = 10, int mink_norm = 5, float sigma = 2);
+CV_EXPORTS_W void weightedGreyEdge(InputArray _src, OutputArray _dst, int kappa = 10, int mink_norm = 5, int sigma = 2);
 
 } // cv
 
