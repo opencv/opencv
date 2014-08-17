@@ -2,6 +2,7 @@
 #include "math.h"
 #include <vector>
 #include "opencv2/photo.hpp"
+#include <limits>
 
 using namespace std;
 using namespace cv;
