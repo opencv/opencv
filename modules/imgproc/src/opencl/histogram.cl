@@ -47,7 +47,7 @@
 
 #define noconvert
 
-__kernel void calculate_histogram(__global const uchar * src, int src_step, int src_offset, int src_rows, int src_cols,
+__kernel void calculate_histogram(__global const uchar * src_ptr, int src_step, int src_offset, int src_rows, int src_cols,
                                   __global uchar * histptr, int total)
 {
     int lid = get_local_id(0);
@@ -61,6 +61,7 @@ __kernel void calculate_histogram(__global const uchar * src, int src_step, int 
         localhist[i] = 0;
     barrier(CLK_LOCAL_MEM_FENCE);
 
+    __global const uchar * src = src_ptr + src_offset;
     int src_index;
 
     for (int grain = HISTS_COUNT * WGS * kercn; id < total; id += grain)
@@ -68,7 +69,7 @@ __kernel void calculate_histogram(__global const uchar * src, int src_step, int 
 #ifdef HAVE_SRC_CONT
         src_index = id;
 #else
-        src_index = mad24(id / src_cols, src_step, src_offset + id % src_cols);
+        src_index = mad24(id / src_cols, src_step, id % src_cols);
 #endif
 
 #if kercn == 1

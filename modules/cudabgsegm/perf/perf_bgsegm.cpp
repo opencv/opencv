@@ -42,10 +42,6 @@
 
 #include "perf_precomp.hpp"
 
-#ifdef HAVE_OPENCV_LEGACY
-#  include "opencv2/legacy.hpp"
-#endif
-
 #ifdef HAVE_OPENCV_CUDAIMGPROC
 #  include "opencv2/cudaimgproc.hpp"
 #endif
@@ -71,18 +67,6 @@ using namespace perf;
 // FGDStatModel
 
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT
-
-#ifdef HAVE_OPENCV_LEGACY
-
-namespace cv
-{
-    template<> void DefaultDeleter<CvBGStatModel>::operator ()(CvBGStatModel* obj) const
-    {
-        cvReleaseBGStatModel(&obj);
-    }
-}
-
-#endif
 
 DEF_PARAM_TEST_1(Video, string);
 
@@ -150,48 +134,7 @@ PERF_TEST_P(Video, FGDStatModel,
     }
     else
     {
-#ifdef HAVE_OPENCV_LEGACY
-        IplImage ipl_frame = frame;
-        cv::Ptr<CvBGStatModel> model(cvCreateFGDStatModel(&ipl_frame));
-
-        int i = 0;
-
-        // collect performance data
-        for (; i < numIters; ++i)
-        {
-            cap >> frame;
-            ASSERT_FALSE(frame.empty());
-
-            ipl_frame = frame;
-
-            startTimer();
-            if(!next())
-                break;
-
-            cvUpdateBGStatModel(&ipl_frame, model);
-
-            stopTimer();
-        }
-
-        // process last frame in sequence to get data for sanity test
-        for (; i < numIters; ++i)
-        {
-            cap >> frame;
-            ASSERT_FALSE(frame.empty());
-
-            ipl_frame = frame;
-
-            cvUpdateBGStatModel(&ipl_frame, model);
-        }
-
-        const cv::Mat background = cv::cvarrToMat(model->background);
-        const cv::Mat foreground = cv::cvarrToMat(model->foreground);
-
-        CPU_SANITY_CHECK(background);
-        CPU_SANITY_CHECK(foreground);
-#else
         FAIL_NO_CPU();
-#endif
     }
 }
 
@@ -296,58 +239,7 @@ PERF_TEST_P(Video_Cn_LearningRate, MOG,
     }
     else
     {
-        cv::Ptr<cv::BackgroundSubtractor> mog = cv::createBackgroundSubtractorMOG();
-        cv::Mat foreground;
-
-        mog->apply(frame, foreground, learningRate);
-
-        int i = 0;
-
-        // collect performance data
-        for (; i < numIters; ++i)
-        {
-            cap >> frame;
-            ASSERT_FALSE(frame.empty());
-
-            if (cn != 3)
-            {
-                cv::Mat temp;
-                if (cn == 1)
-                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-                else
-                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-                cv::swap(temp, frame);
-            }
-
-            startTimer();
-            if(!next())
-                break;
-
-            mog->apply(frame, foreground, learningRate);
-
-            stopTimer();
-        }
-
-        // process last frame in sequence to get data for sanity test
-        for (; i < numIters; ++i)
-        {
-            cap >> frame;
-            ASSERT_FALSE(frame.empty());
-
-            if (cn != 3)
-            {
-                cv::Mat temp;
-                if (cn == 1)
-                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-                else
-                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-                cv::swap(temp, frame);
-            }
-
-            mog->apply(frame, foreground, learningRate);
-        }
-
-        CPU_SANITY_CHECK(foreground);
+        FAIL_NO_CPU();
     }
 }
 
@@ -633,7 +525,7 @@ PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
         cv::cuda::GpuMat d_frame(frame);
         cv::cuda::GpuMat foreground;
 
-        cv::Ptr<cv::BackgroundSubtractorGMG> d_gmg = cv::cuda::createBackgroundSubtractorGMG();
+        cv::Ptr<cv::cuda::BackgroundSubtractorGMG> d_gmg = cv::cuda::createBackgroundSubtractorGMG();
         d_gmg->setMaxFeatures(maxFeatures);
 
         d_gmg->apply(d_frame, foreground);
@@ -702,71 +594,7 @@ PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
     }
     else
     {
-        cv::Mat foreground;
-        cv::Mat zeros(frame.size(), CV_8UC1, cv::Scalar::all(0));
-
-        cv::Ptr<cv::BackgroundSubtractorGMG> gmg = cv::createBackgroundSubtractorGMG();
-        gmg->setMaxFeatures(maxFeatures);
-
-        gmg->apply(frame, foreground);
-
-        int i = 0;
-
-        // collect performance data
-        for (; i < numIters; ++i)
-        {
-            cap >> frame;
-            if (frame.empty())
-            {
-                cap.release();
-                cap.open(inputFile);
-                cap >> frame;
-            }
-
-            if (cn != 3)
-            {
-                cv::Mat temp;
-                if (cn == 1)
-                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-                else
-                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-                cv::swap(temp, frame);
-            }
-
-            startTimer();
-            if(!next())
-                break;
-
-            gmg->apply(frame, foreground);
-
-            stopTimer();
-        }
-
-        // process last frame in sequence to get data for sanity test
-        for (; i < numIters; ++i)
-        {
-            cap >> frame;
-            if (frame.empty())
-            {
-                cap.release();
-                cap.open(inputFile);
-                cap >> frame;
-            }
-
-            if (cn != 3)
-            {
-                cv::Mat temp;
-                if (cn == 1)
-                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-                else
-                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-                cv::swap(temp, frame);
-            }
-
-            gmg->apply(frame, foreground);
-        }
-
-        CPU_SANITY_CHECK(foreground);
+        FAIL_NO_CPU();
     }
 }
 

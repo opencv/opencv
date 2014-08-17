@@ -54,7 +54,7 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
     cv::Mat src = _image.getMat(), cornersmat = _corners.getMat();
     int count = cornersmat.checkVector(2, CV_32F);
     CV_Assert( count >= 0 );
-    Point2f* corners = (Point2f*)cornersmat.data;
+    Point2f* corners = cornersmat.ptr<Point2f>();
 
     if( count == 0 )
         return;

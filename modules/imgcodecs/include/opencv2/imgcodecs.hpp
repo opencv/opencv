@@ -53,17 +53,21 @@ enum { IMREAD_UNCHANGED  = -1, // 8bit, color or not
        IMREAD_GRAYSCALE  = 0,  // 8bit, gray
        IMREAD_COLOR      = 1,  // ?, color
        IMREAD_ANYDEPTH   = 2,  // any depth, ?
-       IMREAD_ANYCOLOR   = 4   // ?, any color
+       IMREAD_ANYCOLOR   = 4,  // ?, any color
+       IMREAD_LOAD_GDAL  = 8   // Use gdal driver
      };
 
-enum { IMWRITE_JPEG_QUALITY     = 1,
-       IMWRITE_JPEG_PROGRESSIVE = 2,
-       IMWRITE_JPEG_OPTIMIZE    = 3,
-       IMWRITE_PNG_COMPRESSION  = 16,
-       IMWRITE_PNG_STRATEGY     = 17,
-       IMWRITE_PNG_BILEVEL      = 18,
-       IMWRITE_PXM_BINARY       = 32,
-       IMWRITE_WEBP_QUALITY     = 64
+enum { IMWRITE_JPEG_QUALITY        = 1,
+       IMWRITE_JPEG_PROGRESSIVE    = 2,
+       IMWRITE_JPEG_OPTIMIZE       = 3,
+       IMWRITE_JPEG_RST_INTERVAL   = 4,
+       IMWRITE_JPEG_LUMA_QUALITY   = 5,
+       IMWRITE_JPEG_CHROMA_QUALITY = 6,
+       IMWRITE_PNG_COMPRESSION     = 16,
+       IMWRITE_PNG_STRATEGY        = 17,
+       IMWRITE_PNG_BILEVEL         = 18,
+       IMWRITE_PXM_BINARY          = 32,
+       IMWRITE_WEBP_QUALITY        = 64
      };
 
 enum { IMWRITE_PNG_STRATEGY_DEFAULT      = 0,

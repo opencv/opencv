@@ -159,6 +159,25 @@ do \
         << "Size: " << name ## _roi.size() << std::endl; \
 } while ((void)0, 0)
 
+//for sparse matrix
+#define OCL_EXPECT_MATS_NEAR_RELATIVE_SPARSE(name, eps) \
+do \
+{ \
+    ASSERT_EQ(name ## _roi.type(), u ## name ## _roi.type()); \
+    ASSERT_EQ(name ## _roi.size(), u ## name ## _roi.size()); \
+    EXPECT_LE(TestUtils::checkNormRelativeSparse(name ## _roi, u ## name ## _roi), eps) \
+        << "Size: " << name ## _roi.size() << std::endl; \
+    Point _offset; \
+    Size _wholeSize; \
+    name ## _roi.locateROI(_wholeSize, _offset); \
+    Mat _mask(name.size(), CV_8UC1, Scalar::all(255)); \
+    _mask(Rect(_offset, name ## _roi.size())).setTo(Scalar::all(0)); \
+    ASSERT_EQ(name.type(), u ## name.type()); \
+    ASSERT_EQ(name.size(), u ## name.size()); \
+    EXPECT_LE(TestUtils::checkNormRelativeSparse(name, u ## name, _mask), eps) \
+        << "Size: " << name ## _roi.size() << std::endl; \
+} while ((void)0, 0)
+
 #define EXPECT_MAT_SIMILAR(mat1, mat2, eps) \
 do \
 { \
@@ -274,6 +293,16 @@ struct CV_EXPORTS TestUtils
                 std::max((double)std::numeric_limits<float>::epsilon(),
                          (double)std::max(cvtest::norm(m1.getMat(), cv::NORM_INF), cvtest::norm(m2.getMat(), cv::NORM_INF)));
     }
+
+    static inline double checkNormRelativeSparse(InputArray m1, InputArray m2, InputArray mask = noArray())
+    {
+        double norm_inf = cvtest::norm(m1.getMat(), m2.getMat(), cv::NORM_INF, mask);
+        double norm_rel = norm_inf /
+                std::max((double)std::numeric_limits<float>::epsilon(),
+                         (double)std::max(cvtest::norm(m1.getMat(), cv::NORM_INF), cvtest::norm(m2.getMat(), cv::NORM_INF)));
+        return std::min(norm_inf, norm_rel);
+    }
+
 };
 
 #define TEST_DECLARE_INPUT_PARAMETER(name) Mat name, name ## _roi; UMat u ## name, u ## name ## _roi

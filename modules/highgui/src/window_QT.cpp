@@ -401,7 +401,7 @@ static CvTrackbar* icvFindTrackBarByName(const char* name_trackbar, const char* 
 {
     QString nameQt(name_trackbar);
 
-    if (!name_window && global_control_panel) //window name is null and we have a control panel
+    if ((!name_window || !name_window[0]) && global_control_panel) //window name is null and we have a control panel
         layout = global_control_panel->myLayout;
 
     if (!layout)

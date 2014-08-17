@@ -38,8 +38,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef __OPENCV_ML_PRECOMP_HPP__
+#define __OPENCV_ML_PRECOMP_HPP__
 
 #include "opencv2/core.hpp"
 #include "opencv2/ml.hpp"
@@ -56,321 +56,218 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-
-#define ML_IMPL CV_IMPL
-#define __BEGIN__ __CV_BEGIN__
-#define __END__ __CV_END__
-#define EXIT __CV_EXIT__
-
-#define CV_MAT_ELEM_FLAG( mat, type, comp, vect, tflag )    \
-    (( tflag == CV_ROW_SAMPLE )                             \
-    ? (CV_MAT_ELEM( mat, type, comp, vect ))                \
-    : (CV_MAT_ELEM( mat, type, vect, comp )))
-
-/* Convert matrix to vector */
-#define ICV_MAT2VEC( mat, vdata, vstep, num )      \
-    if( MIN( (mat).rows, (mat).cols ) != 1 )       \
-        CV_ERROR( CV_StsBadArg, "" );              \
-    (vdata) = ((mat).data.ptr);                    \
-    if( (mat).rows == 1 )                          \
-    {                                              \
-        (vstep) = CV_ELEM_SIZE( (mat).type );      \
-        (num) = (mat).cols;                        \
-    }                                              \
-    else                                           \
-    {                                              \
-        (vstep) = (mat).step;                      \
-        (num) = (mat).rows;                        \
-    }
-
-/* get raw data */
-#define ICV_RAWDATA( mat, flags, rdata, sstep, cstep, m, n )         \
-    (rdata) = (mat).data.ptr;                                        \
-    if( CV_IS_ROW_SAMPLE( flags ) )                                  \
-    {                                                                \
-        (sstep) = (mat).step;                                        \
-        (cstep) = CV_ELEM_SIZE( (mat).type );                        \
-        (m) = (mat).rows;                                            \
-        (n) = (mat).cols;                                            \
-    }                                                                \
-    else                                                             \
-    {                                                                \
-        (cstep) = (mat).step;                                        \
-        (sstep) = CV_ELEM_SIZE( (mat).type );                        \
-        (n) = (mat).rows;                                            \
-        (m) = (mat).cols;                                            \
-    }
-
-#define ICV_IS_MAT_OF_TYPE( mat, mat_type) \
-    (CV_IS_MAT( mat ) && CV_MAT_TYPE( mat->type ) == (mat_type) &&   \
-    (mat)->cols > 0 && (mat)->rows > 0)
-
-/*
-    uchar* data; int sstep, cstep;      - trainData->data
-    uchar* classes; int clstep; int ncl;- trainClasses
-    uchar* tmask; int tmstep; int ntm;  - typeMask
-    uchar* missed;int msstep, mcstep;   -missedMeasurements...
-    int mm, mn;                         == m,n == size,dim
-    uchar* sidx;int sistep;             - sampleIdx
-    uchar* cidx;int cistep;             - compIdx
-    int k, l;                           == n,m == dim,size (length of cidx, sidx)
-    int m, n;                           == size,dim
-*/
-#define ICV_DECLARE_TRAIN_ARGS()                                                    \
-    uchar* data;                                                                    \
-    int sstep, cstep;                                                               \
-    uchar* classes;                                                                 \
-    int clstep;                                                                     \
-    int ncl;                                                                        \
-    uchar* tmask;                                                                   \
-    int tmstep;                                                                     \
-    int ntm;                                                                        \
-    uchar* missed;                                                                  \
-    int msstep, mcstep;                                                             \
-    int mm, mn;                                                                     \
-    uchar* sidx;                                                                    \
-    int sistep;                                                                     \
-    uchar* cidx;                                                                    \
-    int cistep;                                                                     \
-    int k, l;                                                                       \
-    int m, n;                                                                       \
-                                                                                    \
-    data = classes = tmask = missed = sidx = cidx = NULL;                           \
-    sstep = cstep = clstep = ncl = tmstep = ntm = msstep = mcstep = mm = mn = 0;    \
-    sistep = cistep = k = l = m = n = 0;
-
-#define ICV_TRAIN_DATA_REQUIRED( param, flags )                                     \
-    if( !ICV_IS_MAT_OF_TYPE( (param), CV_32FC1 ) )                                  \
-    {                                                                               \
-        CV_ERROR( CV_StsBadArg, "Invalid " #param " parameter" );                   \
-    }                                                                               \
-    else                                                                            \
-    {                                                                               \
-        ICV_RAWDATA( *(param), (flags), data, sstep, cstep, m, n );                 \
-        k = n;                                                                      \
-        l = m;                                                                      \
-    }
-
-#define ICV_TRAIN_CLASSES_REQUIRED( param )                                         \
-    if( !ICV_IS_MAT_OF_TYPE( (param), CV_32FC1 ) )                                  \
-    {                                                                               \
-        CV_ERROR( CV_StsBadArg, "Invalid " #param " parameter" );                   \
-    }                                                                               \
-    else                                                                            \
-    {                                                                               \
-        ICV_MAT2VEC( *(param), classes, clstep, ncl );                              \
-        if( m != ncl )                                                              \
-        {                                                                           \
-            CV_ERROR( CV_StsBadArg, "Unmatched sizes" );                            \
-        }                                                                           \
-    }
-
-#define ICV_ARG_NULL( param )                                                       \
-    if( (param) != NULL )                                                           \
-    {                                                                               \
-        CV_ERROR( CV_StsBadArg, #param " parameter must be NULL" );                 \
-    }
-
-#define ICV_MISSED_MEASUREMENTS_OPTIONAL( param, flags )                            \
-    if( param )                                                                     \
-    {                                                                               \
-        if( !ICV_IS_MAT_OF_TYPE( param, CV_8UC1 ) )                                 \
-        {                                                                           \
-            CV_ERROR( CV_StsBadArg, "Invalid " #param " parameter" );               \
-        }                                                                           \
-        else                                                                        \
-        {                                                                           \
-            ICV_RAWDATA( *(param), (flags), missed, msstep, mcstep, mm, mn );       \
-            if( mm != m || mn != n )                                                \
-            {                                                                       \
-                CV_ERROR( CV_StsBadArg, "Unmatched sizes" );                        \
-            }                                                                       \
-        }                                                                           \
-    }
-
-#define ICV_COMP_IDX_OPTIONAL( param )                                              \
-    if( param )                                                                     \
-    {                                                                               \
-        if( !ICV_IS_MAT_OF_TYPE( param, CV_32SC1 ) )                                \
-        {                                                                           \
-            CV_ERROR( CV_StsBadArg, "Invalid " #param " parameter" );               \
-        }                                                                           \
-        else                                                                        \
-        {                                                                           \
-            ICV_MAT2VEC( *(param), cidx, cistep, k );                               \
-            if( k > n )                                                             \
-                CV_ERROR( CV_StsBadArg, "Invalid " #param " parameter" );           \
-        }                                                                           \
-    }
-
-#define ICV_SAMPLE_IDX_OPTIONAL( param )                                            \
-    if( param )                                                                     \
-    {                                                                               \
-        if( !ICV_IS_MAT_OF_TYPE( param, CV_32SC1 ) )                                \
-        {                                                                           \
-            CV_ERROR( CV_StsBadArg, "Invalid " #param " parameter" );               \
-        }                                                                           \
-        else                                                                        \
-        {                                                                           \
-            ICV_MAT2VEC( *sampleIdx, sidx, sistep, l );                             \
-            if( l > m )                                                             \
-                CV_ERROR( CV_StsBadArg, "Invalid " #param " parameter" );           \
-        }                                                                           \
-    }
-
-/****************************************************************************************/
-#define ICV_CONVERT_FLOAT_ARRAY_TO_MATRICE( array, matrice )        \
-{                                                                   \
-    CvMat a, b;                                                     \
-    int dims = (matrice)->cols;                                     \
-    int nsamples = (matrice)->rows;                                 \
-    int type = CV_MAT_TYPE((matrice)->type);                        \
-    int i, offset = dims;                                           \
-                                                                    \
-    CV_ASSERT( type == CV_32FC1 || type == CV_64FC1 );              \
-    offset *= ((type == CV_32FC1) ? sizeof(float) : sizeof(double));\
-                                                                    \
-    b = cvMat( 1, dims, CV_32FC1 );                                 \
-    cvGetRow( matrice, &a, 0 );                                     \
-    for( i = 0; i < nsamples; i++, a.data.ptr += offset )           \
-    {                                                               \
-        b.data.fl = (float*)array[i];                               \
-        CV_CALL( cvConvert( &b, &a ) );                             \
-    }                                                               \
-}
+#include <vector>
 
 /****************************************************************************************\
-*                       Auxiliary functions declarations                                 *
-\****************************************************************************************/
+ *                               Main struct definitions                                  *
+ \****************************************************************************************/
 
-/* Generates a set of classes centers in quantity <num_of_clusters> that are generated as
-   uniform random vectors in parallelepiped, where <data> is concentrated. Vectors in
-   <data> should have horizontal orientation. If <centers> != NULL, the function doesn't
-   allocate any memory and stores generated centers in <centers>, returns <centers>.
-   If <centers> == NULL, the function allocates memory and creates the matrice. Centers
-   are supposed to be oriented horizontally. */
-CvMat* icvGenerateRandomClusterCenters( int seed,
-                                        const CvMat* data,
-                                        int num_of_clusters,
-                                        CvMat* centers CV_DEFAULT(0));
-
-/* Fills the <labels> using <probs> by choosing the maximal probability. Outliers are
-   fixed by <oulier_tresh> and have cluster label (-1). Function also controls that there
-   weren't "empty" clusters by filling empty clusters with the maximal probability vector.
-   If probs_sums != NULL, filles it with the sums of probabilities for each sample (it is
-   useful for normalizing probabilities' matrice of FCM) */
-void icvFindClusterLabels( const CvMat* probs, float outlier_thresh, float r,
-                           const CvMat* labels );
-
-typedef struct CvSparseVecElem32f
-{
-    int idx;
-    float val;
-}
-CvSparseVecElem32f;
-
-/* Prepare training data and related parameters */
-#define CV_TRAIN_STATMODEL_DEFRAGMENT_TRAIN_DATA    1
-#define CV_TRAIN_STATMODEL_SAMPLES_AS_ROWS          2
-#define CV_TRAIN_STATMODEL_SAMPLES_AS_COLUMNS       4
-#define CV_TRAIN_STATMODEL_CATEGORICAL_RESPONSE     8
-#define CV_TRAIN_STATMODEL_ORDERED_RESPONSE         16
-#define CV_TRAIN_STATMODEL_RESPONSES_ON_OUTPUT      32
-#define CV_TRAIN_STATMODEL_ALWAYS_COPY_TRAIN_DATA   64
-#define CV_TRAIN_STATMODEL_SPARSE_AS_SPARSE         128
-
-int
-cvPrepareTrainData( const char* /*funcname*/,
-                    const CvMat* train_data, int tflag,
-                    const CvMat* responses, int response_type,
-                    const CvMat* var_idx,
-                    const CvMat* sample_idx,
-                    bool always_copy_data,
-                    const float*** out_train_samples,
-                    int* _sample_count,
-                    int* _var_count,
-                    int* _var_all,
-                    CvMat** out_responses,
-                    CvMat** out_response_map,
-                    CvMat** out_var_idx,
-                    CvMat** out_sample_idx=0 );
-
-void
-cvSortSamplesByClasses( const float** samples, const CvMat* classes,
-                        int* class_ranges, const uchar** mask CV_DEFAULT(0) );
-
-void
-cvCombineResponseMaps (CvMat*  _responses,
-                 const CvMat*  old_response_map,
-                       CvMat*  new_response_map,
-                       CvMat** out_response_map);
-
-void
-cvPreparePredictData( const CvArr* sample, int dims_all, const CvMat* comp_idx,
-                      int class_count, const CvMat* prob, float** row_sample,
-                      int as_sparse CV_DEFAULT(0) );
-
-/* copies clustering [or batch "predict"] results
-   (labels and/or centers and/or probs) back to the output arrays */
-void
-cvWritebackLabels( const CvMat* labels, CvMat* dst_labels,
-                   const CvMat* centers, CvMat* dst_centers,
-                   const CvMat* probs, CvMat* dst_probs,
-                   const CvMat* sample_idx, int samples_all,
-                   const CvMat* comp_idx, int dims_all );
-#define cvWritebackResponses cvWritebackLabels
-
-#define XML_FIELD_NAME "_name"
-CvFileNode* icvFileNodeGetChild(CvFileNode* father, const char* name);
-CvFileNode* icvFileNodeGetChildArrayElem(CvFileNode* father, const char* name,int index);
-CvFileNode* icvFileNodeGetNext(CvFileNode* n, const char* name);
-
-
-void cvCheckTrainData( const CvMat* train_data, int tflag,
-                       const CvMat* missing_mask,
-                       int* var_all, int* sample_all );
-
-CvMat* cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, bool check_for_duplicates=false );
-
-CvMat* cvPreprocessVarType( const CvMat* type_mask, const CvMat* var_idx,
-                            int var_all, int* response_type );
-
-CvMat* cvPreprocessOrderedResponses( const CvMat* responses,
-                const CvMat* sample_idx, int sample_all );
-
-CvMat* cvPreprocessCategoricalResponses( const CvMat* responses,
-                const CvMat* sample_idx, int sample_all,
-                CvMat** out_response_map, CvMat** class_counts=0 );
-
-const float** cvGetTrainSamples( const CvMat* train_data, int tflag,
-                   const CvMat* var_idx, const CvMat* sample_idx,
-                   int* _var_count, int* _sample_count,
-                   bool always_copy_data=false );
+/* log(2*PI) */
+#define CV_LOG2PI (1.8378770664093454835606594728112)
 
 namespace cv
 {
-    struct DTreeBestSplitFinder
+namespace ml
+{
+    using std::vector;
+
+    #define CV_DTREE_CAT_DIR(idx,subset) \
+        (2*((subset[(idx)>>5]&(1 << ((idx) & 31)))==0)-1)
+
+    template<typename _Tp> struct cmp_lt_idx
     {
-        DTreeBestSplitFinder(){ splitSize = 0, tree = 0; node = 0; }
-        DTreeBestSplitFinder( CvDTree* _tree, CvDTreeNode* _node);
-        DTreeBestSplitFinder( const DTreeBestSplitFinder& finder, Split );
-        virtual ~DTreeBestSplitFinder() {}
-        virtual void operator()(const BlockedRange& range);
-        void join( DTreeBestSplitFinder& rhs );
-        Ptr<CvDTreeSplit> bestSplit;
-        Ptr<CvDTreeSplit> split;
-        int splitSize;
-        CvDTree* tree;
-        CvDTreeNode* node;
+        cmp_lt_idx(const _Tp* _arr) : arr(_arr) {}
+        bool operator ()(int a, int b) const { return arr[a] < arr[b]; }
+        const _Tp* arr;
     };
 
-    struct ForestTreeBestSplitFinder : DTreeBestSplitFinder
+    template<typename _Tp> struct cmp_lt_ptr
     {
-        ForestTreeBestSplitFinder() : DTreeBestSplitFinder() {}
-        ForestTreeBestSplitFinder( CvForestTree* _tree, CvDTreeNode* _node );
-        ForestTreeBestSplitFinder( const ForestTreeBestSplitFinder& finder, Split );
-        virtual void operator()(const BlockedRange& range);
+        cmp_lt_ptr() {}
+        bool operator ()(const _Tp* a, const _Tp* b) const { return *a < *b; }
     };
-}
 
-#endif /* __ML_H__ */
+    static inline void setRangeVector(std::vector<int>& vec, int n)
+    {
+        vec.resize(n);
+        for( int i = 0; i < n; i++ )
+            vec[i] = i;
+    }
+
+    static inline void writeTermCrit(FileStorage& fs, const TermCriteria& termCrit)
+    {
+        if( (termCrit.type & TermCriteria::EPS) != 0 )
+            fs << "epsilon" << termCrit.epsilon;
+        if( (termCrit.type & TermCriteria::COUNT) != 0 )
+            fs << "iterations" << termCrit.maxCount;
+    }
+
+    static inline TermCriteria readTermCrit(const FileNode& fn)
+    {
+        TermCriteria termCrit;
+        double epsilon = (double)fn["epsilon"];
+        if( epsilon > 0 )
+        {
+            termCrit.type |= TermCriteria::EPS;
+            termCrit.epsilon = epsilon;
+        }
+        int iters = (int)fn["iterations"];
+        if( iters > 0 )
+        {
+            termCrit.type |= TermCriteria::COUNT;
+            termCrit.maxCount = iters;
+        }
+        return termCrit;
+    }
+
+    class DTreesImpl : public DTrees
+    {
+    public:
+        struct WNode
+        {
+            WNode()
+            {
+                class_idx = sample_count = depth = complexity = 0;
+                parent = left = right = split = defaultDir = -1;
+                Tn = INT_MAX;
+                value = maxlr = alpha = node_risk = tree_risk = tree_error = 0.;
+            }
+
+            int class_idx;
+            double Tn;
+            double value;
+
+            int parent;
+            int left;
+            int right;
+            int defaultDir;
+
+            int split;
+
+            int sample_count;
+            int depth;
+            double maxlr;
+
+            // global pruning data
+            int complexity;
+            double alpha;
+            double node_risk, tree_risk, tree_error;
+        };
+
+        struct WSplit
+        {
+            WSplit()
+            {
+                varIdx = next = 0;
+                inversed = false;
+                quality = c = 0.f;
+                subsetOfs = -1;
+            }
+
+            int varIdx;
+            bool inversed;
+            float quality;
+            int next;
+            float c;
+            int subsetOfs;
+        };
+
+        struct WorkData
+        {
+            WorkData(const Ptr<TrainData>& _data);
+
+            Ptr<TrainData> data;
+            vector<WNode> wnodes;
+            vector<WSplit> wsplits;
+            vector<int> wsubsets;
+            vector<double> cv_Tn;
+            vector<double> cv_node_risk;
+            vector<double> cv_node_error;
+            vector<int> cv_labels;
+            vector<double> sample_weights;
+            vector<int> cat_responses;
+            vector<double> ord_responses;
+            vector<int> sidx;
+            int maxSubsetSize;
+        };
+
+        DTreesImpl();
+        virtual ~DTreesImpl();
+        virtual void clear();
+
+        String getDefaultModelName() const { return "opencv_ml_dtree"; }
+        bool isTrained() const { return !roots.empty(); }
+        bool isClassifier() const { return _isClassifier; }
+        int getVarCount() const { return varType.empty() ? 0 : (int)(varType.size() - 1); }
+        int getCatCount(int vi) const { return catOfs[vi][1] - catOfs[vi][0]; }
+        int getSubsetSize(int vi) const { return (getCatCount(vi) + 31)/32; }
+
+        virtual void setDParams(const Params& _params);
+        virtual Params getDParams() const;
+        virtual void startTraining( const Ptr<TrainData>& trainData, int flags );
+        virtual void endTraining();
+        virtual void initCompVarIdx();
+        virtual bool train( const Ptr<TrainData>& trainData, int flags );
+
+        virtual int addTree( const vector<int>& sidx );
+        virtual int addNodeAndTrySplit( int parent, const vector<int>& sidx );
+        virtual const vector<int>& getActiveVars();
+        virtual int findBestSplit( const vector<int>& _sidx );
+        virtual void calcValue( int nidx, const vector<int>& _sidx );
+
+        virtual WSplit findSplitOrdClass( int vi, const vector<int>& _sidx, double initQuality );
+
+        // simple k-means, slightly modified to take into account the "weight" (L1-norm) of each vector.
+        virtual void clusterCategories( const double* vectors, int n, int m, double* csums, int k, int* labels );
+        virtual WSplit findSplitCatClass( int vi, const vector<int>& _sidx, double initQuality, int* subset );
+
+        virtual WSplit findSplitOrdReg( int vi, const vector<int>& _sidx, double initQuality );
+        virtual WSplit findSplitCatReg( int vi, const vector<int>& _sidx, double initQuality, int* subset );
+
+        virtual int calcDir( int splitidx, const vector<int>& _sidx, vector<int>& _sleft, vector<int>& _sright );
+        virtual int pruneCV( int root );
+
+        virtual double updateTreeRNC( int root, double T, int fold );
+        virtual bool cutTree( int root, double T, int fold, double min_alpha );
+        virtual float predictTrees( const Range& range, const Mat& sample, int flags ) const;
+        virtual float predict( InputArray inputs, OutputArray outputs, int flags ) const;
+
+        virtual void writeTrainingParams( FileStorage& fs ) const;
+        virtual void writeParams( FileStorage& fs ) const;
+        virtual void writeSplit( FileStorage& fs, int splitidx ) const;
+        virtual void writeNode( FileStorage& fs, int nidx, int depth ) const;
+        virtual void writeTree( FileStorage& fs, int root ) const;
+        virtual void write( FileStorage& fs ) const;
+
+        virtual void readParams( const FileNode& fn );
+        virtual int readSplit( const FileNode& fn );
+        virtual int readNode( const FileNode& fn );
+        virtual int readTree( const FileNode& fn );
+        virtual void read( const FileNode& fn );
+
+        virtual const std::vector<int>& getRoots() const { return roots; }
+        virtual const std::vector<Node>& getNodes() const { return nodes; }
+        virtual const std::vector<Split>& getSplits() const { return splits; }
+        virtual const std::vector<int>& getSubsets() const { return subsets; }
+
+        Params params0, params;
+
+        vector<int> varIdx;
+        vector<int> compVarIdx;
+        vector<uchar> varType;
+        vector<Vec2i> catOfs;
+        vector<int> catMap;
+        vector<int> roots;
+        vector<Node> nodes;
+        vector<Split> splits;
+        vector<int> subsets;
+        vector<int> classLabels;
+        vector<float> missingSubst;
+        bool _isClassifier;
+
+        Ptr<WorkData> w;
+    };
+
+}}
+
+#endif /* __OPENCV_ML_PRECOMP_HPP__ */

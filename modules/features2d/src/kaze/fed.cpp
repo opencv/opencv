@@ -28,7 +28,7 @@
  * DAGM, 2010
  *
 */
-#include "precomp.hpp"
+#include "../precomp.hpp"
 #include "fed.h"
 
 using namespace std;

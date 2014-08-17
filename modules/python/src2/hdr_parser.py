@@ -582,6 +582,7 @@ class CppHeaderParser(object):
             return name
         if name.startswith("cv."):
             return name
+        qualified_name = (("." in name) or ("::" in name))
         n = ""
         for b in self.block_stack:
             block_type, block_name = b[self.BLOCK_TYPE], b[self.BLOCK_NAME]
@@ -590,9 +591,12 @@ class CppHeaderParser(object):
             if block_type not in ["struct", "class", "namespace"]:
                 print("Error at %d: there are non-valid entries in the current block stack " % (self.lineno, self.block_stack))
                 sys.exit(-1)
-            if block_name:
+            if block_name and (block_type == "namespace" or not qualified_name):
                 n += block_name + "."
-        return n + name.replace("::", ".")
+        n += name.replace("::", ".")
+        if n.endswith(".Algorithm"):
+            n = "cv.Algorithm"
+        return n
 
     def parse_stmt(self, stmt, end_token):
         """
@@ -643,7 +647,7 @@ class CppHeaderParser(object):
                     classname = classname[1:]
                 decl = [stmt_type + " " + self.get_dotted_name(classname), "", modlist, []]
                 if bases:
-                    decl[1] = ": " + ", ".join([b if "::" in b else self.get_dotted_name(b).replace(".","::") for b in bases])
+                    decl[1] = ": " + ", ".join([self.get_dotted_name(b).replace(".","::") for b in bases])
                 return stmt_type, classname, True, decl
 
             if stmt.startswith("class") or stmt.startswith("struct"):
@@ -658,7 +662,7 @@ class CppHeaderParser(object):
                     if ("CV_EXPORTS_W" in stmt) or ("CV_EXPORTS_AS" in stmt) or (not self.wrap_mode):# and ("CV_EXPORTS" in stmt)):
                         decl = [stmt_type + " " + self.get_dotted_name(classname), "", modlist, []]
                         if bases:
-                            decl[1] = ": " + ", ".join([b if "::" in b else self.get_dotted_name(b).replace(".","::") for b in bases])
+                            decl[1] = ": " + ", ".join([self.get_dotted_name(b).replace(".","::") for b in bases])
                     return stmt_type, classname, True, decl
 
             if stmt.startswith("enum"):

@@ -296,7 +296,7 @@ public:
 
             ASSERT_TRUE(img.channels() == 4);
 
-            unsigned char* img_data = (unsigned char*)img.data;
+            unsigned char* img_data = img.ptr();
 
             // Verification first pixel is red in BGRA
             ASSERT_TRUE(img_data[0] == 0x00);
@@ -316,7 +316,7 @@ public:
 
             ASSERT_TRUE(img.channels() == 3);
 
-            img_data = (unsigned char*)img.data;
+            img_data = img.ptr();
 
             // Verification first pixel is red in BGR
             ASSERT_TRUE(img_data[0] == 0x00);
@@ -334,7 +334,7 @@ public:
 
             ASSERT_TRUE(img.channels() == 3);
 
-            img_data = (unsigned char*)img.data;
+            img_data = img.ptr();
 
             // Verification first pixel is red in BGR
             ASSERT_TRUE(img_data[0] == 0x00);
@@ -352,7 +352,7 @@ public:
 
             ASSERT_TRUE(img.channels() == 3);
 
-            img_data = (unsigned char*)img.data;
+            img_data = img.ptr();
 
             // Verification first pixel is red in BGR
             ASSERT_TRUE(img_data[0] == 0x00);
@@ -431,6 +431,31 @@ TEST(Imgcodecs_Jpeg, encode_decode_optimize_jpeg)
 
     remove(output_optimized.c_str());
 }
+
+TEST(Imgcodecs_Jpeg, encode_decode_rst_jpeg)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    string input = string(ts.get_data_path()) + "../cv/shared/lena.png";
+    cv::Mat img = cv::imread(input);
+    ASSERT_FALSE(img.empty());
+
+    std::vector<int> params;
+    params.push_back(IMWRITE_JPEG_RST_INTERVAL);
+    params.push_back(1);
+
+    string output_rst = cv::tempfile(".jpg");
+    EXPECT_NO_THROW(cv::imwrite(output_rst, img, params));
+    cv::Mat img_jpg_rst = cv::imread(output_rst);
+
+    string output_normal = cv::tempfile(".jpg");
+    EXPECT_NO_THROW(cv::imwrite(output_normal, img));
+    cv::Mat img_jpg_normal = cv::imread(output_normal);
+
+    EXPECT_EQ(0, cvtest::norm(img_jpg_rst, img_jpg_normal, NORM_INF));
+
+    remove(output_rst.c_str());
+}
+
 #endif
 
 

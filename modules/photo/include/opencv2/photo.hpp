@@ -93,6 +93,8 @@ CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, 
         float h = 3, float hColor = 3,
         int templateWindowSize = 7, int searchWindowSize = 21);
 
+CV_EXPORTS_W void denoise_TVL1(const std::vector<Mat>& observations,Mat& result, double lambda=1.0, int niters=30);
+
 enum { LDR_SIZE = 256 };
 
 class CV_EXPORTS_W Tonemap : public Algorithm

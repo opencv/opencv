@@ -23,7 +23,7 @@ int main( int, char** argv )
   /// Load image
   src = imread( argv[1], 1 );
 
-  if( !src.data )
+  if( src.empty() )
     { return -1; }
 
   /// Separate the image in 3 places ( B, G and R )

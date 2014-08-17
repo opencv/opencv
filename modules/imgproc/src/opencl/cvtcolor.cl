@@ -441,18 +441,18 @@ __kernel void YCrCb2RGB(__global const uchar* src, int src_step, int src_offset,
                 __global DATA_TYPE * dstptr = (__global DATA_TYPE*)(dst + dst_index);
 
                 DATA_TYPE_4 src_pix = vload4(0, srcptr);
-                DATA_TYPE y = src_pix.x, cr = src_pix.y, cb = src_pix.z;
+                DATA_TYPE yp = src_pix.x, cr = src_pix.y, cb = src_pix.z;
 
 #ifdef DEPTH_5
                 __constant float * coeff = c_YCrCb2RGBCoeffs_f;
-                float r = fma(coeff[0], cr - HALF_MAX, y);
-                float g = fma(coeff[1], cr - HALF_MAX, fma(coeff[2], cb - HALF_MAX, y));
-                float b = fma(coeff[3], cb - HALF_MAX, y);
+                float r = fma(coeff[0], cr - HALF_MAX, yp);
+                float g = fma(coeff[1], cr - HALF_MAX, fma(coeff[2], cb - HALF_MAX, yp));
+                float b = fma(coeff[3], cb - HALF_MAX, yp);
 #else
                 __constant int * coeff = c_YCrCb2RGBCoeffs_i;
-                int r = y + CV_DESCALE(coeff[0] * (cr - HALF_MAX), yuv_shift);
-                int g = y + CV_DESCALE(mad24(coeff[1], cr - HALF_MAX, coeff[2] * (cb - HALF_MAX)), yuv_shift);
-                int b = y + CV_DESCALE(coeff[3] * (cb - HALF_MAX), yuv_shift);
+                int r = yp + CV_DESCALE(coeff[0] * (cr - HALF_MAX), yuv_shift);
+                int g = yp + CV_DESCALE(mad24(coeff[1], cr - HALF_MAX, coeff[2] * (cb - HALF_MAX)), yuv_shift);
+                int b = yp + CV_DESCALE(coeff[3] * (cb - HALF_MAX), yuv_shift);
 #endif
 
                 dstptr[(bidx^2)] = SAT_CAST(r);
@@ -1796,6 +1796,10 @@ __kernel void Luv2BGR(__global const uchar * srcptr, int src_step, int src_offse
                 float G = fma(X, coeffs[3], fma(Y, coeffs[4], Z * coeffs[5]));
                 float B = fma(X, coeffs[6], fma(Y, coeffs[7], Z * coeffs[8]));
 
+                R = clamp(R, 0.f, 1.f);
+                G = clamp(G, 0.f, 1.f);
+                B = clamp(B, 0.f, 1.f);
+
 #ifdef SRGB
                 R = splineInterpolate(R*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
                 G = splineInterpolate(G*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
@@ -1852,6 +1856,10 @@ __kernel void Luv2BGR(__global const uchar * src, int src_step, int src_offset,
                 float R = fma(X, coeffs[0], fma(Y, coeffs[1], Z * coeffs[2]));
                 float G = fma(X, coeffs[3], fma(Y, coeffs[4], Z * coeffs[5]));
                 float B = fma(X, coeffs[6], fma(Y, coeffs[7], Z * coeffs[8]));
+
+                R = clamp(R, 0.f, 1.f);
+                G = clamp(G, 0.f, 1.f);
+                B = clamp(B, 0.f, 1.f);
 
 #ifdef SRGB
                 R = splineInterpolate(R*GammaTabScale, gammaTab, GAMMA_TAB_SIZE);

@@ -267,7 +267,7 @@ class ClassInfo(object):
                 #return sys.exit(-1)
             if self.bases and self.bases[0].startswith("cv::"):
                 self.bases[0] = self.bases[0][4:]
-            if self.bases and self.bases[0] == "Algorithm":
+            if self.bases and self.bases[0] == "cv::Algorithm":
                 self.isalgorithm = True
             for m in decl[2]:
                 if m.startswith("="):
@@ -286,7 +286,7 @@ class ClassInfo(object):
         code = "static bool pyopencv_to(PyObject* src, %s& dst, const char* name)\n{\n    PyObject* tmp;\n    bool ok;\n" % (self.cname)
         code += "".join([gen_template_set_prop_from_map.substitute(propname=p.name,proptype=p.tp) for p in self.props])
         if self.bases:
-            code += "\n    return pyopencv_to(src, (%s&)dst, name);\n}\n" % all_classes[self.bases[0]].cname
+            code += "\n    return pyopencv_to(src, (%s&)dst, name);\n}\n" % all_classes[self.bases[0].replace("::", "_")].cname
         else:
             code += "\n    return true;\n}\n"
         return code
@@ -761,7 +761,7 @@ class PythonWrapperGenerator(object):
             sys.exit(-1)
         self.classes[classinfo.name] = classinfo
         if classinfo.bases and not classinfo.isalgorithm:
-            classinfo.isalgorithm = self.classes[classinfo.bases[0]].isalgorithm
+            classinfo.isalgorithm = self.classes[classinfo.bases[0].replace("::", "_")].isalgorithm
 
     def add_const(self, name, decl):
         constinfo = ConstInfo(name, decl[1])

@@ -55,12 +55,22 @@
 namespace cv
 {
 
+/**
+ * @struct ImageCodecInitializer
+ *
+ * Container which stores the registered codecs to be used by OpenCV
+*/
 struct ImageCodecInitializer
 {
+    /**
+     * Default Constructor for the ImageCodeInitializer
+    */
     ImageCodecInitializer()
     {
+        /// BMP Support
         decoders.push_back( makePtr<BmpDecoder>() );
         encoders.push_back( makePtr<BmpEncoder>() );
+
         decoders.push_back( makePtr<HdrDecoder>() );
         encoders.push_back( makePtr<HdrEncoder>() );
     #ifdef HAVE_JPEG
@@ -91,6 +101,11 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<ExrDecoder>() );
         encoders.push_back( makePtr<ExrEncoder>() );
     #endif
+
+    #ifdef HAVE_GDAL
+        /// Attach the GDAL Decoder
+        decoders.push_back( makePtr<GdalDecoder>() );
+    #endif/*HAVE_GDAL*/
     }
 
     std::vector<ImageDecoder> decoders;
@@ -99,29 +114,45 @@ struct ImageCodecInitializer
 
 static ImageCodecInitializer codecs;
 
-static ImageDecoder findDecoder( const String& filename )
-{
+/**
+ * Find the decoders
+ *
+ * @param[in] filename File to search
+ *
+ * @return Image decoder to parse image file.
+*/
+static ImageDecoder findDecoder( const String& filename ) {
+
     size_t i, maxlen = 0;
+
+    /// iterate through list of registered codecs
     for( i = 0; i < codecs.decoders.size(); i++ )
     {
         size_t len = codecs.decoders[i]->signatureLength();
         maxlen = std::max(maxlen, len);
     }
 
+    /// Open the file
     FILE* f= fopen( filename.c_str(), "rb" );
+
+    /// in the event of a failure, return an empty image decoder
     if( !f )
         return ImageDecoder();
+
+    // read the file signature
     String signature(maxlen, ' ');
     maxlen = fread( (void*)signature.c_str(), 1, maxlen, f );
     fclose(f);
     signature = signature.substr(0, maxlen);
 
+    /// compare signature against all decoders
     for( i = 0; i < codecs.decoders.size(); i++ )
     {
         if( codecs.decoders[i]->checkSignature(signature) )
             return codecs.decoders[i]->newDecoder();
     }
 
+    /// If no decoder was found, return base type
     return ImageDecoder();
 }
 
@@ -138,9 +169,9 @@ static ImageDecoder findDecoder( const Mat& buf )
         maxlen = std::max(maxlen, len);
     }
 
+    String signature(maxlen, ' ');
     size_t bufSize = buf.rows*buf.cols*buf.elemSize();
     maxlen = std::min(maxlen, bufSize);
-    String signature(maxlen, ' ');
     memcpy( (void*)signature.c_str(), buf.data, maxlen );
 
     for( i = 0; i < codecs.decoders.size(); i++ )
@@ -193,6 +224,18 @@ static ImageEncoder findEncoder( const String& _ext )
 
 enum { LOAD_CVMAT=0, LOAD_IMAGE=1, LOAD_MAT=2 };
 
+/**
+ * Read an image into memory and return the information
+ *
+ * @param[in] filename File to load
+ * @param[in] flags Flags
+ * @param[in] hdrtype { LOAD_CVMAT=0,
+ *                      LOAD_IMAGE=1,
+ *                      LOAD_MAT=2
+ *                    }
+ * @param[in] mat Reference to C++ Mat object (If LOAD_MAT)
+ *
+*/
 static void*
 imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
 {
@@ -200,16 +243,37 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     CvMat *matrix = 0;
     Mat temp, *data = &temp;
 
-    ImageDecoder decoder = findDecoder(filename);
-    if( !decoder )
+    /// Search for the relevant decoder to handle the imagery
+    ImageDecoder decoder;
+
+#ifdef HAVE_GDAL
+    if( (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
+        decoder = GdalDecoder().newDecoder();
+    }else{
+#endif
+        decoder = findDecoder(filename);
+#ifdef HAVE_GDAL
+    }
+#endif
+
+    /// if no decoder was found, return nothing.
+    if( !decoder ){
         return 0;
+    }
+
+    /// set the filename in the driver
     decoder->setSource(filename);
-    if( !decoder->readHeader() )
+
+   // read the header to make sure it succeeds
+   if( !decoder->readHeader() )
         return 0;
+
+    // established the required input image size
     CvSize size;
     size.width = decoder->width();
     size.height = decoder->height();
 
+    // grab the decoded type
     int type = decoder->type();
     if( flags != -1 )
     {
@@ -242,6 +306,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
         temp = cvarrToMat(image);
     }
 
+    // read the image data
     if( !decoder->readData( *data ))
     {
         cvReleaseImage( &image );
@@ -255,10 +320,23 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
         hdrtype == LOAD_IMAGE ? (void*)image : (void*)mat;
 }
 
+/**
+ * Read an image
+ *
+ *  This function merely calls the actual implementation above and returns itself.
+ *
+ * @param[in] filename File to load
+ * @param[in] flags Flags you wish to set.
+*/
 Mat imread( const String& filename, int flags )
 {
+    /// create the basic container
     Mat img;
+
+    /// load the data
     imread_( filename, flags, LOAD_MAT, &img );
+
+    /// return a reference to the data
     return img;
 }
 
@@ -303,7 +381,7 @@ bool imwrite( const String& filename, InputArray _img,
 static void*
 imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
 {
-    CV_Assert(buf.data && buf.isContinuous());
+    CV_Assert(!buf.empty() && buf.isContinuous());
     IplImage* image = 0;
     CvMat *matrix = 0;
     Mat temp, *data = &temp;
@@ -320,7 +398,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
         if( !f )
             return 0;
         size_t bufSize = buf.cols*buf.rows*buf.elemSize();
-        fwrite( &buf.data[0], 1, bufSize, f );
+        fwrite( buf.ptr(), 1, bufSize, f );
         fclose(f);
         decoder->setSource(filename);
     }

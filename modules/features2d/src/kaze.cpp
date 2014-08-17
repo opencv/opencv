@@ -55,12 +55,21 @@ namespace cv
     KAZE::KAZE()
         : extended(false)
         , upright(false)
+        , threshold(0.001f)
+        , octaves(4)
+        , sublevels(4)
+        , diffusivity(DIFF_PM_G2)
     {
     }
 
-    KAZE::KAZE(bool _extended, bool _upright)
+    KAZE::KAZE(bool _extended, bool _upright, float _threshold, int _octaves,
+               int _sublevels, int _diffusivity)
         : extended(_extended)
         , upright(_upright)
+        , threshold(_threshold)
+        , octaves(_octaves)
+        , sublevels(_sublevels)
+        , diffusivity(_diffusivity)
     {
 
     }
@@ -111,6 +120,10 @@ namespace cv
         options.img_height = img.rows;
         options.extended = extended;
         options.upright = upright;
+        options.dthreshold = threshold;
+        options.omax = octaves;
+        options.nsublevels = sublevels;
+        options.diffusivity = diffusivity;
 
         KAZEFeatures impl(options);
         impl.Create_Nonlinear_Scale_Space(img1_32);

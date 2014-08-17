@@ -41,7 +41,12 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_core.hpp"
+
+#ifdef __APPLE__
+#undef CV_NEON
+#define CV_NEON 0
+#endif
 
 namespace cv
 {
@@ -49,6 +54,71 @@ namespace cv
 /****************************************************************************************\
 *                                       split & merge                                    *
 \****************************************************************************************/
+
+#if CV_NEON
+template<typename T> struct VSplit2;
+template<typename T> struct VSplit3;
+template<typename T> struct VSplit4;
+
+#define SPLIT2_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
+    template<>                                                                    \
+    struct name<data_type>{                                                       \
+        void operator()(const data_type* src, data_type* dst0, data_type* dst1){  \
+            reg_type r = load_func(src);                                          \
+            store_func(dst0, r.val[0]);                                           \
+            store_func(dst1, r.val[1]);                                           \
+        }                                                                         \
+    }
+
+#define SPLIT3_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
+    template<>                                                                    \
+    struct name<data_type>{                                                       \
+        void operator()(const data_type* src, data_type* dst0, data_type* dst1,   \
+                        data_type* dst2){                                         \
+            reg_type r = load_func(src);                                          \
+            store_func(dst0, r.val[0]);                                           \
+            store_func(dst1, r.val[1]);                                           \
+            store_func(dst2, r.val[2]);                                           \
+        }                                                                         \
+    }
+
+#define SPLIT4_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
+    template<>                                                                    \
+    struct name<data_type>{                                                       \
+        void operator()(const data_type* src, data_type* dst0, data_type* dst1,   \
+                        data_type* dst2, data_type* dst3){                        \
+            reg_type r = load_func(src);                                          \
+            store_func(dst0, r.val[0]);                                           \
+            store_func(dst1, r.val[1]);                                           \
+            store_func(dst2, r.val[2]);                                           \
+            store_func(dst3, r.val[3]);                                           \
+        }                                                                         \
+    }
+
+SPLIT2_KERNEL_TEMPLATE(VSplit2, uchar ,  uint8x16x2_t, vld2q_u8 , vst1q_u8 );
+SPLIT2_KERNEL_TEMPLATE(VSplit2, schar ,   int8x16x2_t, vld2q_s8 , vst1q_s8 );
+SPLIT2_KERNEL_TEMPLATE(VSplit2, ushort,  uint16x8x2_t, vld2q_u16, vst1q_u16);
+SPLIT2_KERNEL_TEMPLATE(VSplit2, short ,   int16x8x2_t, vld2q_s16, vst1q_s16);
+SPLIT2_KERNEL_TEMPLATE(VSplit2, int   ,   int32x4x2_t, vld2q_s32, vst1q_s32);
+SPLIT2_KERNEL_TEMPLATE(VSplit2, float , float32x4x2_t, vld2q_f32, vst1q_f32);
+SPLIT2_KERNEL_TEMPLATE(VSplit2, int64 ,   int64x1x2_t, vld2_s64 , vst1_s64 );
+
+SPLIT3_KERNEL_TEMPLATE(VSplit3, uchar ,  uint8x16x3_t, vld3q_u8 , vst1q_u8 );
+SPLIT3_KERNEL_TEMPLATE(VSplit3, schar ,   int8x16x3_t, vld3q_s8 , vst1q_s8 );
+SPLIT3_KERNEL_TEMPLATE(VSplit3, ushort,  uint16x8x3_t, vld3q_u16, vst1q_u16);
+SPLIT3_KERNEL_TEMPLATE(VSplit3, short ,   int16x8x3_t, vld3q_s16, vst1q_s16);
+SPLIT3_KERNEL_TEMPLATE(VSplit3, int   ,   int32x4x3_t, vld3q_s32, vst1q_s32);
+SPLIT3_KERNEL_TEMPLATE(VSplit3, float , float32x4x3_t, vld3q_f32, vst1q_f32);
+SPLIT3_KERNEL_TEMPLATE(VSplit3, int64 ,   int64x1x3_t, vld3_s64 , vst1_s64 );
+
+SPLIT4_KERNEL_TEMPLATE(VSplit4, uchar ,  uint8x16x4_t, vld4q_u8 , vst1q_u8 );
+SPLIT4_KERNEL_TEMPLATE(VSplit4, schar ,   int8x16x4_t, vld4q_s8 , vst1q_s8 );
+SPLIT4_KERNEL_TEMPLATE(VSplit4, ushort,  uint16x8x4_t, vld4q_u16, vst1q_u16);
+SPLIT4_KERNEL_TEMPLATE(VSplit4, short ,   int16x8x4_t, vld4q_s16, vst1q_s16);
+SPLIT4_KERNEL_TEMPLATE(VSplit4, int   ,   int32x4x4_t, vld4q_s32, vst1q_s32);
+SPLIT4_KERNEL_TEMPLATE(VSplit4, float , float32x4x4_t, vld4q_f32, vst1q_f32);
+SPLIT4_KERNEL_TEMPLATE(VSplit4, int64 ,   int64x1x4_t, vld4_s64 , vst1_s64 );
+#endif
 
 template<typename T> static void
 split_( const T* src, T** dst, int len, int cn )
@@ -58,13 +128,34 @@ split_( const T* src, T** dst, int len, int cn )
     if( k == 1 )
     {
         T* dst0 = dst[0];
-        for( i = j = 0; i < len; i++, j += cn )
-            dst0[i] = src[j];
+
+        if(cn == 1)
+        {
+            memcpy(dst0, src, len * sizeof(T));
+        }
+        else
+        {
+            for( i = 0, j = 0 ; i < len; i++, j += cn )
+                dst0[i] = src[j];
+        }
     }
     else if( k == 2 )
     {
         T *dst0 = dst[0], *dst1 = dst[1];
-        for( i = j = 0; i < len; i++, j += cn )
+        i = j = 0;
+
+#if CV_NEON
+        if(cn == 2)
+        {
+            int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
+            int inc_j = 2 * inc_i;
+
+            VSplit2<T> vsplit;
+            for( ; i < len - inc_i; i += inc_i, j += inc_j)
+                vsplit(src + j, dst0 + i, dst1 + i);
+        }
+#endif
+        for( ; i < len; i++, j += cn )
         {
             dst0[i] = src[j];
             dst1[i] = src[j+1];
@@ -73,7 +164,20 @@ split_( const T* src, T** dst, int len, int cn )
     else if( k == 3 )
     {
         T *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2];
-        for( i = j = 0; i < len; i++, j += cn )
+        i = j = 0;
+
+#if CV_NEON
+        if(cn == 3)
+        {
+            int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
+            int inc_j = 3 * inc_i;
+
+            VSplit3<T> vsplit;
+            for( ; i < len - inc_i; i += inc_i, j += inc_j)
+                vsplit(src + j, dst0 + i, dst1 + i, dst2 + i);
+        }
+#endif
+        for( ; i < len; i++, j += cn )
         {
             dst0[i] = src[j];
             dst1[i] = src[j+1];
@@ -83,7 +187,20 @@ split_( const T* src, T** dst, int len, int cn )
     else
     {
         T *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2], *dst3 = dst[3];
-        for( i = j = 0; i < len; i++, j += cn )
+        i = j = 0;
+
+#if CV_NEON
+        if(cn == 4)
+        {
+            int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
+            int inc_j = 4 * inc_i;
+
+            VSplit4<T> vsplit;
+            for( ; i < len - inc_i; i += inc_i, j += inc_j)
+                vsplit(src + j, dst0 + i, dst1 + i, dst2 + i, dst3 + i);
+        }
+#endif
+        for( ; i < len; i++, j += cn )
         {
             dst0[i] = src[j]; dst1[i] = src[j+1];
             dst2[i] = src[j+2]; dst3[i] = src[j+3];
@@ -101,6 +218,77 @@ split_( const T* src, T** dst, int len, int cn )
     }
 }
 
+
+#if CV_NEON
+template<typename T> struct VMerge2;
+template<typename T> struct VMerge3;
+template<typename T> struct VMerge4;
+
+#define MERGE2_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
+    template<>                                                                    \
+    struct name<data_type>{                                                       \
+        void operator()(const data_type* src0, const data_type* src1,             \
+                        data_type* dst){                                          \
+            reg_type r;                                                           \
+            r.val[0] = load_func(src0);                                           \
+            r.val[1] = load_func(src1);                                           \
+            store_func(dst, r);                                                   \
+        }                                                                         \
+    }
+
+#define MERGE3_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
+    template<>                                                                    \
+    struct name<data_type>{                                                       \
+        void operator()(const data_type* src0, const data_type* src1,             \
+                        const data_type* src2, data_type* dst){                   \
+            reg_type r;                                                           \
+            r.val[0] = load_func(src0);                                           \
+            r.val[1] = load_func(src1);                                           \
+            r.val[2] = load_func(src2);                                           \
+            store_func(dst, r);                                                   \
+        }                                                                         \
+    }
+
+#define MERGE4_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
+    template<>                                                                    \
+    struct name<data_type>{                                                       \
+        void operator()(const data_type* src0, const data_type* src1,             \
+                        const data_type* src2, const data_type* src3,             \
+                        data_type* dst){                                          \
+            reg_type r;                                                           \
+            r.val[0] = load_func(src0);                                           \
+            r.val[1] = load_func(src1);                                           \
+            r.val[2] = load_func(src2);                                           \
+            r.val[3] = load_func(src3);                                           \
+            store_func(dst, r);                                                   \
+        }                                                                         \
+    }
+
+MERGE2_KERNEL_TEMPLATE(VMerge2, uchar ,  uint8x16x2_t, vld1q_u8 , vst2q_u8 );
+MERGE2_KERNEL_TEMPLATE(VMerge2, schar ,   int8x16x2_t, vld1q_s8 , vst2q_s8 );
+MERGE2_KERNEL_TEMPLATE(VMerge2, ushort,  uint16x8x2_t, vld1q_u16, vst2q_u16);
+MERGE2_KERNEL_TEMPLATE(VMerge2, short ,   int16x8x2_t, vld1q_s16, vst2q_s16);
+MERGE2_KERNEL_TEMPLATE(VMerge2, int   ,   int32x4x2_t, vld1q_s32, vst2q_s32);
+MERGE2_KERNEL_TEMPLATE(VMerge2, float , float32x4x2_t, vld1q_f32, vst2q_f32);
+MERGE2_KERNEL_TEMPLATE(VMerge2, int64 ,   int64x1x2_t, vld1_s64 , vst2_s64 );
+
+MERGE3_KERNEL_TEMPLATE(VMerge3, uchar ,  uint8x16x3_t, vld1q_u8 , vst3q_u8 );
+MERGE3_KERNEL_TEMPLATE(VMerge3, schar ,   int8x16x3_t, vld1q_s8 , vst3q_s8 );
+MERGE3_KERNEL_TEMPLATE(VMerge3, ushort,  uint16x8x3_t, vld1q_u16, vst3q_u16);
+MERGE3_KERNEL_TEMPLATE(VMerge3, short ,   int16x8x3_t, vld1q_s16, vst3q_s16);
+MERGE3_KERNEL_TEMPLATE(VMerge3, int   ,   int32x4x3_t, vld1q_s32, vst3q_s32);
+MERGE3_KERNEL_TEMPLATE(VMerge3, float , float32x4x3_t, vld1q_f32, vst3q_f32);
+MERGE3_KERNEL_TEMPLATE(VMerge3, int64 ,   int64x1x3_t, vld1_s64 , vst3_s64 );
+
+MERGE4_KERNEL_TEMPLATE(VMerge4, uchar ,  uint8x16x4_t, vld1q_u8 , vst4q_u8 );
+MERGE4_KERNEL_TEMPLATE(VMerge4, schar ,   int8x16x4_t, vld1q_s8 , vst4q_s8 );
+MERGE4_KERNEL_TEMPLATE(VMerge4, ushort,  uint16x8x4_t, vld1q_u16, vst4q_u16);
+MERGE4_KERNEL_TEMPLATE(VMerge4, short ,   int16x8x4_t, vld1q_s16, vst4q_s16);
+MERGE4_KERNEL_TEMPLATE(VMerge4, int   ,   int32x4x4_t, vld1q_s32, vst4q_s32);
+MERGE4_KERNEL_TEMPLATE(VMerge4, float , float32x4x4_t, vld1q_f32, vst4q_f32);
+MERGE4_KERNEL_TEMPLATE(VMerge4, int64 ,   int64x1x4_t, vld1_s64 , vst4_s64 );
+#endif
+
 template<typename T> static void
 merge_( const T** src, T* dst, int len, int cn )
 {
@@ -115,7 +303,19 @@ merge_( const T** src, T* dst, int len, int cn )
     else if( k == 2 )
     {
         const T *src0 = src[0], *src1 = src[1];
-        for( i = j = 0; i < len; i++, j += cn )
+        i = j = 0;
+#if CV_NEON
+        if(cn == 2)
+        {
+            int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
+            int inc_j = 2 * inc_i;
+
+            VMerge2<T> vmerge;
+            for( ; i < len - inc_i; i += inc_i, j += inc_j)
+                vmerge(src0 + i, src1 + i, dst + j);
+        }
+#endif
+        for( ; i < len; i++, j += cn )
         {
             dst[j] = src0[i];
             dst[j+1] = src1[i];
@@ -124,7 +324,19 @@ merge_( const T** src, T* dst, int len, int cn )
     else if( k == 3 )
     {
         const T *src0 = src[0], *src1 = src[1], *src2 = src[2];
-        for( i = j = 0; i < len; i++, j += cn )
+        i = j = 0;
+#if CV_NEON
+        if(cn == 3)
+        {
+            int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
+            int inc_j = 3 * inc_i;
+
+            VMerge3<T> vmerge;
+            for( ; i < len - inc_i; i += inc_i, j += inc_j)
+                vmerge(src0 + i, src1 + i, src2 + i, dst + j);
+        }
+#endif
+        for( ; i < len; i++, j += cn )
         {
             dst[j] = src0[i];
             dst[j+1] = src1[i];
@@ -134,7 +346,19 @@ merge_( const T** src, T* dst, int len, int cn )
     else
     {
         const T *src0 = src[0], *src1 = src[1], *src2 = src[2], *src3 = src[3];
-        for( i = j = 0; i < len; i++, j += cn )
+        i = j = 0;
+#if CV_NEON
+        if(cn == 4)
+        {
+            int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
+            int inc_j = 4 * inc_i;
+
+            VMerge4<T> vmerge;
+            for( ; i < len - inc_i; i += inc_i, j += inc_j)
+                vmerge(src0 + i, src1 + i, src2 + i, src3 + i, dst + j);
+        }
+#endif
+        for( ; i < len; i++, j += cn )
         {
             dst[j] = src0[i]; dst[j+1] = src1[i];
             dst[j+2] = src2[i]; dst[j+3] = src3[i];
@@ -1400,7 +1624,7 @@ DEF_CVT_FUNC_F(8u16s,  uchar, short, 8u16s_C1R)
 DEF_CVT_FUNC_F(8s16s,  schar, short, 8s16s_C1R)
 DEF_CVT_FUNC_F2(16u16s, ushort, short, 16u16s_C1RSfs)
 DEF_CVT_FUNC_F2(32s16s, int, short, 32s16s_C1RSfs)
-DEF_CVT_FUNC_F2(32f16s, float, short, 32f16s_C1RSfs)
+DEF_CVT_FUNC(32f16s, float, short)
 DEF_CVT_FUNC(64f16s, double, short)
 
 DEF_CVT_FUNC_F(8u32s,  uchar, int, 8u32s_C1R)
@@ -1546,8 +1770,7 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
 
     char cvt[2][50];
     int wdepth = std::max(depth, CV_32F);
-    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D OP_CONVERT_SCALE_ABS -D UNARY_OP -D dstT=%s -D srcT1=%s"
+    String build_opt = format("-D OP_CONVERT_SCALE_ABS -D UNARY_OP -D dstT=%s -D srcT1=%s"
                          " -D workT=%s -D wdepth=%d -D convertToWT1=%s -D convertToDT=%s"
                          " -D workT1=%s -D rowsPerWI=%d%s",
                          ocl::typeToStr(CV_8UC(kercn)),
@@ -1556,7 +1779,8 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
                          ocl::convertTypeStr(depth, wdepth, kercn, cvt[0]),
                          ocl::convertTypeStr(wdepth, CV_8U, kercn, cvt[1]),
                          ocl::typeToStr(wdepth), rowsPerWI,
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc, build_opt);
     if (k.empty())
         return false;
 
@@ -1596,7 +1820,7 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
     if( src.dims <= 2 )
     {
         Size sz = getContinuousSize(src, dst, cn);
-        func( src.data, src.step, 0, 0, dst.data, dst.step, sz, scale );
+        func( src.ptr(), src.step, 0, 0, dst.ptr(), dst.step, sz, scale );
     }
     else
     {
@@ -1729,7 +1953,7 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     UMat src = _src.getUMat(), lut = _lut.getUMat();
     _dst.create(src.size(), CV_MAKETYPE(ddepth, dcn));
     UMat dst = _dst.getUMat();
-    int kercn = lcn == 1 ? std::min(4, ocl::predictOptimalVectorWidth(_dst)) : dcn;
+    int kercn = lcn == 1 ? std::min(4, ocl::predictOptimalVectorWidth(_src, _dst)) : dcn;
 
     ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
                   format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", kercn, lcn,
@@ -1835,7 +2059,7 @@ public:
         CV_DbgAssert(lutcn == 3 || lutcn == 4);
         if (lutcn == 3)
         {
-            IppStatus status = ippiCopy_8u_C3P3R(lut.data, (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
+            IppStatus status = ippiCopy_8u_C3P3R(lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
             if (status < 0)
             {
                 setIppErrorStatus();
@@ -1844,7 +2068,7 @@ public:
         }
         else if (lutcn == 4)
         {
-            IppStatus status = ippiCopy_8u_C4P4R(lut.data, (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
+            IppStatus status = ippiCopy_8u_C4P4R(lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
             if (status < 0)
             {
                 setIppErrorStatus();
@@ -1877,14 +2101,14 @@ public:
         if (lutcn == 3)
         {
             if (ippiLUTPalette_8u_C3R(
-                    src.data, (int)src.step[0], dst.data, (int)dst.step[0],
+                    src.ptr(), (int)src.step[0], dst.ptr(), (int)dst.step[0],
                     ippiSize(dst.size()), lutTable, 8) >= 0)
                 return;
         }
         else if (lutcn == 4)
         {
             if (ippiLUTPalette_8u_C4R(
-                    src.data, (int)src.step[0], dst.data, (int)dst.step[0],
+                    src.ptr(), (int)src.step[0], dst.ptr(), (int)dst.step[0],
                     ippiSize(dst.size()), lutTable, 8) >= 0)
                 return;
         }
@@ -1934,7 +2158,7 @@ public:
         int len = (int)it.size;
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
-            func(ptrs[0], lut_.data, ptrs[1], len, cn, lutcn);
+            func(ptrs[0], lut_.ptr(), ptrs[1], len, cn, lutcn);
     }
 private:
     LUTParallelBody(const LUTParallelBody&);
@@ -2006,7 +2230,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     int len = (int)it.size;
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
-        func(ptrs[0], lut.data, ptrs[1], len, cn, lutcn);
+        func(ptrs[0], lut.ptr(), ptrs[1], len, cn, lutcn);
 }
 
 namespace cv {

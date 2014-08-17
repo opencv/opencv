@@ -48,11 +48,13 @@
 void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
                                int templateWindowSize, int searchWindowSize)
 {
-    CV_OCL_RUN(_src.dims() <= 2 && (_src.isUMat() || _dst.isUMat()),
+    Size src_size = _src.size();
+    CV_OCL_RUN(_src.dims() <= 2 && (_src.isUMat() || _dst.isUMat()) &&
+               src_size.width > 5 && src_size.height > 5, // low accuracy on small sizes
                ocl_fastNlMeansDenoising(_src, _dst, h, templateWindowSize, searchWindowSize))
 
     Mat src = _src.getMat();
-    _dst.create(src.size(), src.type());
+    _dst.create(src_size, src.type());
     Mat dst = _dst.getMat();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
@@ -87,26 +89,27 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
                                       int templateWindowSize, int searchWindowSize)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-
+    Size src_size = _src.size();
     if (type != CV_8UC3 && type != CV_8UC4)
     {
         CV_Error(Error::StsBadArg, "Type of input image should be CV_8UC3!");
         return;
     }
 
-    CV_OCL_RUN(_src.dims() <= 2 && (_dst.isUMat() || _src.isUMat()),
+    CV_OCL_RUN(_src.dims() <= 2 && (_dst.isUMat() || _src.isUMat()) &&
+                src_size.width > 5 && src_size.height > 5, // low accuracy on small sizes
                 ocl_fastNlMeansDenoisingColored(_src, _dst, h, hForColorComponents,
                                                 templateWindowSize, searchWindowSize))
 
     Mat src = _src.getMat();
-    _dst.create(src.size(), type);
+    _dst.create(src_size, type);
     Mat dst = _dst.getMat();
 
     Mat src_lab;
     cvtColor(src, src_lab, COLOR_LBGR2Lab);
 
-    Mat l(src.size(), CV_8U);
-    Mat ab(src.size(), CV_8UC2);
+    Mat l(src_size, CV_8U);
+    Mat ab(src_size, CV_8UC2);
     Mat l_ab[] = { l, ab };
     int from_to[] = { 0,0, 1,1, 2,2 };
     mixChannels(&src_lab, 1, l_ab, 2, from_to, 3);
@@ -115,7 +118,7 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
     fastNlMeansDenoising(ab, ab, hForColorComponents, templateWindowSize, searchWindowSize);
 
     Mat l_ab_denoised[] = { l, ab };
-    Mat dst_lab(src.size(), CV_MAKE_TYPE(depth, 3));
+    Mat dst_lab(src_size, CV_MAKE_TYPE(depth, 3));
     mixChannels(l_ab_denoised, 2, &dst_lab, 1, from_to, 3);
 
     cvtColor(dst_lab, dst, COLOR_Lab2LBGR, cn);
