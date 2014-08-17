@@ -95,7 +95,7 @@ OpticalFlowDeepFlow::OpticalFlowDeepFlow()
     downscaleFactor = 0.95f;
     fixedPointIterations = 5;
     sorIterations = 25;
-    alpha = 6.0f;
+    alpha = 1.0f;
     delta = 0.5f;
     gamma = 5.0f;
     omega = 1.6f;
@@ -231,31 +231,15 @@ void OpticalFlowDeepFlow::calcOneLevel( const Mat I0, const Mat I1, Mat W )
     int ddepth = -1; //as source image
     int kernel_size = 1;
 
-    float deriv_kernel[] = {1.0/12, -8.0/12, -0, 8.0/12, -1.0/12};
-    Mat kernel_h = Mat(1, 5, CV_32FC1, deriv_kernel);
-    Mat kernel_v = Mat(5, 1, CV_32FC1, deriv_kernel);
-
-    filter2D(averageFrame, Ix, CV_32FC1, kernel_h);
-    filter2D(averageFrame, Iy, CV_32FC1, kernel_v);
+    Sobel(averageFrame, Ix, ddepth, 1, 0, kernel_size, 1, 0.00, BORDER_REPLICATE);
+    Sobel(averageFrame, Iy, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
     Iz.create(I1.size(), I1.type());
-    Iz = I1 - I0; // FIXME: should the warped I1 be used?
-    filter2D(Ix, Ixx, CV_32FC1, kernel_h);
-    filter2D(Ix, Ixy, CV_32FC1, kernel_v);
-    filter2D(Iy, Iyy, CV_32FC1, kernel_v);
-    filter2D(Iz, Ixz, CV_32FC1, kernel_h);
-    filter2D(Iz, Iyz, CV_32FC1, kernel_v);
-    //FIXME: if source image is has 8-bit depth output may be truncated
-//    Sobel(averageFrame, Ix, ddepth, 1, 0, kernel_size, 1, 0.00, BORDER_REPLICATE);
-//    Sobel(averageFrame, Iy, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
-//    Iz.create(I1.size(), I1.type());
-//    Iz = I1 - I0; // FIXME: should the warped I1 be used?
-//    Sobel(Ix, Ixx, ddepth, 1, 0, kernel_size, 1, 0.00, BORDER_REPLICATE);
-//    Sobel(Ix, Ixy, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
-//    Sobel(Iy, Iyy, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
-//    Sobel(Iz, Ixz, ddepth, 1, 0, kernel_size, 1, 0.00, BORDER_REPLICATE); // should a difference of derivatives be used instead?
-//    Sobel(Iz, Iyz, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
-
-
+    Iz = warpedI1 - I0;
+    Sobel(Ix, Ixx, ddepth, 1, 0, kernel_size, 1, 0.00, BORDER_REPLICATE);
+    Sobel(Ix, Ixy, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
+    Sobel(Iy, Iyy, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
+    Sobel(Iz, Ixz, ddepth, 1, 0, kernel_size, 1, 0.00, BORDER_REPLICATE); // should a difference of derivatives be used instead?
+    Sobel(Iz, Iyz, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
 
     Ix.at<float>(0, 0);
     Mat tempW = W.clone(); // flow version to be modified in each iteration
@@ -276,92 +260,86 @@ void OpticalFlowDeepFlow::dataTerm( const Mat W, const Mat dW, const Mat tempW, 
         const Mat Iy, const Mat Iz, const Mat Ixx, const Mat Ixy, const Mat Iyy, const Mat Ixz,
         const Mat Iyz, Mat a11, Mat a12, Mat a22, Mat b1, Mat b2 )
 {
-    //TODO: data term implementation
     const float zeta_squared = zeta * zeta; // added in normalization factor to be non-zero
     const float epsilon_squared = epsilon * epsilon;
-    if ( Ix.channels() == 1 )
+
+    const float *pIx, *pIy, *pIz;
+    const float *pIxx, *pIxy, *pIyy, *pIxz, *pIyz;
+    const float *pdU, *pdV; // accessing 2 layers of dW. Succesive columns interleave u and v
+    float *pa11, *pa12, *pa22, *pb1, *pb2; // linear equation sys. coeffs for each pixel
+
+    float derivNorm; //denominator of the spatial-derivative normalizing factor (theta_0)
+    float derivNorm2;
+    float Ik1z, Ik1zx, Ik1zy; // approximations of I^(k+1) values by Taylor expansions
+    float temp;
+    for ( int j = 0; j < W.rows; j++ ) //for each row
     {
-        const float *pIx, *pIy, *pIz;
-        const float *pIxx, *pIxy, *pIyy, *pIxz, *pIyz;
-        const float *pdU, *pdV; // accessing 2 layers of dW. Succesive columns interleave u and v
-        float *pa11, *pa12, *pa22, *pb1, *pb2; // linear equation sys. coeffs for each pixel
+        pIx = Ix.ptr<float>(j);
+        pIy = Iy.ptr<float>(j);
+        pIz = Iz.ptr<float>(j);
+        pIxx = Ixx.ptr<float>(j);
+        pIxy = Ixy.ptr<float>(j);
+        pIyy = Iyy.ptr<float>(j);
+        pIxz = Ixz.ptr<float>(j);
+        pIyz = Iyz.ptr<float>(j);
 
-        float derivNorm; //denominator of the spatial-derivative normalizing factor (theta_0)
-        float derivNorm2;
-        float Ik1z, Ik1zx, Ik1zy; // approximations of I^(k+1) values by Taylor expansions
-        float temp;
-        for ( int j = 0; j < W.rows; j++ ) //for each row
-        {
-            pIx = Ix.ptr<float>(j);
-            pIy = Iy.ptr<float>(j);
-            pIz = Iz.ptr<float>(j);
-            pIxx = Ixx.ptr<float>(j);
-            pIxy = Ixy.ptr<float>(j);
-            pIyy = Iyy.ptr<float>(j);
-            pIxz = Ixz.ptr<float>(j);
-            pIyz = Iyz.ptr<float>(j);
+        pa11 = a11.ptr<float>(j);
+        pa12 = a12.ptr<float>(j);
+        pa22 = a22.ptr<float>(j);
+        pb1 = b1.ptr<float>(j);
+        pb2 = b2.ptr<float>(j);
 
-            pa11 = a11.ptr<float>(j);
-            pa12 = a12.ptr<float>(j);
-            pa22 = a22.ptr<float>(j);
-            pb1 = b1.ptr<float>(j);
-            pb2 = b2.ptr<float>(j);
+        pdU = dW.ptr<float>(j);
+        pdV = pdU + 1;
+        for ( int i = 0; i < W.cols; i++ ) //for each pixel in the row
+        { // TODO: implement masking of points warped out of the image
+          //color constancy component
+            derivNorm = (*pIx) * (*pIx) + (*pIy) * (*pIy) + zeta_squared;
+            Ik1z = *pIz + (*pIx * *pdU) + (*pIy * *pdV);
+            temp = (0.5*delta/3) / sqrt(Ik1z * Ik1z / derivNorm + epsilon_squared);
+            *pa11 = *pIx * *pIx * temp / derivNorm;
+            *pa12 = *pIx * *pIy * temp / derivNorm;
+            *pa22 = *pIy * *pIy * temp / derivNorm;
+            *pb1 = -*pIz * *pIx * temp / derivNorm;
+            *pb2 = -*pIz * *pIy * temp / derivNorm;
 
-            pdU = dW.ptr<float>(j);
-            pdV = pdU + 1;
-            for ( int i = 0; i < W.cols; i++ ) //for each pixel in the row
-            { // TODO: implement masking of points warped out of the image
-              //color constancy component
-                derivNorm = (*pIx) * (*pIx) + (*pIy) * (*pIy) + zeta_squared;
-                Ik1z = *pIz + (*pIx * *pdU) + (*pIy * *pdV);
-                temp = (0.5*delta/3) / sqrt(Ik1z * Ik1z / derivNorm + epsilon_squared);
-                *pa11 = *pIx * *pIx * temp / derivNorm;
-                *pa12 = *pIx * *pIy * temp / derivNorm;
-                *pa22 = *pIy * *pIy * temp / derivNorm;
-                *pb1 = -*pIz * *pIx * temp / derivNorm;
-                *pb2 = -*pIz * *pIy * temp / derivNorm;
+            // gradient constancy component
 
-                // gradient constancy component
+            derivNorm = *pIxx * *pIxx + *pIxy * *pIxy + zeta_squared;
+            derivNorm2 = *pIyy * *pIyy + *pIxy * *pIxy + zeta_squared;
+            Ik1zx = *pIxz + *pIxx * *pdU + *pIxy * *pdV;
+            Ik1zy = *pIyz + *pIxy * *pdU + *pIyy * *pdV;
 
-                derivNorm = *pIxx * *pIxx + *pIxy * *pIxy + zeta_squared;
-                derivNorm2 = *pIyy * *pIyy + *pIxy * *pIxy + zeta_squared;
-                Ik1zx = *pIxz + *pIxx * *pdU + *pIxy * *pdV;
-                Ik1zy = *pIyz + *pIxy * *pdU + *pIyy * *pdV;
+            temp = (0.5*gamma/3)
+                    / sqrt(
+                            Ik1zx * Ik1zx / derivNorm + Ik1zy * Ik1zy / derivNorm2
+                                    + epsilon_squared);
+            *pa11 += temp * (*pIxx * *pIxx / derivNorm + *pIxy * *pIxy / derivNorm2);
+            *pa12 += temp * (*pIxx * *pIxy / derivNorm + *pIxy * *pIyy / derivNorm2);
+            *pa22 += temp * (*pIxy * *pIxy / derivNorm + *pIyy * *pIyy / derivNorm2);
+            *pb1 += -temp * (*pIxx * *pIxz / derivNorm + *pIxy * *pIyz / derivNorm2);
+            *pb2 += -temp * (*pIxy * *pIxz / derivNorm + *pIyy * *pIyz / derivNorm2);
 
-                temp = (0.5*gamma/3)
-                        / sqrt(
-                                Ik1zx * Ik1zx / derivNorm + Ik1zy * Ik1zy / derivNorm2
-                                        + epsilon_squared);
-                *pa11 += temp * (*pIxx * *pIxx / derivNorm + *pIxy * *pIxy / derivNorm2);
-                *pa12 += temp * (*pIxx * *pIxy / derivNorm + *pIxy * *pIyy / derivNorm2);
-                *pa22 += temp * (*pIxy * *pIxy / derivNorm + *pIyy * *pIyy / derivNorm2);
-                *pb1 += -temp * (*pIxx * *pIxz / derivNorm + *pIxy * *pIyz / derivNorm2);
-                *pb2 += -temp * (*pIxy * *pIxz / derivNorm + *pIyy * *pIyz / derivNorm2);
+            ++pIx;
+            ++pIy;
+            ++pIz;
+            ++pIxx;
+            ++pIxy;
+            ++pIyy;
+            ++pIxz;
+            ++pIyz;
+            pdU += 2;
+            pdV += 2;
+            ++pa11;
+            ++pa12;
+            ++pa22;
+            ++pb1;
+            ++pb2;
 
-                ++pIx;
-                ++pIy;
-                ++pIz;
-                ++pIxx;
-                ++pIxy;
-                ++pIyy;
-                ++pIxz;
-                ++pIyz;
-                pdU += 2;
-                pdV += 2;
-                ++pa11;
-                ++pa12;
-                ++pa22;
-                ++pb1;
-                ++pb2;
-
-            }
         }
-
-    } else if ( Ix.channels() == 3 )
-    {
-        //TODO: implement 3-channel version of data-term computation
-        CV_Assert(false);
     }
+
+
 
 }
 void OpticalFlowDeepFlow::smoothnessWeights( const Mat W, Mat weightsX, Mat weightsY )
@@ -442,7 +420,7 @@ void OpticalFlowDeepFlow::smoothnessTerm( const Mat W, const Mat weightsX, const
             iB1 = (*(pU + 2) - *pU) * *pWeight;
             iB2 = (*(pV + 2) - *pV) * *pWeight;
             *pB1 += iB1;
-            *(pB1 + 1) -= iB2;
+            *(pB1 + 1) -= iB1;
             *pB2 += iB2;
             *(pB2 + 1) -= iB2;
 
@@ -472,7 +450,7 @@ void OpticalFlowDeepFlow::smoothnessTerm( const Mat W, const Mat weightsX, const
             iB1 = (*pUnext - *pU) * *pWeight;
             iB2 = (*pVnext - *pV) * *pWeight;
             *pB1 += iB1;
-            *pB1next -= iB2;
+            *pB1next -= iB1;
             *pB2 += iB2;
             *pB2next -= iB2;
 
