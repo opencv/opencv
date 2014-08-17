@@ -196,8 +196,8 @@ public:
                                         float theta) = 0;
 
     //! In case you want to do these explicitly
-    virtual void allocate(int rows, int cols, InputArray gx=GpuMat(),InputArray gy=GpuMat()) = 0;
-    virtual void cacheGValues() = 0;
+    virtual void allocate(int rows, int cols, InputArray gx = GpuMat(),InputArray gy = GpuMat()) = 0;
+    virtual void cacheGValues(InputArray visibleLightImage = GpuMat()) = 0;
 };
 
 //! The visibleLightImage is a CV_32FC1 grayscale image of the scene, which can be used as a hint for edge placement.
