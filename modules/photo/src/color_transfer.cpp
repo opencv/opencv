@@ -10,15 +10,13 @@
 using namespace std;
 using namespace cv;
 
-void cv::colorTransfer(InputArray _src1, InputArray _src2, OutputArray _dst, int flag)
+void cv::colorTransfer(InputArray _src, InputArray _dst, OutputArray _color_transfer, int flag)
 {
+    Mat source = _src.getMat();
+    Mat target = _dst.getMat();
+    _color_transfer.create(source.size(), CV_8UC3);
+    Mat output = _color_transfer.getMat();
 
-    Mat source = _src1.getMat();
-    Mat target = _src2.getMat();
-    _dst.create(source.size(), CV_8UC3);
-    Mat dst = _dst.getMat();
-
-    //int flag = 0; //converting to Lab colorspace
     Mat img1 = Mat(source.size(),CV_32FC3);
     source.convertTo(img1,CV_32FC3,1.0/255.0);
 
@@ -64,6 +62,5 @@ void cv::colorTransfer(InputArray _src1, InputArray _src2, OutputArray _dst, int
     if(flag == 0)
         cvtColor(result,result,COLOR_Lab2BGR);
 
-    result.convertTo(dst,CV_8UC3,255);
-
+    result.convertTo(output,CV_8UC3,255);
 }

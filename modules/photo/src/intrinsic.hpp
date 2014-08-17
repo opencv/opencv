@@ -22,7 +22,6 @@ class Intrinsic
         double calc(double val, double temp_val);
         void compute(Mat &rgbIm, Mat &rgbIm2, Mat &weight, Mat &ref, Mat &shade, int iterNum, float rho);
         void decompose(Mat &rgbIm, Mat &ref, Mat &shade, int wd, int iterNum, float rho);
-
 };
 
 void Intrinsic::init(Mat &rgbIm)
@@ -42,7 +41,6 @@ inline double Intrinsic::calc(double val, double temp_val)
         val = .000002;
 
     return val;
-
 }
 
 void Intrinsic::compute(Mat &rgbIm, Mat &rgbIm2, Mat &weight, Mat &ref, Mat &shade, int iterNum, float rho)
@@ -156,7 +154,6 @@ void Intrinsic::decompose(Mat &rgbIm, Mat &ref, Mat &shade, int wd, int iterNum,
 {
     init(rgbIm);
     Mat yplane = Mat(n,m,CV_32FC3);
-    //cvtColor(rgbIm,yplane,COLOR_BGR2YCrCb);
     cvtColor(rgbIm,yplane,COLOR_BGR2YUV);
     cvtColor(rgbIm,rgbIm,COLOR_BGR2RGB);
     rgbIm = rgbIm + epsilon;

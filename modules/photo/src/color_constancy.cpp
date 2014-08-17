@@ -8,7 +8,7 @@
 using namespace std;
 using namespace cv;
 
-void cv::greyEdge(InputArray _src, OutputArray _dst, float diff_order, int mink_norm, float sigma)
+void cv::greyEdge(InputArray _src, OutputArray _dst, int diff_order, int mink_norm, int sigma)
 {
     Mat source = _src.getMat();
     _dst.create(source.size(), CV_8UC3);
@@ -27,7 +27,7 @@ void cv::greyEdge(InputArray _src, OutputArray _dst, float diff_order, int mink_
     output.convertTo(dst,CV_8UC3,1);
 }
 
-void cv::weightedGreyEdge(InputArray _src, OutputArray _dst, float kappa, int mink_norm, float sigma)
+void cv::weightedGreyEdge(InputArray _src, OutputArray _dst, int kappa, int mink_norm, int sigma)
 {
     Mat source = _src.getMat();
     _dst.create(source.size(), CV_8UC3);
