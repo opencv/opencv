@@ -3,6 +3,7 @@
  * @brief Demo code for detecting corners using OpenCV built-in functions
  * @author OpenCV team
  */
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include <iostream>

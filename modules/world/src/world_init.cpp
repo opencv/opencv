@@ -54,8 +54,5 @@ bool cv::initAll()
 #ifdef HAVE_OPENCV_NONFREE
     && initModule_nonfree()
 #endif
-#ifdef HAVE_OPENCV_ML
-    && initModule_ml()
-#endif
     ;
 }

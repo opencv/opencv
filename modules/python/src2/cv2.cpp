@@ -10,6 +10,7 @@
 #include <numpy/ndarrayobject.h>
 
 #include "pyopencv_generated_include.h"
+#include "opencv2/core/types_c.h"
 
 #include "opencv2/opencv_modules.hpp"
 
@@ -84,7 +85,6 @@ catch (const cv::Exception &e) \
 using namespace cv;
 using cv::flann::IndexParams;
 using cv::flann::SearchParams;
-using cv::softcascade::ChannelFeatureBuilder;
 
 typedef std::vector<uchar> vector_uchar;
 typedef std::vector<char> vector_char;
@@ -110,8 +110,6 @@ typedef std::vector<std::vector<Point> > vector_vector_Point;
 typedef std::vector<std::vector<Point2f> > vector_vector_Point2f;
 typedef std::vector<std::vector<Point3f> > vector_vector_Point3f;
 typedef std::vector<std::vector<DMatch> > vector_vector_DMatch;
-
-typedef cv::softcascade::ChannelFeatureBuilder softcascade_ChannelFeatureBuilder;
 
 typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
 
@@ -376,6 +374,12 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
     m.allocator = &g_numpyAllocator;
 
     return true;
+}
+
+template<>
+bool pyopencv_to(PyObject* o, Mat& m, const char* name)
+{
+    return pyopencv_to(o, m, ArgInfo(name, 0));
 }
 
 template<>
@@ -1090,14 +1094,6 @@ bool pyopencv_to(PyObject* obj, CvSlice& r, const char* name)
         return true;
     }
     return PyArg_ParseTuple(obj, "ii", &r.start_index, &r.end_index) > 0;
-}
-
-template<>
-PyObject* pyopencv_from(CvDTreeNode* const & node)
-{
-    double value = node->value;
-    int ivalue = cvRound(value);
-    return value == ivalue ? PyInt_FromLong(ivalue) : PyFloat_FromDouble(value);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

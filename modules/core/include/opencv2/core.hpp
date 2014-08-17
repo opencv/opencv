@@ -506,92 +506,6 @@ CV_EXPORTS_W void randn(InputOutputArray dst, InputArray mean, InputArray stddev
 //! shuffles the input array elements
 CV_EXPORTS_W void randShuffle(InputOutputArray dst, double iterFactor = 1., RNG* rng = 0);
 
-//! draws the line segment (pt1, pt2) in the image
-CV_EXPORTS_W void line(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
-                     int thickness = 1, int lineType = LINE_8, int shift = 0);
-
-//! draws the rectangle outline or a solid rectangle with the opposite corners pt1 and pt2 in the image
-CV_EXPORTS_W void rectangle(InputOutputArray img, Point pt1, Point pt2,
-                          const Scalar& color, int thickness = 1,
-                          int lineType = LINE_8, int shift = 0);
-
-//! draws the rectangle outline or a solid rectangle covering rec in the image
-CV_EXPORTS void rectangle(CV_IN_OUT Mat& img, Rect rec,
-                          const Scalar& color, int thickness = 1,
-                          int lineType = LINE_8, int shift = 0);
-
-//! draws the circle outline or a solid circle in the image
-CV_EXPORTS_W void circle(InputOutputArray img, Point center, int radius,
-                       const Scalar& color, int thickness = 1,
-                       int lineType = LINE_8, int shift = 0);
-
-//! draws an elliptic arc, ellipse sector or a rotated ellipse in the image
-CV_EXPORTS_W void ellipse(InputOutputArray img, Point center, Size axes,
-                        double angle, double startAngle, double endAngle,
-                        const Scalar& color, int thickness = 1,
-                        int lineType = LINE_8, int shift = 0);
-
-//! draws a rotated ellipse in the image
-CV_EXPORTS_W void ellipse(InputOutputArray img, const RotatedRect& box, const Scalar& color,
-                        int thickness = 1, int lineType = LINE_8);
-
-//! draws a filled convex polygon in the image
-CV_EXPORTS void fillConvexPoly(Mat& img, const Point* pts, int npts,
-                               const Scalar& color, int lineType = LINE_8,
-                               int shift = 0);
-
-CV_EXPORTS_W void fillConvexPoly(InputOutputArray img, InputArray points,
-                                 const Scalar& color, int lineType = LINE_8,
-                                 int shift = 0);
-
-//! fills an area bounded by one or more polygons
-CV_EXPORTS void fillPoly(Mat& img, const Point** pts,
-                         const int* npts, int ncontours,
-                         const Scalar& color, int lineType = LINE_8, int shift = 0,
-                         Point offset = Point() );
-
-CV_EXPORTS_W void fillPoly(InputOutputArray img, InputArrayOfArrays pts,
-                           const Scalar& color, int lineType = LINE_8, int shift = 0,
-                           Point offset = Point() );
-
-//! draws one or more polygonal curves
-CV_EXPORTS void polylines(Mat& img, const Point* const* pts, const int* npts,
-                          int ncontours, bool isClosed, const Scalar& color,
-                          int thickness = 1, int lineType = LINE_8, int shift = 0 );
-
-CV_EXPORTS_W void polylines(InputOutputArray img, InputArrayOfArrays pts,
-                            bool isClosed, const Scalar& color,
-                            int thickness = 1, int lineType = LINE_8, int shift = 0 );
-
-//! draws contours in the image
-CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays contours,
-                              int contourIdx, const Scalar& color,
-                              int thickness = 1, int lineType = LINE_8,
-                              InputArray hierarchy = noArray(),
-                              int maxLevel = INT_MAX, Point offset = Point() );
-
-//! clips the line segment by the rectangle Rect(0, 0, imgSize.width, imgSize.height)
-CV_EXPORTS bool clipLine(Size imgSize, CV_IN_OUT Point& pt1, CV_IN_OUT Point& pt2);
-
-//! clips the line segment by the rectangle imgRect
-CV_EXPORTS_W bool clipLine(Rect imgRect, CV_OUT CV_IN_OUT Point& pt1, CV_OUT CV_IN_OUT Point& pt2);
-
-//! converts elliptic arc to a polygonal curve
-CV_EXPORTS_W void ellipse2Poly( Point center, Size axes, int angle,
-                                int arcStart, int arcEnd, int delta,
-                                CV_OUT std::vector<Point>& pts );
-
-//! renders text string in the image
-CV_EXPORTS_W void putText( InputOutputArray img, const String& text, Point org,
-                         int fontFace, double fontScale, Scalar color,
-                         int thickness = 1, int lineType = LINE_8,
-                         bool bottomLeftOrigin = false );
-
-//! returns bounding box of the text string
-CV_EXPORTS_W Size getTextSize(const String& text, int fontFace,
-                            double fontScale, int thickness,
-                            CV_OUT int* baseLine);
-
 /*!
     Principal Component Analysis
 
@@ -686,7 +600,61 @@ public:
     Mat mean; //!< mean value subtracted before the projection and added after the back projection
 };
 
+// Linear Discriminant Analysis
+class CV_EXPORTS LDA
+{
+public:
+    // Initializes a LDA with num_components (default 0) and specifies how
+    // samples are aligned (default dataAsRow=true).
+    explicit LDA(int num_components = 0);
 
+    // Initializes and performs a Discriminant Analysis with Fisher's
+    // Optimization Criterion on given data in src and corresponding labels
+    // in labels. If 0 (or less) number of components are given, they are
+    // automatically determined for given data in computation.
+    LDA(InputArrayOfArrays src, InputArray labels, int num_components = 0);
+
+    // Serializes this object to a given filename.
+    void save(const String& filename) const;
+
+    // Deserializes this object from a given filename.
+    void load(const String& filename);
+
+    // Serializes this object to a given cv::FileStorage.
+    void save(FileStorage& fs) const;
+
+        // Deserializes this object from a given cv::FileStorage.
+    void load(const FileStorage& node);
+
+    // Destructor.
+    ~LDA();
+
+    //! Compute the discriminants for data in src and labels.
+    void compute(InputArrayOfArrays src, InputArray labels);
+
+    // Projects samples into the LDA subspace.
+    Mat project(InputArray src);
+
+    // Reconstructs projections from the LDA subspace.
+    Mat reconstruct(InputArray src);
+
+    // Returns the eigenvectors of this LDA.
+    Mat eigenvectors() const { return _eigenvectors; }
+
+    // Returns the eigenvalues of this LDA.
+    Mat eigenvalues() const { return _eigenvalues; }
+
+    static Mat subspaceProject(InputArray W, InputArray mean, InputArray src);
+    static Mat subspaceReconstruct(InputArray W, InputArray mean, InputArray src);
+
+protected:
+    bool _dataAsRow;
+    int _num_components;
+    Mat _eigenvectors;
+    Mat _eigenvalues;
+
+    void lda(InputArrayOfArrays src, InputArray labels);
+};
 
 /*!
     Singular Value Decomposition class
@@ -953,12 +921,12 @@ public:
 class CV_EXPORTS Formatter
 {
 public:
-    enum { FMT_MATLAB  = 0,
-           FMT_CSV     = 1,
-           FMT_PYTHON  = 2,
-           FMT_NUMPY   = 3,
-           FMT_C       = 4,
-           FMT_DEFAULT = FMT_MATLAB
+    enum { FMT_DEFAULT = 0,
+           FMT_MATLAB  = 1,
+           FMT_CSV     = 2,
+           FMT_PYTHON  = 3,
+           FMT_NUMPY   = 4,
+           FMT_C       = 5
          };
 
     virtual ~Formatter();
@@ -1261,5 +1229,7 @@ template<> struct ParamType<uchar>
 
 #include "opencv2/core/operations.hpp"
 #include "opencv2/core/cvstd.inl.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/core/optim.hpp"
 
 #endif /*__OPENCV_CORE_HPP__*/

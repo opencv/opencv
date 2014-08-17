@@ -1,4 +1,5 @@
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include <stdlib.h>
 #include <stdio.h>
@@ -58,7 +59,7 @@ static void ErodeDilate(int, void*)
 int main( int argc, char** argv )
 {
     char* filename = argc == 2 ? argv[1] : (char*)"baboon.jpg";
-    if( (src = imread(filename,1)).data == 0 )
+    if( (src = imread(filename,1)).empty() )
         return -1;
 
     help();

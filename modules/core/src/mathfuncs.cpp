@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_core.hpp"
 
 namespace cv
 {
@@ -348,7 +348,18 @@ static void InvSqrt_32f(const float* src, float* dst, int len)
 
 static void InvSqrt_64f(const double* src, double* dst, int len)
 {
-    for( int i = 0; i < len; i++ )
+    int i = 0;
+
+#if CV_SSE2
+    if (USE_SSE2)
+    {
+        __m128d v_1 = _mm_set1_pd(1.0);
+        for ( ; i <= len - 2; i += 2)
+            _mm_storeu_pd(dst + i, _mm_div_pd(v_1, _mm_sqrt_pd(_mm_loadu_pd(src + i))));
+    }
+#endif
+
+    for( ; i < len; i++ )
         dst[i] = 1/std::sqrt(src[i]);
 }
 
@@ -775,7 +786,7 @@ void polarToCart( InputArray src1, InputArray src2,
         depth == CV_64F ? (ippsPolarToCart)ippsPolarToCart_64f : 0;
         CV_Assert(ippFunc != 0);
 
-        IppStatus status = ippFunc(Mag.data, Angle.data, X.data, Y.data, static_cast<int>(cn * X.total()));
+        IppStatus status = ippFunc(Mag.ptr(), Angle.ptr(), X.ptr(), Y.ptr(), static_cast<int>(cn * X.total()));
         if (status >= 0)
             return;
         setIppErrorStatus();
@@ -2114,15 +2125,27 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
             rowsPerWI = d.isIntel() ? 4 : 1;
     bool doubleSupport = d.doubleFPConfig() > 0;
 
+    _dst.createSameSize(_src, type);
+    if (is_ipower && (ipower == 0 || ipower == 1))
+    {
+        if (ipower == 0)
+            _dst.setTo(Scalar::all(1));
+        else if (ipower == 1)
+            _src.copyTo(_dst);
+
+        return true;
+    }
+
     if (depth == CV_64F && !doubleSupport)
         return false;
 
-    bool issqrt = std::abs(power - 0.5) < DBL_EPSILON;
-    const char * const op = issqrt ? "OP_SQRT" : is_ipower ? "OP_POWN" : "OP_POW";
+    bool issqrt = std::abs(power - 0.5) < DBL_EPSILON, nonnegative = power >= 0;
+    const char * const op = issqrt ? "OP_SQRT" : is_ipower ? nonnegative ? "OP_POWN" : "OP_ROOTN" : nonnegative ? "OP_POWR" : "OP_POW";
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D dstT=%s -D rowsPerWI=%d -D %s -D UNARY_OP%s", ocl::typeToStr(depth),
-                         rowsPerWI, op, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                  format("-D dstT=%s -D depth=%d -D rowsPerWI=%d -D %s -D UNARY_OP%s",
+                         ocl::typeToStr(depth), depth,  rowsPerWI, op,
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
 
@@ -2153,11 +2176,12 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
 
 void pow( InputArray _src, double power, OutputArray _dst )
 {
-    bool is_ipower = false, same = false;
     int type = _src.type(), depth = CV_MAT_DEPTH(type),
             cn = CV_MAT_CN(type), ipower = cvRound(power);
+    bool is_ipower = fabs(ipower - power) < DBL_EPSILON, same = false,
+            useOpenCL = _dst.isUMat() && _src.dims() <= 2;
 
-    if( fabs(ipower - power) < DBL_EPSILON )
+    if( is_ipower && !(ocl::Device::getDefault().isIntel() && useOpenCL && depth != CV_64F))
     {
         if( ipower < 0 )
         {
@@ -2179,7 +2203,8 @@ void pow( InputArray _src, double power, OutputArray _dst )
             return;
         case 2:
 #if defined(HAVE_IPP)
-            if (depth == CV_32F && !same && ( (_src.dims() <= 2 && !ocl::useOpenCL()) || (_src.dims() > 2 && _src.isContinuous() && _dst.isContinuous()) ))
+            if (depth == CV_32F && !same && ( (_src.dims() <= 2 && !ocl::useOpenCL()) ||
+                                              (_src.dims() > 2 && _src.isContinuous() && _dst.isContinuous()) ))
             {
                 Mat src = _src.getMat();
                 _dst.create( src.dims, src.size, type );
@@ -2195,7 +2220,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
                 }
                 size.width *= cn;
 
-                IppStatus status = ippiSqr_32f_C1R((const Ipp32f *)src.data, srcstep, (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
+                IppStatus status = ippiSqr_32f_C1R(src.ptr<Ipp32f>(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
 
                 if (status >= 0)
                     return;
@@ -2207,14 +2232,12 @@ void pow( InputArray _src, double power, OutputArray _dst )
             else
                 multiply(_src, _src, _dst);
             return;
-        default:
-            is_ipower = true;
         }
     }
     else
         CV_Assert( depth == CV_32F || depth == CV_64F );
 
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN(useOpenCL,
                ocl_pow(same ? _dst : _src, power, _dst, is_ipower, ipower))
 
     Mat src, dst;
@@ -2255,8 +2278,8 @@ void pow( InputArray _src, double power, OutputArray _dst )
         if (src.isContinuous() && dst.isContinuous())
         {
             IppStatus status = depth == CV_32F ?
-                        ippsPowx_32f_A21((const Ipp32f *)src.data, (Ipp32f)power, (Ipp32f*)dst.data, (Ipp32s)(src.total() * cn)) :
-                        ippsPowx_64f_A50((const Ipp64f *)src.data, power, (Ipp64f*)dst.data, (Ipp32s)(src.total() * cn));
+                        ippsPowx_32f_A21(src.ptr<Ipp32f>(), (Ipp32f)power, dst.ptr<Ipp32f>(), (Ipp32s)(src.total() * cn)) :
+                        ippsPowx_64f_A50(src.ptr<Ipp64f>(), power, dst.ptr<Ipp64f>(), (Ipp32s)(src.total() * cn));
 
             if (status >= 0)
                 return;
@@ -2428,7 +2451,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         {
             Cv32suf a, b;
             int ia, ib;
-            const int* isrc = (const int*)src.data;
+            const int* isrc = src.ptr<int>();
             size_t step = src.step/sizeof(isrc[0]);
 
             a.f = (float)std::max(minVal, (double)-FLT_MAX);
@@ -2457,7 +2480,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         {
             Cv64suf a, b;
             int64 ia, ib;
-            const int64* isrc = (const int64*)src.data;
+            const int64* isrc = src.ptr<int64>();
             size_t step = src.step/sizeof(isrc[0]);
 
             a.f = minVal;
@@ -2501,7 +2524,7 @@ static bool ocl_patchNaNs( InputOutputArray _a, float value )
 {
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=int -D rowsPerWI=%d",
+                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=float -D rowsPerWI=%d",
                             rowsPerWI));
     if (k.empty())
         return false;
@@ -2531,12 +2554,33 @@ void patchNaNs( InputOutputArray _a, double _val )
     NAryMatIterator it(arrays, (uchar**)ptrs);
     size_t len = it.size*a.channels();
     Cv32suf val;
-    val.f = (float)_val;
+    float fval = (float)_val;
+    val.f = fval;
+
+#if CV_SSE2
+    __m128i v_mask1 = _mm_set1_epi32(0x7fffffff), v_mask2 = _mm_set1_epi32(0x7f800000);
+    __m128i v_val = _mm_set1_epi32(val.i);
+#endif
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         int* tptr = ptrs[0];
-        for( size_t j = 0; j < len; j++ )
+        size_t j = 0;
+
+#if CV_SSE2
+        if (USE_SSE2)
+        {
+            for ( ; j < len; j += 4)
+            {
+                __m128i v_src = _mm_loadu_si128((__m128i const *)(tptr + j));
+                __m128i v_cmp_mask = _mm_cmplt_epi32(v_mask2, _mm_and_si128(v_src, v_mask1));
+                __m128i v_res = _mm_or_si128(_mm_andnot_si128(v_cmp_mask, v_src), _mm_and_si128(v_cmp_mask, v_val));
+                _mm_storeu_si128((__m128i *)(tptr + j), v_res);
+            }
+        }
+#endif
+
+        for( ; j < len; j++ )
             if( (tptr[j] & 0x7fffffff) > 0x7f800000 )
                 tptr[j] = val.i;
     }

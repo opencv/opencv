@@ -438,7 +438,7 @@ Mat::Mat(const std::vector<_Tp>& vec, bool copyData)
     if( !copyData )
     {
         step[0] = step[1] = sizeof(_Tp);
-        data = datastart = (uchar*)&vec[0];
+        datastart = data = (uchar*)&vec[0];
         datalimit = dataend = datastart + rows * step[0];
     }
     else
@@ -453,7 +453,7 @@ Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
     if( !copyData )
     {
         step[0] = step[1] = sizeof(_Tp);
-        data = datastart = (uchar*)vec.val;
+        datastart = data = (uchar*)vec.val;
         datalimit = dataend = datastart + rows * step[0];
     }
     else
@@ -470,7 +470,7 @@ Mat::Mat(const Matx<_Tp,m,n>& M, bool copyData)
     {
         step[0] = cols * sizeof(_Tp);
         step[1] = sizeof(_Tp);
-        data = datastart = (uchar*)M.val;
+        datastart = data = (uchar*)M.val;
         datalimit = dataend = datastart + rows * step[0];
     }
     else
@@ -485,7 +485,7 @@ Mat::Mat(const Point_<_Tp>& pt, bool copyData)
     if( !copyData )
     {
         step[0] = step[1] = sizeof(_Tp);
-        data = datastart = (uchar*)&pt.x;
+        datastart = data = (uchar*)&pt.x;
         datalimit = dataend = datastart + rows * step[0];
     }
     else
@@ -504,7 +504,7 @@ Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
     if( !copyData )
     {
         step[0] = step[1] = sizeof(_Tp);
-        data = datastart = (uchar*)&pt.x;
+        datastart = data = (uchar*)&pt.x;
         datalimit = dataend = datastart + rows * step[0];
     }
     else
@@ -642,8 +642,9 @@ inline void Mat::release()
     if( u && CV_XADD(&u->refcount, -1) == 1 )
         deallocate();
     u = NULL;
-    data = datastart = dataend = datalimit = 0;
-    size.p[0] = 0;
+    datastart = dataend = datalimit = data = 0;
+    for(int i = 0; i < dims; i++)
+        size.p[i] = 0;
 }
 
 inline
@@ -999,6 +1000,17 @@ MatIterator_<_Tp> Mat::end()
     return it;
 }
 
+template<typename _Tp, typename Functor> inline
+void Mat::forEach(const Functor& operation) {
+    this->forEach_impl<_Tp>(operation);
+};
+
+template<typename _Tp, typename Functor> inline
+void Mat::forEach(const Functor& operation) const {
+    // call as not const
+    (const_cast<Mat*>(this))->forEach<const _Tp>(operation);
+};
+
 template<typename _Tp> inline
 Mat::operator std::vector<_Tp>() const
 {
@@ -1044,7 +1056,7 @@ void Mat::push_back(const _Tp& elem)
     }
     CV_Assert(DataType<_Tp>::type == type() && cols == 1
               /* && dims == 2 (cols == 1 implies dims == 2) */);
-    uchar* tmp = dataend + step[0];
+    const uchar* tmp = dataend + step[0];
     if( !isSubmatrix() && isContinuous() && tmp <= datalimit )
     {
         *(_Tp*)(data + (size.p[0]++) * step.p[0]) = elem;
@@ -1584,6 +1596,15 @@ MatIterator_<_Tp> Mat_<_Tp>::end()
     return Mat::end<_Tp>();
 }
 
+template<typename _Tp> template<typename Functor> inline
+void Mat_<_Tp>::forEach(const Functor& operation) {
+    Mat::forEach<_Tp, Functor>(operation);
+}
+
+template<typename _Tp> template<typename Functor> inline
+void Mat_<_Tp>::forEach(const Functor& operation) const {
+    Mat::forEach<_Tp, Functor>(operation);
+}
 
 ///////////////////////////// SparseMat /////////////////////////////
 
@@ -2100,7 +2121,7 @@ MatConstIterator::MatConstIterator(const Mat* _m)
 {
     if( m && m->isContinuous() )
     {
-        sliceStart = m->data;
+        sliceStart = m->ptr();
         sliceEnd = sliceStart + m->total()*elemSize;
     }
     seek((const int*)0);
@@ -2113,7 +2134,7 @@ MatConstIterator::MatConstIterator(const Mat* _m, int _row, int _col)
     CV_Assert(m && m->dims <= 2);
     if( m->isContinuous() )
     {
-        sliceStart = m->data;
+        sliceStart = m->ptr();
         sliceEnd = sliceStart + m->total()*elemSize;
     }
     int idx[] = {_row, _col};
@@ -2127,7 +2148,7 @@ MatConstIterator::MatConstIterator(const Mat* _m, Point _pt)
     CV_Assert(m && m->dims <= 2);
     if( m->isContinuous() )
     {
-        sliceStart = m->data;
+        sliceStart = m->ptr();
         sliceEnd = sliceStart + m->total()*elemSize;
     }
     int idx[] = {_pt.y, _pt.x};
@@ -2148,7 +2169,7 @@ MatConstIterator& MatConstIterator::operator = (const MatConstIterator& it )
 }
 
 inline
-uchar* MatConstIterator::operator *() const
+const uchar* MatConstIterator::operator *() const
 {
     return ptr;
 }
@@ -2281,7 +2302,7 @@ MatConstIterator operator - (const MatConstIterator& a, ptrdiff_t ofs)
 
 
 inline
-uchar* MatConstIterator::operator [](ptrdiff_t i) const
+const uchar* MatConstIterator::operator [](ptrdiff_t i) const
 {
     return *(*this + i);
 }
@@ -2453,12 +2474,12 @@ MatIterator_<_Tp>::MatIterator_(Mat_<_Tp>* _m, int _row, int _col)
 {}
 
 template<typename _Tp> inline
-MatIterator_<_Tp>::MatIterator_(const Mat_<_Tp>* _m, Point _pt)
+MatIterator_<_Tp>::MatIterator_(Mat_<_Tp>* _m, Point _pt)
     : MatConstIterator_<_Tp>(_m, _pt)
 {}
 
 template<typename _Tp> inline
-MatIterator_<_Tp>::MatIterator_(const Mat_<_Tp>* _m, const int* _idx)
+MatIterator_<_Tp>::MatIterator_(Mat_<_Tp>* _m, const int* _idx)
     : MatConstIterator_<_Tp>(_m, _idx)
 {}
 
@@ -2592,7 +2613,7 @@ inline SparseMatConstIterator& SparseMatConstIterator::operator = (const SparseM
 template<typename _Tp> inline
 const _Tp& SparseMatConstIterator::value() const
 {
-    return *(_Tp*)ptr;
+    return *(const _Tp*)ptr;
 }
 
 inline
@@ -2733,7 +2754,7 @@ SparseMatConstIterator_<_Tp>& SparseMatConstIterator_<_Tp>::operator ++()
 template<typename _Tp> inline
 SparseMatConstIterator_<_Tp> SparseMatConstIterator_<_Tp>::operator ++(int)
 {
-    SparseMatConstIterator it = *this;
+    SparseMatConstIterator_<_Tp> it = *this;
     SparseMatConstIterator::operator ++();
     return it;
 }
@@ -2785,7 +2806,7 @@ SparseMatIterator_<_Tp>& SparseMatIterator_<_Tp>::operator ++()
 template<typename _Tp> inline
 SparseMatIterator_<_Tp> SparseMatIterator_<_Tp>::operator ++(int)
 {
-    SparseMatIterator it = *this;
+    SparseMatIterator_<_Tp> it = *this;
     SparseMatConstIterator::operator ++();
     return it;
 }
@@ -3350,9 +3371,18 @@ size_t UMat::total() const
 
 inline bool UMatData::hostCopyObsolete() const { return (flags & HOST_COPY_OBSOLETE) != 0; }
 inline bool UMatData::deviceCopyObsolete() const { return (flags & DEVICE_COPY_OBSOLETE) != 0; }
+inline bool UMatData::deviceMemMapped() const { return (flags & DEVICE_MEM_MAPPED) != 0; }
 inline bool UMatData::copyOnMap() const { return (flags & COPY_ON_MAP) != 0; }
 inline bool UMatData::tempUMat() const { return (flags & TEMP_UMAT) != 0; }
 inline bool UMatData::tempCopiedUMat() const { return (flags & TEMP_COPIED_UMAT) == TEMP_COPIED_UMAT; }
+
+inline void UMatData::markDeviceMemMapped(bool flag)
+{
+  if(flag)
+    flags |= DEVICE_MEM_MAPPED;
+  else
+    flags &= ~DEVICE_MEM_MAPPED;
+}
 
 inline void UMatData::markHostCopyObsolete(bool flag)
 {

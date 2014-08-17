@@ -90,7 +90,7 @@
 \**********************************************************************************/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_imgproc.hpp"
 #include <limits>
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
@@ -468,10 +468,10 @@ struct IPPGray2BGRAFunctor
 
         const void* srcarray[3] = { src, src, src };
         Mat temp(rows, cols, CV_MAKETYPE(depth, 3));
-        if(func1(srcarray, srcStep, temp.data, (int)temp.step[0], ippiSize(cols, rows)) < 0)
+        if(func1(srcarray, srcStep, temp.ptr(), (int)temp.step[0], ippiSize(cols, rows)) < 0)
             return false;
         int order[4] = {0, 1, 2, 3};
-        return func2(temp.data, (int)temp.step[0], dst, dstStep, ippiSize(cols, rows), order) >= 0;
+        return func2(temp.ptr(), (int)temp.step[0], dst, dstStep, ippiSize(cols, rows), order) >= 0;
     }
 private:
     ippiGeneralFunc func1;
@@ -496,9 +496,9 @@ struct IPPReorderGeneralFunctor
 
         Mat temp;
         temp.create(rows, cols, CV_MAKETYPE(depth, 3));
-        if(func1(src, srcStep, temp.data, (int)temp.step[0], ippiSize(cols, rows), order) < 0)
+        if(func1(src, srcStep, temp.ptr(), (int)temp.step[0], ippiSize(cols, rows), order) < 0)
             return false;
-        return func2(temp.data, (int)temp.step[0], dst, dstStep, ippiSize(cols, rows)) >= 0;
+        return func2(temp.ptr(), (int)temp.step[0], dst, dstStep, ippiSize(cols, rows)) >= 0;
     }
 private:
     ippiReorderFunc func1;
@@ -524,9 +524,9 @@ struct IPPGeneralReorderFunctor
 
         Mat temp;
         temp.create(rows, cols, CV_MAKETYPE(depth, 3));
-        if(func1(src, srcStep, temp.data, (int)temp.step[0], ippiSize(cols, rows)) < 0)
+        if(func1(src, srcStep, temp.ptr(), (int)temp.step[0], ippiSize(cols, rows)) < 0)
             return false;
-        return func2(temp.data, (int)temp.step[0], dst, dstStep, ippiSize(cols, rows), order) >= 0;
+        return func2(temp.ptr(), (int)temp.step[0], dst, dstStep, ippiSize(cols, rows), order) >= 0;
     }
 private:
     ippiGeneralFunc func1;
@@ -2038,6 +2038,10 @@ struct Luv2RGB_f
             float G = X*C3 + Y*C4 + Z*C5;
             float B = X*C6 + Y*C7 + Z*C8;
 
+            R = std::min(std::max(R, 0.f), 1.f);
+            G = std::min(std::max(G, 0.f), 1.f);
+            B = std::min(std::max(B, 0.f), 1.f);
+
             if( gammaTab )
             {
                 R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
@@ -2730,8 +2734,6 @@ struct mRGBA2RGBA
 
 #ifdef HAVE_OPENCL
 
-#define DIVUP(total, grain) (((total) + (grain) - 1) / (grain))
-
 static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 {
     bool ok = false;
@@ -2739,23 +2741,17 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     Size sz = src.size(), dstSz = sz;
     int scn = src.channels(), depth = src.depth(), bidx;
     int dims = 2, stripeSize = 1;
-    size_t globalsize[] = { src.cols, src.rows };
     ocl::Kernel k;
 
     if (depth != CV_8U && depth != CV_16U && depth != CV_32F)
         return false;
 
-    cv::String opts = format("-D depth=%d -D scn=%d ", depth, scn);
-
     ocl::Device dev = ocl::Device::getDefault();
-    int pxPerWIy = 1;
-    if (dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) &&
-            !(code == CV_BGR2Luv || code == CV_RGB2Luv || code == CV_LBGR2Luv || code == CV_LRGB2Luv ||
-              code == CV_Luv2BGR || code == CV_Luv2RGB || code == CV_Luv2LBGR || code == CV_Luv2LRGB))
-        pxPerWIy = 4;
+    int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
 
-    globalsize[1] = DIVUP(globalsize[1], pxPerWIy);
-    opts += format("-D PIX_PER_WI_Y=%d ", pxPerWIy);
+    size_t globalsize[] = { src.cols, (src.rows + pxPerWIy - 1) / pxPerWIy };
+    cv::String opts = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
+                             depth, scn, pxPerWIy);
 
     switch (code)
     {
@@ -3385,18 +3381,16 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             _dst.create(sz, CV_8UC2);
             dst = _dst.getMat();
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && 0 // breaks OCL accuracy tests
             CV_SUPPRESS_DEPRECATED_START
-#if 0
+
             if (code == CV_BGR2BGR565 && scn == 3)
             {
                 if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R)))
                     return;
                 setIppErrorStatus();
             }
-            else
-#endif
-            if (code == CV_BGRA2BGR565 && scn == 4)
+            else if (code == CV_BGRA2BGR565 && scn == 4)
             {
                 if (CvtColorIPPLoopCopy(src, dst,
                                         IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
@@ -3791,6 +3785,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
             if( depth == CV_8U || depth == CV_16U )
             {
+#if 0 // breaks OCL accuracy tests
                 if( code == CV_BGR2HSV_FULL && scn == 3 )
                 {
                     if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2HSVTab[depth], 2, 1, 0, depth)) )
@@ -3803,15 +3798,16 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                         return;
                     setIppErrorStatus();
                 }
-                else if( code == CV_RGB2HSV_FULL && scn == 3 && depth == CV_16U )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiRGB2HSVTab[depth])) )
-                        return;
-                    setIppErrorStatus();
-                }
                 else if( code == CV_RGB2HSV_FULL && scn == 4 )
                 {
                     if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HSVTab[depth], 0, 1, 2, depth)) )
+                        return;
+                    setIppErrorStatus();
+                } else
+#endif
+                if( code == CV_RGB2HSV_FULL && scn == 3 && depth == CV_16U )
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiRGB2HSVTab[depth])) )
                         return;
                     setIppErrorStatus();
                 }

@@ -12,6 +12,8 @@
 #include <opencv2/core/utility.hpp>
 #include "opencv2/imgproc.hpp"
 #include "opencv2/calib3d.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/videoio.hpp"
 #include "opencv2/highgui.hpp"
 
 #include <ctype.h>
@@ -145,7 +147,7 @@ static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFram
 
     projectPoints(Mat(objpt), rvec, tvec, cameraMatrix, Mat(), imgpt);
 
-    if( shownFrame.data )
+    if( !shownFrame.empty() )
     {
         if( nobjpt == 1 )
             circle(shownFrame, imgpt[0], 3, Scalar(0,255,0), -1, LINE_AA);
@@ -532,9 +534,9 @@ int main(int argc, char** argv)
         }
         else
             capture >> frame0;
-        if( !frame0.data )
+        if( frame0.empty() )
             break;
-        if( !frame.data )
+        if( frame.empty() )
         {
             if( frame0.size() != calibratedImageSize )
             {

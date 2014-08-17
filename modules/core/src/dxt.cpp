@@ -42,7 +42,8 @@
 #include "precomp.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_core.hpp"
+#include <map>
 
 namespace cv
 {
@@ -1546,7 +1547,7 @@ public:
         }
 
         for( int i = range.start; i < range.end; ++i)
-            if(!ippidft((Ipp32fc*)(src.data+i*src.step), (int)src.step,(Ipp32fc*)(dst.data+i*dst.step), (int)dst.step, pDFTSpec, (Ipp8u*)pBuffer))
+            if(!ippidft(src.ptr<Ipp32fc>(i), (int)src.step,dst.ptr<Ipp32fc>(i), (int)dst.step, pDFTSpec, (Ipp8u*)pBuffer))
             {
                 *ok = false;
             }
@@ -1717,9 +1718,9 @@ static bool ippi_DFT_C_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
     }
 
     if (!inv)
-        status = ippiDFTFwd_CToC_32fc_C1R( (Ipp32fc*)src.data, (int)src.step, (Ipp32fc*)dst.data, (int)dst.step, pDFTSpec, pBuffer );
+        status = ippiDFTFwd_CToC_32fc_C1R( src.ptr<Ipp32fc>(), (int)src.step, dst.ptr<Ipp32fc>(), (int)dst.step, pDFTSpec, pBuffer );
     else
-        status = ippiDFTInv_CToC_32fc_C1R( (Ipp32fc*)src.data, (int)src.step, (Ipp32fc*)dst.data, (int)dst.step, pDFTSpec, pBuffer );
+        status = ippiDFTInv_CToC_32fc_C1R( src.ptr<Ipp32fc>(), (int)src.step, dst.ptr<Ipp32fc>(), (int)dst.step, pDFTSpec, pBuffer );
 
     if ( sizeBuffer > 0 )
         ippFree( pBuffer );
@@ -1781,6 +1782,375 @@ static bool ippi_DFT_R_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
 #endif
 }
 
+#ifdef HAVE_OPENCL
+
+namespace cv
+{
+
+enum FftType
+{
+    R2R = 0, // real to CCS in case forward transform, CCS to real otherwise
+    C2R = 1, // complex to real in case inverse transform
+    R2C = 2, // real to complex in case forward transform
+    C2C = 3  // complex to complex
+};
+
+struct OCL_FftPlan
+{
+private:
+    UMat twiddles;
+    String buildOptions;
+    int thread_count;
+    int dft_size;
+    bool status;
+
+public:
+    OCL_FftPlan(int _size) : dft_size(_size), status(true)
+    {
+        int min_radix;
+        std::vector<int> radixes, blocks;
+        ocl_getRadixes(dft_size, radixes, blocks, min_radix);
+        thread_count = dft_size / min_radix;
+
+        if (thread_count > (int) ocl::Device::getDefault().maxWorkGroupSize())
+        {
+            status = false;
+            return;
+        }
+
+        // generate string with radix calls
+        String radix_processing;
+        int n = 1, twiddle_size = 0;
+        for (size_t i=0; i<radixes.size(); i++)
+        {
+            int radix = radixes[i], block = blocks[i];
+            if (block > 1)
+                radix_processing += format("fft_radix%d_B%d(smem,twiddles+%d,ind,%d,%d);", radix, block, twiddle_size, n, dft_size/radix);
+            else
+                radix_processing += format("fft_radix%d(smem,twiddles+%d,ind,%d,%d);", radix, twiddle_size, n, dft_size/radix);
+            twiddle_size += (radix-1)*n;
+            n *= radix;
+        }
+
+        Mat tw(1, twiddle_size, CV_32FC2);
+        float* ptr = tw.ptr<float>();
+        int ptr_index = 0;
+
+        n = 1;
+        for (size_t i=0; i<radixes.size(); i++)
+        {
+            int radix = radixes[i];
+            n *= radix;
+
+            for (int j=1; j<radix; j++)
+            {
+                double theta = -CV_2PI*j/n;
+
+                for (int k=0; k<(n/radix); k++)
+                {
+                    ptr[ptr_index++] = (float) cos(k*theta);
+                    ptr[ptr_index++] = (float) sin(k*theta);
+                }
+            }
+        }
+        twiddles = tw.getUMat(ACCESS_READ);
+
+        buildOptions = format("-D LOCAL_SIZE=%d -D kercn=%d -D RADIX_PROCESS=%s",
+                              dft_size, min_radix, radix_processing.c_str());
+    }
+
+    bool enqueueTransform(InputArray _src, OutputArray _dst, int num_dfts, int flags, int fftType, bool rows = true) const
+    {
+        if (!status)
+            return false;
+
+        UMat src = _src.getUMat();
+        UMat dst = _dst.getUMat();
+
+        size_t globalsize[2];
+        size_t localsize[2];
+        String kernel_name;
+
+        bool is1d = (flags & DFT_ROWS) != 0 || num_dfts == 1;
+        bool inv = (flags & DFT_INVERSE) != 0;
+        String options = buildOptions;
+
+        if (rows)
+        {
+            globalsize[0] = thread_count; globalsize[1] = src.rows;
+            localsize[0] = thread_count; localsize[1] = 1;
+            kernel_name = !inv ? "fft_multi_radix_rows" : "ifft_multi_radix_rows";
+            if ((is1d || inv) && (flags & DFT_SCALE))
+                options += " -D DFT_SCALE";
+        }
+        else
+        {
+            globalsize[0] = num_dfts; globalsize[1] = thread_count;
+            localsize[0] = 1; localsize[1] = thread_count;
+            kernel_name = !inv ? "fft_multi_radix_cols" : "ifft_multi_radix_cols";
+            if (flags & DFT_SCALE)
+                options += " -D DFT_SCALE";
+        }
+
+        options += src.channels() == 1 ? " -D REAL_INPUT" : " -D COMPLEX_INPUT";
+        options += dst.channels() == 1 ? " -D REAL_OUTPUT" : " -D COMPLEX_OUTPUT";
+        options += is1d ? " -D IS_1D" : "";
+
+        if (!inv)
+        {
+            if ((is1d && src.channels() == 1) || (rows && (fftType == R2R)))
+                options += " -D NO_CONJUGATE";
+        }
+        else
+        {
+            if (rows && (fftType == C2R || fftType == R2R))
+                options += " -D NO_CONJUGATE";
+            if (dst.cols % 2 == 0)
+                options += " -D EVEN";
+        }
+
+        ocl::Kernel k(kernel_name.c_str(), ocl::core::fft_oclsrc, options);
+        if (k.empty())
+            return false;
+
+        k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(twiddles), thread_count, num_dfts);
+        return k.run(2, globalsize, localsize, false);
+    }
+
+private:
+    static void ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<int>& blocks, int& min_radix)
+    {
+        int factors[34];
+        int nf = DFTFactorize(cols, factors);
+
+        int n = 1;
+        int factor_index = 0;
+        min_radix = INT_MAX;
+
+        // 2^n transforms
+        if ((factors[factor_index] & 1) == 0)
+        {
+            for( ; n < factors[factor_index];)
+            {
+                int radix = 2, block = 1;
+                if (8*n <= factors[0])
+                    radix = 8;
+                else if (4*n <= factors[0])
+                {
+                    radix = 4;
+                    if (cols % 12 == 0)
+                        block = 3;
+                    else if (cols % 8 == 0)
+                        block = 2;
+                }
+                else
+                {
+                    if (cols % 10 == 0)
+                        block = 5;
+                    else if (cols % 8 == 0)
+                        block = 4;
+                    else if (cols % 6 == 0)
+                        block = 3;
+                    else if (cols % 4 == 0)
+                        block = 2;
+                }
+
+                radixes.push_back(radix);
+                blocks.push_back(block);
+                min_radix = min(min_radix, block*radix);
+                n *= radix;
+            }
+            factor_index++;
+        }
+
+        // all the other transforms
+        for( ; factor_index < nf; factor_index++)
+        {
+            int radix = factors[factor_index], block = 1;
+            if (radix == 3)
+            {
+                if (cols % 12 == 0)
+                    block = 4;
+                else if (cols % 9 == 0)
+                    block = 3;
+                else if (cols % 6 == 0)
+                    block = 2;
+            }
+            else if (radix == 5)
+            {
+                if (cols % 10 == 0)
+                    block = 2;
+            }
+            radixes.push_back(radix);
+            blocks.push_back(block);
+            min_radix = min(min_radix, block*radix);
+        }
+    }
+};
+
+class OCL_FftPlanCache
+{
+public:
+    static OCL_FftPlanCache & getInstance()
+    {
+        static OCL_FftPlanCache planCache;
+        return planCache;
+    }
+
+    Ptr<OCL_FftPlan> getFftPlan(int dft_size)
+    {
+        std::map<int, Ptr<OCL_FftPlan> >::iterator f = planStorage.find(dft_size);
+        if (f != planStorage.end())
+        {
+            return f->second;
+        }
+        else
+        {
+            Ptr<OCL_FftPlan> newPlan = Ptr<OCL_FftPlan>(new OCL_FftPlan(dft_size));
+            planStorage[dft_size] = newPlan;
+            return newPlan;
+        }
+    }
+
+    ~OCL_FftPlanCache()
+    {
+        planStorage.clear();
+    }
+
+protected:
+    OCL_FftPlanCache() :
+        planStorage()
+    {
+    }
+    std::map<int, Ptr<OCL_FftPlan> > planStorage;
+};
+
+static bool ocl_dft_rows(InputArray _src, OutputArray _dst, int nonzero_rows, int flags, int fftType)
+{
+    Ptr<OCL_FftPlan> plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.cols());
+    return plan->enqueueTransform(_src, _dst, nonzero_rows, flags, fftType, true);
+}
+
+static bool ocl_dft_cols(InputArray _src, OutputArray _dst, int nonzero_cols, int flags, int fftType)
+{
+    Ptr<OCL_FftPlan> plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.rows());
+    return plan->enqueueTransform(_src, _dst, nonzero_cols, flags, fftType, false);
+}
+
+static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_rows)
+{
+    int type = _src.type(), cn = CV_MAT_CN(type);
+    Size ssize = _src.size();
+    if ( !(type == CV_32FC1 || type == CV_32FC2) )
+        return false;
+
+    // if is not a multiplication of prime numbers { 2, 3, 5 }
+    if (ssize.area() != getOptimalDFTSize(ssize.area()))
+        return false;
+
+    UMat src = _src.getUMat();
+    int complex_input = cn == 2 ? 1 : 0;
+    int complex_output = (flags & DFT_COMPLEX_OUTPUT) != 0;
+    int real_input = cn == 1 ? 1 : 0;
+    int real_output = (flags & DFT_REAL_OUTPUT) != 0;
+    bool inv = (flags & DFT_INVERSE) != 0 ? 1 : 0;
+
+    if( nonzero_rows <= 0 || nonzero_rows > _src.rows() )
+        nonzero_rows = _src.rows();
+    bool is1d = (flags & DFT_ROWS) != 0 || nonzero_rows == 1;
+
+    // if output format is not specified
+    if (complex_output + real_output == 0)
+    {
+        if (real_input)
+            real_output = 1;
+        else
+            complex_output = 1;
+    }
+
+    FftType fftType = (FftType)(complex_input << 0 | complex_output << 1);
+
+    // Forward Complex to CCS not supported
+    if (fftType == C2R && !inv)
+        fftType = C2C;
+
+    // Inverse CCS to Complex not supported
+    if (fftType == R2C && inv)
+        fftType = R2R;
+
+    UMat output;
+    if (fftType == C2C || fftType == R2C)
+    {
+        // complex output
+        _dst.create(src.size(), CV_32FC2);
+        output = _dst.getUMat();
+    }
+    else
+    {
+        // real output
+        if (is1d)
+        {
+            _dst.create(src.size(), CV_32FC1);
+            output = _dst.getUMat();
+        }
+        else
+        {
+            _dst.create(src.size(), CV_32FC1);
+            output.create(src.size(), CV_32FC2);
+        }
+    }
+
+    if (!inv)
+    {
+        if (!ocl_dft_rows(src, output, nonzero_rows, flags, fftType))
+            return false;
+
+        if (!is1d)
+        {
+            int nonzero_cols = fftType == R2R ? output.cols/2 + 1 : output.cols;
+            if (!ocl_dft_cols(output, _dst, nonzero_cols, flags, fftType))
+                return false;
+        }
+    }
+    else
+    {
+        if (fftType == C2C)
+        {
+            // complex output
+            if (!ocl_dft_rows(src, output, nonzero_rows, flags, fftType))
+                return false;
+
+            if (!is1d)
+            {
+                if (!ocl_dft_cols(output, output, output.cols, flags, fftType))
+                    return false;
+            }
+        }
+        else
+        {
+            if (is1d)
+            {
+                if (!ocl_dft_rows(src, output, nonzero_rows, flags, fftType))
+                    return false;
+            }
+            else
+            {
+                int nonzero_cols = src.cols/2 + 1;
+                if (!ocl_dft_cols(src, output, nonzero_cols, flags, fftType))
+                    return false;
+
+                if (!ocl_dft_rows(output, _dst, nonzero_rows, flags, fftType))
+                    return false;
+            }
+        }
+    }
+    return true;
+}
+
+} // namespace cv;
+
+#endif
+
 #ifdef HAVE_CLAMDFFT
 
 namespace cv {
@@ -1790,14 +2160,6 @@ namespace cv {
         clAmdFftStatus s = (func); \
         CV_Assert(s == CLFFT_SUCCESS); \
     }
-
-enum FftType
-{
-    R2R = 0, // real to real
-    C2R = 1, // opencl HERMITIAN_INTERLEAVED to real
-    R2C = 2, // real to opencl HERMITIAN_INTERLEAVED
-    C2C = 3  // complex to complex
-};
 
 class PlanCache
 {
@@ -1923,7 +2285,7 @@ public:
         }
 
         // no baked plan is found, so let's create a new one
-        FftPlan * newPlan = new FftPlan(dft_size, src_step, dst_step, doubleFP, inplace, flags, fftType);
+        Ptr<FftPlan> newPlan = Ptr<FftPlan>(new FftPlan(dft_size, src_step, dst_step, doubleFP, inplace, flags, fftType));
         planStorage.push_back(newPlan);
 
         return newPlan->plHandle;
@@ -1931,8 +2293,6 @@ public:
 
     ~PlanCache()
     {
-        for (std::vector<FftPlan *>::iterator i = planStorage.begin(), end = planStorage.end(); i != end; ++i)
-            delete (*i);
         planStorage.clear();
     }
 
@@ -1942,7 +2302,7 @@ protected:
     {
     }
 
-    std::vector<FftPlan *> planStorage;
+    std::vector<Ptr<FftPlan> > planStorage;
 };
 
 extern "C" {
@@ -1960,7 +2320,7 @@ static void CL_CALLBACK oclCleanupCallback(cl_event e, cl_int, void *p)
 
 }
 
-static bool ocl_dft(InputArray _src, OutputArray _dst, int flags)
+static bool ocl_dft_amdfft(InputArray _src, OutputArray _dst, int flags)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     Size ssize = _src.size();
@@ -2019,7 +2379,6 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags)
 
     tmpBuffer.addref();
     clSetEventCallback(e, CL_COMPLETE, oclCleanupCallback, tmpBuffer.u);
-
     return true;
 }
 
@@ -2034,7 +2393,12 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 #ifdef HAVE_CLAMDFFT
     CV_OCL_RUN(ocl::haveAmdFft() && ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
             _dst.isUMat() && _src0.dims() <= 2 && nonzero_rows == 0,
-               ocl_dft(_src0, _dst, flags))
+               ocl_dft_amdfft(_src0, _dst, flags))
+#endif
+
+#ifdef HAVE_OPENCL
+    CV_OCL_RUN(_dst.isUMat() && _src0.dims() <= 2,
+               ocl_dft(_src0, _dst, flags, nonzero_rows))
 #endif
 
     static DFTFunc dft_tbl[6] =
@@ -2046,10 +2410,8 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
         (DFTFunc)RealDFT_64f,
         (DFTFunc)CCSIDFT_64f
     };
-
     AutoBuffer<uchar> buf;
     void *spec = 0;
-
     Mat src0 = _src0.getMat(), src = src0;
     int prev_len = 0, stage = 0;
     bool inv = (flags & DFT_INVERSE) != 0;
@@ -2080,32 +2442,32 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
     {
         if ((flags & DFT_ROWS) == 0)
         {
-            if (!real_transform)
+            if (src.channels() == 2 && !(inv && (flags & DFT_REAL_OUTPUT)))
             {
-                if (ippi_DFT_C_32F(src,dst, inv, ipp_norm_flag))
+                if (ippi_DFT_C_32F(src, dst, inv, ipp_norm_flag))
                     return;
                 setIppErrorStatus();
             }
-            else if (inv || !(flags & DFT_COMPLEX_OUTPUT))
+            if (src.channels() == 1 && (inv || !(flags & DFT_COMPLEX_OUTPUT)))
             {
-                if (ippi_DFT_R_32F(src,dst, inv, ipp_norm_flag))
+                if (ippi_DFT_R_32F(src, dst, inv, ipp_norm_flag))
                     return;
                 setIppErrorStatus();
             }
         }
         else
         {
-            if (!real_transform)
+            if (src.channels() == 2 && !(inv && (flags & DFT_REAL_OUTPUT)))
             {
                 ippiDFT_C_Func ippiFunc = inv ? (ippiDFT_C_Func)ippiDFTInv_CToC_32fc_C1R : (ippiDFT_C_Func)ippiDFTFwd_CToC_32fc_C1R;
-                if (Dft_C_IPPLoop(src,dst, IPPDFT_C_Functor(ippiFunc),ipp_norm_flag))
+                if (Dft_C_IPPLoop(src, dst, IPPDFT_C_Functor(ippiFunc),ipp_norm_flag))
                     return;
                 setIppErrorStatus();
             }
-            else if (inv || !(flags & DFT_COMPLEX_OUTPUT))
+            if (src.channels() == 1 && (inv || !(flags & DFT_COMPLEX_OUTPUT)))
             {
                 ippiDFT_R_Func ippiFunc = inv ? (ippiDFT_R_Func)ippiDFTInv_PackToR_32f_C1R : (ippiDFT_R_Func)ippiDFTFwd_RToPack_32f_C1R;
-                if (Dft_R_IPPLoop(src,dst, IPPDFT_R_Functor(ippiFunc),ipp_norm_flag))
+                if (Dft_R_IPPLoop(src, dst, IPPDFT_R_Functor(ippiFunc),ipp_norm_flag))
                     return;
                 setIppErrorStatus();
             }
@@ -2273,8 +2635,8 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 
             for( i = 0; i < nonzero_rows; i++ )
             {
-                uchar* sptr = src.data + i*src.step;
-                uchar* dptr0 = dst.data + i*dst.step;
+                const uchar* sptr = src.ptr(i);
+                uchar* dptr0 = dst.ptr(i);
                 uchar* dptr = dptr0;
 
                 if( tmp_buf )
@@ -2287,7 +2649,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 
             for( ; i < count; i++ )
             {
-                uchar* dptr0 = dst.data + i*dst.step;
+                uchar* dptr0 = dst.ptr(i);
                 memset( dptr0, 0, dst_full_len );
             }
 
@@ -2299,8 +2661,8 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
         {
             int a = 0, b = count;
             uchar *buf0, *buf1, *dbuf0, *dbuf1;
-            uchar* sptr0 = src.data;
-            uchar* dptr0 = dst.data;
+            const uchar* sptr0 = src.ptr();
+            uchar* dptr0 = dst.ptr();
             buf0 = ptr;
             ptr += len*complex_elem_size;
             buf1 = ptr;
@@ -2438,7 +2800,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
                     int n = dst.cols;
                     if( elem_size == (int)sizeof(float) )
                     {
-                        float* p0 = (float*)dst.data;
+                        float* p0 = dst.ptr<float>();
                         size_t dstep = dst.step/sizeof(p0[0]);
                         for( i = 0; i < len; i++ )
                         {
@@ -2454,7 +2816,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
                     }
                     else
                     {
-                        double* p0 = (double*)dst.data;
+                        double* p0 = dst.ptr<double>();
                         size_t dstep = dst.step/sizeof(p0[0]);
                         for( i = 0; i < len; i++ )
                         {
@@ -2549,9 +2911,9 @@ void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
 
     if( depth == CV_32F )
     {
-        const float* dataA = (const float*)srcA.data;
-        const float* dataB = (const float*)srcB.data;
-        float* dataC = (float*)dst.data;
+        const float* dataA = srcA.ptr<float>();
+        const float* dataB = srcB.ptr<float>();
+        float* dataC = dst.ptr<float>();
 
         size_t stepA = srcA.step/sizeof(dataA[0]);
         size_t stepB = srcB.step/sizeof(dataB[0]);
@@ -2616,9 +2978,9 @@ void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
     }
     else
     {
-        const double* dataA = (const double*)srcA.data;
-        const double* dataB = (const double*)srcB.data;
-        double* dataC = (double*)dst.data;
+        const double* dataA = srcA.ptr<double>();
+        const double* dataB = srcB.ptr<double>();
+        double* dataC = dst.ptr<double>();
 
         size_t stepA = srcA.step/sizeof(dataA[0]);
         size_t stepB = srcB.step/sizeof(dataB[0]);
@@ -2937,7 +3299,7 @@ public:
             pBuffer = (uchar*)buf;
 
             for( int i = range.start; i < range.end; ++i)
-                if(!(*ippidct)((float*)(src->data+i*src->step), (int)src->step,(float*)(dst->data+i*dst->step), (int)dst->step, pDCTSpec, (Ipp8u*)pBuffer))
+                if(!(*ippidct)(src->ptr<float>(i), (int)src->step,dst->ptr<float>(i), (int)dst->step, pDCTSpec, (Ipp8u*)pBuffer))
                     *ok = false;
         }
         else
@@ -3006,7 +3368,7 @@ static bool ippi_DCT_32f(const Mat& src, Mat& dst, bool inv, bool row)
             buf.allocate( bufSize );
             pBuffer = (uchar*)buf;
 
-            status = ippFunc((float*)src.data, (int)src.step, (float*)dst.data, (int)dst.step, pDCTSpec, (Ipp8u*)pBuffer);
+            status = ippFunc(src.ptr<float>(), (int)src.step, dst.ptr<float>(), (int)dst.step, pDCTSpec, (Ipp8u*)pBuffer);
         }
 
         if (pDCTSpec)
@@ -3076,7 +3438,8 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 
     for( ; stage <= end_stage; stage++ )
     {
-        uchar *sptr = src.data, *dptr = dst.data;
+        const uchar* sptr = src.ptr();
+        uchar* dptr = dst.ptr();
         size_t sstep0, sstep1, dstep0, dstep1;
 
         if( stage == 0 )

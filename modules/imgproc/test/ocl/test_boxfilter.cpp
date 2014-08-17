@@ -41,7 +41,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
@@ -109,7 +109,7 @@ OCL_TEST_P(BoxFilter, Mat)
         OCL_OFF(cv::boxFilter(src_roi, dst_roi, -1, ksize, anchor, normalize, borderType));
         OCL_ON(cv::boxFilter(usrc_roi, udst_roi, -1, ksize, anchor, normalize, borderType));
 
-        Near(depth <= CV_32S ? 1 : 1e-3);
+        Near(depth <= CV_32S ? 1 : 3e-3);
     }
 }
 

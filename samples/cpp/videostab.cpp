@@ -7,6 +7,7 @@
 #include <opencv2/core/utility.hpp>
 #include "opencv2/video.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/videoio.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/videostab.hpp"
 #include "opencv2/opencv_modules.hpp"

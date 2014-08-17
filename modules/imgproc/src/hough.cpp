@@ -84,7 +84,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
 
     CV_Assert( img.type() == CV_8UC1 );
 
-    const uchar* image = img.data;
+    const uchar* image = img.ptr();
     int step = (int)img.step;
     int width = img.cols;
     int height = img.rows;
@@ -224,7 +224,7 @@ HoughLinesSDiv( const Mat& img,
 
     threshold = MIN( threshold, 255 );
 
-    const uchar* image_src = img.data;
+    const uchar* image_src = img.ptr();
     int step = (int)img.step;
     int w = img.cols;
     int h = img.rows;
@@ -462,7 +462,7 @@ HoughLinesProbabilistic( Mat& image,
         trigtab[n*2+1] = (float)(sin((double)n*theta) * irho);
     }
     const float* ttab = &trigtab[0];
-    uchar* mdata0 = mask.data;
+    uchar* mdata0 = mask.ptr();
     std::vector<Point> nzloc;
 
     // stage 1. collect non-zero image points
@@ -493,7 +493,7 @@ HoughLinesProbabilistic( Mat& image,
         Point point = nzloc[idx];
         Point line_end[2];
         float a, b;
-        int* adata = (int*)accum.data;
+        int* adata = accum.ptr<int>();
         int i = point.y, j = point.x, k, x0, y0, dx0, dy0, xflag;
         int good_line;
         const int shift = 16;
@@ -626,7 +626,7 @@ HoughLinesProbabilistic( Mat& image,
                 {
                     if( good_line )
                     {
-                        adata = (int*)accum.data;
+                        adata = accum.ptr<int>();
                         for( int n = 0; n < numangle; n++, adata += numrho )
                         {
                             int r = cvRound( j1 * ttab[n*2] + i1 * ttab[n*2+1] );
@@ -787,7 +787,7 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
         }
         else
         {
-            cvSeqPushMulti(lines, lx.data, nlines);
+            cvSeqPushMulti(lines, lx.ptr(), nlines);
         }
     }
 
@@ -1104,7 +1104,7 @@ static void seqToMat(const CvSeq* seq, OutputArray _arr)
     {
         _arr.create(1, seq->total, seq->flags, -1, true);
         Mat arr = _arr.getMat();
-        cvCvtSeqToArray(seq, arr.data);
+        cvCvtSeqToArray(seq, arr.ptr());
     }
     else
         _arr.release();

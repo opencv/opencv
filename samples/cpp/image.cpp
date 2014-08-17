@@ -2,12 +2,10 @@
 #include <iostream>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/flann/miniflann.hpp>
 #include <opencv2/core/utility.hpp>
 
 using namespace cv; // all the new API is put into "cv" namespace. Export its content
 using namespace std;
-using namespace cv::flann;
 
 static void help()
 {
@@ -24,6 +22,7 @@ static void help()
 
 #ifdef DEMO_MIXED_API_USE
 #  include <opencv2/highgui/highgui_c.h>
+#  include <opencv2/imgcodecs/imgcodecs_c.h>
 #endif
 
 int main( int argc, char** argv )
@@ -49,7 +48,7 @@ int main( int argc, char** argv )
     }
 #endif
 
-    if( !img.data ) // check if the image has been loaded properly
+    if( img.empty() ) // check if the image has been loaded properly
         return -1;
 
     Mat img_yuv;

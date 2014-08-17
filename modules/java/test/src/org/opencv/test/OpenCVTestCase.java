@@ -25,7 +25,7 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.core.DMatch;
 import org.opencv.core.KeyPoint;
-import org.opencv.highgui.Highgui;
+import org.opencv.imgcodecs.Imgcodecs;
 
 public class OpenCVTestCase extends TestCase {
     //change to 'true' to unblock fail on fail("Not yet implemented")
@@ -164,8 +164,8 @@ public class OpenCVTestCase extends TestCase {
         rgba0 = new Mat(matSize, matSize, CvType.CV_8UC4, Scalar.all(0));
         rgba128 = new Mat(matSize, matSize, CvType.CV_8UC4, Scalar.all(128));
 
-        rgbLena = Highgui.imread(OpenCVTestRunner.LENA_PATH);
-        grayChess = Highgui.imread(OpenCVTestRunner.CHESS_PATH, 0);
+        rgbLena = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH);
+        grayChess = Imgcodecs.imread(OpenCVTestRunner.CHESS_PATH, 0);
 
         v1 = new Mat(1, 3, CvType.CV_32F);
         v1.put(0, 0, 1.0, 3.0, 2.0);

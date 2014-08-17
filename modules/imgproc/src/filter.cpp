@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_imgproc.hpp"
 
 /****************************************************************************************\
                                     Base Image Filter
@@ -410,10 +410,10 @@ void FilterEngine::apply(const Mat& src, Mat& dst,
         dstOfs.y + srcRoi.height <= dst.rows );
 
     int y = start(src, srcRoi, isolated);
-    proceed( src.data + y*src.step
+    proceed( src.ptr(y)
              + srcRoi.x*src.elemSize(),
              (int)src.step, endY - startY,
-             dst.data + dstOfs.y*dst.step +
+             dst.ptr(dstOfs.y) +
              dstOfs.x*dst.elemSize(), (int)dst.step );
 }
 
@@ -432,7 +432,7 @@ int cv::getKernelType(InputArray filter_kernel, Point anchor)
     Mat kernel;
     _kernel.convertTo(kernel, CV_64F);
 
-    const double* coeffs = (double*)kernel.data;
+    const double* coeffs = kernel.ptr<double>();
     double sum = 0;
     int type = KERNEL_SMOOTH + KERNEL_INTEGER;
     if( (_kernel.rows == 1 || _kernel.cols == 1) &&
@@ -513,7 +513,7 @@ struct RowVec_8u32s
         int k, ksize = kernel.rows + kernel.cols - 1;
         for( k = 0; k < ksize; k++ )
         {
-            int v = ((const int*)kernel.data)[k];
+            int v = kernel.ptr<int>()[k];
             if( v < SHRT_MIN || v > SHRT_MAX )
             {
                 smallValues = false;
@@ -529,7 +529,7 @@ struct RowVec_8u32s
 
         int i = 0, k, _ksize = kernel.rows + kernel.cols - 1;
         int* dst = (int*)_dst;
-        const int* _kx = (const int*)kernel.data;
+        const int* _kx = kernel.ptr<int>();
         width *= cn;
 
         if( smallValues )
@@ -605,7 +605,7 @@ struct SymmRowSmallVec_8u32s
         int k, ksize = kernel.rows + kernel.cols - 1;
         for( k = 0; k < ksize; k++ )
         {
-            int v = ((const int*)kernel.data)[k];
+            int v = kernel.ptr<int>()[k];
             if( v < SHRT_MIN || v > SHRT_MAX )
             {
                 smallValues = false;
@@ -622,7 +622,7 @@ struct SymmRowSmallVec_8u32s
         int i = 0, j, k, _ksize = kernel.rows + kernel.cols - 1;
         int* dst = (int*)_dst;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
-        const int* kx = (const int*)kernel.data + _ksize/2;
+        const int* kx = kernel.ptr<int>() + _ksize/2;
         if( !smallValues )
             return 0;
 
@@ -941,7 +941,7 @@ struct SymmColumnVec_32s8u
             return 0;
 
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
-        const float* ky = (const float*)kernel.data + ksize2;
+        const float* ky = kernel.ptr<float>() + ksize2;
         int i = 0, k;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
         const int** src = (const int**)_src;
@@ -1089,7 +1089,7 @@ struct SymmColumnSmallVec_32s16s
             return 0;
 
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
-        const float* ky = (const float*)kernel.data + ksize2;
+        const float* ky = kernel.ptr<float>() + ksize2;
         int i = 0;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
         const int** src = (const int**)_src;
@@ -1222,7 +1222,7 @@ struct RowVec_16s32f
 
         int i = 0, k, _ksize = kernel.rows + kernel.cols - 1;
         float* dst = (float*)_dst;
-        const float* _kx = (const float*)kernel.data;
+        const float* _kx = kernel.ptr<float>();
         width *= cn;
 
         for( ; i <= width - 8; i += 8 )
@@ -1271,7 +1271,7 @@ struct SymmColumnVec_32f16s
             return 0;
 
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
-        const float* ky = (const float*)kernel.data + ksize2;
+        const float* ky = kernel.ptr<float>() + ksize2;
         int i = 0, k;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
         const float** src = (const float**)_src;
@@ -1431,7 +1431,7 @@ struct RowVec_32f
         int _ksize = kernel.rows + kernel.cols - 1;
         const float* src0 = (const float*)_src;
         float* dst = (float*)_dst;
-        const float* _kx = (const float*)kernel.data;
+        const float* _kx = kernel.ptr<float>();
 
         if( !haveSSE )
             return 0;
@@ -1519,7 +1519,7 @@ struct SymmRowSmallVec_32f
         float* dst = (float*)_dst;
         const float* src = (const float*)_src + (_ksize/2)*cn;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
-        const float* kx = (const float*)kernel.data + _ksize/2;
+        const float* kx = kernel.ptr<float>() + _ksize/2;
         width *= cn;
 
         if( symmetrical )
@@ -1711,7 +1711,7 @@ struct SymmColumnVec_32f
             return 0;
 
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
-        const float* ky = (const float*)kernel.data + ksize2;
+        const float* ky = kernel.ptr<float>() + ksize2;
         int i = 0, k;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
         const float** src = (const float**)_src;
@@ -1851,7 +1851,7 @@ struct SymmColumnSmallVec_32f
             return 0;
 
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
-        const float* ky = (const float*)kernel.data + ksize2;
+        const float* ky = kernel.ptr<float>() + ksize2;
         int i = 0;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
         const float** src = (const float**)_src;
@@ -2241,7 +2241,7 @@ template<typename ST, typename DT, class VecOp> struct RowFilter : public BaseRo
     void operator()(const uchar* src, uchar* dst, int width, int cn)
     {
         int _ksize = ksize;
-        const DT* kx = (const DT*)kernel.data;
+        const DT* kx = kernel.ptr<DT>();
         const ST* S;
         DT* D = (DT*)dst;
         int i, k;
@@ -2299,7 +2299,7 @@ template<typename ST, typename DT, class VecOp> struct SymmRowSmallFilter :
     void operator()(const uchar* src, uchar* dst, int width, int cn)
     {
         int ksize2 = this->ksize/2, ksize2n = ksize2*cn;
-        const DT* kx = (const DT*)this->kernel.data + ksize2;
+        const DT* kx = this->kernel.template ptr<DT>() + ksize2;
         bool symmetrical = (this->symmetryType & KERNEL_SYMMETRICAL) != 0;
         DT* D = (DT*)dst;
         int i = this->vecOp(src, dst, width, cn), j, k;
@@ -2437,7 +2437,7 @@ template<class CastOp, class VecOp> struct ColumnFilter : public BaseColumnFilte
 
     void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
-        const ST* ky = (const ST*)kernel.data;
+        const ST* ky = kernel.template ptr<ST>();
         ST _delta = delta;
         int _ksize = ksize;
         int i, k;
@@ -2501,7 +2501,7 @@ template<class CastOp, class VecOp> struct SymmColumnFilter : public ColumnFilte
     void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
         int ksize2 = this->ksize/2;
-        const ST* ky = (const ST*)this->kernel.data + ksize2;
+        const ST* ky = this->kernel.template ptr<ST>() + ksize2;
         int i, k;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
         ST _delta = this->delta;
@@ -2607,7 +2607,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
     void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
         int ksize2 = this->ksize/2;
-        const ST* ky = (const ST*)this->kernel.data + ksize2;
+        const ST* ky = this->kernel.template ptr<ST>() + ksize2;
         int i;
         bool symmetrical = (this->symmetryType & KERNEL_SYMMETRICAL) != 0;
         bool is_1_2_1 = ky[0] == 1 && ky[1] == 2;
@@ -3021,7 +3021,7 @@ void preprocess2DKernel( const Mat& kernel, std::vector<Point>& coords, std::vec
 
     for( i = k = 0; i < kernel.rows; i++ )
     {
-        const uchar* krow = kernel.data + kernel.step*i;
+        const uchar* krow = kernel.ptr(i);
         for( j = 0; j < kernel.cols; j++ )
         {
             if( ktype == CV_8U )
@@ -3219,16 +3219,16 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
         ((ksize.width < 5 && ksize.height < 5) ||
         (ksize.width == 5 && ksize.height == 5 && cn == 1)))
     {
-        kernelMat.reshape(0, 1);
+        kernelMat = kernelMat.reshape(0, 1);
         String kerStr = ocl::kernelToStr(kernelMat, CV_32F);
         int h = isolated ? sz.height : wholeSize.height;
         int w = isolated ? sz.width : wholeSize.width;
 
-        if ((w < ksize.width) || (h < ksize.height))
+        if (w < ksize.width || h < ksize.height)
             return false;
 
         // Figure out what vector size to use for loading the pixels.
-        int pxLoadNumPixels = ((cn != 1) || sz.width % 4) ? 1 : 4;
+        int pxLoadNumPixels = cn != 1 || sz.width % 4 ? 1 : 4;
         int pxLoadVecSize = cn * pxLoadNumPixels;
 
         // Figure out how many pixels per work item to compute in X and Y
@@ -3273,8 +3273,8 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                 ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), kerStr.c_str());
-        cv::String errmsg;
-        if (!k.create("filter2DSmall", cv::ocl::imgproc::filter2DSmall_oclsrc, build_options, &errmsg))
+
+        if (!k.create("filter2DSmall", cv::ocl::imgproc::filter2DSmall_oclsrc, build_options))
             return false;
     }
     else
@@ -3289,13 +3289,13 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
             size_t BLOCK_SIZE = tryWorkItems;
             while (BLOCK_SIZE > 32 && BLOCK_SIZE >= (size_t)ksize.width * 2 && BLOCK_SIZE > (size_t)sz.width * 2)
                 BLOCK_SIZE /= 2;
-    #if 1 // TODO Mode with several blocks requires a much more VGPRs, so this optimization is not actual for the current devices
+#if 1 // TODO Mode with several blocks requires a much more VGPRs, so this optimization is not actual for the current devices
             size_t BLOCK_SIZE_Y = 1;
-    #else
+#else
             size_t BLOCK_SIZE_Y = 8; // TODO Check heuristic value on devices
             while (BLOCK_SIZE_Y < BLOCK_SIZE / 8 && BLOCK_SIZE_Y * src.clCxt->getDeviceInfo().maxComputeUnits * 32 < (size_t)src.rows)
                 BLOCK_SIZE_Y *= 2;
-    #endif
+#endif
 
             if ((size_t)ksize.width > BLOCK_SIZE)
                 return false;
@@ -3471,7 +3471,8 @@ static bool ocl_sepColFilter2D(const UMat & buf, UMat & dst, const Mat & kernelY
     return k.run(2, globalsize, localsize, false);
 }
 
-const int optimizedSepFilterLocalSize = 16;
+const int optimizedSepFilterLocalWidth  = 16;
+const int optimizedSepFilterLocalHeight = 8;
 
 static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
                                        Mat row_kernel, Mat col_kernel,
@@ -3491,8 +3492,8 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
               borderType == BORDER_REFLECT_101))
         return false;
 
-    size_t lt2[2] = { optimizedSepFilterLocalSize, optimizedSepFilterLocalSize };
-    size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), lt2[1] * (1 + (size.height - 1) / lt2[1]) };
+    size_t lt2[2] = { optimizedSepFilterLocalWidth, optimizedSepFilterLocalHeight };
+    size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), lt2[1]};
 
     char cvt[2][40];
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
@@ -3584,8 +3585,8 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
     }
 
     CV_OCL_RUN_(kernelY.cols <= 21 && kernelX.cols <= 21 &&
-                imgSize.width > optimizedSepFilterLocalSize + anchor.x &&
-                imgSize.height > optimizedSepFilterLocalSize + anchor.y &&
+                imgSize.width > optimizedSepFilterLocalWidth + anchor.x &&
+                imgSize.height > optimizedSepFilterLocalHeight + anchor.y &&
                 (!(borderType & BORDER_ISOLATED) || _src.offset() == 0) &&
                 anchor == Point(kernelX.cols >> 1, kernelY.cols >> 1) &&
                 (d.isIntel() || (d.isAMD() && !d.hostUnifiedMemory())),

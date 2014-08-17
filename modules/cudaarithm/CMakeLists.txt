@@ -1,4 +1,4 @@
-if(IOS)
+if(IOS OR (NOT HAVE_CUDA AND NOT BUILD_CUDA_STUBS))
   ocv_module_disable(cudaarithm)
 endif()
 
@@ -22,8 +22,6 @@ if(HAVE_CUFFT)
 endif()
 
 ocv_create_module(${extra_libs})
-
-ocv_add_precompiled_headers(${the_module})
 
 ocv_add_accuracy_tests(DEPENDS_ON opencv_imgproc)
 ocv_add_perf_tests(DEPENDS_ON opencv_imgproc)

@@ -39,7 +39,7 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
@@ -306,6 +306,23 @@ OCL_PERF_TEST_P(TransposeFixture, Transpose, ::testing::Combine(
     OCL_TEST_CYCLE() cv::transpose(src, dst);
 
     SANITY_CHECK(dst);
+}
+
+OCL_PERF_TEST_P(TransposeFixture, TransposeInplace, ::testing::Combine(
+                OCL_PERF_ENUM(Size(640, 640), Size(1280, 1280), Size(2160, 2160)), OCL_TEST_TYPES_134))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(src, WARMUP_NONE);
+
+    OCL_TEST_CYCLE() cv::transpose(src, src);
+
+    SANITY_CHECK_NOTHING();
 }
 
 ///////////// Flip ////////////////////////

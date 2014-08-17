@@ -139,7 +139,7 @@ public class CameraCalibrator {
     private void renderFrame(Mat rgbaFrame) {
         drawPoints(rgbaFrame);
 
-        Core.putText(rgbaFrame, "Captured: " + mCornersBuffer.size(), new Point(rgbaFrame.cols() / 3 * 2, rgbaFrame.rows() * 0.1),
+        Imgproc.putText(rgbaFrame, "Captured: " + mCornersBuffer.size(), new Point(rgbaFrame.cols() / 3 * 2, rgbaFrame.rows() * 0.1),
                 Core.FONT_HERSHEY_SIMPLEX, 1.0, new Scalar(255, 255, 0));
     }
 

@@ -2,6 +2,8 @@
 #include <opencv2/core/utility.hpp>
 #include "opencv2/imgproc.hpp"
 #include "opencv2/calib3d.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/videoio.hpp"
 #include "opencv2/highgui.hpp"
 
 #include <cctype>
@@ -446,7 +448,7 @@ int main( int argc, char** argv )
         else if( i < (int)imageList.size() )
             view = imread(imageList[i], 1);
 
-        if(!view.data)
+        if(view.empty())
         {
             if( imagePoints.size() > 0 )
                 runAndSave(outputFilename, imagePoints, imageSize,
@@ -561,7 +563,7 @@ int main( int argc, char** argv )
         for( i = 0; i < (int)imageList.size(); i++ )
         {
             view = imread(imageList[i], 1);
-            if(!view.data)
+            if(view.empty())
                 continue;
             //undistort( view, rview, cameraMatrix, distCoeffs, cameraMatrix );
             remap(view, rview, map1, map2, INTER_LINEAR);

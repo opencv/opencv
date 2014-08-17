@@ -1,46 +1,9 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                           License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2014, Itseez, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// @Authors
-//    Shengen Yan,yanshengen@gmail.com
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of the copyright holders may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors as is and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
 //M*/
 
 #ifdef DOUBLE_SUPPORT
@@ -51,363 +14,175 @@
 #endif
 #endif
 
-#define LSIZE 256
-#define LSIZE_1 255
-#define LSIZE_2 254
-#define HF_LSIZE 128
-#define LOG_LSIZE 8
-#define LOG_NUM_BANKS 5
-#define NUM_BANKS 32
-#define GET_CONFLICT_OFFSET(lid) ((lid) >> LOG_NUM_BANKS)
-
-#if sdepth == 4
-
-kernel void integral_sum_cols(__global uchar4 *src, __global int *sum,
-                              int src_offset, int pre_invalid, int rows, int cols, int src_step, int dst_step)
-{
-    int lid = get_local_id(0);
-    int gid = get_group_id(0);
-    int4 src_t[2], sum_t[2];
-    __local int4 lm_sum[2][LSIZE + LOG_LSIZE];
-    __local int* sum_p;
-    src_step = src_step >> 2;
-    gid = gid << 1;
-    for(int i = 0; i < rows; i =i + LSIZE_1)
-    {
-        src_t[0] = (i + lid < rows ? convert_int4(src[src_offset + (lid+i) * src_step + gid]) : 0);
-        src_t[1] = (i + lid < rows ? convert_int4(src[src_offset + (lid+i) * src_step + gid + 1]) : 0);
-
-        sum_t[0] =  (i == 0 ? 0 : lm_sum[0][LSIZE_2 + LOG_LSIZE]);
-        sum_t[1] =  (i == 0 ? 0 : lm_sum[1][LSIZE_2 + LOG_LSIZE]);
-        barrier(CLK_LOCAL_MEM_FENCE);
-
-        int bf_loc = lid + GET_CONFLICT_OFFSET(lid);
-        lm_sum[0][bf_loc] = src_t[0];
-
-        lm_sum[1][bf_loc] = src_t[1];
-
-        int offset = 1;
-        for(int d = LSIZE >> 1 ;  d > 0; d>>=1)
-        {
-            barrier(CLK_LOCAL_MEM_FENCE);
-            int ai = offset * (((lid & 127)<<1) +1) - 1,bi = ai + offset;
-            ai += GET_CONFLICT_OFFSET(ai);
-            bi += GET_CONFLICT_OFFSET(bi);
-
-            if((lid & 127) < d)
-            {
-                lm_sum[lid >> 7][bi]  +=  lm_sum[lid >> 7][ai];
-            }
-            offset <<= 1;
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-        if(lid < 2)
-        {
-            lm_sum[lid][LSIZE_2 + LOG_LSIZE] = 0;
-        }
-        for(int d = 1;  d < LSIZE; d <<= 1)
-        {
-            barrier(CLK_LOCAL_MEM_FENCE);
-            offset >>= 1;
-            int ai = offset * (((lid & 127)<<1) +1) - 1,bi = ai + offset;
-            ai += GET_CONFLICT_OFFSET(ai);
-            bi += GET_CONFLICT_OFFSET(bi);
-
-            if((lid & 127) < d)
-            {
-                lm_sum[lid >> 7][bi] += lm_sum[lid >> 7][ai];
-                lm_sum[lid >> 7][ai] = lm_sum[lid >> 7][bi] - lm_sum[lid >> 7][ai];
-            }
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-        if(lid > 0 && (i+lid) <= rows)
-        {
-            int loc_s0 = gid * dst_step + i + lid - 1 - pre_invalid * dst_step / 4, loc_s1 = loc_s0 + dst_step ;
-            lm_sum[0][bf_loc] += sum_t[0];
-            lm_sum[1][bf_loc] += sum_t[1];
-            sum_p = (__local int*)(&(lm_sum[0][bf_loc]));
-            for(int k = 0; k < 4; k++)
-            {
-                if(gid * 4 + k >= cols + pre_invalid || gid * 4 + k < pre_invalid) continue;
-                sum[loc_s0 + k * dst_step / 4] = sum_p[k];
-            }
-            sum_p = (__local int*)(&(lm_sum[1][bf_loc]));
-            for(int k = 0; k < 4; k++)
-            {
-                if(gid * 4 + k + 4 >= cols + pre_invalid) break;
-                sum[loc_s1 + k * dst_step / 4] = sum_p[k];
-            }
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-}
-
-kernel void integral_sum_rows(__global int4 *srcsum, __global int *sum,
-                              int rows, int cols, int src_step, int sum_step, int sum_offset)
-{
-    int lid = get_local_id(0);
-    int gid = get_group_id(0);
-    int4 src_t[2], sum_t[2];
-    __local int4 lm_sum[2][LSIZE + LOG_LSIZE];
-    __local int *sum_p;
-    src_step = src_step >> 4;
-    for(int i = 0; i < rows; i =i + LSIZE_1)
-    {
-        src_t[0] = i + lid < rows ? srcsum[(lid+i) * src_step + gid * 2] : 0;
-        src_t[1] = i + lid < rows ? srcsum[(lid+i) * src_step + gid * 2 + 1] : 0;
-
-        sum_t[0] =  (i == 0 ? 0 : lm_sum[0][LSIZE_2 + LOG_LSIZE]);
-        sum_t[1] =  (i == 0 ? 0 : lm_sum[1][LSIZE_2 + LOG_LSIZE]);
-        barrier(CLK_LOCAL_MEM_FENCE);
-
-        int bf_loc = lid + GET_CONFLICT_OFFSET(lid);
-        lm_sum[0][bf_loc] = src_t[0];
-
-        lm_sum[1][bf_loc] = src_t[1];
-
-        int offset = 1;
-        for(int d = LSIZE >> 1 ;  d > 0; d>>=1)
-        {
-            barrier(CLK_LOCAL_MEM_FENCE);
-            int ai = offset * (((lid & 127)<<1) +1) - 1,bi = ai + offset;
-            ai += GET_CONFLICT_OFFSET(ai);
-            bi += GET_CONFLICT_OFFSET(bi);
-
-            if((lid & 127) < d)
-            {
-                lm_sum[lid >> 7][bi]  +=  lm_sum[lid >> 7][ai];
-            }
-            offset <<= 1;
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-        if(lid < 2)
-        {
-            lm_sum[lid][LSIZE_2 + LOG_LSIZE] = 0;
-        }
-        for(int d = 1;  d < LSIZE; d <<= 1)
-        {
-            barrier(CLK_LOCAL_MEM_FENCE);
-            offset >>= 1;
-            int ai = offset * (((lid & 127)<<1) +1) - 1,bi = ai + offset;
-            ai += GET_CONFLICT_OFFSET(ai);
-            bi += GET_CONFLICT_OFFSET(bi);
-
-            if((lid & 127) < d)
-            {
-                lm_sum[lid >> 7][bi] += lm_sum[lid >> 7][ai];
-                lm_sum[lid >> 7][ai] = lm_sum[lid >> 7][bi] - lm_sum[lid >> 7][ai];
-            }
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-        if(gid == 0 && (i + lid) <= rows)
-        {
-            sum[sum_offset + i + lid] = 0;
-        }
-        if(i + lid == 0)
-        {
-            int loc0 = gid * 2 * sum_step;
-            for(int k = 1; k <= 8; k++)
-            {
-                if(gid * 8 + k > cols) break;
-                sum[sum_offset + loc0 + k * sum_step / 4] = 0;
-            }
-        }
-
-        if(lid > 0 && (i+lid) <= rows)
-        {
-            int loc_s0 = sum_offset + gid * 2 * sum_step + sum_step / 4 + i + lid, loc_s1 = loc_s0 + sum_step ;
-            lm_sum[0][bf_loc] += sum_t[0];
-            lm_sum[1][bf_loc] += sum_t[1];
-            sum_p = (__local int*)(&(lm_sum[0][bf_loc]));
-            for(int k = 0; k < 4; k++)
-            {
-                if(gid * 8 + k >= cols) break;
-                sum[loc_s0 + k * sum_step / 4] = sum_p[k];
-            }
-            sum_p = (__local int*)(&(lm_sum[1][bf_loc]));
-            for(int k = 0; k < 4; k++)
-            {
-                if(gid * 8 + 4 + k >= cols) break;
-                sum[loc_s1 + k * sum_step / 4] = sum_p[k];
-            }
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-}
-
-#elif sdepth == 5
-
-kernel void integral_sum_cols(__global uchar4 *src, __global float *sum,
-                              int src_offset, int pre_invalid, int rows, int cols, int src_step, int dst_step)
-{
-    int lid = get_local_id(0);
-    int gid = get_group_id(0);
-    float4 src_t[2], sum_t[2];
-    __local float4 lm_sum[2][LSIZE + LOG_LSIZE];
-    __local float* sum_p;
-    src_step = src_step >> 2;
-    gid = gid << 1;
-    for(int i = 0; i < rows; i =i + LSIZE_1)
-    {
-        src_t[0] = (i + lid < rows ? convert_float4(src[src_offset + (lid+i) * src_step + gid]) : (float4)0);
-        src_t[1] = (i + lid < rows ? convert_float4(src[src_offset + (lid+i) * src_step + gid + 1]) : (float4)0);
-
-        sum_t[0] =  (i == 0 ? (float4)0 : lm_sum[0][LSIZE_2 + LOG_LSIZE]);
-        sum_t[1] =  (i == 0 ? (float4)0 : lm_sum[1][LSIZE_2 + LOG_LSIZE]);
-        barrier(CLK_LOCAL_MEM_FENCE);
-
-        int bf_loc = lid + GET_CONFLICT_OFFSET(lid);
-        lm_sum[0][bf_loc] = src_t[0];
-
-        lm_sum[1][bf_loc] = src_t[1];
-
-        int offset = 1;
-        for(int d = LSIZE >> 1 ;  d > 0; d>>=1)
-        {
-            barrier(CLK_LOCAL_MEM_FENCE);
-            int ai = offset * (((lid & 127)<<1) +1) - 1,bi = ai + offset;
-            ai += GET_CONFLICT_OFFSET(ai);
-            bi += GET_CONFLICT_OFFSET(bi);
-
-            if((lid & 127) < d)
-            {
-                lm_sum[lid >> 7][bi]  +=  lm_sum[lid >> 7][ai];
-            }
-            offset <<= 1;
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-        if(lid < 2)
-        {
-            lm_sum[lid][LSIZE_2 + LOG_LSIZE] = 0;
-        }
-        for(int d = 1;  d < LSIZE; d <<= 1)
-        {
-            barrier(CLK_LOCAL_MEM_FENCE);
-            offset >>= 1;
-            int ai = offset * (((lid & 127)<<1) +1) - 1,bi = ai + offset;
-            ai += GET_CONFLICT_OFFSET(ai);
-            bi += GET_CONFLICT_OFFSET(bi);
-
-            if((lid & 127) < d)
-            {
-                lm_sum[lid >> 7][bi] += lm_sum[lid >> 7][ai];
-                lm_sum[lid >> 7][ai] = lm_sum[lid >> 7][bi] - lm_sum[lid >> 7][ai];
-            }
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-        if(lid > 0 && (i+lid) <= rows)
-        {
-            int loc_s0 = gid * dst_step + i + lid - 1 - pre_invalid * dst_step / 4, loc_s1 = loc_s0 + dst_step ;
-            lm_sum[0][bf_loc] += sum_t[0];
-            lm_sum[1][bf_loc] += sum_t[1];
-            sum_p = (__local float*)(&(lm_sum[0][bf_loc]));
-            for(int k = 0; k < 4; k++)
-            {
-                if(gid * 4 + k >= cols + pre_invalid || gid * 4 + k < pre_invalid) continue;
-                sum[loc_s0 + k * dst_step / 4] = sum_p[k];
-            }
-            sum_p = (__local float*)(&(lm_sum[1][bf_loc]));
-            for(int k = 0; k < 4; k++)
-            {
-                if(gid * 4 + k + 4 >= cols + pre_invalid) break;
-                sum[loc_s1 + k * dst_step / 4] = sum_p[k];
-            }
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-}
-
-kernel void integral_sum_rows(__global float4 *srcsum, __global float *sum,
-                              int rows, int cols, int src_step, int sum_step, int sum_offset)
-{
-    int lid = get_local_id(0);
-    int gid = get_group_id(0);
-    float4 src_t[2], sum_t[2];
-    __local float4 lm_sum[2][LSIZE + LOG_LSIZE];
-    __local float *sum_p;
-    src_step = src_step >> 4;
-    for(int i = 0; i < rows; i =i + LSIZE_1)
-    {
-        src_t[0] = i + lid < rows ? srcsum[(lid+i) * src_step + gid * 2] : (float4)0;
-        src_t[1] = i + lid < rows ? srcsum[(lid+i) * src_step + gid * 2 + 1] : (float4)0;
-
-        sum_t[0] =  (i == 0 ? (float4)0 : lm_sum[0][LSIZE_2 + LOG_LSIZE]);
-        sum_t[1] =  (i == 0 ? (float4)0 : lm_sum[1][LSIZE_2 + LOG_LSIZE]);
-        barrier(CLK_LOCAL_MEM_FENCE);
-
-        int bf_loc = lid + GET_CONFLICT_OFFSET(lid);
-        lm_sum[0][bf_loc] = src_t[0];
-
-        lm_sum[1][bf_loc] = src_t[1];
-
-        int offset = 1;
-        for(int d = LSIZE >> 1 ;  d > 0; d>>=1)
-        {
-            barrier(CLK_LOCAL_MEM_FENCE);
-            int ai = offset * (((lid & 127)<<1) +1) - 1,bi = ai + offset;
-            ai += GET_CONFLICT_OFFSET(ai);
-            bi += GET_CONFLICT_OFFSET(bi);
-
-            if((lid & 127) < d)
-            {
-                lm_sum[lid >> 7][bi]  +=  lm_sum[lid >> 7][ai];
-            }
-            offset <<= 1;
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-        if(lid < 2)
-        {
-            lm_sum[lid][LSIZE_2 + LOG_LSIZE] = 0;
-        }
-        for(int d = 1;  d < LSIZE; d <<= 1)
-        {
-            barrier(CLK_LOCAL_MEM_FENCE);
-            offset >>= 1;
-            int ai = offset * (((lid & 127)<<1) +1) - 1,bi = ai + offset;
-            ai += GET_CONFLICT_OFFSET(ai);
-            bi += GET_CONFLICT_OFFSET(bi);
-
-            if((lid & 127) < d)
-            {
-                lm_sum[lid >> 7][bi] += lm_sum[lid >> 7][ai];
-                lm_sum[lid >> 7][ai] = lm_sum[lid >> 7][bi] - lm_sum[lid >> 7][ai];
-            }
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-        if(gid == 0 && (i + lid) <= rows)
-        {
-            sum[sum_offset + i + lid] = 0;
-        }
-        if(i + lid == 0)
-        {
-            int loc0 = gid * 2 * sum_step;
-            for(int k = 1; k <= 8; k++)
-            {
-                if(gid * 8 + k > cols) break;
-                sum[sum_offset + loc0 + k * sum_step / 4] = 0;
-            }
-        }
-
-        if(lid > 0 && (i+lid) <= rows)
-        {
-            int loc_s0 = sum_offset + gid * 2 * sum_step + sum_step / 4 + i + lid, loc_s1 = loc_s0 + sum_step ;
-            lm_sum[0][bf_loc] += sum_t[0];
-            lm_sum[1][bf_loc] += sum_t[1];
-            sum_p = (__local float*)(&(lm_sum[0][bf_loc]));
-            for(int k = 0; k < 4; k++)
-            {
-                if(gid * 8 + k >= cols) break;
-                sum[loc_s0 + k * sum_step / 4] = sum_p[k];
-            }
-            sum_p = (__local float*)(&(lm_sum[1][bf_loc]));
-            for(int k = 0; k < 4; k++)
-            {
-                if(gid * 8 + 4 + k >= cols) break;
-                sum[loc_s1 + k * sum_step / 4] = sum_p[k];
-            }
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-}
-
+#ifndef LOCAL_SUM_SIZE
+#define LOCAL_SUM_SIZE      16
 #endif
+
+#define LOCAL_SUM_STRIDE    (LOCAL_SUM_SIZE + 1)
+
+
+kernel void integral_sum_cols(__global const uchar *src_ptr, int src_step, int src_offset, int rows, int cols,
+                              __global uchar *buf_ptr, int buf_step, int buf_offset
+#ifdef SUM_SQUARE
+                              ,__global uchar *buf_sq_ptr, int buf_sq_step, int buf_sq_offset
+#endif
+                              )
+{
+    __local sumT lm_sum[LOCAL_SUM_STRIDE * LOCAL_SUM_SIZE];
+#ifdef SUM_SQUARE
+    __local sumSQT lm_sum_sq[LOCAL_SUM_STRIDE * LOCAL_SUM_SIZE];
+#endif
+    int lid = get_local_id(0);
+    int gid = get_group_id(0);
+
+    int x = get_global_id(0);
+    int src_index = x + src_offset;
+
+    sumT accum = 0;
+#ifdef SUM_SQUARE
+    sumSQT accum_sq = 0;
+#endif
+    for (int y = 0; y < rows; y += LOCAL_SUM_SIZE)
+    {
+        int lsum_index = lid;
+        #pragma unroll
+        for (int yin = 0; yin < LOCAL_SUM_SIZE; yin++, src_index+=src_step, lsum_index += LOCAL_SUM_STRIDE)
+        {
+            if ((x < cols) && (y + yin < rows))
+            {
+                __global const uchar *src = src_ptr + src_index;
+                accum += src[0];
+#ifdef SUM_SQUARE
+                sumSQT temp = src[0] * src[0];
+                accum_sq += temp;
+#endif
+            }
+            lm_sum[lsum_index] = accum;
+#ifdef SUM_SQUARE
+            lm_sum_sq[lsum_index] = accum_sq;
+#endif
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        //int buf_index = buf_offset + buf_step * LOCAL_SUM_COLS * gid + sizeof(sumT) * y + sizeof(sumT) * lid;
+        int buf_index = mad24(buf_step, LOCAL_SUM_SIZE * gid, mad24((int)sizeof(sumT), y + lid, buf_offset));
+#ifdef SUM_SQUARE
+        int buf_sq_index = mad24(buf_sq_step, LOCAL_SUM_SIZE * gid, mad24((int)sizeof(sumSQT), y + lid, buf_sq_offset));
+#endif
+
+        lsum_index = LOCAL_SUM_STRIDE * lid;
+        #pragma unroll
+        for (int yin = 0; yin < LOCAL_SUM_SIZE; yin++, lsum_index ++)
+        {
+            __global sumT *buf = (__global sumT *)(buf_ptr + buf_index);
+            buf[0] = lm_sum[lsum_index];
+            buf_index += buf_step;
+#ifdef SUM_SQUARE
+            __global sumSQT *bufsq = (__global sumSQT *)(buf_sq_ptr + buf_sq_index);
+            bufsq[0] = lm_sum_sq[lsum_index];
+            buf_sq_index += buf_sq_step;
+#endif
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+}
+
+kernel void integral_sum_rows(__global const uchar *buf_ptr, int buf_step, int buf_offset,
+#ifdef SUM_SQUARE
+                              __global uchar *buf_sq_ptr, int buf_sq_step, int buf_sq_offset,
+#endif
+                              __global uchar *dst_ptr, int dst_step, int dst_offset, int rows, int cols
+#ifdef SUM_SQUARE
+                              ,__global uchar *dst_sq_ptr, int dst_sq_step, int dst_sq_offset
+#endif
+                              )
+{
+    __local sumT lm_sum[LOCAL_SUM_STRIDE * LOCAL_SUM_SIZE];
+#ifdef SUM_SQUARE
+    __local sumSQT lm_sum_sq[LOCAL_SUM_STRIDE * LOCAL_SUM_SIZE];
+#endif
+    int lid = get_local_id(0);
+    int gid = get_group_id(0);
+
+    int gs = get_global_size(0);
+
+    int x = get_global_id(0);
+
+    __global sumT *dst = (__global sumT *)(dst_ptr + dst_offset);
+    for (int xin = x; xin < cols; xin += gs)
+    {
+        dst[xin] = 0;
+    }
+    dst_offset += dst_step;
+
+    if (x < rows - 1)
+    {
+        dst = (__global sumT *)(dst_ptr + mad24(x, dst_step, dst_offset));
+        dst[0] = 0;
+    }
+
+    int buf_index = mad24((int)sizeof(sumT), x, buf_offset);
+    sumT accum = 0;
+
+#ifdef SUM_SQUARE
+    __global sumSQT *dst_sq = (__global sumT *)(dst_sq_ptr + dst_sq_offset);
+    for (int xin = x; xin < cols; xin += gs)
+    {
+        dst_sq[xin] = 0;
+    }
+    dst_sq_offset += dst_sq_step;
+
+    if (x < rows - 1)
+    {
+        dst_sq = (__global sumSQT *)(dst_sq_ptr + mad24(x, dst_sq_step, dst_sq_offset));
+        dst_sq[0] = 0;
+    }
+
+    int buf_sq_index = mad24((int)sizeof(sumSQT), x, buf_sq_offset);
+    sumSQT accum_sq = 0;
+#endif
+
+    for (int y = 1; y < cols; y += LOCAL_SUM_SIZE)
+    {
+        int lsum_index = lid;
+        #pragma unroll
+        for (int yin = 0; yin < LOCAL_SUM_SIZE; yin++, lsum_index += LOCAL_SUM_STRIDE)
+        {
+            __global const sumT *buf = (__global const sumT *)(buf_ptr + buf_index);
+            accum += buf[0];
+            lm_sum[lsum_index] = accum;
+            buf_index += buf_step;
+#ifdef SUM_SQUARE
+            __global const sumSQT *buf_sq = (__global const sumSQT *)(buf_sq_ptr + buf_sq_index);
+            accum_sq += buf_sq[0];
+            lm_sum_sq[lsum_index] = accum_sq;
+            buf_sq_index += buf_sq_step;
+#endif
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        if (y + lid < cols)
+        {
+            //int dst_index = dst_offset + dst_step *  LOCAL_SUM_COLS * gid + sizeof(sumT) * y + sizeof(sumT) * lid;
+            int dst_index = mad24(dst_step, LOCAL_SUM_SIZE * gid, mad24((int)sizeof(sumT), y + lid, dst_offset));
+#ifdef SUM_SQUARE
+            int dst_sq_index = mad24(dst_sq_step, LOCAL_SUM_SIZE * gid, mad24((int)sizeof(sumSQT), y + lid, dst_sq_offset));
+#endif
+            lsum_index = LOCAL_SUM_STRIDE * lid;
+            int yin_max = min(rows - 1 -  LOCAL_SUM_SIZE * gid, LOCAL_SUM_SIZE);
+            #pragma unroll
+            for (int yin = 0; yin < yin_max; yin++, lsum_index++)
+            {
+                dst = (__global sumT *)(dst_ptr + dst_index);
+                dst[0] = lm_sum[lsum_index];
+                dst_index += dst_step;
+#ifdef SUM_SQUARE
+                dst_sq = (__global sumSQT *)(dst_sq_ptr + dst_sq_index);
+                dst_sq[0] = lm_sum_sq[lsum_index];
+                dst_sq_index += dst_sq_step;
+#endif
+            }
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+}

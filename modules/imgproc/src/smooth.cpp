@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_imgproc.hpp"
 
 /*
  * This file includes the code, contributed by Simon Perreault
@@ -629,12 +629,14 @@ struct ColumnSum<int, ushort> :
 #ifdef HAVE_OPENCL
 
 #define DIVUP(total, grain) ((total + grain - 1) / (grain))
+#define ROUNDUP(sz, n)      ((sz) + (n) - 1 - (((sz) + (n) - 1) % (n)))
 
 static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                            Size ksize, Point anchor, int borderType, bool normalize, bool sqr = false )
 {
+    const ocl::Device & dev = ocl::Device::getDefault();
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(type);
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    bool doubleSupport = dev.doubleFPConfig() > 0;
 
     if (ddepth < 0)
         ddepth = sdepth;
@@ -653,11 +655,12 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     Size size = _src.size(), wholeSize;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     borderType &= ~BORDER_ISOLATED;
-    int wdepth = std::max(CV_32F, std::max(ddepth, sdepth));
+    int wdepth = std::max(CV_32F, std::max(ddepth, sdepth)),
+        wtype = CV_MAKE_TYPE(wdepth, cn), dtype = CV_MAKE_TYPE(ddepth, cn);
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
     size_t globalsize[2] = { size.width, size.height };
-    size_t localsize[2] = { 0, 1 };
+    size_t localsize_general[2] = { 0, 1 }, * localsize = NULL;
 
     UMat src = _src.getUMat();
     if (!isolated)
@@ -674,46 +677,110 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     int tryWorkItems = (int)maxWorkItemSizes[0];
 
     ocl::Kernel kernel;
-    for ( ; ; )
+
+    if (dev.isIntel() && !(dev.type() & ocl::Device::TYPE_CPU) &&
+        ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
+         (ksize.width == 5 && ksize.height == 5 && cn == 1)))
     {
-        int BLOCK_SIZE_X = tryWorkItems, BLOCK_SIZE_Y = std::min(ksize.height * 10, size.height);
-
-        while (BLOCK_SIZE_X > 32 && BLOCK_SIZE_X >= ksize.width * 2 && BLOCK_SIZE_X > size.width * 2)
-            BLOCK_SIZE_X /= 2;
-        while (BLOCK_SIZE_Y < BLOCK_SIZE_X / 8 && BLOCK_SIZE_Y * computeUnits * 32 < size.height)
-            BLOCK_SIZE_Y *= 2;
-
-        if (ksize.width > BLOCK_SIZE_X || w < ksize.width || h < ksize.height)
+        if (w < ksize.width || h < ksize.height)
             return false;
 
-        char cvt[2][50];
-        String opts = format("-D LOCAL_SIZE_X=%d -D BLOCK_SIZE_Y=%d -D ST=%s -D DT=%s -D WT=%s -D convertToDT=%s -D convertToWT=%s"
-                             " -D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D %s%s%s%s%s"
-                             " -D ST1=%s -D DT1=%s -D cn=%d",
-                             BLOCK_SIZE_X, BLOCK_SIZE_Y, ocl::typeToStr(type), ocl::typeToStr(CV_MAKE_TYPE(ddepth, cn)),
-                             ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
-                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[0]),
-                             ocl::convertTypeStr(sdepth, wdepth, cn, cvt[1]),
-                             anchor.x, anchor.y, ksize.width, ksize.height, borderMap[borderType],
-                             isolated ? " -D BORDER_ISOLATED" : "", doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-                             normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "",
-                             ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), cn);
+        // Figure out what vector size to use for loading the pixels.
+        int pxLoadNumPixels = cn != 1 || size.width % 4 ? 1 : 4;
+        int pxLoadVecSize = cn * pxLoadNumPixels;
 
-        localsize[0] = BLOCK_SIZE_X;
-        globalsize[0] = DIVUP(size.width, BLOCK_SIZE_X - (ksize.width - 1)) * BLOCK_SIZE_X;
-        globalsize[1] = DIVUP(size.height, BLOCK_SIZE_Y);
+        // Figure out how many pixels per work item to compute in X and Y
+        // directions.  Too many and we run out of registers.
+        int pxPerWorkItemX = 1, pxPerWorkItemY = 1;
+        if (cn <= 2 && ksize.width <= 4 && ksize.height <= 4)
+        {
+            pxPerWorkItemX = size.width % 8 ? size.width % 4 ? size.width % 2 ? 1 : 2 : 4 : 8;
+            pxPerWorkItemY = size.height % 2 ? 1 : 2;
+        }
+        else if (cn < 4 || (ksize.width <= 4 && ksize.height <= 4))
+        {
+            pxPerWorkItemX = size.width % 2 ? 1 : 2;
+            pxPerWorkItemY = size.height % 2 ? 1 : 2;
+        }
+        globalsize[0] = size.width / pxPerWorkItemX;
+        globalsize[1] = size.height / pxPerWorkItemY;
 
-        kernel.create("boxFilter", cv::ocl::imgproc::boxFilter_oclsrc, opts);
-        if (kernel.empty())
+        // Need some padding in the private array for pixels
+        int privDataWidth = ROUNDUP(pxPerWorkItemX + ksize.width - 1, pxLoadNumPixels);
+
+        // Make the global size a nice round number so the runtime can pick
+        // from reasonable choices for the workgroup size
+        const int wgRound = 256;
+        globalsize[0] = ROUNDUP(globalsize[0], wgRound);
+
+        char build_options[1024], cvt[2][40];
+        sprintf(build_options, "-D cn=%d "
+                "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
+                "-D PX_LOAD_VEC_SIZE=%d -D PX_LOAD_NUM_PX=%d "
+                "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "
+                "-D PX_LOAD_X_ITERATIONS=%d -D PX_LOAD_Y_ITERATIONS=%d "
+                "-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D WT=%s -D WT1=%s "
+                "-D convertToWT=%s -D convertToDstT=%s%s%s -D OP_BOX_FILTER",
+                cn, anchor.x, anchor.y, ksize.width, ksize.height,
+                pxLoadVecSize, pxLoadNumPixels,
+                pxPerWorkItemX, pxPerWorkItemY, privDataWidth, borderMap[borderType],
+                isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
+                privDataWidth / pxLoadNumPixels, pxPerWorkItemY + ksize.height - 1,
+                ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
+                ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
+                ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
+                ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
+                normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "");
+
+
+
+        if (!kernel.create("filterSmall", cv::ocl::imgproc::filterSmall_oclsrc, build_options))
             return false;
+    }
+    else
+    {
+        localsize = localsize_general;
+        for ( ; ; )
+        {
+            int BLOCK_SIZE_X = tryWorkItems, BLOCK_SIZE_Y = std::min(ksize.height * 10, size.height);
 
-        size_t kernelWorkGroupSize = kernel.workGroupSize();
-        if (localsize[0] <= kernelWorkGroupSize)
-            break;
-        if (BLOCK_SIZE_X < (int)kernelWorkGroupSize)
-            return false;
+            while (BLOCK_SIZE_X > 32 && BLOCK_SIZE_X >= ksize.width * 2 && BLOCK_SIZE_X > size.width * 2)
+                BLOCK_SIZE_X /= 2;
+            while (BLOCK_SIZE_Y < BLOCK_SIZE_X / 8 && BLOCK_SIZE_Y * computeUnits * 32 < size.height)
+                BLOCK_SIZE_Y *= 2;
 
-        tryWorkItems = (int)kernelWorkGroupSize;
+            if (ksize.width > BLOCK_SIZE_X || w < ksize.width || h < ksize.height)
+                return false;
+
+            char cvt[2][50];
+            String opts = format("-D LOCAL_SIZE_X=%d -D BLOCK_SIZE_Y=%d -D ST=%s -D DT=%s -D WT=%s -D convertToDT=%s -D convertToWT=%s"
+                                 " -D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D %s%s%s%s%s"
+                                 " -D ST1=%s -D DT1=%s -D cn=%d",
+                                 BLOCK_SIZE_X, BLOCK_SIZE_Y, ocl::typeToStr(type), ocl::typeToStr(CV_MAKE_TYPE(ddepth, cn)),
+                                 ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
+                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[0]),
+                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[1]),
+                                 anchor.x, anchor.y, ksize.width, ksize.height, borderMap[borderType],
+                                 isolated ? " -D BORDER_ISOLATED" : "", doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                                 normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "",
+                                 ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), cn);
+
+            localsize[0] = BLOCK_SIZE_X;
+            globalsize[0] = DIVUP(size.width, BLOCK_SIZE_X - (ksize.width - 1)) * BLOCK_SIZE_X;
+            globalsize[1] = DIVUP(size.height, BLOCK_SIZE_Y);
+
+            kernel.create("boxFilter", cv::ocl::imgproc::boxFilter_oclsrc, opts);
+            if (kernel.empty())
+                return false;
+
+            size_t kernelWorkGroupSize = kernel.workGroupSize();
+            if (localsize[0] <= kernelWorkGroupSize)
+                break;
+            if (BLOCK_SIZE_X < (int)kernelWorkGroupSize)
+                return false;
+
+            tryWorkItems = (int)kernelWorkGroupSize;
+        }
     }
 
     _dst.create(size, CV_MAKETYPE(ddepth, cn));
@@ -735,6 +802,8 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     return kernel.run(2, globalsize, localsize, false);
 }
+
+#undef ROUNDUP
 
 #endif
 
@@ -870,7 +939,8 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     if (normalize && !src.isSubmatrix() && ddepth == sdepth &&
         (/*ippBorderType == BORDER_REPLICATE ||*/ /* returns ippStsStepErr: Step value is not valid */
-         ippBorderType == BORDER_CONSTANT) && ocvAnchor == ippAnchor )
+         ippBorderType == BORDER_CONSTANT) && ocvAnchor == ippAnchor &&
+         dst.cols != ksize.width && dst.rows != ksize.height) // returns ippStsMaskSizeErr: mask has an illegal value
     {
         Ipp32s bufSize = 0;
         IppiSize roiSize = { dst.cols, dst.rows }, maskSize = { ksize.width, ksize.height };
@@ -883,7 +953,7 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 Ipp8u * buffer = ippsMalloc_8u(bufSize); \
                 ippType borderValue[4] = { 0, 0, 0, 0 }; \
                 ippBorderType = ippBorderType == BORDER_CONSTANT ? ippBorderConst : ippBorderRepl; \
-                IppStatus status = ippiFilterBoxBorder_##flavor((const ippType *)src.data, (int)src.step, (ippType *)dst.data, \
+                IppStatus status = ippiFilterBoxBorder_##flavor(src.ptr<ippType>(), (int)src.step, dst.ptr<ippType>(), \
                                                                 (int)dst.step, roiSize, maskSize, \
                                                                 (IppiBorderType)ippBorderType, borderValue, buffer); \
                 ippsFree(buffer); \
@@ -1071,8 +1141,8 @@ cv::Mat cv::getGaussianKernel( int n, double sigma, int ktype )
 
     CV_Assert( ktype == CV_32F || ktype == CV_64F );
     Mat kernel(n, 1, ktype);
-    float* cf = (float*)kernel.data;
-    double* cd = (double*)kernel.data;
+    float* cf = kernel.ptr<float>();
+    double* cd = kernel.ptr<double>();
 
     double sigmaX = sigma > 0 ? sigma : ((n-1)*0.5 - 1)*0.3 + 0.8;
     double scale2X = -0.5/(sigmaX*sigmaX);
@@ -1202,10 +1272,10 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         typedef Ipp##ippfavor ippType; \
         ippType borderValues[] = { 0, 0, 0 }; \
         IppStatus status = ippcn == 1 ? \
-            ippiFilterGaussianBorder_##ippfavor##_C1R((const ippType *)src.data, (int)src.step, \
-                (ippType *)dst.data, (int)dst.step, roiSize, borderValues[0], pSpec, pBuffer) : \
-            ippiFilterGaussianBorder_##ippfavor##_C3R((const ippType *)src.data, (int)src.step, \
-                (ippType *)dst.data, (int)dst.step, roiSize, borderValues, pSpec, pBuffer); \
+            ippiFilterGaussianBorder_##ippfavor##_C1R(src.ptr<ippType>(), (int)src.step, \
+                dst.ptr<ippType>(), (int)dst.step, roiSize, borderValues[0], pSpec, pBuffer) : \
+            ippiFilterGaussianBorder_##ippfavor##_C3R(src.ptr<ippType>(), (int)src.step, \
+                dst.ptr<ippType>(), (int)dst.step, roiSize, borderValues, pSpec, pBuffer); \
         ippFree(pBuffer); \
         ippFree(pSpec); \
         if (status >= 0) \
@@ -1348,8 +1418,8 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
     for( int x = 0; x < _dst.cols; x += STRIPE_SIZE )
     {
         int i, j, k, c, n = std::min(_dst.cols - x, STRIPE_SIZE) + r*2;
-        const uchar* src = _src.data + x*cn;
-        uchar* dst = _dst.data + (x - r)*cn;
+        const uchar* src = _src.ptr() + x*cn;
+        uchar* dst = _dst.ptr() + (x - r)*cn;
 
         memset( h_coarse, 0, 16*n*cn*sizeof(h_coarse[0]) );
         memset( h_fine, 0, 16*16*n*cn*sizeof(h_fine[0]) );
@@ -1531,8 +1601,8 @@ medianBlur_8u_Om( const Mat& _src, Mat& _dst, int m )
     int     x, y;
     int     n2 = m*m/2;
     Size    size = _dst.size();
-    const uchar* src = _src.data;
-    uchar*  dst = _dst.data;
+    const uchar* src = _src.ptr();
+    uchar*  dst = _dst.ptr();
     int     src_step = (int)_src.step, dst_step = (int)_dst.step;
     int     cn = _src.channels();
     const uchar*  src_max = src + size.height*src_step;
@@ -1808,8 +1878,8 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
     typedef typename Op::arg_type WT;
     typedef typename VecOp::arg_type VT;
 
-    const T* src = (const T*)_src.data;
-    T* dst = (T*)_dst.data;
+    const T* src = _src.ptr<T>();
+    T* dst = _dst.ptr<T>();
     int sstep = (int)(_src.step/sizeof(T));
     int dstep = (int)(_dst.step/sizeof(T));
     Size size = _dst.size();
@@ -2092,8 +2162,8 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
             ippDataType, CV_MAT_CN(type), &bufSize) >= 0) \
         { \
             Ipp8u * buffer = ippsMalloc_8u(bufSize); \
-            IppStatus status = ippiFilterMedianBorder_##flavor((const ippType *)src0.data, (int)src0.step, \
-                (ippType *)dst.data, (int)dst.step, dstRoiSize, maskSize, \
+            IppStatus status = ippiFilterMedianBorder_##flavor(src0.ptr<ippType>(), (int)src0.step, \
+                dst.ptr<ippType>(), (int)dst.step, dstRoiSize, maskSize, \
                 ippBorderRepl, (ippType)0, buffer); \
             ippsFree(buffer); \
             if (status >= 0) \
@@ -2103,18 +2173,21 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     } \
     while ((void)0, 0)
 
-    Ipp32s bufSize;
-    IppiSize dstRoiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize, ksize);
+    if( ksize <= 5 )
+    {
+        Ipp32s bufSize;
+        IppiSize dstRoiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize, ksize);
 
-    int type = src0.type();
-    if (type == CV_8UC1)
-        IPP_FILTER_MEDIAN_BORDER(Ipp8u, ipp8u, 8u_C1R);
-    else if (type == CV_16UC1)
-        IPP_FILTER_MEDIAN_BORDER(Ipp16u, ipp16u, 16u_C1R);
-    else if (type == CV_16SC1)
-        IPP_FILTER_MEDIAN_BORDER(Ipp16s, ipp16s, 16s_C1R);
-    else if (type == CV_32FC1)
-        IPP_FILTER_MEDIAN_BORDER(Ipp32f, ipp32f, 32f_C1R);
+        int type = src0.type();
+        if (type == CV_8UC1)
+            IPP_FILTER_MEDIAN_BORDER(Ipp8u, ipp8u, 8u_C1R);
+        else if (type == CV_16UC1)
+            IPP_FILTER_MEDIAN_BORDER(Ipp16u, ipp16u, 16u_C1R);
+        else if (type == CV_16SC1)
+            IPP_FILTER_MEDIAN_BORDER(Ipp16s, ipp16s, 16s_C1R);
+        else if (type == CV_32FC1)
+            IPP_FILTER_MEDIAN_BORDER(Ipp32f, ipp32f, 32f_C1R);
+    }
 #undef IPP_FILTER_MEDIAN_BORDER
 #endif
 

@@ -41,7 +41,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
@@ -125,7 +125,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, Filter2D,
                             Combine(
                                 Values(CV_8U, CV_16U, CV_32F),
                                 OCL_ALL_CHANNELS,
-                                Values(3, 5, 9),  // Kernel size
+                                Values(3, 5, 7),  // Kernel size
                                 Values(1, 4, 8),   // Width mutiple
                                 Values((BorderType)BORDER_CONSTANT,
                                        (BorderType)BORDER_REPLICATE,

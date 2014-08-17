@@ -8,6 +8,7 @@
 #include <iostream>
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/core/core.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 using namespace cv;
@@ -32,7 +33,7 @@ int main( int argc, char** argv )
   Mat imgDisparity16S = Mat( imgLeft.rows, imgLeft.cols, CV_16S );
   Mat imgDisparity8U = Mat( imgLeft.rows, imgLeft.cols, CV_8UC1 );
 
-  if( !imgLeft.data || !imgRight.data )
+  if( imgLeft.empty() || imgRight.empty() )
   { std::cout<< " --(!) Error reading images " << std::endl; return -1; }
 
   //-- 2. Call the constructor for StereoBM

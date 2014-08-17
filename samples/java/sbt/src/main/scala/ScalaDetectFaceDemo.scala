@@ -2,7 +2,7 @@ import org.opencv.core.Core
 import org.opencv.core.MatOfRect
 import org.opencv.core.Point
 import org.opencv.core.Scalar
-import org.opencv.highgui.Highgui
+import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.objdetect.CascadeClassifier
 import reflect._
 
@@ -16,7 +16,7 @@ object ScalaDetectFaceDemo {
 
     // Create a face detector from the cascade file in the resources directory.
     val faceDetector = new CascadeClassifier(getClass.getResource("/lbpcascade_frontalface.xml").getPath)
-    val image = Highgui.imread(getClass.getResource("/AverageMaleFace.jpg").getPath)
+    val image = Imgcodecs.imread(getClass.getResource("/AverageMaleFace.jpg").getPath)
 
     // Detect faces in the image.
     // MatOfRect is a special container class for Rect.
@@ -27,7 +27,7 @@ object ScalaDetectFaceDemo {
 
     // Draw a bounding box around each face.
     for (rect <- faceDetections.toArray) {
-      Core.rectangle(
+      Imgproc.rectangle(
         image,
         new Point(rect.x, rect.y),
         new Point(rect.x + rect.width,
@@ -38,6 +38,6 @@ object ScalaDetectFaceDemo {
     // Save the visualized detection.
     val filename = "scalaFaceDetection.png"
     println(s"Writing ${filename}")
-    assert(Highgui.imwrite(filename, image))
+    assert(Imgcodecs.imwrite(filename, image))
   }
 }

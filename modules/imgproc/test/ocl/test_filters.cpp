@@ -48,7 +48,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "cvconfig.h"
 #include "opencv2/ts/ocl_test.hpp"
 
@@ -63,7 +63,7 @@ PARAM_TEST_CASE(FilterTestBase, MatType,
                 BorderType, // border type
                 double, // optional parameter
                 bool, // roi or not
-                int)  //width multiplier
+                int)  // width multiplier
 {
     int type, borderType, ksize;
     Size size;
@@ -225,7 +225,7 @@ OCL_TEST_P(GaussianBlurTest, Mat)
         OCL_OFF(cv::GaussianBlur(src_roi, dst_roi, Size(ksize, ksize), sigma1, sigma2, borderType));
         OCL_ON(cv::GaussianBlur(usrc_roi, udst_roi, Size(ksize, ksize), sigma1, sigma2, borderType));
 
-        Near(CV_MAT_DEPTH(type) >= CV_32F ? 5e-5 : 1, false);
+        Near(CV_MAT_DEPTH(type) >= CV_32F ? 7e-5 : 1, false);
     }
 }
 
@@ -242,10 +242,10 @@ OCL_TEST_P(Erode, Mat)
     for (int j = 0; j < test_loop_times; j++)
     {
         random_roi();
-        Mat kernel = randomMat(kernelSize, CV_8UC1, 0, 3);
+        Mat kernel = ksize==0 ? Mat() : randomMat(kernelSize, CV_8UC1, 0, 3);
 
-        OCL_OFF(cv::erode(src_roi, dst_roi, kernel, Point(-1,-1), iterations) );
-        OCL_ON(cv::erode(usrc_roi, udst_roi, kernel, Point(-1,-1), iterations) );
+        OCL_OFF(cv::erode(src_roi, dst_roi, kernel, Point(-1, -1), iterations) );
+        OCL_ON(cv::erode(usrc_roi, udst_roi, kernel, Point(-1, -1), iterations) );
 
         Near();
     }
@@ -264,10 +264,10 @@ OCL_TEST_P(Dilate, Mat)
     for (int j = 0; j < test_loop_times; j++)
     {
         random_roi();
-        Mat kernel = randomMat(kernelSize, CV_8UC1, 0, 3);
+        Mat kernel = ksize==0 ? Mat() : randomMat(kernelSize, CV_8UC1, 0, 3);
 
-        OCL_OFF(cv::dilate(src_roi, dst_roi, kernel, Point(-1,-1), iterations) );
-        OCL_ON(cv::dilate(usrc_roi, udst_roi, kernel, Point(-1,-1), iterations) );
+        OCL_OFF(cv::dilate(src_roi, dst_roi, kernel, Point(-1, -1), iterations) );
+        OCL_ON(cv::dilate(usrc_roi, udst_roi, kernel, Point(-1, -1), iterations) );
 
         Near();
     }
@@ -275,22 +275,76 @@ OCL_TEST_P(Dilate, Mat)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // MorphologyEx
+IMPLEMENT_PARAM_CLASS(MorphOp, int)
+PARAM_TEST_CASE(MorphologyEx, MatType,
+                int, // kernel size
+                MorphOp, // MORPH_OP
+                int, // iterations
+                bool)
+{
+    int type, ksize, op, iterations;
+    bool useRoi;
 
-typedef FilterTestBase MorphologyEx;
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
+
+    virtual void SetUp()
+    {
+        type = GET_PARAM(0);
+        ksize = GET_PARAM(1);
+        op = GET_PARAM(2);
+        iterations = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
+    }
+
+    void random_roi(int minSize = 1)
+    {
+        if (minSize == 0)
+            minSize = ksize;
+
+        Size roiSize = randomSize(minSize, MAX_VALUE);
+
+        Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, 5, 256);
+
+        Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, type, -60, 70);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
+    }
+
+    void Near()
+    {
+        int depth = CV_MAT_DEPTH(type);
+        bool isFP = depth >= CV_32F;
+
+        if (isFP)
+            Near(1e-6, true);
+        else
+            Near(1, false);
+    }
+
+    void Near(double threshold, bool relative)
+    {
+        if (relative)
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst, threshold);
+        else
+            OCL_EXPECT_MATS_NEAR(dst, threshold);
+    }
+};
 
 OCL_TEST_P(MorphologyEx, Mat)
 {
     Size kernelSize(ksize, ksize);
-    int iterations = (int)param;
-    int op = size.height;
 
     for (int j = 0; j < test_loop_times; j++)
     {
         random_roi();
         Mat kernel = randomMat(kernelSize, CV_8UC1, 0, 3);
 
-        OCL_OFF(cv::morphologyEx(src_roi, dst_roi, op, kernel, Point(-1,-1), iterations) );
-        OCL_ON(cv::morphologyEx(usrc_roi, udst_roi, op, kernel, Point(-1,-1), iterations) );
+        OCL_OFF(cv::morphologyEx(src_roi, dst_roi, op, kernel, Point(-1, -1), iterations) );
+        OCL_ON(cv::morphologyEx(usrc_roi, udst_roi, op, kernel, Point(-1, -1), iterations) );
 
         Near();
     }
@@ -359,30 +413,28 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, GaussianBlurTest, Combine(
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC4),
-                            Values(3, 5, 7),
-                            Values(Size(0,0)),//not used
-                            Values((BorderType)BORDER_CONSTANT),//not used
+                            Values(0, 3, 5, 7), // kernel size, 0 means kernel = Mat()
+                            Values(Size(0, 0)), //not used
+                            Values((BorderType)BORDER_CONSTANT),
                             Values(1.0, 2.0, 3.0),
                             Bool(),
                             Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC4),
-                            Values(3, 5, 7),
-                            Values(Size(0,0)),//not used
-                            Values((BorderType)BORDER_CONSTANT),//not used
+                            Values(0, 3, 5, 7), // kernel size, 0 means kernel = Mat()
+                            Values(Size(0, 0)), // not used
+                            Values((BorderType)BORDER_CONSTANT),
                             Values(1.0, 2.0, 3.0),
                             Bool(),
-                            Values(1))); //not used
+                            Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, MorphologyEx, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC4),
-                            Values(3, 5, 7),
-                            Values(Size(0, 0), Size(0, 1), Size(0, 2), Size(0, 3), Size(0, 4), Size(0, 5), Size(0, 6)), // used as generator of operations
-                            Values((BorderType)BORDER_CONSTANT),// not used
-                            Values(1.0, 2.0, 3.0),
-                            Bool(),
-                            Values(1))); //not used
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                            Values(3, 5, 7), // kernel size
+                            Values((MorphOp)MORPH_OPEN, (MorphOp)MORPH_CLOSE, (MorphOp)MORPH_GRADIENT, (MorphOp)MORPH_TOPHAT, (MorphOp)MORPH_BLACKHAT), // used as generator of operations
+                            Values(1, 2, 3),
+                            Bool()));
 
 
 } } // namespace cvtest::ocl
