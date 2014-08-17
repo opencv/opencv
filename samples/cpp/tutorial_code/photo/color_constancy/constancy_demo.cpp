@@ -3,7 +3,7 @@
 
 using namespace cv;
 
-int main(int argc, char *argv[])
+int main(int, char *argv[])
 {
     Mat src, grey_world, max_rgb, shades_of_grey, first_order_greyEdge, second_order_greyEdge, weighted_greyEdge;
 

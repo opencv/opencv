@@ -3,7 +3,7 @@
 
 using namespace cv;
 
-int main(int argc, char *argv[])
+int main(int, char *argv[])
 {
     Mat src,dst,output;
 
