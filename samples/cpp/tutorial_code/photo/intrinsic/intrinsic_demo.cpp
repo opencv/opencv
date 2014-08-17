@@ -3,9 +3,8 @@
 
 using namespace cv;
 
-int main(int argc, char *argv[])
+int main(int, char *argv[])
 {
-    CV_Assert(argc == 2);
     Mat I,ref,shade;
 
     I = imread(argv[1]);
