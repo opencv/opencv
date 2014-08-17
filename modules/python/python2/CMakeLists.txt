@@ -5,6 +5,7 @@ endif()
 set(the_description "The python2 bindings")
 set(MODULE_NAME python2)
 # Buildbot requires Python 2 to be in root lib dir
+set(contrib_module cv2_contrib_py2)
 set(MODULE_INSTALL_SUBDIR "")
 
 set(PYTHON_INCLUDE_PATH ${PYTHON2_INCLUDE_PATH})
@@ -19,6 +20,7 @@ set(PYTHON_VERSION_MINOR ${PYTHON2_VERSION_MINOR})
 include(../common.cmake)
 
 unset(MODULE_NAME)
+unset(contrib_module)
 unset(MODULE_INSTALL_SUBDIR)
 unset(PYTHON_INCLUDE_PATH)
 unset(PYTHON_NUMPY_INCLUDE_DIRS)

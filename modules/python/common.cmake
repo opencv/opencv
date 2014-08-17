@@ -1,8 +1,24 @@
 # This file is included from a subdirectory
 set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
+# To disable any module from adding to Python bindings, add them to blacklist
+set(PYTHON_BINDINGS_BLACKLIST "^cuda.*$|contrib|legacy|softcascade|optim|stitching|superres|tracking|videostab|ts|adas|xobjdetect|face|rgbd|ximgproc|xfeatures2d|xphoto|bgsegm|text")
+
+set(candidate_deps "")
+foreach(mp ${OPENCV_MODULES_PATH} ${OPENCV_EXTRA_MODULES_PATH})
+    file(GLOB names "${mp}/*")
+    foreach(m IN LISTS names)
+        if(IS_DIRECTORY ${m})
+            get_filename_component(m ${m} NAME)
+            if(NOT ${m} MATCHES ${PYTHON_BINDINGS_BLACKLIST})
+                list(APPEND candidate_deps "opencv_${m}")
+            endif()
+        endif()
+    endforeach(m)
+endforeach(mp)
+
 set(the_description "The python bindings")
-ocv_add_module(${MODULE_NAME} BINDINGS opencv_core opencv_highgui opencv_videoio opencv_flann OPTIONAL opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_calib3d opencv_photo opencv_objdetect opencv_nonfree opencv_optim opencv_shape opencv_tracking opencv_rgbd opencv_reg)
+ocv_add_module(${MODULE_NAME} BINDINGS OPTIONAL ${candidate_deps})
 
 ocv_module_include_directories(
     "${PYTHON_INCLUDE_PATH}"
@@ -20,12 +36,10 @@ else()
     set(TEMP_EXTRA_MODULES_PATH " ") # Assign something to avoid bug in string(FIND)
 endif()
 
-# To disable any module from adding to Python bindings, add them to blacklist
-set(PYTHON_BINDINGS_BLACKLIST "^cuda.*$|contrib|legacy|softcascade|optim|stitching|superres|tracking|videostab|ts|adas|xobjdetect")
 
 # -- Find the modules to build. Split them to Python modules and Python-Extra modules
-string(REPLACE "opencv_" "" OPENCV_MODULES_NAMES "${OPENCV_MODULES_BUILD}")
-message("Modules Build : ${OPENCV_MODULES_NAMES}")
+#string(REPLACE "opencv_" "" OPENCV_MODULES_NAMES "${OPENCV_MODULES_BUILD}")
+string(REPLACE "opencv_" ";" OPENCV_MODULES_NAMES ${OPENCV_MODULE_opencv_${MODULE_NAME}_DEPS})
 
 foreach(module ${OPENCV_MODULES_NAMES})
     # Check if module location matches with Extra-modules location
@@ -217,35 +231,35 @@ endforeach()
        COMMENT "Usage: python gen2.py <prefix> <dstdir> <srcfiles>"
        VERBATIM)
 
-    ocv_add_library(contrib_module SHARED ${PYTHON_SOURCE_DIR}/src2/cv2_contrib.cpp ${cv2_generated_contrib_hdrs})
+    add_library(${contrib_module} SHARED ${PYTHON_SOURCE_DIR}/src2/cv2_contrib.cpp ${cv2_generated_contrib_hdrs})
 
     if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")
-      target_link_libraries(contrib_module debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
+      target_link_libraries(${contrib_module} debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
     else()
-      target_link_libraries(contrib_module ${PYTHON_LIBRARIES})
+      target_link_libraries(${contrib_module} ${PYTHON_LIBRARIES})
     endif()
 
-    set_target_properties(contrib_module PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
+    set_target_properties(${contrib_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
 
-    #target_link_libraries(contrib_module ${OPENCV_MODULE_${the_module}_DEPS})
-    target_link_libraries(contrib_module ${the_module} ${TEMP_OPENCV_PYTHON_EXTRA_DEPS})
+    #target_link_libraries(${contrib_module} ${OPENCV_MODULE_${the_module}_DEPS})
+    target_link_libraries(${contrib_module} ${the_module} ${TEMP_OPENCV_PYTHON_EXTRA_DEPS})
 
-    set_target_properties(contrib_module PROPERTIES
+    set_target_properties(${contrib_module} PROPERTIES
                       LIBRARY_OUTPUT_DIRECTORY  "${LIBRARY_OUTPUT_PATH}/${MODULE_INSTALL_SUBDIR}"
                           PREFIX ""
                           OUTPUT_NAME cv2_contrib
                           SUFFIX ${CVPY_SUFFIX})
 
     if(ENABLE_SOLUTION_FOLDERS)
-      set_target_properties(contrib_module PROPERTIES FOLDER "bindings")
+      set_target_properties(${contrib_module} PROPERTIES FOLDER "bindings")
     endif()
 
     if(MSVC AND NOT BUILD_SHARED_LIBS)
-      set_target_properties(contrib_module PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
+      set_target_properties(${contrib_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
     endif()
 
     if(NOT INSTALL_CREATE_DISTRIB)
-      install(TARGETS contrib_module
+      install(TARGETS ${contrib_module}
               ${PYTHON_INSTALL_CONFIGURATIONS}
               RUNTIME DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT python
               LIBRARY DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT python
@@ -257,7 +271,7 @@ endforeach()
       else()
         set(__ver "unknown")
       endif()
-      install(TARGETS contrib_module
+      install(TARGETS ${contrib_module}
               CONFIGURATIONS Release
               RUNTIME DESTINATION python/${__ver}/${OpenCV_ARCH} COMPONENT python
               LIBRARY DESTINATION python/${__ver}/${OpenCV_ARCH} COMPONENT python

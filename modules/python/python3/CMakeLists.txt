@@ -4,6 +4,7 @@ endif()
 
 set(the_description "The python3 bindings")
 set(MODULE_NAME python3)
+set(contrib_module cv2_contrib_py3)
 set(MODULE_INSTALL_SUBDIR python3)
 
 set(PYTHON_INCLUDE_PATH ${PYTHON3_INCLUDE_PATH})
@@ -18,6 +19,7 @@ set(PYTHON_VERSION_MINOR ${PYTHON3_VERSION_MINOR})
 include(../common.cmake)
 
 unset(MODULE_NAME)
+unset(contrib_module)
 unset(MODULE_INSTALL_SUBDIR)
 unset(PYTHON_INCLUDE_PATH)
 unset(PYTHON_NUMPY_INCLUDE_DIRS)
