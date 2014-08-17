@@ -42,4 +42,3 @@ void cv::weightedGreyEdge(InputArray _src, OutputArray _dst, int kappa, int mink
 
     output.convertTo(dst,CV_8UC3,1);
 }
-

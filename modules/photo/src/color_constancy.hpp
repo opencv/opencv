@@ -91,19 +91,19 @@ void Constancy::dilation33(Mat &in, Mat &out)
     vector <Mat> out_planes;
     split(out,out_planes);
 
-    out_planes[2](Range(0,hh-1),Range::all()) = in(Range(2-1,hh),Range::all())*1; 
-    out_planes[2](Range(hh-1,hh),Range::all()) = in(Range(hh-1,hh),Range::all())*1; 
+    out_planes[2](Range(0,hh-1),Range::all()) = in(Range(2-1,hh),Range::all())*1;
+    out_planes[2](Range(hh-1,hh),Range::all()) = in(Range(hh-1,hh),Range::all())*1;
     out_planes[1] = in;
-    out_planes[0](Range(0,1),Range::all()) = in(Range(0,1),Range::all())*1; 
+    out_planes[0](Range(0,1),Range::all()) = in(Range(0,1),Range::all())*1;
     out_planes[0](Range(1,hh),Range::all()) = in(Range(0,hh-1),Range::all())*1;
 
     Mat out2 = max(out_planes[0],max(out_planes[1],out_planes[2]));
 
-    out_planes[2](Range::all(),Range(0,ll-1)) = out2(Range::all(),Range(2-1,ll))*1; 
-    out_planes[2](Range::all(),Range(ll-1,ll)) = out2(Range::all(),Range(ll-1,ll))*1; 
+    out_planes[2](Range::all(),Range(0,ll-1)) = out2(Range::all(),Range(2-1,ll))*1;
+    out_planes[2](Range::all(),Range(ll-1,ll)) = out2(Range::all(),Range(ll-1,ll))*1;
     out_planes[1] = out2;
-    out_planes[0](Range::all(),Range(0,1)) = out2(Range::all(),Range(0,1))*1; 
-    out_planes[0](Range::all(),Range(1,ll)) = out2(Range::all(),Range(0,ll-1))*1; 
+    out_planes[0](Range::all(),Range(0,1)) = out2(Range::all(),Range(0,1))*1;
+    out_planes[0](Range::all(),Range(1,ll)) = out2(Range::all(),Range(0,ll-1))*1;
 
     out = max(out_planes[0],max(out_planes[1],out_planes[2]));
 
@@ -141,14 +141,14 @@ void Constancy::fill_border(Mat &in, int bw, Mat &out)
             out_channels[ii](Range(0,bw),Range(0,bw)) = (Mat::ones(bw,bw,CV_32FC1))*(in_channels[ii].at<float>(0,0));
             out_channels[ii](Range(bw+hh+1-1,2*bw+hh),Range(0,bw)) = Mat::ones(bw,bw,CV_32FC1)*(in_channels[ii].at<float>(hh-1,0));
             out_channels[ii](Range(0,bw),Range(bw+1+ww-1,2*bw+ww)) = Mat::ones(bw,bw,CV_32FC1)*(in_channels[ii].at<float>(0,ww-1));
-            out_channels[ii](Range(bw+hh+1-1,2*bw+hh),Range(bw+1+ww-1,2*bw+ww)) = 
+            out_channels[ii](Range(bw+hh+1-1,2*bw+hh),Range(bw+1+ww-1,2*bw+ww)) =
                 Mat::ones(bw,bw,CV_32FC1)*(in_channels[ii].at<float>(hh-1,ww-1));
             out_channels[ii](Range(bw+1-1,bw+hh),Range(bw+1-1,bw+ww)) = in_channels[ii]*1;
             out_channels[ii](Range(0,bw),Range(bw+1-1,bw+ww)) = Mat::ones(bw,1,CV_32FC1)*(in_channels[ii](Range(0,1),Range::all()));
             out_channels[ii](Range(bw+hh+1-1,2*bw+hh),Range(bw+1-1,bw+ww)) = Mat::ones(bw,1,CV_32FC1)*(in_channels[ii](Range(hh-1,hh),Range::all()));
-            out_channels[ii](Range(bw+1-1,bw+hh),Range(0,bw)) = 
+            out_channels[ii](Range(bw+1-1,bw+hh),Range(0,bw)) =
                 (in_channels[ii](Range::all(),Range(0,1)))*(Mat::ones(1,bw,CV_32FC1));
-            out_channels[ii](Range(bw+1-1,bw+hh),Range(bw+ww+1-1,2*bw+ww)) = 
+            out_channels[ii](Range(bw+1-1,bw+hh),Range(bw+ww+1-1,2*bw+ww)) =
                 (in_channels[ii](Range::all(),Range(ww-1,ww)))*(Mat::ones(1,bw,CV_32FC1));
         }
         merge(out_channels,out);
@@ -179,7 +179,7 @@ void Constancy::gDer(Mat &f, int sigma, int iorder, int jorder, Mat &H)
 
     Mat gauss;
     exp((x.mul(x))/(-2 * sigma * sigma) ,gauss);
-    gauss = 1/(sqrt(2 * CV_PI) * sigma)*gauss; 
+    gauss = 1/(sqrt(2 * CV_PI) * sigma)*gauss;
     Mat Gx = Mat(gauss.size(),CV_32FC1);;
     if(iorder == 0)
     {
@@ -415,10 +415,10 @@ void Constancy::weightedGE(Mat &input_im, int kappa, int mink_norm, int sigma, f
         {
             for(int i=0;i<rows;i++)
             {
-                dataR_tmp.ptr<float>(0)[k] = data_Rx.ptr<float>(i)[j]; 
-                dataG_tmp.ptr<float>(0)[k] = data_Gx.ptr<float>(i)[j]; 
-                dataB_tmp.ptr<float>(0)[k] = data_Bx.ptr<float>(i)[j]; 
-                mask_tmp.ptr<float>(0)[k] = mask.ptr<float>(i)[j]; 
+                dataR_tmp.ptr<float>(0)[k] = data_Rx.ptr<float>(i)[j];
+                dataG_tmp.ptr<float>(0)[k] = data_Gx.ptr<float>(i)[j];
+                dataB_tmp.ptr<float>(0)[k] = data_Bx.ptr<float>(i)[j];
+                mask_tmp.ptr<float>(0)[k] = mask.ptr<float>(i)[j];
                 k = k+1;
             }
         }
@@ -540,7 +540,7 @@ void Constancy::general_cc(Mat &I, int njet, int mink_norm, int sigma, float &wh
         Mat kleur = Mat(rows,cols,CV_32FC3);
         pow(I,mink_norm,kleur);
         vector <Mat> kleur_channel;
-        split(kleur,kleur_channel); 
+        split(kleur,kleur_channel);
 
         float t1 = (float)1/mink_norm;
         white_R = pow(sum(kleur_channel[2].mul(mask_im2))[0],t1);
@@ -583,4 +583,3 @@ void Constancy::general_cc(Mat &I, int njet, int mink_norm, int sigma, float &wh
 
     merge(out_channels,output);
 }
-
