@@ -69,6 +69,7 @@ protected:
 
     float zeta; // added to the denomimnator of theta_0 (normaliation of the data term)
     float epsilon; // robust penalizer const
+    int maxLayers; // max amount of layers in the pyramid
 
 private:
     void calcOneLevel( const Mat I0, const Mat I1, Mat W );
@@ -89,7 +90,7 @@ private:
 OpticalFlowDeepFlow::OpticalFlowDeepFlow()
 {
     // parameters
-    sigma = 0.5f;
+    sigma = 0.6f;
     minSize = 25;
     downscaleFactor = 0.95f;
     fixedPointIterations = 5;
@@ -103,6 +104,7 @@ OpticalFlowDeepFlow::OpticalFlowDeepFlow()
     interpolationType = INTER_LINEAR;
     zeta = 0.1f;
     epsilon = 0.001f;
+    maxLayers = 200;
 }
 
 std::vector<Mat> OpticalFlowDeepFlow::buildPyramid( const Mat& src )
@@ -110,12 +112,18 @@ std::vector<Mat> OpticalFlowDeepFlow::buildPyramid( const Mat& src )
     std::vector<Mat> pyramid;
     pyramid.push_back(src);
     Mat prev = pyramid[0];
-    while ( prev.cols > minSize && prev.rows > minSize )
+    int i = 0;
+    while ( i < this->maxLayers )
     {
-        Mat next; //FIXME: filtering at each level?
+        Mat next; //TODO: filtering at each level?
+        Size nextSize((int) (1.5 + (prev.cols-1) * downscaleFactor),
+                        (int) (1.5 + (prev.rows-1) * downscaleFactor));
+        if( nextSize.height <= minSize || nextSize.width <= minSize)
+            break;
         resize(prev, next,
-                Size(floor(prev.cols * downscaleFactor), floor(prev.rows * downscaleFactor)), 0, 0,
+                nextSize, 0, 0,
                 interpolationType);
+        //FIXME: TEMP-different image size computation
         pyramid.push_back(next);
         prev = next;
     }
@@ -126,7 +134,7 @@ Mat OpticalFlowDeepFlow::remapRelative( const Mat input, const Mat flow )
     Mat output;
     Mat mapX = Mat(flow.size(), CV_32FC1);
     Mat mapY = Mat(flow.size(), CV_32FC1);
-    //imshow("input", input);
+//    imshow("input", (1.0/255 *input));
     const float *pFlow;
     float *pMapX, *pMapY;
     for ( int j = 0; j < flow.rows; ++j )
@@ -136,19 +144,19 @@ Mat OpticalFlowDeepFlow::remapRelative( const Mat input, const Mat flow )
         pMapY = mapY.ptr<float>(j);
         for ( int i = 0; i < flow.cols; ++i )
         {
-            pMapX[i] = i - pFlow[2 * i];
-            pMapY[i] = j - pFlow[2 * i + 1];
+            pMapX[i] = i + pFlow[2 * i];
+            pMapY[i] = j + pFlow[2 * i + 1];
         }
     }
     remap(input, output, mapX, mapY, interpolationType, BORDER_TRANSPARENT);
-    //imshow("output", output);
-    //waitKey(0);
+//    imshow("output", (1.0/255 * output));
+//    waitKey(0);
     return output;
 }
 void OpticalFlowDeepFlow::calc( InputArray _I0, InputArray _I1, InputOutputArray _flow )
 {
-    //namedWindow("input");
-    //namedWindow("output");
+//    namedWindow("input");
+//    namedWindow("output");
     Mat I0temp = _I0.getMat();
     Mat I1temp = _I1.getMat();
 
@@ -188,9 +196,7 @@ void OpticalFlowDeepFlow::calc( InputArray _I0, InputArray _I1, InputOutputArray
             Size newSize = pyramid_I0[level - 1].size();
             resize(W, temp, newSize, 0, 0, interpolationType); //resize calculated flow
             W = temp * (1.0f / downscaleFactor); //scale values
-            true;
         }
-        true;
     }
     W.copyTo(_flow);
 }
@@ -216,21 +222,41 @@ void OpticalFlowDeepFlow::calcOneLevel( const Mat I0, const Mat I1, Mat W )
     Mat warpedI1 = remapRelative(I1, W); // warped second image
     Mat averageFrame = 0.5 * (I0 + warpedI1); // mean value of 2 frames - to compute derivatives on
 
+    //FIXME:TEMP - useless stuff for debugging
+    I0.at<float>(0,0);
+    I0.ptr<float>(0);
+
     //computing derivatives, notation as in Brox's paper
     Mat Ix, Iy, Iz, Ixx, Ixy, Iyy, Ixz, Iyz;
     int ddepth = -1; //as source image
     int kernel_size = 1;
 
-    //FIXME: if source image is has 8-bit depth output may be truncated
-    Sobel(averageFrame, Ix, ddepth, 1, 0, kernel_size, 1, 0.00, BORDER_REPLICATE);
-    Sobel(averageFrame, Iy, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
+    float deriv_kernel[] = {1.0/12, -8.0/12, -0, 8.0/12, -1.0/12};
+    Mat kernel_h = Mat(1, 5, CV_32FC1, deriv_kernel);
+    Mat kernel_v = Mat(5, 1, CV_32FC1, deriv_kernel);
+
+    filter2D(averageFrame, Ix, CV_32FC1, kernel_h);
+    filter2D(averageFrame, Iy, CV_32FC1, kernel_v);
     Iz.create(I1.size(), I1.type());
-    Iz = warpedI1 - I0;
-    Sobel(Ix, Ixx, ddepth, 1, 0, kernel_size, 1, 0.00, BORDER_REPLICATE);
-    Sobel(Ix, Ixy, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
-    Sobel(Iy, Iyy, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
-    Sobel(Iz, Ixz, ddepth, 1, 0, kernel_size, 1, 0.00, BORDER_REPLICATE); // should a difference of derivatives be used instead?
-    Sobel(Iz, Iyz, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
+    Iz = I1 - I0; // FIXME: should the warped I1 be used?
+    filter2D(Ix, Ixx, CV_32FC1, kernel_h);
+    filter2D(Ix, Ixy, CV_32FC1, kernel_v);
+    filter2D(Iy, Iyy, CV_32FC1, kernel_v);
+    filter2D(Iz, Ixz, CV_32FC1, kernel_h);
+    filter2D(Iz, Iyz, CV_32FC1, kernel_v);
+    //FIXME: if source image is has 8-bit depth output may be truncated
+//    Sobel(averageFrame, Ix, ddepth, 1, 0, kernel_size, 1, 0.00, BORDER_REPLICATE);
+//    Sobel(averageFrame, Iy, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
+//    Iz.create(I1.size(), I1.type());
+//    Iz = I1 - I0; // FIXME: should the warped I1 be used?
+//    Sobel(Ix, Ixx, ddepth, 1, 0, kernel_size, 1, 0.00, BORDER_REPLICATE);
+//    Sobel(Ix, Ixy, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
+//    Sobel(Iy, Iyy, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
+//    Sobel(Iz, Ixz, ddepth, 1, 0, kernel_size, 1, 0.00, BORDER_REPLICATE); // should a difference of derivatives be used instead?
+//    Sobel(Iz, Iyz, ddepth, 0, 1, kernel_size, 1, 0.00, BORDER_REPLICATE);
+
+
+
     Ix.at<float>(0, 0);
     Mat tempW = W.clone(); // flow version to be modified in each iteration
     Mat dW = Mat::zeros(W.size(), W.type()); // flow increment
@@ -288,7 +314,7 @@ void OpticalFlowDeepFlow::dataTerm( const Mat W, const Mat dW, const Mat tempW, 
               //color constancy component
                 derivNorm = (*pIx) * (*pIx) + (*pIy) * (*pIy) + zeta_squared;
                 Ik1z = *pIz + (*pIx * *pdU) + (*pIy * *pdV);
-                temp = delta / (sqrt(Ik1z * Ik1z / derivNorm + epsilon_squared) * derivNorm);
+                temp = (0.5*delta/3) / sqrt(Ik1z * Ik1z / derivNorm + epsilon_squared) * derivNorm;
                 *pa11 = *pIx * *pIx * temp / derivNorm;
                 *pa12 = *pIx * *pIy * temp / derivNorm;
                 *pa22 = *pIy * *pIy * temp / derivNorm;
@@ -302,7 +328,7 @@ void OpticalFlowDeepFlow::dataTerm( const Mat W, const Mat dW, const Mat tempW, 
                 Ik1zx = *pIxz + *pIxx * *pdU + *pIxy * *pdV;
                 Ik1zy = *pIyz + *pIxy * *pdU + *pIyy * *pdV;
 
-                temp = gamma
+                temp = (0.5*gamma/3)
                         / sqrt(
                                 Ik1zx * Ik1zx / derivNorm + Ik1zy * Ik1zy / derivNorm2
                                         + epsilon_squared);
@@ -349,8 +375,8 @@ void OpticalFlowDeepFlow::smoothnessWeights( const Mat W, Mat weightsX, Mat weig
     weightsX = Mat::zeros(W.size(), CV_32FC1); //output - weights of smoothness terms in x and y directions
     weightsY = Mat::zeros(W.size(), CV_32FC1);
 
-    filter2D(W, Wx, -1, kernel_h);
-    filter2D(W, Wy, -1, kernel_v);
+    filter2D(W, Wx, CV_32FC2, kernel_h);
+    filter2D(W, Wy, CV_32FC2, kernel_v);
 
     const float * ux, *uy, *vx, *vy;
     float * pS, *pWeight, *temp;
@@ -499,7 +525,6 @@ void OpticalFlowDeepFlow::sorSolve( const Mat a11, const Mat a12, const Mat a22,
     pdv = dv.ptr<float>(0);
 
     float sigma_u, sigma_v, sum_dpsis, A11, A22, A12, B1, B2, det;
-    float du_inc, dv_inc;
 
     int s = dW.cols; // step between rows
 
