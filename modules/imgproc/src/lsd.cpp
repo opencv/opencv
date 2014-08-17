@@ -476,7 +476,7 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4i>& lines,
     for(size_t i = 0, list_size = list.size(); i < list_size; ++i)
     {
         unsigned int adx = list[i].p.x + list[i].p.y * img_width;
-        if((used.data[adx] == NOTUSED) && (angles_data[adx] != NOTDEF))
+        if((used.ptr()[adx] == NOTUSED) && (angles_data[adx] != NOTDEF))
         {
             int reg_size;
             double reg_angle;
@@ -640,7 +640,7 @@ void LineSegmentDetectorImpl::region_grow(const Point2i& s, std::vector<RegionPo
     reg[0].x = s.x;
     reg[0].y = s.y;
     int addr = s.x + s.y * img_width;
-    reg[0].used = used.data + addr;
+    reg[0].used = used.ptr() + addr;
     reg_angle = angles_data[addr];
     reg[0].angle = reg_angle;
     reg[0].modgrad = modgrad_data[addr];
@@ -660,15 +660,15 @@ void LineSegmentDetectorImpl::region_grow(const Point2i& s, std::vector<RegionPo
             int c_addr = xx_min + yy * img_width;
             for(int xx = xx_min; xx <= xx_max; ++xx, ++c_addr)
             {
-                if((used.data[c_addr] != USED) &&
+                if((used.ptr()[c_addr] != USED) &&
                    (isAligned(c_addr, reg_angle, prec)))
                 {
                     // Add point
-                    used.data[c_addr] = USED;
+                    used.ptr()[c_addr] = USED;
                     RegionPoint& region_point = reg[reg_size];
                     region_point.x = xx;
                     region_point.y = yy;
-                    region_point.used = &(used.data[c_addr]);
+                    region_point.used = &(used.ptr()[c_addr]);
                     region_point.modgrad = modgrad_data[c_addr];
                     const double& angle = angles_data[c_addr];
                     region_point.angle = angle;
@@ -1232,16 +1232,16 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1
 
         for (unsigned int i = 0; i < I1.total(); ++i)
         {
-            uchar i1 = I1.data[i];
-            uchar i2 = I2.data[i];
+            uchar i1 = I1.ptr()[i];
+            uchar i2 = I2.ptr()[i];
             if (i1 || i2)
             {
                 unsigned int base_idx = i * 3;
-                if (i1) img.data[base_idx] = 255;
-                else img.data[base_idx] = 0;
-                img.data[base_idx + 1] = 0;
-                if (i2) img.data[base_idx + 2] = 255;
-                else img.data[base_idx + 2] = 0;
+                if (i1) img.ptr()[base_idx] = 255;
+                else img.ptr()[base_idx] = 0;
+                img.ptr()[base_idx + 1] = 0;
+                if (i2) img.ptr()[base_idx + 2] = 255;
+                else img.ptr()[base_idx + 2] = 0;
             }
         }
     }

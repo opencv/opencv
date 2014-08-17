@@ -219,8 +219,14 @@ template<typename _Tp, int n> static inline
 std::ostream& operator << (std::ostream& out, const Vec<_Tp, n>& vec)
 {
     out << "[";
-
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable: 4127 )
+#endif
     if(Vec<_Tp, n>::depth < CV_32F)
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
     {
         for (int i = 0; i < n - 1; ++i) {
             out << (int)vec[i] << ", ";

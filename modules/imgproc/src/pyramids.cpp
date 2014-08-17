@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_imgproc.hpp"
 
 namespace cv
 {
@@ -230,7 +230,7 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
 
     for( int y = 0; y < dsize.height; y++ )
     {
-        T* dst = (T*)(_dst.data + _dst.step*y);
+        T* dst = _dst.ptr<T>(y);
         WT *row0, *row1, *row2, *row3, *row4;
 
         // fill the ring buffer (horizontal convolution and decimation)
@@ -238,7 +238,7 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
         {
             WT* row = buf + ((sy - sy0) % PD_SZ)*bufstep;
             int _sy = borderInterpolate(sy, ssize.height, borderType);
-            const T* src = (const T*)(_src.data + _src.step*_sy);
+            const T* src = _src.ptr<T>(_sy);
             int limit = cn;
             const int* tab = tabL;
 
@@ -340,8 +340,8 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
 
     for( int y = 0; y < ssize.height; y++ )
     {
-        T* dst0 = (T*)(_dst.data + _dst.step*y*2);
-        T* dst1 = (T*)(_dst.data + _dst.step*(y*2+1));
+        T* dst0 = _dst.ptr<T>(y*2);
+        T* dst1 = _dst.ptr<T>(y*2+1);
         WT *row0, *row1, *row2;
 
         if( y*2+1 >= dsize.height )
@@ -352,7 +352,7 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
         {
             WT* row = buf + ((sy - sy0) % PU_SZ)*bufstep;
             int _sy = borderInterpolate(sy*2, dsize.height, BORDER_REFLECT_101)/2;
-            const T* src = (const T*)(_src.data + _src.step*_sy);
+            const T* src = _src.ptr<T>(_sy);
 
             if( ssize.width == cn )
             {
@@ -413,6 +413,9 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
 
     Size ssize = _src.size();
     Size dsize = _dsz.area() == 0 ? Size((ssize.width + 1) / 2, (ssize.height + 1) / 2) : _dsz;
+    if (dsize.height < 2 || dsize.width < 2)
+        return false;
+
     CV_Assert( ssize.width > 0 && ssize.height > 0 &&
             std::abs(dsize.width*2 - ssize.width) <= 2 &&
             std::abs(dsize.height*2 - ssize.height) <= 2 );
@@ -505,6 +508,8 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
 
 void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
+    CV_Assert(borderType != BORDER_CONSTANT);
+
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_pyrDown(_src, _dst, _dsz, borderType))
 
@@ -574,6 +579,8 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
 
 void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
+    CV_Assert(borderType == BORDER_DEFAULT);
+
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_pyrUp(_src, _dst, _dsz, borderType))
 
@@ -643,6 +650,8 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
 
 void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
+    CV_Assert(borderType != BORDER_CONSTANT);
+
     if (_src.dims() <= 2 && _dst.isUMatVector())
     {
         UMat src = _src.getUMat();

@@ -636,6 +636,9 @@ protected:
 
 CV_EXPORTS MatAllocator* getOpenCLAllocator();
 
+CV_EXPORTS_W bool isPerformanceCheckBypassed();
+#define OCL_PERFORMANCE_CHECK(condition) (cv::ocl::isPerformanceCheckBypassed() || (condition))
+
 }}
 
 #endif

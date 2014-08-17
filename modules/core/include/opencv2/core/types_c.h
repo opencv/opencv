@@ -548,7 +548,7 @@ CV_INLINE  void  cvmSet( CvMat* mat, int row, int col, double value )
     else
     {
         assert( type == CV_64FC1 );
-        ((double*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col] = (double)value;
+        ((double*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col] = value;
     }
 }
 

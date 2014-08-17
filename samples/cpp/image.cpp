@@ -48,7 +48,7 @@ int main( int argc, char** argv )
     }
 #endif
 
-    if( !img.data ) // check if the image has been loaded properly
+    if( img.empty() ) // check if the image has been loaded properly
         return -1;
 
     Mat img_yuv;

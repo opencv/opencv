@@ -209,69 +209,6 @@ public class CoreTest extends OpenCVTestCase {
         assertFalse(Core.checkRange(outOfRange, true, 5, 100));
     }
 
-    public void testCircleMatPointIntScalar() {
-        Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
-        int radius = Math.min(gray0.cols() / 4, gray0.rows() / 4);
-        Scalar color = new Scalar(128);
-
-        Core.circle(gray0, center, radius, color);
-
-        assertTrue(0 != Core.countNonZero(gray0));
-    }
-
-    public void testCircleMatPointIntScalarInt() {
-        Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
-        int radius = Math.min(gray0.cols() / 4, gray0.rows() / 4);
-        Scalar color = new Scalar(128);
-
-        Core.circle(gray0, center, radius, color, Core.FILLED);
-
-        assertTrue(0 != Core.countNonZero(gray0));
-    }
-
-    public void testCircleMatPointIntScalarIntIntInt() {
-        Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
-        Point center2 = new Point(gray0.cols(), gray0.rows());
-        int radius = Math.min(gray0.cols() / 4, gray0.rows() / 4);
-        Scalar color128 = new Scalar(128);
-        Scalar color0 = new Scalar(0);
-
-        Core.circle(gray0, center2, radius * 2, color128, 2, Core.LINE_4, 1/*
-                                                                            * Number
-                                                                            * of
-                                                                            * fractional
-                                                                            * bits
-                                                                            */);
-        assertFalse(0 == Core.countNonZero(gray0));
-
-        Core.circle(gray0, center, radius, color0, 2, Core.LINE_4, 0);
-
-        assertTrue(0 == Core.countNonZero(gray0));
-    }
-
-    public void testClipLine() {
-        Rect r = new Rect(10, 10, 10, 10);
-        Point pt1 = new Point(5.0, 15.0);
-        Point pt2 = new Point(25.0, 15.0);
-
-        assertTrue(Core.clipLine(r, pt1, pt2));
-
-        Point pt1Clipped = new Point(10.0, 15.0);
-        Point pt2Clipped = new Point(19.0, 15.0);
-        assertEquals(pt1Clipped, pt1);
-        assertEquals(pt2Clipped, pt2);
-
-        pt1 = new Point(5.0, 5.0);
-        pt2 = new Point(25.0, 5.0);
-        pt1Clipped = new Point(5.0, 5.0);
-        pt2Clipped = new Point(25.0, 5.0);
-
-        assertFalse(Core.clipLine(r, pt1, pt2));
-
-        assertEquals(pt1Clipped, pt1);
-        assertEquals(pt2Clipped, pt2);
-    }
-
     public void testCompare() {
         Core.compare(gray0, gray0, dst, Core.CMP_EQ);
 
@@ -478,110 +415,6 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(eigenVecs, expectedEigenVecs, EPS);
     }
 
-    public void testEllipse2Poly() {
-        Point center = new Point(4, 4);
-        Size axes = new Size(2, 2);
-        int angle = 30;
-        int arcStart = 30;
-        int arcEnd = 60;
-        int delta = 2;
-        MatOfPoint pts = new MatOfPoint();
-
-        Core.ellipse2Poly(center, axes, angle, arcStart, arcEnd, delta, pts);
-
-        Point truth[] = {
-                new Point(5, 6),
-                new Point(4, 6)
-        };
-        assertArrayPointsEquals(truth, pts.toArray(), EPS);
-    }
-
-    public void testEllipseMatPointSizeDoubleDoubleDoubleScalar() {
-        Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
-        Size axes = new Size(2, 2);
-        double angle = 30, startAngle = 60, endAngle = 90;
-
-        Core.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite);
-
-        assertTrue(0 != Core.countNonZero(gray0));
-    }
-
-    public void testEllipseMatPointSizeDoubleDoubleDoubleScalarInt() {
-        Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
-        Size axes = new Size(2, 2);
-        double angle = 30, startAngle = 60, endAngle = 90;
-
-        Core.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, Core.FILLED);
-
-        assertTrue(0 != Core.countNonZero(gray0));
-    }
-
-    public void testEllipseMatPointSizeDoubleDoubleDoubleScalarIntIntInt() {
-        Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
-        Size axes = new Size(2, 2);
-        Point center2 = new Point(gray0.cols(), gray0.rows());
-        Size axes2 = new Size(4, 4);
-        double angle = 30, startAngle = 0, endAngle = 30;
-
-        Core.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, Core.FILLED, Core.LINE_4, 0);
-
-        assertTrue(0 != Core.countNonZero(gray0));
-
-        Core.ellipse(gray0, center2, axes2, angle, startAngle, endAngle, colorBlack, Core.FILLED, Core.LINE_4, 1);
-
-        assertEquals(0, Core.countNonZero(gray0));
-    }
-
-    public void testEllipseMatRotatedRectScalar() {
-        int matSize = 10;
-        Mat gray0 = Mat.zeros(matSize, matSize, CvType.CV_8U);
-        Point center = new Point(matSize / 2, matSize / 2);
-        Size size = new Size(matSize / 4, matSize / 2);
-        RotatedRect box = new RotatedRect(center, size, 45);
-
-        Core.ellipse(gray0, box, new Scalar(1));
-
-        final byte[] truth = new byte[] {
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
-                0, 0, 0, 0, 1, 1, 0, 1, 0, 0,
-                0, 0, 0, 0, 1, 0, 1, 0, 0, 0,
-                0, 0, 0, 1, 0, 1, 1, 0, 0, 0,
-                0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
-        assertMatEqual(new Mat(matSize, matSize, CvType.CV_8U) {
-            {
-                put(0, 0, truth);
-            }
-        }, gray0);
-    }
-
-    public void testEllipseMatRotatedRectScalarInt() {
-        Point center = new Point(matSize / 2, matSize / 2);
-        Size size = new Size(matSize / 4, matSize / 2);
-        RotatedRect box = new RotatedRect(center, size, 45);
-
-        Core.ellipse(gray0, box, new Scalar(1), Core.FILLED);
-        Core.ellipse(gray0, box, new Scalar(0));
-
-        assertTrue(0 < Core.countNonZero(gray0));
-    }
-
-    public void testEllipseMatRotatedRectScalarIntInt() {
-        Point center = new Point(matSize / 2, matSize / 2);
-        Size size = new Size(2, matSize * 2 / 3);
-        RotatedRect box = new RotatedRect(center, size, 20);
-
-        Core.ellipse(gray0, box, new Scalar(9), 1, Core.LINE_AA);
-        Core.ellipse(gray0, box, new Scalar(0), 1, Core.LINE_4);
-
-        assertTrue(0 < Core.countNonZero(gray0));
-    }
-
     public void testExp() {
         Core.exp(gray0_32f, dst);
 
@@ -609,7 +442,7 @@ public class CoreTest extends OpenCVTestCase {
     public void testFillConvexPolyMatListOfPointScalar() {
         MatOfPoint polyline = new MatOfPoint(new Point[]{new Point(1, 1), new Point(5, 0), new Point(6, 8), new Point(0, 9)});
 
-        Core.fillConvexPoly(gray0, polyline, new Scalar(150));
+        Imgproc.fillConvexPoly(gray0, polyline, new Scalar(150));
 
         assertTrue(0 < Core.countNonZero(gray0));
         assertTrue(gray0.total() > Core.countNonZero(gray0));
@@ -622,12 +455,12 @@ public class CoreTest extends OpenCVTestCase {
         // current implementation of fixed-point version of fillConvexPoly
         // requires image to be at least 2-pixel wider in each direction than
         // contour
-        Core.fillConvexPoly(gray0, polyline1, colorWhite, Core.LINE_8, 0);
+        Imgproc.fillConvexPoly(gray0, polyline1, colorWhite, Imgproc.line_8, 0);
 
         assertTrue(0 < Core.countNonZero(gray0));
         assertTrue(gray0.total() > Core.countNonZero(gray0));
 
-        Core.fillConvexPoly(gray0, polyline2, colorBlack, Core.LINE_8, 1);
+        Imgproc.fillConvexPoly(gray0, polyline2, colorBlack, Imgproc.line_8, 1);
 
         assertEquals("see http://code.opencv.org/issues/1284", 0, Core.countNonZero(gray0));
     }
@@ -639,7 +472,7 @@ public class CoreTest extends OpenCVTestCase {
         List<MatOfPoint> polylines = new ArrayList<MatOfPoint>();
         polylines.add(polyline);
 
-        Core.fillPoly(gray0, polylines, new Scalar(1));
+        Imgproc.fillPoly(gray0, polylines, new Scalar(1));
 
         final byte[] truth = new byte[] {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -670,11 +503,11 @@ public class CoreTest extends OpenCVTestCase {
         List<MatOfPoint> polylines2 = new ArrayList<MatOfPoint>();
         polylines2.add(polyline2);
 
-        Core.fillPoly(gray0, polylines1, new Scalar(1), Core.LINE_8, 0, new Point(0, 0));
+        Imgproc.fillPoly(gray0, polylines1, new Scalar(1), Imgproc.line_8, 0, new Point(0, 0));
 
         assertTrue(0 < Core.countNonZero(gray0));
 
-        Core.fillPoly(gray0, polylines2, new Scalar(0), Core.LINE_8, 0, new Point(1, 1));
+        Imgproc.fillPoly(gray0, polylines2, new Scalar(0), Imgproc.line_8, 0, new Point(1, 1));
 
         assertEquals(0, Core.countNonZero(gray0));
     }
@@ -797,20 +630,6 @@ public class CoreTest extends OpenCVTestCase {
         assertEquals(1, Core.getOptimalDFTSize(0));
         assertEquals(135, Core.getOptimalDFTSize(133));
         assertEquals(15, Core.getOptimalDFTSize(13));
-    }
-
-    public void testGetTextSize() {
-        String text = "Android all the way";
-        double fontScale = 2;
-        int thickness = 3;
-        int baseLine[] = new int[1];
-
-        Core.getTextSize(text, Core.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, null);
-        Size res = Core.getTextSize(text, Core.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, baseLine);
-
-        assertEquals(543.0, res.width);
-        assertEquals(44.0, res.height);
-        assertEquals(20, baseLine[0]);
     }
 
     public void testGetTickCount() {
@@ -1036,7 +855,7 @@ public class CoreTest extends OpenCVTestCase {
         Point point2 = new Point(nPoints, nPoints);
         Scalar color = new Scalar(255);
 
-        Core.line(gray0, point1, point2, color);
+        Imgproc.line(gray0, point1, point2, color);
 
         assertTrue(nPoints == Core.countNonZero(gray0));
     }
@@ -1046,7 +865,7 @@ public class CoreTest extends OpenCVTestCase {
         Point point1 = new Point(0, 0);
         Point point2 = new Point(nPoints, nPoints);
 
-        Core.line(gray0, point1, point2, colorWhite, 0);
+        Imgproc.line(gray0, point1, point2, colorWhite, 0);
 
         assertTrue(nPoints == Core.countNonZero(gray0));
     }
@@ -1058,11 +877,11 @@ public class CoreTest extends OpenCVTestCase {
         Point point1_4 = new Point(3 * 4, 4 * 4);
         Point point2_4 = new Point(nPoints * 4, nPoints * 4);
 
-        Core.line(gray0, point2, point1, colorWhite, 2, Core.LINE_8, 0);
+        Imgproc.line(gray0, point2, point1, colorWhite, 2, Imgproc.line_8, 0);
 
         assertFalse(0 == Core.countNonZero(gray0));
 
-        Core.line(gray0, point2_4, point1_4, colorBlack, 2, Core.LINE_8, 2);
+        Imgproc.line(gray0, point2_4, point1_4, colorBlack, 2, Imgproc.line_8, 2);
 
         assertEquals(0, Core.countNonZero(gray0));
     }
@@ -1717,93 +1536,10 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(y, yCoordinate, EPS);
     }
 
-    public void testPolylinesMatListOfListOfPointBooleanScalar() {
-        Mat img = gray0;
-        List<MatOfPoint> polyline = new ArrayList<MatOfPoint>();
-        polyline.add(new MatOfPoint(new Point(1, 1), new Point(7, 1), new Point(7, 6), new Point(1, 6)));
-
-        Core.polylines(img, polyline, true, new Scalar(100));
-
-        assertEquals(22, Core.countNonZero(img));
-
-        Core.polylines(img, polyline, false, new Scalar(0));
-
-        assertEquals(4, Core.countNonZero(img));
-    }
-
-    public void testPolylinesMatListOfListOfPointBooleanScalarInt() {
-        Mat img = gray0;
-        List<MatOfPoint> polyline = new ArrayList<MatOfPoint>();
-        polyline.add(new MatOfPoint(new Point(1, 1), new Point(7, 1), new Point(7, 6), new Point(1, 6)));
-
-        Core.polylines(img, polyline, true, new Scalar(100), 2);
-
-        assertEquals(62, Core.countNonZero(img));
-    }
-
-    public void testPolylinesMatListOfListOfPointBooleanScalarIntIntInt() {
-        Mat img = gray0;
-        List<MatOfPoint> polyline1 = new ArrayList<MatOfPoint>();
-        polyline1.add(new MatOfPoint(new Point(1, 1), new Point(7, 1), new Point(7, 6), new Point(1, 6)));
-        List<MatOfPoint> polyline2 = new ArrayList<MatOfPoint>();
-        polyline2.add(new MatOfPoint(new Point(2, 2), new Point(14, 2), new Point(14, 12), new Point(2, 12)));
-
-        Core.polylines(img, polyline1, true, new Scalar(100), 2, Core.LINE_8, 0);
-
-        assertTrue(Core.countNonZero(img) > 0);
-
-        Core.polylines(img, polyline2, true, new Scalar(0), 2, Core.LINE_8, 1);
-
-        assertEquals(0, Core.countNonZero(img));
-    }
-
     public void testPow() {
         Core.pow(gray2, 7, dst);
 
         assertMatEqual(gray128, dst);
-    }
-
-    public void testPutTextMatStringPointIntDoubleScalar() {
-        String text = "Hello World";
-        Size labelSize = new Size(175, 22);
-        Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
-        Point origin = new Point(10, labelSize.height + 10);
-
-        Core.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite);
-
-        assertTrue(Core.countNonZero(img) > 0);
-        // check that border is not corrupted
-        Core.rectangle(img, new Point(11, 11), new Point(labelSize.width + 10, labelSize.height + 10), colorBlack, Core.FILLED);
-        assertEquals(0, Core.countNonZero(img));
-    }
-
-    public void testPutTextMatStringPointIntDoubleScalarInt() {
-        String text = "Hello World";
-        Size labelSize = new Size(176, 22);
-        Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
-        Point origin = new Point(10, labelSize.height + 10);
-
-        Core.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 2);
-
-        assertTrue(Core.countNonZero(img) > 0);
-        // check that border is not corrupted
-        Core.rectangle(img, new Point(10, 10), new Point(labelSize.width + 10 + 1, labelSize.height + 10 + 1), colorBlack, Core.FILLED);
-        assertEquals(0, Core.countNonZero(img));
-    }
-
-    public void testPutTextMatStringPointIntDoubleScalarIntIntBoolean() {
-        String text = "Hello World";
-        Size labelSize = new Size(175, 22);
-
-        Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
-        Point origin = new Point(10, 10);
-
-        Core.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 1, Core.LINE_8, true);
-
-        assertTrue(Core.countNonZero(img) > 0);
-        // check that border is not corrupted
-        Core.rectangle(img, new Point(10, 10), new Point(labelSize.width + 9, labelSize.height + 9), colorBlack, Core.FILLED);
-        assertEquals(0, Core.countNonZero(img));
     }
 
     public void testRandn() {
@@ -1859,7 +1595,7 @@ public class CoreTest extends OpenCVTestCase {
         Point topLeft = new Point(0, 0);
         Scalar color = new Scalar(128);
 
-        Core.rectangle(gray0, bottomRight, topLeft, color);
+        Imgproc.rectangle(gray0, bottomRight, topLeft, color);
 
         assertTrue(0 != Core.countNonZero(gray0));
     }
@@ -1869,8 +1605,8 @@ public class CoreTest extends OpenCVTestCase {
         Point topLeft = new Point(0, 0);
         Scalar color = new Scalar(128);
 
-        Core.rectangle(gray0, bottomRight, topLeft, color, 2);
-        Core.rectangle(gray0, bottomRight, topLeft, colorBlack);
+        Imgproc.rectangle(gray0, bottomRight, topLeft, color, 2);
+        Imgproc.rectangle(gray0, bottomRight, topLeft, colorBlack);
 
         assertTrue(0 != Core.countNonZero(gray0));
     }
@@ -1880,8 +1616,8 @@ public class CoreTest extends OpenCVTestCase {
         Point topLeft = new Point(0, 0);
         Scalar color = new Scalar(128);
 
-        Core.rectangle(gray0, bottomRight, topLeft, color, 2, Core.LINE_AA, 0);
-        Core.rectangle(gray0, bottomRight, topLeft, colorBlack, 2, Core.LINE_4, 0);
+        Imgproc.rectangle(gray0, bottomRight, topLeft, color, 2, Imgproc.line_AA, 0);
+        Imgproc.rectangle(gray0, bottomRight, topLeft, colorBlack, 2, Imgproc.line_4, 0);
 
         assertTrue(0 != Core.countNonZero(gray0));
     }
@@ -1892,11 +1628,11 @@ public class CoreTest extends OpenCVTestCase {
         Point topLeft = new Point(0, 0);
         Scalar color = new Scalar(128);
 
-        Core.rectangle(gray0, bottomRight1, topLeft, color, 2, Core.LINE_8, 1);
+        Imgproc.rectangle(gray0, bottomRight1, topLeft, color, 2, Imgproc.line_8, 1);
 
         assertTrue(0 != Core.countNonZero(gray0));
 
-        Core.rectangle(gray0, bottomRight2, topLeft, colorBlack, 2, Core.LINE_8, 0);
+        Imgproc.rectangle(gray0, bottomRight2, topLeft, colorBlack, 2, Imgproc.line_8, 0);
 
         assertEquals(0, Core.countNonZero(gray0));
     }

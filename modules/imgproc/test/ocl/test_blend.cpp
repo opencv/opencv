@@ -43,7 +43,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "cvconfig.h"
 #include "opencv2/ts/ocl_test.hpp"
 
@@ -117,7 +117,7 @@ OCL_TEST_P(BlendLinear, Accuracy)
         OCL_OFF(cv::blendLinear(src1_roi, src2_roi, weights1_roi, weights2_roi, dst_roi));
         OCL_ON(cv::blendLinear(usrc1_roi, usrc2_roi, uweights1_roi, uweights2_roi, udst_roi));
 
-        Near(depth <= CV_32S ? 1.0 : 0.2);
+        Near(depth <= CV_32S ? 1.0 : 0.5);
     }
 }
 

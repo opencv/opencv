@@ -39,7 +39,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 #include "opencv2/stitching/warpers.hpp"
 
@@ -139,7 +139,7 @@ OCL_TEST_F(PlaneWarperTest, Mat)
         OCL_OFF(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, dst));
         OCL_ON(warper->warp(usrc, K, R, INTER_LINEAR, BORDER_REPLICATE, udst));
 
-        Near(1e-4);
+        Near(1.5e-4);
     }
 }
 

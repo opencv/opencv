@@ -27,7 +27,7 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
 
     private Mat getTestImg() {
         Mat img = new Mat(100, 100, CvType.CV_8U, new Scalar(255));
-        Core.line(img, new Point(30, 30), new Point(70, 70), new Scalar(0), 8);
+        Imgproc.line(img, new Point(30, 30), new Point(70, 70), new Scalar(0), 8);
         return img;
     }
 

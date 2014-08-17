@@ -160,7 +160,7 @@ void cv::cuda::GpuMat::release()
     if (refcount && CV_XADD(refcount, -1) == 1)
         allocator->free(this);
 
-    data = datastart = dataend = 0;
+    dataend = data = datastart = 0;
     step = rows = cols = 0;
     refcount = 0;
 }

@@ -231,7 +231,7 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
                     mP1.x = mP2.x = offset + (c * (mHistSizeNum + 10) + h) * thikness;
                     mP1.y = sizeRgba.height-1;
                     mP2.y = mP1.y - 2 - (int)mBuff[h];
-                    Core.line(rgba, mP1, mP2, mColorsRGB[c], thikness);
+                    Imgproc.line(rgba, mP1, mP2, mColorsRGB[c], thikness);
                 }
             }
             // Value and Hue
@@ -244,7 +244,7 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
                 mP1.x = mP2.x = offset + (3 * (mHistSizeNum + 10) + h) * thikness;
                 mP1.y = sizeRgba.height-1;
                 mP2.y = mP1.y - 2 - (int)mBuff[h];
-                Core.line(rgba, mP1, mP2, mWhilte, thikness);
+                Imgproc.line(rgba, mP1, mP2, mWhilte, thikness);
             }
             // Hue
             Imgproc.calcHist(Arrays.asList(mIntermediateMat), mChannels[0], mMat0, hist, mHistSize, mRanges);
@@ -254,7 +254,7 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
                 mP1.x = mP2.x = offset + (4 * (mHistSizeNum + 10) + h) * thikness;
                 mP1.y = sizeRgba.height-1;
                 mP2.y = mP1.y - 2 - (int)mBuff[h];
-                Core.line(rgba, mP1, mP2, mColorsHue[h], thikness);
+                Imgproc.line(rgba, mP1, mP2, mColorsHue[h], thikness);
             }
             break;
 
@@ -287,7 +287,7 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
             Mat mZoomWindow = rgba.submat(rows / 2 - 9 * rows / 100, rows / 2 + 9 * rows / 100, cols / 2 - 9 * cols / 100, cols / 2 + 9 * cols / 100);
             Imgproc.resize(mZoomWindow, zoomCorner, zoomCorner.size());
             Size wsize = mZoomWindow.size();
-            Core.rectangle(mZoomWindow, new Point(1, 1), new Point(wsize.width - 2, wsize.height - 2), new Scalar(255, 0, 0, 255), 2);
+            Imgproc.rectangle(mZoomWindow, new Point(1, 1), new Point(wsize.width - 2, wsize.height - 2), new Scalar(255, 0, 0, 255), 2);
             zoomCorner.release();
             mZoomWindow.release();
             break;

@@ -1693,7 +1693,7 @@ TEST(Imgproc_ColorBayer, regression)
     Mat gold = imread(string(ts->get_data_path()) + "/cvtcolor/bayer_gold.png", IMREAD_UNCHANGED);
     Mat result;
 
-    CV_Assert(given.data != NULL && gold.data != NULL);
+    CV_Assert( !given.empty() && !gold.empty() );
 
     cvtColor(given, result, CV_BayerBG2GRAY);
 
@@ -1716,7 +1716,7 @@ TEST(Imgproc_ColorBayerVNG, regression)
     Mat gold = imread(goldfname, IMREAD_UNCHANGED);
     Mat result;
 
-    CV_Assert(given.data != NULL);
+    CV_Assert( !given.empty() );
 
     cvtColor(given, result, CV_BayerBG2BGR_VNG, 3);
 
@@ -1808,7 +1808,7 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
     std::string full_path = parent_path + image_name;
     src = imread(full_path, IMREAD_UNCHANGED);
 
-    if (src.data == NULL)
+    if ( src.empty() )
     {
         ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
         ts->printf(cvtest::TS::SUMMARY, "No input image\n");
@@ -1827,7 +1827,7 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
         // reading a reference image
         full_path = parent_path + pattern[i] + image_name;
         reference = imread(full_path, IMREAD_UNCHANGED);
-        if (reference.data == NULL)
+        if ( reference.empty() )
         {
             imwrite(full_path, dst);
             continue;
@@ -2035,7 +2035,7 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
     }
 
     ++size.width;
-    uchar* firstRow = dst.data, *lastRow = dst.data + size.height * dst.step;
+    uchar* firstRow = dst.ptr(), *lastRow = dst.ptr(size.height);
     size.width *= dcn;
     for (int x = 0; x < size.width; ++x)
     {
@@ -2058,8 +2058,8 @@ static void checkData(const Mat& actual, const Mat& reference, cvtest::TS* ts, c
 
     for (int y = 0; y < size.height && next; ++y)
     {
-        const T* A = reinterpret_cast<const T*>(actual.data + actual.step * y);
-        const T* R = reinterpret_cast<const T*>(reference.data + reference.step * y);
+        const T* A = actual.ptr<T>(y);
+        const T* R = reference.ptr<T>(y);
 
         for (int x = 0; x < size.width && next; ++x)
             if (std::abs(A[x] - R[x]) > 1)
@@ -2095,7 +2095,7 @@ TEST(ImgProc_BayerEdgeAwareDemosaicing, accuracy)
     std::string full_path = parent_path + image_name;
     src = imread(full_path, IMREAD_UNCHANGED);
 
-    if (src.data == NULL)
+    if (src.empty())
     {
         ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
         ts->printf(cvtest::TS::SUMMARY, "No input image\n");

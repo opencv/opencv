@@ -415,10 +415,22 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
 """,
         }, # minMaxLoc
 
+
+##        "checkRange"           : #TBD
+##            {'j_code' : '/* TBD: checkRange() */', 'jn_code' : '', 'cpp_code' : '' },
+
+        "checkHardwareSupport" : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "setUseOptimized"      : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "useOptimized"         : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+
+    }, # Core
+
+    'Imgproc' :
+    {
         'getTextSize' :
         {
             'j_code'   :
-"""
+    """
     // C++: Size getTextSize(const String& text, int fontFace, double fontScale, int thickness, int* baseLine);
     //javadoc:getTextSize(text, fontFace, fontScale, thickness, baseLine)
     public static Size getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine) {
@@ -427,17 +439,17 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
         Size retVal = new Size(n_getTextSize(text, fontFace, fontScale, thickness, baseLine));
         return retVal;
     }
-""",
+    """,
             'jn_code'  :
-"""    private static native double[] n_getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine);\n""",
+    """    private static native double[] n_getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine);\n""",
             'cpp_code' :
-"""
-// C++: Size getTextSize(const String& text, int fontFace, double fontScale, int thickness, int* baseLine);
-JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize (JNIEnv*, jclass, jstring, jint, jdouble, jint, jintArray);
+    """
+    // C++: Size getTextSize(const String& text, int fontFace, double fontScale, int thickness, int* baseLine);
+    JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize (JNIEnv*, jclass, jstring, jint, jdouble, jint, jintArray);
 
-JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
-  (JNIEnv* env, jclass, jstring text, jint fontFace, jdouble fontScale, jint thickness, jintArray baseLine)
-{
+    JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
+    (JNIEnv* env, jclass, jstring text, jint fontFace, jdouble fontScale, jint thickness, jintArray baseLine)
+    {
     try {
         LOGD("Core::n_1getTextSize()");
         jdoubleArray result;
@@ -483,18 +495,11 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
         env->ThrowNew(je, "Unknown exception in JNI code {core::getTextSize()}");
         return NULL;
     }
-}
-
-""",
+    }
+    """,
         }, # getTextSize
-##        "checkRange"           : #TBD
-##            {'j_code' : '/* TBD: checkRange() */', 'jn_code' : '', 'cpp_code' : '' },
 
-        "checkHardwareSupport" : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
-        "setUseOptimized"      : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
-        "useOptimized"         : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
-
-    }, # Core
+    }, # Imgproc
 
     'Highgui' :
     {

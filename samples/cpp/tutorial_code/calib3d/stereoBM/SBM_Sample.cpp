@@ -33,7 +33,7 @@ int main( int argc, char** argv )
   Mat imgDisparity16S = Mat( imgLeft.rows, imgLeft.cols, CV_16S );
   Mat imgDisparity8U = Mat( imgLeft.rows, imgLeft.cols, CV_8UC1 );
 
-  if( !imgLeft.data || !imgRight.data )
+  if( imgLeft.empty() || imgRight.empty() )
   { std::cout<< " --(!) Error reading images " << std::endl; return -1; }
 
   //-- 2. Call the constructor for StereoBM
