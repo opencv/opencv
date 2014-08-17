@@ -159,8 +159,6 @@ static void calculateStats( Mat errors, Mat mask = Mat(), bool display_images = 
         A = stat_AX(hist, cutoff_count, max_value);
         printf("A%.2f: %.2f\n", A_thresholds[i], A);
     }
-    if(display_images) // wait for the user to see all the images
-        waitKey(0);
 }
 
 static Mat flowToDisplay(const Mat flow)
@@ -352,6 +350,8 @@ int main( int argc, char** argv )
         calculateStats(computed_errors, mask, display_images);
 
     }
+    if(display_images) // wait for the user to see all the images
+        waitKey(0);
     return 0;
 
 }
