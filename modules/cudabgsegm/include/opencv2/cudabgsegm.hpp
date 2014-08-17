@@ -55,15 +55,27 @@ namespace cv { namespace cuda {
 ////////////////////////////////////////////////////
 // MOG
 
-class CV_EXPORTS BackgroundSubtractorMOG : public cv::BackgroundSubtractorMOG
+class CV_EXPORTS BackgroundSubtractorMOG : public cv::BackgroundSubtractor
 {
 public:
-    using cv::BackgroundSubtractorMOG::apply;
-    using cv::BackgroundSubtractorMOG::getBackgroundImage;
 
+    using cv::BackgroundSubtractor::apply;
     virtual void apply(InputArray image, OutputArray fgmask, double learningRate, Stream& stream) = 0;
 
+    using cv::BackgroundSubtractor::getBackgroundImage;
     virtual void getBackgroundImage(OutputArray backgroundImage, Stream& stream) const = 0;
+
+    virtual int getHistory() const = 0;
+    virtual void setHistory(int nframes) = 0;
+
+    virtual int getNMixtures() const = 0;
+    virtual void setNMixtures(int nmix) = 0;
+
+    virtual double getBackgroundRatio() const = 0;
+    virtual void setBackgroundRatio(double backgroundRatio) = 0;
+
+    virtual double getNoiseSigma() const = 0;
+    virtual void setNoiseSigma(double noiseSigma) = 0;
 };
 
 CV_EXPORTS Ptr<cuda::BackgroundSubtractorMOG>
@@ -91,12 +103,41 @@ CV_EXPORTS Ptr<cuda::BackgroundSubtractorMOG2>
 ////////////////////////////////////////////////////
 // GMG
 
-class CV_EXPORTS BackgroundSubtractorGMG : public cv::BackgroundSubtractorGMG
+class CV_EXPORTS BackgroundSubtractorGMG : public cv::BackgroundSubtractor
 {
 public:
-    using cv::BackgroundSubtractorGMG::apply;
-
+    using cv::BackgroundSubtractor::apply;
     virtual void apply(InputArray image, OutputArray fgmask, double learningRate, Stream& stream) = 0;
+
+    virtual int getMaxFeatures() const = 0;
+    virtual void setMaxFeatures(int maxFeatures) = 0;
+
+    virtual double getDefaultLearningRate() const = 0;
+    virtual void setDefaultLearningRate(double lr) = 0;
+
+    virtual int getNumFrames() const = 0;
+    virtual void setNumFrames(int nframes) = 0;
+
+    virtual int getQuantizationLevels() const = 0;
+    virtual void setQuantizationLevels(int nlevels) = 0;
+
+    virtual double getBackgroundPrior() const = 0;
+    virtual void setBackgroundPrior(double bgprior) = 0;
+
+    virtual int getSmoothingRadius() const = 0;
+    virtual void setSmoothingRadius(int radius) = 0;
+
+    virtual double getDecisionThreshold() const = 0;
+    virtual void setDecisionThreshold(double thresh) = 0;
+
+    virtual bool getUpdateBackgroundModel() const = 0;
+    virtual void setUpdateBackgroundModel(bool update) = 0;
+
+    virtual double getMinVal() const = 0;
+    virtual void setMinVal(double val) = 0;
+
+    virtual double getMaxVal() const = 0;
+    virtual void setMaxVal(double val) = 0;
 };
 
 CV_EXPORTS Ptr<cuda::BackgroundSubtractorGMG>

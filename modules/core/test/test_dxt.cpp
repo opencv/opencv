@@ -39,8 +39,8 @@ static void DFT_1D( const Mat& _src, Mat& _dst, int flags, const Mat& _wave=Mat(
     double scale = (flags & DFT_SCALE) ? 1./n : 1.;
     size_t esz = _src.elemSize();
     size_t srcstep = esz, dststep = esz;
-    const uchar* src0 = _src.data;
-    uchar* dst0 = _dst.data;
+    const uchar* src0 = _src.ptr();
+    uchar* dst0 = _dst.ptr();
 
     CV_Assert( _src.cols + _src.rows - 1 == n );
 

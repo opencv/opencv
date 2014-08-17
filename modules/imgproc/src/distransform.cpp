@@ -75,7 +75,7 @@ distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
     const int DIAG_DIST = CV_FLT_TO_FIX( metrics[1], DIST_SHIFT );
     const float scale = 1.f/(1 << DIST_SHIFT);
 
-    const uchar* src = _src.data;
+    const uchar* src = _src.ptr();
     int* temp = _temp.ptr<int>();
     float* dist = _dist.ptr<float>();
     int srcstep = (int)(_src.step/sizeof(src[0]));
@@ -149,7 +149,7 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
     const int LONG_DIST = CV_FLT_TO_FIX( metrics[2], DIST_SHIFT );
     const float scale = 1.f/(1 << DIST_SHIFT);
 
-    const uchar* src = _src.data;
+    const uchar* src = _src.ptr();
     int* temp = _temp.ptr<int>();
     float* dist = _dist.ptr<float>();
     int srcstep = (int)(_src.step/sizeof(src[0]));
@@ -240,7 +240,7 @@ distanceTransformEx_5x5( const Mat& _src, Mat& _temp, Mat& _dist, Mat& _labels, 
     const int LONG_DIST = CV_FLT_TO_FIX( metrics[2], DIST_SHIFT );
     const float scale = 1.f/(1 << DIST_SHIFT);
 
-    const uchar* src = _src.data;
+    const uchar* src = _src.ptr();
     int* temp = _temp.ptr<int>();
     float* dist = _dist.ptr<float>();
     int* labels = _labels.ptr<int>();
@@ -609,8 +609,8 @@ distanceATS_L1_8u( const Mat& src, Mat& dst )
     uchar lut[256];
     int x, y;
 
-    const uchar *sbase = src.data;
-    uchar *dbase = dst.data;
+    const uchar *sbase = src.ptr();
+    uchar *dbase = dst.ptr();
     int srcstep = (int)src.step;
     int dststep = (int)dst.step;
 

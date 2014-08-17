@@ -5,7 +5,7 @@
 
 SET(OPENCV_CPP_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_flann
     opencv_imgcodecs opencv_videoio opencv_highgui opencv_ml opencv_video
-    opencv_objdetect opencv_photo opencv_nonfree opencv_features2d opencv_calib3d
+    opencv_objdetect opencv_photo opencv_features2d opencv_calib3d
     opencv_stitching opencv_videostab opencv_shape)
 
 ocv_check_dependencies(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
@@ -55,14 +55,14 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
     set(the_target "${sample_kind}_${name}")
     add_executable(${the_target} ${srcs})
-    target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
+    ocv_target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
     if("${srcs}" MATCHES "gpu/")
-      target_link_libraries(${the_target} opencv_cudaarithm opencv_cudafilters)
+      ocv_target_link_libraries(${the_target} opencv_cudaarithm opencv_cudafilters)
     endif()
 
     if(HAVE_opencv_ocl)
-      target_link_libraries(${the_target} opencv_ocl)
+      ocv_target_link_libraries(${the_target} opencv_ocl)
     endif()
 
     set_target_properties(${the_target} PROPERTIES

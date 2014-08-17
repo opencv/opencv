@@ -1,6 +1,4 @@
 #include "opencv2/core.hpp"
-
-#include "cv.h"
 #include "cascadeclassifier.h"
 
 using namespace std;

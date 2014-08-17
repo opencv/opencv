@@ -60,90 +60,13 @@ using namespace cvtest;
 #endif
 
 //////////////////////////////////////////////////////
-// MOG
-
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
-
-namespace
-{
-    IMPLEMENT_PARAM_CLASS(UseGray, bool)
-    IMPLEMENT_PARAM_CLASS(LearningRate, double)
-}
-
-PARAM_TEST_CASE(MOG, cv::cuda::DeviceInfo, std::string, UseGray, LearningRate, UseRoi)
-{
-    cv::cuda::DeviceInfo devInfo;
-    std::string inputFile;
-    bool useGray;
-    double learningRate;
-    bool useRoi;
-
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        cv::cuda::setDevice(devInfo.deviceID());
-
-        inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
-
-        useGray = GET_PARAM(2);
-
-        learningRate = GET_PARAM(3);
-
-        useRoi = GET_PARAM(4);
-    }
-};
-
-CUDA_TEST_P(MOG, Update)
-{
-    cv::VideoCapture cap(inputFile);
-    ASSERT_TRUE(cap.isOpened());
-
-    cv::Mat frame;
-    cap >> frame;
-    ASSERT_FALSE(frame.empty());
-
-    cv::Ptr<cv::BackgroundSubtractorMOG> mog = cv::cuda::createBackgroundSubtractorMOG();
-    cv::cuda::GpuMat foreground = createMat(frame.size(), CV_8UC1, useRoi);
-
-    cv::Ptr<cv::BackgroundSubtractorMOG> mog_gold = cv::createBackgroundSubtractorMOG();
-    cv::Mat foreground_gold;
-
-    for (int i = 0; i < 10; ++i)
-    {
-        cap >> frame;
-        ASSERT_FALSE(frame.empty());
-
-        if (useGray)
-        {
-            cv::Mat temp;
-            cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-            cv::swap(temp, frame);
-        }
-
-        mog->apply(loadMat(frame, useRoi), foreground, learningRate);
-
-        mog_gold->apply(frame, foreground_gold, learningRate);
-
-        ASSERT_MAT_NEAR(foreground_gold, foreground, 0.0);
-    }
-}
-
-INSTANTIATE_TEST_CASE_P(CUDA_BgSegm, MOG, testing::Combine(
-    ALL_DEVICES,
-    testing::Values(std::string("768x576.avi")),
-    testing::Values(UseGray(true), UseGray(false)),
-    testing::Values(LearningRate(0.0), LearningRate(0.01)),
-    WHOLE_SUBMAT));
-
-#endif
-
-//////////////////////////////////////////////////////
 // MOG2
 
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 namespace
-{
+    {
+IMPLEMENT_PARAM_CLASS(UseGray, bool)
     IMPLEMENT_PARAM_CLASS(DetectShadow, bool)
 }
 
@@ -256,58 +179,5 @@ INSTANTIATE_TEST_CASE_P(CUDA_BgSegm, MOG2, testing::Combine(
     WHOLE_SUBMAT));
 
 #endif
-
-//////////////////////////////////////////////////////
-// GMG
-
-PARAM_TEST_CASE(GMG, cv::cuda::DeviceInfo, cv::Size, MatDepth, Channels, UseRoi)
-{
-};
-
-CUDA_TEST_P(GMG, Accuracy)
-{
-    const cv::cuda::DeviceInfo devInfo = GET_PARAM(0);
-    cv::cuda::setDevice(devInfo.deviceID());
-    const cv::Size size = GET_PARAM(1);
-    const int depth = GET_PARAM(2);
-    const int channels = GET_PARAM(3);
-    const bool useRoi = GET_PARAM(4);
-
-    const int type = CV_MAKE_TYPE(depth, channels);
-
-    const cv::Mat zeros(size, CV_8UC1, cv::Scalar::all(0));
-    const cv::Mat fullfg(size, CV_8UC1, cv::Scalar::all(255));
-
-    cv::Mat frame = randomMat(size, type, 0, 100);
-    cv::cuda::GpuMat d_frame = loadMat(frame, useRoi);
-
-    cv::Ptr<cv::BackgroundSubtractorGMG> gmg = cv::cuda::createBackgroundSubtractorGMG();
-    gmg->setNumFrames(5);
-    gmg->setSmoothingRadius(0);
-
-    cv::cuda::GpuMat d_fgmask = createMat(size, CV_8UC1, useRoi);
-
-    for (int i = 0; i < gmg->getNumFrames(); ++i)
-    {
-        gmg->apply(d_frame, d_fgmask);
-
-        // fgmask should be entirely background during training
-        ASSERT_MAT_NEAR(zeros, d_fgmask, 0);
-    }
-
-    frame = randomMat(size, type, 160, 255);
-    d_frame = loadMat(frame, useRoi);
-    gmg->apply(d_frame, d_fgmask);
-
-    // now fgmask should be entirely foreground
-    ASSERT_MAT_NEAR(fullfg, d_fgmask, 0);
-}
-
-INSTANTIATE_TEST_CASE_P(CUDA_BgSegm, GMG, testing::Combine(
-    ALL_DEVICES,
-    DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8U), MatType(CV_16U), MatType(CV_32F)),
-    testing::Values(Channels(1), Channels(3), Channels(4)),
-    WHOLE_SUBMAT));
 
 #endif // HAVE_CUDA

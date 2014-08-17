@@ -39,7 +39,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "../../precomp.hpp"
 
 #if defined(HAVE_OPENCL) && !defined(HAVE_OPENCL_STATIC)
 

@@ -63,7 +63,7 @@ public class Puzzle15Processor {
         }
 
         for (int i = 0; i < GRID_AREA; i++) {
-            Size s = Core.getTextSize(Integer.toString(i + 1), 3/* CV_FONT_HERSHEY_COMPLEX */, 1, 2, null);
+            Size s = Imgproc.getTextSize(Integer.toString(i + 1), 3/* CV_FONT_HERSHEY_COMPLEX */, 1, 2, null);
             mTextHeights[i] = (int) s.height;
             mTextWidths[i] = (int) s.width;
         }
@@ -98,7 +98,7 @@ public class Puzzle15Processor {
             else {
                 cells[idx].copyTo(mCells15[i]);
                 if (mShowTileNumbers) {
-                    Core.putText(mCells15[i], Integer.toString(1 + idx), new Point((cols / GRID_SIZE - mTextWidths[idx]) / 2,
+                    Imgproc.putText(mCells15[i], Integer.toString(1 + idx), new Point((cols / GRID_SIZE - mTextWidths[idx]) / 2,
                             (rows / GRID_SIZE + mTextHeights[idx]) / 2), 3/* CV_FONT_HERSHEY_COMPLEX */, 1, new Scalar(255, 0, 0, 255), 2);
                 }
             }
@@ -160,8 +160,8 @@ public class Puzzle15Processor {
 
     private void drawGrid(int cols, int rows, Mat drawMat) {
         for (int i = 1; i < GRID_SIZE; i++) {
-            Core.line(drawMat, new Point(0, i * rows / GRID_SIZE), new Point(cols, i * rows / GRID_SIZE), new Scalar(0, 255, 0, 255), 3);
-            Core.line(drawMat, new Point(i * cols / GRID_SIZE, 0), new Point(i * cols / GRID_SIZE, rows), new Scalar(0, 255, 0, 255), 3);
+            Imgproc.line(drawMat, new Point(0, i * rows / GRID_SIZE), new Point(cols, i * rows / GRID_SIZE), new Scalar(0, 255, 0, 255), 3);
+            Imgproc.line(drawMat, new Point(i * cols / GRID_SIZE, 0), new Point(i * cols / GRID_SIZE, rows), new Scalar(0, 255, 0, 255), 3);
         }
     }
 

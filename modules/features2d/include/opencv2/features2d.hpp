@@ -49,7 +49,7 @@
 namespace cv
 {
 
-CV_EXPORTS bool initModule_features2d();
+CV_EXPORTS bool initModule_features2d(void);
 
 // //! writes vector of keypoints to the file storage
 // CV_EXPORTS void write(FileStorage& fs, const String& name, const std::vector<KeyPoint>& keypoints);
@@ -354,107 +354,6 @@ typedef ORB OrbFeatureDetector;
 typedef ORB OrbDescriptorExtractor;
 
 /*!
-  FREAK implementation
-*/
-class CV_EXPORTS FREAK : public DescriptorExtractor
-{
-public:
-    /** Constructor
-         * @param orientationNormalized enable orientation normalization
-         * @param scaleNormalized enable scale normalization
-         * @param patternScale scaling of the description pattern
-         * @param nbOctave number of octaves covered by the detected keypoints
-         * @param selectedPairs (optional) user defined selected pairs
-    */
-    explicit FREAK( bool orientationNormalized = true,
-           bool scaleNormalized = true,
-           float patternScale = 22.0f,
-           int nOctaves = 4,
-           const std::vector<int>& selectedPairs = std::vector<int>());
-    FREAK( const FREAK& rhs );
-    FREAK& operator=( const FREAK& );
-
-    virtual ~FREAK();
-
-    /** returns the descriptor length in bytes */
-    virtual int descriptorSize() const;
-
-    /** returns the descriptor type */
-    virtual int descriptorType() const;
-
-    /** returns the default norm type */
-    virtual int defaultNorm() const;
-
-    /** select the 512 "best description pairs"
-         * @param images grayscale images set
-         * @param keypoints set of detected keypoints
-         * @param corrThresh correlation threshold
-         * @param verbose print construction information
-         * @return list of best pair indexes
-    */
-    std::vector<int> selectPairs( const std::vector<Mat>& images, std::vector<std::vector<KeyPoint> >& keypoints,
-                      const double corrThresh = 0.7, bool verbose = true );
-
-    AlgorithmInfo* info() const;
-
-    enum
-    {
-        NB_SCALES = 64, NB_PAIRS = 512, NB_ORIENPAIRS = 45
-    };
-
-protected:
-    virtual void computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors ) const;
-    void buildPattern();
-
-    template <typename imgType, typename iiType>
-    imgType meanIntensity( InputArray image, InputArray integral, const float kp_x, const float kp_y,
-                           const unsigned int scale, const unsigned int rot, const unsigned int point ) const;
-
-    template <typename srcMatType, typename iiMatType>
-    void computeDescriptors( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors ) const;
-
-    template <typename srcMatType>
-    void extractDescriptor(srcMatType *pointsValue, void ** ptr) const;
-
-    bool orientationNormalized; //true if the orientation is normalized, false otherwise
-    bool scaleNormalized; //true if the scale is normalized, false otherwise
-    double patternScale; //scaling of the pattern
-    int nOctaves; //number of octaves
-    bool extAll; // true if all pairs need to be extracted for pairs selection
-
-    double patternScale0;
-    int nOctaves0;
-    std::vector<int> selectedPairs0;
-
-    struct PatternPoint
-    {
-        float x; // x coordinate relative to center
-        float y; // x coordinate relative to center
-        float sigma; // Gaussian smoothing sigma
-    };
-
-    struct DescriptionPair
-    {
-        uchar i; // index of the first point
-        uchar j; // index of the second point
-    };
-
-    struct OrientationPair
-    {
-        uchar i; // index of the first point
-        uchar j; // index of the second point
-        int weight_dx; // dx/(norm_sq))*4096
-        int weight_dy; // dy/(norm_sq))*4096
-    };
-
-    std::vector<PatternPoint> patternLookup; // look-up table for the pattern points (position+sigma of all points at all scales and orientation)
-    int patternSizes[NB_SCALES]; // size of the pattern at a specific scale (used to check if a point is within image boundaries)
-    DescriptionPair descriptionPairs[NB_PAIRS];
-    OrientationPair orientationPairs[NB_ORIENPAIRS];
-};
-
-
-/*!
  Maximal Stable Extremal Regions class.
 
  The class implements MSER algorithm introduced by J. Matas.
@@ -492,36 +391,6 @@ protected:
 };
 
 typedef MSER MserFeatureDetector;
-
-/*!
- The "Star" Detector.
-
- The class implements the keypoint detector introduced by K. Konolige.
-*/
-class CV_EXPORTS_W StarDetector : public FeatureDetector
-{
-public:
-    //! the full constructor
-    CV_WRAP StarDetector(int _maxSize=45, int _responseThreshold=30,
-                 int _lineThresholdProjected=10,
-                 int _lineThresholdBinarized=8,
-                 int _suppressNonmaxSize=5);
-
-    //! finds the keypoints in the image
-    CV_WRAP_AS(detect) void operator()(const Mat& image,
-                CV_OUT std::vector<KeyPoint>& keypoints) const;
-
-    AlgorithmInfo* info() const;
-
-protected:
-    void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
-
-    int maxSize;
-    int responseThreshold;
-    int lineThresholdProjected;
-    int lineThresholdBinarized;
-    int suppressNonmaxSize;
-};
 
 //! detects corners using FAST algorithm by E. Rosten
 CV_EXPORTS void FAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
@@ -570,7 +439,6 @@ protected:
 };
 
 typedef GFTTDetector GoodFeaturesToTrackDetector;
-typedef StarDetector StarFeatureDetector;
 
 class CV_EXPORTS_W SimpleBlobDetector : public FeatureDetector
 {
@@ -623,277 +491,6 @@ protected:
   AlgorithmInfo* info() const;
 };
 
-
-class CV_EXPORTS_W DenseFeatureDetector : public FeatureDetector
-{
-public:
-    CV_WRAP explicit DenseFeatureDetector( float initFeatureScale=1.f, int featureScaleLevels=1,
-                                           float featureScaleMul=0.1f,
-                                           int initXyStep=6, int initImgBound=0,
-                                           bool varyXyStepWithScale=true,
-                                           bool varyImgBoundWithScale=false );
-    AlgorithmInfo* info() const;
-
-protected:
-    virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
-
-    double initFeatureScale;
-    int featureScaleLevels;
-    double featureScaleMul;
-
-    int initXyStep;
-    int initImgBound;
-
-    bool varyXyStepWithScale;
-    bool varyImgBoundWithScale;
-};
-
-/*
- * Adapts a detector to partition the source image into a grid and detect
- * points in each cell.
- */
-class CV_EXPORTS_W GridAdaptedFeatureDetector : public FeatureDetector
-{
-public:
-    /*
-     * detector            Detector that will be adapted.
-     * maxTotalKeypoints   Maximum count of keypoints detected on the image. Only the strongest keypoints
-     *                      will be keeped.
-     * gridRows            Grid rows count.
-     * gridCols            Grid column count.
-     */
-    CV_WRAP GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector=Ptr<FeatureDetector>(),
-                                        int maxTotalKeypoints=1000,
-                                        int gridRows=4, int gridCols=4 );
-
-    // TODO implement read/write
-    virtual bool empty() const;
-
-    AlgorithmInfo* info() const;
-
-protected:
-    virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
-
-    Ptr<FeatureDetector> detector;
-    int maxTotalKeypoints;
-    int gridRows;
-    int gridCols;
-};
-
-/*
- * Adapts a detector to detect points over multiple levels of a Gaussian
- * pyramid. Useful for detectors that are not inherently scaled.
- */
-class CV_EXPORTS_W PyramidAdaptedFeatureDetector : public FeatureDetector
-{
-public:
-    // maxLevel - The 0-based index of the last pyramid layer
-    CV_WRAP PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, int maxLevel=2 );
-
-    // TODO implement read/write
-    virtual bool empty() const;
-
-protected:
-    virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
-
-    Ptr<FeatureDetector> detector;
-    int maxLevel;
-};
-
-/** \brief A feature detector parameter adjuster, this is used by the DynamicAdaptedFeatureDetector
- *  and is a wrapper for FeatureDetector that allow them to be adjusted after a detection
- */
-class CV_EXPORTS AdjusterAdapter: public FeatureDetector
-{
-public:
-    /** pure virtual interface
-     */
-    virtual ~AdjusterAdapter() {}
-    /** too few features were detected so, adjust the detector params accordingly
-     * \param min the minimum number of desired features
-     * \param n_detected the number previously detected
-     */
-    virtual void tooFew(int min, int n_detected) = 0;
-    /** too many features were detected so, adjust the detector params accordingly
-     * \param max the maximum number of desired features
-     * \param n_detected the number previously detected
-     */
-    virtual void tooMany(int max, int n_detected) = 0;
-    /** are params maxed out or still valid?
-     * \return false if the parameters can't be adjusted any more
-     */
-    virtual bool good() const = 0;
-
-    virtual Ptr<AdjusterAdapter> clone() const = 0;
-
-    static Ptr<AdjusterAdapter> create( const String& detectorType );
-};
-/** \brief an adaptively adjusting detector that iteratively detects until the desired number
- * of features are detected.
- *  Beware that this is not thread safe - as the adjustment of parameters breaks the const
- *  of the detection routine...
- *  /TODO Make this const correct and thread safe
- *
- *  sample usage:
- //will create a detector that attempts to find 100 - 110 FAST Keypoints, and will at most run
- //FAST feature detection 10 times until that number of keypoints are found
- Ptr<FeatureDetector> detector(new DynamicAdaptedFeatureDetector(new FastAdjuster(20,true),100, 110, 10));
-
- */
-class CV_EXPORTS DynamicAdaptedFeatureDetector: public FeatureDetector
-{
-public:
-
-    /** \param adjuster an AdjusterAdapter that will do the detection and parameter adjustment
-     *  \param max_features the maximum desired number of features
-     *  \param max_iters the maximum number of times to try to adjust the feature detector params
-     *          for the FastAdjuster this can be high, but with Star or Surf this can get time consuming
-     *  \param min_features the minimum desired features
-     */
-    DynamicAdaptedFeatureDetector( const Ptr<AdjusterAdapter>& adjuster, int min_features=400, int max_features=500, int max_iters=5 );
-
-    virtual bool empty() const;
-
-protected:
-    virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
-
-private:
-    DynamicAdaptedFeatureDetector& operator=(const DynamicAdaptedFeatureDetector&);
-    DynamicAdaptedFeatureDetector(const DynamicAdaptedFeatureDetector&);
-
-    int escape_iters_;
-    int min_features_, max_features_;
-    const Ptr<AdjusterAdapter> adjuster_;
-};
-
-/**\brief an adjust for the FAST detector. This will basically decrement or increment the
- * threshold by 1
- */
-class CV_EXPORTS FastAdjuster: public AdjusterAdapter
-{
-public:
-    /**\param init_thresh the initial threshold to start with, default = 20
-     * \param nonmax whether to use non max or not for fast feature detection
-     */
-    FastAdjuster(int init_thresh=20, bool nonmax=true, int min_thresh=1, int max_thresh=200);
-
-    virtual void tooFew(int minv, int n_detected);
-    virtual void tooMany(int maxv, int n_detected);
-    virtual bool good() const;
-
-    virtual Ptr<AdjusterAdapter> clone() const;
-
-protected:
-    virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
-
-    int thresh_;
-    bool nonmax_;
-    int init_thresh_, min_thresh_, max_thresh_;
-};
-
-
-/** An adjuster for StarFeatureDetector, this one adjusts the responseThreshold for now
- * TODO find a faster way to converge the parameters for Star - use CvStarDetectorParams
- */
-class CV_EXPORTS StarAdjuster: public AdjusterAdapter
-{
-public:
-    StarAdjuster(double initial_thresh=30.0, double min_thresh=2., double max_thresh=200.);
-
-    virtual void tooFew(int minv, int n_detected);
-    virtual void tooMany(int maxv, int n_detected);
-    virtual bool good() const;
-
-    virtual Ptr<AdjusterAdapter> clone() const;
-
-protected:
-    virtual void detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
-
-    double thresh_, init_thresh_, min_thresh_, max_thresh_;
-};
-
-class CV_EXPORTS SurfAdjuster: public AdjusterAdapter
-{
-public:
-    SurfAdjuster( double initial_thresh=400.f, double min_thresh=2, double max_thresh=1000 );
-
-    virtual void tooFew(int minv, int n_detected);
-    virtual void tooMany(int maxv, int n_detected);
-    virtual bool good() const;
-
-    virtual Ptr<AdjusterAdapter> clone() const;
-
-protected:
-    virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
-
-    double thresh_, init_thresh_, min_thresh_, max_thresh_;
-};
-
-CV_EXPORTS Mat windowedMatchingMask( const std::vector<KeyPoint>& keypoints1, const std::vector<KeyPoint>& keypoints2,
-                                     float maxDeltaX, float maxDeltaY );
-
-
-
-/*
- * OpponentColorDescriptorExtractor
- *
- * Adapts a descriptor extractor to compute descriptors in Opponent Color Space
- * (refer to van de Sande et al., CGIV 2008 "Color Descriptors for Object Category Recognition").
- * Input RGB image is transformed in Opponent Color Space. Then unadapted descriptor extractor
- * (set in constructor) computes descriptors on each of the three channel and concatenate
- * them into a single color descriptor.
- */
-class CV_EXPORTS OpponentColorDescriptorExtractor : public DescriptorExtractor
-{
-public:
-    OpponentColorDescriptorExtractor( const Ptr<DescriptorExtractor>& descriptorExtractor );
-
-    virtual void read( const FileNode& );
-    virtual void write( FileStorage& ) const;
-
-    virtual int descriptorSize() const;
-    virtual int descriptorType() const;
-    virtual int defaultNorm() const;
-
-    virtual bool empty() const;
-
-protected:
-    virtual void computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors ) const;
-
-    Ptr<DescriptorExtractor> descriptorExtractor;
-};
-
-/*
- * BRIEF Descriptor
- */
-class CV_EXPORTS BriefDescriptorExtractor : public DescriptorExtractor
-{
-public:
-    static const int PATCH_SIZE = 48;
-    static const int KERNEL_SIZE = 9;
-
-    // bytes is a length of descriptor in bytes. It can be equal 16, 32 or 64 bytes.
-    BriefDescriptorExtractor( int bytes = 32 );
-
-    virtual void read( const FileNode& );
-    virtual void write( FileStorage& ) const;
-
-    virtual int descriptorSize() const;
-    virtual int descriptorType() const;
-    virtual int defaultNorm() const;
-
-    /// @todo read and write for brief
-
-    AlgorithmInfo* info() const;
-
-protected:
-    virtual void computeImpl(InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const;
-
-    typedef void(*PixelTestFn)(InputArray, const std::vector<KeyPoint>&, OutputArray);
-
-    int bytes_;
-    PixelTestFn test_fn_;
-};
 
 // KAZE/AKAZE diffusivity
 enum {
@@ -1293,208 +890,6 @@ protected:
     int addedDescCount;
 };
 
-/****************************************************************************************\
-*                                GenericDescriptorMatcher                                *
-\****************************************************************************************/
-/*
- *   Abstract interface for a keypoint descriptor and matcher
- */
-class GenericDescriptorMatcher;
-typedef GenericDescriptorMatcher GenericDescriptorMatch;
-
-class CV_EXPORTS GenericDescriptorMatcher
-{
-public:
-    GenericDescriptorMatcher();
-    virtual ~GenericDescriptorMatcher();
-
-    /*
-     * Add train collection: images and keypoints from them.
-     * images       A set of train images.
-     * ketpoints    Keypoint collection that have been detected on train images.
-     *
-     * Keypoints for which a descriptor cannot be computed are removed. Such keypoints
-     * must be filtered in this method befor adding keypoints to train collection "trainPointCollection".
-     * If inheritor class need perform such prefiltering the method add() must be overloaded.
-     * In the other class methods programmer has access to the train keypoints by a constant link.
-     */
-    virtual void add( InputArrayOfArrays images,
-                      std::vector<std::vector<KeyPoint> >& keypoints );
-
-    const std::vector<Mat>& getTrainImages() const;
-    const std::vector<std::vector<KeyPoint> >& getTrainKeypoints() const;
-
-    /*
-     * Clear images and keypoints storing in train collection.
-     */
-    virtual void clear();
-    /*
-     * Returns true if matcher supports mask to match descriptors.
-     */
-    virtual bool isMaskSupported() = 0;
-    /*
-     * Train some inner structures (e.g. flann index or decision trees).
-     * train() methods is run every time in matching methods. So the method implementation
-     * should has a check whether these inner structures need be trained/retrained or not.
-     */
-    virtual void train();
-
-    /*
-     * Classifies query keypoints.
-     * queryImage    The query image
-     * queryKeypoints   Keypoints from the query image
-     * trainImage    The train image
-     * trainKeypoints   Keypoints from the train image
-     */
-    // Classify keypoints from query image under one train image.
-    void classify( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
-                           InputArray trainImage, std::vector<KeyPoint>& trainKeypoints ) const;
-    // Classify keypoints from query image under train image collection.
-    void classify( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints );
-
-    /*
-     * Group of methods to match keypoints from image pair.
-     * Keypoints for which a descriptor cannot be computed are removed.
-     * train() method is called here.
-     */
-    // Find one best match for each query descriptor (if mask is empty).
-    void match( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
-                InputArray trainImage, std::vector<KeyPoint>& trainKeypoints,
-                std::vector<DMatch>& matches, InputArray mask=noArray() ) const;
-    // Find k best matches for each query keypoint (in increasing order of distances).
-    // compactResult is used when mask is not empty. If compactResult is false matches
-    // vector will have the same size as queryDescriptors rows.
-    // If compactResult is true matches vector will not contain matches for fully masked out query descriptors.
-    void knnMatch( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
-                   InputArray trainImage, std::vector<KeyPoint>& trainKeypoints,
-                   std::vector<std::vector<DMatch> >& matches, int k,
-                   InputArray mask=noArray(), bool compactResult=false ) const;
-    // Find best matches for each query descriptor which have distance less than maxDistance (in increasing order of distances).
-    void radiusMatch( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
-                      InputArray trainImage, std::vector<KeyPoint>& trainKeypoints,
-                      std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                      InputArray mask=noArray(), bool compactResult=false ) const;
-    /*
-     * Group of methods to match keypoints from one image to image set.
-     * See description of similar methods for matching image pair above.
-     */
-    void match( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
-                std::vector<DMatch>& matches, InputArrayOfArrays masks=noArray() );
-    void knnMatch( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
-                   std::vector<std::vector<DMatch> >& matches, int k,
-                   InputArrayOfArrays masks=noArray(), bool compactResult=false );
-    void radiusMatch(InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
-                      std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                      InputArrayOfArrays masks=noArray(), bool compactResult=false );
-
-    // Reads matcher object from a file node
-    virtual void read( const FileNode& fn );
-    // Writes matcher object to a file storage
-    virtual void write( FileStorage& fs ) const;
-
-    // Return true if matching object is empty (e.g. feature detector or descriptor matcher are empty)
-    virtual bool empty() const;
-
-    // Clone the matcher. If emptyTrainData is false the method create deep copy of the object, i.e. copies
-    // both parameters and train data. If emptyTrainData is true the method create object copy with current parameters
-    // but with empty train data.
-    virtual Ptr<GenericDescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
-
-    static Ptr<GenericDescriptorMatcher> create( const String& genericDescritptorMatcherType,
-                                                 const String &paramsFilename=String() );
-
-protected:
-    // In fact the matching is implemented only by the following two methods. These methods suppose
-    // that the class object has been trained already. Public match methods call these methods
-    // after calling train().
-    virtual void knnMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
-                               std::vector<std::vector<DMatch> >& matches, int k,
-                               InputArrayOfArrays masks, bool compactResult ) = 0;
-    virtual void radiusMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
-                                  std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                                  InputArrayOfArrays masks, bool compactResult ) = 0;
-    /*
-     * A storage for sets of keypoints together with corresponding images and class IDs
-     */
-    class CV_EXPORTS KeyPointCollection
-    {
-    public:
-        KeyPointCollection();
-        KeyPointCollection( const KeyPointCollection& collection );
-        void add( const std::vector<Mat>& images, const std::vector<std::vector<KeyPoint> >& keypoints );
-        void clear();
-
-        // Returns the total number of keypoints in the collection
-        size_t keypointCount() const;
-        size_t imageCount() const;
-
-        const std::vector<std::vector<KeyPoint> >& getKeypoints() const;
-        const std::vector<KeyPoint>& getKeypoints( int imgIdx ) const;
-        const KeyPoint& getKeyPoint( int imgIdx, int localPointIdx ) const;
-        const KeyPoint& getKeyPoint( int globalPointIdx ) const;
-        void getLocalIdx( int globalPointIdx, int& imgIdx, int& localPointIdx ) const;
-
-        const std::vector<Mat>& getImages() const;
-        const Mat& getImage( int imgIdx ) const;
-
-    protected:
-        int pointCount;
-
-        std::vector<Mat> images;
-        std::vector<std::vector<KeyPoint> > keypoints;
-        // global indices of the first points in each image, startIndices.size() = keypoints.size()
-        std::vector<int> startIndices;
-
-    private:
-        static Mat clone_op( Mat m ) { return m.clone(); }
-    };
-
-    KeyPointCollection trainPointCollection;
-};
-
-
-/****************************************************************************************\
-*                                VectorDescriptorMatcher                                 *
-\****************************************************************************************/
-
-/*
- *  A class used for matching descriptors that can be described as vectors in a finite-dimensional space
- */
-class VectorDescriptorMatcher;
-typedef VectorDescriptorMatcher VectorDescriptorMatch;
-
-class CV_EXPORTS VectorDescriptorMatcher : public GenericDescriptorMatcher
-{
-public:
-    VectorDescriptorMatcher( const Ptr<DescriptorExtractor>& extractor, const Ptr<DescriptorMatcher>& matcher );
-    virtual ~VectorDescriptorMatcher();
-
-    virtual void add( InputArrayOfArrays imgCollection,
-                      std::vector<std::vector<KeyPoint> >& pointCollection );
-
-    virtual void clear();
-
-    virtual void train();
-
-    virtual bool isMaskSupported();
-
-    virtual void read( const FileNode& fn );
-    virtual void write( FileStorage& fs ) const;
-    virtual bool empty() const;
-
-    virtual Ptr<GenericDescriptorMatcher> clone( bool emptyTrainData=false ) const;
-
-protected:
-    virtual void knnMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
-                               std::vector<std::vector<DMatch> >& matches, int k,
-                               InputArrayOfArrays masks, bool compactResult );
-    virtual void radiusMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
-                                  std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                                  InputArrayOfArrays masks, bool compactResult );
-
-    Ptr<DescriptorExtractor> extractor;
-    Ptr<DescriptorMatcher> matcher;
-};
 
 /****************************************************************************************\
 *                                   Drawing functions                                    *
@@ -1547,30 +942,23 @@ CV_EXPORTS void computeRecallPrecisionCurve( const std::vector<std::vector<DMatc
 CV_EXPORTS float getRecall( const std::vector<Point2f>& recallPrecisionCurve, float l_precision );
 CV_EXPORTS int getNearestPoint( const std::vector<Point2f>& recallPrecisionCurve, float l_precision );
 
-CV_EXPORTS void evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, const Mat& H1to2,
-                                                  std::vector<KeyPoint>& keypoints1, std::vector<KeyPoint>& keypoints2,
-                                                  std::vector<std::vector<DMatch> >* matches1to2, std::vector<std::vector<uchar> >* correctMatches1to2Mask,
-                                                  std::vector<Point2f>& recallPrecisionCurve,
-                                                  const Ptr<GenericDescriptorMatcher>& dmatch=Ptr<GenericDescriptorMatcher>() );
-
-
 /****************************************************************************************\
 *                                     Bag of visual words                                *
 \****************************************************************************************/
 /*
  * Abstract base class for training of a 'bag of visual words' vocabulary from a set of descriptors
  */
-class CV_EXPORTS BOWTrainer
+class CV_EXPORTS_W BOWTrainer
 {
 public:
     BOWTrainer();
     virtual ~BOWTrainer();
 
-    void add( const Mat& descriptors );
-    const std::vector<Mat>& getDescriptors() const;
-    int descriptorsCount() const;
+    CV_WRAP void add( const Mat& descriptors );
+    CV_WRAP const std::vector<Mat>& getDescriptors() const;
+    CV_WRAP int descriptorsCount() const;
 
-    virtual void clear();
+    CV_WRAP virtual void clear();
 
     /*
      * Train visual words vocabulary, that is cluster training descriptors and
@@ -1579,8 +967,8 @@ public:
      *
      * descriptors      Training descriptors computed on images keypoints.
      */
-    virtual Mat cluster() const = 0;
-    virtual Mat cluster( const Mat& descriptors ) const = 0;
+    CV_WRAP virtual Mat cluster() const = 0;
+    CV_WRAP virtual Mat cluster( const Mat& descriptors ) const = 0;
 
 protected:
     std::vector<Mat> descriptors;
@@ -1590,16 +978,16 @@ protected:
 /*
  * This is BOWTrainer using cv::kmeans to get vocabulary.
  */
-class CV_EXPORTS BOWKMeansTrainer : public BOWTrainer
+class CV_EXPORTS_W BOWKMeansTrainer : public BOWTrainer
 {
 public:
-    BOWKMeansTrainer( int clusterCount, const TermCriteria& termcrit=TermCriteria(),
+    CV_WRAP BOWKMeansTrainer( int clusterCount, const TermCriteria& termcrit=TermCriteria(),
                       int attempts=3, int flags=KMEANS_PP_CENTERS );
     virtual ~BOWKMeansTrainer();
 
     // Returns trained vocabulary (i.e. cluster centers).
-    virtual Mat cluster() const;
-    virtual Mat cluster( const Mat& descriptors ) const;
+    CV_WRAP virtual Mat cluster() const;
+    CV_WRAP virtual Mat cluster( const Mat& descriptors ) const;
 
 protected:
 
@@ -1612,24 +1000,27 @@ protected:
 /*
  * Class to compute image descriptor using bag of visual words.
  */
-class CV_EXPORTS BOWImgDescriptorExtractor
+class CV_EXPORTS_W BOWImgDescriptorExtractor
 {
 public:
-    BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor,
+    CV_WRAP BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor,
                                const Ptr<DescriptorMatcher>& dmatcher );
     BOWImgDescriptorExtractor( const Ptr<DescriptorMatcher>& dmatcher );
     virtual ~BOWImgDescriptorExtractor();
 
-    void setVocabulary( const Mat& vocabulary );
-    const Mat& getVocabulary() const;
+    CV_WRAP void setVocabulary( const Mat& vocabulary );
+    CV_WRAP const Mat& getVocabulary() const;
     void compute( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray imgDescriptor,
                   std::vector<std::vector<int> >* pointIdxsOfClusters=0, Mat* descriptors=0 );
     void compute( InputArray keypointDescriptors, OutputArray imgDescriptor,
                   std::vector<std::vector<int> >* pointIdxsOfClusters=0 );
     // compute() is not constant because DescriptorMatcher::match is not constant
 
-    int descriptorSize() const;
-    int descriptorType() const;
+    CV_WRAP_AS(compute) void compute2( const Mat& image, std::vector<KeyPoint>& keypoints, CV_OUT Mat& imgDescriptor )
+    { compute(image,keypoints,imgDescriptor); }
+
+    CV_WRAP int descriptorSize() const;
+    CV_WRAP int descriptorType() const;
 
 protected:
     Mat vocabulary;

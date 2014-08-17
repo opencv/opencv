@@ -65,7 +65,7 @@ int main(int argc, char** argv)
     // Read the image
     src = imread( argv[1], 1 );
 
-    if( !src.data )
+    if( src.empty() )
     {
         std::cerr<<"Invalid input image\n";
         std::cout<<usage;

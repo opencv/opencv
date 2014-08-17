@@ -767,8 +767,8 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
 
     if( depth == CV_32S || depth == CV_32F )
     {
-        const Point* ptsi = (const Point*)points.data;
-        const Point2f* ptsf = (const Point2f*)points.data;
+        const Point* ptsi = points.ptr<Point>();
+        const Point2f* ptsf = points.ptr<Point2f>();
         Point3f* dstf = lines.ptr<Point3f>();
         for( int i = 0; i < npoints; i++ )
         {
@@ -784,7 +784,7 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
     }
     else
     {
-        const Point2d* ptsd = (const Point2d*)points.data;
+        const Point2d* ptsd = points.ptr<Point2d>();
         Point3d* dstd = lines.ptr<Point3d>();
         for( int i = 0; i < npoints; i++ )
         {
@@ -829,8 +829,8 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
     {
         if( cn == 3 )
         {
-            const Point3i* sptr = (const Point3i*)src.data;
-            Point2f* dptr = (Point2f*)dst.data;
+            const Point3i* sptr = src.ptr<Point3i>();
+            Point2f* dptr = dst.ptr<Point2f>();
             for( i = 0; i < npoints; i++ )
             {
                 float scale = sptr[i].z != 0 ? 1.f/sptr[i].z : 1.f;
@@ -839,8 +839,8 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
         }
         else
         {
-            const Vec4i* sptr = (const Vec4i*)src.data;
-            Point3f* dptr = (Point3f*)dst.data;
+            const Vec4i* sptr = src.ptr<Vec4i>();
+            Point3f* dptr = dst.ptr<Point3f>();
             for( i = 0; i < npoints; i++ )
             {
                 float scale = sptr[i][3] != 0 ? 1.f/sptr[i][3] : 1.f;
@@ -852,8 +852,8 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
     {
         if( cn == 3 )
         {
-            const Point3f* sptr = (const Point3f*)src.data;
-            Point2f* dptr = (Point2f*)dst.data;
+            const Point3f* sptr = src.ptr<Point3f>();
+            Point2f* dptr = dst.ptr<Point2f>();
             for( i = 0; i < npoints; i++ )
             {
                 float scale = sptr[i].z != 0.f ? 1.f/sptr[i].z : 1.f;
@@ -862,8 +862,8 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
         }
         else
         {
-            const Vec4f* sptr = (const Vec4f*)src.data;
-            Point3f* dptr = (Point3f*)dst.data;
+            const Vec4f* sptr = src.ptr<Vec4f>();
+            Point3f* dptr = dst.ptr<Point3f>();
             for( i = 0; i < npoints; i++ )
             {
                 float scale = sptr[i][3] != 0.f ? 1.f/sptr[i][3] : 1.f;
@@ -875,8 +875,8 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
     {
         if( cn == 3 )
         {
-            const Point3d* sptr = (const Point3d*)src.data;
-            Point2d* dptr = (Point2d*)dst.data;
+            const Point3d* sptr = src.ptr<Point3d>();
+            Point2d* dptr = dst.ptr<Point2d>();
             for( i = 0; i < npoints; i++ )
             {
                 double scale = sptr[i].z != 0. ? 1./sptr[i].z : 1.;
@@ -885,8 +885,8 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
         }
         else
         {
-            const Vec4d* sptr = (const Vec4d*)src.data;
-            Point3d* dptr = (Point3d*)dst.data;
+            const Vec4d* sptr = src.ptr<Vec4d>();
+            Point3d* dptr = dst.ptr<Point3d>();
             for( i = 0; i < npoints; i++ )
             {
                 double scale = sptr[i][3] != 0.f ? 1./sptr[i][3] : 1.;
@@ -928,15 +928,15 @@ void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
     {
         if( cn == 2 )
         {
-            const Point2i* sptr = (const Point2i*)src.data;
-            Point3i* dptr = (Point3i*)dst.data;
+            const Point2i* sptr = src.ptr<Point2i>();
+            Point3i* dptr = dst.ptr<Point3i>();
             for( i = 0; i < npoints; i++ )
                 dptr[i] = Point3i(sptr[i].x, sptr[i].y, 1);
         }
         else
         {
-            const Point3i* sptr = (const Point3i*)src.data;
-            Vec4i* dptr = (Vec4i*)dst.data;
+            const Point3i* sptr = src.ptr<Point3i>();
+            Vec4i* dptr = dst.ptr<Vec4i>();
             for( i = 0; i < npoints; i++ )
                 dptr[i] = Vec4i(sptr[i].x, sptr[i].y, sptr[i].z, 1);
         }
@@ -945,15 +945,15 @@ void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
     {
         if( cn == 2 )
         {
-            const Point2f* sptr = (const Point2f*)src.data;
-            Point3f* dptr = (Point3f*)dst.data;
+            const Point2f* sptr = src.ptr<Point2f>();
+            Point3f* dptr = dst.ptr<Point3f>();
             for( i = 0; i < npoints; i++ )
                 dptr[i] = Point3f(sptr[i].x, sptr[i].y, 1.f);
         }
         else
         {
-            const Point3f* sptr = (const Point3f*)src.data;
-            Vec4f* dptr = (Vec4f*)dst.data;
+            const Point3f* sptr = src.ptr<Point3f>();
+            Vec4f* dptr = dst.ptr<Vec4f>();
             for( i = 0; i < npoints; i++ )
                 dptr[i] = Vec4f(sptr[i].x, sptr[i].y, sptr[i].z, 1.f);
         }
@@ -962,15 +962,15 @@ void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
     {
         if( cn == 2 )
         {
-            const Point2d* sptr = (const Point2d*)src.data;
-            Point3d* dptr = (Point3d*)dst.data;
+            const Point2d* sptr = src.ptr<Point2d>();
+            Point3d* dptr = dst.ptr<Point3d>();
             for( i = 0; i < npoints; i++ )
                 dptr[i] = Point3d(sptr[i].x, sptr[i].y, 1.);
         }
         else
         {
-            const Point3d* sptr = (const Point3d*)src.data;
-            Vec4d* dptr = (Vec4d*)dst.data;
+            const Point3d* sptr = src.ptr<Point3d>();
+            Vec4d* dptr = dst.ptr<Vec4d>();
             for( i = 0; i < npoints; i++ )
                 dptr[i] = Vec4d(sptr[i].x, sptr[i].y, sptr[i].z, 1.);
         }

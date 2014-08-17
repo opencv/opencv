@@ -62,7 +62,7 @@ static void writeMatInBin( const Mat& mat, const string& filename )
         fwrite( (void*)&type, sizeof(int), 1, f );
         int dataSize = (int)(mat.step * mat.rows * mat.channels());
         fwrite( (void*)&dataSize, sizeof(int), 1, f );
-        fwrite( (void*)mat.data, 1, dataSize, f );
+        fwrite( (void*)mat.ptr(), 1, dataSize, f );
         fclose(f);
     }
 }
@@ -324,28 +324,6 @@ TEST( Features2d_DescriptorExtractor_ORB, regression )
     // TODO adjust the parameters below
     CV_DescriptorExtractorTest<Hamming> test( "descriptor-orb",  (CV_DescriptorExtractorTest<Hamming>::DistanceType)12.f,
                                                  DescriptorExtractor::create("ORB") );
-    test.safe_run();
-}
-
-TEST( Features2d_DescriptorExtractor_FREAK, regression )
-{
-    // TODO adjust the parameters below
-    CV_DescriptorExtractorTest<Hamming> test( "descriptor-freak",  (CV_DescriptorExtractorTest<Hamming>::DistanceType)12.f,
-                                                 DescriptorExtractor::create("FREAK") );
-    test.safe_run();
-}
-
-TEST( Features2d_DescriptorExtractor_BRIEF, regression )
-{
-    CV_DescriptorExtractorTest<Hamming> test( "descriptor-brief",  1,
-                                               DescriptorExtractor::create("BRIEF") );
-    test.safe_run();
-}
-
-TEST( Features2d_DescriptorExtractor_OpponentBRIEF, regression )
-{
-    CV_DescriptorExtractorTest<Hamming> test( "descriptor-opponent-brief",  1,
-                                               DescriptorExtractor::create("OpponentBRIEF") );
     test.safe_run();
 }
 

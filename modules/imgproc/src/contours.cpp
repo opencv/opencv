@@ -1732,7 +1732,7 @@ void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
         _contours.create((int)c->total, 1, CV_32SC2, i, true);
         Mat ci = _contours.getMat(i);
         CV_Assert( ci.isContinuous() );
-        cvCvtSeqToArray(c, ci.data);
+        cvCvtSeqToArray(c, ci.ptr());
     }
 
     if( _hierarchy.needed() )

@@ -79,7 +79,7 @@ int main(int argc, char** argv)
     Mat tmp_frame, bgmask, out_frame;
 
     cap >> tmp_frame;
-    if(!tmp_frame.data)
+    if(tmp_frame.empty())
     {
         printf("can not read data from the video source\n");
         return -1;
@@ -88,13 +88,13 @@ int main(int argc, char** argv)
     namedWindow("video", 1);
     namedWindow("segmented", 1);
 
-    Ptr<BackgroundSubtractorMOG> bgsubtractor=createBackgroundSubtractorMOG();
-    bgsubtractor->setNoiseSigma(10);
+    Ptr<BackgroundSubtractorMOG2> bgsubtractor=createBackgroundSubtractorMOG2();
+    bgsubtractor->setVarThreshold(10);
 
     for(;;)
     {
         cap >> tmp_frame;
-        if( !tmp_frame.data )
+        if( tmp_frame.empty() )
             break;
         bgsubtractor->apply(tmp_frame, bgmask, update_bg_model ? -1 : 0);
         refineSegments(tmp_frame, bgmask, out_frame);

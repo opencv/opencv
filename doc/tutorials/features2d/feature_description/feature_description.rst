@@ -23,7 +23,7 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/features2D/SURF_descriptor.cpp>`_
+This tutorial code's is shown lines below.
 
 .. code-block:: cpp
 
@@ -32,9 +32,10 @@ This tutorial code's is shown lines below. You can also download it from `here <
    #include "opencv2/core.hpp"
    #include "opencv2/features2d.hpp"
    #include "opencv2/highgui.hpp"
-   #include "opencv2/nonfree.hpp"
+   #include "opencv2/xfeatures2d.hpp"
 
    using namespace cv;
+   using namespace cv::xfeatures2d;
 
    void readme();
 
@@ -50,25 +51,19 @@ This tutorial code's is shown lines below. You can also download it from `here <
      if( !img_1.data || !img_2.data )
       { return -1; }
 
-     //-- Step 1: Detect the keypoints using SURF Detector
+     //-- Step 1: Detect the keypoints using SURF Detector, compute the descriptors
      int minHessian = 400;
 
-     SurfFeatureDetector detector( minHessian );
+     Ptr<SURF> detector = SURF::create();
+     detector->setMinHessian(minHessian);
 
      std::vector<KeyPoint> keypoints_1, keypoints_2;
-
-     detector.detect( img_1, keypoints_1 );
-     detector.detect( img_2, keypoints_2 );
-
-     //-- Step 2: Calculate descriptors (feature vectors)
-     SurfDescriptorExtractor extractor;
-
      Mat descriptors_1, descriptors_2;
 
-     extractor.compute( img_1, keypoints_1, descriptors_1 );
-     extractor.compute( img_2, keypoints_2, descriptors_2 );
+     detector->detectAndCompute( img_1, keypoints_1, descriptors_1 );
+     detector->detectAndCompute( img_2, keypoints_2, descriptors_2 );
 
-     //-- Step 3: Matching descriptor vectors with a brute force matcher
+     //-- Step 2: Matching descriptor vectors with a brute force matcher
      BFMatcher matcher(NORM_L2);
      std::vector< DMatch > matches;
      matcher.match( descriptors_1, descriptors_2, matches );

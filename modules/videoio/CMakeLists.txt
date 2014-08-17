@@ -17,80 +17,83 @@ if(APPLE)
 endif()
 
 set(videoio_hdrs
-    src/precomp.hpp
-    src/cap_ffmpeg_impl.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg_impl.hpp
     )
 
 set(videoio_srcs
-    src/cap.cpp
-    src/cap_images.cpp
-    src/cap_ffmpeg.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap_images.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg.cpp
     )
 
-file(GLOB videoio_ext_hdrs "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
+file(GLOB videoio_ext_hdrs
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h")
 
 if(WIN32 AND NOT ARM)
-  list(APPEND videoio_srcs src/cap_cmu.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_cmu.cpp)
 endif()
 
 if (WIN32 AND HAVE_DSHOW)
-  list(APPEND videoio_srcs src/cap_dshow.cpp)
-  list(APPEND videoio_hdrs src/cap_dshow.hpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dshow.cpp)
+  list(APPEND videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dshow.hpp)
 endif()
 
 if (WIN32 AND HAVE_MSMF)
-  list(APPEND videoio_srcs src/cap_msmf.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_msmf.cpp)
 endif()
 
 if (WIN32 AND HAVE_VFW)
-  list(APPEND videoio_srcs src/cap_vfw.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_vfw.cpp)
 endif()
 
 if(HAVE_XINE)
-  list(APPEND videoio_srcs src/cap_xine.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_xine.cpp)
 endif(HAVE_XINE)
 
 if(HAVE_DC1394_2)
-  list(APPEND videoio_srcs src/cap_dc1394_v2.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dc1394_v2.cpp)
 endif(HAVE_DC1394_2)
 
 if(HAVE_DC1394)
-  list(APPEND videoio_srcs src/cap_dc1394.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dc1394.cpp)
 endif(HAVE_DC1394)
 
 if(HAVE_GSTREAMER)
-  list(APPEND videoio_srcs src/cap_gstreamer.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_gstreamer.cpp)
 endif(HAVE_GSTREAMER)
 
 if(HAVE_UNICAP)
-  list(APPEND videoio_srcs src/cap_unicap.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_unicap.cpp)
 endif(HAVE_UNICAP)
 
 if(HAVE_LIBV4L)
-  list(APPEND videoio_srcs src/cap_libv4l.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_libv4l.cpp)
 elseif(HAVE_CAMV4L OR HAVE_CAMV4L2 OR HAVE_VIDEOIO)
-  list(APPEND videoio_srcs src/cap_v4l.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_v4l.cpp)
 endif()
 
 if(HAVE_OPENNI)
-  list(APPEND videoio_srcs src/cap_openni.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_openni.cpp)
   ocv_include_directories(${OPENNI_INCLUDE_DIR})
   list(APPEND VIDEOIO_LIBRARIES ${OPENNI_LIBRARY})
 endif(HAVE_OPENNI)
 
 if(HAVE_OPENNI2)
-  list(APPEND videoio_srcs src/cap_openni2.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_openni2.cpp)
   ocv_include_directories(${OPENNI2_INCLUDE_DIR})
   list(APPEND VIDEOIO_LIBRARIES ${OPENNI2_LIBRARY})
 endif(HAVE_OPENNI2)
 
 if(HAVE_opencv_androidcamera)
-  list(APPEND videoio_srcs src/cap_android.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_android.cpp)
   add_definitions(-DHAVE_ANDROID_NATIVE_CAMERA)#TODO: remove this line
 endif(HAVE_opencv_androidcamera)
 
 if(HAVE_XIMEA)
-  list(APPEND videoio_srcs src/cap_ximea.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ximea.cpp)
   ocv_include_directories(${XIMEA_PATH})
   if(XIMEA_LIBRARY_DIR)
     link_directories("${XIMEA_LIBRARY_DIR}")
@@ -115,40 +118,43 @@ if(HAVE_PVAPI)
   add_definitions(-DHAVE_PVAPI)
   add_definitions(${PVAPI_DEFINITIONS})
   ocv_include_directories(${PVAPI_INCLUDE_PATH})
-  set(videoio_srcs src/cap_pvapi.cpp ${videoio_srcs})
+  set(videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_pvapi.cpp ${videoio_srcs})
   list(APPEND VIDEOIO_LIBRARIES ${PVAPI_LIBRARY})
 endif()
 
 if(HAVE_GIGE_API)
   add_definitions(-DHAVE_GIGE_API)
   ocv_include_directories(${GIGEAPI_INCLUDE_PATH})
-  set(videoio_srcs src/cap_giganetix.cpp ${videoio_srcs})
+  set(videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_giganetix.cpp ${videoio_srcs})
   list(APPEND VIDEOIO_LIBRARIES ${GIGEAPI_LIBRARIES})
-  list(APPEND videoio_srcs src/cap_giganetix.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_giganetix.cpp)
 endif(HAVE_GIGE_API)
 
 if(HAVE_AVFOUNDATION)
-  list(APPEND videoio_srcs src/cap_avfoundation.mm)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_avfoundation.mm)
   list(APPEND VIDEOIO_LIBRARIES "-framework AVFoundation" "-framework QuartzCore")
 endif()
 
 if(HAVE_QUICKTIME)
-  list(APPEND videoio_srcs src/cap_qt.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_qt.cpp)
   list(APPEND VIDEOIO_LIBRARIES "-framework Carbon" "-framework QuickTime" "-framework CoreFoundation" "-framework QuartzCore")
 elseif(HAVE_QTKIT)
-  list(APPEND videoio_srcs src/cap_qtkit.mm)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_qtkit.mm)
   list(APPEND VIDEOIO_LIBRARIES "-framework QTKit" "-framework QuartzCore" "-framework AppKit")
 endif()
 
 if(HAVE_INTELPERC)
-  list(APPEND videoio_srcs src/cap_intelperc.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_intelperc.cpp)
   ocv_include_directories(${INTELPERC_INCLUDE_DIR})
   list(APPEND VIDEOIO_LIBRARIES ${INTELPERC_LIBRARIES})
 endif(HAVE_INTELPERC)
 
 if(IOS)
   add_definitions(-DHAVE_IOS=1)
-  list(APPEND videoio_srcs src/cap_ios_abstract_camera.mm src/cap_ios_photo_camera.mm src/cap_ios_video_camera.mm)
+  list(APPEND videoio_srcs
+       ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_abstract_camera.mm
+       ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_photo_camera.mm
+       ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_video_camera.mm)
   list(APPEND VIDEOIO_LIBRARIES "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreImage" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore" "-framework AssetsLibrary")
 endif()
 
@@ -176,6 +182,7 @@ ocv_module_include_directories()
 
 ocv_create_module(${VIDEOIO_LIBRARIES})
 
+macro(ocv_videoio_configure_target)
 if(APPLE)
   ocv_check_flag_support(OBJCXX "-fobjc-exceptions" HAVE_OBJC_EXCEPTIONS)
   if(HAVE_OBJC_EXCEPTIONS)
@@ -203,9 +210,10 @@ if(MSVC)
 endif()
 
 #stop automatic dependencies propagation for this module
-set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
+if(NOT BUILD_opencv_world)
+  set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
+endif()
 
-ocv_add_precompiled_headers(${the_module})
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
 
 if(WIN32 AND WITH_FFMPEG)
@@ -234,6 +242,11 @@ if(WIN32 AND WITH_FFMPEG)
   endif()
 
   install(FILES "${ffmpeg_path}" DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT libs RENAME "${ffmpeg_bare_name_ver}")
+endif()
+endmacro()
+
+if(NOT BUILD_opencv_world)
+  ocv_videoio_configure_target()
 endif()
 
 ocv_add_accuracy_tests()

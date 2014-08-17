@@ -9,7 +9,7 @@
 #define __OPENCV_FEATURES_2D_AKAZE_CONFIG_H__
 
 // OpenCV Includes
-#include "precomp.hpp"
+#include "../precomp.hpp"
 #include <opencv2/features2d.hpp>
 
 //*************************************************************************************

@@ -41,7 +41,7 @@ int main( int argc, char* argv[])
     else
         I = imread(argv[1], IMREAD_COLOR);
 
-    if (!I.data)
+    if (I.empty())
     {
         cout << "The image" << argv[1] << " could not be loaded." << endl;
         return -1;
@@ -107,7 +107,7 @@ int main( int argc, char* argv[])
         << times << " runs): " << t << " milliseconds."<< endl;
 
     Mat lookUpTable(1, 256, CV_8U);
-    uchar* p = lookUpTable.data;
+    uchar* p = lookUpTable.ptr();
     for( int i = 0; i < 256; ++i)
         p[i] = table[i];
 
