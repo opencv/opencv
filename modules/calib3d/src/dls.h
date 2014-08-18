@@ -3,6 +3,8 @@
 
 #include "precomp.hpp"
 
+#include <iostream>
+
 using namespace std;
 using namespace cv;
 
@@ -77,6 +79,87 @@ private:
     double cost__;                            // optimal found solution
 };
 
+class Parallel_compute_A : public cv::ParallelLoopBody
+{
+private:
+  cv::Mat eye, *A;
+  const cv::Mat *pp, *z;
+
+public:
+  Parallel_compute_A( cv::Mat * _A, const cv::Mat * _pp, const cv::Mat * _z)
+      : A(_A), pp(_pp), z(_z)
+  {
+      eye = cv::Mat::eye(3, 3, CV_64F);
+  }
+
+  cv::Mat leftMultVec(const cv::Mat& v) const
+  {
+      cv::Mat mat_(3, 9, CV_64F, 0.0);
+      for (int i = 0; i < 3; ++i)
+      {
+          mat_.at<double>(i, 3*i + 0) = v.at<double>(0);
+          mat_.at<double>(i, 3*i + 1) = v.at<double>(1);
+          mat_.at<double>(i, 3*i + 2) = v.at<double>(2);
+      }
+      return mat_;
+  }
+
+  virtual void operator()( const cv::Range &r ) const {
+    for ( int i = r.start; i != r.end; ++i)
+    {
+    	cv::Mat z_i(3, 1, CV_64F);
+    	cv::Mat pp_i(3, 1, CV_64F);
+    	int index = i;
+
+        z->col(index).copyTo(z_i);
+        pp->col(index).copyTo(pp_i);
+        *A += ( z_i*z_i.t() - eye ) * leftMultVec(pp_i);
+    }
+  }
+
+};
+
+class Parallel_compute_D : public cv::ParallelLoopBody
+{
+private:
+  cv::Mat eye, *D;
+  const cv::Mat *pp, *z, *A;
+
+public:
+  Parallel_compute_D( cv::Mat * _D, const cv::Mat * _A, const cv::Mat * _pp, const cv::Mat * _z)
+      : D(_D), A(_A), pp(_pp), z(_z)
+  {
+      eye = cv::Mat::eye(3, 3, CV_64F);
+  }
+
+  cv::Mat leftMultVec(const cv::Mat& v) const
+  {
+      cv::Mat mat_(3, 9, CV_64F, 0.0);
+      for (int i = 0; i < 3; ++i)
+      {
+          mat_.at<double>(i, 3*i + 0) = v.at<double>(0);
+          mat_.at<double>(i, 3*i + 1) = v.at<double>(1);
+          mat_.at<double>(i, 3*i + 2) = v.at<double>(2);
+      }
+      return mat_;
+  }
+
+  virtual void operator()( const cv::Range &r ) const {
+    for ( int i = r.start; i != r.end; ++i)
+    {
+    	cv::Mat z_i(3, 1, CV_64F);
+		cv::Mat pp_i(3, 1, CV_64F);
+		cv::Mat ppi_A(3, 9, CV_64F);
+		int index = i;
+
+        z->col(index).copyTo(z_i);
+        pp->col(index).copyTo(pp_i);
+		cv::Mat(leftMultVec(pp_i) + *A).copyTo(ppi_A);
+		*D += ppi_A.t() * ( eye - z_i*z_i.t() ) * ppi_A;
+    }
+  }
+
+};
 
 class EigenvalueDecomposition {
 private:
