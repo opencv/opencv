@@ -221,6 +221,12 @@ void dls::build_coeff_matrix(const cv::Mat& pp, cv::Mat& Mtilde, cv::Mat& D)
 
     cv::Mat H = cv::Mat::zeros(3, 3, CV_64F);
     cv::Mat A = cv::Mat::zeros(3, 9, CV_64F);
+    cv::Mat pp_i(3, 1, CV_64F);
+
+    //Parallel_compute_A comp_A(&A, &pp, &z);
+    //cv::parallel_for_(cv::Range(0, N), comp_A);
+
+    //exit(-1);
 
     cv::Mat z_i(3, 1, CV_64F);
     for (int i = 0; i < N; ++i)
@@ -234,6 +240,9 @@ void dls::build_coeff_matrix(const cv::Mat& pp, cv::Mat& Mtilde, cv::Mat& D)
     // A\B
     cv::solve(H, A, A, cv::DECOMP_NORMAL);
     H.release();
+
+    //Parallel_compute_D comp_D(&D, &A, &pp, &z);
+    //cv::parallel_for_(cv::Range(0, N), comp_D);
 
     cv::Mat ppi_A(3, 1, CV_64F);
     for (int i = 0; i < N; ++i)
@@ -393,9 +402,6 @@ void dls::fill_coeff(const cv::Mat * D_mat)
 
 cv::Mat dls::LeftMultVec(const cv::Mat& v)
 {
-    //cv::Mat mat, row1, row2, row3;
-    //cv::Mat zeros16 = cv::Mat::zeros(1, 6, CV_64F);
-    //cv::Mat zeros13 = cv::Mat::zeros(1, 3, CV_64F);
     cv::Mat mat_ = cv::Mat::zeros(3, 9, CV_64F);
 
     for (int i = 0; i < 3; ++i)
@@ -404,6 +410,12 @@ cv::Mat dls::LeftMultVec(const cv::Mat& v)
         mat_.at<double>(i, 3*i + 1) = v.at<double>(1);
         mat_.at<double>(i, 3*i + 2) = v.at<double>(2);
     }
+    /*for (int i = 0; i < 3; ++i)
+    {
+		mat_.data[mat_.step[0]*i + mat_.step[1]* 3*i + 0] = v.at<double>(0);
+		mat_.data[mat_.step[0]*i + mat_.step[1]* 3*i + 1] = v.at<double>(1);
+		mat_.data[mat_.step[0]*i + mat_.step[1]* 3*i + 2] = v.at<double>(2);
+    }*/
 
     return mat_;
 }
