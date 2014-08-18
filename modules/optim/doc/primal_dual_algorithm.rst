@@ -63,7 +63,7 @@ In 3D reconstruction, a common way to find the location of points in space is to
         \mathbf{C(d)}
 
 (This is implicitly summed over the whole image.)  
-The problem is that may different depths will produce reasonable colors when pixels are considered individually so we add a term to the cost penalizing the difference between pixels and add a weighting factor:
+The problem is that many different depths will produce reasonable colors when pixels are considered individually so we add a term to the cost penalizing the difference between pixels and add a weighting factor:
 
 .. math::
         f\mathbf{(\nabla\mathbf{d}) + \lambda C(d)}
@@ -75,7 +75,7 @@ where :math:`\mathbf{\nabla d}` is the difference between neighbouring pixels.
 One common choice for :math:`f` is the *Huber norm*, which is 
 
 .. math::
-        \left\| \nabla \mathbf{d} \right\|_e= \left\{\begin{matrix} \frac{(\nabla \mathbf{d})^2}{2e} & \mathrm{if} \left | \nabla \mathbf{d} \right | < e \\ \left |\nabla \mathbf{d} \right | &\mathrm{else} \end{matrix}\right. 
+        \left\| \nabla \mathbf{d} \right\|_e= \left\{\begin{matrix} \frac{(\nabla \mathbf{d})^2}{2\epsilon} & \mathrm{if} \left | \nabla \mathbf{d} \right | < \epsilon \\ \left |\nabla \mathbf{d} \right | - \frac{\epsilon}{2} &\mathrm{else} \end{matrix}\right. 
 
 This is the same as a metal wire: it starts out acting like a spring, but when stretched too much it deforms plastically.
 
@@ -99,7 +99,7 @@ We can also give a hint to the left hand side that certain places are likely to 
 
 The function :math:`\mathbf{g}` is the weight function.
 
-The right half is literally just a search through all possible values of :math:`\mathbf{C(\mathbf{a})}` for each pixel.
+The right half is a literal search through all possible values of :math:`\mathbf{C(\mathbf{a})}` for each pixel.
 
 It turns out that solving the left half:
 
@@ -118,9 +118,9 @@ primal-dual algorithm [ChambollePock]_ ::
     {
     public:
         //! This may be called repeatedly to iteratively refine the internal depthmap
-        virtual cv::cuda::GpuMat operator()(InputArray input,
-                                            float epsilon,
-                                            float theta) = 0;
+        virtual GpuMat operator()(InputArray input,
+                                  float epsilon,
+                                  float theta) = 0;
         
         //! In case you want to do these explicitly, or use a custom g function
         //! gx(x,y) is the weight between pixels (x,y) and (x+1,y) (right neighbor)
@@ -129,6 +129,16 @@ primal-dual algorithm [ChambollePock]_ ::
         virtual void cacheGValues(InputArray visibleLightImage=GpuMat()) = 0;
     };
 
+DepthmapDenoiseWeightedHuber::()
+---------------------------------
+
+ .. ocv:function:: GpuMat operator()(InputArray input, float epsilon, float theta)
+ 
+    :param input: Depthmap to refine
+    
+    :param epsilon: Huber norm elastic to plastic threshold :math:`\epsilon`.
+    
+    :param theta: Stiffness constant :math:`\theta`.
 
 DepthmapDenoiseWeightedHuber::allocate
 --------------------------------------
@@ -137,10 +147,12 @@ Use to preallocate memory for the functor or replace the internal :math:`\mathbf
         
  .. ocv:function:: allocate(int rows, int cols, InputArray gx=GpuMat(),InputArray gy=GpuMat())
 
-    :param rows, cols: Size of the image to process
+    :param rows,cols: Size of the image to process
     
-    :param gx,gy: Optional replacement for the :math:`\mathbf{g}` function that would be 
+    :param gx,gy: Optional replacement for the :math:`\mathbf{g}` function that would be generated internally
     
+
+ 
 DepthmapDenoiseWeightedHuber::cacheGValues
 ------------------------------------------
 
@@ -159,7 +171,7 @@ Generates a denoising functor to handle the algorithm state on the GPU.
     
     :param visibleLightImage: This is an optional grayscale image (CV_32FC1 for best performance) of the scene corresponding to the depthmap to be optimized. The algorithm uses the image to construct the :math:`\mathbf{g}` function, to provide hints for the location of edge discontinuities.
     
-    :param s:The stream to run on. The functor is fully asyncronous except for memory allocation (always synchronous as of the current cuda release). allocate() and cacheGValues() can be called to 
+    :param s: The stream to run on. The functor is fully asyncronous except for memory allocation (always synchronous as of the current CUDA release). To allow fully asynchronous behavior, the functor should be created ahead of time and ``allocate()`` called. ``cacheGValues()`` can then be called later with the appropriate ``visibleLightImage`` without creating a sequence point.
 
 
 .. [ChambollePock] Antonin Chambolle and Thomas Pock. "A first-order primal-dual algorithm for convex problems with applications to imaging." 
