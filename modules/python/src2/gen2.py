@@ -774,18 +774,17 @@ class PythonWrapperGenerator(object):
         chunks = decl[0].split('.')
         name = chunks[-1]
         cname = '::'.join(chunks)
-        namespace = '.'.join(chunks[:-1])
-        classname = normalize_class_name(namespace)
-        if classname in self.classes:
-            bareclassname = chunks[-2]
-            namespace = '.'.join(chunks[:-2])
-            if normalize_class_name(namespace) in self.classes:
-                print('Note: skipping "%s" (nested classes are currently not supported)'%decl[0])
-                return
-        else:            
-            classname = ''
-            bareclassname = ''
- 
+        namespace = chunks[:-1]
+        classes = []
+        while normalize_class_name('.'.join(namespace)) in self.classes:
+            classes.insert(0, namespace.pop())
+        classname = ''
+        bareclassname = ''
+        if classes:
+            classname = normalize_class_name('.'.join(namespace+classes))
+            bareclassname = classes[-1]
+        namespace = '.'.join(namespace)
+
         isconstructor = name == bareclassname
         isclassmethod = False
         for m in decl[2]:
@@ -794,8 +793,10 @@ class PythonWrapperGenerator(object):
             elif m.startswith("="):
                 name = m[1:]
         if isclassmethod:
-            name = bareclassname+"_"+name
+            name = "_".join(classes+[name])
             classname = ''
+        elif isconstructor:
+            name = "_".join(classes[:-1]+[name])
 
         if classname and not isconstructor:
             cname = chunks[-1]

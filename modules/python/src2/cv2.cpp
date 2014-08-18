@@ -83,8 +83,6 @@ catch (const cv::Exception &e) \
 }
 
 using namespace cv;
-using cv::flann::IndexParams;
-using cv::flann::SearchParams;
 
 typedef std::vector<uchar> vector_uchar;
 typedef std::vector<char> vector_char;
