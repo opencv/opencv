@@ -378,7 +378,6 @@ PERF_TEST_P(ImagePair, OpticalFlowDual_TVL1,
         alg->set("medianFiltering", 1);
         alg->set("innerIterations", 1);
         alg->set("outerIterations", 300);
-
         TEST_CYCLE() alg->calc(frame0, frame1, flow);
 
         CPU_SANITY_CHECK(flow);

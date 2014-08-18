@@ -166,7 +166,13 @@ TEST(Video_calcOpticalFlowDual_TVL1, Regression)
     ASSERT_EQ(gold.rows, flow.rows);
     ASSERT_EQ(gold.cols, flow.cols);
 
-    const double err = calcRMSE(gold, flow);
+    double err = calcRMSE(gold, flow);
+    EXPECT_LE(err, MAX_RMSE);
+    tvl1->set("gamma", 1.f);
+    tvl1->calc(frame1, frame2, flow);
+    ASSERT_EQ(gold.rows, flow.rows);
+    ASSERT_EQ(gold.cols, flow.cols);
+    err = calcRMSE(gold, flow);
     EXPECT_LE(err, MAX_RMSE);
 #endif
 }
