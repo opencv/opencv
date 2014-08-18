@@ -229,13 +229,9 @@ void dls::build_coeff_matrix(const cv::Mat& pp, cv::Mat& Mtilde, cv::Mat& D)
     cv::solve(H, A, A, cv::DECOMP_NORMAL);
     H.release();
 
-    //Parallel_compute_D comp_D(&D, &A, &pp, &z);
-    //cv::parallel_for_(cv::Range(0, N), comp_D);
-
     cv::Mat ppi_A(3, 1, CV_64F);
     for (int i = 0; i < N; ++i)
     {
-        //z_i = z.col(i);
         z.col(i).copyTo(z_i);
         ppi_A = LeftMultVec(pp.col(i)) + A;
         D += ppi_A.t() * ( eye - z_i*z_i.t() ) * ppi_A;
@@ -398,13 +394,6 @@ cv::Mat dls::LeftMultVec(const cv::Mat& v)
         mat_.at<double>(i, 3*i + 1) = v.at<double>(1);
         mat_.at<double>(i, 3*i + 2) = v.at<double>(2);
     }
-    /*for (int i = 0; i < 3; ++i)
-    {
-		mat_.data[mat_.step[0]*i + mat_.step[1]* 3*i + 0] = v.at<double>(0);
-		mat_.data[mat_.step[0]*i + mat_.step[1]* 3*i + 1] = v.at<double>(1);
-		mat_.data[mat_.step[0]*i + mat_.step[1]* 3*i + 2] = v.at<double>(2);
-    }*/
-
     return mat_;
 }
 
