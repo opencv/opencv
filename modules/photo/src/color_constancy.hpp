@@ -547,7 +547,7 @@ void Constancy::general_cc(Mat &I, int njet, int mink_norm, int sigma, double &w
         white_G = pow(sum(kleur_channel[1].mul(mask_im2))[0],t1);
         white_B = pow(sum(kleur_channel[0].mul(mask_im2))[0],t1);
 
-        float som = sqrt(pow(white_R,2) + pow(white_G,2) + pow(white_B,2));
+        double som = sqrt(pow(white_R,2) + pow(white_G,2) + pow(white_B,2));
 
         white_R = white_R/som;
         white_G = white_G/som;
@@ -567,7 +567,7 @@ void Constancy::general_cc(Mat &I, int njet, int mink_norm, int sigma, double &w
         minMaxLoc(RGB_channels[0].mul(mask_im2), NULL, &maxVal);
         white_B = maxVal;
 
-        float som = sqrt(pow(white_R,2) + pow(white_G,2) + pow(white_B,2));
+        double som = sqrt(pow(white_R,2) + pow(white_G,2) + pow(white_B,2));
 
         white_R = white_R/som;
         white_G = white_G/som;

@@ -225,7 +225,7 @@ void Intrinsic::decompose(Mat &rgbIm, Mat &ref, Mat &shade, int wd, int iterNum,
             pow(subtract,2,subtract);
 
             double minVal;
-            cv::minMaxIdx(subtract, &minVal,NULL);
+            cv::minMaxLoc(subtract, &minVal,NULL);
 
             double temp_val = -1*minVal/log_val;
             csig = calc(csig,temp_val);
@@ -262,7 +262,7 @@ void Intrinsic::decompose(Mat &rgbIm, Mat &ref, Mat &shade, int wd, int iterNum,
             pow(cvals-1,2,power_cvals);
 
             double minVal1;
-            cv::minMaxIdx(power_cvals, &minVal1,NULL);
+            cv::minMaxLoc(power_cvals, &minVal1,NULL);
 
             double temp_val1 = -1*minVal1/log_val;
             csig_cvals = calc(csig_cvals,temp_val1);
