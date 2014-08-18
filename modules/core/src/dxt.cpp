@@ -1832,7 +1832,8 @@ public:
             n *= radix;
         }
 
-        Mat tw(1, twiddle_size, CV_32FC2);
+        twiddles.create(1, twiddle_size, CV_32FC2);
+        Mat tw = twiddles.getMat(ACCESS_WRITE);
         float* ptr = tw.ptr<float>();
         int ptr_index = 0;
 
@@ -1853,7 +1854,6 @@ public:
                 }
             }
         }
-        twiddles = tw.getUMat(ACCESS_READ);
 
         buildOptions = format("-D LOCAL_SIZE=%d -D kercn=%d -D RADIX_PROCESS=%s",
                               dft_size, min_radix, radix_processing.c_str());
