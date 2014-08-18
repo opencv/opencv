@@ -311,11 +311,11 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         int x, y;
         for( y = 0; y < winSize.height; y++ )
         {
-            const uchar* src = (const uchar*)I.data + (y + iprevPt.y)*stepI + iprevPt.x*cn;
-            const deriv_type* dsrc = (const deriv_type*)derivI.data + (y + iprevPt.y)*dstep + iprevPt.x*cn2;
+            const uchar* src = I.ptr() + (y + iprevPt.y)*stepI + iprevPt.x*cn;
+            const deriv_type* dsrc = derivI.ptr<deriv_type>() + (y + iprevPt.y)*dstep + iprevPt.x*cn2;
 
-            deriv_type* Iptr = (deriv_type*)(IWinBuf.data + y*IWinBuf.step);
-            deriv_type* dIptr = (deriv_type*)(derivIWinBuf.data + y*derivIWinBuf.step);
+            deriv_type* Iptr = IWinBuf.ptr<deriv_type>(y);
+            deriv_type* dIptr = derivIWinBuf.ptr<deriv_type>(y);
 
             x = 0;
 
@@ -541,9 +541,9 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
             for( y = 0; y < winSize.height; y++ )
             {
-                const uchar* Jptr = (const uchar*)J.data + (y + inextPt.y)*stepJ + inextPt.x*cn;
-                const deriv_type* Iptr = (const deriv_type*)(IWinBuf.data + y*IWinBuf.step);
-                const deriv_type* dIptr = (const deriv_type*)(derivIWinBuf.data + y*derivIWinBuf.step);
+                const uchar* Jptr = J.ptr() + (y + inextPt.y)*stepJ + inextPt.x*cn;
+                const deriv_type* Iptr = IWinBuf.ptr<deriv_type>(y);
+                const deriv_type* dIptr = derivIWinBuf.ptr<deriv_type>(y);
 
                 x = 0;
 
@@ -725,8 +725,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
             for( y = 0; y < winSize.height; y++ )
             {
-                const uchar* Jptr = (const uchar*)J.data + (y + inextPoint.y)*stepJ + inextPoint.x*cn;
-                const deriv_type* Iptr = (const deriv_type*)(IWinBuf.data + y*IWinBuf.step);
+                const uchar* Jptr = J.ptr() + (y + inextPoint.y)*stepJ + inextPoint.x*cn;
+                const deriv_type* Iptr = IWinBuf.ptr<deriv_type>(y);
 
                 for( x = 0; x < winSize.width*cn; x++ )
                 {
@@ -1120,13 +1120,13 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
     Mat nextPtsMat = _nextPts.getMat();
     CV_Assert( nextPtsMat.checkVector(2, CV_32F, true) == npoints );
 
-    const Point2f* prevPts = (const Point2f*)prevPtsMat.data;
-    Point2f* nextPts = (Point2f*)nextPtsMat.data;
+    const Point2f* prevPts = prevPtsMat.ptr<Point2f>();
+    Point2f* nextPts = nextPtsMat.ptr<Point2f>();
 
     _status.create((int)npoints, 1, CV_8U, -1, true);
     Mat statusMat = _status.getMat(), errMat;
     CV_Assert( statusMat.isContinuous() );
-    uchar* status = statusMat.data;
+    uchar* status = statusMat.ptr();
     float* err = 0;
 
     for( i = 0; i < npoints; i++ )
@@ -1137,7 +1137,7 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         _err.create((int)npoints, 1, CV_32F, -1, true);
         errMat = _err.getMat();
         CV_Assert( errMat.isContinuous() );
-        err = (float*)errMat.data;
+        err = errMat.ptr<float>();
     }
 
     std::vector<Mat> prevPyr, nextPyr;
@@ -1230,7 +1230,7 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         {
             Size imgSize = prevPyr[level * lvlStep1].size();
             Mat _derivI( imgSize.height + winSize.height*2,
-                imgSize.width + winSize.width*2, derivIBuf.type(), derivIBuf.data );
+                imgSize.width + winSize.width*2, derivIBuf.type(), derivIBuf.ptr() );
             derivI = _derivI(Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
             calcSharrDeriv(prevPyr[level * lvlStep1], derivI);
             copyMakeBorder(derivI, _derivI, winSize.height, winSize.height, winSize.width, winSize.width, BORDER_CONSTANT|BORDER_ISOLATED);

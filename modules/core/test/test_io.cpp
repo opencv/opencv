@@ -126,7 +126,7 @@ protected:
 
             CvSeq* seq = cvCreateSeq(test_mat.type(), (int)sizeof(CvSeq),
                                      (int)test_mat.elemSize(), storage);
-            cvSeqPushMulti(seq, test_mat.data, test_mat.cols*test_mat.rows);
+            cvSeqPushMulti(seq, test_mat.ptr(), test_mat.cols*test_mat.rows);
 
             CvGraph* graph = cvCreateGraph( CV_ORIENTED_GRAPH,
                                            sizeof(CvGraph), sizeof(CvGraphVtx),

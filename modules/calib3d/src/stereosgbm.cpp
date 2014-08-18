@@ -383,12 +383,12 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     width*16*img1.channels()*sizeof(PixType) + // temp buffer for computing per-pixel cost
     width*(sizeof(CostType) + sizeof(DispType)) + 1024; // disp2cost + disp2
 
-    if( !buffer.data || !buffer.isContinuous() ||
+    if( buffer.empty() || !buffer.isContinuous() ||
         buffer.cols*buffer.rows*buffer.elemSize() < totalBufSize )
         buffer.create(1, (int)totalBufSize, CV_8U);
 
     // summary cost over different (nDirs) directions
-    CostType* Cbuf = (CostType*)alignPtr(buffer.data, ALIGN);
+    CostType* Cbuf = (CostType*)alignPtr(buffer.ptr(), ALIGN);
     CostType* Sbuf = Cbuf + CSBufSize;
     CostType* hsumBuf = Sbuf + CSBufSize;
     CostType* pixDiff = hsumBuf + costBufSize*hsumBufNRows;
@@ -982,10 +982,10 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
 
     int width = img.cols, height = img.rows, npixels = width*height;
     size_t bufSize = npixels*(int)(sizeof(Point2s) + sizeof(int) + sizeof(uchar));
-    if( !_buf.isContinuous() || !_buf.data || _buf.cols*_buf.rows*_buf.elemSize() < bufSize )
+    if( !_buf.isContinuous() || _buf.empty() || _buf.cols*_buf.rows*_buf.elemSize() < bufSize )
         _buf.create(1, (int)bufSize, CV_8U);
 
-    uchar* buf = _buf.data;
+    uchar* buf = _buf.ptr();
     int i, j, dstep = (int)(img.step/sizeof(T));
     int* labels = (int*)buf;
     buf += npixels*sizeof(labels[0]);
@@ -1097,10 +1097,10 @@ void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSi
         if ((int)status >= 0)
         {
             if (type == CV_8UC1)
-                status = ippiMarkSpeckles_8u_C1IR((Ipp8u *)img.data, (int)img.step, roisize,
+                status = ippiMarkSpeckles_8u_C1IR(img.ptr<Ipp8u>(), (int)img.step, roisize,
                                                   (Ipp8u)newVal, maxSpeckleSize, (Ipp8u)maxDiff, ippiNormL1, buffer);
             else
-                status = ippiMarkSpeckles_16s_C1IR((Ipp16s *)img.data, (int)img.step, roisize,
+                status = ippiMarkSpeckles_16s_C1IR(img.ptr<Ipp16s>(), (int)img.step, roisize,
                                                    (Ipp16s)newVal, maxSpeckleSize, (Ipp16s)maxDiff, ippiNormL1, buffer);
         }
 

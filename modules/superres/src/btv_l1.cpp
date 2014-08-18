@@ -485,7 +485,7 @@ namespace
         bool ocl_process(InputArrayOfArrays src, OutputArray dst, InputArrayOfArrays forwardMotions,
                          InputArrayOfArrays backwardMotions, int baseIdx);
 
-        Ptr<FilterEngine> filter_;
+        //Ptr<FilterEngine> filter_;
         int curBlurKernelSize_;
         double curBlurSigma_;
         int curSrcType_;
@@ -559,9 +559,9 @@ namespace
                 & backwardMotions = *(std::vector<UMat> *)_backwardMotions.getObj();
 
         // update blur filter and btv weights
-        if (!filter_ || blurKernelSize_ != curBlurKernelSize_ || blurSigma_ != curBlurSigma_ || src[0].type() != curSrcType_)
+        if (blurKernelSize_ != curBlurKernelSize_ || blurSigma_ != curBlurSigma_ || src[0].type() != curSrcType_)
         {
-            filter_ = createGaussianFilter(src[0].type(), Size(blurKernelSize_, blurKernelSize_), blurSigma_);
+            //filter_ = createGaussianFilter(src[0].type(), Size(blurKernelSize_, blurKernelSize_), blurSigma_);
             curBlurKernelSize_ = blurKernelSize_;
             curBlurSigma_ = blurSigma_;
             curSrcType_ = src[0].type();
@@ -662,9 +662,9 @@ namespace
                 & backwardMotions = *(std::vector<Mat> *)_backwardMotions.getObj();
 
         // update blur filter and btv weights
-        if (!filter_ || blurKernelSize_ != curBlurKernelSize_ || blurSigma_ != curBlurSigma_ || src[0].type() != curSrcType_)
+        if (blurKernelSize_ != curBlurKernelSize_ || blurSigma_ != curBlurSigma_ || src[0].type() != curSrcType_)
         {
-            filter_ = createGaussianFilter(src[0].type(), Size(blurKernelSize_, blurKernelSize_), blurSigma_);
+            //filter_ = createGaussianFilter(src[0].type(), Size(blurKernelSize_, blurKernelSize_), blurSigma_);
             curBlurKernelSize_ = blurKernelSize_;
             curBlurSigma_ = blurSigma_;
             curSrcType_ = src[0].type();
@@ -709,7 +709,7 @@ namespace
                 // a = M * Ih
                 remap(highRes_, a_, backwardMaps_[k], noArray(), INTER_NEAREST);
                 // b = HM * Ih
-                filter_->apply(a_, b_);
+                GaussianBlur(a_, b_, Size(blurKernelSize_, blurKernelSize_), blurSigma_);
                 // c = DHM * Ih
                 resize(b_, c_, lowResSize, 0, 0, INTER_NEAREST);
 
@@ -718,7 +718,7 @@ namespace
                 // a = Dt * diff
                 upscale(c_, a_, scale_);
                 // b = HtDt * diff
-                filter_->apply(a_, b_);
+                GaussianBlur(a_, b_, Size(blurKernelSize_, blurKernelSize_), blurSigma_);
                 // a = MtHtDt * diff
                 remap(b_, a_, forwardMaps_[k], noArray(), INTER_NEAREST);
 
@@ -740,8 +740,6 @@ namespace
 
     void BTVL1_Base::collectGarbage()
     {
-        filter_.release();
-
         // Mat
         lowResForwardMotions_.clear();
         lowResBackwardMotions_.clear();

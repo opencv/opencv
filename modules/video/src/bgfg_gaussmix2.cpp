@@ -840,9 +840,9 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
 
     parallel_for_(Range(0, image.rows),
                   MOG2Invoker(image, fgmask,
-                              (GMM*)bgmodel.data,
-                              (float*)(bgmodel.data + sizeof(GMM)*nmixtures*image.rows*image.cols),
-                              bgmodelUsedModes.data, nmixtures, (float)learningRate,
+                              bgmodel.ptr<GMM>(),
+                              (float*)(bgmodel.ptr() + sizeof(GMM)*nmixtures*image.rows*image.cols),
+                              bgmodelUsedModes.ptr(), nmixtures, (float)learningRate,
                               (float)varThreshold,
                               backgroundRatio, varThresholdGen,
                               fVarInit, fVarMin, fVarMax, float(-learningRate*fCT), fTau,
@@ -864,7 +864,7 @@ void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImag
     CV_Assert(nchannels == 1 || nchannels == 3);
     Mat meanBackground(frameSize, CV_MAKETYPE(CV_8U, nchannels), Scalar::all(0));
     int firstGaussianIdx = 0;
-    const GMM* gmm = (GMM*)bgmodel.data;
+    const GMM* gmm = bgmodel.ptr<GMM>();
     const float* mean = reinterpret_cast<const float*>(gmm + frameSize.width*frameSize.height*nmixtures);
     std::vector<float> meanVal(nchannels, 0.f);
     for(int row=0; row<meanBackground.rows; row++)

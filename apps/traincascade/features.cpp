@@ -13,9 +13,9 @@ float calcNormFactor( const Mat& sum, const Mat& sqSum )
     size_t p0, p1, p2, p3;
     CV_SUM_OFFSETS( p0, p1, p2, p3, normrect, sum.step1() )
     double area = normrect.width * normrect.height;
-    const int *sp = (const int*)sum.data;
+    const int *sp = sum.ptr<int>();
     int valSum = sp[p0] - sp[p1] - sp[p2] + sp[p3];
-    const double *sqp = (const double *)sqSum.data;
+    const double *sqp = sqSum.ptr<double>();
     double valSqSum = sqp[p0] - sqp[p1] - sqp[p2] + sqp[p3];
     return (float) sqrt( (double) (area * valSqSum - (double)valSum * valSum) );
 }

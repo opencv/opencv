@@ -28,7 +28,7 @@ int main( int, char** argv )
   /// Load an image
   src = imread( argv[1] );
 
-  if( !src.data )
+  if( src.empty() )
     { return -1; }
 
   /// Remove noise by blurring with a Gaussian filter

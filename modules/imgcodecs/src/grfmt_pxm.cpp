@@ -189,7 +189,7 @@ bool  PxMDecoder::readHeader()
 bool  PxMDecoder::readData( Mat& img )
 {
     int color = img.channels() > 1;
-    uchar* data = img.data;
+    uchar* data = img.ptr();
     int step = (int)img.step;
     PaletteEntry palette[256];
     bool   result = false;
@@ -418,16 +418,16 @@ bool  PxMEncoder::write( const Mat& img, const std::vector<int>& params )
 
     for( y = 0; y < height; y++ )
     {
-        uchar* data = img.data + img.step*y;
+        const uchar* const data = img.ptr(y);
         if( isBinary )
         {
             if( _channels == 3 )
             {
                 if( depth == 8 )
-                    icvCvt_BGR2RGB_8u_C3R( (uchar*)data, 0,
+                    icvCvt_BGR2RGB_8u_C3R( (const uchar*)data, 0,
                         (uchar*)buffer, 0, cvSize(width,1) );
                 else
-                    icvCvt_BGR2RGB_16u_C3R( (ushort*)data, 0,
+                    icvCvt_BGR2RGB_16u_C3R( (const ushort*)data, 0,
                         (ushort*)buffer, 0, cvSize(width,1) );
             }
 
@@ -443,7 +443,7 @@ bool  PxMEncoder::write( const Mat& img, const std::vector<int>& params )
                     buffer[x + 1] = v;
                 }
             }
-            strm.putBytes( (channels > 1 || depth > 8) ? buffer : (char*)data, fileStep );
+            strm.putBytes( (channels > 1 || depth > 8) ? buffer : (const char*)data, fileStep );
         }
         else
         {
@@ -469,11 +469,11 @@ bool  PxMEncoder::write( const Mat& img, const std::vector<int>& params )
                 {
                     for( x = 0; x < width*channels; x += channels )
                     {
-                        sprintf( ptr, "% 6d", ((ushort *)data)[x + 2] );
+                        sprintf( ptr, "% 6d", ((const ushort *)data)[x + 2] );
                         ptr += 6;
-                        sprintf( ptr, "% 6d", ((ushort *)data)[x + 1] );
+                        sprintf( ptr, "% 6d", ((const ushort *)data)[x + 1] );
                         ptr += 6;
-                        sprintf( ptr, "% 6d", ((ushort *)data)[x] );
+                        sprintf( ptr, "% 6d", ((const ushort *)data)[x] );
                         ptr += 6;
                         *ptr++ = ' ';
                         *ptr++ = ' ';
@@ -494,7 +494,7 @@ bool  PxMEncoder::write( const Mat& img, const std::vector<int>& params )
                 {
                     for( x = 0; x < width; x++ )
                     {
-                        sprintf( ptr, "% 6d", ((ushort *)data)[x] );
+                        sprintf( ptr, "% 6d", ((const ushort *)data)[x] );
                         ptr += 6;
                     }
                 }

@@ -6,9 +6,10 @@
 
 //opencv
 #include "opencv2/imgcodecs.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/videoio.hpp"
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/video/background_segm.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/video.hpp>
 //C
 #include <stdio.h>
 //C++
@@ -130,7 +131,7 @@ void processVideo(char* videoFilename) {
 void processImages(char* fistFrameFilename) {
     //read the first file of the sequence
     frame = imread(fistFrameFilename);
-    if(!frame.data){
+    if(frame.empty()){
         //error in opening the first image
         cerr << "Unable to open first image frame: " << fistFrameFilename << endl;
         exit(EXIT_FAILURE);
@@ -169,7 +170,7 @@ void processImages(char* fistFrameFilename) {
         string nextFrameFilename = prefix + nextFrameNumberString + suffix;
         //read the next frame
         frame = imread(nextFrameFilename);
-        if(!frame.data){
+        if(frame.empty()){
             //error in opening the next image in the sequence
             cerr << "Unable to open image frame: " << nextFrameFilename << endl;
             exit(EXIT_FAILURE);

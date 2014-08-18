@@ -658,7 +658,7 @@ void UMat::copyTo(OutputArray _dst) const
     }
 
     Mat dst = _dst.getMat();
-    u->currAllocator->download(u, dst.data, dims, sz, srcofs, step.p, dst.step.p);
+    u->currAllocator->download(u, dst.ptr(), dims, sz, srcofs, step.p, dst.step.p);
 }
 
 void UMat::copyTo(OutputArray _dst, InputArray _mask) const

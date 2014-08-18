@@ -40,10 +40,12 @@
 //M*/
 
 #include "precomp.hpp"
-#undef ALEX_DEBUG
-#include "debug.hpp"
 
-namespace cv{namespace optim{
+#define dprintf(x)
+#define print_matrix(x)
+
+namespace cv
+{
 
 #define SEC_METHOD_ITERATIONS 4
 #define INITIAL_SEC_METHOD_SIGMA 0.1
@@ -57,15 +59,15 @@ namespace cv{namespace optim{
         void setTermCriteria(const TermCriteria& termcrit);
         double minimize(InputOutputArray x);
     protected:
-        Ptr<Solver::Function> _Function;
+        Ptr<MinProblemSolver::Function> _Function;
         TermCriteria _termcrit;
         Mat_<double> d,r,buf_x,r_old;
         Mat_<double> minimizeOnTheLine_buf1,minimizeOnTheLine_buf2;
     private:
-        static void minimizeOnTheLine(Ptr<Solver::Function> _f,Mat_<double>& x,const Mat_<double>& d,Mat_<double>& buf1,Mat_<double>& buf2);
+        static void minimizeOnTheLine(Ptr<MinProblemSolver::Function> _f,Mat_<double>& x,const Mat_<double>& d,Mat_<double>& buf1,Mat_<double>& buf2);
     };
 
-    void ConjGradSolverImpl::minimizeOnTheLine(Ptr<Solver::Function> _f,Mat_<double>& x,const Mat_<double>& d,Mat_<double>& buf1,
+    void ConjGradSolverImpl::minimizeOnTheLine(Ptr<MinProblemSolver::Function> _f,Mat_<double>& x,const Mat_<double>& d,Mat_<double>& buf1,
             Mat_<double>& buf2){
         double sigma=INITIAL_SEC_METHOD_SIGMA;
         buf1=0.0;
@@ -119,13 +121,13 @@ namespace cv{namespace optim{
         Mat_<double> proxy_x;
         if(x_mat.rows>1){
             buf_x.create(1,ndim);
-            Mat_<double> proxy(ndim,1,(double*)buf_x.data);
+            Mat_<double> proxy(ndim,1,buf_x.ptr<double>());
             x_mat.copyTo(proxy);
             proxy_x=buf_x;
         }else{
             proxy_x=x_mat;
         }
-        _Function->getGradient((double*)proxy_x.data,(double*)d.data);
+        _Function->getGradient(proxy_x.ptr<double>(),d.ptr<double>());
         d*=-1.0;
         d.copyTo(r);
 
@@ -138,7 +140,7 @@ namespace cv{namespace optim{
         for(int count=0;count<_termcrit.maxCount;count++){
             minimizeOnTheLine(_Function,proxy_x,d,minimizeOnTheLine_buf1,minimizeOnTheLine_buf2);
             r.copyTo(r_old);
-            _Function->getGradient((double*)proxy_x.data,(double*)r.data);
+            _Function->getGradient(proxy_x.ptr<double>(),r.ptr<double>());
             r*=-1.0;
             double r_norm_sq=norm(r);
             if(_termcrit.type==(TermCriteria::MAX_ITER+TermCriteria::EPS) && r_norm_sq<_termcrit.epsilon){
@@ -152,15 +154,15 @@ namespace cv{namespace optim{
 
 
         if(x_mat.rows>1){
-            Mat(ndim, 1, CV_64F, (double*)proxy_x.data).copyTo(x);
+            Mat(ndim, 1, CV_64F, proxy_x.ptr<double>()).copyTo(x);
         }
-        return _Function->calc((double*)proxy_x.data);
+        return _Function->calc(proxy_x.ptr<double>());
     }
 
     ConjGradSolverImpl::ConjGradSolverImpl(){
         _Function=Ptr<Function>();
     }
-    Ptr<Solver::Function> ConjGradSolverImpl::getFunction()const{
+    Ptr<MinProblemSolver::Function> ConjGradSolverImpl::getFunction()const{
         return _Function;
     }
     void ConjGradSolverImpl::setFunction(const Ptr<Function>& f){
@@ -175,10 +177,10 @@ namespace cv{namespace optim{
         _termcrit=termcrit;
     }
     // both minRange & minError are specified by termcrit.epsilon; In addition, user may specify the number of iterations that the algorithm does.
-    Ptr<ConjGradSolver> createConjGradSolver(const Ptr<Solver::Function>& f, TermCriteria termcrit){
-        ConjGradSolver *CG=new ConjGradSolverImpl();
+    Ptr<ConjGradSolver> ConjGradSolver::create(const Ptr<MinProblemSolver::Function>& f, TermCriteria termcrit){
+        Ptr<ConjGradSolver> CG = makePtr<ConjGradSolverImpl>();
         CG->setFunction(f);
         CG->setTermCriteria(termcrit);
-        return Ptr<ConjGradSolver>(CG);
+        return CG;
     }
-}}
+}

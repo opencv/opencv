@@ -75,28 +75,28 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     {
     case THRESH_TRUNC:
 #ifndef HAVE_IPP_ICV_ONLY
-        if (_src.data == _dst.data && ippiThreshold_GT_8u_C1IR(_src.data, (int)src_step, sz, thresh) >= 0)
+        if (_src.data == _dst.data && ippiThreshold_GT_8u_C1IR(_dst.ptr(), (int)dst_step, sz, thresh) >= 0)
             return;
 #endif
-        if (ippiThreshold_GT_8u_C1R(_src.data, (int)src_step, _dst.data, (int)dst_step, sz, thresh) >= 0)
+        if (ippiThreshold_GT_8u_C1R(_src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh) >= 0)
             return;
         setIppErrorStatus();
         break;
     case THRESH_TOZERO:
 #ifndef HAVE_IPP_ICV_ONLY
-        if (_src.data == _dst.data && ippiThreshold_LTVal_8u_C1IR(_src.data, (int)src_step, sz, thresh+1, 0) >= 0)
+        if (_src.data == _dst.data && ippiThreshold_LTVal_8u_C1IR(_dst.ptr(), (int)dst_step, sz, thresh+1, 0) >= 0)
             return;
 #endif
-        if (ippiThreshold_LTVal_8u_C1R(_src.data, (int)src_step, _dst.data, (int)dst_step, sz, thresh+1, 0) >= 0)
+        if (ippiThreshold_LTVal_8u_C1R(_src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh+1, 0) >= 0)
             return;
         setIppErrorStatus();
         break;
     case THRESH_TOZERO_INV:
 #ifndef HAVE_IPP_ICV_ONLY
-        if (_src.data == _dst.data && ippiThreshold_GTVal_8u_C1IR(_src.data, (int)src_step, sz, thresh, 0) >= 0)
+        if (_src.data == _dst.data && ippiThreshold_GTVal_8u_C1IR(_dst.ptr(), (int)dst_step, sz, thresh, 0) >= 0)
             return;
 #endif
-        if (ippiThreshold_GTVal_8u_C1R(_src.data, (int)src_step, _dst.data, (int)dst_step, sz, thresh, 0) >= 0)
+        if (ippiThreshold_GTVal_8u_C1R(_src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh, 0) >= 0)
             return;
         setIppErrorStatus();
         break;
@@ -151,8 +151,8 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
 
         for( i = 0; i < roi.height; i++ )
         {
-            const uchar* src = (const uchar*)(_src.data + src_step*i);
-            uchar* dst = (uchar*)(_dst.data + dst_step*i);
+            const uchar* src = _src.ptr() + src_step*i;
+            uchar* dst = _dst.ptr() + dst_step*i;
 
             switch( type )
             {
@@ -270,8 +270,8 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     {
         for( i = 0; i < roi.height; i++ )
         {
-            const uchar* src = (const uchar*)(_src.data + src_step*i);
-            uchar* dst = (uchar*)(_dst.data + dst_step*i);
+            const uchar* src = _src.ptr() + src_step*i;
+            uchar* dst = _dst.ptr() + dst_step*i;
             j = j_scalar;
 #if CV_ENABLE_UNROLLED
             for( ; j <= roi.width - 4; j += 4 )
@@ -302,8 +302,8 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
     int i, j;
     Size roi = _src.size();
     roi.width *= _src.channels();
-    const short* src = (const short*)_src.data;
-    short* dst = (short*)_dst.data;
+    const short* src = _src.ptr<short>();
+    short* dst = _dst.ptr<short>();
     size_t src_step = _src.step/sizeof(src[0]);
     size_t dst_step = _dst.step/sizeof(dst[0]);
 
@@ -511,8 +511,8 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
     int i, j;
     Size roi = _src.size();
     roi.width *= _src.channels();
-    const float* src = (const float*)_src.data;
-    float* dst = (float*)_dst.data;
+    const float* src = _src.ptr<float>();
+    float* dst = _dst.ptr<float>();
     size_t src_step = _src.step/sizeof(src[0]);
     size_t dst_step = _dst.step/sizeof(dst[0]);
 
@@ -715,7 +715,7 @@ getThreshVal_Otsu_8u( const Mat& _src )
     IppiSize srcSize = { size.width, size.height };
     Ipp8u thresh;
     CV_SUPPRESS_DEPRECATED_START
-    IppStatus ok = ippiComputeThreshold_Otsu_8u_C1R(_src.data, step, srcSize, &thresh);
+    IppStatus ok = ippiComputeThreshold_Otsu_8u_C1R(_src.ptr(), step, srcSize, &thresh);
     CV_SUPPRESS_DEPRECATED_END
     if (ok >= 0)
         return thresh;
@@ -726,7 +726,7 @@ getThreshVal_Otsu_8u( const Mat& _src )
     int i, j, h[N] = {0};
     for( i = 0; i < size.height; i++ )
     {
-        const uchar* src = _src.data + step*i;
+        const uchar* src = _src.ptr() + step*i;
         j = 0;
         #if CV_ENABLE_UNROLLED
         for( ; j <= size.width - 4; j += 4 )
@@ -1003,9 +1003,9 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
 
     for( i = 0; i < size.height; i++ )
     {
-        const uchar* sdata = src.data + src.step*i;
-        const uchar* mdata = mean.data + mean.step*i;
-        uchar* ddata = dst.data + dst.step*i;
+        const uchar* sdata = src.ptr(i);
+        const uchar* mdata = mean.ptr(i);
+        uchar* ddata = dst.ptr(i);
 
         for( j = 0; j < size.width; j++ )
             ddata[j] = tab[sdata[j] - mdata[j] + 255];

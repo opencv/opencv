@@ -187,7 +187,7 @@ bool  ExrDecoder::readData( Mat& img )
     m_native_depth = CV_MAT_DEPTH(type()) == img.depth();
     bool color = img.channels() > 1;
 
-    uchar* data = img.data;
+    uchar* data = img.ptr();
     int step = img.step;
     bool justcopy = m_native_depth;
     bool chromatorgb = false;
@@ -583,8 +583,7 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
     bool issigned = depth == CV_8S || depth == CV_16S || depth == CV_32S;
     bool isfloat = depth == CV_32F || depth == CV_64F;
     depth = CV_ELEM_SIZE1(depth)*8;
-    uchar* data = img.data;
-    int step = img.step;
+    const int step = img.step;
 
     Header header( width, height );
     Imf::PixelType type;
@@ -618,7 +617,7 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
     int size;
     if( type == FLOAT && depth == 32 )
     {
-        buffer = (char *)const_cast<uchar *>(data);
+        buffer = (char *)const_cast<uchar *>(img.ptr());
         bufferstep = step;
         size = 4;
     }
@@ -674,18 +673,19 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
 
                 if( depth <= 8 )
                 {
+                    const uchar* sd = img.ptr(line);
                     for(int i = 0; i < width * channels; i++)
-                        buf[i] = data[i] + offset;
+                        buf[i] = sd[i] + offset;
                 }
                 else if( depth <= 16 )
                 {
-                    unsigned short *sd = (unsigned short *)data;
+                    const unsigned short *sd = img.ptr<unsigned short>(line);
                     for(int i = 0; i < width * channels; i++)
                         buf[i] = sd[i] + offset;
                 }
                 else
                 {
-                    int *sd = (int *)data; // FIXME 64-bit problems
+                    const int *sd = img.ptr<int>(line); // FIXME 64-bit problems
                     for(int i = 0; i < width * channels; i++)
                         buf[i] = (unsigned) sd[i] + offset;
                 }
@@ -696,12 +696,13 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
 
                 if( depth <= 8 )
                 {
+                    const uchar* sd = img.ptr(line);
                     for(int i = 0; i < width * channels; i++)
-                        buf[i] = data[i];
+                        buf[i] = sd[i];
                 }
                 else if( depth <= 16 )
                 {
-                    unsigned short *sd = (unsigned short *)data;
+                    const unsigned short *sd = img.ptr<unsigned short>(line);
                     for(int i = 0; i < width * channels; i++)
                         buf[i] = sd[i];
                 }
@@ -715,7 +716,6 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
                 result = false;
                 break;
             }
-            data += step;
         }
         delete[] buffer;
     }

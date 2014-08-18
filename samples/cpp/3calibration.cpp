@@ -268,7 +268,7 @@ int main( int argc, char** argv )
             printf("%s\n", imageList[i*3+k].c_str());
             view = imread(imageList[i*3+k], 1);
 
-            if(view.data)
+            if(!view.empty())
             {
                 vector<Point2f> ptvec;
                 imageSize = view.size();
@@ -356,7 +356,7 @@ int main( int argc, char** argv )
             int k2 = k == 0 ? 1 : k == 1 ? 0 : 2;
             view = imread(imageList[i*3+k], 1);
 
-            if(!view.data)
+            if(view.empty())
                 continue;
 
             Mat rview = canvas.colRange(k2*imageSize.width, (k2+1)*imageSize.width);

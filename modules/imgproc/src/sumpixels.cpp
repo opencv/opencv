@@ -419,8 +419,8 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
-    func( src.data, src.step, sum.data, sum.step, sqsum.data, sqsum.step,
-          tilted.data, tilted.step, src.size(), cn );
+    func( src.ptr(), src.step, sum.ptr(), sum.step, sqsum.ptr(), sqsum.step,
+          tilted.ptr(), tilted.step, src.size(), cn );
 }
 
 void cv::integral( InputArray src, OutputArray sum, int sdepth )

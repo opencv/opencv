@@ -113,12 +113,12 @@ public:
         int d1 = m1.channels() > 1 ? m1.channels() : m1.cols;
         int d2 = m2.channels() > 1 ? m2.channels() : m2.cols;
         int count = m1.checkVector(d1), count2 = m2.checkVector(d2);
-        const int *m1ptr = (const int*)m1.data, *m2ptr = (const int*)m2.data;
+        const int *m1ptr = m1.ptr<int>(), *m2ptr = m2.ptr<int>();
 
         ms1.create(modelPoints, 1, CV_MAKETYPE(m1.depth(), d1));
         ms2.create(modelPoints, 1, CV_MAKETYPE(m2.depth(), d2));
 
-        int *ms1ptr = (int*)ms1.data, *ms2ptr = (int*)ms2.data;
+        int *ms1ptr = ms1.ptr<int>(), *ms2ptr = ms2.ptr<int>();
 
         CV_Assert( count >= modelPoints && count == count2 );
         CV_Assert( (esz1 % sizeof(int)) == 0 && (esz2 % sizeof(int)) == 0 );
@@ -343,7 +343,7 @@ public:
                 else
                     errf = err;
                 CV_Assert( errf.isContinuous() && errf.type() == CV_32F && (int)errf.total() == count );
-                std::sort((int*)errf.data, (int*)errf.data + count);
+                std::sort(errf.ptr<int>(), errf.ptr<int>() + count);
 
                 double median = count % 2 != 0 ?
                 errf.at<float>(count/2) : (errf.at<float>(count/2-1) + errf.at<float>(count/2))*0.5;

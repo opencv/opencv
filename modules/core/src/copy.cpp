@@ -741,28 +741,28 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
 
     if (ippFunc != 0)
     {
-        if (ippFunc(src.data, (int)src.step, dst.data, (int)dst.step, ippiSize(src.cols, src.rows), axis) >= 0)
+        if (ippFunc(src.ptr(), (int)src.step, dst.ptr(), (int)dst.step, ippiSize(src.cols, src.rows), axis) >= 0)
             return;
         setIppErrorStatus();
     }
     else if (ippFuncI != 0)
     {
-        if (ippFuncI(dst.data, (int)dst.step, roisize, axis) >= 0)
+        if (ippFuncI(dst.ptr(), (int)dst.step, roisize, axis) >= 0)
             return;
         setIppErrorStatus();
     }
 #endif
 
     if( flip_mode <= 0 )
-        flipVert( src.data, src.step, dst.data, dst.step, src.size(), esz );
+        flipVert( src.ptr(), src.step, dst.ptr(), dst.step, src.size(), esz );
     else
-        flipHoriz( src.data, src.step, dst.data, dst.step, src.size(), esz );
+        flipHoriz( src.ptr(), src.step, dst.ptr(), dst.step, src.size(), esz );
 
     if( flip_mode < 0 )
-        flipHoriz( dst.data, dst.step, dst.data, dst.step, dst.size(), esz );
+        flipHoriz( dst.ptr(), dst.step, dst.ptr(), dst.step, dst.size(), esz );
 }
 
-/*#ifdef HAVE_OPENCL
+#if defined HAVE_OPENCL && !defined __APPLE__
 
 static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
@@ -790,7 +790,7 @@ static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
     return k.run(2, globalsize, NULL, false);
 }
 
-#endif*/
+#endif
 
 void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
@@ -800,8 +800,10 @@ void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
     Size ssize = _src.size();
     _dst.create(ssize.height*ny, ssize.width*nx, _src.type());
 
-    /*CV_OCL_RUN(_dst.isUMat(),
-               ocl_repeat(_src, ny, nx, _dst))*/
+#if !defined __APPLE__
+    CV_OCL_RUN(_dst.isUMat(),
+               ocl_repeat(_src, ny, nx, _dst))
+#endif
 
     Mat src = _src.getMat(), dst = _dst.getMat();
     Size dsize = dst.size();
@@ -812,11 +814,11 @@ void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
     for( y = 0; y < ssize.height; y++ )
     {
         for( x = 0; x < dsize.width; x += ssize.width )
-            memcpy( dst.data + y*dst.step + x, src.data + y*src.step, ssize.width );
+            memcpy( dst.ptr(y) + x, src.ptr(y), ssize.width );
     }
 
     for( ; y < dsize.height; y++ )
-        memcpy( dst.data + y*dst.step, dst.data + (y - ssize.height)*dst.step, dsize.width );
+        memcpy( dst.ptr(y), dst.ptr(y - ssize.height), dsize.width );
 }
 
 Mat repeat(const Mat& src, int ny, int nx)
@@ -1218,8 +1220,8 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
 #endif
 
     if( borderType != BORDER_CONSTANT )
-        copyMakeBorder_8u( src.data, src.step, src.size(),
-                           dst.data, dst.step, dst.size(),
+        copyMakeBorder_8u( src.ptr(), src.step, src.size(),
+                           dst.ptr(), dst.step, dst.size(),
                            top, left, (int)src.elemSize(), borderType );
     else
     {
@@ -1231,8 +1233,8 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
             cn1 = 1;
         }
         scalarToRawData(value, buf, CV_MAKETYPE(src.depth(), cn1), cn);
-        copyMakeConstBorder_8u( src.data, src.step, src.size(),
-                                dst.data, dst.step, dst.size(),
+        copyMakeConstBorder_8u( src.ptr(), src.step, src.size(),
+                                dst.ptr(), dst.step, dst.size(),
                                 top, left, (int)src.elemSize(), (uchar*)(double*)buf );
     }
 }

@@ -352,7 +352,7 @@ static void finalizeHdr(Mat& m)
         m.datalimit = m.datastart + m.size[0]*m.step[0];
         if( m.size[0] > 0 )
         {
-            m.dataend = m.data + m.size[d-1]*m.step[d-1];
+            m.dataend = m.ptr() + m.size[d-1]*m.step[d-1];
             for( int i = 0; i < d-1; i++ )
                 m.dataend += (m.size[i] - 1)*m.step[i];
         }
@@ -871,7 +871,7 @@ Mat cvarrToMat(const CvArr* arr, bool copyData,
         }
 
         Mat buf(total, 1, type);
-        cvCvtSeqToArray(seq, buf.data, CV_WHOLE_SEQ);
+        cvCvtSeqToArray(seq, buf.ptr(), CV_WHOLE_SEQ);
         return buf;
     }
     CV_Error(CV_StsBadArg, "Unknown array type");
@@ -1941,7 +1941,7 @@ size_t _InputArray::offset(int i) const
     {
         CV_Assert( i < 0 );
         const Mat * const m = ((const Mat*)obj);
-        return (size_t)(m->data - m->datastart);
+        return (size_t)(m->ptr() - m->datastart);
     }
 
     if( k == UMAT )
@@ -1960,7 +1960,7 @@ size_t _InputArray::offset(int i) const
             return 1;
         CV_Assert( i < (int)vv.size() );
 
-        return (size_t)(vv[i].data - vv[i].datastart);
+        return (size_t)(vv[i].ptr() - vv[i].datastart);
     }
 
     if( k == STD_VECTOR_UMAT )
@@ -2618,7 +2618,7 @@ void _OutputArray::setTo(const _InputArray& arr, const _InputArray & mask) const
     {
         Mat value = arr.getMat();
         CV_Assert( checkScalar(value, type(), arr.kind(), _InputArray::GPU_MAT) );
-        ((cuda::GpuMat*)obj)->setTo(Scalar(Vec<double, 4>((double *)value.data)), mask);
+        ((cuda::GpuMat*)obj)->setTo(Scalar(Vec<double, 4>(value.ptr<double>())), mask);
     }
     else
         CV_Error(Error::StsNotImplemented, "");
@@ -2804,7 +2804,7 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
 
     if( type == CV_32FC1 )
     {
-        float* data = (float*)m.data;
+        float* data = m.ptr<float>();
         float val = (float)s[0];
         size_t step = m.step/sizeof(data[0]);
 
@@ -2818,7 +2818,7 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
     }
     else if( type == CV_64FC1 )
     {
-        double* data = (double*)m.data;
+        double* data = m.ptr<double>();
         double val = s[0];
         size_t step = m.step/sizeof(data[0]);
 
@@ -2846,7 +2846,7 @@ cv::Scalar cv::trace( InputArray _m )
 
     if( type == CV_32FC1 )
     {
-        const float* ptr = (const float*)m.data;
+        const float* ptr = m.ptr<float>();
         size_t step = m.step/sizeof(ptr[0]) + 1;
         double _s = 0;
         for( i = 0; i < nm; i++ )
@@ -2856,7 +2856,7 @@ cv::Scalar cv::trace( InputArray _m )
 
     if( type == CV_64FC1 )
     {
-        const double* ptr = (const double*)m.data;
+        const double* ptr = m.ptr<double>();
         size_t step = m.step/sizeof(ptr[0]) + 1;
         double _s = 0;
         for( i = 0; i < nm; i++ )
@@ -3002,6 +3002,13 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
         CV_Assert(dst.cols == dst.rows);
         kernelName += "_inplace";
     }
+    else
+    {
+        // check required local memory size
+        size_t required_local_memory = (size_t) TILE_DIM*(TILE_DIM+1)*CV_ELEM_SIZE(type);
+        if (required_local_memory > ocl::Device::getDefault().localMemSize())
+            return false;
+    }
 
     ocl::Kernel k(kernelName.c_str(), ocl::core::transpose_oclsrc,
                   format("-D T=%s -D T1=%s -D cn=%d -D TILE_DIM=%d -D BLOCK_ROWS=%d -D rowsPerWI=%d",
@@ -3108,13 +3115,13 @@ void cv::transpose( InputArray _src, OutputArray _dst )
     IppiSize roiSize = { src.cols, src.rows };
     if (ippFunc != 0)
     {
-        if (ippFunc(src.data, (int)src.step, dst.data, (int)dst.step, roiSize) >= 0)
+        if (ippFunc(src.ptr(), (int)src.step, dst.ptr(), (int)dst.step, roiSize) >= 0)
             return;
         setIppErrorStatus();
     }
     else if (ippFuncI != 0)
     {
-        if (ippFuncI(dst.data, (int)dst.step, roiSize) >= 0)
+        if (ippFuncI(dst.ptr(), (int)dst.step, roiSize) >= 0)
             return;
         setIppErrorStatus();
     }
@@ -3125,13 +3132,13 @@ void cv::transpose( InputArray _src, OutputArray _dst )
         TransposeInplaceFunc func = transposeInplaceTab[esz];
         CV_Assert( func != 0 );
         CV_Assert( dst.cols == dst.rows );
-        func( dst.data, dst.step, dst.rows );
+        func( dst.ptr(), dst.step, dst.rows );
     }
     else
     {
         TransposeFunc func = transposeTab[esz];
         CV_Assert( func != 0 );
-        func( src.data, src.step, dst.data, dst.step, src.size() );
+        func( src.ptr(), src.step, dst.ptr(), dst.step, src.size() );
     }
 }
 
@@ -3147,7 +3154,7 @@ void cv::completeSymm( InputOutputArray _m, bool LtoR )
     int rows = m.rows;
     int j0 = 0, j1 = rows;
 
-    uchar* data = m.data;
+    uchar* data = m.ptr();
     for( int i = 0; i < rows; i++ )
     {
         if( !LtoR ) j1 = i; else j0 = i+1;
@@ -3205,8 +3212,8 @@ reduceR_( const Mat& srcmat, Mat& dstmat )
     size.width *= srcmat.channels();
     AutoBuffer<WT> buffer(size.width);
     WT* buf = buffer;
-    ST* dst = (ST*)dstmat.data;
-    const T* src = (const T*)srcmat.data;
+    ST* dst = dstmat.ptr<ST>();
+    const T* src = srcmat.ptr<T>();
     size_t srcstep = srcmat.step/sizeof(src[0]);
     int i;
     Op op;
@@ -3251,8 +3258,8 @@ reduceC_( const Mat& srcmat, Mat& dstmat )
 
     for( int y = 0; y < size.height; y++ )
     {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        ST* dst = (ST*)(dstmat.data + dstmat.step*y);
+        const T* src = srcmat.ptr<T>(y);
+        ST* dst = dstmat.ptr<ST>(y);
         if( size.width == cn )
             for( k = 0; k < cn; k++ )
                 dst[k] = src[k];
@@ -3349,7 +3356,7 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
     if (ippFunc)
     {
         for (int y = 0; y < size.height; ++y)
-            if (ippFunc(srcmat.data + sstep * y, sstep, roisize, dstmat.ptr<Ipp64f>(y)) < 0)
+            if (ippFunc(srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y)) < 0)
             {
                 setIppErrorStatus();
                 cv::Mat dstroi = dstmat.rowRange(y, y + 1);
@@ -3360,7 +3367,7 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
     else if (ippFuncHint)
     {
         for (int y = 0; y < size.height; ++y)
-            if (ippFuncHint(srcmat.data + sstep * y, sstep, roisize, dstmat.ptr<Ipp64f>(y), ippAlgHintAccurate) < 0)
+            if (ippFuncHint(srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y), ippAlgHintAccurate) < 0)
             {
                 setIppErrorStatus();
                 cv::Mat dstroi = dstmat.rowRange(y, y + 1);
@@ -3460,9 +3467,6 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
     bool useOptimized = 1 == dim && _src.cols() > min_opt_cols && (wgs >= buf_cols);
 
     if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
-        return false;
-
-    if ((op == CV_REDUCE_SUM && sdepth == CV_32F) || op == CV_REDUCE_MIN || op == CV_REDUCE_MAX)
         return false;
 
     if (op == CV_REDUCE_AVG)
@@ -3773,10 +3777,10 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
         T* ptr = bptr;
         if( sortRows )
         {
-            T* dptr = (T*)(dst.data + dst.step*i);
+            T* dptr = dst.ptr<T>(i);
             if( !inplace )
             {
-                const T* sptr = (const T*)(src.data + src.step*i);
+                const T* sptr = src.ptr<T>(i);
                 memcpy(dptr, sptr, sizeof(T) * len);
             }
             ptr = dptr;
@@ -3784,7 +3788,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
         else
         {
             for( j = 0; j < len; j++ )
-                ptr[j] = ((const T*)(src.data + src.step*j))[i];
+                ptr[j] = src.ptr<T>(j)[i];
         }
 
 #ifdef USE_IPP_SORT
@@ -3813,7 +3817,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 
         if( !sortRows )
             for( j = 0; j < len; j++ )
-                ((T*)(dst.data + dst.step*j))[i] = ptr[j];
+                dst.ptr<T>(j)[i] = ptr[j];
     }
 }
 
@@ -3886,12 +3890,12 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
         if( sortRows )
         {
             ptr = (T*)(src.data + src.step*i);
-            iptr = (int*)(dst.data + dst.step*i);
+            iptr = dst.ptr<int>(i);
         }
         else
         {
             for( j = 0; j < len; j++ )
-                ptr[j] = ((const T*)(src.data + src.step*j))[i];
+                ptr[j] = src.ptr<T>(j)[i];
         }
         for( j = 0; j < len; j++ )
             iptr[j] = j;
@@ -3921,7 +3925,7 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 
         if( !sortRows )
             for( j = 0; j < len; j++ )
-                ((int*)(dst.data + dst.step*j))[i] = iptr[j];
+                dst.ptr<int>(j)[i] = iptr[j];
     }
 }
 
@@ -3961,420 +3965,6 @@ void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
     _dst.create( src.size(), CV_32S );
     dst = _dst.getMat();
     func( src, dst, flags );
-}
-
-
-////////////////////////////////////////// kmeans ////////////////////////////////////////////
-
-namespace cv
-{
-
-static void generateRandomCenter(const std::vector<Vec2f>& box, float* center, RNG& rng)
-{
-    size_t j, dims = box.size();
-    float margin = 1.f/dims;
-    for( j = 0; j < dims; j++ )
-        center[j] = ((float)rng*(1.f+margin*2.f)-margin)*(box[j][1] - box[j][0]) + box[j][0];
-}
-
-class KMeansPPDistanceComputer : public ParallelLoopBody
-{
-public:
-    KMeansPPDistanceComputer( float *_tdist2,
-                              const float *_data,
-                              const float *_dist,
-                              int _dims,
-                              size_t _step,
-                              size_t _stepci )
-        : tdist2(_tdist2),
-          data(_data),
-          dist(_dist),
-          dims(_dims),
-          step(_step),
-          stepci(_stepci) { }
-
-    void operator()( const cv::Range& range ) const
-    {
-        const int begin = range.start;
-        const int end = range.end;
-
-        for ( int i = begin; i<end; i++ )
-        {
-            tdist2[i] = std::min(normL2Sqr_(data + step*i, data + stepci, dims), dist[i]);
-        }
-    }
-
-private:
-    KMeansPPDistanceComputer& operator=(const KMeansPPDistanceComputer&); // to quiet MSVC
-
-    float *tdist2;
-    const float *data;
-    const float *dist;
-    const int dims;
-    const size_t step;
-    const size_t stepci;
-};
-
-/*
-k-means center initialization using the following algorithm:
-Arthur & Vassilvitskii (2007) k-means++: The Advantages of Careful Seeding
-*/
-static void generateCentersPP(const Mat& _data, Mat& _out_centers,
-                              int K, RNG& rng, int trials)
-{
-    int i, j, k, dims = _data.cols, N = _data.rows;
-    const float* data = _data.ptr<float>(0);
-    size_t step = _data.step/sizeof(data[0]);
-    std::vector<int> _centers(K);
-    int* centers = &_centers[0];
-    std::vector<float> _dist(N*3);
-    float* dist = &_dist[0], *tdist = dist + N, *tdist2 = tdist + N;
-    double sum0 = 0;
-
-    centers[0] = (unsigned)rng % N;
-
-    for( i = 0; i < N; i++ )
-    {
-        dist[i] = normL2Sqr_(data + step*i, data + step*centers[0], dims);
-        sum0 += dist[i];
-    }
-
-    for( k = 1; k < K; k++ )
-    {
-        double bestSum = DBL_MAX;
-        int bestCenter = -1;
-
-        for( j = 0; j < trials; j++ )
-        {
-            double p = (double)rng*sum0, s = 0;
-            for( i = 0; i < N-1; i++ )
-                if( (p -= dist[i]) <= 0 )
-                    break;
-            int ci = i;
-
-            parallel_for_(Range(0, N),
-                         KMeansPPDistanceComputer(tdist2, data, dist, dims, step, step*ci));
-            for( i = 0; i < N; i++ )
-            {
-                s += tdist2[i];
-            }
-
-            if( s < bestSum )
-            {
-                bestSum = s;
-                bestCenter = ci;
-                std::swap(tdist, tdist2);
-            }
-        }
-        centers[k] = bestCenter;
-        sum0 = bestSum;
-        std::swap(dist, tdist);
-    }
-
-    for( k = 0; k < K; k++ )
-    {
-        const float* src = data + step*centers[k];
-        float* dst = _out_centers.ptr<float>(k);
-        for( j = 0; j < dims; j++ )
-            dst[j] = src[j];
-    }
-}
-
-class KMeansDistanceComputer : public ParallelLoopBody
-{
-public:
-    KMeansDistanceComputer( double *_distances,
-                            int *_labels,
-                            const Mat& _data,
-                            const Mat& _centers )
-        : distances(_distances),
-          labels(_labels),
-          data(_data),
-          centers(_centers)
-    {
-    }
-
-    void operator()( const Range& range ) const
-    {
-        const int begin = range.start;
-        const int end = range.end;
-        const int K = centers.rows;
-        const int dims = centers.cols;
-
-        const float *sample;
-        for( int i = begin; i<end; ++i)
-        {
-            sample = data.ptr<float>(i);
-            int k_best = 0;
-            double min_dist = DBL_MAX;
-
-            for( int k = 0; k < K; k++ )
-            {
-                const float* center = centers.ptr<float>(k);
-                const double dist = normL2Sqr_(sample, center, dims);
-
-                if( min_dist > dist )
-                {
-                    min_dist = dist;
-                    k_best = k;
-                }
-            }
-
-            distances[i] = min_dist;
-            labels[i] = k_best;
-        }
-    }
-
-private:
-    KMeansDistanceComputer& operator=(const KMeansDistanceComputer&); // to quiet MSVC
-
-    double *distances;
-    int *labels;
-    const Mat& data;
-    const Mat& centers;
-};
-
-}
-
-double cv::kmeans( InputArray _data, int K,
-                   InputOutputArray _bestLabels,
-                   TermCriteria criteria, int attempts,
-                   int flags, OutputArray _centers )
-{
-    const int SPP_TRIALS = 3;
-    Mat data0 = _data.getMat();
-    bool isrow = data0.rows == 1 && data0.channels() > 1;
-    int N = !isrow ? data0.rows : data0.cols;
-    int dims = (!isrow ? data0.cols : 1)*data0.channels();
-    int type = data0.depth();
-
-    attempts = std::max(attempts, 1);
-    CV_Assert( data0.dims <= 2 && type == CV_32F && K > 0 );
-    CV_Assert( N >= K );
-
-    Mat data(N, dims, CV_32F, data0.data, isrow ? dims * sizeof(float) : static_cast<size_t>(data0.step));
-
-    _bestLabels.create(N, 1, CV_32S, -1, true);
-
-    Mat _labels, best_labels = _bestLabels.getMat();
-    if( flags & CV_KMEANS_USE_INITIAL_LABELS )
-    {
-        CV_Assert( (best_labels.cols == 1 || best_labels.rows == 1) &&
-                  best_labels.cols*best_labels.rows == N &&
-                  best_labels.type() == CV_32S &&
-                  best_labels.isContinuous());
-        best_labels.copyTo(_labels);
-    }
-    else
-    {
-        if( !((best_labels.cols == 1 || best_labels.rows == 1) &&
-             best_labels.cols*best_labels.rows == N &&
-            best_labels.type() == CV_32S &&
-            best_labels.isContinuous()))
-            best_labels.create(N, 1, CV_32S);
-        _labels.create(best_labels.size(), best_labels.type());
-    }
-    int* labels = _labels.ptr<int>();
-
-    Mat centers(K, dims, type), old_centers(K, dims, type), temp(1, dims, type);
-    std::vector<int> counters(K);
-    std::vector<Vec2f> _box(dims);
-    Vec2f* box = &_box[0];
-    double best_compactness = DBL_MAX, compactness = 0;
-    RNG& rng = theRNG();
-    int a, iter, i, j, k;
-
-    if( criteria.type & TermCriteria::EPS )
-        criteria.epsilon = std::max(criteria.epsilon, 0.);
-    else
-        criteria.epsilon = FLT_EPSILON;
-    criteria.epsilon *= criteria.epsilon;
-
-    if( criteria.type & TermCriteria::COUNT )
-        criteria.maxCount = std::min(std::max(criteria.maxCount, 2), 100);
-    else
-        criteria.maxCount = 100;
-
-    if( K == 1 )
-    {
-        attempts = 1;
-        criteria.maxCount = 2;
-    }
-
-    const float* sample = data.ptr<float>(0);
-    for( j = 0; j < dims; j++ )
-        box[j] = Vec2f(sample[j], sample[j]);
-
-    for( i = 1; i < N; i++ )
-    {
-        sample = data.ptr<float>(i);
-        for( j = 0; j < dims; j++ )
-        {
-            float v = sample[j];
-            box[j][0] = std::min(box[j][0], v);
-            box[j][1] = std::max(box[j][1], v);
-        }
-    }
-
-    for( a = 0; a < attempts; a++ )
-    {
-        double max_center_shift = DBL_MAX;
-        for( iter = 0;; )
-        {
-            swap(centers, old_centers);
-
-            if( iter == 0 && (a > 0 || !(flags & KMEANS_USE_INITIAL_LABELS)) )
-            {
-                if( flags & KMEANS_PP_CENTERS )
-                    generateCentersPP(data, centers, K, rng, SPP_TRIALS);
-                else
-                {
-                    for( k = 0; k < K; k++ )
-                        generateRandomCenter(_box, centers.ptr<float>(k), rng);
-                }
-            }
-            else
-            {
-                if( iter == 0 && a == 0 && (flags & KMEANS_USE_INITIAL_LABELS) )
-                {
-                    for( i = 0; i < N; i++ )
-                        CV_Assert( (unsigned)labels[i] < (unsigned)K );
-                }
-
-                // compute centers
-                centers = Scalar(0);
-                for( k = 0; k < K; k++ )
-                    counters[k] = 0;
-
-                for( i = 0; i < N; i++ )
-                {
-                    sample = data.ptr<float>(i);
-                    k = labels[i];
-                    float* center = centers.ptr<float>(k);
-                    j=0;
-                    #if CV_ENABLE_UNROLLED
-                    for(; j <= dims - 4; j += 4 )
-                    {
-                        float t0 = center[j] + sample[j];
-                        float t1 = center[j+1] + sample[j+1];
-
-                        center[j] = t0;
-                        center[j+1] = t1;
-
-                        t0 = center[j+2] + sample[j+2];
-                        t1 = center[j+3] + sample[j+3];
-
-                        center[j+2] = t0;
-                        center[j+3] = t1;
-                    }
-                    #endif
-                    for( ; j < dims; j++ )
-                        center[j] += sample[j];
-                    counters[k]++;
-                }
-
-                if( iter > 0 )
-                    max_center_shift = 0;
-
-                for( k = 0; k < K; k++ )
-                {
-                    if( counters[k] != 0 )
-                        continue;
-
-                    // if some cluster appeared to be empty then:
-                    //   1. find the biggest cluster
-                    //   2. find the farthest from the center point in the biggest cluster
-                    //   3. exclude the farthest point from the biggest cluster and form a new 1-point cluster.
-                    int max_k = 0;
-                    for( int k1 = 1; k1 < K; k1++ )
-                    {
-                        if( counters[max_k] < counters[k1] )
-                            max_k = k1;
-                    }
-
-                    double max_dist = 0;
-                    int farthest_i = -1;
-                    float* new_center = centers.ptr<float>(k);
-                    float* old_center = centers.ptr<float>(max_k);
-                    float* _old_center = temp.ptr<float>(); // normalized
-                    float scale = 1.f/counters[max_k];
-                    for( j = 0; j < dims; j++ )
-                        _old_center[j] = old_center[j]*scale;
-
-                    for( i = 0; i < N; i++ )
-                    {
-                        if( labels[i] != max_k )
-                            continue;
-                        sample = data.ptr<float>(i);
-                        double dist = normL2Sqr_(sample, _old_center, dims);
-
-                        if( max_dist <= dist )
-                        {
-                            max_dist = dist;
-                            farthest_i = i;
-                        }
-                    }
-
-                    counters[max_k]--;
-                    counters[k]++;
-                    labels[farthest_i] = k;
-                    sample = data.ptr<float>(farthest_i);
-
-                    for( j = 0; j < dims; j++ )
-                    {
-                        old_center[j] -= sample[j];
-                        new_center[j] += sample[j];
-                    }
-                }
-
-                for( k = 0; k < K; k++ )
-                {
-                    float* center = centers.ptr<float>(k);
-                    CV_Assert( counters[k] != 0 );
-
-                    float scale = 1.f/counters[k];
-                    for( j = 0; j < dims; j++ )
-                        center[j] *= scale;
-
-                    if( iter > 0 )
-                    {
-                        double dist = 0;
-                        const float* old_center = old_centers.ptr<float>(k);
-                        for( j = 0; j < dims; j++ )
-                        {
-                            double t = center[j] - old_center[j];
-                            dist += t*t;
-                        }
-                        max_center_shift = std::max(max_center_shift, dist);
-                    }
-                }
-            }
-
-            if( ++iter == MAX(criteria.maxCount, 2) || max_center_shift <= criteria.epsilon )
-                break;
-
-            // assign labels
-            Mat dists(1, N, CV_64F);
-            double* dist = dists.ptr<double>(0);
-            parallel_for_(Range(0, N),
-                         KMeansDistanceComputer(dist, labels, data, centers));
-            compactness = 0;
-            for( i = 0; i < N; i++ )
-            {
-                compactness += dist[i];
-            }
-        }
-
-        if( compactness < best_compactness )
-        {
-            best_compactness = compactness;
-            if( _centers.needed() )
-                centers.copyTo(_centers);
-            _labels.copyTo(best_labels);
-        }
-    }
-
-    return best_compactness;
 }
 
 
@@ -4758,7 +4348,7 @@ Point MatConstIterator::pos() const
         return Point();
     CV_DbgAssert(m->dims <= 2);
 
-    ptrdiff_t ofs = ptr - m->data;
+    ptrdiff_t ofs = ptr - m->ptr();
     int y = (int)(ofs/m->step[0]);
     return Point((int)((ofs - y*m->step[0])/elemSize), y);
 }
@@ -4766,7 +4356,7 @@ Point MatConstIterator::pos() const
 void MatConstIterator::pos(int* _idx) const
 {
     CV_Assert(m != 0 && _idx);
-    ptrdiff_t ofs = ptr - m->data;
+    ptrdiff_t ofs = ptr - m->ptr();
     for( int i = 0; i < m->dims; i++ )
     {
         size_t s = m->step[i], v = ofs/s;
@@ -4781,7 +4371,7 @@ ptrdiff_t MatConstIterator::lpos() const
         return 0;
     if( m->isContinuous() )
         return (ptr - sliceStart)/elemSize;
-    ptrdiff_t ofs = ptr - m->data;
+    ptrdiff_t ofs = ptr - m->ptr();
     int i, d = m->dims;
     if( d == 2 )
     {
@@ -4816,13 +4406,13 @@ void MatConstIterator::seek(ptrdiff_t ofs, bool relative)
         ptrdiff_t ofs0, y;
         if( relative )
         {
-            ofs0 = ptr - m->data;
+            ofs0 = ptr - m->ptr();
             y = ofs0/m->step[0];
             ofs += y*m->cols + (ofs0 - y*m->step[0])/elemSize;
         }
         y = ofs/m->cols;
         int y1 = std::min(std::max((int)y, 0), m->rows-1);
-        sliceStart = m->data + y1*m->step[0];
+        sliceStart = m->ptr(y1);
         sliceEnd = sliceStart + m->cols*elemSize;
         ptr = y < 0 ? sliceStart : y >= m->rows ? sliceEnd :
             sliceStart + (ofs - y*m->cols)*elemSize;
@@ -4839,8 +4429,8 @@ void MatConstIterator::seek(ptrdiff_t ofs, bool relative)
     ptrdiff_t t = ofs/szi;
     int v = (int)(ofs - t*szi);
     ofs = t;
-    ptr = m->data + v*elemSize;
-    sliceStart = m->data;
+    ptr = m->ptr() + v*elemSize;
+    sliceStart = m->ptr();
 
     for( int i = d-2; i >= 0; i-- )
     {
@@ -4855,7 +4445,7 @@ void MatConstIterator::seek(ptrdiff_t ofs, bool relative)
     if( ofs > 0 )
         ptr = sliceEnd;
     else
-        ptr = sliceStart + (ptr - m->data);
+        ptr = sliceStart + (ptr - m->ptr());
 }
 
 void MatConstIterator::seek(const int* _idx, bool relative)
@@ -5051,7 +4641,7 @@ SparseMat::SparseMat(const Mat& m)
 
     int i, idx[CV_MAX_DIM] = {0}, d = m.dims, lastSize = m.size[d - 1];
     size_t esz = m.elemSize();
-    uchar* dptr = m.data;
+    const uchar* dptr = m.ptr();
 
     for(;;)
     {

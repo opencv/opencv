@@ -1076,7 +1076,7 @@ void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t bl
 {
     int scn = (int)sc.total(), cn = CV_MAT_CN(buftype);
     size_t esz = CV_ELEM_SIZE(buftype);
-    getConvertFunc(sc.depth(), buftype)(sc.data, 1, 0, 1, scbuf, 1, Size(std::min(cn, scn), 1), 0);
+    getConvertFunc(sc.depth(), buftype)(sc.ptr(), 1, 0, 1, scbuf, 1, Size(std::min(cn, scn), 1), 0);
     // unroll the scalar
     if( scn < cn )
     {
@@ -1215,7 +1215,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
         if( len == (size_t)(int)len )
         {
             sz.width = (int)len;
-            func(src1.data, src1.step, src2.data, src2.step, dst.data, dst.step, sz, 0);
+            func(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz, 0);
             return;
         }
     }
@@ -1491,9 +1491,6 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     if (!doubleSupport && (depth2 == CV_64F || depth1 == CV_64F))
         return false;
 
-    if( (oclop == OCL_OP_MUL_SCALE || oclop == OCL_OP_DIV_SCALE) && (depth1 >= CV_32F || depth2 >= CV_32F || ddepth >= CV_32F) )
-        return false;
-
     int kercn = haveMask || haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
     int scalarcn = kercn == 3 ? 4 : kercn, rowsPerWI = d.isIntel() ? 4 : 1;
 
@@ -1625,7 +1622,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
         Size sz = getContinuousSize(src1, src2, dst, src1.channels());
-        tab[depth1](src1.data, src1.step, src2.data, src2.step, dst.data, dst.step, sz, usrdata);
+        tab[depth1](src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz, usrdata);
         return;
     }
 
@@ -2988,7 +2985,7 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
         else
         {
             double fval = 0;
-            getConvertFunc(depth2, CV_64F)(src2.data, 1, 0, 1, (uchar *)&fval, 1, Size(1, 1), 0);
+            getConvertFunc(depth2, CV_64F)(src2.ptr(), 1, 0, 1, (uchar *)&fval, 1, Size(1, 1), 0);
             if( fval < getMinVal(depth1) )
                 return dst.setTo(Scalar::all(op == CMP_GT || op == CMP_GE || op == CMP_NE ? 255 : 0)), true;
 
@@ -3068,7 +3065,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         _dst.create(src1.size(), CV_8UC(cn));
         Mat dst = _dst.getMat();
         Size sz = getContinuousSize(src1, src2, dst, src1.channels());
-        getCmpFunc(src1.depth())(src1.data, src1.step, src2.data, src2.step, dst.data, dst.step, sz, &op);
+        getCmpFunc(src1.depth())(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz, &op);
         return;
     }
 
@@ -3109,7 +3106,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         else
         {
             double fval=0;
-            getConvertFunc(depth2, CV_64F)(src2.data, 1, 0, 1, (uchar*)&fval, 1, Size(1,1), 0);
+            getConvertFunc(depth2, CV_64F)(src2.ptr(), 1, 0, 1, (uchar*)&fval, 1, Size(1,1), 0);
             if( fval < getMinVal(depth1) )
             {
                 dst = Scalar::all(op == CMP_GT || op == CMP_GE || op == CMP_NE ? 255 : 0);
@@ -3679,8 +3676,8 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
             int* iubuf = ilbuf + cn;
 
             BinaryFunc sccvtfunc = getConvertFunc(ldepth, CV_32S);
-            sccvtfunc(lscalar.data, 1, 0, 1, (uchar*)ilbuf, 1, Size(cn, 1), 0);
-            sccvtfunc(uscalar.data, 1, 0, 1, (uchar*)iubuf, 1, Size(cn, 1), 0);
+            sccvtfunc(lscalar.ptr(), 1, 0, 1, (uchar*)ilbuf, 1, Size(cn, 1), 0);
+            sccvtfunc(uscalar.ptr(), 1, 0, 1, (uchar*)iubuf, 1, Size(cn, 1), 0);
             int minval = cvRound(getMinVal(sdepth)), maxval = cvRound(getMaxVal(sdepth));
 
             for( int k = 0; k < cn; k++ )
@@ -3790,8 +3787,8 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
             int* iubuf = ilbuf + cn;
 
             BinaryFunc sccvtfunc = getConvertFunc(scdepth, CV_32S);
-            sccvtfunc(lb.data, 1, 0, 1, (uchar*)ilbuf, 1, Size(cn, 1), 0);
-            sccvtfunc(ub.data, 1, 0, 1, (uchar*)iubuf, 1, Size(cn, 1), 0);
+            sccvtfunc(lb.ptr(), 1, 0, 1, (uchar*)ilbuf, 1, Size(cn, 1), 0);
+            sccvtfunc(ub.ptr(), 1, 0, 1, (uchar*)iubuf, 1, Size(cn, 1), 0);
             int minval = cvRound(getMinVal(depth)), maxval = cvRound(getMaxVal(depth));
 
             for( int k = 0; k < cn; k++ )
