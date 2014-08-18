@@ -418,6 +418,7 @@ __kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offse
                 ushort posy = pos.y + move_dir[1][j];
                 if (posx < 0 || posy < 0 || posx >= cols || posy >= rows)
                     continue;
+
                 __global uchar *addr = map + mad24(posy, map_step, posx * (int)sizeof(int));
                 int type = loadpix(addr);
                 if (type == 0)
