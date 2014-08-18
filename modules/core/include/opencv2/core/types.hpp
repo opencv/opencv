@@ -1311,11 +1311,19 @@ _Tp Size_<_Tp>::area() const
     return width * height;
 }
 
+template<typename _Tp> static inline
+Size_<_Tp>& operator *= (Size_<_Tp>& a, _Tp b)
+{
+    a.width *= b;
+    a.height *= b;
+    return a;
+}
 
 template<typename _Tp> static inline
-Size_<_Tp> operator * (const Size_<_Tp>& a, _Tp b)
+Size_<_Tp> operator * (Size_<_Tp> a, _Tp b)
 {
-    return Size_<_Tp>(a.width * b, a.height * b);
+    a *= b;
+    return a;
 }
 
 template<typename _Tp> static inline
