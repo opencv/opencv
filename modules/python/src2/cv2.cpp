@@ -1193,8 +1193,6 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 #include "pyopencv_generated_funcs.h"
 
 static PyMethodDef methods[] = {
-
-#include "pyopencv_generated_func_tab.h"
   {"createTrackbar", pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
   {"setMouseCallback", (PyCFunction)pycvSetMouseCallback, METH_VARARGS | METH_KEYWORDS, "setMouseCallback(windowName, onMouse [, param]) -> None"},
   {NULL, NULL},
@@ -1205,9 +1203,10 @@ static PyMethodDef methods[] = {
 
 static void init_submodule(PyObject * root, const char * name, PyMethodDef * methods)
 {
+  // traverse and create nested submodules
   std::string s = name;
-  size_t i = s.find('.')+1; //  assume, that name is cv2.<name>...
-  while (i < s.length())
+  size_t i = s.find('.');
+  while (i < s.length() && i != std::string::npos)
   {
     size_t j = s.find('.', i);
     if (j == std::string::npos)
@@ -1226,6 +1225,7 @@ static void init_submodule(PyObject * root, const char * name, PyMethodDef * met
     root = submod;
   }
 
+  // populate module's dict
   PyObject * d = PyModule_GetDict(root);
   for (PyMethodDef * m = methods; m->ml_name != NULL; ++m)
   {
