@@ -14,7 +14,7 @@ void cv::greyEdge(InputArray _src, OutputArray _dst, int diff_order, int mink_no
     Mat img = Mat(source.size(),CV_32FC3);
     source.convertTo(img,CV_32FC3,1.0);
 
-    float white_R,white_G,white_B;
+    double white_R,white_G,white_B;
     Constancy obj;
 
     Mat output = Mat(img.size(),CV_32FC3);
@@ -33,7 +33,7 @@ void cv::weightedGreyEdge(InputArray _src, OutputArray _dst, int kappa, int mink
     Mat img = Mat(source.size(),CV_32FC3);
     source.convertTo(img,CV_32FC3,1.0);
 
-    float white_R,white_G,white_B;
+    double white_R,white_G,white_B;
     Constancy obj;
 
     Mat output = Mat(img.size(),CV_32FC3);
