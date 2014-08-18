@@ -11,6 +11,7 @@
 
 #include "pyopencv_generated_include.h"
 #include "pyopencv_generated_contrib_include.h"
+#include "opencv2/core/types_c.h"
 #include "pyopencv_generated_contrib_typedefs.h"
 
 #include "pycv2.hpp"
