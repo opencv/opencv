@@ -63,6 +63,20 @@
         Double thresholding
 */
 
+__constant int prev[4][2] = {
+    { 0, -1 },
+    { -1, 1 },
+    { -1, 0 },
+    { -1, -1 }
+};
+
+__constant int next[4][2] = {
+    { 0, 1 },
+    { 1, -1 },
+    { 1, 0 },
+    { 1, 1 }
+};
+
 __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src_offset, int rows, int cols,
                                 __global uchar *map, int map_step, int map_offset,
                                 int low_thr, int high_thr)
@@ -79,7 +93,7 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
     {
         int x = clamp(start_x - 2 + (i % (GRP_SIZEX + 4)), 0, cols - 1);
         int y = clamp(start_y - 2 + (i / (GRP_SIZEX + 4)), 0, rows - 1);
-        smem[i] = loadpix(src + mad24(y, src_step, mad24(x, cn * sizeof(TYPE), src_offset)));
+        smem[i] = loadpix(src + mad24(y, src_step, mad24(x, cn * (int)sizeof(TYPE), src_offset)));
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -171,20 +185,6 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
         2 - belong to an edge
     */
 
-    __constant int prev[4][2] = {
-        { 0, -1 },
-        { -1, 1 },
-        { -1, 0 },
-        { -1, -1 }
-    };
-
-    __constant int next[4][2] = {
-        { 0, 1 },
-        { 1, -1 },
-        { 1, 0 },
-        { 1, 1 }
-    };
-
     lidx++;
     lidy++;
 
@@ -222,7 +222,7 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
         }
     }
 
-    storepix(value, map + mad24(gidy, map_step, mad24(gidx, sizeof(int), map_offset)));
+    storepix(value, map + mad24(gidy, map_step, mad24(gidx, (int)sizeof(int), map_offset)));
 }
 
 #elif defined WITHOUT_SOBEL
@@ -243,6 +243,19 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
 #define dist(x, y) (abs(x) + abs(y))
 #endif
 
+__constant int prev[4][2] = {
+    { 0, -1 },
+    { -1, -1 },
+    { -1, 0 },
+    { -1, 1 }
+};
+
+__constant int next[4][2] = {
+    { 0, 1 },
+    { 1, 1 },
+    { 1, 0 },
+    { 1, -1 }
+};
 
 __kernel void stage1_without_sobel(__global const uchar *dxptr, int dx_step, int dx_offset,
                                    __global const uchar *dyptr, int dy_step, int dy_offset,
@@ -264,8 +277,8 @@ __kernel void stage1_without_sobel(__global const uchar *dxptr, int dx_step, int
         int x = clamp(start_x - 1 + i % (GRP_SIZEX + 2), 0, cols - 1);
         int y = clamp(start_y - 1 + i / (GRP_SIZEX + 2), 0, rows - 1);
 
-        int dx_index = mad24(y, dx_step, mad24(x, cn * sizeof(short), dx_offset));
-        int dy_index = mad24(y, dy_step, mad24(x, cn * sizeof(short), dy_offset));
+        int dx_index = mad24(y, dx_step, mad24(x, cn * (int)sizeof(short), dx_offset));
+        int dy_index = mad24(y, dy_step, mad24(x, cn * (int)sizeof(short), dy_offset));
 
         __global short *dx = loadpix(dxptr + dx_index);
         __global short *dy = loadpix(dyptr + dy_index);
@@ -305,20 +318,6 @@ __kernel void stage1_without_sobel(__global const uchar *dxptr, int dx_step, int
         2 - belong to an edge
     */
 
-    __constant int prev[4][2] = {
-        { 0, -1 },
-        { -1, -1 },
-        { -1, 0 },
-        { -1, 1 }
-    };
-
-    __constant int next[4][2] = {
-        { 0, 1 },
-        { 1, 1 },
-        { 1, 0 },
-        { 1, -1 }
-    };
-
     lidx++;
     lidy++;
 
@@ -350,7 +349,7 @@ __kernel void stage1_without_sobel(__global const uchar *dxptr, int dx_step, int
         }
     }
 
-    storepix(value, map + mad24(gidy, map_step, mad24(gidx, sizeof(int), map_offset)));
+    storepix(value, map + mad24(gidy, map_step, mad24(gidx, (int)sizeof(int), map_offset)));
 }
 
 #undef TG22
@@ -391,7 +390,7 @@ __kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offse
     #pragma unroll
     for (int y = y0; y < min(y0 + PIX_PER_WI, rows); ++y)
     {
-        int type = loadpix(map + mad24(y, map_step, x * sizeof(int)));
+        int type = loadpix(map + mad24(y, map_step, x * (int)sizeof(int)));
         if (type == 2)
         {
             l_stack[atomic_inc(&l_counter)] = (ushort2)(x, y);
@@ -419,7 +418,7 @@ __kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offse
                 ushort posy = pos.y + move_dir[1][j];
                 if (posx < 0 || posy < 0 || posx >= cols || posy >= rows)
                     continue;
-                __global uchar *addr = map + mad24(posy, map_step, posx * sizeof(int));
+                __global uchar *addr = map + mad24(posy, map_step, posx * (int)sizeof(int));
                 int type = loadpix(addr);
                 if (type == 0)
                 {
@@ -453,7 +452,7 @@ __kernel void getEdges(__global const uchar *mapptr, int map_step, int map_offse
     #pragma unroll
     for (int y = y0; y < min(y0 + PIX_PER_WI, rows); ++y)
     {
-        int map_index = mad24(map_step, y, mad24(x, sizeof(int), map_offset));
+        int map_index = mad24(map_step, y, mad24(x, (int)sizeof(int), map_offset));
         int dst_index = mad24(dst_step, y, x) + dst_offset;
 
         __global const int * map = (__global const int *)(mapptr + map_index);
