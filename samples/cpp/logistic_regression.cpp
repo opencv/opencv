@@ -66,6 +66,21 @@ using namespace std;
 using namespace cv;
 using namespace cv::ml;
 
+static void showImage(const Mat &data, int columns, const String &name)
+{
+    Mat bigImage;
+    for(int i = 0; i < data.rows; ++i)
+    {
+        bigImage.push_back(data.row(i).reshape(0, columns));
+    }
+    imshow(name, bigImage.t());
+}
+
+static float calculateAccuracyPercent(const Mat &original, const Mat &predicted)
+{
+    return 100 * (float)cv::countNonZero(original == predicted) / predicted.rows;
+}
+
 int main()
 {
     const String filename = "data01.xml";
@@ -78,7 +93,7 @@ int main()
 
     Mat data, labels;
     {
-        cout << "loading the dataset" << endl;
+        cout << "loading the dataset...";
         FileStorage f;
         if(f.open(filename, FileStorage::READ))
         {
@@ -88,7 +103,7 @@ int main()
         }
         else
         {
-            cerr << "File can not be opened: " << filename << endl;
+            cerr << "file can not be opened: " << filename << endl;
             return 1;
         }
         data.convertTo(data, CV_32F);
@@ -114,27 +129,20 @@ int main()
     cout << "training/testing samples count: " << data_train.rows << "/" << data_test.rows << endl;
 
     // display sample image
-//    Mat bigImage;
-//    for(int i = 0; i < data_train.rows; ++i)
-//    {
-//        bigImage.push_back(data_train.row(i).reshape(0, 28));
-//    }
-//    imshow("digits", bigImage.t());
+    showImage(data_train, 28, "train data");
+    showImage(data_test, 28, "test data");
 
-    Mat responses, result;
 
-//    LogisticRegression::Params params = LogisticRegression::Params(
-//        0.001, 10, LogisticRegression::BATCH, LogisticRegression::REG_L2, 1, 1);
-    // params1 (above) with batch gradient performs better than mini batch
-    // gradient below with same parameters
+    // simple case with batch gradient
     LogisticRegression::Params params = LogisticRegression::Params(
-        0.001, 10, LogisticRegression::MINI_BATCH, LogisticRegression::REG_L2, 1, 1);
+        0.001, 10, LogisticRegression::BATCH, LogisticRegression::REG_L2, 1, 1);
+    // simple case with  mini-batch gradient
+    // LogisticRegression::Params params = LogisticRegression::Params(
+    //     0.001, 10, LogisticRegression::MINI_BATCH, LogisticRegression::REG_L2, 1, 1);
 
-    // however mini batch gradient descent parameters with slower learning
-    // rate(below) can be used to get higher accuracy than with parameters
-    // mentioned above
-//    LogisticRegression::Params params = LogisticRegression::Params(
-//        0.000001, 10, LogisticRegression::MINI_BATCH, LogisticRegression::REG_L2, 1, 1);
+    // mini-batch gradient with higher accuracy
+    // LogisticRegression::Params params = LogisticRegression::Params(
+    //     0.000001, 10, LogisticRegression::MINI_BATCH, LogisticRegression::REG_L2, 1, 1);
 
     cout << "training...";
     Ptr<StatModel> lr1 = LogisticRegression::create(params);
@@ -142,6 +150,7 @@ int main()
     cout << "done!" << endl;
 
     cout << "predicting...";
+    Mat responses;
     lr1->predict(data_test, responses);
     cout << "done!" << endl;
 
@@ -150,26 +159,27 @@ int main()
     labels_test.convertTo(labels_test, CV_32S);
     cout << labels_test.t() << endl;
     cout << responses.t() << endl;
-    result = (labels_test == responses) / 255;
-    cout << "accuracy: " << ((double)cv::sum(result)[0] / result.rows) * 100 << "%\n";
+    cout << "accuracy: " << calculateAccuracyPercent(labels_test, responses) << "%" << endl;
 
     // save the classfier
-    cout << "saving the classifier" << endl;
     const String saveFilename = "NewLR_Trained.xml";
+    cout << "saving the classifier to " << saveFilename << endl;
     lr1->save(saveFilename);
 
     // load the classifier onto new object
-    cout << "loading a new classifier" << endl;
+    cout << "loading a new classifier from " << saveFilename << endl;
     Ptr<LogisticRegression> lr2 = StatModel::load<LogisticRegression>(saveFilename);
 
     // predict using loaded classifier
-    cout << "predicting the dataset using the loaded classfier" << endl;
+    cout << "predicting the dataset using the loaded classfier...";
     Mat responses2;
     lr2->predict(data_test, responses2);
+    cout << "done!" << endl;
+
     // calculate accuracy
-    cout << "accuracy using loaded classifier: "
-         << 100 * (float)cv::countNonZero(labels_test == responses2) / responses2.rows << "%"
-         << endl;
+    cout << labels_test.t() << endl;
+    cout << responses2.t() << endl;
+    cout << "accuracy: " << calculateAccuracyPercent(labels_test, responses2) << "%" << endl;
 
     waitKey(0);
     return 0;
