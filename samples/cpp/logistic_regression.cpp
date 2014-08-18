@@ -58,9 +58,9 @@
 
 #include <iostream>
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/ml/ml.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/ml.hpp>
+#include <opencv2/highgui.hpp>
 
 using namespace std;
 using namespace cv;
@@ -78,7 +78,7 @@ static void showImage(const Mat &data, int columns, const String &name)
 
 static float calculateAccuracyPercent(const Mat &original, const Mat &predicted)
 {
-    return 100 * (float)cv::countNonZero(original == predicted) / predicted.rows;
+    return 100 * (float)countNonZero(original == predicted) / predicted.rows;
 }
 
 int main()
