@@ -211,8 +211,8 @@ CV_EXPORTS void pow(InputArray src, double power, OutputArray dst, Stream& strea
 @param dst Destination matrix that has the same size and type as the input array(s).
 @param cmpop Flag specifying the relation between the elements to be checked:
 -   **CMP_EQ:** a(.) == b(.)
--   **CMP_GT:** a(.) \< b(.)
--   **CMP_GE:** a(.) \<= b(.)
+-   **CMP_GT:** a(.) \> b(.)
+-   **CMP_GE:** a(.) \>= b(.)
 -   **CMP_LT:** a(.) \< b(.)
 -   **CMP_LE:** a(.) \<= b(.)
 -   **CMP_NE:** a(.) != b(.)
