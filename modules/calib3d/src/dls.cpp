@@ -39,9 +39,6 @@ dls::dls(const cv::Mat& opoints, const cv::Mat& ipoints)
         init_points<cv::Point3f, cv::Point2d>(opoints, ipoints);
     else
         init_points<cv::Point3d, cv::Point2f>(opoints, ipoints);
-
-    //norm_z_vector();
-
 }
 
 dls::~dls()
@@ -57,13 +54,10 @@ bool dls::compute_pose(cv::Mat& R, cv::Mat& t)
     R_.push_back(roty(CV_PI/2));
     R_.push_back(rotz(CV_PI/2));
 
-    //cv::Mat t_mean = this->mean(p);
-
     // version that calls dls 3 times, to avoid Cayley singularity
     for (int i = 0; i < 3; ++i)
     {
         // Make a random rotation
-        //cv::Mat pp = R_[i] * ( p - cv::repeat(t_mean, 1, p.cols) );
         cv::Mat pp = R_[i] * ( p - cv::repeat(mn, 1, p.cols) );
 
         // clear for new data
@@ -78,7 +72,6 @@ bool dls::compute_pose(cv::Mat& R, cv::Mat& t)
         {
             if( cost_[j] < cost__ )
             {
-                //t_est__ = t_est_[j] - C_est_[j] * R_[i] * t_mean;
                 t_est__ = t_est_[j] - C_est_[j] * R_[i] * mn;
                 C_est__ = C_est_[j] * R_[i];
                 cost__ = cost_[j];
@@ -222,11 +215,6 @@ void dls::build_coeff_matrix(const cv::Mat& pp, cv::Mat& Mtilde, cv::Mat& D)
     cv::Mat H = cv::Mat::zeros(3, 3, CV_64F);
     cv::Mat A = cv::Mat::zeros(3, 9, CV_64F);
     cv::Mat pp_i(3, 1, CV_64F);
-
-    //Parallel_compute_A comp_A(&A, &pp, &z);
-    //cv::parallel_for_(cv::Range(0, N), comp_A);
-
-    //exit(-1);
 
     cv::Mat z_i(3, 1, CV_64F);
     for (int i = 0; i < N; ++i)
