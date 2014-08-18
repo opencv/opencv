@@ -27,18 +27,15 @@ ocv_module_include_directories(
     )
 
 # -- Check if EXTRA modules path is provided. If provided, build it.
-
 if(NOT OPENCV_EXTRA_MODULES_PATH STREQUAL "")
     set(BUILD_PYTHON_CONTRIB ON)
     set(TEMP_EXTRA_MODULES_PATH ${OPENCV_EXTRA_MODULES_PATH})
 else()
     set(BUILD_PYTHON_CONTRIB OFF)
-    set(TEMP_EXTRA_MODULES_PATH " ") # Assign something to avoid bug in string(FIND)
+    set(TEMP_EXTRA_MODULES_PATH " ")
 endif()
 
-
 # -- Find the modules to build. Split them to Python modules and Python-Extra modules
-#string(REPLACE "opencv_" "" OPENCV_MODULES_NAMES "${OPENCV_MODULES_BUILD}")
 string(REPLACE "opencv_" ";" OPENCV_MODULES_NAMES ${OPENCV_MODULE_opencv_${MODULE_NAME}_DEPS})
 
 foreach(module ${OPENCV_MODULES_NAMES})
@@ -57,17 +54,9 @@ foreach(module ${OPENCV_MODULES_NAMES})
             endif()
         endif()
     endif()
-
 endforeach()
 
-message("Modules filtered Build : ${OPENCV_PYTHON_MODULES}")
-message("Modules extra Build : ${OPENCV_PYTHON_EXTRA_MODULES}")
-message("Python include Path : ${PYTHON_INCLUDE_PATH}")
-message("Python source dir : ${PYTHON_SOURCE_DIR}")
-message("CMake curret bin dir: ${CMAKE_CURRENT_BINARY_DIR}")
-message("CMake curret source dir: ${CMAKE_CURRENT_SOURCE_DIR}")
-
-# -- Now collect headers for each module for Python(cv2). Extra-modules later
+# -- Now collect headers for each module for Python(cv2). Extra-modules in second half of this file
 
 foreach(module ${OPENCV_PYTHON_MODULES})
     set(module_hdrs "${OPENCV_MODULE_opencv_${module}_HEADERS}")
@@ -80,10 +69,6 @@ foreach(module ${OPENCV_PYTHON_MODULES})
     ocv_list_filterout(module_hdrs "detection_based_tracker.hpp$")
     list(APPEND opencv_hdrs ${module_hdrs})
 endforeach()
-
-#foreach(i ${opencv_hdrs})
-#message("opencv_hdrs" : ${i})
-#endforeach()
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
@@ -103,7 +88,6 @@ add_custom_command(
    DEPENDS ${opencv_hdrs}
    COMMENT "Usage: python gen2.py <prefix> <dstdir> <srcfiles>"
    VERBATIM)
-
 
 ocv_add_library(${the_module} SHARED ${PYTHON_SOURCE_DIR}/src2/cv2.cpp ${cv2_generated_hdrs})
 set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
@@ -191,26 +175,14 @@ endif()
 if(BUILD_PYTHON_CONTRIB)
     set(TEMP_OPENCV_PYTHON_EXTRA_DEPS ${OPENCV_PYTHON_EXTRA_MODULES})
     ocv_list_add_prefix(TEMP_OPENCV_PYTHON_EXTRA_DEPS "opencv_")
-    message("OPENCV EXTRA MODULES : ${TEMP_OPENCV_PYTHON_EXTRA_DEPS}")
-#    ocv_include_modules(${TEMP_OPENCV_PYTHON_EXTRA_DEPS})
+
     foreach(module ${OPENCV_PYTHON_EXTRA_MODULES})
-       # ocv_include_modules("opencv_${module}")
-       # ocv_include_directories("${OPENCV_MODULE_opencv_${module}_LOCATION}/include")
-       # message("module location : ${OPENCV_MODULE_opencv_${module}_LOCATION}")
-       ocv_include_directories("${OPENCV_EXTRA_MODULES_PATH}/${module}/include")
+        ocv_include_directories("${OPENCV_EXTRA_MODULES_PATH}/${module}/include")
         set(extra_module_hdrs "${OPENCV_MODULE_opencv_${module}_HEADERS}")
         ocv_list_filterout(extra_module_hdrs "^.*\${module}/\${module}.hpp$")
         ocv_list_filterout(extra_module_hdrs "^.*cuda.*$")
-       # message("${module}  ${extra_module_hdrs}")
-       list(APPEND opencv_contrib_hdrs ${extra_module_hdrs})
+        list(APPEND opencv_contrib_hdrs ${extra_module_hdrs})
     endforeach()
-
-foreach(i ${opencv_contrib_hdrs})
-message("opencv_contrib_hdrs" : ${i})
-endforeach()
-
-    list(LENGTH opencv_contrib_hdrs number)
-
 
     set(cv2_generated_contrib_hdrs
         "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_include.h"
@@ -231,11 +203,12 @@ endforeach()
        COMMENT "Usage: python gen2.py <prefix> <dstdir> <srcfiles>"
        VERBATIM)
 
+    # include Python header files, pyopencv_generated_*.h files, all master module headers
     ocv_include_directories(${PYTHON_INCLUDE_PATH} ${CMAKE_CURRENT_BINARY_DIR})
     foreach(module ${OPENCV_PYTHON_MODULES})
         ocv_include_directories("${OPENCV_MODULE_opencv_${module}_LOCATION}/include")
     endforeach()
-    
+
     add_library(${contrib_module} SHARED ${PYTHON_SOURCE_DIR}/src2/cv2_contrib.cpp ${cv2_generated_contrib_hdrs})
 
     if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")
@@ -246,7 +219,7 @@ endforeach()
 
     set_target_properties(${contrib_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
 
-    #target_link_libraries(${contrib_module} ${OPENCV_MODULE_${the_module}_DEPS})
+    # target linking dependencies
     target_link_libraries(${contrib_module} ${the_module} ${TEMP_OPENCV_PYTHON_EXTRA_DEPS})
 
     set_target_properties(${contrib_module} PROPERTIES

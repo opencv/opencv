@@ -768,9 +768,9 @@ class PythonWrapperGenerator(object):
         constinfo = ConstInfo(name, decl[1])
 
         if constinfo.name in self.consts:
-            #print("Generator error: constant %s (cname=%s) already exists" \
-            #    % (constinfo.name, constinfo.cname))
-        #    sys.exit(-1)
+            print("Generator error: constant %s (cname=%s) already exists" \
+                % (constinfo.name, constinfo.cname))
+            sys.exit(-1)
             return
         self.consts[constinfo.name] = constinfo
 
@@ -833,7 +833,6 @@ class PythonWrapperGenerator(object):
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
-            print("python ", prefix, " : ", hdr)
             decls = parser.parse(hdr)
             if len(decls)>0:
                 self.code_include.write( '#include "{}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )
@@ -846,26 +845,24 @@ class PythonWrapperGenerator(object):
                     stype = name[:p]
                     name = name[p+1:].strip()
                     self.add_class(stype, name, decl)
-                    # EDIT abid: Automating calling namespaces and typedefs
+                    # Automating namespaces and typedefs for classes inside namespace -->
                     if stype == "class":
                         temp_namespace = 'cv'
                         temp_classname = '.'
                         for ns in parser.namespace_list:
                             if ns != 'cv' and name.startswith(ns) and len(ns)>len(temp_namespace):
-                                #temp_pos = name.rfind('.')
-                                temp_namespace = ns # cv.optim
-                                temp_classname = name.lstrip(ns+'.') # solver.function
+                                temp_namespace = ns
+                                temp_classname = name.lstrip(ns+'.')
                                 break
 
                         if temp_namespace.startswith('cv') and temp_namespace != 'cv' and '.' not in temp_classname:
-                            temp_ns = temp_namespace.replace('.', '::')+"::"    # cv.optim --> cv::optim::
+                            temp_ns = temp_namespace.replace('.', '::')+"::" # cv.optim --> cv::optim::
                             temp_var = temp_ns + temp_classname # cv.optim.Solver --> cv::optim::Solver
                             temp_using = "using " + temp_var + ";" # cv.optim.solver --> using cv::optim::solver;
-                            # below typedef: cv.optim.solver --> typedef cv::optim::solver optim_solver
+                            # typedef: cv.optim.solver --> typedef cv::optim::solver optim_solver
                             temp_typedef = "typedef " + temp_var+ " " + temp_var[4:].replace('::','_') + ";"
-                            print(temp_using, temp_typedef)
                             self.code_typedefs.write(temp_using+"\n"+temp_typedef+"\n")
-                    # ----------- finished abid
+                    # <-- finished
                 elif name.startswith("const"):
                     # constant
                     self.add_const(name.replace("const ", "").strip(), decl)
@@ -932,6 +929,5 @@ if __name__ == "__main__":
         dstdir = sys.argv[2]
     if len(sys.argv) > 3:
         srcfiles = sys.argv[3:]
-    print("prefix: {0}\ndstdir: {1}\nsrcfiles: {2}\n".format(prefix, dstdir, srcfiles))
     generator = PythonWrapperGenerator()
     generator.gen(srcfiles, dstdir, prefix)
