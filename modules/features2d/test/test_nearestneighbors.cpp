@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2014, Itseez Inc, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -167,13 +168,13 @@ protected:
     virtual int findNeighbors( Mat& points, Mat& neighbors );
     virtual int checkFindBoxed();
     virtual void releaseModel();
-    KDTree* tr;
+    ml::KDTree* tr;
 };
 
 
 void CV_KDTreeTest_CPP::createModel( const Mat& data )
 {
-    tr = new KDTree( data, false );
+    tr = new ml::KDTree( data, false );
 }
 
 int CV_KDTreeTest_CPP::checkGetPoins( const Mat& data )
