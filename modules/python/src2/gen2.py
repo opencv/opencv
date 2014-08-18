@@ -731,18 +731,23 @@ class FuncInfo(object):
         return code
 
 
+class Namespace(object):
+    def __init__(self):
+        self.funcs = {}
+        self.consts = {}
+
+
 class PythonWrapperGenerator(object):
     def __init__(self):
         self.clear()
 
     def clear(self):
         self.classes = {}
-        self.ns_funcs = {}
+        self.namespaces = {}
         self.consts = {}
         self.code_include = StringIO()
         self.code_types = StringIO()
         self.code_funcs = StringIO()
-        self.code_func_tab = StringIO()
         self.code_type_reg = StringIO()
         self.code_const_reg = StringIO()
         self.code_ns_reg = StringIO()
@@ -802,7 +807,7 @@ class PythonWrapperGenerator(object):
             cname = chunks[-1]
             func_map = self.classes[classname].methods
         else:
-            func_map = self.ns_funcs.setdefault(namespace, {})
+            func_map = self.namespaces.setdefault(namespace, Namespace()).funcs
 
         func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace))
         func.add_variant(decl)
@@ -813,16 +818,14 @@ class PythonWrapperGenerator(object):
     def gen_namespace(self, ns_name):
         wname = normalize_class_name(ns_name)
         self.code_ns_reg.write('static PyMethodDef methods_%s[] = {\n'%wname)
-        funclist = sorted(self.ns_funcs[ns_name].items())
+        funclist = sorted(self.namespaces[ns_name].funcs.items())
         for name, func in funclist:
             self.code_ns_reg.write(func.get_tab_entry())
         self.code_ns_reg.write('    {NULL, NULL}\n};\n\n')
 
     def gen_namespaces_reg(self):
         self.code_ns_reg.write('static void init_submodules(PyObject * root) \n{\n')
-        for ns_name in sorted(self.ns_funcs):
-            if ns_name == 'cv':
-                continue
+        for ns_name in sorted(self.namespaces):
             wname = normalize_class_name(ns_name)
             self.code_ns_reg.write('  init_submodule(root, MODULESTR"%s", methods_%s);\n' % (ns_name[2:], wname))
         self.code_ns_reg.write('};\n')
@@ -884,16 +887,11 @@ class PythonWrapperGenerator(object):
                 self.code_type_reg.write("MKTYPE2(%s);\n" % (classinfo.name,) )
 
         # step 3: generate the code for all the global functions
-        for ns in self.ns_funcs:
-            funclist = self.ns_funcs[ns].items()
-            funclist.sort()
-            for name, func in funclist:
+        for ns_name, ns in sorted(self.namespaces.items()):
+            for name, func in sorted(ns.funcs.items()):
                 code = func.gen_code(self.classes)
                 self.code_funcs.write(code)
-                if ns == 'cv':
-                    self.code_func_tab.write(func.get_tab_entry())
-            if ns != 'cv':
-                self.gen_namespace(ns)
+            self.gen_namespace(ns_name)
         self.gen_namespaces_reg()
 
         # step 4: generate the code for constants
@@ -905,7 +903,6 @@ class PythonWrapperGenerator(object):
         # That's it. Now save all the files
         self.save(output_path, "pyopencv_generated_include.h", self.code_include)
         self.save(output_path, "pyopencv_generated_funcs.h", self.code_funcs)
-        self.save(output_path, "pyopencv_generated_func_tab.h", self.code_func_tab)
         self.save(output_path, "pyopencv_generated_const_reg.h", self.code_const_reg)
         self.save(output_path, "pyopencv_generated_types.h", self.code_types)
         self.save(output_path, "pyopencv_generated_type_reg.h", self.code_type_reg)
