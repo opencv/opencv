@@ -16,8 +16,8 @@ class Constancy
         void gDer(Mat &f, int sigma, int iorder, int jorder, Mat &H);
         void normDerivative(Mat &in, int sigma, int order, Mat &Rw, Mat &Gw, Mat &Bw);
         void compute_spvar(Mat &im, int sigma, Mat &Rw, Mat &Gw, Mat &Bw, Mat &sp_var);
-        void general_cc(Mat &I, int njet, int mink_norm, int sigma, float &white_R, float &white_G, float &white_B, Mat &output);
-        void weightedGE(Mat &input_im, int kappa, int mink_norm, int sigma, float &white_R, float &white_G, float &white_B, Mat &output);
+        void general_cc(Mat &I, int njet, int mink_norm, int sigma, double &white_R, double &white_G, double &white_B, Mat &output);
+        void weightedGE(Mat &input_im, int kappa, int mink_norm, int sigma, double &white_R, double &white_G, double &white_B, Mat &output);
 };
 
 void Constancy::set_border(Mat &in,int width, int method, Mat &out)
@@ -158,7 +158,7 @@ void Constancy::fill_border(Mat &in, int bw, Mat &out)
 void Constancy::gDer(Mat &f, int sigma, int iorder, int jorder, Mat &H)
 {
     float break_off_sigma = 3;
-    int filtersize = floor(break_off_sigma*sigma + 0.5);
+    int filtersize = (int)floor(break_off_sigma*sigma + 0.5);
 
    Mat temp;
    if(f.channels() == 1)
@@ -173,7 +173,7 @@ void Constancy::gDer(Mat &f, int sigma, int iorder, int jorder, Mat &H)
 
     for(int i =0;i<x.cols;i++)
     {
-        x.ptr<float>(0)[i] = filter;
+        x.ptr<float>(0)[i] = (float)filter;
         filter = filter+1;
     }
 
@@ -329,7 +329,7 @@ void Constancy::compute_spvar(Mat &im, int sigma, Mat &Rw, Mat &Gw, Mat &Bw, Mat
     sqrt(temp_x + temp_y,sp_var);
 }
 
-void Constancy::weightedGE(Mat &input_im, int kappa, int mink_norm, int sigma, float &white_R, float &white_G, float &white_B, Mat &output)
+void Constancy::weightedGE(Mat &input_im, int kappa, int mink_norm, int sigma, double &white_R, double &white_G, double &white_B, Mat &output)
 {
     int rows = input_im.rows;
     int cols = input_im.cols;
@@ -441,12 +441,12 @@ void Constancy::weightedGE(Mat &input_im, int kappa, int mink_norm, int sigma, f
 
         Mat norm1;
         pow(tmp_ill,2,norm1);
-        float sum_norm1 = sum(norm1)[0];
+        double sum_norm1 = sum(norm1)[0];
         tmp_ill = tmp_ill/sqrt(sum_norm1);
         final_ill = final_ill.mul(tmp_ill);
         Mat norm;
         pow(final_ill,2,norm);
-        float sum_norm = sum(norm)[0];
+        double sum_norm = sum(norm)[0];
 
         final_ill = final_ill/sqrt(sum_norm);
 
@@ -457,9 +457,9 @@ void Constancy::weightedGE(Mat &input_im, int kappa, int mink_norm, int sigma, f
         }
     }
 
-    white_R = final_ill.ptr<float>(0)[0];
-    white_G = final_ill.ptr<float>(0)[1];
-    white_B = final_ill.ptr<float>(0)[2];
+    white_R = (double)final_ill.ptr<float>(0)[0];
+    white_G = (double)final_ill.ptr<float>(0)[1];
+    white_B = (double)final_ill.ptr<float>(0)[2];
 
     vector <Mat> out_planes;
     split(output,out_planes);
@@ -475,7 +475,7 @@ void Constancy::weightedGE(Mat &input_im, int kappa, int mink_norm, int sigma, f
     output.convertTo(output,CV_8UC3,1);
 }
 
-void Constancy::general_cc(Mat &I, int njet, int mink_norm, int sigma, float &white_R, float &white_G, float &white_B, Mat &output)
+void Constancy::general_cc(Mat &I, int njet, int mink_norm, int sigma, double &white_R, double &white_G, double &white_B, Mat &output)
 {
     int rows = I.rows;
     int cols = I.cols;

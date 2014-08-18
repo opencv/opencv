@@ -84,7 +84,7 @@ void Intrinsic::compute(Mat &rgbIm, Mat &rgbIm2, Mat &weight, Mat &ref, Mat &sha
                 {
                     for(int y =0;y<3;y++)
                     {
-                        temp.ptr<float>(l)[y] = R.ptr<float>(n_idx.at<float>(len-1,l))[y];
+                        temp.ptr<float>(l)[y] = R.ptr<float>((int)n_idx.at<float>(len-1,l))[y];
                     }
                 }
 
@@ -167,7 +167,7 @@ void Intrinsic::decompose(Mat &rgbIm, Mat &ref, Mat &shade, int wd, int iterNum,
 
     Mat rgbIm_c;
     divide(rgbIm,out,rgbIm_c);
-    column = std::pow(2*wd+1,2);
+    column = (int)std::pow(2*wd+1,2);
 
     // luminlances in a local window
     Mat gvals = Mat::zeros(1,column,CV_32FC1);
