@@ -74,7 +74,7 @@ static bool calculateError( const Mat& _p_labels, const Mat& _o_labels, float& e
     CV_Assert(_p_labels_temp.total() == _o_labels_temp.total());
     CV_Assert(_p_labels_temp.rows == _o_labels_temp.rows);
 
-    accuracy = (float)cv::countNonZero(_p_labels_temp == _o_labels_temp)/_p_labels_temp.rows;
+    accuracy = (float)countNonZero(_p_labels_temp == _o_labels_temp)/_p_labels_temp.rows;
     error = 1 - accuracy;
     return true;
 }
@@ -166,7 +166,7 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
     params1.mini_batch_size = 10;
 
     // train and save the classifier
-    String filename = cv::tempfile(".xml");
+    String filename = tempfile(".xml");
     try
     {
         // run LR classifier train classifier
@@ -208,8 +208,8 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
     // check if there is any difference between computed learnt mat and retreived mat
 
     float errorCount = 0.0;
-    errorCount += 1 - (float)cv::countNonZero(responses1 == responses2)/responses1.rows;
-    errorCount += 1 - (float)cv::sum(comp_learnt_mats)[0]/comp_learnt_mats.rows;
+    errorCount += 1 - (float)countNonZero(responses1 == responses2)/responses1.rows;
+    errorCount += 1 - (float)sum(comp_learnt_mats)[0]/comp_learnt_mats.rows;
 
     if(errorCount>0)
     {

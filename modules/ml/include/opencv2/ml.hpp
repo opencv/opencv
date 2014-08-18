@@ -89,9 +89,6 @@ public:
     CV_PROP_RW double maxVal;
     CV_PROP_RW double logStep;
 };
-#define CV_TYPE_NAME_ML_LR          "opencv-ml-lr"
-
-
 
 class CV_EXPORTS TrainData
 {
@@ -590,7 +587,7 @@ public:
         int regularized;
         int train_method;
         int mini_batch_size;
-        cv::TermCriteria term_crit;
+        TermCriteria term_crit;
     };
 
     enum { REG_L1 = 0, REG_L2 = 1};
