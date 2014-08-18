@@ -446,7 +446,7 @@ cv::Mat LogisticRegressionImpl::compute_mini_batch_gradient(const cv::Mat& _data
         lambda_l = 1;
     }
 
-    for(int i = 0;this->params.term_crit.maxCount;i++)
+    for(int i = 0;i<this->params.term_crit.maxCount;i++)
     {
         if(j+size_b<=_data.rows)
         {
