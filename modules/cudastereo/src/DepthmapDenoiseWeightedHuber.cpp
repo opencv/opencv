@@ -67,10 +67,8 @@ namespace cv{
         public:
             //CostVolume cv;//The cost volume we are attached to
             
-            DepthmapDenoiseWeightedHuberImpl(const cv::cuda::GpuMat& visibleLightImage=GpuMat(),Stream cvStream=Stream::Null());
-            cv::cuda::GpuMat operator()(InputArray ain,
-                                        float epsilon,
-                                        float theta);
+            DepthmapDenoiseWeightedHuberImpl(const GpuMat& visibleLightImage=GpuMat(),Stream cvStream=Stream::Null());
+            GpuMat operator()(InputArray ain, float epsilon, float theta);
 
             GpuMat visibleLightImage;
             //buffers
@@ -95,37 +93,47 @@ namespace cv{
             bool cachedG;
             int alloced;
             int dInited;
+            
+            void setStream(Stream /*s*/){CV_Assert(!"Not Implemented");};
+            Stream getStream(){CV_Assert(!"Not Implemented"); return cvStream;};
+            
+            void setAlpha(float /*alpha*/){CV_Assert(!"Not Implemented");};
+            float getAlpha(){CV_Assert(!"Not Implemented");return 0;};
+            
+            void setBeta(float /*beta*/){CV_Assert(!"Not Implemented");};
+            float getBeta(){CV_Assert(!"Not Implemented");return 0;};
 
         public:
             Stream cvStream;
         }; 
-
-        DepthmapDenoiseWeightedHuberImpl::DepthmapDenoiseWeightedHuberImpl(const GpuMat& _visibleLightImage,
-                                                                Stream _cvStream) : 
-                                                                visibleLightImage(_visibleLightImage), 
-                                                                rows(_visibleLightImage.rows),
-                                                                cols(_visibleLightImage.cols),
-                                                                cvStream(_cvStream)
-        {
-            alloced=0;
-            cachedG=0; 
-            dInited=0;
-        }
-
-        Ptr<DepthmapDenoiseWeightedHuber>
-        CV_EXPORTS createDepthmapDenoiseWeightedHuber(InputArray visibleLightImage, Stream cvStream){
-            return Ptr<DepthmapDenoiseWeightedHuber>(new DepthmapDenoiseWeightedHuberImpl(visibleLightImage.getGpuMat(),cvStream));
-        }
     }
 }
 
 
 
 
-
-
+namespace cv{
+    namespace cuda{
 using namespace std;
 using namespace cv::cuda;
+
+DepthmapDenoiseWeightedHuberImpl::DepthmapDenoiseWeightedHuberImpl(const GpuMat& _visibleLightImage,
+                                                        Stream _cvStream) : 
+                                                        visibleLightImage(_visibleLightImage), 
+                                                        rows(_visibleLightImage.rows),
+                                                        cols(_visibleLightImage.cols),
+                                                        cvStream(_cvStream)
+{
+    alloced=0;
+    cachedG=0; 
+    dInited=0;
+}
+
+Ptr<DepthmapDenoiseWeightedHuber>
+CV_EXPORTS createDepthmapDenoiseWeightedHuber(InputArray visibleLightImage, Stream cvStream){
+    return Ptr<DepthmapDenoiseWeightedHuber>(new DepthmapDenoiseWeightedHuberImpl(visibleLightImage.getGpuMat(),cvStream));
+}
+
 
 #define FLATALLOC(n,cv) n.create(1,cv.rows*cv.cols, CV_32FC1);n=n.reshape(0,cv.rows)
 static void memZero(GpuMat& in,Stream& cvStream){
@@ -319,14 +327,12 @@ GpuMat DepthmapDenoiseWeightedHuberImpl::operator()(InputArray _ain, float epsil
     float* gqxpt = (float*)_qx.data;
     float* gqypt = (float*)_qy.data;
 
-   loadConstants(rows, cols, 0, 0, 0, 0, 0, 0,
+    loadConstants(rows, cols, 0, 0, 0, 0, 0, 0,
            0, 0);
     updateQDCaller  ( gqxpt, gqypt, d, a,
             gxpt, gypt, cols, sigma_q, sigma_d, epsilon, theta);
-    cudaDeviceSynchronize();
     cudaSafeCall(cudaGetLastError());
     return _d;
 }
-
-
-
+}  
+}

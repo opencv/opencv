@@ -198,6 +198,16 @@ public:
     //! In case you want to do these explicitly
     virtual void allocate(int rows, int cols, InputArray gx = GpuMat(),InputArray gy = GpuMat()) = 0;
     virtual void cacheGValues(InputArray visibleLightImage = GpuMat()) = 0;
+    
+    // Following reserved for later use, not implemented
+    virtual void setStream(Stream) = 0;//not implemented, may be unsafe to implement
+    virtual Stream getStream() = 0;//not implemented
+    
+    virtual void setAlpha(float alpha) = 0;//not implemented
+    virtual float getAlpha() = 0;//not implemented
+    
+    virtual void setBeta(float beta) = 0;//not implemented
+    virtual float getBeta() = 0;//not implemented
 };
 
 //! The visibleLightImage is a CV_32FC1 grayscale image of the scene, which can be used as a hint for edge placement.
