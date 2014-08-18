@@ -71,17 +71,21 @@
 
 #if cn == 1
 #define READ_IMAGE(X,Y,Z)  read_imagef(X,Y,Z).x
+#define INTERMEDIATE_TYPE  float
 #elif cn == 2
 #define READ_IMAGE(X,Y,Z)  read_imagef(X,Y,Z).xy
+#define INTERMEDIATE_TYPE  float2
 #elif cn == 3
 #define READ_IMAGE(X,Y,Z)  read_imagef(X,Y,Z).xyz
+#define INTERMEDIATE_TYPE  float3
 #elif cn == 4
 #define READ_IMAGE(X,Y,Z)  read_imagef(X,Y,Z)
+#define INTERMEDIATE_TYPE  float4
 #endif
 
 #define __CAT(x, y) x##y
 #define CAT(x, y) __CAT(x, y)
-#define INTERMEDIATE_TYPE CAT(float, cn)
+//#define INTERMEDIATE_TYPE CAT(float, cn)
 #define float1 float
 
 #if depth == 0
