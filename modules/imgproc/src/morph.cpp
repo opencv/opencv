@@ -1531,7 +1531,7 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
     if (dev.isIntel() && !(dev.type() & ocl::Device::TYPE_CPU) &&
         ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
          (ksize.width == 5 && ksize.height == 5 && cn == 1)) &&
-         (iterations == 1))
+         (iterations == 1) && cn == 1)
     {
         if (ocl_morphSmall(_src, _dst, kernel, anchor, borderType, op, actual_op, _extraMat))
             return true;
@@ -1543,12 +1543,17 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
         return true;
     }
 
-#ifdef ANDROID
+#if defined ANDROID
     size_t localThreads[2] = { 16, 8 };
 #else
     size_t localThreads[2] = { 16, 16 };
 #endif
     size_t globalThreads[2] = { ssize.width, ssize.height };
+
+#ifdef __APPLE__
+    if( actual_op != MORPH_ERODE && actual_op != MORPH_DILATE )
+        localThreads[0] = localThreads[1] = 4;
+#endif
 
     if (localThreads[0]*localThreads[1] * 2 < (localThreads[0] + ksize.width - 1) * (localThreads[1] + ksize.height - 1))
         return false;
