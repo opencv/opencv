@@ -190,7 +190,7 @@ void add(const Mat& _a, double alpha, const Mat& _b, double beta,
     if(!b.empty())
         buf[1].create(1, maxsize, CV_64FC(cn));
     buf[2].create(1, maxsize, CV_64FC(cn));
-    scalarToRawData(gamma, buf[2].data, CV_64FC(cn), (int)(maxsize*cn));
+    scalarToRawData(gamma, buf[2].ptr(), CV_64FC(cn), (int)(maxsize*cn));
 
     for( i = 0; i < nplanes; i++, ++it)
     {
@@ -203,8 +203,8 @@ void add(const Mat& _a, double alpha, const Mat& _b, double beta,
 
             apart0.convertTo(apart, apart.type(), alpha);
             size_t k, n = (j2 - j)*cn;
-            double* aptr = (double*)apart.data;
-            const double* gptr = (const double*)buf[2].data;
+            double* aptr = apart.ptr<double>();
+            const double* gptr = buf[2].ptr<double>();
 
             if( b.empty() )
             {
@@ -216,7 +216,7 @@ void add(const Mat& _a, double alpha, const Mat& _b, double beta,
                 Mat bpart0 = planes[1].colRange((int)j, (int)j2);
                 Mat bpart = buf[1].colRange(0, (int)(j2 - j));
                 bpart0.convertTo(bpart, bpart.type(), beta);
-                const double* bptr = (const double*)bpart.data;
+                const double* bptr = bpart.ptr<double>();
 
                 for( k = 0; k < n; k++ )
                     aptr[k] += bptr[k] + gptr[k];
@@ -303,8 +303,8 @@ void convert(const Mat& src, cv::OutputArray _dst, int dtype, double alpha, doub
 
     for( i = 0; i < nplanes; i++, ++it)
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         switch( src.depth() )
         {
@@ -347,7 +347,7 @@ void copy(const Mat& src, Mat& dst, const Mat& mask, bool invertMask)
         size_t planeSize = planes[0].total()*src.elemSize();
 
         for( i = 0; i < nplanes; i++, ++it )
-            memcpy(planes[1].data, planes[0].data, planeSize);
+            memcpy(planes[1].ptr(), planes[0].ptr(), planeSize);
 
         return;
     }
@@ -363,9 +363,9 @@ void copy(const Mat& src, Mat& dst, const Mat& mask, bool invertMask)
 
     for( i = 0; i < nplanes; i++, ++it)
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
-        const uchar* mptr = planes[2].data;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
+        const uchar* mptr = planes[2].ptr();
 
         for( j = 0; j < total; j++, sptr += elemSize, dptr += elemSize )
         {
@@ -398,7 +398,7 @@ void set(Mat& dst, const Scalar& gamma, const Mat& mask)
 
         for( i = 0; i < nplanes; i++, ++it )
         {
-            uchar* dptr = plane.data;
+            uchar* dptr = plane.ptr();
             if( uniform )
                 memset( dptr, gptr[0], planeSize );
             else if( i == 0 )
@@ -408,7 +408,7 @@ void set(Mat& dst, const Scalar& gamma, const Mat& mask)
                         dptr[k] = gptr[k];
             }
             else
-                memcpy(dptr, dst.data, planeSize);
+                memcpy(dptr, dst.ptr(), planeSize);
         }
         return;
     }
@@ -424,8 +424,8 @@ void set(Mat& dst, const Scalar& gamma, const Mat& mask)
 
     for( i = 0; i < nplanes; i++, ++it)
     {
-        uchar* dptr = planes[0].data;
-        const uchar* mptr = planes[1].data;
+        uchar* dptr = planes[0].ptr();
+        const uchar* mptr = planes[1].ptr();
 
         for( j = 0; j < total; j++, dptr += elemSize )
         {
@@ -450,8 +450,8 @@ void insert(const Mat& src, Mat& dst, int coi)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data + coi*size0;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr() + coi*size0;
 
         for( j = 0; j < total; j++, sptr += size0, dptr += size1 )
         {
@@ -475,8 +475,8 @@ void extract(const Mat& src, Mat& dst, int coi)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data + coi*size1;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr() + coi*size1;
+        uchar* dptr = planes[1].ptr();
 
         for( j = 0; j < total; j++, sptr += size0, dptr += size1 )
         {
@@ -1055,8 +1055,8 @@ void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
 
     for( i = 0; i < nplanes; i++, ++it, startidx += total )
     {
-        const uchar* sptr = planes[0].data;
-        const uchar* mptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        const uchar* mptr = planes[1].ptr();
 
         switch( depth )
         {
@@ -1262,7 +1262,7 @@ double norm(InputArray _src, int normType, InputArray _mask)
         int cellSize = normType == NORM_HAMMING ? 1 : 2;
 
         for( i = 0; i < nplanes; i++, ++it )
-            result += normHamming(planes[0].data, total, cellSize);
+            result += normHamming(planes[0].ptr(), total, cellSize);
         return result;
     }
     int normType0 = normType;
@@ -1282,8 +1282,8 @@ double norm(InputArray _src, int normType, InputArray _mask)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        const uchar* mptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        const uchar* mptr = planes[1].ptr();
 
         switch( depth )
         {
@@ -1343,7 +1343,7 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
         int cellSize = normType == NORM_HAMMING ? 1 : 2;
 
         for( i = 0; i < nplanes; i++, ++it )
-            result += normHamming(planes[0].data, total, cellSize);
+            result += normHamming(planes[0].ptr(), total, cellSize);
         return result;
     }
     int normType0 = normType;
@@ -1363,9 +1363,9 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
-        const uchar* mptr = planes[2].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
+        const uchar* mptr = planes[2].ptr();
 
         switch( depth )
         {
@@ -1429,8 +1429,8 @@ double crossCorr(const Mat& src1, const Mat& src2)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
 
         switch( depth )
         {
@@ -1526,9 +1526,9 @@ void logicOp( const Mat& src1, const Mat& src2, Mat& dst, char op )
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
-        uchar* dptr = planes[2].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
+        uchar* dptr = planes[2].ptr();
 
         logicOp_(sptr1, sptr2, dptr, total, op);
     }
@@ -1550,8 +1550,8 @@ void logicOp(const Mat& src, const Scalar& s, Mat& dst, char op)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         logicOpS_(sptr, (uchar*)&buf[0], dptr, total, op);
     }
@@ -1644,9 +1644,9 @@ void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
-        uchar* dptr = planes[2].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
+        uchar* dptr = planes[2].ptr();
 
         switch( depth )
         {
@@ -1692,8 +1692,8 @@ void compare(const Mat& src, double value, Mat& dst, int cmpop)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         switch( depth )
         {
@@ -1823,8 +1823,8 @@ bool cmpUlps(const Mat& src1, const Mat& src2, int imaxDiff, double* _realmaxdif
 
     for( i = 0; i < nplanes; i++, ++it, startidx += total )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
         double realmaxdiff = 0;
 
         switch( depth )
@@ -1914,7 +1914,7 @@ int check( const Mat& a, double fmin, double fmax, vector<int>* _idx )
 
     for( i = 0; i < nplanes; i++, ++it, startidx += total )
     {
-        const uchar* aptr = plane.data;
+        const uchar* aptr = plane.ptr();
 
         switch( depth )
         {
@@ -1990,8 +1990,8 @@ int cmpEps( const Mat& arr, const Mat& refarr, double* _realmaxdiff,
 
     for( i = 0; i < nplanes; i++, ++it, startidx += total )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
 
         switch( depth )
         {
@@ -2332,8 +2332,8 @@ void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& _shift
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         switch( depth )
         {
@@ -2388,9 +2388,9 @@ static void minmax(const Mat& src1, const Mat& src2, Mat& dst, char op)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
-        uchar* dptr = planes[2].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
+        uchar* dptr = planes[2].ptr();
 
         switch( depth )
         {
@@ -2457,8 +2457,8 @@ static void minmax(const Mat& src1, double val, Mat& dst, char op)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr1 = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr1 = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         switch( depth )
         {
@@ -2528,9 +2528,9 @@ static void muldiv(const Mat& src1, const Mat& src2, Mat& dst, double scale, cha
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
-        uchar* dptr = planes[2].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
+        uchar* dptr = planes[2].ptr();
 
         switch( depth )
         {
@@ -2614,8 +2614,8 @@ Scalar mean(const Mat& src, const Mat& mask)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        const uchar* mptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        const uchar* mptr = planes[1].ptr();
 
         switch( depth )
         {

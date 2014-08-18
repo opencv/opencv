@@ -39,8 +39,9 @@
 //
 //M*/
 #include "precomp.hpp"
-#include "debug.hpp"
-#include "opencv2/core/core_c.h"
+
+#define dprintf(x)
+#define print_matrix(x)
 
 /*
 
@@ -83,13 +84,13 @@ Created by @SareeAlnaghy
 using namespace std;
 using namespace cv;
 
-void test(Ptr<optim::DownhillSolver> solver, Ptr<optim::Solver::Function> ptr_F, Mat &P, Mat &step)
+void test(Ptr<optim::DownhillSolver> MinProblemSolver, Ptr<optim::MinProblemSolver::Function> ptr_F, Mat &P, Mat &step)
 {
 try{
 
-solver->setFunction(ptr_F);
-solver->setInitStep(step);
-double res = solver->minimize(P);
+MinProblemSolver->setFunction(ptr_F);
+MinProblemSolver->setInitStep(step);
+double res = MinProblemSolver->minimize(P);
 
 cout << "res " << res << endl;
 }
@@ -102,7 +103,7 @@ cerr << "Error:: " << e.what() << endl;
 int main()
 {
 
-class DistanceToLines :public optim::Solver::Function {
+class DistanceToLines :public optim::MinProblemSolver::Function {
 public:
 double calc(const double* x)const{
 
@@ -114,10 +115,10 @@ return x[0] * x[0] + x[1] * x[1];
 Mat P = (Mat_<double>(1, 2) << 1.0, 1.0);
 Mat step = (Mat_<double>(2, 1) << -0.5, 0.5);
 
-Ptr<optim::Solver::Function> ptr_F(new DistanceToLines());
-Ptr<optim::DownhillSolver> solver = optim::createDownhillSolver();
+Ptr<optim::MinProblemSolver::Function> ptr_F(new DistanceToLines());
+Ptr<optim::DownhillSolver> MinProblemSolver = optim::createDownhillSolver();
 
-test(solver, ptr_F, P, step);
+test(MinProblemSolver, ptr_F, P, step);
 
 system("pause");
 return 0;
@@ -131,11 +132,8 @@ multiple lines in three dimensions as not all lines intersect in three dimension
 
 */
 
-
-
-
-
-namespace cv{namespace optim{
+namespace cv
+{
 
     class DownhillSolverImpl : public DownhillSolver
     {
@@ -149,7 +147,7 @@ namespace cv{namespace optim{
         void setTermCriteria(const TermCriteria& termcrit);
         double minimize(InputOutputArray x);
     protected:
-        Ptr<Solver::Function> _Function;
+        Ptr<MinProblemSolver::Function> _Function;
         TermCriteria _termcrit;
         Mat _step;
         Mat_<double> buf_x;
@@ -157,8 +155,8 @@ namespace cv{namespace optim{
     private:
         inline void createInitialSimplex(Mat_<double>& simplex,Mat& step);
         inline double innerDownhillSimplex(cv::Mat_<double>& p,double MinRange,double MinError,int& nfunk,
-                const Ptr<Solver::Function>& f,int nmax);
-        inline double tryNewPoint(Mat_<double>& p,Mat_<double>& y,Mat_<double>& coord_sum,const Ptr<Solver::Function>& f,int ihi,
+                const Ptr<MinProblemSolver::Function>& f,int nmax);
+        inline double tryNewPoint(Mat_<double>& p,Mat_<double>& y,Mat_<double>& coord_sum,const Ptr<MinProblemSolver::Function>& f,int ihi,
                 double fac,Mat_<double>& ptry);
     };
 
@@ -166,7 +164,7 @@ namespace cv{namespace optim{
         Mat_<double>& p,
         Mat_<double>& y,
         Mat_<double>&  coord_sum,
-        const Ptr<Solver::Function>& f,
+        const Ptr<MinProblemSolver::Function>& f,
         int      ihi,
         double   fac,
         Mat_<double>& ptry
@@ -182,7 +180,7 @@ namespace cv{namespace optim{
         {
             ptry(j)=coord_sum(j)*fac1-p(ihi,j)*fac2;
         }
-        ytry=f->calc((double*)ptry.data);
+        ytry=f->calc(ptry.ptr<double>());
         if (ytry < y(ihi))
         {
             y(ihi)=ytry;
@@ -197,7 +195,7 @@ namespace cv{namespace optim{
     }
 
     /*
-    Performs the actual minimization of Solver::Function f (after the initialization was done)
+    Performs the actual minimization of MinProblemSolver::Function f (after the initialization was done)
 
     The matrix p[ndim+1][1..ndim] represents ndim+1 vertices that
     form a simplex - each row is an ndim vector.
@@ -208,7 +206,7 @@ namespace cv{namespace optim{
         double     MinRange,
         double     MinError,
         int&       nfunk,
-        const Ptr<Solver::Function>& f,
+        const Ptr<MinProblemSolver::Function>& f,
         int nmax
         )
     {
@@ -302,7 +300,7 @@ namespace cv{namespace optim{
                             {
                                 p(i,j) = coord_sum(j) = 0.5*(p(i,j)+p(ilo,j));
                             }
-                            y(i)=f->calc((double*)coord_sum.data);
+                            y(i)=f->calc(coord_sum.ptr<double>());
                         }
                     }
                     nfunk += ndim;
@@ -345,7 +343,7 @@ namespace cv{namespace optim{
 
         if(x_mat.rows>1){
             buf_x.create(1,_step.cols);
-            Mat_<double> proxy(_step.cols,1,(double*)buf_x.data);
+            Mat_<double> proxy(_step.cols,1,buf_x.ptr<double>());
             x_mat.copyTo(proxy);
             proxy_x=buf_x;
         }else{
@@ -365,7 +363,7 @@ namespace cv{namespace optim{
         dprintf(("%d iterations done\n",count));
 
         if(x_mat.rows>1){
-            Mat(x_mat.rows, 1, CV_64F, (double*)proxy_x.data).copyTo(x);
+            Mat(x_mat.rows, 1, CV_64F, proxy_x.ptr<double>()).copyTo(x);
         }
         return res;
     }
@@ -373,7 +371,7 @@ namespace cv{namespace optim{
         _Function=Ptr<Function>();
         _step=Mat_<double>();
     }
-    Ptr<Solver::Function> DownhillSolverImpl::getFunction()const{
+    Ptr<MinProblemSolver::Function> DownhillSolverImpl::getFunction()const{
         return _Function;
     }
     void DownhillSolverImpl::setFunction(const Ptr<Function>& f){
@@ -387,12 +385,12 @@ namespace cv{namespace optim{
         _termcrit=termcrit;
     }
     // both minRange & minError are specified by termcrit.epsilon; In addition, user may specify the number of iterations that the algorithm does.
-    Ptr<DownhillSolver> createDownhillSolver(const Ptr<Solver::Function>& f, InputArray initStep, TermCriteria termcrit){
-        DownhillSolver *DS=new DownhillSolverImpl();
+    Ptr<DownhillSolver> DownhillSolver::create(const Ptr<MinProblemSolver::Function>& f, InputArray initStep, TermCriteria termcrit){
+        Ptr<DownhillSolver> DS = makePtr<DownhillSolverImpl>();
         DS->setFunction(f);
         DS->setInitStep(initStep);
         DS->setTermCriteria(termcrit);
-        return Ptr<DownhillSolver>(DS);
+        return DS;
     }
     void DownhillSolverImpl::getInitStep(OutputArray step)const{
         _step.copyTo(step);
@@ -408,4 +406,4 @@ namespace cv{namespace optim{
             transpose(m,_step);
         }
     }
-}}
+}

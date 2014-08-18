@@ -123,7 +123,7 @@ void HOGDescriptor::setSVMDetector(InputArray _svmDetector)
         for (int j = 0; j < blocks_per_img.width; ++j)
         {
             const float *src = &svmDetector[0] + (j * blocks_per_img.height + i) * block_hist_size;
-            float *dst = (float*)detector_reordered.data + (i * blocks_per_img.width + j) * block_hist_size;
+            float *dst = detector_reordered.ptr<float>() + (i * blocks_per_img.width + j) * block_hist_size;
             for (size_t k = 0; k < block_hist_size; ++k)
                 dst[k] = src[k];
         }
@@ -300,12 +300,12 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
     float angleScale = (float)(nbins/CV_PI);
     for( y = 0; y < gradsize.height; y++ )
     {
-        const uchar* imgPtr  = img.data + img.step*ymap[y];
-        const uchar* prevPtr = img.data + img.step*ymap[y-1];
-        const uchar* nextPtr = img.data + img.step*ymap[y+1];
+        const uchar* imgPtr  = img.ptr(ymap[y]);
+        const uchar* prevPtr = img.ptr(ymap[y-1]);
+        const uchar* nextPtr = img.ptr(ymap[y+1]);
 
-        float* gradPtr = (float*)grad.ptr(y);
-        uchar* qanglePtr = (uchar*)qangle.ptr(y);
+        float* gradPtr = grad.ptr<float>(y);
+        uchar* qanglePtr = qangle.ptr(y);
 
         if( cn == 1 )
         {
@@ -781,8 +781,8 @@ const float* HOGCache::getBlock(Point pt, float* buf)
     }
 
     int k, C1 = count1, C2 = count2, C4 = count4;
-    const float* gradPtr = (const float*)(grad.data + grad.step*pt.y) + pt.x*2;
-    const uchar* qanglePtr = qangle.data + qangle.step*pt.y + pt.x*2;
+    const float* gradPtr = grad.ptr<float>(pt.y) + pt.x*2;
+    const uchar* qanglePtr = qangle.ptr(pt.y) + pt.x*2;
 
 //    CV_Assert( blockHist != 0 );
     memset(blockHist, 0, sizeof(float) * blockHistogramSize);
@@ -1581,7 +1581,7 @@ public:
         {
             double scale = levelScale[i];
             Size sz(cvRound(img.cols/scale), cvRound(img.rows/scale));
-            Mat smallerImg(sz, img.type(), smallerImgBuf.data);
+            Mat smallerImg(sz, img.type(), smallerImgBuf.ptr());
             if( sz == img.size() )
                 smallerImg = Mat(sz, img.type(), img.data, img.step);
             else
@@ -3282,7 +3282,7 @@ public:
             double scale = (*locations)[i].scale;
 
             Size sz(cvRound(img.cols / scale), cvRound(img.rows / scale));
-            Mat smallerImg(sz, img.type(), smallerImgBuf.data);
+            Mat smallerImg(sz, img.type(), smallerImgBuf.ptr());
 
             if( sz == img.size() )
                 smallerImg = Mat(sz, img.type(), img.data, img.step);

@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 
     Mat I = imread(argv[1]);
 
-    if(!I.data)
+    if(I.empty())
     {
         cout <<  "Image not found" << endl;
         exit(0);

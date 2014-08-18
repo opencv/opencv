@@ -21,6 +21,9 @@ ocv_list_filterout(candidate_deps "^opencv_tracking$")
 ocv_list_filterout(candidate_deps "^opencv_optflow$")
 ocv_list_filterout(candidate_deps "^opencv_bgsegm$")
 ocv_list_filterout(candidate_deps "^opencv_xfeatures2d$")
+ocv_list_filterout(candidate_deps "^opencv_ximgproc$")
+ocv_list_filterout(candidate_deps "^opencv_xphoto$")
+ocv_list_filterout(candidate_deps "^opencv_ts$")
 
 ocv_add_module(${MODULE_NAME} BINDINGS OPTIONAL ${candidate_deps})
 

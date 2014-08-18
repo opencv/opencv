@@ -472,10 +472,10 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
             size.width *= scn;
 
             if (mask.empty())
-                status = ippFunc(src.data, srcstep, (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
+                status = ippFunc(src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
             else
-                status = ippFuncMask(src.data, srcstep, (const Ipp8u *)mask.data, maskstep,
-                                     (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
+                status = ippFuncMask(src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
+                                     dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
 
             if (status >= 0)
                 return;
@@ -549,10 +549,10 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
             size.width *= scn;
 
             if (mask.empty())
-                status = ippFunc(src.data, srcstep, (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
+                status = ippFunc(src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
             else
-                status = ippFuncMask(src.data, srcstep, (const Ipp8u *)mask.data, maskstep,
-                                     (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
+                status = ippFuncMask(src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
+                                     dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
 
             if (status >= 0)
                 return;
@@ -630,11 +630,11 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
             size.width *= scn;
 
             if (mask.empty())
-                status = ippFunc(src1.data, src1step, src2.data, src2step, (Ipp32f *)dst.data,
+                status = ippFunc(src1.ptr(), src1step, src2.ptr(), src2step, dst.ptr<Ipp32f>(),
                                  dststep, ippiSize(size.width, size.height));
             else
-                status = ippFuncMask(src1.data, src1step, src2.data, src2step, (const Ipp8u *)mask.data, maskstep,
-                                     (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height));
+                status = ippFuncMask(src1.ptr(), src1step, src2.ptr(), src2step, mask.ptr<Ipp8u>(), maskstep,
+                                     dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
 
             if (status >= 0)
                 return;
@@ -711,10 +711,10 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
             size.width *= scn;
 
             if (mask.empty())
-                status = ippFunc(src.data, srcstep, (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
+                status = ippFunc(src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
             else
-                status = ippFuncMask(src.data, srcstep, (const Ipp8u *)mask.data, maskstep,
-                                     (Ipp32f *)dst.data, dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
+                status = ippFuncMask(src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
+                                     dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
 
             if (status >= 0)
                 return;

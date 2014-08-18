@@ -53,7 +53,8 @@ enum { IMREAD_UNCHANGED  = -1, // 8bit, color or not
        IMREAD_GRAYSCALE  = 0,  // 8bit, gray
        IMREAD_COLOR      = 1,  // ?, color
        IMREAD_ANYDEPTH   = 2,  // any depth, ?
-       IMREAD_ANYCOLOR   = 4   // ?, any color
+       IMREAD_ANYCOLOR   = 4,  // ?, any color
+       IMREAD_LOAD_GDAL  = 8   // Use gdal driver
      };
 
 enum { IMWRITE_JPEG_QUALITY        = 1,

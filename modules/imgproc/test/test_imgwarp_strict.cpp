@@ -533,11 +533,11 @@ void CV_Resize_Test::resize_1d(const Mat& _src, Mat& _dst, int dy, const dim& _d
 
         Mat _extended_src_row(1, _src.cols + ksize * 2, _src.type());
         const uchar* srow = _src.ptr(dy);
-        memcpy(_extended_src_row.data + elemsize * ksize, srow, _src.step);
+        memcpy(_extended_src_row.ptr() + elemsize * ksize, srow, _src.step);
         for (int k = 0; k < ksize; ++k)
         {
-            memcpy(_extended_src_row.data + k * elemsize, srow, elemsize);
-            memcpy(_extended_src_row.data + (ksize + k) * elemsize + _src.step, srow + _src.step - elemsize, elemsize);
+            memcpy(_extended_src_row.ptr() + k * elemsize, srow, elemsize);
+            memcpy(_extended_src_row.ptr() + (ksize + k) * elemsize + _src.step, srow + _src.step - elemsize, elemsize);
         }
 
         for (int dx = 0; dx < dsize.width; ++dx)
@@ -757,7 +757,7 @@ void CV_Remap_Test::convert_maps()
 
     if (interpolation == INTER_NEAREST)
         mapy = Mat();
-    CV_Assert(((interpolation == INTER_NEAREST && !mapy.data) || mapy.type() == CV_16UC1 ||
+    CV_Assert(((interpolation == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16UC1 ||
                mapy.type() == CV_16SC1) && mapx.type() == CV_16SC2);
 }
 
@@ -809,7 +809,7 @@ void CV_Remap_Test::run_reference_func()
 void CV_Remap_Test::remap_nearest(const Mat& _src, Mat& _dst)
 {
     CV_Assert(_src.depth() == CV_32F && _dst.type() == _src.type());
-    CV_Assert(mapx.type() == CV_16SC2 && !mapy.data);
+    CV_Assert(mapx.type() == CV_16SC2 && mapy.empty());
 
     Size ssize = _src.size(), dsize = _dst.size();
     CV_Assert(ssize.area() > 0 && dsize.area() > 0);
@@ -1079,7 +1079,7 @@ void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
         }
     }
 
-    CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && !mapy.data) || mapy.type() == CV_16SC1));
+    CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16SC1));
     cv::remap(_src, _dst, mapx, mapy, inter, borderType, borderValue);
 }
 
@@ -1206,7 +1206,7 @@ void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
         }
     }
 
-    CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && !mapy.data) || mapy.type() == CV_16SC1));
+    CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16SC1));
     cv::remap(_src, _dst, mapx, mapy, inter, borderType, borderValue);
 }
 

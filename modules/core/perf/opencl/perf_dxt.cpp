@@ -75,7 +75,7 @@ OCL_PERF_TEST_P(DftFixture, Dft, ::testing::Combine(Values(C2C, R2R, C2R, R2C),
     const Size srcSize = get<1>(params);
     int flags = get<2>(params);
 
-    int in_cn, out_cn;
+    int in_cn = 0, out_cn = 0;
     switch (dft_type)
     {
     case R2R: flags |= cv::DFT_REAL_OUTPUT; in_cn = 1; out_cn = 1; break;

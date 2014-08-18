@@ -585,25 +585,16 @@ macro(ocv_glob_module_sources)
   ocv_source_group("Src" DIRBASE "${CMAKE_CURRENT_LIST_DIR}/src" FILES ${lib_srcs} ${lib_int_hdrs})
   ocv_source_group("Include" DIRBASE "${CMAKE_CURRENT_LIST_DIR}/include" FILES ${lib_hdrs} ${lib_hdrs_detail})
 
-  if (exclude_cuda EQUAL -1)
+  set(lib_cuda_srcs "")
+  set(lib_cuda_hdrs "")
+  if(HAVE_CUDA AND exclude_cuda EQUAL -1)
     file(GLOB lib_cuda_srcs
          "${CMAKE_CURRENT_LIST_DIR}/src/cuda/*.cu"
     )
-    set(cuda_objs "")
-    set(lib_cuda_hdrs "")
-    if(HAVE_CUDA)
-      ocv_include_directories(${CUDA_INCLUDE_DIRS})
-      file(GLOB lib_cuda_hdrs
-           "${CMAKE_CURRENT_LIST_DIR}/src/cuda/*.hpp"
-      )
-
-      ocv_cuda_compile(cuda_objs ${lib_cuda_srcs} ${lib_cuda_hdrs})
-      source_group("Src\\Cuda"      FILES ${lib_cuda_srcs} ${lib_cuda_hdrs})
-    endif()
-  else()
-    set(cuda_objs "")
-    set(lib_cuda_srcs "")
-    set(lib_cuda_hdrs "")
+    file(GLOB lib_cuda_hdrs
+         "${CMAKE_CURRENT_LIST_DIR}/src/cuda/*.hpp"
+    )
+    source_group("Src\\Cuda"      FILES ${lib_cuda_srcs} ${lib_cuda_hdrs})
   endif()
 
   file(GLOB cl_kernels
@@ -622,7 +613,7 @@ macro(ocv_glob_module_sources)
   endif()
 
   ocv_set_module_sources(${_argn} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
-                         SOURCES ${lib_srcs} ${lib_int_hdrs} ${cuda_objs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
+                         SOURCES ${lib_srcs} ${lib_int_hdrs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
 endmacro()
 
 # creates OpenCV module in current folder

@@ -939,7 +939,8 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     if (normalize && !src.isSubmatrix() && ddepth == sdepth &&
         (/*ippBorderType == BORDER_REPLICATE ||*/ /* returns ippStsStepErr: Step value is not valid */
-         ippBorderType == BORDER_CONSTANT) && ocvAnchor == ippAnchor )
+         ippBorderType == BORDER_CONSTANT) && ocvAnchor == ippAnchor &&
+         dst.cols != ksize.width && dst.rows != ksize.height) // returns ippStsMaskSizeErr: mask has an illegal value
     {
         Ipp32s bufSize = 0;
         IppiSize roiSize = { dst.cols, dst.rows }, maskSize = { ksize.width, ksize.height };
@@ -952,7 +953,7 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 Ipp8u * buffer = ippsMalloc_8u(bufSize); \
                 ippType borderValue[4] = { 0, 0, 0, 0 }; \
                 ippBorderType = ippBorderType == BORDER_CONSTANT ? ippBorderConst : ippBorderRepl; \
-                IppStatus status = ippiFilterBoxBorder_##flavor((const ippType *)src.data, (int)src.step, (ippType *)dst.data, \
+                IppStatus status = ippiFilterBoxBorder_##flavor(src.ptr<ippType>(), (int)src.step, dst.ptr<ippType>(), \
                                                                 (int)dst.step, roiSize, maskSize, \
                                                                 (IppiBorderType)ippBorderType, borderValue, buffer); \
                 ippsFree(buffer); \
@@ -1140,8 +1141,8 @@ cv::Mat cv::getGaussianKernel( int n, double sigma, int ktype )
 
     CV_Assert( ktype == CV_32F || ktype == CV_64F );
     Mat kernel(n, 1, ktype);
-    float* cf = (float*)kernel.data;
-    double* cd = (double*)kernel.data;
+    float* cf = kernel.ptr<float>();
+    double* cd = kernel.ptr<double>();
 
     double sigmaX = sigma > 0 ? sigma : ((n-1)*0.5 - 1)*0.3 + 0.8;
     double scale2X = -0.5/(sigmaX*sigmaX);
@@ -1271,10 +1272,10 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         typedef Ipp##ippfavor ippType; \
         ippType borderValues[] = { 0, 0, 0 }; \
         IppStatus status = ippcn == 1 ? \
-            ippiFilterGaussianBorder_##ippfavor##_C1R((const ippType *)src.data, (int)src.step, \
-                (ippType *)dst.data, (int)dst.step, roiSize, borderValues[0], pSpec, pBuffer) : \
-            ippiFilterGaussianBorder_##ippfavor##_C3R((const ippType *)src.data, (int)src.step, \
-                (ippType *)dst.data, (int)dst.step, roiSize, borderValues, pSpec, pBuffer); \
+            ippiFilterGaussianBorder_##ippfavor##_C1R(src.ptr<ippType>(), (int)src.step, \
+                dst.ptr<ippType>(), (int)dst.step, roiSize, borderValues[0], pSpec, pBuffer) : \
+            ippiFilterGaussianBorder_##ippfavor##_C3R(src.ptr<ippType>(), (int)src.step, \
+                dst.ptr<ippType>(), (int)dst.step, roiSize, borderValues, pSpec, pBuffer); \
         ippFree(pBuffer); \
         ippFree(pSpec); \
         if (status >= 0) \
@@ -1417,8 +1418,8 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
     for( int x = 0; x < _dst.cols; x += STRIPE_SIZE )
     {
         int i, j, k, c, n = std::min(_dst.cols - x, STRIPE_SIZE) + r*2;
-        const uchar* src = _src.data + x*cn;
-        uchar* dst = _dst.data + (x - r)*cn;
+        const uchar* src = _src.ptr() + x*cn;
+        uchar* dst = _dst.ptr() + (x - r)*cn;
 
         memset( h_coarse, 0, 16*n*cn*sizeof(h_coarse[0]) );
         memset( h_fine, 0, 16*16*n*cn*sizeof(h_fine[0]) );
@@ -1600,8 +1601,8 @@ medianBlur_8u_Om( const Mat& _src, Mat& _dst, int m )
     int     x, y;
     int     n2 = m*m/2;
     Size    size = _dst.size();
-    const uchar* src = _src.data;
-    uchar*  dst = _dst.data;
+    const uchar* src = _src.ptr();
+    uchar*  dst = _dst.ptr();
     int     src_step = (int)_src.step, dst_step = (int)_dst.step;
     int     cn = _src.channels();
     const uchar*  src_max = src + size.height*src_step;
@@ -1877,8 +1878,8 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
     typedef typename Op::arg_type WT;
     typedef typename VecOp::arg_type VT;
 
-    const T* src = (const T*)_src.data;
-    T* dst = (T*)_dst.data;
+    const T* src = _src.ptr<T>();
+    T* dst = _dst.ptr<T>();
     int sstep = (int)(_src.step/sizeof(T));
     int dstep = (int)(_dst.step/sizeof(T));
     Size size = _dst.size();
@@ -2161,8 +2162,8 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
             ippDataType, CV_MAT_CN(type), &bufSize) >= 0) \
         { \
             Ipp8u * buffer = ippsMalloc_8u(bufSize); \
-            IppStatus status = ippiFilterMedianBorder_##flavor((const ippType *)src0.data, (int)src0.step, \
-                (ippType *)dst.data, (int)dst.step, dstRoiSize, maskSize, \
+            IppStatus status = ippiFilterMedianBorder_##flavor(src0.ptr<ippType>(), (int)src0.step, \
+                dst.ptr<ippType>(), (int)dst.step, dstRoiSize, maskSize, \
                 ippBorderRepl, (ippType)0, buffer); \
             ippsFree(buffer); \
             if (status >= 0) \

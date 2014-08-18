@@ -323,8 +323,8 @@ protected:
          evec = svd.vt;
          eval = svd.w;*/
 
-        Mat subEval( maxComponents, 1, eval.type(), eval.data ),
-        subEvec( maxComponents, evec.cols, evec.type(), evec.data );
+        Mat subEval( maxComponents, 1, eval.type(), eval.ptr() ),
+        subEvec( maxComponents, evec.cols, evec.type(), evec.ptr() );
 
     #ifdef CHECK_C
         Mat prjTestPoints, backPrjTestPoints, cPoints = rPoints.t(), cTestPoints = rTestPoints.t();

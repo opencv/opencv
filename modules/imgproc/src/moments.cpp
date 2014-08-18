@@ -95,8 +95,8 @@ static Moments contourMoments( const Mat& contour )
     Moments m;
     int lpt = contour.checkVector(2);
     int is_float = contour.depth() == CV_32F;
-    const Point* ptsi = (const Point*)contour.data;
-    const Point2f* ptsf = (const Point2f*)contour.data;
+    const Point* ptsi = contour.ptr<Point>();
+    const Point2f* ptsf = contour.ptr<Point2f>();
 
     CV_Assert( contour.depth() == CV_32S || contour.depth() == CV_32F );
 
@@ -338,7 +338,7 @@ static void momentsInTile( const Mat& img, double* moments )
 
     for( y = 0; y < size.height; y++ )
     {
-        const T* ptr = (const T*)(img.data + y*img.step);
+        const T* ptr = img.ptr<T>(y);
         WT x0 = 0, x1 = 0, x2 = 0;
         MT x3 = 0;
         x = vop(ptr, size.width, x0, x1, x2, x3);
@@ -690,7 +690,7 @@ void cv::HuMoments( const Moments& m, OutputArray _hu )
     _hu.create(7, 1, CV_64F);
     Mat hu = _hu.getMat();
     CV_Assert( hu.isContinuous() );
-    HuMoments(m, (double*)hu.data);
+    HuMoments(m, hu.ptr<double>());
 }
 
 
