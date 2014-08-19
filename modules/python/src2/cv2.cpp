@@ -1192,7 +1192,7 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 #include "pyopencv_generated_types.h"
 #include "pyopencv_generated_funcs.h"
 
-static PyMethodDef methods[] = {
+static PyMethodDef special_methods[] = {
   {"createTrackbar", pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
   {"setMouseCallback", (PyCFunction)pycvSetMouseCallback, METH_VARARGS | METH_KEYWORDS, "setMouseCallback(windowName, onMouse [, param]) -> None"},
   {NULL, NULL},
@@ -1266,7 +1266,7 @@ static struct PyModuleDef cv2_moduledef =
     "Python wrapper for OpenCV.",
     -1,     /* size of per-interpreter state of the module,
                or -1 if the module keeps state in global variables. */
-    methods
+    special_methods
 };
 
 PyObject* PyInit_cv2()
@@ -1283,7 +1283,7 @@ void initcv2()
 #if PY_MAJOR_VERSION >= 3
   PyObject* m = PyModule_Create(&cv2_moduledef);
 #else
-  PyObject* m = Py_InitModule(MODULESTR, methods);
+  PyObject* m = Py_InitModule(MODULESTR, special_methods);
 #endif
   init_submodules(m); // from "pyopencv_generated_ns_reg.h"
 

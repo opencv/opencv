@@ -883,4 +883,3 @@ if __name__ == '__main__':
     parser.print_decls(decls)
     print(len(decls))
     print("namespaces:", " ".join(sorted(parser.namespaces)))
-
