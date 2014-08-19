@@ -204,7 +204,7 @@ if(BUILD_PYTHON_CONTRIB)
        VERBATIM)
 
     # include Python header files, pyopencv_generated_*.h files, all master module headers
-    ocv_include_directories(${PYTHON_INCLUDE_PATH} ${CMAKE_CURRENT_BINARY_DIR})
+    ocv_include_directories(${PYTHON_INCLUDE_PATH} ${PYTHON_NUMPY_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
     foreach(module ${OPENCV_PYTHON_MODULES})
         ocv_include_directories("${OPENCV_MODULE_opencv_${module}_LOCATION}/include")
     endforeach()
