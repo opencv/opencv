@@ -81,27 +81,27 @@ And here are the color scales for each of the available colormaps:
 +-----------------------+---------------------------------------------------+
 | Class                 | Scale                                             |
 +=======================+===================================================+
-| COLORMAP_AUTUMN       | .. image:: pics/colormaps/colorscale_autumn.jpg    |
+| COLORMAP_AUTUMN       | .. image:: pics/colormaps/colorscale_autumn.jpg   |
 +-----------------------+---------------------------------------------------+
-| COLORMAP_BONE         | .. image:: pics/colormaps/colorscale_bone.jpg      |
+| COLORMAP_BONE         | .. image:: pics/colormaps/colorscale_bone.jpg     |
 +-----------------------+---------------------------------------------------+
-| COLORMAP_COOL         | .. image:: pics/colormaps/colorscale_cool.jpg      |
+| COLORMAP_COOL         | .. image:: pics/colormaps/colorscale_cool.jpg     |
 +-----------------------+---------------------------------------------------+
-| COLORMAP_HOT          | .. image:: pics/colormaps/colorscale_hot.jpg       |
+| COLORMAP_HOT          | .. image:: pics/colormaps/colorscale_hot.jpg      |
 +-----------------------+---------------------------------------------------+
-| COLORMAP_HSV          | .. image:: pics/colormaps/colorscale_hsv.jpg       |
+| COLORMAP_HSV          | .. image:: pics/colormaps/colorscale_hsv.jpg      |
 +-----------------------+---------------------------------------------------+
-| COLORMAP_JET          | .. image:: pics/colormaps/colorscale_jet.jpg       |
+| COLORMAP_JET          | .. image:: pics/colormaps/colorscale_jet.jpg      |
 +-----------------------+---------------------------------------------------+
-| COLORMAP_OCEAN        | .. image:: pics/colormaps/colorscale_ocean.jpg     |
+| COLORMAP_OCEAN        | .. image:: pics/colormaps/colorscale_ocean.jpg    |
 +-----------------------+---------------------------------------------------+
-| COLORMAP_PINK         | .. image:: pics/colormaps/colorscale_pink.jpg      |
+| COLORMAP_PINK         | .. image:: pics/colormaps/colorscale_pink.jpg     |
 +-----------------------+---------------------------------------------------+
-| COLORMAP_RAINBOW      | .. image:: pics/colormaps/colorscale_rainbow.jpg   |
+| COLORMAP_RAINBOW      | .. image:: pics/colormaps/colorscale_rainbow.jpg  |
 +-----------------------+---------------------------------------------------+
-| COLORMAP_SPRING       | .. image:: pics/colormaps/colorscale_spring.jpg    |
+| COLORMAP_SPRING       | .. image:: pics/colormaps/colorscale_spring.jpg   |
 +-----------------------+---------------------------------------------------+
-| COLORMAP_SUMMER       | .. image:: pics/colormaps/colorscale_summer.jpg    |
+| COLORMAP_SUMMER       | .. image:: pics/colormaps/colorscale_summer.jpg   |
 +-----------------------+---------------------------------------------------+
-| COLORMAP_WINTER       | .. image:: pics/colormaps/colorscale_winter.jpg    |
+| COLORMAP_WINTER       | .. image:: pics/colormaps/colorscale_winter.jpg   |
 +-----------------------+---------------------------------------------------+
