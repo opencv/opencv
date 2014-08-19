@@ -821,7 +821,7 @@ class PythonWrapperGenerator(object):
 
         self.code_ns_reg.write('static ConstDef consts_%s[] = {\n'%wname)
         for name, cname in sorted(ns.consts.items()):
-            self.code_ns_reg.write('    {"%s", %s},\n'%(name, cname))
+            self.code_ns_reg.write('    {"%s", (long)(%s)},\n'%(name, cname))
         self.code_ns_reg.write('    {NULL, NULL}\n};\n\n')
 
     def gen_namespaces_reg(self):
