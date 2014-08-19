@@ -1201,7 +1201,13 @@ static PyMethodDef methods[] = {
 /************************************************************************/
 /* Module init */
 
-static void init_submodule(PyObject * root, const char * name, PyMethodDef * methods)
+struct ConstDef
+{
+    const char * name;
+    long val;
+};
+
+static void init_submodule(PyObject * root, const char * name, PyMethodDef * methods, ConstDef * consts)
 {
   // traverse and create nested submodules
   std::string s = name;
@@ -1233,6 +1239,11 @@ static void init_submodule(PyObject * root, const char * name, PyMethodDef * met
     PyDict_SetItemString(d, m->ml_name, method_obj);
     Py_DECREF(method_obj);
   }
+  for (ConstDef * c = consts; c->name != NULL; ++c)
+  {
+    PyDict_SetItemString(d, c->name, PyInt_FromLong(c->val));
+  }
+
 }
 
 #include "pyopencv_generated_ns_reg.h"
@@ -1323,7 +1334,6 @@ void initcv2()
   PUBLISH(CV_64FC3);
   PUBLISH(CV_64FC4);
 
-#include "pyopencv_generated_const_reg.h"
 #if PY_MAJOR_VERSION >= 3
     return m;
 #endif
