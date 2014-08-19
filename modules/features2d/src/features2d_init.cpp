@@ -106,14 +106,22 @@ CV_INIT_ALGORITHM(GFTTDetector, "Feature2D.GFTT",
 
 CV_INIT_ALGORITHM(KAZE, "Feature2D.KAZE",
                   obj.info()->addParam(obj, "upright", obj.upright);
-                  obj.info()->addParam(obj, "extended", obj.extended))
+                  obj.info()->addParam(obj, "extended", obj.extended);
+                  obj.info()->addParam(obj, "threshold", obj.threshold);
+                  obj.info()->addParam(obj, "octaves", obj.octaves);
+                  obj.info()->addParam(obj, "sublevels", obj.sublevels);
+                  obj.info()->addParam(obj, "diffusivity", obj.diffusivity))
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 CV_INIT_ALGORITHM(AKAZE, "Feature2D.AKAZE",
-                  obj.info()->addParam(obj, "descriptor_channels", obj.descriptor_channels);
                   obj.info()->addParam(obj, "descriptor", obj.descriptor);
-                  obj.info()->addParam(obj, "descriptor_size", obj.descriptor_size))
+                  obj.info()->addParam(obj, "descriptor_channels", obj.descriptor_channels);
+                  obj.info()->addParam(obj, "descriptor_size", obj.descriptor_size);
+                  obj.info()->addParam(obj, "threshold", obj.threshold);
+                  obj.info()->addParam(obj, "octaves", obj.octaves);
+                  obj.info()->addParam(obj, "sublevels", obj.sublevels);
+                  obj.info()->addParam(obj, "diffusivity", obj.diffusivity))
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 

@@ -226,7 +226,7 @@ Class implementing the AKAZE keypoint detector and descriptor extractor, describ
                                float threshold = 0.001f, int octaves = 4, int sublevels = 4, int diffusivity = DIFF_PM_G2);
     };
 
-.. note:: AKAZE descriptor can only be used with KAZE or AKAZE keypoints
+.. note:: AKAZE descriptors can only be used with KAZE or AKAZE keypoints. Try to avoid using *extract* and *detect* instead of *operator()* due to performance reasons.
 
 .. [ANB13] Fast Explicit Diffusion for Accelerated Features in Nonlinear Scale Spaces. Pablo F. Alcantarilla, Jesús Nuevo and Adrien Bartoli. In British Machine Vision Conference (BMVC), Bristol, UK, September 2013.
 
