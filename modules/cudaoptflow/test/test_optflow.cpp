@@ -360,6 +360,18 @@ CUDA_TEST_P(OpticalFlowDual_TVL1, Accuracy)
     alg->calc(frame0, frame1, flow);
     cv::Mat gold[2];
     cv::split(flow, gold);
+    cv::Mat mx(d_flowx);
+    cv::Mat my(d_flowx);
+
+    EXPECT_MAT_SIMILAR(gold[0], d_flowx, 4e-3);
+    EXPECT_MAT_SIMILAR(gold[1], d_flowy, 4e-3);
+    d_alg.gamma = 1;
+    alg->set("gamma", 1);
+    d_alg(loadMat(frame0, useRoi), loadMat(frame1, useRoi), d_flowx, d_flowy);
+    alg->calc(frame0, frame1, flow);
+    cv::split(flow, gold);
+    mx = cv::Mat(d_flowx);
+    my = cv::Mat(d_flowx);
 
     EXPECT_MAT_SIMILAR(gold[0], d_flowx, 4e-3);
     EXPECT_MAT_SIMILAR(gold[1], d_flowy, 4e-3);
