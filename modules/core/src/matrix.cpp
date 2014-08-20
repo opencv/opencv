@@ -2729,7 +2729,6 @@ double cv::kmeans( InputArray _data, int K,
     vector<Vec2f> _box(dims);
     Vec2f* box = &_box[0];
     double best_compactness = DBL_MAX, compactness = 0;
-//    RNG& rng = theRNG();
 
     srand(rand());
     RNG rng((unsigned int)rand());
