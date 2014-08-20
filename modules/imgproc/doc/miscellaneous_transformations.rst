@@ -380,7 +380,7 @@ The function can do the following transformations:
 
         .. math::
 
-            L  \leftarrow 255/100 L, \; u  \leftarrow 255/354 (u + 134), \; v  \leftarrow 255/256 (v + 140)
+            L  \leftarrow 255/100 L, \; u  \leftarrow 255/354 (u + 134), \; v  \leftarrow 255/262 (v + 140)
 
     * 16-bit images
         (currently not supported)
