@@ -531,4 +531,45 @@ Stitcher::Status Stitcher::estimateCameraParams()
     return OK;
 }
 
+
+Ptr<Stitcher> createStitcher(bool try_use_gpu)
+{
+    Ptr<Stitcher> stitcher = makePtr<Stitcher>();
+    stitcher->setRegistrationResol(0.6);
+    stitcher->setSeamEstimationResol(0.1);
+    stitcher->setCompositingResol(Stitcher::ORIG_RESOL);
+    stitcher->setPanoConfidenceThresh(1);
+    stitcher->setWaveCorrection(true);
+    stitcher->setWaveCorrectKind(detail::WAVE_CORRECT_HORIZ);
+    stitcher->setFeaturesMatcher(makePtr<detail::BestOf2NearestMatcher>(try_use_gpu));
+    stitcher->setBundleAdjuster(makePtr<detail::BundleAdjusterRay>());
+
+    #ifdef HAVE_OPENCV_CUDA
+    if (try_use_gpu && cuda::getCudaEnabledDeviceCount() > 0)
+    {
+        #ifdef HAVE_OPENCV_NONFREE
+        stitcher->setFeaturesFinder(makePtr<detail::SurfFeaturesFinderGpu>());
+        #else
+        stitcher->setFeaturesFinder(makePtr<detail::OrbFeaturesFinder>());
+        #endif
+        stitcher->setWarper(makePtr<SphericalWarperGpu>());
+        stitcher->setSeamFinder(makePtr<detail::GraphCutSeamFinderGpu>());
+    }
+    else
+        #endif
+        {
+            #ifdef HAVE_OPENCV_NONFREE
+            stitcher->setFeaturesFinder(makePtr<detail::SurfFeaturesFinder>());
+            #else
+            stitcher->setFeaturesFinder(makePtr<detail::OrbFeaturesFinder>());
+            #endif
+            stitcher->setWarper(makePtr<SphericalWarper>());
+            stitcher->setSeamFinder(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR));
+        }
+
+        stitcher->setExposureCompensator(makePtr<detail::BlocksGainCompensator>());
+        stitcher->setBlender(makePtr<detail::MultiBandBlender>(try_use_gpu));
+
+        return stitcher;
+}
 } // namespace cv

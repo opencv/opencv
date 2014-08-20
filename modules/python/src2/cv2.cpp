@@ -116,6 +116,7 @@ typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
 typedef cvflann::flann_distance_t cvflann_flann_distance_t;
 typedef cvflann::flann_algorithm_t cvflann_flann_algorithm_t;
 
+typedef Stitcher::Status Status;
 
 static PyObject* failmsgp(const char *fmt, ...)
 {
@@ -444,6 +445,12 @@ template<>
 PyObject* pyopencv_from(const bool& value)
 {
     return PyBool_FromLong(value);
+}
+
+template<>
+PyObject* pyopencv_from(const Status& value)
+{
+    return PyInt_FromLong(value);
 }
 
 template<>
