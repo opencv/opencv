@@ -1168,8 +1168,8 @@ void CV_ColorLuvTest::convert_row_bgr2abc_32f_c3( const float* src_row, float* d
     {
         u_scale = 0.720338983f;
         u_bias = 96.5254237f;
-        v_scale = 0.99609375f;
-        v_bias = 139.453125f;
+        v_scale = 0.973282442f;
+        v_bias = 136.2595419f;
     }
 
     for( j = 0; j < n*3; j += 3 )
@@ -1221,8 +1221,8 @@ void CV_ColorLuvTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
     {
         u_scale = 1.f/0.720338983f;
         u_bias = 96.5254237f;
-        v_scale = 1.f/0.99609375f;
-        v_bias = 139.453125f;
+        v_scale = 1.f/0.973282442f;
+        v_bias = 136.2595419f;
     }
 
     for( j = 0; j < n*3; j += 3 )
