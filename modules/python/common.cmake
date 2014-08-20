@@ -209,7 +209,7 @@ if(BUILD_PYTHON_CONTRIB)
         ocv_include_directories("${OPENCV_MODULE_opencv_${module}_LOCATION}/include")
     endforeach()
 
-    add_library(${contrib_module} SHARED ${PYTHON_SOURCE_DIR}/src2/cv2_contrib.cpp ${cv2_generated_contrib_hdrs})
+    add_library(${contrib_module} SHARED ${PYTHON_SOURCE_DIR}/src2/cv2_contrib.cpp ${PYTHON_SOURCE_DIR}/src2/pycv2.hpp ${cv2_generated_contrib_hdrs})
 
     if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")
       target_link_libraries(${contrib_module} debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
