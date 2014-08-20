@@ -10,7 +10,7 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-CV_ENUM(pnpAlgo, ITERATIVE, EPNP /*, P3P*/)
+CV_ENUM(pnpAlgo, SOLVEPNP_ITERATIVE, SOLVEPNP_EPNP, SOLVEPNP_P3P, SOLVEPNP_DLS)
 
 typedef std::tr1::tuple<int, pnpAlgo> PointsNum_Algo_t;
 typedef perf::TestBaseWithParam<PointsNum_Algo_t> PointsNum_Algo;
@@ -19,8 +19,8 @@ typedef perf::TestBaseWithParam<int> PointsNum;
 
 PERF_TEST_P(PointsNum_Algo, solvePnP,
             testing::Combine(
-                testing::Values(/*4,*/ 3*9, 7*13), //TODO: find why results on 4 points are too unstable
-                testing::Values((int)ITERATIVE, (int)EPNP)
+                testing::Values(4, 3*9, 7*13), //TODO: find why results on 4 points are too unstable
+                testing::Values((int)SOLVEPNP_ITERATIVE, (int)SOLVEPNP_EPNP)
                 )
             )
 {
@@ -51,6 +51,7 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
     add(points2d, noise, points2d);
 
     declare.in(points3d, points2d);
+    declare.time(100);
 
     TEST_CYCLE_N(1000)
     {
@@ -58,12 +59,18 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
     }
 
     SANITY_CHECK(rvec, 1e-6);
-    SANITY_CHECK(tvec, 1e-3);
+    SANITY_CHECK(tvec, 1e-6);
 }
 
-PERF_TEST(PointsNum_Algo, solveP3P)
+PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
+            testing::Combine(
+                testing::Values(4), //TODO: find why results on 4 points are too unstable
+                testing::Values((int)SOLVEPNP_P3P, (int)SOLVEPNP_DLS)
+                )
+            )
 {
-    int pointsNum = 4;
+    int pointsNum = get<0>(GetParam());
+    pnpAlgo algo = get<1>(GetParam());
 
     vector<Point2f> points2d(pointsNum);
     vector<Point3f> points3d(pointsNum);
@@ -93,11 +100,11 @@ PERF_TEST(PointsNum_Algo, solveP3P)
 
     TEST_CYCLE_N(1000)
     {
-        solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, P3P);
+        solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, algo);
     }
 
-    SANITY_CHECK(rvec, 1e-6);
-    SANITY_CHECK(tvec, 1e-6);
+    SANITY_CHECK(rvec, 1e-4);
+    SANITY_CHECK(tvec, 1e-2);
 }
 
 PERF_TEST_P(PointsNum, DISABLED_SolvePnPRansac, testing::Values(4, 3*9, 7*13))
@@ -117,8 +124,10 @@ PERF_TEST_P(PointsNum, DISABLED_SolvePnPRansac, testing::Values(4, 3*9, 7*13))
     Mat dist_coef(1, 8, CV_32F, cv::Scalar::all(0));
 
     vector<cv::Point2f> image_vec;
+
     Mat rvec_gold(1, 3, CV_32FC1);
     randu(rvec_gold, 0, 1);
+
     Mat tvec_gold(1, 3, CV_32FC1);
     randu(tvec_gold, 0, 1);
     projectPoints(object, rvec_gold, tvec_gold, camera_mat, dist_coef, image_vec);

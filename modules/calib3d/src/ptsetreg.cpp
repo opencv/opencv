@@ -391,6 +391,7 @@ CV_INIT_ALGORITHM(LMeDSPointSetRegistrator, "PointSetRegistrator.LMeDS",
                   obj.info()->addParam(obj, "confidence", obj.confidence);
                   obj.info()->addParam(obj, "maxIters", obj.maxIters))
 
+
 Ptr<PointSetRegistrator> createRANSACPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& _cb,
                                                          int _modelPoints, double _threshold,
                                                          double _confidence, int _maxIters)
@@ -408,6 +409,7 @@ Ptr<PointSetRegistrator> createLMeDSPointSetRegistrator(const Ptr<PointSetRegist
     return Ptr<PointSetRegistrator>(
         new LMeDSPointSetRegistrator(_cb, _modelPoints, _confidence, _maxIters));
 }
+
 
 class Affine3DEstimatorCallback : public PointSetRegistrator::Callback
 {
