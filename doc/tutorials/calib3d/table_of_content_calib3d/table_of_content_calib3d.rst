@@ -45,6 +45,25 @@ Although we got most of our images in a 2D format they do come from a 3D world. 
      :height: 90pt
      :width:  90pt
 
++
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  ===================== ==============================================
+    |PoseEstimation|    **Title:** :ref:`realTimePoseEstimation`
+
+                        *Compatibility:* > OpenCV 2.0
+
+                        *Author:* Edgar Riba
+
+                        Real time pose estimation of a textured object using ORB features, FlannBased matcher, PnP approach plus Ransac and Linear Kalman Filter to reject possible bad poses.
+
+  ===================== ==============================================
+
+  .. |PoseEstimation|   image:: images/real_time_pose_estimation.jpg
+     :height: 90pt
+     :width:  90pt
+
 .. raw:: latex
 
    \pagebreak
@@ -54,3 +73,4 @@ Although we got most of our images in a 2D format they do come from a 3D world. 
 
    ../camera_calibration_square_chess/camera_calibration_square_chess
    ../camera_calibration/camera_calibration
+   ../real_time_pose/real_time_pose

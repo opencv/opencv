@@ -54,9 +54,10 @@ class CV_solvePnPRansac_Test : public cvtest::BaseTest
 public:
     CV_solvePnPRansac_Test()
     {
-        eps[ITERATIVE] = 1.0e-2;
-        eps[EPNP] = 1.0e-2;
-        eps[P3P] = 1.0e-2;
+        eps[SOLVEPNP_ITERATIVE] = 1.0e-2;
+        eps[SOLVEPNP_EPNP] = 1.0e-2;
+        eps[SOLVEPNP_P3P] = 1.0e-2;
+        eps[SOLVEPNP_DLS] = 1.0e-2;
         totalTestsCount = 10;
     }
     ~CV_solvePnPRansac_Test() {}
@@ -135,7 +136,7 @@ protected:
         }
 
         solvePnPRansac(points, projectedPoints, intrinsics, distCoeffs, rvec, tvec,
-            false, 500, 0.5, -1, inliers, method);
+            false, 500, 0.5, 0.99, inliers, method);
 
         bool isTestSuccess = inliers.size() >= points.size()*0.95;
 
@@ -153,13 +154,12 @@ protected:
     {
         ts->set_failed_test_info(cvtest::TS::OK);
 
-        vector<Point3f> points;
+        vector<Point3f> points, points_dls;
         const int pointsCount = 500;
         points.resize(pointsCount);
         generate3DPointCloud(points);
 
-
-        const int methodsCount = 3;
+        const int methodsCount = 4;
         RNG rng = ts->get_rng();
 
 
@@ -184,7 +184,7 @@ protected:
             }
         }
     }
-    double eps[3];
+    double eps[4];
     int totalTestsCount;
 };
 
@@ -193,9 +193,10 @@ class CV_solvePnP_Test : public CV_solvePnPRansac_Test
 public:
     CV_solvePnP_Test()
     {
-        eps[ITERATIVE] = 1.0e-6;
-        eps[EPNP] = 1.0e-6;
-        eps[P3P] = 1.0e-4;
+        eps[SOLVEPNP_ITERATIVE] = 1.0e-6;
+        eps[SOLVEPNP_EPNP] = 1.0e-6;
+        eps[SOLVEPNP_P3P] = 1.0e-4;
+        eps[SOLVEPNP_DLS] = 1.0e-4;
         totalTestsCount = 1000;
     }
 
@@ -218,6 +219,10 @@ protected:
         {
             opoints = std::vector<Point3f>(points.begin(), points.begin()+4);
         }
+        else if(method == 3)
+        {
+            opoints = std::vector<Point3f>(points.begin(), points.begin()+50);
+        }
         else
             opoints = points;
 
@@ -239,7 +244,7 @@ protected:
     }
 };
 
-TEST(DISABLED_Calib3d_SolvePnPRansac, accuracy) { CV_solvePnPRansac_Test test; test.safe_run(); }
+TEST(Calib3d_SolvePnPRansac, accuracy) { CV_solvePnPRansac_Test test; test.safe_run(); }
 TEST(Calib3d_SolvePnP, accuracy) { CV_solvePnP_Test test; test.safe_run(); }
 
 
