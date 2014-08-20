@@ -188,7 +188,7 @@ inline bool isBorder(const struct RectCoords bounds, int2 coord, int numPixels)
 }
 #endif
 
-WT getBorderPixel(const struct RectCoords bounds, int2 coord,
+inline WT getBorderPixel(const struct RectCoords bounds, int2 coord,
                   __global const uchar* srcptr, int srcstep)
 {
 #ifdef BORDER_CONSTANT
@@ -231,7 +231,18 @@ inline WT readSrcPixelSingle(int2 pos, __global const uchar* srcptr,
 #define vload1(OFFSET, PTR) (*(PTR + OFFSET))
 #define PX_LOAD_VEC_TYPE CAT(srcT1, PX_LOAD_VEC_SIZE)
 #define PX_LOAD_FLOAT_VEC_TYPE CAT(WT1, PX_LOAD_VEC_SIZE)
-#define PX_LOAD_FLOAT_VEC_CONV CAT(convert_, PX_LOAD_FLOAT_VEC_TYPE)
+//#define PX_LOAD_FLOAT_VEC_CONV CAT(convert_, PX_LOAD_FLOAT_VEC_TYPE)
+
+#if PX_LOAD_VEC_SIZE == 1
+#define PX_LOAD_FLOAT_VEC_CONV (float)
+#elif PX_LOAD_VEC_SIZE == 2
+#define PX_LOAD_FLOAT_VEC_CONV convert_float2
+#elif PX_LOAD_VEC_SIZE == 3
+#define PX_LOAD_FLOAT_VEC_CONV convert_float3
+#elif PX_LOAD_VEC_SIZE == 4
+#define PX_LOAD_FLOAT_VEC_CONV convert_float4
+#endif
+
 #define PX_LOAD CAT(vload, PX_LOAD_VEC_SIZE)
 #define float1 float
 
