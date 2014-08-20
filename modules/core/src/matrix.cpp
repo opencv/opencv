@@ -44,6 +44,7 @@
 #include "opencv2/core/gpumat.hpp"
 #include "opencv2/core/opengl_interop.hpp"
 #include "opencv2/core/opengl_interop_deprecated.hpp"
+#include "time.h"
 
 /****************************************************************************************\
 *                           [scaled] Identity matrix initialization                      *
@@ -2728,7 +2729,11 @@ double cv::kmeans( InputArray _data, int K,
     vector<Vec2f> _box(dims);
     Vec2f* box = &_box[0];
     double best_compactness = DBL_MAX, compactness = 0;
-    RNG& rng = theRNG();
+//    RNG& rng = theRNG();
+
+    srand(rand());
+    RNG rng((unsigned int)rand());
+
     int a, iter, i, j, k;
 
     if( criteria.type & TermCriteria::EPS )
