@@ -509,7 +509,7 @@ class FuncInfo(object):
                 name = "getelem"
         else:
             classname = ""
-        return "pyopencv_" + classname + name
+        return "pyopencv_" + self.namespace.replace('.','_') + '_' + classname + name
 
     def get_wrapper_prototype(self):
         full_fname = self.get_wrapper_name()
@@ -760,7 +760,7 @@ class PythonWrapperGenerator(object):
                 del chunks[-2]
                 base = '_'.join(chunks)
             if base not in self.classes:
-                print("Generator error: unable to resolve base %s for %s" 
+                print("Generator error: unable to resolve base %s for %s"
                     % (classinfo.bases[0], classinfo.name))
                 sys.exit(-1)
             classinfo.bases[0] = "::".join(chunks)
