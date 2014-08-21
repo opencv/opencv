@@ -73,10 +73,6 @@
     #undef abs
 #endif
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#include "opencv2/imgcodecs/imgcodecs_tegra.hpp"
-#endif
-
 #define __BEGIN__ __CV_BEGIN__
 #define __END__  __CV_END__
 #define EXIT __CV_EXIT__
