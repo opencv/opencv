@@ -23,6 +23,7 @@
  */
 
 #include "nldiffusion_functions.h"
+#include <iostream>
 
 // Namespaces
 using namespace std;
@@ -92,7 +93,21 @@ namespace cv {
              * @param k Contrast factor parameter
              */
             void pm_g1(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, float k) {
-                cv::exp(-(Lx.mul(Lx) + Ly.mul(Ly)) / (k*k), dst);
+
+              Size sz = Lx.size();
+              float inv_k = 1.0f / (k*k);
+              for (int y = 0; y < sz.height; y++) {
+
+                const float* Lx_row = Lx.ptr<float>(y);
+                const float* Ly_row = Ly.ptr<float>(y);
+                float* dst_row = dst.ptr<float>(y);
+
+                for (int x = 0; x < sz.width; x++) {
+                  dst_row[x] = (-inv_k*(Lx_row[x]*Lx_row[x] + Ly_row[x]*Ly_row[x]));
+                }
+              }
+
+              exp(dst, dst);
             }
 
             /* ************************************************************************* */
@@ -105,9 +120,20 @@ namespace cv {
              * @param k Contrast factor parameter
              */
             void pm_g2(const cv::Mat &Lx, const cv::Mat& Ly, cv::Mat& dst, float k) {
-                dst = 1.0f / (1.0f + (Lx.mul(Lx) + Ly.mul(Ly)) / (k*k));
-            }
 
+                Size sz = Lx.size();
+                dst.create(sz, Lx.type());
+                float k2inv = 1.0f / (k * k);
+
+                for(int y = 0; y < sz.height; y++) {
+                    const float *Lx_row = Lx.ptr<float>(y);
+                    const float *Ly_row = Ly.ptr<float>(y);
+                    float* dst_row = dst.ptr<float>(y);
+                    for(int x = 0; x < sz.width; x++) {
+                        dst_row[x] = 1.0f / (1.0f + ((Lx_row[x] * Lx_row[x] + Ly_row[x] * Ly_row[x]) * k2inv));
+                    }
+                }
+            }
             /* ************************************************************************* */
             /**
              * @brief This function computes Weickert conductivity coefficient gw
@@ -120,11 +146,25 @@ namespace cv {
              * Proceedings of Algorithmy 2000
              */
             void weickert_diffusivity(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, float k) {
-                Mat modg;
-                cv::pow((Lx.mul(Lx) + Ly.mul(Ly)) / (k*k), 4, modg);
-                cv::exp(-3.315f / modg, dst);
-                dst = 1.0f - dst;
+
+              Size sz = Lx.size();
+              float inv_k = 1.0f / (k*k);
+              for (int y = 0; y < sz.height; y++) {
+
+                const float* Lx_row = Lx.ptr<float>(y);
+                const float* Ly_row = Ly.ptr<float>(y);
+                float* dst_row = dst.ptr<float>(y);
+
+                for (int x = 0; x < sz.width; x++) {
+                  float dL = inv_k*(Lx_row[x]*Lx_row[x] + Ly_row[x]*Ly_row[x]);
+                  dst_row[x] = -3.315f/(dL*dL*dL*dL);
+                }
+              }
+
+              exp(dst, dst);
+              dst = 1.0 - dst;
             }
+
 
             /* ************************************************************************* */
             /**
@@ -139,10 +179,22 @@ namespace cv {
             * Proceedings of Algorithmy 2000
             */
             void charbonnier_diffusivity(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, float k) {
-                Mat den;
-                cv::sqrt(1.0f + (Lx.mul(Lx) + Ly.mul(Ly)) / (k*k), den);
-                dst = 1.0f / den;
+
+              Size sz = Lx.size();
+              float inv_k = 1.0f / (k*k);
+              for (int y = 0; y < sz.height; y++) {
+
+                const float* Lx_row = Lx.ptr<float>(y);
+                const float* Ly_row = Ly.ptr<float>(y);
+                float* dst_row = dst.ptr<float>(y);
+
+                for (int x = 0; x < sz.width; x++) {
+                  float den = sqrt(1.0f+inv_k*(Lx_row[x]*Lx_row[x] + Ly_row[x]*Ly_row[x]));
+                  dst_row[x] = 1.0f / den;
+                }
+              }
             }
+
 
             /* ************************************************************************* */
             /**
@@ -160,7 +212,7 @@ namespace cv {
             float compute_k_percentile(const cv::Mat& img, float perc, float gscale, int nbins, int ksize_x, int ksize_y) {
 
                 int nbin = 0, nelements = 0, nthreshold = 0, k = 0;
-                float kperc = 0.0, modg = 0.0, lx = 0.0, ly = 0.0;
+                float kperc = 0.0, modg = 0.0;
                 float npoints = 0.0;
                 float hmax = 0.0;
 
@@ -181,10 +233,10 @@ namespace cv {
 
                 // Skip the borders for computing the histogram
                 for (int i = 1; i < gaussian.rows - 1; i++) {
+                    const float *lx = Lx.ptr<float>(i);
+                    const float *ly = Ly.ptr<float>(i);
                     for (int j = 1; j < gaussian.cols - 1; j++) {
-                        lx = *(Lx.ptr<float>(i)+j);
-                        ly = *(Ly.ptr<float>(i)+j);
-                        modg = sqrt(lx*lx + ly*ly);
+                        modg = lx[j]*lx[j] + ly[j]*ly[j];
 
                         // Get the maximum
                         if (modg > hmax) {
@@ -192,17 +244,17 @@ namespace cv {
                         }
                     }
                 }
-
+                hmax = sqrt(hmax);
                 // Skip the borders for computing the histogram
                 for (int i = 1; i < gaussian.rows - 1; i++) {
+                    const float *lx = Lx.ptr<float>(i);
+                    const float *ly = Ly.ptr<float>(i);
                     for (int j = 1; j < gaussian.cols - 1; j++) {
-                        lx = *(Lx.ptr<float>(i)+j);
-                        ly = *(Ly.ptr<float>(i)+j);
-                        modg = sqrt(lx*lx + ly*ly);
+                        modg = lx[j]*lx[j] + ly[j]*ly[j];
 
                         // Find the correspondent bin
                         if (modg != 0.0) {
-                            nbin = (int)floor(nbins*(modg / hmax));
+                            nbin = (int)floor(nbins*(sqrt(modg) / hmax));
 
                             if (nbin == nbins) {
                                 nbin--;
@@ -249,7 +301,7 @@ namespace cv {
             /* ************************************************************************* */
             /**
              * @brief Compute derivative kernels for sizes different than 3
-             * @param _kx Horizontal kernel values
+             * @param _kx Horizontal kernel ues
              * @param _ky Vertical kernel values
              * @param dx Derivative order in X-direction (horizontal)
              * @param dy Derivative order in Y-direction (vertical)
@@ -314,17 +366,25 @@ namespace cv {
 
                     for (int i = range.start; i < range.end; i++)
                     {
+                        const float *c_prev  = c.ptr<float>(i - 1);
+                        const float *c_curr  = c.ptr<float>(i);
+                        const float *c_next  = c.ptr<float>(i + 1);
+                        const float *ld_prev = Ld.ptr<float>(i - 1);
+                        const float *ld_curr = Ld.ptr<float>(i);
+                        const float *ld_next = Ld.ptr<float>(i + 1);
+
+                        float *dst  = Lstep.ptr<float>(i);
+
                         for (int j = 1; j < Lstep.cols - 1; j++)
                         {
-                            float xpos = ((*(c.ptr<float>(i)+j)) + (*(c.ptr<float>(i)+j + 1)))*((*(Ld.ptr<float>(i)+j + 1)) - (*(Ld.ptr<float>(i)+j)));
-                            float xneg = ((*(c.ptr<float>(i)+j - 1)) + (*(c.ptr<float>(i)+j)))*((*(Ld.ptr<float>(i)+j)) - (*(Ld.ptr<float>(i)+j - 1)));
-                            float ypos = ((*(c.ptr<float>(i)+j)) + (*(c.ptr<float>(i + 1) + j)))*((*(Ld.ptr<float>(i + 1) + j)) - (*(Ld.ptr<float>(i)+j)));
-                            float yneg = ((*(c.ptr<float>(i - 1) + j)) + (*(c.ptr<float>(i)+j)))*((*(Ld.ptr<float>(i)+j)) - (*(Ld.ptr<float>(i - 1) + j)));
-                            *(Lstep.ptr<float>(i)+j) = 0.5f*stepsize*(xpos - xneg + ypos - yneg);
+                            float xpos = (c_curr[j]   + c_curr[j+1])*(ld_curr[j+1] - ld_curr[j]);
+                            float xneg = (c_curr[j-1] + c_curr[j])  *(ld_curr[j]   - ld_curr[j-1]);
+                            float ypos = (c_curr[j]   + c_next[j])  *(ld_next[j]   - ld_curr[j]);
+                            float yneg = (c_prev[j]   + c_curr[j])  *(ld_curr[j]   - ld_prev[j]);
+                            dst[j] = 0.5f*stepsize*(xpos - xneg + ypos - yneg);
                         }
                     }
                 }
-
             private:
                 cv::Mat * _Ld;
                 const cv::Mat * _c;
@@ -345,39 +405,65 @@ namespace cv {
             */
             void nld_step_scalar(cv::Mat& Ld, const cv::Mat& c, cv::Mat& Lstep, float stepsize) {
 
-                cv::parallel_for_(cv::Range(1, Lstep.rows - 1), Nld_Step_Scalar_Invoker(Ld, c, Lstep, stepsize));
+                cv::parallel_for_(cv::Range(1, Lstep.rows - 1), Nld_Step_Scalar_Invoker(Ld, c, Lstep, stepsize), (double)Ld.total()/(1 << 16));
+
+                float xneg, xpos, yneg, ypos;
+                float* dst = Lstep.ptr<float>(0);
+                const float* cprv = NULL;
+                const float* ccur  = c.ptr<float>(0);
+                const float* cnxt  = c.ptr<float>(1);
+                const float* ldprv = NULL;
+                const float* ldcur = Ld.ptr<float>(0);
+                const float* ldnxt = Ld.ptr<float>(1);
+                for (int j = 1; j < Lstep.cols - 1; j++) {
+                    xpos = (ccur[j]   + ccur[j+1]) * (ldcur[j+1] - ldcur[j]);
+                    xneg = (ccur[j-1] + ccur[j])   * (ldcur[j]   - ldcur[j-1]);
+                    ypos = (ccur[j]   + cnxt[j])   * (ldnxt[j]   - ldcur[j]);
+                    dst[j] = 0.5f*stepsize*(xpos - xneg + ypos);
+                }
+
+                dst = Lstep.ptr<float>(Lstep.rows - 1);
+                ccur = c.ptr<float>(Lstep.rows - 1);
+                cprv = c.ptr<float>(Lstep.rows - 2);
+                ldcur = Ld.ptr<float>(Lstep.rows - 1);
+                ldprv = Ld.ptr<float>(Lstep.rows - 2);
 
                 for (int j = 1; j < Lstep.cols - 1; j++) {
-                    float xpos = ((*(c.ptr<float>(0) + j)) + (*(c.ptr<float>(0) + j + 1)))*((*(Ld.ptr<float>(0) + j + 1)) - (*(Ld.ptr<float>(0) + j)));
-                    float xneg = ((*(c.ptr<float>(0) + j - 1)) + (*(c.ptr<float>(0) + j)))*((*(Ld.ptr<float>(0) + j)) - (*(Ld.ptr<float>(0) + j - 1)));
-                    float ypos = ((*(c.ptr<float>(0) + j)) + (*(c.ptr<float>(1) + j)))*((*(Ld.ptr<float>(1) + j)) - (*(Ld.ptr<float>(0) + j)));
-                    *(Lstep.ptr<float>(0) + j) = 0.5f*stepsize*(xpos - xneg + ypos);
+                    xpos = (ccur[j] + ccur[j+1]) * (ldcur[j+1] - ldcur[j]);
+                    xneg = (ccur[j-1] + ccur[j]) * (ldcur[j] - ldcur[j-1]);
+                    yneg = (cprv[j] + ccur[j])   * (ldcur[j] - ldprv[j]);
+                    dst[j] = 0.5f*stepsize*(xpos - xneg - yneg);
                 }
 
-                for (int j = 1; j < Lstep.cols - 1; j++) {
-                    float xpos = ((*(c.ptr<float>(Lstep.rows - 1) + j)) + (*(c.ptr<float>(Lstep.rows - 1) + j + 1)))*((*(Ld.ptr<float>(Lstep.rows - 1) + j + 1)) - (*(Ld.ptr<float>(Lstep.rows - 1) + j)));
-                    float xneg = ((*(c.ptr<float>(Lstep.rows - 1) + j - 1)) + (*(c.ptr<float>(Lstep.rows - 1) + j)))*((*(Ld.ptr<float>(Lstep.rows - 1) + j)) - (*(Ld.ptr<float>(Lstep.rows - 1) + j - 1)));
-                    float ypos = ((*(c.ptr<float>(Lstep.rows - 1) + j)) + (*(c.ptr<float>(Lstep.rows - 1) + j)))*((*(Ld.ptr<float>(Lstep.rows - 1) + j)) - (*(Ld.ptr<float>(Lstep.rows - 1) + j)));
-                    float yneg = ((*(c.ptr<float>(Lstep.rows - 2) + j)) + (*(c.ptr<float>(Lstep.rows - 1) + j)))*((*(Ld.ptr<float>(Lstep.rows - 1) + j)) - (*(Ld.ptr<float>(Lstep.rows - 2) + j)));
-                    *(Lstep.ptr<float>(Lstep.rows - 1) + j) = 0.5f*stepsize*(xpos - xneg + ypos - yneg);
-                }
+                ccur = c.ptr<float>(1);
+                ldcur = Ld.ptr<float>(1);
+                cprv = c.ptr<float>(0);
+                ldprv = Ld.ptr<float>(0);
 
-                for (int i = 1; i < Lstep.rows - 1; i++) {
-                    float xpos = ((*(c.ptr<float>(i))) + (*(c.ptr<float>(i)+1)))*((*(Ld.ptr<float>(i)+1)) - (*(Ld.ptr<float>(i))));
-                    float xneg = ((*(c.ptr<float>(i))) + (*(c.ptr<float>(i))))*((*(Ld.ptr<float>(i))) - (*(Ld.ptr<float>(i))));
-                    float ypos = ((*(c.ptr<float>(i))) + (*(c.ptr<float>(i + 1))))*((*(Ld.ptr<float>(i + 1))) - (*(Ld.ptr<float>(i))));
-                    float yneg = ((*(c.ptr<float>(i - 1))) + (*(c.ptr<float>(i))))*((*(Ld.ptr<float>(i))) - (*(Ld.ptr<float>(i - 1))));
-                    *(Lstep.ptr<float>(i)) = 0.5f*stepsize*(xpos - xneg + ypos - yneg);
-                }
+                int r0 = Lstep.cols - 1;
+                int r1 = Lstep.cols - 2;
 
                 for (int i = 1; i < Lstep.rows - 1; i++) {
-                    float xneg = ((*(c.ptr<float>(i)+Lstep.cols - 2)) + (*(c.ptr<float>(i)+Lstep.cols - 1)))*((*(Ld.ptr<float>(i)+Lstep.cols - 1)) - (*(Ld.ptr<float>(i)+Lstep.cols - 2)));
-                    float ypos = ((*(c.ptr<float>(i)+Lstep.cols - 1)) + (*(c.ptr<float>(i + 1) + Lstep.cols - 1)))*((*(Ld.ptr<float>(i + 1) + Lstep.cols - 1)) - (*(Ld.ptr<float>(i)+Lstep.cols - 1)));
-                    float yneg = ((*(c.ptr<float>(i - 1) + Lstep.cols - 1)) + (*(c.ptr<float>(i)+Lstep.cols - 1)))*((*(Ld.ptr<float>(i)+Lstep.cols - 1)) - (*(Ld.ptr<float>(i - 1) + Lstep.cols - 1)));
-                    *(Lstep.ptr<float>(i)+Lstep.cols - 1) = 0.5f*stepsize*(-xneg + ypos - yneg);
-                }
+                    cnxt = c.ptr<float>(i + 1);
+                    ldnxt = Ld.ptr<float>(i + 1);
+                    dst = Lstep.ptr<float>(i);
 
-                Ld = Ld + Lstep;
+                    xpos = (ccur[0] + ccur[1]) * (ldcur[1] - ldcur[0]);
+                    ypos = (ccur[0] + cnxt[0]) * (ldnxt[0] - ldcur[0]);
+                    yneg = (cprv[0] + ccur[0]) * (ldcur[0] - ldprv[0]);
+                    dst[0] = 0.5f*stepsize*(xpos + ypos - yneg);
+
+                    xneg = (ccur[r1] + ccur[r0]) * (ldcur[r0] - ldcur[r1]);
+                    ypos = (ccur[r0] + cnxt[r0]) * (ldnxt[r0] - ldcur[r0]);
+                    yneg = (cprv[r0] + ccur[r0]) * (ldcur[r0] - ldprv[r0]);
+                    dst[r0] = 0.5f*stepsize*(-xneg + ypos - yneg);
+
+                    cprv = ccur;
+                    ccur = cnxt;
+                    ldprv = ldcur;
+                    ldcur = ldnxt;
+                }
+                Ld += Lstep;
             }
 
             /* ************************************************************************* */
