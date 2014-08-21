@@ -16,6 +16,7 @@ endforeach(mp)
 ocv_list_filterout(candidate_deps "^opencv_cud(a|ev)")
 ocv_list_filterout(candidate_deps "^opencv_matlab$")
 ocv_list_filterout(candidate_deps "^opencv_ts$")
+ocv_list_filterout(candidate_deps "^opencv_adas$")
 
 ocv_add_module(${MODULE_NAME} BINDINGS OPTIONAL ${candidate_deps})
 
@@ -35,6 +36,7 @@ ocv_list_filterout(opencv_hdrs ".h$")
 ocv_list_filterout(opencv_hdrs "cuda")
 ocv_list_filterout(opencv_hdrs "cudev")
 ocv_list_filterout(opencv_hdrs "opencv2/objdetect/detection_based_tracker.hpp")
+ocv_list_filterout(opencv_hdrs "opencv2/ximgproc/structured_edge_detection.hpp")
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
