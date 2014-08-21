@@ -1322,7 +1322,7 @@ Size_<_Tp>& operator *= (Size_<_Tp>& a, _Tp b)
 template<typename _Tp> static inline
 Size_<_Tp> operator * (const Size_<_Tp>& a, _Tp b)
 {
-    Size_<_Tp> tmp;
+    Size_<_Tp> tmp(a);
     tmp *= b;
     return tmp;
 }
@@ -1338,7 +1338,7 @@ Size_<_Tp>& operator /= (Size_<_Tp>& a, _Tp b)
 template<typename _Tp> static inline
 Size_<_Tp> operator / (const Size_<_Tp>& a, _Tp b)
 {
-    Size_<_Tp> tmp;
+    Size_<_Tp> tmp(a);
     tmp /= b;
     return tmp;
 }
@@ -1354,7 +1354,7 @@ Size_<_Tp>& operator += (Size_<_Tp>& a, const Size_<_Tp>& b)
 template<typename _Tp> static inline
 Size_<_Tp> operator + (const Size_<_Tp>& a, const Size_<_Tp>& b)
 {
-    Size_<_Tp> tmp;
+    Size_<_Tp> tmp(a);
     tmp += b;
     return tmp;
 }
@@ -1370,7 +1370,7 @@ Size_<_Tp>& operator -= (Size_<_Tp>& a, const Size_<_Tp>& b)
 template<typename _Tp> static inline
 Size_<_Tp> operator - (const Size_<_Tp>& a, const Size_<_Tp>& b)
 {
-    Size_<_Tp> tmp;
+    Size_<_Tp> tmp(a);
     tmp -= b;
     return tmp;
 }
