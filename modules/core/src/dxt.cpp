@@ -2390,11 +2390,11 @@ static bool ocl_dft_amdfft(InputArray _src, OutputArray _dst, int flags)
 
 void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 {
-#ifdef HAVE_CLAMDFFT
-    CV_OCL_RUN(ocl::haveAmdFft() && ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
-            _dst.isUMat() && _src0.dims() <= 2 && nonzero_rows == 0,
-               ocl_dft_amdfft(_src0, _dst, flags))
-#endif
+//#ifdef HAVE_CLAMDFFT
+//    CV_OCL_RUN(ocl::haveAmdFft() && ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
+//            _dst.isUMat() && _src0.dims() <= 2 && nonzero_rows == 0,
+//               ocl_dft_amdfft(_src0, _dst, flags))
+//#endif
 
 #ifdef HAVE_OPENCL
     CV_OCL_RUN(_dst.isUMat() && _src0.dims() <= 2,
