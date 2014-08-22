@@ -693,7 +693,7 @@ static void GEMMStore_64fc( const Complexd* c_data, size_t c_step,
 
 #ifdef HAVE_CLAMDBLAS
 
-static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
+static bool ocl_gemm_amdblas( InputArray matA, InputArray matB, double alpha,
                       InputArray matC, double beta, OutputArray matD, int flags )
 {
     int type = matA.type(), esz = CV_ELEM_SIZE(type);
@@ -775,6 +775,79 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
 
 #endif
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
+                      InputArray matC, double beta, OutputArray matD, int flags )
+{
+    int depth = matA.depth(), cn = matA.channels();
+    int type = CV_MAKETYPE(depth, cn);
+
+    CV_Assert( type == matB.type() && (type == CV_32FC1 || type == CV_64FC1 || type == CV_32FC2 || type == CV_64FC2) );
+
+    const ocl::Device & dev = ocl::Device::getDefault();
+    bool doubleSupport = dev.doubleFPConfig() > 0;
+
+    if ((!doubleSupport && depth == CV_64F))
+        return false;
+
+    bool haveC = matC.kind() != cv::_InputArray::NONE;
+    Size sizeA = matA.size(), sizeB = matB.size(), sizeC = haveC ? matC.size() : Size(0, 0);
+    bool atrans = (flags & GEMM_1_T) != 0, btrans = (flags & GEMM_2_T) != 0, ctrans = (flags & GEMM_3_T) != 0;
+
+    if (atrans)
+        sizeA = Size(sizeA.height, sizeA.width);
+    if (btrans)
+        sizeB = Size(sizeB.height, sizeB.width);
+    if (haveC && ctrans)
+        sizeC = Size(sizeC.height, sizeC.width);
+
+    Size sizeD(sizeB.width, sizeA.height);
+
+    CV_Assert( matB.type() == type && (!haveC || matC.type() == type) );
+    CV_Assert( sizeA.width == sizeB.height && (!haveC || sizeC == sizeD) );
+
+    String opts = format("-D T=%s -D T1=%s -D cn=%d %s %s",
+                          ocl::typeToStr(type), ocl::typeToStr(depth), cn,
+                          haveC ? "-D HAVE_C" : "",
+                          doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+
+    ocl::Kernel k("gemm", cv::ocl::core::gemm_oclsrc, opts);
+    if (k.empty())
+        return false;
+
+    matD.create(sizeD, type);
+
+    UMat A = matA.getUMat(), B = matB.getUMat(), D = matD.getUMat();
+
+    if (atrans)
+        A = A.t();
+
+    if (btrans)
+        B = B.t();
+
+    if (haveC)
+        ctrans ? transpose(matC, D) : matC.copyTo(D);
+    else
+        D.setTo(Scalar::all(0));
+
+    if (depth == CV_64F)
+        k.args(ocl::KernelArg::ReadOnlyNoSize(A),
+               ocl::KernelArg::ReadOnlyNoSize(B),
+               ocl::KernelArg::ReadWrite(D),
+               sizeA.width, alpha, beta);
+    else
+        k.args(ocl::KernelArg::ReadOnlyNoSize(A),
+               ocl::KernelArg::ReadOnlyNoSize(B),
+               ocl::KernelArg::ReadWrite(D),
+               sizeA.width, (float)alpha, (float)beta);
+
+    size_t globalsize[2] = { sizeD.width, sizeD.height};
+    return k.run(2, globalsize, NULL, false);
+}
+
+#endif
+
 }
 
 void cv::gemm( InputArray matA, InputArray matB, double alpha,
@@ -783,7 +856,12 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
 #ifdef HAVE_CLAMDBLAS
     CV_OCL_RUN(ocl::haveAmdBlas() && matA.dims() <= 2 && matB.dims() <= 2 && matC.dims() <= 2 && _matD.isUMat() &&
         matA.cols() > 20 && matA.rows() > 20 && matB.cols() > 20, // since it works incorrect for small sizes
-        ocl_gemm(matA, matB, alpha, matC, beta, _matD, flags))
+        ocl_gemm_amdblas(matA, matB, alpha, matC, beta, _matD, flags))
+#endif
+
+#ifdef HAVE_OPENCL
+    CV_OCL_RUN(_matD.isUMat() && matA.dims() <= 2 && matB.dims() <= 2 && matC.dims() <= 2,
+               ocl_gemm(matA, matB, alpha, matC, beta, _matD, flags))
 #endif
 
     const int block_lin_size = 128;
