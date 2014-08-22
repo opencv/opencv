@@ -42,6 +42,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels_imgproc.hpp"
 
 namespace cv
 {
@@ -652,13 +653,76 @@ HoughLinesProbabilistic( Mat& image,
     }
 }
 
+
+static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, double theta, int threshold,  
+                           double min_theta, double max_theta)
+{
+    CV_Assert(_src.type() == CV_8UC1);
+
+    if (max_theta < 0 || max_theta > CV_PI ) {
+        CV_Error( CV_StsBadArg, "max_theta must fall between 0 and pi" );
+    }
+    if (min_theta < 0 || min_theta > max_theta ) {
+        CV_Error( CV_StsBadArg, "min_theta must fall between 0 and max_theta" );
+    }
+
+    UMat src = _src.getUMat();
+
+    float irho = 1 / rho;
+    int numangle = cvRound((max_theta - min_theta) / theta);
+    int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
+
+    // make list of nonzero points
+    const int pixelsPerWI = 4;
+    int group_size = (src.cols + pixelsPerWI - 1)/pixelsPerWI;
+    ocl::Kernel pointListKernel("make_point_list", ocl::imgproc::hough_lines_oclsrc, 
+                                format("-D MAKE_POINT_LIST -D GROUP_SIZE=%d -D LOCAL_SIZE", group_size, src.cols));
+    if (pointListKernel.empty())
+        return false;
+
+    UMat pointsList(1, src.total(), CV_32SC1);
+    UMat total(1, 1, CV_32SC1, Scalar::all(0));
+    pointListKernel.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnlyNoSize(pointsList),
+                         ocl::KernelArg::PtrWriteOnly(total));
+    size_t localThreads[2]  = { group_size, 1 };
+    size_t globalThreads[2] = { group_size, src.rows };
+
+    if (!pointListKernel.run(2, globalThreads, localThreads, false))
+        return false;
+
+    int total_points = total.getMat(ACCESS_READ).at<int>(0, 0);
+    if (total_points <= 0)
+        return false;
+
+    // convert src to hough space
+    group_size = (total_points + pixelsPerWI - 1)/pixelsPerWI;
+    ocl::Kernel fillAccumKernel("fill_accum", ocl::imgproc::hough_lines_oclsrc,
+                                format("-D FILL_ACCUM -D GROUP_SIZE=%d", group_size));
+    if (fillAccumKernel.empty())
+        return false;
+
+    UMat accum(numangle + 2, numrho + 2, CV_32SC1, Scalar::all(0));
+    fillAccumKernel.args(ocl::KernelArg::ReadOnlyNoSize(pointsList), ocl::KernelArg::WriteOnly(accum),
+                         ocl::KernelArg::Constant(&total_points, sizeof(int)), ocl::KernelArg::Constant(&irho, sizeof(float)),
+                         ocl::KernelArg::Constant(&theta, sizeof(float)), ocl::KernelArg::Constant(&numrho, sizeof(int)));
+    globalThreads[0] = numangle; globalThreads[1] = group_size;
+
+    if (!fillAccumKernel.run(2, globalThreads, NULL, false))
+        return false;
+
+
+    return false;
 }
 
+}
 
 void cv::HoughLines( InputArray _image, OutputArray _lines,
                     double rho, double theta, int threshold,
                     double srn, double stn, double min_theta, double max_theta )
 {
+    CV_OCL_RUN(srn == 0 && stn == 0 && _lines.isUMat(), 
+               ocl_HoughLines(_image, _lines, rho, theta, threshold, min_theta, max_theta));
+
     Mat image = _image.getMat();
     std::vector<Vec2f> lines;
 
