@@ -739,8 +739,8 @@ class CppHeaderParser(object):
         """
         self.hname = hname
         decls = []
-        f = open(hname, "rt")
-        linelist = list(f.readlines())
+        f = open(hname, "rt", encoding='UTF-8')
+        linelist = f.readlines()
         f.close()
 
         # states:
