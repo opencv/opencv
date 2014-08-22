@@ -14,16 +14,10 @@ endforeach(mp)
 
 # module blacklist
 ocv_list_filterout(candidate_deps "^opencv_cud(a|ev)")
-ocv_list_filterout(candidate_deps "^opencv_adas$")
-ocv_list_filterout(candidate_deps "^opencv_face$")
 ocv_list_filterout(candidate_deps "^opencv_matlab$")
-ocv_list_filterout(candidate_deps "^opencv_tracking$")
-ocv_list_filterout(candidate_deps "^opencv_optflow$")
-ocv_list_filterout(candidate_deps "^opencv_bgsegm$")
-ocv_list_filterout(candidate_deps "^opencv_xfeatures2d$")
-ocv_list_filterout(candidate_deps "^opencv_ximgproc$")
-ocv_list_filterout(candidate_deps "^opencv_xphoto$")
 ocv_list_filterout(candidate_deps "^opencv_ts$")
+ocv_list_filterout(candidate_deps "^opencv_adas$")
+ocv_list_filterout(candidate_deps "^opencv_tracking$")
 
 ocv_add_module(${MODULE_NAME} BINDINGS OPTIONAL ${candidate_deps})
 
@@ -43,15 +37,14 @@ ocv_list_filterout(opencv_hdrs ".h$")
 ocv_list_filterout(opencv_hdrs "cuda")
 ocv_list_filterout(opencv_hdrs "cudev")
 ocv_list_filterout(opencv_hdrs "opencv2/objdetect/detection_based_tracker.hpp")
-ocv_list_filterout(opencv_hdrs "opencv2/optim.hpp")
+ocv_list_filterout(opencv_hdrs "opencv2/ximgproc/structured_edge_detection.hpp")
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_funcs.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_func_tab.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_types.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_type_reg.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_const_reg.h")
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_ns_reg.h")
 
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs}")
 add_custom_command(
