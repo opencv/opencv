@@ -299,7 +299,8 @@ CV_IMPL int cvRANSACUpdateNumIters( double p, double ep, int modelPoints, int ma
 
 
 CV_IMPL int cvFindHomography( const CvMat* _src, const CvMat* _dst, CvMat* __H, int method,
-                              double ransacReprojThreshold, CvMat* _mask )
+                              double ransacReprojThreshold, CvMat* _mask, int maxIters,
+                              double confidence)
 {
     cv::Mat src = cv::cvarrToMat(_src), dst = cv::cvarrToMat(_dst);
 
@@ -308,9 +309,20 @@ CV_IMPL int cvFindHomography( const CvMat* _src, const CvMat* _dst, CvMat* __H, 
     if( dst.channels() == 1 && (dst.rows == 2 || dst.rows == 3) && dst.cols > 3 )
         cv::transpose(dst, dst);
 
+    if ( maxIters < 0 )
+        maxIters = 0;
+    if ( maxIters > 2000 )
+        maxIters = 2000;
+
+    if ( confidence < 0 )
+        confidence = 0;
+    if ( confidence > 1 )
+        confidence = 1;
+
     const cv::Mat H = cv::cvarrToMat(__H), mask = cv::cvarrToMat(_mask);
     cv::Mat H0 = cv::findHomography(src, dst, method, ransacReprojThreshold,
-                                    _mask ? cv::_OutputArray(mask) : cv::_OutputArray());
+                                    _mask ? cv::_OutputArray(mask) : cv::_OutputArray(), maxIters,
+                                    confidence);
 
     if( H0.empty() )
     {
