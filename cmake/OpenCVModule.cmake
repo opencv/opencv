@@ -945,9 +945,19 @@ function(ocv_add_samples)
   endif()
 
   if(INSTALL_C_EXAMPLES AND NOT WIN32 AND EXISTS "${samples_path}")
-    file(GLOB sample_files "${samples_path}/*")
+  file(GLOB DEPLOY_FILES_AND_DIRS "${samples_path}/*")
+    foreach(ITEM ${DEPLOY_FILES_AND_DIRS})
+        IF( IS_DIRECTORY "${ITEM}" )
+            LIST( APPEND sample_dirs "${ITEM}" )
+        ELSE()
+            LIST( APPEND sample_files "${ITEM}" )
+        ENDIF()
+    endforeach()
     install(FILES ${sample_files}
             DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/${module_id}
             PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
+    install(DIRECTORY ${sample_dirs}
+            DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/${module_id}
+            USE_SOURCE_PERMISSIONS COMPONENT samples)
   endif()
 endfunction()
