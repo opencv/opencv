@@ -87,8 +87,8 @@
 #  include "opencv2/cuda.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree/cuda.hpp"
+#ifdef HAVE_OPENCV_XFEATURES2D
+#  include "opencv2/xfeatures2d/cuda.hpp"
 #endif
 
 #include "../../imgproc/src/gcgraph.hpp"
