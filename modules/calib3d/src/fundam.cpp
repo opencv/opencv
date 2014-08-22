@@ -274,10 +274,9 @@ public:
 
 
 cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
-                            int method, double ransacReprojThreshold, OutputArray _mask )
+                            int method, double ransacReprojThreshold, OutputArray _mask,
+                            const int maxIters, const double confidence)
 {
-    const double confidence = 0.995;
-    const int maxIters = 2000;
     const double defaultRANSACReprojThreshold = 3;
     bool result = false;
 

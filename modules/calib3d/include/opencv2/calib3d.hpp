@@ -109,7 +109,8 @@ CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobi
 //! computes the best-fit perspective transformation mapping srcPoints to dstPoints.
 CV_EXPORTS_W Mat findHomography( InputArray srcPoints, InputArray dstPoints,
                                  int method = 0, double ransacReprojThreshold = 3,
-                                 OutputArray mask=noArray());
+                                 OutputArray mask=noArray(), const int maxIters = 2000,
+                                 const double confidence = 0.995);
 
 //! variant of findHomography for backward compatibility
 CV_EXPORTS Mat findHomography( InputArray srcPoints, InputArray dstPoints,
