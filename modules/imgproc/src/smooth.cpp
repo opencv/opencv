@@ -720,7 +720,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "
                 "-D PX_LOAD_X_ITERATIONS=%d -D PX_LOAD_Y_ITERATIONS=%d "
                 "-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D WT=%s -D WT1=%s "
-                "-D convertToWT=%s -D convertToDstT=%s%s%s -D OP_BOX_FILTER",
+                "-D convertToWT=%s -D convertToDstT=%s%s%s -D PX_LOAD_FLOAT_VEC_CONV=convert_%s -D OP_BOX_FILTER",
                 cn, anchor.x, anchor.y, ksize.width, ksize.height,
                 pxLoadVecSize, pxLoadNumPixels,
                 pxPerWorkItemX, pxPerWorkItemY, privDataWidth, borderMap[borderType],
@@ -730,8 +730,9 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
-                normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "");
-
+                normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "",
+                ocl::typeToStr(CV_MAKE_TYPE(wdepth, pxLoadVecSize)) //PX_LOAD_FLOAT_VEC_CONV
+                );
 
 
         if (!kernel.create("filterSmall", cv::ocl::imgproc::filterSmall_oclsrc, build_options))
