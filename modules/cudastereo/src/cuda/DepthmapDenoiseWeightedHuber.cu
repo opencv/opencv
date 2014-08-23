@@ -50,7 +50,7 @@
 //! "DTAM: Dense tracking and mapping in real-time."
 //! Which was in turn based on Chambolle & Pock's
 //! "A first-order primal-dual algorithm for convex problems with applications to imaging."
-
+// #define __CUDA_ARCH__ 200
 #include <opencv2/core/cuda/common.hpp>//for cudaSafeCall,CV_Assert
 
 #include "DepthmapDenoiseWeightedHuber.cuh"
@@ -213,6 +213,7 @@ GENERATE_CUDA_FUNC2DROWS(computeG1,
             g0x=threadIdx.x>0?g0x:gsav;//xxxxxxx
             gsav=__shfl_down(gt,31);//x000000 for next time
         #else
+            gt=fabsf(pr-pl);
             g1p[pt+1]=gt;
             g0x=g1p[pt];
         #endif
@@ -245,6 +246,7 @@ GENERATE_CUDA_FUNC2DROWS(computeG1,
         g0x=__shfl_up(gt,1);//?xxxxxx
         g0x=threadIdx.x>0?g0x:gsav;//xxxxxxx
     #else
+        gt=fabsf(pr-pl);
         if(threadIdx.x!=31)
             g1p[pt+1]=gt;
         g0x=g1p[pt];
@@ -787,7 +789,7 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
 //        dpt[pt]=d;
 //    }
 //}
-#if __CUDA_ARCH__>=300
+
     __shared__ float s[32*BLOCKY2D];
     int x = threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -828,11 +830,14 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
                 gx=gxpt[pt]+.01f;
 //                gx=1.0f;
             }
-
+#if __CUDA_ARCH__>=300
             dr=__shfl_down(dh,1);
             tmp=__shfl_up(dn,31);
             if (rt && x<cols-32)
                 dr=tmp;
+#else
+            dr=x<cols-1?dpt[pt+1]:dh;
+#endif
             qx = gqx/gx;
             //qx+=(gx*(dr-dh)-epsilon*qx)*.5f;//simplified step
             qx = (qx+sigma_q*gx*(dr-dh))/(1+sigma_q*epsilon);//basic spring force equation f=k(x-x0)
@@ -865,7 +870,7 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
         }
         //__syncthreads();
     }
-#endif
+
 }
 
 GENERATE_CUDA_FUNC2DROWS(updateD,
@@ -874,7 +879,6 @@ GENERATE_CUDA_FUNC2DROWS(updateD,
                 float theta),
                 ( gqxpt, gqypt, dpt, apt,
                         gxpt, gypt, cols, sigma_q, sigma_d, epsilon, theta)) {
-    #if __CUDA_ARCH__>=300
     //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
 
     //Original pseudocode for this function:
@@ -952,10 +956,20 @@ GENERATE_CUDA_FUNC2DROWS(updateD,
         {
             float gqr,gql;
             gqr=gqx=gqxpt[pt];
+#if __CUDA_ARCH__>=300
             gql=__shfl_up(gqx,1);
             if (lf)
                 gql=gqsave;
             gqsave=__shfl_down(gqx,31);//save for next iter
+#else
+            if(x!=0)
+                gql=gqxpt[pt-1];
+            else
+                gql=0.0f;
+#endif
+            
+
+            
             dacc = gqr - gql;//dx part
         }
         //dy update and d store
@@ -984,7 +998,6 @@ GENERATE_CUDA_FUNC2DROWS(updateD,
         }
         __syncthreads();//can't figure out why this is needed, but it is to avoid subtle errors in Qy at the ends of the warp
     }
-#endif
 }
 
 
