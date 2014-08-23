@@ -110,10 +110,14 @@ void computeGCaller  (float* pp, float* g1p, float* gxp, float* gyp, int cols){
    cudaSafeCall( cudaGetLastError() );
 };
 
+#if __CUDA_ARCH__<300
+__device__ inline int max(int a, int b) { return a > b ? a : b; } 
+__device__ inline int min(int a, int b) { return a < b ? a : b; }
+#endif
 GENERATE_CUDA_FUNC2DROWS(computeG1,
                      (float* pp, float* g1p, float* gxp, float* gyp, int cols),
                      (pp, g1p, gxp, gyp, cols)) {
-    #if __CUDA_ARCH__>300
+
 //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
 
 //Original pseudocode for this function:
@@ -143,9 +147,12 @@ GENERATE_CUDA_FUNC2DROWS(computeG1,
     //itr0
     int pt=x+y*cols;
     float ph,pn,pu,pd,pl,pr;
-    float g0x,g0y,g0,g1,gt,gsav;
-    float tmp;
+    float g0x,g0y,g0,g1,gt;
+#if __CUDA_ARCH__>=300
+    float gsav,tmp;
+#endif
     ph=pp[pt];
+#if __CUDA_ARCH__>=300
     pn=pp[pt+blockDim.x];
 
     pr=__shfl_down(ph,2);
@@ -153,16 +160,26 @@ GENERATE_CUDA_FUNC2DROWS(computeG1,
     if(threadIdx.x>=30){
         pr=tmp;
     }
+#else
+    pr=pp[pt+2];
+#endif
     pl=ph;
     pu=pp[pt+upoff];
     pd=pp[pt+dnoff];
 
 
     // g0 is the strongest nearby gradient (excluding point defects)
+
         gt=fabsf(pr-pl);
+    #if __CUDA_ARCH__>=300
         g0x=__shfl_up(gt,1);//?xxxxxx no prior val
         gsav=__shfl_down(gt,31);//x000000 for next time
         g0x=threadIdx.x>0?g0x:0.0f;//0xxxxxx
+    #else
+        if(threadIdx.x>0)
+            g1p[pt+1]=gt;
+        g0x=threadIdx.x>0?g1p[pt]:0.0f;
+    #endif
         g0y=fabsf(pd-pu);
 
         g0=fmaxf(g0x,g0y);
@@ -178,19 +195,27 @@ GENERATE_CUDA_FUNC2DROWS(computeG1,
         pt=x+y*cols;
         ph=pn;
         pn=pp[pt+blockDim.x];
+    #if __CUDA_ARCH__>=300
         pr=__shfl_down(ph,2);
         tmp=__shfl_up(pn,30);
         pr=threadIdx.x>=30?tmp:pr;
-
+    #else
+        pr=pp[pt+2];
+    #endif
         pl=ph;
         pu=pp[pt+upoff];
         pd=pp[pt+dnoff];
 
         // g0 is the strongest nearby gradient (excluding point defects)
+        #if __CUDA_ARCH__>=300
             gt=fabsf(pr-pl);
             g0x=__shfl_up(gt,1);//?xxxxxx
             g0x=threadIdx.x>0?g0x:gsav;//xxxxxxx
             gsav=__shfl_down(gt,31);//x000000 for next time
+        #else
+            g1p[pt+1]=gt;
+            g0x=g1p[pt];
+        #endif
             g0y=fabsf(pd-pu);
 
             g0=fmaxf(g0x,g0y);
@@ -205,15 +230,25 @@ GENERATE_CUDA_FUNC2DROWS(computeG1,
     //itr n-1
     pt=x+y*cols;
     ph=pn;
+#if __CUDA_ARCH__>=300
     pr=__shfl_down(ph,2);
+#else
+    pr=pp[pt+min(2,31-threadIdx.x)];
+#endif
     pl=ph;
     pu=pp[pt+upoff];
     pd=pp[pt+dnoff];
 
     // g0 is the strongest nearby gradient (excluding point defects)
+    #if __CUDA_ARCH__>=300
         gt=fabsf(pr-pl);
         g0x=__shfl_up(gt,1);//?xxxxxx
         g0x=threadIdx.x>0?g0x:gsav;//xxxxxxx
+    #else
+        if(threadIdx.x!=31)
+            g1p[pt+1]=gt;
+        g0x=g1p[pt];
+    #endif
         g0y=fabsf(pd-pu);
 
         g0=fmaxf(g0x,g0y);
@@ -222,19 +257,20 @@ GENERATE_CUDA_FUNC2DROWS(computeG1,
         g1=exp(-alpha*g1);
     //save
         g1p[pt]=g1;
-#endif
 }
 GENERATE_CUDA_FUNC2DROWS(computeG2,
                      (float* pp, float* g1p, float* gxp, float* gyp, int cols),
                      (pp, g1p, gxp, gyp, cols)) {
-    #if __CUDA_ARCH__>300
     int x = threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     int dnoff=(y<gridDim.y*blockDim.y-1)*cols;
     //itr0
     int pt=x+y*cols;
-    float g1h,g1n,g1u,g1d,g1r,g1l,gx,gy;
+    float g1h,g1u,g1d,g1r,g1l,gx,gy;
+    #if __CUDA_ARCH__>=300
+    float g1n;
     float tmp;
+    #endif
 //part2, find gx,gy
     x = threadIdx.x;
     y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -242,12 +278,17 @@ GENERATE_CUDA_FUNC2DROWS(computeG2,
     pt=x+y*cols;
 
     g1h=g1p[pt];
+#if __CUDA_ARCH__>=300
     g1n=g1p[pt+blockDim.x];
     g1r=__shfl_down(g1h,1);
     tmp=__shfl_up(g1n,31);
     if(threadIdx.x>=31){
         g1r=tmp;
     }
+#else
+    g1r=g1p[pt+1];
+#endif
+    
     g1l=g1h;
     g1u=g1h;
     g1d=g1p[pt+dnoff];
@@ -262,12 +303,16 @@ GENERATE_CUDA_FUNC2DROWS(computeG2,
     //itr 1:n-2
     for(;x<cols-32;x+=32){
         pt=x+y*cols;
+#if __CUDA_ARCH__>=300
         g1h=g1n;
         g1n=g1p[pt+blockDim.x];
         g1r=__shfl_down(g1h,1);
         tmp=__shfl_up(g1n,31);
         g1r=threadIdx.x>=31?tmp:g1r;
-
+#else
+        g1h=g1p[pt];
+        g1r=g1p[pt+1];
+#endif
         g1l=g1h;
         g1u=g1h;
         g1d=g1p[pt+dnoff];
@@ -281,8 +326,13 @@ GENERATE_CUDA_FUNC2DROWS(computeG2,
 
     //itr n-1
     pt=x+y*cols;
+#if __CUDA_ARCH__>=300
     g1h=g1n;
     g1r=__shfl_down(g1h,1);
+#else
+    g1h=g1p[pt];
+    g1r=g1p[pt+min(1,31-threadIdx.x)];
+#endif
     g1l=g1h;
     g1u=g1h;
     g1d=g1p[pt+dnoff];
@@ -294,7 +344,6 @@ GENERATE_CUDA_FUNC2DROWS(computeG2,
     //save
         gxp[pt]=gx;
         gyp[pt]=gy;
-#endif
 }
 
 
@@ -304,7 +353,7 @@ GENERATE_CUDA_FUNC2DROWS(computeG2,
 GENERATE_CUDA_FUNC2DROWS(computeGunsafe,
                      (float* pp, float* g1p, float* gxp, float* gyp, int cols),
                      (pp, g1p, gxp, gyp, cols)) {
-    #if __CUDA_ARCH__>300
+    #if __CUDA_ARCH__>=300
 //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
 //TODO: rerun kernel on lines with y%32==31 or y%32==0 to fix stitch lines
 
@@ -738,7 +787,7 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
 //        dpt[pt]=d;
 //    }
 //}
-#if __CUDA_ARCH__>300
+#if __CUDA_ARCH__>=300
     __shared__ float s[32*BLOCKY2D];
     int x = threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -825,7 +874,7 @@ GENERATE_CUDA_FUNC2DROWS(updateD,
                 float theta),
                 ( gqxpt, gqypt, dpt, apt,
                         gxpt, gypt, cols, sigma_q, sigma_d, epsilon, theta)) {
-    #if __CUDA_ARCH__>300
+    #if __CUDA_ARCH__>=300
     //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
 
     //Original pseudocode for this function:
