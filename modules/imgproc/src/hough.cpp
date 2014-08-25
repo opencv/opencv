@@ -676,7 +676,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     const int pixelsPerWI = 4;
     int group_size = (src.cols + pixelsPerWI - 1)/pixelsPerWI;
     ocl::Kernel pointListKernel("make_point_list", ocl::imgproc::hough_lines_oclsrc, 
-                                format("-D MAKE_POINT_LIST -D GROUP_SIZE=%d -D LOCAL_SIZE", group_size, src.cols));
+                                format("-D MAKE_POINT_LIST -D GROUP_SIZE=%d -D LOCAL_SIZE=%d", group_size, src.cols));
     if (pointListKernel.empty())
         return false;
 
@@ -703,13 +703,24 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
 
     UMat accum(numangle + 2, numrho + 2, CV_32SC1, Scalar::all(0));
     fillAccumKernel.args(ocl::KernelArg::ReadOnlyNoSize(pointsList), ocl::KernelArg::WriteOnly(accum),
-                         ocl::KernelArg::Constant(&total_points, sizeof(int)), ocl::KernelArg::Constant(&irho, sizeof(float)),
-                         ocl::KernelArg::Constant(&theta, sizeof(float)), ocl::KernelArg::Constant(&numrho, sizeof(int)));
-    globalThreads[0] = numangle; globalThreads[1] = group_size;
+                         total_points, irho, (float) theta, numrho, numangle);
+    globalThreads[0] = group_size; globalThreads[1] = numangle;
 
     if (!fillAccumKernel.run(2, globalThreads, NULL, false))
         return false;
-
+    printf("GPU: \n");
+    int sum = 0;
+    Mat ac = accum.getMat(ACCESS_READ);
+    for (int i=0; i<8; i++)
+    {
+        for (int j=0; j<8; j++)
+        {
+            sum += ac.at<int>(i, j);
+            printf("%d ", ac.at<int>(i, j));
+        }
+        printf("\n");
+    }
+    printf("sum = %d\n", sum);
 
     return false;
 }

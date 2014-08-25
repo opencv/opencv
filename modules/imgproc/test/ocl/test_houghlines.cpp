@@ -26,7 +26,7 @@ PARAM_TEST_CASE(HoughLinesTestBase, bool)
     virtual void SetUp()
     {
         rhoStep = 10;
-        thetaStep = 0.1;
+        thetaStep = 0.5;
         threshold = 80;
         useRoi = false;
     }
@@ -35,7 +35,7 @@ PARAM_TEST_CASE(HoughLinesTestBase, bool)
     {
         //Mat image = readImage("shared/pic1.png", IMREAD_GRAYSCALE);
         
-        Mat image = randomMat(Size(100, 100), CV_8UC1, 0, 255, false);
+        Mat image = randomMat(Size(20, 10), CV_8UC1, 0, 255, false);
         
         cv::threshold(image, src, 127, 255, THRESH_BINARY);
         //Canny(image, src, 100, 150, 3);
