@@ -13,7 +13,7 @@ __kernel void make_point_list(__global const uchar * src_ptr, int src_step, int 
     int x = get_local_id(0);
     int y = get_group_id(1);
     
-    __local int l_index;
+    __local int l_index, l_offset;
     __local int l_points[LOCAL_SIZE];
     __global const uchar * src = src_ptr + mad24(y, src_step, src_offset);
     __global int * list = (__global int*)(list_ptr + list_offset);
@@ -38,13 +38,12 @@ __kernel void make_point_list(__global const uchar * src_ptr, int src_step, int 
 
     barrier(CLK_LOCAL_MEM_FENCE);
     
-    int offset;
     if (x == 0)
-        offset = atomic_add(global_offset, l_index);
+        l_offset = atomic_add(global_offset, l_index);
 
     barrier(CLK_LOCAL_MEM_FENCE);
     
-    list += offset;
+    list += l_offset;
     for (int i=x; i < l_index; i+=GROUP_SIZE)
     {
         list[i] = l_points[i];
@@ -55,27 +54,31 @@ __kernel void make_point_list(__global const uchar * src_ptr, int src_step, int 
 
 __kernel void fill_accum(__global const uchar * list_ptr, int list_step, int list_offset,
                          __global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
-                         int count, float irho, float theta, int numrho)
+                         int count, float irho, float theta, int numrho, int numangle)
 {
-    int theta_idx = get_global_id(0);
-    int count_idx = get_global_id(1);
+    int theta_idx = get_global_id(1);
+    int count_idx = get_global_id(0);
+    int glob_size = get_global_size(0);
     float cosVal;
-    float sinVal = sincos(theta * theta_idx, &cosVal);
+    float sinVal = sincos(theta * ((float)theta_idx), &cosVal);
     sinVal *= irho;
     cosVal *= irho;
 
     __global const int * list = (__global const int*)(list_ptr + list_offset);
-    __global int* accum = (__global int*)(accum_ptr + mad24(theta_idx, accum_step, accum_offset));
+    __global int* accum = (__global int*)(accum_ptr + mad24(theta_idx + 1, accum_step, accum_offset));
     const int shift = (numrho - 1) / 2;
 
-    for (int i = count_idx; i < count; i += GROUP_SIZE)
+    if (theta_idx < numangle)
     {
-        const int val = list[i];
-        const int x = (val & 0xFFFF);
-        const int y = (val >> 16) & 0xFFFF;
+        for (int i = count_idx; i < count; i += glob_size)
+        {
+            const int val = list[i];
+            const int x = (val & 0xFFFF);
+            const int y = (val >> 16) & 0xFFFF;
 
-        int r = round(x * cosVal + y * sinVal) + shift;
-        atomic_inc(accum + r + 1);
+            int r = convert_int_rte(x * cosVal + y * sinVal) + shift;
+            atomic_inc(accum + r + 1);
+        }
     }
 }
 
