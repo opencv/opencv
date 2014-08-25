@@ -49,7 +49,8 @@ template<typename _Tp> inline void copyVectorToUMat(const std::vector<_Tp>& v, O
 {
     if(v.empty())
         um.release();
-    Mat(1, (int)(v.size()*sizeof(v[0])), CV_8U, (void*)&v[0]).copyTo(um);
+    else
+        Mat(1, (int)(v.size()*sizeof(v[0])), CV_8U, (void*)&v[0]).copyTo(um);
 }
 
 static bool
@@ -805,6 +806,10 @@ static void computeKeyPoints(const Mat& imagePyramid,
     std::vector<Vec3i> ukeypoints_buf;
 
     nkeypoints = (int)allKeypoints.size();
+    if(nkeypoints == 0)
+    {
+        return;
+    }
     Mat responses;
     UMat ukeypoints, uresponses(1, nkeypoints, CV_32F);
 
