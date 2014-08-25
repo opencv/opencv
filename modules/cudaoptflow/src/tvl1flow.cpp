@@ -47,7 +47,7 @@
 cv::cuda::OpticalFlowDual_TVL1_CUDA::OpticalFlowDual_TVL1_CUDA() { throw_no_cuda(); }
 void cv::cuda::OpticalFlowDual_TVL1_CUDA::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 void cv::cuda::OpticalFlowDual_TVL1_CUDA::collectGarbage() {}
-void cv::cuda::OpticalFlowDual_TVL1_CUDA::procOneScale(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::cuda::OpticalFlowDual_TVL1_CUDA::procOneScale(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
 #else
 
