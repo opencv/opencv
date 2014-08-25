@@ -578,7 +578,7 @@ cv::Scalar cv::sum( InputArray _src )
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     size_t total_size = src.total();
-    int rows = src.size[0], cols = (int)(total_size/rows);
+    int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
     if( src.dims == 2 || (src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
     {
         IppiSize sz = { cols, rows };
@@ -775,7 +775,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     size_t total_size = src.total();
-    int rows = src.size[0], cols = (int)(total_size/rows);
+    int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
     if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
     {
         IppiSize sz = { cols, rows };
@@ -1037,7 +1037,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     size_t total_size = src.total();
-    int rows = src.size[0], cols = (int)(total_size/rows);
+    int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
     if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
     {
         Ipp64f mean_temp[3];
@@ -1583,7 +1583,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     size_t total_size = src.total();
-    int rows = src.size[0], cols = (int)(total_size/rows);
+    int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
     if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
     {
         IppiSize sz = { cols * cn, rows };
@@ -2246,7 +2246,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     size_t total_size = src.total();
-    int rows = src.size[0], cols = (int)(total_size/rows);
+    int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
 
     if( (src.dims == 2 || (src.isContinuous() && mask.isContinuous()))
         && cols > 0 && (size_t)rows*cols == total_size
@@ -2607,7 +2607,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
         CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR ||
                 ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
         size_t total_size = src1.total();
-        int rows = src1.size[0], cols = (int)(total_size/rows);
+        int rows = src1.size[0], cols = rows ? (int)(total_size/rows) : 0;
         if( (src1.dims == 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous()))
             && cols > 0 && (size_t)rows*cols == total_size
             && (normType == NORM_INF || normType == NORM_L1 ||
@@ -2703,7 +2703,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     size_t total_size = src1.total();
-    int rows = src1.size[0], cols = (int)(total_size/rows);
+    int rows = src1.size[0], cols = rows ? (int)(total_size/rows) : 0;
     if( (src1.dims == 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous()))
         && cols > 0 && (size_t)rows*cols == total_size
         && (normType == NORM_INF || normType == NORM_L1 ||

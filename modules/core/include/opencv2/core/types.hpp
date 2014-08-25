@@ -1311,23 +1311,36 @@ _Tp Size_<_Tp>::area() const
     return width * height;
 }
 
+template<typename _Tp> static inline
+Size_<_Tp>& operator *= (Size_<_Tp>& a, _Tp b)
+{
+    a.width *= b;
+    a.height *= b;
+    return a;
+}
 
 template<typename _Tp> static inline
 Size_<_Tp> operator * (const Size_<_Tp>& a, _Tp b)
 {
-    return Size_<_Tp>(a.width * b, a.height * b);
+    Size_<_Tp> tmp(a);
+    tmp *= b;
+    return tmp;
 }
 
 template<typename _Tp> static inline
-Size_<_Tp> operator + (const Size_<_Tp>& a, const Size_<_Tp>& b)
+Size_<_Tp>& operator /= (Size_<_Tp>& a, _Tp b)
 {
-    return Size_<_Tp>(a.width + b.width, a.height + b.height);
+    a.width /= b;
+    a.height /= b;
+    return a;
 }
 
 template<typename _Tp> static inline
-Size_<_Tp> operator - (const Size_<_Tp>& a, const Size_<_Tp>& b)
+Size_<_Tp> operator / (const Size_<_Tp>& a, _Tp b)
 {
-    return Size_<_Tp>(a.width - b.width, a.height - b.height);
+    Size_<_Tp> tmp(a);
+    tmp /= b;
+    return tmp;
 }
 
 template<typename _Tp> static inline
@@ -1339,11 +1352,27 @@ Size_<_Tp>& operator += (Size_<_Tp>& a, const Size_<_Tp>& b)
 }
 
 template<typename _Tp> static inline
+Size_<_Tp> operator + (const Size_<_Tp>& a, const Size_<_Tp>& b)
+{
+    Size_<_Tp> tmp(a);
+    tmp += b;
+    return tmp;
+}
+
+template<typename _Tp> static inline
 Size_<_Tp>& operator -= (Size_<_Tp>& a, const Size_<_Tp>& b)
 {
     a.width -= b.width;
     a.height -= b.height;
     return a;
+}
+
+template<typename _Tp> static inline
+Size_<_Tp> operator - (const Size_<_Tp>& a, const Size_<_Tp>& b)
+{
+    Size_<_Tp> tmp(a);
+    tmp -= b;
+    return tmp;
 }
 
 template<typename _Tp> static inline
@@ -1355,7 +1384,7 @@ bool operator == (const Size_<_Tp>& a, const Size_<_Tp>& b)
 template<typename _Tp> static inline
 bool operator != (const Size_<_Tp>& a, const Size_<_Tp>& b)
 {
-    return a.width != b.width || a.height != b.height;
+    return !(a == b);
 }
 
 

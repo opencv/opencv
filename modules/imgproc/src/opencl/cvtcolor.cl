@@ -1747,7 +1747,7 @@ __kernel void BGR2Luv(__global const uchar * src, int src_step, int src_offset,
 
                 dst[0] = SAT_CAST(L * 2.55f);
                 dst[1] = SAT_CAST(fma(u, 0.72033898305084743f, 96.525423728813564f));
-                dst[2] = SAT_CAST(fma(v, 0.99609375f, 139.453125f));
+                dst[2] = SAT_CAST(fma(v, 0.9732824427480916f, 136.259541984732824f));
 
                 ++y;
                 dst += dst_step;
@@ -1843,7 +1843,7 @@ __kernel void Luv2BGR(__global const uchar * src, int src_step, int src_offset,
                 float d, X, Y, Z;
                 float L = src[0]*(100.f/255.f);
                 float u = fma(convert_float(src[1]), 1.388235294117647f, -134.f);
-                float v = fma(convert_float(src[2]), 1.003921568627451f, - 140.f);
+                float v = fma(convert_float(src[2]), 1.027450980392157f, - 140.f);
                 Y = (L + 16.f) * (1.f/116.f);
                 Y = Y*Y*Y;
                 d = (1.f/13.f)/L;

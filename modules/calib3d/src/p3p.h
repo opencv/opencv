@@ -37,11 +37,11 @@ class p3p
       points.resize(20);
       for(int i = 0; i < 4; i++)
       {
-          points[i*5] = ipoints.at<IpointType>(0,i).x*fx + cx;
-          points[i*5+1] = ipoints.at<IpointType>(0,i).y*fy + cy;
-          points[i*5+2] = opoints.at<OpointType>(0,i).x;
-          points[i*5+3] = opoints.at<OpointType>(0,i).y;
-          points[i*5+4] = opoints.at<OpointType>(0,i).z;
+          points[i*5] = ipoints.at<IpointType>(i).x*fx + cx;
+          points[i*5+1] = ipoints.at<IpointType>(i).y*fy + cy;
+          points[i*5+2] = opoints.at<OpointType>(i).x;
+          points[i*5+3] = opoints.at<OpointType>(i).y;
+          points[i*5+4] = opoints.at<OpointType>(i).z;
       }
   }
   void init_inverse_parameters();

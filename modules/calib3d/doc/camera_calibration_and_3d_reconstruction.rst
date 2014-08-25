@@ -580,7 +580,7 @@ Finds an object pose from 3D-2D point correspondences.
 
     :param tvec: Output translation vector.
 
-    :param useExtrinsicGuess: If true (1), the function uses the provided  ``rvec``  and  ``tvec``  values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
+    :param useExtrinsicGuess: Parameter used for ITERATIVE. If true (1), the function uses the provided  ``rvec``  and  ``tvec``  values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
 
     :param flags: Method for solving a PnP problem:
 
@@ -615,7 +615,7 @@ Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
 
     :param tvec: Output translation vector.
 
-    :param useExtrinsicGuess: If true (1), the function uses the provided  ``rvec``  and  ``tvec`` values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
+    :param useExtrinsicGuess: Parameter used for ITERATIVE. If true (1), the function uses the provided  ``rvec``  and  ``tvec`` values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
 
     :param iterationsCount: Number of iterations.
 
@@ -843,11 +843,11 @@ findHomography
 ------------------
 Finds a perspective transformation between two planes.
 
-.. ocv:function:: Mat findHomography( InputArray srcPoints, InputArray dstPoints, int method=0, double ransacReprojThreshold=3, OutputArray mask=noArray() )
+.. ocv:function:: Mat findHomography( InputArray srcPoints, InputArray dstPoints, int method=0, double ransacReprojThreshold=3, OutputArray mask=noArray(), const int maxIters = 2000, const double confidence = 0.995)
 
 .. ocv:pyfunction:: cv2.findHomography(srcPoints, dstPoints[, method[, ransacReprojThreshold[, mask]]]) -> retval, mask
 
-.. ocv:cfunction:: int cvFindHomography( const CvMat* src_points, const CvMat* dst_points, CvMat* homography, int method=0, double ransacReprojThreshold=3, CvMat* mask=0 )
+.. ocv:cfunction:: int cvFindHomography( const CvMat* src_points, const CvMat* dst_points, CvMat* homography, int method=0, double ransacReprojThreshold=3, CvMat* mask=0, int maxIters = 2000, double confidence = 0.995)
 
     :param srcPoints: Coordinates of the points in the original plane, a matrix of the type  ``CV_32FC2``  or ``vector<Point2f>`` .
 
@@ -870,6 +870,10 @@ Finds a perspective transformation between two planes.
         then the point  :math:`i`  is considered an outlier. If  ``srcPoints``  and  ``dstPoints``  are measured in pixels, it usually makes sense to set this parameter somewhere in the range of 1 to 10.
 
     :param mask: Optional output mask set by a robust method ( ``RANSAC``  or  ``LMEDS`` ).  Note that the input mask values are ignored.
+
+    :param maxIters: The maximum number of RANSAC iterations, 2000 is the maximum it can be.
+
+    :param confidence: Confidence level, between 0 and 1.
 
 The functions find and return the perspective transformation :math:`H` between the source and the destination planes:
 
