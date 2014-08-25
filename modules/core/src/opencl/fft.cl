@@ -556,7 +556,8 @@ __kernel void fft_multi_radix_rows(__global const uchar* src_ptr, int src_step, 
         __global const FT* src = (__global const FT*)(src_ptr + mad24(y, src_step, mad24(x, (int)sizeof(FT), src_offset)));
         #pragma unroll
         for (int i=0, i1 = kercn * block_size; i<i1; i+=block_size)
-            smem[x+i] = (float2)(src[i], 0.f);#endif
+            smem[x+i] = (float2)(src[i], 0.f);
+#endif
         barrier(CLK_LOCAL_MEM_FENCE);
 
         RADIX_PROCESS;
@@ -603,28 +604,30 @@ __kernel void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, 
 {
     const int x = get_group_id(0);
     const int y = get_global_id(1);
+    const int idy = y*kercn;
 
     if (x < nz)
     {
         __local CT smem[LOCAL_SIZE];
-        __global const uchar* src = src_ptr + mad24(y, src_step, mad24(x, (int)(sizeof(CT)), src_offset));
+        __global const uchar* src = src_ptr + mad24(idy, src_step, mad24(x, (int)(sizeof(CT)), src_offset));
         __global const CT* twiddles = (__global const CT*)(twiddles_ptr + twiddles_offset);
         const int ind = y;
         const int block_size = LOCAL_SIZE/kercn;
         FT scale = 1.f/(dst_rows*dst_cols);
 
         #pragma unroll
-        for (int i=0, i1 = kercn * block_size; i<i1; i+=block_size)
-            smem[x+i] = (float2)(src[i], 0.f);
+        for (int i=0, i1 = kercn; i<i1; i++)
+            smem[idy+i] = *((__global const CT*)(src + i*src_step));
         barrier(CLK_LOCAL_MEM_FENCE);
 
         RADIX_PROCESS;
 
 #ifdef COMPLEX_OUTPUT
-        __global uchar* dst = dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(CT)), dst_offset));
-        #pragma unroll
-        for (int i=0, i1 = kercn * block_size; i<i1; i+=block_size)
-            *((__global CT*)(dst + i*dst_step)) = SCALE_VAL(smem[y + i], scale);#else
+        __global uchar* dst = dst_ptr + mad24(idy, dst_step, mad24(x, (int)(sizeof(CT)), dst_offset));
+#pragma unroll
+        for (int i=0, i1 = kercn; i<i1; i++)
+            *((__global CT*)(dst + i*dst_step)) = SCALE_VAL(smem[idy + i], scale);
+#else
         if (x == 0)
         {
             // pack first column to CCS
