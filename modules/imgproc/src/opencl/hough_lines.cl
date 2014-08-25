@@ -50,9 +50,9 @@ __kernel void make_point_list(__global const uchar * src_ptr, int src_step, int 
     }
 }
 
-#elif defined FILL_ACCUM
+#elif defined FILL_ACCUM_GLOBAL
 
-__kernel void fill_accum(__global const uchar * list_ptr, int list_step, int list_offset,
+__kernel void fill_accum_global(__global const uchar * list_ptr, int list_step, int list_offset,
                          __global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
                          int count, float irho, float theta, int numrho, int numangle)
 {
@@ -78,6 +78,83 @@ __kernel void fill_accum(__global const uchar * list_ptr, int list_step, int lis
 
             int r = convert_int_rte(x * cosVal + y * sinVal) + shift;
             atomic_inc(accum + r + 1);
+        }
+    }
+}
+
+#elif defined FILL_ACCUM_LOCAL
+
+__kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, int list_offset,
+                               __global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
+                               int count, float irho, float theta, int numrho, int numangle)
+{
+    int theta_idx = get_global_id(1);
+    int count_idx = get_local_id(0);
+
+    float cosVal;
+    float sinVal = sincos(theta * ((float)theta_idx), &cosVal);
+    sinVal *= irho;
+    cosVal *= irho;
+
+    __local int l_accum[BUFFER_SIZE];
+    for (int i=count_idx; i<BUFFER_SIZE; i+=LOCAL_SIZE)
+        l_accum[i] = 0;
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    __global const int * list = (__global const int*)(list_ptr + list_offset);
+    const int shift = (numrho - 1) / 2;
+
+    if (theta_idx < numangle)
+    {
+        for (int i = count_idx; i < count; i += LOCAL_SIZE)
+        {
+            const int val = list[i];
+            const int x = (val & 0xFFFF);
+            const int y = (val >> 16) & 0xFFFF;
+
+            int r = convert_int_rte(x * cosVal + y * sinVal) + shift;
+            atomic_inc(l_accum + r + 1);
+        }
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    __global int* accum = (__global int*)(accum_ptr + mad24(theta_idx + 1, accum_step, accum_offset));
+    for (int i=count_idx; i<BUFFER_SIZE; i+=LOCAL_SIZE)
+        accum[i] = l_accum[i];
+}
+
+#elif defined GET_LINES
+
+#define ACCUM(ptr) *((__global int*)(ptr))
+
+__kernel void get_lines(__global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
+                         __global uchar * lines_ptr, int lines_step, int lines_offset, __global int* lines_index, 
+                         int linesMax, int threshold, float rho, float theta)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < accum_cols-2 && y < accum_rows-2)
+    {
+        __global uchar* accum = accum_ptr + mad24(y+1, accum_step, mad24(x+1, (int) sizeof(int), accum_offset));
+        __global float2* lines = (__global float2*)(lines_ptr + lines_offset);
+    
+        int curVote = ACCUM(accum);
+
+        if (curVote > threshold && curVote > ACCUM(accum - sizeof(int)) && curVote >= ACCUM(accum + sizeof(int)) &&
+            curVote > ACCUM(accum - accum_step) && curVote >= ACCUM(accum + accum_step))
+        {
+            int index = atomic_inc(lines_index);
+
+            if (index < linesMax)
+            {
+                float radius = (x - (accum_cols - 3) * 0.5f) * rho;
+                float angle = y * theta;
+
+                lines[index] = (float2)(radius, angle);
+            }
         }
     }
 }
