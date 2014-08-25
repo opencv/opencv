@@ -668,9 +668,10 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
 
     UMat src = _src.getUMat();
 
-    float irho = 1 / rho;
+    float irho = (float) (1 / rho);
     int numangle = cvRound((max_theta - min_theta) / theta);
     int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
+    ocl::Device dev = ocl::Device::getDefault();
 
     // make list of nonzero points
     const int pixelsPerWI = 4;
@@ -680,7 +681,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     if (pointListKernel.empty())
         return false;
 
-    UMat pointsList(1, src.total(), CV_32SC1);
+    UMat pointsList(1, (int) src.total(), CV_32SC1);
     UMat total(1, 1, CV_32SC1, Scalar::all(0));
     pointListKernel.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnlyNoSize(pointsList),
                          ocl::KernelArg::PtrWriteOnly(total));
@@ -692,37 +693,66 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
 
     int total_points = total.getMat(ACCESS_READ).at<int>(0, 0);
     if (total_points <= 0)
-        return false;
+    {
+        _lines.assign(UMat(0,0,CV_32FC2));
+        return true;
+    }
 
     // convert src to hough space
-    group_size = (total_points + pixelsPerWI - 1)/pixelsPerWI;
-    ocl::Kernel fillAccumKernel("fill_accum", ocl::imgproc::hough_lines_oclsrc,
-                                format("-D FILL_ACCUM -D GROUP_SIZE=%d", group_size));
+    group_size = min((int) dev.maxWorkGroupSize(), total_points);
+    int local_memory_needed = (numrho + 2)*sizeof(int);
+    ocl::Kernel fillAccumKernel;
+    globalThreads[0] = group_size; globalThreads[1] = numangle;
+    size_t* fillAccumLT = NULL;
+
+    UMat accum(numangle + 2, numrho + 2, CV_32SC1);
+
+    if (local_memory_needed > dev.localMemSize())
+    {
+        fillAccumKernel.create("fill_accum_global", ocl::imgproc::hough_lines_oclsrc,
+                                format("-D FILL_ACCUM_GLOBAL"));
+        accum.setTo(Scalar::all(0));
+    }
+    else
+    {
+        fillAccumKernel.create("fill_accum_local", ocl::imgproc::hough_lines_oclsrc,
+                                format("-D FILL_ACCUM_LOCAL -D LOCAL_SIZE=%d -D BUFFER_SIZE=%d", group_size, numrho + 2));
+        localThreads[0] = group_size; localThreads[1] = 1;
+        fillAccumLT = localThreads;
+    }
     if (fillAccumKernel.empty())
         return false;
 
-    UMat accum(numangle + 2, numrho + 2, CV_32SC1, Scalar::all(0));
+    int linesMax = min(total_points*numangle/threshold, 4096);
+    UMat lines(linesMax, 1, CV_32FC2);
+    UMat lines_count(1, 1, CV_32SC1, Scalar::all(0));
+
     fillAccumKernel.args(ocl::KernelArg::ReadOnlyNoSize(pointsList), ocl::KernelArg::WriteOnly(accum),
                          total_points, irho, (float) theta, numrho, numangle);
-    globalThreads[0] = group_size; globalThreads[1] = numangle;
 
-    if (!fillAccumKernel.run(2, globalThreads, NULL, false))
+
+    if (!fillAccumKernel.run(2, globalThreads, fillAccumLT, false))
         return false;
-    printf("GPU: \n");
-    int sum = 0;
-    Mat ac = accum.getMat(ACCESS_READ);
-    for (int i=0; i<8; i++)
-    {
-        for (int j=0; j<8; j++)
-        {
-            sum += ac.at<int>(i, j);
-            printf("%d ", ac.at<int>(i, j));
-        }
-        printf("\n");
-    }
-    printf("sum = %d\n", sum);
 
-    return false;
+    ocl::Kernel getLinesKernel("get_lines", ocl::imgproc::hough_lines_oclsrc,
+                               format("-D GET_LINES"));
+    if (getLinesKernel.empty())
+        return false;
+
+    globalThreads[0] = numrho; globalThreads[1] = numangle;
+    getLinesKernel.args(ocl::KernelArg::ReadOnly(accum), ocl::KernelArg::WriteOnlyNoSize(lines),
+                        ocl::KernelArg::PtrWriteOnly(lines_count), linesMax, threshold, (float) rho, (float) theta);
+
+    if (!getLinesKernel.run(2, globalThreads, NULL, false))
+        return false;
+
+    
+    int total_lines = min(lines_count.getMat(ACCESS_READ).at<int>(0, 0), linesMax);
+    if (total_lines > 0)
+        _lines.assign(lines.rowRange(Range(0, total_lines)));
+    else
+        _lines.assign(UMat(0,0,CV_32FC2));
+    return true;
 }
 
 }
