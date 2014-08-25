@@ -201,7 +201,7 @@ int main( int argc, char* argv[] )
     }
     if( !pngoutput)
     {
-        printf( "Original image whill be scaled to:\n");
+        printf( "Original image will be scaled to:\n");
         printf( "\tWidth: $backgroundWidth / %d\n", width );
         printf( "\tHeight: $backgroundHeight / %d\n", height );
     }
