@@ -1867,13 +1867,17 @@ public:
         UMat src = _src.getUMat();
         UMat dst = _dst.getUMat();
 
+        int type = src.type(), depth = CV_MAT_DEPTH(type);
+
         size_t globalsize[2];
         size_t localsize[2];
         String kernel_name;
 
         bool is1d = (flags & DFT_ROWS) != 0 || num_dfts == 1;
         bool inv = (flags & DFT_INVERSE) != 0;
-        String options = buildOptions;
+        String options = buildOptions + format(" -D FT=%s CT=%s%s", ocl::typeToStr(depth),
+                                                ocl::typeToStr(CV_MAKE_TYPE(depth, 2)),
+                                                depth == CV_64F ? " -D DOUBLE_SUPPORT" : "");
 
         if (rows)
         {
@@ -2039,9 +2043,11 @@ static bool ocl_dft_cols(InputArray _src, OutputArray _dst, int nonzero_cols, in
 
 static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_rows)
 {
-    int type = _src.type(), cn = CV_MAT_CN(type);
+    int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
     Size ssize = _src.size();
-    if ( !(type == CV_32FC1 || type == CV_32FC2) )
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig();
+
+    if ( !((cn == 1 || cn == 2) && (depth == CV_32F || (depth == CV_64F && doubleSupport))) )
         return false;
 
     // if is not a multiplication of prime numbers { 2, 3, 5 }
@@ -2082,7 +2088,7 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
     if (fftType == C2C || fftType == R2C)
     {
         // complex output
-        _dst.create(src.size(), CV_32FC2);
+        _dst.create(src.size(), CV_MAKETYPE(depth, 2));
         output = _dst.getUMat();
     }
     else
@@ -2090,13 +2096,13 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
         // real output
         if (is1d)
         {
-            _dst.create(src.size(), CV_32FC1);
+            _dst.create(src.size(), CV_MAKETYPE(depth, 1));
             output = _dst.getUMat();
         }
         else
         {
-            _dst.create(src.size(), CV_32FC1);
-            output.create(src.size(), CV_32FC2);
+            _dst.create(src.size(), CV_MAKETYPE(depth, 1));
+            output.create(src.size(), CV_MAKETYPE(depth, 2));
         }
     }
 
