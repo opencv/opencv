@@ -48,8 +48,8 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree/cuda.hpp"
+#ifdef HAVE_OPENCV_XFEATURES2D
+#  include "opencv2/xfeatures2d/cuda.hpp"
 #endif
 
 namespace cv {
@@ -104,7 +104,7 @@ private:
 };
 
 
-#ifdef HAVE_OPENCV_NONFREE
+#ifdef HAVE_OPENCV_XFEATURES2D
 class CV_EXPORTS SurfFeaturesFinderGpu : public FeaturesFinder
 {
 public:

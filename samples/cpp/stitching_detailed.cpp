@@ -384,7 +384,7 @@ int main(int argc, char* argv[])
     Ptr<FeaturesFinder> finder;
     if (features_type == "surf")
     {
-#ifdef HAVE_OPENCV_NONFREE
+#ifdef HAVE_OPENCV_XFEATURES2D
         if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
             finder = makePtr<SurfFeaturesFinderGpu>();
         else

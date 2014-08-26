@@ -19,8 +19,8 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/core"
     )
 
-  if(HAVE_opencv_nonfree)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/nonfree/include")
+  if(HAVE_opencv_xfeatures2d)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/xfeatures2d/include")
   endif()
 
   if(HAVE_opencv_cudacodec)
@@ -52,8 +52,8 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
       ocv_target_link_libraries(${the_target} ${CUDA_CUDA_LIBRARY})
     endif()
 
-    if(HAVE_opencv_nonfree)
-      ocv_target_link_libraries(${the_target} opencv_nonfree)
+    if(HAVE_opencv_xfeatures2d)
+      ocv_target_link_libraries(${the_target} opencv_xfeatures2d)
     endif()
     if(HAVE_opencv_cudacodec)
       ocv_target_link_libraries(${the_target} opencv_cudacodec)

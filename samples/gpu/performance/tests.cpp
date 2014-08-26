@@ -17,9 +17,9 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_NONFREE
-#include "opencv2/nonfree/cuda.hpp"
-#include "opencv2/nonfree/nonfree.hpp"
+#ifdef HAVE_OPENCV_XFEATURES2D
+#include "opencv2/xfeatures2d/cuda.hpp"
+#include "opencv2/xfeatures2d/nonfree.hpp"
 #endif
 
 using namespace std;
@@ -274,7 +274,7 @@ TEST(meanShift)
     }
 }
 
-#ifdef HAVE_OPENCV_NONFREE
+#ifdef HAVE_OPENCV_XFEATURES2D
 
 TEST(SURF)
 {
