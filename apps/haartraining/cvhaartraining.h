@@ -202,17 +202,17 @@ void cvCreateTreeCascadeClassifier( const char* dirname,
                                     int maxtreesplits, int minpos, bool bg_vecfile = false );
 
 
-class SamplesGenerator
+class DatasetGenerator
 {
 public:
-    SamplesGenerator( IOutput* _writer );
+    DatasetGenerator( IOutput* _writer );
     void create( const char* imgfilename, int bgcolor, int bgthreshold,
                  const char* bgfilename, int count,
                  int invert, int maxintensitydev,
                  double maxxangle, double maxyangle, double maxzangle,
                  bool showsamples,
                  int winwidth, int winheight);
-    virtual ~SamplesGenerator();
+    virtual ~DatasetGenerator();
 private:
     virtual void showSamples( bool* showSamples, CvMat* img ) const;
 
@@ -226,20 +226,21 @@ private:
     IOutput* writer;
 };
 
-class TestSamplesGenerator: public SamplesGenerator
+/* Provides the functionality of test set generating */
+class JpgDatasetGrenerator: public DatasetGenerator
 {
 public:
-    TestSamplesGenerator(const char* filename);
+    JpgDatasetGrenerator(const char* filename);
 private:
     CvSize scaleObjectSize(const CvSize& bgImgSize,
                            const CvSize& ,
                            const CvSize& sampleSize) const;
 };
 
-class PngTrainingSetGenerator: public SamplesGenerator
+class PngDatasetGenerator: public DatasetGenerator
 {
 public:
-    PngTrainingSetGenerator(const char *filename);
+    PngDatasetGenerator(const char *filename);
 private:
     CvSize scaleObjectSize(const CvSize& bgImgSize,
                            const CvSize& imgSize ,

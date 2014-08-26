@@ -3,16 +3,16 @@
 
 #include "ioutput.h"
 
-class PngTrainingSetOutput: public IOutput
+class PngDatasetOutput: public IOutput
 {
     friend IOutput* IOutput::createOutput(const char *filename, OutputType type);
 public:
     virtual bool write( const CvMat& img,
                         const CvRect& boundingBox);
 
-    virtual ~PngTrainingSetOutput(){}
+    virtual ~PngDatasetOutput(){}
 private:
-    PngTrainingSetOutput()
+    PngDatasetOutput()
         : extension("png")
         , destImgWidth(640)
         , destImgHeight(480)
@@ -36,14 +36,14 @@ private:
     int destImgHeight ;
 };
 
-class TestSamplesOutput: public IOutput
+class JpgDatasetOutput: public IOutput
 {
     friend IOutput* IOutput::createOutput(const char *filename, OutputType type);
 public:
     virtual bool write( const CvMat& img,
                         const CvRect& boundingBox );
-    virtual ~TestSamplesOutput(){}
+    virtual ~JpgDatasetOutput(){}
 private:
-    TestSamplesOutput(){}
+    JpgDatasetOutput(){}
 };
 #endif // CVSAMPLESOUTPUT_H

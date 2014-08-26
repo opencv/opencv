@@ -225,7 +225,7 @@ int main( int argc, char* argv[] )
                 "Annotations are in a separate directory\n",
                 (( pngoutput ) ? "JPG" : "PNG") );
 
-        PngTrainingSetGenerator creator( infoname );
+        PngDatasetGenerator creator( infoname );
         creator.create( imagename, bgcolor, bgthreshold, bgfilename, num,
                         invert, maxintensitydev, maxxangle, maxyangle, maxzangle,
                         showsamples, width, height );
@@ -238,7 +238,7 @@ int main( int argc, char* argv[] )
                 "Output format: %s\n",
                 (( pngoutput ) ? "JPG" : "PNG") );
 
-        TestSamplesGenerator creator( infoname );
+        JpgDatasetGrenerator creator( infoname );
         creator.create( imagename, bgcolor, bgthreshold, bgfilename, num,
                         invert, maxintensitydev, maxxangle, maxyangle, maxzangle,
                         showsamples, width, height );
