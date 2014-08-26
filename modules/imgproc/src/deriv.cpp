@@ -676,8 +676,8 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
     if (((src_offset % src_step) % esz == 0) &&
         (
          (borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE) ||
-         (borderType == BORDER_REFLECT || borderType == BORDER_WRAP || borderType == BORDER_REFLECT_101) &&
-         (_src.cols() >= kernelX.cols && _src.rows() >= kernelY.cols)
+         ((borderType == BORDER_REFLECT || borderType == BORDER_WRAP || borderType == BORDER_REFLECT_101) &&
+          (_src.cols() >= kernelX.cols && _src.rows() >= kernelY.cols))
         ) &&
         (tileSizeX * tileSizeYmin  <= wgs) &&
         (LAPLACIAN_LOCAL_MEM(tileSizeX, tileSizeYmin, kernelX.cols, cn * 4) <= lmsz)
@@ -702,13 +702,19 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
 
         String opts = cv::format("-D BLK_X=%d -D BLK_Y=%d -D RADIUS=%d%s%s"
                                  " -D convertToWT=%s -D convertToDT=%s"
-                                 " -D %s -D srcT1=%s -D dstT1=%s -D WT1=%s -D CN=%d ",
+                                 " -D %s -D srcT1=%s -D dstT1=%s -D WT1=%s"
+                                 " -D srcT=%s -D dstT=%s -D WT=%s"
+                                 " -D CN=%d ",
                                  (int)lt2[0], (int)lt2[1], kernelX.cols / 2,
                                  ocl::kernelToStr(kernelX, wdepth, "KERNEL_MATRIX_X").c_str(),
                                  ocl::kernelToStr(kernelY, wdepth, "KERNEL_MATRIX_Y").c_str(),
                                  ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
                                  ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
-                                 borderMap[borderType], ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), ocl::typeToStr(wdepth),
+                                 borderMap[borderType],
+                                 ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), ocl::typeToStr(wdepth),
+                                 ocl::typeToStr(CV_MAKETYPE(sdepth, cn)),
+                                 ocl::typeToStr(CV_MAKETYPE(ddepth, cn)),
+                                 ocl::typeToStr(CV_MAKETYPE(wdepth, cn)),
                                  cn);
 
         ocl::Kernel k("laplacian", ocl::imgproc::laplacian5_oclsrc, opts);
