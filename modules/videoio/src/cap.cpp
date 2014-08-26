@@ -621,15 +621,15 @@ Ptr<IVideoCapture> VideoCapture::createCameraCapture(int index)
         {
 #ifdef HAVE_DSHOW
         case CV_CAP_DSHOW:
-            capture = Ptr<IVideoCapture>(new cv::VideoCapture_DShow(index));
-            if (capture)
+            capture = makePtr<VideoCapture_DShow>(index);
+            if (capture && capture.dynamicCast<VideoCapture_DShow>()->isOpened())
                 return capture;
             break; // CV_CAP_DSHOW
 #endif
 #ifdef HAVE_INTELPERC
         case CV_CAP_INTELPERC:
-            capture = Ptr<IVideoCapture>(new cv::VideoCapture_IntelPerC());
-            if (capture)
+            capture = makePtr<VideoCapture_IntelPerC>();
+            if (capture && capture.dynamicCast<VideoCapture_IntelPerC>()->isOpened())
                 return capture;
             break; // CV_CAP_INTEL_PERC
 #endif
