@@ -2942,13 +2942,13 @@ void cvCreateTrainingSamples( const char* filename,
 
 }
 
-SamplesGenerator::SamplesGenerator( IOutput* _writer )
+DatasetGenerator::DatasetGenerator( IOutput* _writer )
     :writer(_writer)
 {
 
 }
 
-void SamplesGenerator::showSamples(bool* show, CvMat *img) const
+void DatasetGenerator::showSamples(bool* show, CvMat *img) const
 {
     if( *show )
     {
@@ -2960,7 +2960,7 @@ void SamplesGenerator::showSamples(bool* show, CvMat *img) const
     }
 }
 
-void SamplesGenerator::create(const char* imgfilename, int bgcolor, int bgthreshold,
+void DatasetGenerator::create(const char* imgfilename, int bgcolor, int bgthreshold,
                               const char* bgfilename, int count,
                               int invert, int maxintensitydev,
                               double maxxangle, double maxyangle, double maxzangle,
@@ -3023,18 +3023,18 @@ void SamplesGenerator::create(const char* imgfilename, int bgcolor, int bgthresh
     }
 }
 
-SamplesGenerator::~SamplesGenerator()
+DatasetGenerator::~DatasetGenerator()
 {
     delete writer;
 }
 
 
-TestSamplesGenerator::TestSamplesGenerator(const char* filename)
-    :SamplesGenerator(IOutput::createOutput(filename,IOutput::JPG_TEST_SET))
+JpgDatasetGrenerator::JpgDatasetGrenerator(const char* filename)
+    :DatasetGenerator(IOutput::createOutput(filename,IOutput::JPG_TEST_SET))
 {
 }
 
-CvSize TestSamplesGenerator::scaleObjectSize(const CvSize& bgImgSize,
+CvSize JpgDatasetGrenerator::scaleObjectSize(const CvSize& bgImgSize,
                                              const CvSize& ,
                                              const CvSize& sampleSize) const
 {
@@ -3058,7 +3058,7 @@ CvSize TestSamplesGenerator::scaleObjectSize(const CvSize& bgImgSize,
     return cvSize( width, height );
 }
 
-CvRect SamplesGenerator::getObjectPosition(const CvSize& bgImgSize,
+CvRect DatasetGenerator::getObjectPosition(const CvSize& bgImgSize,
                                            const CvSize& imgSize,
                                            const CvSize& sampleSize) const
 {
@@ -3073,12 +3073,12 @@ CvRect SamplesGenerator::getObjectPosition(const CvSize& bgImgSize,
 }
 
 
-PngTrainingSetGenerator::PngTrainingSetGenerator(const char* filename)
-    :SamplesGenerator(IOutput::createOutput(filename,IOutput::PNG_TRAINING_SET))
+PngDatasetGenerator::PngDatasetGenerator(const char* filename)
+    :DatasetGenerator(IOutput::createOutput(filename,IOutput::PNG_TRAINING_SET))
 {
 }
 
-CvSize PngTrainingSetGenerator::scaleObjectSize( const CvSize& bgImgSize,
+CvSize PngDatasetGenerator::scaleObjectSize( const CvSize& bgImgSize,
                                                 const CvSize& imgSize,
                                                 const CvSize& ) const
 {

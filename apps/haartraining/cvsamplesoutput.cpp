@@ -35,10 +35,10 @@ IOutput* IOutput::createOutput(const char *filename,
     IOutput* output = 0;
     switch (type) {
     case IOutput::PNG_TRAINING_SET:
-        output = new PngTrainingSetOutput();
+        output = new PngDatasetOutput();
         break;
     case IOutput::JPG_TEST_SET:
-        output = new TestSamplesOutput();
+        output = new JpgDatasetOutput();
         break;
     default:
 #if CV_VERBOSE
@@ -53,7 +53,7 @@ IOutput* IOutput::createOutput(const char *filename,
         return 0;
 }
 
-bool PngTrainingSetOutput::init( const char* annotationsListFileName )
+bool PngDatasetOutput::init( const char* annotationsListFileName )
 {
     IOutput::init( annotationsListFileName );
 
@@ -112,7 +112,7 @@ bool PngTrainingSetOutput::init( const char* annotationsListFileName )
     return true;
 }
 
-bool PngTrainingSetOutput::write( const CvMat& img,
+bool PngDatasetOutput::write( const CvMat& img,
                                   const CvRect& boundingBox )
 {
     CvRect bbox = scaleBoundingBox(cvGetSize(&img), boundingBox);
@@ -153,7 +153,7 @@ bool PngTrainingSetOutput::write( const CvMat& img,
     return true;
 }
 
-void PngTrainingSetOutput::writeImage(const CvMat &img) const
+void PngDatasetOutput::writeImage(const CvMat &img) const
 {
     CvSize origsize = cvGetSize(&img);
 
@@ -173,7 +173,7 @@ void PngTrainingSetOutput::writeImage(const CvMat &img) const
     return;
 }
 
-CvRect PngTrainingSetOutput::scaleBoundingBox(const CvSize& imgSize, const CvRect& bbox)
+CvRect PngDatasetOutput::scaleBoundingBox(const CvSize& imgSize, const CvRect& bbox)
 {
     double scale = MAX( (float) destImgWidth / imgSize.width,
                         (float) destImgHeight / imgSize.height );
@@ -231,7 +231,7 @@ bool IOutput::init(const char *filename)
     return true;
 }
 
-bool TestSamplesOutput::write( const CvMat& img,
+bool JpgDatasetOutput::write( const CvMat& img,
                                const CvRect& boundingBox )
 {
     sprintf( imgFileName, "%04d_%04d_%04d_%04d_%04d.jpg",
@@ -242,7 +242,7 @@ bool TestSamplesOutput::write( const CvMat& img,
              boundingBox.height );
 
    fprintf( annotationsList, "%s %d %d %d %d %d\n",
-            imgFullPath,
+            imgFileName,
             1,
             boundingBox.x,
             boundingBox.y,
