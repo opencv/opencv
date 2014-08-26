@@ -1802,11 +1802,14 @@ private:
     String buildOptions;
     int thread_count;
     int dft_size;
+    int dft_depth;
     bool status;
 
 public:
-    OCL_FftPlan(int _size) : dft_size(_size), status(true)
+    OCL_FftPlan(int _size, int _depth) : dft_size(_size), dft_depth(_depth), status(true)
     {
+        CV_Assert( dft_depth == CV_32F || dft_depth == CV_64F );
+
         int min_radix;
         std::vector<int> radixes, blocks;
         ocl_getRadixes(dft_size, radixes, blocks, min_radix);
@@ -1832,31 +1835,15 @@ public:
             n *= radix;
         }
 
-        twiddles.create(1, twiddle_size, CV_32FC2);
-        Mat tw = twiddles.getMat(ACCESS_WRITE);
-        float* ptr = tw.ptr<float>();
-        int ptr_index = 0;
+        twiddles.create(1, twiddle_size, CV_MAKE_TYPE(dft_depth, 2));
+        if (dft_depth == CV_32F)
+            fillRadixTable<float>(twiddles, radixes);
+        else
+            fillRadixTable<double>(twiddles, radixes);
 
-        n = 1;
-        for (size_t i=0; i<radixes.size(); i++)
-        {
-            int radix = radixes[i];
-            n *= radix;
-
-            for (int j=1; j<radix; j++)
-            {
-                double theta = -CV_2PI*j/n;
-
-                for (int k=0; k<(n/radix); k++)
-                {
-                    ptr[ptr_index++] = (float) cos(k*theta);
-                    ptr[ptr_index++] = (float) sin(k*theta);
-                }
-            }
-        }
-
-        buildOptions = format("-D LOCAL_SIZE=%d -D kercn=%d -D RADIX_PROCESS=%s",
-                              dft_size, min_radix, radix_processing.c_str());
+        buildOptions = format("-D LOCAL_SIZE=%d -D kercn=%d -D FT=%s -D CT=%s%s -D RADIX_PROCESS=%s",
+                              dft_size, min_radix, ocl::typeToStr(dft_depth), ocl::typeToStr(CV_MAKE_TYPE(dft_depth, 2)),
+                              dft_depth == CV_64F ? " -D DOUBLE_SUPPORT" : "", radix_processing.c_str());
     }
 
     bool enqueueTransform(InputArray _src, OutputArray _dst, int num_dfts, int flags, int fftType, bool rows = true) const
@@ -1867,17 +1854,13 @@ public:
         UMat src = _src.getUMat();
         UMat dst = _dst.getUMat();
 
-        int type = src.type(), depth = CV_MAT_DEPTH(type);
-
         size_t globalsize[2];
         size_t localsize[2];
         String kernel_name;
 
         bool is1d = (flags & DFT_ROWS) != 0 || num_dfts == 1;
         bool inv = (flags & DFT_INVERSE) != 0;
-        String options = buildOptions + format(" -D FT=%s CT=%s%s", ocl::typeToStr(depth),
-                                                ocl::typeToStr(CV_MAKE_TYPE(depth, 2)),
-                                                depth == CV_64F ? " -D DOUBLE_SUPPORT" : "");
+        String options = buildOptions;
 
         if (rows)
         {
@@ -1917,7 +1900,7 @@ public:
         if (k.empty())
             return false;
 
-        k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(twiddles), thread_count, num_dfts);
+        k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::ReadOnlyNoSize(twiddles), thread_count, num_dfts);
         return k.run(2, globalsize, localsize, false);
     }
 
@@ -1990,6 +1973,32 @@ private:
             min_radix = min(min_radix, block*radix);
         }
     }
+
+    template <typename T>
+    static void fillRadixTable(UMat twiddles, const std::vector<int>& radixes)
+    {
+        Mat tw = twiddles.getMat(ACCESS_WRITE);
+        T* ptr = tw.ptr<T>();
+        int ptr_index = 0;
+
+        int n = 1;
+        for (size_t i=0; i<radixes.size(); i++)
+        {
+            int radix = radixes[i];
+            n *= radix;
+
+            for (int j=1; j<radix; j++)
+            {
+                double theta = -CV_2PI*j/n;
+
+                for (int k=0; k<(n/radix); k++)
+                {
+                    ptr[ptr_index++] = (T) cos(k*theta);
+                    ptr[ptr_index++] = (T) sin(k*theta);
+                }
+            }
+        }
+    }
 };
 
 class OCL_FftPlanCache
@@ -2001,17 +2010,18 @@ public:
         return planCache;
     }
 
-    Ptr<OCL_FftPlan> getFftPlan(int dft_size)
+    Ptr<OCL_FftPlan> getFftPlan(int dft_size, int depth)
     {
-        std::map<int, Ptr<OCL_FftPlan> >::iterator f = planStorage.find(dft_size);
+        int key = (dft_size << 16) | (depth & 0xFFFF);
+        std::map<int, Ptr<OCL_FftPlan> >::iterator f = planStorage.find(key);
         if (f != planStorage.end())
         {
             return f->second;
         }
         else
         {
-            Ptr<OCL_FftPlan> newPlan = Ptr<OCL_FftPlan>(new OCL_FftPlan(dft_size));
-            planStorage[dft_size] = newPlan;
+            Ptr<OCL_FftPlan> newPlan = Ptr<OCL_FftPlan>(new OCL_FftPlan(dft_size, depth));
+            planStorage[key] = newPlan;
             return newPlan;
         }
     }
@@ -2031,13 +2041,15 @@ protected:
 
 static bool ocl_dft_rows(InputArray _src, OutputArray _dst, int nonzero_rows, int flags, int fftType)
 {
-    Ptr<OCL_FftPlan> plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.cols());
+    int type = _src.type(), depth = CV_MAT_DEPTH(type);
+    Ptr<OCL_FftPlan> plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.cols(), depth);
     return plan->enqueueTransform(_src, _dst, nonzero_rows, flags, fftType, true);
 }
 
 static bool ocl_dft_cols(InputArray _src, OutputArray _dst, int nonzero_cols, int flags, int fftType)
 {
-    Ptr<OCL_FftPlan> plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.rows());
+    int type = _src.type(), depth = CV_MAT_DEPTH(type);
+    Ptr<OCL_FftPlan> plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.rows(), depth);
     return plan->enqueueTransform(_src, _dst, nonzero_cols, flags, fftType, false);
 }
 
@@ -2045,7 +2057,7 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
 {
     int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
     Size ssize = _src.size();
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig();
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if ( !((cn == 1 || cn == 2) && (depth == CV_32F || (depth == CV_64F && doubleSupport))) )
         return false;
