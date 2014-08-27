@@ -53,9 +53,44 @@ PARAM_TEST_CASE(HoughLinesTestBase, double, double, int)
         
         src.copyTo(usrc);
     }
+
+    virtual void readRealTestData()
+    {
+        Mat img = readImage("shared/pic5.png", IMREAD_GRAYSCALE);
+        Canny(img, src, 100, 150, 3);
+
+        src.copyTo(usrc);
+    }
+
+    virtual void Near(double eps = 0.)
+    {
+        EXPECT_EQ(dst.size(), udst.size());
+        
+        if (dst.total() > 0)
+        {
+            Mat lines_cpu, lines_gpu;
+            dst.copyTo(lines_cpu);
+            udst.copyTo(lines_gpu);
+
+            std::sort(lines_cpu.begin<Vec2f>(), lines_cpu.end<Vec2f>(), Vec2fComparator());
+            std::sort(lines_gpu.begin<Vec2f>(), lines_gpu.end<Vec2f>(), Vec2fComparator());
+
+            EXPECT_LE(TestUtils::checkNorm2(lines_cpu, lines_gpu), eps);
+        }
+    }
 };
 
 typedef HoughLinesTestBase HoughLines;
+
+OCL_TEST_P(HoughLines, RealImage)
+{
+    readRealTestData();
+
+    OCL_OFF(cv::HoughLines(src, dst, rhoStep, thetaStep, threshold));
+    OCL_ON(cv::HoughLines(usrc, udst, rhoStep, thetaStep, threshold));
+
+    Near(1e-5);
+}
 
 OCL_TEST_P(HoughLines, GeneratedImage)
 {
