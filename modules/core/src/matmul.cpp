@@ -782,6 +782,7 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
 {
     int depth = matA.depth(), cn = matA.channels();
     int type = CV_MAKETYPE(depth, cn);
+    const int block_size = 16;
 
     CV_Assert( type == matB.type() && (type == CV_32FC1 || type == CV_64FC1 || type == CV_32FC2 || type == CV_64FC2) );
 
@@ -807,8 +808,8 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
     CV_Assert( matB.type() == type && (!haveC || matC.type() == type) );
     CV_Assert( sizeA.width == sizeB.height && (!haveC || sizeC == sizeD) );
 
-    String opts = format("-D T=%s -D T1=%s -D cn=%d %s %s",
-                          ocl::typeToStr(type), ocl::typeToStr(depth), cn,
+    String opts = format("-D T=%s -D T1=%s -D cn=%d -D LOCAL_SIZE=%d %s %s",
+                          ocl::typeToStr(type), ocl::typeToStr(depth), cn, block_size,
                           haveC ? "-D HAVE_C" : "",
                           doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
@@ -843,7 +844,8 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
                sizeA.width, (float)alpha, (float)beta);
 
     size_t globalsize[2] = { sizeD.width, sizeD.height};
-    return k.run(2, globalsize, NULL, false);
+    size_t localsize[2] = { block_size, block_size};
+    return k.run(2, globalsize, localsize, false);
 }
 
 #endif
