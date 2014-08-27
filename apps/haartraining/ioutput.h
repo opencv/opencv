@@ -11,7 +11,7 @@ struct CvRect;
 class IOutput
 {
 public:
-    enum OutputType {PNG_TRAINING_SET, JPG_TEST_SET};
+    enum OutputType {PNG_DATASET, JPG_DATASET};
 public:
     virtual bool write( const CvMat& img,
                         const CvRect& boundingBox ) =0;

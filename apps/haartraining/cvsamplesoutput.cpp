@@ -34,10 +34,10 @@ IOutput* IOutput::createOutput(const char *filename,
 {
     IOutput* output = 0;
     switch (type) {
-    case IOutput::PNG_TRAINING_SET:
+    case IOutput::PNG_DATASET:
         output = new PngDatasetOutput();
         break;
-    case IOutput::JPG_TEST_SET:
+    case IOutput::JPG_DATASET:
         output = new JpgDatasetOutput();
         break;
     default:
