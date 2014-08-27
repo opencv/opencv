@@ -50,6 +50,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <ctime>
+#include <memory>
 
 using namespace std;
 
@@ -218,28 +219,22 @@ int main( int argc, char* argv[] )
 
         printf( "Done\n" );
     }
-    else if( imagename && bgfilename && infoname && pngoutput)
+    else if( imagename && bgfilename && infoname)
     {
-        printf( "Create training set from a single image and a collection of backgrounds.\n"
-                "Output format: %s\n"
-                "Annotations are in a separate directory\n",
-                (( pngoutput ) ? "JPG" : "PNG") );
-
-        PngDatasetGenerator creator( infoname );
-        creator.create( imagename, bgcolor, bgthreshold, bgfilename, num,
-                        invert, maxintensitydev, maxxangle, maxyangle, maxzangle,
-                        showsamples, width, height );
-
-        printf( "Done\n" );
-    }
-    else if( imagename && bgfilename && infoname )
-    {
-        printf( "Create test samples from single image applying distortions...\n"
+        printf( "Create data set from single image applying distortions...\n"
                 "Output format: %s\n",
-                (( pngoutput ) ? "JPG" : "PNG") );
+                (( pngoutput ) ? "PNG" : "JPG") );
 
-        JpgDatasetGrenerator creator( infoname );
-        creator.create( imagename, bgcolor, bgthreshold, bgfilename, num,
+        std::auto_ptr<DatasetGenerator> creator;
+        if( pngoutput )
+        {
+            creator = std::auto_ptr<DatasetGenerator>( new PngDatasetGenerator( infoname ) );
+        }
+        else
+        {
+            creator = std::auto_ptr<DatasetGenerator>( new JpgDatasetGenerator( infoname ) );
+        }
+        creator->create( imagename, bgcolor, bgthreshold, bgfilename, num,
                         invert, maxintensitydev, maxxangle, maxyangle, maxzangle,
                         showsamples, width, height );
 

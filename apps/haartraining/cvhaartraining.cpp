@@ -3029,12 +3029,12 @@ DatasetGenerator::~DatasetGenerator()
 }
 
 
-JpgDatasetGrenerator::JpgDatasetGrenerator(const char* filename)
-    :DatasetGenerator(IOutput::createOutput(filename,IOutput::JPG_TEST_SET))
+JpgDatasetGenerator::JpgDatasetGenerator( const char* filename )
+    :DatasetGenerator( IOutput::createOutput( filename, IOutput::JPG_DATASET ) )
 {
 }
 
-CvSize JpgDatasetGrenerator::scaleObjectSize(const CvSize& bgImgSize,
+CvSize JpgDatasetGenerator::scaleObjectSize( const CvSize& bgImgSize,
                                              const CvSize& ,
                                              const CvSize& sampleSize) const
 {
@@ -3074,13 +3074,13 @@ CvRect DatasetGenerator::getObjectPosition(const CvSize& bgImgSize,
 
 
 PngDatasetGenerator::PngDatasetGenerator(const char* filename)
-    :DatasetGenerator(IOutput::createOutput(filename,IOutput::PNG_TRAINING_SET))
+    :DatasetGenerator( IOutput::createOutput( filename, IOutput::PNG_DATASET ) )
 {
 }
 
 CvSize PngDatasetGenerator::scaleObjectSize( const CvSize& bgImgSize,
-                                                const CvSize& imgSize,
-                                                const CvSize& ) const
+                                             const CvSize& imgSize,
+                                             const CvSize& ) const
 {
     float scale;
 

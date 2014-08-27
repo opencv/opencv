@@ -227,10 +227,10 @@ private:
 };
 
 /* Provides the functionality of test set generating */
-class JpgDatasetGrenerator: public DatasetGenerator
+class JpgDatasetGenerator: public DatasetGenerator
 {
 public:
-    JpgDatasetGrenerator(const char* filename);
+    JpgDatasetGenerator(const char* filename);
 private:
     CvSize scaleObjectSize(const CvSize& bgImgSize,
                            const CvSize& ,
