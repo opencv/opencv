@@ -7,7 +7,7 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/contrib.hpp"
+#include "opencv2/rgbd.hpp"
 #include "opencv2/superres.hpp"
 #include "opencv2/superres/optical_flow.hpp"
 #include "opencv2/opencv_modules.hpp"
@@ -15,6 +15,7 @@
 using namespace std;
 using namespace cv;
 using namespace cv::superres;
+using namespace cv::rgbd;
 
 #define MEASURE_TIME(op) \
     { \
