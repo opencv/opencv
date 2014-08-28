@@ -557,11 +557,6 @@ class CppHeaderParser(object):
                     args.append([arg_type, arg_name, defval, modlist])
                 npos = arg_start-1
 
-        npos = decl_str.replace(" ", "").find("=0", npos)
-        if npos >= 0:
-            # skip pure virtual functions
-            return []
-
         if static_method:
             func_modlist.append("/S")
 
