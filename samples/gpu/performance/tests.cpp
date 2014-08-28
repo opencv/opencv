@@ -12,7 +12,6 @@
 #include "opencv2/cudaoptflow.hpp"
 #include "opencv2/cudabgsegm.hpp"
 
-#include "opencv2/legacy.hpp"
 #include "performance.h"
 
 #include "opencv2/opencv_modules.hpp"
