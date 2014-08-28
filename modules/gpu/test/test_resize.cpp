@@ -217,7 +217,8 @@ GPU_TEST_P(ResizeSameAsHost, Accuracy)
     cv::Mat dst_gold;
     cv::resize(src, dst_gold, cv::Size(), coeff, coeff, interpolation);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-2 : 1.0);
+    // CPU test for cv::resize uses 16 as error threshold for CV_8U, we uses 4 as error threshold for CV_8U
+    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-2 : src.depth() == CV_8U ? 4.0 : 1.0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ResizeSameAsHost, testing::Combine(
