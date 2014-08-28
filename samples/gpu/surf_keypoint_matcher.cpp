@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
 
 int main()
 {
-    std::cerr << "OpenCV was built without nonfree module" << std::endl;
+    std::cerr << "OpenCV was built without xfeatures2d module" << std::endl;
     return 0;
 }
 

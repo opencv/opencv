@@ -7,10 +7,11 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/cudaimgproc.hpp"
 #include "opencv2/highgui.hpp"
-#include "opencv2/contrib.hpp"
+#include <opencv2/rgbd.hpp>
 
 using namespace std;
 using namespace cv;
+using namespace cv::rgbd;
 
 static Mat loadImage(const string& name)
 {

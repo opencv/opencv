@@ -6,7 +6,7 @@
 SET(OPENCV_CPP_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_flann
     opencv_imgcodecs opencv_videoio opencv_highgui opencv_ml opencv_video
     opencv_objdetect opencv_photo opencv_features2d opencv_calib3d
-    opencv_stitching opencv_videostab opencv_shape)
+    opencv_stitching opencv_videostab opencv_shape opencv_xfeatures2d)
 
 ocv_check_dependencies(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
