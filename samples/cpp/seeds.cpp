@@ -65,13 +65,13 @@ int main(int argc, char** argv)
 
     namedWindow(window_name, 0);
     int num_iterations = 4;
-    int use_prior = 1;
+    int prior = 2;
     bool double_step = false;
     int num_superpixels = 400;
     int num_levels = 4;
     int num_histogram_bins = 5;
     createTrackbar("Number of Superpixels", window_name, &num_superpixels, 1000, trackbarChanged);
-    createTrackbar("Use Prior", window_name, &use_prior, 1, trackbarChanged);
+    createTrackbar("Smoothing Prior", window_name, &prior, 5, trackbarChanged);
     createTrackbar("Number of Levels", window_name, &num_levels, 10, trackbarChanged);
     createTrackbar("Iterations", window_name, &num_iterations, 12, 0);
 
@@ -96,7 +96,7 @@ int main(int argc, char** argv)
             width = frame.size().width;
             height = frame.size().height;
             seeds = createSuperpixelSEEDS(width, height, frame.channels(), num_superpixels,
-                    num_levels, num_histogram_bins, use_prior, double_step);
+                    num_levels, prior, num_histogram_bins, double_step);
             init = true;
         }
         Mat converted;

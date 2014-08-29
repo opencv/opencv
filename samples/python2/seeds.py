@@ -37,7 +37,7 @@ if __name__ == '__main__':
     seeds = None
     display_mode = 0
     num_superpixels = 400
-    use_prior = True
+    prior = 2
     num_levels = 4
     num_histogram_bins = 5
 
@@ -52,7 +52,7 @@ if __name__ == '__main__':
         if not seeds or num_superpixels_new != num_superpixels:
             num_superpixels = num_superpixels_new
             seeds = cv2.createSuperpixelSEEDS(width, height, channels,
-                    num_superpixels, num_levels, num_histogram_bins, use_prior)
+                    num_superpixels, num_levels, prior, num_histogram_bins)
             color_img = np.zeros((height,width,3), np.uint8)
             color_img[:] = (0, 0, 255)
 

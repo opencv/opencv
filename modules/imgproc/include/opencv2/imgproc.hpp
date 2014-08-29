@@ -1318,7 +1318,7 @@ CV_EXPORTS_W Size getTextSize(const String& text, int fontFace,
                             CV_OUT int* baseLine);
 
 
-//! Superpixel implementation: "SEEDS: Superpixels Extracted via Energy-Driven Sampling", ECCV 2012
+//! Superpixel implementation: "SEEDS: Superpixels Extracted via Energy-Driven Sampling", IJCV 2014
 class CV_EXPORTS_W SuperpixelSEEDS : public Algorithm
 {
 public:
@@ -1366,14 +1366,16 @@ public:
  *                          accurate is the segmentation, but needs more memory
  *                          and CPU time.
  * @param histogram_bins    number of histogram bins.
- * @param use_prior         if true, enabled 3x3 shape smoothing term
+ * @param prior             enable 3x3 shape smoothing term if >0. a larger value
+ *                          leads to smoother shapes.
+ *                          range: [0, 5]
  * @param double_step       if true, iterate each block level twice for higher
  *                          accuracy.
  */
 CV_EXPORTS_W Ptr<SuperpixelSEEDS> createSuperpixelSEEDS(
     int image_width, int image_height, int image_channels,
-    int num_superpixels, int num_levels, int histogram_bins=5,
-    bool use_prior = true, bool double_step = false);
+    int num_superpixels, int num_levels, int prior = 2,
+    int histogram_bins=5, bool double_step = false);
 
 } // cv
 

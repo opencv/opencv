@@ -72,8 +72,8 @@ class SuperpixelSEEDSImpl : public SuperpixelSEEDS
 public:
 
     SuperpixelSEEDSImpl(int image_width, int image_height, int image_channels,
-            int num_superpixels, int num_levels, int histogram_bins = 5,
-            bool use_prior = true, bool double_step = false);
+            int num_superpixels, int num_levels,  int prior = 2,
+           int histogram_bins = 5,  bool double_step = false);
 
     virtual ~SuperpixelSEEDSImpl();
 
@@ -153,7 +153,7 @@ private:
     int seeds_top_level; // == seeds_nr_levels-1 (const)
     int seeds_current_level; //start with level seeds_top_level-1, then go down
     bool seeds_double_step;
-    bool seeds_use_prior;
+    int seeds_prior;
 
     // keep one labeling for each level
     int* nr_wh; // [2*level]/[2*level+1] number of labels in x-direction/y-direction
@@ -176,16 +176,15 @@ private:
 };
 
 CV_EXPORTS Ptr<SuperpixelSEEDS> createSuperpixelSEEDS(int image_width, int image_height,
-        int image_channels, int num_superpixels, int num_levels, int histogram_bins,
-        bool use_prior, bool double_step)
+        int image_channels, int num_superpixels, int num_levels, int prior, int histogram_bins,
+        bool double_step)
 {
     return makePtr<SuperpixelSEEDSImpl>(image_width, image_height, image_channels,
-            num_superpixels, num_levels, histogram_bins, use_prior, double_step);
+            num_superpixels, num_levels, prior, histogram_bins, double_step);
 }
 
 SuperpixelSEEDSImpl::SuperpixelSEEDSImpl(int image_width, int image_height, int image_channels,
-            int num_superpixels, int num_levels, int histogram_bins,
-            bool use_prior, bool double_step)
+            int num_superpixels, int num_levels, int prior, int histogram_bins, bool double_step)
     : initialized(false)
 {
     width = image_width;
@@ -193,7 +192,7 @@ SuperpixelSEEDSImpl::SuperpixelSEEDSImpl(int image_width, int image_height, int 
     nr_bins = histogram_bins;
     nr_channels = image_channels;
     seeds_double_step = double_step;
-    seeds_use_prior = use_prior;
+    seeds_prior = std::min(prior, 5);
 
     histogram_size = nr_bins;
     for (int i = 1; i < nr_channels; ++i)
@@ -653,7 +652,7 @@ void SuperpixelSEEDSImpl::updatePixels()
                     int a32 = labels[(y + 1) * width + (x)];
                     if( checkSplit_hf(a11, a12, a21, a22, a31, a32) )
                     {
-                        if( seeds_use_prior )
+                        if( seeds_prior )
                         {
                             priorA = threebyfour(x, y, labelA);
                             priorB = threebyfour(x, y, labelB);
@@ -691,7 +690,7 @@ void SuperpixelSEEDSImpl::updatePixels()
                     int a34 = labels[(y + 1) * width + (x + 2)];
                     if( checkSplit_hb(a13, a14, a23, a24, a33, a34) )
                     {
-                        if( seeds_use_prior )
+                        if( seeds_prior )
                         {
                             priorA = threebyfour(x, y, labelA);
                             priorB = threebyfour(x, y, labelB);
@@ -745,7 +744,7 @@ void SuperpixelSEEDSImpl::updatePixels()
                     int a23 = labels[(y) * width + (x + 1)];
                     if( checkSplit_vf(a11, a12, a13, a21, a22, a23) )
                     {
-                        if( seeds_use_prior )
+                        if( seeds_prior )
                         {
                             priorA = fourbythree(x, y, labelA);
                             priorB = fourbythree(x, y, labelB);
@@ -783,7 +782,7 @@ void SuperpixelSEEDSImpl::updatePixels()
                     int a43 = labels[(y + 2) * width + (x + 1)];
                     if( checkSplit_vb(a31, a32, a33, a41, a42, a43) )
                     {
-                        if( seeds_use_prior )
+                        if( seeds_prior )
                         {
                             priorA = fourbythree(x, y, labelA);
                             priorB = fourbythree(x, y, labelB);
@@ -939,10 +938,30 @@ bool SuperpixelSEEDSImpl::probability(int image_idx, int label1, int label2,
     float P_label2 = histogram[seeds_top_level][label2 * histogram_size_aligned + color]
                                                 * T[seeds_top_level][label1];
 
-    if( seeds_use_prior )
+    if( seeds_prior )
     {
-        P_label1 *= (float) prior1;
-        P_label2 *= (float) prior2;
+        float p;
+        if( prior2 != 0 )
+            p = (float) prior1 / prior2;
+        else //pathological case
+            p = 1.f;
+        switch( seeds_prior )
+        {
+        case 5: p *= p;
+            //no break
+        case 4: p *= p;
+            //no break
+        case 3: p *= p;
+            //no break
+        case 2:
+            p *= p;
+            P_label1 *= T[seeds_top_level][label2];
+            P_label2 *= T[seeds_top_level][label1];
+            //no break
+        case 1:
+            P_label1 *= p;
+            break;
+        }
     }
 
     return (P_label2 > P_label1);
