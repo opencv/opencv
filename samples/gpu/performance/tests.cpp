@@ -21,6 +21,10 @@
 #include "opencv2/xfeatures2d/nonfree.hpp"
 #endif
 
+#ifdef HAVE_OPENCV_BGSEGM
+#include "opencv2/bgsegm.hpp"
+#endif
+
 using namespace std;
 using namespace cv;
 
@@ -1266,6 +1270,8 @@ TEST(FarnebackOpticalFlow)
     }}}
 }
 
+#ifdef HAVE_OPENCV_BGSEGM
+
 TEST(MOG)
 {
     const std::string inputFile = abspath("768x576.avi");
@@ -1276,7 +1282,7 @@ TEST(MOG)
     cv::Mat frame;
     cap >> frame;
 
-    cv::Ptr<cv::BackgroundSubtractor> mog = cv::createBackgroundSubtractorMOG();
+    cv::Ptr<cv::BackgroundSubtractor> mog = cv::bgsegm::createBackgroundSubtractorMOG();
     cv::Mat foreground;
 
     mog->apply(frame, foreground, 0.01);
@@ -1316,6 +1322,8 @@ TEST(MOG)
     }
     TestSystem::instance().gpuComplete();
 }
+
+#endif
 
 TEST(MOG2)
 {
