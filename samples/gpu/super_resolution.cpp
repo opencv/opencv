@@ -35,8 +35,8 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name, bool useGpu)
         else
             return createOptFlow_Farneback();
     }
-    else if (name == "simple")
-        return createOptFlow_Simple();
+    /*else if (name == "simple")
+        return createOptFlow_Simple();*/
     else if (name == "tvl1")
     {
         if (useGpu)
