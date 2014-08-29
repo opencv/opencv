@@ -2180,7 +2180,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     {
         k.create("resizeNN", ocl::imgproc::resize_oclsrc,
                  format("-D INTER_NEAREST -D T=%s -D T1=%s -D cn=%d",
-                        ocl::memopTypeToStr(type), ocl::memopTypeToStr(depth), cn));
+                        ocl::vecopTypeToStr(type), ocl::vecopTypeToStr(depth), cn));
         if (k.empty())
             return false;
 
