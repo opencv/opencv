@@ -317,6 +317,11 @@ void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode, Stream& stream)
 ////////////////////////////////////////////////////////////////////////
 // LUT
 
+namespace arithm
+{
+    void lut(PtrStepSzb src, uchar* lut, int lut_cn, PtrStepSzb dst, bool cc30, cudaStream_t stream);
+}
+
 void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& s)
 {
     const int cn = src.channels();
@@ -328,82 +333,21 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& s)
 
     dst.create(src.size(), CV_MAKE_TYPE(lut.depth(), cn));
 
-    NppiSize sz;
-    sz.height = src.rows;
-    sz.width = src.cols;
+    GpuMat d_lut;
+    d_lut.upload(Mat(1, 256, lut.type(), lut.data));
 
-    Mat nppLut;
-    lut.convertTo(nppLut, CV_32S);
-
-    int nValues3[] = {256, 256, 256};
-
-    Npp32s pLevels[256];
-    for (int i = 0; i < 256; ++i)
-        pLevels[i] = i;
-
-    const Npp32s* pLevels3[3];
-
-#if (CUDA_VERSION <= 4020)
-    pLevels3[0] = pLevels3[1] = pLevels3[2] = pLevels;
-#else
-    GpuMat d_pLevels;
-    d_pLevels.upload(Mat(1, 256, CV_32S, pLevels));
-    pLevels3[0] = pLevels3[1] = pLevels3[2] = d_pLevels.ptr<Npp32s>();
-#endif
-
+    int lut_cn = d_lut.channels();
+    bool cc30 = deviceSupports(FEATURE_SET_COMPUTE_30);
     cudaStream_t stream = StreamAccessor::getStream(s);
-    NppStreamHandler h(stream);
 
-    if (src.type() == CV_8UC1)
+    if (lut_cn == 1)
     {
-#if (CUDA_VERSION <= 4020)
-        nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, nppLut.ptr<Npp32s>(), pLevels, 256) );
-#else
-        GpuMat d_nppLut(Mat(1, 256, CV_32S, nppLut.data));
-        nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, d_nppLut.ptr<Npp32s>(), d_pLevels.ptr<Npp32s>(), 256) );
-#endif
+        arithm::lut(src.reshape(1), d_lut.data, lut_cn, dst.reshape(1), cc30, stream);
     }
-    else
+    else if (lut_cn == 3)
     {
-        const Npp32s* pValues3[3];
-
-        Mat nppLut3[3];
-        if (nppLut.channels() == 1)
-        {
-#if (CUDA_VERSION <= 4020)
-            pValues3[0] = pValues3[1] = pValues3[2] = nppLut.ptr<Npp32s>();
-#else
-            GpuMat d_nppLut(Mat(1, 256, CV_32S, nppLut.data));
-            pValues3[0] = pValues3[1] = pValues3[2] = d_nppLut.ptr<Npp32s>();
-#endif
-        }
-        else
-        {
-            cv::split(nppLut, nppLut3);
-
-#if (CUDA_VERSION <= 4020)
-            pValues3[0] = nppLut3[0].ptr<Npp32s>();
-            pValues3[1] = nppLut3[1].ptr<Npp32s>();
-            pValues3[2] = nppLut3[2].ptr<Npp32s>();
-#else
-            GpuMat d_nppLut0(Mat(1, 256, CV_32S, nppLut3[0].data));
-            GpuMat d_nppLut1(Mat(1, 256, CV_32S, nppLut3[1].data));
-            GpuMat d_nppLut2(Mat(1, 256, CV_32S, nppLut3[2].data));
-
-            pValues3[0] = d_nppLut0.ptr<Npp32s>();
-            pValues3[1] = d_nppLut1.ptr<Npp32s>();
-            pValues3[2] = d_nppLut2.ptr<Npp32s>();
-#endif
-        }
-
-        nppSafeCall( nppiLUT_Linear_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step),
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, pValues3, pLevels3, nValues3) );
+        arithm::lut(src, d_lut.data, lut_cn, dst, cc30, stream);
     }
-
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 ////////////////////////////////////////////////////////////////////////
