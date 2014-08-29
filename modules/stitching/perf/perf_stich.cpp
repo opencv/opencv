@@ -18,7 +18,7 @@ typedef TestBaseWithParam<string> match;
 typedef std::tr1::tuple<string, int> matchVector_t;
 typedef TestBaseWithParam<matchVector_t> matchVector;
 
-#ifdef HAVE_OPENCV_NONFREE_TODO_FIND_WHY_SURF_IS_NOT_ABLE_TO_STITCH_PANOS
+#ifdef HAVE_OPENCV_XFEATURES2D_TODO_FIND_WHY_SURF_IS_NOT_ABLE_TO_STITCH_PANOS
 #define TEST_DETECTORS testing::Values("surf", "orb")
 #else
 #define TEST_DETECTORS testing::Values<string>("orb")

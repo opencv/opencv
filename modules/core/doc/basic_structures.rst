@@ -3133,7 +3133,7 @@ Stores algorithm parameters in a file storage
 
 The method stores all the algorithm parameters (in alphabetic order) to the file storage. The method is virtual. If you define your own Algorithm derivative, your can override the method and store some extra information. However, it's rarely needed. Here are some examples:
 
- * SIFT feature detector (from nonfree module). The class only stores algorithm parameters and no keypoints or their descriptors. Therefore, it's enough to store the algorithm parameters, which is what ``Algorithm::write()`` does. Therefore, there is no dedicated ``SIFT::write()``.
+ * SIFT feature detector (from xfeatures2d module). The class only stores algorithm parameters and no keypoints or their descriptors. Therefore, it's enough to store the algorithm parameters, which is what ``Algorithm::write()`` does. Therefore, there is no dedicated ``SIFT::write()``.
 
  * Background subtractor (from video module). It has the algorithm parameters and also it has the current background model. However, the background model is not stored. First, it's rather big. Then, if you have stored the background model, it would likely become irrelevant on the next run (because of shifted camera, changed background, different lighting etc.). Therefore, ``BackgroundSubtractorMOG`` and ``BackgroundSubtractorMOG2`` also rely on the standard ``Algorithm::write()`` to store just the algorithm parameters.
 
@@ -3179,7 +3179,7 @@ This static method creates a new instance of the specified algorithm. If there i
 
     Ptr<BackgroundSubtractor> bgfg = Algorithm::create<BackgroundSubtractor>("BackgroundSubtractor.MOG2");
 
-.. note:: This is important note about seemingly mysterious behavior of ``Algorithm::create()`` when it returns NULL while it should not. The reason is simple - ``Algorithm::create()`` resides in OpenCV`s core module and the algorithms are implemented in other modules. If you create algorithms dynamically, C++ linker may decide to throw away the modules where the actual algorithms are implemented, since you do not call any functions from the modules. To avoid this problem, you need to call ``initModule_<modulename>();`` somewhere in the beginning of the program before ``Algorithm::create()``. For example, call ``initModule_nonfree()`` in order to use SURF/SIFT, call ``initModule_ml()`` to use expectation maximization etc.
+.. note:: This is important note about seemingly mysterious behavior of ``Algorithm::create()`` when it returns NULL while it should not. The reason is simple - ``Algorithm::create()`` resides in OpenCV`s core module and the algorithms are implemented in other modules. If you create algorithms dynamically, C++ linker may decide to throw away the modules where the actual algorithms are implemented, since you do not call any functions from the modules. To avoid this problem, you need to call ``initModule_<modulename>();`` somewhere in the beginning of the program before ``Algorithm::create()``. For example, call ``initModule_xfeatures2d()`` in order to use SURF/SIFT, call ``initModule_ml()`` to use expectation maximization etc.
 
 Creating Own Algorithms
 -----------------------
