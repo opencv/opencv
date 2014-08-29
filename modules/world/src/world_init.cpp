@@ -52,7 +52,7 @@ bool cv::initAll()
     && initModule_features2d()
 #endif
 #ifdef HAVE_OPENCV_XFEATURES2D
-    && initModule_xfeatures2d()
+    && xfeatures2d::initModule_xfeatures2d()
 #endif
     ;
 }
