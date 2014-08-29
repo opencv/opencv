@@ -1581,7 +1581,11 @@ protected:
             {
                 try
                 {
+                    cl_uint major, minor, patch;
                     CV_Assert(clAmdFftInitSetupData(&setupData) == CLFFT_SUCCESS);
+
+                    // it throws exception in case AmdFft binaries are not found
+                    CV_Assert(clAmdFftGetVersion(&major, &minor, &patch) == CLFFT_SUCCESS);
                     g_isAmdFftAvailable = true;
                 }
                 catch (const Exception &)

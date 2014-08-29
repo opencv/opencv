@@ -21,7 +21,7 @@ enum OPENCLAMDFFT_FN_ID {
 //    OPENCLAMDFFT_FN_clAmdFftGetPlanTransposeResult = 15,
 //    OPENCLAMDFFT_FN_clAmdFftGetResultLocation = 16,
     OPENCLAMDFFT_FN_clAmdFftGetTmpBufSize = 17,
-//    OPENCLAMDFFT_FN_clAmdFftGetVersion = 18,
+    OPENCLAMDFFT_FN_clAmdFftGetVersion = 18,
     OPENCLAMDFFT_FN_clAmdFftSetLayout = 19,
     OPENCLAMDFFT_FN_clAmdFftSetPlanBatchSize = 20,
 //    OPENCLAMDFFT_FN_clAmdFftSetPlanDim = 21,
@@ -298,9 +298,9 @@ clAmdFftStatus (*clAmdFftGetTmpBufSize)(const clAmdFftPlanHandle, size_t*) =
         openclamdfft_fn2<OPENCLAMDFFT_FN_clAmdFftGetTmpBufSize, clAmdFftStatus, const clAmdFftPlanHandle, size_t*>::switch_fn;
 static const struct DynamicFnEntry clAmdFftGetTmpBufSize_definition = { "clAmdFftGetTmpBufSize", (void**)&clAmdFftGetTmpBufSize};
 
-//clAmdFftStatus (*clAmdFftGetVersion)(cl_uint*, cl_uint*, cl_uint*) =
-//        openclamdfft_fn3<OPENCLAMDFFT_FN_clAmdFftGetVersion, clAmdFftStatus, cl_uint*, cl_uint*, cl_uint*>::switch_fn;
-//static const struct DynamicFnEntry clAmdFftGetVersion_definition = { "clAmdFftGetVersion", (void**)&clAmdFftGetVersion};
+clAmdFftStatus (*clAmdFftGetVersion)(cl_uint*, cl_uint*, cl_uint*) =
+        openclamdfft_fn3<OPENCLAMDFFT_FN_clAmdFftGetVersion, clAmdFftStatus, cl_uint*, cl_uint*, cl_uint*>::switch_fn;
+static const struct DynamicFnEntry clAmdFftGetVersion_definition = { "clAmdFftGetVersion", (void**)&clAmdFftGetVersion};
 
 clAmdFftStatus (*clAmdFftSetLayout)(clAmdFftPlanHandle, clAmdFftLayout, clAmdFftLayout) =
         openclamdfft_fn3<OPENCLAMDFFT_FN_clAmdFftSetLayout, clAmdFftStatus, clAmdFftPlanHandle, clAmdFftLayout, clAmdFftLayout>::switch_fn;
@@ -375,7 +375,7 @@ static const struct DynamicFnEntry* openclamdfft_fn[] = {
     NULL/*&clAmdFftGetPlanTransposeResult_definition*/,
     NULL/*&clAmdFftGetResultLocation_definition*/,
     &clAmdFftGetTmpBufSize_definition,
-    NULL/*&clAmdFftGetVersion_definition*/,
+    &clAmdFftGetVersion_definition,
     &clAmdFftSetLayout_definition,
     &clAmdFftSetPlanBatchSize_definition,
     NULL/*&clAmdFftSetPlanDim_definition*/,
@@ -391,4 +391,4 @@ static const struct DynamicFnEntry* openclamdfft_fn[] = {
     &clAmdFftTeardown_definition,
 };
 
-// number of enabled functions: 15
+// number of enabled functions: 16
