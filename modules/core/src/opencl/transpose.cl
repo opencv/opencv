@@ -53,6 +53,8 @@
 #define TSIZE ((int)sizeof(T1)*3)
 #endif
 
+#ifndef INPLACE
+
 #define LDS_STEP      (TILE_DIM + 1)
 
 __kernel void transpose(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
@@ -114,6 +116,8 @@ __kernel void transpose(__global const uchar * srcptr, int src_step, int src_off
     }
 }
 
+#else
+
 __kernel void transpose_inplace(__global uchar * srcptr, int src_step, int src_offset, int src_rows)
 {
     int x = get_global_id(0);
@@ -138,3 +142,5 @@ __kernel void transpose_inplace(__global uchar * srcptr, int src_step, int src_o
             }
     }
 }
+
+#endif // INPLACE
