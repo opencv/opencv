@@ -284,7 +284,7 @@ TEST(SURF)
     Mat src = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
     if (src.empty()) throw runtime_error("can't open aloeL.jpg");
 
-    SURF surf;
+    xfeatures2d::SURF surf;
     vector<KeyPoint> keypoints;
     Mat descriptors;
 
