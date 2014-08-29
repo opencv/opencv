@@ -4,7 +4,7 @@ file(GLOB sources "performance/*.cpp")
 file(GLOB headers "performance/*.h")
 
 if(HAVE_opencv_xfeatures2d)
-  ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/xfeatures2d/include")
+  ocv_include_directories("${opencv_xfeatures2d_SOURCE_DIR}/include")
 endif()
 
 add_executable(${the_target} ${sources} ${headers})
