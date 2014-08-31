@@ -266,7 +266,7 @@
       {% trans sphinx_version=sphinx_version|e %}Created using <a href="http://sphinx-doc.org/">Sphinx</a> {{ sphinx_version }}.{% endtrans %}
     {%- endif %}
     {%- if show_source and has_source and sourcename %}
-      <a href="{{ pathto('_sources/' + sourcename, true)|e }}" rel="nofollow">{{ _('Show This Page Source') }}</a>
+      <a href="{{ pathto('_sources/' + sourcename, true)|e }}" rel="nofollow">{{ _('Show this page source.') }}</a>
     {%- endif %}
     </div>
 {%- endblock %}

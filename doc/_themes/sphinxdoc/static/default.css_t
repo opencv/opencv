@@ -114,6 +114,16 @@ div.related ul li a:hover {
     text-shadow: 0px 0px 1px rgba(255, 255, 255, 0.5);
 }
 
+div.footer {
+    background-image: url(footerbg.png);
+    color: #ccc;
+    text-shadow: 0 0 .2px rgba(255, 255, 255, 0.8);
+    padding: 3px 8px 3px 0;
+    clear: both;
+    font-size: 0.8em;
+    text-align: center;
+}
+
 div.sphinxsidebarwrapper {
     position: relative;
     top: 0px;
@@ -190,16 +200,6 @@ div.sphinxsidebar ul {
 div.sphinxsidebar ul ul {
     margin-left: 20px;
     list-style-image: url(listitem.png);
-}
-
-div.footer {
-    background-image: url(footerbg.png);
-    color: #ccc;
-    text-shadow: 0 0 .2px rgba(255, 255, 255, 0.8);
-    padding: 3px 8px 3px 0;
-    clear: both;
-    font-size: 0.8em;
-    text-align: right;
 }
 
 /* -- body styles ----------------------------------------------------------- */
@@ -416,6 +416,7 @@ div.feedback {
     background-color: {{ theme_feedbackbgcolor }};
     color: {{ theme_feedbacktextcolor }};
     padding: 20px 20px 30px 20px;
+    border-top: 1px solid #002e50;
 }
 
 div.feedback h2 {
@@ -452,8 +453,7 @@ dl.cfunction > dt:first-child {
     color: #8080B0;
 }
 
-dl.cfunction > dt:first-child tt.descname
-{
+dl.cfunction > dt:first-child tt.descname {
     color: #8080B0;
 }
 
@@ -470,58 +470,51 @@ table.field-list {
     margin-top: 20px;
 }
 
-/*ul.simple {
-    list-style: none;
-}*/
-
 em.menuselection, em.guilabel {
     font-family: {{ theme_guifont }};
 }
 
 .enumeratevisibleitemswithsquare ul {
-list-style: square;
-margin-bottom: 0px;
-margin-left: 0px;
-margin-right: 0px;
-margin-top: 0px;
+    list-style: square;
+    margin-bottom: 0px;
+    margin-left: 0px;
+    margin-right: 0px;
+    margin-top: 0px;
 }
 
 .enumeratevisibleitemswithsquare li {
-margin-bottom: 0.2em;
-margin-left: 0px;
-margin-right: 0px;
-margin-top: 0.2em;
+    margin-bottom: 0.2em;
+    margin-left: 0px;
+    margin-right: 0px;
+    margin-top: 0.2em;
  }
 
- .enumeratevisibleitemswithsquare p {
- margin-bottom: 0pt;
- margin-top: 1pt;
- }
+.enumeratevisibleitemswithsquare p {
+    margin-bottom: 0pt;
+    margin-top: 1pt;
+}
 
- .enumeratevisibleitemswithsquare dl{
-margin-bottom: 0px;
-margin-left: 0px;
-margin-right: 0px;
-margin-top: 0px;
- }
+.enumeratevisibleitemswithsquare dl {
+    margin-bottom: 0px;
+    margin-left: 0px;
+    margin-right: 0px;
+    margin-top: 0px;
+}
 
- .toctableopencv
- {
-   width: 100% ;
-   table-layout: fixed;
- }
+.toctableopencv {
+    width: 100% ;
+    table-layout: fixed;
+}
 
-  .toctableopencv colgroup col:first-child
-  {
+.toctableopencv colgroup col:first-child {
     width: 100pt !important;
     max-width: 100pt !important;
     min-width: 100pt !important;
-  }
+}
 
-  .toctableopencv colgroup col:nth-child(2)
-  {
+.toctableopencv colgroup col:nth-child(2) {
     width: 100% !important;
-  }
+}
 
 div.body ul.search li {
     text-align: left;
@@ -530,12 +523,4 @@ div.body ul.search li {
 div.linenodiv {
     min-width: 1em;
     text-align: right;
-}
-
-div.sphinxsidebar #searchbox input[type="text"] {
-    width:auto;
-}
-
-div.sphinxsidebar #searchbox input[type="submit"] {
-    width:auto;
 }
