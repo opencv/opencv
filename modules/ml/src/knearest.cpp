@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "kdtree.hpp"
 
 /****************************************************************************************\
 *                              K-Nearest Neighbors Classifier                            *
