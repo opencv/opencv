@@ -338,6 +338,11 @@ void CV_KNearestTest::run( int /*start_from*/ )
         ts->printf( cvtest::TS::LOG, "Bad output labels.\n" );
         code = cvtest::TS::FAIL_INVALID_OUTPUT;
     }
+    else if( err > 0.01f )
+    {
+        ts->printf( cvtest::TS::LOG, "Bad accuracy (%f) on test data.\n", err );
+        code = cvtest::TS::FAIL_BAD_ACCURACY;
+    }
 
     ts->set_failed_test_info( code );
 }

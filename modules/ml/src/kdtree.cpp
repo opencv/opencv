@@ -43,6 +43,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "kdtree.hpp"
 
 namespace cv
 {
