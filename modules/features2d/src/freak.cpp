@@ -394,7 +394,7 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
                 (*ptr) = result128;
                 ++ptr;
             }
-            ptr -= 8;
+            ptr -= (FREAK_NB_PAIRS/128)*2;
 #else
             // extracting descriptor preserving the order of SSE version
             int cnt = 0;
