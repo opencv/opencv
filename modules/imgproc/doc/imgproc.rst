@@ -17,3 +17,4 @@ imgproc. Image Processing
     motion_analysis_and_object_tracking
     feature_detection
     object_detection
+    superpixels
