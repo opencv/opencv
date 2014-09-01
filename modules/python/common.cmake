@@ -37,7 +37,6 @@ ocv_list_filterout(opencv_hdrs ".h$")
 ocv_list_filterout(opencv_hdrs "cuda")
 ocv_list_filterout(opencv_hdrs "cudev")
 ocv_list_filterout(opencv_hdrs "opencv2/objdetect/detection_based_tracker.hpp")
-ocv_list_filterout(opencv_hdrs "opencv2/ximgproc/structured_edge_detection.hpp")
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
