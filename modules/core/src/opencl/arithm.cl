@@ -293,7 +293,11 @@
 #define PROCESS_ELEM storedst(pown(srcelem1, srcelem2))
 
 #elif defined OP_SQRT
+#if depth <= 5
 #define PROCESS_ELEM storedst(native_sqrt(srcelem1))
+#else
+#define PROCESS_ELEM storedst(sqrt(srcelem1))
+#endif
 
 #elif defined OP_LOG
 #define PROCESS_ELEM \
