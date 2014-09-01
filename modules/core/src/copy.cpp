@@ -640,8 +640,8 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 
     ocl::Kernel k(kernelName, ocl::core::flip_oclsrc,
         format( "-D T=%s -D T1=%s -D cn=%d -D PIX_PER_WI_Y=%d -D kercn=%d",
-                kercn != cn ? ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)) : ocl::memopTypeToStr(CV_MAKE_TYPE(depth, kercn)),
-                kercn != cn ? ocl::typeToStr(depth) : ocl::memopTypeToStr(depth), cn, pxPerWIy, kercn));
+                kercn != cn ? ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)) : ocl::vecopTypeToStr(CV_MAKE_TYPE(depth, kercn)),
+                kercn != cn ? ocl::typeToStr(depth) : ocl::vecopTypeToStr(depth), cn, pxPerWIy, kercn));
     if (k.empty())
         return false;
 
