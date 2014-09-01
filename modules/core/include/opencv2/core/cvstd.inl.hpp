@@ -198,7 +198,7 @@ std::ostream& operator << (std::ostream& out, const std::vector<Point3_<_Tp> >& 
 template<typename _Tp, int m, int n> static inline
 std::ostream& operator << (std::ostream& out, const Matx<_Tp, m, n>& matx)
 {
-    return out << Formatter::get()->format(matx);
+    return out << Formatter::get()->format(Mat(matx));
 }
 
 template<typename _Tp> static inline
