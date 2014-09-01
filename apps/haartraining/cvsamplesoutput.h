@@ -20,10 +20,7 @@ private:
 
     virtual bool init(const char* annotationsListFileName );
 
-    void writeImage( const CvMat& img ) const;
-
-    CvRect scaleBoundingBox(const CvSize& imgSize,
-                            const CvRect& bbox);
+    CvRect addBoundingboxBorder(const CvRect& bbox) const;
 private:
 
     char annotationFullPath[PATH_MAX];
