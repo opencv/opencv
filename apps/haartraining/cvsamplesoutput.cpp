@@ -113,9 +113,9 @@ bool PngDatasetOutput::init( const char* annotationsListFileName )
 }
 
 bool PngDatasetOutput::write( const CvMat& img,
-                                  const CvRect& boundingBox )
+                              const CvRect& boundingBox )
 {
-    CvRect bbox = scaleBoundingBox(cvGetSize(&img), boundingBox);
+    CvRect bbox = addBoundingboxBorder(boundingBox);
 
     sprintf( imgFileName,
              "%04d_%04d_%04d_%04d_%04d",
@@ -148,44 +148,16 @@ bool PngDatasetOutput::write( const CvMat& img,
              bbox.y + bbox.height );
     fclose( annotationFile );
 
-    writeImage(img);
+    cvSaveImage( imgFullPath, &img);
 
     return true;
 }
 
-void PngDatasetOutput::writeImage(const CvMat &img) const
+CvRect PngDatasetOutput::addBoundingboxBorder(const CvRect& bbox) const
 {
-    CvSize origsize = cvGetSize(&img);
-
-    if( origsize.height > destImgHeight || origsize.width > destImgWidth )
-    {
-        CvMat result = cvMat( destImgHeight, destImgWidth, CV_8UC1,
-                              cvAlloc( sizeof( uchar ) * destImgHeight * destImgWidth ) );
-        cvResize(&img, &result);
-        cvSaveImage( imgFullPath, &result );
-        cvFree( &(result.data.ptr) );
-    }
-    else
-    {
-        cvSaveImage( imgFullPath, &img);
-    }
-
-    return;
-}
-
-CvRect PngDatasetOutput::scaleBoundingBox(const CvSize& imgSize, const CvRect& bbox)
-{
-    double scale = MAX( (float) destImgWidth / imgSize.width,
-                        (float) destImgHeight / imgSize.height );
     CvRect boundingBox = bbox;
     int border = 5;
-    if( scale < 1. )
-    {
-        boundingBox.x = bbox.x  * scale;
-        boundingBox.y  = bbox.y  * scale;
-        boundingBox.width = bbox.width * scale;
-        boundingBox.height = bbox.height * scale;
-    }
+
     boundingBox.x -= border;
     boundingBox.y -= border;
     boundingBox.width += 2*border;
