@@ -737,14 +737,14 @@ The following videos are the results of pose estimation in real time using the e
     int minInliersKalman = 30;    // Kalman threshold updating
 
 
-You can watch the real time pose estimation on the `YouTube here <https://www.youtube.com/watch?v=msFFuHsiUns>`_.
+You can watch the real time pose estimation on the `YouTube here <http://www.youtube.com/user/opencvdev/videos>`_.
 
 .. raw:: html
 
    <div align="center">
-   <iframe title=" Pose estimation for the Google Summer Code 2014 using OpenCV libraries." width="560" height="349" src="http://www.youtube.com/embed/msFFuHsiUns?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
+   <iframe title="Pose estimation of textured object using OpenCV" width="560" height="349" src="http://www.youtube.com/embed/XNATklaJlSQ?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
    </div>
-
+   </br></br>
    <div align="center">
-   <iframe title=" Pose estimation for the Google Summer Code 2014 using OpenCV libraries." width="560" height="349" src="http://www.youtube.com/embed/_E4vhmBJYLU?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
+   <iframe title="Pose estimation of textured object using OpenCV in cluttered background" width="560" height="349" src="http://www.youtube.com/embed/YLS9bWek78k?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
    </div>
