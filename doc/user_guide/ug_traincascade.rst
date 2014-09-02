@@ -140,10 +140,10 @@ Creating training set from a single image and a collection of backgrounds with a
 The following procedure is used to create a sample object instance:
 The source image is rotated randomly around all three axes. The chosen angle is limited my ``-max?angle``. Then pixels having the intensity from [``bg_color-bg_color_threshold``; ``bg_color+bg_color_threshold``] range are interpreted as transparent. White noise is added to the intensities of the foreground. If the ``-inv`` key is specified then foreground pixel intensities are inverted. If ``-randinv`` key is specified then algorithm randomly selects whether inversion should be applied to this sample. Finally, the obtained image is placed onto an arbitrary background from the background description file, resized to the desired size specified by ``-w`` and ``-h`` and stored to the vec-file, specified by the ``-vec`` command line option.
 
-Creating training set as a collection of JPG images
+Creating training set as a collection of PNG images
 ---------------------------------------------------
 
-To obtain such behaviour the ``-img``, ``-bg`` and ``-info`` keys should be specified. The file name specified with ``-info`` key should include at least one level of directory hierarchy, that directory
+To obtain such behaviour the ``-img``, ``-bg``, ``-info`` and ``-pngoutput`` keys should be specified. The file name specified with ``-info`` key should include at least one level of directory hierarchy, that directory
 will be used as the top-level directory for the training set.
 For example, with the ``opencv_createsamples`` called as following:
 
@@ -172,20 +172,26 @@ With ``*.txt`` files in ``annotations`` directory containing information about o
 
     .. code-block:: text
 
-        Image filename : "createsamples/pos/0002_0107_0115_0195_0139.png"
+        Image filename : "/home/user/pos/0002_0107_0115_0195_0139.png"
         Bounding box for object 1 "PASperson" (Xmin, Ymin) - (Xmax, Ymax) : (107, 115) - (302, 254)
 
 And ``annotations.lst`` file containing the list of all annotations file:
 
     .. code-block:: text
 
-        createsamples/annotations/0001_0109_0209_0195_0139.txt
-        createsamples/annotations/0002_0241_0245_0139_0100.txt
+        /home/user/annotations/0001_0109_0209_0195_0139.txt
+        /home/user/annotations/0002_0241_0245_0139_0100.txt
 
 Creating test set as a collection of JPG images
 -----------------------------------------------
 
 This variant of ``opencv_createsamples`` usage is very similar to the previous one, but generates the output in a different format;
+To obtain such behaviour the ``-img``, ``-bg`` and ``-info`` keys should be specified.
+For example, with the ``opencv_createsamples`` called as following:
+
+    .. code-block:: text
+
+        opencv_createsamples -img /home/user/logo.png -bg /home/user/bg.txt -info annotations.lst -maxxangle 0.1 -maxyangle 0.1 -maxzangle 0.1
 
 Directory structure:
 
