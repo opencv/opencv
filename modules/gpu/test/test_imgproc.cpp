@@ -738,7 +738,7 @@ GPU_TEST_P(MatchTemplate32F, Regression)
     cv::Mat dst_gold;
     cv::matchTemplate(image, templ, dst_gold, method);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, templ_size.area() * 1e-1);
+    EXPECT_MAT_NEAR(dst_gold, dst, templ_size.area() * 1.1e-1);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MatchTemplate32F, testing::Combine(
