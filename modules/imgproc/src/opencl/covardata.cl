@@ -16,7 +16,7 @@
 //aaaaaa|abcdefgh|hhhhhhh
 #define EXTRAPOLATE(x, maxV) \
     { \
-        (x) = max(min((x), (maxV) - 1), 0); \
+        (x) = clamp((x), 0, (maxV)-1); \
     }
 #elif defined BORDER_WRAP
 //cdefgh|abcdefgh|abcdefg
@@ -28,13 +28,13 @@
 //fedcba|abcdefgh|hgfedcb
 #define EXTRAPOLATE(x, maxV) \
     { \
-        (x) = min( mad24((maxV)-1,2,-(x))+1 , max((x),-(x)-1) ); \
+        (x) = clamp(min( mad24((maxV)-1,2,-(x))+1 , max((x),-(x)-1) ), 0, (maxV)-1); \
     }
 #elif defined BORDER_REFLECT_101 || defined BORDER_REFLECT101
 //gfedcb|abcdefgh|gfedcba
 #define EXTRAPOLATE(x, maxV) \
     { \
-        (x) = min( mad24((maxV)-1,2,-(x)), max((x),-(x)) ); \
+        (x) = clamp(min( mad24((maxV)-1,2,-(x)), max((x),-(x)) ), 0, (maxV)-1); \
     }
 #else
 #error No extrapolation method
