@@ -61,13 +61,13 @@ __kernel void sumConvert(__global const uchar * src1ptr, int src1_step, int src1
 // fedcba|abcdefgh|hgfedcb
 #define EXTRAPOLATE(x, maxV) \
     { \
-        (x) = clamp(min(((maxV)-1)*2-(x)+1, max((x),-(x)-1) ), 0, (maxV)-1); \
+        (x) = min(((maxV)-1)*2-(x)+1, max((x),-(x)-1) ); \
     }
 #elif defined BORDER_REFLECT_101
 // gfedcb|abcdefgh|gfedcba
 #define EXTRAPOLATE(x, maxV) \
     { \
-        (x) = clamp(min(((maxV)-1)*2-(x), max((x),-(x)) ), 0, (maxV)-1); \
+        (x) = min(((maxV)-1)*2-(x), max((x),-(x)) ); \
     }
 #else
 #error No extrapolation method
