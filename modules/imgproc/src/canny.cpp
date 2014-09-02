@@ -195,20 +195,20 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
             hysteresis (add weak edges if they are connected with strong edges)
     */
 
+    int sizey = lSizeY / PIX_PER_WI;
+    if (sizey == 0)
+        sizey = 1;
+
+    size_t globalsize[2] = { size.width, (size.height + PIX_PER_WI - 1) / PIX_PER_WI }, localsize[2] = { lSizeX, sizey };
+
     ocl::Kernel edgesHysteresis("stage2_hysteresis", ocl::imgproc::canny_oclsrc,
-                                format("-D STAGE2 -D PIX_PER_WI=%d", PIX_PER_WI));
+                                format("-D STAGE2 -D PIX_PER_WI=%d -D LOCAL_X=%d -D LOCAL_Y=%d",
+                                PIX_PER_WI, lSizeX, sizey));
 
     if (edgesHysteresis.empty())
         return false;
 
     edgesHysteresis.args(ocl::KernelArg::ReadWrite(map));
-
-    int sizey = lSizeY / PIX_PER_WI;
-    if (sizey == 0)
-        sizey = 1;
-
-    size_t globalsize[2] = { size.width, size.height / PIX_PER_WI }, localsize[2] = { lSizeX, sizey };
-
     if (!edgesHysteresis.run(2, globalsize, localsize, false))
         return false;
 
