@@ -363,8 +363,8 @@ void BFMatcher::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch>
     for( iIdx = 0; iIdx < imgCount; iIdx++ )
     {
         CV_Assert( trainDescCollection[iIdx].rows < IMGIDX_ONE );
-        batchDistance(queryDescriptors, trainDescCollection[iIdx], dist, dtype, nidx,
-                      normType, knn, masks.empty() ? Mat() : masks[iIdx], update, crossCheck);
+        batchDistanceForBFMatcher(queryDescriptors, trainDescCollection[iIdx], dist, dtype, nidx,
+                                  normType, knn, masks.empty() ? Mat() : masks[iIdx], update, crossCheck);
         update += IMGIDX_ONE;
     }
 
