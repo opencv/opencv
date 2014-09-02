@@ -56,7 +56,7 @@ using namespace std;
 
 
 //required confidence when double_step is used
-#define REQ_CONF 0.1
+#define REQ_CONF 0.1f
 
 #define MINIMUM_NR_SUBLABELS 1
 
@@ -103,8 +103,8 @@ private:
     inline void addPixel(int level, int label, int image_idx);
     inline void deletePixel(int level, int label, int image_idx);
     inline bool probability(int image_idx, int label1, int label2, int prior1, int prior2);
-    inline int threebyfour(int x, int y, unsigned int label);
-    inline int fourbythree(int x, int y, unsigned int label);
+    inline int threebyfour(int x, int y, int label);
+    inline int fourbythree(int x, int y, int label);
 
     inline void updateLabels();
     // main loop for pixel updating
@@ -198,7 +198,7 @@ SuperpixelSEEDSImpl::SuperpixelSEEDSImpl(int image_width, int image_height, int 
     for (int i = 1; i < nr_channels; ++i)
         histogram_size *= nr_bins;
     histogram_size_aligned = (histogram_size
-        + ((CV_MALLOC_ALIGN / sizeof(HISTN)) - 1)) & -(CV_MALLOC_ALIGN / sizeof(HISTN));
+        + ((CV_MALLOC_ALIGN / sizeof(HISTN)) - 1)) & -static_cast<int>(CV_MALLOC_ALIGN / sizeof(HISTN));
 
     initialize(num_superpixels, num_levels);
 }
@@ -265,7 +265,7 @@ void SuperpixelSEEDSImpl::initialize(int num_superpixels, int num_levels)
         num_superpixels = 10;
     if( num_levels < 2 )
         num_levels = 2;
-    int num_superpixels_h = sqrt(num_superpixels * height / width);
+    int num_superpixels_h = (int)sqrtf((float)num_superpixels * height / width);
     int num_superpixels_w = num_superpixels_h * width / height;
     seeds_nr_levels = num_levels + 1;
     float seeds_wf, seeds_hf;
@@ -275,8 +275,8 @@ void SuperpixelSEEDSImpl::initialize(int num_superpixels, int num_levels)
         seeds_wf = (float)width / num_superpixels_w / (1<<(seeds_nr_levels-1));
         seeds_hf = (float)height / num_superpixels_h / (1<<(seeds_nr_levels-1));
     } while( seeds_wf < 1.f || seeds_hf < 1.f );
-    int seeds_w = ceil(seeds_wf);
-    int seeds_h = ceil(seeds_hf);
+    int seeds_w = (int)ceil(seeds_wf);
+    int seeds_h = (int)ceil(seeds_hf);
     CV_Assert(seeds_nr_levels > 0);
 
     seeds_top_level = seeds_nr_levels - 1;
@@ -290,8 +290,8 @@ void SuperpixelSEEDSImpl::initialize(int num_superpixels, int num_levels)
     parent_pre_init = new int*[seeds_nr_levels];
     nr_wh = new int[2 * seeds_nr_levels];
     int level = 0;
-    int nr_seeds_w = floor(width / seeds_w);
-    int nr_seeds_h = floor(height / seeds_h);
+    int nr_seeds_w = (int)floor(width / seeds_w);
+    int nr_seeds_h = (int)floor(height / seeds_h);
     int nr_seeds = nr_seeds_w * nr_seeds_h;
     nr_wh[2 * level] = nr_seeds_w;
     nr_wh[2 * level + 1] = nr_seeds_h;
@@ -967,7 +967,7 @@ bool SuperpixelSEEDSImpl::probability(int image_idx, int label1, int label2,
     return (P_label2 > P_label1);
 }
 
-int SuperpixelSEEDSImpl::threebyfour(int x, int y, unsigned int label)
+int SuperpixelSEEDSImpl::threebyfour(int x, int y, int label)
 {
     /* count how many pixels in a neighborhood of (x,y) have the label 'label'.
      * neighborhood (x=counted, o,O=ignored, O=(x,y)):
@@ -1017,7 +1017,7 @@ int SuperpixelSEEDSImpl::threebyfour(int x, int y, unsigned int label)
 #endif
 }
 
-int SuperpixelSEEDSImpl::fourbythree(int x, int y, unsigned int label)
+int SuperpixelSEEDSImpl::fourbythree(int x, int y, int label)
 {
     /* count how many pixels in a neighborhood of (x,y) have the label 'label'.
      * neighborhood (x=counted, o,O=ignored, O=(x,y)):
@@ -1226,7 +1226,7 @@ void SuperpixelSEEDSImpl::getLabelContourMask(OutputArray image, bool thick_line
                 }
             }
             if( neighbors > 1 )
-                *dst.ptr<uchar>(j, k) = -1;
+                *dst.ptr<uchar>(j, k) = (uchar)-1;
         }
     }
 }
