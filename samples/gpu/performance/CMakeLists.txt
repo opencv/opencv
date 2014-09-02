@@ -4,7 +4,11 @@ file(GLOB sources "performance/*.cpp")
 file(GLOB headers "performance/*.h")
 
 if(HAVE_opencv_xfeatures2d)
-  ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/xfeatures2d/include")
+  ocv_include_directories("${opencv_xfeatures2d_SOURCE_DIR}/include")
+endif()
+
+if(HAVE_opencv_bgsegm)
+  ocv_include_directories("${opencv_bgsegm_SOURCE_DIR}/include")
 endif()
 
 add_executable(${the_target} ${sources} ${headers})
@@ -12,6 +16,10 @@ ocv_target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CUDA_SAMP
 
 if(HAVE_opencv_xfeatures2d)
   ocv_target_link_libraries(${the_target} opencv_xfeatures2d)
+endif()
+
+if(HAVE_opencv_bgsegm)
+  ocv_target_link_libraries(${the_target} opencv_bgsegm)
 endif()
 
 set_target_properties(${the_target} PROPERTIES

@@ -12,7 +12,6 @@
 #include "opencv2/cudaoptflow.hpp"
 #include "opencv2/cudabgsegm.hpp"
 
-#include "opencv2/legacy.hpp"
 #include "performance.h"
 
 #include "opencv2/opencv_modules.hpp"
@@ -20,6 +19,10 @@
 #ifdef HAVE_OPENCV_XFEATURES2D
 #include "opencv2/xfeatures2d/cuda.hpp"
 #include "opencv2/xfeatures2d/nonfree.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_BGSEGM
+#include "opencv2/bgsegm.hpp"
 #endif
 
 using namespace std;
@@ -281,7 +284,7 @@ TEST(SURF)
     Mat src = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
     if (src.empty()) throw runtime_error("can't open aloeL.jpg");
 
-    SURF surf;
+    xfeatures2d::SURF surf;
     vector<KeyPoint> keypoints;
     Mat descriptors;
 
@@ -1267,62 +1270,7 @@ TEST(FarnebackOpticalFlow)
     }}}
 }
 
-namespace cv
-{
-    template<> void DefaultDeleter<CvBGStatModel>::operator ()(CvBGStatModel* obj) const
-    {
-        cvReleaseBGStatModel(&obj);
-    }
-}
-
-TEST(FGDStatModel)
-{
-    const std::string inputFile = abspath("768x576.avi");
-
-    VideoCapture cap(inputFile);
-    if (!cap.isOpened()) throw runtime_error("can't open 768x576.avi");
-
-    Mat frame;
-    cap >> frame;
-
-    IplImage ipl_frame = frame;
-    Ptr<CvBGStatModel> model(cvCreateFGDStatModel(&ipl_frame));
-
-    while (!TestSystem::instance().stop())
-    {
-        cap >> frame;
-        ipl_frame = frame;
-
-        TestSystem::instance().cpuOn();
-
-        cvUpdateBGStatModel(&ipl_frame, model);
-
-        TestSystem::instance().cpuOff();
-    }
-    TestSystem::instance().cpuComplete();
-
-    cap.open(inputFile);
-
-    cap >> frame;
-
-    cuda::GpuMat d_frame(frame), d_fgmask;
-    Ptr<BackgroundSubtractor> d_fgd = cuda::createBackgroundSubtractorFGD();
-
-    d_fgd->apply(d_frame, d_fgmask);
-
-    while (!TestSystem::instance().stop())
-    {
-        cap >> frame;
-        d_frame.upload(frame);
-
-        TestSystem::instance().gpuOn();
-
-        d_fgd->apply(d_frame, d_fgmask);
-
-        TestSystem::instance().gpuOff();
-    }
-    TestSystem::instance().gpuComplete();
-}
+#ifdef HAVE_OPENCV_BGSEGM
 
 TEST(MOG)
 {
@@ -1334,7 +1282,7 @@ TEST(MOG)
     cv::Mat frame;
     cap >> frame;
 
-    cv::Ptr<cv::BackgroundSubtractor> mog = cv::createBackgroundSubtractorMOG();
+    cv::Ptr<cv::BackgroundSubtractor> mog = cv::bgsegm::createBackgroundSubtractorMOG();
     cv::Mat foreground;
 
     mog->apply(frame, foreground, 0.01);
@@ -1374,6 +1322,8 @@ TEST(MOG)
     }
     TestSystem::instance().gpuComplete();
 }
+
+#endif
 
 TEST(MOG2)
 {
