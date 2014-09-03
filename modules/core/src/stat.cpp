@@ -1446,7 +1446,8 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
             kercn = haveMask ? cn : std::min(4, ocl::predictOptimalVectorWidth(_src, _src2));
 
-    if (haveMask && dev.isAMD())
+    // disabled following modes since it occasionally fails on AMD devices (e.g. A10-6800K, sep. 2014)
+    if ((haveMask || type == CV_32FC1) && dev.isAMD())
         return false;
 
     CV_Assert( (cn == 1 && (!haveMask || _mask.type() == CV_8U)) ||
