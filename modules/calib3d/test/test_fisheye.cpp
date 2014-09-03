@@ -110,20 +110,16 @@ TEST_F(fisheyeTest, undistortImage)
         newK(1, 1) = 100;
         cv::fisheye::undistortImage(distorted, undistorted, K, D, newK);
         cv::Mat correct = cv::imread(combine(datasets_repository_path, "new_f_100.png"));
-        if (correct.empty())
-            CV_Assert(cv::imwrite(combine(datasets_repository_path, "new_f_100.png"), undistorted));
-        else
-            EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
+        CV_Assert(!correct.empty());
+        EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
     }
     {
         double balance = 1.0;
         cv::fisheye::estimateNewCameraMatrixForUndistortRectify(K, D, distorted.size(), cv::noArray(), newK, balance);
         cv::fisheye::undistortImage(distorted, undistorted, K, D, newK);
         cv::Mat correct = cv::imread(combine(datasets_repository_path, "balance_1.0.png"));
-        if (correct.empty())
-            CV_Assert(cv::imwrite(combine(datasets_repository_path, "balance_1.0.png"), undistorted));
-        else
-            EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
+        CV_Assert(!correct.empty());
+        EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
     }
 
     {
@@ -131,10 +127,8 @@ TEST_F(fisheyeTest, undistortImage)
         cv::fisheye::estimateNewCameraMatrixForUndistortRectify(K, D, distorted.size(), cv::noArray(), newK, balance);
         cv::fisheye::undistortImage(distorted, undistorted, K, D, newK);
         cv::Mat correct = cv::imread(combine(datasets_repository_path, "balance_0.0.png"));
-        if (correct.empty())
-            CV_Assert(cv::imwrite(combine(datasets_repository_path, "balance_0.0.png"), undistorted));
-        else
-            EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
+        CV_Assert(!correct.empty());
+        EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
     }
 }
 
@@ -422,15 +416,10 @@ TEST_F(fisheyeTest, rectify)
         cv::rectangle(r, cv::Rect(255-ndisp, 0, 829+ndisp ,l.rows-1), CV_RGB(255, 0, 0));
         cv::remap(l, lundist, lmapx, lmapy, cv::INTER_LINEAR);
         cv::remap(r, rundist, rmapx, rmapy, cv::INTER_LINEAR);
-
         cv::Mat rectification = mergeRectification(lundist, rundist);
-
         cv::Mat correct = cv::imread(combine(datasets_repository_path, cv::format("rectification_AB_%03d.png", i)));
-
-        if (correct.empty())
-            cv::imwrite(combine(datasets_repository_path, cv::format("rectification_AB_%03d.png", i)), rectification);
-         else
-             EXPECT_MAT_NEAR(correct, rectification, 1e-10);
+        CV_Assert(!correct.empty());
+        EXPECT_MAT_NEAR(correct, rectification, 1e-10);
      }
 }
 
