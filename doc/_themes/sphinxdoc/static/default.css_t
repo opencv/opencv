@@ -1,8 +1,8 @@
 /*
- * sphinx13.css
- * ~~~~~~~~~~~~
+ * sphinxdoc.css_t
+ * ~~~~~~~~~~~~~~~
  *
- * Sphinx stylesheet -- sphinx13 theme.
+ * Sphinx stylesheet -- sphinxdoc theme.
  *
  * :copyright: Copyright 2007-2014 by the Sphinx team, see AUTHORS.
  * :license: BSD, see LICENSE for details.
@@ -27,39 +27,6 @@ body {
     margin: 0 auto;
     min-width: 780px;
     max-width: 1080px;
-}
-
-.pageheader {
-    background-image: url(headerbg.png);
-    text-align: left;
-    padding: 10px 15px;
-}
-
-.pageheader ul {
-    float: right;
-    color: white;
-    list-style-type: none;
-    padding-left: 0;
-    margin-top: 30px;
-    margin-right: 10px;
-}
-
-.pageheader li {
-    float: left;
-    margin: 0 0 0 10px;
-}
-
-.pageheader li a {
-    border-radius: 1px;
-    padding: 8px 12px;
-    color: #f9f9f0;
-    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
-}
-
-.pageheader li a:hover {
-    background-color: #f9f9f0;
-    color: #0a507a;
-    text-shadow: none;
 }
 
 div.document {
@@ -110,7 +77,6 @@ div.related ul li a {
 
 div.related ul li a:hover {
     color: white;
-    /*text-decoration: underline;*/
     text-shadow: 0px 0px 1px rgba(255, 255, 255, 0.5);
 }
 
@@ -141,13 +107,11 @@ div.sphinxsidebar {
 }
 
 div.sphinxsidebar .logo {
-    font-size: 1.8em;
-    color: #0A507A;
-    font-weight: 300;
     text-align: center;
 }
 
 div.sphinxsidebar .logo img {
+    width: 150px;
     vertical-align: middle;
 }
 
@@ -208,51 +172,55 @@ p {
     margin: 0.8em 0 0.5em 0;
 }
 
-a {
-    color: #A2881D;
-    text-decoration: none;
+a, a tt {
+    color: #2878a2; // a2881d
 }
 
-a:hover {
-    color: #E1C13F;
+a:hover, a tt:hover {
+    color: #68b8c2; // #e1c13f;
 }
 
-div.body a {
-    text-decoration: underline;
+a tt {
+    border: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #0a507a;
+    background-color: #f2f8fa;
+    font-weight: 300;
 }
 
 h1 {
     margin: 10px 0 0 0;
-    font-size: 2.4em;
-    color: #0A507A;
-    font-weight: 300;
 }
 
 h2 {
     margin: 1.em 0 0.2em 0;
-    font-size: 1.5em;
-    font-weight: 300;
     padding: 0;
-    color: #174967;
 }
 
 h3 {
     margin: 1em 0 -0.3em 0;
-    font-size: 1.3em;
-    font-weight: 300;
 }
 
-div.body h1 a, div.body h2 a, div.body h3 a, div.body h4 a, div.body h5 a, div.body h6 a {
+h1 { font-size: 200%; }
+h2 { font-size: 160%; }
+h3 { font-size: 140%; }
+h4 { font-size: 120%; }
+h5 { font-size: 110%; }
+h6 { font-size: 100%; }
+
+div a, h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
     text-decoration: none;
 }
 
 div.body h1 a tt, div.body h2 a tt, div.body h3 a tt, div.body h4 a tt, div.body h5 a tt, div.body h6 a tt {
-    color: #0A507A !important;
+    color: #0a507a !important;
     font-size: inherit !important;
 }
 
 a.headerlink {
-    color: #0A507A !important;
+    color: #0a507a !important;
     font-size: 12px;
     margin-left: 6px;
     padding: 0 4px 0 4px;
@@ -289,15 +257,6 @@ hr {
     margin: 2em;
 }
 
-a tt {
-    border: 0;
-    color: #a2881d;
-}
-
-a tt:hover {
-    color: #e1c13f;
-}
-
 pre {
     font-family: 'Consolas', 'DejaVu Sans Mono',
                  'Bitstream Vera Sans Mono', monospace;
@@ -312,7 +271,7 @@ pre {
 
 pre a {
     color: inherit;
-    text-decoration: underline;
+    text-decoration: none;
 }
 
 td.linenos pre {
@@ -341,54 +300,39 @@ table td, table th {
     padding: 0.2em 0.5em 0.2em 0.5em;
 }
 
-div.admonition, div.warning {
-    font-size: 0.9em;
-    margin: 1em 0 1em 0;
-    border: 1px solid #86989B;
-    border-radius: 2px;
-    background-color: #f7f7f7;
-    padding: 0;
+div.note {
+    background-color: #eee;
+    border: 1px solid #ccc;
 }
 
-div.admonition p, div.warning p {
-    margin: 0.5em 1em 0.5em 1em;
-    padding: 0;
+div.seealso {
+    background-color: #ffc;
+    border: 1px solid #ff6;
 }
 
-div.admonition pre, div.warning pre {
-    margin: 0.4em 1em 0.4em 1em;
-}
-
-div.admonition p.admonition-title,
-div.warning p.admonition-title {
-    margin-top: 1em;
-    padding-top: 0.5em;
-    font-weight: bold;
+div.topic {
+    background-color: #eee;
 }
 
 div.warning {
-    border: 1px solid #940000;
-/*    background-color: #FFCCCF;*/
+    background-color: #ffe4e4;
+    border: 1px solid #f66;
 }
 
-div.warning p.admonition-title {
+div.admonition ul li, div.warning ul li {
+    text-align: left;
 }
 
-div.admonition ul, div.admonition ol,
-div.warning ul, div.warning ol {
-    margin: 0.1em 0.5em 0.5em 3em;
-    padding: 0;
+div.admonition p.admonition-title + p {
+    display: inline;
 }
 
-.viewcode-back {
-    font-family: 'Open Sans', 'Lucida Grande', 'Lucida Sans Unicode', 'Geneva',
-                 'Verdana', sans-serif;
+p.admonition-title {
+    display: inline;
 }
 
-div.viewcode-block:target {
-    background-color: #f4debf;
-    border-top: 1px solid #ac9;
-    border-bottom: 1px solid #ac9;
+p.admonition-title:after {
+    content: ":";
 }
 
 /* ------------------ our styles ----------------*/
@@ -428,17 +372,6 @@ div.feedback a {
     font-weight: bold;
 }
 
-img.logo {
-    width: 150px;
-}
-
-tt, tt.descname {
-    color: {{ theme_headtextcolor }};
-    /*background-color: #ecf0f3;*/
-    padding: 0 1px 0 1px;
-    font-size: 1.4em;
-}
-
 div.math p {
     margin-top: 10px;
     margin-bottom: 10px;
@@ -456,7 +389,6 @@ dl.cfunction > dt:first-child {
 dl.cfunction > dt:first-child tt.descname {
     color: #8080B0;
 }
-
 
 dl.pyfunction > dt:first-child {
     margin-bottom: 7px;
