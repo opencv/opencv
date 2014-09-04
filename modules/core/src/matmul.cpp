@@ -782,7 +782,6 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
 {
     int depth = matA.depth(), cn = matA.channels();
     int type = CV_MAKETYPE(depth, cn);
-    const int block_size = 16;
 
     CV_Assert( type == matB.type() && (type == CV_32FC1 || type == CV_64FC1 || type == CV_32FC2 || type == CV_64FC2) );
 
@@ -808,14 +807,8 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
     CV_Assert( matB.type() == type && (!haveC || matC.type() == type) );
     CV_Assert( sizeA.width == sizeB.height && (!haveC || sizeC == sizeD) );
 
-    String opts = format("-D T=%s -D T1=%s -D cn=%d -D LOCAL_SIZE=%d %s %s",
-                          ocl::typeToStr(type), ocl::typeToStr(depth), cn, block_size,
-                          haveC ? "-D HAVE_C" : "",
-                          doubleSupport ? " -D DOUBLE_SUPPORT" : "");
-
-    ocl::Kernel k("gemm", cv::ocl::core::gemm_oclsrc, opts);
-    if (k.empty())
-        return false;
+    int max_wg_size = (int)dev.maxWorkGroupSize();
+    int block_size = (max_wg_size / (32*cn) < 32) ? (max_wg_size / (16*cn) < 16) ? (max_wg_size / (8*cn) < 8) ? 1 : 8 : 16 : 32;
 
     matD.create(sizeD, type);
 
@@ -832,24 +825,37 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
     else
         D.setTo(Scalar::all(0));
 
+    int vectorWidths[] = { 4, 4, 2, 2, 1, 4, cn, -1 };
+
+    int kercn = ocl::checkOptimalVectorWidth(vectorWidths, B, D);
+
+    String opts = format("-D T=%s -D T1=%s -D WT=%s -D cn=%d -D kercn=%d -D LOCAL_SIZE=%d %s %s %s",
+                          ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(CV_MAKETYPE(depth, kercn)),
+                          cn, kercn, block_size,
+                          (sizeA.width % block_size !=0) ? "-D NO_MULT" : "",
+                          haveC ? "-D HAVE_C" : "",
+                          doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+
+    ocl::Kernel k("gemm", cv::ocl::core::gemm_oclsrc, opts);
+    if (k.empty())
+        return false;
+
     if (depth == CV_64F)
         k.args(ocl::KernelArg::ReadOnlyNoSize(A),
-               ocl::KernelArg::ReadOnlyNoSize(B),
-               ocl::KernelArg::ReadWrite(D),
+               ocl::KernelArg::ReadOnlyNoSize(B, cn, kercn),
+               ocl::KernelArg::ReadWrite(D, cn, kercn),
                sizeA.width, alpha, beta);
     else
         k.args(ocl::KernelArg::ReadOnlyNoSize(A),
-               ocl::KernelArg::ReadOnlyNoSize(B),
-               ocl::KernelArg::ReadWrite(D),
+               ocl::KernelArg::ReadOnlyNoSize(B, cn, kercn),
+               ocl::KernelArg::ReadWrite(D, cn, kercn),
                sizeA.width, (float)alpha, (float)beta);
 
-    size_t globalsize[2] = { sizeD.width, sizeD.height};
+    size_t globalsize[2] = { sizeD.width * cn / kercn, sizeD.height};
     size_t localsize[2] = { block_size, block_size};
-    return k.run(2, globalsize, localsize, false);
+    return k.run(2, globalsize, block_size!=1 ? localsize : NULL, false);
 }
-
 #endif
-
 }
 
 void cv::gemm( InputArray matA, InputArray matB, double alpha,
