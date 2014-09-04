@@ -674,62 +674,56 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     ocl::Device dev = ocl::Device::getDefault();
 
     // make list of nonzero points
-    const int pixelsPerWI = 4;
-    int group_size = (src.cols + pixelsPerWI - 1)/pixelsPerWI;
+    const int pixelsPerWI = 8;
+    int workgroup_size = min((int) dev.maxWorkGroupSize(), (src.cols + pixelsPerWI - 1)/pixelsPerWI);
     ocl::Kernel pointListKernel("make_point_list", ocl::imgproc::hough_lines_oclsrc, 
-                                format("-D MAKE_POINT_LIST -D GROUP_SIZE=%d -D LOCAL_SIZE=%d", group_size, src.cols));
+                                format("-D MAKE_POINTS_LIST -D GROUP_SIZE=%d -D LOCAL_SIZE=%d", workgroup_size, src.cols));
     if (pointListKernel.empty())
         return false;
 
     UMat pointsList(1, (int) src.total(), CV_32SC1);
-    UMat total(1, 1, CV_32SC1, Scalar::all(0));
+    UMat counters(1, 2, CV_32SC1, Scalar::all(0));
     pointListKernel.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnlyNoSize(pointsList),
-                         ocl::KernelArg::PtrWriteOnly(total));
-    size_t localThreads[2]  = { group_size, 1 };
-    size_t globalThreads[2] = { group_size, src.rows };
+                         ocl::KernelArg::PtrWriteOnly(counters));
+    size_t localThreads[2]  = { workgroup_size, 1 };
+    size_t globalThreads[2] = { workgroup_size, src.rows };
 
     if (!pointListKernel.run(2, globalThreads, localThreads, false))
         return false;
 
-    int total_points = total.getMat(ACCESS_READ).at<int>(0, 0);
+    int total_points = counters.getMat(ACCESS_READ).at<int>(0, 0);
     if (total_points <= 0)
     {
         _lines.assign(UMat(0,0,CV_32FC2));
         return true;
     }
 
-    // convert src to hough space
-    group_size = min((int) dev.maxWorkGroupSize(), total_points);
-    int local_memory_needed = (numrho + 2)*sizeof(int);
-    ocl::Kernel fillAccumKernel;
-    globalThreads[0] = group_size; globalThreads[1] = numangle;
-    size_t* fillAccumLT = NULL;
-
+    // convert src image to hough space
     UMat accum(numangle + 2, numrho + 2, CV_32SC1);
-
+    workgroup_size = min((int) dev.maxWorkGroupSize(), total_points);
+    ocl::Kernel fillAccumKernel;
+    size_t* fillAccumLT = NULL;
+    int local_memory_needed = (numrho + 2)*sizeof(int);
     if (local_memory_needed > dev.localMemSize())
     {
+        accum.setTo(Scalar::all(0));
         fillAccumKernel.create("fill_accum_global", ocl::imgproc::hough_lines_oclsrc,
                                 format("-D FILL_ACCUM_GLOBAL"));
-        accum.setTo(Scalar::all(0));
+        globalThreads[0] = workgroup_size; globalThreads[1] = numangle;
     }
     else
     {
         fillAccumKernel.create("fill_accum_local", ocl::imgproc::hough_lines_oclsrc,
-                                format("-D FILL_ACCUM_LOCAL -D LOCAL_SIZE=%d -D BUFFER_SIZE=%d", group_size, numrho + 2));
-        localThreads[0] = group_size; localThreads[1] = 1;
+                                format("-D FILL_ACCUM_LOCAL -D LOCAL_SIZE=%d -D BUFFER_SIZE=%d", workgroup_size, numrho + 2));
+        localThreads[0] = workgroup_size; localThreads[1] = 1;
+        globalThreads[0] = workgroup_size; globalThreads[1] = numangle+2;
         fillAccumLT = localThreads;
     }
     if (fillAccumKernel.empty())
         return false;
 
-    int linesMax = min(total_points*numangle/threshold, 4096);
-    UMat lines(linesMax, 1, CV_32FC2);
-    UMat lines_count(1, 1, CV_32SC1, Scalar::all(0));
-
     fillAccumKernel.args(ocl::KernelArg::ReadOnlyNoSize(pointsList), ocl::KernelArg::WriteOnly(accum),
                          total_points, irho, (float) theta, numrho, numangle);
-
 
     if (!fillAccumKernel.run(2, globalThreads, fillAccumLT, false))
         return false;
@@ -739,15 +733,18 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     if (getLinesKernel.empty())
         return false;
 
-    globalThreads[0] = numrho; globalThreads[1] = numangle;
-    getLinesKernel.args(ocl::KernelArg::ReadOnly(accum), ocl::KernelArg::WriteOnlyNoSize(lines),
-                        ocl::KernelArg::PtrWriteOnly(lines_count), linesMax, threshold, (float) rho, (float) theta);
+    // TODO: investigate other strategies to choose linesMax
+    int linesMax = min(total_points*numangle/threshold, 4096);
+    UMat lines(linesMax, 1, CV_32FC2);
 
+    getLinesKernel.args(ocl::KernelArg::ReadOnly(accum), ocl::KernelArg::WriteOnlyNoSize(lines),
+                        ocl::KernelArg::PtrWriteOnly(counters), linesMax, threshold, (float) rho, (float) theta);
+
+    globalThreads[0] = numrho; globalThreads[1] = numangle;
     if (!getLinesKernel.run(2, globalThreads, NULL, false))
         return false;
-
     
-    int total_lines = min(lines_count.getMat(ACCESS_READ).at<int>(0, 0), linesMax);
+    int total_lines = min(counters.getMat(ACCESS_READ).at<int>(0, 1), linesMax);
     if (total_lines > 0)
         _lines.assign(lines.rowRange(Range(0, total_lines)));
     else

@@ -41,7 +41,7 @@ PARAM_TEST_CASE(HoughLinesTestBase, double, double, int)
 
     virtual void generateTestData()
     {
-        src_size = randomSize(500, 1000);
+        src_size = randomSize(500, 1920);
         src.create(src_size, CV_8UC1);
         src.setTo(Scalar::all(0));
         line(src, Point(0, 100), Point(100, 100), Scalar::all(255), 1);
@@ -101,7 +101,7 @@ OCL_TEST_P(HoughLines, GeneratedImage)
         OCL_OFF(cv::HoughLines(src, dst, rhoStep, thetaStep, threshold));
         OCL_ON(cv::HoughLines(usrc, udst, rhoStep, thetaStep, threshold));
 
-        //Near(1e-5);
+        Near(1e-5);
     }
 }
 
