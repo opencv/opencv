@@ -671,16 +671,20 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
 
     size_t wgs = dev.maxWorkGroupSize();
     size_t lmsz = dev.localMemSize();
-
     size_t src_step = _src.step(), src_offset = _src.offset();
+    const size_t tileSizeYmax = wgs / tileSizeX;
+
+    // workaround for Nvidia: 3 channel vector type takes 4*elem_size in local memory
+    int loc_mem_cn = dev.vendorID() == ocl::Device::VENDOR_NVIDIA && cn == 3 ? 4 : cn;
+
     if (((src_offset % src_step) % esz == 0) &&
         (
          (borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE) ||
          ((borderType == BORDER_REFLECT || borderType == BORDER_WRAP || borderType == BORDER_REFLECT_101) &&
-          (_src.cols() >= kernelX.cols && _src.rows() >= kernelY.cols))
+          (_src.cols() >= (int) (kernelX.cols + tileSizeX) && _src.rows() >= (int) (kernelY.cols + tileSizeYmax)))
         ) &&
-        (tileSizeX * tileSizeYmin  <= wgs) &&
-        (LAPLACIAN_LOCAL_MEM(tileSizeX, tileSizeYmin, kernelX.cols, cn * 4) <= lmsz)
+        (tileSizeX * tileSizeYmin <= wgs) &&
+        (LAPLACIAN_LOCAL_MEM(tileSizeX, tileSizeYmin, kernelX.cols, loc_mem_cn * 4) <= lmsz)
        )
     {
         Size size = _src.size(), wholeSize;
@@ -688,8 +692,8 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
         int dtype = CV_MAKE_TYPE(ddepth, cn);
         int wdepth = CV_32F;
 
-        size_t tileSizeY = wgs / tileSizeX;
-        while ((tileSizeX * tileSizeY > wgs) || (LAPLACIAN_LOCAL_MEM(tileSizeX, tileSizeY, kernelX.cols, cn * 4) > lmsz))
+        size_t tileSizeY = tileSizeYmax;
+        while ((tileSizeX * tileSizeY > wgs) || (LAPLACIAN_LOCAL_MEM(tileSizeX, tileSizeY, kernelX.cols, loc_mem_cn * 4) > lmsz))
         {
             tileSizeY /= 2;
         }

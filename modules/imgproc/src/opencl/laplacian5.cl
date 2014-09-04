@@ -49,7 +49,7 @@ __kernel void sumConvert(__global const uchar * src1ptr, int src1_step, int src1
 // aaaaaa|abcdefgh|hhhhhhh
 #define EXTRAPOLATE(x, maxV) \
     { \
-        (x) = max(min((x), (maxV) - 1), 0); \
+        (x) = clamp((x), 0, (maxV)-1); \
     }
 #elif defined BORDER_WRAP
 // cdefgh|abcdefgh|abcdefg
