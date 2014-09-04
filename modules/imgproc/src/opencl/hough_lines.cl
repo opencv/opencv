@@ -5,7 +5,7 @@
 // Copyright (C) 2014, Itseez, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#ifdef MAKE_POINT_LIST
+#ifdef MAKE_POINTS_LIST
 
 __kernel void make_point_list(__global const uchar * src_ptr, int src_step, int src_offset, int src_rows, int src_cols,
                               __global uchar * list_ptr, int list_step, int list_offset, __global int* global_offset)
@@ -54,7 +54,7 @@ __kernel void make_point_list(__global const uchar * src_ptr, int src_step, int 
 
 __kernel void fill_accum_global(__global const uchar * list_ptr, int list_step, int list_offset,
                          __global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
-                         int count, float irho, float theta, int numrho, int numangle)
+                         int total_points, float irho, float theta, int numrho, int numangle)
 {
     int theta_idx = get_global_id(1);
     int count_idx = get_global_id(0);
@@ -70,7 +70,7 @@ __kernel void fill_accum_global(__global const uchar * list_ptr, int list_step, 
 
     if (theta_idx < numangle)
     {
-        for (int i = count_idx; i < count; i += glob_size)
+        for (int i = count_idx; i < total_points; i += glob_size)
         {
             const int val = list[i];
             const int x = (val & 0xFFFF);
@@ -86,43 +86,50 @@ __kernel void fill_accum_global(__global const uchar * list_ptr, int list_step, 
 
 __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, int list_offset,
                                __global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
-                               int count, float irho, float theta, int numrho, int numangle)
+                               int total_points, float irho, float theta, int numrho, int numangle)
 {
     int theta_idx = get_global_id(1);
     int count_idx = get_local_id(0);
-
-    float cosVal;
-    float sinVal = sincos(theta * ((float)theta_idx), &cosVal);
-    sinVal *= irho;
-    cosVal *= irho;
-
-    __local int l_accum[BUFFER_SIZE];
-    for (int i=count_idx; i<BUFFER_SIZE; i+=LOCAL_SIZE)
-        l_accum[i] = 0;
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    __global const int * list = (__global const int*)(list_ptr + list_offset);
-    const int shift = (numrho - 1) / 2;
-
-    if (theta_idx < numangle)
+    
+    if (theta_idx > 0 && theta_idx < numangle + 1)
     {
-        for (int i = count_idx; i < count; i += LOCAL_SIZE)
+        float cosVal;
+        float sinVal = sincos(theta * (float) (theta_idx-1), &cosVal);
+        sinVal *= irho;
+        cosVal *= irho;
+
+        __local int l_accum[BUFFER_SIZE];
+        for (int i=count_idx; i<BUFFER_SIZE; i+=LOCAL_SIZE)
+            l_accum[i] = 0;
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        __global const int * list = (__global const int*)(list_ptr + list_offset);
+        const int shift = (numrho - 1) / 2;
+
+
+        for (int i = count_idx; i < total_points; i += LOCAL_SIZE)
         {
-            const int val = list[i];
-            const int x = (val & 0xFFFF);
-            const int y = (val >> 16) & 0xFFFF;
+            const int point = list[i];
+            const int x = (point & 0xFFFF);
+            const int y = (point >> 16) & 0xFFFF;
 
             int r = convert_int_rte(x * cosVal + y * sinVal) + shift;
             atomic_inc(l_accum + r + 1);
         }
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        __global int* accum = (__global int*)(accum_ptr + mad24(theta_idx, accum_step, accum_offset));
+        for (int i=count_idx; i<BUFFER_SIZE; i+=LOCAL_SIZE)
+            accum[i] = l_accum[i];
     }
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    __global int* accum = (__global int*)(accum_ptr + mad24(theta_idx + 1, accum_step, accum_offset));
-    for (int i=count_idx; i<BUFFER_SIZE; i+=LOCAL_SIZE)
-        accum[i] = l_accum[i];
+    else if (theta_idx < numangle + 2)
+    {
+        __global int* accum = (__global int*)(accum_ptr + mad24(theta_idx, accum_step, accum_offset));
+        for (int i=count_idx; i<BUFFER_SIZE; i+=LOCAL_SIZE)
+            accum[i] = 0;
+    }
 }
 
 #elif defined GET_LINES
@@ -130,7 +137,7 @@ __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, i
 #define ACCUM(ptr) *((__global int*)(ptr))
 
 __kernel void get_lines(__global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
-                         __global uchar * lines_ptr, int lines_step, int lines_offset, __global int* lines_index, 
+                         __global uchar * lines_ptr, int lines_step, int lines_offset, __global int* lines_index_ptr, 
                          int linesMax, int threshold, float rho, float theta)
 {
     int x = get_global_id(0);
@@ -140,6 +147,7 @@ __kernel void get_lines(__global uchar * accum_ptr, int accum_step, int accum_of
     {
         __global uchar* accum = accum_ptr + mad24(y+1, accum_step, mad24(x+1, (int) sizeof(int), accum_offset));
         __global float2* lines = (__global float2*)(lines_ptr + lines_offset);
+        __global int* lines_index = lines_index_ptr + 1;
     
         int curVote = ACCUM(accum);
 
