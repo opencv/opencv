@@ -375,7 +375,8 @@ __kernel void stage1_without_sobel(__global const uchar *dxptr, int dx_step, int
 
 #define loadpix(addr) *(__global int *)(addr)
 #define storepix(val, addr) *(__global int *)(addr) = (int)(val)
-#define l_stack_size 256
+#define LOCAL_TOTAL (LOCAL_X*LOCAL_Y)
+#define l_stack_size (4*LOCAL_TOTAL)
 #define p_stack_size 8
 
 __constant short move_dir[2][8] = {
@@ -390,7 +391,7 @@ __kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offse
     int x = get_global_id(0);
     int y0 = get_global_id(1) * PIX_PER_WI;
 
-    int lid = get_local_id(0) + get_local_id(1) * 32;
+    int lid = get_local_id(0) + get_local_id(1) * LOCAL_X;
 
     __local ushort2 l_stack[l_stack_size];
     __local int l_counter;
@@ -402,10 +403,13 @@ __kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offse
     #pragma unroll
     for (int y = y0; y < min(y0 + PIX_PER_WI, rows); ++y)
     {
-        int type = loadpix(map + mad24(y, map_step, x * (int)sizeof(int)));
-        if (type == 2)
+        if (x < cols)
         {
-            l_stack[atomic_inc(&l_counter)] = (ushort2)(x, y);
+            int type = loadpix(map + mad24(y, map_step, x * (int)sizeof(int)));
+            if (type == 2)
+            {
+                l_stack[atomic_inc(&l_counter)] = (ushort2)(x, y);
+            }
         }
     }
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -415,8 +419,8 @@ __kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offse
 
     while(l_counter != 0)
     {
-        int mod = l_counter % 64;
-        int pix_per_thr = l_counter / 64 + (lid < mod) ? 1 : 0;
+        int mod = l_counter % LOCAL_TOTAL;
+        int pix_per_thr = l_counter / LOCAL_TOTAL + ((lid < mod) ? 1 : 0);
 
         #pragma unroll
         for (int i = 0; i < pix_per_thr; ++i)
