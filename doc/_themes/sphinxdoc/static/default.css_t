@@ -51,15 +51,13 @@ div.related {
 
 div.related ul {
     background-image: url(relbg.png);
-    height: 1.9em;
+    text-align: left;
     border-top: 1px solid #002e50;
     border-bottom: 1px solid #002e50;
 }
 
-div.related ul li {
-    margin: 0 5px 0 0;
-    padding: 0;
-    float: left;
+div.related li + li {
+    display: inline;
 }
 
 div.related ul li.right {
@@ -122,6 +120,14 @@ div.sphinxsidebar input {
     font-size: 1em;
 }
 
+div.sphinxsidebar #searchbox input[type="text"] {
+    width: 160px;
+}
+
+div.sphinxsidebar #searchbox input[type="submit"] {
+    width: 40px;
+}
+
 div.sphinxsidebar h3 {
     font-size: 1.5em;
     border-top: 1px solid #0a507a;
@@ -173,11 +179,11 @@ p {
 }
 
 a, a tt {
-    color: #2878a2; // a2881d
+    color: #2878a2;
 }
 
 a:hover, a tt:hover {
-    color: #68b8c2; // #e1c13f;
+    color: #68b8c2;
 }
 
 a tt {
@@ -214,7 +220,8 @@ div a, h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
     text-decoration: none;
 }
 
-div.body h1 a tt, div.body h2 a tt, div.body h3 a tt, div.body h4 a tt, div.body h5 a tt, div.body h6 a tt {
+div.body h1 a tt, div.body h2 a tt, div.body h3 a tt,
+div.body h4 a tt, div.body h5 a tt, div.body h6 a tt {
     color: #0a507a !important;
     font-size: inherit !important;
 }
@@ -234,10 +241,12 @@ a.headerlink:hover {
 }
 
 cite, code, tt {
-    font-family: 'Consolas', 'DejaVu Sans Mono',
-                 'Bitstream Vera Sans Mono', monospace;
+    font-family: 'Consolas', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono',
+                 monospace;
     font-size: 14px;
     letter-spacing: -0.02em;
+    min-width: 780px;
+    max-width: 1080px;
 }
 
 tt {
@@ -258,8 +267,8 @@ hr {
 }
 
 pre {
-    font-family: 'Consolas', 'DejaVu Sans Mono',
-                 'Bitstream Vera Sans Mono', monospace;
+    font-family: 'Consolas', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono',
+                 monospace;
     font-size: 13px;
     letter-spacing: 0.015em;
     line-height: 120%;
@@ -276,6 +285,12 @@ pre a {
 
 td.linenos pre {
     padding: 0.5em 0;
+}
+
+td.code pre {
+    max-width: 740px;
+    overflow: auto;
+    overflow-y: hidden;  /* fixes display issues on Chrome browsers */
 }
 
 div.quotebar {
@@ -319,7 +334,8 @@ div.warning {
     border: 1px solid #f66;
 }
 
-div.admonition ul li, div.warning ul li {
+div.admonition ul li, div.warning ul li,
+div.admonition ol li, div.warning ol li {
     text-align: left;
 }
 
@@ -348,17 +364,12 @@ div.toctree-wrapper li, ul.simple li {
     margin:0;
 }
 
-a.toc-backref, a.toc-backref:hover {
-    font-family: {{ theme_headfont }};
-    background-color: {{ theme_headbgcolor }};
-    font-weight: normal;
-    color: {{ theme_headtextcolor }};
-    text-decoration: none;
-}
+/*a.toc-backref {
+}*/
 
 div.feedback {
-    background-color: {{ theme_feedbackbgcolor }};
-    color: {{ theme_feedbacktextcolor }};
+    /*background-color: #;*/
+    /*color: #;*/
     padding: 20px 20px 30px 20px;
     border-top: 1px solid #002e50;
 }
@@ -368,7 +379,7 @@ div.feedback h2 {
 }
 
 div.feedback a {
-    color: {{ theme_feedbacklinkcolor }};
+    /*color: #;*/
     font-weight: bold;
 }
 
@@ -403,7 +414,8 @@ table.field-list {
 }
 
 em.menuselection, em.guilabel {
-    font-family: {{ theme_guifont }};
+    font-family: 'Lucida Sans', 'Lucida Sans Unicode', 'Lucida Grande', Verdana,
+                 Arial, Helvetica, sans-serif;
 }
 
 .enumeratevisibleitemswithsquare ul {
