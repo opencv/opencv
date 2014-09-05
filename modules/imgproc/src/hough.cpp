@@ -728,6 +728,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     if (!fillAccumKernel.run(2, globalThreads, fillAccumLT, false))
         return false;
 
+    const int pixPerWI = 8;
     ocl::Kernel getLinesKernel("get_lines", ocl::imgproc::hough_lines_oclsrc,
                                format("-D GET_LINES"));
     if (getLinesKernel.empty())
@@ -740,7 +741,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     getLinesKernel.args(ocl::KernelArg::ReadOnly(accum), ocl::KernelArg::WriteOnlyNoSize(lines),
                         ocl::KernelArg::PtrWriteOnly(counters), linesMax, threshold, (float) rho, (float) theta);
 
-    globalThreads[0] = numrho; globalThreads[1] = numangle;
+    globalThreads[0] = (numrho + pixPerWI - 1)/pixPerWI; globalThreads[1] = numangle;
     if (!getLinesKernel.run(2, globalThreads, NULL, false))
         return false;
     
