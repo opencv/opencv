@@ -3,7 +3,7 @@
 #include <cstdio>
 
 #include "_cvcommon.h"
-#include "opencv2/opencv.hpp"
+#include "highgui.h"
 
 /* print statistic info */
 #define CV_VERBOSE 1
