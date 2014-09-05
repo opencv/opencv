@@ -48,6 +48,11 @@
 #ifndef _CVHAARTRAINING_H_
 #define _CVHAARTRAINING_H_
 
+class IOutput;
+struct CvRect;
+struct CvSize;
+struct CvMat;
+
 /*
  * cvCreateTrainingSamples
  *
@@ -74,23 +79,30 @@
  */
 #define CV_RANDOM_INVERT 0x7FFFFFFF
 
-void cvCreateTrainingSamples( const char* filename,
+void cvCreateTrainingSamples(const char* filename,
                               const char* imgfilename, int bgcolor, int bgthreshold,
                               const char* bgfilename, int count,
                               int invert = 0, int maxintensitydev = 40,
                               double maxxangle = 1.1,
                               double maxyangle = 1.1,
                               double maxzangle = 0.5,
-                              int showsamples = 0,
+                              bool showsamples = false,
                               int winwidth = 24, int winheight = 24 );
 
-void cvCreateTestSamples( const char* infoname,
-                          const char* imgfilename, int bgcolor, int bgthreshold,
+void cvCreatePngTrainingSet(const char* imgfilename, int bgcolor, int bgthreshold,
+                            const char* bgfilename, int count,
+                            int invert, int maxintensitydev,
+                            double maxxangle, double maxyangle, double maxzangle,
+                            int winwidth, int winheight,
+                            IOutput *writer );
+
+void cvCreateTestSamples(const char* imgfilename, int bgcolor, int bgthreshold,
                           const char* bgfilename, int count,
                           int invert, int maxintensitydev,
                           double maxxangle, double maxyangle, double maxzangle,
                           int showsamples,
-                          int winwidth, int winheight );
+                          int winwidth, int winheight,
+                          IOutput* writer);
 
 /*
  * cvCreateTrainingSamplesFromInfo
@@ -188,5 +200,51 @@ void cvCreateTreeCascadeClassifier( const char* dirname,
                                     int winwidth, int winheight,
                                     int boosttype, int stumperror,
                                     int maxtreesplits, int minpos, bool bg_vecfile = false );
+
+
+class DatasetGenerator
+{
+public:
+    DatasetGenerator( IOutput* _writer );
+    void create( const char* imgfilename, int bgcolor, int bgthreshold,
+                 const char* bgfilename, int count,
+                 int invert, int maxintensitydev,
+                 double maxxangle, double maxyangle, double maxzangle,
+                 bool showsamples,
+                 int winwidth, int winheight);
+    virtual ~DatasetGenerator();
+private:
+    virtual void showSamples( bool* showSamples, CvMat* img ) const;
+
+    CvRect getObjectPosition( const CvSize& bgImgSize,
+                              const CvSize& imgSize,
+                              const CvSize& sampleSize ) const;
+    virtual CvSize scaleObjectSize(const CvSize& bgImgSize,
+                                   const CvSize& imgSize ,
+                                   const CvSize& sampleSize) const =0 ;
+private:
+    IOutput* writer;
+};
+
+/* Provides the functionality of test set generating */
+class JpgDatasetGenerator: public DatasetGenerator
+{
+public:
+    JpgDatasetGenerator(const char* filename);
+private:
+    CvSize scaleObjectSize(const CvSize& bgImgSize,
+                           const CvSize& ,
+                           const CvSize& sampleSize) const;
+};
+
+class PngDatasetGenerator: public DatasetGenerator
+{
+public:
+    PngDatasetGenerator(const char *filename);
+private:
+    CvSize scaleObjectSize(const CvSize& bgImgSize,
+                           const CvSize& imgSize ,
+                           const CvSize& ) const;
+};
 
 #endif /* _CVHAARTRAINING_H_ */
