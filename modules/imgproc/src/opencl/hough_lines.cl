@@ -88,7 +88,7 @@ __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, i
                                __global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
                                int total_points, float irho, float theta, int numrho, int numangle)
 {
-    int theta_idx = get_global_id(1);
+    int theta_idx = get_group_id(1);
     int count_idx = get_local_id(0);
     
     if (theta_idx > 0 && theta_idx < numangle + 1)
@@ -140,32 +140,37 @@ __kernel void get_lines(__global uchar * accum_ptr, int accum_step, int accum_of
                          __global uchar * lines_ptr, int lines_step, int lines_offset, __global int* lines_index_ptr, 
                          int linesMax, int threshold, float rho, float theta)
 {
-    int x = get_global_id(0);
+    int x0 = get_global_id(0);
     int y = get_global_id(1);
+    int gl_size = get_global_size(0);
 
-    if (x < accum_cols-2 && y < accum_rows-2)
+    if (y < accum_rows-2)
     {
-        __global uchar* accum = accum_ptr + mad24(y+1, accum_step, mad24(x+1, (int) sizeof(int), accum_offset));
+        __global uchar* accum = accum_ptr + mad24(y+1, accum_step, mad24(x0+1, (int) sizeof(int), accum_offset));
         __global float2* lines = (__global float2*)(lines_ptr + lines_offset);
         __global int* lines_index = lines_index_ptr + 1;
     
-        int curVote = ACCUM(accum);
-
-        if (curVote > threshold && curVote > ACCUM(accum - sizeof(int)) && curVote >= ACCUM(accum + sizeof(int)) &&
-            curVote > ACCUM(accum - accum_step) && curVote >= ACCUM(accum + accum_step))
+        for (int x=x0; x<accum_cols-2; x+=gl_size)
         {
-            int index = atomic_inc(lines_index);
+            int curVote = ACCUM(accum);
 
-            if (index < linesMax)
+            if (curVote > threshold && curVote > ACCUM(accum - sizeof(int)) && curVote >= ACCUM(accum + sizeof(int)) &&
+                curVote > ACCUM(accum - accum_step) && curVote >= ACCUM(accum + accum_step))
             {
-                float radius = (x - (accum_cols - 3) * 0.5f) * rho;
-                float angle = y * theta;
+                int index = atomic_inc(lines_index);
 
-                lines[index] = (float2)(radius, angle);
+                if (index < linesMax)
+                {
+                    float radius = (x - (accum_cols - 3) * 0.5f) * rho;
+                    float angle = y * theta;
+
+                    lines[index] = (float2)(radius, angle);
+                }
             }
+
+            accum += gl_size * (int) sizeof(int);
         }
     }
 }
 
 #endif
-
