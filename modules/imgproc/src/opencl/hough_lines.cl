@@ -107,14 +107,13 @@ __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, i
         __global const int * list = (__global const int*)(list_ptr + list_offset);
         const int shift = (numrho - 1) / 2;
 
-
         for (int i = count_idx; i < total_points; i += LOCAL_SIZE)
         {
             const int point = list[i];
             const int x = (point & 0xFFFF);
-            const int y = (point >> 16) & 0xFFFF;
+            const int y = point >> 16;
 
-            int r = convert_int_rte(x * cosVal + y * sinVal) + shift;
+            int r = convert_int_rte(mad(x, cosVal, y * sinVal)) + shift;
             atomic_inc(l_accum + r + 1);
         }
 
