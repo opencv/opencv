@@ -79,14 +79,14 @@ struct CvMat;
  */
 #define CV_RANDOM_INVERT 0x7FFFFFFF
 
-void cvCreateTrainingSamples( const char* filename,
+void cvCreateTrainingSamples(const char* filename,
                               const char* imgfilename, int bgcolor, int bgthreshold,
                               const char* bgfilename, int count,
                               int invert = 0, int maxintensitydev = 40,
                               double maxxangle = 1.1,
                               double maxyangle = 1.1,
                               double maxzangle = 0.5,
-                              int showsamples = 0,
+                              bool showsamples = false,
                               int winwidth = 24, int winheight = 24 );
 
 void cvCreatePngTrainingSet(const char* imgfilename, int bgcolor, int bgthreshold,

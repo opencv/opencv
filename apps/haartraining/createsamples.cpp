@@ -73,7 +73,7 @@ int main( int argc, char* argv[] )
     double maxxangle = 1.1;
     double maxyangle = 1.1;
     double maxzangle = 0.5;
-    int showsamples = 0;
+    bool showsamples = false;
     /* the samples are adjusted to this scale in the sample preview window */
     double scale = 4.0;
     int width  = 24;
@@ -159,7 +159,7 @@ int main( int argc, char* argv[] )
         }
         else if( !strcmp( argv[i], "-show" ) )
         {
-            showsamples = 1;
+            showsamples = true;
             if( i+1 < argc && strlen( argv[i+1] ) > 0 && argv[i+1][0] != '-' )
             {
                 double d;

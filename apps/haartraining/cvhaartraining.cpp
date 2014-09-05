@@ -2848,7 +2848,7 @@ void cvCreateTrainingSamples( const char* filename,
                               const char* bgfilename, int count,
                               int invert, int maxintensitydev,
                               double maxxangle, double maxyangle, double maxzangle,
-                              int showsamples,
+                              bool showsamples,
                               int winwidth, int winheight )
 {
     CvSampleDistortionData data;
@@ -2915,7 +2915,7 @@ void cvCreateTrainingSamples( const char* filename,
                     cvShowImage( "Sample", &sample );
                     if( cvWaitKey( 0 ) == 27 )
                     {
-                        showsamples = 0;
+                        showsamples = false;
                     }
                 }
 
