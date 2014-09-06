@@ -330,7 +330,7 @@ void CV_KNearestTest::run( int /*start_from*/ )
     }
 
     // KNearest KDTree implementation
-    Ptr<KNearest> knearestKdt = KNearest::create(ml::KNearest::Params(), ml::KNearest::KDTREE);
+    Ptr<KNearest> knearestKdt = KNearest::create(ml::KNearest::Params(ml::KNearest::KDTREE));
     knearestKdt->train(trainData, ml::ROW_SAMPLE, trainLabels);
     knearestKdt->findNearest(testData, 4, bestLabels);
     if( !calcErr( bestLabels, testLabels, sizes, err, true ) )
