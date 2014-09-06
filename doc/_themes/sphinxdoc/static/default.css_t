@@ -192,7 +192,7 @@ a tt {
 
 h1, h2, h3, h4, h5, h6 {
     color: #0a507a;
-    background-color: #f2f8fa;
+    background-color: #e5f5ff;
     font-weight: 300;
 }
 
@@ -244,21 +244,17 @@ cite, code, tt {
     font-family: 'Consolas', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono',
                  monospace;
     font-size: 14px;
-    letter-spacing: -0.02em;
     min-width: 780px;
     max-width: 1080px;
 }
 
 tt {
-    background-color: #f2f2f2;
-    border: 1px solid #ddd;
-    border-radius: 2px;
-    color: #333;
+    color: #003048;
     padding: 1px;
 }
 
 tt.descname, tt.descclassname, tt.xref {
-    border: 0;
+    font-size: 12px;
 }
 
 hr {
