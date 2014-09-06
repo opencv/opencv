@@ -50,13 +50,13 @@
 namespace cv {
 namespace ml {
 
-KNearest::Params::Params(int k, bool isclassifier_, int Emax_)
+KNearest::Params::Params(int algorithmType_, int k, bool isclassifier_, int Emax_) :
+    algorithmType(algorithmType_),
+    defaultK(k),
+    isclassifier(isclassifier_),
+    Emax(Emax_)
 {
-    defaultK = k;
-    isclassifier = isclassifier_;
-    Emax = Emax_;
 }
-
 
 class KNearestImpl : public KNearest
 {
@@ -497,9 +497,9 @@ public:
     Params params;
 };
 
-Ptr<KNearest> KNearest::create(const Params& p, int type)
+Ptr<KNearest> KNearest::create(const Params& p)
 {
-    if (KDTREE==type)
+    if (KDTREE==p.algorithmType)
     {
         return makePtr<KNearestKDTreeImpl>(p);
     }

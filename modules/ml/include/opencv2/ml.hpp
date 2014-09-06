@@ -230,8 +230,9 @@ public:
     class CV_EXPORTS_W_MAP Params
     {
     public:
-        Params(int defaultK=10, bool isclassifier_=true, int Emax_=INT_MAX);
+        Params(int algorithmType_=BRUTE_FORCE, int defaultK=10, bool isclassifier_=true, int Emax_=INT_MAX);
 
+        CV_PROP_RW int algorithmType;
         CV_PROP_RW int defaultK;
         CV_PROP_RW bool isclassifier;
         CV_PROP_RW int Emax; // for implementation with KDTree
@@ -243,9 +244,9 @@ public:
                                OutputArray neighborResponses=noArray(),
                                OutputArray dist=noArray() ) const = 0;
 
-    enum { DEFAULT=1, KDTREE=2 };
+    enum { BRUTE_FORCE=1, KDTREE=2 };
 
-    static Ptr<KNearest> create(const Params& params=Params(), int type=DEFAULT);
+    static Ptr<KNearest> create(const Params& params=Params());
 };
 
 /****************************************************************************************\
