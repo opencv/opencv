@@ -740,14 +740,14 @@ double cvGetOpenGlProp_QT(const char* name)
 GuiReceiver::GuiReceiver() : bTimeOut(false), nb_windows(0)
 {
     doesExternalQAppExist = (QApplication::instance() != 0);
-    if ( doesExternalQAppExist ) {
-        moveToThread(QApplication::instance()->thread());
-    }
     icvInitSystem(&parameterSystemC, parameterSystemV);
 
     timer = new QTimer(this);
     QObject::connect(timer, SIGNAL(timeout()), this, SLOT(timeOut()));
     timer->setSingleShot(true);
+    if ( doesExternalQAppExist ) {
+        moveToThread(QApplication::instance()->thread());
+    }
 }
 
 
