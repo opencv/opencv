@@ -68,7 +68,7 @@ __kernel void meanStdDev(__global const uchar * srcptr, int src_step, int src_of
 #endif
         {
 #ifdef HAVE_SRC_CONT
-            int src_index = mul24(id, srcTSIZE);
+            int src_index = id * srcTSIZE;
 #else
             int src_index = mad24(id / cols, src_step, mul24(id % cols, srcTSIZE));
 #endif
