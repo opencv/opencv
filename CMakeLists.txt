@@ -602,6 +602,12 @@ if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH AND UNIX)
     install(PROGRAMS "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh"
             DESTINATION ${CMAKE_INSTALL_PREFIX} COMPONENT tests)
   else()
+    set(OPENCV_PYTHON_TESTS_LIST "")
+    if(BUILD_opencv_python)
+      file(GLOB py_tests modules/python/test/*.py)
+      install(PROGRAMS ${py_tests} DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
+      set(OPENCV_PYTHON_TESTS_LIST "test2.py")
+    endif()
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_testing.sh.in"
                    "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh" @ONLY)
     install(FILES "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh"
@@ -610,7 +616,6 @@ if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH AND UNIX)
                    "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh" @ONLY)
     install(PROGRAMS "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh"
             DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
-
   endif()
 endif()
 
