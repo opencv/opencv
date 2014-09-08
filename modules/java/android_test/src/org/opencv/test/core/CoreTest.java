@@ -19,6 +19,7 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.core.TermCriteria;
 import org.opencv.test.OpenCVTestCase;
+import org.opencv.imgproc.Imgproc;
 
 public class CoreTest extends OpenCVTestCase {
 
@@ -455,12 +456,12 @@ public class CoreTest extends OpenCVTestCase {
         // current implementation of fixed-point version of fillConvexPoly
         // requires image to be at least 2-pixel wider in each direction than
         // contour
-        Imgproc.fillConvexPoly(gray0, polyline1, colorWhite, Imgproc.line_8, 0);
+        Imgproc.fillConvexPoly(gray0, polyline1, colorWhite, Imgproc.LINE_8, 0);
 
         assertTrue(0 < Core.countNonZero(gray0));
         assertTrue(gray0.total() > Core.countNonZero(gray0));
 
-        Imgproc.fillConvexPoly(gray0, polyline2, colorBlack, Imgproc.line_8, 1);
+        Imgproc.fillConvexPoly(gray0, polyline2, colorBlack, Imgproc.LINE_8, 1);
 
         assertEquals("see http://code.opencv.org/issues/1284", 0, Core.countNonZero(gray0));
     }
@@ -503,11 +504,11 @@ public class CoreTest extends OpenCVTestCase {
         List<MatOfPoint> polylines2 = new ArrayList<MatOfPoint>();
         polylines2.add(polyline2);
 
-        Imgproc.fillPoly(gray0, polylines1, new Scalar(1), Imgproc.line_8, 0, new Point(0, 0));
+        Imgproc.fillPoly(gray0, polylines1, new Scalar(1), Imgproc.LINE_8, 0, new Point(0, 0));
 
         assertTrue(0 < Core.countNonZero(gray0));
 
-        Imgproc.fillPoly(gray0, polylines2, new Scalar(0), Imgproc.line_8, 0, new Point(1, 1));
+        Imgproc.fillPoly(gray0, polylines2, new Scalar(0), Imgproc.LINE_8, 0, new Point(1, 1));
 
         assertEquals(0, Core.countNonZero(gray0));
     }
@@ -877,11 +878,11 @@ public class CoreTest extends OpenCVTestCase {
         Point point1_4 = new Point(3 * 4, 4 * 4);
         Point point2_4 = new Point(nPoints * 4, nPoints * 4);
 
-        Imgproc.line(gray0, point2, point1, colorWhite, 2, Imgproc.line_8, 0);
+        Imgproc.line(gray0, point2, point1, colorWhite, 2, Imgproc.LINE_8, 0);
 
         assertFalse(0 == Core.countNonZero(gray0));
 
-        Imgproc.line(gray0, point2_4, point1_4, colorBlack, 2, Imgproc.line_8, 2);
+        Imgproc.line(gray0, point2_4, point1_4, colorBlack, 2, Imgproc.LINE_8, 2);
 
         assertEquals(0, Core.countNonZero(gray0));
     }
@@ -1616,8 +1617,8 @@ public class CoreTest extends OpenCVTestCase {
         Point topLeft = new Point(0, 0);
         Scalar color = new Scalar(128);
 
-        Imgproc.rectangle(gray0, bottomRight, topLeft, color, 2, Imgproc.line_AA, 0);
-        Imgproc.rectangle(gray0, bottomRight, topLeft, colorBlack, 2, Imgproc.line_4, 0);
+        Imgproc.rectangle(gray0, bottomRight, topLeft, color, 2, Imgproc.LINE_AA, 0);
+        Imgproc.rectangle(gray0, bottomRight, topLeft, colorBlack, 2, Imgproc.LINE_4, 0);
 
         assertTrue(0 != Core.countNonZero(gray0));
     }
@@ -1628,11 +1629,11 @@ public class CoreTest extends OpenCVTestCase {
         Point topLeft = new Point(0, 0);
         Scalar color = new Scalar(128);
 
-        Imgproc.rectangle(gray0, bottomRight1, topLeft, color, 2, Imgproc.line_8, 1);
+        Imgproc.rectangle(gray0, bottomRight1, topLeft, color, 2, Imgproc.LINE_8, 1);
 
         assertTrue(0 != Core.countNonZero(gray0));
 
-        Imgproc.rectangle(gray0, bottomRight2, topLeft, colorBlack, 2, Imgproc.line_8, 0);
+        Imgproc.rectangle(gray0, bottomRight2, topLeft, colorBlack, 2, Imgproc.LINE_8, 0);
 
         assertEquals(0, Core.countNonZero(gray0));
     }
