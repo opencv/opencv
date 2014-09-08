@@ -578,13 +578,13 @@ __kernel void reduce(__global const uchar * srcptr, int src_step, int src_offset
     for (int grain = groupnum * WGS * kercn; id < total; id += grain)
     {
 #ifdef HAVE_SRC_CONT
-        int src_index = mul24(id, srcTSIZE);
+        int src_index = id * srcTSIZE;
 #else
         int src_index = mad24(id / cols, src_step, mul24(id % cols, srcTSIZE));
 #endif
 #ifdef HAVE_SRC2
 #ifdef HAVE_SRC2_CONT
-        int src2_index = mul24(id, srcTSIZE);
+        int src2_index = id * srcTSIZE;
 #else
         int src2_index = mad24(id / cols, src2_step, mul24(id % cols, srcTSIZE));
 #endif
