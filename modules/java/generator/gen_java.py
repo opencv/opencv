@@ -127,7 +127,6 @@ missing_consts = \
         (
             ('SVD_MODIFY_A', 1), ('SVD_NO_UV', 2), ('SVD_FULL_UV', 4),
             ('FILLED', -1),
-            ('LINE_AA', 16), ('LINE_8', 8), ('LINE_4', 4),
             ('REDUCE_SUM', 0), ('REDUCE_AVG', 1), ('REDUCE_MAX', 2), ('REDUCE_MIN', 3),
         ) #public
     }, # Core
@@ -142,7 +141,11 @@ missing_consts = \
             ('IPL_BORDER_WRAP',        3 ),
             ('IPL_BORDER_REFLECT_101', 4 ),
             ('IPL_BORDER_TRANSPARENT', 5 ),
-        ) # private
+        ), # private
+        'public' :
+        (
+            ('LINE_AA', 16), ('LINE_8', 8), ('LINE_4', 4),
+        ) #public
     }, # Imgproc
 
     "Calib3d":

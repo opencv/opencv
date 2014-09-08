@@ -647,7 +647,7 @@ public class ImgprocTest extends OpenCVTestCase {
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
         Imgproc.findContours(gray0, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
-        Core.drawContours(gray0, contours, -1, new Scalar(0));
+        Imgproc.drawContours(gray0, contours, -1, new Scalar(0));
 
         assertEquals(0, Core.countNonZero(gray0));
     }
@@ -657,7 +657,7 @@ public class ImgprocTest extends OpenCVTestCase {
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
         Imgproc.findContours(gray0, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
-        Core.drawContours(gray0, contours, -1, new Scalar(0), Core.FILLED);
+        Imgproc.drawContours(gray0, contours, -1, new Scalar(0), Core.FILLED);
 
         assertEquals(0, Core.countNonZero(gray0));
     }
@@ -758,7 +758,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(contours.size(), 0);
         assertEquals(contours.size(), hierarchy.total());
 
-        Imgproc.rectangle(img, new Point(10, 20), new Point(20, 30), new Scalar(100), 3, Imgproc.line_AA, 0);
+        Imgproc.rectangle(img, new Point(10, 20), new Point(20, 30), new Scalar(100), 3, Imgproc.LINE_AA, 0);
         Imgproc.rectangle(img, new Point(30, 35), new Point(40, 45), new Scalar(200));
 
         Imgproc.findContours(img, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
@@ -775,7 +775,7 @@ public class ImgprocTest extends OpenCVTestCase {
         List<MatOfPoint> contours2 = new ArrayList<MatOfPoint>();
         Mat hierarchy = new Mat();
 
-        Imgproc.rectangle(img, new Point(10, 20), new Point(20, 30), new Scalar(100), 3, Imgproc.line_AA, 0);
+        Imgproc.rectangle(img, new Point(10, 20), new Point(20, 30), new Scalar(100), 3, Imgproc.LINE_AA, 0);
         Imgproc.rectangle(img, new Point(30, 35), new Point(40, 45), new Scalar(200));
 
         Imgproc.findContours(img, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
@@ -817,24 +817,24 @@ public class ImgprocTest extends OpenCVTestCase {
     public void testFloodFillMatMatPointScalar() {
         Mat mask = new Mat(matSize + 2, matSize + 2, CvType.CV_8U, new Scalar(0));
         Mat img = gray0;
-        Core.circle(mask, new Point(matSize / 2 + 1, matSize / 2 + 1), 3, new Scalar(2));
+        Imgproc.circle(mask, new Point(matSize / 2 + 1, matSize / 2 + 1), 3, new Scalar(2));
 
         int retval = Imgproc.floodFill(img, mask, new Point(matSize / 2, matSize / 2), new Scalar(1));
 
         assertEquals(Core.countNonZero(img), retval);
-        Core.circle(mask, new Point(matSize / 2 + 1, matSize / 2 + 1), 3, new Scalar(0));
+        Imgproc.circle(mask, new Point(matSize / 2 + 1, matSize / 2 + 1), 3, new Scalar(0));
         assertEquals(retval + 4 * (matSize + 1), Core.countNonZero(mask));
         assertMatEqual(mask.submat(1, matSize + 1, 1, matSize + 1), img);
     }
 
     public void testFloodFillMatMatPointScalar_WithoutMask() {
         Mat img = gray0;
-        Core.circle(img, new Point(matSize / 2, matSize / 2), 3, new Scalar(2));
+        Imgproc.circle(img, new Point(matSize / 2, matSize / 2), 3, new Scalar(2));
 
         // TODO: ideally we should pass null instead of "new Mat()"
         int retval = Imgproc.floodFill(img, new Mat(), new Point(matSize / 2, matSize / 2), new Scalar(1));
 
-        Core.circle(img, new Point(matSize / 2, matSize / 2), 3, new Scalar(0));
+        Imgproc.circle(img, new Point(matSize / 2, matSize / 2), 3, new Scalar(0));
         assertEquals(Core.countNonZero(img), retval);
     }
 
@@ -1063,7 +1063,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         Point center = new Point(img.cols() / 2, img.rows() / 2);
         int radius = Math.min(img.cols() / 4, img.rows() / 4);
-        Core.circle(img, center, radius, colorBlack, 3);
+        Imgproc.circle(img, center, radius, colorBlack, 3);
 
         Imgproc.HoughCircles(img, circles, Imgproc.CV_HOUGH_GRADIENT, 2, img.rows() / 4);
 
@@ -1973,7 +1973,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Scalar color128 = new Scalar(128);
         Scalar color0 = new Scalar(0);
 
-        Imgproc.circle(gray0, center2, radius * 2, color128, 2, Imgproc.line_4, 1/*
+        Imgproc.circle(gray0, center2, radius * 2, color128, 2, Imgproc.LINE_4, 1/*
                                                                             * Number
                                                                             * of
                                                                             * fractional
@@ -1981,7 +1981,7 @@ public class ImgprocTest extends OpenCVTestCase {
                                                                             */);
         assertFalse(0 == Core.countNonZero(gray0));
 
-        Imgproc.circle(gray0, center, radius, color0, 2, Imgproc.line_4, 0);
+        Imgproc.circle(gray0, center, radius, color0, 2, Imgproc.LINE_4, 0);
 
         assertTrue(0 == Core.countNonZero(gray0));
     }
@@ -1991,7 +1991,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Point pt1 = new Point(5.0, 15.0);
         Point pt2 = new Point(25.0, 15.0);
 
-        assertTrue(Core.clipLine(r, pt1, pt2));
+        assertTrue(Imgproc.clipLine(r, pt1, pt2));
 
         Point pt1Clipped = new Point(10.0, 15.0);
         Point pt2Clipped = new Point(19.0, 15.0);
@@ -2003,7 +2003,7 @@ public class ImgprocTest extends OpenCVTestCase {
         pt1Clipped = new Point(5.0, 5.0);
         pt2Clipped = new Point(25.0, 5.0);
 
-        assertFalse(Core.clipLine(r, pt1, pt2));
+        assertFalse(Imgproc.clipLine(r, pt1, pt2));
 
         assertEquals(pt1Clipped, pt1);
         assertEquals(pt2Clipped, pt2);
@@ -2054,11 +2054,11 @@ public class ImgprocTest extends OpenCVTestCase {
         Size axes2 = new Size(4, 4);
         double angle = 30, startAngle = 0, endAngle = 30;
 
-        Imgproc.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, Core.FILLED, Imgproc.line_4, 0);
+        Imgproc.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, Core.FILLED, Imgproc.LINE_4, 0);
 
         assertTrue(0 != Core.countNonZero(gray0));
 
-        Imgproc.ellipse(gray0, center2, axes2, angle, startAngle, endAngle, colorBlack, Core.FILLED, Imgproc.line_4, 1);
+        Imgproc.ellipse(gray0, center2, axes2, angle, startAngle, endAngle, colorBlack, Core.FILLED, Imgproc.LINE_4, 1);
 
         assertEquals(0, Core.countNonZero(gray0));
     }
@@ -2107,8 +2107,8 @@ public class ImgprocTest extends OpenCVTestCase {
         Size size = new Size(2, matSize * 2 / 3);
         RotatedRect box = new RotatedRect(center, size, 20);
 
-        Imgproc.ellipse(gray0, box, new Scalar(9), 1, Imgproc.line_AA);
-        Imgproc.ellipse(gray0, box, new Scalar(0), 1, Imgproc.line_4);
+        Imgproc.ellipse(gray0, box, new Scalar(9), 1, Imgproc.LINE_AA);
+        Imgproc.ellipse(gray0, box, new Scalar(0), 1, Imgproc.LINE_4);
 
         assertTrue(0 < Core.countNonZero(gray0));
     }
@@ -2144,11 +2144,11 @@ public class ImgprocTest extends OpenCVTestCase {
         List<MatOfPoint> polyline2 = new ArrayList<MatOfPoint>();
         polyline2.add(new MatOfPoint(new Point(2, 2), new Point(14, 2), new Point(14, 12), new Point(2, 12)));
 
-        Imgproc.polylines(img, polyline1, true, new Scalar(100), 2, Imgproc.line_8, 0);
+        Imgproc.polylines(img, polyline1, true, new Scalar(100), 2, Imgproc.LINE_8, 0);
 
         assertTrue(Core.countNonZero(img) > 0);
 
-        Imgproc.polylines(img, polyline2, true, new Scalar(0), 2, Imgproc.line_8, 1);
+        Imgproc.polylines(img, polyline2, true, new Scalar(0), 2, Imgproc.LINE_8, 1);
 
         assertEquals(0, Core.countNonZero(img));
     }
@@ -2188,7 +2188,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
         Point origin = new Point(10, 10);
 
-        Imgproc.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 1, Imgproc.line_8, true);
+        Imgproc.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 1, Imgproc.LINE_8, true);
 
         assertTrue(Core.countNonZero(img) > 0);
         // check that border is not corrupted
