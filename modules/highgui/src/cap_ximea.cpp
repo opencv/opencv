@@ -1,8 +1,10 @@
 #include "precomp.hpp"
 
+#ifdef WIN32
 #include "xiApi.h"
-#include "xiExt.h"
-#include "m3Api.h"
+#else
+#include <m3api/xiApi.h>
+#endif
 
 /**********************************************************************************/
 
@@ -156,7 +158,7 @@ bool CvCaptureCAM_XIMEA::grabFrame()
     image.size = sizeof(XI_IMG);
     int mvret = xiGetImage( hmv, timeout, &image);
 
-    if(mvret == MM40_ACQUISITION_STOPED)
+    if(mvret == XI_ACQUISITION_STOPED)
     {
         xiStartAcquisition(hmv);
         mvret = xiGetImage(hmv, timeout, &image);
