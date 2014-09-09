@@ -69,7 +69,7 @@ To draw a polygon, first you need coordinates of vertices. Make those points int
 
 .. Note:: If third argument is ``False``, you will get a polylines joining all the points, not a closed shape.
 
-.. Note:: ``cv2.polylines()`` can be used to draw multiple lines. Just create a list of all the lines you want to draw and pass it to the function. All lines will be drawn individually. It is more better and faster way to draw a group of lines than calling ``cv2.line()`` for each line.
+.. Note:: ``cv2.polylines()`` can be used to draw multiple lines. Just create a list of all the lines you want to draw and pass it to the function. All lines will be drawn individually. It is a much better and faster way to draw a group of lines than calling ``cv2.line()`` for each line.
 
 Adding Text to Images:
 ------------------------
