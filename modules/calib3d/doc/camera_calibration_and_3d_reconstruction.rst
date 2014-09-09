@@ -580,7 +580,7 @@ Finds an object pose from 3D-2D point correspondences.
 
     :param tvec: Output translation vector.
 
-    :param useExtrinsicGuess: Parameter used for ITERATIVE. If true (1), the function uses the provided  ``rvec``  and  ``tvec``  values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
+    :param useExtrinsicGuess: Parameter used for SOLVEPNP_ITERATIVE. If true (1), the function uses the provided  ``rvec``  and  ``tvec``  values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
 
     :param flags: Method for solving a PnP problem:
 
@@ -615,7 +615,7 @@ Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
 
     :param tvec: Output translation vector.
 
-    :param useExtrinsicGuess: Parameter used for ITERATIVE. If true (1), the function uses the provided  ``rvec``  and  ``tvec`` values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
+    :param useExtrinsicGuess: Parameter used for SOLVEPNP_ITERATIVE. If true (1), the function uses the provided  ``rvec``  and  ``tvec`` values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
 
     :param iterationsCount: Number of iterations.
 
