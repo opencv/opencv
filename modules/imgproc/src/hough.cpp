@@ -652,6 +652,9 @@ HoughLinesProbabilistic( Mat& image,
         }
     }
 }
+
+#ifdef HAVE_OPENCL
+
 static bool ocl_makePointsList(InputArray _src, OutputArray _pointsList, InputOutputArray _counters)
 {
     UMat src = _src.getUMat();
@@ -660,16 +663,16 @@ static bool ocl_makePointsList(InputArray _src, OutputArray _pointsList, InputOu
     UMat counters = _counters.getUMat();
     ocl::Device dev = ocl::Device::getDefault();
 
-    const int pixelsPerWI = 16;
-    int workgroup_size = min((int) dev.maxWorkGroupSize(), (src.cols + pixelsPerWI - 1)/pixelsPerWI);
-    ocl::Kernel pointListKernel("make_point_list", ocl::imgproc::hough_lines_oclsrc, 
+    const int pixPerWI = 16;
+    int workgroup_size = min((int) dev.maxWorkGroupSize(), (src.cols + pixPerWI - 1)/pixPerWI);
+    ocl::Kernel pointListKernel("make_point_list", ocl::imgproc::hough_lines_oclsrc,
                                 format("-D MAKE_POINTS_LIST -D GROUP_SIZE=%d -D LOCAL_SIZE=%d", workgroup_size, src.cols));
     if (pointListKernel.empty())
         return false;
 
     pointListKernel.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnlyNoSize(pointsList),
                          ocl::KernelArg::PtrWriteOnly(counters));
-    
+
     size_t localThreads[2]  = { workgroup_size, 1 };
     size_t globalThreads[2] = { workgroup_size, src.rows };
 
@@ -685,12 +688,12 @@ static bool ocl_fillAccum(InputArray _pointsList, OutputArray _accum, int total_
 
     float irho = (float) (1 / rho);
     int workgroup_size = min((int) dev.maxWorkGroupSize(), total_points);
-    
+
     ocl::Kernel fillAccumKernel;
     size_t localThreads[2];
     size_t globalThreads[2];
 
-    int local_memory_needed = (numrho + 2)*sizeof(int);
+    size_t local_memory_needed = (numrho + 2)*sizeof(int);
     if (local_memory_needed > dev.localMemSize())
     {
         accum.setTo(Scalar::all(0));
@@ -717,7 +720,7 @@ static bool ocl_fillAccum(InputArray _pointsList, OutputArray _accum, int total_
     }
 }
 
-static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, double theta, int threshold,  
+static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, double theta, int threshold,
                            double min_theta, double max_theta)
 {
     CV_Assert(_src.type() == CV_8UC1);
@@ -732,7 +735,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     UMat src = _src.getUMat();
     int numangle = cvRound((max_theta - min_theta) / theta);
     int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
-    
+
     UMat pointsList;
     UMat counters(1, 2, CV_32SC1, Scalar::all(0));
 
@@ -766,7 +769,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     size_t globalThreads[2] = { (numrho + pixPerWI - 1)/pixPerWI, numangle };
     if (!getLinesKernel.run(2, globalThreads, NULL, false))
         return false;
-    
+
     int total_lines = min(counters.getMat(ACCESS_READ).at<int>(0, 1), linesMax);
     if (total_lines > 0)
         _lines.assign(lines.rowRange(Range(0, total_lines)));
@@ -775,15 +778,59 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     return true;
 }
 
-static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, double theta, int threshold,  
+static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, double theta, int threshold,
                            double minLineLength, double maxGap)
 {
     CV_Assert(_src.type() == CV_8UC1);
-    
-    UMat src = _src.getUMat();
 
-    return false;
+    UMat src = _src.getUMat();
+    int numangle = cvRound(CV_PI / theta);
+    int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
+
+    UMat pointsList;
+    UMat counters(1, 2, CV_32SC1, Scalar::all(0));
+
+    if (!ocl_makePointsList(src, pointsList, counters))
+        return false;
+
+    int total_points = counters.getMat(ACCESS_READ).at<int>(0, 0);
+    if (total_points <= 0)
+    {
+        _lines.assign(UMat(0,0,CV_32SC4));
+        return true;
+    }
+
+    UMat accum;
+    if (!ocl_fillAccum(pointsList, accum, total_points, rho, theta, numrho, numangle))
+        return false;
+
+    ocl::Kernel getLinesKernel("get_lines", ocl::imgproc::hough_lines_oclsrc,
+                               format("-D GET_LINES_PROBABOLISTIC"));
+    if (getLinesKernel.empty())
+        return false;
+
+    // TODO: investigate other strategies to choose linesMax
+    int linesMax = min(total_points*numangle/threshold, 4096);
+    UMat lines(linesMax, 1, CV_32SC4);
+
+    getLinesKernel.args(ocl::KernelArg::ReadOnly(accum), ocl::KernelArg::ReadOnly(src),
+                        ocl::KernelArg::WriteOnlyNoSize(lines), ocl::KernelArg::PtrWriteOnly(counters),
+                        linesMax, threshold, (int) minLineLength, (int) maxGap, (float) rho, (float) theta);
+
+    size_t globalThreads[2] = { numrho, numangle };
+    if (!getLinesKernel.run(2, globalThreads, NULL, false))
+        return false;
+
+    int total_lines = min(counters.getMat(ACCESS_READ).at<int>(0, 1), linesMax);
+    if (total_lines > 0)
+        _lines.assign(lines.rowRange(Range(0, total_lines)));
+    else
+        _lines.assign(UMat(0,0,CV_32SC4));
+
+    return true;
 }
+
+#endif /* HAVE_OPENCL */
 
 }
 
@@ -791,7 +838,7 @@ void cv::HoughLines( InputArray _image, OutputArray _lines,
                     double rho, double theta, int threshold,
                     double srn, double stn, double min_theta, double max_theta )
 {
-    CV_OCL_RUN(srn == 0 && stn == 0 && _image.isUMat() && _lines.isUMat(), 
+    CV_OCL_RUN(srn == 0 && stn == 0 && _image.isUMat() && _lines.isUMat(),
                ocl_HoughLines(_image, _lines, rho, theta, threshold, min_theta, max_theta));
 
     Mat image = _image.getMat();
@@ -810,7 +857,8 @@ void cv::HoughLinesP(InputArray _image, OutputArray _lines,
                      double rho, double theta, int threshold,
                      double minLineLength, double maxGap )
 {
-    CV_OCL_RUN(_image.isUMat() && _lines.isUMat(), ocl_HoughLinesP(_image, _lines, rho, theta, threshold, minLineLength, maxGap));
+    CV_OCL_RUN(_image.isUMat() && _lines.isUMat(),
+               ocl_HoughLinesP(_image, _lines, rho, theta, threshold, minLineLength, maxGap));
 
     Mat image = _image.getMat();
     std::vector<Vec4i> lines;

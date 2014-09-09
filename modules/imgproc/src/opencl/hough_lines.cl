@@ -12,7 +12,7 @@ __kernel void make_point_list(__global const uchar * src_ptr, int src_step, int 
 {
     int x = get_local_id(0);
     int y = get_group_id(1);
-    
+
     __local int l_index, l_offset;
     __local int l_points[LOCAL_SIZE];
     __global const uchar * src = src_ptr + mad24(y, src_step, src_offset);
@@ -37,12 +37,12 @@ __kernel void make_point_list(__global const uchar * src_ptr, int src_step, int 
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
-    
+
     if (x == 0)
         l_offset = atomic_add(global_offset, l_index);
 
     barrier(CLK_LOCAL_MEM_FENCE);
-    
+
     list += l_offset;
     for (int i=x; i < l_index; i+=GROUP_SIZE)
     {
@@ -53,8 +53,8 @@ __kernel void make_point_list(__global const uchar * src_ptr, int src_step, int 
 #elif defined FILL_ACCUM_GLOBAL
 
 __kernel void fill_accum_global(__global const uchar * list_ptr, int list_step, int list_offset,
-                         __global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
-                         int total_points, float irho, float theta, int numrho, int numangle)
+                                __global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
+                                int total_points, float irho, float theta, int numrho, int numangle)
 {
     int theta_idx = get_global_id(1);
     int count_idx = get_global_id(0);
@@ -90,7 +90,7 @@ __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, i
 {
     int theta_idx = get_group_id(1);
     int count_idx = get_local_id(0);
-    
+
     if (theta_idx > 0 && theta_idx < numangle + 1)
     {
         float cosVal;
@@ -136,7 +136,7 @@ __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, i
 #define ACCUM(ptr) *((__global int*)(ptr))
 
 __kernel void get_lines(__global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
-                         __global uchar * lines_ptr, int lines_step, int lines_offset, __global int* lines_index_ptr, 
+                         __global uchar * lines_ptr, int lines_step, int lines_offset, __global int* lines_index_ptr,
                          int linesMax, int threshold, float rho, float theta)
 {
     int x0 = get_global_id(0);
@@ -148,7 +148,7 @@ __kernel void get_lines(__global uchar * accum_ptr, int accum_step, int accum_of
         __global uchar* accum = accum_ptr + mad24(y+1, accum_step, mad24(x0+1, (int) sizeof(int), accum_offset));
         __global float2* lines = (__global float2*)(lines_ptr + lines_offset);
         __global int* lines_index = lines_index_ptr + 1;
-    
+
         for (int x=x0; x<accum_cols-2; x+=gl_size)
         {
             int curVote = ACCUM(accum);
@@ -169,6 +169,171 @@ __kernel void get_lines(__global uchar * accum_ptr, int accum_step, int accum_of
 
             accum += gl_size * (int) sizeof(int);
         }
+    }
+}
+
+#elif GET_LINES_PROBABOLISTIC
+
+#define ACCUM(ptr) *((__global int*)(ptr))
+
+__kernel void get_lines(__global const uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
+                        __global const uchar * src_ptr, int src_step, int src_offset, int src_rows, int src_cols,
+                        __global uchar * lines_ptr, int lines_step, int lines_offset, __global int* lines_index_ptr,
+                        int linesMax, int threshold, int lineLength, int lineGap, float rho, float theta)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    __global uchar* accum = accum_ptr + mad24(y+1, accum_step, mad24(x+1, (int) sizeof(int), accum_offset));
+    __global int4* lines = (__global int4*)(lines_ptr + lines_offset);
+    __global int* lines_index = lines_index_ptr + 1;
+
+    int curVote = ACCUM(accum);
+
+    if (curVote >= threshold &&
+        curVote > ACCUM(accum - accum_step - sizeof(int)) &&
+        curVote > ACCUM(accum - accum_step) &&
+        curVote > ACCUM(accum - accum_step + sizeof(int)) &&
+        curVote > ACCUM(accum - sizeof(int)) &&
+        curVote > ACCUM(accum + sizeof(int)) &&
+        curVote > ACCUM(accum + accum_step - sizeof(int)) &&
+        curVote > ACCUM(accum + accum_step) &&
+        curVote > ACCUM(accum + accum_step + sizeof(int)))
+    {
+        const float radius = (x - (accum_cols - 2 - 1) * 0.5f) * rho;
+        const float angle = y * theta;
+
+        float cosa;
+        float sina = sincos(angle, &cosa);
+
+        float2 p0 = (float2)(cosa * radius, sina * radius);
+        float2 dir = (float2)(-sina, cosa);
+
+        float2 pb[4] = { (float2)(-1, -1), (float2)(-1, -1), (float2)(-1, -1), (float2)(-1, -1) };
+        float a;
+
+        if (dir.x != 0)
+        {
+            a = -p0.x / dir.x;
+            pb[0].x = 0;
+            pb[0].y = p0.y + a * dir.y;
+
+            a = (src_cols - 1 - p0.x) / dir.x;
+            pb[1].x = src_cols - 1;
+            pb[1].y = p0.y + a * dir.y;
+        }
+        if (dir.y != 0)
+        {
+            a = -p0.y / dir.y;
+            pb[2].x = p0.x + a * dir.x;
+            pb[2].y = 0;
+
+            a = (src_rows - 1 - p0.y) / dir.y;
+            pb[3].x = p0.x + a * dir.x;
+            pb[3].y = src_rows - 1;
+        }
+
+        if (pb[0].x == 0 && (pb[0].y >= 0 && pb[0].y < src_rows))
+        {
+            p0 = pb[0];
+            if (dir.x < 0)
+                dir = -dir;
+        }
+        else if (pb[1].x == src_cols - 1 && (pb[0].y >= 0 && pb[0].y < src_rows))
+        {
+            p0 = pb[1];
+            if (dir.x > 0)
+                dir = -dir;
+        }
+        else if (pb[2].y == 0 && (pb[2].x >= 0 && pb[2].x < src_cols))
+        {
+            p0 = pb[2];
+            if (dir.y < 0)
+                dir = -dir;
+        }
+        else if (pb[3].y == src_rows - 1 && (pb[3].x >= 0 && pb[3].x < src_cols))
+        {
+            p0 = pb[3];
+            if (dir.y > 0)
+                dir = -dir;
+        }
+
+        float2 d;
+        if (fabs(dir.x) > fabs(dir.y))
+        {
+            d.x = dir.x > 0 ? 1 : -1;
+            d.y = dir.y / fabs(dir.x);
+        }
+        else
+        {
+            d.x = dir.x / fabs(dir.y);
+            d.y = dir.y > 0 ? 1 : -1;
+        }
+
+        float2 line_end[2];
+        int gap;
+        bool inLine = false;
+
+        float2 p1 = p0;
+        if (p1.x < 0 || p1.x >= src_cols || p1.y < 0 || p1.y >= src_rows)
+            return;
+
+        for (;;)
+        {
+            if (*(src_ptr + mad24(p1.y, src_step, p1.x + src_offset)))
+            {
+                gap = 0;
+
+                if (!inLine)
+                {
+                    line_end[0] = p1;
+                    line_end[1] = p1;
+                    inLine = true;
+                }
+                else
+                {
+                    line_end[1] = p1;
+                }
+            }
+            else if (inLine)
+            {
+                if (++gap > lineGap)
+                {
+                    bool good_line = fabs(line_end[1].x - line_end[0].x) >= lineLength ||
+                                     fabs(line_end[1].y - line_end[0].y) >= lineLength;
+
+                    if (good_line)
+                    {
+                        int index = atomic_inc(lines_index);
+                        if (index < linesMax)
+                            lines[index] = (int4)(line_end[0].x, line_end[0].y, line_end[1].x, line_end[1].y);
+                    }
+
+                    gap = 0;
+                    inLine = false;
+                }
+            }
+
+            p1 = p1 + d;
+            if (p1.x < 0 || p1.x >= src_cols || p1.y < 0 || p1.y >= src_rows)
+            {
+                if (inLine)
+                {
+                    bool good_line = fabs(line_end[1].x - line_end[0].x) >= lineLength ||
+                                     fabs(line_end[1].y - line_end[0].y) >= lineLength;
+
+                    if (good_line)
+                    {
+                        int index = atomic_inc(lines_index);
+                        if (index < linesMax)
+                            lines[index] = (int4)(line_end[0].x, line_end[0].y, line_end[1].x, line_end[1].y);
+                    }
+
+                }
+                break;
+            }
+        }
+
     }
 }
 
