@@ -20,8 +20,6 @@ ocv_module_include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/src2"
     )
 
-
-
 set(opencv_hdrs
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/core.hpp"
     "${OPENCV_MODULE_opencv_flann_LOCATION}/include/opencv2/flann/miniflann.hpp"
