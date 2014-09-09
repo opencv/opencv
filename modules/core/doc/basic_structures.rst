@@ -264,8 +264,8 @@ OpenCV typically assumes that the top and left boundary of the rectangle are inc
 Virtually every loop over an image
 ROI in OpenCV (where ROI is specified by ``Rect_<int>`` ) is implemented as: ::
 
-    for(int y = roi.y; y < roi.y + rect.height; y++)
-        for(int x = roi.x; x < roi.x + rect.width; x++)
+    for(int y = roi.y; y < roi.y + roi.height; y++)
+        for(int x = roi.x; x < roi.x + roi.width; x++)
         {
             // ...
         }
