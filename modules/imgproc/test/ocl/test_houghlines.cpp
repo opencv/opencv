@@ -15,17 +15,18 @@ namespace ocl {
 
 struct Vec2fComparator
 {
-    bool operator()(const cv::Vec2f& a, const cv::Vec2f b) const
+    bool operator()(const Vec2f& a, const Vec2f b) const
     {
         if(a[0] != b[0]) return a[0] < b[0];
         else return a[1] < b[1];
     }
 };
 
-PARAM_TEST_CASE(HoughLinesTestBase, double, double, int)
+/////////////////////////////// HoughLines ////////////////////////////////////
+
+PARAM_TEST_CASE(HoughLines, double, double, int)
 {
-    double rhoStep;
-    double thetaStep;
+    double rhoStep, thetaStep;
     int threshold;
 
     Size src_size;
@@ -50,7 +51,7 @@ PARAM_TEST_CASE(HoughLinesTestBase, double, double, int)
         line(src, Point(100, 0), Point(100, 200), Scalar::all(255), 1);
         line(src, Point(200, 0), Point(200, 200), Scalar::all(255), 1);
         line(src, Point(400, 0), Point(400, 200), Scalar::all(255), 1);
-        
+
         src.copyTo(usrc);
     }
 
@@ -65,7 +66,7 @@ PARAM_TEST_CASE(HoughLinesTestBase, double, double, int)
     virtual void Near(double eps = 0.)
     {
         EXPECT_EQ(dst.size(), udst.size());
-        
+
         if (dst.total() > 0)
         {
             Mat lines_cpu, lines_gpu;
@@ -79,8 +80,6 @@ PARAM_TEST_CASE(HoughLinesTestBase, double, double, int)
         }
     }
 };
-
-typedef HoughLinesTestBase HoughLines;
 
 OCL_TEST_P(HoughLines, RealImage)
 {
@@ -105,9 +104,80 @@ OCL_TEST_P(HoughLines, GeneratedImage)
     }
 }
 
+/////////////////////////////// HoughLinesP ///////////////////////////////////
+
+PARAM_TEST_CASE(HoughLinesP, int, double, double)
+{
+    double rhoStep, thetaStep, minLineLength, maxGap;
+    int threshold;
+
+    Size src_size;
+    Mat src, dst;
+    UMat usrc, udst;
+
+    virtual void SetUp()
+    {
+        rhoStep = 1.0;
+        thetaStep = CV_PI / 180;
+        threshold = GET_PARAM(0);
+        minLineLength = GET_PARAM(1);
+        maxGap = GET_PARAM(2);
+    }
+
+    virtual void readRealTestData()
+    {
+        Mat img = readImage("shared/pic5.png", IMREAD_GRAYSCALE);
+        Canny(img, src, 50, 200, 3);
+
+        src.copyTo(usrc);
+    }
+
+    virtual void Near(double eps = 0.)
+    {
+        Mat lines_gpu = udst.getMat(ACCESS_READ);
+
+        if (dst.total() > 0 && lines_gpu.total() > 0)
+        {
+            Mat result_cpu(src.size(), CV_8UC1, Scalar::all(0));
+            Mat result_gpu(src.size(), CV_8UC1, Scalar::all(0));
+
+            MatConstIterator_<Vec4i> it = dst.begin<Vec4i>(), end = dst.end<Vec4i>();
+            for ( ; it != end; it++)
+            {
+                Vec4i p = *it;
+                line(result_cpu, Point(p[0], p[1]), Point(p[2], p[3]), Scalar(255));
+            }
+
+            it = lines_gpu.begin<Vec4i>(), end = lines_gpu.end<Vec4i>();
+            for ( ; it != end; it++)
+            {
+                Vec4i p = *it;
+                line(result_gpu, Point(p[0], p[1]), Point(p[2], p[3]), Scalar(255));
+            }
+
+            EXPECT_MAT_SIMILAR(result_cpu, result_gpu, eps);
+        }
+    }
+};
+
+
+OCL_TEST_P(HoughLinesP, RealImage)
+{
+    readRealTestData();
+
+    OCL_OFF(cv::HoughLinesP(src, dst, rhoStep, thetaStep, threshold, minLineLength, maxGap));
+    OCL_ON(cv::HoughLinesP(usrc, udst, rhoStep, thetaStep, threshold, minLineLength, maxGap));
+
+    Near(0.2);
+}
+
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLines, Combine(Values(1, 0.5),                        // rhoStep
                                                          Values(CV_PI / 180.0, CV_PI / 360.0),  // thetaStep
                                                          Values(80, 150)));                     // threshold
+
+OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLinesP, Combine(Values(100, 150),                     // threshold
+                                                          Values(50, 100),                      // minLineLength
+                                                          Values(5, 10)));                      // maxLineGap
 
 } } // namespace cvtest::ocl
 
