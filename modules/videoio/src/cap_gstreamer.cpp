@@ -74,7 +74,7 @@
 #endif
 
 #if GST_VERSION_MAJOR > 0
-#define COLOR_ELEM "videoconvert"
+#define COLOR_ELEM "autovideoconvert"
 #else
 #define COLOR_ELEM "ffmpegcolorspace"
 #endif
@@ -151,6 +151,7 @@ protected:
     GstCaps*      caps;
     GstCaps*      buffer_caps;
     IplImage*     frame;
+    gint64        duration;
 };
 
 /*!
@@ -171,6 +172,7 @@ void CvCapture_GStreamer::init()
     caps = NULL;
     buffer_caps = NULL;
     frame = NULL;
+    duration = -1;
 }
 
 /*!
@@ -187,42 +189,8 @@ void CvCapture_GStreamer::close()
         gst_object_unref(GST_OBJECT(pipeline));
         pipeline = NULL;
     }
-    if(uridecodebin){
-        gst_object_unref(GST_OBJECT(uridecodebin));
-        uridecodebin = NULL;
-    }
-    if(color){
-        gst_object_unref(GST_OBJECT(color));
-        color = NULL;
-    }
-    if(sink){
-        gst_object_unref(GST_OBJECT(sink));
-        sink = NULL;
-    }
-    if(buffer) {
-        gst_buffer_unref(buffer);
-        buffer = NULL;
-    }
-    if(frame) {
-        frame->imageData = 0;
-        cvReleaseImage(&frame);
-        frame = NULL;
-    }
-    if(caps){
-        gst_caps_unref(caps);
-        caps = NULL;
-    }
-    if(buffer_caps){
-        gst_caps_unref(buffer_caps);
-        buffer_caps = NULL;
-    }
-#if GST_VERSION_MAJOR > 0
-    if(sample){
-        gst_sample_unref(sample);
-        sample = NULL;
-    }
-#endif
 
+    duration = -1;
 }
 
 /*!
@@ -394,10 +362,20 @@ void CvCapture_GStreamer::startPipeline()
     __BEGIN__;
 
     //fprintf(stderr, "relinked, pausing\n");
-    if(gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING) ==
-            GST_STATE_CHANGE_FAILURE) {
-        CV_ERROR(CV_StsError, "GStreamer: unable to start pipeline\n");
+    GstStateChangeReturn status = gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
+    if (status == GST_STATE_CHANGE_ASYNC)
+    {
+        // wait for status update
+        GstState st1;
+        GstState st2;
+        status = gst_element_get_state(pipeline, &st1, &st2, GST_CLOCK_TIME_NONE);
+    }
+    if (status == GST_STATE_CHANGE_FAILURE)
+    {
+        handleMessage(pipeline);
         gst_object_unref(pipeline);
+        pipeline = NULL;
+        CV_ERROR(CV_StsError, "GStreamer: unable to start pipeline\n");
         return;
     }
 
@@ -422,6 +400,7 @@ void CvCapture_GStreamer::stopPipeline()
             GST_STATE_CHANGE_FAILURE) {
         CV_ERROR(CV_StsError, "GStreamer: unable to stop pipeline\n");
         gst_object_unref(pipeline);
+        pipeline = NULL;
         return;
     }
     __END__;
@@ -578,9 +557,11 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
     bool stream = false;
     bool manualpipeline = false;
+    bool st;
     char *uri = NULL;
     uridecodebin = NULL;
     GstElementFactory * testfac;
+    GstStateChangeReturn status;
 
     if (type == CV_CAP_GSTREAMER_V4L){
         testfac = gst_element_factory_find("v4lsrc");
@@ -651,7 +632,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 #endif
             element_from_uri = true;
         }else{
-            uridecodebin = gst_element_factory_make ("uridecodebin", NULL);
+            uridecodebin = gst_element_factory_make("uridecodebin", NULL);
             g_object_set(G_OBJECT(uridecodebin),"uri",uri, NULL);
         }
         g_free(protocol);
@@ -716,9 +697,9 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     }
     else
     {
-        pipeline = gst_pipeline_new (NULL);
-        // videoconvert (in 0.10: ffmpegcolorspace) automatically selects the correct colorspace
-        // conversion based on caps.
+        pipeline = gst_pipeline_new(NULL);
+        // videoconvert (in 0.10: ffmpegcolorspace, in 1.x autovideoconvert)
+        //automatically selects the correct colorspace conversion based on caps.
         color = gst_element_factory_make(COLOR_ELEM, NULL);
         sink = gst_element_factory_make("appsink", NULL);
 
@@ -728,6 +709,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
             if(!gst_element_link(uridecodebin, color)) {
                 CV_ERROR(CV_StsError, "GStreamer: cannot link color -> sink\n");
                 gst_object_unref(pipeline);
+                pipeline = NULL;
                 return false;
             }
         }else{
@@ -737,6 +719,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
         if(!gst_element_link(color, sink)) {
             CV_ERROR(CV_StsError, "GStreamer: cannot link color -> sink\n");
             gst_object_unref(pipeline);
+            pipeline = NULL;
             return false;
         }
     }
@@ -761,8 +744,48 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     gst_app_sink_set_caps(GST_APP_SINK(sink), caps);
     gst_caps_unref(caps);
 
-    //we do not start recording here just yet.
-    // the user probably wants to set capture properties first, so start recording whenever the first frame is requested
+    // For fideo files only: set pipeline to PAUSED state to get its duration
+    if (stream)
+    {
+        status = gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PAUSED);
+        if (status == GST_STATE_CHANGE_ASYNC)
+        {
+            // wait for status update
+            GstState st1;
+            GstState st2;
+            status = gst_element_get_state(pipeline, &st1, &st2, GST_CLOCK_TIME_NONE);
+        }
+        if (status == GST_STATE_CHANGE_FAILURE)
+        {
+            handleMessage(pipeline);
+            gst_object_unref(pipeline);
+            pipeline = NULL;
+            CV_ERROR(CV_StsError, "GStreamer: unable to start pipeline\n");
+            return false;
+        }
+
+        GstFormat format;
+
+#if GST_VERSION_MAJOR == 0
+#define FORMAT &format
+#else
+#define FORMAT format
+#endif
+
+        format = GST_FORMAT_DEFAULT;
+        st = gst_element_query_duration(sink, FORMAT, &duration);
+        if(!st)
+        {
+            CV_WARN("GStreamer: unable to query duration of stream");
+            duration = -1;
+            return true;
+        }
+    }
+    else
+    {
+        duration = -1;
+    }
+
     __END__;
 
     return true;
@@ -864,13 +887,7 @@ double CvCapture_GStreamer::getProperty( int propId )
     case CV_CAP_PROP_FOURCC:
         break;
     case CV_CAP_PROP_FRAME_COUNT:
-        format = GST_FORMAT_DEFAULT;
-        status = gst_element_query_position(sink, FORMAT, &value);
-        if(!status) {
-            CV_WARN("GStreamer: unable to query position of stream");
-            return false;
-        }
-        return value;
+        return duration;
     case CV_CAP_PROP_FORMAT:
     case CV_CAP_PROP_MODE:
     case CV_CAP_PROP_BRIGHTNESS:
@@ -1059,28 +1076,45 @@ void CvVideoWriter_GStreamer::init()
  */
 void CvVideoWriter_GStreamer::close()
 {
+    GstStateChangeReturn status;
     if (pipeline)
     {
-        gst_app_src_end_of_stream(GST_APP_SRC(source));
+        //handleMessage(pipeline);
+
+        if (gst_app_src_end_of_stream(GST_APP_SRC(source)) != GST_FLOW_OK)
+            CV_WARN("Cannot send EOS to GStreamer pipeline\n");
 
         //wait for EOS to trickle down the pipeline. This will let all elements finish properly
         GstBus* bus = gst_element_get_bus(pipeline);
         GstMessage *msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE, (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
-        if(msg != NULL){
+        if (GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ERROR)
+            CV_WARN("Error during VideoWriter finalization\n");
+
+        if(msg != NULL)
+        {
             gst_message_unref(msg);
             g_object_unref(G_OBJECT(bus));
         }
 
-        gst_element_set_state (pipeline, GST_STATE_NULL);
-        handleMessage(pipeline);
+        status = gst_element_set_state (pipeline, GST_STATE_NULL);
+        if (status == GST_STATE_CHANGE_ASYNC)
+        {
+            // wait for status update
+            GstState st1;
+            GstState st2;
+            status = gst_element_get_state(pipeline, &st1, &st2, GST_CLOCK_TIME_NONE);
+        }
+        if (status == GST_STATE_CHANGE_FAILURE)
+        {
+            handleMessage (pipeline);
+            gst_object_unref (GST_OBJECT (pipeline));
+            pipeline = NULL;
+            CV_WARN("Unable to stop gstreamer pipeline\n");
+            return;
+        }
 
         gst_object_unref (GST_OBJECT (pipeline));
-
-        if (source)
-          gst_object_unref (GST_OBJECT (source));
-
-        if (file)
-          gst_object_unref (GST_OBJECT (file));
+        pipeline = NULL;
     }
 }
 
@@ -1353,12 +1387,14 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
 
     stateret = gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
     if(stateret  == GST_STATE_CHANGE_FAILURE) {
+        handleMessage(pipeline);
         CV_ERROR(CV_StsError, "GStreamer: cannot put pipeline to play\n");
     }
-    handleMessage(pipeline);
 
     framerate = fps;
     num_frames = 0;
+
+    handleMessage(pipeline);
 
     __END__;
 
@@ -1376,7 +1412,6 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
  */
 bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
 {
-
     CV_FUNCNAME("CvVideoWriter_GStreamer::writerFrame");
 
     GstClockTime duration, timestamp;
@@ -1384,6 +1419,7 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
     int size;
 
     __BEGIN__;
+
     handleMessage(pipeline);
 
     if (input_pix_fmt == GST_VIDEO_FORMAT_BGR) {
@@ -1399,7 +1435,8 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
     }
 #endif
     else {
-        assert(false);
+        fprintf(stderr, "Invalid video format!\n");
+        return false;
     }
 
     size = image->imageSize;
@@ -1427,13 +1464,15 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
 
     ret = gst_app_src_push_buffer(GST_APP_SRC(source), buffer);
     if (ret != GST_FLOW_OK) {
-        /* something wrong, stop pushing */
-        assert(false);
+        CV_WARN("Error pushing buffer to GStreamer pipeline");
+        return false;
     }
     //gst_debug_bin_to_dot_file (GST_BIN(pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
+
     ++num_frames;
 
     __END__;
+
     return true;
 }
 
@@ -1518,7 +1557,6 @@ void handleMessage(GstElement * pipeline)
                 break;
             case GST_MESSAGE_ERROR:
                 gst_message_parse_error(msg, &err, &debug);
-
                 //fprintf(stderr, "GStreamer Plugin: Embedded video playback halted; module %s reported: %s\n",
                 //                gst_element_get_name(GST_MESSAGE_SRC (msg)), err->message);
 
@@ -1531,12 +1569,11 @@ void handleMessage(GstElement * pipeline)
                 //fprintf(stderr, "reached the end of the stream.");
                 break;
             case GST_MESSAGE_STREAM_STATUS:
-
                 gst_message_parse_stream_status(msg,&tp,&elem);
                 //fprintf(stderr, "stream status: elem %s, %i\n", GST_ELEMENT_NAME(elem), tp);
                 break;
             default:
-                //fprintf(stderr, "unhandled message\n");
+                //fprintf(stderr, "unhandled message %s\n",GST_MESSAGE_TYPE_NAME(msg));
                 break;
             }
         }
