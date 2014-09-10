@@ -83,7 +83,12 @@ function(find_python preferred_version min_version library_env include_dir_env
       endif()
 
       # not using _version_string here, because it might not conform to the CMake version format
-      find_host_package(PythonLibs "${_version_major_minor}.${_version_patch}" EXACT)
+      if(CMAKE_CROSSCOMPILING)
+        # builder version can differ from target, matching base version (e.g. 2.7)
+        find_host_package(PythonLibs "${_version_major_minor}")
+      else()
+        find_host_package(PythonLibs "${_version_major_minor}.${_version_patch}" EXACT)
+      endif()
 
       if(PYTHONLIBS_FOUND)
         # Copy outputs
