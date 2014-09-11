@@ -1,5 +1,7 @@
 <project>
   <property file="ant-${opencv.build.type}.properties"/>
+  <property name="test.dir" value="testResults"/>
+  <property name="build.dir" value="build"/>
 
   <path id="master-classpath">
     <fileset dir="lib">
@@ -12,7 +14,7 @@
 
   <target name="clean">
     <delete dir="build"/>
-    <delete dir="testResults"/>
+    <delete dir="${test.dir}"/>
   </target>
 
   <target name="compile">
@@ -34,7 +36,7 @@
   </target>
 
   <target name="test">
-    <mkdir dir="testResults"/>
+    <mkdir dir="${test.dir}"/>
     <junit printsummary="true" haltonfailure="false" haltonerror="false" showoutput="false" logfailedtests="true" maxmemory="256m">
       <sysproperty key="java.library.path" path="${opencv.lib.path}"/>
       <env key="PATH" path="${opencv.lib.path}"/>
@@ -45,12 +47,18 @@
 
       <formatter type="xml"/>
 
-      <batchtest fork="yes" todir="testResults">
+      <batchtest fork="yes" todir="${test.dir}">
         <zipfileset src="build/jar/opencv-test.jar" includes="**/*.class" excludes="**/OpenCVTest*">
           <exclude name="**/*$*.class"/>
         </zipfileset>
       </batchtest>
     </junit>
+    <junitreport todir="${test.dir}">
+      <fileset dir="${test.dir}">
+        <include name="TEST-*.xml"/>
+      </fileset>
+      <report format="noframes" todir="${test.dir}"/>
+    </junitreport>
   </target>
 
   <target name="build">
