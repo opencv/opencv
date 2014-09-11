@@ -116,7 +116,7 @@ public class OpenCVTestCase extends TestCase {
             return;
         }
 
-        OpenCVTestRunner.LENA_PATH = pwd + "res/drawable/lena.jpg";
+        OpenCVTestRunner.LENA_PATH = pwd + "res/drawable/lena.png";
         OpenCVTestRunner.CHESS_PATH = pwd + "res/drawable/chessboard.jpg";
         OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH = pwd + "res/raw/lbpcascade_frontalface.xml";
 

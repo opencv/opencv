@@ -11,6 +11,8 @@ set(opencv_test_java_bin_dir "${CMAKE_CURRENT_BINARY_DIR}/.build")
 # get project sources
 file(GLOB_RECURSE opencv_test_java_files RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/res/*" "${CMAKE_CURRENT_SOURCE_DIR}/src/*")
 ocv_list_filterout(opencv_test_java_files ".svn")
+# opencv_ml is broken
+ocv_list_filterout(opencv_test_java_files "/ml/")
 
 # copy sources out from the build tree
 set(opencv_test_java_file_deps "")

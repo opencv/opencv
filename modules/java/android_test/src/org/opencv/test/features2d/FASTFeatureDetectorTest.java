@@ -12,6 +12,7 @@ import org.opencv.features2d.FeatureDetector;
 import org.opencv.core.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
+import org.opencv.imgproc.Imgproc;
 
 public class FASTFeatureDetectorTest extends OpenCVTestCase {
 

@@ -19,6 +19,8 @@ file(GLOB_RECURSE opencv_test_java_files RELATIVE "${android_source_dir}" "${and
 ocv_list_filterout(opencv_test_java_files "OpenCVTest(Case|Runner).java")
 # These files aren't for desktop Java.
 ocv_list_filterout(opencv_test_java_files "/android/")
+# opencv_ml is broken
+ocv_list_filterout(opencv_test_java_files "/ml/")
 
 # These are files updated for pure Java.
 file(GLOB_RECURSE modified_files RELATIVE "${java_source_dir}" "${java_source_dir}/src/*")
