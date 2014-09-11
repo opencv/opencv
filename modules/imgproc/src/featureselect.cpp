@@ -85,6 +85,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     size_t total, i, j, ncorners = 0, possibleCornersCount =
             std::max(1024, static_cast<int>(imgsize.area() * 0.1));
     bool haveMask = !_mask.empty();
+    UMat counter(1, 1, CV_32SC1);
 
     // find threshold
     {
@@ -108,7 +109,8 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
 
         ocl::KernelArg eigarg = ocl::KernelArg::ReadOnlyNoSize(eig),
                 dbarg = ocl::KernelArg::PtrWriteOnly(maxEigenValue),
-                maskarg = ocl::KernelArg::ReadOnlyNoSize(mask);
+                maskarg = ocl::KernelArg::ReadOnlyNoSize(mask),
+                counterarg = ocl::KernelArg::PtrReadWrite(counter);
 
         if (haveMask)
             k.args(eigarg, eig.cols, (int)eig.total(), dbarg, maskarg);
@@ -125,7 +127,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         if (k2.empty())
             return false;
 
-        k2.args(dbarg, (float)qualityLevel);
+        k2.args(dbarg, (float)qualityLevel, counterarg);
 
         if (!k2.runTask(false))
             return false;
@@ -138,8 +140,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         if (k.empty())
             return false;
 
-        UMat counter(1, 1, CV_32SC1, Scalar::all(0)),
-            corners(1, (int)possibleCornersCount, CV_32FC2, Scalar::all(-1));
+        UMat corners(1, (int)possibleCornersCount, CV_32FC2);
         CV_Assert(sizeof(Corner) == corners.elemSize());
 
         ocl::KernelArg eigarg = ocl::KernelArg::ReadOnlyNoSize(eig),
