@@ -91,7 +91,8 @@ __kernel void maxEigenVal(__global const uchar * srcptr, int src_step, int src_o
         *(__global float *)(dstptr + (int)sizeof(float) * gid) = localmem_max[0];
 }
 
-__kernel void maxEigenValTask(__global float * dst, float qualityLevel)
+__kernel void maxEigenValTask(__global float * dst, float qualityLevel,
+                              __global int * counter)
 {
     float maxval = -FLT_MAX;
 
@@ -100,6 +101,7 @@ __kernel void maxEigenValTask(__global float * dst, float qualityLevel)
         maxval = max(maxval, dst[x]);
 
     dst[0] = maxval * qualityLevel;
+    counter[0] = 0;
 }
 
 #elif OP_FIND_CORNERS
