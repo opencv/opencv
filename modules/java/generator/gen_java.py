@@ -127,7 +127,6 @@ missing_consts = \
         (
             ('SVD_MODIFY_A', 1), ('SVD_NO_UV', 2), ('SVD_FULL_UV', 4),
             ('FILLED', -1),
-            ('LINE_AA', 16), ('LINE_8', 8), ('LINE_4', 4),
             ('REDUCE_SUM', 0), ('REDUCE_AVG', 1), ('REDUCE_MAX', 2), ('REDUCE_MIN', 3),
         ) #public
     }, # Core
@@ -142,7 +141,11 @@ missing_consts = \
             ('IPL_BORDER_WRAP',        3 ),
             ('IPL_BORDER_REFLECT_101', 4 ),
             ('IPL_BORDER_TRANSPARENT', 5 ),
-        ) # private
+        ), # private
+        'public' :
+        (
+            ('LINE_AA', 16), ('LINE_8', 8), ('LINE_4', 4),
+        ) #public
     }, # Imgproc
 
     "Calib3d":
@@ -445,9 +448,9 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
             'cpp_code' :
     """
     // C++: Size getTextSize(const String& text, int fontFace, double fontScale, int thickness, int* baseLine);
-    JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize (JNIEnv*, jclass, jstring, jint, jdouble, jint, jintArray);
+    JNIEXPORT jdoubleArray JNICALL Java_org_opencv_imgproc_Imgproc_n_1getTextSize (JNIEnv*, jclass, jstring, jint, jdouble, jint, jintArray);
 
-    JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
+    JNIEXPORT jdoubleArray JNICALL Java_org_opencv_imgproc_Imgproc_n_1getTextSize
     (JNIEnv* env, jclass, jstring text, jint fontFace, jdouble fontScale, jint thickness, jintArray baseLine)
     {
     try {
@@ -484,13 +487,13 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
         return result;
 
     } catch(const cv::Exception& e) {
-        LOGD("Core::n_1getTextSize() catched cv::Exception: %s", e.what());
+        LOGD("Imgproc::n_1getTextSize() catched cv::Exception: %s", e.what());
         jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return NULL;
     } catch (...) {
-        LOGD("Core::n_1getTextSize() catched unknown exception (...)");
+        LOGD("Imgproc::n_1getTextSize() catched unknown exception (...)");
         jclass je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, "Unknown exception in JNI code {core::getTextSize()}");
         return NULL;
