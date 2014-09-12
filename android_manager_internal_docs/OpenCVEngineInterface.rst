@@ -8,7 +8,7 @@ Java OpenCV OpenCVEngineInterface
     :synopsis: Defines OpenCV Manager interface for Android.
 .. Class:: OpenCVEngineInterface
 
-OpenCVEngineInterface class provides Java interface to OpenCV Manager Service. Is synchronous with native OpenCVEngine class
+This class provides a Java interface to the OpenCV Manager service. It is similar to the OpenCVEngine class.
 
 .. note:: Do not use this class directly. Use OpenCVLoader instead!
 
@@ -20,7 +20,7 @@ int getEngineVersion()
     Get OpenCV Manager version
 
     :rtype: int
-    :return: Return OpenCV Manager version
+    :return: Version of the OpenCV Manager
 
 String getLibPathByVersion()
 ----------------------------
@@ -31,7 +31,7 @@ String getLibPathByVersion()
 
     :param version: OpenCV library version
     :rtype: String
-    :return: Return path to OpenCV native libs or empty string if OpenCV was not found
+    :return: Path to OpenCV native libs or empty string if OpenCV was not found
 
 String getLibraryList()
 -----------------------
@@ -42,7 +42,7 @@ String getLibraryList()
 
     :param version: OpenCV library version
     :rtype: String
-    :return: Return OpenCV libraries names separated by symbol ";" in loading order
+    :return: OpenCV library names separated by symbol ";" in loading order
 
 boolean installVersion()
 ------------------------
@@ -53,5 +53,5 @@ boolean installVersion()
 
     :param version: OpenCV library version
     :rtype: String
-    :return: Return true if installation was successful or OpenCV package has been already installed
+    :return: True if installation was successful or package was already installed
  
