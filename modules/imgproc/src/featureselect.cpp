@@ -81,11 +81,12 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         cornerMinEigenVal( _image, eig, blockSize, 3 );
 
     Size imgsize = _image.size();
-    std::vector<Corner> tmpCorners;
     size_t total, i, j, ncorners = 0, possibleCornersCount =
             std::max(1024, static_cast<int>(imgsize.area() * 0.1));
     bool haveMask = !_mask.empty();
-    UMat counter(1, 1, CV_32SC1);
+    UMat corners_buffer(1, (int)possibleCornersCount + 1, CV_32FC2);
+    CV_Assert(sizeof(Corner) == corners_buffer.elemSize());
+    Mat tmpCorners;
 
     // find threshold
     {
@@ -110,7 +111,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         ocl::KernelArg eigarg = ocl::KernelArg::ReadOnlyNoSize(eig),
                 dbarg = ocl::KernelArg::PtrWriteOnly(maxEigenValue),
                 maskarg = ocl::KernelArg::ReadOnlyNoSize(mask),
-                counterarg = ocl::KernelArg::PtrReadWrite(counter);
+                cornersarg = ocl::KernelArg::PtrWriteOnly(corners_buffer);
 
         if (haveMask)
             k.args(eigarg, eig.cols, (int)eig.total(), dbarg, maskarg);
@@ -127,7 +128,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         if (k2.empty())
             return false;
 
-        k2.args(dbarg, (float)qualityLevel, counterarg);
+        k2.args(dbarg, (float)qualityLevel, cornersarg);
 
         if (!k2.runTask(false))
             return false;
@@ -140,23 +141,18 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         if (k.empty())
             return false;
 
-        UMat corners(1, (int)possibleCornersCount, CV_32FC2);
-        CV_Assert(sizeof(Corner) == corners.elemSize());
-
         ocl::KernelArg eigarg = ocl::KernelArg::ReadOnlyNoSize(eig),
-                cornersarg = ocl::KernelArg::PtrWriteOnly(corners),
-                counterarg = ocl::KernelArg::PtrReadWrite(counter),
+                cornersarg = ocl::KernelArg::PtrWriteOnly(corners_buffer),
                 thresholdarg = ocl::KernelArg::PtrReadOnly(maxEigenValue);
 
         if (!haveMask)
-            k.args(eigarg, cornersarg, counterarg,
-                   eig.rows - 2, eig.cols - 2, thresholdarg,
-                   (int)possibleCornersCount);
+            k.args(eigarg, cornersarg, eig.rows - 2, eig.cols - 2, thresholdarg,
+                  (int)possibleCornersCount);
         else
         {
             UMat mask = _mask.getUMat();
             k.args(eigarg, ocl::KernelArg::ReadOnlyNoSize(mask),
-                   cornersarg, counterarg, eig.rows - 2, eig.cols - 2,
+                   cornersarg, eig.rows - 2, eig.cols - 2,
                    thresholdarg, (int)possibleCornersCount);
         }
 
@@ -164,19 +160,17 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         if (!k.run(2, globalsize, NULL, false))
             return false;
 
-        total = std::min<size_t>(counter.getMat(ACCESS_READ).at<int>(0, 0), possibleCornersCount);
+        tmpCorners = corners_buffer.getMat(ACCESS_RW);
+        total = std::min<size_t>(tmpCorners.at<Vec2i>(0, 0)[0], possibleCornersCount);
         if (total == 0)
         {
             _corners.release();
             return true;
         }
-
-        tmpCorners.resize(total);
-
-        Mat mcorners(1, (int)total, CV_32FC2, &tmpCorners[0]);
-        corners.colRange(0, (int)total).copyTo(mcorners);
     }
-    std::sort(tmpCorners.begin(), tmpCorners.end());
+
+    Corner* corner_ptr = tmpCorners.ptr<Corner>() + 1;
+    std::sort(corner_ptr, corner_ptr + total);
 
     std::vector<Point2f> corners;
     corners.reserve(total);
@@ -195,7 +189,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
 
         for( i = 0; i < total; i++ )
         {
-            const Corner & c = tmpCorners[i];
+            const Corner & c = corner_ptr[i];
             bool good = true;
 
             int x_cell = c.x / cell_size;
@@ -251,7 +245,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     {
         for( i = 0; i < total; i++ )
         {
-            const Corner & c = tmpCorners[i];
+            const Corner & c = corner_ptr[i];
 
             corners.push_back(Point2f((float)c.x, (float)c.y));
             ++ncorners;
