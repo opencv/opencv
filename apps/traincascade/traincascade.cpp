@@ -10,7 +10,7 @@ using namespace cv;
  
 THis is my first opencv source project
 hello world!
-
+...
 */
 int main( int argc, char* argv[] )
 {
