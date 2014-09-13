@@ -102,9 +102,9 @@ print __doc__
 if len(sys.argv) == 2:
     filename = sys.argv[1] # for drawing purposes
 else:
-    print "No input image given, so loading default image, lena.jpg \n"
+    print "No input image given, so loading default image, ../data/lena.jpg \n"
     print "Correct Usage: python grabcut.py <filename> \n"
-    filename = '../cpp/lena.jpg'
+    filename = '../data/lena.jpg'
 
 img = cv2.imread(filename)
 img2 = img.copy()                               # a copy of original image

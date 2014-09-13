@@ -14,12 +14,12 @@ static void help()
     printf("\nThis program demonstrated the use of the discrete Fourier transform (dft)\n"
            "The dft of an image is taken and it's power spectrum is displayed.\n"
            "Usage:\n"
-            "./dft [image_name -- default lena.jpg]\n");
+            "./dft [image_name -- default ../data/lena.jpg]\n");
 }
 
 const char* keys =
 {
-    "{@image|lena.jpg|input image file}"
+    "{@image|../data/lena.jpg|input image file}"
 };
 
 int main(int argc, const char ** argv)

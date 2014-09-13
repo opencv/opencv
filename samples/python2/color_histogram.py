@@ -31,7 +31,7 @@ if __name__ == '__main__':
         fn = sys.argv[1]
     except:
         fn = 0
-    cam = video.create_capture(fn, fallback='synth:bg=../cpp/baboon.jpg:class=chess:noise=0.05')
+    cam = video.create_capture(fn, fallback='synth:bg=../data/baboon.jpg:class=chess:noise=0.05')
 
     while True:
         flag, frame = cam.read()

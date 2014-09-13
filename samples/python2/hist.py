@@ -57,7 +57,7 @@ if __name__ == '__main__':
     if len(sys.argv)>1:
         fname = sys.argv[1]
     else :
-        fname = '../cpp/lena.jpg'
+        fname = '../data/lena.jpg'
         print "usage : python hist.py <image_file>"
 
     im = cv2.imread(fname)

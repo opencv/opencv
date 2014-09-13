@@ -281,8 +281,8 @@ TEST(meanShift)
 
 TEST(SURF)
 {
-    Mat src = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
-    if (src.empty()) throw runtime_error("can't open aloeL.jpg");
+    Mat src = imread(abspath("../data/aloeL.jpg"), IMREAD_GRAYSCALE);
+    if (src.empty()) throw runtime_error("can't open ../data/aloeL.jpg");
 
     xfeatures2d::SURF surf;
     vector<KeyPoint> keypoints;
@@ -311,8 +311,8 @@ TEST(SURF)
 
 TEST(FAST)
 {
-    Mat src = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
-    if (src.empty()) throw runtime_error("can't open aloeL.jpg");
+    Mat src = imread(abspath("../data/aloeL.jpg"), IMREAD_GRAYSCALE);
+    if (src.empty()) throw runtime_error("can't open ../data/aloeL.jpg");
 
     vector<KeyPoint> keypoints;
 
@@ -336,8 +336,8 @@ TEST(FAST)
 
 TEST(ORB)
 {
-    Mat src = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
-    if (src.empty()) throw runtime_error("can't open aloeL.jpg");
+    Mat src = imread(abspath("../data/aloeL.jpg"), IMREAD_GRAYSCALE);
+    if (src.empty()) throw runtime_error("can't open ../data/aloeL.jpg");
 
     ORB orb(4000);
     vector<KeyPoint> keypoints;
@@ -1065,9 +1065,9 @@ TEST(equalizeHist)
 
 TEST(Canny)
 {
-    Mat img = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
+    Mat img = imread(abspath("../data/aloeL.jpg"), IMREAD_GRAYSCALE);
 
-    if (img.empty()) throw runtime_error("can't open aloeL.jpg");
+    if (img.empty()) throw runtime_error("can't open ../data/aloeL.jpg");
 
     Mat edges(img.size(), CV_8UC1);
 
@@ -1166,8 +1166,8 @@ TEST(gemm)
 
 TEST(GoodFeaturesToTrack)
 {
-    Mat src = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
-    if (src.empty()) throw runtime_error("can't open aloeL.jpg");
+    Mat src = imread(abspath("../data/aloeL.jpg"), IMREAD_GRAYSCALE);
+    if (src.empty()) throw runtime_error("can't open ../data/aloeL.jpg");
 
     vector<Point2f> pts;
 
@@ -1191,11 +1191,11 @@ TEST(GoodFeaturesToTrack)
 
 TEST(PyrLKOpticalFlow)
 {
-    Mat frame0 = imread(abspath("rubberwhale1.png"));
-    if (frame0.empty()) throw runtime_error("can't open rubberwhale1.png");
+    Mat frame0 = imread(abspath("../data/rubberwhale1.png"));
+    if (frame0.empty()) throw runtime_error("can't open ../data/rubberwhale1.png");
 
-    Mat frame1 = imread(abspath("rubberwhale2.png"));
-    if (frame1.empty()) throw runtime_error("can't open rubberwhale2.png");
+    Mat frame1 = imread(abspath("../data/rubberwhale2.png"));
+    if (frame1.empty()) throw runtime_error("can't open ../data/rubberwhale2.png");
 
     Mat gray_frame;
     cvtColor(frame0, gray_frame, COLOR_BGR2GRAY);
@@ -1242,7 +1242,7 @@ TEST(PyrLKOpticalFlow)
 
 TEST(FarnebackOpticalFlow)
 {
-    const string datasets[] = {"rubberwhale", "basketball"};
+    const string datasets[] = {"../data/rubberwhale", "../data/basketball"};
     for (size_t i = 0; i < sizeof(datasets)/sizeof(*datasets); ++i) {
     for (int fastPyramids = 0; fastPyramids < 2; ++fastPyramids) {
     for (int useGaussianBlur = 0; useGaussianBlur < 2; ++useGaussianBlur) {
@@ -1274,10 +1274,10 @@ TEST(FarnebackOpticalFlow)
 
 TEST(MOG)
 {
-    const std::string inputFile = abspath("768x576.avi");
+    const std::string inputFile = abspath("../data/768x576.avi");
 
     cv::VideoCapture cap(inputFile);
-    if (!cap.isOpened()) throw runtime_error("can't open 768x576.avi");
+    if (!cap.isOpened()) throw runtime_error("can't open ../data/768x576.avi");
 
     cv::Mat frame;
     cap >> frame;
@@ -1327,10 +1327,10 @@ TEST(MOG)
 
 TEST(MOG2)
 {
-    const std::string inputFile = abspath("768x576.avi");
+    const std::string inputFile = abspath("../data/768x576.avi");
 
     cv::VideoCapture cap(inputFile);
-    if (!cap.isOpened()) throw runtime_error("can't open 768x576.avi");
+    if (!cap.isOpened()) throw runtime_error("can't open ../data/768x576.avi");
 
     cv::Mat frame;
     cap >> frame;

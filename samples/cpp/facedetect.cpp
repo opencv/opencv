@@ -118,8 +118,8 @@ int main( int argc, const char** argv )
     }
     else
     {
-        image = imread( "lena.jpg", 1 );
-        if(image.empty()) cout << "Couldn't read lena.jpg" << endl;
+        image = imread( "../data/lena.jpg", 1 );
+        if(image.empty()) cout << "Couldn't read ../data/lena.jpg" << endl;
     }
 
     cvNamedWindow( "result", 1 );

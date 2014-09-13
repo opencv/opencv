@@ -58,7 +58,7 @@ static void ErodeDilate(int, void*)
 
 int main( int argc, char** argv )
 {
-    char* filename = argc == 2 ? argv[1] : (char*)"baboon.jpg";
+    char* filename = argc == 2 ? argv[1] : (char*)"../data/baboon.jpg";
     if( (src = imread(filename,1)).empty() )
         return -1;
 

@@ -80,7 +80,7 @@ int main(int ac, char** av)
 
         fs << "iterationNr" << 100;
         fs << "strings" << "[";                              // text - string sequence
-        fs << "image1.jpg" << "Awesomeness" << "baboon.jpg";
+        fs << "image1.jpg" << "Awesomeness" << "../data/baboon.jpg";
         fs << "]";                                           // close sequence
 
         fs << "Mapping";                              // text - mapping

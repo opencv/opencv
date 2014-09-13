@@ -36,7 +36,7 @@ static void help()
 const char* keys =
 {
     "{c  camera   |           | use camera or not}"
-    "{fn file_name|baboon.jpg | image file       }"
+    "{fn file_name|../data/baboon.jpg | image file       }"
     "{a accel     |auto       | accelerator type: auto (default), cpu, gpu}"
 };
 

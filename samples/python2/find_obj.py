@@ -139,8 +139,8 @@ if __name__ == '__main__':
     try:
         fn1, fn2 = args
     except:
-        fn1 = '../cpp/box.png'
-        fn2 = '../cpp/box_in_scene.png'
+        fn1 = '../data/box.png'
+        fn2 = '../data/box_in_scene.png'
 
     img1 = cv2.imread(fn1, 0)
     img2 = cv2.imread(fn2, 0)

@@ -17,7 +17,7 @@ static void help()
 {
     printf("\n"
             "This program demonstrates a method for shape comparisson based on Shape Context\n"
-            "You should run the program providing a number between 1 and 20 for selecting an image in the folder shape_sample.\n"
+            "You should run the program providing a number between 1 and 20 for selecting an image in the folder ../data/shape_sample.\n"
             "Call\n"
             "./shape_example [number between 1 and 20]\n\n");
 }
@@ -55,7 +55,7 @@ static vector<Point> simpleContour( const Mat& currentQuery, int n=300 )
 int main(int argc, char** argv)
 {
     help();
-    string path = "./shape_sample/";
+    string path = "../data/shape_sample/";
     int indexQuery = 1;
     if( argc < 2 )
     {

@@ -44,7 +44,7 @@ App::App(int argc, const char* argv[])
         exit(0);
     }
 
-    String filename = argc == 2 ? argv[1] : "baboon.jpg";
+    String filename = argc == 2 ? argv[1] : "../data/baboon.jpg";
 
     Mat img = imread(filename);
     if (img.empty())

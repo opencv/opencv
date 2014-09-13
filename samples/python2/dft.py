@@ -56,7 +56,7 @@ if __name__ == "__main__":
     if len(sys.argv)>1:
         im = cv2.imread(sys.argv[1])
     else :
-        im = cv2.imread('../c/baboon.jpg')
+        im = cv2.imread('../data/baboon.jpg')
         print "usage : python dft.py <image_file>"
 
     # convert to grayscale

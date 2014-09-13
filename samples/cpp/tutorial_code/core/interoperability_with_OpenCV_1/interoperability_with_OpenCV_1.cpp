@@ -17,7 +17,7 @@ static void help( char* progName)
         << "Also contains example for image read, spliting the planes, merging back and "  << endl
         << " color conversion, plus iterating through pixels. "                            << endl
         << "Usage:" << endl
-        << progName << " [image-name Default: lena.jpg]"                           << endl << endl;
+        << progName << " [image-name Default: ../data/lena.jpg]"                   << endl << endl;
 }
 
 // comment out the define to use only the latest C++ API
@@ -31,7 +31,7 @@ static void help( char* progName)
 int main( int argc, char** argv )
 {
     help(argv[0]);
-    const char* imagename = argc > 1 ? argv[1] : "lena.jpg";
+    const char* imagename = argc > 1 ? argv[1] : "../data/lena.jpg";
 
 #ifdef DEMO_MIXED_API_USE
     Ptr<IplImage> IplI(cvLoadImage(imagename));      // Ptr<T> is a safe ref-counting pointer class

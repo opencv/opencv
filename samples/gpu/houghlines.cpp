@@ -15,12 +15,12 @@ static void help()
 {
     cout << "This program demonstrates line finding with the Hough transform." << endl;
     cout << "Usage:" << endl;
-    cout << "./gpu-example-houghlines <image_name>, Default is pic1.png\n" << endl;
+    cout << "./gpu-example-houghlines <image_name>, Default is ../data/pic1.png\n" << endl;
 }
 
 int main(int argc, const char* argv[])
 {
-    const string filename = argc >= 2 ? argv[1] : "pic1.png";
+    const string filename = argc >= 2 ? argv[1] : "../data/pic1.png";
 
     Mat src = imread(filename, IMREAD_GRAYSCALE);
     if (src.empty())

@@ -14,7 +14,7 @@ static void help()
     "It shows reading of images, converting to planes and merging back, color conversion\n"
     "and also iterating through pixels.\n"
     "Call:\n"
-    "./image [image-name Default: lena.jpg]\n" << endl;
+    "./image [image-name Default: ../data/lena.jpg]\n" << endl;
 }
 
 // enable/disable use of mixed API in the code below.
@@ -28,7 +28,7 @@ static void help()
 int main( int argc, char** argv )
 {
     help();
-    const char* imagename = argc > 1 ? argv[1] : "lena.jpg";
+    const char* imagename = argc > 1 ? argv[1] : "../data/lena.jpg";
 #if DEMO_MIXED_API_USE
     Ptr<IplImage> iplimg(cvLoadImage(imagename)); // Ptr<T> is safe ref-counting pointer class
     if(!iplimg)
