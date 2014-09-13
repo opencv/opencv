@@ -15,8 +15,8 @@ int main(int argc, char** argv)
     std::string in;
     if (argc != 2)
     {
-        std::cout << "Usage: lsd_lines [input image]. Now loading building.jpg" << std::endl;
-        in = "building.jpg";
+        std::cout << "Usage: lsd_lines [input image]. Now loading ../data/building.jpg" << std::endl;
+        in = "../data/building.jpg";
     }
     else
     {

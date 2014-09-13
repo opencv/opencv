@@ -23,7 +23,7 @@ const char* keys =
     "{c  camera   |         | use camera or not}"
     "{m  method   |mog2     | method (knn or mog2) }"
     "{s  smooth   |         | smooth the mask }"
-    "{fn file_name|tree.avi | movie file        }"
+    "{fn file_name|../data/tree.avi | movie file        }"
 };
 
 //this is a sample for foreground detection functions

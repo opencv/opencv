@@ -32,8 +32,8 @@ def write_ply(fn, verts, colors):
 
 if __name__ == '__main__':
     print 'loading images...'
-    imgL = cv2.pyrDown( cv2.imread('../gpu/aloeL.jpg') )  # downscale images for faster processing
-    imgR = cv2.pyrDown( cv2.imread('../gpu/aloeR.jpg') )
+    imgL = cv2.pyrDown( cv2.imread('../data/aloeL.jpg') )  # downscale images for faster processing
+    imgR = cv2.pyrDown( cv2.imread('../data/aloeR.jpg') )
 
     # disparity range is tuned for 'aloe' image pair
     window_size = 3

@@ -2,7 +2,7 @@
 '''
 This example illustrates how to use Hough Transform to find lines
 Usage: ./houghlines.py [<image_name>]
-image argument defaults to ../cpp/pic1.png
+image argument defaults to ../data/pic1.png
 '''
 import cv2
 import numpy as np
@@ -12,7 +12,7 @@ import math
 try:
     fn = sys.argv[1]
 except:
-    fn = "../cpp/pic1.png"
+    fn = "../data/pic1.png"
 print __doc__
 src = cv2.imread(fn)
 dst = cv2.Canny(src, 50, 200)

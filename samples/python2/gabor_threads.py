@@ -52,7 +52,7 @@ if __name__ == '__main__':
     try:
         img_fn = sys.argv[1]
     except:
-        img_fn = '../cpp/baboon.jpg'
+        img_fn = '../data/baboon.jpg'
 
     img = cv2.imread(img_fn)
     if img is None:

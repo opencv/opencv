@@ -85,8 +85,8 @@ int main(int ac, char** av)
     cout << "writing images\n";
     fs << "images" << "[";
 
-    fs << "image1.jpg" << "myfi.png" << "baboon.jpg";
-    cout << "image1.jpg" << " myfi.png" << " baboon.jpg" << endl;
+    fs << "image1.jpg" << "myfi.png" << "../data/baboon.jpg";
+    cout << "image1.jpg" << " myfi.png" << " ../data/baboon.jpg" << endl;
 
     fs << "]";
 
