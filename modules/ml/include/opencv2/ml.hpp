@@ -230,12 +230,12 @@ public:
     class CV_EXPORTS_W_MAP Params
     {
     public:
-        Params(int algorithmType_=BRUTE_FORCE, int defaultK=10, bool isclassifier_=true, int Emax_=INT_MAX);
+        Params(int defaultK=10, bool isclassifier_=true, int Emax_=INT_MAX, int algorithmType_=BRUTE_FORCE);
 
-        CV_PROP_RW int algorithmType;
         CV_PROP_RW int defaultK;
         CV_PROP_RW bool isclassifier;
         CV_PROP_RW int Emax; // for implementation with KDTree
+        CV_PROP_RW int algorithmType;
     };
     virtual void setParams(const Params& p) = 0;
     virtual Params getParams() const = 0;

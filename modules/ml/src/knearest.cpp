@@ -50,11 +50,11 @@
 namespace cv {
 namespace ml {
 
-KNearest::Params::Params(int algorithmType_, int k, bool isclassifier_, int Emax_) :
-    algorithmType(algorithmType_),
+KNearest::Params::Params(int k, bool isclassifier_, int Emax_, int algorithmType_) :
     defaultK(k),
     isclassifier(isclassifier_),
-    Emax(Emax_)
+    Emax(Emax_),
+    algorithmType(algorithmType_)
 {
 }
 
