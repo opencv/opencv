@@ -199,11 +199,16 @@ From here you can start processing video frames. For example the following snipp
     {
         // Do some OpenCV stuff with the image
         Mat image_copy;
-        cvtColor(image, image_copy, CV_BGRA2BGR);
+        cvtColor(image, image_copy, COLOR_BGR2GRAY);
 
         // invert image
         bitwise_not(image_copy, image_copy);
-        cvtColor(image_copy, image, CV_BGR2BGRA);
+
+        //Convert BGR to BGRA (three channel to four channel)
+        Mat bgr;
+        cvtColor(image_copy, bgr, COLOR_GRAY2BGR);
+
+        cvtColor(bgr, image, COLOR_BGR2BGRA);
     }
 
 

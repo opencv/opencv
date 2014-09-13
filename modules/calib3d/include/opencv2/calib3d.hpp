@@ -56,10 +56,11 @@ enum { LMEDS  = 4, //!< least-median algorithm
        RANSAC = 8  //!< RANSAC algorithm
      };
 
-enum { ITERATIVE = 0,
-       EPNP      = 1, // F.Moreno-Noguer, V.Lepetit and P.Fua "EPnP: Efficient Perspective-n-Point Camera Pose Estimation"
-       P3P       = 2  // X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
-     };
+enum { SOLVEPNP_ITERATIVE = 0,
+       SOLVEPNP_EPNP      = 1, // F.Moreno-Noguer, V.Lepetit and P.Fua "EPnP: Efficient Perspective-n-Point Camera Pose Estimation"
+       SOLVEPNP_P3P       = 2, // X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
+       SOLVEPNP_DLS       = 3  // Joel A. Hesch and Stergios I. Roumeliotis. "A Direct Least-Squares (DLS) Method for PnP"
+};
 
 enum { CALIB_CB_ADAPTIVE_THRESH = 1,
        CALIB_CB_NORMALIZE_IMAGE = 2,
@@ -108,7 +109,8 @@ CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobi
 //! computes the best-fit perspective transformation mapping srcPoints to dstPoints.
 CV_EXPORTS_W Mat findHomography( InputArray srcPoints, InputArray dstPoints,
                                  int method = 0, double ransacReprojThreshold = 3,
-                                 OutputArray mask=noArray());
+                                 OutputArray mask=noArray(), const int maxIters = 2000,
+                                 const double confidence = 0.995);
 
 //! variant of findHomography for backward compatibility
 CV_EXPORTS Mat findHomography( InputArray srcPoints, InputArray dstPoints,
@@ -152,15 +154,15 @@ CV_EXPORTS_W void projectPoints( InputArray objectPoints,
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
                             OutputArray rvec, OutputArray tvec,
-                            bool useExtrinsicGuess = false, int flags = ITERATIVE );
+                            bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE );
 
 //! computes the camera pose from a few 3D points and the corresponding projections. The outliers are possible.
-CV_EXPORTS_W void solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
+CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
                                   InputArray cameraMatrix, InputArray distCoeffs,
                                   OutputArray rvec, OutputArray tvec,
                                   bool useExtrinsicGuess = false, int iterationsCount = 100,
-                                  float reprojectionError = 8.0, int minInliersCount = 100,
-                                  OutputArray inliers = noArray(), int flags = ITERATIVE );
+                                  float reprojectionError = 8.0, double confidence = 0.99,
+                                  OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE );
 
 //! initializes camera matrix from a few 3D points and the corresponding projections.
 CV_EXPORTS_W Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,

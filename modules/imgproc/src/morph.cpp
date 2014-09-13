@@ -1434,7 +1434,7 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
             "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "
             "-D PX_LOAD_X_ITERATIONS=%d -D PX_LOAD_Y_ITERATIONS=%d "
             "-D srcT=%s -D srcT1=%s -D dstT=srcT -D dstT1=srcT1 -D WT=%s -D WT1=%s "
-            "-D convertToWT=%s -D convertToDstT=%s -D PROCESS_ELEM_=%s -D %s%s",
+            "-D convertToWT=%s -D convertToDstT=%s -D PX_LOAD_FLOAT_VEC_CONV=convert_%s -D PROCESS_ELEM_=%s -D %s%s",
             cn, anchor.x, anchor.y, ksize.width, ksize.height,
             pxLoadVecSize, pxLoadNumPixels, depth,
             pxPerWorkItemX, pxPerWorkItemY, privDataWidth, borderMap[borderType],
@@ -1445,6 +1445,7 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
             haveExtraMat ? ocl::typeToStr(wdepth):"srcT1",//to prevent overflow - WT1
             haveExtraMat ? ocl::convertTypeStr(depth, wdepth, cn, cvt[0]) : "noconvert",//to prevent overflow - src to WT
             haveExtraMat ? ocl::convertTypeStr(wdepth, depth, cn, cvt[1]) : "noconvert",//to prevent overflow - WT to dst
+            ocl::typeToStr(CV_MAKE_TYPE(haveExtraMat ? wdepth : depth, pxLoadVecSize)), //PX_LOAD_FLOAT_VEC_CONV
             processing.c_str(), op2str[op],
             actual_op == op ? "" : cv::format(" -D %s", op2str[actual_op]).c_str());
 
@@ -1531,7 +1532,11 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
     if (dev.isIntel() && !(dev.type() & ocl::Device::TYPE_CPU) &&
         ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
          (ksize.width == 5 && ksize.height == 5 && cn == 1)) &&
-         (iterations == 1))
+         (iterations == 1)
+#if defined __APPLE__
+         && cn == 1
+#endif
+         )
     {
         if (ocl_morphSmall(_src, _dst, kernel, anchor, borderType, op, actual_op, _extraMat))
             return true;
@@ -1543,12 +1548,17 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
         return true;
     }
 
-#ifdef ANDROID
+#if defined ANDROID
     size_t localThreads[2] = { 16, 8 };
 #else
     size_t localThreads[2] = { 16, 16 };
 #endif
     size_t globalThreads[2] = { ssize.width, ssize.height };
+
+#ifdef __APPLE__
+    if( actual_op != MORPH_ERODE && actual_op != MORPH_DILATE )
+        localThreads[0] = localThreads[1] = 4;
+#endif
 
     if (localThreads[0]*localThreads[1] * 2 < (localThreads[0] + ksize.width - 1) * (localThreads[1] + ksize.height - 1))
         return false;

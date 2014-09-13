@@ -158,6 +158,10 @@ namespace cv
         options.img_height = img.rows;
         options.extended = extended;
         options.upright = upright;
+        options.dthreshold = threshold;
+        options.omax = octaves;
+        options.nsublevels = sublevels;
+        options.diffusivity = diffusivity;
 
         KAZEFeatures impl(options);
         impl.Create_Nonlinear_Scale_Space(img1_32);
@@ -185,6 +189,10 @@ namespace cv
         options.img_height = img.rows;
         options.extended = extended;
         options.upright = upright;
+        options.dthreshold = threshold;
+        options.omax = octaves;
+        options.nsublevels = sublevels;
+        options.diffusivity = diffusivity;
 
         KAZEFeatures impl(options);
         impl.Create_Nonlinear_Scale_Space(img1_32);

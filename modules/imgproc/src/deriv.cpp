@@ -643,21 +643,113 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
 
 namespace cv {
 
+#define LAPLACIAN_LOCAL_MEM(tileX, tileY, ksize, elsize) (((tileX) + 2 * (int)((ksize) / 2)) * (3 * (tileY) + 2 * (int)((ksize) / 2)) * elsize)
+
 static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
                            const Mat & kd, const Mat & ks, double scale, double delta,
                            int borderType, int depth, int ddepth)
 {
+    const size_t tileSizeX = 16;
+    const size_t tileSizeYmin = 8;
+
+    const ocl::Device dev = ocl::Device::getDefault();
+
+    int stype = _src.type();
+    int sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype), esz = CV_ELEM_SIZE(stype);
+
+    bool doubleSupport = dev.doubleFPConfig() > 0;
+    if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
+        return false;
+
+    Mat kernelX = kd.reshape(1, 1);
+    if (kernelX.cols % 2 != 1)
+        return false;
+    Mat kernelY = ks.reshape(1, 1);
+    if (kernelY.cols % 2 != 1)
+        return false;
+    CV_Assert(kernelX.cols == kernelY.cols);
+
+    size_t wgs = dev.maxWorkGroupSize();
+    size_t lmsz = dev.localMemSize();
+    size_t src_step = _src.step(), src_offset = _src.offset();
+    const size_t tileSizeYmax = wgs / tileSizeX;
+
+    // workaround for Nvidia: 3 channel vector type takes 4*elem_size in local memory
+    int loc_mem_cn = dev.vendorID() == ocl::Device::VENDOR_NVIDIA && cn == 3 ? 4 : cn;
+
+    if (((src_offset % src_step) % esz == 0) &&
+        (
+         (borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE) ||
+         ((borderType == BORDER_REFLECT || borderType == BORDER_WRAP || borderType == BORDER_REFLECT_101) &&
+          (_src.cols() >= (int) (kernelX.cols + tileSizeX) && _src.rows() >= (int) (kernelY.cols + tileSizeYmax)))
+        ) &&
+        (tileSizeX * tileSizeYmin <= wgs) &&
+        (LAPLACIAN_LOCAL_MEM(tileSizeX, tileSizeYmin, kernelX.cols, loc_mem_cn * 4) <= lmsz)
+       )
+    {
+        Size size = _src.size(), wholeSize;
+        Point origin;
+        int dtype = CV_MAKE_TYPE(ddepth, cn);
+        int wdepth = CV_32F;
+
+        size_t tileSizeY = tileSizeYmax;
+        while ((tileSizeX * tileSizeY > wgs) || (LAPLACIAN_LOCAL_MEM(tileSizeX, tileSizeY, kernelX.cols, loc_mem_cn * 4) > lmsz))
+        {
+            tileSizeY /= 2;
+        }
+        size_t lt2[2] = { tileSizeX, tileSizeY};
+        size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), lt2[1] };
+
+        char cvt[2][40];
+        const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
+                                           "BORDER_REFLECT_101" };
+
+        String opts = cv::format("-D BLK_X=%d -D BLK_Y=%d -D RADIUS=%d%s%s"
+                                 " -D convertToWT=%s -D convertToDT=%s"
+                                 " -D %s -D srcT1=%s -D dstT1=%s -D WT1=%s"
+                                 " -D srcT=%s -D dstT=%s -D WT=%s"
+                                 " -D CN=%d ",
+                                 (int)lt2[0], (int)lt2[1], kernelX.cols / 2,
+                                 ocl::kernelToStr(kernelX, wdepth, "KERNEL_MATRIX_X").c_str(),
+                                 ocl::kernelToStr(kernelY, wdepth, "KERNEL_MATRIX_Y").c_str(),
+                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
+                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
+                                 borderMap[borderType],
+                                 ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), ocl::typeToStr(wdepth),
+                                 ocl::typeToStr(CV_MAKETYPE(sdepth, cn)),
+                                 ocl::typeToStr(CV_MAKETYPE(ddepth, cn)),
+                                 ocl::typeToStr(CV_MAKETYPE(wdepth, cn)),
+                                 cn);
+
+        ocl::Kernel k("laplacian", ocl::imgproc::laplacian5_oclsrc, opts);
+        if (k.empty())
+            return false;
+        UMat src = _src.getUMat();
+        _dst.create(size, dtype);
+        UMat dst = _dst.getUMat();
+
+        int src_offset_x = static_cast<int>((src_offset % src_step) / esz);
+        int src_offset_y = static_cast<int>(src_offset / src_step);
+
+        src.locateROI(wholeSize, origin);
+
+        k.args(ocl::KernelArg::PtrReadOnly(src), (int)src_step, src_offset_x, src_offset_y,
+               wholeSize.height, wholeSize.width, ocl::KernelArg::WriteOnly(dst),
+               static_cast<float>(scale), static_cast<float>(delta));
+
+        return k.run(2, gt2, lt2, false);
+    }
     int iscale = cvRound(scale), idelta = cvRound(delta);
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
-            floatCoeff = std::fabs(delta - idelta) > DBL_EPSILON || std::fabs(scale - iscale) > DBL_EPSILON;
-    int cn = _src.channels(), wdepth = std::max(depth, floatCoeff ? CV_32F : CV_32S), kercn = 1;
+    bool floatCoeff = std::fabs(delta - idelta) > DBL_EPSILON || std::fabs(scale - iscale) > DBL_EPSILON;
+    int wdepth = std::max(depth, floatCoeff ? CV_32F : CV_32S), kercn = 1;
 
     if (!doubleSupport && wdepth == CV_64F)
         return false;
 
     char cvt[2][40];
     ocl::Kernel k("sumConvert", ocl::imgproc::laplacian5_oclsrc,
-                  format("-D srcT=%s -D WT=%s -D dstT=%s -D coeffT=%s -D wdepth=%d "
+                  format("-D ONLY_SUM_CONVERT "
+                         "-D srcT=%s -D WT=%s -D dstT=%s -D coeffT=%s -D wdepth=%d "
                          "-D convertToWT=%s -D convertToDT=%s%s",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
                          ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)),

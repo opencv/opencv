@@ -54,7 +54,7 @@ typedef pair<string, string> pair_string;
 DEF_PARAM_TEST_1(ImagePair, pair_string);
 
 PERF_TEST_P(ImagePair, InterpolateFrames,
-            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -73,7 +73,7 @@ PERF_TEST_P(ImagePair, InterpolateFrames,
         cv::cuda::GpuMat d_bu, d_bv;
 
         cv::cuda::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                        10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
+            10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
         d_flow(d_frame0, d_frame1, d_fu, d_fv);
         d_flow(d_frame1, d_frame0, d_bu, d_bv);
@@ -378,7 +378,6 @@ PERF_TEST_P(ImagePair, OpticalFlowDual_TVL1,
         alg->set("medianFiltering", 1);
         alg->set("innerIterations", 1);
         alg->set("outerIterations", 300);
-
         TEST_CYCLE() alg->calc(frame0, frame1, flow);
 
         CPU_SANITY_CHECK(flow);
@@ -389,7 +388,7 @@ PERF_TEST_P(ImagePair, OpticalFlowDual_TVL1,
 // OpticalFlowBM
 
 PERF_TEST_P(ImagePair, OpticalFlowBM,
-            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     declare.time(400);
 
@@ -421,7 +420,7 @@ PERF_TEST_P(ImagePair, OpticalFlowBM,
 }
 
 PERF_TEST_P(ImagePair, DISABLED_FastOpticalFlowBM,
-            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     declare.time(400);
 

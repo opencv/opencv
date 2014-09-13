@@ -325,6 +325,7 @@ extlinks = {
             'imgproc_geometric' : ('http://docs.opencv.org/modules/imgproc/doc/geometric_transformations.html#%s', None ),
             'miscellaneous_transformations' : ('http://docs.opencv.org/modules/imgproc/doc/miscellaneous_transformations.html#%s', None),
             'user_interface' : ('http://docs.opencv.org/modules/highgui/doc/user_interface.html#%s', None),
+            'video' : ('http://docs.opencv.org/modules/video/doc/motion_analysis_and_object_tracking.html#%s', None),
 
             # 'opencv_group' : ('http://answers.opencv.org/%s', None),
             'opencv_qa' : ('http://answers.opencv.org/%s', None),
@@ -402,6 +403,7 @@ extlinks = {
             'contour_area' : ('http://docs.opencv.org/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=contourarea#contourarea%s', None),
             'arc_length' : ('http://docs.opencv.org/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=arclength#arclength%s', None),
             'point_polygon_test' : ('http://docs.opencv.org/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=pointpolygontest#pointpolygontest%s', None),
+            'feature_detection_and_description' : ('http://docs.opencv.org/modules/features2d/doc/feature_detection_and_description.html#%s', None),
             'feature_detector' : ( 'http://docs.opencv.org/modules/features2d/doc/common_interfaces_of_feature_detectors.html?highlight=featuredetector#FeatureDetector%s', None),
             'feature_detector_detect' : ('http://docs.opencv.org/modules/features2d/doc/common_interfaces_of_feature_detectors.html?highlight=detect#featuredetector-detect%s', None ),
             'surf_feature_detector' : ('http://docs.opencv.org/modules/features2d/doc/common_interfaces_of_feature_detectors.html?highlight=surffeaturedetector#surffeaturedetector%s', None ),

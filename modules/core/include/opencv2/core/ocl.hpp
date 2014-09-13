@@ -596,11 +596,32 @@ protected:
 CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf);
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
+CV_EXPORTS const char* vecopTypeToStr(int t);
 CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1, const char * name = NULL);
 CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo>& platform_info);
+
+
+enum OclVectorStrategy
+{
+    // all matrices have its own vector width
+    OCL_VECTOR_OWN = 0,
+    // all matrices have maximal vector width among all matrices
+    // (useful for cases when matrices have different data types)
+    OCL_VECTOR_MAX = 1,
+
+    // default strategy
+    OCL_VECTOR_DEFAULT = OCL_VECTOR_OWN
+};
+
 CV_EXPORTS int predictOptimalVectorWidth(InputArray src1, InputArray src2 = noArray(), InputArray src3 = noArray(),
                                          InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
-                                         InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray());
+                                         InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray(),
+                                         OclVectorStrategy strat = OCL_VECTOR_DEFAULT);
+
+// with OCL_VECTOR_MAX strategy
+CV_EXPORTS int predictOptimalVectorWidthMax(InputArray src1, InputArray src2 = noArray(), InputArray src3 = noArray(),
+                                            InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
+                                            InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray());
 
 CV_EXPORTS void buildOptionsAddMatrixDescription(String& buildOptions, const String& name, InputArray _m);
 

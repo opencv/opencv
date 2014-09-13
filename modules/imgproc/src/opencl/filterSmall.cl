@@ -164,7 +164,6 @@ inline bool isBorder(const struct RectCoords bounds, int2 coord, int numPixels)
 #define vload1(OFFSET, PTR) (*(PTR + OFFSET))
 #define PX_LOAD_VEC_TYPE CAT(srcT1, PX_LOAD_VEC_SIZE)
 #define PX_LOAD_FLOAT_VEC_TYPE CAT(WT1, PX_LOAD_VEC_SIZE)
-#define PX_LOAD_FLOAT_VEC_CONV CAT(convert_, PX_LOAD_FLOAT_VEC_TYPE)
 #define PX_LOAD CAT(vload, PX_LOAD_VEC_SIZE)
 
 
@@ -267,7 +266,7 @@ __constant WT1 kernelData[] = { COEFF };
 // workaround for bug in Intel HD graphics drivers (10.18.10.3496 or older)
 #define WA_CONVERT_1 CAT(convert_uint, cn)
 #define WA_CONVERT_2 CAT(convert_, srcT)
-#define MORPH_OP(A, B) WA_CONVERT_2(min(WA_CONVERT_1(A), WA_CONVERT_1(B)))
+#define MORPH_OP(A, B) ((A) < (B) ? (A) : (B))
 #else
 #define MORPH_OP(A, B) min((A), (B))
 #endif

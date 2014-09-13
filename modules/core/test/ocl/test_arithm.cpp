@@ -175,9 +175,12 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
         UMAT_UPLOAD_OUTPUT_PARAMETER(dst2);
     }
 
-    void Near(double threshold = 0.)
+    void Near(double threshold = 0., bool relative = false)
     {
-        OCL_EXPECT_MATS_NEAR(dst1, threshold);
+        if (!relative)
+            OCL_EXPECT_MATS_NEAR(dst1, threshold);
+        else
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst1, threshold);
     }
 
     void Near1(double threshold = 0.)
@@ -341,7 +344,10 @@ OCL_TEST_P(Mul, Mat_Scalar_Scale)
         OCL_OFF(cv::multiply(src1_roi, val, dst1_roi, val[0]));
         OCL_ON(cv::multiply(usrc1_roi, val, udst1_roi, val[0]));
 
-        Near(udst1_roi.depth() >= CV_32F ? 1e-2 : 1);
+        if (udst1_roi.depth() >= CV_32F)
+            Near(1e-6, true);
+        else
+            Near(1);
     }
 }
 

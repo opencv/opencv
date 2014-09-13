@@ -1590,7 +1590,7 @@ bool videoInput::isFrameNew(int id){
 
 bool videoInput::isDeviceSetup(int id){
 
-    if(id<devicesFound && VDList[id]->readyToCapture)return true;
+    if(id>=0 && id<devicesFound && VDList[id]->readyToCapture)return true;
     else return false;
 
 }

@@ -562,7 +562,7 @@ solvePnP
 ------------
 Finds an object pose from 3D-2D point correspondences.
 
-.. ocv:function:: bool solvePnP( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false, int flags=ITERATIVE )
+.. ocv:function:: bool solvePnP( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false, int flags=SOLVEPNP_ITERATIVE )
 
 .. ocv:pyfunction:: cv2.solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs[, rvec[, tvec[, useExtrinsicGuess[, flags]]]]) -> retval, rvec, tvec
 
@@ -580,13 +580,14 @@ Finds an object pose from 3D-2D point correspondences.
 
     :param tvec: Output translation vector.
 
-    :param useExtrinsicGuess: If true (1), the function uses the provided  ``rvec``  and  ``tvec``  values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
+    :param useExtrinsicGuess: Parameter used for ITERATIVE. If true (1), the function uses the provided  ``rvec``  and  ``tvec``  values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
 
     :param flags: Method for solving a PnP problem:
 
-            *  **ITERATIVE** Iterative method is based on Levenberg-Marquardt optimization. In this case the function finds such a pose that minimizes reprojection error, that is the sum of squared distances between the observed projections ``imagePoints`` and the projected (using :ocv:func:`projectPoints` ) ``objectPoints`` .
-            *  **P3P**  Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang "Complete Solution Classification for the Perspective-Three-Point Problem". In this case the function requires exactly four object and image points.
-            *  **EPNP** Method has been introduced by F.Moreno-Noguer, V.Lepetit and P.Fua in the paper "EPnP: Efficient Perspective-n-Point Camera Pose Estimation".
+            *  **SOLVEPNP_ITERATIVE** Iterative method is based on Levenberg-Marquardt optimization. In this case the function finds such a pose that minimizes reprojection error, that is the sum of squared distances between the observed projections ``imagePoints`` and the projected (using :ocv:func:`projectPoints` ) ``objectPoints`` .
+            *  **SOLVEPNP_P3P**  Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang "Complete Solution Classification for the Perspective-Three-Point Problem". In this case the function requires exactly four object and image points.
+            *  **SOLVEPNP_EPNP** Method has been introduced by F.Moreno-Noguer, V.Lepetit and P.Fua in the paper "EPnP: Efficient Perspective-n-Point Camera Pose Estimation".
+            *  **SOLVEPNP_DLS**  Method is based on the paper of Joel A. Hesch and Stergios I. Roumeliotis. "A Direct Least-Squares (DLS) Method for PnP".
 
 The function estimates the object pose given a set of object points, their corresponding image projections, as well as the camera matrix and the distortion coefficients.
 
@@ -598,7 +599,7 @@ solvePnPRansac
 ------------------
 Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
 
-.. ocv:function:: void solvePnPRansac( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false, int iterationsCount = 100, float reprojectionError = 8.0, int minInliersCount = 100, OutputArray inliers = noArray(), int flags = ITERATIVE )
+.. ocv:function:: bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false, int iterationsCount = 100, float reprojectionError = 8.0, double confidence = 0.99, OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE )
 
 .. ocv:pyfunction:: cv2.solvePnPRansac(objectPoints, imagePoints, cameraMatrix, distCoeffs[, rvec[, tvec[, useExtrinsicGuess[, iterationsCount[, reprojectionError[, minInliersCount[, inliers[, flags]]]]]]]]) -> rvec, tvec, inliers
 
@@ -614,21 +615,24 @@ Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
 
     :param tvec: Output translation vector.
 
-    :param useExtrinsicGuess: If true (1), the function uses the provided  ``rvec``  and  ``tvec`` values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
+    :param useExtrinsicGuess: Parameter used for ITERATIVE. If true (1), the function uses the provided  ``rvec``  and  ``tvec`` values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
 
     :param iterationsCount: Number of iterations.
 
     :param reprojectionError: Inlier threshold value used by the RANSAC procedure. The parameter value is the maximum allowed distance between the observed and computed point projections to consider it an inlier.
 
-    :param minInliersCount: Number of inliers. If the algorithm at some stage finds more inliers than ``minInliersCount`` , it finishes.
+    :param confidence: The probability that the algorithm produces a useful result.
 
     :param inliers: Output vector that contains indices of inliers in ``objectPoints`` and ``imagePoints`` .
 
     :param flags: Method for solving a PnP problem (see  :ocv:func:`solvePnP` ).
 
 The function estimates an object pose given a set of object points, their corresponding image projections, as well as the camera matrix and the distortion coefficients. This function finds such a pose that minimizes reprojection error, that is, the sum of squared distances between the observed projections ``imagePoints`` and the projected (using
-:ocv:func:`projectPoints` ) ``objectPoints``. The use of RANSAC makes the function resistant to outliers. The function is parallelized with the TBB library.
+:ocv:func:`projectPoints` ) ``objectPoints``. The use of RANSAC makes the function resistant to outliers.
 
+.. note::
+
+   * An example of how to use solvePNPRansac for object detection can be found at opencv_source_code/samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/
 
 
 findFundamentalMat
@@ -736,7 +740,7 @@ where
 :math:`E` is an essential matrix,
 :math:`p_1` and
 :math:`p_2` are corresponding points in the first and the second images, respectively.
-The result of this function may be passed further to ``decomposeEssentialMat()`` or ``recoverPose()`` to recover the relative pose between cameras.
+The result of this function may be passed further to :ocv:func:`decomposeEssentialMat` or :ocv:func:`recoverPose` to recover the relative pose between cameras.
 
 decomposeEssentialMat
 -------------------------
@@ -808,11 +812,11 @@ Returns the number of inliers which pass the check.
                  Only these inliers will be used to recover pose.
                  In the output mask only inliers which pass the cheirality check.
 
-This function decomposes an essential matrix using ``decomposeEssentialMat()`` and then verifies possible pose hypotheses by doing cheirality check.
-The cheirality check basically means that the triangulated 3D points should have positive depth. Some details can be found from [Nister03]_.
+This function decomposes an essential matrix using :ocv:func:`decomposeEssentialMat` and then verifies possible pose hypotheses by doing cheirality check.
+The cheirality check basically means that the triangulated 3D points should have positive depth. Some details can be found in [Nister03]_.
 
-This function can be used to process output ``E`` and ``mask`` from ``findEssentialMat()``.
-In this scenario, ``points1`` and ``points2`` are the same input for ``findEssentialMat()``. ::
+This function can be used to process output ``E`` and ``mask`` from :ocv:func:`findEssentialMat`.
+In this scenario, ``points1`` and ``points2`` are the same input for :ocv:func:`findEssentialMat`. ::
 
     // Example. Estimation of fundamental matrix using the RANSAC algorithm
     int point_count = 100;
@@ -839,11 +843,11 @@ findHomography
 ------------------
 Finds a perspective transformation between two planes.
 
-.. ocv:function:: Mat findHomography( InputArray srcPoints, InputArray dstPoints, int method=0, double ransacReprojThreshold=3, OutputArray mask=noArray() )
+.. ocv:function:: Mat findHomography( InputArray srcPoints, InputArray dstPoints, int method=0, double ransacReprojThreshold=3, OutputArray mask=noArray(), const int maxIters = 2000, const double confidence = 0.995)
 
 .. ocv:pyfunction:: cv2.findHomography(srcPoints, dstPoints[, method[, ransacReprojThreshold[, mask]]]) -> retval, mask
 
-.. ocv:cfunction:: int cvFindHomography( const CvMat* src_points, const CvMat* dst_points, CvMat* homography, int method=0, double ransacReprojThreshold=3, CvMat* mask=0 )
+.. ocv:cfunction:: int cvFindHomography( const CvMat* src_points, const CvMat* dst_points, CvMat* homography, int method=0, double ransacReprojThreshold=3, CvMat* mask=0, int maxIters = 2000, double confidence = 0.995)
 
     :param srcPoints: Coordinates of the points in the original plane, a matrix of the type  ``CV_32FC2``  or ``vector<Point2f>`` .
 
@@ -866,6 +870,10 @@ Finds a perspective transformation between two planes.
         then the point  :math:`i`  is considered an outlier. If  ``srcPoints``  and  ``dstPoints``  are measured in pixels, it usually makes sense to set this parameter somewhere in the range of 1 to 10.
 
     :param mask: Optional output mask set by a robust method ( ``RANSAC``  or  ``LMEDS`` ).  Note that the input mask values are ignored.
+
+    :param maxIters: The maximum number of RANSAC iterations, 2000 is the maximum it can be.
+
+    :param confidence: Confidence level, between 0 and 1.
 
 The functions find and return the perspective transformation :math:`H` between the source and the destination planes:
 

@@ -2,7 +2,7 @@
 set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
 # To disable any module from adding to Python bindings, add them to blacklist
-set(PYTHON_BINDINGS_BLACKLIST "^cuda.*$|contrib|legacy|softcascade|optim|stitching|superres|tracking|videostab|ts|adas|xobjdetect|face|rgbd|ximgproc|xfeatures2d|xphoto|bgsegm|text")
+set(PYTHON_BINDINGS_BLACKLIST "^cuda.*$|contrib|legacy|softcascade|optim|stitching|superres|tracking|videostab|ts|adas|xobjdetect|face|rgbd|ximgproc|xfeatures2d|bgsegm|text")
 
 set(candidate_deps "")
 foreach(mp ${OPENCV_MODULES_PATH} ${OPENCV_EXTRA_MODULES_PATH})
@@ -18,6 +18,14 @@ foreach(mp ${OPENCV_MODULES_PATH} ${OPENCV_EXTRA_MODULES_PATH})
 endforeach(mp)
 
 set(the_description "The python bindings")
+
+# module blacklist
+ocv_list_filterout(candidate_deps "^opencv_cud(a|ev)")
+ocv_list_filterout(candidate_deps "^opencv_matlab$")
+ocv_list_filterout(candidate_deps "^opencv_ts$")
+ocv_list_filterout(candidate_deps "^opencv_adas$")
+ocv_list_filterout(candidate_deps "^opencv_tracking$")
+
 ocv_add_module(${MODULE_NAME} BINDINGS OPTIONAL ${candidate_deps})
 
 ocv_module_include_directories(
@@ -69,15 +77,24 @@ foreach(module ${OPENCV_PYTHON_MODULES})
     ocv_list_filterout(module_hdrs "detection_based_tracker.hpp$")
     list(APPEND opencv_hdrs ${module_hdrs})
 endforeach()
+#=======
+## header blacklist
+#ocv_list_filterout(opencv_hdrs ".h$")
+#ocv_list_filterout(opencv_hdrs "cuda")
+#ocv_list_filterout(opencv_hdrs "cudev")
+#ocv_list_filterout(opencv_hdrs "opencv2/objdetect/detection_based_tracker.hpp")
+#>>>>>>> master
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_funcs.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_func_tab.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_types.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_type_reg.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_const_reg.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_typedefs.h")
+#<<<<<<< HEAD
+#    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_const_reg.h"
+#    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_typedefs.h")
+#=======
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_ns_reg.h")
 
 # Run header parser to generate above .h files, prefix=""
 add_custom_command(
@@ -187,11 +204,12 @@ if(BUILD_PYTHON_CONTRIB)
     set(cv2_generated_contrib_hdrs
         "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_include.h"
         "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_funcs.h"
-        "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_func_tab.h"
+       # "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_func_tab.h"
         "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_types.h"
         "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_type_reg.h"
-        "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_const_reg.h"
-        "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_typedefs.h")
+       # "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_const_reg.h"
+       # "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_typedefs.h")
+        "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_ns_reg.h")
 
     # Run header parser to generate above .h files, prefix="_contrib"
     add_custom_command(

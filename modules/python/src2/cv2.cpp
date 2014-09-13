@@ -11,7 +11,6 @@
 
 #include "pyopencv_generated_include.h"
 #include "opencv2/core/types_c.h"
-#include "pyopencv_generated_typedefs.h"
 
 #include "pycv2.hpp"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -112,9 +111,7 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 #include "pyopencv_generated_types.h"
 #include "pyopencv_generated_funcs.h"
 
-static PyMethodDef methods[] = {
-
-#include "pyopencv_generated_func_tab.h"
+static PyMethodDef special_methods[] = {
   {"createTrackbar", pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
   {"setMouseCallback", (PyCFunction)pycvSetMouseCallback, METH_VARARGS | METH_KEYWORDS, "setMouseCallback(windowName, onMouse [, param]) -> None"},
   {NULL, NULL},
@@ -122,6 +119,53 @@ static PyMethodDef methods[] = {
 
 /************************************************************************/
 /* Module init */
+
+struct ConstDef
+{
+    const char * name;
+    long val;
+};
+
+static void init_submodule(PyObject * root, const char * name, PyMethodDef * methods, ConstDef * consts)
+{
+  // traverse and create nested submodules
+  std::string s = name;
+  size_t i = s.find('.');
+  while (i < s.length() && i != std::string::npos)
+  {
+    size_t j = s.find('.', i);
+    if (j == std::string::npos)
+        j = s.length();
+    std::string short_name = s.substr(i, j-i);
+    std::string full_name = s.substr(0, j);
+    i = j+1;
+
+    PyObject * d = PyModule_GetDict(root);
+    PyObject * submod = PyDict_GetItemString(d, short_name.c_str());
+    if (submod == NULL)
+    {
+        submod = PyImport_AddModule(full_name.c_str());
+        PyDict_SetItemString(d, short_name.c_str(), submod);
+    }
+    root = submod;
+  }
+
+  // populate module's dict
+  PyObject * d = PyModule_GetDict(root);
+  for (PyMethodDef * m = methods; m->ml_name != NULL; ++m)
+  {
+    PyObject * method_obj = PyCFunction_NewEx(m, NULL, NULL);
+    PyDict_SetItemString(d, m->ml_name, method_obj);
+    Py_DECREF(method_obj);
+  }
+  for (ConstDef * c = consts; c->name != NULL; ++c)
+  {
+    PyDict_SetItemString(d, c->name, PyInt_FromLong(c->val));
+  }
+
+}
+
+#include "pyopencv_generated_ns_reg.h"
 
 static int to_ok(PyTypeObject *to)
 {
@@ -141,7 +185,7 @@ static struct PyModuleDef cv2_moduledef =
     "Python wrapper for OpenCV.",
     -1,     /* size of per-interpreter state of the module,
                or -1 if the module keeps state in global variables. */
-    methods
+    special_methods
 };
 
 PyObject* PyInit_cv2()
@@ -158,8 +202,10 @@ void initcv2()
 #if PY_MAJOR_VERSION >= 3
   PyObject* m = PyModule_Create(&cv2_moduledef);
 #else
-  PyObject* m = Py_InitModule(MODULESTR, methods);
+  PyObject* m = Py_InitModule(MODULESTR, special_methods);
 #endif
+  init_submodules(m); // from "pyopencv_generated_ns_reg.h"
+
   PyObject* d = PyModule_GetDict(m);
 
   PyDict_SetItemString(d, "__version__", PyString_FromString(CV_VERSION));
@@ -207,7 +253,6 @@ void initcv2()
   PUBLISH(CV_64FC3);
   PUBLISH(CV_64FC4);
 
-#include "pyopencv_generated_const_reg.h"
 #if PY_MAJOR_VERSION >= 3
     return m;
 #endif

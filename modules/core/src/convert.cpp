@@ -173,7 +173,7 @@ split_( const T* src, T** dst, int len, int cn )
             int inc_j = 3 * inc_i;
 
             VSplit3<T> vsplit;
-            for( ; i < len - inc_i; i += inc_i, j += inc_j)
+            for( ; i <= len - inc_i; i += inc_i, j += inc_j)
                 vsplit(src + j, dst0 + i, dst1 + i, dst2 + i);
         }
 #endif
@@ -196,7 +196,7 @@ split_( const T* src, T** dst, int len, int cn )
             int inc_j = 4 * inc_i;
 
             VSplit4<T> vsplit;
-            for( ; i < len - inc_i; i += inc_i, j += inc_j)
+            for( ; i <= len - inc_i; i += inc_i, j += inc_j)
                 vsplit(src + j, dst0 + i, dst1 + i, dst2 + i, dst3 + i);
         }
 #endif
@@ -1076,7 +1076,7 @@ namespace cv
 {
 
 template<typename T, typename DT, typename WT>
-struct cvtScaleAbs_SSE2
+struct cvtScaleAbs_SIMD
 {
     int operator () (const T *, DT *, int, WT, WT) const
     {
@@ -1087,7 +1087,7 @@ struct cvtScaleAbs_SSE2
 #if CV_SSE2
 
 template <>
-struct cvtScaleAbs_SSE2<uchar, uchar, float>
+struct cvtScaleAbs_SIMD<uchar, uchar, float>
 {
     int operator () (const uchar * src, uchar * dst, int width,
                      float scale, float shift) const
@@ -1124,7 +1124,7 @@ struct cvtScaleAbs_SSE2<uchar, uchar, float>
 };
 
 template <>
-struct cvtScaleAbs_SSE2<ushort, uchar, float>
+struct cvtScaleAbs_SIMD<ushort, uchar, float>
 {
     int operator () (const ushort * src, uchar * dst, int width,
                      float scale, float shift) const
@@ -1155,7 +1155,7 @@ struct cvtScaleAbs_SSE2<ushort, uchar, float>
 };
 
 template <>
-struct cvtScaleAbs_SSE2<short, uchar, float>
+struct cvtScaleAbs_SIMD<short, uchar, float>
 {
     int operator () (const short * src, uchar * dst, int width,
                      float scale, float shift) const
@@ -1186,7 +1186,7 @@ struct cvtScaleAbs_SSE2<short, uchar, float>
 };
 
 template <>
-struct cvtScaleAbs_SSE2<int, uchar, float>
+struct cvtScaleAbs_SIMD<int, uchar, float>
 {
     int operator () (const int * src, uchar * dst, int width,
                      float scale, float shift) const
@@ -1215,7 +1215,7 @@ struct cvtScaleAbs_SSE2<int, uchar, float>
 };
 
 template <>
-struct cvtScaleAbs_SSE2<float, uchar, float>
+struct cvtScaleAbs_SIMD<float, uchar, float>
 {
     int operator () (const float * src, uchar * dst, int width,
                      float scale, float shift) const
@@ -1242,6 +1242,35 @@ struct cvtScaleAbs_SSE2<float, uchar, float>
     }
 };
 
+#elif CV_NEON
+
+template <>
+struct cvtScaleAbs_SIMD<float, uchar, float>
+{
+    int operator () (const float * src, uchar * dst, int width,
+                     float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            float32x4_t v_dst_0 = vmulq_n_f32(vld1q_f32(src + x), scale);
+            v_dst_0 = vabsq_f32(vaddq_f32(v_dst_0, v_shift));
+            uint16x4_t v_dsti_0 = vqmovun_s32(vcvtq_s32_f32(v_dst_0));
+
+            float32x4_t v_dst_1 = vmulq_n_f32(vld1q_f32(src + x + 4), scale);
+            v_dst_1 = vabsq_f32(vaddq_f32(v_dst_1, v_shift));
+            uint16x4_t v_dsti_1 = vqmovun_s32(vcvtq_s32_f32(v_dst_1));
+
+            uint16x8_t v_dst = vcombine_u16(v_dsti_0, v_dsti_1);
+            vst1_u8(dst + x, vqmovn_u16(v_dst));
+        }
+
+        return x;
+    }
+};
+
 #endif
 
 template<typename T, typename DT, typename WT> static void
@@ -1251,7 +1280,7 @@ cvtScaleAbs_( const T* src, size_t sstep,
 {
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
-    cvtScaleAbs_SSE2<T, DT, WT> vop;
+    cvtScaleAbs_SIMD<T, DT, WT> vop;
 
     for( ; size.height--; src += sstep, dst += dstep )
     {

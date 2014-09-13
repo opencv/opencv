@@ -2090,7 +2090,7 @@ struct RGB2Luv_b
             {
                 dst[j] = saturate_cast<uchar>(buf[j]*2.55f);
                 dst[j+1] = saturate_cast<uchar>(buf[j+1]*0.72033898305084743f + 96.525423728813564f);
-                dst[j+2] = saturate_cast<uchar>(buf[j+2]*0.99609375f + 139.453125f);
+                dst[j+2] = saturate_cast<uchar>(buf[j+2]*0.9732824427480916f + 136.259541984732824f);
             }
         }
     }
@@ -2122,7 +2122,7 @@ struct Luv2RGB_b
             {
                 buf[j] = src[j]*(100.f/255.f);
                 buf[j+1] = (float)(src[j+1]*1.388235294117647f - 134.f);
-                buf[j+2] = (float)(src[j+2]*1.003921568627451f - 140.f);
+                buf[j+2] = (float)(src[j+2]*1.027450980392157f - 140.f);
             }
             cvt(buf, buf, dn);
 
@@ -4208,7 +4208,12 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 Size dstSz(sz.width, sz.height * 2 / 3);
                 _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
                 dst = _dst.getMat();
-
+#if defined HAVE_IPP
+                if (ippStsNoErr == ippiCopy_8u_C1R(src.data, (int)src.step, dst.data, (int)dst.step,
+                        ippiSize(dstSz.width, dstSz.height)))
+                    return;
+                setIppErrorStatus();
+#endif
                 src(Range(0, dstSz.height), Range::all()).copyTo(dst);
             }
             break;

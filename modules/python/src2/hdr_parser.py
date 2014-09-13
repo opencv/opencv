@@ -38,7 +38,11 @@ class CppHeaderParser(object):
         self.PUBLIC_SECTION = 3
         self.CLASS_DECL = 4
 
-        self.namespace_list = []  # To keep all the namespaces encountered
+#<<<<<<< HEAD
+#        self.namespace_list = []  # To keep all the namespaces encountered
+#=======
+        self.namespaces = set()
+#>>>>>>> master
 
     def batch_replace(self, s, pairs):
         for before, after in pairs:
@@ -557,11 +561,6 @@ class CppHeaderParser(object):
                     args.append([arg_type, arg_name, defval, modlist])
                 npos = arg_start-1
 
-        npos = decl_str.replace(" ", "").find("=0", npos)
-        if npos >= 0:
-            # skip pure virtual functions
-            return []
-
         if static_method:
             func_modlist.append("/S")
 
@@ -835,6 +834,9 @@ class CppHeaderParser(object):
                                 decls.append(d)
                         else:
                             decls.append(decl)
+                    if stmt_type == "namespace":
+                        chunks = [block[1] for block in self.block_stack if block[0] == 'namespace'] + [name]
+                        self.namespaces.add('.'.join(chunks))
                 else:
                     stmt_type, name, parse_flag = "block", "", False
 
@@ -845,14 +847,14 @@ class CppHeaderParser(object):
                         public_section = True
                     self.block_stack.append([stmt_type, name, parse_flag, public_section, decl])
 
-                    # add namespaces to its namespace_list -->
-                    if stmt_type == "namespace":
-                        # take all namespaces in block_stack and join them with '.'
-                        namespace_items = [item[1] for item in self.block_stack if item[0]=="namespace"]
-                        temp_ns = '.'.join(namespace_items)
-                        if temp_ns not in self.namespace_list:
-                            self.namespace_list.append(temp_ns)
-                    # <-- finished
+#                    # add namespaces to its namespace_list -->
+#                    if stmt_type == "namespace":
+#                        # take all namespaces in block_stack and join them with '.'
+#                        namespace_items = [item[1] for item in self.block_stack if item[0]=="namespace"]
+#                        temp_ns = '.'.join(namespace_items)
+#                        if temp_ns not in self.namespace_list:
+#                            self.namespace_list.append(temp_ns)
+#                    # <-- finished
 
                 if token == "}":
                     if not self.block_stack:
@@ -888,3 +890,4 @@ if __name__ == '__main__':
         #decls += parser.parse(hname, wmode=False)
     parser.print_decls(decls)
     print(len(decls))
+    print("namespaces:", " ".join(sorted(parser.namespaces)))

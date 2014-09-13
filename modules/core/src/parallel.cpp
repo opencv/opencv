@@ -240,6 +240,11 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
     {
         ProxyLoopBody pbody(body, range, nstripes);
         cv::Range stripeRange = pbody.stripeRange();
+        if( stripeRange.end - stripeRange.start == 1 )
+        {
+            body(range);
+            return;
+        }
 
 #if defined HAVE_TBB
 
