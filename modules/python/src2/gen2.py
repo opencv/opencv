@@ -984,8 +984,8 @@ class PythonWrapperGenerator(object):
         self.save(output_path, "pyopencv_generated"+prefix+"_types.h", self.code_types)
         self.save(output_path, "pyopencv_generated"+prefix+"_type_reg.h", self.code_type_reg)
         self.save(output_path, "pyopencv_generated"+prefix+"_ns_reg.h", self.code_ns_reg)
-#>>>>>>> master                                   
-                                                  
+#>>>>>>> master
+
 if __name__ == "__main__":
     srcfiles = hdr_parser.opencv_hdr_list
     dstdir = "/Users/vp/tmp"
