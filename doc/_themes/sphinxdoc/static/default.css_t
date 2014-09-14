@@ -1,0 +1,466 @@
+/*
+ * sphinxdoc.css_t
+ * ~~~~~~~~~~~~~~~
+ *
+ * Sphinx stylesheet -- sphinxdoc theme.
+ *
+ * :copyright: Copyright 2007-2014 by the Sphinx team, see AUTHORS.
+ * :license: BSD, see LICENSE for details.
+ *
+ */
+
+@import url("basic.css");
+
+/* -- page layout ----------------------------------------------------------- */
+
+body {
+    font-family: 'Open Sans', 'Lucida Grande', 'Lucida Sans Unicode', 'Geneva',
+                 'Verdana', sans-serif;
+    font-size: 14px;
+    text-align: center;
+    background-image: url(bodybg.png);
+    color: black;
+    padding: 0;
+    border-right: 1px solid #0a507a;
+    border-left: 1px solid #0a507a;
+
+    margin: 0 auto;
+    min-width: 780px;
+    max-width: 1080px;
+}
+
+div.document {
+    background-color: white;
+    text-align: left;
+}
+
+div.bodywrapper {
+    margin: 0 240px 0 0;
+    border-right: 1px solid #0a507a;
+}
+
+div.body {
+    margin: 0;
+    padding: 0.5em 20px 20px 20px;
+}
+
+div.related {
+    font-size: 1em;
+    color: white;
+}
+
+div.related ul {
+    background-image: url(relbg.png);
+    text-align: left;
+    border-top: 1px solid #002e50;
+    border-bottom: 1px solid #002e50;
+}
+
+div.related li + li {
+    display: inline;
+}
+
+div.related ul li.right {
+    float: right;
+    margin-right: 5px;
+}
+
+div.related ul li a {
+    margin: 0;
+    padding: 0 5px 0 5px;
+    line-height: 1.75em;
+    color: #f9f9f0;
+    text-shadow: 0px 0px 1px rgba(0, 0, 0, 0.5);
+}
+
+div.related ul li a:hover {
+    color: white;
+    text-shadow: 0px 0px 1px rgba(255, 255, 255, 0.5);
+}
+
+div.footer {
+    background-image: url(footerbg.png);
+    color: #ccc;
+    text-shadow: 0 0 .2px rgba(255, 255, 255, 0.8);
+    padding: 3px 8px 3px 0;
+    clear: both;
+    font-size: 0.8em;
+    text-align: center;
+}
+
+div.sphinxsidebarwrapper {
+    position: relative;
+    top: 0px;
+    padding: 0;
+}
+
+div.sphinxsidebar {
+    word-wrap: break-word;
+    margin: 0;
+    padding: 0 15px 15px 0;
+    width: 210px;
+    float: right;
+    font-size: 1em;
+    text-align: left;
+}
+
+div.sphinxsidebar .logo {
+    text-align: center;
+}
+
+div.sphinxsidebar .logo img {
+    width: 150px;
+    vertical-align: middle;
+}
+
+div.sphinxsidebar input {
+    border: 1px solid #aaa;
+    font-family: 'Open Sans', 'Lucida Grande', 'Lucida Sans Unicode', 'Geneva',
+                 'Verdana', sans-serif;
+    font-size: 1em;
+}
+
+div.sphinxsidebar #searchbox input[type="text"] {
+    width: 160px;
+}
+
+div.sphinxsidebar #searchbox input[type="submit"] {
+    width: 40px;
+}
+
+div.sphinxsidebar h3 {
+    font-size: 1.5em;
+    border-top: 1px solid #0a507a;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    padding-top: 0.5em;
+}
+
+div.sphinxsidebar h4 {
+    font-size: 1.2em;
+    margin-bottom: 0;
+}
+
+div.sphinxsidebar h3, div.sphinxsidebar h4 {
+    margin-right: -15px;
+    margin-left: -15px;
+    padding-right: 14px;
+    padding-left: 14px;
+    color: #333;
+    font-weight: 300;
+    /*text-shadow: 0px 0px 0.5px rgba(0, 0, 0, 0.4);*/
+}
+
+div.sphinxsidebarwrapper > h3:first-child {
+    margin-top: 0.5em;
+    border: none;
+}
+
+div.sphinxsidebar h3 a {
+    color: #333;
+}
+
+div.sphinxsidebar ul {
+    color: #444;
+    margin-top: 7px;
+    padding: 0;
+    line-height: 130%;
+}
+
+div.sphinxsidebar ul ul {
+    margin-left: 20px;
+    list-style-image: url(listitem.png);
+}
+
+/* -- body styles ----------------------------------------------------------- */
+
+p {
+    margin: 0.8em 0 0.5em 0;
+}
+
+a, a tt {
+    color: #2878a2;
+}
+
+a:hover, a tt:hover {
+    color: #68b8c2;
+}
+
+a tt {
+    border: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #0a507a;
+    background-color: #e5f5ff;
+    font-weight: 300;
+}
+
+h1 {
+    margin: 10px 0 0 0;
+}
+
+h2 {
+    margin: 1.em 0 0.2em 0;
+    padding: 0;
+}
+
+h3 {
+    margin: 1em 0 -0.3em 0;
+}
+
+h1 { font-size: 200%; }
+h2 { font-size: 160%; }
+h3 { font-size: 140%; }
+h4 { font-size: 120%; }
+h5 { font-size: 110%; }
+h6 { font-size: 100%; }
+
+div a, h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
+    text-decoration: none;
+}
+
+div.body h1 a tt, div.body h2 a tt, div.body h3 a tt,
+div.body h4 a tt, div.body h5 a tt, div.body h6 a tt {
+    color: #0a507a !important;
+    font-size: inherit !important;
+}
+
+a.headerlink {
+    color: #0a507a !important;
+    font-size: 12px;
+    margin-left: 6px;
+    padding: 0 4px 0 4px;
+    text-decoration: none !important;
+    float: right;
+}
+
+a.headerlink:hover {
+    background-color: #ccc;
+    color: white!important;
+}
+
+cite, code, tt {
+    font-family: 'Consolas', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono',
+                 monospace;
+    font-size: 14px;
+    min-width: 780px;
+    max-width: 1080px;
+}
+
+tt {
+    color: #003048;
+    padding: 1px;
+}
+
+tt.descname, tt.descclassname, tt.xref {
+    font-size: 12px;
+}
+
+hr {
+    border: 1px solid #abc;
+    margin: 2em;
+}
+
+pre {
+    font-family: 'Consolas', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono',
+                 monospace;
+    font-size: 13px;
+    letter-spacing: 0.015em;
+    line-height: 120%;
+    padding: 0.5em;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    background-color: #f8f8f8;
+}
+
+pre a {
+    color: inherit;
+    text-decoration: none;
+}
+
+td.linenos pre {
+    padding: 0.5em 0;
+}
+
+td.code pre {
+    max-width: 740px;
+    overflow: auto;
+    overflow-y: hidden;  /* fixes display issues on Chrome browsers */
+}
+
+div.quotebar {
+    background-color: #f8f8f8;
+    max-width: 250px;
+    float: right;
+    padding: 0px 7px;
+    border: 1px solid #ccc;
+    margin-left: 1em;
+}
+
+div.topic {
+    background-color: #f8f8f8;
+}
+
+table {
+    border-collapse: collapse;
+    margin: 0 -0.5em 0 -0.5em;
+}
+
+table td, table th {
+    padding: 0.2em 0.5em 0.2em 0.5em;
+}
+
+div.note {
+    background-color: #eee;
+    border: 1px solid #ccc;
+}
+
+div.seealso {
+    background-color: #ffc;
+    border: 1px solid #ff6;
+}
+
+div.topic {
+    background-color: #eee;
+}
+
+div.warning {
+    background-color: #ffe4e4;
+    border: 1px solid #f66;
+}
+
+div.admonition ul li, div.warning ul li,
+div.admonition ol li, div.warning ol li {
+    text-align: left;
+}
+
+div.admonition p.admonition-title + p {
+    display: inline;
+}
+
+p.admonition-title {
+    display: inline;
+}
+
+p.admonition-title:after {
+    content: ":";
+}
+
+/* ------------------ our styles ----------------*/
+
+div.body p, div.body dd, div.body li {
+    text-align: justify;
+    line-height: 130%;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+div.toctree-wrapper li, ul.simple li {
+    margin:0;
+}
+
+/*a.toc-backref {
+}*/
+
+div.feedback {
+    /*background-color: #;*/
+    /*color: #;*/
+    padding: 20px 20px 30px 20px;
+    border-top: 1px solid #002e50;
+}
+
+div.feedback h2 {
+    margin: 10px 0 10px 0;
+}
+
+div.feedback a {
+    /*color: #;*/
+    font-weight: bold;
+}
+
+div.math p {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+dl.function > dt:first-child {
+    margin-bottom: 7px;
+}
+
+dl.cfunction > dt:first-child {
+    margin-bottom: 7px;
+    color: #8080B0;
+}
+
+dl.cfunction > dt:first-child tt.descname {
+    color: #8080B0;
+}
+
+dl.pyfunction > dt:first-child {
+    margin-bottom: 7px;
+}
+
+dl.jfunction > dt:first-child {
+    margin-bottom: 7px;
+}
+
+table.field-list {
+    margin-top: 20px;
+}
+
+em.menuselection, em.guilabel {
+    font-family: 'Lucida Sans', 'Lucida Sans Unicode', 'Lucida Grande', Verdana,
+                 Arial, Helvetica, sans-serif;
+}
+
+.enumeratevisibleitemswithsquare ul {
+    list-style: square;
+    margin-bottom: 0px;
+    margin-left: 0px;
+    margin-right: 0px;
+    margin-top: 0px;
+}
+
+.enumeratevisibleitemswithsquare li {
+    margin-bottom: 0.2em;
+    margin-left: 0px;
+    margin-right: 0px;
+    margin-top: 0.2em;
+ }
+
+.enumeratevisibleitemswithsquare p {
+    margin-bottom: 0pt;
+    margin-top: 1pt;
+}
+
+.enumeratevisibleitemswithsquare dl {
+    margin-bottom: 0px;
+    margin-left: 0px;
+    margin-right: 0px;
+    margin-top: 0px;
+}
+
+.toctableopencv {
+    width: 100% ;
+    table-layout: fixed;
+}
+
+.toctableopencv colgroup col:first-child {
+    width: 100pt !important;
+    max-width: 100pt !important;
+    min-width: 100pt !important;
+}
+
+.toctableopencv colgroup col:nth-child(2) {
+    width: 100% !important;
+}
+
+div.body ul.search li {
+    text-align: left;
+}
+
+div.linenodiv {
+    min-width: 1em;
+    text-align: right;
+}
