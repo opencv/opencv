@@ -1317,6 +1317,66 @@ CV_EXPORTS_W Size getTextSize(const String& text, int fontFace,
                             double fontScale, int thickness,
                             CV_OUT int* baseLine);
 
+
+//! Superpixel implementation: "SEEDS: Superpixels Extracted via Energy-Driven Sampling", IJCV 2014
+class CV_EXPORTS_W SuperpixelSEEDS : public Algorithm
+{
+public:
+
+    /*! get the actual number of superpixels */
+    CV_WRAP virtual int getNumberOfSuperpixels() = 0;
+
+    /*!
+     * calculate the segmentation on a given image. To get the result use getLabels()
+     * @param img            input image. supported formats: CV_8U, CV_16U, CV_32F
+     *                       image size & number of channels must match with the
+     *                       initialized image size & channels.
+     * @param num_iterations number of pixel level iterations. higher number
+     *                       improves the result
+     */
+    CV_WRAP virtual void iterate(InputArray img, int num_iterations=4) = 0;
+
+    /*!
+     * retrieve the segmentation results.
+     * @param labels_out     Return: A CV_32UC1 integer array containing the labels
+     *                       labels are in the range [0, getNumberOfSuperpixels()]
+     */
+    CV_WRAP virtual void getLabels(OutputArray labels_out) = 0;
+
+    /*!
+     * get an image mask with the contour of the superpixels. useful for test output.
+     * @param image          Return: CV_8UC1 image mask where -1 is a superpixel border
+     *                       pixel and 0 an interior pixel.
+     * @param thick_line     if false, border is only one pixel wide, otherwise
+     *                       all border pixels are masked
+     */
+    CV_WRAP virtual void getLabelContourMask(OutputArray image, bool thick_line = false) = 0;
+
+    virtual ~SuperpixelSEEDS() {}
+};
+
+/*! Creates a SuperpixelSEEDS object.
+ * @param image_width       image width
+ * @param image_height      image height
+ * @param image_channels    number of channels the image has
+ * @param num_superpixels   desired number of superpixels. Note that the actual
+ *                          number can be smaller due to further restrictions.
+ *                          use getNumberOfSuperpixels to get the actual number.
+ * @param num_levels        number of block levels: the more levels, the more
+ *                          accurate is the segmentation, but needs more memory
+ *                          and CPU time.
+ * @param histogram_bins    number of histogram bins.
+ * @param prior             enable 3x3 shape smoothing term if >0. a larger value
+ *                          leads to smoother shapes.
+ *                          range: [0, 5]
+ * @param double_step       if true, iterate each block level twice for higher
+ *                          accuracy.
+ */
+CV_EXPORTS_W Ptr<SuperpixelSEEDS> createSuperpixelSEEDS(
+    int image_width, int image_height, int image_channels,
+    int num_superpixels, int num_levels, int prior = 2,
+    int histogram_bins=5, bool double_step = false);
+
 } // cv
 
 #endif
