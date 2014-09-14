@@ -739,10 +739,6 @@ class PythonWrapperGenerator(object):
         self.code_types = StringIO()
         self.code_funcs = StringIO()
         self.code_type_reg = StringIO()
-#<<<<<<< HEAD
-#        self.code_const_reg = StringIO()
-#        self.code_typedefs = StringIO()     # for putting all nested namespaces and typedef
-#=======
         self.code_ns_reg = StringIO()
         self.class_idx = 0
 
@@ -789,27 +785,6 @@ class PythonWrapperGenerator(object):
             print("Generator error: constant %s (cname=%s) already exists" \
                 % (name, cname))
             sys.exit(-1)
-#<<<<<<< HEAD
-#            return
-#        self.consts[constinfo.name] = constinfo
-#
-#    def add_func(self, decl, namespace_list):
-#        classname = bareclassname = ""
-#        name = decl[0]
-#        dpos = name.rfind(".")
-#        if dpos >= 0 and name[:dpos] not in namespace_list:
-#            classname = bareclassname = re.sub(r"^cv\.", "", name[:dpos])
-#            name = name[dpos+1:]
-#            dpos = classname.rfind(".")
-#            if dpos >= 0:
-#                bareclassname = classname[dpos+1:]
-#                classname = classname.replace(".", "_")
-#        cname = name
-#        name = re.sub(r"^cv\.", "", name)
-#        name = name.replace(".", "_")
-#        isconstructor = cname == bareclassname
-#        cname = cname.replace(".", "::")
-#=======
         ns.consts[name] = cname
 
     def add_func(self, decl):
@@ -824,7 +799,6 @@ class PythonWrapperGenerator(object):
         namespace = '.'.join(namespace)
 
         isconstructor = name == bareclassname
-#>>>>>>> master
         isclassmethod = False
         for m in decl[2]:
             if m == "/S":
@@ -878,23 +852,16 @@ class PythonWrapperGenerator(object):
         f.write(buf.getvalue())
         f.close()
 
-    def gen(self, srcfiles, output_path, prefix):
+    def gen(self, srcfiles, output_path):
         self.clear()
         self.parser = hdr_parser.CppHeaderParser()
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
-#<<<<<<< HEAD
-#            decls = parser.parse(hdr)
-#            if len(decls)>0:
-#                self.code_include.write( '#include "{}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )
-#
-#=======
             decls = self.parser.parse(hdr)
             if len(decls) == 0:
                 continue
             self.code_include.write( '#include "{}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )
-#>>>>>>> master
             for decl in decls:
                 name = decl[0]
                 if name.startswith("struct") or name.startswith("class"):
@@ -903,24 +870,6 @@ class PythonWrapperGenerator(object):
                     stype = name[:p]
                     name = name[p+1:].strip()
                     self.add_class(stype, name, decl)
-                    # Automating namespaces and typedefs for classes inside namespace -->
-#                    if stype == "class":
-#                        temp_namespace = 'cv'
-#                        temp_classname = '.'
-#                        for ns in parser.namespace_list:
-#                            if ns != 'cv' and name.startswith(ns) and len(ns)>len(temp_namespace):
-#                                temp_namespace = ns
-#                                temp_classname = name.lstrip(ns+'.')
-#                                break
-#
-#                        if temp_namespace.startswith('cv') and temp_namespace != 'cv' and '.' not in temp_classname:
-#                            temp_ns = temp_namespace.replace('.', '::')+"::" # cv.optim --> cv::optim::
-#                            temp_var = temp_ns + temp_classname # cv.optim.Solver --> cv::optim::Solver
-#                            temp_using = "using " + temp_var + ";" # cv.optim.solver --> using cv::optim::solver;
-#                            # typedef: cv.optim.solver --> typedef cv::optim::solver optim_solver
-#                            temp_typedef = "typedef " + temp_var+ " " + temp_var[4:].replace('::','_') + ";"
-#                            self.code_typedefs.write(temp_using+"\n"+temp_typedef+"\n")
-#                    # <-- finished
                 elif name.startswith("const"):
                     # constant
                     self.add_const(name.replace("const ", "").strip(), decl)
@@ -969,33 +918,23 @@ class PythonWrapperGenerator(object):
         for name, constinfo in constlist:
             self.gen_const_reg(constinfo)
 
+        print("prefix : ", prefix)
         # That's it. Now save all the files
-#<<<<<<< HEAD
-#        self.save(output_path, "pyopencv_generated"+prefix+"_include.h", self.code_include)
-#        self.save(output_path, "pyopencv_generated"+prefix+"_funcs.h", self.code_funcs)
-#        self.save(output_path, "pyopencv_generated"+prefix+"_func_tab.h", self.code_func_tab)
-#        self.save(output_path, "pyopencv_generated"+prefix+"_const_reg.h", self.code_const_reg)
-#        self.save(output_path, "pyopencv_generated"+prefix+"_types.h", self.code_types)
-#        self.save(output_path, "pyopencv_generated"+prefix+"_type_reg.h", self.code_type_reg)
-#        self.save(output_path, "pyopencv_generated"+prefix+"_typedefs.h", self.code_typedefs)
-#=======
         self.save(output_path, "pyopencv_generated"+prefix+"_include.h", self.code_include)
         self.save(output_path, "pyopencv_generated"+prefix+"_funcs.h", self.code_funcs)
         self.save(output_path, "pyopencv_generated"+prefix+"_types.h", self.code_types)
         self.save(output_path, "pyopencv_generated"+prefix+"_type_reg.h", self.code_type_reg)
         self.save(output_path, "pyopencv_generated"+prefix+"_ns_reg.h", self.code_ns_reg)
-#>>>>>>> master
 
 if __name__ == "__main__":
     srcfiles = hdr_parser.opencv_hdr_list
     dstdir = "/Users/vp/tmp"
-    # Prefix decides output for master/contrib modules. See modules/python/CMakeLists.txt
-    prefix = ""
     if len(sys.argv) > 1:
         prefix = sys.argv[1]
     if len(sys.argv) > 2:
         dstdir = sys.argv[2]
     if len(sys.argv) > 3:
         srcfiles = sys.argv[3:]
+        #srcfiles = open(sys.argv[2], 'r').read().split(';')
     generator = PythonWrapperGenerator()
-    generator.gen(srcfiles, dstdir, prefix)
+    generator.gen(srcfiles, dstdir)

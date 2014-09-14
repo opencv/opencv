@@ -38,11 +38,7 @@ class CppHeaderParser(object):
         self.PUBLIC_SECTION = 3
         self.CLASS_DECL = 4
 
-#<<<<<<< HEAD
-#        self.namespace_list = []  # To keep all the namespaces encountered
-#=======
         self.namespaces = set()
-#>>>>>>> master
 
     def batch_replace(self, s, pairs):
         for before, after in pairs:
@@ -846,15 +842,6 @@ class CppHeaderParser(object):
                     else:
                         public_section = True
                     self.block_stack.append([stmt_type, name, parse_flag, public_section, decl])
-
-#                    # add namespaces to its namespace_list -->
-#                    if stmt_type == "namespace":
-#                        # take all namespaces in block_stack and join them with '.'
-#                        namespace_items = [item[1] for item in self.block_stack if item[0]=="namespace"]
-#                        temp_ns = '.'.join(namespace_items)
-#                        if temp_ns not in self.namespace_list:
-#                            self.namespace_list.append(temp_ns)
-#                    # <-- finished
 
                 if token == "}":
                     if not self.block_stack:

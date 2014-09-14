@@ -40,6 +40,7 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 
 #include "pyopencv_generated_types.h"
 #include "pyopencv_generated_contrib_types.h"
+#include "pyopencv_generated_funcs.h"
 #include "pyopencv_generated_contrib_funcs.h"
 
 static PyMethodDef special_methods[] = {
