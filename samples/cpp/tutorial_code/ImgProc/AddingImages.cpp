@@ -32,8 +32,8 @@ int main( void )
      { alpha = input; }
 
    /// Read image ( same size, same type )
-   src1 = imread("../images/LinuxLogo.jpg");
-   src2 = imread("../images/WindowsLogo.jpg");
+   src1 = imread("../data/LinuxLogo.jpg");
+   src2 = imread("../data/WindowsLogo.jpg");
 
    if( src1.empty() ) { std::cout<< "Error loading src1"<<std::endl; return -1; }
    if( src2.empty() ) { std::cout<< "Error loading src2"<<std::endl; return -1; }
