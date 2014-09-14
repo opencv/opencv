@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2014, Itseez Inc, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -228,10 +229,12 @@ public:
     class CV_EXPORTS_W_MAP Params
     {
     public:
-        Params(int defaultK=10, bool isclassifier=true);
+        Params(int defaultK=10, bool isclassifier_=true, int Emax_=INT_MAX, int algorithmType_=BRUTE_FORCE);
 
         CV_PROP_RW int defaultK;
         CV_PROP_RW bool isclassifier;
+        CV_PROP_RW int Emax; // for implementation with KDTree
+        CV_PROP_RW int algorithmType;
     };
     virtual void setParams(const Params& p) = 0;
     virtual Params getParams() const = 0;
@@ -239,6 +242,9 @@ public:
                                OutputArray results,
                                OutputArray neighborResponses=noArray(),
                                OutputArray dist=noArray() ) const = 0;
+
+    enum { BRUTE_FORCE=1, KDTREE=2 };
+
     static Ptr<KNearest> create(const Params& params=Params());
 };
 

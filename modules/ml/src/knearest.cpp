@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "kdtree.hpp"
 
 /****************************************************************************************\
 *                              K-Nearest Neighbors Classifier                            *
@@ -49,12 +50,13 @@
 namespace cv {
 namespace ml {
 
-KNearest::Params::Params(int k, bool isclassifier_)
+KNearest::Params::Params(int k, bool isclassifier_, int Emax_, int algorithmType_) :
+    defaultK(k),
+    isclassifier(isclassifier_),
+    Emax(Emax_),
+    algorithmType(algorithmType_)
 {
-    defaultK = k;
-    isclassifier = isclassifier_;
 }
-
 
 class KNearestImpl : public KNearest
 {
@@ -352,8 +354,156 @@ public:
     Params params;
 };
 
+
+class KNearestKDTreeImpl : public KNearest
+{
+public:
+    KNearestKDTreeImpl(const Params& p)
+    {
+        params = p;
+    }
+
+    virtual ~KNearestKDTreeImpl() {}
+
+    Params getParams() const { return params; }
+    void setParams(const Params& p) { params = p; }
+
+    bool isClassifier() const { return params.isclassifier; }
+    bool isTrained() const { return !samples.empty(); }
+
+    String getDefaultModelName() const { return "opencv_ml_knn_kd"; }
+
+    void clear()
+    {
+        samples.release();
+        responses.release();
+    }
+
+    int getVarCount() const { return samples.cols; }
+
+    bool train( const Ptr<TrainData>& data, int flags )
+    {
+        Mat new_samples = data->getTrainSamples(ROW_SAMPLE);
+        Mat new_responses;
+        data->getTrainResponses().convertTo(new_responses, CV_32F);
+        bool update = (flags & UPDATE_MODEL) != 0 && !samples.empty();
+
+        CV_Assert( new_samples.type() == CV_32F );
+
+        if( !update )
+        {
+            clear();
+        }
+        else
+        {
+            CV_Assert( new_samples.cols == samples.cols &&
+                       new_responses.cols == responses.cols );
+        }
+
+        samples.push_back(new_samples);
+        responses.push_back(new_responses);
+
+        tr.build(samples);
+
+        return true;
+    }
+
+    float findNearest( InputArray _samples, int k,
+                       OutputArray _results,
+                       OutputArray _neighborResponses,
+                       OutputArray _dists ) const
+    {
+        float result = 0.f;
+        CV_Assert( 0 < k );
+
+        Mat test_samples = _samples.getMat();
+        CV_Assert( test_samples.type() == CV_32F && test_samples.cols == samples.cols );
+        int testcount = test_samples.rows;
+
+        if( testcount == 0 )
+        {
+            _results.release();
+            _neighborResponses.release();
+            _dists.release();
+            return 0.f;
+        }
+
+        Mat res, nr, d;
+        if( _results.needed() )
+        {
+            _results.create(testcount, 1, CV_32F);
+            res = _results.getMat();
+        }
+        if( _neighborResponses.needed() )
+        {
+            _neighborResponses.create(testcount, k, CV_32F);
+            nr = _neighborResponses.getMat();
+        }
+        if( _dists.needed() )
+        {
+            _dists.create(testcount, k, CV_32F);
+            d = _dists.getMat();
+        }
+
+        for (int i=0; i<test_samples.rows; ++i)
+        {
+            Mat _res, _nr, _d;
+            if (res.rows>i)
+            {
+                _res = res.row(i);
+            }
+            if (nr.rows>i)
+            {
+                _nr = nr.row(i);
+            }
+            if (d.rows>i)
+            {
+                _d = d.row(i);
+            }
+            tr.findNearest(test_samples.row(i), k, params.Emax, _res, _nr, _d, noArray());
+        }
+
+        return result; // currently always 0
+    }
+
+    float predict(InputArray inputs, OutputArray outputs, int) const
+    {
+        return findNearest( inputs, params.defaultK, outputs, noArray(), noArray() );
+    }
+
+    void write( FileStorage& fs ) const
+    {
+        fs << "is_classifier" << (int)params.isclassifier;
+        fs << "default_k" << params.defaultK;
+
+        fs << "samples" << samples;
+        fs << "responses" << responses;
+    }
+
+    void read( const FileNode& fn )
+    {
+        clear();
+        params.isclassifier = (int)fn["is_classifier"] != 0;
+        params.defaultK = (int)fn["default_k"];
+
+        fn["samples"] >> samples;
+        fn["responses"] >> responses;
+    }
+
+    KDTree tr;
+
+    Mat samples;
+    Mat responses;
+    Params params;
+};
+
 Ptr<KNearest> KNearest::create(const Params& p)
 {
+    if (KDTREE==p.algorithmType)
+    {
+        return makePtr<KNearestKDTreeImpl>(p);
+    }
+
     return makePtr<KNearestImpl>(p);
 }
 
