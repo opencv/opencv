@@ -126,7 +126,7 @@ In this sample I'll show how to calculate and show the *magnitude* image of a Fo
 Result
 ======
 
-An application idea would be to determine the geometrical orientation present in the image. For example, let us find out if a text is horizontal or not? Looking at some text you'll notice that the text lines sort of form also horizontal lines and the letters form sort of vertical lines. These two main components of a text snippet may be also seen in case of the Fourier transform. Let us use :download:`this horizontal <../../../../samples/cpp/tutorial_code/images/imageTextN.png>` and :download:`this rotated<../../../../samples/cpp/tutorial_code/images/imageTextR.png>` image about a text.
+An application idea would be to determine the geometrical orientation present in the image. For example, let us find out if a text is horizontal or not? Looking at some text you'll notice that the text lines sort of form also horizontal lines and the letters form sort of vertical lines. These two main components of a text snippet may be also seen in case of the Fourier transform. Let us use :download:`this horizontal <../../../../samples/data/imageTextN.png>` and :download:`this rotated<../../../../samples/data/imageTextR.png>` image about a text.
 
 In case of the horizontal text:
 
