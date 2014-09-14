@@ -13,6 +13,7 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/imgcodecs.hpp"
+#include "opencv2/ml.hpp"
 #include <iostream>
 
 #endif

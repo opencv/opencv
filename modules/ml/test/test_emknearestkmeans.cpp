@@ -312,9 +312,11 @@ void CV_KNearestTest::run( int /*start_from*/ )
     generateData( testData, testLabels, sizes, means, covs, CV_32FC1, CV_32FC1 );
 
     int code = cvtest::TS::OK;
-    Ptr<KNearest> knearest = KNearest::create(true);
-    knearest->train(trainData, cv::ml::ROW_SAMPLE, trainLabels);
-    knearest->findNearest( testData, 4, bestLabels);
+
+    // KNearest default implementation
+    Ptr<KNearest> knearest = KNearest::create();
+    knearest->train(trainData, ml::ROW_SAMPLE, trainLabels);
+    knearest->findNearest(testData, 4, bestLabels);
     float err;
     if( !calcErr( bestLabels, testLabels, sizes, err, true ) )
     {
@@ -326,6 +328,22 @@ void CV_KNearestTest::run( int /*start_from*/ )
         ts->printf( cvtest::TS::LOG, "Bad accuracy (%f) on test data.\n", err );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
     }
+
+    // KNearest KDTree implementation
+    Ptr<KNearest> knearestKdt = KNearest::create(ml::KNearest::Params(10, true, INT_MAX, ml::KNearest::KDTREE));
+    knearestKdt->train(trainData, ml::ROW_SAMPLE, trainLabels);
+    knearestKdt->findNearest(testData, 4, bestLabels);
+    if( !calcErr( bestLabels, testLabels, sizes, err, true ) )
+    {
+        ts->printf( cvtest::TS::LOG, "Bad output labels.\n" );
+        code = cvtest::TS::FAIL_INVALID_OUTPUT;
+    }
+    else if( err > 0.01f )
+    {
+        ts->printf( cvtest::TS::LOG, "Bad accuracy (%f) on test data.\n", err );
+        code = cvtest::TS::FAIL_BAD_ACCURACY;
+    }
+
     ts->set_failed_test_info( code );
 }
 

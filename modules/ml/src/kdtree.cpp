@@ -13,6 +13,7 @@
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2014, Itseez Inc, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -42,13 +43,14 @@
 //M*/
 
 #include "precomp.hpp"
+#include "kdtree.hpp"
 
 namespace cv
 {
-
+namespace ml
+{
 // This is reimplementation of kd-trees from cvkdtree*.* by Xavier Delacour, cleaned-up and
-// adopted to work with the new OpenCV data structures. It's in cxcore to be shared by
-// both cv (CvFeatureTree) and ml (kNN).
+// adopted to work with the new OpenCV data structures.
 
 // The algorithm is taken from:
 // J.S. Beis and D.G. Lowe. Shape indexing using approximate nearest-neighbor search
@@ -528,4 +530,5 @@ int KDTree::dims() const
     return !points.empty() ? points.cols : 0;
 }
 
+}
 }
