@@ -2,7 +2,7 @@ ColorMaps in OpenCV
 ===================
 
 applyColorMap
----------------------
+-------------
 
 Applies a GNU Octave/MATLAB equivalent colormap on a given image.
 
@@ -34,44 +34,47 @@ Currently the following GNU Octave/MATLAB equivalent colormaps are implemented:
 
 
 Description
------------
+===========
 
 The human perception isn't built for observing fine changes in grayscale images. Human eyes are more sensitive to observing changes between colors, so you often need to recolor your grayscale images to get a clue about them. OpenCV now comes with various colormaps to enhance the visualization in your computer vision application.
 
-In OpenCV 2.4 you only need :ocv:func:`applyColorMap` to apply a colormap on a given image. The following sample code reads the path to an image from command line, applies a Jet colormap on it and shows the result:
+In OpenCV you only need :ocv:func:`applyColorMap` to apply a colormap on a given image. The following sample code reads the path to an image from command line, applies a Jet colormap on it and shows the result:
 
 .. code-block:: cpp
 
-    #include <opencv2/contrib.hpp>
     #include <opencv2/core.hpp>
+    #include <opencv2/imgproc.hpp>
+    #include <opencv2/imgcodecs.hpp>
     #include <opencv2/highgui.hpp>
-
     using namespace cv;
 
-    int main(int argc, const char *argv[]) {
-        // Get the path to the image, if it was given
-        // if no arguments were given.
-        String filename;
-        if (argc > 1) {
-            filename = String(argv[1]);
+    #include <iostream>
+    using namespace std;
+
+    int main(int argc, const char *argv[])
+    {
+        // We need an input image. (can be grayscale or color)
+        if (argc < 2)
+        {
+            cerr << "We need an image to process here. Please run: colorMap [path_to_image]" << endl;
+            return -1;
         }
-        // The following lines show how to apply a colormap on a given image
-        // and show it with cv::imshow example with an image. An exception is
-        // thrown if the path to the image is invalid.
-        if(!filename.empty()) {
-            Mat img0 = imread(filename);
-            // Throw an exception, if the image can't be read:
-            if(img0.empty()) {
-                CV_Error(CV_StsBadArg, "Sample image is empty. Please adjust your path, so it points to a valid input image!");
-            }
-            // Holds the colormap version of the image:
-            Mat cm_img0;
-            // Apply the colormap:
-            applyColorMap(img0, cm_img0, COLORMAP_JET);
-            // Show the result:
-            imshow("cm_img0", cm_img0);
-            waitKey(0);
+
+        Mat img_in = imread(argv[1]);
+
+        if(img_in.empty())
+        {
+            cerr << "Sample image (" << argv[1] << ") is empty. Please adjust your path, so it points to a valid input image!" << endl;
+            return -1;
         }
+
+        // Holds the colormap version of the image:
+        Mat img_color;
+        // Apply the colormap:
+        applyColorMap(img_in, img_color, COLORMAP_JET);
+        // Show the result:
+        imshow("colorMap", img_color);
+        waitKey(0);
 
         return 0;
     }
