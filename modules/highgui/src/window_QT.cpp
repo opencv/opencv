@@ -76,6 +76,17 @@ static const unsigned int threshold_zoom_img_region = 30;
 static CvWinProperties* global_control_panel = NULL;
 //end static and global
 
+// Declaration
+Qt::ConnectionType autoBlockingConnection();
+
+// Implementation - this allows us to do blocking whilst automatically selecting the right
+// behaviour for in-thread and out-of-thread launches of cv windows. Qt strangely doesn't
+// cater for this, but does for strictly queued connections.
+Qt::ConnectionType autoBlockingConnection() {
+  return (QThread::currentThread() != QApplication::instance()->thread())
+      ? Qt::BlockingQueuedConnection
+      : Qt::DirectConnection;
+}
 
 CV_IMPL CvFont cvFontQt(const char* nameFont, int pointSize,CvScalar color,int weight,int style, int spacing)
 {
@@ -104,7 +115,7 @@ CV_IMPL void cvAddText(const CvArr* img, const char* text, CvPoint org, CvFont* 
 
     QMetaObject::invokeMethod(guiMainThread,
         "putText",
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_ARG(void*, (void*) img),
         Q_ARG(QString,QString(text)),
         Q_ARG(QPoint, QPoint(org.x,org.y)),
@@ -120,8 +131,7 @@ double cvGetRatioWindow_QT(const char* name)
     double result = -1;
     QMetaObject::invokeMethod(guiMainThread,
         "getRatioWindow",
-        //Qt::DirectConnection,
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_RETURN_ARG(double, result),
         Q_ARG(QString, QString(name)));
 
@@ -137,7 +147,7 @@ void cvSetRatioWindow_QT(const char* name,double prop_value)
 
     QMetaObject::invokeMethod(guiMainThread,
         "setRatioWindow",
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_ARG(QString, QString(name)),
         Q_ARG(double, prop_value));
 }
@@ -151,8 +161,7 @@ double cvGetPropWindow_QT(const char* name)
     double result = -1;
     QMetaObject::invokeMethod(guiMainThread,
         "getPropWindow",
-        //Qt::DirectConnection,
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_RETURN_ARG(double, result),
         Q_ARG(QString, QString(name)));
 
@@ -167,7 +176,7 @@ void cvSetPropWindow_QT(const char* name,double prop_value)
 
     QMetaObject::invokeMethod(guiMainThread,
         "setPropWindow",
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_ARG(QString, QString(name)),
         Q_ARG(double, prop_value));
 }
@@ -180,7 +189,7 @@ void cvSetModeWindow_QT(const char* name, double prop_value)
 
     QMetaObject::invokeMethod(guiMainThread,
         "toggleFullScreen",
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_ARG(QString, QString(name)),
         Q_ARG(double, prop_value));
 }
@@ -195,7 +204,7 @@ double cvGetModeWindow_QT(const char* name)
 
     QMetaObject::invokeMethod(guiMainThread,
         "isFullScreen",
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_RETURN_ARG(double, result),
         Q_ARG(QString, QString(name)));
 
@@ -210,8 +219,7 @@ CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
 
     QMetaObject::invokeMethod(guiMainThread,
         "displayInfo",
-        Qt::AutoConnection,
-        //Qt::DirectConnection,
+        autoBlockingConnection(),
         Q_ARG(QString, QString(name)),
         Q_ARG(QString, QString(text)),
         Q_ARG(int, delayms));
@@ -225,7 +233,7 @@ CV_IMPL void cvSaveWindowParameters(const char* name)
 
     QMetaObject::invokeMethod(guiMainThread,
         "saveWindowParameters",
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_ARG(QString, QString(name)));
 }
 
@@ -237,7 +245,7 @@ CV_IMPL void cvLoadWindowParameters(const char* name)
 
     QMetaObject::invokeMethod(guiMainThread,
         "loadWindowParameters",
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_ARG(QString, QString(name)));
 }
 
@@ -249,8 +257,7 @@ CV_IMPL void cvDisplayStatusBar(const char* name, const char* text, int delayms)
 
     QMetaObject::invokeMethod(guiMainThread,
         "displayStatusBar",
-        Qt::AutoConnection,
-        //Qt::DirectConnection,
+        autoBlockingConnection(),
         Q_ARG(QString, QString(name)),
         Q_ARG(QString, QString(text)),
         Q_ARG(int, delayms));
@@ -328,7 +335,6 @@ CV_IMPL int cvWaitKey(int delay)
 
         guiMainThread->bTimeOut = false;
     }
-
     return result;
 }
 
@@ -400,7 +406,6 @@ static CvBar* icvFindBarByName(QBoxLayout* layout, QString name_bar, typeBar typ
 static CvTrackbar* icvFindTrackBarByName(const char* name_trackbar, const char* name_window, QBoxLayout* layout = NULL)
 {
     QString nameQt(name_trackbar);
-
     if ((!name_window || !name_window[0]) && global_control_panel) //window name is null and we have a control panel
         layout = global_control_panel->myLayout;
 
@@ -470,17 +475,18 @@ CV_IMPL int cvNamedWindow(const char* name, int flags)
 {
     if (!guiMainThread)
         guiMainThread = new GuiReceiver;
-
-    if (multiThreads)
+    if (QThread::currentThread() != QApplication::instance()->thread()) {
+        multiThreads = true;
         QMetaObject::invokeMethod(guiMainThread,
         "createWindow",
-        Qt::BlockingQueuedConnection,
+        Qt::BlockingQueuedConnection,  // block so that we can do useful stuff once we confirm it is created
         Q_ARG(QString, QString(name)),
         Q_ARG(int, flags));
-    else
+     } else {
         guiMainThread->createWindow(QString(name), flags);
+     }
 
-    return 1; //Dummy value
+    return 1; //Dummy value - probably should return the result of the invocation.
 }
 
 
@@ -491,8 +497,7 @@ CV_IMPL void cvDestroyWindow(const char* name)
 
     QMetaObject::invokeMethod(guiMainThread,
         "destroyWindow",
-        //Qt::BlockingQueuedConnection,
-        Qt::AutoConnection,
+        Qt::AutoConnection,  // if another thread is controlling, let it handle it without blocking ourselves here
         Q_ARG(QString, QString(name)));
 }
 
@@ -501,11 +506,10 @@ CV_IMPL void cvDestroyAllWindows()
 {
     if (!guiMainThread)
         return;
-
     QMetaObject::invokeMethod(guiMainThread,
         "destroyAllWindow",
-        //Qt::BlockingQueuedConnection,
-        Qt::AutoConnection);
+        Qt::AutoConnection  // if another thread is controlling, let it handle it without blocking ourselves here
+        );
 }
 
 
@@ -531,26 +535,21 @@ CV_IMPL void cvMoveWindow(const char* name, int x, int y)
 {
     if (!guiMainThread)
         CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
-
     QMetaObject::invokeMethod(guiMainThread,
         "moveWindow",
-        //Qt::BlockingQueuedConnection,
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_ARG(QString, QString(name)),
         Q_ARG(int, x),
         Q_ARG(int, y));
 }
 
-
 CV_IMPL void cvResizeWindow(const char* name, int width, int height)
 {
     if (!guiMainThread)
         CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
-
     QMetaObject::invokeMethod(guiMainThread,
         "resizeWindow",
-        //Qt::BlockingQueuedConnection,
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_ARG(QString, QString(name)),
         Q_ARG(int, width),
         Q_ARG(int, height));
@@ -564,7 +563,7 @@ CV_IMPL int cvCreateTrackbar2(const char* name_bar, const char* window_name, int
 
     QMetaObject::invokeMethod(guiMainThread,
         "addSlider2",
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_ARG(QString, QString(name_bar)),
         Q_ARG(QString, QString(window_name)),
         Q_ARG(void*, (void*)val),
@@ -589,7 +588,7 @@ CV_IMPL int cvCreateTrackbar(const char* name_bar, const char* window_name, int*
 
     QMetaObject::invokeMethod(guiMainThread,
         "addSlider",
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_ARG(QString, QString(name_bar)),
         Q_ARG(QString, QString(window_name)),
         Q_ARG(void*, (void*)value),
@@ -610,7 +609,7 @@ CV_IMPL int cvCreateButton(const char* button_name, CvButtonCallback on_change, 
 
     QMetaObject::invokeMethod(guiMainThread,
         "addButton",
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_ARG(QString, QString(button_name)),
         Q_ARG(int,  button_type),
         Q_ARG(int, initial_button_state),
@@ -660,13 +659,17 @@ CV_IMPL void cvShowImage(const char* name, const CvArr* arr)
 {
     if (!guiMainThread)
         guiMainThread = new GuiReceiver;
-
-    QMetaObject::invokeMethod(guiMainThread,
-        "showImage",
-        //Qt::BlockingQueuedConnection,
-        Qt::DirectConnection,
-        Q_ARG(QString, QString(name)),
-        Q_ARG(void*, (void*)arr));
+    if (QThread::currentThread() != QApplication::instance()->thread()) {
+        multiThreads = true;
+        QMetaObject::invokeMethod(guiMainThread,
+            "showImage",
+             autoBlockingConnection(),
+             Q_ARG(QString, QString(name)),
+             Q_ARG(void*, (void*)arr)
+        );
+     } else {
+        guiMainThread->showImage(QString(name), (void*)arr);
+     }
 }
 
 
@@ -679,7 +682,7 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* window_name, CvOpenGlDrawCallba
 
     QMetaObject::invokeMethod(guiMainThread,
         "setOpenGlDrawCallback",
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_ARG(QString, QString(window_name)),
         Q_ARG(void*, (void*)callback),
         Q_ARG(void*, userdata));
@@ -693,7 +696,7 @@ CV_IMPL void cvSetOpenGlContext(const char* window_name)
 
     QMetaObject::invokeMethod(guiMainThread,
         "setOpenGlContext",
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_ARG(QString, QString(window_name)));
 }
 
@@ -705,7 +708,7 @@ CV_IMPL void cvUpdateWindow(const char* window_name)
 
     QMetaObject::invokeMethod(guiMainThread,
         "updateWindow",
-        Qt::AutoConnection,
+        autoBlockingConnection(),
         Q_ARG(QString, QString(window_name)));
 }
 
@@ -720,7 +723,7 @@ double cvGetOpenGlProp_QT(const char* name)
     {
         QMetaObject::invokeMethod(guiMainThread,
             "isOpenGl",
-            Qt::AutoConnection,
+            autoBlockingConnection(),
             Q_RETURN_ARG(double, result),
             Q_ARG(QString, QString(name)));
     }
@@ -741,6 +744,9 @@ GuiReceiver::GuiReceiver() : bTimeOut(false), nb_windows(0)
     timer = new QTimer(this);
     QObject::connect(timer, SIGNAL(timeout()), this, SLOT(timeOut()));
     timer->setSingleShot(true);
+    if ( doesExternalQAppExist ) {
+        moveToThread(QApplication::instance()->thread());
+    }
 }
 
 
@@ -964,6 +970,7 @@ void GuiReceiver::showImage(QString name, void* arr)
 
 void GuiReceiver::destroyWindow(QString name)
 {
+
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
     if (w)
@@ -1525,7 +1532,6 @@ CvWinProperties::~CvWinProperties()
 CvWindow::CvWindow(QString name, int arg2)
 {
     type = type_CvWindow;
-    moveToThread(qApp->instance()->thread());
 
     param_flags = arg2 & 0x0000000F;
     param_gui_mode = arg2 & 0x000000F0;
@@ -2365,7 +2371,6 @@ void DefaultViewPort::updateImage(const CvArr* arr)
         //use to compute mouse coordinate, I need to update the ratio here and in resizeEvent
         ratioX = width() / float(image2Draw_mat->cols);
         ratioY = height() / float(image2Draw_mat->rows);
-
         updateGeometry();
     }
 
