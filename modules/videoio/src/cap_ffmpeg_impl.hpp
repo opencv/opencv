@@ -649,7 +649,7 @@ bool CvCapture_FFMPEG::grabFrame()
     int got_picture;
 
     int count_errs = 0;
-    const int max_number_of_attempts = 1 << 16;
+    const int max_number_of_attempts = 1 << 9;
 
     if( !ic || !video_st )  return false;
 
