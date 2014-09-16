@@ -92,7 +92,8 @@ template <class T> void SafeRelease(T **ppT)
     }
 }
 
-/// Class for printing info into consol
+#ifdef _DEBUG
+/// Class for printing info into console
 class DebugPrintOut
 {
 public:
@@ -104,6 +105,7 @@ public:
 private:
     DebugPrintOut(void);
 };
+#endif
 
 // Structure for collecting info about types of video, which are supported by current video device
 struct MediaType
@@ -176,7 +178,7 @@ class ImageGrabber : public IMFSampleGrabberSinkCallback
 {
 public:
     ~ImageGrabber(void);
-    HRESULT initImageGrabber(IMFMediaSource *pSource, GUID VideoFormat);
+    HRESULT initImageGrabber(IMFMediaSource *pSource);
     HRESULT startGrabbing(void);
     void pauseGrabbing();
     void resumeGrabbing();
@@ -222,6 +224,8 @@ private:
         LONGLONG llSampleTime, LONGLONG llSampleDuration, const BYTE * pSampleBuffer,
         DWORD dwSampleSize);
     STDMETHODIMP OnShutdown();
+
+    ImageGrabber& operator=(const ImageGrabber&);   // Declared to fix comiplation error.
 };
 
 /// Class for controlling of thread of the grabbing raw data from video device
@@ -301,8 +305,9 @@ public:
     long readInfoOfDevice(IMFActivate *pActivate, unsigned int Num);
     wchar_t *getName();
     int getCountFormats();
-    unsigned int getWidth();
-    unsigned int getHeight();
+    unsigned int getWidth() const;
+    unsigned int getHeight() const;
+    unsigned int getFrameRate() const;
     MediaType getFormat(unsigned int id);
     bool setupDevice(unsigned int w, unsigned int h, unsigned int idealFramerate = 0);
     bool setupDevice(unsigned int id);
@@ -324,6 +329,7 @@ private:
     CamParametrs vd_PrevParametrs;
     unsigned int vd_Width;
     unsigned int vd_Height;
+    unsigned int vd_FrameRate;
     unsigned int vd_CurrentNumber;
     bool vd_IsSetuped;
     std::map<UINT64, FrameRateMap> vd_CaptureFormats;
@@ -389,9 +395,11 @@ public:
     // Getting numbers of formats, which are supported by videodevice with deviceID
     unsigned int getCountFormats(int deviceID);
     // Getting width of image, which is getting from videodevice with deviceID
-    unsigned int getWidth(int deviceID);
+    unsigned int getWidth(int deviceID) const;
     // Getting height of image, which is getting from videodevice with deviceID
-    unsigned int getHeight(int deviceID);
+    unsigned int getHeight(int deviceID) const;
+    // Getting frame rate, which is getting from videodevice with deviceID
+    unsigned int getFrameRate(int deviceID) const;
     // Getting name of videodevice with deviceID
     wchar_t *getNameVideoDevice(int deviceID);
     // Getting interface MediaSource for Media Foundation from videodevice with deviceID
@@ -406,8 +414,10 @@ public:
     bool isDeviceMediaSource(int deviceID);
     // Checking of using Raw Data of pixels from videodevice with deviceID
     bool isDeviceRawDataSource(int deviceID);
+#ifdef _DEBUG
     // Setting of the state of outprinting info in console
     static void setVerbose(bool state);
+#endif
     // Initialization of video device with deviceID by media type with id
     bool setupDevice(int deviceID, unsigned int id = 0);
     // Initialization of video device with deviceID by wisth w, height h and fps idealFramerate
@@ -423,6 +433,7 @@ private:
     void updateListOfDevices();
 };
 
+#ifdef _DEBUG
 DebugPrintOut::DebugPrintOut(void):verbose(true)
 {
 }
@@ -441,19 +452,28 @@ void DebugPrintOut::printOut(const wchar_t *format, ...)
 {
     if(verbose)
     {
-        int i = 0;
-        wchar_t *p = NULL;
         va_list args;
         va_start(args, format);
-        if(wcscmp(format, L"%i"))
+        if( ::IsDebuggerPresent() )
         {
-            i = va_arg (args, int);
+            WCHAR szMsg[512];
+            ::StringCchVPrintfW(szMsg, sizeof(szMsg)/sizeof(szMsg[0]), format, args);
+            ::OutputDebugStringW(szMsg);
         }
-        if(wcscmp(format, L"%s"))
+        else
         {
-            p = va_arg (args, wchar_t *);
+            int i = 0;
+            wchar_t *p = NULL;
+            if(wcscmp(format, L"%i"))
+            {
+                i = va_arg (args, int);
+            }
+            if(wcscmp(format, L"%s"))
+            {
+                p = va_arg (args, wchar_t *);
+            }
+            wprintf(format, i,p);
         }
-        wprintf(format, i,p);
         va_end (args);
     }
 }
@@ -462,6 +482,11 @@ void DebugPrintOut::setVerbose(bool state)
 {
     verbose = state;
 }
+
+#define DebugPrintOut(...) DebugPrintOut::getInstance().printOut(__VA_ARGS__)
+#else
+#define DebugPrintOut(...) void()
+#endif
 
 LPCWSTR GetGUIDNameConstNew(const GUID& guid);
 HRESULT GetGUIDNameNew(const GUID& guid, WCHAR **ppwsz);
@@ -537,7 +562,7 @@ HRESULT LogAttributeValueByIndexNew(IMFAttributes *pAttr, DWORD index, MediaType
                 hr = GetGUIDNameNew(*var.puuid, &pGuidValName);
                 if (SUCCEEDED(hr))
                 {
-                    out.MF_MT_AM_FORMAT_TYPE = MF_MT_AM_FORMAT_TYPE;
+                    out.MF_MT_AM_FORMAT_TYPE = *var.puuid;
                     out.pMF_MT_AM_FORMAT_TYPEName = pGuidValName;
                     pGuidValName = NULL;
                 }
@@ -547,7 +572,7 @@ HRESULT LogAttributeValueByIndexNew(IMFAttributes *pAttr, DWORD index, MediaType
                 hr = GetGUIDNameNew(*var.puuid, &pGuidValName);
                 if (SUCCEEDED(hr))
                 {
-                    out.MF_MT_MAJOR_TYPE = MF_MT_MAJOR_TYPE;
+                    out.MF_MT_MAJOR_TYPE = *var.puuid;
                     out.pMF_MT_MAJOR_TYPEName = pGuidValName;
                     pGuidValName = NULL;
                 }
@@ -557,7 +582,7 @@ HRESULT LogAttributeValueByIndexNew(IMFAttributes *pAttr, DWORD index, MediaType
                 hr = GetGUIDNameNew(*var.puuid, &pGuidValName);
                 if (SUCCEEDED(hr))
                 {
-                    out.MF_MT_SUBTYPE = MF_MT_SUBTYPE;
+                    out.MF_MT_SUBTYPE = *var.puuid;
                     out.pMF_MT_SUBTYPEName = pGuidValName;
                     pGuidValName = NULL;
                 }
@@ -850,9 +875,8 @@ FormatReader::FormatReader(void)
 MediaType FormatReader::Read(IMFMediaType *pType)
 {
     UINT32 count = 0;
-    HRESULT hr = S_OK;
     MediaType out;
-    hr = pType->LockStore();
+    HRESULT hr = pType->LockStore();
     if (FAILED(hr))
     {
         return out;
@@ -915,12 +939,11 @@ ImageGrabber::~ImageGrabber(void)
 
     SafeRelease(&ig_pSession);
     SafeRelease(&ig_pTopology);
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
 
-    DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Destroing instance of the ImageGrabber class\n", ig_DeviceID);
+    DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: Destroing instance of the ImageGrabber class\n", ig_DeviceID);
 }
 
-HRESULT ImageGrabber::initImageGrabber(IMFMediaSource *pSource, GUID VideoFormat)
+HRESULT ImageGrabber::initImageGrabber(IMFMediaSource *pSource)
 {
     ComPtr<IMFActivate> pSinkActivate = NULL;
     ComPtr<IMFMediaType> pType = NULL;
@@ -928,7 +951,6 @@ HRESULT ImageGrabber::initImageGrabber(IMFMediaSource *pSource, GUID VideoFormat
     ComPtr<IMFStreamDescriptor> pSD = NULL;
     ComPtr<IMFMediaTypeHandler> pHandler = NULL;
     ComPtr<IMFMediaType> pCurrentType = NULL;
-    HRESULT hr = S_OK;
     MediaType MT;
      // Clean up.
     if (ig_pSession)
@@ -938,7 +960,7 @@ HRESULT ImageGrabber::initImageGrabber(IMFMediaSource *pSource, GUID VideoFormat
     SafeRelease(&ig_pSession);
     SafeRelease(&ig_pTopology);
     ig_pSource = pSource;
-    hr = pSource->CreatePresentationDescriptor(&pPD);
+    HRESULT hr = pSource->CreatePresentationDescriptor(&pPD);
     if (FAILED(hr))
     {
         goto err;
@@ -966,24 +988,16 @@ HRESULT ImageGrabber::initImageGrabber(IMFMediaSource *pSource, GUID VideoFormat
         MT = FormatReader::Read(pCurrentType.Get());
     }
 err:
-    unsigned int sizeRawImage = 0;
-    if(VideoFormat == MFVideoFormat_RGB24)
-    {
-        sizeRawImage = MT.MF_MT_FRAME_SIZE * 3;
-    }
-    else if(VideoFormat == MFVideoFormat_RGB32)
-    {
-        sizeRawImage = MT.MF_MT_FRAME_SIZE * 4;
-    }
-    CHECK_HR(hr = RawImage::CreateInstance(&ig_RIFirst, sizeRawImage));
-    CHECK_HR(hr = RawImage::CreateInstance(&ig_RISecond, sizeRawImage));
+    CHECK_HR(hr);
+    CHECK_HR(hr = RawImage::CreateInstance(&ig_RIFirst, MT.MF_MT_SAMPLE_SIZE));
+    CHECK_HR(hr = RawImage::CreateInstance(&ig_RISecond, MT.MF_MT_SAMPLE_SIZE));
     ig_RIOut = ig_RISecond;
     // Configure the media type that the Sample Grabber will receive.
     // Setting the major and subtype is usually enough for the topology loader
     // to resolve the topology.
     CHECK_HR(hr = MFCreateMediaType(pType.GetAddressOf()));
-    CHECK_HR(hr = pType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video));
-    CHECK_HR(hr = pType->SetGUID(MF_MT_SUBTYPE, VideoFormat));
+    CHECK_HR(hr = pType->SetGUID(MF_MT_MAJOR_TYPE, MT.MF_MT_MAJOR_TYPE));
+    CHECK_HR(hr = pType->SetGUID(MF_MT_SUBTYPE, MT.MF_MT_SUBTYPE));
     // Create the sample grabber sink.
     CHECK_HR(hr = MFCreateSampleGrabberSinkActivate(pType.Get(), this, pSinkActivate.GetAddressOf()));
     // To run as fast as possible, set this attribute (requires Windows 7):
@@ -1011,19 +1025,16 @@ void ImageGrabber::stopGrabbing()
 {
     if(ig_pSession)
         ig_pSession->Stop();
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-    DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Stopping of of grabbing of images\n", ig_DeviceID);
+    DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: Stopping of grabbing of images\n", ig_DeviceID);
 }
 
 HRESULT ImageGrabber::startGrabbing(void)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     ComPtr<IMFMediaEvent> pEvent = NULL;
     PROPVARIANT var;
     PropVariantInit(&var);
-    HRESULT hr = S_OK;
-    hr = ig_pSession->SetTopology(0, ig_pTopology);
-    DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Start Grabbing of the images\n", ig_DeviceID);
+    HRESULT hr = ig_pSession->SetTopology(0, ig_pTopology);
+    DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: Start Grabbing of the images\n", ig_DeviceID);
     hr = ig_pSession->Start(&GUID_NULL, &var);
     for(;;)
     {
@@ -1050,28 +1061,28 @@ HRESULT ImageGrabber::startGrabbing(void)
         }
         if (met == MESessionEnded)
         {
-            DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: MESessionEnded \n", ig_DeviceID);
+            DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: MESessionEnded \n", ig_DeviceID);
             ig_pSession->Stop();
             break;
         }
         if (met == MESessionStopped)
         {
-            DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: MESessionStopped \n", ig_DeviceID);
+            DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: MESessionStopped \n", ig_DeviceID);
             break;
         }
         if (met == MEVideoCaptureDeviceRemoved)
         {
-            DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: MEVideoCaptureDeviceRemoved \n", ig_DeviceID);
+            DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: MEVideoCaptureDeviceRemoved \n", ig_DeviceID);
             break;
         }
         if ((met == MEError) || (met == MENonFatalError))
         {
             pEvent->GetStatus(&hrStatus);
-            DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: MEError | MENonFatalError: %u\n", ig_DeviceID, hrStatus);
+            DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: MEError | MENonFatalError: %u\n", ig_DeviceID, hrStatus);
             break;
         }
     }
-    DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Finish startGrabbing \n", ig_DeviceID);
+    DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: Finish startGrabbing \n", ig_DeviceID);
 
 done:
     SetEvent(ig_hFinish);
@@ -1170,15 +1181,14 @@ done:
     return hr;
 }
 
-HRESULT ImageGrabber::CreateInstance(ImageGrabber **ppIG, unsigned int deviceID, bool synchronious)
+HRESULT ImageGrabber::CreateInstance(ImageGrabber **ppIG, unsigned int deviceID, bool synchronous)
 {
-    *ppIG = new (std::nothrow) ImageGrabber(deviceID, synchronious);
+    *ppIG = new (std::nothrow) ImageGrabber(deviceID, synchronous);
     if (ppIG == NULL)
     {
         return E_OUTOFMEMORY;
     }
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-    DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Creating instance of ImageGrabber\n", deviceID);
+    DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: Creating instance of ImageGrabber\n", deviceID);
     return S_OK;
 }
 
@@ -1271,7 +1281,7 @@ STDMETHODIMP ImageGrabber::OnProcessSample(REFGUID guidMajorMediaType, DWORD dwS
     DWORD status = WaitForMultipleObjects(2, tmp, FALSE, INFINITE);
     if (status == WAIT_OBJECT_0)
     {
-        printf("OnProcessFrame called after ig_hFinish event\n");
+        DebugPrintOut(L"OnProcessFrame called after ig_hFinish event\n");
         return S_OK;
     }
 
@@ -1318,15 +1328,14 @@ DWORD WINAPI MainThreadFunction( LPVOID lpParam )
 
 HRESULT ImageGrabberThread::CreateInstance(ImageGrabberThread **ppIGT, IMFMediaSource *pSource, unsigned int deviceID, bool synchronious)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     *ppIGT = new (std::nothrow) ImageGrabberThread(pSource, deviceID, synchronious);
     if (ppIGT == NULL)
     {
-        DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Memory cannot be allocated\n", deviceID);
+        DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Memory cannot be allocated\n", deviceID);
         return E_OUTOFMEMORY;
     }
     else
-        DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Creating of the instance of ImageGrabberThread\n", deviceID);
+        DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Creating of the instance of ImageGrabberThread\n", deviceID);
     return S_OK;
 }
 
@@ -1335,24 +1344,23 @@ ImageGrabberThread::ImageGrabberThread(IMFMediaSource *pSource, unsigned int dev
     igt_Handle(NULL),
     igt_stop(false)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     HRESULT hr = ImageGrabber::CreateInstance(&igt_pImageGrabber, deviceID, synchronious);
     igt_DeviceID = deviceID;
     if(SUCCEEDED(hr))
     {
-        hr = igt_pImageGrabber->initImageGrabber(pSource, MFVideoFormat_RGB24);
+        hr = igt_pImageGrabber->initImageGrabber(pSource);
         if(!SUCCEEDED(hr))
         {
-            DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: There is a problem with initialization of the instance of the ImageGrabber class\n", deviceID);
+            DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: There is a problem with initialization of the instance of the ImageGrabber class\n", deviceID);
         }
         else
         {
-            DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Initialization of instance of the ImageGrabber class\n", deviceID);
+            DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Initialization of instance of the ImageGrabber class\n", deviceID);
         }
     }
     else
     {
-        DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i There is a problem with creation of the instance of the ImageGrabber class\n", deviceID);
+        DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i There is a problem with creation of the instance of the ImageGrabber class\n", deviceID);
     }
 }
 
@@ -1367,8 +1375,7 @@ void ImageGrabberThread::setEmergencyStopEvent(void *userData, void(*func)(int, 
 
 ImageGrabberThread::~ImageGrabberThread(void)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-    DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Destroing ImageGrabberThread\n", igt_DeviceID);
+    DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Destroing ImageGrabberThread\n", igt_DeviceID);
     if (igt_Handle)
         WaitForSingleObject(igt_Handle, INFINITE);
     delete igt_pImageGrabber;
@@ -1396,30 +1403,29 @@ void ImageGrabberThread::start()
 
 void ImageGrabberThread::run()
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if(igt_pImageGrabber)
     {
-        DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Thread for grabbing images is started\n", igt_DeviceID);
+        DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Thread for grabbing images is started\n", igt_DeviceID);
         HRESULT hr = igt_pImageGrabber->startGrabbing();
         if(!SUCCEEDED(hr))
         {
-            DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: There is a problem with starting the process of grabbing\n", igt_DeviceID);
+            DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: There is a problem with starting the process of grabbing\n", igt_DeviceID);
         }
     }
     else
     {
-        DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i The thread is finished without execution of grabbing\n", igt_DeviceID);
+        DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i The thread is finished without execution of grabbing\n", igt_DeviceID);
     }
     if(!igt_stop)
     {
-        DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Emergency Stop thread\n", igt_DeviceID);
+        DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Emergency Stop thread\n", igt_DeviceID);
         if(igt_func)
         {
             igt_func(igt_DeviceID, igt_userData);
         }
     }
     else
-        DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Finish thread\n", igt_DeviceID);
+        DebugPrintOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Finish thread\n", igt_DeviceID);
 }
 
 ImageGrabber *ImageGrabberThread::getImageGrabber()
@@ -1432,8 +1438,7 @@ Media_Foundation::Media_Foundation(void)
     HRESULT hr = MFStartup(MF_VERSION);
     if(!SUCCEEDED(hr))
     {
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MEDIA FOUNDATION: It cannot be created!!!\n");
+        DebugPrintOut(L"MEDIA FOUNDATION: It cannot be created!!!\n");
     }
 }
 
@@ -1442,17 +1447,15 @@ Media_Foundation::~Media_Foundation(void)
     HRESULT hr = MFShutdown();
     if(!SUCCEEDED(hr))
     {
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MEDIA FOUNDATION: Resources cannot be released\n");
+        DebugPrintOut(L"MEDIA FOUNDATION: Resources cannot be released\n");
     }
 }
 
 bool Media_Foundation::buildListOfDevices()
 {
-    HRESULT hr = S_OK;
     ComPtr<IMFAttributes> pAttributes = NULL;
     CoInitialize(NULL);
-    hr = MFCreateAttributes(pAttributes.GetAddressOf(), 1);
+    HRESULT hr = MFCreateAttributes(pAttributes.GetAddressOf(), 1);
     if (SUCCEEDED(hr))
     {
         hr = pAttributes->SetGUID(
@@ -1467,8 +1470,7 @@ bool Media_Foundation::buildListOfDevices()
     }
     else
     {
-       DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-       DPO->printOut(L"MEDIA FOUNDATION: The access to the video cameras denied\n");
+       DebugPrintOut(L"MEDIA FOUNDATION: The access to the video cameras denied\n");
     }
 
     return (SUCCEEDED(hr));
@@ -1532,7 +1534,7 @@ unsigned char * RawImage::getpPixels()
 }
 
 videoDevice::videoDevice(void): vd_IsSetuped(false), vd_LockOut(OpenLock), vd_pFriendlyName(NULL),
-    vd_Width(0), vd_Height(0), vd_pSource(NULL), vd_func(NULL), vd_userData(NULL)
+    vd_Width(0), vd_Height(0), vd_FrameRate(0), vd_pSource(NULL), vd_func(NULL), vd_userData(NULL)
 {
 }
 
@@ -1618,7 +1620,7 @@ CamParametrs videoDevice::getParametrs()
 
 long videoDevice::resetDevice(IMFActivate *pActivate)
 {
-    HRESULT hr = -1;
+    HRESULT hr = E_FAIL;
     vd_CurrentFormats.clear();
     if(vd_pFriendlyName)
         CoTaskMemFree(vd_pFriendlyName);
@@ -1641,8 +1643,7 @@ long videoDevice::resetDevice(IMFActivate *pActivate)
         if(FAILED(hr))
         {
             vd_pFriendlyName = NULL;
-            DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-            DPO->printOut(L"VIDEODEVICE %i: IMFMediaSource interface cannot be created \n", vd_CurrentNumber);
+            DebugPrintOut(L"VIDEODEVICE %i: IMFMediaSource interface cannot be created \n", vd_CurrentNumber);
         }
     }
     return hr;
@@ -1650,20 +1651,16 @@ long videoDevice::resetDevice(IMFActivate *pActivate)
 
 long videoDevice::readInfoOfDevice(IMFActivate *pActivate, unsigned int Num)
 {
-    HRESULT hr = -1;
     vd_CurrentNumber = Num;
-    hr = resetDevice(pActivate);
-    return hr;
+    return resetDevice(pActivate);
 }
 
 long videoDevice::checkDevice(IMFAttributes *pAttributes, IMFActivate **pDevice)
 {
-    HRESULT hr = S_OK;
     IMFActivate **ppDevices = NULL;
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     UINT32 count;
     wchar_t *newFriendlyName = NULL;
-    hr = MFEnumDeviceSources(pAttributes, &ppDevices, &count);
+    HRESULT hr = MFEnumDeviceSources(pAttributes, &ppDevices, &count);
     if (SUCCEEDED(hr))
     {
         if(count > 0)
@@ -1679,8 +1676,8 @@ long videoDevice::checkDevice(IMFAttributes *pAttributes, IMFActivate **pDevice)
                 {
                     if(wcscmp(newFriendlyName, vd_pFriendlyName) != 0)
                     {
-                        DPO->printOut(L"VIDEODEVICE %i: Chosen device cannot be found \n", vd_CurrentNumber);
-                        hr = -1;
+                        DebugPrintOut(L"VIDEODEVICE %i: Chosen device cannot be found \n", vd_CurrentNumber);
+                        hr = E_INVALIDARG;
                         pDevice = NULL;
                     }
                     else
@@ -1691,13 +1688,13 @@ long videoDevice::checkDevice(IMFAttributes *pAttributes, IMFActivate **pDevice)
                 }
                 else
                 {
-                    DPO->printOut(L"VIDEODEVICE %i: Name of device cannot be gotten \n", vd_CurrentNumber);
+                    DebugPrintOut(L"VIDEODEVICE %i: Name of device cannot be gotten \n", vd_CurrentNumber);
                 }
             }
             else
             {
-                DPO->printOut(L"VIDEODEVICE %i: Number of devices more than corrent number of the device \n", vd_CurrentNumber);
-                hr = -1;
+                DebugPrintOut(L"VIDEODEVICE %i: Number of devices more than corrent number of the device \n", vd_CurrentNumber);
+                hr = E_INVALIDARG;
             }
             for(UINT32 i = 0; i < count; i++)
             {
@@ -1706,23 +1703,22 @@ long videoDevice::checkDevice(IMFAttributes *pAttributes, IMFActivate **pDevice)
             SafeRelease(ppDevices);
         }
         else
-            hr = -1;
+            hr = E_FAIL;
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE %i: List of DeviceSources cannot be enumerated \n", vd_CurrentNumber);
+        DebugPrintOut(L"VIDEODEVICE %i: List of DeviceSources cannot be enumerated \n", vd_CurrentNumber);
     }
+
     return hr;
 }
 
 long videoDevice::initDevice()
 {
-    HRESULT hr = -1;
     ComPtr<IMFAttributes> pAttributes = NULL;
     IMFActivate *vd_pActivate = NULL;
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     CoInitialize(NULL);
-    hr = MFCreateAttributes(pAttributes.GetAddressOf(), 1);
+    HRESULT hr = MFCreateAttributes(pAttributes.GetAddressOf(), 1);
     if (SUCCEEDED(hr))
     {
         hr = pAttributes->SetGUID(
@@ -1747,12 +1743,12 @@ long videoDevice::initDevice()
         }
         else
         {
-            DPO->printOut(L"VIDEODEVICE %i: Device there is not \n", vd_CurrentNumber);
+            DebugPrintOut(L"VIDEODEVICE %i: Device there is not \n", vd_CurrentNumber);
         }
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE %i: The attribute of video cameras cannot be getting \n", vd_CurrentNumber);
+        DebugPrintOut(L"VIDEODEVICE %i: The attribute of video cameras cannot be getting \n", vd_CurrentNumber);
     }
 
     return hr;
@@ -1780,7 +1776,7 @@ void videoDevice::closeDevice()
     if(vd_IsSetuped)
     {
         vd_IsSetuped = false;
-        vd_pSource->Stop();
+        vd_pSource->Shutdown();
         SafeRelease(&vd_pSource);
         if(vd_LockOut == RawDataLock)
         {
@@ -1790,24 +1786,33 @@ void videoDevice::closeDevice()
         }
         vd_pImGrTh = NULL;
         vd_LockOut = OpenLock;
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"VIDEODEVICE %i: Device is stopped \n", vd_CurrentNumber);
+        DebugPrintOut(L"VIDEODEVICE %i: Device is stopped \n", vd_CurrentNumber);
     }
 }
-unsigned int videoDevice::getWidth()
+unsigned int videoDevice::getWidth() const
 {
     if(vd_IsSetuped)
         return vd_Width;
     else
         return 0;
 }
-unsigned int videoDevice::getHeight()
+
+unsigned int videoDevice::getHeight() const
 {
     if(vd_IsSetuped)
         return vd_Height;
     else
         return 0;
 }
+
+unsigned int videoDevice::getFrameRate() const
+{
+    if(vd_IsSetuped)
+        return vd_FrameRate;
+    else
+        return 0;
+}
+
 IMFMediaSource *videoDevice::getMediaSource()
 {
     IMFMediaSource *out = NULL;
@@ -1818,19 +1823,32 @@ IMFMediaSource *videoDevice::getMediaSource()
     }
     return out;
 }
+
 int videoDevice::findType(unsigned int size, unsigned int frameRate)
 {
-    if(vd_CaptureFormats.size() == 0)
-        return 0;
-    FrameRateMap FRM = vd_CaptureFormats[size];
-    if(FRM.size() == 0)
-        return 0;
+    if( vd_CaptureFormats.empty() )
+        return -1;
+
+    // For required frame size look for the suitable video format.
+    // If not found, get the format for the largest available frame size.
+    FrameRateMap FRM;
+    std::map<UINT64, FrameRateMap>::const_iterator fmt;
+    fmt = vd_CaptureFormats.find(size);
+    if( fmt != vd_CaptureFormats.end() )
+        FRM = fmt->second;
+    else
+        FRM = vd_CaptureFormats.rbegin()->second;
+
+    if( FRM.empty() )
+        return -1;
+
     UINT64 frameRateMax = 0;  SUBTYPEMap STMMax;
     if(frameRate == 0)
     {
         std::map<UINT64, SUBTYPEMap>::iterator f = FRM.begin();
         for(; f != FRM.end(); f++)
         {
+            // Looking for highest possible frame rate.
              if((*f).first >= frameRateMax)
              {
                  frameRateMax = (*f).first;
@@ -1843,22 +1861,26 @@ int videoDevice::findType(unsigned int size, unsigned int frameRate)
         std::map<UINT64, SUBTYPEMap>::iterator f = FRM.begin();
         for(; f != FRM.end(); f++)
         {
-             if((*f).first >= frameRateMax)
-             {
-                 if(frameRate > (*f).first)
-                 {
-                     frameRateMax = (*f).first;
-                     STMMax = (*f).second;
-                 }
-             }
+            // Looking for frame rate higher that recently found but not higher then demanded.
+            if( (*f).first >= frameRateMax && (*f).first <= frameRate )
+            {
+                frameRateMax = (*f).first;
+                STMMax = (*f).second;
+            }
         }
     }
-    if(STMMax.size() == 0)
-        return 0;
-    std::map<String, vectorNum>::iterator S = STMMax.begin();
-    vectorNum VN = (*S).second;
-    if(VN.size() == 0)
-        return 0;
+
+    // Get first (default) item from the list if no suitable frame rate found.
+    if( STMMax.empty() )
+        STMMax = FRM.begin()->second;
+
+    // Check if there are any format types on the list.
+    if( STMMax.empty() )
+        return -1;
+
+    vectorNum VN = STMMax.begin()->second;
+    if( VN.empty() )
+        return -1;
     return VN[0];
 }
 
@@ -1870,16 +1892,20 @@ void videoDevice::buildLibraryofTypes()
     int count = 0;
     for(; i != vd_CurrentFormats.end(); i++)
     {
-        size = (*i).MF_MT_FRAME_SIZE;
-        framerate = (*i).MF_MT_FRAME_RATE_NUMERATOR;
-        FrameRateMap FRM = vd_CaptureFormats[size];
-        SUBTYPEMap STM = FRM[framerate];
-        String subType((*i).pMF_MT_SUBTYPEName);
-        vectorNum VN = STM[subType];
-        VN.push_back(count);
-        STM[subType] = VN;
-        FRM[framerate] = STM;
-        vd_CaptureFormats[size] = FRM;
+        // Count only supported video formats.
+        if( (*i).MF_MT_SUBTYPE == MFVideoFormat_RGB24 )
+        {
+            size = (*i).MF_MT_FRAME_SIZE;
+            framerate = (*i).MF_MT_FRAME_RATE_NUMERATOR / (*i).MF_MT_FRAME_RATE_DENOMINATOR;
+            FrameRateMap FRM = vd_CaptureFormats[size];
+            SUBTYPEMap STM = FRM[framerate];
+            String subType((*i).pMF_MT_SUBTYPEName);
+            vectorNum VN = STM[subType];
+            VN.push_back(count);
+            STM[subType] = VN;
+            FRM[framerate] = STM;
+            vd_CaptureFormats[size] = FRM;
+        }
         count++;
     }
 }
@@ -1929,8 +1955,7 @@ RawImage * videoDevice::getRawImageOut()
             return vd_pImGrTh->getImageGrabber()->getRawImage();
     else
     {
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"VIDEODEVICE %i: The instance of ImageGrabberThread class does not exist  \n", vd_CurrentNumber);
+        DebugPrintOut(L"VIDEODEVICE %i: The instance of ImageGrabberThread class does not exist  \n", vd_CurrentNumber);
     }
     return NULL;
 }
@@ -1946,8 +1971,7 @@ bool videoDevice::isFrameNew()
             HRESULT hr = ImageGrabberThread::CreateInstance(&vd_pImGrTh, vd_pSource, vd_CurrentNumber);
             if(FAILED(hr))
             {
-                DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-                DPO->printOut(L"VIDEODEVICE %i: The instance of ImageGrabberThread class cannot be created.\n", vd_CurrentNumber);
+                DebugPrintOut(L"VIDEODEVICE %i: The instance of ImageGrabberThread class cannot be created.\n", vd_CurrentNumber);
                 return false;
             }
             vd_pImGrTh->setEmergencyStopEvent(vd_userData, vd_func);
@@ -1974,38 +1998,41 @@ bool videoDevice::isDeviceRawDataSource()
 
 bool videoDevice::setupDevice(unsigned int id)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if(!vd_IsSetuped)
     {
-        HRESULT hr = -1;
-        hr = initDevice();
+        HRESULT hr = initDevice();
         if(SUCCEEDED(hr))
         {
             vd_Width = vd_CurrentFormats[id].width;
             vd_Height = vd_CurrentFormats[id].height;
+            vd_FrameRate = vd_CurrentFormats[id].MF_MT_FRAME_RATE_NUMERATOR /
+                           vd_CurrentFormats[id].MF_MT_FRAME_RATE_DENOMINATOR;
             hr = setDeviceFormat(vd_pSource, (DWORD) id);
             vd_IsSetuped = (SUCCEEDED(hr));
             if(vd_IsSetuped)
-                DPO->printOut(L"\n\nVIDEODEVICE %i: Device is setuped \n", vd_CurrentNumber);
+                DebugPrintOut(L"\n\nVIDEODEVICE %i: Device is setuped \n", vd_CurrentNumber);
             vd_PrevParametrs = getParametrs();
             return vd_IsSetuped;
         }
         else
         {
-            DPO->printOut(L"VIDEODEVICE %i: Interface IMFMediaSource cannot be got \n", vd_CurrentNumber);
+            DebugPrintOut(L"VIDEODEVICE %i: Interface IMFMediaSource cannot be got \n", vd_CurrentNumber);
             return false;
         }
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE %i: Device is setuped already \n", vd_CurrentNumber);
+        DebugPrintOut(L"VIDEODEVICE %i: Device is setuped already \n", vd_CurrentNumber);
         return false;
     }
 }
 
 bool videoDevice::setupDevice(unsigned int w, unsigned int h, unsigned int idealFramerate)
 {
-    unsigned int id = findType(w * h, idealFramerate);
+    int id = findType(w * h, idealFramerate);
+    if( id < 0 )
+        return false;
+
     return setupDevice(id);
 }
 
@@ -2096,10 +2123,9 @@ videoDevice * videoDevices::getDevice(unsigned int i)
 
 long videoDevices::initDevices(IMFAttributes *pAttributes)
 {
-    HRESULT hr = S_OK;
     IMFActivate **ppDevices = NULL;
     clearDevices();
-    hr = MFEnumDeviceSources(pAttributes, &ppDevices, &count);
+    HRESULT hr = MFEnumDeviceSources(pAttributes, &ppDevices, &count);
     if (SUCCEEDED(hr))
     {
         if(count > 0)
@@ -2114,12 +2140,11 @@ long videoDevices::initDevices(IMFAttributes *pAttributes)
             SafeRelease(ppDevices);
         }
         else
-            hr = -1;
+            hr = E_INVALIDARG;
     }
     else
     {
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"VIDEODEVICES: The instances of the videoDevice class cannot be created\n");
+        DebugPrintOut(L"VIDEODEVICES: The instances of the videoDevice class cannot be created\n");
     }
     return hr;
 }
@@ -2188,31 +2213,27 @@ void MediaType::Clear()
 
 videoInput::videoInput(void): accessToDevices(false)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-    DPO->printOut(L"\n***** VIDEOINPUT LIBRARY - 2013 (Author: Evgeny Pereguda) *****\n\n");
+    DebugPrintOut(L"\n***** VIDEOINPUT LIBRARY - 2013 (Author: Evgeny Pereguda) *****\n\n");
     updateListOfDevices();
     if(!accessToDevices)
-        DPO->printOut(L"INITIALIZATION: Ther is not any suitable video device\n");
+        DebugPrintOut(L"INITIALIZATION: Ther is not any suitable video device\n");
 }
 
 void videoInput::updateListOfDevices()
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     Media_Foundation *MF = &Media_Foundation::getInstance();
     accessToDevices = MF->buildListOfDevices();
     if(!accessToDevices)
-        DPO->printOut(L"UPDATING: Ther is not any suitable video device\n");
+        DebugPrintOut(L"UPDATING: Ther is not any suitable video device\n");
 }
 
 videoInput::~videoInput(void)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-    DPO->printOut(L"\n***** CLOSE VIDEOINPUT LIBRARY - 2013 *****\n\n");
+    DebugPrintOut(L"\n***** CLOSE VIDEOINPUT LIBRARY - 2013 *****\n\n");
 }
 
 IMFMediaSource *videoInput::getMediaSource(int deviceID)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if(accessToDevices)
     {
         videoDevices *VDS = &videoDevices::getInstance();
@@ -2221,23 +2242,22 @@ IMFMediaSource *videoInput::getMediaSource(int deviceID)
         {
             IMFMediaSource *out = VD->getMediaSource();
             if(!out)
-                DPO->printOut(L"VideoDevice %i: There is not any suitable IMFMediaSource interface\n", deviceID);
+                DebugPrintOut(L"VideoDevice %i: There is not any suitable IMFMediaSource interface\n", deviceID);
             return out;
         }
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
     return NULL;
 }
 
 bool videoInput::setupDevice(int deviceID, unsigned int id)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if (deviceID < 0 )
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return false;
     }
     if(accessToDevices)
@@ -2248,23 +2268,22 @@ bool videoInput::setupDevice(int deviceID, unsigned int id)
         {
             bool out = VD->setupDevice(id);
             if(!out)
-                DPO->printOut(L"VIDEODEVICE %i: This device cannot be started\n", deviceID);
+                DebugPrintOut(L"VIDEODEVICE %i: This device cannot be started\n", deviceID);
             return out;
         }
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
     return false;
 }
 
 bool videoInput::setupDevice(int deviceID, unsigned int w, unsigned int h, unsigned int idealFramerate)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if (deviceID < 0 )
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return false;
     }
     if(accessToDevices)
@@ -2275,23 +2294,22 @@ bool videoInput::setupDevice(int deviceID, unsigned int w, unsigned int h, unsig
         {
             bool out = VD->setupDevice(w, h, idealFramerate);
             if(!out)
-                DPO->printOut(L"VIDEODEVICE %i: this device cannot be started\n", deviceID);
+                DebugPrintOut(L"VIDEODEVICE %i: this device cannot be started\n", deviceID);
             return out;
         }
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n", deviceID);
     }
     return false;
 }
 
 MediaType videoInput::getFormat(int deviceID, unsigned int id)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if (deviceID < 0)
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return MediaType();
     }
     if(accessToDevices)
@@ -2303,17 +2321,16 @@ MediaType videoInput::getFormat(int deviceID, unsigned int id)
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
     return MediaType();
 }
 
 bool videoInput::isDeviceSetup(int deviceID)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if (deviceID < 0)
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return false;
     }
     if(accessToDevices)
@@ -2325,17 +2342,16 @@ bool videoInput::isDeviceSetup(int deviceID)
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
     return false;
 }
 
 bool videoInput::isDeviceMediaSource(int deviceID)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if (deviceID < 0)
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return false;
     }
     if(accessToDevices)
@@ -2347,17 +2363,16 @@ bool videoInput::isDeviceMediaSource(int deviceID)
     }
     else
     {
-        DPO->printOut(L"Device(s): There is not any suitable video device\n");
+        DebugPrintOut(L"Device(s): There is not any suitable video device\n");
     }
     return false;
 }
 
 bool videoInput::isDeviceRawDataSource(int deviceID)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if (deviceID < 0)
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return false;
     }
     if(accessToDevices)
@@ -2372,17 +2387,16 @@ bool videoInput::isDeviceRawDataSource(int deviceID)
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
     return false;
 }
 
 bool videoInput::isFrameNew(int deviceID)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if (deviceID < 0)
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return false;
     }
     if(accessToDevices)
@@ -2401,17 +2415,16 @@ bool videoInput::isFrameNew(int deviceID)
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
     return false;
 }
 
 unsigned int videoInput::getCountFormats(int deviceID)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if (deviceID < 0)
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return 0;
     }
     if(accessToDevices)
@@ -2423,7 +2436,7 @@ unsigned int videoInput::getCountFormats(int deviceID)
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
     return 0;
 }
@@ -2437,10 +2450,9 @@ void videoInput::closeAllDevices()
 
 void videoInput::setParametrs(int deviceID, CamParametrs parametrs)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if (deviceID < 0)
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return;
     }
     if(accessToDevices)
@@ -2452,17 +2464,16 @@ void videoInput::setParametrs(int deviceID, CamParametrs parametrs)
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
 }
 
 CamParametrs videoInput::getParametrs(int deviceID)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     CamParametrs out;
     if (deviceID < 0)
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return out;
     }
     if(accessToDevices)
@@ -2474,17 +2485,16 @@ CamParametrs videoInput::getParametrs(int deviceID)
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
     return out;
 }
 
 void videoInput::closeDevice(int deviceID)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if (deviceID < 0)
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return;
     }
     if(accessToDevices)
@@ -2496,60 +2506,74 @@ void videoInput::closeDevice(int deviceID)
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
 }
 
-unsigned int videoInput::getWidth(int deviceID)
+unsigned int videoInput::getWidth(int deviceID) const
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if (deviceID < 0)
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return 0;
     }
     if(accessToDevices)
     {
-        videoDevices *VDS = &videoDevices::getInstance();
-        videoDevice * VD = VDS->getDevice(deviceID);
+        videoDevice * VD = videoDevices::getInstance().getDevice(deviceID);
         if(VD)
             return VD->getWidth();
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
     return 0;
 }
 
-unsigned int videoInput::getHeight(int deviceID)
+unsigned int videoInput::getHeight(int deviceID) const
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if (deviceID < 0)
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return 0;
     }
     if(accessToDevices)
     {
-        videoDevices *VDS = &videoDevices::getInstance();
-        videoDevice * VD = VDS->getDevice(deviceID);
+        videoDevice * VD = videoDevices::getInstance().getDevice(deviceID);
         if(VD)
             return VD->getHeight();
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+    }
+    return 0;
+}
+
+unsigned int videoInput::getFrameRate(int deviceID) const
+{
+    if (deviceID < 0)
+    {
+        return 0;
+    }
+    if(accessToDevices)
+    {
+        videoDevice * VD = videoDevices::getInstance().getDevice(deviceID);
+        if(VD)
+            return VD->getFrameRate();
+    }
+    else
+    {
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
     return 0;
 }
 
 wchar_t *videoInput::getNameVideoDevice(int deviceID)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if (deviceID < 0)
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return NULL;
     }
     if(accessToDevices)
@@ -2561,31 +2585,29 @@ wchar_t *videoInput::getNameVideoDevice(int deviceID)
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
     return L"Empty";
 }
 
 unsigned int videoInput::listDevices(bool silent)
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     int out = 0;
     if(accessToDevices)
     {
         videoDevices *VDS = &videoDevices::getInstance();
         out = VDS->getCount();
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        if(!silent)DPO->printOut(L"\nVIDEOINPUT SPY MODE!\n\n");
-        if(!silent)DPO->printOut(L"SETUP: Looking For Capture Devices\n");
+        if(!silent) DebugPrintOut(L"\nVIDEOINPUT SPY MODE!\n\n");
+        if(!silent) DebugPrintOut(L"SETUP: Looking For Capture Devices\n");
         for(int i = 0; i < out; i++)
         {
-            if(!silent)DPO->printOut(L"SETUP: %i) %s \n",i, getNameVideoDevice(i));
+            if(!silent) DebugPrintOut(L"SETUP: %i) %s \n",i, getNameVideoDevice(i));
         }
-        if(!silent)DPO->printOut(L"SETUP: %i Device(s) found\n\n", out);
+        if(!silent) DebugPrintOut(L"SETUP: %i Device(s) found\n\n", out);
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
     return out;
 }
@@ -2601,18 +2623,20 @@ bool videoInput::isDevicesAcceable()
     return accessToDevices;
 }
 
+#ifdef _DEBUG
 void videoInput::setVerbose(bool state)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     DPO->setVerbose(state);
 }
 
+#endif
+
 void videoInput::setEmergencyStopEvent(int deviceID, void *userData, void(*func)(int, void *))
 {
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if (deviceID < 0)
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return;
     }
     if(accessToDevices)
@@ -2627,18 +2651,16 @@ void videoInput::setEmergencyStopEvent(int deviceID, void *userData, void(*func)
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
 }
 
 bool videoInput::getPixels(int deviceID, unsigned char * dstBuffer, bool flipRedAndBlue, bool flipImage)
 {
     bool success = false;
-    unsigned int bytes = 3;
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     if (deviceID < 0)
     {
-        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        DebugPrintOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
         return success;
     }
     if(accessToDevices)
@@ -2646,14 +2668,14 @@ bool videoInput::getPixels(int deviceID, unsigned char * dstBuffer, bool flipRed
         bool isRaw = isDeviceRawDataSource(deviceID);
         if(isRaw)
         {
-            videoDevices *VDS = &videoDevices::getInstance();
-            DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-            RawImage *RIOut = VDS->getDevice(deviceID)->getRawImageOut();
+            videoDevice *VD = videoDevices::getInstance().getDevice(deviceID);
+            RawImage *RIOut = VD->getRawImageOut();
             if(RIOut)
             {
-                unsigned int height = VDS->getDevice(deviceID)->getHeight();
-                unsigned int width  = VDS->getDevice(deviceID)->getWidth();
-                unsigned int size = bytes * width * height;
+                const unsigned int bytes = 3;
+                const unsigned int height = VD->getHeight();
+                const unsigned int width  = VD->getWidth();
+                const unsigned int size = bytes * width * height;
                 if(size == RIOut->getSize())
                 {
                     processPixels(RIOut->getpPixels(), dstBuffer, width, height, bytes, flipRedAndBlue, flipImage);
@@ -2661,22 +2683,22 @@ bool videoInput::getPixels(int deviceID, unsigned char * dstBuffer, bool flipRed
                 }
                 else
                 {
-                    DPO->printOut(L"ERROR: GetPixels() - bufferSizes do not match!\n");
+                    DebugPrintOut(L"ERROR: GetPixels() - bufferSizes do not match!\n");
                 }
             }
             else
             {
-                DPO->printOut(L"ERROR: GetPixels() - Unable to grab frame for device %i\n", deviceID);
+                DebugPrintOut(L"ERROR: GetPixels() - Unable to grab frame for device %i\n", deviceID);
             }
         }
         else
         {
-            DPO->printOut(L"ERROR: GetPixels() - Not raw data source device %i\n", deviceID);
+            DebugPrintOut(L"ERROR: GetPixels() - Not raw data source device %i\n", deviceID);
         }
     }
     else
     {
-        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+        DebugPrintOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
     return success;
 }
@@ -2764,12 +2786,14 @@ protected:
     videoInput VI;
 };
 
+#ifdef _DEBUG
 struct SuppressVideoInputMessages
 {
     SuppressVideoInputMessages() { videoInput::setVerbose(true); }
 };
 
 static SuppressVideoInputMessages do_it;
+#endif
 
 CvCaptureCAM_MSMF::CvCaptureCAM_MSMF():
     index(-1),
@@ -2809,7 +2833,7 @@ bool CvCaptureCAM_MSMF::open( int _index )
     if (devices == 0)
         return false;
     try_index = try_index < 0 ? 0 : (try_index > devices-1 ? devices-1 : try_index);
-    VI.setupDevice(try_index);
+    VI.setupDevice(try_index, 0, 0, 0); // With maximum frame size.
     if( !VI.isFrameNew(try_index) )
         return false;
     index = try_index;
@@ -2825,11 +2849,12 @@ bool CvCaptureCAM_MSMF::grabFrame()
 
 IplImage* CvCaptureCAM_MSMF::retrieveFrame(int)
 {
-    if( !frame || (int)VI.getWidth(index) != frame->width || (int)VI.getHeight(index) != frame->height )
+    const int w = (int)VI.getWidth(index);
+    const int h = (int)VI.getHeight(index);
+    if( !frame || w != frame->width || h != frame->height )
     {
         if (frame)
             cvReleaseImage( &frame );
-        unsigned int w = VI.getWidth(index), h = VI.getHeight(index);
         frame = cvCreateImage( cvSize(w,h), 8, 3 );
     }
     VI.getPixels( index, (uchar*)frame->imageData, false, true );
@@ -2845,21 +2870,36 @@ double CvCaptureCAM_MSMF::getProperty( int property_id )
         return VI.getWidth(index);
     case CV_CAP_PROP_FRAME_HEIGHT:
         return VI.getHeight(index);
+    case CV_CAP_PROP_FPS:
+        return VI.getFrameRate(index);
+    default:
+        break;
     }
-    return -1;
+    return 0;
 }
+
 bool CvCaptureCAM_MSMF::setProperty( int property_id, double value )
 {
     // image capture properties
+    unsigned int fps = 0;
+
     bool handled = false;
     switch( property_id )
     {
     case CV_CAP_PROP_FRAME_WIDTH:
         width = cvRound(value);
+        fps = VI.getFrameRate(index);
         handled = true;
         break;
     case CV_CAP_PROP_FRAME_HEIGHT:
         height = cvRound(value);
+        fps = VI.getFrameRate(index);
+        handled = true;
+        break;
+    case CV_CAP_PROP_FPS:
+        width = (int)VI.getHeight(index);
+        height = (int)VI.getWidth(index);
+        fps = cvRound(value);
         handled = true;
         break;
     }
@@ -2867,11 +2907,13 @@ bool CvCaptureCAM_MSMF::setProperty( int property_id, double value )
     if ( handled ) {
         if( width > 0 && height > 0 )
         {
-            if( width != (int)VI.getWidth(index) || height != (int)VI.getHeight(index)  && VI.isDeviceSetup(index))//|| fourcc != VI.getFourcc(index) )
+            if( (width != (int)VI.getWidth(index) || height != (int)VI.getHeight(index) || fps != VI.getFrameRate(index))
+                && VI.isDeviceSetup(index))//|| fourcc != VI.getFourcc(index) )
             {
                 VI.closeDevice(index);
-                VI.setupDevice(index, width, height);
+                VI.setupDevice(index, width, height, fps);
             }
+            width = height = -1;
             return VI.isDeviceSetup(index);
         }
         return true;
@@ -2930,14 +2972,12 @@ bool CvCaptureFile_MSMF::open(const char* filename)
     wchar_t* unicodeFileName = new wchar_t[strlen(filename)+1];
     MultiByteToWideChar(CP_ACP, 0, filename, -1, unicodeFileName, strlen(filename)+1);
 
-    HRESULT hr = S_OK;
-
     MF_OBJECT_TYPE ObjectType = MF_OBJECT_INVALID;
 
     ComPtr<IMFSourceResolver> pSourceResolver = NULL;
     IUnknown* pUnkSource = NULL;
 
-    hr = MFCreateSourceResolver(pSourceResolver.GetAddressOf());
+    HRESULT hr = MFCreateSourceResolver(pSourceResolver.GetAddressOf());
 
     if (SUCCEEDED(hr))
     {
@@ -3231,8 +3271,10 @@ const GUID CvVideoWriter_MSMF::FourCC2GUID(int fourcc)
             return MFVideoFormat_DVSD; break;
         case CV_FOURCC_MACRO('d', 'v', 's', 'l'):
                 return MFVideoFormat_DVSL; break;
-        case CV_FOURCC_MACRO('H', '2', '6', '3'):
+#if (WINVER >= _WIN32_WINNT_WIN8)
+        case CV_FOURCC_MACRO('H', '2', '6', '3'):   // Available only for Win 8 target.
                 return MFVideoFormat_H263; break;
+#endif
         case CV_FOURCC_MACRO('H', '2', '6', '4'):
                 return MFVideoFormat_H264; break;
         case CV_FOURCC_MACRO('M', '4', 'S', '2'):
