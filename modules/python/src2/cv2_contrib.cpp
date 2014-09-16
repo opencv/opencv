@@ -5,85 +5,15 @@
 
 #include <Python.h>
 
-#define MODULESTR "cv2"
+#define MODULESTR "cv2_contrib"
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/ndarrayobject.h>
 
 #include "pyopencv_generated_include.h"
+#include "pyopencv_generated_contrib_include.h"
 #include "opencv2/core/types_c.h"
 
 #include "pycv2.hpp"
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static void OnMouse(int event, int x, int y, int flags, void* param)
-{
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
-
-    PyObject *o = (PyObject*)param;
-    PyObject *args = Py_BuildValue("iiiiO", event, x, y, flags, PyTuple_GetItem(o, 1));
-
-    PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, NULL);
-    if (r == NULL)
-        PyErr_Print();
-    else
-        Py_DECREF(r);
-    Py_DECREF(args);
-    PyGILState_Release(gstate);
-}
-
-static PyObject *pycvSetMouseCallback(PyObject*, PyObject *args, PyObject *kw)
-{
-    const char *keywords[] = { "window_name", "on_mouse", "param", NULL };
-    char* name;
-    PyObject *on_mouse;
-    PyObject *param = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "sO|O", (char**)keywords, &name, &on_mouse, &param))
-        return NULL;
-    if (!PyCallable_Check(on_mouse)) {
-        PyErr_SetString(PyExc_TypeError, "on_mouse must be callable");
-        return NULL;
-    }
-    if (param == NULL) {
-        param = Py_None;
-    }
-    ERRWRAP2(setMouseCallback(name, OnMouse, Py_BuildValue("OO", on_mouse, param)));
-    Py_RETURN_NONE;
-}
-
-static void OnChange(int pos, void *param)
-{
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
-
-    PyObject *o = (PyObject*)param;
-    PyObject *args = Py_BuildValue("(i)", pos);
-    PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, NULL);
-    if (r == NULL)
-        PyErr_Print();
-    Py_DECREF(args);
-    PyGILState_Release(gstate);
-}
-
-static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
-{
-    PyObject *on_change;
-    char* trackbar_name;
-    char* window_name;
-    int *value = new int;
-    int count;
-
-    if (!PyArg_ParseTuple(args, "ssiiO", &trackbar_name, &window_name, value, &count, &on_change))
-        return NULL;
-    if (!PyCallable_Check(on_change)) {
-        PyErr_SetString(PyExc_TypeError, "on_change must be callable");
-        return NULL;
-    }
-    ERRWRAP2(createTrackbar(trackbar_name, window_name, value, count, OnChange, Py_BuildValue("OO", on_change, Py_None)));
-    Py_RETURN_NONE;
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////
 
 static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
@@ -109,17 +39,18 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 #endif
 
 #include "pyopencv_generated_types.h"
+#include "pyopencv_generated_contrib_types.h"
 #include "pyopencv_generated_funcs.h"
+#include "pyopencv_generated_contrib_funcs.h"
 
 static PyMethodDef special_methods[] = {
-  {"createTrackbar", pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
-  {"setMouseCallback", (PyCFunction)pycvSetMouseCallback, METH_VARARGS | METH_KEYWORDS, "setMouseCallback(windowName, onMouse [, param]) -> None"},
+
+//#include "pyopencv_generated_contrib_func_tab.h"
   {NULL, NULL},
 };
 
 /************************************************************************/
 /* Module init */
-
 struct ConstDef
 {
     const char * name;
@@ -165,7 +96,7 @@ static void init_submodule(PyObject * root, const char * name, PyMethodDef * met
 
 }
 
-#include "pyopencv_generated_ns_reg.h"
+#include "pyopencv_generated_contrib_ns_reg.h"
 
 static int to_ok(PyTypeObject *to)
 {
@@ -177,8 +108,8 @@ static int to_ok(PyTypeObject *to)
 
 
 #if PY_MAJOR_VERSION >= 3
-extern "C" CV_EXPORTS PyObject* PyInit_cv2();
-static struct PyModuleDef cv2_moduledef =
+extern "C" CV_EXPORTS PyObject* PyInit_cv2_contrib();
+static struct PyModuleDef cv2_contrib_moduledef =
 {
     PyModuleDef_HEAD_INIT,
     MODULESTR,
@@ -188,11 +119,11 @@ static struct PyModuleDef cv2_moduledef =
     special_methods
 };
 
-PyObject* PyInit_cv2()
+PyObject* PyInit_cv2_contrib()
 #else
-extern "C" CV_EXPORTS void initcv2();
+extern "C" CV_EXPORTS void initcv2_contrib();
 
-void initcv2()
+void initcv2_contrib()
 #endif
 {
   import_array();
@@ -200,7 +131,7 @@ void initcv2()
 #include "pyopencv_generated_type_reg.h"
 
 #if PY_MAJOR_VERSION >= 3
-  PyObject* m = PyModule_Create(&cv2_moduledef);
+  PyObject* m = PyModule_Create(&cv2_contrib_moduledef);
 #else
   PyObject* m = Py_InitModule(MODULESTR, special_methods);
 #endif

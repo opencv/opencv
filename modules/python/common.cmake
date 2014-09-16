@@ -1,5 +1,8 @@
 # This file is included from a subdirectory
-set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../")
+set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
+
+# To disable any module from adding to Python bindings, add them to blacklist
+set(PYTHON_BINDINGS_BLACKLIST "^cuda.*$|contrib|legacy|softcascade|optim|tracking|matlab|ts|adas|xobjdetect|ximgproc|xfeatures2d|bgsegm|face")
 
 set(candidate_deps "")
 foreach(mp ${OPENCV_MODULES_PATH} ${OPENCV_EXTRA_MODULES_PATH})
@@ -7,10 +10,14 @@ foreach(mp ${OPENCV_MODULES_PATH} ${OPENCV_EXTRA_MODULES_PATH})
     foreach(m IN LISTS names)
         if(IS_DIRECTORY ${m})
             get_filename_component(m ${m} NAME)
-            list(APPEND candidate_deps "opencv_${m}")
+            if(NOT ${m} MATCHES ${PYTHON_BINDINGS_BLACKLIST})
+                list(APPEND candidate_deps "opencv_${m}")
+            endif()
         endif()
     endforeach(m)
 endforeach(mp)
+
+set(the_description "The python bindings")
 
 # module blacklist
 ocv_list_filterout(candidate_deps "^opencv_cud(a|ev)")
@@ -27,16 +34,56 @@ ocv_module_include_directories(
     "${PYTHON_SOURCE_DIR}/src2"
     )
 
-set(opencv_hdrs "")
-foreach(m IN LISTS OPENCV_MODULE_opencv_${MODULE_NAME}_DEPS)
-    list(APPEND opencv_hdrs ${OPENCV_MODULE_${m}_HEADERS})
-endforeach(m)
+# -- Check if EXTRA modules path is provided. If provided, build it.
+if(NOT OPENCV_EXTRA_MODULES_PATH STREQUAL "")
+    set(BUILD_PYTHON_CONTRIB ON)
+    set(TEMP_EXTRA_MODULES_PATH ${OPENCV_EXTRA_MODULES_PATH})
+else()
+    set(BUILD_PYTHON_CONTRIB OFF)
+    set(TEMP_EXTRA_MODULES_PATH " ")
+endif()
 
-# header blacklist
-ocv_list_filterout(opencv_hdrs ".h$")
-ocv_list_filterout(opencv_hdrs "cuda")
-ocv_list_filterout(opencv_hdrs "cudev")
-ocv_list_filterout(opencv_hdrs "opencv2/objdetect/detection_based_tracker.hpp")
+# -- Find the modules to build. Split them to Python modules and Python-Extra modules
+string(REPLACE "opencv_" ";" OPENCV_MODULES_NAMES ${OPENCV_MODULE_opencv_${MODULE_NAME}_DEPS})
+
+foreach(module ${OPENCV_MODULES_NAMES})
+    # Check if module location matches with Extra-modules location
+    string(FIND ${OPENCV_MODULE_opencv_${module}_LOCATION} ${TEMP_EXTRA_MODULES_PATH} IS_PYTHON_EXTRA)
+
+    if(HAVE_opencv_${module})
+        if((${OPENCV_MODULE_opencv_${module}_CLASS} STREQUAL "PUBLIC"))
+            if(NOT ${module} MATCHES ${PYTHON_BINDINGS_BLACKLIST})
+                # If it is an Extra-module, put it in Python-Extra modules group
+                if(${IS_PYTHON_EXTRA} GREATER -1)
+                    list(APPEND OPENCV_PYTHON_EXTRA_MODULES ${module})
+                else()
+                    list(APPEND OPENCV_PYTHON_MODULES ${module})
+                endif()
+            endif()
+        endif()
+    endif()
+endforeach()
+
+# -- Now collect headers for each module for Python(cv2). Extra-modules in second half of this file
+
+foreach(module ${OPENCV_PYTHON_MODULES})
+    set(module_hdrs "${OPENCV_MODULE_opencv_${module}_HEADERS}")
+    # Remove compatibility headers
+    ocv_list_filterout(module_hdrs "\${module}/\${module}.hpp$")
+    # Python bindings doesn't seem to process *.h files. So remove them, so with cuda,ios,opencl etc.
+    ocv_list_filterout(module_hdrs ".h$")
+    ocv_list_filterout(module_hdrs "^.*(cuda|ios|opencl).*$")
+    # detection_based_tracker is a linux only header
+    ocv_list_filterout(module_hdrs "detection_based_tracker.hpp$")
+    list(APPEND opencv_hdrs ${module_hdrs})
+endforeach()
+#=======
+## header blacklist
+#ocv_list_filterout(opencv_hdrs ".h$")
+#ocv_list_filterout(opencv_hdrs "cuda")
+#ocv_list_filterout(opencv_hdrs "cudev")
+#ocv_list_filterout(opencv_hdrs "opencv2/objdetect/detection_based_tracker.hpp")
+#>>>>>>> master
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
@@ -45,24 +92,29 @@ set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_type_reg.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_ns_reg.h")
 
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs}")
+# Run header parser to generate above .h files, prefix=""
 add_custom_command(
    OUTPUT ${cv2_generated_hdrs}
-   COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/headers.txt"
+   COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_SOURCE_DIR}/src2/gen2.py" "" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_hdrs}
    DEPENDS ${PYTHON_SOURCE_DIR}/src2/gen2.py
    DEPENDS ${PYTHON_SOURCE_DIR}/src2/hdr_parser.py
-   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
-   DEPENDS ${opencv_hdrs})
+   DEPENDS ${opencv_hdrs}
+   COMMENT "Usage: python gen2.py <prefix> <dstdir> <srcfiles>"
+   VERBATIM)
 
 ocv_add_library(${the_module} SHARED ${PYTHON_SOURCE_DIR}/src2/cv2.cpp ${cv2_generated_hdrs})
 set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
 
 if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")
-  ocv_target_link_libraries(${the_module} debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
+  target_link_libraries(${the_module} debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
 else()
-  ocv_target_link_libraries(${the_module} ${PYTHON_LIBRARIES})
+  target_link_libraries(${the_module} ${PYTHON_LIBRARIES})
 endif()
-ocv_target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS})
+
+# -- Target linking dependencies.
+set(TEMP_OPENCV_PYTHON_DEPS ${OPENCV_PYTHON_MODULES})
+ocv_list_add_prefix(TEMP_OPENCV_PYTHON_DEPS "opencv_")
+target_link_libraries(${the_module} ${TEMP_OPENCV_PYTHON_DEPS})
 
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import distutils.sysconfig; print(distutils.sysconfig.get_config_var('SO'))"
                 RESULT_VARIABLE PYTHON_CVPY_PROCESS
@@ -80,7 +132,7 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(MSVC)
-  add_definitions(-DCVAPI_EXPORTS)
+    add_definitions(-DCVAPI_EXPORTS)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
@@ -128,6 +180,93 @@ else()
           RUNTIME DESTINATION python/${__ver}/${OpenCV_ARCH} COMPONENT python
           LIBRARY DESTINATION python/${__ver}/${OpenCV_ARCH} COMPONENT python
           )
+endif()
+
+#-------------------------------------------------------------------------------------------------
+#                   Python bindings for External contrib module --> cv2_contrib
+#-------------------------------------------------------------------------------------------------
+if(BUILD_PYTHON_CONTRIB)
+    set(TEMP_OPENCV_PYTHON_EXTRA_DEPS ${OPENCV_PYTHON_EXTRA_MODULES})
+    ocv_list_add_prefix(TEMP_OPENCV_PYTHON_EXTRA_DEPS "opencv_")
+
+    foreach(module ${OPENCV_PYTHON_EXTRA_MODULES})
+        ocv_include_directories("${OPENCV_EXTRA_MODULES_PATH}/${module}/include")
+        set(extra_module_hdrs "${OPENCV_MODULE_opencv_${module}_HEADERS}")
+        ocv_list_filterout(extra_module_hdrs "^.*\${module}/\${module}.hpp$")
+        ocv_list_filterout(extra_module_hdrs "^.*cuda.*$")
+        list(APPEND opencv_contrib_hdrs ${extra_module_hdrs})
+    endforeach()
+
+    set(cv2_generated_contrib_hdrs
+        "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_include.h"
+        "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_funcs.h"
+        "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_types.h"
+        "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_type_reg.h"
+        "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_contrib_ns_reg.h")
+
+    # Run header parser to generate above .h files, prefix="_contrib"
+    add_custom_command(
+       OUTPUT ${cv2_generated_contrib_hdrs}
+       COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_SOURCE_DIR}/src2/gen2.py" "_contrib" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_contrib_hdrs}
+       DEPENDS ${PYTHON_SOURCE_DIR}/src2/gen2.py
+       DEPENDS ${PYTHON_SOURCE_DIR}/src2/hdr_parser.py
+       DEPENDS ${opencv_contrib_hdrs}
+       COMMENT "Usage: python gen2.py <prefix> <dstdir> <srcfiles>"
+       VERBATIM)
+
+    # include Python header files, pyopencv_generated_*.h files, all master module headers
+    ocv_include_directories(${PYTHON_INCLUDE_PATH} ${PYTHON_NUMPY_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR} "${PYTHON_SOURCE_DIR}/src2")
+    foreach(module ${OPENCV_PYTHON_MODULES})
+        ocv_include_directories("${OPENCV_MODULE_opencv_${module}_LOCATION}/include")
+    endforeach()
+
+    add_library(${contrib_module} SHARED ${PYTHON_SOURCE_DIR}/src2/cv2_contrib.cpp ${PYTHON_SOURCE_DIR}/src2/pycv2.hpp ${cv2_generated_contrib_hdrs})
+
+    if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")
+      target_link_libraries(${contrib_module} debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
+    else()
+      target_link_libraries(${contrib_module} ${PYTHON_LIBRARIES})
+    endif()
+
+    set_target_properties(${contrib_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
+
+    # target linking dependencies
+    target_link_libraries(${contrib_module} ${the_module} ${TEMP_OPENCV_PYTHON_EXTRA_DEPS})
+
+    set_target_properties(${contrib_module} PROPERTIES
+                      LIBRARY_OUTPUT_DIRECTORY  "${LIBRARY_OUTPUT_PATH}/${MODULE_INSTALL_SUBDIR}"
+                          PREFIX ""
+                          OUTPUT_NAME cv2_contrib
+                          SUFFIX ${CVPY_SUFFIX})
+
+    if(ENABLE_SOLUTION_FOLDERS)
+      set_target_properties(${contrib_module} PROPERTIES FOLDER "bindings")
+    endif()
+
+    if(MSVC AND NOT BUILD_SHARED_LIBS)
+      set_target_properties(${contrib_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
+    endif()
+
+    if(NOT INSTALL_CREATE_DISTRIB)
+      install(TARGETS ${contrib_module}
+              ${PYTHON_INSTALL_CONFIGURATIONS}
+              RUNTIME DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT python
+              LIBRARY DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT python
+              ${PYTHON_INSTALL_ARCHIVE}
+              )
+    else()
+      if(DEFINED PYTHON_VERSION_MAJOR)
+        set(__ver "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
+      else()
+        set(__ver "unknown")
+      endif()
+      install(TARGETS ${contrib_module}
+              CONFIGURATIONS Release
+              RUNTIME DESTINATION python/${__ver}/${OpenCV_ARCH} COMPONENT python
+              LIBRARY DESTINATION python/${__ver}/${OpenCV_ARCH} COMPONENT python
+              )
+    endif()
+
 endif()
 
 unset(PYTHON_SRC_DIR)

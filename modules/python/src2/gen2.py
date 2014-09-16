@@ -918,19 +918,23 @@ class PythonWrapperGenerator(object):
         for name, constinfo in constlist:
             self.gen_const_reg(constinfo)
 
+        print("prefix : ", prefix)
         # That's it. Now save all the files
-        self.save(output_path, "pyopencv_generated_include.h", self.code_include)
-        self.save(output_path, "pyopencv_generated_funcs.h", self.code_funcs)
-        self.save(output_path, "pyopencv_generated_types.h", self.code_types)
-        self.save(output_path, "pyopencv_generated_type_reg.h", self.code_type_reg)
-        self.save(output_path, "pyopencv_generated_ns_reg.h", self.code_ns_reg)
+        self.save(output_path, "pyopencv_generated"+prefix+"_include.h", self.code_include)
+        self.save(output_path, "pyopencv_generated"+prefix+"_funcs.h", self.code_funcs)
+        self.save(output_path, "pyopencv_generated"+prefix+"_types.h", self.code_types)
+        self.save(output_path, "pyopencv_generated"+prefix+"_type_reg.h", self.code_type_reg)
+        self.save(output_path, "pyopencv_generated"+prefix+"_ns_reg.h", self.code_ns_reg)
 
 if __name__ == "__main__":
     srcfiles = hdr_parser.opencv_hdr_list
     dstdir = "/Users/vp/tmp"
     if len(sys.argv) > 1:
-        dstdir = sys.argv[1]
+        prefix = sys.argv[1]
     if len(sys.argv) > 2:
-        srcfiles = open(sys.argv[2], 'r').read().split(';')
+        dstdir = sys.argv[2]
+    if len(sys.argv) > 3:
+        srcfiles = sys.argv[3:]
+        #srcfiles = open(sys.argv[2], 'r').read().split(';')
     generator = PythonWrapperGenerator()
     generator.gen(srcfiles, dstdir)
