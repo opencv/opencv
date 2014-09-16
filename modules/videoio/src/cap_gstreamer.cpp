@@ -555,6 +555,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
     gst_initializer::init();
 
+    bool file = false;
     bool stream = false;
     bool manualpipeline = false;
     char *uri = NULL;
@@ -591,7 +592,12 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
         if(uri)
         {
             uri = g_filename_to_uri(uri, NULL, NULL);
-            if(!uri) {
+            if(uri)
+            {
+                file = true;
+            }
+            else
+            {
                 CV_WARN("GStreamer: Error opening file\n");
                 close();
                 return false;
@@ -601,9 +607,9 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
         {
             GError *err = NULL;
             uridecodebin = gst_parse_launch(filename, &err);
-            if(!uridecodebin) {
-                //fprintf(stderr, "GStreamer: Error opening bin: %s\n", err->message);
-                //close();
+            if(!uridecodebin)
+            {
+                fprintf(stderr, "GStreamer: Error opening bin: %s\n", err->message);
                 return false;
             }
             stream = true;
@@ -632,7 +638,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
             element_from_uri = true;
         }else{
             uridecodebin = gst_element_factory_make("uridecodebin", NULL);
-            g_object_set(G_OBJECT(uridecodebin),"uri",uri, NULL);
+            g_object_set(G_OBJECT(uridecodebin), "uri", uri, NULL);
         }
         g_free(protocol);
 
@@ -744,7 +750,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     gst_caps_unref(caps);
 
     // For video files only: set pipeline to PAUSED state to get its duration
-    if (stream)
+    if (file)
     {
         status = gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PAUSED);
         if (status == GST_STATE_CHANGE_ASYNC)
@@ -772,6 +778,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
         if(!gst_element_query_duration(sink, format, &duration))
 #endif
         {
+            handleMessage(pipeline);
             CV_WARN("GStreamer: unable to query duration of stream");
             duration = -1;
             return true;
@@ -1166,7 +1173,6 @@ const char* CvVideoWriter_GStreamer::filenameToMimetype(const char *filename)
     return (const char*)"video/x-msvideo";
 }
 
-
 /*!
  * \brief CvVideoWriter_GStreamer::open
  * \param filename filename to output to
@@ -1214,7 +1220,12 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
     GstEncodingVideoProfile* videoprofile = NULL;
 #endif
 
-    GstIterator *it = NULL;
+    bool done = false;
+    GstElement* item = NULL;
+    GstIterator* it = NULL;
+    char* name = NULL;
+    GstElement* splitter;
+    GstElement* combiner;
 
     // we first try to construct a pipeline from the given string.
     // if that fails, we assume it is an ordinary filename
@@ -1222,9 +1233,7 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
     __BEGIN__;
 
     encodebin = gst_parse_launch(filename, &err);
-    if(!encodebin) {
-        manualpipeline = false;
-    }
+    manualpipeline = (encodebin != NULL);
 
     if(manualpipeline)
     {
@@ -1289,7 +1298,9 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
         if (fourcc == CV_FOURCC('M','P','2','V')) fourcc = CV_FOURCC('M', 'P', 'G' ,'2');
         if (fourcc == CV_FOURCC('D','R','A','C')) fourcc = CV_FOURCC('d', 'r', 'a' ,'c');
 
+
         //create encoder caps from fourcc
+
         videocaps = gst_riff_create_video_caps(fourcc, NULL, NULL, NULL, NULL, NULL);
         if (!videocaps){
             CV_ERROR( CV_StsUnsupportedFormat, "Gstreamer Opencv backend does not support this codec.");
@@ -1312,6 +1323,7 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
 
         //create pipeline elements
         encodebin = gst_element_factory_make("encodebin", NULL);
+
 #if FULL_GST_VERSION >= VERSION_NUM(0,10,32)
         g_object_set(G_OBJECT(encodebin), "profile", containerprofile, NULL);
 #endif
@@ -1376,7 +1388,7 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
     g_object_set(G_OBJECT(source), "format", GST_FORMAT_TIME, NULL);
     g_object_set(G_OBJECT(source), "block", 1, NULL);
     g_object_set(G_OBJECT(source), "is-live", 0, NULL);
-    g_object_set(G_OBJECT(source), "emit-signals", 1, NULL);
+
 
     if(!manualpipeline)
     {
@@ -1385,6 +1397,61 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
         if(!gst_element_link_many(source, encodebin, file, NULL)) {
             CV_ERROR(CV_StsError, "GStreamer: cannot link elements\n");
         }
+    }
+
+    // HACK: remove streamsplitter and streamcombiner from
+    // encodebin pipeline to prevent early EOF event handling
+    // We always fetch BGR or gray-scale frames, so combiner->spliter
+    // endge in graph is useless.
+    it = gst_bin_iterate_recurse (GST_BIN(encodebin));
+    while (!done) {
+      switch (gst_iterator_next (it, (void**)&item)) {
+        case GST_ITERATOR_OK:
+          name = gst_element_get_name(item);
+          if (strstr(name, "streamsplitter"))
+            splitter = item;
+          else if (strstr(name, "streamcombiner"))
+            combiner = item;
+          break;
+        case GST_ITERATOR_RESYNC:
+          gst_iterator_resync (it);
+          break;
+        case GST_ITERATOR_ERROR:
+          done = true;
+          break;
+        case GST_ITERATOR_DONE:
+          done = true;
+          break;
+      }
+    }
+
+    gst_iterator_free (it);
+
+    if (splitter && combiner)
+    {
+        gst_element_unlink(splitter, combiner);
+
+        GstPad* src  = gst_element_get_pad(combiner, "src");
+        GstPad* sink = gst_element_get_pad(combiner, "encodingsink");
+
+        GstPad* srcPeer = gst_pad_get_peer(src);
+        GstPad* sinkPeer = gst_pad_get_peer(sink);
+
+        gst_pad_unlink(sinkPeer, sink);
+        gst_pad_unlink(src, srcPeer);
+
+        gst_pad_link(sinkPeer, srcPeer);
+
+        src = gst_element_get_pad(splitter, "encodingsrc");
+        sink = gst_element_get_pad(splitter, "sink");
+
+        srcPeer = gst_pad_get_peer(src);
+        sinkPeer = gst_pad_get_peer(sink);
+
+        gst_pad_unlink(sinkPeer, sink);
+        gst_pad_unlink(src, srcPeer);
+
+        gst_pad_link(sinkPeer, srcPeer);
     }
 
     stateret = gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
@@ -1437,7 +1504,7 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
     }
 #endif
     else {
-        CV_WARN("Invalid video format!\n");
+        CV_ERROR(CV_StsUnsupportedFormat, "cvWriteFrame() needs BGR or grayscale images\n");
         return false;
     }
 
@@ -1447,7 +1514,12 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
 
     //gst_app_src_push_buffer takes ownership of the buffer, so we need to supply it a copy
 #if GST_VERSION_MAJOR == 0
-    buffer = gst_buffer_new_and_alloc (size);
+    buffer = gst_buffer_try_new_and_alloc (size);
+    if (!buffer)
+    {
+        CV_ERROR(CV_StsBadSize, "Cannot create GStreamer buffer");
+    }
+
     memcpy(GST_BUFFER_DATA (buffer), (guint8*)image->imageData, size);
     GST_BUFFER_DURATION(buffer) = duration;
     GST_BUFFER_TIMESTAMP(buffer) = timestamp;
@@ -1469,7 +1541,8 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
         CV_WARN("Error pushing buffer to GStreamer pipeline");
         return false;
     }
-    //gst_debug_bin_to_dot_file (GST_BIN(pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
+
+    //GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
 
     ++num_frames;
 
@@ -1559,8 +1632,8 @@ void handleMessage(GstElement * pipeline)
                 break;
             case GST_MESSAGE_ERROR:
                 gst_message_parse_error(msg, &err, &debug);
-                //fprintf(stderr, "GStreamer Plugin: Embedded video playback halted; module %s reported: %s\n",
-                //                gst_element_get_name(GST_MESSAGE_SRC (msg)), err->message);
+                fprintf(stderr, "GStreamer Plugin: Embedded video playback halted; module %s reported: %s\n",
+                                gst_element_get_name(GST_MESSAGE_SRC (msg)), err->message);
 
                 g_error_free(err);
                 g_free(debug);
