@@ -557,7 +557,6 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
     bool stream = false;
     bool manualpipeline = false;
-    bool st;
     char *uri = NULL;
     uridecodebin = NULL;
     GstElementFactory * testfac;
@@ -744,7 +743,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     gst_app_sink_set_caps(GST_APP_SINK(sink), caps);
     gst_caps_unref(caps);
 
-    // For fideo files only: set pipeline to PAUSED state to get its duration
+    // For video files only: set pipeline to PAUSED state to get its duration
     if (stream)
     {
         status = gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PAUSED);
@@ -766,15 +765,12 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
         GstFormat format;
 
-#if GST_VERSION_MAJOR == 0
-#define FORMAT &format
-#else
-#define FORMAT format
-#endif
-
         format = GST_FORMAT_DEFAULT;
-        st = gst_element_query_duration(sink, FORMAT, &duration);
-        if(!st)
+#if GST_VERSION_MAJOR == 0
+        if(!gst_element_query_duration(sink, &format, &duration))
+#else
+        if(!gst_element_query_duration(sink, format, &duration))
+#endif
         {
             CV_WARN("GStreamer: unable to query duration of stream");
             duration = -1;
@@ -1079,16 +1075,22 @@ void CvVideoWriter_GStreamer::close()
     GstStateChangeReturn status;
     if (pipeline)
     {
-        //handleMessage(pipeline);
+        handleMessage(pipeline);
 
         if (gst_app_src_end_of_stream(GST_APP_SRC(source)) != GST_FLOW_OK)
+        {
             CV_WARN("Cannot send EOS to GStreamer pipeline\n");
+            return;
+        }
 
         //wait for EOS to trickle down the pipeline. This will let all elements finish properly
         GstBus* bus = gst_element_get_bus(pipeline);
         GstMessage *msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE, (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
         if (GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ERROR)
+        {
             CV_WARN("Error during VideoWriter finalization\n");
+            return;
+        }
 
         if(msg != NULL)
         {
@@ -1435,7 +1437,7 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
     }
 #endif
     else {
-        fprintf(stderr, "Invalid video format!\n");
+        CV_WARN("Invalid video format!\n");
         return false;
     }
 
