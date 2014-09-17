@@ -161,7 +161,7 @@ __kernel void matchTemplate_Naive_CCORR(__global const uchar * srcptr, int src_s
                 for (int j = 0; j < template_cols; ++j)
                 {
                     T temp = (T)(template[j]);
-                    T src = *(__global const T*)(srcptr + ind + j*(int)sizeof(T1));
+                    T src = vload4(0, (__global const T1*)(srcptr + ind + j*(int)sizeof(T1)));
 
                     sum = mad(convertToWT(src), convertToWT(temp), sum);
 
