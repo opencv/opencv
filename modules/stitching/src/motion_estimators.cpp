@@ -629,7 +629,14 @@ void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
     for (size_t i = 0; i < rmats.size(); ++i)
         img_k += rmats[i].col(2);
     Mat rg0 = rg1.cross(img_k);
-    rg0 /= norm(rg0);
+    double rg0_norm = norm(rg0);
+
+    if( rg0_norm <= DBL_MIN )
+    {
+        return;
+    }
+
+    rg0 /= rg0_norm;
 
     Mat rg2 = rg0.cross(rg1);
 
