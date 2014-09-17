@@ -129,6 +129,23 @@ public:
     //! updates the predicted state from the measurement
     CV_WRAP const Mat& correct( const Mat& measurement );
 
+    //! sets predicted state
+    CV_WRAP void setStatePre( const Mat& state ) { statePre = state; }
+    //! sets corrected state
+    CV_WRAP void setStatePost( const Mat& state ) { statePost = state; }
+    //! sets transition matrix
+    CV_WRAP void setTransitionMatrix( const Mat& transition ) { transitionMatrix = transition; }
+    //! sets control matrix
+    CV_WRAP void setControlMatrix( const Mat& control ) { controlMatrix = control; }
+    //! sets measurement matrix
+    CV_WRAP void setMeasurementMatrix( const Mat& measurement ) { measurementMatrix = measurement; }
+    //! sets process noise covariance matrix
+    CV_WRAP void setProcessNoiseCov( const Mat& noise ) { processNoiseCov = noise; }
+    //! sets measurement noise covariance matrix
+    CV_WRAP void setMeasurementNoiseCov( const Mat& noise ) { measurementNoiseCov = noise; }
+    //! sets posteriori error covariance
+    CV_WRAP void setErrorCovPost( const Mat& error ) { errorCovPost = error; }
+
     Mat statePre;           //!< predicted state (x'(k)): x(k)=A*x(k-1)+B*u(k)
     Mat statePost;          //!< corrected state (x(k)): x(k)=x'(k)+K(k)*(z(k)-H*x'(k))
     Mat transitionMatrix;   //!< state transition matrix (A)
