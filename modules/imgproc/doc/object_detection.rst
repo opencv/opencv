@@ -29,6 +29,7 @@ methods (
 :math:`I` denotes ``image``, :math:`T` ``template``, :math:`R` ``result`` ). The summation is done over template and/or the
 image patch:
 :math:`x' = 0...w-1, y' = 0...h-1`
+
 * method=CV\_TM\_SQDIFF
 
     .. math::
