@@ -11,21 +11,15 @@
    Pressing any key (except ESC) will reset the tracking with a different speed.
    Pressing ESC will stop the program.
 """
-import urllib2
 import cv2
-from math import cos, sin, sqrt
-import sys
+from math import cos, sin
 import numpy as np
 
 if __name__ == "__main__":
 
     img_height = 500
     img_width = 500
-    img = np.array((img_height, img_width, 3), np.uint8)
     kalman = cv2.KalmanFilter(2, 1, 0)
-    state = np.zeros((2, 1))  # (phi, delta_phi)
-    process_noise = np.zeros((2, 1))
-    measurement = np.zeros((1, 1))
 
     code = -1L
 
@@ -34,25 +28,17 @@ if __name__ == "__main__":
     while True:
         state = 0.1 * np.random.randn(2, 1)
 
-        transition_matrix = np.array([[1., 1.], [0., 1.]])
-        kalman.setTransitionMatrix(transition_matrix)
-        measurement_matrix = 1. * np.ones((1, 2))
-        kalman.setMeasurementMatrix(measurement_matrix)
-
-        process_noise_cov = 1e-5
-        kalman.setProcessNoiseCov(process_noise_cov * np.eye(2))
-
-        measurement_noise_cov = 1e-1
-        kalman.setMeasurementNoiseCov(measurement_noise_cov * np.ones((1, 1)))
-
-        kalman.setErrorCovPost(1. * np.ones((2, 2)))
-
-        kalman.setStatePost(0.1 * np.random.randn(2, 1))
+        kalman.transitionMatrix = np.array([[1., 1.], [0., 1.]])
+        kalman.measurementMatrix = 1. * np.ones((1, 2))
+        kalman.processNoiseCov = 1e-5 * np.eye(2)
+        kalman.measurementNoiseCov = 1e-1 * np.ones((1, 1))
+        kalman.errorCovPost = 1. * np.ones((2, 2))
+        kalman.statePost = 0.1 * np.random.randn(2, 1)
 
         while True:
             def calc_point(angle):
                 return (np.around(img_width/2 + img_width/3*cos(angle), 0).astype(int),
-                         np.around(img_height/2 - img_width/3*sin(angle), 1).astype(int))
+                        np.around(img_height/2 - img_width/3*sin(angle), 1).astype(int))
 
             state_angle = state[0, 0]
             state_pt = calc_point(state_angle)
@@ -61,21 +47,22 @@ if __name__ == "__main__":
             predict_angle = prediction[0, 0]
             predict_pt = calc_point(predict_angle)
 
-
-            measurement = measurement_noise_cov * np.random.randn(1, 1)
+            measurement = kalman.measurementNoiseCov * np.random.randn(1, 1)
 
             # generate measurement
-            measurement = np.dot(measurement_matrix, state) + measurement
+            measurement = np.dot(kalman.measurementMatrix, state) + measurement
 
             measurement_angle = measurement[0, 0]
             measurement_pt = calc_point(measurement_angle)
 
             # plot points
             def draw_cross(center, color, d):
-                cv2.line(img, (center[0] - d, center[1] - d),
-                              (center[0] + d, center[1] + d), color, 1, cv2.LINE_AA, 0)
-                cv2.line(img, (center[0] + d, center[1] - d),
-                              (center[0] - d, center[1] + d), color, 1, cv2.LINE_AA, 0)
+                cv2.line(img,
+                         (center[0] - d, center[1] - d), (center[0] + d, center[1] + d),
+                         color, 1, cv2.LINE_AA, 0)
+                cv2.line(img,
+                         (center[0] + d, center[1] - d), (center[0] - d, center[1] + d),
+                         color, 1, cv2.LINE_AA, 0)
 
             img = np.zeros((img_height, img_width, 3), np.uint8)
             draw_cross(np.int32(state_pt), (255, 255, 255), 3)
@@ -87,8 +74,8 @@ if __name__ == "__main__":
 
             kalman.correct(measurement)
 
-            process_noise = process_noise_cov * np.random.randn(2, 1)
-            state = np.dot(transition_matrix, state) + process_noise
+            process_noise = kalman.processNoiseCov * np.random.randn(2, 1)
+            state = np.dot(kalman.transitionMatrix, state) + process_noise
 
             cv2.imshow("Kalman", img)
 
