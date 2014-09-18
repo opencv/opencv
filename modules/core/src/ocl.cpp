@@ -4504,8 +4504,8 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
     if (vectorWidths[0] == 1)
     {
         // it's heuristic
-        vectorWidths[CV_8U] = vectorWidths[CV_8S] = 16;
-        vectorWidths[CV_16U] = vectorWidths[CV_16S] = 8;
+        vectorWidths[CV_8U] = vectorWidths[CV_8S] = 4;
+        vectorWidths[CV_16U] = vectorWidths[CV_16S] = 2;
         vectorWidths[CV_32S] = vectorWidths[CV_32F] = vectorWidths[CV_64F] = 1;
     }
 
