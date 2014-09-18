@@ -129,16 +129,16 @@ public:
     //! updates the predicted state from the measurement
     CV_WRAP const Mat& correct( const Mat& measurement );
 
-    Mat statePre;           //!< predicted state (x'(k)): x(k)=A*x(k-1)+B*u(k)
-    Mat statePost;          //!< corrected state (x(k)): x(k)=x'(k)+K(k)*(z(k)-H*x'(k))
-    Mat transitionMatrix;   //!< state transition matrix (A)
-    Mat controlMatrix;      //!< control matrix (B) (not used if there is no control)
-    Mat measurementMatrix;  //!< measurement matrix (H)
-    Mat processNoiseCov;    //!< process noise covariance matrix (Q)
-    Mat measurementNoiseCov;//!< measurement noise covariance matrix (R)
-    Mat errorCovPre;        //!< priori error estimate covariance matrix (P'(k)): P'(k)=A*P(k-1)*At + Q)*/
-    Mat gain;               //!< Kalman gain matrix (K(k)): K(k)=P'(k)*Ht*inv(H*P'(k)*Ht+R)
-    Mat errorCovPost;       //!< posteriori error estimate covariance matrix (P(k)): P(k)=(I-K(k)*H)*P'(k)
+    CV_PROP_RW Mat statePre;           //!< predicted state (x'(k)): x(k)=A*x(k-1)+B*u(k)
+    CV_PROP_RW Mat statePost;          //!< corrected state (x(k)): x(k)=x'(k)+K(k)*(z(k)-H*x'(k))
+    CV_PROP_RW Mat transitionMatrix;   //!< state transition matrix (A)
+    CV_PROP_RW Mat controlMatrix;      //!< control matrix (B) (not used if there is no control)
+    CV_PROP_RW Mat measurementMatrix;  //!< measurement matrix (H)
+    CV_PROP_RW Mat processNoiseCov;    //!< process noise covariance matrix (Q)
+    CV_PROP_RW Mat measurementNoiseCov;//!< measurement noise covariance matrix (R)
+    CV_PROP_RW Mat errorCovPre;        //!< priori error estimate covariance matrix (P'(k)): P'(k)=A*P(k-1)*At + Q)*/
+    CV_PROP_RW Mat gain;               //!< Kalman gain matrix (K(k)): K(k)=P'(k)*Ht*inv(H*P'(k)*Ht+R)
+    CV_PROP_RW Mat errorCovPost;       //!< posteriori error estimate covariance matrix (P(k)): P(k)=(I-K(k)*H)*P'(k)
 
     // temporary matrices
     Mat temp1;
