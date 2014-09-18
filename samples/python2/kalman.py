@@ -62,7 +62,7 @@ if __name__ == "__main__":
             predict_pt = calc_point(predict_angle)
 
 
-            measurement = measurement_noise_cov * np.random.randn(1, 1) 
+            measurement = measurement_noise_cov * np.random.randn(1, 1)
 
             # generate measurement
             measurement = np.dot(measurement_matrix, state) + measurement
@@ -88,7 +88,6 @@ if __name__ == "__main__":
             kalman.correct(measurement)
 
             process_noise = process_noise_cov * np.random.randn(2, 1)
-            
             state = np.dot(transition_matrix, state) + process_noise
 
             cv2.imshow("Kalman", img)
