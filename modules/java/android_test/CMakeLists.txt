@@ -1,5 +1,5 @@
 # list of modules covered with tests
-set(tested_modules opencv_calib3d opencv_core opencv_features2d opencv_highgui opencv_imgproc opencv_objdetect opencv_photo opencv_video opencv_android)
+set(tested_modules opencv_calib3d opencv_core opencv_features2d opencv_highgui opencv_imgproc opencv_objdetect opencv_photo opencv_video)
 
 # opencv_ml is broken
 #list(APPEND tested_modules opencv_ml)
