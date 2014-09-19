@@ -1500,11 +1500,13 @@ HRESULT ImageGrabber::startGrabbing(void)
             DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: MESessionStopped \n", ig_DeviceID);
             break;
         }
+#if (WINVER >= 0x0602) // Available since Win 8
         if (met == MEVideoCaptureDeviceRemoved)
         {
             DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: MEVideoCaptureDeviceRemoved \n", ig_DeviceID);
             break;
         }
+#endif
         if ((met == MEError) || (met == MENonFatalError))
         {
             pEvent->GetStatus(&hrStatus);
@@ -4110,7 +4112,7 @@ const GUID CvVideoWriter_MSMF::FourCC2GUID(int fourcc)
             return MFVideoFormat_DVSD; break;
         case CV_FOURCC_MACRO('d', 'v', 's', 'l'):
                 return MFVideoFormat_DVSL; break;
-#if (WINVER >= _WIN32_WINNT_WIN8)
+#if (WINVER >= 0x0602)
         case CV_FOURCC_MACRO('H', '2', '6', '3'):   // Available only for Win 8 target.
                 return MFVideoFormat_H263; break;
 #endif
