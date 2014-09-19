@@ -179,7 +179,7 @@ __kernel void BruteForceMatch_UnrollMatch(
     for (int i = 0 ;  i <  MAX_DESC_LEN / BLOCK_SIZE; i ++)
     {
         int loadx = lidx + i * BLOCK_SIZE;
-        s_query[lidy * MAX_DESC_LEN + loadx] = loadx < query_cols ? query[min(queryIdx, query_rows - 1)  * (step / sizeof(float)) + loadx] : 0;
+        s_query[lidy * MAX_DESC_LEN + loadx] = loadx < query_cols ? query[min(queryIdx, query_rows - 1)  * (step / sizeof(T)) + loadx] : 0;
     }
 
     float myBestDistance = MAX_FLOAT;
@@ -194,7 +194,7 @@ __kernel void BruteForceMatch_UnrollMatch(
         {
             //load a BLOCK_SIZE * BLOCK_SIZE block into local train.
             const int loadx = lidx + i * BLOCK_SIZE;
-            s_train[lidx * BLOCK_SIZE + lidy] = loadx < train_cols ? train[min(t * BLOCK_SIZE + lidy, train_rows - 1) * (step / sizeof(float)) + loadx] : 0;
+            s_train[lidx * BLOCK_SIZE + lidy] = loadx < train_cols ? train[min(t * BLOCK_SIZE + lidy, train_rows - 1) * (step / sizeof(T)) + loadx] : 0;
 
             //synchronize to make sure each elem for reduceIteration in share memory is written already.
             barrier(CLK_LOCAL_MEM_FENCE);
@@ -284,8 +284,8 @@ __kernel void BruteForceMatch_Match(
 
             if (loadx < query_cols)
             {
-                s_query[lidy * BLOCK_SIZE + lidx] = query[min(queryIdx, query_rows - 1) * (step / sizeof(float)) + loadx];
-                s_train[lidx * BLOCK_SIZE + lidy] = train[min(t * BLOCK_SIZE + lidy, train_rows - 1) * (step / sizeof(float)) + loadx];
+                s_query[lidy * BLOCK_SIZE + lidx] = query[min(queryIdx, query_rows - 1) * (step / sizeof(T)) + loadx];
+                s_train[lidx * BLOCK_SIZE + lidy] = train[min(t * BLOCK_SIZE + lidy, train_rows - 1) * (step / sizeof(T)) + loadx];
             }
 
             barrier(CLK_LOCAL_MEM_FENCE);
@@ -372,8 +372,8 @@ __kernel void BruteForceMatch_RadiusUnrollMatch(
         //load a BLOCK_SIZE * BLOCK_SIZE block into local train.
         const int loadx = lidx + i * BLOCK_SIZE;
 
-        s_query[lidy * BLOCK_SIZE + lidx] = loadx < query_cols ? query[min(queryIdx, query_rows - 1)  * (step / sizeof(float)) + loadx] : 0;
-        s_train[lidx * BLOCK_SIZE + lidy] = loadx < query_cols ? train[min(groupidx * BLOCK_SIZE + lidy, train_rows - 1)  * (step / sizeof(float)) + loadx] : 0;
+        s_query[lidy * BLOCK_SIZE + lidx] = loadx < query_cols ? query[min(queryIdx, query_rows - 1)  * (step / sizeof(T)) + loadx] : 0;
+        s_train[lidx * BLOCK_SIZE + lidy] = loadx < query_cols ? train[min(groupidx * BLOCK_SIZE + lidy, train_rows - 1)  * (step / sizeof(T)) + loadx] : 0;
 
         //synchronize to make sure each elem for reduceIteration in share memory is written already.
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -432,8 +432,8 @@ __kernel void BruteForceMatch_RadiusMatch(
         //load a BLOCK_SIZE * BLOCK_SIZE block into local train.
         const int loadx = lidx + i * BLOCK_SIZE;
 
-        s_query[lidy * BLOCK_SIZE + lidx] = loadx < query_cols ? query[min(queryIdx, query_rows - 1)  * (step / sizeof(float)) + loadx] : 0;
-        s_train[lidx * BLOCK_SIZE + lidy] = loadx < query_cols ? train[min(groupidx * BLOCK_SIZE + lidy, train_rows - 1)  * (step / sizeof(float)) + loadx] : 0;
+        s_query[lidy * BLOCK_SIZE + lidx] = loadx < query_cols ? query[min(queryIdx, query_rows - 1)  * (step / sizeof(T)) + loadx] : 0;
+        s_train[lidx * BLOCK_SIZE + lidy] = loadx < query_cols ? train[min(groupidx * BLOCK_SIZE + lidy, train_rows - 1)  * (step / sizeof(T)) + loadx] : 0;
 
         //synchronize to make sure each elem for reduceIteration in share memory is written already.
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -483,7 +483,7 @@ __kernel void BruteForceMatch_knnUnrollMatch(
     for (int i = 0 ;  i <  MAX_DESC_LEN / BLOCK_SIZE; i ++)
     {
         int loadx = lidx + i * BLOCK_SIZE;
-        s_query[lidy * MAX_DESC_LEN + loadx] = loadx < query_cols ? query[min(queryIdx, query_rows - 1)  * (step / sizeof(float)) + loadx] : 0;
+        s_query[lidy * MAX_DESC_LEN + loadx] = loadx < query_cols ? query[min(queryIdx, query_rows - 1)  * (step / sizeof(T)) + loadx] : 0;
     }
 
     float myBestDistance1 = MAX_FLOAT;
@@ -499,7 +499,7 @@ __kernel void BruteForceMatch_knnUnrollMatch(
         {
             //load a BLOCK_SIZE * BLOCK_SIZE block into local train.
             const int loadx = lidx + i * BLOCK_SIZE;
-            s_train[lidx * BLOCK_SIZE + lidy] = loadx < train_cols ? train[min(t * BLOCK_SIZE + lidy, train_rows - 1) * (step / sizeof(float)) + loadx] : 0;
+            s_train[lidx * BLOCK_SIZE + lidy] = loadx < train_cols ? train[min(t * BLOCK_SIZE + lidy, train_rows - 1) * (step / sizeof(T)) + loadx] : 0;
 
             //synchronize to make sure each elem for reduceIteration in share memory is written already.
             barrier(CLK_LOCAL_MEM_FENCE);
@@ -643,8 +643,8 @@ __kernel void BruteForceMatch_knnMatch(
 
             if (loadx < query_cols)
             {
-                s_query[lidy * BLOCK_SIZE + lidx] = query[min(queryIdx, query_rows - 1) * (step / sizeof(float)) + loadx];
-                s_train[lidx * BLOCK_SIZE + lidy] = train[min(t * BLOCK_SIZE + lidy, train_rows - 1) * (step / sizeof(float)) + loadx];
+                s_query[lidy * BLOCK_SIZE + lidx] = query[min(queryIdx, query_rows - 1) * (step / sizeof(T)) + loadx];
+                s_train[lidx * BLOCK_SIZE + lidy] = train[min(t * BLOCK_SIZE + lidy, train_rows - 1) * (step / sizeof(T)) + loadx];
             }
 
             barrier(CLK_LOCAL_MEM_FENCE);
