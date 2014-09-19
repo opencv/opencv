@@ -2192,13 +2192,6 @@ CV_EXPORTS_W void batchDistance(InputArray src1, InputArray src2,
                                 InputArray mask=noArray(), int update=0,
                                 bool crosscheck=false);
 
-//! naive nearest neighbor finder which incrementally updates dist and nidx when called repeatedly with the same K and src1, but varying src2
-CV_EXPORTS_W void batchDistanceForBFMatcher(InputArray src1, InputArray src2,
-                                            InputOutputArray dist, int dtype, InputOutputArray nidx,
-                                            int normType=NORM_L2, int K=1,
-                                            InputArray mask=noArray(), int update=0,
-                                            bool crosscheck=false);
-
 //! scales and shifts array elements so that either the specified norm (alpha) or the minimum (alpha) and maximum (beta) array values get the specified values
 CV_EXPORTS_W void normalize( InputArray src, OutputArray dst, double alpha=1, double beta=0,
                              int norm_type=NORM_L2, int dtype=-1, InputArray mask=noArray());
