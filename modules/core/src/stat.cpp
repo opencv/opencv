@@ -2460,21 +2460,32 @@ struct BatchDistInvoker : public ParallelLoopBody
     BatchDistFunc func;
 };
 
-static void batchDistanceImpl( InputArray _src1, InputArray _src2,
-                               InputOutputArray _dist, int dtype, InputOutputArray _nidx,
-                               int normType, int K, InputArray _mask,
-                               int update, bool crosscheck )
+}
+
+void cv::batchDistance( InputArray _src1, InputArray _src2,
+                       OutputArray _dist, int dtype, OutputArray _nidx,
+                       int normType, int K, InputArray _mask,
+                       int update, bool crosscheck )
 {
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
     int type = src1.type();
     CV_Assert( type == src2.type() && src1.cols == src2.cols &&
-               (type == CV_32F || type == CV_8U));
+              (type == CV_32F || type == CV_8U));
+    CV_Assert( _nidx.needed() == (K > 0) );
 
+    if( dtype == -1 )
+    {
+        dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ? CV_32S : CV_32F;
+    }
     CV_Assert( (type == CV_8U && dtype == CV_32S) || dtype == CV_32F);
 
+    K = std::min(K, src2.rows);
+
+    _dist.create(src1.rows, (K > 0 ? K : src2.rows), dtype);
     Mat dist = _dist.getMat(), nidx;
     if( _nidx.needed() )
     {
+        _nidx.create(dist.size(), CV_32S);
         nidx = _nidx.getMat();
     }
 
@@ -2560,55 +2571,6 @@ static void batchDistanceImpl( InputArray _src1, InputArray _src2,
 
     parallel_for_(Range(0, src1.rows),
                   BatchDistInvoker(src1, src2, dist, nidx, K, mask, update, func));
-}
-
-}
-
-
-void cv::batchDistance( InputArray _src1, InputArray _src2,
-                        OutputArray _dist, int dtype, OutputArray _nidx,
-                        int normType, int K, InputArray _mask,
-                        int update, bool crosscheck )
-{
-    if( dtype == -1 )
-    {
-        dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ? CV_32S : CV_32F;
-    }
-
-    // K == 0: return all matches; K > 0: return K best matches, but never more than the number of candidates in _src2
-    CV_Assert( _nidx.needed() == (K > 0) );
-    int candidates = _src2.size().height;
-    K = std::min( K, candidates );
-    _dist.create( _src1.size().height, (K > 0 ? K : candidates), dtype );
-    if( _nidx.needed() )
-    {
-        _nidx.create( _dist.size(), CV_32S );
-    }
-
-    batchDistanceImpl( _src1, _src2, _dist, dtype, _nidx, normType, K, _mask, update, crosscheck );
-}
-
-
-void cv::batchDistanceForBFMatcher( InputArray _src1, InputArray _src2,
-                                    InputOutputArray _dist, int dtype, InputOutputArray _nidx,
-                                    int normType, int K, InputArray _mask,
-                                    int update, bool crosscheck )
-{
-    if( dtype == -1 )
-    {
-        dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ? CV_32S : CV_32F;
-    }
-
-    // always work with K matches (unlike cv::batchDistance), even if _src2 has fewer candidates
-    // if this function is called in a loop, then the other loop iterations may require all K
-    CV_Assert( K > 0 && _nidx.needed() );
-    cv::Size size( K, _src1.size().height );
-    CV_Assert( update == 0 || (_dist.size() == size && _nidx.size() == size) );
-    _dist.create( size, dtype );
-    _nidx.create( size, CV_32S );
-
-    batchDistanceImpl( _src1, _src2, _dist, dtype, _nidx, normType, K, _mask, update, crosscheck );
-    CV_Assert( _dist.size() == size && _nidx.size() == size );
 }
 
 
