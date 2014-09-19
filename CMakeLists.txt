@@ -1043,7 +1043,8 @@ status("    ant:"           ANT_EXECUTABLE      THEN "${ANT_EXECUTABLE} (ver ${A
 if(NOT ANDROID)
   status("    JNI:"         JNI_INCLUDE_DIRS    THEN "${JNI_INCLUDE_DIRS}"                                       ELSE NO)
 endif()
-status("    Java tests:"    BUILD_TESTS AND (CAN_BUILD_ANDROID_PROJECTS OR HAVE_opencv_java)            THEN YES ELSE NO)
+status("    Java wrappers:" HAVE_opencv_java                                                            THEN YES ELSE NO)
+status("    Java tests:"    BUILD_TESTS AND opencv_test_java_BINARY_DIR                                 THEN YES ELSE NO)
 
 # ========================= matlab =========================
 status("")
