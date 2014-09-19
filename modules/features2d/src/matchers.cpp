@@ -352,18 +352,27 @@ void BFMatcher::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch>
 
     matches.reserve(queryDescriptors.rows);
 
-    Mat dist, nidx;
-
     int iIdx, imgCount = (int)trainDescCollection.size(), update = 0;
     int dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ||
         (normType == NORM_L1 && queryDescriptors.type() == CV_8U) ? CV_32S : CV_32F;
+    int maxRows = 0;
 
     CV_Assert( (int64)imgCount*IMGIDX_ONE < INT_MAX );
 
     for( iIdx = 0; iIdx < imgCount; iIdx++ )
+        maxRows = std::max(maxRows, trainDescCollection[iIdx].rows);
+
+    int m = queryDescriptors.rows;
+    Mat dist(m, knn, dtype), nidx(m, knn, CV_32S);
+    dist = Scalar::all(dtype == CV_32S ? (double)INT_MAX : (double)FLT_MAX);
+    nidx = Scalar::all(-1);
+
+    for( iIdx = 0; iIdx < imgCount; iIdx++ )
     {
         CV_Assert( trainDescCollection[iIdx].rows < IMGIDX_ONE );
-        batchDistance(queryDescriptors, trainDescCollection[iIdx], dist, dtype, nidx,
+        int n = std::min(knn, trainDescCollection[iIdx].rows);
+        Mat dist_i = dist.colRange(0, n), nidx_i = nidx.colRange(0, n);
+        batchDistance(queryDescriptors, trainDescCollection[iIdx], dist_i, dtype, nidx_i,
                       normType, knn, masks.empty() ? Mat() : masks[iIdx], update, crossCheck);
         update += IMGIDX_ONE;
     }
