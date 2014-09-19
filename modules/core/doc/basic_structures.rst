@@ -264,8 +264,8 @@ OpenCV typically assumes that the top and left boundary of the rectangle are inc
 Virtually every loop over an image
 ROI in OpenCV (where ROI is specified by ``Rect_<int>`` ) is implemented as: ::
 
-    for(int y = roi.y; y < roi.y + rect.height; y++)
-        for(int x = roi.x; x < roi.x + rect.width; x++)
+    for(int y = roi.y; y < roi.y + roi.height; y++)
+        for(int x = roi.x; x < roi.x + roi.width; x++)
         {
             // ...
         }
@@ -2325,6 +2325,69 @@ Returns the matrix iterator and sets it to the after-last matrix element.
 
 The methods return the matrix read-only or read-write iterators, set to the point following the last matrix element.
 
+
+Mat::forEach
+------------
+Invoke with arguments functor, and runs the functor over all matrix element.
+
+.. ocv:function:: template<typename _Tp, typename Functor> void Mat::forEach(Functor operation)
+
+.. ocv:function:: template<typename _Tp, typename Functor> void Mat::forEach(Functor operation) const
+
+The methos runs operation in parallel. Operation is passed by arguments. Operation have to be a function pointer, a function object or a lambda(C++11).
+
+All of below operation is equal. Put 0xFF to first channel of all matrix elements. ::
+
+    Mat image(1920, 1080, CV_8UC3);
+    typedef cv::Point3_<uint8_t> Pixel;
+
+    // first. raw pointer access.
+    for (int r = 0; r < image.rows; ++r) {
+        Pixel* ptr = image.ptr<Pixel>(0, r);
+        const Pixel* ptr_end = ptr + image.cols;
+        for (; ptr != ptr_end; ++ptr) {
+            ptr->x = 255;
+        }
+    }
+
+
+    // Using MatIterator. (Simple but there are a Iterator's overhead)
+    for (Pixel &p : cv::Mat_<Pixel>(image)) {
+        p.x = 255;
+    }
+
+
+    // Parallel execution with function object.
+    struct Operator {
+        void operator ()(Pixel &pixel, const int * position) {
+            pixel.x = 255;
+        }
+    };
+    image.forEach<Pixel>(Operator());
+
+
+    // Parallel execution using C++11 lambda.
+    image.forEach<Pixel>([](Pixel &p, const int * position) -> void {
+        p.x = 255;
+    });
+
+position parameter is index of current pixel. ::
+
+    // Creating 3D matrix (255 x 255 x 255) typed uint8_t,
+    //  and initialize all elements by the value which equals elements position.
+    //  i.e. pixels (x,y,z) = (1,2,3) is (b,g,r) = (1,2,3).
+
+    int sizes[] = { 255, 255, 255 };
+    typedef cv::Point3_<uint8_t> Pixel;
+
+    Mat_<Pixel> image = Mat::zeros(3, sizes, CV_8UC3);
+
+    image.forEachWithPosition([&](Pixel& pixel, const int position[]) -> void{
+        pixel.x = position[0];
+        pixel.y = position[1];
+        pixel.z = position[2];
+    });
+
 Mat\_
 -----
 .. ocv:class:: Mat_
@@ -2987,13 +3050,13 @@ The class provides the following features for all derived classes:
 Here is example of SIFT use in your application via Algorithm interface: ::
 
     #include "opencv2/opencv.hpp"
-    #include "opencv2/nonfree.hpp"
+    #include "opencv2/xfeatures2d.hpp"
+
+    using namespace cv::xfeatures2d;
 
     ...
 
-    initModule_nonfree(); // to load SURF/SIFT etc.
-
-    Ptr<Feature2D> sift = Algorithm::create<Feature2D>("Feature2D.SIFT");
+    Ptr<Feature2D> sift = SIFT::create();
 
     FileStorage fs("sift_params.xml", FileStorage::READ);
     if( fs.isOpened() ) // if we have file with parameters, read them
@@ -3003,7 +3066,7 @@ Here is example of SIFT use in your application via Algorithm interface: ::
     }
     else // else modify the parameters and store them; user can later edit the file to use different parameters
     {
-        sift->set("contrastThreshold", 0.01f); // lower the contrast threshold, compared to the default value
+        sift->setContrastThreshold(0.01f); // lower the contrast threshold, compared to the default value
 
         {
         WriteStructContext ws(fs, "sift_params", CV_NODE_MAP);
@@ -3013,7 +3076,7 @@ Here is example of SIFT use in your application via Algorithm interface: ::
 
     Mat image = imread("myimage.png", 0), descriptors;
     vector<KeyPoint> keypoints;
-    (*sift)(image, noArray(), keypoints, descriptors);
+    sift->detectAndCompute(image, noArray(), keypoints, descriptors);
 
 Algorithm::name
 ---------------
@@ -3070,7 +3133,7 @@ Stores algorithm parameters in a file storage
 
 The method stores all the algorithm parameters (in alphabetic order) to the file storage. The method is virtual. If you define your own Algorithm derivative, your can override the method and store some extra information. However, it's rarely needed. Here are some examples:
 
- * SIFT feature detector (from nonfree module). The class only stores algorithm parameters and no keypoints or their descriptors. Therefore, it's enough to store the algorithm parameters, which is what ``Algorithm::write()`` does. Therefore, there is no dedicated ``SIFT::write()``.
+ * SIFT feature detector (from xfeatures2d module). The class only stores algorithm parameters and no keypoints or their descriptors. Therefore, it's enough to store the algorithm parameters, which is what ``Algorithm::write()`` does. Therefore, there is no dedicated ``SIFT::write()``.
 
  * Background subtractor (from video module). It has the algorithm parameters and also it has the current background model. However, the background model is not stored. First, it's rather big. Then, if you have stored the background model, it would likely become irrelevant on the next run (because of shifted camera, changed background, different lighting etc.). Therefore, ``BackgroundSubtractorMOG`` and ``BackgroundSubtractorMOG2`` also rely on the standard ``Algorithm::write()`` to store just the algorithm parameters.
 
@@ -3116,7 +3179,7 @@ This static method creates a new instance of the specified algorithm. If there i
 
     Ptr<BackgroundSubtractor> bgfg = Algorithm::create<BackgroundSubtractor>("BackgroundSubtractor.MOG2");
 
-.. note:: This is important note about seemingly mysterious behavior of ``Algorithm::create()`` when it returns NULL while it should not. The reason is simple - ``Algorithm::create()`` resides in OpenCV`s core module and the algorithms are implemented in other modules. If you create algorithms dynamically, C++ linker may decide to throw away the modules where the actual algorithms are implemented, since you do not call any functions from the modules. To avoid this problem, you need to call ``initModule_<modulename>();`` somewhere in the beginning of the program before ``Algorithm::create()``. For example, call ``initModule_nonfree()`` in order to use SURF/SIFT, call ``initModule_ml()`` to use expectation maximization etc.
+.. note:: This is important note about seemingly mysterious behavior of ``Algorithm::create()`` when it returns NULL while it should not. The reason is simple - ``Algorithm::create()`` resides in OpenCV`s core module and the algorithms are implemented in other modules. If you create algorithms dynamically, C++ linker may decide to throw away the modules where the actual algorithms are implemented, since you do not call any functions from the modules. To avoid this problem, you need to call ``initModule_<modulename>();`` somewhere in the beginning of the program before ``Algorithm::create()``. For example, call ``initModule_xfeatures2d()`` in order to use SURF/SIFT, call ``initModule_ml()`` to use expectation maximization etc.
 
 Creating Own Algorithms
 -----------------------

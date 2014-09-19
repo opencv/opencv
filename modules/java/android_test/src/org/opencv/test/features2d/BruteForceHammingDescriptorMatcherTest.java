@@ -17,6 +17,7 @@ import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.features2d.FeatureDetector;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
+import org.opencv.imgproc.Imgproc;
 
 public class BruteForceHammingDescriptorMatcherTest extends OpenCVTestCase {
 
@@ -38,7 +39,7 @@ public class BruteForceHammingDescriptorMatcherTest extends OpenCVTestCase {
 
     private Mat getQueryImg() {
         Mat img = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        Core.line(img, new Point(40, matSize - 40), new Point(matSize - 50, 50), new Scalar(0), 8);
+        Imgproc.line(img, new Point(40, matSize - 40), new Point(matSize - 50, 50), new Scalar(0), 8);
         return img;
     }
 
@@ -61,7 +62,7 @@ public class BruteForceHammingDescriptorMatcherTest extends OpenCVTestCase {
 
     private Mat getTrainImg() {
         Mat img = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        Core.line(img, new Point(40, 40), new Point(matSize - 40, matSize - 40), new Scalar(0), 8);
+        Imgproc.line(img, new Point(40, 40), new Point(matSize - 40, matSize - 40), new Scalar(0), 8);
         return img;
     }
 

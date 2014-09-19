@@ -155,7 +155,7 @@ bool  SunRasterDecoder::readHeader()
 bool  SunRasterDecoder::readData( Mat& img )
 {
     int color = img.channels() > 1;
-    uchar* data = img.data;
+    uchar* data = img.ptr();
     int step = (int)img.step;
     uchar  gray_palette[256];
     bool   result = false;
@@ -414,7 +414,7 @@ bool  SunRasterEncoder::write( const Mat& img, const std::vector<int>& )
         strm.putDWord( 0 );
 
         for( y = 0; y < height; y++ )
-            strm.putBytes( img.data + img.step*y, fileStep );
+            strm.putBytes( img.ptr(y), fileStep );
 
         strm.close();
         result = true;

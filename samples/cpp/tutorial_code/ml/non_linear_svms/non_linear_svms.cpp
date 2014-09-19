@@ -1,8 +1,9 @@
 #include <iostream>
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 #include "opencv2/imgcodecs.hpp"
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/ml/ml.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/ml.hpp>
 
 #define	NTRAINING_SAMPLES	100			// Number of training samples per class
 #define FRAC_LINEAR_SEP		0.9f	    // Fraction of samples which compose the linear separable part

@@ -1,7 +1,6 @@
 SET(OPENCV_CUDA_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc opencv_imgcodecs opencv_videoio opencv_highgui
                                      opencv_ml opencv_video opencv_objdetect opencv_features2d
-                                     opencv_calib3d opencv_legacy opencv_contrib opencv_cuda
-                                     opencv_nonfree opencv_softcascade opencv_superres
+                                     opencv_calib3d opencv_cuda opencv_superres
                                      opencv_cudaarithm opencv_cudafilters opencv_cudawarping opencv_cudaimgproc
                                      opencv_cudafeatures2d opencv_cudaoptflow opencv_cudabgsegm
                                      opencv_cudastereo opencv_cudalegacy)
@@ -20,8 +19,8 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/core"
     )
 
-  if(HAVE_opencv_nonfree)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/nonfree/include")
+  if(HAVE_opencv_xfeatures2d)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/xfeatures2d/include")
   endif()
 
   if(HAVE_opencv_cudacodec)
@@ -47,21 +46,21 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     set(the_target "example_${project}_${name}")
     add_executable(${the_target} ${srcs})
 
-    target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
+    ocv_target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
 
     if(HAVE_CUDA AND NOT ANDROID)
-      target_link_libraries(${the_target} ${CUDA_CUDA_LIBRARY})
+      ocv_target_link_libraries(${the_target} ${CUDA_CUDA_LIBRARY})
     endif()
 
-    if(HAVE_opencv_nonfree)
-      target_link_libraries(${the_target} opencv_nonfree)
+    if(HAVE_opencv_xfeatures2d)
+      ocv_target_link_libraries(${the_target} opencv_xfeatures2d)
     endif()
     if(HAVE_opencv_cudacodec)
-      target_link_libraries(${the_target} opencv_cudacodec)
+      ocv_target_link_libraries(${the_target} opencv_cudacodec)
     endif()
 
     if(HAVE_opencv_ocl)
-      target_link_libraries(${the_target} opencv_ocl)
+      ocv_target_link_libraries(${the_target} opencv_ocl)
     endif()
 
     set_target_properties(${the_target} PROPERTIES

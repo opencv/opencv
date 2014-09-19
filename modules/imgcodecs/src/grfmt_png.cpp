@@ -134,7 +134,7 @@ void  PngDecoder::readDataFromBuf( void* _png_ptr, uchar* dst, size_t size )
         png_error(png_ptr, "PNG input buffer is incomplete");
         return;
     }
-    memcpy( dst, &decoder->m_buf.data[decoder->m_buf_pos], size );
+    memcpy( dst, decoder->m_buf.ptr() + decoder->m_buf_pos, size );
     decoder->m_buf_pos += size;
 }
 
@@ -228,7 +228,7 @@ bool  PngDecoder::readData( Mat& img )
     AutoBuffer<uchar*> _buffer(m_height);
     uchar** buffer = _buffer;
     int color = img.channels() > 1;
-    uchar* data = img.data;
+    uchar* data = img.ptr();
     int step = (int)img.step;
 
     if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height )

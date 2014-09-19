@@ -398,7 +398,7 @@ Now modify src/main/java/HelloOpenCV.java so it contains the following Java code
 
        // Draw a bounding box around each face.
        for (Rect rect : faceDetections.toArray()) {
-           Core.rectangle(image, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(0, 255, 0));
+           Imgproc.rectangle(image, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(0, 255, 0));
        }
 
        // Save the visualized detection.

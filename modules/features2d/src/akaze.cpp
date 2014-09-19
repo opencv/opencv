@@ -209,6 +209,10 @@ namespace cv
         options.descriptor_size = descriptor_size;
         options.img_width = img.cols;
         options.img_height = img.rows;
+        options.dthreshold = threshold;
+        options.omax = octaves;
+        options.nsublevels = sublevels;
+        options.diffusivity = diffusivity;
 
         AKAZEFeatures impl(options);
         impl.Create_Nonlinear_Scale_Space(img1_32);
@@ -237,6 +241,10 @@ namespace cv
         options.descriptor_size = descriptor_size;
         options.img_width = img.cols;
         options.img_height = img.rows;
+        options.dthreshold = threshold;
+        options.omax = octaves;
+        options.nsublevels = sublevels;
+        options.diffusivity = diffusivity;
 
         AKAZEFeatures impl(options);
         impl.Create_Nonlinear_Scale_Space(img1_32);

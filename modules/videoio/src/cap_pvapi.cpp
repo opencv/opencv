@@ -300,12 +300,26 @@ double CvCaptureCAM_PvAPI::getProperty( int property_id )
             return 4.0;
         else
             return -1.0;
+    case CV_CAP_PROP_PVAPI_DECIMATIONHORIZONTAL:
+        PvAttrUint32Get(Camera.Handle, "DecimationHorizontal", &nTemp);
+        return (double)nTemp;
+    case CV_CAP_PROP_PVAPI_DECIMATIONVERTICAL:
+        PvAttrUint32Get(Camera.Handle, "DecimationVertical", &nTemp);
+        return (double)nTemp;
+    case CV_CAP_PROP_PVAPI_BINNINGX:
+        PvAttrUint32Get(Camera.Handle,"BinningX",&nTemp);
+        return (double)nTemp;
+    case CV_CAP_PROP_PVAPI_BINNINGY:
+        PvAttrUint32Get(Camera.Handle,"BinningY",&nTemp);
+        return (double)nTemp;
     }
     return -1.0;
 }
 
 bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
 {
+    tPvErr error;
+
     switch ( property_id )
     {
     case CV_CAP_PROP_FRAME_WIDTH:
@@ -335,7 +349,7 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
         stopCapture();
 
         // Reallocate Frames
-        if (!resizeCaptureFrame(value, currWidth))
+        if (!resizeCaptureFrame(currWidth, value))
         {
             startCapture();
             return false;
@@ -375,7 +389,7 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
         }
         else
         {
-            cv::String ip=cv::format("%d.%d.%d.%d", ((int)value>>24)&255, ((int)value>>16)&255, ((int)value>>8)&255, (int)value&255);
+            cv::String ip=cv::format("%d.%d.%d.%d", ((unsigned int)value>>24)&255, ((unsigned int)value>>16)&255, ((unsigned int)value>>8)&255, (unsigned int)value&255);
             if ((PvAttrEnumSet(Camera.Handle,"MulticastEnable", "On")==ePvErrSuccess) &&
                 (PvAttrStringSet(Camera.Handle, "MulticastIPAddress", ip.c_str())==ePvErrSuccess))
                 break;
@@ -389,7 +403,6 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
         }
         break;
     case CV_CAP_PROP_PVAPI_FRAMESTARTTRIGGERMODE:
-        tPvErr error;
         if (value==0)
             error = PvAttrEnumSet(Camera.Handle, "FrameStartTriggerMode", "Freerun");
         else if (value==1)
@@ -402,6 +415,36 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
             error = PvAttrEnumSet(Camera.Handle, "FrameStartTriggerMode", "Software");
         else
             error = ePvErrOutOfRange;
+        if(error==ePvErrSuccess)
+            break;
+        else
+            return false;
+    case CV_CAP_PROP_PVAPI_DECIMATIONHORIZONTAL:
+        if (value >= 1 && value <= 8)
+            error = PvAttrUint32Set(Camera.Handle, "DecimationHorizontal", value);
+        else
+            error = ePvErrOutOfRange;
+        if(error==ePvErrSuccess)
+            break;
+        else
+            return false;
+    case CV_CAP_PROP_PVAPI_DECIMATIONVERTICAL:
+        if (value >= 1 && value <= 8)
+            error = PvAttrUint32Set(Camera.Handle, "DecimationVertical", value);
+        else
+            error = ePvErrOutOfRange;
+        if(error==ePvErrSuccess)
+            break;
+        else
+            return false;
+    case CV_CAP_PROP_PVAPI_BINNINGX:
+        error = PvAttrUint32Set(Camera.Handle, "BinningX", value);
+        if(error==ePvErrSuccess)
+            break;
+        else
+            return false;
+    case CV_CAP_PROP_PVAPI_BINNINGY:
+        error = PvAttrUint32Set(Camera.Handle, "BinningY", value);
         if(error==ePvErrSuccess)
             break;
         else

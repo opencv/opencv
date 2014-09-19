@@ -191,8 +191,12 @@ enum { CAP_PROP_GSTREAMER_QUEUE_LENGTH = 200 // default is 1
 
 
 // PVAPI
-enum { CAP_PROP_PVAPI_MULTICASTIP               = 300, // ip for anable multicast master mode. 0 for disable multicast
-       CAP_PROP_PVAPI_FRAMESTARTTRIGGERMODE     = 301  // FrameStartTriggerMode: Determines how a frame is initiated
+enum { CAP_PROP_PVAPI_MULTICASTIP           = 300, // ip for anable multicast master mode. 0 for disable multicast
+       CAP_PROP_PVAPI_FRAMESTARTTRIGGERMODE = 301, // FrameStartTriggerMode: Determines how a frame is initiated
+       CAP_PROP_PVAPI_DECIMATIONHORIZONTAL  = 302, // Horizontal sub-sampling of the image
+       CAP_PROP_PVAPI_DECIMATIONVERTICAL    = 303, // Vertical sub-sampling of the image
+       CAP_PROP_PVAPI_BINNINGX              = 304, // Horizontal binning factor
+       CAP_PROP_PVAPI_BINNINGY              = 305  // Vertical binning factor
      };
 
 // PVAPI: FrameStartTriggerMode
@@ -201,6 +205,13 @@ enum { CAP_PVAPI_FSTRIGMODE_FREERUN     = 0,    // Freerun
        CAP_PVAPI_FSTRIGMODE_SYNCIN2     = 2,    // SyncIn2
        CAP_PVAPI_FSTRIGMODE_FIXEDRATE   = 3,    // FixedRate
        CAP_PVAPI_FSTRIGMODE_SOFTWARE    = 4     // Software
+     };
+
+// PVAPI: DecimationHorizontal, DecimationVertical
+enum { CAP_PVAPI_DECIMATION_OFF       = 1,    // Off
+       CAP_PVAPI_DECIMATION_2OUTOF4   = 2,    // 2 out of 4 decimation
+       CAP_PVAPI_DECIMATION_2OUTOF8   = 4,    // 2 out of 8 decimation
+       CAP_PVAPI_DECIMATION_2OUTOF16  = 8     // 2 out of 16 decimation
      };
 
 // Properties of cameras available through XIMEA SDK interface

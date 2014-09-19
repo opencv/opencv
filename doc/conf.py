@@ -114,7 +114,7 @@ todo_include_todos=True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'blue'
+html_theme = 'sphinxdoc'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -133,7 +133,7 @@ html_theme_path = ['_themes']
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = 'opencv-logo-white.png'
+html_logo = 'opencv-logo2.png'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -325,6 +325,7 @@ extlinks = {
             'imgproc_geometric' : ('http://docs.opencv.org/modules/imgproc/doc/geometric_transformations.html#%s', None ),
             'miscellaneous_transformations' : ('http://docs.opencv.org/modules/imgproc/doc/miscellaneous_transformations.html#%s', None),
             'user_interface' : ('http://docs.opencv.org/modules/highgui/doc/user_interface.html#%s', None),
+            'video' : ('http://docs.opencv.org/modules/video/doc/motion_analysis_and_object_tracking.html#%s', None),
 
             # 'opencv_group' : ('http://answers.opencv.org/%s', None),
             'opencv_qa' : ('http://answers.opencv.org/%s', None),
@@ -402,6 +403,7 @@ extlinks = {
             'contour_area' : ('http://docs.opencv.org/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=contourarea#contourarea%s', None),
             'arc_length' : ('http://docs.opencv.org/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=arclength#arclength%s', None),
             'point_polygon_test' : ('http://docs.opencv.org/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=pointpolygontest#pointpolygontest%s', None),
+            'feature_detection_and_description' : ('http://docs.opencv.org/modules/features2d/doc/feature_detection_and_description.html#%s', None),
             'feature_detector' : ( 'http://docs.opencv.org/modules/features2d/doc/common_interfaces_of_feature_detectors.html?highlight=featuredetector#FeatureDetector%s', None),
             'feature_detector_detect' : ('http://docs.opencv.org/modules/features2d/doc/common_interfaces_of_feature_detectors.html?highlight=detect#featuredetector-detect%s', None ),
             'surf_feature_detector' : ('http://docs.opencv.org/modules/features2d/doc/common_interfaces_of_feature_detectors.html?highlight=surffeaturedetector#surffeaturedetector%s', None ),

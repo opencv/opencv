@@ -100,7 +100,7 @@ bool initDirect3DTextures()
         desc.CPUAccessFlags = cv::ocl::useOpenCL() ? 0 : D3D10_CPU_ACCESS_READ;
 
         D3D10_SUBRESOURCE_DATA srInitData;
-        srInitData.pSysMem = inputMat.data;
+        srInitData.pSysMem = inputMat.ptr();
         srInitData.SysMemPitch = (UINT)inputMat.step[0];
 
         if (FAILED(dev->CreateTexture2D(&desc, &srInitData, &pInputTexture)))

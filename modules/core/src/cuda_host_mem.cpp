@@ -175,7 +175,7 @@ void cv::cuda::CudaMem::release()
         fastFree(refcount);
     }
 
-    data = datastart = dataend = 0;
+    dataend = data = datastart = 0;
     step = rows = cols = 0;
     refcount = 0;
 #endif

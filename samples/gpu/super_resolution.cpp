@@ -7,10 +7,11 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/contrib.hpp"
 #include "opencv2/superres.hpp"
 #include "opencv2/superres/optical_flow.hpp"
 #include "opencv2/opencv_modules.hpp"
+
+#include "tick_meter.hpp"
 
 using namespace std;
 using namespace cv;
@@ -34,8 +35,8 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name, bool useGpu)
         else
             return createOptFlow_Farneback();
     }
-    else if (name == "simple")
-        return createOptFlow_Simple();
+    /*else if (name == "simple")
+        return createOptFlow_Simple();*/
     else if (name == "tvl1")
     {
         if (useGpu)

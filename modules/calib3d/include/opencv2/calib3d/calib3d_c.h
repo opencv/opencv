@@ -91,7 +91,8 @@ enum
 {
     CV_ITERATIVE = 0,
     CV_EPNP = 1, // F.Moreno-Noguer, V.Lepetit and P.Fua "EPnP: Efficient Perspective-n-Point Camera Pose Estimation"
-    CV_P3P = 2 // X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
+    CV_P3P = 2, // X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
+    CV_DLS = 3 // Joel A. Hesch and Stergios I. Roumeliotis. "A Direct Least-Squares (DLS) Method for PnP"
 };
 
 CVAPI(int) cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
@@ -140,7 +141,9 @@ CVAPI(int) cvFindHomography( const CvMat* src_points,
                              CvMat* homography,
                              int method CV_DEFAULT(0),
                              double ransacReprojThreshold CV_DEFAULT(3),
-                             CvMat* mask CV_DEFAULT(0));
+                             CvMat* mask CV_DEFAULT(0),
+                             int maxIters CV_DEFAULT(2000),
+                             double confidence CV_DEFAULT(0.995));
 
 /* Computes RQ decomposition for 3x3 matrices */
 CVAPI(void) cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,

@@ -183,7 +183,7 @@ bool  BmpDecoder::readHeader()
 
 bool  BmpDecoder::readData( Mat& img )
 {
-    uchar* data = img.data;
+    uchar* data = img.ptr();
     int step = (int)img.step;
     bool color = img.channels() > 1;
     uchar  gray_palette[256];
@@ -553,7 +553,7 @@ bool  BmpEncoder::write( const Mat& img, const std::vector<int>& )
     width *= channels;
     for( int y = height - 1; y >= 0; y-- )
     {
-        strm.putBytes( img.data + img.step*y, width );
+        strm.putBytes( img.ptr(y), width );
         if( fileStep > width )
             strm.putBytes( zeropad, fileStep - width );
     }

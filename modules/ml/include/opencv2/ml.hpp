@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2014, Itseez Inc, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -89,7 +90,6 @@ public:
     CV_PROP_RW double maxVal;
     CV_PROP_RW double logStep;
 };
-
 
 class CV_EXPORTS TrainData
 {
@@ -229,10 +229,12 @@ public:
     class CV_EXPORTS_W_MAP Params
     {
     public:
-        Params(int defaultK=10, bool isclassifier=true);
+        Params(int defaultK=10, bool isclassifier_=true, int Emax_=INT_MAX, int algorithmType_=BRUTE_FORCE);
 
         CV_PROP_RW int defaultK;
         CV_PROP_RW bool isclassifier;
+        CV_PROP_RW int Emax; // for implementation with KDTree
+        CV_PROP_RW int algorithmType;
     };
     virtual void setParams(const Params& p) = 0;
     virtual Params getParams() const = 0;
@@ -240,6 +242,9 @@ public:
                                OutputArray results,
                                OutputArray neighborResponses=noArray(),
                                OutputArray dist=noArray() ) const = 0;
+
+    enum { BRUTE_FORCE=1, KDTREE=2 };
+
     static Ptr<KNearest> create(const Params& params=Params());
 };
 
@@ -564,6 +569,48 @@ public:
     virtual Params getParams() const = 0;
 
     static Ptr<ANN_MLP> create(const Params& params=Params());
+};
+
+/****************************************************************************************\
+*                           Logistic Regression                                          *
+\****************************************************************************************/
+
+class CV_EXPORTS LogisticRegression : public StatModel
+{
+public:
+    class CV_EXPORTS Params
+    {
+    public:
+        Params(double learning_rate = 0.001,
+               int iters = 1000,
+               int method = LogisticRegression::BATCH,
+               int normlization = LogisticRegression::REG_L2,
+               int reg = 1,
+               int batch_size = 1);
+        double alpha;
+        int num_iters;
+        int norm;
+        int regularized;
+        int train_method;
+        int mini_batch_size;
+        TermCriteria term_crit;
+    };
+
+    enum { REG_L1 = 0, REG_L2 = 1};
+    enum { BATCH = 0, MINI_BATCH = 1};
+
+    // Algorithm interface
+    virtual void write( FileStorage &fs ) const = 0;
+    virtual void read( const FileNode &fn ) = 0;
+
+    // StatModel interface
+    virtual bool train( const Ptr<TrainData>& trainData, int flags=0 ) = 0;
+    virtual float predict( InputArray samples, OutputArray results=noArray(), int flags=0 ) const = 0;
+    virtual void clear() = 0;
+
+    virtual Mat get_learnt_thetas() const = 0;
+
+    static Ptr<LogisticRegression> create( const Params& params = Params() );
 };
 
 /****************************************************************************************\

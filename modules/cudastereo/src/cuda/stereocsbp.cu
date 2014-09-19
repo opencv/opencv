@@ -59,19 +59,19 @@ namespace cv { namespace cuda { namespace device
         ///////////////////////////////////////////////////////////////
 
         template <int channels> static float __device__ pixeldiff(const uchar* left, const uchar* right, float max_data_term);
-        template<> __device__ __forceinline__ static float pixeldiff<1>(const uchar* left, const uchar* right, float max_data_term)
+        template<> __device__ __forceinline__ float pixeldiff<1>(const uchar* left, const uchar* right, float max_data_term)
         {
-            return fmin( ::abs((int)*left - *right), max_data_term);
+            return fminf( ::abs((int)*left - *right), max_data_term);
         }
-        template<> __device__ __forceinline__ static float pixeldiff<3>(const uchar* left, const uchar* right, float max_data_term)
+        template<> __device__ __forceinline__ float pixeldiff<3>(const uchar* left, const uchar* right, float max_data_term)
         {
             float tb = 0.114f * ::abs((int)left[0] - right[0]);
             float tg = 0.587f * ::abs((int)left[1] - right[1]);
             float tr = 0.299f * ::abs((int)left[2] - right[2]);
 
-            return fmin(tr + tg + tb, max_data_term);
+            return fminf(tr + tg + tb, max_data_term);
         }
-        template<> __device__ __forceinline__ static float pixeldiff<4>(const uchar* left, const uchar* right, float max_data_term)
+        template<> __device__ __forceinline__ float pixeldiff<4>(const uchar* left, const uchar* right, float max_data_term)
         {
             uchar4 l = *((const uchar4*)left);
             uchar4 r = *((const uchar4*)right);
@@ -80,7 +80,7 @@ namespace cv { namespace cuda { namespace device
             float tg = 0.587f * ::abs((int)l.y - r.y);
             float tr = 0.299f * ::abs((int)l.z - r.z);
 
-            return fmin(tr + tg + tb, max_data_term);
+            return fminf(tr + tg + tb, max_data_term);
         }
 
         template <typename T>

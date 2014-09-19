@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_imgproc.hpp"
 
 ////////////////////////////////////////////////// matchTemplate //////////////////////////////////////////////////////////
 
@@ -450,18 +450,18 @@ static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArr
 
     UMat templ  = _templ.getUMat();
     UMat result = _result.getUMat();
-    Size tsize = templ.size();
 
     if (cn==1)
     {
-        float templ_sum = static_cast<float>(sum(_templ)[0]) / tsize.area();
+        Scalar templMean = mean(templ);
+        float templ_sum = (float)templMean[0];
 
         k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, templ_sum);
     }
     else
     {
         Vec4f templ_sum = Vec4f::all(0);
-        templ_sum = sum(templ) / tsize.area();
+        templ_sum = (Vec4f)mean(templ);
 
        k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, templ_sum);    }
 
@@ -591,7 +591,7 @@ static bool ipp_crossCorr(const Mat& src, const Mat& tpl, Mat& dst)
 
     pBuffer = ippsMalloc_8u( bufSize );
 
-    status = ippFunc(src.data, (int)src.step, srcRoiSize, tpl.data, (int)tpl.step, tplRoiSize, (Ipp32f*)dst.data, (int)dst.step, funCfg, pBuffer);
+    status = ippFunc(src.ptr(), (int)src.step, srcRoiSize, tpl.ptr(), (int)tpl.step, tplRoiSize, dst.ptr<Ipp32f>(), (int)dst.step, funCfg, pBuffer);
 
     ippsFree( pBuffer );
     return status >= 0;
@@ -624,7 +624,7 @@ static bool ipp_sqrDistance(const Mat& src, const Mat& tpl, Mat& dst)
 
     pBuffer = ippsMalloc_8u( bufSize );
 
-    status = ippFunc(src.data, (int)src.step, srcRoiSize, tpl.data, (int)tpl.step, tplRoiSize, (Ipp32f*)dst.data, (int)dst.step, funCfg, pBuffer);
+    status = ippFunc(src.ptr(), (int)src.step, srcRoiSize, tpl.ptr(), (int)tpl.step, tplRoiSize, dst.ptr<Ipp32f>(), (int)dst.step, funCfg, pBuffer);
 
     ippsFree( pBuffer );
     return status >= 0;
@@ -934,7 +934,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
 
     for( i = 0; i < result.rows; i++ )
     {
-        float* rrow = (float*)(result.data + i*result.step);
+        float* rrow = result.ptr<float>(i);
         int idx = i * sumstep;
         int idx2 = i * sqstep;
 

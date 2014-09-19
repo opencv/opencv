@@ -38,6 +38,8 @@ class CppHeaderParser(object):
         self.PUBLIC_SECTION = 3
         self.CLASS_DECL = 4
 
+        self.namespaces = set()
+
     def batch_replace(self, s, pairs):
         for before, after in pairs:
             s = s.replace(before, after)
@@ -555,11 +557,6 @@ class CppHeaderParser(object):
                     args.append([arg_type, arg_name, defval, modlist])
                 npos = arg_start-1
 
-        npos = decl_str.replace(" ", "").find("=0", npos)
-        if npos >= 0:
-            # skip pure virtual functions
-            return []
-
         if static_method:
             func_modlist.append("/S")
 
@@ -833,6 +830,9 @@ class CppHeaderParser(object):
                                 decls.append(d)
                         else:
                             decls.append(decl)
+                    if stmt_type == "namespace":
+                        chunks = [block[1] for block in self.block_stack if block[0] == 'namespace'] + [name]
+                        self.namespaces.add('.'.join(chunks))
                 else:
                     stmt_type, name, parse_flag = "block", "", False
 
@@ -877,3 +877,4 @@ if __name__ == '__main__':
         #decls += parser.parse(hname, wmode=False)
     parser.print_decls(decls)
     print(len(decls))
+    print("namespaces:", " ".join(sorted(parser.namespaces)))

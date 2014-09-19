@@ -39,108 +39,94 @@
 //
 //M*/
 
-#ifdef BORDER_REPLICATE
-//BORDER_REPLICATE:     aaaaaa|abcdefgh|hhhhhhh
-#define ADDR_L(i, l_edge, r_edge)  ((i) <  (l_edge) ? (l_edge)   : (i))
-#define ADDR_R(i, r_edge, addr)    ((i) >= (r_edge) ? (r_edge)-1 : (addr))
-#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? (t_edge)   :(i))
-#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? (b_edge)-1 :(addr))
-#endif
-
-#ifdef BORDER_REFLECT
-//BORDER_REFLECT:       fedcba|abcdefgh|hgfedcb
-#define ADDR_L(i, l_edge, r_edge)  ((i) <  (l_edge) ? -(i)-1               : (i))
-#define ADDR_R(i, r_edge, addr)    ((i) >= (r_edge) ? -(i)-1+((r_edge)<<1) : (addr))
-#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? -(i)-1 : (i))
-#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? -(i)-1+((b_edge)<<1) : (addr))
-#endif
-
-#ifdef BORDER_REFLECT_101
-//BORDER_REFLECT_101:   gfedcb|abcdefgh|gfedcba
-#define ADDR_L(i, l_edge, r_edge)  ((i) <  (l_edge) ? -(i)                 : (i))
-#define ADDR_R(i, r_edge, addr)    ((i) >= (r_edge) ? -(i)-2+((r_edge)<<1) : (addr))
-#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? -(i)                 : (i))
-#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? -(i)-2+((b_edge)<<1) : (addr))
-#endif
-
-//blur function does not support BORDER_WRAP
-#ifdef BORDER_WRAP
-//BORDER_WRAP:          cdefgh|abcdefgh|abcdefg
-#define ADDR_L(i, l_edge, r_edge)  ((i) <  (l_edge) ? (i)+(r_edge) : (i))
-#define ADDR_R(i, r_edge, addr)    ((i) >= (r_edge) ? (i)-(r_edge) : (addr))
-#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? (i)+(b_edge) : (i))
-#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? (i)-(b_edge) : (addr))
-#endif
-
 #ifdef EXTRA_EXTRAPOLATION // border > src image size
 #ifdef BORDER_CONSTANT
-// None
+// CCCCCC|abcdefgh|CCCCCCC
+#define EXTRAPOLATE(x, minV, maxV)
 #elif defined BORDER_REPLICATE
-#define EXTRAPOLATE(x, y, minX, minY, maxX, maxY) \
+// aaaaaa|abcdefgh|hhhhhhh
+#define EXTRAPOLATE(x, minV, maxV) \
     { \
-        x = max(min(x, maxX - 1), minX); \
-        y = max(min(y, maxY - 1), minY); \
+        (x) = clamp((x), (minV), (maxV)-1); \
     }
 #elif defined BORDER_WRAP
-#define EXTRAPOLATE(x, y, minX, minY, maxX, maxY) \
+// cdefgh|abcdefgh|abcdefg
+#define EXTRAPOLATE(x, minV, maxV) \
     { \
-        if (x < minX) \
-            x -= ((x - maxX + 1) / maxX) * maxX; \
-        if (x >= maxX) \
-            x %= maxX; \
-        if (y < minY) \
-            y -= ((y - maxY + 1) / maxY) * maxY; \
-        if (y >= maxY) \
-            y %= maxY; \
+        if ((x) < (minV)) \
+            (x) += ((maxV) - (minV)); \
+        if ((x) >= (maxV)) \
+            (x) -= ((maxV) - (minV)); \
     }
-#elif defined(BORDER_REFLECT) || defined(BORDER_REFLECT_101)
-#define EXTRAPOLATE_(x, y, minX, minY, maxX, maxY, delta) \
+#elif defined BORDER_REFLECT
+// fedcba|abcdefgh|hgfedcb
+#define EXTRAPOLATE(x, minV, maxV) \
     { \
-        if (maxX - minX == 1) \
-            x = minX; \
+        if ((maxV) - (minV) == 1) \
+            (x) = (minV); \
         else \
-            do \
+            while ((x) >= (maxV) || (x) < (minV)) \
             { \
-                if (x < minX) \
-                    x = minX - (x - minX) - 1 + delta; \
+                if ((x) < (minV)) \
+                    (x) = (minV) - ((x) - (minV)) - 1; \
                 else \
-                    x = maxX - 1 - (x - maxX) - delta; \
+                    (x) = (maxV) - 1 - ((x) - (maxV)); \
             } \
-            while (x >= maxX || x < minX); \
-        \
-        if (maxY - minY == 1) \
-            y = minY; \
-        else \
-            do \
-            { \
-                if (y < minY) \
-                    y = minY - (y - minY) - 1 + delta; \
-                else \
-                    y = maxY - 1 - (y - maxY) - delta; \
-            } \
-            while (y >= maxY || y < minY); \
     }
-#ifdef BORDER_REFLECT
-#define EXTRAPOLATE(x, y, minX, minY, maxX, maxY) EXTRAPOLATE_(x, y, minX, minY, maxX, maxY, 0)
-#elif defined(BORDER_REFLECT_101) || defined(BORDER_REFLECT101)
-#define EXTRAPOLATE(x, y, minX, minY, maxX, maxY) EXTRAPOLATE_(x, y, minX, minY, maxX, maxY, 1)
-#endif
+#elif defined BORDER_REFLECT_101 || defined BORDER_REFLECT101
+// gfedcb|abcdefgh|gfedcba
+#define EXTRAPOLATE(x, minV, maxV) \
+    { \
+        if ((maxV) - (minV) == 1) \
+            (x) = (minV); \
+        else \
+            while ((x) >= (maxV) || (x) < (minV)) \
+            { \
+                if ((x) < (minV)) \
+                    (x) = (minV) - ((x) - (minV)); \
+                else \
+                    (x) = (maxV) - 1 - ((x) - (maxV)) - 1; \
+            } \
+    }
 #else
 #error No extrapolation method
 #endif
 #else
-#define EXTRAPOLATE(x, y, minX, minY, maxX, maxY) \
+#ifdef BORDER_CONSTANT
+// CCCCCC|abcdefgh|CCCCCCC
+#define EXTRAPOLATE(x, minV, maxV)
+#elif defined BORDER_REPLICATE
+// aaaaaa|abcdefgh|hhhhhhh
+#define EXTRAPOLATE(x, minV, maxV) \
     { \
-        int _row = y - minY, _col = x - minX; \
-        _row = ADDR_H(_row, 0, maxY - minY); \
-        _row = ADDR_B(_row, maxY - minY, _row); \
-        y = _row + minY; \
-        \
-        _col = ADDR_L(_col, 0, maxX - minX); \
-        _col = ADDR_R(_col, maxX - minX, _col); \
-        x = _col + minX; \
+        (x) = clamp((x), (minV), (maxV)-1); \
     }
+#elif defined BORDER_WRAP
+// cdefgh|abcdefgh|abcdefg
+#define EXTRAPOLATE(x, minV, maxV) \
+    { \
+        if ((x) < (minV)) \
+            (x) += (((minV) - (x)) / ((maxV) - (minV)) + 1) * ((maxV) - (minV)); \
+        if ((x) >= (maxV)) \
+            (x) = ((x) - (minV)) % ((maxV) - (minV)) + (minV); \
+    }
+#elif defined BORDER_REFLECT
+// fedcba|abcdefgh|hgfedcb
+#define EXTRAPOLATE(x, minV, maxV) \
+    { \
+        (x) = clamp((x), 2 * (minV) - (x) - 1, 2 * (maxV) - (x) - 1); \
+    }
+#elif defined BORDER_REFLECT_101 || defined BORDER_REFLECT101
+// gfedcb|abcdefgh|gfedcba
+#define EXTRAPOLATE(x, minV, maxV) \
+    { \
+        (x) = clamp((x), 2 * (minV) - (x), 2 * (maxV) - (x) - 2); \
+    }
+#else
+#error No extrapolation method
 #endif
+#endif //EXTRA_EXTRAPOLATION
+
 
 #ifdef DOUBLE_SUPPORT
 #ifdef cl_amd_fp64
@@ -162,43 +148,21 @@
 #define DSTSIZE (int)sizeof(dstT1) * cn
 #endif
 
+#define UPDATE_COLUMN_SUM(col) \
+    __constant WT1 * k = &kernelData[KERNEL_SIZE_Y2_ALIGNED * col]; \
+    WT tmp_sum = 0;                                                 \
+    for (int sy = 0; sy < KERNEL_SIZE_Y; sy++)                      \
+        tmp_sum += data[sy] * k[sy];                                \
+    sumOfCols[local_id] = tmp_sum;                                  \
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+#define UPDATE_TOTAL_SUM(col) \
+    int id = local_id + col - ANCHOR_X; \
+    if (id >= 0 && id < LOCAL_SIZE)     \
+        total_sum += sumOfCols[id];     \
+    barrier(CLK_LOCAL_MEM_FENCE);
+
 #define noconvert
-
-struct RectCoords
-{
-    int x1, y1, x2, y2;
-};
-
-inline WT readSrcPixel(int2 pos, __global const uchar * srcptr, int src_step, const struct RectCoords srcCoords)
-{
-#ifdef BORDER_ISOLATED
-    if (pos.x >= srcCoords.x1 && pos.y >= srcCoords.y1 && pos.x < srcCoords.x2 && pos.y < srcCoords.y2)
-#else
-    if (pos.x >= 0 && pos.y >= 0 && pos.x < srcCoords.x2 && pos.y < srcCoords.y2)
-#endif
-    {
-        return convertToWT(loadpix(srcptr + mad24(pos.y, src_step, pos.x * SRCSIZE)));
-    }
-    else
-    {
-#ifdef BORDER_CONSTANT
-        return (WT)(0);
-#else
-        int selected_col = pos.x, selected_row = pos.y;
-
-        EXTRAPOLATE(selected_col, selected_row,
-#ifdef BORDER_ISOLATED
-                srcCoords.x1, srcCoords.y1,
-#else
-                0, 0,
-#endif
-                srcCoords.x2, srcCoords.y2
-         );
-
-        return convertToWT(loadpix(srcptr + mad24(selected_row, src_step, selected_col * SRCSIZE)));
-#endif
-    }
-}
 
 #define DIG(a) a,
 __constant WT1 kernelData[] = { COEFF };
@@ -206,77 +170,71 @@ __constant WT1 kernelData[] = { COEFF };
 __kernel void filter2D(__global const uchar * srcptr, int src_step, int srcOffsetX, int srcOffsetY, int srcEndX, int srcEndY,
                        __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols, float delta)
 {
-    const struct RectCoords srcCoords = { srcOffsetX, srcOffsetY, srcEndX, srcEndY }; // for non-isolated border: offsetX, offsetY, wholeX, wholeY
-
     int local_id = get_local_id(0);
     int x = local_id + (LOCAL_SIZE - (KERNEL_SIZE_X - 1)) * get_group_id(0) - ANCHOR_X;
-    int y = get_global_id(1) * BLOCK_SIZE_Y;
+    int y = get_global_id(1);
 
     WT data[KERNEL_SIZE_Y];
     __local WT sumOfCols[LOCAL_SIZE];
 
-    int2 srcPos = (int2)(srcCoords.x1 + x, srcCoords.y1 + y - ANCHOR_Y);
-
-    int2 pos = (int2)(x, y);
-    __global dstT * dst = (__global dstT *)(dstptr + mad24(pos.y, dst_step, mad24(pos.x, DSTSIZE, dst_offset))); // Pointer can be out of bounds!
-    bool writeResult = local_id >= ANCHOR_X && local_id < LOCAL_SIZE - (KERNEL_SIZE_X - 1 - ANCHOR_X) &&
-                        pos.x >= 0 && pos.x < cols;
-
-#if BLOCK_SIZE_Y > 1
-    bool readAllpixels = true;
-    int sy_index = 0; // current index in data[] array
-
-    dstRowsMax = min(rows, pos.y + BLOCK_SIZE_Y);
-    for ( ;
-          pos.y < dstRowsMax;
-          pos.y++, dst = (__global dstT *)((__global uchar *)dst + dst_step))
+#ifdef BORDER_ISOLATED
+    int srcBeginX = srcOffsetX;
+    int srcBeginY = srcOffsetY;
+#else
+    int srcBeginX = 0;
+    int srcBeginY = 0;
 #endif
+
+    int srcX = srcOffsetX + x;
+    int srcY = srcOffsetY + y - ANCHOR_Y;
+
+    __global dstT *dst = (__global dstT *)(dstptr + mad24(y, dst_step, mad24(x, DSTSIZE, dst_offset))); // Pointer can be out of bounds!
+
+#ifdef BORDER_CONSTANT
+    if (srcX >= srcBeginX && srcX < srcEndX)
     {
-        for (
-#if BLOCK_SIZE_Y > 1
-            int sy = readAllpixels ? 0 : -1; sy < (readAllpixels ? KERNEL_SIZE_Y : 0);
-#else
-            int sy = 0, sy_index = 0; sy < KERNEL_SIZE_Y;
-#endif
-            sy++, srcPos.y++)
+        for (int sy = 0, sy_index = 0; sy < KERNEL_SIZE_Y; sy++, srcY++)
         {
-            data[sy + sy_index] = readSrcPixel(srcPos, srcptr, src_step, srcCoords);
+            if (srcY >= srcBeginY && srcY < srcEndY)
+                data[sy + sy_index] = convertToWT(loadpix(srcptr + mad24(srcY, src_step, srcX * SRCSIZE)));
+            else
+                data[sy + sy_index] = (WT)(0);
         }
-
-        WT total_sum = 0;
-        for (int sx = 0; sx < KERNEL_SIZE_X; sx++)
-        {
-            {
-                __constant WT1 * k = &kernelData[KERNEL_SIZE_Y2_ALIGNED * sx
-#if BLOCK_SIZE_Y > 1
-                                                   + KERNEL_SIZE_Y - sy_index
-#endif
-                                                   ];
-                WT tmp_sum = 0;
-                for (int sy = 0; sy < KERNEL_SIZE_Y; sy++)
-                    tmp_sum += data[sy] * k[sy];
-
-                sumOfCols[local_id] = tmp_sum;
-                barrier(CLK_LOCAL_MEM_FENCE);
-            }
-
-            int id = local_id + sx - ANCHOR_X;
-            if (id >= 0 && id < LOCAL_SIZE)
-               total_sum += sumOfCols[id];
-
-            barrier(CLK_LOCAL_MEM_FENCE);
-        }
-
-        if (writeResult)
-            storepix(convertToDstT(total_sum + (WT)(delta)), dst);
-
-#if BLOCK_SIZE_Y > 1
-        readAllpixels = false;
-#if BLOCK_SIZE_Y > KERNEL_SIZE_Y
-        sy_index = sy_index + 1 <= KERNEL_SIZE_Y ? sy_index + 1 : 1;
-#else
-        sy_index++;
-#endif
-#endif // BLOCK_SIZE_Y == 1
     }
+    else
+    {
+        for (int sy = 0, sy_index = 0; sy < KERNEL_SIZE_Y; sy++, srcY++)
+        {
+             data[sy + sy_index] = (WT)(0);
+        }
+    }
+#else
+    EXTRAPOLATE(srcX, srcBeginX, srcEndX);
+    for (int sy = 0, sy_index = 0; sy < KERNEL_SIZE_Y; sy++, srcY++)
+    {
+        int tempY = srcY;
+        EXTRAPOLATE(tempY, srcBeginY, srcEndY);
+        data[sy + sy_index] = convertToWT(loadpix(srcptr + mad24(tempY, src_step, srcX * SRCSIZE)));
+    }
+#endif
+
+    WT total_sum = 0;
+    for (int sx = 0; sx < ANCHOR_X; sx++)
+    {
+        UPDATE_COLUMN_SUM(sx);
+        UPDATE_TOTAL_SUM(sx);
+    }
+
+    __constant WT1 * k = &kernelData[KERNEL_SIZE_Y2_ALIGNED * ANCHOR_X];
+    for (int sy = 0; sy < KERNEL_SIZE_Y; sy++)
+        total_sum += data[sy] * k[sy];
+
+    for (int sx = ANCHOR_X + 1; sx < KERNEL_SIZE_X; sx++)
+    {
+        UPDATE_COLUMN_SUM(sx);
+        UPDATE_TOTAL_SUM(sx);
+    }
+
+    if (local_id >= ANCHOR_X && local_id < LOCAL_SIZE - (KERNEL_SIZE_X - 1 - ANCHOR_X) && x >= 0 && x < cols)
+        storepix(convertToDstT(total_sum + (WT)(delta)), dst);
 }

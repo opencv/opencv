@@ -2,13 +2,13 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_NONFREE
+#ifdef HAVE_OPENCV_XFEATURES2D
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/cudafeatures2d.hpp"
-#include "opencv2/nonfree/cuda.hpp"
+#include "opencv2/xfeatures2d/cuda.hpp"
 
 using namespace std;
 using namespace cv;
@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
 
 int main()
 {
-    std::cerr << "OpenCV was built without nonfree module" << std::endl;
+    std::cerr << "OpenCV was built without xfeatures2d module" << std::endl;
     return 0;
 }
 

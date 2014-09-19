@@ -44,17 +44,17 @@
 #define __OPENCV_PRECOMP_H__
 
 #include "opencv2/opencv_modules.hpp"
+
+#include "opencv2/core/ocl.hpp"
+
 #ifdef HAVE_OPENCV_VIDEO
 #include "opencv2/video.hpp"
 #endif
 #ifdef HAVE_OPENCV_FEATURES2D
 #include "opencv2/features2d.hpp"
 #endif
-#ifdef HAVE_OPENCV_NONFREE
-#include "opencv2/nonfree.hpp"
-#endif
-#ifdef HAVE_OPENCV_ML
-#include "opencv2/ml.hpp"
+#ifdef HAVE_OPENCV_XFEATURES2D
+#include "opencv2/xfeatures2d/nonfree.hpp"
 #endif
 
 #include "opencv2/world.hpp"

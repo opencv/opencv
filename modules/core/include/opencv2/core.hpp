@@ -506,96 +506,6 @@ CV_EXPORTS_W void randn(InputOutputArray dst, InputArray mean, InputArray stddev
 //! shuffles the input array elements
 CV_EXPORTS_W void randShuffle(InputOutputArray dst, double iterFactor = 1., RNG* rng = 0);
 
-//! draws the line segment (pt1, pt2) in the image
-CV_EXPORTS_W void line(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
-                     int thickness = 1, int lineType = LINE_8, int shift = 0);
-
-//! draws an arrow from pt1 to pt2 in the image
-CV_EXPORTS_W void arrowedLine(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
-                     int thickness=1, int line_type=8, int shift=0, double tipLength=0.1);
-
-//! draws the rectangle outline or a solid rectangle with the opposite corners pt1 and pt2 in the image
-CV_EXPORTS_W void rectangle(InputOutputArray img, Point pt1, Point pt2,
-                          const Scalar& color, int thickness = 1,
-                          int lineType = LINE_8, int shift = 0);
-
-//! draws the rectangle outline or a solid rectangle covering rec in the image
-CV_EXPORTS void rectangle(CV_IN_OUT Mat& img, Rect rec,
-                          const Scalar& color, int thickness = 1,
-                          int lineType = LINE_8, int shift = 0);
-
-//! draws the circle outline or a solid circle in the image
-CV_EXPORTS_W void circle(InputOutputArray img, Point center, int radius,
-                       const Scalar& color, int thickness = 1,
-                       int lineType = LINE_8, int shift = 0);
-
-//! draws an elliptic arc, ellipse sector or a rotated ellipse in the image
-CV_EXPORTS_W void ellipse(InputOutputArray img, Point center, Size axes,
-                        double angle, double startAngle, double endAngle,
-                        const Scalar& color, int thickness = 1,
-                        int lineType = LINE_8, int shift = 0);
-
-//! draws a rotated ellipse in the image
-CV_EXPORTS_W void ellipse(InputOutputArray img, const RotatedRect& box, const Scalar& color,
-                        int thickness = 1, int lineType = LINE_8);
-
-//! draws a filled convex polygon in the image
-CV_EXPORTS void fillConvexPoly(Mat& img, const Point* pts, int npts,
-                               const Scalar& color, int lineType = LINE_8,
-                               int shift = 0);
-
-CV_EXPORTS_W void fillConvexPoly(InputOutputArray img, InputArray points,
-                                 const Scalar& color, int lineType = LINE_8,
-                                 int shift = 0);
-
-//! fills an area bounded by one or more polygons
-CV_EXPORTS void fillPoly(Mat& img, const Point** pts,
-                         const int* npts, int ncontours,
-                         const Scalar& color, int lineType = LINE_8, int shift = 0,
-                         Point offset = Point() );
-
-CV_EXPORTS_W void fillPoly(InputOutputArray img, InputArrayOfArrays pts,
-                           const Scalar& color, int lineType = LINE_8, int shift = 0,
-                           Point offset = Point() );
-
-//! draws one or more polygonal curves
-CV_EXPORTS void polylines(Mat& img, const Point* const* pts, const int* npts,
-                          int ncontours, bool isClosed, const Scalar& color,
-                          int thickness = 1, int lineType = LINE_8, int shift = 0 );
-
-CV_EXPORTS_W void polylines(InputOutputArray img, InputArrayOfArrays pts,
-                            bool isClosed, const Scalar& color,
-                            int thickness = 1, int lineType = LINE_8, int shift = 0 );
-
-//! draws contours in the image
-CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays contours,
-                              int contourIdx, const Scalar& color,
-                              int thickness = 1, int lineType = LINE_8,
-                              InputArray hierarchy = noArray(),
-                              int maxLevel = INT_MAX, Point offset = Point() );
-
-//! clips the line segment by the rectangle Rect(0, 0, imgSize.width, imgSize.height)
-CV_EXPORTS bool clipLine(Size imgSize, CV_IN_OUT Point& pt1, CV_IN_OUT Point& pt2);
-
-//! clips the line segment by the rectangle imgRect
-CV_EXPORTS_W bool clipLine(Rect imgRect, CV_OUT CV_IN_OUT Point& pt1, CV_OUT CV_IN_OUT Point& pt2);
-
-//! converts elliptic arc to a polygonal curve
-CV_EXPORTS_W void ellipse2Poly( Point center, Size axes, int angle,
-                                int arcStart, int arcEnd, int delta,
-                                CV_OUT std::vector<Point>& pts );
-
-//! renders text string in the image
-CV_EXPORTS_W void putText( InputOutputArray img, const String& text, Point org,
-                         int fontFace, double fontScale, Scalar color,
-                         int thickness = 1, int lineType = LINE_8,
-                         bool bottomLeftOrigin = false );
-
-//! returns bounding box of the text string
-CV_EXPORTS_W Size getTextSize(const String& text, int fontFace,
-                            double fontScale, int thickness,
-                            CV_OUT int* baseLine);
-
 /*!
     Principal Component Analysis
 
@@ -690,7 +600,61 @@ public:
     Mat mean; //!< mean value subtracted before the projection and added after the back projection
 };
 
+// Linear Discriminant Analysis
+class CV_EXPORTS LDA
+{
+public:
+    // Initializes a LDA with num_components (default 0) and specifies how
+    // samples are aligned (default dataAsRow=true).
+    explicit LDA(int num_components = 0);
 
+    // Initializes and performs a Discriminant Analysis with Fisher's
+    // Optimization Criterion on given data in src and corresponding labels
+    // in labels. If 0 (or less) number of components are given, they are
+    // automatically determined for given data in computation.
+    LDA(InputArrayOfArrays src, InputArray labels, int num_components = 0);
+
+    // Serializes this object to a given filename.
+    void save(const String& filename) const;
+
+    // Deserializes this object from a given filename.
+    void load(const String& filename);
+
+    // Serializes this object to a given cv::FileStorage.
+    void save(FileStorage& fs) const;
+
+        // Deserializes this object from a given cv::FileStorage.
+    void load(const FileStorage& node);
+
+    // Destructor.
+    ~LDA();
+
+    //! Compute the discriminants for data in src and labels.
+    void compute(InputArrayOfArrays src, InputArray labels);
+
+    // Projects samples into the LDA subspace.
+    Mat project(InputArray src);
+
+    // Reconstructs projections from the LDA subspace.
+    Mat reconstruct(InputArray src);
+
+    // Returns the eigenvectors of this LDA.
+    Mat eigenvectors() const { return _eigenvectors; }
+
+    // Returns the eigenvalues of this LDA.
+    Mat eigenvalues() const { return _eigenvalues; }
+
+    static Mat subspaceProject(InputArray W, InputArray mean, InputArray src);
+    static Mat subspaceReconstruct(InputArray W, InputArray mean, InputArray src);
+
+protected:
+    bool _dataAsRow;
+    int _num_components;
+    Mat _eigenvectors;
+    Mat _eigenvalues;
+
+    void lda(InputArrayOfArrays src, InputArray labels);
+};
 
 /*!
     Singular Value Decomposition class
@@ -782,93 +746,6 @@ public:
     int minusDelta, plusDelta;
     int minusStep, plusStep;
 };
-
-
-
-/*!
- Fast Nearest Neighbor Search Class.
-
- The class implements D. Lowe BBF (Best-Bin-First) algorithm for the last
- approximate (or accurate) nearest neighbor search in multi-dimensional spaces.
-
- First, a set of vectors is passed to KDTree::KDTree() constructor
- or KDTree::build() method, where it is reordered.
-
- Then arbitrary vectors can be passed to KDTree::findNearest() methods, which
- find the K nearest neighbors among the vectors from the initial set.
- The user can balance between the speed and accuracy of the search by varying Emax
- parameter, which is the number of leaves that the algorithm checks.
- The larger parameter values yield more accurate results at the expense of lower processing speed.
-
- \code
- KDTree T(points, false);
- const int K = 3, Emax = INT_MAX;
- int idx[K];
- float dist[K];
- T.findNearest(query_vec, K, Emax, idx, 0, dist);
- CV_Assert(dist[0] <= dist[1] && dist[1] <= dist[2]);
- \endcode
-*/
-class CV_EXPORTS_W KDTree
-{
-public:
-    /*!
-        The node of the search tree.
-    */
-    struct Node
-    {
-        Node() : idx(-1), left(-1), right(-1), boundary(0.f) {}
-        Node(int _idx, int _left, int _right, float _boundary)
-            : idx(_idx), left(_left), right(_right), boundary(_boundary) {}
-
-        //! split dimension; >=0 for nodes (dim), < 0 for leaves (index of the point)
-        int idx;
-        //! node indices of the left and the right branches
-        int left, right;
-        //! go to the left if query_vec[node.idx]<=node.boundary, otherwise go to the right
-        float boundary;
-    };
-
-    //! the default constructor
-    CV_WRAP KDTree();
-    //! the full constructor that builds the search tree
-    CV_WRAP KDTree(InputArray points, bool copyAndReorderPoints = false);
-    //! the full constructor that builds the search tree
-    CV_WRAP KDTree(InputArray points, InputArray _labels,
-                   bool copyAndReorderPoints = false);
-    //! builds the search tree
-    CV_WRAP void build(InputArray points, bool copyAndReorderPoints = false);
-    //! builds the search tree
-    CV_WRAP void build(InputArray points, InputArray labels,
-                       bool copyAndReorderPoints = false);
-    //! finds the K nearest neighbors of "vec" while looking at Emax (at most) leaves
-    CV_WRAP int findNearest(InputArray vec, int K, int Emax,
-                            OutputArray neighborsIdx,
-                            OutputArray neighbors = noArray(),
-                            OutputArray dist = noArray(),
-                            OutputArray labels = noArray()) const;
-    //! finds all the points from the initial set that belong to the specified box
-    CV_WRAP void findOrthoRange(InputArray minBounds,
-                                InputArray maxBounds,
-                                OutputArray neighborsIdx,
-                                OutputArray neighbors = noArray(),
-                                OutputArray labels = noArray()) const;
-    //! returns vectors with the specified indices
-    CV_WRAP void getPoints(InputArray idx, OutputArray pts,
-                           OutputArray labels = noArray()) const;
-    //! return a vector with the specified index
-    const float* getPoint(int ptidx, int* label = 0) const;
-    //! returns the search space dimensionality
-    CV_WRAP int dims() const;
-
-    std::vector<Node> nodes; //!< all the tree nodes
-    CV_PROP Mat points; //!< all the points. It can be a reordered copy of the input vector set or the original vector set.
-    CV_PROP std::vector<int> labels; //!< the parallel array of labels.
-    CV_PROP int maxDepth; //!< maximum depth of the search tree. Do not modify it
-    CV_PROP_RW int normType; //!< type of the distance (cv::NORM_L1 or cv::NORM_L2) used for search. Initially set to cv::NORM_L2, but you can modify it
-};
-
-
 
 /*!
    Random Number Generator
@@ -1265,5 +1142,7 @@ template<> struct ParamType<uchar>
 
 #include "opencv2/core/operations.hpp"
 #include "opencv2/core/cvstd.inl.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/core/optim.hpp"
 
 #endif /*__OPENCV_CORE_HPP__*/

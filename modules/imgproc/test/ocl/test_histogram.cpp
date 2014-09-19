@@ -52,7 +52,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "cvconfig.h"
 #include "opencv2/ts/ocl_test.hpp"
 
@@ -99,6 +99,10 @@ PARAM_TEST_CASE(CalcBackProject, MatDepth, int, bool)
         Size roiSize = randomSize(1, MAX_VALUE);
 
         int totalChannels = 0;
+
+        ranges.clear();
+        channels.clear();
+
         for (int i = 0; i < N; ++i)
         {
             Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
@@ -202,9 +206,9 @@ OCL_TEST_P(CalcBackProject, Mat)
         OCL_ON(cv::calcBackProject(uimages_roi, channels, uhist_roi, udst_roi, ranges, scale));
 
         Size dstSize = dst_roi.size();
-        int nDiffs = (int)(0.03f*dstSize.height*dstSize.width);
+        int nDiffs = std::max((int)(0.07f*dstSize.area()), 1);
 
-        //check if the dst mats are the same except 3% difference
+        //check if the dst mats are the same except 7% difference
         EXPECT_MAT_N_DIFF(dst_roi, udst_roi, nDiffs);
     }
 }

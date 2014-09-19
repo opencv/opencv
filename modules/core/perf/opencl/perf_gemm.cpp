@@ -44,7 +44,7 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
@@ -54,20 +54,21 @@ namespace ocl {
 
 ///////////// gemm ////////////////////////
 
-typedef tuple<Size, int> GemmParams;
+CV_ENUM(FlagType, 0, GEMM_1_T, GEMM_2_T, GEMM_3_T, GEMM_1_T|GEMM_2_T, GEMM_2_T|GEMM_3_T)
+
+typedef tuple<Size, FlagType, MatType> GemmParams;
 typedef TestBaseWithParam<GemmParams> GemmFixture;
 
 OCL_PERF_TEST_P(GemmFixture, Gemm, ::testing::Combine(
-                    ::testing::Values(Size(1000, 1000), Size(1500, 1500)),
-            Values((int)cv::GEMM_3_T, (int)cv::GEMM_3_T | (int)cv::GEMM_2_T,
-                   (int)cv::GEMM_1_T, (int)cv::GEMM_1_T | (int)cv::GEMM_2_T)))
+                    ::testing::Values(Size(640, 640), Size(1280, 1280)),
+                    FlagType::all(), testing::Values(CV_32FC1, CV_32FC2)))
 {
     GemmParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int flags = get<1>(params);
+    const int type = get<2>(params);
 
-    UMat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
-            src3(srcSize, CV_32FC1), dst(srcSize, CV_32FC1);
+    UMat src1(srcSize, type), src2(srcSize, type), src3(srcSize, type), dst(srcSize, type);
     declare.in(src1, src2, src3).out(dst);
     randu(src1, -10.0f, 10.0f);
     randu(src2, -10.0f, 10.0f);

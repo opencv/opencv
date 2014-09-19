@@ -98,7 +98,7 @@
 
 #ifdef OP_CALC2
 #define CALC_MAX2(p) \
-    maxval2 = MAX(maxval2, temp.p);
+    maxval2 = MAX(maxval2, temp2.p);
 #else
 #define CALC_MAX2(p)
 #endif
@@ -185,7 +185,7 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 #endif
         {
 #ifdef HAVE_SRC_CONT
-            src_index = mul24(id, srcTSIZE);
+            src_index = id * srcTSIZE;//mul24(id, srcTSIZE);
 #else
             src_index = mad24(id / cols, src_step, mul24(id % cols, srcTSIZE));
 #endif
@@ -196,7 +196,7 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 
 #ifdef HAVE_SRC2
 #ifdef HAVE_SRC2_CONT
-            src2_index = mul24(id, srcTSIZE);
+            src2_index = id * srcTSIZE; //mul24(id, srcTSIZE);
 #else
             src2_index = mad24(id / cols, src2_step, mul24(id % cols, srcTSIZE));
 #endif

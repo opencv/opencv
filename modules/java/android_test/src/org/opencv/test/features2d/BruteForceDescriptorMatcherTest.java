@@ -18,6 +18,7 @@ import org.opencv.features2d.FeatureDetector;
 import org.opencv.core.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
+import org.opencv.imgproc.Imgproc;
 
 public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
 
@@ -53,8 +54,8 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
 
     private Mat getQueryImg() {
         Mat cross = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        Core.line(cross, new Point(30, matSize / 2), new Point(matSize - 31, matSize / 2), new Scalar(100), 3);
-        Core.line(cross, new Point(matSize / 2, 30), new Point(matSize / 2, matSize - 31), new Scalar(100), 3);
+        Imgproc.line(cross, new Point(30, matSize / 2), new Point(matSize - 31, matSize / 2), new Scalar(100), 3);
+        Imgproc.line(cross, new Point(matSize / 2, 30), new Point(matSize / 2, matSize - 31), new Scalar(100), 3);
 
         return cross;
     }
@@ -73,8 +74,8 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
 
     private Mat getTrainImg() {
         Mat cross = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        Core.line(cross, new Point(20, matSize / 2), new Point(matSize - 21, matSize / 2), new Scalar(100), 2);
-        Core.line(cross, new Point(matSize / 2, 20), new Point(matSize / 2, matSize - 21), new Scalar(100), 2);
+        Imgproc.line(cross, new Point(20, matSize / 2), new Point(matSize - 21, matSize / 2), new Scalar(100), 2);
+        Imgproc.line(cross, new Point(matSize / 2, 20), new Point(matSize / 2, matSize - 21), new Scalar(100), 2);
 
         return cross;
     }

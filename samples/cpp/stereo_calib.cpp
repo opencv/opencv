@@ -237,7 +237,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
         fs.release();
     }
     else
-        cout << "Error: can not save the intrinsic parameters\n";
+        cout << "Error: can not save the extrinsic parameters\n";
 
     // OpenCV can handle left-right
     // or up-down camera arrangements

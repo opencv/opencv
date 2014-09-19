@@ -46,6 +46,7 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"
+#include "opencv2/core/affine.hpp"
 
 namespace cv
 {
@@ -55,10 +56,11 @@ enum { LMEDS  = 4, //!< least-median algorithm
        RANSAC = 8  //!< RANSAC algorithm
      };
 
-enum { ITERATIVE = 0,
-       EPNP      = 1, // F.Moreno-Noguer, V.Lepetit and P.Fua "EPnP: Efficient Perspective-n-Point Camera Pose Estimation"
-       P3P       = 2  // X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
-     };
+enum { SOLVEPNP_ITERATIVE = 0,
+       SOLVEPNP_EPNP      = 1, // F.Moreno-Noguer, V.Lepetit and P.Fua "EPnP: Efficient Perspective-n-Point Camera Pose Estimation"
+       SOLVEPNP_P3P       = 2, // X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
+       SOLVEPNP_DLS       = 3  // Joel A. Hesch and Stergios I. Roumeliotis. "A Direct Least-Squares (DLS) Method for PnP"
+};
 
 enum { CALIB_CB_ADAPTIVE_THRESH = 1,
        CALIB_CB_NORMALIZE_IMAGE = 2,
@@ -107,7 +109,8 @@ CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobi
 //! computes the best-fit perspective transformation mapping srcPoints to dstPoints.
 CV_EXPORTS_W Mat findHomography( InputArray srcPoints, InputArray dstPoints,
                                  int method = 0, double ransacReprojThreshold = 3,
-                                 OutputArray mask=noArray());
+                                 OutputArray mask=noArray(), const int maxIters = 2000,
+                                 const double confidence = 0.995);
 
 //! variant of findHomography for backward compatibility
 CV_EXPORTS Mat findHomography( InputArray srcPoints, InputArray dstPoints,
@@ -151,15 +154,15 @@ CV_EXPORTS_W void projectPoints( InputArray objectPoints,
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
                             OutputArray rvec, OutputArray tvec,
-                            bool useExtrinsicGuess = false, int flags = ITERATIVE );
+                            bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE );
 
 //! computes the camera pose from a few 3D points and the corresponding projections. The outliers are possible.
-CV_EXPORTS_W void solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
+CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
                                   InputArray cameraMatrix, InputArray distCoeffs,
                                   OutputArray rvec, OutputArray tvec,
                                   bool useExtrinsicGuess = false, int iterationsCount = 100,
-                                  float reprojectionError = 8.0, int minInliersCount = 100,
-                                  OutputArray inliers = noArray(), int flags = ITERATIVE );
+                                  float reprojectionError = 8.0, double confidence = 0.99,
+                                  OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE );
 
 //! initializes camera matrix from a few 3D points and the corresponding projections.
 CV_EXPORTS_W Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
@@ -415,6 +418,66 @@ CV_EXPORTS_W Ptr<StereoSGBM> createStereoSGBM(int minDisparity, int numDispariti
                                             int preFilterCap = 0, int uniquenessRatio = 0,
                                             int speckleWindowSize = 0, int speckleRange = 0,
                                             int mode = StereoSGBM::MODE_SGBM);
+
+namespace fisheye
+{
+    enum{
+        CALIB_USE_INTRINSIC_GUESS   = 1,
+        CALIB_RECOMPUTE_EXTRINSIC   = 2,
+        CALIB_CHECK_COND            = 4,
+        CALIB_FIX_SKEW              = 8,
+        CALIB_FIX_K1                = 16,
+        CALIB_FIX_K2                = 32,
+        CALIB_FIX_K3                = 64,
+        CALIB_FIX_K4                = 128,
+        CALIB_FIX_INTRINSIC         = 256
+    };
+
+    //! projects 3D points using fisheye model
+    CV_EXPORTS void projectPoints(InputArray objectPoints, OutputArray imagePoints, const Affine3d& affine,
+        InputArray K, InputArray D, double alpha = 0, OutputArray jacobian = noArray());
+
+    //! projects points using fisheye model
+    CV_EXPORTS void projectPoints(InputArray objectPoints, OutputArray imagePoints, InputArray rvec, InputArray tvec,
+        InputArray K, InputArray D, double alpha = 0, OutputArray jacobian = noArray());
+
+    //! distorts 2D points using fisheye model
+    CV_EXPORTS void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0);
+
+    //! undistorts 2D points using fisheye model
+    CV_EXPORTS void undistortPoints(InputArray distorted, OutputArray undistorted,
+        InputArray K, InputArray D, InputArray R = noArray(), InputArray P  = noArray());
+
+    //! computing undistortion and rectification maps for image transform by cv::remap()
+    //! If D is empty zero distortion is used, if R or P is empty identity matrixes are used
+    CV_EXPORTS void initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P,
+        const cv::Size& size, int m1type, OutputArray map1, OutputArray map2);
+
+    //! undistorts image, optionally changes resolution and camera matrix. If Knew zero identity matrix is used
+    CV_EXPORTS void undistortImage(InputArray distorted, OutputArray undistorted,
+        InputArray K, InputArray D, InputArray Knew = cv::noArray(), const Size& new_size = Size());
+
+    //! estimates new camera matrix for undistortion or rectification
+    CV_EXPORTS void estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
+        OutputArray P, double balance = 0.0, const Size& new_size = Size(), double fov_scale = 1.0);
+
+    //! performs camera calibaration
+    CV_EXPORTS double calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
+        InputOutputArray K, InputOutputArray D, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags = 0,
+            TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
+
+    //! stereo rectification estimation
+    CV_EXPORTS void stereoRectify(InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size &imageSize, InputArray R, InputArray tvec,
+        OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags, const Size &newImageSize = Size(),
+        double balance = 0.0, double fov_scale = 1.0);
+
+    //! performs stereo calibaration
+    CV_EXPORTS double stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+                                  InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
+                                  OutputArray R, OutputArray T, int flags = CALIB_FIX_INTRINSIC,
+                                  TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
+
+}
 
 } // cv
 
