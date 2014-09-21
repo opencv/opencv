@@ -123,14 +123,14 @@ int gdal2opencv( const GDALDataType& gdalType, const int& channels ){
             if( channels == 3 ){ return CV_32SC3; }
             if( channels == 4 ){ return CV_32SC4; }
             return -1;
-        
+
         /// Float32
         case GDT_Float32:
             if (channels == 1){ return CV_32FC1; }
             if (channels == 3){ return CV_32FC3; }
             if (channels == 4){ return CV_32FC4; }
             return -1;
-        
+    
         default:
             std::cout << "Unknown GDAL Data Type" << std::endl;
             std::cout << "Type: " << GDALGetDataTypeName(gdalType) << std::endl;
@@ -230,8 +230,8 @@ double range_cast( const GDALDataType& gdalType, const int& cvDepth, const doubl
     }
 
     // float32 -> float32
-    if(gdalType == GDT_Float32 && cvDepth == CV_32F){
-    	return value;
+    if( gdalType == GDT_Float32 && cvDepth == CV_32F ){
+        return value;
     }
 
     std::cout << GDALGetDataTypeName( gdalType ) << std::endl;
