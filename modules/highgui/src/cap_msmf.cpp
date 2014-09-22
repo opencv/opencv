@@ -2445,10 +2445,11 @@ int videoDevice::findType(unsigned int size, unsigned int frameRate)
     fmt = vd_CaptureFormats.find(size);
     if( fmt != vd_CaptureFormats.end() )
         FRM = fmt->second;
-    else if (FRM.empty())
-        return -1;
-    else
+    else if(!vd_CaptureFormats.empty())
         FRM = vd_CaptureFormats.rbegin()->second;
+
+    if (FRM.empty())
+        return -1;
 
     UINT64 frameRateMax = 0;  SUBTYPEMap STMMax;
     if(frameRate == 0)
