@@ -123,6 +123,7 @@ if (WIN32 AND HAVE_DSHOW)
 endif()
 
 if (WIN32 AND HAVE_MSMF)
+  list(APPEND highgui_srcs src/cap_msmf.hpp)
   list(APPEND highgui_srcs src/cap_msmf.cpp)
 endif()
 
