@@ -6,7 +6,7 @@ Intrinsic Image Decomposition
 intrinsicDecompose
 ------------------
 
-Intrinsic Image Decomposition is referred as the separation of illumination (shading) and reflectance components from an input photograph. Many computer vision algorithms, such as segmentation, recognition, and motion estimation are confounded by illumination effects in the image. The performance of these algorithms may beneﬁt substantially from reliable estimation of illumination-invariant material properties for all objects in the scene [JS11]_.
+Intrinsic Image Decomposition is referred as the separation of illumination (shading) and reflectance components from an input photograph. Many computer vision algorithms, such as segmentation, recognition, and motion estimation are confounded by illumination effects in the image. The performance of these algorithms may benefit substantially from reliable estimation of illumination-invariant material properties for all objects in the scene [JS11]_.
 
 .. ocv:function:: void intrinsicDecompose(InputArray _src, OutputArray _ref, OutputArray _shade, int window = 3, int no_of_iter = 100, float rho = 1.9f)
 
