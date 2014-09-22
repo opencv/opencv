@@ -30,6 +30,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudafilters/include")
   endif()
 
+  if (HAVE_opencv_xfeatures2d)
+    ocv_include_directories("${OPENCV_MODULE_opencv_xfeatures2d_LOCATION}/include")
+  endif()
+
   if(HAVE_opencv_ocl)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/ocl/include")
   endif()
