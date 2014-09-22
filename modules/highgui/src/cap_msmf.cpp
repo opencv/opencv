@@ -1462,7 +1462,6 @@ void ImageGrabber::stopGrabbing()
 
 HRESULT ImageGrabber::startGrabbing(void)
 {
-    _ComPtr<IMFMediaEvent> pEvent = NULL;
     PROPVARIANT var;
     PropVariantInit(&var);
     HRESULT hr = ig_pSession->SetTopology(0, ig_pTopology);
@@ -1470,6 +1469,7 @@ HRESULT ImageGrabber::startGrabbing(void)
     hr = ig_pSession->Start(&GUID_NULL, &var);
     for(;;)
     {
+        _ComPtr<IMFMediaEvent> pEvent = NULL;
         HRESULT hrStatus = S_OK;
         MediaEventType met;
         if(!ig_pSession) break;
