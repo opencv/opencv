@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010,2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -62,7 +62,7 @@ __kernel void centeredGradientKernel(__global const float* src, int src_col, int
 
 }
 
-inline float bicubicCoeff(float x_)
+float bicubicCoeff(float x_)
 {
 
     float x = fabs(x_);
@@ -156,7 +156,7 @@ __kernel void warpBackwardKernel(__global const float* I0, int I0_step, int I0_c
 
 }
 
-inline float readImage(__global float *image,  int x,  int y,  int rows,  int cols, int elemCntPerRow)
+float readImage(__global float *image,  int x,  int y,  int rows,  int cols, int elemCntPerRow)
 {
     int i0 = clamp(x, 0, cols - 1);
     int j0 = clamp(y, 0, rows - 1);
@@ -284,7 +284,7 @@ __kernel void estimateDualVariablesKernel(__global const float* u1, int u1_col, 
 
 }
 
-inline float divergence(__global const float* v1, __global const float* v2, int y, int x, int v1_step, int v2_step)
+float divergence(__global const float* v1, __global const float* v2, int y, int x, int v1_step, int v2_step)
 {
 
     if (x > 0 && y > 0)

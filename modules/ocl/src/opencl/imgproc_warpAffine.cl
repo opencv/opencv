@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010,2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -70,7 +70,7 @@ typedef float4 F4;
 #define INTER_REMAP_COEF_BITS 15
 #define INTER_REMAP_COEF_SCALE (1 << INTER_REMAP_COEF_BITS)
 
-inline void interpolateCubic( float x, float* coeffs )
+void interpolateCubic( float x, float* coeffs )
 {
     const float A = -0.75f;
 
