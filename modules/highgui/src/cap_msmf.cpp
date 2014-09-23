@@ -1462,7 +1462,6 @@ void ImageGrabber::stopGrabbing()
 
 HRESULT ImageGrabber::startGrabbing(void)
 {
-    _ComPtr<IMFMediaEvent> pEvent = NULL;
     PROPVARIANT var;
     PropVariantInit(&var);
     HRESULT hr = ig_pSession->SetTopology(0, ig_pTopology);
@@ -1470,6 +1469,7 @@ HRESULT ImageGrabber::startGrabbing(void)
     hr = ig_pSession->Start(&GUID_NULL, &var);
     for(;;)
     {
+        _ComPtr<IMFMediaEvent> pEvent = NULL;
         HRESULT hrStatus = S_OK;
         MediaEventType met;
         if(!ig_pSession) break;
@@ -2445,10 +2445,11 @@ int videoDevice::findType(unsigned int size, unsigned int frameRate)
     fmt = vd_CaptureFormats.find(size);
     if( fmt != vd_CaptureFormats.end() )
         FRM = fmt->second;
-    else if (FRM.empty())
-        return -1;
-    else
+    else if(!vd_CaptureFormats.empty())
         FRM = vd_CaptureFormats.rbegin()->second;
+
+    if (FRM.empty())
+        return -1;
 
     UINT64 frameRateMax = 0;  SUBTYPEMap STMMax;
     if(frameRate == 0)
