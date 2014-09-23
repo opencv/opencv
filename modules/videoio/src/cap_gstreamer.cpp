@@ -1220,12 +1220,12 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
     GstEncodingVideoProfile* videoprofile = NULL;
 #endif
 
-    bool done = false;
-    GstElement* item = NULL;
     GstIterator* it = NULL;
-    char* name = NULL;
-    GstElement* splitter;
-    GstElement* combiner;
+    gboolean done = FALSE;
+    GstElement *element = NULL;
+    gchar* name = NULL;
+    GstElement* splitter = NULL;
+    GstElement* combiner = NULL;
 
     // we first try to construct a pipeline from the given string.
     // if that fails, we assume it is an ordinary filename
@@ -1245,10 +1245,6 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
         }
 #else
         it = gst_bin_iterate_sources (GST_BIN(encodebin));
-
-        gboolean done = FALSE;
-        GstElement *element = NULL;
-        gchar* name = NULL;
         GValue value = G_VALUE_INIT;
 
         while (!done) {
@@ -1399,19 +1395,20 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
         }
     }
 
+#if GST_VERSION_MAJOR == 0
     // HACK: remove streamsplitter and streamcombiner from
     // encodebin pipeline to prevent early EOF event handling
     // We always fetch BGR or gray-scale frames, so combiner->spliter
     // endge in graph is useless.
     it = gst_bin_iterate_recurse (GST_BIN(encodebin));
     while (!done) {
-      switch (gst_iterator_next (it, (void**)&item)) {
+      switch (gst_iterator_next (it, (void**)&element)) {
         case GST_ITERATOR_OK:
-          name = gst_element_get_name(item);
+          name = gst_element_get_name(element);
           if (strstr(name, "streamsplitter"))
-            splitter = item;
+            splitter = element;
           else if (strstr(name, "streamcombiner"))
-            combiner = item;
+            combiner = element;
           break;
         case GST_ITERATOR_RESYNC:
           gst_iterator_resync (it);
@@ -1453,6 +1450,7 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
 
         gst_pad_link(sinkPeer, srcPeer);
     }
+#endif
 
     stateret = gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
     if(stateret  == GST_STATE_CHANGE_FAILURE) {
