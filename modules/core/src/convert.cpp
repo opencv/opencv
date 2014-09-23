@@ -1491,6 +1491,7 @@ cvtScale_( const T* src, size_t sstep,
     for( ; size.height--; src += sstep, dst += dstep )
     {
         int x = 0;
+
         #if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
@@ -1604,16 +1605,493 @@ cvtScale_<short, int, float>( const short* src, size_t sstep,
     }
 }
 
+template <typename T, typename DT>
+struct Cvt_SIMD
+{
+    int operator() (const T *, DT *, int) const
+    {
+        return 0;
+    }
+};
+
+#if CV_NEON
+
+// from uchar
+
+template <>
+struct Cvt_SIMD<uchar, schar>
+{
+    int operator() (const uchar * src, schar * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+            vst1_s8(dst + x, vqmovn_s16(vreinterpretq_s16_u16(vmovl_u8(vld1_u8(src + x)))));
+
+        return x;
+    }
+};
+
+
+template <>
+struct Cvt_SIMD<uchar, ushort>
+{
+    int operator() (const uchar * src, ushort * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+            vst1q_u16(dst + x, vmovl_u8(vld1_u8(src + x)));
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<uchar, short>
+{
+    int operator() (const uchar * src, short * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+            vst1q_s16(dst + x, vreinterpretq_s16_u16(vmovl_u8(vld1_u8(src + x))));
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<uchar, int>
+{
+    int operator() (const uchar * src, int * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vmovl_u8(vld1_u8(src + x));
+            vst1q_s32(dst + x, vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src))));
+            vst1q_s32(dst + x + 4, vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src))));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<uchar, float>
+{
+    int operator() (const uchar * src, float * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vmovl_u8(vld1_u8(src + x));
+            vst1q_f32(dst + x, vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src))));
+            vst1q_f32(dst + x + 4, vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src))));
+        }
+
+        return x;
+    }
+};
+
+// from schar
+
+template <>
+struct Cvt_SIMD<schar, uchar>
+{
+    int operator() (const schar * src, uchar * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+            vst1_u8(dst + x, vqmovun_s16(vmovl_s8(vld1_s8(src + x))));
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<schar, short>
+{
+    int operator() (const schar * src, short * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+            vst1q_s16(dst + x, vmovl_s8(vld1_s8(src + x)));
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<schar, int>
+{
+    int operator() (const schar * src, int * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vmovl_s8(vld1_s8(src + x));
+            vst1q_s32(dst + x, vmovl_s16(vget_low_s16(v_src)));
+            vst1q_s32(dst + x + 4, vmovl_s16(vget_high_s16(v_src)));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<schar, float>
+{
+    int operator() (const schar * src, float * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vmovl_s8(vld1_s8(src + x));
+            vst1q_f32(dst + x, vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src))));
+            vst1q_f32(dst + x + 4, vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src))));
+        }
+
+        return x;
+    }
+};
+
+// from ushort
+
+template <>
+struct Cvt_SIMD<ushort, uchar>
+{
+    int operator() (const ushort * src, uchar * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 16; x += 16)
+        {
+            uint16x8_t v_src1 = vld1q_u16(src + x), v_src2 = vld1q_u16(src + x + 8);
+            vst1q_u8(dst + x, vcombine_u8(vqmovn_u16(v_src1), vqmovn_u16(v_src2)));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<ushort, int>
+{
+    int operator() (const ushort * src, int * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vld1q_u16(src + x);
+            vst1q_s32(dst + x, vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src))));
+            vst1q_s32(dst + x + 4, vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src))));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<ushort, float>
+{
+    int operator() (const ushort * src, float * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vld1q_u16(src + x);
+            vst1q_f32(dst + x, vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src))));
+            vst1q_f32(dst + x + 4, vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src))));
+        }
+
+        return x;
+    }
+};
+
+// from short
+
+template <>
+struct Cvt_SIMD<short, uchar>
+{
+    int operator() (const short * src, uchar * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 16; x += 16)
+        {
+            int16x8_t v_src1 = vld1q_s16(src + x), v_src2 = vld1q_s16(src + x + 8);
+            vst1q_u8(dst + x, vcombine_u8(vqmovun_s16(v_src1), vqmovun_s16(v_src2)));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<short, schar>
+{
+    int operator() (const short * src, schar * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 16; x += 16)
+        {
+            int16x8_t v_src1 = vld1q_s16(src + x), v_src2 = vld1q_s16(src + x + 8);
+            vst1q_s8(dst + x, vcombine_s8(vqmovn_s16(v_src1), vqmovn_s16(v_src2)));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<short, ushort>
+{
+    int operator() (const short * src, ushort * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vld1q_s16(src + x);
+            uint16x4_t v_dst1 = vqmovun_s32(vmovl_s16(vget_low_s16(v_src)));
+            uint16x4_t v_dst2 = vqmovun_s32(vmovl_s16(vget_high_s16(v_src)));
+            vst1q_u16(dst + x, vcombine_u16(v_dst1, v_dst2));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<short, int>
+{
+    int operator() (const short * src, int * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vld1q_s16(src + x);
+            vst1q_s32(dst + x, vmovl_s16(vget_low_s16(v_src)));
+            vst1q_s32(dst + x + 4, vmovl_s16(vget_high_s16(v_src)));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<short, float>
+{
+    int operator() (const short * src, float * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vld1q_s16(src + x);
+            vst1q_f32(dst + x, vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src))));
+            vst1q_f32(dst + x + 4, vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src))));
+        }
+
+        return x;
+    }
+};
+
+// from int
+
+template <>
+struct Cvt_SIMD<int, uchar>
+{
+    int operator() (const int * src, uchar * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 16; x += 16)
+        {
+            int32x4_t v_src1 = vld1q_s32(src + x), v_src2 = vld1q_s32(src + x + 4);
+            int32x4_t v_src3 = vld1q_s32(src + x + 8), v_src4 = vld1q_s32(src + x + 12);
+            uint8x8_t v_dst1 = vqmovn_u16(vcombine_u16(vqmovun_s32(v_src1), vqmovun_s32(v_src2)));
+            uint8x8_t v_dst2 = vqmovn_u16(vcombine_u16(vqmovun_s32(v_src3), vqmovun_s32(v_src4)));
+            vst1q_u8(dst + x, vcombine_u8(v_dst1, v_dst2));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<int, schar>
+{
+    int operator() (const int * src, schar * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 16; x += 16)
+        {
+            int32x4_t v_src1 = vld1q_s32(src + x), v_src2 = vld1q_s32(src + x + 4);
+            int32x4_t v_src3 = vld1q_s32(src + x + 8), v_src4 = vld1q_s32(src + x + 12);
+            int8x8_t v_dst1 = vqmovn_s16(vcombine_s16(vqmovn_s32(v_src1), vqmovn_s32(v_src2)));
+            int8x8_t v_dst2 = vqmovn_s16(vcombine_s16(vqmovn_s32(v_src3), vqmovn_s32(v_src4)));
+            vst1q_s8(dst + x, vcombine_s8(v_dst1, v_dst2));
+        }
+
+        return x;
+    }
+};
+
+
+template <>
+struct Cvt_SIMD<int, ushort>
+{
+    int operator() (const int * src, ushort * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int32x4_t v_src1 = vld1q_s32(src + x), v_src2 = vld1q_s32(src + x + 4);
+            vst1q_u16(dst + x, vcombine_u16(vqmovun_s32(v_src1), vqmovun_s32(v_src2)));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<int, short>
+{
+    int operator() (const int * src, short * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int32x4_t v_src1 = vld1q_s32(src + x), v_src2 = vld1q_s32(src + x + 4);
+            vst1q_s16(dst + x, vcombine_s16(vqmovn_s32(v_src1), vqmovn_s32(v_src2)));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<int, float>
+{
+    int operator() (const int * src, float * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 4; x += 4)
+            vst1q_f32(dst + x, vcvtq_f32_s32(vld1q_s32(src + x)));
+
+        return x;
+    }
+};
+
+// from float
+
+template <>
+struct Cvt_SIMD<float, uchar>
+{
+    int operator() (const float * src, uchar * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 16; x += 16)
+        {
+            int32x4_t v_src1 = vcvtq_s32_f32(vld1q_f32(src + x));
+            int32x4_t v_src2 = vcvtq_s32_f32(vld1q_f32(src + x + 4));
+            int32x4_t v_src3 = vcvtq_s32_f32(vld1q_f32(src + x + 8));
+            int32x4_t v_src4 = vcvtq_s32_f32(vld1q_f32(src + x + 12));
+            uint8x8_t v_dst1 = vqmovn_u16(vcombine_u16(vqmovun_s32(v_src1), vqmovun_s32(v_src2)));
+            uint8x8_t v_dst2 = vqmovn_u16(vcombine_u16(vqmovun_s32(v_src3), vqmovun_s32(v_src4)));
+            vst1q_u8(dst + x, vcombine_u8(v_dst1, v_dst2));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<float, schar>
+{
+    int operator() (const float * src, schar * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 16; x += 16)
+        {
+            int32x4_t v_src1 = vcvtq_s32_f32(vld1q_f32(src + x));
+            int32x4_t v_src2 = vcvtq_s32_f32(vld1q_f32(src + x + 4));
+            int32x4_t v_src3 = vcvtq_s32_f32(vld1q_f32(src + x + 8));
+            int32x4_t v_src4 = vcvtq_s32_f32(vld1q_f32(src + x + 12));
+            int8x8_t v_dst1 = vqmovn_s16(vcombine_s16(vqmovn_s32(v_src1), vqmovn_s32(v_src2)));
+            int8x8_t v_dst2 = vqmovn_s16(vcombine_s16(vqmovn_s32(v_src3), vqmovn_s32(v_src4)));
+            vst1q_s8(dst + x, vcombine_s8(v_dst1, v_dst2));
+        }
+
+        return x;
+    }
+};
+
+
+template <>
+struct Cvt_SIMD<float, ushort>
+{
+    int operator() (const float * src, ushort * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int32x4_t v_src1 = vcvtq_s32_f32(vld1q_f32(src + x));
+            int32x4_t v_src2 = vcvtq_s32_f32(vld1q_f32(src + x + 4));
+            vst1q_u16(dst + x, vcombine_u16(vqmovun_s32(v_src1), vqmovun_s32(v_src2)));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<float, int>
+{
+    int operator() (const float * src, int * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 4; x += 4)
+            vst1q_s32(dst + x, vcvtq_s32_f32(vld1q_f32(src + x)));
+
+        return x;
+    }
+};
+
+#endif
+
 template<typename T, typename DT> static void
 cvt_( const T* src, size_t sstep,
       DT* dst, size_t dstep, Size size )
 {
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
+    Cvt_SIMD<T, DT> vop;
 
     for( ; size.height--; src += sstep, dst += dstep )
     {
-        int x = 0;
+        int x = vop(src, dst, size.width);
         #if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
