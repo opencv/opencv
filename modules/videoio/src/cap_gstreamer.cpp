@@ -73,12 +73,13 @@
 #define CV_WARN(message) fprintf(stderr, "warning: %s (%s:%d)\n", message, __FILE__, __LINE__)
 #endif
 
-#if GST_VERSION_MAJOR > 0
-#define COLOR_ELEM "autovideoconvert"
-#else
+#if GST_VERSION_MAJOR == 0
 #define COLOR_ELEM "ffmpegcolorspace"
+#elif FULL_GST_VERSION < VERSION_NUM(1,5,0)
+#define COLOR_ELEM "videoconvert"
+#else
+#define COLOR_ELEM "autovideoconvert"
 #endif
-
 
 void toFraction(double decimal, double &numerator, double &denominator);
 void handleMessage(GstElement * pipeline);
