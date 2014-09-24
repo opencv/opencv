@@ -4113,36 +4113,6 @@ cvSort( const CvArr* _src, CvArr* _dst, CvArr* _idx, int flags )
     }
 }
 
-
-CV_IMPL int
-cvKMeans2( const CvArr* _samples, int cluster_count, CvArr* _labels,
-           CvTermCriteria termcrit, int attempts, CvRNG*,
-           int flags, CvArr* _centers, double* _compactness )
-{
-    cv::Mat data = cv::cvarrToMat(_samples), labels = cv::cvarrToMat(_labels), centers;
-    if( _centers )
-    {
-        centers = cv::cvarrToMat(_centers);
-
-        centers = centers.reshape(1);
-        data = data.reshape(1);
-
-        CV_Assert( !centers.empty() );
-        CV_Assert( centers.rows == cluster_count );
-        CV_Assert( centers.cols == data.cols );
-        CV_Assert( centers.depth() == data.depth() );
-    }
-    CV_Assert( labels.isContinuous() && labels.type() == CV_32S &&
-        (labels.cols == 1 || labels.rows == 1) &&
-        labels.cols + labels.rows - 1 == data.rows );
-
-    double compactness = cv::kmeans(data, cluster_count, labels, termcrit, attempts,
-                                    flags, _centers ? cv::_OutputArray(centers) : cv::_OutputArray() );
-    if( _compactness )
-        *_compactness = compactness;
-    return 1;
-}
-
 ///////////////////////////// n-dimensional matrices ////////////////////////////
 
 namespace cv

@@ -613,6 +613,19 @@ public:
     static Ptr<LogisticRegression> create( const Params& params = Params() );
 };
 
+/*!
+ k-Means flags
+*/
+enum { KMEANS_RANDOM_CENTERS     = 0, // Chooses random centers for k-Means initialization
+       KMEANS_PP_CENTERS         = 2, // Uses k-Means++ algorithm for initialization
+       KMEANS_USE_INITIAL_LABELS = 1  // Uses the user-provided labels for K-Means initialization
+     };
+
+//! clusters the input data using k-Means algorithm
+CV_EXPORTS_W double kmeans( InputArray data, int K, InputOutputArray bestLabels,
+                            TermCriteria criteria, int attempts,
+                            int flags, OutputArray centers = noArray() );
+
 /****************************************************************************************\
 *                           Auxilary functions declarations                              *
 \****************************************************************************************/

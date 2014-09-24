@@ -44,6 +44,7 @@
 #define __OPENCV_FEATURES_2D_HPP__
 
 #include "opencv2/core.hpp"
+#include "opencv2/ml.hpp"
 #include "opencv2/flann/miniflann.hpp"
 
 namespace cv
@@ -982,7 +983,7 @@ class CV_EXPORTS_W BOWKMeansTrainer : public BOWTrainer
 {
 public:
     CV_WRAP BOWKMeansTrainer( int clusterCount, const TermCriteria& termcrit=TermCriteria(),
-                      int attempts=3, int flags=KMEANS_PP_CENTERS );
+                      int attempts=3, int flags=ml::KMEANS_PP_CENTERS );
     virtual ~BOWKMeansTrainer();
 
     // Returns trained vocabulary (i.e. cluster centers).

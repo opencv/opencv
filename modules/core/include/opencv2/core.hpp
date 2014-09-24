@@ -123,14 +123,6 @@ enum { COVAR_SCRAMBLED = 0,
        COVAR_COLS      = 16
      };
 
-/*!
- k-Means flags
-*/
-enum { KMEANS_RANDOM_CENTERS     = 0, // Chooses random centers for k-Means initialization
-       KMEANS_PP_CENTERS         = 2, // Uses k-Means++ algorithm for initialization
-       KMEANS_USE_INITIAL_LABELS = 1  // Uses the user-provided labels for K-Means initialization
-     };
-
 enum { FILLED  = -1,
        LINE_4  = 4,
        LINE_8  = 8,
@@ -488,11 +480,6 @@ CV_EXPORTS_W void mulSpectrums(InputArray a, InputArray b, OutputArray c,
 
 //! computes the minimal vector size vecsize1 >= vecsize so that the dft() of the vector of length vecsize1 can be computed efficiently
 CV_EXPORTS_W int getOptimalDFTSize(int vecsize);
-
-//! clusters the input data using k-Means algorithm
-CV_EXPORTS_W double kmeans( InputArray data, int K, InputOutputArray bestLabels,
-                            TermCriteria criteria, int attempts,
-                            int flags, OutputArray centers = noArray() );
 
 //! returns the thread-local Random number generator
 CV_EXPORTS RNG& theRNG();
