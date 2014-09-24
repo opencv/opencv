@@ -362,7 +362,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
                     }
                 }
 #elif CV_NEON
-                for ( ; j < width - 8; j += 8)
+                for ( ; j <= width - 8; j += 8)
                 {
                     int16x8_t v_dx = vld1q_s16(_dx + j), v_dy = vld1q_s16(_dy + j);
                     vst1q_s32(_norm + j, vaddq_s32(vmovl_s16(vget_low_s16(v_dx)), vmovl_s16(vget_low_s16(v_dy))));
@@ -394,7 +394,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
                     }
                 }
 #elif CV_NEON
-                for ( ; j < width - 8; j += 8)
+                for ( ; j <= width - 8; j += 8)
                 {
                     int16x8_t v_dx = vld1q_s16(_dx + j), v_dy = vld1q_s16(_dy + j);
                     int32x4_t v_dxp = vmovl_s16(vget_low_s16(v_dx)), v_dyp = vmovl_s16(vget_low_s16(v_dy));
