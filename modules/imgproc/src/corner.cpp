@@ -147,16 +147,15 @@ static void calcHarris( const Mat& _cov, Mat& _dst, double k )
             }
         }
     #elif CV_NEON
-        float32x4_t v_k = vdupq_n_f32((float)k));
+        float32x4_t v_k = vdupq_n_f32((float)k);
 
         for( ; j <= size.width - 4; j += 4 )
         {
             float32x4x3_t v_src = vld3q_f32(cov + j + 3);
             float32x4_t v_a = v_src.val[0], v_b = v_src.val[1], v_c = v_src.val[2];
-            float32x4_t v_ac_bb = vsubq_f32(vmulq_f32(v_a, v_c), vmulq_f32(v_b, v_b));
+            float32x4_t v_ac_bb = vmlsq_f32(vmulq_f32(v_a, v_c), v_b, v_b);
             float32x4_t v_ac = vaddq_f32(v_a, v_c);
-            float32x4_t v_prod = vmulq_f32(v_k, vmulq_f32(v_ac, v_ac));
-            vst1q_f32(dst + j, vsubq_f32(v_ac_bb, v_prod));
+            vst1q_f32(dst + j, vmlsq_f32(v_ac_bb, v_k, vmulq_f32(v_ac, v_ac)));
         }
     #endif
 
@@ -619,10 +618,11 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
     if( src.depth() == CV_8U )
         factor *= 255;
     factor = 1./(factor * factor * factor);
+    float factor_f = (float)factor;
 
 #if CV_SSE2
     volatile bool haveSSE2 = cv::checkHardwareSupport(CV_CPU_SSE2);
-    __m128 v_factor = _mm_set1_ps((float)factor), v_m2 = _mm_set1_ps(-2.0f);
+    __m128 v_factor = _mm_set1_ps(factor_f), v_m2 = _mm_set1_ps(-2.0f);
 #endif
 
     Size size = src.size();
@@ -657,10 +657,10 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
         for( ; j <= size.width - 4; j += 4 )
         {
             float32x4_t v_dx = vld1q_f32(dxdata + j), v_dy = vld1q_f32(dydata + j);
-            float32x4_t v_s1 = vmulq_f32(v_dx, vmulq_f32(v_dx, vld1q_f32(d2ydata + j)));
-            float32x4_t v_s2 = vmulq_f32(v_dy, vmulq_f32(v_dy, vld1q_f32(d2xdata + j)));
-            float32x4_t v_s3 = vmulq_f32(v_dx, vmulq_f32(v_dy, vld1q_f32(dxydata + j)));
-            vst1q_f32(dstdata + j, vaddq_f32(vaddq_f32(v_s1, v_s2), vmulq_n_f32(v_s3, -2.0f)));
+            float32x4_t v_s = vmulq_f32(v_dx, vmulq_f32(v_dx, vld1q_f32(d2ydata + j)));
+            v_s = vmlaq_f32(v_s, vld1q_f32(d2xdata + j), vmulq_f32(v_dy, v_dy));
+            v_s = vmlaq_f32(v_s, vld1q_f32(dxydata + j), vmulq_n_f32(vmulq_f32(v_dy, v_dx), -2));
+            vst1q_f32(dstdata + j, vmulq_n_f32(v_s, factor_f));
         }
 #endif
 

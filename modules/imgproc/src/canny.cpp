@@ -365,8 +365,10 @@ void cv::Canny( InputArray _src, OutputArray _dst,
                 for ( ; j <= width - 8; j += 8)
                 {
                     int16x8_t v_dx = vld1q_s16(_dx + j), v_dy = vld1q_s16(_dy + j);
-                    vst1q_s32(_norm + j, vaddq_s32(vmovl_s16(vget_low_s16(v_dx)), vmovl_s16(vget_low_s16(v_dy))));
-                    vst1q_s32(_norm + j + 4, vaddq_s32(vmovl_s16(vget_high_s16(v_dx)), vmovl_s16(vget_high_s16(v_dy))));
+                    vst1q_s32(_norm + j, vaddq_s32(vabsq_s32(vmovl_s16(vget_low_s16(v_dx))),
+                                                   vabsq_s32(vmovl_s16(vget_low_s16(v_dy)))));
+                    vst1q_s32(_norm + j + 4, vaddq_s32(vabsq_s32(vmovl_s16(vget_high_s16(v_dx))),
+                                                       vabsq_s32(vmovl_s16(vget_high_s16(v_dy)))));
                 }
 #endif
                 for ( ; j < width; ++j)
@@ -397,13 +399,13 @@ void cv::Canny( InputArray _src, OutputArray _dst,
                 for ( ; j <= width - 8; j += 8)
                 {
                     int16x8_t v_dx = vld1q_s16(_dx + j), v_dy = vld1q_s16(_dy + j);
-                    int32x4_t v_dxp = vmovl_s16(vget_low_s16(v_dx)), v_dyp = vmovl_s16(vget_low_s16(v_dy));
-                    int32x4_t v_dst = vaddq_s32(vmulq_s32(v_dxp, v_dxp), vmulq_s32(v_dyp, v_dyp));
+                    int16x4_t v_dxp = vget_low_s16(v_dx), v_dyp = vget_low_s16(v_dy);
+                    int32x4_t v_dst = vmlal_s16(vmull_s16(v_dxp, v_dxp), v_dyp, v_dyp);
                     vst1q_s32(_norm + j, v_dst);
 
-                    v_dxp = vmovl_s16(vget_high_s16(v_dx)), v_dyp = vmovl_s16(vget_high_s16(v_dy));
-                    v_dst = vaddq_s32(vmulq_s32(v_dxp, v_dxp), vmulq_s32(v_dyp, v_dyp));
-                    vst1q_s32(_norm + j, v_dst);
+                    v_dxp = vget_high_s16(v_dx), v_dyp = vget_high_s16(v_dy);
+                    v_dst = vmlal_s16(vmull_s16(v_dxp, v_dxp), v_dyp, v_dyp);
+                    vst1q_s32(_norm + j + 4, v_dst);
                 }
 #endif
                 for ( ; j < width; ++j)

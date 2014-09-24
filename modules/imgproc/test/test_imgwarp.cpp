@@ -1545,4 +1545,52 @@ TEST(Imgproc_InitUndistortMap, accuracy) { CV_UndistortMapTest test; test.safe_r
 TEST(Imgproc_GetRectSubPix, accuracy) { CV_GetRectSubPixTest test; test.safe_run(); }
 TEST(Imgproc_GetQuadSubPix, accuracy) { CV_GetQuadSubPixTest test; test.safe_run(); }
 
+//////////////////////////////////////////////////////////////////////////
+
+template <typename T, typename WT>
+void resizeArea(const cv::Mat & src, cv::Mat & dst)
+{
+    int cn = src.channels();
+
+    for (int y = 0; y < dst.rows; ++y)
+    {
+        const T * sptr0 = src.ptr<T>(y << 1);
+        const T * sptr1 = src.ptr<T>((y << 1) + 1);
+        T * dptr = dst.ptr<T>(y);
+
+        for (int x = 0; x < dst.cols * cn; x += cn)
+        {
+            int x1 = x << 1;
+
+            for (int c = 0; c < cn; ++c)
+            {
+                WT sum = WT(sptr0[x1 + c]) + WT(sptr0[x1 + c + cn]);
+                sum += WT(sptr1[x1 + c]) + WT(sptr1[x1 + c + cn]) + (WT)(2);
+
+                dptr[x + c] = cv::saturate_cast<T>(sum >> 2);
+            }
+        }
+    }
+}
+
+TEST(Resize, Area_half)
+{
+    int types[] = { CV_8UC1, CV_8UC4 };
+
+    for (int i = 0, size = sizeof(types) / sizeof(types[0]); i < size; ++i)
+    {
+        int type = types[i];
+        cv::Mat src(100, 100, type), dst_actual(50, 50, type), dst_reference(50, 50, type);
+
+        if (CV_MAT_DEPTH(type) == CV_8U)
+            resizeArea<uchar, ushort>(src, dst_reference);
+        else
+            CV_Assert(0);
+
+        cv::resize(src, dst_actual, dst_actual.size(), 0, 0, cv::INTER_AREA);
+
+        ASSERT_EQ(0, cvtest::norm(dst_reference, dst_actual, cv::NORM_INF));
+    }
+}
+
 /* End of file. */
