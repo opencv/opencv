@@ -10,6 +10,7 @@ import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.core.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
+import org.opencv.imgproc.Imgproc;
 
 public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
 

@@ -615,8 +615,14 @@ enum { FLIP_COLS = 1 << 0, FLIP_ROWS = 1 << 1, FLIP_BOTH = FLIP_ROWS | FLIP_COLS
 static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 {
     CV_Assert(flipCode >= -1 && flipCode <= 1);
+
+    const ocl::Device & dev = ocl::Device::getDefault();
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
             flipType, kercn = std::min(ocl::predictOptimalVectorWidth(_src, _dst), 4);
+
+    bool doubleSupport = dev.doubleFPConfig() > 0;
+    if (!doubleSupport && depth == CV_64F)
+        kercn = cn;
 
     if (cn > 4)
         return false;
@@ -629,14 +635,13 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     else
         kernelName = "arithm_flip_rows_cols", flipType = FLIP_BOTH;
 
-    ocl::Device dev = ocl::Device::getDefault();
     int pxPerWIy = (dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU)) ? 4 : 1;
     kercn = (cn!=3 || flipType == FLIP_ROWS) ? std::max(kercn, cn) : cn;
 
     ocl::Kernel k(kernelName, ocl::core::flip_oclsrc,
         format( "-D T=%s -D T1=%s -D cn=%d -D PIX_PER_WI_Y=%d -D kercn=%d",
-                ocl::memopTypeToStr(CV_MAKE_TYPE(depth, kercn)),
-                ocl::memopTypeToStr(depth), cn, pxPerWIy, kercn));
+                kercn != cn ? ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)) : ocl::vecopTypeToStr(CV_MAKE_TYPE(depth, kercn)),
+                kercn != cn ? ocl::typeToStr(depth) : ocl::vecopTypeToStr(depth), cn, pxPerWIy, kercn));
     if (k.empty())
         return false;
 

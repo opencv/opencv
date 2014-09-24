@@ -580,7 +580,7 @@ Finds an object pose from 3D-2D point correspondences.
 
     :param tvec: Output translation vector.
 
-    :param useExtrinsicGuess: Parameter used for ITERATIVE. If true (1), the function uses the provided  ``rvec``  and  ``tvec``  values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
+    :param useExtrinsicGuess: Parameter used for SOLVEPNP_ITERATIVE. If true (1), the function uses the provided  ``rvec``  and  ``tvec``  values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
 
     :param flags: Method for solving a PnP problem:
 
@@ -615,7 +615,7 @@ Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
 
     :param tvec: Output translation vector.
 
-    :param useExtrinsicGuess: Parameter used for ITERATIVE. If true (1), the function uses the provided  ``rvec``  and  ``tvec`` values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
+    :param useExtrinsicGuess: Parameter used for SOLVEPNP_ITERATIVE. If true (1), the function uses the provided  ``rvec``  and  ``tvec`` values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
 
     :param iterationsCount: Number of iterations.
 
@@ -740,7 +740,7 @@ where
 :math:`E` is an essential matrix,
 :math:`p_1` and
 :math:`p_2` are corresponding points in the first and the second images, respectively.
-The result of this function may be passed further to ``decomposeEssentialMat()`` or ``recoverPose()`` to recover the relative pose between cameras.
+The result of this function may be passed further to :ocv:func:`decomposeEssentialMat` or :ocv:func:`recoverPose` to recover the relative pose between cameras.
 
 decomposeEssentialMat
 -------------------------
@@ -812,11 +812,11 @@ Returns the number of inliers which pass the check.
                  Only these inliers will be used to recover pose.
                  In the output mask only inliers which pass the cheirality check.
 
-This function decomposes an essential matrix using ``decomposeEssentialMat()`` and then verifies possible pose hypotheses by doing cheirality check.
-The cheirality check basically means that the triangulated 3D points should have positive depth. Some details can be found from [Nister03]_.
+This function decomposes an essential matrix using :ocv:func:`decomposeEssentialMat` and then verifies possible pose hypotheses by doing cheirality check.
+The cheirality check basically means that the triangulated 3D points should have positive depth. Some details can be found in [Nister03]_.
 
-This function can be used to process output ``E`` and ``mask`` from ``findEssentialMat()``.
-In this scenario, ``points1`` and ``points2`` are the same input for ``findEssentialMat()``. ::
+This function can be used to process output ``E`` and ``mask`` from :ocv:func:`findEssentialMat`.
+In this scenario, ``points1`` and ``points2`` are the same input for :ocv:func:`findEssentialMat`. ::
 
     // Example. Estimation of fundamental matrix using the RANSAC algorithm
     int point_count = 100;

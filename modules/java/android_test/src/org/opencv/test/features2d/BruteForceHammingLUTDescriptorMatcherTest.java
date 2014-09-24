@@ -16,6 +16,7 @@ import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.features2d.FeatureDetector;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
+import org.opencv.imgproc.Imgproc;
 
 public class BruteForceHammingLUTDescriptorMatcherTest extends OpenCVTestCase {
 

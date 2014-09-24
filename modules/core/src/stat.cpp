@@ -63,14 +63,181 @@ template<typename T> static inline Scalar rawToScalar(const T& v)
 *                                        sum                                             *
 \****************************************************************************************/
 
+template <typename T, typename ST>
+struct Sum_SIMD
+{
+    int operator () (const T *, const uchar *, ST *, int, int) const
+    {
+        return 0;
+    }
+};
+
+#if CV_NEON
+
+template <>
+struct Sum_SIMD<uchar, int>
+{
+    int operator () (const uchar * src0, const uchar * mask, int * dst, int len, int cn) const
+    {
+        if (mask || (cn != 1 && cn != 2 && cn != 4))
+            return 0;
+
+        int x = 0;
+        uint32x4_t v_sum = vdupq_n_u32(0u);
+
+        for ( ; x <= len - 16; x += 16)
+        {
+            uint8x16_t v_src = vld1q_u8(src0 + x);
+            uint16x8_t v_half = vmovl_u8(vget_low_u8(v_src));
+
+            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_low_u16(v_half)));
+            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_high_u16(v_half)));
+
+            v_half = vmovl_u8(vget_high_u8(v_src));
+            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_low_u16(v_half)));
+            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_high_u16(v_half)));
+        }
+
+        for ( ; x <= len - 8; x += 8)
+        {
+            uint16x8_t v_src = vmovl_u8(vld1_u8(src0 + x));
+
+            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_low_u16(v_src)));
+            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_high_u16(v_src)));
+        }
+
+        unsigned int CV_DECL_ALIGNED(16) ar[4];
+        vst1q_u32(ar, v_sum);
+
+        for (int i = 0; i < 4; i += cn)
+            for (int j = 0; j < cn; ++j)
+                dst[j] += ar[j + i];
+
+        return x / cn;
+    }
+};
+
+template <>
+struct Sum_SIMD<schar, int>
+{
+    int operator () (const schar * src0, const uchar * mask, int * dst, int len, int cn) const
+    {
+        if (mask || (cn != 1 && cn != 2 && cn != 4))
+            return 0;
+
+        int x = 0;
+        int32x4_t v_sum = vdupq_n_s32(0);
+
+        for ( ; x <= len - 16; x += 16)
+        {
+            int8x16_t v_src = vld1q_s8(src0 + x);
+            int16x8_t v_half = vmovl_s8(vget_low_s8(v_src));
+
+            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_low_s16(v_half)));
+            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_high_s16(v_half)));
+
+            v_half = vmovl_s8(vget_high_s8(v_src));
+            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_low_s16(v_half)));
+            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_high_s16(v_half)));
+        }
+
+        for ( ; x <= len - 8; x += 8)
+        {
+            int16x8_t v_src = vmovl_s8(vld1_s8(src0 + x));
+
+            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_low_s16(v_src)));
+            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_high_s16(v_src)));
+        }
+
+        int CV_DECL_ALIGNED(16) ar[4];
+        vst1q_s32(ar, v_sum);
+
+        for (int i = 0; i < 4; i += cn)
+            for (int j = 0; j < cn; ++j)
+                dst[j] += ar[j + i];
+
+        return x / cn;
+    }
+};
+
+template <>
+struct Sum_SIMD<ushort, int>
+{
+    int operator () (const ushort * src0, const uchar * mask, int * dst, int len, int cn) const
+    {
+        if (mask || (cn != 1 && cn != 2 && cn != 4))
+            return 0;
+
+        int x = 0;
+        uint32x4_t v_sum = vdupq_n_u32(0u);
+
+        for ( ; x <= len - 8; x += 8)
+        {
+            uint16x8_t v_src = vld1q_u16(src0 + x);
+
+            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_low_u16(v_src)));
+            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_high_u16(v_src)));
+        }
+
+        for ( ; x <= len - 4; x += 4)
+            v_sum = vaddq_u32(v_sum, vmovl_u16(vld1_u16(src0 + x)));
+      
+        unsigned int CV_DECL_ALIGNED(16) ar[4];
+        vst1q_u32(ar, v_sum);
+
+        for (int i = 0; i < 4; i += cn)
+            for (int j = 0; j < cn; ++j)
+                dst[j] += ar[j + i];
+
+        return x / cn;
+    }
+};
+
+template <>
+struct Sum_SIMD<short, int>
+{
+    int operator () (const short * src0, const uchar * mask, int * dst, int len, int cn) const
+    {
+        if (mask || (cn != 1 && cn != 2 && cn != 4))
+            return 0;
+
+        int x = 0;
+        int32x4_t v_sum = vdupq_n_s32(0u);
+
+        for ( ; x <= len - 8; x += 8)
+        {
+            int16x8_t v_src = vld1q_s16(src0 + x);
+
+            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_low_s16(v_src)));
+            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_high_s16(v_src)));
+        }
+
+        for ( ; x <= len - 4; x += 4)
+            v_sum = vaddq_s32(v_sum, vmovl_s16(vld1_s16(src0 + x)));
+      
+        int CV_DECL_ALIGNED(16) ar[4];
+        vst1q_s32(ar, v_sum);
+
+        for (int i = 0; i < 4; i += cn)
+            for (int j = 0; j < cn; ++j)
+                dst[j] += ar[j + i];
+
+        return x / cn;
+    }
+};
+
+#endif
+
 template<typename T, typename ST>
 static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
 {
     const T* src = src0;
     if( !mask )
     {
-        int i=0;
-        int k = cn % 4;
+        Sum_SIMD<T, ST> vop;
+        int i = vop(src0, mask, dst, len, cn), k = cn % 4;
+        src += i * cn;
+
         if( k == 1 )
         {
             ST s0 = dst[0];
@@ -86,7 +253,7 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
         else if( k == 2 )
         {
             ST s0 = dst[0], s1 = dst[1];
-            for( i = 0; i < len; i++, src += cn )
+            for( ; i < len; i++, src += cn )
             {
                 s0 += src[0];
                 s1 += src[1];
@@ -97,7 +264,7 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
         else if( k == 3 )
         {
             ST s0 = dst[0], s1 = dst[1], s2 = dst[2];
-            for( i = 0; i < len; i++, src += cn )
+            for( ; i < len; i++, src += cn )
             {
                 s0 += src[0];
                 s1 += src[1];
@@ -110,9 +277,9 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
 
         for( ; k < cn; k += 4 )
         {
-            src = src0 + k;
+            src = src0 + i*cn + k;
             ST s0 = dst[k], s1 = dst[k+1], s2 = dst[k+2], s3 = dst[k+3];
-            for( i = 0; i < len; i++, src += cn )
+            for( ; i < len; i++, src += cn )
             {
                 s0 += src[0]; s1 += src[1];
                 s2 += src[2]; s3 += src[3];
@@ -1446,7 +1613,8 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
             kercn = haveMask ? cn : std::min(4, ocl::predictOptimalVectorWidth(_src, _src2));
 
-    if (haveMask && dev.isAMD())
+    // disabled following modes since it occasionally fails on AMD devices (e.g. A10-6800K, sep. 2014)
+    if ((haveMask || type == CV_32FC1) && dev.isAMD())
         return false;
 
     CV_Assert( (cn == 1 && (!haveMask || _mask.type() == CV_8U)) ||
@@ -2621,13 +2789,17 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 ippiMaskNormRelFuncC1 ippFuncC1 =
                     normType == NORM_INF ?
                     (type == CV_8UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_Inf_8u_C1MR :
+#ifndef __APPLE__
                     type == CV_8SC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_Inf_8s_C1MR :
+#endif
                     type == CV_16UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_Inf_16u_C1MR :
                     type == CV_32FC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_Inf_32f_C1MR :
                     0) :
                     normType == NORM_L1 ?
                     (type == CV_8UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L1_8u_C1MR :
+#ifndef __APPLE__
                     type == CV_8SC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L1_8s_C1MR :
+#endif
                     type == CV_16UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L1_16u_C1MR :
                     type == CV_32FC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L1_32f_C1MR :
                     0) :
@@ -2723,7 +2895,9 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 0) :
                 normType == NORM_L1 ?
                 (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8u_C1MR :
-                //type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8s_C1MR :
+#ifndef __APPLE__
+                type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8s_C1MR :
+#endif
                 type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_32f_C1MR :
                 0) :
@@ -2740,7 +2914,8 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                     return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
                 setIppErrorStatus();
             }
-            /*typedef IppStatus (CV_STDCALL* ippiMaskNormDiffFuncC3)(const void *, int, const void *, int, const void *, int, IppiSize, int, Ipp64f *);
+#ifndef __APPLE__
+            typedef IppStatus (CV_STDCALL* ippiMaskNormDiffFuncC3)(const void *, int, const void *, int, const void *, int, IppiSize, int, Ipp64f *);
             ippiMaskNormDiffFuncC3 ippFuncC3 =
                 normType == NORM_INF ?
                 (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_8u_C3CMR :
@@ -2775,7 +2950,8 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                     return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
                 }
                 setIppErrorStatus();
-            }*/
+            }
+#endif
         }
         else
         {

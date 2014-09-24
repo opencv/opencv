@@ -51,8 +51,8 @@ bool cv::initAll()
 #ifdef HAVE_OPENCV_FEATURES2D
     && initModule_features2d()
 #endif
-#ifdef HAVE_OPENCV_NONFREE
-    && initModule_nonfree()
+#ifdef HAVE_OPENCV_XFEATURES2D
+    && xfeatures2d::initModule_xfeatures2d()
 #endif
     ;
 }

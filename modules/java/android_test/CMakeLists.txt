@@ -1,4 +1,10 @@
-ocv_check_dependencies(opencv_java ${OPENCV_MODULE_opencv_java_OPT_DEPS} ${OPENCV_MODULE_opencv_java_REQ_DEPS})
+# list of modules covered with tests
+set(tested_modules opencv_calib3d opencv_core opencv_features2d opencv_highgui opencv_imgproc opencv_objdetect opencv_photo opencv_video)
+
+# opencv_ml is broken
+#list(APPEND tested_modules opencv_ml)
+
+ocv_check_dependencies(opencv_java ${tested_modules})
 
 if(NOT OCV_DEPENDENCIES_FOUND OR NOT ANT_EXECUTABLE OR NOT ANDROID_EXECUTABLE OR NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
   return()
@@ -11,6 +17,8 @@ set(opencv_test_java_bin_dir "${CMAKE_CURRENT_BINARY_DIR}/.build")
 # get project sources
 file(GLOB_RECURSE opencv_test_java_files RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/res/*" "${CMAKE_CURRENT_SOURCE_DIR}/src/*")
 ocv_list_filterout(opencv_test_java_files ".svn")
+# opencv_ml is broken
+ocv_list_filterout(opencv_test_java_files "/ml/")
 
 # copy sources out from the build tree
 set(opencv_test_java_file_deps "")

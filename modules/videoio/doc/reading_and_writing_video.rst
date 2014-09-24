@@ -300,7 +300,7 @@ VideoWriter constructors
 
     :param filename: Name of the output video file.
 
-    :param fourcc: 4-character code of codec used to compress the frames. For example, ``CV_FOURCC('P','I','M','1')``  is a MPEG-1 codec, ``CV_FOURCC('M','J','P','G')``  is a motion-jpeg codec etc. List of codes can be obtained at `Video Codecs by FOURCC <http://www.fourcc.org/codecs.php>`_ page.
+    :param fourcc: 4-character code of codec used to compress the frames. For example, ``VideoWriter::fourcc('P','I','M','1')``  is a MPEG-1 codec, ``VideoWriter::fourcc('M','J','P','G')``  is a motion-jpeg codec etc. List of codes can be obtained at `Video Codecs by FOURCC <http://www.fourcc.org/codecs.php>`_ page.
 
     :param fps: Framerate of the created video stream.
 
@@ -358,3 +358,14 @@ Writes the next video frame
     :param image: The written frame
 
 The functions/methods write the specified image to video file. It must have the same size as has been specified when opening the video writer.
+
+
+VideoWriter::fourcc
+-------------------
+Concatenates 4 chars to a fourcc code
+
+.. ocv:function:: static int VideoWriter::fourcc(char c1, char c2, char c3, char c4)
+
+.. ocv:pyfunction:: cv2.VideoWriter_fourcc(c1, c2, c3, c4) -> retval
+
+This static method constructs the fourcc code of the codec to be used in the constructor :ocv:func:`VideoWriter::VideoWriter` or :ocv:func:`VideoWriter::open`.

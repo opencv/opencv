@@ -6,13 +6,14 @@
 
 #include <iostream>
 #include <iomanip>
-#include "opencv2/contrib/contrib.hpp"
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/cuda.hpp"
 #include "opencv2/cudaimgproc.hpp"
 #include "opencv2/cudawarping.hpp"
+
+#include "tick_meter.hpp"
 
 using namespace std;
 using namespace cv;

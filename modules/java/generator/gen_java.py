@@ -127,7 +127,6 @@ missing_consts = \
         (
             ('SVD_MODIFY_A', 1), ('SVD_NO_UV', 2), ('SVD_FULL_UV', 4),
             ('FILLED', -1),
-            ('LINE_AA', 16), ('LINE_8', 8), ('LINE_4', 4),
             ('REDUCE_SUM', 0), ('REDUCE_AVG', 1), ('REDUCE_MAX', 2), ('REDUCE_MIN', 3),
         ) #public
     }, # Core
@@ -142,7 +141,11 @@ missing_consts = \
             ('IPL_BORDER_WRAP',        3 ),
             ('IPL_BORDER_REFLECT_101', 4 ),
             ('IPL_BORDER_TRANSPARENT', 5 ),
-        ) # private
+        ), # private
+        'public' :
+        (
+            ('LINE_AA', 16), ('LINE_8', 8), ('LINE_4', 4),
+        ) #public
     }, # Imgproc
 
     "Calib3d":
@@ -445,9 +448,9 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
             'cpp_code' :
     """
     // C++: Size getTextSize(const String& text, int fontFace, double fontScale, int thickness, int* baseLine);
-    JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize (JNIEnv*, jclass, jstring, jint, jdouble, jint, jintArray);
+    JNIEXPORT jdoubleArray JNICALL Java_org_opencv_imgproc_Imgproc_n_1getTextSize (JNIEnv*, jclass, jstring, jint, jdouble, jint, jintArray);
 
-    JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
+    JNIEXPORT jdoubleArray JNICALL Java_org_opencv_imgproc_Imgproc_n_1getTextSize
     (JNIEnv* env, jclass, jstring text, jint fontFace, jdouble fontScale, jint thickness, jintArray baseLine)
     {
     try {
@@ -484,13 +487,13 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
         return result;
 
     } catch(const cv::Exception& e) {
-        LOGD("Core::n_1getTextSize() catched cv::Exception: %s", e.what());
+        LOGD("Imgproc::n_1getTextSize() catched cv::Exception: %s", e.what());
         jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return NULL;
     } catch (...) {
-        LOGD("Core::n_1getTextSize() catched unknown exception (...)");
+        LOGD("Imgproc::n_1getTextSize() catched unknown exception (...)");
         jclass je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, "Unknown exception in JNI code {core::getTextSize()}");
         return NULL;
@@ -879,6 +882,11 @@ public class %(jc)s {
         self.add_class_code_stream(name, classinfo.base)
         if classinfo.base:
             self.get_imports(name, classinfo.base)
+            type_dict["Ptr_"+name] = \
+                { "j_type" : name,
+                  "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+                  "jni_name" : "Ptr<"+name+">(("+name+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
+                  "suffix" : "J" }
 
 
     def add_const(self, decl): # [ "const cname", val, [], [] ]
@@ -1253,6 +1261,9 @@ extern "C" {
                     j_prologue.append( j_type + ' retVal = new Array' + j_type+'();')
                     self.classes[fi.classname or self.Module].imports.add('java.util.ArrayList')
                     j_epilogue.append('Converters.Mat_to_' + ret_type + '(retValMat, retVal);')
+            elif ret_type.startswith("Ptr_"):
+                ret_val = type_dict[fi.ctype]["j_type"] + " retVal = new " + type_dict[ret_type]["j_type"] + "("
+                tail = ")"
             elif ret_type == "void":
                 ret_val = ""
                 ret = "return;"
@@ -1325,6 +1336,9 @@ extern "C" {
                 default = 'return env->NewStringUTF("");'
             elif fi.ctype in self.classes: # wrapped class:
                 ret = "return (jlong) new %s(_retval_);" % fi.ctype
+            elif fi.ctype.startswith('Ptr_'):
+                c_prologue.append("typedef Ptr<%s> %s;" % (fi.ctype[4:], fi.ctype))
+                ret = "return (jlong)(new %(ctype)s(_retval_));" % { 'ctype':fi.ctype }
             elif ret_type in self.classes: # pointer to wrapped class:
                 ret = "return (jlong) _retval_;"
             elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
@@ -1355,10 +1369,10 @@ extern "C" {
                 elif fi.static:
                     cvname = "%s::%s" % (fi.classname, name)
                 else:
-                    cvname = "me->" + name
+                    cvname = ("me->" if  not self.isSmartClass(fi.classname) else "(*me)->") + name
                     c_prologue.append(\
                         "%(cls)s* me = (%(cls)s*) self; //TODO: check for NULL" \
-                            % { "cls" : fi.classname} \
+                            % { "cls" : self.smartWrap(fi.classname)} \
                     )
             cvargs = []
             for a in args:
@@ -1511,8 +1525,22 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
     delete (%(cls)s*) self;
 }
 
-""" % {"module" : module, "cls" : name, "j_cls" : ci.jname.replace('_', '_1')}
+""" % {"module" : module, "cls" : self.smartWrap(name), "j_cls" : ci.jname.replace('_', '_1')}
             )
+
+    def isSmartClass(self, classname):
+        '''
+        Check if class stores Ptr<T>* instead of T* in nativeObj field
+        '''
+        return classname in self.classes and self.classes[classname].base
+
+    def smartWrap(self, classname):
+        '''
+        Wraps class name with Ptr<> if needed
+        '''
+        if self.isSmartClass(classname):
+            return "Ptr<" + classname + ">"
+        return classname
 
 
 if __name__ == "__main__":

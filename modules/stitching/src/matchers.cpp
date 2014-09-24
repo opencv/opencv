@@ -46,10 +46,10 @@ using namespace cv;
 using namespace cv::detail;
 using namespace cv::cuda;
 
-#ifdef HAVE_OPENCV_NONFREE
-#include "opencv2/nonfree.hpp"
+#ifdef HAVE_OPENCV_XFEATURES2D
+#include "opencv2/xfeatures2d.hpp"
 
-static bool makeUseOfNonfree = initModule_nonfree();
+static bool makeUseOfXfeatures2d = xfeatures2d::initModule_xfeatures2d();
 #endif
 
 namespace {
@@ -443,7 +443,7 @@ void OrbFeaturesFinder::find(InputArray image, ImageFeatures &features)
     }
 }
 
-#ifdef HAVE_OPENCV_NONFREE
+#ifdef HAVE_OPENCV_XFEATURES2D
 SurfFeaturesFinderGpu::SurfFeaturesFinderGpu(double hess_thresh, int num_octaves, int num_layers,
                                              int num_octaves_descr, int num_layers_descr)
 {
