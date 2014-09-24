@@ -1842,7 +1842,11 @@ static const int HersheyComplex[] = {
 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2223, 2084,
 2224, 2247, 587, 2249, 2101, 2102, 2103, 2104, 2105, 2106, 2107, 2108, 2109, 2110, 2111,
 2112, 2113, 2114, 2115, 2116, 2117, 2118, 2119, 2120, 2121, 2122, 2123, 2124, 2125, 2126,
-2225, 2229, 2226, 2246 };
+2225, 2229, 2226, 2246, 2801, 2802, 2803, 2804, 2805, 2806, 2807, 2808, 2809, 2810, 2811,
+2812, 2813, 2814, 2815, 2816, 2817, 2818, 2819, 2820, 2821, 2822, 2823, 2824, 2825, 2826,
+2827, 2828, 2829, 2830, 2831, 2832, 2901, 2902, 2903, 2904, 2905, 2906, 2907, 2908, 2909,
+2910, 2911, 2912, 2913, 2914, 2915, 2916, 2917, 2918, 2919, 2920, 2921, 2922, 2923, 2924,
+2925, 2926, 2927, 2928, 2929, 2930, 2931, 2932};
 
 static const int HersheyComplexItalic[] = {
 (9 + 12*16) + FONT_ITALIC_ALPHA + FONT_ITALIC_DIGIT + FONT_ITALIC_PUNCT +
@@ -1960,12 +1964,44 @@ void putText( Mat& img, const string& text, Point org,
     pts.reserve(1 << 10);
     const char **faces = cv::g_HersheyGlyphs;
 
+    int rightBoundary = fontFace == FONT_HERSHEY_COMPLEX ? 191 : 127;
+
     for( int i = 0; text[i] != '\0'; i++ )
     {
         int c = (uchar)text[i];
         Point p;
 
-        if( c >= 127 || c < ' ' )
+
+        if(c >= 0b10000000)
+        {
+            if(c >= 0b11000000 && c <= 0b11011111) //2 bytes utf
+            {
+                if(c & 1)
+                    c = (uchar)text[++i] + 47;
+                else
+                    c = (uchar)text[++i] - 17;
+            }
+            else
+            {
+                if(c >= 0b11100000) //3 bytes utf
+                    i++;
+
+                if(c >= 0b11110000) //4 bytes utf
+                    i++;
+
+                if(c >= 0b11111000) //5 bytes utf
+                    i++;
+
+                if(c >= 0b11111100) //6 bytes utf
+                    i++;
+
+                i++;
+                c = '?';
+
+            }
+        }
+
+        if(c >= rightBoundary || c < ' ')
             c = '?';
 
         const char* ptr = faces[ascii[(c-' ')+1]];
