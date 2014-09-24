@@ -146,6 +146,18 @@ static void calcHarris( const Mat& _cov, Mat& _dst, double k )
                 _mm_storeu_ps(dst + j, a);
             }
         }
+    #elif CV_NEON
+        float32x4_t v_k = vdupq_n_f32((float)k));
+
+        for( ; j <= size.width - 4; j += 4 )
+        {
+            float32x4x3_t v_src = vld3q_f32(cov + j + 3);
+            float32x4_t v_a = v_src.val[0], v_b = v_src.val[1], v_c = v_src.val[2];
+            float32x4_t v_ac_bb = vsubq_f32(vmulq_f32(v_a, v_c), vmulq_f32(v_b, v_b));
+            float32x4_t v_ac = vaddq_f32(v_a, v_c);
+            float32x4_t v_prod = vmulq_f32(v_k, vmulq_f32(v_ac, v_ac));
+            vst1q_f32(dst + j, vsubq_f32(v_ac_bb, v_prod));
+        }
     #endif
 
         for( ; j < size.width; j++ )
@@ -640,6 +652,15 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
                 v_s1 = _mm_mul_ps(v_factor, _mm_add_ps(v_s1, _mm_add_ps(v_s2, _mm_mul_ps(v_s3, v_m2))));
                 _mm_storeu_ps(dstdata + j, v_s1);
             }
+        }
+#elif CV_NEON
+        for( ; j <= size.width - 4; j += 4 )
+        {
+            float32x4_t v_dx = vld1q_f32(dxdata + j), v_dy = vld1q_f32(dydata + j);
+            float32x4_t v_s1 = vmulq_f32(v_dx, vmulq_f32(v_dx, vld1q_f32(d2ydata + j)));
+            float32x4_t v_s2 = vmulq_f32(v_dy, vmulq_f32(v_dy, vld1q_f32(d2xdata + j)));
+            float32x4_t v_s3 = vmulq_f32(v_dx, vmulq_f32(v_dy, vld1q_f32(dxydata + j)));
+            vst1q_f32(dstdata + j, vaddq_f32(vaddq_f32(v_s1, v_s2), vmulq_n_f32(v_s3, -2.0f)));
         }
 #endif
 
