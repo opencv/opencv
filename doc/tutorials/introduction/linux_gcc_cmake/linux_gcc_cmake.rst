@@ -46,7 +46,7 @@ Let's use a simple program such as DisplayImage.cpp shown below.
           printf("No image data \n");
           return -1;
       }
-      namedWindow("Display Image", CV_WINDOW_AUTOSIZE );
+      namedWindow("Display Image", WINDOW_AUTOSIZE );
       imshow("Display Image", image);
 
       waitKey(0);
