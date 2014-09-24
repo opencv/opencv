@@ -54,13 +54,11 @@ source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 set(highgui_hdrs
     src/precomp.hpp
     src/utils.hpp
-    src/cap_ffmpeg_impl.hpp
     )
 
 set(highgui_srcs
     src/cap.cpp
     src/cap_images.cpp
-    src/cap_ffmpeg.cpp
     src/loadsave.cpp
     src/utils.cpp
     src/window.cpp
@@ -186,6 +184,8 @@ if(HAVE_XIMEA)
 endif(HAVE_XIMEA)
 
 if(HAVE_FFMPEG)
+  list(APPEND highgui_hdrs src/cap_ffmpeg_impl.hpp)
+  list(APPEND highgui_srcs src/cap_ffmpeg.cpp)
   if(UNIX AND BZIP2_LIBRARIES)
     list(APPEND HIGHGUI_LIBRARIES ${BZIP2_LIBRARIES})
   endif()
