@@ -2459,7 +2459,7 @@ int videoDevice::findType(unsigned int size, unsigned int frameRate)
     fmt = vd_CaptureFormats.find(size);
     if( fmt != vd_CaptureFormats.end() )
         FRM = fmt->second;
-    else
+    else if( !vd_CaptureFormats.empty() )
         FRM = vd_CaptureFormats.rbegin()->second;
 
     if( FRM.empty() )
