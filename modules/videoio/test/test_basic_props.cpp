@@ -51,7 +51,11 @@ using namespace cv;
 using namespace std;
 using namespace cvtest;
 
-const string ext[] = {"avi"}; //, "mov", "mp4"};
+#ifdef HAVE_GSTREAMER
+const string ext[] = {"avi"};
+#else
+const string ext[] = {"avi", "mov", "mp4"};
+#endif
 
 TEST(Videoio_Video, prop_resolution)
 {
