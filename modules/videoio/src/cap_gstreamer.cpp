@@ -788,25 +788,31 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
             duration = -1;
         }
 
-        GstPad* pad = gst_element_get_pad(color, "src");
+        GstPad* pad = gst_element_get_static_pad(color, "src");
+#if GST_VERSION_MAJOR == 0
         GstCaps* buffer_caps = gst_pad_get_caps(pad);
+#else
+        GstCaps* buffer_caps = gst_pad_get_current_caps(pad);
+#endif
         const GstStructure *structure = gst_caps_get_structure (buffer_caps, 0);
 
         if (!gst_structure_get_int (structure, "width", &width))
+        {
             CV_WARN("Cannot query video width\n");
+        }
 
         if (!gst_structure_get_int (structure, "height", &height))
+        {
             CV_WARN("Cannot query video heigth\n");
-
-        if (!gst_structure_get_int (structure, "height", &height))
-            CV_WARN("Cannot query video heigth\n");
+        }
 
         gint num = 0, denom=1;
         if(!gst_structure_get_fraction(structure, "framerate", &num, &denom))
+        {
             CV_WARN("Cannot query video fps\n");
+        }
 
         fps = (double)num/(double)denom;
-
 
          // GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
     }
@@ -1217,8 +1223,11 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
     gboolean done = FALSE;
     GstElement *element = NULL;
     gchar* name = NULL;
+
+#if GST_VERSION_MAJOR == 0
     GstElement* splitter = NULL;
     GstElement* combiner = NULL;
+#endif
 
     // we first try to construct a pipeline from the given string.
     // if that fails, we assume it is an ordinary filename
