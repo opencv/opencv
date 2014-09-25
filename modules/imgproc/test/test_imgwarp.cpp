@@ -1575,15 +1575,26 @@ void resizeArea(const cv::Mat & src, cv::Mat & dst)
 
 TEST(Resize, Area_half)
 {
-    int types[] = { CV_8UC1, CV_8UC4 };
+    const int size = 10;
+    int types[] = { CV_8UC1, CV_8UC4, CV_16UC1, CV_16UC4 };
 
-    for (int i = 0, size = sizeof(types) / sizeof(types[0]); i < size; ++i)
+    cv::RNG rng(17);
+
+    for (int i = 0, _size = sizeof(types) / sizeof(types[0]); i < _size; ++i)
     {
-        int type = types[i];
-        cv::Mat src(100, 100, type), dst_actual(50, 50, type), dst_reference(50, 50, type);
+        int type = types[i], depth = CV_MAT_DEPTH(type);
 
-        if (CV_MAT_DEPTH(type) == CV_8U)
+        SCOPED_TRACE(depth);
+
+        cv::Mat src(size, size, type), dst_actual(size >> 1, size >> 1, type),
+            dst_reference(size >> 1, size >> 1, type);
+
+        rng.fill(src, cv::RNG::UNIFORM, 0, 1000, true);
+
+        if (depth == CV_8U)
             resizeArea<uchar, ushort>(src, dst_reference);
+        else if (depth == CV_16U)
+            resizeArea<ushort, int>(src, dst_reference);
         else
             CV_Assert(0);
 
