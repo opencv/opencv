@@ -113,7 +113,7 @@ TEST(Photo_NPR_PencilSketch, regression)
     Mat pencil_result, color_pencil_result;
     pencilSketch(source,pencil_result, color_pencil_result, 10, 0.1f, 0.03f);
 
-    Mat pencil_reference = imread(folder + "pencil_sketch_reference.png");
+    Mat pencil_reference = imread(folder + "pencil_sketch_reference.png", 0 /* == grayscale*/);
     double pencil_error = norm(pencil_reference, pencil_result, NORM_L1);
     EXPECT_LE(pencil_error, numerical_precision);
 
