@@ -3580,6 +3580,14 @@ public:
                                     _mm_storeu_si128((__m128i*)(XY + x1*2 + 8), iy1);
                                 }
                             }
+                        #elif CV_NEON
+                            for( ; x1 <= bcols - 4; x1 += 4 )
+                            {
+                                int32x4_t v_sx = cv_vrndq_s32_f32(vld1q_f32(sX + x1)),
+                                          v_sy = cv_vrndq_s32_f32(vld1q_f32(sY + x1));
+                                int16x4x2_t v_dst = vzip_s16(vqmovn_s32(v_sx), vqmovn_s32(v_sy));
+                                vst1q_s16(XY + (x1 << 1), vcombine_s16(v_dst.val[0], v_dst.val[1]));
+                            }
                         #endif
 
                             for( ; x1 < bcols; x1++ )
@@ -3604,7 +3612,15 @@ public:
                         bufxy = (*m1)(Rect(x, y, bcols, brows));
 
                         const ushort* sA = m2->ptr<ushort>(y+y1) + x;
-                        for( x1 = 0; x1 < bcols; x1++ )
+                        x1 = 0;
+
+                    #if CV_NEON
+                        uint16x8_t v_scale = vdupq_n_u16(INTER_TAB_SIZE2-1);
+                        for ( ; x1 <= bcols - 8; x1 += 8)
+                            vst1q_u16(A + x1, vandq_u16(vld1q_u16(sA + x1), v_scale));
+                    #endif
+
+                        for( ; x1 < bcols; x1++ )
                             A[x1] = (ushort)(sA[x1] & (INTER_TAB_SIZE2-1));
                     }
                     else if( planar_input )
@@ -3649,6 +3665,22 @@ public:
                                 _mm_storeu_si128((__m128i*)(XY + x1*2 + 8), iy1);
                             }
                         }
+                    #elif CV_NEON
+                        float32x4_t v_scale = vdupq_n_f32((float)INTER_TAB_SIZE);
+                        int32x4_t v_scale2 = vdupq_n_s32(INTER_TAB_SIZE - 1), v_scale3 = vdupq_n_s32(INTER_TAB_SIZE);
+
+                        for( ; x1 <= bcols - 4; x1 += 4 )
+                        {
+                            int32x4_t v_sx = cv_vrndq_s32_f32(vmulq_f32(vld1q_f32(sX + x1), v_scale)),
+                                      v_sy = cv_vrndq_s32_f32(vmulq_f32(vld1q_f32(sY + x1), v_scale));
+                            int32x4_t v_v = vmlaq_s32(vandq_s32(v_sx, v_scale2), v_scale3,
+                                                      vandq_s32(v_sy, v_scale2));
+                            vst1_u16(A + x1, vqmovun_s32(v_v));
+
+                            int16x4x2_t v_dst = vzip_s16(vqmovn_s32(vshrq_n_s32(v_sx, INTER_BITS)),
+                                                         vqmovn_s32(vshrq_n_s32(v_sy, INTER_BITS)));
+                            vst1q_s16(XY + (x1 << 1), vcombine_s16(v_dst.val[0], v_dst.val[1]));
+                        }
                     #endif
 
                         for( ; x1 < bcols; x1++ )
@@ -3664,6 +3696,26 @@ public:
                     else
                     {
                         const float* sXY = m1->ptr<float>(y+y1) + x*2;
+                        x1 = 0;
+
+                    #if CV_NEON
+                        float32x4_t v_scale = vdupq_n_f32(INTER_TAB_SIZE);
+                        int32x4_t v_scale2 = vdupq_n_s32(INTER_TAB_SIZE-1), v_scale3 = vdupq_n_s32(INTER_TAB_SIZE);
+
+                        for( ; x1 <= bcols - 4; x1 += 4 )
+                        {
+                            float32x4x2_t v_src = vld2q_f32(sXY + (x1 << 1));
+                            int32x4_t v_sx = cv_vrndq_s32_f32(vmulq_f32(v_src.val[0], v_scale));
+                            int32x4_t v_sy = cv_vrndq_s32_f32(vmulq_f32(v_src.val[1], v_scale));
+                            int32x4_t v_v = vmlaq_s32(vandq_s32(v_sx, v_scale2), v_scale3,
+                                                      vandq_s32(v_sy, v_scale2));
+                            vst1_u16(A + x1, vqmovun_s32(v_v));
+
+                            int16x4x2_t v_dst = vzip_s16(vqmovn_s32(vshrq_n_s32(v_sx, INTER_BITS)),
+                                                         vqmovn_s32(vshrq_n_s32(v_sy, INTER_BITS)));
+                            vst1q_s16(XY + (x1 << 1), vcombine_s16(v_dst.val[0], v_dst.val[1]));
+                        }
+                    #endif
 
                         for( x1 = 0; x1 < bcols; x1++ )
                         {
