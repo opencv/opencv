@@ -1938,16 +1938,27 @@ static const int* getFontData(int fontFace)
     return ascii;
 }
 
-inline void readCheck(int &c, int &i, const string &text, const int rightBoundary)
+inline void readCheck(int &c, int &i, const string &text)
 {
+
+    int leftBoundary = ' ', rightBoundary = 127;
+
     if(c >= 0x80)
     {
         if(c >= 0xC0 && c <= 0xDF) //2 bytes utf
         {
             if(c & 1)
+            {
                 c = (uchar)text[++i] + 47;
+                leftBoundary = 175;
+                rightBoundary = 191;
+            }
             else
+            {
                 c = (uchar)text[++i] - 17;
+                leftBoundary = 127;
+                rightBoundary = 175;
+            }
         }
         else
         {
@@ -1969,7 +1980,7 @@ inline void readCheck(int &c, int &i, const string &text, const int rightBoundar
         }
     }
 
-    if(c >= rightBoundary || c < ' ')
+    if(c >= rightBoundary || c < leftBoundary)
         c = '?';
 }
 
@@ -1998,14 +2009,12 @@ void putText( Mat& img, const string& text, Point org,
     pts.reserve(1 << 10);
     const char **faces = cv::g_HersheyGlyphs;
 
-    int rightBoundary = fontFace == FONT_HERSHEY_COMPLEX ? 191 : 127;
-
     for( int i = 0; text[i] != '\0'; i++ )
     {
         int c = (uchar)text[i];
         Point p;
 
-        readCheck(c, i, text, rightBoundary);
+        readCheck(c, i, text);
 
         const char* ptr = faces[ascii[(c-' ')+1]];
         p.x = (uchar)ptr[0] - 'R';
@@ -2047,14 +2056,12 @@ Size getTextSize( const string& text, int fontFace, double fontScale, int thickn
     int cap_line = (ascii[0] >> 4) & 15;
     size.height = cvRound((cap_line + base_line)*fontScale + (thickness+1)/2);
 
-    int rightBoundary = fontFace == FONT_HERSHEY_COMPLEX ? 191 : 127;
-
     for( int i = 0; text[i] != '\0'; i++ )
     {
         int c = (uchar)text[i];
         Point p;
 
-        readCheck(c, i, text, rightBoundary);
+        readCheck(c, i, text);
 
         const char* ptr = faces[ascii[(c-' ')+1]];
         p.x = (uchar)ptr[0] - 'R';
