@@ -131,4 +131,27 @@ TEST(Videoio_Video, prop_fps)
     }
 }
 
+TEST(Videoio_Video, prop_framecount)
+{
+    const size_t n = sizeof(ext)/sizeof(ext[0]);
+    const string src_dir = TS::ptr()->get_data_path();
+
+    TS::ptr()->printf(cvtest::TS::LOG, "\n\nSource files directory: %s\n", (src_dir+"video/").c_str());
+
+    for (size_t i = 0; i < n; ++i)
+    {
+        string file_path = src_dir+"video/big_buck_bunny."+ext[i];
+        VideoCapture cap(file_path);
+        if (!cap.isOpened())
+        {
+            TS::ptr()->printf(cvtest::TS::LOG, "\nFile information (video %d): \n\nName: big_buck_bunny.%s\nFAILED\n\n", i+1, ext[i].c_str());
+            TS::ptr()->printf(cvtest::TS::LOG, "Error: cannot read source video file.\n");
+            TS::ptr()->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+            return;
+        }
+
+        ASSERT_EQ(125, cap.get(CAP_PROP_FRAME_COUNT));
+    }
+}
+
 #endif
