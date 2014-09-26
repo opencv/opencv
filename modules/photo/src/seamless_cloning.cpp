@@ -50,9 +50,9 @@ using namespace cv;
 
 void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point p, OutputArray _blend, int flags)
 {
-    Mat src  = _src.getMat();
-    Mat dest = _dst.getMat();
-    Mat mask = _mask.getMat();
+    const Mat src  = _src.getMat();
+    const Mat dest = _dst.getMat();
+    const Mat mask = _mask.getMat();
     _blend.create(dest.size(), CV_8UC3);
     Mat blend = _blend.getMat();
 

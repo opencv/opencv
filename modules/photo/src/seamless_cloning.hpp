@@ -51,17 +51,22 @@ using namespace cv;
 
 class Cloning
 {
-
     public:
+        void normal_clone(const Mat &I, const Mat &mask, const Mat &wmask, Mat &cloned, int num);
+        void illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float alpha, float beta);
+        void local_color_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float red_mul, float green_mul, float blue_mul);
+        void texture_flatten(Mat &I, Mat &mask, Mat &wmask, double low_threshold, double high_threhold, int kernel_size, Mat &cloned);
+
+    protected:
 
         vector <Mat> rgb_channel, rgbx_channel, rgby_channel, output;
         Mat grx, gry, sgx, sgy, srx32, sry32, grx32, gry32, smask, smask1;
-        void init_var(Mat &I, Mat &wmask);
-        void initialization(Mat &I, Mat &mask, Mat &wmask);
+        void init_var(const Mat &I, const Mat &wmask);
+        void initialization(const Mat &I, const Mat &mask, const Mat &wmask);
         void scalar_product(Mat mat, float r, float g, float b);
         void array_product(Mat mat1, Mat mat2, Mat mat3);
-        void poisson(Mat &I, Mat &gx, Mat &gy, Mat &sx, Mat &sy);
-        void evaluate(Mat &I, Mat &wmask, Mat &cloned);
+        void poisson(const Mat &I, const Mat &gx, const Mat &gy, const Mat &sx, const Mat &sy);
+        void evaluate(const Mat &I, const Mat &wmask, const Mat &cloned);
         void getGradientx(const Mat &img, Mat &gx);
         void getGradienty(const Mat &img, Mat &gy);
         void lapx(const Mat &img, Mat &gxx);
@@ -71,10 +76,10 @@ class Cloning
         void transpose(double *mat, double *mat_t,int h,int w);
         void solve(const Mat &img, double *mod_diff, Mat &result);
         void poisson_solver(const Mat &img, Mat &gxx , Mat &gyy, Mat &result);
-        void normal_clone(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, int num);
-        void local_color_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float red_mul, float green_mul, float blue_mul);
-        void illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float alpha, float beta);
-        void texture_flatten(Mat &I, Mat &mask, Mat &wmask, double low_threshold, double high_threhold, int kernel_size, Mat &cloned);
+
+
+
+
 };
 
 void Cloning::getGradientx( const Mat &img, Mat &gx)
@@ -352,7 +357,7 @@ void Cloning::poisson_solver(const Mat &img, Mat &gxx , Mat &gyy, Mat &result)
     delete [] boundary_point;
 }
 
-void Cloning::init_var(Mat &I, Mat &wmask)
+void Cloning::init_var(const Mat &I, const Mat &wmask)
 {
     grx = Mat(I.size(),CV_32FC3);
     gry = Mat(I.size(),CV_32FC3);
@@ -369,7 +374,7 @@ void Cloning::init_var(Mat &I, Mat &wmask)
     gry32 = Mat(I.size(),CV_32FC3);
 }
 
-void Cloning::initialization(Mat &I, Mat &mask, Mat &wmask)
+void Cloning::initialization(const Mat &I, const Mat &mask, const Mat &wmask)
 {
     init_var(I,wmask);
 
@@ -411,7 +416,7 @@ void Cloning::array_product(Mat mat1, Mat mat2, Mat mat3)
     merge(channels_temp1,mat1);
 }
 
-void Cloning::poisson(Mat &I, Mat &gx, Mat &gy, Mat &sx, Mat &sy)
+void Cloning::poisson(const Mat &I, const Mat &gx, const Mat &gy, const Mat &sx, const Mat &sy)
 {
     Mat fx = Mat(I.size(),CV_32FC3);
     Mat fy = Mat(I.size(),CV_32FC3);
@@ -435,7 +440,7 @@ void Cloning::poisson(Mat &I, Mat &gx, Mat &gy, Mat &sx, Mat &sy)
     poisson_solver(rgb_channel[0],rgbx_channel[0], rgby_channel[0],output[0]);
 }
 
-void Cloning::evaluate(Mat &I, Mat &wmask, Mat &cloned)
+void Cloning::evaluate(const Mat &I, const Mat &wmask, const Mat &cloned)
 {
     bitwise_not(wmask,wmask);
 
@@ -451,7 +456,7 @@ void Cloning::evaluate(Mat &I, Mat &wmask, Mat &cloned)
     merge(output,cloned);
 }
 
-void Cloning::normal_clone(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, int num)
+void Cloning::normal_clone(const Mat &I, const Mat &mask, const Mat &wmask, Mat &cloned, int num)
 {
     int w = I.size().width;
     int h = I.size().height;
