@@ -493,6 +493,7 @@ static int LockCallBack(void **mutex, AVLockOp op)
             localMutex->destroy();
             free(localMutex);
             localMutex = NULL;
+            *mutex = NULL;
         break;
     }
     return 0;
