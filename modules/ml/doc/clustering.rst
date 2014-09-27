@@ -9,7 +9,7 @@ Finds centers of clusters and groups input samples around the clusters.
 
 .. ocv:function:: double kmeans( InputArray data, int K, InputOutputArray bestLabels, TermCriteria criteria, int attempts, int flags, OutputArray centers=noArray() )
 
-.. ocv:pyfunction:: cv2.kmeans(data, K, bestLabels, criteria, attempts, flags[, centers]) -> retval, bestLabels, centers
+.. ocv:pyfunction:: cv2.ml.kmeans(data, K, bestLabels, criteria, attempts, flags[, centers]) -> retval, bestLabels, centers
 
 .. ocv:cfunction:: int cvKMeans2( const CvArr* samples, int cluster_count, CvArr* labels, CvTermCriteria termcrit, int attempts=1, CvRNG* rng=0, int flags=0, CvArr* _centers=0, double* compactness=0 )
 
@@ -43,7 +43,7 @@ Finds centers of clusters and groups input samples around the clusters.
 
             * **KMEANS_RANDOM_CENTERS** Select random initial centers in each attempt.
 
-            * **KMEANS_PP_CENTERS** Use ``kmeans++`` center initialization by Arthur and Vassilvitskii [Arthur2007].
+            * **KMEANS_PP_CENTERS** Use ``kmeans++`` center initialization by Arthur and Vassilvitskii [Arthur2007]_.
 
             * **KMEANS_USE_INITIAL_LABELS** During the first (and possibly the only) attempt, use the user-supplied labels instead of computing them from the initial centers. For the second and further attempts, use the random or semi-random centers. Use one of  ``KMEANS_*_CENTERS``  flag to specify the exact method.
 
@@ -78,6 +78,8 @@ attempts to 1, initialize labels each time using a custom algorithm, pass them w
 
    * (Python) An example on K-means clustering can be found at opencv_source_code/samples/python2/kmeans.py
 
+.. [Arthur2007] Arthur and S. Vassilvitskii. k-means++: the advantages of careful seeding, Proceedings of the eighteenth annual ACM-SIAM symposium on Discrete algorithms, 2007
+
 partition
 -------------
 Splits an element set into equivalency classes.
@@ -97,5 +99,3 @@ splitting a set of
 http://en.wikipedia.org/wiki/Disjoint-set_data_structure
 . The function
 returns the number of equivalency classes.
-
-.. [Arthur2007] Arthur and S. Vassilvitskii. k-means++: the advantages of careful seeding, Proceedings of the eighteenth annual ACM-SIAM symposium on Discrete algorithms, 2007
