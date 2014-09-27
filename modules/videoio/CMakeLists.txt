@@ -42,6 +42,7 @@ if (WIN32 AND HAVE_DSHOW)
 endif()
 
 if (WIN32 AND HAVE_MSMF)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_msmf.hpp)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_msmf.cpp)
 endif()
 
