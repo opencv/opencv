@@ -985,3 +985,8 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Farneback_OCL()
 }
 
 #endif
+
+// Suppress specific warnings during cross-compilation for ARM
+#if defined(__arm__) && defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+# pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
