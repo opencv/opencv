@@ -150,9 +150,11 @@ protected:
 #endif
     GstBuffer*    buffer;
     GstCaps*      caps;
-    GstCaps*      buffer_caps;
     IplImage*     frame;
     gint64        duration;
+    gint          width;
+    gint          height;
+    double        fps;
 };
 
 /*!
@@ -171,9 +173,11 @@ void CvCapture_GStreamer::init()
 #endif
     buffer = NULL;
     caps = NULL;
-    buffer_caps = NULL;
     frame = NULL;
     duration = -1;
+    width = -1;
+    height = -1;
+    fps = -1;
 }
 
 /*!
@@ -192,6 +196,9 @@ void CvCapture_GStreamer::close()
     }
 
     duration = -1;
+    width = -1;
+    height = -1;
+    fps = -1;
 }
 
 /*!
@@ -249,16 +256,10 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
     //construct a frame header if we did not have any yet
     if(!frame)
     {
-        gint height, width;
-
-        //reuse the caps ptr
-        if (buffer_caps)
-            gst_caps_unref(buffer_caps);
-
 #if GST_VERSION_MAJOR == 0
-        buffer_caps = gst_buffer_get_caps(buffer);
+        GstCaps* buffer_caps = gst_buffer_get_caps(buffer);
 #else
-        buffer_caps = gst_sample_get_caps(sample);
+        GstCaps* buffer_caps = gst_sample_get_caps(sample);
 #endif
         // bail out in no caps
         assert(gst_caps_get_size(buffer_caps) == 1);
@@ -268,9 +269,9 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
         if(!gst_structure_get_int(structure, "width", &width) ||
                 !gst_structure_get_int(structure, "height", &height))
         {
+            gst_caps_unref(buffer_caps);
             return 0;
         }
-
 
         int depth = 3;
 #if GST_VERSION_MAJOR > 0
@@ -304,9 +305,12 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
 #endif
         if (depth > 0) {
             frame = cvCreateImageHeader(cvSize(width, height), IPL_DEPTH_8U, depth);
-        }else{
+        } else {
+            gst_caps_unref(buffer_caps);
             return 0;
         }
+
+        gst_caps_unref(buffer_caps);
     }
 
     // gstreamer expects us to handle the memory at this point
@@ -782,12 +786,42 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
             handleMessage(pipeline);
             CV_WARN("GStreamer: unable to query duration of stream");
             duration = -1;
-            return true;
         }
+
+        GstPad* pad = gst_element_get_static_pad(color, "src");
+#if GST_VERSION_MAJOR == 0
+        GstCaps* buffer_caps = gst_pad_get_caps(pad);
+#else
+        GstCaps* buffer_caps = gst_pad_get_current_caps(pad);
+#endif
+        const GstStructure *structure = gst_caps_get_structure (buffer_caps, 0);
+
+        if (!gst_structure_get_int (structure, "width", &width))
+        {
+            CV_WARN("Cannot query video width\n");
+        }
+
+        if (!gst_structure_get_int (structure, "height", &height))
+        {
+            CV_WARN("Cannot query video heigth\n");
+        }
+
+        gint num = 0, denom=1;
+        if(!gst_structure_get_fraction(structure, "framerate", &num, &denom))
+        {
+            CV_WARN("Cannot query video fps\n");
+        }
+
+        fps = (double)num/(double)denom;
+
+         // GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
     }
     else
     {
         duration = -1;
+        width = -1;
+        height = -1;
+        fps = -1;
     }
 
     __END__;
@@ -846,48 +880,12 @@ double CvCapture_GStreamer::getProperty( int propId )
             return false;
         }
         return ((double) value) / GST_FORMAT_PERCENT_MAX;
-    case CV_CAP_PROP_FRAME_WIDTH: {
-        if (!buffer_caps){
-            CV_WARN("GStreamer: unable to query width of frame; no frame grabbed yet");
-            return 0;
-        }
-        GstStructure* structure = gst_caps_get_structure(buffer_caps, 0);
-        gint width = 0;
-        if(!gst_structure_get_int(structure, "width", &width)){
-            CV_WARN("GStreamer: unable to query width of frame");
-            return 0;
-        }
+    case CV_CAP_PROP_FRAME_WIDTH:
         return width;
-        break;
-    }
-    case CV_CAP_PROP_FRAME_HEIGHT: {
-        if (!buffer_caps){
-            CV_WARN("GStreamer: unable to query height of frame; no frame grabbed yet");
-            return 0;
-        }
-        GstStructure* structure = gst_caps_get_structure(buffer_caps, 0);
-        gint height = 0;
-        if(!gst_structure_get_int(structure, "height", &height)){
-            CV_WARN("GStreamer: unable to query height of frame");
-            return 0;
-        }
+    case CV_CAP_PROP_FRAME_HEIGHT:
         return height;
-        break;
-    }
-    case CV_CAP_PROP_FPS: {
-        if (!buffer_caps){
-            CV_WARN("GStreamer: unable to query framerate of stream; no frame grabbed yet");
-            return 0;
-        }
-        GstStructure* structure = gst_caps_get_structure(buffer_caps, 0);
-        gint num = 0, denom=1;
-        if(!gst_structure_get_fraction(structure, "framerate", &num, &denom)){
-            CV_WARN("GStreamer: unable to query framerate of stream");
-            return 0;
-        }
-        return (double)num/(double)denom;
-        break;
-    }
+    case CV_CAP_PROP_FPS:
+        return fps;
     case CV_CAP_PROP_FOURCC:
         break;
     case CV_CAP_PROP_FRAME_COUNT:
@@ -1225,8 +1223,11 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
     gboolean done = FALSE;
     GstElement *element = NULL;
     gchar* name = NULL;
+
+#if GST_VERSION_MAJOR == 0
     GstElement* splitter = NULL;
     GstElement* combiner = NULL;
+#endif
 
     // we first try to construct a pipeline from the given string.
     // if that fails, we assume it is an ordinary filename
