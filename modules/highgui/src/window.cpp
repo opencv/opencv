@@ -206,6 +206,11 @@ void cv::setTrackbarPos( const String& trackbarName, const String& winName, int 
     cvSetTrackbarPos(trackbarName.c_str(), winName.c_str(), value );
 }
 
+void cv::setTrackbarMax(const String& trackbarName, const String& winName, int maxval)
+{
+    cvSetTrackbarMax(trackbarName.c_str(), winName.c_str(), maxval);
+}
+
 int cv::getTrackbarPos( const String& trackbarName, const String& winName )
 {
     return cvGetTrackbarPos(trackbarName.c_str(), winName.c_str());
@@ -571,6 +576,11 @@ CV_IMPL int cvGetTrackbarPos( const char*, const char* )
 CV_IMPL void cvSetTrackbarPos( const char*, const char*, int )
 {
     CV_NO_GUI_ERROR( "cvSetTrackbarPos" );
+}
+
+CV_IMPL void cvSetTrackbarMax(const char*, const char*, int)
+{
+    CV_NO_GUI_ERROR( "cvSetTrackbarMax" );
 }
 
 CV_IMPL void* cvGetWindowHandle( const char* )
