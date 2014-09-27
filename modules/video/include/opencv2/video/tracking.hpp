@@ -107,6 +107,11 @@ CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray input
                                       InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
                                       TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001));
 
+//! reads optical flow from a file, Middlebury format:
+// http://vision.middlebury.edu/flow/code/flow-code/README.txt
+CV_EXPORTS_W Mat readOpticalFlow( const String& path );
+//! writes optical flow to a file, Middlebury format
+CV_EXPORTS_W bool writeOpticalFlow( const String& path, InputArray flow );
 /*!
  Kalman filter.
 
@@ -164,6 +169,16 @@ public:
 //   [2] Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
 CV_EXPORTS_W Ptr<DenseOpticalFlow> createOptFlow_DualTVL1();
 
+
+// DeepFlow implementation, based on:
+//   P. Weinzaepfel, J. Revaud, Z. Harchaoui, and C. Schmid, “DeepFlow: Large Displacement Optical Flow with Deep Matching,”
+CV_EXPORTS_W Ptr<DenseOpticalFlow> createOptFlow_DeepFlow();
+
+// Additional interface to the SimpleFlow algorithm - calcOpticalFlowSF()
+CV_EXPORTS_W Ptr<DenseOpticalFlow> createOptFlow_SimpleFlow();
+
+// Additional interface to the Farneback's algorithm - calcOpticalFlowFarneback()
+CV_EXPORTS_W Ptr<DenseOpticalFlow> createOptFlow_Farnebacks();
 } // cv
 
 #endif
