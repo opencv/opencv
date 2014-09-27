@@ -1928,22 +1928,6 @@ icvFindTrackbarByName( const CvWindow* window, const char* name )
 }
 
 
-typedef struct
-{
-    UINT cbSize;
-    DWORD dwMask;
-    int idCommand;
-    int iImage;
-    BYTE fsState;
-    BYTE fsStyle;
-    WORD cx;
-    DWORD lParam;
-    LPSTR pszText;
-    int cchText;
-}
-ButtonInfo;
-
-
 static int
 icvCreateTrackbar( const char* trackbar_name, const char* window_name,
                    int* val, int count, CvTrackbarCallback on_notify,
@@ -1973,8 +1957,8 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     trackbar = icvFindTrackbarByName(window,trackbar_name);
     if( !trackbar )
     {
-        TBBUTTON tbs;
-        ButtonInfo tbis;
+        TBBUTTON tbs = {0};
+        TBBUTTONINFO tbis = {0};
         RECT rect;
         int bcount;
         int len = (int)strlen( trackbar_name );
