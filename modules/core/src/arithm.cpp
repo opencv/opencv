@@ -2667,6 +2667,213 @@ void cv::addWeighted( InputArray src1, double alpha, InputArray src2,
 namespace cv
 {
 
+template <typename T>
+struct Cmp_SIMD
+{
+    explicit Cmp_SIMD(int)
+    {
+    }
+
+    int operator () (const T *, const T *, uchar *, int) const
+    {
+        return 0;
+    }
+};
+
+#if CV_NEON
+
+template <>
+struct Cmp_SIMD<schar>
+{
+    explicit Cmp_SIMD(int code_) :
+        code(code_)
+    {
+        CV_Assert(code == CMP_GT || code == CMP_LE ||
+                  code == CMP_EQ || code == CMP_NE);
+
+        v_mask = vdupq_n_u8(255);
+    }
+
+    int operator () (const schar * src1, const schar * src2, uchar * dst, int width) const
+    {
+        int x = 0;
+
+        if (code == CMP_GT)
+            for ( ; x <= width - 16; x += 16)
+                vst1q_u8(dst + x, vcgtq_s8(vld1q_s8(src1 + x), vld1q_s8(src2 + x)));
+        else if (code == CMP_LE)
+            for ( ; x <= width - 16; x += 16)
+                vst1q_u8(dst + x, vcleq_s8(vld1q_s8(src1 + x), vld1q_s8(src2 + x)));
+        else if (code == CMP_EQ)
+            for ( ; x <= width - 16; x += 16)
+                vst1q_u8(dst + x, vceqq_s8(vld1q_s8(src1 + x), vld1q_s8(src2 + x)));
+        else if (code == CMP_NE)
+            for ( ; x <= width - 16; x += 16)
+                vst1q_u8(dst + x, veorq_u8(vceqq_s8(vld1q_s8(src1 + x), vld1q_s8(src2 + x)), v_mask));
+
+        return x;
+    }
+
+    int code;
+    uint8x16_t v_mask;
+};
+
+template <>
+struct Cmp_SIMD<ushort>
+{
+    explicit Cmp_SIMD(int code_) :
+        code(code_)
+    {
+        CV_Assert(code == CMP_GT || code == CMP_LE ||
+                  code == CMP_EQ || code == CMP_NE);
+
+        v_mask = vdup_n_u8(255);
+    }
+
+    int operator () (const ushort * src1, const ushort * src2, uchar * dst, int width) const
+    {
+        int x = 0;
+
+        if (code == CMP_GT)
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint16x8_t v_dst = vcgtq_u16(vld1q_u16(src1 + x), vld1q_u16(src2 + x));
+                vst1_u8(dst + x, vmovn_u16(v_dst));
+            }
+        else if (code == CMP_LE)
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint16x8_t v_dst = vcleq_u16(vld1q_u16(src1 + x), vld1q_u16(src2 + x));
+                vst1_u8(dst + x, vmovn_u16(v_dst));
+            }
+        else if (code == CMP_EQ)
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint16x8_t v_dst = vceqq_u16(vld1q_u16(src1 + x), vld1q_u16(src2 + x));
+                vst1_u8(dst + x, vmovn_u16(v_dst));
+            }
+        else if (code == CMP_NE)
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint16x8_t v_dst = vceqq_u16(vld1q_u16(src1 + x), vld1q_u16(src2 + x));
+                vst1_u8(dst + x, veor_u8(vmovn_u16(v_dst), v_mask));
+            }
+
+        return x;
+    }
+
+    int code;
+    uint8x8_t v_mask;
+};
+
+template <>
+struct Cmp_SIMD<int>
+{
+    explicit Cmp_SIMD(int code_) :
+        code(code_)
+    {
+        CV_Assert(code == CMP_GT || code == CMP_LE ||
+                  code == CMP_EQ || code == CMP_NE);
+
+        v_mask = vdup_n_u8(255);
+    }
+
+    int operator () (const int * src1, const int * src2, uchar * dst, int width) const
+    {
+        int x = 0;
+
+        if (code == CMP_GT)
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint32x4_t v_dst1 = vcgtq_s32(vld1q_s32(src1 + x), vld1q_s32(src2 + x));
+                uint32x4_t v_dst2 = vcgtq_s32(vld1q_s32(src1 + x + 4), vld1q_s32(src2 + x + 4));
+                vst1_u8(dst + x, vmovn_u16(vcombine_u16(vmovn_u32(v_dst1), vmovn_u32(v_dst2))));
+            }
+        else if (code == CMP_LE)
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint32x4_t v_dst1 = vcleq_s32(vld1q_s32(src1 + x), vld1q_s32(src2 + x));
+                uint32x4_t v_dst2 = vcleq_s32(vld1q_s32(src1 + x + 4), vld1q_s32(src2 + x + 4));
+                vst1_u8(dst + x, vmovn_u16(vcombine_u16(vmovn_u32(v_dst1), vmovn_u32(v_dst2))));
+            }
+        else if (code == CMP_EQ)
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint32x4_t v_dst1 = vceqq_s32(vld1q_s32(src1 + x), vld1q_s32(src2 + x));
+                uint32x4_t v_dst2 = vceqq_s32(vld1q_s32(src1 + x + 4), vld1q_s32(src2 + x + 4));
+                vst1_u8(dst + x, vmovn_u16(vcombine_u16(vmovn_u32(v_dst1), vmovn_u32(v_dst2))));
+            }
+        else if (code == CMP_NE)
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint32x4_t v_dst1 = vceqq_s32(vld1q_s32(src1 + x), vld1q_s32(src2 + x));
+                uint32x4_t v_dst2 = vceqq_s32(vld1q_s32(src1 + x + 4), vld1q_s32(src2 + x + 4));
+                uint8x8_t v_dst = vmovn_u16(vcombine_u16(vmovn_u32(v_dst1), vmovn_u32(v_dst2)));
+                vst1_u8(dst + x, veor_u8(v_dst, v_mask));
+            }
+
+        return x;
+    }
+
+    int code;
+    uint8x8_t v_mask;
+};
+
+template <>
+struct Cmp_SIMD<float>
+{
+    explicit Cmp_SIMD(int code_) :
+        code(code_)
+    {
+        CV_Assert(code == CMP_GT || code == CMP_LE ||
+                  code == CMP_EQ || code == CMP_NE);
+
+        v_mask = vdup_n_u8(255);
+    }
+
+    int operator () (const float * src1, const float * src2, uchar * dst, int width) const
+    {
+        int x = 0;
+
+        if (code == CMP_GT)
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint32x4_t v_dst1 = vcgtq_f32(vld1q_f32(src1 + x), vld1q_f32(src2 + x));
+                uint32x4_t v_dst2 = vcgtq_f32(vld1q_f32(src1 + x + 4), vld1q_f32(src2 + x + 4));
+                vst1_u8(dst + x, vmovn_u16(vcombine_u16(vmovn_u32(v_dst1), vmovn_u32(v_dst2))));
+            }
+        else if (code == CMP_LE)
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint32x4_t v_dst1 = vcleq_f32(vld1q_f32(src1 + x), vld1q_f32(src2 + x));
+                uint32x4_t v_dst2 = vcleq_f32(vld1q_f32(src1 + x + 4), vld1q_f32(src2 + x + 4));
+                vst1_u8(dst + x, vmovn_u16(vcombine_u16(vmovn_u32(v_dst1), vmovn_u32(v_dst2))));
+            }
+        else if (code == CMP_EQ)
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint32x4_t v_dst1 = vceqq_f32(vld1q_f32(src1 + x), vld1q_f32(src2 + x));
+                uint32x4_t v_dst2 = vceqq_f32(vld1q_f32(src1 + x + 4), vld1q_f32(src2 + x + 4));
+                vst1_u8(dst + x, vmovn_u16(vcombine_u16(vmovn_u32(v_dst1), vmovn_u32(v_dst2))));
+            }
+        else if (code == CMP_NE)
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint32x4_t v_dst1 = vceqq_f32(vld1q_f32(src1 + x), vld1q_f32(src2 + x));
+                uint32x4_t v_dst2 = vceqq_f32(vld1q_f32(src1 + x + 4), vld1q_f32(src2 + x + 4));
+                uint8x8_t v_dst = vmovn_u16(vcombine_u16(vmovn_u32(v_dst1), vmovn_u32(v_dst2)));
+                vst1_u8(dst + x, veor_u8(v_dst, v_mask));
+            }
+
+        return x;
+    }
+
+    int code;
+    uint8x8_t v_mask;
+};
+
+#endif
+
 template<typename T> static void
 cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
      uchar* dst, size_t step, Size size, int code)
@@ -2680,12 +2887,14 @@ cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
         code = code == CMP_GE ? CMP_LE : CMP_GT;
     }
 
+    Cmp_SIMD<T> vop(code);
+
     if( code == CMP_GT || code == CMP_LE )
     {
         int m = code == CMP_GT ? 0 : 255;
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
-            int x = 0;
+            int x = vop(src1, src2, dst, size.width);
             #if CV_ENABLE_UNROLLED
             for( ; x <= size.width - 4; x += 4 )
             {
@@ -2700,7 +2909,7 @@ cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
             #endif
             for( ; x < size.width; x++ )
                 dst[x] = (uchar)(-(src1[x] > src2[x]) ^ m);
-               }
+        }
     }
     else if( code == CMP_EQ || code == CMP_NE )
     {
