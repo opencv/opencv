@@ -2051,6 +2051,17 @@ float normL2Sqr_(const float* a, const float* b, int n)
         d = buf[0] + buf[1] + buf[2] + buf[3];
     }
     else
+#elif CV_NEON
+    float32x4_t v_sum = vdupq_n_f32(0.0f);
+    for ( ; j <= n - 4; j += 4)
+    {
+        float32x4_t v_diff = vmulq_f32(vld1q_f32(a + j), vld1q_f32(b + j));
+        v_sum = vaddq_f32(v_sum, vmulq_f32(v_diff, v_diff));
+    }
+
+    float CV_DECL_ALIGNED(16) buf[4];
+    vst1q_f32(buf, v_sum);
+    d = buf[0] + buf[1] + buf[2] + buf[3];
 #endif
     {
         for( ; j <= n - 4; j += 4 )
@@ -2091,6 +2102,14 @@ float normL1_(const float* a, const float* b, int n)
         d = buf[0] + buf[1] + buf[2] + buf[3];
     }
     else
+#elif CV_NEON
+    float32x4_t v_sum = vdupq_n_f32(0.0f);
+    for ( ; j <= n - 4; j += 4)
+        v_sum = vaddq_f32(v_sum, vabdq_f32(vld1q_f32(a + j), vld1q_f32(b + j)));
+
+    float CV_DECL_ALIGNED(16) buf[4];
+    vst1q_f32(buf, v_sum);
+    d = buf[0] + buf[1] + buf[2] + buf[3];
 #endif
     {
         for( ; j <= n - 4; j += 4 )
@@ -2131,6 +2150,19 @@ int normL1_(const uchar* a, const uchar* b, int n)
         d = _mm_cvtsi128_si32(_mm_add_epi32(d0, _mm_unpackhi_epi64(d0, d0)));
     }
     else
+#elif CV_NEON
+    uint32x4_t v_sum = vdupq_n_u32(0.0f);
+    for ( ; j <= n - 16; j += 16)
+    {
+        uint8x16_t v_dst = vabdq_u8(vld1q_u8(a + j), vld1q_u8(b + j));
+        uint16x8_t v_low = vmovl_u8(vget_low_u8(v_dst)), v_high = vmovl_u8(vget_high_u8(v_dst));
+        v_sum = vaddq_u32(v_sum, vaddl_u16(vget_low_u16(v_low), vget_low_u16(v_high)));
+        v_sum = vaddq_u32(v_sum, vaddl_u16(vget_high_u16(v_low), vget_high_u16(v_high)));
+    }
+
+    uint CV_DECL_ALIGNED(16) buf[4];
+    vst1q_u32(buf, v_sum);
+    d = buf[0] + buf[1] + buf[2] + buf[3];
 #endif
     {
         for( ; j <= n - 4; j += 4 )
