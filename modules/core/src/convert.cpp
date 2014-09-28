@@ -1480,6 +1480,724 @@ cvtScaleAbs_( const T* src, size_t sstep,
     }
 }
 
+template <typename T, typename DT, typename WT>
+struct cvtScale_SIMD
+{
+    int operator () (const T *, DT *, int, WT, WT) const
+    {
+        return 0;
+    }
+};
+
+#if CV_NEON
+
+// from uchar
+
+template <>
+struct cvtScale_SIMD<uchar, uchar, float>
+{
+    int operator () (const uchar * src, uchar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vmovl_u8(vld1_u8(src + x));
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src))), v_scale), v_shift);
+
+            uint16x8_t v_dst = vcombine_u16(vqmovn_u32(vcvtq_u32_f32(v_dst1)),
+                                            vqmovn_u32(vcvtq_u32_f32(v_dst2)));
+            vst1_u8(dst + x, vqmovn_u16(v_dst));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<uchar, schar, float>
+{
+    int operator () (const uchar * src, schar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vmovl_u8(vld1_u8(src + x));
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src))), v_scale), v_shift);
+
+            int16x8_t v_dst = vcombine_s16(vqmovn_s32(vcvtq_s32_f32(v_dst1)),
+                                           vqmovn_s32(vcvtq_s32_f32(v_dst2)));
+            vst1_s8(dst + x, vqmovn_s16(v_dst));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<uchar, ushort, float>
+{
+    int operator () (const uchar * src, ushort * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vmovl_u8(vld1_u8(src + x));
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src))), v_scale), v_shift);
+
+            uint16x8_t v_dst = vcombine_u16(vqmovn_u32(vcvtq_u32_f32(v_dst1)),
+                                            vqmovn_u32(vcvtq_u32_f32(v_dst2)));
+            vst1q_u16(dst + x, v_dst);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<uchar, short, float>
+{
+    int operator () (const uchar * src, short * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vmovl_u8(vld1_u8(src + x));
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src))), v_scale), v_shift);
+
+            int16x8_t v_dst = vcombine_s16(vqmovn_s32(vcvtq_s32_f32(v_dst1)),
+                                           vqmovn_s32(vcvtq_s32_f32(v_dst2)));
+            vst1q_s16(dst + x, v_dst);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<uchar, int, float>
+{
+    int operator () (const uchar * src, int * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vmovl_u8(vld1_u8(src + x));
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src))), v_scale), v_shift);
+
+            vst1q_s32(dst + x, vcvtq_s32_f32(v_dst1));
+            vst1q_s32(dst + x + 4, vcvtq_s32_f32(v_dst2));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<uchar, float, float>
+{
+    int operator () (const uchar * src, float * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vmovl_u8(vld1_u8(src + x));
+            vst1q_f32(dst + x, vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src))), v_scale), v_shift));
+            vst1q_f32(dst + x + 4, vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src))), v_scale), v_shift));
+        }
+
+        return x;
+    }
+};
+
+// from schar
+
+template <>
+struct cvtScale_SIMD<schar, uchar, float>
+{
+    int operator () (const schar * src, uchar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vmovl_s8(vld1_s8(src + x));
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src))), v_scale), v_shift);
+
+            uint16x8_t v_dst = vcombine_u16(vqmovn_u32(vcvtq_u32_f32(v_dst1)),
+                                            vqmovn_u32(vcvtq_u32_f32(v_dst2)));
+            vst1_u8(dst + x, vqmovn_u16(v_dst));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<schar, schar, float>
+{
+    int operator () (const schar * src, schar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vmovl_s8(vld1_s8(src + x));
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src))), v_scale), v_shift);
+
+            int16x8_t v_dst = vcombine_s16(vqmovn_s32(vcvtq_s32_f32(v_dst1)),
+                                           vqmovn_s32(vcvtq_s32_f32(v_dst2)));
+            vst1_s8(dst + x, vqmovn_s16(v_dst));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<schar, ushort, float>
+{
+    int operator () (const schar * src, ushort * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vmovl_s8(vld1_s8(src + x));
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src))), v_scale), v_shift);
+
+            uint16x8_t v_dst = vcombine_u16(vqmovn_u32(vcvtq_u32_f32(v_dst1)),
+                                            vqmovn_u32(vcvtq_u32_f32(v_dst2)));
+            vst1q_u16(dst + x, v_dst);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<schar, short, float>
+{
+    int operator () (const schar * src, short * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vmovl_s8(vld1_s8(src + x));
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src))), v_scale), v_shift);
+
+            int16x8_t v_dst = vcombine_s16(vqmovn_s32(vcvtq_s32_f32(v_dst1)),
+                                           vqmovn_s32(vcvtq_s32_f32(v_dst2)));
+            vst1q_s16(dst + x, v_dst);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<schar, int, float>
+{
+    int operator () (const schar * src, int * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vmovl_s8(vld1_s8(src + x));
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src))), v_scale), v_shift);
+
+            vst1q_s32(dst + x, vcvtq_s32_f32(v_dst1));
+            vst1q_s32(dst + x + 4, vcvtq_s32_f32(v_dst2));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<schar, float, float>
+{
+    int operator () (const schar * src, float * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vmovl_s8(vld1_s8(src + x));
+            vst1q_f32(dst + x, vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src))), v_scale), v_shift));
+            vst1q_f32(dst + x + 4, vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src))), v_scale), v_shift));
+        }
+
+        return x;
+    }
+};
+
+// from ushort
+
+template <>
+struct cvtScale_SIMD<ushort, uchar, float>
+{
+    int operator () (const ushort * src, uchar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vld1q_u16(src + x);
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src))), v_scale), v_shift);
+
+            uint16x8_t v_dst = vcombine_u16(vqmovn_u32(vcvtq_u32_f32(v_dst1)),
+                                            vqmovn_u32(vcvtq_u32_f32(v_dst2)));
+            vst1_u8(dst + x, vqmovn_u16(v_dst));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<ushort, schar, float>
+{
+    int operator () (const ushort * src, schar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vld1q_u16(src + x);
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src))), v_scale), v_shift);
+
+            int16x8_t v_dst = vcombine_s16(vqmovn_s32(vcvtq_s32_f32(v_dst1)),
+                                           vqmovn_s32(vcvtq_s32_f32(v_dst2)));
+            vst1_s8(dst + x, vqmovn_s16(v_dst));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<ushort, ushort, float>
+{
+    int operator () (const ushort * src, ushort * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vld1q_u16(src + x);
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src))), v_scale), v_shift);
+
+            uint16x8_t v_dst = vcombine_u16(vqmovn_u32(vcvtq_u32_f32(v_dst1)),
+                                            vqmovn_u32(vcvtq_u32_f32(v_dst2)));
+            vst1q_u16(dst + x, v_dst);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<ushort, short, float>
+{
+    int operator () (const ushort * src, short * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vld1q_u16(src + x);
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src))), v_scale), v_shift);
+
+            int16x8_t v_dst = vcombine_s16(vqmovn_s32(vcvtq_s32_f32(v_dst1)),
+                                           vqmovn_s32(vcvtq_s32_f32(v_dst2)));
+            vst1q_s16(dst + x, v_dst);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<ushort, int, float>
+{
+    int operator () (const ushort * src, int * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vld1q_u16(src + x);
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src))), v_scale), v_shift);
+
+            vst1q_s32(dst + x, vcvtq_s32_f32(v_dst1));
+            vst1q_s32(dst + x + 4, vcvtq_s32_f32(v_dst2));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<ushort, float, float>
+{
+    int operator () (const ushort * src, float * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vld1q_u16(src + x);
+            vst1q_f32(dst + x, vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src))), v_scale), v_shift));
+            vst1q_f32(dst + x + 4, vaddq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src))), v_scale), v_shift));
+        }
+
+        return x;
+    }
+};
+
+// from short
+
+template <>
+struct cvtScale_SIMD<short, uchar, float>
+{
+    int operator () (const short * src, uchar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vld1q_s16(src + x);
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src))), v_scale), v_shift);
+
+            uint16x8_t v_dst = vcombine_u16(vqmovn_u32(vcvtq_u32_f32(v_dst1)),
+                                            vqmovn_u32(vcvtq_u32_f32(v_dst2)));
+            vst1_u8(dst + x, vqmovn_u16(v_dst));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<short, schar, float>
+{
+    int operator () (const short * src, schar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vld1q_s16(src + x);
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src))), v_scale), v_shift);
+
+            int16x8_t v_dst = vcombine_s16(vqmovn_s32(vcvtq_s32_f32(v_dst1)),
+                                           vqmovn_s32(vcvtq_s32_f32(v_dst2)));
+            vst1_s8(dst + x, vqmovn_s16(v_dst));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<short, ushort, float>
+{
+    int operator () (const short * src, ushort * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vld1q_s16(src + x);
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src))), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src))), v_scale), v_shift);
+
+            uint16x8_t v_dst = vcombine_u16(vqmovn_u32(vcvtq_u32_f32(v_dst1)),
+                                            vqmovn_u32(vcvtq_u32_f32(v_dst2)));
+            vst1q_u16(dst + x, v_dst);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<short, float, float>
+{
+    int operator () (const short * src, float * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vld1q_s16(src + x);
+            vst1q_f32(dst + x, vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src))), v_scale), v_shift));
+            vst1q_f32(dst + x + 4, vaddq_f32(vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src))), v_scale), v_shift));
+        }
+
+        return x;
+    }
+};
+
+// from int
+
+template <>
+struct cvtScale_SIMD<int, uchar, float>
+{
+    int operator () (const int * src, uchar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vld1q_s32(src + x)), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vld1q_s32(src + x + 4)), v_scale), v_shift);
+
+            uint16x8_t v_dst = vcombine_u16(vqmovn_u32(vcvtq_u32_f32(v_dst1)),
+                                            vqmovn_u32(vcvtq_u32_f32(v_dst2)));
+            vst1_u8(dst + x, vqmovn_u16(v_dst));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<int, schar, float>
+{
+    int operator () (const int * src, schar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vld1q_s32(src + x)), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vld1q_s32(src + x + 4)), v_scale), v_shift);
+
+            int16x8_t v_dst = vcombine_s16(vqmovn_s32(vcvtq_s32_f32(v_dst1)),
+                                           vqmovn_s32(vcvtq_s32_f32(v_dst2)));
+            vst1_s8(dst + x, vqmovn_s16(v_dst));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<int, ushort, float>
+{
+    int operator () (const int * src, ushort * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vld1q_s32(src + x)), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vld1q_s32(src + x + 4)), v_scale), v_shift);
+
+            uint16x8_t v_dst = vcombine_u16(vqmovn_u32(vcvtq_u32_f32(v_dst1)),
+                                            vqmovn_u32(vcvtq_u32_f32(v_dst2)));
+            vst1q_u16(dst + x, v_dst);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<int, short, float>
+{
+    int operator () (const int * src, short * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vld1q_s32(src + x)), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(vld1q_s32(src + x + 4)), v_scale), v_shift);
+
+            int16x8_t v_dst = vcombine_s16(vqmovn_s32(vcvtq_s32_f32(v_dst1)),
+                                            vqmovn_s32(vcvtq_s32_f32(v_dst2)));
+            vst1q_s16(dst + x, v_dst);
+        }
+
+        return x;
+    }
+};
+
+// from float
+
+template <>
+struct cvtScale_SIMD<float, uchar, float>
+{
+    int operator () (const float * src, uchar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vld1q_f32(src + x), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vld1q_f32(src + x + 4), v_scale), v_shift);
+
+            uint16x8_t v_dst = vcombine_u16(vqmovn_u32(vcvtq_u32_f32(v_dst1)),
+                                            vqmovn_u32(vcvtq_u32_f32(v_dst2)));
+            vst1_u8(dst + x, vqmovn_u16(v_dst));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<float, schar, float>
+{
+    int operator () (const float * src, schar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vld1q_f32(src + x), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vld1q_f32(src + x + 4), v_scale), v_shift);
+
+            int16x8_t v_dst = vcombine_s16(vqmovn_s32(vcvtq_s32_f32(v_dst1)),
+                                           vqmovn_s32(vcvtq_s32_f32(v_dst2)));
+            vst1_s8(dst + x, vqmovn_s16(v_dst));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<float, ushort, float>
+{
+    int operator () (const float * src, ushort * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vld1q_f32(src + x), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vld1q_f32(src + x + 4), v_scale), v_shift);
+
+            uint16x8_t v_dst = vcombine_u16(vqmovn_u32(vcvtq_u32_f32(v_dst1)),
+                                            vqmovn_u32(vcvtq_u32_f32(v_dst2)));
+            vst1q_u16(dst + x, v_dst);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<float, short, float>
+{
+    int operator () (const float * src, short * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            float32x4_t v_dst1 = vaddq_f32(vmulq_f32(vld1q_f32(src + x), v_scale), v_shift);
+            float32x4_t v_dst2 = vaddq_f32(vmulq_f32(vld1q_f32(src + x + 4), v_scale), v_shift);
+
+            int16x8_t v_dst = vcombine_s16(vqmovn_s32(vcvtq_s32_f32(v_dst1)),
+                                            vqmovn_s32(vcvtq_s32_f32(v_dst2)));
+            vst1q_s16(dst + x, v_dst);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<float, int, float>
+{
+    int operator () (const float * src, int * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 4; x += 4)
+            vst1q_s32(dst + x, vcvtq_s32_f32(vaddq_f32(vmulq_f32(vld1q_f32(src + x), v_scale), v_shift)));
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<float, float, float>
+{
+    int operator () (const float * src, float * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+        float32x4_t v_shift = vdupq_n_f32(shift), v_scale = vdupq_n_f32(scale);
+
+        for ( ; x <= width - 4; x += 4)
+            vst1q_f32(dst + x, vaddq_f32(vmulq_f32(vld1q_f32(src + x), v_scale), v_shift));
+
+        return x;
+    }
+};
+
+#endif
+
 template<typename T, typename DT, typename WT> static void
 cvtScale_( const T* src, size_t sstep,
            DT* dst, size_t dstep, Size size,
@@ -1488,9 +2206,11 @@ cvtScale_( const T* src, size_t sstep,
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
 
+    cvtScale_SIMD<T, DT, WT> vop;
+
     for( ; size.height--; src += sstep, dst += dstep )
     {
-        int x = 0;
+        int x = vop(src, dst, size.width, scale, shift);
 
         #if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
