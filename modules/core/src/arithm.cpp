@@ -2367,6 +2367,114 @@ void cv::divide(double scale, InputArray src2,
 namespace cv
 {
 
+template <typename T, typename WT>
+struct AddWeighted_SIMD
+{
+    int operator() (const T *, const T *, T *, int, WT, WT, WT) const
+    {
+        return 0;
+    }
+};
+
+#if CV_NEON
+
+template <>
+struct AddWeighted_SIMD<schar, float>
+{
+    int operator() (const schar * src1, const schar * src2, schar * dst, int width, float alpha, float beta, float gamma) const
+    {
+        int x = 0;
+
+        float32x4_t g = vdupq_n_f32 (gamma);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            int8x8_t in1 = vld1_s8(src1 + x);
+            int16x8_t in1_16 = vmovl_s8(in1);
+            float32x4_t in1_f_l = vcvtq_f32_s32(vmovl_s16(vget_low_s16(in1_16)));
+            float32x4_t in1_f_h = vcvtq_f32_s32(vmovl_s16(vget_high_s16(in1_16)));
+
+            int8x8_t in2 = vld1_s8(src2+x);
+            int16x8_t in2_16 = vmovl_s8(in2);
+            float32x4_t in2_f_l = vcvtq_f32_s32(vmovl_s16(vget_low_s16(in2_16)));
+            float32x4_t in2_f_h = vcvtq_f32_s32(vmovl_s16(vget_high_s16(in2_16)));
+
+            float32x4_t out_f_l = vaddq_f32(vmulq_n_f32(in1_f_l, alpha), vmulq_n_f32(in2_f_l, beta));
+            float32x4_t out_f_h = vaddq_f32(vmulq_n_f32(in1_f_h, alpha), vmulq_n_f32(in2_f_h, beta));
+            out_f_l = vaddq_f32(out_f_l, g);
+            out_f_h = vaddq_f32(out_f_h, g);
+
+            int16x4_t out_16_l = vqmovn_s32(vcvtq_s32_f32(out_f_l));
+            int16x4_t out_16_h = vqmovn_s32(vcvtq_s32_f32(out_f_h));
+
+            int16x8_t out_16 = vcombine_s16(out_16_l, out_16_h);
+            int8x8_t out = vqmovn_s16(out_16);
+
+            vst1_s8(dst + x, out);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct AddWeighted_SIMD<ushort, float>
+{
+    int operator() (const ushort * src1, const ushort * src2, ushort * dst, int width, float alpha, float beta, float gamma) const
+    {
+        int x = 0;
+
+        float32x4_t g = vdupq_n_f32(gamma);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            uint16x8_t v_src1 = vld1q_u16(src1 + x), v_src2 = vld1q_u16(src2 + x);
+
+            float32x4_t v_s1 = vmulq_n_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1))), alpha);
+            float32x4_t v_s2 = vmulq_n_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src2))), beta);
+            uint16x4_t v_dst1 = vqmovn_u32(vcvtq_u32_f32(vaddq_f32(vaddq_f32(v_s1, v_s2), g)));
+
+            v_s1 = vmulq_n_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1))), alpha);
+            v_s2 = vmulq_n_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src2))), beta);
+            uint16x4_t v_dst2 = vqmovn_u32(vcvtq_u32_f32(vaddq_f32(vaddq_f32(v_s1, v_s2), g)));
+
+            vst1q_u16(dst + x, vcombine_u16(v_dst1, v_dst2));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct AddWeighted_SIMD<short, float>
+{
+    int operator() (const short * src1, const short * src2, short * dst, int width, float alpha, float beta, float gamma) const
+    {
+        int x = 0;
+
+        float32x4_t g = vdupq_n_f32(gamma);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            int16x8_t v_src1 = vld1q_s16(src1 + x), v_src2 = vld1q_s16(src2 + x);
+
+            float32x4_t v_s1 = vmulq_n_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src1))), alpha);
+            float32x4_t v_s2 = vmulq_n_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src2))), beta);
+            int16x4_t v_dst1 = vqmovn_s32(vcvtq_s32_f32(vaddq_f32(vaddq_f32(v_s1, v_s2), g)));
+
+            v_s1 = vmulq_n_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src1))), alpha);
+            v_s2 = vmulq_n_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src2))), beta);
+            int16x4_t v_dst2 = vqmovn_s32(vcvtq_s32_f32(vaddq_f32(vaddq_f32(v_s1, v_s2), g)));
+
+            vst1q_s16(dst + x, vcombine_s16(v_dst1, v_dst2));
+        }
+
+        return x;
+    }
+};
+
+#endif
+
 template<typename T, typename WT> static void
 addWeighted_( const T* src1, size_t step1, const T* src2, size_t step2,
               T* dst, size_t step, Size size, void* _scalars )
@@ -2377,9 +2485,11 @@ addWeighted_( const T* src1, size_t step1, const T* src2, size_t step2,
     step2 /= sizeof(src2[0]);
     step /= sizeof(dst[0]);
 
+    AddWeighted_SIMD<T, WT> vop;
+
     for( ; size.height--; src1 += step1, src2 += step2, dst += step )
     {
-        int x = 0;
+        int x = vop(src1, src2, dst, size.width, alpha, beta, gamma);
         #if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
