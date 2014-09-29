@@ -71,7 +71,7 @@ TEST(Photo_SeamlessClone_normal, regression)
     seamlessClone(source, destination, mask, p, result, 1);
 
     Mat reference = imread(folder + "reference.png");
-    double error = norm(reference, result, NORM_L1);
+    double error = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
 }
 
@@ -97,7 +97,7 @@ TEST(Photo_SeamlessClone_mixed, regression)
     seamlessClone(source, destination, mask, p, result, 2);
 
     Mat reference = imread(folder + "reference.png");
-    double error = norm(reference, result, NORM_L1);
+    double error = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
 
 }
@@ -124,7 +124,7 @@ TEST(Photo_SeamlessClone_featureExchange, regression)
     seamlessClone(source, destination, mask, p, result, 3);
 
     Mat reference = imread(folder + "reference.png");
-    double error = norm(reference, result, NORM_L1);
+    double error = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
 
 }
@@ -145,7 +145,7 @@ TEST(Photo_SeamlessClone_colorChange, regression)
     colorChange(source, mask, result, 1.5, .5, .5);
 
     Mat reference = imread(folder + "reference.png");
-    double error = norm(reference, result, NORM_L1);
+    double error = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
 
 }
@@ -166,7 +166,7 @@ TEST(Photo_SeamlessClone_illuminationChange, regression)
     illuminationChange(source, mask, result, 0.2f, 0.4f);
 
     Mat reference = imread(folder + "reference.png");
-    double error = norm(reference, result, NORM_L1);
+    double error = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
 
 }
@@ -187,7 +187,7 @@ TEST(Photo_SeamlessClone_textureFlattening, regression)
     textureFlattening(source, mask, result, 30, 45, 3);
 
     Mat reference = imread(folder + "reference.png");
-    double error = norm(reference, result, NORM_L1);
+    double error = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
 
 }
