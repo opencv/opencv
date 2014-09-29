@@ -126,7 +126,7 @@ static void calcHarris( const Mat& _cov, Mat& _dst, double k )
         if( simd )
         {
             __m128 k4 = _mm_set1_ps((float)k);
-            for( ; j <= size.width - 5; j += 4 )
+            for( ; j <= size.width - 4; j += 4 )
             {
                 __m128 t0 = _mm_loadu_ps(cov + j*3); // a0 b0 c0 x
                 __m128 t1 = _mm_loadu_ps(cov + j*3 + 3); // a1 b1 c1 x
@@ -151,7 +151,7 @@ static void calcHarris( const Mat& _cov, Mat& _dst, double k )
 
         for( ; j <= size.width - 4; j += 4 )
         {
-            float32x4x3_t v_src = vld3q_f32(cov + j + 3);
+            float32x4x3_t v_src = vld3q_f32(cov + j * 3);
             float32x4_t v_a = v_src.val[0], v_b = v_src.val[1], v_c = v_src.val[2];
             float32x4_t v_ac_bb = vmlsq_f32(vmulq_f32(v_a, v_c), v_b, v_b);
             float32x4_t v_ac = vaddq_f32(v_a, v_c);
