@@ -61,9 +61,9 @@ namespace cv
         protected:
 
             void init_var(const cv::Mat &I, const cv::Mat &wmask);
-            void compute_derivatives(const cv::Mat &I, const cv::Mat &mask, const cv::Mat &wmask);
+            void compute_derivatives(const cv::Mat &destination, const cv::Mat &patch, const cv::Mat &binaryMask);
             void scalar_product(cv::Mat mat, float r, float g, float b);
-            void poisson(const cv::Mat &I, const cv::Mat &gx, const cv::Mat &gy, const cv::Mat &sx, const cv::Mat &sy);
+            void poisson(const cv::Mat &destination, const cv::Mat &gx, const cv::Mat &gy, const cv::Mat &sx, const cv::Mat &sy);
             void evaluate(const cv::Mat &I, const cv::Mat &wmask, const cv::Mat &cloned);
             void dst(double *mod_diff, double *sineTransform,int h,int w);
             void idst(double *mod_diff, double *sineTransform,int h,int w);
@@ -80,7 +80,10 @@ namespace cv
 
         private:
             std::vector <cv::Mat> rgb_channel, rgbx_channel, rgby_channel, output;
-            cv::Mat grx, gry, sgx, sgy, srx32, sry32, grx32, gry32, smask, smask1;
+            cv::Mat gradientX, gradientY;
+            cv::Mat patchGradientX, patchGradientY;
+            cv::Mat srx32, sry32, grx32, gry32;
+            cv::Mat binaryMaskFloat, binaryMaskFloatInverted;
 
     };
 }
