@@ -39,9 +39,14 @@
 //
 //M*/
 
+#include <string>
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
+#include "opencv2/highgui.hpp"
 #include <stdlib.h>
+
+#include <iostream>
+
 
 #include "seamless_cloning.hpp"
 
@@ -87,6 +92,8 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
     int lenx = maxx - minx;
     int leny = maxy - miny;
 
+    Mat patch = Mat::zeros(Size(leny, lenx), CV_8UC3);
+
     int minxd = p.y - lenx/2;
     int maxxd = p.y + lenx/2;
     int minyd = p.x - leny/2;
@@ -97,14 +104,25 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
     Rect roi_d(minyd,minxd,leny,lenx);
     Rect roi_s(miny,minx,leny,lenx);
 
+    std::cout << "p : " << p.x << "\t"<<p.y<<"\n";
+    std::cout << "min : " << miny << "\t"<<minx<<"\n";
+    std::cout << "mind : " << minyd << "\t"<<minxd<<"\n";
+
     Mat destinationROI = dst_mask(roi_d);
     Mat sourceROI = cs_mask(roi_s);
 
     gray(roi_s).copyTo(destinationROI);
     src(roi_s).copyTo(sourceROI,gray(roi_s));
+    src(roi_s).copyTo(patch, gray(roi_s));
 
     destinationROI = cd_mask(roi_d);
     cs_mask(roi_s).copyTo(destinationROI);
+
+
+    imwrite("/home/adrien/DATA/tmp/dst_mask.png", dst_mask);
+    imwrite("/home/adrien/DATA/tmp/cs_mask.png", cs_mask);
+    imwrite("/home/adrien/DATA/tmp/cd_mask.png", cd_mask);
+    imwrite("/home/adrien/DATA/tmp/patch.png", patch);
 
     Cloning obj;
     obj.normal_clone(dest,cd_mask,dst_mask,blend,flags);

@@ -47,7 +47,7 @@ using namespace cv;
 using namespace std;
 
 
-void Cloning::getGradientx( const Mat &img, Mat &gx)
+void Cloning::computeGradientX( const Mat &img, Mat &gx)
 {
     Mat kernel = Mat::zeros(1, 3, CV_8S);
     kernel.at<char>(0,2) = 1;
@@ -55,7 +55,7 @@ void Cloning::getGradientx( const Mat &img, Mat &gx)
     filter2D(img, gx, CV_32F, kernel);
 }
 
-void Cloning::getGradienty( const Mat &img, Mat &gy)
+void Cloning::computeGradientY( const Mat &img, Mat &gy)
 {
     Mat kernel = Mat::zeros(3, 1, CV_8S);
     kernel.at<char>(2,0) = 1;
@@ -63,7 +63,7 @@ void Cloning::getGradienty( const Mat &img, Mat &gy)
     filter2D(img, gy, CV_32F, kernel);
 }
 
-void Cloning::lapx( const Mat &img, Mat &gxx)
+void Cloning::computeLaplacianX( const Mat &img, Mat &gxx)
 {
     Mat kernel = Mat::zeros(1, 3, CV_8S);
     kernel.at<char>(0,0) = -1;
@@ -71,7 +71,7 @@ void Cloning::lapx( const Mat &img, Mat &gxx)
     filter2D(img, gxx, CV_32F, kernel);
 }
 
-void Cloning::lapy( const Mat &img, Mat &gyy)
+void Cloning::computeLaplacianY( const Mat &img, Mat &gyy)
 {
     Mat kernel = Mat::zeros(3, 1, CV_8S);
     kernel.at<char>(0,0) = -1;
@@ -339,15 +339,15 @@ void Cloning::init_var(const Mat &I, const Mat &wmask)
     gry32 = Mat(I.size(),CV_32FC3);
 }
 
-void Cloning::initialization(const Mat &I, const Mat &mask, const Mat &wmask)
+void Cloning::compute_derivatives(const Mat &I, const Mat &mask, const Mat &wmask)
 {
     init_var(I,wmask);
 
-    getGradientx(I,grx);
-    getGradienty(I,gry);
+    computeGradientX(I,grx);
+    computeGradientY(I,gry);
 
-    getGradientx(mask,sgx);
-    getGradienty(mask,sgy);
+    computeGradientX(mask,sgx);
+    computeGradientY(mask,sgy);
 
     Mat Kernel(Size(3, 3), CV_8UC1);
     Kernel.setTo(Scalar(1));
@@ -392,8 +392,8 @@ void Cloning::poisson(const Mat &I, const Mat &gx, const Mat &gy, const Mat &sx,
     Mat gxx = Mat(I.size(),CV_32FC3);
     Mat gyy = Mat(I.size(),CV_32FC3);
 
-    lapx(fx,gxx);
-    lapy(fy,gyy);
+    computeLaplacianX(fx,gxx);
+    computeLaplacianY(fy,gyy);
 
     split(gxx,rgbx_channel);
     split(gyy,rgby_channel);
@@ -421,23 +421,23 @@ void Cloning::evaluate(const Mat &I, const Mat &wmask, const Mat &cloned)
     merge(output,cloned);
 }
 
-void Cloning::normal_clone(const Mat &I, const Mat &mask, const Mat &wmask, Mat &cloned, int num)
+void Cloning::normal_clone(const Mat &destination, const Mat &mask, const Mat &wmask, Mat &cloned, int flag)
 {
-    int w = I.size().width;
-    int h = I.size().height;
-    int channel = I.channels();
+    int w = destination.size().width;
+    int h = destination.size().height;
+    int channel = destination.channels();
 
 
-    initialization(I,mask,wmask);
+    compute_derivatives(destination,mask,wmask);
 
-    if(num == 1)
+    switch(flag)
     {
-        array_product(srx32,sgx,smask);
-        array_product(sry32,sgy,smask);
+        case NORMAL_CLONE:
+            array_product(srx32,sgx,smask);
+            array_product(sry32,sgy,smask);
+            break;
 
-    }
-    else if(num == 2)
-    {
+        case MIXED_CLONE:
 
         for(int i=0;i < h; i++)
         {
@@ -464,36 +464,36 @@ void Cloning::normal_clone(const Mat &I, const Mat &mask, const Mat &wmask, Mat 
                 }
             }
         }
+        break;
 
-    }
-    else if(num == 3)
-    {
+        case MONOCHROME_TRANSFER:
         Mat gray = Mat(mask.size(),CV_8UC1);
         Mat gray8 = Mat(mask.size(),CV_8UC3);
         cvtColor(mask, gray, COLOR_BGR2GRAY );
         vector <Mat> temp;
-        split(I,temp);
+        split(destination,temp);
         gray.copyTo(temp[2]);
         gray.copyTo(temp[1]);
         gray.copyTo(temp[0]);
 
         merge(temp,gray8);
 
-        getGradientx(gray8,sgx);
-        getGradienty(gray8,sgy);
+        computeGradientX(gray8,sgx);
+        computeGradientY(gray8,sgy);
 
         array_product(srx32,sgx,smask);
         array_product(sry32,sgy,smask);
+        break;
 
     }
 
-    evaluate(I,wmask,cloned);
+    evaluate(destination,wmask,cloned);
 }
 
 void Cloning::local_color_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float red_mul=1.0,
                                  float green_mul=1.0, float blue_mul=1.0)
 {
-    initialization(I,mask,wmask);
+    compute_derivatives(I,mask,wmask);
 
     array_product(srx32,sgx,smask);
     array_product(sry32,sgy,smask);
@@ -505,7 +505,7 @@ void Cloning::local_color_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, flo
 
 void Cloning::illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float alpha, float beta)
 {
-    initialization(I,mask,wmask);
+    compute_derivatives(I,mask,wmask);
 
     array_product(srx32,sgx,smask);
     array_product(sry32,sgy,smask);
@@ -534,7 +534,7 @@ void Cloning::illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float alp
 void Cloning::texture_flatten(Mat &I, Mat &mask, Mat &wmask, double low_threshold,
         double high_threshold, int kernel_size, Mat &cloned)
 {
-    initialization(I,mask,wmask);
+    compute_derivatives(I,mask,wmask);
 
     Mat out = Mat(mask.size(),CV_8UC1);
     Canny(mask,out,low_threshold,high_threshold,kernel_size);

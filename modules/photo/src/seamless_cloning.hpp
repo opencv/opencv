@@ -53,7 +53,7 @@ namespace cv
     class Cloning
     {
         public:
-            void normal_clone(const cv::Mat &I, const cv::Mat &mask, const cv::Mat &wmask, cv::Mat &cloned, int num);
+            void normal_clone(const cv::Mat& destination, const cv::Mat &mask, const cv::Mat &wmask, cv::Mat &cloned, int flag);
             void illum_change(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, cv::Mat &cloned, float alpha, float beta);
             void local_color_change(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, cv::Mat &cloned, float red_mul, float green_mul, float blue_mul);
             void texture_flatten(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, double low_threshold, double high_threhold, int kernel_size, cv::Mat &cloned);
@@ -61,21 +61,22 @@ namespace cv
         protected:
 
             void init_var(const cv::Mat &I, const cv::Mat &wmask);
-            void initialization(const cv::Mat &I, const cv::Mat &mask, const cv::Mat &wmask);
+            void compute_derivatives(const cv::Mat &I, const cv::Mat &mask, const cv::Mat &wmask);
             void scalar_product(cv::Mat mat, float r, float g, float b);
             void array_product(cv::Mat mat1, cv::Mat mat2, cv::Mat mat3);
             void poisson(const cv::Mat &I, const cv::Mat &gx, const cv::Mat &gy, const cv::Mat &sx, const cv::Mat &sy);
             void evaluate(const cv::Mat &I, const cv::Mat &wmask, const cv::Mat &cloned);
-            void getGradientx(const cv::Mat &img, cv::Mat &gx);
-            void getGradienty(const cv::Mat &img, cv::Mat &gy);
-            void lapx(const cv::Mat &img, cv::Mat &gxx);
-            void lapy(const cv::Mat &img, cv::Mat &gyy);
             void dst(double *mod_diff, double *sineTransform,int h,int w);
             void idst(double *mod_diff, double *sineTransform,int h,int w);
             void transpose(double *mat, double *mat_t,int h,int w);
             void solve(const cv::Mat &img, double *mod_diff, cv::Mat &result);
             void poisson_solver(const cv::Mat &img, cv::Mat &gxx , cv::Mat &gyy, cv::Mat &result);
 
+            
+            void computeGradientX(const cv::Mat &img, cv::Mat &gx);
+            void computeGradientY(const cv::Mat &img, cv::Mat &gy);
+            void computeLaplacianX(const cv::Mat &img, cv::Mat &gxx);
+            void computeLaplacianY(const cv::Mat &img, cv::Mat &gyy);
 
         private:
             std::vector <cv::Mat> rgb_channel, rgbx_channel, rgby_channel, output;
