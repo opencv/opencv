@@ -369,16 +369,18 @@ void Cloning::scalar_product(Mat mat, float r, float g, float b)
     merge(channels,mat);
 }
 
-void Cloning::array_product(Mat mat1, Mat mat2, Mat mat3)
+void Cloning::array_product(const cv::Mat& lhs, const cv::Mat& rhs, cv::Mat& result) const
 {
-    vector <Mat> channels_temp1;
-    vector <Mat> channels_temp2;
-    split(mat1,channels_temp1);
-    split(mat2,channels_temp2);
-    multiply(channels_temp2[2],mat3,channels_temp1[2]);
-    multiply(channels_temp2[1],mat3,channels_temp1[1]);
-    multiply(channels_temp2[0],mat3,channels_temp1[0]);
-    merge(channels_temp1,mat1);
+    vector <Mat> lhs_channels;
+    vector <Mat> result_channels;
+    
+    split(lhs,lhs_channels);
+    split(result,result_channels);
+    
+    for(int chan = 0 ; chan < 3 ; ++chan)
+        multiply(lhs_channels[chan],rhs,result_channels[chan]);
+    
+    merge(result_channels,result);
 }
 
 void Cloning::poisson(const Mat &I, const Mat &gx, const Mat &gy, const Mat &sx, const Mat &sy)
@@ -413,8 +415,8 @@ void Cloning::evaluate(const Mat &I, const Mat &wmask, const Mat &cloned)
     I.convertTo(grx32,CV_32FC3,1.0/255.0);
     I.convertTo(gry32,CV_32FC3,1.0/255.0);
 
-    array_product(grx32,grx,smask1);
-    array_product(gry32,gry,smask1);
+    array_product(grx,smask1, grx32);
+    array_product(gry,smask1, gry32);
 
     poisson(I,grx32,gry32,srx32,sry32);
 
@@ -433,8 +435,8 @@ void Cloning::normal_clone(const Mat &destination, const Mat &mask, const Mat &w
     switch(flag)
     {
         case NORMAL_CLONE:
-            array_product(srx32,sgx,smask);
-            array_product(sry32,sgy,smask);
+            array_product(sgx,smask, srx32);
+            array_product(sgy,smask, sry32);
             break;
 
         case MIXED_CLONE:
@@ -481,8 +483,8 @@ void Cloning::normal_clone(const Mat &destination, const Mat &mask, const Mat &w
         computeGradientX(gray8,sgx);
         computeGradientY(gray8,sgy);
 
-        array_product(srx32,sgx,smask);
-        array_product(sry32,sgy,smask);
+        array_product(sgx, smask, srx32);
+        array_product(sgy, smask, sry32);
         break;
 
     }
@@ -495,8 +497,8 @@ void Cloning::local_color_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, flo
 {
     compute_derivatives(I,mask,wmask);
 
-    array_product(srx32,sgx,smask);
-    array_product(sry32,sgy,smask);
+    array_product(sgx,smask, srx32);
+    array_product(sgy,smask, sry32);
     scalar_product(srx32,red_mul,green_mul,blue_mul);
     scalar_product(sry32,red_mul,green_mul,blue_mul);
 
@@ -507,8 +509,8 @@ void Cloning::illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float alp
 {
     compute_derivatives(I,mask,wmask);
 
-    array_product(srx32,sgx,smask);
-    array_product(sry32,sgy,smask);
+    array_product(sgx,smask, srx32);
+    array_product(sgy,smask, sry32);
 
     Mat mag = Mat(I.size(),CV_32FC3);
     magnitude(srx32,sry32,mag);
@@ -545,8 +547,8 @@ void Cloning::texture_flatten(Mat &I, Mat &mask, Mat &wmask, double low_threshol
     zeros.copyTo(sgx, zerosMask);
     zeros.copyTo(sgy, zerosMask);
 
-    array_product(srx32,sgx,smask);
-    array_product(sry32,sgy,smask);
+    array_product(sgx,smask, srx32);
+    array_product(sgy,smask, sry32);
 
     evaluate(I,wmask,cloned);
 }

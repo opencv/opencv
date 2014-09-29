@@ -63,7 +63,6 @@ namespace cv
             void init_var(const cv::Mat &I, const cv::Mat &wmask);
             void compute_derivatives(const cv::Mat &I, const cv::Mat &mask, const cv::Mat &wmask);
             void scalar_product(cv::Mat mat, float r, float g, float b);
-            void array_product(cv::Mat mat1, cv::Mat mat2, cv::Mat mat3);
             void poisson(const cv::Mat &I, const cv::Mat &gx, const cv::Mat &gy, const cv::Mat &sx, const cv::Mat &sy);
             void evaluate(const cv::Mat &I, const cv::Mat &wmask, const cv::Mat &cloned);
             void dst(double *mod_diff, double *sineTransform,int h,int w);
@@ -72,6 +71,7 @@ namespace cv
             void solve(const cv::Mat &img, double *mod_diff, cv::Mat &result);
             void poisson_solver(const cv::Mat &img, cv::Mat &gxx , cv::Mat &gyy, cv::Mat &result);
 
+            void array_product(const cv::Mat& lhs, const cv::Mat& rhs, cv::Mat& result) const;
             
             void computeGradientX(const cv::Mat &img, cv::Mat &gx);
             void computeGradientY(const cv::Mat &img, cv::Mat &gy);
