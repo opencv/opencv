@@ -80,11 +80,9 @@ namespace cv
 
         private:
             std::vector <cv::Mat> rgb_channel, rgbx_channel, rgby_channel, output;
-            cv::Mat gradientX, gradientY;
+            cv::Mat destinationGradientX, destinationGradientY;
             cv::Mat patchGradientX, patchGradientY;
-            cv::Mat srx32, sry32, grx32, gry32;
             cv::Mat binaryMaskFloat, binaryMaskFloatInverted;
-
     };
 }
 #endif
