@@ -2051,17 +2051,6 @@ float normL2Sqr_(const float* a, const float* b, int n)
         d = buf[0] + buf[1] + buf[2] + buf[3];
     }
     else
-#elif CV_NEON
-    float32x4_t v_sum = vdupq_n_f32(0.0f);
-    for ( ; j <= n - 4; j += 4)
-    {
-        float32x4_t v_diff = vmulq_f32(vld1q_f32(a + j), vld1q_f32(b + j));
-        v_sum = vaddq_f32(v_sum, vmulq_f32(v_diff, v_diff));
-    }
-
-    float CV_DECL_ALIGNED(16) buf[4];
-    vst1q_f32(buf, v_sum);
-    d = buf[0] + buf[1] + buf[2] + buf[3];
 #endif
     {
         for( ; j <= n - 4; j += 4 )
