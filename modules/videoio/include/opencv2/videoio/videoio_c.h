@@ -178,9 +178,11 @@ enum
     CV_CAP_PROP_IRIS          =36,
     CV_CAP_PROP_SETTINGS      =37,
 
-    CV_CAP_PROP_AUTOGRAB      =1024, // property for videoio class CvCapture_Android only
-    CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING=1025, // readonly, tricky property, returns cpnst char* indeed
-    CV_CAP_PROP_PREVIEW_FORMAT=1026, // readonly, tricky property, returns cpnst char* indeed
+    // Android specific properties
+    CV_CAP_PROP_AUTOGRAB = 1024, // property for CvCapture_Android only
+    CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING = 1025, // readonly, tricky property, returns cpnst char* indeed
+    CV_CAP_PROP_PREVIEW_FORMAT = 1026, // readonly, tricky property, returns cpnst char* indeed
+    CV_CAP_PROP_OUTPUT_FORMAT = 1027, // property for CvCapture_Android only, but can be used for others is theory
 
     // OpenNI map generators
     CV_CAP_OPENNI_DEPTH_GENERATOR = 1 << 31,
@@ -320,7 +322,9 @@ enum
     CV_CAP_ANDROID_GREY_FRAME  = 1,  //Y
     CV_CAP_ANDROID_COLOR_FRAME_RGB = 2,
     CV_CAP_ANDROID_COLOR_FRAME_BGRA = 3,
-    CV_CAP_ANDROID_COLOR_FRAME_RGBA = 4
+    CV_CAP_ANDROID_COLOR_FRAME_RGBA = 4,
+    CV_CAP_ANDROID_COLOR_FRAME_YUV420sp = 5, //Default native color format for Android camera, a.k.a YUV NV21
+    CV_CAP_ANDROID_COLOR_FRAME_YUV_NV21 = CV_CAP_ANDROID_COLOR_FRAME_YUV420sp
 };
 
 // supported Android camera flash modes
