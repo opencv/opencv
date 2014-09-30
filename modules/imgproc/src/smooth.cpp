@@ -1607,6 +1607,21 @@ static inline void histogram_sub_simd( const HT x[16], HT y[16] )
     _mm_store_si128(ry+1, r1);
 }
 
+#elif CV_NEON
+#define MEDIAN_HAVE_SIMD 1
+
+static inline void histogram_add_simd( const HT x[16], HT y[16] )
+{
+    vst1q_u16(y, vaddq_u16(vld1q_u16(x), vld1q_u16(y)));
+    vst1q_u16(y + 8, vaddq_u16(vld1q_u16(x + 8), vld1q_u16(y + 8)));
+}
+
+static inline void histogram_sub_simd( const HT x[16], HT y[16] )
+{
+    vst1q_u16(y, vsubq_u16(vld1q_u16(x), vld1q_u16(y)));
+    vst1q_u16(y + 8, vsubq_u16(vld1q_u16(x + 8), vld1q_u16(y + 8)));
+}
+
 #else
 #define MEDIAN_HAVE_SIMD 0
 #endif
@@ -1660,7 +1675,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
     HT* h_coarse = alignPtr(&_h_coarse[0], 16);
     HT* h_fine = alignPtr(&_h_fine[0], 16);
 #if MEDIAN_HAVE_SIMD
-    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
+    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON);
 #endif
 
     for( int x = 0; x < _dst.cols; x += STRIPE_SIZE )
@@ -2108,6 +2123,71 @@ struct MinMaxVec32f
     }
 };
 
+#elif CV_NEON
+
+struct MinMaxVec8u
+{
+    typedef uchar value_type;
+    typedef uint8x16_t arg_type;
+    enum { SIZE = 16 };
+    arg_type load(const uchar* ptr) { return vld1q_u8(ptr); }
+    void store(uchar* ptr, arg_type val) { vst1q_u8(ptr, val); }
+    void operator()(arg_type& a, arg_type& b) const
+    {
+        arg_type t = a;
+        a = vminq_u8(a, b);
+        b = vmaxq_u8(b, t);
+    }
+};
+
+
+struct MinMaxVec16u
+{
+    typedef ushort value_type;
+    typedef uint16x8_t arg_type;
+    enum { SIZE = 8 };
+    arg_type load(const ushort* ptr) { return vld1q_u16(ptr); }
+    void store(ushort* ptr, arg_type val) { vst1q_u16(ptr, val); }
+    void operator()(arg_type& a, arg_type& b) const
+    {
+        arg_type t = a;
+        a = vminq_u16(a, b);
+        b = vmaxq_u16(b, t);
+    }
+};
+
+
+struct MinMaxVec16s
+{
+    typedef short value_type;
+    typedef int16x8_t arg_type;
+    enum { SIZE = 8 };
+    arg_type load(const short* ptr) { return vld1q_s16(ptr); }
+    void store(short* ptr, arg_type val) { vst1q_s16(ptr, val); }
+    void operator()(arg_type& a, arg_type& b) const
+    {
+        arg_type t = a;
+        a = vminq_s16(a, b);
+        b = vmaxq_s16(b, t);
+    }
+};
+
+
+struct MinMaxVec32f
+{
+    typedef float value_type;
+    typedef float32x4_t arg_type;
+    enum { SIZE = 4 };
+    arg_type load(const float* ptr) { return vld1q_f32(ptr); }
+    void store(float* ptr, arg_type val) { vst1q_f32(ptr, val); }
+    void operator()(arg_type& a, arg_type& b) const
+    {
+        arg_type t = a;
+        a = vminq_f32(a, b);
+        b = vmaxq_f32(b, t);
+    }
+};
+
 
 #else
 
@@ -2134,7 +2214,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
     int i, j, k, cn = _src.channels();
     Op op;
     VecOp vop;
-    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
+    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON);
 
     if( m == 3 )
     {
@@ -2450,7 +2530,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 #endif
 
     bool useSortNet = ksize == 3 || (ksize == 5
-#if !CV_SSE2
+#if !(CV_SSE2 || CV_NEON)
             && src0.depth() > CV_8U
 #endif
         );
@@ -2484,7 +2564,8 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
         CV_Assert( src.depth() == CV_8U && (cn == 1 || cn == 3 || cn == 4) );
 
         double img_size_mp = (double)(src0.total())/(1 << 20);
-        if( ksize <= 3 + (img_size_mp < 1 ? 12 : img_size_mp < 4 ? 6 : 2)*(MEDIAN_HAVE_SIMD && checkHardwareSupport(CV_CPU_SSE2) ? 1 : 3))
+        if( ksize <= 3 + (img_size_mp < 1 ? 12 : img_size_mp < 4 ? 6 : 2)*
+            (MEDIAN_HAVE_SIMD && (checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON)) ? 1 : 3))
             medianBlur_8u_Om( src, dst, ksize );
         else
             medianBlur_8u_O1( src, dst, ksize );
