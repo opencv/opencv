@@ -207,10 +207,12 @@ bool  TiffDecoder::readData( Mat& img )
             if(!is_tiled)
                 TIFFGetField( tif, TIFFTAG_ROWSPERSTRIP, &tile_height0 );
 
-            if( tile_width0 <= 0 )
+            uint32 infinity = -1; // default value for TIFFTAG_ROWSPERSTRIP is 2**32-1
+
+            if( tile_width0 == 0 || tile_width0 == infinity )
                 tile_width0 = m_width;
 
-            if( tile_height0 <= 0 )
+            if( tile_height0 == 0 || tile_height0 == infinity )
                 tile_height0 = m_height;
 
             AutoBuffer<uchar> _buffer( size_t(8) * tile_height0*tile_width0);
