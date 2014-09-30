@@ -90,20 +90,20 @@ struct Sum_SIMD<uchar, int>
             uint8x16_t v_src = vld1q_u8(src0 + x);
             uint16x8_t v_half = vmovl_u8(vget_low_u8(v_src));
 
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_low_u16(v_half)));
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_high_u16(v_half)));
+            v_sum = vaddw_u16(v_sum, vget_low_u16(v_half));
+            v_sum = vaddw_u16(v_sum, vget_high_u16(v_half));
 
             v_half = vmovl_u8(vget_high_u8(v_src));
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_low_u16(v_half)));
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_high_u16(v_half)));
+            v_sum = vaddw_u16(v_sum, vget_low_u16(v_half));
+            v_sum = vaddw_u16(v_sum, vget_high_u16(v_half));
         }
 
         for ( ; x <= len - 8; x += 8)
         {
             uint16x8_t v_src = vmovl_u8(vld1_u8(src0 + x));
 
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_low_u16(v_src)));
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_high_u16(v_src)));
+            v_sum = vaddw_u16(v_sum, vget_low_u16(v_src));
+            v_sum = vaddw_u16(v_sum, vget_high_u16(v_src));
         }
 
         unsigned int CV_DECL_ALIGNED(16) ar[4];
@@ -133,20 +133,20 @@ struct Sum_SIMD<schar, int>
             int8x16_t v_src = vld1q_s8(src0 + x);
             int16x8_t v_half = vmovl_s8(vget_low_s8(v_src));
 
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_low_s16(v_half)));
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_high_s16(v_half)));
+            v_sum = vaddw_s16(v_sum, vget_low_s16(v_half));
+            v_sum = vaddw_s16(v_sum, vget_high_s16(v_half));
 
             v_half = vmovl_s8(vget_high_s8(v_src));
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_low_s16(v_half)));
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_high_s16(v_half)));
+            v_sum = vaddw_s16(v_sum, vget_low_s16(v_half));
+            v_sum = vaddw_s16(v_sum, vget_high_s16(v_half));
         }
 
         for ( ; x <= len - 8; x += 8)
         {
             int16x8_t v_src = vmovl_s8(vld1_s8(src0 + x));
 
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_low_s16(v_src)));
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_high_s16(v_src)));
+            v_sum = vaddw_s16(v_sum, vget_low_s16(v_src));
+            v_sum = vaddw_s16(v_sum, vget_high_s16(v_src));
         }
 
         int CV_DECL_ALIGNED(16) ar[4];
@@ -175,12 +175,12 @@ struct Sum_SIMD<ushort, int>
         {
             uint16x8_t v_src = vld1q_u16(src0 + x);
 
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_low_u16(v_src)));
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_high_u16(v_src)));
+            v_sum = vaddw_u16(v_sum, vget_low_u16(v_src));
+            v_sum = vaddw_u16(v_sum, vget_high_u16(v_src));
         }
 
         for ( ; x <= len - 4; x += 4)
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vld1_u16(src0 + x)));
+            v_sum = vaddw_u16(v_sum, vld1_u16(src0 + x));
 
         unsigned int CV_DECL_ALIGNED(16) ar[4];
         vst1q_u32(ar, v_sum);
@@ -208,12 +208,12 @@ struct Sum_SIMD<short, int>
         {
             int16x8_t v_src = vld1q_s16(src0 + x);
 
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_low_s16(v_src)));
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_high_s16(v_src)));
+            v_sum = vaddw_s16(v_sum, vget_low_s16(v_src));
+            v_sum = vaddw_s16(v_sum, vget_high_s16(v_src));
         }
 
         for ( ; x <= len - 4; x += 4)
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vld1_s16(src0 + x)));
+            v_sum = vaddw_s16(v_sum, vld1_s16(src0 + x));
 
         int CV_DECL_ALIGNED(16) ar[4];
         vst1q_s32(ar, v_sum);
