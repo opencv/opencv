@@ -543,19 +543,17 @@ void Cloning::illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float alp
     Mat mag = Mat(I.size(),CV_32FC3);
     magnitude(srx32,sry32,mag);
 
-    Mat magnitude_mask = mag != 0;
-
     Mat multX, multY, multx_temp, multy_temp;
 
     multiply(srx32,pow(alpha,beta),multX);
     pow(mag,-1*beta, multx_temp);
-    multiply(multX,multx_temp,multX);
-    multX.copyTo(srx32, magnitude_mask);
+    multiply(multX,multx_temp,srx32);
+    patchNaNs(srx32);
 
     multiply(sry32,pow(alpha,beta),multY);
     pow(mag,-1*beta, multy_temp);
-    multiply(multY,multy_temp,multY);
-    multY.copyTo(sry32, magnitude_mask);
+    multiply(multY,multy_temp,sry32);
+    patchNaNs(sry32);
 
     Mat zeroMask = (srx32 != 0);
 
