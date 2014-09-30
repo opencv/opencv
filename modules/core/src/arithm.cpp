@@ -1987,6 +1987,238 @@ void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
 namespace cv
 {
 
+template <typename T, typename WT>
+struct Mul_SIMD
+{
+    int operator() (const T *, const T *, T *, int, WT) const
+    {
+        return 0;
+    }
+};
+
+#if CV_NEON
+
+template <>
+struct Mul_SIMD<uchar, float>
+{
+    int operator() (const uchar * src1, const uchar * src2, uchar * dst, int width, float scale) const
+    {
+        int x = 0;
+
+        if( scale == 1.0f )
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint16x8_t v_src1 = vmovl_u8(vld1_u8(src1 + x));
+                uint16x8_t v_src2 = vmovl_u8(vld1_u8(src2 + x));
+
+                float32x4_t v_dst1 = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1))),
+                                               vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src2))));
+                float32x4_t v_dst2 = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1))),
+                                               vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src2))));
+
+                uint16x8_t v_dst = vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(v_dst1)),
+                                                vqmovn_u32(cv_vrndq_u32_f32(v_dst2)));
+                vst1_u8(dst + x, vqmovn_u16(v_dst));
+            }
+        else
+        {
+            float32x4_t v_scale = vdupq_n_f32(scale);
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint16x8_t v_src1 = vmovl_u8(vld1_u8(src1 + x));
+                uint16x8_t v_src2 = vmovl_u8(vld1_u8(src2 + x));
+
+                float32x4_t v_dst1 = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1))),
+                                               vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src2))));
+                v_dst1 = vmulq_f32(v_dst1, v_scale);
+                float32x4_t v_dst2 = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1))),
+                                               vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src2))));
+                v_dst2 = vmulq_f32(v_dst2, v_scale);
+
+                uint16x8_t v_dst = vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(v_dst1)),
+                                                vqmovn_u32(cv_vrndq_u32_f32(v_dst2)));
+                vst1_u8(dst + x, vqmovn_u16(v_dst));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Mul_SIMD<schar, float>
+{
+    int operator() (const schar * src1, const schar * src2, schar * dst, int width, float scale) const
+    {
+        int x = 0;
+
+        if( scale == 1.0f )
+            for ( ; x <= width - 8; x += 8)
+            {
+                int16x8_t v_src1 = vmovl_s8(vld1_s8(src1 + x));
+                int16x8_t v_src2 = vmovl_s8(vld1_s8(src2 + x));
+
+                float32x4_t v_dst1 = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src1))),
+                                               vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src2))));
+                float32x4_t v_dst2 = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src1))),
+                                               vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src2))));
+
+                int16x8_t v_dst = vcombine_s16(vqmovn_s32(cv_vrndq_s32_f32(v_dst1)),
+                                               vqmovn_s32(cv_vrndq_s32_f32(v_dst2)));
+                vst1_s8(dst + x, vqmovn_s16(v_dst));
+            }
+        else
+        {
+            float32x4_t v_scale = vdupq_n_f32(scale);
+            for ( ; x <= width - 8; x += 8)
+            {
+                int16x8_t v_src1 = vmovl_s8(vld1_s8(src1 + x));
+                int16x8_t v_src2 = vmovl_s8(vld1_s8(src2 + x));
+
+                float32x4_t v_dst1 = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src1))),
+                                               vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src2))));
+                v_dst1 = vmulq_f32(v_dst1, v_scale);
+                float32x4_t v_dst2 = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src1))),
+                                               vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src2))));
+                v_dst2 = vmulq_f32(v_dst2, v_scale);
+
+                int16x8_t v_dst = vcombine_s16(vqmovn_s32(cv_vrndq_s32_f32(v_dst1)),
+                                               vqmovn_s32(cv_vrndq_s32_f32(v_dst2)));
+                vst1_s8(dst + x, vqmovn_s16(v_dst));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Mul_SIMD<ushort, float>
+{
+    int operator() (const ushort * src1, const ushort * src2, ushort * dst, int width, float scale) const
+    {
+        int x = 0;
+
+        if( scale == 1.0f )
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint16x8_t v_src1 = vld1q_u16(src1 + x), v_src2 = vld1q_u16(src2 + x);
+
+                float32x4_t v_dst1 = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1))),
+                                               vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src2))));
+                float32x4_t v_dst2 = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1))),
+                                               vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src2))));
+
+                uint16x8_t v_dst = vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(v_dst1)),
+                                                vqmovn_u32(cv_vrndq_u32_f32(v_dst2)));
+                vst1q_u16(dst + x, v_dst);
+            }
+        else
+        {
+            float32x4_t v_scale = vdupq_n_f32(scale);
+            for ( ; x <= width - 8; x += 8)
+            {
+                uint16x8_t v_src1 = vld1q_u16(src1 + x), v_src2 = vld1q_u16(src2 + x);
+
+                float32x4_t v_dst1 = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1))),
+                                               vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src2))));
+                v_dst1 = vmulq_f32(v_dst1, v_scale);
+                float32x4_t v_dst2 = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1))),
+                                               vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src2))));
+                v_dst2 = vmulq_f32(v_dst2, v_scale);
+
+                uint16x8_t v_dst = vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(v_dst1)),
+                                                vqmovn_u32(cv_vrndq_u32_f32(v_dst2)));
+                vst1q_u16(dst + x, v_dst);
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Mul_SIMD<short, float>
+{
+    int operator() (const short * src1, const short * src2, short * dst, int width, float scale) const
+    {
+        int x = 0;
+
+        if( scale == 1.0f )
+            for ( ; x <= width - 8; x += 8)
+            {
+                int16x8_t v_src1 = vld1q_s16(src1 + x), v_src2 = vld1q_s16(src2 + x);
+
+                float32x4_t v_dst1 = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src1))),
+                                               vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src2))));
+                float32x4_t v_dst2 = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src1))),
+                                               vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src2))));
+
+                int16x8_t v_dst = vcombine_s16(vqmovn_s32(cv_vrndq_s32_f32(v_dst1)),
+                                               vqmovn_s32(cv_vrndq_s32_f32(v_dst2)));
+                vst1q_s16(dst + x, v_dst);
+            }
+        else
+        {
+            float32x4_t v_scale = vdupq_n_f32(scale);
+            for ( ; x <= width - 8; x += 8)
+            {
+                int16x8_t v_src1 = vld1q_s16(src1 + x), v_src2 = vld1q_s16(src2 + x);
+
+                float32x4_t v_dst1 = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src1))),
+                                               vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src2))));
+                v_dst1 = vmulq_f32(v_dst1, v_scale);
+                float32x4_t v_dst2 = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src1))),
+                                               vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src2))));
+                v_dst2 = vmulq_f32(v_dst2, v_scale);
+
+                int16x8_t v_dst = vcombine_s16(vqmovn_s32(cv_vrndq_s32_f32(v_dst1)),
+                                               vqmovn_s32(cv_vrndq_s32_f32(v_dst2)));
+                vst1q_s16(dst + x, v_dst);
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Mul_SIMD<float, float>
+{
+    int operator() (const float * src1, const float * src2, float * dst, int width, float scale) const
+    {
+        int x = 0;
+
+        if( scale == 1.0f )
+            for ( ; x <= width - 8; x += 8)
+            {
+                float32x4_t v_dst1 = vmulq_f32(vld1q_f32(src1 + x), vld1q_f32(src2 + x));
+                float32x4_t v_dst2 = vmulq_f32(vld1q_f32(src1 + x + 4), vld1q_f32(src2 + x + 4));
+                vst1q_f32(dst + x, v_dst1);
+                vst1q_f32(dst + x + 4, v_dst2);
+            }
+        else
+        {
+            float32x4_t v_scale = vdupq_n_f32(scale);
+            for ( ; x <= width - 8; x += 8)
+            {
+                float32x4_t v_dst1 = vmulq_f32(vld1q_f32(src1 + x), vld1q_f32(src2 + x));
+                v_dst1 = vmulq_f32(v_dst1, v_scale);
+
+                float32x4_t v_dst2 = vmulq_f32(vld1q_f32(src1 + x + 4), vld1q_f32(src2 + x + 4));
+                v_dst2 = vmulq_f32(v_dst2, v_scale);
+
+                vst1q_f32(dst + x, v_dst1);
+                vst1q_f32(dst + x + 4, v_dst2);
+            }
+        }
+
+        return x;
+    }
+};
+
+#endif
+
 template<typename T, typename WT> static void
 mul_( const T* src1, size_t step1, const T* src2, size_t step2,
       T* dst, size_t step, Size size, WT scale )
@@ -1995,11 +2227,13 @@ mul_( const T* src1, size_t step1, const T* src2, size_t step2,
     step2 /= sizeof(src2[0]);
     step /= sizeof(dst[0]);
 
+    Mul_SIMD<T, WT> vop;
+
     if( scale == (WT)1. )
     {
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
-            int i=0;
+            int i = vop(src1, src2, dst, size.width, scale);
             #if CV_ENABLE_UNROLLED
             for(; i <= size.width - 4; i += 4 )
             {
@@ -2024,7 +2258,7 @@ mul_( const T* src1, size_t step1, const T* src2, size_t step2,
     {
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
-            int i = 0;
+            int i = vop(src1, src2, dst, size.width, scale);
             #if CV_ENABLE_UNROLLED
             for(; i <= size.width - 4; i += 4 )
             {
