@@ -60,10 +60,10 @@ namespace cv
 
         protected:
 
-            void init_var(const cv::Mat &I, const cv::Mat &wmask);
+            void init_var(const cv::Mat &destination, const cv::Mat &binaryMask);
             void compute_derivatives(const cv::Mat &destination, const cv::Mat &patch, const cv::Mat &binaryMask);
             void scalar_product(cv::Mat mat, float r, float g, float b);
-            void poisson(const cv::Mat &destination, const cv::Mat &gx, const cv::Mat &gy, const cv::Mat &sx, const cv::Mat &sy);
+            void poisson(const cv::Mat &destination);
             void evaluate(const cv::Mat &I, const cv::Mat &wmask, const cv::Mat &cloned);
             void dst(double *mod_diff, double *sineTransform,int h,int w);
             void idst(double *mod_diff, double *sineTransform,int h,int w);
@@ -79,7 +79,7 @@ namespace cv
             void computeLaplacianY(const cv::Mat &img, cv::Mat &gyy);
 
         private:
-            std::vector <cv::Mat> rgb_channel, rgbx_channel, rgby_channel, output;
+            std::vector <cv::Mat> rgbx_channel, rgby_channel, output;
             cv::Mat destinationGradientX, destinationGradientY;
             cv::Mat patchGradientX, patchGradientY;
             cv::Mat binaryMaskFloat, binaryMaskFloatInverted;
