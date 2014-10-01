@@ -4848,7 +4848,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     bool ok = false;
     UMat src = _src.getUMat(), dst;
     Size sz = src.size(), dstSz = sz;
-    int scn = src.channels(), depth = src.depth(), bidx;
+    int scn = src.channels(), depth = src.depth(), bidx, uidx;
     int dims = 2, stripeSize = 1;
     ocl::Kernel k;
 
@@ -4960,17 +4960,21 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                  opts + format("-D dcn=%d -D bidx=%d", dcn, bidx));
         break;
     }
-    case COLOR_YUV2RGB_NV12: case COLOR_YUV2BGR_NV12:
-    case COLOR_YUV2RGBA_NV12: case COLOR_YUV2BGRA_NV12:
+    case COLOR_YUV2RGB_NV12: case COLOR_YUV2BGR_NV12: case COLOR_YUV2RGB_NV21: case COLOR_YUV2BGR_NV21:
+    case COLOR_YUV2RGBA_NV12: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV21:
     {
         CV_Assert( scn == 1 );
         CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
-        dcn  = code == COLOR_YUV2BGRA_NV12 || code == COLOR_YUV2RGBA_NV12 ? 4 : 3;
-        bidx = code == COLOR_YUV2BGRA_NV12 || code == COLOR_YUV2BGR_NV12 ? 0 : 2;
+        dcn  = code == COLOR_YUV2BGRA_NV12 || code == COLOR_YUV2RGBA_NV12 ||
+               code == COLOR_YUV2BGRA_NV21 || code == COLOR_YUV2RGBA_NV21 ? 4 : 3;
+        bidx = code == COLOR_YUV2BGRA_NV12 || code == COLOR_YUV2BGR_NV12 || 
+               code == COLOR_YUV2BGRA_NV21 || code == COLOR_YUV2BGR_NV21 ? 0 : 2;
+        uidx = code == COLOR_YUV2RGBA_NV21 || code == COLOR_YUV2RGB_NV21 ||
+               code == COLOR_YUV2BGRA_NV21 || code == COLOR_YUV2BGR_NV21 ? 1 : 0;
 
         dstSz = Size(sz.width, sz.height * 2 / 3);
-        k.create("YUV2RGB_NV12", ocl::imgproc::cvtcolor_oclsrc,
-                 opts + format("-D dcn=%d -D bidx=%d", dcn, bidx));
+        k.create("YUV2RGB_NVx", ocl::imgproc::cvtcolor_oclsrc,
+                 opts + format("-D dcn=%d -D bidx=%d -D uidx=%d", dcn, bidx, uidx));
         break;
     }
     case COLOR_BGR2YCrCb:
