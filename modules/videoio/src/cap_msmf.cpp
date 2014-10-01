@@ -72,6 +72,7 @@
 #include <stdarg.h>
 #include <string.h>
 
+#ifdef _MSC_VER
 #pragma warning(disable:4503)
 #pragma comment(lib, "mfplat")
 #pragma comment(lib, "mf")
@@ -80,6 +81,7 @@
 #pragma comment(lib, "Mfreadwrite")
 #if (WINVER >= 0x0602) // Available since Win 8
 #pragma comment(lib, "MinCore_Downlevel")
+#endif
 #endif
 
 #include <mferror.h>
@@ -260,7 +262,7 @@ public:
 #include "ppltasks_winrt.h"
 #endif
 #else
-#include <atlbase.h>
+#include <comdef.h>
 #endif
 
 struct IMFMediaType;
