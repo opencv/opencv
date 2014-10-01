@@ -65,20 +65,20 @@ void Cloning::computeGradientY( const Mat &img, Mat &gy)
     filter2D(img, gy, CV_32F, kernel);
 }
 
-void Cloning::computeLaplacianX( const Mat &img, Mat &gxx)
+void Cloning::computeLaplacianX( const Mat &img, Mat &laplacianX)
 {
     Mat kernel = Mat::zeros(1, 3, CV_8S);
     kernel.at<char>(0,0) = -1;
     kernel.at<char>(0,1) = 1;
-    filter2D(img, gxx, CV_32F, kernel);
+    filter2D(img, laplacianX, CV_32F, kernel);
 }
 
-void Cloning::computeLaplacianY( const Mat &img, Mat &gyy)
+void Cloning::computeLaplacianY( const Mat &img, Mat &laplacianY)
 {
     Mat kernel = Mat::zeros(3, 1, CV_8S);
     kernel.at<char>(0,0) = -1;
     kernel.at<char>(1,0) = 1;
-    filter2D(img, gyy, CV_32F, kernel);
+    filter2D(img, laplacianY, CV_32F, kernel);
 }
 
 void Cloning::dst(double *mod_diff, double *sineTransform,int h,int w)
@@ -270,17 +270,17 @@ void Cloning::solve(const Mat &img, double *mod_diff, Mat &result)
     delete [] img_d;
 }
 
-void Cloning::poisson_solver(const Mat &img, Mat &gxx , Mat &gyy, Mat &result)
+void Cloning::poisson_solver(const Mat &img, Mat &laplacianX , Mat &laplacianY, Mat &result)
 {
 
-    int w = img.size().width;
-    int h = img.size().height;
+    const int w = img.size().width;
+    const int h = img.size().height;
 
     unsigned long int idx;
 
     Mat lap = Mat(img.size(),CV_32FC1);
 
-    lap = gxx + gyy;
+    lap = laplacianX + laplacianY;
 
     Mat bound = img.clone();
 
@@ -324,17 +324,15 @@ void Cloning::poisson_solver(const Mat &img, Mat &gxx , Mat &gyy, Mat &result)
     delete [] boundary_point;
 }
 
-void Cloning::init_var(const Mat &I, const Mat &wmask)
+void Cloning::init_var(const Mat &destination, const Mat &binaryMask)
 {
-    destinationGradientX = Mat(I.size(),CV_32FC3);
-    destinationGradientY = Mat(I.size(),CV_32FC3);
-    patchGradientX = Mat(I.size(),CV_32FC3);
-    patchGradientY = Mat(I.size(),CV_32FC3);
+    destinationGradientX = Mat(destination.size(),CV_32FC3);
+    destinationGradientY = Mat(destination.size(),CV_32FC3);
+    patchGradientX = Mat(destination.size(),CV_32FC3);
+    patchGradientY = Mat(destination.size(),CV_32FC3);
 
-    split(I,rgb_channel);
-
-    binaryMaskFloat = Mat(wmask.size(),CV_32FC1);
-    binaryMaskFloatInverted = Mat(wmask.size(),CV_32FC1);
+    binaryMaskFloat = Mat(binaryMask.size(),CV_32FC1);
+    binaryMaskFloatInverted = Mat(binaryMask.size(),CV_32FC1);
 }
 
 void Cloning::compute_derivatives(const Mat& destination, const Mat &patch, const Mat &binaryMask)
@@ -378,28 +376,26 @@ void Cloning::array_product(const cv::Mat& lhs, const cv::Mat& rhs, cv::Mat& res
     merge(result_channels,result);
 }
 
-void Cloning::poisson(const Mat &destination, const Mat &gx, const Mat &gy, const Mat &sx, const Mat &sy)
+void Cloning::poisson(const Mat &destination)
 {
-    Mat fx = Mat(destination.size(),CV_32FC3);
-    Mat fy = Mat(destination.size(),CV_32FC3);
+    Mat laplacianX = Mat(destination.size(),CV_32FC3);
+    Mat laplacianY = Mat(destination.size(),CV_32FC3);
 
-    fx = gx + sx;
-    fy = gy + sy;
+    laplacianX = destinationGradientX + patchGradientX;
+    laplacianY = destinationGradientY + patchGradientY;
 
-    Mat gxx = Mat(destination.size(),CV_32FC3);
-    Mat gyy = Mat(destination.size(),CV_32FC3);
+    computeLaplacianX(laplacianX,laplacianX);
+    computeLaplacianY(laplacianY,laplacianY);
 
-    computeLaplacianX(fx,gxx);
-    computeLaplacianY(fy,gyy);
-
-    split(gxx,rgbx_channel);
-    split(gyy,rgby_channel);
+    split(laplacianX,rgbx_channel);
+    split(laplacianY,rgby_channel);
 
     split(destination,output);
 
-    poisson_solver(rgb_channel[2],rgbx_channel[2], rgby_channel[2],output[2]);
-    poisson_solver(rgb_channel[1],rgbx_channel[1], rgby_channel[1],output[1]);
-    poisson_solver(rgb_channel[0],rgbx_channel[0], rgby_channel[0],output[0]);
+    for(int chan = 0 ; chan < 3 ; ++chan)
+    {
+        poisson_solver(output[chan], rgbx_channel[chan], rgby_channel[chan], output[chan]);
+    }
 }
 
 void Cloning::evaluate(const Mat &I, const Mat &wmask, const Mat &cloned)
@@ -411,7 +407,7 @@ void Cloning::evaluate(const Mat &I, const Mat &wmask, const Mat &cloned)
     array_product(destinationGradientX,binaryMaskFloatInverted, destinationGradientX);
     array_product(destinationGradientY,binaryMaskFloatInverted, destinationGradientY);
 
-    poisson(I,destinationGradientX,destinationGradientY,patchGradientX,patchGradientY);
+    poisson(I);
 
     merge(output,cloned);
 }
