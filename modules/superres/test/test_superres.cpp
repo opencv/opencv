@@ -42,6 +42,8 @@
 
 #include "test_precomp.hpp"
 
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+
 class AllignedFrameSource : public cv::superres::FrameSource
 {
 public:
@@ -291,3 +293,5 @@ TEST_F(SuperResolution, BTVL1_OCL)
     RunTest(cv::superres::createSuperResolution_BTVL1_OCL());
 }
 #endif
+
+#endif // BUILD_WITH_VIDEO_INPUT_SUPPORT
