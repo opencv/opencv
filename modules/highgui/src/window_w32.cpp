@@ -1947,7 +1947,7 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     if( !window_name || !trackbar_name )
         CV_ERROR( CV_StsNullPtr, "NULL window or trackbar name" );
 
-    if( count <= 0 )
+    if( count < 0 )
         CV_ERROR( CV_StsOutOfRange, "Bad trackbar maximal value" );
 
     window = icvFindWindowByName(window_name);
@@ -2186,7 +2186,7 @@ CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name
 }
 
 
-CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_name, int pos )
+CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name, int pos, int maxval)
 {
     CV_FUNCNAME( "cvSetTrackbarPos" );
 
@@ -2207,10 +2207,16 @@ CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_nam
         if( pos < 0 )
             pos = 0;
 
-        if( pos > trackbar->maxval )
-            pos = trackbar->maxval;
+        if (maxval >= 0)
+        {
+            trackbar->maxval = maxval;
+            // The position will be min(pos, new_count).
+            SendMessage(trackbar->hwnd, TBM_SETRANGEMAX, (WPARAM)TRUE, (LPARAM)maxval);
+        }
 
-        SendMessage( trackbar->hwnd, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)pos );
+        if (pos > trackbar->maxval)
+            pos = trackbar->maxval;
+        SendMessage(trackbar->hwnd, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)pos);
         icvUpdateTrackbar( trackbar, pos );
     }
 

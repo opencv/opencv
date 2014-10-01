@@ -201,9 +201,9 @@ int cv::createTrackbar(const String& trackbarName, const String& winName,
                              value, count, callback, userdata);
 }
 
-void cv::setTrackbarPos( const String& trackbarName, const String& winName, int value )
+void cv::setTrackbarPos( const String& trackbarName, const String& winName, int value, int maxval )
 {
-    cvSetTrackbarPos(trackbarName.c_str(), winName.c_str(), value );
+    cvSetTrackbarPos(trackbarName.c_str(), winName.c_str(), value, maxval);
 }
 
 int cv::getTrackbarPos( const String& trackbarName, const String& winName )
@@ -568,7 +568,7 @@ CV_IMPL int cvGetTrackbarPos( const char*, const char* )
     return -1;
 }
 
-CV_IMPL void cvSetTrackbarPos( const char*, const char*, int )
+CV_IMPL void cvSetTrackbarPos( const char*, const char*, int, int )
 {
     CV_NO_GUI_ERROR( "cvSetTrackbarPos" );
 }

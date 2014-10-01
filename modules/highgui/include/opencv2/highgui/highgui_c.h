@@ -160,7 +160,7 @@ CVAPI(int) cvCreateTrackbar2( const char* trackbar_name, const char* window_name
 
 /* retrieve or set trackbar position */
 CVAPI(int) cvGetTrackbarPos( const char* trackbar_name, const char* window_name );
-CVAPI(void) cvSetTrackbarPos( const char* trackbar_name, const char* window_name, int pos );
+CVAPI(void) cvSetTrackbarPos( const char* trackbar_name, const char* window_name, int pos, int maxval = -1 );
 
 enum
 {
