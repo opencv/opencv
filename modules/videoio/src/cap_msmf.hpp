@@ -333,6 +333,7 @@ MAKE_ENUM(MediaEventType) MediaEventTypePairs[] = {
     MAKE_ENUM_PAIR(MediaEventType, MEAudioSessionDisconnected),
     MAKE_ENUM_PAIR(MediaEventType, MEAudioSessionExclusiveModeOverride),
     MAKE_ENUM_PAIR(MediaEventType, MESinkV1Anchor),
+#if (WINVER >= 0x0602) // Available since Win 8
     MAKE_ENUM_PAIR(MediaEventType, MECaptureAudioSessionVolumeChanged),
     MAKE_ENUM_PAIR(MediaEventType, MECaptureAudioSessionDeviceRemoved),
     MAKE_ENUM_PAIR(MediaEventType, MECaptureAudioSessionFormatChanged),
@@ -340,6 +341,7 @@ MAKE_ENUM(MediaEventType) MediaEventTypePairs[] = {
     MAKE_ENUM_PAIR(MediaEventType, MECaptureAudioSessionExclusiveModeOverride),
     MAKE_ENUM_PAIR(MediaEventType, MECaptureAudioSessionServerShutdown),
     MAKE_ENUM_PAIR(MediaEventType, MESinkV2Anchor),
+#endif
     MAKE_ENUM_PAIR(MediaEventType, METrustUnknown),
     MAKE_ENUM_PAIR(MediaEventType, MEPolicyChanged),
     MAKE_ENUM_PAIR(MediaEventType, MEContentProtectionMessage),
@@ -361,9 +363,11 @@ MAKE_ENUM(MediaEventType) MediaEventTypePairs[] = {
     MAKE_ENUM_PAIR(MediaEventType, METransformHaveOutput),
     MAKE_ENUM_PAIR(MediaEventType, METransformDrainComplete),
     MAKE_ENUM_PAIR(MediaEventType, METransformMarker),
+#if (WINVER >= 0x0602) // Available since Win 8
     MAKE_ENUM_PAIR(MediaEventType, MEByteStreamCharacteristicsChanged),
     MAKE_ENUM_PAIR(MediaEventType, MEVideoCaptureDeviceRemoved),
     MAKE_ENUM_PAIR(MediaEventType, MEVideoCaptureDevicePreempted),
+#endif
     MAKE_ENUM_PAIR(MediaEventType, MEReservedMax)
 };
 MAKE_MAP(MediaEventType) MediaEventTypeMap(MediaEventTypePairs, MediaEventTypePairs + sizeof(MediaEventTypePairs) / sizeof(MediaEventTypePairs[0]));
@@ -1044,7 +1048,11 @@ class StreamSink :
 {
 public:
     // IUnknown methods
+#if defined(_MSC_VER) && _MSC_VER >= 1700  // '_Outptr_result_nullonfailure_' SAL is avaialable since VS 2012
     STDMETHOD(QueryInterface)(REFIID riid, _Outptr_result_nullonfailure_ void **ppv)
+#else
+    STDMETHOD(QueryInterface)(REFIID riid, void **ppv)
+#endif
     {
         if (ppv == nullptr) {
             return E_POINTER;
@@ -2383,7 +2391,11 @@ public:
         }
         return cRef;
     }
+#if defined(_MSC_VER) && _MSC_VER >= 1700  // '_Outptr_result_nullonfailure_' SAL is avaialable since VS 2012
     STDMETHOD(QueryInterface)(REFIID riid, _Outptr_result_nullonfailure_ void **ppv)
+#else
+    STDMETHOD(QueryInterface)(REFIID riid, void **ppv)
+#endif
     {
         if (ppv == nullptr) {
             return E_POINTER;

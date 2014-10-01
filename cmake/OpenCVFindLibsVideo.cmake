@@ -254,6 +254,7 @@ if(WITH_DSHOW)
 endif(WITH_DSHOW)
 
 # --- VideoInput/Microsoft Media Foundation ---
+ocv_clear_vars(HAVE_MSMF)
 if(WITH_MSMF)
   check_include_file(Mfapi.h HAVE_MSMF)
 endif(WITH_MSMF)

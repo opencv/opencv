@@ -568,6 +568,41 @@ CV_EXPORTS int getIppStatus();
 CV_EXPORTS String getIppErrorLocation();
 
 } // ipp
+
+#if CV_NEON
+
+inline int32x2_t cv_vrnd_s32_f32(float32x2_t v)
+{
+    static int32x2_t v_sign = vdup_n_s32(1 << 31),
+        v_05 = vreinterpret_s32_f32(vdup_n_f32(0.5f));
+
+    int32x2_t v_addition = vorr_s32(v_05, vand_s32(v_sign, vreinterpret_s32_f32(v)));
+    return vcvt_s32_f32(vadd_f32(v, vreinterpret_f32_s32(v_addition)));
+}
+
+inline int32x4_t cv_vrndq_s32_f32(float32x4_t v)
+{
+    static int32x4_t v_sign = vdupq_n_s32(1 << 31),
+        v_05 = vreinterpretq_s32_f32(vdupq_n_f32(0.5f));
+
+    int32x4_t v_addition = vorrq_s32(v_05, vandq_s32(v_sign, vreinterpretq_s32_f32(v)));
+    return vcvtq_s32_f32(vaddq_f32(v, vreinterpretq_f32_s32(v_addition)));
+}
+
+inline uint32x2_t cv_vrnd_u32_f32(float32x2_t v)
+{
+    static float32x2_t v_05 = vdup_n_f32(0.5f);
+    return vcvt_u32_f32(vadd_f32(v, v_05));
+}
+
+inline uint32x4_t cv_vrndq_u32_f32(float32x4_t v)
+{
+    static float32x4_t v_05 = vdupq_n_f32(0.5f);
+    return vcvtq_u32_f32(vaddq_f32(v, v_05));
+}
+
+#endif
+
 } // cv
 
 #endif //__OPENCV_CORE_BASE_HPP__
