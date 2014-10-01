@@ -111,6 +111,10 @@ enum
 #define B_COMP w
 #endif
 
+#ifndef uidx
+#define uidx 0
+#endif
+
 #define __CAT(x, y) x##y
 #define CAT(x, y) __CAT(x, y)
 
@@ -297,7 +301,7 @@ __constant int ITUR_BT_601_CVG = 852492;
 __constant int ITUR_BT_601_CVR = 1673527;
 __constant int ITUR_BT_601_SHIFT = 20;
 
-__kernel void YUV2RGB_NV12(__global const uchar* srcptr, int src_step, int src_offset,
+__kernel void YUV2RGB_NVx(__global const uchar* srcptr, int src_step, int src_offset,
                             __global uchar* dstptr, int dst_step, int dt_offset,
                             int rows, int cols)
 {
@@ -321,8 +325,8 @@ __kernel void YUV2RGB_NV12(__global const uchar* srcptr, int src_step, int src_o
                 int Y3 = ysrc[src_step];
                 int Y4 = ysrc[src_step + 1];
 
-                int U  = usrc[0] - 128;
-                int V  = usrc[1] - 128;
+                int U  = usrc[uidx] - 128;
+                int V  = usrc[1 - uidx] - 128;
 
                 int ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * V;
                 int guv = (1 << (ITUR_BT_601_SHIFT - 1)) - ITUR_BT_601_CVG * V - ITUR_BT_601_CUG * U;
