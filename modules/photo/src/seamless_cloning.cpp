@@ -104,10 +104,6 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
     Rect roi_d(minyd,minxd,leny,lenx);
     Rect roi_s(miny,minx,leny,lenx);
 
-    std::cout << "p : " << p.x << "\t"<<p.y<<"\n";
-    std::cout << "min : " << miny << "\t"<<minx<<"\n";
-    std::cout << "mind : " << minyd << "\t"<<minxd<<"\n";
-
     Mat destinationROI = dst_mask(roi_d);
     Mat sourceROI = cs_mask(roi_s);
 
