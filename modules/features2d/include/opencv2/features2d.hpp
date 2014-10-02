@@ -317,7 +317,7 @@ public:
     enum { kBytes = 32, HARRIS_SCORE=0, FAST_SCORE=1 };
 
     CV_WRAP explicit ORB(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31,
-        int firstLevel = 0, int WTA_K=2, int scoreType=ORB::HARRIS_SCORE, int patchSize=31 );
+        int firstLevel = 0, int WTA_K=2, int scoreType=ORB::HARRIS_SCORE, int patchSize=31, int fastThreshold = 20);
 
     // returns the descriptor size in bytes
     int descriptorSize() const;
@@ -348,6 +348,7 @@ protected:
     CV_PROP_RW int WTA_K;
     CV_PROP_RW int scoreType;
     CV_PROP_RW int patchSize;
+    CV_PROP_RW int fastThreshold;
 };
 
 typedef ORB OrbFeatureDetector;
