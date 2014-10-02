@@ -65,10 +65,10 @@ namespace cv
             void scalar_product(cv::Mat mat, float r, float g, float b);
             void poisson(const cv::Mat &destination);
             void evaluate(const cv::Mat &I, const cv::Mat &wmask, const cv::Mat &cloned);
-            void dst(double *mod_diff, double *sineTransform,int h,int w);
-            void idst(double *mod_diff, double *sineTransform,int h,int w);
-            void transpose(double *mat, double *mat_t,int h,int w);
-            void solve(const cv::Mat &img, double *mod_diff, cv::Mat &result);
+            void dst(const std::vector<double>& mod_diff, std::vector<double>& sineTransform,int h,int w);
+            void idst(const std::vector<double>& mod_diff, std::vector<double>& sineTransform,int h,int w);
+            void transpose(const std::vector<double>& mat, std::vector<double>& mat_t,int h,int w);
+            void solve(const cv::Mat &img, const std::vector<double>& mod_diff, cv::Mat &result);
             void poisson_solver(const cv::Mat &img, cv::Mat &gxx , cv::Mat &gyy, cv::Mat &result);
 
             void array_product(const cv::Mat& lhs, const cv::Mat& rhs, cv::Mat& result) const;

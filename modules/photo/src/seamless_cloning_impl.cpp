@@ -81,7 +81,7 @@ void Cloning::computeLaplacianY( const Mat &img, Mat &laplacianY)
     filter2D(img, laplacianY, CV_32F, kernel);
 }
 
-void Cloning::dst(double *mod_diff, double *sineTransform,int h,int w)
+void Cloning::dst(const std::vector<double>& mod_diff, std::vector<double>& sineTransform,int h,int w)
 {
 
     unsigned long int idx;
@@ -137,7 +137,7 @@ void Cloning::dst(double *mod_diff, double *sineTransform,int h,int w)
     }
 }
 
-void Cloning::idst(double *mod_diff, double *sineTransform,int h,int w)
+void Cloning::idst(const std::vector<double>& mod_diff, std::vector<double>& sineTransform,int h,int w)
 {
     int nn = h+1;
     unsigned long int idx;
@@ -151,7 +151,7 @@ void Cloning::idst(double *mod_diff, double *sineTransform,int h,int w)
 
 }
 
-void Cloning::transpose(double *mat, double *mat_t,int h,int w)
+void Cloning::transpose(const std::vector<double>& mat, std::vector<double>& mat_t,int h,int w)
 {
 
     Mat tmp = Mat(h,w,CV_32FC1);
@@ -175,33 +175,32 @@ void Cloning::transpose(double *mat, double *mat_t,int h,int w)
         }
 }
 
-void Cloning::solve(const Mat &img, double *mod_diff, Mat &result)
+void Cloning::solve(const Mat &img, const std::vector<double>& mod_diff, Mat &result)
 {
     int w = img.size().width;
     int h = img.size().height;
 
     unsigned long int idx,idx1;
 
-    double *sineTransform = new double[(h-2)*(w-2)];
-    double *sineTransform_t = new double[(h-2)*(w-2)];
-    double *denom = new double[(h-2)*(w-2)];
-    double *invsineTransform = new double[(h-2)*(w-2)];
-    double *invsineTransform_t = new double[(h-2)*(w-2)];
-    double *img_d = new double[(h)*(w)];
+    std::vector<double> sineTransform((h-2)*(w-2), 0.);
+    std::vector<double> sineTranformTranspose((h-2)*(w-2), 0.);
+    std::vector<double> denom((h-2)*(w-2), 0.);
+    std::vector<double> invsineTransform((h-2)*(w-2), 0.);
+    std::vector<double> invsineTransform_t((h-2)*(w-2), 0.);
+    std::vector<double> img_d((h)*(w), 0.);
 
     dst(mod_diff,sineTransform,h-2,w-2);
 
-    transpose(sineTransform,sineTransform_t,h-2,w-2);
+    transpose(sineTransform,sineTranformTranspose,h-2,w-2);
 
-    dst(sineTransform_t,sineTransform,w-2,h-2);
+    dst(sineTranformTranspose,sineTransform,w-2,h-2);
 
-    transpose(sineTransform,sineTransform_t,w-2,h-2);
+    transpose(sineTransform,sineTranformTranspose,w-2,h-2);
 
-    int cy = 1;
 
-    for(int i = 0 ; i < w-2;i++,cy++)
+    for(int j = 0,cx = 1; j < h-2; j++,cx++)
     {
-        for(int j = 0,cx = 1; j < h-2; j++,cx++)
+        for(int i = 0, cy=1 ; i < w-2;i++,cy++)
         {
             idx = j*(w-2) + i;
             denom[idx] = (float) 2*cos(CV_PI*cy/( (double) (w-1))) - 2 + 2*cos(CV_PI*cx/((double) (h-1))) - 2;
@@ -211,10 +210,10 @@ void Cloning::solve(const Mat &img, double *mod_diff, Mat &result)
 
     for(idx = 0 ; idx < (unsigned)(w-2)*(h-2) ;idx++)
     {
-        sineTransform_t[idx] = sineTransform_t[idx]/denom[idx];
+        sineTranformTranspose[idx] = sineTranformTranspose[idx]/denom[idx];
     }
 
-    idst(sineTransform_t,invsineTransform,h-2,w-2);
+    idst(sineTranformTranspose,invsineTransform,h-2,w-2);
 
     transpose(invsineTransform,invsineTransform_t,h-2,w-2);
 
@@ -261,13 +260,6 @@ void Cloning::solve(const Mat &img, double *mod_diff, Mat &result)
                 result.at<uchar>(i,j) = (uchar) img_d[idx];
         }
     }
-
-    delete [] sineTransform;
-    delete [] sineTransform_t;
-    delete [] denom;
-    delete [] invsineTransform;
-    delete [] invsineTransform_t;
-    delete [] img_d;
 }
 
 void Cloning::poisson_solver(const Mat &img, Mat &laplacianX , Mat &laplacianY, Mat &result)
@@ -286,7 +278,7 @@ void Cloning::poisson_solver(const Mat &img, Mat &laplacianX , Mat &laplacianY, 
 
     rectangle(bound, Point(1, 1), Point(img.cols-2, img.rows-2), Scalar::all(0), -1);
 
-    double *boundary_point = new double[h*w];
+    std::vector<double> boundary_point(h*w, 0.);
 
     for(int i =1;i<h-1;i++)
         for(int j=1;j<w-1;j++)
@@ -306,7 +298,7 @@ void Cloning::poisson_solver(const Mat &img, Mat &laplacianX , Mat &laplacianY, 
         }
     }
 
-    double *mod_diff = new double[(h-2)*(w-2)];
+    std::vector<double> mod_diff((h-2)*(w-2), 0.);
     for(int i = 0 ; i < h-2;i++)
     {
         for(int j = 0 ; j < w-2; j++)
@@ -319,9 +311,6 @@ void Cloning::poisson_solver(const Mat &img, Mat &laplacianX , Mat &laplacianY, 
     ///////////////////////////////////////////////////// Find DST  /////////////////////////////////////////////////////
 
     solve(img,mod_diff,result);
-
-    delete [] mod_diff;
-    delete [] boundary_point;
 }
 
 void Cloning::init_var(const Mat &destination, const Mat &binaryMask)
