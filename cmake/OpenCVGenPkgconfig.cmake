@@ -8,10 +8,6 @@
 #
 # ${BIN_DIR}/unix-install/opencv.pc -> For use *with* "make install"
 # -------------------------------------------------------------------------------------------
-set(prefix      "${CMAKE_INSTALL_PREFIX}")
-set(exec_prefix "\${prefix}")
-set(libdir      "") #TODO: need link paths for OpenCV_EXTRA_COMPONENTS
-set(includedir  "\${prefix}/${OPENCV_INCLUDE_INSTALL_PATH}")
 
 if(CMAKE_BUILD_TYPE MATCHES "Release")
   set(ocv_optkind OPT)
@@ -35,42 +31,66 @@ ocv_list_reverse(OpenCV_LIB_COMPONENTS)
 ocv_list_reverse(OpenCV_EXTRA_COMPONENTS)
 
 #build the list of components
-set(OpenCV_LIB_COMPONENTS_ "")
+
+# Note:
+#   when linking against static libraries, if libfoo depends on libbar, then
+#   libfoo must come first in the linker flags.
+
+# world is a special target whose library should come first, especially for
+# static link.
+if(OpenCV_LIB_COMPONENTS MATCHES "opencv_world")
+  list(REMOVE_ITEM OpenCV_LIB_COMPONENTS "opencv_world")
+  list(INSERT OpenCV_LIB_COMPONENTS 0 "opencv_world")
+endif()
+
+set(OpenCV_LIB_COMPONENTS_)
 foreach(CVLib ${OpenCV_LIB_COMPONENTS})
-  get_target_property(libpath ${CVLib} LOCATION_${CMAKE_BUILD_TYPE})
-  get_filename_component(libname "${libpath}" NAME)
 
-  if(INSTALL_TO_MANGLED_PATHS)
-    set(libname "${libname}.${OPENCV_VERSION}")
-  endif()
-
-  #need better solution....
-  if(libpath MATCHES "3rdparty")
-    set(installDir "share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH}")
+  get_target_property(libloc ${CVLib} LOCATION_${CMAKE_BUILD_TYPE})
+  if(libloc MATCHES "3rdparty")
+    set(libpath "\${exec_prefix}/share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH}")
   else()
-    set(installDir "${OPENCV_LIB_INSTALL_PATH}")
+    set(libpath "\${exec_prefix}/${OPENCV_LIB_INSTALL_PATH}")
   endif()
+  list(APPEND OpenCV_LIB_COMPONENTS_ "-L${libpath}")
 
-  set(OpenCV_LIB_COMPONENTS_ "${OpenCV_LIB_COMPONENTS_} \${exec_prefix}/${installDir}/${libname}")
+  get_filename_component(libname ${CVLib} NAME_WE)
+  string(REGEX REPLACE "^lib" "" libname "${libname}")
+  list(APPEND OpenCV_LIB_COMPONENTS_ "-l${libname}")
+
 endforeach()
 
 # add extra dependencies required for OpenCV
-set(OpenCV_LIB_COMPONENTS ${OpenCV_LIB_COMPONENTS_})
 if(OpenCV_EXTRA_COMPONENTS)
   foreach(extra_component ${OpenCV_EXTRA_COMPONENTS})
 
-    if(extra_component MATCHES "^-[lL]" OR extra_component MATCHES "[\\/]")
-      set(maybe_l_prefix "")
+    if(extra_component MATCHES "^-[lL]")
+      set(libprefix "")
+      set(libname "${extra_component}")
+    elseif(extra_component MATCHES "[\\/]")
+      get_filename_component(libdir "${extra_component}" PATH)
+      list(APPEND OpenCV_LIB_COMPONENTS_ "-L${libdir}")
+      get_filename_component(libname "${extra_component}" NAME_WE)
+      string(REGEX REPLACE "^lib" "" libname "${libname}")
+      set(libprefix "-l")
     else()
-      set(maybe_l_prefix "-l")
+      set(libprefix "-l")
+      set(libname "${extra_component}")
     endif()
-
-    set(OpenCV_LIB_COMPONENTS "${OpenCV_LIB_COMPONENTS} ${maybe_l_prefix}${extra_component}")
+    list(APPEND OpenCV_LIB_COMPONENTS_ "${libprefix}${libname}")
 
   endforeach()
 endif()
 
+list(REMOVE_DUPLICATES OpenCV_LIB_COMPONENTS_)
+string(REPLACE ";" " " OpenCV_LIB_COMPONENTS "${OpenCV_LIB_COMPONENTS_}")
+
 #generate the .pc file
+set(prefix      "${CMAKE_INSTALL_PREFIX}")
+set(exec_prefix "\${prefix}")
+set(libdir      "\${exec_prefix}/${OPENCV_LIB_INSTALL_PATH}")
+set(includedir  "\${prefix}/${OPENCV_INCLUDE_INSTALL_PATH}")
+
 if(INSTALL_TO_MANGLED_PATHS)
   set(OPENCV_PC_FILE_NAME "opencv-${OPENCV_VERSION}.pc")
 else()
