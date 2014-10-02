@@ -93,6 +93,9 @@ void Cloning::dst(const std::vector<double>& mod_diff, std::vector<double>& sine
 
     Mat result;
     int p=0;
+
+    const double factor = 0.5;
+
     for(int i=0;i<w;i++)
     {
         temp.at<float>(0,0) = 0.0;
@@ -119,13 +122,9 @@ void Cloning::dst(const std::vector<double>& mod_diff, std::vector<double>& sine
 
         split(result, planes1);
 
-        std::complex<double> two_i = std::sqrt(std::complex<double>(-1));
-
-        double factor = -2*imag(two_i);
-
         for(int c=1,z=0;c<h+1;c++,z++)
         {
-            res.at<float>(z,0) = (float) (planes1[1].at<float>(c,0)/factor);
+            res.at<float>(z,0) = (float) (planes1[1].at<float>(c,0) * factor);
         }
 
         for(int q=0,z=0;q<h;q++,z++)
