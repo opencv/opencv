@@ -301,7 +301,7 @@ __constant int ITUR_BT_601_CVG = 852492;
 __constant int ITUR_BT_601_CVR = 1673527;
 __constant int ITUR_BT_601_SHIFT = 20;
 
-__kernel void YUV2RGB_NVx(__global const uchar* srcptr, int src_step, int src_offset,
+__kernel void YUV2RGB_NV(__global const uchar* srcptr, int src_step, int src_offset,
                             __global uchar* dstptr, int dst_step, int dt_offset,
                             int rows, int cols)
 {
@@ -318,15 +318,15 @@ __kernel void YUV2RGB_NVx(__global const uchar* srcptr, int src_step, int src_of
                 __global const uchar* ysrc = srcptr + mad24(y << 1, src_step, (x << 1) + src_offset);
                 __global const uchar* usrc = srcptr + mad24(rows + y, src_step, (x << 1) + src_offset);
                 __global uchar*       dst1 = dstptr + mad24(y << 1, dst_step, x * (dcn<<1) + dt_offset);
-                __global uchar*       dst2 = dstptr + mad24((y << 1) + 1, dst_step, x * (dcn<<1) + dt_offset);
+                __global uchar*       dst2 = dst1 + dst_step;
 
                 int Y1 = ysrc[0];
                 int Y2 = ysrc[1];
                 int Y3 = ysrc[src_step];
                 int Y4 = ysrc[src_step + 1];
 
-                int U  = usrc[uidx] - 128;
-                int V  = usrc[1 - uidx] - 128;
+                int U  = ((int)usrc[uidx]) - 128;
+                int V  = ((int)usrc[1-uidx]) - 128;
 
                 int ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * V;
                 int guv = (1 << (ITUR_BT_601_SHIFT - 1)) - ITUR_BT_601_CVG * V - ITUR_BT_601_CUG * U;
@@ -360,6 +360,83 @@ __kernel void YUV2RGB_NVx(__global const uchar* srcptr, int src_step, int src_of
                 dst2[dcn + 2 - bidx] = convert_uchar_sat((Y4 + ruv) >> ITUR_BT_601_SHIFT);
                 dst2[dcn + 1]        = convert_uchar_sat((Y4 + guv) >> ITUR_BT_601_SHIFT);
                 dst2[dcn + bidx] = convert_uchar_sat((Y4 + buv) >> ITUR_BT_601_SHIFT);
+#if dcn == 4
+                dst2[7]        = 255;
+#endif
+            }
+            ++y;
+        }
+    }
+}
+
+__kernel void YUV2RGB_YV12_IYUV(__global const uchar* srcptr, int src_step, int src_offset,
+                                __global uchar* dstptr, int dst_step, int dt_offset,
+                                int rows, int cols)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1) * PIX_PER_WI_Y;
+
+    if (x < cols / 2)
+    {
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
+        {
+            if (y < rows / 2 )
+            {
+                __global const uchar* ysrc = srcptr + mad24(y << 1, src_step, (x << 1) + src_offset);
+                __global uchar*       dst1 = dstptr + mad24(y << 1, dst_step, x * (dcn<<1) + dt_offset);
+                __global uchar*       dst2 = dst1 + dst_step;
+
+                int Y1 = ysrc[0];
+                int Y2 = ysrc[1];
+                int Y3 = ysrc[src_step];
+                int Y4 = ysrc[src_step + 1];
+
+#ifdef SRC_CONT
+                __global const uchar* uvsrc = srcptr + mad24(rows, src_step, src_offset);
+                int u_ind = mad24(y, cols >> 1, x);
+                int uv[2] = { ((int)uvsrc[u_ind]) - 128, ((int)uvsrc[u_ind + ((rows * cols) >> 2)]) - 128 };
+#else
+                int vsteps[2] = { cols >> 1, src_step - (cols >> 1)};
+                __global const uchar* usrc = srcptr + mad24(rows + (y>>1), src_step, src_offset + (y%2)*(cols >> 1) + x);
+                __global const uchar* vsrc = usrc + mad24(rows >> 2, src_step, rows % 4 ? vsteps[y%2] : 0);
+                int uv[2] = { ((int)usrc[0]) - 128, ((int)vsrc[0]) - 128 };
+#endif
+                int u = uv[uidx];
+                int v = uv[1-uidx];
+
+                int ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * v;
+                int guv = (1 << (ITUR_BT_601_SHIFT - 1)) - ITUR_BT_601_CVG * v - ITUR_BT_601_CUG * u;
+                int buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * u;
+
+                Y1 = max(0, Y1 - 16) * ITUR_BT_601_CY;
+                dst1[2 - bidx] = convert_uchar_sat((Y1 + ruv) >> ITUR_BT_601_SHIFT);
+                dst1[1]        = convert_uchar_sat((Y1 + guv) >> ITUR_BT_601_SHIFT);
+                dst1[bidx]     = convert_uchar_sat((Y1 + buv) >> ITUR_BT_601_SHIFT);
+#if dcn == 4
+                dst1[3]        = 255;
+#endif
+
+                Y2 = max(0, Y2 - 16) * ITUR_BT_601_CY;
+                dst1[dcn + 2 - bidx] = convert_uchar_sat((Y2 + ruv) >> ITUR_BT_601_SHIFT);
+                dst1[dcn + 1]        = convert_uchar_sat((Y2 + guv) >> ITUR_BT_601_SHIFT);
+                dst1[dcn + bidx]     = convert_uchar_sat((Y2 + buv) >> ITUR_BT_601_SHIFT);
+#if dcn == 4
+                dst1[7]        = 255;
+#endif
+
+                Y3 = max(0, Y3 - 16) * ITUR_BT_601_CY;
+                dst2[2 - bidx] = convert_uchar_sat((Y3 + ruv) >> ITUR_BT_601_SHIFT);
+                dst2[1]        = convert_uchar_sat((Y3 + guv) >> ITUR_BT_601_SHIFT);
+                dst2[bidx]     = convert_uchar_sat((Y3 + buv) >> ITUR_BT_601_SHIFT);
+#if dcn == 4
+                dst2[3]        = 255;
+#endif
+
+                Y4 = max(0, Y4 - 16) * ITUR_BT_601_CY;
+                dst2[dcn + 2 - bidx] = convert_uchar_sat((Y4 + ruv) >> ITUR_BT_601_SHIFT);
+                dst2[dcn + 1]        = convert_uchar_sat((Y4 + guv) >> ITUR_BT_601_SHIFT);
+                dst2[dcn + bidx]     = convert_uchar_sat((Y4 + buv) >> ITUR_BT_601_SHIFT);
 #if dcn == 4
                 dst2[7]        = 255;
 #endif
