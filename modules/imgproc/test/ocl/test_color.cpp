@@ -320,7 +320,7 @@ OCL_TEST_P(CvtColor8u32f, Luv2RGBA) { performTest(3, 4, CVTCODE(Luv2RGB), depth 
 OCL_TEST_P(CvtColor8u32f, Luv2LBGRA) { performTest(3, 4, CVTCODE(Luv2LBGR), depth == CV_8U ? 1 : 1e-5); }
 OCL_TEST_P(CvtColor8u32f, Luv2LRGBA) { performTest(3, 4, CVTCODE(Luv2LRGB), depth == CV_8U ? 1 : 1e-5); }
 
-// YUV -> RGBA_NVx
+// YUV420 -> RGBA
 
 struct CvtColor_YUV420 :
         public CvtColor
@@ -352,6 +352,14 @@ OCL_TEST_P(CvtColor_YUV420, YUV2RGBA_NV21) { performTest(1, 4, COLOR_YUV2RGBA_NV
 OCL_TEST_P(CvtColor_YUV420, YUV2BGRA_NV21) { performTest(1, 4, COLOR_YUV2BGRA_NV21); }
 OCL_TEST_P(CvtColor_YUV420, YUV2RGB_NV21) { performTest(1, 3, COLOR_YUV2RGB_NV21); }
 OCL_TEST_P(CvtColor_YUV420, YUV2BGR_NV21) { performTest(1, 3, COLOR_YUV2BGR_NV21); }
+OCL_TEST_P(CvtColor_YUV420, YUV2RGBA_YV12) { performTest(1, 4, COLOR_YUV2RGBA_YV12); }
+OCL_TEST_P(CvtColor_YUV420, YUV2BGRA_YV12) { performTest(1, 4, COLOR_YUV2BGRA_YV12); }
+OCL_TEST_P(CvtColor_YUV420, YUV2RGB_YV12) { performTest(1, 3, COLOR_YUV2RGB_YV12); }
+OCL_TEST_P(CvtColor_YUV420, YUV2BGR_YV12) { performTest(1, 3, COLOR_YUV2BGR_YV12); }
+OCL_TEST_P(CvtColor_YUV420, YUV2RGBA_IYUV) { performTest(1, 4, COLOR_YUV2RGBA_IYUV); }
+OCL_TEST_P(CvtColor_YUV420, YUV2BGRA_IYUV) { performTest(1, 4, COLOR_YUV2BGRA_IYUV); }
+OCL_TEST_P(CvtColor_YUV420, YUV2RGB_IYUV) { performTest(1, 3, COLOR_YUV2RGB_IYUV); }
+OCL_TEST_P(CvtColor_YUV420, YUV2BGR_IYUV) { performTest(1, 3, COLOR_YUV2BGR_IYUV); }
 
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor8u,
