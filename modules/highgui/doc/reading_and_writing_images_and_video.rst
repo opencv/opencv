@@ -115,7 +115,7 @@ The function ``imread`` loads an image from the specified file and returns it. I
 .. note:: In the case of color images, the decoded images will have the channels stored in ``B G R`` order.
 
 imwrite
------------
+-------
 Saves an image to a specified file.
 
 .. ocv:function:: bool imwrite( const string& filename, InputArray img, const vector<int>& params=vector<int>() )
@@ -235,7 +235,7 @@ The class provides C++ API for capturing video from cameras or for reading video
 
 
 VideoCapture::VideoCapture
-------------------------------
+--------------------------
 VideoCapture constructors.
 
 .. ocv:function:: VideoCapture::VideoCapture()
@@ -261,7 +261,7 @@ VideoCapture constructors.
 
 
 VideoCapture::open
----------------------
+------------------
 Open video file or a capturing device for video capturing
 
 .. ocv:function:: bool VideoCapture::open(const string& filename)
@@ -303,7 +303,7 @@ The C function also deallocates memory and clears ``*capture`` pointer.
 
 
 VideoCapture::grab
----------------------
+------------------
 Grabs the next frame from video file or capturing device.
 
 .. ocv:function:: bool VideoCapture::grab()
@@ -331,7 +331,7 @@ Decodes and returns the grabbed video frame.
 
 .. ocv:cfunction:: IplImage* cvRetrieveFrame( CvCapture* capture, int streamIdx=0 )
 
-.. ocv:pyoldfunction:: cv.RetrieveFrame(capture) -> image
+.. ocv:pyoldfunction:: cv.RetrieveFrame(capture [, index]) -> image
 
 The methods/functions decode and return the just grabbed frame. If no frames has been grabbed (camera has been disconnected, or there are no more frames in video file), the methods return false and the functions return NULL pointer.
 
@@ -339,7 +339,7 @@ The methods/functions decode and return the just grabbed frame. If no frames has
 
 
 VideoCapture::read
-----------------------
+------------------
 Grabs, decodes and returns the next video frame.
 
 .. ocv:function:: VideoCapture& VideoCapture::operator >> (Mat& image)
@@ -358,7 +358,7 @@ The methods/functions combine :ocv:func:`VideoCapture::grab` and :ocv:func:`Vide
 
 
 VideoCapture::get
----------------------
+-----------------
 Returns the specified ``VideoCapture`` property
 
 .. ocv:function:: double VideoCapture::get(int propId)
@@ -414,7 +414,7 @@ Returns the specified ``VideoCapture`` property
 **Note**: When querying a property that is not supported by the backend used by the ``VideoCapture`` class, value 0 is returned.
 
 VideoCapture::set
----------------------
+-----------------
 Sets a property in the ``VideoCapture``.
 
 .. ocv:function:: bool VideoCapture::set( int propId, double value )

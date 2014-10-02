@@ -375,7 +375,7 @@ arrowedLine
 ----------------
 Draws a arrow segment pointing from the first point to the second one.
 
-.. ocv:function:: void arrowedLine(Mat& img, Point pt1, Point pt2, const Scalar& color,          int thickness=1, int lineType=8, int shift=0, double tipLength=0.1)
+.. ocv:function:: void arrowedLine(Mat& img, Point pt1, Point pt2, const Scalar& color, int thickness=1, int line_type=8, int shift=0, double tipLength=0.1)
 
     :param img: Image.
 
@@ -387,7 +387,7 @@ Draws a arrow segment pointing from the first point to the second one.
 
     :param thickness: Line thickness.
 
-    :param lineType: Type of the line:
+    :param line_type: Type of the line:
 
             * **8** (or omitted) - 8-connected line.
 
