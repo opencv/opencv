@@ -199,7 +199,7 @@ void Cloning::solve(const Mat &img, const std::vector<double>& mod_diff, Mat &re
         for(int i = 0, cy=1 ; i < w-2;i++,cy++)
         {
             int idx = j*(w-2) + i;
-            denom[idx] = (float) 2*cos(CV_PI*cy/( (double) (w-1))) - 2 + 2*cos(CV_PI*cx/((double) (h-1))) - 2;
+            denom[idx] = 2*cos(CV_PI*cy/( w-1)) + 2*cos(CV_PI*cx/(h-1)) - 4;
 
         }
     }
