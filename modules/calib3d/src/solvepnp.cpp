@@ -41,6 +41,7 @@
  //M*/
 
 #include "precomp.hpp"
+#include "upnp.h"
 #include "dls.h"
 #include "epnp.h"
 #include "p3p.h"
@@ -106,6 +107,15 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
         if (result)
             cv::Rodrigues(R, rvec);
         return result;
+    }
+    else if (flags == SOLVEPNP_UPNP)
+    {
+        upnp PnP(cameraMatrix, opoints, ipoints);
+
+        cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
+		PnP.compute_pose(R, tvec);
+		cv::Rodrigues(R, rvec);
+		return true;
     }
     else
         CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, SOLVEPNP_EPNP or SOLVEPNP_DLS");
@@ -205,6 +215,7 @@ bool cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     int model_points = 4;                             // minimum of number of model points
     if( flags == cv::SOLVEPNP_ITERATIVE ) model_points = 6;
+    else if( flags == cv::SOLVEPNP_UPNP ) model_points = 6;
     else if( flags == cv::SOLVEPNP_EPNP ) model_points = 5;
 
     double param1 = reprojectionError;                // reprojection error
