@@ -10,7 +10,7 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-CV_ENUM(pnpAlgo, SOLVEPNP_ITERATIVE, SOLVEPNP_EPNP, SOLVEPNP_P3P, SOLVEPNP_DLS)
+CV_ENUM(pnpAlgo, SOLVEPNP_ITERATIVE, SOLVEPNP_EPNP, SOLVEPNP_P3P, SOLVEPNP_DLS, SOLVEPNP_UPNP)
 
 typedef std::tr1::tuple<int, pnpAlgo> PointsNum_Algo_t;
 typedef perf::TestBaseWithParam<PointsNum_Algo_t> PointsNum_Algo;
@@ -20,7 +20,7 @@ typedef perf::TestBaseWithParam<int> PointsNum;
 PERF_TEST_P(PointsNum_Algo, solvePnP,
             testing::Combine(
                 testing::Values(4, 3*9, 7*13), //TODO: find why results on 4 points are too unstable
-                testing::Values((int)SOLVEPNP_ITERATIVE, (int)SOLVEPNP_EPNP)
+                testing::Values((int)SOLVEPNP_ITERATIVE, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_UPNP)
                 )
             )
 {

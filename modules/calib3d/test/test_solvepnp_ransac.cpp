@@ -58,6 +58,7 @@ public:
         eps[SOLVEPNP_EPNP] = 1.0e-2;
         eps[SOLVEPNP_P3P] = 1.0e-2;
         eps[SOLVEPNP_DLS] = 1.0e-2;
+        eps[SOLVEPNP_UPNP] = 1.0e-2;
         totalTestsCount = 10;
     }
     ~CV_solvePnPRansac_Test() {}
@@ -118,6 +119,7 @@ protected:
         Mat trueRvec, trueTvec;
         Mat intrinsics, distCoeffs;
         generateCameraMatrix(intrinsics, rng);
+        if (method == 4) intrinsics.at<double>(1,1) = intrinsics.at<double>(0,0);
         if (mode == 0)
             distCoeffs = Mat::zeros(4, 1, CV_64FC1);
         else
@@ -159,7 +161,7 @@ protected:
         points.resize(pointsCount);
         generate3DPointCloud(points);
 
-        const int methodsCount = 4;
+        const int methodsCount = 5;
         RNG rng = ts->get_rng();
 
 
@@ -184,7 +186,7 @@ protected:
             }
         }
     }
-    double eps[4];
+    double eps[5];
     int totalTestsCount;
 };
 
@@ -197,6 +199,7 @@ public:
         eps[SOLVEPNP_EPNP] = 1.0e-6;
         eps[SOLVEPNP_P3P] = 1.0e-4;
         eps[SOLVEPNP_DLS] = 1.0e-4;
+        eps[SOLVEPNP_UPNP] = 1.0e-4;
         totalTestsCount = 1000;
     }
 
@@ -208,6 +211,7 @@ protected:
         Mat trueRvec, trueTvec;
         Mat intrinsics, distCoeffs;
         generateCameraMatrix(intrinsics, rng);
+        if (method == 4) intrinsics.at<double>(1,1) = intrinsics.at<double>(0,0);
         if (mode == 0)
             distCoeffs = Mat::zeros(4, 1, CV_64FC1);
         else
