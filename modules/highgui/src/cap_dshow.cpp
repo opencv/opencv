@@ -2578,6 +2578,7 @@ int videoInput::start(int deviceID, videoDevice *VD){
 
             if( setSizeAndSubtype(VD, VD->tryWidth, VD->tryHeight, VD->tryVideoType) ){
                 VD->setSize(VD->tryWidth, VD->tryHeight);
+                VD->videoType = VD->tryVideoType;
                 foundSize = true;
             } else {
                 // try specified size with all formats
@@ -2588,6 +2589,7 @@ int videoInput::start(int deviceID, videoDevice *VD){
                     if(verbose)printf("SETUP: trying format %s @ %i by %i\n", guidStr, VD->tryWidth, VD->tryHeight);
                     if( setSizeAndSubtype(VD, VD->tryWidth, VD->tryHeight, mediaSubtypes[i]) ){
                         VD->setSize(VD->tryWidth, VD->tryHeight);
+                        VD->videoType = mediaSubtypes[i];
                         foundSize = true;
                         break;
                     }
