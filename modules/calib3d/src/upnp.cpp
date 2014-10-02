@@ -53,7 +53,7 @@ upnp::~upnp()
         delete[] A2;
 }
 
-void upnp::compute_pose(cv::Mat& R, cv::Mat& t)
+double upnp::compute_pose(cv::Mat& R, cv::Mat& t)
 {
 	choose_control_points();
 	compute_alphas();
@@ -72,7 +72,6 @@ void upnp::compute_pose(cv::Mat& R, cv::Mat& t)
 
 	cvMulTransposed(M, &MtM, 1);
 	cvSVD(&MtM, &D, &Ut, 0, CV_SVD_MODIFY_A | CV_SVD_U_T);
-	//check_positive_eigenvectors(ut); // same result
 	cvReleaseMat(&M);
 
     double l_6x12[6 * 12], rho[6];
@@ -99,6 +98,8 @@ void upnp::compute_pose(cv::Mat& R, cv::Mat& t)
 
 	cv::Mat(3, 1, CV_64F, ts[N]).copyTo(t);
 	cv::Mat(3, 3, CV_64F, Rs[N]).copyTo(R);
+
+	return Efs[N][0];
 }
 
 void upnp::copy_R_and_t(const double R_src[3][3], const double t_src[3],
@@ -184,14 +185,6 @@ void upnp::solve_for_sign(void)
       pcs[3 * i + 2] = -pcs[3 * i + 2];
     }
   }
-}
-
-void upnp::check_positive_eigenvectors(double * ut)
-{
-	for (int i = 0; i < 12; ++i)
-		if (ut[12 * i] < 0.0) {
-			for (int j = 0; j < 12; ++j)ut[12 * i + j] = -ut[12 * i + j];
-		}
 }
 
 double upnp::compute_R_and_t(const double * ut, const double * betas, const double * efs,

@@ -13,7 +13,7 @@ public:
     upnp(const cv::Mat& cameraMatrix, const cv::Mat& opoints, const cv::Mat& ipoints);
     ~upnp();
 
-    void compute_pose(cv::Mat& R, cv::Mat& t);
+    double compute_pose(cv::Mat& R, cv::Mat& t);
 private:
     template <typename T>
       void init_camera_parameters(const cv::Mat& cameraMatrix)
@@ -45,7 +45,6 @@ private:
       void compute_pcs(void);
 
       void solve_for_sign(void);
-      void check_positive_eigenvectors(double * ut);
 
       void find_betas_and_focal_approx_1(const CvMat * Ut, const CvMat * Rho, double * betas, double * efs);
       void find_betas_and_focal_approx_2(const CvMat * Ut, const CvMat * Rho, double * betas, double * efs);

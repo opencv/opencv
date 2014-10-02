@@ -113,8 +113,9 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
         upnp PnP(cameraMatrix, opoints, ipoints);
 
         cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
-		PnP.compute_pose(R, tvec);
+		double f = PnP.compute_pose(R, tvec);
 		cv::Rodrigues(R, rvec);
+		cameraMatrix.at<double>(0,0) = cameraMatrix.at<double>(1,1) = f;
 		return true;
     }
     else
