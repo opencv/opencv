@@ -2416,7 +2416,15 @@ static bool setSizeAndSubtype(videoDevice * VD, int attemptWidth, int attemptHei
     VD->pAmMediaType->subtype     = mediatype;
 
     //buffer size
-    VD->pAmMediaType->lSampleSize = attemptWidth*attemptHeight*3;
+    if (mediatype == MEDIASUBTYPE_RGB24)
+    {
+        VD->pAmMediaType->lSampleSize = attemptWidth*attemptHeight*3;
+    }
+    else
+    {
+        // For compressed data, the value can be zero.
+        VD->pAmMediaType->lSampleSize = 0;
+    }
 
     //set fps if requested
     if( VD->requestedFrameTime != -1){
