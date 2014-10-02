@@ -177,17 +177,14 @@ void Cloning::transpose(const std::vector<double>& mat, std::vector<double>& mat
 
 void Cloning::solve(const Mat &img, const std::vector<double>& mod_diff, Mat &result)
 {
-    int w = img.size().width;
-    int h = img.size().height;
-
-    unsigned long int idx,idx1;
+    const int w = img.size().width;
+    const int h = img.size().height;
 
     std::vector<double> sineTransform((h-2)*(w-2), 0.);
     std::vector<double> sineTranformTranspose((h-2)*(w-2), 0.);
     std::vector<double> denom((h-2)*(w-2), 0.);
     std::vector<double> invsineTransform((h-2)*(w-2), 0.);
     std::vector<double> invsineTransform_t((h-2)*(w-2), 0.);
-    std::vector<double> img_d((h)*(w), 0.);
 
     dst(mod_diff,sineTransform,h-2,w-2);
 
@@ -202,13 +199,13 @@ void Cloning::solve(const Mat &img, const std::vector<double>& mod_diff, Mat &re
     {
         for(int i = 0, cy=1 ; i < w-2;i++,cy++)
         {
-            idx = j*(w-2) + i;
+            int idx = j*(w-2) + i;
             denom[idx] = (float) 2*cos(CV_PI*cy/( (double) (w-1))) - 2 + 2*cos(CV_PI*cx/((double) (h-1))) - 2;
 
         }
     }
 
-    for(idx = 0 ; idx < (unsigned)(w-2)*(h-2) ;idx++)
+    for(int idx = 0 ; idx < (w-2)*(h-2) ;idx++)
     {
         sineTranformTranspose[idx] = sineTranformTranspose[idx]/denom[idx];
     }
@@ -221,45 +218,38 @@ void Cloning::solve(const Mat &img, const std::vector<double>& mod_diff, Mat &re
 
     transpose(invsineTransform,invsineTransform_t,w-2,h-2);
 
-    for(int i = 0 ; i < h;i++)
+     //first col
+    for(int i = 0 ; i < w ; ++i)
+        result.ptr<unsigned char>(0)[i] = img.ptr<unsigned char>(0)[i];
+
+    for(int j = 1 ; j < h-1 ; ++j)
     {
-        for(int j = 0 ; j < w; j++)
+        //first row
+        result.ptr<unsigned char>(j)[0] = img.ptr<unsigned char>(j)[0];
+        
+        for(int i = 1 ; i < w-1 ; ++i)
         {
-            idx = i*w + j;
-            img_d[idx] = (double)img.at<uchar>(i,j);
+            int idx = (j-1)* (w-2) + (i-1);
+            //saturate cast is not used here, because it behaves differently from the previous implementation
+            //most notable, saturate_cast rounds before truncating, here it's the opposite.
+            double value = invsineTransform_t[idx];
+            if(value < 0.)
+                result.ptr<unsigned char>(j)[i] = 0;
+            else if (value > 255.0)
+                result.ptr<unsigned char>(j)[i] = 255;
+            else
+                result.ptr<unsigned char>(j)[i] = static_cast<unsigned char>(value);
         }
-    }
-    for(int i = 1 ; i < h-1;i++)
-    {
-        for(int j = 1 ; j < w-1; j++)
-        {
-            idx = i*w + j;
-            img_d[idx] = 0.0;
-        }
-    }
-    for(int i = 1,id1=0 ; i < h-1;i++,id1++)
-    {
-        for(int j = 1,id2=0 ; j < w-1; j++,id2++)
-        {
-            idx = i*w + j;
-            idx1= id1*(w-2) + id2;
-            img_d[idx] = invsineTransform_t[idx1];
-        }
+
+        //last row
+        result.ptr<unsigned char>(j)[w-1] = img.ptr<unsigned char>(j)[w-1];
     }
 
-    for(int i = 0 ; i < h;i++)
-    {
-        for(int j = 0 ; j < w; j++)
-        {
-            idx = i*w + j;
-            if(img_d[idx] < 0.0)
-                result.at<uchar>(i,j) = 0;
-            else if(img_d[idx] > 255.0)
-                result.at<uchar>(i,j) = 255;
-            else
-                result.at<uchar>(i,j) = (uchar) img_d[idx];
-        }
-    }
+    //last col
+    for(int i = 0 ; i < w ; ++i)
+        result.ptr<unsigned char>(h-1)[i] = img.ptr<unsigned char>(h-1)[i];
+
+
 }
 
 void Cloning::poisson_solver(const Mat &img, Mat &laplacianX , Mat &laplacianY, Mat &result)
