@@ -2246,7 +2246,7 @@ n-ary multi-dimensional array iterator. ::
 
 
 Use the class to implement unary, binary, and, generally, n-ary element-wise operations on multi-dimensional arrays. Some of the arguments of an n-ary function may be continuous arrays, some may be not. It is possible to use conventional
-``MatIterator`` 's for each array but incrementing all of the iterators after each small operations may be a big overhead. In this case consider using ``NAryMatIterator`` to iterate through several matrices simultaneously as long as they have the same geometry (dimensionality and all the dimension sizes are the same). On each iteration ``it.planes[0]``, ``it.planes[1]`` , ... will be the slices of the corresponding matrices.
+``MatIterator`` 's for each array but incrementing all of the iterators after each small operations may be a big overhead. In this case consider using ``NAryMatIterator`` to iterate through several matrices simultaneously as long as they have the same geometry (dimensionality and all the dimension sizes are the same). It iterates through the slices (or planes), not the elements, where "slice" is a continuous part of the arrays. On each iteration ``it.planes[0]``, ``it.planes[1]`` , ... will be the slices of the corresponding matrices.
 
 The example below illustrates how you can compute a normalized and threshold 3D color histogram: ::
 
@@ -2272,21 +2272,29 @@ The example below illustrates how you can compute a normalized and threshold 3D 
         }
 
         minProb *= image.rows*image.cols;
-        Mat plane;
-        NAryMatIterator it(&hist, &plane, 1);
+
+        // intialize iterator (the style is different from STL).
+        // after initialization the iterator will contain
+        // the number of slices or planes the iterator will go through.
+        // it simultaneously increments iterators for several matrices
+        // supplied as a null terminated list of pointers
+        const Mat* arrays[] = {&hist, 0};
+        Mat planes[1];
+        NAryMatIterator itNAry(arrays, planes, 1);
         double s = 0;
         // iterate through the matrix. on each iteration
-        // it.planes[*] (of type Mat) will be set to the current plane.
-        for(int p = 0; p < it.nplanes; p++, ++it)
+        // itNAry.planes[i] (of type Mat) will be set to the current plane
+        // of the i-th n-dim matrix passed to the iterator constructor.
+        for(int p = 0; p < itNAry.nplanes; p++, ++itNAry)
         {
-            threshold(it.planes[0], it.planes[0], minProb, 0, THRESH_TOZERO);
-            s += sum(it.planes[0])[0];
+            threshold(itNAry.planes[0], itNAry.planes[0], minProb, 0, THRESH_TOZERO);
+            s += sum(itNAry.planes[0])[0];
         }
 
         s = 1./s;
-        it = NAryMatIterator(&hist, &plane, 1);
-        for(int p = 0; p < it.nplanes; p++, ++it)
-            it.planes[0] *= s;
+        itNAry = NAryMatIterator(arrays, planes, 1);
+        for(int p = 0; p < itNAry.nplanes; p++, ++itNAry)
+            itNAry.planes[0] *= s;
     }
 
 
