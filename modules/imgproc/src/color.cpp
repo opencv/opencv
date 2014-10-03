@@ -4997,6 +4997,20 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                  src.isContinuous() ? " -D SRC_CONT" : ""));
         break;
     }
+    case COLOR_YUV2GRAY_420:
+    {
+        if (dcn <= 0) dcn = 1;
+
+        CV_Assert( dcn == 1 );
+        CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
+
+        dstSz = Size(sz.width, sz.height * 2 / 3);
+        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
+        dst = _dst.getUMat();
+
+        src.rowRange(0, dstSz.height).copyTo(dst);
+        return true;
+    }
     case COLOR_BGR2YCrCb:
     case COLOR_RGB2YCrCb:
     {
