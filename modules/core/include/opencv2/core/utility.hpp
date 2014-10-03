@@ -53,6 +53,30 @@
 namespace cv
 {
 
+#ifdef CV_COLLECT_IMPL_DATA
+CV_EXPORTS void setImpl(int flags); // set implementation flags and reset storage arrays
+CV_EXPORTS void addImpl(int flag, const char* func = 0); // add implementation and function name to storage arrays
+// Get stored implementation flags and fucntions names arrays
+// Each implementation entry correspond to function name entry, so you can find which implementation was executed in which fucntion
+CV_EXPORTS int getImpl(std::vector<int> &impl, std::vector<String> &funName);
+
+CV_EXPORTS bool useCollection(); // return implementation colelction state
+CV_EXPORTS void setUseCollection(bool flag); // set implementation collection state
+
+#define CV_IMPL_PLAIN  0x01 // native CPU OpenCV implementation
+#define CV_IMPL_OCL    0x02 // OpenCL implementation
+#define CV_IMPL_IPP    0x04 // IPP implementation
+#define CV_IMPL_MT     0x10 // multithreaded implementation
+
+#define CV_IMPL_ADD(impl)                                                   \
+    if(cv::useCollection())                                                 \
+    {                                                                       \
+        cv::addImpl(impl, CV_Func);                                         \
+    }
+#else
+#define CV_IMPL_ADD(impl)
+#endif
+
 /*!
  Automatically Allocated Buffer Class
 

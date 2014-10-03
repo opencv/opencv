@@ -1059,6 +1059,51 @@ TLSStorage::~TLSStorage()
 
 TLSData<CoreTLSData> coreTlsData;
 
+#ifdef CV_COLLECT_IMPL_DATA
+void setImpl(int flags)
+{
+    CoreTLSData* data = coreTlsData.get();
+    data->implFlags = flags;
+    data->implCode.clear();
+    data->implFun.clear();
+}
+
+void addImpl(int flag, const char* func)
+{
+    CoreTLSData* data = coreTlsData.get();
+    data->implFlags |= flag;
+    if(func) // use lazy collection if name was not specified
+    {
+        size_t index = data->implCode.size();
+        if(!index || (data->implCode[index-1] != flag || data->implFun[index-1].compare(func))) // avoid duplicates
+        {
+            data->implCode.push_back(flag);
+            data->implFun.push_back(func);
+        }
+    }
+}
+
+int getImpl(std::vector<int> &impl, std::vector<String> &funName)
+{
+    CoreTLSData* data = coreTlsData.get();
+    impl = data->implCode;
+    funName = data->implFun;
+    return data->implFlags; // return actual flags for lazy collection
+}
+
+bool useCollection()
+{
+    CoreTLSData* data = coreTlsData.get();
+    return data->useCollection;
+}
+
+void setUseCollection(bool flag)
+{
+    CoreTLSData* data = coreTlsData.get();
+    data->useCollection = flag;
+}
+#endif
+
 namespace ipp
 {
 
@@ -1082,6 +1127,35 @@ int getIppStatus()
 String getIppErrorLocation()
 {
     return format("%s:%d %s", filename ? filename : "", linen, funcname ? funcname : "");
+}
+
+bool useIPP()
+{
+#ifdef HAVE_IPP
+    CoreTLSData* data = coreTlsData.get();
+    if(data->useIPP < 0)
+    {
+        const char* pIppEnv = getenv("OPENCV_IPP");
+        if(pIppEnv && (cv::String(pIppEnv) == "disabled"))
+            data->useIPP = false;
+        else
+            data->useIPP = true;
+    }
+    return (data->useIPP > 0);
+#else
+    return false;
+#endif
+}
+
+void setUseIPP(bool flag)
+{
+    CoreTLSData* data = coreTlsData.get();
+#ifdef HAVE_IPP
+    data->useIPP = flag;
+#else
+    (void)flag;
+    data->useIPP = false;
+#endif
 }
 
 } // namespace ipp

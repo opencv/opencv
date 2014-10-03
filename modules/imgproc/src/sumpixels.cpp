@@ -355,35 +355,41 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
     };
 
 #if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) // Disabled on ICV due invalid results
-    if( ( depth == CV_8U ) && ( sdepth == CV_32F || sdepth == CV_32S ) && ( !_tilted.needed() ) && ( !_sqsum.needed() || sqdepth == CV_64F ) && ( cn == 1 ) )
+    CV_IPP_CHECK()
     {
-        IppStatus status = ippStsErr;
-        IppiSize srcRoiSize = ippiSize( src.cols, src.rows );
-        if( sdepth == CV_32F )
+        if( ( depth == CV_8U ) && ( sdepth == CV_32F || sdepth == CV_32S ) && ( !_tilted.needed() ) && ( !_sqsum.needed() || sqdepth == CV_64F ) && ( cn == 1 ) )
         {
-            if( _sqsum.needed() )
+            IppStatus status = ippStsErr;
+            IppiSize srcRoiSize = ippiSize( src.cols, src.rows );
+            if( sdepth == CV_32F )
             {
-                status = ippiSqrIntegral_8u32f64f_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32f*)sum.data, (int)sum.step, (Ipp64f*)sqsum.data, (int)sqsum.step, srcRoiSize, 0, 0 );
+                if( _sqsum.needed() )
+                {
+                    status = ippiSqrIntegral_8u32f64f_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32f*)sum.data, (int)sum.step, (Ipp64f*)sqsum.data, (int)sqsum.step, srcRoiSize, 0, 0 );
+                }
+                else
+                {
+                    status = ippiIntegral_8u32f_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32f*)sum.data, (int)sum.step, srcRoiSize, 0 );
+                }
             }
-            else
+            else if( sdepth == CV_32S )
             {
-                status = ippiIntegral_8u32f_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32f*)sum.data, (int)sum.step, srcRoiSize, 0 );
+                if( _sqsum.needed() )
+                {
+                    status = ippiSqrIntegral_8u32s64f_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32s*)sum.data, (int)sum.step, (Ipp64f*)sqsum.data, (int)sqsum.step, srcRoiSize, 0, 0 );
+                }
+                else
+                {
+                    status = ippiIntegral_8u32s_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32s*)sum.data, (int)sum.step, srcRoiSize, 0 );
+                }
             }
+            if (0 <= status)
+            {
+                CV_IMPL_ADD(CV_IMPL_IPP);
+                return;
+            }
+            setIppErrorStatus();
         }
-        else if( sdepth == CV_32S )
-        {
-            if( _sqsum.needed() )
-            {
-                status = ippiSqrIntegral_8u32s64f_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32s*)sum.data, (int)sum.step, (Ipp64f*)sqsum.data, (int)sqsum.step, srcRoiSize, 0, 0 );
-            }
-            else
-            {
-                status = ippiIntegral_8u32s_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32s*)sum.data, (int)sum.step, srcRoiSize, 0 );
-            }
-        }
-        if (0 <= status)
-            return;
-        setIppErrorStatus();
     }
 #endif
 

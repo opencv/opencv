@@ -1081,7 +1081,10 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
 {
     bool use_opencl = ocl::useOpenCL() && _flow0.isUMat();
     if( use_opencl && ocl_calcOpticalFlowFarneback(_prev0, _next0, _flow0, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags))
+    {
+        CV_IMPL_ADD(CV_IMPL_OCL);
         return;
+    }
 
     Mat prev0 = _prev0.getMat(), next0 = _next0.getMat();
     const int min_size = 32;

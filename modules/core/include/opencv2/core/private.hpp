@@ -254,6 +254,9 @@ static inline IppDataType ippiGetDataType(int depth)
 #  define IPP_VERSION_X100 0
 #endif
 
+#define CV_IPP_CHECK_COND (cv::ipp::useIPP())
+#define CV_IPP_CHECK() if(CV_IPP_CHECK_COND)
+
 #ifndef IPPI_CALL
 #  define IPPI_CALL(func) CV_Assert((func) >= 0)
 #endif
