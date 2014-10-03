@@ -332,7 +332,10 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 {
   if( ocl::useOpenCL() && _img.isUMat() && type == FastFeatureDetector::TYPE_9_16 &&
       ocl_FAST(_img, keypoints, threshold, nonmax_suppression, 10000))
-      return;
+  {
+    CV_IMPL_ADD(CV_IMPL_OCL);
+    return;
+  }
 
   switch(type) {
     case FastFeatureDetector::TYPE_5_8:

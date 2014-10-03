@@ -265,11 +265,17 @@ void cv::Canny( InputArray _src, OutputArray _dst,
 #endif
 
 #ifdef USE_IPP_CANNY
-    if( aperture_size == 3 && !L2gradient && 1 == cn )
+    CV_IPP_CHECK()
     {
-        if (ippCanny(src, dst, (float)low_thresh, (float)high_thresh))
-            return;
-        setIppErrorStatus();
+        if( aperture_size == 3 && !L2gradient && 1 == cn )
+        {
+            if (ippCanny(src, dst, (float)low_thresh, (float)high_thresh))
+            {
+                CV_IMPL_ADD(CV_IMPL_IPP);
+                return;
+            }
+            setIppErrorStatus();
+        }
     }
 #endif
 

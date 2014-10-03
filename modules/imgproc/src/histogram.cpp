@@ -1200,6 +1200,7 @@ public:
             *ok = false;
             return;
         }
+        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
 
         for (int i = 0; i < histSize; ++i)
             CV_XADD((int *)(hist->data + i * hist->step), *(int *)(phist.data + i * phist.step));
@@ -1233,29 +1234,33 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK)|CV_32S;
 
 #ifdef HAVE_IPP
-    if (nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && channels &&
-            channels[0] == 0 && mask.empty() && images[0].dims <= 2 &&
-            !accumulate && uniform)
+    CV_IPP_CHECK()
     {
-        ihist.setTo(Scalar::all(0));
-        AutoBuffer<Ipp32s> levels(histSize[0] + 1);
-
-        bool ok = true;
-        const Mat & src = images[0];
-        int nstripes = std::min<int>(8, static_cast<int>(src.total() / (1 << 16)));
-#ifdef HAVE_CONCURRENCY
-        nstripes = 1;
-#endif
-        IPPCalcHistInvoker invoker(src, ihist, levels, histSize[0] + 1, (Ipp32s)ranges[0][0], (Ipp32s)ranges[0][1], &ok);
-        Range range(0, src.rows);
-        parallel_for_(range, invoker, nstripes);
-
-        if (ok)
+        if (nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && channels &&
+                channels[0] == 0 && mask.empty() && images[0].dims <= 2 &&
+                !accumulate && uniform)
         {
-            ihist.convertTo(hist, CV_32F);
-            return;
+            ihist.setTo(Scalar::all(0));
+            AutoBuffer<Ipp32s> levels(histSize[0] + 1);
+
+            bool ok = true;
+            const Mat & src = images[0];
+            int nstripes = std::min<int>(8, static_cast<int>(src.total() / (1 << 16)));
+#ifdef HAVE_CONCURRENCY
+            nstripes = 1;
+#endif
+            IPPCalcHistInvoker invoker(src, ihist, levels, histSize[0] + 1, (Ipp32s)ranges[0][0], (Ipp32s)ranges[0][1], &ok);
+            Range range(0, src.rows);
+            parallel_for_(range, invoker, nstripes);
+
+            if (ok)
+            {
+                ihist.convertTo(hist, CV_32F);
+                CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                return;
+            }
+            setIppErrorStatus();
         }
-        setIppErrorStatus();
     }
 #endif
 

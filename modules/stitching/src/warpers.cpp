@@ -114,7 +114,10 @@ Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, InputArra
 
             size_t globalsize[2] = { dsize.width, (dsize.height + rowsPerWI - 1) / rowsPerWI };
             if (k.run(2, globalsize, NULL, true))
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return Rect(dst_tl, dst_br);
+            }
         }
     }
 
@@ -389,7 +392,10 @@ Rect SphericalWarper::buildMaps(Size src_size, InputArray K, InputArray R, Outpu
 
             size_t globalsize[2] = { dsize.width, (dsize.height + rowsPerWI - 1) / rowsPerWI };
             if (k.run(2, globalsize, NULL, true))
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return Rect(dst_tl, dst_br);
+            }
         }
     }
 
@@ -435,7 +441,10 @@ Rect CylindricalWarper::buildMaps(Size src_size, InputArray K, InputArray R, Out
 
             size_t globalsize[2] = { dsize.width, (dsize.height + rowsPerWI - 1) / rowsPerWI };
             if (k.run(2, globalsize, NULL, true))
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return Rect(dst_tl, dst_br);
+            }
         }
     }
 

@@ -853,13 +853,20 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
 #endif
 
 #if defined HAVE_IPP
-    bool useIppMT = (templ.rows < img.rows/2 && templ.cols < img.cols/2);
-
-    if (method == CV_TM_SQDIFF && cn == 1 && useIppMT)
+    bool useIppMT = false;
+    CV_IPP_CHECK()
     {
-        if (ipp_sqrDistance(img, templ, result))
-            return;
-        setIppErrorStatus();
+        useIppMT = (templ.rows < img.rows/2 && templ.cols < img.cols/2);
+
+        if (method == CV_TM_SQDIFF && cn == 1 && useIppMT)
+        {
+            if (ipp_sqrDistance(img, templ, result))
+            {
+                CV_IMPL_ADD(CV_IMPL_IPP);
+                return;
+            }
+            setIppErrorStatus();
+        }
     }
 #endif
 
@@ -870,6 +877,10 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
         {
             setIppErrorStatus();
             crossCorr( img, templ, result, result.size(), result.type(), Point(0,0), 0, 0);
+        }
+        else
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
         }
     }
     else

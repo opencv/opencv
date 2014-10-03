@@ -943,12 +943,18 @@ void BFMatcher::knnMatchImpl( InputArray _queryDescriptors, std::vector<std::vec
             if(trainDescCollection.empty())
             {
                 if(ocl_match(_queryDescriptors, utrainDescCollection[0], matches, normType))
+                {
+                    CV_IMPL_ADD(CV_IMPL_OCL);
                     return;
+                }
             }
             else
             {
                 if(ocl_match(_queryDescriptors, trainDescCollection[0], matches, normType))
+                {
+                    CV_IMPL_ADD(CV_IMPL_OCL);
                     return;
+                }
             }
         }
         else
@@ -956,12 +962,18 @@ void BFMatcher::knnMatchImpl( InputArray _queryDescriptors, std::vector<std::vec
             if(trainDescCollection.empty())
             {
                 if(ocl_knnMatch(_queryDescriptors, utrainDescCollection[0], matches, knn, normType, compactResult) )
+                {
+                    CV_IMPL_ADD(CV_IMPL_OCL);
                     return;
+                }
             }
             else
             {
                 if(ocl_knnMatch(_queryDescriptors, trainDescCollection[0], matches, knn, normType, compactResult) )
+                {
+                    CV_IMPL_ADD(CV_IMPL_OCL);
                     return;
+                }
             }
         }
     }
@@ -1073,12 +1085,18 @@ void BFMatcher::radiusMatchImpl( InputArray _queryDescriptors, std::vector<std::
         if (trainDescCollection.empty())
         {
             if(ocl_radiusMatch(_queryDescriptors, utrainDescCollection[0], matches, maxDistance, normType, compactResult) )
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return;
+            }
         }
         else
         {
             if (ocl_radiusMatch(_queryDescriptors, trainDescCollection[0], matches, maxDistance, normType, compactResult) )
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return;
+            }
         }
     }
 

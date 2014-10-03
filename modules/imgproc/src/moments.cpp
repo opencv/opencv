@@ -578,64 +578,68 @@ cv::Moments cv::moments( InputArray _src, bool binary )
             CV_Error( CV_StsBadArg, "Invalid image type (must be single-channel)" );
 
 #if IPP_VERSION_X100 >= 801 && 0
-        if (!binary)
+        CV_IPP_CHECK()
         {
-            IppiSize roi = { mat.cols, mat.rows };
-            IppiMomentState_64f * moment = NULL;
-            // ippiMomentInitAlloc_64f, ippiMomentFree_64f are deprecated in 8.1, but there are not another way
-            // to initialize IppiMomentState_64f. When GetStateSize and Init functions will appear we have to
-            // change our code.
-            CV_SUPPRESS_DEPRECATED_START
-            if (ippiMomentInitAlloc_64f(&moment, ippAlgHintAccurate) >= 0)
+            if (!binary)
             {
-                typedef IppStatus (CV_STDCALL * ippiMoments)(const void * pSrc, int srcStep, IppiSize roiSize, IppiMomentState_64f* pCtx);
-                ippiMoments ippFunc =
-                    type == CV_8UC1 ? (ippiMoments)ippiMoments64f_8u_C1R :
-                    type == CV_16UC1 ? (ippiMoments)ippiMoments64f_16u_C1R :
-                    type == CV_32FC1? (ippiMoments)ippiMoments64f_32f_C1R : 0;
-
-                if (ippFunc)
+                IppiSize roi = { mat.cols, mat.rows };
+                IppiMomentState_64f * moment = NULL;
+                // ippiMomentInitAlloc_64f, ippiMomentFree_64f are deprecated in 8.1, but there are not another way
+                // to initialize IppiMomentState_64f. When GetStateSize and Init functions will appear we have to
+                // change our code.
+                CV_SUPPRESS_DEPRECATED_START
+                if (ippiMomentInitAlloc_64f(&moment, ippAlgHintAccurate) >= 0)
                 {
-                    if (ippFunc(mat.data, (int)mat.step, roi, moment) >= 0)
+                    typedef IppStatus (CV_STDCALL * ippiMoments)(const void * pSrc, int srcStep, IppiSize roiSize, IppiMomentState_64f* pCtx);
+                    ippiMoments ippFunc =
+                        type == CV_8UC1 ? (ippiMoments)ippiMoments64f_8u_C1R :
+                        type == CV_16UC1 ? (ippiMoments)ippiMoments64f_16u_C1R :
+                        type == CV_32FC1? (ippiMoments)ippiMoments64f_32f_C1R : 0;
+
+                    if (ippFunc)
                     {
-                        IppiPoint point = { 0, 0 };
-                        ippiGetSpatialMoment_64f(moment, 0, 0, 0, point, &m.m00);
-                        ippiGetSpatialMoment_64f(moment, 1, 0, 0, point, &m.m10);
-                        ippiGetSpatialMoment_64f(moment, 0, 1, 0, point, &m.m01);
+                        if (ippFunc(mat.data, (int)mat.step, roi, moment) >= 0)
+                        {
+                            IppiPoint point = { 0, 0 };
+                            ippiGetSpatialMoment_64f(moment, 0, 0, 0, point, &m.m00);
+                            ippiGetSpatialMoment_64f(moment, 1, 0, 0, point, &m.m10);
+                            ippiGetSpatialMoment_64f(moment, 0, 1, 0, point, &m.m01);
 
-                        ippiGetSpatialMoment_64f(moment, 2, 0, 0, point, &m.m20);
-                        ippiGetSpatialMoment_64f(moment, 1, 1, 0, point, &m.m11);
-                        ippiGetSpatialMoment_64f(moment, 0, 2, 0, point, &m.m02);
+                            ippiGetSpatialMoment_64f(moment, 2, 0, 0, point, &m.m20);
+                            ippiGetSpatialMoment_64f(moment, 1, 1, 0, point, &m.m11);
+                            ippiGetSpatialMoment_64f(moment, 0, 2, 0, point, &m.m02);
 
-                        ippiGetSpatialMoment_64f(moment, 3, 0, 0, point, &m.m30);
-                        ippiGetSpatialMoment_64f(moment, 2, 1, 0, point, &m.m21);
-                        ippiGetSpatialMoment_64f(moment, 1, 2, 0, point, &m.m12);
-                        ippiGetSpatialMoment_64f(moment, 0, 3, 0, point, &m.m03);
-                        ippiGetCentralMoment_64f(moment, 2, 0, 0, &m.mu20);
-                        ippiGetCentralMoment_64f(moment, 1, 1, 0, &m.mu11);
-                        ippiGetCentralMoment_64f(moment, 0, 2, 0, &m.mu02);
-                        ippiGetCentralMoment_64f(moment, 3, 0, 0, &m.mu30);
-                        ippiGetCentralMoment_64f(moment, 2, 1, 0, &m.mu21);
-                        ippiGetCentralMoment_64f(moment, 1, 2, 0, &m.mu12);
-                        ippiGetCentralMoment_64f(moment, 0, 3, 0, &m.mu03);
-                        ippiGetNormalizedCentralMoment_64f(moment, 2, 0, 0, &m.nu20);
-                        ippiGetNormalizedCentralMoment_64f(moment, 1, 1, 0, &m.nu11);
-                        ippiGetNormalizedCentralMoment_64f(moment, 0, 2, 0, &m.nu02);
-                        ippiGetNormalizedCentralMoment_64f(moment, 3, 0, 0, &m.nu30);
-                        ippiGetNormalizedCentralMoment_64f(moment, 2, 1, 0, &m.nu21);
-                        ippiGetNormalizedCentralMoment_64f(moment, 1, 2, 0, &m.nu12);
-                        ippiGetNormalizedCentralMoment_64f(moment, 0, 3, 0, &m.nu03);
+                            ippiGetSpatialMoment_64f(moment, 3, 0, 0, point, &m.m30);
+                            ippiGetSpatialMoment_64f(moment, 2, 1, 0, point, &m.m21);
+                            ippiGetSpatialMoment_64f(moment, 1, 2, 0, point, &m.m12);
+                            ippiGetSpatialMoment_64f(moment, 0, 3, 0, point, &m.m03);
+                            ippiGetCentralMoment_64f(moment, 2, 0, 0, &m.mu20);
+                            ippiGetCentralMoment_64f(moment, 1, 1, 0, &m.mu11);
+                            ippiGetCentralMoment_64f(moment, 0, 2, 0, &m.mu02);
+                            ippiGetCentralMoment_64f(moment, 3, 0, 0, &m.mu30);
+                            ippiGetCentralMoment_64f(moment, 2, 1, 0, &m.mu21);
+                            ippiGetCentralMoment_64f(moment, 1, 2, 0, &m.mu12);
+                            ippiGetCentralMoment_64f(moment, 0, 3, 0, &m.mu03);
+                            ippiGetNormalizedCentralMoment_64f(moment, 2, 0, 0, &m.nu20);
+                            ippiGetNormalizedCentralMoment_64f(moment, 1, 1, 0, &m.nu11);
+                            ippiGetNormalizedCentralMoment_64f(moment, 0, 2, 0, &m.nu02);
+                            ippiGetNormalizedCentralMoment_64f(moment, 3, 0, 0, &m.nu30);
+                            ippiGetNormalizedCentralMoment_64f(moment, 2, 1, 0, &m.nu21);
+                            ippiGetNormalizedCentralMoment_64f(moment, 1, 2, 0, &m.nu12);
+                            ippiGetNormalizedCentralMoment_64f(moment, 0, 3, 0, &m.nu03);
 
-                        ippiMomentFree_64f(moment);
-                        return m;
+                            ippiMomentFree_64f(moment);
+                            CV_IMPL_ADD(CV_IMPL_IPP);
+                            return m;
+                        }
+                        setIppErrorStatus();
                     }
-                    setIppErrorStatus();
+                    ippiMomentFree_64f(moment);
                 }
-                ippiMomentFree_64f(moment);
+                else
+                    setIppErrorStatus();
+                CV_SUPPRESS_DEPRECATED_END
             }
-            else
-                setIppErrorStatus();
-            CV_SUPPRESS_DEPRECATED_END
         }
 #endif
 
