@@ -65,13 +65,13 @@ class JavadocGenerator(object):
                         javadoc = self.makeJavadoc(decl, marker[2])
                         if self.verbose:
                             print
-                            print "Javadoc for \"%s\" File: %s (line %s)" % (decl["name"], decl["file"], decl["line"])
-                            print javadoc
+                            print("Javadoc for \"%s\" File: %s line %s" % (decl["name"], decl["file"], decl["line"]))
+                            print(javadoc)
                         for line in javadoc.split("\n"):
                             outf.write(marker[1] + line + "\n")
                         self.markers_documented += 1
                     elif self.show_errors:
-                        print >> sys.stderr, "gen_javadoc error: could not find documentation for %s (module: %s)" % (l.lstrip()[len(self.javadoc_marker):-1].strip(), module)
+                         sys.stderr.write("gen_javadoc error: could not find documentation for %s (module: %s)" % (l.lstrip()[len(self.javadoc_marker):-1].strip(), module))
                 else:
                     outf.write(org.replace("\t", "    ").rstrip()+"\n")
         except:
@@ -210,7 +210,7 @@ class JavadocGenerator(object):
                 if not arg_doc:
                     arg_doc = "a " + arg
                     if self.show_warnings:
-                        print >> sys.stderr, "gen_javadoc warning: parameter \"%s\" of \"%s\" is undocumented. File: %s (line %s)" % (arg, decl["name"], decl["file"], decl["line"])
+                        sys.stderr.write("gen_javadoc warning: parameter \"%s\" of \"%s\" is undocumented. File: %s (line %s)" % (arg, decl["name"], decl["file"], decl["line"]))
                     self.params_undocumented += 1
                 else:
                     self.params_documented += 1
@@ -237,14 +237,14 @@ class JavadocGenerator(object):
         return (doc + " */").replace("::",".")
 
     def printSummary(self):
-        print "Javadoc Generator Summary:"
-        print "  Total markers:        %s" % self.markers_processed
-        print "  Undocumented markers: %s" % (self.markers_processed - self.markers_documented)
-        print "  Generated comments:   %s" % self.markers_documented
+        print("Javadoc Generator Summary:")
+        print("  Total markers:        %s" % self.markers_processed)
+        print( "  Undocumented markers: %s" % (self.markers_processed - self.markers_documented))
+        print( "  Generated comments:   %s" % self.markers_documented)
 
         print
-        print "  Documented params:    %s" % self.params_documented
-        print "  Undocumented params:  %s" % self.params_undocumented
+        print("  Documented params:    %s" % self.params_documented)
+        print("  Undocumented params:  %s" % self.params_undocumented)
         print
 
 if __name__ == "__main__":
