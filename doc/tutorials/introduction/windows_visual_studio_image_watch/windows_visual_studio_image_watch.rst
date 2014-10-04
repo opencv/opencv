@@ -65,7 +65,7 @@ Image Watch works with any existing project that uses OpenCV image objects (for 
 
         cout << "Loading input image: " << argv[1] << endl;
         Mat input;
-        input = imread(argv[1], CV_LOAD_IMAGE_COLOR);
+        input = imread(argv[1], IMREAD_COLOR);
 
         cout << "Detecting edges in input image" << endl;
         Mat edges;

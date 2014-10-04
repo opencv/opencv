@@ -180,10 +180,10 @@ This tutorial code's is shown lines below. You can also download it from `here <
    {
      /// Load source image and convert it to gray
      src = imread( argv[1], 1 );
-     cvtColor( src, src_gray, CV_BGR2GRAY );
+     cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
      /// Create a window and a trackbar
-     namedWindow( source_window, CV_WINDOW_AUTOSIZE );
+     namedWindow( source_window, WINDOW_AUTOSIZE );
      createTrackbar( "Threshold: ", source_window, &thresh, max_thresh, cornerHarris_demo );
      imshow( source_window, src );
 
@@ -223,7 +223,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
              }
         }
      /// Showing the result
-     namedWindow( corners_window, CV_WINDOW_AUTOSIZE );
+     namedWindow( corners_window, WINDOW_AUTOSIZE );
      imshow( corners_window, dst_norm_scaled );
    }
 

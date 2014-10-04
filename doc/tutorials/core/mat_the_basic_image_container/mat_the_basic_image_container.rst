@@ -32,8 +32,8 @@ To tackle this issue OpenCV uses a reference counting system. The idea is that e
 .. code-block:: cpp
    :linenos:
 
-   Mat A, C;                                 // creates just the header parts
-   A = imread(argv[1], CV_LOAD_IMAGE_COLOR); // here we'll know the method used (allocate matrix)
+   Mat A, C;                          // creates just the header parts
+   A = imread(argv[1], IMREAD_COLOR); // here we'll know the method used (allocate matrix)
 
    Mat B(A);                                 // Use the copy constructor
 

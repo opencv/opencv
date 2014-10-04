@@ -67,7 +67,7 @@ Code
        { return -1; }
 
      /// Convert it to gray
-     cvtColor( src, src_gray, CV_BGR2GRAY );
+     cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
      /// Reduce the noise so we avoid false circle detection
      GaussianBlur( src_gray, src_gray, Size(9, 9), 2, 2 );
@@ -75,7 +75,7 @@ Code
      vector<Vec3f> circles;
 
      /// Apply the Hough Transform to find the circles
-     HoughCircles( src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows/8, 200, 100, 0, 0 );
+     HoughCircles( src_gray, circles, HOUGH_GRADIENT, 1, src_gray.rows/8, 200, 100, 0, 0 );
 
      /// Draw the circles detected
      for( size_t i = 0; i < circles.size(); i++ )
@@ -89,7 +89,7 @@ Code
       }
 
      /// Show your results
-     namedWindow( "Hough Circle Transform Demo", CV_WINDOW_AUTOSIZE );
+     namedWindow( "Hough Circle Transform Demo", WINDOW_AUTOSIZE );
      imshow( "Hough Circle Transform Demo", src );
 
      waitKey(0);
@@ -114,7 +114,7 @@ Explanation
 
    .. code-block:: cpp
 
-      cvtColor( src, src_gray, CV_BGR2GRAY );
+      cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
 #. Apply a Gaussian blur to reduce noise and avoid false circle detection:
 
@@ -128,13 +128,13 @@ Explanation
 
       vector<Vec3f> circles;
 
-      HoughCircles( src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows/8, 200, 100, 0, 0 );
+      HoughCircles( src_gray, circles, HOUGH_GRADIENT, 1, src_gray.rows/8, 200, 100, 0, 0 );
 
    with the arguments:
 
    * *src_gray*: Input image (grayscale).
    * *circles*: A vector that stores sets of 3 values: :math:`x_{c}, y_{c}, r` for each detected circle.
-   * *CV_HOUGH_GRADIENT*: Define the detection method. Currently this is the only one available in OpenCV.
+   * *HOUGH_GRADIENT*: Define the detection method. Currently this is the only one available in OpenCV.
    * *dp = 1*: The inverse ratio of resolution.
    * *min_dist = src_gray.rows/8*: Minimum distance between detected centers.
    * *param_1 = 200*: Upper threshold for the internal Canny edge detector.
@@ -162,7 +162,7 @@ Explanation
 
    .. code-block:: cpp
 
-      namedWindow( "Hough Circle Transform Demo", CV_WINDOW_AUTOSIZE );
+      namedWindow( "Hough Circle Transform Demo", WINDOW_AUTOSIZE );
       imshow( "Hough Circle Transform Demo", src );
 
 #. Wait for the user to exit the program

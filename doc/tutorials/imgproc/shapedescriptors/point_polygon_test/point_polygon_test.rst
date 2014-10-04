@@ -88,9 +88,9 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
      /// Create Window and show your results
      char* source_window = "Source";
-     namedWindow( source_window, CV_WINDOW_AUTOSIZE );
+     namedWindow( source_window, WINDOW_AUTOSIZE );
      imshow( source_window, src );
-     namedWindow( "Distance", CV_WINDOW_AUTOSIZE );
+     namedWindow( "Distance", WINDOW_AUTOSIZE );
      imshow( "Distance", drawing );
 
      waitKey(0);

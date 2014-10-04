@@ -93,7 +93,7 @@ Code
     map_y.create( src.size(), CV_32FC1 );
 
     /// Create window
-    namedWindow( remap_window, CV_WINDOW_AUTOSIZE );
+    namedWindow( remap_window, WINDOW_AUTOSIZE );
 
     /// Loop
     while( true )
@@ -106,7 +106,7 @@ Code
 
       /// Update map_x & map_y. Then apply remap
       update_map();
-      remap( src, dst, map_x, map_y, CV_INTER_LINEAR, BORDER_CONSTANT, Scalar(0,0, 0) );
+      remap( src, dst, map_x, map_y, INTER_LINEAR, BORDER_CONSTANT, Scalar(0,0, 0) );
 
       /// Display results
       imshow( remap_window, dst );
@@ -186,7 +186,7 @@ Explanation
 
    .. code-block:: cpp
 
-      namedWindow( remap_window, CV_WINDOW_AUTOSIZE );
+      namedWindow( remap_window, WINDOW_AUTOSIZE );
 
 #. Establish a loop. Each 1000 ms we update our mapping matrices (*mat_x* and *mat_y*) and apply them to our source image:
 
@@ -202,7 +202,7 @@ Explanation
 
         /// Update map_x & map_y. Then apply remap
         update_map();
-        remap( src, dst, map_x, map_y, CV_INTER_LINEAR, BORDER_CONSTANT, Scalar(0,0, 0) );
+        remap( src, dst, map_x, map_y, INTER_LINEAR, BORDER_CONSTANT, Scalar(0,0, 0) );
 
         /// Display results
         imshow( remap_window, dst );
@@ -214,7 +214,7 @@ Explanation
    * **dst**: Destination image of same size as *src*
    * **map_x**: The mapping function in the x direction. It is equivalent to the first component of :math:`h(i,j)`
    * **map_y**: Same as above, but in y direction. Note that *map_y* and *map_x* are both of the same size as *src*
-   * **CV_INTER_LINEAR**: The type of interpolation to use for non-integer pixels. This is by default.
+   * **INTER_LINEAR**: The type of interpolation to use for non-integer pixels. This is by default.
    * **BORDER_CONSTANT**: Default
 
    How do we update our mapping matrices *mat_x* and *mat_y*? Go on reading:
