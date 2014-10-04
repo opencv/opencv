@@ -79,18 +79,18 @@ Videos have many-many information attached to them besides the content of the fr
 
 .. code-block:: cpp
 
-   Size refS = Size((int) captRefrnc.get(CV_CAP_PROP_FRAME_WIDTH),
-                    (int) captRefrnc.get(CV_CAP_PROP_FRAME_HEIGHT)),
+   Size refS = Size((int) captRefrnc.get(CAP_PROP_FRAME_WIDTH),
+                    (int) captRefrnc.get(CAP_PROP_FRAME_HEIGHT)),
 
    cout << "Reference frame resolution: Width=" << refS.width << "  Height=" << refS.height
-        << " of nr#: " << captRefrnc.get(CV_CAP_PROP_FRAME_COUNT) << endl;
+        << " of nr#: " << captRefrnc.get(CAP_PROP_FRAME_COUNT) << endl;
 
 When you are working with videos you may often want to control these values yourself. To do this there is a :hgvideo:`set <videocapture-set>` function. Its first argument remains the name of the property you want to change and there is a second of double type containing the value to be set. It will return true if it succeeds and false otherwise. Good examples for this is seeking in a video file to a given time or frame:
 
 .. code-block:: cpp
 
-   captRefrnc.set(CV_CAP_PROP_POS_MSEC, 1.2);  // go to the 1.2 second in the video
-   captRefrnc.set(CV_CAP_PROP_POS_FRAMES, 10); // go to the 10th frame of the video
+   captRefrnc.set(CAP_PROP_POS_MSEC, 1.2);  // go to the 1.2 second in the video
+   captRefrnc.set(CAP_PROP_POS_FRAMES, 10); // go to the 10th frame of the video
    // now a read operation would read the frame at the set position
 
 For properties you can read and change look into the documentation of the :hgvideo:`get <videocapture-get>` and :hgvideo:`set <videocapture-set>` functions.
@@ -122,7 +122,7 @@ Here the :math:`MAX_I^2` is the maximum valid value for a pixel. In case of the 
     s1.convertTo(s1, CV_32F);  // cannot make a square on 8 bits
     s1 = s1.mul(s1);           // |I1 - I2|^2
 
-    Scalar s = sum(s1);         // sum elements per channel
+    Scalar s = sum(s1);        // sum elements per channel
 
     double sse = s.val[0] + s.val[1] + s.val[2]; // sum channels
 

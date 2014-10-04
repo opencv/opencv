@@ -167,10 +167,10 @@ The tutorial code's is shown lines below. You can also download it from `here <h
      src = imread( argv[1], 1 );
 
      /// Convert the image to Gray
-     cvtColor( src, src_gray, CV_RGB2GRAY );
+     cvtColor( src, src_gray, COLOR_RGB2GRAY );
 
      /// Create a window to display results
-     namedWindow( window_name, CV_WINDOW_AUTOSIZE );
+     namedWindow( window_name, WINDOW_AUTOSIZE );
 
      /// Create Trackbar to choose type of Threshold
      createTrackbar( trackbar_type,
@@ -228,14 +228,14 @@ Explanation
         src = imread( argv[1], 1 );
 
         /// Convert the image to Gray
-        cvtColor( src, src_gray, CV_RGB2GRAY );
+        cvtColor( src, src_gray, COLOR_RGB2GRAY );
 
 
    * Create a window to display the result
 
      .. code-block:: cpp
 
-        namedWindow( window_name, CV_WINDOW_AUTOSIZE );
+        namedWindow( window_name, WINDOW_AUTOSIZE );
 
    * Create :math:`2` trackbars for the user to enter user input:
 

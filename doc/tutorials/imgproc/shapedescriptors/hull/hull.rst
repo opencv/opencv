@@ -47,12 +47,12 @@ This tutorial code's is shown lines below. You can also download it from `here <
      src = imread( argv[1], 1 );
 
      /// Convert image to gray and blur it
-     cvtColor( src, src_gray, CV_BGR2GRAY );
+     cvtColor( src, src_gray, COLOR_BGR2GRAY );
      blur( src_gray, src_gray, Size(3,3) );
 
      /// Create Window
      char* source_window = "Source";
-     namedWindow( source_window, CV_WINDOW_AUTOSIZE );
+     namedWindow( source_window, WINDOW_AUTOSIZE );
      imshow( source_window, src );
 
      createTrackbar( " Threshold:", "Source", &thresh, max_thresh, thresh_callback );
@@ -74,7 +74,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      threshold( src_gray, threshold_output, thresh, 255, THRESH_BINARY );
 
      /// Find contours
-     findContours( threshold_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+     findContours( threshold_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
      /// Find the convex hull object for each contour
      vector<vector<Point> >hull( contours.size() );
@@ -91,7 +91,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
         }
 
      /// Show in a window
-     namedWindow( "Hull demo", CV_WINDOW_AUTOSIZE );
+     namedWindow( "Hull demo", WINDOW_AUTOSIZE );
      imshow( "Hull demo", drawing );
    }
 

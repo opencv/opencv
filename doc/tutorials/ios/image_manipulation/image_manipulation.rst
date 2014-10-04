@@ -70,7 +70,7 @@ After the processing we need to convert it back to UIImage. The code below can h
 .. code-block:: cpp
 
     cv::Mat greyMat;
-    cv::cvtColor(inputMat, greyMat, CV_BGR2GRAY);
+    cv::cvtColor(inputMat, greyMat, COLOR_BGR2GRAY);
 
 After the processing we need to convert it back to UIImage.
 
