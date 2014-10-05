@@ -3580,14 +3580,6 @@ public:
                                     _mm_storeu_si128((__m128i*)(XY + x1*2 + 8), iy1);
                                 }
                             }
-                        #elif CV_NEON
-                            for( ; x1 <= bcols - 4; x1 += 4 )
-                            {
-                                int32x4_t v_sx = cv_vrndq_s32_f32(vld1q_f32(sX + x1)),
-                                          v_sy = cv_vrndq_s32_f32(vld1q_f32(sY + x1));
-                                int16x4x2_t v_dst = vzip_s16(vqmovn_s32(v_sx), vqmovn_s32(v_sy));
-                                vst1q_s16(XY + (x1 << 1), vcombine_s16(v_dst.val[0], v_dst.val[1]));
-                            }
                         #endif
 
                             for( ; x1 < bcols; x1++ )
