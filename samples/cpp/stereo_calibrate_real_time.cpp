@@ -43,7 +43,7 @@ using namespace cv;
 using namespace std;
 
 enum Modes { DETECTING, CAPTURING, CALIBRATING};
-int mode = Modes::DETECTING;
+Modes mode = DETECTING;
 const int noOfStereoPairs = 14;
 int stereoPairIndex = 0, cornerImageIndex=0;
 int goIn = 1;
@@ -52,7 +52,7 @@ int64 prevTickCount;
 
 vector<Point2f> cornersLeft, cornersRight;
 
-vector<vector<Point2f>> cameraImagePoints[2];
+vector<vector<Point2f> > cameraImagePoints[2];
 
 Mat displayCapturedImageIndex(Mat img) {
     std::ostringstream imageIndex;
@@ -63,15 +63,15 @@ Mat displayCapturedImageIndex(Mat img) {
 
 Mat displayMode(Mat img) {
     String modeString = "DETECTING";
-    if (mode==Modes::CAPTURING) {
+    if (mode == CAPTURING) {
         modeString="CAPTURING";
     }
-    else if (mode==Modes::CALIBRATING) {
+    else if (mode == CALIBRATING) {
         modeString="CALIBRATED";
     }
     putText(img, modeString, Point(50,50), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0,255,0), 2);
     
-    if (mode == Modes::CAPTURING) {
+    if (mode == CAPTURING) {
         img = displayCapturedImageIndex(img);
     }
     
@@ -130,7 +130,7 @@ void saveImages(Mat leftImage, Mat rightImage, int pairIndex) {
 
 void calibrateStereoCamera(Size boardSize, Size imageSize) {
     
-    vector<vector<Point3f>> objectPoints;
+    vector<vector<Point3f> > objectPoints;
     
     objectPoints.resize(noOfStereoPairs);
     
@@ -271,6 +271,12 @@ void calibrateStereoCamera(Size boardSize, Size imageSize) {
 int main(int argc, char** argv) {
     
     VideoCapture camLeft(0), camRight(2);
+    
+    if (!camLeft.isOpened() || !camRight.isOpened()) {
+        cout<<"Stereo Cameras not found or there is some problem connecting them. Please check your cameras.\n";
+        exit(-1);
+    }
+    
     Size boardSize = Size(7,6);
     
     Mat inputLeft, inputRight, copyImageLeft, copyImageRight;
@@ -282,11 +288,16 @@ int main(int argc, char** argv) {
         camLeft>>inputLeft;
         camRight>>inputRight;
         
+        if ((inputLeft.rows != inputRight.rows) || (inputLeft.cols != inputRight.cols)) {
+            cout<<"Images from both cameras are not of some size. Please check the size of each camera.\n";
+            exit(-1);
+        }
+        
         inputLeft.copyTo(copyImageLeft);
         inputRight.copyTo(copyImageRight);
         
         foundCornersInBothImage = findChessboardCornersAndDraw(inputLeft, inputRight, boardSize);
-        if (foundCornersInBothImage && mode == Modes::CAPTURING && stereoPairIndex<14) {
+        if (foundCornersInBothImage && mode == CAPTURING && stereoPairIndex<14) {
             int64 thisTick = getTickCount();
             int64 diff = thisTick - prevTickCount;
             if (goIn==1 || diff >= 3000000000) {
@@ -297,7 +308,7 @@ int main(int argc, char** argv) {
         }
         displayImages();
         
-        if (mode == Modes::CALIBRATING) {
+        if (mode == CALIBRATING) {
             calibrateStereoCamera(boardSize, inputLeft.size());
             waitKey();
         }
@@ -307,10 +318,10 @@ int main(int argc, char** argv) {
             exit(-1);
         }
         else if(keyBoardInput == 'c' || keyBoardInput == 'C') {
-            mode = Modes::CAPTURING;
+            mode = CAPTURING;
         }
         else if (keyBoardInput == 'p' || keyBoardInput == 'P') {
-            mode = Modes::CALIBRATING;
+            mode = CALIBRATING;
         }
     }
     return 0;
