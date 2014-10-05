@@ -81,7 +81,7 @@ void Cloning::computeLaplacianY( const Mat &img, Mat &laplacianY)
     filter2D(img, laplacianY, CV_32F, kernel);
 }
 
-void Cloning::dst(const std::vector<double>& mod_diff, std::vector<double>& sineTransform,int h,int w)
+void Cloning::dst(const std::vector<float>& mod_diff, std::vector<float>& sineTransform,int h,int w)
 {
 
     unsigned long int idx;
@@ -94,7 +94,7 @@ void Cloning::dst(const std::vector<double>& mod_diff, std::vector<double>& sine
     Mat result;
     int p=0;
 
-    const double factor = 0.5;
+    const float factor = 0.5;
 
     for(int i=0;i<w;i++)
     {
@@ -136,7 +136,7 @@ void Cloning::dst(const std::vector<double>& mod_diff, std::vector<double>& sine
     }
 }
 
-void Cloning::idst(const std::vector<double>& mod_diff, std::vector<double>& sineTransform,int h,int w)
+void Cloning::idst(const std::vector<float>& mod_diff, std::vector<float>& sineTransform,int h,int w)
 {
     int nn = h+1;
     unsigned long int idx;
@@ -145,12 +145,12 @@ void Cloning::idst(const std::vector<double>& mod_diff, std::vector<double>& sin
         for(int j=0;j<w;j++)
         {
             idx = i*w + j;
-            sineTransform[idx] = (double) (2*sineTransform[idx])/nn;
+            sineTransform[idx] = (float) (2*sineTransform[idx])/nn;
         }
 
 }
 
-void Cloning::transpose(const std::vector<double>& mat, std::vector<double>& mat_t,int h,int w)
+void Cloning::transpose(const std::vector<float>& mat, std::vector<float>& mat_t,int h,int w)
 {
 
     Mat tmp = Mat(h,w,CV_32FC1);
@@ -174,16 +174,16 @@ void Cloning::transpose(const std::vector<double>& mat, std::vector<double>& mat
         }
 }
 
-void Cloning::solve(const Mat &img, const std::vector<double>& mod_diff, Mat &result)
+void Cloning::solve(const Mat &img, const std::vector<float>& mod_diff, Mat &result)
 {
     const int w = img.size().width;
     const int h = img.size().height;
 
-    std::vector<double> sineTransform((h-2)*(w-2), 0.);
-    std::vector<double> sineTranformTranspose((h-2)*(w-2), 0.);
-    std::vector<double> denom((h-2)*(w-2), 0.);
-    std::vector<double> invsineTransform((h-2)*(w-2), 0.);
-    std::vector<double> invsineTransform_t((h-2)*(w-2), 0.);
+    std::vector<float> sineTransform((h-2)*(w-2), 0.);
+    std::vector<float> sineTranformTranspose((h-2)*(w-2), 0.);
+    std::vector<float> denom((h-2)*(w-2), 0.);
+    std::vector<float> invsineTransform((h-2)*(w-2), 0.);
+    std::vector<float> invsineTransform_t((h-2)*(w-2), 0.);
 
     dst(mod_diff,sineTransform,h-2,w-2);
 
@@ -231,7 +231,7 @@ void Cloning::solve(const Mat &img, const std::vector<double>& mod_diff, Mat &re
             int idx = (j-1)* (w-2) + (i-1);
             //saturate cast is not used here, because it behaves differently from the previous implementation
             //most notable, saturate_cast rounds before truncating, here it's the opposite.
-            double value = invsineTransform_t[idx];
+            float value = invsineTransform_t[idx];
             if(value < 0.)
                 result.ptr<unsigned char>(j)[i] = 0;
             else if (value > 255.0)
@@ -267,7 +267,7 @@ void Cloning::poisson_solver(const Mat &img, Mat &laplacianX , Mat &laplacianY, 
 
     rectangle(bound, Point(1, 1), Point(img.cols-2, img.rows-2), Scalar::all(0), -1);
 
-    std::vector<double> boundary_point(h*w, 0.);
+    std::vector<float> boundary_point(h*w, 0.);
 
     for(int i =1;i<h-1;i++)
         for(int j=1;j<w-1;j++)
@@ -287,7 +287,7 @@ void Cloning::poisson_solver(const Mat &img, Mat &laplacianX , Mat &laplacianY, 
         }
     }
 
-    std::vector<double> mod_diff((h-2)*(w-2), 0.);
+    std::vector<float> mod_diff((h-2)*(w-2), 0.);
     for(int i = 0 ; i < h-2;i++)
     {
         for(int j = 0 ; j < w-2; j++)
@@ -501,8 +501,8 @@ void Cloning::illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float alp
     evaluate(I,wmask,cloned);
 }
 
-void Cloning::texture_flatten(Mat &I, Mat &mask, Mat &wmask, double low_threshold,
-        double high_threshold, int kernel_size, Mat &cloned)
+void Cloning::texture_flatten(Mat &I, Mat &mask, Mat &wmask, float low_threshold,
+        float high_threshold, int kernel_size, Mat &cloned)
 {
     compute_derivatives(I,mask,wmask);
 
