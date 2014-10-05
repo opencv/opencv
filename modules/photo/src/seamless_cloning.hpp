@@ -56,7 +56,7 @@ namespace cv
             void normal_clone(const cv::Mat& destination, const cv::Mat &mask, const cv::Mat &wmask, cv::Mat &cloned, int flag);
             void illum_change(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, cv::Mat &cloned, float alpha, float beta);
             void local_color_change(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, cv::Mat &cloned, float red_mul, float green_mul, float blue_mul);
-            void texture_flatten(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, double low_threshold, double high_threhold, int kernel_size, cv::Mat &cloned);
+            void texture_flatten(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, float low_threshold, float high_threhold, int kernel_size, cv::Mat &cloned);
 
         protected:
 
@@ -65,10 +65,10 @@ namespace cv
             void scalar_product(cv::Mat mat, float r, float g, float b);
             void poisson(const cv::Mat &destination);
             void evaluate(const cv::Mat &I, const cv::Mat &wmask, const cv::Mat &cloned);
-            void dst(const std::vector<double>& mod_diff, std::vector<double>& sineTransform,int h,int w);
-            void idst(const std::vector<double>& mod_diff, std::vector<double>& sineTransform,int h,int w);
-            void transpose(const std::vector<double>& mat, std::vector<double>& mat_t,int h,int w);
-            void solve(const cv::Mat &img, const std::vector<double>& mod_diff, cv::Mat &result);
+            void dst(const std::vector<float>& mod_diff, std::vector<float>& sineTransform,int h,int w);
+            void idst(const std::vector<float>& mod_diff, std::vector<float>& sineTransform,int h,int w);
+            void transpose(const std::vector<float>& mat, std::vector<float>& mat_t,int h,int w);
+            void solve(const cv::Mat &img, const std::vector<float>& mod_diff, cv::Mat &result);
             void poisson_solver(const cv::Mat &img, cv::Mat &gxx , cv::Mat &gyy, cv::Mat &result);
 
             void array_product(const cv::Mat& lhs, const cv::Mat& rhs, cv::Mat& result) const;
