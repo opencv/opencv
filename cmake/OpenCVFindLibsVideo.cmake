@@ -13,7 +13,7 @@ endif(WITH_VFW)
 # --- GStreamer ---
 ocv_clear_vars(HAVE_GSTREAMER)
 # try to find gstreamer 1.x first
-if(WITH_GSTREAMER AND NOT WITH_GSTREAMER_0_10)
+if(WITH_GSTREAMER)
   CHECK_MODULE(gstreamer-base-1.0 HAVE_GSTREAMER_BASE)
   CHECK_MODULE(gstreamer-video-1.0 HAVE_GSTREAMER_VIDEO)
   CHECK_MODULE(gstreamer-app-1.0 HAVE_GSTREAMER_APP)
@@ -29,10 +29,18 @@ if(WITH_GSTREAMER AND NOT WITH_GSTREAMER_0_10)
       set(GSTREAMER_PBUTILS_VERSION ${ALIASOF_gstreamer-pbutils-1.0_VERSION})
   endif()
 
-endif(WITH_GSTREAMER AND NOT WITH_GSTREAMER_0_10)
+endif(WITH_GSTREAMER)
 
-# if gstreamer 1.x was not found, or we specified we wanted 0.10, try to find it
-if(WITH_GSTREAMER_0_10 OR NOT HAVE_GSTREAMER)
+# gstreamer support was requested but could not find gstreamer 1.x,
+# so fallback/try to find gstreamer 0.10
+if(WITH_GSTREAMER AND NOT HAVE_GSTREAMER)
+  set(WITH_GSTREAMER_0_10 ON)
+endif()
+
+# if gstreamer 1.x was not found (fallback on gstreamer 0.10), or we specified
+# we wanted gstreamer 0.10 support,
+# then try to find it if not gstreamer support has not been found so far.
+if(WITH_GSTREAMER_0_10 AND NOT HAVE_GSTREAMER)
   CHECK_MODULE(gstreamer-base-0.10 HAVE_GSTREAMER_BASE)
   CHECK_MODULE(gstreamer-video-0.10 HAVE_GSTREAMER_VIDEO)
   CHECK_MODULE(gstreamer-app-0.10 HAVE_GSTREAMER_APP)
@@ -47,7 +55,7 @@ if(WITH_GSTREAMER_0_10 OR NOT HAVE_GSTREAMER)
       set(GSTREAMER_RIFF_VERSION ${ALIASOF_gstreamer-riff-0.10_VERSION})
       set(GSTREAMER_PBUTILS_VERSION ${ALIASOF_gstreamer-pbutils-0.10_VERSION})
   endif()
-endif(WITH_GSTREAMER_0_10 OR NOT HAVE_GSTREAMER)
+endif(WITH_GSTREAMER_0_10 AND NOT HAVE_GSTREAMER)
 
 # --- unicap ---
 ocv_clear_vars(HAVE_UNICAP)
