@@ -115,6 +115,10 @@ enum
 #define uidx 0
 #endif
 
+#ifndef yidx
+#define yidx 0
+#endif
+
 #define __CAT(x, y) x##y
 #define CAT(x, y) __CAT(x, y)
 
@@ -317,7 +321,7 @@ __kernel void YUV2RGB_NV(__global const uchar* srcptr, int src_step, int src_off
             {
                 __global const uchar* ysrc = srcptr + mad24(y << 1, src_step, (x << 1) + src_offset);
                 __global const uchar* usrc = srcptr + mad24(rows + y, src_step, (x << 1) + src_offset);
-                __global uchar*       dst1 = dstptr + mad24(y << 1, dst_step, x * (dcn<<1) + dt_offset);
+                __global uchar*       dst1 = dstptr + mad24(y << 1, dst_step, mad24(x, dcn<<1, dt_offset));
                 __global uchar*       dst2 = dst1 + dst_step;
 
                 int Y1 = ysrc[0];
@@ -442,6 +446,73 @@ __kernel void YUV2RGB_YV12_IYUV(__global const uchar* srcptr, int src_step, int 
 #endif
             }
             ++y;
+        }
+    }
+}
+
+__constant int ITUR_BT_601_CRY =  269484;
+__constant int ITUR_BT_601_CGY =  528482;
+__constant int ITUR_BT_601_CBY =  102760;
+__constant int ITUR_BT_601_CRU = -155188;
+__constant int ITUR_BT_601_CGU = -305135;
+__constant int ITUR_BT_601_CBU =  460324;
+__constant int ITUR_BT_601_CGV = -385875;
+__constant int ITUR_BT_601_CBV = -74448;
+__constant int YSHIFT = 17301504;
+__constant int UVSHIFT = 134742016;
+
+__kernel void RGB2YUV_YV12_IYUV(__global const uchar* srcptr, int src_step, int src_offset,
+                                __global uchar* dstptr, int dst_step, int dst_offset,
+                                int rows, int cols)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1) * PIX_PER_WI_Y;
+
+    if (x < cols/2)
+    {
+        int src_index  = mad24(y << 1, src_step, mad24(x << 1, scn, src_offset));
+        int ydst_index = mad24(y << 1, dst_step, (x << 1) + dst_offset);
+        int y_rows = rows / 3 * 2;
+        int vsteps[2] = { cols >> 1, dst_step - (cols >> 1)};
+
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
+        {
+            if (y < rows / 3)
+            {
+                __global const uchar* src1 = srcptr + src_index;
+                __global const uchar* src2 = src1 + src_step;
+                __global uchar* ydst1 = dstptr + ydst_index;
+                __global uchar* ydst2 = ydst1 + dst_step;
+
+                __global uchar* udst = dstptr + mad24(y_rows + (y>>1), dst_step, dst_offset + (y%2)*(cols >> 1) + x);
+                __global uchar* vdst = udst + mad24(y_rows >> 2, dst_step, y_rows % 4 ? vsteps[y%2] : 0);
+
+                int4 src_pix1 = convert_int4(vload4(0, src1));
+                int4 src_pix2 = convert_int4(vload4(0, src1+scn));
+                int4 src_pix3 = convert_int4(vload4(0, src2));
+                int4 src_pix4 = convert_int4(vload4(0, src2+scn));
+
+                int y00 = mad24(ITUR_BT_601_CRY, src_pix1.R_COMP, mad24(ITUR_BT_601_CGY, src_pix1.G_COMP, mad24(ITUR_BT_601_CBY, src_pix1.B_COMP, YSHIFT)));
+                int y01 = mad24(ITUR_BT_601_CRY, src_pix2.R_COMP, mad24(ITUR_BT_601_CGY, src_pix2.G_COMP, mad24(ITUR_BT_601_CBY, src_pix2.B_COMP, YSHIFT)));
+                int y10 = mad24(ITUR_BT_601_CRY, src_pix3.R_COMP, mad24(ITUR_BT_601_CGY, src_pix3.G_COMP, mad24(ITUR_BT_601_CBY, src_pix3.B_COMP, YSHIFT)));
+                int y11 = mad24(ITUR_BT_601_CRY, src_pix4.R_COMP, mad24(ITUR_BT_601_CGY, src_pix4.G_COMP, mad24(ITUR_BT_601_CBY, src_pix4.B_COMP, YSHIFT)));
+
+                ydst1[0] = convert_uchar_sat(y00 >> ITUR_BT_601_SHIFT);
+                ydst1[1] = convert_uchar_sat(y01 >> ITUR_BT_601_SHIFT);
+                ydst2[0] = convert_uchar_sat(y10 >> ITUR_BT_601_SHIFT);
+                ydst2[1] = convert_uchar_sat(y11 >> ITUR_BT_601_SHIFT);
+
+                int uv[2] = { mad24(ITUR_BT_601_CRU, src_pix1.R_COMP, mad24(ITUR_BT_601_CGU, src_pix1.G_COMP, mad24(ITUR_BT_601_CBU, src_pix1.B_COMP, UVSHIFT))),
+                              mad24(ITUR_BT_601_CBU, src_pix1.R_COMP, mad24(ITUR_BT_601_CGV, src_pix1.G_COMP, mad24(ITUR_BT_601_CBV, src_pix1.B_COMP, UVSHIFT))) };
+
+                udst[0] = convert_uchar_sat(uv[uidx]   >> ITUR_BT_601_SHIFT);
+                vdst[0] = convert_uchar_sat(uv[1-uidx] >> ITUR_BT_601_SHIFT);
+
+                ++y;
+                src_index += 2*src_step;
+                ydst_index += 2*dst_step;
+            }
         }
     }
 }
