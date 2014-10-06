@@ -28,12 +28,12 @@ private:
       {
           for(int i = 0; i < number_of_correspondences; i++)
           {
-        	pws[3 * i    ] = opoints.at<OpointType>(0,i).x;
-			pws[3 * i + 1] = opoints.at<OpointType>(0,i).y;
-			pws[3 * i + 2] = opoints.at<OpointType>(0,i).z;
+            pws[3 * i    ] = opoints.at<OpointType>(0,i).x;
+            pws[3 * i + 1] = opoints.at<OpointType>(0,i).y;
+            pws[3 * i + 2] = opoints.at<OpointType>(0,i).z;
 
-			us[2 * i    ] = ipoints.at<IpointType>(0,i).x;
-			us[2 * i + 1] = ipoints.at<IpointType>(0,i).y;
+            us[2 * i    ] = ipoints.at<IpointType>(0,i).x;
+            us[2 * i + 1] = ipoints.at<IpointType>(0,i).y;
           }
       }
 
@@ -41,7 +41,7 @@ private:
       void choose_control_points();
       void compute_alphas();
       void fill_M(CvMat * M, const int row, const double * alphas, const double u, const double v);
-      void compute_ccs(const double * betas, const double * f, const double * ut);
+      void compute_ccs(const double * betas, const double * ut);
       void compute_pcs(void);
 
       void solve_for_sign(void);
@@ -52,7 +52,9 @@ private:
 
       cv::Mat compute_constraint_distance_2param_6eq_2unk_f_unk(const cv::Mat& M1);
       cv::Mat compute_constraint_distance_3param_6eq_6unk_f_unk(const cv::Mat& M1, const cv::Mat& M2);
+      void generate_all_possible_solutions_for_f_unk(const double betas_[5], double solutions[18][3]);
 
+      double sign(const double v);
       double dot(const double * v1, const double * v2);
       double dotXY(const double * v1, const double * v2);
       double dotZ(const double * v1, const double * v2);
@@ -65,7 +67,7 @@ private:
       void compute_A_and_b_gauss_newton(const double * l_6x12, const double * rho,
                           const double cb[4], CvMat * A, CvMat * b, double const f);
 
-      double compute_R_and_t(const double * ut, const double * betas, const double * efs,
+      double compute_R_and_t(const double * ut, const double * betas,
                    double R[3][3], double t[3]);
 
       void estimate_R_and_t(double R[3][3], double t[3]);
