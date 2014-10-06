@@ -3206,9 +3206,9 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
         src.locateROI(wholeSize, ofs);
     }
 
-    size_t maxWorkItemSizes[32];
-    device.maxWorkItemSizes(maxWorkItemSizes);
-    size_t tryWorkItems = maxWorkItemSizes[0];
+    size_t tryWorkItems = device.maxWorkGroupSize();
+    if (device.isIntel() && 128 < tryWorkItems)
+        tryWorkItems = 128;
     char cvt[2][40];
 
     // For smaller filter kernels, there is a special kernel that is more
@@ -3288,13 +3288,6 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
             size_t BLOCK_SIZE = tryWorkItems;
             while (BLOCK_SIZE > 32 && BLOCK_SIZE >= (size_t)ksize.width * 2 && BLOCK_SIZE > (size_t)sz.width * 2)
                 BLOCK_SIZE /= 2;
-#if 1 // TODO Mode with several blocks requires a much more VGPRs, so this optimization is not actual for the current devices
-            size_t BLOCK_SIZE_Y = 1;
-#else
-            size_t BLOCK_SIZE_Y = 8; // TODO Check heuristic value on devices
-            while (BLOCK_SIZE_Y < BLOCK_SIZE / 8 && BLOCK_SIZE_Y * src.clCxt->getDeviceInfo().maxComputeUnits * 32 < (size_t)src.rows)
-                BLOCK_SIZE_Y *= 2;
-#endif
 
             if ((size_t)ksize.width > BLOCK_SIZE)
                 return false;
@@ -3310,12 +3303,12 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
             if ((w < ksize.width) || (h < ksize.height))
                 return false;
 
-            String opts = format("-D LOCAL_SIZE=%d -D BLOCK_SIZE_Y=%d -D cn=%d "
+            String opts = format("-D LOCAL_SIZE=%d -D cn=%d "
                                  "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
                                  "-D KERNEL_SIZE_Y2_ALIGNED=%d -D %s -D %s -D %s%s%s "
                                  "-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D WT=%s -D WT1=%s "
                                  "-D convertToWT=%s -D convertToDstT=%s",
-                                 (int)BLOCK_SIZE, (int)BLOCK_SIZE_Y, cn, anchor.x, anchor.y,
+                                 (int)BLOCK_SIZE, cn, anchor.x, anchor.y,
                                  ksize.width, ksize.height, kernel_size_y2_aligned, borderMap[borderType],
                                  extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
                                  isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
@@ -3327,7 +3320,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
 
             localsize[0] = BLOCK_SIZE;
             globalsize[0] = DIVUP(sz.width, BLOCK_SIZE - (ksize.width - 1)) * BLOCK_SIZE;
-            globalsize[1] = DIVUP(sz.height, BLOCK_SIZE_Y);
+            globalsize[1] = sz.height;
 
             if (!k.create("filter2D", cv::ocl::imgproc::filter2D_oclsrc, opts))
                 return false;

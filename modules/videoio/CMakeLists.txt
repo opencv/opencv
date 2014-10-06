@@ -18,13 +18,11 @@ endif()
 
 set(videoio_hdrs
     ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg_impl.hpp
     )
 
 set(videoio_srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/cap.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/cap_images.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg.cpp
     )
 
 file(GLOB videoio_ext_hdrs
@@ -42,6 +40,7 @@ if (WIN32 AND HAVE_DSHOW)
 endif()
 
 if (WIN32 AND HAVE_MSMF)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_msmf.hpp)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_msmf.cpp)
 endif()
 
@@ -94,18 +93,24 @@ endif(HAVE_opencv_androidcamera)
 
 if(HAVE_XIMEA)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ximea.cpp)
-  ocv_include_directories(${XIMEA_PATH})
+  if(XIMEA_PATH)
+    ocv_include_directories(${XIMEA_PATH})
+  endif()
   if(XIMEA_LIBRARY_DIR)
     link_directories("${XIMEA_LIBRARY_DIR}")
   endif()
-  if(X86_64)
+  if(WIN32 AND X86_64)
     list(APPEND VIDEOIO_LIBRARIES m3apiX64)
+  elseif(APPLE)
+    list(APPEND VIDEOIO_LIBRARIES "-framework m3api")
   else()
     list(APPEND VIDEOIO_LIBRARIES m3api)
   endif()
 endif(HAVE_XIMEA)
 
 if(HAVE_FFMPEG)
+  list(APPEND videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg_impl.hpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg.cpp)
   if(UNIX AND BZIP2_LIBRARIES)
     list(APPEND VIDEOIO_LIBRARIES ${BZIP2_LIBRARIES})
   endif()

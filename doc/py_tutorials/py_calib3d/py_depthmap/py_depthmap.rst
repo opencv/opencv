@@ -48,7 +48,7 @@ Below code snippet shows a simple procedure to create disparity map.
     plt.imshow(disparity,'gray')
     plt.show()
 
-Below image contains the original image (left) and its disparity map (right). As you can see, result is contaminated with high degree of noise. By adjusting the values of numDisparities and blockSize, you can get more better result.
+Below image contains the original image (left) and its disparity map (right). As you can see, result is contaminated with high degree of noise. By adjusting the values of numDisparities and blockSize, you can get a better result.
 
     .. image:: images/disparity_map.jpg
         :alt: Disparity Map

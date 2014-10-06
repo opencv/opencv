@@ -341,11 +341,8 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
     for( int y = 0; y < ssize.height; y++ )
     {
         T* dst0 = _dst.ptr<T>(y*2);
-        T* dst1 = _dst.ptr<T>(y*2+1);
+        T* dst1 = _dst.ptr<T>(std::min(y*2+1, dsize.height-1));
         WT *row0, *row1, *row2;
-
-        if( y*2+1 >= dsize.height )
-            dst1 = dst0;
 
         // fill the ring buffer (horizontal convolution and decimation)
         for( ; sy <= y + 1; sy++ )

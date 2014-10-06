@@ -2163,7 +2163,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
             ippDataType, CV_MAT_CN(type), &bufSize) >= 0) \
         { \
             Ipp8u * buffer = ippsMalloc_8u(bufSize); \
-            IppStatus status = ippiFilterMedianBorder_##flavor(src0.ptr<ippType>(), (int)src0.step, \
+            IppStatus status = ippiFilterMedianBorder_##flavor(src.ptr<ippType>(), (int)src.step, \
                 dst.ptr<ippType>(), (int)dst.step, dstRoiSize, maskSize, \
                 ippBorderRepl, (ippType)0, buffer); \
             ippsFree(buffer); \
@@ -2178,6 +2178,11 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     {
         Ipp32s bufSize;
         IppiSize dstRoiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize, ksize);
+        Mat src;
+        if( dst.data != src0.data )
+            src = src0;
+        else
+            src0.copyTo(src);
 
         int type = src0.type();
         if (type == CV_8UC1)
