@@ -686,18 +686,18 @@ template<> struct RGB2RGB<uchar>
             for ( ; i <= n - 64; i += 64 )
             {
                 uint8x16x4_t v_src = vld4q_u8(src + i), v_dst;
-                v_dst.val[0] = v_src.val[0];
+                v_dst.val[0] = v_src.val[2];
                 v_dst.val[1] = v_src.val[1];
-                v_dst.val[2] = v_src.val[2];
+                v_dst.val[2] = v_src.val[0];
                 v_dst.val[3] = v_src.val[3];
                 vst4q_u8(dst + i, v_dst);
             }
             for ( ; i <= n - 32; i += 32 )
             {
                 uint8x8x4_t v_src = vld4_u8(src + i), v_dst;
-                v_dst.val[0] = v_src.val[0];
+                v_dst.val[0] = v_src.val[2];
                 v_dst.val[1] = v_src.val[1];
-                v_dst.val[2] = v_src.val[2];
+                v_dst.val[2] = v_src.val[0];
                 v_dst.val[3] = v_src.val[3];
                 vst4_u8(dst + i, v_dst);
             }
@@ -956,23 +956,57 @@ struct Gray2RGB5x5
 {
     typedef uchar channel_type;
 
-    Gray2RGB5x5(int _greenBits) : greenBits(_greenBits) {}
+    Gray2RGB5x5(int _greenBits) : greenBits(_greenBits)
+    {
+        #if CV_NEON
+        v_n7 = vdup_n_u8(~7);
+        v_n3 = vdup_n_u8(~3);
+        #endif
+    }
+
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        int i = 0;
         if( greenBits == 6 )
-            for( int i = 0; i < n; i++ )
+        {
+            #if CV_NEON
+            for ( ; i <= n - 8; i += 8 )
+            {
+                uint8x8_t v_src = vld1_u8(src + i);
+                uint16x8_t v_dst = vmovl_u8(vshr_n_u8(v_src, 3));
+                v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src, v_n3)), 3));
+                v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src, v_n7)), 8));
+                vst1q_u16((ushort *)dst + i, v_dst);
+            }
+            #endif
+            for ( ; i < n; i++ )
             {
                 int t = src[i];
                 ((ushort*)dst)[i] = (ushort)((t >> 3)|((t & ~3) << 3)|((t & ~7) << 8));
             }
+        }
         else
-            for( int i = 0; i < n; i++ )
+        {
+            #if CV_NEON
+            for ( ; i <= n - 8; i += 8 )
+            {
+                uint16x8_t v_src = vmovl_u8(vshr_n_u8(vld1_u8(src + i), 3));
+                uint16x8_t v_dst = vorrq_u16(vorrq_u16(v_src, vshlq_n_u16(v_src, 5)), vshlq_n_u16(v_src, 10));
+                vst1q_u16((ushort *)dst + i, v_dst);
+            }
+            #endif
+            for( ; i < n; i++ )
             {
                 int t = src[i] >> 3;
                 ((ushort*)dst)[i] = (ushort)(t|(t << 5)|(t << 10));
             }
+        }
     }
     int greenBits;
+
+    #if CV_NEON
+    uint8x8_t v_n7, v_n3;
+    #endif
 };
 
 
@@ -1046,7 +1080,7 @@ struct RGB5x52Gray
                 uint16x8_t v_src = vld1q_u16((ushort *)src + i);
                 uint16x8_t v_t0 = vandq_u16(vshlq_n_u16(v_src, 3), v_f8),
                            v_t1 = vandq_u16(vshrq_n_u16(v_src, 2), v_f8),
-                           v_t2 = vandq_u16(vshrq_n_u16(v_src, 8), v_f8);
+                           v_t2 = vandq_u16(vshrq_n_u16(v_src, 7), v_f8);
 
                 uint32x4_t v_dst0 = vmlal_u16(vmlal_u16(vmull_u16(vget_low_u16(v_t0), v_b2y),
                                               vget_low_u16(v_t1), v_g2y), vget_low_u16(v_t2), v_r2y);
