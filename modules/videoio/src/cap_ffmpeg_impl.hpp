@@ -270,6 +270,10 @@ struct CvCapture_FFMPEG
    and so the filename is needed to reopen the file on backward seeking.
 */
     char              * filename;
+
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
+    AVDictionary *dict;
+#endif
 };
 
 void CvCapture_FFMPEG::init()
@@ -290,6 +294,10 @@ void CvCapture_FFMPEG::init()
     avcodec = 0;
     frame_number = 0;
     eps_zero = 0.000025;
+
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
+    dict = NULL;
+#endif
 }
 
 
@@ -346,6 +354,11 @@ void CvCapture_FFMPEG::close()
         av_free_packet (&packet);
         packet.data = NULL;
     }
+
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
+    if (dict != NULL)
+       av_dict_free(&dict);
+#endif
 
     init();
 }
@@ -554,6 +567,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
     close();
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
+    av_dict_set(&dict, "rtsp_transport", "tcp", 0);
     int err = avformat_open_input(&ic, _filename, NULL, NULL);
 #else
     int err = av_open_input_file(&ic, _filename, NULL, 0, NULL);
