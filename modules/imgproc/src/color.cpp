@@ -4848,7 +4848,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     bool ok = false;
     UMat src = _src.getUMat(), dst;
     Size sz = src.size(), dstSz = sz;
-    int scn = src.channels(), depth = src.depth(), bidx, uidx;
+    int scn = src.channels(), depth = src.depth(), bidx, uidx, yidx;
     int dims = 2, stripeSize = 1;
     ocl::Kernel k;
 
@@ -4967,14 +4967,14 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
         dcn  = code == COLOR_YUV2BGRA_NV12 || code == COLOR_YUV2RGBA_NV12 ||
                code == COLOR_YUV2BGRA_NV21 || code == COLOR_YUV2RGBA_NV21 ? 4 : 3;
-        bidx = code == COLOR_YUV2BGRA_NV12 || code == COLOR_YUV2BGR_NV12 || 
+        bidx = code == COLOR_YUV2BGRA_NV12 || code == COLOR_YUV2BGR_NV12 ||
                code == COLOR_YUV2BGRA_NV21 || code == COLOR_YUV2BGR_NV21 ? 0 : 2;
         uidx = code == COLOR_YUV2RGBA_NV21 || code == COLOR_YUV2RGB_NV21 ||
                code == COLOR_YUV2BGRA_NV21 || code == COLOR_YUV2BGR_NV21 ? 1 : 0;
 
         dstSz = Size(sz.width, sz.height * 2 / 3);
         globalsize[0] = dstSz.width / 2; globalsize[1] = (dstSz.height/2 + pxPerWIy - 1) / pxPerWIy;
-        k.create("YUV2RGB_NV", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("YUV2RGB_NVx", ocl::imgproc::cvtcolor_oclsrc,
                  opts + format("-D dcn=%d -D bidx=%d -D uidx=%d", dcn, bidx, uidx));
         break;
     }
@@ -4985,7 +4985,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
         dcn  = code == COLOR_YUV2BGRA_YV12 || code == COLOR_YUV2RGBA_YV12 ||
                code == COLOR_YUV2BGRA_IYUV || code == COLOR_YUV2RGBA_IYUV ? 4 : 3;
-        bidx = code == COLOR_YUV2BGRA_YV12 || code == COLOR_YUV2BGR_YV12 || 
+        bidx = code == COLOR_YUV2BGRA_YV12 || code == COLOR_YUV2BGR_YV12 ||
                code == COLOR_YUV2BGRA_IYUV || code == COLOR_YUV2BGR_IYUV ? 0 : 2;
         uidx = code == COLOR_YUV2BGRA_YV12 || code == COLOR_YUV2BGR_YV12 ||
                code == COLOR_YUV2RGBA_YV12 || code == COLOR_YUV2RGB_YV12 ? 1 : 0;
@@ -5015,7 +5015,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     case COLOR_RGB2YUV_IYUV: case COLOR_BGR2YUV_IYUV: case COLOR_RGBA2YUV_IYUV: case COLOR_BGRA2YUV_IYUV:
     {
         if (dcn <= 0) dcn = 1;
-        bidx = code == COLOR_BGRA2YUV_YV12 || code == COLOR_BGR2YUV_YV12 || 
+        bidx = code == COLOR_BGRA2YUV_YV12 || code == COLOR_BGR2YUV_YV12 ||
                code == COLOR_BGRA2YUV_IYUV || code == COLOR_BGR2YUV_IYUV ? 0 : 2;
         uidx = code == COLOR_RGBA2YUV_YV12 || code == COLOR_RGB2YUV_YV12 ||
                code == COLOR_BGRA2YUV_YV12 || code == COLOR_BGR2YUV_YV12 ? 1 : 0;
@@ -5028,6 +5028,28 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         globalsize[0] = dstSz.width / 2; globalsize[1] = (dstSz.height/3 + pxPerWIy - 1) / pxPerWIy;
         k.create("RGB2YUV_YV12_IYUV", ocl::imgproc::cvtcolor_oclsrc,
                  opts + format("-D dcn=%d -D bidx=%d -D uidx=%d", dcn, bidx, uidx));
+        break;
+    }
+    case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY: case COLOR_YUV2RGBA_UYVY: case COLOR_YUV2BGRA_UYVY:
+    case COLOR_YUV2RGB_YUY2: case COLOR_YUV2BGR_YUY2: case COLOR_YUV2RGB_YVYU: case COLOR_YUV2BGR_YVYU:
+    case COLOR_YUV2RGBA_YUY2: case COLOR_YUV2BGRA_YUY2: case COLOR_YUV2RGBA_YVYU: case COLOR_YUV2BGRA_YVYU:
+    {
+        if (dcn <= 0)
+            dcn = (code==COLOR_YUV2RGBA_UYVY || code==COLOR_YUV2BGRA_UYVY || code==COLOR_YUV2RGBA_YUY2 ||
+                   code==COLOR_YUV2BGRA_YUY2 || code==COLOR_YUV2RGBA_YVYU || code==COLOR_YUV2BGRA_YVYU) ? 4 : 3;
+
+        bidx = (code==COLOR_YUV2BGR_UYVY || code==COLOR_YUV2BGRA_UYVY || code==COLOR_YUV2BGRA_YUY2 ||
+                code==COLOR_YUV2BGR_YUY2 || code==COLOR_YUV2BGRA_YVYU || code==COLOR_YUV2BGR_YVYU) ? 0 : 2;
+        yidx = (code==COLOR_YUV2RGB_UYVY || code==COLOR_YUV2RGBA_UYVY || code==COLOR_YUV2BGR_UYVY || code==COLOR_YUV2BGRA_UYVY) ? 1 : 0;
+        uidx = (code==COLOR_YUV2RGB_YVYU || code==COLOR_YUV2RGBA_YVYU ||
+                code==COLOR_YUV2BGR_YVYU || code==COLOR_YUV2BGRA_YVYU) ? 2 : 0;
+        uidx = 1 - yidx + uidx;
+
+        CV_Assert( dcn == 3 || dcn == 4 );
+        CV_Assert( scn == 2 && depth == CV_8U );
+
+        k.create("YUV2RGB_422", ocl::imgproc::cvtcolor_oclsrc,
+                 opts + format("-D dcn=%d -D bidx=%d -D uidx=%d -D yidx=%d", dcn, bidx, uidx, yidx));
         break;
     }
     case COLOR_BGR2YCrCb:
