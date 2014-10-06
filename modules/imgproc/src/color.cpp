@@ -834,30 +834,92 @@ struct RGB2RGB5x5
     typedef uchar channel_type;
 
     RGB2RGB5x5(int _srccn, int _blueIdx, int _greenBits)
-        : srccn(_srccn), blueIdx(_blueIdx), greenBits(_greenBits) {}
+        : srccn(_srccn), blueIdx(_blueIdx), greenBits(_greenBits)
+    {
+        #if CV_NEON
+        v_n3 = vdup_n_u8(~3);
+        v_n7 = vdup_n_u8(~7);
+        v_mask = vdupq_n_u16(0x8000);
+        v_0 = vdupq_n_u16(0);
+        v_full = vdupq_n_u16(0xffff);
+        #endif
+    }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
-        int scn = srccn, bidx = blueIdx;
-        if( greenBits == 6 )
-            for( int i = 0; i < n; i++, src += scn )
+        int scn = srccn, bidx = blueIdx, i = 0;
+        if (greenBits == 6)
+        {
+            if (scn == 3)
             {
-                ((ushort*)dst)[i] = (ushort)((src[bidx] >> 3)|((src[1]&~3) << 3)|((src[bidx^2]&~7) << 8));
+                #if CV_NEON
+                for ( ; i <= n - 8; i += 8, src += 24 )
+                {
+                    uint8x8x3_t v_src = vld3_u8(src);
+                    uint16x8_t v_dst = vmovl_u8(vshr_n_u8(v_src.val[bidx], 3));
+                    v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[1], v_n3)), 3));
+                    v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[bidx^2], v_n7)), 8));
+                    vst1q_u16((ushort *)dst + i, v_dst);
+                }
+                #endif
+                for ( ; i < n; i++, src += 3 )
+                    ((ushort*)dst)[i] = (ushort)((src[bidx] >> 3)|((src[1]&~3) << 3)|((src[bidx^2]&~7) << 8));
             }
-        else if( scn == 3 )
-            for( int i = 0; i < n; i++, src += 3 )
+            else
             {
+                #if CV_NEON
+                for ( ; i <= n - 8; i += 8, src += 32 )
+                {
+                    uint8x8x4_t v_src = vld4_u8(src);
+                    uint16x8_t v_dst = vmovl_u8(vshr_n_u8(v_src.val[bidx], 3));
+                    v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[1], v_n3)), 3));
+                    v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[bidx^2], v_n7)), 8));
+                    vst1q_u16((ushort *)dst + i, v_dst);
+                }
+                #endif
+                for ( ; i < n; i++, src += 4 )
+                    ((ushort*)dst)[i] = (ushort)((src[bidx] >> 3)|((src[1]&~3) << 3)|((src[bidx^2]&~7) << 8));
+            }
+        }
+        else if (scn == 3)
+        {
+            #if CV_NEON
+            for ( ; i <= n - 8; i += 8, src += 24 )
+            {
+                uint8x8x3_t v_src = vld3_u8(src);
+                uint16x8_t v_dst = vmovl_u8(vshr_n_u8(v_src.val[bidx], 3));
+                v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[1], v_n7)), 2));
+                v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[bidx^2], v_n7)), 7));
+                vst1q_u16((ushort *)dst + i, v_dst);
+            }
+            #endif
+            for ( ; i < n; i++, src += 3 )
                 ((ushort*)dst)[i] = (ushort)((src[bidx] >> 3)|((src[1]&~7) << 2)|((src[bidx^2]&~7) << 7));
-            }
+        }
         else
-            for( int i = 0; i < n; i++, src += 4 )
+        {
+            #if CV_NEON
+            for ( ; i <= n - 8; i += 8, src += 32 )
             {
+                uint8x8x4_t v_src = vld4_u8(src);
+                uint16x8_t v_dst = vmovl_u8(vshr_n_u8(v_src.val[bidx], 3));
+                v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[1], v_n7)), 2));
+                v_dst = vorrq_u16(v_dst, vorrq_u16(vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[bidx^2], v_n7)), 7),
+                                                   vbslq_u16(veorq_u16(vceqq_u16(vmovl_u8(v_src.val[3]), v_0), v_full), v_mask, v_0)));
+                vst1q_u16((ushort *)dst + i, v_dst);
+            }
+            #endif
+            for ( ; i < n; i++, src += 4 )
                 ((ushort*)dst)[i] = (ushort)((src[bidx] >> 3)|((src[1]&~7) << 2)|
                     ((src[bidx^2]&~7) << 7)|(src[3] ? 0x8000 : 0));
-            }
+        }
     }
 
     int srccn, blueIdx, greenBits;
+    #if CV_NEON
+    uint8x8_t v_n3, v_n7;
+    uint16x8_t v_mask, v_0, v_full;
+    #endif
 };
 
 ///////////////////////////////// Color to/from Grayscale ////////////////////////////////
