@@ -724,13 +724,51 @@ struct RGB5x52RGB
     typedef uchar channel_type;
 
     RGB5x52RGB(int _dstcn, int _blueIdx, int _greenBits)
-        : dstcn(_dstcn), blueIdx(_blueIdx), greenBits(_greenBits) {}
+        : dstcn(_dstcn), blueIdx(_blueIdx), greenBits(_greenBits)
+    {
+        #if CV_NEON
+        v_n3 = vdupq_n_u16(~3);
+        v_n7 = vdupq_n_u16(~7);
+        v_255 = vdupq_n_u8(255);
+        v_0 = vdupq_n_u8(0);
+        v_mask = vdupq_n_u16(0x8000);
+        #endif
+    }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
-        int dcn = dstcn, bidx = blueIdx;
+        int dcn = dstcn, bidx = blueIdx, i = 0;
         if( greenBits == 6 )
-            for( int i = 0; i < n; i++, dst += dcn )
+        {
+            #if CV_NEON
+            for ( ; i <= n - 16; i += 16, dst += dcn * 16)
+            {
+                uint16x8_t v_src0 = vld1q_u16((const ushort *)src + i), v_src1 = vld1q_u16((const ushort *)src + i + 8);
+                uint8x16_t v_b = vcombine_u8(vmovn_u16(vshlq_n_u16(v_src0, 3)), vmovn_u16(vshlq_n_u16(v_src1, 3)));
+                uint8x16_t v_g = vcombine_u8(vmovn_u16(vandq_u16(vshrq_n_u16(v_src0, 3), v_n3)),
+                                             vmovn_u16(vandq_u16(vshrq_n_u16(v_src1, 3), v_n3)));
+                uint8x16_t v_r = vcombine_u8(vmovn_u16(vandq_u16(vshrq_n_u16(v_src0, 8), v_n7)),
+                                             vmovn_u16(vandq_u16(vshrq_n_u16(v_src1, 8), v_n7)));
+                if (dcn == 3)
+                {
+                    uint8x16x3_t v_dst;
+                    v_dst.val[bidx] = v_b;
+                    v_dst.val[1] = v_g;
+                    v_dst.val[bidx^2] = v_r;
+                    vst3q_u8(dst, v_dst);
+                }
+                else
+                {
+                    uint8x16x4_t v_dst;
+                    v_dst.val[bidx] = v_b;
+                    v_dst.val[1] = v_g;
+                    v_dst.val[bidx^2] = v_r;
+                    v_dst.val[3] = v_255;
+                    vst4q_u8(dst, v_dst);
+                }
+            }
+            #endif
+            for( ; i < n; i++, dst += dcn )
             {
                 unsigned t = ((const ushort*)src)[i];
                 dst[bidx] = (uchar)(t << 3);
@@ -739,8 +777,39 @@ struct RGB5x52RGB
                 if( dcn == 4 )
                     dst[3] = 255;
             }
+        }
         else
-            for( int i = 0; i < n; i++, dst += dcn )
+        {
+            #if CV_NEON
+            for ( ; i <= n - 16; i += 16, dst += dcn * 16)
+            {
+                uint16x8_t v_src0 = vld1q_u16((const ushort *)src + i), v_src1 = vld1q_u16((const ushort *)src + i + 8);
+                uint8x16_t v_b = vcombine_u8(vmovn_u16(vshlq_n_u16(v_src0, 3)), vmovn_u16(vshlq_n_u16(v_src1, 3)));
+                uint8x16_t v_g = vcombine_u8(vmovn_u16(vandq_u16(vshrq_n_u16(v_src0, 2), v_n7)),
+                                             vmovn_u16(vandq_u16(vshrq_n_u16(v_src1, 2), v_n7)));
+                uint8x16_t v_r = vcombine_u8(vmovn_u16(vandq_u16(vshrq_n_u16(v_src0, 7), v_n7)),
+                                             vmovn_u16(vandq_u16(vshrq_n_u16(v_src1, 7), v_n7)));
+                if (dcn == 3)
+                {
+                    uint8x16x3_t v_dst;
+                    v_dst.val[bidx] = v_b;
+                    v_dst.val[1] = v_g;
+                    v_dst.val[bidx^2] = v_r;
+                    vst3q_u8(dst, v_dst);
+                }
+                else
+                {
+                    uint8x16x4_t v_dst;
+                    v_dst.val[bidx] = v_b;
+                    v_dst.val[1] = v_g;
+                    v_dst.val[bidx^2] = v_r;
+                    v_dst.val[3] = vbslq_u8(vcombine_u8(vqmovn_u16(vandq_u16(v_src0, v_mask)),
+                                                        vqmovn_u16(vandq_u16(v_src1, v_mask))), v_255, v_0);
+                    vst4q_u8(dst, v_dst);
+                }
+            }
+            #endif
+            for( ; i < n; i++, dst += dcn )
             {
                 unsigned t = ((const ushort*)src)[i];
                 dst[bidx] = (uchar)(t << 3);
@@ -749,9 +818,14 @@ struct RGB5x52RGB
                 if( dcn == 4 )
                     dst[3] = t & 0x8000 ? 255 : 0;
             }
+        }
     }
 
     int dstcn, blueIdx, greenBits;
+    #if CV_NEON
+    uint16x8_t v_n3, v_n7, v_mask;
+    uint8x16_t v_255, v_0;
+    #endif
 };
 
 
