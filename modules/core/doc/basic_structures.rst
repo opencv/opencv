@@ -96,9 +96,11 @@ operation for each of the coordinates. Besides the class members listed in the d
         pt1 = pt2 - pt3;
         pt1 = pt2 * a;
         pt1 = a * pt2;
+        pt1 = pt2 / a;
         pt1 += pt2;
         pt1 -= pt2;
         pt1 *= a;
+        pt1 /= a;
         double value = norm(pt); // L2 norm
         pt1 == pt2;
         pt1 != pt2;

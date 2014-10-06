@@ -90,25 +90,24 @@ A full list, for the latest version would contain:
 
 .. code-block:: bash
 
-   opencv_calib3d249d.lib
-   opencv_contrib249d.lib
-   opencv_core249d.lib
-   opencv_features2d249d.lib
-   opencv_flann249d.lib
-   opencv_gpu249d.lib
-   opencv_highgui249d.lib
-   opencv_imgproc249d.lib
-   opencv_legacy249d.lib
-   opencv_ml249d.lib
-   opencv_nonfree249d.lib
-   opencv_objdetect249d.lib
-   opencv_ocl249d.lib
-   opencv_photo249d.lib
-   opencv_stitching249d.lib
-   opencv_superres249d.lib
-   opencv_ts249d.lib
-   opencv_video249d.lib
-   opencv_videostab249d.lib
+   opencv_calib3d300d.lib
+   opencv_core300d.lib
+   opencv_features2d300d.lib
+   opencv_flann300d.lib
+   opencv_highgui300d.lib
+   opencv_imgcodecs300d.lib
+   opencv_imgproc300d.lib
+   opencv_ml300d.lib
+   opencv_objdetect300d.lib
+   opencv_photo300d.lib
+   opencv_shape300d.lib
+   opencv_stitching300d.lib
+   opencv_superres300d.lib
+   opencv_ts300d.lib
+   opencv_video300d.lib
+   opencv_videoio300d.lib
+   opencv_videostab300d.lib
+
 
 The letter *d* at the end just indicates that these are the libraries required for the debug. Now click ok to save and do the same with a new property inside the Release rule section. Make sure to omit the *d* letters from the library names and to save the property sheets with the save icon above them.
 

@@ -2102,6 +2102,16 @@ static void scaleAdd_32f(const float* src1, const float* src2, float* dst,
             }
     }
     else
+#elif CV_NEON
+    if (true)
+    {
+        for ( ; i <= len - 4; i += 4)
+        {
+            float32x4_t v_src1 = vld1q_f32(src1 + i), v_src2 = vld1q_f32(src2 + i);
+            vst1q_f32(dst + i, vaddq_f32(vmulq_n_f32(v_src1, alpha), v_src2));
+        }
+    }
+    else
 #endif
     //vz why do we need unroll here?
     for( ; i <= len - 4; i += 4 )

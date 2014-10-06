@@ -6,7 +6,7 @@
 SET(OPENCV_CPP_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_flann
     opencv_imgcodecs opencv_videoio opencv_highgui opencv_ml opencv_video
     opencv_objdetect opencv_photo opencv_features2d opencv_calib3d
-    opencv_stitching opencv_videostab opencv_shape opencv_xfeatures2d)
+    opencv_stitching opencv_videostab opencv_shape)
 
 ocv_check_dependencies(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
@@ -28,6 +28,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   endif()
   if(HAVE_opencv_cudafilters)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudafilters/include")
+  endif()
+
+  if (HAVE_opencv_xfeatures2d)
+    ocv_include_directories("${OPENCV_MODULE_opencv_xfeatures2d_LOCATION}/include")
   endif()
 
   if(HAVE_opencv_ocl)

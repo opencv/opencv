@@ -1,4 +1,10 @@
-ocv_check_dependencies(opencv_java ${OPENCV_MODULE_opencv_java_OPT_DEPS} ${OPENCV_MODULE_opencv_java_REQ_DEPS})
+# list of modules covered with tests
+set(tested_modules opencv_calib3d opencv_core opencv_features2d opencv_highgui opencv_imgproc opencv_objdetect opencv_photo opencv_video)
+
+# opencv_ml is broken
+#list(APPEND tested_modules opencv_ml)
+
+ocv_check_dependencies(opencv_java ${tested_modules})
 
 if(NOT OCV_DEPENDENCIES_FOUND OR NOT ANT_EXECUTABLE OR NOT ANDROID_EXECUTABLE OR NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
   return()

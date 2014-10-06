@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
 import sys, re, os.path
+import logging
 from string import Template
 
-try:
+if sys.version_info[0] >= 3:
+    from io import StringIO
+else:
     from cStringIO import StringIO
-except:
-    from StringIO import StringIO
 
 class_ignore_list = (
     #core
@@ -150,32 +151,18 @@ missing_consts = \
 
     "Calib3d":
     {
-        'private' :
+        'public' :
         (
-            ('CV_LMEDS',  4),
-            ('CV_RANSAC', 8),
-            ('CV_FM_LMEDS', 'CV_LMEDS'),
-            ('CV_FM_RANSAC','CV_RANSAC'),
-            ('CV_FM_7POINT', 1),
-            ('CV_FM_8POINT', 2),
-            ('CV_CALIB_USE_INTRINSIC_GUESS', 1),
-            ('CV_CALIB_FIX_ASPECT_RATIO',    2),
-            ('CV_CALIB_FIX_PRINCIPAL_POINT', 4),
-            ('CV_CALIB_ZERO_TANGENT_DIST',   8),
-            ('CV_CALIB_FIX_FOCAL_LENGTH',   16),
-            ('CV_CALIB_FIX_K1',             32),
-            ('CV_CALIB_FIX_K2',             64),
-            ('CV_CALIB_FIX_K3',            128),
-            ('CV_CALIB_FIX_K4',           2048),
-            ('CV_CALIB_FIX_K5',           4096),
-            ('CV_CALIB_FIX_K6',           8192),
-            ('CV_CALIB_RATIONAL_MODEL',  16384),
-            ('CV_CALIB_THIN_PRISM_MODEL',32768),
-            ('CV_CALIB_FIX_S1_S2_S3_S4', 65536),
-            ('CV_CALIB_FIX_INTRINSIC',     256),
-            ('CV_CALIB_SAME_FOCAL_LENGTH', 512),
-            ('CV_CALIB_ZERO_DISPARITY',   1024),
-        ) # public
+            ('CALIB_USE_INTRINSIC_GUESS', '1'),
+            ('CALIB_RECOMPUTE_EXTRINSIC', '2'),
+            ('CALIB_CHECK_COND', '4'),
+            ('CALIB_FIX_SKEW', '8'),
+            ('CALIB_FIX_K1', '16'),
+            ('CALIB_FIX_K2', '32'),
+            ('CALIB_FIX_K3', '64'),
+            ('CALIB_FIX_K4', '128'),
+            ('CALIB_FIX_INTRINSIC', '256')
+        )
     }, # Calib3d
 
     "Video":
@@ -635,6 +622,51 @@ func_arg_fix = {
     }, # '', i.e. no class
 } # func_arg_fix
 
+def objdump(obj):
+    attrs = ["%s='%s'" % (attr, getattr(obj, attr)) for attr in dir(obj) if not attr.startswith("__") and not hasattr(getattr(obj, attr), "__call__")]
+    return "%s [%s]" % (obj.__class__.__name__, " ; ".join(attrs))
+
+class DebuggedObject(object):
+    def __init__(self):
+        pass
+    def __str__(self):
+        return objdump(self)
+
+class GeneralInfo(DebuggedObject):
+    def __init__(self, name, namespaces):
+        DebuggedObject.__init__(self)
+        self.namespace, self.classpath, self.classname, self.name = self.parseName(name, namespaces)
+
+    def parseName(self, name, namespaces):
+        '''
+        input: full name and available namespaces
+        returns: (namespace, classpath, classname, name)
+        '''
+        name = name[name.find(" ")+1:].strip() # remove struct/class/const prefix
+        spaceName = ""
+        localName = name # <classes>.<name>
+        for namespace in sorted(namespaces, key=len, reverse=True):
+            if name.startswith(namespace + "."):
+                spaceName = namespace
+                localName = name.replace(namespace + ".", "")
+                break
+        pieces = localName.split(".")
+        if len(pieces) > 2: # <class>.<class>.<class>.<name>
+            return spaceName, ".".join(pieces[:-1]), pieces[-2], pieces[-1]
+        elif len(pieces) == 2: # <class>.<name>
+            return spaceName, pieces[0], pieces[0], pieces[1]
+        elif len(pieces) == 1: # <name>
+            return spaceName, "", "", pieces[0]
+        else:
+            return spaceName, "", "" # error?!
+
+    def fullName(self, isCPP=False):
+        result = ".".join([self.fullClass(), self.name])
+        return result if not isCPP else result.replace(".", "::")
+
+    def fullClass(self, isCPP=False):
+        result = ".".join([f for f in [self.namespace] + self.classpath.split(".") if len(f)>0])
+        return result if not isCPP else result.replace(".", "::")
 
 def getLibVersion(version_hpp_path):
     version_file = open(version_hpp_path, "rt").read()
@@ -644,26 +676,24 @@ def getLibVersion(version_hpp_path):
     status = re.search("^W*#\W*define\W+CV_VERSION_STATUS\W+\"(.*?)\"\W*$", version_file, re.MULTILINE).group(1)
     return (major, minor, revision, status)
 
-class ConstInfo(object):
-    def __init__(self, cname, name, val, addedManually=False):
-        self.cname = cname
-        self.name = re.sub(r"^Cv", "", name)
-        self.value = val
+class ConstInfo(GeneralInfo):
+    def __init__(self, decl, addedManually=False, namespaces=[]):
+        GeneralInfo.__init__(self, decl[0], namespaces)
+        self.cname = self.name.replace(".", "::")
+        self.value = decl[1]
         self.addedManually = addedManually
 
-
-class ClassPropInfo(object):
+class ClassPropInfo(DebuggedObject):
     def __init__(self, decl): # [f_ctype, f_name, '', '/RW']
+        DebuggedObject.__init__(self)
         self.ctype = decl[0]
         self.name = decl[1]
         self.rw = "/RW" in decl[3]
 
-class ClassInfo(object):
-    def __init__(self, decl): # [ 'class/struct cname', ': base', [modlist] ]
-        name = decl[0]
-        name = name[name.find(" ")+1:].strip()
-        self.cname = self.name = self.jname = re.sub(r"^cv\.", "", name)
-        self.cname = self.cname.replace(".", "::")
+class ClassInfo(GeneralInfo):
+    def __init__(self, decl, namespaces=[]): # [ 'class/struct cname', ': base', [modlist] ]
+        GeneralInfo.__init__(self, decl[0], namespaces)
+        self.cname = self.name.replace(".", "::")
         self.methods = {}
         self.methods_suffixes = {}
         self.consts = [] # using a list to save the occurence order
@@ -679,8 +709,9 @@ class ClassInfo(object):
             #self.base = re.sub(r"\b"+self.jname+r"\b", "", decl[1].replace(":", "")).strip()
             self.base = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip().replace(self.jname, "")
 
-class ArgInfo(object):
+class ArgInfo(DebuggedObject):
     def __init__(self, arg_tuple): # [ ctype, name, def val, [mod], argno ]
+        DebuggedObject.__init__(self)
         self.pointer = False
         ctype = arg_tuple[0]
         if ctype.endswith("*"):
@@ -700,18 +731,12 @@ class ArgInfo(object):
             self.out = "IO"
 
 
-class FuncInfo(object):
-    def __init__(self, decl): # [ funcname, return_ctype, [modifiers], [args] ]
-        name = re.sub(r"^cv\.", "", decl[0])
-        self.cname = name.replace(".", "::")
-        classname = ""
-        dpos = name.rfind(".")
-        if dpos >= 0:
-            classname = name[:dpos]
-            name = name[dpos+1:]
-        self.classname = classname
-        self.jname = self.name = name
-        if "[" in name:
+class FuncInfo(GeneralInfo):
+    def __init__(self, decl, namespaces=[]): # [ funcname, return_ctype, [modifiers], [args] ]
+        GeneralInfo.__init__(self, decl[0], namespaces)
+        self.cname = self.name.replace(".", "::")
+        self.jname = self.name
+        if "[" in self.name:
             self.jname = "getelem"
         for m in decl[2]:
             if m.startswith("="):
@@ -719,25 +744,21 @@ class FuncInfo(object):
         self.static = ["","static"][ "/S" in decl[2] ]
         self.ctype = re.sub(r"^CvTermCriteria", "TermCriteria", decl[1] or "")
         self.args = []
-        func_fix_map = func_arg_fix.get(classname, {}).get(self.jname, {})
+        func_fix_map = func_arg_fix.get(self.classname, {}).get(self.jname, {})
         for a in decl[3]:
             arg = a[:]
             arg_fix_map = func_fix_map.get(arg[1], {})
             arg[0] = arg_fix_map.get('ctype',  arg[0]) #fixing arg type
             arg[3] = arg_fix_map.get('attrib', arg[3]) #fixing arg attrib
-            ai = ArgInfo(arg)
-            self.args.append(ai)
+            self.args.append(ArgInfo(arg))
 
-
-
-class FuncFamilyInfo(object):
-    def __init__(self, decl): # [ funcname, return_ctype, [modifiers], [args] ]
+class FuncFamilyInfo(DebuggedObject):
+    def __init__(self, decl, namespaces=set()): # [ funcname, return_ctype, [modifiers], [args] ]
+        DebuggedObject.__init__(self)
         self.funcs = []
-        self.funcs.append( FuncInfo(decl) )
+        self.funcs.append( FuncInfo(decl, namespaces) )
         self.jname = self.funcs[0].jname
         self.isconstructor = self.funcs[0].name == self.funcs[0].classname
-
-
 
     def add_func(self, fi):
         self.funcs.append( fi )
@@ -758,6 +779,7 @@ class JavaWrapperGenerator(object):
         self.def_args_hist = {} # { def_args_cnt : funcs_cnt }
         self.classes_map = []
         self.classes_simple = []
+        self.namespaces = set(["cv"])
 
     def add_class_code_stream(self, class_name, cls_base = ''):
         jname = self.classes[class_name].jname
@@ -833,106 +855,118 @@ public class %(jc)s {
 
 
     def add_class(self, decl):
-        classinfo = ClassInfo(decl)
+        logging.info("class: %s", decl)
+        classinfo = ClassInfo(decl, namespaces=self.namespaces)
         if classinfo.name in class_ignore_list:
+            logging.info('ignored: %s', classinfo)
             return
         name = classinfo.name
         if name in self.classes:
-            print "Generator error: class %s (%s) is duplicated" % \
-                    (name, classinfo.cname)
+            print("Generator error: class %s (%s) is duplicated" % \
+                    (name, classinfo.cname))
+            logging.info('duplicated: %s', classinfo)
             return
         self.classes[name] = classinfo
         if name in type_dict:
-            print "Duplicated class: " + name
+            print("Duplicated class: " + name)
+            logging.info('duplicated: %s', classinfo)
             return
         if '/Simple' in decl[2]:
             self.classes_simple.append(name)
         if ('/Map' in decl[2]):
             self.classes_map.append(name)
             #adding default c-tor
-            ffi = FuncFamilyInfo(['cv.'+name+'.'+name, '', [], []])
+            ffi = FuncFamilyInfo(['cv.'+name+'.'+name, '', [], []], namespaces=self.namespaces)
             classinfo.methods[ffi.jname] = ffi
         type_dict[name] = \
             { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
-              "jni_name" : "(*("+name+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
+              "jni_name" : "(*("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
               "suffix" : "J" }
         type_dict[name+'*'] = \
             { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
-              "jni_name" : "("+name+"*)%(n)s_nativeObj", "jni_type" : "jlong",
+              "jni_name" : "("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj", "jni_type" : "jlong",
               "suffix" : "J" }
 
         # missing_consts { Module : { public : [[name, val],...], private : [[]...] } }
         if name in missing_consts:
             if 'private' in missing_consts[name]:
                 for (n, val) in missing_consts[name]['private']:
-                    classinfo.private_consts.append( ConstInfo(n, n, val, True) )
+                    classinfo.private_consts.append( ConstInfo([n, val], addedManually=True) )
             if 'public' in missing_consts[name]:
                 for (n, val) in missing_consts[name]['public']:
-                    classinfo.consts.append( ConstInfo(n, n, val, True) )
+                    classinfo.consts.append( ConstInfo([n, val], addedManually=True) )
 
         # class props
         for p in decl[3]:
             if True: #"vector" not in p[0]:
                 classinfo.props.append( ClassPropInfo(p) )
             else:
-                print "Skipped property: [%s]" % name, p
+                print("Skipped property: [%s]" % name, p)
 
         self.add_class_code_stream(name, classinfo.base)
         if classinfo.base:
             self.get_imports(name, classinfo.base)
-
+            type_dict["Ptr_"+name] = \
+                { "j_type" : name,
+                  "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+                  "jni_name" : "Ptr<"+name+">(("+name+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
+                  "suffix" : "J" }
+        logging.info('ok: %s', classinfo)
 
     def add_const(self, decl): # [ "const cname", val, [], [] ]
-        name = decl[0].replace("const ", "").strip()
-        name = re.sub(r"^cv\.", "", name)
-        cname = name.replace(".", "::")
+        logging.info("constant: %s", decl)
+        constinfo = ConstInfo(decl, namespaces=self.namespaces)
         for c in const_ignore_list:
-            if re.match(c, name):
+            if re.match(c, constinfo.name):
+                logging.info('ignored: %s', constinfo)
                 return
         # class member?
-        dpos = name.rfind(".")
-        if dpos >= 0:
-            classname = name[:dpos]
-            name = name[dpos+1:]
-        else:
-            classname = self.Module
-        if classname not in self.classes:
+        if len(constinfo.classname) == 0:
+            constinfo.classname = self.Module
+        if constinfo.classname not in self.classes:
             # this class isn't wrapped
             # skipping this const
+            logging.info('class not found: %s', constinfo)
             return
 
-        consts = self.classes[classname].consts
+        consts = self.classes[constinfo.classname].consts
         for c in const_private_list:
-            if re.match(c, name):
-                consts = self.classes[classname].private_consts
+            if re.match(c, constinfo.name):
+                consts = self.classes[constinfo.classname].private_consts
                 break
 
-        constinfo = ConstInfo(cname, name, decl[1])
         # checking duplication
-        for list in self.classes[classname].consts, self.classes[classname].private_consts:
+        for list in self.classes[constinfo.classname].consts, self.classes[constinfo.classname].private_consts:
             for c in list:
                 if c.name == constinfo.name:
                     if c.addedManually:
+                        logging.info('manual: %s', constinfo)
                         return
-                    print "Generator error: constant %s (%s) is duplicated" \
-                            % (constinfo.name, constinfo.cname)
-                    sys.exit(-1)
+                    print("Generator error: constant %s (%s) is duplicated" \
+                            % (constinfo.name, constinfo.cname))
+                    logging.info('duplicated: %s', constinfo)
+                    return
 
         consts.append(constinfo)
+        logging.info('ok: %s', constinfo)
 
     def add_func(self, decl):
-        ffi = FuncFamilyInfo(decl)
+        logging.info("function: %s", decl)
+        ffi = FuncFamilyInfo(decl, namespaces=self.namespaces)
         classname = ffi.funcs[0].classname or self.Module
         if classname in class_ignore_list:
+            logging.info('ignored: %s', ffi)
             return
         if classname in ManualFuncs and ffi.jname in ManualFuncs[classname]:
+            logging.info('manual: %s', ffi)
             return
         if classname not in self.classes:
-            print "Generator error: the class %s for method %s is missing" % \
-                    (classname, ffi.jname)
-            sys.exit(-1)
+            print("Generator error: the class %s for method %s is missing" % \
+                    (classname, ffi.jname))
+            logging.info('not found: %s', ffi)
+            return
         func_map = self.classes[classname].methods
         if ffi.jname in func_map:
             func_map[ffi.jname].add_func(ffi.funcs[0])
@@ -941,6 +975,7 @@ public class %(jc)s {
         # calc args with def val
         cnt = len([a for a in ffi.funcs[0].args if a.defval])
         self.def_args_hist[cnt] = self.def_args_hist.get(cnt, 0) + 1
+        logging.info('ok: %s', ffi)
 
     def save(self, path, buf):
         f = open(path, "wt")
@@ -958,6 +993,9 @@ public class %(jc)s {
         # scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
             decls = parser.parse(hdr)
+            self.namespaces = parser.namespaces
+            logging.info("=== Header: %s", hdr)
+            logging.info("=== Namespaces: %s", parser.namespaces)
             for decl in decls:
                 name = decl[0]
                 if name.startswith("struct") or name.startswith("class"):
@@ -1049,7 +1087,7 @@ extern "C" {
 
         self.save(output_path+"/"+module+".txt", report.getvalue())
 
-        #print "Done %i of %i funcs." % (len(self.ported_func_list), len(self.ported_func_list)+ len(self.skipped_func_list))
+        #print("Done %i of %i funcs." % (len(self.ported_func_list), len(self.ported_func_list)+ len(self.skipped_func_list)))
 
 
 
@@ -1082,7 +1120,11 @@ extern "C" {
             imports.add("java.lang.String")
         return
 
-
+    def fullTypeName(self, t):
+        if t in self.classes:
+            return self.classes[t].fullName(isCPP=True)
+        else:
+            return t
 
     def gen_func(self, fi, prop_name=''):
         j_code   = self.java_code[fi.classname or self.Module]["j_code"]
@@ -1114,7 +1156,7 @@ extern "C" {
             msg = "// Return type '%s' is not supported, skipping the function\n\n" % fi.ctype
             self.skipped_func_list.append(c_decl + "\n" + msg)
             j_code.write( " "*4 + msg )
-            print "SKIP:", c_decl.strip(), "\t due to RET type", fi.ctype
+            print("SKIP:", c_decl.strip(), "\t due to RET type", fi.ctype)
             return
         for a in fi.args:
             if a.ctype not in type_dict:
@@ -1126,7 +1168,7 @@ extern "C" {
                 msg = "// Unknown type '%s' (%s), skipping the function\n\n" % (a.ctype, a.out or "I")
                 self.skipped_func_list.append(c_decl + "\n" + msg)
                 j_code.write( " "*4 + msg )
-                print "SKIP:", c_decl.strip(), "\t due to ARG type", a.ctype, "/" + (a.out or "I")
+                print("SKIP:", c_decl.strip(), "\t due to ARG type", a.ctype, "/" + (a.out or "I"))
                 return
 
         self.ported_func_list.append(c_decl)
@@ -1256,6 +1298,9 @@ extern "C" {
                     j_prologue.append( j_type + ' retVal = new Array' + j_type+'();')
                     self.classes[fi.classname or self.Module].imports.add('java.util.ArrayList')
                     j_epilogue.append('Converters.Mat_to_' + ret_type + '(retValMat, retVal);')
+            elif ret_type.startswith("Ptr_"):
+                ret_val = type_dict[fi.ctype]["j_type"] + " retVal = new " + type_dict[ret_type]["j_type"] + "("
+                tail = ")"
             elif ret_type == "void":
                 ret_val = ""
                 ret = "return;"
@@ -1327,7 +1372,10 @@ extern "C" {
                 ret = "return env->NewStringUTF(_retval_.c_str());"
                 default = 'return env->NewStringUTF("");'
             elif fi.ctype in self.classes: # wrapped class:
-                ret = "return (jlong) new %s(_retval_);" % fi.ctype
+                ret = "return (jlong) new %s(_retval_);" % self.fullTypeName(fi.ctype)
+            elif fi.ctype.startswith('Ptr_'):
+                c_prologue.append("typedef Ptr<%s> %s;" % (self.fullTypeName(fi.ctype[4:]), fi.ctype))
+                ret = "return (jlong)(new %(ctype)s(_retval_));" % { 'ctype':fi.ctype }
             elif ret_type in self.classes: # pointer to wrapped class:
                 ret = "return (jlong) _retval_;"
             elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
@@ -1341,8 +1389,8 @@ extern "C" {
                 else:
                     name = prop_name + ";//"
 
-            cvname = "cv::" + name
-            retval = fi.ctype + " _retval_ = "
+            cvname = fi.fullName(isCPP=True)
+            retval = self.fullTypeName(fi.ctype) + " _retval_ = "
             if fi.ctype == "void":
                 retval = ""
             elif fi.ctype == "String":
@@ -1351,17 +1399,17 @@ extern "C" {
                 retval = type_dict[fi.ctype]['jni_var'] % {"n" : '_ret_val_vector_'} + " = "
                 c_epilogue.append("Mat* _retval_ = new Mat();")
                 c_epilogue.append(fi.ctype+"_to_Mat(_ret_val_vector_, *_retval_);")
-            if fi.classname:
+            if len(fi.classname)>0:
                 if not fi.ctype: # c-tor
-                    retval = fi.classname + "* _retval_ = "
-                    cvname = "new " + fi.classname
+                    retval = fi.fullClass(isCPP=True) + "* _retval_ = "
+                    cvname = "new " + fi.fullClass(isCPP=True)
                 elif fi.static:
-                    cvname = "%s::%s" % (fi.classname, name)
+                    cvname = fi.fullName(isCPP=True)
                 else:
-                    cvname = "me->" + name
+                    cvname = ("me->" if  not self.isSmartClass(fi.classname) else "(*me)->") + name
                     c_prologue.append(\
                         "%(cls)s* me = (%(cls)s*) self; //TODO: check for NULL" \
-                            % { "cls" : fi.classname} \
+                            % { "cls" : self.smartWrap(fi.classname, fi.fullClass(isCPP=True))} \
                     )
             cvargs = []
             for a in args:
@@ -1450,8 +1498,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
             %s;\n\n""" % (",\n"+" "*12).join(["%s = %s" % (c.name, c.value) for c in ci.consts])
             )
         # c-tors
-        fflist = ci.methods.items()
-        fflist.sort()
+        fflist = sorted(ci.methods.items())
         for n, ffi in fflist:
             if ffi.isconstructor:
                 for fi in ffi.funcs:
@@ -1465,15 +1512,13 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         # props
         for pi in ci.props:
             # getter
-            getter_name = name + ".get_" + pi.name
-            #print getter_name
-            fi = FuncInfo( [getter_name, pi.ctype, [], []] ) # [ funcname, return_ctype, [modifiers], [args] ]
+            getter_name = ci.fullName() + ".get_" + pi.name
+            fi = FuncInfo( [getter_name, pi.ctype, [], []], self.namespaces ) # [ funcname, return_ctype, [modifiers], [args] ]
             self.gen_func(fi, pi.name)
             if pi.rw:
                 #setter
-                setter_name = name + ".set_" + pi.name
-                #print setter_name
-                fi = FuncInfo( [ setter_name, "void", [], [ [pi.ctype, pi.name, "", [], ""] ] ] )
+                setter_name = ci.fullName() + ".set_" + pi.name
+                fi = FuncInfo( [ setter_name, "void", [], [ [pi.ctype, pi.name, "", [], ""] ] ], self.namespaces)
                 self.gen_func(fi, pi.name)
 
         # manual ports
@@ -1514,16 +1559,30 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
     delete (%(cls)s*) self;
 }
 
-""" % {"module" : module, "cls" : name, "j_cls" : ci.jname.replace('_', '_1')}
+""" % {"module" : module, "cls" : self.smartWrap(ci.name, ci.fullName(isCPP=True)), "j_cls" : ci.jname.replace('_', '_1')}
             )
+
+    def isSmartClass(self, classname):
+        '''
+        Check if class stores Ptr<T>* instead of T* in nativeObj field
+        '''
+        return classname in self.classes and self.classes[classname].base
+
+    def smartWrap(self, name, fullname):
+        '''
+        Wraps fullname with Ptr<> if needed
+        '''
+        if self.isSmartClass(name):
+            return "Ptr<" + fullname + ">"
+        return fullname
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:
-        print "Usage:\n", \
+        print("Usage:\n", \
             os.path.basename(sys.argv[0]), \
-            "<full path to hdr_parser.py> <module name> <C++ header> [<C++ header>...]"
-        print "Current args are: ", ", ".join(["'"+a+"'" for a in sys.argv])
+            "<full path to hdr_parser.py> <module name> <C++ header> [<C++ header>...]")
+        print("Current args are: ", ", ".join(["'"+a+"'" for a in sys.argv]))
         exit(0)
 
     dstdir = "."
@@ -1534,6 +1593,7 @@ if __name__ == "__main__":
     import hdr_parser
     module = sys.argv[2]
     srcfiles = sys.argv[3:]
-    #print "Generating module '" + module + "' from headers:\n\t" + "\n\t".join(srcfiles)
+    logging.basicConfig(filename='%s/%s.log' % (dstdir, module), filemode='w', level=logging.INFO)
+    #print("Generating module '" + module + "' from headers:\n\t" + "\n\t".join(srcfiles))
     generator = JavaWrapperGenerator()
     generator.gen(srcfiles, module, dstdir)

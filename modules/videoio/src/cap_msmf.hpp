@@ -1,6 +1,206 @@
 #ifdef HAVE_WINRT
 #define ICustomStreamSink StreamSink
-#include "ppltasks_winrt.h"
+#ifndef __cplusplus_winrt
+
+#define __is_winrt_array(type) (type == ABI::Windows::Foundation::PropertyType::PropertyType_UInt8Array || type == ABI::Windows::Foundation::PropertyType::PropertyType_Int16Array ||\
+    type == ABI::Windows::Foundation::PropertyType::PropertyType_UInt16Array || type == ABI::Windows::Foundation::PropertyType::PropertyType_Int32Array ||\
+    type == ABI::Windows::Foundation::PropertyType::PropertyType_UInt32Array || type == ABI::Windows::Foundation::PropertyType::PropertyType_Int64Array ||\
+    type == ABI::Windows::Foundation::PropertyType::PropertyType_UInt64Array || type == ABI::Windows::Foundation::PropertyType::PropertyType_SingleArray ||\
+    type == ABI::Windows::Foundation::PropertyType::PropertyType_DoubleArray || type == ABI::Windows::Foundation::PropertyType::PropertyType_Char16Array ||\
+    type == ABI::Windows::Foundation::PropertyType::PropertyType_BooleanArray || type == ABI::Windows::Foundation::PropertyType::PropertyType_StringArray ||\
+    type == ABI::Windows::Foundation::PropertyType::PropertyType_InspectableArray || type == ABI::Windows::Foundation::PropertyType::PropertyType_DateTimeArray ||\
+    type == ABI::Windows::Foundation::PropertyType::PropertyType_TimeSpanArray || type == ABI::Windows::Foundation::PropertyType::PropertyType_GuidArray ||\
+    type == ABI::Windows::Foundation::PropertyType::PropertyType_PointArray || type == ABI::Windows::Foundation::PropertyType::PropertyType_SizeArray ||\
+    type == ABI::Windows::Foundation::PropertyType::PropertyType_RectArray || type == ABI::Windows::Foundation::PropertyType::PropertyType_OtherTypeArray)
+
+template<typename _Type, bool bUnknown = std::is_base_of<IUnknown, _Type>::value>
+struct winrt_type
+{
+};
+template<typename _Type>
+struct winrt_type<_Type, true>
+{
+    static IUnknown* create(_Type* _ObjInCtx) {
+        return reinterpret_cast<IUnknown*>(_ObjInCtx);
+    }
+    static IID getuuid() { return __uuidof(_Type); }
+    static const ABI::Windows::Foundation::PropertyType _PropType = ABI::Windows::Foundation::PropertyType::PropertyType_OtherType;
+};
+template <typename _Type>
+struct winrt_type<_Type, false>
+{
+    static IUnknown* create(_Type* _ObjInCtx) {
+        Microsoft::WRL::ComPtr<IInspectable> _PObj;
+        Microsoft::WRL::ComPtr<IActivationFactory> objFactory;
+        HRESULT hr = Windows::Foundation::GetActivationFactory(Microsoft::WRL::Wrappers::HStringReference(RuntimeClass_Windows_Foundation_PropertyValue).Get(), objFactory.ReleaseAndGetAddressOf());
+        if (FAILED(hr)) return nullptr;
+        Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IPropertyValueStatics> spPropVal;
+        if (SUCCEEDED(hr))
+            hr = objFactory.As(&spPropVal);
+        if (SUCCEEDED(hr)) {
+            hr = winrt_type<_Type>::create(spPropVal.Get(), _ObjInCtx, _PObj.GetAddressOf());
+            if (SUCCEEDED(hr))
+                return reinterpret_cast<IUnknown*>(_PObj.Detach());
+        }
+        return nullptr;
+    }
+    static IID getuuid() { return __uuidof(ABI::Windows::Foundation::IPropertyValue); }
+    static const ABI::Windows::Foundation::PropertyType _PropType = ABI::Windows::Foundation::PropertyType::PropertyType_OtherType;
+};
+
+template<>
+struct winrt_type<void>
+{
+    static HRESULT create(ABI::Windows::Foundation::IPropertyValueStatics* spPropVal, void* _ObjInCtx, IInspectable** ppInsp) {
+        (void)_ObjInCtx;
+        return spPropVal->CreateEmpty(ppInsp);
+    }
+    static const ABI::Windows::Foundation::PropertyType _PropType = ABI::Windows::Foundation::PropertyType::PropertyType_Empty;
+};
+#define MAKE_TYPE(Type, Name) template<>\
+struct winrt_type<Type>\
+{\
+    static HRESULT create(ABI::Windows::Foundation::IPropertyValueStatics* spPropVal, Type* _ObjInCtx, IInspectable** ppInsp) {\
+    return spPropVal->Create##Name(*_ObjInCtx, ppInsp);\
+}\
+    static const ABI::Windows::Foundation::PropertyType _PropType = ABI::Windows::Foundation::PropertyType::PropertyType_##Name;\
+};
+
+template<typename _Type>
+struct winrt_array_type
+{
+    static IUnknown* create(_Type* _ObjInCtx, size_t N) {
+        Microsoft::WRL::ComPtr<IInspectable> _PObj;
+        Microsoft::WRL::ComPtr<IActivationFactory> objFactory;
+        HRESULT hr = Windows::Foundation::GetActivationFactory(Microsoft::WRL::Wrappers::HStringReference(RuntimeClass_Windows_Foundation_PropertyValue).Get(), objFactory.ReleaseAndGetAddressOf());
+        if (FAILED(hr)) return nullptr;
+        Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IPropertyValueStatics> spPropVal;
+        if (SUCCEEDED(hr))
+            hr = objFactory.As(&spPropVal);
+        if (SUCCEEDED(hr)) {
+            hr = winrt_array_type<_Type>::create(spPropVal.Get(), N, _ObjInCtx, _PObj.GetAddressOf());
+            if (SUCCEEDED(hr))
+                return reinterpret_cast<IUnknown*>(_PObj.Detach());
+        }
+        return nullptr;
+    }
+    static const ABI::Windows::Foundation::PropertyType _PropType = ABI::Windows::Foundation::PropertyType::PropertyType_OtherTypeArray;
+};
+template<int>
+struct winrt_prop_type {};
+
+template <>
+struct winrt_prop_type<ABI::Windows::Foundation::PropertyType_Empty> {
+    typedef void _Type;
+};
+
+template <>
+struct winrt_prop_type<ABI::Windows::Foundation::PropertyType_OtherType> {
+    typedef void _Type;
+};
+
+template <>
+struct winrt_prop_type<ABI::Windows::Foundation::PropertyType_OtherTypeArray> {
+    typedef void _Type;
+};
+
+#define MAKE_PROP(Prop, Type) template <>\
+struct winrt_prop_type<ABI::Windows::Foundation::PropertyType_##Prop> {\
+    typedef Type _Type;\
+};
+
+#define MAKE_ARRAY_TYPE(Type, Name) MAKE_PROP(Name, Type)\
+    MAKE_PROP(Name##Array, Type*)\
+    MAKE_TYPE(Type, Name)\
+    template<>\
+struct winrt_array_type<Type*>\
+{\
+    static HRESULT create(ABI::Windows::Foundation::IPropertyValueStatics* spPropVal, UINT32 __valueSize, Type** _ObjInCtx, IInspectable** ppInsp) {\
+    return spPropVal->Create##Name##Array(__valueSize, *_ObjInCtx, ppInsp);\
+}\
+    static const ABI::Windows::Foundation::PropertyType _PropType = ABI::Windows::Foundation::PropertyType::PropertyType_##Name##Array;\
+    static std::vector<Type> PropertyValueToVector(ABI::Windows::Foundation::IPropertyValue* propValue)\
+{\
+    UINT32 uLen = 0;\
+    Type* pArray = nullptr;\
+    propValue->Get##Name##Array(&uLen, &pArray);\
+    return std::vector<Type>(pArray, pArray + uLen);\
+}\
+};
+MAKE_ARRAY_TYPE(BYTE, UInt8)
+MAKE_ARRAY_TYPE(INT16, Int16)
+MAKE_ARRAY_TYPE(UINT16, UInt16)
+MAKE_ARRAY_TYPE(INT32, Int32)
+MAKE_ARRAY_TYPE(UINT32, UInt32)
+MAKE_ARRAY_TYPE(INT64, Int64)
+MAKE_ARRAY_TYPE(UINT64, UInt64)
+MAKE_ARRAY_TYPE(FLOAT, Single)
+MAKE_ARRAY_TYPE(DOUBLE, Double)
+MAKE_ARRAY_TYPE(WCHAR, Char16)
+//MAKE_ARRAY_TYPE(boolean, Boolean) //conflict with identical type in C++ of BYTE/UInt8
+MAKE_ARRAY_TYPE(HSTRING, String)
+MAKE_ARRAY_TYPE(IInspectable*, Inspectable)
+MAKE_ARRAY_TYPE(GUID, Guid)
+MAKE_ARRAY_TYPE(ABI::Windows::Foundation::DateTime, DateTime)
+MAKE_ARRAY_TYPE(ABI::Windows::Foundation::TimeSpan, TimeSpan)
+MAKE_ARRAY_TYPE(ABI::Windows::Foundation::Point, Point)
+MAKE_ARRAY_TYPE(ABI::Windows::Foundation::Size, Size)
+MAKE_ARRAY_TYPE(ABI::Windows::Foundation::Rect, Rect)
+
+template < typename T >
+struct DerefHelper
+{
+    typedef T DerefType;
+};
+
+template < typename T >
+struct DerefHelper<T*>
+{
+    typedef T DerefType;
+};
+
+#define __is_valid_winrt_type(_Type) (std::is_void<_Type>::value || \
+    std::is_same<_Type, BYTE>::value || \
+    std::is_same<_Type, INT16>::value || \
+    std::is_same<_Type, UINT16>::value || \
+    std::is_same<_Type, INT32>::value || \
+    std::is_same<_Type, UINT32>::value || \
+    std::is_same<_Type, INT64>::value || \
+    std::is_same<_Type, UINT64>::value || \
+    std::is_same<_Type, FLOAT>::value || \
+    std::is_same<_Type, DOUBLE>::value || \
+    std::is_same<_Type, WCHAR>::value || \
+    std::is_same<_Type, boolean>::value || \
+    std::is_same<_Type, HSTRING>::value || \
+    std::is_same<_Type, IInspectable *>::value || \
+    std::is_base_of<Microsoft::WRL::Details::RuntimeClassBase, _Type>::value || \
+    std::is_base_of<IInspectable, typename DerefHelper<_Type>::DerefType>::value || \
+    std::is_same<_Type, GUID>::value || \
+    std::is_same<_Type, ABI::Windows::Foundation::DateTime>::value || \
+    std::is_same<_Type, ABI::Windows::Foundation::TimeSpan>::value || \
+    std::is_same<_Type, ABI::Windows::Foundation::Point>::value || \
+    std::is_same<_Type, ABI::Windows::Foundation::Size>::value || \
+    std::is_same<_Type, ABI::Windows::Foundation::Rect>::value || \
+    std::is_same<_Type, BYTE*>::value || \
+    std::is_same<_Type, INT16*>::value || \
+    std::is_same<_Type, UINT16*>::value || \
+    std::is_same<_Type, INT32*>::value || \
+    std::is_same<_Type, UINT32*>::value || \
+    std::is_same<_Type, INT64*>::value || \
+    std::is_same<_Type, UINT64*>::value || \
+    std::is_same<_Type, FLOAT*>::value || \
+    std::is_same<_Type, DOUBLE*>::value || \
+    std::is_same<_Type, WCHAR*>::value || \
+    std::is_same<_Type, boolean*>::value || \
+    std::is_same<_Type, HSTRING*>::value || \
+    std::is_same<_Type, IInspectable **>::value || \
+    std::is_same<_Type, GUID*>::value || \
+    std::is_same<_Type, ABI::Windows::Foundation::DateTime*>::value || \
+    std::is_same<_Type, ABI::Windows::Foundation::TimeSpan*>::value || \
+    std::is_same<_Type, ABI::Windows::Foundation::Point*>::value || \
+    std::is_same<_Type, ABI::Windows::Foundation::Size*>::value || \
+    std::is_same<_Type, ABI::Windows::Foundation::Rect*>::value)
+#endif
 #else
 EXTERN_C const IID IID_ICustomStreamSink;
 
@@ -133,6 +333,7 @@ MAKE_ENUM(MediaEventType) MediaEventTypePairs[] = {
     MAKE_ENUM_PAIR(MediaEventType, MEAudioSessionDisconnected),
     MAKE_ENUM_PAIR(MediaEventType, MEAudioSessionExclusiveModeOverride),
     MAKE_ENUM_PAIR(MediaEventType, MESinkV1Anchor),
+#if (WINVER >= 0x0602) // Available since Win 8
     MAKE_ENUM_PAIR(MediaEventType, MECaptureAudioSessionVolumeChanged),
     MAKE_ENUM_PAIR(MediaEventType, MECaptureAudioSessionDeviceRemoved),
     MAKE_ENUM_PAIR(MediaEventType, MECaptureAudioSessionFormatChanged),
@@ -140,6 +341,7 @@ MAKE_ENUM(MediaEventType) MediaEventTypePairs[] = {
     MAKE_ENUM_PAIR(MediaEventType, MECaptureAudioSessionExclusiveModeOverride),
     MAKE_ENUM_PAIR(MediaEventType, MECaptureAudioSessionServerShutdown),
     MAKE_ENUM_PAIR(MediaEventType, MESinkV2Anchor),
+#endif
     MAKE_ENUM_PAIR(MediaEventType, METrustUnknown),
     MAKE_ENUM_PAIR(MediaEventType, MEPolicyChanged),
     MAKE_ENUM_PAIR(MediaEventType, MEContentProtectionMessage),
@@ -161,9 +363,11 @@ MAKE_ENUM(MediaEventType) MediaEventTypePairs[] = {
     MAKE_ENUM_PAIR(MediaEventType, METransformHaveOutput),
     MAKE_ENUM_PAIR(MediaEventType, METransformDrainComplete),
     MAKE_ENUM_PAIR(MediaEventType, METransformMarker),
+#if (WINVER >= 0x0602) // Available since Win 8
     MAKE_ENUM_PAIR(MediaEventType, MEByteStreamCharacteristicsChanged),
     MAKE_ENUM_PAIR(MediaEventType, MEVideoCaptureDeviceRemoved),
     MAKE_ENUM_PAIR(MediaEventType, MEVideoCaptureDevicePreempted),
+#endif
     MAKE_ENUM_PAIR(MediaEventType, MEReservedMax)
 };
 MAKE_MAP(MediaEventType) MediaEventTypeMap(MediaEventTypePairs, MediaEventTypePairs + sizeof(MediaEventTypePairs) / sizeof(MediaEventTypePairs[0]));
@@ -179,11 +383,32 @@ MAKE_MAP(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypeMap(StreamSinkMarkerTypeP
 #ifdef HAVE_WINRT
 
 #ifdef __cplusplus_winrt
+#define _ContextCallback Concurrency::details::_ContextCallback
+#define BEGIN_CALL_IN_CONTEXT(hr, var, ...) hr = S_OK;\
+    var._CallInContext([__VA_ARGS__]() {
+#define END_CALL_IN_CONTEXT(hr) if (FAILED(hr)) throw Platform::Exception::CreateException(hr);\
+});
+#define END_CALL_IN_CONTEXT_BASE });
+#else
+#define _ContextCallback Concurrency_winrt::details::_ContextCallback
+#define BEGIN_CALL_IN_CONTEXT(hr, var, ...) hr = var._CallInContext([__VA_ARGS__]() -> HRESULT {
+#define END_CALL_IN_CONTEXT(hr) return hr;\
+});
+#define END_CALL_IN_CONTEXT_BASE return S_OK;\
+});
+#endif
+#define GET_CURRENT_CONTEXT _ContextCallback::_CaptureCurrent()
+#define SAVE_CURRENT_CONTEXT(var) _ContextCallback var = GET_CURRENT_CONTEXT
+
+#define COMMA ,
+
+#ifdef __cplusplus_winrt
 #define _Object Platform::Object^
 #define _ObjectObj Platform::Object^
 #define _String Platform::String^
 #define _StringObj Platform::String^
 #define _StringReference ref new Platform::String
+#define _StringReferenceObj Platform::String^
 #define _DeviceInformationCollection Windows::Devices::Enumeration::DeviceInformationCollection
 #define _MediaCapture Windows::Media::Capture::MediaCapture
 #define _MediaCaptureVideoPreview Windows::Media::Capture::MediaCapture
@@ -193,6 +418,7 @@ MAKE_MAP(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypeMap(StreamSinkMarkerTypeP
 #define _MediaEncodingProperties Windows::Media::MediaProperties::IMediaEncodingProperties
 #define _VideoEncodingProperties Windows::Media::MediaProperties::VideoEncodingProperties
 #define _MediaStreamType Windows::Media::Capture::MediaStreamType
+#define _AsyncInfo Windows::Foundation::IAsyncInfo
 #define _AsyncAction Windows::Foundation::IAsyncAction
 #define _AsyncOperation Windows::Foundation::IAsyncOperation
 #define _DeviceClass Windows::Devices::Enumeration::DeviceClass
@@ -209,29 +435,37 @@ MAKE_MAP(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypeMap(StreamSinkMarkerTypeP
 #define _InitializeWithSettingsAsync InitializeAsync
 #define _FindAllAsyncDeviceClass FindAllAsync
 #define _MediaExtension Windows::Media::IMediaExtension
-#define _ContextCallback Concurrency::details::_ContextCallback
-#define BEGIN_CALL_IN_CONTEXT(hr, var, ...) hr = S_OK;\
-var._CallInContext([__VA_ARGS__]() {
-#define END_CALL_IN_CONTEXT(hr) if (FAILED(hr)) throw Platform::Exception::CreateException(hr);\
-});
-#define DO_ACTION_SYNCHRONOUSLY(hr, action, ctxt) hr = S_OK;\
-CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(action), ctxt)
-#define DO_OPERATION_SYNCHRONOUSLY_VECTOR(hr, action, ctxt, pResult, vectortype, elementtype, _type) hr = S_OK;\
-pResult = CCompletionHandler::PerformSynchronously<_type^>(reinterpret_cast<Windows::Foundation::IAsyncOperation<_type^>^>(action), ctxt)
-#define BEGIN_CREATE_ASYNC(...) reinterpret_cast<ABI::Windows::Foundation::IAsyncAction*>(Concurrency::create_async([__VA_ARGS__]() {
+#define BEGIN_CREATE_ASYNC(type, ...) (Concurrency::create_async([__VA_ARGS__]() {
 #define END_CREATE_ASYNC(hr) if (FAILED(hr)) throw Platform::Exception::CreateException(hr);\
 }))
 #define DEFINE_TASK Concurrency::task
 #define CREATE_TASK Concurrency::create_task
 #define CREATE_OR_CONTINUE_TASK(_task, rettype, func) _task = (_task == Concurrency::task<rettype>()) ? Concurrency::create_task(func) : _task.then([func](rettype) -> rettype { return func(); });
+#define DEFINE_RET_VAL(x)
+#define DEFINE_RET_TYPE(x)
+#define DEFINE_RET_FORMAL(x) x
+#define RET_VAL(x) return x;
+#define RET_VAL_BASE
+#define MAKE_STRING(str) str
+#define GET_STL_STRING(str) std::wstring(str->Data())
+#define GET_STL_STRING_RAW(str) std::wstring(str->Data())
 #define MAKE_WRL_OBJ(x) x^
 #define MAKE_WRL_REF(x) x^
+#define MAKE_OBJ_REF(x) x^
 #define MAKE_WRL_AGILE_REF(x) Platform::Agile<x^>
+#define MAKE_PROPERTY_BACKING(Type, PropName) property Type PropName;
+#define MAKE_PROPERTY(Type, PropName, PropValue)
+#define MAKE_PROPERTY_STRING(Type, PropName, PropValue)
+#define MAKE_READONLY_PROPERTY(Type, PropName, PropValue) property Type PropName\
+{\
+    Type get() { return PropValue; }\
+}
+#define THROW_INVALID_ARG throw ref new Platform::InvalidArgumentException();
 #define RELEASE_AGILE_WRL(x) x = nullptr;
 #define RELEASE_WRL(x) x = nullptr;
 #define GET_WRL_OBJ_FROM_REF(objtype, obj, orig, hr) objtype^ obj = orig;\
 hr = S_OK;
-#define GET_WRL_OBJ_FROM_OBJ(objtype, obj, orig, hr) objtype^ obj = orig;\
+#define GET_WRL_OBJ_FROM_OBJ(objtype, obj, orig, hr) objtype^ obj = safe_cast<objtype^>(orig);\
 hr = S_OK;
 #define WRL_ENUM_GET(obj, prefix, prop) obj::##prop
 #define WRL_PROP_GET(obj, prop, arg, hr) arg = obj->##prop;\
@@ -242,11 +476,18 @@ hr = S_OK;
 hr = S_OK;
 #define WRL_METHOD(obj, method, ret, hr, ...) ret = obj->##method(__VA_ARGS__);\
 hr = S_OK;
+#define WRL_METHOD_NORET_BASE(obj, method, hr) obj->##method();\
+    hr = S_OK;
+#define WRL_METHOD_NORET(obj, method, hr, ...) obj->##method(__VA_ARGS__);\
+    hr = S_OK;
 #define REF_WRL_OBJ(obj) &obj
 #define DEREF_WRL_OBJ(obj) obj
 #define DEREF_AGILE_WRL_OBJ(obj) obj.Get()
 #define DEREF_AS_NATIVE_WRL_OBJ(type, obj) reinterpret_cast<type*>(obj)
 #define PREPARE_TRANSFER_WRL_OBJ(obj) obj
+#define ACTIVATE_LOCAL_OBJ_BASE(objtype) ref new objtype()
+#define ACTIVATE_LOCAL_OBJ(objtype, ...) ref new objtype(__VA_ARGS__)
+#define ACTIVATE_EVENT_HANDLER(objtype, ...) ref new objtype(__VA_ARGS__)
 #define ACTIVATE_OBJ(rtclass, objtype, obj, hr) MAKE_WRL_OBJ(objtype) obj = ref new objtype();\
 hr = S_OK;
 #define ACTIVATE_STATIC_OBJ(rtclass, objtype, obj, hr) objtype obj;\
@@ -257,6 +498,7 @@ hr = S_OK;
 #define _String HSTRING
 #define _StringObj Microsoft::WRL::Wrappers::HString
 #define _StringReference Microsoft::WRL::Wrappers::HStringReference
+#define _StringReferenceObj Microsoft::WRL::Wrappers::HStringReference
 #define _DeviceInformationCollection ABI::Windows::Devices::Enumeration::DeviceInformationCollection
 #define _MediaCapture ABI::Windows::Media::Capture::IMediaCapture
 #define _MediaCaptureVideoPreview ABI::Windows::Media::Capture::IMediaCaptureVideoPreview
@@ -266,6 +508,7 @@ hr = S_OK;
 #define _MediaEncodingProperties ABI::Windows::Media::MediaProperties::IMediaEncodingProperties
 #define _VideoEncodingProperties ABI::Windows::Media::MediaProperties::IVideoEncodingProperties
 #define _MediaStreamType ABI::Windows::Media::Capture::MediaStreamType
+#define _AsyncInfo ABI::Windows::Foundation::IAsyncInfo
 #define _AsyncAction ABI::Windows::Foundation::IAsyncAction
 #define _AsyncOperation ABI::Windows::Foundation::IAsyncOperation
 #define _DeviceClass ABI::Windows::Devices::Enumeration::DeviceClass
@@ -282,21 +525,32 @@ hr = S_OK;
 #define _InitializeWithSettingsAsync InitializeWithSettingsAsync
 #define _FindAllAsyncDeviceClass FindAllAsyncDeviceClass
 #define _MediaExtension ABI::Windows::Media::IMediaExtension
-#define _ContextCallback Concurrency_winrt::details::_ContextCallback
-#define BEGIN_CALL_IN_CONTEXT(hr, var, ...) hr = var._CallInContext([__VA_ARGS__]() -> HRESULT {
-#define END_CALL_IN_CONTEXT(hr) return hr;\
-});
-#define DO_ACTION_SYNCHRONOUSLY(hr, action, ctxt) hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(action, ctxt)
-#define DO_OPERATION_SYNCHRONOUSLY_VECTOR(hr, action, ctxt, pResult, vectortype, elementtype, _type) hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncOperationCompletedHandler<_type*>, ABI::Windows::Foundation::IAsyncOperation<_type*>>::PerformSynchronously<vectortype<elementtype*>*>(action, ctxt, pResult.GetAddressOf())
-#define BEGIN_CREATE_ASYNC(...) Concurrency_winrt::create_async([__VA_ARGS__]() -> HRESULT {
+#define BEGIN_CREATE_ASYNC(type, ...) Concurrency_winrt::create_async<type>([__VA_ARGS__]() -> HRESULT {
 #define END_CREATE_ASYNC(hr) return hr;\
 })
 #define DEFINE_TASK Concurrency_winrt::task
 #define CREATE_TASK Concurrency_winrt::create_task
-#define CREATE_OR_CONTINUE_TASK(_task, rettype, func) _task = (_task == Concurrency_winrt::task<rettype>()) ? Concurrency_winrt::create_task(func) : _task.then([func](rettype) -> rettype { return func(); });
+#define CREATE_OR_CONTINUE_TASK(_task, rettype, func) _task = (_task == Concurrency_winrt::task<rettype>()) ? Concurrency_winrt::create_task<rettype>(func) : _task.then([func](rettype, rettype* retVal) -> HRESULT { return func(retVal); });
+#define DEFINE_RET_VAL(x) x* retVal
+#define DEFINE_RET_TYPE(x) <x>
+#define DEFINE_RET_FORMAL(x) HRESULT
+#define RET_VAL(x) *retVal = x;\
+return S_OK;
+#define RET_VAL_BASE return S_OK;
+#define MAKE_STRING(str) Microsoft::WRL::Wrappers::HStringReference(L##str)
+#define GET_STL_STRING(str) std::wstring(str.GetRawBuffer(NULL))
+#define GET_STL_STRING_RAW(str) WindowsGetStringRawBuffer(str, NULL)
 #define MAKE_WRL_OBJ(x) Microsoft::WRL::ComPtr<x>
 #define MAKE_WRL_REF(x) x*
+#define MAKE_OBJ_REF(x) x
 #define MAKE_WRL_AGILE_REF(x) x*
+#define MAKE_PROPERTY_BACKING(Type, PropName) Type PropName;
+#define MAKE_PROPERTY(Type, PropName, PropValue) STDMETHODIMP get_##PropName(Type* pVal) { if (pVal) { *pVal = PropValue; } else { return E_INVALIDARG; } return S_OK; }\
+    STDMETHODIMP put_##PropName(Type Val) { PropValue = Val; return S_OK; }
+#define MAKE_PROPERTY_STRING(Type, PropName, PropValue) STDMETHODIMP get_##PropName(Type* pVal) { if (pVal) { return ::WindowsDuplicateString(PropValue.Get(), pVal); } else { return E_INVALIDARG; } }\
+    STDMETHODIMP put_##PropName(Type Val) { return PropValue.Set(Val); }
+#define MAKE_READONLY_PROPERTY(Type, PropName, PropValue) STDMETHODIMP get_##PropName(Type* pVal) { if (pVal) { *pVal = PropValue; } else { return E_INVALIDARG; } return S_OK; }
+#define THROW_INVALID_ARG RoOriginateError(E_INVALIDARG, nullptr);
 #define RELEASE_AGILE_WRL(x) if (x) { (x)->Release(); x = nullptr; }
 #define RELEASE_WRL(x) if (x) { (x)->Release(); x = nullptr; }
 #define GET_WRL_OBJ_FROM_REF(objtype, obj, orig, hr) Microsoft::WRL::ComPtr<objtype> obj;\
@@ -308,11 +562,15 @@ hr = orig.As(&obj);
 #define WRL_PROP_PUT(obj, prop, arg, hr) hr = obj->put_##prop(arg);
 #define WRL_METHOD_BASE(obj, method, ret, hr) hr = obj->##method(&ret);
 #define WRL_METHOD(obj, method, ret, hr, ...) hr = obj->##method(__VA_ARGS__, &ret);
+#define WRL_METHOD_NORET_BASE(obj, method, hr) hr = obj->##method();
 #define REF_WRL_OBJ(obj) obj.GetAddressOf()
 #define DEREF_WRL_OBJ(obj) obj.Get()
 #define DEREF_AGILE_WRL_OBJ(obj) obj
 #define DEREF_AS_NATIVE_WRL_OBJ(type, obj) obj.Get()
 #define PREPARE_TRANSFER_WRL_OBJ(obj) obj.Detach()
+#define ACTIVATE_LOCAL_OBJ_BASE(objtype) Microsoft::WRL::Make<objtype>()
+#define ACTIVATE_LOCAL_OBJ(objtype, ...) Microsoft::WRL::Make<objtype>(__VA_ARGS__)
+#define ACTIVATE_EVENT_HANDLER(objtype, ...) Microsoft::WRL::Callback<objtype>(__VA_ARGS__).Get()
 #define ACTIVATE_OBJ(rtclass, objtype, obj, hr) MAKE_WRL_OBJ(objtype) obj;\
 {\
     Microsoft::WRL::ComPtr<IActivationFactory> objFactory;\
@@ -333,272 +591,134 @@ hr = orig.As(&obj);
 }
 #endif
 
-#define GET_CURRENT_CONTEXT _ContextCallback::_CaptureCurrent()
-#define SAVE_CURRENT_CONTEXT(var) _ContextCallback var = GET_CURRENT_CONTEXT
-
-#ifdef __cplusplus_winrt
-ref class CCompletionHandler sealed
+#define _ComPtr Microsoft::WRL::ComPtr
 #else
-template <typename TCompletionHandler, typename TAction>
-class CCompletionHandler
-    : public Microsoft::WRL::RuntimeClass<
-    Microsoft::WRL::RuntimeClassFlags< Microsoft::WRL::RuntimeClassType::ClassicCom>,
-    TCompletionHandler, IAgileObject, FtmBase>
-#endif
-{
-    MixInHelper()
-#ifndef __cplusplus_winrt
-public:
-    CCompletionHandler() {}
 
-    STDMETHODIMP Invoke(TAction* /*asyncInfo*/, AsyncStatus /*asyncStatus*/)
-    {
-        m_Event.set();
-        return S_OK;
-    }
-    void wait() { m_Event.wait(); }
-#endif
-#ifdef __cplusplus_winrt
-internal:
-    template <typename TResult>
-    static TResult PerformSynchronously(Windows::Foundation::IAsyncOperation<TResult>^ asyncOp, _ContextCallback context)
-    {
-        TResult pResult;
-        context._CallInContext([asyncOp, &pResult]() { Concurrency::task<TResult> asyncTask = Concurrency::task<TResult>(asyncOp); pResult = asyncTask.get(); });
-        return pResult;
-#else
-    template <typename TResult>
-    static HRESULT PerformSynchronously(TAction* asyncOp, _ContextCallback context, TResult* pResult)
-    {
-        HRESULT hr;
-        ComPtr<CCompletionHandler<TCompletionHandler, TAction>> completeHandler = Microsoft::WRL::Make<CCompletionHandler<TCompletionHandler, TAction>>();
-        hr = context._CallInContext([&asyncOp, &completeHandler]() -> HRESULT {
-            HRESULT hr = asyncOp->put_Completed(completeHandler.Get());
-            if (FAILED(hr)) asyncOp->Release();
-            return hr;
-        });
-        if (SUCCEEDED(hr))
-            completeHandler->wait();
-        else
-            return hr;
-        hr = context._CallInContext([&asyncOp, &pResult]() -> HRESULT {
-            HRESULT hr = asyncOp->GetResults(pResult);
-            asyncOp->Release();
-            return hr;
-        });
-        return hr;
-#endif
-    }
+#define _COM_SMARTPTR_DECLARE(T,var) T ## Ptr var
 
-#ifdef __cplusplus_winrt
-    static void PerformActionSynchronously(Windows::Foundation::IAsyncAction^ asyncOp, _ContextCallback context)
-    {
-        context._CallInContext([asyncOp](){ Concurrency::task<void>(asyncOp).get(); });
-#else
-    static HRESULT PerformActionSynchronously(TAction* asyncOp, _ContextCallback context)
-    {
-        HRESULT hr;
-        ComPtr<CCompletionHandler<TCompletionHandler, TAction>> completeHandler = Microsoft::WRL::Make<CCompletionHandler<TCompletionHandler, TAction>>();
-        hr = context._CallInContext([&asyncOp, &completeHandler]() -> HRESULT {
-            HRESULT hr = asyncOp->put_Completed(completeHandler.Get());
-            if (FAILED(hr)) asyncOp->Release();
-            return hr;
-        });
-        if (SUCCEEDED(hr))
-            completeHandler->wait();
-        else
-            return hr;
-        hr = context._CallInContext([&asyncOp]() -> HRESULT {
-            HRESULT hr = asyncOp->GetResults();
-            asyncOp->Release();
-            return hr;
-        });
-        return hr;
-#endif
-    }
-#ifndef __cplusplus_winrt
-private:
-    Concurrency::event m_Event;
-#endif
-};
-
-#ifndef __cplusplus_winrt
-
-// Helpers for create_async validation
-//
-// A parameter lambda taking no arguments is valid
-template<typename _Ty>
-static auto _IsValidCreateAsync(_Ty _Param, int, int, int, int) -> typename decltype(_Param(), std::true_type());
-
-// A parameter lambda taking an cancellation_token argument is valid
-template<typename _Ty>
-static auto _IsValidCreateAsync(_Ty _Param, int, int, int, ...) -> typename decltype(_Param(cancellation_token::none()), std::true_type());
-
-// A parameter lambda taking a progress report argument is valid
-template<typename _Ty>
-static auto _IsValidCreateAsync(_Ty _Param, int, int, ...) -> typename decltype(_Param(details::_ProgressReporterCtorArgType()), std::true_type());
-
-// A parameter lambda taking a progress report and a cancellation_token argument is valid
-template<typename _Ty>
-static auto _IsValidCreateAsync(_Ty _Param, int, ...) -> typename decltype(_Param(details::_ProgressReporterCtorArgType(), cancellation_token::none()), std::true_type());
-
-// All else is invalid
-template<typename _Ty>
-static std::false_type _IsValidCreateAsync(_Ty _Param, ...);
-
-//for task specific architecture
-//could add a CancelPending which is set when Cancel is called, return as Cancel when get_Status is called and set when a task_canceled exception is thrown
-
-extern const __declspec(selectany) WCHAR RuntimeClass_CV_CAsyncAction[] = L"cv.CAsyncAction";
-
-template<typename _Function>
-class CAsyncAction
-    : public Microsoft::WRL::RuntimeClass<
-    Microsoft::WRL::RuntimeClassFlags< Microsoft::WRL::RuntimeClassType::WinRt>,
-    Microsoft::WRL::Implements<ABI::Windows::Foundation::IAsyncAction>, Microsoft::WRL::AsyncBase<ABI::Windows::Foundation::IAsyncActionCompletedHandler >>
-{
-    InspectableClass(RuntimeClass_CV_CAsyncAction, BaseTrust)
-public:
-    STDMETHOD(RuntimeClassInitialize)() { return S_OK; }
-    virtual ~CAsyncAction() {}
-    CAsyncAction(const _Function &_Func) : _M_func(_Func) {
-        Start();
-    }
-    void _SetTaskCreationAddressHint(void* _SourceAddressHint)
-    {
-        if (!(std::is_same<Concurrency_winrt::details::_TaskTypeTraits<Concurrency_winrt::task<HRESULT>>::_AsyncKind, Concurrency_winrt::details::_TypeSelectorAsyncTask>::value))
-        {
-            // Overwrite the creation address with the return address of create_async unless the
-            // lambda returned a task. If the create async lambda returns a task, that task is reused and
-            // we want to preserve its creation address hint.
-            _M_task._SetTaskCreationAddressHint(_SourceAddressHint);
-        }
-    }
-    HRESULT STDMETHODCALLTYPE put_Completed(
-        /* [in] */ __RPC__in_opt ABI::Windows::Foundation::IAsyncActionCompletedHandler *handler)
-    {
-        HRESULT hr;
-        if (SUCCEEDED(hr = PutOnComplete(handler)) && cCallbackMade_ == 0) {
-            //okay to use default implementation even for the callback as already running in context
-            //otherwise check for the alternate case and save the context
-            _M_completeDelegateContext = _ContextCallback::_CaptureCurrent();
-        }
-        return hr;
-    }
-    HRESULT STDMETHODCALLTYPE get_Completed(
-        /* [out][retval] */ __RPC__deref_out_opt ABI::Windows::Foundation::IAsyncActionCompletedHandler **handler) {
-        if (!handler) return E_POINTER;
-        return GetOnComplete(handler);
-    }
-    HRESULT STDMETHODCALLTYPE GetResults(void) {
-        HRESULT hr = CheckValidStateForResultsCall();
-        if (SUCCEEDED(hr)) {
-            _M_task.get();
-        }
-        return hr;
-    }
-    HRESULT OnStart() {
-        _M_task = Concurrency_winrt::task<HRESULT>(_M_func, _M_cts.get_token());
-        AddRef();
-        _M_task.then([this](Concurrency_winrt::task<HRESULT> _Antecedent) {
-            try {
-                HRESULT hr = _Antecedent.get();
-                if (FAILED(hr)) TryTransitionToError(hr);
-            }
-            catch (Concurrency::task_canceled&){
-            }
-            catch (...) {
-                TryTransitionToError(E_FAIL);
-            }
-            _FireCompletion();
-            Release();
-        });
-        return S_OK;
-    }
-    void OnClose() {}
-    void OnCancel() { _M_cts.cancel(); }
-
-protected:
-    //modified for _CallInContext to support UI STA thread
-    //can wrap the base clase implementation or duplicate it but must use get_Completed to fetch the private member variable
-    virtual void _FireCompletion()
-    {
-        AddRef();
-        _M_completeDelegateContext._CallInContext([this]() -> HRESULT {
-            FireCompletion();
-            Release();
-            return S_OK;
-        });
-    }
-private:
-
-    _Function _M_func;
-    Concurrency_winrt::task<HRESULT> _M_task;
-    Concurrency::cancellation_token_source _M_cts;
-    _ContextCallback        _M_completeDelegateContext;
-};
-
-template<typename _Function>
-__declspec(noinline)
-CAsyncAction<_Function>* create_async(const _Function& _Func)
-{
-    static_assert(std::is_same<decltype(_IsValidCreateAsync(_Func, 0, 0, 0, 0)), std::true_type>::value,
-        "argument to create_async must be a callable object taking zero, one or two arguments");
-    CAsyncAction<_Function>* action = Microsoft::WRL::Make<CAsyncAction<_Function>>(_Func).Detach();
-    action->_SetTaskCreationAddressHint(_ReturnAddress());
-    return action;
-}
-#endif
-
-EXTERN_C const IID IID_IMedCapFailHandler;
-
-class DECLSPEC_UUID("CE22BEDB-0B3C-4BE0-BE8F-E53AB457EA2C") DECLSPEC_NOVTABLE IMedCapFailHandler : public IUnknown
+template <class T>
+class ComPtr
 {
 public:
-    virtual HRESULT AddHandler(ABI::Windows::Media::Capture::IMediaCapture* pMedCap) = 0;
-    virtual HRESULT RemoveHandler(ABI::Windows::Media::Capture::IMediaCapture* pMedCap) = 0;
-};
+    ComPtr() throw()
+    {
+    }
+    ComPtr(int nNull) throw()
+    {
+        assert(nNull == 0);
+        p = NULL;
+    }
+    ComPtr(T* lp) throw()
+    {
+        p = lp;
+    }
+    ComPtr(_In_ const ComPtr<T>& lp) throw()
+    {
+        p = lp.p;
+    }
+    virtual ~ComPtr()
+    {
+    }
 
-template<typename _Function>
-class MediaCaptureFailedHandler :
-    public Microsoft::WRL::RuntimeClass<
-    Microsoft::WRL::RuntimeClassFlags< Microsoft::WRL::RuntimeClassType::ClassicCom>,
-    IMedCapFailHandler, ABI::Windows::Media::Capture::IMediaCaptureFailedEventHandler, IAgileObject, FtmBase>
-{
-public:
-    MediaCaptureFailedHandler(const _Function &_Func) : _M_func(_Func) { m_cookie.value = 0; }
-    HRESULT AddHandler(ABI::Windows::Media::Capture::IMediaCapture* pMedCap)
+    T** operator&() throw()
     {
-        return pMedCap->add_Failed(this, &m_cookie);
+        assert(p == NULL);
+        return p.operator&();
     }
-    HRESULT RemoveHandler(ABI::Windows::Media::Capture::IMediaCapture* pMedCap)
+    T* operator->() const throw()
     {
-        return pMedCap->remove_Failed(m_cookie);
+        assert(p != NULL);
+        return p.operator->();
     }
-    HRESULT STDMETHODCALLTYPE Invoke(
-        ABI::Windows::Media::Capture::IMediaCapture *sender,
-        ABI::Windows::Media::Capture::IMediaCaptureFailedEventArgs *errorEventArgs)
+    bool operator!() const throw()
     {
-        (void)sender;
-        (void)errorEventArgs;
-        AddRef();
-        _M_func();
-        Release();
+        return p.operator==(NULL);
+    }
+    bool operator==(_In_opt_ T* pT) const throw()
+    {
+        return p.operator==(pT);
+    }
+    // For comparison to NULL
+    bool operator==(int nNull) const
+    {
+        assert(nNull == 0);
+        return p.operator==(NULL);
+    }
+
+    bool operator!=(_In_opt_ T* pT) const throw()
+    {
+        return p.operator!=(pT);
+    }
+    operator bool()
+    {
+        return p.operator!=(NULL);
+    }
+
+    T* const* GetAddressOf() const throw()
+    {
+        return &p;
+    }
+
+    T** GetAddressOf() throw()
+    {
+        return &p;
+    }
+
+    T** ReleaseAndGetAddressOf() throw()
+    {
+        p.Release();
+        return &p;
+    }
+
+    T* Get() const throw()
+    {
+        return p;
+    }
+
+    // Attach to an existing interface (does not AddRef)
+    void Attach(_In_opt_ T* p2) throw()
+    {
+        p.Attach(p2);
+    }
+    // Detach the interface (does not Release)
+    T* Detach() throw()
+    {
+        return p.Detach();
+    }
+    _Check_return_ HRESULT CopyTo(_Deref_out_opt_ T** ppT) throw()
+    {
+        assert(ppT != NULL);
+        if (ppT == NULL)
+            return E_POINTER;
+        *ppT = p;
+        if (p != NULL)
+            p->AddRef();
         return S_OK;
     }
 
+    void Reset()
+    {
+        p.Release();
+    }
+
+    // query for U interface
+    template<typename U>
+    HRESULT As(_Inout_ U** lp) const throw()
+    {
+        return p->QueryInterface(__uuidof(U), reinterpret_cast<void**>(lp));
+    }
+    // query for U interface
+    template<typename U>
+    HRESULT As(_Out_ ComPtr<U>* lp) const throw()
+    {
+        return p->QueryInterface(__uuidof(U), reinterpret_cast<void**>(lp->ReleaseAndGetAddressOf()));
+    }
 private:
-    _Function _M_func;
-    EventRegistrationToken m_cookie;
+    _COM_SMARTPTR_TYPEDEF(T, __uuidof(T));
+    _COM_SMARTPTR_DECLARE(T, p);
 };
 
-template<typename _Function>
-__declspec(noinline)
-MediaCaptureFailedHandler<_Function>* create_medcapfailedhandler(const _Function& _Func)
-{
-    return Microsoft::WRL::Make<MediaCaptureFailedHandler<_Function>>(_Func).Detach();
-}
-
+#define _ComPtr ComPtr
 #endif
 
 template <class TBase=IMFAttributes>
@@ -946,7 +1066,7 @@ done:
     }
 
 protected:
-    ComPtr<IMFAttributes> _spAttributes;
+    _ComPtr<IMFAttributes> _spAttributes;
 };
 
 class StreamSink :
@@ -966,7 +1086,11 @@ class StreamSink :
 {
 public:
     // IUnknown methods
+#if defined(_MSC_VER) && _MSC_VER >= 1700  // '_Outptr_result_nullonfailure_' SAL is avaialable since VS 2012
     STDMETHOD(QueryInterface)(REFIID riid, _Outptr_result_nullonfailure_ void **ppv)
+#else
+    STDMETHOD(QueryInterface)(REFIID riid, void **ppv)
+#endif
     {
         if (ppv == nullptr) {
             return E_POINTER;
@@ -1005,11 +1129,11 @@ public:
 #ifdef HAVE_WINRT
     STDMETHOD(RuntimeClassInitialize)() { return S_OK; }
 #else
-    ULONG AddRef()
+    ULONG STDMETHODCALLTYPE AddRef()
     {
         return InterlockedIncrement(&m_cRef);
     }
-    ULONG Release()
+    ULONG STDMETHODCALLTYPE Release()
     {
         ULONG cRef = InterlockedDecrement(&m_cRef);
         if (cRef == 0)
@@ -1025,7 +1149,7 @@ public:
         if (m_spFTM == nullptr) {
             EnterCriticalSection(&m_critSec);
             if (m_spFTM == nullptr) {
-                hr = CoCreateFreeThreadedMarshaler(static_cast<IMFStreamSink*>(this), &m_spFTM);
+                hr = CoCreateFreeThreadedMarshaler((IMFStreamSink*)this, &m_spFTM);
             }
             LeaveCriticalSection(&m_critSec);
         }
@@ -1061,14 +1185,12 @@ public:
         InitializeCriticalSectionEx(&m_critSec, 3000, 0);
         ZeroMemory(&m_guiCurrentSubtype, sizeof(m_guiCurrentSubtype));
         CBaseAttributes::Initialize(0U);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"StreamSink::StreamSink\n");
+        DebugPrintOut(L"StreamSink::StreamSink\n");
     }
     virtual ~StreamSink() {
         DeleteCriticalSection(&m_critSec);
         assert(m_IsShutdown);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"StreamSink::~StreamSink\n");
+        DebugPrintOut(L"StreamSink::~StreamSink\n");
     }
 
     HRESULT Initialize()
@@ -1078,7 +1200,7 @@ public:
         hr = MFCreateEventQueue(&m_spEventQueue);
         if (SUCCEEDED(hr))
         {
-            ComPtr<IMFMediaSink> pMedSink;
+            _ComPtr<IMFMediaSink> pMedSink;
             hr = CBaseAttributes<>::GetUnknown(MF_STREAMSINK_MEDIASINKINTERFACE, __uuidof(IMFMediaSink), (LPVOID*)pMedSink.GetAddressOf());
             assert(pMedSink.Get() != NULL);
             if (SUCCEEDED(hr)) {
@@ -1102,10 +1224,8 @@ public:
     // Called when the presentation clock starts.
     HRESULT Start(MFTIME start)
     {
-        EnterCriticalSection(&m_critSec);
-
         HRESULT hr = S_OK;
-
+        EnterCriticalSection(&m_critSec);
         if (m_state != State_TypeNotSet) {
             if (start != PRESENTATION_CURRENT_POSITION)
             {
@@ -1184,7 +1304,7 @@ public:
     // Shuts down the stream sink.
     HRESULT Shutdown()
     {
-        ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
+        _ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
         HRESULT hr = S_OK;
         assert(!m_IsShutdown);
         hr = m_pParent->GetUnknown(MF_MEDIASINK_SAMPLEGRABBERCALLBACK, IID_IMFSampleGrabberSinkCallback, (LPVOID*)pSampleCallback.GetAddressOf());
@@ -1217,7 +1337,7 @@ public:
 
         if (SUCCEEDED(hr))
         {
-            ComPtr<IMFMediaSink> pMedSink;
+            _ComPtr<IMFMediaSink> pMedSink;
             hr = CBaseAttributes<>::GetUnknown(MF_STREAMSINK_MEDIASINKINTERFACE, __uuidof(IMFMediaSink), (LPVOID*)pMedSink.GetAddressOf());
             if (SUCCEEDED(hr)) {
                 *ppMediaSink = pMedSink.Detach();
@@ -1225,8 +1345,7 @@ public:
         }
 
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"StreamSink::GetMediaSink: HRESULT=%i\n", hr);
+        DebugPrintOut(L"StreamSink::GetMediaSink: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -1247,8 +1366,7 @@ public:
         }
 
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"StreamSink::GetIdentifier: HRESULT=%i\n", hr);
+        DebugPrintOut(L"StreamSink::GetIdentifier: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -1270,14 +1388,13 @@ public:
         }
 
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"StreamSink::GetMediaTypeHandler: HRESULT=%i\n", hr);
+        DebugPrintOut(L"StreamSink::GetMediaTypeHandler: HRESULT=%i\n", hr);
         return hr;
     }
 
     HRESULT STDMETHODCALLTYPE ProcessSample(IMFSample *pSample) {
-        ComPtr<IMFMediaBuffer> pInput;
-        ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
+        _ComPtr<IMFMediaBuffer> pInput;
+        _ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
         BYTE *pSrc = NULL;          // Source buffer.
         // Stride if the buffer does not support IMF2DBuffer
         LONGLONG hnsTime = 0;
@@ -1334,6 +1451,7 @@ public:
         /* [in] */ MFSTREAMSINK_MARKER_TYPE eMarkerType,
         /* [in] */ __RPC__in const PROPVARIANT * /*pvarMarkerValue*/,
         /* [in] */ __RPC__in const PROPVARIANT * /*pvarContextValue*/) {
+        eMarkerType;
         EnterCriticalSection(&m_critSec);
 
         HRESULT hr = S_OK;
@@ -1345,12 +1463,12 @@ public:
 
         if (SUCCEEDED(hr))
         {
+            //at shutdown will receive MFSTREAMSINK_MARKER_ENDOFSEGMENT
             hr = QueueEvent(MEStreamSinkRequestSample, GUID_NULL, S_OK, NULL);
         }
 
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"StreamSink::PlaceMarker: HRESULT=%i %s\n", hr, StreamSinkMarkerTypeMap.at(eMarkerType).c_str());
+        DebugPrintOut(L"StreamSink::PlaceMarker: HRESULT=%i %s\n", hr, StreamSinkMarkerTypeMap.at(eMarkerType).c_str());
         return hr;
     }
 
@@ -1364,8 +1482,7 @@ public:
         }
 
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"StreamSink::Flush: HRESULT=%i\n", hr);
+        DebugPrintOut(L"StreamSink::Flush: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -1378,7 +1495,7 @@ public:
 
         HRESULT hr = S_OK;
 
-        ComPtr<IMFMediaEventQueue> pQueue;
+        _ComPtr<IMFMediaEventQueue> pQueue;
 
         {
             EnterCriticalSection(&m_critSec);
@@ -1403,13 +1520,12 @@ public:
         if (SUCCEEDED(hr) && SUCCEEDED((*ppEvent)->GetType(&meType)) && meType == MEStreamSinkStopped) {
         }
         HRESULT hrStatus = S_OK;
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
         if (SUCCEEDED(hr))
             hr = (*ppEvent)->GetStatus(&hrStatus);
         if (SUCCEEDED(hr))
-            DPO->printOut(L"StreamSink::GetEvent: HRESULT=%i %s\n", hrStatus, MediaEventTypeMap.at(meType).c_str());
+            DebugPrintOut(L"StreamSink::GetEvent: HRESULT=%i %s\n", hrStatus, MediaEventTypeMap.at(meType).c_str());
         else
-            DPO->printOut(L"StreamSink::GetEvent: HRESULT=%i\n", hr);
+            DebugPrintOut(L"StreamSink::GetEvent: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -1426,8 +1542,7 @@ public:
             hr = m_spEventQueue->BeginGetEvent(pCallback, punkState);
         }
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"StreamSink::BeginGetEvent: HRESULT=%i\n", hr);
+        DebugPrintOut(L"StreamSink::BeginGetEvent: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -1449,14 +1564,13 @@ public:
         }
 
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
         HRESULT hrStatus = S_OK;
         if (SUCCEEDED(hr))
             hr = (*ppEvent)->GetStatus(&hrStatus);
         if (SUCCEEDED(hr))
-            DPO->printOut(L"StreamSink::EndGetEvent: HRESULT=%i %s\n", hrStatus, MediaEventTypeMap.at(meType).c_str());
+            DebugPrintOut(L"StreamSink::EndGetEvent: HRESULT=%i %s\n", hrStatus, MediaEventTypeMap.at(meType).c_str());
         else
-            DPO->printOut(L"StreamSink::EndGetEvent: HRESULT=%i\n", hr);
+            DebugPrintOut(L"StreamSink::EndGetEvent: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -1475,9 +1589,8 @@ public:
         }
 
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"StreamSink::QueueEvent: HRESULT=%i %s\n", hrStatus, MediaEventTypeMap.at(met).c_str());
-        DPO->printOut(L"StreamSink::QueueEvent: HRESULT=%i\n", hr);
+        DebugPrintOut(L"StreamSink::QueueEvent: HRESULT=%i %s\n", hrStatus, MediaEventTypeMap.at(met).c_str());
+        DebugPrintOut(L"StreamSink::QueueEvent: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -1522,13 +1635,14 @@ public:
                 hr = MF_E_INVALIDTYPE;
             }
         }
+        // We don't return any "close match" types.
         if (ppMediaType)
         {
             *ppMediaType = nullptr;
         }
 
         if (ppMediaType && SUCCEEDED(hr)) {
-            ComPtr<IMFMediaType> pType;
+            _ComPtr<IMFMediaType> pType;
             hr = MFCreateMediaType(ppMediaType);
             if (SUCCEEDED(hr)) {
                 hr = m_pParent->GetUnknown(MF_MEDIASINK_PREFERREDTYPE, __uuidof(IMFMediaType), (LPVOID*)&pType);
@@ -1558,8 +1672,7 @@ public:
             }
         }
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"StreamSink::IsMediaTypeSupported: HRESULT=%i\n", hr);
+        DebugPrintOut(L"StreamSink::IsMediaTypeSupported: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -1583,8 +1696,7 @@ public:
         }
 
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"StreamSink::GetMediaTypeCount: HRESULT=%i\n", hr);
+        DebugPrintOut(L"StreamSink::GetMediaTypeCount: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -1609,7 +1721,7 @@ public:
             //return preferred type based on media capture library 6 elements preferred preview type
             //hr = m_spCurrentType.CopyTo(ppType);
             if (SUCCEEDED(hr)) {
-                ComPtr<IMFMediaType> pType;
+                _ComPtr<IMFMediaType> pType;
                 hr = MFCreateMediaType(ppType);
                 if (SUCCEEDED(hr)) {
                     hr = m_pParent->GetUnknown(MF_MEDIASINK_PREFERREDTYPE, __uuidof(IMFMediaType), (LPVOID*)&pType);
@@ -1641,8 +1753,7 @@ public:
         }
 
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"StreamSink::GetMediaTypeByIndex: HRESULT=%i\n", hr);
+        DebugPrintOut(L"StreamSink::GetMediaTypeByIndex: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -1674,9 +1785,6 @@ public:
 
         if (SUCCEEDED(hr))
         {
-            GUID guiMajorType;
-            pMediaType->GetMajorType(&guiMajorType);
-
             hr = MFCreateMediaType(m_spCurrentType.ReleaseAndGetAddressOf());
             if (SUCCEEDED(hr))
             {
@@ -1686,7 +1794,11 @@ public:
             {
                 hr = m_spCurrentType->GetGUID(MF_MT_SUBTYPE, &m_guiCurrentSubtype);
             }
+            GUID guid;
             if (SUCCEEDED(hr)) {
+                hr = m_spCurrentType->GetMajorType(&guid);
+            }
+            if (SUCCEEDED(hr) && guid == MFMediaType_Video) {
                 hr = MFGetAttributeSize(m_spCurrentType.Get(), MF_MT_FRAME_SIZE, &m_imageWidthInPixels, &m_imageHeightInPixels);
             }
             if (SUCCEEDED(hr))
@@ -1696,8 +1808,7 @@ public:
         }
 
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"StreamSink::SetCurrentMediaType: HRESULT=%i\n", hr);
+        DebugPrintOut(L"StreamSink::SetCurrentMediaType: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -1723,8 +1834,7 @@ public:
         }
 
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"StreamSink::GetCurrentMediaType: HRESULT=%i\n", hr);
+        DebugPrintOut(L"StreamSink::GetCurrentMediaType: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -1737,13 +1847,12 @@ public:
             return E_INVALIDARG;
         }
 
-        ComPtr<IMFMediaType> pType;
+        _ComPtr<IMFMediaType> pType;
         hr = m_pParent->GetUnknown(MF_MEDIASINK_PREFERREDTYPE, __uuidof(IMFMediaType), (LPVOID*)&pType);
         if (SUCCEEDED(hr)) {
             hr = pType->GetMajorType(pguidMajorType);
         }
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"StreamSink::GetMajorType: HRESULT=%i\n", hr);
+        DebugPrintOut(L"StreamSink::GetMajorType: HRESULT=%i\n", hr);
         return hr;
     }
 private:
@@ -1759,10 +1868,10 @@ private:
     long m_cRef;
 #endif
     IMFAttributes*        m_pParent;
-    ComPtr<IMFMediaType>        m_spCurrentType;
-    ComPtr<IMFMediaEventQueue>  m_spEventQueue;              // Event queue
+    _ComPtr<IMFMediaType>        m_spCurrentType;
+    _ComPtr<IMFMediaEventQueue>  m_spEventQueue;              // Event queue
 
-    ComPtr<IUnknown>            m_spFTM;
+    _ComPtr<IUnknown>            m_spFTM;
     State                       m_state;
     bool                        m_fGetStartTimeFromSample;
     bool                        m_fWaitingForFirstSample;
@@ -2185,6 +2294,11 @@ public:
 // succeed but return a nullptr pointer. By default, the list does not allow nullptr
 // pointers.
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4127) // constant expression
+#endif
+
 template <class T, bool NULLABLE = FALSE>
 class ComPtrList : public List<T*>
 {
@@ -2275,6 +2389,10 @@ protected:
     }
 };
 
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 /* Be sure to declare webcam device capability in manifest
   For better media capture support, add the following snippet with correct module name to the project manifest
     (videoio needs DLL activation class factoryentry points):
@@ -2296,7 +2414,7 @@ class MediaSink :
     Microsoft::WRL::Implements<ABI::Windows::Media::IMediaExtension>,
     IMFMediaSink,
     IMFClockStateSink,
-    FtmBase,
+    Microsoft::WRL::FtmBase,
     CBaseAttributes<>>
 #else
     public IMFMediaSink, public IMFClockStateSink, public CBaseAttributes<>
@@ -2307,11 +2425,11 @@ class MediaSink :
 public:
 #else
 public:
-    ULONG AddRef()
+    ULONG STDMETHODCALLTYPE AddRef()
     {
         return InterlockedIncrement(&m_cRef);
     }
-    ULONG Release()
+    ULONG STDMETHODCALLTYPE Release()
     {
         ULONG cRef = InterlockedDecrement(&m_cRef);
         if (cRef == 0)
@@ -2320,7 +2438,11 @@ public:
         }
         return cRef;
     }
+#if defined(_MSC_VER) && _MSC_VER >= 1700  // '_Outptr_result_nullonfailure_' SAL is avaialable since VS 2012
     STDMETHOD(QueryInterface)(REFIID riid, _Outptr_result_nullonfailure_ void **ppv)
+#else
+    STDMETHOD(QueryInterface)(REFIID riid, void **ppv)
+#endif
     {
         if (ppv == nullptr) {
             return E_POINTER;
@@ -2347,13 +2469,11 @@ public:
     MediaSink() : m_IsShutdown(false), m_llStartTime(0) {
         CBaseAttributes<>::Initialize(0U);
         InitializeCriticalSectionEx(&m_critSec, 3000, 0);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::MediaSink\n");
+        DebugPrintOut(L"MediaSink::MediaSink\n");
     }
 
     virtual ~MediaSink() {
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::~MediaSink\n");
+        DebugPrintOut(L"MediaSink::~MediaSink\n");
         DeleteCriticalSection(&m_critSec);
         assert(m_IsShutdown);
     }
@@ -2376,7 +2496,7 @@ public:
             Microsoft::WRL::ComPtr<IInspectable> spInsp;
             Microsoft::WRL::ComPtr<ABI::Windows::Foundation::Collections::IMap<HSTRING, IInspectable *>> spSetting;
             Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IPropertyValue> spPropVal;
-            ComPtr<ABI::Windows::Media::MediaProperties::IMediaEncodingProperties> pMedEncProps;
+            Microsoft::WRL::ComPtr<ABI::Windows::Media::MediaProperties::IMediaEncodingProperties> pMedEncProps;
             UINT32 uiType = ABI::Windows::Media::Capture::MediaStreamType_VideoPreview;
 
             hr = pConfiguration->QueryInterface(IID_PPV_ARGS(&spSetting));
@@ -2385,7 +2505,7 @@ public:
             }
 
             if (SUCCEEDED(hr)) {
-                hr = spSetting->Lookup(HStringReference(MF_PROP_SAMPLEGRABBERCALLBACK).Get(), spInsp.ReleaseAndGetAddressOf());
+                hr = spSetting->Lookup(Microsoft::WRL::Wrappers::HStringReference(MF_PROP_SAMPLEGRABBERCALLBACK).Get(), spInsp.ReleaseAndGetAddressOf());
                 if (FAILED(hr)) {
                     hr = E_INVALIDARG;
                 }
@@ -2394,7 +2514,7 @@ public:
                 }
             }
             if (SUCCEEDED(hr)) {
-                hr = spSetting->Lookup(HStringReference(MF_PROP_VIDTYPE).Get(), spInsp.ReleaseAndGetAddressOf());
+                hr = spSetting->Lookup(Microsoft::WRL::Wrappers::HStringReference(MF_PROP_VIDTYPE).Get(), spInsp.ReleaseAndGetAddressOf());
                 if (FAILED(hr)) {
                     hr = E_INVALIDARG;
                 }
@@ -2405,7 +2525,7 @@ public:
                 }
             }
             if (SUCCEEDED(hr)) {
-                hr = spSetting->Lookup(HStringReference(MF_PROP_VIDENCPROPS).Get(), spInsp.ReleaseAndGetAddressOf());
+                hr = spSetting->Lookup(Microsoft::WRL::Wrappers::HStringReference(MF_PROP_VIDENCPROPS).Get(), spInsp.ReleaseAndGetAddressOf());
                 if (FAILED(hr)) {
                     hr = E_INVALIDARG;
                 }
@@ -2480,14 +2600,13 @@ public:
 
             case ABI::Windows::Foundation::PropertyType_String:
             {
-                                                                  HSTRING value;
-                                                                  hr = pValue->GetString(&value);
+                        Microsoft::WRL::Wrappers::HString value;
+                        hr = pValue->GetString(value.GetAddressOf());
                                                                   if (SUCCEEDED(hr))
                                                                   {
                                                                       UINT32 len = 0;
-                                                                      LPCWSTR szValue = WindowsGetStringRawBuffer(value, &len);
+                            LPCWSTR szValue = WindowsGetStringRawBuffer(value.Get(), &len);
                                                                       hr = pAttr->SetString(guidKey, szValue);
-                                                                      WindowsDeleteString(value);
                                                                   }
             }
                 break;
@@ -2516,7 +2635,7 @@ public:
 
             case ABI::Windows::Foundation::PropertyType_Inspectable:
             {
-                                                                       ComPtr<IInspectable> value;
+                                                                       Microsoft::WRL::ComPtr<IInspectable> value;
                                                                        hr = TYPE_E_TYPEMISMATCH;
                                                                        if (SUCCEEDED(hr))
                                                                        {
@@ -2534,10 +2653,10 @@ public:
     static HRESULT ConvertPropertiesToMediaType(_In_ ABI::Windows::Media::MediaProperties::IMediaEncodingProperties *pMEP, _Outptr_ IMFMediaType **ppMT)
     {
         HRESULT hr = S_OK;
-        ComPtr<IMFMediaType> spMT;
-        ComPtr<ABI::Windows::Foundation::Collections::IMap<GUID, IInspectable*>> spMap;
-        ComPtr<ABI::Windows::Foundation::Collections::IIterable<ABI::Windows::Foundation::Collections::IKeyValuePair<GUID, IInspectable*>*>> spIterable;
-        ComPtr<ABI::Windows::Foundation::Collections::IIterator<ABI::Windows::Foundation::Collections::IKeyValuePair<GUID, IInspectable*>*>> spIterator;
+        _ComPtr<IMFMediaType> spMT;
+        Microsoft::WRL::ComPtr<ABI::Windows::Foundation::Collections::IMap<GUID, IInspectable*>> spMap;
+        Microsoft::WRL::ComPtr<ABI::Windows::Foundation::Collections::IIterable<ABI::Windows::Foundation::Collections::IKeyValuePair<GUID, IInspectable*>*>> spIterable;
+        Microsoft::WRL::ComPtr<ABI::Windows::Foundation::Collections::IIterator<ABI::Windows::Foundation::Collections::IKeyValuePair<GUID, IInspectable*>*>> spIterator;
 
         if (pMEP == nullptr || ppMT == nullptr)
         {
@@ -2545,7 +2664,7 @@ public:
         }
         *ppMT = nullptr;
 
-        hr = pMEP->get_Properties(&spMap);
+                hr = pMEP->get_Properties(spMap.GetAddressOf());
 
         if (SUCCEEDED(hr))
         {
@@ -2568,9 +2687,9 @@ public:
 
         while (hasCurrent)
         {
-            ComPtr<ABI::Windows::Foundation::Collections::IKeyValuePair<GUID, IInspectable*> > spKeyValuePair;
-            ComPtr<IInspectable> spValue;
-            ComPtr<ABI::Windows::Foundation::IPropertyValue> spPropValue;
+            Microsoft::WRL::ComPtr<ABI::Windows::Foundation::Collections::IKeyValuePair<GUID, IInspectable*> > spKeyValuePair;
+            Microsoft::WRL::ComPtr<IInspectable> spValue;
+            Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IPropertyValue> spPropValue;
             GUID guidKey;
 
             hr = spIterator->get_Current(&spKeyValuePair);
@@ -2609,8 +2728,8 @@ public:
 
         if (SUCCEEDED(hr))
         {
-            ComPtr<IInspectable> spValue;
-            ComPtr<ABI::Windows::Foundation::IPropertyValue> spPropValue;
+            Microsoft::WRL::ComPtr<IInspectable> spValue;
+            Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IPropertyValue> spPropValue;
             GUID guiMajorType;
 
             hr = spMap->Lookup(MF_MT_MAJOR_TYPE, spValue.GetAddressOf());
@@ -2639,12 +2758,12 @@ public:
 
         return hr;
     }
-    HRESULT SetMediaStreamProperties(
-        ABI::Windows::Media::Capture::MediaStreamType MediaStreamType,
+            //this should be passed through SetProperties!
+            HRESULT SetMediaStreamProperties(ABI::Windows::Media::Capture::MediaStreamType MediaStreamType,
         _In_opt_ ABI::Windows::Media::MediaProperties::IMediaEncodingProperties *mediaEncodingProperties)
     {
         HRESULT hr = S_OK;
-        ComPtr<IMFMediaType> spMediaType;
+        _ComPtr<IMFMediaType> spMediaType;
 
         if (MediaStreamType != ABI::Windows::Media::Capture::MediaStreamType_VideoPreview &&
             MediaStreamType != ABI::Windows::Media::Capture::MediaStreamType_VideoRecord &&
@@ -2657,7 +2776,7 @@ public:
 
         if (mediaEncodingProperties != nullptr)
         {
-            ComPtr<IMFStreamSink> spStreamSink;
+            _ComPtr<IMFStreamSink> spStreamSink;
             hr = ConvertPropertiesToMediaType(mediaEncodingProperties, &spMediaType);
             if (SUCCEEDED(hr))
             {
@@ -2678,18 +2797,18 @@ public:
         if (pdwCharacteristics == NULL) return E_INVALIDARG;
         EnterCriticalSection(&m_critSec);
         if (SUCCEEDED(hr = CheckShutdown())) {
-            *pdwCharacteristics = MEDIASINK_FIXED_STREAMS;
+                    //if had an activation object for the sink, shut down would be managed and MF_STREAM_SINK_SUPPORTS_ROTATION appears to be setable to TRUE
+                    *pdwCharacteristics = MEDIASINK_FIXED_STREAMS;// | MEDIASINK_REQUIRE_REFERENCE_MEDIATYPE;
         }
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::GetCharacteristics: HRESULT=%i\n", hr);
-        return S_OK;
+        DebugPrintOut(L"MediaSink::GetCharacteristics: HRESULT=%i\n", hr);
+        return hr;
     }
 
     HRESULT STDMETHODCALLTYPE AddStreamSink(
         DWORD dwStreamSinkIdentifier, IMFMediaType * /*pMediaType*/, IMFStreamSink **ppStreamSink) {
-        ComPtr<IMFStreamSink> spMFStream;
-        ComPtr<ICustomStreamSink> pStream;
+        _ComPtr<IMFStreamSink> spMFStream;
+        _ComPtr<ICustomStreamSink> pStream;
         EnterCriticalSection(&m_critSec);
         HRESULT hr = CheckShutdown();
 
@@ -2729,7 +2848,7 @@ public:
         }
 
         // Initialize the stream.
-        ComPtr<IMFAttributes> pAttr;
+        _ComPtr<IMFAttributes> pAttr;
         if (SUCCEEDED(hr)) {
             hr = pStream.As(&pAttr);
         }
@@ -2752,7 +2871,7 @@ public:
             for (; pos != posEnd; pos = m_streams.Next(pos))
             {
                 DWORD dwCurrId;
-                ComPtr<IMFStreamSink> spCurr;
+                _ComPtr<IMFStreamSink> spCurr;
                 hr = m_streams.GetItemPos(pos, &spCurr);
                 if (FAILED(hr))
                 {
@@ -2781,8 +2900,7 @@ public:
             *ppStreamSink = spMFStream.Detach();
         }
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::AddStreamSink: HRESULT=%i\n", hr);
+        DebugPrintOut(L"MediaSink::AddStreamSink: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -2791,7 +2909,7 @@ public:
         HRESULT hr = CheckShutdown();
         ComPtrList<IMFStreamSink>::POSITION pos = m_streams.FrontPosition();
         ComPtrList<IMFStreamSink>::POSITION endPos = m_streams.EndPosition();
-        ComPtr<IMFStreamSink> spStream;
+        _ComPtr<IMFStreamSink> spStream;
 
         if (SUCCEEDED(hr))
         {
@@ -2821,11 +2939,18 @@ public:
         if (SUCCEEDED(hr))
         {
             hr = m_streams.Remove(pos, nullptr);
-            static_cast<StreamSink *>(spStream.Get())->Shutdown();
+                    _ComPtr<ICustomStreamSink> spCustomSink;
+#ifdef HAVE_WINRT
+                    spCustomSink = static_cast<StreamSink*>(spStream.Get());
+                    hr = S_OK;
+#else
+                    hr = spStream.As(&spCustomSink);
+#endif
+                    if (SUCCEEDED(hr))
+                        hr = spCustomSink->Shutdown();
         }
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::RemoveStreamSink: HRESULT=%i\n", hr);
+        DebugPrintOut(L"MediaSink::RemoveStreamSink: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -2845,8 +2970,7 @@ public:
         }
 
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::GetStreamSinkCount: HRESULT=%i\n", hr);
+        DebugPrintOut(L"MediaSink::GetStreamSinkCount: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -2857,7 +2981,7 @@ public:
             return E_INVALIDARG;
         }
 
-        ComPtr<IMFStreamSink> spStream;
+        _ComPtr<IMFStreamSink> spStream;
         EnterCriticalSection(&m_critSec);
         DWORD cStreams = m_streams.GetCount();
 
@@ -2894,8 +3018,7 @@ public:
             *ppStreamSink = spStream.Detach();
         }
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::GetStreamSinkByIndex: HRESULT=%i\n", hr);
+        DebugPrintOut(L"MediaSink::GetStreamSinkByIndex: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -2908,7 +3031,7 @@ public:
 
         EnterCriticalSection(&m_critSec);
         HRESULT hr = CheckShutdown();
-        ComPtr<IMFStreamSink> spResult;
+        _ComPtr<IMFStreamSink> spResult;
 
         if (SUCCEEDED(hr))
         {
@@ -2917,7 +3040,7 @@ public:
 
             for (; pos != endPos; pos = m_streams.Next(pos))
             {
-                ComPtr<IMFStreamSink> spStream;
+                _ComPtr<IMFStreamSink> spStream;
                 hr = m_streams.GetItemPos(pos, &spStream);
                 DWORD dwId;
 
@@ -2950,8 +3073,7 @@ public:
             *ppStreamSink = spResult.Detach();
         }
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::GetStreamSinkById: HRESULT=%i\n", hr);
+        DebugPrintOut(L"MediaSink::GetStreamSinkById: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -2976,7 +3098,7 @@ public:
             }
         }
 
-        ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
+        _ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
         if (SUCCEEDED(hr)) {
             // Release the pointer to the old clock.
             // Store the pointer to the new clock.
@@ -2986,8 +3108,7 @@ public:
         LeaveCriticalSection(&m_critSec);
         if (SUCCEEDED(hr))
             hr = pSampleCallback->OnSetPresentationClock(pPresentationClock);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::SetPresentationClock: HRESULT=%i\n", hr);
+        DebugPrintOut(L"MediaSink::SetPresentationClock: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -3010,8 +3131,7 @@ public:
             }
         }
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::GetPresentationClock: HRESULT=%i\n", hr);
+        DebugPrintOut(L"MediaSink::GetPresentationClock: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -3025,13 +3145,16 @@ public:
             m_streams.Clear();
             m_spClock.ReleaseAndGetAddressOf();
 
+                    _ComPtr<IMFMediaType> pType;
+                    hr = CBaseAttributes<>::GetUnknown(MF_MEDIASINK_PREFERREDTYPE, __uuidof(IMFMediaType), (LPVOID*)pType.GetAddressOf());
+                    if (SUCCEEDED(hr)) {
             hr = DeleteItem(MF_MEDIASINK_PREFERREDTYPE);
+                    }
             m_IsShutdown = true;
         }
 
         LeaveCriticalSection(&m_critSec);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::Shutdown: HRESULT=%i\n", hr);
+        DebugPrintOut(L"MediaSink::Shutdown: HRESULT=%i\n", hr);
         return hr;
     }
     class ShutdownFunc
@@ -3039,8 +3162,16 @@ public:
     public:
         HRESULT operator()(IMFStreamSink *pStream) const
         {
-            static_cast<StreamSink *>(pStream)->Shutdown();
-            return S_OK;
+                    _ComPtr<ICustomStreamSink> spCustomSink;
+                    HRESULT hr;
+#ifdef HAVE_WINRT
+                    spCustomSink = static_cast<StreamSink*>(pStream);
+#else
+                    hr = pStream->QueryInterface(IID_PPV_ARGS(spCustomSink.GetAddressOf()));
+                    if (FAILED(hr)) return hr;
+#endif
+                    hr = spCustomSink->Shutdown();
+                    return hr;
         }
     };
 
@@ -3054,7 +3185,16 @@ public:
 
         HRESULT operator()(IMFStreamSink *pStream) const
         {
-            return static_cast<StreamSink *>(pStream)->Start(_llStartTime);
+                    _ComPtr<ICustomStreamSink> spCustomSink;
+                    HRESULT hr;
+#ifdef HAVE_WINRT
+                    spCustomSink = static_cast<StreamSink*>(pStream);
+#else
+                    hr = pStream->QueryInterface(IID_PPV_ARGS(spCustomSink.GetAddressOf()));
+                    if (FAILED(hr)) return hr;
+#endif
+                    hr = spCustomSink->Start(_llStartTime);
+                    return hr;
         }
 
         LONGLONG _llStartTime;
@@ -3065,7 +3205,16 @@ public:
     public:
         HRESULT operator()(IMFStreamSink *pStream) const
         {
-            return static_cast<StreamSink *>(pStream)->Stop();
+                    _ComPtr<ICustomStreamSink> spCustomSink;
+                    HRESULT hr;
+#ifdef HAVE_WINRT
+                    spCustomSink = static_cast<StreamSink*>(pStream);
+#else
+                    hr = pStream->QueryInterface(IID_PPV_ARGS(spCustomSink.GetAddressOf()));
+                    if (FAILED(hr)) return hr;
+#endif
+                    hr = spCustomSink->Stop();
+                    return hr;
         }
     };
 
@@ -3078,7 +3227,7 @@ public:
 
         for (; pos != endPos; pos = col.Next(pos))
         {
-            ComPtr<T> spStream;
+            _ComPtr<T> spStream;
 
             hr = col.GetItemPos(pos, &spStream);
             if (FAILED(hr))
@@ -3104,14 +3253,13 @@ public:
             m_llStartTime = llClockStartOffset;
             hr = ForEach(m_streams, StartFunc(llClockStartOffset));
         }
-        ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
+        _ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
         if (SUCCEEDED(hr))
             hr = GetUnknown(MF_MEDIASINK_SAMPLEGRABBERCALLBACK, IID_IMFSampleGrabberSinkCallback, (LPVOID*)pSampleCallback.GetAddressOf());
         LeaveCriticalSection(&m_critSec);
         if (SUCCEEDED(hr))
             hr = pSampleCallback->OnClockStart(hnsSystemTime, llClockStartOffset);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::OnClockStart: HRESULT=%i\n", hr);
+        DebugPrintOut(L"MediaSink::OnClockStart: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -3125,38 +3273,35 @@ public:
             // Stop each stream
             hr = ForEach(m_streams, StopFunc());
         }
-        ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
+        _ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
         if (SUCCEEDED(hr))
             hr = GetUnknown(MF_MEDIASINK_SAMPLEGRABBERCALLBACK, IID_IMFSampleGrabberSinkCallback, (LPVOID*)pSampleCallback.GetAddressOf());
         LeaveCriticalSection(&m_critSec);
         if (SUCCEEDED(hr))
             hr = pSampleCallback->OnClockStop(hnsSystemTime);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::OnClockStop: HRESULT=%i\n", hr);
+        DebugPrintOut(L"MediaSink::OnClockStop: HRESULT=%i\n", hr);
         return hr;
     }
 
     HRESULT STDMETHODCALLTYPE OnClockPause(
         MFTIME hnsSystemTime) {
         HRESULT hr;
-        ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
+        _ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
         hr = GetUnknown(MF_MEDIASINK_SAMPLEGRABBERCALLBACK, IID_IMFSampleGrabberSinkCallback, (LPVOID*)pSampleCallback.GetAddressOf());
         if (SUCCEEDED(hr))
             hr = pSampleCallback->OnClockPause(hnsSystemTime);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::OnClockPause: HRESULT=%i\n", hr);
+        DebugPrintOut(L"MediaSink::OnClockPause: HRESULT=%i\n", hr);
         return hr;
     }
 
     HRESULT STDMETHODCALLTYPE OnClockRestart(
         MFTIME hnsSystemTime) {
            HRESULT hr;
-        ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
+        _ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
         hr = GetUnknown(MF_MEDIASINK_SAMPLEGRABBERCALLBACK, IID_IMFSampleGrabberSinkCallback, (LPVOID*)pSampleCallback.GetAddressOf());
         if (SUCCEEDED(hr))
             hr = pSampleCallback->OnClockRestart(hnsSystemTime);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::OnClockRestart: HRESULT=%i\n", hr);
+        DebugPrintOut(L"MediaSink::OnClockRestart: HRESULT=%i\n", hr);
         return hr;
     }
 
@@ -3164,12 +3309,11 @@ public:
         MFTIME hnsSystemTime,
         float flRate) {
            HRESULT hr;
-        ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
+        _ComPtr<IMFSampleGrabberSinkCallback> pSampleCallback;
         hr = GetUnknown(MF_MEDIASINK_SAMPLEGRABBERCALLBACK, IID_IMFSampleGrabberSinkCallback, (LPVOID*)pSampleCallback.GetAddressOf());
         if (SUCCEEDED(hr))
             hr = pSampleCallback->OnClockSetRate(hnsSystemTime, flRate);
-        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-        DPO->printOut(L"MediaSink::OnClockSetRate: HRESULT=%i\n", hr);
+        DebugPrintOut(L"MediaSink::OnClockSetRate: HRESULT=%i\n", hr);
         return hr;
     }
 private:
@@ -3179,7 +3323,7 @@ private:
     CRITICAL_SECTION            m_critSec;
     bool                        m_IsShutdown;
     ComPtrList<IMFStreamSink>    m_streams;
-    ComPtr<IMFPresentationClock>    m_spClock;
+    _ComPtr<IMFPresentationClock>    m_spClock;
     LONGLONG                        m_llStartTime;
 };
 
