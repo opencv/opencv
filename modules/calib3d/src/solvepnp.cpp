@@ -113,10 +113,10 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
         upnp PnP(cameraMatrix, opoints, ipoints);
 
         cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
-		double f = PnP.compute_pose(R, tvec);
-		cv::Rodrigues(R, rvec);
-		cameraMatrix.at<double>(0,0) = cameraMatrix.at<double>(1,1) = f;
-		return true;
+        double f = PnP.compute_pose(R, tvec);
+        cv::Rodrigues(R, rvec);
+        cameraMatrix.at<double>(0,0) = cameraMatrix.at<double>(1,1) = f;
+        return true;
     }
     else
         CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, SOLVEPNP_EPNP or SOLVEPNP_DLS");
