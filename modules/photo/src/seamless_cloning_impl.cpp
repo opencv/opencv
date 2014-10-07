@@ -81,141 +81,76 @@ void Cloning::computeLaplacianY( const Mat &img, Mat &laplacianY)
     filter2D(img, laplacianY, CV_32F, kernel);
 }
 
-void Cloning::dst(const std::vector<float>& mod_diff, std::vector<float>& sineTransform,int h,int w)
+void Cloning::dst(const Mat& src, Mat& dest, bool invert)
 {
+    Mat temp = Mat::zeros(src.rows, 2 * src.cols + 2, CV_32F);
 
-    unsigned long int idx;
+    int flag = invert ? DFT_ROWS + DFT_SCALE + DFT_INVERSE: DFT_ROWS;
+    
+    src.copyTo(temp(Rect(1,0, src.cols, src.rows)));
 
-    Mat temp = Mat(2*h+2,1,CV_32F);
-    Mat res  = Mat(h,1,CV_32F);
-
-    Mat planes[] = {Mat_<float>(temp), Mat::zeros(temp.size(), CV_32F)};
-
-    Mat result;
-    int p=0;
-
-    const float factor = 0.5;
-
-    for(int i=0;i<w;i++)
+    for(int j = 0 ; j < src.rows ; ++j)
     {
-        temp.at<float>(0,0) = 0.0;
-
-        for(int j=0,r=1;j<h;j++,r++)
+        for(int i = 0 ; i < src.cols ; ++i)
         {
-            idx = j*w+i;
-            temp.at<float>(r,0) = (float) mod_diff[idx];
-        }
-
-        temp.at<float>(h+1,0)=0.0;
-
-        for(int j=h-1, r=h+2;j>=0;j--,r++)
-        {
-            idx = j*w+i;
-            temp.at<float>(r,0) = (float) (-1.0 * mod_diff[idx]);
-        }
-
-        merge(planes, 2, result);
-
-        dft(result,result,0,0);
-
-        Mat planes1[] = {Mat::zeros(result.size(), CV_32F), Mat::zeros(result.size(), CV_32F)};
-
-        split(result, planes1);
-
-        for(int c=1,z=0;c<h+1;c++,z++)
-        {
-            res.at<float>(z,0) = (float) (planes1[1].at<float>(c,0) * factor);
-        }
-
-        for(int q=0,z=0;q<h;q++,z++)
-        {
-            idx = q*w+p;
-            sineTransform[idx] =  res.at<float>(z,0);
-        }
-        p++;
-    }
-}
-
-void Cloning::idst(const std::vector<float>& mod_diff, std::vector<float>& sineTransform,int h,int w)
-{
-    int nn = h+1;
-    unsigned long int idx;
-    dst(mod_diff,sineTransform,h,w);
-    for(int  i= 0;i<h;i++)
-        for(int j=0;j<w;j++)
-        {
-            idx = i*w + j;
-            sineTransform[idx] = (float) (2*sineTransform[idx])/nn;
-        }
-
-}
-
-void Cloning::transpose(const std::vector<float>& mat, std::vector<float>& mat_t,int h,int w)
-{
-
-    Mat tmp = Mat(h,w,CV_32FC1);
-    unsigned long int idx;
-    for(int i = 0 ; i < h;i++)
-    {
-        for(int j = 0 ; j < w; j++)
-        {
-
-            idx = i*(w) + j;
-            tmp.at<float>(i,j) = (float) mat[idx];
+            temp.ptr<float>(j)[src.cols + 2 + i] = - src.ptr<float>(j)[src.cols - 1 - i];
         }
     }
-    Mat tmp_t = tmp.t();
 
-    for(int i = 0;i < tmp_t.size().height; i++)
-        for(int j=0;j<tmp_t.size().width;j++)
+    Mat planes[] = {temp, Mat::zeros(temp.size(), CV_32F)};
+    Mat complex;
+
+    merge(planes, 2, complex);
+    dft(complex, complex, flag);
+    split(complex, planes);
+    
+    temp = Mat::zeros(src.cols, 2 * src.rows + 2, CV_32F);
+
+    for(int j = 0 ; j < src.cols ; ++j)
+    {
+        for(int i = 0 ; i < src.rows ; ++i)
         {
-            idx = i*tmp_t.size().width + j;
-            mat_t[idx] = tmp_t.at<float>(i,j);
+            float val = planes[1].ptr<float>(i)[j + 1];
+            temp.ptr<float>(j)[i + 1] = val;
+            temp.ptr<float>(j)[temp.cols - 1 - i] = - val;
         }
+    }
+ 
+    Mat planes2[] = {temp, Mat::zeros(temp.size(), CV_32F)};
+
+    merge(planes2, 2, complex);
+    dft(complex, complex, flag);
+    split(complex, planes2);
+
+    temp = planes2[1].t();
+    dest = Mat::zeros(src.size(), CV_32F);
+    temp(Rect( 0, 1, src.cols, src.rows)).copyTo(dest);
 }
 
-void Cloning::solve(const Mat &img, const std::vector<float>& mod_diff, Mat &result)
+void Cloning::idst(const Mat& src, Mat& dest)
+{
+    dst(src, dest, true);
+}
+
+void Cloning::solve(const Mat &img, std::vector<float>& mod_diff, Mat &result)
 {
     const int w = img.size().width;
     const int h = img.size().height;
 
-    std::vector<float> sineTransform((h-2)*(w-2), 0.);
-    std::vector<float> sineTranformTranspose((h-2)*(w-2), 0.);
-    std::vector<float> denom((h-2)*(w-2), 0.);
-    std::vector<float> invsineTransform((h-2)*(w-2), 0.);
-    std::vector<float> invsineTransform_t((h-2)*(w-2), 0.);
 
-    dst(mod_diff,sineTransform,h-2,w-2);
-
-    transpose(sineTransform,sineTranformTranspose,h-2,w-2);
-
-    dst(sineTranformTranspose,sineTransform,w-2,h-2);
-
-    transpose(sineTransform,sineTranformTranspose,w-2,h-2);
-
-
-    for(int j = 0,cx = 1; j < h-2; j++,cx++)
+    Mat ModDiff(h-2, w-2, CV_32F, &mod_diff[0]);
+    Mat res;
+    dst(ModDiff, res);
+    
+    for(int j = 0 ; j < h-2; j++)
     {
-        for(int i = 0, cy=1 ; i < w-2;i++,cy++)
+        for(int i = 0 ; i < w-2; i++)
         {
-            int idx = j*(w-2) + i;
-            denom[idx] = 2*cos(CV_PI*cy/( w-1)) + 2*cos(CV_PI*cx/(h-1)) - 4;
-
+            res.ptr<float>(j)[i] /= (filter_X[i] + filter_Y[j] - 4);
         }
     }
 
-    for(int idx = 0 ; idx < (w-2)*(h-2) ;idx++)
-    {
-        sineTranformTranspose[idx] = sineTranformTranspose[idx]/denom[idx];
-    }
-
-    idst(sineTranformTranspose,invsineTransform,h-2,w-2);
-
-    transpose(invsineTransform,invsineTransform_t,h-2,w-2);
-
-    idst(invsineTransform_t,invsineTransform,w-2,h-2);
-
-    transpose(invsineTransform,invsineTransform_t,w-2,h-2);
+    idst(res, ModDiff);
 
      //first col
     for(int i = 0 ; i < w ; ++i)
@@ -228,10 +163,9 @@ void Cloning::solve(const Mat &img, const std::vector<float>& mod_diff, Mat &res
         
         for(int i = 1 ; i < w-1 ; ++i)
         {
-            int idx = (j-1)* (w-2) + (i-1);
             //saturate cast is not used here, because it behaves differently from the previous implementation
             //most notable, saturate_cast rounds before truncating, here it's the opposite.
-            float value = invsineTransform_t[idx];
+            float value = ModDiff.ptr<float>(j-1)[i-1];
             if(value < 0.)
                 result.ptr<unsigned char>(j)[i] = 0;
             else if (value > 255.0)
@@ -266,6 +200,7 @@ void Cloning::poisson_solver(const Mat &img, Mat &laplacianX , Mat &laplacianY, 
     Mat bound = img.clone();
 
     rectangle(bound, Point(1, 1), Point(img.cols-2, img.rows-2), Scalar::all(0), -1);
+
 
     std::vector<float> boundary_point(h*w, 0.);
 
@@ -311,6 +246,17 @@ void Cloning::init_var(const Mat &destination, const Mat &binaryMask)
 
     binaryMaskFloat = Mat(binaryMask.size(),CV_32FC1);
     binaryMaskFloatInverted = Mat(binaryMask.size(),CV_32FC1);
+
+    //init of the filters used in the dft
+    const int w = destination.size().width;
+    filter_X.resize(w - 2);
+    for(int i = 0 ; i < w-2 ; ++i)
+        filter_X[i] = 2.0f * std::cos(CV_PI * (i + 1) / (w - 1));
+
+    const int h  = destination.size().height;
+    filter_Y.resize(h - 2);
+    for(int j = 0 ; j < h - 2 ; ++j)
+        filter_Y[j] = 2.0f * std::cos(CV_PI * (j + 1) / (h - 1));
 }
 
 void Cloning::compute_derivatives(const Mat& destination, const Mat &patch, const Mat &binaryMask)
