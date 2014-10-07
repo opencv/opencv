@@ -65,10 +65,9 @@ namespace cv
             void scalar_product(cv::Mat mat, float r, float g, float b);
             void poisson(const cv::Mat &destination);
             void evaluate(const cv::Mat &I, const cv::Mat &wmask, const cv::Mat &cloned);
-            void dst(const std::vector<float>& mod_diff, std::vector<float>& sineTransform,int h,int w);
-            void idst(const std::vector<float>& mod_diff, std::vector<float>& sineTransform,int h,int w);
-            void transpose(const std::vector<float>& mat, std::vector<float>& mat_t,int h,int w);
-            void solve(const cv::Mat &img, const std::vector<float>& mod_diff, cv::Mat &result);
+            void dst(const Mat& src, Mat& dest, bool invert = false);
+            void idst(const Mat& src, Mat& dest);
+            void solve(const cv::Mat &img, std::vector<float>& mod_diff, cv::Mat &result);
             void poisson_solver(const cv::Mat &img, cv::Mat &gxx , cv::Mat &gyy, cv::Mat &result);
 
             void array_product(const cv::Mat& lhs, const cv::Mat& rhs, cv::Mat& result) const;
@@ -83,6 +82,8 @@ namespace cv
             cv::Mat destinationGradientX, destinationGradientY;
             cv::Mat patchGradientX, patchGradientY;
             cv::Mat binaryMaskFloat, binaryMaskFloatInverted;
+
+            std::vector<float> filter_X, filter_Y;
     };
 }
 #endif
