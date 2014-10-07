@@ -570,16 +570,15 @@ void upnp::compute_A_and_b_gauss_newton(const double * l_6x12, const double * rh
 
 void upnp::compute_L_6x12(const double * ut, double * l_6x12)
 {
-  int N = 3;
-  const double * v[N];
+  const double * v[3];
 
   v[0] = ut + 12 * 9;
   v[1] = ut + 12 * 10;
   v[2] = ut + 12 * 11;
 
-  double dv[N][6][3];
+  double dv[3][6][3];
 
-  for(int i = 0; i < N; i++) {
+  for(int i = 0; i < 3; i++) {
     int a = 0, b = 1;
     for(int j = 0; j < 6; j++) {
       dv[i][j][0] = v[i][3 * a    ] - v[i][3 * b];
