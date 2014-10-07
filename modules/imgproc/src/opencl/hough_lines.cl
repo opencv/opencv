@@ -5,6 +5,8 @@
 // Copyright (C) 2014, Itseez, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 
+#define ACCUM(ptr) *((__global int*)(ptr))
+
 #ifdef MAKE_POINTS_LIST
 
 __kernel void make_point_list(__global const uchar * src_ptr, int src_step, int src_offset, int src_rows, int src_cols,
@@ -25,11 +27,13 @@ __kernel void make_point_list(__global const uchar * src_ptr, int src_step, int 
 
     if (y < src_rows)
     {
+        y <<= 16;
+
         for (int i=x; i < src_cols; i+=GROUP_SIZE)
         {
             if (src[i])
             {
-                int val = (y << 16) | i;
+                int val = y | i;
                 int index = atomic_inc(&l_index);
                 l_points[index] = val;
             }
@@ -53,7 +57,7 @@ __kernel void make_point_list(__global const uchar * src_ptr, int src_step, int 
 #elif defined FILL_ACCUM_GLOBAL
 
 __kernel void fill_accum_global(__global const uchar * list_ptr, int list_step, int list_offset,
-                                __global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
+                                __global uchar * accum_ptr, int accum_step, int accum_offset,
                                 int total_points, float irho, float theta, int numrho, int numangle)
 {
     int theta_idx = get_global_id(1);
@@ -76,7 +80,7 @@ __kernel void fill_accum_global(__global const uchar * list_ptr, int list_step, 
             const int x = (val & 0xFFFF);
             const int y = (val >> 16) & 0xFFFF;
 
-            int r = convert_int_rte(x * cosVal + y * sinVal) + shift;
+            int r = convert_int_rte(mad(x, cosVal, y * sinVal)) + shift;
             atomic_inc(accum + r + 1);
         }
     }
@@ -85,7 +89,7 @@ __kernel void fill_accum_global(__global const uchar * list_ptr, int list_step, 
 #elif defined FILL_ACCUM_LOCAL
 
 __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, int list_offset,
-                               __global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
+                               __global uchar * accum_ptr, int accum_step, int accum_offset,
                                int total_points, float irho, float theta, int numrho, int numangle)
 {
     int theta_idx = get_group_id(1);
@@ -133,15 +137,13 @@ __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, i
 
 #elif defined GET_LINES
 
-#define ACCUM(ptr) *((__global int*)(ptr))
-
 __kernel void get_lines(__global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
                          __global uchar * lines_ptr, int lines_step, int lines_offset, __global int* lines_index_ptr,
                          int linesMax, int threshold, float rho, float theta)
 {
     int x0 = get_global_id(0);
     int y = get_global_id(1);
-    int gl_size = get_global_size(0);
+    int glob_size = get_global_size(0);
 
     if (y < accum_rows-2)
     {
@@ -149,7 +151,7 @@ __kernel void get_lines(__global uchar * accum_ptr, int accum_step, int accum_of
         __global float2* lines = (__global float2*)(lines_ptr + lines_offset);
         __global int* lines_index = lines_index_ptr + 1;
 
-        for (int x=x0; x<accum_cols-2; x+=gl_size)
+        for (int x=x0; x<accum_cols-2; x+=glob_size)
         {
             int curVote = ACCUM(accum);
 
@@ -167,14 +169,12 @@ __kernel void get_lines(__global uchar * accum_ptr, int accum_step, int accum_of
                 }
             }
 
-            accum += gl_size * (int) sizeof(int);
+            accum += glob_size * (int) sizeof(int);
         }
     }
 }
 
 #elif GET_LINES_PROBABOLISTIC
-
-#define ACCUM(ptr) *((__global int*)(ptr))
 
 __kernel void get_lines(__global const uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
                         __global const uchar * src_ptr, int src_step, int src_offset, int src_rows, int src_cols,
@@ -222,6 +222,7 @@ __kernel void get_lines(__global const uchar * accum_ptr, int accum_step, int ac
             pb[1].x = src_cols - 1;
             pb[1].y = p0.y + a * dir.y;
         }
+
         if (dir.y != 0)
         {
             a = -p0.y / dir.y;
@@ -239,7 +240,7 @@ __kernel void get_lines(__global const uchar * accum_ptr, int accum_step, int ac
             if (dir.x < 0)
                 dir = -dir;
         }
-        else if (pb[1].x == src_cols - 1 && (pb[0].y >= 0 && pb[0].y < src_rows))
+        else if (pb[1].x == src_cols - 1 && (pb[1].y >= 0 && pb[1].y < src_rows))
         {
             p0 = pb[1];
             if (dir.x > 0)
@@ -258,41 +259,30 @@ __kernel void get_lines(__global const uchar * accum_ptr, int accum_step, int ac
                 dir = -dir;
         }
 
-        float2 d;
-        if (fabs(dir.x) > fabs(dir.y))
-        {
-            d.x = dir.x > 0 ? 1 : -1;
-            d.y = dir.y / fabs(dir.x);
-        }
-        else
-        {
-            d.x = dir.x / fabs(dir.y);
-            d.y = dir.y > 0 ? 1 : -1;
-        }
+        dir /= max(fabs(dir.x), fabs(dir.y));
 
         float2 line_end[2];
         int gap;
         bool inLine = false;
 
-        float2 p1 = p0;
-        if (p1.x < 0 || p1.x >= src_cols || p1.y < 0 || p1.y >= src_rows)
+        if (p0.x < 0 || p0.x >= src_cols || p0.y < 0 || p0.y >= src_rows)
             return;
 
         for (;;)
         {
-            if (*(src_ptr + mad24(p1.y, src_step, p1.x + src_offset)))
+            if (*(src_ptr + mad24(p0.y, src_step, p0.x + src_offset)))
             {
                 gap = 0;
 
                 if (!inLine)
                 {
-                    line_end[0] = p1;
-                    line_end[1] = p1;
+                    line_end[0] = p0;
+                    line_end[1] = p0;
                     inLine = true;
                 }
                 else
                 {
-                    line_end[1] = p1;
+                    line_end[1] = p0;
                 }
             }
             else if (inLine)
@@ -314,8 +304,8 @@ __kernel void get_lines(__global const uchar * accum_ptr, int accum_step, int ac
                 }
             }
 
-            p1 = p1 + d;
-            if (p1.x < 0 || p1.x >= src_cols || p1.y < 0 || p1.y >= src_rows)
+            p0 = p0 + dir;
+            if (p0.x < 0 || p0.x >= src_cols || p0.y < 0 || p0.y >= src_rows)
             {
                 if (inLine)
                 {

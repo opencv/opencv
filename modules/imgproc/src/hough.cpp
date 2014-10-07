@@ -221,7 +221,7 @@ HoughLinesSDiv( const Mat& img,
     std::vector<hough_index> lst;
 
     CV_Assert( img.type() == CV_8UC1 );
-    CV_Assert( linesMax > 0 && rho > 0 && theta > 0 );
+    CV_Assert( linesMax > 0 );
 
     threshold = MIN( threshold, 255 );
 
@@ -655,6 +655,8 @@ HoughLinesProbabilistic( Mat& image,
 
 #ifdef HAVE_OPENCL
 
+#define OCL_MAX_LINES 4096
+
 static bool ocl_makePointsList(InputArray _src, OutputArray _pointsList, InputOutputArray _counters)
 {
     UMat src = _src.getUMat();
@@ -702,7 +704,7 @@ static bool ocl_fillAccum(InputArray _pointsList, OutputArray _accum, int total_
         if (fillAccumKernel.empty())
             return false;
         globalThreads[0] = workgroup_size; globalThreads[1] = numangle;
-        fillAccumKernel.args(ocl::KernelArg::ReadOnlyNoSize(pointsList), ocl::KernelArg::WriteOnly(accum),
+        fillAccumKernel.args(ocl::KernelArg::ReadOnlyNoSize(pointsList), ocl::KernelArg::WriteOnlyNoSize(accum),
                         total_points, irho, (float) theta, numrho, numangle);
         return fillAccumKernel.run(2, globalThreads, NULL, false);
     }
@@ -714,7 +716,7 @@ static bool ocl_fillAccum(InputArray _pointsList, OutputArray _accum, int total_
             return false;
         localThreads[0] = workgroup_size; localThreads[1] = 1;
         globalThreads[0] = workgroup_size; globalThreads[1] = numangle+2;
-        fillAccumKernel.args(ocl::KernelArg::ReadOnlyNoSize(pointsList), ocl::KernelArg::WriteOnly(accum),
+        fillAccumKernel.args(ocl::KernelArg::ReadOnlyNoSize(pointsList), ocl::KernelArg::WriteOnlyNoSize(accum),
                         total_points, irho, (float) theta, numrho, numangle);
         return fillAccumKernel.run(2, globalThreads, localThreads, false);
     }
@@ -730,6 +732,9 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     }
     if (min_theta < 0 || min_theta > max_theta ) {
         CV_Error( CV_StsBadArg, "min_theta must fall between 0 and max_theta" );
+    }
+    if (!(rho > 0 && theta > 0)) {
+        CV_Error( CV_StsBadArg, "rho and theta must be greater 0" );
     }
 
     UMat src = _src.getUMat();
@@ -759,8 +764,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     if (getLinesKernel.empty())
         return false;
 
-    // TODO: investigate other strategies to choose linesMax
-    int linesMax = min(total_points*numangle/threshold, 4096);
+    int linesMax = threshold > 0 ? min(total_points*numangle/threshold, OCL_MAX_LINES) : OCL_MAX_LINES;
     UMat lines(linesMax, 1, CV_32FC2);
 
     getLinesKernel.args(ocl::KernelArg::ReadOnly(accum), ocl::KernelArg::WriteOnlyNoSize(lines),
@@ -782,6 +786,10 @@ static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, dou
                            double minLineLength, double maxGap)
 {
     CV_Assert(_src.type() == CV_8UC1);
+
+    if (!(rho > 0 && theta > 0)) {
+        CV_Error( CV_StsBadArg, "rho and theta must be greater 0" );
+    }
 
     UMat src = _src.getUMat();
     int numangle = cvRound(CV_PI / theta);
@@ -809,8 +817,7 @@ static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, dou
     if (getLinesKernel.empty())
         return false;
 
-    // TODO: investigate other strategies to choose linesMax
-    int linesMax = min(total_points*numangle/threshold, 4096);
+    int linesMax = threshold > 0 ? min(total_points*numangle/threshold, OCL_MAX_LINES) : OCL_MAX_LINES;
     UMat lines(linesMax, 1, CV_32SC4);
 
     getLinesKernel.args(ocl::KernelArg::ReadOnly(accum), ocl::KernelArg::ReadOnly(src),

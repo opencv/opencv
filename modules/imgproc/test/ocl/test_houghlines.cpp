@@ -168,7 +168,7 @@ OCL_TEST_P(HoughLinesP, RealImage)
     OCL_OFF(cv::HoughLinesP(src, dst, rhoStep, thetaStep, threshold, minLineLength, maxGap));
     OCL_ON(cv::HoughLinesP(usrc, udst, rhoStep, thetaStep, threshold, minLineLength, maxGap));
 
-    Near(0.2);
+    Near(0.25);
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLines, Combine(Values(1, 0.5),                        // rhoStep
