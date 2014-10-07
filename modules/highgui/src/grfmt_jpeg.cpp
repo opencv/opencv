@@ -582,7 +582,7 @@ bool JpegEncoder::write( const Mat& img, const vector<int>& params )
     jpeg_create_compress(&cinfo);
     cinfo.err = jpeg_std_error(&jerr.pub);
     jerr.pub.error_exit = error_exit;
-	jerr.pub.output_message = output_message;
+    jerr.pub.output_message = output_message;
 
     if( !m_buf )
     {
