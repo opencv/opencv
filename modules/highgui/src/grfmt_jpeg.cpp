@@ -171,13 +171,13 @@ error_exit( j_common_ptr cinfo )
 METHODDEF(void)
 output_message( j_common_ptr cinfo )
 {
-  char buffer[JMSG_LENGTH_MAX];
+    char buffer[JMSG_LENGTH_MAX];
 
-  /* Create the message */
-  (*cinfo->err->format_message) (cinfo, buffer);
+    /* Create the message */
+    (*cinfo->err->format_message) (cinfo, buffer);
 
-  /* Default OpenCV error handling instead of print */
-  CV_Error(CV_StsError, buffer);
+    /* Default OpenCV error handling instead of print */
+    CV_Error(CV_StsError, buffer);
 }
 
 
