@@ -3779,6 +3779,7 @@ struct Lab2RGB_b
         v_scale_inv = vdupq_n_f32(100.f/255.f);
         v_scale = vdupq_n_f32(255.f);
         v_alpha = vdup_n_u8(ColorChannel<uchar>::max());
+        v_128 = vdupq_n_f32(128.0f);
         #endif
     }
 
@@ -4035,7 +4036,18 @@ struct RGB2Luv_b
 
     RGB2Luv_b( int _srccn, int blueIdx, const float* _coeffs,
                const float* _whitept, bool _srgb )
-    : srccn(_srccn), cvt(3, blueIdx, _coeffs, _whitept, _srgb) {}
+    : srccn(_srccn), cvt(3, blueIdx, _coeffs, _whitept, _srgb)
+    {
+        #if CV_NEON
+        v_scale_inv = vdupq_n_f32(1.f/255.f);
+        v_scale = vdupq_n_f32(2.55f);
+        v_coeff1 = vdupq_n_f32(0.72033898305084743f);
+        v_coeff2 = vdupq_n_f32(96.525423728813564f);
+        v_coeff3 = vdupq_n_f32(0.9732824427480916f);
+        v_coeff4 = vdupq_n_f32(136.259541984732824f);
+        v_alpha = vdup_n_u8(ColorChannel<uchar>::max());
+        #endif
+    }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
@@ -4045,8 +4057,41 @@ struct RGB2Luv_b
         for( i = 0; i < n; i += BLOCK_SIZE, dst += BLOCK_SIZE*3 )
         {
             int dn = std::min(n - i, (int)BLOCK_SIZE);
+            j = 0;
 
-            for( j = 0; j < dn*3; j += 3, src += scn )
+            #if CV_NEON
+            for ( ; j <= (dn - 8) * 3; j += 24, src += 8 * scn)
+            {
+                uint16x8_t v_t0, v_t1, v_t2;
+
+                if (scn == 3)
+                {
+                    uint8x8x3_t v_src = vld3_u8(src);
+                    v_t0 = vmovl_u8(v_src.val[0]);
+                    v_t1 = vmovl_u8(v_src.val[1]);
+                    v_t2 = vmovl_u8(v_src.val[2]);
+                }
+                else
+                {
+                    uint8x8x4_t v_src = vld4_u8(src);
+                    v_t0 = vmovl_u8(v_src.val[0]);
+                    v_t1 = vmovl_u8(v_src.val[1]);
+                    v_t2 = vmovl_u8(v_src.val[2]);
+                }
+
+                float32x4x3_t v_dst;
+                v_dst.val[0] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t0))), v_scale_inv);
+                v_dst.val[1] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t1))), v_scale_inv);
+                v_dst.val[2] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t2))), v_scale_inv);
+                vst3q_f32(buf + j, v_dst);
+
+                v_dst.val[0] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t0))), v_scale_inv);
+                v_dst.val[1] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t1))), v_scale_inv);
+                v_dst.val[2] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t2))), v_scale_inv);
+                vst3q_f32(buf + j + 12, v_dst);
+            }
+            #endif
+            for( ; j < dn*3; j += 3, src += scn )
             {
                 buf[j] = src[0]*(1.f/255.f);
                 buf[j+1] = (float)(src[1]*(1.f/255.f));
@@ -4054,7 +4099,25 @@ struct RGB2Luv_b
             }
             cvt(buf, buf, dn);
 
-            for( j = 0; j < dn*3; j += 3 )
+            j = 0;
+            #if CV_NEON
+            for ( ; j <= (dn - 8) * 3; j += 24)
+            {
+                float32x4x3_t v_src0 = vld3q_f32(buf + j), v_src1 = vld3q_f32(buf + j + 12);
+
+                uint8x8x3_t v_dst;
+                v_dst.val[0] = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src0.val[0], v_scale))),
+                                                       vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src1.val[0], v_scale)))));
+                v_dst.val[1] = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vaddq_f32(vmulq_f32(v_src0.val[1], v_coeff1), v_coeff2))),
+                                                       vqmovn_u32(cv_vrndq_u32_f32(vaddq_f32(vmulq_f32(v_src1.val[1], v_coeff1), v_coeff2)))));
+                v_dst.val[2] = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vaddq_f32(vmulq_f32(v_src0.val[2], v_coeff3), v_coeff4))),
+                                                       vqmovn_u32(cv_vrndq_u32_f32(vaddq_f32(vmulq_f32(v_src1.val[2], v_coeff3), v_coeff4)))));
+
+                vst3_u8(dst + j, v_dst);
+            }
+            #endif
+
+            for( ; j < dn*3; j += 3 )
             {
                 dst[j] = saturate_cast<uchar>(buf[j]*2.55f);
                 dst[j+1] = saturate_cast<uchar>(buf[j+1]*0.72033898305084743f + 96.525423728813564f);
@@ -4065,6 +4128,11 @@ struct RGB2Luv_b
 
     int srccn;
     RGB2Luv_f cvt;
+
+    #if CV_NEON
+    float32x4_t v_scale, v_scale_inv, v_coeff1, v_coeff2, v_coeff3, v_coeff4;
+    uint8x8_t v_alpha;
+    #endif
 };
 
 
