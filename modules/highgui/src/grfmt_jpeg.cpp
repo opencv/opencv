@@ -167,6 +167,19 @@ error_exit( j_common_ptr cinfo )
     longjmp( err_mgr->setjmp_buffer, 1 );
 }
 
+/* Overwriting to make libjpeg warnings catchable */
+METHODDEF(void)
+output_message( j_common_ptr cinfo )
+{
+    char buffer[JMSG_LENGTH_MAX];
+
+    /* Create the message */
+    (*cinfo->err->format_message) (cinfo, buffer);
+
+    /* Default OpenCV error handling instead of print */
+    CV_Error(CV_StsError, buffer);
+}
+
 
 /////////////////////// JpegDecoder ///////////////////
 
@@ -220,6 +233,7 @@ bool  JpegDecoder::readHeader()
     m_state = state;
     state->cinfo.err = jpeg_std_error(&state->jerr.pub);
     state->jerr.pub.error_exit = error_exit;
+    state->jerr.pub.output_message = output_message;
 
     if( setjmp( state->jerr.setjmp_buffer ) == 0 )
     {
@@ -568,6 +582,7 @@ bool JpegEncoder::write( const Mat& img, const vector<int>& params )
     jpeg_create_compress(&cinfo);
     cinfo.err = jpeg_std_error(&jerr.pub);
     jerr.pub.error_exit = error_exit;
+    jerr.pub.output_message = output_message;
 
     if( !m_buf )
     {
