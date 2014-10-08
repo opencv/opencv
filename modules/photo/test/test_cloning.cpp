@@ -39,6 +39,15 @@
 //
 //M*/
 
+#define OUTPUT_SAVING 0
+#if OUTPUT_SAVING
+#define SAVE(x) std::vector<int> params;\
+                params.push_back(16);\
+                params.push_back(0);\
+                imwrite(folder + "output.png", x ,params);
+#else
+#define SAVE(x)
+#endif
 
 #include "test_precomp.hpp"
 #include "opencv2/photo.hpp"
@@ -70,8 +79,12 @@ TEST(Photo_SeamlessClone_normal, regression)
     p.y = destination.size().height/2;
     seamlessClone(source, destination, mask, p, result, 1);
 
+
     Mat reference = imread(folder + "reference.png");
-    double error = norm(reference, result, NORM_L1);
+
+    SAVE(result);
+
+    double error = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
 }
 
@@ -95,6 +108,8 @@ TEST(Photo_SeamlessClone_mixed, regression)
     p.x = destination.size().width/2;
     p.y = destination.size().height/2;
     seamlessClone(source, destination, mask, p, result, 2);
+
+    SAVE(result);
 
     Mat reference = imread(folder + "reference.png");
     double error = norm(reference, result, NORM_L1);
@@ -123,6 +138,8 @@ TEST(Photo_SeamlessClone_featureExchange, regression)
     p.y = destination.size().height/2;
     seamlessClone(source, destination, mask, p, result, 3);
 
+    SAVE(result);
+
     Mat reference = imread(folder + "reference.png");
     double error = norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
@@ -143,6 +160,8 @@ TEST(Photo_SeamlessClone_colorChange, regression)
 
     Mat result;
     colorChange(source, mask, result, 1.5, .5, .5);
+
+    SAVE(result);
 
     Mat reference = imread(folder + "reference.png");
     double error = norm(reference, result, NORM_L1);
@@ -165,6 +184,8 @@ TEST(Photo_SeamlessClone_illuminationChange, regression)
     Mat result;
     illuminationChange(source, mask, result, 0.2f, 0.4f);
 
+    SAVE(result);
+
     Mat reference = imread(folder + "reference.png");
     double error = norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
@@ -185,6 +206,8 @@ TEST(Photo_SeamlessClone_textureFlattening, regression)
 
     Mat result;
     textureFlattening(source, mask, result, 30, 45, 3);
+
+    SAVE(result);
 
     Mat reference = imread(folder + "reference.png");
     double error = norm(reference, result, NORM_L1);
