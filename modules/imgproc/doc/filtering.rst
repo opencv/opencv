@@ -1078,7 +1078,7 @@ The function computes and returns the
 
 .. math::
 
-    G_i= \alpha *e^{-(i-( \texttt{ksize} -1)/2)^2/(2* \texttt{sigma} )^2},
+    G_i= \alpha *e^{-(i-( \texttt{ksize} -1)/2)^2/(2* \texttt{sigma}^2 )},
 
 where
 :math:`i=0..\texttt{ksize}-1` and
