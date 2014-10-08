@@ -185,7 +185,7 @@ void Cloning::solve(const Mat &img, std::vector<float>& mod_diff, Mat &result)
 
 }
 
-void Cloning::poisson_solver(const Mat &img, Mat &laplacianX , Mat &laplacianY, Mat &result)
+void Cloning::poissonSolver(const Mat &img, Mat &laplacianX , Mat &laplacianY, Mat &result)
 {
 
     const int w = img.size().width;
@@ -237,7 +237,7 @@ void Cloning::poisson_solver(const Mat &img, Mat &laplacianX , Mat &laplacianY, 
     solve(img,mod_diff,result);
 }
 
-void Cloning::init_var(const Mat &destination, const Mat &binaryMask)
+void Cloning::initVariables(const Mat &destination, const Mat &binaryMask)
 {
     destinationGradientX = Mat(destination.size(),CV_32FC3);
     destinationGradientY = Mat(destination.size(),CV_32FC3);
@@ -247,7 +247,7 @@ void Cloning::init_var(const Mat &destination, const Mat &binaryMask)
     binaryMaskFloat = Mat(binaryMask.size(),CV_32FC1);
     binaryMaskFloatInverted = Mat(binaryMask.size(),CV_32FC1);
 
-    //init of the filters used in the dft
+    //init of the filters used in the dst
     const int w = destination.size().width;
     filter_X.resize(w - 2);
     for(int i = 0 ; i < w-2 ; ++i)
@@ -259,9 +259,9 @@ void Cloning::init_var(const Mat &destination, const Mat &binaryMask)
         filter_Y[j] = 2.0f * std::cos(CV_PI * (j + 1) / (h - 1));
 }
 
-void Cloning::compute_derivatives(const Mat& destination, const Mat &patch, const Mat &binaryMask)
+void Cloning::computeDerivatives(const Mat& destination, const Mat &patch, const Mat &binaryMask)
 {
-    init_var(destination,binaryMask);
+    initVariables(destination,binaryMask);
 
     computeGradientX(destination,destinationGradientX);
     computeGradientY(destination,destinationGradientY);
@@ -276,7 +276,7 @@ void Cloning::compute_derivatives(const Mat& destination, const Mat &patch, cons
     binaryMask.convertTo(binaryMaskFloat,CV_32FC1,1.0/255.0);
 }
 
-void Cloning::scalar_product(Mat mat, float r, float g, float b)
+void Cloning::scalarProduct(Mat mat, float r, float g, float b)
 {
     vector <Mat> channels;
     split(mat,channels);
@@ -286,7 +286,7 @@ void Cloning::scalar_product(Mat mat, float r, float g, float b)
     merge(channels,mat);
 }
 
-void Cloning::array_product(const cv::Mat& lhs, const cv::Mat& rhs, cv::Mat& result) const
+void Cloning::arrayProduct(const cv::Mat& lhs, const cv::Mat& rhs, cv::Mat& result) const
 {
     vector <Mat> lhs_channels;
     vector <Mat> result_channels;
@@ -318,7 +318,7 @@ void Cloning::poisson(const Mat &destination)
 
     for(int chan = 0 ; chan < 3 ; ++chan)
     {
-        poisson_solver(output[chan], rgbx_channel[chan], rgby_channel[chan], output[chan]);
+        poissonSolver(output[chan], rgbx_channel[chan], rgby_channel[chan], output[chan]);
     }
 }
 
@@ -328,27 +328,27 @@ void Cloning::evaluate(const Mat &I, const Mat &wmask, const Mat &cloned)
 
     wmask.convertTo(binaryMaskFloatInverted,CV_32FC1,1.0/255.0);
 
-    array_product(destinationGradientX,binaryMaskFloatInverted, destinationGradientX);
-    array_product(destinationGradientY,binaryMaskFloatInverted, destinationGradientY);
+    arrayProduct(destinationGradientX,binaryMaskFloatInverted, destinationGradientX);
+    arrayProduct(destinationGradientY,binaryMaskFloatInverted, destinationGradientY);
 
     poisson(I);
 
     merge(output,cloned);
 }
 
-void Cloning::normal_clone(const Mat &destination, const Mat &patch, const Mat &binaryMask, Mat &cloned, int flag)
+void Cloning::normalClone(const Mat &destination, const Mat &patch, const Mat &binaryMask, Mat &cloned, int flag)
 {
     int w = destination.size().width;
     int h = destination.size().height;
     int channel = destination.channels();
 
-    compute_derivatives(destination,patch,binaryMask);
+    computeDerivatives(destination,patch,binaryMask);
 
     switch(flag)
     {
         case NORMAL_CLONE:
-            array_product(patchGradientX,binaryMaskFloat, patchGradientX);
-            array_product(patchGradientY,binaryMaskFloat, patchGradientY);
+            arrayProduct(patchGradientX,binaryMaskFloat, patchGradientX);
+            arrayProduct(patchGradientY,binaryMaskFloat, patchGradientY);
             break;
 
         case MIXED_CLONE:
@@ -395,8 +395,8 @@ void Cloning::normal_clone(const Mat &destination, const Mat &patch, const Mat &
             computeGradientX(gray8,patchGradientX);
             computeGradientY(gray8,patchGradientY);
 
-            array_product(patchGradientX, binaryMaskFloat, patchGradientX);
-            array_product(patchGradientY, binaryMaskFloat, patchGradientY);
+            arrayProduct(patchGradientX, binaryMaskFloat, patchGradientX);
+            arrayProduct(patchGradientY, binaryMaskFloat, patchGradientY);
         break;
 
     }
@@ -404,25 +404,25 @@ void Cloning::normal_clone(const Mat &destination, const Mat &patch, const Mat &
     evaluate(destination,binaryMask,cloned);
 }
 
-void Cloning::local_color_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float red_mul=1.0,
+void Cloning::localColorChange(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float red_mul=1.0,
                                  float green_mul=1.0, float blue_mul=1.0)
 {
-    compute_derivatives(I,mask,wmask);
+    computeDerivatives(I,mask,wmask);
 
-    array_product(patchGradientX,binaryMaskFloat, patchGradientX);
-    array_product(patchGradientY,binaryMaskFloat, patchGradientY);
-    scalar_product(patchGradientX,red_mul,green_mul,blue_mul);
-    scalar_product(patchGradientY,red_mul,green_mul,blue_mul);
+    arrayProduct(patchGradientX,binaryMaskFloat, patchGradientX);
+    arrayProduct(patchGradientY,binaryMaskFloat, patchGradientY);
+    scalarProduct(patchGradientX,red_mul,green_mul,blue_mul);
+    scalarProduct(patchGradientY,red_mul,green_mul,blue_mul);
 
     evaluate(I,wmask,cloned);
 }
 
-void Cloning::illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float alpha, float beta)
+void Cloning::illuminationChange(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float alpha, float beta)
 {
-    compute_derivatives(I,mask,wmask);
+    computeDerivatives(I,mask,wmask);
 
-    array_product(patchGradientX,binaryMaskFloat, patchGradientX);
-    array_product(patchGradientY,binaryMaskFloat, patchGradientY);
+    arrayProduct(patchGradientX,binaryMaskFloat, patchGradientX);
+    arrayProduct(patchGradientY,binaryMaskFloat, patchGradientY);
 
     Mat mag = Mat(I.size(),CV_32FC3);
     magnitude(patchGradientX,patchGradientY,mag);
@@ -447,10 +447,10 @@ void Cloning::illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float alp
     evaluate(I,wmask,cloned);
 }
 
-void Cloning::texture_flatten(Mat &I, Mat &mask, Mat &wmask, float low_threshold,
+void Cloning::textureFlatten(Mat &I, Mat &mask, Mat &wmask, float low_threshold,
         float high_threshold, int kernel_size, Mat &cloned)
 {
-    compute_derivatives(I,mask,wmask);
+    computeDerivatives(I,mask,wmask);
 
     Mat out = Mat(mask.size(),CV_8UC1);
     Canny(mask,out,low_threshold,high_threshold,kernel_size);
@@ -461,8 +461,8 @@ void Cloning::texture_flatten(Mat &I, Mat &mask, Mat &wmask, float low_threshold
     zeros.copyTo(patchGradientX, zerosMask);
     zeros.copyTo(patchGradientY, zerosMask);
 
-    array_product(patchGradientX,binaryMaskFloat, patchGradientX);
-    array_product(patchGradientY,binaryMaskFloat, patchGradientY);
+    arrayProduct(patchGradientX,binaryMaskFloat, patchGradientX);
+    arrayProduct(patchGradientY,binaryMaskFloat, patchGradientY);
 
     evaluate(I,wmask,cloned);
 }

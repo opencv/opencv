@@ -53,24 +53,24 @@ namespace cv
     class Cloning
     {
         public:
-            void normal_clone(const cv::Mat& destination, const cv::Mat &mask, const cv::Mat &wmask, cv::Mat &cloned, int flag);
-            void illum_change(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, cv::Mat &cloned, float alpha, float beta);
-            void local_color_change(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, cv::Mat &cloned, float red_mul, float green_mul, float blue_mul);
-            void texture_flatten(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, float low_threshold, float high_threhold, int kernel_size, cv::Mat &cloned);
+            void normalClone(const cv::Mat& destination, const cv::Mat &mask, const cv::Mat &wmask, cv::Mat &cloned, int flag);
+            void illuminationChange(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, cv::Mat &cloned, float alpha, float beta);
+            void localColorChange(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, cv::Mat &cloned, float red_mul, float green_mul, float blue_mul);
+            void textureFlatten(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, float low_threshold, float high_threhold, int kernel_size, cv::Mat &cloned);
 
         protected:
 
-            void init_var(const cv::Mat &destination, const cv::Mat &binaryMask);
-            void compute_derivatives(const cv::Mat &destination, const cv::Mat &patch, const cv::Mat &binaryMask);
-            void scalar_product(cv::Mat mat, float r, float g, float b);
+            void initVariables(const cv::Mat &destination, const cv::Mat &binaryMask);
+            void computeDerivatives(const cv::Mat &destination, const cv::Mat &patch, const cv::Mat &binaryMask);
+            void scalarProduct(cv::Mat mat, float r, float g, float b);
             void poisson(const cv::Mat &destination);
             void evaluate(const cv::Mat &I, const cv::Mat &wmask, const cv::Mat &cloned);
             void dst(const Mat& src, Mat& dest, bool invert = false);
             void idst(const Mat& src, Mat& dest);
             void solve(const cv::Mat &img, std::vector<float>& mod_diff, cv::Mat &result);
-            void poisson_solver(const cv::Mat &img, cv::Mat &gxx , cv::Mat &gyy, cv::Mat &result);
+            void poissonSolver(const cv::Mat &img, cv::Mat &gxx , cv::Mat &gyy, cv::Mat &result);
 
-            void array_product(const cv::Mat& lhs, const cv::Mat& rhs, cv::Mat& result) const;
+            void arrayProduct(const cv::Mat& lhs, const cv::Mat& rhs, cv::Mat& result) const;
             
             void computeGradientX(const cv::Mat &img, cv::Mat &gx);
             void computeGradientY(const cv::Mat &img, cv::Mat &gy);

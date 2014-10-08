@@ -116,7 +116,7 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
 
 
     Cloning obj;
-    obj.normal_clone(dest,cd_mask,dst_mask,blend,flags);
+    obj.normalClone(dest,cd_mask,dst_mask,blend,flags);
 
 }
 
@@ -143,7 +143,7 @@ void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float 
     src.copyTo(cs_mask,gray);
 
     Cloning obj;
-    obj.local_color_change(src,cs_mask,gray,blend,red,green,blue);
+    obj.localColorChange(src,cs_mask,gray,blend,red,green,blue);
 }
 
 void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst, float a, float b)
@@ -168,7 +168,7 @@ void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst,
     src.copyTo(cs_mask,gray);
 
     Cloning obj;
-    obj.illum_change(src,cs_mask,gray,blend,alpha,beta);
+    obj.illuminationChange(src,cs_mask,gray,blend,alpha,beta);
 
 }
 
@@ -193,5 +193,5 @@ void cv::textureFlattening(InputArray _src, InputArray _mask, OutputArray _dst,
     src.copyTo(cs_mask,gray);
 
     Cloning obj;
-    obj.texture_flatten(src,cs_mask,gray,low_threshold,high_threshold,kernel_size,blend);
+    obj.textureFlatten(src,cs_mask,gray,low_threshold,high_threshold,kernel_size,blend);
 }
