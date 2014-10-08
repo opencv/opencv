@@ -320,12 +320,45 @@ struct PyrDownVec_32f
     }
 };
 
+struct PyrUpVec_32f
+{
+    int operator()(float** src, float* dst, int, int width) const
+    {
+        int x = 0;
+        float ** dsts = (float **)dst;
+        const float *row0 = src[0], *row1 = src[1], *row2 = src[2];
+        float *dst0 = dsts[0], *dst1 = dsts[1];
+        float32x4_t v_6 = vdupq_n_f32(6.0f), v_scale = vdupq_n_f32(1.f/64.0f), v_scale4 = vmulq_n_f32(v_scale, 4.0f);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            float32x4_t v_r0 = vld1q_f32(row0 + x);
+            float32x4_t v_r1 = vld1q_f32(row1 + x);
+            float32x4_t v_r2 = vld1q_f32(row2 + x);
+
+            vst1q_f32(dst1 + x, vmulq_f32(v_scale4, vaddq_f32(v_r1, v_r2)));
+            vst1q_f32(dst0 + x, vmulq_f32(v_scale, vaddq_f32(vmlaq_f32(v_r0, v_6, v_r1), v_r2)));
+
+            v_r0 = vld1q_f32(row0 + x + 4);
+            v_r1 = vld1q_f32(row1 + x + 4);
+            v_r2 = vld1q_f32(row2 + x + 4);
+
+            vst1q_f32(dst1 + x + 4, vmulq_f32(v_scale4, vaddq_f32(v_r1, v_r2)));
+            vst1q_f32(dst0 + x + 4, vmulq_f32(v_scale, vaddq_f32(vmlaq_f32(v_r0, v_6, v_r1), v_r2)));
+        }
+
+        return x;
+    }
+};
+
 #else
 
 typedef NoVec<int, uchar> PyrDownVec_32s8u;
 typedef NoVec<int, ushort> PyrDownVec_32s16u;
 typedef NoVec<int, short> PyrDownVec_32s16s;
 typedef NoVec<float, float> PyrDownVec_32f;
+
+typedef NoVec<float, float> PyrUpVec_32f;
 
 #endif
 
@@ -469,6 +502,7 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
     AutoBuffer<int> _dtab(ssize.width*cn);
     int* dtab = _dtab;
     WT* rows[PU_SZ];
+    T* dsts[2];
     CastOp castOp;
     VecOp vecOp;
 
@@ -529,8 +563,9 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
         for( k = 0; k < PU_SZ; k++ )
             rows[k] = buf + ((y - PU_SZ/2 + k - sy0) % PU_SZ)*bufstep;
         row0 = rows[0]; row1 = rows[1]; row2 = rows[2];
+        dsts[0] = dst0; dsts[1] = dst1;
 
-        x = vecOp(rows, dst0, (int)_dst.step, dsize.width);
+        x = vecOp(rows, (T*)dsts, (int)_dst.step, dsize.width);
         for( ; x < dsize.width; x++ )
         {
             T t1 = castOp((row1[x] + row2[x])*4);
@@ -780,7 +815,7 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
     else if( depth == CV_16U )
         func = pyrUp_<FixPtCast<ushort, 6>, NoVec<int, ushort> >;
     else if( depth == CV_32F )
-        func = pyrUp_<FltCast<float, 6>, NoVec<float, float> >;
+        func = pyrUp_<FltCast<float, 6>, PyrUpVec_32f >;
     else if( depth == CV_64F )
         func = pyrUp_<FltCast<double, 6>, NoVec<double, double> >;
     else
