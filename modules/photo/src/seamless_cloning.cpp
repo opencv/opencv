@@ -39,14 +39,9 @@
 //
 //M*/
 
-#include <string>
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
 #include "opencv2/highgui.hpp"
-#include <stdlib.h>
-
-#include <iostream>
-
 
 #include "seamless_cloning.hpp"
 
