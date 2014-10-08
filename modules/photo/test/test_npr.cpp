@@ -62,7 +62,7 @@ TEST(Photo_NPR_EdgePreserveSmoothing_RecursiveFilter, regression)
     edgePreservingFilter(source,result,1);
 
     Mat reference = imread(folder + "smoothened_RF_reference.png");
-    double error = norm(reference, result, NORM_L1);
+    double error = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
 }
 
@@ -79,7 +79,7 @@ TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, regression)
     edgePreservingFilter(source,result,2);
 
     Mat reference = imread(folder + "smoothened_NCF_reference.png");
-    double error = norm(reference, result, NORM_L1);
+    double error = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
 
 }
@@ -97,7 +97,7 @@ TEST(Photo_NPR_DetailEnhance, regression)
     detailEnhance(source,result);
 
     Mat reference = imread(folder + "detail_enhanced_reference.png");
-    double error = norm(reference, result, NORM_L1);
+    double error = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
 }
 
@@ -118,7 +118,7 @@ TEST(Photo_NPR_PencilSketch, regression)
     EXPECT_LE(pencil_error, numerical_precision);
 
     Mat color_pencil_reference = imread(folder + "color_pencil_sketch_reference.png");
-    double color_pencil_error = norm(color_pencil_reference, color_pencil_result, NORM_L1);
+    double color_pencil_error = cvtest::norm(color_pencil_reference, color_pencil_result, NORM_L1);
     EXPECT_LE(color_pencil_error, numerical_precision);
 }
 
@@ -135,7 +135,7 @@ TEST(Photo_NPR_Stylization, regression)
     stylization(source,result);
 
     Mat stylized_reference = imread(folder + "stylized_reference.png");
-    double stylized_error = norm(stylized_reference, result, NORM_L1);
+    double stylized_error = cvtest::norm(stylized_reference, result, NORM_L1);
     EXPECT_LE(stylized_error, numerical_precision);
 
 }
