@@ -115,11 +115,6 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
     cs_mask(roi_s).copyTo(destinationROI);
 
 
-    imwrite("/home/adrien/DATA/tmp/dst_mask.png", dst_mask);
-    imwrite("/home/adrien/DATA/tmp/cs_mask.png", cs_mask);
-    imwrite("/home/adrien/DATA/tmp/cd_mask.png", cd_mask);
-    imwrite("/home/adrien/DATA/tmp/patch.png", patch);
-
     Cloning obj;
     obj.normal_clone(dest,cd_mask,dst_mask,blend,flags);
 
