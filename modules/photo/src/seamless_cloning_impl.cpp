@@ -42,9 +42,6 @@
 #include "seamless_cloning.hpp"
 #include "opencv2/highgui.hpp"
 
-#include <iostream>
-#include <complex>
-
 using namespace cv;
 using namespace std;
 
