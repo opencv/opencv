@@ -11,7 +11,8 @@
 #endif
 
 #ifdef _MSC_VER
-#pragma warning( disable: 4127 )
+#pragma warning( disable: 4127 ) // conditional expression is constant
+#pragma warning( disable: 4503 ) // decorated name length exceeded, name was truncated
 #endif
 
 #define GTEST_DONT_DEFINE_FAIL      0
