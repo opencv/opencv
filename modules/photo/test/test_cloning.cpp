@@ -112,7 +112,7 @@ TEST(Photo_SeamlessClone_mixed, regression)
     SAVE(result);
 
     Mat reference = imread(folder + "reference.png");
-    double error = norm(reference, result, NORM_L1);
+    double error = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
 
 }
@@ -141,7 +141,7 @@ TEST(Photo_SeamlessClone_featureExchange, regression)
     SAVE(result);
 
     Mat reference = imread(folder + "reference.png");
-    double error = norm(reference, result, NORM_L1);
+    double error = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
 
 }
@@ -164,7 +164,7 @@ TEST(Photo_SeamlessClone_colorChange, regression)
     SAVE(result);
 
     Mat reference = imread(folder + "reference.png");
-    double error = norm(reference, result, NORM_L1);
+    double error = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
 
 }
@@ -187,7 +187,7 @@ TEST(Photo_SeamlessClone_illuminationChange, regression)
     SAVE(result);
 
     Mat reference = imread(folder + "reference.png");
-    double error = norm(reference, result, NORM_L1);
+    double error = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
 
 }
@@ -210,7 +210,7 @@ TEST(Photo_SeamlessClone_textureFlattening, regression)
     SAVE(result);
 
     Mat reference = imread(folder + "reference.png");
-    double error = norm(reference, result, NORM_L1);
+    double error = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(error, numerical_precision);
 
 }

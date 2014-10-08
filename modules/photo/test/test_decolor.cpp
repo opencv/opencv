@@ -63,10 +63,10 @@ TEST(Photo_Decolor, regression)
         decolor(original, grayscale, color_boost);
 
         Mat reference_grayscale = imread(folder + "grayscale_reference.png", 0 /* == grayscale image*/);
-        double error_grayscale = norm(reference_grayscale, grayscale, NORM_L1);
+        double error_grayscale = cvtest::norm(reference_grayscale, grayscale, NORM_L1);
         EXPECT_LE(error_grayscale, numerical_precision);
 
         Mat reference_boost = imread(folder + "boost_reference.png");
-        double error_boost = norm(reference_boost, color_boost, NORM_L1);
+        double error_boost = cvtest::norm(reference_boost, color_boost, NORM_L1);
         EXPECT_LE(error_boost, numerical_precision);
 }
