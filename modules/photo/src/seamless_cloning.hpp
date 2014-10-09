@@ -548,10 +548,12 @@ void Cloning::illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float alp
     multiply(srx32,pow(alpha,beta),multX);
     pow(mag,-1*beta, multx_temp);
     multiply(multX,multx_temp,srx32);
+    patchNaNs(srx32);
 
     multiply(sry32,pow(alpha,beta),multY);
     pow(mag,-1*beta, multy_temp);
     multiply(multY,multy_temp,sry32);
+    patchNaNs(sry32);
 
     Mat zeroMask = (srx32 != 0);
 
