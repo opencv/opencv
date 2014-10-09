@@ -213,7 +213,7 @@ DEFINE_GUID(MEDIASUBTYPE_RGB24,0xe436eb7d,0x524f,0x11ce,0x9f,0x53,0x00,0x20,0xaf
 DEFINE_GUID(MEDIASUBTYPE_RGB32,0xe436eb7e,0x524f,0x11ce,0x9f,0x53,0x00,0x20,0xaf,0x0b,0xa7,0x70);
 DEFINE_GUID(MEDIASUBTYPE_RGB555,0xe436eb7c,0x524f,0x11ce,0x9f,0x53,0x00,0x20,0xaf,0x0b,0xa7,0x70);
 DEFINE_GUID(MEDIASUBTYPE_RGB565,0xe436eb7b,0x524f,0x11ce,0x9f,0x53,0x00,0x20,0xaf,0x0b,0xa7,0x70);
-DEFINE_GUID(MEDIASUBTYPE_I420,0x49343230,0x0000,0x0010,0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71);
+DEFINE_GUID(MEDIASUBTYPE_I420,0x30323449,0x0000,0x0010,0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71);
 DEFINE_GUID(MEDIASUBTYPE_UYVY,0x59565955,0x0000,0x0010,0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71);
 DEFINE_GUID(MEDIASUBTYPE_Y211,0x31313259,0x0000,0x0010,0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71);
 DEFINE_GUID(MEDIASUBTYPE_Y411,0x31313459,0x0000,0x0010,0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71);
@@ -2427,7 +2427,15 @@ static bool setSizeAndSubtype(videoDevice * VD, int attemptWidth, int attemptHei
     VD->pAmMediaType->subtype     = mediatype;
 
     //buffer size
-    VD->pAmMediaType->lSampleSize = attemptWidth*attemptHeight*3;
+    if (mediatype == MEDIASUBTYPE_RGB24)
+    {
+        VD->pAmMediaType->lSampleSize = attemptWidth*attemptHeight*3;
+    }
+    else
+    {
+        // For compressed data, the value can be zero.
+        VD->pAmMediaType->lSampleSize = 0;
+    }
 
     //set fps if requested
     if( VD->requestedFrameTime != -1){
@@ -2570,6 +2578,7 @@ int videoInput::start(int deviceID, videoDevice *VD){
 
             if( setSizeAndSubtype(VD, VD->tryWidth, VD->tryHeight, VD->tryVideoType) ){
                 VD->setSize(VD->tryWidth, VD->tryHeight);
+                VD->videoType = VD->tryVideoType;
                 foundSize = true;
             } else {
                 // try specified size with all formats
@@ -2580,6 +2589,7 @@ int videoInput::start(int deviceID, videoDevice *VD){
                     if(verbose)printf("SETUP: trying format %s @ %i by %i\n", guidStr, VD->tryWidth, VD->tryHeight);
                     if( setSizeAndSubtype(VD, VD->tryWidth, VD->tryHeight, mediaSubtypes[i]) ){
                         VD->setSize(VD->tryWidth, VD->tryHeight);
+                        VD->videoType = mediaSubtypes[i];
                         foundSize = true;
                         break;
                     }
