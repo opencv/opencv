@@ -47,6 +47,7 @@
 #include <iostream> // std::cerr
 
 #define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG 0
+#define CV_OPENCL_SHOW_RUN_ERRORS       0
 
 #include "opencv2/core/bufferpool.hpp"
 #ifndef LOG_BUFFER_POOL
@@ -3037,6 +3038,13 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
     cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
                                            offset, globalsize, _localsize, 0, 0,
                                            sync ? 0 : &p->e);
+#if CV_OPENCL_SHOW_RUN_ERRORS
+    if (retval != CL_SUCCESS)
+    {
+        printf("OpenCL program returns error: %d\n", retval);
+        fflush(stdout);
+    }
+#endif
     if( sync || retval != CL_SUCCESS )
     {
         CV_OclDbgAssert(clFinish(qq) == CL_SUCCESS);
