@@ -130,8 +130,8 @@ void Cloning::idst(const Mat& src, Mat& dest)
 
 void Cloning::solve(const Mat &img, std::vector<float>& mod_diff, Mat &result)
 {
-    const int w = img.size().width;
-    const int h = img.size().height;
+    const int w = img.cols;
+    const int h = img.rows;
 
 
     Mat ModDiff(h-2, w-2, CV_32F, &mod_diff[0]);
@@ -184,8 +184,8 @@ void Cloning::solve(const Mat &img, std::vector<float>& mod_diff, Mat &result)
 void Cloning::poissonSolver(const Mat &img, Mat &laplacianX , Mat &laplacianY, Mat &result)
 {
 
-    const int w = img.size().width;
-    const int h = img.size().height;
+    const int w = img.cols;
+    const int h = img.rows;
 
     unsigned long int idx;
 
@@ -244,12 +244,12 @@ void Cloning::initVariables(const Mat &destination, const Mat &binaryMask)
     binaryMaskFloatInverted = Mat(binaryMask.size(),CV_32FC1);
 
     //init of the filters used in the dst
-    const int w = destination.size().width;
+    const int w = destination.cols;
     filter_X.resize(w - 2);
     for(int i = 0 ; i < w-2 ; ++i)
         filter_X[i] = 2.0f * std::cos(CV_PI * (i + 1) / (w - 1));
 
-    const int h  = destination.size().height;
+    const int h  = destination.rows;
     filter_Y.resize(h - 2);
     for(int j = 0 ; j < h - 2 ; ++j)
         filter_Y[j] = 2.0f * std::cos(CV_PI * (j + 1) / (h - 1));
@@ -334,8 +334,8 @@ void Cloning::evaluate(const Mat &I, const Mat &wmask, const Mat &cloned)
 
 void Cloning::normalClone(const Mat &destination, const Mat &patch, const Mat &binaryMask, Mat &cloned, int flag)
 {
-    int w = destination.size().width;
-    int h = destination.size().height;
+    int w = destination.cols;
+    int h = destination.rows;
     int channel = destination.channels();
 
     computeDerivatives(destination,patch,binaryMask);
