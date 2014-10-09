@@ -48,6 +48,8 @@ using namespace cv;
 TEST(Features2D_ORB, _1996)
 {
     Ptr<FeatureDetector> fd = FeatureDetector::create("ORB");
+    fd->set("nFeatures", 10000);//setting a higher maximum to make effect of threshold visible
+    fd->set("fastThreshold", 20);//more features than the default
     Ptr<DescriptorExtractor> de = DescriptorExtractor::create("ORB");
 
     Mat image = imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.png");
