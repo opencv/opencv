@@ -12,8 +12,8 @@ The goal of this tutorial is to learn how to use *features2d* and *calib3d* modu
 #.
     Create a new console project. Read two input images. ::
 
-        Mat img1 = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
-        Mat img2 = imread(argv[2], CV_LOAD_IMAGE_GRAYSCALE);
+        Mat img1 = imread(argv[1], IMREAD_GRAYSCALE);
+        Mat img2 = imread(argv[2], IMREAD_GRAYSCALE);
 
 #.
     Detect keypoints in both images. ::
@@ -59,7 +59,7 @@ The goal of this tutorial is to learn how to use *features2d* and *calib3d* modu
         vector<Point2f> points1, points2;
         // fill the arrays with the points
         ....
-        Mat H = findHomography(Mat(points1), Mat(points2), CV_RANSAC, ransacReprojThreshold);
+        Mat H = findHomography(Mat(points1), Mat(points2), RANSAC, ransacReprojThreshold);
 
 
 #.

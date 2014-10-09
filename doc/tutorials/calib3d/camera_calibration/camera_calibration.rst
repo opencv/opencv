@@ -136,7 +136,7 @@ Explanation
       {
       case Settings::CHESSBOARD:
         found = findChessboardCorners( view, s.boardSize, pointBuf,
-        CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FAST_CHECK | CV_CALIB_CB_NORMALIZE_IMAGE);
+        CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_FAST_CHECK | CALIB_CB_NORMALIZE_IMAGE);
         break;
       case Settings::CIRCLES_GRID:
         found = findCirclesGrid( view, s.boardSize, pointBuf );
@@ -158,9 +158,9 @@ Explanation
               if( s.calibrationPattern == Settings::CHESSBOARD)
               {
                   Mat viewGray;
-                  cvtColor(view, viewGray, CV_BGR2GRAY);
+                  cvtColor(view, viewGray, COLOR_BGR2GRAY);
                   cornerSubPix( viewGray, pointBuf, Size(11,11),
-                    Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
+                    Size(-1,-1), TermCriteria( TermCriteria::EPS+TermCriteria::MAX_ITER, 30, 0.1 ));
               }
 
               if( mode == CAPTURING &&  // For camera only take new samples after delay time
@@ -327,7 +327,7 @@ We do the calibration with the help of the :calib3d:`calibrateCamera <calibratec
      .. code-block:: cpp
 
         cameraMatrix = Mat::eye(3, 3, CV_64F);
-        if( s.flag & CV_CALIB_FIX_ASPECT_RATIO )
+        if( s.flag & CALIB_FIX_ASPECT_RATIO )
              cameraMatrix.at<double>(0,0) = 1.0;
 
    + The distortion coefficient matrix. Initialize with zero.
@@ -364,7 +364,7 @@ We do the calibration with the help of the :calib3d:`calibrateCamera <calibratec
         {
           projectPoints( Mat(objectPoints[i]), rvecs[i], tvecs[i], cameraMatrix,  // project
                                                distCoeffs, imagePoints2);
-          err = norm(Mat(imagePoints[i]), Mat(imagePoints2), CV_L2);              // difference
+          err = norm(Mat(imagePoints[i]), Mat(imagePoints2), NORM_L2);              // difference
 
           int n = (int)objectPoints[i].size();
           perViewErrors[i] = (float) std::sqrt(err*err/n);                        // save for this view

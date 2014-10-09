@@ -128,7 +128,7 @@ Code
      /// Read the image
      src = imread( argv[1], 1 );
      /// Transform it to HSV
-     cvtColor( src, hsv, CV_BGR2HSV );
+     cvtColor( src, hsv, COLOR_BGR2HSV );
 
      /// Use only the Hue value
      hue.create( hsv.size(), hsv.depth() );
@@ -137,7 +137,7 @@ Code
 
      /// Create Trackbar to enter the number of bins
      char* window_image = "Source image";
-     namedWindow( window_image, CV_WINDOW_AUTOSIZE );
+     namedWindow( window_image, WINDOW_AUTOSIZE );
      createTrackbar("* Hue  bins: ", window_image, &bins, 180, Hist_and_Backproj );
      Hist_and_Backproj(0, 0);
 
@@ -198,7 +198,7 @@ Explanation
    .. code-block:: cpp
 
       src = imread( argv[1], 1 );
-      cvtColor( src, hsv, CV_BGR2HSV );
+      cvtColor( src, hsv, COLOR_BGR2HSV );
 
 #. For this tutorial, we will use only the Hue value for our 1-D histogram (check out the fancier code in the links above if you want to use the more standard H-S histogram, which yields better results):
 
@@ -224,7 +224,7 @@ Explanation
    .. code-block:: cpp
 
       char* window_image = "Source image";
-      namedWindow( window_image, CV_WINDOW_AUTOSIZE );
+      namedWindow( window_image, WINDOW_AUTOSIZE );
       createTrackbar("* Hue  bins: ", window_image, &bins, 180, Hist_and_Backproj );
       Hist_and_Backproj(0, 0);
 

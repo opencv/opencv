@@ -28,12 +28,12 @@ Now, let us write a code that detects a chessboard in a new image and finds its 
 #.
     Create an empty console project. Load a test image: ::
 
-        Mat img = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
+        Mat img = imread(argv[1], IMREAD_GRAYSCALE);
 
 #.
     Detect a chessboard in this image using findChessboard function. ::
 
-        bool found = findChessboardCorners( img, boardSize, ptvec, CV_CALIB_CB_ADAPTIVE_THRESH );
+        bool found = findChessboardCorners( img, boardSize, ptvec, CALIB_CB_ADAPTIVE_THRESH );
 
 #.
     Now, write a function that generates a ``vector<Point3f>`` array of 3d coordinates of a chessboard in any coordinate system. For simplicity, let us choose a system such that one of the chessboard corners is in the origin and the board is in the plane *z = 0*.

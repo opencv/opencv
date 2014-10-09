@@ -50,10 +50,10 @@ This tutorial code's is shown lines below. You can also download it from `here <
    {
      /// Load source image and convert it to gray
      src = imread( argv[1], 1 );
-     cvtColor( src, src_gray, CV_BGR2GRAY );
+     cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
      /// Create Window
-     namedWindow( source_window, CV_WINDOW_AUTOSIZE );
+     namedWindow( source_window, WINDOW_AUTOSIZE );
 
      /// Create Trackbar to set the number of corners
      createTrackbar( "Max  corners:", source_window, &maxCorners, maxTrackbar, goodFeaturesToTrack_Demo );
@@ -106,7 +106,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
                  rng.uniform(0,255)), -1, 8, 0 ); }
 
      /// Show what you got
-     namedWindow( source_window, CV_WINDOW_AUTOSIZE );
+     namedWindow( source_window, WINDOW_AUTOSIZE );
      imshow( source_window, copy );
    }
 
