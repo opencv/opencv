@@ -49,6 +49,11 @@ if(WITH_GSTREAMER_0_10 OR NOT HAVE_GSTREAMER)
   endif()
 endif(WITH_GSTREAMER_0_10 OR NOT HAVE_GSTREAMER)
 
+# if you do not want to use gstreamer at all
+if(NOT WITH_GSTREAMER_0_10 OR NOT HAVE_GSTREAMER)
+  set(HAVE_GSTREAMER FALSE)
+endif(NOT WITH_GSTREAMER_0_10 OR NOT HAVE_GSTREAMER)
+
 # --- unicap ---
 ocv_clear_vars(HAVE_UNICAP)
 if(WITH_UNICAP)
