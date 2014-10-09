@@ -239,8 +239,9 @@ namespace
     void GeneralizedHoughBase::detectImpl(InputArray image, OutputArray positions, OutputArray votes)
     {
 #ifndef HAVE_OPENCV_CUDAFILTERS
-        (void) templ;
-        (void) templCenter;
+        (void) image;
+        (void) positions;
+        (void) votes;
         throw_no_cuda();
 #else
         calcEdges(image, imageEdges_, imageDx_, imageDy_);
