@@ -3008,7 +3008,7 @@ static double dotProd_32f(const float* src1, const float* src2, int len)
         return r;
     setIppErrorStatus();
 #elif CV_NEON
-    int len0 = len & -4, blockSize0 = (1 << 15), blockSize;
+    int len0 = len & -4, blockSize0 = (1 << 13), blockSize;
     float32x4_t v_zero = vdupq_n_f32(0.0f);
     CV_DECL_ALIGNED(16) float buf[4];
 
