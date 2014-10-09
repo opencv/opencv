@@ -1222,7 +1222,7 @@ Performs generalized matrix multiplication.
 
 .. ocv:cfunction:: void cvGEMM( const CvArr* src1, const CvArr* src2, double alpha, const CvArr* src3, double beta, CvArr* dst, int tABC=0)
 
-    :param src1: first multiplied input matrix that should have ``CV_32FC1``, ``CV_64FC1``, ``CV_32FC2``, or ``CV_64FC2`` type.
+    :param src1: first multiplied input matrix that could be real(``CV_32FC1``, ``CV_64FC1``) or complex(``CV_32FC2``, ``CV_64FC2``).
 
     :param src2: second multiplied input matrix of the same type as ``src1``.
 
@@ -1245,6 +1245,8 @@ The function performs generalized matrix multiplication similar to the ``gemm`` 
 .. math::
 
     \texttt{dst} =  \texttt{alpha} \cdot \texttt{src1} ^T  \cdot \texttt{src2} +  \texttt{beta} \cdot \texttt{src3} ^T
+
+In case of complex (two-channel) data, performed a complex matrix multiplication.
 
 The function can be replaced with a matrix expression. For example, the above call can be replaced with: ::
 
