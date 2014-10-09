@@ -91,7 +91,8 @@ CV_INIT_ALGORITHM(ORB, "Feature2D.ORB",
                   obj.info()->addParam(obj, "edgeThreshold", obj.edgeThreshold);
                   obj.info()->addParam(obj, "patchSize", obj.patchSize);
                   obj.info()->addParam(obj, "WTA_K", obj.WTA_K);
-                  obj.info()->addParam(obj, "scoreType", obj.scoreType))
+                  obj.info()->addParam(obj, "scoreType", obj.scoreType);
+                  obj.info()->addParam(obj, "fastThreshold", obj.fastThreshold))
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 

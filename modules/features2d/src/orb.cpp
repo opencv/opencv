@@ -649,10 +649,10 @@ static inline float getScale(int level, int firstLevel, double scaleFactor)
  * @param detector_params parameters to use
  */
 ORB::ORB(int _nfeatures, float _scaleFactor, int _nlevels, int _edgeThreshold,
-         int _firstLevel, int _WTA_K, int _scoreType, int _patchSize) :
+         int _firstLevel, int _WTA_K, int _scoreType, int _patchSize, int _fastThreshold) :
     nfeatures(_nfeatures), scaleFactor(_scaleFactor), nlevels(_nlevels),
     edgeThreshold(_edgeThreshold), firstLevel(_firstLevel), WTA_K(_WTA_K),
-    scoreType(_scoreType), patchSize(_patchSize)
+    scoreType(_scoreType), patchSize(_patchSize), fastThreshold(_fastThreshold)
 {}
 
 
@@ -730,7 +730,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
                              std::vector<KeyPoint>& allKeypoints,
                              int nfeatures, double scaleFactor,
                              int edgeThreshold, int patchSize, int scoreType,
-                             bool useOCL )
+                             bool useOCL, int fastThreshold  )
 {
     int i, nkeypoints, level, nlevels = (int)layerInfo.size();
     std::vector<int> nfeaturesPerLevel(nlevels);
@@ -781,7 +781,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
         Mat mask = maskPyramid.empty() ? Mat() : maskPyramid(layerInfo[level]);
 
         // Detect FAST features, 20 is a good threshold
-        FastFeatureDetector fd(20, true);
+        FastFeatureDetector fd(fastThreshold, true);
         fd.detect(img, keypoints, mask);
 
         // Remove keypoints very close to the border
@@ -1033,7 +1033,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
         // Get keypoints, those will be far enough from the border that no check will be required for the descriptor
         computeKeyPoints(imagePyramid, uimagePyramid, maskPyramid,
                          layerInfo, ulayerInfo, layerScale, keypoints,
-                         nfeatures, scaleFactor, edgeThreshold, patchSize, scoreType, useOCL);
+                         nfeatures, scaleFactor, edgeThreshold, patchSize, scoreType, useOCL, fastThreshold);
     }
     else
     {
@@ -1130,5 +1130,6 @@ void ORB::computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, Outpu
 {
     (*this)(image, Mat(), keypoints, descriptors, true);
 }
+
 
 }
