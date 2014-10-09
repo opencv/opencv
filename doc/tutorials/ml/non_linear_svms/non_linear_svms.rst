@@ -131,7 +131,7 @@ Explanation
      params.svm_type    = SVM::C_SVC;
      params.C              = 0.1;
      params.kernel_type = SVM::LINEAR;
-     params.term_crit   = TermCriteria(CV_TERMCRIT_ITER, (int)1e7, 1e-6);
+     params.term_crit   = TermCriteria(TermCriteria::ITER, (int)1e7, 1e-6);
 
   There are just two differences between the configuration we do here and the one that was done in the :ref:`previous tutorial <introductiontosvms>` that we use as reference.
 

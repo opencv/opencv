@@ -119,9 +119,9 @@ Explanation
 
    .. code-block:: cpp
 
-      cvtColor( src_base, hsv_base, CV_BGR2HSV );
-      cvtColor( src_test1, hsv_test1, CV_BGR2HSV );
-      cvtColor( src_test2, hsv_test2, CV_BGR2HSV );
+      cvtColor( src_base, hsv_base, COLOR_BGR2HSV );
+      cvtColor( src_test1, hsv_test1, COLOR_BGR2HSV );
+      cvtColor( src_test2, hsv_test2, COLOR_BGR2HSV );
 
 #. Also, create an image of half the base image (in HSV format):
 

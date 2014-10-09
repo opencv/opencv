@@ -114,16 +114,16 @@ Explanation
 
    .. code-block:: cpp
 
-      CvSVMParams params;
-      params.svm_type    = CvSVM::C_SVC;
-      params.kernel_type = CvSVM::LINEAR;
-      params.term_crit   = cvTermCriteria(CV_TERMCRIT_ITER, 100, 1e-6);
+      ml::SVM::Params params;
+      params.svmType    = ml::SVM::C_SVC;
+      params.kernelType = ml::SVM::LINEAR;
+      params.termCrit   = TermCriteria(TermCriteria::MAX_ITER, 100, 1e-6);
 
-   * *Type of SVM*. We choose here the type **CvSVM::C_SVC** that can be used for n-class classification (n :math:`\geq` 2). This parameter is defined in the attribute *CvSVMParams.svm_type*.
+   * *Type of SVM*. We choose here the type **ml::SVM::C_SVC** that can be used for n-class classification (n :math:`\geq` 2). This parameter is defined in the attribute *ml::SVM::Params.svmType*.
 
      .. note:: The important feature of the type of SVM **CvSVM::C_SVC** deals with imperfect separation of classes (i.e. when the training data is non-linearly separable). This feature is not important here since the data is linearly separable and we chose this SVM type only for being the most commonly used.
 
-   * *Type of SVM kernel*. We have not talked about kernel functions since they are not interesting for the training data we are dealing with. Nevertheless, let's explain briefly now the main idea behind a kernel function. It is a mapping done to the training data to improve its resemblance to a linearly separable set of data. This mapping consists of increasing the dimensionality of the data and is done efficiently using a kernel function. We choose here the type **CvSVM::LINEAR** which means that no mapping is done. This parameter is defined in the attribute *CvSVMParams.kernel_type*.
+   * *Type of SVM kernel*. We have not talked about kernel functions since they are not interesting for the training data we are dealing with. Nevertheless, let's explain briefly now the main idea behind a kernel function. It is a mapping done to the training data to improve its resemblance to a linearly separable set of data. This mapping consists of increasing the dimensionality of the data and is done efficiently using a kernel function. We choose here the type **ml::SVM::LINEAR** which means that no mapping is done. This parameter is defined in the attribute *ml::SVMParams.kernel_type*.
 
    * *Termination criteria of the algorithm*. The SVM training procedure is implemented solving a constrained quadratic optimization problem in an **iterative** fashion. Here we specify a maximum number of iterations and a tolerance error so we allow the algorithm to finish in less number of steps even if the optimal hyperplane has not been computed yet. This parameter is defined in a structure :oldbasicstructures:`cvTermCriteria <cvtermcriteria>`.
 

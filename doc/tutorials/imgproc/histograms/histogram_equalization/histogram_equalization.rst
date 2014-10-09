@@ -113,14 +113,14 @@ Code
          return -1;}
 
      /// Convert to grayscale
-     cvtColor( src, src, CV_BGR2GRAY );
+     cvtColor( src, src, COLOR_BGR2GRAY );
 
      /// Apply Histogram Equalization
      equalizeHist( src, dst );
 
      /// Display results
-     namedWindow( source_window, CV_WINDOW_AUTOSIZE );
-     namedWindow( equalized_window, CV_WINDOW_AUTOSIZE );
+     namedWindow( source_window, WINDOW_AUTOSIZE );
+     namedWindow( equalized_window, WINDOW_AUTOSIZE );
 
      imshow( source_window, src );
      imshow( equalized_window, dst );
@@ -157,7 +157,7 @@ Explanation
 
    ..  code-block:: cpp
 
-       cvtColor( src, src, CV_BGR2GRAY );
+       cvtColor( src, src, COLOR_BGR2GRAY );
 
 #. Apply histogram equalization with the function :equalize_hist:`equalizeHist <>` :
 
@@ -171,8 +171,8 @@ Explanation
 
    .. code-block::  cpp
 
-      namedWindow( source_window, CV_WINDOW_AUTOSIZE );
-      namedWindow( equalized_window, CV_WINDOW_AUTOSIZE );
+      namedWindow( source_window, WINDOW_AUTOSIZE );
+      namedWindow( equalized_window, WINDOW_AUTOSIZE );
 
       imshow( source_window, src );
       imshow( equalized_window, dst );

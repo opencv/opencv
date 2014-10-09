@@ -17,8 +17,8 @@ The code
 --------
 We will start with a short sample ``opencv/samples/cpp/matcher_simple.cpp``: ::
 
-    Mat img1 = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
-    Mat img2 = imread(argv[2], CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img1 = imread(argv[1], IMREAD_GRAYSCALE);
+    Mat img2 = imread(argv[2], IMREAD_GRAYSCALE);
     if(img1.empty() || img2.empty())
     {
         printf("Can't read one of the images\n");
@@ -54,8 +54,8 @@ The code explained
 
 Let us break the code down. ::
 
-    Mat img1 = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
-    Mat img2 = imread(argv[2], CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img1 = imread(argv[1], IMREAD_GRAYSCALE);
+    Mat img2 = imread(argv[2], IMREAD_GRAYSCALE);
     if(img1.empty() || img2.empty())
     {
         printf("Can't read one of the images\n");

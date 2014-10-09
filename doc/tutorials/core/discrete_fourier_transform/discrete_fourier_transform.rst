@@ -120,8 +120,8 @@ In this sample I'll show how to calculate and show the *magnitude* image of a Fo
 
    .. code-block:: cpp
 
-      normalize(magI, magI, 0, 1, CV_MINMAX); // Transform the matrix with float values into a
-                                              // viewable image form (float between values 0 and 1).
+      normalize(magI, magI, 0, 1, NORM_MINMAX); // Transform the matrix with float values into a
+                                                // viewable image form (float between values 0 and 1).
 
 Result
 ======

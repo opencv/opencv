@@ -158,8 +158,8 @@ Code
      templ = imread( argv[2], 1 );
 
      /// Create windows
-     namedWindow( image_window, CV_WINDOW_AUTOSIZE );
-     namedWindow( result_window, CV_WINDOW_AUTOSIZE );
+     namedWindow( image_window, WINDOW_AUTOSIZE );
+     namedWindow( result_window, WINDOW_AUTOSIZE );
 
      /// Create Trackbar
      char* trackbar_label = "Method: \n 0: SQDIFF \n 1: SQDIFF NORMED \n 2: TM CCORR \n 3: TM CCORR NORMED \n 4: TM COEFF \n 5: TM COEFF NORMED";
@@ -239,8 +239,8 @@ Explanation
 
    .. code-block:: cpp
 
-      namedWindow( image_window, CV_WINDOW_AUTOSIZE );
-      namedWindow( result_window, CV_WINDOW_AUTOSIZE );
+      namedWindow( image_window, WINDOW_AUTOSIZE );
+      namedWindow( result_window, WINDOW_AUTOSIZE );
 
 #. Create the Trackbar to enter the kind of matching method to be used. When a change is detected the callback function **MatchingMethod** is called.
 
@@ -306,11 +306,11 @@ Explanation
       + **Mat():** Optional mask
 
 
-#. For the first two methods ( CV\_SQDIFF and CV\_SQDIFF\_NORMED ) the best match are the lowest values. For all the others, higher values represent better matches. So, we save the corresponding value in the **matchLoc** variable:
+#. For the first two methods ( TM\_SQDIFF and MT\_SQDIFF\_NORMED ) the best match are the lowest values. For all the others, higher values represent better matches. So, we save the corresponding value in the **matchLoc** variable:
 
    .. code-block:: cpp
 
-     if( match_method  == CV_TM_SQDIFF || match_method == CV_TM_SQDIFF_NORMED )
+     if( match_method  == TM_SQDIFF || match_method == TM_SQDIFF_NORMED )
        { matchLoc = minLoc; }
      else
        { matchLoc = maxLoc; }

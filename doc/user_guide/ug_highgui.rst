@@ -41,19 +41,19 @@ VideoCapture can retrieve the following data:
 
 #.
     data given from depth generator:
-      * ``CV_CAP_OPENNI_DEPTH_MAP``          - depth values in mm (CV_16UC1)
-      * ``CV_CAP_OPENNI_POINT_CLOUD_MAP``    - XYZ in meters (CV_32FC3)
-      * ``CV_CAP_OPENNI_DISPARITY_MAP``      - disparity in pixels (CV_8UC1)
-      * ``CV_CAP_OPENNI_DISPARITY_MAP_32F``  - disparity in pixels (CV_32FC1)
-      * ``CV_CAP_OPENNI_VALID_DEPTH_MASK``   - mask of valid pixels (not ocluded, not shaded etc.) (CV_8UC1)
+      * ``CAP_OPENNI_DEPTH_MAP``          - depth values in mm (CV_16UC1)
+      * ``CAP_OPENNI_POINT_CLOUD_MAP``    - XYZ in meters (CV_32FC3)
+      * ``CAP_OPENNI_DISPARITY_MAP``      - disparity in pixels (CV_8UC1)
+      * ``CAP_OPENNI_DISPARITY_MAP_32F``  - disparity in pixels (CV_32FC1)
+      * ``CAP_OPENNI_VALID_DEPTH_MASK``   - mask of valid pixels (not ocluded, not shaded etc.) (CV_8UC1)
 #.
     data given from RGB image generator:
-      * ``CV_CAP_OPENNI_BGR_IMAGE``          - color image (CV_8UC3)
-      * ``CV_CAP_OPENNI_GRAY_IMAGE``         - gray image (CV_8UC1)
+      * ``CAP_OPENNI_BGR_IMAGE``          - color image (CV_8UC3)
+      * ``CAP_OPENNI_GRAY_IMAGE``         - gray image (CV_8UC1)
 
 In order to get depth map from depth sensor use ``VideoCapture::operator >>``, e. g. ::
 
-    VideoCapture capture( CV_CAP_OPENNI );
+    VideoCapture capture( CAP_OPENNI );
     for(;;)
     {
         Mat depthMap;
@@ -65,7 +65,7 @@ In order to get depth map from depth sensor use ``VideoCapture::operator >>``, e
 
 For getting several data maps use ``VideoCapture::grab`` and ``VideoCapture::retrieve``, e.g. ::
 
-    VideoCapture capture(0); // or CV_CAP_OPENNI
+    VideoCapture capture(0); // or CAP_OPENNI
     for(;;)
     {
         Mat depthMap;
@@ -73,8 +73,8 @@ For getting several data maps use ``VideoCapture::grab`` and ``VideoCapture::ret
 
         capture.grab();
 
-        capture.retrieve( depthMap, CV_CAP_OPENNI_DEPTH_MAP );
-        capture.retrieve( bgrImage, CV_CAP_OPENNI_BGR_IMAGE );
+        capture.retrieve( depthMap, CAP_OPENNI_DEPTH_MAP );
+        capture.retrieve( bgrImage, CAP_OPENNI_BGR_IMAGE );
 
         if( waitKey( 30 ) >= 0 )
             break;
@@ -82,20 +82,20 @@ For getting several data maps use ``VideoCapture::grab`` and ``VideoCapture::ret
 
 For setting and getting some property of sensor` data generators use ``VideoCapture::set`` and ``VideoCapture::get`` methods respectively, e.g. ::
 
-    VideoCapture capture( CV_CAP_OPENNI );
-    capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_VGA_30HZ );
-    cout << "FPS    " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FPS ) << endl;
+    VideoCapture capture( CAP_OPENNI );
+    capture.set( CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CAP_OPENNI_VGA_30HZ );
+    cout << "FPS    " << capture.get( CAP_OPENNI_IMAGE_GENERATOR+CAP_PROP_FPS ) << endl;
 
 Since two types of sensor's data generators are supported (image generator and depth generator), there are two flags that should be used to set/get property of the needed generator:
 
-* CV_CAP_OPENNI_IMAGE_GENERATOR -- A flag for access to the image generator properties.
+* CAP_OPENNI_IMAGE_GENERATOR -- A flag for access to the image generator properties.
 
-* CV_CAP_OPENNI_DEPTH_GENERATOR -- A flag for access to the depth generator properties. This flag value is assumed by default if neither of the two possible values of the property is not set.
+* CAP_OPENNI_DEPTH_GENERATOR -- A flag for access to the depth generator properties. This flag value is assumed by default if neither of the two possible values of the property is not set.
 
-Some depth sensors (for example XtionPRO) do not have image generator. In order to check it you can get ``CV_CAP_OPENNI_IMAGE_GENERATOR_PRESENT`` property.
+Some depth sensors (for example XtionPRO) do not have image generator. In order to check it you can get ``CAP_OPENNI_IMAGE_GENERATOR_PRESENT`` property.
 ::
 
-    bool isImageGeneratorPresent = capture.get( CV_CAP_PROP_OPENNI_IMAGE_GENERATOR_PRESENT ) != 0; // or == 1
+    bool isImageGeneratorPresent = capture.get( CAP_PROP_OPENNI_IMAGE_GENERATOR_PRESENT ) != 0; // or == 1
 
 
 Flags specifing the needed generator type must be used in combination with particular generator property. The following properties of cameras available through OpenNI interfaces are supported:
@@ -103,30 +103,30 @@ Flags specifing the needed generator type must be used in combination with parti
 *
   For image generator:
 
-  - ``CV_CAP_PROP_OPENNI_OUTPUT_MODE`` -- Three output modes are supported: ``CV_CAP_OPENNI_VGA_30HZ`` used by default (image generator returns images in VGA resolution with 30 FPS), ``CV_CAP_OPENNI_SXGA_15HZ`` (image generator returns images in SXGA resolution with 15 FPS) and ``CV_CAP_OPENNI_SXGA_30HZ`` (image generator returns images in SXGA resolution with 30 FPS, the mode is supported by XtionPRO Live); depth generator's maps are always in VGA resolution.
+  - ``CAP_PROP_OPENNI_OUTPUT_MODE`` -- Three output modes are supported: ``CAP_OPENNI_VGA_30HZ`` used by default (image generator returns images in VGA resolution with 30 FPS), ``CAP_OPENNI_SXGA_15HZ`` (image generator returns images in SXGA resolution with 15 FPS) and ``CAP_OPENNI_SXGA_30HZ`` (image generator returns images in SXGA resolution with 30 FPS, the mode is supported by XtionPRO Live); depth generator's maps are always in VGA resolution.
 
 
 *
   For depth generator:
 
-  - ``CV_CAP_PROP_OPENNI_REGISTRATION`` -- Flag that registers the remapping depth map to image map  by changing depth generator's view point (if the flag is ``"on"``) or sets this view point to its normal one (if the flag is ``"off"``). The registration process’s resulting images are pixel-aligned,which means that every pixel in the image is aligned to a pixel in the depth image.
+  - ``CAP_PROP_OPENNI_REGISTRATION`` -- Flag that registers the remapping depth map to image map  by changing depth generator's view point (if the flag is ``"on"``) or sets this view point to its normal one (if the flag is ``"off"``). The registration process’s resulting images are pixel-aligned,which means that every pixel in the image is aligned to a pixel in the depth image.
 
     Next properties are available for getting only:
 
-  - ``CV_CAP_PROP_OPENNI_FRAME_MAX_DEPTH`` -- A maximum supported depth of Kinect in mm.
-  - ``CV_CAP_PROP_OPENNI_BASELINE`` -- Baseline value in mm.
-  - ``CV_CAP_PROP_OPENNI_FOCAL_LENGTH`` -- A focal length in pixels.
-  - ``CV_CAP_PROP_FRAME_WIDTH`` -- Frame width in pixels.
-  - ``CV_CAP_PROP_FRAME_HEIGHT`` -- Frame height in pixels.
-  - ``CV_CAP_PROP_FPS`` -- Frame rate in FPS.
+  - ``CAP_PROP_OPENNI_FRAME_MAX_DEPTH`` -- A maximum supported depth of Kinect in mm.
+  - ``CAP_PROP_OPENNI_BASELINE`` -- Baseline value in mm.
+  - ``CAP_PROP_OPENNI_FOCAL_LENGTH`` -- A focal length in pixels.
+  - ``CAP_PROP_FRAME_WIDTH`` -- Frame width in pixels.
+  - ``CAP_PROP_FRAME_HEIGHT`` -- Frame height in pixels.
+  - ``CAP_PROP_FPS`` -- Frame rate in FPS.
 
 *
   Some typical flags combinations "generator type + property" are defined as single flags:
 
-    - ``CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE = CV_CAP_OPENNI_IMAGE_GENERATOR + CV_CAP_PROP_OPENNI_OUTPUT_MODE``
-    - ``CV_CAP_OPENNI_DEPTH_GENERATOR_BASELINE = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_BASELINE``
-    - ``CV_CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_FOCAL_LENGTH``
-    - ``CV_CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_REGISTRATION``
+    - ``CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE = CAP_OPENNI_IMAGE_GENERATOR + CAP_PROP_OPENNI_OUTPUT_MODE``
+    - ``CAP_OPENNI_DEPTH_GENERATOR_BASELINE = CAP_OPENNI_DEPTH_GENERATOR + CAP_PROP_OPENNI_BASELINE``
+    - ``CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH = CAP_OPENNI_DEPTH_GENERATOR + CAP_PROP_OPENNI_FOCAL_LENGTH``
+    - ``CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION = CAP_OPENNI_DEPTH_GENERATOR + CAP_PROP_OPENNI_REGISTRATION``
 
 For more information please refer to the example of usage openni_capture.cpp_ in ``opencv/samples/cpp`` folder.
 

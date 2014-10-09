@@ -49,12 +49,12 @@ This tutorial code's is shown lines below. You can also download it from `here <
      src = imread( argv[1], 1 );
 
      /// Convert image to gray and blur it
-     cvtColor( src, src_gray, CV_BGR2GRAY );
+     cvtColor( src, src_gray, COLOR_BGR2GRAY );
      blur( src_gray, src_gray, Size(3,3) );
 
      /// Create Window
      char* source_window = "Source";
-     namedWindow( source_window, CV_WINDOW_AUTOSIZE );
+     namedWindow( source_window, WINDOW_AUTOSIZE );
      imshow( source_window, src );
 
      createTrackbar( " Canny thresh:", "Source", &thresh, max_thresh, thresh_callback );
@@ -74,7 +74,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      /// Detect edges using canny
      Canny( src_gray, canny_output, thresh, thresh*2, 3 );
      /// Find contours
-     findContours( canny_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+     findContours( canny_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
      /// Get the moments
      vector<Moments> mu(contours.size() );
@@ -96,7 +96,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
         }
 
      /// Show in a window
-     namedWindow( "Contours", CV_WINDOW_AUTOSIZE );
+     namedWindow( "Contours", WINDOW_AUTOSIZE );
      imshow( "Contours", drawing );
 
      /// Calculate the area with the moments 00 and compare with the result of the OpenCV function

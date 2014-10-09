@@ -119,7 +119,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      dst = tmp;
 
      /// Create window
-     namedWindow( window_name, CV_WINDOW_AUTOSIZE );
+     namedWindow( window_name, WINDOW_AUTOSIZE );
      imshow( window_name, dst );
 
      /// Loop
@@ -175,7 +175,7 @@ Explanation
 
      .. code-block:: cpp
 
-        namedWindow( window_name, CV_WINDOW_AUTOSIZE );
+        namedWindow( window_name, WINDOW_AUTOSIZE );
         imshow( window_name, dst );
 
    * Perform an infinite loop waiting for user input.
