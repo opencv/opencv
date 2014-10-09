@@ -224,6 +224,7 @@ const _Tp* GpuMat::ptr(int y) const
     return (const _Tp*)ptr(y);
 }
 
+/** @cond IGNORED */
 template <class T> inline
 GpuMat::operator PtrStepSz<T>() const
 {
@@ -235,6 +236,7 @@ GpuMat::operator PtrStep<T>() const
 {
     return PtrStep<T>((T*)data, step);
 }
+/** @endcond */
 
 inline
 GpuMat GpuMat::row(int y) const

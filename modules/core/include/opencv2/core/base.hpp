@@ -235,13 +235,15 @@ enum {
 #define CV_SUPPRESS_DEPRECATED_END
 #endif
 
-//! Signals an error and raises the exception.
-/*!
+/*! @brief Signals an error and raises the exception.
   By default the function prints information about the error to stderr,
   then it either stops if setBreakOnError() had been called before or raises the exception.
   It is possible to alternate error processing by using redirectError().
-
-  \param exc the exception raisen.
+  @param _code - error code @see CVStatus
+  @param _err - error description
+  @param _func - function name. Available only when the compiler supports getting it
+  @param _file - source file name where the error has occured
+  @param _line - line number in the source file where the error has occured
  */
 CV_EXPORTS void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
 

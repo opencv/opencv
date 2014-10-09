@@ -185,9 +185,6 @@ public:
     _Tp val[m*n]; //< matrix elements
 };
 
-/*!
-  \typedef
-*/
 typedef Matx<float, 1, 2> Matx12f;
 typedef Matx<double, 1, 2> Matx12d;
 typedef Matx<float, 1, 3> Matx13f;
@@ -631,6 +628,7 @@ double Matx<_Tp, m, n>::ddot(const Matx<_Tp, m, n>& M) const
     return s;
 }
 
+/** @cond IGNORED */
 template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n> Matx<_Tp,m,n>::diag(const typename Matx<_Tp,m,n>::diag_type& d)
 {
@@ -639,6 +637,7 @@ Matx<_Tp,m,n> Matx<_Tp,m,n>::diag(const typename Matx<_Tp,m,n>::diag_type& d)
         M(i,i) = d(i, 0);
     return M;
 }
+/** @endcond */
 
 template<typename _Tp, int m, int n> template<typename T2>
 inline Matx<_Tp, m, n>::operator Matx<T2, m, n>() const
