@@ -210,7 +210,8 @@ bool  TiffDecoder::readData( Mat& img )
             if( tile_width0 <= 0 )
                 tile_width0 = m_width;
 
-            if( tile_height0 <= 0 )
+            if( tile_height0 <= 0 ||
+                (!is_tiled && tile_height0 == std::numeric_limits<uint32>::max()) )
                 tile_height0 = m_height;
 
             AutoBuffer<uchar> _buffer( size_t(8) * tile_height0*tile_width0);
