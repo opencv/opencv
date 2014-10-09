@@ -512,6 +512,7 @@ namespace cv { namespace gpu
         return *this;
     }
 
+    /** @cond IGNORED */
     template <class T> inline GpuMat::operator PtrStepSz<T>() const
     {
         return PtrStepSz<T>(rows, cols, (T*)data, step);
@@ -531,6 +532,7 @@ namespace cv { namespace gpu
     {
         return PtrStep_<T>(static_cast< DevMem2D_<T> >(*this));
     }
+    /** @endcond */
 
     inline GpuMat createContinuous(int rows, int cols, int type)
     {

@@ -365,7 +365,7 @@ template<typename _Tp, int m, int n> inline double Matx<_Tp, m, n>::ddot(const M
 }
 
 
-
+/** @cond IGNORED */
 template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n> Matx<_Tp,m,n>::diag(const typename Matx<_Tp,m,n>::diag_type& d)
 {
@@ -374,6 +374,7 @@ Matx<_Tp,m,n> Matx<_Tp,m,n>::diag(const typename Matx<_Tp,m,n>::diag_type& d)
         M(i,i) = d(i, 0);
     return M;
 }
+/** @endcond */
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n> Matx<_Tp,m,n>::randu(_Tp a, _Tp b)
