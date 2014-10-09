@@ -110,7 +110,7 @@ CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray input
 /*!
  Kalman filter.
 
- The class implements standard Kalman filter \url{http://en.wikipedia.org/wiki/Kalman_filter}.
+ The class implements standard Kalman filter http://en.wikipedia.org/wiki/Kalman_filter.
  However, you can modify KalmanFilter::transitionMatrix, KalmanFilter::controlMatrix and
  KalmanFilter::measurementMatrix to get the extended Kalman filter functionality.
 */

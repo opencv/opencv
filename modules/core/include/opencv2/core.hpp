@@ -102,10 +102,10 @@ public:
   By default the function prints information about the error to stderr,
   then it either stops if setBreakOnError() had been called before or raises the exception.
   It is possible to alternate error processing by using redirectError().
-
   \param exc the exception raisen.
+  \todo drop this version
  */
-//TODO: drop this version
+
 CV_EXPORTS void error( const Exception& exc );
 
 
@@ -332,7 +332,7 @@ CV_EXPORTS_W void absdiff(InputArray src1, InputArray src2, OutputArray dst);
 CV_EXPORTS_W void inRange(InputArray src, InputArray lowerb,
                           InputArray upperb, OutputArray dst);
 
-//! compares elements of two arrays (dst = src1 <cmpop> src2)
+//! compares elements of two arrays (dst = src1 \<cmpop\> src2)
 CV_EXPORTS_W void compare(InputArray src1, InputArray src2, OutputArray dst, int cmpop);
 
 //! computes per-element minimum of two arrays (dst = min(src1, src2))
