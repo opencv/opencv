@@ -2638,8 +2638,8 @@ struct AddWeighted_SIMD<schar, float>
             out_f_l = vaddq_f32(out_f_l, g);
             out_f_h = vaddq_f32(out_f_h, g);
 
-            int16x4_t out_16_l = vqmovn_s32(vcvtq_s32_f32(out_f_l));
-            int16x4_t out_16_h = vqmovn_s32(vcvtq_s32_f32(out_f_h));
+            int16x4_t out_16_l = vqmovn_s32(cv_vrndq_s32_f32(out_f_l));
+            int16x4_t out_16_h = vqmovn_s32(cv_vrndq_s32_f32(out_f_h));
 
             int16x8_t out_16 = vcombine_s16(out_16_l, out_16_h);
             int8x8_t out = vqmovn_s16(out_16);
@@ -2666,11 +2666,11 @@ struct AddWeighted_SIMD<ushort, float>
 
             float32x4_t v_s1 = vmulq_n_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1))), alpha);
             float32x4_t v_s2 = vmulq_n_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src2))), beta);
-            uint16x4_t v_dst1 = vqmovn_u32(vcvtq_u32_f32(vaddq_f32(vaddq_f32(v_s1, v_s2), g)));
+            uint16x4_t v_dst1 = vqmovn_u32(cv_vrndq_u32_f32(vaddq_f32(vaddq_f32(v_s1, v_s2), g)));
 
             v_s1 = vmulq_n_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1))), alpha);
             v_s2 = vmulq_n_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src2))), beta);
-            uint16x4_t v_dst2 = vqmovn_u32(vcvtq_u32_f32(vaddq_f32(vaddq_f32(v_s1, v_s2), g)));
+            uint16x4_t v_dst2 = vqmovn_u32(cv_vrndq_u32_f32(vaddq_f32(vaddq_f32(v_s1, v_s2), g)));
 
             vst1q_u16(dst + x, vcombine_u16(v_dst1, v_dst2));
         }
@@ -2694,11 +2694,11 @@ struct AddWeighted_SIMD<short, float>
 
             float32x4_t v_s1 = vmulq_n_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src1))), alpha);
             float32x4_t v_s2 = vmulq_n_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src2))), beta);
-            int16x4_t v_dst1 = vqmovn_s32(vcvtq_s32_f32(vaddq_f32(vaddq_f32(v_s1, v_s2), g)));
+            int16x4_t v_dst1 = vqmovn_s32(cv_vrndq_s32_f32(vaddq_f32(vaddq_f32(v_s1, v_s2), g)));
 
             v_s1 = vmulq_n_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src1))), alpha);
             v_s2 = vmulq_n_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src2))), beta);
-            int16x4_t v_dst2 = vqmovn_s32(vcvtq_s32_f32(vaddq_f32(vaddq_f32(v_s1, v_s2), g)));
+            int16x4_t v_dst2 = vqmovn_s32(cv_vrndq_s32_f32(vaddq_f32(vaddq_f32(v_s1, v_s2), g)));
 
             vst1q_s16(dst + x, vcombine_s16(v_dst1, v_dst2));
         }
@@ -2801,8 +2801,8 @@ addWeighted8u( const uchar* src1, size_t step1,
             out_f_l = vaddq_f32(out_f_l, g);
             out_f_h = vaddq_f32(out_f_h, g);
 
-            uint16x4_t out_16_l = vqmovun_s32(vcvtq_s32_f32(out_f_l));
-            uint16x4_t out_16_h = vqmovun_s32(vcvtq_s32_f32(out_f_h));
+            uint16x4_t out_16_l = vqmovun_s32(cv_vrndq_s32_f32(out_f_l));
+            uint16x4_t out_16_h = vqmovun_s32(cv_vrndq_s32_f32(out_f_h));
 
             uint16x8_t out_16 = vcombine_u16(out_16_l, out_16_h);
             uint8x8_t out = vqmovn_u16(out_16);
