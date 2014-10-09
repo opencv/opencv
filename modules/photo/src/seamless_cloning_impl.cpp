@@ -204,8 +204,8 @@ void Cloning::poissonSolver(const Mat &img, Mat &laplacianX , Mat &laplacianY, M
         for(int j=1;j<w-1;j++)
         {
             idx=i*w + j;
-            boundary_point[idx] = -4*(int)bound.at<uchar>(i,j) + (int)bound.at<uchar>(i,(j+1)) + (int)bound.at<uchar>(i,(j-1))
-                + (int)bound.at<uchar>(i-1,j) + (int)bound.at<uchar>(i+1,j);
+            boundary_point[idx] = -4*(int)bound.ptr<uchar>(i)[j] + (int)bound.ptr<uchar>(i)[j+1] + (int)bound.ptr<uchar>(i)[j-1]
+                + (int)bound.ptr<uchar>(i-1)[j] + (int)bound.ptr<uchar>(i+1)[j];
         }
 
     Mat diff = Mat(h,w,CV_32FC1);
@@ -214,7 +214,7 @@ void Cloning::poissonSolver(const Mat &img, Mat &laplacianX , Mat &laplacianY, M
         for(int j=0;j<w;j++)
         {
             idx = i*w+j;
-            diff.at<float>(i,j) = (float) (lap.at<float>(i,j) - boundary_point[idx]);
+            diff.ptr<float>(i)[j] = (lap.ptr<float>(i)[j] - boundary_point[idx]);
         }
     }
 
@@ -224,7 +224,7 @@ void Cloning::poissonSolver(const Mat &img, Mat &laplacianX , Mat &laplacianY, M
         for(int j = 0 ; j < w-2; j++)
         {
             idx = i*(w-2) + j;
-            mod_diff[idx] = diff.at<float>(i+1,j+1);
+            mod_diff[idx] = diff.ptr<float>(i+1)[j+1];
 
         }
     }
@@ -355,21 +355,21 @@ void Cloning::normalClone(const Mat &destination, const Mat &patch, const Mat &b
                 {
                     for(int c=0;c<channel;++c)
                     {
-                        if(abs(patchGradientX.at<float>(i,j*channel+c) - patchGradientY.at<float>(i,j*channel+c)) >
-                                abs(destinationGradientX.at<float>(i,j*channel+c) - destinationGradientY.at<float>(i,j*channel+c)))
+                        if(abs(patchGradientX.ptr<float>(i)[j*channel+c] - patchGradientY.ptr<float>(i)[j*channel+c]) >
+                                abs(destinationGradientX.ptr<float>(i)[j*channel+c] - destinationGradientY.ptr<float>(i)[j*channel+c]))
                         {
 
-                            patchGradientX.at<float>(i,j*channel+c) = patchGradientX.at<float>(i,j*channel+c)
-                                * binaryMaskFloat.at<float>(i,j);
-                            patchGradientY.at<float>(i,j*channel+c) = patchGradientY.at<float>(i,j*channel+c)
-                                * binaryMaskFloat.at<float>(i,j);
+                            patchGradientX.ptr<float>(i)[j*channel+c] = patchGradientX.ptr<float>(i)[j*channel+c]
+                                * binaryMaskFloat.ptr<float>(i)[j];
+                            patchGradientY.ptr<float>(i)[j*channel+c] = patchGradientY.ptr<float>(i)[j*channel+c]
+                                * binaryMaskFloat.ptr<float>(i)[j];
                         }
                         else
                         {
-                            patchGradientX.at<float>(i,j*channel+c) = destinationGradientX.at<float>(i,j*channel+c)
-                                * binaryMaskFloat.at<float>(i,j);
-                            patchGradientY.at<float>(i,j*channel+c) = destinationGradientY.at<float>(i,j*channel+c)
-                                * binaryMaskFloat.at<float>(i,j);
+                            patchGradientX.ptr<float>(i)[j*channel+c] = destinationGradientX.ptr<float>(i)[j*channel+c]
+                                * binaryMaskFloat.ptr<float>(i)[j];
+                            patchGradientY.ptr<float>(i)[j*channel+c] = destinationGradientY.ptr<float>(i)[j*channel+c]
+                                * binaryMaskFloat.ptr<float>(i)[j];
                         }
                     }
                 }
