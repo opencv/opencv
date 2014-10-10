@@ -131,15 +131,13 @@ void Cloning::idst(const Mat& src, Mat& dest)
     dst(src, dest, true);
 }
 
-void Cloning::solve(const Mat &img, std::vector<float>& mod_diff, Mat &result)
+void Cloning::solve(const Mat &img, Mat& mod_diff, Mat &result)
 {
     const int w = img.cols;
     const int h = img.rows;
 
-
-    Mat ModDiff(h-2, w-2, CV_32F, &mod_diff[0]);
     Mat res;
-    dst(ModDiff, res);
+    dst(mod_diff, res);
     
     for(int j = 0 ; j < h-2; j++)
     {
@@ -150,7 +148,7 @@ void Cloning::solve(const Mat &img, std::vector<float>& mod_diff, Mat &result)
         }
     }
 
-    idst(res, ModDiff);
+    idst(res, mod_diff);
 
     unsigned char *  resLinePtr = result.ptr<unsigned char>(0);
     const unsigned char * imgLinePtr = img.ptr<unsigned char>(0);
@@ -164,7 +162,7 @@ void Cloning::solve(const Mat &img, std::vector<float>& mod_diff, Mat &result)
     {
         resLinePtr = result.ptr<unsigned char>(j);
         imgLinePtr  = img.ptr<unsigned char>(j);
-        interpLinePtr = ModDiff.ptr<float>(j-1);
+        interpLinePtr = mod_diff.ptr<float>(j-1);
 
         //first row
         resLinePtr[0] = imgLinePtr[0];
@@ -201,8 +199,6 @@ void Cloning::poissonSolver(const Mat &img, Mat &laplacianX , Mat &laplacianY, M
     const int w = img.cols;
     const int h = img.rows;
 
-    unsigned long int idx;
-
     Mat lap = Mat(img.size(),CV_32FC1);
 
     lap = laplacianX + laplacianY;
@@ -210,39 +206,12 @@ void Cloning::poissonSolver(const Mat &img, Mat &laplacianX , Mat &laplacianY, M
     Mat bound = img.clone();
 
     rectangle(bound, Point(1, 1), Point(img.cols-2, img.rows-2), Scalar::all(0), -1);
+    Mat boundary_points;
+    Laplacian(bound, boundary_points, CV_32F);
 
+    boundary_points = lap - boundary_points;
 
-    std::vector<float> boundary_point(h*w, 0.);
-
-    for(int i =1;i<h-1;i++)
-        for(int j=1;j<w-1;j++)
-        {
-            idx=i*w + j;
-            boundary_point[idx] = -4*(int)bound.ptr<uchar>(i)[j] + (int)bound.ptr<uchar>(i)[j+1] + (int)bound.ptr<uchar>(i)[j-1]
-                + (int)bound.ptr<uchar>(i-1)[j] + (int)bound.ptr<uchar>(i+1)[j];
-        }
-
-    Mat diff = Mat(h,w,CV_32FC1);
-    for(int i =0;i<h;i++)
-    {
-        for(int j=0;j<w;j++)
-        {
-            idx = i*w+j;
-            diff.ptr<float>(i)[j] = (lap.ptr<float>(i)[j] - boundary_point[idx]);
-        }
-    }
-
-    std::vector<float> mod_diff((h-2)*(w-2), 0.);
-    for(int i = 0 ; i < h-2;i++)
-    {
-        for(int j = 0 ; j < w-2; j++)
-        {
-            idx = i*(w-2) + j;
-            mod_diff[idx] = diff.ptr<float>(i+1)[j+1];
-
-        }
-    }
-    ///////////////////////////////////////////////////// Find DST  /////////////////////////////////////////////////////
+    Mat mod_diff = boundary_points(Rect(1, 1, w-2, h-2));
 
     solve(img,mod_diff,result);
 }
