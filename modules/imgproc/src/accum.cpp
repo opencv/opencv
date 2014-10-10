@@ -96,7 +96,7 @@ struct Acc_SIMD<uchar, float>
             len *= cn;
             for ( ; x <= len - 16; x += 16)
             {
-                uint8x16_t v_src = vld1q_u8(src);
+                uint8x16_t v_src = vld1q_u8(src + x);
                 uint16x8_t v_src0 = vmovl_u8(vget_low_u8(v_src)), v_src1 = vmovl_u8(vget_high_u8(v_src));
 
                 vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
@@ -111,7 +111,7 @@ struct Acc_SIMD<uchar, float>
 
             for ( ; x <= len - 16; x += 16)
             {
-                uint8x16_t v_src = vandq_u8(vld1q_u8(src), veorq_u8(v_255, vceqq_u8(vld1q_u8(mask + x), v_0)));
+                uint8x16_t v_src = vandq_u8(vld1q_u8(src + x), veorq_u8(v_255, vceqq_u8(vld1q_u8(mask + x), v_0)));
                 uint16x8_t v_src0 = vmovl_u8(vget_low_u8(v_src)), v_src1 = vmovl_u8(vget_high_u8(v_src));
 
                 vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
@@ -182,7 +182,7 @@ struct AccSqr_SIMD<uchar, float>
             len *= cn;
             for ( ; x <= len - 16; x += 16)
             {
-                uint8x16_t v_src = vld1q_u8(src);
+                uint8x16_t v_src = vld1q_u8(src + x);
                 uint8x8_t v_src_0 = vget_low_u8(v_src), v_src_1 = vget_high_u8(v_src);
                 uint16x8_t v_src0 = vmull_u8(v_src_0, v_src_0), v_src1 = vmull_u8(v_src_1, v_src_1);
 
@@ -198,7 +198,7 @@ struct AccSqr_SIMD<uchar, float>
 
             for ( ; x <= len - 16; x += 16)
             {
-                uint8x16_t v_src = vandq_u8(vld1q_u8(src), veorq_u8(v_255, vceqq_u8(vld1q_u8(mask + x), v_0)));
+                uint8x16_t v_src = vandq_u8(vld1q_u8(src + x), veorq_u8(v_255, vceqq_u8(vld1q_u8(mask + x), v_0)));
                 uint8x8_t v_src_0 = vget_low_u8(v_src), v_src_1 = vget_high_u8(v_src);
                 uint16x8_t v_src0 = vmull_u8(v_src_0, v_src_0), v_src1 = vmull_u8(v_src_1, v_src_1);
 
@@ -292,7 +292,7 @@ struct AccProd_SIMD<uchar, float>
             len *= cn;
             for ( ; x <= len - 16; x += 16)
             {
-                uint8x16_t v_1src = vld1q_u8(src1), v_2src = vld1q_u8(src2);
+                uint8x16_t v_1src = vld1q_u8(src1 + x), v_2src = vld1q_u8(src2 + x);
                 uint16x8_t v_src0 = vmull_u8(vget_low_u8(v_1src), vget_low_u8(v_2src)),
                            v_src1 = vmull_u8(vget_high_u8(v_1src), vget_high_u8(v_2src));
 
@@ -309,7 +309,7 @@ struct AccProd_SIMD<uchar, float>
             for ( ; x <= len - 16; x += 16)
             {
                 uint8x16_t v_mask = veorq_u8(v_255, vceqq_u8(vld1q_u8(mask + x), v_0));
-                uint8x16_t v_1src = vandq_u8(vld1q_u8(src1), v_mask), v_2src = vandq_u8(vld1q_u8(src2), v_mask);
+                uint8x16_t v_1src = vandq_u8(vld1q_u8(src1 + x), v_mask), v_2src = vandq_u8(vld1q_u8(src2 + x), v_mask);
                 uint16x8_t v_src0 = vmull_u8(vget_low_u8(v_1src), vget_low_u8(v_2src)),
                            v_src1 = vmull_u8(vget_high_u8(v_1src), vget_high_u8(v_2src));
 
@@ -402,32 +402,13 @@ struct AccW_SIMD<uchar, float>
             len *= cn;
             for ( ; x <= len - 16; x += 16)
             {
-                uint8x16_t v_src = vld1q_u8(src);
+                uint8x16_t v_src = vld1q_u8(src + x);
                 uint16x8_t v_src0 = vmovl_u8(vget_low_u8(v_src)), v_src1 = vmovl_u8(vget_high_u8(v_src));
 
                 vst1q_f32(dst + x, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x), v_beta),
                                              vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0))), v_alpha));
                 vst1q_f32(dst + x + 4, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 4), v_beta),
                                              vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0))), v_alpha));
-                vst1q_f32(dst + x + 8, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 8), v_beta),
-                                                 vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1))), v_alpha));
-                vst1q_f32(dst + x + 12, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 12), v_beta),
-                                                  vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1))), v_alpha));
-            }
-        }
-        else if (cn == 1)
-        {
-            uint8x16_t v_255 = vdupq_n_u8(255), v_0 = vdupq_n_u8(0);
-
-            for ( ; x <= len - 16; x += 16)
-            {
-                uint8x16_t v_src = vandq_u8(vld1q_u8(src), veorq_u8(v_255, vceqq_u8(vld1q_u8(mask + x), v_0)));
-                uint16x8_t v_src0 = vmovl_u8(vget_low_u8(v_src)), v_src1 = vmovl_u8(vget_high_u8(v_src));
-
-                vst1q_f32(dst + x, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x), v_beta),
-                                             vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0))), v_alpha));
-                vst1q_f32(dst + x + 4, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 4), v_beta),
-                                                 vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0))), v_alpha));
                 vst1q_f32(dst + x + 8, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 8), v_beta),
                                                  vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1))), v_alpha));
                 vst1q_f32(dst + x + 12, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 12), v_beta),
@@ -453,22 +434,6 @@ struct AccW_SIMD<ushort, float>
             for ( ; x <= len - 8; x += 8)
             {
                 uint16x8_t v_src = vld1q_u16(src + x);
-                uint32x4_t v_src0 = vmovl_u16(vget_low_u16(v_src)), v_src1 = vmovl_u16(vget_high_u16(v_src));
-
-                vst1q_f32(dst + x, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x), v_beta), vcvtq_f32_u32(v_src0), v_alpha));
-                vst1q_f32(dst + x + 4, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 4), v_beta), vcvtq_f32_u32(v_src1), v_alpha));
-            }
-        }
-        else if (cn == 1)
-        {
-            uint8x8_t v_255 = vdup_n_u8(255), v_0 = vdup_n_u8(0);
-
-            for ( ; x <= len - 8; x += 8)
-            {
-                uint8x8_t v_mask_src = veor_u8(v_255, vceq_u8(vld1_u8(mask + x), v_0));
-                uint8x8x2_t v_mask_zp = vzip_u8(v_mask_src, v_mask_src);
-                uint16x8_t v_mask = vreinterpretq_u16_u8(vcombine_u8(v_mask_zp.val[0], v_mask_zp.val[1])),
-                           v_src = vandq_u16(vld1q_u16(src + x), v_mask);
                 uint32x4_t v_src0 = vmovl_u16(vget_low_u16(v_src)), v_src1 = vmovl_u16(vget_high_u16(v_src));
 
                 vst1q_f32(dst + x, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x), v_beta), vcvtq_f32_u32(v_src0), v_alpha));
