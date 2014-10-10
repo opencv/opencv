@@ -67,7 +67,8 @@ namespace cv
             void evaluate(const cv::Mat &I, const cv::Mat &wmask, const cv::Mat &cloned);
             void dst(const Mat& src, Mat& dest, bool invert = false);
             void idst(const Mat& src, Mat& dest);
-            void solve(const cv::Mat &img, std::vector<float>& mod_diff, cv::Mat &result);
+            void solve(const Mat &img, Mat& mod_diff, Mat &result);
+
             void poissonSolver(const cv::Mat &img, cv::Mat &gxx , cv::Mat &gyy, cv::Mat &result);
 
             void arrayProduct(const cv::Mat& lhs, const cv::Mat& rhs, cv::Mat& result) const;
