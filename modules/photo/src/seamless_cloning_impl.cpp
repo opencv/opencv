@@ -87,9 +87,11 @@ void Cloning::dst(const Mat& src, Mat& dest, bool invert)
 
     for(int j = 0 ; j < src.rows ; ++j)
     {
+        float * tempLinePtr = temp.ptr<float>(j);
+        const float * srcLinePtr = src.ptr<float>(j);
         for(int i = 0 ; i < src.cols ; ++i)
         {
-            temp.ptr<float>(j)[src.cols + 2 + i] = - src.ptr<float>(j)[src.cols - 1 - i];
+            tempLinePtr[src.cols + 2 + i] = - srcLinePtr[src.cols - 1 - i];
         }
     }
 
@@ -104,11 +106,12 @@ void Cloning::dst(const Mat& src, Mat& dest, bool invert)
 
     for(int j = 0 ; j < src.cols ; ++j)
     {
+        float * tempLinePtr = temp.ptr<float>(j);
         for(int i = 0 ; i < src.rows ; ++i)
         {
             float val = planes[1].ptr<float>(i)[j + 1];
-            temp.ptr<float>(j)[i + 1] = val;
-            temp.ptr<float>(j)[temp.cols - 1 - i] = - val;
+            tempLinePtr[i + 1] = val;
+            tempLinePtr[temp.cols - 1 - i] = - val;
         }
     }
  
@@ -140,13 +143,18 @@ void Cloning::solve(const Mat &img, std::vector<float>& mod_diff, Mat &result)
     
     for(int j = 0 ; j < h-2; j++)
     {
+        float * resLinePtr = res.ptr<float>(j);
         for(int i = 0 ; i < w-2; i++)
         {
-            res.ptr<float>(j)[i] /= (filter_X[i] + filter_Y[j] - 4);
+            resLinePtr[i] /= (filter_X[i] + filter_Y[j] - 4);
         }
     }
 
     idst(res, ModDiff);
+
+    unsigned char *  resLinePtr = result.ptr<unsigned char>(0);
+    const unsigned char * imgLinePtr = img.ptr<unsigned char>(0);
+    const float * interpLinePtr = NULL;
 
      //first col
     for(int i = 0 ; i < w ; ++i)
@@ -154,29 +162,35 @@ void Cloning::solve(const Mat &img, std::vector<float>& mod_diff, Mat &result)
 
     for(int j = 1 ; j < h-1 ; ++j)
     {
+        resLinePtr = result.ptr<unsigned char>(j);
+        imgLinePtr  = img.ptr<unsigned char>(j);
+        interpLinePtr = ModDiff.ptr<float>(j-1);
+
         //first row
-        result.ptr<unsigned char>(j)[0] = img.ptr<unsigned char>(j)[0];
+        resLinePtr[0] = imgLinePtr[0];
         
         for(int i = 1 ; i < w-1 ; ++i)
         {
             //saturate cast is not used here, because it behaves differently from the previous implementation
             //most notable, saturate_cast rounds before truncating, here it's the opposite.
-            float value = ModDiff.ptr<float>(j-1)[i-1];
+            float value = interpLinePtr[i-1];
             if(value < 0.)
-                result.ptr<unsigned char>(j)[i] = 0;
+                resLinePtr[i] = 0;
             else if (value > 255.0)
-                result.ptr<unsigned char>(j)[i] = 255;
+                resLinePtr[i] = 255;
             else
-                result.ptr<unsigned char>(j)[i] = static_cast<unsigned char>(value);
+                resLinePtr[i] = static_cast<unsigned char>(value);
         }
 
         //last row
-        result.ptr<unsigned char>(j)[w-1] = img.ptr<unsigned char>(j)[w-1];
+        resLinePtr[w-1] = imgLinePtr[w-1];
     }
 
     //last col
+    resLinePtr = result.ptr<unsigned char>(h-1);
+    imgLinePtr = img.ptr<unsigned char>(h-1);
     for(int i = 0 ; i < w ; ++i)
-        result.ptr<unsigned char>(h-1)[i] = img.ptr<unsigned char>(h-1)[i];
+        resLinePtr[i] = imgLinePtr[i];
 
 
 }
@@ -351,25 +365,29 @@ void Cloning::normalClone(const Mat &destination, const Mat &patch, const Mat &b
 
             for(int i=0;i < h; i++)
             {
+                float * patchXLinePtr = patchGradientX.ptr<float>(i);
+                float * patchYLinePtr = patchGradientY.ptr<float>(i);
+                const float * destinationXLinePtr = destinationGradientX.ptr<float>(i);
+                const float * destinationYLinePtr = destinationGradientY.ptr<float>(i);
+                const float * binaryMaskLinePtr = binaryMaskFloat.ptr<float>(i);
+
                for(int j=0; j < w; j++)
                 {
                     for(int c=0;c<channel;++c)
                     {
-                        if(abs(patchGradientX.ptr<float>(i)[j*channel+c] - patchGradientY.ptr<float>(i)[j*channel+c]) >
-                                abs(destinationGradientX.ptr<float>(i)[j*channel+c] - destinationGradientY.ptr<float>(i)[j*channel+c]))
+                        if(abs(patchXLinePtr[j*channel+c] - patchYLinePtr[j*channel+c]) >
+                                abs(destinationXLinePtr[j*channel+c] - destinationYLinePtr[j*channel+c]))
                         {
 
-                            patchGradientX.ptr<float>(i)[j*channel+c] = patchGradientX.ptr<float>(i)[j*channel+c]
-                                * binaryMaskFloat.ptr<float>(i)[j];
-                            patchGradientY.ptr<float>(i)[j*channel+c] = patchGradientY.ptr<float>(i)[j*channel+c]
-                                * binaryMaskFloat.ptr<float>(i)[j];
+                            patchXLinePtr[j*channel+c] *= binaryMaskLinePtr[j];
+                            patchYLinePtr[j*channel+c] *= binaryMaskLinePtr[j];
                         }
                         else
                         {
-                            patchGradientX.ptr<float>(i)[j*channel+c] = destinationGradientX.ptr<float>(i)[j*channel+c]
-                                * binaryMaskFloat.ptr<float>(i)[j];
-                            patchGradientY.ptr<float>(i)[j*channel+c] = destinationGradientY.ptr<float>(i)[j*channel+c]
-                                * binaryMaskFloat.ptr<float>(i)[j];
+                            patchXLinePtr[j*channel+c] = destinationXLinePtr[j*channel+c]
+                                * binaryMaskLinePtr[j];
+                            patchGradientY.ptr<float>(i)[j*channel+c] = destinationYLinePtr[j*channel+c]
+                                * binaryMaskLinePtr[j];
                         }
                     }
                 }
