@@ -2448,6 +2448,25 @@ struct Cvt_SIMD<schar, short>
 };
 
 template <>
+struct Cvt_SIMD<schar, ushort>
+{
+    int operator() (const schar * src, ushort * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            int16x8_t v_src = vmovl_s8(vld1_s8(src + x));
+            vst1q_u16(dst + x, vcombine_u16(vqmovun_s32(vmovl_s16(vget_low_s16(v_src))),
+                                            vqmovun_s32(vmovl_s16(vget_high_s16(v_src)))));
+        }
+
+        return x;
+    }
+};
+
+
+template <>
 struct Cvt_SIMD<schar, int>
 {
     int operator() (const schar * src, int * dst, int width) const
@@ -2496,6 +2515,49 @@ struct Cvt_SIMD<ushort, uchar>
         {
             uint16x8_t v_src1 = vld1q_u16(src + x), v_src2 = vld1q_u16(src + x + 8);
             vst1q_u8(dst + x, vcombine_u8(vqmovn_u16(v_src1), vqmovn_u16(v_src2)));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<ushort, schar>
+{
+    int operator() (const ushort * src, schar * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 16; x += 16)
+        {
+            uint16x8_t v_src1 = vld1q_u16(src + x), v_src2 = vld1q_u16(src + x + 8);
+            int32x4_t v_dst10 = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src1)));
+            int32x4_t v_dst11 = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src1)));
+            int32x4_t v_dst20 = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src2)));
+            int32x4_t v_dst21 = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src2)));
+
+            vst1q_s8(dst + x, vcombine_s8(vqmovn_s16(vcombine_s16(vqmovn_s32(v_dst10), vqmovn_s32(v_dst11))),
+                                          vqmovn_s16(vcombine_s16(vqmovn_s32(v_dst20), vqmovn_s32(v_dst21)))));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<ushort, short>
+{
+    int operator() (const ushort * src, short * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            uint16x8_t v_src = vld1q_u16(src + x);
+            int32x4_t v_dst0 = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src)));
+            int32x4_t v_dst1 = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src)));
+
+            vst1q_s16(dst + x, vcombine_s16(vqmovn_s32(v_dst0), vqmovn_s32(v_dst1)));
         }
 
         return x;
