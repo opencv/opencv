@@ -1938,12 +1938,12 @@ static const int* getFontData(int fontFace)
     return ascii;
 }
 
-inline void readCheck(int &c, int &i, const string &text)
+inline void readCheck(int &c, int &i, const string &text, int fontFace)
 {
 
     int leftBoundary = ' ', rightBoundary = 127;
 
-    if(c >= 0x80)
+    if(c >= 0x80 && fontFace == FONT_HERSHEY_COMPLEX)
     {
         if(c >= 0xC0 && c <= 0xDF) //2 bytes utf
         {
@@ -2014,7 +2014,7 @@ void putText( Mat& img, const string& text, Point org,
         int c = (uchar)text[i];
         Point p;
 
-        readCheck(c, i, text);
+        readCheck(c, i, text, fontFace);
 
         const char* ptr = faces[ascii[(c-' ')+1]];
         p.x = (uchar)ptr[0] - 'R';
@@ -2061,7 +2061,7 @@ Size getTextSize( const string& text, int fontFace, double fontScale, int thickn
         int c = (uchar)text[i];
         Point p;
 
-        readCheck(c, i, text);
+        readCheck(c, i, text, fontFace);
 
         const char* ptr = faces[ascii[(c-' ')+1]];
         p.x = (uchar)ptr[0] - 'R';
