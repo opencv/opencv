@@ -261,6 +261,19 @@ static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
             _mm_storeu_ps(mag + i, x0); _mm_storeu_ps(mag + i + 4, x1);
         }
     }
+#elif CV_NEON
+    float CV_DECL_ALIGNED(16) m[4];
+
+    for( ; i <= len - 4; i += 4 )
+    {
+        float32x4_t v_x = vld1q_f32(x + i), v_y = vld1q_f32(y + i);
+        vst1q_f32(m, vaddq_f32(vmulq_f32(v_x, v_x), vmulq_f32(v_y, v_y)));
+
+        mag[i] = std::sqrt(m[0]);
+        mag[i+1] = std::sqrt(m[1]);
+        mag[i+2] = std::sqrt(m[2]);
+        mag[i+3] = std::sqrt(m[3]);
+    }
 #endif
 
     for( ; i < len; i++ )
@@ -2554,12 +2567,14 @@ void patchNaNs( InputOutputArray _a, double _val )
     NAryMatIterator it(arrays, (uchar**)ptrs);
     size_t len = it.size*a.channels();
     Cv32suf val;
-    float fval = (float)_val;
-    val.f = fval;
+    val.f = (float)_val;
 
 #if CV_SSE2
     __m128i v_mask1 = _mm_set1_epi32(0x7fffffff), v_mask2 = _mm_set1_epi32(0x7f800000);
     __m128i v_val = _mm_set1_epi32(val.i);
+#elif CV_NEON
+    int32x4_t v_mask1 = vdupq_n_s32(0x7fffffff), v_mask2 = vdupq_n_s32(0x7f800000),
+        v_val = vdupq_n_s32(val.i);
 #endif
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
@@ -2570,13 +2585,21 @@ void patchNaNs( InputOutputArray _a, double _val )
 #if CV_SSE2
         if (USE_SSE2)
         {
-            for ( ; j < len; j += 4)
+            for ( ; j + 4 <= len; j += 4)
             {
                 __m128i v_src = _mm_loadu_si128((__m128i const *)(tptr + j));
                 __m128i v_cmp_mask = _mm_cmplt_epi32(v_mask2, _mm_and_si128(v_src, v_mask1));
                 __m128i v_res = _mm_or_si128(_mm_andnot_si128(v_cmp_mask, v_src), _mm_and_si128(v_cmp_mask, v_val));
                 _mm_storeu_si128((__m128i *)(tptr + j), v_res);
             }
+        }
+#elif CV_NEON
+        for ( ; j + 4 <= len; j += 4)
+        {
+            int32x4_t v_src = vld1q_s32(tptr + j);
+            uint32x4_t v_cmp_mask = vcltq_s32(v_mask2, vandq_s32(v_src, v_mask1));
+            int32x4_t v_dst = vbslq_s32(v_cmp_mask, v_val, v_src);
+            vst1q_s32(tptr + j, v_dst);
         }
 #endif
 
