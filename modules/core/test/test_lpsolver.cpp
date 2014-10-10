@@ -52,7 +52,7 @@ TEST(Core_LPSolver, regression_basic){
     cv::solveLP(A,B,z);
     std::cout<<"here z goes\n"<<z<<"\n";
     etalon_z=(cv::Mat_<double>(3,1)<<8,4,0);
-    ASSERT_EQ(cv::countNonZero(z!=etalon_z),0);
+    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12);
 #endif
 
 #if 1
@@ -63,7 +63,7 @@ TEST(Core_LPSolver, regression_basic){
     cv::solveLP(A,B,z);
     std::cout<<"here z goes\n"<<z<<"\n";
     etalon_z=(cv::Mat_<double>(2,1)<<20,0);
-    ASSERT_EQ(cv::countNonZero(z!=etalon_z),0);
+    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12);
 #endif
 
 #if 1
@@ -74,7 +74,7 @@ TEST(Core_LPSolver, regression_basic){
     cv::solveLP(A,B,z);
     std::cout<<"here z goes\n"<<z<<"\n";
     etalon_z=(cv::Mat_<double>(2,1)<<1,0);
-    ASSERT_EQ(cv::countNonZero(z!=etalon_z),0);
+    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12);
 #endif
 }
 
@@ -89,7 +89,7 @@ TEST(Core_LPSolver, regression_init_unfeasible){
     cv::solveLP(A,B,z);
     std::cout<<"here z goes\n"<<z<<"\n";
     etalon_z=(cv::Mat_<double>(3,1)<<1250,1000,0);
-    ASSERT_EQ(cv::countNonZero(z!=etalon_z),0);
+    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12);
 #endif
 }
 
@@ -119,7 +119,7 @@ TEST(Core_LPSolver, regression_multiple_solutions){
     printf("scalar %g\n",z.dot(A));
     std::cout<<"here z goes\n"<<z<<"\n";
     ASSERT_EQ(res,1);
-    ASSERT_EQ(z.dot(A),1);
+    ASSERT_LT(fabs(z.dot(A) - 1), DBL_EPSILON);
 #endif
 }
 
@@ -135,7 +135,7 @@ TEST(Core_LPSolver, regression_cycling){
     printf("res=%d\n",res);
     printf("scalar %g\n",z.dot(A));
     std::cout<<"here z goes\n"<<z<<"\n";
-    ASSERT_EQ(z.dot(A),1);
+    ASSERT_LT(fabs(z.dot(A) - 1), DBL_EPSILON);
     //ASSERT_EQ(res,1);
 #endif
 }
