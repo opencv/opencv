@@ -1,8 +1,58 @@
+//M*//////////////////////////////////////////////////////////////////////////////////////
+//
+// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+// By downloading, copying, installing or using the software you agree to this license.
+// If you do not agree to this license, do not download, install,
+// copy or use the software.
+//
+//
+// License Agreement
+// For Open Source Computer Vision Library
+//
+// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+// * Redistribution's of source code must retain the above copyright notice,
+// this list of conditions and the following disclaimer.
+//
+// * Redistribution's in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimer in the documentation
+// and/or other materials provided with the distribution.
+//
+// * The name of the copyright holders may not be used to endorse or promote products
+// derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
+
+/****************************************************************************************\
+* Exhaustive Linearization for Robust Camera Pose and Focal Length Estimation.
+* Contributed by Edgar Riba
+\****************************************************************************************/
+
 #include "precomp.hpp"
 #include "upnp.h"
 #include <limits>
 
-upnp::upnp(const cv::Mat& cameraMatrix, const cv::Mat& opoints, const cv::Mat& ipoints)
+using namespace std;
+using namespace cv;
+
+upnp::upnp(const Mat& cameraMatrix, const Mat& opoints, const Mat& ipoints)
 {
   if (cameraMatrix.depth() == CV_32F)
     init_camera_parameters<float>(cameraMatrix);
@@ -17,14 +67,14 @@ upnp::upnp(const cv::Mat& cameraMatrix, const cv::Mat& opoints, const cv::Mat& i
   if (opoints.depth() == ipoints.depth())
   {
     if (opoints.depth() == CV_32F)
-      init_points<cv::Point3f,cv::Point2f>(opoints, ipoints);
+      init_points<Point3f,Point2f>(opoints, ipoints);
     else
-      init_points<cv::Point3d,cv::Point2d>(opoints, ipoints);
+      init_points<Point3d,Point2d>(opoints, ipoints);
   }
   else if (opoints.depth() == CV_32F)
-    init_points<cv::Point3f,cv::Point2d>(opoints, ipoints);
+    init_points<Point3f,Point2d>(opoints, ipoints);
   else
-    init_points<cv::Point3d,cv::Point2f>(opoints, ipoints);
+    init_points<Point3d,Point2f>(opoints, ipoints);
 
   alphas.resize(4 * number_of_correspondences);
   pcs.resize(3 * number_of_correspondences);
@@ -42,30 +92,32 @@ upnp::~upnp()
     delete[] A2;
 }
 
-double upnp::compute_pose(cv::Mat& R, cv::Mat& t)
+double upnp::compute_pose(Mat& R, Mat& t)
 {
   choose_control_points();
   compute_alphas();
 
-  CvMat * M = cvCreateMat(2 * number_of_correspondences, 12, CV_64F);
+  Mat * M = new Mat(2 * number_of_correspondences, 12, CV_64F);
 
   for(int i = 0; i < number_of_correspondences; i++)
   {
     fill_M(M, 2 * i, &alphas[0] + 4 * i, us[2 * i], us[2 * i + 1]);
   }
 
-  double mtm[12 * 12], d[12], ut[12 * 12];
-  CvMat MtM = cvMat(12, 12, CV_64F, mtm);
-  CvMat D   = cvMat(12,  1, CV_64F, d);
-  CvMat Ut  = cvMat(12, 12, CV_64F, ut);
+  double mtm[12 * 12], d[12], ut[12 * 12], vt[12 * 12];
+  Mat MtM = Mat(12, 12, CV_64F, mtm);
+  Mat D   = Mat(12,  1, CV_64F, d);
+  Mat Ut  = Mat(12, 12, CV_64F, ut);
+  Mat Vt  = Mat(12, 12, CV_64F, vt);
 
-  cvMulTransposed(M, &MtM, 1);
-  cvSVD(&MtM, &D, &Ut, 0, CV_SVD_MODIFY_A | CV_SVD_U_T);
-  cvReleaseMat(&M);
+  MtM = M->t() * (*M);
+  SVD::compute(MtM, D, Ut, Vt, SVD::MODIFY_A | SVD::FULL_UV);
+  Mat(Ut.t()).copyTo(Ut);
+  M->release();
 
   double l_6x12[6 * 12], rho[6];
-  CvMat L_6x12 = cvMat(6, 12, CV_64F, l_6x12);
-  CvMat Rho    = cvMat(6,  1, CV_64F, rho);
+  Mat L_6x12 = Mat(6, 12, CV_64F, l_6x12);
+  Mat Rho    = Mat(6,  1, CV_64F, rho);
 
   compute_L_6x12(ut, l_6x12);
   compute_rho(rho);
@@ -84,8 +136,8 @@ double upnp::compute_pose(cv::Mat& R, cv::Mat& t)
   int N = 1;
   if (rep_errors[2] < rep_errors[1]) N = 2;
 
-  cv::Mat(3, 1, CV_64F, ts[N]).copyTo(t);
-  cv::Mat(3, 3, CV_64F, Rs[N]).copyTo(R);
+  Mat(3, 1, CV_64F, ts[N]).copyTo(t);
+  Mat(3, 3, CV_64F, Rs[N]).copyTo(R);
   fu = fv = Efs[N][0];
 
   return fu;
@@ -96,7 +148,7 @@ void upnp::copy_R_and_t(const double R_src[3][3], const double t_src[3],
 {
   for(int i = 0; i < 3; i++) {
     for(int j = 0; j < 3; j++)
-     R_dst[i][j] = R_src[i][j];
+      R_dst[i][j] = R_src[i][j];
     t_dst[i] = t_src[i];
   }
 }
@@ -123,12 +175,12 @@ void upnp::estimate_R_and_t(double R[3][3], double t[3])
   }
 
   double abt[3 * 3], abt_d[3], abt_u[3 * 3], abt_v[3 * 3];
-  CvMat ABt   = cvMat(3, 3, CV_64F, abt);
-  CvMat ABt_D = cvMat(3, 1, CV_64F, abt_d);
-  CvMat ABt_U = cvMat(3, 3, CV_64F, abt_u);
-  CvMat ABt_V = cvMat(3, 3, CV_64F, abt_v);
+  Mat ABt   = Mat(3, 3, CV_64F, abt);
+  Mat ABt_D = Mat(3, 1, CV_64F, abt_d);
+  Mat ABt_U = Mat(3, 3, CV_64F, abt_u);
+  Mat ABt_V = Mat(3, 3, CV_64F, abt_v);
 
-  cvSetZero(&ABt);
+  ABt.setTo(0.0);
   for(int i = 0; i < number_of_correspondences; i++) {
     double * pc = &pcs[3 * i];
     double * pw = &pws[3 * i];
@@ -140,7 +192,8 @@ void upnp::estimate_R_and_t(double R[3][3], double t[3])
     }
   }
 
-  cvSVD(&ABt, &ABt_D, &ABt_U, &ABt_V, CV_SVD_MODIFY_A);
+  SVD::compute(ABt, ABt_D, ABt_U, ABt_V, SVD::MODIFY_A);
+  Mat(ABt_V.t()).copyTo(ABt_V);
 
   for(int i = 0; i < 3; i++)
     for(int j = 0; j < 3; j++)
@@ -211,31 +264,31 @@ double upnp::reprojection_error(const double R[3][3], const double t[3])
 void upnp::choose_control_points()
 {
     for (int i = 0; i < 4; ++i)
-      cws[i][0] = cws[i][1] = cws[i][2] = 0;
-    cws[0][0] = cws[1][1] = cws[2][2] = 1.;
+      cws[i][0] = cws[i][1] = cws[i][2] = 0.0;
+    cws[0][0] = cws[1][1] = cws[2][2] = 1.0;
 }
 
 void upnp::compute_alphas()
 {
-    cv::Mat CC = cv::Mat(4, 3, CV_64F, &cws);
-    cv::Mat PC = cv::Mat(number_of_correspondences, 3, CV_64F, &pws[0]);
-    cv::Mat ALPHAS = cv::Mat(number_of_correspondences, 4, CV_64F, &alphas[0]);
+    Mat CC = Mat(4, 3, CV_64F, &cws);
+    Mat PC = Mat(number_of_correspondences, 3, CV_64F, &pws[0]);
+    Mat ALPHAS = Mat(number_of_correspondences, 4, CV_64F, &alphas[0]);
 
-    cv::Mat CC_ = CC.clone().t();
-    cv::Mat PC_ = PC.clone().t();
+    Mat CC_ = CC.clone().t();
+    Mat PC_ = PC.clone().t();
 
-    cv::Mat row14 = cv::Mat::ones(1, 4, CV_64F);
-    cv::Mat row1n = cv::Mat::ones(1, number_of_correspondences, CV_64F);
+    Mat row14 = Mat::ones(1, 4, CV_64F);
+    Mat row1n = Mat::ones(1, number_of_correspondences, CV_64F);
 
     CC_.push_back(row14);
     PC_.push_back(row1n);
 
-    ALPHAS = cv::Mat( CC_.inv() * PC_ ).t();
+    ALPHAS = Mat( CC_.inv() * PC_ ).t();
 }
 
-void upnp::fill_M(CvMat * M, const int row, const double * as, const double u, const double v)
+void upnp::fill_M(Mat * M, const int row, const double * as, const double u, const double v)
 {
-  double * M1 = M->data.db + row * 12;
+  double * M1 = M->ptr<double>(row);
   double * M2 = M1 + 12;
 
   for(int i = 0; i < 4; i++) {
@@ -252,7 +305,7 @@ void upnp::fill_M(CvMat * M, const int row, const double * as, const double u, c
 void upnp::compute_ccs(const double * betas, const double * ut)
 {
     for(int i = 0; i < 4; ++i)
-      ccs[i][0] = ccs[i][1] = ccs[i][2] = 0.0f;
+      ccs[i][0] = ccs[i][1] = ccs[i][2] = 0.0;
 
     int N = 4;
     for(int i = 0; i < N; ++i) {
@@ -276,42 +329,45 @@ void upnp::compute_pcs(void)
   }
 }
 
-void upnp::find_betas_and_focal_approx_1(const CvMat * Ut, const CvMat * Rho, double * betas, double * efs)
+void upnp::find_betas_and_focal_approx_1(Mat * Ut, Mat * Rho, double * betas, double * efs)
 {
-    cv::Mat Kmf1 = cv::Mat(12, 1, CV_64F, Ut->data.db + 11 * 12);
-    cv::Mat dsq = cv::Mat(6, 1, CV_64F, Rho->data.db);
+  Mat Kmf1 = Mat(12, 1, CV_64F, Ut->ptr<double>(11));
+  Mat dsq = Mat(6, 1, CV_64F, Rho->ptr<double>(0));
 
-    cv::Mat D = compute_constraint_distance_2param_6eq_2unk_f_unk( Kmf1 );
-    cv::Mat Dt = D.t();
+  Mat D = compute_constraint_distance_2param_6eq_2unk_f_unk( Kmf1 );
+  Mat Dt = D.t();
 
-    cv::Mat A = Dt * D;
-    cv::Mat b = Dt * dsq;
+  Mat A = Dt * D;
+  Mat b = Dt * dsq;
 
-    cv::Mat x = cv::Mat(2, 1, CV_64F);
-    cv::solve(A, b, x);
+  Mat x = Mat(2, 1, CV_64F);
+  solve(A, b, x);
 
-    betas[0] = std::sqrt( std::abs( x.at<double>(0) ) );
-    betas[1] = betas[2] = betas[3] = 0;
+  betas[0] = sqrt( abs( x.at<double>(0) ) );
+  betas[1] = betas[2] = betas[3] = 0.0;
 
-    efs[0] = std::sqrt( std::abs( x.at<double>(1) ) ) / betas[0];
+  efs[0] = sqrt( abs( x.at<double>(1) ) ) / betas[0];
 }
 
-void upnp::find_betas_and_focal_approx_2(const CvMat * Ut, const CvMat * Rho, double * betas, double * efs)
+void upnp::find_betas_and_focal_approx_2(Mat * Ut, Mat * Rho, double * betas, double * efs)
 {
+  double u[12*12];
+  Mat U = Mat(12, 12, CV_64F, u);
+  Ut->copyTo(U);
 
-  cv::Mat Kmf1 = cv::Mat(12, 1, CV_64F, Ut->data.db + 10 * 12);
-  cv::Mat Kmf2 = cv::Mat(12, 1, CV_64F, Ut->data.db + 11 * 12);
-  cv::Mat dsq = cv::Mat(6, 1, CV_64F, Rho->data.db);
+  Mat Kmf1 = Mat(12, 1, CV_64F, Ut->ptr<double>(10));
+  Mat Kmf2 = Mat(12, 1, CV_64F, Ut->ptr<double>(11));
+  Mat dsq = Mat(6, 1, CV_64F, Rho->ptr<double>(0));
 
-  cv::Mat D = compute_constraint_distance_3param_6eq_6unk_f_unk( Kmf1, Kmf2 );
+  Mat D = compute_constraint_distance_3param_6eq_6unk_f_unk( Kmf1, Kmf2 );
 
-  cv::Mat A = D;
-  cv::Mat b = dsq;
+  Mat A = D;
+  Mat b = dsq;
 
   double x[6];
-  cv::Mat X = cv::Mat(6, 1, CV_64F, x);
+  Mat X = Mat(6, 1, CV_64F, x);
 
-  cv::solve(A, b, X, cv::DECOMP_QR);
+  solve(A, b, X, DECOMP_QR);
 
   double solutions[18][3];
   generate_all_possible_solutions_for_f_unk(x, solutions);
@@ -323,11 +379,11 @@ void upnp::find_betas_and_focal_approx_2(const CvMat * Ut, const CvMat * Rho, do
 
     betas[3] = solutions[i][0];
     betas[2] = solutions[i][1];
-    betas[1] = betas[0] = 0;
+    betas[1] = betas[0] = 0.0;
     fu = fv = solutions[i][2];
 
     double Rs[3][3], ts[3];
-    double error_i = compute_R_and_t( Ut->data.db, betas, Rs, ts);
+    double error_i = compute_R_and_t( u, betas, Rs, ts);
 
     if( error_i < min_error)
     {
@@ -338,136 +394,136 @@ void upnp::find_betas_and_focal_approx_2(const CvMat * Ut, const CvMat * Rho, do
 
   betas[0] = solutions[min_sol][0];
   betas[1] = solutions[min_sol][1];
-  betas[2] = betas[3] = 0;
+  betas[2] = betas[3] = 0.0;
 
   efs[0] = solutions[min_sol][2];
 }
 
-cv::Mat upnp::compute_constraint_distance_2param_6eq_2unk_f_unk(const cv::Mat& M1)
+Mat upnp::compute_constraint_distance_2param_6eq_2unk_f_unk(const Mat& M1)
 {
-  cv::Mat P = cv::Mat(6, 2, CV_64F);
+  Mat P = Mat(6, 2, CV_64F);
 
   double m[13];
-  for (int i = 1; i < 13; ++i) m[i] = M1.at<double>(i-1);
+  for (int i = 1; i < 13; ++i) m[i] = *M1.ptr<double>(i-1);
 
-  double t1 = std::pow( m[4], 2 );
-  double t4 = std::pow( m[1], 2 );
-  double t5 = std::pow( m[5], 2 );
-  double t8 = std::pow( m[2], 2 );
-  double t10 = std::pow( m[6], 2 );
-  double t13 = std::pow( m[3], 2 );
-  double t15 = std::pow( m[7], 2 );
-  double t18 = std::pow( m[8], 2 );
-  double t22 = std::pow( m[9], 2 );
-  double t26 = std::pow( m[10], 2 );
-  double t29 = std::pow( m[11], 2 );
-  double t33 = std::pow( m[12], 2 );
+  double t1 = pow( m[4], 2 );
+  double t4 = pow( m[1], 2 );
+  double t5 = pow( m[5], 2 );
+  double t8 = pow( m[2], 2 );
+  double t10 = pow( m[6], 2 );
+  double t13 = pow( m[3], 2 );
+  double t15 = pow( m[7], 2 );
+  double t18 = pow( m[8], 2 );
+  double t22 = pow( m[9], 2 );
+  double t26 = pow( m[10], 2 );
+  double t29 = pow( m[11], 2 );
+  double t33 = pow( m[12], 2 );
 
-  P.at<double>(0,0) = t1 - 2 * m[4] * m[1] + t4 + t5 - 2 * m[5] * m[2] + t8;
-  P.at<double>(0,1) = t10 - 2 * m[6] * m[3] + t13;
-  P.at<double>(1,0) = t15 - 2 * m[7] * m[1] + t4 + t18 - 2 * m[8] * m[2] + t8;
-  P.at<double>(1,1) = t22 - 2 * m[9] * m[3] + t13;
-  P.at<double>(2,0) = t26 - 2 * m[10] * m[1] + t4 + t29 - 2 * m[11] * m[2] + t8;
-  P.at<double>(2,1) = t33 - 2 * m[12] * m[3] + t13;
-  P.at<double>(3,0) = t15 - 2 * m[7] * m[4] + t1 + t18 - 2 * m[8] * m[5] + t5;
-  P.at<double>(3,1) = t22 - 2 * m[9] * m[6] + t10;
-  P.at<double>(4,0) = t26 - 2 * m[10] * m[4] + t1 + t29 - 2 * m[11] * m[5] + t5;
-  P.at<double>(4,1) = t33 - 2 * m[12] * m[6] + t10;
-  P.at<double>(5,0) = t26 - 2 * m[10] * m[7] + t15 + t29 - 2 * m[11] * m[8] + t18;
-  P.at<double>(5,1) = t33 - 2 * m[12] * m[9] + t22;
+  *P.ptr<double>(0,0) = t1 - 2 * m[4] * m[1] + t4 + t5 - 2 * m[5] * m[2] + t8;
+  *P.ptr<double>(0,1) = t10 - 2 * m[6] * m[3] + t13;
+  *P.ptr<double>(1,0) = t15 - 2 * m[7] * m[1] + t4 + t18 - 2 * m[8] * m[2] + t8;
+  *P.ptr<double>(1,1) = t22 - 2 * m[9] * m[3] + t13;
+  *P.ptr<double>(2,0) = t26 - 2 * m[10] * m[1] + t4 + t29 - 2 * m[11] * m[2] + t8;
+  *P.ptr<double>(2,1) = t33 - 2 * m[12] * m[3] + t13;
+  *P.ptr<double>(3,0) = t15 - 2 * m[7] * m[4] + t1 + t18 - 2 * m[8] * m[5] + t5;
+  *P.ptr<double>(3,1) = t22 - 2 * m[9] * m[6] + t10;
+  *P.ptr<double>(4,0) = t26 - 2 * m[10] * m[4] + t1 + t29 - 2 * m[11] * m[5] + t5;
+  *P.ptr<double>(4,1) = t33 - 2 * m[12] * m[6] + t10;
+  *P.ptr<double>(5,0) = t26 - 2 * m[10] * m[7] + t15 + t29 - 2 * m[11] * m[8] + t18;
+  *P.ptr<double>(5,1) = t33 - 2 * m[12] * m[9] + t22;
 
   return P;
 }
 
-cv::Mat upnp::compute_constraint_distance_3param_6eq_6unk_f_unk(const cv::Mat& M1, const cv::Mat& M2)
+Mat upnp::compute_constraint_distance_3param_6eq_6unk_f_unk(const Mat& M1, const Mat& M2)
 {
-  cv::Mat P = cv::Mat(6, 6, CV_64F);
+  Mat P = Mat(6, 6, CV_64F);
 
   double m[3][13];
   for (int i = 1; i < 13; ++i)
   {
-    m[1][i] = M1.at<double>(i-1);
-    m[2][i] = M2.at<double>(i-1);
+    m[1][i] = *M1.ptr<double>(i-1);
+    m[2][i] = *M2.ptr<double>(i-1);
   }
 
-  double t1 = std::pow( m[1][4], 2 );
-  double t2 = std::pow( m[1][1], 2 );
-  double t7 = std::pow( m[1][5], 2 );
-  double t8 = std::pow( m[1][2], 2 );
+  double t1 = pow( m[1][4], 2 );
+  double t2 = pow( m[1][1], 2 );
+  double t7 = pow( m[1][5], 2 );
+  double t8 = pow( m[1][2], 2 );
   double t11 = m[1][1] * m[2][1];
   double t12 = m[1][5] * m[2][5];
   double t15 = m[1][2] * m[2][2];
   double t16 = m[1][4] * m[2][4];
-  double t19 = std::pow( m[2][4], 2 );
-  double t22 = std::pow( m[2][2], 2 );
-  double t23 = std::pow( m[2][1], 2 );
-  double t24 = std::pow( m[2][5], 2 );
-  double t28 = std::pow( m[1][6], 2 );
-  double t29 = std::pow( m[1][3], 2 );
-  double t34 = std::pow( m[1][3], 2 );
+  double t19 = pow( m[2][4], 2 );
+  double t22 = pow( m[2][2], 2 );
+  double t23 = pow( m[2][1], 2 );
+  double t24 = pow( m[2][5], 2 );
+  double t28 = pow( m[1][6], 2 );
+  double t29 = pow( m[1][3], 2 );
+  double t34 = pow( m[1][3], 2 );
   double t36 = m[1][6] * m[2][6];
-  double t40 = std::pow( m[2][6], 2 );
-  double t41 = std::pow( m[2][3], 2 );
-  double t47 = std::pow( m[1][7], 2 );
-  double t48 = std::pow( m[1][8], 2 );
+  double t40 = pow( m[2][6], 2 );
+  double t41 = pow( m[2][3], 2 );
+  double t47 = pow( m[1][7], 2 );
+  double t48 = pow( m[1][8], 2 );
   double t52 = m[1][7] * m[2][7];
   double t55 = m[1][8] * m[2][8];
-  double t59 = std::pow( m[2][8], 2 );
-  double t62 = std::pow( m[2][7], 2 );
-  double t64 = std::pow( m[1][9], 2 );
+  double t59 = pow( m[2][8], 2 );
+  double t62 = pow( m[2][7], 2 );
+  double t64 = pow( m[1][9], 2 );
   double t68 = m[1][9] * m[2][9];
-  double t74 = std::pow( m[2][9], 2 );
-  double t78 = std::pow( m[1][10], 2 );
-  double t79 = std::pow( m[1][11], 2 );
+  double t74 = pow( m[2][9], 2 );
+  double t78 = pow( m[1][10], 2 );
+  double t79 = pow( m[1][11], 2 );
   double t84 = m[1][10] * m[2][10];
   double t87 = m[1][11] * m[2][11];
-  double t90 = std::pow( m[2][10], 2 );
-  double t95 = std::pow( m[2][11], 2 );
-  double t99 = std::pow( m[1][12], 2 );
+  double t90 = pow( m[2][10], 2 );
+  double t95 = pow( m[2][11], 2 );
+  double t99 = pow( m[1][12], 2 );
   double t101 = m[1][12] * m[2][12];
-  double t105 = std::pow( m[2][12], 2 );
+  double t105 = pow( m[2][12], 2 );
 
-  P.at<double>(0,0) = t1 + t2 - 2 * m[1][4] * m[1][1] - 2 * m[1][5] * m[1][2] + t7 + t8;
-  P.at<double>(0,1) = -2 * m[2][4] * m[1][1] + 2 * t11 + 2 * t12 - 2 * m[1][4] * m[2][1] - 2 * m[2][5] * m[1][2] + 2 * t15 + 2 * t16 - 2 * m[1][5] * m[2][2];
-  P.at<double>(0,2) = t19 - 2 * m[2][4] * m[2][1] + t22 + t23 + t24 - 2 * m[2][5] * m[2][2];
-  P.at<double>(0,3) = t28 + t29 - 2 * m[1][6] * m[1][3];
-  P.at<double>(0,4) = -2 * m[2][6] * m[1][3] + 2 * t34 - 2 * m[1][6] * m[2][3] + 2 * t36;
-  P.at<double>(0,5) = -2 * m[2][6] * m[2][3] + t40 + t41;
+  *P.ptr<double>(0,0) = t1 + t2 - 2 * m[1][4] * m[1][1] - 2 * m[1][5] * m[1][2] + t7 + t8;
+  *P.ptr<double>(0,1) = -2 * m[2][4] * m[1][1] + 2 * t11 + 2 * t12 - 2 * m[1][4] * m[2][1] - 2 * m[2][5] * m[1][2] + 2 * t15 + 2 * t16 - 2 * m[1][5] * m[2][2];
+  *P.ptr<double>(0,2) = t19 - 2 * m[2][4] * m[2][1] + t22 + t23 + t24 - 2 * m[2][5] * m[2][2];
+  *P.ptr<double>(0,3) = t28 + t29 - 2 * m[1][6] * m[1][3];
+  *P.ptr<double>(0,4) = -2 * m[2][6] * m[1][3] + 2 * t34 - 2 * m[1][6] * m[2][3] + 2 * t36;
+  *P.ptr<double>(0,5) = -2 * m[2][6] * m[2][3] + t40 + t41;
 
-  P.at<double>(1,0) = t8 - 2 * m[1][8] * m[1][2] - 2 * m[1][7] * m[1][1] + t47 + t48 + t2;
-  P.at<double>(1,1) = 2 * t15 - 2 * m[1][8] * m[2][2] - 2 * m[2][8] * m[1][2] + 2 * t52 - 2 * m[1][7] * m[2][1] - 2 * m[2][7] * m[1][1] + 2 * t55 + 2 * t11;
-  P.at<double>(1,2) = -2 * m[2][8] * m[2][2] + t22 + t23 + t59 - 2 * m[2][7] * m[2][1] + t62;
-  P.at<double>(1,3) = t29 + t64 - 2 * m[1][9] * m[1][3];
-  P.at<double>(1,4) = 2 * t34 + 2 * t68 - 2 * m[2][9] * m[1][3] - 2 * m[1][9] * m[2][3];
-  P.at<double>(1,5) = -2 * m[2][9] * m[2][3] + t74 + t41;
+  *P.ptr<double>(1,0) = t8 - 2 * m[1][8] * m[1][2] - 2 * m[1][7] * m[1][1] + t47 + t48 + t2;
+  *P.ptr<double>(1,1) = 2 * t15 - 2 * m[1][8] * m[2][2] - 2 * m[2][8] * m[1][2] + 2 * t52 - 2 * m[1][7] * m[2][1] - 2 * m[2][7] * m[1][1] + 2 * t55 + 2 * t11;
+  *P.ptr<double>(1,2) = -2 * m[2][8] * m[2][2] + t22 + t23 + t59 - 2 * m[2][7] * m[2][1] + t62;
+  *P.ptr<double>(1,3) = t29 + t64 - 2 * m[1][9] * m[1][3];
+  *P.ptr<double>(1,4) = 2 * t34 + 2 * t68 - 2 * m[2][9] * m[1][3] - 2 * m[1][9] * m[2][3];
+  *P.ptr<double>(1,5) = -2 * m[2][9] * m[2][3] + t74 + t41;
 
-  P.at<double>(2,0) = -2 * m[1][11] * m[1][2] + t2 + t8 + t78 + t79 - 2 * m[1][10] * m[1][1];
-  P.at<double>(2,1) = 2 * t15 - 2 * m[1][11] * m[2][2] + 2 * t84 - 2 * m[1][10] * m[2][1] - 2 * m[2][10] * m[1][1] + 2 * t87 - 2 * m[2][11] * m[1][2]+ 2 * t11;
-  P.at<double>(2,2) = t90 + t22 - 2 * m[2][10] * m[2][1] + t23 - 2 * m[2][11] * m[2][2] + t95;
-  P.at<double>(2,3) = -2 * m[1][12] * m[1][3] + t99 + t29;
-  P.at<double>(2,4) = 2 * t34 + 2 * t101 - 2 * m[2][12] * m[1][3] - 2 * m[1][12] * m[2][3];
-  P.at<double>(2,5) = t41 + t105 - 2 * m[2][12] * m[2][3];
+  *P.ptr<double>(2,0) = -2 * m[1][11] * m[1][2] + t2 + t8 + t78 + t79 - 2 * m[1][10] * m[1][1];
+  *P.ptr<double>(2,1) = 2 * t15 - 2 * m[1][11] * m[2][2] + 2 * t84 - 2 * m[1][10] * m[2][1] - 2 * m[2][10] * m[1][1] + 2 * t87 - 2 * m[2][11] * m[1][2]+ 2 * t11;
+  *P.ptr<double>(2,2) = t90 + t22 - 2 * m[2][10] * m[2][1] + t23 - 2 * m[2][11] * m[2][2] + t95;
+  *P.ptr<double>(2,3) = -2 * m[1][12] * m[1][3] + t99 + t29;
+  *P.ptr<double>(2,4) = 2 * t34 + 2 * t101 - 2 * m[2][12] * m[1][3] - 2 * m[1][12] * m[2][3];
+  *P.ptr<double>(2,5) = t41 + t105 - 2 * m[2][12] * m[2][3];
 
-  P.at<double>(3,0) = t48 + t1 - 2 * m[1][8] * m[1][5] + t7 - 2 * m[1][7] * m[1][4] + t47;
-  P.at<double>(3,1) = 2 * t16 - 2 * m[1][7] * m[2][4] + 2 * t55 + 2 * t52 - 2 * m[1][8] * m[2][5] - 2 * m[2][8] * m[1][5] - 2 * m[2][7] * m[1][4] + 2 * t12;
-  P.at<double>(3,2) = t24 - 2 * m[2][8] * m[2][5] + t19 - 2 * m[2][7] * m[2][4] + t62 + t59;
-  P.at<double>(3,3) = -2 * m[1][9] * m[1][6] + t64 + t28;
-  P.at<double>(3,4) = 2 * t68 + 2 * t36 - 2 * m[2][9] * m[1][6] - 2 * m[1][9] * m[2][6];
-  P.at<double>(3,5) = t40 + t74 - 2 * m[2][9] * m[2][6];
+  *P.ptr<double>(3,0) = t48 + t1 - 2 * m[1][8] * m[1][5] + t7 - 2 * m[1][7] * m[1][4] + t47;
+  *P.ptr<double>(3,1) = 2 * t16 - 2 * m[1][7] * m[2][4] + 2 * t55 + 2 * t52 - 2 * m[1][8] * m[2][5] - 2 * m[2][8] * m[1][5] - 2 * m[2][7] * m[1][4] + 2 * t12;
+  *P.ptr<double>(3,2) = t24 - 2 * m[2][8] * m[2][5] + t19 - 2 * m[2][7] * m[2][4] + t62 + t59;
+  *P.ptr<double>(3,3) = -2 * m[1][9] * m[1][6] + t64 + t28;
+  *P.ptr<double>(3,4) = 2 * t68 + 2 * t36 - 2 * m[2][9] * m[1][6] - 2 * m[1][9] * m[2][6];
+  *P.ptr<double>(3,5) = t40 + t74 - 2 * m[2][9] * m[2][6];
 
-  P.at<double>(4,0) = t1 - 2 * m[1][10] * m[1][4] + t7 + t78 + t79 - 2 * m[1][11] * m[1][5];
-  P.at<double>(4,1) = 2 * t84 - 2 * m[1][11] * m[2][5] - 2 * m[1][10] * m[2][4] + 2 * t16 - 2 * m[2][11] * m[1][5] + 2 * t87 - 2 * m[2][10] * m[1][4] + 2 * t12;
-  P.at<double>(4,2) = t19 + t24 - 2 * m[2][10] * m[2][4] - 2 * m[2][11] * m[2][5] + t95 + t90;
-  P.at<double>(4,3) = t28 - 2 * m[1][12] * m[1][6] + t99;
-  P.at<double>(4,4) = 2 * t101 + 2 * t36 - 2 * m[2][12] * m[1][6] - 2 * m[1][12] * m[2][6];
-  P.at<double>(4,5) = t105 - 2 * m[2][12] * m[2][6] + t40;
+  *P.ptr<double>(4,0) = t1 - 2 * m[1][10] * m[1][4] + t7 + t78 + t79 - 2 * m[1][11] * m[1][5];
+  *P.ptr<double>(4,1) = 2 * t84 - 2 * m[1][11] * m[2][5] - 2 * m[1][10] * m[2][4] + 2 * t16 - 2 * m[2][11] * m[1][5] + 2 * t87 - 2 * m[2][10] * m[1][4] + 2 * t12;
+  *P.ptr<double>(4,2) = t19 + t24 - 2 * m[2][10] * m[2][4] - 2 * m[2][11] * m[2][5] + t95 + t90;
+  *P.ptr<double>(4,3) = t28 - 2 * m[1][12] * m[1][6] + t99;
+  *P.ptr<double>(4,4) = 2 * t101 + 2 * t36 - 2 * m[2][12] * m[1][6] - 2 * m[1][12] * m[2][6];
+  *P.ptr<double>(4,5) = t105 - 2 * m[2][12] * m[2][6] + t40;
 
-  P.at<double>(5,0) = -2 * m[1][10] * m[1][7] + t47 + t48 + t78 + t79 - 2 * m[1][11] * m[1][8];
-  P.at<double>(5,1) = 2 * t84 + 2 * t87 - 2 * m[2][11] * m[1][8] - 2 * m[1][10] * m[2][7] - 2 * m[2][10] * m[1][7] + 2 * t55 + 2 * t52 - 2 * m[1][11] * m[2][8];
-  P.at<double>(5,2) = -2 * m[2][10] * m[2][7] - 2 * m[2][11] * m[2][8] + t62 + t59 + t90 + t95;
-  P.at<double>(5,3) = t64 - 2 * m[1][12] * m[1][9] + t99;
-  P.at<double>(5,4) = 2 * t68 - 2 * m[2][12] * m[1][9] - 2 * m[1][12] * m[2][9] + 2 * t101;
-  P.at<double>(5,5) = t105 - 2 * m[2][12] * m[2][9] + t74;
+  *P.ptr<double>(5,0) = -2 * m[1][10] * m[1][7] + t47 + t48 + t78 + t79 - 2 * m[1][11] * m[1][8];
+  *P.ptr<double>(5,1) = 2 * t84 + 2 * t87 - 2 * m[2][11] * m[1][8] - 2 * m[1][10] * m[2][7] - 2 * m[2][10] * m[1][7] + 2 * t55 + 2 * t52 - 2 * m[1][11] * m[2][8];
+  *P.ptr<double>(5,2) = -2 * m[2][10] * m[2][7] - 2 * m[2][11] * m[2][8] + t62 + t59 + t90 + t95;
+  *P.ptr<double>(5,3) = t64 - 2 * m[1][12] * m[1][9] + t99;
+  *P.ptr<double>(5,4) = 2 * t68 - 2 * m[2][12] * m[1][9] - 2 * m[1][12] * m[2][9] + 2 * t101;
+  *P.ptr<double>(5,5) = t105 - 2 * m[2][12] * m[2][9] + t74;
 
   return P;
 }
@@ -496,37 +552,37 @@ void upnp::generate_all_possible_solutions_for_f_unk(const double betas[5], doub
 
   for (int i = 0; i < 18; ++i) {
     double matrix[9], independent_term[3];
-    cv::Mat M = cv::Mat(3, 3, CV_64F, matrix);
-    cv::Mat I = cv::Mat(3, 1, CV_64F, independent_term);
-    cv::Mat S = cv::Mat(1, 3, CV_64F);
+    Mat M = Mat(3, 3, CV_64F, matrix);
+    Mat I = Mat(3, 1, CV_64F, independent_term);
+    Mat S = Mat(1, 3, CV_64F);
 
     for (int j = 0; j < 9; ++j) matrix[j] = (double)matrix_to_resolve[i][j];
 
-    independent_term[0] = std::log( std::abs( betas[ combination[i][0]-1 ] ) );
-    independent_term[1] = std::log( std::abs( betas[ combination[i][1]-1 ] ) );
-    independent_term[2] = std::log( std::abs( betas[ combination[i][2]-1 ] ) );
+    independent_term[0] = log( abs( betas[ combination[i][0]-1 ] ) );
+    independent_term[1] = log( abs( betas[ combination[i][1]-1 ] ) );
+    independent_term[2] = log( abs( betas[ combination[i][2]-1 ] ) );
 
-    cv::exp( cv::Mat(M.inv() * I), S);
+    exp( Mat(M.inv() * I), S);
 
     solutions[i][0] = S.at<double>(0);
     solutions[i][1] = S.at<double>(1) * sign( betas[1] );
-    solutions[i][2] = std::abs( S.at<double>(2) );
+    solutions[i][2] = abs( S.at<double>(2) );
   }
 }
 
-void upnp::gauss_newton(const CvMat * L_6x12, const CvMat * Rho, double betas[4], double * f)
+void upnp::gauss_newton(const Mat * L_6x12, const Mat * Rho, double betas[4], double * f)
 {
   const int iterations_number = 50;
 
   double a[6*4], b[6], x[4];
-  CvMat A = cvMat(6, 4, CV_64F, a);
-  CvMat B = cvMat(6, 1, CV_64F, b);
-  CvMat X = cvMat(4, 1, CV_64F, x);
+  Mat * A = new Mat(6, 4, CV_64F, a);
+  Mat * B = new Mat(6, 1, CV_64F, b);
+  Mat * X = new Mat(4, 1, CV_64F, x);
 
   for(int k = 0; k < iterations_number; k++)
   {
-    compute_A_and_b_gauss_newton(L_6x12->data.db, Rho->data.db, betas, &A, &B, f[0]);
-    qr_solve(&A, &B, &X);
+    compute_A_and_b_gauss_newton(L_6x12->ptr<double>(0), Rho->ptr<double>(0), betas, A, B, f[0]);
+    qr_solve(A, B, X);
     for(int i = 0; i < 3; i++)
       betas[i] += x[i];
     f[0] += x[3];
@@ -538,19 +594,19 @@ void upnp::gauss_newton(const CvMat * L_6x12, const CvMat * Rho, double betas[4]
 }
 
 void upnp::compute_A_and_b_gauss_newton(const double * l_6x12, const double * rho,
-        const double betas[4], CvMat * A, CvMat * b, double const f)
+        const double betas[4], Mat * A, Mat * b, double const f)
 {
 
   for(int i = 0; i < 6; i++) {
     const double * rowL = l_6x12 + i * 12;
-    double * rowA = A->data.db + i * 4;
+    double * rowA = A->ptr<double>(i);
 
     rowA[0] = 2 * rowL[0] * betas[0] +    rowL[1] * betas[1] +    rowL[2] * betas[2] + f*f * ( 2 * rowL[6]*betas[0] +    rowL[7]*betas[1]  +    rowL[8]*betas[2] );
     rowA[1] =    rowL[1] * betas[0] + 2 * rowL[3] * betas[1] +    rowL[4] * betas[2] + f*f * (    rowL[7]*betas[0] + 2 * rowL[9]*betas[1]  +    rowL[10]*betas[2] );
     rowA[2] =    rowL[2] * betas[0] +    rowL[4] * betas[1] + 2 * rowL[5] * betas[2] + f*f * (    rowL[8]*betas[0] +    rowL[10]*betas[1] + 2 * rowL[11]*betas[2] );
     rowA[3] = 2*f * ( rowL[6]*betas[0]*betas[0] + rowL[7]*betas[0]*betas[1] + rowL[8]*betas[0]*betas[2] + rowL[9]*betas[1]*betas[1] + rowL[10]*betas[1]*betas[2] + rowL[11]*betas[2]*betas[2] ) ;
 
-    cvmSet(b, i, 0, rho[i] -
+    *b->ptr<double>(i) = rho[i] -
     (
       rowL[0] * betas[0] * betas[0] +
       rowL[1] * betas[0] * betas[1] +
@@ -564,7 +620,7 @@ void upnp::compute_A_and_b_gauss_newton(const double * l_6x12, const double * rh
       f*f * rowL[9] * betas[1] * betas[1] +
       f*f * rowL[10] * betas[1] * betas[2] +
       f*f * rowL[11] * betas[2] * betas[2]
-     ));
+     );
   }
 }
 
@@ -647,10 +703,10 @@ double upnp::dotZ(const double * v1, const double * v2)
 
 double upnp::sign(const double v)
 {
-  return ( v < 0 ) ? -1. : ( v > 0 ) ? 1. : 0.;
+  return ( v < 0.0 ) ? -1.0 : ( v > 0.0 ) ? 1.0 : 0.0;
 }
 
-void upnp::qr_solve(CvMat * A, CvMat * b, CvMat * X)
+void upnp::qr_solve(Mat * A, Mat * b, Mat * X)
 {
   const int nr = A->rows;
   const int nc = A->cols;
@@ -667,7 +723,7 @@ void upnp::qr_solve(CvMat * A, CvMat * b, CvMat * X)
     A2 = new double[nr];
   }
 
-  double * pA = A->data.db, * ppAkk = pA;
+  double * pA = A->ptr<double>(0), * ppAkk = pA;
   for(int k = 0; k < nc; k++)
   {
     double * ppAik1 = ppAkk, eta = fabs(*ppAik1);
@@ -719,7 +775,7 @@ void upnp::qr_solve(CvMat * A, CvMat * b, CvMat * X)
   }
 
   // b <- Qt b
-  double * ppAjj = pA, * pb = b->data.db;
+  double * ppAjj = pA, * pb = b->ptr<double>(0);
   for(int j = 0; j < nc; j++)
   {
     double * ppAij = ppAjj, tau = 0;
@@ -739,7 +795,7 @@ void upnp::qr_solve(CvMat * A, CvMat * b, CvMat * X)
   }
 
   // X = R-1 b
-  double * pX = X->data.db;
+  double * pX = X->ptr<double>(0);
   pX[nc - 1] = pb[nc - 1] / A2[nc - 1];
   for(int i = nc - 2; i >= 0; i--)
   {
