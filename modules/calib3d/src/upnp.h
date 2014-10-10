@@ -1,11 +1,56 @@
-#ifndef UPNP_H_
-#define UPNP_H_
+//M*//////////////////////////////////////////////////////////////////////////////////////
+//
+// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+// By downloading, copying, installing or using the software you agree to this license.
+// If you do not agree to this license, do not download, install,
+// copy or use the software.
+//
+//
+// License Agreement
+// For Open Source Computer Vision Library
+//
+// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+// * Redistribution's of source code must retain the above copyright notice,
+// this list of conditions and the following disclaimer.
+//
+// * Redistribution's in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimer in the documentation
+// and/or other materials provided with the distribution.
+//
+// * The name of the copyright holders may not be used to endorse or promote products
+// derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
+
+/****************************************************************************************\
+* Exhaustive Linearization for Robust Camera Pose and Focal Length Estimation.
+* Contributed by Edgar Riba
+\****************************************************************************************/
+
+#ifndef OPENCV_CALIB3D_UPNP_H_
+#define OPENCV_CALIB3D_UPNP_H_
 
 #include "precomp.hpp"
 #include "opencv2/core/core_c.h"
 #include <iostream>
-
-using namespace std;
 
 class upnp
 {
@@ -40,19 +85,19 @@ private:
       double reprojection_error(const double R[3][3], const double t[3]);
       void choose_control_points();
       void compute_alphas();
-      void fill_M(CvMat * M, const int row, const double * alphas, const double u, const double v);
+      void fill_M(cv::Mat * M, const int row, const double * alphas, const double u, const double v);
       void compute_ccs(const double * betas, const double * ut);
       void compute_pcs(void);
 
       void solve_for_sign(void);
 
-      void find_betas_and_focal_approx_1(const CvMat * Ut, const CvMat * Rho, double * betas, double * efs);
-      void find_betas_and_focal_approx_2(const CvMat * Ut, const CvMat * Rho, double * betas, double * efs);
-      void qr_solve(CvMat * A, CvMat * b, CvMat * X);
+      void find_betas_and_focal_approx_1(cv::Mat * Ut, cv::Mat * Rho, double * betas, double * efs);
+      void find_betas_and_focal_approx_2(cv::Mat * Ut, cv::Mat * Rho, double * betas, double * efs);
+      void qr_solve(cv::Mat * A, cv::Mat * b, cv::Mat * X);
 
       cv::Mat compute_constraint_distance_2param_6eq_2unk_f_unk(const cv::Mat& M1);
       cv::Mat compute_constraint_distance_3param_6eq_6unk_f_unk(const cv::Mat& M1, const cv::Mat& M2);
-      void generate_all_possible_solutions_for_f_unk(const double betas_[5], double solutions[18][3]);
+      void generate_all_possible_solutions_for_f_unk(const double betas[5], double solutions[18][3]);
 
       double sign(const double v);
       double dot(const double * v1, const double * v2);
@@ -63,9 +108,9 @@ private:
       void compute_rho(double * rho);
       void compute_L_6x12(const double * ut, double * l_6x12);
 
-      void gauss_newton(const CvMat * L_6x12, const CvMat * Rho, double current_betas[4], double * efs);
+      void gauss_newton(const cv::Mat * L_6x12, const cv::Mat * Rho, double current_betas[4], double * efs);
       void compute_A_and_b_gauss_newton(const double * l_6x12, const double * rho,
-                          const double cb[4], CvMat * A, CvMat * b, double const f);
+                          const double cb[4], cv::Mat * A, cv::Mat * b, double const f);
 
       double compute_R_and_t(const double * ut, const double * betas,
                    double R[3][3], double t[3]);
@@ -86,4 +131,4 @@ private:
       double * A1, * A2;
 };
 
-#endif // UPNP_H_
+#endif // OPENCV_CALIB3D_UPNP_H_
