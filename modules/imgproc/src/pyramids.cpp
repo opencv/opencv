@@ -181,6 +181,8 @@ struct PyrDownVec_32f
 typedef NoVec<int, ushort> PyrDownVec_32s16u;
 typedef NoVec<int, short> PyrDownVec_32s16s;
 
+typedef NoVec<float, float> PyrUpVec_32f;
+
 #elif CV_NEON
 
 struct PyrDownVec_32s8u

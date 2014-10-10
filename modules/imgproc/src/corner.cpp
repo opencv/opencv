@@ -618,7 +618,9 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
     if( src.depth() == CV_8U )
         factor *= 255;
     factor = 1./(factor * factor * factor);
+#if CV_NEON || CV_SSE2
     float factor_f = (float)factor;
+#endif
 
 #if CV_SSE2
     volatile bool haveSSE2 = cv::checkHardwareSupport(CV_CPU_SSE2);
