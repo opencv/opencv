@@ -1541,6 +1541,20 @@ cvtScale_<short, short, float>( const short* src, size_t sstep,
                     _mm_storeu_si128((__m128i*)(dst + x), r0);
                 }
             }
+        #elif CV_NEON
+        float32x4_t v_shift = vdupq_n_f32(shift);
+        for(; x <= size.width - 8; x += 8 )
+        {
+            int16x8_t v_src = vld1q_s16(src + x);
+            float32x4_t v_tmp1 = vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src)));
+            float32x4_t v_tmp2 = vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src)));
+
+            v_tmp1 = vaddq_f32(vmulq_n_f32(v_tmp1, scale), v_shift);
+            v_tmp2 = vaddq_f32(vmulq_n_f32(v_tmp2, scale), v_shift);
+
+            vst1q_s16(dst + x, vcombine_s16(vqmovn_s32(cv_vrndq_s32_f32(v_tmp1)),
+                                            vqmovn_s32(cv_vrndq_s32_f32(v_tmp2))));
+        }
         #endif
 
         for(; x < size.width; x++ )
@@ -1580,6 +1594,20 @@ cvtScale_<short, int, float>( const short* src, size_t sstep,
                     _mm_storeu_si128((__m128i*)(dst + x + 4), r1);
                 }
             }
+        #elif CV_NEON
+        float32x4_t v_shift = vdupq_n_f32(shift);
+        for(; x <= size.width - 8; x += 8 )
+        {
+            int16x8_t v_src = vld1q_s16(src + x);
+            float32x4_t v_tmp1 = vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src)));
+            float32x4_t v_tmp2 = vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src)));
+
+            v_tmp1 = vaddq_f32(vmulq_n_f32(v_tmp1, scale), v_shift);
+            v_tmp2 = vaddq_f32(vmulq_n_f32(v_tmp2, scale), v_shift);
+
+            vst1q_s32(dst + x, cv_vrndq_s32_f32(v_tmp1));
+            vst1q_s32(dst + x + 4, cv_vrndq_s32_f32(v_tmp2));
+        }
         #endif
 
         //We will wait Haswell
@@ -2133,6 +2161,14 @@ cvt_<float, short>( const float* src, size_t sstep,
                 src1_int128 = _mm_packs_epi32(src_int128, src1_int128);
                 _mm_storeu_si128((__m128i*)(dst + x),src1_int128);
             }
+        }
+        #elif CV_NEON
+        for( ; x <= size.width - 8; x += 8 )
+        {
+            float32x4_t v_src1 = vld1q_f32(src + x), v_src2 = vld1q_f32(src + x + 4);
+            int16x8_t v_dst = vcombine_s16(vqmovn_s32(cv_vrndq_s32_f32(v_src1)),
+                                           vqmovn_s32(cv_vrndq_s32_f32(v_src2)));
+            vst1q_s16(dst + x, v_dst);
         }
         #endif
         for( ; x < size.width; x++ )
