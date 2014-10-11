@@ -60,9 +60,14 @@ template<typename T, int shift> struct FltCast
     rtype operator ()(type1 arg) const { return arg*(T)(1./(1 << shift)); }
 };
 
-template<typename T1, typename T2> struct NoVec
+template<typename T1, typename T2> struct PyrDownNoVec
 {
     int operator()(T1**, T2*, int, int) const { return 0; }
+};
+
+template<typename T1, typename T2> struct PyrUpNoVec
+{
+    int operator()(T1**, T2**, int, int) const { return 0; }
 };
 
 #if CV_SSE2
@@ -178,10 +183,13 @@ struct PyrDownVec_32f
     }
 };
 
-typedef NoVec<int, ushort> PyrDownVec_32s16u;
-typedef NoVec<int, short> PyrDownVec_32s16s;
+typedef PyrDownNoVec<int, ushort> PyrDownVec_32s16u;
+typedef PyrDownNoVec<int, short> PyrDownVec_32s16s;
 
-typedef NoVec<float, float> PyrUpVec_32f;
+typedef PyrUpNoVec<int, uchar> PyrUpVec_32s8u;
+typedef PyrUpNoVec<int, short> PyrUpVec_32s16s;
+typedef PyrUpNoVec<int, ushort> PyrUpVec_32s16u;
+typedef PyrUpNoVec<float, float> PyrUpVec_32f;
 
 #elif CV_NEON
 
@@ -329,14 +337,156 @@ struct PyrDownVec_32f
     }
 };
 
-struct PyrUpVec_32f
+struct PyrUpVec_32s8u
 {
-    int operator()(float** src, float* dst, int, int width) const
+    int operator()(int** src, uchar** dst, int, int width) const
     {
         int x = 0;
-        float ** dsts = (float **)dst;
+        uchar *dst0 = dst[0], *dst1 = dst[1];
+        const uint *row0 = (uint *)src[0], *row1 = (uint *)src[1], *row2 = (uint *)src[2];
+        uint16x8_t v_delta = vdupq_n_u16(32);
+
+        for( ; x <= width - 16; x += 16 )
+        {
+            uint16x8_t v_r0 = vcombine_u16(vqmovn_u32(vld1q_u32(row0 + x)), vqmovn_u32(vld1q_u32(row0 + x + 4)));
+            uint16x8_t v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x)), vqmovn_u32(vld1q_u32(row1 + x + 4)));
+            uint16x8_t v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x)), vqmovn_u32(vld1q_u32(row2 + x + 4)));
+
+            uint16x8_t v_2r1 = vqaddq_u16(v_r1, v_r1), v_4r1 = vqaddq_u16(v_2r1, v_2r1);
+            uint16x8_t v_dst00 = vqaddq_u16(vqaddq_u16(v_r0, v_r2), vqaddq_u16(v_2r1, v_4r1));
+            uint16x8_t v_dst10 = vqshlq_n_u16(vqaddq_u16(v_r1, v_r2), 2);
+
+            v_r0 = vcombine_u16(vqmovn_u32(vld1q_u32(row0 + x + 8)), vqmovn_u32(vld1q_u32(row0 + x + 12)));
+            v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x + 8)), vqmovn_u32(vld1q_u32(row1 + x + 12)));
+            v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x + 8)), vqmovn_u32(vld1q_u32(row2 + x + 12)));
+
+            v_2r1 = vqaddq_u16(v_r1, v_r1), v_4r1 = vqaddq_u16(v_2r1, v_2r1);
+            uint16x8_t v_dst01 = vqaddq_u16(vqaddq_u16(v_r0, v_r2), vqaddq_u16(v_2r1, v_4r1));
+            uint16x8_t v_dst11 = vshlq_n_u16(vqaddq_u16(v_r1, v_r2), 2);
+
+            vst1q_u8(dst0 + x, vcombine_u8(vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst00, v_delta), 6)),
+                                           vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst01, v_delta), 6))));
+            vst1q_u8(dst1 + x, vcombine_u8(vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst10, v_delta), 6)),
+                                           vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst11, v_delta), 6))));
+        }
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            uint16x8_t v_r0 = vcombine_u16(vqmovn_u32(vld1q_u32(row0 + x)), vqmovn_u32(vld1q_u32(row0 + x + 4)));
+            uint16x8_t v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x)), vqmovn_u32(vld1q_u32(row1 + x + 4)));
+            uint16x8_t v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x)), vqmovn_u32(vld1q_u32(row2 + x + 4)));
+
+            uint16x8_t v_2r1 = vqaddq_u16(v_r1, v_r1), v_4r1 = vqaddq_u16(v_2r1, v_2r1);
+            uint16x8_t v_dst0 = vqaddq_u16(vqaddq_u16(v_r0, v_r2), vqaddq_u16(v_2r1, v_4r1));
+            uint16x8_t v_dst1 = vqshlq_n_u16(vqaddq_u16(v_r1, v_r2), 2);
+
+            vst1_u8(dst0 + x, vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst0, v_delta), 6)));
+            vst1_u8(dst1 + x, vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst1, v_delta), 6)));
+        }
+
+        return x;
+    }
+};
+
+struct PyrUpVec_32s16u
+{
+    int operator()(int** src, ushort** dst, int, int width) const
+    {
+        int x = 0;
+        ushort *dst0 = dst[0], *dst1 = dst[1];
+        const uint *row0 = (uint *)src[0], *row1 = (uint *)src[1], *row2 = (uint *)src[2];
+        uint32x4_t v_delta = vdupq_n_u32(32);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            uint32x4_t v_r0 = vld1q_u32(row0 + x), v_r1 = vld1q_u32(row1 + x), v_r2 = vld1q_u32(row2 + x);
+            uint32x4_t v_2r1 = vshlq_n_u32(v_r1, 1), v_4r1 = vshlq_n_u32(v_r1, 2);
+            uint32x4_t v_dst00 = vaddq_u32(vqaddq_u32(v_r0, v_r2), vaddq_u32(v_2r1, v_4r1));
+            uint32x4_t v_dst10 = vshlq_n_u32(vaddq_u32(v_r1, v_r2), 2);
+
+            v_r0 = vld1q_u32(row0 + x + 4);
+            v_r1 = vld1q_u32(row1 + x + 4);
+            v_r2 = vld1q_u32(row2 + x + 4);
+            v_2r1 = vshlq_n_u32(v_r1, 1);
+            v_4r1 = vshlq_n_u32(v_r1, 2);
+            uint32x4_t v_dst01 = vaddq_u32(vaddq_u32(v_r0, v_r2), vaddq_u32(v_2r1, v_4r1));
+            uint32x4_t v_dst11 = vshlq_n_u32(vaddq_u32(v_r1, v_r2), 2);
+
+            vst1q_u16(dst0 + x, vcombine_u16(vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst00, v_delta), 6)),
+                                             vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst01, v_delta), 6))));
+            vst1q_u16(dst1 + x, vcombine_u16(vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst10, v_delta), 6)),
+                                             vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst11, v_delta), 6))));
+        }
+
+        for( ; x <= width - 4; x += 4 )
+        {
+            uint32x4_t v_r0 = vld1q_u32(row0 + x), v_r1 = vld1q_u32(row1 + x), v_r2 = vld1q_u32(row2 + x);
+            uint32x4_t v_2r1 = vshlq_n_u32(v_r1, 1), v_4r1 = vshlq_n_u32(v_r1, 2);
+
+            uint32x4_t v_dst0 = vaddq_u32(vqaddq_u32(v_r0, v_r2), vaddq_u32(v_2r1, v_4r1));
+            uint32x4_t v_dst1 = vshlq_n_u32(vaddq_u32(v_r1, v_r2), 2);
+
+            vst1_u16(dst0 + x, vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst0, v_delta), 6)));
+            vst1_u16(dst1 + x, vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst1, v_delta), 6)));
+        }
+
+        return x;
+    }
+};
+
+struct PyrUpVec_32s16s
+{
+    int operator()(int** src, short** dst, int, int width) const
+    {
+        int x = 0;
+        short *dst0 = dst[0], *dst1 = dst[1];
+        const int *row0 = src[0], *row1 = src[1], *row2 = src[2];
+        int32x4_t v_delta = vdupq_n_s32(32);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            int32x4_t v_r0 = vld1q_s32(row0 + x), v_r1 = vld1q_s32(row1 + x), v_r2 = vld1q_s32(row2 + x);
+            int32x4_t v_2r1 = vshlq_n_s32(v_r1, 1), v_4r1 = vshlq_n_s32(v_r1, 2);
+            int32x4_t v_dst00 = vaddq_s32(vaddq_s32(v_r0, v_r2), vaddq_s32(v_2r1, v_4r1));
+            int32x4_t v_dst10 = vshlq_n_s32(vaddq_s32(v_r1, v_r2), 2);
+
+            v_r0 = vld1q_s32(row0 + x + 4);
+            v_r1 = vld1q_s32(row1 + x + 4);
+            v_r2 = vld1q_s32(row2 + x + 4);
+            v_2r1 = vshlq_n_s32(v_r1, 1);
+            v_4r1 = vshlq_n_s32(v_r1, 2);
+            int32x4_t v_dst01 = vaddq_s32(vaddq_s32(v_r0, v_r2), vaddq_s32(v_2r1, v_4r1));
+            int32x4_t v_dst11 = vshlq_n_s32(vaddq_s32(v_r1, v_r2), 2);
+
+            vst1q_s16(dst0 + x, vcombine_s16(vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst00, v_delta), 6)),
+                                             vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst01, v_delta), 6))));
+            vst1q_s16(dst1 + x, vcombine_s16(vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst10, v_delta), 6)),
+                                             vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst11, v_delta), 6))));
+        }
+
+        for( ; x <= width - 4; x += 4 )
+        {
+            int32x4_t v_r0 = vld1q_s32(row0 + x), v_r1 = vld1q_s32(row1 + x), v_r2 = vld1q_s32(row2 + x);
+            int32x4_t v_2r1 = vshlq_n_s32(v_r1, 1), v_4r1 = vshlq_n_s32(v_r1, 2);
+
+            int32x4_t v_dst0 = vaddq_s32(vaddq_s32(v_r0, v_r2), vaddq_s32(v_2r1, v_4r1));
+            int32x4_t v_dst1 = vshlq_n_s32(vaddq_s32(v_r1, v_r2), 2);
+
+            vst1_s16(dst0 + x, vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst0, v_delta), 6)));
+            vst1_s16(dst1 + x, vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst1, v_delta), 6)));
+        }
+
+        return x;
+    }
+};
+
+struct PyrUpVec_32f
+{
+    int operator()(float** src, float** dst, int, int width) const
+    {
+        int x = 0;
         const float *row0 = src[0], *row1 = src[1], *row2 = src[2];
-        float *dst0 = dsts[0], *dst1 = dsts[1];
+        float *dst0 = dst[0], *dst1 = dst[1];
         float32x4_t v_6 = vdupq_n_f32(6.0f), v_scale = vdupq_n_f32(1.f/64.0f), v_scale4 = vmulq_n_f32(v_scale, 4.0f);
 
         for( ; x <= width - 8; x += 8 )
@@ -362,12 +512,15 @@ struct PyrUpVec_32f
 
 #else
 
-typedef NoVec<int, uchar> PyrDownVec_32s8u;
-typedef NoVec<int, ushort> PyrDownVec_32s16u;
-typedef NoVec<int, short> PyrDownVec_32s16s;
-typedef NoVec<float, float> PyrDownVec_32f;
+typedef PyrDownNoVec<int, uchar> PyrDownVec_32s8u;
+typedef PyrDownNoVec<int, ushort> PyrDownVec_32s16u;
+typedef PyrDownNoVec<int, short> PyrDownVec_32s16s;
+typedef PyrDownNoVec<float, float> PyrDownVec_32f;
 
-typedef NoVec<float, float> PyrUpVec_32f;
+typedef PyrUpNoVec<int, uchar> PyrUpVec_32s8u;
+typedef PyrUpNoVec<int, short> PyrUpVec_32s16s;
+typedef PyrUpNoVec<int, ushort> PyrUpVec_32s16u;
+typedef PyrUpNoVec<float, float> PyrUpVec_32f;
 
 #endif
 
@@ -574,7 +727,7 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
         row0 = rows[0]; row1 = rows[1]; row2 = rows[2];
         dsts[0] = dst0; dsts[1] = dst1;
 
-        x = vecOp(rows, (T*)dsts, (int)_dst.step, dsize.width);
+        x = vecOp(rows, dsts, (int)_dst.step, dsize.width);
         for( ; x < dsize.width; x++ )
         {
             T t1 = castOp((row1[x] + row2[x])*4);
@@ -761,7 +914,7 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     else if( depth == CV_32F )
         func = pyrDown_<FltCast<float, 8>, PyrDownVec_32f>;
     else if( depth == CV_64F )
-        func = pyrDown_<FltCast<double, 8>, NoVec<double, double> >;
+        func = pyrDown_<FltCast<double, 8>, PyrDownNoVec<double, double> >;
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
@@ -830,15 +983,15 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
 
     PyrFunc func = 0;
     if( depth == CV_8U )
-        func = pyrUp_<FixPtCast<uchar, 6>, NoVec<int, uchar> >;
+        func = pyrUp_<FixPtCast<uchar, 6>, PyrUpVec_32s8u >;
     else if( depth == CV_16S )
-        func = pyrUp_<FixPtCast<short, 6>, NoVec<int, short> >;
+        func = pyrUp_<FixPtCast<short, 6>, PyrUpVec_32s16s >;
     else if( depth == CV_16U )
-        func = pyrUp_<FixPtCast<ushort, 6>, NoVec<int, ushort> >;
+        func = pyrUp_<FixPtCast<ushort, 6>, PyrUpVec_32s16u >;
     else if( depth == CV_32F )
         func = pyrUp_<FltCast<float, 6>, PyrUpVec_32f >;
     else if( depth == CV_64F )
-        func = pyrUp_<FltCast<double, 6>, NoVec<double, double> >;
+        func = pyrUp_<FltCast<double, 6>, PyrUpNoVec<double, double> >;
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
