@@ -733,19 +733,25 @@ void CV_Remap_Test::generate_test_data()
 
         case CV_32FC2:
         {
-            MatIterator_<Vec2f> begin_x = mapx.begin<Vec2f>(), end_x = mapx.end<Vec2f>();
             float fscols = static_cast<float>(std::max(src.cols - 1 + n, 0)),
                     fsrows = static_cast<float>(std::max(src.rows - 1 + n, 0));
-            for ( ; begin_x != end_x; ++begin_x)
+            int width = mapx.cols << 1;
+
+            for (int y = 0; y < mapx.rows; ++y)
             {
-                begin_x[0] = rng.uniform(_n, fscols);
-                begin_x[1] = rng.uniform(_n, fsrows);
+                float * ptr = mapx.ptr<float>(y);
+
+                for (int x = 0; x < width; x += 2)
+                {
+                    ptr[x] = rng.uniform(_n, fscols);
+                    ptr[x + 1] = rng.uniform(_n, fsrows);
+                }
             }
         }
         break;
 
         default:
-            assert(0);
+            CV_Assert(0);
         break;
     }
 }

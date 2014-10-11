@@ -2804,7 +2804,8 @@ dotProd_(const T* src1, const T* src2, int len)
 {
     int i = 0;
     double result = 0;
-     #if CV_ENABLE_UNROLLED
+
+    #if CV_ENABLE_UNROLLED
     for( ; i <= len - 4; i += 4 )
         result += (double)src1[i]*src2[i] + (double)src1[i+1]*src2[i+1] +
             (double)src1[i+2]*src2[i+2] + (double)src1[i+3]*src2[i+3];
@@ -2833,10 +2834,12 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
     {
         int j, len0 = len & -4, blockSize0 = (1 << 13), blockSize;
         __m128i z = _mm_setzero_si128();
+        CV_DECL_ALIGNED(16) int buf[4];
+
         while( i < len0 )
         {
             blockSize = std::min(len0 - i, blockSize0);
-            __m128i s = _mm_setzero_si128();
+            __m128i s = z;
             j = 0;
             for( ; j <= blockSize - 16; j += 16 )
             {
@@ -2860,7 +2863,7 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
                 s0 = _mm_madd_epi16(s0, s1);
                 s = _mm_add_epi32(s, s0);
             }
-            CV_DECL_ALIGNED(16) int buf[4];
+
             _mm_store_si128((__m128i*)buf, s);
             r += buf[0] + buf[1] + buf[2] + buf[3];
 
@@ -2869,6 +2872,45 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
             i += blockSize;
         }
     }
+#elif CV_NEON
+    int len0 = len & -8, blockSize0 = (1 << 15), blockSize;
+    uint32x4_t v_zero = vdupq_n_u32(0u);
+    CV_DECL_ALIGNED(16) uint buf[4];
+
+    while( i < len0 )
+    {
+        blockSize = std::min(len0 - i, blockSize0);
+        uint32x4_t v_sum = v_zero;
+
+        int j = 0;
+        for( ; j <= blockSize - 16; j += 16 )
+        {
+            uint8x16_t v_src1 = vld1q_u8(src1 + j), v_src2 = vld1q_u8(src2 + j);
+
+            uint16x8_t v_src10 = vmovl_u8(vget_low_u8(v_src1)), v_src20 = vmovl_u8(vget_low_u8(v_src2));
+            v_sum = vmlal_u16(v_sum, vget_low_u16(v_src10), vget_low_u16(v_src20));
+            v_sum = vmlal_u16(v_sum, vget_high_u16(v_src10), vget_high_u16(v_src20));
+
+            v_src10 = vmovl_u8(vget_high_u8(v_src1));
+            v_src20 = vmovl_u8(vget_high_u8(v_src2));
+            v_sum = vmlal_u16(v_sum, vget_low_u16(v_src10), vget_low_u16(v_src20));
+            v_sum = vmlal_u16(v_sum, vget_high_u16(v_src10), vget_high_u16(v_src20));
+        }
+
+        for( ; j <= blockSize - 8; j += 8 )
+        {
+            uint16x8_t v_src1 = vmovl_u8(vld1_u8(src1 + j)), v_src2 = vmovl_u8(vld1_u8(src2 + j));
+            v_sum = vmlal_u16(v_sum, vget_low_u16(v_src1), vget_low_u16(v_src2));
+            v_sum = vmlal_u16(v_sum, vget_high_u16(v_src1), vget_high_u16(v_src2));
+        }
+
+        vst1q_u32(buf, v_sum);
+        r += buf[0] + buf[1] + buf[2] + buf[3];
+
+        src1 += blockSize;
+        src2 += blockSize;
+        i += blockSize;
+    }
 #endif
     return r + dotProd_(src1, src2, len - i);
 }
@@ -2876,7 +2918,51 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
 
 static double dotProd_8s(const schar* src1, const schar* src2, int len)
 {
-    return dotProd_(src1, src2, len);
+    int i = 0;
+    double r = 0.0;
+
+#if CV_NEON
+    int len0 = len & -8, blockSize0 = (1 << 14), blockSize;
+    int32x4_t v_zero = vdupq_n_s32(0);
+    CV_DECL_ALIGNED(16) int buf[4];
+
+    while( i < len0 )
+    {
+        blockSize = std::min(len0 - i, blockSize0);
+        int32x4_t v_sum = v_zero;
+
+        int j = 0;
+        for( ; j <= blockSize - 16; j += 16 )
+        {
+            int8x16_t v_src1 = vld1q_s8(src1 + j), v_src2 = vld1q_s8(src2 + j);
+
+            int16x8_t v_src10 = vmovl_s8(vget_low_s8(v_src1)), v_src20 = vmovl_s8(vget_low_s8(v_src2));
+            v_sum = vmlal_s16(v_sum, vget_low_s16(v_src10), vget_low_s16(v_src20));
+            v_sum = vmlal_s16(v_sum, vget_high_s16(v_src10), vget_high_s16(v_src20));
+
+            v_src10 = vmovl_s8(vget_high_s8(v_src1));
+            v_src20 = vmovl_s8(vget_high_s8(v_src2));
+            v_sum = vmlal_s16(v_sum, vget_low_s16(v_src10), vget_low_s16(v_src20));
+            v_sum = vmlal_s16(v_sum, vget_high_s16(v_src10), vget_high_s16(v_src20));
+        }
+
+        for( ; j <= blockSize - 8; j += 8 )
+        {
+            int16x8_t v_src1 = vmovl_s8(vld1_s8(src1 + j)), v_src2 = vmovl_s8(vld1_s8(src2 + j));
+            v_sum = vmlal_s16(v_sum, vget_low_s16(v_src1), vget_low_s16(v_src2));
+            v_sum = vmlal_s16(v_sum, vget_high_s16(v_src1), vget_high_s16(v_src2));
+        }
+
+        vst1q_s32(buf, v_sum);
+        r += buf[0] + buf[1] + buf[2] + buf[3];
+
+        src1 += blockSize;
+        src2 += blockSize;
+        i += blockSize;
+    }
+#endif
+
+    return r + dotProd_(src1, src2, len - i);
 }
 
 static double dotProd_16u(const ushort* src1, const ushort* src2, int len)
@@ -2914,13 +3000,36 @@ static double dotProd_32s(const int* src1, const int* src2, int len)
 
 static double dotProd_32f(const float* src1, const float* src2, int len)
 {
+    double r = 0.0;
+    int i = 0;
+
 #if (ARITHM_USE_IPP == 1)
-    double r = 0;
     if (0 <= ippsDotProd_32f64f(src1, src2, len, &r))
         return r;
     setIppErrorStatus();
+#elif CV_NEON
+    int len0 = len & -4, blockSize0 = (1 << 13), blockSize;
+    float32x4_t v_zero = vdupq_n_f32(0.0f);
+    CV_DECL_ALIGNED(16) float buf[4];
+
+    while( i < len0 )
+    {
+        blockSize = std::min(len0 - i, blockSize0);
+        float32x4_t v_sum = v_zero;
+
+        int j = 0;
+        for( ; j <= blockSize - 4; j += 4 )
+            v_sum = vmlaq_f32(v_sum, vld1q_f32(src1 + j), vld1q_f32(src2 + j));
+
+        vst1q_f32(buf, v_sum);
+        r += buf[0] + buf[1] + buf[2] + buf[3];
+
+        src1 += blockSize;
+        src2 += blockSize;
+        i += blockSize;
+    }
 #endif
-    return dotProd_(src1, src2, len);
+    return r + dotProd_(src1, src2, len - i);
 }
 
 static double dotProd_64f(const double* src1, const double* src2, int len)
