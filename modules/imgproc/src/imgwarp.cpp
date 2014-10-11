@@ -133,7 +133,7 @@ static uchar NNDeltaTab_i[INTER_TAB_SIZE2][2];
 static float BilinearTab_f[INTER_TAB_SIZE2][2][2];
 static short BilinearTab_i[INTER_TAB_SIZE2][2][2];
 
-#if CV_SSE2
+#if CV_SSE2 || CV_NEON
 static short BilinearTab_iC4_buf[INTER_TAB_SIZE2+2][2][8];
 static short (*BilinearTab_iC4)[2][8] = (short (*)[2][8])alignPtr(BilinearTab_iC4_buf, 16);
 #endif
@@ -269,7 +269,7 @@ static const void* initInterTab2D( int method, bool fixpt )
             }
         tab -= INTER_TAB_SIZE2*ksize*ksize;
         itab -= INTER_TAB_SIZE2*ksize*ksize;
-#if CV_SSE2
+#if CV_SSE2 || CV_NEON
         if( method == INTER_LINEAR )
         {
             for( i = 0; i < INTER_TAB_SIZE2; i++ )
@@ -896,7 +896,41 @@ struct VResizeCubicVec_32f
 
 #elif CV_NEON
 
-typedef VResizeNoVec VResizeLinearVec_32s8u;
+struct VResizeLinearVec_32s8u
+{
+    int operator()(const uchar** _src, uchar* dst, const uchar* _beta, int width ) const
+    {
+        const int** src = (const int**)_src, *S0 = src[0], *S1 = src[1];
+        const short* beta = (const short*)_beta;
+        int x = 0;
+        int16x8_t v_b0 = vdupq_n_s16(beta[0]), v_b1 = vdupq_n_s16(beta[1]), v_delta = vdupq_n_s16(2);
+
+        for( ; x <= width - 16; x += 16)
+        {
+            int32x4_t v_src00 = vshrq_n_s32(vld1q_s32(S0 + x), 4), v_src10 = vshrq_n_s32(vld1q_s32(S1 + x), 4);
+            int32x4_t v_src01 = vshrq_n_s32(vld1q_s32(S0 + x + 4), 4), v_src11 = vshrq_n_s32(vld1q_s32(S1 + x + 4), 4);
+
+            int16x8_t v_src0 = vcombine_s16(vmovn_s32(v_src00), vmovn_s32(v_src01));
+            int16x8_t v_src1 = vcombine_s16(vmovn_s32(v_src10), vmovn_s32(v_src11));
+
+            int16x8_t v_dst0 = vmlaq_s16(vmulq_s16(v_src0, v_b0), v_src1, v_b1);
+            v_dst0 = vshrq_n_s16(vaddq_s16(v_dst0, v_delta), 2);
+
+            v_src00 = vshrq_n_s32(vld1q_s32(S0 + x + 8), 4), v_src10 = vshrq_n_s32(vld1q_s32(S1 + x + 8), 4);
+            v_src01 = vshrq_n_s32(vld1q_s32(S0 + x + 12), 4), v_src11 = vshrq_n_s32(vld1q_s32(S1 + x + 12), 4);
+
+            v_src0 = vcombine_s16(vmovn_s32(v_src00), vmovn_s32(v_src01));
+            v_src1 = vcombine_s16(vmovn_s32(v_src10), vmovn_s32(v_src11));
+
+            int16x8_t v_dst1 = vmlaq_s16(vmulq_s16(v_src0, v_b0), v_src1, v_b1);
+            v_dst1 = vshrq_n_s16(vaddq_s16(v_dst1, v_delta), 2);
+
+            vst1q_u8(dst + x, vcombine_u8(vqmovun_s16(v_dst0), vqmovun_s16(v_dst1)));
+        }
+
+        return x;
+    }
+};
 
 struct VResizeLinearVec_32f16u
 {
