@@ -640,4 +640,25 @@
       <data>
         2.6848968552324195e+03 -3.9480221796060600e+03
         3.3993813622987973e+03</data></val></tvec></PointsNum_Algo_solvePnPSmallPoints--solvePnPSmallPoints---4--SOLVEPNP_DLS->
+<PointsNum_Algo_solvePnPSmallPoints--solvePnPSmallPoints---4--SOLVEPNP_UPNP->
+  <rvec>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -1.663551826142825e+00 2.073692005541536e+00
+        1.062594625926871e+00</data></val></rvec>
+  <tvec>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.673135018912835e+03  -1.744317871474202e+02
+        2.466455403737361e+12</data></val></tvec></PointsNum_Algo_solvePnPSmallPoints--solvePnPSmallPoints---4--SOLVEPNP_UPNP->
 </opencv_storage>
