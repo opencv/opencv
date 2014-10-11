@@ -301,6 +301,8 @@
 #     [+] updated for NDK r9c
 #   - January 2014
 #     [~] fix copying of shared STL
+#   - October 2014
+#     [~] fix NATIVE_API_LEVEL detection for NDK r10
 # ------------------------------------------------------------------------------
 
 cmake_minimum_required( VERSION 2.6.3 )
@@ -423,12 +425,18 @@ macro( __INIT_VARIABLE var_name )
 endmacro()
 
 macro( __DETECT_NATIVE_API_LEVEL _var _path )
- SET( __ndkApiLevelRegex "^[\t ]*#define[\t ]+__ANDROID_API__[\t ]+([0-9]+)[\t ]*$" )
- FILE( STRINGS ${_path} __apiFileContent REGEX "${__ndkApiLevelRegex}" )
- if( NOT __apiFileContent )
-  message( SEND_ERROR "Could not get Android native API level. Probably you have specified invalid level value, or your copy of NDK/toolchain is broken." )
- endif()
- string( REGEX REPLACE "${__ndkApiLevelRegex}" "\\1" ${_var} "${__apiFileContent}" )
+ list(APPEND __ndkApiLevelRegexList
+  "^[\t ]*#define[\t ]+__ANDROID_API__[\t ]+([0-9])[\t ]*$"
+  "^[\t ]*#define[\t ]+__ANDROID_API__[\t ]+[0-9]+[\t ]+.*([A-Z]).*$"
+ )
+ foreach( __ndkApiLevelRegex IN LISTS __ndkApiLevelRegexList)
+  FILE( STRINGS ${_path} __apiFileContent REGEX "${__ndkApiLevelRegex}" )
+  if( __apiFileContent )
+   string( REGEX REPLACE "${__ndkApiLevelRegex}" "\\1" ${_var} "${__apiFileContent}" )
+   break()
+  endif()
+ endforeach()
+ unset( __ndkApiLevelRegexList )
  unset( __apiFileContent )
  unset( __ndkApiLevelRegex )
 endmacro()
@@ -874,7 +882,7 @@ if( __levelIdx EQUAL -1 )
 else()
  if( BUILD_WITH_ANDROID_NDK )
   __DETECT_NATIVE_API_LEVEL( __realApiLevel "${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}/usr/include/android/api-level.h" )
-  if( NOT __realApiLevel EQUAL ANDROID_NATIVE_API_LEVEL )
+  if( NOT __realApiLevel STREQUAL ANDROID_NATIVE_API_LEVEL )
    message( SEND_ERROR "Specified Android API level (${ANDROID_NATIVE_API_LEVEL}) does not match to the level found (${__realApiLevel}). Probably your copy of NDK is broken." )
   endif()
   unset( __realApiLevel )
