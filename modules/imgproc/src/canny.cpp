@@ -361,6 +361,15 @@ void cv::Canny( InputArray _src, OutputArray _dst,
                         _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm);
                     }
                 }
+#elif CV_NEON
+                for ( ; j <= width - 8; j += 8)
+                {
+                    int16x8_t v_dx = vld1q_s16(_dx + j), v_dy = vld1q_s16(_dy + j);
+                    vst1q_s32(_norm + j, vaddq_s32(vabsq_s32(vmovl_s16(vget_low_s16(v_dx))),
+                                                   vabsq_s32(vmovl_s16(vget_low_s16(v_dy)))));
+                    vst1q_s32(_norm + j + 4, vaddq_s32(vabsq_s32(vmovl_s16(vget_high_s16(v_dx))),
+                                                       vabsq_s32(vmovl_s16(vget_high_s16(v_dy)))));
+                }
 #endif
                 for ( ; j < width; ++j)
                     _norm[j] = std::abs(int(_dx[j])) + std::abs(int(_dy[j]));
@@ -385,6 +394,18 @@ void cv::Canny( InputArray _src, OutputArray _dst,
                         v_norm = _mm_add_epi32(_mm_unpackhi_epi16(v_dx_ml, v_dx_mh), _mm_unpackhi_epi16(v_dy_ml, v_dy_mh));
                         _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm);
                     }
+                }
+#elif CV_NEON
+                for ( ; j <= width - 8; j += 8)
+                {
+                    int16x8_t v_dx = vld1q_s16(_dx + j), v_dy = vld1q_s16(_dy + j);
+                    int16x4_t v_dxp = vget_low_s16(v_dx), v_dyp = vget_low_s16(v_dy);
+                    int32x4_t v_dst = vmlal_s16(vmull_s16(v_dxp, v_dxp), v_dyp, v_dyp);
+                    vst1q_s32(_norm + j, v_dst);
+
+                    v_dxp = vget_high_s16(v_dx), v_dyp = vget_high_s16(v_dy);
+                    v_dst = vmlal_s16(vmull_s16(v_dxp, v_dxp), v_dyp, v_dyp);
+                    vst1q_s32(_norm + j + 4, v_dst);
                 }
 #endif
                 for ( ; j < width; ++j)

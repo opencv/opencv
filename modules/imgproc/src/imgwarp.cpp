@@ -894,6 +894,183 @@ struct VResizeCubicVec_32f
     }
 };
 
+#elif CV_NEON
+
+typedef VResizeNoVec VResizeLinearVec_32s8u;
+
+struct VResizeLinearVec_32f16u
+{
+    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    {
+        const float** src = (const float**)_src;
+        const float* beta = (const float*)_beta;
+        const float *S0 = src[0], *S1 = src[1];
+        ushort* dst = (ushort*)_dst;
+        int x = 0;
+
+        float32x4_t v_b0 = vdupq_n_f32(beta[0]), v_b1 = vdupq_n_f32(beta[1]);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            float32x4_t v_src00 = vld1q_f32(S0 + x), v_src01 = vld1q_f32(S0 + x + 4);
+            float32x4_t v_src10 = vld1q_f32(S1 + x), v_src11 = vld1q_f32(S1 + x + 4);
+
+            float32x4_t v_dst0 = vmlaq_f32(vmulq_f32(v_src00, v_b0), v_src10, v_b1);
+            float32x4_t v_dst1 = vmlaq_f32(vmulq_f32(v_src01, v_b0), v_src11, v_b1);
+
+            vst1q_u16(dst + x, vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(v_dst0)),
+                                            vqmovn_u32(cv_vrndq_u32_f32(v_dst1))));
+        }
+
+        return x;
+    }
+};
+
+struct VResizeLinearVec_32f16s
+{
+    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    {
+        const float** src = (const float**)_src;
+        const float* beta = (const float*)_beta;
+        const float *S0 = src[0], *S1 = src[1];
+        short* dst = (short*)_dst;
+        int x = 0;
+
+        float32x4_t v_b0 = vdupq_n_f32(beta[0]), v_b1 = vdupq_n_f32(beta[1]);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            float32x4_t v_src00 = vld1q_f32(S0 + x), v_src01 = vld1q_f32(S0 + x + 4);
+            float32x4_t v_src10 = vld1q_f32(S1 + x), v_src11 = vld1q_f32(S1 + x + 4);
+
+            float32x4_t v_dst0 = vmlaq_f32(vmulq_f32(v_src00, v_b0), v_src10, v_b1);
+            float32x4_t v_dst1 = vmlaq_f32(vmulq_f32(v_src01, v_b0), v_src11, v_b1);
+
+            vst1q_s16(dst + x, vcombine_s16(vqmovn_s32(cv_vrndq_s32_f32(v_dst0)),
+                                            vqmovn_s32(cv_vrndq_s32_f32(v_dst1))));
+        }
+
+        return x;
+    }
+};
+
+struct VResizeLinearVec_32f
+{
+    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    {
+        const float** src = (const float**)_src;
+        const float* beta = (const float*)_beta;
+        const float *S0 = src[0], *S1 = src[1];
+        float* dst = (float*)_dst;
+        int x = 0;
+
+        float32x4_t v_b0 = vdupq_n_f32(beta[0]), v_b1 = vdupq_n_f32(beta[1]);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            float32x4_t v_src00 = vld1q_f32(S0 + x), v_src01 = vld1q_f32(S0 + x + 4);
+            float32x4_t v_src10 = vld1q_f32(S1 + x), v_src11 = vld1q_f32(S1 + x + 4);
+
+            vst1q_f32(dst + x, vmlaq_f32(vmulq_f32(v_src00, v_b0), v_src10, v_b1));
+            vst1q_f32(dst + x + 4, vmlaq_f32(vmulq_f32(v_src01, v_b0), v_src11, v_b1));
+        }
+
+        return x;
+    }
+};
+
+typedef VResizeNoVec VResizeCubicVec_32s8u;
+
+struct VResizeCubicVec_32f16u
+{
+    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    {
+        const float** src = (const float**)_src;
+        const float* beta = (const float*)_beta;
+        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
+        ushort* dst = (ushort*)_dst;
+        int x = 0;
+        float32x4_t v_b0 = vdupq_n_f32(beta[0]), v_b1 = vdupq_n_f32(beta[1]),
+                    v_b2 = vdupq_n_f32(beta[2]), v_b3 = vdupq_n_f32(beta[3]);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            float32x4_t v_dst0 = vmlaq_f32(vmlaq_f32(vmlaq_f32(vmulq_f32(v_b0, vld1q_f32(S0 + x)),
+                                                                         v_b1, vld1q_f32(S1 + x)),
+                                                                         v_b2, vld1q_f32(S2 + x)),
+                                                                         v_b3, vld1q_f32(S3 + x));
+            float32x4_t v_dst1 = vmlaq_f32(vmlaq_f32(vmlaq_f32(vmulq_f32(v_b0, vld1q_f32(S0 + x + 4)),
+                                                                         v_b1, vld1q_f32(S1 + x + 4)),
+                                                                         v_b2, vld1q_f32(S2 + x + 4)),
+                                                                         v_b3, vld1q_f32(S3 + x + 4));
+
+            vst1q_u16(dst + x, vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(v_dst0)),
+                                            vqmovn_u32(cv_vrndq_u32_f32(v_dst1))));
+        }
+
+        return x;
+    }
+};
+
+struct VResizeCubicVec_32f16s
+{
+    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    {
+        const float** src = (const float**)_src;
+        const float* beta = (const float*)_beta;
+        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
+        short* dst = (short*)_dst;
+        int x = 0;
+        float32x4_t v_b0 = vdupq_n_f32(beta[0]), v_b1 = vdupq_n_f32(beta[1]),
+                    v_b2 = vdupq_n_f32(beta[2]), v_b3 = vdupq_n_f32(beta[3]);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            float32x4_t v_dst0 = vmlaq_f32(vmlaq_f32(vmlaq_f32(vmulq_f32(v_b0, vld1q_f32(S0 + x)),
+                                                                         v_b1, vld1q_f32(S1 + x)),
+                                                                         v_b2, vld1q_f32(S2 + x)),
+                                                                         v_b3, vld1q_f32(S3 + x));
+            float32x4_t v_dst1 = vmlaq_f32(vmlaq_f32(vmlaq_f32(vmulq_f32(v_b0, vld1q_f32(S0 + x + 4)),
+                                                                         v_b1, vld1q_f32(S1 + x + 4)),
+                                                                         v_b2, vld1q_f32(S2 + x + 4)),
+                                                                         v_b3, vld1q_f32(S3 + x + 4));
+
+            vst1q_s16(dst + x, vcombine_s16(vqmovn_s32(cv_vrndq_s32_f32(v_dst0)),
+                                            vqmovn_s32(cv_vrndq_s32_f32(v_dst1))));
+        }
+
+        return x;
+    }
+};
+
+struct VResizeCubicVec_32f
+{
+    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    {
+        const float** src = (const float**)_src;
+        const float* beta = (const float*)_beta;
+        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
+        float* dst = (float*)_dst;
+        int x = 0;
+        float32x4_t v_b0 = vdupq_n_f32(beta[0]), v_b1 = vdupq_n_f32(beta[1]),
+                    v_b2 = vdupq_n_f32(beta[2]), v_b3 = vdupq_n_f32(beta[3]);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            vst1q_f32(dst + x, vmlaq_f32(vmlaq_f32(vmlaq_f32(vmulq_f32(v_b0, vld1q_f32(S0 + x)),
+                                                                       v_b1, vld1q_f32(S1 + x)),
+                                                                       v_b2, vld1q_f32(S2 + x)),
+                                                                       v_b3, vld1q_f32(S3 + x)));
+            vst1q_f32(dst + x + 4, vmlaq_f32(vmlaq_f32(vmlaq_f32(vmulq_f32(v_b0, vld1q_f32(S0 + x + 4)),
+                                                                          v_b1, vld1q_f32(S1 + x + 4)),
+                                                                          v_b2, vld1q_f32(S2 + x + 4)),
+                                                                          v_b3, vld1q_f32(S3 + x + 4)));
+        }
+
+        return x;
+    }
+};
+
 #else
 
 typedef VResizeNoVec VResizeLinearVec_32s8u;
@@ -1322,7 +1499,120 @@ struct ResizeAreaFastNoVec
     { return 0; }
 };
 
-#if CV_SSE2
+#if CV_NEON
+
+class ResizeAreaFastVec_SIMD_8u
+{
+public:
+    ResizeAreaFastVec_SIMD_8u(int _cn, int _step) :
+        cn(_cn), step(_step)
+    {
+    }
+
+    int operator() (const uchar* S, uchar* D, int w) const
+    {
+        int dx = 0;
+        const uchar* S0 = S, * S1 = S0 + step;
+
+        uint16x8_t v_2 = vdupq_n_u16(2);
+
+        if (cn == 1)
+        {
+            for ( ; dx <= w - 16; dx += 16, S0 += 32, S1 += 32, D += 16)
+            {
+                uint8x16x2_t v_row0 = vld2q_u8(S0), v_row1 = vld2q_u8(S1);
+
+                uint16x8_t v_dst0 = vaddl_u8(vget_low_u8(v_row0.val[0]), vget_low_u8(v_row0.val[1]));
+                v_dst0 = vaddq_u16(v_dst0, vaddl_u8(vget_low_u8(v_row1.val[0]), vget_low_u8(v_row1.val[1])));
+                v_dst0 = vshrq_n_u16(vaddq_u16(v_dst0, v_2), 2);
+
+                uint16x8_t v_dst1 = vaddl_u8(vget_high_u8(v_row0.val[0]), vget_high_u8(v_row0.val[1]));
+                v_dst1 = vaddq_u16(v_dst1, vaddl_u8(vget_high_u8(v_row1.val[0]), vget_high_u8(v_row1.val[1])));
+                v_dst1 = vshrq_n_u16(vaddq_u16(v_dst1, v_2), 2);
+
+                vst1q_u8(D, vcombine_u8(vmovn_u16(v_dst0), vmovn_u16(v_dst1)));
+            }
+        }
+        else if (cn == 4)
+        {
+            for ( ; dx <= w - 8; dx += 8, S0 += 16, S1 += 16, D += 8)
+            {
+                uint8x16_t v_row0 = vld1q_u8(S0), v_row1 = vld1q_u8(S1);
+
+                uint16x8_t v_row00 = vmovl_u8(vget_low_u8(v_row0));
+                uint16x8_t v_row01 = vmovl_u8(vget_high_u8(v_row0));
+                uint16x8_t v_row10 = vmovl_u8(vget_low_u8(v_row1));
+                uint16x8_t v_row11 = vmovl_u8(vget_high_u8(v_row1));
+
+                uint16x4_t v_p0 = vadd_u16(vadd_u16(vget_low_u16(v_row00), vget_high_u16(v_row00)),
+                                           vadd_u16(vget_low_u16(v_row10), vget_high_u16(v_row10)));
+                uint16x4_t v_p1 = vadd_u16(vadd_u16(vget_low_u16(v_row01), vget_high_u16(v_row01)),
+                                           vadd_u16(vget_low_u16(v_row11), vget_high_u16(v_row11)));
+                uint16x8_t v_dst = vshrq_n_u16(vaddq_u16(vcombine_u16(v_p0, v_p1), v_2), 2);
+
+                vst1_u8(D, vmovn_u16(v_dst));
+            }
+        }
+
+        return dx;
+    }
+
+private:
+    int cn, step;
+};
+
+class ResizeAreaFastVec_SIMD_16u
+{
+public:
+    ResizeAreaFastVec_SIMD_16u(int _cn, int _step) :
+        cn(_cn), step(_step)
+    {
+    }
+
+    int operator() (const ushort * S, ushort * D, int w) const
+    {
+        int dx = 0;
+        const ushort * S0 = S, * S1 = (const ushort *)((const uchar *)(S0) + step);
+
+        uint32x4_t v_2 = vdupq_n_u32(2);
+
+        if (cn == 1)
+        {
+            for ( ; dx <= w - 8; dx += 8, S0 += 16, S1 += 16, D += 8)
+            {
+                uint16x8x2_t v_row0 = vld2q_u16(S0), v_row1 = vld2q_u16(S1);
+
+                uint32x4_t v_dst0 = vaddl_u16(vget_low_u16(v_row0.val[0]), vget_low_u16(v_row0.val[1]));
+                v_dst0 = vaddq_u32(v_dst0, vaddl_u16(vget_low_u16(v_row1.val[0]), vget_low_u16(v_row1.val[1])));
+                v_dst0 = vshrq_n_u32(vaddq_u32(v_dst0, v_2), 2);
+
+                uint32x4_t v_dst1 = vaddl_u16(vget_high_u16(v_row0.val[0]), vget_high_u16(v_row0.val[1]));
+                v_dst1 = vaddq_u32(v_dst1, vaddl_u16(vget_high_u16(v_row1.val[0]), vget_high_u16(v_row1.val[1])));
+                v_dst1 = vshrq_n_u32(vaddq_u32(v_dst1, v_2), 2);
+
+                vst1q_u16(D, vcombine_u16(vmovn_u32(v_dst0), vmovn_u32(v_dst1)));
+            }
+        }
+        else if (cn == 4)
+        {
+            for ( ; dx <= w - 4; dx += 4, S0 += 8, S1 += 8, D += 4)
+            {
+                uint16x8_t v_row0 = vld1q_u16(S0), v_row1 = vld1q_u16(S1);
+                uint32x4_t v_dst = vaddq_u32(vaddl_u16(vget_low_u16(v_row0), vget_high_u16(v_row0)),
+                                             vaddl_u16(vget_low_u16(v_row1), vget_high_u16(v_row1)));
+                vst1_u16(D, vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst, v_2), 2)));
+            }
+        }
+
+        return dx;
+    }
+
+private:
+    int cn, step;
+};
+
+#elif CV_SSE2
+
 class ResizeAreaFastVec_SIMD_8u
 {
 public:
@@ -3489,7 +3779,15 @@ public:
                         bufxy = (*m1)(Rect(x, y, bcols, brows));
 
                         const ushort* sA = m2->ptr<ushort>(y+y1) + x;
-                        for( x1 = 0; x1 < bcols; x1++ )
+                        x1 = 0;
+
+                    #if CV_NEON
+                        uint16x8_t v_scale = vdupq_n_u16(INTER_TAB_SIZE2-1);
+                        for ( ; x1 <= bcols - 8; x1 += 8)
+                            vst1q_u16(A + x1, vandq_u16(vld1q_u16(sA + x1), v_scale));
+                    #endif
+
+                        for( ; x1 < bcols; x1++ )
                             A[x1] = (ushort)(sA[x1] & (INTER_TAB_SIZE2-1));
                     }
                     else if( planar_input )
@@ -3534,6 +3832,22 @@ public:
                                 _mm_storeu_si128((__m128i*)(XY + x1*2 + 8), iy1);
                             }
                         }
+                    #elif CV_NEON
+                        float32x4_t v_scale = vdupq_n_f32((float)INTER_TAB_SIZE);
+                        int32x4_t v_scale2 = vdupq_n_s32(INTER_TAB_SIZE - 1), v_scale3 = vdupq_n_s32(INTER_TAB_SIZE);
+
+                        for( ; x1 <= bcols - 4; x1 += 4 )
+                        {
+                            int32x4_t v_sx = cv_vrndq_s32_f32(vmulq_f32(vld1q_f32(sX + x1), v_scale)),
+                                      v_sy = cv_vrndq_s32_f32(vmulq_f32(vld1q_f32(sY + x1), v_scale));
+                            int32x4_t v_v = vmlaq_s32(vandq_s32(v_sx, v_scale2), v_scale3,
+                                                      vandq_s32(v_sy, v_scale2));
+                            vst1_u16(A + x1, vqmovun_s32(v_v));
+
+                            int16x4x2_t v_dst = vzip_s16(vqmovn_s32(vshrq_n_s32(v_sx, INTER_BITS)),
+                                                         vqmovn_s32(vshrq_n_s32(v_sy, INTER_BITS)));
+                            vst1q_s16(XY + (x1 << 1), vcombine_s16(v_dst.val[0], v_dst.val[1]));
+                        }
                     #endif
 
                         for( ; x1 < bcols; x1++ )
@@ -3549,6 +3863,26 @@ public:
                     else
                     {
                         const float* sXY = m1->ptr<float>(y+y1) + x*2;
+                        x1 = 0;
+
+                    #if CV_NEON
+                        float32x4_t v_scale = vdupq_n_f32(INTER_TAB_SIZE);
+                        int32x4_t v_scale2 = vdupq_n_s32(INTER_TAB_SIZE-1), v_scale3 = vdupq_n_s32(INTER_TAB_SIZE);
+
+                        for( ; x1 <= bcols - 4; x1 += 4 )
+                        {
+                            float32x4x2_t v_src = vld2q_f32(sXY + (x1 << 1));
+                            int32x4_t v_sx = cv_vrndq_s32_f32(vmulq_f32(v_src.val[0], v_scale));
+                            int32x4_t v_sy = cv_vrndq_s32_f32(vmulq_f32(v_src.val[1], v_scale));
+                            int32x4_t v_v = vmlaq_s32(vandq_s32(v_sx, v_scale2), v_scale3,
+                                                      vandq_s32(v_sy, v_scale2));
+                            vst1_u16(A + x1, vqmovun_s32(v_v));
+
+                            int16x4x2_t v_dst = vzip_s16(vqmovn_s32(vshrq_n_s32(v_sx, INTER_BITS)),
+                                                         vqmovn_s32(vshrq_n_s32(v_sy, INTER_BITS)));
+                            vst1q_s16(XY + (x1 << 1), vcombine_s16(v_dst.val[0], v_dst.val[1]));
+                        }
+                    #endif
 
                         for( x1 = 0; x1 < bcols; x1++ )
                         {

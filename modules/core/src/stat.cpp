@@ -90,20 +90,20 @@ struct Sum_SIMD<uchar, int>
             uint8x16_t v_src = vld1q_u8(src0 + x);
             uint16x8_t v_half = vmovl_u8(vget_low_u8(v_src));
 
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_low_u16(v_half)));
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_high_u16(v_half)));
+            v_sum = vaddw_u16(v_sum, vget_low_u16(v_half));
+            v_sum = vaddw_u16(v_sum, vget_high_u16(v_half));
 
             v_half = vmovl_u8(vget_high_u8(v_src));
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_low_u16(v_half)));
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_high_u16(v_half)));
+            v_sum = vaddw_u16(v_sum, vget_low_u16(v_half));
+            v_sum = vaddw_u16(v_sum, vget_high_u16(v_half));
         }
 
         for ( ; x <= len - 8; x += 8)
         {
             uint16x8_t v_src = vmovl_u8(vld1_u8(src0 + x));
 
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_low_u16(v_src)));
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_high_u16(v_src)));
+            v_sum = vaddw_u16(v_sum, vget_low_u16(v_src));
+            v_sum = vaddw_u16(v_sum, vget_high_u16(v_src));
         }
 
         unsigned int CV_DECL_ALIGNED(16) ar[4];
@@ -133,20 +133,20 @@ struct Sum_SIMD<schar, int>
             int8x16_t v_src = vld1q_s8(src0 + x);
             int16x8_t v_half = vmovl_s8(vget_low_s8(v_src));
 
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_low_s16(v_half)));
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_high_s16(v_half)));
+            v_sum = vaddw_s16(v_sum, vget_low_s16(v_half));
+            v_sum = vaddw_s16(v_sum, vget_high_s16(v_half));
 
             v_half = vmovl_s8(vget_high_s8(v_src));
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_low_s16(v_half)));
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_high_s16(v_half)));
+            v_sum = vaddw_s16(v_sum, vget_low_s16(v_half));
+            v_sum = vaddw_s16(v_sum, vget_high_s16(v_half));
         }
 
         for ( ; x <= len - 8; x += 8)
         {
             int16x8_t v_src = vmovl_s8(vld1_s8(src0 + x));
 
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_low_s16(v_src)));
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_high_s16(v_src)));
+            v_sum = vaddw_s16(v_sum, vget_low_s16(v_src));
+            v_sum = vaddw_s16(v_sum, vget_high_s16(v_src));
         }
 
         int CV_DECL_ALIGNED(16) ar[4];
@@ -175,13 +175,13 @@ struct Sum_SIMD<ushort, int>
         {
             uint16x8_t v_src = vld1q_u16(src0 + x);
 
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_low_u16(v_src)));
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vget_high_u16(v_src)));
+            v_sum = vaddw_u16(v_sum, vget_low_u16(v_src));
+            v_sum = vaddw_u16(v_sum, vget_high_u16(v_src));
         }
 
         for ( ; x <= len - 4; x += 4)
-            v_sum = vaddq_u32(v_sum, vmovl_u16(vld1_u16(src0 + x)));
-      
+            v_sum = vaddw_u16(v_sum, vld1_u16(src0 + x));
+
         unsigned int CV_DECL_ALIGNED(16) ar[4];
         vst1q_u32(ar, v_sum);
 
@@ -208,13 +208,13 @@ struct Sum_SIMD<short, int>
         {
             int16x8_t v_src = vld1q_s16(src0 + x);
 
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_low_s16(v_src)));
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vget_high_s16(v_src)));
+            v_sum = vaddw_s16(v_sum, vget_low_s16(v_src));
+            v_sum = vaddw_s16(v_sum, vget_high_s16(v_src));
         }
 
         for ( ; x <= len - 4; x += 4)
-            v_sum = vaddq_s32(v_sum, vmovl_s16(vld1_s16(src0 + x)));
-      
+            v_sum = vaddw_s16(v_sum, vld1_s16(src0 + x));
+
         int CV_DECL_ALIGNED(16) ar[4];
         vst1q_s32(ar, v_sum);
 
@@ -426,6 +426,38 @@ static int countNonZero8u( const uchar* src, int len )
             nz += tab[val & 255] + tab[val >> 8];
         }
     }
+#elif CV_NEON
+    int len0 = len & -16, blockSize1 = (1 << 8) - 16, blockSize0 = blockSize1 << 6;
+    uint32x4_t v_nz = vdupq_n_u32(0u);
+    uint8x16_t v_zero = vdupq_n_u8(0), v_1 = vdupq_n_u8(1);
+    const uchar * src0 = src;
+
+    while( i < len0 )
+    {
+        int blockSizei = std::min(len0 - i, blockSize0), j = 0;
+
+        while (j < blockSizei)
+        {
+            int blockSizej = std::min(blockSizei - j, blockSize1), k = 0;
+            uint8x16_t v_pz = v_zero;
+
+            for( ; k <= blockSizej - 16; k += 16 )
+                v_pz = vaddq_u8(v_pz, vandq_u8(vceqq_u8(vld1q_u8(src0 + k), v_zero), v_1));
+
+            uint16x8_t v_p1 = vmovl_u8(vget_low_u8(v_pz)), v_p2 = vmovl_u8(vget_high_u8(v_pz));
+            v_nz = vaddq_u32(vaddl_u16(vget_low_u16(v_p1), vget_high_u16(v_p1)), v_nz);
+            v_nz = vaddq_u32(vaddl_u16(vget_low_u16(v_p2), vget_high_u16(v_p2)), v_nz);
+
+            src0 += blockSizej;
+            j += blockSizej;
+        }
+
+        i += blockSizei;
+    }
+
+    CV_DECL_ALIGNED(16) unsigned int buf[4];
+    vst1q_u32(buf, v_nz);
+    nz += i - saturate_cast<int>(buf[0] + buf[1] + buf[2] + buf[3]);
 #endif
     for( ; i < len; i++ )
         nz += src[i] != 0;
@@ -433,13 +465,116 @@ static int countNonZero8u( const uchar* src, int len )
 }
 
 static int countNonZero16u( const ushort* src, int len )
-{ return countNonZero_(src, len); }
+{
+    int i = 0, nz = 0;
+#if CV_NEON
+    int len0 = len & -8, blockSize1 = (1 << 15), blockSize0 = blockSize1 << 6;
+    uint32x4_t v_nz = vdupq_n_u32(0u);
+    uint16x8_t v_zero = vdupq_n_u16(0), v_1 = vdupq_n_u16(1);
+
+    while( i < len0 )
+    {
+        int blockSizei = std::min(len0 - i, blockSize0), j = 0;
+
+        while (j < blockSizei)
+        {
+            int blockSizej = std::min(blockSizei - j, blockSize1), k = 0;
+            uint16x8_t v_pz = v_zero;
+
+            for( ; k <= blockSizej - 8; k += 8 )
+                v_pz = vaddq_u16(v_pz, vandq_u16(vceqq_u16(vld1q_u16(src + k), v_zero), v_1));
+
+            v_nz = vaddq_u32(vaddl_u16(vget_low_u16(v_pz), vget_high_u16(v_pz)), v_nz);
+
+            src += blockSizej;
+            j += blockSizej;
+        }
+
+        i += blockSizei;
+    }
+
+    CV_DECL_ALIGNED(16) unsigned int buf[4];
+    vst1q_u32(buf, v_nz);
+    nz += i - saturate_cast<int>(buf[0] + buf[1] + buf[2] + buf[3]);
+#endif
+    return nz + countNonZero_(src, len - i);
+}
 
 static int countNonZero32s( const int* src, int len )
-{ return countNonZero_(src, len); }
+{
+    int i = 0, nz = 0;
+#if CV_NEON
+    int len0 = len & -8, blockSize1 = (1 << 15), blockSize0 = blockSize1 << 6;
+    uint32x4_t v_nz = vdupq_n_u32(0u);
+    int32x4_t v_zero = vdupq_n_s32(0.0f);
+    uint16x8_t v_1 = vdupq_n_u16(1u), v_zerou = vdupq_n_u16(0u);
+
+    while( i < len0 )
+    {
+        int blockSizei = std::min(len0 - i, blockSize0), j = 0;
+
+        while (j < blockSizei)
+        {
+            int blockSizej = std::min(blockSizei - j, blockSize1), k = 0;
+            uint16x8_t v_pz = v_zerou;
+
+            for( ; k <= blockSizej - 8; k += 8 )
+                v_pz = vaddq_u16(v_pz, vandq_u16(vcombine_u16(vmovn_u32(vceqq_s32(vld1q_s32(src + k), v_zero)),
+                                                              vmovn_u32(vceqq_s32(vld1q_s32(src + k + 4), v_zero))), v_1));
+
+            v_nz = vaddq_u32(vaddl_u16(vget_low_u16(v_pz), vget_high_u16(v_pz)), v_nz);
+
+            src += blockSizej;
+            j += blockSizej;
+        }
+
+        i += blockSizei;
+    }
+
+    CV_DECL_ALIGNED(16) unsigned int buf[4];
+    vst1q_u32(buf, v_nz);
+    nz += i - saturate_cast<int>(buf[0] + buf[1] + buf[2] + buf[3]);
+#endif
+    return nz + countNonZero_(src, len - i);
+}
 
 static int countNonZero32f( const float* src, int len )
-{ return countNonZero_(src, len); }
+{
+    int i = 0, nz = 0;
+#if CV_NEON
+    int len0 = len & -8, blockSize1 = (1 << 15), blockSize0 = blockSize1 << 6;
+    uint32x4_t v_nz = vdupq_n_u32(0u);
+    float32x4_t v_zero = vdupq_n_f32(0.0f);
+    uint16x8_t v_1 = vdupq_n_u16(1u), v_zerou = vdupq_n_u16(0u);
+
+    while( i < len0 )
+    {
+        int blockSizei = std::min(len0 - i, blockSize0), j = 0;
+
+        while (j < blockSizei)
+        {
+            int blockSizej = std::min(blockSizei - j, blockSize1), k = 0;
+            uint16x8_t v_pz = v_zerou;
+
+            for( ; k <= blockSizej - 8; k += 8 )
+                v_pz = vaddq_u16(v_pz, vandq_u16(vcombine_u16(vmovn_u32(vceqq_f32(vld1q_f32(src + k), v_zero)),
+                                                              vmovn_u32(vceqq_f32(vld1q_f32(src + k + 4), v_zero))), v_1));
+
+            v_nz = vaddq_u32(vaddl_u16(vget_low_u16(v_pz), vget_high_u16(v_pz)), v_nz);
+
+            src += blockSizej;
+            j += blockSizej;
+        }
+
+        i += blockSizei;
+    }
+
+    CV_DECL_ALIGNED(16) unsigned int buf[4];
+    vst1q_u32(buf, v_nz);
+    nz += i - saturate_cast<int>(buf[0] + buf[1] + buf[2] + buf[3]);
+#endif
+    return nz + countNonZero_(src, len - i);
+}
 
 static int countNonZero64f( const double* src, int len )
 { return countNonZero_(src, len); }
@@ -1956,6 +2091,14 @@ float normL1_(const float* a, const float* b, int n)
         d = buf[0] + buf[1] + buf[2] + buf[3];
     }
     else
+#elif CV_NEON
+    float32x4_t v_sum = vdupq_n_f32(0.0f);
+    for ( ; j <= n - 4; j += 4)
+        v_sum = vaddq_f32(v_sum, vabdq_f32(vld1q_f32(a + j), vld1q_f32(b + j)));
+
+    float CV_DECL_ALIGNED(16) buf[4];
+    vst1q_f32(buf, v_sum);
+    d = buf[0] + buf[1] + buf[2] + buf[3];
 #endif
     {
         for( ; j <= n - 4; j += 4 )
@@ -1996,6 +2139,19 @@ int normL1_(const uchar* a, const uchar* b, int n)
         d = _mm_cvtsi128_si32(_mm_add_epi32(d0, _mm_unpackhi_epi64(d0, d0)));
     }
     else
+#elif CV_NEON
+    uint32x4_t v_sum = vdupq_n_u32(0.0f);
+    for ( ; j <= n - 16; j += 16)
+    {
+        uint8x16_t v_dst = vabdq_u8(vld1q_u8(a + j), vld1q_u8(b + j));
+        uint16x8_t v_low = vmovl_u8(vget_low_u8(v_dst)), v_high = vmovl_u8(vget_high_u8(v_dst));
+        v_sum = vaddq_u32(v_sum, vaddl_u16(vget_low_u16(v_low), vget_low_u16(v_high)));
+        v_sum = vaddq_u32(v_sum, vaddl_u16(vget_high_u16(v_low), vget_high_u16(v_high)));
+    }
+
+    uint CV_DECL_ALIGNED(16) buf[4];
+    vst1q_u32(buf, v_sum);
+    d = buf[0] + buf[1] + buf[2] + buf[3];
 #endif
     {
         for( ; j <= n - 4; j += 4 )
