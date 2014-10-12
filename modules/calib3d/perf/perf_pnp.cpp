@@ -79,8 +79,8 @@ PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
 
     Mat distortion = Mat::zeros(5, 1, CV_32FC1);
     Mat intrinsics = Mat::eye(3, 3, CV_32FC1);
-    intrinsics.at<float> (0, 0) = 400.0;
-    intrinsics.at<float> (1, 1) = 400.0;
+    intrinsics.at<float> (0, 0) = 400.0f;
+    intrinsics.at<float> (1, 1) = 400.0f;
     intrinsics.at<float> (0, 2) = 640 / 2;
     intrinsics.at<float> (1, 2) = 480 / 2;
 
