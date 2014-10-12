@@ -211,9 +211,9 @@ struct PyrDownVec_32s8u
             uint16x8_t v_r3 = vcombine_u16(vqmovn_u32(vld1q_u32(row3 + x)), vqmovn_u32(vld1q_u32(row3 + x + 4)));
             uint16x8_t v_r4 = vcombine_u16(vqmovn_u32(vld1q_u32(row4 + x)), vqmovn_u32(vld1q_u32(row4 + x + 4)));
 
-            v_r0 = vqaddq_u16(vqaddq_u16(v_r0, v_r4), vqaddq_u16(v_r2, v_r2));
-            v_r1 = vqaddq_u16(vqaddq_u16(v_r1, v_r2), v_r3);
-            uint16x8_t v_dst0 = vqaddq_u16(v_r0, vshlq_n_u16(v_r1, 2));
+            v_r0 = vaddq_u16(vaddq_u16(v_r0, v_r4), vaddq_u16(v_r2, v_r2));
+            v_r1 = vaddq_u16(vaddq_u16(v_r1, v_r2), v_r3);
+            uint16x8_t v_dst0 = vaddq_u16(v_r0, vshlq_n_u16(v_r1, 2));
 
             v_r0 = vcombine_u16(vqmovn_u32(vld1q_u32(row0 + x + 8)), vqmovn_u32(vld1q_u32(row0 + x + 12)));
             v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x + 8)), vqmovn_u32(vld1q_u32(row1 + x + 12)));
@@ -221,9 +221,9 @@ struct PyrDownVec_32s8u
             v_r3 = vcombine_u16(vqmovn_u32(vld1q_u32(row3 + x + 8)), vqmovn_u32(vld1q_u32(row3 + x + 12)));
             v_r4 = vcombine_u16(vqmovn_u32(vld1q_u32(row4 + x + 8)), vqmovn_u32(vld1q_u32(row4 + x + 12)));
 
-            v_r0 = vqaddq_u16(vqaddq_u16(v_r0, v_r4), vqaddq_u16(v_r2, v_r2));
-            v_r1 = vqaddq_u16(vqaddq_u16(v_r1, v_r2), v_r3);
-            uint16x8_t v_dst1 = vqaddq_u16(v_r0, vshlq_n_u16(v_r1, 2));
+            v_r0 = vaddq_u16(vaddq_u16(v_r0, v_r4), vaddq_u16(v_r2, v_r2));
+            v_r1 = vaddq_u16(vaddq_u16(v_r1, v_r2), v_r3);
+            uint16x8_t v_dst1 = vaddq_u16(v_r0, vshlq_n_u16(v_r1, 2));
 
             vst1q_u8(dst + x, vcombine_u8(vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst0, v_delta), 8)),
                                           vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst1, v_delta), 8))));
@@ -248,18 +248,17 @@ struct PyrDownVec_32s16u
             int32x4_t v_r20 = vld1q_s32(row2 + x), v_r21 = vld1q_s32(row2 + x + 4);
             int32x4_t v_r30 = vld1q_s32(row3 + x), v_r31 = vld1q_s32(row3 + x + 4);
             int32x4_t v_r40 = vld1q_s32(row4 + x), v_r41 = vld1q_s32(row4 + x + 4);
-            int32x4_t shifted;
 
-            v_r00 = vaddq_s32(vqaddq_s32(v_r00, v_r40), vqaddq_s32(v_r20, v_r20));
-            v_r10 = vaddq_s32(vqaddq_s32(v_r10, v_r20), v_r30);
+            v_r00 = vaddq_s32(vaddq_s32(v_r00, v_r40), vaddq_s32(v_r20, v_r20));
+            v_r10 = vaddq_s32(vaddq_s32(v_r10, v_r20), v_r30);
 
-            shifted = vshlq_n_s32(v_r10, 2);
-            int32x4_t v_dst0 = vshrq_n_s32(vaddq_s32(vqaddq_s32(v_r00, shifted), v_delta), 8);
+            v_r10 = vshlq_n_s32(v_r10, 2);
+            int32x4_t v_dst0 = vshrq_n_s32(vaddq_s32(vaddq_s32(v_r00, v_r10), v_delta), 8);
 
-            v_r01 = vaddq_s32(vqaddq_s32(v_r01, v_r41), vqaddq_s32(v_r21, v_r21));
-            v_r11 = vaddq_s32(vqaddq_s32(v_r11, v_r21), v_r31);
-            shifted = vshlq_n_s32(v_r11, 2);
-            int32x4_t v_dst1 = vshrq_n_s32(vaddq_s32(vqaddq_s32(v_r01, shifted), v_delta), 8);
+            v_r01 = vaddq_s32(vaddq_s32(v_r01, v_r41), vaddq_s32(v_r21, v_r21));
+            v_r11 = vaddq_s32(vaddq_s32(v_r11, v_r21), v_r31);
+            v_r11 = vshlq_n_s32(v_r11, 2);
+            int32x4_t v_dst1 = vshrq_n_s32(vaddq_s32(vaddq_s32(v_r01, v_r11), v_delta), 8);
 
             vst1q_u16(dst + x, vcombine_u16(vqmovun_s32(v_dst0), vqmovun_s32(v_dst1)));
         }
@@ -283,17 +282,16 @@ struct PyrDownVec_32s16s
             int32x4_t v_r20 = vld1q_s32(row2 + x), v_r21 = vld1q_s32(row2 + x + 4);
             int32x4_t v_r30 = vld1q_s32(row3 + x), v_r31 = vld1q_s32(row3 + x + 4);
             int32x4_t v_r40 = vld1q_s32(row4 + x), v_r41 = vld1q_s32(row4 + x + 4);
-            int32x4_t shifted;
 
-            v_r00 = vaddq_s32(vqaddq_s32(v_r00, v_r40), vqaddq_s32(v_r20, v_r20));
-            v_r10 = vaddq_s32(vqaddq_s32(v_r10, v_r20), v_r30);
-            shifted = vshlq_n_s32(v_r10, 2);
-            int32x4_t v_dst0 = vshrq_n_s32(vaddq_s32(vqaddq_s32(v_r00, shifted), v_delta), 8);
+            v_r00 = vaddq_s32(vaddq_s32(v_r00, v_r40), vaddq_s32(v_r20, v_r20));
+            v_r10 = vaddq_s32(vaddq_s32(v_r10, v_r20), v_r30);
+            v_r10 = vshlq_n_s32(v_r10, 2);
+            int32x4_t v_dst0 = vshrq_n_s32(vaddq_s32(vaddq_s32(v_r00, shifted), v_delta), 8);
 
-            v_r01 = vaddq_s32(vqaddq_s32(v_r01, v_r41), vqaddq_s32(v_r21, v_r21));
-            v_r11 = vaddq_s32(vqaddq_s32(v_r11, v_r21), v_r31);
-            shifted = vshlq_n_s32(v_r11, 2);
-            int32x4_t v_dst1 = vshrq_n_s32(vaddq_s32(vqaddq_s32(v_r01, shifted), v_delta), 8);
+            v_r01 = vaddq_s32(vaddq_s32(v_r01, v_r41), vaddq_s32(v_r21, v_r21));
+            v_r11 = vaddq_s32(vaddq_s32(v_r11, v_r21), v_r31);
+            v_r11 = vshlq_n_s32(v_r11, 2);
+            int32x4_t v_dst1 = vshrq_n_s32(vaddq_s32(vaddq_s32(v_r01, v_r11), v_delta), 8);
 
             vst1q_s16(dst + x, vcombine_s16(vqmovn_s32(v_dst0), vqmovn_s32(v_dst1)));
         }
@@ -352,17 +350,17 @@ struct PyrUpVec_32s8u
             uint16x8_t v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x)), vqmovn_u32(vld1q_u32(row1 + x + 4)));
             uint16x8_t v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x)), vqmovn_u32(vld1q_u32(row2 + x + 4)));
 
-            uint16x8_t v_2r1 = vqaddq_u16(v_r1, v_r1), v_4r1 = vqaddq_u16(v_2r1, v_2r1);
-            uint16x8_t v_dst00 = vqaddq_u16(vqaddq_u16(v_r0, v_r2), vqaddq_u16(v_2r1, v_4r1));
-            uint16x8_t v_dst10 = vqshlq_n_u16(vqaddq_u16(v_r1, v_r2), 2);
+            uint16x8_t v_2r1 = vaddq_u16(v_r1, v_r1), v_4r1 = vaddq_u16(v_2r1, v_2r1);
+            uint16x8_t v_dst00 = vaddq_u16(vaddq_u16(v_r0, v_r2), vaddq_u16(v_2r1, v_4r1));
+            uint16x8_t v_dst10 = vshlq_n_u16(vaddq_u16(v_r1, v_r2), 2);
 
             v_r0 = vcombine_u16(vqmovn_u32(vld1q_u32(row0 + x + 8)), vqmovn_u32(vld1q_u32(row0 + x + 12)));
             v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x + 8)), vqmovn_u32(vld1q_u32(row1 + x + 12)));
             v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x + 8)), vqmovn_u32(vld1q_u32(row2 + x + 12)));
 
-            v_2r1 = vqaddq_u16(v_r1, v_r1), v_4r1 = vqaddq_u16(v_2r1, v_2r1);
-            uint16x8_t v_dst01 = vqaddq_u16(vqaddq_u16(v_r0, v_r2), vqaddq_u16(v_2r1, v_4r1));
-            uint16x8_t v_dst11 = vshlq_n_u16(vqaddq_u16(v_r1, v_r2), 2);
+            v_2r1 = vaddq_u16(v_r1, v_r1), v_4r1 = vaddq_u16(v_2r1, v_2r1);
+            uint16x8_t v_dst01 = vaddq_u16(vaddq_u16(v_r0, v_r2), vaddq_u16(v_2r1, v_4r1));
+            uint16x8_t v_dst11 = vshlq_n_u16(vaddq_u16(v_r1, v_r2), 2);
 
             vst1q_u8(dst0 + x, vcombine_u8(vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst00, v_delta), 6)),
                                            vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst01, v_delta), 6))));
@@ -376,9 +374,9 @@ struct PyrUpVec_32s8u
             uint16x8_t v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x)), vqmovn_u32(vld1q_u32(row1 + x + 4)));
             uint16x8_t v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x)), vqmovn_u32(vld1q_u32(row2 + x + 4)));
 
-            uint16x8_t v_2r1 = vqaddq_u16(v_r1, v_r1), v_4r1 = vqaddq_u16(v_2r1, v_2r1);
-            uint16x8_t v_dst0 = vqaddq_u16(vqaddq_u16(v_r0, v_r2), vqaddq_u16(v_2r1, v_4r1));
-            uint16x8_t v_dst1 = vqshlq_n_u16(vqaddq_u16(v_r1, v_r2), 2);
+            uint16x8_t v_2r1 = vaddq_u16(v_r1, v_r1), v_4r1 = vaddq_u16(v_2r1, v_2r1);
+            uint16x8_t v_dst0 = vaddq_u16(vaddq_u16(v_r0, v_r2), vaddq_u16(v_2r1, v_4r1));
+            uint16x8_t v_dst1 = vshlq_n_u16(vaddq_u16(v_r1, v_r2), 2);
 
             vst1_u8(dst0 + x, vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst0, v_delta), 6)));
             vst1_u8(dst1 + x, vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst1, v_delta), 6)));
@@ -401,7 +399,7 @@ struct PyrUpVec_32s16u
         {
             uint32x4_t v_r0 = vld1q_u32(row0 + x), v_r1 = vld1q_u32(row1 + x), v_r2 = vld1q_u32(row2 + x);
             uint32x4_t v_2r1 = vshlq_n_u32(v_r1, 1), v_4r1 = vshlq_n_u32(v_r1, 2);
-            uint32x4_t v_dst00 = vaddq_u32(vqaddq_u32(v_r0, v_r2), vaddq_u32(v_2r1, v_4r1));
+            uint32x4_t v_dst00 = vaddq_u32(vaddq_u32(v_r0, v_r2), vaddq_u32(v_2r1, v_4r1));
             uint32x4_t v_dst10 = vshlq_n_u32(vaddq_u32(v_r1, v_r2), 2);
 
             v_r0 = vld1q_u32(row0 + x + 4);
@@ -423,7 +421,7 @@ struct PyrUpVec_32s16u
             uint32x4_t v_r0 = vld1q_u32(row0 + x), v_r1 = vld1q_u32(row1 + x), v_r2 = vld1q_u32(row2 + x);
             uint32x4_t v_2r1 = vshlq_n_u32(v_r1, 1), v_4r1 = vshlq_n_u32(v_r1, 2);
 
-            uint32x4_t v_dst0 = vaddq_u32(vqaddq_u32(v_r0, v_r2), vaddq_u32(v_2r1, v_4r1));
+            uint32x4_t v_dst0 = vaddq_u32(vaddq_u32(v_r0, v_r2), vaddq_u32(v_2r1, v_4r1));
             uint32x4_t v_dst1 = vshlq_n_u32(vaddq_u32(v_r1, v_r2), 2);
 
             vst1_u16(dst0 + x, vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst0, v_delta), 6)));
