@@ -4669,13 +4669,15 @@ public:
                         x1 = 0;
                         #if CV_NEON
                         int32x4_t v_X0 = vdupq_n_s32(X0), v_Y0 = vdupq_n_s32(Y0);
-                        for( ; x1 <= bw - 4; x1 += 4 )
+                        for( ; x1 <= bw - 8; x1 += 8 )
                         {
-                            int32x4_t v_X = vshrq_n_s32(vaddq_s32(v_X0, vld1q_s32(adelta + x + x1)), AB_BITS - INTER_BITS);
-                            int32x4_t v_Y = vshrq_n_s32(vaddq_s32(v_Y0, vld1q_s32(bdelta + x + x1)), AB_BITS - INTER_BITS);
+                            int16x8x2_t v_dst;
+                            v_dst.val[0] = vcombine_s16(vqmovn_s32(vshrq_n_s32(vaddq_s32(v_X0, vld1q_s32(adelta + x + x1)), AB_BITS)),
+                                                        vqmovn_s32(vshrq_n_s32(vaddq_s32(v_X0, vld1q_s32(adelta + x + x1 + 4)), AB_BITS)));
+                            v_dst.val[1] = vcombine_s16(vqmovn_s32(vshrq_n_s32(vaddq_s32(v_Y0, vld1q_s32(bdelta + x + x1)), AB_BITS)),
+                                                        vqmovn_s32(vshrq_n_s32(vaddq_s32(v_Y0, vld1q_s32(bdelta + x + x1 + 4)), AB_BITS)));
 
-                            vst1q_s16(xy + (x1 << 1), vcombine_s16(vqmovn_s32(vshrq_n_s32(v_X, INTER_BITS)),
-                                                                   vqmovn_s32(vshrq_n_s32(v_Y, INTER_BITS))));
+                            vst2q_s16(xy + (x1 << 1), v_dst);
                         }
                         #endif
                         for( ; x1 < bw; x1++ )
@@ -4723,18 +4725,27 @@ public:
                                 _mm_storeu_si128((__m128i*)(alpha + x1), fx_);
                             }
                         }
-                    // #elif CV_NEON
-                    //     int32x4_t v_X0 = vdupq_n_s32(X0), v_Y0 = vdupq_n_s32(Y0), v_mask = vdupq_n_s32(INTER_TAB_SIZE - 1);
-                    //     for( ; x1 <= bw - 4; x1 += 4 )
-                    //     {
-                    //         int32x4_t v_X = vshrq_n_s32(vaddq_s32(v_X0, vld1q_s32(adelta + x + x1)), AB_BITS - INTER_BITS);
-                    //         int32x4_t v_Y = vshrq_n_s32(vaddq_s32(v_Y0, vld1q_s32(bdelta + x + x1)), AB_BITS - INTER_BITS);
+                    #elif CV_NEON
+                        int32x4_t v__X0 = vdupq_n_s32(X0), v__Y0 = vdupq_n_s32(Y0), v_mask = vdupq_n_s32(INTER_TAB_SIZE - 1);
+                        for( ; x1 <= bw - 8; x1 += 8 )
+                        {
+                            int32x4_t v_X0 = vshrq_n_s32(vaddq_s32(v__X0, vld1q_s32(adelta + x + x1)), AB_BITS - INTER_BITS);
+                            int32x4_t v_Y0 = vshrq_n_s32(vaddq_s32(v__Y0, vld1q_s32(bdelta + x + x1)), AB_BITS - INTER_BITS);
+                            int32x4_t v_X1 = vshrq_n_s32(vaddq_s32(v__X0, vld1q_s32(adelta + x + x1 + 4)), AB_BITS - INTER_BITS);
+                            int32x4_t v_Y1 = vshrq_n_s32(vaddq_s32(v__Y0, vld1q_s32(bdelta + x + x1 + 4)), AB_BITS - INTER_BITS);
 
-                    //         vst1q_s16(xy + (x1 << 1), vcombine_s16(vqmovn_s32(vshrq_n_s32(v_X, INTER_BITS)),
-                    //                                                vqmovn_s32(vshrq_n_s32(v_Y, INTER_BITS))));
-                    //         vst1_s16(alpha + x1, vmovn_s32(vaddq_s32(vshlq_n_s32(vandq_s32(v_Y, v_mask), INTER_BITS),
-                    //                                                  vandq_s32(v_X, v_mask))));
-                    //     }
+                            int16x8x2_t v_xy;
+                            v_xy.val[0] = vcombine_s16(vqmovn_s32(vshrq_n_s32(v_X0, INTER_BITS)), vqmovn_s32(vshrq_n_s32(v_X1, INTER_BITS)));
+                            v_xy.val[1] = vcombine_s16(vqmovn_s32(vshrq_n_s32(v_Y0, INTER_BITS)), vqmovn_s32(vshrq_n_s32(v_Y1, INTER_BITS)));
+
+                            vst2q_s16(xy + (x1 << 1), v_xy);
+
+                            int16x4_t v_alpha0 = vmovn_s32(vaddq_s32(vshlq_n_s32(vandq_s32(v_Y0, v_mask), INTER_BITS),
+                                                                     vandq_s32(v_X0, v_mask)));
+                            int16x4_t v_alpha1 = vmovn_s32(vaddq_s32(vshlq_n_s32(vandq_s32(v_Y1, v_mask), INTER_BITS),
+                                                                     vandq_s32(v_X1, v_mask)));
+                            vst1q_s16(alpha + x1, vcombine_s16(v_alpha0, v_alpha1));
+                        }
                     #endif
                         for( ; x1 < bw; x1++ )
                         {
