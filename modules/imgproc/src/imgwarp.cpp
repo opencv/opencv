@@ -917,22 +917,26 @@ struct VResizeLinearVec_32s8u
             int16x8_t v_src0 = vcombine_s16(vmovn_s32(v_src00), vmovn_s32(v_src01));
             int16x8_t v_src1 = vcombine_s16(vmovn_s32(v_src10), vmovn_s32(v_src11));
 
-            int16x8_t v_dst0 = vmlaq_s16(vmulq_s16(v_src0, v_b0), v_src1, v_b1);
+            int16x8_t v_dst0 = vaddq_s16(vshrq_n_s16(vqdmulhq_s16(v_src0, v_b0), 1),
+                                         vshrq_n_s16(vqdmulhq_s16(v_src1, v_b1), 1));
             v_dst0 = vshrq_n_s16(vaddq_s16(v_dst0, v_delta), 2);
 
-            v_src00 = vshrq_n_s32(vld1q_s32(S0 + x + 8), 4), v_src10 = vshrq_n_s32(vld1q_s32(S1 + x + 8), 4);
-            v_src01 = vshrq_n_s32(vld1q_s32(S0 + x + 12), 4), v_src11 = vshrq_n_s32(vld1q_s32(S1 + x + 12), 4);
+            v_src00 = vshrq_n_s32(vld1q_s32(S0 + x + 8), 4);
+            v_src10 = vshrq_n_s32(vld1q_s32(S1 + x + 8), 4);
+            v_src01 = vshrq_n_s32(vld1q_s32(S0 + x + 12), 4);
+            v_src11 = vshrq_n_s32(vld1q_s32(S1 + x + 12), 4);
 
             v_src0 = vcombine_s16(vmovn_s32(v_src00), vmovn_s32(v_src01));
             v_src1 = vcombine_s16(vmovn_s32(v_src10), vmovn_s32(v_src11));
 
-            int16x8_t v_dst1 = vmlaq_s16(vmulq_s16(v_src0, v_b0), v_src1, v_b1);
+            int16x8_t v_dst1 = vaddq_s16(vshrq_n_s16(vqdmulhq_s16(v_src0, v_b0), 1),
+                                         vshrq_n_s16(vqdmulhq_s16(v_src1, v_b1), 1));
             v_dst1 = vshrq_n_s16(vaddq_s16(v_dst1, v_delta), 2);
 
             vst1q_u8(dst + x, vcombine_u8(vqmovun_s16(v_dst0), vqmovun_s16(v_dst1)));
         }
 
-        return 0;
+        return x;
     }
 };
 
