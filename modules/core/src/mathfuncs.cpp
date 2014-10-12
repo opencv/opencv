@@ -168,6 +168,31 @@ static void FastAtan2_32f(const float *Y, const float *X, float *angle, int len,
             _mm_storeu_ps(angle + i, a);
         }
     }
+#elif CV_NEON
+    float32x4_t eps = vdupq_n_f32((float)DBL_EPSILON);
+    float32x4_t _90 = vdupq_n_f32(90.f), _180 = vdupq_n_f32(180.f), _360 = vdupq_n_f32(360.f);
+    float32x4_t z = vdupq_n_f32(0.0f), scale4 = vdupq_n_f32(scale);
+    float32x4_t p1 = vdupq_n_f32(atan2_p1), p3 = vdupq_n_f32(atan2_p3);
+    float32x4_t p5 = vdupq_n_f32(atan2_p5), p7 = vdupq_n_f32(atan2_p7);
+
+    for( ; i <= len - 4; i += 4 )
+    {
+        float32x4_t x = vld1q_f32(X + i), y = vld1q_f32(Y + i);
+        float32x4_t ax = vabsq_f32(x), ay = vabsq_f32(y);
+        float32x4_t tmin = vminq_f32(ax, ay), tmax = vmaxq_f32(ax, ay);
+        float32x4_t c = vmulq_f32(tmin, cv_vrecpq_f32(vaddq_f32(tmax, eps)));
+        float32x4_t c2 = vmulq_f32(c, c);
+        float32x4_t a = vmulq_f32(c2, p7);
+        a = vmulq_f32(vaddq_f32(a, p5), c2);
+        a = vmulq_f32(vaddq_f32(a, p3), c2);
+        a = vmulq_f32(vaddq_f32(a, p1), c);
+
+        a = vbslq_f32(vcgeq_f32(ax, ay), a, vsubq_f32(_90, a));
+        a = vbslq_f32(vcltq_f32(x, z), vsubq_f32(_180, a), a);
+        a = vbslq_f32(vcltq_f32(y, z), vsubq_f32(_360, a), a);
+
+        vst1q_f32(angle + i, vmulq_f32(a, scale4));
+    }
 #endif
 
     for( ; i < len; i++ )
