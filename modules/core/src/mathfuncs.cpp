@@ -892,11 +892,24 @@ void polarToCart( InputArray src1, InputArray src2,
 
                 SinCos_32f( angle, y, x, len, angleInDegrees );
                 if( mag )
-                    for( k = 0; k < len; k++ )
+                {
+                    k = 0;
+
+                    #if CV_NEON
+                    for( ; k <= len - 4; k += 4 )
+                    {
+                        float32x4_t v_m = vld1q_f32(mag + k);
+                        vst1q_f32(x + k, vmulq_f32(vld1q_f32(x + k), v_m));
+                        vst1q_f32(y + k, vmulq_f32(vld1q_f32(y + k), v_m));
+                    }
+                    #endif
+
+                    for( ; k < len; k++ )
                     {
                         float m = mag[k];
                         x[k] *= m; y[k] *= m;
                     }
+                }
             }
             else
             {
