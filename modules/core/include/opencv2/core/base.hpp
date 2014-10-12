@@ -605,6 +605,22 @@ inline uint32x4_t cv_vrndq_u32_f32(float32x4_t v)
     return vcvtq_u32_f32(vaddq_f32(v, v_05));
 }
 
+inline float32x4_t cv_vrecpq_f32(float32x4_t val)
+{
+    float32x4_t reciprocal = vrecpeq_f32(val);
+    reciprocal = vmulq_f32(vrecpsq_f32(val, reciprocal), reciprocal);
+    reciprocal = vmulq_f32(vrecpsq_f32(val, reciprocal), reciprocal);
+    return reciprocal;
+}
+
+inline float32x2_t cv_vrecp_f32(float32x2_t val)
+{
+    float32x2_t reciprocal = vrecpe_f32(val);
+    reciprocal = vmul_f32(vrecps_f32(val, reciprocal), reciprocal);
+    reciprocal = vmul_f32(vrecps_f32(val, reciprocal), reciprocal);
+    return reciprocal;
+}
+
 #endif
 
 } // cv
