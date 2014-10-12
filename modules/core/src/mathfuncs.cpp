@@ -293,17 +293,15 @@ static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
         }
     }
 #elif CV_NEON
-    float CV_DECL_ALIGNED(16) m[4];
-
     for( ; i <= len - 4; i += 4 )
     {
         float32x4_t v_x = vld1q_f32(x + i), v_y = vld1q_f32(y + i);
-        vst1q_f32(m, vaddq_f32(vmulq_f32(v_x, v_x), vmulq_f32(v_y, v_y)));
-
-        mag[i] = std::sqrt(m[0]);
-        mag[i+1] = std::sqrt(m[1]);
-        mag[i+2] = std::sqrt(m[2]);
-        mag[i+3] = std::sqrt(m[3]);
+        vst1q_f32(mag + i, cv_vsqrtq_f32(vmlaq_f32(vmulq_f32(v_x, v_x), v_y, v_y)));
+    }
+    for( ; i <= len - 2; i += 2 )
+    {
+        float32x2_t v_x = vld1_f32(x + i), v_y = vld1_f32(y + i);
+        vst1_f32(mag + i, cv_vsqrt_f32(vmla_f32(vmul_f32(v_x, v_x), v_y, v_y)));
     }
 #endif
 
