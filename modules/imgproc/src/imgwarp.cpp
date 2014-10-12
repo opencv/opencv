@@ -1645,6 +1645,107 @@ private:
     int cn, step;
 };
 
+class ResizeAreaFastVec_SIMD_16s
+{
+public:
+    ResizeAreaFastVec_SIMD_16s(int _cn, int _step) :
+        cn(_cn), step(_step)
+    {
+    }
+
+    int operator() (const short * S, short * D, int w) const
+    {
+        int dx = 0;
+        const short * S0 = S, * S1 = (const short *)((const uchar *)(S0) + step);
+
+        int32x4_t v_2 = vdupq_n_s32(2);
+
+        if (cn == 1)
+        {
+            for ( ; dx <= w - 8; dx += 8, S0 += 16, S1 += 16, D += 8)
+            {
+                int16x8x2_t v_row0 = vld2q_s16(S0), v_row1 = vld2q_s16(S1);
+
+                int32x4_t v_dst0 = vaddl_s16(vget_low_s16(v_row0.val[0]), vget_low_s16(v_row0.val[1]));
+                v_dst0 = vaddq_s32(v_dst0, vaddl_s16(vget_low_s16(v_row1.val[0]), vget_low_s16(v_row1.val[1])));
+                v_dst0 = vshrq_n_s32(vaddq_s32(v_dst0, v_2), 2);
+
+                int32x4_t v_dst1 = vaddl_s16(vget_high_s16(v_row0.val[0]), vget_high_s16(v_row0.val[1]));
+                v_dst1 = vaddq_s32(v_dst1, vaddl_s16(vget_high_s16(v_row1.val[0]), vget_high_s16(v_row1.val[1])));
+                v_dst1 = vshrq_n_s32(vaddq_s32(v_dst1, v_2), 2);
+
+                vst1q_s16(D, vcombine_s16(vmovn_s32(v_dst0), vmovn_s32(v_dst1)));
+            }
+        }
+        else if (cn == 4)
+        {
+            for ( ; dx <= w - 4; dx += 4, S0 += 8, S1 += 8, D += 4)
+            {
+                int16x8_t v_row0 = vld1q_s16(S0), v_row1 = vld1q_s16(S1);
+                int32x4_t v_dst = vaddq_s32(vaddl_s16(vget_low_s16(v_row0), vget_high_s16(v_row0)),
+                                            vaddl_s16(vget_low_s16(v_row1), vget_high_s16(v_row1)));
+                vst1_s16(D, vmovn_s32(vshrq_n_s32(vaddq_s32(v_dst, v_2), 2)));
+            }
+        }
+
+        return dx;
+    }
+
+private:
+    int cn, step;
+};
+
+struct ResizeAreaFastVec_SIMD_32f
+{
+    ResizeAreaFastVec_SIMD_32f(int _scale_x, int _scale_y, int _cn, int _step) :
+        scale_x(_scale_x), scale_y(_scale_y), cn(_cn), step(_step)
+    {
+        fast_mode = scale_x == 2 && scale_y == 2 && (cn == 1 || cn == 3 || cn == 4);
+    }
+
+    int operator() (const float * S, float * D, int w) const
+    {
+        if (!fast_mode)
+            return 0;
+
+        const float * S0 = S, * S1 = (const float *)((const uchar *)(S0) + step);
+        int dx = 0;
+
+        float32x4_t v_025 = vdupq_n_f32(0.25f);
+
+        if (cn == 1)
+        {
+            for ( ; dx <= w - 4; dx += 4, S0 += 8, S1 += 8, D += 4)
+            {
+                float32x4x2_t v_row0 = vld2q_f32(S0), v_row1 = vld2q_f32(S1);
+
+                float32x4_t v_dst0 = vaddq_f32(v_row0.val[0], v_row0.val[1]);
+                float32x4_t v_dst1 = vaddq_f32(v_row1.val[0], v_row1.val[1]);
+
+                vst1q_f32(D, vmulq_f32(vaddq_f32(v_dst0, v_dst1), v_025));
+            }
+        }
+        else if (cn == 4)
+        {
+            for ( ; dx <= w - 4; dx += 4, S0 += 8, S1 += 8, D += 4)
+            {
+                float32x4_t v_dst0 = vaddq_f32(vld1q_f32(S0), vld1q_f32(S0 + 4));
+                float32x4_t v_dst1 = vaddq_f32(vld1q_f32(S1), vld1q_f32(S1 + 4));
+
+                vst1q_f32(D, vmulq_f32(vaddq_f32(v_dst0, v_dst1), v_025));
+            }
+        }
+
+        return dx;
+    }
+
+private:
+    int scale_x, scale_y;
+    int cn;
+    bool fast_mode;
+    int step;
+};
+
 #elif CV_SSE2
 
 class ResizeAreaFastVec_SIMD_8u
@@ -1834,9 +1935,16 @@ private:
     bool use_simd;
 };
 
+typedef ResizeAreaFastNoVec<short, short> ResizeAreaFastVec_SIMD_16s;
+typedef ResizeAreaFastNoVec<float, float> ResizeAreaFastVec_SIMD_32f;
+
 #else
+
 typedef ResizeAreaFastNoVec<uchar, uchar> ResizeAreaFastVec_SIMD_8u;
 typedef ResizeAreaFastNoVec<ushort, ushort> ResizeAreaFastVec_SIMD_16u;
+typedef ResizeAreaFastNoVec<short, short> ResizeAreaFastVec_SIMD_16s;
+typedef ResizeAreaFastNoVec<float, float> ResizeAreaFastVec_SIMD_32f;
+
 #endif
 
 template<typename T, typename SIMDVecOp>
@@ -2679,9 +2787,9 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         resizeAreaFast_<uchar, int, ResizeAreaFastVec<uchar, ResizeAreaFastVec_SIMD_8u> >,
         0,
         resizeAreaFast_<ushort, float, ResizeAreaFastVec<ushort, ResizeAreaFastVec_SIMD_16u> >,
-        resizeAreaFast_<short, float, ResizeAreaFastVec<short, ResizeAreaFastNoVec<short, float> > >,
+        resizeAreaFast_<short, float, ResizeAreaFastVec<short, ResizeAreaFastVec_SIMD_16s> >,
         0,
-        resizeAreaFast_<float, float, ResizeAreaFastNoVec<float, float> >,
+        resizeAreaFast_<float, float, ResizeAreaFastVec_SIMD_32f>,
         resizeAreaFast_<double, double, ResizeAreaFastNoVec<double, double> >,
         0
     };
