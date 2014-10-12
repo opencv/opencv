@@ -267,14 +267,17 @@ struct HWFeatures
          : "cc"
         );
         #else
+        // We need to preserve ebx since we are compiling PIC code.
+        // This means we cannot use "=b" for the 2nd output register.
         asm volatile
         (
          "pushl %%ebx\n\t"
          "movl $7,%%eax\n\t"
          "movl $0,%%ecx\n\t"
          "cpuid\n\t"
+         "movl %%ebx,%1\n\t"
          "popl %%ebx\n\t"
-         : "=a"(cpuid_data[0]), "=b"(cpuid_data[1]), "=c"(cpuid_data[2]), "=d"(cpuid_data[3])
+         : "=a"(cpuid_data[0]), "=r"(cpuid_data[1]), "=c"(cpuid_data[2]), "=d"(cpuid_data[3])
          :
          : "cc"
         );
