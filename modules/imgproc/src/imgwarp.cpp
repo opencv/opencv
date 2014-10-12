@@ -4557,17 +4557,59 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         float* dst2f = dstmap2.ptr<float>(y);
         short* dst1 = (short*)dst1f;
         ushort* dst2 = (ushort*)dst2f;
+        x = 0;
 
         if( m1type == CV_32FC1 && dstm1type == CV_16SC2 )
         {
             if( nninterpolate )
-                for( x = 0; x < size.width; x++ )
+            {
+                #if CV_NEON
+                for( ; x <= size.width - 8; x += 8 )
+                {
+                    int16x8x2_t v_dst;
+                    v_dst.val[0] = vcombine_s16(vqmovn_s32(cv_vrndq_s32_f32(vld1q_f32(src1f + x))),
+                                                vqmovn_s32(cv_vrndq_s32_f32(vld1q_f32(src1f + x + 4))));
+                    v_dst.val[1] = vcombine_s16(vqmovn_s32(cv_vrndq_s32_f32(vld1q_f32(src2f + x))),
+                                                vqmovn_s32(cv_vrndq_s32_f32(vld1q_f32(src2f + x + 4))));
+
+                    vst2q_s16(dst1 + (x << 1), v_dst);
+                }
+                #endif
+                for( ; x < size.width; x++ )
                 {
                     dst1[x*2] = saturate_cast<short>(src1f[x]);
                     dst1[x*2+1] = saturate_cast<short>(src2f[x]);
                 }
+            }
             else
-                for( x = 0; x < size.width; x++ )
+            {
+                #if CV_NEON
+                float32x4_t v_scale = vdupq_n_f32((float)INTER_TAB_SIZE);
+                int32x4_t v_mask = vdupq_n_s32(INTER_TAB_SIZE - 1);
+
+                for( ; x <= size.width - 8; x += 8 )
+                {
+                    int32x4_t v_ix0 = cv_vrndq_s32_f32(vmulq_f32(vld1q_f32(src1f + x), v_scale));
+                    int32x4_t v_ix1 = cv_vrndq_s32_f32(vmulq_f32(vld1q_f32(src1f + x + 4), v_scale));
+                    int32x4_t v_iy0 = cv_vrndq_s32_f32(vmulq_f32(vld1q_f32(src2f + x), v_scale));
+                    int32x4_t v_iy1 = cv_vrndq_s32_f32(vmulq_f32(vld1q_f32(src2f + x + 4), v_scale));
+
+                    int16x8x2_t v_dst;
+                    v_dst.val[0] = vcombine_s16(vqmovn_s32(vshrq_n_s32(v_ix0, INTER_BITS)),
+                                                vqmovn_s32(vshrq_n_s32(v_ix1, INTER_BITS)));
+                    v_dst.val[1] = vcombine_s16(vqmovn_s32(vshrq_n_s32(v_iy0, INTER_BITS)),
+                                                vqmovn_s32(vshrq_n_s32(v_iy1, INTER_BITS)));
+
+                    vst2q_s16(dst1 + (x << 1), v_dst);
+
+                    uint16x4_t v_dst0 = vqmovun_s32(vaddq_s32(vshlq_n_s32(vandq_s32(v_iy0, v_mask), INTER_BITS),
+                                                              vandq_s32(v_ix0, v_mask)));
+                    uint16x4_t v_dst1 = vqmovun_s32(vaddq_s32(vshlq_n_s32(vandq_s32(v_iy1, v_mask), INTER_BITS),
+                                                              vandq_s32(v_ix1, v_mask)));
+                    vst1q_u16(dst2 + x, vcombine_u16(v_dst0, v_dst1));
+                }
+                #endif
+                for( ; x < size.width; x++ )
                 {
                     int ix = saturate_cast<int>(src1f[x]*INTER_TAB_SIZE);
                     int iy = saturate_cast<int>(src2f[x]*INTER_TAB_SIZE);
@@ -4575,17 +4617,53 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                     dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
                     dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
                 }
+            }
         }
         else if( m1type == CV_32FC2 && dstm1type == CV_16SC2 )
         {
             if( nninterpolate )
-                for( x = 0; x < size.width; x++ )
+            {
+                #if CV_NEON
+                for( ; x <= (size.width << 1) - 8; x += 8 )
+                    vst1q_s16(dst1 + x, vcombine_s16(vqmovn_s32(cv_vrndq_s32_f32(vld1q_f32(src1f + x))),
+                                                     vqmovn_s32(cv_vrndq_s32_f32(vld1q_f32(src1f + x + 4)))));
+                #endif
+                for( ; x < size.width; x++ )
                 {
                     dst1[x*2] = saturate_cast<short>(src1f[x*2]);
                     dst1[x*2+1] = saturate_cast<short>(src1f[x*2+1]);
                 }
+            }
             else
-                for( x = 0; x < size.width; x++ )
+            {
+                #if CV_NEON
+                float32x4_t v_scale = vdupq_n_f32((float)INTER_TAB_SIZE);
+                int32x4_t v_mask = vdupq_n_s32(INTER_TAB_SIZE - 1);
+
+                for( ; x <= size.width - 8; x += 8 )
+                {
+                    float32x4x2_t v_src0 = vld2q_f32(src1f + (x << 1)), v_src1 = vld2q_f32(src1f + (x << 1) + 8);
+                    int32x4_t v_ix0 = cv_vrndq_s32_f32(vmulq_f32(v_src0.val[0], v_scale));
+                    int32x4_t v_ix1 = cv_vrndq_s32_f32(vmulq_f32(v_src1.val[0], v_scale));
+                    int32x4_t v_iy0 = cv_vrndq_s32_f32(vmulq_f32(v_src0.val[1], v_scale));
+                    int32x4_t v_iy1 = cv_vrndq_s32_f32(vmulq_f32(v_src1.val[1], v_scale));
+
+                    int16x8x2_t v_dst;
+                    v_dst.val[0] = vcombine_s16(vqmovn_s32(vshrq_n_s32(v_ix0, INTER_BITS)),
+                                                vqmovn_s32(vshrq_n_s32(v_ix1, INTER_BITS)));
+                    v_dst.val[1] = vcombine_s16(vqmovn_s32(vshrq_n_s32(v_iy0, INTER_BITS)),
+                                                vqmovn_s32(vshrq_n_s32(v_iy1, INTER_BITS)));
+
+                    vst2q_s16(dst1 + (x << 1), v_dst);
+
+                    uint16x4_t v_dst0 = vqmovun_s32(vaddq_s32(vshlq_n_s32(vandq_s32(v_iy0, v_mask), INTER_BITS),
+                                                              vandq_s32(v_ix0, v_mask)));
+                    uint16x4_t v_dst1 = vqmovun_s32(vaddq_s32(vshlq_n_s32(vandq_s32(v_iy1, v_mask), INTER_BITS),
+                                                              vandq_s32(v_ix1, v_mask)));
+                    vst1q_u16(dst2 + x, vcombine_u16(v_dst0, v_dst1));
+                }
+                #endif
+                for( ; x < size.width; x++ )
                 {
                     int ix = saturate_cast<int>(src1f[x*2]*INTER_TAB_SIZE);
                     int iy = saturate_cast<int>(src1f[x*2+1]*INTER_TAB_SIZE);
@@ -4593,10 +4671,44 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                     dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
                     dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
                 }
+            }
         }
         else if( m1type == CV_16SC2 && dstm1type == CV_32FC1 )
         {
-            for( x = 0; x < size.width; x++ )
+            #if CV_NEON
+            uint16x8_t v_mask2 = vdupq_n_u16(INTER_TAB_SIZE2-1);
+            uint32x4_t v_zero = vdupq_n_u32(0u), v_mask = vdupq_n_u32(INTER_TAB_SIZE-1);
+            float32x4_t v_scale = vdupq_n_f32(scale);
+
+            for( ; x <= size.width - 8; x += 8)
+            {
+                uint32x4_t v_fxy1, v_fxy2;
+                if (src2)
+                {
+                    uint16x8_t v_src2 = vandq_u16(vld1q_u16(src2 + x), v_mask2);
+                    v_fxy1 = vmovl_u16(vget_low_u16(v_src2));
+                    v_fxy2 = vmovl_u16(vget_high_u16(v_src2));
+                }
+                else
+                    v_fxy1 = v_fxy2 = v_zero;
+
+                int16x8x2_t v_src = vld2q_s16(src1 + (x << 1));
+                float32x4_t v_dst1 = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src.val[0]))),
+                                               v_scale, vcvtq_f32_u32(vandq_u32(v_fxy1, v_mask)));
+                float32x4_t v_dst2 = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src.val[1]))),
+                                               v_scale, vcvtq_f32_u32(vshrq_n_u32(v_fxy1, INTER_BITS)));
+                vst1q_f32(dst1f + x, v_dst1);
+                vst1q_f32(dst2f + x, v_dst2);
+
+                v_dst1 = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src.val[0]))),
+                                   v_scale, vcvtq_f32_u32(vandq_u32(v_fxy2, v_mask)));
+                v_dst2 = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src.val[1]))),
+                                   v_scale, vcvtq_f32_u32(vshrq_n_u32(v_fxy2, INTER_BITS)));
+                vst1q_f32(dst1f + x + 4, v_dst1);
+                vst1q_f32(dst2f + x + 4, v_dst2);
+            }
+            #endif
+            for( ; x < size.width; x++ )
             {
                 int fxy = src2 ? src2[x] & (INTER_TAB_SIZE2-1) : 0;
                 dst1f[x] = src1[x*2] + (fxy & (INTER_TAB_SIZE-1))*scale;
@@ -4605,7 +4717,39 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         }
         else if( m1type == CV_16SC2 && dstm1type == CV_32FC2 )
         {
-            for( x = 0; x < size.width; x++ )
+            #if CV_NEON
+            int16x8_t v_mask2 = vdupq_n_s16(INTER_TAB_SIZE2-1);
+            int32x4_t v_zero = vdupq_n_s32(0), v_mask = vdupq_n_s32(INTER_TAB_SIZE-1);
+            float32x4_t v_scale = vdupq_n_f32(scale);
+
+            for( ; x <= size.width - 8; x += 8)
+            {
+                int32x4_t v_fxy1, v_fxy2;
+                if (src2)
+                {
+                    int16x8_t v_src2 = vandq_s16(vld1q_s16((short *)src2 + x), v_mask2);
+                    v_fxy1 = vmovl_s16(vget_low_s16(v_src2));
+                    v_fxy2 = vmovl_s16(vget_high_s16(v_src2));
+                }
+                else
+                    v_fxy1 = v_fxy2 = v_zero;
+
+                int16x8x2_t v_src = vld2q_s16(src1 + (x << 1));
+                float32x4x2_t v_dst;
+                v_dst.val[0] = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src.val[0]))),
+                                         v_scale, vcvtq_f32_s32(vandq_s32(v_fxy1, v_mask)));
+                v_dst.val[1] = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src.val[1]))),
+                                         v_scale, vcvtq_f32_s32(vshrq_n_s32(v_fxy1, INTER_BITS)));
+                vst2q_f32(dst1f + (x << 1), v_dst);
+
+                v_dst.val[0] = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src.val[0]))),
+                                         v_scale, vcvtq_f32_s32(vandq_s32(v_fxy2, v_mask)));
+                v_dst.val[1] = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src.val[1]))),
+                                         v_scale, vcvtq_f32_s32(vshrq_n_s32(v_fxy2, INTER_BITS)));
+                vst2q_f32(dst1f + (x << 1) + 8, v_dst);
+            }
+            #endif
+            for( ; x < size.width; x++ )
             {
                 int fxy = src2 ? src2[x] & (INTER_TAB_SIZE2-1): 0;
                 dst1f[x*2] = src1[x*2] + (fxy & (INTER_TAB_SIZE-1))*scale;

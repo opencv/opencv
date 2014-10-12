@@ -286,7 +286,7 @@ struct PyrDownVec_32s16s
             v_r00 = vaddq_s32(vaddq_s32(v_r00, v_r40), vaddq_s32(v_r20, v_r20));
             v_r10 = vaddq_s32(vaddq_s32(v_r10, v_r20), v_r30);
             v_r10 = vshlq_n_s32(v_r10, 2);
-            int32x4_t v_dst0 = vshrq_n_s32(vaddq_s32(vaddq_s32(v_r00, shifted), v_delta), 8);
+            int32x4_t v_dst0 = vshrq_n_s32(vaddq_s32(vaddq_s32(v_r00, v_r10), v_delta), 8);
 
             v_r01 = vaddq_s32(vaddq_s32(v_r01, v_r41), vaddq_s32(v_r21, v_r21));
             v_r11 = vaddq_s32(vaddq_s32(v_r11, v_r21), v_r31);

@@ -1602,7 +1602,7 @@ TEST(Resize, Area_half)
     for (int i = 0, _size = sizeof(types) / sizeof(types[0]); i < _size; ++i)
     {
         int type = types[i], depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-        const float eps = depth <= CV_32S ? 0 : 5e-5;
+        const float eps = depth <= CV_32S ? 0 : 7e-5f;
 
         SCOPED_TRACE(depth);
         SCOPED_TRACE(cn);
