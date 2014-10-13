@@ -2,7 +2,7 @@
 OpenCV Tutorials
 ################
 
-The following links describe a set of basic OpenCV  tutorials. All the source code mentioned here is provide as part of the OpenCV regular releases, so check before you start copy & pasting the code. The list of tutorials below is automatically generated from reST files located in our GIT repository.
+The following links describe a set of basic OpenCV  tutorials. All the source code mentioned here is provided as part of the OpenCV regular releases, so check before you start copy & pasting the code. The list of tutorials below is automatically generated from reST files located in our GIT repository.
 
 As always, we would be happy to hear your comments and receive your contributions on any tutorial.
 
@@ -102,7 +102,7 @@ As always, we would be happy to hear your comments and receive your contribution
    .. cssclass:: toctableopencv
 
    =========== =======================================================
-   |Video|     Look here in order to find use on your video stream algorithms like: motion extraction, feature tracking and foreground extractions.
+   |Video|     Look here in order to find algorithms usable on your video streams like: motion extraction, feature tracking and foreground extractions.
 
    =========== =======================================================
 
