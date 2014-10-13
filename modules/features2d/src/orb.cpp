@@ -645,38 +645,70 @@ static inline float getScale(int level, int firstLevel, double scaleFactor)
     return (float)std::pow(scaleFactor, (double)(level - firstLevel));
 }
 
-/** Constructor
- * @param detector_params parameters to use
- */
-ORB::ORB(int _nfeatures, float _scaleFactor, int _nlevels, int _edgeThreshold,
-         int _firstLevel, int _WTA_K, int _scoreType, int _patchSize, int _fastThreshold) :
-    nfeatures(_nfeatures), scaleFactor(_scaleFactor), nlevels(_nlevels),
-    edgeThreshold(_edgeThreshold), firstLevel(_firstLevel), WTA_K(_WTA_K),
-    scoreType(_scoreType), patchSize(_patchSize), fastThreshold(_fastThreshold)
-{}
 
+class ORB_Impl : public ORB
+{
+public:
+    explicit ORB_Impl(int _nfeatures, float _scaleFactor, int _nlevels, int _edgeThreshold,
+             int _firstLevel, int _WTA_K, int _scoreType, int _patchSize, int _fastThreshold) :
+        nfeatures(_nfeatures), scaleFactor(_scaleFactor), nlevels(_nlevels),
+        edgeThreshold(_edgeThreshold), firstLevel(_firstLevel), WTA_K(_WTA_K),
+        scoreType(_scoreType), patchSize(_patchSize), fastThreshold(_fastThreshold)
+    {}
 
-int ORB::descriptorSize() const
+    // returns the descriptor size in bytes
+    int descriptorSize() const;
+    // returns the descriptor type
+    int descriptorType() const;
+    // returns the default norm type
+    int defaultNorm() const;
+
+    // Compute the ORB_Impl features and descriptors on an image
+    void operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const;
+
+    // Compute the ORB_Impl features and descriptors on an image
+    void operator()( InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
+                     OutputArray descriptors, bool useProvidedKeypoints=false ) const;
+
+    AlgorithmInfo* info() const;
+
+protected:
+
+    void computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors ) const;
+    void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
+
+    int nfeatures;
+    double scaleFactor;
+    int nlevels;
+    int edgeThreshold;
+    int firstLevel;
+    int WTA_K;
+    int scoreType;
+    int patchSize;
+    int fastThreshold;
+};
+
+int ORB_Impl::descriptorSize() const
 {
     return kBytes;
 }
 
-int ORB::descriptorType() const
+int ORB_Impl::descriptorType() const
 {
     return CV_8U;
 }
 
-int ORB::defaultNorm() const
+int ORB_Impl::defaultNorm() const
 {
     return NORM_HAMMING;
 }
 
-/** Compute the ORB features and descriptors on an image
+/** Compute the ORB_Impl features and descriptors on an image
  * @param img the image to compute the features and descriptors on
  * @param mask the mask to apply
  * @param keypoints the resulting keypoints
  */
-void ORB::operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const
+void ORB_Impl::operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const
 {
     (*this)(image, mask, keypoints, noArray(), false);
 }
@@ -716,7 +748,7 @@ static void uploadORBKeypoints(const std::vector<KeyPoint>& src,
 }
 
 
-/** Compute the ORB keypoints on an image
+/** Compute the ORB_Impl keypoints on an image
  * @param image_pyramid the image pyramid to compute the features and descriptors on
  * @param mask_pyramid the masks to apply at every level
  * @param keypoints the resulting keypoints, clustered per level
@@ -788,7 +820,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
         KeyPointsFilter::runByImageBorder(keypoints, img.size(), edgeThreshold);
 
         // Keep more points than necessary as FAST does not give amazing corners
-        KeyPointsFilter::retainBest(keypoints, scoreType == ORB::HARRIS_SCORE ? 2 * featuresNum : featuresNum);
+        KeyPointsFilter::retainBest(keypoints, scoreType == ORB_Impl::HARRIS_SCORE ? 2 * featuresNum : featuresNum);
 
         nkeypoints = (int)keypoints.size();
         counters[level] = nkeypoints;
@@ -814,7 +846,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
     UMat ukeypoints, uresponses(1, nkeypoints, CV_32F);
 
     // Select best features using the Harris cornerness (better scoring than FAST)
-    if( scoreType == ORB::HARRIS_SCORE )
+    if( scoreType == ORB_Impl::HARRIS_SCORE )
     {
         if( useOCL )
         {
@@ -886,7 +918,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
 }
 
 
-/** Compute the ORB features and descriptors on an image
+/** Compute the ORB_Impl features and descriptors on an image
  * @param img the image to compute the features and descriptors on
  * @param mask the mask to apply
  * @param keypoints the resulting keypoints
@@ -894,7 +926,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
  * @param do_keypoints if true, the keypoints are computed, otherwise used as an input
  * @param do_descriptors if true, also computes the descriptors
  */
-void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
+void ORB_Impl::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
                       OutputArray _descriptors, bool useProvidedKeypoints ) const
 {
     CV_Assert(patchSize >= 2);
@@ -1121,12 +1153,12 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
     }
 }
 
-void ORB::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
+void ORB_Impl::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
 {
     (*this)(image.getMat(), mask.getMat(), keypoints, noArray(), false);
 }
 
-void ORB::computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
+void ORB_Impl::computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
 {
     (*this)(image, Mat(), keypoints, descriptors, true);
 }

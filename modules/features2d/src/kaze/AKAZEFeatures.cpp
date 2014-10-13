@@ -6,6 +6,7 @@
  * @author Pablo F. Alcantarilla, Jesus Nuevo
  */
 
+#include "../precomp.hpp"
 #include "AKAZEFeatures.h"
 #include "fed.h"
 #include "nldiffusion_functions.h"
@@ -14,9 +15,9 @@
 #include <iostream>
 
 // Namespaces
+namespace cv
+{
 using namespace std;
-using namespace cv;
-using namespace cv::details::kaze;
 
 /* ************************************************************************* */
 /**
@@ -29,7 +30,7 @@ AKAZEFeatures::AKAZEFeatures(const AKAZEOptions& options) : options_(options) {
   ncycles_ = 0;
   reordering_ = true;
 
-  if (options_.descriptor_size > 0 && options_.descriptor >= cv::DESCRIPTOR_MLDB_UPRIGHT) {
+  if (options_.descriptor_size > 0 && options_.descriptor >= AKAZE::DESCRIPTOR_MLDB_UPRIGHT) {
     generateDescriptorSubsample(descriptorSamples_, descriptorBits_, options_.descriptor_size,
                                 options_.descriptor_pattern_size, options_.descriptor_channels);
   }
@@ -264,10 +265,10 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts)
   vector<cv::KeyPoint> kpts_aux;
 
   // Set maximum size
-  if (options_.descriptor == cv::DESCRIPTOR_MLDB_UPRIGHT || options_.descriptor == cv::DESCRIPTOR_MLDB) {
+  if (options_.descriptor == AKAZE::DESCRIPTOR_MLDB_UPRIGHT || options_.descriptor == AKAZE::DESCRIPTOR_MLDB) {
     smax = 10.0f*sqrtf(2.0f);
   }
-  else if (options_.descriptor == cv::DESCRIPTOR_KAZE_UPRIGHT || options_.descriptor == cv::DESCRIPTOR_KAZE) {
+  else if (options_.descriptor == AKAZE::DESCRIPTOR_KAZE_UPRIGHT || options_.descriptor == AKAZE::DESCRIPTOR_KAZE) {
     smax = 12.0f*sqrtf(2.0f);
   }
 
@@ -712,7 +713,7 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
   }
 
   // Allocate memory for the matrix with the descriptors
-  if (options_.descriptor < cv::DESCRIPTOR_MLDB_UPRIGHT) {
+  if (options_.descriptor < AKAZE::DESCRIPTOR_MLDB_UPRIGHT) {
     desc = cv::Mat::zeros((int)kpts.size(), 64, CV_32FC1);
   }
   else {
@@ -729,17 +730,17 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
 
   switch (options_.descriptor)
   {
-    case cv::DESCRIPTOR_KAZE_UPRIGHT: // Upright descriptors, not invariant to rotation
+    case AKAZE::DESCRIPTOR_KAZE_UPRIGHT: // Upright descriptors, not invariant to rotation
     {
       cv::parallel_for_(cv::Range(0, (int)kpts.size()), MSURF_Upright_Descriptor_64_Invoker(kpts, desc, evolution_));
     }
     break;
-    case cv::DESCRIPTOR_KAZE:
+    case AKAZE::DESCRIPTOR_KAZE:
     {
       cv::parallel_for_(cv::Range(0, (int)kpts.size()), MSURF_Descriptor_64_Invoker(kpts, desc, evolution_));
     }
     break;
-    case cv::DESCRIPTOR_MLDB_UPRIGHT: // Upright descriptors, not invariant to rotation
+    case AKAZE::DESCRIPTOR_MLDB_UPRIGHT: // Upright descriptors, not invariant to rotation
     {
       if (options_.descriptor_size == 0)
         cv::parallel_for_(cv::Range(0, (int)kpts.size()), Upright_MLDB_Full_Descriptor_Invoker(kpts, desc, evolution_, options_));
@@ -747,7 +748,7 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
         cv::parallel_for_(cv::Range(0, (int)kpts.size()), Upright_MLDB_Descriptor_Subset_Invoker(kpts, desc, evolution_, options_, descriptorSamples_, descriptorBits_));
     }
     break;
-    case cv::DESCRIPTOR_MLDB:
+    case AKAZE::DESCRIPTOR_MLDB:
     {
       if (options_.descriptor_size == 0)
         cv::parallel_for_(cv::Range(0, (int)kpts.size()), MLDB_Full_Descriptor_Invoker(kpts, desc, evolution_, options_));
@@ -765,7 +766,20 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat
  * @note The orientation is computed using a similar approach as described in the
  * original SURF method. See Bay et al., Speeded Up Robust Features, ECCV 2006
  */
-void AKAZEFeatures::Compute_Main_Orientation(cv::KeyPoint& kpt, const std::vector<TEvolution>& evolution_) {
+void AKAZEFeatures::Compute_Main_Orientation(cv::KeyPoint& kpt, const std::vector<TEvolution>& evolution_)
+{
+    /* ************************************************************************* */
+    /// Lookup table for 2d gaussian (sigma = 2.5) where (0,0) is top left and (6,6) is bottom right
+    static const float gauss25[7][7] =
+    {
+        { 0.02546481f, 0.02350698f, 0.01849125f, 0.01239505f, 0.00708017f, 0.00344629f, 0.00142946f },
+        { 0.02350698f, 0.02169968f, 0.01706957f, 0.01144208f, 0.00653582f, 0.00318132f, 0.00131956f },
+        { 0.01849125f, 0.01706957f, 0.01342740f, 0.00900066f, 0.00514126f, 0.00250252f, 0.00103800f },
+        { 0.01239505f, 0.01144208f, 0.00900066f, 0.00603332f, 0.00344629f, 0.00167749f, 0.00069579f },
+        { 0.00708017f, 0.00653582f, 0.00514126f, 0.00344629f, 0.00196855f, 0.00095820f, 0.00039744f },
+        { 0.00344629f, 0.00318132f, 0.00250252f, 0.00167749f, 0.00095820f, 0.00046640f, 0.00019346f },
+        { 0.00142946f, 0.00131956f, 0.00103800f, 0.00069579f, 0.00039744f, 0.00019346f, 0.00008024f }
+    };
 
   int ix = 0, iy = 0, idx = 0, s = 0, level = 0;
   float xf = 0.0, yf = 0.0, gweight = 0.0, ratio = 0.0;
@@ -1701,4 +1715,7 @@ void generateDescriptorSubsample(cv::Mat& sampleList, cv::Mat& comparisons, int 
 
   sampleList = samples.rowRange(0, count).clone();
   comparisons = comps.rowRange(0, nbits).clone();
+}
+
+}
 }
