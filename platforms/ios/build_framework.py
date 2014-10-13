@@ -42,6 +42,10 @@ def build_opencv(srcroot, buildroot, target, arch):
                 "-DBUILD_opencv_world=ON " +
                 "-DCMAKE_C_FLAGS=\"-Wno-implicit-function-declaration\" " +
                 "-DCMAKE_INSTALL_PREFIX=install") % (srcroot, target)
+
+    if arch.startswith("armv"):
+        cmakeargs += " -DENABLE_NEON=ON"
+
     # if cmake cache exists, just rerun cmake to update OpenCV.xproj if necessary
     if os.path.isfile(os.path.join(builddir, "CMakeCache.txt")):
         os.system("cmake %s ." % (cmakeargs,))
