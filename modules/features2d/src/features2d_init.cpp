@@ -42,6 +42,8 @@
 
 #include "precomp.hpp"
 
+#if 0
+
 using namespace cv;
 
 Ptr<Feature2D> Feature2D::create( const String& feature2DType )
@@ -193,3 +195,5 @@ bool cv::initModule_features2d(void)
 
     return all;
 }
+
+#endif
