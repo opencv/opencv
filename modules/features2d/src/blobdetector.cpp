@@ -55,7 +55,32 @@
 #  endif
 #endif
 
-using namespace cv;
+namespace cv
+{
+
+class CV_EXPORTS_W SimpleBlobDetectorImpl : public SimpleBlobDetector
+{
+public:
+
+  explicit SimpleBlobDetectorImpl(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
+
+  virtual void read( const FileNode& fn );
+  virtual void write( FileStorage& fs ) const;
+
+protected:
+  struct CV_EXPORTS Center
+  {
+      Point2d location;
+      double radius;
+      double confidence;
+  };
+
+  virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
+  virtual void findBlobs(InputArray image, InputArray binaryImage, std::vector<Center> &centers) const;
+
+  Params params;
+  AlgorithmInfo* info() const;
+};
 
 /*
 *  SimpleBlobDetector
