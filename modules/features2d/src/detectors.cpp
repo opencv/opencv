@@ -44,118 +44,65 @@
 namespace cv
 {
 
-/*
- *  FeatureDetector
- */
-
-FeatureDetector::~FeatureDetector()
-{}
-
-void FeatureDetector::detect( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask ) const
+class GFTTDetector_Impl : public GFTTDetector
 {
-    keypoints.clear();
-
-    if( image.empty() )
-        return;
-
-    CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == image.size()) );
-
-    detectImpl( image, keypoints, mask );
-}
-
-void FeatureDetector::detect(InputArrayOfArrays _imageCollection, std::vector<std::vector<KeyPoint> >& pointCollection,
-                             InputArrayOfArrays _masks ) const
-{
-    if (_imageCollection.isUMatVector())
+public:
+    GFTTDetector_Impl( int _nfeatures, double _qualityLevel,
+                      double _minDistance, int _blockSize,
+                      bool _useHarrisDetector, double _k )
+        : nfeatures(_nfeatures), qualityLevel(_qualityLevel), minDistance(_minDistance),
+        blockSize(_blockSize), useHarrisDetector(_useHarrisDetector), k(_k)
     {
-        std::vector<UMat> uimageCollection, umasks;
-        _imageCollection.getUMatVector(uimageCollection);
-        _masks.getUMatVector(umasks);
-
-        pointCollection.resize( uimageCollection.size() );
-        for( size_t i = 0; i < uimageCollection.size(); i++ )
-            detect( uimageCollection[i], pointCollection[i], umasks.empty() ? noArray() : umasks[i] );
-
-        return;
     }
 
-    std::vector<Mat> imageCollection, masks;
-    _imageCollection.getMatVector(imageCollection);
-    _masks.getMatVector(masks);
-
-    pointCollection.resize( imageCollection.size() );
-    for( size_t i = 0; i < imageCollection.size(); i++ )
-        detect( imageCollection[i], pointCollection[i], masks.empty() ? noArray() : masks[i] );
-}
-
-/*void FeatureDetector::read( const FileNode& )
-{}
-
-void FeatureDetector::write( FileStorage& ) const
-{}*/
-
-bool FeatureDetector::empty() const
-{
-    return false;
-}
-
-void FeatureDetector::removeInvalidPoints( const Mat& mask, std::vector<KeyPoint>& keypoints )
-{
-    KeyPointsFilter::runByPixelsMask( keypoints, mask );
-}
-
-Ptr<FeatureDetector> FeatureDetector::create( const String& detectorType )
-{
-    if( detectorType.compare( "HARRIS" ) == 0 )
+    void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask )
     {
-        Ptr<FeatureDetector> fd = FeatureDetector::create("GFTT");
-        fd->set("useHarrisDetector", true);
-        return fd;
-    }
+        std::vector<Point2f> corners;
 
-    return Algorithm::create<FeatureDetector>("Feature2D." + detectorType);
-}
+        if (_image.isUMat())
+        {
+            UMat ugrayImage;
+            if( _image.type() != CV_8U )
+                cvtColor( _image, ugrayImage, COLOR_BGR2GRAY );
+            else
+                ugrayImage = _image.getUMat();
 
-
-GFTTDetector::GFTTDetector( int _nfeatures, double _qualityLevel,
-                            double _minDistance, int _blockSize,
-                            bool _useHarrisDetector, double _k )
-    : nfeatures(_nfeatures), qualityLevel(_qualityLevel), minDistance(_minDistance),
-    blockSize(_blockSize), useHarrisDetector(_useHarrisDetector), k(_k)
-{
-}
-
-void GFTTDetector::detectImpl( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask) const
-{
-    std::vector<Point2f> corners;
-
-    if (_image.isUMat())
-    {
-        UMat ugrayImage;
-        if( _image.type() != CV_8U )
-            cvtColor( _image, ugrayImage, COLOR_BGR2GRAY );
+            goodFeaturesToTrack( ugrayImage, corners, nfeatures, qualityLevel, minDistance, _mask,
+                                 blockSize, useHarrisDetector, k );
+        }
         else
-            ugrayImage = _image.getUMat();
+        {
+            Mat image = _image.getMat(), grayImage = image;
+            if( image.type() != CV_8U )
+                cvtColor( image, grayImage, COLOR_BGR2GRAY );
 
-        goodFeaturesToTrack( ugrayImage, corners, nfeatures, qualityLevel, minDistance, _mask,
-                             blockSize, useHarrisDetector, k );
+            goodFeaturesToTrack( grayImage, corners, nfeatures, qualityLevel, minDistance, _mask,
+                                blockSize, useHarrisDetector, k );
+        }
+
+        keypoints.resize(corners.size());
+        std::vector<Point2f>::const_iterator corner_it = corners.begin();
+        std::vector<KeyPoint>::iterator keypoint_it = keypoints.begin();
+        for( ; corner_it != corners.end(); ++corner_it, ++keypoint_it )
+            *keypoint_it = KeyPoint( *corner_it, (float)blockSize );
+
     }
-    else
-    {
-        Mat image = _image.getMat(), grayImage = image;
-        if( image.type() != CV_8U )
-            cvtColor( image, grayImage, COLOR_BGR2GRAY );
 
-        goodFeaturesToTrack( grayImage, corners, nfeatures, qualityLevel, minDistance, _mask,
-                             blockSize, useHarrisDetector, k );
-    }
+    int nfeatures;
+    double qualityLevel;
+    double minDistance;
+    int blockSize;
+    bool useHarrisDetector;
+    double k;
+};
 
-    keypoints.resize(corners.size());
-    std::vector<Point2f>::const_iterator corner_it = corners.begin();
-    std::vector<KeyPoint>::iterator keypoint_it = keypoints.begin();
-    for( ; corner_it != corners.end(); ++corner_it, ++keypoint_it )
-        *keypoint_it = KeyPoint( *corner_it, (float)blockSize );
 
+Ptr<GFTTDetector> GFTTDetector::create( int _nfeatures, double _qualityLevel,
+                         double _minDistance, int _blockSize,
+                         bool _useHarrisDetector, double _k )
+{
+    return makePtr<GFTTDetector_Impl>(_nfeatures, _qualityLevel,
+                                      _minDistance, _blockSize, _useHarrisDetector, _k);
 }
 
 }
