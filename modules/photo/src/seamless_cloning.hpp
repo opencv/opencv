@@ -72,7 +72,7 @@ namespace cv
             void poissonSolver(const cv::Mat &img, cv::Mat &gxx , cv::Mat &gyy, cv::Mat &result);
 
             void arrayProduct(const cv::Mat& lhs, const cv::Mat& rhs, cv::Mat& result) const;
-            
+
             void computeGradientX(const cv::Mat &img, cv::Mat &gx);
             void computeGradientY(const cv::Mat &img, cv::Mat &gy);
             void computeLaplacianX(const cv::Mat &img, cv::Mat &gxx);
