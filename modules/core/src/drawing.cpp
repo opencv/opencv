@@ -2028,38 +2028,36 @@ inline void readCheck(int &c, int &i, const string &text, int fontFace)
 
     if(c >= 0x80 && fontFace == FONT_HERSHEY_COMPLEX)
     {
-        if(c >= 0xC0 && c <= 0xDF) //2 bytes utf
+        if(c == 0xD0 && (uchar)text[i + 1] >= 0x90 && (uchar)text[i + 1] <= 0xBF)
         {
-            if(c & 1)
-            {
-                c = (uchar)text[++i] + 47;
-                leftBoundary = 175;
-                rightBoundary = 191;
-            }
-            else
-            {
-                c = (uchar)text[++i] - 17;
-                leftBoundary = 127;
-                rightBoundary = 175;
-            }
+            c = (uchar)text[++i] - 17;
+            leftBoundary = 127;
+            rightBoundary = 175;
+        }
+        else if(c == 0xD1 && (uchar)text[i + 1] >= 0x80 && (uchar)text[i + 1] <= 0x8F)
+        {
+            c = (uchar)text[++i] + 47;
+            leftBoundary = 175;
+            rightBoundary = 191;
         }
         else
         {
-            if(c >= 0xE0) //3 bytes utf
+            if(c >= 0xC0 && text[i+1] != 0) //2 bytes utf
                 i++;
 
-            if(c >= 0xF0) //4 bytes utf
+            if(c >= 0xE0 && text[i+1] != 0) //3 bytes utf
                 i++;
 
-            if(c >= 0xF8) //5 bytes utf
+            if(c >= 0xF0 && text[i+1] != 0) //4 bytes utf
                 i++;
 
-            if(c >= 0xFC) //6 bytes utf
+            if(c >= 0xF8 && text[i+1] != 0) //5 bytes utf
                 i++;
 
-            i++;
+            if(c >= 0xFC && text[i+1] != 0) //6 bytes utf
+                i++;
+
             c = '?';
-
         }
     }
 
