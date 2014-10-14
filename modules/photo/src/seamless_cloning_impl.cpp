@@ -343,9 +343,10 @@ void Cloning::evaluate(const Mat &I, const Mat &wmask, const Mat &cloned)
 
 void Cloning::normalClone(const Mat &destination, const Mat &patch, const Mat &binaryMask, Mat &cloned, int flag)
 {
-    int w = destination.cols;
-    int h = destination.rows;
-    int channel = destination.channels();
+    const int w = destination.cols;
+    const int h = destination.rows;
+    const int channel = destination.channels();
+    const int n_elem_in_line = w * channel;
 
     computeDerivatives(destination,patch,binaryMask);
 
@@ -357,6 +358,10 @@ void Cloning::normalClone(const Mat &destination, const Mat &patch, const Mat &b
             break;
 
         case MIXED_CLONE:
+        {
+            AutoBuffer<int> maskIndices(n_elem_in_line);
+            for (int i = 0; i < n_elem_in_line; ++i)
+                maskIndices[i] = i / channel;
 
             for(int i=0;i < h; i++)
             {
@@ -366,28 +371,27 @@ void Cloning::normalClone(const Mat &destination, const Mat &patch, const Mat &b
                 const float * destinationYLinePtr = destinationGradientY.ptr<float>(i);
                 const float * binaryMaskLinePtr = binaryMaskFloat.ptr<float>(i);
 
-               for(int j=0; j < w; j++)
+                for(int j=0; j < n_elem_in_line; j++)
                 {
-                    for(int c=0;c<channel;++c)
-                    {
-                        if(abs(patchXLinePtr[j*channel+c] - patchYLinePtr[j*channel+c]) >
-                                abs(destinationXLinePtr[j*channel+c] - destinationYLinePtr[j*channel+c]))
-                        {
+                    int maskIndex = maskIndices[j];
 
-                            patchXLinePtr[j*channel+c] *= binaryMaskLinePtr[j];
-                            patchYLinePtr[j*channel+c] *= binaryMaskLinePtr[j];
-                        }
-                        else
-                        {
-                            patchXLinePtr[j*channel+c] = destinationXLinePtr[j*channel+c]
-                                * binaryMaskLinePtr[j];
-                            patchGradientY.ptr<float>(i)[j*channel+c] = destinationYLinePtr[j*channel+c]
-                                * binaryMaskLinePtr[j];
-                        }
+                    if(abs(patchXLinePtr[j] - patchYLinePtr[j]) >
+                       abs(destinationXLinePtr[j] - destinationYLinePtr[j]))
+                    {
+                        patchXLinePtr[j] *= binaryMaskLinePtr[maskIndex];
+                        patchYLinePtr[j] *= binaryMaskLinePtr[maskIndex];
+                    }
+                    else
+                    {
+                        patchXLinePtr[j] = destinationXLinePtr[j]
+                            * binaryMaskLinePtr[maskIndex];
+                        patchYLinePtr[j] = destinationYLinePtr[j]
+                            * binaryMaskLinePtr[maskIndex];
                     }
                 }
             }
-            break;
+        }
+        break;
 
         case MONOCHROME_TRANSFER:
             Mat gray = Mat(patch.size(),CV_8UC1);
