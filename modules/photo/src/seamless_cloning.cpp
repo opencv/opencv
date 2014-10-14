@@ -167,7 +167,7 @@ void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst,
 }
 
 void cv::textureFlattening(InputArray _src, InputArray _mask, OutputArray _dst,
-                           double low_threshold, double high_threshold, int kernel_size)
+                           float low_threshold, float high_threshold, int kernel_size)
 {
 
     Mat src  = _src.getMat();
