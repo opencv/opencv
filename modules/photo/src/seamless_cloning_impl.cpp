@@ -108,7 +108,7 @@ void Cloning::dst(const Mat& src, Mat& dest, bool invert)
     Mat temp = Mat::zeros(src.rows, 2 * src.cols + 2, CV_32F);
 
     int flag = invert ? DFT_ROWS + DFT_SCALE + DFT_INVERSE: DFT_ROWS;
-    
+
     src.copyTo(temp(Rect(1,0, src.cols, src.rows)));
 
     for(int j = 0 ; j < src.rows ; ++j)
@@ -127,7 +127,6 @@ void Cloning::dst(const Mat& src, Mat& dest, bool invert)
     merge(planes, 2, complex);
     dft(complex, complex, flag);
     split(complex, planes);
-    
     temp = Mat::zeros(src.cols, 2 * src.rows + 2, CV_32F);
 
     for(int j = 0 ; j < src.cols ; ++j)
@@ -140,7 +139,7 @@ void Cloning::dst(const Mat& src, Mat& dest, bool invert)
             tempLinePtr[temp.cols - 1 - i] = - val;
         }
     }
- 
+
     Mat planes2[] = {temp, Mat::zeros(temp.size(), CV_32F)};
 
     merge(planes2, 2, complex);
@@ -164,7 +163,7 @@ void Cloning::solve(const Mat &img, Mat& mod_diff, Mat &result)
 
     Mat res;
     dst(mod_diff, res);
-    
+
     for(int j = 0 ; j < h-2; j++)
     {
         float * resLinePtr = res.ptr<float>(j);
@@ -192,7 +191,7 @@ void Cloning::solve(const Mat &img, Mat& mod_diff, Mat &result)
 
         //first row
         resLinePtr[0] = imgLinePtr[0];
-        
+
         for(int i = 1 ; i < w-1 ; ++i)
         {
             //saturate cast is not used here, because it behaves differently from the previous implementation
@@ -292,13 +291,13 @@ void Cloning::arrayProduct(const cv::Mat& lhs, const cv::Mat& rhs, cv::Mat& resu
 {
     vector <Mat> lhs_channels;
     vector <Mat> result_channels;
-    
+
     split(lhs,lhs_channels);
     split(result,result_channels);
-    
+
     for(int chan = 0 ; chan < 3 ; ++chan)
         multiply(lhs_channels[chan],rhs,result_channels[chan]);
-    
+
     merge(result_channels,result);
 }
 
