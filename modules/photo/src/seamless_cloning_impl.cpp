@@ -215,13 +215,10 @@ void Cloning::solve(const Mat &img, Mat& mod_diff, Mat &result)
     imgLinePtr = img.ptr<unsigned char>(h-1);
     for(int i = 0 ; i < w ; ++i)
         resLinePtr[i] = imgLinePtr[i];
-
-
 }
 
 void Cloning::poissonSolver(const Mat &img, Mat &laplacianX , Mat &laplacianY, Mat &result)
 {
-
     const int w = img.cols;
     const int h = img.rows;
 
