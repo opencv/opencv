@@ -110,6 +110,10 @@ public:
                                  CV_OUT std::vector<KeyPoint>& keypoints,
                                  InputArray mask=noArray() );
 
+    virtual void detect( InputArrayOfArrays images,
+                         std::vector<std::vector<KeyPoint> >& keypoints,
+                         InputArrayOfArrays masks=noArray() );
+
     /*
      * Compute the descriptors for a set of keypoints in an image.
      * image        The image.
@@ -119,6 +123,10 @@ public:
     CV_WRAP virtual void compute( InputArray image,
                                   CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints,
                                   OutputArray descriptors );
+
+    virtual void compute( InputArrayOfArrays images,
+                          std::vector<std::vector<KeyPoint> >& keypoints,
+                          OutputArrayOfArrays descriptors );
 
     /* Detects keypoints and computes the descriptors */
     CV_WRAP virtual void detectAndCompute( InputArray image, InputArray mask,
@@ -146,7 +154,7 @@ public:
     CV_WRAP static Ptr<BRISK> create(int thresh=30, int octaves=3, float patternScale=1.0f);
     // custom setup
     CV_WRAP static Ptr<BRISK> create(const std::vector<float> &radiusList, const std::vector<int> &numberList,
-        float dMax=5.85f, float dMin=8.2f, const std::vector<int> indexChange=std::vector<int>());
+        float dMax=5.85f, float dMin=8.2f, const std::vector<int>& indexChange=std::vector<int>());
 };
 
 /*!
@@ -174,6 +182,13 @@ public:
 class CV_EXPORTS_W MSER : public Feature2D
 {
 public:
+    enum
+    {
+        DELTA=10000, MIN_AREA=10001, MAX_AREA=10002, PASS2_ONLY=10003,
+        MAX_EVOLUTION=10004, AREA_THRESHOLD=10005,
+        MIN_MARGIN=10006, EDGE_BLUR_SIZE=10007
+    };
+
     //! the full constructor
     CV_WRAP static Ptr<MSER> create( int _delta=5, int _min_area=60, int _max_area=14400,
           double _max_variation=0.25, double _min_diversity=.2,
@@ -181,7 +196,7 @@ public:
           double _min_margin=0.003, int _edge_blur_size=5 );
 
     CV_WRAP virtual int detectAndLabel( InputArray image, OutputArray label,
-                                        OutputArray stats=noArray() ) const = 0;
+                                        OutputArray stats=noArray() ) = 0;
 };
 
 //! detects corners using FAST algorithm by E. Rosten
@@ -199,13 +214,16 @@ public:
         TYPE_5_8 = 0, TYPE_7_12 = 1, TYPE_9_16 = 2
     };
 
-    CV_WRAP static Ptr<FastFeatureDetector> create( int threshold=10, bool nonmaxSuppression=true, int type=TYPE_9_16 );
+    CV_WRAP static Ptr<FastFeatureDetector> create( int threshold=10,
+                                                    bool nonmaxSuppression=true,
+                                                    int type=FastFeatureDetector::TYPE_9_16 );
 };
 
 
 class CV_EXPORTS_W GFTTDetector : public Feature2D
 {
 public:
+    enum { USE_HARRIS_DETECTOR=10000 };
     CV_WRAP static Ptr<GFTTDetector> create( int maxCorners=1000, double qualityLevel=0.01, double minDistance=1,
                                              int blockSize=3, bool useHarrisDetector=false, double k=0.04 );
 };
@@ -282,7 +300,7 @@ public:
         DESCRIPTOR_MLDB = 5
     };
 
-    CV_WRAP static Ptr<AKAZE> create(int descriptor_type=DESCRIPTOR_MLDB,
+    CV_WRAP static Ptr<AKAZE> create(int descriptor_type=AKAZE::DESCRIPTOR_MLDB,
                                      int descriptor_size = 0, int descriptor_channels = 3,
                                      float threshold = 0.001f, int octaves = 4,
                                      int sublevels = 4, int diffusivity = KAZE::DIFF_PM_G2);
@@ -535,8 +553,6 @@ public:
     virtual bool isMaskSupported() const { return true; }
 
     virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const;
-
-    AlgorithmInfo* info() const;
 protected:
     virtual void knnMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
         InputArrayOfArrays masks=noArray(), bool compactResult=false );
@@ -569,8 +585,6 @@ public:
     virtual bool isMaskSupported() const;
 
     virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const;
-
-    AlgorithmInfo* info() const;
 protected:
     static void convertToDMatches( const DescriptorCollection& descriptors,
                                    const Mat& indices, const Mat& distances,

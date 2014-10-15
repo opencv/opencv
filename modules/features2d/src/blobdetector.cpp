@@ -75,11 +75,10 @@ protected:
       double confidence;
   };
 
-  virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
+  virtual void detect( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() );
   virtual void findBlobs(InputArray image, InputArray binaryImage, std::vector<Center> &centers) const;
 
   Params params;
-  AlgorithmInfo* info() const;
 };
 
 /*
@@ -173,22 +172,22 @@ void SimpleBlobDetector::Params::write(cv::FileStorage& fs) const
     fs << "maxConvexity" << maxConvexity;
 }
 
-SimpleBlobDetector::SimpleBlobDetector(const SimpleBlobDetector::Params &parameters) :
+SimpleBlobDetectorImpl::SimpleBlobDetectorImpl(const SimpleBlobDetector::Params &parameters) :
 params(parameters)
 {
 }
 
-void SimpleBlobDetector::read( const cv::FileNode& fn )
+void SimpleBlobDetectorImpl::read( const cv::FileNode& fn )
 {
     params.read(fn);
 }
 
-void SimpleBlobDetector::write( cv::FileStorage& fs ) const
+void SimpleBlobDetectorImpl::write( cv::FileStorage& fs ) const
 {
     params.write(fs);
 }
 
-void SimpleBlobDetector::findBlobs(InputArray _image, InputArray _binaryImage, std::vector<Center> &centers) const
+void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImage, std::vector<Center> &centers) const
 {
     Mat image = _image.getMat(), binaryImage = _binaryImage.getMat();
     (void)image;
@@ -302,7 +301,7 @@ void SimpleBlobDetector::findBlobs(InputArray _image, InputArray _binaryImage, s
 #endif
 }
 
-void SimpleBlobDetector::detectImpl(InputArray image, std::vector<cv::KeyPoint>& keypoints, InputArray) const
+void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>& keypoints, InputArray)
 {
     //TODO: support mask
     keypoints.clear();
@@ -364,4 +363,11 @@ void SimpleBlobDetector::detectImpl(InputArray image, std::vector<cv::KeyPoint>&
         KeyPoint kpt(sumPoint, (float)(centers[i][centers[i].size() / 2].radius) * 2.0f);
         keypoints.push_back(kpt);
     }
+}
+
+Ptr<SimpleBlobDetector> SimpleBlobDetector::create(const SimpleBlobDetector::Params& params)
+{
+    return makePtr<SimpleBlobDetectorImpl>(params);
+}
+
 }

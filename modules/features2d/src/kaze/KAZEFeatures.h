@@ -22,8 +22,8 @@ namespace cv
 
 /* ************************************************************************* */
 // KAZE Class Declaration
-class KAZEFeatures {
-
+class KAZEFeatures
+{
 private:
 
     /// Parameters of the Nonlinear diffusion class
