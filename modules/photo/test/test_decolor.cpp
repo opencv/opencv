@@ -47,7 +47,7 @@
 using namespace cv;
 using namespace std;
 
-static const double numerical_precision = 1.;
+static const double numerical_precision = 10.;
 
 TEST(Photo_Decolor, regression)
 {
