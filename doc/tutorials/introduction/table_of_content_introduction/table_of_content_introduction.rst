@@ -4,7 +4,7 @@ Introduction to OpenCV
 -----------------------------------------------------------
 
 Here you can read tutorials about how to set up your computer to work with the OpenCV library.
-Additionally you can find a few very basic sample source code that will let introduce you to the
+Additionally you can find very basic sample source code to introduce you to the
 world of the OpenCV.
 
 .. include:: ../../definitions/tocDefinitions.rst
