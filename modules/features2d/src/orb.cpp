@@ -664,18 +664,10 @@ public:
     int defaultNorm() const;
 
     // Compute the ORB_Impl features and descriptors on an image
-    void operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const;
-
-    // Compute the ORB_Impl features and descriptors on an image
-    void operator()( InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
-                     OutputArray descriptors, bool useProvidedKeypoints=false ) const;
-
-    AlgorithmInfo* info() const;
+    void detectAndCompute( InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
+                     OutputArray descriptors, bool useProvidedKeypoints=false );
 
 protected:
-
-    void computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors ) const;
-    void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
 
     int nfeatures;
     double scaleFactor;
@@ -702,17 +694,6 @@ int ORB_Impl::defaultNorm() const
 {
     return NORM_HAMMING;
 }
-
-/** Compute the ORB_Impl features and descriptors on an image
- * @param img the image to compute the features and descriptors on
- * @param mask the mask to apply
- * @param keypoints the resulting keypoints
- */
-void ORB_Impl::operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const
-{
-    (*this)(image, mask, keypoints, noArray(), false);
-}
-
 
 static void uploadORBKeypoints(const std::vector<KeyPoint>& src, std::vector<Vec3i>& buf, OutputArray dst)
 {
@@ -813,8 +794,10 @@ static void computeKeyPoints(const Mat& imagePyramid,
         Mat mask = maskPyramid.empty() ? Mat() : maskPyramid(layerInfo[level]);
 
         // Detect FAST features, 20 is a good threshold
-        FastFeatureDetector fd(fastThreshold, true);
-        fd.detect(img, keypoints, mask);
+        {
+        Ptr<FastFeatureDetector> fd = FastFeatureDetector::create(fastThreshold, true);
+        fd->detect(img, keypoints, mask);
+        }
 
         // Remove keypoints very close to the border
         KeyPointsFilter::runByImageBorder(keypoints, img.size(), edgeThreshold);
@@ -926,8 +909,9 @@ static void computeKeyPoints(const Mat& imagePyramid,
  * @param do_keypoints if true, the keypoints are computed, otherwise used as an input
  * @param do_descriptors if true, also computes the descriptors
  */
-void ORB_Impl::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
-                      OutputArray _descriptors, bool useProvidedKeypoints ) const
+void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
+                                 std::vector<KeyPoint>& keypoints,
+                                 OutputArray _descriptors, bool useProvidedKeypoints )
 {
     CV_Assert(patchSize >= 2);
 
@@ -1153,15 +1137,11 @@ void ORB_Impl::operator()( InputArray _image, InputArray _mask, std::vector<KeyP
     }
 }
 
-void ORB_Impl::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
+Ptr<ORB> ORB::create(int nfeatures, float scaleFactor, int nlevels, int edgeThreshold,
+           int firstLevel, int WTA_K, int scoreType, int patchSize, int fastThreshold)
 {
-    (*this)(image.getMat(), mask.getMat(), keypoints, noArray(), false);
+    return makePtr<ORB_Impl>(nfeatures, scaleFactor, nlevels, edgeThreshold,
+                             firstLevel, WTA_K, scoreType, patchSize, fastThreshold);
 }
-
-void ORB_Impl::computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
-{
-    (*this)(image, Mat(), keypoints, descriptors, true);
-}
-
 
 }

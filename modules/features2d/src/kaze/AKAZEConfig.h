@@ -22,12 +22,12 @@ struct AKAZEOptions {
         , soffset(1.6f)
         , derivative_factor(1.5f)
         , sderivatives(1.0)
-        , diffusivity(cv::DIFF_PM_G2)
+        , diffusivity(KAZE::DIFF_PM_G2)
 
         , dthreshold(0.001f)
         , min_dthreshold(0.00001f)
 
-        , descriptor(cv::DESCRIPTOR_MLDB)
+        , descriptor(AKAZE::DESCRIPTOR_MLDB)
         , descriptor_size(0)
         , descriptor_channels(3)
         , descriptor_pattern_size(10)
