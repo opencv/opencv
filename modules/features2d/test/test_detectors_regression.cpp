@@ -249,48 +249,48 @@ void CV_FeatureDetectorTest::run( int /*start_from*/ )
 
 TEST( Features2d_Detector_BRISK, regression )
 {
-    CV_FeatureDetectorTest test( "detector-brisk", FeatureDetector::create("BRISK") );
+    CV_FeatureDetectorTest test( "detector-brisk", BRISK::create() );
     test.safe_run();
 }
 
 TEST( Features2d_Detector_FAST, regression )
 {
-    CV_FeatureDetectorTest test( "detector-fast", FeatureDetector::create("FAST") );
+    CV_FeatureDetectorTest test( "detector-fast", FastFeatureDetector::create() );
     test.safe_run();
 }
 
 TEST( Features2d_Detector_GFTT, regression )
 {
-    CV_FeatureDetectorTest test( "detector-gftt", FeatureDetector::create("GFTT") );
+    CV_FeatureDetectorTest test( "detector-gftt", GFTTDetector::create() );
     test.safe_run();
 }
 
 TEST( Features2d_Detector_Harris, regression )
 {
-    CV_FeatureDetectorTest test( "detector-harris", FeatureDetector::create("HARRIS") );
+    CV_FeatureDetectorTest test( "detector-harris", GFTTDetector::create(1000, 0.01, 1, 3, true, 0.04));
     test.safe_run();
 }
 
 TEST( Features2d_Detector_MSER, DISABLED_regression )
 {
-    CV_FeatureDetectorTest test( "detector-mser", FeatureDetector::create("MSER") );
+    CV_FeatureDetectorTest test( "detector-mser", MSER::create() );
     test.safe_run();
 }
 
 TEST( Features2d_Detector_ORB, regression )
 {
-    CV_FeatureDetectorTest test( "detector-orb", FeatureDetector::create("ORB") );
+    CV_FeatureDetectorTest test( "detector-orb", ORB::create() );
     test.safe_run();
 }
 
 TEST( Features2d_Detector_KAZE, regression )
 {
-    CV_FeatureDetectorTest test( "detector-kaze", FeatureDetector::create("KAZE") );
+    CV_FeatureDetectorTest test( "detector-kaze", KAZE::create() );
     test.safe_run();
 }
 
 TEST( Features2d_Detector_AKAZE, regression )
 {
-    CV_FeatureDetectorTest test( "detector-akaze", FeatureDetector::create("AKAZE") );
+    CV_FeatureDetectorTest test( "detector-akaze", AKAZE::create() );
     test.safe_run();
 }

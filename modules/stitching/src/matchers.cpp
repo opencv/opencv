@@ -367,7 +367,7 @@ void SurfFeaturesFinder::find(InputArray image, ImageFeatures &features)
     else
     {
         UMat descriptors;
-        (*surf)(gray_image, Mat(), features.keypoints, descriptors);
+        surf->detectAndCompute(gray_image, Mat(), features.keypoints, descriptors);
         features.descriptors = descriptors.reshape(1, (int)features.keypoints.size());
     }
 }
@@ -375,7 +375,7 @@ void SurfFeaturesFinder::find(InputArray image, ImageFeatures &features)
 OrbFeaturesFinder::OrbFeaturesFinder(Size _grid_size, int n_features, float scaleFactor, int nlevels)
 {
     grid_size = _grid_size;
-    orb = makePtr<ORB>(n_features * (99 + grid_size.area())/100/grid_size.area(), scaleFactor, nlevels);
+    orb = ORB::create(n_features * (99 + grid_size.area())/100/grid_size.area(), scaleFactor, nlevels);
 }
 
 void OrbFeaturesFinder::find(InputArray image, ImageFeatures &features)
@@ -395,7 +395,7 @@ void OrbFeaturesFinder::find(InputArray image, ImageFeatures &features)
     }
 
     if (grid_size.area() == 1)
-        (*orb)(gray_image, Mat(), features.keypoints, features.descriptors);
+        orb->detectAndCompute(gray_image, Mat(), features.keypoints, features.descriptors);
     else
     {
         features.keypoints.clear();
@@ -425,7 +425,7 @@ void OrbFeaturesFinder::find(InputArray image, ImageFeatures &features)
                 //     << " gray_image_part.dims=" << gray_image_part.dims << ", "
                 //     << " gray_image_part.data=" << ((size_t)gray_image_part.data) << "\n");
 
-                (*orb)(gray_image_part, UMat(), points, descriptors);
+                orb->detectAndCompute(gray_image_part, UMat(), points, descriptors);
 
                 features.keypoints.reserve(features.keypoints.size() + points.size());
                 for (std::vector<KeyPoint>::iterator kp = points.begin(); kp != points.end(); ++kp)

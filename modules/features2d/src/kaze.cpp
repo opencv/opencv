@@ -140,5 +140,11 @@ namespace cv
         int diffusivity;
     };
 
-
+    Ptr<KAZE> KAZE::create(bool extended, bool upright,
+                            float threshold,
+                            int octaves, int sublevels,
+                            int diffusivity)
+    {
+        return makePtr<KAZE_Impl>(extended, upright, threshold, octaves, sublevels, diffusivity);
+    }
 }
