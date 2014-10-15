@@ -68,7 +68,7 @@ public:
     virtual double getProperty(int propIdx);
     virtual bool setProperty(int probIdx, double propVal);
     virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int outputType);
+    virtual IplImage* retrieveFrame(int);
     virtual int getCaptureDomain() { return CV_CAP_ANDROID; }
 
     bool isOpened() const;
@@ -100,6 +100,7 @@ protected:
     };
 
     YUVformat m_frameFormat;
+    int m_outputFormat;
 
     void setFrame(const void* buffer, int bufferSize);
 
@@ -201,6 +202,7 @@ CvCapture_Android::CvCapture_Android(int cameraId)
     m_framesGrabbed       = 0;
     m_CameraParamsChanged = false;
     m_frameFormat         = noformat;
+    m_outputFormat        = CV_CAP_ANDROID_COLOR_FRAME_BGR;
 
     //try connect to camera
     LOGD("CvCapture_Android::CvCapture_Android(%i)", cameraId);
@@ -266,7 +268,7 @@ double CvCapture_Android::getProperty( int propIdx )
     case CV_CAP_PROP_FRAME_HEIGHT:
         return (double)m_activity->getFrameHeight();
     case CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING:
-    return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_SUPPORTED_PREVIEW_SIZES_STRING);
+        return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_SUPPORTED_PREVIEW_SIZES_STRING);
     case CV_CAP_PROP_PREVIEW_FORMAT:
         return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_PREVIEW_FORMAT_STRING);
     case CV_CAP_PROP_FPS:
@@ -314,7 +316,10 @@ bool CvCapture_Android::setProperty( int propIdx, double propValue )
             m_activity->setProperty(ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT, propValue);
             break;
         case CV_CAP_PROP_AUTOGRAB:
-        m_shouldAutoGrab=(propValue != 0);
+            m_shouldAutoGrab=(propValue != 0);
+            break;
+        case CV_CAP_PROP_OUTPUT_FORMAT:
+            m_outputFormat = (int)propValue;
             break;
         case CV_CAP_PROP_EXPOSURE:
             m_activity->setProperty(ANDROID_CAMERA_PROPERTY_EXPOSURE, propValue);
@@ -404,7 +409,7 @@ bool CvCapture_Android::grabFrame()
     return res;
 }
 
-IplImage* CvCapture_Android::retrieveFrame( int outputType )
+IplImage* CvCapture_Android::retrieveFrame( int )
 {
     IplImage* image = NULL;
 
@@ -425,7 +430,7 @@ IplImage* CvCapture_Android::retrieveFrame( int outputType )
                 m_frameFormat = yuvUnknown;
         }
 
-        switch(outputType)
+        switch(m_outputFormat)
         {
         case CV_CAP_ANDROID_GREY_FRAME:
             if (!m_hasGray)
@@ -435,18 +440,24 @@ IplImage* CvCapture_Android::retrieveFrame( int outputType )
             break;
         case CV_CAP_ANDROID_COLOR_FRAME_BGR: case CV_CAP_ANDROID_COLOR_FRAME_RGB:
             if (!m_hasColor)
-                if (!(m_hasColor = convertYUV2BGR(m_width, m_height, current_frameYUV420, m_frameColor.mat, outputType == CV_CAP_ANDROID_COLOR_FRAME_RGB, false)))
+                if (!(m_hasColor = convertYUV2BGR(m_width, m_height, current_frameYUV420, m_frameColor.mat, m_outputFormat == CV_CAP_ANDROID_COLOR_FRAME_RGB, false)))
                     return NULL;
             image = m_frameColor.getIplImagePtr();
             break;
         case CV_CAP_ANDROID_COLOR_FRAME_BGRA: case CV_CAP_ANDROID_COLOR_FRAME_RGBA:
             if (!m_hasColor)
-                if (!(m_hasColor = convertYUV2BGR(m_width, m_height, current_frameYUV420, m_frameColor.mat, outputType == CV_CAP_ANDROID_COLOR_FRAME_RGBA, true)))
+                if (!(m_hasColor = convertYUV2BGR(m_width, m_height, current_frameYUV420, m_frameColor.mat, m_outputFormat == CV_CAP_ANDROID_COLOR_FRAME_RGBA, true)))
                     return NULL;
             image = m_frameColor.getIplImagePtr();
             break;
+        case CV_CAP_ANDROID_COLOR_FRAME_YUV420sp:
+            if (m_frameFormat != yuv420sp && m_frameFormat != yvu420sp)
+                return NULL;
+            m_frameColor.mat = m_frameYUV420_ref;
+            image = m_frameColor.getIplImagePtr();
+            break;
         default:
-            LOGE("Unsupported frame output format: %d", outputType);
+            LOGE("Unsupported frame output format: %d", m_outputFormat);
             CV_Error( CV_StsOutOfRange, "Output frame format is not supported." );
             image = NULL;
             break;

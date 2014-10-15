@@ -270,6 +270,8 @@ Sets a property in the ``VideoCapture``.
 
         * **CV_CAP_PROP_RECTIFICATION** Rectification flag for stereo cameras (note: only supported by DC1394 v 2.x backend currently)
 
+        * **CV_CAP_PROP_OUTPUT_FORMAT** Output color format, one of ``CV_CAP_ANDROID_GREY_FRAME``, ``CV_CAP_ANDROID_COLOR_FRAME_BGR``, ``CV_CAP_ANDROID_COLOR_FRAME_RGB``, ``CV_CAP_ANDROID_COLOR_FRAME_BGRA``, ``CV_CAP_ANDROID_COLOR_FRAME_RGBA`` or ``CV_CAP_ANDROID_COLOR_FRAME_YUV420sp`` (note: currently only for Android)
+
     :param value: Value of the property.
 
 
