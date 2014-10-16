@@ -13,13 +13,16 @@
 #include "ModelRegistration.h"
 #include "Utils.h"
 
+using namespace cv;
+using namespace std;
+
 /**  GLOBAL VARIABLES  **/
 
-std::string tutorial_path = "../../samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/"; // path to tutorial
+string tutorial_path = "../../samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/"; // path to tutorial
 
-std::string img_path = tutorial_path + "Data/resized_IMG_3875.JPG";  // image to register
-std::string ply_read_path = tutorial_path + "Data/box.ply";          // object mesh
-std::string write_path = tutorial_path + "Data/cookies_ORB.yml";     // output file
+string img_path = tutorial_path + "Data/resized_IMG_3875.JPG";  // image to register
+string ply_read_path = tutorial_path + "Data/box.ply";          // object mesh
+string write_path = tutorial_path + "Data/cookies_ORB.yml";     // output file
 
 // Boolean the know if the registration it's done
 bool end_registration = false;
@@ -39,10 +42,10 @@ int n = 8;
 int pts[] = {1, 2, 3, 4, 5, 6, 7, 8}; // 3 -> 4
 
 // Some basic colors
-cv::Scalar red(0, 0, 255);
-cv::Scalar green(0,255,0);
-cv::Scalar blue(255,0,0);
-cv::Scalar yellow(0,255,255);
+Scalar red(0, 0, 255);
+Scalar green(0,255,0);
+Scalar blue(255,0,0);
+Scalar yellow(0,255,255);
 
 /*
  * CREATE MODEL REGISTRATION OBJECT
@@ -61,13 +64,13 @@ void help();
 // Mouse events for model registration
 static void onMouseModelRegistration( int event, int x, int y, int, void* )
 {
-  if  ( event == cv::EVENT_LBUTTONUP )
+  if  ( event == EVENT_LBUTTONUP )
   {
       int n_regist = registration.getNumRegist();
       int n_vertex = pts[n_regist];
 
-      cv::Point2f point_2d = cv::Point2f((float)x,(float)y);
-      cv::Point3f point_3d = mesh.getVertex(n_vertex-1);
+      Point2f point_2d = Point2f((float)x,(float)y);
+      Point3f point_3d = mesh.getVertex(n_vertex-1);
 
       bool is_registrable = registration.is_registrable();
       if (is_registrable)
@@ -92,23 +95,23 @@ int main()
 
   //Instantiate robust matcher: detector, extractor, matcher
   RobustMatcher rmatcher;
-  cv::FeatureDetector * detector = new cv::OrbFeatureDetector(numKeyPoints);
+  Ptr<FeatureDetector> detector = ORB::create(numKeyPoints);
   rmatcher.setFeatureDetector(detector);
 
   /**  GROUND TRUTH OF THE FIRST IMAGE  **/
 
   // Create & Open Window
-  cv::namedWindow("MODEL REGISTRATION", cv::WINDOW_KEEPRATIO);
+  namedWindow("MODEL REGISTRATION", WINDOW_KEEPRATIO);
 
   // Set up the mouse events
-  cv::setMouseCallback("MODEL REGISTRATION", onMouseModelRegistration, 0 );
+  setMouseCallback("MODEL REGISTRATION", onMouseModelRegistration, 0 );
 
   // Open the image to register
-  cv::Mat img_in = cv::imread(img_path, cv::IMREAD_COLOR);
-  cv::Mat img_vis = img_in.clone();
+  Mat img_in = imread(img_path, IMREAD_COLOR);
+  Mat img_vis = img_in.clone();
 
   if (!img_in.data) {
-    std::cout << "Could not open or find the image" << std::endl;
+    cout << "Could not open or find the image" << endl;
     return -1;
   }
 
@@ -116,18 +119,18 @@ int main()
   int num_registrations = n;
   registration.setNumMax(num_registrations);
 
-  std::cout << "Click the box corners ..." << std::endl;
-  std::cout << "Waiting ..." << std::endl;
+  cout << "Click the box corners ..." << endl;
+  cout << "Waiting ..." << endl;
 
   // Loop until all the points are registered
-  while ( cv::waitKey(30) < 0 )
+  while ( waitKey(30) < 0 )
   {
     // Refresh debug image
     img_vis = img_in.clone();
 
     // Current registered points
-    std::vector<cv::Point2f> list_points2d = registration.get_points2d();
-    std::vector<cv::Point3f> list_points3d = registration.get_points3d();
+    vector<Point2f> list_points2d = registration.get_points2d();
+    vector<Point3f> list_points3d = registration.get_points3d();
 
     // Draw current registered points
     drawPoints(img_vis, list_points2d, list_points3d, red);
@@ -139,7 +142,7 @@ int main()
       // Draw debug text
       int n_regist = registration.getNumRegist();
       int n_vertex = pts[n_regist];
-      cv::Point3f current_poin3d = mesh.getVertex(n_vertex-1);
+      Point3f current_poin3d = mesh.getVertex(n_vertex-1);
 
       drawQuestion(img_vis, current_poin3d, green);
       drawCounter(img_vis, registration.getNumRegist(), registration.getNumMax(), red);
@@ -153,43 +156,43 @@ int main()
     }
 
     // Show the image
-    cv::imshow("MODEL REGISTRATION", img_vis);
+    imshow("MODEL REGISTRATION", img_vis);
   }
 
   /** COMPUTE CAMERA POSE **/
 
-  std::cout << "COMPUTING POSE ..." << std::endl;
+  cout << "COMPUTING POSE ..." << endl;
 
   // The list of registered points
-  std::vector<cv::Point2f> list_points2d = registration.get_points2d();
-  std::vector<cv::Point3f> list_points3d = registration.get_points3d();
+  vector<Point2f> list_points2d = registration.get_points2d();
+  vector<Point3f> list_points3d = registration.get_points3d();
 
   // Estimate pose given the registered points
-  bool is_correspondence = pnp_registration.estimatePose(list_points3d, list_points2d, cv::SOLVEPNP_ITERATIVE);
+  bool is_correspondence = pnp_registration.estimatePose(list_points3d, list_points2d, SOLVEPNP_ITERATIVE);
   if ( is_correspondence )
   {
-    std::cout << "Correspondence found" << std::endl;
+    cout << "Correspondence found" << endl;
 
     // Compute all the 2D points of the mesh to verify the algorithm and draw it
-    std::vector<cv::Point2f> list_points2d_mesh = pnp_registration.verify_points(&mesh);
+    vector<Point2f> list_points2d_mesh = pnp_registration.verify_points(&mesh);
     draw2DPoints(img_vis, list_points2d_mesh, green);
 
   } else {
-    std::cout << "Correspondence not found" << std::endl << std::endl;
+    cout << "Correspondence not found" << endl << endl;
   }
 
   // Show the image
-  cv::imshow("MODEL REGISTRATION", img_vis);
+  imshow("MODEL REGISTRATION", img_vis);
 
   // Show image until ESC pressed
-  cv::waitKey(0);
+  waitKey(0);
 
 
    /** COMPUTE 3D of the image Keypoints **/
 
   // Containers for keypoints and descriptors of the model
-  std::vector<cv::KeyPoint> keypoints_model;
-  cv::Mat descriptors;
+  vector<KeyPoint> keypoints_model;
+  Mat descriptors;
 
   // Compute keypoints and descriptors
   rmatcher.computeKeyPoints(img_in, keypoints_model);
@@ -197,8 +200,8 @@ int main()
 
   // Check if keypoints are on the surface of the registration image and add to the model
   for (unsigned int i = 0; i < keypoints_model.size(); ++i) {
-    cv::Point2f point2d(keypoints_model[i].pt);
-    cv::Point3f point3d;
+    Point2f point2d(keypoints_model[i].pt);
+    Point3f point3d;
     bool on_surface = pnp_registration.backproject2DPoint(&mesh, point2d, point3d);
     if (on_surface)
     {
@@ -219,12 +222,12 @@ int main()
   img_vis = img_in.clone();
 
   // The list of the points2d of the model
-  std::vector<cv::Point2f> list_points_in = model.get_points2d_in();
-  std::vector<cv::Point2f> list_points_out = model.get_points2d_out();
+  vector<Point2f> list_points_in = model.get_points2d_in();
+  vector<Point2f> list_points_out = model.get_points2d_out();
 
   // Draw some debug text
-  std::string num = IntToString((int)list_points_in.size());
-  std::string text = "There are " + num + " inliers";
+  string num = IntToString((int)list_points_in.size());
+  string text = "There are " + num + " inliers";
   drawText(img_vis, text, green);
 
   // Draw some debug text
@@ -240,26 +243,26 @@ int main()
   draw2DPoints(img_vis, list_points_out, red);
 
   // Show the image
-  cv::imshow("MODEL REGISTRATION", img_vis);
+  imshow("MODEL REGISTRATION", img_vis);
 
   // Wait until ESC pressed
-  cv::waitKey(0);
+  waitKey(0);
 
   // Close and Destroy Window
-  cv::destroyWindow("MODEL REGISTRATION");
+  destroyWindow("MODEL REGISTRATION");
 
-  std::cout << "GOODBYE" << std::endl;
+  cout << "GOODBYE" << endl;
 
 }
 
 /**********************************************************************************************************/
 void help()
 {
-  std::cout
-  << "--------------------------------------------------------------------------"   << std::endl
-  << "This program shows how to create your 3D textured model. "                    << std::endl
-  << "Usage:"                                                                       << std::endl
-  << "./cpp-tutorial-pnp_registration"                                              << std::endl
-  << "--------------------------------------------------------------------------"   << std::endl
-  << std::endl;
+  cout
+  << "--------------------------------------------------------------------------"   << endl
+  << "This program shows how to create your 3D textured model. "                    << endl
+  << "Usage:"                                                                       << endl
+  << "./cpp-tutorial-pnp_registration"                                              << endl
+  << "--------------------------------------------------------------------------"   << endl
+  << endl;
 }
