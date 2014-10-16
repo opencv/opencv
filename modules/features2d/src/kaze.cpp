@@ -132,6 +132,26 @@ namespace cv
             }
         }
 
+        void write(FileStorage& fs) const
+        {
+            fs << "extended" << (int)extended;
+            fs << "upright" << (int)upright;
+            fs << "threshold" << threshold;
+            fs << "octaves" << octaves;
+            fs << "sublevels" << sublevels;
+            fs << "diffusivity" << diffusivity;
+        }
+
+        void read(const FileNode& fn)
+        {
+            extended = (int)fn["extended"] != 0;
+            upright = (int)fn["upright"] != 0;
+            threshold = (float)fn["threshold"];
+            octaves = (int)fn["octaves"];
+            sublevels = (int)fn["sublevels"];
+            diffusivity = (int)fn["diffusivity"];
+        }
+
         bool extended;
         bool upright;
         float threshold;

@@ -145,7 +145,7 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const Mat &img)
  */
 void KAZEFeatures::Compute_KContrast(const Mat &img, const float &kpercentile)
 {
-        options_.kcontrast = compute_k_percentile(img, kpercentile, options_.sderivatives, options_.kcontrast_bins, 0, 0);
+    options_.kcontrast = compute_k_percentile(img, kpercentile, options_.sderivatives, options_.kcontrast_bins, 0, 0);
 }
 
 /* ************************************************************************* */
