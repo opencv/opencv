@@ -23,7 +23,7 @@ public:
     extractor_ = cv::ORB::create();
 
     // BruteFroce matcher with Norm Hamming is the default matcher
-    matcher_ = cv::makePtr<cv::BFMatcher>(cv::NORM_HAMMING, false);
+    matcher_ = cv::makePtr<cv::BFMatcher>((int)cv::NORM_HAMMING, false);
 
   }
   virtual ~RobustMatcher();
