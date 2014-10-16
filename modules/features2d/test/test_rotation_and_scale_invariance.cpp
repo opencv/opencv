@@ -595,7 +595,7 @@ protected:
 
 TEST(Features2d_RotationInvariance_Detector_BRISK, regression)
 {
-    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.BRISK"),
+    DetectorRotationInvarianceTest test(BRISK::create(),
                                         0.32f,
                                         0.76f);
     test.safe_run();
@@ -603,7 +603,7 @@ TEST(Features2d_RotationInvariance_Detector_BRISK, regression)
 
 TEST(Features2d_RotationInvariance_Detector_ORB, regression)
 {
-    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"),
+    DetectorRotationInvarianceTest test(ORB::create(),
                                         0.47f,
                                         0.76f);
     test.safe_run();

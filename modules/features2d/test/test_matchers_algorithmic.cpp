@@ -533,13 +533,13 @@ void CV_DescriptorMatcherTest::run( int )
 TEST( Features2d_DescriptorMatcher_BruteForce, regression )
 {
     CV_DescriptorMatcherTest test( "descriptor-matcher-brute-force",
-                                  DescriptorMatcher::create("BFMatcher"), 0.01f );
+                                  DescriptorMatcher::create("BruteForce"), 0.01f );
     test.safe_run();
 }
 
 TEST( Features2d_DescriptorMatcher_FlannBased, regression )
 {
     CV_DescriptorMatcherTest test( "descriptor-matcher-flann-based",
-                                  DescriptorMatcher::create("FlannBasedMatcher"), 0.04f );
+                                  DescriptorMatcher::create("FlannBased"), 0.04f );
     test.safe_run();
 }

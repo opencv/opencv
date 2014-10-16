@@ -213,9 +213,10 @@ CV_EXPORTS void FAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
 class CV_EXPORTS_W FastFeatureDetector : public Feature2D
 {
 public:
-    enum Type
+    enum
     {
-        TYPE_5_8 = 0, TYPE_7_12 = 1, TYPE_9_16 = 2
+        TYPE_5_8 = 0, TYPE_7_12 = 1, TYPE_9_16 = 2,
+        THRESHOLD = 10000, NONMAX_SUPPRESSION=10001, FAST_N=10002,
     };
 
     CV_WRAP static Ptr<FastFeatureDetector> create( int threshold=10,
