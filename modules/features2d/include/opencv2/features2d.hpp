@@ -197,6 +197,10 @@ public:
 
     CV_WRAP virtual int detectAndLabel( InputArray image, OutputArray label,
                                         OutputArray stats=noArray() ) = 0;
+
+    CV_WRAP virtual void detectAndStore( InputArray image,
+                                         std::vector<std::vector<Point> >& msers,
+                                         OutputArray stats=noArray() ) = 0;
 };
 
 //! detects corners using FAST algorithm by E. Rosten

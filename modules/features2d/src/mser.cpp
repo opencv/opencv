@@ -301,6 +301,9 @@ public:
     };
 
     int detectAndLabel( InputArray _src, OutputArray _labels, OutputArray _bboxes );
+    void detectAndStore( InputArray image,
+                         std::vector<std::vector<Point> >& msers,
+                         OutputArray stats );
     void detect( InputArray _src, vector<KeyPoint>& keypoints, InputArray _mask );
 
     void preprocess1( const Mat& img, int* level_size )
@@ -953,6 +956,35 @@ int MSER_Impl::detectAndLabel( InputArray _src, OutputArray _labels, OutputArray
     if( _bboxes.needed() )
         Mat(bboxvec).copyTo(_bboxes);
     return (int)bboxvec.size();
+}
+
+void MSER_Impl::detectAndStore( InputArray image,
+                                std::vector<std::vector<Point> >& msers,
+                                OutputArray stats )
+{
+    vector<Rect> bboxvec;
+    Mat labels;
+    int i, x, y, nregs = detectAndLabel(image, labels, bboxvec);
+
+    msers.resize(nregs);
+    for( i = 0; i < nregs; i++ )
+    {
+        Rect r = bboxvec[i];
+        vector<Point>& msers_i = msers[i];
+        msers_i.clear();
+        for( y = r.y; y < r.y + r.height; y++ )
+        {
+            const int* lptr = labels.ptr<int>(y);
+            for( x = r.x; x < r.x + r.width; x++ )
+            {
+                if( lptr[x] == i+1 )
+                    msers_i.push_back(Point(x, y));
+            }
+        }
+    }
+
+    if( stats.needed() )
+        Mat(bboxvec).copyTo(stats);
 }
 
 void MSER_Impl::detect( InputArray _image, vector<KeyPoint>& keypoints, InputArray _mask )
