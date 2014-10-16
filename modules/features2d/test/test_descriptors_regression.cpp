@@ -106,8 +106,6 @@ public:
 
     ~CV_DescriptorExtractorTest()
     {
-        if(!detector.empty())
-            detector.release();
     }
 protected:
     virtual void createDescriptorExtractor() {}
@@ -333,7 +331,7 @@ TEST( Features2d_DescriptorExtractor_KAZE, regression )
 {
     CV_DescriptorExtractorTest< L2<float> > test( "descriptor-kaze",  0.03f,
                                                  KAZE::create(),
-                                                 L2<float>() );
+                                                 L2<float>(), KAZE::create() );
     test.safe_run();
 }
 

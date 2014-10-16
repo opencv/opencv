@@ -874,6 +874,9 @@ public:
     virtual ~Algorithm();
     String name() const;
 
+    virtual void set(int, double);
+    virtual double get(int) const;
+
     template<typename _Tp> typename ParamType<_Tp>::member_type get(const String& name) const;
     template<typename _Tp> typename ParamType<_Tp>::member_type get(const char* name) const;
 

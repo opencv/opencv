@@ -800,9 +800,12 @@ extractMSER_8uC3( const Mat& src, Mat& labels,
     double emean = 0;
     Mat dx( src.rows, src.cols-1, CV_32FC1 );
     Mat dy( src.rows, src.cols, CV_32FC1 );
+
     Ne = preprocessMSER_8UC3( map, edge, emean, src, dx, dy, Ne, params.edgeBlurSize );
     emean = emean / (double)Ne;
+
     std::sort(edge, edge + Ne, LessThanEdge());
+
     MSCREdge* edge_ub = edge+Ne;
     MSCREdge* edgeptr = edge;
     TempMSCR* mscrptr = mscr;

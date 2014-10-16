@@ -383,6 +383,30 @@ public:
         KeyPointsFilter::runByPixelsMask( keypoints, mask );
     }
 
+    void set(int prop, double value)
+    {
+        if(prop == THRESHOLD)
+            threshold = cvRound(value);
+        else if(prop == NONMAX_SUPPRESSION)
+            nonmaxSuppression = value != 0;
+        else if(prop == FAST_N)
+            type = cvRound(value);
+        else
+            CV_Error(Error::StsBadArg, "");
+    }
+
+    double get(int prop) const
+    {
+        if(prop == THRESHOLD)
+            return threshold;
+        if(prop == NONMAX_SUPPRESSION)
+            return nonmaxSuppression;
+        if(prop == FAST_N)
+            return type;
+        CV_Error(Error::StsBadArg, "");
+        return 0;
+    }
+
     int threshold;
     bool nonmaxSuppression;
     int type;
