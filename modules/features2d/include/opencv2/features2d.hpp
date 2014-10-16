@@ -195,12 +195,9 @@ public:
           int _max_evolution=200, double _area_threshold=1.01,
           double _min_margin=0.003, int _edge_blur_size=5 );
 
-    CV_WRAP virtual int detectAndLabel( InputArray image, OutputArray label,
-                                        OutputArray stats=noArray() ) = 0;
-
-    CV_WRAP virtual void detectAndStore( InputArray image,
-                                         std::vector<std::vector<Point> >& msers,
-                                         OutputArray stats=noArray() ) = 0;
+    CV_WRAP virtual void detectRegions( InputArray image,
+                                        std::vector<std::vector<Point> >& msers,
+                                        std::vector<Rect>& bboxes ) = 0;
 };
 
 //! detects corners using FAST algorithm by E. Rosten
