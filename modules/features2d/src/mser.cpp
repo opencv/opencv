@@ -53,23 +53,22 @@ class MSER_Impl : public MSER
 public:
     struct Params
     {
-        explicit Params( int _delta=5, double _maxVariation=0.25,
-                        int _minArea=60, int _maxArea=14400,
-                        double _minDiversity=.2, int _maxEvolution=200,
-                        double _areaThreshold=1.01,
-                        double _minMargin=0.003, int _edgeBlurSize=5 )
+        Params( int _delta=5, int _min_area=60, int _max_area=14400,
+                   double _max_variation=0.25, double _min_diversity=.2,
+                   int _max_evolution=200, double _area_threshold=1.01,
+                   double _min_margin=0.003, int _edge_blur_size=5 )
         {
             delta = _delta;
-            minArea = _minArea;
-            maxArea = _maxArea;
-            maxVariation = _maxVariation;
-            minDiversity = _minDiversity;
-            pass2Only = false;
-            maxEvolution = _maxEvolution;
-            areaThreshold = _areaThreshold;
-            minMargin = _minMargin;
-            edgeBlurSize = _edgeBlurSize;
+            minArea = _min_area;
+            maxArea = _max_area;
+            maxVariation = _max_variation;
+            minDiversity = _min_diversity;
+            maxEvolution = _max_evolution;
+            areaThreshold = _area_threshold;
+            minMargin = _min_margin;
+            edgeBlurSize = _edge_blur_size;
         }
+
         int delta;
         int minArea;
         int maxArea;
@@ -269,11 +268,10 @@ public:
         }
 
         // convert the point set to CvSeq
-        Rect label( Mat& labels, int lval, const Pixel* pix0, int step ) const
+        Rect capture( const Pixel* pix0, int step, vector<Point>& region ) const
         {
-            int* lptr = labels.ptr<int>();
-            int lstep = labels.step/sizeof(lptr[0]);
             int xmin = INT_MAX, ymin = INT_MAX, xmax = INT_MIN, ymax = INT_MIN;
+            region.clear();
 
             for( PPixel pix = head; pix != 0; pix = pix0[pix].getNext() )
             {
@@ -285,7 +283,7 @@ public:
                 ymin = std::min(ymin, y);
                 ymax = std::max(ymax, y);
 
-                lptr[lstep*y + x] = lval;
+                region.push_back(Point(x, y));
             }
 
             return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
@@ -300,10 +298,9 @@ public:
         bool dvar; // the derivative of last var
     };
 
-    int detectAndLabel( InputArray _src, OutputArray _labels, OutputArray _bboxes );
-    void detectAndStore( InputArray image,
-                         std::vector<std::vector<Point> >& msers,
-                         OutputArray stats );
+    void detectRegions( InputArray image,
+                        std::vector<std::vector<Point> >& msers,
+                        std::vector<Rect>& bboxes );
     void detect( InputArray _src, vector<KeyPoint>& keypoints, InputArray _mask );
 
     void preprocess1( const Mat& img, int* level_size )
@@ -359,7 +356,7 @@ public:
         }
     }
 
-    void pass( const Mat& img, Mat& labels, int& lval, vector<Rect>& bboxvec,
+    void pass( const Mat& img, vector<vector<Point> >& msers, vector<Rect>& bboxvec,
               Size size, const int* level_size, int mask )
     {
         CompHistory* histptr = &histbuf[0];
@@ -452,7 +449,10 @@ public:
                     // check the stablity and push a new history, increase the grey level
                     if( comptr->isStable(params) )
                     {
-                        Rect box = comptr->label( labels, lval++, ptr0, step );
+                        msers.push_back(vector<Point>());
+                        vector<Point>& mser = msers.back();
+
+                        Rect box = comptr->capture( ptr0, step, mser );
                         bboxvec.push_back(box);
                     }
                     comptr->growHistory( histptr++ );
@@ -472,7 +472,10 @@ public:
                             // check the stablity here otherwise it wouldn't be an ER
                             if( comptr->isStable(params) )
                             {
-                                Rect box = comptr->label( labels, lval++, ptr0, step );
+                                msers.push_back(vector<Point>());
+                                vector<Point>& mser = msers.back();
+
+                                Rect box = comptr->capture( ptr0, step, mser );
                                 bboxvec.push_back(box);
                             }
                             comptr->growHistory( histptr++ );
@@ -607,7 +610,6 @@ static const float chitab3[]=
     3.98692f,  4.2776f,  4.77167f,  133.333f
 };
 
-
 struct MSCRNode;
 
 struct TempMSCR
@@ -620,56 +622,6 @@ struct TempMSCR
 
 struct MSCRNode
 {
-    // the stable mscr should be:
-    // bigger than minArea and smaller than maxArea
-    // differ from its ancestor more than minDiversity
-    bool isStable( const MSER_Impl::Params& params ) const
-    {
-        if( size <= params.minArea || size >= params.maxArea )
-            return 0;
-        if( gmsr == NULL )
-            return 1;
-        double div = (double)(size - gmsr->size)/(double)size;
-        return div > params.minDiversity;
-    }
-
-    void init( int _index )
-    {
-        gmsr = tmsr = NULL;
-        reinit = 0xffff;
-        rank = 0;
-        sizei = size = 1;
-        prev = next = shortcut = this;
-        index = _index;
-    }
-
-    // to find the root of one region
-    MSCRNode* findRoot()
-    {
-        MSCRNode* x = this;
-        MSCRNode* _prev = x;
-        MSCRNode* _next;
-        for(;;)
-        {
-            _next = x->shortcut;
-            x->shortcut = _prev;
-            if( _next == x )
-                break;
-            _prev = x;
-            x = _next;
-        }
-        MSCRNode* root = x;
-        for(;;)
-        {
-            _prev = x->shortcut;
-            x->shortcut = root;
-            if( _prev == x )
-                break;
-            x = _prev;
-        }
-        return root;
-    }
-
     MSCRNode* shortcut;
     // to make the finding of root less painful
     MSCRNode* prev;
@@ -690,85 +642,175 @@ struct MSCRNode
 
 struct MSCREdge
 {
-    double init(float _chi, MSCRNode* _left, MSCRNode* _right)
-    {
-        chi = _chi;
-        left = _left;
-        right = _right;
-        return chi;
-    }
-    float chi;
+    double chi;
     MSCRNode* left;
     MSCRNode* right;
 };
 
-static float ChiSquaredDistance( const uchar* x, const uchar* y )
+static double ChiSquaredDistance( const uchar* x, const uchar* y )
 {
-    return (float)((x[0]-y[0])*(x[0]-y[0]))/(float)(x[0]+y[0]+FLT_EPSILON)+
-           (float)((x[1]-y[1])*(x[1]-y[1]))/(float)(x[1]+y[1]+FLT_EPSILON)+
-           (float)((x[2]-y[2])*(x[2]-y[2]))/(float)(x[2]+y[2]+FLT_EPSILON);
+    return (double)((x[0]-y[0])*(x[0]-y[0]))/(double)(x[0]+y[0]+1e-10)+
+    (double)((x[1]-y[1])*(x[1]-y[1]))/(double)(x[1]+y[1]+1e-10)+
+    (double)((x[2]-y[2])*(x[2]-y[2]))/(double)(x[2]+y[2]+1e-10);
 }
 
+static void initMSCRNode( MSCRNode* node )
+{
+    node->gmsr = node->tmsr = NULL;
+    node->reinit = 0xffff;
+    node->rank = 0;
+    node->sizei = node->size = 1;
+    node->prev = node->next = node->shortcut = node;
+}
 
 // the preprocess to get the edge list with proper gaussian blur
-static int preprocessMSER_8UC3( MSCRNode* node, MSCREdge* edge,
-                                double& total, const Mat& src,
-                                Mat& dx, Mat& dy, int Ne, int edgeBlurSize )
+static int preprocessMSER_8uC3( MSCRNode* node,
+                               MSCREdge* edge,
+                               double* total,
+                               const Mat& src,
+                               Mat& dx,
+                               Mat& dy,
+                               int Ne,
+                               int edgeBlurSize )
 {
-    int nch = src.channels();
-    int i, j, nrows = src.rows, ncols = src.cols;
-    float* dxptr = 0;
-    float* dyptr = 0;
-    for( i = 0; i < nrows; i++ )
+    int srccpt = src.step-src.cols*3;
+    const uchar* srcptr = src.ptr();
+    const uchar* lastptr = srcptr+3;
+    double* dxptr = dx.ptr<double>();
+    for ( int i = 0; i < src.rows; i++ )
     {
-        const uchar* srcptr = src.ptr(i);
-        const uchar* nextsrc = src.ptr(std::min(i+1, nrows-1));
-        dxptr = dx.ptr<float>(i);
-        dyptr = dy.ptr<float>(i);
-
-        for( j = 0; j < ncols-1; j++ )
+        for ( int j = 0; j < src.cols-1; j++ )
         {
-            dxptr[j] = ChiSquaredDistance( srcptr + j*nch, srcptr + (j+1)*nch );
-            dyptr[j] = ChiSquaredDistance( srcptr + j*nch, nextsrc + j*nch );
+            *dxptr = ChiSquaredDistance( srcptr, lastptr );
+            dxptr++;
+            srcptr += 3;
+            lastptr += 3;
         }
-        dyptr[ncols-1] = ChiSquaredDistance( srcptr + (ncols-1)*nch, nextsrc + (ncols-1)*nch );
+        srcptr += srccpt+3;
+        lastptr += srccpt+3;
     }
-
-    // get dx and dy and blur it
-    if( edgeBlurSize >= 1 )
+    srcptr = src.ptr();
+    lastptr = srcptr+src.step;
+    double* dyptr = dy.ptr<double>();
+    for ( int i = 0; i < src.rows-1; i++ )
     {
-        GaussianBlur(dx, dx, Size(edgeBlurSize, edgeBlurSize), 0);
-        GaussianBlur(dy, dy, Size(edgeBlurSize, edgeBlurSize), 0);
+        for ( int j = 0; j < src.cols; j++ )
+        {
+            *dyptr = ChiSquaredDistance( srcptr, lastptr );
+            dyptr++;
+            srcptr += 3;
+            lastptr += 3;
+        }
+        srcptr += srccpt;
+        lastptr += srccpt;
     }
-    dxptr = dx.ptr<float>();
-    dyptr = dy.ptr<float>();
+    // get dx and dy and blur it
+    if ( edgeBlurSize >= 1 )
+    {
+        GaussianBlur( dx, dx, Size(edgeBlurSize, edgeBlurSize), 0 );
+        GaussianBlur( dy, dy, Size(edgeBlurSize, edgeBlurSize), 0 );
+    }
+    dxptr = dx.ptr<double>();
+    dyptr = dy.ptr<double>();
     // assian dx, dy to proper edge list and initialize mscr node
     // the nasty code here intended to avoid extra loops
     MSCRNode* nodeptr = node;
-    for( j = 0; j < ncols-1; j++ )
+    initMSCRNode( nodeptr );
+    nodeptr->index = 0;
+    *total += edge->chi = *dxptr;
+    dxptr++;
+    edge->left = nodeptr;
+    edge->right = nodeptr+1;
+    edge++;
+    nodeptr++;
+    for ( int i = 1; i < src.cols-1; i++ )
     {
-        nodeptr[j].init(j);
-        total += edge[j].init(dxptr[j], nodeptr+j, nodeptr+j+1);
+        initMSCRNode( nodeptr );
+        nodeptr->index = i;
+        *total += edge->chi = *dxptr;
+        dxptr++;
+        edge->left = nodeptr;
+        edge->right = nodeptr+1;
+        edge++;
+        nodeptr++;
     }
-    dxptr += ncols - 1;
-    edge += ncols - 1;
-    nodeptr[ncols-1].init(ncols - 1);
-    nodeptr += ncols;
-    for( i = 1; i < nrows; i++ )
+    initMSCRNode( nodeptr );
+    nodeptr->index = src.cols-1;
+    nodeptr++;
+    for ( int i = 1; i < src.rows-1; i++ )
     {
-        for( j = 0; j < ncols-1; j++ )
+        initMSCRNode( nodeptr );
+        nodeptr->index = i<<16;
+        *total += edge->chi = *dyptr;
+        dyptr++;
+        edge->left = nodeptr-src.cols;
+        edge->right = nodeptr;
+        edge++;
+        *total += edge->chi = *dxptr;
+        dxptr++;
+        edge->left = nodeptr;
+        edge->right = nodeptr+1;
+        edge++;
+        nodeptr++;
+        for ( int j = 1; j < src.cols-1; j++ )
         {
-            nodeptr[j].init( (i<<16)|j );
-            total += edge[j*2].init(dyptr[j], nodeptr + j - ncols, nodeptr + j);
-            total += edge[j*2+1].init(dxptr[j], nodeptr + j, nodeptr + j + 1);
+            initMSCRNode( nodeptr );
+            nodeptr->index = (i<<16)|j;
+            *total += edge->chi = *dyptr;
+            dyptr++;
+            edge->left = nodeptr-src.cols;
+            edge->right = nodeptr;
+            edge++;
+            *total += edge->chi = *dxptr;
+            dxptr++;
+            edge->left = nodeptr;
+            edge->right = nodeptr+1;
+            edge++;
+            nodeptr++;
         }
-        nodeptr[ncols-1].init((i<<16)|(ncols - 1));
-        total += edge[(ncols-1)*2].init(dyptr[ncols-1], nodeptr - 1, nodeptr + ncols-1);
-        dxptr += ncols-1;
-        dyptr += ncols;
-        edge += 2*ncols - 1;
-        nodeptr += ncols;
+        initMSCRNode( nodeptr );
+        nodeptr->index = (i<<16)|(src.cols-1);
+        *total += edge->chi = *dyptr;
+        dyptr++;
+        edge->left = nodeptr-src.cols;
+        edge->right = nodeptr;
+        edge++;
+        nodeptr++;
     }
+    initMSCRNode( nodeptr );
+    nodeptr->index = (src.rows-1)<<16;
+    *total += edge->chi = *dxptr;
+    dxptr++;
+    edge->left = nodeptr;
+    edge->right = nodeptr+1;
+    edge++;
+    *total += edge->chi = *dyptr;
+    dyptr++;
+    edge->left = nodeptr-src.cols;
+    edge->right = nodeptr;
+    edge++;
+    nodeptr++;
+    for ( int i = 1; i < src.cols-1; i++ )
+    {
+        initMSCRNode( nodeptr );
+        nodeptr->index = ((src.rows-1)<<16)|i;
+        *total += edge->chi = *dxptr;
+        dxptr++;
+        edge->left = nodeptr;
+        edge->right = nodeptr+1;
+        edge++;
+        *total += edge->chi = *dyptr;
+        dyptr++;
+        edge->left = nodeptr-src.cols;
+        edge->right = nodeptr;
+        edge++;
+        nodeptr++;
+    }
+    initMSCRNode( nodeptr );
+    nodeptr->index = ((src.rows-1)<<16)|(src.cols-1);
+    *total += edge->chi = *dyptr;
+    edge->left = nodeptr-src.cols;
+    edge->right = nodeptr;
 
     return Ne;
 }
@@ -779,37 +821,63 @@ public:
     bool operator()(const MSCREdge& a, const MSCREdge& b) const { return a.chi < b.chi; }
 };
 
+// to find the root of one region
+static MSCRNode* findMSCR( MSCRNode* x )
+{
+    MSCRNode* prev = x;
+    MSCRNode* next;
+    for ( ; ; )
+    {
+        next = x->shortcut;
+        x->shortcut = prev;
+        if ( next == x ) break;
+        prev= x;
+        x = next;
+    }
+    MSCRNode* root = x;
+    for ( ; ; )
+    {
+        prev = x->shortcut;
+        x->shortcut = root;
+        if ( prev == x ) break;
+        x = prev;
+    }
+    return root;
+}
+
+// the stable mscr should be:
+// bigger than minArea and smaller than maxArea
+// differ from its ancestor more than minDiversity
+static bool MSCRStableCheck( MSCRNode* x, const MSER_Impl::Params& params )
+{
+    if ( x->size <= params.minArea || x->size >= params.maxArea )
+        return false;
+    if ( x->gmsr == NULL )
+        return true;
+    double div = (double)(x->size-x->gmsr->size)/(double)x->size;
+    return div > params.minDiversity;
+}
 
 static void
-extractMSER_8uC3( const Mat& src, Mat& labels,
+extractMSER_8uC3( const Mat& src,
+                  vector<vector<Point> >& msers,
                   vector<Rect>& bboxvec,
                   const MSER_Impl::Params& params )
 {
-    int npixels = src.cols*src.rows;
-    int currlabel = 0;
-    int* lptr = labels.ptr<int>();
-    int lstep = (int)(labels.step/sizeof(int));
-
-    vector<MSCRNode> mapvec(npixels);
-    MSCRNode* map = &mapvec[0];
-    int Ne = npixels*2 - src.cols - src.rows;
-    vector<MSCREdge> edgevec(Ne+1);
-    MSCREdge* edge = &edgevec[0];
-    vector<TempMSCR> mscrvec(npixels);
-    TempMSCR* mscr = &mscrvec[0];
+    bboxvec.clear();
+    MSCRNode* map = (MSCRNode*)cvAlloc( src.cols*src.rows*sizeof(map[0]) );
+    int Ne = src.cols*src.rows*2-src.cols-src.rows;
+    MSCREdge* edge = (MSCREdge*)cvAlloc( Ne*sizeof(edge[0]) );
+    TempMSCR* mscr = (TempMSCR*)cvAlloc( src.cols*src.rows*sizeof(mscr[0]) );
     double emean = 0;
-    Mat dx( src.rows, src.cols-1, CV_32FC1 );
-    Mat dy( src.rows, src.cols, CV_32FC1 );
-
-    Ne = preprocessMSER_8UC3( map, edge, emean, src, dx, dy, Ne, params.edgeBlurSize );
+    Mat dx( src.rows, src.cols-1, CV_64FC1 );
+    Mat dy( src.rows-1, src.cols, CV_64FC1 );
+    Ne = preprocessMSER_8uC3( map, edge, &emean, src, dx, dy, Ne, params.edgeBlurSize );
     emean = emean / (double)Ne;
-
     std::sort(edge, edge + Ne, LessThanEdge());
-
     MSCREdge* edge_ub = edge+Ne;
     MSCREdge* edgeptr = edge;
     TempMSCR* mscrptr = mscr;
-
     // the evolution process
     for ( int i = 0; i < params.maxEvolution; i++ )
     {
@@ -818,24 +886,23 @@ extractMSER_8uC3( const Mat& src, Mat& labels,
         double reminder = k-ti;
         double thres = emean*(chitab3[ti]*(1-reminder)+chitab3[ti+1]*reminder);
         // to process all the edges in the list that chi < thres
-        while( edgeptr < edge_ub && edgeptr->chi < thres )
+        while ( edgeptr < edge_ub && edgeptr->chi < thres )
         {
-            MSCRNode* lr = edgeptr->left->findRoot();
-            MSCRNode* rr = edgeptr->right->findRoot();
+            MSCRNode* lr = findMSCR( edgeptr->left );
+            MSCRNode* rr = findMSCR( edgeptr->right );
             // get the region root (who is responsible)
             if ( lr != rr )
             {
-                MSCRNode* tmp;
                 // rank idea take from: N-tree Disjoint-Set Forests for Maximally Stable Extremal Regions
                 if ( rr->rank > lr->rank )
                 {
+                    MSCRNode* tmp;
                     CV_SWAP( lr, rr, tmp );
-                }
-                else if ( lr->rank == rr->rank )
-                {
+                } else if ( lr->rank == rr->rank ) {
                     // at the same rank, we will compare the size
-                    if( lr->size > rr->size )
+                    if ( lr->size > rr->size )
                     {
+                        MSCRNode* tmp;
                         CV_SWAP( lr, rr, tmp );
                     }
                     lr->rank++;
@@ -867,7 +934,7 @@ extractMSER_8uC3( const Mat& src, Mat& labels,
                     if ( s < lr->s )
                     {
                         // skip the first one and check stablity
-                        if ( i > lr->reinit+1 && lr->isStable( params ) )
+                        if ( i > lr->reinit+1 && MSCRStableCheck( lr, params ) )
                         {
                             if ( lr->tmsr == NULL )
                             {
@@ -888,55 +955,51 @@ extractMSER_8uC3( const Mat& src, Mat& labels,
         if ( edgeptr >= edge_ub )
             break;
     }
-
-    for( TempMSCR* ptr = mscr; ptr < mscrptr; ptr++ )
-    {
+    for ( TempMSCR* ptr = mscr; ptr < mscrptr; ptr++ )
         // to prune area with margin less than minMargin
-        if( ptr->m > params.minMargin )
+        if ( ptr->m > params.minMargin )
         {
-            int xmin = INT_MAX, ymin = INT_MAX, xmax = INT_MIN, ymax = INT_MIN;
-            currlabel++;
             MSCRNode* lpt = ptr->head;
-            for( int i = 0; i < ptr->size; i++ )
+            int xmin = INT_MAX, ymin = INT_MAX, xmax = INT_MIN, ymax = INT_MIN;
+            msers.push_back(vector<Point>());
+            vector<Point>& mser = msers.back();
+
+            for ( int i = 0; i < ptr->size; i++ )
             {
-                int x = (lpt->index)&0xffff;
-                int y = (lpt->index)>>16;
+                Point pt;
+                pt.x = (lpt->index)&0xffff;
+                pt.y = (lpt->index)>>16;
+                xmin = std::min(xmin, pt.x);
+                xmax = std::max(xmax, pt.x);
+                ymin = std::min(ymin, pt.y);
+                ymax = std::max(ymax, pt.y);
+
                 lpt = lpt->next;
-
-                xmin = std::min(xmin, x);
-                xmax = std::max(xmax, x);
-                ymin = std::min(ymin, y);
-                ymax = std::max(ymax, y);
-
-                lptr[lstep*y + x] = currlabel;
+                mser.push_back(pt);
             }
             bboxvec.push_back(Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1));
         }
-    }
+    cvFree( &mscr );
+    cvFree( &edge );
+    cvFree( &map );
 }
 
-int MSER_Impl::detectAndLabel( InputArray _src, OutputArray _labels, OutputArray _bboxes )
+void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, vector<Rect>& bboxes )
 {
     Mat src = _src.getMat();
     size_t npix = src.total();
-    vector<Rect> bboxvec;
+
+    msers.clear();
+    bboxes.clear();
 
     if( npix == 0 )
-    {
-        _labels.release();
-        return 0;
-    }
+        return;
 
     Size size = src.size();
-    _labels.create( size, CV_32S );
-    Mat labels = _labels.getMat();
-    labels.setTo(Scalar::all(0));
 
     if( src.type() == CV_8U )
     {
         int level_size[256];
-        int lval = 1;
-
         if( !src.isContinuous() )
         {
             src.copyTo(tempsrc);
@@ -946,77 +1009,33 @@ int MSER_Impl::detectAndLabel( InputArray _src, OutputArray _labels, OutputArray
         // darker to brighter (MSER+)
         preprocess1( src, level_size );
         if( !params.pass2Only )
-            pass( src, labels, lval, bboxvec, size, level_size, 0 );
+            pass( src, msers, bboxes, size, level_size, 0 );
         // brighter to darker (MSER-)
         preprocess2( src, level_size );
-        pass( src, labels, lval, bboxvec, size, level_size, 255 );
+        pass( src, msers, bboxes, size, level_size, 255 );
     }
     else
     {
         CV_Assert( src.type() == CV_8UC3 || src.type() == CV_8UC4 );
-        extractMSER_8uC3( src, labels, bboxvec, params );
+        extractMSER_8uC3( src, msers, bboxes, params );
     }
-    if( _bboxes.needed() )
-        Mat(bboxvec).copyTo(_bboxes);
-    return (int)bboxvec.size();
-}
-
-void MSER_Impl::detectAndStore( InputArray image,
-                                std::vector<std::vector<Point> >& msers,
-                                OutputArray stats )
-{
-    vector<Rect> bboxvec;
-    Mat labels;
-    int i, x, y, nregs = detectAndLabel(image, labels, bboxvec);
-
-    msers.resize(nregs);
-    for( i = 0; i < nregs; i++ )
-    {
-        Rect r = bboxvec[i];
-        vector<Point>& msers_i = msers[i];
-        msers_i.clear();
-        for( y = r.y; y < r.y + r.height; y++ )
-        {
-            const int* lptr = labels.ptr<int>(y);
-            for( x = r.x; x < r.x + r.width; x++ )
-            {
-                if( lptr[x] == i+1 )
-                    msers_i.push_back(Point(x, y));
-            }
-        }
-    }
-
-    if( stats.needed() )
-        Mat(bboxvec).copyTo(stats);
 }
 
 void MSER_Impl::detect( InputArray _image, vector<KeyPoint>& keypoints, InputArray _mask )
 {
     vector<Rect> bboxes;
-    vector<Point> reg;
-    Mat labels, mask = _mask.getMat();
+    vector<vector<Point> > msers;
+    Mat mask = _mask.getMat();
 
-    int i, x, y, ncomps = detectAndLabel(_image, labels, bboxes);
-    CV_Assert( ncomps == (int)bboxes.size() );
+    detectRegions(_image, msers, bboxes);
+    int i, ncomps = (int)msers.size();
 
     keypoints.clear();
     for( i = 0; i < ncomps; i++ )
     {
         Rect r = bboxes[i];
-        reg.reserve(r.area());
-        reg.clear();
-
-        for( y = r.y; y < r.y + r.height; y++ )
-        {
-            const int* lptr = labels.ptr<int>(y);
-            for( x = r.x; x < r.x + r.width; x++ )
-            {
-                if( lptr[x] == i+1 )
-                    reg.push_back(Point(x, y));
-            }
-        }
         // TODO check transformation from MSER region to KeyPoint
-        RotatedRect rect = fitEllipse(Mat(reg));
+        RotatedRect rect = fitEllipse(Mat(msers[i]));
         float diam = std::sqrt(rect.size.height*rect.size.width);
 
         if( diam > std::numeric_limits<float>::epsilon() && r.contains(rect.center) &&
