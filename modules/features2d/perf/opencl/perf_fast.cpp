@@ -32,11 +32,8 @@ OCL_PERF_TEST_P(FASTFixture, FastDetect, testing::Combine(
     mframe.copyTo(frame);
     declare.in(frame);
 
-    Ptr<FeatureDetector> fd = Algorithm::create<FeatureDetector>("Feature2D.FAST");
+    Ptr<FeatureDetector> fd = FastFeatureDetector::create(20, true, type);
     ASSERT_FALSE( fd.empty() );
-    fd->set("threshold", 20);
-    fd->set("nonmaxSuppression", true);
-    fd->set("type", type);
     vector<KeyPoint> points;
 
     OCL_TEST_CYCLE() fd->detect(frame, points);

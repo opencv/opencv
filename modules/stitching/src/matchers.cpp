@@ -321,7 +321,7 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
 {
     if (num_octaves_descr == num_octaves && num_layers_descr == num_layers)
     {
-        surf = Algorithm::create<Feature2D>("Feature2D.SURF");
+        surf = xfeatures2d::SURF::create();
         if( !surf )
             CV_Error( Error::StsNotImplemented, "OpenCV was built without SURF support" );
         surf->set("hessianThreshold", hess_thresh);
@@ -330,8 +330,8 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
     }
     else
     {
-        detector_ = Algorithm::create<FeatureDetector>("Feature2D.SURF");
-        extractor_ = Algorithm::create<DescriptorExtractor>("Feature2D.SURF");
+        detector_ = xfeatures2d::SURF::create();
+        extractor_ = xfeatures2d::SURF::create();
 
         if( !detector_ || !extractor_ )
             CV_Error( Error::StsNotImplemented, "OpenCV was built without SURF support" );
