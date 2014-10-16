@@ -673,7 +673,7 @@ static int preprocessMSER_8uC3( MSCRNode* node,
                                int Ne,
                                int edgeBlurSize )
 {
-    int srccpt = src.step-src.cols*3;
+    int srccpt = (int)(src.step-src.cols*3);
     const uchar* srcptr = src.ptr();
     const uchar* lastptr = srcptr+3;
     double* dxptr = dx.ptr<double>();
