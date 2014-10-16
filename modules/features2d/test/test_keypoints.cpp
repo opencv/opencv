@@ -75,9 +75,6 @@ protected:
         }
 
         vector<KeyPoint> keypoints;
-        vector<vector<Point> > msers;
-        CvMat src = image;
-
         detector->detect(image, keypoints);
 
         if(keypoints.empty())
