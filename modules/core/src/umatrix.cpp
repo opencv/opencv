@@ -697,7 +697,10 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
 
             size_t globalsize[2] = { cols, rows };
             if (k.run(2, globalsize, NULL, false))
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return;
+            }
         }
     }
 #endif
@@ -753,7 +756,10 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
 
             size_t globalsize[2] = { dst.cols * cn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
             if (k.run(2, globalsize, NULL, false))
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return;
+            }
         }
     }
 #endif
@@ -802,7 +808,10 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
 
             size_t globalsize[] = { cols, (rows + rowsPerWI - 1) / rowsPerWI };
             if( setK.run(2, globalsize, NULL, false) )
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return *this;
+            }
         }
     }
 #endif

@@ -265,6 +265,95 @@ enum PERF_STRATEGY
 /*****************************************************************************************\
 *                           Base fixture for performance tests                            *
 \*****************************************************************************************/
+#ifdef CV_COLLECT_IMPL_DATA
+// Implementation collection processing class.
+// Accumulates and shapes implementation data.
+typedef struct ImplData
+{
+    bool ipp;
+    bool icv;
+    bool ipp_mt;
+    bool ocl;
+    bool plain;
+    std::vector<int> implCode;
+    std::vector<cv::String> funName;
+
+    ImplData()
+    {
+        Reset();
+    }
+
+    void Reset()
+    {
+        cv::setImpl(0);
+        ipp = icv = ocl = ipp_mt = false;
+        implCode.clear();
+        funName.clear();
+    }
+
+    void GetImpl()
+    {
+        flagsToVars(cv::getImpl(implCode, funName));
+    }
+
+    std::vector<cv::String> GetCallsForImpl(int impl)
+    {
+        std::vector<cv::String> out;
+
+        for(int i = 0; i < implCode.size(); i++)
+        {
+            if(impl == implCode[i])
+                out.push_back(funName[i]);
+        }
+        return out;
+    }
+
+    // Remove duplicate entries
+    void ShapeUp()
+    {
+        std::vector<int> savedCode;
+        std::vector<cv::String> savedName;
+
+        for(int i = 0; i < implCode.size(); i++)
+        {
+            bool match = false;
+            for(int j = 0; j < savedCode.size(); j++)
+            {
+                if(implCode[i] == savedCode[j] && !funName[i].compare(savedName[j]))
+                {
+                    match = true;
+                    break;
+                }
+            }
+            if(!match)
+            {
+                savedCode.push_back(implCode[i]);
+                savedName.push_back(funName[i]);
+            }
+        }
+
+        implCode = savedCode;
+        funName = savedName;
+    }
+
+    // convert flags register to more handy variables
+    void flagsToVars(int flags)
+    {
+#if defined(HAVE_IPP_ICV_ONLY)
+        ipp    = 0;
+        icv    = ((flags&CV_IMPL_IPP) > 0);
+#else
+        ipp    = ((flags&CV_IMPL_IPP) > 0);
+        icv    = 0;
+#endif
+        ipp_mt = ((flags&CV_IMPL_MT) > 0);
+        ocl    = ((flags&CV_IMPL_OCL) > 0);
+        plain  = (flags == 0);
+    }
+
+} ImplData;
+#endif
+
 class CV_EXPORTS TestBase: public ::testing::Test
 {
 public:
@@ -308,6 +397,10 @@ protected:
     performance_metrics& calcMetrics();
 
     void RunPerfTestBody();
+
+#ifdef CV_COLLECT_IMPL_DATA
+    ImplData implConf;
+#endif
 private:
     typedef std::vector<std::pair<int, cv::Size> > SizeVector;
     typedef std::vector<int64> TimeVector;

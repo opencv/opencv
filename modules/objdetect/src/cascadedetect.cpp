@@ -1213,6 +1213,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
     if( maxObjectSize.height == 0 || maxObjectSize.width == 0 )
         maxObjectSize = imgsz;
 
+#ifdef HAVE_OPENCL
     bool use_ocl = tryOpenCL && ocl::useOpenCL() &&
          featureEvaluator->getLocalSize().area() > 0 &&
          ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
@@ -1220,6 +1221,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
          !isOldFormatCascade() &&
          maskGenerator.empty() &&
          !outputRejectLevels;
+#endif
 
     /*if( use_ocl )
     {
@@ -1262,8 +1264,8 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
         return;
 
     // OpenCL code
-    if( use_ocl && ocl_detectMultiScaleNoGrouping( scales, candidates ))
-        return;
+    CV_OCL_RUN(use_ocl, ocl_detectMultiScaleNoGrouping( scales, candidates ))
+
     tryOpenCL = false;
 
     // CPU code

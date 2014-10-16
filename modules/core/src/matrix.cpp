@@ -3066,64 +3066,73 @@ void cv::transpose( InputArray _src, OutputArray _dst )
     }
 
 #if defined HAVE_IPP
-    typedef IppStatus (CV_STDCALL * ippiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
-    typedef IppStatus (CV_STDCALL * ippiTransposeI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize);
-    ippiTranspose ippFunc = 0;
-    ippiTransposeI ippFuncI = 0;
+    CV_IPP_CHECK()
+    {
+        typedef IppStatus (CV_STDCALL * ippiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
+        typedef IppStatus (CV_STDCALL * ippiTransposeI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize);
+        ippiTranspose ippFunc = 0;
+        ippiTransposeI ippFuncI = 0;
 
-    if (dst.data == src.data && dst.cols == dst.rows)
-    {
-        CV_SUPPRESS_DEPRECATED_START
-        ippFuncI =
-            type == CV_8UC1 ? (ippiTransposeI)ippiTranspose_8u_C1IR :
-            type == CV_8UC3 ? (ippiTransposeI)ippiTranspose_8u_C3IR :
-            type == CV_8UC4 ? (ippiTransposeI)ippiTranspose_8u_C4IR :
-            type == CV_16UC1 ? (ippiTransposeI)ippiTranspose_16u_C1IR :
-            type == CV_16UC3 ? (ippiTransposeI)ippiTranspose_16u_C3IR :
-            type == CV_16UC4 ? (ippiTransposeI)ippiTranspose_16u_C4IR :
-            type == CV_16SC1 ? (ippiTransposeI)ippiTranspose_16s_C1IR :
-            type == CV_16SC3 ? (ippiTransposeI)ippiTranspose_16s_C3IR :
-            type == CV_16SC4 ? (ippiTransposeI)ippiTranspose_16s_C4IR :
-            type == CV_32SC1 ? (ippiTransposeI)ippiTranspose_32s_C1IR :
-            type == CV_32SC3 ? (ippiTransposeI)ippiTranspose_32s_C3IR :
-            type == CV_32SC4 ? (ippiTransposeI)ippiTranspose_32s_C4IR :
-            type == CV_32FC1 ? (ippiTransposeI)ippiTranspose_32f_C1IR :
-            type == CV_32FC3 ? (ippiTransposeI)ippiTranspose_32f_C3IR :
-            type == CV_32FC4 ? (ippiTransposeI)ippiTranspose_32f_C4IR : 0;
-        CV_SUPPRESS_DEPRECATED_END
-    }
-    else
-    {
-        ippFunc =
-            type == CV_8UC1 ? (ippiTranspose)ippiTranspose_8u_C1R :
-            type == CV_8UC3 ? (ippiTranspose)ippiTranspose_8u_C3R :
-            type == CV_8UC4 ? (ippiTranspose)ippiTranspose_8u_C4R :
-            type == CV_16UC1 ? (ippiTranspose)ippiTranspose_16u_C1R :
-            type == CV_16UC3 ? (ippiTranspose)ippiTranspose_16u_C3R :
-            type == CV_16UC4 ? (ippiTranspose)ippiTranspose_16u_C4R :
-            type == CV_16SC1 ? (ippiTranspose)ippiTranspose_16s_C1R :
-            type == CV_16SC3 ? (ippiTranspose)ippiTranspose_16s_C3R :
-            type == CV_16SC4 ? (ippiTranspose)ippiTranspose_16s_C4R :
-            type == CV_32SC1 ? (ippiTranspose)ippiTranspose_32s_C1R :
-            type == CV_32SC3 ? (ippiTranspose)ippiTranspose_32s_C3R :
-            type == CV_32SC4 ? (ippiTranspose)ippiTranspose_32s_C4R :
-            type == CV_32FC1 ? (ippiTranspose)ippiTranspose_32f_C1R :
-            type == CV_32FC3 ? (ippiTranspose)ippiTranspose_32f_C3R :
-            type == CV_32FC4 ? (ippiTranspose)ippiTranspose_32f_C4R : 0;
-    }
+        if (dst.data == src.data && dst.cols == dst.rows)
+        {
+            CV_SUPPRESS_DEPRECATED_START
+            ippFuncI =
+                type == CV_8UC1 ? (ippiTransposeI)ippiTranspose_8u_C1IR :
+                type == CV_8UC3 ? (ippiTransposeI)ippiTranspose_8u_C3IR :
+                type == CV_8UC4 ? (ippiTransposeI)ippiTranspose_8u_C4IR :
+                type == CV_16UC1 ? (ippiTransposeI)ippiTranspose_16u_C1IR :
+                type == CV_16UC3 ? (ippiTransposeI)ippiTranspose_16u_C3IR :
+                type == CV_16UC4 ? (ippiTransposeI)ippiTranspose_16u_C4IR :
+                type == CV_16SC1 ? (ippiTransposeI)ippiTranspose_16s_C1IR :
+                type == CV_16SC3 ? (ippiTransposeI)ippiTranspose_16s_C3IR :
+                type == CV_16SC4 ? (ippiTransposeI)ippiTranspose_16s_C4IR :
+                type == CV_32SC1 ? (ippiTransposeI)ippiTranspose_32s_C1IR :
+                type == CV_32SC3 ? (ippiTransposeI)ippiTranspose_32s_C3IR :
+                type == CV_32SC4 ? (ippiTransposeI)ippiTranspose_32s_C4IR :
+                type == CV_32FC1 ? (ippiTransposeI)ippiTranspose_32f_C1IR :
+                type == CV_32FC3 ? (ippiTransposeI)ippiTranspose_32f_C3IR :
+                type == CV_32FC4 ? (ippiTransposeI)ippiTranspose_32f_C4IR : 0;
+            CV_SUPPRESS_DEPRECATED_END
+        }
+        else
+        {
+            ippFunc =
+                type == CV_8UC1 ? (ippiTranspose)ippiTranspose_8u_C1R :
+                type == CV_8UC3 ? (ippiTranspose)ippiTranspose_8u_C3R :
+                type == CV_8UC4 ? (ippiTranspose)ippiTranspose_8u_C4R :
+                type == CV_16UC1 ? (ippiTranspose)ippiTranspose_16u_C1R :
+                type == CV_16UC3 ? (ippiTranspose)ippiTranspose_16u_C3R :
+                type == CV_16UC4 ? (ippiTranspose)ippiTranspose_16u_C4R :
+                type == CV_16SC1 ? (ippiTranspose)ippiTranspose_16s_C1R :
+                type == CV_16SC3 ? (ippiTranspose)ippiTranspose_16s_C3R :
+                type == CV_16SC4 ? (ippiTranspose)ippiTranspose_16s_C4R :
+                type == CV_32SC1 ? (ippiTranspose)ippiTranspose_32s_C1R :
+                type == CV_32SC3 ? (ippiTranspose)ippiTranspose_32s_C3R :
+                type == CV_32SC4 ? (ippiTranspose)ippiTranspose_32s_C4R :
+                type == CV_32FC1 ? (ippiTranspose)ippiTranspose_32f_C1R :
+                type == CV_32FC3 ? (ippiTranspose)ippiTranspose_32f_C3R :
+                type == CV_32FC4 ? (ippiTranspose)ippiTranspose_32f_C4R : 0;
+        }
 
-    IppiSize roiSize = { src.cols, src.rows };
-    if (ippFunc != 0)
-    {
-        if (ippFunc(src.ptr(), (int)src.step, dst.ptr(), (int)dst.step, roiSize) >= 0)
-            return;
-        setIppErrorStatus();
-    }
-    else if (ippFuncI != 0)
-    {
-        if (ippFuncI(dst.ptr(), (int)dst.step, roiSize) >= 0)
-            return;
-        setIppErrorStatus();
+        IppiSize roiSize = { src.cols, src.rows };
+        if (ippFunc != 0)
+        {
+            if (ippFunc(src.ptr(), (int)src.step, dst.ptr(), (int)dst.step, roiSize) >= 0)
+            {
+                CV_IMPL_ADD(CV_IMPL_IPP);
+                return;
+            }
+            setIppErrorStatus();
+        }
+        else if (ippFuncI != 0)
+        {
+            if (ippFuncI(dst.ptr(), (int)dst.step, roiSize) >= 0)
+            {
+                CV_IMPL_ADD(CV_IMPL_IPP);
+                return;
+            }
+            setIppErrorStatus();
+        }
     }
 #endif
 
@@ -3353,27 +3362,32 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
     }
     CV_Assert(!(ippFunc && ippFuncHint) && func);
 
-    if (ippFunc)
+    CV_IPP_CHECK()
     {
-        for (int y = 0; y < size.height; ++y)
-            if (ippFunc(srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y)) < 0)
-            {
-                setIppErrorStatus();
-                cv::Mat dstroi = dstmat.rowRange(y, y + 1);
-                func(srcmat.rowRange(y, y + 1), dstroi);
-            }
-        return;
-    }
-    else if (ippFuncHint)
-    {
-        for (int y = 0; y < size.height; ++y)
-            if (ippFuncHint(srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y), ippAlgHintAccurate) < 0)
-            {
-                setIppErrorStatus();
-                cv::Mat dstroi = dstmat.rowRange(y, y + 1);
-                func(srcmat.rowRange(y, y + 1), dstroi);
-            }
-        return;
+        if (ippFunc)
+        {
+            for (int y = 0; y < size.height; ++y)
+                if (ippFunc(srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y)) < 0)
+                {
+                    setIppErrorStatus();
+                    cv::Mat dstroi = dstmat.rowRange(y, y + 1);
+                    func(srcmat.rowRange(y, y + 1), dstroi);
+                }
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        else if (ippFuncHint)
+        {
+            for (int y = 0; y < size.height; ++y)
+                if (ippFuncHint(srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y), ippAlgHintAccurate) < 0)
+                {
+                    setIppErrorStatus();
+                    cv::Mat dstroi = dstmat.rowRange(y, y + 1);
+                    func(srcmat.rowRange(y, y + 1), dstroi);
+                }
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
     }
 
     func(srcmat, dstmat);
@@ -3409,7 +3423,7 @@ static inline void reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& dstm
     IppiSize roisize = ippiSize(size.width, 1);\
     int sstep = (int)srcmat.step; \
      \
-    if (srcmat.channels() == 1) \
+    if (CV_IPP_CHECK_COND && (srcmat.channels() == 1)) \
     { \
         for (int y = 0; y < size.height; ++y) \
             if (ippi##optype##_##favor##_C1R(srcmat.ptr<IppType>(y), sstep, roisize, dstmat.ptr<IppType>(y)) < 0) \
@@ -3417,6 +3431,10 @@ static inline void reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& dstm
                 setIppErrorStatus(); \
                 cv::Mat dstroi = dstmat.rowRange(y, y + 1); \
                 cv::reduceC_ < type1, type2, cv::Op##optype < type2 > >(srcmat.rowRange(y, y + 1), dstroi); \
+            } \
+            else \
+            { \
+                CV_IMPL_ADD(CV_IMPL_IPP);\
             } \
         return; \
     } \
@@ -3768,8 +3786,13 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 
 #ifdef USE_IPP_SORT
     int depth = src.depth();
-    IppSortFunc ippSortFunc = getSortFunc(depth, sortDescending);
-    IppFlipFunc ippFlipFunc = getFlipFunc(depth);
+    IppSortFunc ippSortFunc = 0;
+    IppFlipFunc ippFlipFunc = 0;
+    CV_IPP_CHECK()
+    {
+        ippSortFunc = getSortFunc(depth, sortDescending);
+        ippFlipFunc = getFlipFunc(depth);
+    }
 #endif
 
     for( i = 0; i < n; i++ )
@@ -3812,8 +3835,20 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
                     for( j = 0; j < len/2; j++ )
                         std::swap(ptr[j], ptr[len-1-j]);
                 }
+#ifdef USE_IPP_SORT
+                else
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                }
+#endif
             }
         }
+#ifdef USE_IPP_SORT
+        else
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+        }
+#endif
 
         if( !sortRows )
             for( j = 0; j < len; j++ )
@@ -3878,8 +3913,13 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 
 #if defined USE_IPP_SORT && 0
     int depth = src.depth();
-    IppSortIndexFunc ippFunc = getSortIndexFunc(depth, sortDescending);
-    IppFlipFunc ippFlipFunc = getFlipFunc(depth);
+    IppSortIndexFunc ippFunc = 0;
+    IppFlipFunc ippFlipFunc = 0;
+    CV_IPP_CHECK()
+    {
+        ippFunc = getSortIndexFunc(depth, sortDescending);
+        ippFlipFunc = getFlipFunc(depth);
+    }
 #endif
 
     for( i = 0; i < n; i++ )
@@ -3920,8 +3960,20 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
                     for( j = 0; j < len/2; j++ )
                         std::swap(iptr[j], iptr[len-1-j]);
                 }
+#if defined USE_IPP_SORT && 0
+                else
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                }
+#endif
             }
         }
+#if defined USE_IPP_SORT && 0
+        else
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+        }
+#endif
 
         if( !sortRows )
             for( j = 0; j < len; j++ )

@@ -240,10 +240,16 @@ float  cubeRoot( float value )
 static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
 {
 #if defined HAVE_IPP && 0
-    IppStatus status = ippsMagnitude_32f(x, y, mag, len);
-    if (status >= 0)
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        IppStatus status = ippsMagnitude_32f(x, y, mag, len);
+        if (status >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
 #endif
 
     int i = 0;
@@ -286,10 +292,16 @@ static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
 static void Magnitude_64f(const double* x, const double* y, double* mag, int len)
 {
 #if defined(HAVE_IPP)
-    IppStatus status = ippsMagnitude_64f(x, y, mag, len);
-    if (status >= 0)
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        IppStatus status = ippsMagnitude_64f(x, y, mag, len);
+        if (status >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
 #endif
 
     int i = 0;
@@ -320,9 +332,15 @@ static void Magnitude_64f(const double* x, const double* y, double* mag, int len
 static void InvSqrt_32f(const float* src, float* dst, int len)
 {
 #if defined(HAVE_IPP)
-    if (ippsInvSqrt_32f_A21(src, dst, len) >= 0)
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (ippsInvSqrt_32f_A21(src, dst, len) >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
 #endif
 
     int i = 0;
@@ -380,9 +398,15 @@ static void InvSqrt_64f(const double* src, double* dst, int len)
 static void Sqrt_32f(const float* src, float* dst, int len)
 {
 #if defined(HAVE_IPP)
-    if (ippsSqrt_32f_A21(src, dst, len) >= 0)
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (ippsSqrt_32f_A21(src, dst, len) >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
 #endif
     int i = 0;
 
@@ -414,9 +438,15 @@ static void Sqrt_32f(const float* src, float* dst, int len)
 static void Sqrt_64f(const double* src, double* dst, int len)
 {
 #if defined(HAVE_IPP)
-    if (ippsSqrt_64f_A50(src, dst, len) >= 0)
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (ippsSqrt_64f_A50(src, dst, len) >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
 #endif
 
     int i = 0;
@@ -790,19 +820,25 @@ void polarToCart( InputArray src1, InputArray src2,
     Mat X = dst1.getMat(), Y = dst2.getMat();
 
 #if defined(HAVE_IPP)
-    if (Mag.isContinuous() && Angle.isContinuous() && X.isContinuous() && Y.isContinuous() && !angleInDegrees)
+    CV_IPP_CHECK()
     {
-        typedef IppStatus (CV_STDCALL * ippsPolarToCart)(const void * pSrcMagn, const void * pSrcPhase,
-                                                         void * pDstRe, void * pDstIm, int len);
-        ippsPolarToCart ippFunc =
-        depth == CV_32F ? (ippsPolarToCart)ippsPolarToCart_32f :
-        depth == CV_64F ? (ippsPolarToCart)ippsPolarToCart_64f : 0;
-        CV_Assert(ippFunc != 0);
+        if (Mag.isContinuous() && Angle.isContinuous() && X.isContinuous() && Y.isContinuous() && !angleInDegrees)
+        {
+            typedef IppStatus (CV_STDCALL * ippsPolarToCart)(const void * pSrcMagn, const void * pSrcPhase,
+                                                             void * pDstRe, void * pDstIm, int len);
+            ippsPolarToCart ippFunc =
+            depth == CV_32F ? (ippsPolarToCart)ippsPolarToCart_32f :
+            depth == CV_64F ? (ippsPolarToCart)ippsPolarToCart_64f : 0;
+            CV_Assert(ippFunc != 0);
 
-        IppStatus status = ippFunc(Mag.ptr(), Angle.ptr(), X.ptr(), Y.ptr(), static_cast<int>(cn * X.total()));
-        if (status >= 0)
-            return;
-        setIppErrorStatus();
+            IppStatus status = ippFunc(Mag.ptr(), Angle.ptr(), X.ptr(), Y.ptr(), static_cast<int>(cn * X.total()));
+            if (status >= 0)
+            {
+                CV_IMPL_ADD(CV_IMPL_IPP);
+                return;
+            }
+            setIppErrorStatus();
+        }
     }
 #endif
 
@@ -1353,17 +1389,29 @@ static void Exp_64f( const double *_x, double *y, int n )
 #ifdef HAVE_IPP
 static void Exp_32f_ipp(const float *x, float *y, int n)
 {
-    if (0 <= ippsExp_32f_A21(x, y, n))
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (0 <= ippsExp_32f_A21(x, y, n))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
     Exp_32f(x, y, n);
 }
 
 static void Exp_64f_ipp(const double *x, double *y, int n)
 {
-    if (0 <= ippsExp_64f_A50(x, y, n))
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (0 <= ippsExp_64f_A50(x, y, n))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
     Exp_64f(x, y, n);
 }
 
@@ -2013,17 +2061,29 @@ static void Log_64f( const double *x, double *y, int n )
 #ifdef HAVE_IPP
 static void Log_32f_ipp(const float *x, float *y, int n)
 {
-    if (0 <= ippsLn_32f_A21(x, y, n))
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (0 <= ippsLn_32f_A21(x, y, n))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
     Log_32f(x, y, n);
 }
 
 static void Log_64f_ipp(const double *x, double *y, int n)
 {
-    if (0 <= ippsLn_64f_A50(x, y, n))
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (0 <= ippsLn_64f_A50(x, y, n))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
     Log_64f(x, y, n);
 }
 
@@ -2216,28 +2276,34 @@ void pow( InputArray _src, double power, OutputArray _dst )
             return;
         case 2:
 #if defined(HAVE_IPP)
-            if (depth == CV_32F && !same && ( (_src.dims() <= 2 && !ocl::useOpenCL()) ||
-                                              (_src.dims() > 2 && _src.isContinuous() && _dst.isContinuous()) ))
+            CV_IPP_CHECK()
             {
-                Mat src = _src.getMat();
-                _dst.create( src.dims, src.size, type );
-                Mat dst = _dst.getMat();
-
-                Size size = src.size();
-                int srcstep = (int)src.step, dststep = (int)dst.step, esz = CV_ELEM_SIZE(type);
-                if (src.isContinuous() && dst.isContinuous())
+                if (depth == CV_32F && !same && ( (_src.dims() <= 2 && !ocl::useOpenCL()) ||
+                                                  (_src.dims() > 2 && _src.isContinuous() && _dst.isContinuous()) ))
                 {
-                    size.width = (int)src.total();
-                    size.height = 1;
-                    srcstep = dststep = (int)src.total() * esz;
+                    Mat src = _src.getMat();
+                    _dst.create( src.dims, src.size, type );
+                    Mat dst = _dst.getMat();
+
+                    Size size = src.size();
+                    int srcstep = (int)src.step, dststep = (int)dst.step, esz = CV_ELEM_SIZE(type);
+                    if (src.isContinuous() && dst.isContinuous())
+                    {
+                        size.width = (int)src.total();
+                        size.height = 1;
+                        srcstep = dststep = (int)src.total() * esz;
+                    }
+                    size.width *= cn;
+
+                    IppStatus status = ippiSqr_32f_C1R(src.ptr<Ipp32f>(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+
+                    if (status >= 0)
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP);
+                        return;
+                    }
+                    setIppErrorStatus();
                 }
-                size.width *= cn;
-
-                IppStatus status = ippiSqr_32f_C1R(src.ptr<Ipp32f>(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
-
-                if (status >= 0)
-                    return;
-                setIppErrorStatus();
             }
 #endif
             if (same)
@@ -2288,15 +2354,21 @@ void pow( InputArray _src, double power, OutputArray _dst )
     else
     {
 #if defined(HAVE_IPP)
-        if (src.isContinuous() && dst.isContinuous())
+        CV_IPP_CHECK()
         {
-            IppStatus status = depth == CV_32F ?
-                        ippsPowx_32f_A21(src.ptr<Ipp32f>(), (Ipp32f)power, dst.ptr<Ipp32f>(), (Ipp32s)(src.total() * cn)) :
-                        ippsPowx_64f_A50(src.ptr<Ipp64f>(), power, dst.ptr<Ipp64f>(), (Ipp32s)(src.total() * cn));
+            if (src.isContinuous() && dst.isContinuous())
+            {
+                IppStatus status = depth == CV_32F ?
+                            ippsPowx_32f_A21(src.ptr<Ipp32f>(), (Ipp32f)power, dst.ptr<Ipp32f>(), (Ipp32s)(src.total() * cn)) :
+                            ippsPowx_64f_A50(src.ptr<Ipp64f>(), power, dst.ptr<Ipp64f>(), (Ipp32s)(src.total() * cn));
 
-            if (status >= 0)
-                return;
-            setIppErrorStatus();
+                if (status >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+            }
         }
 #endif
 

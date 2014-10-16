@@ -31,6 +31,9 @@ static double       param_time_limit;
 static int          param_threads;
 static bool         param_write_sanity;
 static bool         param_verify_sanity;
+#ifdef CV_COLLECT_IMPL_DATA
+static bool         param_collect_impl;
+#endif
 extern bool         test_ipp_check;
 #ifdef HAVE_CUDA
 static int          param_cuda_device;
@@ -674,6 +677,9 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 #ifdef HAVE_IPP
         "{   perf_ipp_check              |false    |check whether IPP works without failures}"
 #endif
+#ifdef CV_COLLECT_IMPL_DATA
+        "{   perf_collect_impl           |false    |collect info about executed implementations}"
+#endif
         "{   help h                      |false    |print help info}"
 #ifdef HAVE_CUDA
         "{   perf_cuda_device            |0        |run CUDA test suite onto specific CUDA capable device}"
@@ -719,6 +725,9 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     param_verify_sanity = args.has("perf_verify_sanity");
     test_ipp_check      = !args.has("perf_ipp_check") ? getenv("OPENCV_IPP_CHECK") != NULL : true;
     param_threads       = args.get<int>("perf_threads");
+#ifdef CV_COLLECT_IMPL_DATA
+    param_collect_impl  = args.has("perf_collect_impl");
+#endif
 #ifdef ANDROID
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
     log_power_checkpoints = args.has("perf_log_power_checkpoints");
@@ -742,6 +751,13 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         printf("No such implementation: %s\n", param_impl.c_str());
         exit(1);
     }
+
+#ifdef CV_COLLECT_IMPL_DATA
+    if(param_collect_impl)
+        cv::setUseCollection(1);
+    else
+        cv::setUseCollection(0);
+#endif
 
 #ifdef HAVE_CUDA
 
@@ -1242,6 +1258,28 @@ void TestBase::reportMetrics(bool toJUnitXML)
         RecordProperty("gstddev", cv::format("%.6f", m.gstddev).c_str());
         RecordProperty("mean", cv::format("%.0f", m.mean).c_str());
         RecordProperty("stddev", cv::format("%.0f", m.stddev).c_str());
+#ifdef CV_COLLECT_IMPL_DATA
+        if(param_collect_impl)
+        {
+            RecordProperty("impl_ipp", (int)(implConf.ipp || implConf.icv));
+            RecordProperty("impl_ocl", (int)implConf.ocl);
+            RecordProperty("impl_plain", (int)implConf.plain);
+
+            std::string rec_line;
+            std::vector<cv::String> rec;
+            rec_line.clear();
+            rec = implConf.GetCallsForImpl(CV_IMPL_IPP|CV_IMPL_MT);
+            for(int i=0; i<rec.size();i++ ){rec_line += rec[i].c_str(); rec_line += " ";}
+            rec = implConf.GetCallsForImpl(CV_IMPL_IPP);
+            for(int i=0; i<rec.size();i++ ){rec_line += rec[i].c_str(); rec_line += " ";}
+            RecordProperty("impl_rec_ipp", rec_line.c_str());
+
+            rec_line.clear();
+            rec = implConf.GetCallsForImpl(CV_IMPL_OCL);
+            for(int i=0; i<rec.size();i++ ){rec_line += rec[i].c_str(); rec_line += " ";}
+            RecordProperty("impl_rec_ocl", rec_line.c_str());
+        }
+#endif
     }
     else
     {
@@ -1275,6 +1313,29 @@ void TestBase::reportMetrics(bool toJUnitXML)
             LOGD("termination reason:  unknown");
             break;
         };
+
+#ifdef CV_COLLECT_IMPL_DATA
+        if(param_collect_impl)
+        {
+            LOGD("impl_ipp =%11d", (int)(implConf.ipp || implConf.icv));
+            LOGD("impl_ocl =%11d", (int)implConf.ocl);
+            LOGD("impl_plain =%11d", (int)implConf.plain);
+
+            std::string rec_line;
+            std::vector<cv::String> rec;
+            rec_line.clear();
+            rec = implConf.GetCallsForImpl(CV_IMPL_IPP|CV_IMPL_MT);
+            for(int i=0; i<rec.size();i++ ){rec_line += rec[i].c_str(); rec_line += " ";}
+            rec = implConf.GetCallsForImpl(CV_IMPL_IPP);
+            for(int i=0; i<rec.size();i++ ){rec_line += rec[i].c_str(); rec_line += " ";}
+            LOGD("impl_rec_ipp =%s", rec_line.c_str());
+
+            rec_line.clear();
+            rec = implConf.GetCallsForImpl(CV_IMPL_OCL);
+            for(int i=0; i<rec.size();i++ ){rec_line += rec[i].c_str(); rec_line += " ";}
+            LOGD("impl_rec_ocl =%s", rec_line.c_str());
+        }
+#endif
 
         LOGD("bytesIn   =%11lu", (unsigned long)m.bytesIn);
         LOGD("bytesOut  =%11lu", (unsigned long)m.bytesOut);
@@ -1343,6 +1404,30 @@ void TestBase::TearDown()
     const char* value_param = test_info->value_param();
     if (value_param) printf("[ VALUE    ] \t%s\n", value_param), fflush(stdout);
     if (type_param)  printf("[ TYPE     ] \t%s\n", type_param), fflush(stdout);
+
+#ifdef CV_COLLECT_IMPL_DATA
+    if(param_collect_impl)
+    {
+        implConf.ShapeUp();
+        printf("[ I. FLAGS ] \t");
+        if(implConf.ipp_mt)
+        {
+            if(implConf.icv) {printf("ICV_MT "); std::vector<cv::String> fun = implConf.GetCallsForImpl(CV_IMPL_IPP|CV_IMPL_MT); printf("("); for(int i=0; i<fun.size();i++ ){printf("%s ", fun[i].c_str());} printf(") "); }
+            if(implConf.ipp) {printf("IPP_MT "); std::vector<cv::String> fun = implConf.GetCallsForImpl(CV_IMPL_IPP|CV_IMPL_MT); printf("("); for(int i=0; i<fun.size();i++ ){printf("%s ", fun[i].c_str());} printf(") "); }
+        }
+        else
+        {
+            if(implConf.icv) {printf("ICV "); std::vector<cv::String> fun = implConf.GetCallsForImpl(CV_IMPL_IPP); printf("("); for(int i=0; i<fun.size();i++ ){printf("%s ", fun[i].c_str());} printf(") "); }
+            if(implConf.ipp) {printf("IPP "); std::vector<cv::String> fun = implConf.GetCallsForImpl(CV_IMPL_IPP); printf("("); for(int i=0; i<fun.size();i++ ){printf("%s ", fun[i].c_str());} printf(") "); }
+        }
+        if(implConf.ocl) {printf("OCL "); std::vector<cv::String> fun = implConf.GetCallsForImpl(CV_IMPL_OCL); printf("("); for(int i=0; i<fun.size();i++ ){printf("%s ", fun[i].c_str());} printf(") "); }
+        if(implConf.plain) printf("PLAIN ");
+        if(!(implConf.ipp_mt || implConf.icv || implConf.ipp || implConf.ocl || implConf.plain))
+            printf("ERROR ");
+        printf("\n");
+        fflush(stdout);
+    }
+#endif
     reportMetrics(true);
 }
 
@@ -1391,7 +1476,15 @@ void TestBase::RunPerfTestBody()
 {
     try
     {
+#ifdef CV_COLLECT_IMPL_DATA
+        if(param_collect_impl)
+            implConf.Reset();
+#endif
         this->PerfTestBody();
+#ifdef CV_COLLECT_IMPL_DATA
+        if(param_collect_impl)
+            implConf.GetImpl();
+#endif
     }
     catch(PerfSkipTestException&)
     {

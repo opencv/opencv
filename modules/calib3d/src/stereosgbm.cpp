@@ -1085,28 +1085,34 @@ void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSi
     int newVal = cvRound(_newval), maxDiff = cvRound(_maxDiff);
 
 #if IPP_VERSION_X100 >= 801
-    Ipp32s bufsize = 0;
-    IppiSize roisize = { img.cols, img.rows };
-    IppDataType datatype = type == CV_8UC1 ? ipp8u : ipp16s;
-
-    if (!__buf.needed() && (type == CV_8UC1 || type == CV_16SC1))
+    CV_IPP_CHECK()
     {
-        IppStatus status = ippiMarkSpecklesGetBufferSize(roisize, datatype, CV_MAT_CN(type), &bufsize);
-        Ipp8u * buffer = ippsMalloc_8u(bufsize);
+        Ipp32s bufsize = 0;
+        IppiSize roisize = { img.cols, img.rows };
+        IppDataType datatype = type == CV_8UC1 ? ipp8u : ipp16s;
 
-        if ((int)status >= 0)
+        if (!__buf.needed() && (type == CV_8UC1 || type == CV_16SC1))
         {
-            if (type == CV_8UC1)
-                status = ippiMarkSpeckles_8u_C1IR(img.ptr<Ipp8u>(), (int)img.step, roisize,
-                                                  (Ipp8u)newVal, maxSpeckleSize, (Ipp8u)maxDiff, ippiNormL1, buffer);
-            else
-                status = ippiMarkSpeckles_16s_C1IR(img.ptr<Ipp16s>(), (int)img.step, roisize,
-                                                   (Ipp16s)newVal, maxSpeckleSize, (Ipp16s)maxDiff, ippiNormL1, buffer);
-        }
+            IppStatus status = ippiMarkSpecklesGetBufferSize(roisize, datatype, CV_MAT_CN(type), &bufsize);
+            Ipp8u * buffer = ippsMalloc_8u(bufsize);
 
-        if (status >= 0)
-            return;
-        setIppErrorStatus();
+            if ((int)status >= 0)
+            {
+                if (type == CV_8UC1)
+                    status = ippiMarkSpeckles_8u_C1IR(img.ptr<Ipp8u>(), (int)img.step, roisize,
+                                                      (Ipp8u)newVal, maxSpeckleSize, (Ipp8u)maxDiff, ippiNormL1, buffer);
+                else
+                    status = ippiMarkSpeckles_16s_C1IR(img.ptr<Ipp16s>(), (int)img.step, roisize,
+                                                       (Ipp16s)newVal, maxSpeckleSize, (Ipp16s)maxDiff, ippiNormL1, buffer);
+            }
+
+            if (status >= 0)
+            {
+                CV_IMPL_ADD(CV_IMPL_IPP);
+                return;
+            }
+            setIppErrorStatus();
+        }
     }
 #endif
 
