@@ -22,13 +22,13 @@
 
 #if cn==2
 #if kercn==2
-#define MUL(i, a, b)\
+#define MUL(a, b)\
     {\
     sum.x += fma(a.x, b.x, - a.y * b.y);\
     sum.y += fma(a.x, b.y, a.y * b.x);\
     }
 #else
-#define MUL(i, a, b)\
+#define MUL(a, b)\
     {\
     sum.x += fma(a.x, b.x, - a.y * b.y);\
     sum.y += fma(a.x, b.y, a.y * b.x);\
@@ -37,7 +37,7 @@
     }
 #endif
 #else
-#define MUL(i, a, b) sum = fma(a, b, sum);
+#define MUL(a, b) sum = fma(a, b, sum);
 #endif
 
 
@@ -62,7 +62,7 @@ __kernel void gemm(__global const uchar * A_ptr, int A_step, int A_offset,
     if (x < D_cols && y < D_rows)
     {
         for (int i = 0; i < n; ++i)
-            MUL(i, A[i], B[i*STEP_B]);
+            MUL(A[i], B[i*STEP_B]);
 #else
 
     __local T  a_local[LOCAL_SIZE*LOCAL_SIZE];
@@ -86,14 +86,14 @@ __kernel void gemm(__global const uchar * A_ptr, int A_step, int A_offset,
 
         if (x < D_cols && y < D_rows)
         {
-            for (int i = 0; i < LOCAL_SIZE
 #if NO_MULT
-                && p * LOCAL_SIZE + i < n
+            int ie = min(LOCAL_SIZE, n - p * LOCAL_SIZE);
+            for (int i = 0; i < ie; ++i)
+#else
+            for (int i = 0; i < LOCAL_SIZE; ++i)
 #endif
-                ; ++i)
-                MUL(i, a_local[mad24(lidy, LOCAL_SIZE, i)], b_local[mad24(i, LOCAL_SIZE, lidx)]);
+                MUL(a_local[mad24(lidy, LOCAL_SIZE, i)], b_local[mad24(i, LOCAL_SIZE, lidx)]);
         }
-
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 
