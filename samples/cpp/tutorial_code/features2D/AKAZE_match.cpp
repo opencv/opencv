@@ -22,9 +22,9 @@ int main(void)
     vector<KeyPoint> kpts1, kpts2;
     Mat desc1, desc2;
 
-    AKAZE akaze;
-    akaze(img1, noArray(), kpts1, desc1);
-    akaze(img2, noArray(), kpts2, desc2);
+    Ptr<AKAZE> akaze = AKAZE::create();
+    akaze->detectAndCompute(img1, noArray(), kpts1, desc1);
+    akaze->detectAndCompute(img2, noArray(), kpts2, desc2);
 
     BFMatcher matcher(NORM_HAMMING);
     vector< vector<DMatch> > nn_matches;
