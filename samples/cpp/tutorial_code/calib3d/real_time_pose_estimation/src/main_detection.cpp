@@ -18,11 +18,14 @@
 
 /**  GLOBAL VARIABLES  **/
 
-std::string tutorial_path = "../../samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/"; // path to tutorial
+using namespace cv;
+using namespace std;
 
-std::string video_read_path = tutorial_path + "Data/box.mp4";       // recorded video
-std::string yml_read_path = tutorial_path + "Data/cookies_ORB.yml"; // 3dpts + descriptors
-std::string ply_read_path = tutorial_path + "Data/box.ply";         // mesh
+string tutorial_path = "../../samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/"; // path to tutorial
+
+string video_read_path = tutorial_path + "Data/box.mp4";       // recorded video
+string yml_read_path = tutorial_path + "Data/cookies_ORB.yml"; // 3dpts + descriptors
+string ply_read_path = tutorial_path + "Data/box.ply";         // mesh
 
 // Intrinsic camera parameters: UVC WEBCAM
 double f = 55;                           // focal length in mm
@@ -35,15 +38,15 @@ double params_WEBCAM[] = { width*f/sx,   // fx
                            height/2};    // cy
 
 // Some basic colors
-cv::Scalar red(0, 0, 255);
-cv::Scalar green(0,255,0);
-cv::Scalar blue(255,0,0);
-cv::Scalar yellow(0,255,255);
+Scalar red(0, 0, 255);
+Scalar green(0,255,0);
+Scalar blue(255,0,0);
+Scalar yellow(0,255,255);
 
 
 // Robust Matcher parameters
 int numKeyPoints = 2000;      // number of detected keypoints
-float ratio = 0.70f;          // ratio test
+float ratioTest = 0.70f;          // ratio test
 bool fast_match = true;       // fastRobustMatch() or robustMatch()
 
 // RANSAC parameters
@@ -55,16 +58,16 @@ double confidence = 0.95;        // ransac successful confidence.
 int minInliersKalman = 30;    // Kalman threshold updating
 
 // PnP parameters
-int pnpMethod = cv::SOLVEPNP_ITERATIVE;
+int pnpMethod = SOLVEPNP_ITERATIVE;
 
 
 /**  Functions headers  **/
 void help();
-void initKalmanFilter( cv::KalmanFilter &KF, int nStates, int nMeasurements, int nInputs, double dt);
-void updateKalmanFilter( cv::KalmanFilter &KF, cv::Mat &measurements,
-                         cv::Mat &translation_estimated, cv::Mat &rotation_estimated );
-void fillMeasurements( cv::Mat &measurements,
-                       const cv::Mat &translation_measured, const cv::Mat &rotation_measured);
+void initKalmanFilter( KalmanFilter &KF, int nStates, int nMeasurements, int nInputs, double dt);
+void updateKalmanFilter( KalmanFilter &KF, Mat &measurements,
+                         Mat &translation_estimated, Mat &rotation_estimated );
+void fillMeasurements( Mat &measurements,
+                       const Mat &translation_measured, const Mat &rotation_measured);
 
 
 /**  Main program  **/
@@ -73,7 +76,7 @@ int main(int argc, char *argv[])
 
   help();
 
-  const cv::String keys =
+  const String keys =
       "{help h        |      | print this message                   }"
       "{video v       |      | path to recorded video               }"
       "{model         |      | path to yml model                    }"
@@ -87,7 +90,7 @@ int main(int argc, char *argv[])
       "{method  pnp   |0     | PnP method: (0) ITERATIVE - (1) EPNP - (2) P3P - (3) DLS}"
       "{fast f        |true  | use of robust fast match             }"
       ;
-  cv::CommandLineParser parser(argc, argv, keys);
+  CommandLineParser parser(argc, argv, keys);
 
   if (parser.has("help"))
   {
@@ -96,11 +99,11 @@ int main(int argc, char *argv[])
   }
   else
   {
-    video_read_path = parser.get<std::string>("video").size() > 0 ? parser.get<std::string>("video") : video_read_path;
-    yml_read_path = parser.get<std::string>("model").size() > 0 ? parser.get<std::string>("model") : yml_read_path;
-    ply_read_path = parser.get<std::string>("mesh").size() > 0 ? parser.get<std::string>("mesh") : ply_read_path;
+    video_read_path = parser.get<string>("video").size() > 0 ? parser.get<string>("video") : video_read_path;
+    yml_read_path = parser.get<string>("model").size() > 0 ? parser.get<string>("model") : yml_read_path;
+    ply_read_path = parser.get<string>("mesh").size() > 0 ? parser.get<string>("mesh") : ply_read_path;
     numKeyPoints = !parser.has("keypoints") ? parser.get<int>("keypoints") : numKeyPoints;
-    ratio = !parser.has("ratio") ? parser.get<float>("ratio") : ratio;
+    ratioTest = !parser.has("ratio") ? parser.get<float>("ratio") : ratioTest;
     fast_match = !parser.has("fast") ? parser.get<bool>("fast") : fast_match;
     iterationsCount = !parser.has("iterations") ? parser.get<int>("iterations") : iterationsCount;
     reprojectionError = !parser.has("error") ? parser.get<float>("error") : reprojectionError;
@@ -120,45 +123,45 @@ int main(int argc, char *argv[])
 
   RobustMatcher rmatcher;                                                     // instantiate RobustMatcher
 
-  cv::FeatureDetector * detector = new cv::OrbFeatureDetector(numKeyPoints);  // instatiate ORB feature detector
-  cv::DescriptorExtractor * extractor = new cv::OrbDescriptorExtractor();     // instatiate ORB descriptor extractor
+  Ptr<FeatureDetector> orb = ORB::create();
 
-  rmatcher.setFeatureDetector(detector);                                      // set feature detector
-  rmatcher.setDescriptorExtractor(extractor);                                 // set descriptor extractor
+  rmatcher.setFeatureDetector(orb);                                      // set feature detector
+  rmatcher.setDescriptorExtractor(orb);                                 // set descriptor extractor
 
-  cv::Ptr<cv::flann::IndexParams> indexParams = cv::makePtr<cv::flann::LshIndexParams>(6, 12, 1); // instantiate LSH index parameters
-  cv::Ptr<cv::flann::SearchParams> searchParams = cv::makePtr<cv::flann::SearchParams>(50);       // instantiate flann search parameters
+  Ptr<flann::IndexParams> indexParams = makePtr<flann::LshIndexParams>(6, 12, 1); // instantiate LSH index parameters
+  Ptr<flann::SearchParams> searchParams = makePtr<flann::SearchParams>(50);       // instantiate flann search parameters
 
-  cv::DescriptorMatcher * matcher = new cv::FlannBasedMatcher(indexParams, searchParams);         // instantiate FlannBased matcher
+  // instantiate FlannBased matcher
+  Ptr<DescriptorMatcher> matcher = makePtr<FlannBasedMatcher>(indexParams, searchParams);
   rmatcher.setDescriptorMatcher(matcher);                                                         // set matcher
-  rmatcher.setRatio(ratio); // set ratio test parameter
+  rmatcher.setRatio(ratioTest); // set ratio test parameter
 
-  cv::KalmanFilter KF;         // instantiate Kalman Filter
+  KalmanFilter KF;         // instantiate Kalman Filter
   int nStates = 18;            // the number of states
   int nMeasurements = 6;       // the number of measured states
   int nInputs = 0;             // the number of control actions
   double dt = 0.125;           // time between measurements (1/FPS)
 
   initKalmanFilter(KF, nStates, nMeasurements, nInputs, dt);    // init function
-  cv::Mat measurements(nMeasurements, 1, CV_64F); measurements.setTo(cv::Scalar(0));
+  Mat measurements(nMeasurements, 1, CV_64F); measurements.setTo(Scalar(0));
   bool good_measurement = false;
 
 
   // Get the MODEL INFO
-  std::vector<cv::Point3f> list_points3d_model = model.get_points3d();  // list with model 3D coordinates
-  cv::Mat descriptors_model = model.get_descriptors();                  // list with descriptors of each 3D coordinate
+  vector<Point3f> list_points3d_model = model.get_points3d();  // list with model 3D coordinates
+  Mat descriptors_model = model.get_descriptors();                  // list with descriptors of each 3D coordinate
 
 
   // Create & Open Window
-  cv::namedWindow("REAL TIME DEMO", cv::WINDOW_KEEPRATIO);
+  namedWindow("REAL TIME DEMO", WINDOW_KEEPRATIO);
 
 
-  cv::VideoCapture cap;                           // instantiate VideoCapture
+  VideoCapture cap;                           // instantiate VideoCapture
   cap.open(video_read_path);                      // open a recorded video
 
   if(!cap.isOpened())   // check if we succeeded
   {
-    std::cout << "Could not open the camera device" << std::endl;
+    cout << "Could not open the camera device" << endl;
     return -1;
   }
 
@@ -175,9 +178,9 @@ int main(int argc, char *argv[])
   // start the clock
   time(&start);
 
-  cv::Mat frame, frame_vis;
+  Mat frame, frame_vis;
 
-  while(cap.read(frame) && cv::waitKey(30) != 27) // capture frame until ESC is pressed
+  while(cap.read(frame) && waitKey(30) != 27) // capture frame until ESC is pressed
   {
 
     frame_vis = frame.clone();    // refresh visualisation frame
@@ -185,8 +188,8 @@ int main(int argc, char *argv[])
 
     // -- Step 1: Robust matching between model descriptors and scene descriptors
 
-    std::vector<cv::DMatch> good_matches;       // to obtain the 3D points of the model
-    std::vector<cv::KeyPoint> keypoints_scene;  // to obtain the 2D points of the scene
+    vector<DMatch> good_matches;       // to obtain the 3D points of the model
+    vector<KeyPoint> keypoints_scene;  // to obtain the 2D points of the scene
 
 
     if(fast_match)
@@ -201,13 +204,13 @@ int main(int argc, char *argv[])
 
     // -- Step 2: Find out the 2D/3D correspondences
 
-    std::vector<cv::Point3f> list_points3d_model_match; // container for the model 3D coordinates found in the scene
-    std::vector<cv::Point2f> list_points2d_scene_match; // container for the model 2D coordinates found in the scene
+    vector<Point3f> list_points3d_model_match; // container for the model 3D coordinates found in the scene
+    vector<Point2f> list_points2d_scene_match; // container for the model 2D coordinates found in the scene
 
     for(unsigned int match_index = 0; match_index < good_matches.size(); ++match_index)
     {
-      cv::Point3f point3d_model = list_points3d_model[ good_matches[match_index].trainIdx ];  // 3D point from model
-      cv::Point2f point2d_scene = keypoints_scene[ good_matches[match_index].queryIdx ].pt; // 2D point from the scene
+      Point3f point3d_model = list_points3d_model[ good_matches[match_index].trainIdx ];  // 3D point from model
+      Point2f point2d_scene = keypoints_scene[ good_matches[match_index].queryIdx ].pt; // 2D point from the scene
       list_points3d_model_match.push_back(point3d_model);         // add 3D point
       list_points2d_scene_match.push_back(point2d_scene);         // add 2D point
     }
@@ -216,8 +219,8 @@ int main(int argc, char *argv[])
     draw2DPoints(frame_vis, list_points2d_scene_match, red);
 
 
-    cv::Mat inliers_idx;
-    std::vector<cv::Point2f> list_points2d_inliers;
+    Mat inliers_idx;
+    vector<Point2f> list_points2d_inliers;
 
     if(good_matches.size() > 0) // None matches, then RANSAC crashes
     {
@@ -231,7 +234,7 @@ int main(int argc, char *argv[])
       for(int inliers_index = 0; inliers_index < inliers_idx.rows; ++inliers_index)
       {
         int n = inliers_idx.at<int>(inliers_index);         // i-inlier
-        cv::Point2f point2d = list_points2d_scene_match[n]; // i-inlier point 2D
+        Point2f point2d = list_points2d_scene_match[n]; // i-inlier point 2D
         list_points2d_inliers.push_back(point2d);           // add i-inlier to list
       }
 
@@ -248,11 +251,11 @@ int main(int argc, char *argv[])
       {
 
         // Get the measured translation
-        cv::Mat translation_measured(3, 1, CV_64F);
+        Mat translation_measured(3, 1, CV_64F);
         translation_measured = pnp_detection.get_t_matrix();
 
         // Get the measured rotation
-        cv::Mat rotation_measured(3, 3, CV_64F);
+        Mat rotation_measured(3, 3, CV_64F);
         rotation_measured = pnp_detection.get_R_matrix();
 
         // fill the measurements vector
@@ -263,8 +266,8 @@ int main(int argc, char *argv[])
       }
 
       // Instantiate estimated translation and rotation
-      cv::Mat translation_estimated(3, 1, CV_64F);
-      cv::Mat rotation_estimated(3, 3, CV_64F);
+      Mat translation_estimated(3, 1, CV_64F);
+      Mat rotation_estimated(3, 3, CV_64F);
 
       // update the Kalman filter with good measurements
       updateKalmanFilter( KF, measurements,
@@ -288,11 +291,11 @@ int main(int argc, char *argv[])
     }
 
     float l = 5;
-    std::vector<cv::Point2f> pose_points2d;
-    pose_points2d.push_back(pnp_detection_est.backproject3DPoint(cv::Point3f(0,0,0)));  // axis center
-    pose_points2d.push_back(pnp_detection_est.backproject3DPoint(cv::Point3f(l,0,0)));  // axis x
-    pose_points2d.push_back(pnp_detection_est.backproject3DPoint(cv::Point3f(0,l,0)));  // axis y
-    pose_points2d.push_back(pnp_detection_est.backproject3DPoint(cv::Point3f(0,0,l)));  // axis z
+    vector<Point2f> pose_points2d;
+    pose_points2d.push_back(pnp_detection_est.backproject3DPoint(Point3f(0,0,0)));  // axis center
+    pose_points2d.push_back(pnp_detection_est.backproject3DPoint(Point3f(l,0,0)));  // axis x
+    pose_points2d.push_back(pnp_detection_est.backproject3DPoint(Point3f(0,l,0)));  // axis y
+    pose_points2d.push_back(pnp_detection_est.backproject3DPoint(Point3f(0,0,l)));  // axis z
     draw3DCoordinateAxes(frame_vis, pose_points2d);           // draw axes
 
     // FRAME RATE
@@ -316,49 +319,49 @@ int main(int argc, char *argv[])
     // Draw some debug text
     int inliers_int = inliers_idx.rows;
     int outliers_int = (int)good_matches.size() - inliers_int;
-    std::string inliers_str = IntToString(inliers_int);
-    std::string outliers_str = IntToString(outliers_int);
-    std::string n = IntToString((int)good_matches.size());
-    std::string text = "Found " + inliers_str + " of " + n + " matches";
-    std::string text2 = "Inliers: " + inliers_str + " - Outliers: " + outliers_str;
+    string inliers_str = IntToString(inliers_int);
+    string outliers_str = IntToString(outliers_int);
+    string n = IntToString((int)good_matches.size());
+    string text = "Found " + inliers_str + " of " + n + " matches";
+    string text2 = "Inliers: " + inliers_str + " - Outliers: " + outliers_str;
 
     drawText(frame_vis, text, green);
     drawText2(frame_vis, text2, red);
 
-    cv::imshow("REAL TIME DEMO", frame_vis);
+    imshow("REAL TIME DEMO", frame_vis);
   }
 
   // Close and Destroy Window
-  cv::destroyWindow("REAL TIME DEMO");
+  destroyWindow("REAL TIME DEMO");
 
-  std::cout << "GOODBYE ..." << std::endl;
+  cout << "GOODBYE ..." << endl;
 
 }
 
 /**********************************************************************************************************/
 void help()
 {
-std::cout
-<< "--------------------------------------------------------------------------"   << std::endl
+cout
+<< "--------------------------------------------------------------------------"   << endl
 << "This program shows how to detect an object given its 3D textured model. You can choose to "
-<< "use a recorded video or the webcam."                                          << std::endl
-<< "Usage:"                                                                       << std::endl
-<< "./cpp-tutorial-pnp_detection -help"                                           << std::endl
-<< "Keys:"                                                                        << std::endl
-<< "'esc' - to quit."                                                             << std::endl
-<< "--------------------------------------------------------------------------"   << std::endl
-<< std::endl;
+<< "use a recorded video or the webcam."                                          << endl
+<< "Usage:"                                                                       << endl
+<< "./cpp-tutorial-pnp_detection -help"                                           << endl
+<< "Keys:"                                                                        << endl
+<< "'esc' - to quit."                                                             << endl
+<< "--------------------------------------------------------------------------"   << endl
+<< endl;
 }
 
 /**********************************************************************************************************/
-void initKalmanFilter(cv::KalmanFilter &KF, int nStates, int nMeasurements, int nInputs, double dt)
+void initKalmanFilter(KalmanFilter &KF, int nStates, int nMeasurements, int nInputs, double dt)
 {
 
   KF.init(nStates, nMeasurements, nInputs, CV_64F);                 // init Kalman Filter
 
-  cv::setIdentity(KF.processNoiseCov, cv::Scalar::all(1e-5));       // set process noise
-  cv::setIdentity(KF.measurementNoiseCov, cv::Scalar::all(1e-2));   // set measurement noise
-  cv::setIdentity(KF.errorCovPost, cv::Scalar::all(1));             // error covariance
+  setIdentity(KF.processNoiseCov, Scalar::all(1e-5));       // set process noise
+  setIdentity(KF.measurementNoiseCov, Scalar::all(1e-2));   // set measurement noise
+  setIdentity(KF.errorCovPost, Scalar::all(1));             // error covariance
 
 
                      /** DYNAMIC MODEL **/
@@ -424,15 +427,15 @@ void initKalmanFilter(cv::KalmanFilter &KF, int nStates, int nMeasurements, int 
 }
 
 /**********************************************************************************************************/
-void updateKalmanFilter( cv::KalmanFilter &KF, cv::Mat &measurement,
-                         cv::Mat &translation_estimated, cv::Mat &rotation_estimated )
+void updateKalmanFilter( KalmanFilter &KF, Mat &measurement,
+                         Mat &translation_estimated, Mat &rotation_estimated )
 {
 
   // First predict, to update the internal statePre variable
-  cv::Mat prediction = KF.predict();
+  Mat prediction = KF.predict();
 
   // The "correct" phase that is going to use the predicted value and our measurement
-  cv::Mat estimated = KF.correct(measurement);
+  Mat estimated = KF.correct(measurement);
 
   // Estimated translation
   translation_estimated.at<double>(0) = estimated.at<double>(0);
@@ -440,7 +443,7 @@ void updateKalmanFilter( cv::KalmanFilter &KF, cv::Mat &measurement,
   translation_estimated.at<double>(2) = estimated.at<double>(2);
 
   // Estimated euler angles
-  cv::Mat eulers_estimated(3, 1, CV_64F);
+  Mat eulers_estimated(3, 1, CV_64F);
   eulers_estimated.at<double>(0) = estimated.at<double>(9);
   eulers_estimated.at<double>(1) = estimated.at<double>(10);
   eulers_estimated.at<double>(2) = estimated.at<double>(11);
@@ -451,11 +454,11 @@ void updateKalmanFilter( cv::KalmanFilter &KF, cv::Mat &measurement,
 }
 
 /**********************************************************************************************************/
-void fillMeasurements( cv::Mat &measurements,
-                       const cv::Mat &translation_measured, const cv::Mat &rotation_measured)
+void fillMeasurements( Mat &measurements,
+                       const Mat &translation_measured, const Mat &rotation_measured)
 {
   // Convert rotation matrix to euler angles
-  cv::Mat measured_eulers(3, 1, CV_64F);
+  Mat measured_eulers(3, 1, CV_64F);
   measured_eulers = rot2euler(rotation_measured);
 
   // Set measurement to predict

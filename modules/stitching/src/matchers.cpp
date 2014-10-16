@@ -48,8 +48,6 @@ using namespace cv::cuda;
 
 #ifdef HAVE_OPENCV_XFEATURES2D
 #include "opencv2/xfeatures2d.hpp"
-
-static bool makeUseOfXfeatures2d = xfeatures2d::initModule_xfeatures2d();
 #endif
 
 namespace {
