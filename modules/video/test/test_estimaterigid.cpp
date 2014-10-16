@@ -75,8 +75,8 @@ struct WrapAff2D
     WrapAff2D(const Mat& aff) : F(aff.ptr<double>()) {}
     Point2f operator()(const Point2f& p)
     {
-        return Point2d( p.x * F[0] + p.y * F[1] +  F[2],
-                        p.x * F[3] + p.y * F[4] +  F[5]);
+        return Point2f( (float)(p.x * F[0] + p.y * F[1] + F[2]),
+                        (float)(p.x * F[3] + p.y * F[4] + F[5]) );
     }
 };
 
