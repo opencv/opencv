@@ -788,7 +788,7 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
     const ocl::Device & dev = ocl::Device::getDefault();
     bool doubleSupport = dev.doubleFPConfig() > 0;
 
-    if ((!doubleSupport && depth == CV_64F))
+    if (!doubleSupport && depth == CV_64F)
         return false;
 
     bool haveC = matC.kind() != cv::_InputArray::NONE;
@@ -804,7 +804,7 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
 
     Size sizeD(sizeB.width, sizeA.height);
 
-    CV_Assert( matB.type() == type && (!haveC || matC.type() == type) );
+    CV_Assert( !haveC || matC.type() == type );
     CV_Assert( sizeA.width == sizeB.height && (!haveC || sizeC == sizeD) );
 
     int max_wg_size = (int)dev.maxWorkGroupSize();
@@ -822,11 +822,8 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
 
     if (haveC)
         ctrans ? transpose(matC, D) : matC.copyTo(D);
-    else
-        D.setTo(Scalar::all(0));
 
     int vectorWidths[] = { 4, 4, 2, 2, 1, 4, cn, -1 };
-
     int kercn = ocl::checkOptimalVectorWidth(vectorWidths, B, D);
 
     String opts = format("-D T=%s -D T1=%s -D WT=%s -D cn=%d -D kercn=%d -D LOCAL_SIZE=%d %s %s %s",
