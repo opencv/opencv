@@ -187,6 +187,28 @@ namespace cv
             }
         }
 
+        void write(FileStorage& fs) const
+        {
+            fs << "descriptor" << descriptor;
+            fs << "descriptor_channels" << descriptor_channels;
+            fs << "descriptor_size" << descriptor_size;
+            fs << "threshold" << threshold;
+            fs << "octaves" << octaves;
+            fs << "sublevels" << sublevels;
+            fs << "diffusivity" << diffusivity;
+        }
+
+        void read(const FileNode& fn)
+        {
+            descriptor = (int)fn["descriptor"];
+            descriptor_channels = (int)fn["descriptor_channels"];
+            descriptor_size = (int)fn["descriptor_size"];
+            threshold = (float)fn["threshold"];
+            octaves = (int)fn["octaves"];
+            sublevels = (int)fn["sublevels"];
+            diffusivity = (int)fn["diffusivity"];
+        }
+
         int descriptor;
         int descriptor_channels;
         int descriptor_size;
