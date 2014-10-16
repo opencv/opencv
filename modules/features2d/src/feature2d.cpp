@@ -60,6 +60,11 @@ void Feature2D::detect( InputArray image,
                         std::vector<KeyPoint>& keypoints,
                         InputArray mask )
 {
+    if( image.empty() )
+    {
+        keypoints.clear();
+        return;
+    }
     detectAndCompute(image, mask, keypoints, noArray(), false);
 }
 
@@ -97,6 +102,11 @@ void Feature2D::compute( InputArray image,
                          std::vector<KeyPoint>& keypoints,
                          OutputArray descriptors )
 {
+    if( image.empty() )
+    {
+        descriptors.release();
+        return;
+    }
     detectAndCompute(image, noArray(), keypoints, descriptors, true);
 }
 
