@@ -2893,6 +2893,9 @@ bool Kernel::create(const char* kname, const Program& prog)
         p->release();
         p = 0;
     }
+#ifdef CV_OPENCL_RUN_ASSERT // check kernel compilation fails
+    CV_Assert(p);
+#endif
     return p != 0;
 }
 
@@ -3523,6 +3526,10 @@ protected:
         entry.clBuffer_ = clCreateBuffer((cl_context)ctx.ptr(), CL_MEM_READ_WRITE, entry.capacity_, 0, &retval);
         CV_Assert(retval == CL_SUCCESS);
         CV_Assert(entry.clBuffer_ != NULL);
+        if(retval == CL_SUCCESS)
+        {
+            CV_IMPL_ADD(CV_IMPL_OCL);
+        }
         LOG_BUFFER_POOL("OpenCL allocate %lld (0x%llx) bytes: %p\n",
                 (long long)entry.capacity_, (long long)entry.capacity_, entry.clBuffer_);
     }
@@ -3747,6 +3754,7 @@ public:
                                           CL_MEM_READ_WRITE|createFlags, total, 0, &retval);
             if( !handle || retval != CL_SUCCESS )
                 return defaultAllocate(dims, sizes, type, data, step, flags, usageFlags);
+            CV_IMPL_ADD(CV_IMPL_OCL)
         }
         UMatData* u = new UMatData(this);
         u->data = 0;
@@ -4187,19 +4195,23 @@ public:
         CV_Assert(dst->refcount == 0);
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
+        cl_int retval;
         if( iscontinuous )
         {
-            CV_Assert( clEnqueueCopyBuffer(q, (cl_mem)src->handle, (cl_mem)dst->handle,
-                                           srcrawofs, dstrawofs, total, 0, 0, 0) == CL_SUCCESS );
+            CV_Assert( (retval = clEnqueueCopyBuffer(q, (cl_mem)src->handle, (cl_mem)dst->handle,
+                                           srcrawofs, dstrawofs, total, 0, 0, 0)) == CL_SUCCESS );
         }
         else
         {
-            cl_int retval;
             CV_Assert( (retval = clEnqueueCopyBufferRect(q, (cl_mem)src->handle, (cl_mem)dst->handle,
                                                new_srcofs, new_dstofs, new_sz,
                                                new_srcstep[0], new_srcstep[1],
                                                new_dststep[0], new_dststep[1],
                                                0, 0, 0)) == CL_SUCCESS );
+        }
+        if(retval == CL_SUCCESS)
+        {
+            CV_IMPL_ADD(CV_IMPL_OCL)
         }
 
         dst->markHostCopyObsolete(true);

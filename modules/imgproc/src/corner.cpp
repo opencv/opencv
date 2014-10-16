@@ -472,56 +472,62 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
     _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
 #if defined(HAVE_IPP) && (IPP_VERSION_MAJOR >= 8)
-    typedef IppStatus (CV_STDCALL * ippiMinEigenValGetBufferSize)(IppiSize, int, int, int*);
-    typedef IppStatus (CV_STDCALL * ippiMinEigenVal)(const void*, int, Ipp32f*, int, IppiSize, IppiKernelType, int, int, Ipp8u*);
-    IppiKernelType kerType;
-    int kerSize = ksize;
-    if (ksize < 0)
+    CV_IPP_CHECK()
     {
-        kerType = ippKernelScharr;
-        kerSize = 3;
-    } else
-    {
-        kerType = ippKernelSobel;
-    }
-    bool isolated = (borderType & BORDER_ISOLATED) != 0;
-    int borderTypeNI = borderType & ~BORDER_ISOLATED;
-    if ((borderTypeNI == BORDER_REPLICATE && (!src.isSubmatrix() || isolated)) &&
-        (kerSize == 3 || kerSize == 5) && (blockSize == 3 || blockSize == 5))
-    {
-        ippiMinEigenValGetBufferSize getBufferSizeFunc = 0;
-        ippiMinEigenVal minEigenValFunc = 0;
-        float norm_coef = 0.f;
-
-        if (src.type() == CV_8UC1)
+        typedef IppStatus (CV_STDCALL * ippiMinEigenValGetBufferSize)(IppiSize, int, int, int*);
+        typedef IppStatus (CV_STDCALL * ippiMinEigenVal)(const void*, int, Ipp32f*, int, IppiSize, IppiKernelType, int, int, Ipp8u*);
+        IppiKernelType kerType;
+        int kerSize = ksize;
+        if (ksize < 0)
         {
-            getBufferSizeFunc = (ippiMinEigenValGetBufferSize) ippiMinEigenValGetBufferSize_8u32f_C1R;
-            minEigenValFunc = (ippiMinEigenVal) ippiMinEigenVal_8u32f_C1R;
-            norm_coef = 1.f / 255.f;
-        } else if (src.type() == CV_32FC1)
+            kerType = ippKernelScharr;
+            kerSize = 3;
+        } else
         {
-            getBufferSizeFunc = (ippiMinEigenValGetBufferSize) ippiMinEigenValGetBufferSize_32f_C1R;
-            minEigenValFunc = (ippiMinEigenVal) ippiMinEigenVal_32f_C1R;
-            norm_coef = 255.f;
+            kerType = ippKernelSobel;
         }
-        norm_coef = kerType == ippKernelSobel ? norm_coef : norm_coef / 2.45f;
-
-        if (getBufferSizeFunc && minEigenValFunc)
+        bool isolated = (borderType & BORDER_ISOLATED) != 0;
+        int borderTypeNI = borderType & ~BORDER_ISOLATED;
+        if ((borderTypeNI == BORDER_REPLICATE && (!src.isSubmatrix() || isolated)) &&
+            (kerSize == 3 || kerSize == 5) && (blockSize == 3 || blockSize == 5))
         {
-            int bufferSize;
-            IppiSize srcRoi = { src.cols, src.rows };
-            IppStatus ok = getBufferSizeFunc(srcRoi, kerSize, blockSize, &bufferSize);
-            if (ok >= 0)
+            ippiMinEigenValGetBufferSize getBufferSizeFunc = 0;
+            ippiMinEigenVal minEigenValFunc = 0;
+            float norm_coef = 0.f;
+
+            if (src.type() == CV_8UC1)
             {
-                AutoBuffer<uchar> buffer(bufferSize);
-                ok = minEigenValFunc(src.ptr(), (int) src.step, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi, kerType, kerSize, blockSize, buffer);
-                CV_SUPPRESS_DEPRECATED_START
-                if (ok >= 0) ok = ippiMulC_32f_C1IR(norm_coef, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi);
-                CV_SUPPRESS_DEPRECATED_END
-                if (ok >= 0)
-                    return;
+                getBufferSizeFunc = (ippiMinEigenValGetBufferSize) ippiMinEigenValGetBufferSize_8u32f_C1R;
+                minEigenValFunc = (ippiMinEigenVal) ippiMinEigenVal_8u32f_C1R;
+                norm_coef = 1.f / 255.f;
+            } else if (src.type() == CV_32FC1)
+            {
+                getBufferSizeFunc = (ippiMinEigenValGetBufferSize) ippiMinEigenValGetBufferSize_32f_C1R;
+                minEigenValFunc = (ippiMinEigenVal) ippiMinEigenVal_32f_C1R;
+                norm_coef = 255.f;
             }
-            setIppErrorStatus();
+            norm_coef = kerType == ippKernelSobel ? norm_coef : norm_coef / 2.45f;
+
+            if (getBufferSizeFunc && minEigenValFunc)
+            {
+                int bufferSize;
+                IppiSize srcRoi = { src.cols, src.rows };
+                IppStatus ok = getBufferSizeFunc(srcRoi, kerSize, blockSize, &bufferSize);
+                if (ok >= 0)
+                {
+                    AutoBuffer<uchar> buffer(bufferSize);
+                    ok = minEigenValFunc(src.ptr(), (int) src.step, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi, kerType, kerSize, blockSize, buffer);
+                    CV_SUPPRESS_DEPRECATED_START
+                    if (ok >= 0) ok = ippiMulC_32f_C1IR(norm_coef, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi);
+                    CV_SUPPRESS_DEPRECATED_END
+                    if (ok >= 0)
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP);
+                        return;
+                    }
+                }
+                setIppErrorStatus();
+            }
         }
     }
 #endif
@@ -538,44 +544,50 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
     Mat dst = _dst.getMat();
 
 #if IPP_VERSION_X100 >= 801 && 0
-    int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    int borderTypeNI = borderType & ~BORDER_ISOLATED;
-    bool isolated = (borderType & BORDER_ISOLATED) != 0;
-
-    if ( (ksize == 3 || ksize == 5) && (type == CV_8UC1 || type == CV_32FC1) &&
-        (borderTypeNI == BORDER_CONSTANT || borderTypeNI == BORDER_REPLICATE) && cn == 1 && (!src.isSubmatrix() || isolated) )
+    CV_IPP_CHECK()
     {
-        IppiSize roisize = { src.cols, src.rows };
-        IppiMaskSize masksize = ksize == 5 ? ippMskSize5x5 : ippMskSize3x3;
-        IppDataType datatype = type == CV_8UC1 ? ipp8u : ipp32f;
-        Ipp32s bufsize = 0;
+        int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+        int borderTypeNI = borderType & ~BORDER_ISOLATED;
+        bool isolated = (borderType & BORDER_ISOLATED) != 0;
 
-        double scale = (double)(1 << ((ksize > 0 ? ksize : 3) - 1)) * blockSize;
-        if (ksize < 0)
-            scale *= 2.0;
-        if (depth == CV_8U)
-            scale *= 255.0;
-        scale = std::pow(scale, -4.0);
-
-        if (ippiHarrisCornerGetBufferSize(roisize, masksize, blockSize, datatype, cn, &bufsize) >= 0)
+        if ( (ksize == 3 || ksize == 5) && (type == CV_8UC1 || type == CV_32FC1) &&
+            (borderTypeNI == BORDER_CONSTANT || borderTypeNI == BORDER_REPLICATE) && cn == 1 && (!src.isSubmatrix() || isolated) )
         {
-            Ipp8u * buffer = ippsMalloc_8u(bufsize);
-            IppiDifferentialKernel filterType = ksize > 0 ? ippFilterSobel : ippFilterScharr;
-            IppiBorderType borderTypeIpp = borderTypeNI == BORDER_CONSTANT ? ippBorderConst : ippBorderRepl;
-            IppStatus status = (IppStatus)-1;
+            IppiSize roisize = { src.cols, src.rows };
+            IppiMaskSize masksize = ksize == 5 ? ippMskSize5x5 : ippMskSize3x3;
+            IppDataType datatype = type == CV_8UC1 ? ipp8u : ipp32f;
+            Ipp32s bufsize = 0;
 
+            double scale = (double)(1 << ((ksize > 0 ? ksize : 3) - 1)) * blockSize;
+            if (ksize < 0)
+                scale *= 2.0;
             if (depth == CV_8U)
-                status = ippiHarrisCorner_8u32f_C1R((const Ipp8u *)src.data, (int)src.step, (Ipp32f *)dst.data, (int)dst.step, roisize,
-                                                    filterType, masksize, blockSize, (Ipp32f)k, (Ipp32f)scale, borderTypeIpp, 0, buffer);
-            else if (depth == CV_32F)
-                status = ippiHarrisCorner_32f_C1R((const Ipp32f *)src.data, (int)src.step, (Ipp32f *)dst.data, (int)dst.step, roisize,
-                                                  filterType, masksize, blockSize, (Ipp32f)k, (Ipp32f)scale, borderTypeIpp, 0, buffer);
-            ippsFree(buffer);
+                scale *= 255.0;
+            scale = std::pow(scale, -4.0);
 
-            if (status >= 0)
-                return;
+            if (ippiHarrisCornerGetBufferSize(roisize, masksize, blockSize, datatype, cn, &bufsize) >= 0)
+            {
+                Ipp8u * buffer = ippsMalloc_8u(bufsize);
+                IppiDifferentialKernel filterType = ksize > 0 ? ippFilterSobel : ippFilterScharr;
+                IppiBorderType borderTypeIpp = borderTypeNI == BORDER_CONSTANT ? ippBorderConst : ippBorderRepl;
+                IppStatus status = (IppStatus)-1;
+
+                if (depth == CV_8U)
+                    status = ippiHarrisCorner_8u32f_C1R((const Ipp8u *)src.data, (int)src.step, (Ipp32f *)dst.data, (int)dst.step, roisize,
+                                                        filterType, masksize, blockSize, (Ipp32f)k, (Ipp32f)scale, borderTypeIpp, 0, buffer);
+                else if (depth == CV_32F)
+                    status = ippiHarrisCorner_32f_C1R((const Ipp32f *)src.data, (int)src.step, (Ipp32f *)dst.data, (int)dst.step, roisize,
+                                                      filterType, masksize, blockSize, (Ipp32f)k, (Ipp32f)scale, borderTypeIpp, 0, buffer);
+                ippsFree(buffer);
+
+                if (status >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+            }
+            setIppErrorStatus();
         }
-        setIppErrorStatus();
     }
 #endif
 

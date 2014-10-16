@@ -2989,11 +2989,17 @@ dtype* dst, size_t dstep, Size size, double* scale) \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
 { \
-    if (src && dst)\
+    CV_IPP_CHECK()\
     {\
-        if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height)) >= 0) \
-            return; \
-        setIppErrorStatus(); \
+        if (src && dst)\
+        {\
+            if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height)) >= 0) \
+            {\
+                CV_IMPL_ADD(CV_IMPL_IPP)\
+                return; \
+            }\
+            setIppErrorStatus(); \
+        }\
     }\
     cvt_(src, sstep, dst, dstep, size); \
 }
@@ -3002,11 +3008,17 @@ static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
 { \
-    if (src && dst)\
+    CV_IPP_CHECK()\
     {\
-        if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height), ippRndFinancial, 0) >= 0) \
-            return; \
-        setIppErrorStatus(); \
+        if (src && dst)\
+        {\
+            if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height), ippRndFinancial, 0) >= 0) \
+            {\
+                CV_IMPL_ADD(CV_IMPL_IPP)\
+                return; \
+            }\
+            setIppErrorStatus(); \
+        }\
     }\
     cvt_(src, sstep, dst, dstep, size); \
 }
@@ -3524,6 +3536,7 @@ public:
             setIppErrorStatus();
             *ok = false;
         }
+        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
     }
 private:
     IppLUTParallelBody_LUTC1(const IppLUTParallelBody_LUTC1&);
@@ -3567,6 +3580,7 @@ public:
                 setIppErrorStatus();
                 return;
             }
+            CV_IMPL_ADD(CV_IMPL_IPP);
         }
         else if (lutcn == 4)
         {
@@ -3576,6 +3590,7 @@ public:
                 setIppErrorStatus();
                 return;
             }
+            CV_IMPL_ADD(CV_IMPL_IPP);
         }
 
         *ok = true;
@@ -3605,14 +3620,20 @@ public:
             if (ippiLUTPalette_8u_C3R(
                     src.ptr(), (int)src.step[0], dst.ptr(), (int)dst.step[0],
                     ippiSize(dst.size()), lutTable, 8) >= 0)
+            {
+                CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
                 return;
+            }
         }
         else if (lutcn == 4)
         {
             if (ippiLUTPalette_8u_C4R(
                     src.ptr(), (int)src.step[0], dst.ptr(), (int)dst.step[0],
                     ippiSize(dst.size()), lutTable, 8) >= 0)
+            {
+                CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
                 return;
+            }
         }
         setIppErrorStatus();
         *ok = false;
@@ -3690,19 +3711,22 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
         bool ok = false;
         Ptr<ParallelLoopBody> body;
 #if defined(HAVE_IPP)
-        size_t elemSize1 = CV_ELEM_SIZE1(dst.depth());
+        CV_IPP_CHECK()
+        {
+            size_t elemSize1 = CV_ELEM_SIZE1(dst.depth());
 #if 0 // there are no performance benefits (PR #2653)
-        if (lutcn == 1)
-        {
-            ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTC1(src, lut, dst, &ok);
-            body.reset(p);
-        }
-        else
+            if (lutcn == 1)
+            {
+                ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTC1(src, lut, dst, &ok);
+                body.reset(p);
+            }
+            else
 #endif
-        if ((lutcn == 3 || lutcn == 4) && elemSize1 == 1)
-        {
-            ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTCN(src, lut, dst, &ok);
-            body.reset(p);
+            if ((lutcn == 3 || lutcn == 4) && elemSize1 == 1)
+            {
+                ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTCN(src, lut, dst, &ok);
+                body.reset(p);
+            }
         }
 #endif
         if (body == NULL || ok == false)

@@ -233,13 +233,25 @@ void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t bl
 
 struct CoreTLSData
 {
-    CoreTLSData() : device(0), useOpenCL(-1)
-    {}
+    CoreTLSData() : device(0), useOpenCL(-1), useIPP(-1), useCollection(false)
+    {
+#ifdef CV_COLLECT_IMPL_DATA
+        implFlags = 0;
+#endif
+    }
 
     RNG rng;
     int device;
     ocl::Queue oclQueue;
     int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
+    int useIPP; // 1 - use, 0 - do not use, -1 - auto/not initialized
+    bool useCollection; // enable/disable impl data collection
+
+#ifdef CV_COLLECT_IMPL_DATA
+    int implFlags;
+    std::vector<int> implCode;
+    std::vector<String> implFun;
+#endif
 };
 
 extern TLSData<CoreTLSData> coreTlsData;

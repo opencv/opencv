@@ -1423,9 +1423,12 @@ struct RowVec_32f
     int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
 #if defined USE_IPP_SEP_FILTERS && 0
-        int ret = ippiOperator(_src, _dst, width, cn);
-        if (ret > 0)
-            return ret;
+        CV_IPP_CHECK()
+        {
+            int ret = ippiOperator(_src, _dst, width, cn);
+            if (ret > 0)
+                return ret;
+        }
 #endif
         int _ksize = kernel.rows + kernel.cols - 1;
         const float* src0 = (const float*)_src;
@@ -1494,6 +1497,7 @@ private:
             setIppErrorStatus();
             return 0;
         }
+        CV_IMPL_ADD(CV_IMPL_IPP);
         return width - _ksize + 1;
     }
 #endif
@@ -3743,67 +3747,73 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
     Point anchor = normalizeAnchor(anchor0, kernel.size());
 
 #if IPP_VERSION_X100 > 0 && !defined HAVE_IPP_ICV_ONLY
-    typedef IppStatus (CV_STDCALL * ippiFilterBorder)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize dstRoiSize,
-                                                      IppiBorderType border, const void * borderValue,
-                                                      const IppiFilterBorderSpec* pSpec, Ipp8u* pBuffer);
-
-    int stype = src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
-            ktype = kernel.type(), kdepth = CV_MAT_DEPTH(ktype);
-    bool isolated = (borderType & BORDER_ISOLATED) != 0;
-    Point ippAnchor(kernel.cols >> 1, kernel.rows >> 1);
-    int borderTypeNI = borderType & ~BORDER_ISOLATED;
-    IppiBorderType ippBorderType = ippiGetBorderType(borderTypeNI);
-
-    if (borderTypeNI == BORDER_CONSTANT || borderTypeNI == BORDER_REPLICATE)
+    CV_IPP_CHECK()
     {
-        ippiFilterBorder ippFunc =
-            stype == CV_8UC1 ? (ippiFilterBorder)ippiFilterBorder_8u_C1R :
-            stype == CV_8UC3 ? (ippiFilterBorder)ippiFilterBorder_8u_C3R :
-            stype == CV_8UC4 ? (ippiFilterBorder)ippiFilterBorder_8u_C4R :
-            stype == CV_16UC1 ? (ippiFilterBorder)ippiFilterBorder_16u_C1R :
-            stype == CV_16UC3 ? (ippiFilterBorder)ippiFilterBorder_16u_C3R :
-            stype == CV_16UC4 ? (ippiFilterBorder)ippiFilterBorder_16u_C4R :
-            stype == CV_16SC1 ? (ippiFilterBorder)ippiFilterBorder_16s_C1R :
-            stype == CV_16SC3 ? (ippiFilterBorder)ippiFilterBorder_16s_C3R :
-            stype == CV_16SC4 ? (ippiFilterBorder)ippiFilterBorder_16s_C4R :
-            stype == CV_32FC1 ? (ippiFilterBorder)ippiFilterBorder_32f_C1R :
-            stype == CV_32FC3 ? (ippiFilterBorder)ippiFilterBorder_32f_C3R :
-            stype == CV_32FC4 ? (ippiFilterBorder)ippiFilterBorder_32f_C4R : 0;
+        typedef IppStatus (CV_STDCALL * ippiFilterBorder)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize dstRoiSize,
+                                                          IppiBorderType border, const void * borderValue,
+                                                          const IppiFilterBorderSpec* pSpec, Ipp8u* pBuffer);
 
-        if (sdepth == ddepth && (ktype == CV_16SC1 || ktype == CV_32FC1) &&
-                ippFunc && (int)ippBorderType >= 0 && (!src.isSubmatrix() || isolated) &&
-                std::fabs(delta - 0) < DBL_EPSILON && ippAnchor == anchor && dst.data != src.data)
+        int stype = src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
+                ktype = kernel.type(), kdepth = CV_MAT_DEPTH(ktype);
+        bool isolated = (borderType & BORDER_ISOLATED) != 0;
+        Point ippAnchor(kernel.cols >> 1, kernel.rows >> 1);
+        int borderTypeNI = borderType & ~BORDER_ISOLATED;
+        IppiBorderType ippBorderType = ippiGetBorderType(borderTypeNI);
+
+        if (borderTypeNI == BORDER_CONSTANT || borderTypeNI == BORDER_REPLICATE)
         {
-            IppiSize kernelSize = { kernel.cols, kernel.rows }, dstRoiSize = { dst.cols, dst.rows };
-            IppDataType dataType = ippiGetDataType(ddepth), kernelType = ippiGetDataType(kdepth);
-            Ipp32s specSize = 0, bufsize = 0;
-            IppStatus status = (IppStatus)-1;
+            ippiFilterBorder ippFunc =
+                stype == CV_8UC1 ? (ippiFilterBorder)ippiFilterBorder_8u_C1R :
+                stype == CV_8UC3 ? (ippiFilterBorder)ippiFilterBorder_8u_C3R :
+                stype == CV_8UC4 ? (ippiFilterBorder)ippiFilterBorder_8u_C4R :
+                stype == CV_16UC1 ? (ippiFilterBorder)ippiFilterBorder_16u_C1R :
+                stype == CV_16UC3 ? (ippiFilterBorder)ippiFilterBorder_16u_C3R :
+                stype == CV_16UC4 ? (ippiFilterBorder)ippiFilterBorder_16u_C4R :
+                stype == CV_16SC1 ? (ippiFilterBorder)ippiFilterBorder_16s_C1R :
+                stype == CV_16SC3 ? (ippiFilterBorder)ippiFilterBorder_16s_C3R :
+                stype == CV_16SC4 ? (ippiFilterBorder)ippiFilterBorder_16s_C4R :
+                stype == CV_32FC1 ? (ippiFilterBorder)ippiFilterBorder_32f_C1R :
+                stype == CV_32FC3 ? (ippiFilterBorder)ippiFilterBorder_32f_C3R :
+                stype == CV_32FC4 ? (ippiFilterBorder)ippiFilterBorder_32f_C4R : 0;
 
-            if ((status = ippiFilterBorderGetSize(kernelSize, dstRoiSize, dataType, kernelType, cn, &specSize, &bufsize)) >= 0)
+            if (sdepth == ddepth && (ktype == CV_16SC1 || ktype == CV_32FC1) &&
+                    ippFunc && (int)ippBorderType >= 0 && (!src.isSubmatrix() || isolated) &&
+                    std::fabs(delta - 0) < DBL_EPSILON && ippAnchor == anchor && dst.data != src.data)
             {
-                IppiFilterBorderSpec * spec = (IppiFilterBorderSpec *)ippMalloc(specSize);
-                Ipp8u * buffer = ippsMalloc_8u(bufsize);
-                Ipp32f borderValue[4] = { 0, 0, 0, 0 };
+                IppiSize kernelSize = { kernel.cols, kernel.rows }, dstRoiSize = { dst.cols, dst.rows };
+                IppDataType dataType = ippiGetDataType(ddepth), kernelType = ippiGetDataType(kdepth);
+                Ipp32s specSize = 0, bufsize = 0;
+                IppStatus status = (IppStatus)-1;
 
-                Mat reversedKernel;
-                flip(kernel, reversedKernel, -1);
-
-                if ((kdepth == CV_32F && (status = ippiFilterBorderInit_32f((const Ipp32f *)reversedKernel.data, kernelSize,
-                        dataType, cn, ippRndFinancial, spec)) >= 0 ) ||
-                    (kdepth == CV_16S && (status = ippiFilterBorderInit_16s((const Ipp16s *)reversedKernel.data,
-                        kernelSize, 0, dataType, cn, ippRndFinancial, spec)) >= 0))
+                if ((status = ippiFilterBorderGetSize(kernelSize, dstRoiSize, dataType, kernelType, cn, &specSize, &bufsize)) >= 0)
                 {
-                    status = ippFunc(src.data, (int)src.step, dst.data, (int)dst.step, dstRoiSize,
-                                     ippBorderType, borderValue, spec, buffer);
+                    IppiFilterBorderSpec * spec = (IppiFilterBorderSpec *)ippMalloc(specSize);
+                    Ipp8u * buffer = ippsMalloc_8u(bufsize);
+                    Ipp32f borderValue[4] = { 0, 0, 0, 0 };
+
+                    Mat reversedKernel;
+                    flip(kernel, reversedKernel, -1);
+
+                    if ((kdepth == CV_32F && (status = ippiFilterBorderInit_32f((const Ipp32f *)reversedKernel.data, kernelSize,
+                            dataType, cn, ippRndFinancial, spec)) >= 0 ) ||
+                        (kdepth == CV_16S && (status = ippiFilterBorderInit_16s((const Ipp16s *)reversedKernel.data,
+                            kernelSize, 0, dataType, cn, ippRndFinancial, spec)) >= 0))
+                    {
+                        status = ippFunc(src.data, (int)src.step, dst.data, (int)dst.step, dstRoiSize,
+                                         ippBorderType, borderValue, spec, buffer);
+                    }
+
+                    ippsFree(buffer);
+                    ippsFree(spec);
                 }
 
-                ippsFree(buffer);
-                ippsFree(spec);
+                if (status >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
             }
-
-            if (status >= 0)
-                return;
-            setIppErrorStatus();
         }
     }
 #endif

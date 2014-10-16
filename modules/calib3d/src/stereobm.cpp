@@ -925,6 +925,7 @@ public:
                         filterSpeckles(disparr.getMat(), FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
                     if (dtype == CV_32F)
                         disparr.getUMat().convertTo(disparr, CV_32FC1, 1./(1 << DISPARITY_SHIFT), 0);
+                    CV_IMPL_ADD(CV_IMPL_OCL);
                     return;
                 }
             }

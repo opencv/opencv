@@ -566,6 +566,8 @@ CV_EXPORTS void setIppStatus(int status, const char * const funcname = NULL, con
                              int line = 0);
 CV_EXPORTS int getIppStatus();
 CV_EXPORTS String getIppErrorLocation();
+CV_EXPORTS bool useIPP();
+CV_EXPORTS void setUseIPP(bool flag);
 
 } // ipp
 

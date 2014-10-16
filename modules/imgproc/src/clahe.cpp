@@ -404,7 +404,10 @@ namespace
 #ifdef HAVE_OPENCL
         if (useOpenCL && clahe::calcLut(_srcForLut, ulut_, tilesX_, tilesY_, tileSize, clipLimit, lutScale) )
             if( clahe::transform(_src, _dst, ulut_, tilesX_, tilesY_, tileSize) )
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return;
+            }
 #endif
 
         cv::Mat src = _src.getMat();

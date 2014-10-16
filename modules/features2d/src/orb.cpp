@@ -823,6 +823,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
                                           uresponses, nkeypoints, 7, HARRIS_K );
             if( useOCL )
             {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 uresponses.copyTo(responses);
                 for( i = 0; i < nkeypoints; i++ )
                     allKeypoints[i].response = responses.at<float>(i);
@@ -867,6 +868,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
 
         if( useOCL )
         {
+            CV_IMPL_ADD(CV_IMPL_OCL);
             uresponses.copyTo(responses);
             for( i = 0; i < nkeypoints; i++ )
                 allKeypoints[i].angle = responses.at<float>(i);
@@ -1110,6 +1112,10 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
             useOCL = ocl_computeOrbDescriptors(uimagePyramid, ulayerInfo,
                                                ukeypoints, udescriptors, upattern,
                                                nkeypoints, dsize, WTA_K);
+            if(useOCL)
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
+            }
         }
 
         if( !useOCL )

@@ -414,6 +414,12 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
                 }
             }
         }
+#ifdef HAVE_OPENCL
+        else
+        {
+            CV_IMPL_ADD(CV_IMPL_OCL);
+        }
+#endif
 
         x_tl /= 2; y_tl /= 2;
         x_br /= 2; y_br /= 2;
@@ -476,8 +482,8 @@ void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
 #endif
 
 #ifdef HAVE_OPENCL
-        if ( !cv::ocl::useOpenCL() ||
-             !ocl_normalizeUsingWeightMap(_weight, _src) )
+    if ( !cv::ocl::useOpenCL() ||
+            !ocl_normalizeUsingWeightMap(_weight, _src) )
 #endif
     {
         Mat weight = _weight.getMat();
@@ -519,6 +525,12 @@ void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
             }
         }
     }
+#ifdef HAVE_OPENCL
+    else
+    {
+        CV_IMPL_ADD(CV_IMPL_OCL);
+    }
+#endif
 }
 
 

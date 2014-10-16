@@ -1096,7 +1096,10 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
                       (_prevImg.isUMat() || _nextImg.isUMat()) &&
                       ocl::Image2D::isFormatSupported(CV_32F, 1, false);
     if ( use_opencl && ocl_calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err, winSize, maxLevel, criteria, flags/*, minEigThreshold*/))
+    {
+        CV_IMPL_ADD(CV_IMPL_OCL);
         return;
+    }
 
     Mat prevPtsMat = _prevPts.getMat();
     const int derivDepth = DataType<cv::detail::deriv_type>::depth;

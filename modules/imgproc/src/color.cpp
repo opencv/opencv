@@ -223,6 +223,10 @@ public:
         void *yD = dst.ptr<uchar>(range.start);
         if( !cvt(yS, (int)src.step[0], yD, (int)dst.step[0], src.cols, range.end - range.start) )
             *ok = false;
+        else
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+        }
     }
 
 private:
@@ -5427,44 +5431,65 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-            if( code == CV_BGR2BGRA)
+            CV_IPP_CHECK()
             {
-                if ( CvtColorIPPLoop(src, dst, IPPReorderFunctor(ippiSwapChannelsC3C4RTab[depth], 0, 1, 2)) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if( code == CV_BGRA2BGR )
-            {
-                if ( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiCopyAC4C3RTab[depth])) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if( code == CV_BGR2RGBA )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPReorderFunctor(ippiSwapChannelsC3C4RTab[depth], 2, 1, 0)) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if( code == CV_RGBA2BGR )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPReorderFunctor(ippiSwapChannelsC4C3RTab[depth], 2, 1, 0)) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if( code == CV_RGB2BGR )
-            {
-                if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC3RTab[depth], 2, 1, 0)) )
-                    return;
-                setIppErrorStatus();
-            }
+                if( code == CV_BGR2BGRA)
+                {
+                    if ( CvtColorIPPLoop(src, dst, IPPReorderFunctor(ippiSwapChannelsC3C4RTab[depth], 0, 1, 2)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if( code == CV_BGRA2BGR )
+                {
+                    if ( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiCopyAC4C3RTab[depth])) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if( code == CV_BGR2RGBA )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPReorderFunctor(ippiSwapChannelsC3C4RTab[depth], 2, 1, 0)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if( code == CV_RGBA2BGR )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPReorderFunctor(ippiSwapChannelsC4C3RTab[depth], 2, 1, 0)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if( code == CV_RGB2BGR )
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC3RTab[depth], 2, 1, 0)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
 #if IPP_VERSION_X100 >= 801
-            else if( code == CV_RGBA2BGRA )
-            {
-                if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC4RTab[depth], 2, 1, 0)) )
-                    return;
-                setIppErrorStatus();
-            }
+                else if( code == CV_RGBA2BGRA )
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC4RTab[depth], 2, 1, 0)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
 #endif
+            }
 #endif
 
             if( depth == CV_8U )
@@ -5487,37 +5512,52 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 
 #if defined(HAVE_IPP) && 0 // breaks OCL accuracy tests
-            CV_SUPPRESS_DEPRECATED_START
+            CV_IPP_CHECK()
+            {
+                CV_SUPPRESS_DEPRECATED_START
 
-            if (code == CV_BGR2BGR565 && scn == 3)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R)))
-                    return;
-                setIppErrorStatus();
+                if (code == CV_BGR2BGR565 && scn == 3)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_BGRA2BGR565 && scn == 4)
+                {
+                    if (CvtColorIPPLoopCopy(src, dst,
+                                            IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
+                                            (ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R, 0, 1, 2, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_RGB2BGR565 && scn == 3)
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
+                                                                               (ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R, 2, 1, 0, depth)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_RGBA2BGR565 && scn == 4)
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
+                                                                               (ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R, 2, 1, 0, depth)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                CV_SUPPRESS_DEPRECATED_END
             }
-            else if (code == CV_BGRA2BGR565 && scn == 4)
-            {
-                if (CvtColorIPPLoopCopy(src, dst,
-                                        IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                        (ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R, 0, 1, 2, depth)))
-                    return;
-                setIppErrorStatus();
-            }
-            else if (code == CV_RGB2BGR565 && scn == 3)
-            {
-                if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
-                                                                           (ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R, 2, 1, 0, depth)) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if (code == CV_RGBA2BGR565 && scn == 4)
-            {
-                if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                           (ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R, 2, 1, 0, depth)) )
-                    return;
-                setIppErrorStatus();
-            }
-            CV_SUPPRESS_DEPRECATED_END
 #endif
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
@@ -5542,35 +5582,50 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 
 #ifdef HAVE_IPP
-            CV_SUPPRESS_DEPRECATED_START
-            if (code == CV_BGR5652BGR && dcn == 3)
+            CV_IPP_CHECK()
             {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R)))
-                    return;
-                setIppErrorStatus();
+                CV_SUPPRESS_DEPRECATED_START
+                if (code == CV_BGR5652BGR && dcn == 3)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_BGR5652RGB && dcn == 3)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R,
+                                                                           ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_BGR5652BGRA && dcn == 4)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R,
+                                                                           ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_BGR5652RGBA && dcn == 4)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R,
+                                                                           ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                CV_SUPPRESS_DEPRECATED_END
             }
-            else if (code == CV_BGR5652RGB && dcn == 3)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R,
-                                                                       ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)))
-                    return;
-                setIppErrorStatus();
-            }
-            else if (code == CV_BGR5652BGRA && dcn == 4)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R,
-                                                                       ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)))
-                    return;
-                setIppErrorStatus();
-            }
-            else if (code == CV_BGR5652RGBA && dcn == 4)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R,
-                                                                       ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)))
-                    return;
-                setIppErrorStatus();
-            }
-            CV_SUPPRESS_DEPRECATED_END
 #endif
 
             CvtColorLoop(src, dst, RGB5x52RGB(dcn,
@@ -5587,29 +5642,44 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-            if( code == CV_BGR2GRAY && depth == CV_32F )
+            CV_IPP_CHECK()
             {
-                if( CvtColorIPPLoop(src, dst, IPPColor2GrayFunctor(ippiColor2GrayC3Tab[depth])) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if( code == CV_RGB2GRAY && depth == CV_32F )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGB2GrayC3Tab[depth])) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if( code == CV_BGRA2GRAY && depth == CV_32F )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPColor2GrayFunctor(ippiColor2GrayC4Tab[depth])) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if( code == CV_RGBA2GRAY && depth == CV_32F )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGB2GrayC4Tab[depth])) )
-                    return;
-                setIppErrorStatus();
+                if( code == CV_BGR2GRAY && depth == CV_32F )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPColor2GrayFunctor(ippiColor2GrayC3Tab[depth])) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if( code == CV_RGB2GRAY && depth == CV_32F )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGB2GrayC3Tab[depth])) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if( code == CV_BGRA2GRAY && depth == CV_32F )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPColor2GrayFunctor(ippiColor2GrayC4Tab[depth])) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if( code == CV_RGBA2GRAY && depth == CV_32F )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGB2GrayC4Tab[depth])) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
             }
 #endif
 
@@ -5643,17 +5713,26 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-            if( code == CV_GRAY2BGR )
+            CV_IPP_CHECK()
             {
-                if( CvtColorIPPLoop(src, dst, IPPGray2BGRFunctor(ippiCopyP3C3RTab[depth])) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if( code == CV_GRAY2BGRA )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGray2BGRAFunctor(ippiCopyP3C3RTab[depth], ippiSwapChannelsC3C4RTab[depth], depth)) )
-                    return;
-                setIppErrorStatus();
+                if( code == CV_GRAY2BGR )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGray2BGRFunctor(ippiCopyP3C3RTab[depth])) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if( code == CV_GRAY2BGRA )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGray2BGRAFunctor(ippiCopyP3C3RTab[depth], ippiSwapChannelsC3C4RTab[depth], depth)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
             }
 #endif
 
@@ -5693,32 +5772,47 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 
 #if defined HAVE_IPP && 0
-            if (code == CV_RGB2YUV && scn == 3 && depth == CV_8U)
+            CV_IPP_CHECK()
             {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiRGBToYUV_8u_C3R)))
-                    return;
-                setIppErrorStatus();
-            }
-            else if (code == CV_BGR2YUV && scn == 3 && depth == CV_8U)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
-                                                                       (ippiGeneralFunc)ippiRGBToYUV_8u_C3R, 2, 1, 0, depth)))
-                    return;
-                setIppErrorStatus();
-            }
-            else if (code == CV_RGB2YUV && scn == 4 && depth == CV_8U)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                       (ippiGeneralFunc)ippiRGBToYUV_8u_C3R, 0, 1, 2, depth)))
-                    return;
-                setIppErrorStatus();
-            }
-            else if (code == CV_BGR2YUV && scn == 4 && depth == CV_8U)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                       (ippiGeneralFunc)ippiRGBToYUV_8u_C3R, 2, 1, 0, depth)))
-                    return;
-                setIppErrorStatus();
+                if (code == CV_RGB2YUV && scn == 3 && depth == CV_8U)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiRGBToYUV_8u_C3R)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_BGR2YUV && scn == 3 && depth == CV_8U)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
+                                                                           (ippiGeneralFunc)ippiRGBToYUV_8u_C3R, 2, 1, 0, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_RGB2YUV && scn == 4 && depth == CV_8U)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
+                                                                           (ippiGeneralFunc)ippiRGBToYUV_8u_C3R, 0, 1, 2, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_BGR2YUV && scn == 4 && depth == CV_8U)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
+                                                                           (ippiGeneralFunc)ippiRGBToYUV_8u_C3R, 2, 1, 0, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
             }
 #endif
 
@@ -5752,32 +5846,47 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 
 #if defined HAVE_IPP && 0
-            if (code == CV_YUV2RGB && dcn == 3 && depth == CV_8U)
+            CV_IPP_CHECK()
             {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R)))
-                    return;
-                setIppErrorStatus();
-            }
-            else if (code == CV_YUV2BGR && dcn == 3 && depth == CV_8U)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R,
-                                                                       ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)))
-                    return;
-                setIppErrorStatus();
-            }
-            else if (code == CV_YUV2RGB && dcn == 4 && depth == CV_8U)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R,
-                                                                       ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)))
-                    return;
-                setIppErrorStatus();
-            }
-            else if (code == CV_YUV2BGR && dcn == 4 && depth == CV_8U)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R,
-                                                                       ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)))
-                    return;
-                setIppErrorStatus();
+                if (code == CV_YUV2RGB && dcn == 3 && depth == CV_8U)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_YUV2BGR && dcn == 3 && depth == CV_8U)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R,
+                                                                           ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_YUV2RGB && dcn == 4 && depth == CV_8U)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R,
+                                                                           ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_YUV2BGR && dcn == 4 && depth == CV_8U)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R,
+                                                                           ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
             }
 #endif
 
@@ -5798,29 +5907,44 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-            if( code == CV_BGR2XYZ && scn == 3 && depth != CV_32F )
+            CV_IPP_CHECK()
             {
-                if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2XYZTab[depth], 2, 1, 0, depth)) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if( code == CV_BGR2XYZ && scn == 4 && depth != CV_32F )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2XYZTab[depth], 2, 1, 0, depth)) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if( code == CV_RGB2XYZ && scn == 3 && depth != CV_32F )
-            {
-                if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiRGB2XYZTab[depth])) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if( code == CV_RGB2XYZ && scn == 4 && depth != CV_32F )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2XYZTab[depth], 0, 1, 2, depth)) )
-                    return;
-                setIppErrorStatus();
+                if( code == CV_BGR2XYZ && scn == 3 && depth != CV_32F )
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2XYZTab[depth], 2, 1, 0, depth)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if( code == CV_BGR2XYZ && scn == 4 && depth != CV_32F )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2XYZTab[depth], 2, 1, 0, depth)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if( code == CV_RGB2XYZ && scn == 3 && depth != CV_32F )
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiRGB2XYZTab[depth])) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if( code == CV_RGB2XYZ && scn == 4 && depth != CV_32F )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2XYZTab[depth], 0, 1, 2, depth)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
             }
 #endif
 
@@ -5841,29 +5965,44 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-            if( code == CV_XYZ2BGR && dcn == 3 && depth != CV_32F )
+            CV_IPP_CHECK()
             {
-                if( CvtColorIPPLoopCopy(src, dst, IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if( code == CV_XYZ2BGR && dcn == 4 && depth != CV_32F )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
-                    return;
-                setIppErrorStatus();
-            }
-            if( code == CV_XYZ2RGB && dcn == 3 && depth != CV_32F )
-            {
-                if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiXYZ2RGBTab[depth])) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if( code == CV_XYZ2RGB && dcn == 4 && depth != CV_32F )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
-                    return;
-                setIppErrorStatus();
+                if( code == CV_XYZ2BGR && dcn == 3 && depth != CV_32F )
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if( code == CV_XYZ2BGR && dcn == 4 && depth != CV_32F )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                if( code == CV_XYZ2RGB && dcn == 3 && depth != CV_32F )
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiXYZ2RGBTab[depth])) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if( code == CV_XYZ2RGB && dcn == 4 && depth != CV_32F )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
             }
 #endif
 
@@ -5888,57 +6027,84 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-            if( depth == CV_8U || depth == CV_16U )
+            CV_IPP_CHECK()
             {
+                if( depth == CV_8U || depth == CV_16U )
+                {
 #if 0 // breaks OCL accuracy tests
-                if( code == CV_BGR2HSV_FULL && scn == 3 )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2HSVTab[depth], 2, 1, 0, depth)) )
-                        return;
-                    setIppErrorStatus();
-                }
-                else if( code == CV_BGR2HSV_FULL && scn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HSVTab[depth], 2, 1, 0, depth)) )
-                        return;
-                    setIppErrorStatus();
-                }
-                else if( code == CV_RGB2HSV_FULL && scn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HSVTab[depth], 0, 1, 2, depth)) )
-                        return;
-                    setIppErrorStatus();
-                } else
+                    if( code == CV_BGR2HSV_FULL && scn == 3 )
+                    {
+                        if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2HSVTab[depth], 2, 1, 0, depth)) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
+                    else if( code == CV_BGR2HSV_FULL && scn == 4 )
+                    {
+                        if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HSVTab[depth], 2, 1, 0, depth)) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
+                    else if( code == CV_RGB2HSV_FULL && scn == 4 )
+                    {
+                        if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HSVTab[depth], 0, 1, 2, depth)) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    } else
 #endif
-                if( code == CV_RGB2HSV_FULL && scn == 3 && depth == CV_16U )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiRGB2HSVTab[depth])) )
-                        return;
-                    setIppErrorStatus();
-                }
-                else if( code == CV_BGR2HLS_FULL && scn == 3 )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2HLSTab[depth], 2, 1, 0, depth)) )
-                        return;
-                    setIppErrorStatus();
-                }
-                else if( code == CV_BGR2HLS_FULL && scn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HLSTab[depth], 2, 1, 0, depth)) )
-                        return;
-                    setIppErrorStatus();
-                }
-                else if( code == CV_RGB2HLS_FULL && scn == 3 )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiRGB2HLSTab[depth])) )
-                        return;
-                    setIppErrorStatus();
-                }
-                else if( code == CV_RGB2HLS_FULL && scn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HLSTab[depth], 0, 1, 2, depth)) )
-                        return;
-                    setIppErrorStatus();
+                    if( code == CV_RGB2HSV_FULL && scn == 3 && depth == CV_16U )
+                    {
+                        if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiRGB2HSVTab[depth])) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
+                    else if( code == CV_BGR2HLS_FULL && scn == 3 )
+                    {
+                        if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2HLSTab[depth], 2, 1, 0, depth)) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
+                    else if( code == CV_BGR2HLS_FULL && scn == 4 )
+                    {
+                        if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HLSTab[depth], 2, 1, 0, depth)) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
+                    else if( code == CV_RGB2HLS_FULL && scn == 3 )
+                    {
+                        if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiRGB2HLSTab[depth])) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
+                    else if( code == CV_RGB2HLS_FULL && scn == 4 )
+                    {
+                        if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HLSTab[depth], 0, 1, 2, depth)) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
                 }
             }
 #endif
@@ -5979,55 +6145,82 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-            if( depth == CV_8U || depth == CV_16U )
+            CV_IPP_CHECK()
             {
-                if( code == CV_HSV2BGR_FULL && dcn == 3 )
+                if( depth == CV_8U || depth == CV_16U )
                 {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralReorderFunctor(ippiHSV2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
-                        return;
-                    setIppErrorStatus();
-                }
-                else if( code == CV_HSV2BGR_FULL && dcn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHSV2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
-                        return;
-                    setIppErrorStatus();
-                }
-                else if( code == CV_HSV2RGB_FULL && dcn == 3 )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiHSV2RGBTab[depth])) )
-                        return;
-                    setIppErrorStatus();
-                }
-                else if( code == CV_HSV2RGB_FULL && dcn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHSV2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
-                        return;
-                    setIppErrorStatus();
-                }
-                else if( code == CV_HLS2BGR_FULL && dcn == 3 )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralReorderFunctor(ippiHLS2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
-                        return;
-                    setIppErrorStatus();
-                }
-                else if( code == CV_HLS2BGR_FULL && dcn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHLS2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
-                        return;
-                    setIppErrorStatus();
-                }
-                else if( code == CV_HLS2RGB_FULL && dcn == 3 )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiHLS2RGBTab[depth])) )
-                        return;
-                    setIppErrorStatus();
-                }
-                else if( code == CV_HLS2RGB_FULL && dcn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHLS2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
-                        return;
-                    setIppErrorStatus();
+                    if( code == CV_HSV2BGR_FULL && dcn == 3 )
+                    {
+                        if( CvtColorIPPLoopCopy(src, dst, IPPGeneralReorderFunctor(ippiHSV2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
+                    else if( code == CV_HSV2BGR_FULL && dcn == 4 )
+                    {
+                        if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHSV2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
+                    else if( code == CV_HSV2RGB_FULL && dcn == 3 )
+                    {
+                        if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiHSV2RGBTab[depth])) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
+                    else if( code == CV_HSV2RGB_FULL && dcn == 4 )
+                    {
+                        if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHSV2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
+                    else if( code == CV_HLS2BGR_FULL && dcn == 3 )
+                    {
+                        if( CvtColorIPPLoopCopy(src, dst, IPPGeneralReorderFunctor(ippiHLS2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
+                    else if( code == CV_HLS2BGR_FULL && dcn == 4 )
+                    {
+                        if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHLS2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
+                    else if( code == CV_HLS2RGB_FULL && dcn == 3 )
+                    {
+                        if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiHLS2RGBTab[depth])) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
+                    else if( code == CV_HLS2RGB_FULL && dcn == 4 )
+                    {
+                        if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHLS2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
                 }
             }
 #endif
@@ -6062,64 +6255,89 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
 
-#ifdef HAVE_IPP
-#if 0
-            if (code == CV_LBGR2Lab && scn == 3 && depth == CV_8U)
+#if defined HAVE_IPP && 0
+            CV_IPP_CHECK()
             {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiBGRToLab_8u_C3R)))
-                    return;
-                setIppErrorStatus();
+                if (code == CV_LBGR2Lab && scn == 3 && depth == CV_8U)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiBGRToLab_8u_C3R)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_LBGR2Lab && scn == 4 && depth == CV_8U)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
+                                                                           (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 0, 1, 2, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else
+                if (code == CV_LRGB2Lab && scn == 3 && depth == CV_8U) // slower than OpenCV
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
+                                                                           (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 2, 1, 0, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_LRGB2Lab && scn == 4 && depth == CV_8U) // slower than OpenCV
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
+                                                                           (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 2, 1, 0, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_LRGB2Luv && scn == 3)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGBToLUVTab[depth])))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_LRGB2Luv && scn == 4)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
+                                                                           ippiRGBToLUVTab[depth], 0, 1, 2, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_LBGR2Luv && scn == 3)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
+                                                                           ippiRGBToLUVTab[depth], 2, 1, 0, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (code == CV_LBGR2Luv && scn == 4)
+                {
+                    if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
+                                                                           ippiRGBToLUVTab[depth], 2, 1, 0, depth)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
             }
-            else if (code == CV_LBGR2Lab && scn == 4 && depth == CV_8U)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                       (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 0, 1, 2, depth)))
-                    return;
-                setIppErrorStatus();
-            }
-            else
-            if (code == CV_LRGB2Lab && scn == 3 && depth == CV_8U) // slower than OpenCV
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
-                                                                       (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 2, 1, 0, depth)))
-                    return;
-                setIppErrorStatus();
-            }
-            else if (code == CV_LRGB2Lab && scn == 4 && depth == CV_8U) // slower than OpenCV
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                       (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 2, 1, 0, depth)))
-                    return;
-                setIppErrorStatus();
-            }
-            else if (code == CV_LRGB2Luv && scn == 3)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGBToLUVTab[depth])))
-                    return;
-                setIppErrorStatus();
-            }
-            else if (code == CV_LRGB2Luv && scn == 4)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                       ippiRGBToLUVTab[depth], 0, 1, 2, depth)))
-                    return;
-                setIppErrorStatus();
-            }
-            else if (code == CV_LBGR2Luv && scn == 3)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
-                                                                       ippiRGBToLUVTab[depth], 2, 1, 0, depth)))
-                    return;
-                setIppErrorStatus();
-            }
-            else if (code == CV_LBGR2Luv && scn == 4)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                       ippiRGBToLUVTab[depth], 2, 1, 0, depth)))
-                    return;
-                setIppErrorStatus();
-            }
-#endif
 #endif
 
             if( code == CV_BGR2Lab || code == CV_RGB2Lab ||
@@ -6154,55 +6372,79 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
 
 #if defined HAVE_IPP && 0
-            if( code == CV_Lab2LBGR && dcn == 3 && depth == CV_8U)
+            CV_IPP_CHECK()
             {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R)) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if( code == CV_Lab2LBGR && dcn == 4 && depth == CV_8U )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R,
-                                    ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
-                    return;
-                setIppErrorStatus();
-            }
-            if( code == CV_Lab2LRGB && dcn == 3 && depth == CV_8U )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R,
+                if( code == CV_Lab2LBGR && dcn == 3 && depth == CV_8U)
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if( code == CV_Lab2LBGR && dcn == 4 && depth == CV_8U )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R,
+                                        ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                if( code == CV_Lab2LRGB && dcn == 3 && depth == CV_8U )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R,
+                                                                               ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if( code == CV_Lab2LRGB && dcn == 4 && depth == CV_8U )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R,
+                                                                           ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                if( code == CV_Luv2LRGB && dcn == 3 )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiLUVToRGBTab[depth])) )
+                        return;
+                }
+                else if( code == CV_Luv2LRGB && dcn == 4 )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiLUVToRGBTab[depth],
+                                                                           ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                }
+                if( code == CV_Luv2LBGR && dcn == 3 )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiLUVToRGBTab[depth],
                                                                            ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
-                    return;
-                setIppErrorStatus();
-            }
-            else if( code == CV_Lab2LRGB && dcn == 4 && depth == CV_8U )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R,
-                                                                       ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
-                    return;
-                setIppErrorStatus();
-            }
-            if( code == CV_Luv2LRGB && dcn == 3 )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiLUVToRGBTab[depth])) )
-                    return;
-            }
-            else if( code == CV_Luv2LRGB && dcn == 4 )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiLUVToRGBTab[depth],
-                                                                       ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
-                    return;
-            }
-            if( code == CV_Luv2LBGR && dcn == 3 )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiLUVToRGBTab[depth],
-                                                                       ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
-                    return;
-            }
-            else if( code == CV_Luv2LBGR && dcn == 4 )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiLUVToRGBTab[depth],
-                                                                       ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
-                    return;
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                }
+                else if( code == CV_Luv2LBGR && dcn == 4 )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiLUVToRGBTab[depth],
+                                                                           ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                }
             }
 #endif
 
@@ -6314,10 +6556,16 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
                 dst = _dst.getMat();
 #if defined HAVE_IPP
-                if (ippStsNoErr == ippiCopy_8u_C1R(src.data, (int)src.step, dst.data, (int)dst.step,
-                        ippiSize(dstSz.width, dstSz.height)))
-                    return;
-                setIppErrorStatus();
+                CV_IPP_CHECK()
+                {
+                    if (ippStsNoErr == ippiCopy_8u_C1R(src.data, (int)src.step, dst.data, (int)dst.step,
+                            ippiSize(dstSz.width, dstSz.height)))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
 #endif
                 src(Range(0, dstSz.height), Range::all()).copyTo(dst);
             }
@@ -6409,9 +6657,15 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 if( depth == CV_8U )
                 {
 #if defined(HAVE_IPP)
-                    if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiAlphaPremul_8u_AC4R)))
-                        return;
-                    setIppErrorStatus();
+                    CV_IPP_CHECK()
+                    {
+                        if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiAlphaPremul_8u_AC4R)))
+                        {
+                            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                            return;
+                        }
+                        setIppErrorStatus();
+                    }
 #endif
                     CvtColorLoop(src, dst, RGBA2mRGBA<uchar>());
                 }
