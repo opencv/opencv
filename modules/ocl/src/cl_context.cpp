@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2014, Advanced Micro Devices, Inc., all rights reserved.
 // Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
@@ -70,17 +70,6 @@ struct __Module
     cv::Mutex initializationMutex;
     cv::Mutex currentContextMutex;
 };
-static __Module __module;
-
-cv::Mutex& getInitializationMutex()
-{
-    return __module.initializationMutex;
-}
-
-static cv::Mutex& getCurrentContextMutex()
-{
-    return __module.currentContextMutex;
-}
 
 static bool parseOpenCLVersion(const std::string& versionStr, int& major, int& minor)
 {
@@ -245,6 +234,18 @@ struct DeviceInfoImpl: public DeviceInfo
 
 static std::vector<PlatformInfoImpl> global_platforms;
 static std::vector<DeviceInfoImpl> global_devices;
+static __Module __module;
+
+cv::Mutex& getInitializationMutex()
+{
+    return __module.initializationMutex;
+}
+
+static cv::Mutex& getCurrentContextMutex()
+{
+    return __module.currentContextMutex;
+}
+
 
 static void split(const std::string &s, char delim, std::vector<std::string> &elems) {
     std::stringstream ss(s);
