@@ -267,7 +267,9 @@ TEST( Features2d_Detector_GFTT, regression )
 
 TEST( Features2d_Detector_Harris, regression )
 {
-    CV_FeatureDetectorTest test( "detector-harris", GFTTDetector::create(1000, 0.01, 1, 3, true, 0.04));
+    Ptr<FeatureDetector> gftt = GFTTDetector::create();
+    gftt->set(GFTTDetector::USE_HARRIS_DETECTOR, 1);
+    CV_FeatureDetectorTest test( "detector-harris", gftt);
     test.safe_run();
 }
 

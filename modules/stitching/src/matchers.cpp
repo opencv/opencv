@@ -50,6 +50,8 @@ using namespace cv::cuda;
 #include "opencv2/xfeatures2d.hpp"
 #endif
 
+using xfeatures2d::SURF;
+
 namespace {
 
 struct DistIdxPair
@@ -321,27 +323,27 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
 {
     if (num_octaves_descr == num_octaves && num_layers_descr == num_layers)
     {
-        surf = xfeatures2d::SURF::create();
+        surf = SURF::create();
         if( !surf )
             CV_Error( Error::StsNotImplemented, "OpenCV was built without SURF support" );
-        surf->set("hessianThreshold", hess_thresh);
-        surf->set("nOctaves", num_octaves);
-        surf->set("nOctaveLayers", num_layers);
+        surf->set(SURF::HESSIAN_THRESHOLD, hess_thresh);
+        surf->set(SURF::NOCTAVES, num_octaves);
+        surf->set(SURF::NOCTAVE_LAYERS, num_layers);
     }
     else
     {
-        detector_ = xfeatures2d::SURF::create();
-        extractor_ = xfeatures2d::SURF::create();
+        detector_ = SURF::create();
+        extractor_ = SURF::create();
 
         if( !detector_ || !extractor_ )
             CV_Error( Error::StsNotImplemented, "OpenCV was built without SURF support" );
 
-        detector_->set("hessianThreshold", hess_thresh);
-        detector_->set("nOctaves", num_octaves);
-        detector_->set("nOctaveLayers", num_layers);
+        detector_->set(SURF::HESSIAN_THRESHOLD, hess_thresh);
+        detector_->set(SURF::NOCTAVES, num_octaves);
+        detector_->set(SURF::NOCTAVE_LAYERS, num_layers);
 
-        extractor_->set("nOctaves", num_octaves_descr);
-        extractor_->set("nOctaveLayers", num_layers_descr);
+        extractor_->set(SURF::NOCTAVES, num_octaves_descr);
+        extractor_->set(SURF::NOCTAVE_LAYERS, num_layers_descr);
     }
 }
 

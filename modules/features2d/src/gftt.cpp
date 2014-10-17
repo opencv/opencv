@@ -55,6 +55,24 @@ public:
     {
     }
 
+    void set(int prop, double value)
+    {
+        if( prop == USE_HARRIS_DETECTOR )
+            useHarrisDetector = value != 0;
+        else
+            CV_Error(Error::StsBadArg, "");
+    }
+
+    double get(int prop) const
+    {
+        double value = 0;
+        if( prop == USE_HARRIS_DETECTOR )
+            value = useHarrisDetector;
+        else
+            CV_Error(Error::StsBadArg, "");
+        return value;
+    }
+
     void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask )
     {
         std::vector<Point2f> corners;
