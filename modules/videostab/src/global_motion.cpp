@@ -671,7 +671,7 @@ Mat ToFileMotionWriter::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
 KeypointBasedMotionEstimator::KeypointBasedMotionEstimator(Ptr<MotionEstimatorBase> estimator)
     : ImageMotionEstimatorBase(estimator->motionModel()), motionEstimator_(estimator)
 {
-    setDetector(makePtr<GoodFeaturesToTrackDetector>());
+    setDetector(GFTTDetector::create());
     setOpticalFlowEstimator(makePtr<SparsePyrLkOptFlowEstimator>());
     setOutlierRejector(makePtr<NullOutlierRejector>());
 }

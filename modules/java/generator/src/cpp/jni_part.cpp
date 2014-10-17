@@ -24,14 +24,8 @@ JNI_OnLoad(JavaVM* vm, void* )
         return -1;
 
     bool init = true;
-#ifdef HAVE_OPENCV_FEATURES2D
-    init &= cv::initModule_features2d();
-#endif
 #ifdef HAVE_OPENCV_VIDEO
     init &= cv::initModule_video();
-#endif
-#ifdef HAVE_OPENCV_CONTRIB
-    init &= cv::initModule_contrib();
 #endif
 
     if(!init)

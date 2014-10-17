@@ -179,6 +179,9 @@ String Algorithm::name() const
     return info()->name();
 }
 
+void Algorithm::set(int, double) {}
+double Algorithm::get(int) const { return 0.; }
+
 void Algorithm::set(const String& parameter, int value)
 {
     info()->set(this, parameter.c_str(), ParamType<int>::type, &value);

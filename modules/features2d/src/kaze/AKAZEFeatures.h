@@ -11,9 +11,11 @@
 
 /* ************************************************************************* */
 // Includes
-#include "../precomp.hpp"
 #include "AKAZEConfig.h"
 #include "TEvolution.h"
+
+namespace cv
+{
 
 /* ************************************************************************* */
 // AKAZE Class Declaration
@@ -22,7 +24,7 @@ class AKAZEFeatures {
 private:
 
   AKAZEOptions options_;                ///< Configuration options for AKAZE
-    std::vector<TEvolution> evolution_;        ///< Vector of nonlinear diffusion evolution
+  std::vector<TEvolution> evolution_;        ///< Vector of nonlinear diffusion evolution
 
   /// FED parameters
   int ncycles_;                  ///< Number of cycles
@@ -58,5 +60,7 @@ public:
 /// Inline functions
 void generateDescriptorSubsample(cv::Mat& sampleList, cv::Mat& comparisons,
                                  int nbits, int pattern_size, int nchannels);
+
+}
 
 #endif

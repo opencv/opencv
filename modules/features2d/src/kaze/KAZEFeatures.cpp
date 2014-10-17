@@ -20,14 +20,15 @@
  * @date Jan 21, 2012
  * @author Pablo F. Alcantarilla
  */
-
+#include "../precomp.hpp"
 #include "KAZEFeatures.h"
 #include "utils.h"
 
+namespace cv
+{
+
 // Namespaces
 using namespace std;
-using namespace cv;
-using namespace cv::details::kaze;
 
 /* ************************************************************************* */
 /**
@@ -52,19 +53,20 @@ KAZEFeatures::KAZEFeatures(KAZEOptions& options)
 void KAZEFeatures::Allocate_Memory_Evolution(void) {
 
     // Allocate the dimension of the matrices for the evolution
-        for (int i = 0; i <= options_.omax - 1; i++) {
-                for (int j = 0; j <= options_.nsublevels - 1; j++) {
-
+    for (int i = 0; i <= options_.omax - 1; i++)
+    {
+        for (int j = 0; j <= options_.nsublevels - 1; j++)
+        {
             TEvolution aux;
-                        aux.Lx = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-                        aux.Ly = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-                        aux.Lxx = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-                        aux.Lxy = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-                        aux.Lyy = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-                        aux.Lt = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-                        aux.Lsmooth = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-                        aux.Ldet = cv::Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-                        aux.esigma = options_.soffset*pow((float)2.0f, (float)(j) / (float)(options_.nsublevels)+i);
+            aux.Lx = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+            aux.Ly = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+            aux.Lxx = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+            aux.Lxy = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+            aux.Lyy = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+            aux.Lt = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+            aux.Lsmooth = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+            aux.Ldet = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+            aux.esigma = options_.soffset*pow((float)2.0f, (float)(j) / (float)(options_.nsublevels)+i);
             aux.etime = 0.5f*(aux.esigma*aux.esigma);
             aux.sigma_size = fRound(aux.esigma);
             aux.octave = i;
@@ -74,7 +76,8 @@ void KAZEFeatures::Allocate_Memory_Evolution(void) {
     }
 
     // Allocate memory for the FED number of cycles and time steps
-    for (size_t i = 1; i < evolution_.size(); i++) {
+    for (size_t i = 1; i < evolution_.size(); i++)
+    {
         int naux = 0;
         vector<float> tau;
         float ttime = 0.0;
@@ -92,47 +95,43 @@ void KAZEFeatures::Allocate_Memory_Evolution(void) {
  * @param img Input image for which the nonlinear scale space needs to be created
  * @return 0 if the nonlinear scale space was created successfully. -1 otherwise
  */
-int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img)
+int KAZEFeatures::Create_Nonlinear_Scale_Space(const Mat &img)
 {
     CV_Assert(evolution_.size() > 0);
 
     // Copy the original image to the first level of the evolution
     img.copyTo(evolution_[0].Lt);
-        gaussian_2D_convolution(evolution_[0].Lt, evolution_[0].Lt, 0, 0, options_.soffset);
-        gaussian_2D_convolution(evolution_[0].Lt, evolution_[0].Lsmooth, 0, 0, options_.sderivatives);
+    gaussian_2D_convolution(evolution_[0].Lt, evolution_[0].Lt, 0, 0, options_.soffset);
+    gaussian_2D_convolution(evolution_[0].Lt, evolution_[0].Lsmooth, 0, 0, options_.sderivatives);
 
     // Firstly compute the kcontrast factor
         Compute_KContrast(evolution_[0].Lt, options_.kcontrast_percentille);
 
     // Allocate memory for the flow and step images
-    cv::Mat Lflow = cv::Mat::zeros(evolution_[0].Lt.rows, evolution_[0].Lt.cols, CV_32F);
-    cv::Mat Lstep = cv::Mat::zeros(evolution_[0].Lt.rows, evolution_[0].Lt.cols, CV_32F);
+    Mat Lflow = Mat::zeros(evolution_[0].Lt.rows, evolution_[0].Lt.cols, CV_32F);
+    Mat Lstep = Mat::zeros(evolution_[0].Lt.rows, evolution_[0].Lt.cols, CV_32F);
 
     // Now generate the rest of evolution levels
-    for (size_t i = 1; i < evolution_.size(); i++) {
-
+    for (size_t i = 1; i < evolution_.size(); i++)
+    {
         evolution_[i - 1].Lt.copyTo(evolution_[i].Lt);
-                gaussian_2D_convolution(evolution_[i - 1].Lt, evolution_[i].Lsmooth, 0, 0, options_.sderivatives);
+        gaussian_2D_convolution(evolution_[i - 1].Lt, evolution_[i].Lsmooth, 0, 0, options_.sderivatives);
 
         // Compute the Gaussian derivatives Lx and Ly
         Scharr(evolution_[i].Lsmooth, evolution_[i].Lx, CV_32F, 1, 0, 1, 0, BORDER_DEFAULT);
         Scharr(evolution_[i].Lsmooth, evolution_[i].Ly, CV_32F, 0, 1, 1, 0, BORDER_DEFAULT);
 
         // Compute the conductivity equation
-                if (options_.diffusivity == cv::DIFF_PM_G1) {
-                        pm_g1(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
-        }
-                else if (options_.diffusivity == cv::DIFF_PM_G2) {
-                        pm_g2(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
-        }
-                else if (options_.diffusivity == cv::DIFF_WEICKERT) {
-                        weickert_diffusivity(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
-        }
+        if (options_.diffusivity == KAZE::DIFF_PM_G1)
+            pm_g1(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
+        else if (options_.diffusivity == KAZE::DIFF_PM_G2)
+            pm_g2(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
+        else if (options_.diffusivity == KAZE::DIFF_WEICKERT)
+            weickert_diffusivity(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
 
         // Perform FED n inner steps
-        for (int j = 0; j < nsteps_[i - 1]; j++) {
+        for (int j = 0; j < nsteps_[i - 1]; j++)
             nld_step_scalar(evolution_[i].Lt, Lflow, Lstep, tsteps_[i - 1][j]);
-        }
     }
 
     return 0;
@@ -144,9 +143,9 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const cv::Mat &img)
  * @param img Input image
  * @param kpercentile Percentile of the gradient histogram
  */
-void KAZEFeatures::Compute_KContrast(const cv::Mat &img, const float &kpercentile)
+void KAZEFeatures::Compute_KContrast(const Mat &img, const float &kpercentile)
 {
-        options_.kcontrast = compute_k_percentile(img, kpercentile, options_.sderivatives, options_.kcontrast_bins, 0, 0);
+    options_.kcontrast = compute_k_percentile(img, kpercentile, options_.sderivatives, options_.kcontrast_bins, 0, 0);
 }
 
 /* ************************************************************************* */
@@ -181,7 +180,7 @@ void KAZEFeatures::Compute_Detector_Response(void)
  * @brief This method selects interesting keypoints through the nonlinear scale space
  * @param kpts Vector of keypoints
  */
-void KAZEFeatures::Feature_Detection(std::vector<cv::KeyPoint>& kpts)
+void KAZEFeatures::Feature_Detection(std::vector<KeyPoint>& kpts)
 {
     kpts.clear();
         Compute_Detector_Response();
@@ -190,14 +189,14 @@ void KAZEFeatures::Feature_Detection(std::vector<cv::KeyPoint>& kpts)
 }
 
 /* ************************************************************************* */
-class MultiscaleDerivativesKAZEInvoker : public cv::ParallelLoopBody
+class MultiscaleDerivativesKAZEInvoker : public ParallelLoopBody
 {
 public:
     explicit MultiscaleDerivativesKAZEInvoker(std::vector<TEvolution>& ev) : evolution_(&ev)
     {
     }
 
-    void operator()(const cv::Range& range) const
+    void operator()(const Range& range) const
     {
         std::vector<TEvolution>& evolution = *evolution_;
         for (int i = range.start; i < range.end; i++)
@@ -226,74 +225,79 @@ private:
  */
 void KAZEFeatures::Compute_Multiscale_Derivatives(void)
 {
-    cv::parallel_for_(cv::Range(0, (int)evolution_.size()),
+    parallel_for_(Range(0, (int)evolution_.size()),
                                         MultiscaleDerivativesKAZEInvoker(evolution_));
 }
 
 
 /* ************************************************************************* */
-class FindExtremumKAZEInvoker : public cv::ParallelLoopBody
+class FindExtremumKAZEInvoker : public ParallelLoopBody
 {
 public:
-    explicit FindExtremumKAZEInvoker(std::vector<TEvolution>& ev, std::vector<std::vector<cv::KeyPoint> >& kpts_par,
+    explicit FindExtremumKAZEInvoker(std::vector<TEvolution>& ev, std::vector<std::vector<KeyPoint> >& kpts_par,
                                                                      const KAZEOptions& options) : evolution_(&ev), kpts_par_(&kpts_par), options_(options)
     {
     }
 
-    void operator()(const cv::Range& range) const
+    void operator()(const Range& range) const
     {
         std::vector<TEvolution>& evolution = *evolution_;
-        std::vector<std::vector<cv::KeyPoint> >& kpts_par = *kpts_par_;
+        std::vector<std::vector<KeyPoint> >& kpts_par = *kpts_par_;
         for (int i = range.start; i < range.end; i++)
         {
             float value = 0.0;
             bool is_extremum = false;
 
-            for (int ix = 1; ix < options_.img_height - 1; ix++) {
-                    for (int jx = 1; jx < options_.img_width - 1; jx++) {
+            for (int ix = 1; ix < options_.img_height - 1; ix++)
+            {
+                for (int jx = 1; jx < options_.img_width - 1; jx++)
+                {
+                    is_extremum = false;
+                    value = *(evolution[i].Ldet.ptr<float>(ix)+jx);
 
-                            is_extremum = false;
-                            value = *(evolution[i].Ldet.ptr<float>(ix)+jx);
-
-                            // Filter the points with the detector threshold
-                            if (value > options_.dthreshold) {
-                                    if (value >= *(evolution[i].Ldet.ptr<float>(ix)+jx - 1)) {
-                                            // First check on the same scale
-                                            if (check_maximum_neighbourhood(evolution[i].Ldet, 1, value, ix, jx, 1)) {
-                                                    // Now check on the lower scale
-                                                    if (check_maximum_neighbourhood(evolution[i - 1].Ldet, 1, value, ix, jx, 0)) {
-                                                            // Now check on the upper scale
-                                                            if (check_maximum_neighbourhood(evolution[i + 1].Ldet, 1, value, ix, jx, 0)) {
-                                                                    is_extremum = true;
-                                                            }
-                                                    }
-                                            }
-                                    }
+                    // Filter the points with the detector threshold
+                    if (value > options_.dthreshold)
+                    {
+                        if (value >= *(evolution[i].Ldet.ptr<float>(ix)+jx - 1))
+                        {
+                            // First check on the same scale
+                            if (check_maximum_neighbourhood(evolution[i].Ldet, 1, value, ix, jx, 1))
+                            {
+                                // Now check on the lower scale
+                                if (check_maximum_neighbourhood(evolution[i - 1].Ldet, 1, value, ix, jx, 0))
+                                {
+                                    // Now check on the upper scale
+                                    if (check_maximum_neighbourhood(evolution[i + 1].Ldet, 1, value, ix, jx, 0))
+                                        is_extremum = true;
+                                }
                             }
-
-                            // Add the point of interest!!
-                            if (is_extremum == true) {
-                                    cv::KeyPoint point;
-                                    point.pt.x = (float)jx;
-                                    point.pt.y = (float)ix;
-                                    point.response = fabs(value);
-                                    point.size = evolution[i].esigma;
-                                    point.octave = (int)evolution[i].octave;
-                                    point.class_id = i;
-
-                                    // We use the angle field for the sublevel value
-                                    // Then, we will replace this angle field with the main orientation
-                                    point.angle = static_cast<float>(evolution[i].sublevel);
-                                    kpts_par[i - 1].push_back(point);
-                            }
+                        }
                     }
+
+                    // Add the point of interest!!
+                    if (is_extremum)
+                    {
+                        KeyPoint point;
+                        point.pt.x = (float)jx;
+                        point.pt.y = (float)ix;
+                        point.response = fabs(value);
+                        point.size = evolution[i].esigma;
+                        point.octave = (int)evolution[i].octave;
+                        point.class_id = i;
+
+                        // We use the angle field for the sublevel value
+                        // Then, we will replace this angle field with the main orientation
+                        point.angle = static_cast<float>(evolution[i].sublevel);
+                        kpts_par[i - 1].push_back(point);
+                    }
+                }
             }
         }
     }
 
 private:
     std::vector<TEvolution>*  evolution_;
-    std::vector<std::vector<cv::KeyPoint> >* kpts_par_;
+    std::vector<std::vector<KeyPoint> >* kpts_par_;
     KAZEOptions options_;
 };
 
@@ -304,7 +308,7 @@ private:
  * @param kpts Vector of keypoints
  * @note We compute features for each of the nonlinear scale space level in a different processing thread
  */
-void KAZEFeatures::Determinant_Hessian(std::vector<cv::KeyPoint>& kpts)
+void KAZEFeatures::Determinant_Hessian(std::vector<KeyPoint>& kpts)
 {
     int level = 0;
     float dist = 0.0, smax = 3.0;
@@ -325,12 +329,14 @@ void KAZEFeatures::Determinant_Hessian(std::vector<cv::KeyPoint>& kpts)
         kpts_par_.push_back(aux);
     }
 
-        cv::parallel_for_(cv::Range(1, (int)evolution_.size()-1),
-                                            FindExtremumKAZEInvoker(evolution_, kpts_par_, options_));
+    parallel_for_(Range(1, (int)evolution_.size()-1),
+                FindExtremumKAZEInvoker(evolution_, kpts_par_, options_));
 
     // Now fill the vector of keypoints!!!
-    for (int i = 0; i < (int)kpts_par_.size(); i++) {
-        for (int j = 0; j < (int)kpts_par_[i].size(); j++) {
+    for (int i = 0; i < (int)kpts_par_.size(); i++)
+    {
+        for (int j = 0; j < (int)kpts_par_[i].size(); j++)
+        {
             level = i + 1;
             is_extremum = true;
             is_repeated = false;
@@ -388,7 +394,7 @@ void KAZEFeatures::Determinant_Hessian(std::vector<cv::KeyPoint>& kpts)
  * @brief This method performs subpixel refinement of the detected keypoints
  * @param kpts Vector of detected keypoints
  */
-void KAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
+void KAZEFeatures::Do_Subpixel_Refinement(std::vector<KeyPoint> &kpts) {
 
     int step = 1;
     int x = 0, y = 0;
@@ -482,10 +488,10 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<cv::KeyPoint> &kpts) {
 }
 
 /* ************************************************************************* */
-class KAZE_Descriptor_Invoker : public cv::ParallelLoopBody
+class KAZE_Descriptor_Invoker : public ParallelLoopBody
 {
 public:
-        KAZE_Descriptor_Invoker(std::vector<cv::KeyPoint> &kpts, cv::Mat &desc, std::vector<TEvolution>& evolution, const KAZEOptions& options)
+        KAZE_Descriptor_Invoker(std::vector<KeyPoint> &kpts, Mat &desc, std::vector<TEvolution>& evolution, const KAZEOptions& options)
                 : kpts_(&kpts)
                 , desc_(&desc)
                 , evolution_(&evolution)
@@ -497,10 +503,10 @@ public:
     {
     }
 
-    void operator() (const cv::Range& range) const
+    void operator() (const Range& range) const
     {
-                std::vector<cv::KeyPoint> &kpts      = *kpts_;
-                cv::Mat                   &desc      = *desc_;
+                std::vector<KeyPoint> &kpts      = *kpts_;
+                Mat                   &desc      = *desc_;
                 std::vector<TEvolution>   &evolution = *evolution_;
 
         for (int i = range.start; i < range.end; i++)
@@ -526,13 +532,13 @@ public:
         }
     }
 private:
-    void Get_KAZE_Upright_Descriptor_64(const cv::KeyPoint& kpt, float* desc) const;
-    void Get_KAZE_Descriptor_64(const cv::KeyPoint& kpt, float* desc) const;
-    void Get_KAZE_Upright_Descriptor_128(const cv::KeyPoint& kpt, float* desc) const;
-    void Get_KAZE_Descriptor_128(const cv::KeyPoint& kpt, float *desc) const;
+    void Get_KAZE_Upright_Descriptor_64(const KeyPoint& kpt, float* desc) const;
+    void Get_KAZE_Descriptor_64(const KeyPoint& kpt, float* desc) const;
+    void Get_KAZE_Upright_Descriptor_128(const KeyPoint& kpt, float* desc) const;
+    void Get_KAZE_Descriptor_128(const KeyPoint& kpt, float *desc) const;
 
-        std::vector<cv::KeyPoint> * kpts_;
-        cv::Mat                   * desc_;
+        std::vector<KeyPoint> * kpts_;
+        Mat                   * desc_;
         std::vector<TEvolution>   * evolution_;
         KAZEOptions                 options_;
 };
@@ -543,7 +549,7 @@ private:
  * @param kpts Vector of keypoints
  * @param desc Matrix with the feature descriptors
  */
-void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat &desc)
+void KAZEFeatures::Feature_Description(std::vector<KeyPoint> &kpts, Mat &desc)
 {
     for(size_t i = 0; i < kpts.size(); i++)
     {
@@ -558,7 +564,7 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
         desc = Mat::zeros((int)kpts.size(), 64, CV_32FC1);
     }
 
-        cv::parallel_for_(cv::Range(0, (int)kpts.size()), KAZE_Descriptor_Invoker(kpts, desc, evolution_, options_));
+        parallel_for_(Range(0, (int)kpts.size()), KAZE_Descriptor_Invoker(kpts, desc, evolution_, options_));
 }
 
 /* ************************************************************************* */
@@ -568,7 +574,7 @@ void KAZEFeatures::Feature_Description(std::vector<cv::KeyPoint> &kpts, cv::Mat 
  * @note The orientation is computed using a similar approach as described in the
  * original SURF method. See Bay et al., Speeded Up Robust Features, ECCV 2006
  */
-void KAZEFeatures::Compute_Main_Orientation(cv::KeyPoint &kpt, const std::vector<TEvolution>& evolution_, const KAZEOptions& options)
+void KAZEFeatures::Compute_Main_Orientation(KeyPoint &kpt, const std::vector<TEvolution>& evolution_, const KAZEOptions& options)
 {
     int ix = 0, iy = 0, idx = 0, s = 0, level = 0;
     float xf = 0.0, yf = 0.0, gweight = 0.0;
@@ -647,7 +653,7 @@ void KAZEFeatures::Compute_Main_Orientation(cv::KeyPoint &kpt, const std::vector
  * from Agrawal et al., CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching,
  * ECCV 2008
  */
-void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_64(const cv::KeyPoint &kpt, float *desc) const
+void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_64(const KeyPoint &kpt, float *desc) const
 {
     float dx = 0.0, dy = 0.0, mdx = 0.0, mdy = 0.0, gauss_s1 = 0.0, gauss_s2 = 0.0;
     float rx = 0.0, ry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, ys = 0.0, xs = 0.0;
@@ -775,7 +781,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_64(const cv::KeyPoint 
  * from Agrawal et al., CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching,
  * ECCV 2008
  */
-void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_64(const cv::KeyPoint &kpt, float *desc) const
+void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_64(const KeyPoint &kpt, float *desc) const
 {
     float dx = 0.0, dy = 0.0, mdx = 0.0, mdy = 0.0, gauss_s1 = 0.0, gauss_s2 = 0.0;
     float rx = 0.0, ry = 0.0, rrx = 0.0, rry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, ys = 0.0, xs = 0.0;
@@ -904,7 +910,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_64(const cv::KeyPoint &kpt, fl
  * from Agrawal et al., CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching,
  * ECCV 2008
  */
-void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_128(const cv::KeyPoint &kpt, float *desc) const
+void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_128(const KeyPoint &kpt, float *desc) const
 {
     float gauss_s1 = 0.0, gauss_s2 = 0.0;
     float rx = 0.0, ry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, ys = 0.0, xs = 0.0;
@@ -1056,7 +1062,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_128(const cv::KeyPoint
  * from Agrawal et al., CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching,
  * ECCV 2008
  */
-void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const cv::KeyPoint &kpt, float *desc) const
+void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const KeyPoint &kpt, float *desc) const
 {
     float gauss_s1 = 0.0, gauss_s2 = 0.0;
     float rx = 0.0, ry = 0.0, rrx = 0.0, rry = 0.0, len = 0.0, xf = 0.0, yf = 0.0, ys = 0.0, xs = 0.0;
@@ -1201,4 +1207,6 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const cv::KeyPoint &kpt, f
     for (i = 0; i < dsize; i++) {
         desc[i] /= len;
     }
+}
+
 }
