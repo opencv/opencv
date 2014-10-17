@@ -39,16 +39,11 @@ set (CMAKE_CXX_OSX_COMPATIBILITY_VERSION_FLAG "${CMAKE_C_OSX_COMPATIBILITY_VERSI
 set (CMAKE_CXX_OSX_CURRENT_VERSION_FLAG "${CMAKE_C_OSX_CURRENT_VERSION_FLAG}")
 
 # Hidden visibilty is required for cxx on iOS
-set (CMAKE_C_FLAGS "")
-set (CMAKE_CXX_FLAGS "-stdlib=libc++ -fvisibility=hidden -fvisibility-inlines-hidden")
-set (CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -fomit-frame-pointer -ffast-math")
+set (no_warn "-Wno-unused-function -Wno-overloaded-virtual")
+set (CMAKE_C_FLAGS "${no_warn}")
+set (CMAKE_CXX_FLAGS "-stdlib=libc++ -fvisibility=hidden -fvisibility-inlines-hidden ${no_warn}")
 
-# Silence some warnings
-set (no_warn "-Wno-unused-function -Wno-unused-parameter -Wno-strict-prototypes -Wno-missing-prototypes -Wno-missing-declarations -Wno-unused-const-variable -Wno-overloaded-virtual")
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${no_warn}")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${no_warn}")
-# Additional linker flag
-set (CMAKE_CXX_LINK_FLAGS "-Wl,-headerpad_max_install_names ${CMAKE_CXX_LINK_FLAGS}")
+set (CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -fomit-frame-pointer -ffast-math")
 
 if (HAVE_FLAG_SEARCH_PATHS_FIRST)
     set (CMAKE_C_LINK_FLAGS "-Wl,-search_paths_first ${CMAKE_C_LINK_FLAGS}")

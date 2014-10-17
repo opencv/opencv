@@ -464,7 +464,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
         }
 
         // delegate image processing to the delegate
-        cv::Mat image(height, width, format_opencv, bufferAddress, bytesPerRow);
+        cv::Mat image((int)height, (int)width, format_opencv, bufferAddress, bytesPerRow);
 
         CGImage* dstImage;
 

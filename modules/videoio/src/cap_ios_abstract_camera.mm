@@ -150,7 +150,7 @@
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
-    [super dealloc]
+    [super dealloc];
 }
 
 
@@ -244,7 +244,7 @@
         default:
             break;
     }
-    NSLog(@"deviceOrientationDidChange: %d", orientation);
+    NSLog(@"deviceOrientationDidChange: %d", (int)orientation);
 
     [self updateOrientation];
 }
