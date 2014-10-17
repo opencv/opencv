@@ -100,12 +100,12 @@ ocl_ICAngles(const UMat& imgbuf, const UMat& layerinfo,
 static bool
 ocl_computeOrbDescriptors(const UMat& imgbuf, const UMat& layerInfo,
                           const UMat& keypoints, UMat& desc, const UMat& pattern,
-                          int nkeypoints, int dsize, int WTA_K)
+                          int nkeypoints, int dsize, int wta_k)
 {
     size_t globalSize[] = {nkeypoints};
 
     ocl::Kernel desc_ker("ORB_computeDescriptor", ocl::features2d::orb_oclsrc,
-                         format("-D ORB_DESCRIPTORS -D WTA_K=%d", WTA_K));
+                         format("-D ORB_DESCRIPTORS -D wta_k=%d", wta_k));
     if( desc_ker.empty() )
         return false;
 
@@ -209,7 +209,7 @@ static void ICAngles(const Mat& img, const std::vector<Rect>& layerinfo,
 static void
 computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerInfo,
                        const std::vector<float>& layerScale, std::vector<KeyPoint>& keypoints,
-                       Mat& descriptors, const std::vector<Point>& _pattern, int dsize, int WTA_K )
+                       Mat& descriptors, const std::vector<Point>& _pattern, int dsize, int wta_k )
 {
     int step = (int)imagePyramid.step;
     int j, i, nkeypoints = (int)keypoints.size();
@@ -248,7 +248,7 @@ computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerIn
                     center[iy*step + ix+1]*x*(1-y) + center[(iy+1)*step + ix+1]*x*y))
     #endif
 
-        if( WTA_K == 2 )
+        if( wta_k == 2 )
         {
             for (i = 0; i < dsize; ++i, pattern += 16)
             {
@@ -273,7 +273,7 @@ computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerIn
                 desc[i] = (uchar)val;
             }
         }
-        else if( WTA_K == 3 )
+        else if( wta_k == 3 )
         {
             for (i = 0; i < dsize; ++i, pattern += 12)
             {
@@ -293,7 +293,7 @@ computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerIn
                 desc[i] = (uchar)val;
             }
         }
-        else if( WTA_K == 4 )
+        else if( wta_k == 4 )
         {
             for (i = 0; i < dsize; ++i, pattern += 16)
             {
@@ -334,7 +334,7 @@ computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerIn
             }
         }
         else
-            CV_Error( Error::StsBadSize, "Wrong WTA_K. It can be only 2, 3 or 4." );
+            CV_Error( Error::StsBadSize, "Wrong wta_k. It can be only 2, 3 or 4." );
         #undef GET_VALUE
     }
 }
@@ -652,9 +652,59 @@ public:
     explicit ORB_Impl(int _nfeatures, float _scaleFactor, int _nlevels, int _edgeThreshold,
              int _firstLevel, int _WTA_K, int _scoreType, int _patchSize, int _fastThreshold) :
         nfeatures(_nfeatures), scaleFactor(_scaleFactor), nlevels(_nlevels),
-        edgeThreshold(_edgeThreshold), firstLevel(_firstLevel), WTA_K(_WTA_K),
+        edgeThreshold(_edgeThreshold), firstLevel(_firstLevel), wta_k(_WTA_K),
         scoreType(_scoreType), patchSize(_patchSize), fastThreshold(_fastThreshold)
     {}
+
+    void set(int prop, double value)
+    {
+        if( prop == NFEATURES )
+            nfeatures = cvRound(value);
+        else if( prop == SCALE_FACTOR )
+            scaleFactor = value;
+        else if( prop == NLEVELS )
+            nlevels = cvRound(value);
+        else if( prop == EDGE_THRESHOLD )
+            edgeThreshold = cvRound(value);
+        else if( prop == FIRST_LEVEL )
+            firstLevel = cvRound(value);
+        else if( prop == WTA_K )
+            wta_k = cvRound(value);
+        else if( prop == SCORE_TYPE )
+            scoreType = cvRound(value);
+        else if( prop == PATCH_SIZE )
+            patchSize = cvRound(value);
+        else if( prop == FAST_THRESHOLD )
+            fastThreshold = cvRound(value);
+        else
+            CV_Error(Error::StsBadArg, "");
+    }
+
+    double get(int prop) const
+    {
+        double value = 0;
+        if( prop == NFEATURES )
+            value = nfeatures;
+        else if( prop == SCALE_FACTOR )
+            value = scaleFactor;
+        else if( prop == NLEVELS )
+            value = nlevels;
+        else if( prop == EDGE_THRESHOLD )
+            value = edgeThreshold;
+        else if( prop == FIRST_LEVEL )
+            value = firstLevel;
+        else if( prop == WTA_K )
+            value = wta_k;
+        else if( prop == SCORE_TYPE )
+            value = scoreType;
+        else if( prop == PATCH_SIZE )
+            value = patchSize;
+        else if( prop == FAST_THRESHOLD )
+            value = fastThreshold;
+        else
+            CV_Error(Error::StsBadArg, "");
+        return value;
+    }
 
     // returns the descriptor size in bytes
     int descriptorSize() const;
@@ -674,7 +724,7 @@ protected:
     int nlevels;
     int edgeThreshold;
     int firstLevel;
-    int WTA_K;
+    int wta_k;
     int scoreType;
     int patchSize;
     int fastThreshold;
@@ -1095,14 +1145,14 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
             makeRandomPattern(patchSize, patternbuf, npoints);
         }
 
-        CV_Assert( WTA_K == 2 || WTA_K == 3 || WTA_K == 4 );
+        CV_Assert( wta_k == 2 || wta_k == 3 || wta_k == 4 );
 
-        if( WTA_K == 2 )
+        if( wta_k == 2 )
             std::copy(pattern0, pattern0 + npoints, std::back_inserter(pattern));
         else
         {
             int ntuples = descriptorSize()*4;
-            initializeOrbPattern(pattern0, pattern, ntuples, WTA_K, npoints);
+            initializeOrbPattern(pattern0, pattern, ntuples, wta_k, npoints);
         }
 
         for( level = 0; level < nLevels; level++ )
@@ -1125,23 +1175,23 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
             UMat udescriptors = _descriptors.getUMat();
             useOCL = ocl_computeOrbDescriptors(uimagePyramid, ulayerInfo,
                                                ukeypoints, udescriptors, upattern,
-                                               nkeypoints, dsize, WTA_K);
+                                               nkeypoints, dsize, wta_k);
         }
 
         if( !useOCL )
         {
             Mat descriptors = _descriptors.getMat();
             computeOrbDescriptors(imagePyramid, layerInfo, layerScale,
-                                  keypoints, descriptors, pattern, dsize, WTA_K);
+                                  keypoints, descriptors, pattern, dsize, wta_k);
         }
     }
 }
 
 Ptr<ORB> ORB::create(int nfeatures, float scaleFactor, int nlevels, int edgeThreshold,
-           int firstLevel, int WTA_K, int scoreType, int patchSize, int fastThreshold)
+           int firstLevel, int wta_k, int scoreType, int patchSize, int fastThreshold)
 {
     return makePtr<ORB_Impl>(nfeatures, scaleFactor, nlevels, edgeThreshold,
-                             firstLevel, WTA_K, scoreType, patchSize, fastThreshold);
+                             firstLevel, wta_k, scoreType, patchSize, fastThreshold);
 }
 
 }

@@ -133,13 +133,16 @@ TEST(Features2d_Detector_Keypoints_FAST, validation)
 
 TEST(Features2d_Detector_Keypoints_HARRIS, validation)
 {
+
     CV_FeatureDetectorKeypointsTest test(GFTTDetector::create(1000, 0.01, 1, 3, true, 0.04));
     test.safe_run();
 }
 
 TEST(Features2d_Detector_Keypoints_GFTT, validation)
 {
-    CV_FeatureDetectorKeypointsTest test(GFTTDetector::create());
+    Ptr<FeatureDetector> gftt = GFTTDetector::create();
+    gftt->set(GFTTDetector::USE_HARRIS_DETECTOR, 1);
+    CV_FeatureDetectorKeypointsTest test(gftt);
     test.safe_run();
 }
 
