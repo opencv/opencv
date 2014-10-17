@@ -116,7 +116,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
         double f = PnP.compute_pose(R, tvec);
         cv::Rodrigues(R, rvec);
         if(cameraMatrix.type() == CV_32F)
-            cameraMatrix.at<float>(0,0) = cameraMatrix.at<float>(1,1) = f;
+            cameraMatrix.at<float>(0,0) = cameraMatrix.at<float>(1,1) = (float)f;
         else
             cameraMatrix.at<double>(0,0) = cameraMatrix.at<double>(1,1) = f;
         return true;
