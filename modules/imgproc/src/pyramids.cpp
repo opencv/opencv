@@ -250,7 +250,7 @@ struct PyrDownVec_32s16u
 
             v_r01 = vaddq_s32(vqaddq_s32(v_r01, v_r41), vqaddq_s32(v_r21, v_r21));
             v_r11 = vaddq_s32(vqaddq_s32(v_r11, v_r21), v_r31);
-            shifted = vshlq_n_s32(v_r11, 2)
+            shifted = vshlq_n_s32(v_r11, 2);
             int32x4_t v_dst1 = vshrq_n_s32(vaddq_s32(vqaddq_s32(v_r01, shifted), v_delta), 8);
 
             vst1q_u16(dst + x, vcombine_u16(vqmovun_s32(v_dst0), vqmovun_s32(v_dst1)));
