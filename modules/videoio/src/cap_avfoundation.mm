@@ -181,7 +181,6 @@ class CvVideoWriter_AVFoundation : public CvVideoWriter{
         AVAssetWriterInput* mMovieWriterInput;
         AVAssetWriterInputPixelBufferAdaptor* mMovieWriterAdaptor;
 
-        unsigned char* imagedata;
         NSString* path;
         NSString* codec;
         NSString* fileType;
@@ -490,15 +489,15 @@ double CvCaptureCAM::getProperty(int property_id){
     CMFormatDescriptionRef format = [[ports objectAtIndex:0] formatDescription];
     CGSize s1 = CMVideoFormatDescriptionGetPresentationDimensions(format, YES, YES);
 
-    int width=(int)s1.width, height=(int)s1.height;
+    int w=(int)s1.width, h=(int)s1.height;
 
     [localpool drain];
 
     switch (property_id) {
         case CV_CAP_PROP_FRAME_WIDTH:
-            return width;
+            return w;
         case CV_CAP_PROP_FRAME_HEIGHT:
-            return height;
+            return h;
 
         case CV_CAP_PROP_IOS_DEVICE_FOCUS:
             return mCaptureDevice.focusMode;
@@ -659,6 +658,8 @@ fromConnection:(AVCaptureConnection *)connection{
 
     // Failed
     // connection.videoOrientation = AVCaptureVideoOrientationPortrait;
+    (void)captureOutput;
+    (void)connection;
 
     CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
 
@@ -1009,7 +1010,7 @@ double CvCaptureFile::getFPS() {
     return 30.0; //TODO: Debugging
 }
 
-double CvCaptureFile::getProperty(int property_id){
+double CvCaptureFile::getProperty(int /*property_id*/){
 
     /*
          if (mCaptureSession == nil) return 0;
@@ -1050,7 +1051,7 @@ double CvCaptureFile::getProperty(int property_id){
     return 1.0; //Debugging
 }
 
-bool CvCaptureFile::setProperty(int property_id, double value) {
+bool CvCaptureFile::setProperty(int /*property_id*/, double /*value*/) {
 
     /*
          if (mCaptureSession == nil) return false;

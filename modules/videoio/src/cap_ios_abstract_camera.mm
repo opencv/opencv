@@ -308,7 +308,7 @@
         if ([device position] == desiredPosition) {
             [self.captureSession beginConfiguration];
 
-            NSError* error;
+            NSError* error = nil;
             AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:device error:&error];
             if (!input) {
                 NSLog(@"error creating input %@", [error localizedDescription]);
@@ -316,7 +316,7 @@
 
             // support for autofocus
             if ([device isFocusModeSupported:AVCaptureFocusModeContinuousAutoFocus]) {
-                NSError *error = nil;
+                error = nil;
                 if ([device lockForConfiguration:&error]) {
                     device.focusMode = AVCaptureFocusModeContinuousAutoFocus;
                     [device unlockForConfiguration];
