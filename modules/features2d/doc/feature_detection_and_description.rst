@@ -14,11 +14,6 @@ Detects corners using the FAST algorithm
 .. ocv:function:: void FAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSuppression=true )
 .. ocv:function:: void FAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSuppression, int type )
 
-.. ocv:pyfunction:: cv2.FastFeatureDetector([, threshold[, nonmaxSuppression]]) -> <FastFeatureDetector object>
-.. ocv:pyfunction:: cv2.FastFeatureDetector(threshold, nonmaxSuppression, type) -> <FastFeatureDetector object>
-.. ocv:pyfunction:: cv2.FastFeatureDetector.detect(image[, mask]) -> keypoints
-
-
     :param image: grayscale image where keypoints (corners) are detected.
 
     :param keypoints: keypoints detected on the image.
@@ -55,7 +50,7 @@ Maximally stable extremal region extractor. ::
         // runs the extractor on the specified image; returns the MSERs,
         // each encoded as a contour (vector<Point>, see findContours)
         // the optional mask marks the area where MSERs are searched for
-        void operator()( const Mat& image, vector<vector<Point> >& msers, const Mat& mask ) const;
+        void detectRegions( InputArray image, vector<vector<Point> >& msers, vector<Rect>& bboxes ) const;
     };
 
 The class encapsulates all the parameters of the MSER extraction algorithm (see

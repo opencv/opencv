@@ -16,24 +16,15 @@ The goal of this tutorial is to learn how to use *features2d* and *calib3d* modu
         Mat img2 = imread(argv[2], IMREAD_GRAYSCALE);
 
 #.
-    Detect keypoints in both images. ::
+    Detect keypoints in both images and compute descriptors for each of the keypoints. ::
 
         // detecting keypoints
-        FastFeatureDetector detector(15);
+        Ptr<Feature2D> surf = SURF::create();
         vector<KeyPoint> keypoints1;
-        detector.detect(img1, keypoints1);
+        Mat descriptors1;
+        surf->detectAndCompute(img1, Mat(), keypoints1, descriptors1);
 
         ... // do the same for the second image
-
-#.
-    Compute descriptors for each of the keypoints. ::
-
-        // computing descriptors
-        SurfDescriptorExtractor extractor;
-        Mat descriptors1;
-        extractor.compute(img1, keypoints1, descriptors1);
-
-        ... // process keypoints from the second image as well
 
 #.
     Now, find the closest matches between descriptors from the first image to the second: ::
