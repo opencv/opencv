@@ -38,6 +38,10 @@
 #include "opencl_kernels_features2d.hpp"
 #include <iterator>
 
+#ifndef CV_IMPL_ADD
+#define CV_IMPL_ADD(x)
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace cv
@@ -888,6 +892,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
                                           uresponses, nkeypoints, 7, HARRIS_K );
             if( useOCL )
             {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 uresponses.copyTo(responses);
                 for( i = 0; i < nkeypoints; i++ )
                     allKeypoints[i].response = responses.at<float>(i);
@@ -932,6 +937,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
 
         if( useOCL )
         {
+            CV_IMPL_ADD(CV_IMPL_OCL);
             uresponses.copyTo(responses);
             for( i = 0; i < nkeypoints; i++ )
                 allKeypoints[i].angle = responses.at<float>(i);
@@ -1176,6 +1182,10 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
             useOCL = ocl_computeOrbDescriptors(uimagePyramid, ulayerInfo,
                                                ukeypoints, udescriptors, upattern,
                                                nkeypoints, dsize, wta_k);
+            if(useOCL)
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
+            }
         }
 
         if( !useOCL )
