@@ -48,9 +48,8 @@ using namespace cv::cuda;
 
 #ifdef HAVE_OPENCV_XFEATURES2D
 #include "opencv2/xfeatures2d.hpp"
-#endif
-
 using xfeatures2d::SURF;
+#endif
 
 namespace {
 
@@ -321,6 +320,7 @@ void FeaturesFinder::operator ()(InputArray image, ImageFeatures &features, cons
 SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers,
                                        int num_octaves_descr, int num_layers_descr)
 {
+#ifdef HAVE_OPENCV_XFEATURES2D
     if (num_octaves_descr == num_octaves && num_layers_descr == num_layers)
     {
         surf = SURF::create();
@@ -345,6 +345,9 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
         extractor_->set(SURF::NOCTAVES, num_octaves_descr);
         extractor_->set(SURF::NOCTAVE_LAYERS, num_layers_descr);
     }
+#else
+    CV_Error( Error::StsNotImplemented, "OpenCV was built without SURF support" );
+#endif
 }
 
 void SurfFeaturesFinder::find(InputArray image, ImageFeatures &features)
