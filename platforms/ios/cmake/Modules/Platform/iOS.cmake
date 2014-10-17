@@ -44,7 +44,7 @@ set (CMAKE_CXX_FLAGS "-stdlib=libc++ -fvisibility=hidden -fvisibility-inlines-hi
 set (CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -fomit-frame-pointer -ffast-math")
 
 # Silence some warnings
-set (no_warn "-Wno-semicolon-before-method-body -Wno-unused-function -Wno-unused-parameter -Wno-strict-prototypes -Wno-missing-prototypes -Wno-missing-declarations -Wno-unused-const-variable -Wno-overloaded-virtual")
+set (no_warn "-Wno-unused-function -Wno-unused-parameter -Wno-strict-prototypes -Wno-missing-prototypes -Wno-missing-declarations -Wno-unused-const-variable -Wno-overloaded-virtual")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${no_warn}")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${no_warn}")
 # Additional linker flag

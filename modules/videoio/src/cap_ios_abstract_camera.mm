@@ -150,6 +150,7 @@
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
+    [super dealloc]
 }
 
 
@@ -226,6 +227,7 @@
 
 - (void)deviceOrientationDidChange:(NSNotification*)notification
 {
+    (void)notification;
     UIDeviceOrientation orientation = [UIDevice currentDevice].orientation;
 
     switch (orientation)

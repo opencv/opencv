@@ -474,7 +474,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 
         // check if matrix data pointer or dimensions were changed by the delegate
         bool iOSimage = false;
-        if (height == image.rows && width == image.cols && format_opencv == image.type() && bufferAddress == image.data && bytesPerRow == image.step) {
+        if (height == (size_t)image.rows && width == (size_t)image.cols && format_opencv == image.type() && bufferAddress == image.data && bytesPerRow == image.step) {
             iOSimage = true;
         }
 
@@ -592,7 +592,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
     ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
     if ([library videoAtPathIsCompatibleWithSavedPhotosAlbum:[self videoFileURL]]) {
         [library writeVideoAtPathToSavedPhotosAlbum:[self videoFileURL]
-                                    completionBlock:^(NSURL *assetURL, NSError *error){}];
+                                    completionBlock:^(NSURL *assetURL, NSError *error){ (void)assetURL; (void)error; }];
     }
 }
 
