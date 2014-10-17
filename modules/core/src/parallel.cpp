@@ -177,7 +177,7 @@ namespace
     static void block_function(void* context, size_t index)
     {
         ProxyLoopBody* ptr_body = static_cast<ProxyLoopBody*>(context);
-        (*ptr_body)(cv::Range(index, index + 1));
+        (*ptr_body)(cv::Range((int)index, (int)index + 1));
     }
 #elif defined HAVE_CONCURRENCY
     class ProxyLoopBody : public ParallelLoopBodyWrapper
