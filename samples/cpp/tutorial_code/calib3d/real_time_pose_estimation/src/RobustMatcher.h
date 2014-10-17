@@ -19,23 +19,23 @@ public:
   RobustMatcher() : ratio_(0.8f)
   {
     // ORB is the default feature
-    detector_ = new cv::OrbFeatureDetector();
-    extractor_ = new cv::OrbDescriptorExtractor();
+    detector_ = cv::ORB::create();
+    extractor_ = cv::ORB::create();
 
     // BruteFroce matcher with Norm Hamming is the default matcher
-    matcher_ = new cv::BFMatcher(cv::NORM_HAMMING, false);
+    matcher_ = cv::makePtr<cv::BFMatcher>((int)cv::NORM_HAMMING, false);
 
   }
   virtual ~RobustMatcher();
 
   // Set the feature detector
-  void setFeatureDetector(cv::FeatureDetector * detect) {  detector_ = detect; }
+  void setFeatureDetector(const cv::Ptr<cv::FeatureDetector>& detect) {  detector_ = detect; }
 
   // Set the descriptor extractor
-  void setDescriptorExtractor(cv::DescriptorExtractor * desc) { extractor_ = desc; }
+  void setDescriptorExtractor(const cv::Ptr<cv::DescriptorExtractor>& desc) { extractor_ = desc; }
 
   // Set the matcher
-  void setDescriptorMatcher(cv::DescriptorMatcher * match) {  matcher_ = match; }
+  void setDescriptorMatcher(const cv::Ptr<cv::DescriptorMatcher>& match) {  matcher_ = match; }
 
   // Compute the keypoints of an image
   void computeKeyPoints( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints);
@@ -69,11 +69,11 @@ public:
 
 private:
   // pointer to the feature point detector object
-  cv::FeatureDetector * detector_;
+  cv::Ptr<cv::FeatureDetector> detector_;
   // pointer to the feature descriptor extractor object
-  cv::DescriptorExtractor * extractor_;
+  cv::Ptr<cv::DescriptorExtractor> extractor_;
   // pointer to the matcher object
-  cv::DescriptorMatcher * matcher_;
+  cv::Ptr<cv::DescriptorMatcher> matcher_;
   // max ratio between 1st and 2nd NN
   float ratio_;
 };

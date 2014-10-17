@@ -227,7 +227,7 @@ public:
 #endif
 
         Ptr<KeypointBasedMotionEstimator> kbest = makePtr<KeypointBasedMotionEstimator>(est);
-        kbest->setDetector(makePtr<GoodFeaturesToTrackDetector>(argi(prefix + "nkps")));
+        kbest->setDetector(GFTTDetector::create(argi(prefix + "nkps")));
         kbest->setOutlierRejector(outlierRejector);
         return kbest;
     }
@@ -268,7 +268,7 @@ public:
 #endif
 
         Ptr<KeypointBasedMotionEstimator> kbest = makePtr<KeypointBasedMotionEstimator>(est);
-        kbest->setDetector(makePtr<GoodFeaturesToTrackDetector>(argi(prefix + "nkps")));
+        kbest->setDetector(GFTTDetector::create(argi(prefix + "nkps")));
         kbest->setOutlierRejector(outlierRejector);
         return kbest;
     }

@@ -595,7 +595,7 @@ protected:
 
 TEST(Features2d_RotationInvariance_Detector_BRISK, regression)
 {
-    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.BRISK"),
+    DetectorRotationInvarianceTest test(BRISK::create(),
                                         0.32f,
                                         0.76f);
     test.safe_run();
@@ -603,7 +603,7 @@ TEST(Features2d_RotationInvariance_Detector_BRISK, regression)
 
 TEST(Features2d_RotationInvariance_Detector_ORB, regression)
 {
-    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"),
+    DetectorRotationInvarianceTest test(ORB::create(),
                                         0.47f,
                                         0.76f);
     test.safe_run();
@@ -615,19 +615,15 @@ TEST(Features2d_RotationInvariance_Detector_ORB, regression)
 
 TEST(Features2d_RotationInvariance_Descriptor_BRISK, regression)
 {
-    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.BRISK"),
-                                          Algorithm::create<DescriptorExtractor>("Feature2D.BRISK"),
-                                          Algorithm::create<DescriptorExtractor>("Feature2D.BRISK")->defaultNorm(),
-                                          0.99f);
+    Ptr<Feature2D> f2d = BRISK::create();
+    DescriptorRotationInvarianceTest test(f2d, f2d, f2d->defaultNorm(), 0.99f);
     test.safe_run();
 }
 
 TEST(Features2d_RotationInvariance_Descriptor_ORB, regression)
 {
-    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"),
-                                          Algorithm::create<DescriptorExtractor>("Feature2D.ORB"),
-                                          Algorithm::create<DescriptorExtractor>("Feature2D.ORB")->defaultNorm(),
-                                          0.99f);
+    Ptr<Feature2D> f2d = ORB::create();
+    DescriptorRotationInvarianceTest test(f2d, f2d, f2d->defaultNorm(), 0.99f);
     test.safe_run();
 }
 
@@ -646,25 +642,19 @@ TEST(Features2d_RotationInvariance_Descriptor_ORB, regression)
 
 TEST(Features2d_ScaleInvariance_Detector_BRISK, regression)
 {
-    DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.BRISK"),
-                                     0.08f,
-                                     0.49f);
+    DetectorScaleInvarianceTest test(BRISK::create(), 0.08f, 0.49f);
     test.safe_run();
 }
 
 TEST(Features2d_ScaleInvariance_Detector_KAZE, regression)
 {
-    DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.KAZE"),
-        0.08f,
-        0.49f);
+    DetectorScaleInvarianceTest test(KAZE::create(), 0.08f, 0.49f);
     test.safe_run();
 }
 
 TEST(Features2d_ScaleInvariance_Detector_AKAZE, regression)
 {
-    DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.AKAZE"),
-        0.08f,
-        0.49f);
+    DetectorScaleInvarianceTest test(AKAZE::create(), 0.08f, 0.49f);
     test.safe_run();
 }
 

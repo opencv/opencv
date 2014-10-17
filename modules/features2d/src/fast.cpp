@@ -359,30 +359,63 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 {
     FAST(_img, keypoints, threshold, nonmax_suppression, FastFeatureDetector::TYPE_9_16);
 }
-/*
- *   FastFeatureDetector
- */
-FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppression )
-    : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type(FastFeatureDetector::TYPE_9_16)
-{}
 
-FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppression, int _type )
-: threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type((short)_type)
-{}
 
-void FastFeatureDetector::detectImpl( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) const
+class FastFeatureDetector_Impl : public FastFeatureDetector
 {
-    Mat mask = _mask.getMat(), grayImage;
-    UMat ugrayImage;
-    _InputArray gray = _image;
-    if( _image.type() != CV_8U )
+public:
+    FastFeatureDetector_Impl( int _threshold, bool _nonmaxSuppression, int _type )
+    : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type((short)_type)
+    {}
+
+    void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask )
     {
-        _OutputArray ogray = _image.isUMat() ? _OutputArray(ugrayImage) : _OutputArray(grayImage);
-        cvtColor( _image, ogray, COLOR_BGR2GRAY );
-        gray = ogray;
+        Mat mask = _mask.getMat(), grayImage;
+        UMat ugrayImage;
+        _InputArray gray = _image;
+        if( _image.type() != CV_8U )
+        {
+            _OutputArray ogray = _image.isUMat() ? _OutputArray(ugrayImage) : _OutputArray(grayImage);
+            cvtColor( _image, ogray, COLOR_BGR2GRAY );
+            gray = ogray;
+        }
+        FAST( gray, keypoints, threshold, nonmaxSuppression, type );
+        KeyPointsFilter::runByPixelsMask( keypoints, mask );
     }
-    FAST( gray, keypoints, threshold, nonmaxSuppression, type );
-    KeyPointsFilter::runByPixelsMask( keypoints, mask );
+
+    void set(int prop, double value)
+    {
+        if(prop == THRESHOLD)
+            threshold = cvRound(value);
+        else if(prop == NONMAX_SUPPRESSION)
+            nonmaxSuppression = value != 0;
+        else if(prop == FAST_N)
+            type = cvRound(value);
+        else
+            CV_Error(Error::StsBadArg, "");
+    }
+
+    double get(int prop) const
+    {
+        if(prop == THRESHOLD)
+            return threshold;
+        if(prop == NONMAX_SUPPRESSION)
+            return nonmaxSuppression;
+        if(prop == FAST_N)
+            return type;
+        CV_Error(Error::StsBadArg, "");
+        return 0;
+    }
+
+    int threshold;
+    bool nonmaxSuppression;
+    int type;
+};
+
+Ptr<FastFeatureDetector> FastFeatureDetector::create( int threshold, bool nonmaxSuppression, int type )
+{
+    return makePtr<FastFeatureDetector_Impl>(threshold, nonmaxSuppression, type);
 }
+
 
 }
