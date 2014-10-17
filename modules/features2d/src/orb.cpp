@@ -105,7 +105,7 @@ ocl_computeOrbDescriptors(const UMat& imgbuf, const UMat& layerInfo,
     size_t globalSize[] = {nkeypoints};
 
     ocl::Kernel desc_ker("ORB_computeDescriptor", ocl::features2d::orb_oclsrc,
-                         format("-D ORB_DESCRIPTORS -D wta_k=%d", wta_k));
+                         format("-D ORB_DESCRIPTORS -D WTA_K=%d", wta_k));
     if( desc_ker.empty() )
         return false;
 
