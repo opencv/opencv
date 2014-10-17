@@ -101,7 +101,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
     [super start];
 
     if (self.recordVideo == YES) {
-        NSError* error;
+        NSError* error = nil;
         if ([[NSFileManager defaultManager] fileExistsAtPath:[self videoFileString]]) {
             [[NSFileManager defaultManager] removeItemAtPath:[self videoFileString] error:&error];
         }
@@ -424,6 +424,8 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection
 {
+    (void)captureOutput;
+    (void)connection;
     if (self.delegate) {
 
         // convert from Core Media to Core Video
@@ -464,7 +466,6 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
         // delegate image processing to the delegate
         cv::Mat image(height, width, format_opencv, bufferAddress, bytesPerRow);
 
-        cv::Mat* result = NULL;
         CGImage* dstImage;
 
         if ([self.delegate respondsToSelector:@selector(processImage:)]) {
