@@ -164,7 +164,13 @@ class CV_EXPORTS_W ORB : public Feature2D
 {
 public:
     // the size of the signature in bytes
-    enum { kBytes = 32, HARRIS_SCORE=0, FAST_SCORE=1 };
+    enum
+    {
+        kBytes = 32, HARRIS_SCORE=0, FAST_SCORE=1,
+        NFEATURES=10000, SCALE_FACTOR=10001, NLEVELS=10002,
+        EDGE_THRESHOLD=10003, FIRST_LEVEL=10004, WTA_K=10005,
+        SCORE_TYPE=10006, PATCH_SIZE=10007, FAST_THRESHOLD=10008
+    };
 
     CV_WRAP static Ptr<ORB> create(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31,
         int firstLevel = 0, int WTA_K=2, int scoreType=ORB::HARRIS_SCORE, int patchSize=31, int fastThreshold = 20);

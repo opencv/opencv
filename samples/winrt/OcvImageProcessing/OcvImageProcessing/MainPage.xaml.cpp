@@ -129,12 +129,12 @@ cv::Mat OcvImageProcessing::MainPage::ApplyFindFeaturesFilter(const cv::Mat& ima
 {
     cv::Mat result;
     cv::Mat intermediateMat;
-    cv::FastFeatureDetector detector(50);
+    cv::Ptr<cv::FeatureDetector> detector = cv::FastFeatureDetector::create(50);
     std::vector<cv::KeyPoint> features;
 
     image.copyTo(result);
     cv::cvtColor(image, intermediateMat, CV_RGBA2GRAY);
-    detector.detect(intermediateMat, features);
+    detector->detect(intermediateMat, features);
 
     for( unsigned int i = 0; i < std::min(features.size(), (size_t)50); i++ )
     {
