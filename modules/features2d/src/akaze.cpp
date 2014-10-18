@@ -86,7 +86,7 @@ namespace cv
         void setDescriptorChannels(int dch) { descriptor_channels = dch; }
         int getDescriptorChannels() const { return descriptor_channels; }
 
-        void setThreshold(double threshold_) { threshold = threshold_; }
+        void setThreshold(double threshold_) { threshold = (float)threshold_; }
         double getThreshold() const { return threshold; }
 
         void setNOctaves(int octaves_) { octaves = octaves_; }

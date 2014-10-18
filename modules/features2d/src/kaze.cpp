@@ -75,7 +75,7 @@ namespace cv
         void setUpright(bool upright_) { upright = upright_; }
         bool getUpright() const { return upright; }
 
-        void setThreshold(double threshold_) { threshold = threshold_; }
+        void setThreshold(double threshold_) { threshold = (float)threshold_; }
         double getThreshold() const { return threshold; }
 
         void setNOctaves(int octaves_) { octaves = octaves_; }
