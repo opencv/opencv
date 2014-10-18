@@ -407,6 +407,15 @@ public:
         return 0;
     }
 
+    void setThreshold(int threshold_) { threshold = threshold_; }
+    int getThreshold() const { return threshold; }
+
+    void setNonmaxSuppression(bool f) { nonmaxSuppression = f; }
+    bool getNonmaxSuppression() const { return nonmaxSuppression; }
+
+    void setType(int type_) { type = type_; }
+    int getType() const { return type; }
+
     int threshold;
     bool nonmaxSuppression;
     int type;

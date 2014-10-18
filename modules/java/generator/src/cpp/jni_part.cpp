@@ -23,14 +23,6 @@ JNI_OnLoad(JavaVM* vm, void* )
     if (vm->GetEnv((void**) &env, JNI_VERSION_1_6) != JNI_OK)
         return -1;
 
-    bool init = true;
-#ifdef HAVE_OPENCV_VIDEO
-    init &= cv::initModule_video();
-#endif
-
-    if(!init)
-        return -1;
-
     /* get class with (*env)->FindClass */
     /* register methods with (*env)->RegisterNatives */
 

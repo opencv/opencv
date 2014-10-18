@@ -86,35 +86,17 @@ public:
 
     virtual ~MSER_Impl() {}
 
-    void set(int propId, double value)
-    {
-        if( propId == DELTA )
-            params.delta = cvRound(value);
-        else if( propId == MIN_AREA )
-            params.minArea = cvRound(value);
-        else if( propId == MAX_AREA )
-            params.maxArea = cvRound(value);
-        else if( propId == PASS2_ONLY )
-            params.pass2Only = value != 0;
-        else
-            CV_Error(CV_StsBadArg, "Unknown parameter id");
-    }
+    void setDelta(int delta) { params.delta = delta; }
+    int getDelta() const { return params.delta; }
 
-    double get(int propId) const
-    {
-        double value = 0;
-        if( propId == DELTA )
-            value = params.delta;
-        else if( propId == MIN_AREA )
-            value = params.minArea;
-        else if( propId == MAX_AREA )
-            value = params.maxArea;
-        else if( propId == PASS2_ONLY )
-            value = params.pass2Only;
-        else
-            CV_Error(CV_StsBadArg, "Unknown parameter id");
-        return value;
-    }
+    void setMinArea(int minArea) { params.minArea = minArea; }
+    int getMinArea() const { return params.minArea; }
+
+    void setMaxArea(int maxArea) { params.maxArea = maxArea; }
+    int getMaxArea() const { return params.maxArea; }
+
+    void setPass2Only(bool f) { params.pass2Only = f; }
+    bool getPass2Only() const { return params.pass2Only; }
 
     enum { DIR_SHIFT = 29, NEXT_MASK = ((1<<DIR_SHIFT)-1)  };
 

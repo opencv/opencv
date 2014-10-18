@@ -135,18 +135,19 @@ int main(int argc, char **argv)
         return 1;
     }
     fs["bounding_box"] >> bb;
-    Ptr<Feature2D> akaze = AKAZE::create();
+
+    Stats stats, akaze_stats, orb_stats;
+    Ptr<AKAZE> akaze = AKAZE::create();
     akaze->set("threshold", akaze_thresh);
-    Ptr<Feature2D> orb = ORB::create();
+    Ptr<ORB> orb = ORB::create();
+    orb->setMaxFeatures(stats.keypoints);
     Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce-Hamming");
     Tracker akaze_tracker(akaze, matcher);
     Tracker orb_tracker(orb, matcher);
 
-    Stats stats, akaze_stats, orb_stats;
     Mat frame;
     video_in >> frame;
     akaze_tracker.setFirstFrame(frame, bb, "AKAZE", stats);
-    orb_tracker.getDetector()->set("nFeatures", stats.keypoints);
     orb_tracker.setFirstFrame(frame, bb, "ORB", stats);
 
     Stats akaze_draw_stats, orb_draw_stats;

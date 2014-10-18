@@ -660,55 +660,32 @@ public:
         scoreType(_scoreType), patchSize(_patchSize), fastThreshold(_fastThreshold)
     {}
 
-    void set(int prop, double value)
-    {
-        if( prop == NFEATURES )
-            nfeatures = cvRound(value);
-        else if( prop == SCALE_FACTOR )
-            scaleFactor = value;
-        else if( prop == NLEVELS )
-            nlevels = cvRound(value);
-        else if( prop == EDGE_THRESHOLD )
-            edgeThreshold = cvRound(value);
-        else if( prop == FIRST_LEVEL )
-            firstLevel = cvRound(value);
-        else if( prop == WTA_K )
-            wta_k = cvRound(value);
-        else if( prop == SCORE_TYPE )
-            scoreType = cvRound(value);
-        else if( prop == PATCH_SIZE )
-            patchSize = cvRound(value);
-        else if( prop == FAST_THRESHOLD )
-            fastThreshold = cvRound(value);
-        else
-            CV_Error(Error::StsBadArg, "");
-    }
+    void setMaxFeatures(int maxFeatures) { nfeatures = maxFeatures; }
+    int getMaxFeatures() const { return nfeatures; }
 
-    double get(int prop) const
-    {
-        double value = 0;
-        if( prop == NFEATURES )
-            value = nfeatures;
-        else if( prop == SCALE_FACTOR )
-            value = scaleFactor;
-        else if( prop == NLEVELS )
-            value = nlevels;
-        else if( prop == EDGE_THRESHOLD )
-            value = edgeThreshold;
-        else if( prop == FIRST_LEVEL )
-            value = firstLevel;
-        else if( prop == WTA_K )
-            value = wta_k;
-        else if( prop == SCORE_TYPE )
-            value = scoreType;
-        else if( prop == PATCH_SIZE )
-            value = patchSize;
-        else if( prop == FAST_THRESHOLD )
-            value = fastThreshold;
-        else
-            CV_Error(Error::StsBadArg, "");
-        return value;
-    }
+    void setScaleFactor(double scaleFactor_) { scaleFactor = scaleFactor_; }
+    double getScaleFactor() const { return scaleFactor; }
+
+    void setNLevels(int nlevels_) { nlevels = nlevels_; }
+    int getNLevels() const { return nlevels; }
+
+    void setEdgeThreshold(int edgeThreshold_) { edgeThreshold = edgeThreshold_; }
+    int getEdgeThreshold() const { return edgeThreshold; }
+
+    void setFirstLevel(int firstLevel_) { firstLevel = firstLevel_; }
+    int getFirstLevel() const { return firstLevel; }
+
+    void setWTA_K(int wta_k_) { wta_k = wta_k_; }
+    int getWTA_K() const { return wta_k; }
+
+    void setScoreType(int scoreType_) { scoreType = scoreType_; }
+    int getScoreType() const { return scoreType; }
+
+    void setPatchSize(int patchSize_) { patchSize = patchSize_; }
+    int getPatchSize() const { return patchSize; }
+
+    void setFastThreshold(int fastThreshold_) { fastThreshold = fastThreshold_; }
+    int getFastThreshold() const { return fastThreshold; }
 
     // returns the descriptor size in bytes
     int descriptorSize() const;

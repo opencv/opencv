@@ -1098,11 +1098,11 @@ public:
 
 const char* StereoBMImpl::name_ = "StereoMatcher.BM";
 
-}
-
-cv::Ptr<cv::StereoBM> cv::createStereoBM(int _numDisparities, int _SADWindowSize)
+Ptr<StereoBM> StereoBM::create(int _numDisparities, int _SADWindowSize)
 {
     return makePtr<StereoBMImpl>(_numDisparities, _SADWindowSize);
+}
+
 }
 
 /* End of file. */

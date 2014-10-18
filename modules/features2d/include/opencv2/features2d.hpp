@@ -163,17 +163,37 @@ public:
 class CV_EXPORTS_W ORB : public Feature2D
 {
 public:
-    // the size of the signature in bytes
-    enum
-    {
-        kBytes = 32, HARRIS_SCORE=0, FAST_SCORE=1,
-        NFEATURES=10000, SCALE_FACTOR=10001, NLEVELS=10002,
-        EDGE_THRESHOLD=10003, FIRST_LEVEL=10004, WTA_K=10005,
-        SCORE_TYPE=10006, PATCH_SIZE=10007, FAST_THRESHOLD=10008
-    };
+    enum { kBytes = 32, HARRIS_SCORE=0, FAST_SCORE=1 };
 
-    CV_WRAP static Ptr<ORB> create(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31,
-        int firstLevel = 0, int WTA_K=2, int scoreType=ORB::HARRIS_SCORE, int patchSize=31, int fastThreshold = 20);
+    CV_WRAP static Ptr<ORB> create(int nfeatures=500, float scaleFactor=1.2f, int nlevels=8, int edgeThreshold=31,
+        int firstLevel=0, int WTA_K=2, int scoreType=ORB::HARRIS_SCORE, int patchSize=31, int fastThreshold=20);
+
+    CV_WRAP virtual void setMaxFeatures(int maxFeatures) = 0;
+    CV_WRAP virtual int getMaxFeatures() const = 0;
+
+    CV_WRAP virtual void setScaleFactor(double scaleFactor) = 0;
+    CV_WRAP virtual double getScaleFactor() const = 0;
+
+    CV_WRAP virtual void setNLevels(int nlevels) = 0;
+    CV_WRAP virtual int getNLevels() const = 0;
+
+    CV_WRAP virtual void setEdgeThreshold(int edgeThreshold) = 0;
+    CV_WRAP virtual int getEdgeThreshold() const = 0;
+
+    CV_WRAP virtual void setFirstLevel(int firstLevel) = 0;
+    CV_WRAP virtual int getFirstLevel() const = 0;
+
+    CV_WRAP virtual void setWTA_K(int wta_k) = 0;
+    CV_WRAP virtual int getWTA_K() const = 0;
+
+    CV_WRAP virtual void setScoreType(int scoreType) = 0;
+    CV_WRAP virtual int getScoreType() const = 0;
+
+    CV_WRAP virtual void setPatchSize(int patchSize) = 0;
+    CV_WRAP virtual int getPatchSize() const = 0;
+
+    CV_WRAP virtual void setFastThreshold(int fastThreshold) = 0;
+    CV_WRAP virtual int getFastThreshold() const = 0;
 };
 
 /*!
@@ -188,13 +208,6 @@ public:
 class CV_EXPORTS_W MSER : public Feature2D
 {
 public:
-    enum
-    {
-        DELTA=10000, MIN_AREA=10001, MAX_AREA=10002, PASS2_ONLY=10003,
-        MAX_EVOLUTION=10004, AREA_THRESHOLD=10005,
-        MIN_MARGIN=10006, EDGE_BLUR_SIZE=10007
-    };
-
     //! the full constructor
     CV_WRAP static Ptr<MSER> create( int _delta=5, int _min_area=60, int _max_area=14400,
           double _max_variation=0.25, double _min_diversity=.2,
@@ -204,6 +217,18 @@ public:
     CV_WRAP virtual void detectRegions( InputArray image,
                                         std::vector<std::vector<Point> >& msers,
                                         std::vector<Rect>& bboxes ) = 0;
+
+    CV_WRAP virtual void setDelta(int delta) = 0;
+    CV_WRAP virtual int getDelta() const = 0;
+
+    CV_WRAP virtual void setMinArea(int minArea) = 0;
+    CV_WRAP virtual int getMinArea() const = 0;
+
+    CV_WRAP virtual void setMaxArea(int maxArea) = 0;
+    CV_WRAP virtual int getMaxArea() const = 0;
+
+    CV_WRAP virtual void setPass2Only(bool f) = 0;
+    CV_WRAP virtual bool getPass2Only() const = 0;
 };
 
 //! detects corners using FAST algorithm by E. Rosten
@@ -225,15 +250,40 @@ public:
     CV_WRAP static Ptr<FastFeatureDetector> create( int threshold=10,
                                                     bool nonmaxSuppression=true,
                                                     int type=FastFeatureDetector::TYPE_9_16 );
+
+    CV_WRAP virtual void setThreshold(int threshold) = 0;
+    CV_WRAP virtual int getThreshold() const = 0;
+
+    CV_WRAP virtual void setNonmaxSuppression(bool f) = 0;
+    CV_WRAP virtual bool getNonmaxSuppression() const = 0;
+
+    CV_WRAP virtual void setType(int type) = 0;
+    CV_WRAP virtual int getType() const = 0;
 };
 
 
 class CV_EXPORTS_W GFTTDetector : public Feature2D
 {
 public:
-    enum { USE_HARRIS_DETECTOR=10000 };
     CV_WRAP static Ptr<GFTTDetector> create( int maxCorners=1000, double qualityLevel=0.01, double minDistance=1,
                                              int blockSize=3, bool useHarrisDetector=false, double k=0.04 );
+    CV_WRAP virtual void setMaxFeatures(int maxFeatures) = 0;
+    CV_WRAP virtual int getMaxFeatures() const = 0;
+
+    CV_WRAP virtual void setQualityLevel(double qlevel) = 0;
+    CV_WRAP virtual double getQualityLevel() const = 0;
+
+    CV_WRAP virtual void setMinDistance(double minDistance) = 0;
+    CV_WRAP virtual double getMinDistance() const = 0;
+
+    CV_WRAP virtual void setBlockSize(int blockSize) = 0;
+    CV_WRAP virtual int getBlockSize() const = 0;
+
+    CV_WRAP virtual void setHarrisDetector(bool val) = 0;
+    CV_WRAP virtual bool getHarrisDetector() const = 0;
+
+    CV_WRAP virtual void setK(double k) = 0;
+    CV_WRAP virtual double getK() const = 0;
 };
 
 
@@ -289,8 +339,26 @@ public:
 
     CV_WRAP static Ptr<KAZE> create(bool extended=false, bool upright=false,
                                     float threshold = 0.001f,
-                                    int octaves = 4, int sublevels = 4,
+                                    int nOctaves = 4, int nOctaveLayers = 4,
                                     int diffusivity = KAZE::DIFF_PM_G2);
+
+    CV_WRAP virtual void setExtended(bool extended) = 0;
+    CV_WRAP virtual bool getExtended() const = 0;
+
+    CV_WRAP virtual void setUpright(bool upright) = 0;
+    CV_WRAP virtual bool getUpright() const = 0;
+
+    CV_WRAP virtual void setThreshold(double threshold) = 0;
+    CV_WRAP virtual double getThreshold() const = 0;
+
+    CV_WRAP virtual void setNOctaves(int octaves) = 0;
+    CV_WRAP virtual int getNOctaves() const = 0;
+
+    CV_WRAP virtual void setNOctaveLayers(int octaveLayers) = 0;
+    CV_WRAP virtual int getNOctaveLayers() const = 0;
+
+    CV_WRAP virtual void setDiffusivity(int diff) = 0;
+    CV_WRAP virtual int getDiffusivity() const = 0;
 };
 
 /*!
@@ -310,8 +378,29 @@ public:
 
     CV_WRAP static Ptr<AKAZE> create(int descriptor_type=AKAZE::DESCRIPTOR_MLDB,
                                      int descriptor_size = 0, int descriptor_channels = 3,
-                                     float threshold = 0.001f, int octaves = 4,
-                                     int sublevels = 4, int diffusivity = KAZE::DIFF_PM_G2);
+                                     float threshold = 0.001f, int nOctaves = 4,
+                                     int nOctaveLayers = 4, int diffusivity = KAZE::DIFF_PM_G2);
+
+    CV_WRAP virtual void setDescriptorType(int dtype) = 0;
+    CV_WRAP virtual int getDescriptorType() const = 0;
+
+    CV_WRAP virtual void setDescriptorSize(int dsize) = 0;
+    CV_WRAP virtual int getDescriptorSize() const = 0;
+
+    CV_WRAP virtual void setDescriptorChannels(int dch) = 0;
+    CV_WRAP virtual int getDescriptorChannels() const = 0;
+
+    CV_WRAP virtual void setThreshold(double threshold) = 0;
+    CV_WRAP virtual double getThreshold() const = 0;
+
+    CV_WRAP virtual void setNOctaves(int octaves) = 0;
+    CV_WRAP virtual int getNOctaves() const = 0;
+
+    CV_WRAP virtual void setNOctaveLayers(int octaveLayers) = 0;
+    CV_WRAP virtual int getNOctaveLayers() const = 0;
+
+    CV_WRAP virtual void setDiffusivity(int diff) = 0;
+    CV_WRAP virtual int getDiffusivity() const = 0;
 };
 
 /****************************************************************************************\

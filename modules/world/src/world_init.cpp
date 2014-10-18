@@ -44,9 +44,5 @@
 
 bool cv::initAll()
 {
-    return true
-#ifdef HAVE_OPENCV_VIDEO
-    && initModule_video()
-#endif
-    ;
+    return true;
 }
