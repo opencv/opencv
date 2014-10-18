@@ -214,7 +214,8 @@ bool  TiffDecoder::readData( Mat& img )
                 (!is_tiled && tile_height0 == std::numeric_limits<uint32>::max()) )
                 tile_height0 = m_height;
 
-            AutoBuffer<uchar> _buffer( size_t(8) * tile_height0*tile_width0);
+            const size_t buffer_size = bpp * ncn * tile_height0 * tile_width0;
+            AutoBuffer<uchar> _buffer( buffer_size );
             uchar* buffer = _buffer;
             ushort* buffer16 = (ushort*)buffer;
             float* buffer32 = (float*)buffer;
