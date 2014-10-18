@@ -255,8 +255,8 @@ protected:
             fs.open( string(ts->get_data_path()) + FEATURES2D_DIR + "/keypoints.xml.gz", FileStorage::WRITE );
             if( fs.isOpened() )
             {
-                ORB fd;
-                fd.detect(img, keypoints);
+                Ptr<ORB> fd = ORB::create();
+                fd->detect(img, keypoints);
                 write( fs, "keypoints", keypoints );
             }
             else

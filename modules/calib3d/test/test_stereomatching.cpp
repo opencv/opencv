@@ -717,7 +717,7 @@ protected:
         Mat leftImg; cvtColor( _leftImg, leftImg, COLOR_BGR2GRAY );
         Mat rightImg; cvtColor( _rightImg, rightImg, COLOR_BGR2GRAY );
 
-        Ptr<StereoBM> bm = createStereoBM( params.ndisp, params.winSize );
+        Ptr<StereoBM> bm = StereoBM::create( params.ndisp, params.winSize );
         Mat tempDisp;
         bm->compute( leftImg, rightImg, tempDisp );
         tempDisp.convertTo(leftDisp, CV_32F, 1./StereoMatcher::DISP_SCALE);
@@ -770,7 +770,7 @@ protected:
     {
         RunParams params = caseRunParams[caseIdx];
         assert( params.ndisp%16 == 0 );
-        Ptr<StereoSGBM> sgbm = createStereoSGBM( 0, params.ndisp, params.winSize,
+        Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, params.ndisp, params.winSize,
                                                  10*params.winSize*params.winSize,
                                                  40*params.winSize*params.winSize,
                                                  1, 63, 10, 100, 32, params.fullDP ?

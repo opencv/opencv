@@ -941,7 +941,7 @@ public:
 const char* StereoSGBMImpl::name_ = "StereoMatcher.SGBM";
 
 
-Ptr<StereoSGBM> createStereoSGBM(int minDisparity, int numDisparities, int SADWindowSize,
+Ptr<StereoSGBM> StereoSGBM::create(int minDisparity, int numDisparities, int SADWindowSize,
                                  int P1, int P2, int disp12MaxDiff,
                                  int preFilterCap, int uniquenessRatio,
                                  int speckleWindowSize, int speckleRange,

@@ -55,23 +55,23 @@ public:
     {
     }
 
-    void set(int prop, double value)
-    {
-        if( prop == USE_HARRIS_DETECTOR )
-            useHarrisDetector = value != 0;
-        else
-            CV_Error(Error::StsBadArg, "");
-    }
+    void setMaxFeatures(int maxFeatures) { nfeatures = maxFeatures; }
+    int getMaxFeatures() const { return nfeatures; }
 
-    double get(int prop) const
-    {
-        double value = 0;
-        if( prop == USE_HARRIS_DETECTOR )
-            value = useHarrisDetector;
-        else
-            CV_Error(Error::StsBadArg, "");
-        return value;
-    }
+    void setQualityLevel(double qlevel) { qualityLevel = qlevel; }
+    double getQualityLevel() const { return qualityLevel; }
+
+    void setMinDistance(double minDistance_) { minDistance = minDistance_; }
+    double getMinDistance() const { return minDistance; }
+
+    void setBlockSize(int blockSize_) { blockSize = blockSize_; }
+    int getBlockSize() const { return blockSize; }
+
+    void setHarrisDetector(bool val) { useHarrisDetector = val; }
+    bool getHarrisDetector() const { return useHarrisDetector; }
+
+    void setK(double k_) { k = k_; }
+    double getK() const { return k; }
 
     void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask )
     {
