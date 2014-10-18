@@ -1728,6 +1728,9 @@ public:
         FOR_IN_GRID(coef0, coef_grid)
         FOR_IN_GRID(degree, degree_grid)
         {
+            // make sure we updated the kernel and other parameters
+            setParams(params, Ptr<Kernel>() );
+
             double error = 0;
             for( k = 0; k < k_fold; k++ )
             {

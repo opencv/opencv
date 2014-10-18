@@ -79,7 +79,7 @@ PARAM_TEST_CASE(StereoBMFixture, int, int)
 
 OCL_TEST_P(StereoBMFixture, StereoBM)
 {
-    Ptr<StereoBM> bm = createStereoBM( n_disp, winSize);
+    Ptr<StereoBM> bm = StereoBM::create( n_disp, winSize);
     bm->setPreFilterType(bm->PREFILTER_XSOBEL);
     bm->setTextureThreshold(0);
 

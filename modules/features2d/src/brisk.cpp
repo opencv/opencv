@@ -2099,7 +2099,7 @@ BriskLayer::BriskLayer(const BriskLayer& layer, int mode)
 void
 BriskLayer::getAgastPoints(int threshold, std::vector<KeyPoint>& keypoints)
 {
-  fast_9_16_->set(FastFeatureDetector::THRESHOLD, threshold);
+  fast_9_16_->setThreshold(threshold);
   fast_9_16_->detect(img_, keypoints);
 
   // also write scores

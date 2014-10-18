@@ -323,27 +323,31 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
 #ifdef HAVE_OPENCV_XFEATURES2D
     if (num_octaves_descr == num_octaves && num_layers_descr == num_layers)
     {
-        surf = SURF::create();
-        if( !surf )
+        Ptr<SURF> surf_ = SURF::create();
+        if( !surf_ )
             CV_Error( Error::StsNotImplemented, "OpenCV was built without SURF support" );
-        surf->set(SURF::HESSIAN_THRESHOLD, hess_thresh);
-        surf->set(SURF::NOCTAVES, num_octaves);
-        surf->set(SURF::NOCTAVE_LAYERS, num_layers);
+        surf_->setHessianThreshold(hess_thresh);
+        surf_->setNOctaves(num_octaves);
+        surf_->setNOctaveLayers(num_layers);
+        surf = surf_;
     }
     else
     {
-        detector_ = SURF::create();
-        extractor_ = SURF::create();
+        Ptr<SURF> sdetector_ = SURF::create();
+        Ptr<SURF> sextractor_ = SURF::create();
 
-        if( !detector_ || !extractor_ )
+        if( !sdetector_ || !sextractor_ )
             CV_Error( Error::StsNotImplemented, "OpenCV was built without SURF support" );
 
-        detector_->set(SURF::HESSIAN_THRESHOLD, hess_thresh);
-        detector_->set(SURF::NOCTAVES, num_octaves);
-        detector_->set(SURF::NOCTAVE_LAYERS, num_layers);
+        sdetector_->setHessianThreshold(hess_thresh);
+        sdetector_->setNOctaves(num_octaves);
+        sdetector_->setNOctaveLayers(num_layers);
 
-        extractor_->set(SURF::NOCTAVES, num_octaves_descr);
-        extractor_->set(SURF::NOCTAVE_LAYERS, num_layers_descr);
+        sextractor_->setNOctaves(num_octaves_descr);
+        sextractor_->setNOctaveLayers(num_layers_descr);
+
+        detector_ = sdetector_;
+        extractor_ = sextractor_;
     }
 #else
     CV_Error( Error::StsNotImplemented, "OpenCV was built without SURF support" );

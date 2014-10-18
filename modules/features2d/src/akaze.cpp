@@ -77,6 +77,27 @@ namespace cv
 
         }
 
+        void setDescriptorType(int dtype) { descriptor = dtype; }
+        int getDescriptorType() const { return descriptor; }
+
+        void setDescriptorSize(int dsize) { descriptor_size = dsize; }
+        int getDescriptorSize() const { return descriptor_size; }
+
+        void setDescriptorChannels(int dch) { descriptor_channels = dch; }
+        int getDescriptorChannels() const { return descriptor_channels; }
+
+        void setThreshold(double threshold_) { threshold = (float)threshold_; }
+        double getThreshold() const { return threshold; }
+
+        void setNOctaves(int octaves_) { octaves = octaves_; }
+        int getNOctaves() const { return octaves; }
+
+        void setNOctaveLayers(int octaveLayers_) { sublevels = octaveLayers_; }
+        int getNOctaveLayers() const { return sublevels; }
+
+        void setDiffusivity(int diff_) { diffusivity = diff_; }
+        int getDiffusivity() const { return diffusivity; }
+
         // returns the descriptor size in bytes
         int descriptorSize() const
         {

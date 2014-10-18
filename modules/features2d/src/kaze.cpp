@@ -69,6 +69,24 @@ namespace cv
 
         virtual ~KAZE_Impl() {}
 
+        void setExtended(bool extended_) { extended = extended_; }
+        bool getExtended() const { return extended; }
+
+        void setUpright(bool upright_) { upright = upright_; }
+        bool getUpright() const { return upright; }
+
+        void setThreshold(double threshold_) { threshold = (float)threshold_; }
+        double getThreshold() const { return threshold; }
+
+        void setNOctaves(int octaves_) { octaves = octaves_; }
+        int getNOctaves() const { return octaves; }
+
+        void setNOctaveLayers(int octaveLayers_) { sublevels = octaveLayers_; }
+        int getNOctaveLayers() const { return sublevels; }
+
+        void setDiffusivity(int diff_) { diffusivity = diff_; }
+        int getDiffusivity() const { return diffusivity; }
+
         // returns the descriptor size in bytes
         int descriptorSize() const
         {
