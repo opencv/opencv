@@ -140,8 +140,8 @@ TEST(Features2d_Detector_Keypoints_HARRIS, validation)
 
 TEST(Features2d_Detector_Keypoints_GFTT, validation)
 {
-    Ptr<FeatureDetector> gftt = GFTTDetector::create();
-    gftt->set(GFTTDetector::USE_HARRIS_DETECTOR, 1);
+    Ptr<GFTTDetector> gftt = GFTTDetector::create();
+    gftt->setHarrisDetector(true);
     CV_FeatureDetectorKeypointsTest test(gftt);
     test.safe_run();
 }

@@ -132,8 +132,11 @@ public:
             fd = GFTTDetector::create();
             break;
         case HARRIS:
-            fd = GFTTDetector::create();
-            fd->set(GFTTDetector::USE_HARRIS_DETECTOR, 1);
+            {
+            Ptr<GFTTDetector> gftt = GFTTDetector::create();
+            gftt->setHarrisDetector(true);
+            fd = gftt;
+            }
             break;
         case SIMPLEBLOB:
             fd = SimpleBlobDetector::create();
