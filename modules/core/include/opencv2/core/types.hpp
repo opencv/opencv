@@ -493,7 +493,7 @@ public:
     template<typename T2> operator Scalar_<T2>() const;
 
     //! per-element product
-    Scalar_<_Tp> mul(const Scalar_<_Tp>& t, double scale=1 ) const;
+    Scalar_<_Tp> mul(const Scalar_<_Tp>& a, double scale=1 ) const;
 
     // returns (v0, -v1, -v2, -v3)
     Scalar_<_Tp> conj() const;
@@ -1802,12 +1802,12 @@ Scalar_<_Tp> Scalar_<_Tp>::all(_Tp v0)
 
 
 template<typename _Tp> inline
-Scalar_<_Tp> Scalar_<_Tp>::mul(const Scalar_<_Tp>& t, double scale ) const
+Scalar_<_Tp> Scalar_<_Tp>::mul(const Scalar_<_Tp>& a, double scale ) const
 {
-    return Scalar_<_Tp>(saturate_cast<_Tp>(this->val[0] * t.val[0] * scale),
-                        saturate_cast<_Tp>(this->val[1] * t.val[1] * scale),
-                        saturate_cast<_Tp>(this->val[2] * t.val[2] * scale),
-                        saturate_cast<_Tp>(this->val[3] * t.val[3] * scale));
+    return Scalar_<_Tp>(saturate_cast<_Tp>(this->val[0] * a.val[0] * scale),
+                        saturate_cast<_Tp>(this->val[1] * a.val[1] * scale),
+                        saturate_cast<_Tp>(this->val[2] * a.val[2] * scale),
+                        saturate_cast<_Tp>(this->val[3] * a.val[3] * scale));
 }
 
 template<typename _Tp> inline
