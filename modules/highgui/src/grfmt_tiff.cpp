@@ -270,9 +270,9 @@ bool  TiffDecoder::readData( Mat& img )
                         case 16:
                         {
                             if( !is_tiled )
-                                ok = (int)TIFFReadEncodedStrip( tif, tileidx, (uint32*)buffer, (tsize_t)-1 ) >= 0;
+                                ok = (int)TIFFReadEncodedStrip( tif, tileidx, (uint32*)buffer, buffer_size ) >= 0;
                             else
-                                ok = (int)TIFFReadEncodedTile( tif, tileidx, (uint32*)buffer, (tsize_t)-1 ) >= 0;
+                                ok = (int)TIFFReadEncodedTile( tif, tileidx, (uint32*)buffer, buffer_size ) >= 0;
 
                             if( !ok )
                             {
@@ -326,9 +326,9 @@ bool  TiffDecoder::readData( Mat& img )
                         case 64:
                         {
                             if( !is_tiled )
-                                ok = (int)TIFFReadEncodedStrip( tif, tileidx, buffer, (tsize_t)-1 ) >= 0;
+                                ok = (int)TIFFReadEncodedStrip( tif, tileidx, buffer, buffer_size ) >= 0;
                             else
-                                ok = (int)TIFFReadEncodedTile( tif, tileidx, buffer, (tsize_t)-1 ) >= 0;
+                                ok = (int)TIFFReadEncodedTile( tif, tileidx, buffer, buffer_size ) >= 0;
 
                             if( !ok || ncn != 1 )
                             {
