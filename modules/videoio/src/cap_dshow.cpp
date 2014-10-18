@@ -337,6 +337,7 @@ interface ISampleGrabber : public IUnknown
 //STUFF YOU CAN CHANGE
 
 #ifdef _DEBUG
+#include <strsafe.h>
 
 //change for verbose debug info
 static bool gs_verbose = true;
