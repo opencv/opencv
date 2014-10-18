@@ -516,7 +516,7 @@ TEST(Highgui_Tiff, decode_tile_remainder)
     CV_GrfmtReadTifTiledWithNotFullTiles test; test.safe_run();
 }
 
-TEST(Imgcodecs_Tiff, decode_infinite_rowsperstrip)
+TEST(Highgui_Tiff, decode_infinite_rowsperstrip)
 {
     const uchar sample_data[142] = {
         0x49, 0x49, 0x2a, 0x00, 0x10, 0x00, 0x00, 0x00, 0x56, 0x54,
