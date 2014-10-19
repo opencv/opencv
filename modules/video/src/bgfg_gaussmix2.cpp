@@ -689,7 +689,7 @@ public:
                 nmodes = nNewModes;
 
                 //make new mode if needed and exit
-                if( !fitsPDF )
+                if( !fitsPDF && alphaT > 0.f )
                 {
                     // replace the weakest or add a new one
                     int mode = nmodes == nmixtures ? nmixtures-1 : nmodes++;
