@@ -185,7 +185,6 @@ class CvVideoWriter_AVFoundation : public CvVideoWriter{
         AVAssetWriterInput* mMovieWriterInput;
         AVAssetWriterInputPixelBufferAdaptor* mMovieWriterAdaptor;
 
-        unsigned char* imagedata;
         NSString* path;
         NSString* codec;
         NSString* fileType;
@@ -494,15 +493,15 @@ double CvCaptureCAM::getProperty(int property_id){
     CMFormatDescriptionRef format = [[ports objectAtIndex:0] formatDescription];
     CGSize s1 = CMVideoFormatDescriptionGetPresentationDimensions(format, YES, YES);
 
-    int width=(int)s1.width, height=(int)s1.height;
+    int w=(int)s1.width, h=(int)s1.height;
 
     [localpool drain];
 
     switch (property_id) {
         case CV_CAP_PROP_FRAME_WIDTH:
-            return width;
+            return w;
         case CV_CAP_PROP_FRAME_HEIGHT:
-            return height;
+            return h;
 
         case CV_CAP_PROP_IOS_DEVICE_FOCUS:
             return mCaptureDevice.focusMode;
@@ -660,7 +659,8 @@ bool CvCaptureCAM::setProperty(int property_id, double value) {
 - (void)captureOutput:(AVCaptureOutput *)captureOutput
 didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
 fromConnection:(AVCaptureConnection *)connection{
-
+    (void)captureOutput;
+    (void)connection;
     // Failed
     // connection.videoOrientation = AVCaptureVideoOrientationPortrait;
 
@@ -714,26 +714,26 @@ fromConnection:(AVCaptureConnection *)connection{
         memcpy(imagedata, baseaddress, currSize);
 
         if (image == NULL) {
-            image = cvCreateImageHeader(cvSize(width,height), IPL_DEPTH_8U, 4);
+            image = cvCreateImageHeader(cvSize((int)width,(int)height), IPL_DEPTH_8U, 4);
         }
-        image->width =width;
-        image->height = height;
+        image->width = (int)width;
+        image->height = (int)height;
         image->nChannels = 4;
         image->depth = IPL_DEPTH_8U;
         image->widthStep = (int)rowBytes;
         image->imageData = imagedata;
-        image->imageSize = currSize;
+        image->imageSize = (int)currSize;
 
         if (bgr_image == NULL) {
-            bgr_image = cvCreateImageHeader(cvSize(width,height), IPL_DEPTH_8U, 3);
+            bgr_image = cvCreateImageHeader(cvSize((int)width,(int)height), IPL_DEPTH_8U, 3);
         }
-        bgr_image->width =width;
-        bgr_image->height = height;
+        bgr_image->width = (int)width;
+        bgr_image->height = (int)height;
         bgr_image->nChannels = 3;
         bgr_image->depth = IPL_DEPTH_8U;
         bgr_image->widthStep = (int)rowBytes;
         bgr_image->imageData = bgr_imagedata;
-        bgr_image->imageSize = currSize;
+        bgr_image->imageSize = (int)currSize;
 
         cvCvtColor(image, bgr_image, CV_BGRA2BGR);
 
@@ -742,7 +742,7 @@ fromConnection:(AVCaptureConnection *)connection{
         // iOS provides hardware accelerated rotation through AVCaptureConnection class
         // I can't get it work.
         if (bgr_image_r90 == NULL){
-            bgr_image_r90 = cvCreateImage(cvSize(height, width), IPL_DEPTH_8U, 3);
+            bgr_image_r90 = cvCreateImage(cvSize((int)height, (int)width), IPL_DEPTH_8U, 3);
         }
         cvTranspose(bgr_image, bgr_image_r90);
         cvFlip(bgr_image_r90, NULL, 1);
@@ -942,29 +942,29 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         memcpy(imagedata, baseaddress, currSize);
 
         if (image == NULL) {
-            image = cvCreateImageHeader(cvSize(width,height), IPL_DEPTH_8U, 4);
+            image = cvCreateImageHeader(cvSize((int)width,(int)height), IPL_DEPTH_8U, 4);
         }
 
-        image->width =width;
-        image->height = height;
+        image->width = (int)width;
+        image->height = (int)height;
         image->nChannels = 4;
         image->depth = IPL_DEPTH_8U;
-        image->widthStep = rowBytes;
+        image->widthStep = (int)rowBytes;
         image->imageData = imagedata;
-        image->imageSize = currSize;
+        image->imageSize = (int)currSize;
 
 
         if (bgr_image == NULL) {
-            bgr_image = cvCreateImageHeader(cvSize(width,height), IPL_DEPTH_8U, 3);
+            bgr_image = cvCreateImageHeader(cvSize((int)width,(int)height), IPL_DEPTH_8U, 3);
         }
 
-        bgr_image->width =width;
-        bgr_image->height = height;
+        bgr_image->width = (int)width;
+        bgr_image->height = (int)height;
         bgr_image->nChannels = 3;
         bgr_image->depth = IPL_DEPTH_8U;
-        bgr_image->widthStep = rowBytes;
+        bgr_image->widthStep = (int)rowBytes;
         bgr_image->imageData = bgr_imagedata;
-        bgr_image->imageSize = currSize;
+        bgr_image->imageSize = (int)currSize;
 
         cvCvtColor(image, bgr_image,CV_BGRA2BGR);
 
@@ -1014,7 +1014,7 @@ double CvCaptureFile::getFPS() {
 }
 
 double CvCaptureFile::getProperty(int property_id){
-
+    (void)property_id;
     /*
          if (mCaptureSession == nil) return 0;
 
@@ -1055,7 +1055,8 @@ double CvCaptureFile::getProperty(int property_id){
 }
 
 bool CvCaptureFile::setProperty(int property_id, double value) {
-
+    (void)property_id;
+    (void)value;
     /*
          if (mCaptureSession == nil) return false;
 
@@ -1265,7 +1266,7 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
     // writer status check
     if (![mMovieWriterInput isReadyForMoreMediaData] || mMovieWriter.status !=  AVAssetWriterStatusWriting ) {
         NSLog(@"[mMovieWriterInput isReadyForMoreMediaData] Not ready for media data or ...");
-        NSLog(@"mMovieWriter.status: %d. Error: %@", mMovieWriter.status, [mMovieWriter.error localizedDescription]);
+        NSLog(@"mMovieWriter.status: %d. Error: %@", (int)mMovieWriter.status, [mMovieWriter.error localizedDescription]);
         [localpool drain];
         return false;
     }

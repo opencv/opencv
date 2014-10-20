@@ -58,10 +58,10 @@
 namespace cv
 {
 static const char fmtSignTiffII[] = "II\x2a\x00";
-static const char fmtSignTiffMM[] = "MM\x00\x2a";
 
 #ifdef HAVE_TIFF
 
+static const char fmtSignTiffMM[] = "MM\x00\x2a";
 static int grfmt_tiff_err_handler_init = 0;
 static void GrFmtSilentTIFFErrorHandler( const char*, const char*, va_list ) {}
 

@@ -355,7 +355,7 @@ type* prefix##get_##type(CVPOS pos)\
 }\
 int prefix##get_count_##type(_CVLIST* list)\
 {\
-    return list->m_size;\
+    return (int)list->m_size;\
 }
 
 #define DECLARE_AND_IMPLEMENT_LIST(type, prefix)\

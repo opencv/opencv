@@ -1208,7 +1208,7 @@ force_int:
                         int val, is_hex = d == 'x';
                         c = ptr[3];
                         ptr[3] = '\0';
-                        val = strtol( ptr + is_hex, &endptr, is_hex ? 8 : 16 );
+                        val = (int)strtol( ptr + is_hex, &endptr, is_hex ? 8 : 16 );
                         ptr[3] = c;
                         if( endptr == ptr + is_hex )
                             buf[len++] = 'x';
@@ -2819,7 +2819,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
                 // find the last occurence of </opencv_storage>
                 for(;;)
                 {
-                    int line_offset = ftell( fs->file );
+                    int line_offset = (int)ftell( fs->file );
                     char* ptr0 = icvGets( fs, xml_buf, xml_buf_size ), *ptr;
                     if( !ptr0 )
                         break;

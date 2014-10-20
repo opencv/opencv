@@ -523,8 +523,6 @@ private:
     RetinaColor       _colorEngine;
     ImageLogPolProjection *_photoreceptorsLogSampling;
 
-    bool _useMinimalMemoryForToneMappingONLY;
-
     bool _normalizeParvoOutput_0_maxOutputValue;
     bool _normalizeMagnoOutput_0_maxOutputValue;
     float _maxOutputValue;

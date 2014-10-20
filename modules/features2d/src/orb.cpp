@@ -43,7 +43,6 @@ namespace cv
 {
 
 const float HARRIS_K = 0.04f;
-const int DESCRIPTOR_SIZE = 32;
 
 /**
  * Function that computes the Harris responses in a

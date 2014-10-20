@@ -364,7 +364,7 @@ inline void ReallocImage(IplImage** ppImage, CvSize sz, long lChNum)
             cvReleaseImage( &pImage );
     }
     if( pImage == NULL )
-        pImage = cvCreateImage( sz, IPL_DEPTH_8U, lChNum);
+        pImage = cvCreateImage( sz, IPL_DEPTH_8U, (int)lChNum);
     *ppImage = pImage;
 }
 
@@ -385,9 +385,9 @@ inline BoostingFaceTemplate::BoostingFaceTemplate(long lNumber,CvRect rect):Face
     long EyeWidth = rect.width/5;
     long EyeHeight = EyeWidth;
 
-    CvRect LeftEyeRect = cvRect(rect.x + EyeWidth,rect.y + rect.height/2 - EyeHeight,EyeWidth,EyeHeight);
-    CvRect RightEyeRect = cvRect(rect.x + 3*EyeWidth,rect.y + rect.height/2 - EyeHeight,EyeWidth,EyeHeight);
-    CvRect MouthRect = cvRect(rect.x + 3*EyeWidth/2,rect.y + 3*rect.height/4 - EyeHeight/2,2*EyeWidth,EyeHeight);
+    CvRect LeftEyeRect = cvRect((int)(rect.x + EyeWidth),(int)(rect.y + rect.height/2 - EyeHeight),(int)EyeWidth,(int)EyeHeight);
+    CvRect RightEyeRect = cvRect((int)(rect.x + 3*EyeWidth),(int)(rect.y + rect.height/2 - EyeHeight),(int)EyeWidth,(int)EyeHeight);
+    CvRect MouthRect = cvRect((int)(rect.x + 3*EyeWidth/2),(int)(rect.y + 3*rect.height/4 - EyeHeight/2),(int)(2*EyeWidth),(int)EyeHeight);
 
     CvRect * lpMouthRect = new CvRect();
     *lpMouthRect = MouthRect;

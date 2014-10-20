@@ -150,6 +150,7 @@
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
+    [super dealloc];
 }
 
 
@@ -234,6 +235,7 @@
 
 - (void)deviceOrientationDidChange:(NSNotification*)notification
 {
+    (void)notification;
     UIDeviceOrientation orientation = [UIDevice currentDevice].orientation;
 
     switch (orientation)
@@ -250,7 +252,7 @@
         default:
             break;
     }
-    NSLog(@"deviceOrientationDidChange: %d", orientation);
+    NSLog(@"deviceOrientationDidChange: %d", (int)orientation);
 
     [self updateOrientation];
 }
@@ -324,7 +326,7 @@
 
             // support for autofocus
             if ([device isFocusModeSupported:AVCaptureFocusModeContinuousAutoFocus]) {
-                NSError *error = nil;
+                error = nil;
                 if ([device lockForConfiguration:&error]) {
                     device.focusMode = AVCaptureFocusModeContinuousAutoFocus;
                     [device unlockForConfiguration];
