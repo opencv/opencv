@@ -63,10 +63,8 @@ private:
     float           m_FVMin[MAX_FV_SIZE];
     float           m_FVVar[MAX_FV_SIZE];
     int             m_Dim;
-    CvBlob          m_BlobSeq[BLOB_NUM];
     int             m_Frame;
     int             m_State;
-    int             m_LastFrame;
     int             m_ClearFlag;
     void Clear()
     {
@@ -251,10 +249,8 @@ private:
     float           m_FVMin[MAX_FV_SIZE];
     float           m_FVVar[MAX_FV_SIZE];
     int             m_Dim;
-    CvBlob          m_BlobSeq[BLOB_NUM];
     int             m_Frame;
     int             m_State;
-    int             m_LastFrame;
     int             m_ClearFlag;
     void Clear()
     {
@@ -1132,7 +1128,6 @@ class CvBlobTrackAnalysisSVM : public CvBlobTrackAnalysis
 {
     /*---------------- Internal functions: --------------------*/
 private:
-    CvMemStorage*       m_pMem;
     int                 m_TrackNum;
     int                 m_Frame;
     char                m_DataFileName[1024];

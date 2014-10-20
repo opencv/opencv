@@ -588,7 +588,9 @@ private:
     float           m_param_roi_scale;
     int             m_param_only_roi;
 
+#ifdef USE_OBJECT_DETECTOR
     CvObjectDetector* m_split_detector;
+#endif
     CvSize          m_min_window_size;
     int             m_max_border;
 
@@ -603,7 +605,9 @@ CvBlobDetector* cvCreateBlobDetectorCC(){return new CvBlobDetectorCC;}
 
 /* Constructor for BlobDetector: */
 CvBlobDetectorCC::CvBlobDetectorCC() :
+#ifdef USE_OBJECT_DETECTOR
     m_split_detector(0),
+#endif
     m_detected_blob_seq(sizeof(CvDetectedBlob)),
     m_roi_seq(0),
     m_debug_blob_seq(sizeof(CvDetectedBlob))

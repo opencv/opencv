@@ -122,8 +122,10 @@ private:
     gpu::SURF_GPU surf_;
     gpu::GpuMat keypoints_;
     gpu::GpuMat descriptors_;
+#if defined(HAVE_OPENCV_GPU) && !defined(DYNAMIC_CUDA_SUPPORT)
     int num_octaves_, num_layers_;
     int num_octaves_descr_, num_layers_descr_;
+#endif
 };
 #endif
 
