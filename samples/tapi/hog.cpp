@@ -44,8 +44,6 @@ private:
     //Args args;
     bool running;
     bool make_gray;
-    bool use_ocl;
-    bool ocl_switch;
     double scale;
     double resize_scale;
     int win_width;
@@ -136,9 +134,6 @@ App::App(CommandLineParser& cmd)
     gamma_corr = true;
     write_once = false;
 
-    use_ocl = ocl::useOpenCL();
-    ocl_switch = true;
-
     cout << "Group threshold: " << gr_threshold << endl;
     cout << "Levels number: " << nlevels << endl;
     cout << "Win width: " << win_width << endl;
@@ -160,6 +155,7 @@ void App::run()
 
     HOGDescriptor hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 1, -1,
                           HOGDescriptor::L2Hys, 0.2, gamma_corr, cv::HOGDescriptor::DEFAULT_NLEVELS);
+    hog.setSVMDetector( HOGDescriptor::getDaimlerPeopleDetector() );
 
     while (running)
     {
@@ -191,17 +187,13 @@ void App::run()
                 throw runtime_error(string("can't open image file: " + img_source));
         }
 
+        UMat img_aux, img;
         Mat img_to_show;
 
         // Iterate over all frames
         while (running && !frame.empty())
         {
             workBegin();
-            if(ocl_switch){
-                hog.setSVMDetector( HOGDescriptor::getDaimlerPeopleDetector() );
-                ocl_switch = false;
-            }
-            UMat img_aux, img;
 
             // Change format of the image
             if (make_gray) cvtColor(frame, img_aux, COLOR_BGR2GRAY );
@@ -221,12 +213,8 @@ void App::run()
             // Perform HOG classification
             hogWorkBegin();
 
-            if(use_ocl)
-                hog.detectMultiScale(img, found, hit_threshold, win_stride,
-                        Size(0, 0), scale, gr_threshold);
-            else
-                hog.detectMultiScale(img.getMat(ACCESS_READ), found, hit_threshold, win_stride,
-                        Size(0, 0), scale, gr_threshold);
+            hog.detectMultiScale(img, found, hit_threshold, win_stride,
+                    Size(0, 0), scale, gr_threshold);
             hogWorkEnd();
 
 
@@ -237,7 +225,7 @@ void App::run()
                 rectangle(img_to_show, r.tl(), r.br(), Scalar(0, 255, 0), 3);
             }
 
-            putText(img_to_show, use_ocl ? "Mode: OpenCL"  : "Mode: CPU", Point(5, 25), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
+            putText(img_to_show, ocl::useOpenCL() ? "Mode: OpenCL"  : "Mode: CPU", Point(5, 25), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
             putText(img_to_show, "FPS (HOG only): " + hogWorkFps(), Point(5, 65), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
             putText(img_to_show, "FPS (total): " + workFps(), Point(5, 105), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
             imshow("opencv_hog", img_to_show);
@@ -284,9 +272,7 @@ void App::handleKey(char key)
     case 'm':
     case 'M':
         ocl::setUseOpenCL(!cv::ocl::useOpenCL());
-        ocl_switch = true;
-        use_ocl =  ocl::useOpenCL();
-        cout << "Switched to " << (use_ocl ? "OpenCL enabled" : "CPU") << " mode\n";
+        cout << "Switched to " << (ocl::useOpenCL() ? "OpenCL enabled" : "CPU") << " mode\n";
         break;
     case 'g':
     case 'G':
