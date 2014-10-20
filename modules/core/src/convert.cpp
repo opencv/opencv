@@ -3275,13 +3275,26 @@ static BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
 static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
 {
     const ocl::Device & d = ocl::Device::getDefault();
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
-        kercn = ocl::predictOptimalVectorWidth(_src, _dst), rowsPerWI = d.isIntel() ? 4 : 1;
-    bool doubleSupport = d.doubleFPConfig() > 0;
 
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    bool doubleSupport = d.doubleFPConfig() > 0;
     if (!doubleSupport && depth == CV_64F)
         return false;
 
+    _dst.create(_src.size(), CV_8UC(cn));
+    int kercn = 1;
+    if (d.isIntel())
+    {
+        static const int vectorWidths[] = {4, 4, 4, 4, 4, 4, 4, -1};
+        kercn = ocl::checkOptimalVectorWidth( vectorWidths, _src, _dst,
+                                              noArray(), noArray(), noArray(),
+                                              noArray(), noArray(), noArray(),
+                                              noArray(), ocl::OCL_VECTOR_MAX);
+    }
+    else
+        kercn = ocl::predictOptimalVectorWidthMax(_src, _dst);
+
+    int rowsPerWI = d.isIntel() ? 4 : 1;
     char cvt[2][50];
     int wdepth = std::max(depth, CV_32F);
     String build_opt = format("-D OP_CONVERT_SCALE_ABS -D UNARY_OP -D dstT=%s -D srcT1=%s"
@@ -3299,7 +3312,6 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
         return false;
 
     UMat src = _src.getUMat();
-    _dst.create(src.size(), CV_8UC(cn));
     UMat dst = _dst.getUMat();
 
     ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
