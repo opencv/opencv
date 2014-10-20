@@ -150,6 +150,7 @@
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
+    [super dealloc];
 }
 
 
@@ -226,6 +227,7 @@
 
 - (void)deviceOrientationDidChange:(NSNotification*)notification
 {
+    (void)notification;
     UIDeviceOrientation orientation = [UIDevice currentDevice].orientation;
 
     switch (orientation)
@@ -242,7 +244,7 @@
         default:
             break;
     }
-    NSLog(@"deviceOrientationDidChange: %d", orientation);
+    NSLog(@"deviceOrientationDidChange: %d", (int)orientation);
 
     [self updateOrientation];
 }
@@ -308,7 +310,7 @@
         if ([device position] == desiredPosition) {
             [self.captureSession beginConfiguration];
 
-            NSError* error;
+            NSError* error = nil;
             AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:device error:&error];
             if (!input) {
                 NSLog(@"error creating input %@", [error localizedDescription]);
@@ -316,7 +318,7 @@
 
             // support for autofocus
             if ([device isFocusModeSupported:AVCaptureFocusModeContinuousAutoFocus]) {
-                NSError *error = nil;
+                error = nil;
                 if ([device lockForConfiguration:&error]) {
                     device.focusMode = AVCaptureFocusModeContinuousAutoFocus;
                     [device unlockForConfiguration];

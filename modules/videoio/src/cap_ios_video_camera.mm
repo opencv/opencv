@@ -101,7 +101,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
     [super start];
 
     if (self.recordVideo == YES) {
-        NSError* error;
+        NSError* error = nil;
         if ([[NSFileManager defaultManager] fileExistsAtPath:[self videoFileString]]) {
             [[NSFileManager defaultManager] removeItemAtPath:[self videoFileString] error:&error];
         }
@@ -424,6 +424,8 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection
 {
+    (void)captureOutput;
+    (void)connection;
     if (self.delegate) {
 
         // convert from Core Media to Core Video
@@ -462,9 +464,8 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
         }
 
         // delegate image processing to the delegate
-        cv::Mat image(height, width, format_opencv, bufferAddress, bytesPerRow);
+        cv::Mat image((int)height, (int)width, format_opencv, bufferAddress, bytesPerRow);
 
-        cv::Mat* result = NULL;
         CGImage* dstImage;
 
         if ([self.delegate respondsToSelector:@selector(processImage:)]) {
@@ -473,7 +474,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 
         // check if matrix data pointer or dimensions were changed by the delegate
         bool iOSimage = false;
-        if (height == image.rows && width == image.cols && format_opencv == image.type() && bufferAddress == image.data && bytesPerRow == image.step) {
+        if (height == (size_t)image.rows && width == (size_t)image.cols && format_opencv == image.type() && bufferAddress == image.data && bytesPerRow == image.step) {
             iOSimage = true;
         }
 
@@ -591,7 +592,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
     ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
     if ([library videoAtPathIsCompatibleWithSavedPhotosAlbum:[self videoFileURL]]) {
         [library writeVideoAtPathToSavedPhotosAlbum:[self videoFileURL]
-                                    completionBlock:^(NSURL *assetURL, NSError *error){}];
+                                    completionBlock:^(NSURL *assetURL, NSError *error){ (void)assetURL; (void)error; }];
     }
 }
 

@@ -350,6 +350,11 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
         extractor_ = sextractor_;
     }
 #else
+    (void)hess_thresh;
+    (void)num_octaves;
+    (void)num_layers;
+    (void)num_octaves_descr;
+    (void)num_layers_descr;
     CV_Error( Error::StsNotImplemented, "OpenCV was built without SURF support" );
 #endif
 }

@@ -39,8 +39,9 @@ set (CMAKE_CXX_OSX_COMPATIBILITY_VERSION_FLAG "${CMAKE_C_OSX_COMPATIBILITY_VERSI
 set (CMAKE_CXX_OSX_CURRENT_VERSION_FLAG "${CMAKE_C_OSX_CURRENT_VERSION_FLAG}")
 
 # Hidden visibilty is required for cxx on iOS
-set (CMAKE_C_FLAGS "")
-set (CMAKE_CXX_FLAGS "-stdlib=libc++ -headerpad_max_install_names -fvisibility=hidden -fvisibility-inlines-hidden")
+set (no_warn "-Wno-unused-function -Wno-overloaded-virtual")
+set (CMAKE_C_FLAGS "${no_warn}")
+set (CMAKE_CXX_FLAGS "-stdlib=libc++ -fvisibility=hidden -fvisibility-inlines-hidden ${no_warn}")
 
 set (CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -fomit-frame-pointer -ffast-math")
 
