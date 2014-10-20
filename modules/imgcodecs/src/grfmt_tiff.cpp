@@ -52,9 +52,10 @@
 namespace cv
 {
 static const char fmtSignTiffII[] = "II\x2a\x00";
-static const char fmtSignTiffMM[] = "MM\x00\x2a";
 
 #ifdef HAVE_TIFF
+
+static const char fmtSignTiffMM[] = "MM\x00\x2a";
 
 #include "tiff.h"
 #include "tiffio.h"
