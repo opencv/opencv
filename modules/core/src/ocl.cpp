@@ -4513,7 +4513,6 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
                               OclVectorStrategy strat)
 {
     const ocl::Device & d = ocl::Device::getDefault();
-    int ref_type = src1.type();
 
     int vectorWidths[] = { d.preferredVectorWidthChar(), d.preferredVectorWidthChar(),
         d.preferredVectorWidthShort(), d.preferredVectorWidthShort(),
@@ -4528,6 +4527,17 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
         vectorWidths[CV_16U] = vectorWidths[CV_16S] = 2;
         vectorWidths[CV_32S] = vectorWidths[CV_32F] = vectorWidths[CV_64F] = 1;
     }
+
+    return checkOptimalVectorWidth(vectorWidths, src1, src2, src3, src4, src5, src6, src7, src8, src9, strat);
+}
+
+int checkOptimalVectorWidth(int *vectorWidths,
+                            InputArray src1, InputArray src2, InputArray src3,
+                            InputArray src4, InputArray src5, InputArray src6,
+                            InputArray src7, InputArray src8, InputArray src9,
+                            OclVectorStrategy strat)
+{
+    int ref_type = src1.type();
 
     std::vector<size_t> offsets, steps, cols;
     std::vector<int> dividers, kercns;
