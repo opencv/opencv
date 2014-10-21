@@ -761,6 +761,14 @@ function(ocv_add_perf_tests)
 
       ocv_add_precompiled_headers(${the_target})
 
+      if(CMAKE_VERSION VERSION_GREATER "2.8" AND OPENCV_TEST_DATA_PATH)
+        add_test(NAME ${the_target} COMMAND ${the_target} --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity)
+
+        set_tests_properties(${the_target} PROPERTIES
+          LABELS "Sanity"
+          ENVIRONMENT "OPENCV_TEST_DATA_PATH=${OPENCV_TEST_DATA_PATH}")
+      endif()
+
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)
@@ -818,6 +826,7 @@ function(ocv_add_accuracy_tests)
         add_test(NAME ${the_target} COMMAND ${the_target})
 
         set_tests_properties(${the_target} PROPERTIES
+          LABELS "Accuracy"
           ENVIRONMENT "OPENCV_TEST_DATA_PATH=${OPENCV_TEST_DATA_PATH}")
       endif()
 
