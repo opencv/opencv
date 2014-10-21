@@ -618,6 +618,12 @@ CV_EXPORTS int predictOptimalVectorWidth(InputArray src1, InputArray src2 = noAr
                                          InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray(),
                                          OclVectorStrategy strat = OCL_VECTOR_DEFAULT);
 
+CV_EXPORTS int checkOptimalVectorWidth(int *vectorWidths,
+                                       InputArray src1, InputArray src2 = noArray(), InputArray src3 = noArray(),
+                                       InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
+                                       InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray(),
+                                       OclVectorStrategy strat = OCL_VECTOR_DEFAULT);
+
 // with OCL_VECTOR_MAX strategy
 CV_EXPORTS int predictOptimalVectorWidthMax(InputArray src1, InputArray src2 = noArray(), InputArray src3 = noArray(),
                                             InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
