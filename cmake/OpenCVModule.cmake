@@ -814,7 +814,7 @@ function(ocv_add_accuracy_tests)
 
       ocv_add_precompiled_headers(${the_target})
 
-      if(CMAKE_VERSION VERSION_GREATER "2.8" AND OPENCV_TEST_DATA_PATH)
+      if(CMAKE_VERSION VERSION_GREATER "2.8" AND OPENCV_TEST_DATA_PATH AND NOT "${the_target}" MATCHES "opencv_test_viz")
         add_test(NAME ${the_target} COMMAND ${the_target})
 
         set_tests_properties(${the_target} PROPERTIES
