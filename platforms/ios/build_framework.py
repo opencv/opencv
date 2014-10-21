@@ -15,7 +15,7 @@ Script will create <outputdir>, if it's missing, and a few its subdirectories:
         build/
             iPhoneOS-*/
                [cmake-generated build tree for an iOS device target]
-            iPhoneSimulator/
+            iPhoneSimulator-*/
                [cmake-generated build tree for iOS simulator]
         opencv2.framework/
             [the framework content]
@@ -53,7 +53,11 @@ def build_opencv(srcroot, buildroot, target, arch):
                 "-DBUILD_opencv_world=ON " +
                 "-DCMAKE_C_FLAGS=\"-Wno-implicit-function-declaration\" " +
                 "-DCMAKE_INSTALL_PREFIX=install") % (srcroot, target)
-    # if cmake cache exists, just rerun cmake to update OpenCV.xproj if necessary
+
+    if arch.startswith("armv"):
+        cmakeargs += " -DENABLE_NEON=ON"
+
+    # if cmake cache exists, just rerun cmake to update OpenCV.xcodeproj if necessary
     if os.path.isfile(os.path.join(builddir, "CMakeCache.txt")):
         execute("cmake %s ." % (cmakeargs,))
     else:
