@@ -430,7 +430,7 @@ Applies a fixed-level threshold to each array element.
 
     :param maxval: Maximum value to use with  ``THRESH_BINARY`` and  ``THRESH_BINARY_INV`` threshold types.
 
-    :param type: Threshold type. For details, see  :ocv:func:`threshold` . The ``THRESH_OTSU`` threshold type is not supported.
+    :param type: Threshold type. For details, see  :ocv:func:`threshold` . The ``THRESH_OTSU`` and ``THRESH_TRIANGLE`` threshold types are not supported.
 
     :param stream: Stream for the asynchronous version.
 
