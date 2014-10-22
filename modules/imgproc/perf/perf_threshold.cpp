@@ -57,6 +57,23 @@ PERF_TEST_P(Size_Only, threshold_otsu, testing::Values(TYPICAL_MAT_SIZES))
     SANITY_CHECK(dst);
 }
 
+PERF_TEST_P(Size_Only, threshold_triangle, testing::Values(TYPICAL_MAT_SIZES))
+{
+    Size sz = GetParam();
+
+    Mat src(sz, CV_8UC1);
+    Mat dst(sz, CV_8UC1);
+
+    double maxval = theRNG().uniform(1, 254);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    int runs = 15;
+    TEST_CYCLE_MULTIRUN(runs) threshold(src, dst, 0, maxval, THRESH_BINARY|THRESH_TRIANGLE);
+
+    SANITY_CHECK(dst);
+}
+
 CV_ENUM(AdaptThreshType, THRESH_BINARY, THRESH_BINARY_INV)
 CV_ENUM(AdaptThreshMethod, ADAPTIVE_THRESH_MEAN_C, ADAPTIVE_THRESH_GAUSSIAN_C)
 
