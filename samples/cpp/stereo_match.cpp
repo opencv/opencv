@@ -14,6 +14,7 @@
 #include "opencv2/core/utility.hpp"
 
 #include <stdio.h>
+#include <sys/stat.h>
 
 using namespace cv;
 
@@ -140,6 +141,19 @@ int main(int argc, char** argv)
     if( !img1_filename || !img2_filename )
     {
         printf("Command-line parameter error: both left and right images must be specified\n");
+        return -1;
+    }
+
+    struct stat stat_buffer;
+    if (stat(img1_filename, &stat_buffer) != 0)
+    {
+        printf("Command-line parameter error: could not find the first input image file\n");
+        return -1;
+    }
+
+    if (stat(img2_filename, &stat_buffer) != 0)
+    {
+        printf("Command-line parameter error: could not find the second input image file\n");
         return -1;
     }
 
