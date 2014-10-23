@@ -103,16 +103,22 @@ namespace cv { namespace gpu { namespace device
         {
             static __device__ __forceinline__ float compute(const uchar* left, const uchar* right)
             {
-                return fmin(cdata_weight * ::abs((int)*left - *right), cdata_weight * cmax_data_term);
+                int l = *(left);
+                int r = *(right);
+
+                return fmin(cdata_weight * ::abs(l - r), cdata_weight * cmax_data_term);
             }
         };
         template <> struct DataCostPerPixel<3>
         {
             static __device__ __forceinline__ float compute(const uchar* left, const uchar* right)
             {
-                float tb = 0.114f * ::abs((int)left[0] - right[0]);
-                float tg = 0.587f * ::abs((int)left[1] - right[1]);
-                float tr = 0.299f * ::abs((int)left[2] - right[2]);
+                uchar3 l = *((const uchar3*)left);
+                uchar3 r = *((const uchar3*)right);
+
+                float tb = 0.114f * ::abs((int)l.x - r.x);
+                float tg = 0.587f * ::abs((int)l.y - r.y);
+                float tr = 0.299f * ::abs((int)l.z - r.z);
 
                 return fmin(cdata_weight * (tr + tg + tb), cdata_weight * cmax_data_term);
             }
