@@ -4624,6 +4624,9 @@ struct Image2D::Impl
 
     static bool isFormatSupported(cl_image_format format)
     {
+        if (!haveOpenCL())
+            CV_Error(Error::OpenCLApiCallError, "OpenCL runtime not found!");
+
         cl_context context = (cl_context)Context::getDefault().ptr();
         // Figure out how many formats are supported by this context.
         cl_uint numFormats = 0;
