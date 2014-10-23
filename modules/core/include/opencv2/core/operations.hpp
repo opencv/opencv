@@ -3750,8 +3750,15 @@ template<typename _Tp> inline ptrdiff_t operator - (const SeqIterator<_Tp>& a,
                                                     const SeqIterator<_Tp>& b)
 {
     ptrdiff_t delta = a.index - b.index, n = a.seq->total;
+#if defined(__QNX__)
+    // No long std::abs(long) in QNX
+    long absdelta = (delta < 0) ? -delta : delta;
+    if( absdelta > n )
+#else
     if( std::abs(static_cast<long>(delta)) > n )
+#endif
         delta += delta < 0 ? n : -n;
+
     return delta;
 }
 

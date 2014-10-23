@@ -604,7 +604,12 @@ void ColorGradient::write(FileStorage& fs) const
 
 static void accumBilateral(long delta, long i, long j, long * A, long * b, int threshold)
 {
-  long f = std::abs(delta) < threshold ? 1 : 0;
+#ifdef __QNX__
+  long absdelta = (delta > 0) ? delta : -delta;
+  long f = absdelta < threshold ? 1 : 0;
+#else
+   long f = std::abs(delta) < threshold ? 1 : 0;
+#endif
 
   const long fi = f * i;
   const long fj = f * j;
