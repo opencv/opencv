@@ -1413,7 +1413,7 @@ PERF_TEST_P(Sz_Depth_Code, ImgProc_CvtColor,
 
         TEST_CYCLE() cv::gpu::cvtColor(d_src, dst, info.code, info.dcn);
 
-        GPU_SANITY_CHECK(dst, 1e-4);
+        GPU_SANITY_CHECK(dst, 1e-2);
     }
     else
     {
@@ -1609,7 +1609,7 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidBuild,
         cv::gpu::GpuMat dst;
         d_pyr.getLayer(dst, dstSize);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-3);
     }
     else
     {
@@ -1646,7 +1646,7 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidGetLayer,
 
         TEST_CYCLE() d_pyr.getLayer(dst, dstSize);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-3);
     }
     else
     {

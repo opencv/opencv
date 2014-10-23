@@ -143,7 +143,7 @@ PERF_TEST_P(ImagePair, Video_CreateOpticalFlowNeedleMap,
 
         TEST_CYCLE() cv::gpu::createOpticalFlowNeedleMap(u, v, vertex, colors);
 
-        GPU_SANITY_CHECK(vertex, 1e-6);
+        GPU_SANITY_CHECK(vertex, 1e-5);
         GPU_SANITY_CHECK(colors);
     }
     else
