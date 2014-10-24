@@ -48,7 +48,7 @@ int main(int argc, char** argv)
     
     // Load image and cascade classifier files
     Mat image;
-    image = imread(input_image_path, CV_LOAD_IMAGE_UNCHANGED); 
+    image = imread(input_image_path);
  
     // Detect faces and facial features
     vector<Rect_<int> > faces;
@@ -80,7 +80,7 @@ static void detectFaces(Mat& img, vector<Rect_<int> >& faces, string cascade_pat
     CascadeClassifier face_cascade;
     face_cascade.load(cascade_path);
 
-    face_cascade.detectMultiScale(img, faces, 1.15, 3, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30));
+    face_cascade.detectMultiScale(img, faces, 1.15, 3, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
     return;
 }
 
@@ -135,7 +135,7 @@ static void detectEyes(Mat& img, vector<Rect_<int> >& eyes, string cascade_path)
     CascadeClassifier eyes_cascade;
     eyes_cascade.load(cascade_path);
 
-    eyes_cascade.detectMultiScale(img, eyes, 1.20, 5, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30));
+    eyes_cascade.detectMultiScale(img, eyes, 1.20, 5, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
     return;
 }
 
@@ -144,7 +144,7 @@ static void detectNose(Mat& img, vector<Rect_<int> >& nose, string cascade_path)
     CascadeClassifier nose_cascade;
     nose_cascade.load(cascade_path);
 
-    nose_cascade.detectMultiScale(img, nose, 1.20, 5, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30));
+    nose_cascade.detectMultiScale(img, nose, 1.20, 5, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
     return;
 }
 
@@ -153,7 +153,7 @@ static void detectMouth(Mat& img, vector<Rect_<int> >& mouth, string cascade_pat
     CascadeClassifier mouth_cascade;
     mouth_cascade.load(cascade_path);
 
-    mouth_cascade.detectMultiScale(img, mouth, 1.20, 5, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30));
+    mouth_cascade.detectMultiScale(img, mouth, 1.20, 5, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
     return;
 }
 
