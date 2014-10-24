@@ -3979,6 +3979,11 @@ public:
             u->markDeviceMemMapped(false);
             CV_Assert( (retval = clEnqueueUnmapMemObject(q,
                                 (cl_mem)u->handle, u->data, 0, 0, 0)) == CL_SUCCESS );
+            if (Device::getDefault().isAMD())
+            {
+                // required for multithreaded applications (see stitching test)
+                CV_OclDbgAssert(clFinish(q) == CL_SUCCESS);
+            }
             u->data = 0;
         }
         else if( u->copyOnMap() && u->deviceCopyObsolete() )
