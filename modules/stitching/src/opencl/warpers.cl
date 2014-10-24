@@ -57,7 +57,7 @@ __kernel void buildWarpPlaneMaps(__global uchar * xmapptr, int xmap_step, int xm
         int ymap_index = mad24(dv0, ymap_step, mad24(du, (int)sizeof(float), ymap_offset));
 
         float u = tl_u + du;
-        float x_ = u * scale - ct[0];
+        float x_ = fma(u, scale, -ct[0]);
         float ct1 = 1 - ct[2];
 
         for (int dv = dv0, dv1 = min(rows, dv0 + rowsPerWI); dv < dv1; ++dv, xmap_index += xmap_step,
@@ -67,7 +67,7 @@ __kernel void buildWarpPlaneMaps(__global uchar * xmapptr, int xmap_step, int xm
             __global float * ymap = (__global float *)(ymapptr + ymap_index);
 
             float v = tl_v + dv;
-            float y_ = v * scale - ct[1];
+            float y_ = fma(v, scale, -ct[1]);
 
             float x = fma(ck_rinv[0], x_, fma(ck_rinv[1], y_, ck_rinv[2] * ct1));
             float y = fma(ck_rinv[3], x_, fma(ck_rinv[4], y_, ck_rinv[5] * ct1));

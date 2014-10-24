@@ -87,6 +87,11 @@ Point2f PlaneWarper::warpPoint(const Point2f &pt, InputArray K, InputArray R, In
     return uv;
 }
 
+Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap)
+{
+    return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32FC1), xmap, ymap);
+}
+
 Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, InputArray T, OutputArray _xmap, OutputArray _ymap)
 {
     projector_.setCameraParams(K, R, T);
