@@ -24,27 +24,29 @@ static void detectMouth(Mat&, vector<Rect_<int> >&, string);
 static void detectFacialFeaures(Mat&, const vector<Rect_<int> >, string, string, string);
 
 string input_image_path;
-string face_cascade_path = "../../data/haarcascades/haarcascade_frontalface_default.xml";
-string eye_cascade_path  = "../../data/haarcascades/haarcascade_eye.xml";
-string nose_cascade_path, mouth_cascade_path;
+string face_cascade_path, eye_cascade_path, nose_cascade_path, mouth_cascade_path;
 
 int main(int argc, char** argv)
 {
     /* Parse command line arguments:
      *  (1) Path to input image
-     *  (2) Path to cascade file for nose detection
-     *  (3) Path to cascade file for mouth detection
+     *  (2) Path to cascade file for face detection
+     *  (3) Path to cascade file for eye detection
+     *  (4) Path to cascade file for nose detection
+     *  (5) Path to cascade file for mouth detection
      */
 
-    if(argc < 4)
+    if(argc < 6)
     {
         help();
-        exit(1);
+        return 1;
     }
 
     input_image_path = argv[1];
-    nose_cascade_path = argv[2];
-    mouth_cascade_path = argv[3];
+    face_cascade_path = argv[2];
+    eye_cascade_path = argv[3];
+    nose_cascade_path = argv[4];
+    mouth_cascade_path = argv[5];
 
     // Load image and cascade classifier files
     Mat image;
@@ -57,22 +59,29 @@ int main(int argc, char** argv)
 
     imshow("Result", image);
 
-    waitKey(0);                  
+    waitKey(0);
     return 0;
 }
 
 static void help()
 {
-    cout << "\nThis file demonstrates facial feature points detection using Haarcascade classifiers."
-        " The program detects a face and eyes, nose and mouth inside the face. The code has been"
-        " tested on the Japanese Female Facial Expression (JAFFE) database and found to give"
-        " reasonably accurate results. \n";
+    cout << "\nThis file demonstrates facial feature points detection using Haarcascade classifiers.\n"
+        " The program detects a face and eyes, nose and mouth inside the face."
+        " The code has been tested on the Japanese Female Facial Expression (JAFFE) database and found"
+        " to give reasonably accurate results. \n";
 
-    cout << "\nUsage: ./face_detector <input_image> <nose_cascade> <mouth_cascade>\n"
-        "<nose_cascade> and <mouth_cascade> are paths to the Haarcascade classifiers for"
-        " nose and mouth detection respectively. They have been removed from the "
-        " data/haarcascade/ directory and can be downloaded separately from: "
-        " https://github.com/Itseez/opencv_contrib/tree/master/modules/face/data/cascades\n";
+    cout << "\nUsage: ./face_detector <input_image> <f_cascade> <e_cascade> <n_cascade> <m_cascade>\n"
+        " input_image: Path to an image of a face taken as input\n"
+        " f_cacade: Path to a haarcascade classifier for face detection\n"
+        " e_cacade: Path to a haarcascade classifier for eye detection\n"
+        " n_cacade: Path to a haarcascade classifier for nose detection\n"
+        " m_cacade: Path to a haarcascade classifier for mouth detection\n";
+
+    cout << " \n\nThe classifiers for face and eyes can be downloaded from : "
+        " \nhttps://github.com/Itseez/opencv/tree/master/data/haarcascades";
+
+    cout << "\n\nThe classifiers for nose and mouth can be downloaded from : "
+        " \nhttps://github.com/Itseez/opencv_contrib/tree/master/modules/face/data/cascades\n";
 }
 
 static void detectFaces(Mat& img, vector<Rect_<int> >& faces, string cascade_path)
