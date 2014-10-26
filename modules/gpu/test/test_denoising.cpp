@@ -134,8 +134,8 @@ GPU_TEST_P(BruteForceNonLocalMeans, Regression)
     cv::resize(bgr_gold, bgr_gold, cv::Size(256, 256));
     cv::resize(gray_gold, gray_gold, cv::Size(256, 256));
 
-    EXPECT_MAT_NEAR(bgr_gold, dbgr, 1e-4);
-    EXPECT_MAT_NEAR(gray_gold, dgray, 1e-4);
+    EXPECT_MAT_NEAR(bgr_gold, dbgr, 1);
+    EXPECT_MAT_NEAR(gray_gold, dgray, 1);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Denoising, BruteForceNonLocalMeans, ALL_DEVICES);
