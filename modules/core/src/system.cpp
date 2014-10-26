@@ -157,7 +157,7 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 
 #include <stdarg.h>
 
-#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__
+#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __QNX__
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
