@@ -158,7 +158,7 @@ GPU_TEST_P(StereoConstantSpaceBP, Regression)
     cv::Mat h_disp(disp);
     h_disp.convertTo(h_disp, disp_gold.depth());
 
-    EXPECT_MAT_NEAR(disp_gold, h_disp, 1.0);
+    EXPECT_MAT_SIMILAR(disp_gold, h_disp, 1e-4);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Calib3D, StereoConstantSpaceBP, ALL_DEVICES);
