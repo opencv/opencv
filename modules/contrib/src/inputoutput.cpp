@@ -77,15 +77,34 @@ namespace cv
                 return list;
             }
 
+            #ifdef __QNX__
+            // you have to ask QNX to please include more file information
+            // and not to report duplicate names as a result of file system unions
+            if ( -1 == dircntl(dp, D_SETFLAG, D_FLAG_STAT|D_FLAG_FILTER) )
+                return list;
+            #endif
+
             while ((dirp = readdir(dp)) != NULL)
             {
+            #ifdef __QNX__
+                // QNX looks at the world a little differently
+                dirent_extra *extra;
+                dirent_extra_stat *extra_stat;
+                for (extra = _DEXTRA_FIRST(dirp),
+                     extra_stat = reinterpret_cast<dirent_extra_stat *>(extra);
+                     _DEXTRA_VALID(extra, dirp);
+                     extra = _DEXTRA_NEXT(extra),
+                     extra_stat = reinterpret_cast<dirent_extra_stat *>(extra))
+                if ((extra->d_type != _DTYPE_NONE) && S_ISREG(extra_stat->d_stat.st_mode))
+            #else
                 if (dirp->d_type == DT_REG)
+            #endif
                 {
-                    if (exten.compare("*") == 0)
-                        list.push_back(static_cast<std::string>(dirp->d_name));
-                    else
-                        if (std::string(dirp->d_name).find(exten) != std::string::npos)
-                            list.push_back(static_cast<std::string>(dirp->d_name));
+                   if (exten.compare("*") == 0)
+                       list.push_back(static_cast<std::string>(dirp->d_name));
+                   else
+                       if (std::string(dirp->d_name).find(exten) != std::string::npos)
+                           list.push_back(static_cast<std::string>(dirp->d_name));
                 }
             }
             closedir(dp);
@@ -124,15 +143,15 @@ namespace cv
             {
                 do
                 {
-#ifdef HAVE_WINRT
+                    #ifdef HAVE_WINRT
                     if (FindFileData.dwFileAttributes == FILE_ATTRIBUTE_DIRECTORY &&
                         wcscmp(FindFileData.cFileName, L".") != 0 &&
                         wcscmp(FindFileData.cFileName, L"..") != 0)
-#else
+                    #else
                     if (FindFileData.dwFileAttributes == FILE_ATTRIBUTE_DIRECTORY &&
                         strcmp(FindFileData.cFileName, ".") != 0 &&
                         strcmp(FindFileData.cFileName, "..") != 0)
-#endif
+                    #endif
                     {
                         char* fname;
                     #ifdef HAVE_WINRT
@@ -167,9 +186,29 @@ namespace cv
                 return list;
             }
 
+        #ifdef __QNX__
+           // you have to ask QNX to please include more file information
+           // and not to report duplicate names as a result of file system unions
+           if ( -1 == dircntl(dp, D_SETFLAG, D_FLAG_STAT|D_FLAG_FILTER) )
+               return list;
+        #endif
+
             while ((dirp = readdir(dp)) != NULL)
             {
+            #ifdef __QNX__
+                // QNX looks at the world a little differently
+                dirent_extra *extra;
+                dirent_extra_stat *extra_stat;
+                for (extra = _DEXTRA_FIRST(dirp),
+                     extra_stat = reinterpret_cast<dirent_extra_stat *>(extra);
+                     _DEXTRA_VALID(extra, dirp);
+                     extra = _DEXTRA_NEXT(extra),
+                     extra_stat = reinterpret_cast<dirent_extra_stat *>(extra))
+                if ((extra->d_type != _DTYPE_NONE) &&
+                    S_ISDIR(extra_stat->d_stat.st_mode) &&
+            #else
                 if (dirp->d_type == DT_DIR &&
+            #endif
                     strcmp(dirp->d_name, ".") != 0 &&
                     strcmp(dirp->d_name, "..") != 0 )
                 {

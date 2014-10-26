@@ -45,8 +45,15 @@
     (see otherlibs/_graphics/readme.txt for copyright notice)
 \****************************************************************************************/
 
+#include <stdarg.h>
+
 #include "precomp.hpp"
 #include "grfmt_tiff.hpp"
+
+#ifdef HAVE_TIFF
+# include "tiff.h"
+# include "tiffio.h"
+#endif
 
 namespace cv
 {
@@ -54,9 +61,6 @@ static const char fmtSignTiffII[] = "II\x2a\x00";
 static const char fmtSignTiffMM[] = "MM\x00\x2a";
 
 #ifdef HAVE_TIFF
-
-#include "tiff.h"
-#include "tiffio.h"
 
 static int grfmt_tiff_err_handler_init = 0;
 static void GrFmtSilentTIFFErrorHandler( const char*, const char*, va_list ) {}
