@@ -250,7 +250,7 @@ namespace
 
 Ptr<FrameSource> cv::superres::createFrameSource_Video_CUDA(const String& fileName)
 {
-    return makePtr<VideoFrameSource>(fileName);
+    return makePtr<VideoFrameSource_CUDA>(fileName);
 }
 
 #endif // HAVE_OPENCV_CUDACODEC
