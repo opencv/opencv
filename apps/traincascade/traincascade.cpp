@@ -4,7 +4,8 @@
 using namespace std;
 using namespace cv;
 /*
-
+Add some lines of comments here for testing and illustration purposes.
+Created by @StevenPuttemans
 
 
 */
