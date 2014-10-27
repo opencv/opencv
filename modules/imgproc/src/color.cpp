@@ -4857,6 +4857,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
     ocl::Device dev = ocl::Device::getDefault();
     int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
+    int pxPerWIx = 1;
 
     size_t globalsize[] = { src.cols, (src.rows + pxPerWIy - 1) / pxPerWIy };
     cv::String opts = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
@@ -5025,10 +5026,20 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         CV_Assert( sz.width % 2 == 0 && sz.height % 2 == 0 );
 
         dstSz = Size(sz.width, sz.height / 2 * 3);
-        globalsize[0] = dstSz.width / 2; globalsize[1] = (dstSz.height/3 + pxPerWIy - 1) / pxPerWIy;
+        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
+        dst = _dst.getUMat();
+
+        if (dev.isIntel() && src.cols % 4 == 0 && src.step % 4 == 0 && src.offset % 4 == 0 &&
+            dst.step % 4 == 0 && dst.offset % 4 == 0)
+        {
+            pxPerWIx = 2;
+        }
+        globalsize[0] = dstSz.width / (2 * pxPerWIx); globalsize[1] = (dstSz.height/3 + pxPerWIy - 1) / pxPerWIy;
+
         k.create("RGB2YUV_YV12_IYUV", ocl::imgproc::cvtcolor_oclsrc,
-                 opts + format("-D dcn=%d -D bidx=%d -D uidx=%d", dcn, bidx, uidx));
-        break;
+                 opts + format("-D dcn=%d -D bidx=%d -D uidx=%d -D PIX_PER_WI_X=%d", dcn, bidx, uidx, pxPerWIx));
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst));
+        return k.run(2, globalsize, NULL, false);
     }
     case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY: case COLOR_YUV2RGBA_UYVY: case COLOR_YUV2BGRA_UYVY:
     case COLOR_YUV2RGB_YUY2: case COLOR_YUV2BGR_YUY2: case COLOR_YUV2RGB_YVYU: case COLOR_YUV2BGR_YVYU:
