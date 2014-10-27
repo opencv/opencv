@@ -2173,13 +2173,17 @@ typedef void (*ScaleAddFunc)(const uchar* src1, const uchar* src2, uchar* dst, i
 static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray _dst, int type )
 {
     const ocl::Device & d = ocl::Device::getDefault();
-    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), wdepth = std::max(depth, CV_32F),
-            kercn = ocl::predictOptimalVectorWidth(_src1, _src2, _dst), rowsPerWI = d.isIntel() ? 4 : 1;
+
     bool doubleSupport = d.doubleFPConfig() > 0;
     Size size = _src1.size();
-
+    int depth = CV_MAT_DEPTH(type);
     if ( (!doubleSupport && depth == CV_64F) || size != _src2.size() )
         return false;
+
+    _dst.create(size, type);
+    int cn = CV_MAT_CN(type), wdepth = std::max(depth, CV_32F);
+    int kercn = ocl::predictOptimalVectorWidthMax(_src1, _src2, _dst),
+        rowsPerWI = d.isIntel() ? 4 : 1;
 
     char cvt[2][50];
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
@@ -2195,9 +2199,7 @@ static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, Outp
     if (k.empty())
         return false;
 
-    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
-    _dst.create(size, type);
-    UMat dst = _dst.getUMat();
+    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat(), dst = _dst.getUMat();
 
     ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1),
             src2arg = ocl::KernelArg::ReadOnlyNoSize(src2),
