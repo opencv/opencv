@@ -73,8 +73,10 @@ __kernel void buildWarpPlaneMaps(__global uchar * xmapptr, int xmap_step, int xm
             float y = fma(ck_rinv[3], x_, fma(ck_rinv[4], y_, ck_rinv[5] * ct1));
             float z = fma(ck_rinv[6], x_, fma(ck_rinv[7], y_, ck_rinv[8] * ct1));
 
-            x /= z;
-            y /= z;
+            if (z != 0)
+                x /= z, y /= z;
+            else
+                x = y = -1;
 
             xmap[0] = x;
             ymap[0] = y;
