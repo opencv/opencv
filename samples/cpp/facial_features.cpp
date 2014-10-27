@@ -113,7 +113,7 @@ static void detectFacialFeaures(Mat& img, const vector<Rect_<int> > faces, strin
         for(unsigned int j = 0; j < eyes.size(); ++j)
         {
             Rect e = eyes[j];
-            circle(ROI, Point(e.x+e.width/2, e.y+e.height/2), 3.0, Scalar(0, 255, 0), -1, 8);
+            circle(ROI, Point(e.x+e.width/2, e.y+e.height/2), 3, Scalar(0, 255, 0), -1, 8);
             /* rectangle(ROI, Point(e.x, e.y), Point(e.x+e.width, e.y+e.height),
                     Scalar(0, 255, 0), 1, 4); */
         }
@@ -124,7 +124,7 @@ static void detectFacialFeaures(Mat& img, const vector<Rect_<int> > faces, strin
         {
             Rect n = nose[j];
             nose_center_height = (n.y + n.height/2);
-            circle(ROI, Point(n.x+n.width/2, n.y+n.height/2), 3.0, Scalar(0, 255, 0), -1, 8);
+            circle(ROI, Point(n.x+n.width/2, n.y+n.height/2), 3, Scalar(0, 255, 0), -1, 8);
         }
 
         int mouth_center_height = 0;
