@@ -350,11 +350,6 @@ namespace
     {
     }
 
-    CV_INIT_ALGORITHM(CLAHE_Impl, "CLAHE",
-        obj.info()->addParam(obj, "clipLimit", obj.clipLimit_);
-        obj.info()->addParam(obj, "tilesX", obj.tilesX_);
-        obj.info()->addParam(obj, "tilesY", obj.tilesY_))
-
     void CLAHE_Impl::apply(cv::InputArray _src, cv::OutputArray _dst)
     {
         CV_Assert( _src.type() == CV_8UC1 || _src.type() == CV_16UC1 );
