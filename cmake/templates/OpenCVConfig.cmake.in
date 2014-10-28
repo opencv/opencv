@@ -49,7 +49,7 @@ if(NOT DEFINED OpenCV_MODULES_SUFFIX)
   endif()
 endif()
 
-if(@USE_IPPICV@) # value is defined by package builder
+if("@USE_IPPICV@" STREQUAL "TRUE") # value is defined by package builder (use STREQUAL to comply new CMake policy CMP0012)
   if(NOT TARGET ippicv)
     if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/@INSTALL_PATH_RELATIVE_IPPICV@")
       add_library(ippicv STATIC IMPORTED)
