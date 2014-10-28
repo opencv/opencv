@@ -5060,7 +5060,8 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         CV_Assert( scn == 2 && depth == CV_8U );
 
         k.create("YUV2RGB_422", ocl::imgproc::cvtcolor_oclsrc,
-                 opts + format("-D dcn=%d -D bidx=%d -D uidx=%d -D yidx=%d", dcn, bidx, uidx, yidx));
+                 opts + format("-D dcn=%d -D bidx=%d -D uidx=%d -D yidx=%d%s", dcn, bidx, uidx, yidx,
+                                src.offset % 4 == 0 && src.step % 4 == 0 ? " -D USE_OPTIMIZED_LOAD" : ""));
         break;
     }
     case COLOR_BGR2YCrCb:
