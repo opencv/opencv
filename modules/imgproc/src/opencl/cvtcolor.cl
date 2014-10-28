@@ -573,22 +573,33 @@ __kernel void YUV2RGB_422(__global const uchar* srcptr, int src_step, int src_of
         {
             if (y < rows )
             {
+                __constant float* coeffs = c_YUV2RGBCoeffs_420;
+
+#ifndef USE_OPTIMIZED_LOAD
                 float U = ((float) src[uidx]) - HALF_MAX;
                 float V = ((float) src[(2 + uidx) % 4]) - HALF_MAX;
+                float y00 = max(0.f, ((float) src[yidx]) - 16.f) * coeffs[0];
+                float y01 = max(0.f, ((float) src[yidx + 2]) - 16.f) * coeffs[0];
+#else
+                int load_src = *((__global int*) src);
+                float vec_src[4] = { load_src & 0xff, (load_src >> 8) & 0xff, (load_src >> 16) & 0xff, (load_src >> 24) & 0xff};
+                float U = vec_src[uidx] - HALF_MAX;
+                float V = vec_src[(2 + uidx) % 4] - HALF_MAX;
+                float y00 = max(0.f, vec_src[yidx] - 16.f) * coeffs[0];
+                float y01 = max(0.f, vec_src[yidx + 2] - 16.f) * coeffs[0];
+#endif
 
-                __constant float* coeffs = c_YUV2RGBCoeffs_420;
                 float ruv = fma(coeffs[4], V, 0.5f);
                 float guv = fma(coeffs[3], V, fma(coeffs[2], U, 0.5f));
                 float buv = fma(coeffs[1], U, 0.5f);
 
-                float y00 = max(0.f, ((float) src[yidx]) - 16.f) * coeffs[0];
                 dst[2 - bidx] = convert_uchar_sat(y00 + ruv);
                 dst[1]        = convert_uchar_sat(y00 + guv);
                 dst[bidx]     = convert_uchar_sat(y00 + buv);
 #if dcn == 4
                 dst[3]        = 255;
 #endif
-                float y01 = max(0.f, ((float) src[yidx + 2]) - 16.f) * coeffs[0];
+
                 dst[dcn + 2 - bidx] = convert_uchar_sat(y01 + ruv);
                 dst[dcn + 1]        = convert_uchar_sat(y01 + guv);
                 dst[dcn + bidx]     = convert_uchar_sat(y01 + buv);
