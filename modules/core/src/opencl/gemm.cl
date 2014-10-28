@@ -20,6 +20,8 @@
 #define IND_B mad24(x, WTSIZE, B_offset)
 #define STEP_B B_step / WTSIZE
 
+#define LOCAL_SIZE_ODD (LOCAL_SIZE + 1)
+
 #if cn==2
 #if kercn==2
 #define MUL(a, b)\
@@ -65,8 +67,8 @@ __kernel void gemm(__global const uchar * A_ptr, int A_step, int A_offset,
             MUL(A[i], B[i*STEP_B]);
 #else
 
-    __local T  a_local[LOCAL_SIZE*LOCAL_SIZE];
-    __local WT b_local[LOCAL_SIZE*LOCAL_SIZE];
+    __local T  a_local[LOCAL_SIZE_ODD*LOCAL_SIZE];
+    __local WT b_local[LOCAL_SIZE_ODD*LOCAL_SIZE];
 
     int reps;
 #if NO_MULT
@@ -78,9 +80,9 @@ __kernel void gemm(__global const uchar * A_ptr, int A_step, int A_offset,
     for (int p = 0; p < reps; ++p)
     {
         if (p * LOCAL_SIZE + lidx < n && y < D_rows)
-            a_local[mad24(lidy, LOCAL_SIZE, lidx)] = A[mad24(p, LOCAL_SIZE, lidx)];
+            a_local[mad24(lidy, LOCAL_SIZE_ODD, lidx)] = A[mad24(p, LOCAL_SIZE, lidx)];
         if (p * LOCAL_SIZE + lidy < n && x < D_cols)
-            b_local[mad24(lidy, LOCAL_SIZE, lidx)] = B[mad24(p, LOCAL_SIZE, lidy)*STEP_B];
+            b_local[mad24(lidy, LOCAL_SIZE_ODD, lidx)] = B[mad24(p, LOCAL_SIZE, lidy)*STEP_B];
 
         barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -92,7 +94,7 @@ __kernel void gemm(__global const uchar * A_ptr, int A_step, int A_offset,
 #else
             for (int i = 0; i < LOCAL_SIZE; ++i)
 #endif
-                MUL(a_local[mad24(lidy, LOCAL_SIZE, i)], b_local[mad24(i, LOCAL_SIZE, lidx)]);
+                MUL(a_local[mad24(lidy, LOCAL_SIZE_ODD, i)], b_local[mad24(i, LOCAL_SIZE_ODD, lidx)]);
         }
         barrier(CLK_LOCAL_MEM_FENCE);
     }
