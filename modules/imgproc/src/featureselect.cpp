@@ -275,6 +275,12 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                                     _mask, blockSize, useHarrisDetector, harrisK))
 
     Mat image = _image.getMat(), eig, tmp;
+    if (image.empty())
+    {
+        _corners.release();
+        return;
+    }
+
     if( useHarrisDetector )
         cornerHarris( image, eig, blockSize, 3, harrisK );
     else
