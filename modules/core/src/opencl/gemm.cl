@@ -49,24 +49,17 @@ __kernel void gemm(__global const uchar * A_ptr, int A_step, int A_offset,
     int x = get_global_id(0);
     int y = get_global_id(1);
 
-    int lidx = get_local_id(0);
-    int lidy = get_local_id(1);
-
     __global const T* A = (__global const T*)(A_ptr + IND_A);
     __global const WT* B = (__global const WT*)(B_ptr + IND_B);
 
     WT sum = (WT)(0);
 
-#if LOCAL_SIZE == 1
-
     if (x < D_cols && y < D_rows)
     {
+#if LOCAL_SIZE == 1
         for (int i = 0; i < n; ++i)
             MUL(A[i], B[i*STEP_B]);
 #else
-
-    __local T  a_local[LOCAL_SIZE*LOCAL_SIZE];
-    __local WT b_local[LOCAL_SIZE*LOCAL_SIZE];
 
     int reps;
 #if NO_MULT
@@ -77,29 +70,17 @@ __kernel void gemm(__global const uchar * A_ptr, int A_step, int A_offset,
 
     for (int p = 0; p < reps; ++p)
     {
-        if (p * LOCAL_SIZE + lidx < n && y < D_rows)
-            a_local[mad24(lidy, LOCAL_SIZE, lidx)] = A[mad24(p, LOCAL_SIZE, lidx)];
-        if (p * LOCAL_SIZE + lidy < n && x < D_cols)
-            b_local[mad24(lidy, LOCAL_SIZE, lidx)] = B[mad24(p, LOCAL_SIZE, lidy)*STEP_B];
-
-        barrier(CLK_LOCAL_MEM_FENCE);
-
-        if (x < D_cols && y < D_rows)
-        {
 #if NO_MULT
             int ie = min(LOCAL_SIZE, n - p * LOCAL_SIZE);
             for (int i = 0; i < ie; ++i)
 #else
             for (int i = 0; i < LOCAL_SIZE; ++i)
 #endif
-                MUL(a_local[mad24(lidy, LOCAL_SIZE, i)], b_local[mad24(i, LOCAL_SIZE, lidx)]);
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
+                MUL(A[mad24(p, LOCAL_SIZE, i)], B[mad24(p, LOCAL_SIZE, i)*STEP_B]);
+     }
 
-    if (x < D_cols && y < D_rows)
-    {
 #endif
+
         __global WT* D = (__global WT*)(D_ptr + mad24(y, D_step, mad24(x, WTSIZE, D_offset)));
 #if HAVE_C
         D[0] = mad(alpha, sum, D[0]*beta);
