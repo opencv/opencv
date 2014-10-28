@@ -213,7 +213,7 @@ void App::run()
             // Perform HOG classification
             hogWorkBegin();
 
-            hog.detectMultiScale(img.getMat(ACCESS_READ), found, hit_threshold, win_stride,
+            hog.detectMultiScale(img, found, hit_threshold, win_stride,
                     Size(0, 0), scale, gr_threshold);
             hogWorkEnd();
 
@@ -225,7 +225,7 @@ void App::run()
                 rectangle(img_to_show, r.tl(), r.br(), Scalar(0, 255, 0), 3);
             }
 
-            putText(img_to_show, "Mode: CPU", Point(5, 25), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
+            putText(img_to_show, ocl::useOpenCL() ? "Mode: OpenCL"  : "Mode: CPU", Point(5, 25), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
             putText(img_to_show, "FPS (HOG only): " + hogWorkFps(), Point(5, 65), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
             putText(img_to_show, "FPS (total): " + workFps(), Point(5, 105), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
             imshow("opencv_hog", img_to_show);
