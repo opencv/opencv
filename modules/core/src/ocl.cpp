@@ -3951,7 +3951,7 @@ public:
         }
     }
 
-    void deallocateData(UMatData* u) const
+    void deallocateData(UMatData* /*u*/) const
     {
         return;
     }

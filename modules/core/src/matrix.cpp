@@ -196,8 +196,8 @@ public:
         return u;
     }
 
-    void allocate(UMatData* u, int dims, const int* sizes, int type,
-                       void* data0, size_t* step, int /*flags*/, UMatUsageFlags /*usageFlags*/) const
+    void allocate(UMatData* /*u*/, int /*dims*/, const int* /*sizes*/, int /*type*/,
+                  void* /*data0*/, size_t* /*step*/, int /*flags*/, UMatUsageFlags /*usageFlags*/) const
     {
         return;
     }
