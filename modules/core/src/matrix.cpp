@@ -196,6 +196,12 @@ public:
         return u;
     }
 
+    void allocate(UMatData* u, int dims, const int* sizes, int type,
+                       void* data0, size_t* step, int /*flags*/, UMatUsageFlags /*usageFlags*/) const
+    {
+        return;
+    }
+
     bool allocate(UMatData* u, int /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const
     {
         if(!u) return false;
@@ -214,6 +220,27 @@ public:
                 u->origdata = 0;
             }
             delete u;
+        }
+    }
+
+    void deallocateData(UMatData* u) const
+    {
+        CV_Assert(u->urefcount >= 0);
+        CV_Assert(u->refcount >= 0);
+        if(u && u->refcount == 0)
+        {
+            if( !(u->flags & UMatData::USER_ALLOCATED) )
+            {
+                fastFree(u->origdata);
+                u->origdata = 0;
+                u->data = 0;
+                u->size = 0;
+                u->capacity = 0;
+                u->flags = 0;
+                u->allocatorFlags_ = 0;
+                u->prevAllocator = 0;
+                u->currAllocator = 0;
+            }
         }
     }
 };

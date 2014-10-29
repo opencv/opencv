@@ -603,6 +603,38 @@ void* UMat::handle(int accessFlags) const
     if ((accessFlags & ACCESS_WRITE) != 0)
         u->markHostCopyObsolete(true);
 
+    if (!u->handle && u->data && ocl::useOpenCL()){
+        //Code go into here in this situation:
+        //UMat is created when OpenCL is off, so buffer
+        //is allocated from cpu side. Then OpenCL is on,
+        //this UMat is used as an kernel parameter.
+        //We should create a cl buffer, upload data content
+        //to this cl buffer and release cpu buffer.
+
+        Mat temp_m;
+        copyTo(temp_m);
+        u->currAllocator->deallocateData(u);
+        int _type = type();
+        if( total() > 0 )
+        {
+            MatAllocator *a = allocator, *a0 = getStdAllocator();
+            if(!a)
+                a = a0;
+            try
+            {
+                a->allocate(u, dims, size, _type, 0, 0, 0, usageFlags);
+            }
+            catch(...)
+            {
+            if(a != a0)
+                a0->allocate(u, dims, size, _type, 0, 0, 0, usageFlags);
+            }
+            CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
+        }
+
+        temp_m.copyTo(*this);
+    }
+
     return u->handle;
 }
 
