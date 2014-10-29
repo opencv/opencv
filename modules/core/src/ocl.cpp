@@ -4536,12 +4536,14 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
     return checkOptimalVectorWidth(vectorWidths, src1, src2, src3, src4, src5, src6, src7, src8, src9, strat);
 }
 
-int checkOptimalVectorWidth(int *vectorWidths,
+int checkOptimalVectorWidth(const int *vectorWidths,
                             InputArray src1, InputArray src2, InputArray src3,
                             InputArray src4, InputArray src5, InputArray src6,
                             InputArray src7, InputArray src8, InputArray src9,
                             OclVectorStrategy strat)
 {
+    CV_Assert(vectorWidths);
+
     int ref_type = src1.type();
 
     std::vector<size_t> offsets, steps, cols;
