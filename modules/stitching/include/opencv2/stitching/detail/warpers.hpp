@@ -135,6 +135,7 @@ public:
     Point2f warpPoint(const Point2f &pt, InputArray K, InputArray R, InputArray T);
 
     virtual Rect buildMaps(Size src_size, InputArray K, InputArray R, InputArray T, OutputArray xmap, OutputArray ymap);
+    Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap);
 
     virtual Point warp(InputArray src, InputArray K, InputArray R, InputArray T, int interp_mode, int border_mode,
                OutputArray dst);
