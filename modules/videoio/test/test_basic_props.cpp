@@ -108,7 +108,7 @@ TEST(Videoio_Video, actual_resolution)
     }
 }
 
-TEST(Videoio_Video, prop_fps)
+TEST(Videoio_Video, DISABLED_prop_fps)
 {
     const size_t n = sizeof(ext)/sizeof(ext[0]);
     const string src_dir = TS::ptr()->get_data_path();
