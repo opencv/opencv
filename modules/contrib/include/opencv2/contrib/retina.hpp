@@ -88,7 +88,7 @@ enum RETINA_COLORSAMPLINGMETHOD
 class RetinaFilter;
 
 /**
- * @class Retina a wrapper class which allows the Gipsa/Listic Labs model to be used.
+ * a wrapper class which allows the Gipsa/Listic Labs model to be used.
  * This retina model allows spatio-temporal image processing (applied on still images, video sequences).
  * As a summary, these are the retina model properties:
  * => It applies a spectral whithening (mid-frequency details enhancement)
@@ -199,7 +199,6 @@ public:
      * => if the xml file does not exist, then default setup is applied
      * => warning, Exceptions are thrown if read XML file is not valid
      * @param newParameters : a parameters structures updated with the new target configuration
-         * @param applyDefaultSetupOnFailure : set to true if an error must be thrown on error
      */
     void setup(RetinaParameters newParameters);
 
@@ -216,7 +215,7 @@ public:
 
     /**
      * write xml/yml formated parameters information
-     * @rparam fs : the filename of the xml file that will be open and writen with formatted parameters information
+     * @param fs : the filename of the xml file that will be open and writen with formatted parameters information
      */
     virtual void write( std::string fs ) const;
 

@@ -415,7 +415,7 @@ public:
          * @param orientationNormalized enable orientation normalization
          * @param scaleNormalized enable scale normalization
          * @param patternScale scaling of the description pattern
-         * @param nbOctave number of octaves covered by the detected keypoints
+         * @param nOctaves number of octaves covered by the detected keypoints
          * @param selectedPairs (optional) user defined selected pairs
     */
     explicit FREAK( bool orientationNormalized = true,
@@ -814,6 +814,8 @@ class CV_EXPORTS FastAdjuster: public AdjusterAdapter
 public:
     /**\param init_thresh the initial threshold to start with, default = 20
      * \param nonmax whether to use non max or not for fast feature detection
+     * \param min_thresh
+     * \param max_thresh
      */
     FastAdjuster(int init_thresh=20, bool nonmax=true, int min_thresh=1, int max_thresh=200);
 
