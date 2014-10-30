@@ -13,3 +13,6 @@ photo. Computational Photography
     decolor
     cloning
     npr
+    intrinsic
+    colorTransfer
+    colorConstancy
