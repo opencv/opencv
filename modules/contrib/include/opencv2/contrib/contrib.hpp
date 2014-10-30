@@ -664,6 +664,7 @@ namespace cv
         *\param center the transformation center: where the output precision is maximal
         *\param R the number of rings of the cortical image (default value 70 pixel)
         *\param ro0 the radius of the blind spot (default value 3 pixel)
+        *\param interp interpolation algorithm
         *\param full \a 1 (default value) means that the retinal image (the inverse transform) is computed within the circumscribing circle.
         *            \a 0 means that the retinal image is computed within the inscribed circle.
         *\param S the number of sectors of the cortical image (default value 70 pixel).
