@@ -77,7 +77,7 @@ enum
 {
     yuv_shift  = 14,
     xyz_shift  = 12,
-    hsv_shift = 12,
+    hsv_shift  = 12,
     R2Y        = 4899,
     G2Y        = 9617,
     B2Y        = 1868,
@@ -111,6 +111,18 @@ enum
 #define B_COMP w
 #endif
 
+#ifndef uidx
+#define uidx 0
+#endif
+
+#ifndef yidx
+#define yidx 0
+#endif
+
+#ifndef PIX_PER_WI_X
+#define PIX_PER_WI_X 1
+#endif
+
 #define __CAT(x, y) x##y
 #define CAT(x, y) __CAT(x, y)
 
@@ -141,7 +153,7 @@ __kernel void RGB2Gray(__global const uchar * srcptr, int src_step, int src_offs
 #ifdef DEPTH_5
                 dst[0] = fma(src_pix.B_COMP, 0.114f, fma(src_pix.G_COMP, 0.587f, src_pix.R_COMP * 0.299f));
 #else
-                dst[0] = (DATA_TYPE)CV_DESCALE(mad24(src_pix.B_COMP, B2Y, mad24(src_pix.G_COMP, G2Y, src_pix.R_COMP * R2Y)), yuv_shift);
+                dst[0] = (DATA_TYPE)CV_DESCALE(mad24(src_pix.B_COMP, B2Y, mad24(src_pix.G_COMP, G2Y, mul24(src_pix.R_COMP, R2Y))), yuv_shift);
 #endif
                 ++y;
                 src_index += src_step;
@@ -216,13 +228,13 @@ __kernel void RGB2YUV(__global const uchar* srcptr, int src_step, int src_offset
 
 #ifdef DEPTH_5
                 __constant float * coeffs = c_RGB2YUVCoeffs_f;
-                const DATA_TYPE Y  = fma(b, coeffs[0], fma(g, coeffs[1], r * coeffs[2]));
+                const DATA_TYPE Y = fma(b, coeffs[0], fma(g, coeffs[1], r * coeffs[2]));
                 const DATA_TYPE U = fma(b - Y, coeffs[3], HALF_MAX);
                 const DATA_TYPE V = fma(r - Y, coeffs[4], HALF_MAX);
 #else
                 __constant int * coeffs = c_RGB2YUVCoeffs_i;
                 const int delta = HALF_MAX * (1 << yuv_shift);
-                const int Y = CV_DESCALE(mad24(b, coeffs[0], mad24(g, coeffs[1], r * coeffs[2])), yuv_shift);
+                const int Y = CV_DESCALE(mad24(b, coeffs[0], mad24(g, coeffs[1], mul24(r, coeffs[2]))), yuv_shift);
                 const int U = CV_DESCALE(mad24(b - Y, coeffs[3], delta), yuv_shift);
                 const int V = CV_DESCALE(mad24(r - Y, coeffs[4], delta), yuv_shift);
 #endif
@@ -239,8 +251,8 @@ __kernel void RGB2YUV(__global const uchar* srcptr, int src_step, int src_offset
     }
 }
 
-__constant float c_YUV2RGBCoeffs_f[5] = { 2.032f, -0.395f, -0.581f, 1.140f };
-__constant int   c_YUV2RGBCoeffs_i[5] = { 33292, -6472, -9519, 18678 };
+__constant float c_YUV2RGBCoeffs_f[4] = { 2.032f, -0.395f, -0.581f, 1.140f };
+__constant int   c_YUV2RGBCoeffs_i[4] = { 33292, -6472, -9519, 18678 };
 
 __kernel void YUV2RGB(__global const uchar* srcptr, int src_step, int src_offset,
                       __global uchar* dstptr, int dst_step, int dt_offset,
@@ -271,9 +283,9 @@ __kernel void YUV2RGB(__global const uchar* srcptr, int src_step, int src_offset
                 float b = fma(U - HALF_MAX, coeffs[0], Y);
 #else
                 __constant int * coeffs = c_YUV2RGBCoeffs_i;
-                const int r = Y + CV_DESCALE((V - HALF_MAX) * coeffs[3], yuv_shift);
-                const int g = Y + CV_DESCALE(mad24(V - HALF_MAX, coeffs[2], (U - HALF_MAX) * coeffs[1]), yuv_shift);
-                const int b = Y + CV_DESCALE((U - HALF_MAX) * coeffs[0], yuv_shift);
+                const int r = Y + CV_DESCALE(mul24(V - HALF_MAX, coeffs[3]), yuv_shift);
+                const int g = Y + CV_DESCALE(mad24(V - HALF_MAX, coeffs[2], mul24(U - HALF_MAX, coeffs[1])), yuv_shift);
+                const int b = Y + CV_DESCALE(mul24(U - HALF_MAX, coeffs[0]), yuv_shift);
 #endif
 
                 dst[bidx] = SAT_CAST( b );
@@ -289,15 +301,10 @@ __kernel void YUV2RGB(__global const uchar* srcptr, int src_step, int src_offset
         }
     }
 }
+__constant float c_YUV2RGBCoeffs_420[5] = { 1.163999557f, 2.017999649f, -0.390999794f,
+                                            -0.812999725f, 1.5959997177f };
 
-__constant int ITUR_BT_601_CY = 1220542;
-__constant int ITUR_BT_601_CUB = 2116026;
-__constant int ITUR_BT_601_CUG = 409993;
-__constant int ITUR_BT_601_CVG = 852492;
-__constant int ITUR_BT_601_CVR = 1673527;
-__constant int ITUR_BT_601_SHIFT = 20;
-
-__kernel void YUV2RGB_NV12(__global const uchar* srcptr, int src_step, int src_offset,
+__kernel void YUV2RGB_NVx(__global const uchar* srcptr, int src_step, int src_offset,
                             __global uchar* dstptr, int dst_step, int dt_offset,
                             int rows, int cols)
 {
@@ -313,54 +320,296 @@ __kernel void YUV2RGB_NV12(__global const uchar* srcptr, int src_step, int src_o
             {
                 __global const uchar* ysrc = srcptr + mad24(y << 1, src_step, (x << 1) + src_offset);
                 __global const uchar* usrc = srcptr + mad24(rows + y, src_step, (x << 1) + src_offset);
-                __global uchar*       dst1 = dstptr + mad24(y << 1, dst_step, x * (dcn<<1) + dt_offset);
-                __global uchar*       dst2 = dstptr + mad24((y << 1) + 1, dst_step, x * (dcn<<1) + dt_offset);
+                __global uchar*       dst1 = dstptr + mad24(y << 1, dst_step, mad24(x, dcn<<1, dt_offset));
+                __global uchar*       dst2 = dst1 + dst_step;
 
-                int Y1 = ysrc[0];
-                int Y2 = ysrc[1];
-                int Y3 = ysrc[src_step];
-                int Y4 = ysrc[src_step + 1];
+                float Y1 = ysrc[0];
+                float Y2 = ysrc[1];
+                float Y3 = ysrc[src_step];
+                float Y4 = ysrc[src_step + 1];
 
-                int U  = usrc[0] - 128;
-                int V  = usrc[1] - 128;
+                float U  = ((float)usrc[uidx]) - HALF_MAX;
+                float V  = ((float)usrc[1-uidx]) - HALF_MAX;
 
-                int ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * V;
-                int guv = (1 << (ITUR_BT_601_SHIFT - 1)) - ITUR_BT_601_CVG * V - ITUR_BT_601_CUG * U;
-                int buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * U;
+                __constant float* coeffs = c_YUV2RGBCoeffs_420;
+                float ruv = fma(coeffs[4], V, 0.5f);
+                float guv = fma(coeffs[3], V, fma(coeffs[2], U, 0.5f));
+                float buv = fma(coeffs[1], U, 0.5f);
 
-                Y1 = max(0, Y1 - 16) * ITUR_BT_601_CY;
-                dst1[2 - bidx]     = convert_uchar_sat((Y1 + ruv) >> ITUR_BT_601_SHIFT);
-                dst1[1]        = convert_uchar_sat((Y1 + guv) >> ITUR_BT_601_SHIFT);
-                dst1[bidx] = convert_uchar_sat((Y1 + buv) >> ITUR_BT_601_SHIFT);
+                Y1 = max(0.f, Y1 - 16.f) * coeffs[0];
+                dst1[2 - bidx] = convert_uchar_sat(Y1 + ruv);
+                dst1[1]        = convert_uchar_sat(Y1 + guv);
+                dst1[bidx]     = convert_uchar_sat(Y1 + buv);
 #if dcn == 4
                 dst1[3]        = 255;
 #endif
 
-                Y2 = max(0, Y2 - 16) * ITUR_BT_601_CY;
-                dst1[dcn + 2 - bidx] = convert_uchar_sat((Y2 + ruv) >> ITUR_BT_601_SHIFT);
-                dst1[dcn + 1]        = convert_uchar_sat((Y2 + guv) >> ITUR_BT_601_SHIFT);
-                dst1[dcn + bidx] = convert_uchar_sat((Y2 + buv) >> ITUR_BT_601_SHIFT);
+                Y2 = max(0.f, Y2 - 16.f) * coeffs[0];
+                dst1[dcn + 2 - bidx] = convert_uchar_sat(Y2 + ruv);
+                dst1[dcn + 1]        = convert_uchar_sat(Y2 + guv);
+                dst1[dcn + bidx]     = convert_uchar_sat(Y2 + buv);
 #if dcn == 4
                 dst1[7]        = 255;
 #endif
 
-                Y3 = max(0, Y3 - 16) * ITUR_BT_601_CY;
-                dst2[2 - bidx]     = convert_uchar_sat((Y3 + ruv) >> ITUR_BT_601_SHIFT);
-                dst2[1]        = convert_uchar_sat((Y3 + guv) >> ITUR_BT_601_SHIFT);
-                dst2[bidx] = convert_uchar_sat((Y3 + buv) >> ITUR_BT_601_SHIFT);
+                Y3 = max(0.f, Y3 - 16.f) * coeffs[0];
+                dst2[2 - bidx] = convert_uchar_sat(Y3 + ruv);
+                dst2[1]        = convert_uchar_sat(Y3 + guv);
+                dst2[bidx]     = convert_uchar_sat(Y3 + buv);
 #if dcn == 4
                 dst2[3]        = 255;
 #endif
 
-                Y4 = max(0, Y4 - 16) * ITUR_BT_601_CY;
-                dst2[dcn + 2 - bidx] = convert_uchar_sat((Y4 + ruv) >> ITUR_BT_601_SHIFT);
-                dst2[dcn + 1]        = convert_uchar_sat((Y4 + guv) >> ITUR_BT_601_SHIFT);
-                dst2[dcn + bidx] = convert_uchar_sat((Y4 + buv) >> ITUR_BT_601_SHIFT);
+                Y4 = max(0.f, Y4 - 16.f) * coeffs[0];
+                dst2[dcn + 2 - bidx] = convert_uchar_sat(Y4 + ruv);
+                dst2[dcn + 1]        = convert_uchar_sat(Y4 + guv);
+                dst2[dcn + bidx]     = convert_uchar_sat(Y4 + buv);
 #if dcn == 4
                 dst2[7]        = 255;
 #endif
             }
             ++y;
+        }
+    }
+}
+
+__kernel void YUV2RGB_YV12_IYUV(__global const uchar* srcptr, int src_step, int src_offset,
+                                __global uchar* dstptr, int dst_step, int dt_offset,
+                                int rows, int cols)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1) * PIX_PER_WI_Y;
+
+    if (x < cols / 2)
+    {
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
+        {
+            if (y < rows / 2 )
+            {
+                __global const uchar* ysrc = srcptr + mad24(y << 1, src_step, (x << 1) + src_offset);
+                __global uchar*       dst1 = dstptr + mad24(y << 1, dst_step, x * (dcn<<1) + dt_offset);
+                __global uchar*       dst2 = dst1 + dst_step;
+
+                float Y1 = ysrc[0];
+                float Y2 = ysrc[1];
+                float Y3 = ysrc[src_step];
+                float Y4 = ysrc[src_step + 1];
+
+#ifdef SRC_CONT
+                __global const uchar* uvsrc = srcptr + mad24(rows, src_step, src_offset);
+                int u_ind = mad24(y, cols >> 1, x);
+                float uv[2] = { ((float)uvsrc[u_ind]) - HALF_MAX, ((float)uvsrc[u_ind + ((rows * cols) >> 2)]) - HALF_MAX };
+#else
+                int vsteps[2] = { cols >> 1, src_step - (cols >> 1)};
+                __global const uchar* usrc = srcptr + mad24(rows + (y>>1), src_step, src_offset + (y%2)*(cols >> 1) + x);
+                __global const uchar* vsrc = usrc + mad24(rows >> 2, src_step, rows % 4 ? vsteps[y%2] : 0);
+                float uv[2] = { ((float)usrc[0]) - HALF_MAX, ((float)vsrc[0]) - HALF_MAX };
+#endif
+                float U = uv[uidx];
+                float V = uv[1-uidx];
+
+                __constant float* coeffs = c_YUV2RGBCoeffs_420;
+                float ruv = fma(coeffs[4], V, 0.5f);
+                float guv = fma(coeffs[3], V, fma(coeffs[2], U, 0.5f));
+                float buv = fma(coeffs[1], U, 0.5f);
+
+                Y1 = max(0.f, Y1 - 16.f) * coeffs[0];
+                dst1[2 - bidx] = convert_uchar_sat(Y1 + ruv);
+                dst1[1]        = convert_uchar_sat(Y1 + guv);
+                dst1[bidx]     = convert_uchar_sat(Y1 + buv);
+#if dcn == 4
+                dst1[3]        = 255;
+#endif
+
+                Y2 = max(0.f, Y2 - 16.f) * coeffs[0];
+                dst1[dcn + 2 - bidx] = convert_uchar_sat(Y2 + ruv);
+                dst1[dcn + 1]        = convert_uchar_sat(Y2 + guv);
+                dst1[dcn + bidx]     = convert_uchar_sat(Y2 + buv);
+#if dcn == 4
+                dst1[7]        = 255;
+#endif
+
+                Y3 = max(0.f, Y3 - 16.f) * coeffs[0];
+                dst2[2 - bidx] = convert_uchar_sat(Y3 + ruv);
+                dst2[1]        = convert_uchar_sat(Y3 + guv);
+                dst2[bidx]     = convert_uchar_sat(Y3 + buv);
+#if dcn == 4
+                dst2[3]        = 255;
+#endif
+
+                Y4 = max(0.f, Y4 - 16.f) * coeffs[0];
+                dst2[dcn + 2 - bidx] = convert_uchar_sat(Y4 + ruv);
+                dst2[dcn + 1]        = convert_uchar_sat(Y4 + guv);
+                dst2[dcn + bidx]     = convert_uchar_sat(Y4 + buv);
+#if dcn == 4
+                dst2[7]        = 255;
+#endif
+            }
+            ++y;
+        }
+    }
+}
+
+__constant float c_RGB2YUVCoeffs_420[8] = { 0.256999969f, 0.50399971f, 0.09799957f, -0.1479988098f, -0.2909994125f,
+                                            0.438999176f, -0.3679990768f, -0.0709991455f };
+
+__kernel void RGB2YUV_YV12_IYUV(__global const uchar* srcptr, int src_step, int src_offset,
+                                __global uchar* dstptr, int dst_step, int dst_offset,
+                                int rows, int cols)
+{
+    int x = get_global_id(0) * PIX_PER_WI_X;
+    int y = get_global_id(1) * PIX_PER_WI_Y;
+
+    if (x < cols/2)
+    {
+        int src_index  = mad24(y << 1, src_step, mad24(x << 1, scn, src_offset));
+        int ydst_index = mad24(y << 1, dst_step, (x << 1) + dst_offset);
+        int y_rows = rows / 3 * 2;
+        int vsteps[2] = { cols >> 1, dst_step - (cols >> 1)};
+        __constant float* coeffs = c_RGB2YUVCoeffs_420;
+
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
+        {
+            if (y < rows / 3)
+            {
+                __global const uchar* src1 = srcptr + src_index;
+                __global const uchar* src2 = src1 + src_step;
+                __global uchar* ydst1 = dstptr + ydst_index;
+                __global uchar* ydst2 = ydst1 + dst_step;
+
+                __global uchar* udst = dstptr + mad24(y_rows + (y>>1), dst_step, dst_offset + (y%2)*(cols >> 1) + x);
+                __global uchar* vdst = udst + mad24(y_rows >> 2, dst_step, y_rows % 4 ? vsteps[y%2] : 0);
+
+#if PIX_PER_WI_X == 2
+                int s11 = *((__global const int*) src1);
+                int s12 = *((__global const int*) src1 + 1);
+                int s13 = *((__global const int*) src1 + 2);
+#if scn == 4
+                int s14 = *((__global const int*) src1 + 3);
+#endif
+                int s21 = *((__global const int*) src2);
+                int s22 = *((__global const int*) src2 + 1);
+                int s23 = *((__global const int*) src2 + 2);
+#if scn == 4
+                int s24 = *((__global const int*) src2 + 3);
+#endif
+                float src_pix1[scn * 4], src_pix2[scn * 4];
+
+                *((float4*) src_pix1)     = convert_float4(as_uchar4(s11));
+                *((float4*) src_pix1 + 1) = convert_float4(as_uchar4(s12));
+                *((float4*) src_pix1 + 2) = convert_float4(as_uchar4(s13));
+#if scn == 4
+                *((float4*) src_pix1 + 3) = convert_float4(as_uchar4(s14));
+#endif
+                *((float4*) src_pix2)     = convert_float4(as_uchar4(s21));
+                *((float4*) src_pix2 + 1) = convert_float4(as_uchar4(s22));
+                *((float4*) src_pix2 + 2) = convert_float4(as_uchar4(s23));
+#if scn == 4
+                *((float4*) src_pix2 + 3) = convert_float4(as_uchar4(s24));
+#endif
+                uchar4 y1, y2;
+                y1.x = convert_uchar_sat(fma(coeffs[0], src_pix1[      2-bidx], fma(coeffs[1], src_pix1[      1], fma(coeffs[2], src_pix1[      bidx], 16.5f))));
+                y1.y = convert_uchar_sat(fma(coeffs[0], src_pix1[  scn+2-bidx], fma(coeffs[1], src_pix1[  scn+1], fma(coeffs[2], src_pix1[  scn+bidx], 16.5f))));
+                y1.z = convert_uchar_sat(fma(coeffs[0], src_pix1[2*scn+2-bidx], fma(coeffs[1], src_pix1[2*scn+1], fma(coeffs[2], src_pix1[2*scn+bidx], 16.5f))));
+                y1.w = convert_uchar_sat(fma(coeffs[0], src_pix1[3*scn+2-bidx], fma(coeffs[1], src_pix1[3*scn+1], fma(coeffs[2], src_pix1[3*scn+bidx], 16.5f))));
+                y2.x = convert_uchar_sat(fma(coeffs[0], src_pix2[      2-bidx], fma(coeffs[1], src_pix2[      1], fma(coeffs[2], src_pix2[      bidx], 16.5f))));
+                y2.y = convert_uchar_sat(fma(coeffs[0], src_pix2[  scn+2-bidx], fma(coeffs[1], src_pix2[  scn+1], fma(coeffs[2], src_pix2[  scn+bidx], 16.5f))));
+                y2.z = convert_uchar_sat(fma(coeffs[0], src_pix2[2*scn+2-bidx], fma(coeffs[1], src_pix2[2*scn+1], fma(coeffs[2], src_pix2[2*scn+bidx], 16.5f))));
+                y2.w = convert_uchar_sat(fma(coeffs[0], src_pix2[3*scn+2-bidx], fma(coeffs[1], src_pix2[3*scn+1], fma(coeffs[2], src_pix2[3*scn+bidx], 16.5f))));
+
+                *((__global int*) ydst1) = as_int(y1);
+                *((__global int*) ydst2) = as_int(y2);
+
+                float uv[4] = { fma(coeffs[3], src_pix1[      2-bidx], fma(coeffs[4], src_pix1[      1], fma(coeffs[5], src_pix1[      bidx], 128.5f))),
+                                fma(coeffs[5], src_pix1[      2-bidx], fma(coeffs[6], src_pix1[      1], fma(coeffs[7], src_pix1[      bidx], 128.5f))),
+                                fma(coeffs[3], src_pix1[2*scn+2-bidx], fma(coeffs[4], src_pix1[2*scn+1], fma(coeffs[5], src_pix1[2*scn+bidx], 128.5f))),
+                                fma(coeffs[5], src_pix1[2*scn+2-bidx], fma(coeffs[6], src_pix1[2*scn+1], fma(coeffs[7], src_pix1[2*scn+bidx], 128.5f))) };
+
+                udst[0] = convert_uchar_sat(uv[uidx]    );
+                vdst[0] = convert_uchar_sat(uv[1 - uidx]);
+                udst[1] = convert_uchar_sat(uv[2 + uidx]);
+                vdst[1] = convert_uchar_sat(uv[3 - uidx]);
+#else
+                float4 src_pix1 = convert_float4(vload4(0, src1));
+                float4 src_pix2 = convert_float4(vload4(0, src1+scn));
+                float4 src_pix3 = convert_float4(vload4(0, src2));
+                float4 src_pix4 = convert_float4(vload4(0, src2+scn));
+
+                ydst1[0] = convert_uchar_sat(fma(coeffs[0], src_pix1.R_COMP, fma(coeffs[1], src_pix1.G_COMP, fma(coeffs[2], src_pix1.B_COMP, 16.5f))));
+                ydst1[1] = convert_uchar_sat(fma(coeffs[0], src_pix2.R_COMP, fma(coeffs[1], src_pix2.G_COMP, fma(coeffs[2], src_pix2.B_COMP, 16.5f))));
+                ydst2[0] = convert_uchar_sat(fma(coeffs[0], src_pix3.R_COMP, fma(coeffs[1], src_pix3.G_COMP, fma(coeffs[2], src_pix3.B_COMP, 16.5f))));
+                ydst2[1] = convert_uchar_sat(fma(coeffs[0], src_pix4.R_COMP, fma(coeffs[1], src_pix4.G_COMP, fma(coeffs[2], src_pix4.B_COMP, 16.5f))));
+
+                float uv[2] = { fma(coeffs[3], src_pix1.R_COMP, fma(coeffs[4], src_pix1.G_COMP, fma(coeffs[5], src_pix1.B_COMP, 128.5f))),
+                                fma(coeffs[5], src_pix1.R_COMP, fma(coeffs[6], src_pix1.G_COMP, fma(coeffs[7], src_pix1.B_COMP, 128.5f))) };
+
+                udst[0] = convert_uchar_sat(uv[uidx]  );
+                vdst[0] = convert_uchar_sat(uv[1-uidx]);
+#endif
+                ++y;
+                src_index += 2*src_step;
+                ydst_index += 2*dst_step;
+            }
+        }
+    }
+}
+
+__kernel void YUV2RGB_422(__global const uchar* srcptr, int src_step, int src_offset,
+                          __global uchar* dstptr, int dst_step, int dst_offset,
+                          int rows, int cols)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1) * PIX_PER_WI_Y;
+
+    if (x < cols / 2)
+    {
+        __global const uchar* src = srcptr + mad24(y, src_step, (x << 2) + src_offset);
+        __global uchar*       dst = dstptr + mad24(y, dst_step, mad24(x << 1, dcn, dst_offset));
+
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
+        {
+            if (y < rows )
+            {
+                __constant float* coeffs = c_YUV2RGBCoeffs_420;
+
+#ifndef USE_OPTIMIZED_LOAD
+                float U = ((float) src[uidx]) - HALF_MAX;
+                float V = ((float) src[(2 + uidx) % 4]) - HALF_MAX;
+                float y00 = max(0.f, ((float) src[yidx]) - 16.f) * coeffs[0];
+                float y01 = max(0.f, ((float) src[yidx + 2]) - 16.f) * coeffs[0];
+#else
+                int load_src = *((__global int*) src);
+                float vec_src[4] = { load_src & 0xff, (load_src >> 8) & 0xff, (load_src >> 16) & 0xff, (load_src >> 24) & 0xff};
+                float U = vec_src[uidx] - HALF_MAX;
+                float V = vec_src[(2 + uidx) % 4] - HALF_MAX;
+                float y00 = max(0.f, vec_src[yidx] - 16.f) * coeffs[0];
+                float y01 = max(0.f, vec_src[yidx + 2] - 16.f) * coeffs[0];
+#endif
+
+                float ruv = fma(coeffs[4], V, 0.5f);
+                float guv = fma(coeffs[3], V, fma(coeffs[2], U, 0.5f));
+                float buv = fma(coeffs[1], U, 0.5f);
+
+                dst[2 - bidx] = convert_uchar_sat(y00 + ruv);
+                dst[1]        = convert_uchar_sat(y00 + guv);
+                dst[bidx]     = convert_uchar_sat(y00 + buv);
+#if dcn == 4
+                dst[3]        = 255;
+#endif
+
+                dst[dcn + 2 - bidx] = convert_uchar_sat(y01 + ruv);
+                dst[dcn + 1]        = convert_uchar_sat(y01 + guv);
+                dst[dcn + bidx]     = convert_uchar_sat(y01 + buv);
+#if dcn == 4
+                dst[7]        = 255;
+#endif
+            }
+            ++y;
+            src += src_step;
+            dst += dst_step;
         }
     }
 }
@@ -400,7 +649,7 @@ __kernel void RGB2YCrCb(__global const uchar* srcptr, int src_step, int src_offs
 #else
                 __constant int * coeffs = c_RGB2YCrCbCoeffs_i;
                 int delta = HALF_MAX * (1 << yuv_shift);
-                int Y =  CV_DESCALE(mad24(b, coeffs[2], mad24(g, coeffs[1], r * coeffs[0])), yuv_shift);
+                int Y =  CV_DESCALE(mad24(b, coeffs[2], mad24(g, coeffs[1], mul24(r, coeffs[0]))), yuv_shift);
                 int Cr = CV_DESCALE(mad24(r - Y, coeffs[3], delta), yuv_shift);
                 int Cb = CV_DESCALE(mad24(b - Y, coeffs[4], delta), yuv_shift);
 #endif

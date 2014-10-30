@@ -419,9 +419,11 @@ private:
     static int64 timeLimitDefault;
     static unsigned int iterationsLimitDefault;
 
+    unsigned int minIters;
     unsigned int nIters;
     unsigned int currentIter;
     unsigned int runsPerIteration;
+    unsigned int perfValidationStage;
 
     performance_metrics metrics;
     void validateMetrics();
