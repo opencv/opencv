@@ -84,15 +84,9 @@ public:
     _Tp re, im; //< the real and the imaginary parts
 };
 
-/*!
-  \typedef
-*/
 typedef Complex<float> Complexf;
 typedef Complex<double> Complexd;
 
-/*!
-  traits
-*/
 template<typename _Tp> class DataType< Complex<_Tp> >
 {
 public:
@@ -151,17 +145,11 @@ public:
     _Tp x, y; //< the point coordinates
 };
 
-/*!
-  \typedef
-*/
 typedef Point_<int> Point2i;
 typedef Point_<float> Point2f;
 typedef Point_<double> Point2d;
 typedef Point2i Point;
 
-/*!
-  traits
-*/
 template<typename _Tp> class DataType< Point_<_Tp> >
 {
 public:
@@ -219,16 +207,10 @@ public:
     _Tp x, y, z; //< the point coordinates
 };
 
-/*!
-  \typedef
-*/
 typedef Point3_<int> Point3i;
 typedef Point3_<float> Point3f;
 typedef Point3_<double> Point3d;
 
-/*!
-  traits
-*/
 template<typename _Tp> class DataType< Point3_<_Tp> >
 {
 public:
@@ -277,17 +259,11 @@ public:
     _Tp width, height; // the width and the height
 };
 
-/*!
-  \typedef
-*/
 typedef Size_<int> Size2i;
 typedef Size_<float> Size2f;
 typedef Size_<double> Size2d;
 typedef Size2i Size;
 
-/*!
-  traits
-*/
 template<typename _Tp> class DataType< Size_<_Tp> >
 {
 public:
@@ -347,17 +323,11 @@ public:
     _Tp x, y, width, height; //< the top-left corner, as well as width and height of the rectangle
 };
 
-/*!
-  \typedef
-*/
 typedef Rect_<int> Rect2i;
 typedef Rect_<float> Rect2f;
 typedef Rect_<double> Rect2d;
 typedef Rect2i Rect;
 
-/*!
-  traits
-*/
 template<typename _Tp> class DataType< Rect_<_Tp> >
 {
 public:
@@ -404,9 +374,6 @@ public:
     float angle;    //< the rotation angle. When the angle is 0, 90, 180, 270 etc., the rectangle becomes an up-right rectangle.
 };
 
-/*!
-  traits
-*/
 template<> class DataType< RotatedRect >
 {
 public:
@@ -445,9 +412,6 @@ public:
     int start, end;
 };
 
-/*!
-  traits
-*/
 template<> class DataType<Range>
 {
 public:
@@ -502,14 +466,8 @@ public:
     bool isReal() const;
 };
 
-/*!
-  \typedef
-*/
 typedef Scalar_<double> Scalar;
 
-/*!
-  traits
-*/
 template<typename _Tp> class DataType< Scalar_<_Tp> >
 {
 public:
@@ -579,9 +537,6 @@ public:
     CV_PROP_RW int class_id; //!< object class (if the keypoints need to be clustered by an object they belong to)
 };
 
-/*!
-  traits
-*/
 template<> class DataType<KeyPoint>
 {
 public:
@@ -623,9 +578,6 @@ public:
     bool operator<(const DMatch &m) const;
 };
 
-/*!
-  traits
-*/
 template<> class DataType<DMatch>
 {
 public:
@@ -695,9 +647,6 @@ public:
     CV_PROP_RW double  nu20, nu11, nu02, nu30, nu21, nu12, nu03;
 };
 
-/*!
-  traits
-*/
 template<> class DataType<Moments>
 {
 public:
