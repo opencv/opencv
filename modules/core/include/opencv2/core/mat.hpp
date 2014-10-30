@@ -578,8 +578,6 @@ protected:
    cv::Mat::step that is used to actually compute address of a matrix element. cv::Mat::step is needed because the matrix can be
    a part of another matrix or because there can some padding space in the end of each row for a proper alignment.
 
-   \image html roi.png
-
    Given these parameters, address of the matrix element M_{ij} is computed as following:
 
    addr(M_{ij})=M.data + M.step*i + j*M.elemSize()
@@ -962,9 +960,8 @@ protected:
  \endcode
 
  While cv::Mat is sufficient in most cases, cv::Mat_ can be more convenient if you use a lot of element
- access operations and if you know matrix type at compile time.
- Note that cv::Mat::at<_Tp>(int y, int x) and cv::Mat_<_Tp>::operator ()(int y, int x) do absolutely the
- same thing and run at the same speed, but the latter is certainly shorter:
+ access operations and if you know matrix type at compile time. Note that cv::Mat::at and
+ cv::Mat::operator() do absolutely the same thing and run at the same speed, but the latter is certainly shorter:
 
  \code
  Mat_<double> M(20,20);
@@ -1514,9 +1511,13 @@ public:
     void convertTo( SparseMat& m, int rtype, double alpha=1 ) const;
     //! converts sparse matrix to dense n-dim matrix with optional type conversion and scaling.
     /*!
-      \param rtype The output matrix data type. When it is =-1, the output array will have the same data type as (*this)
-      \param alpha The scale factor
-      \param beta The optional delta added to the scaled values before the conversion
+        @param [out] m - output matrix; if it does not have a proper size or type before the operation,
+            it is reallocated
+        @param [in] rtype – desired output matrix type or, rather, the depth since the number of channels
+            are the same as the input has; if rtype is negative, the output matrix will have the
+            same type as the input.
+        @param [in] alpha – optional scale factor
+        @param [in] beta – optional delta added to the scaled values
     */
     void convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const;
 

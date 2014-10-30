@@ -458,8 +458,13 @@ include(cmake/OpenCVFindLibsPerf.cmake)
 # ----------------------------------------------------------------------------
 
 # --- LATEX for pdf documentation ---
+unset(HAVE_DOXYGEN CACHE)
 if(BUILD_DOCS)
   include(cmake/OpenCVFindLATEX.cmake)
+  find_host_program(DOXYGEN_BUILD doxygen)
+  if (DOXYGEN_BUILD)
+    set(HAVE_DOXYGEN 1)
+  endif (DOXYGEN_BUILD)
 endif(BUILD_DOCS)
 
 # --- Python Support ---
@@ -1071,6 +1076,7 @@ if(BUILD_DOCS)
   status("    Sphinx:"              HAVE_SPHINX              THEN "${SPHINX_BUILD} (ver ${SPHINX_VERSION})" ELSE NO)
   status("    PdfLaTeX compiler:"   PDFLATEX_COMPILER        THEN "${PDFLATEX_COMPILER}" ELSE NO)
   status("    PlantUML:"            PLANTUML                 THEN "${PLANTUML}" ELSE NO)
+  status("    Doxygen:"             HAVE_DOXYGEN             THEN "YES (${DOXYGEN_BUILD})" ELSE NO)
 endif()
 
 # ========================== samples and tests ==========================
