@@ -48,6 +48,8 @@
 
 namespace cv { namespace cuda { namespace device
 {
+//! @addtogroup cuda
+//! @{
     struct Emulation
     {
 
@@ -256,6 +258,7 @@ namespace cv { namespace cuda { namespace device
             }
         };
     }; //struct Emulation
+//!@}
 }}} // namespace cv { namespace cuda { namespace cudev
 
 #endif /* OPENCV_CUDA_EMULATION_HPP_ */

@@ -10,6 +10,9 @@
 namespace cv
 {
 
+//! @addtogroup core
+//! @{
+
 class BufferPoolController
 {
 protected:
@@ -20,6 +23,8 @@ public:
     virtual void setMaxReservedSize(size_t size) = 0;
     virtual void freeAllReservedBuffers() = 0;
 };
+
+//! @}
 
 }
 

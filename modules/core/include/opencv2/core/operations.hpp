@@ -49,6 +49,8 @@
 
 #include <cstdio>
 
+//! @cond IGNORED
+
 namespace cv
 {
 
@@ -525,17 +527,27 @@ void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter, Ptr<_Tp>& v
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
 }
 
+//! @endcond
 
 /****************************************************************************************\
 *                                  Auxiliary algorithms                                  *
 \****************************************************************************************/
 
-// This function splits the input sequence or set into one or more equivalence classes and
-// returns the vector of labels - 0-based class indexes for each element.
-// predicate(a,b) returns true if the two sequence elements certainly belong to the same class.
-//
-// The algorithm is described in "Introduction to Algorithms"
-// by Cormen, Leiserson and Rivest, the chapter "Data structures for disjoint sets"
+/** @brief Splits an element set into equivalency classes.
+
+The generic function partition implements an \f$O(N^2)\f$ algorithm for splitting a set of \f$N\f$ elements
+into one or more equivalency classes, as described in
+<http://en.wikipedia.org/wiki/Disjoint-set_data_structure> . The function returns the number of
+equivalency classes.
+@param _vec Set of elements stored as a vector.
+@param labels Output vector of labels. It contains as many elements as vec. Each label labels[i] is
+a 0-based cluster index of `vec[i]`.
+@param predicate Equivalence predicate (pointer to a boolean function of two arguments or an
+instance of the class that has the method bool operator()(const _Tp& a, const _Tp& b) ). The
+predicate returns true when the elements are certainly in the same class, and returns false if they
+may or may not be in the same class.
+@ingroup core_cluster
+*/
 template<typename _Tp, class _EqPredicate> int
 partition( const std::vector<_Tp>& _vec, std::vector<int>& labels,
           _EqPredicate predicate=_EqPredicate())

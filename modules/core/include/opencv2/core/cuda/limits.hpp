@@ -49,7 +49,8 @@
 
 namespace cv { namespace cuda { namespace device
 {
-
+//! @addtogroup cuda
+//! @{
 template <class T> struct numeric_limits;
 
 template <> struct numeric_limits<bool>
@@ -116,7 +117,7 @@ template <> struct numeric_limits<double>
     __device__ __forceinline__ static double epsilon() { return DBL_EPSILON; }
     static const bool is_signed = true;
 };
-
+//! @}
 }}} // namespace cv { namespace cuda { namespace cudev {
 
 #endif // __OPENCV_CUDA_LIMITS_HPP__

@@ -358,6 +358,14 @@ typedef signed char schar;
 #  include "tegra_round.hpp"
 #endif
 
+//! @addtogroup core_utils
+//! @{
+
+/** @brief Rounds floating-point number to the nearest integer
+
+@param value floating-point number. If the value is outside of INT_MIN ... INT_MAX range, the
+result is not defined.
+ */
 CV_INLINE int cvRound( double value )
 {
 #if ((defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__ && defined __SSE2__ && !defined __APPLE__)) && !defined(__CUDACC__)
@@ -389,6 +397,13 @@ CV_INLINE int cvRound( double value )
 #endif
 }
 
+/** @brief Rounds floating-point number to the nearest integer not larger than the original.
+
+The function computes an integer i such that:
+\f[i \le \texttt{value} < i+1\f]
+@param value floating-point number. If the value is outside of INT_MIN ... INT_MAX range, the
+result is not defined.
+ */
 CV_INLINE int cvFloor( double value )
 {
 #if (defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__ && !defined __APPLE__)) && !defined(__CUDACC__)
@@ -405,6 +420,13 @@ CV_INLINE int cvFloor( double value )
 #endif
 }
 
+/** @brief Rounds floating-point number to the nearest integer not larger than the original.
+
+The function computes an integer i such that:
+\f[i \le \texttt{value} < i+1\f]
+@param value floating-point number. If the value is outside of INT_MIN ... INT_MAX range, the
+result is not defined.
+*/
 CV_INLINE int cvCeil( double value )
 {
 #if (defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__&& !defined __APPLE__)) && !defined(__CUDACC__)
@@ -421,6 +443,12 @@ CV_INLINE int cvCeil( double value )
 #endif
 }
 
+/** @brief Determines if the argument is Not A Number.
+
+@param value The input floating-point value
+
+The function returns 1 if the argument is Not A Number (as defined by IEEE754 standard), 0
+otherwise. */
 CV_INLINE int cvIsNaN( double value )
 {
     union { uint64 u; double f; } ieee754;
@@ -429,6 +457,12 @@ CV_INLINE int cvIsNaN( double value )
            ((unsigned)ieee754.u != 0) > 0x7ff00000;
 }
 
+/** @brief Determines if the argument is Infinity.
+
+@param value The input floating-point value
+
+The function returns 1 if the argument is a plus or minus infinity (as defined by IEEE754 standard)
+and 0 otherwise. */
 CV_INLINE int cvIsInf( double value )
 {
     union { uint64 u; double f; } ieee754;
@@ -436,6 +470,8 @@ CV_INLINE int cvIsInf( double value )
     return ((unsigned)(ieee754.u >> 32) & 0x7fffffff) == 0x7ff00000 &&
            (unsigned)ieee754.u == 0;
 }
+
+//! @} core_utils
 
 /****************************************************************************************\
 *          exchange-add operation for atomic operations on reference counters            *
