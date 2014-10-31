@@ -71,6 +71,8 @@
 #  endif
 #endif
 
+//! @cond IGNORED
+
 namespace cv
 {
 #ifdef HAVE_TBB
@@ -300,5 +302,7 @@ typedef enum CvStatus
     CV_OK                       =   CV_NO_ERR
 }
 CvStatus;
+
+//! @endcond
 
 #endif // __OPENCV_CORE_PRIVATE_HPP__

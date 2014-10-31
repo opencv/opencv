@@ -61,10 +61,14 @@ struct IDirect3DDevice9Ex;
 struct IDirect3DSurface9;
 #endif
 
+
 namespace cv { namespace directx {
 
 namespace ocl {
 using namespace cv::ocl;
+
+//! @addtogroup core_directx
+//! @{
 
 // TODO static functions in the Context class
 CV_EXPORTS Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device);
@@ -72,7 +76,12 @@ CV_EXPORTS Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
 CV_EXPORTS Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDevice9Ex);
 CV_EXPORTS Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9);
 
+//! @}
+
 } // namespace cv::directx::ocl
+
+//! @addtogroup core_directx
+//! @{
 
 CV_EXPORTS void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D);
 CV_EXPORTS void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst);
@@ -89,6 +98,7 @@ CV_EXPORTS int getTypeFromDXGI_FORMAT(const int iDXGI_FORMAT); // enum DXGI_FORM
 // Get OpenCV type from DirectX type, return -1 if there is no equivalent
 CV_EXPORTS int getTypeFromD3DFORMAT(const int iD3DFORMAT); // enum D3DTYPE for D3D9
 
+//! @}
 
 } } // namespace cv::directx
 

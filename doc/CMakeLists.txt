@@ -147,14 +147,18 @@ endif()
 
 # ========= Doxygen docs =========
 if(BUILD_DOCS AND HAVE_DOXYGEN)
+  # documented modules list
   set(candidates)
-  set(all_headers)
-  set(all_images)
   list(APPEND candidates ${BASE_MODULES} ${EXTRA_MODULES})
   # blacklisted modules
   ocv_list_filterout(candidates "^ts$")
+
   # gathering headers
+  set(all_headers) # files and dirs to process
+  set(all_images) # image search paths
+  set(reflist) # modules reference
   foreach(m ${candidates})
+    set(reflist "${reflist} \n- @subpage ${m}")
     set(all_headers ${all_headers} "${OPENCV_MODULE_opencv_${m}_HEADERS}")
     set(docs_dir "${OPENCV_MODULE_opencv_${m}_LOCATION}/doc")
     if(EXISTS ${docs_dir})
@@ -164,15 +168,20 @@ if(BUILD_DOCS AND HAVE_DOXYGEN)
   endforeach()
 
   # additional config
+  set(doxyfile "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile")
+  set(rootfile "${CMAKE_CURRENT_BINARY_DIR}/root.markdown")
+  set(all_headers ${all_headers} ${rootfile})
   string(REGEX REPLACE ";" " \\\\\\n" CMAKE_DOXYGEN_INPUT_LIST "${all_headers}")
   string(REGEX REPLACE ";" " \\\\\\n" CMAKE_DOXYGEN_IMAGE_PATH "${all_images}")
-  set(CMAKE_DOXYGEN_INDEX_MD "${CMAKE_SOURCE_DIR}/README.md")
   set(CMAKE_DOXYGEN_LAYOUT "${CMAKE_CURRENT_SOURCE_DIR}/DoxygenLayout.xml")
   set(CMAKE_DOXYGEN_OUTPUT_PATH "doxygen")
+  set(CMAKE_DOXYGEN_MODULES_REFERENCE "${reflist}")
+  set(CMAKE_DOXYGEN_EXAMPLE_PATH "${CMAKE_SOURCE_DIR}/samples/cpp")
 
   # writing file
-  set(doxyfile "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile")
   configure_file(Doxyfile.in ${doxyfile} @ONLY)
+  configure_file(root.markdown.in ${rootfile} @ONLY)
+  configure_file(mymath.sty "${CMAKE_DOXYGEN_OUTPUT_PATH}/html/mymath.sty" @ONLY)
 
   add_custom_target(doxygen
     COMMAND ${DOXYGEN_BUILD} ${doxyfile}

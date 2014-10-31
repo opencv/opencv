@@ -77,8 +77,10 @@ CV_EXPORTS void setUseCollection(bool flag); // set implementation collection st
 #define CV_IMPL_ADD(impl)
 #endif
 
-/*!
- Automatically Allocated Buffer Class
+//! @addtogroup core_utils
+//! @{
+
+/** @brief  Automatically Allocated Buffer Class
 
  The class is used for temporary buffers in functions and methods.
  If a temporary buffer is usually small (a few K's of memory),
@@ -144,13 +146,12 @@ protected:
     _Tp buf[(fixed_size > 0) ? fixed_size : 1];
 };
 
-//! Sets/resets the break-on-error mode.
+/**  @brief Sets/resets the break-on-error mode.
 
-/*!
-  When the break-on-error mode is set, the default error handler
-  issues a hardware exception, which can make debugging more convenient.
+When the break-on-error mode is set, the default error handler issues a hardware exception, which
+can make debugging more convenient.
 
-  \return the previous state
+\return the previous state
  */
 CV_EXPORTS bool setBreakOnError(bool flag);
 
@@ -158,9 +159,9 @@ extern "C" typedef int (*ErrorCallback)( int status, const char* func_name,
                                        const char* err_msg, const char* file_name,
                                        int line, void* userdata );
 
-//! Sets the new error handler and the optional user data.
 
-/*!
+/** @brief Sets the new error handler and the optional user data.
+
   The function sets the new error handler, called from cv::error().
 
   \param errCallback the new error handler. If NULL, the default error handler is used.
@@ -171,124 +172,194 @@ extern "C" typedef int (*ErrorCallback)( int status, const char* func_name,
 */
 CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback, void* userdata=0, void** prevUserdata=0);
 
+/** @brief Returns a text string formatted using the printf-like expression.
+
+The function acts like sprintf but forms and returns an STL string. It can be used to form an error
+message in the Exception constructor.
+@param fmt printf-compatible formatting specifiers.
+ */
 CV_EXPORTS String format( const char* fmt, ... );
 CV_EXPORTS String tempfile( const char* suffix = 0);
 CV_EXPORTS void glob(String pattern, std::vector<String>& result, bool recursive = false);
+
+/** @brief OpenCV will try to set the number of threads for the next parallel region.
+
+If threads == 0, OpenCV will disable threading optimizations and run all it's functions
+sequentially. Passing threads \< 0 will reset threads number to system default. This function must
+be called outside of parallel region.
+
+OpenCV will try to run it's functions with specified threads number, but some behaviour differs from
+framework:
+-   `TBB` – User-defined parallel constructions will run with the same threads number, if
+    another does not specified. If late on user creates own scheduler, OpenCV will be use it.
+-   `OpenMP` – No special defined behaviour.
+-   `Concurrency` – If threads == 1, OpenCV will disable threading optimizations and run it's
+    functions sequentially.
+-   `GCD` – Supports only values \<= 0.
+-   `C=` – No special defined behaviour.
+@param nthreads Number of threads used by OpenCV.
+@sa getNumThreads, getThreadNum
+ */
 CV_EXPORTS void setNumThreads(int nthreads);
+
+/** @brief Returns the number of threads used by OpenCV for parallel regions.
+
+Always returns 1 if OpenCV is built without threading support.
+
+The exact meaning of return value depends on the threading framework used by OpenCV library:
+- `TBB` – The number of threads, that OpenCV will try to use for parallel regions. If there is
+  any tbb::thread_scheduler_init in user code conflicting with OpenCV, then function returns
+  default number of threads used by TBB library.
+- `OpenMP` – An upper bound on the number of threads that could be used to form a new team.
+- `Concurrency` – The number of threads, that OpenCV will try to use for parallel regions.
+- `GCD` – Unsupported; returns the GCD thread pool limit (512) for compatibility.
+- `C=` – The number of threads, that OpenCV will try to use for parallel regions, if before
+  called setNumThreads with threads \> 0, otherwise returns the number of logical CPUs,
+  available for the process.
+@sa setNumThreads, getThreadNum
+ */
 CV_EXPORTS int getNumThreads();
+
+/** @brief Returns the index of the currently executed thread within the current parallel region. Always
+returns 0 if called outside of parallel region.
+
+The exact meaning of return value depends on the threading framework used by OpenCV library:
+- `TBB` – Unsupported with current 4.1 TBB release. May be will be supported in future.
+- `OpenMP` – The thread number, within the current team, of the calling thread.
+- `Concurrency` – An ID for the virtual processor that the current context is executing on (0
+  for master thread and unique number for others, but not necessary 1,2,3,...).
+- `GCD` – System calling thread's ID. Never returns 0 inside parallel region.
+- `C=` – The index of the current parallel task.
+@sa setNumThreads, getNumThreads
+ */
 CV_EXPORTS int getThreadNum();
 
+/** @brief Returns full configuration time cmake output.
+
+Returned value is raw cmake output including version control system revision, compiler version,
+compiler flags, enabled modules and third party libraries, etc. Output format depends on target
+architecture.
+ */
 CV_EXPORTS_W const String& getBuildInformation();
 
-//! Returns the number of ticks.
+/** @brief Returns the number of ticks.
 
-/*!
-  The function returns the number of ticks since the certain event (e.g. when the machine was turned on).
-  It can be used to initialize cv::RNG or to measure a function execution time by reading the tick count
-  before and after the function call. The granularity of ticks depends on the hardware and OS used. Use
-  cv::getTickFrequency() to convert ticks to seconds.
-*/
+The function returns the number of ticks after the certain event (for example, when the machine was
+turned on). It can be used to initialize RNG or to measure a function execution time by reading the
+tick count before and after the function call. See also the tick frequency.
+ */
 CV_EXPORTS_W int64 getTickCount();
 
-/*!
-  Returns the number of ticks per seconds.
+/** @brief Returns the number of ticks per second.
 
-  The function returns the number of ticks (as returned by cv::getTickCount()) per second.
-  The following code computes the execution time in milliseconds:
-
-  \code
-  double exec_time = (double)getTickCount();
-  // do something ...
-  exec_time = ((double)getTickCount() - exec_time)*1000./getTickFrequency();
-  \endcode
-*/
+The function returns the number of ticks per second. That is, the following code computes the
+execution time in seconds:
+@code
+    double t = (double)getTickCount();
+    // do something ...
+    t = ((double)getTickCount() - t)/getTickFrequency();
+@endcode
+ */
 CV_EXPORTS_W double getTickFrequency();
 
-/*!
-  Returns the number of CPU ticks.
+/** @brief Returns the number of CPU ticks.
 
-  On platforms where the feature is available, the function returns the number of CPU ticks
-  since the certain event (normally, the system power-on moment). Using this function
-  one can accurately measure the execution time of very small code fragments,
-  for which cv::getTickCount() granularity is not enough.
-*/
+The function returns the current number of CPU ticks on some architectures (such as x86, x64,
+PowerPC). On other platforms the function is equivalent to getTickCount. It can also be used for
+very accurate time measurements, as well as for RNG initialization. Note that in case of multi-CPU
+systems a thread, from which getCPUTickCount is called, can be suspended and resumed at another CPU
+with its own counter. So, theoretically (and practically) the subsequent calls to the function do
+not necessary return the monotonously increasing values. Also, since a modern CPU varies the CPU
+frequency depending on the load, the number of CPU clocks spent in some code cannot be directly
+converted to time units. Therefore, getTickCount is generally a preferable solution for measuring
+execution time.
+ */
 CV_EXPORTS_W int64 getCPUTickCount();
 
-//! Available CPU features. Currently, the following features are recognized:
-enum {
-      CPU_MMX       = 1,
-      CPU_SSE       = 2,
-      CPU_SSE2      = 3,
-      CPU_SSE3      = 4,
-      CPU_SSSE3     = 5,
-      CPU_SSE4_1    = 6,
-      CPU_SSE4_2    = 7,
-      CPU_POPCNT    = 8,
-      CPU_AVX       = 10,
-      CPU_NEON      = 11
-     };
-// remember to keep this list identical to the one in cvdef.h
+/** @brief Available CPU features.
 
-/*!
-  Returns SSE etc. support status
-
-  The function returns true if certain hardware features are available.
-
-  \note {Note that the function output is not static. Once you called cv::useOptimized(false),
-  most of the hardware acceleration is disabled and thus the function will returns false,
-  until you call cv::useOptimized(true)}
+remember to keep this list identical to the one in cvdef.h
 */
+enum CpuFeatures {
+    CPU_MMX       = 1,
+    CPU_SSE       = 2,
+    CPU_SSE2      = 3,
+    CPU_SSE3      = 4,
+    CPU_SSSE3     = 5,
+    CPU_SSE4_1    = 6,
+    CPU_SSE4_2    = 7,
+    CPU_POPCNT    = 8,
+    CPU_AVX       = 10,
+    CPU_NEON      = 11
+};
+
+/** @brief Returns true if the specified feature is supported by the host hardware.
+
+The function returns true if the host hardware supports the specified feature. When user calls
+setUseOptimized(false), the subsequent calls to checkHardwareSupport() will return false until
+setUseOptimized(true) is called. This way user can dynamically switch on and off the optimized code
+in OpenCV.
+@param feature The feature of interest, one of cv::CpuFeatures
+ */
 CV_EXPORTS_W bool checkHardwareSupport(int feature);
 
-//! returns the number of CPUs (including hyper-threading)
+/** @brief Returns the number of logical CPUs available for the process.
+ */
 CV_EXPORTS_W int getNumberOfCPUs();
 
 
-/*!
-  Aligns pointer by the certain number of bytes
+/** @brief Aligns a pointer to the specified number of bytes.
 
-  This small inline function aligns the pointer by the certian number of bytes by shifting
-  it forward by 0 or a positive offset.
-*/
+The function returns the aligned pointer of the same type as the input pointer:
+\f[\texttt{(\_Tp*)(((size\_t)ptr + n-1) \& -n)}\f]
+@param ptr Aligned pointer.
+@param n Alignment size that must be a power of two.
+ */
 template<typename _Tp> static inline _Tp* alignPtr(_Tp* ptr, int n=(int)sizeof(_Tp))
 {
     return (_Tp*)(((size_t)ptr + n-1) & -n);
 }
 
-/*!
-  Aligns buffer size by the certain number of bytes
+/** @brief Aligns a buffer size to the specified number of bytes.
 
-  This small inline function aligns a buffer size by the certian number of bytes by enlarging it.
-*/
+The function returns the minimum number that is greater or equal to sz and is divisible by n :
+\f[\texttt{(sz + n-1) \& -n}\f]
+@param sz Buffer size to align.
+@param n Alignment size that must be a power of two.
+ */
 static inline size_t alignSize(size_t sz, int n)
 {
     CV_DbgAssert((n & (n - 1)) == 0); // n is a power of 2
     return (sz + n-1) & -n;
 }
 
-/*!
-  Turns on/off available optimization
+/** @brief Enables or disables the optimized code.
 
-  The function turns on or off the optimized code in OpenCV. Some optimization can not be enabled
-  or disabled, but, for example, most of SSE code in OpenCV can be temporarily turned on or off this way.
+The function can be used to dynamically turn on and off optimized code (code that uses SSE2, AVX,
+and other instructions on the platforms that support it). It sets a global flag that is further
+checked by OpenCV functions. Since the flag is not checked in the inner OpenCV loops, it is only
+safe to call the function on the very top level in your application where you can be sure that no
+other OpenCV function is currently executed.
 
-  \note{Since optimization may imply using special data structures, it may be unsafe
-  to call this function anywhere in the code. Instead, call it somewhere at the top level.}
-*/
+By default, the optimized code is enabled unless you disable it in CMake. The current status can be
+retrieved using useOptimized.
+@param onoff The boolean flag specifying whether the optimized code should be used (onoff=true)
+or not (onoff=false).
+ */
 CV_EXPORTS_W void setUseOptimized(bool onoff);
 
-/*!
-  Returns the current optimization status
+/** @brief Returns the status of optimized code usage.
 
-  The function returns the current optimization status, which is controlled by cv::setUseOptimized().
-*/
+The function returns true if the optimized code is enabled. Otherwise, it returns false.
+ */
 CV_EXPORTS_W bool useOptimized();
 
 static inline size_t getElemSize(int type) { return CV_ELEM_SIZE(type); }
 
 /////////////////////////////// Parallel Primitives //////////////////////////////////
 
-// a base body class
+/** @brief Base class for parallel data processors
+*/
 class CV_EXPORTS ParallelLoopBody
 {
 public:
@@ -296,6 +367,8 @@ public:
     virtual void operator() (const Range& range) const = 0;
 };
 
+/** @brief Parallel data processor
+*/
 CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes=-1.);
 
 /////////////////////////////// forEach method of cv::Mat ////////////////////////////
@@ -451,8 +524,58 @@ private:
     virtual void deleteDataInstance(void* data) const { delete (T*)data; }
 };
 
-// The CommandLineParser class is designed for command line arguments parsing
+/** @brief designed for command line arguments parsing
 
+The sample below demonstrates how to use CommandLineParser:
+@code
+    CommandLineParser parser(argc, argv, keys);
+    parser.about("Application name v1.0.0");
+
+    if (parser.has("help"))
+    {
+        parser.printMessage();
+        return 0;
+    }
+
+    int N = parser.get<int>("N");
+    double fps = parser.get<double>("fps");
+    String path = parser.get<String>("path");
+
+    use_time_stamp = parser.has("timestamp");
+
+    String img1 = parser.get<String>(0);
+    String img2 = parser.get<String>(1);
+
+    int repeat = parser.get<int>(2);
+
+    if (!parser.check())
+    {
+        parser.printErrors();
+        return 0;
+    }
+@endcode
+Syntax:
+@code
+    const String keys =
+        "{help h usage ? |      | print this message   }"
+        "{@image1        |      | image1 for compare   }"
+        "{@image2        |      | image2 for compare   }"
+        "{@repeat        |1     | number               }"
+        "{path           |.     | path to file         }"
+        "{fps            | -1.0 | fps for output video }"
+        "{N count        |100   | count of objects     }"
+        "{ts timestamp   |      | use time stamp       }"
+        ;
+@endcode
+Use:
+@code
+    # ./app -N=200 1.png 2.jpg 19 -ts
+
+    # ./app -fps=aaa
+    ERRORS:
+    Exception: can not convert: [aaa] to [double]
+@endcode
+ */
 class CV_EXPORTS CommandLineParser
 {
     public:
@@ -496,6 +619,10 @@ protected:
     struct Impl;
     Impl* impl;
 };
+
+//! @} core_utils
+
+//! @cond IGNORED
 
 /////////////////////////////// AutoBuffer implementation ////////////////////////////////////////
 
@@ -614,6 +741,8 @@ template<> inline std::string CommandLineParser::get<std::string>(const String& 
     return get<String>(name, space_delete);
 }
 #endif // OPENCV_NOSTL
+
+//! @endcond
 
 } //namespace cv
 

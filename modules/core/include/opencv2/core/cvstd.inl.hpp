@@ -49,6 +49,8 @@
 #  include <ostream>
 #endif
 
+//! @cond IGNORED
+
 namespace cv
 {
 #ifndef OPENCV_NOSTL
@@ -259,5 +261,7 @@ std::ostream& operator << (std::ostream& out, const Rect_<_Tp>& rect)
 
 #endif // OPENCV_NOSTL
 } // cv
+
+//! @endcond
 
 #endif // __OPENCV_CORE_CVSTDINL_HPP__

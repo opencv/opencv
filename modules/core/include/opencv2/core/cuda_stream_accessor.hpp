@@ -59,6 +59,10 @@ namespace cv
 {
     namespace cuda
     {
+
+//! @addtogroup cuda_struct
+//! @{
+
         class Stream;
         class Event;
 
@@ -71,6 +75,9 @@ namespace cv
         {
             CV_EXPORTS static cudaEvent_t getEvent(const Event& event);
         };
+
+//! @}
+
     }
 }
 
