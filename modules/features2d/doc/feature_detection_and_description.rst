@@ -32,7 +32,7 @@ Detects corners using the FAST algorithm by [Rosten06]_.
 .. [Rosten06] E. Rosten. Machine Learning for High-speed Corner Detection, 2006.
 
 AGAST
-----
+-----
 Detects corners using the AGAST algorithm
 
 .. ocv:function:: void AGAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSuppression=true )

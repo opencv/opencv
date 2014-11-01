@@ -73,7 +73,7 @@ Wrapping class for feature detection using the
     };
 
 AgastFeatureDetector
--------------------
+--------------------
 .. ocv:class:: AgastFeatureDetector : public Feature2D
 
 Wrapping class for feature detection using the
