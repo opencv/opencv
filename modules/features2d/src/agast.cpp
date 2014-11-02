@@ -68,7 +68,7 @@ static void AGAST_5_8(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
 
     keypoints.resize(0);
 
-    int pixel_5_8_[8];
+    int pixel_5_8_[16];
     makeAgastOffsets(pixel_5_8_, (int)img.step, AgastFeatureDetector::AGAST_5_8);
 
     register short offset0 = pixel_5_8_[0];
@@ -828,7 +828,7 @@ static void AGAST_7_12d(InputArray _img, std::vector<KeyPoint>& keypoints, int t
 
     keypoints.resize(0);
 
-    int pixel_7_12d_[12];
+    int pixel_7_12d_[16];
     makeAgastOffsets(pixel_7_12d_, (int)img.step, AgastFeatureDetector::AGAST_7_12d);
 
     register short offset0 = pixel_7_12d_[0];
@@ -3272,7 +3272,7 @@ static void AGAST_7_12s(InputArray _img, std::vector<KeyPoint>& keypoints, int t
 
     keypoints.resize(0);
 
-    int pixel_7_12s_[12];
+    int pixel_7_12s_[16];
     makeAgastOffsets(pixel_7_12s_, (int)img.step, AgastFeatureDetector::AGAST_7_12s);
 
     register short offset0 = pixel_7_12s_[0];
