@@ -225,7 +225,7 @@ enum {
     CV_DO_PRAGMA(warning(push)) \
     CV_DO_PRAGMA(warning(disable: 4996))
 #define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(warning(pop))
-#elif defined __GNUC__
+#elif defined (__clang__) || ((__GNUC__)  && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 5))))
 #define CV_SUPPRESS_DEPRECATED_START \
     CV_DO_PRAGMA(GCC diagnostic push) \
     CV_DO_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
