@@ -92,22 +92,22 @@ int agast_cornerScore<AgastFeatureDetector::OAST_9_16>(const uchar* ptr, const i
     int bmax = 255;
     int b_test = (bmax + bmin) / 2;
 
-    register int16_t offset0 = pixel[0];
-    register int16_t offset1 = pixel[1];
-    register int16_t offset2 = pixel[2];
-    register int16_t offset3 = pixel[3];
-    register int16_t offset4 = pixel[4];
-    register int16_t offset5 = pixel[5];
-    register int16_t offset6 = pixel[6];
-    register int16_t offset7 = pixel[7];
-    register int16_t offset8 = pixel[8];
-    register int16_t offset9 = pixel[9];
-    register int16_t offset10 = pixel[10];
-    register int16_t offset11 = pixel[11];
-    register int16_t offset12 = pixel[12];
-    register int16_t offset13 = pixel[13];
-    register int16_t offset14 = pixel[14];
-    register int16_t offset15 = pixel[15];
+    register short offset0 = pixel[0];
+    register short offset1 = pixel[1];
+    register short offset2 = pixel[2];
+    register short offset3 = pixel[3];
+    register short offset4 = pixel[4];
+    register short offset5 = pixel[5];
+    register short offset6 = pixel[6];
+    register short offset7 = pixel[7];
+    register short offset8 = pixel[8];
+    register short offset9 = pixel[9];
+    register short offset10 = pixel[10];
+    register short offset11 = pixel[11];
+    register short offset12 = pixel[12];
+    register short offset13 = pixel[13];
+    register short offset14 = pixel[14];
+    register short offset15 = pixel[15];
 
     while(true)
     {
@@ -2167,18 +2167,18 @@ int agast_cornerScore<AgastFeatureDetector::AGAST_7_12d>(const uchar* ptr, const
     int bmax = 255;
     int b_test = (bmax + bmin)/2;
 
-    register int16_t offset0 = pixel[0];
-    register int16_t offset1 = pixel[1];
-    register int16_t offset2 = pixel[2];
-    register int16_t offset3 = pixel[3];
-    register int16_t offset4 = pixel[4];
-    register int16_t offset5 = pixel[5];
-    register int16_t offset6 = pixel[6];
-    register int16_t offset7 = pixel[7];
-    register int16_t offset8 = pixel[8];
-    register int16_t offset9 = pixel[9];
-    register int16_t offset10 = pixel[10];
-    register int16_t offset11 = pixel[11];
+    register short offset0 = pixel[0];
+    register short offset1 = pixel[1];
+    register short offset2 = pixel[2];
+    register short offset3 = pixel[3];
+    register short offset4 = pixel[4];
+    register short offset5 = pixel[5];
+    register short offset6 = pixel[6];
+    register short offset7 = pixel[7];
+    register short offset8 = pixel[8];
+    register short offset9 = pixel[9];
+    register short offset10 = pixel[10];
+    register short offset11 = pixel[11];
 
     while(true)
     {
@@ -3379,18 +3379,18 @@ int agast_cornerScore<AgastFeatureDetector::AGAST_7_12s>(const uchar* ptr, const
     int bmax = 255;
     int b_test = (bmax + bmin)/2;
 
-    register int16_t offset0 = pixel[0];
-    register int16_t offset1 = pixel[1];
-    register int16_t offset2 = pixel[2];
-    register int16_t offset3 = pixel[3];
-    register int16_t offset4 = pixel[4];
-    register int16_t offset5 = pixel[5];
-    register int16_t offset6 = pixel[6];
-    register int16_t offset7 = pixel[7];
-    register int16_t offset8 = pixel[8];
-    register int16_t offset9 = pixel[9];
-    register int16_t offset10 = pixel[10];
-    register int16_t offset11 = pixel[11];
+    register short offset0 = pixel[0];
+    register short offset1 = pixel[1];
+    register short offset2 = pixel[2];
+    register short offset3 = pixel[3];
+    register short offset4 = pixel[4];
+    register short offset5 = pixel[5];
+    register short offset6 = pixel[6];
+    register short offset7 = pixel[7];
+    register short offset8 = pixel[8];
+    register short offset9 = pixel[9];
+    register short offset10 = pixel[10];
+    register short offset11 = pixel[11];
 
     while(true)
     {
@@ -9013,14 +9013,14 @@ int agast_cornerScore<AgastFeatureDetector::AGAST_5_8>(const uchar* ptr, const i
     int bmax = 255;
     int b_test = (bmax + bmin)/2;
 
-    register int16_t offset0 = pixel[0];
-    register int16_t offset1 = pixel[1];
-    register int16_t offset2 = pixel[2];
-    register int16_t offset3 = pixel[3];
-    register int16_t offset4 = pixel[4];
-    register int16_t offset5 = pixel[5];
-    register int16_t offset6 = pixel[6];
-    register int16_t offset7 = pixel[7];
+    register short offset0 = pixel[0];
+    register short offset1 = pixel[1];
+    register short offset2 = pixel[2];
+    register short offset3 = pixel[3];
+    register short offset4 = pixel[4];
+    register short offset5 = pixel[5];
+    register short offset6 = pixel[6];
+    register short offset7 = pixel[7];
 
     while(true)
     {

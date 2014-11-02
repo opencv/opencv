@@ -71,14 +71,14 @@ static void AGAST_5_8(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
     int pixel_5_8_[8];
     makeAgastOffsets(pixel_5_8_, (int)img.step, AgastFeatureDetector::AGAST_5_8);
 
-    register int16_t offset0 = pixel_5_8_[0];
-    register int16_t offset1 = pixel_5_8_[1];
-    register int16_t offset2 = pixel_5_8_[2];
-    register int16_t offset3 = pixel_5_8_[3];
-    register int16_t offset4 = pixel_5_8_[4];
-    register int16_t offset5 = pixel_5_8_[5];
-    register int16_t offset6 = pixel_5_8_[6];
-    register int16_t offset7 = pixel_5_8_[7];
+    register short offset0 = pixel_5_8_[0];
+    register short offset1 = pixel_5_8_[1];
+    register short offset2 = pixel_5_8_[2];
+    register short offset3 = pixel_5_8_[3];
+    register short offset4 = pixel_5_8_[4];
+    register short offset5 = pixel_5_8_[5];
+    register short offset6 = pixel_5_8_[6];
+    register short offset7 = pixel_5_8_[7];
 
     width = xsize;
 
@@ -831,18 +831,18 @@ static void AGAST_7_12d(InputArray _img, std::vector<KeyPoint>& keypoints, int t
     int pixel_7_12d_[12];
     makeAgastOffsets(pixel_7_12d_, (int)img.step, AgastFeatureDetector::AGAST_7_12d);
 
-    register int16_t offset0 = pixel_7_12d_[0];
-    register int16_t offset1 = pixel_7_12d_[1];
-    register int16_t offset2 = pixel_7_12d_[2];
-    register int16_t offset3 = pixel_7_12d_[3];
-    register int16_t offset4 = pixel_7_12d_[4];
-    register int16_t offset5 = pixel_7_12d_[5];
-    register int16_t offset6 = pixel_7_12d_[6];
-    register int16_t offset7 = pixel_7_12d_[7];
-    register int16_t offset8 = pixel_7_12d_[8];
-    register int16_t offset9 = pixel_7_12d_[9];
-    register int16_t offset10 = pixel_7_12d_[10];
-    register int16_t offset11 = pixel_7_12d_[11];
+    register short offset0 = pixel_7_12d_[0];
+    register short offset1 = pixel_7_12d_[1];
+    register short offset2 = pixel_7_12d_[2];
+    register short offset3 = pixel_7_12d_[3];
+    register short offset4 = pixel_7_12d_[4];
+    register short offset5 = pixel_7_12d_[5];
+    register short offset6 = pixel_7_12d_[6];
+    register short offset7 = pixel_7_12d_[7];
+    register short offset8 = pixel_7_12d_[8];
+    register short offset9 = pixel_7_12d_[9];
+    register short offset10 = pixel_7_12d_[10];
+    register short offset11 = pixel_7_12d_[11];
 
     width = xsize;
 
@@ -3275,18 +3275,18 @@ static void AGAST_7_12s(InputArray _img, std::vector<KeyPoint>& keypoints, int t
     int pixel_7_12s_[12];
     makeAgastOffsets(pixel_7_12s_, (int)img.step, AgastFeatureDetector::AGAST_7_12s);
 
-    register int16_t offset0 = pixel_7_12s_[0];
-    register int16_t offset1 = pixel_7_12s_[1];
-    register int16_t offset2 = pixel_7_12s_[2];
-    register int16_t offset3 = pixel_7_12s_[3];
-    register int16_t offset4 = pixel_7_12s_[4];
-    register int16_t offset5 = pixel_7_12s_[5];
-    register int16_t offset6 = pixel_7_12s_[6];
-    register int16_t offset7 = pixel_7_12s_[7];
-    register int16_t offset8 = pixel_7_12s_[8];
-    register int16_t offset9 = pixel_7_12s_[9];
-    register int16_t offset10 = pixel_7_12s_[10];
-    register int16_t offset11 = pixel_7_12s_[11];
+    register short offset0 = pixel_7_12s_[0];
+    register short offset1 = pixel_7_12s_[1];
+    register short offset2 = pixel_7_12s_[2];
+    register short offset3 = pixel_7_12s_[3];
+    register short offset4 = pixel_7_12s_[4];
+    register short offset5 = pixel_7_12s_[5];
+    register short offset6 = pixel_7_12s_[6];
+    register short offset7 = pixel_7_12s_[7];
+    register short offset8 = pixel_7_12s_[8];
+    register short offset9 = pixel_7_12s_[9];
+    register short offset10 = pixel_7_12s_[10];
+    register short offset11 = pixel_7_12s_[11];
 
     width = xsize;
 
@@ -5356,22 +5356,22 @@ static void OAST_9_16(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
     int pixel_9_16_[16];
     makeAgastOffsets(pixel_9_16_, (int)img.step, AgastFeatureDetector::OAST_9_16);
 
-    register int16_t offset0 = pixel_9_16_[0];
-    register int16_t offset1 = pixel_9_16_[1];
-    register int16_t offset2 = pixel_9_16_[2];
-    register int16_t offset3 = pixel_9_16_[3];
-    register int16_t offset4 = pixel_9_16_[4];
-    register int16_t offset5 = pixel_9_16_[5];
-    register int16_t offset6 = pixel_9_16_[6];
-    register int16_t offset7 = pixel_9_16_[7];
-    register int16_t offset8 = pixel_9_16_[8];
-    register int16_t offset9 = pixel_9_16_[9];
-    register int16_t offset10 = pixel_9_16_[10];
-    register int16_t offset11 = pixel_9_16_[11];
-    register int16_t offset12 = pixel_9_16_[12];
-    register int16_t offset13 = pixel_9_16_[13];
-    register int16_t offset14 = pixel_9_16_[14];
-    register int16_t offset15 = pixel_9_16_[15];
+    register short offset0 = pixel_9_16_[0];
+    register short offset1 = pixel_9_16_[1];
+    register short offset2 = pixel_9_16_[2];
+    register short offset3 = pixel_9_16_[3];
+    register short offset4 = pixel_9_16_[4];
+    register short offset5 = pixel_9_16_[5];
+    register short offset6 = pixel_9_16_[6];
+    register short offset7 = pixel_9_16_[7];
+    register short offset8 = pixel_9_16_[8];
+    register short offset9 = pixel_9_16_[9];
+    register short offset10 = pixel_9_16_[10];
+    register short offset11 = pixel_9_16_[11];
+    register short offset12 = pixel_9_16_[12];
+    register short offset13 = pixel_9_16_[13];
+    register short offset14 = pixel_9_16_[14];
+    register short offset15 = pixel_9_16_[15];
 
     width = xsize;
 
