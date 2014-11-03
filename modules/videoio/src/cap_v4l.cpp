@@ -294,7 +294,8 @@ enum PALETTE_TYPE {
   PALETTE_SBGGR8,
   PALETTE_SN9C10X,
   PALETTE_MJPEG,
-  PALETTE_SGBRG
+  PALETTE_SGBRG,
+  PALETTE_RGB24
 };
 
 typedef struct CvCaptureCAM_V4L
@@ -587,6 +588,10 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture)
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_SGBRG) == 0)
   {
     capture->palette = PALETTE_SGBRG;
+  }
+  else if (try_palette_v4l2(capture, V4L2_PIX_FMT_RGB24) == 0)
+  {
+    capture->palette = PALETTE_RGB24;
   }
       else
   {
@@ -1916,6 +1921,18 @@ static void sgbrg2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, uns
     }
 }
 
+static void
+rgb24_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
+{
+  const int size = width * height;
+  for(int i = 0; i < size; ++i, src += 3, dst += 3)
+  {
+    *(dst + 0) = *(src + 2);
+    *(dst + 1) = *(src + 1);
+    *(dst + 2) = *(src + 0);
+  }
+}
+
 #define CLAMP(x)        ((x)<0?0:((x)>255)?255:(x))
 
 typedef struct {
@@ -2215,6 +2232,12 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
 
     case PALETTE_SGBRG:
         sgbrg2rgb24(capture->form.fmt.pix.width,
+                capture->form.fmt.pix.height,
+                (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
+                (unsigned char*)capture->frame.imageData);
+        break;
+    case PALETTE_RGB24:
+        rgb24_to_rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
                 (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
                 (unsigned char*)capture->frame.imageData);
