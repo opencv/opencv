@@ -144,19 +144,6 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    struct stat stat_buffer;
-    if (stat(img1_filename, &stat_buffer) != 0)
-    {
-        printf("Command-line parameter error: could not find the first input image file\n");
-        return -1;
-    }
-
-    if (stat(img2_filename, &stat_buffer) != 0)
-    {
-        printf("Command-line parameter error: could not find the second input image file\n");
-        return -1;
-    }
-
     if( (intrinsic_filename != 0) ^ (extrinsic_filename != 0) )
     {
         printf("Command-line parameter error: either both intrinsic and extrinsic parameters must be specified, or none of them (when the stereo pair is already rectified)\n");
@@ -173,7 +160,18 @@ int main(int argc, char** argv)
     Mat img1 = imread(img1_filename, color_mode);
     Mat img2 = imread(img2_filename, color_mode);
 
-    if( scale != 1.f )
+    if (img1.empty())
+    {
+        printf("Command-line parameter error: could not load the first input image file\n");
+        return -1;
+    }
+    if (img2.empty())
+    {
+        printf("Command-line parameter error: could not load the second input image file\n");
+        return -1;
+    }
+
+    if (scale != 1.f)
     {
         Mat temp1, temp2;
         int method = scale < 1 ? INTER_AREA : INTER_CUBIC;
