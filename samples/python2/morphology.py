@@ -26,7 +26,7 @@ if __name__ == '__main__':
     try:
         fn = sys.argv[1]
     except:
-        fn = '../cpp/baboon.jpg'
+        fn = '../data/baboon.jpg'
 
     img = cv2.imread(fn)
 
