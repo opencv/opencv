@@ -185,7 +185,7 @@ CUDA_TEST_P(ORB, Accuracy)
         cv::cuda::GpuMat descriptors;
         orb(loadMat(image), loadMat(mask), keypoints, descriptors);
 
-        cv::Ptr<cv::ORB> orb_gold;
+        cv::Ptr<cv::ORB> orb_gold = cv::ORB::create(nFeatures, scaleFactor, nLevels, edgeThreshold, firstLevel, WTA_K, scoreType, patchSize);
 
         std::vector<cv::KeyPoint> keypoints_gold;
         cv::Mat descriptors_gold;
