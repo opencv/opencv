@@ -1548,9 +1548,28 @@ TEST(Imgproc_GetQuadSubPix, accuracy) { CV_GetQuadSubPixTest test; test.safe_run
 //////////////////////////////////////////////////////////////////////////
 
 template <typename T, typename WT>
+struct IntCast
+{
+    T operator() (WT val) const
+    {
+        return cv::saturate_cast<T>(val >> 2);
+    }
+};
+
+template <typename T, typename WT>
+struct FltCast
+{
+    T operator() (WT val) const
+    {
+        return cv::saturate_cast<T>(val * 0.25);
+    }
+};
+
+template <typename T, typename WT, int one, typename CastOp>
 void resizeArea(const cv::Mat & src, cv::Mat & dst)
 {
     int cn = src.channels();
+    CastOp castOp;
 
     for (int y = 0; y < dst.rows; ++y)
     {
@@ -1565,9 +1584,9 @@ void resizeArea(const cv::Mat & src, cv::Mat & dst)
             for (int c = 0; c < cn; ++c)
             {
                 WT sum = WT(sptr0[x1 + c]) + WT(sptr0[x1 + c + cn]);
-                sum += WT(sptr1[x1 + c]) + WT(sptr1[x1 + c + cn]) + (WT)(2);
+                sum += WT(sptr1[x1 + c]) + WT(sptr1[x1 + c + cn]) + (WT)(one);
 
-                dptr[x + c] = cv::saturate_cast<T>(sum >> 2);
+                dptr[x + c] = castOp(sum);
             }
         }
     }
@@ -1575,32 +1594,38 @@ void resizeArea(const cv::Mat & src, cv::Mat & dst)
 
 TEST(Resize, Area_half)
 {
-    const int size = 10;
-    int types[] = { CV_8UC1, CV_8UC4, CV_16UC1, CV_16UC4 };
+    const int size = 1000;
+    int types[] = { CV_8UC1, CV_8UC4, CV_16UC1, CV_16UC4, CV_16SC1, CV_16SC4, CV_32FC1, CV_32FC4 };
 
     cv::RNG rng(17);
 
     for (int i = 0, _size = sizeof(types) / sizeof(types[0]); i < _size; ++i)
     {
-        int type = types[i], depth = CV_MAT_DEPTH(type);
+        int type = types[i], depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+        const float eps = depth <= CV_32S ? 0 : 7e-5f;
 
         SCOPED_TRACE(depth);
+        SCOPED_TRACE(cn);
 
         cv::Mat src(size, size, type), dst_actual(size >> 1, size >> 1, type),
             dst_reference(size >> 1, size >> 1, type);
 
-        rng.fill(src, cv::RNG::UNIFORM, 0, 1000, true);
+        rng.fill(src, cv::RNG::UNIFORM, -1000, 1000, true);
 
         if (depth == CV_8U)
-            resizeArea<uchar, ushort>(src, dst_reference);
+            resizeArea<uchar, ushort, 2, IntCast<uchar, ushort> >(src, dst_reference);
         else if (depth == CV_16U)
-            resizeArea<ushort, int>(src, dst_reference);
+            resizeArea<ushort, uint, 2, IntCast<ushort, uint> >(src, dst_reference);
+        else if (depth == CV_16S)
+            resizeArea<short, int, 2, IntCast<short, int> >(src, dst_reference);
+        else if (depth == CV_32F)
+            resizeArea<float, float, 0, FltCast<float, float> >(src, dst_reference);
         else
             CV_Assert(0);
 
         cv::resize(src, dst_actual, dst_actual.size(), 0, 0, cv::INTER_AREA);
 
-        ASSERT_EQ(0, cvtest::norm(dst_reference, dst_actual, cv::NORM_INF));
+        ASSERT_GE(eps, cvtest::norm(dst_reference, dst_actual, cv::NORM_INF));
     }
 }
 

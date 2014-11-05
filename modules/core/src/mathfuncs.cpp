@@ -168,6 +168,31 @@ static void FastAtan2_32f(const float *Y, const float *X, float *angle, int len,
             _mm_storeu_ps(angle + i, a);
         }
     }
+#elif CV_NEON
+    float32x4_t eps = vdupq_n_f32((float)DBL_EPSILON);
+    float32x4_t _90 = vdupq_n_f32(90.f), _180 = vdupq_n_f32(180.f), _360 = vdupq_n_f32(360.f);
+    float32x4_t z = vdupq_n_f32(0.0f), scale4 = vdupq_n_f32(scale);
+    float32x4_t p1 = vdupq_n_f32(atan2_p1), p3 = vdupq_n_f32(atan2_p3);
+    float32x4_t p5 = vdupq_n_f32(atan2_p5), p7 = vdupq_n_f32(atan2_p7);
+
+    for( ; i <= len - 4; i += 4 )
+    {
+        float32x4_t x = vld1q_f32(X + i), y = vld1q_f32(Y + i);
+        float32x4_t ax = vabsq_f32(x), ay = vabsq_f32(y);
+        float32x4_t tmin = vminq_f32(ax, ay), tmax = vmaxq_f32(ax, ay);
+        float32x4_t c = vmulq_f32(tmin, cv_vrecpq_f32(vaddq_f32(tmax, eps)));
+        float32x4_t c2 = vmulq_f32(c, c);
+        float32x4_t a = vmulq_f32(c2, p7);
+        a = vmulq_f32(vaddq_f32(a, p5), c2);
+        a = vmulq_f32(vaddq_f32(a, p3), c2);
+        a = vmulq_f32(vaddq_f32(a, p1), c);
+
+        a = vbslq_f32(vcgeq_f32(ax, ay), a, vsubq_f32(_90, a));
+        a = vbslq_f32(vcltq_f32(x, z), vsubq_f32(_180, a), a);
+        a = vbslq_f32(vcltq_f32(y, z), vsubq_f32(_360, a), a);
+
+        vst1q_f32(angle + i, vmulq_f32(a, scale4));
+    }
 #endif
 
     for( ; i < len; i++ )
@@ -268,17 +293,15 @@ static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
         }
     }
 #elif CV_NEON
-    float CV_DECL_ALIGNED(16) m[4];
-
     for( ; i <= len - 4; i += 4 )
     {
         float32x4_t v_x = vld1q_f32(x + i), v_y = vld1q_f32(y + i);
-        vst1q_f32(m, vaddq_f32(vmulq_f32(v_x, v_x), vmulq_f32(v_y, v_y)));
-
-        mag[i] = std::sqrt(m[0]);
-        mag[i+1] = std::sqrt(m[1]);
-        mag[i+2] = std::sqrt(m[2]);
-        mag[i+3] = std::sqrt(m[3]);
+        vst1q_f32(mag + i, cv_vsqrtq_f32(vmlaq_f32(vmulq_f32(v_x, v_x), v_y, v_y)));
+    }
+    for( ; i <= len - 2; i += 2 )
+    {
+        float32x2_t v_x = vld1_f32(x + i), v_y = vld1_f32(y + i);
+        vst1_f32(mag + i, cv_vsqrt_f32(vmla_f32(vmul_f32(v_x, v_x), v_y, v_y)));
     }
 #endif
 
@@ -370,6 +393,12 @@ static void InvSqrt_32f(const float* src, float* dst, int len)
                 _mm_storeu_ps(dst + i, t0); _mm_storeu_ps(dst + i + 4, t1);
             }
     }
+#elif CV_NEON
+    for ( ; i <= len - 8; i += 8)
+    {
+        vst1q_f32(dst + i, cv_vrsqrtq_f32(vld1q_f32(src + i)));
+        vst1q_f32(dst + i + 4, cv_vrsqrtq_f32(vld1q_f32(src + i + 4)));
+    }
 #endif
 
     for( ; i < len; i++ )
@@ -427,6 +456,12 @@ static void Sqrt_32f(const float* src, float* dst, int len)
                 t0 = _mm_sqrt_ps(t0); t1 = _mm_sqrt_ps(t1);
                 _mm_storeu_ps(dst + i, t0); _mm_storeu_ps(dst + i + 4, t1);
             }
+    }
+#elif CV_NEON
+    for ( ; i <= len - 8; i += 8)
+    {
+        vst1q_f32(dst + i, cv_vsqrtq_f32(vld1q_f32(src + i)));
+        vst1q_f32(dst + i + 4, cv_vsqrtq_f32(vld1q_f32(src + i + 4)));
     }
 #endif
 
@@ -869,11 +904,24 @@ void polarToCart( InputArray src1, InputArray src2,
 
                 SinCos_32f( angle, y, x, len, angleInDegrees );
                 if( mag )
-                    for( k = 0; k < len; k++ )
+                {
+                    k = 0;
+
+                    #if CV_NEON
+                    for( ; k <= len - 4; k += 4 )
+                    {
+                        float32x4_t v_m = vld1q_f32(mag + k);
+                        vst1q_f32(x + k, vmulq_f32(vld1q_f32(x + k), v_m));
+                        vst1q_f32(y + k, vmulq_f32(vld1q_f32(y + k), v_m));
+                    }
+                    #endif
+
+                    for( ; k < len; k++ )
                     {
                         float m = mag[k];
                         x[k] *= m; y[k] *= m;
                     }
+                }
             }
             else
             {
@@ -2121,12 +2169,230 @@ void log( InputArray _src, OutputArray _dst )
 *                                    P O W E R                                           *
 \****************************************************************************************/
 
+template <typename T, typename WT>
+struct iPow_SIMD
+{
+    int operator() ( const T *, T *, int, int)
+    {
+        return 0;
+    }
+};
+
+#if CV_NEON
+
+template <>
+struct iPow_SIMD<uchar, int>
+{
+    int operator() ( const uchar * src, uchar * dst, int len, int power)
+    {
+        int i = 0;
+        uint32x4_t v_1 = vdupq_n_u32(1u);
+
+        for ( ; i <= len - 8; i += 8)
+        {
+            uint32x4_t v_a1 = v_1, v_a2 = v_1;
+            uint16x8_t v_src = vmovl_u8(vld1_u8(src + i));
+            uint32x4_t v_b1 = vmovl_u16(vget_low_u16(v_src)), v_b2 = vmovl_u16(vget_high_u16(v_src));
+            int p = power;
+
+            while( p > 1 )
+            {
+                if (p & 1)
+                {
+                    v_a1 = vmulq_u32(v_a1, v_b1);
+                    v_a2 = vmulq_u32(v_a2, v_b2);
+                }
+                v_b1 = vmulq_u32(v_b1, v_b1);
+                v_b2 = vmulq_u32(v_b2, v_b2);
+                p >>= 1;
+            }
+
+            v_a1 = vmulq_u32(v_a1, v_b1);
+            v_a2 = vmulq_u32(v_a2, v_b2);
+            vst1_u8(dst + i, vqmovn_u16(vcombine_u16(vqmovn_u32(v_a1), vqmovn_u32(v_a2))));
+        }
+
+        return i;
+    }
+};
+
+template <>
+struct iPow_SIMD<schar, int>
+{
+    int operator() ( const schar * src, schar * dst, int len, int power)
+    {
+        int i = 0;
+        int32x4_t v_1 = vdupq_n_s32(1);
+
+        for ( ; i <= len - 8; i += 8)
+        {
+            int32x4_t v_a1 = v_1, v_a2 = v_1;
+            int16x8_t v_src = vmovl_s8(vld1_s8(src + i));
+            int32x4_t v_b1 = vmovl_s16(vget_low_s16(v_src)), v_b2 = vmovl_s16(vget_high_s16(v_src));
+            int p = power;
+
+            while( p > 1 )
+            {
+                if (p & 1)
+                {
+                    v_a1 = vmulq_s32(v_a1, v_b1);
+                    v_a2 = vmulq_s32(v_a2, v_b2);
+                }
+                v_b1 = vmulq_s32(v_b1, v_b1);
+                v_b2 = vmulq_s32(v_b2, v_b2);
+                p >>= 1;
+            }
+
+            v_a1 = vmulq_s32(v_a1, v_b1);
+            v_a2 = vmulq_s32(v_a2, v_b2);
+            vst1_s8(dst + i, vqmovn_s16(vcombine_s16(vqmovn_s32(v_a1), vqmovn_s32(v_a2))));
+        }
+
+        return i;
+    }
+};
+
+template <>
+struct iPow_SIMD<ushort, int>
+{
+    int operator() ( const ushort * src, ushort * dst, int len, int power)
+    {
+        int i = 0;
+        uint32x4_t v_1 = vdupq_n_u32(1u);
+
+        for ( ; i <= len - 8; i += 8)
+        {
+            uint32x4_t v_a1 = v_1, v_a2 = v_1;
+            uint16x8_t v_src = vld1q_u16(src + i);
+            uint32x4_t v_b1 = vmovl_u16(vget_low_u16(v_src)), v_b2 = vmovl_u16(vget_high_u16(v_src));
+            int p = power;
+
+            while( p > 1 )
+            {
+                if (p & 1)
+                {
+                    v_a1 = vmulq_u32(v_a1, v_b1);
+                    v_a2 = vmulq_u32(v_a2, v_b2);
+                }
+                v_b1 = vmulq_u32(v_b1, v_b1);
+                v_b2 = vmulq_u32(v_b2, v_b2);
+                p >>= 1;
+            }
+
+            v_a1 = vmulq_u32(v_a1, v_b1);
+            v_a2 = vmulq_u32(v_a2, v_b2);
+            vst1q_u16(dst + i, vcombine_u16(vqmovn_u32(v_a1), vqmovn_u32(v_a2)));
+        }
+
+        return i;
+    }
+};
+
+template <>
+struct iPow_SIMD<short, int>
+{
+    int operator() ( const short * src, short * dst, int len, int power)
+    {
+        int i = 0;
+        int32x4_t v_1 = vdupq_n_s32(1);
+
+        for ( ; i <= len - 8; i += 8)
+        {
+            int32x4_t v_a1 = v_1, v_a2 = v_1;
+            int16x8_t v_src = vld1q_s16(src + i);
+            int32x4_t v_b1 = vmovl_s16(vget_low_s16(v_src)), v_b2 = vmovl_s16(vget_high_s16(v_src));
+            int p = power;
+
+            while( p > 1 )
+            {
+                if (p & 1)
+                {
+                    v_a1 = vmulq_s32(v_a1, v_b1);
+                    v_a2 = vmulq_s32(v_a2, v_b2);
+                }
+                v_b1 = vmulq_s32(v_b1, v_b1);
+                v_b2 = vmulq_s32(v_b2, v_b2);
+                p >>= 1;
+            }
+
+            v_a1 = vmulq_s32(v_a1, v_b1);
+            v_a2 = vmulq_s32(v_a2, v_b2);
+            vst1q_s16(dst + i, vcombine_s16(vqmovn_s32(v_a1), vqmovn_s32(v_a2)));
+        }
+
+        return i;
+    }
+};
+
+
+template <>
+struct iPow_SIMD<int, int>
+{
+    int operator() ( const int * src, int * dst, int len, int power)
+    {
+        int i = 0;
+        int32x4_t v_1 = vdupq_n_s32(1);
+
+        for ( ; i <= len - 4; i += 4)
+        {
+            int32x4_t v_b = vld1q_s32(src + i), v_a = v_1;
+            int p = power;
+
+            while( p > 1 )
+            {
+                if (p & 1)
+                    v_a = vmulq_s32(v_a, v_b);
+                v_b = vmulq_s32(v_b, v_b);
+                p >>= 1;
+            }
+
+            v_a = vmulq_s32(v_a, v_b);
+            vst1q_s32(dst + i, v_a);
+        }
+
+        return i;
+    }
+};
+
+template <>
+struct iPow_SIMD<float, float>
+{
+    int operator() ( const float * src, float * dst, int len, int power)
+    {
+        int i = 0;
+        float32x4_t v_1 = vdupq_n_f32(1.0f);
+
+        for ( ; i <= len - 4; i += 4)
+        {
+            float32x4_t v_b = vld1q_f32(src + i), v_a = v_1;
+            int p = power;
+
+            while( p > 1 )
+            {
+                if (p & 1)
+                    v_a = vmulq_f32(v_a, v_b);
+                v_b = vmulq_f32(v_b, v_b);
+                p >>= 1;
+            }
+
+            v_a = vmulq_f32(v_a, v_b);
+            vst1q_f32(dst + i, v_a);
+        }
+
+        return i;
+    }
+};
+
+#endif
+
 template<typename T, typename WT>
 static void
 iPow_( const T* src, T* dst, int len, int power )
 {
-    int i;
-    for( i = 0; i < len; i++ )
+    iPow_SIMD<T, WT> vop;
+    int i = vop(src, dst, len, power);
+
+    for( ; i < len; i++ )
     {
         WT a = 1, b = src[i];
         int p = power;
