@@ -1189,20 +1189,19 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
                 ocl_threshold(_src, _dst, thresh, maxval, type), thresh)
 
     Mat src = _src.getMat();
-    bool use_otsu = (type & THRESH_OTSU) != 0;
-    bool use_triangle = (type & THRESH_TRIANGLE) != 0;
+    int automatic_thresh = (type & ~CV_THRESH_MASK);
     type &= THRESH_MASK;
 
-    if( use_otsu )
+    CV_Assert( automatic_thresh != (CV_THRESH_OTSU | CV_THRESH_TRIANGLE) );
+    if( automatic_thresh == CV_THRESH_OTSU )
     {
         CV_Assert( src.type() == CV_8UC1 );
-        thresh = getThreshVal_Otsu_8u(src);
+        thresh = getThreshVal_Otsu_8u( src );
     }
-
-    if( use_triangle )
+    else if( automatic_thresh == CV_THRESH_TRIANGLE )
     {
         CV_Assert( src.type() == CV_8UC1 );
-        thresh = getThreshVal_Triangle_8u(src);
+        thresh = getThreshVal_Triangle_8u( src );
     }
 
     _dst.create( src.size(), src.type() );
