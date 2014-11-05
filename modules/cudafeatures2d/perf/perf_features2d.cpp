@@ -128,7 +128,7 @@ PERF_TEST_P(Image_NFeatures, ORB,
     }
     else
     {
-        cv::Ptr<cv::ORB> orb;
+        cv::Ptr<cv::ORB> orb = cv::ORB::create(nFeatures);
 
         std::vector<cv::KeyPoint> cpu_keypoints;
         cv::Mat cpu_descriptors;
