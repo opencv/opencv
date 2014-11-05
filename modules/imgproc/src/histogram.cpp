@@ -2316,7 +2316,16 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
         }
         else if( method == CV_COMP_INTERSECT )
         {
-            for( j = 0; j < len; j++ )
+            j = 0;
+            #if CV_NEON
+            float32x4_t v_result = vdupq_n_f32(0.0f);
+            for( ; j <= len - 4; j += 4 )
+                v_result = vaddq_f32(v_result, vminq_f32(vld1q_f32(h1 + j), vld1q_f32(h2 + j)));
+            float CV_DECL_ALIGNED(16) ar[4];
+            vst1q_f32(ar, v_result);
+            result += ar[0] + ar[1] + ar[2] + ar[3];
+            #endif
+            for( ; j < len; j++ )
                 result += std::min(h1[j], h2[j]);
         }
         else if( method == CV_COMP_BHATTACHARYYA )

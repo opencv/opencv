@@ -71,7 +71,7 @@ int main(int argc, char** argv)
         "{ h help      | false          | print help message }"
         "{ i input     |                | specify input image}"
         "{ c camera    | -1             | enable camera capturing }"
-        "{ v video     | 768x576.avi    | use video as input }"
+        "{ v video     | ../data/768x576.avi | use video as input }"
         "{ g gray      | false          | convert image to gray one or not}"
         "{ s scale     | 1.0            | resize the image before detect}"
         "{ o output    |                | specify output path when input is images}";

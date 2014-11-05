@@ -44,6 +44,8 @@
 
 #include <algorithm>
 
+//! @cond IGNORED
+
 namespace cv {
 
 template<typename Y>
@@ -334,5 +336,7 @@ Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5&
 }
 
 } // namespace cv
+
+//! @endcond
 
 #endif // __OPENCV_CORE_PTR_INL_HPP__

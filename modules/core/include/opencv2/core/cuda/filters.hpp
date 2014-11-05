@@ -50,6 +50,8 @@
 
 namespace cv { namespace cuda { namespace device
 {
+//! @addtogroup cuda
+//! @{
     template <typename Ptr2D> struct PointFilter
     {
         typedef typename Ptr2D::elem_type elem_type;
@@ -273,6 +275,7 @@ namespace cv { namespace cuda { namespace device
         float scale_x, scale_y;
         int width, haight;
     };
+//! @}
 }}} // namespace cv { namespace cuda { namespace cudev
 
 #endif // __OPENCV_CUDA_FILTERS_HPP__

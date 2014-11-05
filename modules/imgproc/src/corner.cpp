@@ -69,7 +69,7 @@ static void calcMinEigenVal( const Mat& _cov, Mat& _dst )
         if( simd )
         {
             __m128 half = _mm_set1_ps(0.5f);
-            for( ; j <= size.width - 5; j += 4 )
+            for( ; j <= size.width - 4; j += 4 )
             {
                 __m128 t0 = _mm_loadu_ps(cov + j*3); // a0 b0 c0 x
                 __m128 t1 = _mm_loadu_ps(cov + j*3 + 3); // a1 b1 c1 x
@@ -89,6 +89,19 @@ static void calcMinEigenVal( const Mat& _cov, Mat& _dst )
                 a = _mm_sub_ps(_mm_add_ps(a, c), _mm_sqrt_ps(t));
                 _mm_storeu_ps(dst + j, a);
             }
+        }
+    #elif CV_NEON
+        float32x4_t v_half = vdupq_n_f32(0.5f);
+        for( ; j <= size.width - 4; j += 4 )
+        {
+            float32x4x3_t v_src = vld3q_f32(cov + j * 3);
+            float32x4_t v_a = vmulq_f32(v_src.val[0], v_half);
+            float32x4_t v_b = v_src.val[1];
+            float32x4_t v_c = vmulq_f32(v_src.val[2], v_half);
+
+            float32x4_t v_t = vsubq_f32(v_a, v_c);
+            v_t = vmlaq_f32(vmulq_f32(v_t, v_t), v_b, v_b);
+            vst1q_f32(dst + j, vsubq_f32(vaddq_f32(v_a, v_c), cv_vsqrtq_f32(v_t)));
         }
     #endif
         for( ; j < size.width; j++ )
@@ -290,8 +303,24 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
         float* cov_data = cov.ptr<float>(i);
         const float* dxdata = Dx.ptr<float>(i);
         const float* dydata = Dy.ptr<float>(i);
+        j = 0;
 
-        for( j = 0; j < size.width; j++ )
+        #if CV_NEON
+        for( ; j <= size.width - 4; j += 4 )
+        {
+            float32x4_t v_dx = vld1q_f32(dxdata + j);
+            float32x4_t v_dy = vld1q_f32(dydata + j);
+
+            float32x4x3_t v_dst;
+            v_dst.val[0] = vmulq_f32(v_dx, v_dx);
+            v_dst.val[1] = vmulq_f32(v_dx, v_dy);
+            v_dst.val[2] = vmulq_f32(v_dy, v_dy);
+
+            vst3q_f32(cov_data + j * 3, v_dst);
+        }
+        #endif
+
+        for( ; j < size.width; j++ )
         {
             float dx = dxdata[j];
             float dy = dydata[j];

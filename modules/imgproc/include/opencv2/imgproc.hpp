@@ -45,11 +45,22 @@
 
 #include "opencv2/core.hpp"
 
-/*! \namespace cv
- Namespace where all the C++ OpenCV functionality resides
- */
+/**
+  @defgroup imgproc Image processing
+  @{
+  @defgroup imgproc_filter Image filtering
+  @defgroup imgproc_transform Image transformations
+  @defgroup imgproc_drawing Drawing functions
+  @defgroup imgproc_shape Structural Analysis and Shape Descriptors
+  @}
+*/
+
 namespace cv
 {
+
+/** @addtogroup imgproc
+@{
+*/
 
 //! type of morphological operation
 enum { MORPH_ERODE    = 0,
@@ -109,7 +120,8 @@ enum { THRESH_BINARY     = 0, // value = value > threshold ? max_value : 0
        THRESH_TOZERO     = 3, // value = value > threshold ? value : 0
        THRESH_TOZERO_INV = 4, // value = value > threshold ? 0 : value
        THRESH_MASK       = 7,
-       THRESH_OTSU       = 8  // use Otsu algorithm to choose the optimal threshold value
+       THRESH_OTSU       = 8, // use Otsu algorithm to choose the optimal threshold value
+       THRESH_TRIANGLE   = 16  // use Triangle algorithm to choose the optimal threshold value
      };
 
 //! adaptive threshold algorithm
@@ -1314,6 +1326,8 @@ CV_EXPORTS_W void putText( InputOutputArray img, const String& text, Point org,
 CV_EXPORTS_W Size getTextSize(const String& text, int fontFace,
                             double fontScale, int thickness,
                             CV_OUT int* baseLine);
+
+/** @} */
 
 } // cv
 

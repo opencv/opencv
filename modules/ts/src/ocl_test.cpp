@@ -128,6 +128,9 @@ void dumpOpenCLDevice()
         }
 
         const Device& device = Device::getDefault();
+        if (!device.available())
+            CV_ErrorNoReturn(CV_OpenCLInitError, "OpenCL device is not available");
+
         DUMP_MESSAGE_STDOUT("Current OpenCL device: ");
 
 #if 0

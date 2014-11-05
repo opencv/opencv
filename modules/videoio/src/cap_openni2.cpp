@@ -646,7 +646,7 @@ bool CvCapture_OpenNI2::setImageGeneratorProperty(int propIdx, double propValue)
         {
         case CV_CAP_PROP_OPENNI_OUTPUT_MODE :
         {
-            openni::VideoMode mode;
+            openni::VideoMode mode = color.getVideoMode();
 
             switch( cvRound(propValue) )
             {

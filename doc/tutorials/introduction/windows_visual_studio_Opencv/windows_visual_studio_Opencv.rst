@@ -160,7 +160,7 @@ You can start a Visual Studio build from two places. Either inside from the *IDE
 
 .. |voila| unicode:: voil U+00E1
 
-This is important to remember when you code inside the code open and save commands. You're resources will be saved ( and queried for at opening!!!) relatively to your working directory. This is unless you give a full, explicit path as parameter for the I/O functions. In the code above we open :download:`this OpenCV logo<../../../../samples/cpp/tutorial_code/images/opencv-logo.png>`. Before starting up the application make sure you place the image file in your current working directory. Modify the image file name inside the code to try it out on other images too. Run it and |voila|:
+This is important to remember when you code inside the code open and save commands. You're resources will be saved ( and queried for at opening!!!) relatively to your working directory. This is unless you give a full, explicit path as parameter for the I/O functions. In the code above we open :download:`this OpenCV logo<../../../../samples/data/opencv-logo.png>`. Before starting up the application make sure you place the image file in your current working directory. Modify the image file name inside the code to try it out on other images too. Run it and |voila|:
 
 .. image:: images/SuccessVisualStudioWindows.jpg
    :alt: You should have this.

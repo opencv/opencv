@@ -49,6 +49,9 @@
 
 namespace cv { namespace cuda { namespace device
 {
+//! @addtogroup cuda
+//! @{
+
     //////////////////////////////////////////////////////////////
     // BrdConstant
 
@@ -709,6 +712,7 @@ namespace cv { namespace cuda { namespace device
         int width;
         D val;
     };
+//! @}
 }}} // namespace cv { namespace cuda { namespace cudev
 
 #endif // __OPENCV_CUDA_BORDER_INTERPOLATE_HPP__

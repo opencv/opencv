@@ -130,6 +130,12 @@ TEST_P(UMatBasicTests, swap)
 
 TEST_P(UMatBasicTests, base)
 {
+    const int align_mask = 3;
+    roi.x &= ~align_mask;
+    roi.y &= ~align_mask;
+    roi.width = (roi.width + align_mask) & ~align_mask;
+    roi &= Rect(0, 0, ua.cols, ua.rows);
+
     if(useRoi)
     {
         ua = UMat(ua,roi);

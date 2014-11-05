@@ -47,6 +47,8 @@
 
 namespace cv { namespace cuda { namespace device
 {
+//! @addtogroup cuda
+//! @{
     template<typename _Tp> __device__ __forceinline__ _Tp saturate_cast(uchar v) { return _Tp(v); }
     template<typename _Tp> __device__ __forceinline__ _Tp saturate_cast(schar v) { return _Tp(v); }
     template<typename _Tp> __device__ __forceinline__ _Tp saturate_cast(ushort v) { return _Tp(v); }
@@ -279,6 +281,7 @@ namespace cv { namespace cuda { namespace device
         return saturate_cast<uint>((float)v);
     #endif
     }
+//! @}
 }}}
 
 #endif /* __OPENCV_CUDA_SATURATE_CAST_HPP__ */

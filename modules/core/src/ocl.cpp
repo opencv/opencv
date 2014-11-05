@@ -1453,7 +1453,7 @@ bool useOpenCL()
     {
         try
         {
-            data->useOpenCL = (int)haveOpenCL() && Device::getDefault().ptr() != NULL;
+            data->useOpenCL = (int)haveOpenCL() && Device::getDefault().ptr() && Device::getDefault().available();
         }
         catch (...)
         {
@@ -2130,7 +2130,8 @@ const Device& Device::getDefault()
 {
     const Context& ctx = Context::getDefault();
     int idx = coreTlsData.get()->device;
-    return ctx.device(idx);
+    const Device& device = ctx.device(idx);
+    return device;
 }
 
 ////////////////////////////////////// Context ///////////////////////////////////////////////////
@@ -2210,7 +2211,10 @@ static cl_device_id selectOpenCLDevice()
     std::vector<std::string> deviceTypes;
 
     const char* configuration = getenv("OPENCV_OPENCL_DEVICE");
-    if (configuration && !parseOpenCLDeviceConfiguration(std::string(configuration), platform, deviceTypes, deviceName))
+    if (configuration &&
+            (strcmp(configuration, "disabled") == 0 ||
+             !parseOpenCLDeviceConfiguration(std::string(configuration), platform, deviceTypes, deviceName)
+            ))
         return NULL;
 
     bool isID = false;
@@ -2339,14 +2343,16 @@ static cl_device_id selectOpenCLDevice()
     }
 
 not_found:
-    std::cerr << "ERROR: Required OpenCL device not found, check configuration: " << (configuration == NULL ? "" : configuration) << std::endl
+    if (!configuration)
+        return NULL; // suppress messages on stderr
+
+    std::cerr << "ERROR: Requested OpenCL device not found, check configuration: " << (configuration == NULL ? "" : configuration) << std::endl
             << "    Platform: " << (platform.length() == 0 ? "any" : platform) << std::endl
             << "    Device types: ";
     for (size_t t = 0; t < deviceTypes.size(); t++)
         std::cerr << deviceTypes[t] << " ";
 
     std::cerr << std::endl << "    Device name: " << (deviceName.length() == 0 ? "any" : deviceName) << std::endl;
-    CV_Error(CL_INVALID_DEVICE, "Requested OpenCL device is not found");
     return NULL;
 }
 #endif
