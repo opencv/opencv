@@ -128,12 +128,12 @@ PERF_TEST_P(Image_NFeatures, ORB,
     }
     else
     {
-        cv::ORB orb(nFeatures);
+        cv::Ptr<cv::ORB> orb = cv::ORB::create(nFeatures);
 
         std::vector<cv::KeyPoint> cpu_keypoints;
         cv::Mat cpu_descriptors;
 
-        TEST_CYCLE() orb(img, cv::noArray(), cpu_keypoints, cpu_descriptors);
+        TEST_CYCLE() orb->detectAndCompute(img, cv::noArray(), cpu_keypoints, cpu_descriptors);
 
         SANITY_CHECK_KEYPOINTS(cpu_keypoints);
         SANITY_CHECK(cpu_descriptors);
