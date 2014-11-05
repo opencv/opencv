@@ -50,6 +50,8 @@
 namespace cv
 {
 
+//! @cond IGNORED
+
 //////////////////////// Input/Output Arrays ////////////////////////
 
 inline void _InputArray::init(int _flags, const void* _obj)
@@ -3401,6 +3403,8 @@ inline void UMatData::markDeviceCopyObsolete(bool flag)
 
 inline UMatDataAutoLock::UMatDataAutoLock(UMatData* _u) : u(_u) { u->lock(); }
 inline UMatDataAutoLock::~UMatDataAutoLock() { u->unlock(); }
+
+//! @endcond
 
 } //cv
 

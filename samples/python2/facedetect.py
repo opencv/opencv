@@ -38,7 +38,7 @@ if __name__ == '__main__':
     cascade = cv2.CascadeClassifier(cascade_fn)
     nested = cv2.CascadeClassifier(nested_fn)
 
-    cam = create_capture(video_src, fallback='synth:bg=../cpp/lena.jpg:noise=0.05')
+    cam = create_capture(video_src, fallback='synth:bg=../data/lena.jpg:noise=0.05')
 
     while True:
         ret, img = cam.read()

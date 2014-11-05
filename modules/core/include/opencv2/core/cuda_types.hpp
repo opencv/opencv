@@ -57,6 +57,10 @@ namespace cv
 {
     namespace cuda
     {
+
+//! @addtogroup cuda_struct
+//! @{
+
         // Simple lightweight structures that encapsulates information about an image on device.
         // It is intended to pass to nvcc-compiled code. GpuMat depends on headers that nvcc can't compile
 
@@ -120,6 +124,9 @@ namespace cv
         typedef PtrStep<unsigned char> PtrStepb;
         typedef PtrStep<float> PtrStepf;
         typedef PtrStep<int> PtrStepi;
+
+//! @}
+
     }
 }
 

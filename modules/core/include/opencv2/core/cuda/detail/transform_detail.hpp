@@ -47,6 +47,8 @@
 #include "../vec_traits.hpp"
 #include "../functional.hpp"
 
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     namespace transform_detail
@@ -391,5 +393,7 @@ namespace cv { namespace cuda { namespace device
         };
     } // namespace transform_detail
 }}} // namespace cv { namespace cuda { namespace cudev
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_TRANSFORM_DETAIL_HPP__

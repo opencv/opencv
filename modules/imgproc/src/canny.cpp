@@ -138,10 +138,10 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
         */
         char cvt[40];
         ocl::Kernel with_sobel("stage1_with_sobel", ocl::imgproc::canny_oclsrc,
-                               format("-D WITH_SOBEL -D cn=%d -D TYPE=%s -D convert_intN=%s -D intN=%s -D GRP_SIZEX=%d -D GRP_SIZEY=%d%s",
+                               format("-D WITH_SOBEL -D cn=%d -D TYPE=%s -D convert_floatN=%s -D floatN=%s -D GRP_SIZEX=%d -D GRP_SIZEY=%d%s",
                                       cn, ocl::memopTypeToStr(_src.depth()),
-                                      ocl::convertTypeStr(_src.type(), CV_32SC(cn), cn, cvt),
-                                      ocl::memopTypeToStr(CV_32SC(cn)),
+                                      ocl::convertTypeStr(_src.depth(), CV_32F, cn, cvt),
+                                      ocl::typeToStr(CV_MAKE_TYPE(CV_32F, cn)),
                                       lSizeX, lSizeY,
                                       L2gradient ? " -D L2GRAD" : ""));
         if (with_sobel.empty())
@@ -151,7 +151,7 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
         map.create(size, CV_32S);
         with_sobel.args(ocl::KernelArg::ReadOnly(src),
                         ocl::KernelArg::WriteOnlyNoSize(map),
-                        low, high);
+                        (float) low, (float) high);
 
         size_t globalsize[2] = { size.width, size.height },
                 localsize[2] = { lSizeX, lSizeY };
@@ -453,7 +453,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
         if ((stack_top - stack_bottom) + src.cols > maxsize)
         {
             int sz = (int)(stack_top - stack_bottom);
-            maxsize = maxsize * 3/2;
+            maxsize = std::max(maxsize * 3/2, sz + src.cols);
             stack.resize(maxsize);
             stack_bottom = &stack[0];
             stack_top = stack_bottom + sz;

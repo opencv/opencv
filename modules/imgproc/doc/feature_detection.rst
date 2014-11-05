@@ -268,7 +268,7 @@ The function finds the most prominent corners in the image or in the specified i
 
 The function can be used to initialize a point-based tracker of an object.
 
-.. note:: If the function is called with different values ``A`` and ``B`` of the parameter ``qualityLevel`` , and ``A`` > {B}, the vector of returned corners with ``qualityLevel=A`` will be the prefix of the output vector with ``qualityLevel=B`` .
+.. note:: If the function is called with different values ``A`` and ``B`` of the parameter ``qualityLevel`` , and ``A`` > ``B``, the vector of returned corners with ``qualityLevel=A`` will be the prefix of the output vector with ``qualityLevel=B`` .
 
 .. seealso::
 

@@ -55,24 +55,12 @@
 namespace cv
 {
 
+//! @addtogroup core_basic
+//! @{
+
 ////////////////////////////// Small Matrix ///////////////////////////
 
-/*!
- A short numerical vector.
-
- This template class represents short numerical vectors (of 1, 2, 3, 4 ... elements)
- on which you can perform basic arithmetical operations, access individual elements using [] operator etc.
- The vectors are allocated on stack, as opposite to std::valarray, std::vector, cv::Mat etc.,
- which elements are dynamically allocated in the heap.
-
- The template takes 2 parameters:
- -# _Tp element type
- -# cn the number of elements
-
- In addition to the universal notation like Vec<float, 3>, you can use shorter aliases
- for the most popular specialized variants of Vec, e.g. Vec3f ~ Vec<float, 3>.
- */
-
+//! @cond IGNORED
 struct CV_EXPORTS Matx_AddOp {};
 struct CV_EXPORTS Matx_SubOp {};
 struct CV_EXPORTS Matx_ScaleOp {};
@@ -80,7 +68,21 @@ struct CV_EXPORTS Matx_MulOp {};
 struct CV_EXPORTS Matx_DivOp {};
 struct CV_EXPORTS Matx_MatMulOp {};
 struct CV_EXPORTS Matx_TOp {};
+//! @endcond
 
+/** @brief Template class for small matrices whose type and size are known at compilation time
+
+If you need a more flexible type, use Mat . The elements of the matrix M are accessible using the
+M(i,j) notation. Most of the common matrix operations (see also @ref MatrixExpressions ) are
+available. To do an operation on Matx that is not implemented, you can easily convert the matrix to
+Mat and backwards:
+@code
+    Matx33f m(1, 2, 3,
+              4, 5, 6,
+              7, 8, 9);
+    cout << sum(Mat(m*m.t())) << endl;
+ @endcode
+ */
 template<typename _Tp, int m, int n> class Matx
 {
 public:
@@ -242,8 +244,7 @@ public:
          };
 };
 
-/*!
- Comma-separated Matrix Initializer
+/** @brief  Comma-separated Matrix Initializer
 */
 template<typename _Tp, int m, int n> class MatxCommaInitializer
 {
@@ -256,7 +257,7 @@ public:
     int idx;
 };
 
-/*!
+/*
  Utility methods
 */
 template<typename _Tp, int m> static double determinant(const Matx<_Tp, m, m>& a);
@@ -268,20 +269,33 @@ template<typename _Tp, int m, int n> static double norm(const Matx<_Tp, m, n>& M
 
 /////////////////////// Vec (used as element of multi-channel images /////////////////////
 
-/*!
-  A short numerical vector.
+/** @brief Template class for short numerical vectors, a partial case of Matx
 
-  This template class represents short numerical vectors (of 1, 2, 3, 4 ... elements)
-  on which you can perform basic arithmetical operations, access individual elements using [] operator etc.
-  The vectors are allocated on stack, as opposite to std::valarray, std::vector, cv::Mat etc.,
-  which elements are dynamically allocated in the heap.
+This template class represents short numerical vectors (of 1, 2, 3, 4 ... elements) on which you
+can perform basic arithmetical operations, access individual elements using [] operator etc. The
+vectors are allocated on stack, as opposite to std::valarray, std::vector, cv::Mat etc., which
+elements are dynamically allocated in the heap.
 
-  The template takes 2 parameters:
-  -# _Tp element type
-  -# cn the number of elements
+The template takes 2 parameters:
+@tparam _Tp element type
+@tparam cn the number of elements
 
-  In addition to the universal notation like Vec<float, 3>, you can use shorter aliases
-  for the most popular specialized variants of Vec, e.g. Vec3f ~ Vec<float, 3>.
+In addition to the universal notation like Vec<float, 3>, you can use shorter aliases
+for the most popular specialized variants of Vec, e.g. Vec3f ~ Vec<float, 3>.
+
+It is possible to convert Vec\<T,2\> to/from Point_, Vec\<T,3\> to/from Point3_ , and Vec\<T,4\>
+to CvScalar or Scalar_. Use operator[] to access the elements of Vec.
+
+All the expected vector operations are also implemented:
+-   v1 = v2 + v3
+-   v1 = v2 - v3
+-   v1 = v2 \* scale
+-   v1 = scale \* v2
+-   v1 = -v2
+-   v1 += v2 and other augmenting operations
+-   v1 == v2, v1 != v2
+-   norm(v1) (euclidean norm)
+The Vec class is commonly used to describe pixel types of multi-channel arrays. See Mat for details.
 */
 template<typename _Tp, int cn> class Vec : public Matx<_Tp, cn, 1>
 {
@@ -337,8 +351,8 @@ public:
     template<typename _T2> Vec(const Matx<_Tp, cn, 1>& a, _T2 alpha, Matx_ScaleOp);
 };
 
-/* \typedef
-   Shorter aliases for the most popular specializations of Vec<T,n>
+/** @name Shorter aliases for the most popular specializations of Vec<T,n>
+  @{
 */
 typedef Vec<uchar, 2> Vec2b;
 typedef Vec<uchar, 3> Vec3b;
@@ -367,6 +381,7 @@ typedef Vec<double, 2> Vec2d;
 typedef Vec<double, 3> Vec3d;
 typedef Vec<double, 4> Vec4d;
 typedef Vec<double, 6> Vec6d;
+/** @} */
 
 /*!
   traits
@@ -387,8 +402,7 @@ public:
          };
 };
 
-/*!
- Comma-separated Vec Initializer
+/** @brief  Comma-separated Vec Initializer
 */
 template<typename _Tp, int m> class VecCommaInitializer : public MatxCommaInitializer<_Tp, m, 1>
 {
@@ -398,12 +412,11 @@ public:
     Vec<_Tp, m> operator *() const;
 };
 
-/*!
- Utility methods
-*/
 template<typename _Tp, int cn> static Vec<_Tp, cn> normalize(const Vec<_Tp, cn>& v);
 
+//! @} core_basic
 
+//! @cond IGNORED
 
 ///////////////////////////////////// helper classes /////////////////////////////////////
 namespace internal
@@ -628,7 +641,6 @@ double Matx<_Tp, m, n>::ddot(const Matx<_Tp, m, n>& M) const
     return s;
 }
 
-/** @cond IGNORED */
 template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n> Matx<_Tp,m,n>::diag(const typename Matx<_Tp,m,n>::diag_type& d)
 {
@@ -637,7 +649,6 @@ Matx<_Tp,m,n> Matx<_Tp,m,n>::diag(const typename Matx<_Tp,m,n>::diag_type& d)
         M(i,i) = d(i, 0);
     return M;
 }
-/** @endcond */
 
 template<typename _Tp, int m, int n> template<typename T2>
 inline Matx<_Tp, m, n>::operator Matx<T2, m, n>() const
@@ -1068,9 +1079,12 @@ Vec<_Tp, cn> VecCommaInitializer<_Tp, cn>::operator *() const
     return *this->dst;
 }
 
-
+//! @endcond
 
 ///////////////////////////// Matx out-of-class operators ////////////////////////////////
+
+//! @relates cv::Matx
+//! @{
 
 template<typename _Tp1, typename _Tp2, int m, int n> static inline
 Matx<_Tp1, m, n>& operator += (Matx<_Tp1, m, n>& a, const Matx<_Tp2, m, n>& b)
@@ -1193,9 +1207,12 @@ bool operator != (const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b)
     return !(a == b);
 }
 
-
+//! @}
 
 ////////////////////////////// Vec out-of-class operators ////////////////////////////////
+
+//! @relates cv::Vec
+//! @{
 
 template<typename _Tp1, typename _Tp2, int cn> static inline
 Vec<_Tp1, cn>& operator += (Vec<_Tp1, cn>& a, const Vec<_Tp2, cn>& b)
@@ -1351,6 +1368,8 @@ template<typename _Tp> inline Vec<_Tp, 4>& operator *= (Vec<_Tp, 4>& v1, const V
     v1 = v1 * v2;
     return v1;
 }
+
+//! @}
 
 } // cv
 

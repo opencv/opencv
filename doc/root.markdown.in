@@ -1,0 +1,7 @@
+OpenCV modules {#mainpage}
+==============
+
+- @subpage intro
+- @subpage core
+
+<!-- @CMAKE_DOXYGEN_MODULES_REFERENCE@ -->

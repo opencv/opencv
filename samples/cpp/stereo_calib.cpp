@@ -212,7 +212,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
     cout << "average reprojection err = " <<  err/npoints << endl;
 
     // save intrinsic parameters
-    FileStorage fs("intrinsics.yml", FileStorage::WRITE);
+    FileStorage fs("../data/intrinsics.yml", FileStorage::WRITE);
     if( fs.isOpened() )
     {
         fs << "M1" << cameraMatrix[0] << "D1" << distCoeffs[0] <<
@@ -382,7 +382,7 @@ int main(int argc, char** argv)
 
     if( imagelistfn == "" )
     {
-        imagelistfn = "stereo_calib.xml";
+        imagelistfn = "../data/stereo_calib.xml";
         boardSize = Size(9, 6);
     }
     else if( boardSize.width <= 0 || boardSize.height <= 0 )

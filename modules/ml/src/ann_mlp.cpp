@@ -618,7 +618,7 @@ public:
                     scale[j*2] = mj;
                     scale[j*2+1] = Mj;
                 }
-                else
+                else if( !no_scale )
                 {
                     t = t*inv_scale[j*2] + inv_scale[2*j+1];
                     if( t < m1 || t > M1 )

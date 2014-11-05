@@ -49,6 +49,8 @@
 
 namespace cv { namespace cuda { namespace device
 {
+//! @addtogroup cuda
+//! @{
     template <typename T, typename D, typename UnOp, typename Mask>
     static inline void transform(PtrStepSz<T> src, PtrStepSz<D> dst, UnOp op, const Mask& mask, cudaStream_t stream)
     {
@@ -62,6 +64,7 @@ namespace cv { namespace cuda { namespace device
         typedef TransformFunctorTraits<BinOp> ft;
         transform_detail::TransformDispatcher<VecTraits<T1>::cn == 1 && VecTraits<T2>::cn == 1 && VecTraits<D>::cn == 1 && ft::smart_shift != 1>::call(src1, src2, dst, op, mask, stream);
     }
+//! @}
 }}}
 
 #endif // __OPENCV_CUDA_TRANSFORM_HPP__

@@ -47,6 +47,8 @@
 
 namespace cv { namespace cuda { namespace device
 {
+//! @addtogroup cuda
+//! @{
     // All OPENCV_CUDA_IMPLEMENT_*_TRAITS(ColorSpace1_to_ColorSpace2, ...) macros implements
     // template <typename T> class ColorSpace1_to_ColorSpace2_traits
     // {
@@ -296,6 +298,7 @@ namespace cv { namespace cuda { namespace device
     OPENCV_CUDA_IMPLEMENT_Luv2RGB_TRAITS(luv4_to_lbgra, 4, 4, false, 0)
 
     #undef OPENCV_CUDA_IMPLEMENT_Luv2RGB_TRAITS
+//! @}
 }}} // namespace cv { namespace cuda { namespace cudev
 
 #endif // __OPENCV_CUDA_BORDER_INTERPOLATE_HPP__
