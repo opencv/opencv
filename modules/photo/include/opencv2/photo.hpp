@@ -315,7 +315,7 @@ CV_EXPORTS_W void illuminationChange(InputArray src, InputArray mask, OutputArra
         float alpha = 0.2f, float beta = 0.4f);
 
 CV_EXPORTS_W void textureFlattening(InputArray src, InputArray mask, OutputArray dst,
-        double low_threshold = 30, double high_threshold = 45,
+        float low_threshold = 30, float high_threshold = 45,
         int kernel_size = 3);
 
 CV_EXPORTS_W void edgePreservingFilter(InputArray src, OutputArray dst, int flags = 1,

@@ -47,6 +47,7 @@
 using namespace cv;
 using namespace std;
 
+static const double numerical_precision = 10.;
 
 TEST(Photo_Decolor, regression)
 {
@@ -61,7 +62,11 @@ TEST(Photo_Decolor, regression)
         Mat grayscale, color_boost;
         decolor(original, grayscale, color_boost);
 
-        imwrite(folder + "grayscale.png",grayscale);
-        imwrite(folder + "color_boost.png",color_boost);
+        Mat reference_grayscale = imread(folder + "grayscale_reference.png", 0 /* == grayscale image*/);
+        double error_grayscale = cvtest::norm(reference_grayscale, grayscale, NORM_L1);
+        EXPECT_LE(error_grayscale, numerical_precision);
 
+        Mat reference_boost = imread(folder + "boost_reference.png");
+        double error_boost = cvtest::norm(reference_boost, color_boost, NORM_L1);
+        EXPECT_LE(error_boost, numerical_precision);
 }
