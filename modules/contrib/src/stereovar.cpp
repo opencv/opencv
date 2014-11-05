@@ -327,7 +327,7 @@ void StereoVar::FMG(Mat &I1, Mat &I2, Mat &I2x, Mat &u, int level)
 
 void StereoVar::autoParams()
 {
-    int maxD = MAX(labs(maxDisp), labs(minDisp));
+    int maxD = (int)MAX(labs(maxDisp), labs(minDisp));
 
     if (!maxD) pyrScale = 0.85;
     else if (maxD < 8) pyrScale = 0.5;
@@ -351,7 +351,7 @@ void StereoVar::operator ()( const Mat& left, const Mat& right, Mat& disp )
 {
     CV_Assert(left.size() == right.size() && left.type() == right.type());
     CvSize imgSize = left.size();
-    int MaxD = MAX(labs(minDisp), labs(maxDisp));
+    int MaxD = (int)MAX(labs(minDisp), labs(maxDisp));
     int SignD = 1; if (MIN(minDisp, maxDisp) < 0) SignD = -1;
     if (minDisp >= maxDisp) {MaxD = 256; SignD = 1;}
 

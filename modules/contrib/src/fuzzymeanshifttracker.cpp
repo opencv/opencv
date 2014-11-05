@@ -499,8 +499,8 @@ void CvFuzzyMeanShiftTracker::SearchWindow::extractInfo(IplImage *maskImage, Ipl
 
     if (m00 > 0)
     {
-        xGc = (m10 / m00);
-        yGc = (m01 / m00);
+        xGc = (int)(m10 / m00);
+        yGc = (int)(m01 / m00);
 
         double a, b, c, e1, e2, e3;
         a = ((double)m20/(double)m00)-(xGc * xGc);
