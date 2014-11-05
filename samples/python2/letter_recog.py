@@ -153,7 +153,7 @@ if __name__ == '__main__':
     args, dummy = getopt.getopt(sys.argv[1:], '', ['model=', 'data=', 'load=', 'save='])
     args = dict(args)
     args.setdefault('--model', 'rtrees')
-    args.setdefault('--data', '../cpp/letter-recognition.data')
+    args.setdefault('--data', '../data/letter-recognition.data')
 
     print 'loading data %s ...' % args['--data']
     samples, responses = load_base(args['--data'])
