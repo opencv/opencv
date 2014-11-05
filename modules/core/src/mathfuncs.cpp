@@ -46,7 +46,6 @@
 namespace cv
 {
 
-static const int MAX_BLOCK_SIZE = 1024;
 typedef void (*MathFunc)(const void* src, void* dst, int len);
 
 static const float atan2_p1 = 0.9997878412794807f*(float)(180/CV_PI);

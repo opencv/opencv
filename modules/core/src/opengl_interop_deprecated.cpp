@@ -264,18 +264,7 @@ void cv::render(const string&, const Ptr<GlFont>&, Scalar, Point2d)
 ////////////////////////////////////////////////////////////////////////
 // GlCamera
 
-cv::GlCamera::GlCamera() :
-    eye_(0.0, 0.0, -5.0), center_(0.0, 0.0, 0.0), up_(0.0, 1.0, 0.0),
-    pos_(0.0, 0.0, -5.0), yaw_(0.0), pitch_(0.0), roll_(0.0),
-    useLookAtParams_(false),
-
-    scale_(1.0, 1.0, 1.0),
-
-    projectionMatrix_(),
-    fov_(45.0), aspect_(0.0),
-    left_(0.0), right_(1.0), bottom_(1.0), top_(0.0),
-    zNear_(-1.0), zFar_(1.0),
-    perspectiveProjection_(false)
+cv::GlCamera::GlCamera()
 {
     CV_Error(CV_StsNotImplemented, "This function in deprecated, do not use it");
 }

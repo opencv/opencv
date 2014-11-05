@@ -1977,7 +1977,7 @@ cvLoadHaarClassifierCascade( const char* directory, CvSize orig_window_size )
         if( !f )
             CV_Error( CV_StsError, "" );
         fseek( f, 0, SEEK_END );
-        size = ftell( f );
+        size = (int)ftell( f );
         fseek( f, 0, SEEK_SET );
         size_t elements_read = fread( ptr, 1, size, f );
         CV_Assert(elements_read == (size_t)(size));

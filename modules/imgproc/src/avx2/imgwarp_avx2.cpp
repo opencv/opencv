@@ -43,10 +43,10 @@
 #include "../precomp.hpp"
 #include "imgwarp_avx2.hpp"
 
+#if CV_AVX2
 const int INTER_RESIZE_COEF_BITS=11;
 const int INTER_RESIZE_COEF_SCALE=1 << INTER_RESIZE_COEF_BITS;
 
-#if CV_AVX2
 int VResizeLinearVec_32s8u_avx2(const uchar** _src, uchar* dst, const uchar* _beta, int width )
 {
     const int** src = (const int**)_src;
