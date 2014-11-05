@@ -79,7 +79,7 @@ PERF_TEST_P(ImagePair, StereoBM,
     }
     else
     {
-        cv::Ptr<cv::StereoBM> bm = cv::cuda::createStereoBM(ndisp);
+        cv::Ptr<cv::StereoBM> bm = cv::StereoBM::create(ndisp);
 
         cv::Mat dst;
 
