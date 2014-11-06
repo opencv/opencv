@@ -712,11 +712,11 @@ types of thresholding supported by the function. They are determined by ``type``
 
               \texttt{dst} (x,y) =  \fork{0}{if $\texttt{src}(x,y) > \texttt{thresh}$}{\texttt{src}(x,y)}{otherwise}
 
-Also, the special value ``THRESH_OTSU`` may be combined with
-one of the above values. In this case, the function determines the optimal threshold
-value using the Otsu's algorithm and uses it instead of the specified ``thresh`` .
+Also, the special values ``THRESH_OTSU`` or ``THRESH_TRIANGLE`` may be combined with
+one of the above values. In these cases, the function determines the optimal threshold
+value using the Otsu's or Triangle algorithm and uses it instead of the specified ``thresh`` .
 The function returns the computed threshold value.
-Currently, the Otsu's method is implemented only for 8-bit images.
+Currently, the Otsu's and Triangle methods are implemented only for 8-bit images.
 
 
 .. image:: pics/threshold.png
