@@ -61,7 +61,7 @@ int main(int argc, char * argv[])
      mask = Scalar(255);
      if(!tracks.empty())
      {
-       for(int i = 0; i < tracks.size(); i++)
+       for(int i = 0; i < (int)tracks.size(); i++)
        {
          circle(mask, tracks[i].back(), 5, Scalar(0), -1);
        }
@@ -69,7 +69,7 @@ int main(int argc, char * argv[])
      p.clear();
      goodFeaturesToTrack(gray, p, maxCorners, qualityLevel, minDistance, mask, blockSize);
 
-     for(int i = 0; i < p.size(); i++)
+     for(int i = 0; i < (int)p.size(); i++)
      {
        tmp.clear();
        tmp.push_back(p[i]);
@@ -78,7 +78,7 @@ int main(int argc, char * argv[])
      if(tracks.size() > 0)
      {
        p0.clear();
-       for(int i = 0; i<tracks.size(); i++)
+       for(int i = 0; i<(int)tracks.size(); i++)
        {
          p0.push_back(tracks[i].back());
        }
@@ -86,14 +86,14 @@ int main(int argc, char * argv[])
        calcOpticalFlowPyrLK(prevGray, gray, p0, p1, status, err, winSize, maxLevel, criteria, 0, 0.001);
        calcOpticalFlowPyrLK(gray, prevGray, p1, p0r, status, err, winSize, maxLevel, criteria, 0, 0.001);
        good.clear();
-       for(int i = 0; i < p1.size(); i++)
+       for(int i = 0; i <(int) p1.size(); i++)
        {
           float dx = abs(p0[i].x - p0r[i].x);
           float dy = abs(p0[i].y - p0r[i].y);
           good.push_back(std::max(dx,dy) < 1);
        }
        new_tracks.clear();
-       for( int i = 0; i < tracks.size(); i++)
+       for( int i = 0; i <(int) tracks.size(); i++)
        {
           if(!good[i])
           {
@@ -101,7 +101,7 @@ int main(int argc, char * argv[])
           }
           tracks[i].push_back(p1[i]);
 
-          if(tracks[i].size() > track_len)
+          if((int)tracks[i].size() > track_len)
           {
              // remove first element
              tracks[i].erase(tracks[i].begin());
@@ -112,7 +112,7 @@ int main(int argc, char * argv[])
 
        std::swap(tracks, new_tracks);
        new_tracks.clear();
-       for (int i = 0; i < tracks.size(); i ++)
+       for (int i = 0; i < (int)tracks.size(); i ++)
        {
           vector <Point2i> dst;
           dst.clear();
@@ -123,7 +123,9 @@ int main(int argc, char * argv[])
      gray.copyTo(prevGray);
 
      imshow("IMG",vis);
-     waitKey(1);
+     int key = waitKey(1);
+	 if(key == 27)
+		 break;
 
 }
   return 0;
