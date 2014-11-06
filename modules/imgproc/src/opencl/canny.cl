@@ -49,9 +49,9 @@
 #ifdef WITH_SOBEL
 
 #if cn == 1
-#define loadpix(addr) convert_intN(*(__global const TYPE *)(addr))
+#define loadpix(addr) convert_floatN(*(__global const TYPE *)(addr))
 #else
-#define loadpix(addr) convert_intN(vload3(0, (__global const TYPE *)(addr)))
+#define loadpix(addr) convert_floatN(vload3(0, (__global const TYPE *)(addr)))
 #endif
 #define storepix(value, addr) *(__global int *)(addr) = (int)(value)
 
@@ -77,23 +77,21 @@ __constant int next[4][2] = {
     { 1, 1 }
 };
 
-inline int3 sobel(int idx, __local const intN *smem)
+inline float3 sobel(int idx, __local const floatN *smem)
 {
     // result: x, y, mag
-    int3 res;
+    float3 res;
 
-    intN dx = smem[idx + 2] - smem[idx]
-        + 2 * (smem[idx + GRP_SIZEX + 6] - smem[idx + GRP_SIZEX + 4])
-        + smem[idx + 2 * GRP_SIZEX + 10] - smem[idx + 2 * GRP_SIZEX + 8];
+    floatN dx = fma(2, smem[idx + GRP_SIZEX + 6] - smem[idx + GRP_SIZEX + 4],
+        smem[idx + 2] - smem[idx] + smem[idx + 2 * GRP_SIZEX + 10] - smem[idx + 2 * GRP_SIZEX + 8]);
 
-    intN dy = smem[idx] - smem[idx + 2 * GRP_SIZEX + 8]
-        + 2 * (smem[idx + 1] - smem[idx + 2 * GRP_SIZEX + 9])
-        + smem[idx + 2] - smem[idx + 2 * GRP_SIZEX + 10];
+    floatN dy = fma(2, smem[idx + 1] - smem[idx + 2 * GRP_SIZEX + 9],
+        smem[idx + 2] - smem[idx + 2 * GRP_SIZEX + 10] + smem[idx] - smem[idx + 2 * GRP_SIZEX + 8]);
 
 #ifdef L2GRAD
-    intN magN = dx * dx + dy * dy;
+    floatN magN = fma(dx, dx, dy * dy);
 #else
-    intN magN = convert_intN(abs(dx) + abs(dy));
+    floatN magN = fabs(dx) + fabs(dy);
 #endif
 #if cn == 1
     res.z = magN;
@@ -120,9 +118,9 @@ inline int3 sobel(int idx, __local const intN *smem)
 
 __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src_offset, int rows, int cols,
                                 __global uchar *map, int map_step, int map_offset,
-                                int low_thr, int high_thr)
+                                float low_thr, float high_thr)
 {
-    __local intN smem[(GRP_SIZEX + 4) * (GRP_SIZEY + 4)];
+    __local floatN smem[(GRP_SIZEX + 4) * (GRP_SIZEY + 4)];
 
     int lidx = get_local_id(0);
     int lidy = get_local_id(1);
@@ -143,7 +141,7 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
     //// Sobel, Magnitude
     //
 
-    __local int mag[(GRP_SIZEX + 2) * (GRP_SIZEY + 2)];
+    __local float mag[(GRP_SIZEX + 2) * (GRP_SIZEY + 2)];
 
     lidx++;
     lidy++;
@@ -164,12 +162,12 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
     int idx = lidx + lidy * (GRP_SIZEX + 4);
     i = lidx + lidy * (GRP_SIZEX + 2);
 
-    int3 res = sobel(idx, smem);
+    float3 res = sobel(idx, smem);
     mag[i] = res.z;
-    int x = res.x;
-    int y = res.y;
-
     barrier(CLK_LOCAL_MEM_FENCE);
+
+    int x = (int) res.x;
+    int y = (int) res.y;
 
     //// Threshold + Non maxima suppression
     //
@@ -218,7 +216,7 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
     if (gidx >= cols || gidy >= rows)
         return;
 
-    int mag0 = mag[i];
+    float mag0 = mag[i];
 
     int value = 1;
     if (mag0 > low_thr)
@@ -235,8 +233,8 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
 
         int dir3 = (a * b) & (((x ^ y) & 0x80000000) >> 31); // if a = 1, b = 1, dy ^ dx < 0
         int dir = a * b + 2 * dir3;
-        int prev_mag = mag[(lidy + prev[dir][0]) * (GRP_SIZEX + 2) + lidx + prev[dir][1]];
-        int next_mag = mag[(lidy + next[dir][0]) * (GRP_SIZEX + 2) + lidx + next[dir][1]] + (dir & 1);
+        float prev_mag = mag[(lidy + prev[dir][0]) * (GRP_SIZEX + 2) + lidx + prev[dir][1]];
+        float next_mag = mag[(lidy + next[dir][0]) * (GRP_SIZEX + 2) + lidx + next[dir][1]] + (dir & 1);
 
         if (mag0 > prev_mag && mag0 >= next_mag)
         {
@@ -400,10 +398,10 @@ __kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offse
         l_counter = 0;
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    #pragma unroll
-    for (int y = y0; y < min(y0 + PIX_PER_WI, rows); ++y)
+    if (x < cols)
     {
-        if (x < cols)
+        #pragma unroll
+        for (int y = y0; y < min(y0 + PIX_PER_WI, rows); ++y)
         {
             int type = loadpix(map + mad24(y, map_step, x * (int)sizeof(int)));
             if (type == 2)
