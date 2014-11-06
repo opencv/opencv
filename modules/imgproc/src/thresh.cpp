@@ -986,6 +986,110 @@ getThreshVal_Otsu_8u( const Mat& _src )
     return max_val;
 }
 
+static double
+getThreshVal_Triangle_8u( const Mat& _src )
+{
+    Size size = _src.size();
+    int step = (int) _src.step;
+    if( _src.isContinuous() )
+    {
+        size.width *= size.height;
+        size.height = 1;
+        step = size.width;
+    }
+
+    const int N = 256;
+    int i, j, h[N] = {0};
+    for( i = 0; i < size.height; i++ )
+    {
+        const uchar* src = _src.ptr() + step*i;
+        j = 0;
+        #if CV_ENABLE_UNROLLED
+        for( ; j <= size.width - 4; j += 4 )
+        {
+            int v0 = src[j], v1 = src[j+1];
+            h[v0]++; h[v1]++;
+            v0 = src[j+2]; v1 = src[j+3];
+            h[v0]++; h[v1]++;
+        }
+        #endif
+        for( ; j < size.width; j++ )
+            h[src[j]]++;
+    }
+
+    int left_bound = 0, right_bound = 0, max_ind = 0, max = 0;
+    int temp;
+    bool isflipped = false;
+
+    for( i = 0; i < N; i++ )
+    {
+        if( h[i] > 0 )
+        {
+            left_bound = i;
+            break;
+        }
+    }
+    if( left_bound > 0 )
+        left_bound--;
+
+    for( i = N-1; i > 0; i-- )
+    {
+        if( h[i] > 0 )
+        {
+            right_bound = i;
+            break;
+        }
+    }
+    if( right_bound < N-1 )
+        right_bound++;
+
+    for( i = 0; i < N; i++ )
+    {
+        if( h[i] > max)
+        {
+            max = h[i];
+            max_ind = i;
+        }
+    }
+
+    if( max_ind-left_bound < right_bound-max_ind)
+    {
+        isflipped = true;
+        i = 0, j = N-1;
+        while( i < j )
+        {
+            temp = h[i]; h[i] = h[j]; h[j] = temp;
+            i++; j--;
+        }
+        left_bound = N-1-right_bound;
+        max_ind = N-1-max_ind;
+    }
+
+    double thresh = left_bound;
+    double a, b, dist = 0, tempdist;
+
+    /*
+     * We do not need to compute precise distance here. Distance is maximized, so some constants can
+     * be omitted. This speeds up a computation a bit.
+     */
+    a = max; b = left_bound-max_ind;
+    for( i = left_bound+1; i <= max_ind; i++ )
+    {
+        tempdist = a*i + b*h[i];
+        if( tempdist > dist)
+        {
+            dist = tempdist;
+            thresh = i;
+        }
+    }
+    thresh--;
+
+    if( isflipped )
+        thresh = N-1-thresh;
+
+    return thresh;
+}
+
 class ThresholdRunner : public ParallelLoopBody
 {
 public:
@@ -1085,13 +1189,19 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
                 ocl_threshold(_src, _dst, thresh, maxval, type), thresh)
 
     Mat src = _src.getMat();
-    bool use_otsu = (type & THRESH_OTSU) != 0;
+    int automatic_thresh = (type & ~CV_THRESH_MASK);
     type &= THRESH_MASK;
 
-    if( use_otsu )
+    CV_Assert( automatic_thresh != (CV_THRESH_OTSU | CV_THRESH_TRIANGLE) );
+    if( automatic_thresh == CV_THRESH_OTSU )
     {
         CV_Assert( src.type() == CV_8UC1 );
-        thresh = getThreshVal_Otsu_8u(src);
+        thresh = getThreshVal_Otsu_8u( src );
+    }
+    else if( automatic_thresh == CV_THRESH_TRIANGLE )
+    {
+        CV_Assert( src.type() == CV_8UC1 );
+        thresh = getThreshVal_Triangle_8u( src );
     }
 
     _dst.create( src.size(), src.type() );
