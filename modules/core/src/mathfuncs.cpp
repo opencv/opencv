@@ -2478,8 +2478,8 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
     if (depth == CV_64F && !doubleSupport)
         return false;
 
-    bool issqrt = std::abs(power - 0.5) < DBL_EPSILON, nonnegative = power >= 0;
-    const char * const op = issqrt ? "OP_SQRT" : is_ipower ? nonnegative ? "OP_POWN" : "OP_ROOTN" : nonnegative ? "OP_POWR" : "OP_POW";
+    bool issqrt = std::abs(power - 0.5) < DBL_EPSILON;
+    const char * const op = issqrt ? "OP_SQRT" : is_ipower ? "OP_POWN" : "OP_POW";
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
                   format("-D dstT=%s -D depth=%d -D rowsPerWI=%d -D %s -D UNARY_OP%s",
