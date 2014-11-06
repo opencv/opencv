@@ -8,21 +8,21 @@
 function(_icv_downloader)
   # Define actual ICV versions
   if(APPLE)
-    set(OPENCV_ICV_PACKAGE_NAME "ippicv_macosx_20140429.tgz")
-    set(OPENCV_ICV_PACKAGE_HASH "f2195a60829899983acd4a45794e1717")
+    set(OPENCV_ICV_PACKAGE_NAME "ippicv_macosx_20141027.tgz")
+    set(OPENCV_ICV_PACKAGE_HASH "9662fe0694a67e59491a0dcc82fa26e0")
     set(OPENCV_ICV_PLATFORM "macosx")
     set(OPENCV_ICV_PACKAGE_SUBDIR "/ippicv_osx")
   elseif(UNIX)
     if(ANDROID AND (NOT ANDROID_ABI STREQUAL x86))
       return()
     endif()
-    set(OPENCV_ICV_PACKAGE_NAME "ippicv_linux_20140513.tgz")
-    set(OPENCV_ICV_PACKAGE_HASH "d80cb24f3a565113a9d6dc56344142f6")
+    set(OPENCV_ICV_PACKAGE_NAME "ippicv_linux_20141027.tgz")
+    set(OPENCV_ICV_PACKAGE_HASH "8b449a536a2157bcad08a2b9f266828b")
     set(OPENCV_ICV_PLATFORM "linux")
     set(OPENCV_ICV_PACKAGE_SUBDIR "/ippicv_lnx")
   elseif(WIN32 AND NOT ARM)
-    set(OPENCV_ICV_PACKAGE_NAME "ippicv_windows_20140429.zip")
-    set(OPENCV_ICV_PACKAGE_HASH "b5028a92224ec1fbc554010c52eb3ec8")
+    set(OPENCV_ICV_PACKAGE_NAME "ippicv_windows_20141027.zip")
+    set(OPENCV_ICV_PACKAGE_HASH "b59f865d1ba16e8c84124e19d78eec57")
     set(OPENCV_ICV_PLATFORM "windows")
     set(OPENCV_ICV_PACKAGE_SUBDIR "/ippicv_win")
   else()
@@ -45,7 +45,7 @@ function(_icv_downloader)
     endif()
   endif()
   unset(OPENCV_ICV_PACKAGE_DOWNLOADED CACHE)
-  
+
   set(OPENCV_ICV_PACKAGE_ARCHIVE "${CMAKE_CURRENT_LIST_DIR}/downloads/${OPENCV_ICV_PLATFORM}-${OPENCV_ICV_PACKAGE_HASH}/${OPENCV_ICV_PACKAGE_NAME}")
   get_filename_component(OPENCV_ICV_PACKAGE_ARCHIVE_DIR "${OPENCV_ICV_PACKAGE_ARCHIVE}" PATH)
   if(EXISTS "${OPENCV_ICV_PACKAGE_ARCHIVE}")
@@ -56,7 +56,7 @@ function(_icv_downloader)
       file(REMOVE_RECURSE "${OPENCV_ICV_PACKAGE_ARCHIVE_DIR}")
     endif()
   endif()
-  
+
   if(NOT EXISTS "${OPENCV_ICV_PACKAGE_ARCHIVE}")
     if(NOT DEFINED OPENCV_ICV_URL)
       if(DEFINED ENV{OPENCV_ICV_URL})
@@ -65,7 +65,7 @@ function(_icv_downloader)
         set(OPENCV_ICV_URL "http://sourceforge.net/projects/opencvlibrary/files/3rdparty/ippicv")
       endif()
     endif()
-  
+
     file(MAKE_DIRECTORY ${OPENCV_ICV_PACKAGE_ARCHIVE_DIR})
     message(STATUS "ICV: Downloading ${OPENCV_ICV_PACKAGE_NAME}...")
     file(DOWNLOAD "${OPENCV_ICV_URL}/${OPENCV_ICV_PACKAGE_NAME}" "${OPENCV_ICV_PACKAGE_ARCHIVE}"
@@ -82,12 +82,12 @@ function(_icv_downloader)
       endif()
     endif()
   endif()
-  
+
   ocv_assert(EXISTS "${OPENCV_ICV_PACKAGE_ARCHIVE}")
   ocv_assert(NOT EXISTS "${OPENCV_ICV_UNPACK_PATH}")
   file(MAKE_DIRECTORY ${OPENCV_ICV_UNPACK_PATH})
   ocv_assert(EXISTS "${OPENCV_ICV_UNPACK_PATH}")
-  
+
   message(STATUS "ICV: Unpacking ${OPENCV_ICV_PACKAGE_NAME} to ${OPENCV_ICV_UNPACK_PATH}...")
   execute_process(COMMAND ${CMAKE_COMMAND} -E tar xz "${OPENCV_ICV_PACKAGE_ARCHIVE}"
                   WORKING_DIRECTORY "${OPENCV_ICV_UNPACK_PATH}"
@@ -100,7 +100,7 @@ function(_icv_downloader)
   ocv_assert(EXISTS "${OPENCV_ICV_PATH}")
 
   set(OPENCV_ICV_PACKAGE_DOWNLOADED "${OPENCV_ICV_PACKAGE_HASH}" CACHE INTERNAL "ICV package hash")
-  
+
   message(STATUS "ICV: Package successfully downloaded")
   set(OPENCV_ICV_PATH "${OPENCV_ICV_PATH}" PARENT_SCOPE)
 endfunction()
