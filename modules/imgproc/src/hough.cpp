@@ -303,7 +303,7 @@ HoughLinesSDiv( const Mat& img,
                      ti1 < halftn; ti1++, phi += theta_it, phi1 += scale_factor )
                 {
                     rv = r0 * std::cos( phi );
-                    i = cvFloor( rv ) * tn;
+                    i = (int)rv * tn;
                     i += cvFloor( phi1 );
                     assert( i >= 0 );
                     assert( i < rn * tn );
