@@ -126,3 +126,5 @@ int main(int argc, char * argv[])
      waitKey(1);
 
 }
+  return 0;
+}
