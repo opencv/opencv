@@ -1223,15 +1223,17 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
             else if (stype == CV_8UC4)
                 IPP_FILTER_BOX_BORDER(Ipp8u, ipp8u, 8u_C4R);
 
-            else if (stype == CV_16UC1)
-                IPP_FILTER_BOX_BORDER(Ipp16u, ipp16u, 16u_C1R);
+            // Oct 2014: performance with BORDER_CONSTANT
+            //else if (stype == CV_16UC1)
+            //    IPP_FILTER_BOX_BORDER(Ipp16u, ipp16u, 16u_C1R);
             else if (stype == CV_16UC3)
                 IPP_FILTER_BOX_BORDER(Ipp16u, ipp16u, 16u_C3R);
             else if (stype == CV_16UC4)
                 IPP_FILTER_BOX_BORDER(Ipp16u, ipp16u, 16u_C4R);
 
-            else if (stype == CV_16SC1)
-                IPP_FILTER_BOX_BORDER(Ipp16s, ipp16s, 16s_C1R);
+            // Oct 2014: performance with BORDER_CONSTANT
+            //else if (stype == CV_16SC1)
+            //    IPP_FILTER_BOX_BORDER(Ipp16s, ipp16s, 16s_C1R);
             else if (stype == CV_16SC3)
                 IPP_FILTER_BOX_BORDER(Ipp16s, ipp16s, 16s_C3R);
             else if (stype == CV_16SC4)
