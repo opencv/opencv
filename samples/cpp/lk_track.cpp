@@ -124,9 +124,7 @@ int main(int argc, char * argv[])
 
      imshow("IMG",vis);
      int key = waitKey(1);
-	 if(key == 27)
-		 break;
-
+     if(key == 27)  break;
 }
   return 0;
 }
