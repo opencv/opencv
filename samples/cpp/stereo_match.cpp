@@ -14,7 +14,6 @@
 #include "opencv2/core/utility.hpp"
 
 #include <stdio.h>
-#include <sys/stat.h>
 
 using namespace cv;
 
