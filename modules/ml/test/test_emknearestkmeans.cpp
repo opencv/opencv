@@ -241,7 +241,7 @@ void CV_KMeansTest::run( int /*start_from*/ )
     float err;
     Mat bestLabels;
     // 1. flag==KMEANS_PP_CENTERS
-    kmeans( data, 3, bestLabels, TermCriteria( TermCriteria::COUNT, iters, 0.0), 0, KMEANS_PP_CENTERS, noArray() );
+    ml::kmeans( data, 3, bestLabels, TermCriteria( TermCriteria::COUNT, iters, 0.0), 0, ml::KMEANS_PP_CENTERS, noArray() );
     if( !calcErr( bestLabels, labels, sizes, err , false ) )
     {
         ts->printf( cvtest::TS::LOG, "Bad output labels if flag==KMEANS_PP_CENTERS.\n" );
@@ -254,7 +254,7 @@ void CV_KMeansTest::run( int /*start_from*/ )
     }
 
     // 2. flag==KMEANS_RANDOM_CENTERS
-    kmeans( data, 3, bestLabels, TermCriteria( TermCriteria::COUNT, iters, 0.0), 0, KMEANS_RANDOM_CENTERS, noArray() );
+    ml::kmeans( data, 3, bestLabels, TermCriteria( TermCriteria::COUNT, iters, 0.0), 0, ml::KMEANS_RANDOM_CENTERS, noArray() );
     if( !calcErr( bestLabels, labels, sizes, err, false ) )
     {
         ts->printf( cvtest::TS::LOG, "Bad output labels if flag==KMEANS_RANDOM_CENTERS.\n" );
@@ -271,7 +271,7 @@ void CV_KMeansTest::run( int /*start_from*/ )
     RNG rng;
     for( int i = 0; i < 0.5f * pointsCount; i++ )
         bestLabels.at<int>( rng.next() % pointsCount, 0 ) = rng.next() % 3;
-    kmeans( data, 3, bestLabels, TermCriteria( TermCriteria::COUNT, iters, 0.0), 0, KMEANS_USE_INITIAL_LABELS, noArray() );
+    ml::kmeans( data, 3, bestLabels, TermCriteria( TermCriteria::COUNT, iters, 0.0), 0, ml::KMEANS_USE_INITIAL_LABELS, noArray() );
     if( !calcErr( bestLabels, labels, sizes, err, false ) )
     {
         ts->printf( cvtest::TS::LOG, "Bad output labels if flag==KMEANS_USE_INITIAL_LABELS.\n" );
