@@ -382,12 +382,12 @@ __constant short move_dir[2][8] = {
     { -1, 0, 1, -1, 1, -1, 0, 1 }
 };
 
-__kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offset, int rows, int cols)
+__kernel void stage2_hysteresis(__global uchar *map_ptr, int map_step, int map_offset, int rows, int cols)
 {
-    map += map_offset;
+    map_ptr += map_offset;
 
     int x = get_global_id(0);
-    int y0 = get_global_id(1) * PIX_PER_WI;
+    int y = get_global_id(1) * PIX_PER_WI;
 
     int lid = get_local_id(0) + get_local_id(1) * LOCAL_X;
 
@@ -400,13 +400,21 @@ __kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offse
 
     if (x < cols)
     {
+        __global uchar* map = map_ptr + mad24(y, map_step, x * (int)sizeof(int));
+
         #pragma unroll
-        for (int y = y0; y < min(y0 + PIX_PER_WI, rows); ++y)
+        for (int cy = 0; cy < PIX_PER_WI; ++cy)
         {
-            int type = loadpix(map + mad24(y, map_step, x * (int)sizeof(int)));
-            if (type == 2)
+            if (y < rows)
             {
-                l_stack[atomic_inc(&l_counter)] = (ushort2)(x, y);
+                int type = loadpix(map);
+                if (type == 2)
+                {
+                    l_stack[atomic_inc(&l_counter)] = (ushort2)(x, y);
+                }
+
+                y++;
+                map += map_step;
             }
         }
     }
@@ -420,7 +428,6 @@ __kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offse
         int mod = l_counter % LOCAL_TOTAL;
         int pix_per_thr = l_counter / LOCAL_TOTAL + ((lid < mod) ? 1 : 0);
 
-        #pragma unroll
         for (int i = 0; i < pix_per_thr; ++i)
         {
             ushort2 pos = l_stack[ atomic_dec(&l_counter) - 1 ];
@@ -432,7 +439,7 @@ __kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offse
                 ushort posy = pos.y + move_dir[1][j];
                 if (posx < 0 || posy < 0 || posx >= cols || posy >= rows)
                     continue;
-                __global uchar *addr = map + mad24(posy, map_step, posx * (int)sizeof(int));
+                __global uchar *addr = map_ptr + mad24(posy, map_step, posx * (int)sizeof(int));
                 int type = loadpix(addr);
                 if (type == 0)
                 {
@@ -461,16 +468,26 @@ __kernel void getEdges(__global const uchar *mapptr, int map_step, int map_offse
                        __global uchar *dst, int dst_step, int dst_offset)
 {
     int x = get_global_id(0);
-    int y0 = get_global_id(1) * PIX_PER_WI;
+    int y = get_global_id(1) * PIX_PER_WI;
 
-    #pragma unroll
-    for (int y = y0; y < min(y0 + PIX_PER_WI, rows); ++y)
+    if (x < cols)
     {
         int map_index = mad24(map_step, y, mad24(x, (int)sizeof(int), map_offset));
-        int dst_index = mad24(dst_step, y, x) + dst_offset;
+        int dst_index = mad24(dst_step, y, x + dst_offset);
 
-        __global const int * map = (__global const int *)(mapptr + map_index);
-        dst[dst_index] = (uchar)(-(map[0] >> 1));
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI; ++cy)
+        {
+            if (y < rows)
+            {
+                __global const int * map = (__global const int *)(mapptr + map_index);
+                dst[dst_index] = (uchar)(-(map[0] >> 1));
+
+                y++;
+                map_index += map_step;
+                dst_index += dst_step;
+            }
+        }
     }
 }
 
