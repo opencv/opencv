@@ -72,6 +72,19 @@ Wrapping class for feature detection using the
         static Ptr<FastFeatureDetector> create( int threshold=1, bool nonmaxSuppression=true, type=FastFeatureDetector::TYPE_9_16 );
     };
 
+AgastFeatureDetector
+--------------------
+.. ocv:class:: AgastFeatureDetector : public Feature2D
+
+Wrapping class for feature detection using the
+:ocv:func:`AGAST` method. ::
+
+    class AgastFeatureDetector : public Feature2D
+    {
+    public:
+        static Ptr<AgastFeatureDetector> create( int threshold=1, bool nonmaxSuppression=true, type=AgastFeatureDetector::OAST_9_16 );
+    };
+
 GFTTDetector
 ---------------------------
 .. ocv:class:: GFTTDetector : public FeatureDetector

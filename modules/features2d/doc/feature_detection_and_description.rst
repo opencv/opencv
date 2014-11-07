@@ -31,6 +31,28 @@ Detects corners using the FAST algorithm by [Rosten06]_.
 
 .. [Rosten06] E. Rosten. Machine Learning for High-speed Corner Detection, 2006.
 
+AGAST
+-----
+Detects corners using the AGAST algorithm
+
+.. ocv:function:: void AGAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSuppression=true )
+.. ocv:function:: void AGAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSuppression, int type )
+
+    :param image: grayscale image where keypoints (corners) are detected.
+
+    :param keypoints: keypoints detected on the image.
+
+    :param threshold: threshold on difference between intensity of the central pixel and pixels of a circle around this pixel.
+
+    :param nonmaxSuppression: if true, non-maximum suppression is applied to detected corners (keypoints).
+
+    :param type: one of the three neighborhoods as defined in the paper: ``AgastFeatureDetector::OAST_9_16``, ``AgastFeatureDetector::AGAST_7_12d``, ``AgastFeatureDetector::AGAST_7_12s``, ``AgastFeatureDetector::AGAST_5_8``
+
+Detects corners using the AGAST algorithm by [Mair2010]_.
+
+
+.. [Mair2010] Elmar Mair and Gregory D. Hager and Darius Burschka and Michael Suppa and Gerhard Hirzinger, Adaptive and Generic Corner Detection Based on the Accelerated Segment Test, ECCV2010
+
 MSER
 ----
 .. ocv:class:: MSER : public FeatureDetector
