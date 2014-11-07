@@ -43,7 +43,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "cvconfig.h"
 #include "opencv2/ts/ocl_test.hpp"
 
@@ -57,11 +57,11 @@ PARAM_TEST_CASE(BlendLinear, MatDepth, Channels, bool)
     int depth, channels;
     bool useRoi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src1)
-    TEST_DECLARE_INPUT_PARAMETER(src2)
-    TEST_DECLARE_INPUT_PARAMETER(weights2)
-    TEST_DECLARE_INPUT_PARAMETER(weights1)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src1);
+    TEST_DECLARE_INPUT_PARAMETER(src2);
+    TEST_DECLARE_INPUT_PARAMETER(weights2);
+    TEST_DECLARE_INPUT_PARAMETER(weights1);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -89,22 +89,22 @@ PARAM_TEST_CASE(BlendLinear, MatDepth, Channels, bool)
         randomSubMat(weights2, weights2_roi, roiSize, weights2Border, CV_32FC1, 1e-2, upValue);
 
         weights2_roi -= weights1_roi;
-        CV_Assert(checkNorm(weights2_roi, weights2(Rect(weights2Border.lef, weights2Border.top,
+        CV_Assert(checkNorm2(weights2_roi, weights2(Rect(weights2Border.lef, weights2Border.top,
                                                         roiSize.width, roiSize.height))) < 1e-6);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, type, 5, 16);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src1)
-        UMAT_UPLOAD_INPUT_PARAMETER(src2)
-        UMAT_UPLOAD_INPUT_PARAMETER(weights1)
-        UMAT_UPLOAD_INPUT_PARAMETER(weights2)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src1);
+        UMAT_UPLOAD_INPUT_PARAMETER(src2);
+        UMAT_UPLOAD_INPUT_PARAMETER(weights1);
+        UMAT_UPLOAD_INPUT_PARAMETER(weights2);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 
     void Near(double eps = 0.0)
     {
-        OCL_EXPECT_MATS_NEAR(dst, eps)
+        OCL_EXPECT_MATS_NEAR(dst, eps);
     }
 };
 
@@ -117,7 +117,7 @@ OCL_TEST_P(BlendLinear, Accuracy)
         OCL_OFF(cv::blendLinear(src1_roi, src2_roi, weights1_roi, weights2_roi, dst_roi));
         OCL_ON(cv::blendLinear(usrc1_roi, usrc2_roi, uweights1_roi, uweights2_roi, udst_roi));
 
-        Near(depth <= CV_32S ? 1.0 : 0.2);
+        Near(depth <= CV_32S ? 1.0 : 0.5);
     }
 }
 

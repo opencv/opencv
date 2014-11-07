@@ -9,7 +9,7 @@ ocv_include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
 
-if(ANDROID OR IOS)
+if(ANDROID OR IOS OR APPLE)
   ocv_list_filterout(lib_srcs jmemansi.c)
 else()
   ocv_list_filterout(lib_srcs jmemnobs.c)

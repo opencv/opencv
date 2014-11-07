@@ -1177,7 +1177,7 @@ force_int:
                         int val, is_hex = d == 'x';
                         c = ptr[3];
                         ptr[3] = '\0';
-                        val = strtol( ptr + is_hex, &endptr, is_hex ? 8 : 16 );
+                        val = (int)strtol( ptr + is_hex, &endptr, is_hex ? 8 : 16 );
                         ptr[3] = c;
                         if( endptr == ptr + is_hex )
                             buf[len++] = 'x';
@@ -2217,7 +2217,6 @@ icvXMLParse( CvFileStorage* fs )
     ptr = icvXMLSkipSpaces( fs, ptr, CV_XML_INSIDE_TAG );
 
     if( memcmp( ptr, "<?xml", 5 ) != 0 )
-
         CV_PARSE_ERROR( "Valid XML should start with \'<?xml ...?>\'" );
 
     ptr = icvXMLParseTag( fs, ptr, &key, &list, &tag_type );
@@ -2788,7 +2787,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
                 // find the last occurence of </opencv_storage>
                 for(;;)
                 {
-                    int line_offset = ftell( fs->file );
+                    int line_offset = (int)ftell( fs->file );
                     char* ptr0 = icvGets( fs, xml_buf, xml_buf_size ), *ptr;
                     if( !ptr0 )
                         break;
@@ -4824,7 +4823,7 @@ cvRegisterType( const CvTypeInfo* _info )
             "Type name should contain only letters, digits, - and _" );
     }
 
-    info = (CvTypeInfo*)malloc( sizeof(*info) + len + 1 );
+    info = (CvTypeInfo*)cvAlloc( sizeof(*info) + len + 1 );
 
     *info = *_info;
     info->type_name = (char*)(info + 1);
@@ -4862,7 +4861,7 @@ cvUnregisterType( const char* type_name )
         if( !CvType::first || !CvType::last )
             CvType::first = CvType::last = 0;
 
-        free( info );
+        cvFree( &info );
     }
 }
 
@@ -5486,11 +5485,27 @@ internal::WriteStructContext::WriteStructContext(FileStorage& _fs,
 {
     cvStartWriteStruct(**fs, !name.empty() ? name.c_str() : 0, flags,
                        !typeName.empty() ? typeName.c_str() : 0);
+    fs->elname = String();
+    if ((flags & FileNode::TYPE_MASK) == FileNode::SEQ)
+    {
+        fs->state = FileStorage::VALUE_EXPECTED;
+        fs->structs.push_back('[');
+    }
+    else
+    {
+        fs->state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
+        fs->structs.push_back('{');
+    }
 }
 
 internal::WriteStructContext::~WriteStructContext()
 {
     cvEndWriteStruct(**fs);
+    fs->structs.pop_back();
+    fs->state = fs->structs.empty() || fs->structs.back() == '{' ?
+        FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP :
+        FileStorage::VALUE_EXPECTED;
+    fs->elname = String();
 }
 
 

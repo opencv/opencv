@@ -22,7 +22,7 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/features2D/SURF_detector.cpp>`_
+This tutorial code's is shown lines below.
 
 .. code-block:: cpp
 
@@ -30,11 +30,11 @@ This tutorial code's is shown lines below. You can also download it from `here <
    #include <iostream>
    #include "opencv2/core.hpp"
    #include "opencv2/features2d.hpp"
-   #include "opencv2/nonfree/features2d.hpp"
+   #include "opencv2/xfeatures2d.hpp"
    #include "opencv2/highgui.hpp"
-   #include "opencv2/nonfree.hpp"
 
    using namespace cv;
+   using namespace cv::xfeatures2d;
 
    void readme();
 
@@ -44,8 +44,8 @@ This tutorial code's is shown lines below. You can also download it from `here <
      if( argc != 3 )
      { readme(); return -1; }
 
-     Mat img_1 = imread( argv[1], CV_LOAD_IMAGE_GRAYSCALE );
-     Mat img_2 = imread( argv[2], CV_LOAD_IMAGE_GRAYSCALE );
+     Mat img_1 = imread( argv[1], IMREAD_GRAYSCALE );
+     Mat img_2 = imread( argv[2], IMREAD_GRAYSCALE );
 
      if( !img_1.data || !img_2.data )
      { std::cout<< " --(!) Error reading images " << std::endl; return -1; }
@@ -53,12 +53,12 @@ This tutorial code's is shown lines below. You can also download it from `here <
      //-- Step 1: Detect the keypoints using SURF Detector
      int minHessian = 400;
 
-     SurfFeatureDetector detector( minHessian );
+     Ptr<SURF> detector = SURF::create( minHessian );
 
      std::vector<KeyPoint> keypoints_1, keypoints_2;
 
-     detector.detect( img_1, keypoints_1 );
-     detector.detect( img_2, keypoints_2 );
+     detector->detect( img_1, keypoints_1 );
+     detector->detect( img_2, keypoints_2 );
 
      //-- Draw keypoints
      Mat img_keypoints_1; Mat img_keypoints_2;

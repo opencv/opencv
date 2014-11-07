@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
-#include <cctype>
+#include <ctype.h>
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"

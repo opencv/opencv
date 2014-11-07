@@ -73,7 +73,7 @@ TEST(Photo_DenoisingGrayscale, regression)
 
     DUMP(result, expected_path + ".res.png");
 
-    ASSERT_EQ(0, norm(result != expected));
+    ASSERT_EQ(0, cvtest::norm(result, expected, NORM_L2));
 }
 
 TEST(Photo_DenoisingColored, regression)
@@ -93,7 +93,7 @@ TEST(Photo_DenoisingColored, regression)
 
     DUMP(result, expected_path + ".res.png");
 
-    ASSERT_EQ(0, norm(result != expected));
+    ASSERT_EQ(0, cvtest::norm(result, expected, NORM_L2));
 }
 
 TEST(Photo_DenoisingGrayscaleMulti, regression)
@@ -118,7 +118,7 @@ TEST(Photo_DenoisingGrayscaleMulti, regression)
 
     DUMP(result, expected_path + ".res.png");
 
-    ASSERT_EQ(0, norm(result != expected));
+    ASSERT_EQ(0, cvtest::norm(result, expected, NORM_L2));
 }
 
 TEST(Photo_DenoisingColoredMulti, regression)
@@ -143,7 +143,7 @@ TEST(Photo_DenoisingColoredMulti, regression)
 
     DUMP(result, expected_path + ".res.png");
 
-    ASSERT_EQ(0, norm(result != expected));
+    ASSERT_EQ(0, cvtest::norm(result, expected, NORM_L2));
 }
 
 TEST(Photo_White, issue_2646)

@@ -185,8 +185,8 @@ int cv::viz::vtkCloudMatSource::filterNanCopy(const Mat& cloud)
     CV_DbgAssert(DataType<_Tp>::depth == cloud.depth());
     points = vtkSmartPointer<vtkPoints>::New();
     points->SetDataType(VtkDepthTraits<_Tp>::data_type);
-    points->Allocate(cloud.total());
-    points->SetNumberOfPoints(cloud.total());
+    points->Allocate((vtkIdType)cloud.total());
+    points->SetNumberOfPoints((vtkIdType)cloud.total());
 
     int s_chs = cloud.channels();
     int total = 0;

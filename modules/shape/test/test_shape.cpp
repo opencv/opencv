@@ -50,8 +50,6 @@ const float minRad=0.2f;
 const float maxRad=2;
 const int NSN=5;//10;//20; //number of shapes per class
 const int NP=120; //number of points sympliying the contour
-const float outlierWeight=0.1f;
-const int numOutliers=20;
 const float CURRENT_MAX_ACCUR=95; //99% and 100% reached in several tests, 95 is fixed as minimum boundary
 
 class CV_ShapeTest : public cvtest::BaseTest

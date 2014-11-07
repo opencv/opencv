@@ -54,32 +54,32 @@ class CV_EXPORTS SeamFinder
 {
 public:
     virtual ~SeamFinder() {}
-    virtual void find(const std::vector<Mat> &src, const std::vector<Point> &corners,
-                      std::vector<Mat> &masks) = 0;
+    virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+                      std::vector<UMat> &masks) = 0;
 };
 
 
 class CV_EXPORTS NoSeamFinder : public SeamFinder
 {
 public:
-    void find(const std::vector<Mat>&, const std::vector<Point>&, std::vector<Mat>&) {}
+    void find(const std::vector<UMat>&, const std::vector<Point>&, std::vector<UMat>&) {}
 };
 
 
 class CV_EXPORTS PairwiseSeamFinder : public SeamFinder
 {
 public:
-    virtual void find(const std::vector<Mat> &src, const std::vector<Point> &corners,
-                      std::vector<Mat> &masks);
+    virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+                      std::vector<UMat> &masks);
 
 protected:
     void run();
     virtual void findInPair(size_t first, size_t second, Rect roi) = 0;
 
-    std::vector<Mat> images_;
+    std::vector<UMat> images_;
     std::vector<Size> sizes_;
     std::vector<Point> corners_;
-    std::vector<Mat> masks_;
+    std::vector<UMat> masks_;
 };
 
 
@@ -87,7 +87,7 @@ class CV_EXPORTS VoronoiSeamFinder : public PairwiseSeamFinder
 {
 public:
     virtual void find(const std::vector<Size> &size, const std::vector<Point> &corners,
-                      std::vector<Mat> &masks);
+                      std::vector<UMat> &masks);
 private:
     void findInPair(size_t first, size_t second, Rect roi);
 };
@@ -103,8 +103,8 @@ public:
     CostFunction costFunction() const { return costFunc_; }
     void setCostFunction(CostFunction val) { costFunc_ = val; }
 
-    virtual void find(const std::vector<Mat> &src, const std::vector<Point> &corners,
-                      std::vector<Mat> &masks);
+    virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+                      std::vector<UMat> &masks);
 
 private:
     enum ComponentState
@@ -154,7 +154,7 @@ private:
     };
 
     void process(
-            const Mat &image1, const Mat &image2, Point tl1, Point tl2, Mat &mask1, Mat &mask2);
+            const Mat &image1, const Mat &image2, Point tl1, Point tl2,  Mat &mask1, Mat &mask2);
 
     void findComponents();
 
@@ -217,8 +217,8 @@ public:
 
     ~GraphCutSeamFinder();
 
-    void find(const std::vector<Mat> &src, const std::vector<Point> &corners,
-              std::vector<Mat> &masks);
+    void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+              std::vector<UMat> &masks);
 
 private:
     // To avoid GCGraph dependency
@@ -236,8 +236,8 @@ public:
                           : cost_type_(cost_type), terminal_cost_(terminal_cost),
                             bad_region_penalty_(bad_region_penalty) {}
 
-    void find(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners,
-              std::vector<cv::Mat> &masks);
+    void find(const std::vector<cv::UMat> &src, const std::vector<cv::Point> &corners,
+              std::vector<cv::UMat> &masks);
     void findInPair(size_t first, size_t second, Rect roi);
 
 private:

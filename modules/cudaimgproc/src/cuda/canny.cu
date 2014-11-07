@@ -42,8 +42,6 @@
 
 #if !defined CUDA_DISABLER
 
-#include <utility>
-#include <algorithm>
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/emulation.hpp"
 #include "opencv2/core/cuda/transform.hpp"
@@ -295,8 +293,12 @@ namespace canny
                 n += smem[threadIdx.y + 2][threadIdx.x + 2] == 2;
             }
 
+            __syncthreads();
+
             if (n > 0)
                 smem[threadIdx.y + 1][threadIdx.x + 1] = 2;
+
+            __syncthreads();
         }
 
         const int e = smem[threadIdx.y + 1][threadIdx.x + 1];
@@ -463,7 +465,10 @@ namespace canny
 
             count = min(count, map.cols * map.rows);
 
-            std::swap(st1, st2);
+            //std::swap(st1, st2);
+            short2* tmp = st1;
+            st1 = st2;
+            st2 = tmp;
         }
     }
 }

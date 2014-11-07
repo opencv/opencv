@@ -79,7 +79,7 @@
 #undef clAmdFftGetTmpBufSize
 #define clAmdFftGetTmpBufSize clAmdFftGetTmpBufSize_pfn
 #undef clAmdFftGetVersion
-//#define clAmdFftGetVersion clAmdFftGetVersion_pfn
+#define clAmdFftGetVersion clAmdFftGetVersion_pfn
 #undef clAmdFftSetLayout
 #define clAmdFftSetLayout clAmdFftSetLayout_pfn
 #undef clAmdFftSetPlanBatchSize
@@ -126,7 +126,7 @@ extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftEnqueueTransform)(clAmdFftPlan
 //extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftGetPlanTransposeResult)(const clAmdFftPlanHandle plHandle, clAmdFftResultTransposed* transposed);
 //extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftGetResultLocation)(const clAmdFftPlanHandle plHandle, clAmdFftResultLocation* placeness);
 extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftGetTmpBufSize)(const clAmdFftPlanHandle plHandle, size_t* buffersize);
-//extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftGetVersion)(cl_uint* major, cl_uint* minor, cl_uint* patch);
+extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftGetVersion)(cl_uint* major, cl_uint* minor, cl_uint* patch);
 extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftSetLayout)(clAmdFftPlanHandle plHandle, clAmdFftLayout iLayout, clAmdFftLayout oLayout);
 extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftSetPlanBatchSize)(clAmdFftPlanHandle plHandle, size_t batchSize);
 //extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftSetPlanDim)(clAmdFftPlanHandle plHandle, const clAmdFftDim dim);

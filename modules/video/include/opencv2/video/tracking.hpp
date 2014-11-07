@@ -55,28 +55,6 @@ enum { OPTFLOW_USE_INITIAL_FLOW     = 4,
        OPTFLOW_FARNEBACK_GAUSSIAN   = 256
      };
 
-enum { MOTION_TRANSLATION = 0,
-       MOTION_EUCLIDEAN   = 1,
-       MOTION_AFFINE      = 2,
-       MOTION_HOMOGRAPHY  = 3
-     };
-
-//! updates motion history image using the current silhouette
-CV_EXPORTS_W void updateMotionHistory( InputArray silhouette, InputOutputArray mhi,
-                                       double timestamp, double duration );
-
-//! computes the motion gradient orientation image from the motion history image
-CV_EXPORTS_W void calcMotionGradient( InputArray mhi, OutputArray mask, OutputArray orientation,
-                                      double delta1, double delta2, int apertureSize = 3 );
-
-//! computes the global orientation of the selected motion history image part
-CV_EXPORTS_W double calcGlobalOrientation( InputArray orientation, InputArray mask, InputArray mhi,
-                                           double timestamp, double duration );
-
-CV_EXPORTS_W void segmentMotion( InputArray mhi, OutputArray segmask,
-                                 CV_OUT std::vector<Rect>& boundingRects,
-                                 double timestamp, double segThresh );
-
 //! updates the object tracking window using CAMSHIFT algorithm
 CV_EXPORTS_W RotatedRect CamShift( InputArray probImage, CV_IN_OUT Rect& window,
                                    TermCriteria criteria );
@@ -109,6 +87,15 @@ CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next, In
 // that maps one 2D point set to another or one image to another.
 CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
 
+
+enum
+{
+    MOTION_TRANSLATION = 0,
+    MOTION_EUCLIDEAN   = 1,
+    MOTION_AFFINE      = 2,
+    MOTION_HOMOGRAPHY  = 3
+};
+
 //! estimates the best-fit Translation, Euclidean, Affine or Perspective Transformation
 // with respect to Enhanced Correlation Coefficient criterion that maps one image to
 // another (area-based alignment)
@@ -120,24 +107,10 @@ CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray input
                                       InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
                                       TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001));
 
-
-//! computes dense optical flow using Simple Flow algorithm
-CV_EXPORTS_W void calcOpticalFlowSF( InputArray from, InputArray to, OutputArray flow,
-                                     int layers, int averaging_block_size, int max_flow);
-
-CV_EXPORTS_W void calcOpticalFlowSF( InputArray from, InputArray to, OutputArray flow, int layers,
-                                     int averaging_block_size, int max_flow,
-                                     double sigma_dist, double sigma_color, int postprocess_window,
-                                     double sigma_dist_fix, double sigma_color_fix, double occ_thr,
-                                     int upscale_averaging_radius, double upscale_sigma_dist,
-                                     double upscale_sigma_color, double speed_up_thr );
-
-
-
 /*!
  Kalman filter.
 
- The class implements standard Kalman filter \url{http://en.wikipedia.org/wiki/Kalman_filter}.
+ The class implements standard Kalman filter http://en.wikipedia.org/wiki/Kalman_filter.
  However, you can modify KalmanFilter::transitionMatrix, KalmanFilter::controlMatrix and
  KalmanFilter::measurementMatrix to get the extended Kalman filter functionality.
 */
@@ -156,16 +129,16 @@ public:
     //! updates the predicted state from the measurement
     CV_WRAP const Mat& correct( const Mat& measurement );
 
-    Mat statePre;           //!< predicted state (x'(k)): x(k)=A*x(k-1)+B*u(k)
-    Mat statePost;          //!< corrected state (x(k)): x(k)=x'(k)+K(k)*(z(k)-H*x'(k))
-    Mat transitionMatrix;   //!< state transition matrix (A)
-    Mat controlMatrix;      //!< control matrix (B) (not used if there is no control)
-    Mat measurementMatrix;  //!< measurement matrix (H)
-    Mat processNoiseCov;    //!< process noise covariance matrix (Q)
-    Mat measurementNoiseCov;//!< measurement noise covariance matrix (R)
-    Mat errorCovPre;        //!< priori error estimate covariance matrix (P'(k)): P'(k)=A*P(k-1)*At + Q)*/
-    Mat gain;               //!< Kalman gain matrix (K(k)): K(k)=P'(k)*Ht*inv(H*P'(k)*Ht+R)
-    Mat errorCovPost;       //!< posteriori error estimate covariance matrix (P(k)): P(k)=(I-K(k)*H)*P'(k)
+    CV_PROP_RW Mat statePre;           //!< predicted state (x'(k)): x(k)=A*x(k-1)+B*u(k)
+    CV_PROP_RW Mat statePost;          //!< corrected state (x(k)): x(k)=x'(k)+K(k)*(z(k)-H*x'(k))
+    CV_PROP_RW Mat transitionMatrix;   //!< state transition matrix (A)
+    CV_PROP_RW Mat controlMatrix;      //!< control matrix (B) (not used if there is no control)
+    CV_PROP_RW Mat measurementMatrix;  //!< measurement matrix (H)
+    CV_PROP_RW Mat processNoiseCov;    //!< process noise covariance matrix (Q)
+    CV_PROP_RW Mat measurementNoiseCov;//!< measurement noise covariance matrix (R)
+    CV_PROP_RW Mat errorCovPre;        //!< priori error estimate covariance matrix (P'(k)): P'(k)=A*P(k-1)*At + Q)*/
+    CV_PROP_RW Mat gain;               //!< Kalman gain matrix (K(k)): K(k)=P'(k)*Ht*inv(H*P'(k)*Ht+R)
+    CV_PROP_RW Mat errorCovPost;       //!< posteriori error estimate covariance matrix (P(k)): P(k)=(I-K(k)*H)*P'(k)
 
     // temporary matrices
     Mat temp1;
@@ -177,11 +150,11 @@ public:
 
 
 
-class CV_EXPORTS DenseOpticalFlow : public Algorithm
+class CV_EXPORTS_W DenseOpticalFlow : public Algorithm
 {
 public:
-    virtual void calc( InputArray I0, InputArray I1, InputOutputArray flow ) = 0;
-    virtual void collectGarbage() = 0;
+    CV_WRAP virtual void calc( InputArray I0, InputArray I1, InputOutputArray flow ) = 0;
+    CV_WRAP virtual void collectGarbage() = 0;
 };
 
 // Implementation of the Zach, Pock and Bischof Dual TV-L1 Optical Flow method
@@ -189,7 +162,7 @@ public:
 // see reference:
 //   [1] C. Zach, T. Pock and H. Bischof, "A Duality Based Approach for Realtime TV-L1 Optical Flow".
 //   [2] Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
-CV_EXPORTS Ptr<DenseOpticalFlow> createOptFlow_DualTVL1();
+CV_EXPORTS_W Ptr<DenseOpticalFlow> createOptFlow_DualTVL1();
 
 } // cv
 

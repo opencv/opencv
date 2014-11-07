@@ -16,7 +16,7 @@ USAGE
   --feature  - Feature to use. Can be sift, surf, orb or brisk. Append '-flann'
                to feature name to use Flann-based matcher instead bruteforce.
 
-  Press left mouse button on a feature point to see its mathcing point.
+  Press left mouse button on a feature point to see its matching point.
 '''
 
 import numpy as np
@@ -113,8 +113,8 @@ if __name__ == '__main__':
     try:
         fn1, fn2 = args
     except:
-        fn1 = 'data/aero1.jpg'
-        fn2 = 'data/aero3.jpg'
+        fn1 = '../data/aero1.jpg'
+        fn2 = '../data/aero3.jpg'
 
     img1 = cv2.imread(fn1, 0)
     img2 = cv2.imread(fn2, 0)

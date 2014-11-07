@@ -214,135 +214,6 @@ Unlike :ocv:func:`findHomography` and :ocv:func:`estimateRigidTransform`, the fu
     :ocv:func:`findHomography`
 
 
-updateMotionHistory
------------------------
-Updates the motion history image by a moving silhouette.
-
-.. ocv:function:: void updateMotionHistory( InputArray silhouette, InputOutputArray mhi, double timestamp, double duration )
-
-.. ocv:pyfunction:: cv2.updateMotionHistory(silhouette, mhi, timestamp, duration) -> mhi
-
-.. ocv:cfunction:: void cvUpdateMotionHistory( const CvArr* silhouette, CvArr* mhi, double timestamp, double duration )
-
-    :param silhouette: Silhouette mask that has non-zero pixels where the motion occurs.
-
-    :param mhi: Motion history image that is updated by the function (single-channel, 32-bit floating-point).
-
-    :param timestamp: Current time in milliseconds or other units.
-
-    :param duration: Maximal duration of the motion track in the same units as  ``timestamp`` .
-
-The function updates the motion history image as follows:
-
-.. math::
-
-    \texttt{mhi} (x,y)= \forkthree{\texttt{timestamp}}{if $\texttt{silhouette}(x,y) \ne 0$}{0}{if $\texttt{silhouette}(x,y) = 0$ and $\texttt{mhi} < (\texttt{timestamp} - \texttt{duration})$}{\texttt{mhi}(x,y)}{otherwise}
-
-That is, MHI pixels where the motion occurs are set to the current ``timestamp`` , while the pixels where the motion happened last time a long time ago are cleared.
-
-The function, together with
-:ocv:func:`calcMotionGradient` and
-:ocv:func:`calcGlobalOrientation` , implements a motion templates technique described in
-[Davis97]_ and [Bradski00]_.
-See also the OpenCV sample ``motempl.c`` that demonstrates the use of all the motion template functions.
-
-
-calcMotionGradient
-----------------------
-Calculates a gradient orientation of a motion history image.
-
-.. ocv:function:: void calcMotionGradient( InputArray mhi, OutputArray mask, OutputArray orientation,                         double delta1, double delta2, int apertureSize=3 )
-
-.. ocv:pyfunction:: cv2.calcMotionGradient(mhi, delta1, delta2[, mask[, orientation[, apertureSize]]]) -> mask, orientation
-
-.. ocv:cfunction:: void cvCalcMotionGradient( const CvArr* mhi, CvArr* mask, CvArr* orientation, double delta1, double delta2, int aperture_size=3 )
-
-    :param mhi: Motion history single-channel floating-point image.
-
-    :param mask: Output mask image that has the type  ``CV_8UC1``  and the same size as  ``mhi`` . Its non-zero elements mark pixels where the motion gradient data is correct.
-
-    :param orientation: Output motion gradient orientation image that has the same type and the same size as  ``mhi`` . Each pixel of the image is a motion orientation, from 0 to 360 degrees.
-
-    :param delta1: Minimal (or maximal) allowed difference between  ``mhi``  values within a pixel neighborhood.
-
-    :param delta2: Maximal (or minimal) allowed difference between  ``mhi``  values within a pixel neighborhood. That is, the function finds the minimum ( :math:`m(x,y)` ) and maximum ( :math:`M(x,y)` )  ``mhi``  values over  :math:`3 \times 3`  neighborhood of each pixel and marks the motion orientation at  :math:`(x, y)`  as valid only if
-
-        .. math::
-
-            \min ( \texttt{delta1}  ,  \texttt{delta2}  )  \le  M(x,y)-m(x,y)  \le   \max ( \texttt{delta1}  , \texttt{delta2} ).
-
-    :param apertureSize: Aperture size of  the :ocv:func:`Sobel`  operator.
-
-The function calculates a gradient orientation at each pixel
-:math:`(x, y)` as:
-
-.. math::
-
-    \texttt{orientation} (x,y)= \arctan{\frac{d\texttt{mhi}/dy}{d\texttt{mhi}/dx}}
-
-In fact,
-:ocv:func:`fastAtan2` and
-:ocv:func:`phase` are used so that the computed angle is measured in degrees and covers the full range 0..360. Also, the ``mask`` is filled to indicate pixels where the computed angle is valid.
-
-.. note::
-
-   * (Python) An example on how to perform a motion template technique can be found at opencv_source_code/samples/python2/motempl.py
-
-calcGlobalOrientation
--------------------------
-Calculates a global motion orientation in a selected region.
-
-.. ocv:function:: double calcGlobalOrientation( InputArray orientation, InputArray mask, InputArray mhi, double timestamp, double duration )
-
-.. ocv:pyfunction:: cv2.calcGlobalOrientation(orientation, mask, mhi, timestamp, duration) -> retval
-
-.. ocv:cfunction:: double cvCalcGlobalOrientation( const CvArr* orientation, const CvArr* mask, const CvArr* mhi, double timestamp, double duration )
-
-    :param orientation: Motion gradient orientation image calculated by the function  :ocv:func:`calcMotionGradient` .
-
-    :param mask: Mask image. It may be a conjunction of a valid gradient mask, also calculated by  :ocv:func:`calcMotionGradient` , and the mask of a region whose direction needs to be calculated.
-
-    :param mhi: Motion history image calculated by  :ocv:func:`updateMotionHistory` .
-
-    :param timestamp: Timestamp passed to  :ocv:func:`updateMotionHistory` .
-
-    :param duration: Maximum duration of a motion track in milliseconds, passed to  :ocv:func:`updateMotionHistory` .
-
-The function calculates an average
-motion direction in the selected region and returns the angle between
-0 degrees  and 360 degrees. The average direction is computed from
-the weighted orientation histogram, where a recent motion has a larger
-weight and the motion occurred in the past has a smaller weight, as recorded in ``mhi`` .
-
-
-
-
-segmentMotion
--------------
-Splits a motion history image into a few parts corresponding to separate independent motions (for example, left hand, right hand).
-
-.. ocv:function:: void segmentMotion(InputArray mhi, OutputArray segmask, vector<Rect>& boundingRects, double timestamp, double segThresh)
-
-.. ocv:pyfunction:: cv2.segmentMotion(mhi, timestamp, segThresh[, segmask]) -> segmask, boundingRects
-
-.. ocv:cfunction:: CvSeq* cvSegmentMotion( const CvArr* mhi, CvArr* seg_mask, CvMemStorage* storage, double timestamp, double seg_thresh )
-
-    :param mhi: Motion history image.
-
-    :param segmask: Image where the found mask should be stored, single-channel, 32-bit floating-point.
-
-    :param boundingRects: Vector containing ROIs of motion connected components.
-
-    :param timestamp: Current time in milliseconds or other units.
-
-    :param segThresh: Segmentation threshold that is recommended to be equal to the interval between motion history "steps" or greater.
-
-
-The function finds all of the motion segments and marks them in ``segmask`` with individual values (1,2,...). It also computes a vector with ROIs of motion connected components. After that the motion direction for every component can be calculated with :ocv:func:`calcGlobalOrientation` using the extracted mask of the particular component.
-
-
-
-
 CamShift
 --------
 Finds an object center, size, and orientation.
@@ -596,7 +467,7 @@ Returns the number of gaussian components in the background model
 
 BackgroundSubtractorMOG2::setNMixtures
 --------------------------------------
-Sets the number of gaussian components in the background model
+Sets the number of gaussian components in the background model. The model needs to be reinitalized to reserve memory.
 
 .. ocv:function:: void BackgroundSubtractorMOG2::setNMixtures(int nmixtures)
 
@@ -615,9 +486,23 @@ Sets the "background ratio" parameter of the algorithm
 
 .. ocv:function:: void BackgroundSubtractorMOG2::setBackgroundRatio(double ratio)
 
+BackgroundSubtractorMOG2::getVarThreshold
+---------------------------------------------
+Returns the variance threshold for the pixel-model match
+
+.. ocv:function:: double BackgroundSubtractorMOG2::getVarThreshold() const
+
+The main threshold on the squared Mahalanobis distance to decide if the sample is well described by the background model or not. Related to Cthr from the paper.
+
+BackgroundSubtractorMOG2::setVarThreshold
+---------------------------------------------
+Sets the variance threshold for the pixel-model match
+
+.. ocv:function:: void BackgroundSubtractorMOG2::setVarThreshold(double varThreshold)
+
 BackgroundSubtractorMOG2::getVarThresholdGen
 ---------------------------------------------
-Returns the variance scale factor for the pixel-model match
+Returns the variance threshold for the pixel-model match used for new mixture component generation
 
 .. ocv:function:: double BackgroundSubtractorMOG2::getVarThresholdGen() const
 
@@ -625,7 +510,7 @@ Threshold for the squared Mahalanobis distance that helps decide when a sample i
 
 BackgroundSubtractorMOG2::setVarThresholdGen
 ---------------------------------------------
-Sets the variance scale factor for the pixel-model match
+Sets the variance threshold for the pixel-model match used for new mixture component generation
 
 .. ocv:function:: void BackgroundSubtractorMOG2::setVarThresholdGen(double varThresholdGen)
 
@@ -698,6 +583,126 @@ BackgroundSubtractorMOG2::setShadowThreshold
 Sets the shadow threshold
 
 .. ocv:function:: void BackgroundSubtractorMOG2::setShadowThreshold(double threshold)
+
+
+BackgroundSubtractorKNN
+------------------------
+K-nearest neigbours - based Background/Foreground Segmentation Algorithm.
+
+.. ocv:class:: BackgroundSubtractorKNN : public BackgroundSubtractor
+
+The class implements the K-nearest neigbours background subtraction described in [Zivkovic2006]_ . Very efficient if number of foreground pixels is low.
+
+
+createBackgroundSubtractorKNN
+--------------------------------------------------
+Creates KNN Background Subtractor
+
+.. ocv:function:: Ptr<BackgroundSubtractorKNN> createBackgroundSubtractorKNN( int history=500, double dist2Threshold=400.0, bool detectShadows=true )
+
+  :param history: Length of the history.
+
+  :param dist2Threshold: Threshold on the squared distance between the pixel and the sample to decide whether a pixel is close to that sample. This parameter does not affect the background update.
+
+  :param detectShadows: If true, the algorithm will detect shadows and mark them. It decreases the speed a bit, so if you do not need this feature, set the parameter to false.
+
+
+BackgroundSubtractorKNN::getHistory
+--------------------------------------
+Returns the number of last frames that affect the background model
+
+.. ocv:function:: int BackgroundSubtractorKNN::getHistory() const
+
+
+BackgroundSubtractorKNN::setHistory
+--------------------------------------
+Sets the number of last frames that affect the background model
+
+.. ocv:function:: void BackgroundSubtractorKNN::setHistory(int history)
+
+
+BackgroundSubtractorKNN::getNSamples
+--------------------------------------
+Returns the number of data samples in the background model
+
+.. ocv:function:: int BackgroundSubtractorKNN::getNSamples() const
+
+
+BackgroundSubtractorKNN::setNSamples
+--------------------------------------
+Sets the number of data samples in the background model. The model needs to be reinitalized to reserve memory.
+
+.. ocv:function:: void BackgroundSubtractorKNN::setNSamples(int _nN)
+
+
+BackgroundSubtractorKNN::getDist2Threshold
+---------------------------------------------
+Returns the threshold on the squared distance between the pixel and the sample
+
+.. ocv:function:: double BackgroundSubtractorKNN::getDist2Threshold() const
+
+The threshold on the squared distance between the pixel and the sample to decide whether a pixel is close to a data sample.
+
+BackgroundSubtractorKNN::setDist2Threshold
+---------------------------------------------
+Sets the threshold on the squared distance
+
+.. ocv:function:: void BackgroundSubtractorKNN::setDist2Threshold(double _dist2Threshold)
+
+BackgroundSubtractorKNN::getkNNSamples
+---------------------------------------------
+Returns the number of neighbours, the k in the kNN. K is the number of samples that need to be within dist2Threshold in order to decide that that pixel is matching the kNN background model.
+
+.. ocv:function:: int BackgroundSubtractorKNN::getkNNSamples() const
+
+BackgroundSubtractorKNN::setkNNSamples
+---------------------------------------------
+Sets the k in the kNN. How many nearest neigbours need to match.
+
+.. ocv:function:: void BackgroundSubtractorKNN::setkNNSamples(int _nkNN)
+
+
+BackgroundSubtractorKNN::getDetectShadows
+---------------------------------------------
+Returns the shadow detection flag
+
+.. ocv:function:: bool BackgroundSubtractorKNN::getDetectShadows() const
+
+If true, the algorithm detects shadows and marks them. See createBackgroundSubtractorKNN for details.
+
+BackgroundSubtractorKNN::setDetectShadows
+---------------------------------------------
+Enables or disables shadow detection
+
+.. ocv:function:: void BackgroundSubtractorKNN::setDetectShadows(bool detectShadows)
+
+BackgroundSubtractorKNN::getShadowValue
+---------------------------------------------
+Returns the shadow value
+
+.. ocv:function:: int BackgroundSubtractorKNN::getShadowValue() const
+
+Shadow value is the value used to mark shadows in the foreground mask. Default value is 127. Value 0 in the mask always means background, 255 means foreground.
+
+BackgroundSubtractorKNN::setShadowValue
+---------------------------------------------
+Sets the shadow value
+
+.. ocv:function:: void BackgroundSubtractorKNN::setShadowValue(int value)
+
+BackgroundSubtractorKNN::getShadowThreshold
+---------------------------------------------
+Returns the shadow threshold
+
+.. ocv:function:: double BackgroundSubtractorKNN::getShadowThreshold() const
+
+A shadow is detected if pixel is a darker version of the background. The shadow threshold (``Tau`` in the paper) is a threshold defining how much darker the shadow can be. ``Tau= 0.5`` means that if a pixel is more than twice darker then it is not shadow. See Prati, Mikic, Trivedi and Cucchiarra, *Detecting Moving Shadows...*, IEEE PAMI,2003.
+
+BackgroundSubtractorKNN::setShadowThreshold
+---------------------------------------------
+Sets the shadow threshold
+
+.. ocv:function:: void BackgroundSubtractorKNN::setShadowThreshold(double threshold)
 
 
 BackgroundSubtractorGMG
@@ -860,52 +865,6 @@ Sets the prior probability that each individual pixel is a background pixel.
 .. ocv:function:: void BackgroundSubtractorGMG::setBackgroundPrior(double bgprior)
 
 
-calcOpticalFlowSF
------------------
-Calculate an optical flow using "SimpleFlow" algorithm.
-
-.. ocv:function:: void calcOpticalFlowSF( InputArray from, InputArray to, OutputArray flow, int layers, int averaging_block_size, int max_flow )
-
-.. ocv:function:: calcOpticalFlowSF( InputArray from, InputArray to, OutputArray flow, int layers, int averaging_block_size, int max_flow, double sigma_dist, double sigma_color, int postprocess_window, double sigma_dist_fix, double sigma_color_fix, double occ_thr, int upscale_averaging_radius, double upscale_sigma_dist, double upscale_sigma_color, double speed_up_thr )
-
-    :param prev: First 8-bit 3-channel image.
-
-    :param next: Second 8-bit 3-channel image of the same size as ``prev``
-
-    :param flow: computed flow image that has the same size as ``prev`` and type ``CV_32FC2``
-
-    :param layers: Number of layers
-
-    :param averaging_block_size: Size of block through which we sum up when calculate cost function for pixel
-
-    :param max_flow: maximal flow that we search at each level
-
-    :param sigma_dist: vector smooth spatial sigma parameter
-
-    :param sigma_color: vector smooth color sigma parameter
-
-    :param postprocess_window: window size for postprocess cross bilateral filter
-
-    :param sigma_dist_fix: spatial sigma for postprocess cross bilateralf filter
-
-    :param sigma_color_fix: color sigma for postprocess cross bilateral filter
-
-    :param occ_thr: threshold for detecting occlusions
-
-    :param upscale_averaging_radius: window size for bilateral upscale operation
-
-    :param upscale_sigma_dist: spatial sigma for bilateral upscale operation
-
-    :param upscale_sigma_color: color sigma for bilateral upscale operation
-
-    :param speed_up_thr: threshold to detect point with irregular flow - where flow should be recalculated after upscale
-
-See [Tao2012]_. And site of project - http://graphics.berkeley.edu/papers/Tao-SAN-2012-05/.
-
-.. note::
-
-   * An example using the simpleFlow algorithm can be found at opencv_source_code/samples/cpp/simpleflow_demo.cpp
-
 createOptFlow_DualTVL1
 ----------------------
 "Dual TV L1" Optical Flow Algorithm.
@@ -946,8 +905,6 @@ createOptFlow_DualTVL1
         Stopping criterion iterations number used in the numerical scheme.
 
 
-
-
 DenseOpticalFlow::calc
 --------------------------
 Calculates an optical flow.
@@ -974,10 +931,6 @@ Releases all inner buffers.
 
 .. [Bradski98] Bradski, G.R. "Computer Vision Face Tracking for Use in a Perceptual User Interface", Intel, 1998
 
-.. [Bradski00] Davis, J.W. and Bradski, G.R. “Motion Segmentation and Pose Recognition with Motion History Gradients”, WACV00, 2000
-
-.. [Davis97] Davis, J.W. and Bobick, A.F. “The Representation and Recognition of Action Using Temporal Templates”, CVPR97, 1997
-
 .. [EP08] Evangelidis, G.D. and Psarakis E.Z. "Parametric Image Alignment using Enhanced Correlation Coefficient Maximization", IEEE Transactions on PAMI, vol. 32, no. 10, 2008
 
 .. [Farneback2003] Gunnar Farneback, Two-frame motion estimation based on polynomial expansion, Lecture Notes in Computer Science, 2003, (2749), , 363-370.
@@ -990,9 +943,7 @@ Releases all inner buffers.
 
 .. [Lucas81] Lucas, B., and Kanade, T. An Iterative Image Registration Technique with an Application to Stereo Vision, Proc. of 7th International Joint Conference on Artificial Intelligence (IJCAI), pp. 674-679.
 
-.. [Welch95] Greg Welch and Gary Bishop “An Introduction to the Kalman Filter”, 1995
-
-.. [Tao2012] Michael Tao, Jiamin Bai, Pushmeet Kohli and Sylvain Paris. SimpleFlow: A Non-iterative, Sublinear Optical Flow Algorithm. Computer Graphics Forum (Eurographics 2012)
+.. [Welch95] Greg Welch and Gary Bishop "An Introduction to the Kalman Filter", 1995
 
 .. [Zach2007] C. Zach, T. Pock and H. Bischof. "A Duality Based Approach for Realtime TV-L1 Optical Flow", In Proceedings of Pattern Recognition (DAGM), Heidelberg, Germany, pp. 214-223, 2007
 

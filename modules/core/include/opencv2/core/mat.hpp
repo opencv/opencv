@@ -118,6 +118,8 @@ public:
 
     virtual int kind() const;
     virtual int dims(int i=-1) const;
+    virtual int cols(int i=-1) const;
+    virtual int rows(int i=-1) const;
     virtual Size size(int i=-1) const;
     virtual int sizend(int* sz, int i=-1) const;
     virtual bool sameSize(const _InputArray& arr) const;
@@ -129,13 +131,14 @@ public:
     virtual bool isSubmatrix(int i=-1) const;
     virtual bool empty() const;
     virtual void copyTo(const _OutputArray& arr) const;
+    virtual void copyTo(const _OutputArray& arr, const _InputArray & mask) const;
     virtual size_t offset(int i=-1) const;
     virtual size_t step(int i=-1) const;
     bool isMat() const;
     bool isUMat() const;
     bool isMatVector() const;
     bool isUMatVector() const;
-    bool isMatx();
+    bool isMatx() const;
 
     virtual ~_InputArray();
 
@@ -216,6 +219,9 @@ public:
     virtual void release() const;
     virtual void clear() const;
     virtual void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
+
+    void assign(const UMat& u) const;
+    void assign(const Mat& m) const;
 };
 
 
@@ -266,6 +272,18 @@ CV_EXPORTS InputOutputArray noArray();
 
 /////////////////////////////////// MatAllocator //////////////////////////////////////
 
+//! Usage flags for allocator
+enum UMatUsageFlags
+{
+    USAGE_DEFAULT = 0,
+
+    // default allocation policy is platform and usage specific
+    USAGE_ALLOCATE_HOST_MEMORY = 1 << 0,
+    USAGE_ALLOCATE_DEVICE_MEMORY = 1 << 1,
+
+    __UMAT_USAGE_FLAGS_32BIT = 0x7fffffff // Binary compatibility hint
+};
+
 struct CV_EXPORTS UMatData;
 
 /*!
@@ -283,8 +301,8 @@ public:
     //                      uchar*& datastart, uchar*& data, size_t* step) = 0;
     //virtual void deallocate(int* refcount, uchar* datastart, uchar* data) = 0;
     virtual UMatData* allocate(int dims, const int* sizes, int type,
-                               void* data, size_t* step, int flags) const = 0;
-    virtual bool allocate(UMatData* data, int accessflags) const = 0;
+                               void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const = 0;
+    virtual bool allocate(UMatData* data, int accessflags, UMatUsageFlags usageFlags) const = 0;
     virtual void deallocate(UMatData* data) const = 0;
     virtual void map(UMatData* data, int accessflags) const;
     virtual void unmap(UMatData* data) const;
@@ -342,7 +360,7 @@ struct CV_EXPORTS UMatData
 {
     enum { COPY_ON_MAP=1, HOST_COPY_OBSOLETE=2,
         DEVICE_COPY_OBSOLETE=4, TEMP_UMAT=8, TEMP_COPIED_UMAT=24,
-        USER_ALLOCATED=32 };
+        USER_ALLOCATED=32, DEVICE_MEM_MAPPED=64};
     UMatData(const MatAllocator* allocator);
     ~UMatData();
 
@@ -352,11 +370,13 @@ struct CV_EXPORTS UMatData
 
     bool hostCopyObsolete() const;
     bool deviceCopyObsolete() const;
+    bool deviceMemMapped() const;
     bool copyOnMap() const;
     bool tempUMat() const;
     bool tempCopiedUMat() const;
     void markHostCopyObsolete(bool flag);
     void markDeviceCopyObsolete(bool flag);
+    void markDeviceMemMapped(bool flag);
 
     const MatAllocator* prevAllocator;
     const MatAllocator* currAllocator;
@@ -369,12 +389,13 @@ struct CV_EXPORTS UMatData
     int flags;
     void* handle;
     void* userdata;
+    int allocatorFlags_;
 };
 
 
 struct CV_EXPORTS UMatDataAutoLock
 {
-    UMatDataAutoLock(UMatData* u);
+    explicit UMatDataAutoLock(UMatData* u);
     ~UMatDataAutoLock();
     UMatData* u;
 };
@@ -382,7 +403,7 @@ struct CV_EXPORTS UMatDataAutoLock
 
 struct CV_EXPORTS MatSize
 {
-    MatSize(int* _p);
+    explicit MatSize(int* _p);
     Size operator()() const;
     const int& operator[](int i) const;
     int& operator[](int i);
@@ -396,7 +417,7 @@ struct CV_EXPORTS MatSize
 struct CV_EXPORTS MatStep
 {
     MatStep();
-    MatStep(size_t s);
+    explicit MatStep(size_t s);
     const size_t& operator[](int i) const;
     size_t& operator[](int i);
     operator size_t() const;
@@ -557,8 +578,6 @@ protected:
    cv::Mat::step that is used to actually compute address of a matrix element. cv::Mat::step is needed because the matrix can be
    a part of another matrix or because there can some padding space in the end of each row for a proper alignment.
 
-   \image html roi.png
-
    Given these parameters, address of the matrix element M_{ij} is computed as following:
 
    addr(M_{ij})=M.data + M.step*i + j*M.elemSize()
@@ -671,7 +690,7 @@ public:
     Mat& operator = (const MatExpr& expr);
 
     //! retrieve UMat from Mat
-    UMat getUMat(int accessFlags) const;
+    UMat getUMat(int accessFlags, UMatUsageFlags usageFlags = USAGE_DEFAULT) const;
 
     //! returns a new matrix header for the specified row
     Mat row(int y) const;
@@ -879,6 +898,11 @@ public:
     template<typename _Tp> MatConstIterator_<_Tp> begin() const;
     template<typename _Tp> MatConstIterator_<_Tp> end() const;
 
+    //! template methods for for operation over all matrix elements.
+    // the operations take care of skipping gaps in the end of rows (if any)
+    template<typename _Tp, typename Functor> void forEach(const Functor& operation);
+    template<typename _Tp, typename Functor> void forEach(const Functor& operation) const;
+
     enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
     enum { MAGIC_MASK = 0xFFFF0000, TYPE_MASK = 0x00000FFF, DEPTH_MASK = 7 };
 
@@ -897,9 +921,9 @@ public:
     uchar* data;
 
     //! helper fields used in locateROI and adjustROI
-    uchar* datastart;
-    uchar* dataend;
-    uchar* datalimit;
+    const uchar* datastart;
+    const uchar* dataend;
+    const uchar* datalimit;
 
     //! custom allocator
     MatAllocator* allocator;
@@ -913,6 +937,7 @@ public:
     MatStep step;
 
 protected:
+    template<typename _Tp, typename Functor> void forEach_impl(const Functor& operation);
 };
 
 
@@ -935,9 +960,8 @@ protected:
  \endcode
 
  While cv::Mat is sufficient in most cases, cv::Mat_ can be more convenient if you use a lot of element
- access operations and if you know matrix type at compile time.
- Note that cv::Mat::at<_Tp>(int y, int x) and cv::Mat_<_Tp>::operator ()(int y, int x) do absolutely the
- same thing and run at the same speed, but the latter is certainly shorter:
+ access operations and if you know matrix type at compile time. Note that cv::Mat::at and
+ cv::Mat::operator() do absolutely the same thing and run at the same speed, but the latter is certainly shorter:
 
  \code
  Mat_<double> M(20,20);
@@ -1021,6 +1045,11 @@ public:
     iterator end();
     const_iterator begin() const;
     const_iterator end() const;
+
+    //! template methods for for operation over all matrix elements.
+    // the operations take care of skipping gaps in the end of rows (if any)
+    template<typename Functor> void forEach(const Functor& operation);
+    template<typename Functor> void forEach(const Functor& operation) const;
 
     //! equivalent to Mat::create(_rows, _cols, DataType<_Tp>::type)
     void create(int _rows, int _cols);
@@ -1136,18 +1165,18 @@ class CV_EXPORTS UMat
 {
 public:
     //! default constructor
-    UMat();
+    UMat(UMatUsageFlags usageFlags = USAGE_DEFAULT);
     //! constructs 2D matrix of the specified size and type
     // (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
-    UMat(int rows, int cols, int type);
-    UMat(Size size, int type);
+    UMat(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     //! constucts 2D matrix and fills it with the specified value _s.
-    UMat(int rows, int cols, int type, const Scalar& s);
-    UMat(Size size, int type, const Scalar& s);
+    UMat(int rows, int cols, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(Size size, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! constructs n-dimensional matrix
-    UMat(int ndims, const int* sizes, int type);
-    UMat(int ndims, const int* sizes, int type, const Scalar& s);
+    UMat(int ndims, const int* sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(int ndims, const int* sizes, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! copy constructor
     UMat(const UMat& m);
@@ -1237,9 +1266,9 @@ public:
 
     //! allocates new matrix data unless the matrix already has specified size and type.
     // previous data is unreferenced if needed.
-    void create(int rows, int cols, int type);
-    void create(Size size, int type);
-    void create(int ndims, const int* sizes, int type);
+    void create(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    void create(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    void create(int ndims, const int* sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! increases the reference counter; use with care to avoid memleaks
     void addref();
@@ -1311,6 +1340,7 @@ public:
 
     //! custom allocator
     MatAllocator* allocator;
+    UMatUsageFlags usageFlags; // usage flags for allocator
     //! and the standard allocator
     static MatAllocator* getStdAllocator();
 
@@ -1481,9 +1511,13 @@ public:
     void convertTo( SparseMat& m, int rtype, double alpha=1 ) const;
     //! converts sparse matrix to dense n-dim matrix with optional type conversion and scaling.
     /*!
-      \param rtype The output matrix data type. When it is =-1, the output array will have the same data type as (*this)
-      \param alpha The scale factor
-      \param beta The optional delta added to the scaled values before the conversion
+        @param [out] m - output matrix; if it does not have a proper size or type before the operation,
+            it is reallocated
+        @param [in] rtype – desired output matrix type or, rather, the depth since the number of channels
+            are the same as the input has; if rtype is negative, the output matrix will have the
+            same type as the input.
+        @param [in] alpha – optional scale factor
+        @param [in] beta – optional delta added to the scaled values
     */
     void convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const;
 
@@ -1782,9 +1816,9 @@ public:
     //! copy operator
     MatConstIterator& operator = (const MatConstIterator& it);
     //! returns the current matrix element
-    uchar* operator *() const;
+    const uchar* operator *() const;
     //! returns the i-th matrix element, relative to the current
-    uchar* operator [](ptrdiff_t i) const;
+    const uchar* operator [](ptrdiff_t i) const;
 
     //! shifts the iterator forward by the specified number of elements
     MatConstIterator& operator += (ptrdiff_t ofs);
@@ -1809,9 +1843,9 @@ public:
 
     const Mat* m;
     size_t elemSize;
-    uchar* ptr;
-    uchar* sliceStart;
-    uchar* sliceEnd;
+    const uchar* ptr;
+    const uchar* sliceStart;
+    const uchar* sliceEnd;
 };
 
 
@@ -1895,9 +1929,9 @@ public:
     //! constructor that sets the iterator to the specified element of the matrix
     MatIterator_(Mat_<_Tp>* _m, int _row, int _col=0);
     //! constructor that sets the iterator to the specified element of the matrix
-    MatIterator_(const Mat_<_Tp>* _m, Point _pt);
+    MatIterator_(Mat_<_Tp>* _m, Point _pt);
     //! constructor that sets the iterator to the specified element of the matrix
-    MatIterator_(const Mat_<_Tp>* _m, const int* _idx);
+    MatIterator_(Mat_<_Tp>* _m, const int* _idx);
     //! copy constructor
     MatIterator_(const MatIterator_& it);
     //! copy operator

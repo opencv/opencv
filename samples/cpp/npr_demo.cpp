@@ -17,6 +17,7 @@
 #include <signal.h>
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/core.hpp"
 #include <iostream>
@@ -37,7 +38,7 @@ int main(int argc, char* argv[])
 
     Mat I = imread(argv[1]);
 
-    if(!I.data)
+    if(I.empty())
     {
         cout <<  "Image not found" << endl;
         exit(0);

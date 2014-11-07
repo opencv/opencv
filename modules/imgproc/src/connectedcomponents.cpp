@@ -203,10 +203,10 @@ namespace cv{
         LabelT lunique = 1;
         //scanning phase
         for(int r_i = 0; r_i < rows; ++r_i){
-            LabelT *Lrow = (LabelT *)(L.data + L.step.p[0] * r_i);
-            LabelT *Lrow_prev = (LabelT *)(((char *)Lrow) - L.step.p[0]);
-            const PixelT *Irow = (PixelT *)(I.data + I.step.p[0] * r_i);
-            const PixelT *Irow_prev = (const PixelT *)(((char *)Irow) - I.step.p[0]);
+            LabelT * const Lrow = L.ptr<LabelT>(r_i);
+            LabelT * const Lrow_prev = (LabelT *)(((char *)Lrow) - L.step.p[0]);
+            const PixelT * const Irow = I.ptr<PixelT>(r_i);
+            const PixelT * const Irow_prev = (const PixelT *)(((char *)Irow) - I.step.p[0]);
             LabelT *Lrows[2] = {
                 Lrow,
                 Lrow_prev
@@ -315,7 +315,7 @@ namespace cv{
         sop.init(nLabels);
 
         for(int r_i = 0; r_i < rows; ++r_i){
-            LabelT *Lrow_start = (LabelT *)(L.data + L.step.p[0] * r_i);
+            LabelT *Lrow_start = L.ptr<LabelT>(r_i);
             LabelT *Lrow_end = Lrow_start + cols;
             LabelT *Lrow = Lrow_start;
             for(int c_i = 0; Lrow != Lrow_end; ++Lrow, ++c_i){

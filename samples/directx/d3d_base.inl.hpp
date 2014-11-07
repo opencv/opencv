@@ -8,6 +8,7 @@
 #include "opencv2/imgproc/types_c.h" // cvtColor
 #include "opencv2/highgui.hpp" // imread
 #include "opencv2/core/directx.hpp"
+#include "opencv2/imgcodecs.hpp"
 
 #include <iostream>
 #include <queue>

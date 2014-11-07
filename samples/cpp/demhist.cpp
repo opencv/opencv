@@ -1,5 +1,6 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 
 #include <iostream>
@@ -58,12 +59,12 @@ static void updateBrightnessContrast( int /*arg*/, void* )
 static void help()
 {
     std::cout << "\nThis program demonstrates the use of calcHist() -- histogram creation.\n"
-              << "Usage: \n" << "demhist [image_name -- Defaults to baboon.jpg]" << std::endl;
+              << "Usage: \n" << "demhist [image_name -- Defaults to ../data/baboon.jpg]" << std::endl;
 }
 
 const char* keys =
 {
-    "{@image|baboon.jpg|input image file}"
+    "{@image|../data/baboon.jpg|input image file}"
 };
 
 int main( int argc, const char** argv )

@@ -210,6 +210,14 @@ public:
      * In theory, it should have a small value in order to maintain both parts in correspondence.
      * The method is stable for a large range of values of this parameter.
      */
+
+    double gamma;
+    /**
+    * parameter used for motion estimation. It adds a variable allowing for illumination variations
+    * Set this parameter to 1. if you have varying illumination.
+    * See: Chambolle et al, A First-Order Primal-Dual Algorithm for Convex Problems with Applications to Imaging
+    * Journal of Mathematical imaging and vision, may 2011 Vol 40 issue 1, pp 120-145
+    */
     double theta;
 
     /**
@@ -241,12 +249,13 @@ public:
     bool useInitialFlow;
 
 private:
-    void procOneScale(const GpuMat& I0, const GpuMat& I1, GpuMat& u1, GpuMat& u2);
+    void procOneScale(const GpuMat& I0, const GpuMat& I1, GpuMat& u1, GpuMat& u2, GpuMat& u3);
 
     std::vector<GpuMat> I0s;
     std::vector<GpuMat> I1s;
     std::vector<GpuMat> u1s;
     std::vector<GpuMat> u2s;
+    std::vector<GpuMat> u3s;
 
     GpuMat I1x_buf;
     GpuMat I1y_buf;
@@ -262,6 +271,8 @@ private:
     GpuMat p12_buf;
     GpuMat p21_buf;
     GpuMat p22_buf;
+    GpuMat p31_buf;
+    GpuMat p32_buf;
 
     GpuMat diff_buf;
     GpuMat norm_buf;

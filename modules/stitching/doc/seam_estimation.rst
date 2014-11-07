@@ -22,7 +22,7 @@ detail::SeamFinder::find
 
 Estimates seams.
 
-.. ocv:function:: void detail::SeamFinder::find(const std::vector<Mat> &src, const std::vector<Point> &corners, std::vector<Mat> &masks)
+.. ocv:function:: void detail::SeamFinder::find(const std::vector<UMat> &src, const std::vector<Point> &corners, std::vector<UMat> &masks)
 
     :param src: Source images
 

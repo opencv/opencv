@@ -33,6 +33,7 @@
 #include <signal.h>
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/core.hpp"
 #include <iostream>
@@ -64,7 +65,7 @@ float alpha,beta;
 
 float red, green, blue;
 
-double low_t, high_t;
+float low_t, high_t;
 
 void source(int, int, int, int, void*);
 void destination(int, int, int, int, void*);
@@ -318,12 +319,12 @@ int main()
 
         img2 = imread(dest);
 
-        if(!img0.data)
+        if(img0.empty())
         {
             cout << "Source Image does not exist" << endl;
             exit(0);
         }
-        if(!img2.data)
+        if(img2.empty())
         {
             cout << "Destination Image does not exist" << endl;
             exit(0);
@@ -366,7 +367,7 @@ int main()
 
         img0 = imread(src);
 
-        if(!img0.data)
+        if(img0.empty())
         {
             cout << "Source Image does not exist" << endl;
             exit(0);
@@ -396,7 +397,7 @@ int main()
 
         img0 = imread(src);
 
-        if(!img0.data)
+        if(img0.empty())
         {
             cout << "Source Image does not exist" << endl;
             exit(0);
@@ -429,7 +430,7 @@ int main()
 
         img0 = imread(src);
 
-        if(!img0.data)
+        if(img0.empty())
         {
             cout << "Source Image does not exist" << endl;
             exit(0);

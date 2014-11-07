@@ -43,8 +43,6 @@
 
 #include "opencv2/ts/ocl_perf.hpp"
 
-#ifdef HAVE_OPENCL
-
 namespace cvtest {
 namespace ocl {
 
@@ -82,6 +80,4 @@ void randu(InputOutputArray dst)
 
 } // namespace perf
 
-}} // namespace cvtest::ocl
-
-#endif // HAVE_OPENCL
+} } // namespace cvtest::ocl

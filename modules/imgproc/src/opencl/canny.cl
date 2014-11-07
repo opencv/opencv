@@ -43,472 +43,452 @@
 //
 //M*/
 
-// Smoothing perpendicular to the derivative direction with a triangle filter
-// only support 3x3 Sobel kernel
-// h (-1) =  1, h (0) =  2, h (1) =  1
-// h'(-1) = -1, h'(0) =  0, h'(1) =  1
-// thus sobel 2D operator can be calculated as:
-// h'(x, y) = h'(x)h(y) for x direction
-//
-// src		input 8bit single channel image data
-// dx_buf	output dx buffer
-// dy_buf	output dy buffer
+#define TG22 0.4142135623730950488016887242097f
+#define TG67 2.4142135623730950488016887242097f
 
-__kernel void __attribute__((reqd_work_group_size(16, 16, 1)))
-calcSobelRowPass
-    (__global const uchar * src, int src_step, int src_offset, int rows, int cols,
-     __global uchar * dx_buf, int dx_buf_step, int dx_buf_offset,
-     __global uchar * dy_buf, int dy_buf_step, int dy_buf_offset)
-{
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
+#ifdef WITH_SOBEL
 
-    int lidx = get_local_id(0);
-    int lidy = get_local_id(1);
-
-    __local int smem[16][18];
-
-    smem[lidy][lidx + 1] = src[mad24(src_step, min(gidy, rows - 1), gidx + src_offset)];
-    if (lidx == 0)
-    {
-        smem[lidy][0]  = src[mad24(src_step, min(gidy, rows - 1), max(gidx - 1,  0)        + src_offset)];
-        smem[lidy][17] = src[mad24(src_step, min(gidy, rows - 1), min(gidx + 16, cols - 1) + src_offset)];
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (gidy < rows && gidx < cols)
-    {
-        *(__global short *)(dx_buf + mad24(gidy, dx_buf_step, gidx * (int)sizeof(short) + dx_buf_offset)) =
-            smem[lidy][lidx + 2] - smem[lidy][lidx];
-        *(__global short *)(dy_buf + mad24(gidy, dy_buf_step, gidx * (int)sizeof(short) + dy_buf_offset)) =
-            smem[lidy][lidx] + 2 * smem[lidy][lidx + 1] + smem[lidy][lidx + 2];
-    }
-}
-
-inline int calc(short x, short y)
-{
-#ifdef L2GRAD
-    return x * x + y * y;
+#if cn == 1
+#define loadpix(addr) convert_floatN(*(__global const TYPE *)(addr))
 #else
-    return (x >= 0 ? x : -x) + (y >= 0 ? y : -y);
+#define loadpix(addr) convert_floatN(vload3(0, (__global const TYPE *)(addr)))
 #endif
-}
+#define storepix(value, addr) *(__global int *)(addr) = (int)(value)
 
-// calculate the magnitude of the filter pass combining both x and y directions
-// This is the non-buffered version(non-3x3 sobel)
-//
-// dx_buf		dx buffer, calculated from calcSobelRowPass
-// dy_buf		dy buffer, calculated from calcSobelRowPass
-// dx			direvitive in x direction output
-// dy			direvitive in y direction output
-// mag			magnitude direvitive of xy output
+/*
+    stage1_with_sobel:
+        Sobel operator
+        Calc magnitudes
+        Non maxima suppression
+        Double thresholding
+*/
 
-__kernel void calcMagnitude(__global const uchar * dxptr, int dx_step, int dx_offset,
-                            __global const uchar * dyptr, int dy_step, int dy_offset,
-                            __global uchar * magptr, int mag_step, int mag_offset, int rows, int cols)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if (y < rows && x < cols)
-    {
-        int dx_index = mad24(dx_step, y, x * (int)sizeof(short) + dx_offset);
-        int dy_index = mad24(dy_step, y, x * (int)sizeof(short) + dy_offset);
-        int mag_index = mad24(mag_step, y + 1, (x + 1) * (int)sizeof(int) + mag_offset);
-
-        __global const short * dx = (__global const short *)(dxptr + dx_index);
-        __global const short * dy = (__global const short *)(dyptr + dy_index);
-        __global int * mag = (__global int *)(magptr + mag_index);
-
-        mag[0] = calc(dx[0], dy[0]);
-    }
-}
-
-// calculate the magnitude of the filter pass combining both x and y directions
-// This is the buffered version(3x3 sobel)
-//
-// dx_buf		dx buffer, calculated from calcSobelRowPass
-// dy_buf		dy buffer, calculated from calcSobelRowPass
-// dx			direvitive in x direction output
-// dy			direvitive in y direction output
-// mag			magnitude direvitive of xy output
-__kernel void __attribute__((reqd_work_group_size(16, 16, 1)))
-calcMagnitude_buf
-    (__global const short * dx_buf, int dx_buf_step, int dx_buf_offset,
-     __global const short * dy_buf, int dy_buf_step, int dy_buf_offset,
-     __global short * dx, int dx_step, int dx_offset,
-     __global short * dy, int dy_step, int dy_offset,
-     __global int * mag, int mag_step, int mag_offset,
-     int rows, int cols)
-{
-    dx_buf_step    /= sizeof(*dx_buf);
-    dx_buf_offset  /= sizeof(*dx_buf);
-    dy_buf_step    /= sizeof(*dy_buf);
-    dy_buf_offset  /= sizeof(*dy_buf);
-    dx_step    /= sizeof(*dx);
-    dx_offset  /= sizeof(*dx);
-    dy_step    /= sizeof(*dy);
-    dy_offset  /= sizeof(*dy);
-    mag_step   /= sizeof(*mag);
-    mag_offset /= sizeof(*mag);
-
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
-
-    int lidx = get_local_id(0);
-    int lidy = get_local_id(1);
-
-    __local short sdx[18][16];
-    __local short sdy[18][16];
-
-    sdx[lidy + 1][lidx] = dx_buf[gidx + min(gidy, rows - 1) * dx_buf_step + dx_buf_offset];
-    sdy[lidy + 1][lidx] = dy_buf[gidx + min(gidy, rows - 1) * dy_buf_step + dy_buf_offset];
-    if (lidy == 0)
-    {
-        sdx[0][lidx]  = dx_buf[gidx + min(max(gidy - 1, 0), rows - 1) * dx_buf_step + dx_buf_offset];
-        sdx[17][lidx] = dx_buf[gidx + min(gidy + 16, rows - 1)        * dx_buf_step + dx_buf_offset];
-
-        sdy[0][lidx]  = dy_buf[gidx + min(max(gidy - 1, 0), rows - 1) * dy_buf_step + dy_buf_offset];
-        sdy[17][lidx] = dy_buf[gidx + min(gidy + 16, rows - 1)        * dy_buf_step + dy_buf_offset];
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (gidx < cols && gidy < rows)
-    {
-        short x =  sdx[lidy][lidx] + 2 * sdx[lidy + 1][lidx] + sdx[lidy + 2][lidx];
-        short y = -sdy[lidy][lidx] + sdy[lidy + 2][lidx];
-
-        dx[gidx + gidy * dx_step + dx_offset] = x;
-        dy[gidx + gidy * dy_step + dy_offset] = y;
-
-        mag[(gidx + 1) + (gidy + 1) * mag_step + mag_offset] = calc(x, y);
-    }
-}
-
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// 0.4142135623730950488016887242097 is tan(22.5)
-
-#define CANNY_SHIFT 15
-#define TG22        (int)(0.4142135623730950488016887242097f*(1<<CANNY_SHIFT) + 0.5f)
-
-// First pass of edge detection and non-maximum suppression
-// edgetype is set to for each pixel:
-// 0 - below low thres, not an edge
-// 1 - maybe an edge
-// 2 - is an edge, either magnitude is greater than high thres, or
-//     Given estimates of the image gradients, a search is then carried out
-//     to determine if the gradient magnitude assumes a local maximum in the gradient direction.
-//     if the rounded gradient angle is zero degrees (i.e. the edge is in the north-south direction) the point will be considered to be on the edge if its gradient magnitude is greater than the magnitudes in the west and east directions,
-//     if the rounded gradient angle is 90 degrees (i.e. the edge is in the east-west direction) the point will be considered to be on the edge if its gradient magnitude is greater than the magnitudes in the north and south directions,
-//     if the rounded gradient angle is 135 degrees (i.e. the edge is in the north east-south west direction) the point will be considered to be on the edge if its gradient magnitude is greater than the magnitudes in the north west and south east directions,
-//     if the rounded gradient angle is 45 degrees (i.e. the edge is in the north west-south east direction)the point will be considered to be on the edge if its gradient magnitude is greater than the magnitudes in the north east and south west directions.
-//
-// dx, dy		direvitives of x and y direction
-// mag			magnitudes calculated from calcMagnitude function
-// map			output containing raw edge types
-
-__kernel void __attribute__((reqd_work_group_size(16,16,1)))
-calcMap(
-    __global const uchar * dx, int dx_step, int dx_offset,
-    __global const uchar * dy, int dy_step, int dy_offset,
-    __global const uchar * mag, int mag_step, int mag_offset,
-    __global uchar * map, int map_step, int map_offset,
-    int rows, int cols, int low_thresh, int high_thresh)
-{
-    __local int smem[18][18];
-
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
-
-    int lidx = get_local_id(0);
-    int lidy = get_local_id(1);
-
-    int grp_idx = get_global_id(0) & 0xFFFFF0;
-    int grp_idy = get_global_id(1) & 0xFFFFF0;
-
-    int tid = lidx + lidy * 16;
-    int lx = tid % 18;
-    int ly = tid / 18;
-
-    mag += mag_offset;
-    if (ly < 14)
-        smem[ly][lx] = *(__global const int *)(mag +
-            mad24(mag_step, min(grp_idy + ly, rows - 1), (int)sizeof(int) * (grp_idx + lx)));
-    if (ly < 4 && grp_idy + ly + 14 <= rows && grp_idx + lx <= cols)
-        smem[ly + 14][lx] = *(__global const int *)(mag +
-            mad24(mag_step, min(grp_idy + ly + 14, rows - 1), (int)sizeof(int) * (grp_idx + lx)));
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (gidy < rows && gidx < cols)
-    {
-        // 0 - the pixel can not belong to an edge
-        // 1 - the pixel might belong to an edge
-        // 2 - the pixel does belong to an edge
-        int edge_type = 0;
-        int m = smem[lidy + 1][lidx + 1];
-
-        if (m > low_thresh)
-        {
-            short xs = *(__global const short *)(dx + mad24(gidy, dx_step, dx_offset + (int)sizeof(short) * gidx));
-            short ys = *(__global const short *)(dy + mad24(gidy, dy_step, dy_offset + (int)sizeof(short) * gidx));
-            int x = abs(xs), y = abs(ys);
-
-            int tg22x = x * TG22;
-            y <<= CANNY_SHIFT;
-
-            if (y < tg22x)
-            {
-                if (m > smem[lidy + 1][lidx] && m >= smem[lidy + 1][lidx + 2])
-                    edge_type = 1 + (int)(m > high_thresh);
-            }
-            else
-            {
-                int tg67x = tg22x + (x << (1 + CANNY_SHIFT));
-                if (y > tg67x)
-                {
-                    if (m > smem[lidy][lidx + 1]&& m >= smem[lidy + 2][lidx + 1])
-                        edge_type = 1 + (int)(m > high_thresh);
-                }
-                else
-                {
-                    int s = (xs ^ ys) < 0 ? -1 : 1;
-                    if (m > smem[lidy][lidx + 1 - s]&& m > smem[lidy + 2][lidx + 1 + s])
-                        edge_type = 1 + (int)(m > high_thresh);
-                }
-            }
-        }
-        *(__global int *)(map + mad24(map_step, gidy + 1, (gidx + 1) * (int)sizeof(int) + map_offset)) = edge_type;
-    }
-}
-
-#undef CANNY_SHIFT
-#undef TG22
-
-struct PtrStepSz
-{
-    __global uchar * ptr;
-    int step, rows, cols;
+__constant int prev[4][2] = {
+    { 0, -1 },
+    { -1, 1 },
+    { -1, 0 },
+    { -1, -1 }
 };
 
-inline int get(struct PtrStepSz data, int y, int x)
+__constant int next[4][2] = {
+    { 0, 1 },
+    { 1, -1 },
+    { 1, 0 },
+    { 1, 1 }
+};
+
+inline float3 sobel(int idx, __local const floatN *smem)
 {
-    return *(__global int *)(data.ptr + mad24(data.step, y + 1, (int)sizeof(int) * (x + 1)));
+    // result: x, y, mag
+    float3 res;
+
+    floatN dx = fma(2, smem[idx + GRP_SIZEX + 6] - smem[idx + GRP_SIZEX + 4],
+        smem[idx + 2] - smem[idx] + smem[idx + 2 * GRP_SIZEX + 10] - smem[idx + 2 * GRP_SIZEX + 8]);
+
+    floatN dy = fma(2, smem[idx + 1] - smem[idx + 2 * GRP_SIZEX + 9],
+        smem[idx + 2] - smem[idx + 2 * GRP_SIZEX + 10] + smem[idx] - smem[idx + 2 * GRP_SIZEX + 8]);
+
+#ifdef L2GRAD
+    floatN magN = fma(dx, dx, dy * dy);
+#else
+    floatN magN = fabs(dx) + fabs(dy);
+#endif
+#if cn == 1
+    res.z = magN;
+    res.x = dx;
+    res.y = dy;
+#else
+    res.z = max(magN.x, max(magN.y, magN.z));
+    if (res.z == magN.y)
+    {
+        dx.x = dx.y;
+        dy.x = dy.y;
+    }
+    else if (res.z == magN.z)
+    {
+        dx.x = dx.z;
+        dy.x = dy.z;
+    }
+    res.x = dx.x;
+    res.y = dy.x;
+#endif
+
+    return res;
 }
 
-inline void set(struct PtrStepSz data, int y, int x, int value)
+__kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src_offset, int rows, int cols,
+                                __global uchar *map, int map_step, int map_offset,
+                                float low_thr, float high_thr)
 {
-    *(__global int *)(data.ptr + mad24(data.step, y + 1, (int)sizeof(int) * (x + 1))) = value;
-}
-
-// perform Hysteresis for pixel whose edge type is 1
-//
-// If candidate pixel (edge type is 1) has a neighbour pixel (in 3x3 area) with type 2, it is believed to be part of an edge and
-// marked as edge. Each thread will iterate for 16 times to connect local edges.
-// Candidate pixel being identified as edge will then be tested if there is nearby potiential edge points. If there is, counter will
-// be incremented by 1 and the point location is stored. These potiential candidates will be processed further in next kernel.
-//
-// map		raw edge type results calculated from calcMap.
-// stack	the potiential edge points found in this kernel call
-// counter	the number of potiential edge points
-
-__kernel void __attribute__((reqd_work_group_size(16,16,1)))
-edgesHysteresisLocal
-    (__global uchar * map_ptr, int map_step, int map_offset,
-     __global ushort2 * st, __global unsigned int * counter,
-    int rows, int cols)
-{
-    struct PtrStepSz map = { map_ptr + map_offset, map_step, rows + 1, cols + 1 };
-
-    __local int smem[18][18];
-
-    int2 blockIdx = (int2)(get_group_id(0), get_group_id(1));
-    int2 blockDim = (int2)(get_local_size(0), get_local_size(1));
-    int2 threadIdx = (int2)(get_local_id(0), get_local_id(1));
-
-    const int x = blockIdx.x * blockDim.x + threadIdx.x;
-    const int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-    smem[threadIdx.y + 1][threadIdx.x + 1] = x < map.cols && y < map.rows ? get(map, y, x) : 0;
-    if (threadIdx.y == 0)
-        smem[0][threadIdx.x + 1] = x < map.cols ? get(map, y - 1, x) : 0;
-    if (threadIdx.y == blockDim.y - 1)
-        smem[blockDim.y + 1][threadIdx.x + 1] = y + 1 < map.rows ? get(map, y + 1, x) : 0;
-    if (threadIdx.x == 0)
-        smem[threadIdx.y + 1][0] = y < map.rows ? get(map, y, x - 1) : 0;
-    if (threadIdx.x == blockDim.x - 1)
-        smem[threadIdx.y + 1][blockDim.x + 1] = x + 1 < map.cols && y < map.rows ? get(map, y, x + 1) : 0;
-    if (threadIdx.x == 0 && threadIdx.y == 0)
-        smem[0][0] = y > 0 && x > 0 ? get(map, y - 1, x - 1) : 0;
-    if (threadIdx.x == blockDim.x - 1 && threadIdx.y == 0)
-        smem[0][blockDim.x + 1] = y > 0 && x + 1 < map.cols ? get(map, y - 1, x + 1) : 0;
-    if (threadIdx.x == 0 && threadIdx.y == blockDim.y - 1)
-        smem[blockDim.y + 1][0] = y + 1 < map.rows && x > 0 ? get(map, y + 1, x - 1) : 0;
-    if (threadIdx.x == blockDim.x - 1 && threadIdx.y == blockDim.y - 1)
-        smem[blockDim.y + 1][blockDim.x + 1] = y + 1 < map.rows && x + 1 < map.cols ? get(map, y + 1, x + 1) : 0;
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (x >= cols || y >= rows)
-        return;
-
-    int n;
-
-    #pragma unroll
-    for (int k = 0; k < 16; ++k)
-    {
-        n = 0;
-
-        if (smem[threadIdx.y + 1][threadIdx.x + 1] == 1)
-        {
-            n += smem[threadIdx.y    ][threadIdx.x    ] == 2;
-            n += smem[threadIdx.y    ][threadIdx.x + 1] == 2;
-            n += smem[threadIdx.y    ][threadIdx.x + 2] == 2;
-
-            n += smem[threadIdx.y + 1][threadIdx.x    ] == 2;
-            n += smem[threadIdx.y + 1][threadIdx.x + 2] == 2;
-
-            n += smem[threadIdx.y + 2][threadIdx.x    ] == 2;
-            n += smem[threadIdx.y + 2][threadIdx.x + 1] == 2;
-            n += smem[threadIdx.y + 2][threadIdx.x + 2] == 2;
-        }
-
-        if (n > 0)
-            smem[threadIdx.y + 1][threadIdx.x + 1] = 2;
-    }
-
-    const int e = smem[threadIdx.y + 1][threadIdx.x + 1];
-    set(map, y, x, e);
-    n = 0;
-
-    if (e == 2)
-    {
-        n += smem[threadIdx.y    ][threadIdx.x    ] == 1;
-        n += smem[threadIdx.y    ][threadIdx.x + 1] == 1;
-        n += smem[threadIdx.y    ][threadIdx.x + 2] == 1;
-
-        n += smem[threadIdx.y + 1][threadIdx.x    ] == 1;
-        n += smem[threadIdx.y + 1][threadIdx.x + 2] == 1;
-
-        n += smem[threadIdx.y + 2][threadIdx.x    ] == 1;
-        n += smem[threadIdx.y + 2][threadIdx.x + 1] == 1;
-        n += smem[threadIdx.y + 2][threadIdx.x + 2] == 1;
-    }
-
-    if (n > 0)
-    {
-        const int ind = atomic_inc(counter);
-        st[ind] = (ushort2)(x + 1, y + 1);
-    }
-}
-
-__constant int c_dx[8] = {-1,  0,  1, -1, 1, -1, 0, 1};
-__constant int c_dy[8] = {-1, -1, -1,  0, 0,  1, 1, 1};
-
-
-#define stack_size 512
-#define map_index mad24(map_step, pos.y, pos.x * (int)sizeof(int))
-
-__kernel void __attribute__((reqd_work_group_size(128, 1, 1)))
-edgesHysteresisGlobal(__global uchar * map, int map_step, int map_offset,
-    __global ushort2 * st1, __global ushort2 * st2, __global int * counter,
-    int rows, int cols, int count)
-{
-    map += map_offset;
+    __local floatN smem[(GRP_SIZEX + 4) * (GRP_SIZEY + 4)];
 
     int lidx = get_local_id(0);
+    int lidy = get_local_id(1);
 
-    int grp_idx = get_group_id(0);
-    int grp_idy = get_group_id(1);
+    int start_x = GRP_SIZEX * get_group_id(0);
+    int start_y = GRP_SIZEY * get_group_id(1);
 
-    __local unsigned int s_counter, s_ind;
-    __local ushort2 s_st[stack_size];
+    int i = lidx + lidy * GRP_SIZEX;
+    for (int j = i;  j < (GRP_SIZEX + 4) * (GRP_SIZEY + 4); j += GRP_SIZEX * GRP_SIZEY)
+    {
+        int x = clamp(start_x - 2 + (j % (GRP_SIZEX + 4)), 0, cols - 1);
+        int y = clamp(start_y - 2 + (j / (GRP_SIZEX + 4)), 0, rows - 1);
+        smem[j] = loadpix(src + mad24(y, src_step, mad24(x, cn * (int)sizeof(TYPE), src_offset)));
+    }
 
-    if (lidx == 0)
-        s_counter = 0;
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    int ind = mad24(grp_idy, (int)get_local_size(0), grp_idx);
+    //// Sobel, Magnitude
+    //
 
-    if (ind < count)
+    __local float mag[(GRP_SIZEX + 2) * (GRP_SIZEY + 2)];
+
+    lidx++;
+    lidy++;
+
+    if (i < GRP_SIZEX + 2)
     {
-        ushort2 pos = st1[ind];
-        if (lidx < 8)
+        int grp_sizey = min(GRP_SIZEY + 1, rows - start_y);
+        mag[i] = (sobel(i, smem)).z;
+        mag[i + grp_sizey * (GRP_SIZEX + 2)] = (sobel(i + grp_sizey * (GRP_SIZEX + 4), smem)).z;
+    }
+    if (i < GRP_SIZEY + 2)
+    {
+        int grp_sizex = min(GRP_SIZEX + 1, cols - start_x);
+        mag[i * (GRP_SIZEX + 2)] = (sobel(i * (GRP_SIZEX + 4), smem)).z;
+        mag[i * (GRP_SIZEX + 2) + grp_sizex] = (sobel(i * (GRP_SIZEX + 4) + grp_sizex, smem)).z;
+    }
+
+    int idx = lidx + lidy * (GRP_SIZEX + 4);
+    i = lidx + lidy * (GRP_SIZEX + 2);
+
+    float3 res = sobel(idx, smem);
+    mag[i] = res.z;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    int x = (int) res.x;
+    int y = (int) res.y;
+
+    //// Threshold + Non maxima suppression
+    //
+
+    /*
+        Sector numbers
+
+        3   2   1
+         *  *  *
+          * * *
+        0*******0
+          * * *
+         *  *  *
+        1   2   3
+
+        We need to determine arctg(dy / dx) to one of the four directions: 0, 45, 90 or 135 degrees.
+        Therefore if abs(dy / dx) belongs to the interval
+        [0, tg(22.5)]           -> 0 direction
+        [tg(22.5), tg(67.5)]    -> 1 or 3
+        [tg(67,5), +oo)         -> 2
+
+        Since tg(67.5) = 1 / tg(22.5), if we take
+        a = abs(dy / dx) * tg(22.5) and b = abs(dy / dx) * tg(67.5)
+        we can get another intervals
+
+        in case a:
+        [0, tg(22.5)^2]     -> 0
+        [tg(22.5)^2, 1]     -> 1, 3
+        [1, +oo)            -> 2
+
+        in case b:
+        [0, 1]              -> 0
+        [1, tg(67.5)^2]     -> 1,3
+        [tg(67.5)^2, +oo)   -> 2
+
+        that can help to find direction without conditions.
+
+        0 - might belong to an edge
+        1 - pixel doesn't belong to an edge
+        2 - belong to an edge
+    */
+
+    int gidx = get_global_id(0);
+    int gidy = get_global_id(1);
+
+    if (gidx >= cols || gidy >= rows)
+        return;
+
+    float mag0 = mag[i];
+
+    int value = 1;
+    if (mag0 > low_thr)
+    {
+        int a = (y / (float)x) * TG22;
+        int b = (y / (float)x) * TG67;
+
+        a = min((int)abs(a), 1) + 1;
+        b = min((int)abs(b), 1);
+
+        //  a = { 1, 2 }
+        //  b = { 0, 1 }
+        //  a * b = { 0, 1, 2 } - directions that we need ( + 3 if x ^ y < 0)
+
+        int dir3 = (a * b) & (((x ^ y) & 0x80000000) >> 31); // if a = 1, b = 1, dy ^ dx < 0
+        int dir = a * b + 2 * dir3;
+        float prev_mag = mag[(lidy + prev[dir][0]) * (GRP_SIZEX + 2) + lidx + prev[dir][1]];
+        float next_mag = mag[(lidy + next[dir][0]) * (GRP_SIZEX + 2) + lidx + next[dir][1]] + (dir & 1);
+
+        if (mag0 > prev_mag && mag0 >= next_mag)
         {
-            pos.x += c_dx[lidx];
-            pos.y += c_dy[lidx];
-            if (pos.x > 0 && pos.x <= cols && pos.y > 0 && pos.y <= rows && *(__global int *)(map + map_index) == 1)
+            value = (mag0 > high_thr) ? 2 : 0;
+        }
+    }
+
+    storepix(value, map + mad24(gidy, map_step, mad24(gidx, (int)sizeof(int), map_offset)));
+}
+
+#elif defined WITHOUT_SOBEL
+
+/*
+    stage1_without_sobel:
+        Calc magnitudes
+        Non maxima suppression
+        Double thresholding
+*/
+
+#define loadpix(addr) (__global short *)(addr)
+#define storepix(val, addr) *(__global int *)(addr) = (int)(val)
+
+#ifdef L2GRAD
+#define dist(x, y) ((int)(x) * (x) + (int)(y) * (y))
+#else
+#define dist(x, y) (abs(x) + abs(y))
+#endif
+
+__constant int prev[4][2] = {
+    { 0, -1 },
+    { -1, -1 },
+    { -1, 0 },
+    { -1, 1 }
+};
+
+__constant int next[4][2] = {
+    { 0, 1 },
+    { 1, 1 },
+    { 1, 0 },
+    { 1, -1 }
+};
+
+__kernel void stage1_without_sobel(__global const uchar *dxptr, int dx_step, int dx_offset,
+                                   __global const uchar *dyptr, int dy_step, int dy_offset,
+                                   __global uchar *map, int map_step, int map_offset, int rows, int cols,
+                                   int low_thr, int high_thr)
+{
+    int start_x = get_group_id(0) * GRP_SIZEX;
+    int start_y = get_group_id(1) * GRP_SIZEY;
+
+    int lidx = get_local_id(0);
+    int lidy = get_local_id(1);
+
+    __local int mag[(GRP_SIZEX + 2) * (GRP_SIZEY + 2)];
+    __local short2 sigma[(GRP_SIZEX + 2) * (GRP_SIZEY + 2)];
+
+#pragma unroll
+    for (int i = lidx + lidy * GRP_SIZEX; i < (GRP_SIZEX + 2) * (GRP_SIZEY + 2); i += GRP_SIZEX * GRP_SIZEY)
+    {
+        int x = clamp(start_x - 1 + i % (GRP_SIZEX + 2), 0, cols - 1);
+        int y = clamp(start_y - 1 + i / (GRP_SIZEX + 2), 0, rows - 1);
+
+        int dx_index = mad24(y, dx_step, mad24(x, cn * (int)sizeof(short), dx_offset));
+        int dy_index = mad24(y, dy_step, mad24(x, cn * (int)sizeof(short), dy_offset));
+
+        __global short *dx = loadpix(dxptr + dx_index);
+        __global short *dy = loadpix(dyptr + dy_index);
+
+        int mag0 = dist(dx[0], dy[0]);
+#if cn > 1
+        short cdx = dx[0], cdy = dy[0];
+#pragma unroll
+        for (int j = 1; j < cn; ++j)
+        {
+            int mag1 = dist(dx[j], dy[j]);
+            if (mag1 > mag0)
             {
-                *(__global int *)(map + map_index) = 2;
-                ind = atomic_inc(&s_counter);
-                s_st[ind] = pos;
+                mag0 = mag1;
+                cdx = dx[j];
+                cdy = dy[j];
+            }
+        }
+        dx[0] = cdx;
+        dy[0] = cdy;
+#endif
+        mag[i] = mag0;
+        sigma[i] = (short2)(dx[0], dy[0]);
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    int gidx = get_global_id(0);
+    int gidy = get_global_id(1);
+
+    if (gidx >= cols || gidy >= rows)
+        return;
+
+    lidx++;
+    lidy++;
+
+    int mag0 = mag[lidx + lidy * (GRP_SIZEX + 2)];
+    short x = (sigma[lidx + lidy * (GRP_SIZEX + 2)]).x;
+    short y = (sigma[lidx + lidy * (GRP_SIZEX + 2)]).y;
+
+    int value = 1;
+    if (mag0 > low_thr)
+    {
+        int a = (y / (float)x) * TG22;
+        int b = (y / (float)x) * TG67;
+
+        a = min((int)abs(a), 1) + 1;
+        b = min((int)abs(b), 1);
+
+        int dir3 = (a * b) & (((x ^ y) & 0x80000000) >> 31);
+        int dir = a * b + 2 * dir3;
+        int prev_mag = mag[(lidy + prev[dir][0]) * (GRP_SIZEX + 2) + lidx + prev[dir][1]];
+        int next_mag = mag[(lidy + next[dir][0]) * (GRP_SIZEX + 2) + lidx + next[dir][1]] + (dir & 1);
+
+        if (mag0 > prev_mag && mag0 >= next_mag)
+        {
+            value = (mag0 > high_thr) ? 2 : 0;
+        }
+    }
+
+    storepix(value, map + mad24(gidy, map_step, mad24(gidx, (int)sizeof(int), map_offset)));
+}
+
+#undef TG22
+#undef CANNY_SHIFT
+
+#elif defined STAGE2
+/*
+    stage2:
+        hysteresis (add edges labeled 0 if they are connected with an edge labeled 2)
+*/
+
+#define loadpix(addr) *(__global int *)(addr)
+#define storepix(val, addr) *(__global int *)(addr) = (int)(val)
+#define LOCAL_TOTAL (LOCAL_X*LOCAL_Y)
+#define l_stack_size (4*LOCAL_TOTAL)
+#define p_stack_size 8
+
+__constant short move_dir[2][8] = {
+    { -1, -1, -1, 0, 0, 1, 1, 1 },
+    { -1, 0, 1, -1, 1, -1, 0, 1 }
+};
+
+__kernel void stage2_hysteresis(__global uchar *map_ptr, int map_step, int map_offset, int rows, int cols)
+{
+    map_ptr += map_offset;
+
+    int x = get_global_id(0);
+    int y = get_global_id(1) * PIX_PER_WI;
+
+    int lid = get_local_id(0) + get_local_id(1) * LOCAL_X;
+
+    __local ushort2 l_stack[l_stack_size];
+    __local int l_counter;
+
+    if (lid == 0)
+        l_counter = 0;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (x < cols)
+    {
+        __global uchar* map = map_ptr + mad24(y, map_step, x * (int)sizeof(int));
+
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI; ++cy)
+        {
+            if (y < rows)
+            {
+                int type = loadpix(map);
+                if (type == 2)
+                {
+                    l_stack[atomic_inc(&l_counter)] = (ushort2)(x, y);
+                }
+
+                y++;
+                map += map_step;
+            }
+        }
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    ushort2 p_stack[p_stack_size];
+    int p_counter = 0;
+
+    while(l_counter != 0)
+    {
+        int mod = l_counter % LOCAL_TOTAL;
+        int pix_per_thr = l_counter / LOCAL_TOTAL + ((lid < mod) ? 1 : 0);
+
+        for (int i = 0; i < pix_per_thr; ++i)
+        {
+            ushort2 pos = l_stack[ atomic_dec(&l_counter) - 1 ];
+
+            #pragma unroll
+            for (int j = 0; j < 8; ++j)
+            {
+                ushort posx = pos.x + move_dir[0][j];
+                ushort posy = pos.y + move_dir[1][j];
+                if (posx < 0 || posy < 0 || posx >= cols || posy >= rows)
+                    continue;
+                __global uchar *addr = map_ptr + mad24(posy, map_step, posx * (int)sizeof(int));
+                int type = loadpix(addr);
+                if (type == 0)
+                {
+                    p_stack[p_counter++] = (ushort2)(posx, posy);
+                    storepix(2, addr);
+                }
             }
         }
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        while (s_counter > 0 && s_counter <= stack_size - get_local_size(0))
+        while (p_counter > 0)
         {
-            const int subTaskIdx = lidx >> 3;
-            const int portion = min(s_counter, (uint)(get_local_size(0)>> 3));
-
-            if (subTaskIdx < portion)
-                pos = s_st[s_counter - 1 - subTaskIdx];
-            barrier(CLK_LOCAL_MEM_FENCE);
-
-            if (lidx == 0)
-                s_counter -= portion;
-            barrier(CLK_LOCAL_MEM_FENCE);
-
-            if (subTaskIdx < portion)
-            {
-                pos.x += c_dx[lidx & 7];
-                pos.y += c_dy[lidx & 7];
-                if (pos.x > 0 && pos.x <= cols && pos.y > 0 && pos.y <= rows && *(__global int *)(map + map_index) == 1)
-                {
-                    *(__global int *)(map + map_index) = 2;
-                    ind = atomic_inc(&s_counter);
-                    s_st[ind] = pos;
-                }
-            }
-            barrier(CLK_LOCAL_MEM_FENCE);
+            l_stack[ atomic_inc(&l_counter) ] = p_stack[--p_counter];
         }
-
-        if (s_counter > 0)
-        {
-            if (lidx == 0)
-            {
-                ind = atomic_add(counter, s_counter);
-                s_ind = ind - s_counter;
-            }
-            barrier(CLK_LOCAL_MEM_FENCE);
-
-            ind = s_ind;
-            for (int i = lidx; i < (int)s_counter; i += get_local_size(0))
-                st2[ind + i] = s_st[i];
-        }
+        barrier(CLK_LOCAL_MEM_FENCE);
     }
 }
 
-#undef map_index
-#undef stack_size
+#elif defined GET_EDGES
 
 // Get the edge result. egde type of value 2 will be marked as an edge point and set to 255. Otherwise 0.
-// map		edge type mappings
-// dst		edge output
+// map      edge type mappings
+// dst      edge output
 
-__kernel void getEdges(__global const uchar * mapptr, int map_step, int map_offset,
-                       __global uchar * dst, int dst_step, int dst_offset, int rows, int cols)
+__kernel void getEdges(__global const uchar *mapptr, int map_step, int map_offset, int rows, int cols,
+                       __global uchar *dst, int dst_step, int dst_offset)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y = get_global_id(1) * PIX_PER_WI;
 
-    if (y < rows && x < cols)
+    if (x < cols)
     {
-        int map_index = mad24(map_step, y + 1, (x + 1) * (int)sizeof(int) + map_offset);
+        int map_index = mad24(map_step, y, mad24(x, (int)sizeof(int), map_offset));
         int dst_index = mad24(dst_step, y, x + dst_offset);
 
-        __global const int * map = (__global const int *)(mapptr + map_index);
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI; ++cy)
+        {
+            if (y < rows)
+            {
+                __global const int * map = (__global const int *)(mapptr + map_index);
+                dst[dst_index] = (uchar)(-(map[0] >> 1));
 
-        dst[dst_index] = (uchar)(-(map[0] >> 1));
+                y++;
+                map_index += map_step;
+                dst_index += dst_step;
+            }
+        }
     }
 }
+
+#endif

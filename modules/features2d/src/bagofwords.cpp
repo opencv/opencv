@@ -44,7 +44,7 @@
 namespace cv
 {
 
-BOWTrainer::BOWTrainer()
+BOWTrainer::BOWTrainer() : size(0)
 {}
 
 BOWTrainer::~BOWTrainer()
@@ -172,7 +172,7 @@ int BOWImgDescriptorExtractor::descriptorType() const
 
 void BOWImgDescriptorExtractor::compute( InputArray keypointDescriptors, OutputArray _imgDescriptor, std::vector<std::vector<int> >* pointIdxsOfClusters )
 {
-    CV_Assert( vocabulary.empty() != false );
+    CV_Assert( !vocabulary.empty() );
 
     int clusterCount = descriptorSize(); // = vocabulary.rows
 
@@ -192,7 +192,7 @@ void BOWImgDescriptorExtractor::compute( InputArray keypointDescriptors, OutputA
 
     Mat imgDescriptor = _imgDescriptor.getMat();
 
-    float *dptr = (float*)imgDescriptor.data;
+    float *dptr = imgDescriptor.ptr<float>();
     for( size_t i = 0; i < matches.size(); i++ )
     {
         int queryIdx = matches[i].queryIdx;

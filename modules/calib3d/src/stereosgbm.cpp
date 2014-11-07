@@ -383,12 +383,12 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     width*16*img1.channels()*sizeof(PixType) + // temp buffer for computing per-pixel cost
     width*(sizeof(CostType) + sizeof(DispType)) + 1024; // disp2cost + disp2
 
-    if( !buffer.data || !buffer.isContinuous() ||
+    if( buffer.empty() || !buffer.isContinuous() ||
         buffer.cols*buffer.rows*buffer.elemSize() < totalBufSize )
         buffer.create(1, (int)totalBufSize, CV_8U);
 
     // summary cost over different (nDirs) directions
-    CostType* Cbuf = (CostType*)alignPtr(buffer.data, ALIGN);
+    CostType* Cbuf = (CostType*)alignPtr(buffer.ptr(), ALIGN);
     CostType* Sbuf = Cbuf + CSBufSize;
     CostType* hsumBuf = Sbuf + CSBufSize;
     CostType* pixDiff = hsumBuf + costBufSize*hsumBufNRows;
@@ -941,7 +941,7 @@ public:
 const char* StereoSGBMImpl::name_ = "StereoMatcher.SGBM";
 
 
-Ptr<StereoSGBM> createStereoSGBM(int minDisparity, int numDisparities, int SADWindowSize,
+Ptr<StereoSGBM> StereoSGBM::create(int minDisparity, int numDisparities, int SADWindowSize,
                                  int P1, int P2, int disp12MaxDiff,
                                  int preFilterCap, int uniquenessRatio,
                                  int speckleWindowSize, int speckleRange,
@@ -982,10 +982,10 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
 
     int width = img.cols, height = img.rows, npixels = width*height;
     size_t bufSize = npixels*(int)(sizeof(Point2s) + sizeof(int) + sizeof(uchar));
-    if( !_buf.isContinuous() || !_buf.data || _buf.cols*_buf.rows*_buf.elemSize() < bufSize )
+    if( !_buf.isContinuous() || _buf.empty() || _buf.cols*_buf.rows*_buf.elemSize() < bufSize )
         _buf.create(1, (int)bufSize, CV_8U);
 
-    uchar* buf = _buf.data;
+    uchar* buf = _buf.ptr();
     int i, j, dstep = (int)(img.step/sizeof(T));
     int* labels = (int*)buf;
     buf += npixels*sizeof(labels[0]);
@@ -1029,18 +1029,6 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
                         T dp = *dpp;
                         int* lpp = labels + width*p.y + p.x;
 
-                        if( p.x < width-1 && !lpp[+1] && dpp[+1] != newVal && std::abs(dp - dpp[+1]) <= maxDiff )
-                        {
-                            lpp[+1] = curlabel;
-                            *ws++ = Point2s(p.x+1, p.y);
-                        }
-
-                        if( p.x > 0 && !lpp[-1] && dpp[-1] != newVal && std::abs(dp - dpp[-1]) <= maxDiff )
-                        {
-                            lpp[-1] = curlabel;
-                            *ws++ = Point2s(p.x-1, p.y);
-                        }
-
                         if( p.y < height-1 && !lpp[+width] && dpp[+dstep] != newVal && std::abs(dp - dpp[+dstep]) <= maxDiff )
                         {
                             lpp[+width] = curlabel;
@@ -1051,6 +1039,18 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
                         {
                             lpp[-width] = curlabel;
                             *ws++ = Point2s(p.x, p.y-1);
+                        }
+
+                        if( p.x < width-1 && !lpp[+1] && dpp[+1] != newVal && std::abs(dp - dpp[+1]) <= maxDiff )
+                        {
+                            lpp[+1] = curlabel;
+                            *ws++ = Point2s(p.x+1, p.y);
+                        }
+
+                        if( p.x > 0 && !lpp[-1] && dpp[-1] != newVal && std::abs(dp - dpp[-1]) <= maxDiff )
+                        {
+                            lpp[-1] = curlabel;
+                            *ws++ = Point2s(p.x-1, p.y);
                         }
 
                         // pop most recent and propagate
@@ -1078,13 +1078,45 @@ void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSi
                          double _maxDiff, InputOutputArray __buf )
 {
     Mat img = _img.getMat();
+    int type = img.type();
     Mat temp, &_buf = __buf.needed() ? __buf.getMatRef() : temp;
-    CV_Assert( img.type() == CV_8UC1 || img.type() == CV_16SC1 );
+    CV_Assert( type == CV_8UC1 || type == CV_16SC1 );
 
-    int newVal = cvRound(_newval);
-    int maxDiff = cvRound(_maxDiff);
+    int newVal = cvRound(_newval), maxDiff = cvRound(_maxDiff);
 
-    if (img.type() == CV_8UC1)
+#if IPP_VERSION_X100 >= 801
+    CV_IPP_CHECK()
+    {
+        Ipp32s bufsize = 0;
+        IppiSize roisize = { img.cols, img.rows };
+        IppDataType datatype = type == CV_8UC1 ? ipp8u : ipp16s;
+
+        if (!__buf.needed() && (type == CV_8UC1 || type == CV_16SC1))
+        {
+            IppStatus status = ippiMarkSpecklesGetBufferSize(roisize, datatype, CV_MAT_CN(type), &bufsize);
+            Ipp8u * buffer = ippsMalloc_8u(bufsize);
+
+            if ((int)status >= 0)
+            {
+                if (type == CV_8UC1)
+                    status = ippiMarkSpeckles_8u_C1IR(img.ptr<Ipp8u>(), (int)img.step, roisize,
+                                                      (Ipp8u)newVal, maxSpeckleSize, (Ipp8u)maxDiff, ippiNormL1, buffer);
+                else
+                    status = ippiMarkSpeckles_16s_C1IR(img.ptr<Ipp16s>(), (int)img.step, roisize,
+                                                       (Ipp16s)newVal, maxSpeckleSize, (Ipp16s)maxDiff, ippiNormL1, buffer);
+            }
+
+            if (status >= 0)
+            {
+                CV_IMPL_ADD(CV_IMPL_IPP);
+                return;
+            }
+            setIppErrorStatus();
+        }
+    }
+#endif
+
+    if (type == CV_8UC1)
         filterSpecklesImpl<uchar>(img, newVal, maxSpeckleSize, maxDiff, _buf);
     else
         filterSpecklesImpl<short>(img, newVal, maxSpeckleSize, maxDiff, _buf);

@@ -9,7 +9,7 @@ Video Analysis
   .. cssclass:: toctableopencv
 
   =========== ======================================================
-  |vdo_1|     We have already seen an example of color-based tracking. It is simpler. This time, we see much more better algorithms like "Meanshift", and its upgraded version, "Camshift" to find and track them.
+  |vdo_1|     We have already seen an example of color-based tracking. It is simpler. This time, we see significantly better algorithms like "Meanshift", and its upgraded version, "Camshift" to find and track them.
 
   =========== ======================================================
 

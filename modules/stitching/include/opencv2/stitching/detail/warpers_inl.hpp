@@ -92,7 +92,7 @@ template <class P>
 Point RotationWarperBase<P>::warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode,
                                   OutputArray dst)
 {
-    Mat xmap, ymap;
+    UMat xmap, ymap;
     Rect dst_roi = buildMaps(src.size(), K, R, xmap, ymap);
 
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());

@@ -75,7 +75,7 @@ Measuring Performance in IPython
 
 Sometimes you may need to compare the performance of two similar operations. IPython gives you a magic command ``%timeit`` to perform this. It runs the code several times to get more accurate results. Once again, they are suitable to measure single line codes.
 
-For example, do you know which of the following addition operation is more better, ``x = 5; y = x**2``, ``x = 5; y = x*x``, ``x = np.uint8([5]); y = x*x`` or ``y = np.square(x)`` ? We will find it with %timeit in IPython shell.
+For example, do you know which of the following addition operation is better, ``x = 5; y = x**2``, ``x = 5; y = x*x``, ``x = np.uint8([5]); y = x*x`` or ``y = np.square(x)`` ? We will find it with %timeit in IPython shell.
 ::
 
     In [10]: x = 5

@@ -49,7 +49,7 @@ using namespace cv::cuda;
 cv::cuda::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t step_) :
     flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(rows_), cols(cols_),
     step(step_), data((uchar*)data_), refcount(0),
-    datastart((uchar*)data_), dataend((uchar*)data_),
+    datastart((uchar*)data_), dataend((const uchar*)data_),
     allocator(defaultAllocator())
 {
     size_t minstep = cols * elemSize();
@@ -75,7 +75,7 @@ cv::cuda::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t st
 cv::cuda::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
     flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(size_.height), cols(size_.width),
     step(step_), data((uchar*)data_), refcount(0),
-    datastart((uchar*)data_), dataend((uchar*)data_),
+    datastart((uchar*)data_), dataend((const uchar*)data_),
     allocator(defaultAllocator())
 {
     size_t minstep = cols * elemSize();

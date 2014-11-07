@@ -41,7 +41,11 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_video.hpp"
+
+#if defined __APPLE__ || defined ANDROID
+#define SMALL_LOCALSIZE
+#endif
 
 //
 // 2D dense optical flow algorithm from the following paper:
@@ -130,8 +134,8 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
     for( y = 0; y < height; y++ )
     {
         float g0 = g[0], g1, g2;
-        float *srow0 = (float*)(src.data + src.step*y), *srow1 = 0;
-        float *drow = (float*)(dst.data + dst.step*y);
+        const float *srow0 = src.ptr<float>(y), *srow1 = 0;
+        float *drow = dst.ptr<float>(y);
 
         // vertical part of convolution
         for( x = 0; x < width; x++ )
@@ -143,8 +147,8 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
         for( k = 1; k <= n; k++ )
         {
             g0 = g[k]; g1 = xg[k]; g2 = xxg[k];
-            srow0 = (float*)(src.data + src.step*std::max(y-k,0));
-            srow1 = (float*)(src.data + src.step*std::min(y+k,height-1));
+            srow0 = src.ptr<float>(std::max(y-k,0));
+            srow1 = src.ptr<float>(std::min(y+k,height-1));
 
             for( x = 0; x < width; x++ )
             {
@@ -216,16 +220,16 @@ FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& 
     static const float border[BORDER] = {0.14f, 0.14f, 0.4472f, 0.4472f, 0.4472f};
 
     int x, y, width = _flow.cols, height = _flow.rows;
-    const float* R1 = (float*)_R1.data;
+    const float* R1 = _R1.ptr<float>();
     size_t step1 = _R1.step/sizeof(R1[0]);
 
     matM.create(height, width, CV_32FC(5));
 
     for( y = _y0; y < _y1; y++ )
     {
-        const float* flow = (float*)(_flow.data + y*_flow.step);
-        const float* R0 = (float*)(_R0.data + y*_R0.step);
-        float* M = (float*)(matM.data + y*matM.step);
+        const float* flow = _flow.ptr<float>(y);
+        const float* R0 = _R0.ptr<float>(y);
+        float* M = matM.ptr<float>(y);
 
         for( x = 0; x < width; x++ )
         {
@@ -321,13 +325,13 @@ FarnebackUpdateFlow_Blur( const Mat& _R0, const Mat& _R1,
     double* vsum = _vsum + (m+1)*5;
 
     // init vsum
-    const float* srow0 = (const float*)matM.data;
+    const float* srow0 = matM.ptr<float>();
     for( x = 0; x < width*5; x++ )
         vsum[x] = srow0[x]*(m+2);
 
     for( y = 1; y < m; y++ )
     {
-        srow0 = (float*)(matM.data + matM.step*std::min(y,height-1));
+        srow0 = matM.ptr<float>(std::min(y,height-1));
         for( x = 0; x < width*5; x++ )
             vsum[x] += srow0[x];
     }
@@ -336,10 +340,10 @@ FarnebackUpdateFlow_Blur( const Mat& _R0, const Mat& _R1,
     for( y = 0; y < height; y++ )
     {
         double g11, g12, g22, h1, h2;
-        float* flow = (float*)(_flow.data + _flow.step*y);
+        float* flow = _flow.ptr<float>(y);
 
-        srow0 = (const float*)(matM.data + matM.step*std::max(y-m-1,0));
-        const float* srow1 = (const float*)(matM.data + matM.step*std::min(y+m,height-1));
+        srow0 = matM.ptr<float>(std::max(y-m-1,0));
+        const float* srow1 = matM.ptr<float>(std::min(y+m,height-1));
 
         // vertical blur
         for( x = 0; x < width*5; x++ )
@@ -443,13 +447,13 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
     for( y = 0; y < height; y++ )
     {
         double g11, g12, g22, h1, h2;
-        float* flow = (float*)(_flow.data + _flow.step*y);
+        float* flow = _flow.ptr<float>(y);
 
         // vertical blur
         for( i = 0; i <= m; i++ )
         {
-            srow[m-i] = (const float*)(matM.data + matM.step*std::max(y-i,0));
-            srow[m+i] = (const float*)(matM.data + matM.step*std::min(y+i,height-1));
+            srow[m-i] = matM.ptr<float>(std::max(y-i,0));
+            srow[m+i] = matM.ptr<float>(std::min(y+i,height-1));
         }
 
         x = 0;
@@ -836,7 +840,7 @@ private:
 
     bool gaussianBlurOcl(const UMat &src, int ksizeHalf, UMat &dst)
     {
-#ifdef ANDROID
+#ifdef SMALL_LOCALSIZE
         size_t localsize[2] = { 128, 1};
 #else
         size_t localsize[2] = { 256, 1};
@@ -857,13 +861,13 @@ private:
         idxArg = kernel.set(idxArg, dst.cols);
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_gKer));
         idxArg = kernel.set(idxArg, (int)ksizeHalf);
-        idxArg = kernel.set(idxArg, (void *)NULL, smem_size);
+        kernel.set(idxArg, (void *)NULL, smem_size);
         return kernel.run(2, globalsize, localsize, false);
     }
     bool gaussianBlur5Ocl(const UMat &src, int ksizeHalf, UMat &dst)
     {
         int height = src.rows / 5;
-#ifdef ANDROID
+#ifdef SMALL_LOCALSIZE
         size_t localsize[2] = { 128, 1};
 #else
         size_t localsize[2] = { 256, 1};
@@ -883,12 +887,12 @@ private:
         idxArg = kernel.set(idxArg, src.cols);
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_gKer));
         idxArg = kernel.set(idxArg, (int)ksizeHalf);
-        idxArg = kernel.set(idxArg, (void *)NULL, smem_size);
+        kernel.set(idxArg, (void *)NULL, smem_size);
         return kernel.run(2, globalsize, localsize, false);
     }
     bool polynomialExpansionOcl(const UMat &src, UMat &dst)
     {
-#ifdef ANDROID
+#ifdef SMALL_LOCALSIZE
         size_t localsize[2] = { 128, 1};
 #else
         size_t localsize[2] = { 256, 1};
@@ -919,18 +923,13 @@ private:
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_xg));
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_xxg));
         idxArg = kernel.set(idxArg, (void *)NULL, smem_size);
-#if 0
-        if (useDouble)
-            idxArg = kernel.set(idxArg, (void *)m_igd, 4 * sizeof(double));
-        else
-#endif
-            idxArg = kernel.set(idxArg, (void *)m_ig, 4 * sizeof(float));
+        kernel.set(idxArg, (void *)m_ig, 4 * sizeof(float));
         return kernel.run(2, globalsize, localsize, false);
     }
     bool boxFilter5Ocl(const UMat &src, int ksizeHalf, UMat &dst)
     {
         int height = src.rows / 5;
-#ifdef ANDROID
+#ifdef SMALL_LOCALSIZE
         size_t localsize[2] = { 128, 1};
 #else
         size_t localsize[2] = { 256, 1};
@@ -951,13 +950,13 @@ private:
         idxArg = kernel.set(idxArg, height);
         idxArg = kernel.set(idxArg, src.cols);
         idxArg = kernel.set(idxArg, (int)ksizeHalf);
-        idxArg = kernel.set(idxArg, (void *)NULL, smem_size);
+        kernel.set(idxArg, (void *)NULL, smem_size);
         return kernel.run(2, globalsize, localsize, false);
     }
 
     bool updateFlowOcl(const UMat &M, UMat &flowx, UMat &flowy)
     {
-#ifdef ANDROID
+#ifdef SMALL_LOCALSIZE
         size_t localsize[2] = { 32, 4};
 #else
         size_t localsize[2] = { 32, 8};
@@ -976,12 +975,12 @@ private:
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(flowy));
         idxArg = kernel.set(idxArg, (int)(flowy.step / flowy.elemSize()));
         idxArg = kernel.set(idxArg, (int)flowy.rows);
-        idxArg = kernel.set(idxArg, (int)flowy.cols);
+        kernel.set(idxArg, (int)flowy.cols);
         return kernel.run(2, globalsize, localsize, false);
     }
     bool updateMatricesOcl(const UMat &flowx, const UMat &flowy, const UMat &R0, const UMat &R1, UMat &M)
     {
-#ifdef ANDROID
+#ifdef SMALL_LOCALSIZE
         size_t localsize[2] = { 32, 4};
 #else
         size_t localsize[2] = { 32, 8};
@@ -1004,7 +1003,7 @@ private:
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(R1));
         idxArg = kernel.set(idxArg, (int)(R1.step / R1.elemSize()));
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(M));
-        idxArg = kernel.set(idxArg, (int)(M.step / M.elemSize()));
+        kernel.set(idxArg, (int)(M.step / M.elemSize()));
         return kernel.run(2, globalsize, localsize, false);
     }
 
@@ -1082,7 +1081,10 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
 {
     bool use_opencl = ocl::useOpenCL() && _flow0.isUMat();
     if( use_opencl && ocl_calcOpticalFlowFarneback(_prev0, _next0, _flow0, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags))
+    {
+        CV_IMPL_ADD(CV_IMPL_OCL);
         return;
+    }
 
     Mat prev0 = _prev0.getMat(), next0 = _next0.getMat();
     const int min_size = 32;
@@ -1123,7 +1125,7 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
         else
             flow = flow0;
 
-        if( !prevFlow.data )
+        if( prevFlow.empty() )
         {
             if( flags & OPTFLOW_USE_INITIAL_FLOW )
             {

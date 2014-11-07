@@ -39,7 +39,7 @@
 //
 //M*/
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_imgproc.hpp"
 
 namespace cv
 {
@@ -95,8 +95,8 @@ static Moments contourMoments( const Mat& contour )
     Moments m;
     int lpt = contour.checkVector(2);
     int is_float = contour.depth() == CV_32F;
-    const Point* ptsi = (const Point*)contour.data;
-    const Point2f* ptsf = (const Point2f*)contour.data;
+    const Point* ptsi = contour.ptr<Point>();
+    const Point2f* ptsf = contour.ptr<Point2f>();
 
     CV_Assert( contour.depth() == CV_32S || contour.depth() == CV_32F );
 
@@ -203,19 +203,212 @@ static Moments contourMoments( const Mat& contour )
 \****************************************************************************************/
 
 template<typename T, typename WT, typename MT>
+struct MomentsInTile_SIMD
+{
+    int operator() (const T *, int, WT &, WT &, WT &, MT &)
+    {
+        return 0;
+    }
+};
+
+#if CV_SSE2
+
+template <>
+struct MomentsInTile_SIMD<uchar, int, int>
+{
+    MomentsInTile_SIMD()
+    {
+        useSIMD = checkHardwareSupport(CV_CPU_SSE2);
+    }
+
+    int operator() (const uchar * ptr, int len, int & x0, int & x1, int & x2, int & x3)
+    {
+        int x = 0;
+
+        if( useSIMD )
+        {
+            __m128i qx_init = _mm_setr_epi16(0, 1, 2, 3, 4, 5, 6, 7);
+            __m128i dx = _mm_set1_epi16(8);
+            __m128i z = _mm_setzero_si128(), qx0 = z, qx1 = z, qx2 = z, qx3 = z, qx = qx_init;
+
+            for( ; x <= len - 8; x += 8 )
+            {
+                __m128i p = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(ptr + x)), z);
+                __m128i sx = _mm_mullo_epi16(qx, qx);
+
+                qx0 = _mm_add_epi32(qx0, _mm_sad_epu8(p, z));
+                qx1 = _mm_add_epi32(qx1, _mm_madd_epi16(p, qx));
+                qx2 = _mm_add_epi32(qx2, _mm_madd_epi16(p, sx));
+                qx3 = _mm_add_epi32(qx3, _mm_madd_epi16( _mm_mullo_epi16(p, qx), sx));
+
+                qx = _mm_add_epi16(qx, dx);
+            }
+
+            _mm_store_si128((__m128i*)buf, qx0);
+            x0 = buf[0] + buf[1] + buf[2] + buf[3];
+            _mm_store_si128((__m128i*)buf, qx1);
+            x1 = buf[0] + buf[1] + buf[2] + buf[3];
+            _mm_store_si128((__m128i*)buf, qx2);
+            x2 = buf[0] + buf[1] + buf[2] + buf[3];
+            _mm_store_si128((__m128i*)buf, qx3);
+            x3 = buf[0] + buf[1] + buf[2] + buf[3];
+        }
+
+        return x;
+    }
+
+    int CV_DECL_ALIGNED(16) buf[4];
+    bool useSIMD;
+};
+
+#elif CV_NEON
+
+template <>
+struct MomentsInTile_SIMD<uchar, int, int>
+{
+    MomentsInTile_SIMD()
+    {
+        ushort CV_DECL_ALIGNED(8) init[4] = { 0, 1, 2, 3 };
+        qx_init = vld1_u16(init);
+        v_step = vdup_n_u16(4);
+    }
+
+    int operator() (const uchar * ptr, int len, int & x0, int & x1, int & x2, int & x3)
+    {
+        int x = 0;
+
+        uint32x4_t v_z = vdupq_n_u32(0), v_x0 = v_z, v_x1 = v_z,
+            v_x2 = v_z, v_x3 = v_z;
+        uint16x4_t qx = qx_init;
+
+        for( ; x <= len - 8; x += 8 )
+        {
+            uint16x8_t v_src = vmovl_u8(vld1_u8(ptr + x));
+
+            // first part
+            uint32x4_t v_qx = vmovl_u16(qx);
+            uint16x4_t v_p = vget_low_u16(v_src);
+            uint32x4_t v_px = vmull_u16(qx, v_p);
+
+            v_x0 = vaddw_u16(v_x0, v_p);
+            v_x1 = vaddq_u32(v_x1, v_px);
+            v_px = vmulq_u32(v_px, v_qx);
+            v_x2 = vaddq_u32(v_x2, v_px);
+            v_x3 = vaddq_u32(v_x3, vmulq_u32(v_px, v_qx));
+            qx = vadd_u16(qx, v_step);
+
+            // second part
+            v_qx = vmovl_u16(qx);
+            v_p = vget_high_u16(v_src);
+            v_px = vmull_u16(qx, v_p);
+
+            v_x0 = vaddw_u16(v_x0, v_p);
+            v_x1 = vaddq_u32(v_x1, v_px);
+            v_px = vmulq_u32(v_px, v_qx);
+            v_x2 = vaddq_u32(v_x2, v_px);
+            v_x3 = vaddq_u32(v_x3, vmulq_u32(v_px, v_qx));
+
+            qx = vadd_u16(qx, v_step);
+        }
+
+        vst1q_u32(buf, v_x0);
+        x0 = buf[0] + buf[1] + buf[2] + buf[3];
+        vst1q_u32(buf, v_x1);
+        x1 = buf[0] + buf[1] + buf[2] + buf[3];
+        vst1q_u32(buf, v_x2);
+        x2 = buf[0] + buf[1] + buf[2] + buf[3];
+        vst1q_u32(buf, v_x3);
+        x3 = buf[0] + buf[1] + buf[2] + buf[3];
+
+        return x;
+    }
+
+    uint CV_DECL_ALIGNED(16) buf[4];
+    uint16x4_t qx_init, v_step;
+};
+
+#endif
+
+#if CV_SSE4_1
+
+template <>
+struct MomentsInTile_SIMD<ushort, int, int64>
+{
+    MomentsInTile_SIMD()
+    {
+        useSIMD = checkHardwareSupport(CV_CPU_SSE4_1);
+    }
+
+    int operator() (const ushort * ptr, int len, int & x0, int & x1, int & x2, int64 & x3)
+    {
+        int x = 0;
+
+        if (useSIMD)
+        {
+            __m128i vx_init0 = _mm_setr_epi32(0, 1, 2, 3), vx_init1 = _mm_setr_epi32(4, 5, 6, 7),
+                v_delta = _mm_set1_epi32(8), v_zero = _mm_setzero_si128(), v_x0 = v_zero,
+                v_x1 = v_zero, v_x2 = v_zero, v_x3 = v_zero, v_ix0 = vx_init0, v_ix1 = vx_init1;
+
+            for( ; x <= len - 8; x += 8 )
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(ptr + x));
+                __m128i v_src0 = _mm_unpacklo_epi16(v_src, v_zero), v_src1 = _mm_unpackhi_epi16(v_src, v_zero);
+
+                v_x0 = _mm_add_epi32(v_x0, _mm_add_epi32(v_src0, v_src1));
+                __m128i v_x1_0 = _mm_mullo_epi32(v_src0, v_ix0), v_x1_1 = _mm_mullo_epi32(v_src1, v_ix1);
+                v_x1 = _mm_add_epi32(v_x1, _mm_add_epi32(v_x1_0, v_x1_1));
+
+                __m128i v_2ix0 = _mm_mullo_epi32(v_ix0, v_ix0), v_2ix1 = _mm_mullo_epi32(v_ix1, v_ix1);
+                v_x2 = _mm_add_epi32(v_x2, _mm_add_epi32(_mm_mullo_epi32(v_2ix0, v_src0), _mm_mullo_epi32(v_2ix1, v_src1)));
+
+                __m128i t = _mm_add_epi32(_mm_mullo_epi32(v_2ix0, v_x1_0), _mm_mullo_epi32(v_2ix1, v_x1_1));
+                v_x3 = _mm_add_epi64(v_x3, _mm_add_epi64(_mm_unpacklo_epi32(t, v_zero), _mm_unpackhi_epi32(t, v_zero)));
+
+                v_ix0 = _mm_add_epi32(v_ix0, v_delta);
+                v_ix1 = _mm_add_epi32(v_ix1, v_delta);
+            }
+
+            _mm_store_si128((__m128i*)buf, v_x0);
+            x0 = buf[0] + buf[1] + buf[2] + buf[3];
+            _mm_store_si128((__m128i*)buf, v_x1);
+            x1 = buf[0] + buf[1] + buf[2] + buf[3];
+            _mm_store_si128((__m128i*)buf, v_x2);
+            x2 = buf[0] + buf[1] + buf[2] + buf[3];
+
+            _mm_store_si128((__m128i*)buf64, v_x3);
+            x3 = buf64[0] + buf64[1];
+        }
+
+        return x;
+    }
+
+    int CV_DECL_ALIGNED(16) buf[4];
+    int64 CV_DECL_ALIGNED(16) buf64[2];
+    bool useSIMD;
+};
+
+#endif
+
+template<typename T, typename WT, typename MT>
+#if defined __GNUC__ && __GNUC__ == 4 && __GNUC_MINOR__ >= 5 && __GNUC_MINOR__ < 9
+// Workaround for http://gcc.gnu.org/bugzilla/show_bug.cgi?id=60196
+__attribute__((optimize("no-tree-vectorize")))
+#endif
 static void momentsInTile( const Mat& img, double* moments )
 {
     Size size = img.size();
     int x, y;
     MT mom[10] = {0,0,0,0,0,0,0,0,0,0};
+    MomentsInTile_SIMD<T, WT, MT> vop;
 
     for( y = 0; y < size.height; y++ )
     {
-        const T* ptr = (const T*)(img.data + y*img.step);
+        const T* ptr = img.ptr<T>(y);
         WT x0 = 0, x1 = 0, x2 = 0;
         MT x3 = 0;
+        x = vop(ptr, size.width, x0, x1, x2, x3);
 
-        for( x = 0; x < size.width; x++ )
+        for( ; x < size.width; x++ )
         {
             WT p = ptr[x];
             WT xp = x * p, xxp;
@@ -244,85 +437,6 @@ static void momentsInTile( const Mat& img, double* moments )
     for( x = 0; x < 10; x++ )
         moments[x] = (double)mom[x];
 }
-
-
-#if CV_SSE2
-
-template<> void momentsInTile<uchar, int, int>( const cv::Mat& img, double* moments )
-{
-    typedef uchar T;
-    typedef int WT;
-    typedef int MT;
-    Size size = img.size();
-    int y;
-    MT mom[10] = {0,0,0,0,0,0,0,0,0,0};
-    bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const T* ptr = img.ptr<T>(y);
-        int x0 = 0, x1 = 0, x2 = 0, x3 = 0, x = 0;
-
-        if( useSIMD )
-        {
-            __m128i qx_init = _mm_setr_epi16(0, 1, 2, 3, 4, 5, 6, 7);
-            __m128i dx = _mm_set1_epi16(8);
-            __m128i z = _mm_setzero_si128(), qx0 = z, qx1 = z, qx2 = z, qx3 = z, qx = qx_init;
-
-            for( ; x <= size.width - 8; x += 8 )
-            {
-                __m128i p = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(ptr + x)), z);
-                qx0 = _mm_add_epi32(qx0, _mm_sad_epu8(p, z));
-                __m128i px = _mm_mullo_epi16(p, qx);
-                __m128i sx = _mm_mullo_epi16(qx, qx);
-                qx1 = _mm_add_epi32(qx1, _mm_madd_epi16(p, qx));
-                qx2 = _mm_add_epi32(qx2, _mm_madd_epi16(p, sx));
-                qx3 = _mm_add_epi32(qx3, _mm_madd_epi16(px, sx));
-
-                qx = _mm_add_epi16(qx, dx);
-            }
-            int CV_DECL_ALIGNED(16) buf[4];
-            _mm_store_si128((__m128i*)buf, qx0);
-            x0 = buf[0] + buf[1] + buf[2] + buf[3];
-            _mm_store_si128((__m128i*)buf, qx1);
-            x1 = buf[0] + buf[1] + buf[2] + buf[3];
-            _mm_store_si128((__m128i*)buf, qx2);
-            x2 = buf[0] + buf[1] + buf[2] + buf[3];
-            _mm_store_si128((__m128i*)buf, qx3);
-            x3 = buf[0] + buf[1] + buf[2] + buf[3];
-        }
-
-        for( ; x < size.width; x++ )
-        {
-            WT p = ptr[x];
-            WT xp = x * p, xxp;
-
-            x0 += p;
-            x1 += xp;
-            xxp = xp * x;
-            x2 += xxp;
-            x3 += xxp * x;
-        }
-
-        WT py = y * x0, sy = y*y;
-
-        mom[9] += ((MT)py) * sy;  // m03
-        mom[8] += ((MT)x1) * sy;  // m12
-        mom[7] += ((MT)x2) * y;  // m21
-        mom[6] += x3;             // m30
-        mom[5] += x0 * sy;        // m02
-        mom[4] += x1 * y;         // m11
-        mom[3] += x2;             // m20
-        mom[2] += py;             // m01
-        mom[1] += x1;             // m10
-        mom[0] += x0;             // m00
-    }
-
-    for(int x = 0; x < 10; x++ )
-        moments[x] = (double)mom[x];
-}
-
-#endif
 
 typedef void (*MomentsInTileFunc)(const Mat& img, double* moments);
 
@@ -365,11 +479,16 @@ Moments::Moments( double _m00, double _m10, double _m01, double _m20, double _m1
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_moments( InputArray _src, Moments& m)
+static bool ocl_moments( InputArray _src, Moments& m, bool binary)
 {
     const int TILE_SIZE = 32;
     const int K = 10;
-    ocl::Kernel k("moments", ocl::imgproc::moments_oclsrc, format("-D TILE_SIZE=%d", TILE_SIZE));
+
+    ocl::Kernel k = ocl::Kernel("moments", ocl::imgproc::moments_oclsrc,
+        format("-D TILE_SIZE=%d%s",
+        TILE_SIZE,
+        binary ? " -D OP_MOMENTS_BINARY" : ""));
+
     if( k.empty() )
         return false;
 
@@ -440,19 +559,15 @@ cv::Moments cv::moments( InputArray _src, bool binary )
     MomentsInTileFunc func = 0;
     uchar nzbuf[TILE_SIZE*TILE_SIZE];
     Moments m;
-    int type = _src.type();
-    int depth = CV_MAT_DEPTH( type );
-    int cn = CV_MAT_CN( type );
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     Size size = _src.size();
 
     if( size.width <= 0 || size.height <= 0 )
         return m;
 
 #ifdef HAVE_OPENCL
-    if( ocl::useOpenCL() && type == CV_8UC1 && !binary &&
-        _src.isUMat() && ocl_moments(_src, m) )
-        ;
-    else
+    if( !(ocl::useOpenCL() && type == CV_8UC1  &&
+        _src.isUMat() && ocl_moments(_src, m, binary)) )
 #endif
     {
         Mat mat = _src.getMat();
@@ -461,6 +576,72 @@ cv::Moments cv::moments( InputArray _src, bool binary )
 
         if( cn > 1 )
             CV_Error( CV_StsBadArg, "Invalid image type (must be single-channel)" );
+
+#if IPP_VERSION_X100 >= 801 && 0
+        CV_IPP_CHECK()
+        {
+            if (!binary)
+            {
+                IppiSize roi = { mat.cols, mat.rows };
+                IppiMomentState_64f * moment = NULL;
+                // ippiMomentInitAlloc_64f, ippiMomentFree_64f are deprecated in 8.1, but there are not another way
+                // to initialize IppiMomentState_64f. When GetStateSize and Init functions will appear we have to
+                // change our code.
+                CV_SUPPRESS_DEPRECATED_START
+                if (ippiMomentInitAlloc_64f(&moment, ippAlgHintAccurate) >= 0)
+                {
+                    typedef IppStatus (CV_STDCALL * ippiMoments)(const void * pSrc, int srcStep, IppiSize roiSize, IppiMomentState_64f* pCtx);
+                    ippiMoments ippFunc =
+                        type == CV_8UC1 ? (ippiMoments)ippiMoments64f_8u_C1R :
+                        type == CV_16UC1 ? (ippiMoments)ippiMoments64f_16u_C1R :
+                        type == CV_32FC1? (ippiMoments)ippiMoments64f_32f_C1R : 0;
+
+                    if (ippFunc)
+                    {
+                        if (ippFunc(mat.data, (int)mat.step, roi, moment) >= 0)
+                        {
+                            IppiPoint point = { 0, 0 };
+                            ippiGetSpatialMoment_64f(moment, 0, 0, 0, point, &m.m00);
+                            ippiGetSpatialMoment_64f(moment, 1, 0, 0, point, &m.m10);
+                            ippiGetSpatialMoment_64f(moment, 0, 1, 0, point, &m.m01);
+
+                            ippiGetSpatialMoment_64f(moment, 2, 0, 0, point, &m.m20);
+                            ippiGetSpatialMoment_64f(moment, 1, 1, 0, point, &m.m11);
+                            ippiGetSpatialMoment_64f(moment, 0, 2, 0, point, &m.m02);
+
+                            ippiGetSpatialMoment_64f(moment, 3, 0, 0, point, &m.m30);
+                            ippiGetSpatialMoment_64f(moment, 2, 1, 0, point, &m.m21);
+                            ippiGetSpatialMoment_64f(moment, 1, 2, 0, point, &m.m12);
+                            ippiGetSpatialMoment_64f(moment, 0, 3, 0, point, &m.m03);
+                            ippiGetCentralMoment_64f(moment, 2, 0, 0, &m.mu20);
+                            ippiGetCentralMoment_64f(moment, 1, 1, 0, &m.mu11);
+                            ippiGetCentralMoment_64f(moment, 0, 2, 0, &m.mu02);
+                            ippiGetCentralMoment_64f(moment, 3, 0, 0, &m.mu30);
+                            ippiGetCentralMoment_64f(moment, 2, 1, 0, &m.mu21);
+                            ippiGetCentralMoment_64f(moment, 1, 2, 0, &m.mu12);
+                            ippiGetCentralMoment_64f(moment, 0, 3, 0, &m.mu03);
+                            ippiGetNormalizedCentralMoment_64f(moment, 2, 0, 0, &m.nu20);
+                            ippiGetNormalizedCentralMoment_64f(moment, 1, 1, 0, &m.nu11);
+                            ippiGetNormalizedCentralMoment_64f(moment, 0, 2, 0, &m.nu02);
+                            ippiGetNormalizedCentralMoment_64f(moment, 3, 0, 0, &m.nu30);
+                            ippiGetNormalizedCentralMoment_64f(moment, 2, 1, 0, &m.nu21);
+                            ippiGetNormalizedCentralMoment_64f(moment, 1, 2, 0, &m.nu12);
+                            ippiGetNormalizedCentralMoment_64f(moment, 0, 3, 0, &m.nu03);
+
+                            ippiMomentFree_64f(moment);
+                            CV_IMPL_ADD(CV_IMPL_IPP);
+                            return m;
+                        }
+                        setIppErrorStatus();
+                    }
+                    ippiMomentFree_64f(moment);
+                }
+                else
+                    setIppErrorStatus();
+                CV_SUPPRESS_DEPRECATED_END
+            }
+        }
+#endif
 
         if( binary || depth == CV_8U )
             func = momentsInTile<uchar, int, int>;
@@ -578,7 +759,7 @@ void cv::HuMoments( const Moments& m, OutputArray _hu )
     _hu.create(7, 1, CV_64F);
     Mat hu = _hu.getMat();
     CV_Assert( hu.isContinuous() );
-    HuMoments(m, (double*)hu.data);
+    HuMoments(m, hu.ptr<double>());
 }
 
 

@@ -123,7 +123,7 @@ Conversion from color to grey scale: ::
 
     Mat img = imread("image.jpg"); // loading a 8UC3 image
     Mat grey;
-    cvtColor(img, grey, CV_BGR2GRAY);
+    cvtColor(img, grey, COLOR_BGR2GRAY);
 
 Change image type from 8UC1 to 32FC1: ::
 
@@ -136,7 +136,7 @@ It is very useful to see intermediate results of your algorithm during developme
 
     Mat img = imread("image.jpg");
 
-    namedWindow("image", CV_WINDOW_AUTOSIZE);
+    namedWindow("image", WINDOW_AUTOSIZE);
     imshow("image", img);
     waitKey();
 
@@ -144,7 +144,7 @@ A call to ``waitKey()`` starts a message passing cycle that waits for a key stro
 
     Mat img = imread("image.jpg");
     Mat grey;
-    cvtColor(img, grey, CV_BGR2GRAY);
+    cvtColor(img, grey, COLOR_BGR2GRAY);
 
     Mat sobelx;
     Sobel(grey, sobelx, CV_32F, 1, 0);
@@ -154,6 +154,6 @@ A call to ``waitKey()`` starts a message passing cycle that waits for a key stro
     Mat draw;
     sobelx.convertTo(draw, CV_8U, 255.0/(maxVal - minVal), -minVal * 255.0/(maxVal - minVal));
 
-    namedWindow("image", CV_WINDOW_AUTOSIZE);
+    namedWindow("image", WINDOW_AUTOSIZE);
     imshow("image", draw);
     waitKey();

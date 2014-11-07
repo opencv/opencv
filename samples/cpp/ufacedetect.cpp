@@ -1,4 +1,6 @@
 #include "opencv2/objdetect.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/videoio.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/core/utility.hpp"
@@ -109,7 +111,7 @@ int main( int argc, const char** argv )
     else
     {
         if( inputName.empty() )
-            inputName = "lena.jpg";
+            inputName = "../data/lena.jpg";
         image = imread( inputName, 1 ).getUMat(ACCESS_READ);
         if( image.empty() )
         {

@@ -15,7 +15,15 @@ Finds centers of clusters and groups input samples around the clusters.
 
     :param samples: Floating-point matrix of input samples, one row per sample.
 
-    :param data: Data for clustering.
+    :param data: Data for clustering. An array of N-Dimensional points with float coordinates is needed. Examples of this array can be:
+
+           * ``Mat points(count, 2, CV_32F);``
+
+           * ``Mat points(count, 1, CV_32FC2);``
+
+           * ``Mat points(1, count, CV_32FC2);``
+
+           * ``std::vector<cv::Point2f> points(sampleCount);``
 
     :param cluster_count: Number of clusters to split the set by.
 

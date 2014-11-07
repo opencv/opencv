@@ -54,9 +54,11 @@ class CV_solvePnPRansac_Test : public cvtest::BaseTest
 public:
     CV_solvePnPRansac_Test()
     {
-        eps[ITERATIVE] = 1.0e-2;
-        eps[EPNP] = 1.0e-2;
-        eps[P3P] = 1.0e-2;
+        eps[SOLVEPNP_ITERATIVE] = 1.0e-2;
+        eps[SOLVEPNP_EPNP] = 1.0e-2;
+        eps[SOLVEPNP_P3P] = 1.0e-2;
+        eps[SOLVEPNP_DLS] = 1.0e-2;
+        eps[SOLVEPNP_UPNP] = 1.0e-2;
         totalTestsCount = 10;
     }
     ~CV_solvePnPRansac_Test() {}
@@ -117,6 +119,7 @@ protected:
         Mat trueRvec, trueTvec;
         Mat intrinsics, distCoeffs;
         generateCameraMatrix(intrinsics, rng);
+        if (method == 4) intrinsics.at<double>(1,1) = intrinsics.at<double>(0,0);
         if (mode == 0)
             distCoeffs = Mat::zeros(4, 1, CV_64FC1);
         else
@@ -135,7 +138,7 @@ protected:
         }
 
         solvePnPRansac(points, projectedPoints, intrinsics, distCoeffs, rvec, tvec,
-            false, 500, 0.5, -1, inliers, method);
+            false, 500, 0.5, 0.99, inliers, method);
 
         bool isTestSuccess = inliers.size() >= points.size()*0.95;
 
@@ -153,13 +156,12 @@ protected:
     {
         ts->set_failed_test_info(cvtest::TS::OK);
 
-        vector<Point3f> points;
+        vector<Point3f> points, points_dls;
         const int pointsCount = 500;
         points.resize(pointsCount);
         generate3DPointCloud(points);
 
-
-        const int methodsCount = 3;
+        const int methodsCount = 5;
         RNG rng = ts->get_rng();
 
 
@@ -184,7 +186,7 @@ protected:
             }
         }
     }
-    double eps[3];
+    double eps[5];
     int totalTestsCount;
 };
 
@@ -193,9 +195,11 @@ class CV_solvePnP_Test : public CV_solvePnPRansac_Test
 public:
     CV_solvePnP_Test()
     {
-        eps[ITERATIVE] = 1.0e-6;
-        eps[EPNP] = 1.0e-6;
-        eps[P3P] = 1.0e-4;
+        eps[SOLVEPNP_ITERATIVE] = 1.0e-6;
+        eps[SOLVEPNP_EPNP] = 1.0e-6;
+        eps[SOLVEPNP_P3P] = 1.0e-4;
+        eps[SOLVEPNP_DLS] = 1.0e-4;
+        eps[SOLVEPNP_UPNP] = 1.0e-4;
         totalTestsCount = 1000;
     }
 
@@ -207,6 +211,7 @@ protected:
         Mat trueRvec, trueTvec;
         Mat intrinsics, distCoeffs;
         generateCameraMatrix(intrinsics, rng);
+        if (method == 4) intrinsics.at<double>(1,1) = intrinsics.at<double>(0,0);
         if (mode == 0)
             distCoeffs = Mat::zeros(4, 1, CV_64FC1);
         else
@@ -217,6 +222,10 @@ protected:
         if (method == 2)
         {
             opoints = std::vector<Point3f>(points.begin(), points.begin()+4);
+        }
+        else if(method == 3)
+        {
+            opoints = std::vector<Point3f>(points.begin(), points.begin()+50);
         }
         else
             opoints = points;
@@ -239,7 +248,7 @@ protected:
     }
 };
 
-TEST(DISABLED_Calib3d_SolvePnPRansac, accuracy) { CV_solvePnPRansac_Test test; test.safe_run(); }
+TEST(Calib3d_SolvePnPRansac, accuracy) { CV_solvePnPRansac_Test test; test.safe_run(); }
 TEST(Calib3d_SolvePnP, accuracy) { CV_solvePnP_Test test; test.safe_run(); }
 
 
@@ -274,7 +283,7 @@ TEST(DISABLED_Calib3d_SolvePnPRansac, concurrency)
     Mat tvec1, tvec2;
 
     {
-        // limit concurrency to get determenistic result
+        // limit concurrency to get deterministic result
         cv::theRNG().state = 20121010;
         tbb::task_scheduler_init one_thread(1);
         solvePnPRansac(object, image, camera_mat, dist_coef, rvec1, tvec1);
@@ -299,8 +308,8 @@ TEST(DISABLED_Calib3d_SolvePnPRansac, concurrency)
         solvePnPRansac(object, image, camera_mat, dist_coef, rvec2, tvec2);
     }
 
-    double rnorm = cv::norm(rvec1, rvec2, NORM_INF);
-    double tnorm = cv::norm(tvec1, tvec2, NORM_INF);
+    double rnorm = cvtest::norm(rvec1, rvec2, NORM_INF);
+    double tnorm = cvtest::norm(tvec1, tvec2, NORM_INF);
 
     EXPECT_LT(rnorm, 1e-6);
     EXPECT_LT(tnorm, 1e-6);

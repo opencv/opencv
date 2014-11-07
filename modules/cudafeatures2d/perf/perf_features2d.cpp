@@ -49,9 +49,9 @@ using namespace perf;
 //////////////////////////////////////////////////////////////////////
 // FAST
 
-DEF_PARAM_TEST(Image_Threshold_NonMaxSupression, string, int, bool);
+DEF_PARAM_TEST(Image_Threshold_NonMaxSuppression, string, int, bool);
 
-PERF_TEST_P(Image_Threshold_NonMaxSupression, FAST,
+PERF_TEST_P(Image_Threshold_NonMaxSuppression, FAST,
             Combine(Values<string>("gpu/perf/aloe.png"),
                     Values(20),
                     Bool()))
@@ -128,12 +128,12 @@ PERF_TEST_P(Image_NFeatures, ORB,
     }
     else
     {
-        cv::ORB orb(nFeatures);
+        cv::Ptr<cv::ORB> orb = cv::ORB::create(nFeatures);
 
         std::vector<cv::KeyPoint> cpu_keypoints;
         cv::Mat cpu_descriptors;
 
-        TEST_CYCLE() orb(img, cv::noArray(), cpu_keypoints, cpu_descriptors);
+        TEST_CYCLE() orb->detectAndCompute(img, cv::noArray(), cpu_keypoints, cpu_descriptors);
 
         SANITY_CHECK_KEYPOINTS(cpu_keypoints);
         SANITY_CHECK(cpu_descriptors);

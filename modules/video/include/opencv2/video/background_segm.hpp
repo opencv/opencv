@@ -66,39 +66,6 @@ public:
 };
 
 
-
-/*!
- Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm
-
- The class implements the following algorithm:
- "An improved adaptive background mixture model for real-time tracking with shadow detection"
- P. KadewTraKuPong and R. Bowden,
- Proc. 2nd European Workshp on Advanced Video-Based Surveillance Systems, 2001."
- http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
-
-*/
-class CV_EXPORTS_W BackgroundSubtractorMOG : public BackgroundSubtractor
-{
-public:
-    CV_WRAP virtual int getHistory() const = 0;
-    CV_WRAP virtual void setHistory(int nframes) = 0;
-
-    CV_WRAP virtual int getNMixtures() const = 0;
-    CV_WRAP virtual void setNMixtures(int nmix) = 0;
-
-    CV_WRAP virtual double getBackgroundRatio() const = 0;
-    CV_WRAP virtual void setBackgroundRatio(double backgroundRatio) = 0;
-
-    CV_WRAP virtual double getNoiseSigma() const = 0;
-    CV_WRAP virtual void setNoiseSigma(double noiseSigma) = 0;
-};
-
-CV_EXPORTS_W Ptr<BackgroundSubtractorMOG>
-    createBackgroundSubtractorMOG(int history=200, int nmixtures=5,
-                                  double backgroundRatio=0.7, double noiseSigma=0);
-
-
-
 /*!
  The class implements the following algorithm:
  "Improved adaptive Gausian mixture model for background subtraction"
@@ -113,7 +80,7 @@ public:
     CV_WRAP virtual void setHistory(int history) = 0;
 
     CV_WRAP virtual int getNMixtures() const = 0;
-    CV_WRAP virtual void setNMixtures(int nmixtures) = 0;
+    CV_WRAP virtual void setNMixtures(int nmixtures) = 0;//needs reinitialization!
 
     CV_WRAP virtual double getBackgroundRatio() const = 0;
     CV_WRAP virtual void setBackgroundRatio(double ratio) = 0;
@@ -150,50 +117,44 @@ CV_EXPORTS_W Ptr<BackgroundSubtractorMOG2>
     createBackgroundSubtractorMOG2(int history=500, double varThreshold=16,
                                    bool detectShadows=true);
 
-/**
- * Background Subtractor module. Takes a series of images and returns a sequence of mask (8UC1)
- * images of the same size, where 255 indicates Foreground and 0 represents Background.
- * This class implements an algorithm described in "Visual Tracking of Human Visitors under
- * Variable-Lighting Conditions for a Responsive Audio Art Installation," A. Godbehere,
- * A. Matsukawa, K. Goldberg, American Control Conference, Montreal, June 2012.
- */
-class CV_EXPORTS_W BackgroundSubtractorGMG : public BackgroundSubtractor
+/*!
+ The class implements the K nearest neigbours algorithm from:
+ "Efficient Adaptive Density Estimation per Image Pixel for the Task of Background Subtraction"
+ Z.Zivkovic, F. van der Heijden
+ Pattern Recognition Letters, vol. 27, no. 7, pages 773-780, 2006
+ http://www.zoranz.net/Publications/zivkovicPRL2006.pdf
+
+ Fast for small foreground object. Results on the benchmark data is at http://www.changedetection.net.
+*/
+
+class CV_EXPORTS_W BackgroundSubtractorKNN : public BackgroundSubtractor
 {
 public:
-    CV_WRAP virtual int getMaxFeatures() const = 0;
-    CV_WRAP virtual void setMaxFeatures(int maxFeatures) = 0;
+    CV_WRAP virtual int getHistory() const = 0;
+    CV_WRAP virtual void setHistory(int history) = 0;
 
-    CV_WRAP virtual double getDefaultLearningRate() const = 0;
-    CV_WRAP virtual void setDefaultLearningRate(double lr) = 0;
+    CV_WRAP virtual int getNSamples() const = 0;
+    CV_WRAP virtual void setNSamples(int _nN) = 0;//needs reinitialization!
 
-    CV_WRAP virtual int getNumFrames() const = 0;
-    CV_WRAP virtual void setNumFrames(int nframes) = 0;
+    CV_WRAP virtual double getDist2Threshold() const = 0;
+    CV_WRAP virtual void setDist2Threshold(double _dist2Threshold) = 0;
 
-    CV_WRAP virtual int getQuantizationLevels() const = 0;
-    CV_WRAP virtual void setQuantizationLevels(int nlevels) = 0;
+    CV_WRAP virtual int getkNNSamples() const = 0;
+    CV_WRAP virtual void setkNNSamples(int _nkNN) = 0;
 
-    CV_WRAP virtual double getBackgroundPrior() const = 0;
-    CV_WRAP virtual void setBackgroundPrior(double bgprior) = 0;
+    CV_WRAP virtual bool getDetectShadows() const = 0;
+    CV_WRAP virtual void setDetectShadows(bool detectShadows) = 0;
 
-    CV_WRAP virtual int getSmoothingRadius() const = 0;
-    CV_WRAP virtual void setSmoothingRadius(int radius) = 0;
+    CV_WRAP virtual int getShadowValue() const = 0;
+    CV_WRAP virtual void setShadowValue(int value) = 0;
 
-    CV_WRAP virtual double getDecisionThreshold() const = 0;
-    CV_WRAP virtual void setDecisionThreshold(double thresh) = 0;
-
-    CV_WRAP virtual bool getUpdateBackgroundModel() const = 0;
-    CV_WRAP virtual void setUpdateBackgroundModel(bool update) = 0;
-
-    CV_WRAP virtual double getMinVal() const = 0;
-    CV_WRAP virtual void setMinVal(double val) = 0;
-
-    CV_WRAP virtual double getMaxVal() const = 0;
-    CV_WRAP virtual void setMaxVal(double val) = 0;
+    CV_WRAP virtual double getShadowThreshold() const = 0;
+    CV_WRAP virtual void setShadowThreshold(double threshold) = 0;
 };
 
-
-CV_EXPORTS_W Ptr<BackgroundSubtractorGMG> createBackgroundSubtractorGMG(int initializationFrames=120,
-                                                                        double decisionThreshold=0.8);
+CV_EXPORTS_W Ptr<BackgroundSubtractorKNN>
+    createBackgroundSubtractorKNN(int history=500, double dist2Threshold=400.0,
+                                   bool detectShadows=true);
 
 } // cv
 

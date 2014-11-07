@@ -39,7 +39,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "../../precomp.hpp"
 
 #ifdef HAVE_CLAMDBLAS
 
@@ -118,7 +118,9 @@ static void* openclamdblas_check_fn(int ID)
     void* func = CV_CL_GET_PROC_ADDRESS(e->fnName);
     if (!func)
     {
-        CV_Error(cv::Error::OpenCLApiCallError, cv::format("OpenCL AMD BLAS function is not available: [%s]", e->fnName));
+        throw cv::Exception(cv::Error::OpenCLApiCallError,
+                cv::format("OpenCL AMD BLAS function is not available: [%s]", e->fnName),
+                CV_Func, __FILE__, __LINE__);
     }
     *(e->ppFn) = func;
     return func;

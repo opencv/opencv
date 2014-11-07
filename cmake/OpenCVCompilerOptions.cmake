@@ -106,6 +106,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     add_extra_compiler_option(-march=i686)
   endif()
 
+  if(APPLE)
+    add_extra_compiler_option(-Wno-semicolon-before-method-body)
+  endif()
+
   # Other optimizations
   if(ENABLE_OMIT_FRAME_POINTER)
     add_extra_compiler_option(-fomit-frame-pointer)
@@ -183,6 +187,11 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   elseif(NOT APPLE AND NOT ANDROID)
     # Remove unreferenced functions: function level linking
     add_extra_compiler_option(-ffunction-sections)
+  endif()
+
+  if(ENABLE_COVERAGE)
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} --coverage")
+    set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} --coverage")
   endif()
 
   set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE} -DNDEBUG")

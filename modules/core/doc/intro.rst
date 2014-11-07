@@ -14,7 +14,8 @@ OpenCV has a modular structure, which means that the package includes several sh
  * **calib3d** - basic multiple-view geometry algorithms, single and stereo camera calibration, object pose estimation, stereo correspondence algorithms, and elements of 3D reconstruction.
  * **features2d** - salient feature detectors, descriptors, and descriptor matchers.
  * **objdetect** - detection of objects and instances of the predefined classes (for example, faces, eyes, mugs, people, cars, and so on).
- * **highgui** - an easy-to-use interface to video capturing, image and video codecs, as well as simple UI capabilities.
+ * **highgui** - an easy-to-use interface to simple UI capabilities.
+ * **videoio** - an easy-to-use interface to video capturing and video codecs.
  * **gpu** - GPU-accelerated algorithms from different OpenCV modules.
  * ... some other helper modules, such as FLANN and Google test wrappers, Python bindings, and others.
 

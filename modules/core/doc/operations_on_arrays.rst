@@ -1216,13 +1216,13 @@ gemm
 ----
 Performs generalized matrix multiplication.
 
-.. ocv:function:: void gemm( InputArray src1, InputArray src2, double alpha, InputArray src3, double gamma, OutputArray dst, int flags=0 )
+.. ocv:function:: void gemm( InputArray src1, InputArray src2, double alpha, InputArray src3, double beta, OutputArray dst, int flags=0 )
 
-.. ocv:pyfunction:: cv2.gemm(src1, src2, alpha, src3, gamma[, dst[, flags]]) -> dst
+.. ocv:pyfunction:: cv2.gemm(src1, src2, alpha, src3, beta[, dst[, flags]]) -> dst
 
 .. ocv:cfunction:: void cvGEMM( const CvArr* src1, const CvArr* src2, double alpha, const CvArr* src3, double beta, CvArr* dst, int tABC=0)
 
-    :param src1: first multiplied input matrix that should have ``CV_32FC1``, ``CV_64FC1``, ``CV_32FC2``, or ``CV_64FC2`` type.
+    :param src1: first multiplied input matrix that could be real(``CV_32FC1``, ``CV_64FC1``) or complex(``CV_32FC2``, ``CV_64FC2``).
 
     :param src2: second multiplied input matrix of the same type as ``src1``.
 
@@ -1245,6 +1245,8 @@ The function performs generalized matrix multiplication similar to the ``gemm`` 
 .. math::
 
     \texttt{dst} =  \texttt{alpha} \cdot \texttt{src1} ^T  \cdot \texttt{src2} +  \texttt{beta} \cdot \texttt{src3} ^T
+
+In case of complex (two-channel) data, performed a complex matrix multiplication.
 
 The function can be replaced with a matrix expression. For example, the above call can be replaced with: ::
 
@@ -2065,7 +2067,7 @@ normalize
 ---------
 Normalizes the norm or value range of an array.
 
-.. ocv:function:: void normalize( InputArray src, OutputArray dst, double alpha=1, double beta=0, int norm_type=NORM_L2, int dtype=-1, InputArray mask=noArray() )
+.. ocv:function:: void normalize( InputArray src, InputOutputArray dst, double alpha=1, double beta=0, int norm_type=NORM_L2, int dtype=-1, InputArray mask=noArray() )
 
 .. ocv:function:: void normalize(const SparseMat& src, SparseMat& dst, double alpha, int normType)
 
@@ -3405,12 +3407,11 @@ and want to compute value of the "virtual" pixel ``Point(-5, 100)`` in a floatin
                               borderInterpolate(-5, img.cols, BORDER_WRAP));
 
 
-Normally, the function is not called directly. It is used inside :ocv:class:`FilterEngine`
-and :ocv:func:`copyMakeBorder` to compute tables for quick extrapolation.
+Normally, the function is not called directly. It is used inside filtering functions
+and also in :ocv:func:`copyMakeBorder`.
 
 .. seealso::
 
-    :ocv:class:`FilterEngine`,
     :ocv:func:`copyMakeBorder`
 
 
@@ -3443,7 +3444,7 @@ Forms a border around an image.
 
 The function copies the source image into the middle of the destination image. The areas to the
 left, to the right, above and below the copied source image will be filled with extrapolated pixels.
-This is not what :ocv:class:`FilterEngine` or filtering functions based on it do (they extrapolate
+This is not what filtering functions based on it do (they extrapolate
 pixels on-fly), but what other more complex functions, including your own, may do to simplify image
 boundary handling.
 

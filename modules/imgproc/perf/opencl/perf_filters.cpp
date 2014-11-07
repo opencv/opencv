@@ -44,7 +44,7 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
@@ -112,7 +112,7 @@ OCL_PERF_TEST_P(LaplacianFixture, Laplacian,
     const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), ksize = get<2>(params);
-    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-5;
+    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 2e-5;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -211,7 +211,7 @@ OCL_PERF_TEST_P(SobelFixture, Sobel,
 
     OCL_TEST_CYCLE() cv::Sobel(src, dst, -1, dx, dy);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1e-6);
 }
 
 ///////////// Scharr ////////////////////////
@@ -246,14 +246,14 @@ OCL_PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
     const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), ksize = get<2>(params);
-    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 + DBL_EPSILON : 3e-4;
+    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 2 + DBL_EPSILON : 3e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     UMat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::GaussianBlur(src, dst, Size(ksize, ksize), 0);
+    OCL_TEST_CYCLE() cv::GaussianBlur(src, dst, Size(ksize, ksize), 1, 1, cv::BORDER_CONSTANT);
 
     SANITY_CHECK(dst, eps);
 }
@@ -272,7 +272,8 @@ OCL_PERF_TEST_P(Filter2DFixture, Filter2D,
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
-    UMat src(srcSize, type), dst(srcSize, type), kernel(ksize, ksize, CV_32SC1);
+    UMat src(srcSize, type), dst(srcSize, type);
+    Mat kernel(ksize, ksize, CV_32SC1);
     declare.in(src, WARMUP_RNG).in(kernel).out(dst);
     randu(kernel, -3.0, 3.0);
 

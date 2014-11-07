@@ -280,9 +280,6 @@ macro(add_android_project target path)
       string(REGEX REPLACE "LOCAL_MODULE[ ]*:=[ ]*([a-zA-Z_][a-zA-Z_0-9]*)[ ]*" "\\1" JNI_LIB_NAME "${JNI_LIB_NAME}")
 
       if(JNI_LIB_NAME)
-        ocv_include_modules_recurse(${android_proj_NATIVE_DEPS})
-        ocv_include_directories("${path}/jni")
-
         if(NATIVE_APP_GLUE)
           include_directories(${ANDROID_NDK}/sources/android/native_app_glue)
           list(APPEND android_proj_jni_files ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
@@ -291,7 +288,9 @@ macro(add_android_project target path)
         endif()
 
         add_library(${JNI_LIB_NAME} MODULE ${android_proj_jni_files})
-        target_link_libraries(${JNI_LIB_NAME} ${OPENCV_LINKER_LIBS} ${android_proj_NATIVE_DEPS})
+        ocv_target_include_modules_recurse(${JNI_LIB_NAME} ${android_proj_NATIVE_DEPS})
+        ocv_target_include_directories(${JNI_LIB_NAME} "${path}/jni")
+        ocv_target_link_libraries(${JNI_LIB_NAME} ${OPENCV_LINKER_LIBS} ${android_proj_NATIVE_DEPS})
 
         set_target_properties(${JNI_LIB_NAME} PROPERTIES
             OUTPUT_NAME "${JNI_LIB_NAME}"
@@ -333,6 +332,16 @@ macro(add_android_project target path)
     endif()
     if(android_proj_native_deps)
       add_dependencies(${target} ${android_proj_native_deps})
+    endif()
+
+    if(ANDROID_EXAMPLES_WITH_LIBS)
+      add_custom_target(
+        ${target}_copy_libs
+        COMMAND ${CMAKE_COMMAND} -DSRC_DIR=${OpenCV_BINARY_DIR}/lib -DDST_DIR=${android_proj_bin_dir}/libs -P ${OpenCV_SOURCE_DIR}/cmake/copyAndroidLibs.cmake
+        WORKING_DIRECTORY ${OpenCV_BINARY_DIR}/lib
+        DEPENDS "${OpenCV_BINARY_DIR}/bin/classes.jar.dephelper" opencv_java
+      )
+      add_dependencies(${target} ${target}_copy_libs)
     endif()
 
     if(__android_project_chain)

@@ -51,11 +51,11 @@
 #define CV_PI_F 3.1415926535897932384626433832795f
 
 #ifdef INTEL_DEVICE
-#define QANGLE_TYPE		int
-#define QANGLE_TYPE2	int2
+#define QANGLE_TYPE     int
+#define QANGLE_TYPE2    int2
 #else
-#define QANGLE_TYPE		uchar
-#define QANGLE_TYPE2	uchar2
+#define QANGLE_TYPE     uchar
+#define QANGLE_TYPE2    uchar2
 #endif
 
 //----------------------------------------------------------------------------
@@ -141,9 +141,8 @@ __kernel void compute_hists_lut_kernel(
             final_hist[(cell_x * 2 + cell_y) * cnbins + bin_id] =
                 hist_[0] + hist_[1] + hist_[2];
     }
-#ifdef CPU
+
     barrier(CLK_LOCAL_MEM_FENCE);
-#endif
 
     int tid = (cell_y * CELLS_PER_BLOCK_Y + cell_x) * 12 + cell_thread_x;
     if ((tid < cblock_hist_size) && (gid < blocks_total))

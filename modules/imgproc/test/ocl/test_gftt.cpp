@@ -41,7 +41,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
@@ -60,7 +60,7 @@ PARAM_TEST_CASE(GoodFeaturesToTrack, double, bool)
     static const int maxCorners;
     static const double qualityLevel;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
+    TEST_DECLARE_INPUT_PARAMETER(src);
     UMat points, upoints;
 
     virtual void SetUp()
@@ -79,7 +79,7 @@ PARAM_TEST_CASE(GoodFeaturesToTrack, double, bool)
         randomSubMat(src, src_roi, roiSize, srcBorder, frame.type(), 5, 256);
         src_roi.copyTo(frame);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
     }
 
     void UMatToVector(const UMat & um, std::vector<Point2f> & v) const
@@ -114,6 +114,7 @@ OCL_TEST_P(GoodFeaturesToTrack, Accuracy)
         for (size_t i = 0; i < pts.size(); ++i)
         {
             Point2i a = upts[i], b = pts[i];
+
             bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1;
 
             if (!eq)

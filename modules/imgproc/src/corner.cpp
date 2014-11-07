@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_imgproc.hpp"
 
 namespace cv
 {
@@ -62,14 +62,14 @@ static void calcMinEigenVal( const Mat& _cov, Mat& _dst )
 
     for( i = 0; i < size.height; i++ )
     {
-        const float* cov = (const float*)(_cov.data + _cov.step*i);
-        float* dst = (float*)(_dst.data + _dst.step*i);
+        const float* cov = _cov.ptr<float>(i);
+        float* dst = _dst.ptr<float>(i);
         j = 0;
     #if CV_SSE
         if( simd )
         {
             __m128 half = _mm_set1_ps(0.5f);
-            for( ; j <= size.width - 5; j += 4 )
+            for( ; j <= size.width - 4; j += 4 )
             {
                 __m128 t0 = _mm_loadu_ps(cov + j*3); // a0 b0 c0 x
                 __m128 t1 = _mm_loadu_ps(cov + j*3 + 3); // a1 b1 c1 x
@@ -89,6 +89,19 @@ static void calcMinEigenVal( const Mat& _cov, Mat& _dst )
                 a = _mm_sub_ps(_mm_add_ps(a, c), _mm_sqrt_ps(t));
                 _mm_storeu_ps(dst + j, a);
             }
+        }
+    #elif CV_NEON
+        float32x4_t v_half = vdupq_n_f32(0.5f);
+        for( ; j <= size.width - 4; j += 4 )
+        {
+            float32x4x3_t v_src = vld3q_f32(cov + j * 3);
+            float32x4_t v_a = vmulq_f32(v_src.val[0], v_half);
+            float32x4_t v_b = v_src.val[1];
+            float32x4_t v_c = vmulq_f32(v_src.val[2], v_half);
+
+            float32x4_t v_t = vsubq_f32(v_a, v_c);
+            v_t = vmlaq_f32(vmulq_f32(v_t, v_t), v_b, v_b);
+            vst1q_f32(dst + j, vsubq_f32(vaddq_f32(v_a, v_c), cv_vsqrtq_f32(v_t)));
         }
     #endif
         for( ; j < size.width; j++ )
@@ -118,15 +131,15 @@ static void calcHarris( const Mat& _cov, Mat& _dst, double k )
 
     for( i = 0; i < size.height; i++ )
     {
-        const float* cov = (const float*)(_cov.data + _cov.step*i);
-        float* dst = (float*)(_dst.data + _dst.step*i);
+        const float* cov = _cov.ptr<float>(i);
+        float* dst = _dst.ptr<float>(i);
         j = 0;
 
     #if CV_SSE
         if( simd )
         {
             __m128 k4 = _mm_set1_ps((float)k);
-            for( ; j <= size.width - 5; j += 4 )
+            for( ; j <= size.width - 4; j += 4 )
             {
                 __m128 t0 = _mm_loadu_ps(cov + j*3); // a0 b0 c0 x
                 __m128 t1 = _mm_loadu_ps(cov + j*3 + 3); // a1 b1 c1 x
@@ -145,6 +158,17 @@ static void calcHarris( const Mat& _cov, Mat& _dst, double k )
                 a = _mm_sub_ps(a, t);
                 _mm_storeu_ps(dst + j, a);
             }
+        }
+    #elif CV_NEON
+        float32x4_t v_k = vdupq_n_f32((float)k);
+
+        for( ; j <= size.width - 4; j += 4 )
+        {
+            float32x4x3_t v_src = vld3q_f32(cov + j * 3);
+            float32x4_t v_a = v_src.val[0], v_b = v_src.val[1], v_c = v_src.val[2];
+            float32x4_t v_ac_bb = vmlsq_f32(vmulq_f32(v_a, v_c), v_b, v_b);
+            float32x4_t v_ac = vaddq_f32(v_a, v_c);
+            vst1q_f32(dst + j, vmlsq_f32(v_ac_bb, v_k, vmulq_f32(v_ac, v_ac)));
         }
     #endif
 
@@ -227,8 +251,8 @@ static void calcEigenValsVecs( const Mat& _cov, Mat& _dst )
 
     for( int i = 0; i < size.height; i++ )
     {
-        const float* cov = (const float*)(_cov.data + _cov.step*i);
-        float* dst = (float*)(_dst.data + _dst.step*i);
+        const float* cov = _cov.ptr<float>(i);
+        float* dst = _dst.ptr<float>(i);
 
         eigen2x2(cov, dst, size.width);
     }
@@ -251,10 +275,10 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
     int depth = src.depth();
     double scale = (double)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
     if( aperture_size < 0 )
-        scale *= 2.;
+        scale *= 2.0;
     if( depth == CV_8U )
-        scale *= 255.;
-    scale = 1./scale;
+        scale *= 255.0;
+    scale = 1.0/scale;
 
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
 
@@ -276,11 +300,27 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 
     for( i = 0; i < size.height; i++ )
     {
-        float* cov_data = (float*)(cov.data + i*cov.step);
-        const float* dxdata = (const float*)(Dx.data + i*Dx.step);
-        const float* dydata = (const float*)(Dy.data + i*Dy.step);
+        float* cov_data = cov.ptr<float>(i);
+        const float* dxdata = Dx.ptr<float>(i);
+        const float* dydata = Dy.ptr<float>(i);
+        j = 0;
 
-        for( j = 0; j < size.width; j++ )
+        #if CV_NEON
+        for( ; j <= size.width - 4; j += 4 )
+        {
+            float32x4_t v_dx = vld1q_f32(dxdata + j);
+            float32x4_t v_dy = vld1q_f32(dydata + j);
+
+            float32x4x3_t v_dst;
+            v_dst.val[0] = vmulq_f32(v_dx, v_dx);
+            v_dst.val[1] = vmulq_f32(v_dx, v_dy);
+            v_dst.val[2] = vmulq_f32(v_dy, v_dy);
+
+            vst3q_f32(cov_data + j * 3, v_dst);
+        }
+        #endif
+
+        for( ; j < size.width; j++ )
         {
             float dx = dxdata[j];
             float dy = dydata[j];
@@ -304,6 +344,65 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 
 #ifdef HAVE_OPENCL
 
+static bool extractCovData(InputArray _src, UMat & Dx, UMat & Dy, int depth,
+                           float scale, int aperture_size, int borderType)
+{
+    UMat src = _src.getUMat();
+
+    Size wholeSize;
+    Point ofs;
+    src.locateROI(wholeSize, ofs);
+
+    const int sobel_lsz = 16;
+    if ((aperture_size == 3 || aperture_size == 5 || aperture_size == 7 || aperture_size == -1) &&
+        wholeSize.height > sobel_lsz + (aperture_size >> 1) &&
+        wholeSize.width > sobel_lsz + (aperture_size >> 1))
+    {
+        CV_Assert(depth == CV_8U || depth == CV_32F);
+
+        Dx.create(src.size(), CV_32FC1);
+        Dy.create(src.size(), CV_32FC1);
+
+        size_t localsize[2] = { sobel_lsz, sobel_lsz };
+        size_t globalsize[2] = { localsize[0] * (1 + (src.cols - 1) / localsize[0]),
+                                 localsize[1] * (1 + (src.rows - 1) / localsize[1]) };
+
+        int src_offset_x = (int)((src.offset % src.step) / src.elemSize());
+        int src_offset_y = (int)(src.offset / src.step);
+
+        const char * const borderTypes[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT",
+                                             "BORDER_WRAP", "BORDER_REFLECT101" };
+
+        ocl::Kernel k(format("sobel%d", aperture_size).c_str(), ocl::imgproc::covardata_oclsrc,
+                      cv::format("-D BLK_X=%d -D BLK_Y=%d -D %s -D SRCTYPE=%s%s",
+                                 (int)localsize[0], (int)localsize[1], borderTypes[borderType], ocl::typeToStr(depth),
+                                 aperture_size < 0 ? " -D SCHARR" : ""));
+        if (k.empty())
+            return false;
+
+        k.args(ocl::KernelArg::PtrReadOnly(src), (int)src.step, src_offset_x, src_offset_y,
+               ocl::KernelArg::WriteOnlyNoSize(Dx), ocl::KernelArg::WriteOnly(Dy),
+               wholeSize.height, wholeSize.width, scale);
+
+        return k.run(2, globalsize, localsize, false);
+    }
+    else
+    {
+        if (aperture_size > 0)
+        {
+            Sobel(_src, Dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType);
+            Sobel(_src, Dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType);
+        }
+        else
+        {
+            Scharr(_src, Dx, CV_32F, 1, 0, scale, 0, borderType);
+            Scharr(_src, Dy, CV_32F, 0, 1, scale, 0, borderType);
+        }
+    }
+
+    return true;
+}
+
 static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int block_size,
                                       int aperture_size, double k, int borderType, int op_type)
 {
@@ -314,31 +413,24 @@ static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int blo
         return false;
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type);
-    double scale = (double)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
-    if( aperture_size < 0 )
-        scale *= 2.0;
-    if( depth == CV_8U )
-        scale *= 255.0;
-    scale = 1.0 / scale;
-
     if ( !(type == CV_8UC1 || type == CV_32FC1) )
         return false;
 
-    UMat Dx, Dy;
-    if (aperture_size > 0)
-    {
-        Sobel(_src, Dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType);
-        Sobel(_src, Dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType);
-    }
-    else
-    {
-        Scharr(_src, Dx, CV_32F, 1, 0, scale, 0, borderType);
-        Scharr(_src, Dy, CV_32F, 0, 1, scale, 0, borderType);
-    }
-
     const char * const borderTypes[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT",
-                                         0, "BORDER_REFLECT101" };
+                                         "BORDER_WRAP", "BORDER_REFLECT101" };
     const char * const cornerType[] = { "CORNER_MINEIGENVAL", "CORNER_HARRIS", 0 };
+
+
+    double scale = (double)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
+    if (aperture_size < 0)
+        scale *= 2.0;
+    if (depth == CV_8U)
+        scale *= 255.0;
+    scale = 1.0 / scale;
+
+    UMat Dx, Dy;
+    if (!extractCovData(_src, Dx, Dy, depth, (float)scale, aperture_size, borderType))
+        return false;
 
     ocl::Kernel cornelKernel("corner", ocl::imgproc::corner_oclsrc,
                              format("-D anX=%d -D anY=%d -D ksX=%d -D ksY=%d -D %s -D %s",
@@ -369,8 +461,9 @@ static bool ocl_preCornerDetect( InputArray _src, OutputArray _dst, int ksize, i
 {
     UMat Dx, Dy, D2x, D2y, Dxy;
 
-    Sobel( _src, Dx, CV_32F, 1, 0, ksize, 1, 0, borderType );
-    Sobel( _src, Dy, CV_32F, 0, 1, ksize, 1, 0, borderType );
+    if (!extractCovData(_src, Dx, Dy, depth, 1, ksize, borderType))
+        return false;
+
     Sobel( _src, D2x, CV_32F, 2, 0, ksize, 1, 0, borderType );
     Sobel( _src, D2y, CV_32F, 0, 2, ksize, 1, 0, borderType );
     Sobel( _src, Dxy, CV_32F, 1, 1, ksize, 1, 0, borderType );
@@ -407,9 +500,68 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
+#if defined(HAVE_IPP) && (IPP_VERSION_MAJOR >= 8)
+    CV_IPP_CHECK()
+    {
+        typedef IppStatus (CV_STDCALL * ippiMinEigenValGetBufferSize)(IppiSize, int, int, int*);
+        typedef IppStatus (CV_STDCALL * ippiMinEigenVal)(const void*, int, Ipp32f*, int, IppiSize, IppiKernelType, int, int, Ipp8u*);
+        IppiKernelType kerType;
+        int kerSize = ksize;
+        if (ksize < 0)
+        {
+            kerType = ippKernelScharr;
+            kerSize = 3;
+        } else
+        {
+            kerType = ippKernelSobel;
+        }
+        bool isolated = (borderType & BORDER_ISOLATED) != 0;
+        int borderTypeNI = borderType & ~BORDER_ISOLATED;
+        if ((borderTypeNI == BORDER_REPLICATE && (!src.isSubmatrix() || isolated)) &&
+            (kerSize == 3 || kerSize == 5) && (blockSize == 3 || blockSize == 5))
+        {
+            ippiMinEigenValGetBufferSize getBufferSizeFunc = 0;
+            ippiMinEigenVal minEigenValFunc = 0;
+            float norm_coef = 0.f;
+
+            if (src.type() == CV_8UC1)
+            {
+                getBufferSizeFunc = (ippiMinEigenValGetBufferSize) ippiMinEigenValGetBufferSize_8u32f_C1R;
+                minEigenValFunc = (ippiMinEigenVal) ippiMinEigenVal_8u32f_C1R;
+                norm_coef = 1.f / 255.f;
+            } else if (src.type() == CV_32FC1)
+            {
+                getBufferSizeFunc = (ippiMinEigenValGetBufferSize) ippiMinEigenValGetBufferSize_32f_C1R;
+                minEigenValFunc = (ippiMinEigenVal) ippiMinEigenVal_32f_C1R;
+                norm_coef = 255.f;
+            }
+            norm_coef = kerType == ippKernelSobel ? norm_coef : norm_coef / 2.45f;
+
+            if (getBufferSizeFunc && minEigenValFunc)
+            {
+                int bufferSize;
+                IppiSize srcRoi = { src.cols, src.rows };
+                IppStatus ok = getBufferSizeFunc(srcRoi, kerSize, blockSize, &bufferSize);
+                if (ok >= 0)
+                {
+                    AutoBuffer<uchar> buffer(bufferSize);
+                    ok = minEigenValFunc(src.ptr(), (int) src.step, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi, kerType, kerSize, blockSize, buffer);
+                    CV_SUPPRESS_DEPRECATED_START
+                    if (ok >= 0) ok = ippiMulC_32f_C1IR(norm_coef, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi);
+                    CV_SUPPRESS_DEPRECATED_END
+                    if (ok >= 0)
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP);
+                        return;
+                    }
+                }
+                setIppErrorStatus();
+            }
+        }
+    }
+#endif
     cornerEigenValsVecs( src, dst, blockSize, ksize, MINEIGENVAL, 0, borderType );
 }
-
 
 void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksize, double k, int borderType )
 {
@@ -419,6 +571,55 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
+
+#if IPP_VERSION_X100 >= 801 && 0
+    CV_IPP_CHECK()
+    {
+        int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+        int borderTypeNI = borderType & ~BORDER_ISOLATED;
+        bool isolated = (borderType & BORDER_ISOLATED) != 0;
+
+        if ( (ksize == 3 || ksize == 5) && (type == CV_8UC1 || type == CV_32FC1) &&
+            (borderTypeNI == BORDER_CONSTANT || borderTypeNI == BORDER_REPLICATE) && cn == 1 && (!src.isSubmatrix() || isolated) )
+        {
+            IppiSize roisize = { src.cols, src.rows };
+            IppiMaskSize masksize = ksize == 5 ? ippMskSize5x5 : ippMskSize3x3;
+            IppDataType datatype = type == CV_8UC1 ? ipp8u : ipp32f;
+            Ipp32s bufsize = 0;
+
+            double scale = (double)(1 << ((ksize > 0 ? ksize : 3) - 1)) * blockSize;
+            if (ksize < 0)
+                scale *= 2.0;
+            if (depth == CV_8U)
+                scale *= 255.0;
+            scale = std::pow(scale, -4.0);
+
+            if (ippiHarrisCornerGetBufferSize(roisize, masksize, blockSize, datatype, cn, &bufsize) >= 0)
+            {
+                Ipp8u * buffer = ippsMalloc_8u(bufsize);
+                IppiDifferentialKernel filterType = ksize > 0 ? ippFilterSobel : ippFilterScharr;
+                IppiBorderType borderTypeIpp = borderTypeNI == BORDER_CONSTANT ? ippBorderConst : ippBorderRepl;
+                IppStatus status = (IppStatus)-1;
+
+                if (depth == CV_8U)
+                    status = ippiHarrisCorner_8u32f_C1R((const Ipp8u *)src.data, (int)src.step, (Ipp32f *)dst.data, (int)dst.step, roisize,
+                                                        filterType, masksize, blockSize, (Ipp32f)k, (Ipp32f)scale, borderTypeIpp, 0, buffer);
+                else if (depth == CV_32F)
+                    status = ippiHarrisCorner_32f_C1R((const Ipp32f *)src.data, (int)src.step, (Ipp32f *)dst.data, (int)dst.step, roisize,
+                                                      filterType, masksize, blockSize, (Ipp32f)k, (Ipp32f)scale, borderTypeIpp, 0, buffer);
+                ippsFree(buffer);
+
+                if (status >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+            }
+            setIppErrorStatus();
+        }
+    }
+#endif
+
     cornerEigenValsVecs( src, dst, blockSize, ksize, HARRIS, k, borderType );
 }
 
@@ -458,19 +659,55 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
     if( src.depth() == CV_8U )
         factor *= 255;
     factor = 1./(factor * factor * factor);
+#if CV_NEON || CV_SSE2
+    float factor_f = (float)factor;
+#endif
+
+#if CV_SSE2
+    volatile bool haveSSE2 = cv::checkHardwareSupport(CV_CPU_SSE2);
+    __m128 v_factor = _mm_set1_ps(factor_f), v_m2 = _mm_set1_ps(-2.0f);
+#endif
 
     Size size = src.size();
     int i, j;
     for( i = 0; i < size.height; i++ )
     {
-        float* dstdata = (float*)(dst.data + i*dst.step);
-        const float* dxdata = (const float*)(Dx.data + i*Dx.step);
-        const float* dydata = (const float*)(Dy.data + i*Dy.step);
-        const float* d2xdata = (const float*)(D2x.data + i*D2x.step);
-        const float* d2ydata = (const float*)(D2y.data + i*D2y.step);
-        const float* dxydata = (const float*)(Dxy.data + i*Dxy.step);
+        float* dstdata = dst.ptr<float>(i);
+        const float* dxdata = Dx.ptr<float>(i);
+        const float* dydata = Dy.ptr<float>(i);
+        const float* d2xdata = D2x.ptr<float>(i);
+        const float* d2ydata = D2y.ptr<float>(i);
+        const float* dxydata = Dxy.ptr<float>(i);
 
-        for( j = 0; j < size.width; j++ )
+        j = 0;
+
+#if CV_SSE2
+        if (haveSSE2)
+        {
+            for( ; j <= size.width - 4; j += 4 )
+            {
+                __m128 v_dx = _mm_loadu_ps((const float *)(dxdata + j));
+                __m128 v_dy = _mm_loadu_ps((const float *)(dydata + j));
+
+                __m128 v_s1 = _mm_mul_ps(_mm_mul_ps(v_dx, v_dx), _mm_loadu_ps((const float *)(d2ydata + j)));
+                __m128 v_s2 = _mm_mul_ps(_mm_mul_ps(v_dy, v_dy), _mm_loadu_ps((const float *)(d2xdata + j)));
+                __m128 v_s3 = _mm_mul_ps(_mm_mul_ps(v_dx, v_dy), _mm_loadu_ps((const float *)(dxydata + j)));
+                v_s1 = _mm_mul_ps(v_factor, _mm_add_ps(v_s1, _mm_add_ps(v_s2, _mm_mul_ps(v_s3, v_m2))));
+                _mm_storeu_ps(dstdata + j, v_s1);
+            }
+        }
+#elif CV_NEON
+        for( ; j <= size.width - 4; j += 4 )
+        {
+            float32x4_t v_dx = vld1q_f32(dxdata + j), v_dy = vld1q_f32(dydata + j);
+            float32x4_t v_s = vmulq_f32(v_dx, vmulq_f32(v_dx, vld1q_f32(d2ydata + j)));
+            v_s = vmlaq_f32(v_s, vld1q_f32(d2xdata + j), vmulq_f32(v_dy, v_dy));
+            v_s = vmlaq_f32(v_s, vld1q_f32(dxydata + j), vmulq_n_f32(vmulq_f32(v_dy, v_dx), -2));
+            vst1q_f32(dstdata + j, vmulq_n_f32(v_s, factor_f));
+        }
+#endif
+
+        for( ; j < size.width; j++ )
         {
             float dx = dxdata[j];
             float dy = dydata[j];

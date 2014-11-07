@@ -1,12 +1,15 @@
 #include <iostream>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/ml/ml.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include "opencv2/imgcodecs.hpp"
+#include <opencv2/highgui.hpp>
+#include <opencv2/ml.hpp>
 
 #define	NTRAINING_SAMPLES	100			// Number of training samples per class
 #define FRAC_LINEAR_SEP		0.9f	    // Fraction of samples which compose the linear separable part
 
 using namespace cv;
+using namespace cv::ml;
 using namespace std;
 
 static void help()
@@ -29,7 +32,7 @@ int main()
 
     //--------------------- 1. Set up training data randomly ---------------------------------------
     Mat trainData(2*NTRAINING_SAMPLES, 2, CV_32FC1);
-    Mat labels   (2*NTRAINING_SAMPLES, 1, CV_32FC1);
+    Mat labels   (2*NTRAINING_SAMPLES, 1, CV_32SC1);
 
     RNG rng(100); // Random value generation class
 
@@ -70,16 +73,15 @@ int main()
     labels.rowRange(NTRAINING_SAMPLES, 2*NTRAINING_SAMPLES).setTo(2);  // Class 2
 
     //------------------------ 2. Set up the support vector machines parameters --------------------
-    CvSVMParams params;
-    params.svm_type    = SVM::C_SVC;
+    SVM::Params params;
+    params.svmType    = SVM::C_SVC;
     params.C 		   = 0.1;
-    params.kernel_type = SVM::LINEAR;
-    params.term_crit   = TermCriteria(CV_TERMCRIT_ITER, (int)1e7, 1e-6);
+    params.kernelType = SVM::LINEAR;
+    params.termCrit   = TermCriteria(TermCriteria::MAX_ITER, (int)1e7, 1e-6);
 
     //------------------------ 3. Train the svm ----------------------------------------------------
     cout << "Starting training process" << endl;
-    CvSVM svm;
-    svm.train(trainData, labels, Mat(), Mat(), params);
+    Ptr<SVM> svm = StatModel::train<SVM>(trainData, ROW_SAMPLE, labels, params);
     cout << "Finished training process" << endl;
 
     //------------------------ 4. Show the decision regions ----------------------------------------
@@ -88,7 +90,7 @@ int main()
         for (int j = 0; j < I.cols; ++j)
         {
             Mat sampleMat = (Mat_<float>(1,2) << i, j);
-            float response = svm.predict(sampleMat);
+            float response = svm->predict(sampleMat);
 
             if      (response == 1)    I.at<Vec3b>(j, i)  = green;
             else if (response == 2)    I.at<Vec3b>(j, i)  = blue;
@@ -116,11 +118,11 @@ int main()
     //------------------------- 6. Show support vectors --------------------------------------------
     thick = 2;
     lineType  = 8;
-    int x     = svm.get_support_vector_count();
+    Mat sv = svm->getSupportVectors();
 
-    for (int i = 0; i < x; ++i)
+    for (int i = 0; i < sv.rows; ++i)
     {
-        const float* v = svm.get_support_vector(i);
+        const float* v = sv.ptr<float>(i);
         circle(	I,  Point( (int) v[0], (int) v[1]), 6, Scalar(128, 128, 128), thick, lineType);
     }
 

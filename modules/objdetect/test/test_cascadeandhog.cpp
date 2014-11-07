@@ -574,7 +574,7 @@ public:
         Size winStride = Size(), Size padding = Size(),
         const vector<Point>& locations = vector<Point>()) const;
 
-    virtual void compute(const Mat& img, vector<float>& descriptors,
+    virtual void compute(InputArray img, vector<float>& descriptors,
         Size winStride = Size(), Size padding = Size(),
         const vector<Point>& locations = vector<Point>()) const;
 
@@ -852,8 +852,8 @@ const float* HOGCacheTester::getBlock(Point pt, float* buf)
     }
 
     int k, C1 = count1, C2 = count2, C4 = count4;
-    const float* gradPtr = (const float*)(grad.data + grad.step*pt.y) + pt.x*2;
-    const uchar* qanglePtr = qangle.data + qangle.step*pt.y + pt.x*2;
+    const float* gradPtr = grad.ptr<float>(pt.y) + pt.x*2;
+    const uchar* qanglePtr = qangle.ptr(pt.y) + pt.x*2;
 
     CV_Assert( blockHist != 0 );
     for( k = 0; k < blockHistogramSize; k++ )
@@ -1087,7 +1087,7 @@ void HOGDescriptorTester::detect(const Mat& img,
     }
 
     const double eps = 0.0;
-    double diff_norm = norm(Mat(actual_weights) - Mat(weights), NORM_L2);
+    double diff_norm = cvtest::norm(actual_weights, weights, NORM_L2);
     if (diff_norm > eps)
     {
         ts->printf(cvtest::TS::SUMMARY, "Weights for found locations aren't equal.\n"
@@ -1107,9 +1107,11 @@ void HOGDescriptorTester::detect(const Mat& img, vector<Point>& hits, double hit
     detect(img, hits, weightsV, hitThreshold, winStride, padding, locations);
 }
 
-void HOGDescriptorTester::compute(const Mat& img, vector<float>& descriptors,
+void HOGDescriptorTester::compute(InputArray _img, vector<float>& descriptors,
     Size winStride, Size padding, const vector<Point>& locations) const
 {
+    Mat img = _img.getMat();
+
     if( winStride == Size() )
         winStride = cellSize;
     Size cacheStride(gcd(winStride.width, blockStride.width),
@@ -1166,7 +1168,7 @@ void HOGDescriptorTester::compute(const Mat& img, vector<float>& descriptors,
     std::vector<float> actual_descriptors;
     actual_hog->compute(img, actual_descriptors, winStride, padding, locations);
 
-    double diff_norm = cv::norm(Mat(actual_descriptors) - Mat(descriptors), NORM_L2);
+    double diff_norm = cvtest::norm(actual_descriptors, descriptors, NORM_L2);
     const double eps = 0.0;
     if (diff_norm > eps)
     {
@@ -1232,9 +1234,9 @@ void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle
     float angleScale = (float)(_nbins/CV_PI);
     for( y = 0; y < gradsize.height; y++ )
     {
-       const uchar* imgPtr  = img.data + img.step*ymap[y];
-       const uchar* prevPtr = img.data + img.step*ymap[y-1];
-       const uchar* nextPtr = img.data + img.step*ymap[y+1];
+       const uchar* imgPtr  = img.ptr(ymap[y]);
+       const uchar* prevPtr = img.ptr(ymap[y-1]);
+       const uchar* nextPtr = img.ptr(ymap[y+1]);
        float* gradPtr = (float*)grad.ptr(y);
        uchar* qanglePtr = (uchar*)qangle.ptr(y);
 
@@ -1316,7 +1318,7 @@ void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle
     const double eps = 0.0;
     for (i = 0; i < 2; ++i)
     {
-       double diff_norm = norm(reference_mats[i] - actual_mats[i], NORM_L2);
+       double diff_norm = cvtest::norm(reference_mats[i], actual_mats[i], NORM_L2);
        if (diff_norm > eps)
        {
            ts->printf(cvtest::TS::LOG, "%s matrices are not equal\n"

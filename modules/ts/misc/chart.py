@@ -168,7 +168,7 @@ if __name__ == "__main__":
             print >> sys.stderr, "%4s:   %s" % (i, name)
             i += 1
         if names1:
-            print >> sys.stderr, "Other suits in this log (can not be choosen):"
+            print >> sys.stderr, "Other suits in this log (can not be chosen):"
             for name in sorted(names1):
                 print >> sys.stderr, "%4s:   %s" % (i, name)
                 i += 1

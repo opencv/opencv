@@ -213,7 +213,7 @@ namespace cv { namespace cuda { namespace device
         const dim3 block(32, 8);
         const dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
 
-        resize_linear<<<grid, block>>>(src, dst, fy, fx);
+        resize_linear<<<grid, block, 0, stream>>>(src, dst, fy, fx);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)

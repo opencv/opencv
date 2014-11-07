@@ -47,8 +47,8 @@ using namespace cv;
 
 TEST(Features2D_ORB, _1996)
 {
-    Ptr<FeatureDetector> fd = FeatureDetector::create("ORB");
-    Ptr<DescriptorExtractor> de = DescriptorExtractor::create("ORB");
+    Ptr<FeatureDetector> fd = ORB::create(10000, 1.2f, 8, 31, 0, 2, ORB::HARRIS_SCORE, 31, 20);
+    Ptr<DescriptorExtractor> de = fd;
 
     Mat image = imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.png");
     ASSERT_FALSE(image.empty());

@@ -3,161 +3,110 @@ Statistical Models
 
 .. highlight:: cpp
 
-.. index:: CvStatModel
+.. index:: StatModel
 
-CvStatModel
+StatModel
 -----------
-.. ocv:class:: CvStatModel
+.. ocv:class:: StatModel
 
-Base class for statistical models in ML. ::
-
-    class CvStatModel
-    {
-    public:
-        /* CvStatModel(); */
-        /* CvStatModel( const Mat& train_data ... ); */
-
-        virtual ~CvStatModel();
-
-        virtual void clear()=0;
-
-        /* virtual bool train( const Mat& train_data, [int tflag,] ..., const
-            Mat& responses, ...,
-         [const Mat& var_idx,] ..., [const Mat& sample_idx,] ...
-         [const Mat& var_type,] ..., [const Mat& missing_mask,]
-            <misc_training_alg_params> ... )=0;
-          */
-
-        /* virtual float predict( const Mat& sample ... ) const=0; */
-
-        virtual void save( const char* filename, const char* name=0 )=0;
-        virtual void load( const char* filename, const char* name=0 )=0;
-
-        virtual void write( CvFileStorage* storage, const char* name )=0;
-        virtual void read( CvFileStorage* storage, CvFileNode* node )=0;
-    };
+Base class for statistical models in OpenCV ML.
 
 
-In this declaration, some methods are commented off. These are methods for which there is no unified API (with the exception of the default constructor). However, there are many similarities in the syntax and semantics that are briefly described below in this section, as if they are part of the base class.
-
-CvStatModel::CvStatModel
+StatModel::train
 ------------------------
-The default constructor.
+Trains the statistical model
 
-.. ocv:function:: CvStatModel::CvStatModel()
+.. ocv:function:: bool StatModel::train( const Ptr<TrainData>& trainData, int flags=0 )
 
-Each statistical model class in ML has a default constructor without parameters. This constructor is useful for a two-stage model construction, when the default constructor is followed by :ocv:func:`CvStatModel::train` or :ocv:func:`CvStatModel::load`.
+.. ocv:function:: bool StatModel::train( InputArray samples, int layout, InputArray responses )
 
-CvStatModel::CvStatModel(...)
+.. ocv:function:: Ptr<_Tp> StatModel::train(const Ptr<TrainData>& data, const _Tp::Params& p, int flags=0 )
+
+.. ocv:function:: Ptr<_Tp> StatModel::train(InputArray samples, int layout, InputArray responses, const _Tp::Params& p, int flags=0 )
+
+    :param trainData: training data that can be loaded from file using ``TrainData::loadFromCSV`` or created with ``TrainData::create``.
+
+    :param samples: training samples
+
+    :param layout: ``ROW_SAMPLE`` (training samples are the matrix rows) or ``COL_SAMPLE`` (training samples are the matrix columns)
+
+    :param responses: vector of responses associated with the training samples.
+
+    :param p: the stat model parameters.
+
+    :param flags: optional flags, depending on the model. Some of the models can be updated with the new training samples, not completely overwritten (such as ``NormalBayesClassifier`` or ``ANN_MLP``).
+
+There are 2 instance methods and 2 static (class) template methods. The first two train the already created model (the very first method must be overwritten in the derived classes). And the latter two variants are convenience methods that construct empty model and then call its train method.
+
+
+StatModel::isTrained
 -----------------------------
-The training constructor.
+Returns true if the model is trained
 
-.. ocv:function:: CvStatModel::CvStatModel()
+.. ocv:function:: bool StatModel::isTrained()
 
-Most ML classes provide a single-step constructor and train constructors. This constructor is equivalent to the default constructor, followed by the :ocv:func:`CvStatModel::train` method with the parameters that are passed to the constructor.
+The method must be overwritten in the derived classes.
 
-CvStatModel::~CvStatModel
--------------------------
-The virtual destructor.
+StatModel::isClassifier
+-----------------------------
+Returns true if the model is classifier
 
-.. ocv:function:: CvStatModel::~CvStatModel()
+.. ocv:function:: bool StatModel::isClassifier()
 
-The destructor of the base class is declared as virtual. So, it is safe to write the following code: ::
+The method must be overwritten in the derived classes.
 
-    CvStatModel* model;
-    if( use_svm )
-        model = new CvSVM(... /* SVM params */);
-    else
-        model = new CvDTree(... /* Decision tree params */);
-    ...
-    delete model;
+StatModel::getVarCount
+-----------------------------
+Returns the number of variables in training samples
 
+.. ocv:function:: int StatModel::getVarCount()
 
-Normally, the destructor of each derived class does nothing. But in this instance, it calls the overridden method :ocv:func:`CvStatModel::clear` that deallocates all the memory.
+The method must be overwritten in the derived classes.
 
-CvStatModel::clear
+StatModel::predict
 ------------------
-Deallocates memory and resets the model state.
+Predicts response(s) for the provided sample(s)
 
-.. ocv:function:: void CvStatModel::clear()
+.. ocv:function:: float StatModel::predict( InputArray samples, OutputArray results=noArray(), int flags=0 ) const
 
-The method ``clear`` does the same job as the destructor: it deallocates all the memory occupied by the class members. But the object itself is not destructed and can be reused further. This method is called from the destructor, from the :ocv:func:`CvStatModel::train` methods of the derived classes, from the methods :ocv:func:`CvStatModel::load`, :ocv:func:`CvStatModel::read()`, or even explicitly by the user.
+    :param samples: The input samples, floating-point matrix
 
-CvStatModel::save
+    :param results: The optional output matrix of results.
+
+    :param flags: The optional flags, model-dependent. Some models, such as ``Boost``, ``SVM`` recognize ``StatModel::RAW_OUTPUT`` flag, which makes the method return the raw results (the sum), not the class label.
+
+
+StatModel::calcError
+-------------------------
+Computes error on the training or test dataset
+
+.. ocv:function:: float StatModel::calcError( const Ptr<TrainData>& data, bool test, OutputArray resp ) const
+
+    :param data: the training data
+
+    :param test: if true, the error is computed over the test subset of the data, otherwise it's computed over the training subset of the data. Please note that if you loaded a completely different dataset to evaluate already trained classifier, you will probably want not to set the test subset at all with ``TrainData::setTrainTestSplitRatio`` and specify ``test=false``, so that the error is computed for the whole new set. Yes, this sounds a bit confusing.
+
+    :param resp: the optional output responses.
+
+The method uses ``StatModel::predict`` to compute the error. For regression models the error is computed as RMS, for classifiers - as a percent of missclassified samples (0%-100%).
+
+
+StatModel::save
 -----------------
 Saves the model to a file.
 
-.. ocv:function:: void CvStatModel::save( const char* filename, const char* name=0 )
+.. ocv:function:: void StatModel::save( const String& filename )
 
-.. ocv:pyfunction:: cv2.StatModel.save(filename[, name]) -> None
+In order to make this method work, the derived class must overwrite ``Algorithm::write(FileStorage& fs)``.
 
-The method ``save`` saves the complete model state to the specified XML or YAML file with the specified name or default name (which depends on a particular class). *Data persistence* functionality from ``CxCore`` is used.
-
-CvStatModel::load
+StatModel::load
 -----------------
-Loads the model from a file.
+Loads model from the file
 
-.. ocv:function:: void CvStatModel::load( const char* filename, const char* name=0 )
+.. ocv:function:: Ptr<_Tp> StatModel::load( const String& filename )
 
-.. ocv:pyfunction:: cv2.StatModel.load(filename[, name]) -> None
+This is static template method of StatModel. It's usage is following (in the case of SVM): ::
 
-The method ``load`` loads the complete model state with the specified name (or default model-dependent name) from the specified XML or YAML file. The previous model state is cleared by :ocv:func:`CvStatModel::clear`.
+    Ptr<SVM> svm = StatModel::load<SVM>("my_svm_model.xml");
 
-
-CvStatModel::write
-------------------
-Writes the model to the file storage.
-
-.. ocv:function:: void CvStatModel::write( CvFileStorage* storage, const char* name )
-
-The method ``write`` stores the complete model state in the file storage with the specified name or default name (which depends on the particular class). The method is called by :ocv:func:`CvStatModel::save`.
-
-
-CvStatModel::read
------------------
-Reads the model from the file storage.
-
-.. ocv:function:: void CvStatModel::read( CvFileStorage* storage, CvFileNode* node )
-
-The method ``read`` restores the complete model state from the specified node of the file storage. Use the function
-:ocv:cfunc:`GetFileNodeByName` to locate the node.
-
-The previous model state is cleared by :ocv:func:`CvStatModel::clear`.
-
-CvStatModel::train
-------------------
-Trains the model.
-
-.. ocv:function:: bool CvStatModel::train( const Mat& train_data, [int tflag,] ..., const Mat& responses, ...,     [const Mat& var_idx,] ..., [const Mat& sample_idx,] ...     [const Mat& var_type,] ..., [const Mat& missing_mask,] <misc_training_alg_params> ... )
-
-The method trains the statistical model using a set of input feature vectors and the corresponding output values (responses). Both input and output vectors/values are passed as matrices. By default, the input feature vectors are stored as ``train_data`` rows, that is, all the components (features) of a training vector are stored continuously. However, some algorithms can handle the transposed representation when all values of each particular feature (component/input variable) over the whole input set are stored continuously. If both layouts are supported, the method includes the ``tflag`` parameter that specifies the orientation as follows:
-
-* ``tflag=CV_ROW_SAMPLE``     The feature vectors are stored as rows.
-
-* ``tflag=CV_COL_SAMPLE``     The feature vectors are stored as columns.
-
-The ``train_data`` must have the ``CV_32FC1`` (32-bit floating-point, single-channel) format. Responses are usually stored in a 1D vector (a row or a column) of ``CV_32SC1`` (only in the classification problem) or ``CV_32FC1`` format, one value per input vector. Although, some algorithms, like various flavors of neural nets, take vector responses.
-
-For classification problems, the responses are discrete class labels. For regression problems, the responses are values of the function to be approximated. Some algorithms can deal only with classification problems, some - only with regression problems, and some can deal with both problems. In the latter case, the type of output variable is either passed as a separate parameter or as the last element of the ``var_type`` vector:
-
-* ``CV_VAR_CATEGORICAL``     The output values are discrete class labels.
-
-* ``CV_VAR_ORDERED(=CV_VAR_NUMERICAL)``     The output values are ordered. This means that two different values can be compared as numbers, and this is a regression problem.
-
-Types of input variables can be also specified using ``var_type``. Most algorithms can handle only ordered input variables.
-
-Many ML models may be trained on a selected feature subset, and/or on a selected sample subset of the training set. To make it easier for you, the method ``train`` usually includes the ``var_idx`` and ``sample_idx`` parameters. The former parameter identifies variables (features) of interest, and the latter one identifies samples of interest. Both vectors are either integer (``CV_32SC1``) vectors (lists of 0-based indices) or 8-bit (``CV_8UC1``) masks of active variables/samples. You may pass ``NULL`` pointers instead of either of the arguments, meaning that all of the variables/samples are used for training.
-
-Additionally, some algorithms can handle missing measurements, that is, when certain features of certain training samples have unknown values (for example, they forgot to measure a temperature of patient A on Monday). The parameter ``missing_mask``, an 8-bit matrix of the same size as ``train_data``, is used to mark the missed values (non-zero elements of the mask).
-
-Usually, the previous model state is cleared by :ocv:func:`CvStatModel::clear` before running the training procedure. However, some algorithms may optionally update the model state with the new training data, instead of resetting it.
-
-CvStatModel::predict
---------------------
-Predicts the response for a sample.
-
-.. ocv:function:: float CvStatModel::predict( const Mat& sample, ... ) const
-
-The method is used to predict the response for a new sample. In case of a classification, the method returns the class label. In case of a regression, the method returns the output function value. The input sample must have as many components as the ``train_data`` passed to ``train`` contains. If the ``var_idx`` parameter is passed to ``train``, it is remembered and then is used to extract only the necessary components from the input sample in the method ``predict``.
-
-The suffix ``const`` means that prediction does not affect the internal model state, so the method can be safely called from within different threads.
+In order to make this method work, the derived class must overwrite ``Algorithm::read(const FileNode& fn)``.

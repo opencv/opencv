@@ -215,7 +215,7 @@ void CV_ProjectPointsTest::prepare_to_validation( int /*test_case_idx*/ )
     cvTsProjectPoints( m, vec2, m2v_jac );
     cvTsCopy( vec, vec2 );
 
-    theta0 = cvNorm( vec2, 0, CV_L2 );
+    theta0 = cvtest::norm( cvarrtomat(vec2), 0, CV_L2 );
     theta1 = fmod( theta0, CV_PI*2 );
 
     if( theta1 > CV_PI )
@@ -225,7 +225,7 @@ void CV_ProjectPointsTest::prepare_to_validation( int /*test_case_idx*/ )
     if( calc_jacobians )
     {
         //cvInvert( v2m_jac, m2v_jac, CV_SVD );
-        if( cvNorm(&test_mat[OUTPUT][3],0,CV_C) < 1000 )
+        if( cvtest::norm(cvarrtomat(&test_mat[OUTPUT][3]), 0, CV_C) < 1000 )
         {
             cvTsGEMM( &test_mat[OUTPUT][1], &test_mat[OUTPUT][3],
                       1, 0, 0, &test_mat[OUTPUT][4],
@@ -480,7 +480,7 @@ void CV_CameraCalibrationTest::run( int start_from )
         values_read = fscanf(file,"%lf",goodDistortion+2); CV_Assert(values_read == 1);
         values_read = fscanf(file,"%lf",goodDistortion+3); CV_Assert(values_read == 1);
 
-        /* Read good Rot matrixes */
+        /* Read good Rot matrices */
         for( currImage = 0; currImage < numImages; currImage++ )
         {
             for( i = 0; i < 3; i++ )
@@ -773,10 +773,10 @@ void CV_CameraCalibrationTest_CPP::calibrate( int imageCount, int* pointCounts,
                      flags );
 
     assert( cameraMatrix.type() == CV_64FC1 );
-    memcpy( _cameraMatrix, cameraMatrix.data, 9*sizeof(double) );
+    memcpy( _cameraMatrix, cameraMatrix.ptr(), 9*sizeof(double) );
 
     assert( cameraMatrix.type() == CV_64FC1 );
-    memcpy( _distortionCoeffs, distCoeffs.data, 4*sizeof(double) );
+    memcpy( _distortionCoeffs, distCoeffs.ptr(), 4*sizeof(double) );
 
     vector<Mat>::iterator rvecsIt = rvecs.begin();
     vector<Mat>::iterator tvecsIt = tvecs.begin();
@@ -788,8 +788,8 @@ void CV_CameraCalibrationTest_CPP::calibrate( int imageCount, int* pointCounts,
     {
         Mat r9( 3, 3, CV_64FC1 );
         Rodrigues( *rvecsIt, r9 );
-        memcpy( rm, r9.data, 9*sizeof(double) );
-        memcpy( tm, tvecsIt->data, 3*sizeof(double) );
+        memcpy( rm, r9.ptr(), 9*sizeof(double) );
+        memcpy( tm, tvecsIt->ptr(), 3*sizeof(double) );
     }
 }
 
@@ -1112,7 +1112,7 @@ void CV_ProjectPointsTest::run(int)
             rightImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
     }
     calcdfdx( leftImgPoints, rightImgPoints, dEps, valDpdrot );
-    err = norm( dpdrot, valDpdrot, NORM_INF );
+    err = cvtest::norm( dpdrot, valDpdrot, NORM_INF );
     if( err > 3 )
     {
         ts->printf( cvtest::TS::LOG, "bad dpdrot: too big difference = %g\n", err );
@@ -1130,7 +1130,7 @@ void CV_ProjectPointsTest::run(int)
             rightImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
     }
     calcdfdx( leftImgPoints, rightImgPoints, dEps, valDpdt );
-    if( norm( dpdt, valDpdt, NORM_INF ) > 0.2 )
+    if( cvtest::norm( dpdt, valDpdt, NORM_INF ) > 0.2 )
     {
         ts->printf( cvtest::TS::LOG, "bad dpdtvec\n" );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
@@ -1153,7 +1153,7 @@ void CV_ProjectPointsTest::run(int)
     project( objPoints, rvec, tvec, rightCameraMatrix, distCoeffs,
         rightImgPoints[1], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
     calcdfdx( leftImgPoints, rightImgPoints, dEps, valDpdf );
-    if ( norm( dpdf, valDpdf ) > 0.2 )
+    if ( cvtest::norm( dpdf, valDpdf, NORM_L2 ) > 0.2 )
     {
         ts->printf( cvtest::TS::LOG, "bad dpdf\n" );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
@@ -1174,7 +1174,7 @@ void CV_ProjectPointsTest::run(int)
     project( objPoints, rvec, tvec, rightCameraMatrix, distCoeffs,
         rightImgPoints[1], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
     calcdfdx( leftImgPoints, rightImgPoints, dEps, valDpdc );
-    if ( norm( dpdc, valDpdc ) > 0.2 )
+    if ( cvtest::norm( dpdc, valDpdc, NORM_L2 ) > 0.2 )
     {
         ts->printf( cvtest::TS::LOG, "bad dpdc\n" );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
@@ -1193,7 +1193,7 @@ void CV_ProjectPointsTest::run(int)
             rightImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
     }
     calcdfdx( leftImgPoints, rightImgPoints, dEps, valDpddist );
-    if( norm( dpddist, valDpddist ) > 0.3 )
+    if( cvtest::norm( dpddist, valDpddist, NORM_L2 ) > 0.3 )
     {
         ts->printf( cvtest::TS::LOG, "bad dpddist\n" );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
@@ -1393,6 +1393,7 @@ void CV_StereoCalibrationTest::run( int )
         {
             ts->printf( cvtest::TS::LOG, "The file %s can not be opened or has invalid content\n", filepath.c_str() );
             ts->set_failed_test_info( f ? cvtest::TS::FAIL_INVALID_TEST_DATA : cvtest::TS::FAIL_MISSING_TEST_DATA );
+            fclose(f);
             return;
         }
 
@@ -1429,7 +1430,7 @@ void CV_StereoCalibrationTest::run( int )
         {
             Mat left = imread(imglist[i*2]);
             Mat right = imread(imglist[i*2+1]);
-            if(!left.data || !right.data)
+            if(left.empty() || right.empty())
             {
                 ts->printf( cvtest::TS::LOG, "Can not load images %s and %s, testcase %d\n",
                     imglist[i*2].c_str(), imglist[i*2+1].c_str(), testcase );
@@ -1480,8 +1481,8 @@ void CV_StereoCalibrationTest::run( int )
         Mat eye33 = Mat::eye(3,3,CV_64F);
         Mat R1t = R1.t(), R2t = R2.t();
 
-        if( norm(R1t*R1 - eye33) > 0.01 ||
-            norm(R2t*R2 - eye33) > 0.01 ||
+        if( cvtest::norm(R1t*R1 - eye33, NORM_L2) > 0.01 ||
+            cvtest::norm(R2t*R2 - eye33, NORM_L2) > 0.01 ||
             abs(determinant(F)) > 0.01)
         {
             ts->printf( cvtest::TS::LOG, "The computed (by rectify) R1 and R2 are not orthogonal,"
@@ -1504,7 +1505,7 @@ void CV_StereoCalibrationTest::run( int )
 
         //check that Tx after rectification is equal to distance between cameras
         double tx = fabs(P2.at<double>(0, 3) / P2.at<double>(0, 0));
-        if (fabs(tx - norm(T)) > 1e-5)
+        if (fabs(tx - cvtest::norm(T, NORM_L2)) > 1e-5)
         {
             ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
             return;
@@ -1555,7 +1556,7 @@ void CV_StereoCalibrationTest::run( int )
         Mat reprojectedPoints;
         perspectiveTransform(sparsePoints, reprojectedPoints, Q);
 
-        if (norm(triangulatedPoints - reprojectedPoints) / sqrt((double)pointsCount) > requiredAccuracy)
+        if (cvtest::norm(triangulatedPoints, reprojectedPoints, NORM_L2) / sqrt((double)pointsCount) > requiredAccuracy)
         {
             ts->printf( cvtest::TS::LOG, "Points reprojected with a matrix Q and points reconstructed by triangulation are different, testcase %d\n", testcase);
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
@@ -1580,7 +1581,7 @@ void CV_StereoCalibrationTest::run( int )
         {
             Mat error = newHomogeneousPoints2.row(i) * typedF * newHomogeneousPoints1.row(i).t();
             CV_Assert(error.rows == 1 && error.cols == 1);
-            if (norm(error) > constraintAccuracy)
+            if (cvtest::norm(error, NORM_L2) > constraintAccuracy)
             {
                 ts->printf( cvtest::TS::LOG, "Epipolar constraint is violated after correctMatches, testcase %d\n", testcase);
                 ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
@@ -1607,7 +1608,7 @@ void CV_StereoCalibrationTest::run( int )
         Mat _M1, _M2, _D1, _D2;
         vector<Mat> _R1, _R2, _T1, _T2;
         calibrateCamera( objpt, imgpt1, imgsize, _M1, _D1, _R1, _T1, 0 );
-        calibrateCamera( objpt, imgpt2, imgsize, _M2, _D2, _R2, _T1, 0 );
+        calibrateCamera( objpt, imgpt2, imgsize, _M2, _D2, _R2, _T2, 0 );
         undistortPoints( _imgpt1, _imgpt1, _M1, _D1, Mat(), _M1 );
         undistortPoints( _imgpt2, _imgpt2, _M2, _D2, Mat(), _M2 );
 
@@ -1721,7 +1722,7 @@ double CV_StereoCalibrationTest_C::calibrateStereoCamera( const vector<vector<Po
     for( int i = 0, ni = 0, j = 0; i < nimages; i++, j += ni )
     {
         ni = (int)objectPoints[i].size();
-        ((int*)npoints.data)[i] = ni;
+        npoints.ptr<int>()[i] = ni;
         std::copy(objectPoints[i].begin(), objectPoints[i].end(), objPtData + j);
         std::copy(imagePoints1[i].begin(), imagePoints1[i].end(), imgPtData + j);
         std::copy(imagePoints2[i].begin(), imagePoints2[i].end(), imgPtData2 + j);

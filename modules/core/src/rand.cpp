@@ -511,8 +511,8 @@ void RNG::fill( InputOutputArray _mat, int disttype,
     {
         _parambuf.allocate(cn*8 + n1 + n2);
         double* parambuf = _parambuf;
-        double* p1 = (double*)_param1.data;
-        double* p2 = (double*)_param2.data;
+        double* p1 = _param1.ptr<double>();
+        double* p2 = _param2.ptr<double>();
 
         if( !_param1.isContinuous() || _param1.type() != CV_64F || n1 != cn )
         {
@@ -625,7 +625,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         int esz = (int)CV_ELEM_SIZE(ptype);
 
         if( _param1.isContinuous() && _param1.type() == ptype )
-            mean = _param1.data;
+            mean = _param1.ptr();
         else
         {
             Mat tmp(_param1.size(), ptype, parambuf);
@@ -638,7 +638,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                 mean[j] = mean[j - n1*esz];
 
         if( _param2.isContinuous() && _param2.type() == ptype )
-            stddev = _param2.data;
+            stddev = _param2.ptr();
         else
         {
             Mat tmp(_param2.size(), ptype, parambuf + cn);
@@ -753,7 +753,7 @@ randShuffle_( Mat& _arr, RNG& rng, double iterFactor )
     int sz = _arr.rows*_arr.cols, iters = cvRound(iterFactor*sz);
     if( _arr.isContinuous() )
     {
-        T* arr = (T*)_arr.data;
+        T* arr = _arr.ptr<T>();
         for( int i = 0; i < iters; i++ )
         {
             int j = (unsigned)rng % sz, k = (unsigned)rng % sz;
@@ -762,7 +762,7 @@ randShuffle_( Mat& _arr, RNG& rng, double iterFactor )
     }
     else
     {
-        uchar* data = _arr.data;
+        uchar* data = _arr.ptr();
         size_t step = _arr.step;
         int cols = _arr.cols;
         for( int i = 0; i < iters; i++ )

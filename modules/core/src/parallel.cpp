@@ -177,7 +177,7 @@ namespace
     static void block_function(void* context, size_t index)
     {
         ProxyLoopBody* ptr_body = static_cast<ProxyLoopBody*>(context);
-        (*ptr_body)(cv::Range(index, index + 1));
+        (*ptr_body)(cv::Range((int)index, (int)index + 1));
     }
 #elif defined HAVE_CONCURRENCY
     class ProxyLoopBody : public ParallelLoopBodyWrapper
@@ -240,6 +240,11 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
     {
         ProxyLoopBody pbody(body, range, nstripes);
         cv::Range stripeRange = pbody.stripeRange();
+        if( stripeRange.end - stripeRange.start == 1 )
+        {
+            body(range);
+            return;
+        }
 
 #if defined HAVE_TBB
 

@@ -12,7 +12,7 @@
 #include <iostream>
 #include "opencv2/ts.hpp"
 #include "opencv2/photo.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include <string>
 #include <algorithm>
 #include <fstream>

@@ -48,6 +48,8 @@
 
 #include <opencv2/core.hpp>
 
+/*! @file */
+
 namespace cv
 {
     template<typename T>
@@ -429,6 +431,7 @@ cv::Affine3<Y> cv::Affine3<T>::cast() const
     return Affine3<Y>(matrix);
 }
 
+/** @cond IGNORED */
 template<typename T> inline
 cv::Affine3<T> cv::operator*(const cv::Affine3<T>& affine1, const cv::Affine3<T>& affine2)
 {
@@ -446,6 +449,7 @@ V cv::operator*(const cv::Affine3<T>& affine, const V& v)
     r.z = m.val[8] * v.x + m.val[9] * v.y + m.val[10] * v.z + m.val[11];
     return r;
 }
+/** @endcond */
 
 static inline
 cv::Vec3f cv::operator*(const cv::Affine3f& affine, const cv::Vec3f& v)

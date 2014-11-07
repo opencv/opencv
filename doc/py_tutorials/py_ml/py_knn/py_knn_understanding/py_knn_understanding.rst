@@ -37,7 +37,7 @@ Now let's see it in OpenCV.
 kNN in OpenCV
 ===============
 
-We will do a simple example here, with two families (classes), just like above. Then in the next chapter, we will do much more better example.
+We will do a simple example here, with two families (classes), just like above. Then in the next chapter, we will do an even better example.
 
 So here, we label the Red family as **Class-0** (so denoted by 0) and Blue family as **Class-1** (denoted by 1). We create 25 families or 25 training data, and label them either Class-0 or Class-1. We do all these with the help of Random Number Generator in Numpy.
 

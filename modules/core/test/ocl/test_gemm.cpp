@@ -42,7 +42,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
@@ -67,10 +67,10 @@ PARAM_TEST_CASE(Gemm,
 
     double alpha, beta;
 
-    TEST_DECLARE_INPUT_PARAMETER(A)
-    TEST_DECLARE_INPUT_PARAMETER(B)
-    TEST_DECLARE_INPUT_PARAMETER(C)
-    TEST_DECLARE_OUTPUT_PARAMETER(D)
+    TEST_DECLARE_INPUT_PARAMETER(A);
+    TEST_DECLARE_INPUT_PARAMETER(B);
+    TEST_DECLARE_INPUT_PARAMETER(C);
+    TEST_DECLARE_OUTPUT_PARAMETER(D);
 
     virtual void SetUp()
     {
@@ -90,14 +90,15 @@ PARAM_TEST_CASE(Gemm,
 
     void generateTestData()
     {
-        Size ARoiSize = randomSize(1, MAX_VALUE);
+        // set minimum size to 20, since testing less sizes doesn't make sense
+        Size ARoiSize = randomSize(20, MAX_VALUE);
         Border ABorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(A, A_roi, ARoiSize, ABorder, type, -11, 11);
 
         if (atrans)
             ARoiSize = Size(ARoiSize.height, ARoiSize.width);
 
-        Size BRoiSize = randomSize(1, MAX_VALUE);
+        Size BRoiSize = randomSize(20, MAX_VALUE);
         if (btrans)
             BRoiSize.width = ARoiSize.width;
         else
@@ -119,10 +120,10 @@ PARAM_TEST_CASE(Gemm,
         alpha = randomDouble(-4, 4);
         beta = randomDouble(-4, 4);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(A)
-        UMAT_UPLOAD_INPUT_PARAMETER(B)
-        UMAT_UPLOAD_INPUT_PARAMETER(C)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(D)
+        UMAT_UPLOAD_INPUT_PARAMETER(A);
+        UMAT_UPLOAD_INPUT_PARAMETER(B);
+        UMAT_UPLOAD_INPUT_PARAMETER(C);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(D);
     }
 };
 

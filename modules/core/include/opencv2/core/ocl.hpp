@@ -46,12 +46,12 @@
 
 namespace cv { namespace ocl {
 
-CV_EXPORTS bool haveOpenCL();
-CV_EXPORTS bool useOpenCL();
-CV_EXPORTS bool haveAmdBlas();
-CV_EXPORTS bool haveAmdFft();
-CV_EXPORTS void setUseOpenCL(bool flag);
-CV_EXPORTS void finish();
+CV_EXPORTS_W bool haveOpenCL();
+CV_EXPORTS_W bool useOpenCL();
+CV_EXPORTS_W bool haveAmdBlas();
+CV_EXPORTS_W bool haveAmdFft();
+CV_EXPORTS_W void setUseOpenCL(bool flag);
+CV_EXPORTS_W void finish();
 
 class CV_EXPORTS Context;
 class CV_EXPORTS Device;
@@ -87,7 +87,7 @@ public:
     String name() const;
     String extensions() const;
     String version() const;
-    String vendor() const;
+    String vendorName() const;
     String OpenCL_C_Version() const;
     String OpenCLVersion() const;
     int deviceVersionMajor() const;
@@ -151,6 +151,10 @@ public:
 
     bool imageSupport() const;
 
+    bool imageFromBufferSupport() const;
+    uint imagePitchAlignment() const;
+    uint imageBaseAddressAlignment() const;
+
     size_t image2DMaxWidth() const;
     size_t image2DMaxHeight() const;
 
@@ -160,6 +164,21 @@ public:
 
     size_t imageMaxBufferSize() const;
     size_t imageMaxArraySize() const;
+
+    enum
+    {
+        UNKNOWN_VENDOR=0,
+        VENDOR_AMD=1,
+        VENDOR_INTEL=2,
+        VENDOR_NVIDIA=3
+    };
+    int vendorID() const;
+    // FIXIT
+    // dev.isAMD() doesn't work for OpenCL CPU devices from AMD OpenCL platform.
+    // This method should use platform name instead of vendor name.
+    // After fix restore code in arithm.cpp: ocl_compare()
+    inline bool isAMD() const { return vendorID() == VENDOR_AMD; }
+    inline bool isIntel() const { return vendorID() == VENDOR_INTEL; }
 
     int maxClockFrequency() const;
     int maxComputeUnits() const;
@@ -275,7 +294,7 @@ class CV_EXPORTS KernelArg
 {
 public:
     enum { LOCAL=1, READ_ONLY=2, WRITE_ONLY=4, READ_WRITE=6, CONSTANT=8, PTR_ONLY = 16, NO_SIZE=256 };
-    KernelArg(int _flags, UMat* _m, int wscale=1, const void* _obj=0, size_t _sz=0);
+    KernelArg(int _flags, UMat* _m, int wscale=1, int iwscale=1, const void* _obj=0, size_t _sz=0);
     KernelArg();
 
     static KernelArg Local() { return KernelArg(LOCAL, 0); }
@@ -285,27 +304,27 @@ public:
     { return KernelArg(PTR_ONLY+READ_ONLY, (UMat*)&m); }
     static KernelArg PtrReadWrite(const UMat& m)
     { return KernelArg(PTR_ONLY+READ_WRITE, (UMat*)&m); }
-    static KernelArg ReadWrite(const UMat& m, int wscale=1)
-    { return KernelArg(READ_WRITE, (UMat*)&m, wscale); }
-    static KernelArg ReadWriteNoSize(const UMat& m, int wscale=1)
-    { return KernelArg(READ_WRITE+NO_SIZE, (UMat*)&m, wscale); }
-    static KernelArg ReadOnly(const UMat& m, int wscale=1)
-    { return KernelArg(READ_ONLY, (UMat*)&m, wscale); }
-    static KernelArg WriteOnly(const UMat& m, int wscale=1)
-    { return KernelArg(WRITE_ONLY, (UMat*)&m, wscale); }
-    static KernelArg ReadOnlyNoSize(const UMat& m, int wscale=1)
-    { return KernelArg(READ_ONLY+NO_SIZE, (UMat*)&m, wscale); }
-    static KernelArg WriteOnlyNoSize(const UMat& m, int wscale=1)
-    { return KernelArg(WRITE_ONLY+NO_SIZE, (UMat*)&m, wscale); }
+    static KernelArg ReadWrite(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(READ_WRITE, (UMat*)&m, wscale, iwscale); }
+    static KernelArg ReadWriteNoSize(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(READ_WRITE+NO_SIZE, (UMat*)&m, wscale, iwscale); }
+    static KernelArg ReadOnly(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(READ_ONLY, (UMat*)&m, wscale, iwscale); }
+    static KernelArg WriteOnly(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(WRITE_ONLY, (UMat*)&m, wscale, iwscale); }
+    static KernelArg ReadOnlyNoSize(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(READ_ONLY+NO_SIZE, (UMat*)&m, wscale, iwscale); }
+    static KernelArg WriteOnlyNoSize(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(WRITE_ONLY+NO_SIZE, (UMat*)&m, wscale, iwscale); }
     static KernelArg Constant(const Mat& m);
     template<typename _Tp> static KernelArg Constant(const _Tp* arr, size_t n)
-    { return KernelArg(CONSTANT, 0, 1, (void*)arr, n); }
+    { return KernelArg(CONSTANT, 0, 1, 1, (void*)arr, n); }
 
     int flags;
     UMat* m;
     const void* obj;
     size_t sz;
-    int wscale;
+    int wscale, iwscale;
 };
 
 
@@ -577,18 +596,63 @@ protected:
 CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf);
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
-CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1);
+CV_EXPORTS const char* vecopTypeToStr(int t);
+CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1, const char * name = NULL);
 CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo>& platform_info);
+
+
+enum OclVectorStrategy
+{
+    // all matrices have its own vector width
+    OCL_VECTOR_OWN = 0,
+    // all matrices have maximal vector width among all matrices
+    // (useful for cases when matrices have different data types)
+    OCL_VECTOR_MAX = 1,
+
+    // default strategy
+    OCL_VECTOR_DEFAULT = OCL_VECTOR_OWN
+};
+
+CV_EXPORTS int predictOptimalVectorWidth(InputArray src1, InputArray src2 = noArray(), InputArray src3 = noArray(),
+                                         InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
+                                         InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray(),
+                                         OclVectorStrategy strat = OCL_VECTOR_DEFAULT);
+
+CV_EXPORTS int checkOptimalVectorWidth(const int *vectorWidths,
+                                       InputArray src1, InputArray src2 = noArray(), InputArray src3 = noArray(),
+                                       InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
+                                       InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray(),
+                                       OclVectorStrategy strat = OCL_VECTOR_DEFAULT);
+
+// with OCL_VECTOR_MAX strategy
+CV_EXPORTS int predictOptimalVectorWidthMax(InputArray src1, InputArray src2 = noArray(), InputArray src3 = noArray(),
+                                            InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
+                                            InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray());
+
+CV_EXPORTS void buildOptionsAddMatrixDescription(String& buildOptions, const String& name, InputArray _m);
 
 class CV_EXPORTS Image2D
 {
 public:
     Image2D();
-    explicit Image2D(const UMat &src);
+
+    // src:     The UMat from which to get image properties and data
+    // norm:    Flag to enable the use of normalized channel data types
+    // alias:   Flag indicating that the image should alias the src UMat.
+    //          If true, changes to the image or src will be reflected in
+    //          both objects.
+    explicit Image2D(const UMat &src, bool norm = false, bool alias = false);
     Image2D(const Image2D & i);
     ~Image2D();
 
     Image2D & operator = (const Image2D & i);
+
+    // Indicates if creating an aliased image should succeed.  Depends on the
+    // underlying platform and the dimensions of the UMat.
+    static bool canCreateAlias(const UMat &u);
+
+    // Indicates if the image format is supported.
+    static bool isFormatSupported(int depth, int cn, bool norm);
 
     void* ptr() const;
 protected:
@@ -598,6 +662,9 @@ protected:
 
 
 CV_EXPORTS MatAllocator* getOpenCLAllocator();
+
+CV_EXPORTS_W bool isPerformanceCheckBypassed();
+#define OCL_PERFORMANCE_CHECK(condition) (cv::ocl::isPerformanceCheckBypassed() || (condition))
 
 }}
 

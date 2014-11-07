@@ -7,7 +7,7 @@ seamlessClone
 -------------
 Image editing tasks concern either global changes (color/intensity corrections, filters, deformations) or local changes concerned to a selection.
 Here we are interested in achieving local changes, ones that are restricted to a region manually selected (ROI), in a seamless and effortless manner.
-The extent of the changes ranges from slight distortions to complete replacement by novel content.
+The extent of the changes ranges from slight distortions to complete replacement by novel content [PM03]_.
 
 .. ocv:function:: void seamlessClone( InputArray src, InputArray dst, InputArray mask, Point p, OutputArray blend, int flags)
 
@@ -25,13 +25,9 @@ The extent of the changes ranges from slight distortions to complete replacement
 
             * **NORMAL_CLONE**     The power of the method is fully expressed when inserting objects with complex outlines into a new background
 
-            * **MIXED_CLONE**    The classic method, color-based selection and alpha
-                                 masking might be time consuming and often leaves an undesirable halo. Seamless
-                                 cloning, even averaged with the original image, is not effective. Mixed seamless
-                                 cloning based on a loose selection proves effective.
+            * **MIXED_CLONE**    The classic method, color-based selection and alpha masking might be time consuming and often leaves an undesirable halo. Seamless cloning, even averaged with the original image, is not effective. Mixed seamless cloning based on a loose selection proves effective.
 
-            * **FEATURE_EXCHANGE**     Feature exchange allows the user to replace easily certain
-                                       features of one object by alternative features.
+            * **FEATURE_EXCHANGE**     Feature exchange allows the user to easily replace certain features of one object by alternative features.
 
 
 
@@ -97,3 +93,5 @@ region, giving its contents a flat aspect. Here Canny Edge Detector is used.
 **NOTE:**
 
 The algorithm assumes that the color of the source image is close to that of the destination. This assumption means that when the colors don't match, the source image color gets tinted toward the color of the destination image.
+
+.. [PM03] Patrick Perez, Michel Gangnet, Andrew Blake, "Poisson image editing", ACM Transactions on Graphics (SIGGRAPH), 2003.

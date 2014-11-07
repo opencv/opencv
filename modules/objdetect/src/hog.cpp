@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/core/core_c.h"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_objdetect.hpp"
 
 #include <cstdio>
 #include <iterator>
@@ -123,7 +123,7 @@ void HOGDescriptor::setSVMDetector(InputArray _svmDetector)
         for (int j = 0; j < blocks_per_img.width; ++j)
         {
             const float *src = &svmDetector[0] + (j * blocks_per_img.height + i) * block_hist_size;
-            float *dst = (float*)detector_reordered.data + (i * blocks_per_img.width + j) * block_hist_size;
+            float *dst = detector_reordered.ptr<float>() + (i * blocks_per_img.width + j) * block_hist_size;
             for (size_t k = 0; k < block_hist_size; ++k)
                 dst[k] = src[k];
         }
@@ -300,12 +300,12 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
     float angleScale = (float)(nbins/CV_PI);
     for( y = 0; y < gradsize.height; y++ )
     {
-        const uchar* imgPtr  = img.data + img.step*ymap[y];
-        const uchar* prevPtr = img.data + img.step*ymap[y-1];
-        const uchar* nextPtr = img.data + img.step*ymap[y+1];
+        const uchar* imgPtr  = img.ptr(ymap[y]);
+        const uchar* prevPtr = img.ptr(ymap[y-1]);
+        const uchar* nextPtr = img.ptr(ymap[y+1]);
 
-        float* gradPtr = (float*)grad.ptr(y);
-        uchar* qanglePtr = (uchar*)qangle.ptr(y);
+        float* gradPtr = grad.ptr<float>(y);
+        uchar* qanglePtr = qangle.ptr(y);
 
         if( cn == 1 )
         {
@@ -781,8 +781,8 @@ const float* HOGCache::getBlock(Point pt, float* buf)
     }
 
     int k, C1 = count1, C2 = count2, C4 = count4;
-    const float* gradPtr = (const float*)(grad.data + grad.step*pt.y) + pt.x*2;
-    const uchar* qanglePtr = qangle.data + qangle.step*pt.y + pt.x*2;
+    const float* gradPtr = grad.ptr<float>(pt.y) + pt.x*2;
+    const uchar* qanglePtr = qangle.ptr(pt.y) + pt.x*2;
 
 //    CV_Assert( blockHist != 0 );
     memset(blockHist, 0, sizeof(float) * blockHistogramSize);
@@ -1085,8 +1085,8 @@ static bool ocl_compute_gradients_8UC1(int height, int width, InputArray _img, f
     size_t globalThreads[3] = { width, height, 1 };
     char correctGamma = (correct_gamma) ? 1 : 0;
     int grad_quadstep = (int)grad.step >> 3;
-    int qangle_step_shift = 0;
-    int qangle_step = (int)qangle.step >> (1 + qangle_step_shift);
+    int qangle_elem_size = CV_ELEM_SIZE1(qangle.type());
+    int qangle_step = (int)qangle.step / (2 * qangle_elem_size);
 
     int idx = 0;
     idx = k.set(idx, height);
@@ -1137,9 +1137,9 @@ static bool ocl_compute_hists(int nbins, int block_stride_x, int block_stride_y,
     int img_block_height = (height - CELLS_PER_BLOCK_Y * CELL_HEIGHT + block_stride_y)/block_stride_y;
     int blocks_total = img_block_width * img_block_height;
 
-    int qangle_step_shift = 0;
+    int qangle_elem_size = CV_ELEM_SIZE1(qangle.type());
     int grad_quadstep = (int)grad.step >> 2;
-    int qangle_step = (int)qangle.step >> qangle_step_shift;
+    int qangle_step = (int)qangle.step / qangle_elem_size;
 
     int blocks_in_group = 4;
     size_t localThreads[3] = { blocks_in_group * 24, 2, 1 };
@@ -1316,11 +1316,12 @@ static bool ocl_extract_descrs_by_cols(int win_height, int win_width, int block_
 static bool ocl_compute(InputArray _img, Size win_stride, std::vector<float>& _descriptors, int descr_format, Size blockSize,
                         Size cellSize, int nbins, Size blockStride, Size winSize, float sigma, bool gammaCorrection, double L2HysThreshold)
 {
-     Size imgSize = _img.size();
+    Size imgSize = _img.size();
     Size effect_size = imgSize;
 
     UMat grad(imgSize, CV_32FC2);
-    UMat qangle(imgSize, CV_8UC2);
+    int qangle_type = ocl::Device::getDefault().isIntel() ? CV_32SC2 : CV_8UC2;
+    UMat qangle(imgSize, qangle_type);
 
     const size_t block_hist_size = getBlockHistogramSize(blockSize, cellSize, nbins);
     const Size blocks_per_img = numPartsWithin(imgSize, blockSize, blockStride);
@@ -1580,7 +1581,7 @@ public:
         {
             double scale = levelScale[i];
             Size sz(cvRound(img.cols/scale), cvRound(img.rows/scale));
-            Mat smallerImg(sz, img.type(), smallerImgBuf.data);
+            Mat smallerImg(sz, img.type(), smallerImgBuf.ptr());
             if( sz == img.size() )
                 smallerImg = Mat(sz, img.type(), img.data, img.step);
             else
@@ -1720,7 +1721,8 @@ static bool ocl_detect(InputArray img, std::vector<Point> &hits, double hit_thre
     Size imgSize = img.size();
     Size effect_size = imgSize;
     UMat grad(imgSize, CV_32FC2);
-    UMat qangle(imgSize, CV_8UC2);
+    int qangle_type = ocl::Device::getDefault().isIntel() ? CV_32SC2 : CV_8UC2;
+    UMat qangle(imgSize, qangle_type);
 
     const size_t block_hist_size = getBlockHistogramSize(blockSize, cellSize, nbins);
     const Size blocks_per_img = numPartsWithin(imgSize, blockSize, blockStride);
@@ -3280,7 +3282,7 @@ public:
             double scale = (*locations)[i].scale;
 
             Size sz(cvRound(img.cols / scale), cvRound(img.rows / scale));
-            Mat smallerImg(sz, img.type(), smallerImgBuf.data);
+            Mat smallerImg(sz, img.type(), smallerImgBuf.ptr());
 
             if( sz == img.size() )
                 smallerImg = Mat(sz, img.type(), img.data, img.step);
@@ -3523,7 +3525,6 @@ void HOGDescriptor::groupRectangles(std::vector<cv::Rect>& rectList, std::vector
     std::vector<cv::Rect_<double> > rrects(nclasses);
     std::vector<int> numInClass(nclasses, 0);
     std::vector<double> foundWeights(nclasses, DBL_MIN);
-    std::vector<double> totalFactorsPerClass(nclasses, 1);
     int i, j, nlabels = (int)labels.size();
 
     for( i = 0; i < nlabels; i++ )

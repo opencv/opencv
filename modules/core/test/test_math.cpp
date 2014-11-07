@@ -458,7 +458,7 @@ void Core_TraceTest::prepare_to_validation( int )
 {
     Mat& mat = test_mat[INPUT][0];
     int count = MIN( mat.rows, mat.cols );
-    Mat diag(count, 1, mat.type(), mat.data, mat.step + mat.elemSize());
+    Mat diag(count, 1, mat.type(), mat.ptr(), mat.step + mat.elemSize());
     Scalar r = cvtest::mean(diag);
     r *= (double)count;
 
@@ -617,6 +617,7 @@ Core_GEMMTest::Core_GEMMTest() : Core_MatrixTest( 5, 1, false, false, 2 )
 {
     test_case_count = 100;
     max_log_array_size = 10;
+    tabc_flag = 0;
     alpha = beta = 0;
 }
 
@@ -821,6 +822,8 @@ protected:
 
 Core_TransformTest::Core_TransformTest() : Core_MatrixTest( 3, 1, true, false, 4 )
 {
+    scale = 1;
+    diagMtx = false;
 }
 
 
@@ -1154,7 +1157,7 @@ protected:
 
 
 Core_CovarMatrixTest::Core_CovarMatrixTest() : Core_MatrixTest( 1, 1, true, false, 1 ),
-flags(0), t_flag(0), are_images(false)
+    flags(0), t_flag(0), len(0), count(0), are_images(false)
 {
     test_case_count = 100;
     test_array[INPUT_OUTPUT].push_back(NULL);
@@ -1353,7 +1356,7 @@ void Core_DetTest::get_test_array_types_and_sizes( int test_case_idx, vector<vec
 {
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
-    sizes[INPUT][0].width = sizes[INPUT][0].height = sizes[INPUT][0].height;
+    sizes[INPUT][0].width = sizes[INPUT][0].height;
     sizes[TEMP][0] = sizes[INPUT][0];
     types[TEMP][0] = CV_64FC1;
 }
@@ -2430,7 +2433,7 @@ protected:
         }
 
         Mat convertedRes = resInRad * 180. / CV_PI;
-        double normDiff = norm(convertedRes - resInDeg, NORM_INF);
+        double normDiff = cvtest::norm(convertedRes - resInDeg, NORM_INF);
         if(normDiff > FLT_EPSILON * 180.)
         {
             ts->printf(cvtest::TS::LOG, "There are incorrect result angles (in radians)\n");
@@ -2566,11 +2569,11 @@ TEST(Core_Invert, small)
     cv::Mat b = a.t()*a;
     cv::Mat c, i = Mat_<float>::eye(3, 3);
     cv::invert(b, c, cv::DECOMP_LU); //std::cout << b*c << std::endl;
-    ASSERT_LT( cv::norm(b*c, i, CV_C), 0.1 );
+    ASSERT_LT( cvtest::norm(b*c, i, CV_C), 0.1 );
     cv::invert(b, c, cv::DECOMP_SVD); //std::cout << b*c << std::endl;
-    ASSERT_LT( cv::norm(b*c, i, CV_C), 0.1 );
+    ASSERT_LT( cvtest::norm(b*c, i, CV_C), 0.1 );
     cv::invert(b, c, cv::DECOMP_CHOLESKY); //std::cout << b*c << std::endl;
-    ASSERT_LT( cv::norm(b*c, i, CV_C), 0.1 );
+    ASSERT_LT( cvtest::norm(b*c, i, CV_C), 0.1 );
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2618,12 +2621,21 @@ TEST(Core_SVD, flt)
     Mat X, B1;
     solve(A, B, X, DECOMP_SVD);
     B1 = A*X;
-    EXPECT_LE(norm(B1, B, NORM_L2 + NORM_RELATIVE), FLT_EPSILON*10);
+    EXPECT_LE(cvtest::norm(B1, B, NORM_L2 + NORM_RELATIVE), FLT_EPSILON*10);
 }
 
 
 // TODO: eigenvv, invsqrt, cbrt, fastarctan, (round, floor, ceil(?)),
 
+enum
+{
+    MAT_N_DIM_C1,
+    MAT_N_1_CDIM,
+    MAT_1_N_CDIM,
+    MAT_N_DIM_C1_NONCONT,
+    MAT_N_1_CDIM_NONCONT,
+    VECTOR
+};
 
 class CV_KMeansSingularTest : public cvtest::BaseTest
 {
@@ -2631,7 +2643,7 @@ public:
     CV_KMeansSingularTest() {}
     ~CV_KMeansSingularTest() {}
 protected:
-    void run(int)
+    void run(int inVariant)
     {
         int i, iter = 0, N = 0, N0 = 0, K = 0, dims = 0;
         Mat labels;
@@ -2643,20 +2655,70 @@ protected:
             for( iter = 0; iter < maxIter; iter++ )
             {
                 ts->update_context(this, iter, true);
-                dims = rng.uniform(1, MAX_DIM+1);
+                dims = rng.uniform(inVariant == MAT_1_N_CDIM ? 2 : 1, MAX_DIM+1);
                 N = rng.uniform(1, MAX_POINTS+1);
                 N0 = rng.uniform(1, MAX(N/10, 2));
                 K = rng.uniform(1, N+1);
 
-                Mat data0(N0, dims, CV_32F);
-                rng.fill(data0, RNG::UNIFORM, -1, 1);
+                if (inVariant == VECTOR)
+                {
+                    dims = 2;
 
-                Mat data(N, dims, CV_32F);
-                for( i = 0; i < N; i++ )
-                    data0.row(rng.uniform(0, N0)).copyTo(data.row(i));
+                    std::vector<cv::Point2f> data0(N0);
+                    rng.fill(data0, RNG::UNIFORM, -1, 1);
 
-                kmeans(data, K, labels, TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 30, 0),
-                       5, KMEANS_PP_CENTERS);
+                    std::vector<cv::Point2f> data(N);
+                    for( i = 0; i < N; i++ )
+                        data[i] = data0[rng.uniform(0, N0)];
+
+                    kmeans(data, K, labels, TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 30, 0),
+                           5, KMEANS_PP_CENTERS);
+                }
+                else
+                {
+                    Mat data0(N0, dims, CV_32F);
+                    rng.fill(data0, RNG::UNIFORM, -1, 1);
+
+                    Mat data;
+
+                    switch (inVariant)
+                    {
+                    case MAT_N_DIM_C1:
+                        data.create(N, dims, CV_32F);
+                        for( i = 0; i < N; i++ )
+                            data0.row(rng.uniform(0, N0)).copyTo(data.row(i));
+                        break;
+
+                    case MAT_N_1_CDIM:
+                        data.create(N, 1, CV_32FC(dims));
+                        for( i = 0; i < N; i++ )
+                            memcpy(data.ptr(i), data0.ptr(rng.uniform(0, N0)), dims * sizeof(float));
+                        break;
+
+                    case MAT_1_N_CDIM:
+                        data.create(1, N, CV_32FC(dims));
+                        for( i = 0; i < N; i++ )
+                            memcpy(data.ptr() + i * dims * sizeof(float), data0.ptr(rng.uniform(0, N0)), dims * sizeof(float));
+                        break;
+
+                    case MAT_N_DIM_C1_NONCONT:
+                        data.create(N, dims + 5, CV_32F);
+                        data = data(Range(0, N), Range(0, dims));
+                        for( i = 0; i < N; i++ )
+                            data0.row(rng.uniform(0, N0)).copyTo(data.row(i));
+                        break;
+
+                    case MAT_N_1_CDIM_NONCONT:
+                        data.create(N, 3, CV_32FC(dims));
+                        data = data.colRange(0, 1);
+                        for( i = 0; i < N; i++ )
+                            memcpy(data.ptr(i), data0.ptr(rng.uniform(0, N0)), dims * sizeof(float));
+                        break;
+                    }
+
+                    kmeans(data, K, labels, TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 30, 0),
+                           5, KMEANS_PP_CENTERS);
+                }
 
                 Mat hist(K, 1, CV_32S, Scalar(0));
                 for( i = 0; i < N; i++ )
@@ -2680,7 +2742,19 @@ protected:
     }
 };
 
-TEST(Core_KMeans, singular) { CV_KMeansSingularTest test; test.safe_run(); }
+TEST(Core_KMeans, singular) { CV_KMeansSingularTest test; test.safe_run(MAT_N_DIM_C1); }
+
+CV_ENUM(KMeansInputVariant, MAT_N_DIM_C1, MAT_N_1_CDIM, MAT_1_N_CDIM, MAT_N_DIM_C1_NONCONT, MAT_N_1_CDIM_NONCONT, VECTOR)
+
+typedef testing::TestWithParam<KMeansInputVariant> Core_KMeans_InputVariants;
+
+TEST_P(Core_KMeans_InputVariants, singular)
+{
+    CV_KMeansSingularTest test;
+    test.safe_run(GetParam());
+}
+
+INSTANTIATE_TEST_CASE_P(AllVariants, Core_KMeans_InputVariants, KMeansInputVariant::all());
 
 TEST(CovariationMatrixVectorOfMat, accuracy)
 {

@@ -93,6 +93,8 @@ CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, 
         float h = 3, float hColor = 3,
         int templateWindowSize = 7, int searchWindowSize = 21);
 
+CV_EXPORTS_W void denoise_TVL1(const std::vector<Mat>& observations,Mat& result, double lambda=1.0, int niters=30);
+
 enum { LDR_SIZE = 256 };
 
 class CV_EXPORTS_W Tonemap : public Algorithm
@@ -313,7 +315,7 @@ CV_EXPORTS_W void illuminationChange(InputArray src, InputArray mask, OutputArra
         float alpha = 0.2f, float beta = 0.4f);
 
 CV_EXPORTS_W void textureFlattening(InputArray src, InputArray mask, OutputArray dst,
-        double low_threshold = 30, double high_threshold = 45,
+        float low_threshold = 30, float high_threshold = 45,
         int kernel_size = 3);
 
 CV_EXPORTS_W void edgePreservingFilter(InputArray src, OutputArray dst, int flags = 1,

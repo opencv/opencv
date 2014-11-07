@@ -44,7 +44,7 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
@@ -57,7 +57,7 @@ namespace ocl {
 typedef Size_MatType PyrDownFixture;
 
 OCL_PERF_TEST_P(PyrDownFixture, PyrDown,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -81,7 +81,7 @@ OCL_PERF_TEST_P(PyrDownFixture, PyrDown,
 typedef Size_MatType PyrUpFixture;
 
 OCL_PERF_TEST_P(PyrUpFixture, PyrUp,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -95,7 +95,7 @@ OCL_PERF_TEST_P(PyrUpFixture, PyrUp,
     UMat src(srcSize, type), dst(dstSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::pyrDown(src, dst);
+    OCL_TEST_CYCLE() cv::pyrUp(src, dst);
 
     SANITY_CHECK(dst, eps);
 }
@@ -105,7 +105,7 @@ OCL_PERF_TEST_P(PyrUpFixture, PyrUp,
 typedef Size_MatType BuildPyramidFixture;
 
 OCL_PERF_TEST_P(BuildPyramidFixture, BuildPyramid,
-                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);

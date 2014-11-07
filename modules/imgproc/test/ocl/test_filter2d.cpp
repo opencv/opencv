@@ -41,7 +41,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
@@ -51,48 +51,54 @@ namespace ocl {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Filter2D
-PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool, bool)
+PARAM_TEST_CASE(Filter2D, MatDepth, Channels, int, int, BorderType, bool, bool)
 {
     static const int kernelMinSize = 2;
     static const int kernelMaxSize = 10;
 
     int type;
-    Size dsize;
+    Size size;
     Point anchor;
     int borderType;
+    int widthMultiple;
     bool useRoi;
     Mat kernel;
+    double delta;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
         type = CV_MAKE_TYPE(GET_PARAM(0), GET_PARAM(1));
-        borderType = GET_PARAM(2) | (GET_PARAM(3) ? BORDER_ISOLATED : 0);
-        useRoi = GET_PARAM(4);
+        Size ksize(GET_PARAM(2), GET_PARAM(2));
+        widthMultiple = GET_PARAM(3);
+        borderType = GET_PARAM(4) | (GET_PARAM(5) ? BORDER_ISOLATED : 0);
+        useRoi = GET_PARAM(6);
+        Mat temp = randomMat(ksize, CV_MAKE_TYPE(((CV_64F == CV_MAT_DEPTH(type)) ? CV_64F : CV_32F), 1), -MAX_VALUE, MAX_VALUE);
+        cv::normalize(temp, kernel, 1.0, 0.0, NORM_L1);
     }
 
     void random_roi()
     {
-        dsize = randomSize(1, MAX_VALUE);
+        size = randomSize(1, MAX_VALUE);
+        // Make sure the width is a multiple of the requested value, and no more.
+        size.width &= ~((widthMultiple * 2) - 1);
+        size.width += widthMultiple;
 
-        Size ksize = randomSize(kernelMinSize, kernelMaxSize);
-        Mat temp = randomMat(ksize, CV_MAKE_TYPE(((CV_64F == CV_MAT_DEPTH(type)) ? CV_64F : CV_32F), 1), -MAX_VALUE, MAX_VALUE);
-        cv::normalize(temp, kernel, 1.0, 0.0, NORM_L1);
-
-        Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
+        randomSubMat(src, src_roi, size, srcBorder, type, -MAX_VALUE, MAX_VALUE);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(dst, dst_roi, dsize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
+        randomSubMat(dst, dst_roi, size, dstBorder, type, -MAX_VALUE, MAX_VALUE);
 
-        anchor.x = randomInt(-1, ksize.width);
-        anchor.y = randomInt(-1, ksize.height);
+        anchor.x = randomInt(-1, kernel.size[0]);
+        anchor.y = randomInt(-1, kernel.size[1]);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        delta = randomDouble(-100, 100);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 
     void Near(double threshold = 0.0)
@@ -108,18 +114,19 @@ OCL_TEST_P(Filter2D, Mat)
     {
         random_roi();
 
-        OCL_OFF(cv::filter2D(src_roi, dst_roi, -1, kernel, anchor, 0.0, borderType));
-        OCL_ON(cv::filter2D(usrc_roi, udst_roi, -1, kernel, anchor, 0.0, borderType));
+        OCL_OFF(cv::filter2D(src_roi, dst_roi, -1, kernel, anchor, delta, borderType));
+        OCL_ON(cv::filter2D(usrc_roi, udst_roi, -1, kernel, anchor, delta, borderType));
 
         Near(1.0);
     }
 }
 
-
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, Filter2D,
                             Combine(
-                                Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
-                                Values(1, 2, 4),
+                                Values(CV_8U, CV_16U, CV_32F),
+                                OCL_ALL_CHANNELS,
+                                Values(3, 5, 7),  // Kernel size
+                                Values(1, 4, 8),   // Width mutiple
                                 Values((BorderType)BORDER_CONSTANT,
                                        (BorderType)BORDER_REPLICATE,
                                        (BorderType)BORDER_REFLECT,

@@ -146,3 +146,5 @@ void cv::viz::Viz3d::setRenderingProperty(const String &id, int property, double
 double cv::viz::Viz3d::getRenderingProperty(const String &id, int property) { return getWidget(id).getRenderingProperty(property); }
 
 void cv::viz::Viz3d::setRepresentation(int representation) { impl_->setRepresentation(representation); }
+
+void cv::viz::Viz3d::setGlobalWarnings(bool enabled) { vtkObject::SetGlobalWarningDisplay(enabled ? 1 : 0); }

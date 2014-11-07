@@ -44,7 +44,7 @@
 
 #include "cascadedetect.hpp"
 #include "opencv2/objdetect/objdetect_c.h"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_objdetect.hpp"
 
 namespace cv
 {
@@ -503,7 +503,7 @@ bool FeatureEvaluator::setImage( InputArray _image, const std::vector<float>& _s
         for (i = 0; i < nscales; i++)
         {
             const ScaleData& s = scaleData->at(i);
-            Mat dst(s.szi.height - 1, s.szi.width - 1, CV_8U, rbuf.data);
+            Mat dst(s.szi.height - 1, s.szi.width - 1, CV_8U, rbuf.ptr());
             resize(image, dst, dst.size(), 1. / s.scale, 1. / s.scale, INTER_LINEAR);
             computeChannels((int)i, dst);
         }
@@ -583,9 +583,7 @@ bool HaarEvaluator::read(const FileNode& node, Size _origWinSize)
     localSize = lbufSize = Size(0, 0);
     if (ocl::haveOpenCL())
     {
-        String vname = ocl::Device::getDefault().vendor();
-        if (vname == "Advanced Micro Devices, Inc." ||
-            vname == "AMD")
+        if (ocl::Device::getDefault().isAMD())
         {
             localSize = Size(8, 8);
             lbufSize = Size(origWinSize.width + localSize.width,
@@ -767,13 +765,8 @@ bool LBPEvaluator::read( const FileNode& node, Size _origWinSize )
     nchannels = 1;
     localSize = lbufSize = Size(0, 0);
     if (ocl::haveOpenCL())
-    {
-        const ocl::Device& device = ocl::Device::getDefault();
-        String vname = device.vendor();
-        if ((vname == "Advanced Micro Devices, Inc." ||
-            vname == "AMD") && !device.hostUnifiedMemory())
-            localSize = Size(8, 8);
-    }
+        localSize = Size(8, 8);
+
     return true;
 }
 
@@ -1220,6 +1213,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
     if( maxObjectSize.height == 0 || maxObjectSize.width == 0 )
         maxObjectSize = imgsz;
 
+#ifdef HAVE_OPENCL
     bool use_ocl = tryOpenCL && ocl::useOpenCL() &&
          featureEvaluator->getLocalSize().area() > 0 &&
          ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
@@ -1227,6 +1221,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
          !isOldFormatCascade() &&
          maskGenerator.empty() &&
          !outputRejectLevels;
+#endif
 
     /*if( use_ocl )
     {
@@ -1269,8 +1264,8 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
         return;
 
     // OpenCL code
-    if( use_ocl && ocl_detectMultiScaleNoGrouping( scales, candidates ))
-        return;
+    CV_OCL_RUN(use_ocl, ocl_detectMultiScaleNoGrouping( scales, candidates ))
+
     tryOpenCL = false;
 
     // CPU code

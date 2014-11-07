@@ -41,7 +41,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 #include "iostream"
 #include "fstream"
@@ -53,8 +53,7 @@ namespace ocl {
 
 ///////////////////////////////////////////// matchTemplate //////////////////////////////////////////////////////////
 
-CV_ENUM(MatchTemplType, CV_TM_SQDIFF, CV_TM_SQDIFF_NORMED, CV_TM_CCORR,
-        CV_TM_CCORR_NORMED, CV_TM_CCOEFF, CV_TM_CCOEFF_NORMED)
+CV_ENUM(MatchTemplType, CV_TM_CCORR, CV_TM_CCORR_NORMED, CV_TM_SQDIFF, CV_TM_SQDIFF_NORMED, CV_TM_CCOEFF, CV_TM_CCOEFF_NORMED)
 
 PARAM_TEST_CASE(MatchTemplate, MatDepth, Channels, MatchTemplType, bool)
 {
@@ -63,9 +62,9 @@ PARAM_TEST_CASE(MatchTemplate, MatDepth, Channels, MatchTemplType, bool)
     int method;
     bool use_roi;
 
-    TEST_DECLARE_INPUT_PARAMETER(image)
-    TEST_DECLARE_INPUT_PARAMETER(templ)
-    TEST_DECLARE_OUTPUT_PARAMETER(result)
+    TEST_DECLARE_INPUT_PARAMETER(image);
+    TEST_DECLARE_INPUT_PARAMETER(templ);
+    TEST_DECLARE_OUTPUT_PARAMETER(result);
 
     virtual void SetUp()
     {
@@ -93,14 +92,22 @@ PARAM_TEST_CASE(MatchTemplate, MatDepth, Channels, MatchTemplType, bool)
         Border resultBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(result, result_roi, result_roiSize, resultBorder, CV_32FC1, -upValue, upValue);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(image)
-        UMAT_UPLOAD_INPUT_PARAMETER(templ)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(result)
+        UMAT_UPLOAD_INPUT_PARAMETER(image);
+        UMAT_UPLOAD_INPUT_PARAMETER(templ);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(result);
     }
 
-    void Near(double threshold = 0.0)
+    void Near()
     {
-        OCL_EXPECT_MATS_NEAR_RELATIVE(result, threshold);
+        bool isNormed =
+        method == TM_CCORR_NORMED ||
+        method == TM_SQDIFF_NORMED ||
+        method == TM_CCOEFF_NORMED;
+
+        if (isNormed)
+            OCL_EXPECT_MATS_NEAR(result, 3e-2);
+        else
+            OCL_EXPECT_MATS_NEAR_RELATIVE_SPARSE(result, 1.5e-2);
     }
 };
 
@@ -113,13 +120,13 @@ OCL_TEST_P(MatchTemplate, Mat)
         OCL_OFF(cv::matchTemplate(image_roi, templ_roi, result_roi, method));
         OCL_ON(cv::matchTemplate(uimage_roi, utempl_roi, uresult_roi, method));
 
-        Near(1.5e-4);
+        Near();
     }
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, MatchTemplate, Combine(
                                 Values(CV_8U, CV_32F),
-                                Values(1, 2, 4),
+                                Values(1, 2, 3, 4),
                                 MatchTemplType::all(),
                                 Bool())
                            );

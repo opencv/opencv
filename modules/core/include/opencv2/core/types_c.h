@@ -158,7 +158,7 @@ enum {
  CV_StsVecLengthErr=           -28, /* incorrect vector length */
  CV_StsFilterStructContentErr= -29, /* incorr. filter structure content */
  CV_StsKernelStructContentErr= -30, /* incorr. transform kernel content */
- CV_StsFilterOffsetErr=        -31, /* incorrect filter ofset value */
+ CV_StsFilterOffsetErr=        -31, /* incorrect filter offset value */
  CV_StsBadSize=                -201, /* the input/output structure size is incorrect  */
  CV_StsDivByZero=              -202, /* division by zero */
  CV_StsInplaceNotSupported=    -203, /* in-place operation is not supported */
@@ -548,7 +548,7 @@ CV_INLINE  void  cvmSet( CvMat* mat, int row, int col, double value )
     else
     {
         assert( type == CV_64FC1 );
-        ((double*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col] = (double)value;
+        ((double*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col] = value;
     }
 }
 

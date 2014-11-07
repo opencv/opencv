@@ -14,21 +14,21 @@ SVM implementation in OpenCV is based on [LibSVM]_.
 .. [LibSVM] C.-C. Chang and C.-J. Lin. *LIBSVM: a library for support vector machines*, ACM Transactions on Intelligent Systems and Technology, 2:27:1--27:27, 2011. (http://www.csie.ntu.edu.tw/~cjlin/papers/libsvm.pdf)
 
 
-CvParamGrid
+ParamGrid
 -----------
-.. ocv:struct:: CvParamGrid
+.. ocv:class:: ParamGrid
 
   The structure represents the logarithmic grid range of statmodel parameters. It is used for optimizing statmodel accuracy by varying model parameters, the accuracy estimate being computed by cross-validation.
 
-  .. ocv:member:: double CvParamGrid::min_val
+  .. ocv:member:: double ParamGrid::minVal
 
      Minimum value of the statmodel parameter.
 
-  .. ocv:member:: double CvParamGrid::max_val
+  .. ocv:member:: double ParamGrid::maxVal
 
      Maximum value of the statmodel parameter.
 
-  .. ocv:member:: double CvParamGrid::step
+  .. ocv:member:: double ParamGrid::logStep
 
      Logarithmic step for iterating the statmodel parameter.
 
@@ -36,88 +36,78 @@ The grid determines the following iteration sequence of the statmodel parameter 
 
 .. math::
 
-    (min\_val, min\_val*step, min\_val*{step}^2, \dots,  min\_val*{step}^n),
+    (minVal, minVal*step, minVal*{step}^2, \dots,  minVal*{logStep}^n),
 
 where :math:`n` is the maximal index satisfying
 
 .. math::
 
-    \texttt{min\_val} * \texttt{step} ^n <  \texttt{max\_val}
+    \texttt{minVal} * \texttt{logStep} ^n <  \texttt{maxVal}
 
-The grid is logarithmic, so ``step`` must always be greater then 1.
+The grid is logarithmic, so ``logStep`` must always be greater then 1.
 
-CvParamGrid::CvParamGrid
+ParamGrid::ParamGrid
 ------------------------
 The constructors.
 
-.. ocv:function:: CvParamGrid::CvParamGrid()
+.. ocv:function:: ParamGrid::ParamGrid()
 
-.. ocv:function:: CvParamGrid::CvParamGrid( double min_val, double max_val, double log_step )
+.. ocv:function:: ParamGrid::ParamGrid( double minVal, double maxVal, double logStep )
 
 The full constructor initializes corresponding members. The default constructor creates a dummy grid:
 
 ::
 
-    CvParamGrid::CvParamGrid()
+    ParamGrid::ParamGrid()
     {
-        min_val = max_val = step = 0;
+        minVal = maxVal = 0;
+        logStep = 1;
     }
 
-CvParamGrid::check
-------------------
-Checks validness of the grid.
 
-.. ocv:function:: bool CvParamGrid::check()
-
-Returns ``true`` if the grid is valid and ``false`` otherwise. The grid is valid if and only if:
-
-* Lower bound of the grid is less then the upper one.
-* Lower bound of the grid is positive.
-* Grid step is greater then 1.
-
-CvSVMParams
+SVM::Params
 -----------
-.. ocv:struct:: CvSVMParams
+.. ocv:class:: SVM::Params
 
 SVM training parameters.
 
-The structure must be initialized and passed to the training method of :ocv:class:`CvSVM`.
+The structure must be initialized and passed to the training method of :ocv:class:`SVM`.
 
-CvSVMParams::CvSVMParams
+SVM::Params::Params
 ------------------------
-The constructors.
+The constructors
 
-.. ocv:function:: CvSVMParams::CvSVMParams()
+.. ocv:function:: SVM::Params::Params()
 
-.. ocv:function:: CvSVMParams::CvSVMParams( int svm_type, int kernel_type, double degree, double gamma, double coef0, double Cvalue, double nu, double p, CvMat* class_weights, CvTermCriteria term_crit )
+.. ocv:function:: SVM::Params::Params( int svmType, int kernelType, double degree, double gamma, double coef0, double Cvalue, double nu, double p, const Mat& classWeights, TermCriteria termCrit )
 
-    :param svm_type: Type of a SVM formulation. Possible values are:
+    :param svmType: Type of a SVM formulation. Possible values are:
 
-        * **CvSVM::C_SVC** C-Support Vector Classification. ``n``-class classification (``n`` :math:`\geq` 2), allows imperfect separation of classes with penalty multiplier ``C`` for outliers.
+        * **SVM::C_SVC** C-Support Vector Classification. ``n``-class classification (``n`` :math:`\geq` 2), allows imperfect separation of classes with penalty multiplier ``C`` for outliers.
 
-        * **CvSVM::NU_SVC** :math:`\nu`-Support Vector Classification. ``n``-class classification with possible imperfect separation. Parameter :math:`\nu`  (in the range 0..1, the larger the value, the smoother the decision boundary) is used instead of ``C``.
+        * **SVM::NU_SVC** :math:`\nu`-Support Vector Classification. ``n``-class classification with possible imperfect separation. Parameter :math:`\nu`  (in the range 0..1, the larger the value, the smoother the decision boundary) is used instead of ``C``.
 
-        * **CvSVM::ONE_CLASS** Distribution Estimation (One-class SVM). All the training data are from the same class, SVM builds a boundary that separates the class from the rest of the feature space.
+        * **SVM::ONE_CLASS** Distribution Estimation (One-class SVM). All the training data are from the same class, SVM builds a boundary that separates the class from the rest of the feature space.
 
-        * **CvSVM::EPS_SVR** :math:`\epsilon`-Support Vector Regression. The distance between feature vectors from the training set and the fitting hyper-plane must be less than ``p``. For outliers the penalty multiplier ``C`` is used.
+        * **SVM::EPS_SVR** :math:`\epsilon`-Support Vector Regression. The distance between feature vectors from the training set and the fitting hyper-plane must be less than ``p``. For outliers the penalty multiplier ``C`` is used.
 
-        * **CvSVM::NU_SVR** :math:`\nu`-Support Vector Regression. :math:`\nu` is used instead of ``p``.
+        * **SVM::NU_SVR** :math:`\nu`-Support Vector Regression. :math:`\nu` is used instead of ``p``.
 
         See [LibSVM]_ for details.
 
-    :param kernel_type: Type of a SVM kernel. Possible values are:
+    :param kernelType: Type of a SVM kernel. Possible values are:
 
-        * **CvSVM::LINEAR** Linear kernel. No mapping is done, linear discrimination (or regression) is done in the original feature space. It is the fastest option. :math:`K(x_i, x_j) = x_i^T x_j`.
+        * **SVM::LINEAR** Linear kernel. No mapping is done, linear discrimination (or regression) is done in the original feature space. It is the fastest option. :math:`K(x_i, x_j) = x_i^T x_j`.
 
-        * **CvSVM::POLY** Polynomial kernel: :math:`K(x_i, x_j) = (\gamma x_i^T x_j + coef0)^{degree}, \gamma > 0`.
+        * **SVM::POLY** Polynomial kernel: :math:`K(x_i, x_j) = (\gamma x_i^T x_j + coef0)^{degree}, \gamma > 0`.
 
-        * **CvSVM::RBF** Radial basis function (RBF), a good choice in most cases. :math:`K(x_i, x_j) = e^{-\gamma ||x_i - x_j||^2}, \gamma > 0`.
+        * **SVM::RBF** Radial basis function (RBF), a good choice in most cases. :math:`K(x_i, x_j) = e^{-\gamma ||x_i - x_j||^2}, \gamma > 0`.
 
-        * **CvSVM::SIGMOID** Sigmoid kernel: :math:`K(x_i, x_j) = \tanh(\gamma x_i^T x_j + coef0)`.
+        * **SVM::SIGMOID** Sigmoid kernel: :math:`K(x_i, x_j) = \tanh(\gamma x_i^T x_j + coef0)`.
 
-        * **CvSVM::CHI2** Exponential Chi2 kernel, similar to the RBF kernel: :math:`K(x_i, x_j) = e^{-\gamma \chi^2(x_i,x_j)}, \chi^2(x_i,x_j) = (x_i-x_j)^2/(x_i+x_j), \gamma > 0`.
+        * **SVM::CHI2** Exponential Chi2 kernel, similar to the RBF kernel: :math:`K(x_i, x_j) = e^{-\gamma \chi^2(x_i,x_j)}, \chi^2(x_i,x_j) = (x_i-x_j)^2/(x_i+x_j), \gamma > 0`.
 
-        * **CvSVM::INTER** Histogram intersection kernel. A fast kernel. :math:`K(x_i, x_j) = min(x_i,x_j)`.
+        * **SVM::INTER** Histogram intersection kernel. A fast kernel. :math:`K(x_i, x_j) = min(x_i,x_j)`.
 
     :param degree: Parameter ``degree`` of a kernel function (POLY).
 
@@ -131,19 +121,19 @@ The constructors.
 
     :param p: Parameter :math:`\epsilon` of a SVM optimization problem (EPS_SVR).
 
-    :param class_weights: Optional weights in the C_SVC problem , assigned to particular classes. They are multiplied by ``C`` so the parameter ``C`` of class ``#i`` becomes :math:`class\_weights_i * C`. Thus these weights affect the misclassification penalty for different classes. The larger weight, the larger penalty on misclassification of data from the corresponding class.
+    :param classWeights: Optional weights in the C_SVC problem , assigned to particular classes. They are multiplied by ``C`` so the parameter ``C`` of class ``#i`` becomes ``classWeights(i) * C``. Thus these weights affect the misclassification penalty for different classes. The larger weight, the larger penalty on misclassification of data from the corresponding class.
 
-    :param term_crit: Termination criteria of the iterative SVM training procedure which solves a partial case of constrained quadratic optimization problem. You can specify tolerance and/or the maximum number of iterations.
+    :param termCrit: Termination criteria of the iterative SVM training procedure which solves a partial case of constrained quadratic optimization problem. You can specify tolerance and/or the maximum number of iterations.
 
 The default constructor initialize the structure with following values:
 
 ::
 
-    CvSVMParams::CvSVMParams() :
-        svm_type(CvSVM::C_SVC), kernel_type(CvSVM::RBF), degree(0),
-        gamma(1), coef0(0), C(1), nu(0), p(0), class_weights(0)
+    SVMParams::SVMParams() :
+        svmType(SVM::C_SVC), kernelType(SVM::RBF), degree(0),
+        gamma(1), coef0(0), C(1), nu(0), p(0), classWeights(0)
     {
-        term_crit = cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 1000, FLT_EPSILON );
+        termCrit = TermCriteria( TermCriteria::MAX_ITER+TermCriteria::EPS, 1000, FLT_EPSILON );
     }
 
 A comparison of different kernels on the following 2D test case with four classes. Four C_SVC SVMs have been trained (one against rest) with auto_train. Evaluation on three different kernels (CHI2, INTER, RBF). The color depicts the class with max score. Bright means max-score > 0, dark means max-score < 0.
@@ -151,10 +141,9 @@ A comparison of different kernels on the following 2D test case with four classe
 .. image:: pics/SVM_Comparison.png
 
 
-
-CvSVM
+SVM
 -----
-.. ocv:class:: CvSVM : public CvStatModel
+.. ocv:class:: SVM : public StatModel
 
 Support Vector Machines.
 
@@ -164,55 +153,27 @@ Support Vector Machines.
    * (Python) An example of grid search digit recognition using SVM can be found at opencv_source/samples/python2/digits_adjust.py
    * (Python) An example of video digit recognition using SVM can be found at opencv_source/samples/python2/digits_video.py
 
-CvSVM::CvSVM
+SVM::create
 ------------
-Default and training constructors.
+Creates empty model
 
-.. ocv:function:: CvSVM::CvSVM()
+.. ocv:function:: Ptr<SVM> SVM::create(const Params& p=Params(), const Ptr<Kernel>& customKernel=Ptr<Kernel>())
 
-.. ocv:function:: CvSVM::CvSVM( const Mat& trainData, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), CvSVMParams params=CvSVMParams() )
+    :param p: SVM parameters
+    :param customKernel: the optional custom kernel to use. It must implement ``SVM::Kernel`` interface.
 
-.. ocv:function:: CvSVM::CvSVM( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, CvSVMParams params=CvSVMParams() )
-
-.. ocv:pyfunction:: cv2.SVM([trainData, responses[, varIdx[, sampleIdx[, params]]]]) -> <SVM object>
-
-The constructors follow conventions of :ocv:func:`CvStatModel::CvStatModel`. See :ocv:func:`CvStatModel::train` for parameters descriptions.
-
-CvSVM::train
-------------
-Trains an SVM.
-
-.. ocv:function:: bool CvSVM::train( const Mat& trainData, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), CvSVMParams params=CvSVMParams() )
-
-.. ocv:function:: bool CvSVM::train( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, CvSVMParams params=CvSVMParams() )
-
-.. ocv:pyfunction:: cv2.SVM.train(trainData, responses[, varIdx[, sampleIdx[, params]]]) -> retval
-
-The method trains the SVM model. It follows the conventions of the generic :ocv:func:`CvStatModel::train` approach with the following limitations:
-
-* Only the ``CV_ROW_SAMPLE`` data layout is supported.
-
-* Input variables are all ordered.
-
-* Output variables can be either categorical (``params.svm_type=CvSVM::C_SVC`` or ``params.svm_type=CvSVM::NU_SVC``), or ordered (``params.svm_type=CvSVM::EPS_SVR`` or ``params.svm_type=CvSVM::NU_SVR``), or not required at all (``params.svm_type=CvSVM::ONE_CLASS``).
-
-* Missing measurements are not supported.
-
-All the other parameters are gathered in the
-:ocv:class:`CvSVMParams` structure.
+Use ``StatModel::train`` to train the model, ``StatModel::train<RTrees>(traindata, params)`` to create and train the model, ``StatModel::load<RTrees>(filename)`` to load the pre-trained model. Since SVM has several parameters, you may want to find the best parameters for your problem. It can be done with ``SVM::trainAuto``.
 
 
-CvSVM::train_auto
+SVM::trainAuto
 -----------------
 Trains an SVM with optimal parameters.
 
-.. ocv:function:: bool CvSVM::train_auto( const Mat& trainData, const Mat& responses, const Mat& varIdx, const Mat& sampleIdx, CvSVMParams params, int k_fold = 10, CvParamGrid Cgrid = CvSVM::get_default_grid(CvSVM::C), CvParamGrid gammaGrid = CvSVM::get_default_grid(CvSVM::GAMMA), CvParamGrid pGrid = CvSVM::get_default_grid(CvSVM::P), CvParamGrid nuGrid  = CvSVM::get_default_grid(CvSVM::NU), CvParamGrid coeffGrid = CvSVM::get_default_grid(CvSVM::COEF), CvParamGrid degreeGrid = CvSVM::get_default_grid(CvSVM::DEGREE), bool balanced=false)
+.. ocv:function:: bool SVM::trainAuto( const Ptr<TrainData>& data, int kFold = 10, ParamGrid Cgrid = SVM::getDefaultGrid(SVM::C), ParamGrid gammaGrid  = SVM::getDefaultGrid(SVM::GAMMA), ParamGrid pGrid = SVM::getDefaultGrid(SVM::P), ParamGrid nuGrid = SVM::getDefaultGrid(SVM::NU), ParamGrid coeffGrid = SVM::getDefaultGrid(SVM::COEF), ParamGrid degreeGrid = SVM::getDefaultGrid(SVM::DEGREE), bool balanced=false)
 
-.. ocv:function:: bool CvSVM::train_auto( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx, const CvMat* sampleIdx, CvSVMParams params, int kfold = 10, CvParamGrid Cgrid = get_default_grid(CvSVM::C), CvParamGrid gammaGrid = get_default_grid(CvSVM::GAMMA), CvParamGrid pGrid = get_default_grid(CvSVM::P), CvParamGrid nuGrid = get_default_grid(CvSVM::NU), CvParamGrid coeffGrid = get_default_grid(CvSVM::COEF), CvParamGrid degreeGrid = get_default_grid(CvSVM::DEGREE), bool balanced=false )
+    :param data: the training data that can be constructed using ``TrainData::create`` or ``TrainData::loadFromCSV``.
 
-.. ocv:pyfunction:: cv2.SVM.train_auto(trainData, responses, varIdx, sampleIdx, params[, k_fold[, Cgrid[, gammaGrid[, pGrid[, nuGrid[, coeffGrid[, degreeGrid[, balanced]]]]]]]]) -> retval
-
-    :param k_fold: Cross-validation parameter. The training set is divided into ``k_fold`` subsets. One subset is used to test the model, the others form the train set. So, the SVM algorithm is executed ``k_fold`` times.
+    :param kFold: Cross-validation parameter. The training set is divided into ``kFold`` subsets. One subset is used to test the model, the others form the train set. So, the SVM algorithm is executed ``kFold`` times.
 
     :param \*Grid: Iteration grid for the corresponding SVM parameter.
 
@@ -220,97 +181,76 @@ Trains an SVM with optimal parameters.
 
 The method trains the SVM model automatically by choosing the optimal
 parameters ``C``, ``gamma``, ``p``, ``nu``, ``coef0``, ``degree`` from
-:ocv:class:`CvSVMParams`. Parameters are considered optimal
+``SVM::Params``. Parameters are considered optimal
 when the cross-validation estimate of the test set error
 is minimal.
 
-If there is no need to optimize a parameter, the corresponding grid step should be set to any value less than or equal to 1. For example, to avoid optimization in ``gamma``, set ``gamma_grid.step = 0``, ``gamma_grid.min_val``, ``gamma_grid.max_val`` as arbitrary numbers. In this case, the value ``params.gamma`` is taken for ``gamma``.
+If there is no need to optimize a parameter, the corresponding grid step should be set to any value less than or equal to 1. For example, to avoid optimization in ``gamma``, set ``gammaGrid.step = 0``, ``gammaGrid.minVal``, ``gamma_grid.maxVal`` as arbitrary numbers. In this case, the value ``params.gamma`` is taken for ``gamma``.
 
 And, finally, if the optimization in a parameter is required but
-the corresponding grid is unknown, you may call the function :ocv:func:`CvSVM::get_default_grid`. To generate a grid, for example, for ``gamma``, call ``CvSVM::get_default_grid(CvSVM::GAMMA)``.
+the corresponding grid is unknown, you may call the function :ocv:func:`SVM::getDefaulltGrid`. To generate a grid, for example, for ``gamma``, call ``SVM::getDefaulltGrid(SVM::GAMMA)``.
 
 This function works for the classification
-(``params.svm_type=CvSVM::C_SVC`` or ``params.svm_type=CvSVM::NU_SVC``)
+(``params.svmType=SVM::C_SVC`` or ``params.svmType=SVM::NU_SVC``)
 as well as for the regression
-(``params.svm_type=CvSVM::EPS_SVR`` or ``params.svm_type=CvSVM::NU_SVR``). If ``params.svm_type=CvSVM::ONE_CLASS``, no optimization is made and the usual SVM with parameters specified in ``params`` is executed.
-
-CvSVM::predict
---------------
-Predicts the response for input sample(s).
-
-.. ocv:function:: float CvSVM::predict( const Mat& sample, bool returnDFVal=false ) const
-
-.. ocv:function:: float CvSVM::predict( const CvMat* sample, bool returnDFVal=false ) const
-
-.. ocv:function:: float CvSVM::predict( const CvMat* samples, CvMat* results, bool returnDFVal=false ) const
-
-.. ocv:pyfunction:: cv2.SVM.predict(sample[, returnDFVal]) -> retval
-
-.. ocv:pyfunction:: cv2.SVM.predict_all(samples[, results]) -> results
-
-    :param sample: Input sample for prediction.
-
-    :param samples: Input samples for prediction.
-
-    :param returnDFVal: Specifies a type of the return value. If ``true`` and the problem is 2-class classification then the method returns the decision function value that is signed distance to the margin, else the function returns a class label (classification) or estimated function value (regression).
-
-    :param results: Output prediction responses for corresponding samples.
-
-If you pass one sample then prediction result is returned. If you want to get responses for several samples then you should pass the ``results`` matrix where prediction results will be stored.
-
-The function is parallelized with the TBB library.
+(``params.svmType=SVM::EPS_SVR`` or ``params.svmType=SVM::NU_SVR``). If ``params.svmType=SVM::ONE_CLASS``, no optimization is made and the usual SVM with parameters specified in ``params`` is executed.
 
 
-CvSVM::get_default_grid
+SVM::getDefaulltGrid
 -----------------------
 Generates a grid for SVM parameters.
 
-.. ocv:function:: CvParamGrid CvSVM::get_default_grid( int param_id )
+.. ocv:function:: ParamGrid SVM::getDefaulltGrid( int param_id )
 
     :param param_id: SVM parameters IDs that must be one of the following:
 
-            * **CvSVM::C**
+            * **SVM::C**
 
-            * **CvSVM::GAMMA**
+            * **SVM::GAMMA**
 
-            * **CvSVM::P**
+            * **SVM::P**
 
-            * **CvSVM::NU**
+            * **SVM::NU**
 
-            * **CvSVM::COEF**
+            * **SVM::COEF**
 
-            * **CvSVM::DEGREE**
+            * **SVM::DEGREE**
 
         The grid is generated for the parameter with this ID.
 
-The function generates a grid for the specified parameter of the SVM algorithm. The grid may be passed to the function :ocv:func:`CvSVM::train_auto`.
+The function generates a grid for the specified parameter of the SVM algorithm. The grid may be passed to the function :ocv:func:`SVM::trainAuto`.
 
-CvSVM::get_params
+SVM::getParams
 -----------------
 Returns the current SVM parameters.
 
-.. ocv:function:: CvSVMParams CvSVM::get_params() const
+.. ocv:function:: SVM::Params SVM::getParams() const
 
-This function may be used to get the optimal parameters obtained while automatically training :ocv:func:`CvSVM::train_auto`.
+This function may be used to get the optimal parameters obtained while automatically training ``SVM::trainAuto``.
 
-CvSVM::get_support_vector
+SVM::getSupportVectors
 --------------------------
-Retrieves a number of support vectors and the particular vector.
+Retrieves all the support vectors
 
-.. ocv:function:: int CvSVM::get_support_vector_count() const
+.. ocv:function:: Mat SVM::getSupportVectors() const
 
-.. ocv:function:: const float* CvSVM::get_support_vector(int i) const
+The method returns all the support vector as floating-point matrix, where support vectors are stored as matrix rows.
 
-.. ocv:pyfunction:: cv2.SVM.get_support_vector_count() -> retval
+SVM::getDecisionFunction
+--------------------------
+Retrieves the decision function
 
-    :param i: Index of the particular support vector.
+.. ocv:function:: double SVM::getDecisionFunction(int i, OutputArray alpha, OutputArray svidx) const
 
-The methods can be used to retrieve a set of support vectors.
+    :param i: the index of the decision function. If the problem solved is regression, 1-class or 2-class classification, then there will be just one decision function and the index should always be 0. Otherwise, in the case of N-class classification, there will be N*(N-1)/2 decision functions.
 
-CvSVM::get_var_count
+    :param alpha: the optional output vector for weights, corresponding to different support vectors. In the case of linear SVM all the alpha's will be 1's.
+
+    :param svidx: the optional output vector of indices of support vectors within the matrix of support vectors (which can be retrieved by ``SVM::getSupportVectors``). In the case of linear SVM each decision function consists of a single "compressed" support vector.
+
+The method returns ``rho`` parameter of the decision function, a scalar subtracted from the weighted sum of kernel responses.
+
+Prediction with SVM
 --------------------
-Returns the number of used features (variables count).
 
-.. ocv:function:: int CvSVM::get_var_count() const
-
-.. ocv:pyfunction:: cv2.SVM.get_var_count() -> retval
+StatModel::predict(samples, results, flags) should be used. Pass ``flags=StatModel::RAW_OUTPUT`` to get the raw response from SVM (in the case of regression, 1-class or 2-class classification problem).

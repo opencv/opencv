@@ -212,8 +212,8 @@ void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radiu
         return;
 
     bool is_float = depth == CV_32F;
-    const Point* ptsi = (const Point*)points.data;
-    const Point2f* ptsf = (const Point2f*)points.data;
+    const Point* ptsi = points.ptr<Point>();
+    const Point2f* ptsf = points.ptr<Point2f>();
 
     Point2f pt = is_float ? ptsf[0] : Point2f((float)ptsi[0].x,(float)ptsi[0].y);
     Point2f pts[4] = {pt, pt, pt, pt};
@@ -310,8 +310,8 @@ double cv::arcLength( InputArray _curve, bool is_closed )
 
     bool is_float = depth == CV_32F;
     int last = is_closed ? count-1 : 0;
-    const Point* pti = (const Point*)curve.data;
-    const Point2f* ptf = (const Point2f*)curve.data;
+    const Point* pti = curve.ptr<Point>();
+    const Point2f* ptf = curve.ptr<Point2f>();
 
     Point2f prev = is_float ? ptf[last] : Point2f((float)pti[last].x,(float)pti[last].y);
 
@@ -347,8 +347,8 @@ double cv::contourArea( InputArray _contour, bool oriented )
 
     double a00 = 0;
     bool is_float = depth == CV_32F;
-    const Point* ptsi = (const Point*)contour.data;
-    const Point2f* ptsf = (const Point2f*)contour.data;
+    const Point* ptsi = contour.ptr<Point>();
+    const Point2f* ptsf = contour.ptr<Point2f>();
     Point2f prev = is_float ? ptsf[npoints-1] : Point2f((float)ptsi[npoints-1].x, (float)ptsi[npoints-1].y);
 
     for( int i = 0; i < npoints; i++ )
@@ -383,8 +383,8 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
     double gfp[5], rp[5], t;
     const double min_eps = 1e-8;
     bool is_float = depth == CV_32F;
-    const Point* ptsi = (const Point*)points.data;
-    const Point2f* ptsf = (const Point2f*)points.data;
+    const Point* ptsi = points.ptr<Point>();
+    const Point2f* ptsf = points.ptr<Point2f>();
 
     AutoBuffer<double> _Ad(n*5), _bd(n);
     double *Ad = _Ad, *bd = _bd;
@@ -493,7 +493,7 @@ static Rect pointSetBoundingRect( const Mat& points )
     if( npoints == 0 )
         return Rect();
 
-    const Point* pts = (const Point*)points.data;
+    const Point* pts = points.ptr<Point>();
     Point pt = pts[0];
 
 #if CV_SSE4_2

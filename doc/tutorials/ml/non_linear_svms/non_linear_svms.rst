@@ -73,7 +73,7 @@ You may also find the source code and these video file in the :file:`samples/cpp
    :language: cpp
    :linenos:
    :tab-width: 4
-   :lines: 1-11, 22-23, 26-
+   :lines: 1-12, 23-24, 27-
 
 Explanation
 ===========
@@ -131,7 +131,7 @@ Explanation
      params.svm_type    = SVM::C_SVC;
      params.C              = 0.1;
      params.kernel_type = SVM::LINEAR;
-     params.term_crit   = TermCriteria(CV_TERMCRIT_ITER, (int)1e7, 1e-6);
+     params.term_crit   = TermCriteria(TermCriteria::ITER, (int)1e7, 1e-6);
 
   There are just two differences between the configuration we do here and the one that was done in the :ref:`previous tutorial <introductiontosvms>` that we use as reference.
 

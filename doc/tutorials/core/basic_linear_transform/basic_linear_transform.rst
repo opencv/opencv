@@ -187,7 +187,7 @@ Explanation
 
       image.convertTo(new_image, -1, alpha, beta);
 
-   where :convert_to:`convertTo <>` would effectively perform *new_image = a*image + beta*. However, we wanted to show you how to access each pixel. In any case, both methods give the same result.
+   where :convert_to:`convertTo <>` would effectively perform *new_image = a*image + beta*. However, we wanted to show you how to access each pixel. In any case, both methods give the same result but convertTo is more optimized and works a lot faster.
 
 Result
 =======

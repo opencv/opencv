@@ -15,7 +15,7 @@ using namespace android;
 
 const int OpenCVEngine::Platform = DetectKnownPlatforms();
 const int OpenCVEngine::CpuID = GetCpuID();
-const int OpenCVEngine::KnownVersions[] = {2040000, 2040100, 2040200, 2040300, 2040301, 2040302, 2040400, 2040500, 2040600, 2040700, 2040701, 2040800};
+const int OpenCVEngine::KnownVersions[] = {2040000, 2040100, 2040200, 2040300, 2040301, 2040302, 2040400, 2040500, 2040600, 2040700, 2040701, 2040800, 2040900};
 
 bool OpenCVEngine::ValidateVersion(int version)
 {

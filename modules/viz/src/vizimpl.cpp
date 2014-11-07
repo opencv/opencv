@@ -60,15 +60,18 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
     window_->AddRenderer(renderer_);
 
     // Create the interactor style
-    style_ = vtkSmartPointer<InteractorStyle>::New();
+    style_ = vtkSmartPointer<vtkVizInteractorStyle>::New();
     style_->setWidgetActorMap(widget_actor_map_);
     style_->UseTimersOn();
-    style_->Initialize();
 
     timer_callback_ = vtkSmartPointer<TimerCallback>::New();
     exit_callback_ = vtkSmartPointer<ExitCallback>::New();
     exit_callback_->viz = this;
+
+    setBackgroundMeshLab();
 }
+
+cv::viz::Viz3d::VizImpl::~VizImpl() { close(); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::TimerCallback::Execute(vtkObject* caller, unsigned long event_id, void* cookie)
@@ -109,11 +112,12 @@ void cv::viz::Viz3d::VizImpl::close()
 
 void cv::viz::Viz3d::VizImpl::recreateRenderWindow()
 {
-#if !defined _MSC_VER
+#if !defined _MSC_VER && !defined __APPLE__
     //recreating is workaround for Ubuntu -- a crash in x-server
     Vec2i window_size(window_->GetSize());
     int fullscreen = window_->GetFullScreen();
 
+    window_->Finalize();
     window_ = vtkSmartPointer<vtkRenderWindow>::New();
     if (window_position_[0] != std::numeric_limits<int>::min()) //also workaround
         window_->SetPosition(window_position_.val);
@@ -124,12 +128,15 @@ void cv::viz::Viz3d::VizImpl::recreateRenderWindow()
 #endif
 }
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::spin()
 {
     recreateRenderWindow();
+#if defined __APPLE__
+    interactor_ = vtkCocoaRenderWindowInteractorNew();
+#else
     interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+#endif
     interactor_->SetRenderWindow(window_);
     interactor_->SetInteractorStyle(style_);
     window_->AlphaBitPlanesOff();
@@ -151,7 +158,11 @@ void cv::viz::Viz3d::VizImpl::spinOnce(int time, bool force_redraw)
     {
         spin_once_state_ = true;
         recreateRenderWindow();
+#if defined __APPLE__
+        interactor_ = vtkCocoaRenderWindowInteractorNew();
+#else
         interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+#endif
         interactor_->SetRenderWindow(window_);
         interactor_->SetInteractorStyle(style_);
         interactor_->AddObserver(vtkCommand::TimerEvent, timer_callback_);
@@ -416,12 +427,12 @@ void cv::viz::Viz3d::VizImpl::setViewerPose(const Affine3d &pose)
 
     // Rotate the view vector
     cv::Matx33d rotation = pose.rotation();
-    cv::Vec3d y_axis(0.0, 1.0, 0.0);
+    cv::Vec3d y_axis(0.0, -1.0, 0.0); // In Computer Vision Camera Y-axis is oriented down
     cv::Vec3d up_vec(rotation * y_axis);
 
     // Compute the new focal point
     cv::Vec3d z_axis(0.0, 0.0, 1.0);
-    cv::Vec3d focal_vec = pos_vec + rotation * z_axis;
+    cv::Vec3d focal_vec = pose * z_axis;
 
     camera.SetPosition(pos_vec.val);
     camera.SetFocalPoint(focal_vec.val);
@@ -439,7 +450,7 @@ cv::Affine3d cv::viz::Viz3d::VizImpl::getViewerPose()
     Vec3d view_up(camera.GetViewUp());
     Vec3d focal(camera.GetFocalPoint());
 
-    Vec3d y_axis = normalized(view_up);
+    Vec3d y_axis = normalized(-view_up); // In Computer Vision Camera Y-axis is oriented down
     Vec3d z_axis = normalized(focal - pos);
     Vec3d x_axis = normalized(y_axis.cross(z_axis));
 

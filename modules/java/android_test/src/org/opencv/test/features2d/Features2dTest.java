@@ -18,7 +18,7 @@ import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.features2d.FeatureDetector;
 import org.opencv.features2d.Features2d;
 import org.opencv.core.KeyPoint;
-import org.opencv.highgui.Highgui;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
@@ -93,7 +93,7 @@ public class Features2dTest extends OpenCVTestCase {
         writeFile(extractorCfgFile, extractorCfg);
         extractor.read(extractorCfgFile);
 
-        Mat imgTrain = Highgui.imread(OpenCVTestRunner.LENA_PATH, Highgui.CV_LOAD_IMAGE_GRAYSCALE);
+        Mat imgTrain = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH, Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE);
         Mat imgQuery = imgTrain.submat(new Range(0, imgTrain.rows() - 100), Range.all());
 
         MatOfKeyPoint trainKeypoints = new MatOfKeyPoint();
@@ -139,7 +139,7 @@ public class Features2dTest extends OpenCVTestCase {
         Mat outimg = new Mat();
         Features2d.drawMatches(imgQuery, queryKeypoints, imgTrain, trainKeypoints, matches, outimg);
         String outputPath = OpenCVTestRunner.getOutputFileName("PTODresult.png");
-        Highgui.imwrite(outputPath, outimg);
+        Imgcodecs.imwrite(outputPath, outimg);
         // OpenCVTestRunner.Log("Output image is saved to: " + outputPath);
     }
 }

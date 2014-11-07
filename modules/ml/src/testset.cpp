@@ -40,131 +40,74 @@
 
 #include "precomp.hpp"
 
-typedef struct CvDI
+namespace cv { namespace ml {
+
+struct PairDI
 {
     double d;
     int    i;
-} CvDI;
+};
 
-static int CV_CDECL
-icvCmpDI( const void* a, const void* b, void* )
+struct CmpPairDI
 {
-    const CvDI* e1 = (const CvDI*) a;
-    const CvDI* e2 = (const CvDI*) b;
+    bool operator ()(const PairDI& e1, const PairDI& e2) const
+    {
+        return (e1.d < e2.d) || (e1.d == e2.d && e1.i < e2.i);
+    }
+};
 
-    return (e1->d < e2->d) ? -1 : (e1->d > e2->d);
-}
-
-CV_IMPL void
-cvCreateTestSet( int type, CvMat** samples,
-                 int num_samples,
-                 int num_features,
-                 CvMat** responses,
-                 int num_classes, ... )
+void createConcentricSpheresTestSet( int num_samples, int num_features, int num_classes,
+                                     OutputArray _samples, OutputArray _responses)
 {
-    CvMat* mean = NULL;
-    CvMat* cov = NULL;
-    CvMemStorage* storage = NULL;
-
-    CV_FUNCNAME( "cvCreateTestSet" );
-
-    __BEGIN__;
-
-    if( samples )
-        *samples = NULL;
-    if( responses )
-        *responses = NULL;
-
-    if( type != CV_TS_CONCENTRIC_SPHERES )
-        CV_ERROR( CV_StsBadArg, "Invalid type parameter" );
-
-    if( !samples )
-        CV_ERROR( CV_StsNullPtr, "samples parameter must be not NULL" );
-
-    if( !responses )
-        CV_ERROR( CV_StsNullPtr, "responses parameter must be not NULL" );
-
     if( num_samples < 1 )
-        CV_ERROR( CV_StsBadArg, "num_samples parameter must be positive" );
+        CV_Error( CV_StsBadArg, "num_samples parameter must be positive" );
 
     if( num_features < 1 )
-        CV_ERROR( CV_StsBadArg, "num_features parameter must be positive" );
+        CV_Error( CV_StsBadArg, "num_features parameter must be positive" );
 
     if( num_classes < 1 )
-        CV_ERROR( CV_StsBadArg, "num_classes parameter must be positive" );
+        CV_Error( CV_StsBadArg, "num_classes parameter must be positive" );
 
-    if( type == CV_TS_CONCENTRIC_SPHERES )
+    int i, cur_class;
+
+    _samples.create( num_samples, num_features, CV_32F );
+    _responses.create( 1, num_samples, CV_32S );
+
+    Mat responses = _responses.getMat();
+
+    Mat mean = Mat::zeros(1, num_features, CV_32F);
+    Mat cov = Mat::eye(num_features, num_features, CV_32F);
+
+    // fill the feature values matrix with random numbers drawn from standard normal distribution
+    randMVNormal( mean, cov, num_samples, _samples );
+    Mat samples = _samples.getMat();
+
+    // calculate distances from the origin to the samples and put them
+    // into the sequence along with indices
+    std::vector<PairDI> dis(samples.rows);
+
+    for( i = 0; i < samples.rows; i++ )
     {
-        CvSeqWriter writer;
-        CvSeqReader reader;
-        CvMat sample;
-        CvDI elem;
-        CvSeq* seq = NULL;
-        int i, cur_class;
-
-        CV_CALL( *samples = cvCreateMat( num_samples, num_features, CV_32FC1 ) );
-        CV_CALL( *responses = cvCreateMat( 1, num_samples, CV_32SC1 ) );
-        CV_CALL( mean = cvCreateMat( 1, num_features, CV_32FC1 ) );
-        CV_CALL( cvSetZero( mean ) );
-        CV_CALL( cov = cvCreateMat( num_features, num_features, CV_32FC1 ) );
-        CV_CALL( cvSetIdentity( cov ) );
-
-        /* fill the feature values matrix with random numbers drawn from standard
-           normal distribution */
-        CV_CALL( cvRandMVNormal( mean, cov, *samples ) );
-
-        /* calculate distances from the origin to the samples and put them
-           into the sequence along with indices */
-        CV_CALL( storage = cvCreateMemStorage() );
-        CV_CALL( cvStartWriteSeq( 0, sizeof( CvSeq ), sizeof( CvDI ), storage, &writer ));
-        for( i = 0; i < (*samples)->rows; ++i )
-        {
-            CV_CALL( cvGetRow( *samples, &sample, i ));
-            elem.i = i;
-            CV_CALL( elem.d = cvNorm( &sample, NULL, CV_L2 ));
-            CV_WRITE_SEQ_ELEM( elem, writer );
-        }
-        CV_CALL( seq = cvEndWriteSeq( &writer ) );
-
-        /* sort the sequence in a distance ascending order */
-        CV_CALL( cvSeqSort( seq, icvCmpDI, NULL ) );
-
-        /* assign class labels */
-        num_classes = MIN( num_samples, num_classes );
-        CV_CALL( cvStartReadSeq( seq, &reader ) );
-        CV_READ_SEQ_ELEM( elem, reader );
-        for( i = 0, cur_class = 0; i < num_samples; ++cur_class )
-        {
-            int last_idx;
-            double max_dst;
-
-            last_idx = num_samples * (cur_class + 1) / num_classes - 1;
-            CV_CALL( max_dst = (*((CvDI*) cvGetSeqElem( seq, last_idx ))).d );
-            max_dst = MAX( max_dst, elem.d );
-
-            for( ; elem.d <= max_dst && i < num_samples; ++i )
-            {
-                CV_MAT_ELEM( **responses, int, 0, elem.i ) = cur_class;
-                if( i < num_samples - 1 )
-                {
-                    CV_READ_SEQ_ELEM( elem, reader );
-                }
-            }
-        }
+        PairDI& elem = dis[i];
+        elem.i = i;
+        elem.d = norm(samples.row(i), NORM_L2);
     }
 
-    __END__;
+    std::sort(dis.begin(), dis.end(), CmpPairDI());
 
-    if( cvGetErrStatus() < 0 )
+    // assign class labels
+    num_classes = std::min( num_samples, num_classes );
+    for( i = 0, cur_class = 0; i < num_samples; ++cur_class )
     {
-        if( samples )
-            cvReleaseMat( samples );
-        if( responses )
-            cvReleaseMat( responses );
+        int last_idx = num_samples * (cur_class + 1) / num_classes - 1;
+        double max_dst = dis[last_idx].d;
+        max_dst = std::max( max_dst, dis[i].d );
+
+        for( ; i < num_samples && dis[i].d <= max_dst; ++i )
+            responses.at<int>(i) = cur_class;
     }
-    cvReleaseMat( &mean );
-    cvReleaseMat( &cov );
-    cvReleaseMemStorage( &storage );
 }
+
+}}
 
 /* End of file. */

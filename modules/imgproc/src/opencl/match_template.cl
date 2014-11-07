@@ -29,369 +29,536 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 
-#define DATA_SIZE ((int)sizeof(type))
-#define ELEM_TYPE elem_type
-#define ELEM_SIZE ((int)sizeof(elem_type))
-#define CN cn
+#if cn != 3
+#define loadpix(addr) *(__global const T *)(addr)
+#define TSIZE (int)sizeof(T)
+#else
+#define loadpix(addr) vload3(0, (__global const T1 *)(addr))
+#define TSIZE ((int)sizeof(T1)*3)
+#endif
 
-#define SQSUMS_PTR(ox, oy) mad24(gidy + oy, img_sqsums_step, gidx*CN + img_sqsums_offset + ox*CN)
-#define SUMS_PTR(ox, oy) mad24(gidy + oy, img_sums_step,   gidx*CN + img_sums_offset + ox*CN)
+#define SQSUMS_PTR(ox, oy) mad24(y + oy, src_sqsums_step, mad24(x + ox, cn, src_sqsums_offset))
+#define SUMS_PTR(ox, oy) mad24(y + oy, src_sums_step, mad24(x + ox, cn, src_sums_offset))
+#define SUMS(ox, oy)    mad24(y+oy, src_sums_step, mad24(x+ox, (int)sizeof(T1)*cn, src_sums_offset))
+#define SQ_SUMS(ox, oy) mad24(y+oy, src_sqsums_step, mad24(x+ox, (int)sizeof(T1)*cn, src_sqsums_offset))
 
 inline float normAcc(float num, float denum)
 {
-    if(fabs(num) < denum)
-    {
+    if (fabs(num) < denum)
         return num / denum;
-    }
-    if(fabs(num) < denum * 1.125f)
-    {
+    if (fabs(num) < denum * 1.125f)
         return num > 0 ? 1 : -1;
-    }
     return 0;
 }
 
 inline float normAcc_SQDIFF(float num, float denum)
 {
-    if(fabs(num) < denum)
-    {
+    if (fabs(num) < denum)
         return num / denum;
-    }
-    if(fabs(num) < denum * 1.125f)
-    {
+    if (fabs(num) < denum * 1.125f)
         return num > 0 ? 1 : -1;
-    }
     return 1;
 }
 
-//////////////////////////////////////////CCORR/////////////////////////////////////////////////////////////////////////
+#define noconvert
 
-__kernel void matchTemplate_Naive_CCORR (__global const uchar * img,int img_step,int img_offset,
-                                         __global const uchar * tpl,int tpl_step,int tpl_offset,int tpl_rows, int tpl_cols,
-                                         __global uchar * res,int res_step,int res_offset,int res_rows,int res_cols)
+#if cn == 1
+#define convertToDT(value) (float)(value)
+#elif cn == 2
+#define convertToDT(value) (float)(value.x + value.y)
+#elif cn == 3
+#define convertToDT(value) (float)(value.x + value.y + value.z)
+#elif cn == 4
+#define convertToDT(value) (float)(value.x + value.y + value.z + value.w)
+#else
+#error "cn should be 1-4"
+#endif
+
+#ifdef CALC_SUM
+
+__kernel void calcSum(__global const uchar * srcptr, int src_step, int src_offset,
+                      int cols, int total, __global float * dst)
 {
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
-    int i,j;
-    float sum = 0;
+    int lid = get_local_id(0), id = get_global_id(0);
 
-    int res_idx = mad24(gidy, res_step, res_offset + gidx * (int)sizeof(float));
+    __local WT localmem[WGS2_ALIGNED];
+    WT accumulator = (WT)(0), tmp;
 
-    if(gidx < res_cols && gidy < res_rows)
+    for ( ; id < total; id += WGS)
     {
-        for(i = 0; i < tpl_rows; i ++)
+        int src_index = mad24(id / cols, src_step, mad24(id % cols, TSIZE, src_offset));
+        T src = loadpix(srcptr + src_index);
+
+        tmp = convertToWT(src);
+
+        accumulator = mad(tmp, tmp, accumulator);
+    }
+
+    if (lid < WGS2_ALIGNED)
+        localmem[lid] = accumulator;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (lid >= WGS2_ALIGNED && total >= WGS2_ALIGNED)
+        localmem[lid - WGS2_ALIGNED] += accumulator;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    for (int lsize = WGS2_ALIGNED >> 1; lsize > 0; lsize >>= 1)
+    {
+        if (lid < lsize)
         {
-            __global const ELEM_TYPE * img_ptr = (__global const ELEM_TYPE *)(img + mad24(gidy + i, img_step, gidx*DATA_SIZE + img_offset));
-            __global const ELEM_TYPE * tpl_ptr = (__global const ELEM_TYPE *)(tpl + mad24(i, tpl_step, tpl_offset));
-
-            for(j = 0; j < tpl_cols; j ++)
-
-#pragma unroll
-                for (int c = 0; c < CN; c++)
-
-                    sum += (float)(img_ptr[j*CN+c] * tpl_ptr[j*CN+c]);
-
+            int lid2 = lsize + lid;
+            localmem[lid] += localmem[lid2];
         }
-        __global float * result = (__global float *)(res+res_idx);
-        *result = sum;
+        barrier(CLK_LOCAL_MEM_FENCE);
     }
+
+    if (lid == 0)
+        dst[0] = convertToDT(localmem[0]);
 }
 
-__kernel void matchTemplate_CCORR_NORMED ( __global const uchar * img_sqsums, int img_sqsums_step, int img_sqsums_offset,
-                                           __global uchar * res, int res_step, int res_offset, int res_rows, int res_cols,
-                                           int tpl_rows, int tpl_cols, float tpl_sqsum)
+#elif defined FIRST_CHANNEL
+
+__kernel void extractFirstChannel( const __global uchar* img, int img_step, int img_offset,
+                                   __global uchar* res, int res_step, int res_offset, int rows, int cols)
 {
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
+    int x = get_global_id(0);
+    int y = get_global_id(1)*PIX_PER_WI_Y;
 
-    img_sqsums_step /= sizeof(float);
-    img_sqsums_offset /= sizeof(float);
-
-    int res_idx = mad24(gidy, res_step, res_offset + gidx * (int)sizeof(float));
-
-    if(gidx < res_cols && gidy < res_rows)
+    if(x < cols )
     {
-        __global float * sqsum = (__global float*)(img_sqsums);
-        float image_sqsum_ = (float)(
-                                 (sqsum[SQSUMS_PTR(tpl_cols, tpl_rows)] - sqsum[SQSUMS_PTR(tpl_cols, 0)]) -
-                                 (sqsum[SQSUMS_PTR(0, tpl_rows)] - sqsum[SQSUMS_PTR(0, 0)]));
-
-        __global float * result = (__global float *)(res+res_idx);
-        *result = normAcc(*result, sqrt(image_sqsum_ * tpl_sqsum));
-    }
-}
-
-////////////////////////////////////////////SQDIFF////////////////////////////////////////////////////////////////////////
-
-__kernel void matchTemplate_Naive_SQDIFF(__global const uchar * img,int img_step,int img_offset,
-                                         __global const uchar * tpl,int tpl_step,int tpl_offset,int tpl_rows, int tpl_cols,
-                                         __global uchar * res,int res_step,int res_offset,int res_rows,int res_cols)
-{
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
-    int i,j;
-    float delta;
-    float sum = 0;
-
-    int res_idx = mad24(gidy, res_step, res_offset + gidx * (int)sizeof(float));
-
-    if(gidx < res_cols && gidy < res_rows)
-    {
-        for(i = 0; i < tpl_rows; i ++)
+        #pragma unroll
+        for (int cy=0; cy < PIX_PER_WI_Y && y < rows; ++cy, ++y)
         {
-            __global const ELEM_TYPE * img_ptr = (__global const ELEM_TYPE *)(img + mad24(gidy + i, img_step, gidx*DATA_SIZE + img_offset));
-            __global const ELEM_TYPE * tpl_ptr = (__global const ELEM_TYPE *)(tpl + mad24(i, tpl_step, tpl_offset));
+            T1 image = *(__global const T1*)(img + mad24(y, img_step, mad24(x, (int)sizeof(T1)*cn, img_offset)));;
+            int res_idx = mad24(y, res_step, mad24(x, (int)sizeof(float), res_offset));
+            *(__global float *)(res + res_idx) = image;
+        }
+    }
+}
 
-            for(j = 0; j < tpl_cols; j ++)
+#elif defined CCORR
 
-#pragma unroll
-                for (int c = 0; c < CN; c++)
+#if cn==1 && PIX_PER_WI_X==4
+
+__kernel void matchTemplate_Naive_CCORR(__global const uchar * srcptr, int src_step, int src_offset,
+                                        __global const uchar * templateptr, int template_step, int template_offset, int template_rows, int template_cols,
+                                        __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
+{
+    int x0 = get_global_id(0)*PIX_PER_WI_X;
+    int y = get_global_id(1);
+
+    if (y < dst_rows)
+    {
+        if (x0 + PIX_PER_WI_X <= dst_cols)
+        {
+            WT sum = (WT)(0);
+
+            int ind = mad24(y, src_step, mad24(x0, (int)sizeof(T1), src_offset));
+            __global const T1 * template = (__global const T1*)(templateptr + template_offset);
+
+            for (int i = 0; i < template_rows; ++i)
+            {
+                for (int j = 0; j < template_cols; ++j)
                 {
-                    delta = (float)(img_ptr[j*CN+c] - tpl_ptr[j*CN+c]);
-                    sum += delta*delta;
+                    T temp = (T)(template[j]);
+                    T src = vload4(0, (__global const T1*)(srcptr + ind + j*(int)sizeof(T1)));
+
+                    sum = mad(convertToWT(src), convertToWT(temp), sum);
+
                 }
+            ind += src_step;
+            template = (__global const T1 *)((__global const uchar *)template + template_step);
+            }
+
+            T temp = (T)(template[0]);
+            int dst_idx = mad24(y, dst_step, mad24(x0, (int)sizeof(float), dst_offset));
+            *(__global float4 *)(dst + dst_idx) = convert_float4(sum);
         }
-        __global float * result = (__global float *)(res+res_idx);
-        *result = sum;
+        else
+        {
+            WT1 sum [PIX_PER_WI_X];
+            #pragma unroll
+            for (int i=0; i < PIX_PER_WI_X; i++) sum[i] = 0;
+
+            __global const T1 * src = (__global const T1 *)(srcptr + mad24(y, src_step, mad24(x0, (int)sizeof(T1), src_offset)));
+            __global const T1 * template = (__global const T1 *)(templateptr + template_offset);
+
+            for (int i = 0; i < template_rows; ++i)
+            {
+                for (int j = 0; j < template_cols; ++j)
+                {
+                    #pragma unroll
+                    for (int cx=0, x = x0; cx < PIX_PER_WI_X && x < dst_cols; ++cx, ++x)
+                    {
+                        sum[cx] = mad(convertToWT1(src[j+cx]), convertToWT1(template[j]), sum[cx]);
+                    }
+                }
+
+            src = (__global const T1 *)((__global const uchar *)src + src_step);
+            template = (__global const T1 *)((__global const uchar *)template + template_step);
+            }
+
+            #pragma unroll
+            for (int cx=0; cx < PIX_PER_WI_X && x0 < dst_cols; ++cx, ++x0)
+            {
+                int dst_idx = mad24(y, dst_step, mad24(x0, (int)sizeof(float), dst_offset));
+                *(__global float *)(dst + dst_idx) = convertToDT(sum[cx]);
+            }
+        }
     }
 }
 
-__kernel void matchTemplate_SQDIFF_NORMED ( __global const uchar * img_sqsums, int img_sqsums_step, int img_sqsums_offset,
-                                            __global uchar * res, int res_step, int res_offset, int res_rows, int res_cols,
-                                            int tpl_rows, int tpl_cols, float tpl_sqsum)
+#else
+
+__kernel void matchTemplate_Naive_CCORR(__global const uchar * srcptr, int src_step, int src_offset,
+                                        __global const uchar * templateptr, int template_step, int template_offset, int template_rows, int template_cols,
+                                        __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
 {
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
-    img_sqsums_step /= sizeof(float);
-    img_sqsums_offset /= sizeof(float);
-
-    int res_idx = mad24(gidy, res_step, res_offset + gidx * (int)sizeof(float));
-
-    if(gidx < res_cols && gidy < res_rows)
+    if (x < dst_cols && y < dst_rows)
     {
-        __global float * sqsum = (__global float*)(img_sqsums);
+        WT sum = (WT)(0);
+
+        for (int i = 0; i < template_rows; ++i)
+        {
+            for (int j = 0; j < template_cols; ++j)
+            {
+                T src      = loadpix(srcptr      + mad24(y+i, src_step,    mad24(x+j, TSIZE, src_offset)));
+                T template = loadpix(templateptr + mad24(i, template_step, mad24(j, TSIZE, template_offset)));
+
+                sum = mad(convertToWT(src), convertToWT(template), sum);
+            }
+        }
+
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        *(__global float *)(dst + dst_idx) = convertToDT(sum);
+    }
+}
+#endif
+
+#elif defined CCORR_NORMED
+
+__kernel void matchTemplate_CCORR_NORMED(__global const uchar * src_sqsums, int src_sqsums_step, int src_sqsums_offset,
+                                         __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                         int template_rows, int template_cols, __global const float * template_sqsum)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < dst_cols && y < dst_rows)
+    {
+        __global const float * sqsum = (__global const float *)(src_sqsums);
+
+        src_sqsums_step /= sizeof(float);
+        src_sqsums_offset /= sizeof(float);
+        float image_sqsum_ = (float)(sqsum[SQSUMS_PTR(template_cols, template_rows)] - sqsum[SQSUMS_PTR(template_cols, 0)] -
+                                     sqsum[SQSUMS_PTR(0, template_rows)] + sqsum[SQSUMS_PTR(0, 0)]);
+
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        __global float * dstult = (__global float *)(dst + dst_idx);
+        *dstult = normAcc(*dstult, sqrt(image_sqsum_ * template_sqsum[0]));
+    }
+}
+
+#elif defined SQDIFF
+
+__kernel void matchTemplate_Naive_SQDIFF(__global const uchar * srcptr, int src_step, int src_offset,
+                                         __global const uchar * templateptr, int template_step, int template_offset, int template_rows, int template_cols,
+                                         __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < dst_cols && y < dst_rows)
+    {
+        WT sum = (WT)(0), value;
+
+        for (int i = 0; i < template_rows; ++i)
+        {
+            for (int j = 0; j < template_cols; ++j)
+            {
+                T src      = loadpix(srcptr      + mad24(y+i, src_step,    mad24(x+j, TSIZE, src_offset)));
+                T template = loadpix(templateptr + mad24(i, template_step, mad24(j, TSIZE, template_offset)));
+
+                value = convertToWT(src) - convertToWT(template);
+
+                sum = mad(value, value, sum);
+            }
+        }
+
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        *(__global float *)(dst + dst_idx) = convertToDT(sum);
+    }
+}
+
+#elif defined SQDIFF_PREPARED
+
+__kernel void matchTemplate_Prepared_SQDIFF(__global const uchar * src_sqsums, int src_sqsums_step, int src_sqsums_offset,
+                                            __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                            int template_rows, int template_cols, __global const float * template_sqsum)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < dst_cols && y < dst_rows)
+    {
+        src_sqsums_step /= sizeof(float);
+        src_sqsums_offset /= sizeof(float);
+
+        __global const float * sqsum = (__global const float *)(src_sqsums);
         float image_sqsum_ = (float)(
-                                 (sqsum[SQSUMS_PTR(tpl_cols, tpl_rows)] - sqsum[SQSUMS_PTR(tpl_cols, 0)]) -
-                                 (sqsum[SQSUMS_PTR(0, tpl_rows)] - sqsum[SQSUMS_PTR(0, 0)]));
+                                 (sqsum[SQSUMS_PTR(template_cols, template_rows)] - sqsum[SQSUMS_PTR(template_cols, 0)]) -
+                                 (sqsum[SQSUMS_PTR(0, template_rows)] - sqsum[SQSUMS_PTR(0, 0)]));
+        float template_sqsum_value = template_sqsum[0];
 
-        __global float * result = (__global float *)(res+res_idx);
-
-        *result = normAcc_SQDIFF(image_sqsum_ - 2.f * result[0] + tpl_sqsum, sqrt(image_sqsum_ * tpl_sqsum));
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        __global float * dstult = (__global float *)(dst + dst_idx);
+        *dstult = image_sqsum_ - 2.0f * dstult[0] + template_sqsum_value;
     }
 }
 
-////////////////////////////////////////////CCOEFF/////////////////////////////////////////////////////////////////
+#elif defined SQDIFF_NORMED
 
-__kernel void matchTemplate_Prepared_CCOEFF_C1 (__global const uchar * img_sums, int img_sums_step, int img_sums_offset,
-                                                  __global uchar * res, int res_step, int res_offset, int res_rows, int res_cols,
-                                                  int tpl_rows, int tpl_cols, float tpl_sum)
+__kernel void matchTemplate_SQDIFF_NORMED(__global const uchar * src_sqsums, int src_sqsums_step, int src_sqsums_offset,
+                                          __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                          int template_rows, int template_cols, __global const float * template_sqsum)
 {
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
-    img_sums_step /= ELEM_SIZE;
-    img_sums_offset /= ELEM_SIZE;
-
-    int res_idx = mad24(gidy, res_step, res_offset + gidx * (int)sizeof(float));
-    float image_sum_ = 0;
-
-    if(gidx < res_cols && gidy < res_rows)
+    if (x < dst_cols && y < dst_rows)
     {
-        __global ELEM_TYPE* sum = (__global ELEM_TYPE*)(img_sums);
+        src_sqsums_step /= sizeof(float);
+        src_sqsums_offset /= sizeof(float);
 
-        image_sum_ += (float)((sum[SUMS_PTR(tpl_cols, tpl_rows)] - sum[SUMS_PTR(tpl_cols, 0)])-
-                              (sum[SUMS_PTR(0, tpl_rows)] - sum[SUMS_PTR(0, 0)])) * tpl_sum;
+        __global const float * sqsum = (__global const float *)(src_sqsums);
+        float image_sqsum_ = (float)(
+                                 (sqsum[SQSUMS_PTR(template_cols, template_rows)] - sqsum[SQSUMS_PTR(template_cols, 0)]) -
+                                 (sqsum[SQSUMS_PTR(0, template_rows)] - sqsum[SQSUMS_PTR(0, 0)]));
+        float template_sqsum_value = template_sqsum[0];
 
-        __global float * result = (__global float *)(res+res_idx);
-        *result -= image_sum_;
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        __global float * dstult = (__global float *)(dst + dst_idx);
+        *dstult = normAcc_SQDIFF(image_sqsum_ - 2.0f * dstult[0] + template_sqsum_value, sqrt(image_sqsum_ * template_sqsum_value));
     }
 }
 
-__kernel void matchTemplate_Prepared_CCOEFF_C2 (__global const uchar * img_sums, int img_sums_step, int img_sums_offset,
-                                                  __global uchar * res, int res_step, int res_offset, int res_rows, int res_cols,
-                                                  int tpl_rows, int tpl_cols, float tpl_sum_0,float tpl_sum_1)
+#elif defined CCOEFF
+
+#if cn == 1
+
+__kernel void matchTemplate_Prepared_CCOEFF(__global const uchar * src_sums, int src_sums_step, int src_sums_offset,
+                                            __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                            int template_rows, int template_cols, float template_sum)
 {
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
-    img_sums_step /= ELEM_SIZE;
-    img_sums_offset /= ELEM_SIZE;
-
-    int res_idx = mad24(gidy, res_step, res_offset + gidx * (int)sizeof(float));
-    float image_sum_ = 0;
-
-    if(gidx < res_cols && gidy < res_rows)
+    if (x < dst_cols && y < dst_rows)
     {
-        __global ELEM_TYPE* sum = (__global ELEM_TYPE*)(img_sums);
+        __global const T* sum = (__global const T*)(src_sums + mad24(y, src_sums_step, mad24(x, (int)sizeof(T), src_sums_offset)));
 
-        image_sum_ += tpl_sum_0 * (float)((sum[SUMS_PTR(tpl_cols, tpl_rows)] - sum[SUMS_PTR(tpl_cols, 0)])    -(sum[SUMS_PTR(0, tpl_rows)] - sum[SUMS_PTR(0, 0)]));
-        image_sum_ += tpl_sum_1 * (float)((sum[SUMS_PTR(tpl_cols, tpl_rows)+1] - sum[SUMS_PTR(tpl_cols, 0)+1])-(sum[SUMS_PTR(0, tpl_rows)+1] - sum[SUMS_PTR(0, 0)+1]));
+        int step = src_sums_step/(int)sizeof(T);
 
-        __global float * result = (__global float *)(res+res_idx);
+        T image_sum = (T)(0), value;
 
-        *result -= image_sum_;
+        value = (T)(sum[mad24(template_rows, step, template_cols)] - sum[mad24(template_rows, step, 0)] - sum[template_cols] + sum[0]);
+
+        image_sum = mad(value, template_sum , image_sum);
+
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        *(__global float *)(dst + dst_idx) -= convertToDT(image_sum);
     }
 }
 
-__kernel void matchTemplate_Prepared_CCOEFF_C4 (__global const uchar * img_sums, int img_sums_step, int img_sums_offset,
-                                                __global uchar * res, int res_step, int res_offset, int res_rows, int res_cols,
-                                                int tpl_rows, int tpl_cols, float tpl_sum_0,float tpl_sum_1,float tpl_sum_2,float tpl_sum_3)
+#elif cn==3
+
+__kernel void matchTemplate_Prepared_CCOEFF(__global const uchar * src_sums, int src_sums_step, int src_sums_offset,
+                                            __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                            int template_rows, int template_cols, float4 template_sum)
 {
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
-    img_sums_step /= ELEM_SIZE;
-    img_sums_offset /= ELEM_SIZE;
-
-    int res_idx = mad24(gidy, res_step, res_offset + gidx * (int)sizeof(float));
-    float image_sum_ = 0;
-
-    if(gidx < res_cols && gidy < res_rows)
+    if (x < dst_cols && y < dst_rows)
     {
-        __global ELEM_TYPE* sum = (__global ELEM_TYPE*)(img_sums);
+        T image_sum = (T)(0), value, temp_sum;
 
-        int c_r = SUMS_PTR(tpl_cols, tpl_rows);
-        int c_o = SUMS_PTR(tpl_cols, 0);
-        int o_r = SUMS_PTR(0,tpl_rows);
-        int oo = SUMS_PTR(0, 0);
+        temp_sum.x = template_sum.x;
+        temp_sum.y = template_sum.y;
+        temp_sum.z = template_sum.z;
 
-        image_sum_ += tpl_sum_0 * (float)((sum[c_r]   - sum[c_o])  -(sum[o_r]   - sum[oo]));
-        image_sum_ += tpl_sum_1 * (float)((sum[c_r+1] - sum[c_o+1])-(sum[o_r+1] - sum[oo+1]));
-        image_sum_ += tpl_sum_2 * (float)((sum[c_r+2] - sum[c_o+2])-(sum[o_r+2] - sum[oo+2]));
-        image_sum_ += tpl_sum_3 * (float)((sum[c_r+3] - sum[c_o+3])-(sum[o_r+3] - sum[oo+3]));
+        value  = vload3(0, (__global const T1 *)(src_sums + SUMS(template_cols, template_rows)));
+        value -= vload3(0, (__global const T1 *)(src_sums + SUMS(0, template_rows)));
+        value -= vload3(0, (__global const T1 *)(src_sums + SUMS(template_cols, 0)));
+        value += vload3(0, (__global const T1 *)(src_sums + SUMS(0, 0)));
 
-        __global float * result = (__global float *)(res+res_idx);
+        image_sum = mad(value, temp_sum , 0);
 
-        *result -= image_sum_;
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        *(__global float *)(dst + dst_idx) -= convertToDT(image_sum);
     }
 }
 
-__kernel void matchTemplate_CCOEFF_NORMED_C1 (__global const uchar * img_sums, int img_sums_step, int img_sums_offset,
-                                              __global const uchar * img_sqsums, int img_sqsums_step, int img_sqsums_offset,
-                                              __global uchar * res, int res_step, int res_offset, int res_rows, int res_cols,
-                                              int t_rows, int t_cols, float weight, float tpl_sum, float tpl_sqsum)
+#elif (cn==2 || cn==4)
+
+__kernel void matchTemplate_Prepared_CCOEFF(__global const uchar * src_sums, int src_sums_step, int src_sums_offset,
+                                            __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                            int template_rows, int template_cols, float4 template_sum)
 {
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
-    img_sums_offset   /= ELEM_SIZE;
-    img_sums_step     /= ELEM_SIZE;
-    img_sqsums_step   /= sizeof(float);
-    img_sqsums_offset /= sizeof(float);
-
-    int res_idx = mad24(gidy, res_step, res_offset + gidx * (int)sizeof(float));
-
-    if(gidx < res_cols && gidy < res_rows)
+    if (x < dst_cols && y < dst_rows)
     {
-        __global ELEM_TYPE* sum = (__global ELEM_TYPE*)(img_sums);
-        __global float * sqsum = (__global float*)(img_sqsums);
+        __global const T* sum = (__global const T*)(src_sums + mad24(y, src_sums_step, mad24(x, (int)sizeof(T), src_sums_offset)));
 
-        float image_sum_ =  (float)((sum[SUMS_PTR(t_cols, t_rows)] - sum[SUMS_PTR(t_cols, 0)]) -
-                                    (sum[SUMS_PTR(0, t_rows)] - sum[SUMS_PTR(0, 0)]));
+        int step = src_sums_step/(int)sizeof(T);
 
-        float image_sqsum_ = (float)((sqsum[SQSUMS_PTR(t_cols, t_rows)] - sqsum[SQSUMS_PTR(t_cols, 0)]) -
-                                     (sqsum[SQSUMS_PTR(0, t_rows)] - sqsum[SQSUMS_PTR(0, 0)]));
+        T image_sum = (T)(0), value, temp_sum;
 
-        __global float * result = (__global float *)(res+res_idx);
+#if cn==2
+        temp_sum.x = template_sum.x;
+        temp_sum.y = template_sum.y;
+#else
+        temp_sum = template_sum;
+#endif
 
-        *result = normAcc((*result) - image_sum_ * tpl_sum,
-                          sqrt(tpl_sqsum * (image_sqsum_ - weight * image_sum_ * image_sum_)));
+        value = (sum[mad24(template_rows, step, template_cols)] - sum[mad24(template_rows, step, 0)] - sum[template_cols] + sum[0]);
+
+        image_sum = mad(value, temp_sum , image_sum);
+
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        *(__global float *)(dst + dst_idx) -= convertToDT(image_sum);
     }
 }
 
-__kernel void matchTemplate_CCOEFF_NORMED_C2 (__global const uchar * img_sums, int img_sums_step, int img_sums_offset,
-                                              __global const uchar * img_sqsums, int img_sqsums_step, int img_sqsums_offset,
-                                              __global uchar * res, int res_step, int res_offset, int res_rows, int res_cols,
-                                              int t_rows, int t_cols, float weight, float tpl_sum_0, float tpl_sum_1, float tpl_sqsum)
+#else
+#error "cn should be 1-4"
+#endif
+
+#elif defined CCOEFF_NORMED
+
+#if cn == 1
+
+__kernel void matchTemplate_CCOEFF_NORMED(__global const uchar * src_sums, int src_sums_step, int src_sums_offset,
+                                          __global const uchar * src_sqsums, int src_sqsums_step, int src_sqsums_offset,
+                                          __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                          int t_rows, int t_cols, float weight, float template_sum, float template_sqsum)
 {
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
-
-    img_sums_offset   /= ELEM_SIZE;
-    img_sums_step     /= ELEM_SIZE;
-    img_sqsums_step   /= sizeof(float);
-    img_sqsums_offset /= sizeof(float);
-
-    int res_idx = mad24(gidy, res_step, res_offset + gidx * (int)sizeof(float));
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
     float sum_[2];
     float sqsum_[2];
 
-    if(gidx < res_cols && gidy < res_rows)
+
+    if (x < dst_cols && y < dst_rows)
     {
-        __global ELEM_TYPE* sum = (__global ELEM_TYPE*)(img_sums);
-        __global float * sqsum = (__global float*)(img_sqsums);
+        int step = src_sums_step/(int)sizeof(T);
 
-        sum_[0] =  (float)((sum[SUMS_PTR(t_cols, t_rows)] - sum[SUMS_PTR(t_cols, 0)])-(sum[SUMS_PTR(0, t_rows)] - sum[SUMS_PTR(0, 0)]));
-        sum_[1] =  (float)((sum[SUMS_PTR(t_cols, t_rows)+1] - sum[SUMS_PTR(t_cols, 0)+1])-(sum[SUMS_PTR(0, t_rows)+1] - sum[SUMS_PTR(0, 0)+1]));
+        __global const T* sum   = (__global const T*)(src_sums + mad24(y, src_sums_step,     mad24(x, (int)sizeof(T), src_sums_offset)));
+        __global const T* sqsum = (__global const T*)(src_sqsums + mad24(y, src_sqsums_step, mad24(x, (int)sizeof(T), src_sqsums_offset)));
 
-        sqsum_[0] = (float)((sqsum[SQSUMS_PTR(t_cols, t_rows)] - sqsum[SQSUMS_PTR(t_cols, 0)])-(sqsum[SQSUMS_PTR(0, t_rows)] - sqsum[SQSUMS_PTR(0, 0)]));
-        sqsum_[1] = (float)((sqsum[SQSUMS_PTR(t_cols, t_rows)+1] - sqsum[SQSUMS_PTR(t_cols, 0)+1])-(sqsum[SQSUMS_PTR(0, t_rows)+1] - sqsum[SQSUMS_PTR(0, 0)+1]));
+        T value_sum   = sum[mad24(t_rows, step, t_cols)] - sum[mad24(t_rows, step, 0)] - sum[t_cols] + sum[0];
+        T value_sqsum = sqsum[mad24(t_rows, step, t_cols)] - sqsum[mad24(t_rows, step, 0)] - sqsum[t_cols] + sqsum[0];
 
-        float num = sum_[0]*tpl_sum_0 + sum_[1]*tpl_sum_1;
+        float num = convertToDT(mad(value_sum, template_sum, 0));
 
-        float denum = sqrt( tpl_sqsum * (sqsum_[0] - weight * sum_[0]* sum_[0] +
-                                         sqsum_[1] - weight * sum_[1]* sum_[1]));
+        value_sqsum -= weight * value_sum * value_sum;
+        float denum = sqrt(mad(template_sqsum, convertToDT(value_sqsum), 0));
 
-        __global float * result = (__global float *)(res+res_idx);
-        *result = normAcc((*result) - num, denum);
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        __global float * dstult = (__global float *)(dst+dst_idx);
+        *dstult = normAcc((*dstult) - num, denum);
     }
 }
 
-__kernel void matchTemplate_CCOEFF_NORMED_C4 (__global const uchar * img_sums, int img_sums_step, int img_sums_offset,
-                                              __global const uchar * img_sqsums, int img_sqsums_step, int img_sqsums_offset,
-                                              __global uchar * res, int res_step, int res_offset, int res_rows, int res_cols,
-                                              int t_rows, int t_cols, float weight,
-                                              float tpl_sum_0,float tpl_sum_1,float tpl_sum_2,float tpl_sum_3,
-                                              float tpl_sqsum)
+#elif cn==3
+
+__kernel void matchTemplate_CCOEFF_NORMED(__global const uchar * src_sums, int src_sums_step, int src_sums_offset,
+                                          __global const uchar * src_sqsums, int src_sqsums_step, int src_sqsums_offset,
+                                          __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                          int t_rows, int t_cols, float weight, float4 template_sum, float template_sqsum)
 {
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
-    img_sums_offset   /= ELEM_SIZE;
-    img_sums_step     /= ELEM_SIZE;
-    img_sqsums_step   /= sizeof(float);
-    img_sqsums_offset /= sizeof(float);
-
-    int res_idx = mad24(gidy, res_step, res_offset + gidx * (int)sizeof(float));
-
-    float sum_[4];
-    float sqsum_[4];
-
-    if(gidx < res_cols && gidy < res_rows)
+    if (x < dst_cols && y < dst_rows)
     {
-        __global ELEM_TYPE* sum = (__global ELEM_TYPE*)(img_sums);
-        __global float * sqsum = (__global float*)(img_sqsums);
+        int step = src_sums_step/(int)sizeof(T);
 
-        int c_r = SUMS_PTR(t_cols, t_rows);
-        int c_o = SUMS_PTR(t_cols, 0);
-        int o_r = SUMS_PTR(0, t_rows);
-        int o_o = SUMS_PTR(0, 0);
+        T temp_sum, value_sum, value_sqsum;
 
-        sum_[0] =  (float)((sum[c_r]   - sum[c_o])  -(sum[o_r]   - sum[o_o ]));
-        sum_[1] =  (float)((sum[c_r+1] - sum[c_o+1])-(sum[o_r+1] - sum[o_o +1]));
-        sum_[2] =  (float)((sum[c_r+2] - sum[c_o+2])-(sum[o_r+2] - sum[o_o +2]));
-        sum_[3] =  (float)((sum[c_r+3] - sum[c_o+3])-(sum[o_r+3] - sum[o_o +3]));
+        temp_sum.x = template_sum.x;
+        temp_sum.y = template_sum.y;
+        temp_sum.z = template_sum.z;
 
-        c_r = SQSUMS_PTR(t_cols, t_rows);
-        c_o = SQSUMS_PTR(t_cols, 0);
-        o_r = SQSUMS_PTR(0, t_rows);
-        o_o = SQSUMS_PTR(0, 0);
+        value_sum  = vload3(0, (__global const T1 *)(src_sums + SUMS(t_cols, t_rows)));
+        value_sum -= vload3(0, (__global const T1 *)(src_sums + SUMS(0, t_rows)));
+        value_sum -= vload3(0, (__global const T1 *)(src_sums + SUMS(t_cols, 0)));
+        value_sum += vload3(0, (__global const T1 *)(src_sums + SUMS(0, 0)));
 
-        sqsum_[0] = (float)((sqsum[c_r]   - sqsum[c_o])  -(sqsum[o_r]   - sqsum[o_o]));
-        sqsum_[1] = (float)((sqsum[c_r+1] - sqsum[c_o+1])-(sqsum[o_r+1] - sqsum[o_o+1]));
-        sqsum_[2] = (float)((sqsum[c_r+2] - sqsum[c_o+2])-(sqsum[o_r+2] - sqsum[o_o+2]));
-        sqsum_[3] = (float)((sqsum[c_r+3] - sqsum[c_o+3])-(sqsum[o_r+3] - sqsum[o_o+3]));
+        value_sqsum  = vload3(0, (__global const T1 *)(src_sqsums + SQ_SUMS(t_cols, t_rows)));
+        value_sqsum -= vload3(0, (__global const T1 *)(src_sqsums + SQ_SUMS(0, t_rows)));
+        value_sqsum -= vload3(0, (__global const T1 *)(src_sqsums + SQ_SUMS(t_cols, 0)));
+        value_sqsum += vload3(0, (__global const T1 *)(src_sqsums + SQ_SUMS(0, 0)));
 
-        float num = sum_[0]*tpl_sum_0 + sum_[1]*tpl_sum_1 + sum_[2]*tpl_sum_2 + sum_[3]*tpl_sum_3;
+        float num = convertToDT(mad(value_sum, temp_sum, 0));
 
-        float denum = sqrt( tpl_sqsum * (
-                                sqsum_[0] - weight * sum_[0]* sum_[0] +
-                                sqsum_[1] - weight * sum_[1]* sum_[1] +
-                                sqsum_[2] - weight * sum_[2]* sum_[2] +
-                                sqsum_[3] - weight * sum_[3]* sum_[3] ));
+        value_sqsum -= weight * value_sum * value_sum;
+        float denum = sqrt(mad(template_sqsum, convertToDT(value_sqsum), 0));
 
-        __global float * result = (__global float *)(res+res_idx);
-        *result = normAcc((*result) - num, denum);
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        __global float * dstult = (__global float *)(dst+dst_idx);
+        *dstult = normAcc((*dstult) - num, denum);
     }
 }
+
+#elif (cn==2 || cn==4)
+
+__kernel void matchTemplate_CCOEFF_NORMED(__global const uchar * src_sums, int src_sums_step, int src_sums_offset,
+                                          __global const uchar * src_sqsums, int src_sqsums_step, int src_sqsums_offset,
+                                          __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                          int t_rows, int t_cols, float weight, float4 template_sum, float template_sqsum)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < dst_cols && y < dst_rows)
+    {
+        int step = src_sums_step/(int)sizeof(T);
+
+        T temp_sum;
+
+        __global const T* sum   = (__global const T*)(src_sums + mad24(y, src_sums_step,     mad24(x, (int)sizeof(T), src_sums_offset)));
+        __global const T* sqsum = (__global const T*)(src_sqsums + mad24(y, src_sqsums_step, mad24(x, (int)sizeof(T), src_sqsums_offset)));
+
+        T value_sum   = sum[mad24(t_rows, step, t_cols)] - sum[mad24(t_rows, step, 0)] - sum[t_cols] + sum[0];
+        T value_sqsum = sqsum[mad24(t_rows, step, t_cols)] - sqsum[mad24(t_rows, step, 0)] - sqsum[t_cols] + sqsum[0];
+
+#if cn==2
+        temp_sum.x = template_sum.x;
+        temp_sum.y = template_sum.y;
+#else
+        temp_sum = template_sum;
+#endif
+
+        float num = convertToDT(mad(value_sum, temp_sum, 0));
+
+        value_sqsum -= weight * value_sum * value_sum;
+        float denum = sqrt(mad(template_sqsum, convertToDT(value_sqsum), 0));
+
+        int dst_idx = mad24(y, dst_step, mad24(x, (int)sizeof(float), dst_offset));
+        __global float * dstult = (__global float *)(dst+dst_idx);
+        *dstult = normAcc((*dstult) - num, denum);
+    }
+}
+
+#else
+#error "cn should be 1-4"
+#endif
+
+#endif

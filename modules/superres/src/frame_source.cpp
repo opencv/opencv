@@ -80,7 +80,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Empty()
 //////////////////////////////////////////////////////
 // VideoFrameSource & CameraFrameSource
 
-#ifndef HAVE_OPENCV_HIGHGUI
+#ifndef HAVE_OPENCV_VIDEOIO
 
 Ptr<FrameSource> cv::superres::createFrameSource_Video(const String& fileName)
 {
@@ -96,7 +96,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
     return Ptr<FrameSource>();
 }
 
-#else // HAVE_OPENCV_HIGHGUI
+#else // HAVE_OPENCV_VIDEOIO
 
 namespace
 {
@@ -187,7 +187,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
     return makePtr<CameraFrameSource>(deviceId);
 }
 
-#endif // HAVE_OPENCV_HIGHGUI
+#endif // HAVE_OPENCV_VIDEOIO
 
 //////////////////////////////////////////////////////
 // VideoFrameSource_CUDA

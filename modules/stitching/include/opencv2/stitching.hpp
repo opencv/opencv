@@ -55,7 +55,7 @@
 
 namespace cv {
 
-class CV_EXPORTS Stitcher
+class CV_EXPORTS_W Stitcher
 {
 public:
     enum { ORIG_RESOL = -1 };
@@ -67,23 +67,24 @@ public:
         ERR_CAMERA_PARAMS_ADJUST_FAIL = 3
     };
 
+   // Stitcher() {}
     // Creates stitcher with default parameters
     static Stitcher createDefault(bool try_use_gpu = false);
 
-    double registrationResol() const { return registr_resol_; }
-    void setRegistrationResol(double resol_mpx) { registr_resol_ = resol_mpx; }
+    CV_WRAP double registrationResol() const { return registr_resol_; }
+    CV_WRAP void setRegistrationResol(double resol_mpx) { registr_resol_ = resol_mpx; }
 
-    double seamEstimationResol() const { return seam_est_resol_; }
-    void setSeamEstimationResol(double resol_mpx) { seam_est_resol_ = resol_mpx; }
+    CV_WRAP double seamEstimationResol() const { return seam_est_resol_; }
+    CV_WRAP void setSeamEstimationResol(double resol_mpx) { seam_est_resol_ = resol_mpx; }
 
-    double compositingResol() const { return compose_resol_; }
-    void setCompositingResol(double resol_mpx) { compose_resol_ = resol_mpx; }
+    CV_WRAP double compositingResol() const { return compose_resol_; }
+    CV_WRAP void setCompositingResol(double resol_mpx) { compose_resol_ = resol_mpx; }
 
-    double panoConfidenceThresh() const { return conf_thresh_; }
-    void setPanoConfidenceThresh(double conf_thresh) { conf_thresh_ = conf_thresh; }
+    CV_WRAP double panoConfidenceThresh() const { return conf_thresh_; }
+    CV_WRAP void setPanoConfidenceThresh(double conf_thresh) { conf_thresh_ = conf_thresh; }
 
-    bool waveCorrection() const { return do_wave_correct_; }
-    void setWaveCorrection(bool flag) { do_wave_correct_ = flag; }
+    CV_WRAP bool waveCorrection() const { return do_wave_correct_; }
+    CV_WRAP void setWaveCorrection(bool flag) { do_wave_correct_ = flag; }
 
     detail::WaveCorrectKind waveCorrectKind() const { return wave_correct_kind_; }
     void setWaveCorrectKind(detail::WaveCorrectKind kind) { wave_correct_kind_ = kind; }
@@ -98,8 +99,8 @@ public:
     void setFeaturesMatcher(Ptr<detail::FeaturesMatcher> features_matcher)
         { features_matcher_ = features_matcher; }
 
-    const cv::Mat& matchingMask() const { return matching_mask_; }
-    void setMatchingMask(const cv::Mat &mask)
+    const cv::UMat& matchingMask() const { return matching_mask_; }
+    void setMatchingMask(const cv::UMat &mask)
     {
         CV_Assert(mask.type() == CV_8U && mask.cols == mask.rows);
         matching_mask_ = mask.clone();
@@ -127,21 +128,21 @@ public:
     const Ptr<detail::Blender> blender() const { return blender_; }
     void setBlender(Ptr<detail::Blender> b) { blender_ = b; }
 
-    Status estimateTransform(InputArray images);
-    Status estimateTransform(InputArray images, const std::vector<std::vector<Rect> > &rois);
+    CV_WRAP Status estimateTransform(InputArrayOfArrays images);
+    Status estimateTransform(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois);
 
-    Status composePanorama(OutputArray pano);
-    Status composePanorama(InputArray images, OutputArray pano);
+    CV_WRAP Status composePanorama(OutputArray pano);
+    Status composePanorama(InputArrayOfArrays images, OutputArray pano);
 
-    Status stitch(InputArray images, OutputArray pano);
-    Status stitch(InputArray images, const std::vector<std::vector<Rect> > &rois, OutputArray pano);
+    CV_WRAP Status stitch(InputArrayOfArrays images, OutputArray pano);
+    Status stitch(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois, OutputArray pano);
 
     std::vector<int> component() const { return indices_; }
     std::vector<detail::CameraParams> cameras() const { return cameras_; }
-    double workScale() const { return work_scale_; }
+    CV_WRAP double workScale() const { return work_scale_; }
 
 private:
-    Stitcher() {}
+    //Stitcher() {}
 
     Status matchImages();
     Status estimateCameraParams();
@@ -152,7 +153,7 @@ private:
     double conf_thresh_;
     Ptr<detail::FeaturesFinder> features_finder_;
     Ptr<detail::FeaturesMatcher> features_matcher_;
-    cv::Mat matching_mask_;
+    cv::UMat matching_mask_;
     Ptr<detail::BundleAdjusterBase> bundle_adjuster_;
     bool do_wave_correct_;
     detail::WaveCorrectKind wave_correct_kind_;
@@ -161,12 +162,12 @@ private:
     Ptr<detail::SeamFinder> seam_finder_;
     Ptr<detail::Blender> blender_;
 
-    std::vector<cv::Mat> imgs_;
+    std::vector<cv::UMat> imgs_;
     std::vector<std::vector<cv::Rect> > rois_;
     std::vector<cv::Size> full_img_sizes_;
     std::vector<detail::ImageFeatures> features_;
     std::vector<detail::MatchesInfo> pairwise_matches_;
-    std::vector<cv::Mat> seam_est_imgs_;
+    std::vector<cv::UMat> seam_est_imgs_;
     std::vector<int> indices_;
     std::vector<detail::CameraParams> cameras_;
     double work_scale_;
@@ -174,6 +175,8 @@ private:
     double seam_work_aspect_;
     double warped_image_scale_;
 };
+
+CV_EXPORTS_W Ptr<Stitcher> createStitcher(bool try_use_gpu = false);
 
 } // namespace cv
 

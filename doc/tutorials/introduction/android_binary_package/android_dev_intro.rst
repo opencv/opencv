@@ -5,7 +5,7 @@
 Introduction into Android Development
 *************************************
 
-This guide was designed to help you in learning Android development basics and seting up your
+This guide was designed to help you in learning Android development basics and setting up your
 working environment quickly. It was written with Windows 7 in mind, though it would work with Linux
 (Ubuntu), Mac OS X and any other OS supported by Android SDK.
 

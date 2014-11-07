@@ -64,6 +64,26 @@ This section contains valuable tutorials about how to read/save your image/video
                    :height: 90pt
                    :width:  90pt
 
++
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  =============== ======================================================
+  |hGDAL_IO|      *Title:* :ref:`Raster_IO_GDAL`
+
+                  *Compatibility:* > OpenCV 2.0
+
+                  *Author:* |Author_MarvinS|
+
+                  Read common GIS Raster and DEM files to display and manipulate geographic data.
+
+  =============== ======================================================
+
+  .. |hGDAL_IO| image::  images/gdal-io.jpg
+               :height: 90pt
+               :width:  90pt
+
+
 
 .. raw:: latex
 
@@ -75,3 +95,4 @@ This section contains valuable tutorials about how to read/save your image/video
    ../trackbar/trackbar
    ../video-input-psnr-ssim/video-input-psnr-ssim
    ../video-write/video-write
+   ../raster-gdal/raster_io_gdal

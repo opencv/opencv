@@ -64,7 +64,7 @@ The result we get is a two dimensional array of size 180x256. So we can show the
 
 Method - 2 : Using Matplotlib
 ------------------------------
-We can use **matplotlib.pyplot.imshow()** function to plot 2D histogram with different color maps. It gives us much more better idea about the different pixel density. But this also, doesn't gives us idea what color is there on a first look, unless you know the Hue values of different colors. Still I prefer this method. It is simple and better.
+We can use **matplotlib.pyplot.imshow()** function to plot 2D histogram with different color maps. It gives us a much better idea about the different pixel density. But this also, doesn't gives us idea what color is there on a first look, unless you know the Hue values of different colors. Still I prefer this method. It is simple and better.
 
 .. note:: While using this function, remember, interpolation flag should be ``nearest`` for better results.
 

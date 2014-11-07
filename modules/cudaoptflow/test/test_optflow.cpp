@@ -41,7 +41,6 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/legacy.hpp"
 
 #ifdef HAVE_CUDA
 
@@ -361,6 +360,18 @@ CUDA_TEST_P(OpticalFlowDual_TVL1, Accuracy)
     alg->calc(frame0, frame1, flow);
     cv::Mat gold[2];
     cv::split(flow, gold);
+    cv::Mat mx(d_flowx);
+    cv::Mat my(d_flowx);
+
+    EXPECT_MAT_SIMILAR(gold[0], d_flowx, 4e-3);
+    EXPECT_MAT_SIMILAR(gold[1], d_flowy, 4e-3);
+    d_alg.gamma = 1;
+    alg->set("gamma", 1);
+    d_alg(loadMat(frame0, useRoi), loadMat(frame1, useRoi), d_flowx, d_flowy);
+    alg->calc(frame0, frame1, flow);
+    cv::split(flow, gold);
+    mx = cv::Mat(d_flowx);
+    my = cv::Mat(d_flowx);
 
     EXPECT_MAT_SIMILAR(gold[0], d_flowx, 4e-3);
     EXPECT_MAT_SIMILAR(gold[1], d_flowy, 4e-3);
@@ -369,63 +380,6 @@ CUDA_TEST_P(OpticalFlowDual_TVL1, Accuracy)
 INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, OpticalFlowDual_TVL1, testing::Combine(
     ALL_DEVICES,
     WHOLE_SUBMAT));
-
-//////////////////////////////////////////////////////
-// OpticalFlowBM
-
-namespace
-{
-    void calcOpticalFlowBM(const cv::Mat& prev, const cv::Mat& curr,
-                           cv::Size bSize, cv::Size shiftSize, cv::Size maxRange, int usePrevious,
-                           cv::Mat& velx, cv::Mat& vely)
-    {
-        cv::Size sz((curr.cols - bSize.width + shiftSize.width)/shiftSize.width, (curr.rows - bSize.height + shiftSize.height)/shiftSize.height);
-
-        velx.create(sz, CV_32FC1);
-        vely.create(sz, CV_32FC1);
-
-        CvMat cvprev = prev;
-        CvMat cvcurr = curr;
-
-        CvMat cvvelx = velx;
-        CvMat cvvely = vely;
-
-        cvCalcOpticalFlowBM(&cvprev, &cvcurr, bSize, shiftSize, maxRange, usePrevious, &cvvelx, &cvvely);
-    }
-}
-
-struct OpticalFlowBM : testing::TestWithParam<cv::cuda::DeviceInfo>
-{
-};
-
-CUDA_TEST_P(OpticalFlowBM, Accuracy)
-{
-    cv::cuda::DeviceInfo devInfo = GetParam();
-    cv::cuda::setDevice(devInfo.deviceID());
-
-    cv::Mat frame0 = readImage("opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame0.empty());
-
-    cv::Mat frame1 = readImage("opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame1.empty());
-
-    cv::Size block_size(16, 16);
-    cv::Size shift_size(1, 1);
-    cv::Size max_range(16, 16);
-
-    cv::cuda::GpuMat d_velx, d_vely, buf;
-    cv::cuda::calcOpticalFlowBM(loadMat(frame0), loadMat(frame1),
-                               block_size, shift_size, max_range, false,
-                               d_velx, d_vely, buf);
-
-    cv::Mat velx, vely;
-    calcOpticalFlowBM(frame0, frame1, block_size, shift_size, max_range, false, velx, vely);
-
-    EXPECT_MAT_NEAR(velx, d_velx, 0);
-    EXPECT_MAT_NEAR(vely, d_vely, 0);
-}
-
-INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, OpticalFlowBM, ALL_DEVICES);
 
 //////////////////////////////////////////////////////
 // FastOpticalFlowBM

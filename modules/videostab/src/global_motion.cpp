@@ -430,7 +430,7 @@ Mat estimateGlobalMotionRansac(
     {
         subset0.resize(ninliersMax);
         subset1.resize(ninliersMax);
-        for (int i = 0, j = 0; i < npoints; ++i)
+        for (int i = 0, j = 0; i < npoints && j < ninliersMax ; ++i)
         {
             p0 = points0_[i];
             p1 = points1_[i];
@@ -671,7 +671,7 @@ Mat ToFileMotionWriter::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
 KeypointBasedMotionEstimator::KeypointBasedMotionEstimator(Ptr<MotionEstimatorBase> estimator)
     : ImageMotionEstimatorBase(estimator->motionModel()), motionEstimator_(estimator)
 {
-    setDetector(makePtr<GoodFeaturesToTrackDetector>());
+    setDetector(GFTTDetector::create());
     setOpticalFlowEstimator(makePtr<SparsePyrLkOptFlowEstimator>());
     setOutlierRejector(makePtr<NullOutlierRejector>());
 }

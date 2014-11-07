@@ -110,7 +110,7 @@ Now I want to apply U-SURF, so that it won't find the orientation.
 
     >>> plt.imshow(img2),plt.show()
 
-See the results below. All the orientations are shown in same direction. It is more faster than previous. If you are working on cases where orientation is not a problem (like panorama stitching) etc, this is more better.
+See the results below. All the orientations are shown in same direction. It is more faster than previous. If you are working on cases where orientation is not a problem (like panorama stitching) etc, this is better.
 
     .. image:: images/surf_kp2.jpg
         :alt: Upright-SURF

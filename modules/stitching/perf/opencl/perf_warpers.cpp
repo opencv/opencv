@@ -39,7 +39,7 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/stitching/warpers.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
@@ -60,33 +60,27 @@ enum
 class WarperBase
 {
 public:
-    explicit WarperBase(int type)
+    explicit WarperBase(int type, Size srcSize)
     {
         Ptr<WarperCreator> creator;
-        if (cv::ocl::useOpenCL())
-        {
-            if (type == SphericalWarperType)
-                creator = makePtr<SphericalWarperOcl>();
-            else if (type == CylindricalWarperType)
-                creator = makePtr<CylindricalWarperOcl>();
-            else if (type == PlaneWarperType)
-                creator = makePtr<PlaneWarperOcl>();
-        }
-        else
-        {
-            if (type == SphericalWarperType)
-                creator = makePtr<SphericalWarper>();
-            else if (type == CylindricalWarperType)
-                creator = makePtr<CylindricalWarper>();
-            else if (type == PlaneWarperType)
-                creator = makePtr<PlaneWarper>();
-        }
+        if (type == SphericalWarperType)
+            creator = makePtr<SphericalWarper>();
+        else if (type == CylindricalWarperType)
+            creator = makePtr<CylindricalWarper>();
+        else if (type == PlaneWarperType)
+            creator = makePtr<PlaneWarper>();
         CV_Assert(!creator.empty());
 
-        warper = creator->create(2.0);
-
         K = Mat::eye(3, 3, CV_32FC1);
+        K.at<float>(0,0) = (float)srcSize.width;
+        K.at<float>(0,2) = (float)srcSize.width/2;
+        K.at<float>(1,1) = (float)srcSize.height;
+        K.at<float>(1,2) = (float)srcSize.height/2;
+        K.at<float>(2,2) = 1.0f;
         R = Mat::eye(3, 3, CV_32FC1);
+        float scale = (float)srcSize.width;
+
+        warper = creator->create(scale);
     }
 
     Rect buildMaps(Size src_size, OutputArray xmap, OutputArray ymap) const
@@ -109,15 +103,25 @@ CV_ENUM(WarperType, SphericalWarperType, CylindricalWarperType, PlaneWarperType)
 typedef tuple<Size, WarperType> StitchingWarpersParams;
 typedef TestBaseWithParam<StitchingWarpersParams> StitchingWarpersFixture;
 
+static void prepareWarperSrc(InputOutputArray src, Size srcSize)
+{
+    src.create(srcSize, CV_8UC1);
+    src.setTo(Scalar::all(64));
+    ellipse(src, Point(srcSize.width/2, srcSize.height/2), Size(srcSize.width/2, srcSize.height/2),
+            360, 0, 360, Scalar::all(255), 2);
+    ellipse(src, Point(srcSize.width/2, srcSize.height/2), Size(srcSize.width/3, srcSize.height/3),
+            360, 0, 360, Scalar::all(128), 2);
+    rectangle(src, Point(10, 10), Point(srcSize.width - 10, srcSize.height - 10), Scalar::all(128), 2);
+}
+
 OCL_PERF_TEST_P(StitchingWarpersFixture, StitchingWarpers_BuildMaps,
                 ::testing::Combine(OCL_TEST_SIZES, WarperType::all()))
 {
     const StitchingWarpersParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const WarperBase warper(get<1>(params));
+    const WarperBase warper(get<1>(params), srcSize);
 
-    UMat src(srcSize, CV_32FC1), xmap(srcSize, CV_32FC1), ymap(srcSize, CV_32FC1);
-    declare.in(src, WARMUP_RNG).out(xmap, ymap);
+    UMat xmap, ymap;
 
     OCL_TEST_CYCLE() warper.buildMaps(srcSize, xmap, ymap);
 
@@ -130,12 +134,22 @@ OCL_PERF_TEST_P(StitchingWarpersFixture, StitchingWarpers_Warp,
 {
     const StitchingWarpersParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const WarperBase warper(get<1>(params));
+    const WarperBase warper(get<1>(params), srcSize);
 
-    UMat src(srcSize, CV_32FC1), dst(srcSize, CV_32FC1);
-    declare.in(src, WARMUP_RNG).out(dst);
+    UMat src, dst;
+    prepareWarperSrc(src, srcSize);
+    declare.in(src, WARMUP_READ);
 
     OCL_TEST_CYCLE() warper.warp(src, INTER_LINEAR, BORDER_REPLICATE, dst);
+
+#if 0
+    namedWindow("src", WINDOW_NORMAL);
+    namedWindow("dst", WINDOW_NORMAL);
+    imshow("src", src);
+    imshow("dst", dst);
+    std::cout << dst.size() << " " << dst.size().area() << std::endl;
+    cv::waitKey();
+#endif
 
     SANITY_CHECK(dst, 1e-5);
 }

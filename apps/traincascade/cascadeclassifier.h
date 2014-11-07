@@ -7,8 +7,6 @@
 #include "lbpfeatures.h"
 #include "HOGfeatures.h" //new
 #include "boost.h"
-#include "cv.h"
-#include "cxcore.h"
 
 #define CC_CASCADE_FILENAME "cascade.xml"
 #define CC_PARAMS_FILENAME "params.xml"

@@ -96,9 +96,11 @@ operation for each of the coordinates. Besides the class members listed in the d
         pt1 = pt2 - pt3;
         pt1 = pt2 * a;
         pt1 = a * pt2;
+        pt1 = pt2 / a;
         pt1 += pt2;
         pt1 -= pt2;
         pt1 *= a;
+        pt1 /= a;
         double value = norm(pt); // L2 norm
         pt1 == pt2;
         pt1 != pt2;
@@ -264,8 +266,8 @@ OpenCV typically assumes that the top and left boundary of the rectangle are inc
 Virtually every loop over an image
 ROI in OpenCV (where ROI is specified by ``Rect_<int>`` ) is implemented as: ::
 
-    for(int y = roi.y; y < roi.y + rect.height; y++)
-        for(int x = roi.x; x < roi.x + rect.width; x++)
+    for(int y = roi.y; y < roi.y + roi.height; y++)
+        for(int x = roi.x; x < roi.x + roi.width; x++)
         {
             // ...
         }
@@ -316,6 +318,7 @@ RotatedRect
         RotatedRect();
         RotatedRect(const Point2f& center, const Size2f& size, float angle);
         RotatedRect(const CvBox2D& box);
+        RotatedRect(const Point2f& point1, const Point2f& point2, const Point2f& point3);
 
         //! returns 4 vertices of the rectangle
         void points(Point2f pts[]) const;
@@ -338,7 +341,11 @@ The class represents rotated (i.e. not up-right) rectangles on a plane. Each rec
         :param size: Width and height of the rectangle.
         :param angle: The rotation angle in a clockwise direction. When the angle is 0, 90, 180, 270 etc., the rectangle becomes an up-right rectangle.
         :param box: The rotated rectangle parameters as the obsolete CvBox2D structure.
+    .. ocv:function:: RotatedRect::RotatedRect(const Point2f& point1, const Point2f& point2, const Point2f& point3)
 
+        :param point1:
+        :param point2:
+        :param point3: Any 3 end points of the RotatedRect. They must be given in order (either clockwise or anticlockwise).
     .. ocv:function:: void RotatedRect::points( Point2f pts[] ) const
     .. ocv:function:: Rect RotatedRect::boundingRect() const
 
@@ -527,7 +534,7 @@ Template class for a 4-element vector derived from Vec.
         template<typename T2> operator Scalar_<T2>() const;
 
         //! per-element product
-        Scalar_<_Tp> mul(const Scalar_<_Tp>& t, double scale=1 ) const;
+        Scalar_<_Tp> mul(const Scalar_<_Tp>& a, double scale=1 ) const;
 
         // returns (v0, -v1, -v2, -v3)
         Scalar_<_Tp> conj() const;
@@ -840,7 +847,6 @@ For convenience, the following types from the OpenCV C API already have such a s
 that calls the appropriate release function:
 
 * ``CvCapture``
-* :ocv:struct:`CvDTreeSplit`
 * :ocv:struct:`CvFileStorage`
 * ``CvHaarClassifierCascade``
 * :ocv:struct:`CvMat`
@@ -1610,12 +1616,12 @@ Copies the matrix to another one.
 
 The method copies the matrix data to another matrix. Before copying the data, the method invokes ::
 
-    m.create(this->size(), this->type);
+    m.create(this->size(), this->type());
 
 
 so that the destination matrix is reallocated if needed. While ``m.copyTo(m);`` works flawlessly, the function does not handle the case of a partial overlap between the source and the destination matrices.
 
-When the operation mask is specified, and the ``Mat::create`` call shown above reallocated the matrix, the newly allocated matrix is initialized with all zeros before copying the data.
+When the operation mask is specified, if the ``Mat::create`` call shown above reallocates the matrix, the newly allocated matrix is initialized with all zeros before copying the data.
 
 .. _Mat::convertTo:
 
@@ -1705,7 +1711,7 @@ Transposes a matrix.
 
 The method performs matrix transposition by means of matrix expressions. It does not perform the actual transposition but returns a temporary matrix transposition object that can be further used as a part of more complex matrix expressions or can be assigned to a matrix: ::
 
-    Mat A1 = A + Mat::eye(A.size(), A.type)*lambda;
+    Mat A1 = A + Mat::eye(A.size(), A.type())*lambda;
     Mat C = A1.t()*A1; // compute (A + lambda*I)^t * (A + lamda*I)
 
 
@@ -2320,6 +2326,69 @@ Returns the matrix iterator and sets it to the after-last matrix element.
 .. ocv:function:: template<typename _Tp> MatConstIterator_<_Tp> Mat::end() const
 
 The methods return the matrix read-only or read-write iterators, set to the point following the last matrix element.
+
+
+Mat::forEach
+------------
+Invoke with arguments functor, and runs the functor over all matrix element.
+
+.. ocv:function:: template<typename _Tp, typename Functor> void Mat::forEach(Functor operation)
+
+.. ocv:function:: template<typename _Tp, typename Functor> void Mat::forEach(Functor operation) const
+
+The methos runs operation in parallel. Operation is passed by arguments. Operation have to be a function pointer, a function object or a lambda(C++11).
+
+All of below operation is equal. Put 0xFF to first channel of all matrix elements. ::
+
+    Mat image(1920, 1080, CV_8UC3);
+    typedef cv::Point3_<uint8_t> Pixel;
+
+    // first. raw pointer access.
+    for (int r = 0; r < image.rows; ++r) {
+        Pixel* ptr = image.ptr<Pixel>(0, r);
+        const Pixel* ptr_end = ptr + image.cols;
+        for (; ptr != ptr_end; ++ptr) {
+            ptr->x = 255;
+        }
+    }
+
+
+    // Using MatIterator. (Simple but there are a Iterator's overhead)
+    for (Pixel &p : cv::Mat_<Pixel>(image)) {
+        p.x = 255;
+    }
+
+
+    // Parallel execution with function object.
+    struct Operator {
+        void operator ()(Pixel &pixel, const int * position) {
+            pixel.x = 255;
+        }
+    };
+    image.forEach<Pixel>(Operator());
+
+
+    // Parallel execution using C++11 lambda.
+    image.forEach<Pixel>([](Pixel &p, const int * position) -> void {
+        p.x = 255;
+    });
+
+position parameter is index of current pixel. ::
+
+    // Creating 3D matrix (255 x 255 x 255) typed uint8_t,
+    //  and initialize all elements by the value which equals elements position.
+    //  i.e. pixels (x,y,z) = (1,2,3) is (b,g,r) = (1,2,3).
+
+    int sizes[] = { 255, 255, 255 };
+    typedef cv::Point3_<uint8_t> Pixel;
+
+    Mat_<Pixel> image = Mat::zeros(3, sizes, CV_8UC3);
+
+    image.forEachWithPosition([&](Pixel& pixel, const int position[]) -> void{
+        pixel.x = position[0];
+        pixel.y = position[1];
+        pixel.z = position[2];
+    });
 
 Mat\_
 -----
@@ -2976,20 +3045,20 @@ The class provides the following features for all derived classes:
 
     * so called "virtual constructor". That is, each Algorithm derivative is registered at program start and you can get the list of registered algorithms and create instance of a particular algorithm by its name (see ``Algorithm::create``). If you plan to add your own algorithms, it is good practice to add a unique prefix to your algorithms to distinguish them from other algorithms.
 
-    * setting/retrieving algorithm parameters by name. If you used video capturing functionality from OpenCV highgui module, you are probably familar with ``cvSetCaptureProperty()``, ``cvGetCaptureProperty()``, ``VideoCapture::set()`` and ``VideoCapture::get()``. ``Algorithm`` provides similar method where instead of integer id's you specify the parameter names as text strings. See ``Algorithm::set`` and ``Algorithm::get`` for details.
+    * setting/retrieving algorithm parameters by name. If you used video capturing functionality from OpenCV videoio module, you are probably familar with ``cvSetCaptureProperty()``, ``cvGetCaptureProperty()``, ``VideoCapture::set()`` and ``VideoCapture::get()``. ``Algorithm`` provides similar method where instead of integer id's you specify the parameter names as text strings. See ``Algorithm::set`` and ``Algorithm::get`` for details.
 
     * reading and writing parameters from/to XML or YAML files. Every Algorithm derivative can store all its parameters and then read them back. There is no need to re-implement it each time.
 
 Here is example of SIFT use in your application via Algorithm interface: ::
 
     #include "opencv2/opencv.hpp"
-    #include "opencv2/nonfree.hpp"
+    #include "opencv2/xfeatures2d.hpp"
+
+    using namespace cv::xfeatures2d;
 
     ...
 
-    initModule_nonfree(); // to load SURF/SIFT etc.
-
-    Ptr<Feature2D> sift = Algorithm::create<Feature2D>("Feature2D.SIFT");
+    Ptr<Feature2D> sift = SIFT::create();
 
     FileStorage fs("sift_params.xml", FileStorage::READ);
     if( fs.isOpened() ) // if we have file with parameters, read them
@@ -2999,7 +3068,7 @@ Here is example of SIFT use in your application via Algorithm interface: ::
     }
     else // else modify the parameters and store them; user can later edit the file to use different parameters
     {
-        sift->set("contrastThreshold", 0.01f); // lower the contrast threshold, compared to the default value
+        sift->setContrastThreshold(0.01f); // lower the contrast threshold, compared to the default value
 
         {
         WriteStructContext ws(fs, "sift_params", CV_NODE_MAP);
@@ -3009,7 +3078,7 @@ Here is example of SIFT use in your application via Algorithm interface: ::
 
     Mat image = imread("myimage.png", 0), descriptors;
     vector<KeyPoint> keypoints;
-    (*sift)(image, noArray(), keypoints, descriptors);
+    sift->detectAndCompute(image, noArray(), keypoints, descriptors);
 
 Algorithm::name
 ---------------
@@ -3066,7 +3135,7 @@ Stores algorithm parameters in a file storage
 
 The method stores all the algorithm parameters (in alphabetic order) to the file storage. The method is virtual. If you define your own Algorithm derivative, your can override the method and store some extra information. However, it's rarely needed. Here are some examples:
 
- * SIFT feature detector (from nonfree module). The class only stores algorithm parameters and no keypoints or their descriptors. Therefore, it's enough to store the algorithm parameters, which is what ``Algorithm::write()`` does. Therefore, there is no dedicated ``SIFT::write()``.
+ * SIFT feature detector (from xfeatures2d module). The class only stores algorithm parameters and no keypoints or their descriptors. Therefore, it's enough to store the algorithm parameters, which is what ``Algorithm::write()`` does. Therefore, there is no dedicated ``SIFT::write()``.
 
  * Background subtractor (from video module). It has the algorithm parameters and also it has the current background model. However, the background model is not stored. First, it's rather big. Then, if you have stored the background model, it would likely become irrelevant on the next run (because of shifted camera, changed background, different lighting etc.). Therefore, ``BackgroundSubtractorMOG`` and ``BackgroundSubtractorMOG2`` also rely on the standard ``Algorithm::write()`` to store just the algorithm parameters.
 
@@ -3112,7 +3181,7 @@ This static method creates a new instance of the specified algorithm. If there i
 
     Ptr<BackgroundSubtractor> bgfg = Algorithm::create<BackgroundSubtractor>("BackgroundSubtractor.MOG2");
 
-.. note:: This is important note about seemingly mysterious behavior of ``Algorithm::create()`` when it returns NULL while it should not. The reason is simple - ``Algorithm::create()`` resides in OpenCV`s core module and the algorithms are implemented in other modules. If you create algorithms dynamically, C++ linker may decide to throw away the modules where the actual algorithms are implemented, since you do not call any functions from the modules. To avoid this problem, you need to call ``initModule_<modulename>();`` somewhere in the beginning of the program before ``Algorithm::create()``. For example, call ``initModule_nonfree()`` in order to use SURF/SIFT, call ``initModule_ml()`` to use expectation maximization etc.
+.. note:: This is important note about seemingly mysterious behavior of ``Algorithm::create()`` when it returns NULL while it should not. The reason is simple - ``Algorithm::create()`` resides in OpenCV`s core module and the algorithms are implemented in other modules. If you create algorithms dynamically, C++ linker may decide to throw away the modules where the actual algorithms are implemented, since you do not call any functions from the modules. To avoid this problem, you need to call ``initModule_<modulename>();`` somewhere in the beginning of the program before ``Algorithm::create()``. For example, call ``initModule_xfeatures2d()`` in order to use SURF/SIFT, call ``initModule_ml()`` to use expectation maximization etc.
 
 Creating Own Algorithms
 -----------------------

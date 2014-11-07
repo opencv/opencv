@@ -65,8 +65,6 @@
 #include "opencv2/photo/photo_c.h"
 #include "opencv2/video/tracking_c.h"
 #include "opencv2/objdetect/objdetect_c.h"
-#include "opencv2/legacy.hpp"
-#include "opencv2/legacy/compat.hpp"
 
 #if !defined(CV_IMPL)
 #define CV_IMPL extern "C"

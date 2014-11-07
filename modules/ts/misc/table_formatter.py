@@ -426,7 +426,7 @@ class table(object):
                     if r == 0:
                         css = css[:-1] + "border-top:2px solid #6678B1;\""
                 out.write("   <td%s%s>\n" % (attr, css))
-                if th is not None:
+                if td is not None:
                     out.write("    %s\n" % htmlEncode(td.text))
                 out.write("   </td>\n")
                 i += colspan

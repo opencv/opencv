@@ -4,6 +4,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 using namespace std;
@@ -14,8 +15,8 @@ int main(int argc, char** argv)
     std::string in;
     if (argc != 2)
     {
-        std::cout << "Usage: lsd_lines [input image]. Now loading building.jpg" << std::endl;
-        in = "building.jpg";
+        std::cout << "Usage: lsd_lines [input image]. Now loading ../data/building.jpg" << std::endl;
+        in = "../data/building.jpg";
     }
     else
     {

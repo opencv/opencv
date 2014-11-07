@@ -90,17 +90,24 @@ A full list, for the latest version would contain:
 
 .. code-block:: bash
 
-   opencv_core231d.lib
-   opencv_imgproc231d.lib
-   opencv_highgui231d.lib
-   opencv_ml231d.lib
-   opencv_video231d.lib
-   opencv_features2d231d.lib
-   opencv_calib3d231d.lib
-   opencv_objdetect231d.lib
-   opencv_contrib231d.lib
-   opencv_legacy231d.lib
-   opencv_flann231d.lib
+   opencv_calib3d300d.lib
+   opencv_core300d.lib
+   opencv_features2d300d.lib
+   opencv_flann300d.lib
+   opencv_highgui300d.lib
+   opencv_imgcodecs300d.lib
+   opencv_imgproc300d.lib
+   opencv_ml300d.lib
+   opencv_objdetect300d.lib
+   opencv_photo300d.lib
+   opencv_shape300d.lib
+   opencv_stitching300d.lib
+   opencv_superres300d.lib
+   opencv_ts300d.lib
+   opencv_video300d.lib
+   opencv_videoio300d.lib
+   opencv_videostab300d.lib
+
 
 The letter *d* at the end just indicates that these are the libraries required for the debug. Now click ok to save and do the same with a new property inside the Release rule section. Make sure to omit the *d* letters from the library names and to save the property sheets with the save icon above them.
 
@@ -153,7 +160,7 @@ You can start a Visual Studio build from two places. Either inside from the *IDE
 
 .. |voila| unicode:: voil U+00E1
 
-This is important to remember when you code inside the code open and save commands. You're resources will be saved ( and queried for at opening!!!) relatively to your working directory. This is unless you give a full, explicit path as parameter for the I/O functions. In the code above we open :download:`this OpenCV logo<../../../../samples/cpp/tutorial_code/images/opencv-logo.png>`. Before starting up the application make sure you place the image file in your current working directory. Modify the image file name inside the code to try it out on other images too. Run it and |voila|:
+This is important to remember when you code inside the code open and save commands. You're resources will be saved ( and queried for at opening!!!) relatively to your working directory. This is unless you give a full, explicit path as parameter for the I/O functions. In the code above we open :download:`this OpenCV logo<../../../../samples/data/opencv-logo.png>`. Before starting up the application make sure you place the image file in your current working directory. Modify the image file name inside the code to try it out on other images too. Run it and |voila|:
 
 .. image:: images/SuccessVisualStudioWindows.jpg
    :alt: You should have this.

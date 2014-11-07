@@ -1822,7 +1822,7 @@ namespace cv { namespace cuda { namespace device
 
             dst.x = saturate_cast<uchar>(dstf.x * 2.55f);
             dst.y = saturate_cast<uchar>(dstf.y * 0.72033898305084743f + 96.525423728813564f);
-            dst.z = saturate_cast<uchar>(dstf.z * 0.99609375f + 139.453125f);
+            dst.z = saturate_cast<uchar>(dstf.z * 0.9732824427480916f + 136.259541984732824f);
         }
 
         template <typename T, int scn, int dcn, bool srgb, int blueIdx> struct RGB2Luv;
@@ -1916,7 +1916,7 @@ namespace cv { namespace cuda { namespace device
 
             srcf.x = src.x * (100.f / 255.f);
             srcf.y = src.y * 1.388235294117647f - 134.f;
-            srcf.z = src.z * 1.003921568627451f - 140.f;
+            srcf.z = src.z * 1.027450980392157f - 140.f;
 
             Luv2RGBConvert_f<srgb, blueIdx>(srcf, dstf);
 

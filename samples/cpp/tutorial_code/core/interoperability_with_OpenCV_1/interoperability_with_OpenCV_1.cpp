@@ -3,6 +3,7 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include "opencv2/imgcodecs.hpp"
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/utility.hpp>
 
@@ -16,7 +17,7 @@ static void help( char* progName)
         << "Also contains example for image read, spliting the planes, merging back and "  << endl
         << " color conversion, plus iterating through pixels. "                            << endl
         << "Usage:" << endl
-        << progName << " [image-name Default: lena.jpg]"                           << endl << endl;
+        << progName << " [image-name Default: ../data/lena.jpg]"                   << endl << endl;
 }
 
 // comment out the define to use only the latest C++ API
@@ -24,12 +25,13 @@ static void help( char* progName)
 
 #ifdef DEMO_MIXED_API_USE
 #  include <opencv2/highgui/highgui_c.h>
+#  include <opencv2/imgcodecs/imgcodecs_c.h>
 #endif
 
 int main( int argc, char** argv )
 {
     help(argv[0]);
-    const char* imagename = argc > 1 ? argv[1] : "lena.jpg";
+    const char* imagename = argc > 1 ? argv[1] : "../data/lena.jpg";
 
 #ifdef DEMO_MIXED_API_USE
     Ptr<IplImage> IplI(cvLoadImage(imagename));      // Ptr<T> is a safe ref-counting pointer class

@@ -66,8 +66,8 @@ static void magSpectrums( InputArray _src, OutputArray _dst)
 
     if( depth == CV_32F )
     {
-        const float* dataSrc = (const float*)src.data;
-        float* dataDst = (float*)dst.data;
+        const float* dataSrc = src.ptr<float>();
+        float* dataDst = dst.ptr<float>();
 
         size_t stepSrc = src.step/sizeof(dataSrc[0]);
         size_t stepDst = dst.step/sizeof(dataDst[0]);
@@ -110,8 +110,8 @@ static void magSpectrums( InputArray _src, OutputArray _dst)
     }
     else
     {
-        const double* dataSrc = (const double*)src.data;
-        double* dataDst = (double*)dst.data;
+        const double* dataSrc = src.ptr<double>();
+        double* dataDst = dst.ptr<double>();
 
         size_t stepSrc = src.step/sizeof(dataSrc[0]);
         size_t stepDst = dst.step/sizeof(dataDst[0]);
@@ -179,9 +179,9 @@ static void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, 
 
     if( depth == CV_32F )
     {
-        const float* dataA = (const float*)srcA.data;
-        const float* dataB = (const float*)srcB.data;
-        float* dataC = (float*)dst.data;
+        const float* dataA = srcA.ptr<float>();
+        const float* dataB = srcB.ptr<float>();
+        float* dataC = dst.ptr<float>();
         float eps = FLT_EPSILON; // prevent div0 problems
 
         size_t stepA = srcA.step/sizeof(dataA[0]);
@@ -264,9 +264,9 @@ static void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, 
     }
     else
     {
-        const double* dataA = (const double*)srcA.data;
-        const double* dataB = (const double*)srcB.data;
-        double* dataC = (double*)dst.data;
+        const double* dataA = srcA.ptr<double>();
+        const double* dataB = srcB.ptr<double>();
+        double* dataC = dst.ptr<double>();
         double eps = DBL_EPSILON; // prevent div0 problems
 
         size_t stepA = srcA.step/sizeof(dataA[0]);
@@ -444,7 +444,7 @@ static Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Siz
 
     if(type == CV_32FC1)
     {
-        const float* dataIn = (const float*)src.data;
+        const float* dataIn = src.ptr<float>();
         dataIn += minr*src.cols;
         for(int y = minr; y <= maxr; y++)
         {
@@ -460,7 +460,7 @@ static Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Siz
     }
     else
     {
-        const double* dataIn = (const double*)src.data;
+        const double* dataIn = src.ptr<double>();
         dataIn += minr*src.cols;
         for(int y = minr; y <= maxr; y++)
         {

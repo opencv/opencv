@@ -27,9 +27,9 @@ Base class for all exposure compensators. ::
 detail::ExposureCompensator::feed
 ----------------------------------
 
-.. ocv:function:: void detail::ExposureCompensator::feed(const std::vector<Point> &corners, const std::vector<Mat> &images, const std::vector<Mat> &masks)
+.. ocv:function:: void detail::ExposureCompensator::feed(const std::vector<Point> &corners, const std::vector<UMat> &images, const std::vector<UMat> &masks)
 
-.. ocv:function:: void detail::ExposureCompensator::feed(const std::vector<Point> &corners, const std::vector<Mat> &images, const std::vector<std::pair<Mat,uchar> > &masks)
+.. ocv:function:: void detail::ExposureCompensator::feed(const std::vector<Point> &corners, const std::vector<UMat> &images, const std::vector<std::pair<UMat,uchar> > &masks)
 
     :param corners: Source image top-left corners
 
@@ -42,7 +42,7 @@ detil::ExposureCompensator::apply
 
 Compensate exposure in the specified image.
 
-.. ocv:function:: void detail::ExposureCompensator::apply(int index, Point corner, Mat &image, const Mat &mask)
+.. ocv:function:: void detail::ExposureCompensator::apply(int index, Point corner, InputOutputArray image, InputArray mask)
 
     :param index: Image index
 

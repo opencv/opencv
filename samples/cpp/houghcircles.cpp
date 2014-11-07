@@ -1,3 +1,4 @@
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
@@ -10,12 +11,12 @@ static void help()
 {
     cout << "\nThis program demonstrates circle finding with the Hough transform.\n"
             "Usage:\n"
-            "./houghcircles <image_name>, Default is pic1.png\n" << endl;
+            "./houghcircles <image_name>, Default is ../data/board.jpg\n" << endl;
 }
 
 int main(int argc, char** argv)
 {
-    const char* filename = argc >= 2 ? argv[1] : "board.jpg";
+    const char* filename = argc >= 2 ? argv[1] : "../data/board.jpg";
 
     Mat img = imread(filename, 0);
     if(img.empty())

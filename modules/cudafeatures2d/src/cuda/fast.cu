@@ -318,9 +318,9 @@ namespace cv { namespace cuda { namespace device
         }
 
         ///////////////////////////////////////////////////////////////////////////
-        // nonmaxSupression
+        // nonmaxSuppression
 
-        __global__ void nonmaxSupression(const short2* kpLoc, int count, const PtrStepSzi scoreMat, short2* locFinal, float* responseFinal)
+        __global__ void nonmaxSuppression(const short2* kpLoc, int count, const PtrStepSzi scoreMat, short2* locFinal, float* responseFinal)
         {
             #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
 
@@ -356,7 +356,7 @@ namespace cv { namespace cuda { namespace device
             #endif
         }
 
-        int nonmaxSupression_gpu(const short2* kpLoc, int count, PtrStepSzi score, short2* loc, float* response)
+        int nonmaxSuppression_gpu(const short2* kpLoc, int count, PtrStepSzi score, short2* loc, float* response)
         {
             void* counter_ptr;
             cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
@@ -368,7 +368,7 @@ namespace cv { namespace cuda { namespace device
 
             cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(unsigned int)) );
 
-            nonmaxSupression<<<grid, block>>>(kpLoc, count, score, loc, response);
+            nonmaxSuppression<<<grid, block>>>(kpLoc, count, score, loc, response);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );

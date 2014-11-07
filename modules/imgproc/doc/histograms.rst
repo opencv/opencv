@@ -181,6 +181,8 @@ Compares two histograms.
 
             * **CV_COMP_HELLINGER**     Synonym for ``CV_COMP_BHATTACHARYYA``
 
+            * **CV_COMP_KL_DIV**     Kullback-Leibler divergence
+
 The functions ``compareHist`` compare two dense or two sparse histograms using the specified method:
 
 * Correlation (``method=CV_COMP_CORREL``)
@@ -223,6 +225,12 @@ The functions ``compareHist`` compare two dense or two sparse histograms using t
     .. math::
 
         d(H_1,H_2) =  \sqrt{1 - \frac{1}{\sqrt{\bar{H_1} \bar{H_2} N^2}} \sum_I \sqrt{H_1(I) \cdot H_2(I)}}
+
+* Kullback-Leibler divergence (``method=CV_COMP_KL_DIV``).
+
+    .. math::
+
+        d(H_1,H_2) = \sum _I H_1(I) \log \left(\frac{H_1(I)}{H_2(I)}\right)
 
 The function returns
 :math:`d(H_1, H_2)` .

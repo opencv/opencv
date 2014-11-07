@@ -79,11 +79,11 @@ void cv::viz::vtkCloudMatSink::WriteData()
 
         if (cloud.depth() == CV_32F)
             for(size_t i = 0; i < cloud.total(); ++i)
-                *fdata++ = Vec3d(points_Data->GetPoint(i));
+                *fdata++ = Vec3d(points_Data->GetPoint((vtkIdType)i));
 
         if (cloud.depth() == CV_64F)
             for(size_t i = 0; i < cloud.total(); ++i)
-                *ddata++ = Vec3d(points_Data->GetPoint(i));
+                *ddata++ = Vec3d(points_Data->GetPoint((vtkIdType)i));
     }
     else
         cloud.release();
@@ -101,7 +101,7 @@ void cv::viz::vtkCloudMatSink::WriteData()
         Mat buffer(cloud.size(), CV_64FC(channels));
         Vec3d *cptr = buffer.ptr<Vec3d>();
         for(size_t i = 0; i < buffer.total(); ++i)
-            *cptr++ = Vec3d(scalars_data->GetTuple(i));
+            *cptr++ = Vec3d(scalars_data->GetTuple((vtkIdType)i));
 
         buffer.convertTo(colors, CV_8U, vtktype == VTK_FLOAT || VTK_FLOAT == VTK_DOUBLE ?  255.0 : 1.0);
     }
@@ -121,7 +121,7 @@ void cv::viz::vtkCloudMatSink::WriteData()
         Mat buffer(cloud.size(), CV_64FC(channels));
         Vec3d *cptr = buffer.ptr<Vec3d>();
         for(size_t i = 0; i < buffer.total(); ++i)
-            *cptr++ = Vec3d(normals_data->GetTuple(i));
+            *cptr++ = Vec3d(normals_data->GetTuple((vtkIdType)i));
 
         buffer.convertTo(normals, vtktype == VTK_FLOAT ? CV_32F : CV_64F);
     }
@@ -140,7 +140,7 @@ void cv::viz::vtkCloudMatSink::WriteData()
         Mat buffer(cloud.size(), CV_64FC2);
         Vec2d *cptr = buffer.ptr<Vec2d>();
         for(size_t i = 0; i < buffer.total(); ++i)
-            *cptr++ = Vec2d(coords_data->GetTuple(i));
+            *cptr++ = Vec2d(coords_data->GetTuple((vtkIdType)i));
 
         buffer.convertTo(tcoords, vtktype == VTK_FLOAT ? CV_32F : CV_64F);
 
@@ -155,4 +155,20 @@ void cv::viz::vtkCloudMatSink::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Cloud: " << cloud.needed() << "\n";
   os << indent << "Colors: " << colors.needed() << "\n";
   os << indent << "Normals: " << normals.needed() << "\n";
+}
+
+int cv::viz::vtkCloudMatSink::FillInputPortInformation(int, vtkInformation *info)
+{
+    info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPolyData");
+    return 1;
+}
+
+vtkPolyData* cv::viz::vtkCloudMatSink::GetInput()
+{
+    return vtkPolyData::SafeDownCast(this->Superclass::GetInput());
+}
+
+vtkPolyData* cv::viz::vtkCloudMatSink::GetInput(int port)
+{
+    return vtkPolyData::SafeDownCast(this->Superclass::GetInput(port));
 }
