@@ -160,7 +160,7 @@ public:
 
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat(), model = _model.getMat();
 
-        int i, count = opoints.cols;
+        int i, count = opoints.checkVector(3);
         Mat _rvec = model.col(0);
         Mat _tvec = model.col(1);
 
