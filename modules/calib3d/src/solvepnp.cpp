@@ -160,7 +160,7 @@ public:
 
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat(), model = _model.getMat();
 
-        int i, count = opoints.cols;
+        int i, count = opoints.checkVector(3);
         Mat _rvec = model.col(0);
         Mat _tvec = model.col(1);
 
@@ -251,14 +251,10 @@ bool cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     if(_inliers.needed())
     {
         Mat _local_inliers;
-        int count = 0;
-        for (int i = 0; i < _mask_local_inliers.rows; ++i)
+        for (int i = 0; i < npoints; ++i)
         {
-            if((int)_mask_local_inliers.at<uchar>(i) == 1) // inliers mask
-            {
-                _local_inliers.push_back(count);    // output inliers vector
-                count++;
-            }
+            if((int)_mask_local_inliers.at<uchar>(i) != 0) // inliers mask
+                _local_inliers.push_back(i);    // output inliers vector
         }
         _local_inliers.copyTo(_inliers);
     }
