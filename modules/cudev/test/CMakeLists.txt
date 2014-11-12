@@ -42,7 +42,16 @@ if(OCV_DEPENDENCIES_FOUND)
     set_target_properties(${the_target} PROPERTIES FOLDER "tests accuracy")
   endif()
 
-  enable_testing()
-  get_target_property(LOC ${the_target} LOCATION)
-  add_test(${the_target} "${LOC}")
+  if(CMAKE_VERSION VERSION_GREATER "2.8")
+    add_test(NAME ${the_target} COMMAND ${the_target})
+
+    set_tests_properties(${the_target} PROPERTIES
+      LABELS "${OPENCV_MODULE_${the_module}_LABEL};Accuracy"
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+    if(OPENCV_TEST_DATA_PATH)
+      set_tests_properties(${the_target} PROPERTIES
+        ENVIRONMENT "OPENCV_TEST_DATA_PATH=${OPENCV_TEST_DATA_PATH}")
+    endif()
+  endif()
 endif()
