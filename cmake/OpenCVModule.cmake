@@ -169,6 +169,12 @@ macro(ocv_add_module _name)
       set(OPENCV_MODULE_${the_module}_IS_PART_OF_WORLD OFF CACHE INTERNAL "")
     endif()
 
+    if(OPENCV_PROCESSING_EXTRA_MODULES)
+      set(OPENCV_MODULE_${the_module}_LABEL "Extra" CACHE INTERNAL "")
+    else()
+      set(OPENCV_MODULE_${the_module}_LABEL "Main" CACHE INTERNAL "")
+    endif()
+
     if(BUILD_${the_module})
       set(OPENCV_MODULES_BUILD ${OPENCV_MODULES_BUILD} "${the_module}" CACHE INTERNAL "List of OpenCV modules included into the build")
     else()
@@ -647,6 +653,7 @@ macro(_ocv_create_module)
   if(NOT the_module STREQUAL opencv_ts)
     set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
   endif()
+  set_target_properties(${the_module} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL}")
 
   ocv_target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS_TO_LINK})
   ocv_target_link_libraries(${the_module} LINK_INTERFACE_LIBRARIES ${OPENCV_MODULE_${the_module}_DEPS_TO_LINK})
@@ -826,6 +833,7 @@ function(ocv_add_perf_tests)
       ocv_target_include_modules(${the_target} ${perf_deps} "${perf_path}")
       ocv_target_link_libraries(${the_target} ${OPENCV_MODULE_${the_module}_DEPS} ${perf_deps} ${OPENCV_LINKER_LIBS})
       add_dependencies(opencv_perf_tests ${the_target})
+      set_target_properties(${the_target} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL}")
 
       # Additional target properties
       set_target_properties(${the_target} PROPERTIES
@@ -881,6 +889,7 @@ function(ocv_add_accuracy_tests)
       ocv_target_include_modules(${the_target} ${test_deps} "${test_path}")
       ocv_target_link_libraries(${the_target} ${OPENCV_MODULE_${the_module}_DEPS} ${test_deps} ${OPENCV_LINKER_LIBS})
       add_dependencies(opencv_tests ${the_target})
+      set_target_properties(${the_target} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL}")
 
       # Additional target properties
       set_target_properties(${the_target} PROPERTIES
@@ -930,6 +939,7 @@ function(ocv_add_samples)
         ocv_target_include_modules(${the_target} ${samples_deps})
         ocv_target_link_libraries(${the_target} ${samples_deps})
         set_target_properties(${the_target} PROPERTIES PROJECT_LABEL "(sample) ${name}")
+        set_target_properties(${the_target} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL}")
 
         if(ENABLE_SOLUTION_FOLDERS)
           set_target_properties(${the_target} PROPERTIES
