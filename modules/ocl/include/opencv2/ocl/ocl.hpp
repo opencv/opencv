@@ -477,7 +477,7 @@ namespace cv
         // supports all data types
         CV_EXPORTS void max(const oclMat &src1, const oclMat &src2, oclMat &dst);
 
-        //! compares elements of two arrays (dst = src1 <cmpop> src2)
+        //! compares elements of two arrays (dst = src1 \verbatim<cmpop>\endverbatim src2)
         // supports all data types
         CV_EXPORTS void compare(const oclMat &src1, const oclMat &src2, oclMat &dst, int cmpop);
 
