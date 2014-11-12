@@ -848,6 +848,23 @@ function(ocv_add_perf_tests)
       if(NOT BUILD_opencv_world)
         _ocv_add_precompiled_headers(${the_target})
       endif()
+
+      if(CMAKE_VERSION VERSION_GREATER "2.8")
+        add_test(NAME ${the_target} COMMAND ${the_target} --gtest_output=xml:${the_target}.xml)
+        add_test(NAME ${the_target}_sanity COMMAND ${the_target} --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity)
+
+        set_tests_properties(${the_target} PROPERTIES
+          LABELS "${OPENCV_MODULE_${the_module}_LABEL};Performance"
+          WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+        set_tests_properties(${the_target}_sanity PROPERTIES
+          LABELS "${OPENCV_MODULE_${the_module}_LABEL};Sanity"
+          WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+        if(OPENCV_TEST_DATA_PATH)
+          set_tests_properties(${the_target} ${the_target}_sanity PROPERTIES
+            ENVIRONMENT "OPENCV_TEST_DATA_PATH=${OPENCV_TEST_DATA_PATH}")
+        endif()
+      endif()
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)
@@ -901,12 +918,21 @@ function(ocv_add_accuracy_tests)
         set_target_properties(${the_target} PROPERTIES FOLDER "tests accuracy")
       endif()
 
-      enable_testing()
-      get_target_property(LOC ${the_target} LOCATION)
-      add_test(${the_target} "${LOC}")
-
       if(NOT BUILD_opencv_world)
         _ocv_add_precompiled_headers(${the_target})
+      endif()
+
+      if(CMAKE_VERSION VERSION_GREATER "2.8")
+        add_test(NAME ${the_target} COMMAND ${the_target})
+
+        set_tests_properties(${the_target} PROPERTIES
+          LABELS "${OPENCV_MODULE_${the_module}_LABEL};Accuracy"
+          WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+        if(OPENCV_TEST_DATA_PATH)
+          set_tests_properties(${the_target} PROPERTIES
+            ENVIRONMENT "OPENCV_TEST_DATA_PATH=${OPENCV_TEST_DATA_PATH}")
+        endif()
       endif()
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
