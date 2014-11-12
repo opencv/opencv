@@ -157,7 +157,10 @@ static int64 icvGCMaxFlow( GCVtx* vtx, int nvtx, GCEdge* edges, GCVtx**& _orphan
             v->t = v->weight < 0;
         }
         else
+        {
+            v->next = NULL;
             v->parent = 0;
+        }
     }
 
     first = first->next;
@@ -396,6 +399,8 @@ void cvReleaseStereoGCState( CvStereoGCState** _state )
     cvReleaseMat( &state->right );
     cvReleaseMat( &state->ptrLeft );
     cvReleaseMat( &state->ptrRight );
+    cvReleaseMat( &state->dispLeft );
+    cvReleaseMat( &state->dispRight );
     cvReleaseMat( &state->vtxBuf );
     cvReleaseMat( &state->edgeBuf );
     cvFree( _state );
