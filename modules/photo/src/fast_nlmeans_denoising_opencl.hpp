@@ -19,7 +19,8 @@ enum
 {
     BLOCK_ROWS = 32,
     BLOCK_COLS = 32,
-    CTA_SIZE = 256
+    CTA_SIZE_INTEL = 64,
+    CTA_SIZE_DEFAULT = 256
 };
 
 static int divUp(int a, int b)
@@ -70,6 +71,7 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
                                      int templateWindowSize, int searchWindowSize)
 {
     int type = _src.type(), cn = CV_MAT_CN(type);
+    int ctaSize = ocl::Device::getDefault().isIntel() ? CTA_SIZE_INTEL : CTA_SIZE_DEFAULT;
     Size size = _src.size();
 
     if ( type != CV_8UC1 && type != CV_8UC2 && type != CV_8UC4 )
@@ -86,12 +88,12 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
     String opts = format("-D OP_CALC_FASTNLMEANS -D TEMPLATE_SIZE=%d -D SEARCH_SIZE=%d"
                          " -D uchar_t=%s -D int_t=%s -D BLOCK_COLS=%d -D BLOCK_ROWS=%d"
                          " -D CTA_SIZE=%d -D TEMPLATE_SIZE2=%d -D SEARCH_SIZE2=%d"
-                         " -D convert_int_t=%s -D cn=%d -D CTA_SIZE2=%d -D convert_uchar_t=%s",
+                         " -D convert_int_t=%s -D cn=%d -D convert_uchar_t=%s",
                          templateWindowSize, searchWindowSize, ocl::typeToStr(type),
-                         ocl::typeToStr(CV_32SC(cn)), BLOCK_COLS, BLOCK_ROWS, CTA_SIZE,
+                         ocl::typeToStr(CV_32SC(cn)), BLOCK_COLS, BLOCK_ROWS, ctaSize,
                          templateWindowHalfWize, searchWindowHalfSize,
                          ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0]), cn,
-                         CTA_SIZE >> 1, ocl::convertTypeStr(CV_32S, CV_8U, cn, cvt[1]));
+                         ocl::convertTypeStr(CV_32S, CV_8U, cn, cvt[1]));
 
     ocl::Kernel k("fastNlMeansDenoising", ocl::photo::nlmeans_oclsrc, opts);
     if (k.empty())
@@ -120,7 +122,7 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
            ocl::KernelArg::PtrReadOnly(almostDist2Weight),
            ocl::KernelArg::PtrReadOnly(buffer), almostTemplateWindowSizeSqBinShift);
 
-    size_t globalsize[2] = { nblocksx * CTA_SIZE, nblocksy }, localsize[2] = { CTA_SIZE, 1 };
+    size_t globalsize[2] = { nblocksx * ctaSize, nblocksy }, localsize[2] = { ctaSize, 1 };
     return k.run(2, globalsize, localsize, false);
 }
 
