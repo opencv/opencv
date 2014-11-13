@@ -45,11 +45,22 @@
 
 #include "opencv2/core.hpp"
 
-/*! \namespace cv
- Namespace where all the C++ OpenCV functionality resides
- */
+/**
+  @defgroup imgproc Image processing
+  @{
+  @defgroup imgproc_filter Image filtering
+  @defgroup imgproc_transform Image transformations
+  @defgroup imgproc_drawing Drawing functions
+  @defgroup imgproc_shape Structural Analysis and Shape Descriptors
+  @}
+*/
+
 namespace cv
 {
+
+/** @addtogroup imgproc
+@{
+*/
 
 //! type of morphological operation
 enum { MORPH_ERODE    = 0,
@@ -1315,6 +1326,8 @@ CV_EXPORTS_W void putText( InputOutputArray img, const String& text, Point org,
 CV_EXPORTS_W Size getTextSize(const String& text, int fontFace,
                             double fontScale, int thickness,
                             CV_OUT int* baseLine);
+
+/** @} */
 
 } // cv
 

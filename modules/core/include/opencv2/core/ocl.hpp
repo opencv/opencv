@@ -46,6 +46,9 @@
 
 namespace cv { namespace ocl {
 
+//! @addtogroup core_opencl
+//! @{
+
 CV_EXPORTS_W bool haveOpenCL();
 CV_EXPORTS_W bool useOpenCL();
 CV_EXPORTS_W bool haveAmdBlas();
@@ -665,6 +668,8 @@ CV_EXPORTS MatAllocator* getOpenCLAllocator();
 
 CV_EXPORTS_W bool isPerformanceCheckBypassed();
 #define OCL_PERFORMANCE_CHECK(condition) (cv::ocl::isPerformanceCheckBypassed() || (condition))
+
+//! @}
 
 }}
 

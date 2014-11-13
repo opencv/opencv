@@ -75,6 +75,8 @@
 #  endif
 #endif
 
+//! @cond IGNORED
+
 namespace cv { namespace cuda {
     CV_EXPORTS cv::String getNppErrorMessage(int code);
     CV_EXPORTS cv::String getCudaDriverApiErrorMessage(int code);
@@ -166,5 +168,7 @@ namespace cv { namespace cuda
 #define cuSafeCall(expr)  cv::cuda::checkCudaDriverApiError(expr, __FILE__, __LINE__, CV_Func)
 
 #endif // HAVE_CUDA
+
+//! @endcond
 
 #endif // __OPENCV_CORE_CUDA_PRIVATE_HPP__
