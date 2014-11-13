@@ -1092,6 +1092,9 @@ namespace cv
             oclMat image_scale;
             // effect size of input image (might be different from original size after scaling)
             Size effect_size;
+
+        private:
+            oclMat gauss_w_lut;
         };
 
 

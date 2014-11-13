@@ -55,7 +55,6 @@ using namespace cv::ocl;
 #define CELLS_PER_BLOCK_Y 2
 #define NTHREADS 256
 
-static oclMat gauss_w_lut;
 static bool hog_device_cpu;
 
 namespace cv
