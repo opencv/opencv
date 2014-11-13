@@ -194,22 +194,27 @@ enum KmeansFlags {
     KMEANS_USE_INITIAL_LABELS = 1
 };
 
-enum { FILLED  = -1,
-       LINE_4  = 4,
-       LINE_8  = 8,
-       LINE_AA = 16
-     };
+//! type of line
+enum LineTypes {
+    FILLED  = -1,
+    LINE_4  = 4, //!< 4-connected line
+    LINE_8  = 8, //!< 8-connected line
+    LINE_AA = 16 //!< antialiased line
+};
 
-enum { FONT_HERSHEY_SIMPLEX        = 0,
-       FONT_HERSHEY_PLAIN          = 1,
-       FONT_HERSHEY_DUPLEX         = 2,
-       FONT_HERSHEY_COMPLEX        = 3,
-       FONT_HERSHEY_TRIPLEX        = 4,
-       FONT_HERSHEY_COMPLEX_SMALL  = 5,
-       FONT_HERSHEY_SCRIPT_SIMPLEX = 6,
-       FONT_HERSHEY_SCRIPT_COMPLEX = 7,
-       FONT_ITALIC                 = 16
-     };
+//! Only a subset of Hershey fonts
+//! <http://sources.isc.org/utils/misc/hershey-font.txt> are supported
+enum HersheyFonts {
+    FONT_HERSHEY_SIMPLEX        = 0, //!< normal size sans-serif font
+    FONT_HERSHEY_PLAIN          = 1, //!< small size sans-serif font
+    FONT_HERSHEY_DUPLEX         = 2, //!< normal size sans-serif font (more complex than FONT_HERSHEY_SIMPLEX)
+    FONT_HERSHEY_COMPLEX        = 3, //!< normal size serif font
+    FONT_HERSHEY_TRIPLEX        = 4, //!< normal size serif font (more complex than FONT_HERSHEY_COMPLEX)
+    FONT_HERSHEY_COMPLEX_SMALL  = 5, //!< smaller version of FONT_HERSHEY_COMPLEX
+    FONT_HERSHEY_SCRIPT_SIMPLEX = 6, //!< hand-writing style font
+    FONT_HERSHEY_SCRIPT_COMPLEX = 7, //!< more complex variant of FONT_HERSHEY_SCRIPT_SIMPLEX
+    FONT_ITALIC                 = 16 //!< flag for italic font
+};
 
 enum ReduceTypes { REDUCE_SUM = 0, //!< the output is the sum of all rows/columns of the matrix.
                    REDUCE_AVG = 1, //!< the output is the mean vector of all rows/columns of the matrix.
@@ -2696,78 +2701,6 @@ CV_EXPORTS_W double kmeans( InputArray data, int K, InputOutputArray bestLabels,
 
 //! @} core_cluster
 
-//! @addtogroup imgproc_drawing
-//! @{
-
-/*! @brief Line iterator
-
-The class is used to iterate over all the pixels on the raster line
-segment connecting two specified points.
-
-The class LineIterator is used to get each pixel of a raster line. It
-can be treated as versatile implementation of the Bresenham algorithm
-where you can stop at each pixel and do some extra processing, for
-example, grab pixel values along the line or draw a line with an effect
-(for example, with XOR operation).
-
-The number of pixels along the line is stored in LineIterator::count.
-The method LineIterator::pos returns the current position in the image:
-
-@code{.cpp}
-// grabs pixels along the line (pt1, pt2)
-// from 8-bit 3-channel image to the buffer
-LineIterator it(img, pt1, pt2, 8);
-LineIterator it2 = it;
-vector<Vec3b> buf(it.count);
-
-for(int i = 0; i < it.count; i++, ++it)
-    buf[i] = *(const Vec3b)*it;
-
-// alternative way of iterating through the line
-for(int i = 0; i < it2.count; i++, ++it2)
-{
-    Vec3b val = img.at<Vec3b>(it2.pos());
-    CV_Assert(buf[i] == val);
-}
-@endcode
-*/
-class CV_EXPORTS LineIterator
-{
-public:
-    /** @brief intializes the iterator
-
-    creates iterators for the line connecting pt1 and pt2
-    the line will be clipped on the image boundaries
-    the line is 8-connected or 4-connected
-    If leftToRight=true, then the iteration is always done
-    from the left-most point to the right most,
-    not to depend on the ordering of pt1 and pt2 parameters
-    */
-    LineIterator( const Mat& img, Point pt1, Point pt2,
-                  int connectivity = 8, bool leftToRight = false );
-    /** @brief returns pointer to the current pixel
-    */
-    uchar* operator *();
-    /** @brief prefix increment operator (++it). shifts iterator to the next pixel
-    */
-    LineIterator& operator ++();
-    /** @brief postfix increment operator (it++). shifts iterator to the next pixel
-    */
-    LineIterator operator ++(int);
-    /** @brief returns coordinates of the current pixel
-    */
-    Point pos() const;
-
-    uchar* ptr;
-    const uchar* ptr0;
-    int step, elemSize;
-    int err, count;
-    int minusDelta, plusDelta;
-    int minusStep, plusStep;
-};
-
-//! @} imgproc_drawing
-
 //! @addtogroup core_basic
 //! @{
 
@@ -2805,7 +2738,6 @@ public:
     static Ptr<Formatter> get(int fmt = FMT_DEFAULT);
 
 };
-
 
 //////////////////////////////////////// Algorithm ////////////////////////////////////
 
