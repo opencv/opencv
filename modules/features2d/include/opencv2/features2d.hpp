@@ -121,7 +121,7 @@ public:
      * descriptors  Copmputed descriptors. Row i is the descriptor for keypoint i.
      */
     CV_WRAP virtual void compute( InputArray image,
-                                  CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints,
+                                  CV_IN_OUT std::vector<KeyPoint>& keypoints,
                                   OutputArray descriptors );
 
     virtual void compute( InputArrayOfArrays images,
