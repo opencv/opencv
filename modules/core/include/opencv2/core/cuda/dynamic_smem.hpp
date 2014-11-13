@@ -45,6 +45,8 @@
 
 namespace cv { namespace cuda { namespace device
 {
+//! @addtogroup cuda
+//! @{
     template<class T> struct DynamicSharedMem
     {
         __device__ __forceinline__ operator T*()
@@ -75,6 +77,7 @@ namespace cv { namespace cuda { namespace device
             return (double*)__smem_d;
         }
     };
+//! @}
 }}}
 
 #endif // __OPENCV_CUDA_DYNAMIC_SMEM_HPP__

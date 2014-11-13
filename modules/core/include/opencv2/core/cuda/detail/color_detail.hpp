@@ -49,6 +49,8 @@
 #include "../limits.hpp"
 #include "../functional.hpp"
 
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     #ifndef CV_DESCALE
@@ -1972,5 +1974,7 @@ namespace cv { namespace cuda { namespace device
     #undef CV_DESCALE
 
 }}} // namespace cv { namespace cuda { namespace cudev
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_COLOR_DETAIL_HPP__

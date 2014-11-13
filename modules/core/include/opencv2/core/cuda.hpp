@@ -51,13 +51,22 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/cuda_types.hpp"
 
+/**
+@defgroup cuda CUDA-accelerated Computer Vision
+@{
+    @defgroup cuda_struct Data structures
+@}
+ */
+
 namespace cv { namespace cuda {
+
+//! @addtogroup cuda_struct
+//! @{
 
 //////////////////////////////// GpuMat ///////////////////////////////
 
-// Smart pointer for GPU memory with reference counting.
-// Its interface is mostly similar with cv::Mat.
-
+//! Smart pointer for GPU memory with reference counting.
+//! Its interface is mostly similar with cv::Mat.
 class CV_EXPORTS GpuMat
 {
 public:
@@ -283,11 +292,10 @@ CV_EXPORTS void setBufferPoolConfig(int deviceId, size_t stackSize, int stackCou
 
 //////////////////////////////// CudaMem ////////////////////////////////
 
-// CudaMem is limited cv::Mat with page locked memory allocation.
-// Page locked memory is only needed for async and faster coping to GPU.
-// It is convertable to cv::Mat header without reference counting
-// so you can use it with other opencv functions.
-
+//! CudaMem is limited cv::Mat with page locked memory allocation.
+//! Page locked memory is only needed for async and faster coping to GPU.
+//! It is convertable to cv::Mat header without reference counting
+//! so you can use it with other opencv functions.
 class CV_EXPORTS CudaMem
 {
 public:
@@ -363,10 +371,9 @@ CV_EXPORTS void unregisterPageLocked(Mat& m);
 
 ///////////////////////////////// Stream //////////////////////////////////
 
-// Encapculates Cuda Stream. Provides interface for async coping.
-// Passed to each function that supports async kernel execution.
-// Reference counting is enabled.
-
+//! Encapculates Cuda Stream. Provides interface for async coping.
+//! Passed to each function that supports async kernel execution.
+//! Reference counting is enabled.
 class CV_EXPORTS Stream
 {
     typedef void (Stream::*bool_type)() const;
@@ -563,10 +570,10 @@ public:
 
     enum ComputeMode
     {
-        ComputeModeDefault,         /**< default compute mode (Multiple threads can use ::cudaSetDevice() with this device) */
-        ComputeModeExclusive,       /**< compute-exclusive-thread mode (Only one thread in one process will be able to use ::cudaSetDevice() with this device) */
-        ComputeModeProhibited,      /**< compute-prohibited mode (No threads can use ::cudaSetDevice() with this device) */
-        ComputeModeExclusiveProcess /**< compute-exclusive-process mode (Many threads in one process will be able to use ::cudaSetDevice() with this device) */
+        ComputeModeDefault,         /**< default compute mode (Multiple threads can use cudaSetDevice with this device) */
+        ComputeModeExclusive,       /**< compute-exclusive-thread mode (Only one thread in one process will be able to use cudaSetDevice with this device) */
+        ComputeModeProhibited,      /**< compute-prohibited mode (No threads can use cudaSetDevice with this device) */
+        ComputeModeExclusiveProcess /**< compute-exclusive-process mode (Many threads in one process will be able to use cudaSetDevice with this device) */
     };
 
     //! compute mode
@@ -685,6 +692,8 @@ private:
 
 CV_EXPORTS void printCudaDeviceInfo(int device);
 CV_EXPORTS void printShortCudaDeviceInfo(int device);
+
+//! @}
 
 }} // namespace cv { namespace cuda {
 

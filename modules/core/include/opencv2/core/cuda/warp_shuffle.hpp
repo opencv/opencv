@@ -45,6 +45,8 @@
 
 namespace cv { namespace cuda { namespace device
 {
+//! @addtogroup cuda
+//! @{
     template <typename T>
     __device__ __forceinline__ T shfl(T val, int srcLane, int width = warpSize)
     {
@@ -140,6 +142,7 @@ namespace cv { namespace cuda { namespace device
         return 0.0;
     #endif
     }
+//! @}
 }}}
 
 #endif // __OPENCV_CUDA_WARP_SHUFFLE_HPP__

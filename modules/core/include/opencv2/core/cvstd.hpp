@@ -102,26 +102,26 @@ namespace cv
 
 namespace cv {
 
+//! @addtogroup core_utils
+//! @{
+
 //////////////////////////// memory management functions ////////////////////////////
 
-/*!
-  Allocates memory buffer
+/** @brief Allocates an aligned memory buffer.
 
-  This is specialized OpenCV memory allocation function that returns properly aligned memory buffers.
-  The usage is identical to malloc(). The allocated buffers must be freed with cv::fastFree().
-  If there is not enough memory, the function calls cv::error(), which raises an exception.
-
-  \param bufSize buffer size in bytes
-  \return the allocated memory buffer.
-*/
+The function allocates the buffer of the specified size and returns it. When the buffer size is 16
+bytes or more, the returned buffer is aligned to 16 bytes.
+@param bufSize Allocated buffer size.
+ */
 CV_EXPORTS void* fastMalloc(size_t bufSize);
 
-/*!
-  Frees the memory allocated with cv::fastMalloc
+/** @brief Deallocates a memory buffer.
 
-  This is the corresponding deallocation function for cv::fastMalloc().
-  When ptr==NULL, the function has no effect.
-*/
+The function deallocates the buffer allocated with fastMalloc . If NULL pointer is passed, the
+function does nothing. C version of the function clears the pointer *pptr* to avoid problems with
+double memory deallocation.
+@param ptr Pointer to the allocated buffer.
+ */
 CV_EXPORTS void fastFree(void* ptr);
 
 /*!
@@ -158,6 +158,10 @@ public:
     size_type max_size() const { return cv::max(static_cast<_Tp>(-1)/sizeof(_Tp), 1); }
 };
 
+//! @} core_utils
+
+//! @cond IGNORED
+
 namespace detail
 {
 
@@ -188,102 +192,219 @@ struct DefaultDeleter
     void operator () (Y* p) const;
 };
 
-/*
-  A smart shared pointer class with reference counting.
+//! @endcond
 
-  A Ptr<T> stores a pointer and owns a (potentially different) pointer.
-  The stored pointer has type T and is the one returned by get() et al,
-  while the owned pointer can have any type and is the one deleted
-  when there are no more Ptrs that own it. You can't directly obtain the
-  owned pointer.
+//! @addtogroup core_basic
+//! @{
 
-  The interface of this class is mostly a subset of that of C++11's
-  std::shared_ptr.
+/** @brief Template class for smart pointers with shared ownership
+
+A Ptr\<T\> pretends to be a pointer to an object of type T. Unlike an ordinary pointer, however, the
+object will be automatically cleaned up once all Ptr instances pointing to it are destroyed.
+
+Ptr is similar to boost::shared_ptr that is part of the Boost library
+(<http://www.boost.org/doc/libs/release/libs/smart_ptr/shared_ptr.htm>) and std::shared_ptr from
+the [C++11](http://en.wikipedia.org/wiki/C++11) standard.
+
+This class provides the following advantages:
+-   Default constructor, copy constructor, and assignment operator for an arbitrary C++ class or C
+    structure. For some objects, like files, windows, mutexes, sockets, and others, a copy
+    constructor or an assignment operator are difficult to define. For some other objects, like
+    complex classifiers in OpenCV, copy constructors are absent and not easy to implement. Finally,
+    some of complex OpenCV and your own data structures may be written in C. However, copy
+    constructors and default constructors can simplify programming a lot. Besides, they are often
+    required (for example, by STL containers). By using a Ptr to such an object instead of the
+    object itself, you automatically get all of the necessary constructors and the assignment
+    operator.
+-   *O(1)* complexity of the above-mentioned operations. While some structures, like std::vector,
+    provide a copy constructor and an assignment operator, the operations may take a considerable
+    amount of time if the data structures are large. But if the structures are put into a Ptr, the
+    overhead is small and independent of the data size.
+-   Automatic and customizable cleanup, even for C structures. See the example below with FILE\*.
+-   Heterogeneous collections of objects. The standard STL and most other C++ and OpenCV containers
+    can store only objects of the same type and the same size. The classical solution to store
+    objects of different types in the same container is to store pointers to the base class (Base\*)
+    instead but then you lose the automatic memory management. Again, by using Ptr\<Base\> instead
+    of raw pointers, you can solve the problem.
+
+A Ptr is said to *own* a pointer - that is, for each Ptr there is a pointer that will be deleted
+once all Ptr instances that own it are destroyed. The owned pointer may be null, in which case
+nothing is deleted. Each Ptr also *stores* a pointer. The stored pointer is the pointer the Ptr
+pretends to be; that is, the one you get when you use Ptr::get or the conversion to T\*. It's
+usually the same as the owned pointer, but if you use casts or the general shared-ownership
+constructor, the two may diverge: the Ptr will still own the original pointer, but will itself point
+to something else.
+
+The owned pointer is treated as a black box. The only thing Ptr needs to know about it is how to
+delete it. This knowledge is encapsulated in the *deleter* - an auxiliary object that is associated
+with the owned pointer and shared between all Ptr instances that own it. The default deleter is an
+instance of DefaultDeleter, which uses the standard C++ delete operator; as such it will work with
+any pointer allocated with the standard new operator.
+
+However, if the pointer must be deleted in a different way, you must specify a custom deleter upon
+Ptr construction. A deleter is simply a callable object that accepts the pointer as its sole
+argument. For example, if you want to wrap FILE, you may do so as follows:
+@code
+    Ptr<FILE> f(fopen("myfile.txt", "w"), fclose);
+    if(!f) throw ...;
+    fprintf(f, ....);
+    ...
+    // the file will be closed automatically by f's destructor.
+@endcode
+Alternatively, if you want all pointers of a particular type to be deleted the same way, you can
+specialize DefaultDeleter<T>::operator() for that type, like this:
+@code
+    namespace cv {
+    template<> void DefaultDeleter<FILE>::operator ()(FILE * obj) const
+    {
+        fclose(obj);
+    }
+    }
+@endcode
+For convenience, the following types from the OpenCV C API already have such a specialization that
+calls the appropriate release function:
+-   CvCapture
+-   CvFileStorage
+-   CvHaarClassifierCascade
+-   CvMat
+-   CvMatND
+-   CvMemStorage
+-   CvSparseMat
+-   CvVideoWriter
+-   IplImage
+@note The shared ownership mechanism is implemented with reference counting. As such, cyclic
+ownership (e.g. when object a contains a Ptr to object b, which contains a Ptr to object a) will
+lead to all involved objects never being cleaned up. Avoid such situations.
+@note It is safe to concurrently read (but not write) a Ptr instance from multiple threads and
+therefore it is normally safe to use it in multi-threaded applications. The same is true for Mat and
+other C++ OpenCV classes that use internal reference counts.
 */
 template<typename T>
 struct Ptr
 {
-    /* Generic programming support. */
+    /** Generic programming support. */
     typedef T element_type;
 
-    /* Ptr that owns NULL and stores NULL. */
+    /** The default constructor creates a null Ptr - one that owns and stores a null pointer.
+    */
     Ptr();
 
-    /* Ptr that owns p and stores p. The owned pointer will be deleted with
-       DefaultDeleter<Y>. Y must be a complete type and Y* must be
-       convertible to T*. */
+    /**
+    If p is null, these are equivalent to the default constructor.
+    Otherwise, these constructors assume ownership of p - that is, the created Ptr owns and stores p
+    and assumes it is the sole owner of it. Don't use them if p is already owned by another Ptr, or
+    else p will get deleted twice.
+    With the first constructor, DefaultDeleter\<Y\>() becomes the associated deleter (so p will
+    eventually be deleted with the standard delete operator). Y must be a complete type at the point
+    of invocation.
+    With the second constructor, d becomes the associated deleter.
+    Y\* must be convertible to T\*.
+    @param p Pointer to own.
+    @note It is often easier to use makePtr instead.
+     */
     template<typename Y>
     explicit Ptr(Y* p);
 
-    /* Ptr that owns p and stores p. The owned pointer will be deleted by
-       calling d(p). Y* must be convertible to T*. */
+    /** @overload
+    @param d Deleter to use for the owned pointer.
+    @param p Pointer to own.
+    */
     template<typename Y, typename D>
     Ptr(Y* p, D d);
 
-    /* Same as the constructor below; it exists to suppress the generation
-       of the implicit copy constructor. */
+    /**
+    These constructors create a Ptr that shares ownership with another Ptr - that is, own the same
+    pointer as o.
+    With the first two, the same pointer is stored, as well; for the second, Y\* must be convertible
+    to T\*.
+    With the third, p is stored, and Y may be any type. This constructor allows to have completely
+    unrelated owned and stored pointers, and should be used with care to avoid confusion. A relatively
+    benign use is to create a non-owning Ptr, like this:
+    @code
+        ptr = Ptr<T>(Ptr<T>(), dont_delete_me); // owns nothing; will not delete the pointer.
+    @endcode
+    @param o Ptr to share ownership with.
+    */
     Ptr(const Ptr& o);
 
-    /* Ptr that owns the same pointer as o and stores the same pointer as o,
-       converted to T*. Naturally, Y* must be convertible to T*. */
+    /** @overload
+    @param o Ptr to share ownership with.
+    */
     template<typename Y>
     Ptr(const Ptr<Y>& o);
 
-    /* Ptr that owns same pointer as o, and stores p. Useful for casts and
-       creating non-owning Ptrs. */
+    /** @overload
+    @param o Ptr to share ownership with.
+    @param p Pointer to store.
+    */
     template<typename Y>
     Ptr(const Ptr<Y>& o, T* p);
 
-    /* Equivalent to release(). */
+    /** The destructor is equivalent to calling Ptr::release. */
     ~Ptr();
 
-    /* Same as assignment below; exists to suppress the generation of the
-       implicit assignment operator. */
+    /**
+    Assignment replaces the current Ptr instance with one that owns and stores same pointers as o and
+    then destroys the old instance.
+    @param o Ptr to share ownership with.
+     */
     Ptr& operator = (const Ptr& o);
 
+    /** @overload */
     template<typename Y>
     Ptr& operator = (const Ptr<Y>& o);
 
-    /* Resets both the owned and stored pointers to NULL. Deletes the owned
-       pointer with the associated deleter if it's not owned by any other
-       Ptr and is non-zero. It's called reset() in std::shared_ptr; here
-       it is release() for compatibility with old OpenCV versions. */
+    /** If no other Ptr instance owns the owned pointer, deletes it with the associated deleter. Then sets
+    both the owned and the stored pointers to NULL.
+    */
     void release();
 
-    /* Equivalent to assigning from Ptr<T>(p). */
+    /**
+    `ptr.reset(...)` is equivalent to `ptr = Ptr<T>(...)`.
+    @param p Pointer to own.
+    */
     template<typename Y>
     void reset(Y* p);
 
-    /* Equivalent to assigning from Ptr<T>(p, d). */
+    /** @overload
+    @param d Deleter to use for the owned pointer.
+    @param p Pointer to own.
+    */
     template<typename Y, typename D>
     void reset(Y* p, D d);
 
-    /* Swaps the stored and owned pointers of this and o. */
+    /**
+    Swaps the owned and stored pointers (and deleters, if any) of this and o.
+    @param o Ptr to swap with.
+    */
     void swap(Ptr& o);
 
-    /* Returns the stored pointer. */
+    /** Returns the stored pointer. */
     T* get() const;
 
-    /* Ordinary pointer emulation. */
+    /** Ordinary pointer emulation. */
     typename detail::RefOrVoid<T>::type operator * () const;
+
+    /** Ordinary pointer emulation. */
     T* operator -> () const;
 
-    /* Equivalent to get(). */
+    /** Equivalent to get(). */
     operator T* () const;
 
-    /* Equivalent to !*this. */
+    /** ptr.empty() is equivalent to `!ptr.get()`. */
     bool empty() const;
 
-    /* Returns a Ptr that owns the same pointer as this, and stores the same
-       pointer as this, except converted via static_cast to Y*. */
+    /** Returns a Ptr that owns the same pointer as this, and stores the same
+       pointer as this, except converted via static_cast to Y*.
+    */
     template<typename Y>
     Ptr<Y> staticCast() const;
 
-    /* Ditto for const_cast. */
+    /** Ditto for const_cast. */
     template<typename Y>
     Ptr<Y> constCast() const;
 
-    /* Ditto for dynamic_cast. */
+    /** Ditto for dynamic_cast. */
     template<typename Y>
     Ptr<Y> dynamicCast() const;
 
@@ -295,40 +416,54 @@ private:
     friend struct Ptr; // have to do this for the cross-type copy constructor
 };
 
-/* Overload of the generic swap. */
+/** Equivalent to ptr1.swap(ptr2). Provided to help write generic algorithms. */
 template<typename T>
 void swap(Ptr<T>& ptr1, Ptr<T>& ptr2);
 
-/* Obvious comparisons. */
+/** Return whether ptr1.get() and ptr2.get() are equal and not equal, respectively. */
 template<typename T>
 bool operator == (const Ptr<T>& ptr1, const Ptr<T>& ptr2);
 template<typename T>
 bool operator != (const Ptr<T>& ptr1, const Ptr<T>& ptr2);
 
-/* Convenience creation functions. In the far future, there may be variadic templates here. */
+/** `makePtr<T>(...)` is equivalent to `Ptr<T>(new T(...))`. It is shorter than the latter, and it's
+marginally safer than using a constructor or Ptr::reset, since it ensures that the owned pointer
+is new and thus not owned by any other Ptr instance.
+Unfortunately, perfect forwarding is impossible to implement in C++03, and so makePtr is limited
+to constructors of T that have up to 10 arguments, none of which are non-const references.
+ */
 template<typename T>
 Ptr<T> makePtr();
+/** @overload */
 template<typename T, typename A1>
 Ptr<T> makePtr(const A1& a1);
+/** @overload */
 template<typename T, typename A1, typename A2>
 Ptr<T> makePtr(const A1& a1, const A2& a2);
+/** @overload */
 template<typename T, typename A1, typename A2, typename A3>
 Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3);
+/** @overload */
 template<typename T, typename A1, typename A2, typename A3, typename A4>
 Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4);
+/** @overload */
 template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5>
 Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5);
+/** @overload */
 template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
 Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5, const A6& a6);
+/** @overload */
 template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7>
 Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5, const A6& a6, const A7& a7);
+/** @overload */
 template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8>
 Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5, const A6& a6, const A7& a7, const A8& a8);
+/** @overload */
 template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
 Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5, const A6& a6, const A7& a7, const A8& a8, const A9& a9);
+/** @overload */
 template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10>
 Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5, const A6& a6, const A7& a7, const A8& a8, const A9& a9, const A10& a10);
-
 
 //////////////////////////////// string class ////////////////////////////////
 
@@ -435,8 +570,11 @@ private:
     void deallocate();
 };
 
+//! @} core_basic
 
 ////////////////////////// cv::String implementation /////////////////////////
+
+//! @cond IGNORED
 
 inline
 String::String()
@@ -815,7 +953,12 @@ String String::toLowerCase() const
     return res;
 }
 
+//! @endcond
+
 // ************************* cv::String non-member functions *************************
+
+//! @relates cv::String
+//! @{
 
 inline
 String operator + (const String& lhs, const String& rhs)
@@ -887,6 +1030,8 @@ static inline bool operator>  (const String& lhs, const char*   rhs) { return lh
 static inline bool operator>= (const String& lhs, const String& rhs) { return lhs.compare(rhs) >= 0; }
 static inline bool operator>= (const char*   lhs, const String& rhs) { return rhs.compare(lhs) <= 0; }
 static inline bool operator>= (const String& lhs, const char*   rhs) { return lhs.compare(rhs) >= 0; }
+
+//! @} relates cv::String
 
 } // cv
 

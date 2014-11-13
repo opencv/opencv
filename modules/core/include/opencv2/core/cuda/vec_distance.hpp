@@ -49,6 +49,8 @@
 
 namespace cv { namespace cuda { namespace device
 {
+//! @addtogroup cuda
+//! @{
     template <typename T> struct L1Dist
     {
         typedef int value_type;
@@ -219,6 +221,7 @@ namespace cv { namespace cuda { namespace device
 
         U vec1Vals[MAX_LEN / THREAD_DIM];
     };
+//! @}
 }}} // namespace cv { namespace cuda { namespace cudev
 
 #endif // __OPENCV_CUDA_VEC_DISTANCE_HPP__
