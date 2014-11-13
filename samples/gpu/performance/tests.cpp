@@ -339,14 +339,15 @@ TEST(ORB)
     Mat src = imread(abspath("../data/aloeL.jpg"), IMREAD_GRAYSCALE);
     if (src.empty()) throw runtime_error("can't open ../data/aloeL.jpg");
 
-    ORB orb(4000);
+    Ptr<ORB> orb = ORB::create(4000);
+
     vector<KeyPoint> keypoints;
     Mat descriptors;
 
-    orb(src, Mat(), keypoints, descriptors);
+    orb->detectAndCompute(src, Mat(), keypoints, descriptors);
 
     CPU_ON;
-    orb(src, Mat(), keypoints, descriptors);
+    orb->detectAndCompute(src, Mat(), keypoints, descriptors);
     CPU_OFF;
 
     cuda::ORB_CUDA d_orb;
