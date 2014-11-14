@@ -410,6 +410,8 @@ Returns the specified ``VideoCapture`` property
 
         * **CV_CAP_PROP_RECTIFICATION** Rectification flag for stereo cameras (note: only supported by DC1394 v 2.x backend currently)
 
+        * **CV_CAP_PROP_BUFFERSIZE** Amount of frames stored in internal buffer memory (note: only supported by DC1394 v 2.x backend currently)
+
 
 **Note**: When querying a property that is not supported by the backend used by the ``VideoCapture`` class, value 0 is returned.
 
@@ -464,6 +466,8 @@ Sets a property in the ``VideoCapture``.
         * **CV_CAP_PROP_WHITE_BALANCE** Currently unsupported
 
         * **CV_CAP_PROP_RECTIFICATION** Rectification flag for stereo cameras (note: only supported by DC1394 v 2.x backend currently)
+
+        * **CV_CAP_PROP_BUFFERSIZE** Amount of frames stored in internal buffer memory (note: only supported by DC1394 v 2.x backend currently)
 
     :param value: Value of the property.
 
