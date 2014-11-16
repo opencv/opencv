@@ -57,77 +57,6 @@ namespace cv {
 namespace ocl {
 namespace optflow_farneback
 {
-oclMat g;
-oclMat xg;
-oclMat xxg;
-oclMat gKer;
-
-float ig[4];
-
-inline void setGaussianBlurKernel(const float *c_gKer, int ksizeHalf)
-{
-    cv::Mat t_gKer(1, ksizeHalf + 1, CV_32FC1, const_cast<float *>(c_gKer));
-    gKer.upload(t_gKer);
-}
-
-static void gaussianBlurOcl(const oclMat &src, int ksizeHalf, oclMat &dst)
-{
-    string kernelName("gaussianBlur");
-#ifdef ANDROID
-    size_t localThreads[3] = { 128, 1, 1 };
-#else
-    size_t localThreads[3] = { 256, 1, 1 };
-#endif
-    size_t globalThreads[3] = { src.cols, src.rows, 1 };
-    int smem_size = (localThreads[0] + 2*ksizeHalf) * sizeof(float);
-
-    CV_Assert(dst.size() == src.size());
-    std::vector< std::pair<size_t, const void *> > args;
-    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&dst.data));
-    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
-    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&gKer.data));
-    args.push_back(std::make_pair(smem_size, (void *)NULL));
-    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.rows));
-    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.cols));
-    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.step));
-    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.step));
-    args.push_back(std::make_pair(sizeof(cl_int), (void *)&ksizeHalf));
-
-    openCLExecuteKernel(Context::getContext(), &optical_flow_farneback, kernelName,
-                        globalThreads, localThreads, args, -1, -1);
-}
-
-static void polynomialExpansionOcl(const oclMat &src, int polyN, oclMat &dst)
-{
-    string kernelName("polynomialExpansion");
-
-#ifdef ANDROID
-    size_t localThreads[3] = { 128, 1, 1 };
-#else
-    size_t localThreads[3] = { 256, 1, 1 };
-#endif
-    size_t globalThreads[3] = { divUp(src.cols, localThreads[0] - 2*polyN) * localThreads[0], src.rows, 1 };
-    int smem_size = 3 * localThreads[0] * sizeof(float);
-
-    std::vector< std::pair<size_t, const void *> > args;
-    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&dst.data));
-    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
-    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&g.data));
-    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&xg.data));
-    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&xxg.data));
-    args.push_back(std::make_pair(smem_size, (void *)NULL));
-    args.push_back(std::make_pair(sizeof(cl_float4), (void *)&ig));
-    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.rows));
-    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.cols));
-    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.step));
-    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.step));
-
-    char opt [128];
-    sprintf(opt, "-D polyN=%d", polyN);
-
-    openCLExecuteKernel(Context::getContext(), &optical_flow_farneback, kernelName,
-                        globalThreads, localThreads, args, -1, -1, opt);
-}
 
 static void updateMatricesOcl(const oclMat &flowx, const oclMat &flowy, const oclMat &R0, const oclMat &R1, oclMat &M)
 {
@@ -207,8 +136,83 @@ static void updateFlowOcl(const oclMat &M, oclMat &flowx, oclMat &flowy)
     openCLExecuteKernel(Context::getContext(), &optical_flow_farneback, kernelName,
                         globalThreads, localThreads, args, -1, -1);
 }
+}
+}
+} // namespace cv { namespace ocl { namespace optflow_farneback
 
-static void gaussianBlur5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
+static oclMat allocMatFromBuf(int rows, int cols, int type, oclMat &mat)
+{
+    if (!mat.empty() && mat.type() == type && mat.rows >= rows && mat.cols >= cols)
+        return mat(Rect(0, 0, cols, rows));
+    return mat = oclMat(rows, cols, type);
+}
+
+void cv::ocl::FarnebackOpticalFlow::setGaussianBlurKernel(const float *c_gKer, int ksizeHalf)
+{
+    cv::Mat t_gKer(1, ksizeHalf + 1, CV_32FC1, const_cast<float *>(c_gKer));
+    gKerMat.upload(t_gKer);
+}
+
+void cv::ocl::FarnebackOpticalFlow::gaussianBlurOcl(const oclMat &src, int ksizeHalf, oclMat &dst)
+{
+    string kernelName("gaussianBlur");
+#ifdef ANDROID
+    size_t localThreads[3] = { 128, 1, 1 };
+#else
+    size_t localThreads[3] = { 256, 1, 1 };
+#endif
+    size_t globalThreads[3] = { src.cols, src.rows, 1 };
+    int smem_size = (localThreads[0] + 2*ksizeHalf) * sizeof(float);
+
+    CV_Assert(dst.size() == src.size());
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&dst.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&gKerMat.data));
+    args.push_back(std::make_pair(smem_size, (void *)NULL));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&ksizeHalf));
+
+    openCLExecuteKernel(Context::getContext(), &optical_flow_farneback, kernelName,
+                        globalThreads, localThreads, args, -1, -1);
+}
+
+void cv::ocl::FarnebackOpticalFlow::polynomialExpansionOcl(const oclMat &src, int polyN, oclMat &dst)
+{
+    string kernelName("polynomialExpansion");
+
+#ifdef ANDROID
+    size_t localThreads[3] = { 128, 1, 1 };
+#else
+    size_t localThreads[3] = { 256, 1, 1 };
+#endif
+    size_t globalThreads[3] = { divUp(src.cols, localThreads[0] - 2*polyN) * localThreads[0], src.rows, 1 };
+    int smem_size = 3 * localThreads[0] * sizeof(float);
+
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&dst.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&gMat.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&xgMat.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&xxgMat.data));
+    args.push_back(std::make_pair(smem_size, (void *)NULL));
+    args.push_back(std::make_pair(sizeof(cl_float4), (void *)&ig));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.step));
+
+    char opt [128];
+    sprintf(opt, "-D polyN=%d", polyN);
+
+    openCLExecuteKernel(Context::getContext(), &optical_flow_farneback, kernelName,
+                        globalThreads, localThreads, args, -1, -1, opt);
+}
+
+void cv::ocl::FarnebackOpticalFlow::gaussianBlur5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
 {
     string kernelName("gaussianBlur5");
     int height = src.rows / 5;
@@ -223,7 +227,7 @@ static void gaussianBlur5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
     std::vector< std::pair<size_t, const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&dst.data));
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
-    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&gKer.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&gKerMat.data));
     args.push_back(std::make_pair(smem_size, (void *)NULL));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&height));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.cols));
@@ -233,16 +237,6 @@ static void gaussianBlur5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
 
     openCLExecuteKernel(Context::getContext(), &optical_flow_farneback, kernelName,
                         globalThreads, localThreads, args, -1, -1);
-}
-}
-}
-} // namespace cv { namespace ocl { namespace optflow_farneback
-
-static oclMat allocMatFromBuf(int rows, int cols, int type, oclMat &mat)
-{
-    if (!mat.empty() && mat.type() == type && mat.rows >= rows && mat.cols >= cols)
-        return mat(Rect(0, 0, cols, rows));
-    return mat = oclMat(rows, cols, type);
 }
 
 cv::ocl::FarnebackOpticalFlow::FarnebackOpticalFlow()
@@ -343,14 +337,14 @@ void cv::ocl::FarnebackOpticalFlow::setPolynomialExpansionConsts(int n, double s
     cv::Mat t_xg(1, n + 1, CV_32FC1, xg);
     cv::Mat t_xxg(1, n + 1, CV_32FC1, xxg);
 
-    optflow_farneback::g.upload(t_g);
-    optflow_farneback::xg.upload(t_xg);
-    optflow_farneback::xxg.upload(t_xxg);
+    gMat.upload(t_g);
+    xgMat.upload(t_xg);
+    xxgMat.upload(t_xxg);
 
-    optflow_farneback::ig[0] = static_cast<float>(ig11);
-    optflow_farneback::ig[1] = static_cast<float>(ig03);
-    optflow_farneback::ig[2] = static_cast<float>(ig33);
-    optflow_farneback::ig[3] = static_cast<float>(ig55);
+    ig[0] = static_cast<float>(ig11);
+    ig[1] = static_cast<float>(ig03);
+    ig[2] = static_cast<float>(ig33);
+    ig[3] = static_cast<float>(ig55);
 }
 
 void cv::ocl::FarnebackOpticalFlow::updateFlow_boxFilter(
@@ -372,7 +366,7 @@ void cv::ocl::FarnebackOpticalFlow::updateFlow_gaussianBlur(
     const oclMat& R0, const oclMat& R1, oclMat& flowx, oclMat& flowy,
     oclMat& M, oclMat &bufM, int blockSize, bool updateMatrices)
 {
-    optflow_farneback::gaussianBlur5Ocl(M, blockSize/2, bufM);
+    gaussianBlur5Ocl(M, blockSize/2, bufM);
 
     swap(M, bufM);
 
@@ -491,8 +485,8 @@ void cv::ocl::FarnebackOpticalFlow::operator ()(
 
         if (fastPyramids)
         {
-            optflow_farneback::polynomialExpansionOcl(pyramid0_[k], polyN, R[0]);
-            optflow_farneback::polynomialExpansionOcl(pyramid1_[k], polyN, R[1]);
+            polynomialExpansionOcl(pyramid0_[k], polyN, R[0]);
+            polynomialExpansionOcl(pyramid1_[k], polyN, R[1]);
         }
         else
         {
@@ -508,13 +502,13 @@ void cv::ocl::FarnebackOpticalFlow::operator ()(
             };
 
             Mat g = getGaussianKernel(smoothSize, sigma, CV_32F);
-            optflow_farneback::setGaussianBlurKernel(g.ptr<float>(smoothSize/2), smoothSize/2);
+            setGaussianBlurKernel(g.ptr<float>(smoothSize/2), smoothSize/2);
 
             for (int i = 0; i < 2; i++)
             {
-                optflow_farneback::gaussianBlurOcl(frames_[i], smoothSize/2, blurredFrame[i]);
+                gaussianBlurOcl(frames_[i], smoothSize/2, blurredFrame[i]);
                 resize(blurredFrame[i], pyrLevel[i], Size(width, height), INTER_LINEAR);
-                optflow_farneback::polynomialExpansionOcl(pyrLevel[i], polyN, R[i]);
+                polynomialExpansionOcl(pyrLevel[i], polyN, R[i]);
             }
         }
 
@@ -523,7 +517,7 @@ void cv::ocl::FarnebackOpticalFlow::operator ()(
         if (flags & OPTFLOW_FARNEBACK_GAUSSIAN)
         {
             Mat g = getGaussianKernel(winSize, winSize/2*0.3f, CV_32F);
-            optflow_farneback::setGaussianBlurKernel(g.ptr<float>(winSize/2), winSize/2);
+            setGaussianBlurKernel(g.ptr<float>(winSize/2), winSize/2);
         }
         for (int i = 0; i < numIters; i++)
         {
