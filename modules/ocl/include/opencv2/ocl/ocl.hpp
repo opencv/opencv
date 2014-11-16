@@ -1473,6 +1473,16 @@ namespace cv
             void releaseMemory();
 
         private:
+            void setGaussianBlurKernel(const float *c_gKer, int ksizeHalf);
+
+            void gaussianBlurOcl(const oclMat &src, int ksizeHalf, oclMat &dst);
+
+            void polynomialExpansionOcl(
+                const oclMat &src, int polyN, oclMat &dst);
+
+            void gaussianBlur5Ocl(
+                const oclMat &src, int ksizeHalf, oclMat &dst);
+
             void prepareGaussian(
                 int n, double sigma, float *g, float *xg, float *xxg,
                 double &ig11, double &ig03, double &ig33, double &ig55);
@@ -1490,6 +1500,11 @@ namespace cv
             oclMat frames_[2];
             oclMat pyrLevel_[2], M_, bufM_, R_[2], blurredFrame_[2];
             std::vector<oclMat> pyramid0_, pyramid1_;
+            float ig[4];
+            oclMat gMat;
+            oclMat xgMat;
+            oclMat xxgMat;
+            oclMat gKerMat;
         };
 
         //////////////// build warping maps ////////////////////
