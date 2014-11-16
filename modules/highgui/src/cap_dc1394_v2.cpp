@@ -686,6 +686,8 @@ double CvCaptureCAM_DC1394_v2_CPP::getProperty(int propId)
         break;
     case CV_CAP_PROP_ISO_SPEED:
         return (double) isoSpeed;
+    case CV_CAP_PROP_BUFFERSIZE:
+        return (double) nDMABufs;
     default:
         if (propId<CV_CAP_PROP_MAX_DC1394 && dc1394properties[propId]!=-1
             && dcCam)
