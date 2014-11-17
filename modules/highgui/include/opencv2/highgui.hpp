@@ -136,6 +136,8 @@ CV_EXPORTS_W void moveWindow(const String& winname, int x, int y);
 
 CV_EXPORTS_W void setWindowProperty(const String& winname, int prop_id, double prop_value);
 
+CV_EXPORTS_W void setWindowTitle(const String& winname, const String& title);
+
 CV_EXPORTS_W double getWindowProperty(const String& winname, int prop_id);
 
 //! assigns callback for mouse events
