@@ -16,7 +16,7 @@
 #    If the module is found then OPENCV_<MODULE>_FOUND is set to TRUE.
 #
 #    This file will define the following variables:
-#      - OpenCV_LIBS                     : The list of libraries to links against.
+#      - OpenCV_LIBS                     : The list of libraries to link against.
 #      - OpenCV_LIB_DIR                  : The directory(es) where lib files are. Calling LINK_DIRECTORIES
 #                                          with this path is NOT needed.
 #      - OpenCV_INCLUDE_DIRS             : The OpenCV include directories.
@@ -124,8 +124,8 @@ endif()
 if(OpenCV_LIB_PATH AND EXISTS "${OpenCV_LIB_PATH}/OpenCVConfig.cmake")
   set(OpenCV_LIB_DIR_OPT "${OpenCV_LIB_PATH}" CACHE PATH "Path where release OpenCV libraries are located" FORCE)
   set(OpenCV_LIB_DIR_DBG "${OpenCV_LIB_PATH}" CACHE PATH "Path where debug OpenCV libraries are located" FORCE)
-  set(OpenCV_3RDPARTY_LIB_DIR_OPT "${OpenCV_LIB_PATH}" CACHE PATH "Path where release 3rdpaty OpenCV dependencies are located" FORCE)
-  set(OpenCV_3RDPARTY_LIB_DIR_DBG "${OpenCV_LIB_PATH}" CACHE PATH "Path where debug 3rdpaty OpenCV dependencies are located" FORCE)
+  set(OpenCV_3RDPARTY_LIB_DIR_OPT "${OpenCV_LIB_PATH}" CACHE PATH "Path where release 3rdparty OpenCV dependencies are located" FORCE)
+  set(OpenCV_3RDPARTY_LIB_DIR_DBG "${OpenCV_LIB_PATH}" CACHE PATH "Path where debug 3rdparty OpenCV dependencies are located" FORCE)
 
   include("${OpenCV_LIB_PATH}/OpenCVConfig.cmake")
 
@@ -159,7 +159,7 @@ if(OpenCV_LIB_PATH AND EXISTS "${OpenCV_LIB_PATH}/OpenCVConfig.cmake")
 else()
   if(NOT OpenCV_FIND_QUIETLY)
     message(WARNING
-"Found OpenCV Windows Pack but it has not binaries compatible with your configuration.
+"Found OpenCV Windows Pack but it has no binaries compatible with your configuration.
 You should manually point CMake variable OpenCV_DIR to your build of OpenCV library."
     )
   endif()
