@@ -41,6 +41,10 @@
 //M*/
 
 #include "precomp.hpp"
+#include "rhorefc.h"
+#if CV_SSE2
+#include "rhosse2.h"
+#endif
 #include <iostream>
 
 namespace cv
@@ -273,6 +277,73 @@ public:
 }
 
 
+
+namespace cv{
+static bool createAndRunRHORegistrator(double confidence, int maxIters, double ransacReprojThreshold, int npoints, InputArray _src, InputArray _dst, OutputArray _H, OutputArray _tempMask){
+    Mat src = _src.getMat();
+    Mat dst = _dst.getMat();
+    Mat tempMask = _tempMask.getMat();
+    bool result;
+
+    /* Run RHO. Needs cleanup or separate function to invoke. */
+    Mat tmpH = Mat(3, 3, CV_32FC1);
+    tempMask = Mat(npoints, 1, CV_8U);
+    double beta = 0.35;/* 0.35 is a value that often works. */
+
+#if CV_SSE2 && 0
+    if(useOptimized()){
+        RHO_HEST_SSE2 p;
+        rhoSSE2Init(&p);
+        rhoSSE2EnsureCapacity(&p, npoints, beta);
+        result = !!rhoSSE2(&p,
+                          (const float*)src.data,
+                          (const float*)dst.data,
+                          (char*)       tempMask.data,
+                          npoints,
+                          ransacReprojThreshold,
+                          maxIters,
+                          maxIters,
+                          confidence,
+                          4,
+                          beta,
+                          RHO_FLAG_ENABLE_NR,
+                          NULL,
+                          (float*)tmpH.data);
+        rhoSSE2Fini(&p);
+    }else
+#endif
+    {
+        RHO_HEST_REFC p;
+        rhoRefCInit(&p);
+        rhoRefCEnsureCapacity(&p, npoints, beta);
+        result = !!rhoRefC(&p,
+                          (const float*)src.data,
+                          (const float*)dst.data,
+                          (char*)       tempMask.data,
+                          npoints,
+                          ransacReprojThreshold,
+                          maxIters,
+                          maxIters,
+                          confidence,
+                          4,
+                          beta,
+                          RHO_FLAG_ENABLE_NR,
+                          NULL,
+                          (float*)tmpH.data);
+        rhoRefCFini(&p);
+    }
+    tmpH.convertTo(_H, CV_64FC1);
+
+    /* Maps non-zero maks elems to 1, for the sake of the testcase. */
+    for(int k=0;k<npoints;k++){
+        tempMask.data[k] = !!tempMask.data[k];
+    }
+
+    return result;
+}
+}
+
+
 cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
                             int method, double ransacReprojThreshold, OutputArray _mask,
                             const int maxIters, const double confidence)
@@ -317,10 +388,12 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
         result = createRANSACPointSetRegistrator(cb, 4, ransacReprojThreshold, confidence, maxIters)->run(src, dst, H, tempMask);
     else if( method == LMEDS )
         result = createLMeDSPointSetRegistrator(cb, 4, confidence, maxIters)->run(src, dst, H, tempMask);
-    else
+    else if( method == RHO ){
+        result = createAndRunRHORegistrator(confidence, maxIters, ransacReprojThreshold, npoints, src, dst, H, tempMask);
+    }else
         CV_Error(Error::StsBadArg, "Unknown estimation method");
 
-    if( result && npoints > 4 )
+    if( result && npoints > 4 && method != RHO)
     {
         compressPoints( src.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
         npoints = compressPoints( dst.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
