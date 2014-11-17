@@ -122,8 +122,8 @@ set(OpenCV_INCLUDE_DIRS @OpenCV_INCLUDE_DIRS_CONFIGCMAKE@)
 # Provide the libs directories to the caller
 set(OpenCV_LIB_DIR_OPT @OpenCV_LIB_DIRS_CONFIGCMAKE@ CACHE PATH "Path where release OpenCV libraries are located")
 set(OpenCV_LIB_DIR_DBG @OpenCV_LIB_DIRS_CONFIGCMAKE@ CACHE PATH "Path where debug OpenCV libraries are located")
-set(OpenCV_3RDPARTY_LIB_DIR_OPT @OpenCV_3RDPARTY_LIB_DIRS_CONFIGCMAKE@ CACHE PATH "Path where release 3rdpaty OpenCV dependencies are located")
-set(OpenCV_3RDPARTY_LIB_DIR_DBG @OpenCV_3RDPARTY_LIB_DIRS_CONFIGCMAKE@ CACHE PATH "Path where debug 3rdpaty OpenCV dependencies are located")
+set(OpenCV_3RDPARTY_LIB_DIR_OPT @OpenCV_3RDPARTY_LIB_DIRS_CONFIGCMAKE@ CACHE PATH "Path where release 3rdparty OpenCV dependencies are located")
+set(OpenCV_3RDPARTY_LIB_DIR_DBG @OpenCV_3RDPARTY_LIB_DIRS_CONFIGCMAKE@ CACHE PATH "Path where debug 3rdparty OpenCV dependencies are located")
 mark_as_advanced(FORCE OpenCV_LIB_DIR_OPT OpenCV_LIB_DIR_DBG OpenCV_3RDPARTY_LIB_DIR_OPT OpenCV_3RDPARTY_LIB_DIR_DBG OpenCV_CONFIG_PATH)
 
 # ======================================================
