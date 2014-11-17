@@ -62,10 +62,10 @@
 
 #define MAX_COUNT_OF_POINTS 303
 #define COUNT_NORM_TYPES 3
-#define METHODS_COUNT 3
+#define METHODS_COUNT 4
 
 int NORM_TYPE[COUNT_NORM_TYPES] = {cv::NORM_L1, cv::NORM_L2, cv::NORM_INF};
-int METHOD[METHODS_COUNT] = {0, cv::RANSAC, cv::LMEDS};
+int METHOD[METHODS_COUNT] = {0, cv::RANSAC, cv::LMEDS, cv::RHO};
 
 using namespace cv;
 using namespace std;
@@ -144,7 +144,7 @@ void CV_HomographyTest::print_information_1(int j, int N, int _method, const Mat
     cout << "Type of srcPoints: "; if ((j>-1) && (j<2)) cout << "Mat of CV_32FC2"; else  cout << "vector <Point2f>";
     cout << "   Type of dstPoints: "; if (j % 2 == 0) cout << "Mat of CV_32FC2"; else cout << "vector <Point2f>"; cout << endl;
     cout << "Count of points: " << N << endl; cout << endl;
-    cout << "Method: "; if (_method == 0) cout << 0; else if (_method == 8) cout << "RANSAC"; else cout << "LMEDS"; cout << endl;
+    cout << "Method: "; if (_method == 0) cout << 0; else if (_method == 8) cout << "RANSAC"; else if (_method == cv::RHO) cout << "RHO"; else cout << "LMEDS"; cout << endl;
     cout << "Homography matrix:" << endl; cout << endl;
     cout << H << endl; cout << endl;
     cout << "Number of rows: " << H.rows << "   Number of cols: " << H.cols << endl; cout << endl;
@@ -156,7 +156,7 @@ void CV_HomographyTest::print_information_2(int j, int N, int _method, const Mat
     cout << "Type of srcPoints: "; if ((j>-1) && (j<2)) cout << "Mat of CV_32FC2"; else  cout << "vector <Point2f>";
     cout << "   Type of dstPoints: "; if (j % 2 == 0) cout << "Mat of CV_32FC2"; else cout << "vector <Point2f>"; cout << endl;
     cout << "Count of points: " << N << endl; cout << endl;
-    cout << "Method: "; if (_method == 0) cout << 0; else if (_method == 8) cout << "RANSAC"; else cout << "LMEDS"; cout << endl;
+    cout << "Method: "; if (_method == 0) cout << 0; else if (_method == 8) cout << "RANSAC"; else if (_method == cv::RHO) cout << "RHO"; else cout << "LMEDS"; cout << endl;
     cout << "Original matrix:" << endl; cout << endl;
     cout << H << endl; cout << endl;
     cout << "Found matrix:" << endl; cout << endl;
@@ -339,14 +339,15 @@ void CV_HomographyTest::run(int)
 
                     continue;
                 }
+            case cv::RHO:
             case RANSAC:
                 {
                     cv::Mat mask [4]; double diff;
 
-                    Mat H_res_64 [4] = { cv::findHomography(src_mat_2f, dst_mat_2f, RANSAC, reproj_threshold, mask[0]),
-                                         cv::findHomography(src_mat_2f, dst_vec, RANSAC, reproj_threshold, mask[1]),
-                                         cv::findHomography(src_vec, dst_mat_2f, RANSAC, reproj_threshold, mask[2]),
-                                         cv::findHomography(src_vec, dst_vec, RANSAC, reproj_threshold, mask[3]) };
+                    Mat H_res_64 [4] = { cv::findHomography(src_mat_2f, dst_mat_2f, method, reproj_threshold, mask[0]),
+                                         cv::findHomography(src_mat_2f, dst_vec, method, reproj_threshold, mask[1]),
+                                         cv::findHomography(src_vec, dst_mat_2f, method, reproj_threshold, mask[2]),
+                                         cv::findHomography(src_vec, dst_vec, method, reproj_threshold, mask[3]) };
 
                     for (int j = 0; j < 4; ++j)
                     {
@@ -466,14 +467,15 @@ void CV_HomographyTest::run(int)
 
                     continue;
                 }
+            case cv::RHO:
             case RANSAC:
                 {
                     cv::Mat mask_res [4];
 
-                    Mat H_res_64 [4] = { cv::findHomography(src_mat_2f, dst_mat_2f, RANSAC, reproj_threshold, mask_res[0]),
-                                         cv::findHomography(src_mat_2f, dst_vec, RANSAC, reproj_threshold, mask_res[1]),
-                                         cv::findHomography(src_vec, dst_mat_2f, RANSAC, reproj_threshold, mask_res[2]),
-                                         cv::findHomography(src_vec, dst_vec, RANSAC, reproj_threshold, mask_res[3]) };
+                    Mat H_res_64 [4] = { cv::findHomography(src_mat_2f, dst_mat_2f, method, reproj_threshold, mask_res[0]),
+                                         cv::findHomography(src_mat_2f, dst_vec, method, reproj_threshold, mask_res[1]),
+                                         cv::findHomography(src_vec, dst_mat_2f, method, reproj_threshold, mask_res[2]),
+                                         cv::findHomography(src_vec, dst_vec, method, reproj_threshold, mask_res[3]) };
 
                     for (int j = 0; j < 4; ++j)
                     {
