@@ -379,7 +379,8 @@ CV_IMPL void cvUpdateWindow(const char*)
 cv::QtFont cv::fontQt(const String& nameFont, int pointSize, Scalar color, int weight,  int style, int /*spacing*/)
 {
     CvFont f = cvFontQt(nameFont.c_str(), pointSize,color,weight, style);
-    return *(cv::QtFont*)(&f);
+    void* pf = &f; // to suppress strict-aliasing
+    return *(cv::QtFont*)pf;
 }
 
 void cv::addText( const Mat& img, const String& text, Point org, const QtFont& font)
@@ -490,6 +491,12 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 // version with a more capable one without a need to recompile dependent
 // applications or libraries.
 
+void cv::setWindowTitle(const String&, const String&)
+{
+    CV_Error(Error::StsNotImplemented, "The function is not implemented. "
+        "Rebuild the library with Windows, GTK+ 2.x or Carbon support. "
+        "If you are on Ubuntu or Debian, install libgtk2.0-dev and pkg-config, then re-run cmake or configure script");
+}
 
 #define CV_NO_GUI_ERROR(funcname) \
     cvError( CV_StsError, funcname, \

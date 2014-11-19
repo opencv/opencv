@@ -181,6 +181,18 @@ void cvSetPropWindow_QT(const char* name,double prop_value)
         Q_ARG(double, prop_value));
 }
 
+void cv::setWindowTitle(const String& winname, const String& title)
+{
+    if (!guiMainThread)
+        CV_Error(Error::StsNullPtr, "NULL guiReceiver (please create a window)");
+
+    QMetaObject::invokeMethod(guiMainThread,
+        "setWindowTitle",
+        autoBlockingConnection(),
+        Q_ARG(QString, QString(winname.c_str())),
+        Q_ARG(QString, QString(title.c_str())));
+}
+
 
 void cvSetModeWindow_QT(const char* name, double prop_value)
 {
@@ -371,7 +383,7 @@ static CvWindow* icvFindWindowByName(QString name)
             if (temp->type == type_CvWindow)
             {
                 CvWindow* w = (CvWindow*) temp;
-                if (w->windowTitle() == name)
+                if (w->objectName() == name)
                 {
                     window = w;
                     break;
@@ -527,7 +539,7 @@ CV_IMPL const char* cvGetWindowName(void* window_handle)
     if( !window_handle )
         CV_Error( CV_StsNullPtr, "NULL window handler" );
 
-    return ((CvWindow*)window_handle)->windowTitle().toLatin1().data();
+    return ((CvWindow*)window_handle)->objectName().toLatin1().data();
 }
 
 
@@ -869,6 +881,22 @@ void GuiReceiver::setPropWindow(QString name, double arg2)
     int flags = (int) arg2;
 
     w->setPropWindow(flags);
+}
+
+void GuiReceiver::setWindowTitle(QString name, QString title)
+{
+    QPointer<CvWindow> w = icvFindWindowByName(name);
+
+    if (!w)
+    {
+        cvNamedWindow(name.toLatin1().data());
+        w = icvFindWindowByName(name);
+    }
+
+    if (!w)
+        return;
+
+    w->setWindowTitle(title);
 }
 
 
@@ -1494,7 +1522,7 @@ void CvWinProperties::showEvent(QShowEvent* evnt)
     //no value pos was saved so we let Qt move the window in the middle of its parent (event ignored).
     //then hide will save the last position and thus, we want to retreive it (event accepted).
     QPoint mypos(-1, -1);
-    QSettings settings("OpenCV2", windowTitle());
+    QSettings settings("OpenCV2", objectName());
     mypos = settings.value("pos", mypos).toPoint();
 
     if (mypos.x() >= 0)
@@ -1511,7 +1539,7 @@ void CvWinProperties::showEvent(QShowEvent* evnt)
 
 void CvWinProperties::hideEvent(QHideEvent* evnt)
 {
-    QSettings settings("OpenCV2", windowTitle());
+    QSettings settings("OpenCV2", objectName());
     settings.setValue("pos", pos()); //there is an offset of 6 pixels (so the window's position is wrong -- why ?)
     evnt->accept();
 }
@@ -1520,7 +1548,7 @@ void CvWinProperties::hideEvent(QHideEvent* evnt)
 CvWinProperties::~CvWinProperties()
 {
     //clear the setting pos
-    QSettings settings("OpenCV2", windowTitle());
+    QSettings settings("OpenCV2", objectName());
     settings.remove("pos");
 }
 
@@ -1540,9 +1568,9 @@ CvWindow::CvWindow(QString name, int arg2)
     //setAttribute(Qt::WA_DeleteOnClose); //in other case, does not release memory
     setContentsMargins(0, 0, 0, 0);
     setWindowTitle(name);
-        setObjectName(name);
+    setObjectName(name);
 
-        setFocus( Qt::PopupFocusReason ); //#1695 arrow keys are not received without the explicit focus
+    setFocus( Qt::PopupFocusReason ); //#1695 arrow keys are not received without the explicit focus
 
     resize(400, 300);
     setMinimumSize(1, 1);
@@ -1701,7 +1729,6 @@ void CvWindow::setPropWindow(int flags)
         ;
     }
 }
-
 
 void CvWindow::toggleFullScreen(int flags)
 {
