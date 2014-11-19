@@ -1968,9 +1968,14 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
         {
             const int default_height = 30;
 
-            window->toolbar.toolbar = CreateToolbarEx(
-                    window->frame, WS_CHILD | CCS_TOP | TBSTYLE_WRAPABLE,
-                    1, 0, 0, 0, 0, 0, 16, 20, 16, 16, sizeof(TBBUTTON));
+            // CreateToolbarEx is deprecated and forces linking against Comctl32.lib.
+            window->toolbar.toolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
+                                        WS_CHILD | CCS_TOP | TBSTYLE_WRAPABLE | BTNS_AUTOSIZE | BTNS_BUTTON,
+                                        0, 0, 0, 0,
+                                        window->frame, NULL, GetModuleHandle(NULL), NULL);
+            // CreateToolbarEx automatically sends this but CreateWindowEx doesn't.
+            SendMessage(window->toolbar.toolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
+
             GetClientRect(window->frame, &rect);
             MoveWindow( window->toolbar.toolbar, 0, 0,
                         rect.right - rect.left, default_height, TRUE);
