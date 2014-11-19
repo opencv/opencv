@@ -49,6 +49,9 @@
 namespace cv {
 namespace detail {
 
+//! @addtogroup stitching
+//! @{
+
 //  Base Timelapser class, takes a sequence of images, applies appropriate shift, stores result in dst_.
 
 class CV_EXPORTS Timelapser
@@ -79,6 +82,8 @@ class CV_EXPORTS TimelapserCrop : public Timelapser
 public:
     virtual void initialize(const std::vector<Point> &corners, const std::vector<Size> &sizes);
 };
+
+//! @}
 
 } // namespace detail
 } // namespace cv
