@@ -2249,7 +2249,7 @@ int videoInput::getVideoPropertyFromCV(int cv_property){
         case CV_CAP_PROP_MONOCROME:
             return VideoProcAmp_ColorEnable;
 
-        case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+        case CV_CAP_PROP_WHITE_BALANCE_U:
             return VideoProcAmp_WhiteBalance;
 
         case  CV_CAP_PROP_BACKLIGHT:
@@ -3246,7 +3246,7 @@ double CvCaptureCAM_DShow::getProperty( int property_id )
     case CV_CAP_PROP_SHARPNESS:
     case CV_CAP_PROP_GAMMA:
     case CV_CAP_PROP_MONOCROME:
-    case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+    case CV_CAP_PROP_WHITE_BALANCE_U:
     case CV_CAP_PROP_BACKLIGHT:
     case CV_CAP_PROP_GAIN:
         if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(property_id),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
@@ -3350,7 +3350,7 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
     case CV_CAP_PROP_SHARPNESS:
     case CV_CAP_PROP_GAMMA:
     case CV_CAP_PROP_MONOCROME:
-    case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+    case CV_CAP_PROP_WHITE_BALANCE_U:
     case CV_CAP_PROP_BACKLIGHT:
     case CV_CAP_PROP_GAIN:
         return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(property_id),(long)value);
