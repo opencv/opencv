@@ -426,7 +426,7 @@ endmacro()
 
 macro( __DETECT_NATIVE_API_LEVEL _var _path )
  list(APPEND __ndkApiLevelRegexList
-  "^[\t ]*#define[\t ]+__ANDROID_API__[\t ]+([0-9])[\t ]*$"
+  "^[\t ]*#define[\t ]+__ANDROID_API__[\t ]+([0-9]+)[\t ]*$"
   "^[\t ]*#define[\t ]+__ANDROID_API__[\t ]+[0-9]+[\t ]+.*([A-Z]).*$"
  )
  foreach( __ndkApiLevelRegex IN LISTS __ndkApiLevelRegexList)
