@@ -2613,8 +2613,8 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
         const ST* ky = this->kernel.template ptr<ST>() + ksize2;
         int i;
         bool symmetrical = (this->symmetryType & KERNEL_SYMMETRICAL) != 0;
-        bool is_1_2_1 = ky[0] == 1 && ky[1] == 2;
-        bool is_1_m2_1 = ky[0] == 1 && ky[1] == -2;
+        bool is_1_2_1 = ky[0] == 2 && ky[1] == 1;
+        bool is_1_m2_1 = ky[0] == -2 && ky[1] == 1;
         bool is_m1_0_1 = ky[1] == 1 || ky[1] == -1;
         ST f0 = ky[0], f1 = ky[1];
         ST _delta = this->delta;
