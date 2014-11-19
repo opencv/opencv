@@ -53,6 +53,10 @@
 extern "C" {
 #endif
 
+/** @addtogroup objdetect_c
+  @{
+  */
+
 /****************************************************************************************\
 *                         Haar-like Object Detection functions                           *
 \****************************************************************************************/
@@ -143,6 +147,7 @@ CVAPI(void) cvSetImagesForHaarClassifierCascade( CvHaarClassifierCascade* cascad
 CVAPI(int) cvRunHaarClassifierCascade( const CvHaarClassifierCascade* cascade,
                                        CvPoint pt, int start_stage CV_DEFAULT(0));
 
+/** @} objdetect_c */
 
 #ifdef __cplusplus
 }
