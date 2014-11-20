@@ -732,22 +732,27 @@ void cvSetModeWindow_GTK( const char* name, double prop_value)//Yannick Verdie
     __END__;
 }
 
-void cv::setWindowTitle(const String& winname, const String& title)
+void cvSetWindowTitle_GTK(const char* name, const char* title)
 {
-    CvWindow* window = icvFindWindowByName(winname.c_str());
+    CV_FUNCNAME( "cvSetWindowTitle_GTK" );
+
+    __BEGIN__;
+
+    CvWindow* window;
+
+    if (!name)
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+
+    window = icvFindWindowByName(name);
 
     if (!window)
-    {
-        namedWindow(winname);
-        window = icvFindWindowByName(winname.c_str());
-    }
-
-    if (!window)
-        CV_Error(Error::StsNullPtr, "NULL window");
+        CV_ERROR( CV_StsNullPtr, "NULL window");
 
     CV_LOCK_MUTEX();
-    gtk_window_set_title(GTK_WINDOW(window->frame), title.c_str());
+    gtk_window_set_title(GTK_WINDOW(window->frame), title);
     CV_UNLOCK_MUTEX();
+
+    __END__;
 }
 
 double cvGetPropWindowAutoSize_GTK(const char* name)

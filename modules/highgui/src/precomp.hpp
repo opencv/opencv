@@ -115,6 +115,8 @@ double cvGetRatioWindow_GTK(const char* name);
 double cvGetOpenGlProp_W32(const char* name);
 double cvGetOpenGlProp_GTK(const char* name);
 
+void cvSetWindowTitle_GTK(const char* winname, const char* title);
+
 //for QT
 #if defined (HAVE_QT)
 double cvGetModeWindow_QT(const char* name);
