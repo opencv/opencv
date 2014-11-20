@@ -51,15 +51,6 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/cuda_types.hpp"
 
-/**
-  @addtogroup cuda
-  @{
-    @defgroup cuda_init Initalization and Information
-    @defgroup cuda_struct Data Structures
-    @defgroup cuda_calib3d Camera Calibration and 3D Reconstruction
-  @}
- */
-
 namespace cv { namespace cuda {
 
 //! @addtogroup cuda_struct
