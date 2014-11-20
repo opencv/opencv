@@ -53,15 +53,31 @@ namespace cv
 namespace videostab
 {
 
-// See http://iwi.eldoc.ub.rug.nl/FILES/root/2004/JGraphToolsTelea/2004JGraphToolsTelea.pdf
+//! @addtogroup videostab_marching
+//! @{
+
+/** @brief Describes the Fast Marching Method implementation.
+
+  See http://iwi.eldoc.ub.rug.nl/FILES/root/2004/JGraphToolsTelea/2004JGraphToolsTelea.pdf
+ */
 class CV_EXPORTS FastMarchingMethod
 {
 public:
     FastMarchingMethod() : inf_(1e6f) {}
 
+    /** @brief Template method that runs the Fast Marching Method.
+
+    @param mask Image mask. 0 value indicates that the pixel value must be inpainted, 255 indicates
+    that the pixel value is known, other values aren't acceptable.
+    @param inpaint Inpainting functor that overloads void operator ()(int x, int y).
+    @return Inpainting functor.
+     */
     template <typename Inpaint>
     Inpaint run(const Mat &mask, Inpaint inpaint);
 
+    /**
+    @return Distance map that's created during working of the method.
+    */
     Mat distanceMap() const { return dist_; }
 
 private:
@@ -94,6 +110,8 @@ private:
     std::vector<DXY> narrowBand_; // narrow band heap
     int size_; // narrow band size
 };
+
+//! @}
 
 } // namespace videostab
 } // namespace cv
