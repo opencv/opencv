@@ -187,6 +187,8 @@ namespace cv
     } /* namespace viz */
 } /* namespace cv */
 
+//! @cond IGNORED
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::viz::Color
 
@@ -236,5 +238,7 @@ inline cv::viz::Color cv::viz::Color::celestial_blue() { return Color(208, 151, 
 inline cv::viz::Color cv::viz::Color::amethyst()       { return Color(204, 102, 153); }
 
 inline cv::viz::Color cv::viz::Color::not_set()        { return Color(-1, -1, -1); }
+
+//! @endcond
 
 #endif

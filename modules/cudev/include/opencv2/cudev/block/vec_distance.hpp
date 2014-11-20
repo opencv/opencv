@@ -53,6 +53,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // NormL1
 
 template <typename T> struct NormL1
@@ -178,6 +181,8 @@ struct NormHamming
         return mySum;
     }
 };
+
+//! @}
 
 }}
 

@@ -53,6 +53,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <class SrcPtr, typename DstType>
 __host__ void gridIntegral(const SrcPtr& src, GpuMat_<DstType>& dst, Stream& stream = Stream::Null())
 {
@@ -63,6 +66,8 @@ __host__ void gridIntegral(const SrcPtr& src, GpuMat_<DstType>& dst, Stream& str
 
     integral_detail::integral(shrinkPtr(src), shrinkPtr(dst), rows, cols, StreamAccessor::getStream(stream));
 }
+
+//! @}
 
 }}
 

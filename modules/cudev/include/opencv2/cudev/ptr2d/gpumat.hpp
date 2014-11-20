@@ -53,6 +53,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <typename T>
 class GpuMat_ : public GpuMat
 {
@@ -153,6 +156,8 @@ reshape_(const GpuMat_<T>& mat, int rows = 0)
 template <typename T> struct PtrTraits< GpuMat_<T> > : PtrTraitsBase<GpuMat_<T>, GlobPtr<T> >
 {
 };
+
+//! @}
 
 }}
 

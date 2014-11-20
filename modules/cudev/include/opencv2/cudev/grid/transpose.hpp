@@ -54,6 +54,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <class Policy, class SrcPtr, typename DstType>
 __host__ void gridTranspose_(const SrcPtr& src, GpuMat_<DstType>& dst, Stream& stream = Stream::Null())
 {
@@ -97,6 +100,8 @@ __host__ void gridTranspose(const SrcPtr& src, const GlobPtrSz<DstType>& dst, St
 {
     gridTranspose_<DefaultTransposePolicy>(src, dst, stream);
 }
+
+//! @}
 
 }}
 

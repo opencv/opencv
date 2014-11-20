@@ -50,6 +50,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // MakeVec
 
 template<typename T, int CN> struct MakeVec;
@@ -176,6 +179,8 @@ template<> struct VecTraits<char4>
     __host__ __device__ __forceinline__ static char4 make(schar x, schar y, schar z, schar w) {return make_char4(x, y, z, w);}
     __host__ __device__ __forceinline__ static char4 make(const schar* v) {return make_char4(v[0], v[1], v[2], v[3]);}
 };
+
+//! @}
 
 }}
 

@@ -57,6 +57,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <class Policy, class SrcPtr, typename DstType, class MaskPtr>
 __host__ void gridCopy_(const SrcPtr& src, GpuMat_<DstType>& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
 {
@@ -446,6 +449,8 @@ __host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GlobPtrSz<D0>, Glob
 {
     gridCopy_<DefaultCopyPolicy>(src, dst, stream);
 }
+
+//! @}
 
 }}
 

@@ -60,6 +60,8 @@
 //
 //==============================================================================
 
+//! @addtogroup cudalegacy
+//! @{
 
 /**
 * Compile-time assert namespace
@@ -1023,6 +1025,6 @@ CV_EXPORTS NCVStatus ncvDrawRects_32u_device(Ncv32u *d_dst, Ncv32u dstStride, Nc
     NCVMatrixAlloc<type> name(alloc, width, height); \
     ncvAssertReturn(name.isMemAllocated(), err);
 
-
+//! @}
 
 #endif // _ncv_hpp_

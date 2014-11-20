@@ -50,6 +50,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <class T> struct DynamicSharedMem
 {
     __device__ __forceinline__ operator T*()
@@ -80,6 +83,8 @@ template <> struct DynamicSharedMem<double>
         return (double*) __smem_d;
     }
 };
+
+//! @}
 
 }}
 

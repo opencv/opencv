@@ -159,12 +159,18 @@ if(BUILD_DOCS AND HAVE_DOXYGEN)
   set(reflist) # modules reference
   foreach(m ${candidates})
     set(reflist "${reflist} \n- @subpage ${m}")
-    set(all_headers ${all_headers} "${OPENCV_MODULE_opencv_${m}_HEADERS}")
+
+    set(header_dir "${OPENCV_MODULE_opencv_${m}_LOCATION}/include")
+    if(EXISTS ${header_dir})
+        set(all_headers ${all_headers} ${header_dir})
+    endif()
+
     set(docs_dir "${OPENCV_MODULE_opencv_${m}_LOCATION}/doc")
     if(EXISTS ${docs_dir})
       set(all_images ${all_images} ${docs_dir})
       set(all_headers ${all_headers} ${docs_dir})
     endif()
+
   endforeach()
 
   # additional config

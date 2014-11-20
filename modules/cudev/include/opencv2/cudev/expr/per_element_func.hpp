@@ -56,6 +56,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // min/max
 
 template <class SrcPtr1, class SrcPtr2>
@@ -126,6 +129,8 @@ lut_(const SrcPtr& src, const TablePtr& tbl)
 {
     return makeExpr(lutPtr(src, tbl));
 }
+
+//! @}
 
 }}
 
