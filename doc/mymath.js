@@ -8,7 +8,8 @@ MathJax.Hub.Config(
           forkthree: ["\\left\\{ \\begin{array}{l l} #1 & \\mbox{#2}\\\\ #3 & \\mbox{#4}\\\\ #5 & \\mbox{#6}\\\\ \\end{array} \\right.", 6],
           vecthree: ["\\begin{bmatrix} #1\\\\ #2\\\\ #3 \\end{bmatrix}", 3],
           vecthreethree: ["\\begin{bmatrix} #1 & #2 & #3\\\\ #4 & #5 & #6\\\\ #7 & #8 & #9 \\end{bmatrix}", 9],
-          hdotsfor: ["\\dots", 1]
+          hdotsfor: ["\\dots", 1],
+          mathbbm: ["\\mathbb{#1}", 1]
       }
   }
 }
