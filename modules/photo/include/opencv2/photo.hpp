@@ -96,8 +96,8 @@ needs to be inpainted.
 @param inpaintRadius Radius of a circular neighborhood of each point inpainted that is considered
 by the algorithm.
 @param flags Inpainting method that could be one of the following:
--   **INPAINT\_NS** Navier-Stokes based method [Navier01]
--   **INPAINT\_TELEA** Method by Alexandru Telea @cite Telea04.
+-   **INPAINT_NS** Navier-Stokes based method [Navier01]
+-   **INPAINT_TELEA** Method by Alexandru Telea @cite Telea04.
 
 The function reconstructs the selected image area from the pixel near the area boundary. The
 function may be used to remove dust and scratches from a scanned photo, or to remove undesirable
@@ -105,9 +105,9 @@ objects from still images or video. See <http://en.wikipedia.org/wiki/Inpainting
 
 @note
    -   An example using the inpainting technique can be found at
-        opencv\_source\_code/samples/cpp/inpaint.cpp
+        opencv_source_code/samples/cpp/inpaint.cpp
     -   (Python) An example using the inpainting technique can be found at
-        opencv\_source\_code/samples/python2/inpaint.py
+        opencv_source_code/samples/python2/inpaint.py
  */
 CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
         OutputArray dst, double inpaintRadius, int flags );
@@ -347,8 +347,8 @@ public:
 @param contrast resulting contrast on logarithmic scale, i. e. log(max / min), where max and min
 are maximum and minimum luminance values of the resulting image.
 @param saturation saturation enhancement value. See createTonemapDrago
-@param sigma\_space bilateral filter sigma in color space
-@param sigma\_color bilateral filter sigma in coordinate space
+@param sigma_space bilateral filter sigma in color space
+@param sigma_color bilateral filter sigma in coordinate space
  */
 CV_EXPORTS_W Ptr<TonemapDurand>
 createTonemapDurand(float gamma = 1.0f, float contrast = 4.0f, float saturation = 1.0f, float sigma_space = 2.0f, float sigma_color = 2.0f);
@@ -377,9 +377,9 @@ public:
 
 @param gamma gamma value for gamma correction. See createTonemap
 @param intensity result intensity in [-8, 8] range. Greater intensity produces brighter results.
-@param light\_adapt light adaptation in [0, 1] range. If 1 adaptation is based only on pixel
+@param light_adapt light adaptation in [0, 1] range. If 1 adaptation is based only on pixel
 value, if 0 it's global, otherwise it's a weighted mean of this two cases.
-@param color\_adapt chromatic adaptation in [0, 1] range. If 1 channels are treated independently,
+@param color_adapt chromatic adaptation in [0, 1] range. If 1 channels are treated independently,
 if 0 adaptation level is the same for each channel.
  */
 CV_EXPORTS_W Ptr<TonemapReinhard>
@@ -484,9 +484,9 @@ public:
 
 /** @brief Creates AlignMTB object
 
-@param max\_bits logarithm to the base 2 of maximal shift in each dimension. Values of 5 and 6 are
+@param max_bits logarithm to the base 2 of maximal shift in each dimension. Values of 5 and 6 are
 usually good enough (31 and 63 pixels shift respectively).
-@param exclude\_range range for exclusion bitmap that is constructed to suppress noise around the
+@param exclude_range range for exclusion bitmap that is constructed to suppress noise around the
 median value.
 @param cut if true cuts images, otherwise fills the new regions with zeros.
  */
@@ -554,7 +554,7 @@ public:
 
 /** @brief Creates CalibrateRobertson object
 
-@param max\_iter maximal number of Gauss-Seidel solver iterations.
+@param max_iter maximal number of Gauss-Seidel solver iterations.
 @param threshold target difference between results of two successive steps of the minimization.
  */
 CV_EXPORTS_W Ptr<CalibrateRobertson> createCalibrateRobertson(int max_iter = 30, float threshold = 0.01f);
@@ -628,9 +628,9 @@ public:
 
 /** @brief Creates MergeMertens object
 
-@param contrast\_weight contrast measure weight. See MergeMertens.
-@param saturation\_weight saturation measure weight
-@param exposure\_weight well-exposedness measure weight
+@param contrast_weight contrast measure weight. See MergeMertens.
+@param saturation_weight saturation measure weight
+@param exposure_weight well-exposedness measure weight
  */
 CV_EXPORTS_W Ptr<MergeMertens>
 createMergeMertens(float contrast_weight = 1.0f, float saturation_weight = 1.0f, float exposure_weight = 0.0f);
@@ -660,7 +660,7 @@ black-and-white photograph rendering, and in many single channel image processin
 
 @param src Input 8-bit 3-channel image.
 @param grayscale Output 8-bit 1-channel image.
-@param color\_boost Output 8-bit 3-channel image.
+@param color_boost Output 8-bit 3-channel image.
 
 This function is to be applied on color images.
  */
@@ -681,13 +681,13 @@ content @cite PM03.
 @param p Point in dst image where object is placed.
 @param blend Output image with the same size and type as dst.
 @param flags Cloning method that could be one of the following:
--   **NORMAL\_CLONE** The power of the method is fully expressed when inserting objects with
+-   **NORMAL_CLONE** The power of the method is fully expressed when inserting objects with
 complex outlines into a new background
--   **MIXED\_CLONE** The classic method, color-based selection and alpha masking might be time
+-   **MIXED_CLONE** The classic method, color-based selection and alpha masking might be time
 consuming and often leaves an undesirable halo. Seamless cloning, even averaged with the
 original image, is not effective. Mixed seamless cloning based on a loose selection proves
 effective.
--   **FEATURE\_EXCHANGE** Feature exchange allows the user to easily replace certain features of
+-   **FEATURE_EXCHANGE** Feature exchange allows the user to easily replace certain features of
 one object by alternative features.
  */
 CV_EXPORTS_W void seamlessClone( InputArray src, InputArray dst, InputArray mask, Point p,
@@ -699,9 +699,9 @@ seamlessly.
 @param src Input 8-bit 3-channel image.
 @param mask Input 8-bit 1 or 3-channel image.
 @param dst Output image with the same size and type as src .
-@param red\_mul R-channel multiply factor.
-@param green\_mul G-channel multiply factor.
-@param blue\_mul B-channel multiply factor.
+@param red_mul R-channel multiply factor.
+@param green_mul G-channel multiply factor.
+@param blue_mul B-channel multiply factor.
 
 Multiplication factor is between .5 to 2.5.
  */
@@ -729,9 +729,9 @@ Detector is used.
 @param src Input 8-bit 3-channel image.
 @param mask Input 8-bit 1 or 3-channel image.
 @param dst Output image with the same size and type as src.
-@param low\_threshold Range from 0 to 100.
-@param high\_threshold Value \> 100.
-@param kernel\_size The size of the Sobel kernel to be used.
+@param low_threshold Range from 0 to 100.
+@param high_threshold Value \> 100.
+@param kernel_size The size of the Sobel kernel to be used.
 
 **NOTE:**
 
@@ -754,10 +754,10 @@ filters are used in many different applications @cite EM11.
 @param src Input 8-bit 3-channel image.
 @param dst Output 8-bit 3-channel image.
 @param flags Edge preserving filters:
--   **RECURS\_FILTER** = 1
--   **NORMCONV\_FILTER** = 2
-@param sigma\_s Range between 0 to 200.
-@param sigma\_r Range between 0 to 1.
+-   **RECURS_FILTER** = 1
+-   **NORMCONV_FILTER** = 2
+@param sigma_s Range between 0 to 200.
+@param sigma_r Range between 0 to 1.
  */
 CV_EXPORTS_W void edgePreservingFilter(InputArray src, OutputArray dst, int flags = 1,
         float sigma_s = 60, float sigma_r = 0.4f);
@@ -766,8 +766,8 @@ CV_EXPORTS_W void edgePreservingFilter(InputArray src, OutputArray dst, int flag
 
 @param src Input 8-bit 3-channel image.
 @param dst Output image with the same size and type as src.
-@param sigma\_s Range between 0 to 200.
-@param sigma\_r Range between 0 to 1.
+@param sigma_s Range between 0 to 200.
+@param sigma_r Range between 0 to 1.
  */
 CV_EXPORTS_W void detailEnhance(InputArray src, OutputArray dst, float sigma_s = 10,
         float sigma_r = 0.15f);
@@ -777,9 +777,9 @@ CV_EXPORTS_W void detailEnhance(InputArray src, OutputArray dst, float sigma_s =
 @param src Input 8-bit 3-channel image.
 @param dst1 Output 8-bit 1-channel image.
 @param dst2 Output image with the same size and type as src.
-@param sigma\_s Range between 0 to 200.
-@param sigma\_r Range between 0 to 1.
-@param shade\_factor Range between 0 to 0.1.
+@param sigma_s Range between 0 to 200.
+@param sigma_r Range between 0 to 1.
+@param shade_factor Range between 0 to 0.1.
  */
 CV_EXPORTS_W void pencilSketch(InputArray src, OutputArray dst1, OutputArray dst2,
         float sigma_s = 60, float sigma_r = 0.07f, float shade_factor = 0.02f);
@@ -790,8 +790,8 @@ contrast while preserving, or enhancing, high-contrast features.
 
 @param src Input 8-bit 3-channel image.
 @param dst Output image with the same size and type as src.
-@param sigma\_s Range between 0 to 200.
-@param sigma\_r Range between 0 to 1.
+@param sigma_s Range between 0 to 200.
+@param sigma_r Range between 0 to 1.
  */
 CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 60,
         float sigma_r = 0.45f);

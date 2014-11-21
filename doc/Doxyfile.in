@@ -85,7 +85,7 @@ SHOW_FILES             = YES
 SHOW_NAMESPACES        = YES
 FILE_VERSION_FILTER    =
 LAYOUT_FILE            = @CMAKE_DOXYGEN_LAYOUT@
-CITE_BIB_FILES         = @CMAKE_CURRENT_SOURCE_DIR@/opencv.bib
+CITE_BIB_FILES         = @CMAKE_EXTRA_BIB_FILES@
 QUIET                  = YES
 WARNINGS               = YES
 WARN_IF_UNDOCUMENTED   = YES
@@ -222,6 +222,7 @@ INCLUDE_FILE_PATTERNS  =
 PREDEFINED             = __cplusplus=1 \
                          HAVE_IPP_A=1 \
                          CVAPI(x)=x \
+                         CV_DOXYGEN= \
                          CV_EXPORTS= \
                          CV_EXPORTS_W= \
                          CV_EXPORTS_W_SIMPLE= \

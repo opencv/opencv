@@ -70,7 +70,7 @@ public:
     /** @brief Estimates camera parameters.
 
     @param features Features of images
-    @param pairwise\_matches Pairwise matches of images
+    @param pairwise_matches Pairwise matches of images
     @param cameras Estimated camera parameters
     @return True in case of success, false otherwise
      */
@@ -81,10 +81,10 @@ public:
 
 protected:
     /** @brief This method must implement camera parameters estimation logic in order to make the wrapper
-    detail::Estimator::operator()\_ work.
+    detail::Estimator::operator()_ work.
 
     @param features Features of images
-    @param pairwise\_matches Pairwise matches of images
+    @param pairwise_matches Pairwise matches of images
     @param cameras Estimated camera parameters
     @return True in case of success, false otherwise
      */
@@ -130,8 +130,8 @@ public:
 protected:
     /** @brief Construct a bundle adjuster base instance.
 
-    @param num\_params\_per\_cam Number of parameters per camera
-    @param num\_errs\_per\_measurement Number of error terms (components) per match
+    @param num_params_per_cam Number of parameters per camera
+    @param num_errs_per_measurement Number of error terms (components) per match
      */
     BundleAdjusterBase(int num_params_per_cam, int num_errs_per_measurement)
         : num_params_per_cam_(num_params_per_cam),
@@ -159,13 +159,13 @@ protected:
     virtual void obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const = 0;
     /** @brief Calculates error vector.
 
-    @param err Error column-vector of length total\_num\_matches \* num\_errs\_per\_measurement
+    @param err Error column-vector of length total_num_matches \* num_errs_per_measurement
      */
     virtual void calcError(Mat &err) = 0;
     /** @brief Calculates the cost function jacobian.
 
     @param jac Jacobian matrix of dimensions
-    (total\_num\_matches \* num\_errs\_per\_measurement) x (num\_images \* num\_params\_per\_cam)
+    (total_num_matches \* num_errs_per_measurement) x (num_images \* num_params_per_cam)
      */
     virtual void calcJacobian(Mat &jac) = 0;
 

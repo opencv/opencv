@@ -70,7 +70,7 @@ namespace videostab
 
 @param points0 Source set of 2D points (32F).
 @param points1 Destination set of 2D points (32F).
-@param model Motion model (up to MM\_AFFINE).
+@param model Motion model (up to MM_AFFINE).
 @param rmse Final root-mean-square error.
 @return 3x3 2D transformation matrix (32F).
  */

@@ -146,43 +146,59 @@ if(BUILD_DOCS AND HAVE_SPHINX)
 endif()
 
 # ========= Doxygen docs =========
+
+macro(make_reference result modules_list black_list)
+    set(_res)
+    foreach(m ${${modules_list}})
+        list(FIND ${black_list} ${m} _pos)
+        if(${_pos} EQUAL -1)
+            set(_res "${_res} @ref ${m} | ${m} \n")
+        endif()
+    endforeach()
+    set(${result} ${_res})
+endmacro()
+
 if(BUILD_DOCS AND HAVE_DOXYGEN)
-  # documented modules list
-  set(candidates)
-  list(APPEND candidates ${BASE_MODULES} ${EXTRA_MODULES})
-  # blacklisted modules
-  ocv_list_filterout(candidates "^ts$")
+  # not documented modules list
+  list(APPEND blacklist "ts" "java" "python2" "python3" "world")
 
   # gathering headers
-  set(all_headers) # files and dirs to process
-  set(all_images) # image search paths
-  set(reflist) # modules reference
-  foreach(m ${candidates})
-    set(reflist "${reflist} \n- @subpage ${m}")
-
-    set(header_dir "${OPENCV_MODULE_opencv_${m}_LOCATION}/include")
-    if(EXISTS ${header_dir})
-        set(all_headers ${all_headers} ${header_dir})
+  set(paths_include)
+  set(paths_doc)
+  set(paths_bib)
+  foreach(m ${BASE_MODULES} ${EXTRA_MODULES})
+    list(FIND blacklist ${m} _pos)
+    if(${_pos} EQUAL -1)
+      set(header_dir "${OPENCV_MODULE_opencv_${m}_LOCATION}/include")
+      if(EXISTS "${header_dir}")
+        list(APPEND paths_include "${header_dir}")
+      endif()
+      set(docs_dir "${OPENCV_MODULE_opencv_${m}_LOCATION}/doc")
+      if(EXISTS "${docs_dir}")
+        list(APPEND paths_doc "${docs_dir}")
+        file(GLOB bib_file "${docs_dir}" "*.bib")
+        if(EXISTS "${bib_file}")
+          list(APPEND paths_bib "${bib_file}")
+        endif()
+      endif()
     endif()
-
-    set(docs_dir "${OPENCV_MODULE_opencv_${m}_LOCATION}/doc")
-    if(EXISTS ${docs_dir})
-      set(all_images ${all_images} ${docs_dir})
-      set(all_headers ${all_headers} ${docs_dir})
-    endif()
-
   endforeach()
+
 
   # additional config
   set(doxyfile "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile")
   set(rootfile "${CMAKE_CURRENT_BINARY_DIR}/root.markdown")
-  set(all_headers ${all_headers} ${rootfile})
-  string(REGEX REPLACE ";" " \\\\\\n" CMAKE_DOXYGEN_INPUT_LIST "${all_headers}")
-  string(REGEX REPLACE ";" " \\\\\\n" CMAKE_DOXYGEN_IMAGE_PATH "${all_images}")
+  set(bibfile "${CMAKE_CURRENT_SOURCE_DIR}/opencv.bib")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${paths_include} ; ${paths_doc}")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${paths_doc}")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_EXAMPLE_PATH  "${CMAKE_SOURCE_DIR}/samples/cpp ; ${paths_doc}")
   set(CMAKE_DOXYGEN_LAYOUT "${CMAKE_CURRENT_SOURCE_DIR}/DoxygenLayout.xml")
   set(CMAKE_DOXYGEN_OUTPUT_PATH "doxygen")
-  set(CMAKE_DOXYGEN_MODULES_REFERENCE "${reflist}")
-  set(CMAKE_DOXYGEN_EXAMPLE_PATH "${CMAKE_SOURCE_DIR}/samples/cpp")
+  set(CMAKE_EXTRA_BIB_FILES "${bibfile} ${paths_bib}")
+
+  # generate references
+  make_reference(CMAKE_DOXYGEN_MAIN_REFERENCE BASE_MODULES blacklist)
+  make_reference(CMAKE_DOXYGEN_EXTRA_REFERENCE EXTRA_MODULES blacklist)
 
   # writing file
   configure_file(Doxyfile.in ${doxyfile} @ONLY)

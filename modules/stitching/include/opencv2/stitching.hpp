@@ -89,9 +89,9 @@ familiar with the theory is recommended.
 
 @note
    -   A basic example on image stitching can be found at
-        opencv\_source\_code/samples/cpp/stitching.cpp
+        opencv_source_code/samples/cpp/stitching.cpp
     -   A detailed example on image stitching can be found at
-        opencv\_source\_code/samples/cpp/stitching\_detailed.cpp
+        opencv_source_code/samples/cpp/stitching_detailed.cpp
  */
 class CV_EXPORTS_W Stitcher
 {
@@ -108,7 +108,7 @@ public:
    // Stitcher() {}
     /** @brief Creates a stitcher with the default parameters.
 
-    @param try\_use\_gpu Flag indicating whether GPU should be used whenever it's possible.
+    @param try_use_gpu Flag indicating whether GPU should be used whenever it's possible.
     @return Stitcher class instance.
      */
     static Stitcher createDefault(bool try_use_gpu = false);

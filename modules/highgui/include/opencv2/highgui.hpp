@@ -202,10 +202,10 @@ typedef void (*ButtonCallback)(int state, void* userdata);
 
 @param winname Name of the window in the window caption that may be used as a window identifier.
 @param flags Flags of the window. The supported flags are:
-> -   **WINDOW\_NORMAL** If this is set, the user can resize the window (no constraint).
-> -   **WINDOW\_AUTOSIZE** If this is set, the window size is automatically adjusted to fit the
+> -   **WINDOW_NORMAL** If this is set, the user can resize the window (no constraint).
+> -   **WINDOW_AUTOSIZE** If this is set, the window size is automatically adjusted to fit the
 >     displayed image (see imshow ), and you cannot change the window size manually.
-> -   **WINDOW\_OPENGL** If this is set, the window will be created with OpenGL support.
+> -   **WINDOW_OPENGL** If this is set, the window will be created with OpenGL support.
 
 The function namedWindow creates a window that can be used as a placeholder for images and
 trackbars. Created windows are referred to by their names.
@@ -219,14 +219,14 @@ resources and windows of the application are closed automatically by the operati
 @note
 
 Qt backend supports additional flags:
- -   **CV\_WINDOW\_NORMAL or CV\_WINDOW\_AUTOSIZE:** CV\_WINDOW\_NORMAL enables you to resize the
-     window, whereas CV\_WINDOW\_AUTOSIZE adjusts automatically the window size to fit the
+ -   **CV_WINDOW_NORMAL or CV_WINDOW_AUTOSIZE:** CV_WINDOW_NORMAL enables you to resize the
+     window, whereas CV_WINDOW_AUTOSIZE adjusts automatically the window size to fit the
      displayed image (see imshow ), and you cannot change the window size manually.
- -   **CV\_WINDOW\_FREERATIO or CV\_WINDOW\_KEEPRATIO:** CV\_WINDOW\_FREERATIO adjusts the image
-     with no respect to its ratio, whereas CV\_WINDOW\_KEEPRATIO keeps the image ratio.
- -   **CV\_GUI\_NORMAL or CV\_GUI\_EXPANDED:** CV\_GUI\_NORMAL is the old way to draw the window
-     without statusbar and toolbar, whereas CV\_GUI\_EXPANDED is a new enhanced GUI.
-By default, flags == CV\_WINDOW\_AUTOSIZE | CV\_WINDOW\_KEEPRATIO | CV\_GUI\_EXPANDED
+ -   **CV_WINDOW_FREERATIO or CV_WINDOW_KEEPRATIO:** CV_WINDOW_FREERATIO adjusts the image
+     with no respect to its ratio, whereas CV_WINDOW_KEEPRATIO keeps the image ratio.
+ -   **CV_GUI_NORMAL or CV_GUI_EXPANDED:** CV_GUI_NORMAL is the old way to draw the window
+     without statusbar and toolbar, whereas CV_GUI_EXPANDED is a new enhanced GUI.
+By default, flags == CV_WINDOW_AUTOSIZE | CV_WINDOW_KEEPRATIO | CV_GUI_EXPANDED
  */
 CV_EXPORTS_W void namedWindow(const String& winname, int flags = WINDOW_AUTOSIZE);
 
@@ -275,7 +275,7 @@ CV_EXPORTS_W int waitKey(int delay = 0);
 @param mat Image to be shown.
 
 The function imshow displays an image in the specified window. If the window was created with the
-CV\_WINDOW\_AUTOSIZE flag, the image is shown with its original size. Otherwise, the image is scaled
+CV_WINDOW_AUTOSIZE flag, the image is shown with its original size. Otherwise, the image is scaled
 to fit the window. The function may scale the image, depending on its depth:
 
 -   If the image is 8-bit unsigned, it is displayed as is.
@@ -309,7 +309,7 @@ CV_EXPORTS_W void imshow(const String& winname, InputArray mat);
 @note
 
 -   The specified window size is for the image area. Toolbars are not counted.
--   Only windows created without CV\_WINDOW\_AUTOSIZE flag can be resized.
+-   Only windows created without CV_WINDOW_AUTOSIZE flag can be resized.
  */
 CV_EXPORTS_W void resizeWindow(const String& winname, int width, int height);
 
@@ -325,19 +325,19 @@ CV_EXPORTS_W void moveWindow(const String& winname, int x, int y);
 
 @param winname Name of the window.
 @param prop_id Window property to edit. The following operation flags are available:
- -   **CV\_WND\_PROP\_FULLSCREEN** Change if the window is fullscreen ( CV\_WINDOW\_NORMAL or
-     CV\_WINDOW\_FULLSCREEN ).
- -   **CV\_WND\_PROP\_AUTOSIZE** Change if the window is resizable (CV\_WINDOW\_NORMAL or
-     CV\_WINDOW\_AUTOSIZE ).
- -   **CV\_WND\_PROP\_ASPECTRATIO** Change if the aspect ratio of the image is preserved (
-     CV\_WINDOW\_FREERATIO or CV\_WINDOW\_KEEPRATIO ).
+ -   **CV_WND_PROP_FULLSCREEN** Change if the window is fullscreen ( CV_WINDOW_NORMAL or
+     CV_WINDOW_FULLSCREEN ).
+ -   **CV_WND_PROP_AUTOSIZE** Change if the window is resizable (CV_WINDOW_NORMAL or
+     CV_WINDOW_AUTOSIZE ).
+ -   **CV_WND_PROP_ASPECTRATIO** Change if the aspect ratio of the image is preserved (
+     CV_WINDOW_FREERATIO or CV_WINDOW_KEEPRATIO ).
 @param prop_value New value of the window property. The following operation flags are available:
- -   **CV\_WINDOW\_NORMAL** Change the window to normal size or make the window resizable.
- -   **CV\_WINDOW\_AUTOSIZE** Constrain the size by the displayed image. The window is not
+ -   **CV_WINDOW_NORMAL** Change the window to normal size or make the window resizable.
+ -   **CV_WINDOW_AUTOSIZE** Constrain the size by the displayed image. The window is not
      resizable.
- -   **CV\_WINDOW\_FULLSCREEN** Change the window to fullscreen.
- -   **CV\_WINDOW\_FREERATIO** Make the window resizable without any ratio constraints.
- -   **CV\_WINDOW\_KEEPRATIO** Make the window resizable, but preserve the proportions of the
+ -   **CV_WINDOW_FULLSCREEN** Change the window to fullscreen.
+ -   **CV_WINDOW_FREERATIO** Make the window resizable without any ratio constraints.
+ -   **CV_WINDOW_KEEPRATIO** Make the window resizable, but preserve the proportions of the
      displayed image.
 
 The function setWindowProperty enables changing properties of a window.
@@ -352,12 +352,12 @@ CV_EXPORTS_W void setWindowTitle(const String& winname, const String& title);
 
 @param winname Name of the window.
 @param prop_id Window property to retrieve. The following operation flags are available:
- -   **CV\_WND\_PROP\_FULLSCREEN** Change if the window is fullscreen ( CV\_WINDOW\_NORMAL or
-     CV\_WINDOW\_FULLSCREEN ).
- -   **CV\_WND\_PROP\_AUTOSIZE** Change if the window is resizable (CV\_WINDOW\_NORMAL or
-     CV\_WINDOW\_AUTOSIZE ).
- -   **CV\_WND\_PROP\_ASPECTRATIO** Change if the aspect ratio of the image is preserved
-     (CV\_WINDOW\_FREERATIO or CV\_WINDOW\_KEEPRATIO ).
+ -   **CV_WND_PROP_FULLSCREEN** Change if the window is fullscreen ( CV_WINDOW_NORMAL or
+     CV_WINDOW_FULLSCREEN ).
+ -   **CV_WND_PROP_AUTOSIZE** Change if the window is resizable (CV_WINDOW_NORMAL or
+     CV_WINDOW_AUTOSIZE ).
+ -   **CV_WND_PROP_ASPECTRATIO** Change if the aspect ratio of the image is preserved
+     (CV_WINDOW_FREERATIO or CV_WINDOW_KEEPRATIO ).
 
 See setWindowProperty to know the meaning of the returned values.
 
@@ -375,8 +375,8 @@ use the callback.
  */
 CV_EXPORTS void setMouseCallback(const String& winname, MouseCallback onMouse, void* userdata = 0);
 
-/** @brief Gets the mouse-wheel motion delta, when handling mouse-wheel events EVENT\_MOUSEWHEEL and
-EVENT\_MOUSEHWHEEL.
+/** @brief Gets the mouse-wheel motion delta, when handling mouse-wheel events EVENT_MOUSEWHEEL and
+EVENT_MOUSEHWHEEL.
 
 @param flags The mouse callback flags parameter.
 
@@ -385,11 +385,11 @@ a one notch rotation of the wheel or the threshold for action to be taken and on
 occur for each delta. Some high-precision mice with higher-resolution freely-rotating wheels may
 generate smaller values.
 
-For EVENT\_MOUSEWHEEL positive and negative values mean forward and backward scrolling,
-respectively. For EVENT\_MOUSEHWHEEL, where available, positive and negative values mean right and
+For EVENT_MOUSEWHEEL positive and negative values mean forward and backward scrolling,
+respectively. For EVENT_MOUSEHWHEEL, where available, positive and negative values mean right and
 left scrolling, respectively.
 
-With the C API, the macro CV\_GET\_WHEEL\_DELTA(flags) can be used alternatively.
+With the C API, the macro CV_GET_WHEEL_DELTA(flags) can be used alternatively.
 
 @note
 
@@ -426,7 +426,7 @@ Clicking the label of each trackbar enables editing the trackbar values manually
 @note
 
 -   An example of using the trackbar functionality can be found at
-    opencv\_source\_code/samples/cpp/connected\_components.cpp
+    opencv_source_code/samples/cpp/connected_components.cpp
  */
 CV_EXPORTS int createTrackbar(const String& trackbarname, const String& winname,
                               int* value, int count,
@@ -549,20 +549,20 @@ struct QtFont
 *Times*). If the font is not found, a default one is used.
 @param pointSize Size of the font. If not specified, equal zero or negative, the point size of the
 font is set to a system-dependent default value. Generally, this is 12 points.
-@param color Color of the font in BGRA where A = 255 is fully transparent. Use the macro CV \_ RGB
+@param color Color of the font in BGRA where A = 255 is fully transparent. Use the macro CV _ RGB
 for simplicity.
 @param weight Font weight. The following operation flags are available:
- -   **CV\_FONT\_LIGHT** Weight of 25
- -   **CV\_FONT\_NORMAL** Weight of 50
- -   **CV\_FONT\_DEMIBOLD** Weight of 63
- -   **CV\_FONT\_BOLD** Weight of 75
- -   **CV\_FONT\_BLACK** Weight of 87
+ -   **CV_FONT_LIGHT** Weight of 25
+ -   **CV_FONT_NORMAL** Weight of 50
+ -   **CV_FONT_DEMIBOLD** Weight of 63
+ -   **CV_FONT_BOLD** Weight of 75
+ -   **CV_FONT_BLACK** Weight of 87
 
  You can also specify a positive integer for better control.
 @param style Font style. The following operation flags are available:
- -   **CV\_STYLE\_NORMAL** Normal font
- -   **CV\_STYLE\_ITALIC** Italic font
- -   **CV\_STYLE\_OBLIQUE** Oblique font
+ -   **CV_STYLE_NORMAL** Normal font
+ -   **CV_STYLE_ITALIC** Italic font
+ -   **CV_STYLE_OBLIQUE** Oblique font
 @param spacing Spacing between characters. It can be negative or positive.
 
 The function fontQt creates a CvFont object. This CvFont is not compatible with putText .
@@ -613,7 +613,7 @@ zero, the text never disappears.
 
 The function displayOverlay displays useful information/tips on top of the window for a certain
 amount of time *delayms* . This information is displayed on the window statusbar (the window must be
-created with the CV\_GUI\_EXPANDED flags).
+created with the CV_GUI_EXPANDED flags).
  */
 CV_EXPORTS void displayStatusBar(const String& winname, const String& text, int delayms = 0);
 
@@ -622,7 +622,7 @@ CV_EXPORTS void displayStatusBar(const String& winname, const String& text, int 
 @param windowName Name of the window.
 
 The function saveWindowParameters saves size, location, flags, trackbars value, zoom and panning
-location of the window window\_name .
+location of the window window_name .
  */
 CV_EXPORTS void saveWindowParameters(const String& windowName);
 
@@ -631,7 +631,7 @@ CV_EXPORTS void saveWindowParameters(const String& windowName);
 @param windowName Name of the window.
 
 The function loadWindowParameters loads size, location, flags, trackbars value, zoom and panning
-location of the window window\_name .
+location of the window window_name .
  */
 CV_EXPORTS void loadWindowParameters(const String& windowName);
 
@@ -648,9 +648,9 @@ This function should be prototyped as void Foo(int state,\*void); . *state* is t
 of the button. It could be -1 for a push button, 0 or 1 for a check/radio box button.
 @param userdata Pointer passed to the callback function.
 @param type Optional type of the button.
- -   **CV\_PUSH\_BUTTON** Push button
- -   **CV\_CHECKBOX** Checkbox button
- -   **CV\_RADIOBOX** Radiobox button. The radiobox on the same buttonbar (same line) are
+ -   **CV_PUSH_BUTTON** Push button
+ -   **CV_CHECKBOX** Checkbox button
+ -   **CV_RADIOBOX** Radiobox button. The radiobox on the same buttonbar (same line) are
      exclusive, that is only one can be selected at a time.
 @param initial_button_state Default state of the button. Use for checkbox and radiobox. Its
 value could be 0 or 1. *(Optional)*

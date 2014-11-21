@@ -60,8 +60,8 @@ namespace cv
 
         /** @brief Takes coordinate frame data and builds transform to global coordinate frame.
 
-        @param axis\_x X axis vector in global coordinate frame. @param axis\_y Y axis vector in global
-        coordinate frame. @param axis\_z Z axis vector in global coordinate frame. @param origin Origin of
+        @param axis_x X axis vector in global coordinate frame. @param axis_y Y axis vector in global
+        coordinate frame. @param axis_z Z axis vector in global coordinate frame. @param origin Origin of
         the coordinate frame in global coordinate frame.
 
         This function returns affine transform that describes transformation between global coordinate frame
@@ -69,11 +69,11 @@ namespace cv
          */
         CV_EXPORTS Affine3d makeTransformToGlobal(const Vec3d& axis_x, const Vec3d& axis_y, const Vec3d& axis_z, const Vec3d& origin = Vec3d::all(0));
 
-        /** @brief Constructs camera pose from position, focal\_point and up\_vector (see gluLookAt() for more
+        /** @brief Constructs camera pose from position, focal_point and up_vector (see gluLookAt() for more
         infromation).
 
-        @param position Position of the camera in global coordinate frame. @param focal\_point Focal point
-        of the camera in global coordinate frame. @param y\_dir Up vector of the camera in global
+        @param position Position of the camera in global coordinate frame. @param focal_point Focal point
+        of the camera in global coordinate frame. @param y_dir Up vector of the camera in global
         coordinate frame.
 
         This function returns pose of the camera in global coordinate frame.
@@ -82,7 +82,7 @@ namespace cv
 
         /** @brief Retrieves a window by its name.
 
-        @param window\_name Name of the window that is to be retrieved.
+        @param window_name Name of the window that is to be retrieved.
 
         This function returns a Viz3d object with the given name.
 

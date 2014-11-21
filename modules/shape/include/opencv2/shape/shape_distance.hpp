@@ -200,7 +200,7 @@ public:
     /** @brief Set the norm used to compute the Hausdorff value between two shapes. It can be L1 or L2 norm.
 
     @param distanceFlag Flag indicating which norm is used to compute the Hausdorff distance
-    (NORM\_L1, NORM\_L2).
+    (NORM_L1, NORM_L2).
      */
     CV_WRAP virtual void setDistanceFlag(int distanceFlag) = 0;
     CV_WRAP virtual int getDistanceFlag() const = 0;

@@ -97,7 +97,7 @@ namespace cv
 
             /** @brief Creates a widget from ply file.
 
-            @param file\_name Ply file name.
+            @param file_name Ply file name.
              */
             static Widget fromPlyFile(const String &file_name);
 
@@ -107,24 +107,24 @@ namespace cv
             @param value The new value of the property.
 
             **Rendering property** can be one of the following:
-            -   **POINT\_SIZE**
+            -   **POINT_SIZE**
             -   **OPACITY**
-            -   **LINE\_WIDTH**
-            -   **FONT\_SIZE**
+            -   **LINE_WIDTH**
+            -   **FONT_SIZE**
             -
             **REPRESENTATION**: Expected values are
-            -   **REPRESENTATION\_POINTS**
-            -   **REPRESENTATION\_WIREFRAME**
-            -   **REPRESENTATION\_SURFACE**
+            -   **REPRESENTATION_POINTS**
+            -   **REPRESENTATION_WIREFRAME**
+            -   **REPRESENTATION_SURFACE**
             -
-            **IMMEDIATE\_RENDERING**:
+            **IMMEDIATE_RENDERING**:
             -   Turn on immediate rendering by setting the value to 1.
             -   Turn off immediate rendering by setting the value to 0.
             -
             **SHADING**: Expected values are
-            -   **SHADING\_FLAT**
-            -   **SHADING\_GOURAUD**
-            -   **SHADING\_PHONG**
+            -   **SHADING_FLAT**
+            -   **SHADING_GOURAUD**
+            -   **SHADING_PHONG**
              */
             void setRenderingProperty(int property, double value);
             /** @brief Returns rendering property of the widget.
@@ -132,24 +132,24 @@ namespace cv
             @param property Property.
 
             **Rendering property** can be one of the following:
-            -   **POINT\_SIZE**
+            -   **POINT_SIZE**
             -   **OPACITY**
-            -   **LINE\_WIDTH**
-            -   **FONT\_SIZE**
+            -   **LINE_WIDTH**
+            -   **FONT_SIZE**
             -
             **REPRESENTATION**: Expected values are
-            :   -   **REPRESENTATION\_POINTS**
-            -   **REPRESENTATION\_WIREFRAME**
-            -   **REPRESENTATION\_SURFACE**
+            :   -   **REPRESENTATION_POINTS**
+            -   **REPRESENTATION_WIREFRAME**
+            -   **REPRESENTATION_SURFACE**
             -
-            **IMMEDIATE\_RENDERING**:
+            **IMMEDIATE_RENDERING**:
             :   -   Turn on immediate rendering by setting the value to 1.
             -   Turn off immediate rendering by setting the value to 0.
             -
             **SHADING**: Expected values are
-            :   -   **SHADING\_FLAT**
-            -   **SHADING\_GOURAUD**
-            -   **SHADING\_PHONG**
+            :   -   **SHADING_FLAT**
+            -   **SHADING_GOURAUD**
+            -   **SHADING_PHONG**
              */
             double getRenderingProperty(int property) const;
 
@@ -257,7 +257,7 @@ namespace cv
 
             @param center Center of the plane
             @param normal Plane normal orientation
-            @param new\_yaxis Up-vector. New orientation of plane y-axis.
+            @param new_yaxis Up-vector. New orientation of plane y-axis.
             @param size
             @param color Color of the plane.
              */
@@ -274,7 +274,7 @@ namespace cv
 
             @param center Center of the sphere.
             @param radius Radius of the sphere.
-            @param sphere\_resolution Resolution of the sphere.
+            @param sphere_resolution Resolution of the sphere.
             @param color Color of the sphere.
              */
             WSphere(const cv::Point3d &center, double radius, int sphere_resolution = 10, const Color &color = Color::white());
@@ -355,8 +355,8 @@ namespace cv
         public:
             /** @brief Constructs a WCylinder.
 
-            @param axis\_point1 A point1 on the axis of the cylinder.
-            @param axis\_point2 A point2 on the axis of the cylinder.
+            @param axis_point1 A point1 on the axis of the cylinder.
+            @param axis_point2 A point2 on the axis of the cylinder.
             @param radius Radius of the cylinder.
             @param numsides Resolution of the cylinder.
             @param color Color of the cylinder.
@@ -373,7 +373,7 @@ namespace cv
 
             @param min_point Specifies minimum point of the bounding box.
             @param max_point Specifies maximum point of the bounding box.
-            @param wire\_frame If true, cube is represented as wireframe.
+            @param wire_frame If true, cube is represented as wireframe.
             @param color Color of the cube.
 
             ![Cube Widget](images/cube_widget.png)
@@ -408,7 +408,7 @@ namespace cv
 
             @param text Text content of the widget.
             @param pos Position of the text.
-            @param font\_size Font size.
+            @param font_size Font size.
             @param color Color of the text.
              */
             WText(const String &text, const Point &pos, int font_size = 20, const Color &color = Color::white());
@@ -432,8 +432,8 @@ namespace cv
 
             @param text Text content of the widget.
             @param position Position of the text.
-            @param text\_scale Size of the text.
-            @param face\_camera If true, text always faces the camera.
+            @param text_scale Size of the text.
+            @param face_camera If true, text always faces the camera.
             @param color Color of the text.
              */
             WText3D(const String &text, const Point3d &position, double text_scale = 1., bool face_camera = true, const Color &color = Color::white());
@@ -485,7 +485,7 @@ namespace cv
             @param size Size of the image.
             @param center Position of the image.
             @param normal Normal of the plane that represents the image.
-            @param up\_vector Determines orientation of the image.
+            @param up_vector Determines orientation of the image.
              */
             WImage3D(InputArray image, const Size2d &size, const Vec3d &center, const Vec3d &normal, const Vec3d &up_vector);
 
@@ -519,7 +519,7 @@ namespace cv
             /** @brief Constructs a WGrid.
 
             @param cells Number of cell columns and rows, respectively.
-            @param cells\_spacing Size of each cell, respectively.
+            @param cells_spacing Size of each cell, respectively.
             @param color Color of the grid.
              */
             WGrid(const Vec2i &cells = Vec2i::all(10), const Vec2d &cells_spacing = Vec2d::all(1.0), const Color &color = Color::white());
@@ -600,7 +600,7 @@ namespace cv
             /** @brief Constructs a WTrajectory.
 
             @param path List of poses on a trajectory. Takes std::vector\<Affine\<T\>\> with T == [float | double]
-            @param display\_mode Display mode. This can be PATH, FRAMES, and BOTH.
+            @param display_mode Display mode. This can be PATH, FRAMES, and BOTH.
             @param scale Scale of the frames. Polyline is not affected.
             @param color Color of the polyline that represents path.
 
@@ -652,7 +652,7 @@ namespace cv
             /** @brief Constructs a WTrajectorySpheres.
 
             @param path List of poses on a trajectory. Takes std::vector\<Affine\<T\>\> with T == [float | double]
-            @param line\_length Max length of the lines which point to previous position
+            @param line_length Max length of the lines which point to previous position
             @param radius Radius of the spheres.
             @param from Color for first sphere.
             @param to Color for last sphere. Intermediate spheres will have interpolated color.
@@ -673,7 +673,7 @@ namespace cv
         public:
             /** @brief Constructs a WCloud.
 
-            @param cloud Set of points which can be of type: CV\_32FC3, CV\_32FC4, CV\_64FC3, CV\_64FC4.
+            @param cloud Set of points which can be of type: CV_32FC3, CV_32FC4, CV_64FC3, CV_64FC4.
             @param colors Set of colors. It has to be of the same size with cloud.
 
             Points in the cloud belong to mask when they are set to (NaN, NaN, NaN).
@@ -681,7 +681,7 @@ namespace cv
             WCloud(InputArray cloud, InputArray colors);
 
             /** @brief Constructs a WCloud.
-            @param cloud Set of points which can be of type: CV\_32FC3, CV\_32FC4, CV\_64FC3, CV\_64FC4.
+            @param cloud Set of points which can be of type: CV_32FC3, CV_32FC4, CV_64FC3, CV_64FC4.
             @param color A single Color for the whole cloud.
 
             Points in the cloud belong to mask when they are set to (NaN, NaN, NaN).
@@ -689,7 +689,7 @@ namespace cv
             WCloud(InputArray cloud, const Color &color = Color::white());
 
             /** @brief Constructs a WCloud.
-            @param cloud Set of points which can be of type: CV\_32FC3, CV\_32FC4, CV\_64FC3, CV\_64FC4.
+            @param cloud Set of points which can be of type: CV_32FC3, CV_32FC4, CV_64FC3, CV_64FC4.
             @param colors Set of colors. It has to be of the same size with cloud.
             @param normals Normals for each point in cloud. Size and type should match with the cloud parameter.
 
@@ -698,7 +698,7 @@ namespace cv
             WCloud(InputArray cloud, InputArray colors, InputArray normals);
 
             /** @brief Constructs a WCloud.
-            @param cloud Set of points which can be of type: CV\_32FC3, CV\_32FC4, CV\_64FC3, CV\_64FC4.
+            @param cloud Set of points which can be of type: CV_32FC3, CV_32FC4, CV_64FC3, CV_64FC4.
             @param color A single Color for the whole cloud.
             @param normals Normals for each point in cloud.
 
@@ -731,14 +731,14 @@ namespace cv
 
             /** @brief Adds a cloud to the collection.
 
-            @param cloud Point set which can be of type: CV\_32FC3, CV\_32FC4, CV\_64FC3, CV\_64FC4.
+            @param cloud Point set which can be of type: CV_32FC3, CV_32FC4, CV_64FC3, CV_64FC4.
             @param colors Set of colors. It has to be of the same size with cloud.
             @param pose Pose of the cloud. Points in the cloud belong to mask when they are set to (NaN, NaN, NaN).
              */
             void addCloud(InputArray cloud, InputArray colors, const Affine3d &pose = Affine3d::Identity());
             /** @brief Adds a cloud to the collection.
 
-            @param cloud Point set which can be of type: CV\_32FC3, CV\_32FC4, CV\_64FC3, CV\_64FC4.
+            @param cloud Point set which can be of type: CV_32FC3, CV_32FC4, CV_64FC3, CV_64FC4.
             @param color A single Color for the whole cloud.
             @param pose Pose of the cloud. Points in the cloud belong to mask when they are set to (NaN, NaN, NaN).
              */
@@ -757,7 +757,7 @@ namespace cv
         public:
             /** @brief Constructs a WCloudNormals.
 
-            @param cloud Point set which can be of type: CV\_32FC3, CV\_32FC4, CV\_64FC3, CV\_64FC4.
+            @param cloud Point set which can be of type: CV_32FC3, CV_32FC4, CV_64FC3, CV_64FC4.
             @param normals A set of normals that has to be of same type with cloud.
             @param level Display only every level th normal.
             @param scale Scale of the arrows that represent normals.

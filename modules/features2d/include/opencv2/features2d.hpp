@@ -59,11 +59,11 @@ implement vector descriptor matchers inherit the DescriptorMatcher interface.
 
 @note
    -   An example explaining keypoint matching can be found at
-        opencv\_source\_code/samples/cpp/descriptor\_extractor\_matcher.cpp
+        opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
     -   An example on descriptor matching evaluation can be found at
-        opencv\_source\_code/samples/cpp/detector\_descriptor\_matcher\_evaluation.cpp
+        opencv_source_code/samples/cpp/detector_descriptor_matcher_evaluation.cpp
     -   An example on one to many image matching can be found at
-        opencv\_source\_code/samples/cpp/matching\_to\_many\_images.cpp
+        opencv_source_code/samples/cpp/matching_to_many_images.cpp
 
     @defgroup features2d_draw Drawing Function of Keypoints and Matches
     @defgroup features2d_category Object Categorization
@@ -72,9 +72,9 @@ This section describes approaches based on local 2D features and used to categor
 
 @note
    -   A complete Bag-Of-Words sample can be found at
-        opencv\_source\_code/samples/cpp/bagofwords\_classification.cpp
+        opencv_source_code/samples/cpp/bagofwords_classification.cpp
     -   (Python) An example using the features2D framework to perform object categorization can be
-        found at opencv\_source\_code/samples/python2/find\_obj.py
+        found at opencv_source_code/samples/python2/find_obj.py
 
   @}
  */
@@ -265,22 +265,22 @@ public:
     will mean that to cover certain scale range you will need more pyramid levels and so the speed
     will suffer.
     @param nlevels The number of pyramid levels. The smallest level will have linear size equal to
-    input\_image\_linear\_size/pow(scaleFactor, nlevels).
+    input_image_linear_size/pow(scaleFactor, nlevels).
     @param edgeThreshold This is size of the border where the features are not detected. It should
     roughly match the patchSize parameter.
     @param firstLevel It should be 0 in the current implementation.
-    @param WTA\_K The number of points that produce each element of the oriented BRIEF descriptor. The
+    @param WTA_K The number of points that produce each element of the oriented BRIEF descriptor. The
     default value 2 means the BRIEF where we take a random point pair and compare their brightnesses,
     so we get 0/1 response. Other possible values are 3 and 4. For example, 3 means that we take 3
     random points (of course, those point coordinates are random, but they are generated from the
     pre-defined seed, so each element of BRIEF descriptor is computed deterministically from the pixel
     rectangle), find point of maximum brightness and output index of the winner (0, 1 or 2). Such
     output will occupy 2 bits, and therefore it will need a special variant of Hamming distance,
-    denoted as NORM\_HAMMING2 (2 bits per bin). When WTA\_K=4, we take 4 random points to compute each
+    denoted as NORM_HAMMING2 (2 bits per bin). When WTA_K=4, we take 4 random points to compute each
     bin (that will also occupy 2 bits with possible values 0, 1, 2 or 3).
-    @param scoreType The default HARRIS\_SCORE means that Harris algorithm is used to rank features
+    @param scoreType The default HARRIS_SCORE means that Harris algorithm is used to rank features
     (the score is written to KeyPoint::score and is used to retain best nfeatures features);
-    FAST\_SCORE is alternative value of the parameter that produces slightly less stable keypoints,
+    FAST_SCORE is alternative value of the parameter that produces slightly less stable keypoints,
     but it is a little faster to compute.
     @param patchSize size of the patch used by the oriented BRIEF descriptor. Of course, on smaller
     pyramid layers the perceived image area covered by a feature will be larger.
@@ -325,7 +325,7 @@ The class encapsulates all the parameters of the MSER extraction algorithm (see
 
 @note
    -   (Python) A complete example showing the use of the MSER detector can be found at
-        opencv\_source\_code/samples/python2/mser.py
+        opencv_source_code/samples/python2/mser.py
  */
 class CV_EXPORTS_W MSER : public Feature2D
 {
@@ -366,13 +366,13 @@ circle around this pixel.
 @param nonmaxSuppression if true, non-maximum suppression is applied to detected corners
 (keypoints).
 @param type one of the three neighborhoods as defined in the paper:
-FastFeatureDetector::TYPE\_9\_16, FastFeatureDetector::TYPE\_7\_12,
-FastFeatureDetector::TYPE\_5\_8
+FastFeatureDetector::TYPE_9_16, FastFeatureDetector::TYPE_7_12,
+FastFeatureDetector::TYPE_5_8
 
 Detects corners using the FAST algorithm by @cite Rosten06.
 
-@note In Python API, types are given as cv2.FAST\_FEATURE\_DETECTOR\_TYPE\_5\_8,
-cv2.FAST\_FEATURE\_DETECTOR\_TYPE\_7\_12 and cv2.FAST\_FEATURE\_DETECTOR\_TYPE\_9\_16. For corner
+@note In Python API, types are given as cv2.FAST_FEATURE_DETECTOR_TYPE_5_8,
+cv2.FAST_FEATURE_DETECTOR_TYPE_7_12 and cv2.FAST_FEATURE_DETECTOR_TYPE_9_16. For corner
 detection, use cv2.FAST.detect() method.
  */
 CV_EXPORTS void FAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
@@ -529,8 +529,8 @@ public:
     @param threshold Detector response threshold to accept point
     @param nOctaves Maximum octave evolution of the image
     @param nOctaveLayers Default number of sublevels per scale level
-    @param diffusivity Diffusivity type. DIFF\_PM\_G1, DIFF\_PM\_G2, DIFF\_WEICKERT or
-    DIFF\_CHARBONNIER
+    @param diffusivity Diffusivity type. DIFF_PM_G1, DIFF_PM_G2, DIFF_WEICKERT or
+    DIFF_CHARBONNIER
      */
     CV_WRAP static Ptr<KAZE> create(bool extended=false, bool upright=false,
                                     float threshold = 0.001f,
@@ -577,15 +577,15 @@ public:
 
     /** @brief The AKAZE constructor
 
-    @param descriptor\_type Type of the extracted descriptor: DESCRIPTOR\_KAZE,
-    DESCRIPTOR\_KAZE\_UPRIGHT, DESCRIPTOR\_MLDB or DESCRIPTOR\_MLDB\_UPRIGHT.
-    @param descriptor\_size Size of the descriptor in bits. 0 -\> Full size
-    @param descriptor\_channels Number of channels in the descriptor (1, 2, 3)
+    @param descriptor_type Type of the extracted descriptor: DESCRIPTOR_KAZE,
+    DESCRIPTOR_KAZE_UPRIGHT, DESCRIPTOR_MLDB or DESCRIPTOR_MLDB_UPRIGHT.
+    @param descriptor_size Size of the descriptor in bits. 0 -\> Full size
+    @param descriptor_channels Number of channels in the descriptor (1, 2, 3)
     @param threshold Detector response threshold to accept point
     @param nOctaves Maximum octave evolution of the image
     @param nOctaveLayers Default number of sublevels per scale level
-    @param diffusivity Diffusivity type. DIFF\_PM\_G1, DIFF\_PM\_G2, DIFF\_WEICKERT or
-    DIFF\_CHARBONNIER
+    @param diffusivity Diffusivity type. DIFF_PM_G1, DIFF_PM_G2, DIFF_WEICKERT or
+    DIFF_CHARBONNIER
      */
     CV_WRAP static Ptr<AKAZE> create(int descriptor_type=AKAZE::DESCRIPTOR_MLDB,
                                      int descriptor_size = 0, int descriptor_channels = 3,
@@ -947,9 +947,9 @@ class CV_EXPORTS_W BFMatcher : public DescriptorMatcher
 public:
     /** @brief Brute-force matcher constructor.
 
-    @param normType One of NORM\_L1, NORM\_L2, NORM\_HAMMING, NORM\_HAMMING2. L1 and L2 norms are
-    preferable choices for SIFT and SURF descriptors, NORM\_HAMMING should be used with ORB, BRISK and
-    BRIEF, NORM\_HAMMING2 should be used with ORB when WTA\_K==3 or 4 (see ORB::ORB constructor
+    @param normType One of NORM_L1, NORM_L2, NORM_HAMMING, NORM_HAMMING2. L1 and L2 norms are
+    preferable choices for SIFT and SURF descriptors, NORM_HAMMING should be used with ORB, BRISK and
+    BRIEF, NORM_HAMMING2 should be used with ORB when WTA_K==3 or 4 (see ORB::ORB constructor
     description).
     @param crossCheck If it is false, this is will be default BFMatcher behaviour when it finds the k
     nearest neighbors for each query descriptor. If crossCheck==true, then the knnMatch() method with
@@ -977,7 +977,7 @@ protected:
 
 /** @brief Flann-based descriptor matcher.
 
-This matcher trains flann::Index\_ on a train descriptor collection and calls its nearest search
+This matcher trains flann::Index_ on a train descriptor collection and calls its nearest search
 methods to find the best matches. So, this matcher may be faster when matching a large train
 collection than the brute force matcher. FlannBasedMatcher does not support masking permissible
 matches of descriptor sets because flann::Index does not support this. :
@@ -1053,9 +1053,9 @@ output image. See possible flags bit values below.
 DrawMatchesFlags. See details above in drawMatches .
 
 @note
-For Python API, flags are modified as cv2.DRAW\_MATCHES\_FLAGS\_DEFAULT,
-cv2.DRAW\_MATCHES\_FLAGS\_DRAW\_RICH\_KEYPOINTS, cv2.DRAW\_MATCHES\_FLAGS\_DRAW\_OVER\_OUTIMG,
-cv2.DRAW\_MATCHES\_FLAGS\_NOT\_DRAW\_SINGLE\_POINTS
+For Python API, flags are modified as cv2.DRAW_MATCHES_FLAGS_DEFAULT,
+cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS, cv2.DRAW_MATCHES_FLAGS_DRAW_OVER_OUTIMG,
+cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS
  */
 CV_EXPORTS_W void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, InputOutputArray outImage,
                                const Scalar& color=Scalar::all(-1), int flags=DrawMatchesFlags::DEFAULT );

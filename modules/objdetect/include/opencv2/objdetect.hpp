@@ -94,7 +94,7 @@ To see the object detector at work, have a look at the facedetect demo:
 <https://github.com/Itseez/opencv/tree/master/samples/cpp/dbt_face_detection.cpp>
 
 The following reference is for the detection part only. There is a separate application called
-opencv\_traincascade that can train a cascade of boosted classifiers from a set of samples.
+opencv_traincascade that can train a cascade of boosted classifiers from a set of samples.
 
 @note In the new C++ interface it is also possible to use LBP (local binary pattern) features in
 addition to Haar-like features. .. [Viola01] Paul Viola and Michael J. Jones. Rapid Object Detection
@@ -246,7 +246,7 @@ public:
     /** @brief Detects objects of different sizes in the input image. The detected objects are returned as a list
     of rectangles.
 
-    @param image Matrix of the type CV\_8U containing an image where objects are detected.
+    @param image Matrix of the type CV_8U containing an image where objects are detected.
     @param objects Vector of rectangles where each rectangle contains the detected object, the
     rectangles may be partially outside the original image.
     @param scaleFactor Parameter specifying how much the image size is reduced at each image scale.
@@ -261,7 +261,7 @@ public:
 
     @note
        -   (Python) A face detection example using cascade classifiers can be found at
-            opencv\_source\_code/samples/python2/facedetect.py
+            opencv_source_code/samples/python2/facedetect.py
     */
     CV_WRAP void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
@@ -271,7 +271,7 @@ public:
                           Size maxSize = Size() );
 
     /** @overload
-    @param image Matrix of the type CV\_8U containing an image where objects are detected.
+    @param image Matrix of the type CV_8U containing an image where objects are detected.
     @param objects Vector of rectangles where each rectangle contains the detected object, the
     rectangles may be partially outside the original image.
     @param numDetections Vector of detection numbers for the corresponding objects. An object's number

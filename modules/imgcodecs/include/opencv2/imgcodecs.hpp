@@ -92,10 +92,10 @@ enum { IMWRITE_PNG_STRATEGY_DEFAULT      = 0,
 
 @param filename Name of file to be loaded.
 @param flags Flags specifying the color type of a loaded image:
--   CV\_LOAD\_IMAGE\_ANYDEPTH - If set, return 16-bit/32-bit image when the input has the
+-   CV_LOAD_IMAGE_ANYDEPTH - If set, return 16-bit/32-bit image when the input has the
     corresponding depth, otherwise convert it to 8-bit.
--   CV\_LOAD\_IMAGE\_COLOR - If set, always convert image to the color one
--   CV\_LOAD\_IMAGE\_GRAYSCALE - If set, always convert image to the grayscale one
+-   CV_LOAD_IMAGE_COLOR - If set, always convert image to the color one
+-   CV_LOAD_IMAGE_GRAYSCALE - If set, always convert image to the grayscale one
 -   **\>0** Return a 3-channel color image.
 
 @note In the current implementation the alpha channel, if any, is stripped from the output image.
@@ -128,7 +128,7 @@ returns an empty matrix ( Mat::data==NULL ). Currently, the following file forma
 -   On Linux\*, BSD flavors and other Unix-like open-source operating systems, OpenCV looks for
     codecs supplied with an OS image. Install the relevant packages (do not forget the development
     files, for example, "libjpeg-dev", in Debian\* and Ubuntu\*) to get the codec support or turn
-    on the OPENCV\_BUILD\_3RDPARTY\_LIBS flag in CMake.
+    on the OPENCV_BUILD_3RDPARTY_LIBS flag in CMake.
 
 @note In the case of color images, the decoded images will have the channels stored in B G R order.
  */
@@ -139,20 +139,20 @@ CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 @param filename Name of the file.
 @param img Image to be saved.
 @param params Format-specific save parameters encoded as pairs
-paramId\_1, paramValue\_1, paramId\_2, paramValue\_2, ... . The following parameters are currently
+paramId_1, paramValue_1, paramId_2, paramValue_2, ... . The following parameters are currently
 supported:
--   For JPEG, it can be a quality ( CV\_IMWRITE\_JPEG\_QUALITY ) from 0 to 100 (the higher is
+-   For JPEG, it can be a quality ( CV_IMWRITE_JPEG_QUALITY ) from 0 to 100 (the higher is
     the better). Default value is 95.
--   For WEBP, it can be a quality ( CV\_IMWRITE\_WEBP\_QUALITY ) from 1 to 100 (the higher is
+-   For WEBP, it can be a quality ( CV_IMWRITE_WEBP_QUALITY ) from 1 to 100 (the higher is
     the better). By default (without any parameter) and for quality above 100 the lossless
     compression is used.
--   For PNG, it can be the compression level ( CV\_IMWRITE\_PNG\_COMPRESSION ) from 0 to 9. A
+-   For PNG, it can be the compression level ( CV_IMWRITE_PNG_COMPRESSION ) from 0 to 9. A
     higher value means a smaller size and longer compression time. Default value is 3.
--   For PPM, PGM, or PBM, it can be a binary format flag ( CV\_IMWRITE\_PXM\_BINARY ), 0 or 1.
+-   For PPM, PGM, or PBM, it can be a binary format flag ( CV_IMWRITE_PXM_BINARY ), 0 or 1.
     Default value is 1.
 
 The function imwrite saves the image to the specified file. The image format is chosen based on the
-filename extension (see imread for the list of extensions). Only 8-bit (or 16-bit unsigned (CV\_16U)
+filename extension (see imread for the list of extensions). Only 8-bit (or 16-bit unsigned (CV_16U)
 in case of PNG, JPEG 2000, and TIFF) single-channel or 3-channel (with 'BGR' channel order) images
 can be saved using this function. If the format, depth or channel order is different, use
 Mat::convertTo , and cvtColor to convert it before saving. Or, use the universal FileStorage I/O
@@ -239,7 +239,7 @@ CV_EXPORTS Mat imdecode( InputArray buf, int flags, Mat* dst);
 The function compresses the image and stores it in the memory buffer that is resized to fit the
 result. See imwrite for the list of supported formats and flags description.
 
-@note cvEncodeImage returns single-row matrix of type CV\_8UC1 that contains encoded image as array
+@note cvEncodeImage returns single-row matrix of type CV_8UC1 that contains encoded image as array
 of bytes.
  */
 CV_EXPORTS_W bool imencode( const String& ext, InputArray img,

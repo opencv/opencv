@@ -66,12 +66,12 @@ namespace cv { namespace cuda {
 
 @param src Source image.
 @param dst Destination image with the size the same as xmap and the type the same as src .
-@param xmap X values. Only CV\_32FC1 type is supported.
-@param ymap Y values. Only CV\_32FC1 type is supported.
-@param interpolation Interpolation method (see resize ). INTER\_NEAREST , INTER\_LINEAR and
-INTER\_CUBIC are supported for now.
-@param borderMode Pixel extrapolation method (see borderInterpolate ). BORDER\_REFLECT101 ,
-BORDER\_REPLICATE , BORDER\_CONSTANT , BORDER\_REFLECT and BORDER\_WRAP are supported for now.
+@param xmap X values. Only CV_32FC1 type is supported.
+@param ymap Y values. Only CV_32FC1 type is supported.
+@param interpolation Interpolation method (see resize ). INTER_NEAREST , INTER_LINEAR and
+INTER_CUBIC are supported for now.
+@param borderMode Pixel extrapolation method (see borderInterpolate ). BORDER_REFLECT101 ,
+BORDER_REPLICATE , BORDER_CONSTANT , BORDER_REFLECT and BORDER_WRAP are supported for now.
 @param borderValue Value used in case of a constant border. By default, it is 0.
 @param stream Stream for the asynchronous version.
 
@@ -99,7 +99,7 @@ Either dsize or both fx and fy must be non-zero.
 \f[\texttt{(double)dsize.width/src.cols}\f]
 @param fy Scale factor along the vertical axis. If it is zero, it is computed as:
 \f[\texttt{(double)dsize.height/src.rows}\f]
-@param interpolation Interpolation method. INTER\_NEAREST , INTER\_LINEAR and INTER\_CUBIC are
+@param interpolation Interpolation method. INTER_NEAREST , INTER_LINEAR and INTER_CUBIC are
 supported for now.
 @param stream Stream for the asynchronous version.
 
@@ -109,14 +109,14 @@ CV_EXPORTS void resize(InputArray src, OutputArray dst, Size dsize, double fx=0,
 
 /** @brief Applies an affine transformation to an image.
 
-@param src Source image. CV\_8U , CV\_16U , CV\_32S , or CV\_32F depth and 1, 3, or 4 channels are
+@param src Source image. CV_8U , CV_16U , CV_32S , or CV_32F depth and 1, 3, or 4 channels are
 supported.
 @param dst Destination image with the same type as src . The size is dsize .
 @param M *2x3* transformation matrix.
 @param dsize Size of the destination image.
 @param flags Combination of interpolation methods (see resize) and the optional flag
-WARP\_INVERSE\_MAP specifying that M is an inverse transformation ( dst=\>src ). Only
-INTER\_NEAREST , INTER\_LINEAR , and INTER\_CUBIC interpolation methods are supported.
+WARP_INVERSE_MAP specifying that M is an inverse transformation ( dst=\>src ). Only
+INTER_NEAREST , INTER_LINEAR , and INTER_CUBIC interpolation methods are supported.
 @param borderMode
 @param borderValue
 @param stream Stream for the asynchronous version.
@@ -131,8 +131,8 @@ CV_EXPORTS void warpAffine(InputArray src, OutputArray dst, InputArray M, Size d
 @param M *2x3* transformation matrix.
 @param inverse Flag specifying that M is an inverse transformation ( dst=\>src ).
 @param dsize Size of the destination image.
-@param xmap X values with CV\_32FC1 type.
-@param ymap Y values with CV\_32FC1 type.
+@param xmap X values with CV_32FC1 type.
+@param ymap Y values with CV_32FC1 type.
 @param stream Stream for the asynchronous version.
 
 @sa cuda::warpAffine , cuda::remap
@@ -141,14 +141,14 @@ CV_EXPORTS void buildWarpAffineMaps(InputArray M, bool inverse, Size dsize, Outp
 
 /** @brief Applies a perspective transformation to an image.
 
-@param src Source image. CV\_8U , CV\_16U , CV\_32S , or CV\_32F depth and 1, 3, or 4 channels are
+@param src Source image. CV_8U , CV_16U , CV_32S , or CV_32F depth and 1, 3, or 4 channels are
 supported.
 @param dst Destination image with the same type as src . The size is dsize .
 @param M *3x3* transformation matrix.
 @param dsize Size of the destination image.
 @param flags Combination of interpolation methods (see resize ) and the optional flag
-WARP\_INVERSE\_MAP specifying that M is the inverse transformation ( dst =\> src ). Only
-INTER\_NEAREST , INTER\_LINEAR , and INTER\_CUBIC interpolation methods are supported.
+WARP_INVERSE_MAP specifying that M is the inverse transformation ( dst =\> src ). Only
+INTER_NEAREST , INTER_LINEAR , and INTER_CUBIC interpolation methods are supported.
 @param borderMode
 @param borderValue
 @param stream Stream for the asynchronous version.
@@ -163,8 +163,8 @@ CV_EXPORTS void warpPerspective(InputArray src, OutputArray dst, InputArray M, S
 @param M *3x3* transformation matrix.
 @param inverse Flag specifying that M is an inverse transformation ( dst=\>src ).
 @param dsize Size of the destination image.
-@param xmap X values with CV\_32FC1 type.
-@param ymap Y values with CV\_32FC1 type.
+@param xmap X values with CV_32FC1 type.
+@param ymap Y values with CV_32FC1 type.
 @param stream Stream for the asynchronous version.
 
 @sa cuda::warpPerspective , cuda::remap
@@ -188,14 +188,14 @@ CV_EXPORTS void buildWarpSphericalMaps(Size src_size, Rect dst_roi, InputArray K
 
 /** @brief Rotates an image around the origin (0,0) and then shifts it.
 
-@param src Source image. Supports 1, 3 or 4 channels images with CV\_8U , CV\_16U or CV\_32F
+@param src Source image. Supports 1, 3 or 4 channels images with CV_8U , CV_16U or CV_32F
 depth.
 @param dst Destination image with the same type as src . The size is dsize .
 @param dsize Size of the destination image.
 @param angle Angle of rotation in degrees.
 @param xShift Shift along the horizontal axis.
 @param yShift Shift along the vertical axis.
-@param interpolation Interpolation method. Only INTER\_NEAREST , INTER\_LINEAR , and INTER\_CUBIC
+@param interpolation Interpolation method. Only INTER_NEAREST , INTER_LINEAR , and INTER_CUBIC
 are supported.
 @param stream Stream for the asynchronous version.
 

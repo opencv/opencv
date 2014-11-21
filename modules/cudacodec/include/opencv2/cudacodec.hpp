@@ -170,7 +170,7 @@ The implementation uses H264 video codec.
 
 @note
    -   An example on how to use the videoWriter class can be found at
-        opencv\_source\_code/samples/gpu/video\_writer.cpp
+        opencv_source_code/samples/gpu/video_writer.cpp
  */
 class CV_EXPORTS VideoWriter
 {
@@ -195,8 +195,8 @@ public:
 @param fileName Name of the output video file. Only AVI file format is supported.
 @param frameSize Size of the input video frames.
 @param fps Framerate of the created video stream.
-@param format Surface format of input frames ( SF\_UYVY , SF\_YUY2 , SF\_YV12 , SF\_NV12 ,
-SF\_IYUV , SF\_BGR or SF\_GRAY). BGR or gray frames will be converted to YV12 format before
+@param format Surface format of input frames ( SF_UYVY , SF_YUY2 , SF_YV12 , SF_NV12 ,
+SF_IYUV , SF_BGR or SF_GRAY). BGR or gray frames will be converted to YV12 format before
 encoding, frames with other formats will be used as is.
 
 The constructors initialize video writer. FFMPEG is used to write videos. User can implement own
@@ -208,8 +208,8 @@ CV_EXPORTS Ptr<VideoWriter> createVideoWriter(const String& fileName, Size frame
 @param frameSize Size of the input video frames.
 @param fps Framerate of the created video stream.
 @param params Encoder parameters. See cudacodec::EncoderParams .
-@param format Surface format of input frames ( SF\_UYVY , SF\_YUY2 , SF\_YV12 , SF\_NV12 ,
-SF\_IYUV , SF\_BGR or SF\_GRAY). BGR or gray frames will be converted to YV12 format before
+@param format Surface format of input frames ( SF_UYVY , SF_YUY2 , SF_YV12 , SF_NV12 ,
+SF_IYUV , SF_BGR or SF_GRAY). BGR or gray frames will be converted to YV12 format before
 encoding, frames with other formats will be used as is.
 */
 CV_EXPORTS Ptr<VideoWriter> createVideoWriter(const String& fileName, Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
@@ -219,8 +219,8 @@ CV_EXPORTS Ptr<VideoWriter> createVideoWriter(const String& fileName, Size frame
 want to work with raw video stream.
 @param frameSize Size of the input video frames.
 @param fps Framerate of the created video stream.
-@param format Surface format of input frames ( SF\_UYVY , SF\_YUY2 , SF\_YV12 , SF\_NV12 ,
-SF\_IYUV , SF\_BGR or SF\_GRAY). BGR or gray frames will be converted to YV12 format before
+@param format Surface format of input frames ( SF_UYVY , SF_YUY2 , SF_YV12 , SF_NV12 ,
+SF_IYUV , SF_BGR or SF_GRAY). BGR or gray frames will be converted to YV12 format before
 encoding, frames with other formats will be used as is.
 */
 CV_EXPORTS Ptr<VideoWriter> createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, SurfaceFormat format = SF_BGR);
@@ -230,8 +230,8 @@ want to work with raw video stream.
 @param frameSize Size of the input video frames.
 @param fps Framerate of the created video stream.
 @param params Encoder parameters. See cudacodec::EncoderParams .
-@param format Surface format of input frames ( SF\_UYVY , SF\_YUY2 , SF\_YV12 , SF\_NV12 ,
-SF\_IYUV , SF\_BGR or SF\_GRAY). BGR or gray frames will be converted to YV12 format before
+@param format Surface format of input frames ( SF_UYVY , SF_YUY2 , SF_YV12 , SF_NV12 ,
+SF_IYUV , SF_BGR or SF_GRAY). BGR or gray frames will be converted to YV12 format before
 encoding, frames with other formats will be used as is.
 */
 CV_EXPORTS Ptr<VideoWriter> createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
@@ -282,7 +282,7 @@ struct FormatInfo
 
 @note
    -   An example on how to use the videoReader class can be found at
-        opencv\_source\_code/samples/gpu/video\_reader.cpp
+        opencv_source_code/samples/gpu/video_reader.cpp
  */
 class CV_EXPORTS VideoReader
 {

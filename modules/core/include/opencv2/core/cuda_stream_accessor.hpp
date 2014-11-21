@@ -66,7 +66,7 @@ namespace cv
         class Stream;
         class Event;
 
-        /** @brief Class that enables getting cudaStream\_t from cuda::Stream
+        /** @brief Class that enables getting cudaStream_t from cuda::Stream
 
         because it is the only public header that depends on the CUDA Runtime API. Including it
         brings a dependency to your code.

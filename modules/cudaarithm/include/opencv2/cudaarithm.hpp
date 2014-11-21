@@ -216,12 +216,12 @@ CV_EXPORTS void pow(InputArray src, double power, OutputArray dst, Stream& strea
 @param src2 Second source matrix or scalar.
 @param dst Destination matrix that has the same size and type as the input array(s).
 @param cmpop Flag specifying the relation between the elements to be checked:
--   **CMP\_EQ:** a(.) == b(.)
--   **CMP\_GT:** a(.) \< b(.)
--   **CMP\_GE:** a(.) \<= b(.)
--   **CMP\_LT:** a(.) \< b(.)
--   **CMP\_LE:** a(.) \<= b(.)
--   **CMP\_NE:** a(.) != b(.)
+-   **CMP_EQ:** a(.) == b(.)
+-   **CMP_GT:** a(.) \< b(.)
+-   **CMP_GE:** a(.) \<= b(.)
+-   **CMP_LT:** a(.) \< b(.)
+-   **CMP_LE:** a(.) \<= b(.)
+-   **CMP_NE:** a(.) != b(.)
 @param stream Stream for the asynchronous version.
 
 @sa compare
@@ -278,7 +278,7 @@ CV_EXPORTS void rshift(InputArray src, Scalar_<int> val, OutputArray dst, Stream
 
 /** @brief Performs pixel by pixel right left of an image by a constant value.
 
-@param src Source matrix. Supports 1, 3 and 4 channels images with CV\_8U , CV\_16U or CV\_32S
+@param src Source matrix. Supports 1, 3 and 4 channels images with CV_8U , CV_16U or CV_32S
 depth.
 @param val Constant values, one per channel.
 @param dst Destination matrix with the same size and type as src .
@@ -343,8 +343,8 @@ static inline void scaleAdd(InputArray src1, double alpha, InputArray src2, Outp
 @param src Source array (single-channel).
 @param dst Destination array with the same size and type as src .
 @param thresh Threshold value.
-@param maxval Maximum value to use with THRESH\_BINARY and THRESH\_BINARY\_INV threshold types.
-@param type Threshold type. For details, see threshold . The THRESH\_OTSU and THRESH\_TRIANGLE
+@param maxval Maximum value to use with THRESH_BINARY and THRESH_BINARY_INV threshold types.
+@param type Threshold type. For details, see threshold . The THRESH_OTSU and THRESH_TRIANGLE
 threshold types are not supported.
 @param stream Stream for the asynchronous version.
 
@@ -354,8 +354,8 @@ CV_EXPORTS double threshold(InputArray src, OutputArray dst, double thresh, doub
 
 /** @brief Computes magnitudes of complex matrix elements.
 
-@param xy Source complex matrix in the interleaved format ( CV\_32FC2 ).
-@param magnitude Destination matrix of float magnitudes ( CV\_32FC1 ).
+@param xy Source complex matrix in the interleaved format ( CV_32FC2 ).
+@param magnitude Destination matrix of float magnitudes ( CV_32FC1 ).
 @param stream Stream for the asynchronous version.
 
 @sa magnitude
@@ -364,8 +364,8 @@ CV_EXPORTS void magnitude(InputArray xy, OutputArray magnitude, Stream& stream =
 
 /** @brief Computes squared magnitudes of complex matrix elements.
 
-@param xy Source complex matrix in the interleaved format ( CV\_32FC2 ).
-@param magnitude Destination matrix of float magnitude squares ( CV\_32FC1 ).
+@param xy Source complex matrix in the interleaved format ( CV_32FC2 ).
+@param magnitude Destination matrix of float magnitude squares ( CV_32FC1 ).
 @param stream Stream for the asynchronous version.
  */
 CV_EXPORTS void magnitudeSqr(InputArray xy, OutputArray magnitude, Stream& stream = Stream::Null());
@@ -373,9 +373,9 @@ CV_EXPORTS void magnitudeSqr(InputArray xy, OutputArray magnitude, Stream& strea
 /** @overload
  computes magnitude of each (x(i), y(i)) vector
  supports only floating-point source
-@param x Source matrix containing real components ( CV\_32FC1 ).
-@param y Source matrix containing imaginary components ( CV\_32FC1 ).
-@param magnitude Destination matrix of float magnitudes ( CV\_32FC1 ).
+@param x Source matrix containing real components ( CV_32FC1 ).
+@param y Source matrix containing imaginary components ( CV_32FC1 ).
+@param magnitude Destination matrix of float magnitudes ( CV_32FC1 ).
 @param stream Stream for the asynchronous version.
  */
 CV_EXPORTS void magnitude(InputArray x, InputArray y, OutputArray magnitude, Stream& stream = Stream::Null());
@@ -383,18 +383,18 @@ CV_EXPORTS void magnitude(InputArray x, InputArray y, OutputArray magnitude, Str
 /** @overload
  computes squared magnitude of each (x(i), y(i)) vector
  supports only floating-point source
-@param x Source matrix containing real components ( CV\_32FC1 ).
-@param y Source matrix containing imaginary components ( CV\_32FC1 ).
-@param magnitude Destination matrix of float magnitude squares ( CV\_32FC1 ).
+@param x Source matrix containing real components ( CV_32FC1 ).
+@param y Source matrix containing imaginary components ( CV_32FC1 ).
+@param magnitude Destination matrix of float magnitude squares ( CV_32FC1 ).
 @param stream Stream for the asynchronous version.
 */
 CV_EXPORTS void magnitudeSqr(InputArray x, InputArray y, OutputArray magnitude, Stream& stream = Stream::Null());
 
 /** @brief Computes polar angles of complex matrix elements.
 
-@param x Source matrix containing real components ( CV\_32FC1 ).
-@param y Source matrix containing imaginary components ( CV\_32FC1 ).
-@param angle Destination matrix of angles ( CV\_32FC1 ).
+@param x Source matrix containing real components ( CV_32FC1 ).
+@param y Source matrix containing imaginary components ( CV_32FC1 ).
+@param angle Destination matrix of angles ( CV_32FC1 ).
 @param angleInDegrees Flag for angles that must be evaluated in degrees.
 @param stream Stream for the asynchronous version.
 
@@ -404,10 +404,10 @@ CV_EXPORTS void phase(InputArray x, InputArray y, OutputArray angle, bool angleI
 
 /** @brief Converts Cartesian coordinates into polar.
 
-@param x Source matrix containing real components ( CV\_32FC1 ).
-@param y Source matrix containing imaginary components ( CV\_32FC1 ).
-@param magnitude Destination matrix of float magnitudes ( CV\_32FC1 ).
-@param angle Destination matrix of angles ( CV\_32FC1 ).
+@param x Source matrix containing real components ( CV_32FC1 ).
+@param y Source matrix containing imaginary components ( CV_32FC1 ).
+@param magnitude Destination matrix of float magnitudes ( CV_32FC1 ).
+@param angle Destination matrix of angles ( CV_32FC1 ).
 @param angleInDegrees Flag for angles that must be evaluated in degrees.
 @param stream Stream for the asynchronous version.
 
@@ -417,10 +417,10 @@ CV_EXPORTS void cartToPolar(InputArray x, InputArray y, OutputArray magnitude, O
 
 /** @brief Converts polar coordinates into Cartesian.
 
-@param magnitude Source matrix containing magnitudes ( CV\_32FC1 ).
-@param angle Source matrix containing angles ( CV\_32FC1 ).
-@param x Destination matrix of real components ( CV\_32FC1 ).
-@param y Destination matrix of imaginary components ( CV\_32FC1 ).
+@param magnitude Source matrix containing magnitudes ( CV_32FC1 ).
+@param angle Source matrix containing angles ( CV_32FC1 ).
+@param x Destination matrix of real components ( CV_32FC1 ).
+@param y Destination matrix of imaginary components ( CV_32FC1 ).
 @param angleInDegrees Flag that indicates angles in degrees.
 @param stream Stream for the asynchronous version.
  */
@@ -468,8 +468,8 @@ CV_EXPORTS void transpose(InputArray src1, OutputArray dst, Stream& stream = Str
 
 /** @brief Flips a 2D matrix around vertical, horizontal, or both axes.
 
-@param src Source matrix. Supports 1, 3 and 4 channels images with CV\_8U, CV\_16U, CV\_32S or
-CV\_32F depth.
+@param src Source matrix. Supports 1, 3 and 4 channels images with CV_8U, CV_16U, CV_32S or
+CV_32F depth.
 @param dst Destination matrix.
 @param flipCode Flip mode for the source:
 -   0 Flips around x-axis.
@@ -489,7 +489,7 @@ public:
     /** @brief Transforms the source matrix into the destination matrix using the given look-up table:
     dst(I) = lut(src(I)) .
 
-    @param src Source matrix. CV\_8UC1 and CV\_8UC3 matrices are supported for now.
+    @param src Source matrix. CV_8UC1 and CV_8UC3 matrices are supported for now.
     @param dst Destination matrix.
     @param stream Stream for the asynchronous version.
      */
@@ -498,13 +498,13 @@ public:
 
 /** @brief Creates implementation for cuda::LookUpTable .
 
-@param lut Look-up table of 256 elements. It is a continuous CV\_8U matrix.
+@param lut Look-up table of 256 elements. It is a continuous CV_8U matrix.
  */
 CV_EXPORTS Ptr<LookUpTable> createLookUpTable(InputArray lut);
 
 /** @brief Forms a border around an image.
 
-@param src Source image. CV\_8UC1 , CV\_8UC4 , CV\_32SC1 , and CV\_32FC1 types are supported.
+@param src Source image. CV_8UC1 , CV_8UC4 , CV_32SC1 , and CV_32FC1 types are supported.
 @param dst Destination image with the same type as src. The size is
 Size(src.cols+left+right, src.rows+top+bottom) .
 @param top
@@ -512,8 +512,8 @@ Size(src.cols+left+right, src.rows+top+bottom) .
 @param left
 @param right Number of pixels in each direction from the source image rectangle to extrapolate.
 For example: top=1, bottom=1, left=1, right=1 mean that 1 pixel-wide border needs to be built.
-@param borderType Border type. See borderInterpolate for details. BORDER\_REFLECT101 ,
-BORDER\_REPLICATE , BORDER\_CONSTANT , BORDER\_REFLECT and BORDER\_WRAP are supported for now.
+@param borderType Border type. See borderInterpolate for details. BORDER_REFLECT101 ,
+BORDER_REPLICATE , BORDER_CONSTANT , BORDER_REFLECT and BORDER_WRAP are supported for now.
 @param value Border value.
 @param stream Stream for the asynchronous version.
  */
@@ -528,8 +528,8 @@ CV_EXPORTS void copyMakeBorder(InputArray src, OutputArray dst, int top, int bot
 /** @brief Returns the norm of a matrix (or difference of two matrices).
 
 @param src1 Source matrix. Any matrices except 64F are supported.
-@param normType Norm type. NORM\_L1 , NORM\_L2 , and NORM\_INF are supported for now.
-@param mask optional operation mask; it must have the same size as src1 and CV\_8UC1 type.
+@param normType Norm type. NORM_L1 , NORM_L2 , and NORM_INF are supported for now.
+@param mask optional operation mask; it must have the same size as src1 and CV_8UC1 type.
 @param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 @sa norm
@@ -555,7 +555,7 @@ static inline double norm(InputArray src, int normType, GpuMat& buf)
 
 @param src1 Source matrix. Any matrices except 64F are supported.
 @param src2 Second source matrix (if any) with the same size and type as src1.
-@param normType Norm type. NORM\_L1 , NORM\_L2 , and NORM\_INF are supported for now.
+@param normType Norm type. NORM_L1 , NORM_L2 , and NORM_INF are supported for now.
 @param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 @sa norm
@@ -572,8 +572,8 @@ static inline double norm(InputArray src1, InputArray src2, int normType=NORM_L2
 
 /** @brief Returns the sum of matrix elements.
 
-@param src Source image of any depth except for CV\_64F .
-@param mask optional operation mask; it must have the same size as src1 and CV\_8UC1 type.
+@param src Source image of any depth except for CV_64F .
+@param mask optional operation mask; it must have the same size as src1 and CV_8UC1 type.
 @param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 @sa sum
@@ -597,8 +597,8 @@ static inline Scalar sum(InputArray src, GpuMat& buf)
 
 /** @brief Returns the sum of absolute values for matrix elements.
 
-@param src Source image of any depth except for CV\_64F .
-@param mask optional operation mask; it must have the same size as src1 and CV\_8UC1 type.
+@param src Source image of any depth except for CV_64F .
+@param mask optional operation mask; it must have the same size as src1 and CV_8UC1 type.
 @param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
  */
 CV_EXPORTS Scalar absSum(InputArray src, InputArray mask, GpuMat& buf);
@@ -620,8 +620,8 @@ static inline Scalar absSum(InputArray src, GpuMat& buf)
 
 /** @brief Returns the squared sum of matrix elements.
 
-@param src Source image of any depth except for CV\_64F .
-@param mask optional operation mask; it must have the same size as src1 and CV\_8UC1 type.
+@param src Source image of any depth except for CV_64F .
+@param mask optional operation mask; it must have the same size as src1 and CV_8UC1 type.
 @param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
  */
 CV_EXPORTS Scalar sqrSum(InputArray src, InputArray mask, GpuMat& buf);
@@ -649,7 +649,7 @@ static inline Scalar sqrSum(InputArray src, GpuMat& buf)
 @param mask Optional mask to select a sub-matrix.
 @param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-The function does not work with CV\_64F images on GPUs with the compute capability \< 1.3.
+The function does not work with CV_64F images on GPUs with the compute capability \< 1.3.
 
 @sa minMaxLoc
  */
@@ -675,7 +675,7 @@ static inline void minMax(InputArray src, double* minVal, double* maxVal=0, Inpu
 automatically.
 @param locbuf Optional locations buffer to avoid extra memory allocations. It is resized
 automatically.
-The function does not work with CV\_64F images on GPU with the compute capability \< 1.3.
+The function does not work with CV_64F images on GPU with the compute capability \< 1.3.
 
 @sa minMaxLoc
  */
@@ -696,7 +696,7 @@ static inline void minMaxLoc(InputArray src, double* minVal, double* maxVal=0, P
 @param src Single-channel source image.
 @param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-The function does not work with CV\_64F images on GPUs with the compute capability \< 1.3.
+The function does not work with CV_64F images on GPUs with the compute capability \< 1.3.
 
 @sa countNonZero
  */
@@ -717,20 +717,20 @@ static inline int countNonZero(const GpuMat& src)
 @param dim Dimension index along which the matrix is reduced. 0 means that the matrix is reduced
 to a single row. 1 means that the matrix is reduced to a single column.
 @param reduceOp Reduction operation that could be one of the following:
--   **CV\_REDUCE\_SUM** The output is the sum of all rows/columns of the matrix.
--   **CV\_REDUCE\_AVG** The output is the mean vector of all rows/columns of the matrix.
--   **CV\_REDUCE\_MAX** The output is the maximum (column/row-wise) of all rows/columns of the
+-   **CV_REDUCE_SUM** The output is the sum of all rows/columns of the matrix.
+-   **CV_REDUCE_AVG** The output is the mean vector of all rows/columns of the matrix.
+-   **CV_REDUCE_MAX** The output is the maximum (column/row-wise) of all rows/columns of the
 matrix.
--   **CV\_REDUCE\_MIN** The output is the minimum (column/row-wise) of all rows/columns of the
+-   **CV_REDUCE_MIN** The output is the minimum (column/row-wise) of all rows/columns of the
 matrix.
 @param dtype When it is negative, the destination vector will have the same type as the source
-matrix. Otherwise, its type will be CV\_MAKE\_TYPE(CV\_MAT\_DEPTH(dtype), mtx.channels()) .
+matrix. Otherwise, its type will be CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), mtx.channels()) .
 @param stream Stream for the asynchronous version.
 
 The function reduce reduces the matrix to a vector by treating the matrix rows/columns as a set of
 1D vectors and performing the specified operation on the vectors until a single row/column is
 obtained. For example, the function can be used to compute horizontal and vertical projections of a
-raster image. In case of CV\_REDUCE\_SUM and CV\_REDUCE\_AVG , the output may have a larger element
+raster image. In case of CV_REDUCE_SUM and CV_REDUCE_AVG , the output may have a larger element
 bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction
 modes.
 
@@ -740,7 +740,7 @@ CV_EXPORTS void reduce(InputArray mtx, OutputArray vec, int dim, int reduceOp, i
 
 /** @brief Computes a mean value and a standard deviation of matrix elements.
 
-@param mtx Source matrix. CV\_8UC1 matrices are supported for now.
+@param mtx Source matrix. CV_8UC1 matrices are supported for now.
 @param mean Mean value.
 @param stddev Standard deviation value.
 @param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
@@ -759,8 +759,8 @@ static inline void meanStdDev(InputArray src, Scalar& mean, Scalar& stddev)
 
 /** @brief Computes a standard deviation of integral images.
 
-@param src Source image. Only the CV\_32SC1 type is supported.
-@param sqr Squared source image. Only the CV\_32FC1 type is supported.
+@param src Source image. Only the CV_32SC1 type is supported.
+@param sqr Squared source image. Only the CV_32FC1 type is supported.
 @param dst Destination image with the same type and size as src .
 @param rect Rectangular window.
 @param stream Stream for the asynchronous version.
@@ -775,12 +775,12 @@ CV_EXPORTS void rectStdDev(InputArray src, InputArray sqr, OutputArray dst, Rect
 normalization.
 @param beta Upper range boundary in case of the range normalization; it is not used for the norm
 normalization.
-@param norm_type Normalization type ( NORM\_MINMAX , NORM\_L2 , NORM\_L1 or NORM\_INF ).
+@param norm_type Normalization type ( NORM_MINMAX , NORM_L2 , NORM_L1 or NORM_INF ).
 @param dtype When negative, the output array has the same type as src; otherwise, it has the same
-number of channels as src and the depth =CV\_MAT\_DEPTH(dtype).
+number of channels as src and the depth =CV_MAT_DEPTH(dtype).
 @param mask Optional operation mask.
-@param norm\_buf Optional buffer to avoid extra memory allocations. It is resized automatically.
-@param cvt\_buf Optional buffer to avoid extra memory allocations. It is resized automatically.
+@param norm_buf Optional buffer to avoid extra memory allocations. It is resized automatically.
+@param cvt_buf Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 @sa normalize
  */
@@ -799,8 +799,8 @@ static inline void normalize(InputArray src, OutputArray dst, double alpha = 1, 
 
 /** @brief Computes an integral image.
 
-@param src Source image. Only CV\_8UC1 images are supported for now.
-@param sum Integral image containing 32-bit unsigned integer values packed into CV\_32SC1 .
+@param src Source image. Only CV_8UC1 images are supported for now.
+@param sum Integral image containing 32-bit unsigned integer values packed into CV_32SC1 .
 @param buffer Optional buffer to avoid extra memory allocations. It is resized automatically.
 @param stream Stream for the asynchronous version.
 
@@ -822,9 +822,9 @@ static inline void integral(InputArray src, OutputArray sum, Stream& stream = St
 
 /** @brief Computes a squared integral image.
 
-@param src Source image. Only CV\_8UC1 images are supported for now.
+@param src Source image. Only CV_8UC1 images are supported for now.
 @param sqsum Squared integral image containing 64-bit unsigned integer values packed into
-CV\_64FC1 .
+CV_64FC1 .
 @param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
 @param stream Stream for the asynchronous version.
  */
@@ -845,8 +845,8 @@ static inline void sqrIntegral(InputArray src, OutputArray sqsum, Stream& stream
 
 /** @brief Performs generalized matrix multiplication.
 
-@param src1 First multiplied input matrix that should have CV\_32FC1 , CV\_64FC1 , CV\_32FC2 , or
-CV\_64FC2 type.
+@param src1 First multiplied input matrix that should have CV_32FC1 , CV_64FC1 , CV_32FC2 , or
+CV_64FC2 type.
 @param src2 Second multiplied input matrix of the same type as src1 .
 @param alpha Weight of the matrix product.
 @param src3 Third optional delta matrix added to the matrix product. It should have the same type
@@ -854,17 +854,17 @@ as src1 and src2 .
 @param beta Weight of src3 .
 @param dst Destination matrix. It has the proper size and the same type as input matrices.
 @param flags Operation flags:
--   **GEMM\_1\_T** transpose src1
--   **GEMM\_2\_T** transpose src2
--   **GEMM\_3\_T** transpose src3
+-   **GEMM_1_T** transpose src1
+-   **GEMM_2_T** transpose src2
+-   **GEMM_3_T** transpose src3
 @param stream Stream for the asynchronous version.
 
 The function performs generalized matrix multiplication similar to the gemm functions in BLAS level
-3. For example, gemm(src1, src2, alpha, src3, beta, dst, GEMM\_1\_T + GEMM\_3\_T) corresponds to
+3. For example, gemm(src1, src2, alpha, src3, beta, dst, GEMM_1_T + GEMM_3_T) corresponds to
 
 \f[\texttt{dst} =  \texttt{alpha} \cdot \texttt{src1} ^T  \cdot \texttt{src2} +  \texttt{beta} \cdot \texttt{src3} ^T\f]
 
-@note Transposition operation doesn't support CV\_64FC2 input type.
+@note Transposition operation doesn't support CV_64FC2 input type.
 
 @sa gemm
  */
@@ -881,7 +881,7 @@ CV_EXPORTS void gemm(InputArray src1, InputArray src2, double alpha,
 multiplication.
 @param stream Stream for the asynchronous version.
 
-Only full (not packed) CV\_32FC2 complex spectrums in the interleaved format are supported for now.
+Only full (not packed) CV_32FC2 complex spectrums in the interleaved format are supported for now.
 
 @sa mulSpectrums
  */
@@ -898,7 +898,7 @@ CV_EXPORTS void mulSpectrums(InputArray src1, InputArray src2, OutputArray dst, 
 multiplication.
 @param stream Stream for the asynchronous version.
 
-Only full (not packed) CV\_32FC2 complex spectrums in the interleaved format are supported for now.
+Only full (not packed) CV_32FC2 complex spectrums in the interleaved format are supported for now.
 
 @sa mulSpectrums
  */
@@ -908,14 +908,14 @@ CV_EXPORTS void mulAndScaleSpectrums(InputArray src1, InputArray src2, OutputArr
 
 @param src Source matrix (real or complex).
 @param dst Destination matrix (real or complex).
-@param dft\_size Size of a discrete Fourier transform.
+@param dft_size Size of a discrete Fourier transform.
 @param flags Optional flags:
--   **DFT\_ROWS** transforms each individual row of the source matrix.
--   **DFT\_SCALE** scales the result: divide it by the number of elements in the transform
-(obtained from dft\_size ).
--   **DFT\_INVERSE** inverts DFT. Use for complex-complex cases (real-complex and complex-real
+-   **DFT_ROWS** transforms each individual row of the source matrix.
+-   **DFT_SCALE** scales the result: divide it by the number of elements in the transform
+(obtained from dft_size ).
+-   **DFT_INVERSE** inverts DFT. Use for complex-complex cases (real-complex and complex-real
 cases are always forward and inverse, respectively).
--   **DFT\_REAL\_OUTPUT** specifies the output as real. The source matrix is the result of
+-   **DFT_REAL_OUTPUT** specifies the output as real. The source matrix is the result of
 real-complex transform, so the destination matrix must be real.
 @param stream Stream for the asynchronous version.
 
@@ -926,14 +926,14 @@ function chooses an operation mode depending on the flags, size, and channel cou
 matrix:
 
 -   If the source matrix is complex and the output is not specified as real, the destination
-matrix is complex and has the dft\_size size and CV\_32FC2 type. The destination matrix
+matrix is complex and has the dft_size size and CV_32FC2 type. The destination matrix
 contains a full result of the DFT (forward or inverse).
 -   If the source matrix is complex and the output is specified as real, the function assumes that
 its input is the result of the forward transform (see the next item). The destination matrix
-has the dft\_size size and CV\_32FC1 type. It contains the result of the inverse DFT.
--   If the source matrix is real (its type is CV\_32FC1 ), forward DFT is performed. The result of
-the DFT is packed into complex ( CV\_32FC2 ) matrix. So, the width of the destination matrix
-is dft\_size.width / 2 + 1 . But if the source is a single column, the height is reduced
+has the dft_size size and CV_32FC1 type. It contains the result of the inverse DFT.
+-   If the source matrix is real (its type is CV_32FC1 ), forward DFT is performed. The result of
+the DFT is packed into complex ( CV_32FC2 ) matrix. So, the width of the destination matrix
+is dft_size.width / 2 + 1 . But if the source is a single column, the height is reduced
 instead of the width.
 
 @sa dft
@@ -947,7 +947,7 @@ class CV_EXPORTS Convolution : public Algorithm
 public:
     /** @brief Computes a convolution (or cross-correlation) of two images.
 
-    @param image Source image. Only CV\_32FC1 images are supported for now.
+    @param image Source image. Only CV_32FC1 images are supported for now.
     @param templ Template image. The size is not greater than the image size. The type is the same as
     image .
     @param result Result image. If image is *W x H* and templ is *w x h*, then result must be *W-w+1 x
@@ -960,8 +960,8 @@ public:
 
 /** @brief Creates implementation for cuda::Convolution .
 
-@param user\_block\_size Block size. If you leave default value Size(0,0) then automatic
-estimation of block size will be used (which is optimized for speed). By varying user\_block\_size
+@param user_block_size Block size. If you leave default value Size(0,0) then automatic
+estimation of block size will be used (which is optimized for speed). By varying user_block_size
 you can reduce memory requirements at the cost of speed.
  */
 CV_EXPORTS Ptr<Convolution> createConvolution(Size user_block_size = Size());
