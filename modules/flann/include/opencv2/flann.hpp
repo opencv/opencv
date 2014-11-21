@@ -114,7 +114,7 @@ public:
         /** @brief Constructs a nearest neighbor search index for a given dataset.
 
         @param features Matrix of containing the features(points) to index. The size of the matrix is
-        num\_features x feature\_dimensionality and the data type of the elements in the matrix must
+        num_features x feature_dimensionality and the data type of the elements in the matrix must
         coincide with the type of the index.
         @param params Structure containing the index parameters. The type of index that will be
         constructed depends on the type of this parameter. See the description.

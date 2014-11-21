@@ -81,7 +81,7 @@ public:
     /** @brief Blends and returns the final pano.
 
     @param dst Final pano
-    @param dst\_mask Final pano mask
+    @param dst_mask Final pano mask
      */
     virtual void blend(InputOutputArray dst, InputOutputArray dst_mask);
 

@@ -127,19 +127,19 @@ pattern (every view is described by several 3D-2D point correspondences).
 
 @note
    -   A calibration sample for 3 cameras in horizontal position can be found at
-        opencv\_source\_code/samples/cpp/3calibration.cpp
+        opencv_source_code/samples/cpp/3calibration.cpp
     -   A calibration sample based on a sequence of images can be found at
-        opencv\_source\_code/samples/cpp/calibration.cpp
+        opencv_source_code/samples/cpp/calibration.cpp
     -   A calibration sample in order to do 3D reconstruction can be found at
-        opencv\_source\_code/samples/cpp/build3dmodel.cpp
+        opencv_source_code/samples/cpp/build3dmodel.cpp
     -   A calibration sample of an artificially generated camera and chessboard patterns can be
-        found at opencv\_source\_code/samples/cpp/calibration\_artificial.cpp
+        found at opencv_source_code/samples/cpp/calibration_artificial.cpp
     -   A calibration example on stereo calibration can be found at
-        opencv\_source\_code/samples/cpp/stereo\_calib.cpp
+        opencv_source_code/samples/cpp/stereo_calib.cpp
     -   A calibration example on stereo matching can be found at
-        opencv\_source\_code/samples/cpp/stereo\_match.cpp
+        opencv_source_code/samples/cpp/stereo_match.cpp
     -   (Python) A camera calibration sample can be found at
-        opencv\_source\_code/samples/python2/calibrate.py
+        opencv_source_code/samples/python2/calibrate.py
 
   @{
     @defgroup calib3d_fisheye Fisheye camera model
@@ -257,9 +257,9 @@ CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobi
 
 /** @brief Finds a perspective transformation between two planes.
 
-@param srcPoints Coordinates of the points in the original plane, a matrix of the type CV\_32FC2
+@param srcPoints Coordinates of the points in the original plane, a matrix of the type CV_32FC2
 or vector\<Point2f\> .
-@param dstPoints Coordinates of the points in the target plane, a matrix of the type CV\_32FC2 or
+@param dstPoints Coordinates of the points in the target plane, a matrix of the type CV_32FC2 or
 a vector\<Point2f\> .
 @param method Method used to computed a homography matrix. The following methods are possible:
 -   **0** - a regular method using all the points
@@ -315,7 +315,7 @@ cannot be estimated, an empty one will be returned.
 
 @note
    -   A example on calculating a homography for image matching can be found at
-        opencv\_source\_code/samples/cpp/video\_homography.cpp
+        opencv_source_code/samples/cpp/video_homography.cpp
 
  */
 CV_EXPORTS_W Mat findHomography( InputArray srcPoints, InputArray dstPoints,
@@ -485,22 +485,22 @@ the vector is NULL/empty, the zero distortion coefficients are assumed.
 @param rvec Output rotation vector (see Rodrigues ) that, together with tvec , brings points from
 the model coordinate system to the camera coordinate system.
 @param tvec Output translation vector.
-@param useExtrinsicGuess Parameter used for SOLVEPNP\_ITERATIVE. If true (1), the function uses
+@param useExtrinsicGuess Parameter used for SOLVEPNP_ITERATIVE. If true (1), the function uses
 the provided rvec and tvec values as initial approximations of the rotation and translation
 vectors, respectively, and further optimizes them.
 @param flags Method for solving a PnP problem:
--   **SOLVEPNP\_ITERATIVE** Iterative method is based on Levenberg-Marquardt optimization. In
+-   **SOLVEPNP_ITERATIVE** Iterative method is based on Levenberg-Marquardt optimization. In
 this case the function finds such a pose that minimizes reprojection error, that is the sum
 of squared distances between the observed projections imagePoints and the projected (using
 projectPoints ) objectPoints .
--   **SOLVEPNP\_P3P** Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
+-   **SOLVEPNP_P3P** Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
 "Complete Solution Classification for the Perspective-Three-Point Problem". In this case the
 function requires exactly four object and image points.
--   **SOLVEPNP\_EPNP** Method has been introduced by F.Moreno-Noguer, V.Lepetit and P.Fua in the
+-   **SOLVEPNP_EPNP** Method has been introduced by F.Moreno-Noguer, V.Lepetit and P.Fua in the
 paper "EPnP: Efficient Perspective-n-Point Camera Pose Estimation".
--   **SOLVEPNP\_DLS** Method is based on the paper of Joel A. Hesch and Stergios I. Roumeliotis.
+-   **SOLVEPNP_DLS** Method is based on the paper of Joel A. Hesch and Stergios I. Roumeliotis.
 "A Direct Least-Squares (DLS) Method for PnP".
--   **SOLVEPNP\_UPNP** Method is based on the paper of A.Penate-Sanchez, J.Andrade-Cetto,
+-   **SOLVEPNP_UPNP** Method is based on the paper of A.Penate-Sanchez, J.Andrade-Cetto,
 F.Moreno-Noguer. "Exhaustive Linearization for Robust Camera Pose and Focal Length
 Estimation". In this case the function also estimates the parameters \f$f_x\f$ and \f$f_y\f$
 assuming that both have the same value. Then the cameraMatrix is updated with the estimated
@@ -511,7 +511,7 @@ projections, as well as the camera matrix and the distortion coefficients.
 
 @note
    -   An example of how to use solvePnP for planar augmented reality can be found at
-        opencv\_source\_code/samples/python2/plane\_ar.py
+        opencv_source_code/samples/python2/plane_ar.py
  */
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
@@ -531,7 +531,7 @@ the vector is NULL/empty, the zero distortion coefficients are assumed.
 @param rvec Output rotation vector (see Rodrigues ) that, together with tvec , brings points from
 the model coordinate system to the camera coordinate system.
 @param tvec Output translation vector.
-@param useExtrinsicGuess Parameter used for SOLVEPNP\_ITERATIVE. If true (1), the function uses
+@param useExtrinsicGuess Parameter used for SOLVEPNP_ITERATIVE. If true (1), the function uses
 the provided rvec and tvec values as initial approximations of the rotation and translation
 vectors, respectively, and further optimizes them.
 @param iterationsCount Number of iterations.
@@ -550,7 +550,7 @@ makes the function resistant to outliers.
 
 @note
    -   An example of how to use solvePNPRansac for object detection can be found at
-        opencv\_source\_code/samples/cpp/tutorial\_code/calib3d/real\_time\_pose\_estimation/
+        opencv_source_code/samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/
  */
 CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
                                   InputArray cameraMatrix, InputArray distCoeffs,
@@ -582,16 +582,16 @@ CV_EXPORTS_W Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
 
 @param image Source chessboard view. It must be an 8-bit grayscale or color image.
 @param patternSize Number of inner corners per a chessboard row and column
-( patternSize = cvSize(points\_per\_row,points\_per\_colum) = cvSize(columns,rows) ).
+( patternSize = cvSize(points_per_row,points_per_colum) = cvSize(columns,rows) ).
 @param corners Output array of detected corners.
 @param flags Various operation flags that can be zero or a combination of the following values:
--   **CV\_CALIB\_CB\_ADAPTIVE\_THRESH** Use adaptive thresholding to convert the image to black
+-   **CV_CALIB_CB_ADAPTIVE_THRESH** Use adaptive thresholding to convert the image to black
 and white, rather than a fixed threshold level (computed from the average image brightness).
--   **CV\_CALIB\_CB\_NORMALIZE\_IMAGE** Normalize the image gamma with equalizeHist before
+-   **CV_CALIB_CB_NORMALIZE_IMAGE** Normalize the image gamma with equalizeHist before
 applying fixed or adaptive thresholding.
--   **CV\_CALIB\_CB\_FILTER\_QUADS** Use additional criteria (like contour area, perimeter,
+-   **CV_CALIB_CB_FILTER_QUADS** Use additional criteria (like contour area, perimeter,
 square-like shape) to filter out false quads extracted at the contour retrieval stage.
--   **CALIB\_CB\_FAST\_CHECK** Run a fast check on the image that looks for chessboard corners,
+-   **CALIB_CB_FAST_CHECK** Run a fast check on the image that looks for chessboard corners,
 and shortcut the call if none is found. This can drastically speed up the call in the
 degenerate condition when no chessboard is observed.
 
@@ -637,7 +637,7 @@ CV_EXPORTS bool find4QuadCornerSubpix( InputArray img, InputOutputArray corners,
 
 @param image Destination image. It must be an 8-bit color image.
 @param patternSize Number of inner corners per a chessboard row and column
-(patternSize = cv::Size(points\_per\_row,points\_per\_column)).
+(patternSize = cv::Size(points_per_row,points_per_column)).
 @param corners Array of detected corners, the output of findChessboardCorners.
 @param patternWasFound Parameter indicating whether the complete board was found or not. The
 return value of findChessboardCorners should be passed here.
@@ -652,12 +652,12 @@ CV_EXPORTS_W void drawChessboardCorners( InputOutputArray image, Size patternSiz
 
 @param image grid view of input circles; it must be an 8-bit grayscale or color image.
 @param patternSize number of circles per row and column
-( patternSize = Size(points\_per\_row, points\_per\_colum) ).
+( patternSize = Size(points_per_row, points_per_colum) ).
 @param centers output array of detected centers.
 @param flags various operation flags that can be one of the following values:
--   **CALIB\_CB\_SYMMETRIC\_GRID** uses symmetric pattern of circles.
--   **CALIB\_CB\_ASYMMETRIC\_GRID** uses asymmetric pattern of circles.
--   **CALIB\_CB\_CLUSTERING** uses a special algorithm for grid detection. It is more robust to
+-   **CALIB_CB_SYMMETRIC_GRID** uses symmetric pattern of circles.
+-   **CALIB_CB_ASYMMETRIC_GRID** uses asymmetric pattern of circles.
+-   **CALIB_CB_CLUSTERING** uses a special algorithm for grid detection. It is more robust to
 perspective distortions but much more sensitive to background clutter.
 @param blobDetector feature detector that finds blobs like dark circles on light background.
 
@@ -703,7 +703,7 @@ together.
 @param imageSize Size of the image used only to initialize the intrinsic camera matrix.
 @param cameraMatrix Output 3x3 floating-point camera matrix
 \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ . If CV\_CALIB\_USE\_INTRINSIC\_GUESS
-and/or CV\_CALIB\_FIX\_ASPECT\_RATIO are specified, some or all of fx, fy, cx, cy must be
+and/or CV_CALIB_FIX_ASPECT_RATIO are specified, some or all of fx, fy, cx, cy must be
 initialized before calling the function.
 @param distCoeffs Output vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements.
@@ -714,33 +714,33 @@ space (in which object points are specified) to the world coordinate space, that
 position of the calibration pattern in the k-th pattern view (k=0.. *M* -1).
 @param tvecs Output vector of translation vectors estimated for each pattern view.
 @param flags Different flags that may be zero or a combination of the following values:
--   **CV\_CALIB\_USE\_INTRINSIC\_GUESS** cameraMatrix contains valid initial values of
+-   **CV_CALIB_USE_INTRINSIC_GUESS** cameraMatrix contains valid initial values of
 fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
 center ( imageSize is used), and focal distances are computed in a least-squares fashion.
 Note, that if intrinsic parameters are known, there is no need to use this function just to
 estimate extrinsic parameters. Use solvePnP instead.
--   **CV\_CALIB\_FIX\_PRINCIPAL\_POINT** The principal point is not changed during the global
+-   **CV_CALIB_FIX_PRINCIPAL_POINT** The principal point is not changed during the global
 optimization. It stays at the center or at a different location specified when
-CV\_CALIB\_USE\_INTRINSIC\_GUESS is set too.
--   **CV\_CALIB\_FIX\_ASPECT\_RATIO** The functions considers only fy as a free parameter. The
+CV_CALIB_USE_INTRINSIC_GUESS is set too.
+-   **CV_CALIB_FIX_ASPECT_RATIO** The functions considers only fy as a free parameter. The
 ratio fx/fy stays the same as in the input cameraMatrix . When
-CV\_CALIB\_USE\_INTRINSIC\_GUESS is not set, the actual input values of fx and fy are
+CV_CALIB_USE_INTRINSIC_GUESS is not set, the actual input values of fx and fy are
 ignored, only their ratio is computed and used further.
--   **CV\_CALIB\_ZERO\_TANGENT\_DIST** Tangential distortion coefficients \f$(p_1, p_2)\f$ are set
+-   **CV_CALIB_ZERO_TANGENT_DIST** Tangential distortion coefficients \f$(p_1, p_2)\f$ are set
 to zeros and stay zero.
--   **CV\_CALIB\_FIX\_K1,...,CV\_CALIB\_FIX\_K6** The corresponding radial distortion
-coefficient is not changed during the optimization. If CV\_CALIB\_USE\_INTRINSIC\_GUESS is
+-   **CV_CALIB_FIX_K1,...,CV_CALIB_FIX_K6** The corresponding radial distortion
+coefficient is not changed during the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is
 set, the coefficient from the supplied distCoeffs matrix is used. Otherwise, it is set to 0.
--   **CV\_CALIB\_RATIONAL\_MODEL** Coefficients k4, k5, and k6 are enabled. To provide the
+-   **CV_CALIB_RATIONAL_MODEL** Coefficients k4, k5, and k6 are enabled. To provide the
 backward compatibility, this extra flag should be explicitly specified to make the
 calibration function use the rational model and return 8 coefficients. If the flag is not
 set, the function computes and returns only 5 distortion coefficients.
--   **CALIB\_THIN\_PRISM\_MODEL** Coefficients s1, s2, s3 and s4 are enabled. To provide the
+-   **CALIB_THIN_PRISM_MODEL** Coefficients s1, s2, s3 and s4 are enabled. To provide the
 backward compatibility, this extra flag should be explicitly specified to make the
 calibration function use the thin prism model and return 12 coefficients. If the flag is not
 set, the function computes and returns only 5 distortion coefficients.
--   **CALIB\_FIX\_S1\_S2\_S3\_S4** The thin prism distortion coefficients are not changed during
-the optimization. If CV\_CALIB\_USE\_INTRINSIC\_GUESS is set, the coefficient from the
+-   **CALIB_FIX_S1_S2_S3_S4** The thin prism distortion coefficients are not changed during
+the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 @param criteria Termination criteria for the iterative optimization algorithm.
 
@@ -750,7 +750,7 @@ points and their corresponding 2D projections in each view must be specified. Th
 by using an object with a known geometry and easily detectable feature points. Such an object is
 called a calibration rig or calibration pattern, and OpenCV has built-in support for a chessboard as
 a calibration rig (see findChessboardCorners ). Currently, initialization of intrinsic parameters
-(when CV\_CALIB\_USE\_INTRINSIC\_GUESS is not set) is only implemented for planar calibration
+(when CV_CALIB_USE_INTRINSIC_GUESS is not set) is only implemented for planar calibration
 patterns (where Z-coordinates of the object points must be all zeros). 3D calibration rigs can also
 be used as long as initial cameraMatrix is provided.
 
@@ -758,7 +758,7 @@ The algorithm performs the following steps:
 
 -   Compute the initial intrinsic parameters (the option only available for planar calibration
     patterns) or read them from the input parameters. The distortion coefficients are all set to
-    zeros initially unless some of CV\_CALIB\_FIX\_K? are specified.
+    zeros initially unless some of CV_CALIB_FIX_K? are specified.
 
 -   Estimate the initial camera pose as if the intrinsic parameters have been already known. This is
     done using solvePnP .
@@ -822,8 +822,8 @@ observed by the first camera.
 observed by the second camera.
 @param cameraMatrix1 Input/output first camera matrix:
 \f$\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}\f$ , \f$j = 0,\, 1\f$ . If
-any of CV\_CALIB\_USE\_INTRINSIC\_GUESS , CV\_CALIB\_FIX\_ASPECT\_RATIO ,
-CV\_CALIB\_FIX\_INTRINSIC , or CV\_CALIB\_FIX\_FOCAL\_LENGTH are specified, some or all of the
+any of CV_CALIB_USE_INTRINSIC_GUESS , CV_CALIB_FIX_ASPECT_RATIO ,
+CV_CALIB_FIX_INTRINSIC , or CV_CALIB_FIX_FOCAL_LENGTH are specified, some or all of the
 matrix components must be initialized. See the flags description for details.
 @param distCoeffs1 Input/output vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 ot 12 elements. The
@@ -837,30 +837,30 @@ is similar to distCoeffs1 .
 @param E Output essential matrix.
 @param F Output fundamental matrix.
 @param flags Different flags that may be zero or a combination of the following values:
--   **CV\_CALIB\_FIX\_INTRINSIC** Fix cameraMatrix? and distCoeffs? so that only R, T, E , and F
+-   **CV_CALIB_FIX_INTRINSIC** Fix cameraMatrix? and distCoeffs? so that only R, T, E , and F
 matrices are estimated.
--   **CV\_CALIB\_USE\_INTRINSIC\_GUESS** Optimize some or all of the intrinsic parameters
+-   **CV_CALIB_USE_INTRINSIC_GUESS** Optimize some or all of the intrinsic parameters
 according to the specified flags. Initial values are provided by the user.
--   **CV\_CALIB\_FIX\_PRINCIPAL\_POINT** Fix the principal points during the optimization.
--   **CV\_CALIB\_FIX\_FOCAL\_LENGTH** Fix \f$f^{(j)}_x\f$ and \f$f^{(j)}_y\f$ .
--   **CV\_CALIB\_FIX\_ASPECT\_RATIO** Optimize \f$f^{(j)}_y\f$ . Fix the ratio \f$f^{(j)}_x/f^{(j)}_y\f$
+-   **CV_CALIB_FIX_PRINCIPAL_POINT** Fix the principal points during the optimization.
+-   **CV_CALIB_FIX_FOCAL_LENGTH** Fix \f$f^{(j)}_x\f$ and \f$f^{(j)}_y\f$ .
+-   **CV_CALIB_FIX_ASPECT_RATIO** Optimize \f$f^{(j)}_y\f$ . Fix the ratio \f$f^{(j)}_x/f^{(j)}_y\f$
 .
--   **CV\_CALIB\_SAME\_FOCAL\_LENGTH** Enforce \f$f^{(0)}_x=f^{(1)}_x\f$ and \f$f^{(0)}_y=f^{(1)}_y\f$ .
--   **CV\_CALIB\_ZERO\_TANGENT\_DIST** Set tangential distortion coefficients for each camera to
+-   **CV_CALIB_SAME_FOCAL_LENGTH** Enforce \f$f^{(0)}_x=f^{(1)}_x\f$ and \f$f^{(0)}_y=f^{(1)}_y\f$ .
+-   **CV_CALIB_ZERO_TANGENT_DIST** Set tangential distortion coefficients for each camera to
 zeros and fix there.
--   **CV\_CALIB\_FIX\_K1,...,CV\_CALIB\_FIX\_K6** Do not change the corresponding radial
-distortion coefficient during the optimization. If CV\_CALIB\_USE\_INTRINSIC\_GUESS is set,
+-   **CV_CALIB_FIX_K1,...,CV_CALIB_FIX_K6** Do not change the corresponding radial
+distortion coefficient during the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set,
 the coefficient from the supplied distCoeffs matrix is used. Otherwise, it is set to 0.
--   **CV\_CALIB\_RATIONAL\_MODEL** Enable coefficients k4, k5, and k6. To provide the backward
+-   **CV_CALIB_RATIONAL_MODEL** Enable coefficients k4, k5, and k6. To provide the backward
 compatibility, this extra flag should be explicitly specified to make the calibration
 function use the rational model and return 8 coefficients. If the flag is not set, the
 function computes and returns only 5 distortion coefficients.
--   **CALIB\_THIN\_PRISM\_MODEL** Coefficients s1, s2, s3 and s4 are enabled. To provide the
+-   **CALIB_THIN_PRISM_MODEL** Coefficients s1, s2, s3 and s4 are enabled. To provide the
 backward compatibility, this extra flag should be explicitly specified to make the
 calibration function use the thin prism model and return 12 coefficients. If the flag is not
 set, the function computes and returns only 5 distortion coefficients.
--   **CALIB\_FIX\_S1\_S2\_S3\_S4** The thin prism distortion coefficients are not changed during
-the optimization. If CV\_CALIB\_USE\_INTRINSIC\_GUESS is set, the coefficient from the
+-   **CALIB_FIX_S1_S2_S3_S4** The thin prism distortion coefficients are not changed during
+the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 @param criteria Termination criteria for the iterative optimization algorithm.
 
@@ -888,10 +888,10 @@ Besides the stereo-related information, the function can also perform a full cal
 two cameras. However, due to the high dimensionality of the parameter space and noise in the input
 data, the function can diverge from the correct solution. If the intrinsic parameters can be
 estimated with high accuracy for each of the cameras individually (for example, using
-calibrateCamera ), you are recommended to do so and then pass CV\_CALIB\_FIX\_INTRINSIC flag to the
+calibrateCamera ), you are recommended to do so and then pass CV_CALIB_FIX_INTRINSIC flag to the
 function along with the computed intrinsic parameters. Otherwise, if all the parameters are
 estimated at once, it makes sense to restrict some parameters, for example, pass
-CV\_CALIB\_SAME\_FOCAL\_LENGTH and CV\_CALIB\_ZERO\_TANGENT\_DIST flags, which is usually a
+CV_CALIB_SAME_FOCAL_LENGTH and CV_CALIB_ZERO_TANGENT_DIST flags, which is usually a
 reasonable assumption.
 
 Similarly to calibrateCamera , the function minimizes the total re-projection error for all the
@@ -923,7 +923,7 @@ camera.
 @param P2 Output 3x4 projection matrix in the new (rectified) coordinate systems for the second
 camera.
 @param Q Output \f$4 \times 4\f$ disparity-to-depth mapping matrix (see reprojectImageTo3D ).
-@param flags Operation flags that may be zero or CV\_CALIB\_ZERO\_DISPARITY . If the flag is set,
+@param flags Operation flags that may be zero or CV_CALIB_ZERO_DISPARITY . If the flag is set,
 the function makes the principal points of each camera have the same pixel coordinates in the
 rectified views. And if the flag is not set, the function may still shift the images in the
 horizontal or vertical direction (depending on the orientation of epipolar lines) to maximize the
@@ -936,7 +936,7 @@ pixels from the original images from the cameras are retained in the rectified i
 image pixels are lost). Obviously, any intermediate value yields an intermediate result between
 those two extreme cases.
 @param newImageSize New image resolution after rectification. The same size should be passed to
-initUndistortRectifyMap (see the stereo\_calib.cpp sample in OpenCV samples directory). When (0,0)
+initUndistortRectifyMap (see the stereo_calib.cpp sample in OpenCV samples directory). When (0,0)
 is passed (default), it is set to the original imageSize . Setting it to larger value can help you
 preserve details in the original image, especially when there is a big radial distortion.
 @param validPixROI1 Optional output rectangles inside the rectified images where all the pixels
@@ -962,7 +962,7 @@ coordinates. The function distinguishes the following two cases:
     \f[\texttt{P2} = \begin{bmatrix} f & 0 & cx_2 & T_x*f \\ 0 & f & cy & 0 \\ 0 & 0 & 1 & 0 \end{bmatrix} ,\f]
 
     where \f$T_x\f$ is a horizontal shift between the cameras and \f$cx_1=cx_2\f$ if
-    CV\_CALIB\_ZERO\_DISPARITY is set.
+    CV_CALIB_ZERO_DISPARITY is set.
 
 -   **Vertical stereo**: the first and the second camera views are shifted relative to each other
     mainly in vertical direction (and probably a bit in the horizontal direction too). The epipolar
@@ -972,14 +972,14 @@ coordinates. The function distinguishes the following two cases:
 
     \f[\texttt{P2} = \begin{bmatrix} f & 0 & cx & 0 \\ 0 & f & cy_2 & T_y*f \\ 0 & 0 & 1 & 0 \end{bmatrix} ,\f]
 
-    where \f$T_y\f$ is a vertical shift between the cameras and \f$cy_1=cy_2\f$ if CALIB\_ZERO\_DISPARITY is
+    where \f$T_y\f$ is a vertical shift between the cameras and \f$cy_1=cy_2\f$ if CALIB_ZERO_DISPARITY is
     set.
 
 As you can see, the first three columns of P1 and P2 will effectively be the new "rectified" camera
 matrices. The matrices, together with R1 and R2 , can then be passed to initUndistortRectifyMap to
 initialize the rectification map for each camera.
 
-See below the screenshot from the stereo\_calib.cpp sample. Some red horizontal lines pass through
+See below the screenshot from the stereo_calib.cpp sample. Some red horizontal lines pass through
 the corresponding image regions. This means that the images are well rectified, which is what most
 stereo correspondence algorithms rely on. The green rectangles are roi1 and roi2 . You see that
 their interiors are all valid pixels.
@@ -1057,7 +1057,7 @@ undistorted image. See roi1, roi2 description in stereoRectify .
 @param centerPrincipalPoint Optional flag that indicates whether in the new camera matrix the
 principal point should be at the image center or not. By default, the principal point is chosen to
 best fit a subset of the source image (determined by alpha) to the corrected image.
-@return new\_camera\_matrix Output new camera matrix.
+@return new_camera_matrix Output new camera matrix.
 
 The function computes and returns the optimal new camera matrix based on the free scaling parameter.
 By varying this parameter, you may retrieve only sensible pixels alpha=0 , keep all the original
@@ -1111,10 +1111,10 @@ CV_EXPORTS void convertPointsHomogeneous( InputArray src, OutputArray dst );
 floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
 @param method Method for computing a fundamental matrix.
--   **CV\_FM\_7POINT** for a 7-point algorithm. \f$N = 7\f$
--   **CV\_FM\_8POINT** for an 8-point algorithm. \f$N \ge 8\f$
--   **CV\_FM\_RANSAC** for the RANSAC algorithm. \f$N \ge 8\f$
--   **CV\_FM\_LMEDS** for the LMedS algorithm. \f$N \ge 8\f$
+-   **CV_FM_7POINT** for a 7-point algorithm. \f$N = 7\f$
+-   **CV_FM_8POINT** for an 8-point algorithm. \f$N \ge 8\f$
+-   **CV_FM_RANSAC** for the RANSAC algorithm. \f$N \ge 8\f$
+-   **CV_FM_LMEDS** for the LMedS algorithm. \f$N \ge 8\f$
 @param param1 Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
 line in pixels, beyond which the point is considered an outlier and is not used for computing the
 final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
@@ -1269,7 +1269,7 @@ CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray point
 
 /** @brief For points in an image of a stereo pair, computes the corresponding epilines in the other image.
 
-@param points Input points. \f$N \times 1\f$ or \f$1 \times N\f$ matrix of type CV\_32FC2 or
+@param points Input points. \f$N \times 1\f$ or \f$1 \times N\f$ matrix of type CV_32FC2 or
 vector\<Point2f\> .
 @param whichImage Index of the image (1 or 2) that contains the points .
 @param F Fundamental matrix that can be estimated using findFundamentalMat or stereoRectify .
@@ -1364,16 +1364,16 @@ CV_EXPORTS_W void validateDisparity( InputOutputArray disparity, InputArray cost
 
 @param disparity Input single-channel 8-bit unsigned, 16-bit signed, 32-bit signed or 32-bit
 floating-point disparity image.
-@param \_3dImage Output 3-channel floating-point image of the same size as disparity . Each
-element of \_3dImage(x,y) contains 3D coordinates of the point (x,y) computed from the disparity
+@param _3dImage Output 3-channel floating-point image of the same size as disparity . Each
+element of _3dImage(x,y) contains 3D coordinates of the point (x,y) computed from the disparity
 map.
 @param Q \f$4 \times 4\f$ perspective transformation matrix that can be obtained with stereoRectify.
 @param handleMissingValues Indicates, whether the function should handle missing values (i.e.
 points where the disparity was not computed). If handleMissingValues=true, then pixels with the
 minimal disparity that corresponds to the outliers (see StereoMatcher::compute ) are transformed
 to 3D points with a very large Z value (currently set to 10000).
-@param ddepth The optional output array depth. If it is -1, the output image will have CV\_32F
-depth. ddepth can also be set to CV\_16S, CV\_32S or CV\_32F.
+@param ddepth The optional output array depth. If it is -1, the output image will have CV_32F
+depth. ddepth can also be set to CV_16S, CV_32S or CV_32F.
 
 The function transforms a single-channel disparity map to a 3-channel image representing a 3D
 surface. That is, for each pixel (x,y) andthe corresponding disparity d=disparity(x,y) , it
@@ -1523,19 +1523,19 @@ public:
 one as follows:
 
 -   By default, the algorithm is single-pass, which means that you consider only 5 directions
-instead of 8. Set mode=StereoSGBM::MODE\_HH in createStereoSGBM to run the full variant of the
+instead of 8. Set mode=StereoSGBM::MODE_HH in createStereoSGBM to run the full variant of the
 algorithm but beware that it may consume a lot of memory.
 -   The algorithm matches blocks, not individual pixels. Though, setting blockSize=1 reduces the
 blocks to single pixels.
 -   Mutual information cost function is not implemented. Instead, a simpler Birchfield-Tomasi
 sub-pixel metric from @cite BT98 is used. Though, the color images are supported as well.
 -   Some pre- and post- processing steps from K. Konolige algorithm StereoBM are included, for
-example: pre-filtering (StereoBM::PREFILTER\_XSOBEL type) and post-filtering (uniqueness
+example: pre-filtering (StereoBM::PREFILTER_XSOBEL type) and post-filtering (uniqueness
 check, quadratic interpolation and speckle filtering).
 
 @note
    -   (Python) An example illustrating the use of the StereoSGBM matching algorithm can be found
-        at opencv\_source\_code/samples/python2/stereo\_match.py
+        at opencv_source_code/samples/python2/stereo_match.py
  */
 class CV_EXPORTS_W StereoSGBM : public StereoMatcher
 {
@@ -1573,9 +1573,9 @@ public:
     @param P2 The second parameter controlling the disparity smoothness. The larger the values are,
     the smoother the disparity is. P1 is the penalty on the disparity change by plus or minus 1
     between neighbor pixels. P2 is the penalty on the disparity change by more than 1 between neighbor
-    pixels. The algorithm requires P2 \> P1 . See stereo\_match.cpp sample where some reasonably good
-    P1 and P2 values are shown (like 8\*number\_of\_image\_channels\*SADWindowSize\*SADWindowSize and
-    32\*number\_of\_image\_channels\*SADWindowSize\*SADWindowSize , respectively).
+    pixels. The algorithm requires P2 \> P1 . See stereo_match.cpp sample where some reasonably good
+    P1 and P2 values are shown (like 8\*number_of_image_channels\*SADWindowSize\*SADWindowSize and
+    32\*number_of_image_channels\*SADWindowSize\*SADWindowSize , respectively).
     @param disp12MaxDiff Maximum allowed difference (in integer pixel units) in the left-right
     disparity check. Set it to a non-positive value to disable the check.
     @param preFilterCap Truncation value for the prefiltered image pixels. The algorithm first
@@ -1590,7 +1590,7 @@ public:
     @param speckleRange Maximum disparity variation within each connected component. If you do speckle
     filtering, set the parameter to a positive value, it will be implicitly multiplied by 16.
     Normally, 1 or 2 is good enough.
-    @param mode Set it to StereoSGBM::MODE\_HH to run the full-scale two-pass dynamic programming
+    @param mode Set it to StereoSGBM::MODE_HH to run the full-scale two-pass dynamic programming
     algorithm. It will consume O(W\*H\*numDisparities) bytes, which is large for 640x480 stereo and
     huge for HD-size pictures. By default, it is set to false .
 
@@ -1687,7 +1687,7 @@ namespace fisheye
     1-channel or 1x1 3-channel
     @param P New camera matrix (3x3) or new projection matrix (3x4)
     @param size Undistorted image size.
-    @param m1type Type of the first output map that can be CV\_32FC1 or CV\_16SC2 . See convertMaps()
+    @param m1type Type of the first output map that can be CV_32FC1 or CV_16SC2 . See convertMaps()
     for details.
     @param map1 The first output map.
     @param map2 The second output map.
@@ -1712,10 +1712,10 @@ namespace fisheye
     performed.
 
     See below the results of undistortImage.
-       -   a\) result of undistort of perspective camera model (all possible coefficients (k\_1, k\_2, k\_3,
-            k\_4, k\_5, k\_6) of distortion were optimized under calibration)
-        -   b\) result of fisheye::undistortImage of fisheye camera model (all possible coefficients (k\_1, k\_2,
-            k\_3, k\_4) of fisheye distortion were optimized under calibration)
+       -   a\) result of undistort of perspective camera model (all possible coefficients (k_1, k_2, k_3,
+            k_4, k_5, k_6) of distortion were optimized under calibration)
+        -   b\) result of fisheye::undistortImage of fisheye camera model (all possible coefficients (k_1, k_2,
+            k_3, k_4) of fisheye distortion were optimized under calibration)
         -   c\) original image was captured with fisheye lens
 
     Pictures a) and b) almost the same. But if we consider points of image located far from the center
@@ -1749,10 +1749,10 @@ namespace fisheye
     @param imagePoints vector of vectors of the projections of calibration pattern points.
     imagePoints.size() and objectPoints.size() and imagePoints[i].size() must be equal to
     objectPoints[i].size() for each i.
-    @param image\_size Size of the image used only to initialize the intrinsic camera matrix.
+    @param image_size Size of the image used only to initialize the intrinsic camera matrix.
     @param K Output 3x3 floating-point camera matrix
     \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ . If
-    fisheye::CALIB\_USE\_INTRINSIC\_GUESS/ is specified, some or all of fx, fy, cx, cy must be
+    fisheye::CALIB_USE_INTRINSIC_GUESS/ is specified, some or all of fx, fy, cx, cy must be
     initialized before calling the function.
     @param D Output vector of distortion coefficients \f$(k_1, k_2, k_3, k_4)\f$.
     @param rvecs Output vector of rotation vectors (see Rodrigues ) estimated for each pattern view.
@@ -1762,14 +1762,14 @@ namespace fisheye
     position of the calibration pattern in the k-th pattern view (k=0.. *M* -1).
     @param tvecs Output vector of translation vectors estimated for each pattern view.
     @param flags Different flags that may be zero or a combination of the following values:
-    -   **fisheye::CALIB\_USE\_INTRINSIC\_GUESS** cameraMatrix contains valid initial values of
+    -   **fisheye::CALIB_USE_INTRINSIC_GUESS** cameraMatrix contains valid initial values of
     fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
     center ( imageSize is used), and focal distances are computed in a least-squares fashion.
-    -   **fisheye::CALIB\_RECOMPUTE\_EXTRINSIC** Extrinsic will be recomputed after each iteration
+    -   **fisheye::CALIB_RECOMPUTE_EXTRINSIC** Extrinsic will be recomputed after each iteration
     of intrinsic optimization.
-    -   **fisheye::CALIB\_CHECK\_COND** The functions will check validity of condition number.
-    -   **fisheye::CALIB\_FIX\_SKEW** Skew coefficient (alpha) is set to zero and stay zero.
-    -   **fisheye::CALIB\_FIX\_K1..4** Selected distortion coefficients are set to zeros and stay
+    -   **fisheye::CALIB_CHECK_COND** The functions will check validity of condition number.
+    -   **fisheye::CALIB_FIX_SKEW** Skew coefficient (alpha) is set to zero and stay zero.
+    -   **fisheye::CALIB_FIX_K1..4** Selected distortion coefficients are set to zeros and stay
     zero.
     @param criteria Termination criteria for the iterative optimization algorithm.
      */
@@ -1794,13 +1794,13 @@ namespace fisheye
     @param P2 Output 3x4 projection matrix in the new (rectified) coordinate systems for the second
     camera.
     @param Q Output \f$4 \times 4\f$ disparity-to-depth mapping matrix (see reprojectImageTo3D ).
-    @param flags Operation flags that may be zero or CV\_CALIB\_ZERO\_DISPARITY . If the flag is set,
+    @param flags Operation flags that may be zero or CV_CALIB_ZERO_DISPARITY . If the flag is set,
     the function makes the principal points of each camera have the same pixel coordinates in the
     rectified views. And if the flag is not set, the function may still shift the images in the
     horizontal or vertical direction (depending on the orientation of epipolar lines) to maximize the
     useful image area.
     @param newImageSize New image resolution after rectification. The same size should be passed to
-    initUndistortRectifyMap (see the stereo\_calib.cpp sample in OpenCV samples directory). When (0,0)
+    initUndistortRectifyMap (see the stereo_calib.cpp sample in OpenCV samples directory). When (0,0)
     is passed (default), it is set to the original imageSize . Setting it to larger value can help you
     preserve details in the original image, especially when there is a big radial distortion.
     @param balance Sets the new focal length in range between the min focal length and the max focal
@@ -1820,7 +1820,7 @@ namespace fisheye
     observed by the second camera.
     @param K1 Input/output first camera matrix:
     \f$\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}\f$ , \f$j = 0,\, 1\f$ . If
-    any of fisheye::CALIB\_USE\_INTRINSIC\_GUESS , fisheye::CV\_CALIB\_FIX\_INTRINSIC are specified,
+    any of fisheye::CALIB_USE_INTRINSIC_GUESS , fisheye::CV_CALIB_FIX_INTRINSIC are specified,
     some or all of the matrix components must be initialized.
     @param D1 Input/output vector of distortion coefficients \f$(k_1, k_2, k_3, k_4)\f$ of 4 elements.
     @param K2 Input/output second camera matrix. The parameter is similar to K1 .
@@ -1830,16 +1830,16 @@ namespace fisheye
     @param R Output rotation matrix between the 1st and the 2nd camera coordinate systems.
     @param T Output translation vector between the coordinate systems of the cameras.
     @param flags Different flags that may be zero or a combination of the following values:
-    -   **fisheye::CV\_CALIB\_FIX\_INTRINSIC** Fix K1, K2? and D1, D2? so that only R, T matrices
+    -   **fisheye::CV_CALIB_FIX_INTRINSIC** Fix K1, K2? and D1, D2? so that only R, T matrices
     are estimated.
-    -   **fisheye::CALIB\_USE\_INTRINSIC\_GUESS** K1, K2 contains valid initial values of
+    -   **fisheye::CALIB_USE_INTRINSIC_GUESS** K1, K2 contains valid initial values of
     fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
     center (imageSize is used), and focal distances are computed in a least-squares fashion.
-    -   **fisheye::CALIB\_RECOMPUTE\_EXTRINSIC** Extrinsic will be recomputed after each iteration
+    -   **fisheye::CALIB_RECOMPUTE_EXTRINSIC** Extrinsic will be recomputed after each iteration
     of intrinsic optimization.
-    -   **fisheye::CALIB\_CHECK\_COND** The functions will check validity of condition number.
-    -   **fisheye::CALIB\_FIX\_SKEW** Skew coefficient (alpha) is set to zero and stay zero.
-    -   **fisheye::CALIB\_FIX\_K1..4** Selected distortion coefficients are set to zeros and stay
+    -   **fisheye::CALIB_CHECK_COND** The functions will check validity of condition number.
+    -   **fisheye::CALIB_FIX_SKEW** Skew coefficient (alpha) is set to zero and stay zero.
+    -   **fisheye::CALIB_FIX_K1..4** Selected distortion coefficients are set to zeros and stay
     zero.
     @param criteria Termination criteria for the iterative optimization algorithm.
      */

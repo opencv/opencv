@@ -68,7 +68,7 @@ For each descriptor in the first set, this matcher finds the closest descriptor 
 by trying each one. This descriptor matcher supports masking permissible matches between descriptor
 sets.
 
-The class BFMatcher\_CUDA has an interface similar to the class DescriptorMatcher. It has two groups
+The class BFMatcher_CUDA has an interface similar to the class DescriptorMatcher. It has two groups
 of match methods: for matching descriptors of one image with another image or with an image set.
 Also, all functions have an alternative to save results either to the GPU memory or to the CPU
 memory.
@@ -250,7 +250,7 @@ public:
     @param nonmaxSuppression If it is true, non-maximum suppression is applied to detected corners
     (keypoints).
     @param keypointsRatio Inner buffer size for keypoints store is determined as (keypointsRatio \*
-    image\_width \* image\_height).
+    image_width \* image_height).
      */
     explicit FAST_CUDA(int threshold, bool nonmaxSuppression = true, double keypointsRatio = 0.05);
 
@@ -261,8 +261,8 @@ public:
     @param mask Optional input mask that marks the regions where we should detect features.
     @param keypoints The output vector of keypoints. Can be stored both in CPU and GPU memory. For GPU
     memory:
-    -   keypoints.ptr\<Vec2s\>(LOCATION\_ROW)[i] will contain location of i'th point
-    -   keypoints.ptr\<float\>(RESPONSE\_ROW)[i] will contain response of i'th point (if non-maximum
+    -   keypoints.ptr\<Vec2s\>(LOCATION_ROW)[i] will contain location of i'th point
+    -   keypoints.ptr\<float\>(RESPONSE_ROW)[i] will contain response of i'th point (if non-maximum
     suppression is applied)
      */
     void operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);
@@ -363,12 +363,12 @@ public:
     @param mask Optional input mask that marks the regions where we should detect features.
     @param keypoints The input/output vector of keypoints. Can be stored both in CPU and GPU memory.
     For GPU memory:
-    -   keypoints.ptr\<float\>(X\_ROW)[i] contains x coordinate of the i'th feature.
-    -   keypoints.ptr\<float\>(Y\_ROW)[i] contains y coordinate of the i'th feature.
-    -   keypoints.ptr\<float\>(RESPONSE\_ROW)[i] contains the response of the i'th feature.
-    -   keypoints.ptr\<float\>(ANGLE\_ROW)[i] contains orientation of the i'th feature.
-    -   keypoints.ptr\<float\>(OCTAVE\_ROW)[i] contains the octave of the i'th feature.
-    -   keypoints.ptr\<float\>(SIZE\_ROW)[i] contains the size of the i'th feature.
+    -   keypoints.ptr\<float\>(X_ROW)[i] contains x coordinate of the i'th feature.
+    -   keypoints.ptr\<float\>(Y_ROW)[i] contains y coordinate of the i'th feature.
+    -   keypoints.ptr\<float\>(RESPONSE_ROW)[i] contains the response of the i'th feature.
+    -   keypoints.ptr\<float\>(ANGLE_ROW)[i] contains orientation of the i'th feature.
+    -   keypoints.ptr\<float\>(OCTAVE_ROW)[i] contains the octave of the i'th feature.
+    -   keypoints.ptr\<float\>(SIZE_ROW)[i] contains the size of the i'th feature.
     @param descriptors Computed descriptors. if blurForDescriptor is true, image will be blurred
     before descriptors calculation.
      */

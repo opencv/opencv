@@ -60,7 +60,7 @@ filtering operations on 2D images.
 
 @note
    -   An example containing all basic morphology operators like erode and dilate can be found at
-        opencv\_source\_code/samples/gpu/morphology.cpp
+        opencv_source_code/samples/gpu/morphology.cpp
 
   @}
  */
@@ -89,7 +89,7 @@ public:
 
 /** @brief Creates a normalized 2D box filter.
 
-@param srcType Input image type. Only CV\_8UC1 and CV\_8UC4 are supported for now.
+@param srcType Input image type. Only CV_8UC1 and CV_8UC4 are supported for now.
 @param dstType Output image type. Only the same type as src is supported for now.
 @param ksize Kernel size.
 @param anchor Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel
@@ -107,7 +107,7 @@ CV_EXPORTS Ptr<Filter> createBoxFilter(int srcType, int dstType, Size ksize, Poi
 
 /** @brief Creates a non-separable linear 2D filter.
 
-@param srcType Input image type. Supports CV\_8U , CV\_16U and CV\_32F one and four channel image.
+@param srcType Input image type. Supports CV_8U , CV_16U and CV_32F one and four channel image.
 @param dstType Output image type. Only the same type as src is supported for now.
 @param kernel 2D array of filter coefficients.
 @param anchor Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel
@@ -125,7 +125,7 @@ CV_EXPORTS Ptr<Filter> createLinearFilter(int srcType, int dstType, InputArray k
 
 /** @brief Creates a Laplacian operator.
 
-@param srcType Input image type. Supports CV\_8U , CV\_16U and CV\_32F one and four channel image.
+@param srcType Input image type. Supports CV_8U , CV_16U and CV_32F one and four channel image.
 @param dstType Output image type. Only the same type as src is supported for now.
 @param ksize Aperture size used to compute the second-derivative filters (see getDerivKernels). It
 must be positive and odd. Only ksize = 1 and ksize = 3 are supported.
@@ -243,14 +243,14 @@ CV_EXPORTS Ptr<Filter> createGaussianFilter(int srcType, int dstType, Size ksize
 /** @brief Creates a 2D morphological filter.
 
 @param op Type of morphological operation. The following types are possible:
--   **MORPH\_ERODE** erode
--   **MORPH\_DILATE** dilate
--   **MORPH\_OPEN** opening
--   **MORPH\_CLOSE** closing
--   **MORPH\_GRADIENT** morphological gradient
--   **MORPH\_TOPHAT** "top hat"
--   **MORPH\_BLACKHAT** "black hat"
-@param srcType Input/output image type. Only CV\_8UC1 and CV\_8UC4 are supported.
+-   **MORPH_ERODE** erode
+-   **MORPH_DILATE** dilate
+-   **MORPH_OPEN** opening
+-   **MORPH_CLOSE** closing
+-   **MORPH_GRADIENT** morphological gradient
+-   **MORPH_TOPHAT** "top hat"
+-   **MORPH_BLACKHAT** "black hat"
+@param srcType Input/output image type. Only CV_8UC1 and CV_8UC4 are supported.
 @param kernel 2D 8-bit structuring element for the morphological operation.
 @param anchor Anchor position within the structuring element. Negative values mean that the anchor
 is at the center.
@@ -265,7 +265,7 @@ CV_EXPORTS Ptr<Filter> createMorphologyFilter(int op, int srcType, InputArray ke
 
 /** @brief Creates the maximum filter.
 
-@param srcType Input/output image type. Only CV\_8UC1 and CV\_8UC4 are supported.
+@param srcType Input/output image type. Only CV_8UC1 and CV_8UC4 are supported.
 @param ksize Kernel size.
 @param anchor Anchor point. The default value (-1) means that the anchor is at the kernel center.
 @param borderMode Pixel extrapolation method. For details, see borderInterpolate .
@@ -277,7 +277,7 @@ CV_EXPORTS Ptr<Filter> createBoxMaxFilter(int srcType, Size ksize,
 
 /** @brief Creates the minimum filter.
 
-@param srcType Input/output image type. Only CV\_8UC1 and CV\_8UC4 are supported.
+@param srcType Input/output image type. Only CV_8UC1 and CV_8UC4 are supported.
 @param ksize Kernel size.
 @param anchor Anchor point. The default value (-1) means that the anchor is at the kernel center.
 @param borderMode Pixel extrapolation method. For details, see borderInterpolate .
@@ -292,8 +292,8 @@ CV_EXPORTS Ptr<Filter> createBoxMinFilter(int srcType, Size ksize,
 
 /** @brief Creates a horizontal 1D box filter.
 
-@param srcType Input image type. Only CV\_8UC1 type is supported for now.
-@param dstType Output image type. Only CV\_32FC1 type is supported for now.
+@param srcType Input image type. Only CV_8UC1 type is supported for now.
+@param dstType Output image type. Only CV_32FC1 type is supported for now.
 @param ksize Kernel size.
 @param anchor Anchor point. The default value (-1) means that the anchor is at the kernel center.
 @param borderMode Pixel extrapolation method. For details, see borderInterpolate .
@@ -303,8 +303,8 @@ CV_EXPORTS Ptr<Filter> createRowSumFilter(int srcType, int dstType, int ksize, i
 
 /** @brief Creates a vertical 1D box filter.
 
-@param srcType Input image type. Only CV\_8UC1 type is supported for now.
-@param dstType Output image type. Only CV\_32FC1 type is supported for now.
+@param srcType Input image type. Only CV_8UC1 type is supported for now.
+@param dstType Output image type. Only CV_32FC1 type is supported for now.
 @param ksize Kernel size.
 @param anchor Anchor point. The default value (-1) means that the anchor is at the kernel center.
 @param borderMode Pixel extrapolation method. For details, see borderInterpolate .

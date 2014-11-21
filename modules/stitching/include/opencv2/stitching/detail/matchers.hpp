@@ -80,7 +80,7 @@ public:
     @param features Found features
     @param rois Regions of interest
 
-    @sa detail::ImageFeatures, Rect\_
+    @sa detail::ImageFeatures, Rect_
     */
     void operator ()(InputArray image, ImageFeatures &features, const std::vector<cv::Rect> &rois);
     /** @brief Frees unused memory allocated before if there is any. */
@@ -88,7 +88,7 @@ public:
 
 protected:
     /** @brief This method must implement features finding logic in order to make the wrappers
-    detail::FeaturesFinder::operator()\_ work.
+    detail::FeaturesFinder::operator()_ work.
 
     @param image Source image
     @param features Found features
@@ -181,7 +181,7 @@ public:
     /** @overload
     @param features1 First image features
     @param features2 Second image features
-    @param matches\_info Found matches
+    @param matches_info Found matches
     */
     void operator ()(const ImageFeatures &features1, const ImageFeatures &features2,
                      MatchesInfo& matches_info) { match(features1, features2, matches_info); }
@@ -189,7 +189,7 @@ public:
     /** @brief Performs images matching.
 
     @param features Features of the source images
-    @param pairwise\_matches Found pairwise matches
+    @param pairwise_matches Found pairwise matches
     @param mask Mask indicating which image pairs must be matched
 
     The function is parallelized with the TBB library.
@@ -211,11 +211,11 @@ protected:
     FeaturesMatcher(bool is_thread_safe = false) : is_thread_safe_(is_thread_safe) {}
 
     /** @brief This method must implement matching logic in order to make the wrappers
-    detail::FeaturesMatcher::operator()\_ work.
+    detail::FeaturesMatcher::operator()_ work.
 
     @param features1 first image features
     @param features2 second image features
-    @param matches\_info found matches
+    @param matches_info found matches
      */
     virtual void match(const ImageFeatures &features1, const ImageFeatures &features2,
                        MatchesInfo& matches_info) = 0;
@@ -224,7 +224,7 @@ protected:
 };
 
 /** @brief Features matcher which finds two best matches for each feature and leaves the best one only if the
-ratio between descriptor distances is greater than the threshold match\_conf
+ratio between descriptor distances is greater than the threshold match_conf
 
 @sa detail::FeaturesMatcher
  */
@@ -233,11 +233,11 @@ class CV_EXPORTS BestOf2NearestMatcher : public FeaturesMatcher
 public:
     /** @brief Constructs a "best of 2 nearest" matcher.
 
-    @param try\_use\_gpu Should try to use GPU or not
-    @param match\_conf Match distances ration threshold
-    @param num\_matches\_thresh1 Minimum number of matches required for the 2D projective transform
+    @param try_use_gpu Should try to use GPU or not
+    @param match_conf Match distances ration threshold
+    @param num_matches_thresh1 Minimum number of matches required for the 2D projective transform
     estimation used in the inliers classification step
-    @param num\_matches\_thresh2 Minimum number of matches required for the 2D projective transform
+    @param num_matches_thresh2 Minimum number of matches required for the 2D projective transform
     re-estimation on inliers
      */
     BestOf2NearestMatcher(bool try_use_gpu = false, float match_conf = 0.3f, int num_matches_thresh1 = 6,

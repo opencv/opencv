@@ -72,7 +72,7 @@ public:
 
     /** @brief Builds the projection maps according to the given camera data.
 
-    @param src\_size Source image size
+    @param src_size Source image size
     @param K Camera intrinsic parameters
     @param R Camera rotation matrix
     @param xmap Projection map for the x axis
@@ -86,8 +86,8 @@ public:
     @param src Source image
     @param K Camera intrinsic parameters
     @param R Camera rotation matrix
-    @param interp\_mode Interpolation mode
-    @param border\_mode Border extrapolation mode
+    @param interp_mode Interpolation mode
+    @param border_mode Border extrapolation mode
     @param dst Projected image
     @return Project image top-left corner
      */
@@ -99,16 +99,16 @@ public:
     @param src Projected image
     @param K Camera intrinsic parameters
     @param R Camera rotation matrix
-    @param interp\_mode Interpolation mode
-    @param border\_mode Border extrapolation mode
-    @param dst\_size Backward-projected image size
+    @param interp_mode Interpolation mode
+    @param border_mode Border extrapolation mode
+    @param dst_size Backward-projected image size
     @param dst Backward-projected image
      */
     virtual void warpBackward(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode,
                               Size dst_size, OutputArray dst) = 0;
 
     /**
-    @param src\_size Source image bounding box
+    @param src_size Source image bounding box
     @param K Camera intrinsic parameters
     @param R Camera rotation matrix
     @return Projected image minimum bounding box
@@ -135,7 +135,7 @@ struct CV_EXPORTS ProjectorBase
     float t[3];
 };
 
-/** @brief Base class for rotation-based warper using a detail::ProjectorBase\_ derived class.
+/** @brief Base class for rotation-based warper using a detail::ProjectorBase_ derived class.
  */
 template <class P>
 class CV_EXPORTS RotationWarperBase : public RotationWarper

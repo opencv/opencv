@@ -155,19 +155,19 @@ namespace cv
             Camera(double fx, double fy, double cx, double cy, const Size &window_size);
             /** @overload
             @param fov Field of view (horizontal, vertical)
-            @param window\_size Size of the window. Principal point is at the center of the window
+            @param window_size Size of the window. Principal point is at the center of the window
             by default.
             */
             explicit Camera(const Vec2d &fov, const Size &window_size);
             /** @overload
             @param K Intrinsic matrix of the camera.
-            @param window\_size Size of the window. This together with intrinsic matrix determines
+            @param window_size Size of the window. This together with intrinsic matrix determines
             the field of view.
             */
             explicit Camera(const Matx33d &K, const Size &window_size);
             /** @overload
             @param proj Projection matrix of the camera.
-            @param window\_size Size of the window. This together with projection matrix determines
+            @param window_size Size of the window. This together with projection matrix determines
             the field of view.
             */
             explicit Camera(const Matx44d &proj, const Size &window_size);
@@ -192,7 +192,7 @@ namespace cv
 
             /** @brief Creates a Kinect Camera.
 
-            @param window\_size Size of the window. This together with intrinsic matrix of a Kinect Camera
+            @param window_size Size of the window. This together with intrinsic matrix of a Kinect Camera
             determines the field of view.
              */
             static Camera KinectCamera(const Size &window_size);

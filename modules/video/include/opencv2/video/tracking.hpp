@@ -74,7 +74,7 @@ See the OpenCV sample camshiftdemo.c that tracks colored objects.
 
 @note
 -   (Python) A sample explaining the camshift tracking algorithm can be found at
-    opencv\_source\_code/samples/python2/camshift.py
+    opencv_source_code/samples/python2/camshift.py
  */
 CV_EXPORTS_W RotatedRect CamShift( InputArray probImage, CV_IN_OUT Rect& window,
                                    TermCriteria criteria );
@@ -98,7 +98,7 @@ with findContours , throwing away contours with small area ( contourArea ), and 
 remaining contours with drawContours.
 
 @note
--   A mean-shift tracking sample can be found at opencv\_source\_code/samples/cpp/camshiftdemo.cpp
+-   A mean-shift tracking sample can be found at opencv_source_code/samples/cpp/camshiftdemo.cpp
  */
 CV_EXPORTS_W int meanShift( InputArray probImage, CV_IN_OUT Rect& window, TermCriteria criteria );
 
@@ -132,7 +132,7 @@ pyramids.
 single-precision floating-point numbers.
 @param nextPts output vector of 2D points (with single-precision floating-point coordinates)
 containing the calculated new positions of input features in the second image; when
-OPTFLOW\_USE\_INITIAL\_FLOW flag is passed, the vector must have the same size as in the input.
+OPTFLOW_USE_INITIAL_FLOW flag is passed, the vector must have the same size as in the input.
 @param status output status vector (of unsigned chars); each element of the vector is set to 1 if
 the flow for the corresponding features has been found, otherwise, it is set to 0.
 @param err output vector of errors; each element of the vector is set to an error for the
@@ -146,9 +146,9 @@ algorithm will use as many levels as pyramids have but no more than maxLevel.
 (after the specified maximum number of iterations criteria.maxCount or when the search window
 moves by less than criteria.epsilon.
 @param flags operation flags:
- -   **OPTFLOW\_USE\_INITIAL\_FLOW** uses initial estimations, stored in nextPts; if the flag is
+ -   **OPTFLOW_USE_INITIAL_FLOW** uses initial estimations, stored in nextPts; if the flag is
      not set, then prevPts is copied to nextPts and is considered the initial estimate.
- -   **OPTFLOW\_LK\_GET\_MIN\_EIGENVALS** use minimum eigen values as an error measure (see
+ -   **OPTFLOW_LK_GET_MIN_EIGENVALS** use minimum eigen values as an error measure (see
      minEigThreshold description); if the flag is not set, then L1 distance between patches
      around the original and a moved point, divided by number of pixels in a window, is used as a
      error measure.
@@ -164,11 +164,11 @@ The function implements a sparse iterative version of the Lucas-Kanade optical f
 @note
 
 -   An example using the Lucas-Kanade optical flow algorithm can be found at
-    opencv\_source\_code/samples/cpp/lkdemo.cpp
+    opencv_source_code/samples/cpp/lkdemo.cpp
 -   (Python) An example using the Lucas-Kanade optical flow algorithm can be found at
-    opencv\_source\_code/samples/python2/lk\_track.py
+    opencv_source_code/samples/python2/lk_track.py
 -   (Python) An example using the Lucas-Kanade tracker for homography matching can be found at
-    opencv\_source\_code/samples/python2/lk\_homography.py
+    opencv_source_code/samples/python2/lk_homography.py
  */
 CV_EXPORTS_W void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg,
                                         InputArray prevPts, InputOutputArray nextPts,
@@ -181,24 +181,24 @@ CV_EXPORTS_W void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg,
 
 @param prev first 8-bit single-channel input image.
 @param next second input image of the same size and the same type as prev.
-@param flow computed flow image that has the same size as prev and type CV\_32FC2.
-@param pyr\_scale parameter, specifying the image scale (\<1) to build pyramids for each image;
-pyr\_scale=0.5 means a classical pyramid, where each next layer is twice smaller than the previous
+@param flow computed flow image that has the same size as prev and type CV_32FC2.
+@param pyr_scale parameter, specifying the image scale (\<1) to build pyramids for each image;
+pyr_scale=0.5 means a classical pyramid, where each next layer is twice smaller than the previous
 one.
 @param levels number of pyramid layers including the initial image; levels=1 means that no extra
 layers are created and only the original images are used.
 @param winsize averaging window size; larger values increase the algorithm robustness to image
 noise and give more chances for fast motion detection, but yield more blurred motion field.
 @param iterations number of iterations the algorithm does at each pyramid level.
-@param poly\_n size of the pixel neighborhood used to find polynomial expansion in each pixel;
+@param poly_n size of the pixel neighborhood used to find polynomial expansion in each pixel;
 larger values mean that the image will be approximated with smoother surfaces, yielding more
-robust algorithm and more blurred motion field, typically poly\_n =5 or 7.
-@param poly\_sigma standard deviation of the Gaussian that is used to smooth derivatives used as a
-basis for the polynomial expansion; for poly\_n=5, you can set poly\_sigma=1.1, for poly\_n=7, a
-good value would be poly\_sigma=1.5.
+robust algorithm and more blurred motion field, typically poly_n =5 or 7.
+@param poly_sigma standard deviation of the Gaussian that is used to smooth derivatives used as a
+basis for the polynomial expansion; for poly_n=5, you can set poly_sigma=1.1, for poly_n=7, a
+good value would be poly_sigma=1.5.
 @param flags operation flags that can be a combination of the following:
- -   **OPTFLOW\_USE\_INITIAL\_FLOW** uses the input flow as an initial flow approximation.
- -   **OPTFLOW\_FARNEBACK\_GAUSSIAN** uses the Gaussian \f$\texttt{winsize}\times\texttt{winsize}\f$
+ -   **OPTFLOW_USE_INITIAL_FLOW** uses the input flow as an initial flow approximation.
+ -   **OPTFLOW_FARNEBACK_GAUSSIAN** uses the Gaussian \f$\texttt{winsize}\times\texttt{winsize}\f$
      filter instead of a box filter of the same size for optical flow estimation; usually, this
      option gives z more accurate flow than with a box filter, at the cost of lower speed;
      normally, winsize for a Gaussian window should be set to a larger value to achieve the same
@@ -211,9 +211,9 @@ The function finds an optical flow for each prev pixel using the @cite Farneback
 @note
 
 -   An example using the optical flow algorithm described by Gunnar Farneback can be found at
-    opencv\_source\_code/samples/cpp/fback.cpp
+    opencv_source_code/samples/cpp/fback.cpp
 -   (Python) An example using the optical flow algorithm described by Gunnar Farneback can be
-    found at opencv\_source\_code/samples/python2/opt\_flow.py
+    found at opencv_source_code/samples/python2/opt_flow.py
  */
 CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next, InputOutputArray flow,
                                             double pyr_scale, int levels, int winsize,
@@ -260,19 +260,19 @@ enum
 
 /** @brief Finds the geometric transform (warp) between two images in terms of the ECC criterion @cite EP08.
 
-@param templateImage single-channel template image; CV\_8U or CV\_32F array.
+@param templateImage single-channel template image; CV_8U or CV_32F array.
 @param inputImage single-channel input image which should be warped with the final warpMatrix in
 order to provide an image similar to templateImage, same type as temlateImage.
 @param warpMatrix floating-point \f$2\times 3\f$ or \f$3\times 3\f$ mapping matrix (warp).
 @param motionType parameter, specifying the type of motion:
- -   **MOTION\_TRANSLATION** sets a translational motion model; warpMatrix is \f$2\times 3\f$ with
+ -   **MOTION_TRANSLATION** sets a translational motion model; warpMatrix is \f$2\times 3\f$ with
      the first \f$2\times 2\f$ part being the unity matrix and the rest two parameters being
      estimated.
- -   **MOTION\_EUCLIDEAN** sets a Euclidean (rigid) transformation as motion model; three
+ -   **MOTION_EUCLIDEAN** sets a Euclidean (rigid) transformation as motion model; three
      parameters are estimated; warpMatrix is \f$2\times 3\f$.
- -   **MOTION\_AFFINE** sets an affine motion model (DEFAULT); six parameters are estimated;
+ -   **MOTION_AFFINE** sets an affine motion model (DEFAULT); six parameters are estimated;
      warpMatrix is \f$2\times 3\f$.
- -   **MOTION\_HOMOGRAPHY** sets a homography as a motion model; eight parameters are
+ -   **MOTION_HOMOGRAPHY** sets a homography as a motion model; eight parameters are
      estimated;\`warpMatrix\` is \f$3\times 3\f$.
 @param criteria parameter, specifying the termination criteria of the ECC algorithm;
 criteria.epsilon defines the threshold of the increment in the correlation coefficient between two
@@ -300,8 +300,8 @@ warp (unity matrix) should be given as input. Note that if images undergo strong
 displacements/rotations, an initial transformation that roughly aligns the images is necessary
 (e.g., a simple euclidean/similarity transform that allows for the images showing the same image
 content approximately). Use inverse warping in the second image to take an image close to the first
-one, i.e. use the flag WARP\_INVERSE\_MAP with warpAffine or warpPerspective. See also the OpenCV
-sample image\_alignment.cpp that demonstrates the use of the function. Note that the function throws
+one, i.e. use the flag WARP_INVERSE_MAP with warpAffine or warpPerspective. See also the OpenCV
+sample image_alignment.cpp that demonstrates the use of the function. Note that the function throws
 an exception if algorithm does not converges.
 
 @sa
@@ -320,7 +320,7 @@ an extended Kalman filter functionality. See the OpenCV sample kalman.cpp.
 @note
 
 -   An example using the standard Kalman filter can be found at
-    opencv\_source\_code/samples/cpp/kalman.cpp
+    opencv_source_code/samples/cpp/kalman.cpp
  */
 class CV_EXPORTS_W KalmanFilter
 {
@@ -335,7 +335,7 @@ public:
     @param dynamParams Dimensionality of the state.
     @param measureParams Dimensionality of the measurement.
     @param controlParams Dimensionality of the control vector.
-    @param type Type of the created matrices that should be CV\_32F or CV\_64F.
+    @param type Type of the created matrices that should be CV_32F or CV_64F.
     */
     CV_WRAP KalmanFilter( int dynamParams, int measureParams, int controlParams = 0, int type = CV_32F );
 
@@ -344,7 +344,7 @@ public:
     @param dynamParams Dimensionalityensionality of the state.
     @param measureParams Dimensionality of the measurement.
     @param controlParams Dimensionality of the control vector.
-    @param type Type of the created matrices that should be CV\_32F or CV\_64F.
+    @param type Type of the created matrices that should be CV_32F or CV_64F.
      */
     void init( int dynamParams, int measureParams, int controlParams = 0, int type = CV_32F );
 
@@ -429,7 +429,7 @@ public:
 
     @param I0 first 8-bit single-channel input image.
     @param I1 second input image of the same size and the same type as prev.
-    @param flow computed flow image that has the same size as prev and type CV\_32FC2.
+    @param flow computed flow image that has the same size as prev and type CV_32FC2.
      */
     CV_WRAP virtual void calc( InputArray I0, InputArray I1, InputOutputArray flow ) = 0;
     /** @brief Releases all inner buffers.

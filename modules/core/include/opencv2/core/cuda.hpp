@@ -326,11 +326,11 @@ CV_EXPORTS void setBufferPoolConfig(int deviceId, size_t stackSize, int stackCou
 
 Its interface is also Mat-like but with additional memory type parameters.
 
--   **PAGE\_LOCKED** sets a page locked memory type used commonly for fast and asynchronous
+-   **PAGE_LOCKED** sets a page locked memory type used commonly for fast and asynchronous
     uploading/downloading data from/to GPU.
 -   **SHARED** specifies a zero copy memory allocation that enables mapping the host memory to GPU
     address space, if supported.
--   **WRITE\_COMBINED** sets the write combined buffer that is not cached by CPU. Such buffers are
+-   **WRITE_COMBINED** sets the write combined buffer that is not cached by CPU. Such buffers are
     used to supply GPU with data when GPU only reads it. The advantage is a better CPU cache
     utilization.
 
@@ -581,7 +581,7 @@ class CV_EXPORTS TargetArchs
 public:
     /** @brief The following method checks whether the module was built with the support of the given feature:
 
-    @param feature\_set Features to be checked. See :ocvcuda::FeatureSet.
+    @param feature_set Features to be checked. See :ocvcuda::FeatureSet.
      */
     static bool builtWith(FeatureSet feature_set);
 
@@ -611,9 +611,9 @@ public:
 
     /** @brief The constructors.
 
-    @param device\_id System index of the CUDA device starting with 0.
+    @param device_id System index of the CUDA device starting with 0.
 
-    Constructs the DeviceInfo object for the specified device. If device\_id parameter is missed, it
+    Constructs the DeviceInfo object for the specified device. If device_id parameter is missed, it
     constructs an object for the current device.
      */
     DeviceInfo(int device_id);
@@ -793,7 +793,7 @@ public:
 
     /** @brief Provides information on CUDA feature support.
 
-    @param feature\_set Features to be checked. See cuda::FeatureSet.
+    @param feature_set Features to be checked. See cuda::FeatureSet.
 
     This function returns true if the device has the specified CUDA feature. Otherwise, it returns false
      */

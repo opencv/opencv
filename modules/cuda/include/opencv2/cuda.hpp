@@ -83,11 +83,11 @@ as possible.
 
 @note
    -   An example applying the HOG descriptor for people detection can be found at
-        opencv\_source\_code/samples/cpp/peopledetect.cpp
+        opencv_source_code/samples/cpp/peopledetect.cpp
     -   A CUDA example applying the HOG descriptor for people detection can be found at
-        opencv\_source\_code/samples/gpu/hog.cpp
+        opencv_source_code/samples/gpu/hog.cpp
     -   (Python) An example applying the HOG descriptor for people detection can be found at
-        opencv\_source\_code/samples/python2/peopledetect.py
+        opencv_source_code/samples/python2/peopledetect.py
  */
 struct CV_EXPORTS HOGDescriptor
 {
@@ -97,14 +97,14 @@ struct CV_EXPORTS HOGDescriptor
 
     /** @brief Creates the HOG descriptor and detector.
 
-    @param win\_size Detection window size. Align to block size and block stride.
-    @param block\_size Block size in pixels. Align to cell size. Only (16,16) is supported for now.
-    @param block\_stride Block stride. It must be a multiple of cell size.
-    @param cell\_size Cell size. Only (8, 8) is supported for now.
+    @param win_size Detection window size. Align to block size and block stride.
+    @param block_size Block size in pixels. Align to cell size. Only (16,16) is supported for now.
+    @param block_stride Block stride. It must be a multiple of cell size.
+    @param cell_size Cell size. Only (8, 8) is supported for now.
     @param nbins Number of bins. Only 9 bins per cell are supported for now.
-    @param win\_sigma Gaussian smoothing window parameter.
-    @param threshold\_L2hys L2-Hys normalization method shrinkage.
-    @param gamma\_correction Flag to specify whether the gamma correction preprocessing is required or
+    @param win_sigma Gaussian smoothing window parameter.
+    @param threshold_L2hys L2-Hys normalization method shrinkage.
+    @param gamma_correction Flag to specify whether the gamma correction preprocessing is required or
     not.
     @param nlevels Maximum number of detection window increases.
      */
@@ -137,13 +137,13 @@ struct CV_EXPORTS HOGDescriptor
 
     /** @brief Performs object detection without a multi-scale window.
 
-    @param img Source image. CV\_8UC1 and CV\_8UC4 types are supported for now.
-    @param found\_locations Left-top corner points of detected objects boundaries.
-    @param hit\_threshold Threshold for the distance between features and SVM classifying plane.
+    @param img Source image. CV_8UC1 and CV_8UC4 types are supported for now.
+    @param found_locations Left-top corner points of detected objects boundaries.
+    @param hit_threshold Threshold for the distance between features and SVM classifying plane.
     Usually it is 0 and should be specfied in the detector coefficients (as the last free
     coefficient). But if the free coefficient is omitted (which is allowed), you can specify it
     manually here.
-    @param win\_stride Window stride. It must be a multiple of block stride.
+    @param win_stride Window stride. It must be a multiple of block stride.
     @param padding Mock parameter to keep the CPU interface compatibility. It must be (0,0).
      */
     void detect(const GpuMat& img, std::vector<Point>& found_locations,
@@ -153,13 +153,13 @@ struct CV_EXPORTS HOGDescriptor
     /** @brief Performs object detection with a multi-scale window.
 
     @param img Source image. See cuda::HOGDescriptor::detect for type limitations.
-    @param found\_locations Detected objects boundaries.
-    @param hit\_threshold Threshold for the distance between features and SVM classifying plane. See
+    @param found_locations Detected objects boundaries.
+    @param hit_threshold Threshold for the distance between features and SVM classifying plane. See
     cuda::HOGDescriptor::detect for details.
-    @param win\_stride Window stride. It must be a multiple of block stride.
+    @param win_stride Window stride. It must be a multiple of block stride.
     @param padding Mock parameter to keep the CPU interface compatibility. It must be (0,0).
     @param scale0 Coefficient of the detection window increase.
-    @param group\_threshold Coefficient to regulate the similarity threshold. When detected, some
+    @param group_threshold Coefficient to regulate the similarity threshold. When detected, some
     objects can be covered by many rectangles. 0 means not to perform grouping. See groupRectangles .
      */
     void detectMultiScale(const GpuMat& img, std::vector<Rect>& found_locations,
@@ -177,11 +177,11 @@ struct CV_EXPORTS HOGDescriptor
     /** @brief Returns block descriptors computed for the whole image.
 
     @param img Source image. See cuda::HOGDescriptor::detect for type limitations.
-    @param win\_stride Window stride. It must be a multiple of block stride.
+    @param win_stride Window stride. It must be a multiple of block stride.
     @param descriptors 2D array of descriptors.
-    @param descr\_format Descriptor storage format:
-    -   **DESCR\_FORMAT\_ROW\_BY\_ROW** - Row-major order.
-    -   **DESCR\_FORMAT\_COL\_BY\_COL** - Column-major order.
+    @param descr_format Descriptor storage format:
+    -   **DESCR_FORMAT_ROW_BY_ROW** - Row-major order.
+    -   **DESCR_FORMAT_COL_BY_COL** - Column-major order.
 
     The function is mainly used to learn the classifier.
      */
@@ -236,9 +236,9 @@ protected:
 
 @note
    -   A cascade classifier example can be found at
-        opencv\_source\_code/samples/gpu/cascadeclassifier.cpp
+        opencv_source_code/samples/gpu/cascadeclassifier.cpp
     -   A Nvidea API specific cascade classifier example can be found at
-        opencv\_source\_code/samples/gpu/cascadeclassifier\_nvidia\_api.cpp
+        opencv_source_code/samples/gpu/cascadeclassifier_nvidia_api.cpp
  */
 class CV_EXPORTS CascadeClassifier_CUDA
 {
@@ -271,7 +271,7 @@ public:
     int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor = 1.2, int minNeighbors = 4, Size minSize = Size());
     /** @brief Detects objects of different sizes in the input image.
 
-    @param image Matrix of type CV\_8U containing an image where objects should be detected.
+    @param image Matrix of type CV_8U containing an image where objects should be detected.
     @param objectsBuf Buffer to store detected objects (rectangles). If it is empty, it is allocated
     with the default size. If not empty, the function searches not more than N objects, where
     N = sizeof(objectsBufer's data)/sizeof(cv::Rect).
@@ -364,15 +364,15 @@ CV_EXPORTS void projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tve
 
 @param object Single-row matrix of object points.
 @param image Single-row matrix of image points.
-@param camera\_mat 3x3 matrix of intrinsic camera parameters.
-@param dist\_coef Distortion coefficients. See undistortPoints for details.
+@param camera_mat 3x3 matrix of intrinsic camera parameters.
+@param dist_coef Distortion coefficients. See undistortPoints for details.
 @param rvec Output 3D rotation vector.
 @param tvec Output 3D translation vector.
-@param use\_extrinsic\_guess Flag to indicate that the function must use rvec and tvec as an
+@param use_extrinsic_guess Flag to indicate that the function must use rvec and tvec as an
 initial transformation guess. It is not supported for now.
-@param num\_iters Maximum number of RANSAC iterations.
-@param max\_dist Euclidean distance threshold to detect whether point is inlier or not.
-@param min\_inlier\_count Flag to indicate that the function must stop if greater or equal number
+@param num_iters Maximum number of RANSAC iterations.
+@param max_dist Euclidean distance threshold to detect whether point is inlier or not.
+@param min_inlier_count Flag to indicate that the function must stop if greater or equal number
 of inliers is achieved. It is not supported for now.
 @param inliers Output vector of inlier indices.
  */

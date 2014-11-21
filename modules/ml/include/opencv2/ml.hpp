@@ -92,7 +92,7 @@ SVM implementation in OpenCV is based on @cite LibSVM.
 Prediction with SVM
 -------------------
 
-StatModel::predict(samples, results, flags) should be used. Pass flags=StatModel::RAW\_OUTPUT to get
+StatModel::predict(samples, results, flags) should be used. Pass flags=StatModel::RAW_OUTPUT to get
 the raw response from SVM (in the case of regression, 1-class or 2-class classification problem).
 
 @defgroup ml_decsiontrees Decision Trees
@@ -126,8 +126,8 @@ index is stored in the observed node. The following variables are possible:
     could take. If it does, the procedure goes to the left. Otherwise, it goes to the right. For
     example, if the color is green or red, go to the left, else to the right.
 
-So, in each node, a pair of entities (variable\_index , `decision_rule (threshold/subset)` ) is
-used. This pair is called a *split* (split on the variable variable\_index ). Once a leaf node is
+So, in each node, a pair of entities (variable_index , `decision_rule (threshold/subset)` ) is
+used. This pair is called a *split* (split on the variable variable_index ). Once a leaf node is
 reached, the value assigned to this node is used as the output of the prediction procedure.
 
 Sometimes, certain features of the input vector are missed (for example, in the darkness it is
@@ -232,15 +232,15 @@ the ensemble is increased, a larger number of the training samples are classifie
 increasing confidence, thereby those samples receive smaller weights on the subsequent iterations.
 Examples with a very low relative weight have a small impact on the weak classifier training. Thus,
 such examples may be excluded during the weak classifier training without having much effect on the
-induced classifier. This process is controlled with the weight\_trim\_rate parameter. Only examples
-with the summary fraction weight\_trim\_rate of the total weight mass are used in the weak
+induced classifier. This process is controlled with the weight_trim_rate parameter. Only examples
+with the summary fraction weight_trim_rate of the total weight mass are used in the weak
 classifier training. Note that the weights for **all** training examples are recomputed at each
 training iteration. Examples deleted at a particular iteration may be used again for learning some
 of the weak classifiers further @cite FHT98.
 
 Prediction with Boost
 ---------------------
-StatModel::predict(samples, results, flags) should be used. Pass flags=StatModel::RAW\_OUTPUT to get
+StatModel::predict(samples, results, flags) should be used. Pass flags=StatModel::RAW_OUTPUT to get
 the raw sum from Boost classifier.
 
 @defgroup ml_randomtrees Random Trees
@@ -260,7 +260,7 @@ randomly select the same number of vectors as in the original set ( =N ). The ve
 with replacement. That is, some vectors will occur more than once and some will be absent. At each
 node of each trained tree, not all the variables are used to find the best split, but a random
 subset of them. With each node a new subset is generated. However, its size is fixed for all the
-nodes and all the trees. It is a training parameter set to \f$\sqrt{number\_of\_variables}\f$ by
+nodes and all the trees. It is a training parameter set to \f$\sqrt{number_of_variables}\f$ by
 default. None of the built trees are pruned.
 
 In random trees there is no need for any accuracy estimation procedures, such as cross-validation or
@@ -280,7 +280,7 @@ about N/3 . The classification error is estimated by using this oob-data as foll
     to all the vectors in the original data. In case of regression, the oob-error is computed as the
     squared error for oob vectors difference divided by the total number of vectors.
 
-For the random trees usage example, please, see letter\_recog.cpp sample in OpenCV distribution.
+For the random trees usage example, please, see letter_recog.cpp sample in OpenCV distribution.
 
 **References:**
 
@@ -373,15 +373,15 @@ computed as:
 
 Different activation functions may be used. ML implements three standard functions:
 
--   Identity function ( ANN\_MLP::IDENTITY ): \f$f(x)=x\f$
+-   Identity function ( ANN_MLP::IDENTITY ): \f$f(x)=x\f$
 
--   Symmetrical sigmoid ( ANN\_MLP::SIGMOID\_SYM ): \f$f(x)=\beta*(1-e^{-\alpha x})/(1+e^{-\alpha x}\f$
+-   Symmetrical sigmoid ( ANN_MLP::SIGMOID_SYM ): \f$f(x)=\beta*(1-e^{-\alpha x})/(1+e^{-\alpha x}\f$
     ), which is the default choice for MLP. The standard sigmoid with \f$\beta =1, \alpha =1\f$ is shown
     below:
 
     ![image](pics/sigmoid_bipolar.png)
 
--   Gaussian function ( ANN\_MLP::GAUSSIAN ): \f$f(x)=\beta e^{-\alpha x*x}\f$ , which is not completely
+-   Gaussian function ( ANN_MLP::GAUSSIAN ): \f$f(x)=\beta e^{-\alpha x*x}\f$ , which is not completely
     supported at the moment.
 
 In ML, all the neurons have the same activation functions, with the same free parameters (
@@ -443,18 +443,18 @@ determined by LogisticRegression::Params.alpha. It determines how faster we appr
 It is a positive real number. Optimization algorithms like Batch Gradient Descent and Mini-Batch
 Gradient Descent are supported in LogisticRegression. It is important that we mention the number of
 iterations these optimization algorithms have to run. The number of iterations are mentioned by
-LogisticRegression::Params.num\_iters. The number of iterations can be thought as number of steps
+LogisticRegression::Params.num_iters. The number of iterations can be thought as number of steps
 taken and learning rate specifies if it is a long step or a short step. These two parameters define
 how fast we arrive at a possible solution. In order to compensate for overfitting regularization is
 performed, which can be enabled by setting LogisticRegression::Params.regularized to a positive
 integer (greater than zero). One can specify what kind of regularization has to be performed by
-setting LogisticRegression::Params.norm to LogisticRegression::REG\_L1 or
-LogisticRegression::REG\_L2 values. LogisticRegression provides a choice of 2 training methods with
+setting LogisticRegression::Params.norm to LogisticRegression::REG_L1 or
+LogisticRegression::REG_L2 values. LogisticRegression provides a choice of 2 training methods with
 Batch Gradient Descent or the Mini-Batch Gradient Descent. To specify this, set
-LogisticRegression::Params.train\_method to either LogisticRegression::BATCH or
-LogisticRegression::MINI\_BATCH. If LogisticRegression::Params is set to
-LogisticRegression::MINI\_BATCH, the size of the mini batch has to be to a postive integer using
-LogisticRegression::Params.mini\_batch\_size.
+LogisticRegression::Params.train_method to either LogisticRegression::BATCH or
+LogisticRegression::MINI_BATCH. If LogisticRegression::Params is set to
+LogisticRegression::MINI_BATCH, the size of the mini batch has to be to a postive integer using
+LogisticRegression::Params.mini_batch_size.
 
 A sample set of training parameters for the Logistic Regression classifier can be initialized as
 follows:
@@ -713,22 +713,22 @@ public:
                                       char missch='?');
     /** @brief Creates training data from in-memory arrays.
 
-    @param samples matrix of samples. It should have CV\_32F type.
-    @param layout it's either ROW\_SAMPLE, which means that each training sample is a row of samples,
-    or COL\_SAMPLE, which means that each training sample occupies a column of samples.
+    @param samples matrix of samples. It should have CV_32F type.
+    @param layout it's either ROW_SAMPLE, which means that each training sample is a row of samples,
+    or COL_SAMPLE, which means that each training sample occupies a column of samples.
     @param responses matrix of responses. If the responses are scalar, they should be stored as a
-    single row or as a single column. The matrix should have type CV\_32F or CV\_32S (in the former
+    single row or as a single column. The matrix should have type CV_32F or CV_32S (in the former
     case the responses are considered as ordered by default; in the latter case - as categorical)
     @param varIdx vector specifying which variables to use for training. It can be an integer vector
-    (CV\_32S) containing 0-based variable indices or byte vector (CV\_8U) containing a mask of active
+    (CV_32S) containing 0-based variable indices or byte vector (CV_8U) containing a mask of active
     variables.
     @param sampleIdx vector specifying which samples to use for training. It can be an integer vector
-    (CV\_32S) containing 0-based sample indices or byte vector (CV\_8U) containing a mask of training
+    (CV_32S) containing 0-based sample indices or byte vector (CV_8U) containing a mask of training
     samples.
-    @param sampleWeights optional vector with weights for each sample. It should have CV\_32F type.
-    @param varType optional vector of type CV\_8U and size \<number\_of\_variables\_in\_samples\> +
-    \<number\_of\_variables\_in\_responses\>, containing types of each input and output variable. The
-    ordered variables are denoted by value VAR\_ORDERED, and categorical - by VAR\_CATEGORICAL.
+    @param sampleWeights optional vector with weights for each sample. It should have CV_32F type.
+    @param varType optional vector of type CV_8U and size \<number_of_variables_in_samples\> +
+    \<number_of_variables_in_responses\>, containing types of each input and output variable. The
+    ordered variables are denoted by value VAR_ORDERED, and categorical - by VAR_CATEGORICAL.
      */
     static Ptr<TrainData> create(InputArray samples, int layout, InputArray responses,
                                  InputArray varIdx=noArray(), InputArray sampleIdx=noArray(),
@@ -770,7 +770,7 @@ public:
     @param trainData training data that can be loaded from file using TrainData::loadFromCSV or
     created with TrainData::create.
     @param flags optional flags, depending on the model. Some of the models can be updated with the
-    new training samples, not completely overwritten (such as NormalBayesClassifier or ANN\_MLP).
+    new training samples, not completely overwritten (such as NormalBayesClassifier or ANN_MLP).
 
     There are 2 instance methods and 2 static (class) template methods. The first two train the already
     created model (the very first method must be overwritten in the derived classes). And the latter two
@@ -779,7 +779,7 @@ public:
     virtual bool train( const Ptr<TrainData>& trainData, int flags=0 );
     /** @overload
     @param samples training samples
-    @param layout ROW\_SAMPLE (training samples are the matrix rows) or COL\_SAMPLE (training samples
+    @param layout ROW_SAMPLE (training samples are the matrix rows) or COL_SAMPLE (training samples
     are the matrix columns)
     @param responses vector of responses associated with the training samples.
     */
@@ -805,7 +805,7 @@ public:
     @param samples The input samples, floating-point matrix
     @param results The optional output matrix of results.
     @param flags The optional flags, model-dependent. Some models, such as Boost, SVM recognize
-    StatModel::RAW\_OUTPUT flag, which makes the method return the raw results (the sum), not the
+    StatModel::RAW_OUTPUT flag, which makes the method return the raw results (the sum), not the
     class label.
      */
     virtual float predict( InputArray samples, OutputArray results=noArray(), int flags=0 ) const = 0;
@@ -905,11 +905,11 @@ public:
 
 @note
    -   (Python) An example of digit recognition using KNearest can be found at
-        opencv\_source/samples/python2/digits.py
+        opencv_source/samples/python2/digits.py
     -   (Python) An example of grid search digit recognition using KNearest can be found at
-        opencv\_source/samples/python2/digits\_adjust.py
+        opencv_source/samples/python2/digits_adjust.py
     -   (Python) An example of video digit recognition using KNearest can be found at
-        opencv\_source/samples/python2/digits\_video.py
+        opencv_source/samples/python2/digits_video.py
  */
 class CV_EXPORTS_W KNearest : public StatModel
 {
@@ -930,14 +930,14 @@ public:
     /** @brief Finds the neighbors and predicts responses for input vectors.
 
     @param samples Input samples stored by rows. It is a single-precision floating-point matrix of
-    \<number\_of\_samples\> \* k size.
+    \<number_of_samples\> \* k size.
     @param k Number of used nearest neighbors. Should be greater than 1.
     @param results Vector with results of prediction (regression or classification) for each input
-    sample. It is a single-precision floating-point vector with \<number\_of\_samples\> elements.
+    sample. It is a single-precision floating-point vector with \<number_of_samples\> elements.
     @param neighborResponses Optional output values for corresponding neighbors. It is a
-    single-precision floating-point matrix of \<number\_of\_samples\> \* k size.
+    single-precision floating-point matrix of \<number_of_samples\> \* k size.
     @param dist Optional output distances from the input vectors to the corresponding neighbors. It is
-    a single-precision floating-point matrix of \<number\_of\_samples\> \* k size.
+    a single-precision floating-point matrix of \<number_of_samples\> \* k size.
 
     For each input vector (a row of the matrix samples), the method finds the k nearest neighbors. In
     case of regression, the predicted result is a mean value of the particular vector's neighbor
@@ -986,11 +986,11 @@ public:
 
 @note
    -   (Python) An example of digit recognition using SVM can be found at
-        opencv\_source/samples/python2/digits.py
+        opencv_source/samples/python2/digits.py
     -   (Python) An example of grid search digit recognition using SVM can be found at
-        opencv\_source/samples/python2/digits\_adjust.py
+        opencv_source/samples/python2/digits_adjust.py
     -   (Python) An example of video digit recognition using SVM can be found at
-        opencv\_source/samples/python2/digits\_video.py
+        opencv_source/samples/python2/digits_video.py
  */
 class CV_EXPORTS_W SVM : public StatModel
 {
@@ -1006,18 +1006,18 @@ public:
         /** @brief The constructors
 
         @param svm_type Type of a SVM formulation. Possible values are:
-        -   **SVM::C\_SVC** C-Support Vector Classification. n-class classification (n \f$\geq\f$ 2), allows
+        -   **SVM::C_SVC** C-Support Vector Classification. n-class classification (n \f$\geq\f$ 2), allows
         imperfect separation of classes with penalty multiplier C for outliers.
-        -   **SVM::NU\_SVC** \f$\nu\f$-Support Vector Classification. n-class classification with possible
+        -   **SVM::NU_SVC** \f$\nu\f$-Support Vector Classification. n-class classification with possible
         imperfect separation. Parameter \f$\nu\f$ (in the range 0..1, the larger the value, the smoother
         the decision boundary) is used instead of C.
-        -   **SVM::ONE\_CLASS** Distribution Estimation (One-class SVM). All the training data are from
+        -   **SVM::ONE_CLASS** Distribution Estimation (One-class SVM). All the training data are from
         the same class, SVM builds a boundary that separates the class from the rest of the feature
         space.
-        -   **SVM::EPS\_SVR** \f$\epsilon\f$-Support Vector Regression. The distance between feature vectors
+        -   **SVM::EPS_SVR** \f$\epsilon\f$-Support Vector Regression. The distance between feature vectors
         from the training set and the fitting hyper-plane must be less than p. For outliers the
         penalty multiplier C is used.
-        -   **SVM::NU\_SVR** \f$\nu\f$-Support Vector Regression. \f$\nu\f$ is used instead of p.
+        -   **SVM::NU_SVR** \f$\nu\f$-Support Vector Regression. \f$\nu\f$ is used instead of p.
         See @cite LibSVM for details.
         @param kernel_type Type of a SVM kernel. Possible values are:
         -   **SVM::LINEAR** Linear kernel. No mapping is done, linear discrimination (or regression) is
@@ -1033,10 +1033,10 @@ public:
         @param degree Parameter degree of a kernel function (POLY).
         @param gamma Parameter \f$\gamma\f$ of a kernel function (POLY / RBF / SIGMOID / CHI2).
         @param coef0 Parameter coef0 of a kernel function (POLY / SIGMOID).
-        @param Cvalue Parameter C of a SVM optimization problem (C\_SVC / EPS\_SVR / NU\_SVR).
-        @param nu Parameter \f$\nu\f$ of a SVM optimization problem (NU\_SVC / ONE\_CLASS / NU\_SVR).
-        @param p Parameter \f$\epsilon\f$ of a SVM optimization problem (EPS\_SVR).
-        @param classWeights Optional weights in the C\_SVC problem , assigned to particular classes. They
+        @param Cvalue Parameter C of a SVM optimization problem (C_SVC / EPS_SVR / NU_SVR).
+        @param nu Parameter \f$\nu\f$ of a SVM optimization problem (NU_SVC / ONE_CLASS / NU_SVR).
+        @param p Parameter \f$\epsilon\f$ of a SVM optimization problem (EPS_SVR).
+        @param classWeights Optional weights in the C_SVC problem , assigned to particular classes. They
         are multiplied by C so the parameter C of class \#i becomes classWeights(i) \* C. Thus these
         weights affect the misclassification penalty for different classes. The larger weight, the larger
         penalty on misclassification of data from the corresponding class.
@@ -1053,8 +1053,8 @@ public:
                 termCrit = TermCriteria( TermCriteria::MAX_ITER+TermCriteria::EPS, 1000, FLT_EPSILON );
             }
         @endcode
-        A comparison of different kernels on the following 2D test case with four classes. Four C\_SVC SVMs
-        have been trained (one against rest) with auto\_train. Evaluation on three different kernels (CHI2,
+        A comparison of different kernels on the following 2D test case with four classes. Four C_SVC SVMs
+        have been trained (one against rest) with auto_train. Evaluation on three different kernels (CHI2,
         INTER, RBF). The color depicts the class with max score. Bright means max-score \> 0, dark means
         max-score \< 0.
 
@@ -1115,16 +1115,16 @@ public:
 
     If there is no need to optimize a parameter, the corresponding grid step should be set to any value
     less than or equal to 1. For example, to avoid optimization in gamma, set gammaGrid.step = 0,
-    gammaGrid.minVal, gamma\_grid.maxVal as arbitrary numbers. In this case, the value params.gamma is
+    gammaGrid.minVal, gamma_grid.maxVal as arbitrary numbers. In this case, the value params.gamma is
     taken for gamma.
 
     And, finally, if the optimization in a parameter is required but the corresponding grid is unknown,
     you may call the function SVM::getDefaulltGrid. To generate a grid, for example, for gamma, call
     SVM::getDefaulltGrid(SVM::GAMMA).
 
-    This function works for the classification (params.svmType=SVM::C\_SVC or
-    params.svmType=SVM::NU\_SVC) as well as for the regression (params.svmType=SVM::EPS\_SVR or
-    params.svmType=SVM::NU\_SVR). If params.svmType=SVM::ONE\_CLASS, no optimization is made and the
+    This function works for the classification (params.svmType=SVM::C_SVC or
+    params.svmType=SVM::NU_SVC) as well as for the regression (params.svmType=SVM::EPS_SVR or
+    params.svmType=SVM::NU_SVR). If params.svmType=SVM::ONE_CLASS, no optimization is made and the
     usual SVM with parameters specified in params is executed.
      */
     virtual bool trainAuto( const Ptr<TrainData>& data, int kFold = 10,
@@ -1172,7 +1172,7 @@ public:
 
     /** @brief Generates a grid for SVM parameters.
 
-    @param param\_id SVM parameters IDs that must be one of the following:
+    @param param_id SVM parameters IDs that must be one of the following:
     -   **SVM::C**
     -   **SVM::GAMMA**
     -   **SVM::P**
@@ -1230,27 +1230,27 @@ public:
         /** @brief The constructor
 
         @param nclusters The number of mixture components in the Gaussian mixture model. Default value of
-        the parameter is EM::DEFAULT\_NCLUSTERS=5. Some of EM implementation could determine the optimal
+        the parameter is EM::DEFAULT_NCLUSTERS=5. Some of EM implementation could determine the optimal
         number of mixtures within a specified value range, but that is not the case in ML yet.
         @param covMatType Constraint on covariance matrices which defines type of matrices. Possible
         values are:
-        -   **EM::COV\_MAT\_SPHERICAL** A scaled identity matrix \f$\mu_k * I\f$. There is the only
+        -   **EM::COV_MAT_SPHERICAL** A scaled identity matrix \f$\mu_k * I\f$. There is the only
         parameter \f$\mu_k\f$ to be estimated for each matrix. The option may be used in special cases,
         when the constraint is relevant, or as a first step in the optimization (for example in case
         when the data is preprocessed with PCA). The results of such preliminary estimation may be
         passed again to the optimization procedure, this time with
-        covMatType=EM::COV\_MAT\_DIAGONAL.
-        -   **EM::COV\_MAT\_DIAGONAL** A diagonal matrix with positive diagonal elements. The number of
+        covMatType=EM::COV_MAT_DIAGONAL.
+        -   **EM::COV_MAT_DIAGONAL** A diagonal matrix with positive diagonal elements. The number of
         free parameters is d for each matrix. This is most commonly used option yielding good
         estimation results.
-        -   **EM::COV\_MAT\_GENERIC** A symmetric positively defined matrix. The number of free
+        -   **EM::COV_MAT_GENERIC** A symmetric positively defined matrix. The number of free
         parameters in each matrix is about \f$d^2/2\f$. It is not recommended to use this option, unless
         there is pretty accurate initial estimation of the parameters and/or a huge number of
         training samples.
         @param termCrit The termination criteria of the EM algorithm. The EM algorithm can be terminated
         by the number of iterations termCrit.maxCount (number of M-steps) or when relative change of
         likelihood logarithm is less than termCrit.epsilon. Default maximum number of iterations is
-        EM::DEFAULT\_MAX\_ITERS=100.
+        EM::DEFAULT_MAX_ITERS=100.
          */
         explicit Params(int nclusters=DEFAULT_NCLUSTERS, int covMatType=EM::COV_MAT_DIAGONAL,
                         const TermCriteria& termCrit=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS,
@@ -1286,7 +1286,7 @@ public:
     @param sample A sample for classification. It should be a one-channel matrix of \f$1 \times dims\f$ or
     \f$dims \times 1\f$ size.
     @param probs Optional output matrix that contains posterior probabilities of each component given
-    the sample. It has \f$1 \times nclusters\f$ size and CV\_64FC1 type.
+    the sample. It has \f$1 \times nclusters\f$ size and CV_64FC1 type.
 
     The method returns a two-element double vector. Zero element is a likelihood logarithm value for the
     sample. First element is an index of the most probable mixture component for the given sample.
@@ -1298,15 +1298,15 @@ public:
     /** @brief Static methods that estimate the Gaussian mixture parameters from a samples set
 
     @param samples Samples from which the Gaussian mixture model will be estimated. It should be a
-    one-channel matrix, each row of which is a sample. If the matrix does not have CV\_64F type it
+    one-channel matrix, each row of which is a sample. If the matrix does not have CV_64F type it
     will be converted to the inner matrix of such type for the further computing.
     @param logLikelihoods The optional output matrix that contains a likelihood logarithm value for
-    each sample. It has \f$nsamples \times 1\f$ size and CV\_64FC1 type.
+    each sample. It has \f$nsamples \times 1\f$ size and CV_64FC1 type.
     @param labels The optional output "class label" for each sample:
     \f$\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N\f$ (indices of the most probable mixture
-    component for each sample). It has \f$nsamples \times 1\f$ size and CV\_32SC1 type.
+    component for each sample). It has \f$nsamples \times 1\f$ size and CV_32SC1 type.
     @param probs The optional output matrix that contains posterior probabilities of each Gaussian
-    mixture component given the each sample. It has \f$nsamples \times nclusters\f$ size and CV\_64FC1
+    mixture component given the each sample. It has \f$nsamples \times nclusters\f$ size and CV_64FC1
     type.
     @param params The Gaussian mixture params, see EM::Params description
     @return true if the Gaussian mixture model was trained successfully, otherwise it returns
@@ -1337,24 +1337,24 @@ public:
     \f$S_k\f$ of mixture components.
 
     @param samples Samples from which the Gaussian mixture model will be estimated. It should be a
-    one-channel matrix, each row of which is a sample. If the matrix does not have CV\_64F type it
+    one-channel matrix, each row of which is a sample. If the matrix does not have CV_64F type it
     will be converted to the inner matrix of such type for the further computing.
     @param means0 Initial means \f$a_k\f$ of mixture components. It is a one-channel matrix of
-    \f$nclusters \times dims\f$ size. If the matrix does not have CV\_64F type it will be converted to the
+    \f$nclusters \times dims\f$ size. If the matrix does not have CV_64F type it will be converted to the
     inner matrix of such type for the further computing.
     @param covs0 The vector of initial covariance matrices \f$S_k\f$ of mixture components. Each of
     covariance matrices is a one-channel matrix of \f$dims \times dims\f$ size. If the matrices do not
-    have CV\_64F type they will be converted to the inner matrices of such type for the further
+    have CV_64F type they will be converted to the inner matrices of such type for the further
     computing.
     @param weights0 Initial weights \f$\pi_k\f$ of mixture components. It should be a one-channel
     floating-point matrix with \f$1 \times nclusters\f$ or \f$nclusters \times 1\f$ size.
     @param logLikelihoods The optional output matrix that contains a likelihood logarithm value for
-    each sample. It has \f$nsamples \times 1\f$ size and CV\_64FC1 type.
+    each sample. It has \f$nsamples \times 1\f$ size and CV_64FC1 type.
     @param labels The optional output "class label" for each sample:
     \f$\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N\f$ (indices of the most probable mixture
-    component for each sample). It has \f$nsamples \times 1\f$ size and CV\_32SC1 type.
+    component for each sample). It has \f$nsamples \times 1\f$ size and CV_32SC1 type.
     @param probs The optional output matrix that contains posterior probabilities of each Gaussian
-    mixture component given the each sample. It has \f$nsamples \times nclusters\f$ size and CV\_64FC1
+    mixture component given the each sample. It has \f$nsamples \times nclusters\f$ size and CV_64FC1
     type.
     @param params The Gaussian mixture params, see EM::Params description
     */
@@ -1370,16 +1370,16 @@ public:
     use this option.
 
     @param samples Samples from which the Gaussian mixture model will be estimated. It should be a
-    one-channel matrix, each row of which is a sample. If the matrix does not have CV\_64F type it
+    one-channel matrix, each row of which is a sample. If the matrix does not have CV_64F type it
     will be converted to the inner matrix of such type for the further computing.
     @param probs0
     @param logLikelihoods The optional output matrix that contains a likelihood logarithm value for
-    each sample. It has \f$nsamples \times 1\f$ size and CV\_64FC1 type.
+    each sample. It has \f$nsamples \times 1\f$ size and CV_64FC1 type.
     @param labels The optional output "class label" for each sample:
     \f$\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N\f$ (indices of the most probable mixture
-    component for each sample). It has \f$nsamples \times 1\f$ size and CV\_32SC1 type.
+    component for each sample). It has \f$nsamples \times 1\f$ size and CV_32SC1 type.
     @param probs The optional output matrix that contains posterior probabilities of each Gaussian
-    mixture component given the each sample. It has \f$nsamples \times nclusters\f$ size and CV\_64FC1
+    mixture component given the each sample. It has \f$nsamples \times nclusters\f$ size and CV_64FC1
     type.
     @param params The Gaussian mixture params, see EM::Params description
     */
@@ -1450,7 +1450,7 @@ public:
         engines (including our implementation) try to find sub-optimal split in this case by clustering
         all the samples into maxCategories clusters that is some categories are merged together. The
         clustering is applied only in n \> 2-class classification problems for categorical variables
-        with N \> max\_categories possible values. In case of regression and 2-class classification the
+        with N \> max_categories possible values. In case of regression and 2-class classification the
         optimal split can be found efficiently without employing clustering, thus the parameter is not
         used in these cases.
 
@@ -1515,7 +1515,7 @@ public:
     Value at the node: a class label in case of classification or estimated function value in case
     of regression.
     -   member int classIdx
-    Class index normalized to 0..class\_count-1 range and assigned to the node. It is used
+    Class index normalized to 0..class_count-1 range and assigned to the node. It is used
     internally in classification trees and tree ensembles.
     -   member int parent
     Index of the parent node
@@ -1653,11 +1653,11 @@ public:
         @param useSurrogates
         @param maxCategories Cluster possible values of a categorical variable into K \<= maxCategories
         clusters to find a suboptimal split. If a discrete variable, on which the training procedure tries
-        to make a split, takes more than max\_categories values, the precise best subset estimation may
+        to make a split, takes more than max_categories values, the precise best subset estimation may
         take a very long time because the algorithm is exponential. Instead, many decision trees engines
         (including ML) try to find sub-optimal split in this case by clustering all the samples into
         maxCategories clusters that is some categories are merged together. The clustering is applied only
-        in n\>2-class classification problems for categorical variables with N \> max\_categories possible
+        in n\>2-class classification problems for categorical variables with N \> max_categories possible
         values. In case of regression and 2-class classification the optimal split can be found
         efficiently without employing clustering, thus the parameter is not used in these cases.
         @param priors
@@ -1752,7 +1752,7 @@ public:
         Gentle AdaBoost and Real AdaBoost are often the preferable choices.
         @param weakCount The number of weak classifiers.
         @param weightTrimRate A threshold between 0 and 1 used to save computational time. Samples
-        with summary weight \f$\leq 1 - weight\_trim\_rate\f$ do not participate in the *next* iteration of
+        with summary weight \f$\leq 1 - weight_trim_rate\f$ do not participate in the *next* iteration of
         training. Set this parameter to 0 to turn off this functionality.
         @param maxDepth
         @param useSurrogates
@@ -1844,7 +1844,7 @@ public:
 
 Unlike many other models in ML that are constructed and trained at once, in the MLP model these
 steps are separated. First, a network with the specified topology is created using the non-default
-constructor or the method ANN\_MLP::create. All the weights are set to zeros. Then, the network is
+constructor or the method ANN_MLP::create. All the weights are set to zeros. Then, the network is
 trained using a set of input and output vectors. The training procedure can be repeated more than
 once, that is, the weights can be adjusted based on the new training data.
  */
@@ -1861,13 +1861,13 @@ public:
     of elements in the input layer. The last element - number of elements in the output layer.
     -   member int activateFunc
     The activation function. Currently the only fully supported activation function is
-    ANN\_MLP::SIGMOID\_SYM.
+    ANN_MLP::SIGMOID_SYM.
     -   member double fparam1
     The first parameter of activation function, 0 by default.
     -   member double fparam2
     The second parameter of the activation function, 0 by default.
     @note
-       If you are using the default ANN\_MLP::SIGMOID\_SYM activation function with the default
+       If you are using the default ANN_MLP::SIGMOID_SYM activation function with the default
         parameter values fparam1=0 and fparam2=0 then the function used is y = 1.7159\*tanh(2/3 \* x),
         so the output will range from [-1.7159, 1.7159], instead of [0,1].
 
@@ -1899,7 +1899,7 @@ public:
         @param layerSizes Integer vector specifying the number of neurons in each layer including the
         input and output layers.
         @param activateFunc Parameter specifying the activation function for each neuron: one of
-        ANN\_MLP::IDENTITY, ANN\_MLP::SIGMOID\_SYM, and ANN\_MLP::GAUSSIAN.
+        ANN_MLP::IDENTITY, ANN_MLP::SIGMOID_SYM, and ANN_MLP::GAUSSIAN.
         @param fparam1 The first parameter of the activation function, \f$\alpha\f$. See the formulas in the
         introduction section.
         @param fparam2 The second parameter of the activation function, \f$\beta\f$. See the formulas in the
@@ -1908,11 +1908,11 @@ public:
         of iterations (maxCount) and/or how much the error could change between the iterations to make the
         algorithm continue (epsilon).
         @param trainMethod Training method of the MLP. Possible values are:
-        -   **ANN\_MLP\_TrainParams::BACKPROP** The back-propagation algorithm.
-        -   **ANN\_MLP\_TrainParams::RPROP** The RPROP algorithm.
-        @param param1 Parameter of the training method. It is rp\_dw0 for RPROP and bp\_dw\_scale for
+        -   **ANN_MLP_TrainParams::BACKPROP** The back-propagation algorithm.
+        -   **ANN_MLP_TrainParams::RPROP** The RPROP algorithm.
+        @param param1 Parameter of the training method. It is rp_dw0 for RPROP and bp_dw_scale for
         BACKPROP.
-        @param param2 Parameter of the training method. It is rp\_dw\_min for RPROP and bp\_moment\_scale
+        @param param2 Parameter of the training method. It is rp_dw_min for RPROP and bp_moment_scale
         for BACKPROP.
 
         By default the RPROP algorithm is used:
@@ -1973,18 +1973,18 @@ public:
 
     /** @brief Creates empty model
 
-    Use StatModel::train to train the model, StatModel::train\<ANN\_MLP\>(traindata, params) to create
-    and train the model, StatModel::load\<ANN\_MLP\>(filename) to load the pre-trained model. Note that
-    the train method has optional flags, and the following flags are handled by \`ANN\_MLP\`:
+    Use StatModel::train to train the model, StatModel::train\<ANN_MLP\>(traindata, params) to create
+    and train the model, StatModel::load\<ANN_MLP\>(filename) to load the pre-trained model. Note that
+    the train method has optional flags, and the following flags are handled by \`ANN_MLP\`:
 
-    -   **UPDATE\_WEIGHTS** Algorithm updates the network weights, rather than computes them from
+    -   **UPDATE_WEIGHTS** Algorithm updates the network weights, rather than computes them from
     scratch. In the latter case the weights are initialized using the Nguyen-Widrow algorithm.
-    -   **NO\_INPUT\_SCALE** Algorithm does not normalize the input vectors. If this flag is not set,
+    -   **NO_INPUT_SCALE** Algorithm does not normalize the input vectors. If this flag is not set,
     the training algorithm normalizes each input feature independently, shifting its mean value to
     0 and making the standard deviation equal to 1. If the network is assumed to be updated
     frequently, the new training data could be much different from original one. In this case, you
     should take care of proper normalization.
-    -   **NO\_OUTPUT\_SCALE** Algorithm does not normalize the output vectors. If the flag is not set,
+    -   **NO_OUTPUT_SCALE** Algorithm does not normalize the output vectors. If the flag is not set,
     the training algorithm normalizes each output feature independently, by transforming it to the
     certain range depending on the used activation function.
      */
@@ -2010,19 +2010,19 @@ public:
     public:
         /** @brief The constructors
 
-        @param learning\_rate Specifies the learning rate.
+        @param learning_rate Specifies the learning rate.
         @param iters Specifies the number of iterations.
         @param method Specifies the kind of training method used. It should be set to either
-        LogisticRegression::BATCH or LogisticRegression::MINI\_BATCH. If using
-        LogisticRegression::MINI\_BATCH, set LogisticRegression::Params.mini\_batch\_size to a positive
+        LogisticRegression::BATCH or LogisticRegression::MINI_BATCH. If using
+        LogisticRegression::MINI_BATCH, set LogisticRegression::Params.mini_batch_size to a positive
         integer.
         @param normalization Specifies the kind of regularization to be applied.
-        LogisticRegression::REG\_L1 or LogisticRegression::REG\_L2 (L1 norm or L2 norm). To use this, set
+        LogisticRegression::REG_L1 or LogisticRegression::REG_L2 (L1 norm or L2 norm). To use this, set
         LogisticRegression::Params.regularized to a integer greater than zero.
         @param reg To enable or disable regularization. Set to positive integer (greater than zero) to
         enable and to 0 to disable.
         @param batch_size Specifies the number of training samples taken in each step of Mini-Batch
-        Gradient Descent. Will only be used if using LogisticRegression::MINI\_BATCH training algorithm.
+        Gradient Descent. Will only be used if using LogisticRegression::MINI_BATCH training algorithm.
         It has to take values less than the total number of training samples.
 
         By initializing this structure, one can set all the parameters required for Logistic Regression
@@ -2062,8 +2062,8 @@ public:
     /** @brief Predicts responses for input samples and returns a float type.
 
     @param samples The input data for the prediction algorithm. Matrix [m x n], where each row
-    contains variables (features) of one object being classified. Should have data type CV\_32F.
-    @param results Predicted labels as a column matrix of type CV\_32S.
+    contains variables (features) of one object being classified. Should have data type CV_32F.
+    @param results Predicted labels as a column matrix of type CV_32S.
     @param flags Not used.
      */
     virtual float predict( InputArray samples, OutputArray results=noArray(), int flags=0 ) const = 0;
@@ -2072,7 +2072,7 @@ public:
     /** @brief This function returns the trained paramters arranged across rows.
 
     For a two class classifcation problem, it returns a row matrix.
-    It returns learnt paramters of the Logistic Regression as a matrix of type CV\_32F.
+    It returns learnt paramters of the Logistic Regression as a matrix of type CV_32F.
      */
     virtual Mat get_learnt_thetas() const = 0;
 

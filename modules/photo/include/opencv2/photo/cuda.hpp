@@ -52,13 +52,13 @@ namespace cv { namespace cuda {
 
 /** @brief Performs pure non local means denoising without any simplification, and thus it is not fast.
 
-@param src Source image. Supports only CV\_8UC1, CV\_8UC2 and CV\_8UC3.
+@param src Source image. Supports only CV_8UC1, CV_8UC2 and CV_8UC3.
 @param dst Destination image.
 @param h Filter sigma regulating filter strength for color.
-@param search\_window Size of search window.
-@param block\_size Size of block used for computing weights.
-@param borderMode Border type. See borderInterpolate for details. BORDER\_REFLECT101 ,
-BORDER\_REPLICATE , BORDER\_CONSTANT , BORDER\_REFLECT and BORDER\_WRAP are supported for now.
+@param search_window Size of search window.
+@param block_size Size of block used for computing weights.
+@param borderMode Border type. See borderInterpolate for details. BORDER_REFLECT101 ,
+BORDER_REPLICATE , BORDER_CONSTANT , BORDER_REFLECT and BORDER_WRAP are supported for now.
 @param s Stream for the asynchronous version.
 
 @sa
@@ -79,10 +79,10 @@ public:
     @param dst Output image with the same size and type as src .
     @param h Parameter regulating filter strength. Big h value perfectly removes noise but also
     removes image details, smaller h value preserves details but also preserves some noise
-    @param search\_window Size in pixels of the window that is used to compute weighted average for
-    given pixel. Should be odd. Affect performance linearly: greater search\_window - greater
+    @param search_window Size in pixels of the window that is used to compute weighted average for
+    given pixel. Should be odd. Affect performance linearly: greater search_window - greater
     denoising time. Recommended value 21 pixels
-    @param block\_size Size in pixels of the template patch that is used to compute weights. Should be
+    @param block_size Size in pixels of the template patch that is used to compute weights. Should be
     odd. Recommended value 7 pixels
     @param s Stream for the asynchronous invocations.
 
@@ -98,14 +98,14 @@ public:
 
     @param src Input 8-bit 3-channel image.
     @param dst Output image with the same size and type as src .
-    @param h\_luminance Parameter regulating filter strength. Big h value perfectly removes noise but
+    @param h_luminance Parameter regulating filter strength. Big h value perfectly removes noise but
     also removes image details, smaller h value preserves details but also preserves some noise
     @param photo_render float The same as h but for color components. For most images value equals 10 will be
     enought to remove colored noise and do not distort colors
-    @param search\_window Size in pixels of the window that is used to compute weighted average for
-    given pixel. Should be odd. Affect performance linearly: greater search\_window - greater
+    @param search_window Size in pixels of the window that is used to compute weighted average for
+    given pixel. Should be odd. Affect performance linearly: greater search_window - greater
     denoising time. Recommended value 21 pixels
-    @param block\_size Size in pixels of the template patch that is used to compute weights. Should be
+    @param block_size Size in pixels of the template patch that is used to compute weights. Should be
     odd. Recommended value 7 pixels
     @param s Stream for the asynchronous invocations.
 

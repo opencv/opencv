@@ -75,7 +75,7 @@ class implements algorithm described in @cite MOG2001.
 
 @note
    -   An example on gaussian mixture based background/foreground segmantation can be found at
-        opencv\_source\_code/samples/gpu/bgfg\_segm.cpp
+        opencv_source_code/samples/gpu/bgfg_segm.cpp
  */
 class CV_EXPORTS BackgroundSubtractorMOG : public cv::BackgroundSubtractor
 {
@@ -216,7 +216,7 @@ class CV_EXPORTS BackgroundSubtractorFGD : public cv::BackgroundSubtractor
 public:
     /** @brief Returns the output foreground regions calculated by findContours.
 
-    @param foreground\_regions Output array (CPU memory).
+    @param foreground_regions Output array (CPU memory).
      */
     virtual void getForegroundRegions(OutputArrayOfArrays foreground_regions) = 0;
 };

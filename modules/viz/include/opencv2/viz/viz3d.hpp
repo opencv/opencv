@@ -73,7 +73,7 @@ namespace cv
 
             /** @brief The constructors.
 
-            @param window\_name Name of the window.
+            @param window_name Name of the window.
              */
             Viz3d(const String& window_name = String());
             Viz3d(const Viz3d&);
@@ -165,13 +165,13 @@ namespace cv
             /** @brief Transforms a point in world coordinate system to window coordinate system.
 
             @param pt Point in world coordinate system.
-            @param window\_coord Output point in window coordinate system.
+            @param window_coord Output point in window coordinate system.
              */
             void convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord);
 
             /** @brief Transforms a point in window coordinate system to a 3D ray in world coordinate system.
 
-            @param window\_coord Point in window coordinate system. @param origin Output origin of the ray.
+            @param window_coord Point in window coordinate system. @param origin Output origin of the ray.
             @param direction Output direction of the ray.
              */
             void converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction);
@@ -181,7 +181,7 @@ namespace cv
             Size getWindowSize() const;
             /** @brief Sets the size of the window.
 
-            @param window\_size New size of the window.
+            @param window_size New size of the window.
              */
             void setWindowSize(const Size &window_size);
 
@@ -251,24 +251,24 @@ namespace cv
             @param value The new value of the property.
 
             **Rendering property** can be one of the following:
-            -   **POINT\_SIZE**
+            -   **POINT_SIZE**
             -   **OPACITY**
-            -   **LINE\_WIDTH**
-            -   **FONT\_SIZE**
+            -   **LINE_WIDTH**
+            -   **FONT_SIZE**
             -
             **REPRESENTATION**: Expected values are
-            -   **REPRESENTATION\_POINTS**
-            -   **REPRESENTATION\_WIREFRAME**
-            -   **REPRESENTATION\_SURFACE**
+            -   **REPRESENTATION_POINTS**
+            -   **REPRESENTATION_WIREFRAME**
+            -   **REPRESENTATION_SURFACE**
             -
-            **IMMEDIATE\_RENDERING**:
+            **IMMEDIATE_RENDERING**:
             -   Turn on immediate rendering by setting the value to 1.
             -   Turn off immediate rendering by setting the value to 0.
             -
             **SHADING**: Expected values are
-            -   **SHADING\_FLAT**
-            -   **SHADING\_GOURAUD**
-            -   **SHADING\_PHONG**
+            -   **SHADING_FLAT**
+            -   **SHADING_GOURAUD**
+            -   **SHADING_PHONG**
              */
             void setRenderingProperty(const String &id, int property, double value);
             /** @brief Returns rendering property of a widget.
@@ -277,33 +277,33 @@ namespace cv
             @param property Property.
 
             **Rendering property** can be one of the following:
-            -   **POINT\_SIZE**
+            -   **POINT_SIZE**
             -   **OPACITY**
-            -   **LINE\_WIDTH**
-            -   **FONT\_SIZE**
+            -   **LINE_WIDTH**
+            -   **FONT_SIZE**
             -
             **REPRESENTATION**: Expected values are
-            -   **REPRESENTATION\_POINTS**
-            -   **REPRESENTATION\_WIREFRAME**
-            -   **REPRESENTATION\_SURFACE**
+            -   **REPRESENTATION_POINTS**
+            -   **REPRESENTATION_WIREFRAME**
+            -   **REPRESENTATION_SURFACE**
             -
-            **IMMEDIATE\_RENDERING**:
+            **IMMEDIATE_RENDERING**:
             -   Turn on immediate rendering by setting the value to 1.
             -   Turn off immediate rendering by setting the value to 0.
             -
             **SHADING**: Expected values are
-            -   **SHADING\_FLAT**
-            -   **SHADING\_GOURAUD**
-            -   **SHADING\_PHONG**
+            -   **SHADING_FLAT**
+            -   **SHADING_GOURAUD**
+            -   **SHADING_PHONG**
              */
             double getRenderingProperty(const String &id, int property);
 
             /** @brief Sets geometry representation of the widgets to surface, wireframe or points.
 
             @param representation Geometry representation which can be one of the following:
-            -   **REPRESENTATION\_POINTS**
-            -   **REPRESENTATION\_WIREFRAME**
-            -   **REPRESENTATION\_SURFACE**
+            -   **REPRESENTATION_POINTS**
+            -   **REPRESENTATION_WIREFRAME**
+            -   **REPRESENTATION_SURFACE**
              */
             void setRepresentation(int representation);
 

@@ -75,7 +75,7 @@ namespace cv { namespace cuda {
 
 /** @brief Converts an image from one color space to another.
 
-@param src Source image with CV\_8U , CV\_16U , or CV\_32F depth and 1, 3, or 4 channels.
+@param src Source image with CV_8U , CV_16U , or CV_32F depth and 1, 3, or 4 channels.
 @param dst Destination image.
 @param code Color space conversion code. For details, see cvtColor .
 @param dcn Number of channels in the destination image. If the parameter is 0, the number of the
@@ -121,15 +121,15 @@ The function can do the following transformations:
 
 -   Demosaicing using bilinear interpolation
 
-    > -   COLOR\_BayerBG2GRAY , COLOR\_BayerGB2GRAY , COLOR\_BayerRG2GRAY , COLOR\_BayerGR2GRAY
-    > -   COLOR\_BayerBG2BGR , COLOR\_BayerGB2BGR , COLOR\_BayerRG2BGR , COLOR\_BayerGR2BGR
+    > -   COLOR_BayerBG2GRAY , COLOR_BayerGB2GRAY , COLOR_BayerRG2GRAY , COLOR_BayerGR2GRAY
+    > -   COLOR_BayerBG2BGR , COLOR_BayerGB2BGR , COLOR_BayerRG2BGR , COLOR_BayerGR2BGR
 
 -   Demosaicing using Malvar-He-Cutler algorithm (@cite MHT2011)
 
-    > -   COLOR\_BayerBG2GRAY\_MHT , COLOR\_BayerGB2GRAY\_MHT , COLOR\_BayerRG2GRAY\_MHT ,
-    >     COLOR\_BayerGR2GRAY\_MHT
-    > -   COLOR\_BayerBG2BGR\_MHT , COLOR\_BayerGB2BGR\_MHT , COLOR\_BayerRG2BGR\_MHT ,
-    >     COLOR\_BayerGR2BGR\_MHT
+    > -   COLOR_BayerBG2GRAY_MHT , COLOR_BayerGB2GRAY_MHT , COLOR_BayerRG2GRAY_MHT ,
+    >     COLOR_BayerGR2GRAY_MHT
+    > -   COLOR_BayerBG2BGR_MHT , COLOR_BayerGB2BGR_MHT , COLOR_BayerRG2BGR_MHT ,
+    >     COLOR_BayerGR2BGR_MHT
 
 @sa cvtColor
  */
@@ -137,7 +137,7 @@ CV_EXPORTS void demosaicing(InputArray src, OutputArray dst, int code, int dcn =
 
 /** @brief Exchanges the color channels of an image in-place.
 
-@param image Source image. Supports only CV\_8UC4 type.
+@param image Source image. Supports only CV_8UC4 type.
 @param dstOrder Integer array describing how channel values are permutated. The n-th entry of the
 array contains the number of the channel that is stored in the n-th channel of the output image.
 E.g. Given an RGBA image, aDstOrder = [3,2,1,0] converts this to ABGR channel order.
@@ -161,28 +161,28 @@ enum { ALPHA_OVER, ALPHA_IN, ALPHA_OUT, ALPHA_ATOP, ALPHA_XOR, ALPHA_PLUS, ALPHA
 
 /** @brief Composites two images using alpha opacity values contained in each image.
 
-@param img1 First image. Supports CV\_8UC4 , CV\_16UC4 , CV\_32SC4 and CV\_32FC4 types.
+@param img1 First image. Supports CV_8UC4 , CV_16UC4 , CV_32SC4 and CV_32FC4 types.
 @param img2 Second image. Must have the same size and the same type as img1 .
 @param dst Destination image.
-@param alpha\_op Flag specifying the alpha-blending operation:
--   **ALPHA\_OVER**
--   **ALPHA\_IN**
--   **ALPHA\_OUT**
--   **ALPHA\_ATOP**
--   **ALPHA\_XOR**
--   **ALPHA\_PLUS**
--   **ALPHA\_OVER\_PREMUL**
--   **ALPHA\_IN\_PREMUL**
--   **ALPHA\_OUT\_PREMUL**
--   **ALPHA\_ATOP\_PREMUL**
--   **ALPHA\_XOR\_PREMUL**
--   **ALPHA\_PLUS\_PREMUL**
--   **ALPHA\_PREMUL**
+@param alpha_op Flag specifying the alpha-blending operation:
+-   **ALPHA_OVER**
+-   **ALPHA_IN**
+-   **ALPHA_OUT**
+-   **ALPHA_ATOP**
+-   **ALPHA_XOR**
+-   **ALPHA_PLUS**
+-   **ALPHA_OVER_PREMUL**
+-   **ALPHA_IN_PREMUL**
+-   **ALPHA_OUT_PREMUL**
+-   **ALPHA_ATOP_PREMUL**
+-   **ALPHA_XOR_PREMUL**
+-   **ALPHA_PLUS_PREMUL**
+-   **ALPHA_PREMUL**
 @param stream Stream for the asynchronous version.
 
 @note
    -   An example demonstrating the use of alphaComp can be found at
-        opencv\_source\_code/samples/gpu/alpha\_comp.cpp
+        opencv_source_code/samples/gpu/alpha_comp.cpp
  */
 CV_EXPORTS void alphaComp(InputArray img1, InputArray img2, OutputArray dst, int alpha_op, Stream& stream = Stream::Null());
 
@@ -195,15 +195,15 @@ CV_EXPORTS void alphaComp(InputArray img1, InputArray img2, OutputArray dst, int
 
 /** @brief Calculates histogram for one channel 8-bit image.
 
-@param src Source image with CV\_8UC1 type.
-@param hist Destination histogram with one row, 256 columns, and the CV\_32SC1 type.
+@param src Source image with CV_8UC1 type.
+@param hist Destination histogram with one row, 256 columns, and the CV_32SC1 type.
 @param stream Stream for the asynchronous version.
  */
 CV_EXPORTS void calcHist(InputArray src, OutputArray hist, Stream& stream = Stream::Null());
 
 /** @brief Equalizes the histogram of a grayscale image.
 
-@param src Source image with CV\_8UC1 type.
+@param src Source image with CV_8UC1 type.
 @param dst Destination image.
 @param buf Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
 @param stream Stream for the asynchronous version.
@@ -227,7 +227,7 @@ public:
     using cv::CLAHE::apply;
     /** @brief Equalizes the histogram of a grayscale image using Contrast Limited Adaptive Histogram Equalization.
 
-    @param src Source image with CV\_8UC1 type.
+    @param src Source image with CV_8UC1 type.
     @param dst Destination image.
     @param stream Stream for the asynchronous version.
      */
@@ -244,7 +244,7 @@ CV_EXPORTS Ptr<cuda::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSi
 
 /** @brief Computes levels with even distribution.
 
-@param levels Destination array. levels has 1 row, nLevels columns, and the CV\_32SC1 type.
+@param levels Destination array. levels has 1 row, nLevels columns, and the CV_32SC1 type.
 @param nLevels Number of computed levels. nLevels must be at least 2.
 @param lowerLevel Lower boundary value of the lowest level.
 @param upperLevel Upper boundary value of the greatest level.
@@ -253,9 +253,9 @@ CV_EXPORTS void evenLevels(OutputArray levels, int nLevels, int lowerLevel, int 
 
 /** @brief Calculates a histogram with evenly distributed bins.
 
-@param src Source image. CV\_8U, CV\_16U, or CV\_16S depth and 1 or 4 channels are supported. For
+@param src Source image. CV_8U, CV_16U, or CV_16S depth and 1 or 4 channels are supported. For
 a four-channel image, all channels are processed separately.
-@param hist Destination histogram with one row, histSize columns, and the CV\_32S type.
+@param hist Destination histogram with one row, histSize columns, and the CV_32S type.
 @param histSize Size of the histogram.
 @param lowerLevel Lower boundary of lowest-level bin.
 @param upperLevel Upper boundary of highest-level bin.
@@ -283,9 +283,9 @@ static inline void histEven(InputArray src, GpuMat hist[4], int histSize[4], int
 
 /** @brief Calculates a histogram with bins determined by the levels array.
 
-@param src Source image. CV\_8U , CV\_16U , or CV\_16S depth and 1 or 4 channels are supported.
+@param src Source image. CV_8U , CV_16U , or CV_16S depth and 1 or 4 channels are supported.
 For a four-channel image, all channels are processed separately.
-@param hist Destination histogram with one row, (levels.cols-1) columns, and the CV\_32SC1 type.
+@param hist Destination histogram with one row, (levels.cols-1) columns, and the CV_32SC1 type.
 @param levels Number of levels in the histogram.
 @param buf Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
 @param stream Stream for the asynchronous version.
@@ -325,8 +325,8 @@ public:
      */
     virtual void detect(InputArray image, OutputArray edges) = 0;
     /** @overload
-    @param dx First derivative of image in the vertical direction. Support only CV\_32S type.
-    @param dy First derivative of image in the horizontal direction. Support only CV\_32S type.
+    @param dx First derivative of image in the vertical direction. Support only CV_32S type.
+    @param dy First derivative of image in the horizontal direction. Support only CV_32S type.
     @param edges Output edge map. It has the same size and type as image .
     */
     virtual void detect(InputArray dx, InputArray dy, OutputArray edges) = 0;
@@ -346,9 +346,9 @@ public:
 
 /** @brief Creates implementation for cuda::CannyEdgeDetector .
 
-@param low\_thresh First threshold for the hysteresis procedure.
-@param high\_thresh Second threshold for the hysteresis procedure.
-@param apperture\_size Aperture size for the Sobel operator.
+@param low_thresh First threshold for the hysteresis procedure.
+@param high_thresh Second threshold for the hysteresis procedure.
+@param apperture_size Aperture size for the Sobel operator.
 @param L2gradient Flag indicating whether a more accurate \f$L_2\f$ norm
 \f$=\sqrt{(dI/dx)^2 + (dI/dy)^2}\f$ should be used to compute the image gradient magnitude (
 L2gradient=true ), or a faster default \f$L_1\f$ norm \f$=|dI/dx|+|dI/dy|\f$ is enough ( L2gradient=false
@@ -383,9 +383,9 @@ public:
 
     /** @brief Downloads results from cuda::HoughLinesDetector::detect to host memory.
 
-    @param d\_lines Result of cuda::HoughLinesDetector::detect .
-    @param h\_lines Output host array.
-    @param h\_votes Optional output array for line's votes.
+    @param d_lines Result of cuda::HoughLinesDetector::detect .
+    @param h_lines Output host array.
+    @param h_votes Optional output array for line's votes.
      */
     virtual void downloadResults(InputArray d_lines, OutputArray h_lines, OutputArray h_votes = noArray()) = 0;
 
@@ -547,7 +547,7 @@ public:
 
     @param src Source image.
     @param dst Destination image containing cornerness values. It will have the same size as src and
-    CV\_32FC1 type.
+    CV_32FC1 type.
     @param stream Stream for the asynchronous version.
      */
     virtual void compute(InputArray src, OutputArray dst, Stream& stream = Stream::Null()) = 0;
@@ -555,11 +555,11 @@ public:
 
 /** @brief Creates implementation for Harris cornerness criteria.
 
-@param srcType Input source type. Only CV\_8UC1 and CV\_32FC1 are supported for now.
+@param srcType Input source type. Only CV_8UC1 and CV_32FC1 are supported for now.
 @param blockSize Neighborhood size.
 @param ksize Aperture parameter for the Sobel operator.
 @param k Harris detector free parameter.
-@param borderType Pixel extrapolation method. Only BORDER\_REFLECT101 and BORDER\_REPLICATE are
+@param borderType Pixel extrapolation method. Only BORDER_REFLECT101 and BORDER_REPLICATE are
 supported for now.
 
 @sa cornerHarris
@@ -569,10 +569,10 @@ CV_EXPORTS Ptr<CornernessCriteria> createHarrisCorner(int srcType, int blockSize
 /** @brief Creates implementation for the minimum eigen value of a 2x2 derivative covariation matrix (the
 cornerness criteria).
 
-@param srcType Input source type. Only CV\_8UC1 and CV\_32FC1 are supported for now.
+@param srcType Input source type. Only CV_8UC1 and CV_32FC1 are supported for now.
 @param blockSize Neighborhood size.
 @param ksize Aperture parameter for the Sobel operator.
-@param borderType Pixel extrapolation method. Only BORDER\_REFLECT101 and BORDER\_REPLICATE are
+@param borderType Pixel extrapolation method. Only BORDER_REFLECT101 and BORDER_REPLICATE are
 supported for now.
 
 @sa cornerMinEigenVal
@@ -589,17 +589,17 @@ public:
     /** @brief Determines strong corners on an image.
 
     @param image Input 8-bit or floating-point 32-bit, single-channel image.
-    @param corners Output vector of detected corners (1-row matrix with CV\_32FC2 type with corners
+    @param corners Output vector of detected corners (1-row matrix with CV_32FC2 type with corners
     positions).
     @param mask Optional region of interest. If the image is not empty (it needs to have the type
-    CV\_8UC1 and the same size as image ), it specifies the region in which the corners are detected.
+    CV_8UC1 and the same size as image ), it specifies the region in which the corners are detected.
      */
     virtual void detect(InputArray image, OutputArray corners, InputArray mask = noArray()) = 0;
 };
 
 /** @brief Creates implementation for cuda::CornersDetector .
 
-@param srcType Input source type. Only CV\_8UC1 and CV\_32FC1 are supported for now.
+@param srcType Input source type. Only CV_8UC1 and CV_32FC1 are supported for now.
 @param maxCorners Maximum number of corners to return. If there are more corners than are found,
 the strongest of them is returned.
 @param qualityLevel Parameter characterizing the minimal accepted quality of image corners. The
@@ -624,7 +624,7 @@ CV_EXPORTS Ptr<CornersDetector> createGoodFeaturesToTrackDetector(int srcType, i
 
 /** @brief Performs mean-shift filtering for each point of the source image.
 
-@param src Source image. Only CV\_8UC4 images are supported for now.
+@param src Source image. Only CV_8UC4 images are supported for now.
 @param dst Destination image containing the color of mapped points. It has the same size and type
 as src .
 @param sp Spatial window radius.
@@ -642,11 +642,11 @@ CV_EXPORTS void meanShiftFiltering(InputArray src, OutputArray dst, int sp, int 
 /** @brief Performs a mean-shift procedure and stores information about processed points (their colors and
 positions) in two images.
 
-@param src Source image. Only CV\_8UC4 images are supported for now.
+@param src Source image. Only CV_8UC4 images are supported for now.
 @param dstr Destination image containing the color of mapped points. The size and type is the same
 as src .
 @param dstsp Destination image containing the position of mapped points. The size is the same as
-src size. The type is CV\_16SC2 .
+src size. The type is CV_16SC2 .
 @param sp Spatial window radius.
 @param sr Color window radius.
 @param criteria Termination criteria. See TermCriteria.
@@ -660,7 +660,7 @@ CV_EXPORTS void meanShiftProc(InputArray src, OutputArray dstr, OutputArray dsts
 
 /** @brief Performs a mean-shift segmentation of the source image and eliminates small segments.
 
-@param src Source image. Only CV\_8UC4 images are supported for now.
+@param src Source image. Only CV_8UC4 images are supported for now.
 @param dst Segmented image with the same size and type as src (host memory).
 @param sp Spatial window radius.
 @param sr Color window radius.
@@ -681,7 +681,7 @@ public:
 
     @param image Source image.
     @param templ Template image with the size and type the same as image .
-    @param result Map containing comparison results ( CV\_32FC1 ). If image is *W x H* and templ is *w
+    @param result Map containing comparison results ( CV_32FC1 ). If image is *W x H* and templ is *w
     x h*, then result must be *W-w+1 x H-h+1*.
     @param stream Stream for the asynchronous version.
      */
@@ -690,27 +690,27 @@ public:
 
 /** @brief Creates implementation for cuda::TemplateMatching .
 
-@param srcType Input source type. CV\_32F and CV\_8U depth images (1..4 channels) are supported
+@param srcType Input source type. CV_32F and CV_8U depth images (1..4 channels) are supported
 for now.
 @param method Specifies the way to compare the template with the image.
-@param user\_block\_size You can use field user\_block\_size to set specific block size. If you
+@param user_block_size You can use field user_block_size to set specific block size. If you
 leave its default value Size(0,0) then automatic estimation of block size will be used (which is
-optimized for speed). By varying user\_block\_size you can reduce memory requirements at the cost
+optimized for speed). By varying user_block_size you can reduce memory requirements at the cost
 of speed.
 
-The following methods are supported for the CV\_8U depth images for now:
+The following methods are supported for the CV_8U depth images for now:
 
--   CV\_TM\_SQDIFF
--   CV\_TM\_SQDIFF\_NORMED
--   CV\_TM\_CCORR
--   CV\_TM\_CCORR\_NORMED
--   CV\_TM\_CCOEFF
--   CV\_TM\_CCOEFF\_NORMED
+-   CV_TM_SQDIFF
+-   CV_TM_SQDIFF_NORMED
+-   CV_TM_CCORR
+-   CV_TM_CCORR_NORMED
+-   CV_TM_CCOEFF
+-   CV_TM_CCOEFF_NORMED
 
-The following methods are supported for the CV\_32F images for now:
+The following methods are supported for the CV_32F images for now:
 
--   CV\_TM\_SQDIFF
--   CV\_TM\_CCORR
+-   CV_TM_SQDIFF
+-   CV_TM_CCORR
 
 @sa matchTemplate
  */
@@ -720,14 +720,14 @@ CV_EXPORTS Ptr<TemplateMatching> createTemplateMatching(int srcType, int method,
 
 /** @brief Performs bilateral filtering of passed image
 
-@param src Source image. Supports only (channles != 2 && depth() != CV\_8S && depth() != CV\_32S
-&& depth() != CV\_64F).
+@param src Source image. Supports only (channles != 2 && depth() != CV_8S && depth() != CV_32S
+&& depth() != CV_64F).
 @param dst Destination imagwe.
-@param kernel\_size Kernel window size.
-@param sigma\_color Filter sigma in the color space.
-@param sigma\_spatial Filter sigma in the coordinate space.
-@param borderMode Border type. See borderInterpolate for details. BORDER\_REFLECT101 ,
-BORDER\_REPLICATE , BORDER\_CONSTANT , BORDER\_REFLECT and BORDER\_WRAP are supported for now.
+@param kernel_size Kernel window size.
+@param sigma_color Filter sigma in the color space.
+@param sigma_spatial Filter sigma in the coordinate space.
+@param borderMode Border type. See borderInterpolate for details. BORDER_REFLECT101 ,
+BORDER_REPLICATE , BORDER_CONSTANT , BORDER_REFLECT and BORDER_WRAP are supported for now.
 @param stream Stream for the asynchronous version.
 
 @sa bilateralFilter
@@ -739,11 +739,11 @@ CV_EXPORTS void bilateralFilter(InputArray src, OutputArray dst, int kernel_size
 
 /** @brief Performs linear blending of two images.
 
-@param img1 First image. Supports only CV\_8U and CV\_32F depth.
+@param img1 First image. Supports only CV_8U and CV_32F depth.
 @param img2 Second image. Must have the same size and the same type as img1 .
-@param weights1 Weights for first image. Must have tha same size as img1 . Supports only CV\_32F
+@param weights1 Weights for first image. Must have tha same size as img1 . Supports only CV_32F
 type.
-@param weights2 Weights for second image. Must have tha same size as img2 . Supports only CV\_32F
+@param weights2 Weights for second image. Must have tha same size as img2 . Supports only CV_32F
 type.
 @param result Destination image.
 @param stream Stream for the asynchronous version.

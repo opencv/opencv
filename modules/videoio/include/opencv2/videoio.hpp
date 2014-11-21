@@ -390,15 +390,15 @@ class can be used: :
 
 @note
 -   A basic sample on using the VideoCapture interface can be found at
-    opencv\_source\_code/samples/cpp/starter\_video.cpp
+    opencv_source_code/samples/cpp/starter_video.cpp
 -   Another basic video processing sample can be found at
-    opencv\_source\_code/samples/cpp/video\_dmtx.cpp
+    opencv_source_code/samples/cpp/video_dmtx.cpp
 -   (Python) A basic sample on using the VideoCapture interface can be found at
-    opencv\_source\_code/samples/python2/video.py
+    opencv_source_code/samples/python2/video.py
 -   (Python) Another basic video processing sample can be found at
-    opencv\_source\_code/samples/python2/video\_dmtx.py
+    opencv_source_code/samples/python2/video_dmtx.py
 -   (Python) A multi threaded video processing sample can be found at
-    opencv\_source\_code/samples/python2/video\_threaded.py
+    opencv_source_code/samples/python2/video_threaded.py
  */
 class CV_EXPORTS_W VideoCapture
 {
@@ -412,7 +412,7 @@ public:
 
     /** @overload
     @param filename name of the opened video file (eg. video.avi) or image sequence (eg.
-    img\_%02d.jpg, which will read samples like img\_00.jpg, img\_01.jpg, img\_02.jpg, ...)
+    img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
     */
     CV_WRAP VideoCapture(const String& filename);
 
@@ -427,7 +427,7 @@ public:
     /** @brief Open video file or a capturing device for video capturing
 
     @param filename name of the opened video file (eg. video.avi) or image sequence (eg.
-    img\_%02d.jpg, which will read samples like img\_00.jpg, img\_01.jpg, img\_02.jpg, ...)
+    img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
 
     The methods first call VideoCapture::release to close the already opened file or camera.
      */
@@ -502,27 +502,27 @@ public:
     /** @brief Sets a property in the VideoCapture.
 
     @param propId Property identifier. It can be one of the following:
-     -   **CV\_CAP\_PROP\_POS\_MSEC** Current position of the video file in milliseconds.
-     -   **CV\_CAP\_PROP\_POS\_FRAMES** 0-based index of the frame to be decoded/captured next.
-     -   **CV\_CAP\_PROP\_POS\_AVI\_RATIO** Relative position of the video file: 0 - start of the
+     -   **CV_CAP_PROP_POS_MSEC** Current position of the video file in milliseconds.
+     -   **CV_CAP_PROP_POS_FRAMES** 0-based index of the frame to be decoded/captured next.
+     -   **CV_CAP_PROP_POS_AVI_RATIO** Relative position of the video file: 0 - start of the
          film, 1 - end of the film.
-     -   **CV\_CAP\_PROP\_FRAME\_WIDTH** Width of the frames in the video stream.
-     -   **CV\_CAP\_PROP\_FRAME\_HEIGHT** Height of the frames in the video stream.
-     -   **CV\_CAP\_PROP\_FPS** Frame rate.
-     -   **CV\_CAP\_PROP\_FOURCC** 4-character code of codec.
-     -   **CV\_CAP\_PROP\_FRAME\_COUNT** Number of frames in the video file.
-     -   **CV\_CAP\_PROP\_FORMAT** Format of the Mat objects returned by retrieve() .
-     -   **CV\_CAP\_PROP\_MODE** Backend-specific value indicating the current capture mode.
-     -   **CV\_CAP\_PROP\_BRIGHTNESS** Brightness of the image (only for cameras).
-     -   **CV\_CAP\_PROP\_CONTRAST** Contrast of the image (only for cameras).
-     -   **CV\_CAP\_PROP\_SATURATION** Saturation of the image (only for cameras).
-     -   **CV\_CAP\_PROP\_HUE** Hue of the image (only for cameras).
-     -   **CV\_CAP\_PROP\_GAIN** Gain of the image (only for cameras).
-     -   **CV\_CAP\_PROP\_EXPOSURE** Exposure (only for cameras).
-     -   **CV\_CAP\_PROP\_CONVERT\_RGB** Boolean flags indicating whether images should be converted
+     -   **CV_CAP_PROP_FRAME_WIDTH** Width of the frames in the video stream.
+     -   **CV_CAP_PROP_FRAME_HEIGHT** Height of the frames in the video stream.
+     -   **CV_CAP_PROP_FPS** Frame rate.
+     -   **CV_CAP_PROP_FOURCC** 4-character code of codec.
+     -   **CV_CAP_PROP_FRAME_COUNT** Number of frames in the video file.
+     -   **CV_CAP_PROP_FORMAT** Format of the Mat objects returned by retrieve() .
+     -   **CV_CAP_PROP_MODE** Backend-specific value indicating the current capture mode.
+     -   **CV_CAP_PROP_BRIGHTNESS** Brightness of the image (only for cameras).
+     -   **CV_CAP_PROP_CONTRAST** Contrast of the image (only for cameras).
+     -   **CV_CAP_PROP_SATURATION** Saturation of the image (only for cameras).
+     -   **CV_CAP_PROP_HUE** Hue of the image (only for cameras).
+     -   **CV_CAP_PROP_GAIN** Gain of the image (only for cameras).
+     -   **CV_CAP_PROP_EXPOSURE** Exposure (only for cameras).
+     -   **CV_CAP_PROP_CONVERT_RGB** Boolean flags indicating whether images should be converted
          to RGB.
-     -   **CV\_CAP\_PROP\_WHITE\_BALANCE** Currently unsupported
-     -   **CV\_CAP\_PROP\_RECTIFICATION** Rectification flag for stereo cameras (note: only supported
+     -   **CV_CAP_PROP_WHITE_BALANCE** Currently unsupported
+     -   **CV_CAP_PROP_RECTIFICATION** Rectification flag for stereo cameras (note: only supported
          by DC1394 v 2.x backend currently)
     @param value Value of the property.
      */
@@ -531,28 +531,28 @@ public:
     /** @brief Returns the specified VideoCapture property
 
     @param propId Property identifier. It can be one of the following:
-     -   **CV\_CAP\_PROP\_POS\_MSEC** Current position of the video file in milliseconds or video
+     -   **CV_CAP_PROP_POS_MSEC** Current position of the video file in milliseconds or video
          capture timestamp.
-     -   **CV\_CAP\_PROP\_POS\_FRAMES** 0-based index of the frame to be decoded/captured next.
-     -   **CV\_CAP\_PROP\_POS\_AVI\_RATIO** Relative position of the video file: 0 - start of the
+     -   **CV_CAP_PROP_POS_FRAMES** 0-based index of the frame to be decoded/captured next.
+     -   **CV_CAP_PROP_POS_AVI_RATIO** Relative position of the video file: 0 - start of the
          film, 1 - end of the film.
-     -   **CV\_CAP\_PROP\_FRAME\_WIDTH** Width of the frames in the video stream.
-     -   **CV\_CAP\_PROP\_FRAME\_HEIGHT** Height of the frames in the video stream.
-     -   **CV\_CAP\_PROP\_FPS** Frame rate.
-     -   **CV\_CAP\_PROP\_FOURCC** 4-character code of codec.
-     -   **CV\_CAP\_PROP\_FRAME\_COUNT** Number of frames in the video file.
-     -   **CV\_CAP\_PROP\_FORMAT** Format of the Mat objects returned by retrieve() .
-     -   **CV\_CAP\_PROP\_MODE** Backend-specific value indicating the current capture mode.
-     -   **CV\_CAP\_PROP\_BRIGHTNESS** Brightness of the image (only for cameras).
-     -   **CV\_CAP\_PROP\_CONTRAST** Contrast of the image (only for cameras).
-     -   **CV\_CAP\_PROP\_SATURATION** Saturation of the image (only for cameras).
-     -   **CV\_CAP\_PROP\_HUE** Hue of the image (only for cameras).
-     -   **CV\_CAP\_PROP\_GAIN** Gain of the image (only for cameras).
-     -   **CV\_CAP\_PROP\_EXPOSURE** Exposure (only for cameras).
-     -   **CV\_CAP\_PROP\_CONVERT\_RGB** Boolean flags indicating whether images should be converted
+     -   **CV_CAP_PROP_FRAME_WIDTH** Width of the frames in the video stream.
+     -   **CV_CAP_PROP_FRAME_HEIGHT** Height of the frames in the video stream.
+     -   **CV_CAP_PROP_FPS** Frame rate.
+     -   **CV_CAP_PROP_FOURCC** 4-character code of codec.
+     -   **CV_CAP_PROP_FRAME_COUNT** Number of frames in the video file.
+     -   **CV_CAP_PROP_FORMAT** Format of the Mat objects returned by retrieve() .
+     -   **CV_CAP_PROP_MODE** Backend-specific value indicating the current capture mode.
+     -   **CV_CAP_PROP_BRIGHTNESS** Brightness of the image (only for cameras).
+     -   **CV_CAP_PROP_CONTRAST** Contrast of the image (only for cameras).
+     -   **CV_CAP_PROP_SATURATION** Saturation of the image (only for cameras).
+     -   **CV_CAP_PROP_HUE** Hue of the image (only for cameras).
+     -   **CV_CAP_PROP_GAIN** Gain of the image (only for cameras).
+     -   **CV_CAP_PROP_EXPOSURE** Exposure (only for cameras).
+     -   **CV_CAP_PROP_CONVERT_RGB** Boolean flags indicating whether images should be converted
          to RGB.
-     -   **CV\_CAP\_PROP\_WHITE\_BALANCE** Currently not supported
-     -   **CV\_CAP\_PROP\_RECTIFICATION** Rectification flag for stereo cameras (note: only supported
+     -   **CV_CAP_PROP_WHITE_BALANCE** Currently not supported
+     -   **CV_CAP_PROP_RECTIFICATION** Rectification flag for stereo cameras (note: only supported
          by DC1394 v 2.x backend currently)
 
     **Note**: When querying a property that is not supported by the backend used by the VideoCapture
