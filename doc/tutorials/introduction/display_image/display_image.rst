@@ -69,6 +69,7 @@ Now we call the :imread:`imread <>` function which loads the image name specifie
    + CV_LOAD_IMAGE_UNCHANGED (<0) loads the image as is (including the alpha channel if present)
    + CV_LOAD_IMAGE_GRAYSCALE ( 0) loads the image as an intensity one
    + CV_LOAD_IMAGE_COLOR     (>0) loads the image in the RGB format
+*If the second arguement is not specified, it is implied CV_LOAD_IMAGE_COLOR
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
@@ -83,15 +84,16 @@ After checking that the image data was loaded correctly, we want to display our 
 
 .. container:: enumeratevisibleitemswithsquare
 
-   + *WINDOW_AUTOSIZE* is the only supported one if you do not use the Qt backend. In this case the window size will take up the size of the image it shows. No resize permitted!
-   + *WINDOW_NORMAL* on Qt you may use this to allow window resize. The image will resize itself according to the current window size. By using the | operator you also need to specify if you would like the image to keep its aspect ratio (*WINDOW_KEEPRATIO*) or not (*WINDOW_FREERATIO*).
+   + *CV_WINDOW_AUTOSIZE* is the only supported one if you do not use the Qt backend. In this case the window size will take up the size of the image it shows. No resize permitted!
+   + *CV_WINDOW_NORMAL* on Qt you may use this to allow window resize. The image will resize itself according to the current window size. By using the | operator you also need to specify if you would like the image to keep its aspect ratio (*CV_WINDOW_KEEPRATIO*) or not (*CV_WINDOW_FREERATIO*).
+*If the second agruement is not specified by the user, it is implied to be CV_WINDOW_AUTOSIZE, which means you can't change the size of the image.
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
    :lines: 25
    :tab-width: 4
 
-Finally, to update the content of the OpenCV window with a new image use the :imshow:`imshow <>` function. Specify the OpenCV window name to update and the image to use during this operation:
+Finally, to update the content of the OpenCV window with a new image use the :imshow:`imshow <>` function. Specify the OpenCV window name to update and the image to use during this operation:If you did not call the :named_window:`namedWindow <>` function prior this function, 'namedWindow(  ,CV_WINDOW_AUTOSIZE)' will be called implicitly.
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
