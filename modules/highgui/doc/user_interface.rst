@@ -75,7 +75,7 @@ Displays an image in the specified window.
 
     :param image: Image to be shown.
 
-The function ``imshow`` displays an image in the specified window. If the window was created with the ``CV_WINDOW_AUTOSIZE`` flag, the image is shown with its original size. Otherwise, the image is scaled to fit the window. The function may scale the image, depending on its depth:
+The function ``imshow`` displays an image in the specified window. If the window was created with the ``CV_WINDOW_NORMAL`` flag,  the image is scaled to fit the window. Otherwise, the image is shown with its original size. The function may scale the image, depending on its depth:
 
     * If the image is 8-bit unsigned, it is displayed as is.
 
@@ -83,7 +83,9 @@ The function ``imshow`` displays an image in the specified window. If the window
 
     * If the image is 32-bit floating-point, the pixel values are multiplied by 255. That is, the value range [0,1] is mapped to [0,255].
 
-If window was created with OpenGL support, ``imshow`` also support :ocv:class:`ogl::Buffer` ,  :ocv:class:`ogl::Texture2D` and  :ocv:class:`gpu::GpuMat` as input.
+If the window was created with OpenGL support, ``imshow`` also support :ocv:class:`ogl::Buffer` ,  :ocv:class:`ogl::Texture2D` and  :ocv:class:`gpu::GpuMat` as input.
+
+If the window was not created before this function, it is assumed creating a window with ``CV_WINDOW_NORMAL`` .
 
 namedWindow
 ---------------
