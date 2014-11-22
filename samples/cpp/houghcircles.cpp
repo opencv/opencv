@@ -13,7 +13,7 @@ static void help()
             "./houghcircles <image_name>, Default is pic1.png\n" << endl;
 }
 
-int _main(int argc, char** argv)
+int main(int argc, char** argv)
 {
     const char* filename = argc >= 2 ? argv[1] : "board.jpg";
 
