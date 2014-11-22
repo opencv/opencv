@@ -6,8 +6,6 @@
 using namespace cv;
 using namespace std;
 
-#define CV_HOUGH_GRADIENT_SORTED 2
-
 static void help()
 {
     cout << "\nThis program demonstrates circle finding with the Hough transform.\n"
@@ -15,9 +13,9 @@ static void help()
             "./houghcircles <image_name>, Default is pic1.png\n" << endl;
 }
 
-int main(int argc, char** argv)
+int _main(int argc, char** argv)
 {
-    const char* filename = argc >= 2 ? argv[1] : "..\\board.jpg";
+    const char* filename = argc >= 2 ? argv[1] : "board.jpg";
 
     Mat img = imread(filename, 0);
     if(img.empty())
@@ -32,28 +30,10 @@ int main(int argc, char** argv)
     cvtColor(img, cimg, COLOR_GRAY2BGR);
 
     vector<Vec3f> circles;
-	HoughCircles(img, circles, CV_HOUGH_GRADIENT, 1, 10,
+    HoughCircles(img, circles, CV_HOUGH_GRADIENT, 1, 10,
                  100, 30, 1, 30 // change the last two parameters
                                 // (min_radius & max_radius) to detect larger circles
                  );
-
-
-	/*sort_buf.resize(MAX(center_count, nz_count));
-	cvCvtSeqToArray(centers, &sort_buf[0]);*/
-
-	for (unsigned int i = 0; i < circles.size(); i++){
-		std::cout << circles[i][2] << "\n";
-	}
-
-	//icvHoughSortDescent32s(&sort_buf[0], center_count, adata);
-	//cvClearSeq(centers);
-
-
-	/*cvSeqPushMulti(centers, &sort_buf[0], center_count);*/
-
-
-
-
     for( size_t i = 0; i < circles.size(); i++ )
     {
         Vec3i c = circles[i];
