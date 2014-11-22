@@ -483,6 +483,23 @@ void cvSetModeWindow_W32( const char* name, double prop_value)//Yannick Verdie
     __END__;
 }
 
+void cv::setWindowTitle(const String& winname, const String& title)
+{
+    CvWindow* window = icvFindWindowByName(winname.c_str());
+
+    if (!window)
+    {
+        namedWindow(winname);
+        window = icvFindWindowByName(winname.c_str());
+    }
+
+    if (!window)
+        CV_Error(Error::StsNullPtr, "NULL window");
+
+    if (!SetWindowText(window->frame, title.c_str()))
+        CV_Error_(Error::StsError, ("Failed to set \"%s\" window title to \"%s\"", winname.c_str(), title.c_str()));
+}
+
 double cvGetPropWindowAutoSize_W32(const char* name)
 {
     double result = -1;

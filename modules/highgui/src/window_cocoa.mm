@@ -150,7 +150,7 @@ CV_IMPL int cvInitSystem( int , char** )
 #define NSAppKitVersionNumber10_5 949
 #endif
     if( floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_5 )
-        [application setActivationPolicy:0/*NSApplicationActivationPolicyRegular*/];
+        [application setActivationPolicy:NSApplicationActivationPolicyRegular];
 #endif
     //[application finishLaunching];
     //atexit(icvCocoaCleanup);
@@ -601,6 +601,27 @@ void cvSetModeWindow_COCOA( const char* name, double prop_value )
     [localpool drain];
 
     __END__;
+}
+
+void cv::setWindowTitle(const String& winname, const String& title)
+{
+    CVWindow *window = cvGetWindow(winname.c_str());
+
+    if (window == NULL)
+    {
+        namedWindow(winname);
+        window = cvGetWindow(winname.c_str());
+    }
+
+    if (window == NULL)
+        CV_Error(Error::StsNullPtr, "NULL window");
+
+    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
+
+    NSString *windowTitle = [NSString stringWithFormat:@"%s", title.c_str()];
+    [window setTitle:windowTitle];
+
+    [localpool drain];
 }
 
 @implementation CVWindow
