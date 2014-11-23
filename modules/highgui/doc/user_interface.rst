@@ -87,6 +87,8 @@ If window was created with OpenGL support, ``imshow`` also support :ocv:class:`o
 
     [Windows Backend Only] Pressing Ctrl+C will copy the image to the clipboard.
 
+.. note:: If the window was not created before this function, it is assumed creating a window with ``CV_WINDOW_AUTOSIZE`` .
+
 namedWindow
 ---------------
 Creates a window.
