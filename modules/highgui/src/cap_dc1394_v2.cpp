@@ -665,13 +665,13 @@ double CvCaptureCAM_DC1394_v2_CPP::getProperty(int propId)
         return fps;
     case CV_CAP_PROP_RECTIFICATION:
         return rectify ? 1 : 0;
-    case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+    case CV_CAP_PROP_WHITE_BALANCE_U:
         if (dc1394_feature_whitebalance_get_value(dcCam,
                                                   &feature_set.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].BU_value,
                                                   &feature_set.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].RV_value) == DC1394_SUCCESS)
         return feature_set.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].BU_value;
         break;
-    case CV_CAP_PROP_WHITE_BALANCE_RED_V:
+    case CV_CAP_PROP_WHITE_BALANCE_V:
         if (dc1394_feature_whitebalance_get_value(dcCam,
                                                   &feature_set.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].BU_value,
                                                   &feature_set.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].RV_value) == DC1394_SUCCESS)
@@ -795,7 +795,7 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
                  else
                      act_feature->current_mode=DC1394_FEATURE_MODE_MANUAL;
                  // if property is one of the white balance features treat it in different way
-                 if (propId == CV_CAP_PROP_WHITE_BALANCE_BLUE_U)
+                 if (propId == CV_CAP_PROP_WHITE_BALANCE_U)
                  {
                      if (dc1394_feature_whitebalance_set_value(dcCam,cvRound(value), act_feature->RV_value)!=DC1394_SUCCESS)
                          return false;
@@ -805,7 +805,7 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
                          return true;
                      }
                  }
-                 if (propId == CV_CAP_PROP_WHITE_BALANCE_RED_V)
+                 if (propId == CV_CAP_PROP_WHITE_BALANCE_V)
                  {
                      if (dc1394_feature_whitebalance_set_value(dcCam, act_feature->BU_value, cvRound(value))!=DC1394_SUCCESS)
                          return false;
