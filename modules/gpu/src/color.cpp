@@ -1577,7 +1577,7 @@ namespace
 
     void rgba_to_mbgra(const GpuMat& src, GpuMat& dst, int, Stream& st)
     {
-    #if (CUDA_VERSION < 5000)
+    #if (CUDART_VERSION < 5000)
         (void)src;
         (void)dst;
         (void)st;
@@ -1947,7 +1947,7 @@ void cv::gpu::swapChannels(GpuMat& image, const int dstOrder[4], Stream& s)
 
 void cv::gpu::gammaCorrection(const GpuMat& src, GpuMat& dst, bool forward, Stream& stream)
 {
-#if (CUDA_VERSION < 5000)
+#if (CUDART_VERSION < 5000)
     (void)src;
     (void)dst;
     (void)forward;
