@@ -132,7 +132,7 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev, GpuMat
     DeviceBuffer dbuf(2);
 
     int bufSize;
-#if (CUDA_VERSION <= 4020)
+#if (CUDART_VERSION <= 4020)
     nppSafeCall( nppiMeanStdDev8uC1RGetBufferHostSize(sz, &bufSize) );
 #else
     nppSafeCall( nppiMeanStdDevGetBufferHostSize_8u_C1R(sz, &bufSize) );
@@ -187,7 +187,7 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
     CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
     CV_Assert(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2);
 
-#if CUDA_VERSION < 5050
+#if CUDART_VERSION < 5050
     typedef NppStatus (*func_t)(const Npp8u* pSrc1, int nSrcStep1, const Npp8u* pSrc2, int nSrcStep2, NppiSize oSizeROI, Npp64f* pRetVal);
 
     static const func_t funcs[] = {nppiNormDiff_Inf_8u_C1R, nppiNormDiff_L1_8u_C1R, nppiNormDiff_L2_8u_C1R};
@@ -212,7 +212,7 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
 
     DeviceBuffer dbuf;
 
-#if CUDA_VERSION < 5050
+#if CUDART_VERSION < 5050
     nppSafeCall( funcs[funcIdx](src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), sz, dbuf) );
 #else
     int bufSize;
