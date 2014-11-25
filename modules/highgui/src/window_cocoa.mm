@@ -60,7 +60,7 @@ CV_IMPL int cvCreateTrackbar2(const char* trackbar_name,const char* window_name,
                               int* val, int count, CvTrackbarCallback2 on_notify2, void* userdata) {return 0;}
 CV_IMPL void cvSetMouseCallback( const char* name, CvMouseCallback function, void* info) {}
 CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name ) {return 0;}
-CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name, int pos) {}
+CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name, int pos, int maxval = -1) {}
 CV_IMPL void* cvGetWindowHandle( const char* name ) {return NULL;}
 CV_IMPL const char* cvGetWindowName( void* window_handle ) {return NULL;}
 CV_IMPL int cvNamedWindow( const char* name, int flags ) {return 0; }
@@ -390,7 +390,7 @@ cvSetMouseCallback( const char* name, CvMouseCallback function, void* info)
     return pos;
 }
 
-CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name, int pos)
+CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name, int pos, int maxval)
 {
     CV_FUNCNAME("cvSetTrackbarPos");
 
@@ -413,6 +413,9 @@ CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name
     if(window) {
         slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
         if(slider) {
+            if(maxval >= 0) {
+                [[slider slider] setMaxValue:maxval];
+            }
             [[slider slider] setIntValue:pos];
         }
     }

@@ -645,12 +645,16 @@ CV_IMPL int cvGetTrackbarPos(const char* name_bar, const char* window_name)
 }
 
 
-CV_IMPL void cvSetTrackbarPos(const char* name_bar, const char* window_name, int pos)
+CV_IMPL void cvSetTrackbarPos(const char* name_bar, const char* window_name, int pos, int maxval = -1 )
 {
     QPointer<CvTrackbar> t = icvFindTrackBarByName(name_bar, window_name);
 
     if (t)
+    {
+        if (maxval >= 0)
+            t->slider->setMaximum(maxval);
         t->slider->setValue(pos);
+    }
 }
 
 
