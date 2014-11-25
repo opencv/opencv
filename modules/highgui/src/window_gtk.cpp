@@ -1549,7 +1549,7 @@ CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name
 }
 
 
-CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_name, int pos )
+CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_name, int pos, int maxval )
 {
     CV_FUNCNAME( "cvSetTrackbarPos" );
 
@@ -1569,6 +1569,9 @@ CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_nam
     {
         if( pos < 0 )
             pos = 0;
+
+        if( maxval >= 0 )
+            trackbar->maxval = maxval;
 
         if( pos > trackbar->maxval )
             pos = trackbar->maxval;

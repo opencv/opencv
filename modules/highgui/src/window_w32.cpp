@@ -1928,22 +1928,6 @@ icvFindTrackbarByName( const CvWindow* window, const char* name )
 }
 
 
-typedef struct
-{
-    UINT cbSize;
-    DWORD dwMask;
-    int idCommand;
-    int iImage;
-    BYTE fsState;
-    BYTE fsStyle;
-    WORD cx;
-    DWORD lParam;
-    LPSTR pszText;
-    int cchText;
-}
-ButtonInfo;
-
-
 static int
 icvCreateTrackbar( const char* trackbar_name, const char* window_name,
                    int* val, int count, CvTrackbarCallback on_notify,
@@ -1963,7 +1947,7 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     if( !window_name || !trackbar_name )
         CV_ERROR( CV_StsNullPtr, "NULL window or trackbar name" );
 
-    if( count <= 0 )
+    if( count < 0 )
         CV_ERROR( CV_StsOutOfRange, "Bad trackbar maximal value" );
 
     window = icvFindWindowByName(window_name);
@@ -1973,8 +1957,8 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     trackbar = icvFindTrackbarByName(window,trackbar_name);
     if( !trackbar )
     {
-        TBBUTTON tbs;
-        ButtonInfo tbis;
+        TBBUTTON tbs = {0};
+        TBBUTTONINFO tbis = {0};
         RECT rect;
         int bcount;
         int len = (int)strlen( trackbar_name );
@@ -1984,9 +1968,14 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
         {
             const int default_height = 30;
 
-            window->toolbar.toolbar = CreateToolbarEx(
-                    window->frame, WS_CHILD | CCS_TOP | TBSTYLE_WRAPABLE,
-                    1, 0, 0, 0, 0, 0, 16, 20, 16, 16, sizeof(TBBUTTON));
+            // CreateToolbarEx is deprecated and forces linking against Comctl32.lib.
+            window->toolbar.toolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
+                                        WS_CHILD | CCS_TOP | TBSTYLE_WRAPABLE | BTNS_AUTOSIZE | BTNS_BUTTON,
+                                        0, 0, 0, 0,
+                                        window->frame, NULL, GetModuleHandle(NULL), NULL);
+            // CreateToolbarEx automatically sends this but CreateWindowEx doesn't.
+            SendMessage(window->toolbar.toolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
+
             GetClientRect(window->frame, &rect);
             MoveWindow( window->toolbar.toolbar, 0, 0,
                         rect.right - rect.left, default_height, TRUE);
@@ -2202,7 +2191,7 @@ CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name
 }
 
 
-CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_name, int pos )
+CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name, int pos, int maxval)
 {
     CV_FUNCNAME( "cvSetTrackbarPos" );
 
@@ -2223,10 +2212,16 @@ CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_nam
         if( pos < 0 )
             pos = 0;
 
-        if( pos > trackbar->maxval )
-            pos = trackbar->maxval;
+        if (maxval >= 0)
+        {
+            trackbar->maxval = maxval;
+            // The position will be min(pos, new_count).
+            SendMessage(trackbar->hwnd, TBM_SETRANGEMAX, (WPARAM)TRUE, (LPARAM)maxval);
+        }
 
-        SendMessage( trackbar->hwnd, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)pos );
+        if (pos > trackbar->maxval)
+            pos = trackbar->maxval;
+        SendMessage(trackbar->hwnd, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)pos);
         icvUpdateTrackbar( trackbar, pos );
     }
 

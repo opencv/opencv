@@ -152,7 +152,7 @@ CV_EXPORTS int createTrackbar(const String& trackbarname, const String& winname,
 
 CV_EXPORTS_W int getTrackbarPos(const String& trackbarname, const String& winname);
 
-CV_EXPORTS_W void setTrackbarPos(const String& trackbarname, const String& winname, int pos);
+CV_EXPORTS_W void setTrackbarPos(const String& trackbarname, const String& winname, int pos, int maxval = -1);
 
 
 // OpenGL support
