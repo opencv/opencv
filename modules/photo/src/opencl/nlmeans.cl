@@ -20,22 +20,19 @@
 
 #ifdef OP_CALC_WEIGHTS
 
-__kernel void calcAlmostDist2Weight(__global int * almostDist2Weight, int almostMaxDist,
+__kernel void calcAlmostDist2Weight(__global int * almostDist2Weight,
                                     FT almostDist2ActualDistMultiplier, int fixedPointMult,
                                     FT den, FT WEIGHT_THRESHOLD)
 {
     int almostDist = get_global_id(0);
 
-    if (almostDist < almostMaxDist)
-    {
-        FT dist = almostDist * almostDist2ActualDistMultiplier;
-        int weight = convert_int_sat_rte(fixedPointMult * exp(-dist * den));
+    FT dist = almostDist * almostDist2ActualDistMultiplier;
+    int weight = convert_int_sat_rte(fixedPointMult * exp(-dist * den));
 
-        if (weight < WEIGHT_THRESHOLD * fixedPointMult)
-            weight = 0;
+    if (weight < WEIGHT_THRESHOLD * fixedPointMult)
+        weight = 0;
 
-        almostDist2Weight[almostDist] = weight;
-    }
+    almostDist2Weight[almostDist] = weight;
 }
 
 #elif defined OP_CALC_FASTNLMEANS
@@ -191,8 +188,9 @@ inline void convolveWindow(__global const uchar * src, int src_step, int src_off
                            int y, int x, int id, __local int * weights_local,
                            __local int_t * weighted_sum_local, int almostTemplateWindowSizeSqBinShift)
 {
-    int sx = x - SEARCH_SIZE2, sy = y - SEARCH_SIZE2, weights = 0;
-    int_t weighted_sum = (int_t)(0);
+    int sx = x - SEARCH_SIZE2, sy = y - SEARCH_SIZE2;
+    weights_local[id] = 0;
+    weighted_sum_local[id] = (int_t)(0);
 
     for (int i = id, size = SEARCH_SIZE_SQ; i < size; i += CTA_SIZE)
     {
@@ -202,12 +200,10 @@ inline void convolveWindow(__global const uchar * src, int src_step, int src_off
         int almostAvgDist = dists[i] >> almostTemplateWindowSizeSqBinShift;
         int weight = almostDist2Weight[almostAvgDist];
 
-        weights += weight;
-        weighted_sum += (int_t)(weight) * src_value;
+        weights_local[id] += weight;
+        weighted_sum_local[id] += (int_t)(weight) * src_value;
     }
 
-    weights_local[id] = weights;
-    weighted_sum_local[id] = weighted_sum;
     barrier(CLK_LOCAL_MEM_FENCE);
 
     for (int lsize = CTA_SIZE >> 1; lsize > 2; lsize >>= 1)

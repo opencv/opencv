@@ -60,7 +60,7 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindow
     if (k.empty())
         return false;
 
-    k.args(ocl::KernelArg::PtrWriteOnly(almostDist2Weight), almostMaxDist,
+    k.args(ocl::KernelArg::PtrWriteOnly(almostDist2Weight),
            almostDist2ActualDistMultiplier, fixedPointMult, den, WEIGHT_THRESHOLD);
 
     size_t globalsize[1] = { almostMaxDist };
