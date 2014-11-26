@@ -114,7 +114,7 @@ StereoBeliefPropagation uses a truncated linear model for the data cost and disc
 
 \f[DiscTerm =  \min (disc \_ single \_ jump  \cdot \lvert f_1-f_2  \rvert , max \_ disc \_ term)\f]
 
-For more details, see @cite Felzenszwalb2006.
+For more details, see @cite Felzenszwalb2006 .
 
 By default, StereoBeliefPropagation uses floating-point arithmetics and the CV_32FC1 type for
 messages. But it can also use fixed-point arithmetics and the CV_16SC1 message type for better
@@ -192,7 +192,7 @@ CV_EXPORTS Ptr<cuda::StereoBeliefPropagation>
 
 /** @brief Class computing stereo correspondence using the constant space belief propagation algorithm. :
 
-The class implements algorithm described in @cite Yang2010. StereoConstantSpaceBP supports both local
+The class implements algorithm described in @cite Yang2010 . StereoConstantSpaceBP supports both local
 minimum and global minimum data cost initialization algorithms. For more details, see the paper
 mentioned above. By default, a local algorithm is used. To enable a global algorithm, set
 use_local_init_data_cost to false .
@@ -203,7 +203,7 @@ StereoConstantSpaceBP uses a truncated linear model for the data cost and discon
 
 \f[DiscTerm =  \min (disc \_ single \_ jump  \cdot \lvert f_1-f_2  \rvert , max \_ disc \_ term)\f]
 
-For more details, see @cite Yang2010.
+For more details, see @cite Yang2010 .
 
 By default, StereoConstantSpaceBP uses floating-point arithmetics and the CV_32FC1 type for
 messages. But it can also use fixed-point arithmetics and the CV_16SC1 message type for better

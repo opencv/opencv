@@ -75,6 +75,9 @@
     @defgroup core_opengl OpenGL interoperability
     @defgroup core_ipp Intel IPP Asynchronous C/C++ Converters
     @defgroup core_optim Optimization Algorithms
+    @defgroup core_directx DirectX interoperability
+    @defgroup core_eigen Eigen support
+    @defgroup core_opencl OpenCL support
 @}
  */
 

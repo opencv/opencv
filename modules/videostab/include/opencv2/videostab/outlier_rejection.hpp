@@ -52,7 +52,7 @@ namespace cv
 namespace videostab
 {
 
-//! @addtogroup vieostab
+//! @addtogroup videostab
 //! @{
 
 class CV_EXPORTS IOutlierRejector

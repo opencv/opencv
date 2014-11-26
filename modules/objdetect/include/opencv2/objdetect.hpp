@@ -53,7 +53,7 @@ Haar Feature-based Cascade Classifier for Object Detection
 ----------------------------------------------------------
 
 The object detector described below has been initially proposed by Paul Viola @cite Viola01 and
-improved by Rainer Lienhart @cite Lienhart02.
+improved by Rainer Lienhart @cite Lienhart02 .
 
 First, a classifier (namely a *cascade of boosted classifiers working with haar-like features*) is
 trained with a few hundred sample views of a particular object (i.e., a face or a car), called

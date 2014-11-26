@@ -51,7 +51,7 @@ namespace cv
 namespace videostab
 {
 
-//! @addtogroup vieostab
+//! @addtogroup videostab
 //! @{
 
 template <typename T> inline T& at(int idx, std::vector<T> &items)

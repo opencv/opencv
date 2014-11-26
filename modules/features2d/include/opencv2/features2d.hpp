@@ -215,7 +215,7 @@ typedef Feature2D DescriptorExtractor;
 //! @addtogroup features2d_main
 //! @{
 
-/** @brief Class implementing the BRISK keypoint detector and descriptor extractor, described in @cite LCS11.
+/** @brief Class implementing the BRISK keypoint detector and descriptor extractor, described in @cite LCS11 .
  */
 class CV_EXPORTS_W BRISK : public Feature2D
 {
@@ -246,7 +246,7 @@ public:
 
 /** @brief Class implementing the ORB (*oriented BRIEF*) keypoint detector and descriptor extractor
 
-described in @cite RRKB11. The algorithm uses FAST in pyramids to detect stable keypoints, selects
+described in @cite RRKB11 . The algorithm uses FAST in pyramids to detect stable keypoints, selects
 the strongest features using FAST or Harris response, finds their orientation using first-order
 moments and computes the descriptors using BRIEF (where the coordinates of random point pairs (or
 k-tuples) are rotated according to the measured orientation).
@@ -369,7 +369,7 @@ circle around this pixel.
 FastFeatureDetector::TYPE_9_16, FastFeatureDetector::TYPE_7_12,
 FastFeatureDetector::TYPE_5_8
 
-Detects corners using the FAST algorithm by @cite Rosten06.
+Detects corners using the FAST algorithm by @cite Rosten06 .
 
 @note In Python API, types are given as cv2.FAST_FEATURE_DETECTOR_TYPE_5_8,
 cv2.FAST_FEATURE_DETECTOR_TYPE_7_12 and cv2.FAST_FEATURE_DETECTOR_TYPE_9_16. For corner
@@ -505,7 +505,7 @@ public:
 //! @addtogroup features2d_main
 //! @{
 
-/** @brief Class implementing the KAZE keypoint detector and descriptor extractor, described in @cite ABD12.
+/** @brief Class implementing the KAZE keypoint detector and descriptor extractor, described in @cite ABD12 .
 
 @note AKAZE descriptor can only be used with KAZE or AKAZE keypoints .. [ABD12] KAZE Features. Pablo
 F. Alcantarilla, Adrien Bartoli and Andrew J. Davison. In European Conference on Computer Vision
@@ -556,7 +556,7 @@ public:
     CV_WRAP virtual int getDiffusivity() const = 0;
 };
 
-/** @brief Class implementing the AKAZE keypoint detector and descriptor extractor, described in @cite ANB13. :
+/** @brief Class implementing the AKAZE keypoint detector and descriptor extractor, described in @cite ANB13 . :
 
 @note AKAZE descriptors can only be used with KAZE or AKAZE keypoints. Try to avoid using *extract*
 and *detect* instead of *operator()* due to performance reasons. .. [ANB13] Fast Explicit Diffusion

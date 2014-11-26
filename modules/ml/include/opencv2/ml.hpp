@@ -87,7 +87,7 @@ nearest feature vectors from both classes (in case of 2-class classifier) is max
 vectors that are the closest to the hyper-plane are called *support vectors*, which means that the
 position of other vectors does not affect the hyper-plane (the decision function).
 
-SVM implementation in OpenCV is based on @cite LibSVM.
+SVM implementation in OpenCV is based on @cite LibSVM .
 
 Prediction with SVM
 -------------------
@@ -98,7 +98,7 @@ the raw response from SVM (in the case of regression, 1-class or 2-class classif
 @defgroup ml_decsiontrees Decision Trees
 
 The ML classes discussed in this section implement Classification and Regression Tree algorithms
-described in @cite Breiman84.
+described in @cite Breiman84 .
 
 The class cv::ml::DTrees represents a single decision tree or a collection of decision trees. It's
 also a base class for RTrees and Boost.
@@ -184,7 +184,7 @@ qualitative output is called *classification*, while predicting the quantitative
 
 Boosting is a powerful learning concept that provides a solution to the supervised classification
 learning task. It combines the performance of many "weak" classifiers to produce a powerful
-committee @cite HTF01. A weak classifier is only required to be better than chance, and thus can be
+committee @cite HTF01 . A weak classifier is only required to be better than chance, and thus can be
 very simple and computationally inexpensive. However, many of them smartly combine results to a
 strong classifier that often outperforms most "monolithic" strong classifiers such as SVMs and
 Neural Networks.
@@ -197,7 +197,7 @@ The boosted model is based on \f$N\f$ training examples \f${(x_i,y_i)}1N\f$ with
 the learning task at hand. The desired two-class output is encoded as -1 and +1.
 
 Different variants of boosting are known as Discrete Adaboost, Real AdaBoost, LogitBoost, and Gentle
-AdaBoost @cite FHT98. All of them are very similar in their overall structure. Therefore, this chapter
+AdaBoost @cite FHT98 . All of them are very similar in their overall structure. Therefore, this chapter
 focuses only on the standard two-class Discrete AdaBoost algorithm, outlined below. Initially the
 same weight is assigned to each sample (step 2). Then, a weak classifier \f$f_{m(x)}\f$ is trained on
 the weighted training data (step 3a). Its weighted training error and scaling factor \f$c_m\f$ is
@@ -236,7 +236,7 @@ induced classifier. This process is controlled with the weight_trim_rate paramet
 with the summary fraction weight_trim_rate of the total weight mass are used in the weak
 classifier training. Note that the weights for **all** training examples are recomputed at each
 training iteration. Examples deleted at a particular iteration may be used again for learning some
-of the weak classifiers further @cite FHT98.
+of the weak classifiers further @cite FHT98 .
 
 Prediction with Boost
 ---------------------
@@ -425,8 +425,8 @@ Regression is a binary classification algorithm which is closely related to Supp
 like digit recognition (i.e. recognizing digitis like 0,1 2, 3,... from the given images). This
 version of Logistic Regression supports both binary and multi-class classifications (for multi-class
 it creates a multiple 2-class classifiers). In order to train the logistic regression classifier,
-Batch Gradient Descent and Mini-Batch Gradient Descent algorithms are used (see @cite BatchDesWiki).
-Logistic Regression is a discriminative classifier (see @cite LogRegTomMitch for more details).
+Batch Gradient Descent and Mini-Batch Gradient Descent algorithms are used (see <http://en.wikipedia.org/wiki/Gradient_descent_optimization>).
+Logistic Regression is a discriminative classifier (see <http://www.cs.cmu.edu/~tom/NewChapters.html> for more details).
 Logistic Regression is implemented as a C++ class in LogisticRegression.
 
 In Logistic Regression, we try to optimize the training paramater \f$\theta\f$ such that the hypothesis

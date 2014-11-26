@@ -97,7 +97,7 @@ needs to be inpainted.
 by the algorithm.
 @param flags Inpainting method that could be one of the following:
 -   **INPAINT_NS** Navier-Stokes based method [Navier01]
--   **INPAINT_TELEA** Method by Alexandru Telea @cite Telea04.
+-   **INPAINT_TELEA** Method by Alexandru Telea @cite Telea04 .
 
 The function reconstructs the selected image area from the pixel near the area boundary. The
 function may be used to remove dust and scratches from a scanned photo, or to remove undesirable
@@ -220,12 +220,12 @@ as the variational problem, primal-dual algorithm then can be used to perform de
 exactly what is implemented.
 
 It should be noted, that this implementation was taken from the July 2013 blog entry
-@cite Mordvintsev, which also contained (slightly more general) ready-to-use source code on Python.
+@cite MA13 , which also contained (slightly more general) ready-to-use source code on Python.
 Subsequently, that code was rewritten on C++ with the usage of openCV by Vadim Pisarevsky at the end
 of July 2013 and finally it was slightly adapted by later authors.
 
 Although the thorough discussion and justification of the algorithm involved may be found in
-@cite ChambolleEtAl, it might make sense to skim over it here, following @cite Mordvintsev. To begin
+@cite ChambolleEtAl, it might make sense to skim over it here, following @cite MA13 . To begin
 with, we consider the 1-byte gray-level images as the functions from the rectangular domain of
 pixels (it may be seen as set
 \f$\left\{(x,y)\in\mathbb{N}\times\mathbb{N}\mid 1\leq x\leq n,\;1\leq y\leq m\right\}\f$ for some
@@ -290,9 +290,9 @@ logarithmic domain.
 Since it's a global operator the same function is applied to all the pixels, it is controlled by the
 bias parameter.
 
-Optional saturation enhancement is possible as described in @cite FL02.
+Optional saturation enhancement is possible as described in @cite FL02 .
 
-For more information see @cite DM03.
+For more information see @cite DM03 .
  */
 class CV_EXPORTS_W TonemapDrago : public Tonemap
 {
@@ -322,7 +322,7 @@ This implementation uses regular bilateral filter from opencv.
 
 Saturation enhancement is possible as in ocvTonemapDrago.
 
-For more information see @cite DD02.
+For more information see @cite DD02 .
  */
 class CV_EXPORTS_W TonemapDurand : public Tonemap
 {
@@ -358,7 +358,7 @@ createTonemapDurand(float gamma = 1.0f, float contrast = 4.0f, float saturation 
 Mapping function is controlled by adaptation parameter, that is computed using light adaptation and
 color adaptation.
 
-For more information see @cite RD05.
+For more information see @cite RD05 .
  */
 class CV_EXPORTS_W TonemapReinhard : public Tonemap
 {
@@ -389,7 +389,7 @@ createTonemapReinhard(float gamma = 1.0f, float intensity = 0.0f, float light_ad
 transforms contrast values to HVS response and scales the response. After this the image is
 reconstructed from new contrast values.
 
-For more information see @cite MM06.
+For more information see @cite MM06 .
  */
 class CV_EXPORTS_W TonemapMantiuk : public Tonemap
 {
@@ -435,7 +435,7 @@ It is invariant to exposure, so exposure values and camera response are not nece
 
 In this implementation new image regions are filled with zeros.
 
-For more information see @cite GW03.
+For more information see @cite GW03 .
  */
 class CV_EXPORTS_W AlignMTB : public AlignExposures
 {
@@ -510,7 +510,7 @@ public:
 function as linear system. Objective function is constructed using pixel values on the same position
 in all images, extra term is added to make the result smoother.
 
-For more information see @cite DM97.
+For more information see @cite DM97 .
  */
 class CV_EXPORTS_W CalibrateDebevec : public CalibrateCRF
 {
@@ -538,7 +538,7 @@ CV_EXPORTS_W Ptr<CalibrateDebevec> createCalibrateDebevec(int samples = 70, floa
 /** @brief Inverse camera response function is extracted for each brightness value by minimizing an objective
 function as linear system. This algorithm uses all image pixels.
 
-For more information see @cite RB99.
+For more information see @cite RB99 .
  */
 class CV_EXPORTS_W CalibrateRobertson : public CalibrateCRF
 {
@@ -579,7 +579,7 @@ public:
 /** @brief The resulting HDR image is calculated as weighted average of the exposures considering exposure
 values and camera response.
 
-For more information see @cite DM97.
+For more information see @cite DM97 .
  */
 class CV_EXPORTS_W MergeDebevec : public MergeExposures
 {
@@ -602,7 +602,7 @@ well-exposedness measures.
 The resulting image doesn't require tonemapping and can be converted to 8-bit image by multiplying
 by 255, but it's recommended to apply gamma correction and/or linear tonemapping.
 
-For more information see @cite MK07.
+For more information see @cite MK07 .
  */
 class CV_EXPORTS_W MergeMertens : public MergeExposures
 {
@@ -638,7 +638,7 @@ createMergeMertens(float contrast_weight = 1.0f, float saturation_weight = 1.0f,
 /** @brief The resulting HDR image is calculated as weighted average of the exposures considering exposure
 values and camera response.
 
-For more information see @cite RB99.
+For more information see @cite RB99 .
  */
 class CV_EXPORTS_W MergeRobertson : public MergeExposures
 {
@@ -656,7 +656,7 @@ CV_EXPORTS_W Ptr<MergeRobertson> createMergeRobertson();
 
 /** @brief Transforms a color image to a grayscale image. It is a basic tool in digital printing, stylized
 black-and-white photograph rendering, and in many single channel image processing applications
-@cite CL12.
+@cite CL12 .
 
 @param src Input 8-bit 3-channel image.
 @param grayscale Output 8-bit 1-channel image.
@@ -673,7 +673,7 @@ CV_EXPORTS_W void decolor( InputArray src, OutputArray grayscale, OutputArray co
 deformations) or local changes concerned to a selection. Here we are interested in achieving local
 changes, ones that are restricted to a region manually selected (ROI), in a seamless and effortless
 manner. The extent of the changes ranges from slight distortions to complete replacement by novel
-content @cite PM03.
+content @cite PM03 .
 
 @param src Input 8-bit 3-channel image.
 @param dst Input 8-bit 3-channel image.
@@ -749,7 +749,7 @@ CV_EXPORTS_W void textureFlattening(InputArray src, InputArray mask, OutputArray
 //! @{
 
 /** @brief Filtering is the fundamental operation in image and video processing. Edge-preserving smoothing
-filters are used in many different applications @cite EM11.
+filters are used in many different applications @cite EM11 .
 
 @param src Input 8-bit 3-channel image.
 @param dst Output 8-bit 3-channel image.
