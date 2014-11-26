@@ -48,7 +48,7 @@
 
 The video stabilization module contains a set of functions and classes that can be used to solve the
 problem of video stabilization. There are a few methods implemented, most of them are descibed in
-the papers @cite OF06 and @cite G11. However, there are some extensions and deviations from the orginal
+the papers @cite OF06 and @cite G11 . However, there are some extensions and deviations from the orginal
 paper methods.
 
 ### References
@@ -68,7 +68,7 @@ Both the functions and the classes are available.
 
          @defgroup videostab_marching Fast Marching Method
 
-The Fast Marching Method @cite T04 is used in of the video stabilization routines to do motion and
+The Fast Marching Method @cite Telea04 is used in of the video stabilization routines to do motion and
 color inpainting. The method is implemented is a flexible way and it's made public for other users.
 
      @}

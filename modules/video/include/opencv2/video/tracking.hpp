@@ -65,7 +65,7 @@ enum { OPTFLOW_USE_INITIAL_FLOW     = 4,
 @param criteria Stop criteria for the underlying meanShift.
 returns
 (in old interfaces) Number of iterations CAMSHIFT took to converge
-The function implements the CAMSHIFT object tracking algorithm @cite Bradski98. First, it finds an
+The function implements the CAMSHIFT object tracking algorithm @cite Bradski98 . First, it finds an
 object center using meanShift and then adjusts the window size and finds the optimal rotation. The
 function returns the rotated rectangle structure that includes the object position, size, and
 orientation. The next position of the search window can be obtained with RotatedRect::boundingRect()
@@ -159,7 +159,7 @@ feature is filtered out and its flow is not processed, so it allows to remove ba
 performance boost.
 
 The function implements a sparse iterative version of the Lucas-Kanade optical flow in pyramids. See
-@cite Bouguet00. The function is parallelized with the TBB library.
+@cite Bouguet00 . The function is parallelized with the TBB library.
 
 @note
 
@@ -258,7 +258,7 @@ enum
     MOTION_HOMOGRAPHY  = 3
 };
 
-/** @brief Finds the geometric transform (warp) between two images in terms of the ECC criterion @cite EP08.
+/** @brief Finds the geometric transform (warp) between two images in terms of the ECC criterion @cite EP08 .
 
 @param templateImage single-channel template image; CV_8U or CV_32F array.
 @param inputImage single-channel input image which should be warped with the final warpMatrix in
@@ -314,7 +314,7 @@ CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray input
 /** @brief Kalman filter class.
 
 The class implements a standard Kalman filter <http://en.wikipedia.org/wiki/Kalman_filter>,
-@cite Welch95. However, you can modify transitionMatrix, controlMatrix, and measurementMatrix to get
+@cite Welch95 . However, you can modify transitionMatrix, controlMatrix, and measurementMatrix to get
 an extended Kalman filter functionality. See the OpenCV sample kalman.cpp.
 
 @note
@@ -383,7 +383,7 @@ public:
 /** @brief "Dual TV L1" Optical Flow Algorithm.
 
 The class implements the "Dual TV L1" optical flow algorithm described in @cite Zach2007 and
-@cite Javier2012.
+@cite Javier2012 .
 Here are important members of the class that control the algorithm, which you can set after
 constructing the class instance:
 

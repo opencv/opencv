@@ -343,7 +343,7 @@ and a rotation matrix.
 It optionally returns three rotation matrices, one for each axis, and the three Euler angles in
 degrees (as the return value) that could be used in OpenGL. Note, there is always more than one
 sequence of rotations about the three principle axes that results in the same orientation of an
-object, eg. see @cite Slabaugh. Returned tree rotation matrices and corresponding three Euler angules
+object, eg. see @cite Slabaugh . Returned tree rotation matrices and corresponding three Euler angules
 are only one of the possible solutions.
  */
 CV_EXPORTS_W Vec3d RQDecomp3x3( InputArray src, OutputArray mtxR, OutputArray mtxQ,
@@ -368,7 +368,7 @@ matrix and the position of a camera.
 
 It optionally returns three rotation matrices, one for each axis, and three Euler angles that could
 be used in OpenGL. Note, there is always more than one sequence of rotations about the three
-principle axes that results in the same orientation of an object, eg. see @cite Slabaugh. Returned
+principle axes that results in the same orientation of an object, eg. see @cite Slabaugh . Returned
 tree rotation matrices and corresponding three Euler angules are only one of the possible solutions.
 
 The function is based on RQDecomp3x3 .
@@ -745,7 +745,7 @@ supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 @param criteria Termination criteria for the iterative optimization algorithm.
 
 The function estimates the intrinsic camera parameters and extrinsic parameters for each of the
-views. The algorithm is based on @cite Zhang2000 and @cite BouguetMCT. The coordinates of 3D object
+views. The algorithm is based on @cite Zhang2000 and @cite BouguetMCT . The coordinates of 3D object
 points and their corresponding 2D projections in each view must be specified. That may be achieved
 by using an object with a known geometry and easily detectable feature points. Such an object is
 called a calibration rig or calibration pattern, and OpenCV has built-in support for a chessboard as
@@ -1014,7 +1014,7 @@ The function computes the rectification transformations without knowing intrinsi
 cameras and their relative position in the space, which explains the suffix "uncalibrated". Another
 related difference from stereoRectify is that the function outputs not the rectification
 transformations in the object (3D) space, but the planar perspective transformations encoded by the
-homography matrices H1 and H2 . The function implements the algorithm @cite Hartley99.
+homography matrices H1 and H2 . The function implements the algorithm @cite Hartley99 .
 
 @note
    While the algorithm does not need to know the intrinsic parameters of the cameras, it heavily
@@ -1185,7 +1185,7 @@ confidence (probability) that the estimated matrix is correct.
 @param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
 for the other points. The array is computed only in the RANSAC and LMedS methods.
 
-This function estimates essential matrix based on the five-point algorithm solver in @cite Nister03.
+This function estimates essential matrix based on the five-point algorithm solver in @cite Nister03 .
 @cite SteweniusCFS is also a related. The epipolar geometry is described by the following equation:
 
 \f[[p_2; 1]^T K^T E K [p_1; 1] = 0 \\\f]\f[K =
@@ -1211,7 +1211,7 @@ CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
 @param R2 Another possible rotation matrix.
 @param t One possible translation.
 
-This function decompose an essential matrix E using svd decomposition @cite HartleyZ00. Generally 4
+This function decompose an essential matrix E using svd decomposition @cite HartleyZ00 . Generally 4
 possible poses exists for a given E. They are \f$[R_1, t]\f$, \f$[R_1, -t]\f$, \f$[R_2, t]\f$, \f$[R_2, -t]\f$. By
 decomposing E, you can only get the direction of the translation, so the function returns unit t.
  */
@@ -1236,7 +1236,7 @@ matrix E. Only these inliers will be used to recover pose. In the output mask on
 which pass the cheirality check.
 This function decomposes an essential matrix using decomposeEssentialMat and then verifies possible
 pose hypotheses by doing cheirality check. The cheirality check basically means that the
-triangulated 3D points should have positive depth. Some details can be found in @cite Nister03.
+triangulated 3D points should have positive depth. Some details can be found in @cite Nister03 .
 
 This function can be used to process output E and mask from findEssentialMat. In this scenario,
 points1 and points2 are the same input for findEssentialMat. :
@@ -1421,7 +1421,7 @@ This function extracts relative camera motion between two views observing a plan
 homography H induced by the plane. The intrinsic camera matrix K must also be provided. The function
 may return up to four mathematical solution sets. At least two of the solutions may further be
 invalidated if point correspondences are available by applying positive depth constraint (all points
-must be in front of the camera). The decomposition method is described in detail in @cite Malis.
+must be in front of the camera). The decomposition method is described in detail in @cite Malis .
  */
 CV_EXPORTS_W int decomposeHomographyMat(InputArray H,
                                         InputArray K,
@@ -1605,6 +1605,7 @@ public:
                                           int mode = StereoSGBM::MODE_SGBM);
 };
 
+//! @} calib3d
 
 /** @brief The methods in this namespace use a so-called fisheye camera model.
   @ingroup calib3d_fisheye
@@ -1850,8 +1851,6 @@ namespace fisheye
 
 //! @} calib3d_fisheye
 }
-
-//! @} calib3d
 
 } // cv
 

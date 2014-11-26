@@ -69,7 +69,7 @@ namespace cv { namespace cuda {
 
 The class discriminates between foreground and background pixels by building and maintaining a model
 of the background. Any pixel which does not fit this model is then deemed to be foreground. The
-class implements algorithm described in @cite MOG2001.
+class implements algorithm described in @cite MOG2001 .
 
 @sa BackgroundSubtractorMOG
 
@@ -119,7 +119,7 @@ CV_EXPORTS Ptr<cuda::BackgroundSubtractorMOG>
 
 The class discriminates between foreground and background pixels by building and maintaining a model
 of the background. Any pixel which does not fit this model is then deemed to be foreground. The
-class implements algorithm described in @cite MOG2004.
+class implements algorithm described in @cite Zivkovic2004 .
 
 @sa BackgroundSubtractorMOG2
  */
@@ -154,7 +154,7 @@ CV_EXPORTS Ptr<cuda::BackgroundSubtractorMOG2>
 
 The class discriminates between foreground and background pixels by building and maintaining a model
 of the background. Any pixel which does not fit this model is then deemed to be foreground. The
-class implements algorithm described in @cite GMG2012.
+class implements algorithm described in @cite Gold2012 .
  */
 class CV_EXPORTS BackgroundSubtractorGMG : public cv::BackgroundSubtractor
 {
@@ -208,7 +208,7 @@ CV_EXPORTS Ptr<cuda::BackgroundSubtractorGMG>
 of the background.
 
 Any pixel which does not fit this model is then deemed to be foreground. The class implements
-algorithm described in @cite FGD2003.
+algorithm described in @cite FGD2003 .
 @sa BackgroundSubtractor
  */
 class CV_EXPORTS BackgroundSubtractorFGD : public cv::BackgroundSubtractor

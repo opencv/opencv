@@ -229,7 +229,7 @@ public:
     enum CostType { COST_COLOR, COST_COLOR_GRAD };
 };
 
-/** @brief Minimum graph cut-based seam estimator. See details in @cite V03.
+/** @brief Minimum graph cut-based seam estimator. See details in @cite V03 .
  */
 class CV_EXPORTS GraphCutSeamFinder : public GraphCutSeamFinderBase, public SeamFinder
 {

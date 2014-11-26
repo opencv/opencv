@@ -61,7 +61,7 @@ class it's possible to configure/remove some steps, i.e. adjust the stitching pi
 the particular needs. All building blocks from the pipeline are available in the detail namespace,
 one can combine and use them separately.
 
-The implemented stitching pipeline is very similar to the one proposed in @cite BL07.
+The implemented stitching pipeline is very similar to the one proposed in @cite BL07 .
 
 ![image](StitchingPipeline.jpg)
 
