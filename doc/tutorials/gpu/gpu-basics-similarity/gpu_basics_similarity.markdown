@@ -1,10 +1,11 @@
 Similarity check (PNSR and SSIM) on the GPU {#tutorial_gpu_basics_similarity}
 ===========================================
+@todo update this tutorial
 
 Goal
 ----
 
-In the @ref videoInputPSNRMSSIM tutorial I already presented the PSNR and SSIM methods for checking
+In the @ref tutorial_video_input_psnr_ssim tutorial I already presented the PSNR and SSIM methods for checking
 the similarity between the two images. And as you could see there performing these takes quite some
 time, especially in the case of the SSIM. However, if the performance numbers of an OpenCV
 implementation for the CPU do not satisfy you and you happen to have an NVidia CUDA GPU device in
@@ -32,7 +33,7 @@ you'll find here only the functions itself.
 The PSNR returns a float number, that if the two inputs are similar between 30 and 50 (higher is
 better).
 
-@includelineno cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp
+@includelineno samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp
 
 lines
    165-210, 18-23, 210-235
@@ -41,7 +42,7 @@ The SSIM returns the MSSIM of the images. This is too a float number between zer
 better), however we have one for each channel. Therefore, we return a *Scalar* OpenCV data
 structure:
 
-@includelineno cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp
+@includelineno samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp
 
 lines
    235-355, 26-42, 357-
@@ -63,7 +64,8 @@ the cv:: to avoid confusion. I'll do the later.
 @code{.cpp}
 #include <opencv2/gpu.hpp>        // GPU structures and methods
 @endcode
-GPU stands for **g**raphics **p**rocessing **u**nit. It was originally build to render graphical
+
+GPU stands for "graphics processing unit". It was originally build to render graphical
 scenes. These scenes somehow build on a lot of data. Nevertheless, these aren't all dependent one
 from another in a sequential way and as it is possible a parallel processing of them. Due to this a
 GPU will contain multiple smaller processing units. These aren't the state of the art processors and
@@ -81,7 +83,7 @@ small functions to GPU is not recommended as the upload/download time will be la
 you gain by a parallel execution.
 
 Mat objects are stored only in the system memory (or the CPU cache). For getting an OpenCV matrix to
-the GPU you'll need to use its GPU counterpart @ref cv::GpuMat . It works similar to the Mat with a
+the GPU you'll need to use its GPU counterpart @ref cv::cuda::GpuMat . It works similar to the Mat with a
 2D only limitation and no reference returning for its functions (cannot mix GPU references with CPU
 ones). To upload a Mat object to the GPU you need to call the upload function after creating an
 instance of the class. To download you may use simple assignment to a Mat object or use the download
@@ -120,7 +122,7 @@ Optimization
 
 The reason for this is that you're throwing out on the window the price for memory allocation and
 data transfer. And on the GPU this is damn high. Another possibility for optimization is to
-introduce asynchronous OpenCV GPU calls too with the help of the @ref cv::gpu::Stream.
+introduce asynchronous OpenCV GPU calls too with the help of the @ref cv::cuda::Stream.
 
 1.  Memory allocation on the GPU is considerable. Therefore, if it’s possible allocate new memory as
     few times as possible. If you create a function what you intend to call multiple times it is a
@@ -162,7 +164,7 @@ introduce asynchronous OpenCV GPU calls too with the help of the @ref cv::gpu::S
     gpu::multiply(b.mu1_mu2, 2, b.t1); //b.t1 = 2 * b.mu1_mu2 + C1;
     gpu::add(b.t1, C1, b.t1);
     @endcode
-3.  Use asynchronous calls (the @ref cv::gpu::Stream ). By default whenever you call a gpu function
+3.  Use asynchronous calls (the @ref cv::cuda::Stream ). By default whenever you call a gpu function
     it will wait for the call to finish and return with the result afterwards. However, it is
     possible to make asynchronous calls, meaning it will call for the operation execution, make the
     costly data allocations for the algorithm and return back right away. Now you can call another
@@ -182,6 +184,7 @@ introduce asynchronous OpenCV GPU calls too with the help of the @ref cv::gpu::S
     gpu::split(b.t1, b.vI1, stream);              // Methods (pass the stream as final parameter).
     gpu::multiply(b.vI1[i], b.vI1[i], b.I1_2, stream);        // I1^2
     @endcode
+
 Result and conclusion
 ---------------------
 

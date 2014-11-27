@@ -247,6 +247,7 @@ APP_ABI := all
 @note We recommend setting APP_ABI := all for all targets. If you want to specify the target
 explicitly, use armeabi for ARMv5/ARMv6, armeabi-v7a for ARMv7, x86 for Intel Atom or mips for MIPS.
 
+@anchor tutorial_android_dev_intro_ndk
 Building application native part from command line
 --------------------------------------------------
 
@@ -284,6 +285,8 @@ build tool).
     @code{.bash}
     <path_where_NDK_is_placed>/ndk-build -B
     @endcode
+
+@anchor tutorial_android_dev_intro_eclipse
 Building application native part from *Eclipse* (CDT Builder)
 -------------------------------------------------------------
 
@@ -331,9 +334,9 @@ to apply the changes.
 4.  Open Project Properties -\> C/C++ Build, uncheck Use default build command, replace "Build
     command" text from "make" to
 
-    "\\f${NDKROOT}/ndk-build.cmd" on Windows,
+    "${NDKROOT}/ndk-build.cmd" on Windows,
 
-    "\\f${NDKROOT}/ndk-build" on Linux and MacOS.
+    "${NDKROOT}/ndk-build" on Linux and MacOS.
 
     ![image](images/eclipse_cdt_cfg4.png)
 
@@ -438,7 +441,7 @@ instructions](http://developer.android.com/tools/device.html) for more informati
     ![image](images/usb_device_connect_08.png)
 
     \` \`
-   
+
 
     ![image](images/usb_device_connect_09.png)
 
@@ -514,5 +517,4 @@ What's next
 -----------
 
 Now, when you have your development environment set up and configured, you may want to proceed to
-installing OpenCV4Android SDK. You can learn how to do that in a separate @ref O4A_SDK tutorial.
-
+installing OpenCV4Android SDK. You can learn how to do that in a separate @ref tutorial_O4A_SDK tutorial.

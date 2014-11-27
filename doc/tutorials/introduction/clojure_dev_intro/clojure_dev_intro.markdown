@@ -61,7 +61,7 @@ The available [installation guide](https://github.com/technomancy/leiningen#inst
 easy to be followed:
 
 1.  [Download the script](https://raw.github.com/technomancy/leiningen/stable/bin/lein)
-2.  Place it on your \\f$PATH (cf. \~/bin is a good choice if it is on your path.)
+2.  Place it on your $PATH (cf. \~/bin is a good choice if it is on your path.)
 3.  Set the script to be executable. (i.e. chmod 755 \~/bin/lein).
 
 If you work on Windows, follow [this instruction](https://github.com/technomancy/leiningen#windows)

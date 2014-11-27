@@ -91,7 +91,7 @@ directory mentioned above.
 The application starts up with reading the settings from the configuration file. Although, this is
 an important part of it, it has nothing to do with the subject of this tutorial: *camera
 calibration*. Therefore, I've chosen not to post the code for that part here. Technical background
-on how to do this you can find in the @ref fileInputOutputXMLYAML tutorial.
+on how to do this you can find in the @ref tutorial_file_input_output_with_xml_yml tutorial.
 
 Explanation
 -----------
@@ -486,4 +486,3 @@ here](https://www.youtube.com/watch?v=ViPN810E0SU).
 <iframe title=" Camera calibration With OpenCV - Chessboard or asymmetrical circle pattern." width="560" height="349" src="http://www.youtube.com/embed/ViPN810E0SU?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
 </div>
 \endhtmlonly
-

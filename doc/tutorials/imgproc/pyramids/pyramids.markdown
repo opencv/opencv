@@ -12,8 +12,7 @@ In this tutorial you will learn how to:
 Theory
 ------
 
-@note The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler. ..
-container:: enumeratevisibleitemswithsquare
+@note The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler.
 
 -   Usually we need to convert an image to a size different than its original. For this, there are
     two possible options:
@@ -53,161 +52,109 @@ container:: enumeratevisibleitemswithsquare
     predecessor. Iterating this process on the input image \f$G_{0}\f$ (original image) produces the
     entire pyramid.
 -   The procedure above was useful to downsample an image. What if we want to make it bigger?:
+    columns filled with zeros (\f$0\f$)
     -   First, upsize the image to twice the original in each dimension, wit the new even rows and
-        columns filled with zeros (\f$0\f$)
     -   Perform a convolution with the same kernel shown above (multiplied by 4) to approximate the
         values of the "missing pixels"
 -   These two procedures (downsampling and upsampling as explained above) are implemented by the
     OpenCV functions @ref cv::pyrUp and @ref cv::pyrDown , as we will see in an example with the
     code below:
 
-@note When we reduce the size of an image, we are actually *losing* information of the image. Code
-======
+@note When we reduce the size of an image, we are actually *losing* information of the image.
+
+Code
+----
 
 This tutorial code's is shown lines below. You can also download it from
 [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Pyramids.cpp)
-@code{.cpp}
-#include "opencv2/imgproc.hpp"
-#include "opencv2/highgui.hpp"
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
 
-using namespace cv;
+@includelineno samples/cpp/tutorial_code/ImgProc/Pyramids.cpp
 
-/// Global variables
-Mat src, dst, tmp;
-char* window_name = "Pyramids Demo";
-
-
-/*
- * @function main
- */
-int main( int argc, char** argv )
-{
-  /// General instructions
-  printf( "\n Zoom In-Out demo  \n " );
-  printf( "------------------ \n" );
-  printf( " * [u] -> Zoom in  \n" );
-  printf( " * [d] -> Zoom out \n" );
-  printf( " * [ESC] -> Close program \n \n" );
-
-  /// Test image - Make sure it s divisible by 2^{n}
-  src = imread( "../images/chicky_512.jpg" );
-  if( !src.data )
-    { printf(" No data! -- Exiting the program \n");
-      return -1; }
-
-  tmp = src;
-  dst = tmp;
-
-  /// Create window
-  namedWindow( window_name, WINDOW_AUTOSIZE );
-  imshow( window_name, dst );
-
-  /// Loop
-  while( true )
-  {
-    int c;
-    c = waitKey(10);
-
-    if( (char)c == 27 )
-      { break; }
-    if( (char)c == 'u' )
-      { pyrUp( tmp, dst, Size( tmp.cols*2, tmp.rows*2 ) );
-        printf( "** Zoom In: Image x 2 \n" );
-      }
-    else if( (char)c == 'd' )
-     { pyrDown( tmp, dst, Size( tmp.cols/2, tmp.rows/2 ) );
-       printf( "** Zoom Out: Image / 2 \n" );
-     }
-
-    imshow( window_name, dst );
-    tmp = dst;
-  }
-  return 0;
-}
-@endcode
 Explanation
 -----------
 
-1.  Let's check the general structure of the program:
-    -   Load an image (in this case it is defined in the program, the user does not have to enter it
-        as an argument)
-        @code{.cpp}
-        /// Test image - Make sure it s divisible by 2^{n}
-        src = imread( "../images/chicky_512.jpg" );
-        if( !src.data )
-          { printf(" No data! -- Exiting the program \n");
-            return -1; }
-        @endcode
-    -   Create a Mat object to store the result of the operations (*dst*) and one to save temporal
-        results (*tmp*).
-        @code{.cpp}
-        Mat src, dst, tmp;
-        /* ... */
-        tmp = src;
-        dst = tmp;
-        @endcode
-    -   Create a window to display the result
-        @code{.cpp}
-        namedWindow( window_name, WINDOW_AUTOSIZE );
-        imshow( window_name, dst );
-        @endcode
-    -   Perform an infinite loop waiting for user input.
-        @code{.cpp}
-        while( true )
-        {
-          int c;
-          c = waitKey(10);
+Let's check the general structure of the program:
 
-          if( (char)c == 27 )
-            { break; }
-          if( (char)c == 'u' )
-            { pyrUp( tmp, dst, Size( tmp.cols*2, tmp.rows*2 ) );
-              printf( "** Zoom In: Image x 2 \n" );
-            }
-          else if( (char)c == 'd' )
-           { pyrDown( tmp, dst, Size( tmp.cols/2, tmp.rows/2 ) );
-             printf( "** Zoom Out: Image / 2 \n" );
-           }
+-   Load an image (in this case it is defined in the program, the user does not have to enter it
+    as an argument)
+    @code{.cpp}
+    /// Test image - Make sure it s divisible by 2^{n}
+    src = imread( "../images/chicky_512.jpg" );
+    if( !src.data )
+      { printf(" No data! -- Exiting the program \n");
+        return -1; }
+    @endcode
 
-          imshow( window_name, dst );
-          tmp = dst;
+-   Create a Mat object to store the result of the operations (*dst*) and one to save temporal
+    results (*tmp*).
+    @code{.cpp}
+    Mat src, dst, tmp;
+    /* ... */
+    tmp = src;
+    dst = tmp;
+    @endcode
+
+-   Create a window to display the result
+    @code{.cpp}
+    namedWindow( window_name, WINDOW_AUTOSIZE );
+    imshow( window_name, dst );
+    @endcode
+
+-   Perform an infinite loop waiting for user input.
+    @code{.cpp}
+    while( true )
+    {
+      int c;
+      c = waitKey(10);
+
+      if( (char)c == 27 )
+        { break; }
+      if( (char)c == 'u' )
+        { pyrUp( tmp, dst, Size( tmp.cols*2, tmp.rows*2 ) );
+          printf( "** Zoom In: Image x 2 \n" );
         }
+      else if( (char)c == 'd' )
+       { pyrDown( tmp, dst, Size( tmp.cols/2, tmp.rows/2 ) );
+         printf( "** Zoom Out: Image / 2 \n" );
+       }
+
+      imshow( window_name, dst );
+      tmp = dst;
+    }
+    @endcode
+    Our program exits if the user presses *ESC*. Besides, it has two options:
+
+    -   **Perform upsampling (after pressing 'u')**
+        @code{.cpp}
+        pyrUp( tmp, dst, Size( tmp.cols*2, tmp.rows*2 )
         @endcode
-        Our program exits if the user presses *ESC*. Besides, it has two options:
+        We use the function @ref cv::pyrUp with 03 arguments:
 
-        -   **Perform upsampling (after pressing 'u')**
-            @code{.cpp}
-            pyrUp( tmp, dst, Size( tmp.cols*2, tmp.rows*2 )
-            @endcode
-            We use the function @ref cv::pyrUp with 03 arguments:
+        -   *tmp*: The current image, it is initialized with the *src* original image.
+        -   *dst*: The destination image (to be shown on screen, supposedly the double of the
+            input image)
+        -   *Size( tmp.cols*2, tmp.rows\*2 )\* : The destination size. Since we are upsampling,
+            @ref cv::pyrUp expects a size double than the input image (in this case *tmp*).
+    -   **Perform downsampling (after pressing 'd')**
+        @code{.cpp}
+        pyrDown( tmp, dst, Size( tmp.cols/2, tmp.rows/2 )
+        @endcode
+        Similarly as with @ref cv::pyrUp , we use the function @ref cv::pyrDown with 03
+        arguments:
 
-            -   *tmp*: The current image, it is initialized with the *src* original image.
-            -   *dst*: The destination image (to be shown on screen, supposedly the double of the
-                input image)
-            -   *Size( tmp.cols*2, tmp.rows\*2 )\* : The destination size. Since we are upsampling,
-                @ref cv::pyrUp expects a size double than the input image (in this case *tmp*).
-        -   **Perform downsampling (after pressing 'd')**
-            @code{.cpp}
-            pyrDown( tmp, dst, Size( tmp.cols/2, tmp.rows/2 )
-            @endcode
-            Similarly as with @ref cv::pyrUp , we use the function @ref cv::pyrDown with 03
-            arguments:
+        -   *tmp*: The current image, it is initialized with the *src* original image.
+        -   *dst*: The destination image (to be shown on screen, supposedly half the input
+            image)
+        -   *Size( tmp.cols/2, tmp.rows/2 )* : The destination size. Since we are upsampling,
+            @ref cv::pyrDown expects half the size the input image (in this case *tmp*).
+    -   Notice that it is important that the input image can be divided by a factor of two (in
+        both dimensions). Otherwise, an error will be shown.
+    -   Finally, we update the input image **tmp** with the current image displayed, so the
+        subsequent operations are performed on it.
+        @code{.cpp}
+        tmp = dst;
+        @endcode
 
-            -   *tmp*: The current image, it is initialized with the *src* original image.
-            -   *dst*: The destination image (to be shown on screen, supposedly half the input
-                image)
-            -   *Size( tmp.cols/2, tmp.rows/2 )* : The destination size. Since we are upsampling,
-                @ref cv::pyrDown expects half the size the input image (in this case *tmp*).
-        -   Notice that it is important that the input image can be divided by a factor of two (in
-            both dimensions). Otherwise, an error will be shown.
-        -   Finally, we update the input image **tmp** with the current image displayed, so the
-            subsequent operations are performed on it.
-            @code{.cpp}
-            tmp = dst;
-            @endcode
 Results
 -------
 
@@ -226,5 +173,3 @@ Results
     is now:
 
     ![image](images/Pyramids_Tutorial_PyrUp_Result.jpg)
-
-

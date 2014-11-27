@@ -16,8 +16,7 @@ Code
 
 You may also find the source code in the
 `samples/cpp/tutorial_code/core/ippasync/ippasync_sample.cpp` file of the OpenCV source library or
-download it from here
-\<../../../../samples/cpp/tutorial_code/core/ippasync/ippasync_sample.cpp\>.
+download it from [here](samples/cpp/tutorial_code/core/ippasync/ippasync_sample.cpp).
 
 @includelineno cpp/tutorial_code/core/ippasync/ippasync_sample.cpp
 
@@ -37,8 +36,8 @@ Explanation
     hppStatus sts;
     hppiVirtualMatrix * virtMatrix;
     @endcode
-2.  Load input image or video. How to open and read video stream you can see in the @ref
-    videoInputPSNRMSSIM tutorial.
+2.  Load input image or video. How to open and read video stream you can see in the
+    @ref tutorial_video_input_psnr_ssim tutorial.
     @code{.cpp}
     if( useCamera )
     {
@@ -83,7 +82,7 @@ Explanation
 
     result.create( image.rows, image.cols, CV_8U);
     @endcode
-6.  Convert Mat to [hppiMatrix](http://software.intel.com/en-us/node/501660) using @ref cv::getHpp
+6.  Convert Mat to [hppiMatrix](http://software.intel.com/en-us/node/501660) using @ref cv::hpp::getHpp
     and call [hppiSobel](http://software.intel.com/en-us/node/474701) function.
     @code{.cpp}
     //convert Mat to hppiMatrix
@@ -134,6 +133,7 @@ Explanation
        CHECK_DEL_STATUS(sts, "hppDeleteInstance");
     }
     @endcode
+
 Result
 ------
 
@@ -141,4 +141,3 @@ After compiling the code above we can execute it giving an image or video path a
 as an argument. For this tutorial we use baboon.png image as input. The result is below.
 
 ![image](images/How_To_Use_IPPA_Result.jpg)
-

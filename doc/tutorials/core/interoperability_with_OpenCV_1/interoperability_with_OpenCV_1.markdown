@@ -19,8 +19,8 @@ this. In the following you'll learn:
 General
 -------
 
-When making the switch you first need to learn some about the new data structure for images: @ref
-matTheBasicImageContainer, this replaces the old *CvMat* and *IplImage* ones. Switching to the new
+When making the switch you first need to learn some about the new data structure for images:
+@ref tutorial_mat_the_basic_image_container, this replaces the old *CvMat* and *IplImage* ones. Switching to the new
 functions is easier. You just need to remember a couple of new things.
 
 OpenCV 2 received reorganization. No longer are all the functions crammed into a single library. We
@@ -46,8 +46,8 @@ and the subsequent words start with a capital letter (like *copyMakeBorder*).
 
 Now, remember that you need to link to your application all the modules you use, and in case you are
 on Windows using the *DLL* system you will need to add, again, to the path all the binaries. For
-more in-depth information if you're on Windows read @ref Windows_Visual_Studio_How_To and for
-Linux an example usage is explained in @ref Linux_Eclipse_Usage.
+more in-depth information if you're on Windows read @ref tutorial_windows_visual_studio_Opencv and for
+Linux an example usage is explained in @ref tutorial_linux_eclipse.
 
 Now for converting the *Mat* object you can use either the *IplImage* or the *CvMat* operators.
 While in the C interface you used to work with pointers here it's no longer the case. In the C++
@@ -81,11 +81,11 @@ For example:
 Mat K(piL), L;
 L = Mat(pI);
 @endcode
+
 A case study
 ------------
 
-Now that you have the basics done [here's
-](samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp)
+Now that you have the basics done [here's](samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp)
 an example that mixes the usage of the C interface with the C++ one. You will also find it in the
 sample directory of the OpenCV source code library at the
 `samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp` .
@@ -124,7 +124,7 @@ lines
 
 Here you can observe that we may go through all the pixels of an image in three fashions: an
 iterator, a C pointer and an individual element access style. You can read a more in-depth
-description of these in the @ref howToScanImagesOpenCV tutorial. Converting from the old function
+description of these in the @ref tutorial_how_to_scan_images tutorial. Converting from the old function
 names is easy. Just remove the cv prefix and use the new *Mat* data structure. Here's an example of
 this by using the weighted addition function:
 
@@ -161,4 +161,3 @@ of the OpenCV source code library.
 <iframe title="Interoperability with OpenCV 1" width="560" height="349" src="http://www.youtube.com/embed/qckm-zvo31w?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
 </div>
 \endhtmlonly
-

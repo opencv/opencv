@@ -271,6 +271,6 @@ Results
 
   We get the results below. Varying the indices in the Trackbars give different output images, naturally. Try them out! You can even try to add a third Trackbar to control the number of iterations.
 
-  .. image:: images/Morphology_1_Tutorial_Cover.jpg
+  .. image:: images/Morphology_1_Result.jpg
      :alt: Dilation and Erosion application
      :align: center

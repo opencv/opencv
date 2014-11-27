@@ -8,8 +8,8 @@ In this tutorial you will learn how to:
 
 -   Use the @ref cv::CascadeClassifier class to detect objects in a video stream. Particularly, we
     will use the functions:
-    -   @ref cv::load to load a .xml classifier file. It can be either a Haar or a LBP classifer
-    -   @ref cv::detectMultiScale to perform the detection.
+    -   @ref cv::CascadeClassifier::load to load a .xml classifier file. It can be either a Haar or a LBP classifer
+    -   @ref cv::CascadeClassifier::detectMultiScale to perform the detection.
 
 Theory
 ------
@@ -126,5 +126,3 @@ Result
     detection. For the eyes we keep using the file used in the tutorial.
 
     ![image](images/Cascade_Classifier_Tutorial_Result_LBP.jpg)
-
-

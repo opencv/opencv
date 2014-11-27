@@ -159,15 +159,15 @@ Explanation
     @endcode
     The arguments denote:
 
-    a.  *src*: Source image
-    b.  *dst*: Destination image
-    c.  *ddepth*: The depth of *dst*. A negative value (such as \f$-1\f$) indicates that the depth is
+    -#  *src*: Source image
+    -#  *dst*: Destination image
+    -#  *ddepth*: The depth of *dst*. A negative value (such as \f$-1\f$) indicates that the depth is
         the same as the source.
-    d.  *kernel*: The kernel to be scanned through the image
-    e.  *anchor*: The position of the anchor relative to its kernel. The location *Point(-1, -1)*
+    -#  *kernel*: The kernel to be scanned through the image
+    -#  *anchor*: The position of the anchor relative to its kernel. The location *Point(-1, -1)*
         indicates the center by default.
-    f.  *delta*: A value to be added to each pixel during the convolution. By default it is \f$0\f$
-    g.  *BORDER_DEFAULT*: We let this value by default (more details in the following tutorial)
+    -#  *delta*: A value to be added to each pixel during the convolution. By default it is \f$0\f$
+    -#  *BORDER_DEFAULT*: We let this value by default (more details in the following tutorial)
 
 7.  Our program will effectuate a *while* loop, each 500 ms the kernel size of our filter will be
     updated in the range indicated.
@@ -180,5 +180,3 @@ Results
     the kernel size should change, as can be seen in the series of snapshots below:
 
     ![image](images/filter_2d_tutorial_result.jpg)
-
-

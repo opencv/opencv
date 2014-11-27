@@ -18,9 +18,9 @@ Theory
     transformation) followed by a *vector addition* (translation).
 2.  From the above, We can use an Affine Transformation to express:
 
-    a.  Rotations (linear transformation)
-    b.  Translations (vector addition)
-    c.  Scale operations (linear transformation)
+    -#  Rotations (linear transformation)
+    -#  Translations (vector addition)
+    -#  Scale operations (linear transformation)
 
     you can see that, in essence, an Affine Transformation represents a **relation** between two
     images.
@@ -41,7 +41,7 @@ Theory
 
     begin{bmatrix}
    a_{00} & a_{01} & b_{00} \\ a_{10} & a_{11} & b_{10}
-    
+
     end{bmatrix}_{2 times 3}
 
     Considering that we want to transform a 2D vector \f$X = \begin{bmatrix}x \\ y\end{bmatrix}\f$ by
@@ -58,8 +58,8 @@ Theory
 
 1.  Excellent question. We mentioned that an Affine Transformation is basically a **relation**
     between two images. The information about this relation can come, roughly, in two ways:
-    a.  We know both \f$X\f$ and T and we also know that they are related. Then our job is to find \f$M\f$
-    b.  We know \f$M\f$ and \f$X\f$. To obtain \f$T\f$ we only need to apply \f$T = M \cdot X\f$. Our information
+    -#  We know both \f$X\f$ and T and we also know that they are related. Then our job is to find \f$M\f$
+    -#  We know \f$M\f$ and \f$X\f$. To obtain \f$T\f$ we only need to apply \f$T = M \cdot X\f$. Our information
         for \f$M\f$ may be explicit (i.e. have the 2-by-3 matrix) or it can come as a geometric relation
         between points.
 
@@ -219,9 +219,9 @@ Explanation
 
 7.  **Rotate:** To rotate an image, we need to know two things:
 
-    a.  The center with respect to which the image will rotate
-    b.  The angle to be rotated. In OpenCV a positive angle is counter-clockwise
-    c.  *Optional:* A scale factor
+    -#  The center with respect to which the image will rotate
+    -#  The angle to be rotated. In OpenCV a positive angle is counter-clockwise
+    -#  *Optional:* A scale factor
 
     We define these parameters with the following snippet:
     @code{.cpp}
@@ -269,5 +269,3 @@ Result
     factor, we get:
 
     ![image](images/Warp_Affine_Tutorial_Result_Warp_Rotate.jpg)
-
-

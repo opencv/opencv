@@ -17,7 +17,7 @@ Theory
     (\f$d(H_{1}, H_{2})\f$) to express how well both histograms match.
 -   OpenCV implements the function @ref cv::compareHist to perform a comparison. It also offers 4
     different metrics to compute the matching:
-    a.  **Correlation ( CV_COMP_CORREL )**
+    -#  **Correlation ( CV_COMP_CORREL )**
 
         \f[d(H_1,H_2) =  \frac{\sum_I (H_1(I) - \bar{H_1}) (H_2(I) - \bar{H_2})}{\sqrt{\sum_I(H_1(I) - \bar{H_1})^2 \sum_I(H_2(I) - \bar{H_2})^2}}\f]
 
@@ -27,15 +27,15 @@ Theory
 
         and \f$N\f$ is the total number of histogram bins.
 
-    b.  **Chi-Square ( CV_COMP_CHISQR )**
+    -#  **Chi-Square ( CV_COMP_CHISQR )**
 
         \f[d(H_1,H_2) =  \sum _I  \frac{\left(H_1(I)-H_2(I)\right)^2}{H_1(I)}\f]
 
-    c.  **Intersection ( method=CV_COMP_INTERSECT )**
+    -#  **Intersection ( method=CV_COMP_INTERSECT )**
 
         \f[d(H_1,H_2) =  \sum _I  \min (H_1(I), H_2(I))\f]
 
-    d.  **Bhattacharyya distance ( CV_COMP_BHATTACHARYYA )**
+    -#  **Bhattacharyya distance ( CV_COMP_BHATTACHARYYA )**
 
         \f[d(H_1,H_2) =  \sqrt{1 - \frac{1}{\sqrt{\bar{H_1} \bar{H_2} N^2}} \sum_I \sqrt{H_1(I) \cdot H_2(I)}}\f]
 
@@ -165,4 +165,3 @@ match. As we can see, the match *base-base* is the highest of all as expected. A
 that the match *base-half* is the second best match (as we predicted). For the other two metrics,
 the less the result, the better the match. We can observe that the matches between the test 1 and
 test 2 with respect to the base are worse, which again, was expected.
-

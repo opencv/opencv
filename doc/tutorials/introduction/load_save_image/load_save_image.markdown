@@ -3,7 +3,7 @@ Load, Modify, and Save an Image {#tutorial_load_save_image}
 
 @note
    We assume that by now you know how to load an image using @ref cv::imread and to display it in a
-    window (using @ref cv::imshow ). Read the @ref Display_Image tutorial otherwise.
+    window (using @ref cv::imshow ). Read the @ref tutorial_display_image tutorial otherwise.
 
 Goals
 -----
@@ -103,4 +103,3 @@ And if you check in your folder (in my case *images*), you should have a newly .
 ![image](images/Load_Save_Image_Result_2.jpg)
 
 Congratulations, you are done with this tutorial!
-

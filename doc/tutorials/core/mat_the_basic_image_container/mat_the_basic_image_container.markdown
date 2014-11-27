@@ -18,8 +18,8 @@ numerical matrices and other information describing the matrix itself. *OpenCV* 
 library whose main focus is to process and manipulate this information. Therefore, the first thing
 you need to be familiar with is how OpenCV stores and handles images.
 
-*Mat*
------
+Mat
+---
 
 OpenCV has been around since 2001. In those days the library was built around a *C* interface and to
 store the image in the memory they used a C structure called *IplImage*. This is the one you'll see
@@ -62,6 +62,7 @@ To tackle this issue OpenCV uses a reference counting system. The idea is that e
 its own header, however the matrix may be shared between two instance of them by having their matrix
 pointers point to the same address. Moreover, the copy operators **will only copy the headers** and
 the pointer to the large matrix, not the data itself.
+
 @code{.cpp}
 Mat A, C;                          // creates just the header parts
 A = imread(argv[1], IMREAD_COLOR); // here we'll know the method used (allocate matrix)
@@ -70,6 +71,7 @@ Mat B(A);                                 // Use the copy constructor
 
 C = A;                                    // Assignment operator
 @endcode
+
 All the above objects, in the end, point to the same single data matrix. Their headers are
 different, however, and making a modification using any of them will affect all the other ones as
 well. In practice the different objects just provide different access method to the same underlying
@@ -85,7 +87,7 @@ for cleaning it up when it's no longer needed. The short answer is: the last obj
 This is handled by using a reference counting mechanism. Whenever somebody copies a header of a
 *Mat* object, a counter is increased for the matrix. Whenever a header is cleaned this counter is
 decreased. When the counter reaches zero the matrix too is freed. Sometimes you will want to copy
-the matrix itself too, so OpenCV provides the @ref cv::clone() and @ref cv::copyTo() functions.
+the matrix itself too, so OpenCV provides the @ref cv::Mat::clone() and @ref cv::Mat::copyTo() functions.
 @code{.cpp}
 Mat F = A.clone();
 Mat G;
@@ -97,10 +99,10 @@ remember from all this is that:
 -   Output image allocation for OpenCV functions is automatic (unless specified otherwise).
 -   You do not need to think about memory management with OpenCVs C++ interface.
 -   The assignment operator and the copy constructor only copies the header.
--   The underlying matrix of an image may be copied using the @ref cv::clone() and @ref cv::copyTo()
+-   The underlying matrix of an image may be copied using the @ref cv::Mat::clone() and @ref cv::Mat::copyTo()
     functions.
 
-*Storing* methods
+Storing methods
 -----------------
 
 This is about how you store the pixel values. You can select the color space and the data type used.
@@ -134,10 +136,10 @@ using the float (4 byte = 32 bit) or double (8 byte = 64 bit) data types for eac
 Nevertheless, remember that increasing the size of a component also increases the size of the whole
 picture in the memory.
 
-Creating a *Mat* object explicitly
+Creating a Mat object explicitly
 ----------------------------------
 
-In the @ref Load_Save_Image tutorial you have already learned how to write a matrix to an image
+In the @ref tutorial_load_save_image tutorial you have already learned how to write a matrix to an image
 file by using the @ref cv::imwrite() function. However, for debugging purposes it's much more
 convenient to see the actual values. You can do this using the \<\< operator of *Mat*. Be aware that
 this only works for two dimensional matrices.
@@ -146,29 +148,28 @@ Although *Mat* works really well as an image container, it is also a general mat
 Therefore, it is possible to create and manipulate multidimensional matrices. You can create a Mat
 object in multiple ways:
 
--   @ref cv::Mat() Constructor
+-   @ref cv::Mat::Mat Constructor
 
     @includelineno
     cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
 
-    lines
-   27-28
-    
-![image](images/MatBasicContainerOut1.png)
+    lines   27-28
 
-For two dimensional and multichannel images we first define their size: row and column count wise.
+    ![image](images/MatBasicContainerOut1.png)
 
-Then we need to specify the data type to use for storing the elements and the number of channels
-per matrix point. To do this we have multiple definitions constructed according to the following
-convention:
-@code{.cpp}
-CV_[The number of bits per item][Signed or Unsigned][Type Prefix]C[The channel number]
-@endcode
-For instance, *CV_8UC3* means we use unsigned char types that are 8 bit long and each pixel has
-three of these to form the three channels. This are predefined for up to four channel numbers. The
-@ref cv::Scalar is four element short vector. Specify this and you can initialize all matrix
-points with a custom value. If you need more you can create the type with the upper macro, setting
-the channel number in parenthesis as you can see below.
+    For two dimensional and multichannel images we first define their size: row and column count wise.
+
+    Then we need to specify the data type to use for storing the elements and the number of channels
+    per matrix point. To do this we have multiple definitions constructed according to the following
+    convention:
+    @code{.cpp}
+    CV_[The number of bits per item][Signed or Unsigned][Type Prefix]C[The channel number]
+    @endcode
+    For instance, *CV_8UC3* means we use unsigned char types that are 8 bit long and each pixel has
+    three of these to form the three channels. This are predefined for up to four channel numbers. The
+    @ref cv::Scalar is four element short vector. Specify this and you can initialize all matrix
+    points with a custom value. If you need more you can create the type with the upper macro, setting
+    the channel number in parenthesis as you can see below.
 
 -   Use C/C++ arrays and initialize via constructor
 
@@ -176,8 +177,8 @@ the channel number in parenthesis as you can see below.
     cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
 
     lines
-   35-36
-    
+    35-36
+
     The upper example shows how to create a matrix with more than two dimensions. Specify its
     dimension, then pass a pointer containing the size for each dimension and the rest remains the
     same.
@@ -187,60 +188,57 @@ the channel number in parenthesis as you can see below.
     IplImage* img = cvLoadImage("greatwave.png", 1);
     Mat mtx(img); // convert IplImage* -> Mat
     @endcode
--   @ref cv::Create() function:
+-   @ref cv::Mat::create function:
 
     @includelineno
     cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
 
-    lines
-   31-32
-    
-![image](images/MatBasicContainerOut2.png)
+    lines   31-32
 
-You cannot initialize the matrix values with this construction. It will only reallocate its matrix
-data memory if the new size will not fit into the old one.
+    ![image](images/MatBasicContainerOut2.png)
 
--   MATLAB style initializer: @ref cv::zeros() , @ref cv::ones() , @ref cv::eye() . Specify size and
+    You cannot initialize the matrix values with this construction. It will only reallocate its matrix
+    data memory if the new size will not fit into the old one.
+
+-   MATLAB style initializer: @ref cv::Mat::zeros , @ref cv::Mat::ones , @ref cv::Mat::eye . Specify size and
     data type to use:
 
     @includelineno
     cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
 
     lines
-   40-47
-    
-![image](images/MatBasicContainerOut3.png)
+    40-47
+
+    ![image](images/MatBasicContainerOut3.png)
 
 -   For small matrices you may use comma separated initializers:
 
     @includelineno
     cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
 
-    lines
-   50-51
-    
-![image](images/MatBasicContainerOut6.png)
+    lines   50-51
 
--   Create a new header for an existing *Mat* object and @ref cv::clone() or @ref cv::copyTo() it.
+    ![image](images/MatBasicContainerOut6.png)
+
+-   Create a new header for an existing *Mat* object and @ref cv::Mat::clone or @ref cv::Mat::copyTo it.
 
     @includelineno
     cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
 
-    lines
-   53-54
-    
+    lines   53-54
+
     ![image](images/MatBasicContainerOut7.png)
 
-@note
-   You can fill out a matrix with random values using the @ref cv::randu() function. You need to
-    give the lower and upper value for the random values:
+    @note
+       You can fill out a matrix with random values using the @ref cv::randu() function. You need to
+        give the lower and upper value for the random values:
 
     @includelineno
     cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
 
     lines
-   57-58
-    
+    57-58
+
 Output formatting
 -----------------
 
@@ -253,8 +251,8 @@ format your matrix output:
     cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
 
     lines
-   61
-    
+    61
+
     ![image](images/MatBasicContainerOut8.png)
 
 -   Python
@@ -263,8 +261,8 @@ format your matrix output:
     cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
 
     lines
-   62
-    
+    62
+
     ![image](images/MatBasicContainerOut16.png)
 
 -   Comma separated values (CSV)
@@ -273,8 +271,8 @@ format your matrix output:
     cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
 
     lines
-   64
-    
+    64
+
     ![image](images/MatBasicContainerOut10.png)
 
 -   Numpy
@@ -283,8 +281,8 @@ format your matrix output:
     cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
 
     lines
-   63
-    
+    63
+
     ![image](images/MatBasicContainerOut9.png)
 
 -   C
@@ -293,8 +291,8 @@ format your matrix output:
     cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
 
     lines
-   65
-    
+    65
+
     ![image](images/MatBasicContainerOut11.png)
 
 Output of other common items
@@ -308,8 +306,8 @@ OpenCV offers support for output of other common OpenCV data structures too via 
     cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
 
     lines
-   67-68
-    
+    67-68
+
     ![image](images/MatBasicContainerOut12.png)
 
 -   3D Point
@@ -318,8 +316,8 @@ OpenCV offers support for output of other common OpenCV data structures too via 
     cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
 
     lines
-   70-71
-    
+    70-71
+
     ![image](images/MatBasicContainerOut13.png)
 
 -   std::vector via cv::Mat
@@ -328,8 +326,8 @@ OpenCV offers support for output of other common OpenCV data structures too via 
     cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
 
     lines
-   74-77
-    
+    74-77
+
     ![image](images/MatBasicContainerOut14.png)
 
 -   std::vector of points
@@ -339,12 +337,11 @@ OpenCV offers support for output of other common OpenCV data structures too via 
 
     lines
    79-83
-    
+
     ![image](images/MatBasicContainerOut15.png)
 
 Most of the samples here have been included in a small console application. You can download it from
-[here
-](samples/cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp)
+[here](samples/cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp)
 or in the core section of the cpp samples.
 
 You can also find a quick video demonstration of this on
@@ -355,4 +352,3 @@ You can also find a quick video demonstration of this on
 <iframe title="Install OpenCV by using its source files - Part 1" width="560" height="349" src="http://www.youtube.com/embed/1tibU7vGWpk?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
 </div>
 \endhtmlonly
-

@@ -1,6 +1,8 @@
 Support Vector Machines for Non-Linearly Separable Data {#tutorial_non_linear_svms}
 =======================================================
 
+@todo update this tutorial
+
 Goal
 ----
 
@@ -8,7 +10,7 @@ In this tutorial you will learn how to:
 
 -   Define the optimization problem for SVMs when it is not possible to separate linearly the
     training data.
--   How to configure the parameters in @ref cv::CvSVMParams to adapt your SVM for this class of
+-   How to configure the parameters in @ref cv::ml::SVM::Params to adapt your SVM for this class of
     problems.
 
 Motivation
@@ -36,23 +38,22 @@ the biggest margin and the new one of generalizing the training data correctly b
 many classification errors.
 
 We start here from the formulation of the optimization problem of finding the hyperplane which
-maximizes the **margin** (this is explained in the @ref previous tutorial \<introductiontosvms\>):
+maximizes the **margin** (this is explained in the previous tutorial (@ref tutorial_introduction_to_svm):
 
-min_{beta, beta_{0}} L(beta) = frac{1}{2}||beta||\^{2} text{ subject to } y_{i}(beta\^{T}
-x_{i} + beta_{0}) geq 1 text{ } forall i
+\f[\min_{\beta, \beta_{0}} L(\beta) = \frac{1}{2}||\beta||^{2} \text{ subject to } y_{i}(\beta^{T} x_{i} + \beta_{0}) \geq 1 \text{ } \forall i\f]
 
 There are multiple ways in which this model can be modified so it takes into account the
 misclassification errors. For example, one could think of minimizing the same quantity plus a
 constant times the number of misclassification errors in the training data, i.e.:
 
-min ||beta||\^{2} + C text{(\# misclassication errors)}
+\f[\min ||\beta||^{2} + C \text{(\# misclassication errors)}\f]
 
 However, this one is not a very good solution since, among some other reasons, we do not distinguish
 between samples that are misclassified with a small distance to their appropriate decision region or
 samples that are not. Therefore, a better solution will take into account the *distance of the
 misclassified samples to their correct decision regions*, i.e.:
 
-min ||beta||\^{2} + C text{(distance of misclassified samples to their correct regions)}
+\f[\min ||\beta||^{2} + C \text{(distance of misclassified samples to their correct regions)}\f]
 
 For each sample of the training data a new parameter \f$\xi_{i}\f$ is defined. Each one of these
 parameters contains the distance from its corresponding training sample to their correct decision
@@ -70,8 +71,7 @@ misclassified training sample to the margin of its appropriate region.
 
 Finally, the new formulation for the optimization problem is:
 
-min_{beta, beta_{0}} L(beta) = ||beta||\^{2} + C sum_{i} {xi_{i}} text{ subject to }
-y_{i}(beta\^{T} x_{i} + beta_{0}) geq 1 - xi_{i} text{ and } xi_{i} geq 0 text{ } forall i
+\f[\min_{\beta, \beta_{0}} L(\beta) = ||\beta||^{2} + C \sum_{i} {\xi_{i}} \text{ subject to } y_{i}(\beta^{T} x_{i} + \beta_{0}) \geq 1 - \xi_{i} \text{ and } \xi_{i} \geq 0 \text{ } \forall i\f]
 
 How should the parameter C be chosen? It is obvious that the answer to this question depends on how
 the training data is distributed. Although there is no general answer, it is useful to take into
@@ -101,138 +101,143 @@ Explanation
 
 1.  **Set up the training data**
 
-The training data of this exercise is formed by a set of labeled 2D-points that belong to one of
-two different classes. To make the exercise more appealing, the training data is generated
-randomly using a uniform probability density functions (PDFs).
+    The training data of this exercise is formed by a set of labeled 2D-points that belong to one of
+    two different classes. To make the exercise more appealing, the training data is generated
+    randomly using a uniform probability density functions (PDFs).
 
-We have divided the generation of the training data into two main parts.
+    We have divided the generation of the training data into two main parts.
 
-In the first part we generate data for both classes that is linearly separable.
-@code{.cpp}
-// Generate random points for the class 1
-Mat trainClass = trainData.rowRange(0, nLinearSamples);
-// The x coordinate of the points is in [0, 0.4)
-Mat c = trainClass.colRange(0, 1);
-rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(0.4 * WIDTH));
-// The y coordinate of the points is in [0, 1)
-c = trainClass.colRange(1,2);
-rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(HEIGHT));
+    In the first part we generate data for both classes that is linearly separable.
+    @code{.cpp}
+    // Generate random points for the class 1
+    Mat trainClass = trainData.rowRange(0, nLinearSamples);
+    // The x coordinate of the points is in [0, 0.4)
+    Mat c = trainClass.colRange(0, 1);
+    rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(0.4 * WIDTH));
+    // The y coordinate of the points is in [0, 1)
+    c = trainClass.colRange(1,2);
+    rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(HEIGHT));
 
-// Generate random points for the class 2
-trainClass = trainData.rowRange(2*NTRAINING_SAMPLES-nLinearSamples, 2*NTRAINING_SAMPLES);
-// The x coordinate of the points is in [0.6, 1]
-c = trainClass.colRange(0 , 1);
-rng.fill(c, RNG::UNIFORM, Scalar(0.6*WIDTH), Scalar(WIDTH));
-// The y coordinate of the points is in [0, 1)
-c = trainClass.colRange(1,2);
-rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(HEIGHT));
-@endcode
-In the second part we create data for both classes that is non-linearly separable, data that
-overlaps.
-@code{.cpp}
-// Generate random points for the classes 1 and 2
-trainClass = trainData.rowRange(  nLinearSamples, 2*NTRAINING_SAMPLES-nLinearSamples);
-// The x coordinate of the points is in [0.4, 0.6)
-c = trainClass.colRange(0,1);
-rng.fill(c, RNG::UNIFORM, Scalar(0.4*WIDTH), Scalar(0.6*WIDTH));
-// The y coordinate of the points is in [0, 1)
-c = trainClass.colRange(1,2);
-rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(HEIGHT));
-@endcode
+    // Generate random points for the class 2
+    trainClass = trainData.rowRange(2*NTRAINING_SAMPLES-nLinearSamples, 2*NTRAINING_SAMPLES);
+    // The x coordinate of the points is in [0.6, 1]
+    c = trainClass.colRange(0 , 1);
+    rng.fill(c, RNG::UNIFORM, Scalar(0.6*WIDTH), Scalar(WIDTH));
+    // The y coordinate of the points is in [0, 1)
+    c = trainClass.colRange(1,2);
+    rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(HEIGHT));
+    @endcode
+    In the second part we create data for both classes that is non-linearly separable, data that
+    overlaps.
+    @code{.cpp}
+    // Generate random points for the classes 1 and 2
+    trainClass = trainData.rowRange(  nLinearSamples, 2*NTRAINING_SAMPLES-nLinearSamples);
+    // The x coordinate of the points is in [0.4, 0.6)
+    c = trainClass.colRange(0,1);
+    rng.fill(c, RNG::UNIFORM, Scalar(0.4*WIDTH), Scalar(0.6*WIDTH));
+    // The y coordinate of the points is in [0, 1)
+    c = trainClass.colRange(1,2);
+    rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(HEIGHT));
+    @endcode
+
 2.  **Set up SVM's parameters**
 
-@sa
-   In the previous tutorial @ref introductiontosvms there is an explanation of the atributes of the
-    class @ref cv::CvSVMParams that we configure here before training the SVM.
-@code{.cpp}
-CvSVMParams params;
-params.svm_type    = SVM::C_SVC;
-params.C              = 0.1;
-params.kernel_type = SVM::LINEAR;
-params.term_crit   = TermCriteria(TermCriteria::ITER, (int)1e7, 1e-6);
-@endcode
-There are just two differences between the configuration we do here and the one that was done in
-the @ref previous tutorial \<introductiontosvms\> that we use as reference.
+    @sa
+       In the previous tutorial @ref tutorial_introduction_to_svm there is an explanation of the atributes of the
+        class @ref cv::ml::SVM::Params that we configure here before training the SVM.
 
--   *CvSVM::C_SVC*. We chose here a small value of this parameter in order not to punish too much
-    the misclassification errors in the optimization. The idea of doing this stems from the will
-    of obtaining a solution close to the one intuitively expected. However, we recommend to get a
-    better insight of the problem by making adjustments to this parameter.
+    @code{.cpp}
+    CvSVMParams params;
+    params.svm_type    = SVM::C_SVC;
+    params.C              = 0.1;
+    params.kernel_type = SVM::LINEAR;
+    params.term_crit   = TermCriteria(TermCriteria::ITER, (int)1e7, 1e-6);
+    @endcode
+    There are just two differences between the configuration we do here and the one that was done in
+    the previous tutorial (tutorial_introduction_to_svm) that we use as reference.
 
-@note Here there are just very few points in the overlapping region between classes, giving a smaller value to **FRAC_LINEAR_SEP** the density of points can be incremented and the impact of the parameter **CvSVM::C_SVC** explored deeply.
-   -   *Termination Criteria of the algorithm*. The maximum number of iterations has to be
-        increased considerably in order to solve correctly a problem with non-linearly separable
-        training data. In particular, we have increased in five orders of magnitude this value.
+    -   *CvSVM::C_SVC*. We chose here a small value of this parameter in order not to punish too much
+        the misclassification errors in the optimization. The idea of doing this stems from the will
+        of obtaining a solution close to the one intuitively expected. However, we recommend to get a
+        better insight of the problem by making adjustments to this parameter.
+
+    @note Here there are just very few points in the overlapping region between classes, giving a smaller value to **FRAC_LINEAR_SEP** the density of points can be incremented and the impact of the parameter **CvSVM::C_SVC** explored deeply.
+       -   *Termination Criteria of the algorithm*. The maximum number of iterations has to be
+            increased considerably in order to solve correctly a problem with non-linearly separable
+            training data. In particular, we have increased in five orders of magnitude this value.
 
 3.  **Train the SVM**
 
-We call the method @ref cv::CvSVM::train to build the SVM model. Watch out that the training
-process may take a quite long time. Have patiance when your run the program.
-@code{.cpp}
-CvSVM svm;
-svm.train(trainData, labels, Mat(), Mat(), params);
-@endcode
+    We call the method @ref cv::ml::SVM::train to build the SVM model. Watch out that the training
+    process may take a quite long time. Have patiance when your run the program.
+    @code{.cpp}
+    CvSVM svm;
+    svm.train(trainData, labels, Mat(), Mat(), params);
+    @endcode
+
 4.  **Show the Decision Regions**
 
-The method @ref cv::CvSVM::predict is used to classify an input sample using a trained SVM. In
-this example we have used this method in order to color the space depending on the prediction done
-by the SVM. In other words, an image is traversed interpreting its pixels as points of the
-Cartesian plane. Each of the points is colored depending on the class predicted by the SVM; in
-dark green if it is the class with label 1 and in dark blue if it is the class with label 2.
-@code{.cpp}
-Vec3b green(0,100,0), blue (100,0,0);
-for (int i = 0; i < I.rows; ++i)
-     for (int j = 0; j < I.cols; ++j)
-     {
-          Mat sampleMat = (Mat_<float>(1,2) << i, j);
-          float response = svm.predict(sampleMat);
+    The method @ref cv::ml::SVM::predict is used to classify an input sample using a trained SVM. In
+    this example we have used this method in order to color the space depending on the prediction done
+    by the SVM. In other words, an image is traversed interpreting its pixels as points of the
+    Cartesian plane. Each of the points is colored depending on the class predicted by the SVM; in
+    dark green if it is the class with label 1 and in dark blue if it is the class with label 2.
+    @code{.cpp}
+    Vec3b green(0,100,0), blue (100,0,0);
+    for (int i = 0; i < I.rows; ++i)
+         for (int j = 0; j < I.cols; ++j)
+         {
+              Mat sampleMat = (Mat_<float>(1,2) << i, j);
+              float response = svm.predict(sampleMat);
 
-          if      (response == 1)    I.at<Vec3b>(j, i)  = green;
-          else if (response == 2)    I.at<Vec3b>(j, i)  = blue;
-     }
-@endcode
+              if      (response == 1)    I.at<Vec3b>(j, i)  = green;
+              else if (response == 2)    I.at<Vec3b>(j, i)  = blue;
+         }
+    @endcode
+
 5.  **Show the training data**
 
-The method @ref cv::circle is used to show the samples that compose the training data. The samples
-of the class labeled with 1 are shown in light green and in light blue the samples of the class
-labeled with 2.
-@code{.cpp}
-int thick = -1;
-int lineType = 8;
-float px, py;
-// Class 1
-for (int i = 0; i < NTRAINING_SAMPLES; ++i)
-{
-     px = trainData.at<float>(i,0);
-     py = trainData.at<float>(i,1);
-     circle(I, Point( (int) px,  (int) py ), 3, Scalar(0, 255, 0), thick, lineType);
-}
-// Class 2
-for (int i = NTRAINING_SAMPLES; i <2*NTRAINING_SAMPLES; ++i)
-{
-     px = trainData.at<float>(i,0);
-     py = trainData.at<float>(i,1);
-     circle(I, Point( (int) px, (int) py ), 3, Scalar(255, 0, 0), thick, lineType);
-}
-@endcode
+    The method @ref cv::circle is used to show the samples that compose the training data. The samples
+    of the class labeled with 1 are shown in light green and in light blue the samples of the class
+    labeled with 2.
+    @code{.cpp}
+    int thick = -1;
+    int lineType = 8;
+    float px, py;
+    // Class 1
+    for (int i = 0; i < NTRAINING_SAMPLES; ++i)
+    {
+         px = trainData.at<float>(i,0);
+         py = trainData.at<float>(i,1);
+         circle(I, Point( (int) px,  (int) py ), 3, Scalar(0, 255, 0), thick, lineType);
+    }
+    // Class 2
+    for (int i = NTRAINING_SAMPLES; i <2*NTRAINING_SAMPLES; ++i)
+    {
+         px = trainData.at<float>(i,0);
+         py = trainData.at<float>(i,1);
+         circle(I, Point( (int) px, (int) py ), 3, Scalar(255, 0, 0), thick, lineType);
+    }
+    @endcode
+
 6.  **Support vectors**
 
-We use here a couple of methods to obtain information about the support vectors. The method @ref
-cv::CvSVM::get_support_vector_count outputs the total number of support vectors used in the
-problem and with the method @ref cv::CvSVM::get_support_vector we obtain each of the support
-vectors using an index. We have used this methods here to find the training examples that are
-support vectors and highlight them.
-@code{.cpp}
-thick = 2;
-lineType  = 8;
-int x     = svm.get_support_vector_count();
+    We use here a couple of methods to obtain information about the support vectors. The method
+    @ref cv::ml::SVM::getSupportVectors obtain all support vectors.
+    We have used this methods here to find the training examples that are
+    support vectors and highlight them.
+    @code{.cpp}
+    thick = 2;
+    lineType  = 8;
+    int x     = svm.get_support_vector_count();
 
-for (int i = 0; i < x; ++i)
-{
-     const float* v = svm.get_support_vector(i);
-     circle(     I,  Point( (int) v[0], (int) v[1]), 6, Scalar(128, 128, 128), thick, lineType);
-}
-@endcode
+    for (int i = 0; i < x; ++i)
+    {
+         const float* v = svm.get_support_vector(i);
+         circle(     I,  Point( (int) v[0], (int) v[1]), 6, Scalar(128, 128, 128), thick, lineType);
+    }
+    @endcode
+
 Results
 -------
 
@@ -245,14 +250,12 @@ Results
     and some blue points lay on the green one.
 -   Finally the support vectors are shown using gray rings around the training examples.
 
-![image](images/result.png)
+![image](images/svm_non_linear_result.png)
 
-You may observe a runtime instance of this on the [YouTube
-here](https://www.youtube.com/watch?v=vFv2yPcSo-Q).
+You may observe a runtime instance of this on the [YouTube here](https://www.youtube.com/watch?v=vFv2yPcSo-Q).
 
 \htmlonly
 <div align="center">
 <iframe title="Support Vector Machines for Non-Linearly Separable Data" width="560" height="349" src="http://www.youtube.com/embed/vFv2yPcSo-Q?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
 </div>
 \endhtmlonly
-

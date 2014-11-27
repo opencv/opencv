@@ -20,8 +20,8 @@ straight lines. \#. To apply the Transform, first an edge detection pre-processi
 
 1.  As you know, a line in the image space can be expressed with two variables. For example:
 
-    a.  In the **Cartesian coordinate system:** Parameters: \f$(m,b)\f$.
-    b.  In the **Polar coordinate system:** Parameters: \f$(r,\theta)\f$
+    -#  In the **Cartesian coordinate system:** Parameters: \f$(m,b)\f$.
+    -#  In the **Polar coordinate system:** Parameters: \f$(r,\theta)\f$
 
     ![image](images/Hough_Lines_Tutorial_Theory_0.jpg)
 
@@ -180,7 +180,7 @@ Explanation
     available for this purpose:
 
 3.  **Standard Hough Line Transform**
-    a.  First, you apply the Transform:
+    -#  First, you apply the Transform:
         @code{.cpp}
         vector<Vec2f> lines;
         HoughLines(dst, lines, 1, CV_PI/180, 100, 0, 0 );
@@ -196,7 +196,7 @@ Explanation
         -   *threshold*: The minimum number of intersections to "*detect*" a line
         -   *srn* and *stn*: Default parameters to zero. Check OpenCV reference for more info.
 
-    b.  And then you display the result by drawing the lines.
+    -#  And then you display the result by drawing the lines.
         @code{.cpp}
         for( size_t i = 0; i < lines.size(); i++ )
         {
@@ -212,7 +212,7 @@ Explanation
         }
         @endcode
 4.  **Probabilistic Hough Line Transform**
-    a.  First you apply the transform:
+    -#  First you apply the transform:
         @code{.cpp}
         vector<Vec4i> lines;
         HoughLinesP(dst, lines, 1, CV_PI/180, 50, 50, 10 );
@@ -231,7 +231,7 @@ Explanation
             this number of points are disregarded.
         -   *maxLineGap*: The maximum gap between two points to be considered in the same line.
 
-    b.  And then you display the result by drawing the lines.
+    -#  And then you display the result by drawing the lines.
         @code{.cpp}
         for( size_t i = 0; i < lines.size(); i++ )
         {
@@ -267,4 +267,3 @@ We get the following result by using the Probabilistic Hough Line Transform:
 You may observe that the number of lines detected vary while you change the *threshold*. The
 explanation is sort of evident: If you establish a higher threshold, fewer lines will be detected
 (since you will need more points to declare a line detected).
-

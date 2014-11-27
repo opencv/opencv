@@ -22,7 +22,7 @@ In this tutorial you will learn how to:
 Code
 ----
 
-Let's modify the program made in the tutorial @ref Adding_Images. We will let the user enter the
+Let's modify the program made in the tutorial @ref tutorial_adding_images. We will let the user enter the
 \f$\alpha\f$ value by using the Trackbar.
 @code{.cpp}
 #include <opencv2/opencv.hpp>
@@ -82,6 +82,7 @@ int main( int argc, char** argv )
   return 0;
 }
 @endcode
+
 Explanation
 -----------
 
@@ -122,7 +123,6 @@ We only analyze the code that is related to Trackbar:
     }
     @endcode
     Note that:
-
     -   We use the value of **alpha_slider** (integer) to get a double value for **alpha**.
     -   **alpha_slider** is updated each time the trackbar is displaced by the user.
     -   We define *src1*, *src2*, *dist*, *alpha*, *alpha_slider* and *beta* as global variables,
@@ -135,10 +135,8 @@ Result
 
     ![image](images/Adding_Trackbars_Tutorial_Result_0.jpg)
 
--   As a manner of practice, you can also add 02 trackbars for the program made in @ref
-    Basic_Linear_Transform. One trackbar to set \f$\alpha\f$ and another for \f$\beta\f$. The output might
+-   As a manner of practice, you can also add 02 trackbars for the program made in
+    @ref tutorial_basic_linear_transform. One trackbar to set \f$\alpha\f$ and another for \f$\beta\f$. The output might
     look like:
 
     ![image](images/Adding_Trackbars_Tutorial_Result_1.jpg)
-
-

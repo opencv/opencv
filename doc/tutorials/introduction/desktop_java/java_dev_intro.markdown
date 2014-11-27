@@ -6,8 +6,8 @@ Android development. This guide will help you to create your first Java (or Scal
 OpenCV. We will use either [Apache Ant](http://ant.apache.org/) or [Simple Build Tool
 (SBT)](http://www.scala-sbt.org/) to build the application.
 
-If you want to use Eclipse head to @ref Java_Eclipse. For further reading after this guide, look at
-the @ref Android_Dev_Intro tutorials.
+If you want to use Eclipse head to @ref tutorial_java_eclipse. For further reading after this guide, look at
+the @ref tutorial_android_dev_intro tutorials.
 
 What we'll do in this guide
 ---------------------------
@@ -58,19 +58,23 @@ or
 @code{.bat}
 cmake -DBUILD_SHARED_LIBS=OFF -G "Visual Studio 10" ..
 @endcode
+
 @note When OpenCV is built as a set of **static** libraries (-DBUILD_SHARED_LIBS=OFF option) the
 Java bindings dynamic library is all-sufficient, i.e. doesn't depend on other OpenCV libs, but
-includes all the OpenCV code inside. Examine the output of CMake and ensure java is one of the
+includes all the OpenCV code inside.
+
+Examine the output of CMake and ensure java is one of the
 modules "To be built". If not, it's likely you're missing a dependency. You should troubleshoot by
 looking through the CMake output for any Java-related tools that aren't found and installing them.
 
 ![image](images/cmake_output.png)
 
 @note If CMake can't find Java in your system set the JAVA_HOME environment variable with the path to installed JDK before running it. E.g.:
-   @code{.bash}
-    export JAVA_HOME=/usr/lib/jvm/java-6-oracle
-    cmake -DBUILD_SHARED_LIBS=OFF ..
-    @endcode
+@code{.bash}
+export JAVA_HOME=/usr/lib/jvm/java-6-oracle
+cmake -DBUILD_SHARED_LIBS=OFF ..
+@endcode
+
 Now start the build:
 @code{.bash}
 make -j8
@@ -87,72 +91,23 @@ Java sample with Ant
 --------------------
 
 @note The described sample is provided with OpenCV library in the `opencv/samples/java/ant`
-folder. \* Create a folder where you'll develop this sample application.
+folder.
+
+-   Create a folder where you'll develop this sample application.
 
 -   In this folder create the `build.xml` file with the following content using any text editor:
-    @code{.xml}
-    <project name="SimpleSample" basedir="." default="rebuild-run">
-
-        <property name="src.dir"     value="src"/>
-
-        <property name="lib.dir"     value="\f${ocvJarDir}"/>
-        <path id="classpath">
-            <fileset dir="\f${lib.dir}" includes="**/*.jar"/>
-        </path>
-
-        <property name="build.dir"   value="build"/>
-        <property name="classes.dir" value="\f${build.dir}/classes"/>
-        <property name="jar.dir"     value="\f${build.dir}/jar"/>
-
-        <property name="main-class"  value="\f${ant.project.name}"/>
-
-
-        <target name="clean">
-            <delete dir="\f${build.dir}"/>
-        </target>
-
-        <target name="compile">
-            <mkdir dir="\f${classes.dir}"/>
-            <javac includeantruntime="false" srcdir="\f${src.dir}" destdir="\f${classes.dir}" classpathref="classpath"/>
-        </target>
-
-        <target name="jar" depends="compile">
-            <mkdir dir="\f${jar.dir}"/>
-            <jar destfile="\f${jar.dir}/\f${ant.project.name}.jar" basedir="\f${classes.dir}">
-                <manifest>
-                    <attribute name="Main-Class" value="\f${main-class}"/>
-                </manifest>
-            </jar>
-        </target>
-
-        <target name="run" depends="jar">
-            <java fork="true" classname="\f${main-class}">
-                <sysproperty key="java.library.path" path="\f${ocvLibDir}"/>
-                <classpath>
-                    <path refid="classpath"/>
-                    <path location="\f${jar.dir}/\f${ant.project.name}.jar"/>
-                </classpath>
-            </java>
-        </target>
-
-        <target name="rebuild" depends="clean,jar"/>
-
-        <target name="rebuild-run" depends="clean,run"/>
-
-    </project>
-    @endcode
-@note This XML file can be reused for building other Java applications. It describes a common folder structure in the lines 3 - 12 and common targets for compiling and running the application.
-   When reusing this XML don't forget to modify the project name in the line 1, that is also the
+    @include samples/java/ant/build.xml
+    @note This XML file can be reused for building other Java applications. It describes a common folder structure in the lines 3 - 12 and common targets for compiling and running the application.
+    When reusing this XML don't forget to modify the project name in the line 1, that is also the
     name of the main class (line 14). The paths to OpenCV jar and jni lib are expected as parameters
-    ("\\f${ocvJarDir}" in line 5 and "\\f${ocvLibDir}" in line 37), but you can hardcode these paths for
+    ("${ocvJarDir}" in line 5 and "${ocvLibDir}" in line 37), but you can hardcode these paths for
     your convenience. See [Ant documentation](http://ant.apache.org/manual/) for detailed
     description of its build file format.
 
 -   Create an `src` folder next to the `build.xml` file and a `SimpleSample.java` file in it.
--   
 
-    Put the following Java code into the `SimpleSample.java` file:
-   @code{.java}
+-   Put the following Java code into the `SimpleSample.java` file:
+    @code{.java}
         import org.opencv.core.Core;
         import org.opencv.core.Mat;
         import org.opencv.core.CvType;
@@ -175,20 +130,18 @@ folder. \* Create a folder where you'll develop this sample application.
 
         }
         @endcode
--   
+-   Run the following command in console in the folder containing `build.xml`:
+    @code{.bash}
+    ant -DocvJarDir=path/to/dir/containing/opencv-244.jar -DocvLibDir=path/to/dir/containing/opencv_java244/native/library
+    @endcode
+    For example:
+    @code{.bat}
+    ant -DocvJarDir=X:\opencv-2.4.4\bin -DocvLibDir=X:\opencv-2.4.4\bin\Release
+    @endcode
+    The command should initiate [re]building and running the sample. You should see on the
+    screen something like this:
 
-    Run the following command in console in the folder containing `build.xml`:
-   @code{.bash}
-        ant -DocvJarDir=path/to/dir/containing/opencv-244.jar -DocvLibDir=path/to/dir/containing/opencv_java244/native/library
-        @endcode
-        For example:
-        @code{.bat}
-        ant -DocvJarDir=X:\opencv-2.4.4\bin -DocvLibDir=X:\opencv-2.4.4\bin\Release
-        @endcode
-        The command should initiate [re]building and running the sample. You should see on the
-        screen something like this:
-
-        ![image](images/ant_output.png)
+    ![image](images/ant_output.png)
 
 SBT project for Java and Scala
 ------------------------------
@@ -370,4 +323,3 @@ It should also write the following image to `faceDetection.png`:
 
 You're done! Now you have a sample Java application working with OpenCV, so you can start the work
 on your own. We wish you good luck and many years of joyful life!
-

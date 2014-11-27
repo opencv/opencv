@@ -1,17 +1,16 @@
 Using OpenCV with Eclipse (plugin CDT) {#tutorial_linux_eclipse}
 ======================================
 
-@note Two ways, one by forming a project directly, and another by CMake Prerequisites
-===============
-
+Prerequisites
+-------------
+Two ways, one by forming a project directly, and another by CMake Prerequisites
 1.  Having installed [Eclipse](http://www.eclipse.org/) in your workstation (only the CDT plugin for
     C/C++ is needed). You can follow the following steps:
     -   Go to the Eclipse site
     -   Download [Eclipse IDE for C/C++
         Developers](http://www.eclipse.org/downloads/packages/eclipse-ide-cc-developers/heliossr2) .
         Choose the link according to your workstation.
-
-2.  Having installed OpenCV. If not yet, go @ref here \<Linux-Installation\>.
+2.  Having installed OpenCV. If not yet, go @ref tutorial_linux_install "here".
 
 Making a project
 ----------------
@@ -75,46 +74,47 @@ Making a project
     -   Go to **Project--\>Properties**
     -   In **C/C++ Build**, click on **Settings**. At the right, choose the **Tool Settings** Tab.
         Here we will enter the headers and libraries info:
-        a.  In **GCC C++ Compiler**, go to **Includes**. In **Include paths(-l)** you should
+        -#  In **GCC C++ Compiler**, go to **Includes**. In **Include paths(-l)** you should
             include the path of the folder where opencv was installed. In our example, this is
             /usr/local/include/opencv.
-    
+
             ![image](images/a9.png)
-    
-@note If you do not know where your opencv files are, open the **Terminal** and type:
-   @code{.bash}
-    pkg-config --cflags opencv
-    @endcode
-    For instance, that command gave me this output:
-    @code{.bash}
-    -I/usr/local/include/opencv -I/usr/local/include
-    @endcode
-b.  Now go to **GCC C++ Linker**,there you have to fill two spaces:
 
-    First in **Library search path (-L)** you have to write the path to where the opencv libraries
-    reside, in my case the path is: :
+            @note If you do not know where your opencv files are, open the **Terminal** and type:
+            @code{.bash}
+            pkg-config --cflags opencv
+            @endcode
+            For instance, that command gave me this output:
+            @code{.bash}
+            -I/usr/local/include/opencv -I/usr/local/include
+            @endcode
 
-        /usr/local/lib
+        -#  Now go to **GCC C++ Linker**,there you have to fill two spaces:
 
-    Then in **Libraries(-l)** add the OpenCV libraries that you may need. Usually just the 3 first
-    on the list below are enough (for simple applications) . In my case, I am putting all of them
-    since I plan to use the whole bunch:
+            First in **Library search path (-L)** you have to write the path to where the opencv libraries
+            reside, in my case the path is: :
 
-    opencv_core opencv_imgproc opencv_highgui opencv_ml opencv_video opencv_features2d
-    opencv_calib3d opencv_objdetect opencv_contrib opencv_legacy opencv_flann
+                /usr/local/lib
 
-    ![image](images/a10.png)
+            Then in **Libraries(-l)** add the OpenCV libraries that you may need. Usually just the 3 first
+            on the list below are enough (for simple applications) . In my case, I am putting all of them
+            since I plan to use the whole bunch:
 
-    If you don't know where your libraries are (or you are just psychotic and want to make sure
-    the path is fine), type in **Terminal**:
-    @code{.bash}
-    pkg-config --libs opencv
-    @endcode
-    My output (in case you want to check) was: .. code-block:: bash
+            opencv_core opencv_imgproc opencv_highgui opencv_ml opencv_video opencv_features2d
+            opencv_calib3d opencv_objdetect opencv_contrib opencv_legacy opencv_flann
 
-    -L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_ml -lopencv_video -lopencv_features2d -lopencv_calib3d -lopencv_objdetect -lopencv_contrib -lopencv_legacy -lopencv_flann
+            ![image](images/a10.png)
 
-    Now you are done. Click **OK**
+            If you don't know where your libraries are (or you are just psychotic and want to make sure
+            the path is fine), type in **Terminal**:
+            @code{.bash}
+            pkg-config --libs opencv
+            @endcode
+            My output (in case you want to check) was:
+            @code{.bash}
+            -L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_ml -lopencv_video -lopencv_features2d -lopencv_calib3d -lopencv_objdetect -lopencv_contrib -lopencv_legacy -lopencv_flann
+            @endcode
+            Now you are done. Click **OK**
 
 -   Your project should be ready to be built. For this, go to **Project-\>Build all**
 
@@ -171,7 +171,7 @@ int main ( int argc, char **argv )
 }
 @endcode
 1.  Create a build directory, say, under *foo*: mkdir /build. Then cd build.
-2.  Put a *CmakeLists.txt* file in build:
+2.  Put a `CmakeLists.txt` file in build:
 @code{.bash}
 PROJECT( helloworld_proj )
 FIND_PACKAGE( OpenCV REQUIRED )
@@ -180,21 +180,20 @@ TARGET_LINK_LIBRARIES( helloworld \f${OpenCV_LIBS} )
 @endcode
 1.  Run: cmake-gui .. and make sure you fill in where opencv was built.
 2.  Then click configure and then generate. If it's OK, **quit cmake-gui**
-3.  Run make -j4 *(the -j4 is optional, it just tells the compiler to build in 4 threads)*. Make
+3.  Run `make -j4` (the -j4 is optional, it just tells the compiler to build in 4 threads). Make
     sure it builds.
-4.  Start eclipse . Put the workspace in some directory but **not** in foo or foo\\\\build
+4.  Start eclipse. Put the workspace in some directory but **not** in foo or `foo\build`
 5.  Right click in the Project Explorer section. Select Import And then open the C/C++ filter.
-    Choose *Existing Code* as a Makefile Project\`\`
-6.  Name your project, say *helloworld*. Browse to the Existing Code location foo\\\\build (where
+    Choose *Existing Code* as a Makefile Project.
+6.  Name your project, say *helloworld*. Browse to the Existing Code location `foo\build` (where
     you ran your cmake-gui from). Select *Linux GCC* in the *"Toolchain for Indexer Settings"* and
     press *Finish*.
 7.  Right click in the Project Explorer section. Select Properties. Under C/C++ Build, set the
-    *build directory:* from something like \\f${workspace_loc:/helloworld} to
-    \\f${workspace_loc:/helloworld}/build since that's where you are building to.
+    *build directory:* from something like `${workspace_loc:/helloworld}` to
+    `${workspace_loc:/helloworld}/build` since that's where you are building to.
 
-a.  You can also optionally modify the Build command: from make to something like
-    make VERBOSE=1 -j4 which tells the compiler to produce detailed symbol files for debugging and
-    also to compile in 4 parallel threads.
+    -#  You can also optionally modify the Build command: from make to something like
+        `make VERBOSE=1 -j4` which tells the compiler to produce detailed symbol files for debugging and
+        also to compile in 4 parallel threads.
 
-1.  Done!
-
+8.  Done!

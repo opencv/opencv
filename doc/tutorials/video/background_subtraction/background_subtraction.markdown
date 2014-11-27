@@ -40,11 +40,11 @@ Code
 In the following you can find the source code. We will let the user chose to process either a video
 file or a sequence of images.
 
--   
+-
 
     Two different methods are used to generate two foreground masks:
-   1.  @ref cv::MOG
-        2.  @ref cv::MOG2
+    1.  @ref cv::bgsegm::BackgroundSubtractorMOG
+    2.  @ref cv::bgsegm::BackgroundSubtractorMOG2
 
 The results as well as the input data are shown on the screen.
 @code{.cpp}
@@ -389,4 +389,3 @@ References
 -   Antoine Vacavant, Thierry Chateau, Alexis Wilhelm and Laurent Lequievre. A Benchmark Dataset for
     Foreground/Background Extraction. In ACCV 2012, Workshop: Background Models Challenge, LNCS
     7728, 291-300. November 2012, Daejeon, Korea.
-
