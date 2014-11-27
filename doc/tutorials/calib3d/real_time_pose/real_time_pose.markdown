@@ -51,8 +51,7 @@ plane:
 
 \f[s\ \left [ \begin{matrix}   u \\   v \\  1 \end{matrix} \right ] = \left [ \begin{matrix}   f_x & 0 & c_x \\  0 & f_y & c_y \\   0 & 0 & 1 \end{matrix} \right ] \left [ \begin{matrix}  r_{11} & r_{12} & r_{13} & t_1 \\ r_{21} & r_{22} & r_{23} & t_2 \\  r_{31} & r_{32} & r_{33} & t_3 \end{matrix} \right ] \left [ \begin{matrix}  X \\  Y \\   Z\\ 1 \end{matrix} \right ]\f]
 
-The complete documentation of how to manage with this equations is in @ref cv::Camera Calibration
-and 3D Reconstruction .
+The complete documentation of how to manage with this equations is in @ref calib3d .
 
 Source code
 -----------
@@ -80,7 +79,7 @@ then uses the mesh along with the [Möller–Trumbore intersection
 algorithm](http://http://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm/)
 to compute the 3D coordinates of the found features. Finally, the 3D points and the descriptors
 are stored in different lists in a file with YAML format which each row is a different point. The
-technical background on how to store the files can be found in the @ref fileInputOutputXMLYAML
+technical background on how to store the files can be found in the @ref tutorial_file_input_output_with_xml_yml
 tutorial.
 
 ![image](images/registration.png)
@@ -91,9 +90,9 @@ The aim of this application is estimate in real time the object pose given its 3
 
 The application starts up loading the 3D textured model in YAML file format with the same
 structure explained in the model registration program. From the scene, the ORB features and
-descriptors are detected and extracted. Then, is used @ref cv::FlannBasedMatcher with @ref
-cv::LshIndexParams to do the matching between the scene descriptors and the model descriptors.
-Using the found matches along with @ref cv::solvePnPRansac function the @ref cv::R\` and \f$t\f$ of
+descriptors are detected and extracted. Then, is used @ref cv::FlannBasedMatcher with
+@ref cv::flann::GenericIndex to do the matching between the scene descriptors and the model descriptors.
+Using the found matches along with @ref cv::solvePnPRansac function the `R` and `t` of
 the camera are computed. Finally, a KalmanFilter is applied in order to reject bad poses.
 
 In the case that you compiled OpenCV with the samples, you can find it in opencv/build/bin/cpp-tutorial-pnp_detection\`.
@@ -242,7 +241,7 @@ implemented a *class* **RobustMatcher** which has a function for keypoints detec
 extraction. You can find it in
 `samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/src/RobusMatcher.cpp`. In your
 *RobusMatch* object you can use any of the 2D features detectors of OpenCV. In this case I used
-@ref cv::ORB features because is based on @ref cv::FAST to detect the keypoints and @ref cv::BRIEF
+@ref cv::ORB features because is based on @ref cv::FAST to detect the keypoints and @ref cv::xfeatures2d::BriefDescriptorExtractor
 to extract the descriptors which means that is fast and robust to rotations. You can find more
 detailed information about *ORB* in the documentation.
 
@@ -265,9 +264,9 @@ It is the first step in our detection algorithm. The main idea is to match the s
 with our model descriptors in order to know the 3D coordinates of the found features into the
 current scene.
 
-Firstly, we have to set which matcher we want to use. In this case is used @ref
-cv::FlannBasedMatcher matcher which in terms of computational cost is faster than the @ref
-cv::BruteForceMatcher matcher as we increase the trained collectction of features. Then, for
+Firstly, we have to set which matcher we want to use. In this case is used
+@ref cv::FlannBasedMatcher matcher which in terms of computational cost is faster than the
+@ref cv::BFMatcher matcher as we increase the trained collectction of features. Then, for
 FlannBased matcher the index created is *Multi-Probe LSH: Efficient Indexing for High-Dimensional
 Similarity Search* due to *ORB* descriptors are binary.
 
@@ -349,8 +348,8 @@ void RobustMatcher::robustMatch( const cv::Mat& frame, std::vector<cv::DMatch>& 
 }
 @endcode
 After the matches filtering we have to subtract the 2D and 3D correspondences from the found scene
-keypoints and our 3D model using the obtained *DMatches* vector. For more information about @ref
-cv::DMatch check the documentation.
+keypoints and our 3D model using the obtained *DMatches* vector. For more information about
+@ref cv::DMatch check the documentation.
 @code{.cpp}
 // -- Step 2: Find out the 2D/3D correspondences
 
@@ -385,8 +384,8 @@ solution.
 For the camera pose estimation I have implemented a *class* **PnPProblem**. This *class* has 4
 atributes: a given calibration matrix, the rotation matrix, the translation matrix and the
 rotation-translation matrix. The intrinsic calibration parameters of the camera which you are
-using to estimate the pose are necessary. In order to obtain the parameters you can check @ref
-CameraCalibrationSquareChessBoardTutorial and @ref cameraCalibrationOpenCV tutorials.
+using to estimate the pose are necessary. In order to obtain the parameters you can check
+@ref tutorial_camera_calibration_square_chess and @ref tutorial_camera_calibration tutorials.
 
 The following code is how to declare the *PnPProblem class* in the main program:
 @code{.cpp}
@@ -543,9 +542,9 @@ Filter will be applied after detected a given number of inliers.
 
 You can find more information about what [Kalman
 Filter](http://en.wikipedia.org/wiki/Kalman_filter) is. In this tutorial it's used the OpenCV
-implementation of the @ref cv::Kalman Filter based on [Linear Kalman Filter for position and
-orientation tracking](http://campar.in.tum.de/Chair/KalmanFilter) to set the dynamics and
-measurement models.
+implementation of the @ref cv::KalmanFilter based on
+[Linear Kalman Filter for position and orientation tracking](http://campar.in.tum.de/Chair/KalmanFilter)
+to set the dynamics and measurement models.
 
 Firstly, we have to define our state vector which will have 18 states: the positional data (x,y,z)
 with its first and second derivatives (velocity and acceleration), then rotation is added in form
@@ -796,4 +795,3 @@ here](http://www.youtube.com/user/opencvdev/videos).
 <iframe title="Pose estimation of textured object using OpenCV in cluttered background" width="560" height="349" src="http://www.youtube.com/embed/YLS9bWek78k?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
 </div>
 \endhtmlonly
-

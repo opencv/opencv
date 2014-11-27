@@ -7,7 +7,7 @@ Goal
 In this tutorial you will learn:
 
 -   What an image histogram is and why it is useful
--   To equalize histograms of images by using the OpenCV <function@ref> cv::equalizeHist
+-   To equalize histograms of images by using the OpenCV function @ref cv::equalizeHist
 
 Theory
 ------
@@ -59,54 +59,13 @@ Code
 -   **What does this program do?**
     -   Loads an image
     -   Convert the original image to grayscale
-    -   Equalize the Histogram by using the OpenCV function @ref cv::EqualizeHist
+    -   Equalize the Histogram by using the OpenCV function @ref cv::equalizeHist
     -   Display the source and equalized images in a window.
 -   **Downloadable code**: Click
     [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/EqualizeHist_Demo.cpp)
 -   **Code at glance:**
-@code{.cpp}
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
-#include <iostream>
-#include <stdio.h>
+    @includelineno samples/cpp/tutorial_code/Histograms_Matching/EqualizeHist_Demo.cpp
 
-using namespace cv;
-using namespace std;
-
-/*  @function main */
-int main( int argc, char** argv )
-{
-  Mat src, dst;
-
-  char* source_window = "Source image";
-  char* equalized_window = "Equalized Image";
-
-  /// Load image
-  src = imread( argv[1], 1 );
-
-  if( !src.data )
-    { cout<<"Usage: ./Histogram_Demo <path_to_image>"<<endl;
-      return -1;}
-
-  /// Convert to grayscale
-  cvtColor( src, src, COLOR_BGR2GRAY );
-
-  /// Apply Histogram Equalization
-  equalizeHist( src, dst );
-
-  /// Display results
-  namedWindow( source_window, WINDOW_AUTOSIZE );
-  namedWindow( equalized_window, WINDOW_AUTOSIZE );
-
-  imshow( source_window, src );
-  imshow( equalized_window, dst );
-
-  /// Wait until user exits the program
-  waitKey(0);
-
-  return 0;
-}
-@endcode
 Explanation
 -----------
 
@@ -149,6 +108,7 @@ Explanation
     waitKey(0);
     return 0;
     @endcode
+
 Results
 -------
 
@@ -173,8 +133,6 @@ Results
 
     Notice how the number of pixels is more distributed through the intensity range.
 
-**note**
-
+@note
 Are you wondering how did we draw the Histogram figures shown above? Check out the following
 tutorial!
-

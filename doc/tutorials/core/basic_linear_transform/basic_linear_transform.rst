@@ -204,6 +204,6 @@ Result
 
 * We get this:
 
-  .. image:: images/Basic_Linear_Transform_Tutorial_Result_0.jpg
+  .. image:: images/Basic_Linear_Transform_Tutorial_Result_big.jpg
      :alt: Basic Linear Transform - Final Result
      :align: center

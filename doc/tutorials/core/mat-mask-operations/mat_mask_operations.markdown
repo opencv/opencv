@@ -67,7 +67,7 @@ At first we make sure that the input images data is in unsigned char format. For
 CV_Assert(myImage.depth() == CV_8U);  // accept only uchar images
 @endcode
 We create an output image with the same size and the same type as our input. As you can see in the
-@ref How_Image_Stored_Memory section, depending on the number of channels we may have one or more
+@ref tutorial_how_to_scan_images_storing "storing" section, depending on the number of channels we may have one or more
 subcolumns. We will iterate through them via pointers so the total number of elements depends from
 this number.
 @code{.cpp}
@@ -104,6 +104,7 @@ Result.row(Result.rows - 1).setTo(Scalar(0)); // The bottom row
 Result.col(0).setTo(Scalar(0));               // The left column
 Result.col(Result.cols - 1).setTo(Scalar(0)); // The right column
 @endcode
+
 The filter2D function
 ---------------------
 

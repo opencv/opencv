@@ -1,23 +1,23 @@
-How to build applications with OpenCV inside the *Microsoft Visual Studio* {#tutorial_windows_visual_studio_Opencv}
+How to build applications with OpenCV inside the "Microsoft Visual Studio" {#tutorial_windows_visual_studio_Opencv}
 ==========================================================================
 
 Everything I describe here will apply to the C\\C++ interface of OpenCV. I start out from the
-assumption that you have read and completed with success the @ref Windows_Installation tutorial.
+assumption that you have read and completed with success the @ref tutorial_windows_install tutorial.
 Therefore, before you go any further make sure you have an OpenCV directory that contains the OpenCV
-header files plus binaries and you have set the environment variables as @ref described here
-\<WindowsSetPathAndEnviromentVariable\>.
+header files plus binaries and you have set the environment variables as described here
+@ref tutorial_windows_install_path.
 
 ![image](images/OpenCV_Install_Directory.jpg)
 
 The OpenCV libraries, distributed by us, on the Microsoft Windows operating system are in a
-**D**ynamic **L**inked **L**ibraries (*DLL*). These have the advantage that all the content of the
+Dynamic Linked Libraries (*DLL*). These have the advantage that all the content of the
 library are loaded only at runtime, on demand, and that countless programs may use the same library
 file. This means that if you have ten applications using the OpenCV library, no need to have around
 a version for each one of them. Of course you need to have the *dll* of the OpenCV on all systems
 where you want to run your application.
 
 Another approach is to use static libraries that have *lib* extensions. You may build these by using
-our source files as described in the @ref Windows_Installation tutorial. When you use this the
+our source files as described in the @ref tutorial_windows_install tutorial. When you use this the
 library will be built-in inside your *exe* file. So there is no chance that the user deletes them,
 for some reason. As a drawback your application will be larger one and as, it will take more time to
 load it during its startup.
@@ -103,13 +103,14 @@ further to someone else who has a different OpenCV install path. Moreover, fixin
 to manually modifying every explicit path. A more elegant solution is to use the environment
 variables. Anything that you put inside a parenthesis started with a dollar sign will be replaced at
 runtime with the current environment variables value. Here comes in play the environment variable
-setting we already made in our @ref previous tutorial \<WindowsSetPathAndEnviromentVariable\>.
+setting we already made in our previous tutorial @ref tutorial_windows_install_path.
 
 Next go to the Linker --\> General and under the *"Additional Library Directories"* add the libs
 directory:
 @code{.bash}
-\f$(OPENCV_DIR)\lib
+$(OPENCV_DIR)\lib
 @endcode
+
 ![image](images/PropertySheetOpenCVLib.jpg)
 
 Then you need to specify the libraries in which the linker should look into. To do this go to the
@@ -233,5 +234,4 @@ cumbersome task. Luckily, in the Visual Studio there is a menu to automate all t
 
 Specify here the name of the inputs and while you start your application from the Visual Studio
 enviroment you have automatic argument passing. In the next introductionary tutorial you'll see an
-in-depth explanation of the upper source code: @ref Display_Image.
-
+in-depth explanation of the upper source code: @ref tutorial_display_image.

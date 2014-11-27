@@ -11,7 +11,7 @@ Configuring Eclipse
 -------------------
 
 First, obtain a fresh release of OpenCV [from download page](http://opencv.org/downloads.html) and
-extract it under a simple location like C:\\OpenCV-2.4.6\\. I am using version 2.4.6, but the steps
+extract it under a simple location like `C:\OpenCV-2.4.6\`. I am using version 2.4.6, but the steps
 are more or less the same for other versions.
 
 Now, we will define OpenCV as a user library in Eclipse, so we can reuse the configuration for any
@@ -31,12 +31,12 @@ Now select your new user library and click Add External JARs....
 
 ![image](images/4-add-external-jars.png)
 
-Browse through C:\\OpenCV-2.4.6\\build\\java\\ and select opencv-246.jar. After adding the jar,
+Browse through `C:\OpenCV-2.4.6\build\java\` and select opencv-246.jar. After adding the jar,
 extend the opencv-246.jar and select Native library location and press Edit....
 
 ![image](images/5-native-library.png)
 
-Select External Folder... and browse to select the folder C:\\OpenCV-2.4.6\\build\\java\\x64. If you
+Select External Folder... and browse to select the folder `C:\OpenCV-2.4.6\build\java\x64`. If you
 have a 32-bit system you need to select the x86 folder instead of x64.
 
 ![image](images/6-external-folder.png)
@@ -86,4 +86,3 @@ When you run the code you should see 3x3 identity matrix as output.
 
 That is it, whenever you start a new project just add the OpenCV user library that you have defined
 to your project and you are good to go. Enjoy your powerful, less painful development environment :)
-

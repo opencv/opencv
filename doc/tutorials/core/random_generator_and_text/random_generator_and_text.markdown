@@ -13,15 +13,14 @@ In this tutorial you will learn how to:
 Code
 ----
 
--   In the previous tutorial (@ref Drawing_1) we drew diverse geometric figures, giving as input
-    parameters such as coordinates (in the form of @ref cv::Points ), color, thickness, etc. You
+-   In the previous tutorial (@ref tutorial_basic_geometric_drawing) we drew diverse geometric figures, giving as input
+    parameters such as coordinates (in the form of @ref cv::Point), color, thickness, etc. You
     might have noticed that we gave specific values for these arguments.
 -   In this tutorial, we intend to use *random* values for the drawing parameters. Also, we intend
     to populate our image with a big number of geometric figures. Since we will be initializing them
     in a random fashion, this process will be automatic and made by using *loops* .
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
     [here](http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/core/Matrix/Drawing_2.cpp)
-    .
 
 Explanation
 -----------
@@ -213,9 +212,9 @@ Explanation
     **image** minus the value of **i** (remember that for each pixel we are considering three values
     such as R, G and B, so each of them will be affected)
 
-Also remember that the substraction operation *always* performs internally a **saturate**
-operation, which means that the result obtained will always be inside the allowed range (no
-negative and between 0 and 255 for our example).
+    Also remember that the substraction operation *always* performs internally a **saturate**
+    operation, which means that the result obtained will always be inside the allowed range (no
+    negative and between 0 and 255 for our example).
 
 Result
 ------
@@ -247,6 +246,4 @@ functions, which will produce:
     colors and positions.
 8.  And the big end (which by the way expresses a big truth too):
 
-    ![image](images/Drawing_2_Tutorial_Result_7.jpg)
-
-
+    ![image](images/Drawing_2_Tutorial_Result_big.jpg)

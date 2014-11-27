@@ -8,7 +8,7 @@ In this tutorial you will learn how to:
 
 -   Use the @ref cv::DescriptorExtractor interface in order to find the feature vector correspondent
     to the keypoints. Specifically:
-    -   Use @ref cv::SurfDescriptorExtractor and its function @ref cv::compute to perform the
+    -   Use @ref cv::xfeatures2d::SURF and its function @ref cv::xfeatures2d::SURF::compute to perform the
         required calculations.
     -   Use a @ref cv::BFMatcher to match the features vector
     -   Use the function @ref cv::drawMatches to draw the detected matches.
@@ -78,14 +78,13 @@ int main( int argc, char** argv )
  void readme()
  { std::cout << " Usage: ./SURF_descriptor <img1> <img2>" << std::endl; }
 @endcode
+
 Explanation
 -----------
 
 Result
 ------
 
-1.  Here is the result after applying the BruteForce matcher between the two original images:
+Here is the result after applying the BruteForce matcher between the two original images:
 
-    ![image](images/Feature_Description_BruteForce_Result.jpg)
-
-
+![image](images/Feature_Description_BruteForce_Result.jpg)

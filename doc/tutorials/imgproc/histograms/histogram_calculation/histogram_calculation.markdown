@@ -10,7 +10,7 @@ In this tutorial you will learn how to:
 -   To calculate histograms of arrays of images by using the OpenCV function @ref cv::calcHist
 -   To normalize an array by using the function @ref cv::normalize
 
-@note In the last tutorial (@ref histogram_equalization) we talked about a particular kind of
+@note In the last tutorial (@ref tutorial_histogram_equalization) we talked about a particular kind of
 histogram called *Image histogram*. Now we will considerate it in its more general concept. Read on!
 
 ### What are histograms?
@@ -42,10 +42,10 @@ histogram called *Image histogram*. Now we will considerate it in its more gener
     keep count not only of color intensities, but of whatever image features that we want to measure
     (i.e. gradients, directions, etc).
 -   Let's identify some parts of the histogram:
-    a.  **dims**: The number of parameters you want to collect data of. In our example, **dims = 1**
+    -#  **dims**: The number of parameters you want to collect data of. In our example, **dims = 1**
         because we are only counting the intensity values of each pixel (in a greyscale image).
-    b.  **bins**: It is the number of **subdivisions** in each dim. In our example, **bins = 16**
-    c.  **range**: The limits for the values to be measured. In this case: **range = [0,255]**
+    -#  **bins**: It is the number of **subdivisions** in each dim. In our example, **bins = 16**
+    -#  **range**: The limits for the values to be measured. In this case: **range = [0,255]**
 -   What if you want to count two features? In this case your resulting histogram would be a 3D plot
     (in which x and y would be \f$bin_{x}\f$ and \f$bin_{y}\f$ for each feature and z would be the number of
     counts for each combination of \f$(bin_{x}, bin_{y})\f$. The same would apply for more features (of
@@ -68,82 +68,8 @@ Code
 -   **Downloadable code**: Click
     [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp)
 -   **Code at glance:**
-@code{.cpp}
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
-#include <iostream>
-#include <stdio.h>
+    @includelineno samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp
 
-using namespace std;
-using namespace cv;
-
-/*
- * @function main
- */
-int main( int argc, char** argv )
-{
-  Mat src, dst;
-
-  /// Load image
-  src = imread( argv[1], 1 );
-
-  if( !src.data )
-    { return -1; }
-
-  /// Separate the image in 3 places ( B, G and R )
-  vector<Mat> bgr_planes;
-  split( src, bgr_planes );
-
-  /// Establish the number of bins
-  int histSize = 256;
-
-  /// Set the ranges ( for B,G,R) )
-  float range[] = { 0, 256 } ;
-  const float* histRange = { range };
-
-  bool uniform = true; bool accumulate = false;
-
-  Mat b_hist, g_hist, r_hist;
-
-  /// Compute the histograms:
-  calcHist( &bgr_planes[0], 1, 0, Mat(), b_hist, 1, &histSize, &histRange, uniform, accumulate );
-  calcHist( &bgr_planes[1], 1, 0, Mat(), g_hist, 1, &histSize, &histRange, uniform, accumulate );
-  calcHist( &bgr_planes[2], 1, 0, Mat(), r_hist, 1, &histSize, &histRange, uniform, accumulate );
-
-  // Draw the histograms for B, G and R
-  int hist_w = 512; int hist_h = 400;
-  int bin_w = cvRound( (double) hist_w/histSize );
-
-  Mat histImage( hist_h, hist_w, CV_8UC3, Scalar( 0,0,0) );
-
-  /// Normalize the result to [ 0, histImage.rows ]
-  normalize(b_hist, b_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat() );
-  normalize(g_hist, g_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat() );
-  normalize(r_hist, r_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat() );
-
-  /// Draw for each channel
-  for( int i = 1; i < histSize; i++ )
-  {
-      line( histImage, Point( bin_w*(i-1), hist_h - cvRound(b_hist.at<float>(i-1)) ) ,
-                       Point( bin_w*(i), hist_h - cvRound(b_hist.at<float>(i)) ),
-                       Scalar( 255, 0, 0), 2, 8, 0  );
-      line( histImage, Point( bin_w*(i-1), hist_h - cvRound(g_hist.at<float>(i-1)) ) ,
-                       Point( bin_w*(i), hist_h - cvRound(g_hist.at<float>(i)) ),
-                       Scalar( 0, 255, 0), 2, 8, 0  );
-      line( histImage, Point( bin_w*(i-1), hist_h - cvRound(r_hist.at<float>(i-1)) ) ,
-                       Point( bin_w*(i), hist_h - cvRound(r_hist.at<float>(i)) ),
-                       Scalar( 0, 0, 255), 2, 8, 0  );
-  }
-
-  /// Display
-  namedWindow("calcHist Demo", WINDOW_AUTOSIZE );
-  imshow("calcHist Demo", histImage );
-
-  waitKey(0);
-
-  return 0;
-}
-@endcode
 Explanation
 -----------
 
@@ -169,26 +95,26 @@ Explanation
 
 4.  Now we are ready to start configuring the **histograms** for each plane. Since we are working
     with the B, G and R planes, we know that our values will range in the interval \f$[0,255]\f$
-    a.  Establish number of bins (5, 10...):
+    -#  Establish number of bins (5, 10...):
         @code{.cpp}
         int histSize = 256; //from 0 to 255
         @endcode
-    b.  Set the range of values (as we said, between 0 and 255 )
+    -#  Set the range of values (as we said, between 0 and 255 )
         @code{.cpp}
         /// Set the ranges ( for B,G,R) )
         float range[] = { 0, 256 } ; //the upper boundary is exclusive
         const float* histRange = { range };
         @endcode
-    c.  We want our bins to have the same size (uniform) and to clear the histograms in the
+    -#  We want our bins to have the same size (uniform) and to clear the histograms in the
         beginning, so:
         @code{.cpp}
         bool uniform = true; bool accumulate = false;
         @endcode
-    d.  Finally, we create the Mat objects to save our histograms. Creating 3 (one for each plane):
+    -#  Finally, we create the Mat objects to save our histograms. Creating 3 (one for each plane):
         @code{.cpp}
         Mat b_hist, g_hist, r_hist;
         @endcode
-    e.  We proceed to calculate the histograms by using the OpenCV function @ref cv::calcHist :
+    -#  We proceed to calculate the histograms by using the OpenCV function @ref cv::calcHist :
         @code{.cpp}
         /// Compute the histograms:
         calcHist( &bgr_planes[0], 1, 0, Mat(), b_hist, 1, &histSize, &histRange, uniform, accumulate );
@@ -254,18 +180,15 @@ Explanation
                          Scalar( 0, 0, 255), 2, 8, 0  );
     }
     @endcode
-    
     we use the expression:
-    
     @code{.cpp}
     b_hist.at<float>(i)
     @endcode
-    
     where \f$i\f$ indicates the dimension. If it were a 2D-histogram we would use something like:
-    
     @code{.cpp}
     b_hist.at<float>( i, j )
     @endcode
+
 8.  Finally we display our histograms and wait for the user to exit:
     @code{.cpp}
     namedWindow("calcHist Demo", WINDOW_AUTOSIZE );
@@ -275,6 +198,7 @@ Explanation
 
     return 0;
     @endcode
+
 Result
 ------
 
@@ -285,5 +209,3 @@ Result
 2.  Produces the following histogram:
 
     ![image](images/Histogram_Calculation_Result.jpg)
-
-

@@ -83,29 +83,22 @@ Explanation
     src2 = imread("../../images/WindowsLogo.jpg");
     @endcode
     **warning**
-    
+
     Since we are *adding* *src1* and *src2*, they both have to be of the same size (width and
     height) and type.
 
-2.  Now we need to generate the @ref cv::g(x)\` image. For this, the function
-add_weighted:addWeighted  comes quite handy:
-
-    .. code-block:: cpp
-
-       beta = ( 1.0 - alpha );
-       addWeighted( src1, alpha, src2, beta, 0.0, dst);
-
+2.  Now we need to generate the `g(x)` image. For this, the function add_weighted:addWeighted  comes quite handy:
+    @code{.cpp}
+    beta = ( 1.0 - alpha );
+    addWeighted( src1, alpha, src2, beta, 0.0, dst);
+    @endcode
     since @ref cv::addWeighted  produces:
+    \f[dst = \alpha \cdot src1 + \beta \cdot src2 + \gamma\f]
+    In this case, `gamma` is the argument \f$0.0\f$ in the code above.
 
-    .. math::
-
-       dst = \\alpha \\cdot src1 + \\beta \\cdot src2 + \\gamma
-
-    In this case, :math:gamma\` is the argument \f$0.0\f$ in the code above.
 3.  Create windows, show the images and wait for the user to end the program.
 
 Result
 ------
 
-![image](images/Adding_Images_Tutorial_Result_0.jpg)
-
+![image](images/Adding_Images_Tutorial_Result_Big.jpg)

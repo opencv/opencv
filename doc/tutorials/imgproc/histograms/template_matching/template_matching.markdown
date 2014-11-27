@@ -23,8 +23,8 @@ template image (patch).
 
 -   We need two primary components:
 
-    a.  **Source image (I):** The image in which we expect to find a match to the template image
-    b.  **Template image (T):** The patch image which will be compared to the template image
+    -#  **Source image (I):** The image in which we expect to find a match to the template image
+    -#  **Template image (T):** The patch image which will be compared to the template image
 
     our goal is to detect the highest matching area:
 
@@ -300,5 +300,3 @@ Results
     other possible high matches.
 
     ![image](images/Template_Matching_Image_Result.jpg)
-
-

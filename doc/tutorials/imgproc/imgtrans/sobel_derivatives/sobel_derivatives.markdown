@@ -53,7 +53,7 @@ Theory
 Assuming that the image to be operated is \f$I\f$:
 
 1.  We calculate two derivatives:
-    a.  **Horizontal changes**: This is computed by convolving \f$I\f$ with a kernel \f$G_{x}\f$ with odd
+    1.  **Horizontal changes**: This is computed by convolving \f$I\f$ with a kernel \f$G_{x}\f$ with odd
         size. For example for a kernel size of 3, \f$G_{x}\f$ would be computed as:
 
         \f[G_{x} = \begin{bmatrix}
@@ -62,7 +62,7 @@ Assuming that the image to be operated is \f$I\f$:
         -1 & 0 & +1
         \end{bmatrix} * I\f]
 
-    b.  **Vertical changes**: This is computed by convolving \f$I\f$ with a kernel \f$G_{y}\f$ with odd
+    2.  **Vertical changes**: This is computed by convolving \f$I\f$ with a kernel \f$G_{y}\f$ with odd
         size. For example for a kernel size of 3, \f$G_{y}\f$ would be computed as:
 
         \f[G_{y} = \begin{bmatrix}
@@ -81,11 +81,10 @@ Assuming that the image to be operated is \f$I\f$:
     \f[G = |G_{x}| + |G_{y}|\f]
 
 @note
-   When the size of the kernel is @ref cv::3\`, the Sobel kernel shown above may produce noticeable
+    When the size of the kernel is `3`, the Sobel kernel shown above may produce noticeable
     inaccuracies (after all, Sobel is only an approximation of the derivative). OpenCV addresses
     this inaccuracy for kernels of size 3 by using the :scharr:\`Scharr function. This is as fast
     but more accurate than the standar Sobel function. It implements the following kernels:
-
     \f[G_{x} = \begin{bmatrix}
     -3 & 0 & +3  \\
     -10 & 0 & +10  \\
@@ -95,11 +94,11 @@ Assuming that the image to be operated is \f$I\f$:
     0 & 0 & 0  \\
     +3 & +10 & +3
     \end{bmatrix}\f]
-
-You can check out more information of this function in the OpenCV reference (@ref cv::Scharr ).
-Also, in the sample code below, you will notice that above the code for @ref cv::Sobel function
-there is also code for the @ref cv::Scharr function commented. Uncommenting it (and obviously
-commenting the Sobel stuff) should give you an idea of how this function works.
+@note
+    You can check out more information of this function in the OpenCV reference (@ref cv::Scharr ).
+    Also, in the sample code below, you will notice that above the code for @ref cv::Sobel function
+    there is also code for the @ref cv::Scharr function commented. Uncommenting it (and obviously
+    commenting the Sobel stuff) should give you an idea of how this function works.
 
 Code
 ----
@@ -110,65 +109,8 @@ Code
 
 2.  The tutorial code's is shown lines below. You can also download it from
     [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp)
-@code{.cpp}
-#include "opencv2/imgproc.hpp"
-#include "opencv2/highgui.hpp"
-#include <stdlib.h>
-#include <stdio.h>
+    @includelineno samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp
 
-using namespace cv;
-
-/* @function main */
-int main( int argc, char** argv )
-{
-
-  Mat src, src_gray;
-  Mat grad;
-  char* window_name = "Sobel Demo - Simple Edge Detector";
-  int scale = 1;
-  int delta = 0;
-  int ddepth = CV_16S;
-
-  int c;
-
-  /// Load an image
-  src = imread( argv[1] );
-
-  if( !src.data )
-  { return -1; }
-
-  GaussianBlur( src, src, Size(3,3), 0, 0, BORDER_DEFAULT );
-
-  /// Convert it to gray
-  cvtColor( src, src_gray, COLOR_RGB2GRAY );
-
-  /// Create window
-  namedWindow( window_name, WINDOW_AUTOSIZE );
-
-  /// Generate grad_x and grad_y
-  Mat grad_x, grad_y;
-  Mat abs_grad_x, abs_grad_y;
-
-  /// Gradient X
-  //Scharr( src_gray, grad_x, ddepth, 1, 0, scale, delta, BORDER_DEFAULT );
-  Sobel( src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );
-  convertScaleAbs( grad_x, abs_grad_x );
-
-  /// Gradient Y
-  //Scharr( src_gray, grad_y, ddepth, 0, 1, scale, delta, BORDER_DEFAULT );
-  Sobel( src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );
-  convertScaleAbs( grad_y, abs_grad_y );
-
-  /// Total Gradient (approximate)
-  addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad );
-
-  imshow( window_name, grad );
-
-  waitKey(0);
-
-  return 0;
-  }
-@endcode
 Explanation
 -----------
 
@@ -239,5 +181,3 @@ Results
 1.  Here is the output of applying our basic detector to *lena.jpg*:
 
     ![image](images/Sobel_Derivatives_Tutorial_Result.jpg)
-
-

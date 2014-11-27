@@ -206,16 +206,16 @@ Explanation
     How do we update our mapping matrices *mat_x* and *mat_y*? Go on reading:
 
 6.  **Updating the mapping matrices:** We are going to perform 4 different mappings:
-    a.  Reduce the picture to half its size and will display it in the middle:
+    -#  Reduce the picture to half its size and will display it in the middle:
 
         \f[h(i,j) = ( 2*i - src.cols/2  + 0.5, 2*j - src.rows/2  + 0.5)\f]
 
         for all pairs \f$(i,j)\f$ such that: \f$\dfrac{src.cols}{4}<i<\dfrac{3 \cdot src.cols}{4}\f$ and
         \f$\dfrac{src.rows}{4}<j<\dfrac{3 \cdot src.rows}{4}\f$
 
-    b.  Turn the image upside down: \f$h( i, j ) = (i, src.rows - j)\f$
-    c.  Reflect the image from left to right: \f$h(i,j) = ( src.cols - i, j )\f$
-    d.  Combination of b and c: \f$h(i,j) = ( src.cols - i, src.rows - j )\f$
+    -#  Turn the image upside down: \f$h( i, j ) = (i, src.rows - j)\f$
+    -#  Reflect the image from left to right: \f$h(i,j) = ( src.cols - i, j )\f$
+    -#  Combination of b and c: \f$h(i,j) = ( src.cols - i, src.rows - j )\f$
 
 This is expressed in the following snippet. Here, *map_x* represents the first coordinate of
 *h(i,j)* and *map_y* the second coordinate.
@@ -277,4 +277,3 @@ Result
 5.  Reflecting it in both directions:
 
 ![image](images/Remap_Tutorial_Result_3.jpg)
-

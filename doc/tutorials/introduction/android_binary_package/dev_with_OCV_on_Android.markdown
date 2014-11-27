@@ -13,11 +13,11 @@ This tutorial assumes you have the following installed and configured:
 -   Eclipse IDE
 -   ADT and CDT plugins for Eclipse
 
-If you need help with anything of the above, you may refer to our @ref android_dev_intro guide.
+If you need help with anything of the above, you may refer to our @ref tutorial_android_dev_intro guide.
 
 This tutorial also assumes you have OpenCV4Android SDK already installed on your development machine
 and OpenCV Manager on your testing device correspondingly. If you need help with any of these, you
-may consult our @ref O4A_SDK tutorial.
+may consult our @ref tutorial_O4A_SDK tutorial.
 
 If you encounter any error after thoroughly following these steps, feel free to contact us via
 [OpenCV4Android](https://groups.google.com/group/android-opencv/) discussion group or OpenCV [Q&A
@@ -28,7 +28,7 @@ Using OpenCV Library Within Your Android Project
 
 In this section we will explain how to make some existing project to use OpenCV. Starting with 2.4.2
 release for Android, *OpenCV Manager* is used to provide apps with the best available version of
-OpenCV. You can get more information here: @ref Android_OpenCV_Manager and in these
+OpenCV. You can get more information here: `Android OpenCV Manager` and in these
 [slides](https://docs.google.com/a/itseez.com/presentation/d/1EO_1kijgBg_BsjNp2ymk-aarg-0K279_1VZRcPplSuk/present#slide=id.p).
 
 ### Java
@@ -52,7 +52,7 @@ Manager to access OpenCV libraries externally installed in the target system.
 
 In most cases OpenCV Manager may be installed automatically from Google Play. For the case, when
 Google Play is not available, i.e. emulator, developer board, etc, you can install it manually using
-adb tool. See @ref manager_selection for details.
+adb tool. See `Manager Selection` for details.
 
 There is a very base code snippet implementing the async initialization. It shows basic principles.
 See the "15-puzzle" OpenCV sample for details.
@@ -118,7 +118,7 @@ described above.
 
     In case of the application project **with a JNI part**, instead of manual libraries copying you
     need to modify your Android.mk file: add the following two code lines after the
-    "include \\f$(CLEAR_VARS)" and before
+    "include $(CLEAR_VARS)" and before
     "include path_to_OpenCV-2.4.9-android-sdk/sdk/native/jni/OpenCV.mk"
     @code{.make}
     OPENCV_CAMERA_MODULES:=on
@@ -160,6 +160,7 @@ described above.
         }
     }
     @endcode
+
 ### Native/C++
 
 To build your own Android application, using OpenCV as native part, the following steps should be
@@ -184,12 +185,13 @@ taken:
 4.  Several variables can be used to customize OpenCV stuff, but you **don't need** to use them when
     your application uses the async initialization via the OpenCV Manager API.
 
-@note These variables should be set **before** the "include .../OpenCV.mk" line:
-   @code{.make}
+    @note These variables should be set **before** the "include .../OpenCV.mk" line:
+    @code{.make}
     OPENCV_INSTALL_MODULES:=on
     @endcode
-Copies necessary OpenCV dynamic libs to the project libs folder in order to include them
-   into the APK.
+
+    Copies necessary OpenCV dynamic libs to the project libs folder in order to include them
+    into the APK.
     @code{.make}
     OPENCV_CAMERA_MODULES:=off
     @endcode
@@ -200,7 +202,7 @@ Copies necessary OpenCV dynamic libs to the project libs folder in order to incl
     Perform static linking with OpenCV. By default dynamic link is used and the project JNI lib
     depends on libopencv_java.so.
 
-1.  The file `Application.mk` should exist and should contain lines:
+5.  The file `Application.mk` should exist and should contain lines:
     @code{.make}
     APP_STL := gnustl_static
     APP_CPPFLAGS := -frtti -fexceptions
@@ -218,8 +220,10 @@ Copies necessary OpenCV dynamic libs to the project libs folder in order to incl
     @code{.make}
     APP_PLATFORM := android-9
     @endcode
-2.  Either use @ref manual \<NDK_build_cli\> ndk-build invocation or @ref setup Eclipse CDT
-    Builder \<CDT_Builder\> to build native JNI lib before (re)building the Java part and creating
+
+6.  Either use @ref tutorial_android_dev_intro_ndk "manual"  ndk-build invocation or
+    @ref tutorial_android_dev_intro_eclipse "setup Eclipse CDT Builder" to build native JNI lib
+    before (re)building the Java part and creating
     an APK.
 
 Hello OpenCV Sample
@@ -246,7 +250,7 @@ application. It will be capable of accessing camera output, processing it and di
         xmlns:opencv="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
         android:layout_height="match_parent" >
-    
+
         <org.opencv.android.JavaCameraView
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"
@@ -254,7 +258,7 @@ application. It will be capable of accessing camera output, processing it and di
             android:id="@+id/HelloOpenCvView"
             opencv:show_fps="true"
             opencv:camera_id="any" />
-    
+
     </LinearLayout>
     @endcode
 8.  Add the following permissions to the `AndroidManifest.xml` file:
@@ -293,7 +297,7 @@ application. It will be capable of accessing camera output, processing it and di
             }
         }
     };
-    
+
     @Override
     public void onResume()
     {
@@ -365,7 +369,8 @@ function and it is called on retrieving frame from camera. The callback input is
 CvCameraViewFrame class that represents frame from camera.
 
 @note Do not save or use CvCameraViewFrame object out of onCameraFrame callback. This object does
-not have its own state and its behavior out of callback is unpredictable! It has rgba() and gray()
+not have its own state and its behavior out of callback is unpredictable!
+
+It has rgba() and gray()
 methods that allows to get frame as RGBA and one channel gray scale Mat respectively. It expects
 that onCameraFrame function returns RGBA frame that will be drawn on the screen.
-

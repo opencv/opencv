@@ -42,17 +42,17 @@ Theory
 
 -   What we want to do is to use our *model histogram* (that we know represents a skin tonality) to
     detect skin areas in our Test Image. Here are the steps
-    a.  In each pixel of our Test Image (i.e. \f$p(i,j)\f$ ), collect the data and find the
+    -#  In each pixel of our Test Image (i.e. \f$p(i,j)\f$ ), collect the data and find the
         correspondent bin location for that pixel (i.e. \f$( h_{i,j}, s_{i,j} )\f$ ).
-    b.  Lookup the *model histogram* in the correspondent bin - \f$( h_{i,j}, s_{i,j} )\f$ - and read
+    -#  Lookup the *model histogram* in the correspondent bin - \f$( h_{i,j}, s_{i,j} )\f$ - and read
         the bin value.
-    c.  Store this bin value in a new image (*BackProjection*). Also, you may consider to normalize
+    -#  Store this bin value in a new image (*BackProjection*). Also, you may consider to normalize
         the *model histogram* first, so the output for the Test Image can be visible for you.
-    d.  Applying the steps above, we get the following BackProjection image for our Test Image:
+    -#  Applying the steps above, we get the following BackProjection image for our Test Image:
 
         ![image](images/Back_Projection_Theory4.jpg)
 
-    e.  In terms of statistics, the values stored in *BackProjection* represent the *probability*
+    -#  In terms of statistics, the values stored in *BackProjection* represent the *probability*
         that a pixel in *Test Image* belongs to a skin area, based on the *model histogram* that we
         use. For instance in our Test image, the brighter areas are more probable to be skin area
         (as they actually are), whereas the darker areas have less probability (notice that these
@@ -72,13 +72,13 @@ Code
     -   Display the backprojection and the histogram in windows.
 -   **Downloadable code**:
 
-    a.  Click
+    -#  Click
         [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp)
         for the basic version (explained in this tutorial).
-    b.  For stuff slightly fancier (using H-S histograms and floodFill to define a mask for the
+    -#  For stuff slightly fancier (using H-S histograms and floodFill to define a mask for the
         skin area) you can check the [improved
         demo](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo2.cpp)
-    c.  ...or you can always check out the classical
+    -#  ...or you can always check out the classical
         [camshiftdemo](https://github.com/Itseez/opencv/tree/master/samples/cpp/camshiftdemo.cpp)
         in samples.
 
@@ -255,5 +255,3 @@ Results
       ------ ------ ------
       |R0|   |R1|   |R2|
       ------ ------ ------
-
-

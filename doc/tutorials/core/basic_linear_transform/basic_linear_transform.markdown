@@ -97,6 +97,7 @@ int main( int argc, char** argv )
     return 0;
 }
 @endcode
+
 Explanation
 -----------
 
@@ -134,11 +135,10 @@ Explanation
     }
     @endcode
     Notice the following:
-
     -   To access each pixel in the images we are using this syntax: *image.at\<Vec3b\>(y,x)[c]*
         where *y* is the row, *x* is the column and *c* is R, G or B (0, 1 or 2).
-    -   Since the operation @ref cv::alpha cdot p(i,j) + beta\` can give values out of range or not
-        integers (if \f$\alpha\f$ is float), we use :saturate_cast:\`saturate_cast to make sure the
+    -   Since the operation \f$\alpha \cdot p(i,j) + \beta\f$ can give values out of range or not
+        integers (if \f$\alpha\f$ is float), we use cv::saturate_cast to make sure the
         values are valid.
 
 5.  Finally, we create windows and show the images, the usual way.
@@ -151,12 +151,13 @@ Explanation
 
     waitKey(0);
     @endcode
+
 @note
-   Instead of using the **for** loops to access each pixel, we could have simply used this command:
+    Instead of using the **for** loops to access each pixel, we could have simply used this command:
     @code{.cpp}
     image.convertTo(new_image, -1, alpha, beta);
     @endcode
-    where @ref cv::convertTo would effectively perform *new_image = a*image + beta\*. However, we
+    where @ref cv::Mat::convertTo would effectively perform *new_image = a*image + beta\*. However, we
     wanted to show you how to access each pixel. In any case, both methods give the same result but
     convertTo is more optimized and works a lot faster.
 
@@ -171,8 +172,7 @@ Result
     * Enter the alpha value [1.0-3.0]: 2.2
     * Enter the beta value [0-100]: 50
     @endcode
+
 -   We get this:
 
-    ![image](images/Basic_Linear_Transform_Tutorial_Result_0.jpg)
-
-
+    ![image](images/Basic_Linear_Transform_Tutorial_Result_big.jpg)

@@ -15,7 +15,7 @@ Including OpenCV library in your iOS project
 The OpenCV library comes as a so-called framework, which you can directly drag-and-drop into your
 XCode project. Download the latest binary from
 \<<http://sourceforge.net/projects/opencvlibrary/files/opencv-ios/>\>. Alternatively follow this
-guide @ref iOS-Installation to compile the framework manually. Once you have the framework, just
+guide @ref tutorial_ios_install to compile the framework manually. Once you have the framework, just
 drag-and-drop into XCode:
 
 ![image](images/xcode_hello_ios_framework_drag_and_drop.png)
@@ -203,4 +203,3 @@ When you are working on grayscale data, turn set grayscale = YES as the YUV colo
 directly access the luminance plane.
 
 The Accelerate framework provides some CPU-accelerated DSP filters, which come handy in your case.
-

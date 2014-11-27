@@ -24,8 +24,8 @@ Theory
 3.  In this tutorial, we will briefly explore two ways of defining the extra padding (border) for an
     image:
 
-    a.  **BORDER_CONSTANT**: Pad the image with a constant value (i.e. black or \f$0\f$
-    b.  **BORDER_REPLICATE**: The row or column at the very edge of the original is replicated to
+    -#  **BORDER_CONSTANT**: Pad the image with a constant value (i.e. black or \f$0\f$
+    -#  **BORDER_REPLICATE**: The row or column at the very edge of the original is replicated to
         the extra border.
 
     This will be seen more clearly in the Code section.
@@ -175,13 +175,13 @@ Explanation
     @endcode
     The arguments are:
 
-    a.  *src*: Source image
-    b.  *dst*: Destination image
-    c.  *top*, *bottom*, *left*, *right*: Length in pixels of the borders at each side of the image.
+    -#  *src*: Source image
+    -#  *dst*: Destination image
+    -#  *top*, *bottom*, *left*, *right*: Length in pixels of the borders at each side of the image.
         We define them as being 5% of the original size of the image.
-    d.  *borderType*: Define what type of border is applied. It can be constant or replicate for
+    -#  *borderType*: Define what type of border is applied. It can be constant or replicate for
         this example.
-    e.  *value*: If *borderType* is *BORDER_CONSTANT*, this is the value used to fill the border
+    -#  *value*: If *borderType* is *BORDER_CONSTANT*, this is the value used to fill the border
         pixels.
 
 8.  We display our output image in the image created previously
@@ -204,5 +204,3 @@ Results
     option looks:
 
     ![image](images/CopyMakeBorder_Tutorial_Results.jpg)
-
-

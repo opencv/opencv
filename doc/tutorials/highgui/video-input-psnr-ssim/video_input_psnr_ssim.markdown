@@ -33,8 +33,8 @@ lines
 How to read a video stream (online-camera or offline-file)?
 -----------------------------------------------------------
 
-Essentially, all the functionalities required for video manipulation is integrated in the @ref
-cv::VideoCapture C++ class. This on itself builds on the FFmpeg open source library. This is a basic
+Essentially, all the functionalities required for video manipulation is integrated in the @ref cv::VideoCapture
+C++ class. This on itself builds on the FFmpeg open source library. This is a basic
 dependency of OpenCV so you shouldn't need to worry about this. A video is composed of a succession
 of images, we refer to these in the literature as frames. In case of a video file there is a *frame
 rate* specifying just how long is between two frames. While for the video cameras usually there is a
@@ -42,7 +42,7 @@ limit of just how many frames they can digitalize per second, this property is l
 any time the camera sees the current snapshot of the world.
 
 The first task you need to do is to assign to a @ref cv::VideoCapture class its source. You can do
-this either via the @ref cv::constructor or its @ref cv::open function. If this argument is an
+this either via the @ref cv::VideoCapture::VideoCapture or its @ref cv::VideoCapture::open function. If this argument is an
 integer then you will bind the class to a camera, a device. The number passed here is the ID of the
 device, assigned by the operating system. If you have a single camera attached to your system its ID
 will probably be zero and further ones increasing from there. If the parameter passed to these is a
@@ -63,8 +63,8 @@ VideoCapture captRefrnc(sourceReference);
 VideoCapture captUndTst;
 captUndTst.open(sourceCompareWith);
 @endcode
-To check if the binding of the class to a video source was successful or not use the @ref
-cv::isOpened function:
+To check if the binding of the class to a video source was successful or not use the @ref cv::VideoCapture::isOpened
+function:
 @code{.cpp}
 if ( !captRefrnc.isOpened())
   {
@@ -73,10 +73,10 @@ if ( !captRefrnc.isOpened())
   }
 @endcode
 Closing the video is automatic when the objects destructor is called. However, if you want to close
-it before this you need to call its @ref cv::release function. The frames of the video are just
+it before this you need to call its @ref cv::VideoCapture::release function. The frames of the video are just
 simple images. Therefore, we just need to extract them from the @ref cv::VideoCapture object and put
 them inside a *Mat* one. The video streams are sequential. You may get the frames one after another
-by the @ref cv::read or the overloaded \>\> operator:
+by the @ref cv::VideoCapture::read or the overloaded \>\> operator:
 @code{.cpp}
 Mat frameReference, frameUnderTest;
 captRefrnc >> frameReference;
@@ -92,11 +92,11 @@ if( frameReference.empty()  || frameUnderTest.empty())
 }
 @endcode
 A read method is made of a frame grab and a decoding applied on that. You may call explicitly these
-two by using the @ref cv::grab and then the @ref cv::retrieve functions.
+two by using the @ref cv::VideoCapture::grab and then the @ref cv::VideoCapture::retrieve functions.
 
 Videos have many-many information attached to them besides the content of the frames. These are
 usually numbers, however in some case it may be short character sequences (4 bytes or less). Due to
-this to acquire these information there is a general function named @ref cv::get that returns double
+this to acquire these information there is a general function named @ref cv::VideoCapture::get that returns double
 values containing these properties. Use bitwise operations to decode the characters from a double
 type and conversions where valid values are only integers. Its single argument is the ID of the
 queried property. For example, here we get the size of the frames in the reference and test case
@@ -109,7 +109,7 @@ cout << "Reference frame resolution: Width=" << refS.width << "  Height=" << ref
      << " of nr#: " << captRefrnc.get(CAP_PROP_FRAME_COUNT) << endl;
 @endcode
 When you are working with videos you may often want to control these values yourself. To do this
-there is a @ref cv::set function. Its first argument remains the name of the property you want to
+there is a @ref cv::VideoCapture::set function. Its first argument remains the name of the property you want to
 change and there is a second of double type containing the value to be set. It will return true if
 it succeeds and false otherwise. Good examples for this is seeking in a video file to a given time
 or frame:
@@ -118,8 +118,8 @@ captRefrnc.set(CAP_PROP_POS_MSEC, 1.2);  // go to the 1.2 second in the video
 captRefrnc.set(CAP_PROP_POS_FRAMES, 10); // go to the 10th frame of the video
 // now a read operation would read the frame at the set position
 @endcode
-For properties you can read and change look into the documentation of the @ref cv::get and @ref
-cv::set functions.
+For properties you can read and change look into the documentation of the @ref cv::VideoCapture::get and
+@ref cv::VideoCapture::set functions.
 
 Image similarity - PSNR and SSIM
 --------------------------------
@@ -175,9 +175,10 @@ the article introducing it. Nevertheless, you can get a good image of it by look
 implementation below.
 
 @sa
-   SSIM is described more in-depth in the: "Z. Wang, A. C. Bovik, H. R. Sheikh and E. P.
+    SSIM is described more in-depth in the: "Z. Wang, A. C. Bovik, H. R. Sheikh and E. P.
     Simoncelli, "Image quality assessment: From error visibility to structural similarity," IEEE
     Transactions on Image Processing, vol. 13, no. 4, pp. 600-612, Apr. 2004." article.
+
 @code{.cpp}
 Scalar getMSSIM( const Mat& i1, const Mat& i2)
 {

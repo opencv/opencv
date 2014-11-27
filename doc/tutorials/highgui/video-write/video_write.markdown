@@ -5,8 +5,8 @@ Goal
 ----
 
 Whenever you work with video feeds you may eventually want to save your image processing result in a
-form of a new video file. For simple video outputs you can use the OpenCV built-in @ref
-cv::VideoWriter class, designed for this.
+form of a new video file. For simple video outputs you can use the OpenCV built-in @ref cv::VideoWriter
+class, designed for this.
 
 -   How to create a video file with OpenCV
 -   What type of video files you can create with OpenCV
@@ -58,11 +58,15 @@ container. No audio or other track editing support here. Nevertheless, any video
 your system might work. If you encounter some of these limitations you will need to look into more
 specialized video writing libraries such as *FFMpeg* or codecs as *HuffYUV*, *CorePNG* and *LCL*. As
 an alternative, create the video track with OpenCV and expand it with sound tracks or convert it to
-other formats by using video manipulation programs such as *VirtualDub* or *AviSynth*. The
-*VideoWriter* class ======================= The content written here builds on the assumption you
-already read the @ref videoInputPSNRMSSIM tutorial and you know how to read video files. To create a
+other formats by using video manipulation programs such as *VirtualDub* or *AviSynth*.
+
+The *VideoWriter* class
+-----------------------
+
+The content written here builds on the assumption you
+already read the @ref tutorial_video_input_psnr_ssim tutorial and you know how to read video files. To create a
 video file you just need to create an instance of the @ref cv::VideoWriter class. You can specify
-its properties either via parameters in the constructor or later on via the @ref cv::open function.
+its properties either via parameters in the constructor or later on via the @ref cv::VideoWriter::open function.
 Either way, the parameters are the same: 1. The name of the output that contains the container type
 in its extension. At the moment only *avi* is supported. We construct this from the input file, add
 to this the name of the channel to use, and finish it off with the container extension.
@@ -122,10 +126,10 @@ Size S = Size((int) inputVideo.get(CAP_PROP_FRAME_WIDTH),    //Acquire input siz
               (int) inputVideo.get(CAP_PROP_FRAME_HEIGHT));
 outputVideo.open(NAME , ex, inputVideo.get(CAP_PROP_FPS),S, true);
 @endcode
-Afterwards, you use the @ref cv::isOpened() function to find out if the open operation succeeded or
+Afterwards, you use the @ref cv::VideoWriter::isOpened() function to find out if the open operation succeeded or
 not. The video file automatically closes when the *VideoWriter* object is destroyed. After you open
-the object with success you can send the frames of the video in a sequential order by using the @ref
-cv::write function of the class. Alternatively, you can use its overloaded operator \<\< :
+the object with success you can send the frames of the video in a sequential order by using the
+@ref cv::VideoWriter::write function of the class. Alternatively, you can use its overloaded operator \<\< :
 @code{.cpp}
 outputVideo.write(res);  //or
 outputVideo << res;

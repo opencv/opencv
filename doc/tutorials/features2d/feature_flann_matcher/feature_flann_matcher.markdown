@@ -7,7 +7,7 @@ Goal
 In this tutorial you will learn how to:
 
 -   Use the @ref cv::FlannBasedMatcher interface in order to perform a quick and efficient matching
-    by using the @ref cv::FLANN ( *Fast Approximate Nearest Neighbor Search Library* )
+    by using the @ref flann module
 
 Theory
 ------
@@ -123,6 +123,7 @@ int main( int argc, char** argv )
 void readme()
 { std::cout << " Usage: ./SURF_FlannMatcher <img1> <img2>" << std::endl; }
 @endcode
+
 Explanation
 -----------
 
@@ -136,5 +137,3 @@ Result
 2.  Additionally, we get as console output the keypoints filtered:
 
     ![image](images/Feature_FlannMatcher_Keypoints_Result.jpg)
-
-

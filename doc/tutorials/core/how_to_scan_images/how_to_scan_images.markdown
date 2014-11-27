@@ -79,10 +79,12 @@ double t = (double)getTickCount();
 t = ((double)getTickCount() - t)/getTickFrequency();
 cout << "Times passed in seconds: " << t << endl;
 @endcode
+
+@anchor tutorial_how_to_scan_images_storing
 How the image matrix is stored in the memory?
 ---------------------------------------------
 
-As you could already read in my @ref matTheBasicImageContainer tutorial the size of the matrix
+As you could already read in my @ref tutorial_mat_the_basic_image_container tutorial the size of the matrix
 depends of the color system used. More accurately, it depends from the number of channels used. In
 case of a gray scale image we have something like:
 
@@ -110,7 +112,7 @@ Row n & \tabIt{n,0} & \tabIt{n,1} & \tabIt{n,...} & \tabIt{n, m} \\
 Note that the order of the channels is inverse: BGR instead of RGB. Because in many cases the memory
 is large enough to store the rows in a successive fashion the rows may follow one after another,
 creating a single long row. Because everything is in a single place following one after another this
-may help to speed up the scanning process. We can use the @ref cv::isContinuous() function to *ask*
+may help to speed up the scanning process. We can use the @ref cv::Mat::isContinuous() function to *ask*
 the matrix if this is the case. Continue on to the next section to find an example.
 
 The efficient way
@@ -227,12 +229,12 @@ differences I've used a quite large (2560 X 1600) image. The performance present
 color images. For a more accurate value I've averaged the value I got from the call of the function
 for hundred times.
 
-  --------------- ----------------------
-  Efficient Way   79.4717 milliseconds
-  Iterator        83.7201 milliseconds
-  On-The-Fly RA   93.7878 milliseconds
-  LUT function    32.5759 milliseconds
-  --------------- ----------------------
+Method          |  Time
+--------------- | ----------------------
+Efficient Way   | 79.4717 milliseconds
+Iterator        | 83.7201 milliseconds
+On-The-Fly RA   | 93.7878 milliseconds
+LUT function    | 32.5759 milliseconds
 
 We can conclude a couple of things. If possible, use the already made functions of OpenCV (instead
 reinventing these). The fastest method turns out to be the LUT function. This is because the OpenCV
@@ -242,12 +244,10 @@ Using the on-the-fly reference access method for full image scan is the most cos
 In the release mode it may beat the iterator approach or not, however it surely sacrifices for this
 the safety trait of iterators.
 
-Finally, you may watch a sample run of the program on the [video
-posted](https://www.youtube.com/watch?v=fB3AN5fjgwc) on our YouTube channel.
+Finally, you may watch a sample run of the program on the [video posted](https://www.youtube.com/watch?v=fB3AN5fjgwc) on our YouTube channel.
 
 \htmlonly
 <div align="center">
 <iframe title="How to scan images in OpenCV?" width="560" height="349" src="http://www.youtube.com/embed/fB3AN5fjgwc?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
 </div>
 \endhtmlonly
-
