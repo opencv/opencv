@@ -801,7 +801,6 @@ cvFitEllipse2( const CvArr* array )
     /*
      *  New fitellipse algorithm, contributed by Dr. Daniel Weiss
      */
-    CvPoint2D32f c = {0,0};
     double gfp[5], rp[5], t;
     CvMat A, b, x;
     const double min_eps = 1e-8;
@@ -830,25 +829,6 @@ cvFitEllipse2( const CvArr* array )
             p.y = (float)((int*)reader.ptr)[1];
         }
         CV_NEXT_SEQ_ELEM( sizeof(p), reader );
-        c.x += p.x;
-        c.y += p.y;
-    }
-    c.x /= n;
-    c.y /= n;
-
-    for( i = 0; i < n; i++ )
-    {
-        CvPoint2D32f p;
-        if( is_float )
-            p = *(CvPoint2D32f*)(reader.ptr);
-        else
-        {
-            p.x = (float)((int*)reader.ptr)[0];
-            p.y = (float)((int*)reader.ptr)[1];
-        }
-        CV_NEXT_SEQ_ELEM( sizeof(p), reader );
-        p.x -= c.x;
-        p.y -= c.y;
 
         bd[i] = 10000.0; // 1.0?
         Ad[i*5] = -(double)p.x * p.x; // A - C signs inverted as proposed by APP
@@ -887,8 +867,6 @@ cvFitEllipse2( const CvArr* array )
             p.y = (float)((int*)reader.ptr)[1];
         }
         CV_NEXT_SEQ_ELEM( sizeof(p), reader );
-        p.x -= c.x;
-        p.y -= c.y;
         bd[i] = 1.0;
         Ad[i * 3] = (p.x - rp[0]) * (p.x - rp[0]);
         Ad[i * 3 + 1] = (p.y - rp[1]) * (p.y - rp[1]);
@@ -910,8 +888,8 @@ cvFitEllipse2( const CvArr* array )
     if( rp[3] > min_eps )
         rp[3] = sqrt(2.0 / rp[3]);
 
-    box.center.x = (float)rp[0] + c.x;
-    box.center.y = (float)rp[1] + c.y;
+    box.center.x = (float)rp[0];
+    box.center.y = (float)rp[1];
     box.size.width = (float)(rp[2]*2);
     box.size.height = (float)(rp[3]*2);
     if( box.size.width > box.size.height )
