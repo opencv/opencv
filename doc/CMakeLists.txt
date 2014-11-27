@@ -196,8 +196,9 @@ if(BUILD_DOCS AND HAVE_DOXYGEN)
   set(doxyfile "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile")
   set(rootfile "${CMAKE_CURRENT_BINARY_DIR}/root.markdown")
   set(bibfile "${CMAKE_CURRENT_SOURCE_DIR}/opencv.bib")
-  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${paths_include} ; ${paths_doc}")
-  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${paths_doc}")
+  set(tutorial_path "${CMAKE_CURRENT_SOURCE_DIR}/tutorials")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${paths_include} ; ${paths_doc} ; ${tutorial_path}")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${paths_doc} ; ${tutorial_path}")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_EXAMPLE_PATH  "${CMAKE_SOURCE_DIR}/samples/cpp ; ${paths_doc}")
   set(CMAKE_DOXYGEN_LAYOUT "${CMAKE_CURRENT_SOURCE_DIR}/DoxygenLayout.xml")
   set(CMAKE_DOXYGEN_OUTPUT_PATH "doxygen")
@@ -214,8 +215,12 @@ if(BUILD_DOCS AND HAVE_DOXYGEN)
   configure_file(mymath.sty "${CMAKE_DOXYGEN_OUTPUT_PATH}/latex/mymath.sty" @ONLY)
 
   add_custom_target(doxygen
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_SOURCE_DIR}/samples" "${CMAKE_DOXYGEN_OUTPUT_PATH}/html/samples"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/pattern.png" "${CMAKE_DOXYGEN_OUTPUT_PATH}/html"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/acircles_pattern.png" "${CMAKE_DOXYGEN_OUTPUT_PATH}/html"
     COMMAND ${DOXYGEN_BUILD} ${doxyfile}
-DEPENDS ${doxyfile} ${rootfile} ${bibfile} ${deps})
+    DEPENDS ${doxyfile} ${rootfile} ${bibfile} ${deps}
+  )
 endif()
 
 if(HAVE_DOC_GENERATOR)

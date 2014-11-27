@@ -134,10 +134,10 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
    char* window_name = "Morphology Transformations Demo";
 
-   /** Function Headers */
+   /* Function Headers */
    void Morphology_Operations( int, void* );
 
-   /** @function main */
+   /* @function main */
    int main( int argc, char** argv )
    {
      /// Load an image
@@ -169,7 +169,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
     return 0;
     }
 
-    /**
+    /*
      * @function Morphology_Operations
      */
    void Morphology_Operations( int, void* )
@@ -227,7 +227,7 @@ Explanation
 
      .. code-block:: cpp
 
-        /**
+        /*
          * @function Morphology_Operations
          */
        void Morphology_Operations( int, void* )

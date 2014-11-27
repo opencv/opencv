@@ -42,7 +42,7 @@ Let's modify the program made in the tutorial :ref:`Adding_Images`. We will let 
    Mat src2;
    Mat dst;
 
-   /**
+   /*
     * @function on_trackbar
     * @brief Callback for trackbar
     */

@@ -97,7 +97,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
    char* window_name = "Pyramids Demo";
 
 
-   /**
+   /*
     * @function main
     */
    int main( int argc, char** argv )

@@ -151,7 +151,7 @@ Found matches
 A-KAZE Matching Results
 --------------------------
 
-  ::code-block:: none
+.. code-block:: none
     Keypoints 1:   2943
     Keypoints 2:   3511
     Matches:       447

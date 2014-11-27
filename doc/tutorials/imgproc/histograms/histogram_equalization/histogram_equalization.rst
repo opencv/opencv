@@ -97,7 +97,7 @@ Code
    using namespace cv;
    using namespace std;
 
-   /**  @function main */
+   /*  @function main */
    int main( int argc, char** argv )
    {
      Mat src, dst;
