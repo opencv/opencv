@@ -69,7 +69,6 @@ struct KMeansIndexParams : public IndexParams
     }
 };
 
-
 /**
  * Hierarchical kmeans index
  *
@@ -270,6 +269,68 @@ public:
     {
         return FLANN_INDEX_KMEANS;
     }
+
+    class KMeansDistanceComputer : public cv::ParallelLoopBody
+    {
+    public:
+        KMeansDistanceComputer(Distance _distance, const Matrix<ElementType>& _dataset,
+            const int _branching, const int* _indices, const Matrix<double>& _dcenters, const int _veclen,
+            int* _count, int* _belongs_to, std::vector<DistanceType>& _radiuses, bool* _updated)
+            : distance(_distance)
+            , dataset(_dataset)
+            , branching(_branching)
+            , indices(_indices)
+            , dcenters(_dcenters)
+            , veclen(_veclen)
+            , count(_count)
+            , belongs_to(_belongs_to)
+            , radiuses(_radiuses)
+            , updated(_updated)
+        {
+        }
+
+        void operator()(const cv::Range& range) const
+        {
+            const int begin = range.start;
+            const int end = range.end;
+
+            for( int i = begin; i<end; ++i)
+            {
+                DistanceType sq_dist = distance(dataset[indices[i]], dcenters[0], veclen);
+                int new_centroid = 0;
+                for (int j=1; j<branching; ++j) {
+                    DistanceType new_sq_dist = distance(dataset[indices[i]], dcenters[j], veclen);
+                    if (sq_dist>new_sq_dist) {
+                        new_centroid = j;
+                        sq_dist = new_sq_dist;
+                    }
+                }
+                if (sq_dist > radiuses[new_centroid]) {
+                    radiuses[new_centroid] = sq_dist;
+                }
+                if (new_centroid != belongs_to[i]) {
+                    count[belongs_to[i]]--;
+                    count[new_centroid]++;
+                    belongs_to[i] = new_centroid;
+                    updated[i] = true;
+                } else {
+                    updated[i] = false;
+                }
+            }
+        }
+
+    private:
+        Distance distance;
+        const Matrix<ElementType>& dataset;
+        const int branching;
+        const int* indices;
+        const Matrix<double>& dcenters;
+        int veclen;
+        int* count;
+        int* belongs_to;
+        std::vector<DistanceType>& radiuses;
+        bool* updated;
+    };
 
     /**
      * Index constructor
@@ -708,6 +769,7 @@ private:
 
         bool converged = false;
         int iteration = 0;
+        bool* updated = new bool[indices_length];
         while (!converged && iteration<iterations_) {
             converged = true;
             iteration++;
@@ -732,25 +794,11 @@ private:
             }
 
             // reassign points to clusters
+            parallel_for_(cv::Range(0, indices_length), KMeansDistanceComputer(distance_, dataset_, branching, indices, dcenters, veclen_, count, belongs_to, radiuses, updated));
             for (int i=0; i<indices_length; ++i) {
-                DistanceType sq_dist = distance_(dataset_[indices[i]], dcenters[0], veclen_);
-                int new_centroid = 0;
-                for (int j=1; j<branching; ++j) {
-                    DistanceType new_sq_dist = distance_(dataset_[indices[i]], dcenters[j], veclen_);
-                    if (sq_dist>new_sq_dist) {
-                        new_centroid = j;
-                        sq_dist = new_sq_dist;
-                    }
-                }
-                if (sq_dist>radiuses[new_centroid]) {
-                    radiuses[new_centroid] = sq_dist;
-                }
-                if (new_centroid != belongs_to[i]) {
-                    count[belongs_to[i]]--;
-                    count[new_centroid]++;
-                    belongs_to[i] = new_centroid;
-
+                if (updated[i]) {
                     converged = false;
+                    break;
                 }
             }
 
@@ -828,6 +876,7 @@ private:
         delete[] centers;
         delete[] count;
         delete[] belongs_to;
+        delete[] updated;
     }
 
 
