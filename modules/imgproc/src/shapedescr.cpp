@@ -868,9 +868,11 @@ cvFitEllipse2( const CvArr* array )
         }
         CV_NEXT_SEQ_ELEM( sizeof(p), reader );
         bd[i] = 1.0;
-        Ad[i * 3] = (p.x - rp[0]) * (p.x - rp[0]);
-        Ad[i * 3 + 1] = (p.y - rp[1]) * (p.y - rp[1]);
-        Ad[i * 3 + 2] = (p.x - rp[0]) * (p.y - rp[1]);
+        const double px = p.x - rp[0];
+        const double py = p.y - rp[1];
+        Ad[i * 3] = px * px;
+        Ad[i * 3 + 1] = py * py;
+        Ad[i * 3 + 2] = px * py;
     }
     cvSolve(&A, &b, &x, CV_SVD);
 
