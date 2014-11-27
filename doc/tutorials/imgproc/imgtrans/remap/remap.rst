@@ -79,7 +79,7 @@ Code
    /// Function Headers
    void update_map( void );
 
-   /**
+   /*
    * @function main
    */
    int main( int argc, char** argv )
@@ -114,7 +114,7 @@ Code
     return 0;
    }
 
-   /**
+   /*
    * @function update_map
    * @brief Fill the map_x and map_y matrices with 4 types of mappings
    */

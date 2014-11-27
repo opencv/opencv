@@ -140,7 +140,7 @@ Code
    int display_caption( char* caption );
    int display_dst( int delay );
 
-   /**
+   /*
     * function main
     */
     int main( int argc, char** argv )

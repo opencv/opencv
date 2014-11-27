@@ -77,8 +77,8 @@ Code
 
    using namespace cv;
 
-   double alpha; /**< Simple contrast control */
-   int beta;  /**< Simple brightness control */
+   double alpha; /*< Simple contrast control */
+   int beta;  /*< Simple brightness control */
 
    int main( int argc, char** argv )
    {

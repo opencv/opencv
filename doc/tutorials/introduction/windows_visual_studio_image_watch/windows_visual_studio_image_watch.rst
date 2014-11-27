@@ -26,7 +26,7 @@ Example
 
 Image Watch works with any existing project that uses OpenCV image objects (for example, *cv::Mat*). In this example, we use a minimal test program that loads an image from a file and runs an edge detector. To build the program, create a console application project in Visual Studio, name it "image-watch-demo", and insert the source code below.
 
-.. code-block:: c++
+.. code-block:: cpp
 
     // Test application for the Visual Studio Image Watch Debugger extension
 
@@ -82,7 +82,7 @@ Before continuing, do not forget to add the command line argument of your input 
 
 Now set a breakpoint on the source line that says
 
-.. code-block:: c++
+.. code-block:: cpp
 
     Mat edges;
 

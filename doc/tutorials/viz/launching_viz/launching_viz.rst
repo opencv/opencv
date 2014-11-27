@@ -28,7 +28,7 @@ You can download the code from :download:`here <../../../../samples/cpp/tutorial
     using namespace cv;
     using namespace std;
 
-    /**
+    /*
     * @function main
     */
     int main()

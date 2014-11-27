@@ -67,7 +67,7 @@ Code
    char* window_name = "copyMakeBorder Demo";
    RNG rng(12345);
 
-   /** @function main  */
+   /* @function main  */
    int main( int argc, char** argv )
    {
 
