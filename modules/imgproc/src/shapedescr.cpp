@@ -839,6 +839,11 @@ cvFitEllipse2( const CvArr* array )
     }
 
     cvSolve( &A, &b, &x, CV_SVD );
+    // Check if we have an ellipse: B^2 - 4*A*C < 0
+    // gfp[0] = A, gfp[1] = C (!), gfp[2] = B
+    // If not, return empty box.
+    if ( gfp[2]*gfp[2] - 4*gfp[0]*gfp[1] >= 0 )
+        return box;
 
     // now use general-form parameters A - E to find the ellipse center:
     // differentiate general form wrt x/y to get two equations for cx and cy
