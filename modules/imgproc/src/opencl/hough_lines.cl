@@ -106,8 +106,6 @@ __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, i
         for (int i=count_idx; i<BUFFER_SIZE; i+=LOCAL_SIZE)
             l_accum[i] = 0;
 
-        barrier(CLK_LOCAL_MEM_FENCE);
-
         __global const int * list = (__global const int*)(list_ptr + list_offset);
         const int shift = (numrho - 1) / 2;
 
@@ -120,8 +118,6 @@ __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, i
             int r = convert_int_rte(mad(x, cosVal, y * sinVal)) + shift;
             atomic_inc(l_accum + r + 1);
         }
-
-        barrier(CLK_LOCAL_MEM_FENCE);
 
         __global int* accum = (__global int*)(accum_ptr + mad24(theta_idx, accum_step, accum_offset));
         for (int i=count_idx; i<BUFFER_SIZE; i+=LOCAL_SIZE)
