@@ -804,7 +804,7 @@ cvFitEllipse2( const CvArr* array )
     double gfp[5], rp[5], t;
     CvMat A, b, x;
     const double min_eps = 1e-8;
-    int i, is_float;
+    int i;
     CvSeqReader reader;
 
     Ad.allocate(n*5);
@@ -816,7 +816,7 @@ cvFitEllipse2( const CvArr* array )
     x = cvMat( 5, 1, CV_64F, gfp );
 
     cvStartReadSeq( ptseq, &reader );
-    is_float = CV_SEQ_ELTYPE(ptseq) == CV_32FC2;
+    const bool is_float = CV_SEQ_ELTYPE(ptseq) == CV_32FC2;
 
     for( i = 0; i < n; i++ )
     {
