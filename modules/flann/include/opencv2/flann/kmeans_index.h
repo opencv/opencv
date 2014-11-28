@@ -275,7 +275,7 @@ public:
     {
     public:
         KMeansDistanceComputer(Distance _distance, const Matrix<ElementType>& _dataset,
-            const int _branching, const int* _indices, const Matrix<double>& _dcenters, const int _veclen,
+            const int _branching, const int* _indices, const Matrix<double>& _dcenters, const size_t _veclen,
             int* _count, int* _belongs_to, std::vector<DistanceType>& _radiuses, bool& _converged, cv::Mutex& _mtx)
             : distance(_distance)
             , dataset(_dataset)
@@ -324,15 +324,16 @@ public:
     private:
         Distance distance;
         const Matrix<ElementType>& dataset;
-        int branching;
+        const int branching;
         const int* indices;
         const Matrix<double>& dcenters;
-        int veclen;
+        const size_t veclen;
         int* count;
         int* belongs_to;
         std::vector<DistanceType>& radiuses;
         bool& converged;
         cv::Mutex& mtx;
+        KMeansDistanceComputer& operator=( const KMeansDistanceComputer & ) { return *this; }
     };
 
     /**
