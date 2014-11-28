@@ -28,7 +28,7 @@ Morphological Operations
     -   Finding of intensity bumps or holes in an image
 -   We will explain dilation and erosion briefly, using the following image as an example:
 
-    ![image](images/Morphology_1_Tutorial_Theory_Original_Image.png)
+    ![](images/Morphology_1_Tutorial_Theory_Original_Image.png)
 
 ### Dilation
 
@@ -40,7 +40,7 @@ Morphological Operations
     deduce, this maximizing operation causes bright regions within an image to "grow" (therefore the
     name *dilation*). Take as an example the image above. Applying dilation we can get:
 
-    ![image](images/Morphology_1_Tutorial_Theory_Dilation.png)
+    ![](images/Morphology_1_Tutorial_Theory_Dilation.png)
 
 The background (bright) dilates around the black regions of the letter.
 
@@ -54,7 +54,7 @@ The background (bright) dilates around the black regions of the letter.
     (shown above). You can see in the result below that the bright areas of the image (the
     background, apparently), get thinner, whereas the dark zones (the "writing") gets bigger.
 
-    ![image](images/Morphology_1_Tutorial_Theory_Erosion.png)
+    ![](images/Morphology_1_Tutorial_Theory_Erosion.png)
 
 Code
 ----
@@ -66,7 +66,7 @@ This tutorial code's is shown lines below. You can also download it from
 Explanation
 -----------
 
-1.  Most of the stuff shown is known by you (if you have any doubt, please refer to the tutorials in
+-#  Most of the stuff shown is known by you (if you have any doubt, please refer to the tutorials in
     previous sections). Let's check the general structure of the program:
 
     -   Load an image (can be RGB or grayscale)
@@ -80,7 +80,7 @@ Explanation
 
     Let's analyze these two functions:
 
-2.  **erosion:**
+-#  **erosion:**
     @code{.cpp}
     /*  @function Erosion  */
     void Erosion( int, void* )
@@ -124,7 +124,7 @@ Explanation
 (iterations) at once. We are not using it in this simple tutorial, though. You can check out the
 Reference for more details.
 
-3.  **dilation:**
+-#  **dilation:**
 
     The code is below. As you can see, it is completely similar to the snippet of code for **erosion**.
     Here we also have the option of defining our kernel, its anchor point and the size of the operator
@@ -152,10 +152,10 @@ Results
 
 Compile the code above and execute it with an image as argument. For instance, using this image:
 
-![image](images/Morphology_1_Tutorial_Original_Image.jpg)
+![](images/Morphology_1_Tutorial_Original_Image.jpg)
 
 We get the results below. Varying the indices in the Trackbars give different output images,
 naturally. Try them out! You can even try to add a third Trackbar to control the number of
 iterations.
 
-![image](images/Morphology_1_Result.jpg)
+![](images/Morphology_1_Result.jpg)

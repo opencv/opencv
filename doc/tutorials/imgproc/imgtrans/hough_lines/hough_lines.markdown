@@ -12,18 +12,22 @@ In this tutorial you will learn how to:
 Theory
 ------
 
-@note The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler. Hough
-Line Transform ---------------------\#. The Hough Line Transform is a transform used to detect
-straight lines. \#. To apply the Transform, first an edge detection pre-processing is desirable.
+@note The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler.
+
+Hough Line Transform
+--------------------
+
+-# The Hough Line Transform is a transform used to detect straight lines.
+-# To apply the Transform, first an edge detection pre-processing is desirable.
 
 ### How does it work?
 
-1.  As you know, a line in the image space can be expressed with two variables. For example:
+-#  As you know, a line in the image space can be expressed with two variables. For example:
 
     -#  In the **Cartesian coordinate system:** Parameters: \f$(m,b)\f$.
     -#  In the **Polar coordinate system:** Parameters: \f$(r,\theta)\f$
 
-    ![image](images/Hough_Lines_Tutorial_Theory_0.jpg)
+    ![](images/Hough_Lines_Tutorial_Theory_0.jpg)
 
     For Hough Transforms, we will express lines in the *Polar system*. Hence, a line equation can be
     written as:
@@ -32,7 +36,7 @@ straight lines. \#. To apply the Transform, first an edge detection pre-processi
 
 Arranging the terms: \f$r = x \cos \theta + y \sin \theta\f$
 
-1.  In general for each point \f$(x_{0}, y_{0})\f$, we can define the family of lines that goes through
+-#  In general for each point \f$(x_{0}, y_{0})\f$, we can define the family of lines that goes through
     that point as:
 
     \f[r_{\theta} = x_{0} \cdot \cos \theta  + y_{0} \cdot \sin \theta\f]
@@ -40,30 +44,30 @@ Arranging the terms: \f$r = x \cos \theta + y \sin \theta\f$
     Meaning that each pair \f$(r_{\theta},\theta)\f$ represents each line that passes by
     \f$(x_{0}, y_{0})\f$.
 
-2.  If for a given \f$(x_{0}, y_{0})\f$ we plot the family of lines that goes through it, we get a
+-#  If for a given \f$(x_{0}, y_{0})\f$ we plot the family of lines that goes through it, we get a
     sinusoid. For instance, for \f$x_{0} = 8\f$ and \f$y_{0} = 6\f$ we get the following plot (in a plane
     \f$\theta\f$ - \f$r\f$):
 
-    ![image](images/Hough_Lines_Tutorial_Theory_1.jpg)
+    ![](images/Hough_Lines_Tutorial_Theory_1.jpg)
 
     We consider only points such that \f$r > 0\f$ and \f$0< \theta < 2 \pi\f$.
 
-3.  We can do the same operation above for all the points in an image. If the curves of two
+-#  We can do the same operation above for all the points in an image. If the curves of two
     different points intersect in the plane \f$\theta\f$ - \f$r\f$, that means that both points belong to a
     same line. For instance, following with the example above and drawing the plot for two more
     points: \f$x_{1} = 9\f$, \f$y_{1} = 4\f$ and \f$x_{2} = 12\f$, \f$y_{2} = 3\f$, we get:
 
-    ![image](images/Hough_Lines_Tutorial_Theory_2.jpg)
+    ![](images/Hough_Lines_Tutorial_Theory_2.jpg)
 
     The three plots intersect in one single point \f$(0.925, 9.6)\f$, these coordinates are the
     parameters (\f$\theta, r\f$) or the line in which \f$(x_{0}, y_{0})\f$, \f$(x_{1}, y_{1})\f$ and
     \f$(x_{2}, y_{2})\f$ lay.
 
-4.  What does all the stuff above mean? It means that in general, a line can be *detected* by
+-#  What does all the stuff above mean? It means that in general, a line can be *detected* by
     finding the number of intersections between curves.The more curves intersecting means that the
     line represented by that intersection have more points. In general, we can define a *threshold*
     of the minimum number of intersections needed to *detect* a line.
-5.  This is what the Hough Line Transform does. It keeps track of the intersection between curves of
+-#  This is what the Hough Line Transform does. It keeps track of the intersection between curves of
     every point in the image. If the number of intersections is above some *threshold*, then it
     declares it as a line with the parameters \f$(\theta, r_{\theta})\f$ of the intersection point.
 
@@ -86,83 +90,20 @@ b.  **The Probabilistic Hough Line Transform**
 Code
 ----
 
-1.  **What does this program do?**
+-#  **What does this program do?**
     -   Loads an image
     -   Applies either a *Standard Hough Line Transform* or a *Probabilistic Line Transform*.
     -   Display the original image and the detected line in two windows.
 
-2.  The sample code that we will explain can be downloaded from here_. A slightly fancier version
+-#  The sample code that we will explain can be downloaded from [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/houghlines.cpp). A slightly fancier version
     (which shows both Hough standard and probabilistic with trackbars for changing the threshold
-    values) can be found here_.
-@code{.cpp}
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
+    values) can be found [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp).
+    @includelineno samples/cpp/houghlines.cpp
 
-#include <iostream>
-
-using namespace cv;
-using namespace std;
-
-void help()
-{
- cout << "\nThis program demonstrates line finding with the Hough transform.\n"
-         "Usage:\n"
-         "./houghlines <image_name>, Default is pic1.jpg\n" << endl;
-}
-
-int main(int argc, char** argv)
-{
- const char* filename = argc >= 2 ? argv[1] : "pic1.jpg";
-
- Mat src = imread(filename, 0);
- if(src.empty())
- {
-     help();
-     cout << "can not open " << filename << endl;
-     return -1;
- }
-
- Mat dst, cdst;
- Canny(src, dst, 50, 200, 3);
- cvtColor(dst, cdst, COLOR_GRAY2BGR);
-
- #if 0
-  vector<Vec2f> lines;
-  HoughLines(dst, lines, 1, CV_PI/180, 100, 0, 0 );
-
-  for( size_t i = 0; i < lines.size(); i++ )
-  {
-     float rho = lines[i][0], theta = lines[i][1];
-     Point pt1, pt2;
-     double a = cos(theta), b = sin(theta);
-     double x0 = a*rho, y0 = b*rho;
-     pt1.x = cvRound(x0 + 1000*(-b));
-     pt1.y = cvRound(y0 + 1000*(a));
-     pt2.x = cvRound(x0 - 1000*(-b));
-     pt2.y = cvRound(y0 - 1000*(a));
-     line( cdst, pt1, pt2, Scalar(0,0,255), 3, LINE_AA);
-  }
- #else
-  vector<Vec4i> lines;
-  HoughLinesP(dst, lines, 1, CV_PI/180, 50, 50, 10 );
-  for( size_t i = 0; i < lines.size(); i++ )
-  {
-    Vec4i l = lines[i];
-    line( cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0,255), 3, CV_AA);
-  }
- #endif
- imshow("source", src);
- imshow("detected lines", cdst);
-
- waitKey();
-
- return 0;
-}
-@endcode
 Explanation
 -----------
 
-1.  Load an image
+-#  Load an image
     @code{.cpp}
     Mat src = imread(filename, 0);
     if(src.empty())
@@ -172,14 +113,14 @@ Explanation
       return -1;
     }
     @endcode
-2.  Detect the edges of the image by using a Canny detector
+-#  Detect the edges of the image by using a Canny detector
     @code{.cpp}
     Canny(src, dst, 50, 200, 3);
     @endcode
     Now we will apply the Hough Line Transform. We will explain how to use both OpenCV functions
     available for this purpose:
 
-3.  **Standard Hough Line Transform**
+-#  **Standard Hough Line Transform**
     -#  First, you apply the Transform:
         @code{.cpp}
         vector<Vec2f> lines;
@@ -211,7 +152,7 @@ Explanation
           line( cdst, pt1, pt2, Scalar(0,0,255), 3, LINE_AA);
         }
         @endcode
-4.  **Probabilistic Hough Line Transform**
+-#  **Probabilistic Hough Line Transform**
     -#  First you apply the transform:
         @code{.cpp}
         vector<Vec4i> lines;
@@ -239,15 +180,16 @@ Explanation
           line( cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0,255), 3, LINE_AA);
         }
         @endcode
-5.  Display the original image and the detected lines:
+-#  Display the original image and the detected lines:
     @code{.cpp}
     imshow("source", src);
     imshow("detected lines", cdst);
     @endcode
-6.  Wait until the user exits the program
+-#  Wait until the user exits the program
     @code{.cpp}
     waitKey();
     @endcode
+
 Result
 ------
 
@@ -258,11 +200,11 @@ Result
 
 Using an input image such as:
 
-![image](images/Hough_Lines_Tutorial_Original_Image.jpg)
+![](images/Hough_Lines_Tutorial_Original_Image.jpg)
 
 We get the following result by using the Probabilistic Hough Line Transform:
 
-![image](images/Hough_Lines_Tutorial_Result.jpg)
+![](images/Hough_Lines_Tutorial_Result.jpg)
 
 You may observe that the number of lines detected vary while you change the *threshold*. The
 explanation is sort of evident: If you establish a higher threshold, fewer lines will be detected

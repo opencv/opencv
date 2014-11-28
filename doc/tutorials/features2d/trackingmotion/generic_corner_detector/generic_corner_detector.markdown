@@ -30,7 +30,7 @@ Explanation
 Result
 ------
 
-![image](images/My_Harris_corner_detector_Result.jpg)
+![](images/My_Harris_corner_detector_Result.jpg)
 
-![image](images/My_Shi_Tomasi_corner_detector_Result.jpg)
+![](images/My_Shi_Tomasi_corner_detector_Result.jpg)
 

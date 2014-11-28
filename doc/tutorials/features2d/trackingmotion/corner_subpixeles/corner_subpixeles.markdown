@@ -122,9 +122,9 @@ Explanation
 Result
 ------
 
-![image](images/Corner_Subpixeles_Original_Image.jpg)
+![](images/Corner_Subpixeles_Original_Image.jpg)
 
 Here is the result:
 
-![image](images/Corner_Subpixeles_Result.jpg)
+![](images/Corner_Subpixeles_Result.jpg)
 

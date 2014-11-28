@@ -24,28 +24,45 @@ The source code
 
 You may also find the source code and these video file in the
 `samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity` folder of the OpenCV
-source library or download it from here
-\<../../../../samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp\>. The
-full source code is quite long (due to the controlling of the application via the command line
+source library or download it from [here](samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp).
+The full source code is quite long (due to the controlling of the application via the command line
 arguments and performance measurement). Therefore, to avoid cluttering up these sections with those
 you'll find here only the functions itself.
 
 The PSNR returns a float number, that if the two inputs are similar between 30 and 50 (higher is
 better).
 
-@includelineno samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp
+@dontinclude samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp
 
-lines
-   165-210, 18-23, 210-235
+@skip struct BufferPSNR
+@until };
+
+@skip double getPSNR(
+@until return psnr;
+@until }
+@until }
+
+@skip double getPSNR_CUDA(
+@until return psnr;
+@until }
+@until }
 
 The SSIM returns the MSSIM of the images. This is too a float number between zero and one (higher is
 better), however we have one for each channel. Therefore, we return a *Scalar* OpenCV data
 structure:
 
-@includelineno samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp
+@dontinclude samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp
 
-lines
-   235-355, 26-42, 357-
+@skip struct BufferMSSIM
+@until };
+
+@skip Scalar getMSSIM(
+@until return mssim;
+@until }
+
+@skip Scalar getMSSIM_CUDA_optimized(
+@until return mssim;
+@until }
 
 How to do it? - The GPU
 -----------------------
@@ -124,7 +141,7 @@ The reason for this is that you're throwing out on the window the price for memo
 data transfer. And on the GPU this is damn high. Another possibility for optimization is to
 introduce asynchronous OpenCV GPU calls too with the help of the @ref cv::cuda::Stream.
 
-1.  Memory allocation on the GPU is considerable. Therefore, if it’s possible allocate new memory as
+-#  Memory allocation on the GPU is considerable. Therefore, if it’s possible allocate new memory as
     few times as possible. If you create a function what you intend to call multiple times it is a
     good idea to allocate any local parameters for the function only once, during the first call. To
     do this you create a data structure containing all the local variables you will use. For
@@ -148,7 +165,7 @@ introduce asynchronous OpenCV GPU calls too with the help of the @ref cv::cuda::
     Now you access these local parameters as: *b.gI1*, *b.buf* and so on. The GpuMat will only
     reallocate itself on a new call if the new matrix size is different from the previous one.
 
-2.  Avoid unnecessary function data transfers. Any small data transfer will be significant one once
+-#  Avoid unnecessary function data transfers. Any small data transfer will be significant one once
     you go to the GPU. Therefore, if possible make all calculations in-place (in other words do not
     create new memory objects - for reasons explained at the previous point). For example, although
     expressing arithmetical operations may be easier to express in one line formulas, it will be
@@ -164,7 +181,7 @@ introduce asynchronous OpenCV GPU calls too with the help of the @ref cv::cuda::
     gpu::multiply(b.mu1_mu2, 2, b.t1); //b.t1 = 2 * b.mu1_mu2 + C1;
     gpu::add(b.t1, C1, b.t1);
     @endcode
-3.  Use asynchronous calls (the @ref cv::cuda::Stream ). By default whenever you call a gpu function
+-#  Use asynchronous calls (the @ref cv::cuda::Stream ). By default whenever you call a gpu function
     it will wait for the call to finish and return with the result afterwards. However, it is
     possible to make asynchronous calls, meaning it will call for the operation execution, make the
     costly data allocations for the algorithm and return back right away. Now you can call another
@@ -189,7 +206,7 @@ Result and conclusion
 ---------------------
 
 On an Intel P8700 laptop CPU paired with a low end NVidia GT220M here are the performance numbers:
-@code{.cpp}
+@code
 Time of PSNR CPU (averaged for 10 runs): 41.4122 milliseconds. With result of: 19.2506
 Time of PSNR GPU (averaged for 10 runs): 158.977 milliseconds. With result of: 19.2506
 Initial call GPU optimized:              31.3418 milliseconds. With result of: 19.2506

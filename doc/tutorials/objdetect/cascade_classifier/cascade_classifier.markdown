@@ -113,16 +113,16 @@ Explanation
 Result
 ------
 
-1.  Here is the result of running the code above and using as input the video stream of a build-in
+-#  Here is the result of running the code above and using as input the video stream of a build-in
     webcam:
 
-    ![image](images/Cascade_Classifier_Tutorial_Result_Haar.jpg)
+    ![](images/Cascade_Classifier_Tutorial_Result_Haar.jpg)
 
     Remember to copy the files *haarcascade_frontalface_alt.xml* and
     *haarcascade_eye_tree_eyeglasses.xml* in your current directory. They are located in
     *opencv/data/haarcascades*
 
-2.  This is the result of using the file *lbpcascade_frontalface.xml* (LBP trained) for the face
+-#  This is the result of using the file *lbpcascade_frontalface.xml* (LBP trained) for the face
     detection. For the eyes we keep using the file used in the tutorial.
 
-    ![image](images/Cascade_Classifier_Tutorial_Result_LBP.jpg)
+    ![](images/Cascade_Classifier_Tutorial_Result_LBP.jpg)

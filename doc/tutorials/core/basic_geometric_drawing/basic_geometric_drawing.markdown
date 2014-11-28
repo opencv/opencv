@@ -52,7 +52,7 @@ Code
 Explanation
 -----------
 
-1.  Since we plan to draw two examples (an atom and a rook), we have to create 02 images and two
+-#  Since we plan to draw two examples (an atom and a rook), we have to create 02 images and two
     windows to display them.
     @code{.cpp}
     /// Windows names
@@ -63,7 +63,7 @@ Explanation
     Mat atom_image = Mat::zeros( w, w, CV_8UC3 );
     Mat rook_image = Mat::zeros( w, w, CV_8UC3 );
     @endcode
-2.  We created functions to draw different geometric shapes. For instance, to draw the atom we used
+-#  We created functions to draw different geometric shapes. For instance, to draw the atom we used
     *MyEllipse* and *MyFilledCircle*:
     @code{.cpp}
     /// 1. Draw a simple atom:
@@ -77,7 +77,7 @@ Explanation
     /// 1.b. Creating circles
     MyFilledCircle( atom_image, Point( w/2.0, w/2.0) );
     @endcode
-3.  And to draw the rook we employed *MyLine*, *rectangle* and a *MyPolygon*:
+-#  And to draw the rook we employed *MyLine*, *rectangle* and a *MyPolygon*:
     @code{.cpp}
     /// 2. Draw a rook
 
@@ -98,7 +98,7 @@ Explanation
     MyLine( rook_image, Point( w/2, 7*w/8 ), Point( w/2, w ) );
     MyLine( rook_image, Point( 3*w/4, 7*w/8 ), Point( 3*w/4, w ) );
     @endcode
-4.  Let's check what is inside each of these functions:
+-#  Let's check what is inside each of these functions:
     -   *MyLine*
         @code{.cpp}
         void MyLine( Mat img, Point start, Point end )
@@ -240,5 +240,5 @@ Result
 
 Compiling and running your program should give you a result like this:
 
-![image](images/Drawing_1_Tutorial_Result_0.png)
+![](images/Drawing_1_Tutorial_Result_0.png)
 

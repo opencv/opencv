@@ -15,45 +15,45 @@ Theory
 
 @note The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler.
 
-1.  In the last two tutorials we have seen applicative examples of convolutions. One of the most
+-#  In the last two tutorials we have seen applicative examples of convolutions. One of the most
     important convolutions is the computation of derivatives in an image (or an approximation to
     them).
-2.  Why may be important the calculus of the derivatives in an image? Let's imagine we want to
+-#  Why may be important the calculus of the derivatives in an image? Let's imagine we want to
     detect the *edges* present in the image. For instance:
 
-    ![image](images/Sobel_Derivatives_Tutorial_Theory_0.jpg)
+    ![](images/Sobel_Derivatives_Tutorial_Theory_0.jpg)
 
     You can easily notice that in an *edge*, the pixel intensity *changes* in a notorious way. A
     good way to express *changes* is by using *derivatives*. A high change in gradient indicates a
     major change in the image.
 
-3.  To be more graphical, let's assume we have a 1D-image. An edge is shown by the "jump" in
+-#  To be more graphical, let's assume we have a 1D-image. An edge is shown by the "jump" in
     intensity in the plot below:
 
-    ![image](images/Sobel_Derivatives_Tutorial_Theory_Intensity_Function.jpg)
+    ![](images/Sobel_Derivatives_Tutorial_Theory_Intensity_Function.jpg)
 
-4.  The edge "jump" can be seen more easily if we take the first derivative (actually, here appears
+-#  The edge "jump" can be seen more easily if we take the first derivative (actually, here appears
     as a maximum)
 
-    ![image](images/Sobel_Derivatives_Tutorial_Theory_dIntensity_Function.jpg)
+    ![](images/Sobel_Derivatives_Tutorial_Theory_dIntensity_Function.jpg)
 
-5.  So, from the explanation above, we can deduce that a method to detect edges in an image can be
+-#  So, from the explanation above, we can deduce that a method to detect edges in an image can be
     performed by locating pixel locations where the gradient is higher than its neighbors (or to
     generalize, higher than a threshold).
-6.  More detailed explanation, please refer to **Learning OpenCV** by Bradski and Kaehler
+-#  More detailed explanation, please refer to **Learning OpenCV** by Bradski and Kaehler
 
 ### Sobel Operator
 
-1.  The Sobel Operator is a discrete differentiation operator. It computes an approximation of the
+-#  The Sobel Operator is a discrete differentiation operator. It computes an approximation of the
     gradient of an image intensity function.
-2.  The Sobel Operator combines Gaussian smoothing and differentiation.
+-#  The Sobel Operator combines Gaussian smoothing and differentiation.
 
 #### Formulation
 
 Assuming that the image to be operated is \f$I\f$:
 
-1.  We calculate two derivatives:
-    1.  **Horizontal changes**: This is computed by convolving \f$I\f$ with a kernel \f$G_{x}\f$ with odd
+-#  We calculate two derivatives:
+    -#  **Horizontal changes**: This is computed by convolving \f$I\f$ with a kernel \f$G_{x}\f$ with odd
         size. For example for a kernel size of 3, \f$G_{x}\f$ would be computed as:
 
         \f[G_{x} = \begin{bmatrix}
@@ -62,7 +62,7 @@ Assuming that the image to be operated is \f$I\f$:
         -1 & 0 & +1
         \end{bmatrix} * I\f]
 
-    2.  **Vertical changes**: This is computed by convolving \f$I\f$ with a kernel \f$G_{y}\f$ with odd
+    -#  **Vertical changes**: This is computed by convolving \f$I\f$ with a kernel \f$G_{y}\f$ with odd
         size. For example for a kernel size of 3, \f$G_{y}\f$ would be computed as:
 
         \f[G_{y} = \begin{bmatrix}
@@ -71,7 +71,7 @@ Assuming that the image to be operated is \f$I\f$:
         +1 & +2 & +1
         \end{bmatrix} * I\f]
 
-2.  At each point of the image we calculate an approximation of the *gradient* in that point by
+-#  At each point of the image we calculate an approximation of the *gradient* in that point by
     combining both results above:
 
     \f[G = \sqrt{ G_{x}^{2} + G_{y}^{2} }\f]
@@ -83,7 +83,7 @@ Assuming that the image to be operated is \f$I\f$:
 @note
     When the size of the kernel is `3`, the Sobel kernel shown above may produce noticeable
     inaccuracies (after all, Sobel is only an approximation of the derivative). OpenCV addresses
-    this inaccuracy for kernels of size 3 by using the :scharr:\`Scharr function. This is as fast
+    this inaccuracy for kernels of size 3 by using the @ref cv::Scharr function. This is as fast
     but more accurate than the standar Sobel function. It implements the following kernels:
     \f[G_{x} = \begin{bmatrix}
     -3 & 0 & +3  \\
@@ -103,18 +103,18 @@ Assuming that the image to be operated is \f$I\f$:
 Code
 ----
 
-1.  **What does this program do?**
+-#  **What does this program do?**
     -   Applies the *Sobel Operator* and generates as output an image with the detected *edges*
         bright on a darker background.
 
-2.  The tutorial code's is shown lines below. You can also download it from
+-#  The tutorial code's is shown lines below. You can also download it from
     [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp)
     @includelineno samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp
 
 Explanation
 -----------
 
-1.  First we declare the variables we are going to use:
+-#  First we declare the variables we are going to use:
     @code{.cpp}
     Mat src, src_gray;
     Mat grad;
@@ -123,22 +123,22 @@ Explanation
     int delta = 0;
     int ddepth = CV_16S;
     @endcode
-2.  As usual we load our source image *src*:
+-#  As usual we load our source image *src*:
     @code{.cpp}
     src = imread( argv[1] );
 
     if( !src.data )
     { return -1; }
     @endcode
-3.  First, we apply a @ref cv::GaussianBlur to our image to reduce the noise ( kernel size = 3 )
+-#  First, we apply a @ref cv::GaussianBlur to our image to reduce the noise ( kernel size = 3 )
     @code{.cpp}
     GaussianBlur( src, src, Size(3,3), 0, 0, BORDER_DEFAULT );
     @endcode
-4.  Now we convert our filtered image to grayscale:
+-#  Now we convert our filtered image to grayscale:
     @code{.cpp}
     cvtColor( src, src_gray, COLOR_RGB2GRAY );
     @endcode
-5.  Second, we calculate the "*derivatives*" in *x* and *y* directions. For this, we use the
+-#  Second, we calculate the "*derivatives*" in *x* and *y* directions. For this, we use the
     function @ref cv::Sobel as shown below:
     @code{.cpp}
     Mat grad_x, grad_y;
@@ -161,23 +161,24 @@ Explanation
     Notice that to calculate the gradient in *x* direction we use: \f$x_{order}= 1\f$ and
     \f$y_{order} = 0\f$. We do analogously for the *y* direction.
 
-6.  We convert our partial results back to *CV_8U*:
+-#  We convert our partial results back to *CV_8U*:
     @code{.cpp}
     convertScaleAbs( grad_x, abs_grad_x );
     convertScaleAbs( grad_y, abs_grad_y );
     @endcode
-7.  Finally, we try to approximate the *gradient* by adding both directional gradients (note that
+-#  Finally, we try to approximate the *gradient* by adding both directional gradients (note that
     this is not an exact calculation at all! but it is good for our purposes).
     @code{.cpp}
     addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad );
     @endcode
-8.  Finally, we show our result:
+-#  Finally, we show our result:
     @code{.cpp}
     imshow( window_name, grad );
     @endcode
+
 Results
 -------
 
-1.  Here is the output of applying our basic detector to *lena.jpg*:
+-#  Here is the output of applying our basic detector to *lena.jpg*:
 
-    ![image](images/Sobel_Derivatives_Tutorial_Result.jpg)
+    ![](images/Sobel_Derivatives_Tutorial_Result.jpg)

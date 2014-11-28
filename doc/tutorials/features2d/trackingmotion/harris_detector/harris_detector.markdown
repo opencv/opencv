@@ -201,9 +201,9 @@ Result
 
 The original image:
 
-![image](images/Harris_Detector_Original_Image.jpg)
+![](images/Harris_Detector_Original_Image.jpg)
 
 The detected corners are surrounded by a small black circle
 
-![image](images/Harris_Detector_Result.jpg)
+![](images/Harris_Detector_Result.jpg)
 

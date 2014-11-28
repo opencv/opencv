@@ -21,13 +21,13 @@ git clone https://github.com/Itseez/opencv.git
 Building OpenCV from Source, using CMake and Command Line
 ---------------------------------------------------------
 
-1.  Make symbolic link for Xcode to let OpenCV build scripts find the compiler, header files etc.
+-#  Make symbolic link for Xcode to let OpenCV build scripts find the compiler, header files etc.
     @code{.bash}
     cd /
     sudo ln -s /Applications/Xcode.app/Contents/Developer Developer
     @endcode
 
-2.  Build OpenCV framework:
+-#  Build OpenCV framework:
     @code{.bash}
     cd ~/<my_working_directory>
     python opencv/platforms/ios/build_framework.py ios

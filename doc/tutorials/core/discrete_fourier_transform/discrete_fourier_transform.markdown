@@ -22,10 +22,14 @@ OpenCV source code library.
 
 Here's a sample usage of @ref cv::dft() :
 
-@includelineno cpp/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.cpp
-
-lines
-   1-4, 6, 20-21, 24-79
+@dontinclude cpp/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.cpp
+@until highgui.hpp
+@skipline iostream
+@skip main
+@until {
+@skip filename
+@until return 0;
+@until }
 
 Explanation
 -----------
@@ -52,7 +56,7 @@ Fourier Transform too needs to be of a discrete type resulting in a Discrete Fou
 (*DFT*). You'll want to use this whenever you need to determine the structure of an image from a
 geometrical point of view. Here are the steps to follow (in case of a gray scale input image *I*):
 
-1.  **Expand the image to an optimal size**. The performance of a DFT is dependent of the image
+-#  **Expand the image to an optimal size**. The performance of a DFT is dependent of the image
     size. It tends to be the fastest for image sizes that are multiple of the numbers two, three and
     five. Therefore, to achieve maximal performance it is generally a good idea to pad border values
     to the image to get a size with such traits. The @ref cv::getOptimalDFTSize() returns this
@@ -66,7 +70,7 @@ geometrical point of view. Here are the steps to follow (in case of a gray scale
     @endcode
     The appended pixels are initialized with zero.
 
-2.  **Make place for both the complex and the real values**. The result of a Fourier Transform is
+-#  **Make place for both the complex and the real values**. The result of a Fourier Transform is
     complex. This implies that for each image value the result is two image values (one per
     component). Moreover, the frequency domains range is much larger than its spatial counterpart.
     Therefore, we store these usually at least in a *float* format. Therefore we'll convert our
@@ -76,12 +80,12 @@ geometrical point of view. Here are the steps to follow (in case of a gray scale
     Mat complexI;
     merge(planes, 2, complexI);         // Add to the expanded another plane with zeros
     @endcode
-3.  **Make the Discrete Fourier Transform**. It's possible an in-place calculation (same input as
+-#  **Make the Discrete Fourier Transform**. It's possible an in-place calculation (same input as
     output):
     @code{.cpp}
     dft(complexI, complexI);            // this way the result may fit in the source matrix
     @endcode
-4.  **Transform the real and complex values to magnitude**. A complex number has a real (*Re*) and a
+-#  **Transform the real and complex values to magnitude**. A complex number has a real (*Re*) and a
     complex (imaginary - *Im*) part. The results of a DFT are complex numbers. The magnitude of a
     DFT is:
 
@@ -93,7 +97,7 @@ geometrical point of view. Here are the steps to follow (in case of a gray scale
     magnitude(planes[0], planes[1], planes[0]);// planes[0] = magnitude
     Mat magI = planes[0];
     @endcode
-5.  **Switch to a logarithmic scale**. It turns out that the dynamic range of the Fourier
+-#  **Switch to a logarithmic scale**. It turns out that the dynamic range of the Fourier
     coefficients is too large to be displayed on the screen. We have some small and some high
     changing values that we can't observe like this. Therefore the high values will all turn out as
     white points, while the small ones as black. To use the gray scale values to for visualization
@@ -106,7 +110,7 @@ geometrical point of view. Here are the steps to follow (in case of a gray scale
     magI += Scalar::all(1);                    // switch to logarithmic scale
     log(magI, magI);
     @endcode
-6.  **Crop and rearrange**. Remember, that at the first step, we expanded the image? Well, it's time
+-#  **Crop and rearrange**. Remember, that at the first step, we expanded the image? Well, it's time
     to throw away the newly introduced values. For visualization purposes we may also rearrange the
     quadrants of the result, so that the origin (zero, zero) corresponds with the image center.
     @code{.cpp}
@@ -128,13 +132,14 @@ geometrical point of view. Here are the steps to follow (in case of a gray scale
     q2.copyTo(q1);
     tmp.copyTo(q2);
     @endcode
-7.  **Normalize**. This is done again for visualization purposes. We now have the magnitudes,
+-#  **Normalize**. This is done again for visualization purposes. We now have the magnitudes,
     however this are still out of our image display range of zero to one. We normalize our values to
     this range using the @ref cv::normalize() function.
 @code{.cpp}
 normalize(magI, magI, 0, 1, NORM_MINMAX); // Transform the matrix with float values into a
                                           // viewable image form (float between values 0 and 1).
 @endcode
+
 Result
 ------
 
@@ -147,13 +152,12 @@ image about a text.
 
 In case of the horizontal text:
 
-![image](images/result_normal.jpg)
+![](images/result_normal.jpg)
 
 In case of a rotated text:
 
-![image](images/result_rotated.jpg)
+![](images/result_rotated.jpg)
 
 You can see that the most influential components of the frequency domain (brightest dots on the
 magnitude image) follow the geometric rotation of objects on the image. From this we may calculate
 the offset and perform an image rotation to correct eventual miss alignments.
-

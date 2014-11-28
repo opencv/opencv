@@ -134,8 +134,8 @@ Explanation
 Result
 ------
 
-1.  And here is the result for the detected object (highlighted in green)
+-#  And here is the result for the detected object (highlighted in green)
 
-    ![image](images/Feature_Homography_Result.jpg)
+    ![](images/Feature_Homography_Result.jpg)
 
 

@@ -79,10 +79,10 @@ Explanation
 Result
 ------
 
-1.  Here is the result of the feature detection applied to the first image:
+-#  Here is the result of the feature detection applied to the first image:
 
-    ![image](images/Feature_Detection_Result_a.jpg)
+    ![](images/Feature_Detection_Result_a.jpg)
 
-2.  And here is the result for the second image:
+-#  And here is the result for the second image:
 
-    ![image](images/Feature_Detection_Result_b.jpg)
+    ![](images/Feature_Detection_Result_b.jpg)

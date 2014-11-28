@@ -101,16 +101,16 @@ int main( int argc, char** argv )
 Explanation
 -----------
 
-1.  We begin by creating parameters to save \f$\alpha\f$ and \f$\beta\f$ to be entered by the user:
+-#  We begin by creating parameters to save \f$\alpha\f$ and \f$\beta\f$ to be entered by the user:
     @code{.cpp}
     double alpha;
     int beta;
     @endcode
-2.  We load an image using @ref cv::imread and save it in a Mat object:
+-#  We load an image using @ref cv::imread and save it in a Mat object:
     @code{.cpp}
     Mat image = imread( argv[1] );
     @endcode
-3.  Now, since we will make some transformations to this image, we need a new Mat object to store
+-#  Now, since we will make some transformations to this image, we need a new Mat object to store
     it. Also, we want this to have the following features:
 
     -   Initial pixel values equal to zero
@@ -121,7 +121,7 @@ Explanation
     We observe that @ref cv::Mat::zeros returns a Matlab-style zero initializer based on
     *image.size()* and *image.type()*
 
-4.  Now, to perform the operation \f$g(i,j) = \alpha \cdot f(i,j) + \beta\f$ we will access to each
+-#  Now, to perform the operation \f$g(i,j) = \alpha \cdot f(i,j) + \beta\f$ we will access to each
     pixel in image. Since we are operating with RGB images, we will have three values per pixel (R,
     G and B), so we will also access them separately. Here is the piece of code:
     @code{.cpp}
@@ -141,7 +141,7 @@ Explanation
         integers (if \f$\alpha\f$ is float), we use cv::saturate_cast to make sure the
         values are valid.
 
-5.  Finally, we create windows and show the images, the usual way.
+-#  Finally, we create windows and show the images, the usual way.
     @code{.cpp}
     namedWindow("Original Image", 1);
     namedWindow("New Image", 1);
@@ -166,7 +166,7 @@ Result
 
 -   Running our code and using \f$\alpha = 2.2\f$ and \f$\beta = 50\f$
     @code{.bash}
-    \f$ ./BasicLinearTransforms lena.jpg
+    $ ./BasicLinearTransforms lena.jpg
     Basic Linear Transforms
     -------------------------
     * Enter the alpha value [1.0-3.0]: 2.2
@@ -175,4 +175,4 @@ Result
 
 -   We get this:
 
-    ![image](images/Basic_Linear_Transform_Tutorial_Result_big.jpg)
+    ![](images/Basic_Linear_Transform_Tutorial_Result_big.jpg)

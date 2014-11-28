@@ -87,4 +87,4 @@ Result
 
 Here is the result after applying the BruteForce matcher between the two original images:
 
-![image](images/Feature_Description_BruteForce_Result.jpg)
+![](images/Feature_Description_BruteForce_Result.jpg)

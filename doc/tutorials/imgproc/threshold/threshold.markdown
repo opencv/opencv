@@ -12,7 +12,9 @@ Cool Theory
 -----------
 
 @note The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler. What is
-Thresholding? -----------------------
+
+Thresholding?
+-------------
 
 -   The simplest segmentation method
 -   Application example: Separate out regions of an image corresponding to objects which we want to
@@ -25,7 +27,7 @@ Thresholding? -----------------------
     identify them (i.e. we can assign them a value of \f$0\f$ (black), \f$255\f$ (white) or any value that
     suits your needs).
 
-    ![image](images/Threshold_Tutorial_Theory_Example.jpg)
+    ![](images/Threshold_Tutorial_Theory_Example.jpg)
 
 ### Types of Thresholding
 
@@ -36,7 +38,7 @@ Thresholding? -----------------------
     with pixels with intensity values \f$src(x,y)\f$. The plot below depicts this. The horizontal blue
     line represents the threshold \f$thresh\f$ (fixed).
 
-    ![image](images/Threshold_Tutorial_Theory_Base_Figure.png)
+    ![](images/Threshold_Tutorial_Theory_Base_Figure.png)
 
 #### Threshold Binary
 
@@ -47,7 +49,7 @@ Thresholding? -----------------------
 -   So, if the intensity of the pixel \f$src(x,y)\f$ is higher than \f$thresh\f$, then the new pixel
     intensity is set to a \f$MaxVal\f$. Otherwise, the pixels are set to \f$0\f$.
 
-    ![image](images/Threshold_Tutorial_Theory_Binary.png)
+    ![](images/Threshold_Tutorial_Theory_Binary.png)
 
 #### Threshold Binary, Inverted
 
@@ -58,7 +60,7 @@ Thresholding? -----------------------
 -   If the intensity of the pixel \f$src(x,y)\f$ is higher than \f$thresh\f$, then the new pixel intensity
     is set to a \f$0\f$. Otherwise, it is set to \f$MaxVal\f$.
 
-    ![image](images/Threshold_Tutorial_Theory_Binary_Inverted.png)
+    ![](images/Threshold_Tutorial_Theory_Binary_Inverted.png)
 
 #### Truncate
 
@@ -69,7 +71,7 @@ Thresholding? -----------------------
 -   The maximum intensity value for the pixels is \f$thresh\f$, if \f$src(x,y)\f$ is greater, then its value
     is *truncated*. See figure below:
 
-    ![image](images/Threshold_Tutorial_Theory_Truncate.png)
+    ![](images/Threshold_Tutorial_Theory_Truncate.png)
 
 #### Threshold to Zero
 
@@ -79,7 +81,7 @@ Thresholding? -----------------------
 
 -   If \f$src(x,y)\f$ is lower than \f$thresh\f$, the new pixel value will be set to \f$0\f$.
 
-    ![image](images/Threshold_Tutorial_Theory_Zero.png)
+    ![](images/Threshold_Tutorial_Theory_Zero.png)
 
 #### Threshold to Zero, Inverted
 
@@ -89,97 +91,19 @@ Thresholding? -----------------------
 
 -   If \f$src(x,y)\f$ is greater than \f$thresh\f$, the new pixel value will be set to \f$0\f$.
 
-    ![image](images/Threshold_Tutorial_Theory_Zero_Inverted.png)
+    ![](images/Threshold_Tutorial_Theory_Zero_Inverted.png)
 
 Code
 ----
 
 The tutorial code's is shown lines below. You can also download it from
 [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Threshold.cpp)
-@code{.cpp}
-#include "opencv2/imgproc.hpp"
-#include "opencv2/highgui.hpp"
-#include <stdlib.h>
-#include <stdio.h>
+@includelineno samples/cpp/tutorial_code/ImgProc/Threshold.cpp
 
-using namespace cv;
-
-/// Global variables
-
-int threshold_value = 0;
-int threshold_type = 3;;
-int const max_value = 255;
-int const max_type = 4;
-int const max_BINARY_value = 255;
-
-Mat src, src_gray, dst;
-char* window_name = "Threshold Demo";
-
-char* trackbar_type = "Type: \n 0: Binary \n 1: Binary Inverted \n 2: Truncate \n 3: To Zero \n 4: To Zero Inverted";
-char* trackbar_value = "Value";
-
-/// Function headers
-void Threshold_Demo( int, void* );
-
-/*
- * @function main
- */
-int main( int argc, char** argv )
-{
-  /// Load an image
-  src = imread( argv[1], 1 );
-
-  /// Convert the image to Gray
-  cvtColor( src, src_gray, COLOR_RGB2GRAY );
-
-  /// Create a window to display results
-  namedWindow( window_name, WINDOW_AUTOSIZE );
-
-  /// Create Trackbar to choose type of Threshold
-  createTrackbar( trackbar_type,
-          window_name, &threshold_type,
-          max_type, Threshold_Demo );
-
-  createTrackbar( trackbar_value,
-          window_name, &threshold_value,
-          max_value, Threshold_Demo );
-
-  /// Call the function to initialize
-  Threshold_Demo( 0, 0 );
-
-  /// Wait until user finishes program
-  while(true)
-  {
-    int c;
-    c = waitKey( 20 );
-    if( (char)c == 27 )
-  { break; }
-   }
-
-}
-
-
-/*
- * @function Threshold_Demo
- */
-void Threshold_Demo( int, void* )
-{
-  /* 0: Binary
-     1: Binary Inverted
-     2: Threshold Truncated
-     3: Threshold to Zero
-     4: Threshold to Zero Inverted
-   */
-
-  threshold( src_gray, dst, threshold_value, max_BINARY_value,threshold_type );
-
-  imshow( window_name, dst );
-}
-@endcode
 Explanation
 -----------
 
-1.  Let's check the general structure of the program:
+-#  Let's check the general structure of the program:
     -   Load an image. If it is RGB we convert it to Grayscale. For this, remember that we can use
         the function @ref cv::cvtColor :
         @code{.cpp}
@@ -241,23 +165,21 @@ Explanation
 Results
 -------
 
-1.  After compiling this program, run it giving a path to an image as argument. For instance, for an
+-#  After compiling this program, run it giving a path to an image as argument. For instance, for an
     input image as:
 
-    ![image](images/Threshold_Tutorial_Original_Image.jpg)
+    ![](images/Threshold_Tutorial_Original_Image.jpg)
 
-2.  First, we try to threshold our image with a *binary threhold inverted*. We expect that the
+-#  First, we try to threshold our image with a *binary threhold inverted*. We expect that the
     pixels brighter than the \f$thresh\f$ will turn dark, which is what actually happens, as we can see
     in the snapshot below (notice from the original image, that the doggie's tongue and eyes are
     particularly bright in comparison with the image, this is reflected in the output image).
 
-    ![image](images/Threshold_Tutorial_Result_Binary_Inverted.jpg)
+    ![](images/Threshold_Tutorial_Result_Binary_Inverted.jpg)
 
-3.  Now we try with the *threshold to zero*. With this, we expect that the darkest pixels (below the
+-#  Now we try with the *threshold to zero*. With this, we expect that the darkest pixels (below the
     threshold) will become completely black, whereas the pixels with value greater than the
     threshold will keep its original value. This is verified by the following snapshot of the output
     image:
 
-    ![image](images/Threshold_Tutorial_Result_Zero.jpg)
-
-
+    ![](images/Threshold_Tutorial_Result_Zero.jpg)

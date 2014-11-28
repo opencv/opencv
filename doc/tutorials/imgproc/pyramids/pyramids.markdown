@@ -16,8 +16,8 @@ Theory
 
 -   Usually we need to convert an image to a size different than its original. For this, there are
     two possible options:
-    1.  *Upsize* the image (zoom in) or
-    2.  *Downsize* it (zoom out).
+    -#  *Upsize* the image (zoom in) or
+    -#  *Downsize* it (zoom out).
 -   Although there is a *geometric transformation* function in OpenCV that -literally- resize an
     image (@ref cv::resize , which we will show in a future tutorial), in this section we analyze
     first the use of **Image Pyramids**, which are widely applied in a huge range of vision
@@ -37,7 +37,7 @@ Theory
 
 -   Imagine the pyramid as a set of layers in which the higher the layer, the smaller the size.
 
-    ![image](images/Pyramids_Tutorial_Pyramid_Theory.png)
+    ![](images/Pyramids_Tutorial_Pyramid_Theory.png)
 
 -   Every layer is numbered from bottom to top, so layer \f$(i+1)\f$ (denoted as \f$G_{i+1}\f$ is smaller
     than layer \f$i\f$ (\f$G_{i}\f$).
@@ -162,14 +162,14 @@ Results
     that comes in the *tutorial_code/image* folder. Notice that this image is \f$512 \times 512\f$,
     hence a downsample won't generate any error (\f$512 = 2^{9}\f$). The original image is shown below:
 
-    ![image](images/Pyramids_Tutorial_Original_Image.jpg)
+    ![](images/Pyramids_Tutorial_Original_Image.jpg)
 
 -   First we apply two successive @ref cv::pyrDown operations by pressing 'd'. Our output is:
 
-    ![image](images/Pyramids_Tutorial_PyrDown_Result.jpg)
+    ![](images/Pyramids_Tutorial_PyrDown_Result.jpg)
 
 -   Note that we should have lost some resolution due to the fact that we are diminishing the size
     of the image. This is evident after we apply @ref cv::pyrUp twice (by pressing 'u'). Our output
     is now:
 
-    ![image](images/Pyramids_Tutorial_PyrUp_Result.jpg)
+    ![](images/Pyramids_Tutorial_PyrUp_Result.jpg)

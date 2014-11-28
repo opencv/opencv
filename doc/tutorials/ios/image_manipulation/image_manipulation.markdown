@@ -6,14 +6,14 @@ Goal
 
 In this tutorial we will learn how to do basic image processing using OpenCV in iOS.
 
-*Introduction*
---------------
+Introduction
+------------
 
 In *OpenCV* all the image processing operations are usually carried out on the *Mat* structure. In
 iOS however, to render an image on screen it have to be an instance of the *UIImage* class. To
 convert an *OpenCV Mat* to an *UIImage* we use the *Core Graphics* framework available in iOS. Below
 is the code needed to covert back and forth between Mat's and UIImage's.
-@code{.cpp}
+@code{.m}
 - (cv::Mat)cvMatFromUIImage:(UIImage *)image
 {
   CGColorSpaceRef colorSpace = CGImageGetColorSpace(image.CGImage);
@@ -37,7 +37,7 @@ is the code needed to covert back and forth between Mat's and UIImage's.
   return cvMat;
 }
 @endcode
-@code{.cpp}
+@code{.m}
 - (cv::Mat)cvMatGrayFromUIImage:(UIImage *)image
 {
   CGColorSpaceRef colorSpace = CGImageGetColorSpace(image.CGImage);
@@ -63,12 +63,12 @@ is the code needed to covert back and forth between Mat's and UIImage's.
 @endcode
 After the processing we need to convert it back to UIImage. The code below can handle both
 gray-scale and color image conversions (determined by the number of channels in the *if* statement).
-@code{.cpp}
+@code{.m}
 cv::Mat greyMat;
 cv::cvtColor(inputMat, greyMat, COLOR_BGR2GRAY);
 @endcode
 After the processing we need to convert it back to UIImage.
-@code{.cpp}
+@code{.m}
 -(UIImage *)UIImageFromCVMat:(cv::Mat)cvMat
 {
   NSData *data = [NSData dataWithBytes:cvMat.data length:cvMat.elemSize()*cvMat.total()];
@@ -106,10 +106,11 @@ After the processing we need to convert it back to UIImage.
   return finalImage;
  }
 @endcode
-*Output*
+
+Output
 --------
 
-![image](images/output.jpg)
+![](images/output.jpg)
 
 Check out an instance of running code with more Image Effects on
 [YouTube](http://www.youtube.com/watch?v=Ko3K_xdhJ1I) .
@@ -119,4 +120,3 @@ Check out an instance of running code with more Image Effects on
 <iframe width="560" height="350" src="http://www.youtube.com/embed/Ko3K_xdhJ1I" frameborder="0" allowfullscreen></iframe>
 </div>
 \endhtmlonly
-

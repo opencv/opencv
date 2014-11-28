@@ -4,45 +4,45 @@ Using OpenCV with Eclipse (plugin CDT) {#tutorial_linux_eclipse}
 Prerequisites
 -------------
 Two ways, one by forming a project directly, and another by CMake Prerequisites
-1.  Having installed [Eclipse](http://www.eclipse.org/) in your workstation (only the CDT plugin for
+-#  Having installed [Eclipse](http://www.eclipse.org/) in your workstation (only the CDT plugin for
     C/C++ is needed). You can follow the following steps:
     -   Go to the Eclipse site
     -   Download [Eclipse IDE for C/C++
         Developers](http://www.eclipse.org/downloads/packages/eclipse-ide-cc-developers/heliossr2) .
         Choose the link according to your workstation.
-2.  Having installed OpenCV. If not yet, go @ref tutorial_linux_install "here".
+-#  Having installed OpenCV. If not yet, go @ref tutorial_linux_install "here".
 
 Making a project
 ----------------
 
-1.  Start Eclipse. Just run the executable that comes in the folder.
-2.  Go to **File -\> New -\> C/C++ Project**
+-#  Start Eclipse. Just run the executable that comes in the folder.
+-#  Go to **File -\> New -\> C/C++ Project**
 
-    ![image](images/a0.png)
+    ![](images/a0.png)
 
-3.  Choose a name for your project (i.e. DisplayImage). An **Empty Project** should be okay for this
+-#  Choose a name for your project (i.e. DisplayImage). An **Empty Project** should be okay for this
     example.
 
-    ![image](images/a1.png)
+    ![](images/a1.png)
 
-4.  Leave everything else by default. Press **Finish**.
-5.  Your project (in this case DisplayImage) should appear in the **Project Navigator** (usually at
+-#  Leave everything else by default. Press **Finish**.
+-#  Your project (in this case DisplayImage) should appear in the **Project Navigator** (usually at
     the left side of your window).
 
-    ![image](images/a3.png)
+    ![](images/a3.png)
 
-6.  Now, let's add a source file using OpenCV:
+-#  Now, let's add a source file using OpenCV:
     -   Right click on **DisplayImage** (in the Navigator). **New -\> Folder** .
 
-        ![image](images/a4.png)
+        ![](images/a4.png)
 
     -   Name your folder **src** and then hit **Finish**
     -   Right click on your newly created **src** folder. Choose **New source file**:
     -   Call it **DisplayImage.cpp**. Hit **Finish**
 
-        ![image](images/a7.png)
+        ![](images/a7.png)
 
-7.  So, now you have a project with a empty .cpp file. Let's fill it with some sample code (in other
+-#  So, now you have a project with a empty .cpp file. Let's fill it with some sample code (in other
     words, copy and paste the snippet below):
     @code{.cpp}
     #include <opencv2/opencv.hpp>
@@ -68,7 +68,7 @@ Making a project
       return 0;
     }
     @endcode
-8.  We are only missing one final step: To tell OpenCV where the OpenCV headers and libraries are.
+-#  We are only missing one final step: To tell OpenCV where the OpenCV headers and libraries are.
     For this, do the following:
 
     -   Go to **Project--\>Properties**
@@ -78,7 +78,7 @@ Making a project
             include the path of the folder where opencv was installed. In our example, this is
             /usr/local/include/opencv.
 
-            ![image](images/a9.png)
+            ![](images/a9.png)
 
             @note If you do not know where your opencv files are, open the **Terminal** and type:
             @code{.bash}
@@ -103,7 +103,7 @@ Making a project
             opencv_core opencv_imgproc opencv_highgui opencv_ml opencv_video opencv_features2d
             opencv_calib3d opencv_objdetect opencv_contrib opencv_legacy opencv_flann
 
-            ![image](images/a10.png)
+            ![](images/a10.png)
 
             If you don't know where your libraries are (or you are just psychotic and want to make sure
             the path is fine), type in **Terminal**:
@@ -120,7 +120,7 @@ Making a project
 
     In the Console you should get something like
 
-    ![image](images/a12.png)
+    ![](images/a12.png)
 
     If you check in your folder, there should be an executable there.
 
@@ -138,21 +138,21 @@ Assuming that the image to use as the argument would be located in
 \<DisplayImage_directory\>/images/HappyLittleFish.png. We can still do this, but let's do it from
 Eclipse:
 
-1.  Go to **Run-\>Run Configurations**
-2.  Under C/C++ Application you will see the name of your executable + Debug (if not, click over
+-#  Go to **Run-\>Run Configurations**
+-#  Under C/C++ Application you will see the name of your executable + Debug (if not, click over
     C/C++ Application a couple of times). Select the name (in this case **DisplayImage Debug**).
-3.  Now, in the right side of the window, choose the **Arguments** Tab. Write the path of the image
+-#  Now, in the right side of the window, choose the **Arguments** Tab. Write the path of the image
     file we want to open (path relative to the workspace/DisplayImage folder). Let's use
     **HappyLittleFish.png**:
 
-    ![image](images/a14.png)
+    ![](images/a14.png)
 
-4.  Click on the **Apply** button and then in Run. An OpenCV window should pop up with the fish
+-#  Click on the **Apply** button and then in Run. An OpenCV window should pop up with the fish
     image (or whatever you used).
 
-    ![image](images/a15.jpg)
+    ![](images/a15.jpg)
 
-5.  Congratulations! You are ready to have fun with OpenCV using Eclipse.
+-#  Congratulations! You are ready to have fun with OpenCV using Eclipse.
 
 ### V2: Using CMake+OpenCV with Eclipse (plugin CDT)
 
@@ -170,25 +170,25 @@ int main ( int argc, char **argv )
   return 0;
 }
 @endcode
-1.  Create a build directory, say, under *foo*: mkdir /build. Then cd build.
-2.  Put a `CmakeLists.txt` file in build:
+-#  Create a build directory, say, under *foo*: mkdir /build. Then cd build.
+-#  Put a `CmakeLists.txt` file in build:
 @code{.bash}
 PROJECT( helloworld_proj )
 FIND_PACKAGE( OpenCV REQUIRED )
 ADD_EXECUTABLE( helloworld helloworld.cxx )
 TARGET_LINK_LIBRARIES( helloworld \f${OpenCV_LIBS} )
 @endcode
-1.  Run: cmake-gui .. and make sure you fill in where opencv was built.
-2.  Then click configure and then generate. If it's OK, **quit cmake-gui**
-3.  Run `make -j4` (the -j4 is optional, it just tells the compiler to build in 4 threads). Make
+-#  Run: cmake-gui .. and make sure you fill in where opencv was built.
+-#  Then click configure and then generate. If it's OK, **quit cmake-gui**
+-#  Run `make -j4` (the -j4 is optional, it just tells the compiler to build in 4 threads). Make
     sure it builds.
-4.  Start eclipse. Put the workspace in some directory but **not** in foo or `foo\build`
-5.  Right click in the Project Explorer section. Select Import And then open the C/C++ filter.
+-#  Start eclipse. Put the workspace in some directory but **not** in foo or `foo\build`
+-#  Right click in the Project Explorer section. Select Import And then open the C/C++ filter.
     Choose *Existing Code* as a Makefile Project.
-6.  Name your project, say *helloworld*. Browse to the Existing Code location `foo\build` (where
+-#  Name your project, say *helloworld*. Browse to the Existing Code location `foo\build` (where
     you ran your cmake-gui from). Select *Linux GCC* in the *"Toolchain for Indexer Settings"* and
     press *Finish*.
-7.  Right click in the Project Explorer section. Select Properties. Under C/C++ Build, set the
+-#  Right click in the Project Explorer section. Select Properties. Under C/C++ Build, set the
     *build directory:* from something like `${workspace_loc:/helloworld}` to
     `${workspace_loc:/helloworld}/build` since that's where you are building to.
 
@@ -196,4 +196,4 @@ TARGET_LINK_LIBRARIES( helloworld \f${OpenCV_LIBS} )
         `make VERBOSE=1 -j4` which tells the compiler to produce detailed symbol files for debugging and
         also to compile in 4 parallel threads.
 
-8.  Done!
+-#  Done!

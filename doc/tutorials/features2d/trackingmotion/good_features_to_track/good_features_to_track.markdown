@@ -111,5 +111,5 @@ Explanation
 Result
 ------
 
-![image](images/Feature_Detection_Result_a.jpg)
+![](images/Feature_Detection_Result_a.jpg)
 

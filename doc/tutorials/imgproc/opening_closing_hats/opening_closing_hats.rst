@@ -276,6 +276,6 @@ Results
 
 * And here are two snapshots of the display window. The first picture shows the output after using the operator **Opening** with a cross kernel. The second picture (right side, shows the result of using a **Blackhat** operator with an ellipse kernel.
 
-  .. image:: images/Morphology_2_Tutorial_Cover.jpg
+  .. image:: images/Morphology_2_Tutorial_Result.jpg
      :alt: Morphology 2: Result sample
      :align: center

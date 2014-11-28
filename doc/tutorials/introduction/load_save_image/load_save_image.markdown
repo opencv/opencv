@@ -55,9 +55,9 @@ int main( int argc, char** argv )
 Explanation
 -----------
 
-1.  We begin by loading an image using @ref cv::imread , located in the path given by *imageName*.
+-#  We begin by loading an image using @ref cv::imread , located in the path given by *imageName*.
     For this example, assume you are loading a RGB image.
-2.  Now we are going to convert our image from BGR to Grayscale format. OpenCV has a really nice
+-#  Now we are going to convert our image from BGR to Grayscale format. OpenCV has a really nice
     function to do this kind of transformations:
     @code{.cpp}
     cvtColor( image, gray_image, COLOR_BGR2GRAY );
@@ -70,7 +70,7 @@ Explanation
         this case we use **COLOR_BGR2GRAY** (because of @ref cv::imread has BGR default channel
         order in case of color images).
 
-3.  So now we have our new *gray_image* and want to save it on disk (otherwise it will get lost
+-#  So now we have our new *gray_image* and want to save it on disk (otherwise it will get lost
     after the program ends). To save it, we will use a function analagous to @ref cv::imread : @ref
     cv::imwrite
     @code{.cpp}
@@ -79,7 +79,7 @@ Explanation
     Which will save our *gray_image* as *Gray_Image.jpg* in the folder *images* located two levels
     up of my current location.
 
-4.  Finally, let's check out the images. We create two windows and use them to show the original
+-#  Finally, let's check out the images. We create two windows and use them to show the original
     image as well as the new one:
     @code{.cpp}
     namedWindow( imageName, WINDOW_AUTOSIZE );
@@ -88,18 +88,18 @@ Explanation
     imshow( imageName, image );
     imshow( "Gray image", gray_image );
     @endcode
-5.  Add the *waitKey(0)* function call for the program to wait forever for an user key press.
+-#  Add the *waitKey(0)* function call for the program to wait forever for an user key press.
 
 Result
 ------
 
 When you run your program you should get something like this:
 
-![image](images/Load_Save_Image_Result_1.jpg)
+![](images/Load_Save_Image_Result_1.jpg)
 
 And if you check in your folder (in my case *images*), you should have a newly .jpg file named
 *Gray_Image.jpg*:
 
-![image](images/Load_Save_Image_Result_2.jpg)
+![](images/Load_Save_Image_Result_2.jpg)
 
 Congratulations, you are done with this tutorial!
