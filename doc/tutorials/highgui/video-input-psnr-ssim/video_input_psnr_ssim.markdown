@@ -25,10 +25,14 @@ version of it ](samples/cpp/tutorial_code/HighGUI/video-input-psnr-ssim/video/Me
 You may also find the source code and these video file in the
 `samples/cpp/tutorial_code/HighGUI/video-input-psnr-ssim/` folder of the OpenCV source library.
 
-@includelineno cpp/tutorial_code/HighGUI/video-input-psnr-ssim/video-input-psnr-ssim.cpp
+@dontinclude cpp/tutorial_code/HighGUI/video-input-psnr-ssim/video-input-psnr-ssim.cpp
 
-lines
-   1-15, 29-31, 33-208
+@until Scalar getMSSIM
+@skip main
+@until {
+@skip if
+@until return mssim;
+@until }
 
 How to read a video stream (online-camera or offline-file)?
 -----------------------------------------------------------
@@ -243,10 +247,9 @@ for each frame, and the SSIM only for the frames where the PSNR falls below an i
 visualization purpose we show both images in an OpenCV window and print the PSNR and MSSIM values to
 the console. Expect to see something like:
 
-![image](images/outputVideoInput.png)
+![](images/outputVideoInput.png)
 
-You may observe a runtime instance of this on the [YouTube
-here](https://www.youtube.com/watch?v=iOcNljutOgg).
+You may observe a runtime instance of this on the [YouTube here](https://www.youtube.com/watch?v=iOcNljutOgg).
 
 \htmlonly
 <div align="center">

@@ -56,17 +56,15 @@ enumeratevisibleitemswithsquare
     produce the output array.
 -   Just to make the picture clearer, remember how a 1D Gaussian kernel look like?
 
-    ![image](images/Smoothing_Tutorial_theory_gaussian_0.jpg)
+    ![](images/Smoothing_Tutorial_theory_gaussian_0.jpg)
 
     Assuming that an image is 1D, you can notice that the pixel located in the middle would have the
     biggest weight. The weight of its neighbors decreases as the spatial distance between them and
     the center pixel increases.
 
-@note
-   Remember that a 2D Gaussian can be represented as :
-
+    @note
+    Remember that a 2D Gaussian can be represented as :
     \f[G_{0}(x, y) = A  e^{ \dfrac{ -(x - \mu_{x})^{2} }{ 2\sigma^{2}_{x} } +  \dfrac{ -(y - \mu_{y})^{2} }{ 2\sigma^{2}_{y} } }\f]
-
     where \f$\mu\f$ is the mean (the peak) and \f$\sigma\f$ represents the variance (per each of the
     variables \f$x\f$ and \f$y\f$)
 
@@ -188,12 +186,13 @@ int display_dst( int delay );
     return 0;
   }
 @endcode
+
 Explanation
 -----------
 
-1.  Let's check the OpenCV functions that involve only the smoothing procedure, since the rest is
+-#  Let's check the OpenCV functions that involve only the smoothing procedure, since the rest is
     already known by now.
-2.  **Normalized Block Filter:**
+-#  **Normalized Block Filter:**
 
     OpenCV offers the function @ref cv::blur to perform smoothing with this filter.
     @code{.cpp}
@@ -211,7 +210,7 @@ Explanation
         respect to the neighborhood. If there is a negative value, then the center of the kernel is
         considered the anchor point.
 
-3.  **Gaussian Filter:**
+-#  **Gaussian Filter:**
 
     It is performed by the function @ref cv::GaussianBlur :
     @code{.cpp}
@@ -231,7 +230,7 @@ Explanation
     -   \f$\sigma_{y}\f$: The standard deviation in y. Writing \f$0\f$ implies that \f$\sigma_{y}\f$ is
         calculated using kernel size.
 
-4.  **Median Filter:**
+-#  **Median Filter:**
 
     This filter is provided by the @ref cv::medianBlur function:
     @code{.cpp}
@@ -245,7 +244,7 @@ Explanation
     -   *dst*: Destination image, must be the same type as *src*
     -   *i*: Size of the kernel (only one because we use a square window). Must be odd.
 
-5.  **Bilateral Filter**
+-#  **Bilateral Filter**
 
     Provided by OpenCV function @ref cv::bilateralFilter
     @code{.cpp}
@@ -268,6 +267,4 @@ Results
     filters explained.
 -   Here is a snapshot of the image smoothed using *medianBlur*:
 
-    ![image](images/Smoothing_Tutorial_Result_Median_Filter.jpg)
-
-
+    ![](images/Smoothing_Tutorial_Result_Median_Filter.jpg)

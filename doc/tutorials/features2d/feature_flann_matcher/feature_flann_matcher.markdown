@@ -130,10 +130,10 @@ Explanation
 Result
 ------
 
-1.  Here is the result of the feature detection applied to the first image:
+-#  Here is the result of the feature detection applied to the first image:
 
-    ![image](images/Featur_FlannMatcher_Result.jpg)
+    ![](images/Featur_FlannMatcher_Result.jpg)
 
-2.  Additionally, we get as console output the keypoints filtered:
+-#  Additionally, we get as console output the keypoints filtered:
 
-    ![image](images/Feature_FlannMatcher_Keypoints_Result.jpg)
+    ![](images/Feature_FlannMatcher_Keypoints_Result.jpg)

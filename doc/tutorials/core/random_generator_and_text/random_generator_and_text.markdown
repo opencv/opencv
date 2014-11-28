@@ -25,7 +25,7 @@ Code
 Explanation
 -----------
 
-1.  Let's start by checking out the *main* function. We observe that first thing we do is creating a
+-#  Let's start by checking out the *main* function. We observe that first thing we do is creating a
     *Random Number Generator* object (RNG):
     @code{.cpp}
     RNG rng( 0xFFFFFFFF );
@@ -33,7 +33,7 @@ Explanation
     RNG implements a random number generator. In this example, *rng* is a RNG element initialized
     with the value *0xFFFFFFFF*
 
-2.  Then we create a matrix initialized to *zeros* (which means that it will appear as black),
+-#  Then we create a matrix initialized to *zeros* (which means that it will appear as black),
     specifying its height, width and its type:
     @code{.cpp}
     /// Initialize a matrix filled with zeros
@@ -42,7 +42,7 @@ Explanation
     /// Show it in a window during DELAY ms
     imshow( window_name, image );
     @endcode
-3.  Then we proceed to draw crazy stuff. After taking a look at the code, you can see that it is
+-#  Then we proceed to draw crazy stuff. After taking a look at the code, you can see that it is
     mainly divided in 8 sections, defined as functions:
     @code{.cpp}
     /// Now, let's draw some lines
@@ -79,7 +79,7 @@ Explanation
     All of these functions follow the same pattern, so we will analyze only a couple of them, since
     the same explanation applies for all.
 
-4.  Checking out the function **Drawing_Random_Lines**:
+-#  Checking out the function **Drawing_Random_Lines**:
     @code{.cpp}
     int Drawing_Random_Lines( Mat image, char* window_name, RNG rng )
     {
@@ -133,11 +133,11 @@ Explanation
             are used as the *R*, *G* and *B* parameters for the line color. Hence, the color of the
             lines will be random too!
 
-5.  The explanation above applies for the other functions generating circles, ellipses, polygones,
+-#  The explanation above applies for the other functions generating circles, ellipses, polygones,
     etc. The parameters such as *center* and *vertices* are also generated randomly.
-6.  Before finishing, we also should take a look at the functions *Display_Random_Text* and
+-#  Before finishing, we also should take a look at the functions *Display_Random_Text* and
     *Displaying_Big_End*, since they both have a few interesting features:
-7.  **Display_Random_Text:**
+-#  **Display_Random_Text:**
     @code{.cpp}
     int Displaying_Random_Text( Mat image, char* window_name, RNG rng )
     {
@@ -178,7 +178,7 @@ Explanation
     As a result, we will get (analagously to the other drawing functions) **NUMBER** texts over our
     image, in random locations.
 
-8.  **Displaying_Big_End**
+-#  **Displaying_Big_End**
     @code{.cpp}
     int Displaying_Big_End( Mat image, char* window_name, RNG rng )
     {
@@ -222,28 +222,28 @@ Result
 As you just saw in the Code section, the program will sequentially execute diverse drawing
 functions, which will produce:
 
-1.  First a random set of *NUMBER* lines will appear on screen such as it can be seen in this
+-#  First a random set of *NUMBER* lines will appear on screen such as it can be seen in this
     screenshot:
 
-    ![image](images/Drawing_2_Tutorial_Result_0.jpg)
+    ![](images/Drawing_2_Tutorial_Result_0.jpg)
 
-2.  Then, a new set of figures, these time *rectangles* will follow.
-3.  Now some ellipses will appear, each of them with random position, size, thickness and arc
+-#  Then, a new set of figures, these time *rectangles* will follow.
+-#  Now some ellipses will appear, each of them with random position, size, thickness and arc
     length:
 
-    ![image](images/Drawing_2_Tutorial_Result_2.jpg)
+    ![](images/Drawing_2_Tutorial_Result_2.jpg)
 
-4.  Now, *polylines* with 03 segments will appear on screen, again in random configurations.
+-#  Now, *polylines* with 03 segments will appear on screen, again in random configurations.
 
-    ![image](images/Drawing_2_Tutorial_Result_3.jpg)
+    ![](images/Drawing_2_Tutorial_Result_3.jpg)
 
-5.  Filled polygons (in this example triangles) will follow.
-6.  The last geometric figure to appear: circles!
+-#  Filled polygons (in this example triangles) will follow.
+-#  The last geometric figure to appear: circles!
 
-    ![image](images/Drawing_2_Tutorial_Result_5.jpg)
+    ![](images/Drawing_2_Tutorial_Result_5.jpg)
 
-7.  Near the end, the text *"Testing Text Rendering"* will appear in a variety of fonts, sizes,
+-#  Near the end, the text *"Testing Text Rendering"* will appear in a variety of fonts, sizes,
     colors and positions.
-8.  And the big end (which by the way expresses a big truth too):
+-#  And the big end (which by the way expresses a big truth too):
 
-    ![image](images/Drawing_2_Tutorial_Result_big.jpg)
+    ![](images/Drawing_2_Tutorial_Result_big.jpg)

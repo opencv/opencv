@@ -19,16 +19,16 @@ Development for Android significantly differs from development for other platfor
 starting programming for Android we recommend you make sure that you are familiar with the following
 key topis:
 
-1.  [Java](http://en.wikipedia.org/wiki/Java_(programming_language)) programming language that is
+-#  [Java](http://en.wikipedia.org/wiki/Java_(programming_language)) programming language that is
     the primary development technology for Android OS. Also, you can find [Oracle docs on
     Java](http://docs.oracle.com/javase/) useful.
-2.  [Java Native Interface (JNI)](http://en.wikipedia.org/wiki/Java_Native_Interface) that is a
+-#  [Java Native Interface (JNI)](http://en.wikipedia.org/wiki/Java_Native_Interface) that is a
     technology of running native code in Java virtual machine. Also, you can find [Oracle docs on
     JNI](http://docs.oracle.com/javase/7/docs/technotes/guides/jni/) useful.
-3.  [Android
+-#  [Android
     Activity](http://developer.android.com/training/basics/activity-lifecycle/starting.html) and its
     lifecycle, that is an essential Android API class.
-4.  OpenCV development will certainly require some knowlege of the [Android
+-#  OpenCV development will certainly require some knowlege of the [Android
     Camera](http://developer.android.com/guide/topics/media/camera.html) specifics.
 
 Quick environment setup for Android development
@@ -44,14 +44,15 @@ environment setup automatically and you can skip the rest of the guide.
 
 If you are a beginner in Android development then we also recommend you to start with TADP.
 
-@note *NVIDIA*'s Tegra Android Development Pack includes some special features for *NVIDIA*’s Tegra
-platform_ but its use is not limited to *Tegra* devices only. \* You need at least *1.6 Gb* free
+@note *NVIDIA*'s Tegra Android Development Pack includes some special features for *NVIDIA*’s [Tegra
+platform](http://www.nvidia.com/object/tegra-3-processor.html)
+but its use is not limited to *Tegra* devices only. \* You need at least *1.6 Gb* free
 disk space for the install.
 
 -   TADP will download Android SDK platforms and Android NDK from Google's server, so Internet
     connection is required for the installation.
 -   TADP may ask you to flash your development kit at the end of installation process. Just skip
-    this step if you have no Tegra Development Kit_.
+    this step if you have no [Tegra Development Kit](http://developer.nvidia.com/mobile/tegra-hardware-sales-inquiries).
 -   (UNIX) TADP will ask you for *root* in the middle of installation, so you need to be a member of
     *sudo* group.
 
@@ -62,7 +63,7 @@ Manual environment setup for Android development
 
 You need the following software to be installed in order to develop for Android in Java:
 
-1.  **Sun JDK 6** (Sun JDK 7 is also possible)
+-#  **Sun JDK 6** (Sun JDK 7 is also possible)
 
     Visit [Java SE Downloads page](http://www.oracle.com/technetwork/java/javase/downloads/) and
     download an installer for your OS.
@@ -71,30 +72,32 @@ You need the following software to be installed in order to develop for Android 
     guide](http://source.android.com/source/initializing.html#installing-the-jdk) for Ubuntu and Mac
     OS (only JDK sections are applicable for OpenCV)
 
-@note OpenJDK is not suitable for Android development, since Android SDK supports only Sun JDK. If you use Ubuntu, after installation of Sun JDK you should run the following command to set Sun java environment:
-   @code{.bash}
-    sudo update-java-alternatives --set java-6-sun
-    @endcode
-1.  **Android SDK**
+    @note OpenJDK is not suitable for Android development, since Android SDK supports only Sun JDK. If you use Ubuntu, after installation of Sun JDK you should run the following command to set Sun java environment:
+        @code{.bash}
+        sudo update-java-alternatives --set java-6-sun
+        @endcode
+
+-#  **Android SDK**
 
     Get the latest Android SDK from <http://developer.android.com/sdk/index.html>
 
     Here is Google's [install guide](http://developer.android.com/sdk/installing.html) for the SDK.
 
-@note You can choose downloading **ADT Bundle package** that in addition to Android SDK Tools
-includes Eclipse + ADT + NDK/CDT plugins, Android Platform-tools, the latest Android platform and
-the latest Android system image for the emulator - this is the best choice for those who is setting
-up Android development environment the first time!
+    @note You can choose downloading **ADT Bundle package** that in addition to Android SDK Tools
+    includes Eclipse + ADT + NDK/CDT plugins, Android Platform-tools, the latest Android platform and
+    the latest Android system image for the emulator - this is the best choice for those who is setting
+    up Android development environment the first time!
 
-@note If you are running x64 version of Ubuntu Linux, then you need ia32 shared libraries for use on amd64 and ia64 systems to be installed. You can install them with the following command:
-   @code{.bash}
-    sudo apt-get install ia32-libs
-    @endcode
-    For Red Hat based systems the following command might be helpful:
-    @code{.bash}
-    sudo yum install libXtst.i386
-    @endcode
-1.  **Android SDK components**
+    @note If you are running x64 version of Ubuntu Linux, then you need ia32 shared libraries for use on amd64 and ia64 systems to be installed. You can install them with the following command:
+       @code{.bash}
+        sudo apt-get install ia32-libs
+        @endcode
+        For Red Hat based systems the following command might be helpful:
+        @code{.bash}
+        sudo yum install libXtst.i386
+        @endcode
+
+-#  **Android SDK components**
 
     You need the following SDK components to be installed:
 
@@ -110,13 +113,13 @@ up Android development environment the first time!
         successful compilation the **target** platform should be set to Android 3.0 (API 11) or
         higher. It will not prevent them from running on Android 2.2.
 
-        ![image](images/android_sdk_and_avd_manager.png)
+        ![](images/android_sdk_and_avd_manager.png)
 
         See [Adding Platforms and
         Packages](http://developer.android.com/sdk/installing/adding-packages.html) for help with
         installing/updating SDK components.
 
-2.  **Eclipse IDE**
+-#  **Eclipse IDE**
 
     Check the [Android SDK System Requirements](http://developer.android.com/sdk/requirements.html)
     document for a list of Eclipse versions that are compatible with the Android SDK. For OpenCV
@@ -126,7 +129,7 @@ up Android development environment the first time!
     If you have no Eclipse installed, you can get it from the [official
     site](http://www.eclipse.org/downloads/).
 
-3.  **ADT plugin for Eclipse**
+-#  **ADT plugin for Eclipse**
 
     These instructions are copied from [Android Developers
     site](http://developer.android.com/sdk/installing/installing-adt.html), check it out in case of
@@ -135,33 +138,34 @@ up Android development environment the first time!
     Assuming that you have Eclipse IDE installed, as described above, follow these steps to download
     and install the ADT plugin:
 
-    1.  Start Eclipse, then select Help --\> Install New Software...
-    2.  Click Add (in the top-right corner).
-    3.  In the Add Repository dialog that appears, enter "ADT Plugin" for the Name and the following
-        URL for the Location:
+    -#  Start Eclipse, then select Help --\> Install New Software...
+    -#  Click Add (in the top-right corner).
+    -#  In the Add Repository dialog that appears, enter "ADT Plugin" for the Name and the following
+        URL for the Location: <https://dl-ssl.google.com/android/eclipse/>
 
-        <https://dl-ssl.google.com/android/eclipse/>
+    -#  Click OK
 
-    4.  Click OK
+        @note If you have trouble acquiring the plugin, try using "http" in the Location URL, instead of "https" (https is preferred for security reasons).
 
-@note If you have trouble acquiring the plugin, try using "http" in the Location URL, instead of "https" (https is preferred for security reasons).
-   1.  In the Available Software dialog, select the checkbox next to Developer Tools and click
-        Next.
-    2.  In the next window, you'll see a list of the tools to be downloaded. Click Next.
+    -#  In the Available Software dialog, select the checkbox next to Developer Tools and click Next.
 
-@note If you also plan to develop native C++ code with Android NDK don't forget to enable NDK Plugins installations as well.
-   ![image](images/eclipse_inst_adt.png)
+    -#  In the next window, you'll see a list of the tools to be downloaded. Click Next.
 
-1.  Read and accept the license agreements, then click Finish.
+        @note If you also plan to develop native C++ code with Android NDK don't forget to enable NDK Plugins installations as well.
 
-@note If you get a security warning saying that the authenticity or validity of the software can't be established, click OK.
-   1.  When the installation completes, restart Eclipse.
+        ![](images/eclipse_inst_adt.png)
+
+    -#  Read and accept the license agreements, then click Finish.
+
+        @note If you get a security warning saying that the authenticity or validity of the software can't be established, click OK.
+
+    -#  When the installation completes, restart Eclipse.
 
 ### Native development in C++
 
 You need the following software to be installed in order to develop for Android in C++:
 
-1.  **Android NDK**
+-#  **Android NDK**
 
     To compile C++ code for Android platform you need Android Native Development Kit (*NDK*).
 
@@ -170,17 +174,18 @@ You need the following software to be installed in order to develop for Android 
     extract the archive to some folder on your computer. Here are [installation
     instructions](http://developer.android.com/tools/sdk/ndk/index.html#Installing).
 
-@note Before start you can read official Android NDK documentation which is in the Android NDK
-archive, in the folder `docs/`. The main article about using Android NDK build system is in the
-`ANDROID-MK.html` file. Some additional information you can find in the `APPLICATION-MK.html`,
-`NDK-BUILD.html` files, and `CPU-ARM-NEON.html`, `CPLUSPLUS-SUPPORT.html`, `PREBUILTS.html`. \#.
-**CDT plugin for Eclipse**
+    @note Before start you can read official Android NDK documentation which is in the Android NDK
+    archive, in the folder `docs/`. The main article about using Android NDK build system is in the
+    `ANDROID-MK.html` file. Some additional information you can find in the `APPLICATION-MK.html`,
+    `NDK-BUILD.html` files, and `CPU-ARM-NEON.html`, `CPLUSPLUS-SUPPORT.html`, `PREBUILTS.html`.
 
-If you selected for installation the NDK plugins component of Eclipse ADT plugin (see the picture
-above) your Eclipse IDE should already have CDT plugin (that means C/C++ Development Tooling).
-There are several possible ways to integrate compilation of C++ code by Android NDK into Eclipse
-compilation process. We recommend the approach based on Eclipse CDT(C/C++ Development Tooling)
-Builder.
+-#  **CDT plugin for Eclipse**
+
+    If you selected for installation the NDK plugins component of Eclipse ADT plugin (see the picture
+    above) your Eclipse IDE should already have CDT plugin (that means C/C++ Development Tooling).
+    There are several possible ways to integrate compilation of C++ code by Android NDK into Eclipse
+    compilation process. We recommend the approach based on Eclipse CDT(C/C++ Development Tooling)
+    Builder.
 
 Android application structure
 -----------------------------
@@ -244,6 +249,7 @@ APP_STL := gnustl_static
 APP_CPPFLAGS := -frtti -fexceptions
 APP_ABI := all
 @endcode
+
 @note We recommend setting APP_ABI := all for all targets. If you want to specify the target
 explicitly, use armeabi for ARMv5/ARMv6, armeabi-v7a for ARMv7, x86 for Intel Atom or mips for MIPS.
 
@@ -260,18 +266,18 @@ We strongly reccomend using cmd.exe (standard Windows console) instead of Cygwin
     not really supported and we are unlikely to help you in case you encounter some problems with
     it. So, use it only if you're capable of handling the consequences yourself.
 
-1.  Open console and go to the root folder of an Android application
+-#  Open console and go to the root folder of an Android application
     @code{.bash}
     cd <root folder of the project>/
     @endcode
-2.  Run the following command
+-#  Run the following command
     @code{.bash}
     <path_where_NDK_is_placed>/ndk-build
     @endcode
-@note On Windows we recommend to use ndk-build.cmd in standard Windows console (cmd.exe) rather than the similar bash script in Cygwin shell.
-   ![image](images/ndk_build.png)
+    @note On Windows we recommend to use ndk-build.cmd in standard Windows console (cmd.exe) rather than the similar bash script in Cygwin shell.
+       ![](images/ndk_build.png)
 
-1.  After executing this command the C++ part of the source code is compiled.
+-#  After executing this command the C++ part of the source code is compiled.
 
 After that the Java part of the application can be (re)compiled (using either *Eclipse* or *Ant*
 build tool).
@@ -299,8 +305,8 @@ Builder.
 OpenCV for Android package since version 2.4.2 contains sample projects
    pre-configured CDT Builders. For your own projects follow the steps below.
 
-1.  Define the NDKROOT environment variable containing the path to Android NDK in your system (e.g.
-    "X:\\\\Apps\\\\android-ndk-r8" or "/opt/android-ndk-r8").
+-#  Define the NDKROOT environment variable containing the path to Android NDK in your system (e.g.
+    "X:\\Apps\\android-ndk-r8" or "/opt/android-ndk-r8").
 
     **On Windows** an environment variable can be set via
     My Computer -\> Properties -\> Advanced -\> Environment variables. On Windows 7 it's also
@@ -309,71 +315,68 @@ OpenCV for Android package since version 2.4.2 contains sample projects
     **On Linux** and **MacOS** an environment variable can be set via appending a
     "export VAR_NAME=VAR_VALUE" line to the `"~/.bashrc"` file and logging off and then on.
 
-@note It's also possible to define the NDKROOT environment variable within Eclipse IDE, but it
-should be done for every new workspace you create. If you prefer this option better than setting
-system environment variable, open Eclipse menu
-Window -\> Preferences -\> C/C++ -\> Build -\> Environment, press the Add... button and set variable
-name to NDKROOT and value to local Android NDK path. \#. After that you need to **restart Eclipse**
-to apply the changes.
+    @note It's also possible to define the NDKROOT environment variable within Eclipse IDE, but it
+    should be done for every new workspace you create. If you prefer this option better than setting
+    system environment variable, open Eclipse menu
+    Window -\> Preferences -\> C/C++ -\> Build -\> Environment, press the Add... button and set variable
+    name to NDKROOT and value to local Android NDK path. \#. After that you need to **restart Eclipse**
+    to apply the changes.
 
-1.  Open Eclipse and load the Android app project to configure.
-2.  Add C/C++ Nature to the project via Eclipse menu
+-#  Open Eclipse and load the Android app project to configure.
+
+-#  Add C/C++ Nature to the project via Eclipse menu
     New -\> Other -\> C/C++ -\> Convert to a C/C++ Project.
-
-    ![image](images/eclipse_cdt_cfg1.png)
-
+    ![](images/eclipse_cdt_cfg1.png)
     And:
+    ![](images/eclipse_cdt_cfg2.png)
 
-    ![image](images/eclipse_cdt_cfg2.png)
-
-3.  Select the project(s) to convert. Specify "Project type" = Makefile project, "Toolchains" =
+-#  Select the project(s) to convert. Specify "Project type" = Makefile project, "Toolchains" =
     Other Toolchain.
+    ![](images/eclipse_cdt_cfg3.png)
 
-    ![image](images/eclipse_cdt_cfg3.png)
-
-4.  Open Project Properties -\> C/C++ Build, uncheck Use default build command, replace "Build
+-#  Open Project Properties -\> C/C++ Build, uncheck Use default build command, replace "Build
     command" text from "make" to
 
     "${NDKROOT}/ndk-build.cmd" on Windows,
 
     "${NDKROOT}/ndk-build" on Linux and MacOS.
 
-    ![image](images/eclipse_cdt_cfg4.png)
+    ![](images/eclipse_cdt_cfg4.png)
 
-5.  Go to Behaviour tab and change "Workbench build type" section like shown below:
+-#  Go to Behaviour tab and change "Workbench build type" section like shown below:
 
-    ![image](images/eclipse_cdt_cfg5.png)
+    ![](images/eclipse_cdt_cfg5.png)
 
-6.  Press OK and make sure the ndk-build is successfully invoked when building the project.
+-#  Press OK and make sure the ndk-build is successfully invoked when building the project.
 
-    ![image](images/eclipse_cdt_cfg6.png)
+    ![](images/eclipse_cdt_cfg6.png)
 
-7.  If you open your C++ source file in Eclipse editor, you'll see syntax error notifications. They
+-#  If you open your C++ source file in Eclipse editor, you'll see syntax error notifications. They
     are not real errors, but additional CDT configuring is required.
 
-    ![image](images/eclipse_cdt_cfg7.png)
+    ![](images/eclipse_cdt_cfg7.png)
 
-8.  Open Project Properties -\> C/C++ General -\> Paths and Symbols and add the following
+-#  Open Project Properties -\> C/C++ General -\> Paths and Symbols and add the following
     **Include** paths for **C++**:
-
+    @code
         # for NDK r8 and prior:
-        \f${NDKROOT}/platforms/android-9/arch-arm/usr/include
-        \f${NDKROOT}/sources/cxx-stl/gnu-libstdc++/include
-        \f${NDKROOT}/sources/cxx-stl/gnu-libstdc++/libs/armeabi-v7a/include
-        \f${ProjDirPath}/../../sdk/native/jni/include
+        ${NDKROOT}/platforms/android-9/arch-arm/usr/include
+        ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/include
+        ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/libs/armeabi-v7a/include
+        ${ProjDirPath}/../../sdk/native/jni/include
 
         # for NDK r8b and later:
-        \f${NDKROOT}/platforms/android-9/arch-arm/usr/include
-        \f${NDKROOT}/sources/cxx-stl/gnu-libstdc++/4.6/include
-        \f${NDKROOT}/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi-v7a/include
-        \f${ProjDirPath}/../../sdk/native/jni/include
-
+        ${NDKROOT}/platforms/android-9/arch-arm/usr/include
+        ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/4.6/include
+        ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi-v7a/include
+        ${ProjDirPath}/../../sdk/native/jni/include
+    @endcode
     The last path should be changed to the correct absolute or relative path to OpenCV4Android SDK
     location.
 
     This should clear the syntax error notifications in Eclipse C++ editor.
 
-    ![image](images/eclipse_cdt_cfg8.png)
+    ![](images/eclipse_cdt_cfg8.png)
 
 Debugging and Testing
 ---------------------
@@ -386,18 +389,18 @@ hardware device for testing and debugging an Android project.
 AVD (*Android Virtual Device*) is not probably the most convenient way to test an OpenCV-dependent
 application, but sure the most uncomplicated one to configure.
 
-1.  Assuming you already have *Android SDK* and *Eclipse IDE* installed, in Eclipse go
+-#  Assuming you already have *Android SDK* and *Eclipse IDE* installed, in Eclipse go
     Window -\> AVD Manager.
-2.  Press the New button in AVD Manager window.
-3.  Create new Android Virtual Device window will let you select some properties for your new
+-#  Press the New button in AVD Manager window.
+-#  Create new Android Virtual Device window will let you select some properties for your new
     device, like target API level, size of SD-card and other.
 
-    ![image](images/AVD_create.png)
+    ![](images/AVD_create.png)
 
-4.  When you click the Create AVD button, your new AVD will be availible in AVD Manager.
-5.  Press Start to launch the device. Be aware that any AVD (a.k.a. Emulator) is usually much slower
+-#  When you click the Create AVD button, your new AVD will be availible in AVD Manager.
+-#  Press Start to launch the device. Be aware that any AVD (a.k.a. Emulator) is usually much slower
     than a hardware Android device, so it may take up to several minutes to start.
-6.  Go Run -\> Run/Debug in Eclipse IDE to run your application in regular or debugging mode.
+-#  Go Run -\> Run/Debug in Eclipse IDE to run your application in regular or debugging mode.
     Device Chooser will let you choose among the running devices or to start a new one.
 
 ### Hardware Device
@@ -412,86 +415,77 @@ instructions](http://developer.android.com/tools/device.html) for more informati
 
 #### Windows host computer
 
-1.  Enable USB debugging on the Android device (via Settings menu).
-2.  Attach the Android device to your PC with a USB cable.
-3.  Go to Start Menu and **right-click** on Computer. Select Manage in the context menu. You may be
+-#  Enable USB debugging on the Android device (via Settings menu).
+-#  Attach the Android device to your PC with a USB cable.
+-#  Go to Start Menu and **right-click** on Computer. Select Manage in the context menu. You may be
     asked for Administrative permissions.
-4.  Select Device Manager in the left pane and find an unknown device in the list. You may try
+-#  Select Device Manager in the left pane and find an unknown device in the list. You may try
     unplugging it and then plugging back in order to check whether it's your exact equipment appears
     in the list.
 
-    ![image](images/usb_device_connect_01.png)
+    ![](images/usb_device_connect_01.png)
 
-5.  Try your luck installing Google USB drivers without any modifications: **right-click** on the
+-#  Try your luck installing Google USB drivers without any modifications: **right-click** on the
     unknown device, select Properties menu item --\> Details tab --\> Update Driver button.
 
-    ![image](images/usb_device_connect_05.png)
+    ![](images/usb_device_connect_05.png)
 
-6.  Select Browse computer for driver software.
+-#  Select Browse computer for driver software.
 
-    ![image](images/usb_device_connect_06.png)
+    ![](images/usb_device_connect_06.png)
 
-7.  Specify the path to `<Android SDK folder>/extras/google/usb_driver/` folder.
+-#  Specify the path to `<Android SDK folder>/extras/google/usb_driver/` folder.
 
-    ![image](images/usb_device_connect_07.png)
+    ![](images/usb_device_connect_07.png)
 
-8.  If you get the prompt to install unverified drivers and report about success - you've finished
+-#  If you get the prompt to install unverified drivers and report about success - you've finished
     with USB driver installation.
 
-    ![image](images/usb_device_connect_08.png)
+    ![](images/usb_device_connect_08.png)
 
-    \` \`
+    ![](images/usb_device_connect_09.png)
 
+-#  Otherwise (getting the failure like shown below) follow the next steps.
 
-    ![image](images/usb_device_connect_09.png)
+    ![](images/usb_device_connect_12.png)
 
-9.  Otherwise (getting the failure like shown below) follow the next steps.
+-#  Again **right-click** on the unknown device, select Properties --\> Details --\> Hardware Ids
+    and copy the line like `USB\VID_XXXX&PID_XXXX&MI_XX`.
 
-    ![image](images/usb_device_connect_12.png)
+    ![](images/usb_device_connect_02.png)
 
-10. Again **right-click** on the unknown device, select Properties --\> Details --\> Hardware Ids
-    and copy the line like USB\\VID_XXXX&PID_XXXX&MI_XX.
-
-    ![image](images/usb_device_connect_02.png)
-
-11. Now open file `<Android SDK folder>/extras/google/usb_driver/android_winusb.inf`. Select either
+-#  Now open file `<Android SDK folder>/extras/google/usb_driver/android_winusb.inf`. Select either
     Google.NTx86 or Google.NTamd64 section depending on your host system architecture.
 
-    ![image](images/usb_device_connect_03.png)
+    ![](images/usb_device_connect_03.png)
 
-12. There should be a record like existing ones for your device and you need to add one manually.
+-#  There should be a record like existing ones for your device and you need to add one manually.
 
-    ![image](images/usb_device_connect_04.png)
+    ![](images/usb_device_connect_04.png)
 
-13. Save the `android_winusb.inf` file and try to install the USB driver again.
+-#  Save the `android_winusb.inf` file and try to install the USB driver again.
 
-    ![image](images/usb_device_connect_05.png)
+    ![](images/usb_device_connect_05.png)
 
-    \` \`
+    ![](images/usb_device_connect_06.png)
 
-    ![image](images/usb_device_connect_06.png)
+    ![](images/usb_device_connect_07.png)
 
-    \` \`
+-#  This time installation should go successfully.
 
-    ![image](images/usb_device_connect_07.png)
+    ![](images/usb_device_connect_08.png)
 
-14. This time installation should go successfully.
+    ![](images/usb_device_connect_09.png)
 
-    ![image](images/usb_device_connect_08.png)
+-#  And an unknown device is now recognized as an Android phone.
 
-    \` \`
+    ![](images/usb_device_connect_10.png)
 
-    ![image](images/usb_device_connect_09.png)
+-#  Successful device USB connection can be verified in console via adb devices command.
 
-15. And an unknown device is now recognized as an Android phone.
+    ![](images/usb_device_connect_11.png)
 
-    ![image](images/usb_device_connect_10.png)
-
-16. Successful device USB connection can be verified in console via adb devices command.
-
-    ![image](images/usb_device_connect_11.png)
-
-17. Now, in Eclipse go Run -\> Run/Debug to run your application in regular or debugging mode.
+-#  Now, in Eclipse go Run -\> Run/Debug to run your application in regular or debugging mode.
     Device Chooser will let you choose among the devices.
 
 #### Linux host computer
@@ -507,7 +501,7 @@ SUBSYSTEM=="usb", ATTR{idVendor}=="1004",  MODE="0666", GROUP="plugdev"
 Then restart your adb server (even better to restart the system), plug in your Android device and
 execute adb devices command. You will see the list of attached devices:
 
-![image](images/usb_device_connect_ubuntu.png)
+![](images/usb_device_connect_ubuntu.png)
 
 #### Mac OS host computer
 

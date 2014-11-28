@@ -23,7 +23,7 @@ Theory
     where \f$(x_{center}, y_{center})\f$ define the center position (green point) and \f$r\f$ is the radius,
     which allows us to completely define a circle, as it can be seen below:
 
-    ![image](images/Hough_Circle_Tutorial_Theory_0.jpg)
+    ![](images/Hough_Circle_Tutorial_Theory_0.jpg)
 
 -   For sake of efficiency, OpenCV implements a detection method slightly trickier than the standard
     Hough Transform: *The Hough gradient method*, which is made up of two main stages. The first
@@ -34,82 +34,35 @@ Theory
 Code
 ----
 
-1.  **What does this program do?**
+-#  **What does this program do?**
     -   Loads an image and blur it to reduce the noise
     -   Applies the *Hough Circle Transform* to the blurred image .
     -   Display the detected circle in a window.
 
-2.  The sample code that we will explain can be downloaded from
-    |TutorialHoughCirclesSimpleDownload|_. A slightly fancier version (which shows trackbars for
-    changing the threshold values) can be found |TutorialHoughCirclesFancyDownload|_.
-@code{.cpp}
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
-#include <iostream>
-#include <stdio.h>
+-#  The sample code that we will explain can be downloaded from [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/houghcircles.cpp).
+    A slightly fancier version (which shows trackbars for
+    changing the threshold values) can be found [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/HoughCircle_Demo.cpp).
+    @includelineno samples/cpp/houghcircles.cpp
 
-using namespace cv;
-
-/* @function main */
-int main(int argc, char** argv)
-{
-  Mat src, src_gray;
-
-  /// Read the image
-  src = imread( argv[1], 1 );
-
-  if( !src.data )
-    { return -1; }
-
-  /// Convert it to gray
-  cvtColor( src, src_gray, COLOR_BGR2GRAY );
-
-  /// Reduce the noise so we avoid false circle detection
-  GaussianBlur( src_gray, src_gray, Size(9, 9), 2, 2 );
-
-  vector<Vec3f> circles;
-
-  /// Apply the Hough Transform to find the circles
-  HoughCircles( src_gray, circles, HOUGH_GRADIENT, 1, src_gray.rows/8, 200, 100, 0, 0 );
-
-  /// Draw the circles detected
-  for( size_t i = 0; i < circles.size(); i++ )
-  {
-      Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-      int radius = cvRound(circles[i][2]);
-      // circle center
-      circle( src, center, 3, Scalar(0,255,0), -1, 8, 0 );
-      // circle outline
-      circle( src, center, radius, Scalar(0,0,255), 3, 8, 0 );
-   }
-
-  /// Show your results
-  namedWindow( "Hough Circle Transform Demo", WINDOW_AUTOSIZE );
-  imshow( "Hough Circle Transform Demo", src );
-
-  waitKey(0);
-  return 0;
-}
-@endcode
 Explanation
 -----------
 
-1.  Load an image
+-#  Load an image
     @code{.cpp}
     src = imread( argv[1], 1 );
 
     if( !src.data )
       { return -1; }
     @endcode
-2.  Convert it to grayscale:
+-#  Convert it to grayscale:
     @code{.cpp}
     cvtColor( src, src_gray, COLOR_BGR2GRAY );
     @endcode
-3.  Apply a Gaussian blur to reduce noise and avoid false circle detection:
+-#  Apply a Gaussian blur to reduce noise and avoid false circle detection:
     @code{.cpp}
     GaussianBlur( src_gray, src_gray, Size(9, 9), 2, 2 );
     @endcode
-4.  Proceed to apply Hough Circle Transform:
+-#  Proceed to apply Hough Circle Transform:
     @code{.cpp}
     vector<Vec3f> circles;
 
@@ -129,7 +82,7 @@ Explanation
     -   *min_radius = 0*: Minimum radio to be detected. If unknown, put zero as default.
     -   *max_radius = 0*: Maximum radius to be detected. If unknown, put zero as default.
 
-5.  Draw the detected circles:
+-#  Draw the detected circles:
     @code{.cpp}
     for( size_t i = 0; i < circles.size(); i++ )
     {
@@ -143,19 +96,19 @@ Explanation
     @endcode
     You can see that we will draw the circle(s) on red and the center(s) with a small green dot
 
-6.  Display the detected circle(s):
+-#  Display the detected circle(s):
     @code{.cpp}
     namedWindow( "Hough Circle Transform Demo", WINDOW_AUTOSIZE );
     imshow( "Hough Circle Transform Demo", src );
     @endcode
-7.  Wait for the user to exit the program
+-#  Wait for the user to exit the program
     @code{.cpp}
     waitKey(0);
     @endcode
+
 Result
 ------
 
 The result of running the code above with a test image is shown below:
 
-![image](images/Hough_Circle_Tutorial_Result.jpg)
-
+![](images/Hough_Circle_Tutorial_Result.jpg)

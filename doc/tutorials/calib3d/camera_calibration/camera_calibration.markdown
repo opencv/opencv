@@ -96,7 +96,7 @@ on how to do this you can find in the @ref tutorial_file_input_output_with_xml_y
 Explanation
 -----------
 
-1.  **Read the settings.**
+-#  **Read the settings.**
     @code{.cpp}
     Settings s;
     const string inputSettingsFile = argc > 1 ? argv[1] : "default.xml";
@@ -119,7 +119,7 @@ Explanation
     additional post-processing function that checks validity of the input. Only if all inputs are
     good then *goodInput* variable will be true.
 
-2.  **Get next input, if it fails or we have enough of them - calibrate**. After this we have a big
+-#  **Get next input, if it fails or we have enough of them - calibrate**. After this we have a big
     loop where we do the following operations: get the next image from the image list, camera or
     video file. If this fails or we have enough images then we run the calibration process. In case
     of image we step out of the loop and otherwise the remaining frames will be undistorted (if the
@@ -151,7 +151,7 @@ Explanation
     @endcode
     For some cameras we may need to flip the input image. Here we do this too.
 
-3.  **Find the pattern in the current input**. The formation of the equations I mentioned above aims
+-#  **Find the pattern in the current input**. The formation of the equations I mentioned above aims
     to finding major patterns in the input: in case of the chessboard this are corners of the
     squares and for the circles, well, the circles themselves. The position of these will form the
     result which will be written into the *pointBuf* vector.
@@ -212,7 +212,7 @@ Explanation
             drawChessboardCorners( view, s.boardSize, Mat(pointBuf), found );
       }
     @endcode
-4.  **Show state and result to the user, plus command line control of the application**. This part
+-#  **Show state and result to the user, plus command line control of the application**. This part
     shows text output on the image.
     @code{.cpp}
     //----------------------------- Output Text ------------------------------------------------
@@ -263,7 +263,7 @@ Explanation
       imagePoints.clear();
     }
     @endcode
-5.  **Show the distortion removal for the images too**. When you work with an image list it is not
+-#  **Show the distortion removal for the images too**. When you work with an image list it is not
     possible to remove the distortion inside the loop. Therefore, you must do this after the loop.
     Taking advantage of this now I'll expand the @ref cv::undistort function, which is in fact first
     calls @ref cv::initUndistortRectifyMap to find transformation matrices and then performs
@@ -291,6 +291,7 @@ Explanation
       }
     }
     @endcode
+
 The calibration and save
 ------------------------
 
@@ -419,6 +420,7 @@ double rms = calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix,
     return std::sqrt(totalErr/totalPoints);              // calculate the arithmetical mean
     }
     @endcode
+
 Results
 -------
 
@@ -444,21 +446,21 @@ images/CameraCalibration/VID5/xx8.jpg
 Then passed `images/CameraCalibration/VID5/VID5.XML` as an input in the configuration file. Here's a
 chessboard pattern found during the runtime of the application:
 
-![image](images/fileListImage.jpg)
+![](images/fileListImage.jpg)
 
 After applying the distortion removal we get:
 
-![image](images/fileListImageUnDist.jpg)
+![](images/fileListImageUnDist.jpg)
 
 The same works for [this asymmetrical circle pattern ](acircles_pattern.png) by setting the input
 width to 4 and height to 11. This time I've used a live camera feed by specifying its ID ("1") for
 the input. Here's, how a detected pattern should look:
 
-![image](images/asymetricalPattern.jpg)
+![](images/asymetricalPattern.jpg)
 
 In both cases in the specified output XML/YAML file you'll find the camera and distortion
 coefficients matrices:
-@code{.cpp}
+@code{.xml}
 <Camera_Matrix type_id="opencv-matrix">
 <rows>3</rows>
 <cols>3</cols>

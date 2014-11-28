@@ -38,17 +38,17 @@ OpenCV. You can get more information here: `Android OpenCV Manager` and in these
 Using async initialization is a **recommended** way for application development. It uses the OpenCV
 Manager to access OpenCV libraries externally installed in the target system.
 
-1.  Add OpenCV library project to your workspace. Use menu
+-#  Add OpenCV library project to your workspace. Use menu
     File -\> Import -\> Existing project in your workspace.
 
     Press Browse button and locate OpenCV4Android SDK (`OpenCV-2.4.9-android-sdk/sdk`).
 
-    ![image](images/eclipse_opencv_dependency0.png)
+    ![](images/eclipse_opencv_dependency0.png)
 
-2.  In application project add a reference to the OpenCV Java SDK in
+-#  In application project add a reference to the OpenCV Java SDK in
     Project -\> Properties -\> Android -\> Library -\> Add select OpenCV Library - 2.4.9.
 
-    ![image](images/eclipse_opencv_dependency1.png)
+    ![](images/eclipse_opencv_dependency1.png)
 
 In most cases OpenCV Manager may be installed automatically from Google Play. For the case, when
 Google Play is not available, i.e. emulator, developer board, etc, you can install it manually using
@@ -101,18 +101,18 @@ designed mostly for development purposes. This approach is deprecated for the pr
 release package is recommended to communicate with OpenCV Manager via the async initialization
 described above.
 
-1.  Add the OpenCV library project to your workspace the same way as for the async initialization
+-#  Add the OpenCV library project to your workspace the same way as for the async initialization
     above. Use menu File -\> Import -\> Existing project in your workspace, press Browse button and
     select OpenCV SDK path (`OpenCV-2.4.9-android-sdk/sdk`).
 
-    ![image](images/eclipse_opencv_dependency0.png)
+    ![](images/eclipse_opencv_dependency0.png)
 
-2.  In the application project add a reference to the OpenCV4Android SDK in
+-#  In the application project add a reference to the OpenCV4Android SDK in
     Project -\> Properties -\> Android -\> Library -\> Add select OpenCV Library - 2.4.9;
 
-    ![image](images/eclipse_opencv_dependency1.png)
+    ![](images/eclipse_opencv_dependency1.png)
 
-3.  If your application project **doesn't have a JNI part**, just copy the corresponding OpenCV
+-#  If your application project **doesn't have a JNI part**, just copy the corresponding OpenCV
     native libs from `<OpenCV-2.4.9-android-sdk>/sdk/native/libs/<target_arch>` to your project
     directory to folder `libs/<target_arch>`.
 
@@ -126,7 +126,7 @@ described above.
     @endcode
     The result should look like the following:
     @code{.make}
-    include \f$(CLEAR_VARS)
+    include $(CLEAR_VARS)
 
     # OpenCV
     OPENCV_CAMERA_MODULES:=on
@@ -139,7 +139,7 @@ described above.
     Eclipse will automatically include all the libraries from the `libs` folder to the application
     package (APK).
 
-4.  The last step of enabling OpenCV in your application is Java initialization code before calling
+-#  The last step of enabling OpenCV in your application is Java initialization code before calling
     OpenCV API. It can be done, for example, in the static section of the Activity class:
     @code{.java}
     static {
@@ -166,23 +166,23 @@ described above.
 To build your own Android application, using OpenCV as native part, the following steps should be
 taken:
 
-1.  You can use an environment variable to specify the location of OpenCV package or just hardcode
+-#  You can use an environment variable to specify the location of OpenCV package or just hardcode
     absolute or relative path in the `jni/Android.mk` of your projects.
-2.  The file `jni/Android.mk` should be written for the current application using the common rules
+-#  The file `jni/Android.mk` should be written for the current application using the common rules
     for this file.
 
     For detailed information see the Android NDK documentation from the Android NDK archive, in the
     file `<path_where_NDK_is_placed>/docs/ANDROID-MK.html`.
 
-3.  The following line:
+-#  The following line:
     @code{.make}
     include C:\Work\OpenCV4Android\OpenCV-2.4.9-android-sdk\sdk\native\jni\OpenCV.mk
     @endcode
     Should be inserted into the `jni/Android.mk` file **after** this line:
     @code{.make}
-    include \f$(CLEAR_VARS)
+    include $(CLEAR_VARS)
     @endcode
-4.  Several variables can be used to customize OpenCV stuff, but you **don't need** to use them when
+-#  Several variables can be used to customize OpenCV stuff, but you **don't need** to use them when
     your application uses the async initialization via the OpenCV Manager API.
 
     @note These variables should be set **before** the "include .../OpenCV.mk" line:
@@ -202,7 +202,7 @@ taken:
     Perform static linking with OpenCV. By default dynamic link is used and the project JNI lib
     depends on libopencv_java.so.
 
-5.  The file `Application.mk` should exist and should contain lines:
+-#  The file `Application.mk` should exist and should contain lines:
     @code{.make}
     APP_STL := gnustl_static
     APP_CPPFLAGS := -frtti -fexceptions
@@ -221,7 +221,7 @@ taken:
     APP_PLATFORM := android-9
     @endcode
 
-6.  Either use @ref tutorial_android_dev_intro_ndk "manual"  ndk-build invocation or
+-#  Either use @ref tutorial_android_dev_intro_ndk "manual"  ndk-build invocation or
     @ref tutorial_android_dev_intro_eclipse "setup Eclipse CDT Builder" to build native JNI lib
     before (re)building the Java part and creating
     an APK.
@@ -232,18 +232,18 @@ Hello OpenCV Sample
 Here are basic steps to guide you trough the process of creating a simple OpenCV-centric
 application. It will be capable of accessing camera output, processing it and displaying the result.
 
-1.  Open Eclipse IDE, create a new clean workspace, create a new Android project
+-#  Open Eclipse IDE, create a new clean workspace, create a new Android project
     File --\> New --\> Android Project
-2.  Set name, target, package and minSDKVersion accordingly. The minimal SDK version for build with
+-#  Set name, target, package and minSDKVersion accordingly. The minimal SDK version for build with
     OpenCV4Android SDK is 11. Minimal device API Level (for application manifest) is 8.
-3.  Allow Eclipse to create default activity. Lets name the activity HelloOpenCvActivity.
-4.  Choose Blank Activity with full screen layout. Lets name the layout HelloOpenCvLayout.
-5.  Import OpenCV library project to your workspace.
-6.  Reference OpenCV library within your project properties.
+-#  Allow Eclipse to create default activity. Lets name the activity HelloOpenCvActivity.
+-#  Choose Blank Activity with full screen layout. Lets name the layout HelloOpenCvLayout.
+-#  Import OpenCV library project to your workspace.
+-#  Reference OpenCV library within your project properties.
 
-    ![image](images/dev_OCV_reference.png)
+    ![](images/dev_OCV_reference.png)
 
-7.  Edit your layout file as xml file and pass the following layout there:
+-#  Edit your layout file as xml file and pass the following layout there:
     @code{.xml}
     <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:tools="http://schemas.android.com/tools"
@@ -261,7 +261,7 @@ application. It will be capable of accessing camera output, processing it and di
 
     </LinearLayout>
     @endcode
-8.  Add the following permissions to the `AndroidManifest.xml` file:
+-#  Add the following permissions to the `AndroidManifest.xml` file:
     @code{.xml}
     </application>
 
@@ -272,14 +272,14 @@ application. It will be capable of accessing camera output, processing it and di
     <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.front.autofocus" android:required="false"/>
     @endcode
-9.  Set application theme in AndroidManifest.xml to hide title and system buttons.
+-#  Set application theme in AndroidManifest.xml to hide title and system buttons.
     @code{.xml}
     <application
         android:icon="@drawable/icon"
         android:label="@string/app_name"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen" >
     @endcode
-10. Add OpenCV library initialization to your activity. Fix errors by adding requited imports.
+-#  Add OpenCV library initialization to your activity. Fix errors by adding requited imports.
     @code{.java}
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -305,7 +305,7 @@ application. It will be capable of accessing camera output, processing it and di
         OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_6, this, mLoaderCallback);
     }
     @endcode
-11. Defines that your activity implements CvCameraViewListener2 interface and fix activity related
+-#  Defines that your activity implements CvCameraViewListener2 interface and fix activity related
     errors by defining missed methods. For this activity define onCreate, onDestroy and onPause and
     implement them according code snippet bellow. Fix errors by adding requited imports.
     @code{.java}
@@ -346,7 +346,7 @@ application. It will be capable of accessing camera output, processing it and di
         return inputFrame.rgba();
     }
     @endcode
-12. Run your application on device or emulator.
+-#  Run your application on device or emulator.
 
 Lets discuss some most important steps. Every Android application with UI must implement Activity
 and View. By the first steps we create blank activity and default view layout. The simplest

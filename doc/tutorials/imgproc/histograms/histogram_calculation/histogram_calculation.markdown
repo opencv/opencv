@@ -21,7 +21,7 @@ histogram called *Image histogram*. Now we will considerate it in its more gener
 -   Let's see an example. Imagine that a Matrix contains information of an image (i.e. intensity in
     the range \f$0-255\f$):
 
-    ![image](images/Histogram_Calculation_Theory_Hist0.jpg)
+    ![](images/Histogram_Calculation_Theory_Hist0.jpg)
 
 -   What happens if we want to *count* this data in an organized way? Since we know that the *range*
     of information value for this case is 256 values, we can segment our range in subparts (called
@@ -36,7 +36,7 @@ histogram called *Image histogram*. Now we will considerate it in its more gener
     this to the example above we get the image below ( axis x represents the bins and axis y the
     number of pixels in each of them).
 
-    ![image](images/Histogram_Calculation_Theory_Hist1.jpg)
+    ![](images/Histogram_Calculation_Theory_Hist1.jpg)
 
 -   This was just a simple example of how an histogram works and why it is useful. An histogram can
     keep count not only of color intensities, but of whatever image features that we want to measure
@@ -73,18 +73,18 @@ Code
 Explanation
 -----------
 
-1.  Create the necessary matrices:
+-#  Create the necessary matrices:
     @code{.cpp}
     Mat src, dst;
     @endcode
-2.  Load the source image
+-#  Load the source image
     @code{.cpp}
     src = imread( argv[1], 1 );
 
     if( !src.data )
       { return -1; }
     @endcode
-3.  Separate the source image in its three R,G and B planes. For this we use the OpenCV function
+-#  Separate the source image in its three R,G and B planes. For this we use the OpenCV function
     @ref cv::split :
     @code{.cpp}
     vector<Mat> bgr_planes;
@@ -93,7 +93,7 @@ Explanation
     our input is the image to be divided (this case with three channels) and the output is a vector
     of Mat )
 
-4.  Now we are ready to start configuring the **histograms** for each plane. Since we are working
+-#  Now we are ready to start configuring the **histograms** for each plane. Since we are working
     with the B, G and R planes, we know that our values will range in the interval \f$[0,255]\f$
     -#  Establish number of bins (5, 10...):
         @code{.cpp}
@@ -137,7 +137,7 @@ Explanation
         -   **uniform** and **accumulate**: The bin sizes are the same and the histogram is cleared
             at the beginning.
 
-5.  Create an image to display the histograms:
+-#  Create an image to display the histograms:
     @code{.cpp}
     // Draw the histograms for R, G and B
     int hist_w = 512; int hist_h = 400;
@@ -145,7 +145,7 @@ Explanation
 
     Mat histImage( hist_h, hist_w, CV_8UC3, Scalar( 0,0,0) );
     @endcode
-6.  Notice that before drawing, we first @ref cv::normalize the histogram so its values fall in the
+-#  Notice that before drawing, we first @ref cv::normalize the histogram so its values fall in the
     range indicated by the parameters entered:
     @code{.cpp}
     /// Normalize the result to [ 0, histImage.rows ]
@@ -164,7 +164,7 @@ Explanation
     -   **-1:** Implies that the output normalized array will be the same type as the input
     -   **Mat():** Optional mask
 
-7.  Finally, observe that to access the bin (in this case in this 1D-Histogram):
+-#  Finally, observe that to access the bin (in this case in this 1D-Histogram):
     @code{.cpp}
     /// Draw for each channel
     for( int i = 1; i < histSize; i++ )
@@ -189,7 +189,7 @@ Explanation
     b_hist.at<float>( i, j )
     @endcode
 
-8.  Finally we display our histograms and wait for the user to exit:
+-#  Finally we display our histograms and wait for the user to exit:
     @code{.cpp}
     namedWindow("calcHist Demo", WINDOW_AUTOSIZE );
     imshow("calcHist Demo", histImage );
@@ -202,10 +202,10 @@ Explanation
 Result
 ------
 
-1.  Using as input argument an image like the shown below:
+-#  Using as input argument an image like the shown below:
 
-    ![image](images/Histogram_Calculation_Original_Image.jpg)
+    ![](images/Histogram_Calculation_Original_Image.jpg)
 
-2.  Produces the following histogram:
+-#  Produces the following histogram:
 
-    ![image](images/Histogram_Calculation_Result.jpg)
+    ![](images/Histogram_Calculation_Result.jpg)

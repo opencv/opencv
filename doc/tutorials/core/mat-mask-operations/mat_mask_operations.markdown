@@ -130,7 +130,7 @@ difference.
 
 For example:
 
-![image](images/resultMatMaskFilter2D.png)
+![](images/resultMatMaskFilter2D.png)
 
 You can download this source code from [here
 ](samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp) or look in the

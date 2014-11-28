@@ -1,13 +1,13 @@
 How to build applications with OpenCV inside the "Microsoft Visual Studio" {#tutorial_windows_visual_studio_Opencv}
 ==========================================================================
 
-Everything I describe here will apply to the C\\C++ interface of OpenCV. I start out from the
+Everything I describe here will apply to the `C\C++` interface of OpenCV. I start out from the
 assumption that you have read and completed with success the @ref tutorial_windows_install tutorial.
 Therefore, before you go any further make sure you have an OpenCV directory that contains the OpenCV
 header files plus binaries and you have set the environment variables as described here
 @ref tutorial_windows_install_path.
 
-![image](images/OpenCV_Install_Directory.jpg)
+![](images/OpenCV_Install_Directory.jpg)
 
 The OpenCV libraries, distributed by us, on the Microsoft Windows operating system are in a
 Dynamic Linked Libraries (*DLL*). These have the advantage that all the content of the
@@ -58,7 +58,7 @@ create a new solution inside Visual studio by going through the File --\> New --
 selection. Choose *Win32 Console Application* as type. Enter its name and select the path where to
 create it. Then in the upcoming dialog make sure you create an empty project.
 
-![image](images/NewProjectVisualStudio.jpg)
+![](images/NewProjectVisualStudio.jpg)
 
 The *local* method
 ------------------
@@ -75,7 +75,7 @@ you can view and modify them by using the *Property Manger*. You can bring up th
 View --\> Property Pages. Expand it and you can see the existing rule packages (called *Proporty
 Sheets*).
 
-![image](images/PropertyPageExample.jpg)
+![](images/PropertyPageExample.jpg)
 
 The really useful stuff of these is that you may create a rule package *once* and you can later just
 add it to your new projects. Create it once and reuse it later. We want to create a new *Property
@@ -83,7 +83,7 @@ Sheet* that will contain all the rules that the compiler and linker needs to kno
 need a separate one for the Debug and the Release Builds. Start up with the Debug one as shown in
 the image below:
 
-![image](images/AddNewPropertySheet.jpg)
+![](images/AddNewPropertySheet.jpg)
 
 Use for example the *OpenCV_Debug* name. Then by selecting the sheet Right Click --\> Properties.
 In the following I will show to set the OpenCV rules locally, as I find unnecessary to pollute
@@ -93,7 +93,7 @@ group, you should add any .c/.cpp file to the project.
 @code{.bash}
 \f$(OPENCV_DIR)\..\..\include
 @endcode
-![image](images/PropertySheetOpenCVInclude.jpg)
+![](images/PropertySheetOpenCVInclude.jpg)
 
 When adding third party libraries settings it is generally a good idea to use the power behind the
 environment variables. The full location of the OpenCV library may change on each system. Moreover,
@@ -111,15 +111,15 @@ directory:
 $(OPENCV_DIR)\lib
 @endcode
 
-![image](images/PropertySheetOpenCVLib.jpg)
+![](images/PropertySheetOpenCVLib.jpg)
 
 Then you need to specify the libraries in which the linker should look into. To do this go to the
 Linker --\> Input and under the *"Additional Dependencies"* entry add the name of all modules which
 you want to use:
 
-![image](images/PropertySheetOpenCVLibrariesDebugSmple.jpg)
+![](images/PropertySheetOpenCVLibrariesDebugSmple.jpg)
 
-![image](images/PropertySheetOpenCVLibrariesDebug.jpg)
+![](images/PropertySheetOpenCVLibrariesDebug.jpg)
 
 The names of the libraries are as follow:
 @code{.bash}
@@ -150,19 +150,19 @@ click ok to save and do the same with a new property inside the Release rule sec
 omit the *d* letters from the library names and to save the property sheets with the save icon above
 them.
 
-![image](images/PropertySheetOpenCVLibrariesRelease.jpg)
+![](images/PropertySheetOpenCVLibrariesRelease.jpg)
 
 You can find your property sheets inside your projects directory. At this point it is a wise
 decision to back them up into some special directory, to always have them at hand in the future,
 whenever you create an OpenCV project. Note that for Visual Studio 2010 the file extension is
 *props*, while for 2008 this is *vsprops*.
 
-![image](images/PropertySheetInsideFolder.jpg)
+![](images/PropertySheetInsideFolder.jpg)
 
 Next time when you make a new OpenCV project just use the "Add Existing Property Sheet..." menu
 entry inside the Property Manager to easily add the OpenCV build rules.
 
-![image](images/PropertyPageAddExisting.jpg)
+![](images/PropertyPageAddExisting.jpg)
 
 The *global* method
 -------------------
@@ -175,12 +175,12 @@ by using for instance: a Property page.
 In Visual Studio 2008 you can find this under the:
 Tools --\> Options --\> Projects and Solutions --\> VC++ Directories.
 
-![image](images/VCDirectories2008.jpg)
+![](images/VCDirectories2008.jpg)
 
 In Visual Studio 2010 this has been moved to a global property sheet which is automatically added to
 every project you create:
 
-![image](images/VCDirectories2010.jpg)
+![](images/VCDirectories2010.jpg)
 
 The process is the same as described in case of the local approach. Just add the include directories
 by using the environment variable *OPENCV_DIR*.
@@ -210,7 +210,7 @@ OpenCV logo](samples/data/opencv-logo.png). Before starting up the application m
 the image file in your current working directory. Modify the image file name inside the code to try
 it out on other images too. Run it and voil á:
 
-![image](images/SuccessVisualStudioWindows.jpg)
+![](images/SuccessVisualStudioWindows.jpg)
 
 Command line arguments with Visual Studio
 -----------------------------------------
@@ -230,7 +230,7 @@ with the console window on the Microsoft Windows many people come to use it almo
 adding the same argument again and again while you are testing your application is, somewhat, a
 cumbersome task. Luckily, in the Visual Studio there is a menu to automate all this:
 
-![image](images/VisualStudioCommandLineArguments.jpg)
+![](images/VisualStudioCommandLineArguments.jpg)
 
 Specify here the name of the inputs and while you start your application from the Visual Studio
 enviroment you have automatic argument passing. In the next introductionary tutorial you'll see an

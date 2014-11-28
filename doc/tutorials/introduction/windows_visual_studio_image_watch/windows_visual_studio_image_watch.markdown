@@ -10,10 +10,10 @@ Prerequisites
 
 This tutorial assumes that you have the following available:
 
-1.  Visual Studio 2012 Professional (or better) with Update 1 installed. Update 1 can be downloaded
+-#  Visual Studio 2012 Professional (or better) with Update 1 installed. Update 1 can be downloaded
     [here](http://www.microsoft.com/en-us/download/details.aspx?id=35774).
-2.  An OpenCV installation on your Windows machine (Tutorial: @ref tutorial_windows_install).
-3.  Ability to create and build OpenCV projects in Visual Studio (Tutorial: @ref tutorial_windows_visual_studio_Opencv).
+-#  An OpenCV installation on your Windows machine (Tutorial: @ref tutorial_windows_install).
+-#  Ability to create and build OpenCV projects in Visual Studio (Tutorial: @ref tutorial_windows_visual_studio_Opencv).
 
 Installation
 ------------
@@ -98,13 +98,13 @@ Launch the program in the debugger (Debug --\> Start Debugging, or hit *F5*). Wh
 hit, the program is paused and Visual Studio displays a yellow instruction pointer at the
 breakpoint:
 
-![image](images/breakpoint.png)
+![](images/breakpoint.png)
 
 Now you can inspect the state of you program. For example, you can bring up the *Locals* window
 (Debug --\> Windows --\> Locals), which will show the names and values of the variables in the
 current scope:
 
-![image](images/vs_locals.png)
+![](images/vs_locals.png)
 
 Note that the built-in *Locals* window will display text only. This is where the Image Watch plug-in
 comes in. Image Watch is like another *Locals* window, but with an image viewer built into it. To
@@ -114,7 +114,7 @@ had Image Watch open, and where it was located between debugging sessions. This 
 to do this once--the next time you start debugging, Image Watch will be back where you left it.
 Here's what the docked Image Watch window looks like at our breakpoint:
 
-![image](images/toolwindow.jpg)
+![](images/toolwindow.jpg)
 
 The radio button at the top left (*Locals/Watch*) selects what is shown in the *Image List* below:
 *Locals* lists all OpenCV image objects in the current scope (this list is automatically populated).
@@ -128,7 +128,7 @@ If an image has a thumbnail, left-clicking on that image will select it for deta
 *Image Viewer* on the right. The viewer lets you pan (drag mouse) and zoom (mouse wheel). It also
 displays the pixel coordinate and value at the current mouse position.
 
-![image](images/viewer.jpg)
+![](images/viewer.jpg)
 
 Note that the second image in the list, *edges*, is shown as "invalid". This indicates that some
 data members of this image object have corrupt or invalid values (for example, a negative image
@@ -146,18 +146,18 @@ Now assume you want to do a visual sanity check of the *cv::Canny()* implementat
 *edges* image into the viewer by selecting it in the *Image List* and zoom into a region with a
 clearly defined edge:
 
-![image](images/edges_zoom.png)
+![](images/edges_zoom.png)
 
 Right-click on the *Image Viewer* to bring up the view context menu and enable Link Views (a check
 box next to the menu item indicates whether the option is enabled).
 
-![image](images/viewer_context_menu.png)
+![](images/viewer_context_menu.png)
 
 The Link Views feature keeps the view region fixed when flipping between images of the same size. To
 see how this works, select the input image from the image list--you should now see the corresponding
 zoomed-in region in the input image:
 
-![image](images/input_zoom.png)
+![](images/input_zoom.png)
 
 You may also switch back and forth between viewing input and edges with your up/down cursor keys.
 That way you can easily verify that the detected edges line up nicely with the data in the input
@@ -168,12 +168,12 @@ More ...
 
 Image watch has a number of more advanced features, such as
 
-1.  pinning images to a *Watch* list for inspection across scopes or between debugging sessions
-2.  clamping, thresholding, or diff'ing images directly inside the Watch window
-3.  comparing an in-memory image against a reference image from a file
+-#  pinning images to a *Watch* list for inspection across scopes or between debugging sessions
+-#  clamping, thresholding, or diff'ing images directly inside the Watch window
+-#  comparing an in-memory image against a reference image from a file
 
 Please refer to the online [Image Watch
 Documentation](http://go.microsoft.com/fwlink/?LinkId=285461) for details--you also can get to the
 documentation page by clicking on the *Help* link in the Image Watch window:
 
-![image](images/help_button.jpg)
+![](images/help_button.jpg)

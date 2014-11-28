@@ -16,8 +16,9 @@ In this tutorial you will learn how to:
 Theory
 ------
 
-@note The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler. In the
-previous tutorial we covered two basic Morphology operations:
+@note The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler.
+
+In the previous tutorial we covered two basic Morphology operations:
 
 -   Erosion
 -   Dilation.
@@ -37,7 +38,7 @@ discuss briefly 05 operations offered by OpenCV:
     at the right is the result after applying the opening transformation. We can observe that the
     small spaces in the corners of the letter tend to dissapear.
 
-    ![image](images/Morphology_2_Tutorial_Theory_Opening.png)
+    ![](images/Morphology_2_Tutorial_Theory_Opening.png)
 
 ### Closing
 
@@ -47,7 +48,7 @@ discuss briefly 05 operations offered by OpenCV:
 
 -   Useful to remove small holes (dark regions).
 
-    ![image](images/Morphology_2_Tutorial_Theory_Closing.png)
+    ![](images/Morphology_2_Tutorial_Theory_Closing.png)
 
 ### Morphological Gradient
 
@@ -57,7 +58,7 @@ discuss briefly 05 operations offered by OpenCV:
 
 -   It is useful for finding the outline of an object as can be seen below:
 
-    ![image](images/Morphology_2_Tutorial_Theory_Gradient.png)
+    ![](images/Morphology_2_Tutorial_Theory_Gradient.png)
 
 ### Top Hat
 
@@ -65,7 +66,7 @@ discuss briefly 05 operations offered by OpenCV:
 
     \f[dst = tophat( src, element ) = src - open( src, element )\f]
 
-    ![image](images/Morphology_2_Tutorial_Theory_TopHat.png)
+    ![](images/Morphology_2_Tutorial_Theory_TopHat.png)
 
 ### Black Hat
 
@@ -73,7 +74,7 @@ discuss briefly 05 operations offered by OpenCV:
 
     \f[dst = blackhat( src, element ) = close( src, element ) - src\f]
 
-    ![image](images/Morphology_2_Tutorial_Theory_BlackHat.png)
+    ![](images/Morphology_2_Tutorial_Theory_BlackHat.png)
 
 Code
 ----
@@ -150,10 +151,11 @@ void Morphology_Operations( int, void* )
   imshow( window_name, dst );
   }
 @endcode
+
 Explanation
 -----------
 
-1.  Let's check the general structure of the program:
+-#  Let's check the general structure of the program:
     -   Load an image
     -   Create a window to display results of the Morphological operations
     -   Create 03 Trackbars for the user to enter parameters:
@@ -185,17 +187,18 @@ Explanation
         /*
          * @function Morphology_Operations
          */
-        @endcode
-        void Morphology_Operations( int, void\* ) { // Since MORPH_X : 2,3,4,5 and 6 int
-        operation = morph_operator + 2;
-        
-        Mat element = getStructuringElement( morph_elem, Size( 2\*morph_size + 1,
-        2\*morph_size+1 ), Point( morph_size, morph_size ) );
-        
-        /// Apply the specified morphology operation morphologyEx( src, dst, operation, element
-        ); imshow( window_name, dst );
-        
+        void Morphology_Operations( int, void* )
+        {
+            // Since MORPH_X : 2,3,4,5 and 6
+            int operation = morph_operator + 2;
+
+            Mat element = getStructuringElement( morph_elem, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
+
+            /// Apply the specified morphology operation
+            morphologyEx( src, dst, operation, element );
+            imshow( window_name, dst );
         }
+        @endcode
 
         We can observe that the key function to perform the morphology transformations is @ref
         cv::morphologyEx . In this example we use four arguments (leaving the rest as defaults):
@@ -225,12 +228,10 @@ Results
 -   After compiling the code above we can execute it giving an image path as an argument. For this
     tutorial we use as input the image: **baboon.png**:
 
-    ![image](images/Morphology_2_Tutorial_Original_Image.jpg)
+    ![](images/Morphology_2_Tutorial_Original_Image.jpg)
 
 -   And here are two snapshots of the display window. The first picture shows the output after using
     the operator **Opening** with a cross kernel. The second picture (right side, shows the result
     of using a **Blackhat** operator with an ellipse kernel.
 
-    ![image](images/Morphology_2_Tutorial_Cover.jpg)
-
-
+    ![](images/Morphology_2_Tutorial_Result.jpg)

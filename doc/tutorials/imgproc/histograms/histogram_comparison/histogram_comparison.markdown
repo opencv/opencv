@@ -18,25 +18,18 @@ Theory
 -   OpenCV implements the function @ref cv::compareHist to perform a comparison. It also offers 4
     different metrics to compute the matching:
     -#  **Correlation ( CV_COMP_CORREL )**
-
         \f[d(H_1,H_2) =  \frac{\sum_I (H_1(I) - \bar{H_1}) (H_2(I) - \bar{H_2})}{\sqrt{\sum_I(H_1(I) - \bar{H_1})^2 \sum_I(H_2(I) - \bar{H_2})^2}}\f]
-
         where
-
         \f[\bar{H_k} =  \frac{1}{N} \sum _J H_k(J)\f]
-
         and \f$N\f$ is the total number of histogram bins.
 
     -#  **Chi-Square ( CV_COMP_CHISQR )**
-
         \f[d(H_1,H_2) =  \sum _I  \frac{\left(H_1(I)-H_2(I)\right)^2}{H_1(I)}\f]
 
     -#  **Intersection ( method=CV_COMP_INTERSECT )**
-
         \f[d(H_1,H_2) =  \sum _I  \min (H_1(I), H_2(I))\f]
 
     -#  **Bhattacharyya distance ( CV_COMP_BHATTACHARYYA )**
-
         \f[d(H_1,H_2) =  \sqrt{1 - \frac{1}{\sqrt{\bar{H_1} \bar{H_2} N^2}} \sum_I \sqrt{H_1(I) \cdot H_2(I)}}\f]
 
 Code
@@ -59,7 +52,7 @@ Code
 Explanation
 -----------
 
-1.  Declare variables such as the matrices to store the base image and the two other images to
+-#  Declare variables such as the matrices to store the base image and the two other images to
     compare ( RGB and HSV )
     @code{.cpp}
     Mat src_base, hsv_base;
@@ -67,7 +60,7 @@ Explanation
     Mat src_test2, hsv_test2;
     Mat hsv_half_down;
     @endcode
-2.  Load the base image (src_base) and the other two test images:
+-#  Load the base image (src_base) and the other two test images:
     @code{.cpp}
     if( argc < 4 )
       { printf("** Error. Usage: ./compareHist_Demo <image_settings0> <image_setting1> <image_settings2>\n");
@@ -78,17 +71,17 @@ Explanation
     src_test1 = imread( argv[2], 1 );
     src_test2 = imread( argv[3], 1 );
     @endcode
-3.  Convert them to HSV format:
+-#  Convert them to HSV format:
     @code{.cpp}
     cvtColor( src_base, hsv_base, COLOR_BGR2HSV );
     cvtColor( src_test1, hsv_test1, COLOR_BGR2HSV );
     cvtColor( src_test2, hsv_test2, COLOR_BGR2HSV );
     @endcode
-4.  Also, create an image of half the base image (in HSV format):
+-#  Also, create an image of half the base image (in HSV format):
     @code{.cpp}
     hsv_half_down = hsv_base( Range( hsv_base.rows/2, hsv_base.rows - 1 ), Range( 0, hsv_base.cols - 1 ) );
     @endcode
-5.  Initialize the arguments to calculate the histograms (bins, ranges and channels H and S ).
+-#  Initialize the arguments to calculate the histograms (bins, ranges and channels H and S ).
     @code{.cpp}
     int h_bins = 50; int s_bins = 60;
     int histSize[] = { h_bins, s_bins };
@@ -100,14 +93,14 @@ Explanation
 
     int channels[] = { 0, 1 };
     @endcode
-6.  Create the MatND objects to store the histograms:
+-#  Create the MatND objects to store the histograms:
     @code{.cpp}
     MatND hist_base;
     MatND hist_half_down;
     MatND hist_test1;
     MatND hist_test2;
     @endcode
-7.  Calculate the Histograms for the base image, the 2 test images and the half-down base image:
+-#  Calculate the Histograms for the base image, the 2 test images and the half-down base image:
     @code{.cpp}
     calcHist( &hsv_base, 1, channels, Mat(), hist_base, 2, histSize, ranges, true, false );
     normalize( hist_base, hist_base, 0, 1, NORM_MINMAX, -1, Mat() );
@@ -121,7 +114,7 @@ Explanation
     calcHist( &hsv_test2, 1, channels, Mat(), hist_test2, 2, histSize, ranges, true, false );
     normalize( hist_test2, hist_test2, 0, 1, NORM_MINMAX, -1, Mat() );
     @endcode
-8.  Apply sequentially the 4 comparison methods between the histogram of the base image (hist_base)
+-#  Apply sequentially the 4 comparison methods between the histogram of the base image (hist_base)
     and the other histograms:
     @code{.cpp}
     for( int i = 0; i < 4; i++ )
@@ -134,34 +127,32 @@ Explanation
         printf( " Method [%d] Perfect, Base-Half, Base-Test(1), Base-Test(2) : %f, %f, %f, %f \n", i, base_base, base_half , base_test1, base_test2 );
       }
     @endcode
+
 Results
 -------
 
-1.  We use as input the following images:
-
-      ----------- ----------- -----------
-      |Base_0|   |Test_1|   |Test_2|
-      ----------- ----------- -----------
-
+-#  We use as input the following images:
+    ![Base_0](images/Histogram_Comparison_Source_0.jpg)
+    ![Test_1](images/Histogram_Comparison_Source_1.jpg)
+    ![Test_2](images/Histogram_Comparison_Source_2.jpg)
     where the first one is the base (to be compared to the others), the other 2 are the test images.
     We will also compare the first image with respect to itself and with respect of half the base
     image.
 
-2.  We should expect a perfect match when we compare the base image histogram with itself. Also,
+-#  We should expect a perfect match when we compare the base image histogram with itself. Also,
     compared with the histogram of half the base image, it should present a high match since both
     are from the same source. For the other two test images, we can observe that they have very
     different lighting conditions, so the matching should not be very good:
-3.  Here the numeric results:
 
-  *Method*          Base - Base   Base - Half   Base - Test 1   Base - Test 2
-  ----------------- ------------- ------------- --------------- ---------------
-  *Correlation*     1.000000      0.930766      0.182073        0.120447
-  *Chi-square*      0.000000      4.940466      21.184536       49.273437
-  *Intersection*    24.391548     14.959809     3.889029        5.775088
-  *Bhattacharyya*   0.000000      0.222609      0.646576        0.801869
-
-For the *Correlation* and *Intersection* methods, the higher the metric, the more accurate the
-match. As we can see, the match *base-base* is the highest of all as expected. Also we can observe
-that the match *base-half* is the second best match (as we predicted). For the other two metrics,
-the less the result, the better the match. We can observe that the matches between the test 1 and
-test 2 with respect to the base are worse, which again, was expected.
+-#  Here the numeric results:
+      *Method*        |  Base - Base |  Base - Half |  Base - Test 1 |  Base - Test 2
+    ----------------- | ------------ | ------------ | -------------- | ---------------
+      *Correlation*   |  1.000000    |  0.930766    |  0.182073      |  0.120447
+      *Chi-square*    |  0.000000    |  4.940466    |  21.184536     |  49.273437
+      *Intersection*  |  24.391548   |  14.959809   |  3.889029      |  5.775088
+      *Bhattacharyya* |  0.000000    |  0.222609    |  0.646576      |  0.801869
+    For the *Correlation* and *Intersection* methods, the higher the metric, the more accurate the
+    match. As we can see, the match *base-base* is the highest of all as expected. Also we can observe
+    that the match *base-half* is the second best match (as we predicted). For the other two metrics,
+    the less the result, the better the match. We can observe that the matches between the test 1 and
+    test 2 with respect to the base are worse, which again, was expected.

@@ -75,8 +75,3 @@ As always, we would be happy to hear your comments and receive your contribution
 
     These tutorials show how to use Viz module effectively.
 
--   @subpage tutorial_table_of_content_general
-
-    These tutorials
-    are the bottom of the iceberg as they link together multiple of the modules presented above in
-    order to solve complex problems.

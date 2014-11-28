@@ -152,8 +152,9 @@ A-KAZE Matching Results
 --------------------------
 
 .. code-block:: none
-    Keypoints 1:   2943
-    Keypoints 2:   3511
-    Matches:       447
-    Inliers:       308
-    Inlier Ratio: 0.689038
+
+    Keypoints 1   2943
+    Keypoints 2   3511
+    Matches       447
+    Inliers       308
+    Inlier Ratio  0.689038

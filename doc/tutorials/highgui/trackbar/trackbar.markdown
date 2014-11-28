@@ -7,7 +7,7 @@ Adding a Trackbar to our applications! {#tutorial_trackbar}
 -   Well, it is time to use some fancy GUI tools. OpenCV provides some GUI utilities (*highgui.h*)
     for you. An example of this is a **Trackbar**
 
-    ![image](images/Adding_Trackbars_Tutorial_Trackbar.png)
+    ![](images/Adding_Trackbars_Tutorial_Trackbar.png)
 
 -   In this tutorial we will just modify our two previous programs so that they get the input
     information from the trackbar.
@@ -88,16 +88,16 @@ Explanation
 
 We only analyze the code that is related to Trackbar:
 
-1.  First, we load 02 images, which are going to be blended.
+-#  First, we load 02 images, which are going to be blended.
     @code{.cpp}
     src1 = imread("../../images/LinuxLogo.jpg");
     src2 = imread("../../images/WindowsLogo.jpg");
     @endcode
-2.  To create a trackbar, first we have to create the window in which it is going to be located. So:
+-#  To create a trackbar, first we have to create the window in which it is going to be located. So:
     @code{.cpp}
     namedWindow("Linear Blend", 1);
     @endcode
-3.  Now we can create the Trackbar:
+-#  Now we can create the Trackbar:
     @code{.cpp}
     createTrackbar( TrackbarName, "Linear Blend", &alpha_slider, alpha_slider_max, on_trackbar );
     @endcode
@@ -110,7 +110,7 @@ We only analyze the code that is related to Trackbar:
     -   The numerical value of Trackbar is stored in **alpha_slider**
     -   Whenever the user moves the Trackbar, the callback function **on_trackbar** is called
 
-4.  Finally, we have to define the callback function **on_trackbar**
+-#  Finally, we have to define the callback function **on_trackbar**
     @code{.cpp}
     void on_trackbar( int, void* )
     {
@@ -133,10 +133,10 @@ Result
 
 -   Our program produces the following output:
 
-    ![image](images/Adding_Trackbars_Tutorial_Result_0.jpg)
+    ![](images/Adding_Trackbars_Tutorial_Result_0.jpg)
 
 -   As a manner of practice, you can also add 02 trackbars for the program made in
     @ref tutorial_basic_linear_transform. One trackbar to set \f$\alpha\f$ and another for \f$\beta\f$. The output might
     look like:
 
-    ![image](images/Adding_Trackbars_Tutorial_Result_1.jpg)
+    ![](images/Adding_Trackbars_Tutorial_Result_1.jpg)

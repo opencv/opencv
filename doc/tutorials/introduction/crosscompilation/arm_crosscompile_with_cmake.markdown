@@ -49,10 +49,11 @@ In Linux it can be achieved with the following command in Terminal:
 cd ~/<my_working _directory>
 git clone https://github.com/Itseez/opencv.git
 @endcode
+
 Building OpenCV
 ---------------
 
-1.  Create a build directory, make it current and run the following command:
+-#  Create a build directory, make it current and run the following command:
     @code{.bash}
     cmake [<some optional parameters>] -DCMAKE_TOOLCHAIN_FILE=<path to the OpenCV source directory>/platforms/linux/arm-gnueabi.toolchain.cmake <path to the OpenCV source directory>
     @endcode
@@ -69,13 +70,15 @@ Building OpenCV
 
     cmake -DCMAKE_TOOLCHAIN_FILE=../arm-gnueabi.toolchain.cmake ../../..
     @endcode
-2.  Run make in build (\<cmake_binary_dir\>) directory:
+
+-#  Run make in build (\<cmake_binary_dir\>) directory:
     @code{.bash}
     make
     @endcode
+
 @note
-   Optionally you can strip symbols info from the created library via install/strip make target.
-    This option produces smaller binary (\~ twice smaller) but makes further debugging harder.
+Optionally you can strip symbols info from the created library via install/strip make target.
+This option produces smaller binary (\~ twice smaller) but makes further debugging harder.
 
 ### Enable hardware optimizations
 
@@ -86,5 +89,4 @@ extensions.
 
 TBB is supported on multi core ARM SoCs also. Add -DWITH_TBB=ON and -DBUILD_TBB=ON to enable it.
 Cmake scripts download TBB sources from official project site
-[](http://threadingbuildingblocks.org/) and build it.
-
+<http://threadingbuildingblocks.org/> and build it.

@@ -73,7 +73,7 @@ int main( int argc, char** argv )
 Explanation
 -----------
 
-1.  Since we are going to perform:
+-#  Since we are going to perform:
 
     \f[g(x) = (1 - \alpha)f_{0}(x) + \alpha f_{1}(x)\f]
 
@@ -87,7 +87,7 @@ Explanation
     Since we are *adding* *src1* and *src2*, they both have to be of the same size (width and
     height) and type.
 
-2.  Now we need to generate the `g(x)` image. For this, the function add_weighted:addWeighted  comes quite handy:
+-#  Now we need to generate the `g(x)` image. For this, the function add_weighted:addWeighted  comes quite handy:
     @code{.cpp}
     beta = ( 1.0 - alpha );
     addWeighted( src1, alpha, src2, beta, 0.0, dst);
@@ -96,9 +96,9 @@ Explanation
     \f[dst = \alpha \cdot src1 + \beta \cdot src2 + \gamma\f]
     In this case, `gamma` is the argument \f$0.0\f$ in the code above.
 
-3.  Create windows, show the images and wait for the user to end the program.
+-#  Create windows, show the images and wait for the user to end the program.
 
 Result
 ------
 
-![image](images/Adding_Images_Tutorial_Result_Big.jpg)
+![](images/Adding_Images_Tutorial_Result_Big.jpg)

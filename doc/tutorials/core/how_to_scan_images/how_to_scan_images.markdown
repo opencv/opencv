@@ -59,10 +59,10 @@ how_to_scan_images imageName.jpg intValueToReduce [G]
 The final argument is optional. If given the image will be loaded in gray scale format, otherwise
 the RGB color way is used. The first thing is to calculate the lookup table.
 
-@includelineno cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
+@dontinclude cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
 
-lines
-   49-61
+@skip int divideWith
+@until table[i]
 
 Here we first use the C++ *stringstream* class to convert the third command line argument from text
 to an integer format. Then we use a simple look and the upper formula to calculate the lookup table.
@@ -88,26 +88,12 @@ As you could already read in my @ref tutorial_mat_the_basic_image_container tuto
 depends of the color system used. More accurately, it depends from the number of channels used. In
 case of a gray scale image we have something like:
 
-\f[\newcommand{\tabItG}[1] { \textcolor{black}{#1} \cellcolor[gray]{0.8}}
-\begin{tabular} {ccccc}
-~ & \multicolumn{1}{c}{Column 0} &   \multicolumn{1}{c}{Column 1} &   \multicolumn{1}{c}{Column ...} & \multicolumn{1}{c}{Column m}\\
-Row 0 & \tabItG{0,0} & \tabItG{0,1} & \tabItG{...}  & \tabItG{0, m} \\
-Row 1 & \tabItG{1,0} & \tabItG{1,1} & \tabItG{...}  & \tabItG{1, m} \\
-Row ... & \tabItG{...,0} & \tabItG{...,1} & \tabItG{...} & \tabItG{..., m} \\
-Row n & \tabItG{n,0} & \tabItG{n,1} & \tabItG{n,...} & \tabItG{n, m} \\
-\end{tabular}\f]
+![](tutorial_how_matrix_stored_1.png)
 
 For multichannel images the columns contain as many sub columns as the number of channels. For
 example in case of an RGB color system:
 
-\f[\newcommand{\tabIt}[1] { \textcolor{yellow}{#1} \cellcolor{blue} &  \textcolor{black}{#1} \cellcolor{green} & \textcolor{black}{#1} \cellcolor{red}}
-\begin{tabular} {ccccccccccccc}
-~ & \multicolumn{3}{c}{Column 0} &   \multicolumn{3}{c}{Column 1} &   \multicolumn{3}{c}{Column ...} & \multicolumn{3}{c}{Column m}\\
-Row 0 & \tabIt{0,0} & \tabIt{0,1} & \tabIt{...}  & \tabIt{0, m} \\
-Row 1 & \tabIt{1,0} & \tabIt{1,1} & \tabIt{...}  & \tabIt{1, m} \\
-Row ... & \tabIt{...,0} & \tabIt{...,1} & \tabIt{...} & \tabIt{..., m} \\
-Row n & \tabIt{n,0} & \tabIt{n,1} & \tabIt{n,...} & \tabIt{n, m} \\
-\end{tabular}\f]
+![](tutorial_how_matrix_stored_2.png)
 
 Note that the order of the channels is inverse: BGR instead of RGB. Because in many cases the memory
 is large enough to store the rows in a successive fashion the rows may follow one after another,
@@ -121,10 +107,9 @@ The efficient way
 When it comes to performance you cannot beat the classic C style operator[] (pointer) access.
 Therefore, the most efficient method we can recommend for making the assignment is:
 
-@includelineno cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
-
-lines
-   126-153
+@skip Mat& ScanImageAndReduceC
+@until return
+@until }
 
 Here we basically just acquire a pointer to the start of each row and go through it until it ends.
 In the special case that the matrix is stored in a continues manner we only need to request the
@@ -156,10 +141,9 @@ considered a safer way as it takes over these tasks from the user. All you need 
 begin and the end of the image matrix and then just increase the begin iterator until you reach the
 end. To acquire the value *pointed* by the iterator use the \* operator (add it before it).
 
-@includelineno cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
-
-lines
-   155-183
+@skip ScanImageAndReduceIterator
+@until return
+@until }
 
 In case of color images we have three uchar items per column. This may be considered a short vector
 of uchar items, that has been baptized in OpenCV with the *Vec3b* name. To access the n-th sub
@@ -177,10 +161,9 @@ what type we are looking at the image. It's no different here as you need manual
 type to use at the automatic lookup. You can observe this in case of the gray scale images for the
 following source code (the usage of the + @ref cv::at() function):
 
-@includelineno cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
-
-lines
-   185-217
+@skip ScanImageAndReduceRandomAccess
+@until return
+@until }
 
 The functions takes your input type and coordinates and calculates on the fly the address of the
 queried item. Then returns a reference to that. This may be a constant when you *get* the value and
@@ -209,17 +192,14 @@ OpenCV has a function that makes the modification without the need from you to w
 the image. We use the @ref cv::LUT() function of the core module. First we build a Mat type of the
 lookup table:
 
-@includelineno cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
+@dontinclude cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
 
-lines
-   108-111
+@skip Mat lookUpTable
+@until p[i] = table[i]
 
 Finally call the function (I is our input image and J the output one):
 
-@includelineno cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
-
-lines
-   116
+@skipline LUT
 
 Performance Difference
 ----------------------

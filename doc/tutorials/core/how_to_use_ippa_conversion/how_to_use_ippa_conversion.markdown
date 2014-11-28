@@ -23,7 +23,7 @@ download it from [here](samples/cpp/tutorial_code/core/ippasync/ippasync_sample.
 Explanation
 -----------
 
-1.  Create parameters for OpenCV:
+-#  Create parameters for OpenCV:
     @code{.cpp}
     VideoCapture cap;
     Mat image, gray, result;
@@ -36,7 +36,7 @@ Explanation
     hppStatus sts;
     hppiVirtualMatrix * virtMatrix;
     @endcode
-2.  Load input image or video. How to open and read video stream you can see in the
+-#  Load input image or video. How to open and read video stream you can see in the
     @ref tutorial_video_input_psnr_ssim tutorial.
     @code{.cpp}
     if( useCamera )
@@ -56,7 +56,7 @@ Explanation
        return -1;
     }
     @endcode
-3.  Create accelerator instance using
+-#  Create accelerator instance using
     [hppCreateInstance](http://software.intel.com/en-us/node/501686):
     @code{.cpp}
     accelType = sAccel == "cpu" ? HPP_ACCEL_TYPE_CPU:
@@ -67,12 +67,12 @@ Explanation
     sts = hppCreateInstance(accelType, 0, &accel);
     CHECK_STATUS(sts, "hppCreateInstance");
     @endcode
-4.  Create an array of virtual matrices using
+-#  Create an array of virtual matrices using
     [hppiCreateVirtualMatrices](http://software.intel.com/en-us/node/501700) function.
     @code{.cpp}
     virtMatrix = hppiCreateVirtualMatrices(accel, 1);
     @endcode
-5.  Prepare a matrix for input and output data:
+-#  Prepare a matrix for input and output data:
     @code{.cpp}
     cap >> image;
     if(image.empty())
@@ -82,7 +82,7 @@ Explanation
 
     result.create( image.rows, image.cols, CV_8U);
     @endcode
-6.  Convert Mat to [hppiMatrix](http://software.intel.com/en-us/node/501660) using @ref cv::hpp::getHpp
+-#  Convert Mat to [hppiMatrix](http://software.intel.com/en-us/node/501660) using @ref cv::hpp::getHpp
     and call [hppiSobel](http://software.intel.com/en-us/node/474701) function.
     @code{.cpp}
     //convert Mat to hppiMatrix
@@ -104,14 +104,14 @@ Explanation
     HPP_DATA_TYPE_16S data type for source matrix with HPP_DATA_TYPE_8U type. You should check
     hppStatus after each call IPP Async function.
 
-7.  Create windows and show the images, the usual way.
+-#  Create windows and show the images, the usual way.
     @code{.cpp}
     imshow("image", image);
     imshow("rez", result);
 
     waitKey(15);
     @endcode
-8.  Delete hpp matrices.
+-#  Delete hpp matrices.
     @code{.cpp}
     sts =  hppiFreeMatrix(src);
     CHECK_DEL_STATUS(sts,"hppiFreeMatrix");
@@ -119,7 +119,7 @@ Explanation
     sts =  hppiFreeMatrix(dst);
     CHECK_DEL_STATUS(sts,"hppiFreeMatrix");
     @endcode
-9.  Delete virtual matrices and accelerator instance.
+-#  Delete virtual matrices and accelerator instance.
     @code{.cpp}
     if (virtMatrix)
     {
@@ -140,4 +140,4 @@ Result
 After compiling the code above we can execute it giving an image or video path and accelerator type
 as an argument. For this tutorial we use baboon.png image as input. The result is below.
 
-![image](images/How_To_Use_IPPA_Result.jpg)
+![](images/How_To_Use_IPPA_Result.jpg)

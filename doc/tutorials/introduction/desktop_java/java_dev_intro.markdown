@@ -33,7 +33,9 @@ from the [OpenCV SourceForge repository](http://sourceforge.net/projects/opencvl
 
 @note Windows users can find the prebuilt files needed for Java development in the
 `opencv/build/java/` folder inside the package. For other OSes it's required to build OpenCV from
-sources. Another option to get OpenCV sources is to clone [OpenCV git
+sources.
+
+Another option to get OpenCV sources is to clone [OpenCV git
 repository](https://github.com/Itseez/opencv/). In order to build OpenCV with Java bindings you need
 JDK (Java Development Kit) (we recommend [Oracle/Sun JDK 6 or
 7](http://www.oracle.com/technetwork/java/javase/downloads/)), [Apache Ant](http://ant.apache.org/)
@@ -67,7 +69,7 @@ Examine the output of CMake and ensure java is one of the
 modules "To be built". If not, it's likely you're missing a dependency. You should troubleshoot by
 looking through the CMake output for any Java-related tools that aren't found and installing them.
 
-![image](images/cmake_output.png)
+![](images/cmake_output.png)
 
 @note If CMake can't find Java in your system set the JAVA_HOME environment variable with the path to installed JDK before running it. E.g.:
 @code{.bash}
@@ -141,7 +143,7 @@ folder.
     The command should initiate [re]building and running the sample. You should see on the
     screen something like this:
 
-    ![image](images/ant_output.png)
+    ![](images/ant_output.png)
 
 SBT project for Java and Scala
 ------------------------------
@@ -203,7 +205,7 @@ eclipse # Running "eclipse" from within the sbt console
 @endcode
 You should see something like this:
 
-![image](images/sbt_eclipse.png)
+![](images/sbt_eclipse.png)
 
 You can now import the SBT project to Eclipse using Import ... -\> Existing projects into workspace.
 Whether you actually do this is optional for the guide; we'll be using SBT to build the project, so
@@ -225,7 +227,7 @@ sbt run
 @endcode
 You should see something like this:
 
-![image](images/sbt_run.png)
+![](images/sbt_run.png)
 
 ### Running SBT samples
 
@@ -241,7 +243,7 @@ sbt eclipse
 @endcode
 Next, create the directory `src/main/resources` and download this Lena image into it:
 
-![image](images/lena.png)
+![](images/lena.png)
 
 Make sure it's called `"lena.png"`. Items in the resources directory are available to the Java
 application at runtime.
@@ -315,11 +317,11 @@ sbt run
 @endcode
 You should see something like this:
 
-![image](images/sbt_run_face.png)
+![](images/sbt_run_face.png)
 
 It should also write the following image to `faceDetection.png`:
 
-![image](images/faceDetection.png)
+![](images/faceDetection.png)
 
 You're done! Now you have a sample Java application working with OpenCV, so you can start the work
 on your own. We wish you good luck and many years of joyful life!

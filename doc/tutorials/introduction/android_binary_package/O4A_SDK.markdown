@@ -107,19 +107,19 @@ Manual OpenCV4Android SDK setup
 
 ### Get the OpenCV4Android SDK
 
-1.  Go to the [OpenCV download page on
+-#  Go to the [OpenCV download page on
     SourceForge](http://sourceforge.net/projects/opencvlibrary/files/opencv-android/) and download
     the latest available version. Currently it's [OpenCV-2.4.9-android-sdk.zip](http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.4.9/OpenCV-2.4.9-android-sdk.zip/download).
-2.  Create a new folder for Android with OpenCV development. For this tutorial we have unpacked
+-#  Create a new folder for Android with OpenCV development. For this tutorial we have unpacked
     OpenCV SDK to the `C:\Work\OpenCV4Android\` directory.
 
     @note Better to use a path without spaces in it. Otherwise you may have problems with ndk-build.
 
-3.  Unpack the SDK archive into the chosen directory.
+-#  Unpack the SDK archive into the chosen directory.
 
-    You can unpack it using any popular archiver (e.g with 7-Zip_):
+    You can unpack it using any popular archiver (e.g with 7-Zip):
 
-    ![image](images/android_package_7zip.png)
+    ![](images/android_package_7zip.png)
 
     On Unix you can use the following command:
     @code{.bash}
@@ -128,15 +128,15 @@ Manual OpenCV4Android SDK setup
 
 ### Import OpenCV library and samples to the Eclipse
 
-1.  Start Eclipse and choose your workspace location.
+-#  Start Eclipse and choose your workspace location.
 
     We recommend to start working with OpenCV for Android from a new clean workspace. A new Eclipse
     workspace can for example be created in the folder where you have unpacked OpenCV4Android SDK
     package:
 
-    ![image](images/eclipse_1_choose_workspace.png)
+    ![](images/eclipse_1_choose_workspace.png)
 
-2.  Import OpenCV library and samples into workspace.
+-#  Import OpenCV library and samples into workspace.
 
     OpenCV library is packed as a ready-for-use [Android Library
     Project](http://developer.android.com/guide/developing/projects/index.html#LibraryProjects). You
@@ -146,33 +146,34 @@ Manual OpenCV4Android SDK setup
     already references OpenCV library. Follow the steps below to import OpenCV and samples into the
     workspace:
 
+    -   Right click on the Package Explorer window and choose Import... option from the context
+        menu:
+
+        ![](images/eclipse_5_import_command.png)
+
+    -   In the main panel select General --\> Existing Projects into Workspace and press Next
+        button:
+
+        ![](images/eclipse_6_import_existing_projects.png)
+
+    -   In the Select root directory field locate your OpenCV package folder. Eclipse should
+        automatically locate OpenCV library and samples:
+
+        ![](images/eclipse_7_select_projects.png)
+
+    -   Click Finish button to complete the import operation.
+
     @note OpenCV samples are indeed **dependent** on OpenCV library project so don't forget to import it to your workspace as well.
-        -   Right click on the Package Explorer window and choose Import... option from the context
-            menu:
-
-            ![image](images/eclipse_5_import_command.png)
-
-        -   In the main panel select General --\> Existing Projects into Workspace and press Next
-            button:
-
-            ![image](images/eclipse_6_import_existing_projects.png)
-
-        -   In the Select root directory field locate your OpenCV package folder. Eclipse should
-            automatically locate OpenCV library and samples:
-
-            ![image](images/eclipse_7_select_projects.png)
-
-        -   Click Finish button to complete the import operation.
 
     After clicking Finish button Eclipse will load all selected projects into workspace, and you
     have to wait some time while it is building OpenCV samples. Just give a minute to Eclipse to
     complete initialization.
 
-    ![image](images/eclipse_cdt_cfg4.png)
+    ![](images/eclipse_cdt_cfg4.png)
 
     Once Eclipse completes build you will have the clean workspace without any build errors:
 
-    ![image](images/eclipse_10_crystal_clean.png)
+    ![](images/eclipse_10_crystal_clean.png)
 
 @anchor tutorial_O4A_SDK_samples
 ### Running OpenCV Samples
@@ -205,7 +206,7 @@ Well, running samples from Eclipse is very simple:
     @note Android Emulator can take several minutes to start. So, please, be patient. \* On the first
     run Eclipse will ask you about the running mode for your application:
 
-    ![image](images/eclipse_11_run_as.png)
+    ![](images/eclipse_11_run_as.png)
 
 -   Select the Android Application option and click OK button. Eclipse will install and run the
     sample.
@@ -214,7 +215,7 @@ Well, running samples from Eclipse is very simple:
     Manager](https://docs.google.com/a/itseez.com/presentation/d/1EO_1kijgBg_BsjNp2ymk-aarg-0K279_1VZRcPplSuk/present#slide=id.p)
     package installed. In this case you will see the following message:
 
-    ![image](images/android_emulator_opencv_manager_fail.png)
+    ![](images/android_emulator_opencv_manager_fail.png)
 
     To get rid of the message you will need to install OpenCV Manager and the appropriate
     OpenCV binary pack. Simply tap Yes if you have *Google Play Market* installed on your
@@ -226,12 +227,15 @@ Well, running samples from Eclipse is very simple:
     @code{.sh}
     <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.9_Manager_2.18_armv7a-neon.apk
     @endcode
+
     @note armeabi, armv7a-neon, arm7a-neon-android8, mips and x86 stand for platform targets:
         -   armeabi is for ARM v5 and ARM v6 architectures with Android API 8+,
         -   armv7a-neon is for NEON-optimized ARM v7 with Android API 9+,
         -   arm7a-neon-android8 is for NEON-optimized ARM v7 with Android API 8,
         -   mips is for MIPS architecture with Android API 9+,
         -   x86 is for Intel x86 CPUs with Android API 9+.
+
+    @note
     If using hardware device for testing/debugging, run the following command to learn its CPU
     architecture:
     @code{.sh}
@@ -241,6 +245,7 @@ Well, running samples from Eclipse is very simple:
     Click Edit in the context menu of the selected device. In the window, which then pop-ups, find
     the CPU field.
 
+    @note
     You may also see section `Manager Selection` for details.
 
     When done, you will be able to run OpenCV samples on your device/emulator seamlessly.
@@ -248,7 +253,7 @@ Well, running samples from Eclipse is very simple:
 -   Here is Sample - image-manipulations sample, running on top of stock camera-preview of the
     emulator.
 
-    ![image](images/emulator_canny.png)
+    ![](images/emulator_canny.png)
 
 What's next
 -----------

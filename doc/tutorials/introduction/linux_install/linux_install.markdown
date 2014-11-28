@@ -49,7 +49,7 @@ git clone https://github.com/Itseez/opencv_contrib.git
 Building OpenCV from Source Using CMake
 ---------------------------------------
 
-1.  Create a temporary directory, which we denote as \<cmake_build_dir\>, where you want to put
+-#  Create a temporary directory, which we denote as \<cmake_build_dir\>, where you want to put
     the generated Makefiles, project files as well the object files and output binaries and enter
     there.
 
@@ -59,7 +59,7 @@ Building OpenCV from Source Using CMake
     mkdir build
     cd build
     @endcode
-2.  Configuring. Run cmake [\<some optional parameters\>] \<path to the OpenCV source directory\>
+-#  Configuring. Run cmake [\<some optional parameters\>] \<path to the OpenCV source directory\>
 
     For example
     @code{.bash}
@@ -73,14 +73,14 @@ Building OpenCV from Source Using CMake
     -   run: “Configure”
     -   run: “Generate”
 
-3.  Description of some parameters
-    -   build type: CMAKE_BUILD_TYPE=Release\\Debug
+-#  Description of some parameters
+    -   build type: `CMAKE_BUILD_TYPE=Release\Debug`
     -   to build with modules from opencv_contrib set OPENCV_EXTRA_MODULES_PATH to \<path to
         opencv_contrib/modules/\>
     -   set BUILD_DOCS for building documents
     -   set BUILD_EXAMPLES to build all examples
 
-4.  [optional] Building python. Set the following python parameters:
+-#  [optional] Building python. Set the following python parameters:
     -   PYTHON2(3)_EXECUTABLE = \<path to python\>
     -   PYTHON_INCLUDE_DIR = /usr/include/python\<version\>
     -   PYTHON_INCLUDE_DIR2 = /usr/include/x86_64-linux-gnu/python\<version\>
@@ -88,18 +88,18 @@ Building OpenCV from Source Using CMake
     -   PYTHON2(3)_NUMPY_INCLUDE_DIRS =
         /usr/lib/python\<version\>/dist-packages/numpy/core/include/
 
-5.  [optional] Building java.
+-#  [optional] Building java.
     -   Unset parameter: BUILD_SHARED_LIBS
     -   It is useful also to unset BUILD_EXAMPLES, BUILD_TESTS, BUILD_PERF_TESTS - as they all
         will be statically linked with OpenCV and can take a lot of memory.
 
-6.  Build. From build directory execute make, recomend to do it in several threads
+-#  Build. From build directory execute make, recomend to do it in several threads
 
     For example
     @code{.bash}
     make -j7 # runs 7 jobs in parallel
     @endcode
-7.  [optional] Building documents. Enter \<cmake_build_dir/doc/\> and run make with target
+-#  [optional] Building documents. Enter \<cmake_build_dir/doc/\> and run make with target
     "html_docs"
 
     For example
@@ -107,11 +107,11 @@ Building OpenCV from Source Using CMake
     cd ~/opencv/build/doc/
     make -j7 html_docs
     @endcode
-8.  To install libraries, from build directory execute
+-#  To install libraries, from build directory execute
     @code{.bash}
     sudo make install
     @endcode
-9.  [optional] Running tests
+-#  [optional] Running tests
 
     -   Get the required test data from [OpenCV extra
         repository](https://github.com/Itseez/opencv_extra).

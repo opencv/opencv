@@ -17,51 +17,51 @@ are more or less the same for other versions.
 Now, we will define OpenCV as a user library in Eclipse, so we can reuse the configuration for any
 project. Launch Eclipse and select Window --\> Preferences from the menu.
 
-![image](images/1-window-preferences.png)
+![](images/1-window-preferences.png)
 
 Navigate under Java --\> Build Path --\> User Libraries and click New....
 
-![image](images/2-user-library-new.png)
+![](images/2-user-library-new.png)
 
 Enter a name, e.g. OpenCV-2.4.6, for your new library.
 
-![image](images/3-library-name.png)
+![](images/3-library-name.png)
 
 Now select your new user library and click Add External JARs....
 
-![image](images/4-add-external-jars.png)
+![](images/4-add-external-jars.png)
 
 Browse through `C:\OpenCV-2.4.6\build\java\` and select opencv-246.jar. After adding the jar,
 extend the opencv-246.jar and select Native library location and press Edit....
 
-![image](images/5-native-library.png)
+![](images/5-native-library.png)
 
 Select External Folder... and browse to select the folder `C:\OpenCV-2.4.6\build\java\x64`. If you
 have a 32-bit system you need to select the x86 folder instead of x64.
 
-![image](images/6-external-folder.png)
+![](images/6-external-folder.png)
 
 Your user library configuration should look like this:
 
-![image](images/7-user-library-final.png)
+![](images/7-user-library-final.png)
 
 Testing the configuration on a new Java project
 -----------------------------------------------
 
 Now start creating a new Java project.
 
-![image](images/7_5-new-java-project.png)
+![](images/7_5-new-java-project.png)
 
 On the Java Settings step, under Libraries tab, select Add Library... and select OpenCV-2.4.6, then
 click Finish.
 
-![image](images/8-add-library.png)
+![](images/8-add-library.png)
 
-![image](images/9-select-user-lib.png)
+![](images/9-select-user-lib.png)
 
 Libraries should look like this:
 
-![image](images/10-new-project-created.png)
+![](images/10-new-project-created.png)
 
 Now you have created and configured a new Java project it is time to test it. Create a new java
 file. Here is a starter code for your convenience:
@@ -82,7 +82,7 @@ public class Hello
 @endcode
 When you run the code you should see 3x3 identity matrix as output.
 
-![image](images/11-the-code.png)
+![](images/11-the-code.png)
 
 That is it, whenever you start a new project just add the OpenCV user library that you have defined
 to your project and you are good to go. Enjoy your powerful, less painful development environment :)

@@ -61,11 +61,13 @@ region. The following picture shows non-linearly separable training data from tw
 separating hyperplane and the distances to their correct regions of the samples that are
 misclassified.
 
-![image](images/sample-errors-dist.png)
+![](images/sample-errors-dist.png)
 
 @note Only the distances of the samples that are misclassified are shown in the picture. The
 distances of the rest of the samples are zero since they lay already in their correct decision
-region. The red and blue lines that appear on the picture are the margins to each one of the
+region.
+
+The red and blue lines that appear on the picture are the margins to each one of the
 decision regions. It is very **important** to realize that each of the \f$\xi_{i}\f$ goes from a
 misclassified training sample to the margin of its appropriate region.
 
@@ -93,13 +95,10 @@ or [download it from here ](samples/cpp/tutorial_code/ml/non_linear_svms/non_lin
 
 @includelineno cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp
 
-lines
-   1-12, 23-24, 27-
-
 Explanation
 -----------
 
-1.  **Set up the training data**
+-#  **Set up the training data**
 
     The training data of this exercise is formed by a set of labeled 2D-points that belong to one of
     two different classes. To make the exercise more appealing, the training data is generated
@@ -140,7 +139,7 @@ Explanation
     rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(HEIGHT));
     @endcode
 
-2.  **Set up SVM's parameters**
+-#  **Set up SVM's parameters**
 
     @sa
        In the previous tutorial @ref tutorial_introduction_to_svm there is an explanation of the atributes of the
@@ -161,12 +160,13 @@ Explanation
         of obtaining a solution close to the one intuitively expected. However, we recommend to get a
         better insight of the problem by making adjustments to this parameter.
 
-    @note Here there are just very few points in the overlapping region between classes, giving a smaller value to **FRAC_LINEAR_SEP** the density of points can be incremented and the impact of the parameter **CvSVM::C_SVC** explored deeply.
-       -   *Termination Criteria of the algorithm*. The maximum number of iterations has to be
-            increased considerably in order to solve correctly a problem with non-linearly separable
-            training data. In particular, we have increased in five orders of magnitude this value.
+        @note Here there are just very few points in the overlapping region between classes, giving a smaller value to **FRAC_LINEAR_SEP** the density of points can be incremented and the impact of the parameter **CvSVM::C_SVC** explored deeply.
 
-3.  **Train the SVM**
+    -   *Termination Criteria of the algorithm*. The maximum number of iterations has to be
+        increased considerably in order to solve correctly a problem with non-linearly separable
+        training data. In particular, we have increased in five orders of magnitude this value.
+
+-#  **Train the SVM**
 
     We call the method @ref cv::ml::SVM::train to build the SVM model. Watch out that the training
     process may take a quite long time. Have patiance when your run the program.
@@ -175,7 +175,7 @@ Explanation
     svm.train(trainData, labels, Mat(), Mat(), params);
     @endcode
 
-4.  **Show the Decision Regions**
+-#  **Show the Decision Regions**
 
     The method @ref cv::ml::SVM::predict is used to classify an input sample using a trained SVM. In
     this example we have used this method in order to color the space depending on the prediction done
@@ -195,7 +195,7 @@ Explanation
          }
     @endcode
 
-5.  **Show the training data**
+-#  **Show the training data**
 
     The method @ref cv::circle is used to show the samples that compose the training data. The samples
     of the class labeled with 1 are shown in light green and in light blue the samples of the class
@@ -220,7 +220,7 @@ Explanation
     }
     @endcode
 
-6.  **Support vectors**
+-#  **Support vectors**
 
     We use here a couple of methods to obtain information about the support vectors. The method
     @ref cv::ml::SVM::getSupportVectors obtain all support vectors.
@@ -250,7 +250,7 @@ Results
     and some blue points lay on the green one.
 -   Finally the support vectors are shown using gray rings around the training examples.
 
-![image](images/svm_non_linear_result.png)
+![](images/svm_non_linear_result.png)
 
 You may observe a runtime instance of this on the [YouTube here](https://www.youtube.com/watch?v=vFv2yPcSo-Q).
 

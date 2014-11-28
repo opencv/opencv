@@ -32,9 +32,11 @@ tutorial](http://docs.opencv.org/2.4.4-beta/doc/tutorials/introduction/desktop_j
 
 If you are in hurry, here is a minimum quick start guide to install OpenCV on Mac OS X:
 
-NOTE 1: I'm assuming you already installed [xcode](https://developer.apple.com/xcode/),
+@note
+I'm assuming you already installed [xcode](https://developer.apple.com/xcode/),
 [jdk](http://www.oracle.com/technetwork/java/javase/downloads/index.html) and
 [Cmake](http://www.cmake.org/cmake/resources/software.html).
+
 @code{.bash}
 cd ~/
 mkdir opt
@@ -60,9 +62,9 @@ cycle of your CLJ projects.
 The available [installation guide](https://github.com/technomancy/leiningen#installation) is very
 easy to be followed:
 
-1.  [Download the script](https://raw.github.com/technomancy/leiningen/stable/bin/lein)
-2.  Place it on your $PATH (cf. \~/bin is a good choice if it is on your path.)
-3.  Set the script to be executable. (i.e. chmod 755 \~/bin/lein).
+-#  [Download the script](https://raw.github.com/technomancy/leiningen/stable/bin/lein)
+-#  Place it on your $PATH (cf. \~/bin is a good choice if it is on your path.)
+-#  Set the script to be executable. (i.e. chmod 755 \~/bin/lein).
 
 If you work on Windows, follow [this instruction](https://github.com/technomancy/leiningen#windows)
 
@@ -171,9 +173,9 @@ Your directories layout should look like the following:
 tree
 .
 |__ native
-|   |__ macosx
-|       |__ x86_64
-|           |__ libopencv_java247.dylib
+|   |__ macosx
+|       |__ x86_64
+|           |__ libopencv_java247.dylib
 |
 |__ opencv-247.jar
 |__ opencv-native-247.jar
@@ -215,13 +217,13 @@ simple-sample/
 |__ LICENSE
 |__ README.md
 |__ doc
-|   |__ intro.md
+|   |__ intro.md
 |
 |__ project.clj
 |__ resources
 |__ src
-|   |__ simple_sample
-|       |__ core.clj
+|   |__ simple_sample
+|       |__ core.clj
 |__ test
     |__ simple_sample
         |__ core_test.clj
@@ -299,7 +301,9 @@ nil
 Then you can start interacting with OpenCV by just referencing the fully qualified names of its
 classes.
 
-NOTE 2: [Here](http://docs.opencv.org/java/) you can find the full OpenCV Java API.
+@note
+[Here](http://docs.opencv.org/java/) you can find the full OpenCV Java API.
+
 @code{.clojure}
 user=> (org.opencv.core.Point. 0 0)
 #<Point {0.0, 0.0}>
@@ -409,6 +413,7 @@ class SimpleSample {
 
 }
 @endcode
+
 ### Add injections to the project
 
 Before start coding, we'd like to eliminate the boring need of interactively loading the native
@@ -454,6 +459,7 @@ We're going to mimic almost verbatim the original OpenCV java tutorial to:
 -   change the value of every element of the second row to 1
 -   change the value of every element of the 6th column to 5
 -   print the content of the obtained matrix
+
 @code{.clojure}
 user=> (def m (Mat. 5 10 CvType/CV_8UC1 (Scalar. 0 0)))
 #'user/m
@@ -473,6 +479,7 @@ user=> (println (.dump m))
   0, 0, 0, 0, 0, 5, 0, 0, 0, 0]
 nil
 @endcode
+
 If you are accustomed to a functional language all those abused and mutating nouns are going to
 irritate your preference for verbs. Even if the CLJ interop syntax is very handy and complete, there
 is still an impedance mismatch between any OOP language and any FP language (bein Scala a mixed
@@ -483,6 +490,7 @@ To exit the REPL type (exit), ctr-D or (quit) at the REPL prompt.
 user=> (exit)
 Bye for now!
 @endcode
+
 ### Interactively load and blur an image
 
 In the next sample you will learn how to interactively load and blur and image from the REPL by
@@ -500,7 +508,7 @@ main argument to both the GaussianBlur and the imwrite methods.
 First we want to add an image file to a newly create directory for storing static resources of the
 project.
 
-![image](images/lena.png)
+![](images/lena.png)
 @code{.bash}
 mkdir -p resources/images
 cp ~/opt/opencv/doc/tutorials/introduction/desktop_java/images/lena.png resource/images/
@@ -554,7 +562,7 @@ Bye for now!
 @endcode
 Following is the new blurred image of Lena.
 
-![image](images/blurred.png)
+![](images/blurred.png)
 
 Next Steps
 ----------
@@ -577,4 +585,3 @@ the gap.
 Copyright © 2013 Giacomo (Mimmo) Cosenza aka Magomimmo
 
 Distributed under the BSD 3-clause License, the same of OpenCV.
-

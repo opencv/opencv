@@ -14,11 +14,11 @@ Including OpenCV library in your iOS project
 
 The OpenCV library comes as a so-called framework, which you can directly drag-and-drop into your
 XCode project. Download the latest binary from
-\<<http://sourceforge.net/projects/opencvlibrary/files/opencv-ios/>\>. Alternatively follow this
+<http://sourceforge.net/projects/opencvlibrary/files/opencv-ios/>. Alternatively follow this
 guide @ref tutorial_ios_install to compile the framework manually. Once you have the framework, just
 drag-and-drop into XCode:
 
-![image](images/xcode_hello_ios_framework_drag_and_drop.png)
+![](images/xcode_hello_ios_framework_drag_and_drop.png)
 
 Also you have to locate the prefix header that is used for all header files in the project. The file
 is typically located at "ProjectName/Supporting Files/ProjectName-Prefix.pch". There, you have add
@@ -54,7 +54,7 @@ First, we create a simple iOS project, for example Single View Application. Then
 an UIImageView and UIButton to start the camera and display the video frames. The storyboard could
 look like that:
 
-![image](images/xcode_hello_ios_viewcontroller_layout.png)
+![](images/xcode_hello_ios_viewcontroller_layout.png)
 
 Make sure to add and connect the IBOutlets and IBActions to the corresponding ViewController:
 @code{.objc}
@@ -127,7 +127,7 @@ should have at least the following frameworks in your project:
 -   UIKit
 -   Foundation
 
-    ![image](images/xcode_hello_ios_frameworks_add_dependencies.png)
+    ![](images/xcode_hello_ios_frameworks_add_dependencies.png)
 
 #### Processing frames
 

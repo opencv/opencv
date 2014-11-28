@@ -14,15 +14,15 @@ technologies we integrate into our library. .. _Windows_Install_Prebuild:
 Installation by Using the Pre-built Libraries {#tutorial_windows_install_prebuilt}
 =============================================
 
-1.  Launch a web browser of choice and go to our [page on
+-#  Launch a web browser of choice and go to our [page on
     Sourceforge](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/).
-2.  Choose a build you want to use and download it.
-3.  Make sure you have admin rights. Unpack the self-extracting archive.
-4.  You can check the installation at the chosen path as you can see below.
+-#  Choose a build you want to use and download it.
+-#  Make sure you have admin rights. Unpack the self-extracting archive.
+-#  You can check the installation at the chosen path as you can see below.
 
-    ![image](images/OpenCV_Install_Directory.png)
+    ![](images/OpenCV_Install_Directory.png)
 
-5.  To finalize the installation go to the @ref tutorial_windows_install_path section.
+-#  To finalize the installation go to the @ref tutorial_windows_install_path section.
 
 Installation by Making Your Own Libraries from the Source Files {#tutorial_windows_install_build}
 ===============================================================
@@ -97,18 +97,18 @@ libraries). If you do not need the support for some of these you can just freely
 
 ### Building the library
 
-1.  Make sure you have a working IDE with a valid compiler. In case of the Microsoft Visual Studio
+-#  Make sure you have a working IDE with a valid compiler. In case of the Microsoft Visual Studio
     just install it and make sure it starts up.
-2.  Install [CMake](http://www.cmake.org/cmake/resources/software.html). Simply follow the wizard, no need to add it to the path. The default install
+-#  Install [CMake](http://www.cmake.org/cmake/resources/software.html). Simply follow the wizard, no need to add it to the path. The default install
     options are OK.
-3.  Download and install an up-to-date version of msysgit from its [official
+-#  Download and install an up-to-date version of msysgit from its [official
     site](http://code.google.com/p/msysgit/downloads/list). There is also the portable version,
     which you need only to unpack to get access to the console version of Git. Supposing that for
     some of us it could be quite enough.
-4.  Install [TortoiseGit](http://code.google.com/p/tortoisegit/wiki/Download). Choose the 32 or 64 bit version according to the type of OS you work in.
+-#  Install [TortoiseGit](http://code.google.com/p/tortoisegit/wiki/Download). Choose the 32 or 64 bit version according to the type of OS you work in.
     While installing, locate your msysgit (if it doesn't do that automatically). Follow the
     wizard -- the default options are OK for the most part.
-5.  Choose a directory in your file system, where you will download the OpenCV libraries to. I
+-#  Choose a directory in your file system, where you will download the OpenCV libraries to. I
     recommend creating a new one that has short path and no special charachters in it, for example
     `D:/OpenCV`. For this tutorial I'll suggest you do so. If you use your own path and know, what
     you're doing -- it's OK.
@@ -118,7 +118,7 @@ libraries). If you do not need the support for some of these you can just freely
     -#  Push the OK button and be patient as the repository is quite a heavy download. It will take
         some time depending on your Internet connection.
 
-6.  In this section I will cover installing the 3rd party libraries.
+-#  In this section I will cover installing the 3rd party libraries.
     -#  Download the [Python libraries](http://www.python.org/downloads/) and install it with the default options. You will need a
         couple other python extensions. Luckily installing all these may be automated by a nice tool
         called [Setuptools](http://pypi.python.org/pypi/setuptools#downloads). Download and install
@@ -131,9 +131,9 @@ libraries). If you do not need the support for some of these you can just freely
         Script sub-folder. Here just pass to the *easy_install.exe* as argument the name of the
         program you want to install. Add the *sphinx* argument.
 
-        ![image](images/cmsdstartwindows.jpg)
+        ![](images/cmsdstartwindows.jpg)
 
-        ![image](images/Sphinx_Install.png)
+        ![](images/Sphinx_Install.png)
 
         @note
         The *CD* navigation command works only inside a drive. For example if you are somewhere in the
@@ -152,7 +152,7 @@ libraries). If you do not need the support for some of these you can just freely
         sure you select for the *"Install missing packages on-the-fly"* the *Yes* option, as you can
         see on the image below. Again this will take quite some time so be patient.
 
-        ![image](images/MiktexInstall.png)
+        ![](images/MiktexInstall.png)
 
     -#  For the [Intel Threading Building Blocks (*TBB*)](http://threadingbuildingblocks.org/file.php?fid=77)
         download the source files and extract
@@ -161,7 +161,7 @@ libraries). If you do not need the support for some of these you can just freely
         the story is the same. For
         exctracting the archives I recommend using the [7-Zip](http://www.7-zip.org/) application.
 
-        ![image](images/IntelTBB.png)
+        ![](images/IntelTBB.png)
 
     -#  For the [Intel IPP Asynchronous C/C++](http://software.intel.com/en-us/intel-ipp-preview) download the source files and set environment
         variable **IPP_ASYNC_ROOT**. It should point to
@@ -182,14 +182,14 @@ libraries). If you do not need the support for some of these you can just freely
         Downloads](http://qt.nokia.com/downloads) page. Download the source files (not the
         installers!!!):
 
-        ![image](images/qtDownloadThisPackage.png)
+        ![](images/qtDownloadThisPackage.png)
 
         Extract it into a nice and short named directory like `D:/OpenCV/dep/qt/` . Then you need to
         build it. Start up a *Visual* *Studio* *Command* *Prompt* (*2010*) by using the start menu
         search (or navigate through the start menu
         All Programs --\> Microsoft Visual Studio 2010 --\> Visual Studio Tools --\> Visual Studio Command Prompt (2010)).
 
-        ![image](images/visualstudiocommandprompt.jpg)
+        ![](images/visualstudiocommandprompt.jpg)
 
         Now navigate to the extracted folder and enter inside it by using this console window. You
         should have a folder containing files like *Install*, *Make* and so on. Use the *dir* command
@@ -216,25 +216,25 @@ libraries). If you do not need the support for some of these you can just freely
         Visual Studio Add-in*. After this you can make and build Qt applications without using the *Qt
         Creator*. Everything is nicely integrated into Visual Studio.
 
-7.  Now start the *CMake (cmake-gui)*. You may again enter it in the start menu search or get it
+-#  Now start the *CMake (cmake-gui)*. You may again enter it in the start menu search or get it
     from the All Programs --\> CMake 2.8 --\> CMake (cmake-gui). First, select the directory for the
     source files of the OpenCV library (1). Then, specify a directory where you will build the
     binary files for OpenCV (2).
 
-    ![image](images/CMakeSelectBin.jpg)
+    ![](images/CMakeSelectBin.jpg)
 
     Press the Configure button to specify the compiler (and *IDE*) you want to use. Note that in
     case you can choose between different compilers for making either 64 bit or 32 bit libraries.
     Select the one you use in your application development.
 
-    ![image](images/CMake_Configure_Windows.jpg)
+    ![](images/CMake_Configure_Windows.jpg)
 
     CMake will start out and based on your system variables will try to automatically locate as many
     packages as possible. You can modify the packages to use for the build in the WITH --\> WITH_X
     menu points (where *X* is the package abbreviation). Here are a list of current packages you can
     turn on or off:
 
-    ![image](images/CMakeBuildWithWindowsGUI.jpg)
+    ![](images/CMakeBuildWithWindowsGUI.jpg)
 
     Select all the packages you want to use and press again the *Configure* button. For an easier
     overview of the build options make sure the *Grouped* option under the binary directory
@@ -242,9 +242,9 @@ libraries). If you do not need the support for some of these you can just freely
     directories. In case of these CMake will throw an error in its output window (located at the
     bottom of the GUI) and set its field values, to not found constants. For example:
 
-    ![image](images/CMakePackageNotFoundWindows.jpg)
+    ![](images/CMakePackageNotFoundWindows.jpg)
 
-    ![image](images/CMakeOutputPackageNotFound.jpg)
+    ![](images/CMakeOutputPackageNotFound.jpg)
 
     For these you need to manually set the queried directories or files path. After this press again
     the *Configure* button to see if the value entered by you was accepted or not. Do this until all
@@ -254,7 +254,7 @@ libraries). If you do not need the support for some of these you can just freely
     option will make sure that they are categorized inside directories in the *Solution Explorer*.
     It is a must have feature, if you ask me.
 
-    ![image](images/CMakeBuildOptionsOpenCV.jpg)
+    ![](images/CMakeBuildOptionsOpenCV.jpg)
 
     Furthermore, you need to select what part of OpenCV you want to build.
 
@@ -286,24 +286,24 @@ libraries). If you do not need the support for some of these you can just freely
     IDE at the startup. Now you need to build both the *Release* and the *Debug* binaries. Use the
     drop-down menu on your IDE to change to another of these after building for one of them.
 
-    ![image](images/ChangeBuildVisualStudio.jpg)
+    ![](images/ChangeBuildVisualStudio.jpg)
 
     In the end you can observe the built binary files inside the bin directory:
 
-    ![image](images/OpenCVBuildResultWindows.jpg)
+    ![](images/OpenCVBuildResultWindows.jpg)
 
     For the documentation you need to explicitly issue the build commands on the *doc* project for
     the PDF files and on the *doc_html* for the HTML ones. Each of these will call *Sphinx* to do
     all the hard work. You can find the generated documentation inside the `Build/Doc/_html` for the
     HTML pages and within the `Build/Doc` the PDF manuals.
 
-    ![image](images/WindowsBuildDoc.png)
+    ![](images/WindowsBuildDoc.png)
 
     To collect the header and the binary files, that you will use during your own projects, into a
     separate directory (simillary to how the pre-built binaries ship) you need to explicitely build
     the *Install* project.
 
-    ![image](images/WindowsBuildInstall.png)
+    ![](images/WindowsBuildInstall.png)
 
     This will create an *Install* directory inside the *Build* one collecting all the built binaries
     into a single place. Use this only after you built both the *Release* and *Debug* versions.
@@ -314,7 +314,7 @@ libraries). If you do not need the support for some of these you can just freely
     If everything is okay the *contours.exe* output should resemble the following image (if
     built with Qt support):
 
-    ![image](images/WindowsQtContoursOutput.png)
+    ![](images/WindowsQtContoursOutput.png)
 
 @note
    If you use the GPU module (CUDA libraries) make sure you also upgrade to the latest drivers of
@@ -353,9 +353,9 @@ following new entry (right click in the application to bring up the menu):
     %OPENCV_DIR%\bin
 @endcode
 
-![image](images/PathEditorOpenCVInsertNew.png)
+![](images/PathEditorOpenCVInsertNew.png)
 
-![image](images/PathEditorOpenCVSetPath.png)
+![](images/PathEditorOpenCVSetPath.png)
 
 Save it to the registry and you are done. If you ever change the location of your build directories
 or want to try out your applicaton with a different build all you will need to do is to update the

@@ -47,7 +47,7 @@ somehow longer and includes names such as *XVID*, *DIVX*, *H264* or *LAGS* (*Lag
 Codec*). The full list of codecs you may use on a system depends on just what one you have
 installed.
 
-![image](images/videoFileStructure.png)
+![](images/videoFileStructure.png)
 
 As you can see things can get really complicated with videos. However, OpenCV is mainly a computer
 vision library, not a video stream, codec and write one. Therefore, the developers tried to keep
@@ -75,7 +75,7 @@ const string source      = argv[1];            // the source file name
 string::size_type pAt = source.find_last_of('.');   // Find extension point
 const string NAME = source.substr(0, pAt) + argv[2][0] + ".avi";   // Form the new name with container
 @endcode
-1.  The codec to use for the video track. Now all the video codecs have a unique short name of
+-#  The codec to use for the video track. Now all the video codecs have a unique short name of
     maximum four characters. Hence, the *XVID*, *DIVX* or *H264* names. This is called a four
     character code. You may also ask this from an input video by using its *get* function. Because
     the *get* function is a general function it always returns double values. A double value is
@@ -109,13 +109,13 @@ const string NAME = source.substr(0, pAt) + argv[2][0] + ".avi";   // Form the n
     If you pass for this argument minus one than a window will pop up at runtime that contains all
     the codec installed on your system and ask you to select the one to use:
 
-    ![image](images/videoCompressSelect.png)
+    ![](images/videoCompressSelect.png)
 
-2.  The frame per second for the output video. Again, here I keep the input videos frame per second
+-#  The frame per second for the output video. Again, here I keep the input videos frame per second
     by using the *get* function.
-3.  The size of the frames for the output video. Here too I keep the input videos frame size per
+-#  The size of the frames for the output video. Here too I keep the input videos frame size per
     second by using the *get* function.
-4.  The final argument is an optional one. By default is true and says that the output will be a
+-#  The final argument is an optional one. By default is true and says that the output will be a
     colorful one (so for write you will send three channel images). To create a gray scale video
     pass a false parameter here.
 
@@ -148,7 +148,7 @@ merge(spl, res);
 Put all this together and you'll get the upper source code, whose runtime result will show something
 around the idea:
 
-![image](images/resultOutputWideoWrite.png)
+![](images/resultOutputWideoWrite.png)
 
 You may observe a runtime instance of this on the [YouTube
 here](https://www.youtube.com/watch?v=jpBwHxsl1_0).

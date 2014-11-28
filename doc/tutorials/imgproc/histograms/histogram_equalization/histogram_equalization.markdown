@@ -17,7 +17,7 @@ Theory
 -   It is a graphical representation of the intensity distribution of an image.
 -   It quantifies the number of pixels for each intensity value considered.
 
-![image](images/Histogram_Equalization_Theory_0.jpg)
+![](images/Histogram_Equalization_Theory_0.jpg)
 
 ### What is Histogram Equalization?
 
@@ -29,7 +29,7 @@ Theory
     *underpopulated* intensities. After applying the equalization, we get an histogram like the
     figure in the center. The resulting image is shown in the picture at right.
 
-![image](images/Histogram_Equalization_Theory_1.jpg)
+![](images/Histogram_Equalization_Theory_1.jpg)
 
 ### How does it work?
 
@@ -46,7 +46,7 @@ Theory
     is 255 ( or the maximum value for the intensity of the image ). From the example above, the
     cumulative function is:
 
-    ![image](images/Histogram_Equalization_Theory_2.jpg)
+    ![](images/Histogram_Equalization_Theory_2.jpg)
 
 -   Finally, we use a simple remapping procedure to obtain the intensity values of the equalized
     image:
@@ -69,14 +69,14 @@ Code
 Explanation
 -----------
 
-1.  Declare the source and destination images as well as the windows names:
+-#  Declare the source and destination images as well as the windows names:
     @code{.cpp}
     Mat src, dst;
 
     char* source_window = "Source image";
     char* equalized_window = "Equalized Image";
     @endcode
-2.  Load the source image:
+-#  Load the source image:
     @code{.cpp}
     src = imread( argv[1], 1 );
 
@@ -84,18 +84,18 @@ Explanation
       { cout<<"Usage: ./Histogram_Demo <path_to_image>"<<endl;
         return -1;}
     @endcode
-3.  Convert it to grayscale:
+-#  Convert it to grayscale:
     @code{.cpp}
     cvtColor( src, src, COLOR_BGR2GRAY );
     @endcode
-4.  Apply histogram equalization with the function @ref cv::equalizeHist :
+-#  Apply histogram equalization with the function @ref cv::equalizeHist :
     @code{.cpp}
     equalizeHist( src, dst );
     @endcode
     As it can be easily seen, the only arguments are the original image and the output (equalized)
     image.
 
-5.  Display both images (original and equalized) :
+-#  Display both images (original and equalized) :
     @code{.cpp}
     namedWindow( source_window, WINDOW_AUTOSIZE );
     namedWindow( equalized_window, WINDOW_AUTOSIZE );
@@ -103,7 +103,7 @@ Explanation
     imshow( source_window, src );
     imshow( equalized_window, dst );
     @endcode
-6.  Wait until user exists the program
+-#  Wait until user exists the program
     @code{.cpp}
     waitKey(0);
     return 0;
@@ -112,24 +112,24 @@ Explanation
 Results
 -------
 
-1.  To appreciate better the results of equalization, let's introduce an image with not much
+-#  To appreciate better the results of equalization, let's introduce an image with not much
     contrast, such as:
 
-    ![image](images/Histogram_Equalization_Original_Image.jpg)
+    ![](images/Histogram_Equalization_Original_Image.jpg)
 
     which, by the way, has this histogram:
 
-    ![image](images/Histogram_Equalization_Original_Histogram.jpg)
+    ![](images/Histogram_Equalization_Original_Histogram.jpg)
 
     notice that the pixels are clustered around the center of the histogram.
 
-2.  After applying the equalization with our program, we get this result:
+-#  After applying the equalization with our program, we get this result:
 
-    ![image](images/Histogram_Equalization_Equalized_Image.jpg)
+    ![](images/Histogram_Equalization_Equalized_Image.jpg)
 
     this image has certainly more contrast. Check out its new histogram like this:
 
-    ![image](images/Histogram_Equalization_Equalized_Histogram.jpg)
+    ![](images/Histogram_Equalization_Equalized_Histogram.jpg)
 
     Notice how the number of pixels is more distributed through the intensity range.
 

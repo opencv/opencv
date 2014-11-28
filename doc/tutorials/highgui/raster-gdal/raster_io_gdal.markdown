@@ -94,9 +94,8 @@ Below is the output of the program. Use the first image as the input. For the DE
 the SRTM file located at the USGS here.
 [<http://dds.cr.usgs.gov/srtm/version2_1/SRTM1/Region_04/N37W123.hgt.zip>](http://dds.cr.usgs.gov/srtm/version2_1/SRTM1/Region_04/N37W123.hgt.zip)
 
-![image](images/output.jpg)
+![](images/gdal_output.jpg)
 
-![image](images/heat-map.jpg)
+![](images/gdal_heat-map.jpg)
 
-![image](images/flood-zone.jpg)
-
+![](images/gdal_flood-zone.jpg)

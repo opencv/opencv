@@ -22,10 +22,12 @@ library.
 
 Here's a sample code of how to achieve all the stuff enumerated at the goal list.
 
-@includelineno cpp/tutorial_code/core/file_input_output/file_input_output.cpp
+@dontinclude cpp/tutorial_code/core/file_input_output/file_input_output.cpp
 
-lines
-   1-7, 21-154
+@until std;
+@skip class MyData
+@until return 0;
+@until }
 
 Explanation
 -----------
@@ -36,7 +38,7 @@ structures you may serialize: *mappings* (like the STL map) and *element sequenc
 vector). The difference between these is that in a map every element has a unique name through what
 you may access it. For sequences you need to go through them to query a specific item.
 
-1.  **XML/YAML File Open and Close.** Before you write any content to such file you need to open it
+-#  **XML/YAML File Open and Close.** Before you write any content to such file you need to open it
     and at the end to close it. The XML/YAML data structure in OpenCV is @ref cv::FileStorage . To
     specify that this structure to which file binds on your hard drive you can use either its
     constructor or the *open()* function of this:
@@ -56,7 +58,7 @@ you may access it. For sequences you need to go through them to query a specific
     @code{.cpp}
     fs.release();                                       // explicit close
     @endcode
-2.  **Input and Output of text and numbers.** The data structure uses the same \<\< output operator
+-#  **Input and Output of text and numbers.** The data structure uses the same \<\< output operator
     that the STL library. For outputting any type of data structure we need first to specify its
     name. We do this by just simply printing out the name of this. For basic types you may follow
     this with the print of the value :
@@ -70,7 +72,7 @@ you may access it. For sequences you need to go through them to query a specific
     fs["iterationNr"] >> itNr;
     itNr = (int) fs["iterationNr"];
     @endcode
-3.  **Input/Output of OpenCV Data structures.** Well these behave exactly just as the basic C++
+-#  **Input/Output of OpenCV Data structures.** Well these behave exactly just as the basic C++
     types:
     @code{.cpp}
     Mat R = Mat_<uchar >::eye  (3, 3),
@@ -82,7 +84,7 @@ you may access it. For sequences you need to go through them to query a specific
     fs["R"] >> R;                                      // Read cv::Mat
     fs["T"] >> T;
     @endcode
-4.  **Input/Output of vectors (arrays) and associative maps.** As I mentioned beforehand, we can
+-#  **Input/Output of vectors (arrays) and associative maps.** As I mentioned beforehand, we can
     output maps and sequences (array, vector) too. Again we first print the name of the variable and
     then we have to specify if our output is either a sequence or map.
 
@@ -121,7 +123,7 @@ you may access it. For sequences you need to go through them to query a specific
     cout << "Two  " << (int)(n["Two"]) << "; ";
     cout << "One  " << (int)(n["One"]) << endl << endl;
     @endcode
-5.  **Read and write your own data structures.** Suppose you have a data structure such as:
+-#  **Read and write your own data structures.** Suppose you have a data structure such as:
     @code{.cpp}
     class MyData
     {
@@ -180,6 +182,7 @@ you may access it. For sequences you need to go through them to query a specific
     fs["NonExisting"] >> m;   // Do not add a fs << "NonExisting" << m command for this to work
     cout << endl << "NonExisting = " << endl << m << endl;
     @endcode
+
 Result
 ------
 
@@ -270,4 +273,3 @@ here](https://www.youtube.com/watch?v=A4yqVnByMMM) .
 <iframe title="File Input and Output using XML and YAML files in OpenCV" width="560" height="349" src="http://www.youtube.com/embed/A4yqVnByMMM?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
 </div>
 \endhtmlonly
-

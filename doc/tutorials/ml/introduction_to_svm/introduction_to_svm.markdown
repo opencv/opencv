@@ -23,26 +23,28 @@ In which sense is the hyperplane obtained optimal? Let's consider the following 
 For a linearly separable set of 2D-points which belong to one of two classes, find a separating
 straight line.
 
-![image](images/separating-lines.png)
+![](images/separating-lines.png)
 
 @note In this example we deal with lines and points in the Cartesian plane instead of hyperplanes
 and vectors in a high dimensional space. This is a simplification of the problem.It is important to
 understand that this is done only because our intuition is better built from examples that are easy
 to imagine. However, the same concepts apply to tasks where the examples to classify lie in a space
-whose dimension is higher than two. In the above picture you can see that there exists multiple
+whose dimension is higher than two.
+
+In the above picture you can see that there exists multiple
 lines that offer a solution to the problem. Is any of them better than the others? We can
 intuitively define a criterion to estimate the worth of the lines:
 
-A line is bad if it passes too close to the points because it will be noise sensitive and it will
-not generalize correctly. Therefore, our goal should be to find the line passing as far as
-possible from all points.
+-   A line is bad if it passes too close to the points because it will be noise sensitive and it will
+    not generalize correctly. Therefore, our goal should be to find the line passing as far as
+    possible from all points.
 
 Then, the operation of the SVM algorithm is based on finding the hyperplane that gives the largest
 minimum distance to the training examples. Twice, this distance receives the important name of
 **margin** within SVM's theory. Therefore, the optimal separating hyperplane *maximizes* the margin
 of the training data.
 
-![image](images/optimal-hyperplane.png)
+![](images/optimal-hyperplane.png)
 
 How is the optimal hyperplane computed?
 ---------------------------------------
@@ -55,7 +57,9 @@ where \f$\beta\f$ is known as the *weight vector* and \f$\beta_{0}\f$ as the *bi
 
 @sa A more in depth description of this and hyperplanes you can find in the section 4.5 (*Seperating
 Hyperplanes*) of the book: *Elements of Statistical Learning* by T. Hastie, R. Tibshirani and J. H.
-Friedman. The optimal hyperplane can be represented in an infinite number of different ways by
+Friedman.
+
+The optimal hyperplane can be represented in an infinite number of different ways by
 scaling of \f$\beta\f$ and \f$\beta_{0}\f$. As a matter of convention, among all the possible
 representations of the hyperplane, the one chosen is
 
@@ -99,7 +103,7 @@ Source Code
 Explanation
 -----------
 
-1.  **Set up the training data**
+-#  **Set up the training data**
 
     The training data of this exercise is formed by a set of labeled 2D-points that belong to one of
     two different classes; one of the classes consists of one point and the other of three points.
@@ -115,7 +119,7 @@ Explanation
     Mat labelsMat      (4, 1, CV_32FC1, labels);
     @endcode
 
-2.  **Set up SVM's parameters**
+-#  **Set up SVM's parameters**
 
     In this tutorial we have introduced the theory of SVMs in the most simple case, when the
     training examples are spread into two classes that are linearly separable. However, SVMs can be
@@ -149,7 +153,7 @@ Explanation
         less number of steps even if the optimal hyperplane has not been computed yet. This
         parameter is defined in a structure @ref cv::cvTermCriteria .
 
-3.  **Train the SVM**
+-#  **Train the SVM**
 
     We call the method
     [CvSVM::train](http://docs.opencv.org/modules/ml/doc/support_vector_machines.html#cvsvm-train)
@@ -159,7 +163,7 @@ Explanation
     SVM.train(trainingDataMat, labelsMat, Mat(), Mat(), params);
     @endcode
 
-4.  **Regions classified by the SVM**
+-#  **Regions classified by the SVM**
 
     The method @ref cv::ml::SVM::predict is used to classify an input sample using a trained SVM. In
     this example we have used this method in order to color the space depending on the prediction done
@@ -183,7 +187,7 @@ Explanation
         }
     @endcode
 
-5.  **Support vectors**
+-#  **Support vectors**
 
     We use here a couple of methods to obtain information about the support vectors.
     The method @ref cv::ml::SVM::getSupportVectors obtain all of the support
@@ -209,4 +213,4 @@ Results
     optimal separating hyperplane.
 -   Finally the support vectors are shown using gray rings around the training examples.
 
-![image](images/svm_intro_result.png)
+![](images/svm_intro_result.png)
