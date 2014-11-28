@@ -8,3 +8,10 @@
 Thumbs.db
 tags
 tegra/
+
+# Temporarily disable this to commit 3rdParty files.
+3rdparty/*
+Build/*
+junk/*
+CMakeFiles/*
+CMakeCache.txt
