@@ -733,3 +733,17 @@ The function is similar to
 where ``undistort()`` is an approximate iterative algorithm that estimates the normalized original point coordinates out of the normalized distorted point coordinates ("normalized" means that the coordinates do not depend on the camera matrix).
 
 The function can be used for both a stereo camera head or a monocular camera (when R is empty).
+
+
+
+
+PeiLinNormalization
+-------------------
+Calculates an affine transformation normalizing given image.
+
+.. ocv:function:: Matx23d PeiLinNormalization ( InputArray I )
+
+Assume given image :math:`I=T(\bar{I})` where :math:`\bar{I}` is a normalized image and :math:`T` is is an affine transformation distorting this image by translation, rotation, scaling and skew.
+The function returns an affine transformation matrix corresponding to the transformation :math:`T^{-1}` described in [PeiLin95].
+
+.. [PeiLin95] Soo-Chang Pei and Chao-Nan Lin. Image normalization for pattern recognition. Image and Vision Computing, Vol. 13, N.10, pp. 711-723, 1995.
