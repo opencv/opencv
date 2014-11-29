@@ -1146,7 +1146,7 @@ cvShowImage( const char* name, const CvArr* arr )
         icvUpdateWindowPos(window);
     InvalidateRect(window->hwnd, 0, 0);
     // philipg: this is not needed and just slows things down
-//    UpdateWindow(window->hwnd);
+    //    UpdateWindow(window->hwnd);
 
     __END__;
 }
@@ -1304,7 +1304,7 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
     switch(uMsg)
     {
     case WM_COPY:
-        ::WindowProc(hwnd, uMsg, wParam, lParam); // call highgui proc. There may be a better way to do this.
+        ::SendMessage(window->hwnd, uMsg, wParam, lParam);
         break;
 
     case WM_DESTROY:
@@ -1838,6 +1838,56 @@ cvDestroyAllWindows(void)
     }
 }
 
+static void showSaveDialog(CvWindow* window)
+{
+#ifndef HAVE_OPENGL
+    if (!window || !window->image)
+        return;
+
+    SIZE sz;
+    int channels;
+    void* data;
+    if (icvGetBitmapData(window, &sz, &channels, &data))
+        return; // nothing to save
+
+    char szFileName[MAX_PATH] = "";
+    // try to use window title as file name
+    GetWindowText(window->frame, szFileName, MAX_PATH);
+
+    OPENFILENAME ofn;
+    ZeroMemory(&ofn, sizeof(ofn));
+#ifdef OPENFILENAME_SIZE_VERSION_400
+    // we are not going to use new fields any way
+    ofn.lStructSize = OPENFILENAME_SIZE_VERSION_400;
+#else
+    ofn.lStructSize = sizeof(ofn);
+#endif
+    ofn.hwndOwner = window->hwnd;
+    ofn.lpstrFilter = "Portable Network Graphics files (*.png)\0*.png\0"
+                      "JPEG files (*.jpeg;*.jpg;*.jpe)\0*.jpeg;*.jpg;*.jpe\0"
+                      "Windows bitmap (*.bmp;*.dib)\0*.bmp;*.dib\0"
+                      "TIFF Files (*.tiff;*.tif)\0*.tiff;*.tif\0"
+                      "JPEG-2000 files (*.jp2)\0*.jp2\0"
+                      "WebP files (*.webp)\0*.webp\0"
+                      "Portable image format (*.pbm;*.pgm;*.ppm;*.pxm;*.pnm)\0*.pbm;*.pgm;*.ppm;*.pxm;*.pnm\0"
+                      "OpenEXR Image files (*.exr)\0*.exr\0"
+                      "Radiance HDR (*.hdr;*.pic)\0*.hdr;*.pic\0"
+                      "Sun raster files (*.sr;*.ras)\0*.sr;*.ras\0"
+                      "All Files (*.*)\0*.*\0";
+    ofn.lpstrFile = szFileName;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_NOREADONLYRETURN | OFN_NOCHANGEDIR;
+    ofn.lpstrDefExt = "png";
+
+    if (GetSaveFileName(&ofn))
+    {
+        cv::Mat tmp; cv::flip(cv::Mat(sz.cy, sz.cx, CV_8UC(channels), data), tmp, 0);
+        cv::imwrite(szFileName, tmp);
+    }
+#else
+    (void)window;
+#endif // HAVE_OPENGL
+}
 
 CV_IMPL int
 cvWaitKey( int delay )
@@ -1883,12 +1933,12 @@ cvWaitKey( int delay )
 
                 case WM_KEYDOWN:
                     TranslateMessage(&message);
-                    if( (message.wParam >= VK_F1 && message.wParam <= VK_F24) ||
-                        message.wParam == VK_HOME || message.wParam == VK_END ||
-                        message.wParam == VK_UP || message.wParam == VK_DOWN ||
-                        message.wParam == VK_LEFT || message.wParam == VK_RIGHT ||
-                        message.wParam == VK_INSERT || message.wParam == VK_DELETE ||
-                        message.wParam == VK_PRIOR || message.wParam == VK_NEXT )
+                    if( (message.wParam >= VK_F1 && message.wParam <= VK_F24)       ||
+                        message.wParam == VK_HOME   || message.wParam == VK_END     ||
+                        message.wParam == VK_UP     || message.wParam == VK_DOWN    ||
+                        message.wParam == VK_LEFT   || message.wParam == VK_RIGHT   ||
+                        message.wParam == VK_INSERT || message.wParam == VK_DELETE  ||
+                        message.wParam == VK_PRIOR  || message.wParam == VK_NEXT )
                     {
                         DispatchMessage(&message);
                         is_processed = 1;
@@ -1897,7 +1947,11 @@ cvWaitKey( int delay )
 
                     // Intercept Ctrl+C for copy to clipboard
                     if ('C' == message.wParam && (::GetKeyState(VK_CONTROL)>>15))
-                        ::PostMessage(message.hwnd, WM_COPY, 0, 0);
+                        ::SendMessage(message.hwnd, WM_COPY, 0, 0);
+
+                    // Intercept Ctrl+S for "save as" dialog
+                    if ('S' == message.wParam && (::GetKeyState(VK_CONTROL)>>15))
+                        showSaveDialog(window);
 
                 default:
                     DispatchMessage(&message);
