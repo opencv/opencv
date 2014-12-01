@@ -7,7 +7,7 @@ Goal
 In this tutorial you will learn how to:
 
 -   Use the @ref cv::FeatureDetector interface in order to find interest points. Specifically:
-    -   Use the @ref cv::xfeatures2d::SURF and its function @ref cv::xfeatures2d::SURF::detect to perform the
+    -   Use the cv::xfeatures2d::SURF and its function cv::xfeatures2d::SURF::detect to perform the
         detection process
     -   Use the function @ref cv::drawKeypoints to draw the detected keypoints
 
