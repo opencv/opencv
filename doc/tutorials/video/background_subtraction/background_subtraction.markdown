@@ -41,7 +41,7 @@ In the following you can find the source code. We will let the user chose to pro
 file or a sequence of images.
 
 Two different methods are used to generate two foreground masks:
--#  @ref cv::bgsegm::BackgroundSubtractorMOG
+-#  cv::bgsegm::BackgroundSubtractorMOG
 -#  @ref cv::BackgroundSubtractorMOG2
 
 The results as well as the input data are shown on the screen.

@@ -1,4 +1,4 @@
-OpenCV-Python Tutorials {#tutorial_py_tutorials}
+OpenCV-Python Tutorials {#tutorial_py_root}
 =======================
 
 -   @subpage tutorial_py_table_of_contents_setup

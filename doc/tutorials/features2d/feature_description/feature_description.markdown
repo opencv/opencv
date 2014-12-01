@@ -8,7 +8,7 @@ In this tutorial you will learn how to:
 
 -   Use the @ref cv::DescriptorExtractor interface in order to find the feature vector correspondent
     to the keypoints. Specifically:
-    -   Use @ref cv::xfeatures2d::SURF and its function @ref cv::xfeatures2d::SURF::compute to perform the
+    -   Use cv::xfeatures2d::SURF and its function cv::xfeatures2d::SURF::compute to perform the
         required calculations.
     -   Use a @ref cv::BFMatcher to match the features vector
     -   Use the function @ref cv::drawMatches to draw the detected matches.

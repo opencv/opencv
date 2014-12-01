@@ -21,7 +21,7 @@ Installing OpenCV from prebuilt binaries
 
     -#  [Matplotlib](https://downloads.sourceforge.net/project/matplotlib/matplotlib/matplotlib-1.3.0/matplotlib-1.3.0.win32-py2.7.exe) (*Matplotlib is optional, but recommended since we use it a lot in our tutorials*).
 
--#  Install all packages into their default locations. Python will be installed to **C:/Python27/**.
+-#  Install all packages into their default locations. Python will be installed to `C:/Python27/`.
 
 -#  After installation, open Python IDLE. Enter import numpy and make sure Numpy is working fine.
 

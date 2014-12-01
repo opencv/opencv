@@ -244,7 +244,7 @@ Here is explained in detail the code for the real time application:
     extraction. You can find it in
     `samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/src/RobusMatcher.cpp`. In your
     *RobusMatch* object you can use any of the 2D features detectors of OpenCV. In this case I used
-    @ref cv::ORB features because is based on @ref cv::FAST to detect the keypoints and @ref cv::xfeatures2d::BriefDescriptorExtractor
+    @ref cv::ORB features because is based on @ref cv::FAST to detect the keypoints and cv::xfeatures2d::BriefDescriptorExtractor
     to extract the descriptors which means that is fast and robust to rotations. You can find more
     detailed information about *ORB* in the documentation.
 
