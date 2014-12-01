@@ -3115,7 +3115,7 @@ bool Kernel::compileWorkGroupSize(size_t wsz[]) const
     size_t retsz = 0;
     cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
     return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_COMPILE_WORK_GROUP_SIZE,
-                                    sizeof(wsz[0]*3), wsz, &retsz) == CL_SUCCESS;
+                                    sizeof(wsz[0])*3, wsz, &retsz) == CL_SUCCESS;
 }
 
 size_t Kernel::localMemSize() const
