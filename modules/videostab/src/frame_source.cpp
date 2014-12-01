@@ -70,7 +70,7 @@ public:
         if (!vc.isOpened())
             CV_Error(0, "can't open file: " + path_);
 #else
-        CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without video I/O support");
+        CV_Error(Error::StsNotImplemented, "OpenCV has been compiled without video I/O support");
 #endif
     }
 
