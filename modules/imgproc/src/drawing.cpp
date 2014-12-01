@@ -1190,10 +1190,15 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
     {
         PolyEdge& e1 = edges[i];
         assert( e1.y0 < e1.y1 );
+        // Determine x-coordinate of the end of the edge.
+        // (This is not necessary x-coordinate of any vertex in the array.)
+        int x1 = e1.x + (e1.y1 - e1.y0) * e1.dx;
         y_min = std::min( y_min, e1.y0 );
         y_max = std::max( y_max, e1.y1 );
         x_min = std::min( x_min, e1.x );
         x_max = std::max( x_max, e1.x );
+        x_min = std::min( x_min, x1 );
+        x_max = std::max( x_max, x1 );
     }
 
     if( y_max < 0 || y_min >= size.height || x_max < 0 || x_min >= (size.width<<XY_SHIFT) )
